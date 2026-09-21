@@ -105,7 +105,8 @@ this project's recurring bugs are that sentence playing out.
 
 The v142–v174 work moved eight modules into `static/lib/` — `canvassizes`,
 `posted`, `postedui`, `report`, `segslider`, `tooltip`, `hints`, `helpsearch` —
-each shared by both surfaces. **That is the pattern to continue.** The drawer
+each shared by both surfaces then (`postedui` renders on the profile page alone
+since v304). **That is the pattern to continue.** The drawer
 controllers are the next and largest candidate.
 
 ---
@@ -206,8 +207,12 @@ and puts the tool in front of people who already exist.
 **Deliberately not doing:**
 
 - Free-form canvas sizing. A closed set of ratios is what makes a feed possible.
-- Ranked feeds. Reverse-chronological is correct until it demonstrably is not.
-- Multi-take. A product decision first, a data model second.
+- A recommendation engine. The gallery's Hot tab (v304) is a sort by counted
+  plays in the last seven days, at the owner's word; New stays the default,
+  and nothing is recommended to anyone.
+- ~~Multi-take.~~ **SHIPPED** — a take ends, the canvas locks, "+ Add take"
+  appends another and the replay plays them back to back (START-HERE, "the
+  canvas lock after a take is deliberate").
 
 ---
 

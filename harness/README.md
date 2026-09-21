@@ -394,9 +394,8 @@ A green check is not evidence until it has been shown to go red.
 - Drawing before adding music triggers `setLoopToDrawingLength()`, so the loop
   will be the drawing's length, not 20s. That's intended; don't read it as a bug.
 
-### v303 — the acquisition audit
+### v304 — the gallery, the profile, and the proofread
 
-- `verify_identity.py` — the app's identity to a browser and a Home Screen
 - `verify_gallery.py` — the public gallery is opt-in: the Pad's and Flip's post
   sheets send `visibility: "public"` only when "Show in the public gallery" is
   ticked and omit the key otherwise, the Pad in compose mode renders no such
@@ -418,6 +417,10 @@ A green check is not evidence until it has been shown to go red.
   refuses an unknown reason, 404s an unreadable post, takes nothing down, and
   the row reaches `python -m skribl.takedown --reports`. Shares the gallery's
   batch (it posts too).
+
+### v303 — the acquisition audit
+
+- `verify_identity.py` — the app's identity to a browser and a Home Screen
   (SK-AUD-013): `/manifest.webmanifest` is served and every icon it names is
   fetched and decoded as the PNG of the size it declares; the Pad, Flip, the
   player and the library carry the manifest link, a theme-color and a touch

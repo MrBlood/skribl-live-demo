@@ -3,7 +3,7 @@
 Server-backed Flask app for **Skribl Pad** (record-and-replay drawing) and
 **Skribl Flip** (frame-by-frame animation), plus a public player for sharing.
 
-Current version: **v303** (`SKRIBL_VERSION` in `skribl/core.py`; the archive filename is derived from it)
+Current version: **v304** (`SKRIBL_VERSION` in `skribl/core.py`; the archive filename is derived from it)
 
 ## Dropping Skribl into your own Flask app — start here
 
@@ -84,6 +84,9 @@ skribl/                    The blueprint package — everything Skribl owns
     app.js                 Pad + player (largest file)
     flip.js                Flip
     inlineplayer.js/.css   The in-post player — a Skribl inside a host's feed
+    gallery.js             The public gallery page over the listing
+    library.js             The profile's Skribls tab: the stage and whose list it is
+    posted.css             The posted list's rules, loaded by the editors and the profile
     editor_compose.js      Compose mode: attach a Skribl to a host's draft post
     lib/sharecard.js       Where the drawing sits inside /s/<id>/card.png
     lib/postedcard.js      Compositing that card — editors only
@@ -134,9 +137,9 @@ to the full player a shared `/s/<id>` link opens. A host embeds it in two lines:
 {{ skribl_inline(post.skribl_id) }}   {# once per post #}
 ```
 
-Idle, a post is one cached image — the share card at `/s/<id>/card.png`, cropped
-back to the drawing, about 20 KB — and a play button; nothing is fetched until
-somebody taps. Playing, it redraws the drawing with a progress
+Idle, a post is one cached image — the poster at `/s/<id>/poster`, the share
+card's drawing without its brand strip — and a play button; nothing is fetched
+until somebody taps. Playing, it redraws the drawing with a progress
 hairline and a nib at the pen. There are two viewer controls and only two —
 **mute** (page-wide, session-remembered, off by default) and **loop** (per post,
 on by default; turning it off stops the drawing at its last frame and stops the
@@ -158,21 +161,27 @@ header used to describe is closed as of v279, so there is no known rendering
 difference; see `skribl/static/inlineplayer.js` for the measurement and
 `docs/INTEGRATION.md` for the host-side details.
 
-## The profile's Skribls tab
+## The profile's Skribls tab, and the public gallery
 
-`/library` is the other surface: a page ABOUT the drawings rather than a feed of
-them. One stage with a full transport — play, restart, scrub, loop, mute, copy
-link — and a grid of share cards beside it. The stage is the same in-post
-player, driven through the handle it exposes, so the profile cannot disagree
-with the feed or the shared link about how a drawing replays.
+`/library` is a page ABOUT the drawings rather than a feed of them: one stage
+with a full transport — play, restart, scrub, loop, mute, full screen, copy
+link — and beside it the list of what you posted, one row per Skribl with its
+poster, a title search, a filter (all / in the gallery / link only) and the
+actions: copy or share the link, switch the post in or out of the gallery,
+Delete, Copy key. "Your Skribls" in both editors' menus opens it. Whose it is
+depends on the deployment: with no accounts it is the list this browser kept
+(`lib/posted.js`), unlisted posts included; with a host's signed-in user it is
+`GET /api/skribls?user_id=<me>`. The stage is the same in-post player, driven
+through the handle it exposes, so the profile cannot disagree with the feed or
+the shared link about how a drawing replays, and it fetches ONE payload at a
+time — the row's picture is the poster, and `GET /api/skribls` returns metadata
+precisely so a listing never has to carry payloads.
 
-It fetches ONE payload at a time, for the drawing on the stage. The tiles are
-cached card images; `GET /api/skribls` returns metadata precisely so a listing
-never has to carry payloads. Paging is the server's keyset cursor.
-
-Until now this page was a mock with its own replay engine and a table of
-hand-drawn motifs — nothing on it had been posted by anyone.
-`harness/verify_library.py` is what replaced the warning that used to sit here.
+`/gallery` is the public page: every Skribl whose author ticked "Show in the
+public gallery" on the post sheet, on the in-post player, with New and Hot tabs
+(Hot is plays in the last seven days), a title/caption search, and Report on
+every tile. `harness/verify_library.py`, `verify_gallery.py`, `verify_hot.py`
+and `verify_tilereport.py` are the proof.
 
 ## Local setup
 
@@ -214,7 +223,9 @@ the known gotchas.
 Two things the sandbox **cannot** verify, so they need a real browser:
 
 - **MP4 export.** Headless Chromium has `VideoEncoder` but no avc1, so the H.264
-  path can't run. The capability gate and the WebM fallback are covered.
+  path can't run here. The capability gate and the WebM fallback are covered,
+  and the `mp4` CI job runs the suite on real Chrome and writes the attestation
+  `harness/RELEASE.md` reports on its `mp4 (H.264)` line.
 - **CSP in Safari and Firefox.** Verified in Chromium only. Deploy once with
   `SKRIBL_CSP=report-only` to check.
 

@@ -16,6 +16,10 @@
  *                        appear only where `tok` or `owned` says they may
  *   opts.patchBase    -> the API base for PATCH visibility (the gallery
  *                        switch) and DELETE; SKRIBL_API_BASE when absent
+ *   opts.pageEmpty    -> the page owns the empty state, so an empty list
+ *                        renders nothing here (the profile showed two
+ *                        "nothing yet" messages stacked until v304's
+ *                        proofread)
  *
  * Degrades to nothing if the partial is absent: init() returns null.
  */
@@ -247,6 +251,8 @@
 
       if (!all.length) {
         // An invitation, not an apology: this screen is what a new tester sees.
+        // Unless the page around the list already says it (opts.pageEmpty).
+        if (opts.pageEmpty) { listEl.innerHTML = ''; return; }
         listEl.innerHTML =
           '<div class="posted-empty">' +
           '<div class="posted-empty-title">Nothing posted yet</div>' +
@@ -269,10 +275,14 @@
            no Copy link, no Share, no Delete-for-everyone, and the \u00d7 deletes
            the save itself rather than a list entry, so it arms first. */
         var isLocal = !!e.local;
-        var sub = (isLocal ? 'on this device only'
-          : e.kind === 'flip'
-          ? (e.pages + (e.pages === 1 ? ' page' : ' pages'))
-          : 'replay') + ' \u00b7 ' + store.ago(e.at);
+        /* WHAT KIND OF THING IT IS, only where that is known. A host's
+           listing carries no kind (the payload is deferred there), so a row
+           from it says when it was posted and nothing it cannot know -- the
+           first cut called every host row a "replay" with a pencil on it. */
+        var kindWord = isLocal ? 'on this device only'
+          : e.kind === 'flip' ? (e.pages + (e.pages === 1 ? ' page' : ' pages'))
+          : e.kind === 'pad' ? 'replay' : '';
+        var sub = (kindWord ? kindWord + ' \u00b7 ' : '') + store.ago(e.at);
         // NO route literal. A '/s/' fallback here is exactly what v132 removed
         // from flip.js: it silently posts the wrong URL under a url_prefix, and
         // verify_seam.py exists to catch it. The stored entry carries the url
@@ -302,7 +312,17 @@
         /* MAY ACT: this browser holds the key, or the page says the viewer
            is the author (a host's signed-in user, authorised server-side). */
         var may = !!(e.tok || e.owned);
-        var inGallery = e.visibility === 'public';
+        /* WHICH WAY IT WAS POSTED. An entry this browser kept before v304
+           recorded no visibility, and every editor post before v304 went
+           without the key -- the server's default, unlisted -- so that is
+           what a store row without one IS, not a guess; a host row without
+           one is unknown and says nothing. Three words for three states:
+           in the gallery, link only, or the state's own name (a host's
+           private post is not reachable by link). */
+        var vis = e.visibility || (source ? '' : 'unlisted');
+        var inGallery = vis === 'public';
+        var visWord = inGallery ? 'in the gallery' : vis === 'unlisted' ? 'link only' : vis;
+        var offWord = vis === 'unlisted' ? 'Link only' : (vis.charAt(0).toUpperCase() + vis.slice(1));
         /* MORE THAN ONE ACTION puts the actions under the title on a phone
            (posted.css). Keyed rows always have more than one; a plain row
            does where the system has a share sheet -- which is every phone,
@@ -312,9 +332,9 @@
           /* The poster where the page can build one (the profile), and the
              kind's icon always -- as a badge over the poster, because a Flip
              is marked with the book everywhere else in the app. */
-          '<span class="posted-thumb posted-thumb-' + esc(e.kind) + '" aria-hidden="true">' +
+          '<span class="posted-thumb posted-thumb-' + esc(e.kind || 'any') + '" aria-hidden="true">' +
             (poster ? '<img class="posted-poster" src="' + esc(poster(e.id)) + '" alt="" loading="lazy" decoding="async">' : '') +
-            (e.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>' +
+            (e.kind === 'flip' ? ICON_FLIP : e.kind === 'pad' ? ICON_PAD : '') + '</span>' +
           /* HONOURS player_target, which it did not until v281. __init__.py
              names this link as one of the three "watch it" paths and says
              _blank is their DEFAULT and that a host passing _self "takes
@@ -329,7 +349,7 @@
             (onSelect ? ' data-select="' + esc(e.id) + '"' : '') + '>' +
             '<span class="posted-title">' + esc(e.title || 'Untitled Skribl') + '</span>' +
             '<span class="posted-sub">' + esc(sub) +
-              (e.visibility ? ' \u00b7 ' + (inGallery ? 'in the gallery' : 'link only') : '') + '</span>' +
+              (vis ? ' \u00b7 ' + esc(visWord) : '') + '</span>' +
           '</a>' +
           '<span class="posted-actions">' +
           '<button type="button" class="posted-copy" data-url="' + esc(url) + '">Copy link</button>' +
@@ -341,11 +361,11 @@
           /* THE GALLERY SWITCH (v304): in or out of the public gallery, the
              same choice the post sheet offered, changeable after the fact by
              whoever may act on the post. PATCH visibility; the record follows. */
-          (may && e.visibility
+          (may && vis
             ? '<button type="button" class="posted-gallery' + (inGallery ? ' on' : '') + '" data-gallery="' + esc(e.id) +
                 '" aria-pressed="' + (inGallery ? 'true' : 'false') + '" aria-label="' +
-                (inGallery ? 'In the public gallery. Tap to make it link only' : 'Link only. Tap to show it in the public gallery') + '">' +
-                (inGallery ? 'In gallery' : 'Link only') + '</button>'
+                (inGallery ? 'In the public gallery. Tap to make it link only' : esc(offWord) + '. Tap to show it in the public gallery') + '">' +
+                (inGallery ? 'In gallery' : esc(offWord)) + '</button>'
             : '') +
           /* TWO DIFFERENT ACTIONS, AND THEY USED TO BE ONE BUTTON. The \u2715
              removed the local entry and nothing else — the Skribl stayed live

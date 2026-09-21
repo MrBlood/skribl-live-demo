@@ -117,7 +117,7 @@ here is the rule you can break tomorrow.
 | A colour ratchet cannot see a mark that is white ON PURPOSE — five vanished in light mode and were found by eye. | **no enforcer** — `#fff` is exempt because it is nearly always text on a coloured fill |
 | An anonymous retry replays to the post the first request made, scoped by a client capability, and the key that deletes it was minted before the answer could be lost. | `verify_apiedges.py`, `verify_posted.py` |
 | The Pad's idempotency key is judged on the drawing, not on serialise-time stamps; a Pad entry in Your Skribls holds its revocation key. | `verify_posted.py` |
-| The Pad, Flip, the player and the library carry the app's identity (manifest, theme-color, icons); the feed, a host's page, carries none. | `verify_identity.py` |
+| The Pad, Flip, the player, the library and the gallery carry the app's identity (manifest, theme-color, icons); the feed, a host's page, carries none. | `verify_identity.py` |
 | The feed says it is a developer demo; its consumer states carry no code, and its error state can retry. | `verify_inline.py` |
 | Every live bar and header control answers a tap 44px tall (40 at the 320 safety net); the visible pill is a different floor. | `verify_layout.py`, `verify_a11y.py` |
 | The Motion Smear's trail reaches back to where the object came from, measured on the render. | `verify_tween.py` |
@@ -169,8 +169,10 @@ from a manually chosen specimen.* The suite had already learned to assert
 behaviour instead of attributes, and then asserted the right thing about the
 wrong population — the same error one level up.
 
-All eight surfaces route through the utility (the eighth is the new recovery
-panel). Section 2 reads `[aria-modal="true"]` out of the live DOM; a surface
+Every surface routes through the utility — eight when this was written, the
+eighth the recovery panel; the gallery's report sheet and the profile's key
+dialogs have joined since, and the census counts them rather than this
+sentence. Section 2 reads `[aria-modal="true"]` out of the live DOM; a surface
 with no recipe **fails** rather than being skipped, a recipe naming a deleted
 surface fails too, and a template census backstops the dialog that lives behind
 an unrendered branch. A dialog built at runtime escapes a census taken at load,
@@ -446,7 +448,8 @@ platform.
                      docs/HANDOFF.md and git history
     harness          see harness/RELEASE.md — the count is generated, and a
                      hand-typed one is exactly what drifts
-    migrations       6 Alembic revisions
+    migrations       skribl/migrations/versions — count the files; this line
+                     said "6" for a dozen releases while the directory grew
     last run         see the stamped stanza below — it is generated, and a
                      hand-typed total is exactly what drifts
     tree hash        see the generated stanza below — NEVER typed here
@@ -772,10 +775,10 @@ first rather than trust a snapshot — which is the whole reason this replaced i
 
 * **NEVER edit a released Alembic migration.** `RELEASED.txt` freezes every
   digest and `verify_migrations.py` fails if one changes.
-* **`view` does not show the user anything.** It renders an image for the
-  assistant only. To show someone a screenshot, write it to
-  `/mnt/user-data/outputs/` and call `present_files`. Saying "here it is" after
-  a `view` call is describing something they cannot see.
+* **A screenshot the assistant renders is one the assistant has seen, not the
+  owner.** Measure it; do not describe it as shown. The owner's phone
+  screenshots run the other way and are the bug reports
+  (`docs/SESSION-CONTEXT.md` §7).
 * **Measure rendered geometry, not arithmetic.** Flex shrinks controls before
   anything overflows, so summing child widths reports room that is not there.
   Force the candidate into the DOM and read `scrollWidth` against
@@ -817,7 +820,7 @@ v270). The Procfile keeps the same command for Heroku-style hosts and as local
 reference only. If you ever run more than one web instance, move the migrate to
 a Render `preDeployCommand` so two boots cannot race the same `upgrade head`.
 
-    ./harness/run_harness.sh verify_move.py            # name them; a bare run hangs
+    ./harness/run_harness.sh verify_move.py            # name them, or run bare for everything
     python3 harness/stamp_docs.py                      # docs from LAST-RUN.txt
 
 `pip install -r requirements.txt` also works. What does NOT work is

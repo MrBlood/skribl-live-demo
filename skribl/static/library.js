@@ -55,8 +55,8 @@
   var me = document.body.getAttribute('data-skribl-me') || '';
   var libEmpty = document.getElementById('libEmpty');
   var libEmptyLocal = document.getElementById('libEmptyLocal');
-  var whoBio = document.getElementById('whoBio');
   var btnFull = document.getElementById('btnFull');
+  var loaded = !me;        /* host mode: no empty state until the first page answers */
 
   var listEl = document.getElementById('postedList');
   var moreWrap = document.getElementById('moreWrap');
@@ -117,9 +117,12 @@
     pTitle.textContent = item.title || 'Untitled Skribl';
     pMeta.textContent = when(item.created_at);
     pKind.textContent = item.has_audio ? 'with sound' : 'silent';
-    /* A browser-kept entry may not know its visibility; say nothing rather
-       than guess. */
-    pStats.textContent = !item.visibility ? '' : (item.visibility === 'public' ? 'in the gallery' : item.visibility);
+    /* The same three words the row uses (lib/postedui.js): in the gallery,
+       link only, or the state's own name. A host row may not know; say
+       nothing rather than guess. */
+    pStats.textContent = !item.visibility ? ''
+      : item.visibility === 'public' ? 'in the gallery'
+      : item.visibility === 'unlisted' ? 'link only' : item.visibility;
     scrubFill.style.width = '0%';
     tElapsed.textContent = '0:00 / 0:00';
     setPlayIcon(false);
@@ -256,9 +259,12 @@
   var ui = null;
 
   function asItem(e) {
+    /* A browser-kept entry from before v304 recorded no visibility, and no
+       editor post before v304 sent one, so it is unlisted -- the server's
+       default -- not unknown. A host row without one is unknown. */
     return { id: e.id, title: e.title || '', caption: '',
              created_at: e.at ? new Date(e.at).toISOString() : (e.created_at || null),
-             has_audio: !!e.has_audio, visibility: e.visibility || '' };
+             has_audio: !!e.has_audio, visibility: e.visibility || (me ? '' : 'unlisted') };
   }
 
   function passes(e) {
@@ -269,7 +275,7 @@
   function words(all, hits) {
     var q = (search && search.value.trim()) || '';
     statCount.textContent = all.length;
-    if (libEmpty) libEmpty.hidden = all.length > 0;
+    if (libEmpty) libEmpty.hidden = all.length > 0 || !loaded;
     foot.textContent = !all.length ? ''
       : (q ? (me ? 'Filtering the ' + all.length + ' loaded so far. Load more to search further.'
                  : 'Filtering your ' + all.length + '.')
@@ -327,12 +333,22 @@
   function hostSource() { return hostRows; }
 
   function boot() {
+    /* A HOST'S PROFILE IS NOT A BROWSER'S LIST, and two sentences on the
+       page say it is: the empty state's "kept in this browser only", and
+       the panel's footer about site data and local saves. Both describe
+       lib/posted.js, which the host branch never reads. */
+    if (me) {
+      if (libEmptyLocal) libEmptyLocal.hidden = true;
+      var footTop = document.querySelector('#postedPanel .posted-foot-top');
+      if (footTop) footTop.hidden = true;
+    }
     ui = window.SkriblPostedUI && window.SkriblPostedUI.init({
       poster: posterUrl,
       onSelect: function (e) { select(asItem(e)); },
       filter: passes,
       onRender: words,
       source: me ? hostSource : null,
+      pageEmpty: true,
       onRemoved: function (id) { hostRows = hostRows.filter(function (e) { return e.id !== id; }); }
     });
     window._skriblPostedUI = ui;
@@ -355,12 +371,16 @@
       })
       .then(function (body) {
         (body.items || []).forEach(function (i) {
+          /* No kind: the listing defers the payload, so a host row does not
+             know whether it is a Pad or a Flip, and the row says nothing it
+             cannot know (lib/postedui.js). */
           hostRows.push({ id: i.id, url: playerBase + '/' + encodeURIComponent(i.id), title: i.title || '',
-                          kind: 'pad', pages: 1, at: i.created_at ? Date.parse(i.created_at) : 0,
+                          kind: null, pages: 0, at: i.created_at ? Date.parse(i.created_at) : Date.now(),
                           visibility: i.visibility || '', has_audio: !!i.has_audio, owned: true, tok: null });
         });
         items = hostRows.map(asItem);
         cursor = body.next_cursor || null;
+        loaded = true;
         renderGrid();
         moreWrap.innerHTML = '';
         if (cursor) {
@@ -382,6 +402,8 @@
       })
       .catch(function () {
         moreWrap.innerHTML = '';
+        loaded = true;
+        renderGrid();
         foot.textContent = "Couldn't load the listing.";
       });
   }

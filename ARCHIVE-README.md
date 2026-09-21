@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v303"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v304"` (skribl/core.py).**
 
 This is the sealed delivery of the Skribl source tree — the same files as the
 repository, packaged with the evidence of the run they were tested by.
@@ -29,8 +29,8 @@ each carries its own `SHA256SUMS`:
 **The runtime package is boot-verified, not merely filtered.**
 `python3 harness/package.py <dir> --verify` migrates a fresh database with
 `alembic upgrade head` — the same command the `Procfile` runs — then serves
-Pad, Flip, the library and the demo feed, posts a Skribl, renders its share
-card, and revokes it with the key issued at post time. Removing `alembic.ini`,
+Pad, Flip, the library, the gallery and the demo feed, posts a Skribl, renders
+its share card, and revokes it with the key issued at post time. Removing `alembic.ini`,
 `app.py` or `skribl/migrations` from the allowlist each fails that check by
 name, which is what makes the allowlist a claim rather than a guess.
 
