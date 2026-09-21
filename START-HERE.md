@@ -720,7 +720,7 @@ rather than a shared rule.
 | `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
-| `photofit.js` | Pad+Flip+in-post | Photo fit geometry — the part both editors and the player must agree on. |
+| `photofit.js` | Pad+Flip+library+in-post | Photo fit geometry — the part both editors and the player must agree on. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
 | `pointbudget.js` | Flip | The DOCUMENT's budget — the numbers the editors were spending without being able to see them. |
