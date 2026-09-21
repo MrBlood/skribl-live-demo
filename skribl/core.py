@@ -52,6 +52,25 @@ _PUBLIC_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 REPORT_REASONS = ("spam", "abuse", "copyright", "other")
 MAX_REPORT_NOTE_CHARS = 300
 
+# HOW LONG HOT LOOKS BACK, and how long a view row therefore has to live.
+#
+# HOT_DAYS is the window the ranking reads and lives here rather than in
+# routes.py so the purge below cannot drift from it.
+#
+# THE RETENTION IS THE POINT OF THE SECOND CONSTANT (pre-v305 audit,
+# PRESEAL-003). skribl_views holds one pseudonymous row per (post, client
+# hash, UTC day) and nothing removed them: a viewing history accumulated for
+# the life of the post, while the only thing the product reads is the last
+# seven days. views_total already carries the lifetime figure, so the rows
+# past the window serve nothing and are kept by nobody's decision. They are
+# purged now, with a few days of margin so a clock skew or a late day
+# boundary cannot cost a post its ranking.
+#
+# The floor is not negotiable: whatever a host configures, the purge never
+# deletes inside HOT_DAYS, because a shorter retention would silently change
+# what Hot means rather than fail.
+HOT_DAYS = 7
+
 
 def _valid_public_id(public_id):
     return isinstance(public_id, str) and bool(_PUBLIC_ID_RE.match(public_id))
@@ -116,6 +135,11 @@ def _env_int(name, default, minimum=1, maximum=None):
 # Rate-limiter sizing. Lives here with the other env knobs rather than in
 # validation, which is where the original single-file layout happened to put it.
 RATE_CLEANUP_BATCH = _env_int("SKRIBL_RATE_CLEANUP_BATCH", 500, minimum=1)
+
+# The view-retention knobs named beside HOT_DAYS above; here because they
+# read the environment and _env_int is defined between the two.
+VIEW_RETENTION_DAYS = _env_int("SKRIBL_VIEW_RETENTION_DAYS", 10, minimum=1)
+VIEW_CLEANUP_BATCH = _env_int("SKRIBL_VIEW_CLEANUP_BATCH", 500, minimum=1)
 # How long an unresolved reservation keeps occupying a slot. Long enough for a
 # slow post to finish, short enough that a killed process costs seconds not hours.
 RATE_PENDING_TTL = _env_int("SKRIBL_RATE_PENDING_TTL", 120, minimum=5)

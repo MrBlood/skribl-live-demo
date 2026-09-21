@@ -20,13 +20,14 @@ import hashlib
 
 import sqlalchemy as sa
 
-from .core import (MAX_REPORT_NOTE_CHARS, REPORT_REASONS,
+from .core import (HOT_DAYS, MAX_REPORT_NOTE_CHARS, REPORT_REASONS,
                    MAX_CARD_BYTES,
                    OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE, SKRIBL_VERSION,
                    THEME_GROUND, _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblReport, SkriblView,
                      _visibility_policy, as_utc, normalise_user_id,
                      session, feed_filter, author_dict)
+from .views import purge_views
 from .storage import KEY_RE, LocalDiskStore
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_key, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
@@ -86,8 +87,9 @@ def _decode_cursor(cursor):
 # keyset it pages by is (seven-day plays, id), not (created_at, id). A cursor
 # from one sort handed to the other decodes as unusable, which is a 400, the
 # same answer a mangled cursor gets.
-HOT_DAYS = 7
 MAX_QUERY_CHARS = 80
+# HOT_DAYS moved to skribl.core at v305 so skribl/views.py's purge reads the
+# same window it must never delete inside of. Imported below with the rest.
 
 
 def _encode_hot_cursor(score, post_id):
@@ -1029,6 +1031,17 @@ def register_routes(bp, *, index_route=False):
         except sa.exc.IntegrityError:
             return False
         post.views_total = (post.views_total or 0) + 1
+        # THE JANITOR RIDES THE WRITE, not the read: only a NEW row triggers
+        # it, so the work is proportional to plays rather than to page loads,
+        # and it is bounded and best-effort. A deployment that never schedules
+        # purge_views() still does not accumulate view rows for ever
+        # (PRESEAL-003). Swallowed on purpose, exactly as the rate limiter's
+        # janitor is: a cleanup inside somebody's request must never take
+        # their request down with it, and the next play tries again.
+        try:
+            purge_views(s)
+        except Exception:                                    # pragma: no cover
+            pass
         return True
 
     @bp.get("/api/skribls/<public_id>")

@@ -620,6 +620,43 @@ with sync_playwright() as sp:
             check("...and the failure reaches the live region",
                   "couldn't copy" in _said["live"].lower(), str(_said))
 
+    # ---- A CONTROL THAT CANNOT ACT IS NOT OFFERED (PRESEAL-005) ------------
+    #
+    # Play, Restart, Loop and Copy link were enabled from the first paint,
+    # before any payload existed, and did nothing when pressed. Loop was the
+    # clearest: it toggled its own pressed state, reporting a change it had
+    # not made to a player that was not there.
+    print("\nLIBRARY — the transport is dead until a Skribl is on the stage")
+    _READ = """() => {
+        const ids = ['btnPlay', 'btnRestart', 'btnLoop', 'btnShare'];
+        const out = {};
+        ids.forEach(function (i) { const b = document.getElementById(i); out[i] = b ? !!b.disabled : null; });
+        out.scrub = (document.getElementById('scrub') || {}).getAttribute
+                    ? document.getElementById('scrub').getAttribute('aria-disabled') : null;
+        out.rows = document.querySelectorAll('#postedList .posted-row').length;
+        return out; }"""
+    # An EMPTY profile: a fresh context is a fresh browser list, which is the
+    # state a first-time visitor lands on.
+    _empty = b.new_page(viewport={"width": 1280, "height": 1000})
+    browsing.goto(_empty, BASE, "/library")
+    _empty.wait_for_timeout(1500)
+    _st = _empty.evaluate(_READ)
+    _empty.close()
+    check("with nothing on the stage the transport is disabled",
+          _st["rows"] == 0 and all(_st[k] for k in ("btnPlay", "btnRestart", "btnLoop", "btnShare"))
+          and _st["scrub"] == "true", str(_st))
+    # ...AND COMES ALIVE. Asserting only the disabled half would pass on a
+    # transport that is never usable at all.
+    _live = ctx.new_page()
+    _live.set_viewport_size({"width": 1280, "height": 1000})
+    browsing.goto(_live, BASE, "/library")
+    _live.wait_for_timeout(2500)
+    _st2 = _live.evaluate(_READ)
+    _live.close()
+    check("...and once a Skribl is loaded it is live",
+          _st2["rows"] > 0 and not any(_st2[k] for k in ("btnPlay", "btnRestart", "btnLoop", "btnShare"))
+          and _st2["scrub"] == "false", str(_st2))
+
     # A HOST WITH ACCOUNTS: data-skribl-me set means the listing's author
     # filter, and the browser's list is ignored. The attribute is what the
     # server renders from create_blueprint(current_user_id=...) — pinned on

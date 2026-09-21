@@ -9163,3 +9163,85 @@ two shapes -- its own assertion, because the page's own canvas rule could lose
 it there alone). Calibrated per component: four mutations -- a definite CSS
 width, the JS setting the CSS size again, the page's canvas rule restored, the
 compositor deriving its own scale -- each red on its own pins and nowhere else.
+
+## Unsealed, on top of v304 -- the pre-seal audit of the gallery and the profile (v305 when sealed)
+
+The owner packaged the post-v304 tree for the outside auditor before sealing,
+with a handover note saying what the archives were and which check would not
+reconcile. The verdict: **do not seal yet.** The letterbox correction and its
+replacement test were accepted -- "materially better than the old hardcoded ink
+floor" -- and the new Gallery and Library surfaces carried six findings, two of
+them gating. All six were confirmed in source before anything was changed.
+
+**PRESEAL-001, THE GALLERY DROPPED THE PERSON'S LATEST INTENT.** `load()` began
+with `if (loading) return`. Tapping Hot, or typing, while a listing was in
+flight set `sort`/`query` and then threw the reload away, and nothing re-issued
+it when the first request settled: the grid rendered the OLD answer under a bar
+that said Hot, or under a search term it had never sent. Only paging is guarded
+now, against a double tap on Load more; a reset always goes, and a generation
+token means a superseded response cannot touch the grid, the cursor or the
+loading flag. The auditor was right that the existing assertions could not
+reach this: they wait more than a second between actions. The new one holds the
+first listing open with a route until the tab has been clicked.
+
+**PRESEAL-002, BOTH COPY BUTTONS REPORTED SUCCESS THEY HAD NOT HAD.** The
+stage's ran its "Link copied" handler as BOTH arms of `.then()`, and again when
+there was no Clipboard API at all. The row's ran after
+`try { document.execCommand('copy') }`, which does not throw when it merely
+returns false -- so the fallback the auditor credited the row with was itself
+reporting failures as successes. `lib/postedui.js` owns one `copyText()` now
+that resolves true only when the text arrived, and both callers say what
+happened, in the button and in the live region.
+
+**PRESEAL-003, VIEW ROWS OUTLIVED THE WINDOW THEY SERVE.** `skribl_views` holds
+one pseudonymous row per (post, client hash, UTC day) so Hot can rank the last
+seven days. Nothing removed them: they cascaded away with the post and not
+before, so a live post accumulated a viewing history for its whole life while
+the product read a week of it. `views_total` already carried the lifetime
+figure, so the old rows were not the count. Keeping them was not a decision,
+it was the absence of one; this is the decision. `skribl/views.py` purges past
+`SKRIBL_VIEW_RETENTION_DAYS` (default 10), bounded by
+`SKRIBL_VIEW_CLEANUP_BATCH`, and **never inside `HOT_DAYS` whatever a host
+configures** -- a shorter retention must cost a shorter retention, not a
+ranking quietly reading rows deleted underneath it. `HOT_DAYS` moved to
+`skribl/core.py` so the purge cannot drift from the window it must not cross.
+Two callers: `purge_views()` for a host to schedule, beside `sweep_orphans`,
+flushing and never committing like every other write here; and an opportunistic
+bounded call on the request that WRITES a view, so the work is proportional to
+plays rather than page loads and a deployment that schedules nothing still does
+not accumulate. Swallowed on purpose, as the rate limiter's janitor is.
+
+**PRESEAL-004/005/006, the three cheap ones, all real.** The takedown CLI
+printed report notes and post titles into an operator's shell with C0/C1
+control characters intact -- not command execution, but an operator reading a
+queue is exactly the reader who must be able to trust the screen, and a newline
+inside a note could open a line that forges the next entry. Both are rendered
+inert now, the stored text untouched. The profile's transport was enabled
+before any payload existed and did nothing when pressed; Loop was the clearest,
+toggling its own pressed state to report a change it had not made. And the
+gallery's box said "Search titles" while the server has always matched title
+and caption, so the wider half of the feature was invisible.
+
+**WHAT THE AUDIT DID NOT SAY, AND THE READ FOUND.** The row's copy fallback was
+credited as the correct implementation to reuse; it had the same defect in a
+different shape. Worth recording because the finding was right and its premise
+was not, and copying the "good" one would have carried the bug across.
+
+**AND TWO INSTRUMENTS CAUGHT THEMSELVES.** The first clipboard stub was an
+arrow function handed to `add_init_script`, which evaluates source and never
+calls it, so the stub silently did not apply -- it surfaced as a red assertion
+on a correct tree rather than a green one on a broken tree. The first
+calibration script read the bootstrap database out of a log its own restart
+rewrites, got `None`, and crashed AFTER applying a mutation, leaving a mutated
+source file on disk. It restores in a `finally` now. A calibration script that
+can leave the tree mutated is a worse hazard than the defect it is measuring.
+
+Pins: `verify_hot` 47/47 (the race on both the tab and the box; retention on
+all three halves -- old rows gone, recent rows kept, `views_total` unmoved --
+plus the Hot floor clamping a short retention and a long one still honoured,
+and the batch bound; the placeholder's words tied to a caption-only search
+driven through the box), `verify_library` 92/92 (the clipboard refusing and
+accepting; the transport dead when nothing is on the stage and live once
+something is), `verify_posted` 122/122, `verify_takedown` 49/49 (asserted on
+the BYTES of the output, not the absence of a word). Calibrated per component:
+seven mutations, each red on its own pins and nowhere else.
