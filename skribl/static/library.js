@@ -81,6 +81,22 @@
   var btnMute = document.getElementById('btnMute');
   var btnShare = document.getElementById('btnShare');
 
+  /* THE TRANSPORT IS DEAD UNTIL SOMETHING IS ON THE STAGE (PRESEAL-005).
+     Play, Restart, Loop and Copy link were enabled from the first paint and
+     silently did nothing; Loop even toggled its own pressed state, which is a
+     control reporting a change it did not make. They come alive when a
+     payload has been adopted. Mute is not in this list: refresh() owns it,
+     because whether it means anything depends on the drawing having sound. */
+  function transportLive(on) {
+    [btnPlay, btnRestart, btnLoop, btnShare].forEach(function (b) {
+      if (b) b.disabled = !on;
+    });
+    if (scrub) {
+      scrub.setAttribute('aria-disabled', String(!on));
+      scrub.classList.toggle('inert', !on);
+    }
+  }
+
   var items = [];          /* every row loaded so far, newest first */
   var cursor = null;       /* the keyset cursor for the next page */
   var current = null;      /* the item on the stage */
@@ -146,6 +162,7 @@
         } else {
           player.adopt(payload);
         }
+        transportLive(true);
         refresh();
       })
       .catch(function () {
@@ -177,6 +194,8 @@
   }
 
   tick = setInterval(refresh, 100);
+  transportLive(false);
+  if (btnMute) btnMute.disabled = true;
 
   btnPlay.addEventListener('click', function () { if (player) { player.toggle(); refresh(); } });
   btnRestart.addEventListener('click', function () {

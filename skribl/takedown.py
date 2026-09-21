@@ -67,6 +67,23 @@ EXIT_OK = 0
 EXIT_NO_SUCH_POST = 1
 
 
+def _plain(text):
+    """User-controlled text, rendered inert for a terminal (PRESEAL-004).
+
+    A report note and a post title are typed by whoever filed or made them,
+    and this command prints them into an operator's shell. C0/C1 control
+    characters there can move the cursor, repaint the line or hide what
+    follows -- not command execution, but an operator reading a queue is
+    exactly the reader who must be able to trust what is on the screen. Every
+    control character becomes a visible dot, and the stored text is untouched.
+
+    Tabs and newlines go too: this is a one-line-per-row listing, and a note
+    that can open new lines can forge a second entry.
+    """
+    return "".join(ch if (ch >= " " and ch != "\x7f") and not ("\x80" <= ch <= "\x9f")
+                   else "." for ch in str(text or ""))
+
+
 def _die(message):
     print(f"skribl.takedown: {message}", file=sys.stderr)
     raise SystemExit(EXIT_CANNOT_RUN)
@@ -177,10 +194,10 @@ def main(argv=None, out=sys.stdout):
                 why = ", ".join(f"{k} x{v}" for k, v in sorted(reasons.items()))
                 print(f"  {post.public_id}  {post.visibility}  "
                       f"{len(rows)} report(s)  {why}  latest {rows[0].created_at}\n"
-                      f"    title : {post.title or '(untitled)'}", file=out)
+                      f"    title : {_plain(post.title) or '(untitled)'}", file=out)
                 for r in rows:
                     if r.note:
-                        print(f"    note  : {r.note}", file=out)
+                        print(f"    note  : {_plain(r.note)}", file=out)
             if groups:
                 print("\nAct on one with:\n"
                       "  python -m skribl.takedown <public-id> --visibility private\n"
