@@ -310,6 +310,78 @@ finally:
 with host.app_context():
     db.session.rollback()
 
+print("\nEXT-P1 — the effective request cap, and gzip that means one member")
+# EXT-P1-5. _request_limit returned `MAX_CONTENT_LENGTH or <env>`, which is
+# PRECEDENCE, not a limit. app.py always sets MAX_CONTENT_LENGTH, so in the
+# standalone app an operator who configured SKRIBL_MAX_REQUEST_BYTES got their
+# number ignored with no warning. The lower of the two wins now -- but only
+# where both were chosen, which is the half that keeps this from breaking
+# hosts: min() against this function's own 25 MB DEFAULT would silently cap
+# every deployment that deliberately set a larger MAX_CONTENT_LENGTH.
+# A LARGE BUT VALID BODY, AND 413 EXACTLY. The first draft of this probe was a
+# 20,000-character caption, which the column refuses at 300 -- so the request
+# was rejected by VALIDATION and the assertion passed identically whether the
+# size cap had been consulted or not. It survived reverting the fix, which is
+# how it was caught. The payload is real stroke points now, and the assertion
+# names the status only the size bound produces: a 400 from any validator can
+# no longer stand in for it.
+_pts = [{"x": 10 + i, "y": 20 + (i % 97), "color": "#26b0ff", "size": 4,
+         "t": i * 7} for i in range(400)]
+_probe = _json.dumps({"frames": [{"strokes": _pts,
+                                  "strokeGroups": [len(_pts)]}]}).encode()
+host.config["MAX_CONTENT_LENGTH"] = 25_000_000
+os.environ["SKRIBL_MAX_REQUEST_BYTES"] = "4096"
+try:
+    check("the probe is real: over the Skribl cap, well under the host's",
+          4096 < len(_probe) < 25_000_000, f"{len(_probe)} bytes")
+    r = host.test_client().post("/api/skribls", data=_probe,
+                                headers={"Content-Type": "application/json"})
+    check("EXT-P1-5: a SMALLER SKRIBL_MAX_REQUEST_BYTES is honoured under a "
+          "larger MAX_CONTENT_LENGTH",
+          r.status_code == 413,
+          f"{r.status_code} — 413 is the size bound refusing. 201 means the "
+          f"configured cap was ignored, which is what precedence did; a 400 "
+          f"would mean some validator refused it and this proved nothing")
+finally:
+    del os.environ["SKRIBL_MAX_REQUEST_BYTES"]
+with host.app_context():
+    db.session.rollback()
+
+# ...AND THE OTHER DIRECTION, which is the one a naive min() breaks: with the
+# environment variable UNSET, a host that raised MAX_CONTENT_LENGTH must not be
+# cut back to Skribl's default.
+host.config["MAX_CONTENT_LENGTH"] = 30_000_000
+with host.test_request_context():
+    from skribl.security import resolve_request_limit as _rl   # noqa: E402
+    _unset = _rl(host.config.get("MAX_CONTENT_LENGTH"))
+check("EXT-P1-5: an UNSET Skribl cap does not clamp a host that raised its own",
+      _unset == 30_000_000,
+      f"{_unset} — 25,000,000 here would mean Skribl's default had quietly "
+      f"become a ceiling on every host")
+host.config["MAX_CONTENT_LENGTH"] = 25_000_000
+
+# EXT-P1-6. zlib's eof says the FIRST gzip member ended; anything after it sat
+# in unused_data and was dropped in silence, so a two-member body had its
+# second half ignored behind a 2xx. Sender and server disagreeing about what
+# was posted is the shape request smuggling takes.
+_one = _gzip.compress(_json.dumps({"frames": [FRAME], "caption": "a"}).encode(), 9)
+_two = _one + _gzip.compress(_json.dumps({"frames": [FRAME], "caption": "b"}).encode(), 9)
+_r1 = host.test_client().post("/api/skribls", data=_one,
+                              headers={"Content-Type": "application/json",
+                                       "Content-Encoding": "gzip"})
+check("the probe is real: one member alone is still accepted",
+      _r1.status_code == 201, f"{_r1.status_code}")
+_r2 = host.test_client().post("/api/skribls", data=_two,
+                              headers={"Content-Type": "application/json",
+                                       "Content-Encoding": "gzip"})
+check("EXT-P1-6: concatenated gzip members are refused, not half-read",
+      _r2.status_code == 400,
+      f"{_r2.status_code} — a 201 here means the second member was discarded "
+      f"and the request answered as though it had been read")
+with host.app_context():
+    db.session.rollback()
+
+
 print("\nFAIL CLOSED — auth configured without CSRF now REFUSES to build")
 # v224, outside review #4. This used to log a warning. A warning is the wrong
 # instrument for this: `current_user_id` plus cookie authentication and no CSRF

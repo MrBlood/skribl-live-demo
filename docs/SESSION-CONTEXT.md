@@ -148,7 +148,8 @@ next. Two surfaces sharing a fix may need different assertions; CLAUDE.md
 records why.
 
 **Commit with an explicit file list, push, open a pull request, quote the
-suite runs in it, squash-merge.** Pull requests run the smoke job only; the
+suite runs in it, squash-merge.** Pull requests run the smoke job, which is the boot suite plus the
+browserless/serverless suites (EXT-P1-9); the
 push to `main` runs the full three-job battery, and Render deploys `main`. The
 branch the session was given is reused across pull requests.
 
@@ -207,7 +208,7 @@ satisfied it, with the mechanics the rule leaves out.
    the list, read it rather than retype it. Check with
    `python3 harness/stamp_docs.py --check`. **Do not run `run_harness.sh`
    after this.**
-7. Pull request, wait for the smoke job, squash-merge pinned to the head, and
+7. Pull request, wait for the smoke job (boot + the source suites), squash-merge pinned to the head, and
    the push to `main` runs the full battery and deploys.
 
 Getting step 5 wrong costs either a re-run or a sealed record that contradicts

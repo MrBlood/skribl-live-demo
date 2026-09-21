@@ -63,7 +63,7 @@ concurrency:
 
 jobs:
   smoke:
-    name: smoke (boot suite)
+    name: smoke (boot + source suites)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -77,24 +77,47 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r constraints.txt --require-hashes
-          pip install playwright Pillow
+          # The harness's OWN bounds, not whatever is newest (EXT-P1-10).
+          # This was `pip install playwright Pillow`, which ignored
+          # harness/requirements.txt -- the file that exists because
+          # playwright's version is coupled to a Chromium build number
+          # on disk, and pins a deliberately narrow range for it.
+          pip install -r harness/requirements.txt
       - name: Install Chromium
         run: python -m playwright install --with-deps chromium
-      - name: Run the boot suite
-        run: ./harness/run_harness.sh verify_boot.py
-      # Same hole as the sqlite job had, one suite wide: run_harness.sh exits 0
-      # on a skip, so a browser that failed to install would leave this job
-      # green having booted nothing. No lane is designed to skip here, so the
-      # guard is the simple one.
-      - name: Fail if the boot suite only SKIPPED
+      # THE PR GATE IS MORE THAN A BOOT NOW (EXT-P1-9). It was verify_boot
+      # alone, with the full battery running only AFTER merge -- and this
+      # repository's own history records fixtures going red on main that no
+      # pull request had a chance to catch (three of them in v304, red on
+      # every push since #183). The suites below need no browser and no
+      # server, so they cost about a minute for ~765 assertions: measured at
+      # 59s locally, against ~45 minutes for the full sqlite job. That ratio
+      # is the whole argument. Browser and timing suites stay on the
+      # post-merge run, where a slow job costs nobody's attention.
+      #
+      # ADD A SUITE HERE ONLY IF IT NEEDS NEITHER. One that quietly wants the
+      # shared server passes locally and fails here, and a PR gate that cries
+      # wolf gets ignored, which is worse than not having one.
+      - name: Run the boot and source suites
+        run: |
+          ./harness/run_harness.sh \
+            verify_boot.py verify_docs.py verify_seam.py \
+            verify_txcontract.py verify_privacy.py verify_migrations.py \
+            verify_createpost.py verify_sweepjob.py verify_deletion.py \
+            verify_backfill.py verify_hostseams.py
+      # run_harness.sh exits 0 on a skip, so a suite that quietly declined to
+      # run would leave this job green having proved nothing. None of these is
+      # designed to skip, so ANY skip is a failure -- the guard is generalised
+      # from the single-suite version it replaces rather than naming one file.
+      - name: Fail if any of them only SKIPPED
         run: |
           set -eu
-          if grep -qE '^  verify_boot\.py: SKIPPED' harness/LAST-RUN.txt; then
-            echo "::error::verify_boot.py skipped; this job proved nothing" >&2
-            grep -E '^  verify_boot' harness/LAST-RUN.txt >&2 || true
+          if grep -qE '^  verify_[a-z_]+\.py: SKIPPED' harness/LAST-RUN.txt; then
+            echo "::error::a PR-gate suite skipped; this job proved less than it looks" >&2
+            grep -E ': SKIPPED' harness/LAST-RUN.txt >&2 || true
             exit 1
           fi
-          echo "the boot suite ran"
+          echo "every PR-gate suite ran"
 
   sqlite:
     name: harness (sqlite)
@@ -123,7 +146,12 @@ jobs:
           # app.py. Pillow backs verify_cssplit's pixel gate, and that suite
           # exits 1 rather than SKIPping when it is missing, so leaving it out
           # fails the job rather than degrading it.
-          pip install playwright Pillow
+          # The harness's OWN bounds, not whatever is newest (EXT-P1-10).
+          # This was `pip install playwright Pillow`, which ignored
+          # harness/requirements.txt -- the file that exists because
+          # playwright's version is coupled to a Chromium build number
+          # on disk, and pins a deliberately narrow range for it.
+          pip install -r harness/requirements.txt
       - name: Install Chromium
         # --with-deps pulls the system libraries headless Chromium needs;
         # without it the browser launches and dies on a missing shared object.
@@ -224,7 +252,12 @@ jobs:
           # app.py. Pillow backs verify_cssplit's pixel gate, and that suite
           # exits 1 rather than SKIPping when it is missing, so leaving it out
           # fails the job rather than degrading it.
-          pip install playwright Pillow
+          # The harness's OWN bounds, not whatever is newest (EXT-P1-10).
+          # This was `pip install playwright Pillow`, which ignored
+          # harness/requirements.txt -- the file that exists because
+          # playwright's version is coupled to a Chromium build number
+          # on disk, and pins a deliberately narrow range for it.
+          pip install -r harness/requirements.txt
       - name: Install Chromium
         run: python -m playwright install --with-deps chromium
       - name: Create the empty database verify_postgres migrates into
@@ -374,7 +407,12 @@ jobs:
           # app.py. Pillow backs verify_cssplit's pixel gate, and that suite
           # exits 1 rather than SKIPping when it is missing, so leaving it out
           # fails the job rather than degrading it.
-          pip install playwright Pillow
+          # The harness's OWN bounds, not whatever is newest (EXT-P1-10).
+          # This was `pip install playwright Pillow`, which ignored
+          # harness/requirements.txt -- the file that exists because
+          # playwright's version is coupled to a Chromium build number
+          # on disk, and pins a deliberately narrow range for it.
+          pip install -r harness/requirements.txt
       - name: Install Chromium and real Chrome
         # chromium serves the app for every other suite; chrome supplies the
         # H.264 encoder that Chromium does not ship, which is why the MP4 happy

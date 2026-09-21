@@ -258,9 +258,15 @@ how a real spending question gets waved through with the rest.
 
 ## CI economics — turnaround, not money
 
-Pull requests run only the smoke job; the full three-job harness runs on
-pushes to main and manual dispatch. The full suites run locally before
-every push — that is what makes the PR-side trim safe.
+Pull requests run the smoke job, which since EXT-P1-9 is the boot suite PLUS
+every suite that needs neither a browser nor the shared server — about 765
+assertions in roughly a minute. The full three-job harness still runs on
+pushes to main and manual dispatch. The full suites run locally before every
+push; that, and now the PR gate, is what makes the post-merge trim safe.
+
+Add a suite to that gate only if it needs neither a browser nor a server. One
+that quietly wants the shared server passes locally and fails there, and a PR
+gate that cries wolf gets ignored — which is worse than not having one.
 
 **The trim's justification is WALL-CLOCK, not cost.** Three jobs at 40-90
 minutes each is a long time to sit on a pull request, and free minutes are

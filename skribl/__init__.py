@@ -305,7 +305,17 @@ def create_blueprint(session=None, url_prefix=None,
                                   "caption": MAX_CAPTION_CHARS},
                 # The two grounds _skribl_app_identity.html stamps on its
                 # theme-color meta (SK-AUD-013).
-                "skribl_theme_ground": THEME_GROUND}
+                "skribl_theme_ground": THEME_GROUND,
+                # WHETHER ANYBODY IS SIGNED IN, so copy can stop describing the
+                # wrong ownership model (EXT-P1-13). The help drawer explained
+                # that Your Skribls is what this browser posted and that Delete
+                # works because this browser holds the key -- true standalone,
+                # false the moment a host signs somebody in, where the posts
+                # are the ACCOUNT'S and survive clearing site data. A boolean,
+                # not the id: templates only ever need to pick which sentence
+                # is true, and putting a user id into every rendered page is a
+                # disclosure nothing here asks for.
+                "skribl_signed_in": bp.skribl_current_user_id() is not None}
     register_routes(bp, index_route=index_route)
     register_security(bp, SKRIBL_VERSION, player_target=player_target)
     return bp

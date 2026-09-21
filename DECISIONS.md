@@ -9368,3 +9368,92 @@ One regression came out of it, found by an existing suite: `verify_storage`'s
 that AttributeError as "no claims". Failing closed turned it into a skipped
 delete. The double was taught to say what is true of it -- no database, so no
 claims table -- rather than the production guard being loosened to accept it.
+
+## Unsealed, on top of v305 -- the external audit's P1 tier
+
+Seven of the audit's ten P1 items, plus the two that needed the owner's call.
+
+**EXT-P1-4, views_total lost updates.** `post.views_total = (post.views_total
+or 0) + 1` reads the value into Python and writes back a number computed from
+a snapshot. The uniqueness row stops ONE viewer being counted twice; it does
+nothing about two DIFFERENT viewers interleaving, which is what a popular post
+gets. The database does the addition now.
+
+The pin is asserted on the SQL the route emits, and that was the second
+attempt. The first staged the stale read directly -- session A reads, B
+commits underneath, A writes -- and SQLite refused it outright ("database is
+locked"), because the scenario needs two concurrent writers and SQLite has
+one. Threads would have made it a test that fails once a month on somebody
+else's machine. The emitted statement is not a proxy for the mechanism: a
+read-modify-write can only produce `SET views_total=?`, and an atomic
+increment can only name the column on both sides.
+
+**EXT-P1-5, a cap that was advice.** `_request_limit` returned
+`MAX_CONTENT_LENGTH or <env>`, which is precedence, not a limit; app.py always
+sets MAX_CONTENT_LENGTH, so an operator who configured
+SKRIBL_MAX_REQUEST_BYTES to 1 MB got 25 MB and no warning. The lower of the
+two wins now -- **but only where both were chosen**, and that half matters as
+much as the fix: min() against this function's own 25 MB default would turn
+Skribl's default into a silent ceiling on every host that deliberately raised
+MAX_CONTENT_LENGTH, breaking working deployments in order to honour a variable
+nobody set. The audit asked for min(); min() alone would have been a
+regression.
+
+**The probe for it was vacuous and the calibration is what said so.** The
+first version posted a 20,000-character caption, which the column refuses at
+300 -- so the request was rejected by VALIDATION and the assertion passed
+identically whether the size cap had been consulted or not. Reverting the fix
+left it green. It posts a large VALID body now and asserts 413 exactly, the
+status only the size bound produces. A 400 can no longer stand in for it.
+
+**EXT-P1-6, gzip.** zlib's `eof` says the FIRST member ended; anything after
+it sat in `unused_data` and was dropped in silence, so a two-member body had
+its second half ignored behind a 201. Sender and server disagreeing about what
+was posted is the shape request smuggling takes. Refused now.
+
+**EXT-P1-12, an author could not find their own work.** The own-listing filter
+was `("public", "private")`, under a comment reasoning that unlisted posts
+"stay out of listings entirely". True of PUBLIC listings, false of the page
+that answers "what have I made". Unlisted is the default, so the signed-in
+profile hid nearly everything its owner had. It also split the product in two:
+with no accounts, "Your Skribls" has always included unlisted, because they
+are yours. Both modes answer the same way now; nothing widened for anybody
+else, and the other-viewer and anonymous cases are driven rather than assumed.
+
+**EXT-P1-13, copy describing the wrong ownership model.** The help drawer
+explained that Your Skribls is what this browser posted and that Delete works
+because this browser holds the key. Every clause is false once a host signs
+somebody in -- the posts belong to the account, they survive clearing site
+data, and there is no key to keep safe. Two sentences now, chosen by
+`skribl_signed_in` from the blueprint's context processor. Pinned on BOTH
+editors in BOTH modes: a shared include rendered under two identities is two
+instances until each has been driven.
+
+**EXT-P1-10, CI installed whatever was newest.** `pip install playwright
+Pillow`, ignoring harness/requirements.txt -- the file that exists because
+playwright's version is coupled to a Chromium build number on disk and pins a
+deliberately narrow range for it. All four jobs install from that file now.
+
+**EXT-P1-11, the gunicorn ceiling (owner's call, taken).** `<24.0` was written
+when 23 was current; gunicorn is at 26.2.0, so the ceiling had become a
+three-major freeze on the one process facing the internet. Tested before it
+moved: 26.2.0 migrated with `alembic upgrade head` and served Pad, Flip, the
+gallery, the library, the feed, the API, a posted Skribl's player and a
+gzipped POST, on two workers, with nothing in the log. Ceiling raised to
+`<27.0` and the hashed lock regenerated. Gunicorn 26 opens a control socket at
+`$HOME/.gunicorn/gunicorn.ctl`; the owner chose to keep the default.
+
+**EXT-P1-9, the PR gate (owner's call, taken).** Pull requests ran verify_boot
+alone while the full battery ran only after merge -- and this repository's own
+history records fixtures going red on main that no pull request could have
+caught. The smoke job now runs every suite needing neither a browser nor the
+shared server: 765 assertions, measured at 59 seconds locally, against ~45
+minutes for the full sqlite job. That ratio is the argument. Browser and
+timing suites stay post-merge, where a slow job costs nobody's attention.
+
+**Not done, and why.** EXT-P1-7 (reseal the exact delivered artifact) is a
+seal, and this tier is unsealed by definition; it resolves when v306 is
+sealed. EXT-P1-8 (physical iPhone, VoiceOver, NVDA results) cannot be produced
+from this container at all -- it needs the owner's hands on real devices, and
+recording anything else would be inventing evidence, which is the one thing
+this tree's whole apparatus exists to prevent.

@@ -376,6 +376,63 @@ if have_db:
         purge_views(_s)
         _s.commit()
 
+# ------------------------------------------------------------------ section 8
+# EXT-P1-4: views_total is incremented BY THE DATABASE, not read-modify-write.
+#
+# The uniqueness row stops ONE viewer being counted twice. It does nothing
+# about two DIFFERENT viewers whose requests interleave, and those are exactly
+# the requests a popular post gets: both read N, both write N+1, one play
+# vanishes. Silent, permanent, worst on the posts that matter most, and Hot
+# ranks on this column.
+#
+# ASSERTED ON THE SQL THE ROUTE EMITS, for two reasons. A race reproduced by
+# threads is a test that fails once a month on somebody else's machine and
+# teaches people to re-run it; and staging the stale read directly needs two
+# concurrent writers, which SQLite refuses outright ("database is locked") --
+# the first attempt at this pin died there. The emitted statement is not a
+# proxy for the mechanism, it IS the mechanism: read-modify-write can only
+# produce `SET views_total=?` with the number computed in Python, and an
+# atomic increment can only produce a SET whose right-hand side names the
+# column. Nothing about the wording of the source is consulted.
+if have_db:
+    print("\n8. views_total is incremented by the database")
+    from sqlalchemy import event as _ev                           # noqa: E402
+
+    _rid = post("lost update probe")
+    _stmts = []
+
+    with _app.app_context():
+        _eng = session().get_bind()
+
+        def _spy(conn, cursor, statement, params, context, executemany):
+            if "skribl_posts" in statement and statement.lstrip()[:6].upper() == "UPDATE":
+                _stmts.append(statement)
+
+        _ev.listen(_eng, "before_cursor_execute", _spy)
+        try:
+            _c = _app.test_client()
+            _c.get(f"/api/skribls/{_rid}",
+                   environ_overrides={"REMOTE_ADDR": "203.0.113.77"})
+        finally:
+            _ev.remove(_eng, "before_cursor_execute", _spy)
+
+    _views_updates = [x for x in _stmts if "views_total" in x]
+    check("the probe is real: the view actually counted, so an UPDATE ran",
+          len(_views_updates) >= 1,
+          f"{len(_stmts)} post UPDATEs, {len(_views_updates)} touching "
+          f"views_total — with none, the assertion below is vacuous")
+    # The SET's right-hand side must name the column. `SET views_total=?` is
+    # the read-modify-write signature; the atomic form cannot be written
+    # without mentioning views_total twice in the same statement.
+    _atomic = [x for x in _views_updates
+               if re.search(r"SET\s+views_total\s*=\s*[^,]*views_total", x, re.I)]
+    check("EXT-P1-4: the increment names the column on BOTH sides of the SET",
+          len(_atomic) == len(_views_updates) and _atomic,
+          f"{len(_atomic)}/{len(_views_updates)} atomic. A SET whose value is "
+          f"a bound parameter was computed in Python from a snapshot, and two "
+          f"interleaved viewers then write the same number: "
+          f"{(_views_updates or ['<none>'])[0][:140]}")
+
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")
 sys.exit(0 if passed == len(results) else 1)
