@@ -571,6 +571,55 @@ with sync_playwright() as sp:
               _m and _m["w"] <= _m["bw"] + 1 and _m["h"] <= _m["bh"] + 1,
               f"{_m['w']}x{_m['h']} in {_m['bw']}x{_m['bh']}" if _m else "no canvas on the stage")
 
+    # ---- COPY LINK SAYS WHAT HAPPENED (PRESEAL-002) ------------------------
+    #
+    # The stage's button ran its "Link copied" handler as BOTH arms of
+    # .then(), and again when there was no Clipboard API at all, so a refused
+    # copy was reported as a completed one -- the person walks away believing
+    # they hold a link they do not. Driven with the clipboard REFUSING and the
+    # execCommand fallback returning false, which is the state a locked-down
+    # browser or an insecure context actually presents.
+    print("\nLIBRARY — Copy link does not claim a copy that did not happen")
+    for _case, _stub, _want_ok in (
+        # STATEMENTS, NOT AN ARROW FUNCTION. add_init_script evaluates the
+        # source; an arrow function is an expression that is never called, so
+        # the stub silently does not apply and the real clipboard answers.
+        # Caught here by the assertion going red on a tree that was correct.
+        ("the clipboard refuses and the fallback fails",
+         """Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: function () { return Promise.reject(new Error('denied')); } },
+            configurable: true });
+          document.execCommand = function () { return false; };""", False),
+        ("the clipboard accepts",
+         """window.__copied = null;
+          Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: function (t) { window.__copied = t; return Promise.resolve(); } },
+            configurable: true });""", True)):
+        _cp = ctx.new_page()
+        _cp.set_viewport_size({"width": 1280, "height": 1000})
+        _cp.add_init_script(_stub)
+        browsing.goto(_cp, BASE, "/library")
+        _cp.wait_for_timeout(2000)
+        _cp.click("#btnShare")
+        _cp.wait_for_timeout(900)
+        _said = _cp.evaluate("""() => ({
+            title: document.getElementById('btnShare').title,
+            label: document.getElementById('btnShare').getAttribute('aria-label'),
+            live: (document.getElementById('postedStatus') || {}).textContent || '',
+            copied: window.__copied || null })""")
+        _cp.close()
+        if _want_ok:
+            check(f"when {_case}, it says the link is copied — and it really was",
+                  "copied" in _said["title"].lower() and bool(_said["copied"]), str(_said))
+        else:
+            check(f"when {_case}, it does NOT say the link is copied",
+                  "link copied" not in _said["title"].lower()
+                  and "link copied" not in _said["label"].lower(), str(_said))
+            # ...AND SAYS SO OUT LOUD. A button that silently does nothing is
+            # the same dead end from a screen reader's side.
+            check("...and the failure reaches the live region",
+                  "couldn't copy" in _said["live"].lower(), str(_said))
+
     # A HOST WITH ACCOUNTS: data-skribl-me set means the listing's author
     # filter, and the browser's list is ignored. The attribute is what the
     # server renders from create_blueprint(current_user_id=...) — pinned on

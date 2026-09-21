@@ -220,6 +220,66 @@ with sync_playwright() as sp:
     check("no match shows 'nothing matches', not the empty gallery", none["none"] and not none["empty"] and none["tiles"] == 0, str(none))
     check("no page errors", not errs, "; ".join(errs[:2]))
     pg.close()
+
+    # ---- THE LATEST INTENT WINS (PRESEAL-001) ---------------------------
+    #
+    # gallery.js used to begin load() with `if (loading) return`. Tapping Hot,
+    # or typing, while a listing was still in flight set sort/query and then
+    # threw the reload away, and nothing re-issued it when the first request
+    # settled: the grid rendered the OLD answer under a bar saying Hot. On a
+    # slow phone that is the ordinary case, not a rare one.
+    #
+    # DRIVEN AT THE RACE, not near it: the first listing is held open by the
+    # route until the tab has been clicked, so the click lands while the
+    # request really is pending. The suite's other gallery assertions wait
+    # ~1.2s between actions and cannot reach this.
+    print("\nHOT 5b — a tab or a search during an in-flight request is not dropped")
+    for _what, _act, _wanted in (
+            ("the Hot tab", lambda q: q.click('.tab[data-sort="hot"]'), "sort=hot"),
+            ("a search", lambda q: q.fill("#galleryQ", "beta fish"), "q=beta")):
+        rp = br.new_page(viewport={"width": 1280, "height": 900})
+        seen, held = [], {"done": False}
+        rp.on("request", lambda rq: seen.append(rq.url) if "/api/skribls?" in rq.url else None)
+
+        def _hold(route):
+            # Hold ONLY the first listing, and let it go after the click.
+            if held["done"]:
+                route.continue_()
+                return
+            held["done"] = True
+            for _ in range(60):
+                if held.get("release"):
+                    break
+                rp.wait_for_timeout(100)
+            route.continue_()
+        rp.route(re.compile(r"/api/skribls\?"), _hold)
+        rp.goto(BASE + "/gallery", wait_until="commit")
+        # The page is up but the listing is still open: act now.
+        rp.wait_for_selector('.tab[data-sort="hot"]', timeout=15000)
+        _act(rp)
+        held["release"] = True
+        rp.wait_for_timeout(2500)
+        _sent = [u for u in seen if _wanted in u]
+        check(f"{_what} during a pending request is actually sent",
+              bool(_sent), f"requests: {seen}")
+        _state = rp.evaluate("""() => ({
+            hot: (document.querySelector('.tab[data-sort="hot"]') || {}).getAttribute
+                 ? document.querySelector('.tab[data-sort="hot"]').getAttribute('aria-pressed') : null,
+            q: (document.getElementById('galleryQ') || {}).value,
+            titles: [...document.querySelectorAll('#galleryList .tile .tt')].map(t => t.textContent) })""")
+        # AND THE GRID AGREES WITH THE BAR. Asserting only that the request
+        # went would pass on a page that issued it and then rendered the
+        # stale response over the top.
+        if _wanted == "sort=hot":
+            _st, _srv = listing(sort="hot", limit=3)
+            check("...and the grid is the Hot answer, not the stale one",
+                  _state["titles"][:1] == titles(_srv)[:1],
+                  f"page {_state['titles'][:1]} vs server {titles(_srv)[:1]}")
+        else:
+            check("...and the grid holds only what the search asked for",
+                  bool(_state["titles"]) and all("beta fish" in t.lower() for t in _state["titles"]),
+                  f"q={_state['q']!r} -> {_state['titles']}")
+        rp.close()
     br.close()
 
 # ------------------------------------------------------------------ section 6

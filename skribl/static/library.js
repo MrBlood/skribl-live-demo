@@ -198,14 +198,27 @@
   btnShare.addEventListener('click', function () {
     if (!current) return;
     var url = location.origin + playerBase + '/' + current.id;
-    var done = function () {
-      var t = btnShare.title;
-      btnShare.title = 'Link copied';
-      setTimeout(function () { btnShare.title = t; }, 1400);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(done, done);
-    } else { done(); }
+    /* SAYS WHAT HAPPENED (PRESEAL-002). This ran its "Link copied" handler as
+       BOTH arms of .then(), and again when there was no Clipboard API at all,
+       so a refused copy was reported as a completed one. lib/postedui.js owns
+       the one copy implementation and answers whether the text got there. */
+    var rest = 'Copy link';
+    function say(msg) {
+      btnShare.title = msg;
+      btnShare.setAttribute('aria-label', msg);
+      var live = document.getElementById('postedStatus');
+      if (live) live.textContent = msg;
+      clearTimeout(btnShare._t);
+      btnShare._t = setTimeout(function () {
+        btnShare.title = rest;
+        btnShare.setAttribute('aria-label', rest);
+      }, 1600);
+    }
+    var copier = window.SkriblPostedUI && window.SkriblPostedUI.copyText;
+    if (!copier) { say("Couldn't copy the link"); return; }
+    copier(url).then(function (ok) {
+      say(ok ? 'Link copied' : "Couldn't copy the link");
+    });
   });
 
   /* ---- full screen -------------------------------------------------------

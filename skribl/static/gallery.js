@@ -28,6 +28,9 @@
   var query = '';          /* the search box's words, sent as q */
   var noneEl = document.getElementById('galleryNone');
   var subEl = document.getElementById('gallerySub');
+  /* WHICH REQUEST IS STILL WANTED. Bumped by every load; a response may only
+     touch the page while its own number is still the current one. See load(). */
+  var gen = 0;
 
   function when(iso) {
     if (!iso) return '';
@@ -102,7 +105,20 @@
      a retry after a response that failed mid-way must not double every row —
      and otherwise the page is appended after the cursor the last one gave. */
   function load(reset) {
-    if (loading) return;
+    /* A RESET IS THE PERSON'S LATEST INTENT AND IS NEVER DROPPED.
+     *
+     * This was `if (loading) return`, which discarded it: tapping Hot, or
+     * typing, while the first listing was still in flight set `sort`/`query`
+     * and then threw the reload away, and nothing re-issued it when the old
+     * request settled. The grid then rendered the OLD answer under a bar
+     * saying Hot, or under a search term it had never sent -- on a slow phone,
+     * routinely (PRESEAL-001 of the pre-v305 audit).
+     *
+     * So only PAGING is guarded here, against a double tap on Load more. A
+     * reset always goes, and the generation below makes the superseded
+     * response harmless. */
+    if (loading && !reset) return;
+    var myGen = ++gen;
     loading = true;
     errEl.hidden = true;
     empty.hidden = true;
@@ -121,6 +137,11 @@
         return r.json();
       })
       .then(function (body) {
+        /* SUPERSEDED: a newer load has started, so this answer describes a
+           sort or a search the person has already moved on from. Drop it
+           without touching the grid, the cursor or the loading flag -- the
+           newer request owns all three now. */
+        if (myGen !== gen) return;
         var items = (body && body.items) || [];
         for (var i = 0; i < items.length; i++) list.appendChild(tile(items[i]));
         if (items.length) window.SkriblInline.mount(list);
@@ -132,10 +153,14 @@
         if (noneEl) noneEl.hidden = list.children.length > 0 || !query;
       })
       .catch(function () {
+        if (myGen !== gen) return;
         errEl.hidden = false;
         more.hidden = true;
       })
       .then(function () {
+        /* The stale arm must not clear the flag either: the live request is
+           still running and would be left thinking nothing is in flight. */
+        if (myGen !== gen) return;
         loading = false;
         more.disabled = false;
       });
