@@ -439,6 +439,15 @@
      window.SkriblShareCard. The library page inherited the asset list rather
      than the requirement. Removed in v281; verify_library.py passes without
      it. #}
+  {# lib/photofit.js: WHERE A BACKGROUND PHOTO LANDS. This page loads the
+     in-post player's assets BY HAND rather than through skribl_inline_assets(),
+     so when photofit.js joined that macro this page silently did not get it --
+     inlineplayer.js fell back to a centred cover and the profile stage cropped
+     a photo the editor and /s/<id> both fitted. The owner reported it twice.
+     verify_library.py now asserts that every template loading inlineplayer.js
+     also loads this, because a hand-copied asset list is exactly the thing
+     that drifts. #}
+  <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
   <script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
   {# lib/posted.js: the list this browser kept of what it posted -- the
      profile's population when there are no accounts (v304; see the route). #}

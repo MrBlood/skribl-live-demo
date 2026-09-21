@@ -804,6 +804,39 @@ with sync_playwright() as sp:
 
     b.close()
 
+# ---------------------------------------------------------------------------
+# THE ASSET LIST THIS PAGE COPIED BY HAND, and the defect that rode on it.
+#
+# skribl_library.html does NOT use the skribl_inline_assets() macro -- it lists
+# the in-post player's scripts itself. So when lib/photofit.js joined that
+# macro, this page silently did not get it, inlineplayer.js took its fallback
+# branch, and the profile stage painted a centred COVER over a photo the editor
+# and /s/<id> both fitted. Measured before the fix: the stage's canvas showed
+# the photo's own left and right edges at 2% and 98% of its width, meaning the
+# sides had been cropped away; after, those columns are the background.
+#
+# READ FROM THE SCRIPT TAGS, NOT FROM PROSE. A substring search for
+# "photofit.js" in the template would pass on the COMMENT explaining why it is
+# there -- the absence-check trap this repository has hit three times. The
+# regex matches the asset call itself, and both halves of the pair are counted
+# per template so a page cannot satisfy this by mentioning one of them.
+print("\nASSETS — a page that runs the in-post player has what it needs")
+_TPL = ROOT / "skribl" / "templates" / "skribl"
+_call = lambda name: re.compile(
+    r"skribl_asset\(\s*['\"]" + re.escape(name) + r"['\"]\s*\)")
+_needs, _missing = [], []
+for _t in sorted(_TPL.glob("*.html")):
+    _src = _t.read_text(encoding="utf-8")
+    if _call("inlineplayer.js").search(_src):
+        _needs.append(_t.name)
+        if not _call("lib/photofit.js").search(_src):
+            _missing.append(_t.name)
+check("every template that loads inlineplayer.js also loads lib/photofit.js",
+      _needs and not _missing,
+      f"loads the player: {_needs}; missing the geometry: {_missing or 'none'} "
+      f"— without it the player falls back to a centred cover and crops a "
+      f"photo its author fitted")
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)
