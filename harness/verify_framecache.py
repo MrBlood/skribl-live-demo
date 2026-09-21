@@ -28,6 +28,12 @@ WHAT IS PINNED HERE, and why each assertion looks the way it does:
   * Memory rules are asserted from the side that can lose: the light page must
     NOT be cached, the store must refuse past its byte ceiling, and a failed
     capture must CLOSE the store rather than retry every frame.
+  * NOTHING HERE ENDS ON A CLOCK. Both playback sections run until the work
+    they are measuring has demonstrably happened -- the Flip one counts its
+    own steps, the player one counts the light repaints that three loops must
+    produce -- because a fixed window measures the runner and calls it the
+    cache. The player section learned this the expensive way in v305; the
+    comment above it has the incident.
 """
 import os
 import pathlib
@@ -260,26 +266,82 @@ with sync_playwright() as p:
         pl.goto(f"{BASE}/s/{pid}", wait_until="load")
         pl.wait_for_function("!!window.SkriblFrameBitmap"
                              " && typeof paintStrokesStatic === 'function'")
-        pcounts = pl.evaluate("""() => new Promise(res => {
+        # COUNTED, NOT TIMED — and this is the second time this file has had to
+        # learn it. The Flip section above ends on its own step counter; this
+        # one used to run the player for a flat 1000ms and then assert that at
+        # least 4 light paints had landed in it. That is a wall-clock
+        # assertion, which THIS SUITE'S OWN DOCSTRING calls the wrong one to
+        # make on shared CI hardware, and it behaved exactly as the docstring
+        # predicts: on 2026-09-21 it went red on one runner (21/23, both player
+        # assertions together) while a second runner passed the same commit in
+        # the same minutes. Nothing was wrong with the tree, and no amount of
+        # raising the number would have fixed it -- a threshold on elapsed time
+        # reports the runner, not the cache.
+        #
+        # So the observation ends when the WORK is done instead. The paint
+        # pattern is fully determined: neither light page is ever cached (both
+        # sit below MIN_POINTS), so each one repaints on every cycle, while the
+        # heavy page rasterises once and is blitted from then on. Three loops
+        # is therefore exactly 6 light paints, whenever they happen to arrive.
+        # Waiting for the 6th is waiting for three real loops.
+        #
+        # The deadline that remains is a BACKSTOP, not a threshold, and
+        # reaching it is reported as its own failure ("playback did not
+        # progress") rather than being allowed to surface as an undercount
+        # that reads like a cache bug.
+        #
+        # Both instruments were measured on one page under CDP CPU throttling,
+        # which is what finally reproduced the CI failure -- eight spinners on
+        # four cores did not, and that wrong guess is why this is written down:
+        #
+        #     throttle   old (1000ms window)      new (counts to 6)
+        #        1x      PASS  light=16           PASS    354ms
+        #       20x      PASS  light=8            PASS    893ms
+        #       50x      FAIL  light=1            PASS   2204ms
+        #      100x      FAIL  light=1 heavy=0    PASS   6547ms
+        #      200x      FAIL  light=1            FAIL   deadline
+        #
+        # The 100x row is the CI failure exactly: heavy 0 and light 1, so BOTH
+        # player assertions go red together, which is the signature that was
+        # observed. The 200x row is the backstop doing its job -- at that
+        # starvation three loops genuinely do not fit 15s, and it says
+        # 'deadline' instead of blaming the cache.
+        LOOPS = 3
+        WANT_LIGHT = LOOPS * 2
+        pstate = pl.evaluate("""(want) => new Promise(res => {
             const paints = [];
             const _ps = paintStrokesStatic;
-            window.paintStrokesStatic = function(arr) { paints.push(arr.length); return _ps(arr); };
+            const t0 = performance.now();
+            const done = (reason) => {
+                window.paintStrokesStatic = _ps;
+                res({paints: paints.slice(), reason: reason,
+                     ms: Math.round(performance.now() - t0)});
+            };
+            window.paintStrokesStatic = function(arr) {
+                paints.push(arr.length);
+                const light = paints.filter(n => n > 0 && n < 1500).length;
+                if (light >= want) setTimeout(() => done('looped'), 0);
+                return _ps(arr);
+            };
             document.getElementById('playerLoopBtn').click();
             document.getElementById('playerPlayBtn').click();
-            // 3 frames at 24fps loop in 125ms; a second covers ~8 cycles.
-            setTimeout(() => {
-                window.paintStrokesStatic = _ps;
-                res(paints.slice()); }, 1000);
-        })""")
+            setTimeout(() => done('deadline'), 15000);
+        })""", WANT_LIGHT)
+        pcounts = pstate["paints"]
         heavy_pl = [n for n in pcounts if n >= 1500]
         light_pl = [n for n in pcounts if 0 < n < 1500]
-        check("player: the heavy frame is rasterised exactly once across the loops",
+        check("player: playback really looped (the once-only claim is not vacuous)",
+              pstate["reason"] == "looped" and len(light_pl) >= WANT_LIGHT,
+              f"{len(light_pl)} light paints in {pstate['ms']}ms, ended by "
+              f"{pstate['reason']} — 'deadline' means the player never got "
+              f"through {LOOPS} loops, which is an instrument or a playback "
+              f"failure and NOT evidence about the cache")
+        check("player: the heavy frame is rasterised exactly once across those loops",
               len(heavy_pl) == 1,
-              f"{len(heavy_pl)} rasterisations over {len(pcounts)} paints — a "
-              f"viewer's phone replays every loop, and v259's memo only "
-              f"stopped repaints of the frame already on screen")
-        check("player: light frames repaint every cycle (looping really happened)",
-              len(light_pl) >= 4, f"{len(light_pl)} light paints")
+              f"{len(heavy_pl)} rasterisations over {len(pcounts)} paints in "
+              f"{LOOPS} loops — a viewer's phone replays every loop, and "
+              f"v259's memo only stopped repaints of the frame already on "
+              f"screen")
         check("player: no page errors", not perrs, "; ".join(perrs[:2]))
         pl.close()
 

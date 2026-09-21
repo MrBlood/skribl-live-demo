@@ -9245,3 +9245,55 @@ accepting; the transport dead when nothing is on the stage and live once
 something is), `verify_posted` 122/122, `verify_takedown` 49/49 (asserted on
 the BYTES of the output, not the absence of a word). Calibrated per component:
 seven mutations, each red on its own pins and nowhere else.
+
+## Unsealed, on top of v305 -- the instrument that measured the runner and called it the cache
+
+v305's own CI run went red on `verify_framecache` (21/23) in the sqlite job,
+on both of its PLAYER assertions at once: "the heavy frame is rasterised
+exactly once across the loops" and "light frames repaint every cycle". The
+tree was fine. The push run on the same code, differing only by the version
+string, passed its sqlite job in the same minutes on another runner.
+
+**The first hypothesis was contention and it was wrong**, which is the part
+worth keeping. Driven directly here, idle and then under eight spinners on
+four cores, the suite reported 17 paints and 16 light paints BOTH times
+against a threshold of 4. Had that been left as "probably a flake" the real
+cause would still be in the tree. What reproduced it was CDP CPU throttling:
+
+    throttle   old (1000ms window)      new (counts to 6)
+       1x      PASS  light=16           PASS    354ms
+      20x      PASS  light=8            PASS    893ms
+      50x      FAIL  light=1            PASS   2204ms
+     100x      FAIL  light=1 heavy=0    PASS   6547ms
+     200x      FAIL  light=1            FAIL   deadline
+
+The 100x row is the CI failure exactly -- heavy 0 and light 1, so both
+assertions go red together, which is the signature that was observed.
+
+The defect was in the instrument. That section ran the player for a flat
+1000ms and asserted on what had landed inside it, which is a wall-clock
+assertion -- the thing THIS SUITE'S OWN DOCSTRING calls the wrong one to make
+on shared CI hardware. The Flip section three hundred lines above it already
+ended on a counted number of steps; only the player half was timed.
+
+It counts now. The paint pattern is fully determined -- neither light page is
+ever cached, so each repaints every cycle, while the heavy page rasterises
+once and is blitted after -- so three loops is exactly six light paints
+whenever they arrive, and waiting for the sixth is waiting for three real
+loops. The 15s deadline that remains is a backstop, not a threshold: it is
+reported as its own named failure ("playback did not progress ... which is an
+instrument or a playback failure and NOT evidence about the cache") so a
+starved runner can never again surface as an undercount that reads like a
+cache bug.
+
+Calibrated per component, each red on its own pin and nowhere else: the
+player's cache forced to miss reddens the once-only assertion (3
+rasterisations) and leaves the loop guard green; the loop button forced off
+reddens the loop guard (4 light paints, ended by deadline) and leaves the
+once-only assertion green.
+
+**The rule this earns, because raising the number would have looked like a
+fix:** a threshold on elapsed time reports the runner, not the thing under
+test. End a measurement when the work it is measuring has demonstrably
+happened, and keep the clock only as a backstop that fails under its own
+name.
