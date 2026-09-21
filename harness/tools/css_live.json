@@ -32,7 +32,6 @@
     ".canvas-wrap.locked",
     ".canvas-wrap:fullscreen",
     ".canvas-wrap:fullscreen .player-btn.full-exit",
-    ".canvas-wrap:fullscreen > canvas",
     ".duration-badge",
     ".duration-badge[hidden]",
     ".header",

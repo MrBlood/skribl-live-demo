@@ -1167,14 +1167,24 @@ body.player-mode .app {
 
 /* FULL SCREEN on the player, the control the shared link was missing until the
    owner asked for it. The wrapper is what goes fullscreen, so it has to stop
-   being a sized box and become the screen; layoutPlayerCanvas() then measures
-   the new box and resizes the canvas from it.
+   being a sized box and become the screen, and `place-items: center` is what
+   holds the drawing in the middle of it.
+
+   THE CANVAS IS SIZED IN JAVASCRIPT, NOT HERE, and the first draft of this
+   block believed otherwise. It carried a `.canvas-wrap:fullscreen > canvas`
+   rule setting width and height to auto under 100vw/100vh caps, reasoning that
+   a replaced element with auto sizes letterboxes itself at any shape. That
+   rule never applied for one frame: layoutPlayerCanvas() writes an INLINE
+   width and height onto the canvas, inline beats a stylesheet, and it runs
+   again on `fullscreenchange` — so the drawing stayed at the size it had in
+   the page (551px in a 1200px screen, measured) inside a black field, while
+   every assertion about the control passed. The rule is gone and
+   layoutPlayerCanvas() branches on the fullscreen element instead.
 
    NO ASPECT RATIO IS HARD-CODED HERE, deliberately. The profile stage's
    fullscreen rule says `calc(100vh * 16 / 9)`, which assumes every drawing is
    16:9 and is only harmless because the canvas keeps its own ratio inside the
-   box. The canvas is a replaced element with width and height auto, so max
-   bounds alone letterbox it correctly at ANY shape — which is the lesson the
+   box. The JS branch fits the authored shape at ANY ratio — the lesson the
    in-post player's stretch bug taught, applied rather than repeated. */
 .canvas-wrap:fullscreen {
   width: 100vw;
@@ -1207,12 +1217,6 @@ body.player-mode .app {
   z-index: 3; width: 44px; height: 44px; background: var(--surface-deep);
   border-color: var(--hairline-strong); color: var(--text-primary); }
 .canvas-wrap:fullscreen .player-btn.full-exit { display: grid; place-items: center; }
-.canvas-wrap:fullscreen > canvas {
-  max-width: 100vw;
-  max-height: 100vh;
-  width: auto;
-  height: auto;
-}
 
 body.player-mode .canvas-wrap {
   flex: none;

@@ -662,12 +662,18 @@ ratchet in `verify_inline.py`, separate from the embed's: a page that only
 DISPLAYS Skribls never composes one and must not be charged for it.
 
 "in-post" is the fourth surface: the player a host embeds in a feed post (`skribl/static/inlineplayer.js`, `templates/skribl/_skribl_inline_player.html`).
-It loads THREE of these — `canvassizes.js` for a legacy payload's default
+It loads FOUR of these — `canvassizes.js` for a legacy payload's default
 shape, `holdtiming.js` for how long a page lasts and how much of one that
-draws itself has been revealed, and `audiosession.js`
-for the iOS ringer fix — and its own code reads all three. This said "exactly
-two ... and reads nothing else from `lib/`" until v281; `audiosession.js`
-arrived with the ringer fix and the sentence did not move.
+draws itself has been revealed, `audiosession.js`
+for the iOS ringer fix, and `photofit.js` for where a background photo lands —
+and its own code reads all four. The count has now been wrong twice in the same
+way: it said "exactly two ... and reads nothing else from `lib/`" until v281,
+when `audiosession.js` arrived with the ringer fix and the sentence did not
+move, and it said THREE until v306, when `photofit.js` arrived with the
+authored-fit fix and the sentence did not move again. A hand-typed count of a
+list the template owns goes stale silently; `verify_inline.py` is what actually
+pins the set, asserting both that the macro loads each module and that
+`inlineplayer.js` reads it.
 
 `sharecard.js` USED to be a fifth, and v281 dropped it. The idle poster's crop
 is literals in `inlineplayer.css`; nothing in the page ever read

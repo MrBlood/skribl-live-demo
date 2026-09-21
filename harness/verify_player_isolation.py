@@ -1158,6 +1158,15 @@ with sync_playwright() as sp:
           _exit_at_rest == "HIDDEN",
           f"{_exit_at_rest} — a close control on a page with nothing to close "
           f"is what a specificity tie with .player-btn produced")
+    _rest = _fp.evaluate("""
+        () => { const c = document.querySelector('.canvas-wrap > canvas');
+                if (!c) return {w: 0, h: 0};
+                const r = c.getBoundingClientRect();
+                return {w: Math.round(r.width), h: Math.round(r.height)}; }""")
+    _rest_w, _rest_h = _rest["w"], _rest["h"]
+    check("precondition: the canvas has a measurable size in the page",
+          _rest_w > 0 and _rest_h > 0,
+          f"{_rest} — the growth assertion below needs a size to grow from")
     if _shown is True:
         _fp.click("#playerFullBtn")
         _fp.wait_for_timeout(700)
@@ -1185,6 +1194,39 @@ with sync_playwright() as sp:
               f"transport row is gone; without a control inside it the only "
               f"exit is a key some devices do not have")
 
+        # AND THE DRAWING IS ACTUALLY BIGGER, which is the entire point and is
+        # the arm the first version of this block did not have. Every assertion
+        # above passes on a player whose canvas stays exactly the size it had in
+        # the page: the wrapper fills the screen (the UA's `:fullscreen` rule
+        # sets width/height to 100% with !important), the exit control appears,
+        # aria-pressed flips -- and the drawing sits at its page size in the
+        # middle of a black field. layoutPlayerCanvas() measured `.app`, whose
+        # max-width is 720px, and capped the scale at 1:1; it runs again on
+        # fullscreenchange, so its INLINE width beat the stylesheet's
+        # `.canvas-wrap:fullscreen > canvas { width: auto }` every time and that
+        # rule never applied at all.
+        #
+        # MEASURED AGAINST THE AT-REST SIZE rather than a constant: the
+        # fixture's authored shape and the viewport decide the number, and the
+        # defect's signature is precisely "the same width as at rest".
+        _sz = _fp.evaluate("""
+            () => { const c = document.querySelector('.canvas-wrap > canvas');
+                    if (!c) return {w: 0, h: 0, vw: 0, vh: 0};
+                    const r = c.getBoundingClientRect();
+                    return {w: Math.round(r.width), h: Math.round(r.height),
+                            vw: window.innerWidth, vh: window.innerHeight}; }""")
+        check("...and the drawing FILLS the screen rather than staying page-sized",
+              _rest_w and _sz["w"] >= _rest_w * 1.25,
+              f"full screen {_sz['w']}x{_sz['h']} in a {_sz['vw']}x{_sz['vh']} "
+              f"screen, against {_rest_w}x{_rest_h} in the page — a canvas that "
+              f"does not grow is a black border, not a full screen")
+        check("...and it keeps the authored shape while it does",
+              bool(_rest_w) and bool(_sz["h"])
+              and abs((_sz["w"] / _sz["h"]) - (_rest_w / _rest_h)) < 0.02,
+              f"{_sz['w']}x{_sz['h']} against the authored "
+              f"{_rest_w}x{_rest_h} — filling the screen by stretching is the "
+              f"v305 in-post defect reappearing on another surface")
+
         # EXITED THROUGH THAT CONTROL, and
         # getting here took two wrong turns worth recording. Escape first:
         # that is handled by the BROWSER's fullscreen chrome, which a headless
@@ -1205,6 +1247,60 @@ with sync_playwright() as sp:
         check("...and leaving it returns the control to its resting state",
               not _off["fs"] and _off["pressed"] == "false", str(_off))
     _fp.close()
+
+    # THE EDITOR RUNS THIS PLAYER TOO, and it does not have the way out.
+    #
+    # _skribl_player_controls.html is included by skribl_editor.html as well as
+    # by skribl_player.html — byte-identical, no `kind` branch — so the full
+    # screen button added in v306 appeared on BOTH. #playerFullExit is not in
+    # that partial: it has to sit inside `.canvas-wrap`, which the partial is
+    # not part of, so it is written into skribl_player.html alone. The editor
+    # page runs initPlayer() for the `#skribl=<id>` local fallback that
+    # editor_post.js hands back when posting to the server fails, and on that
+    # page full screen would have had no control inside the fullscreened
+    # subtree at all — the trap #playerFullExit exists to close, re-opened on
+    # the surface nobody thought to look at.
+    #
+    # DRIVEN ON THE EDITOR PAGE, through the fallback's own mechanism: the post
+    # this suite authored is written to localStorage under the key the hash
+    # player reads, and the page is loaded at that hash. Reading the template
+    # for the absence would prove nothing about what the page offers.
+    _hp = b.new_page(viewport={"width": 1000, "height": 800})
+    browsing.goto(_hp, BASE, "/")
+    _pid = link.rstrip("/").rsplit("/", 1)[-1]
+    _stored = _hp.evaluate("""
+        async (id) => {
+            const r = await fetch('/api/skribls/' + encodeURIComponent(id));
+            if (!r.ok) return 'HTTP ' + r.status;
+            localStorage.setItem('skribl_post_' + id, JSON.stringify(await r.json()));
+            return 'ok'; }""", _pid)
+    check("fixture: the posted Skribl is on this device for the hash player",
+          _stored == "ok",
+          f"{_stored} — without it the page below is a bare editor and the "
+          f"assertion would pass for the wrong reason")
+    _hp.goto(BASE + "/#skribl=" + _pid, wait_until="load")
+    _hp.reload(wait_until="load")      # a hash-only navigation re-runs nothing
+    _hp.wait_for_timeout(1800)
+    _hash = _hp.evaluate("""
+        () => { const sh = document.getElementById('playerShell');
+                const b = document.getElementById('playerFullBtn');
+                return {booted: !!(sh && !sh.hidden),
+                        exit: !!document.getElementById('playerFullExit'),
+                        offered: !!(b && !b.hidden)}; }""")
+    check("precondition: the editor page's local hash player actually booted",
+          _hash["booted"],
+          f"{_hash} — a player that never started offers no controls either, "
+          f"which would make the row below vacuous")
+    check("precondition: and that page has no exit control inside the canvas",
+          _hash["booted"] and not _hash["exit"],
+          f"{_hash} — if the editor ever gains #playerFullExit this row is "
+          f"measuring the wrong page and the gate below should be revisited")
+    check("...so it does not offer a full screen there is no way back from",
+          _hash["booted"] and not _hash["offered"],
+          f"{_hash} — only the fullscreened subtree renders, so with no exit "
+          f"control inside it the transport row is gone and the only way out "
+          f"is a key some devices do not have")
+    _hp.close()
 
     # THE PARITY CLAIM ITSELF, keyed by (surface, control). The two players are
     # separate implementations on purpose, so nothing but a check like this
