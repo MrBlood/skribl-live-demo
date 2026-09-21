@@ -117,6 +117,7 @@ here is the rule you can break tomorrow.
 | Copy describes the ownership model IN FORCE. The browser-held sentences are false under host accounts, and a shared help include is two instances until it has been driven on both editors in both modes. | `verify_hostseams.py` |
 | A background photo lands where `lib/photofit.js` says, on EVERY surface -- editor, `/s/<id>`, and the in-post player a feed and the profile stage use. The in-post player hard-coded cover and cropped what the author had fitted. | `verify_inline.py` (solid photo, 4:1 on 4:3, sampled at three rows; both fits driven) |
 | Both playback surfaces carry a full screen control, and whatever goes full screen contains its own way out -- only that subtree renders, so the transport row is not on screen. | `verify_player_isolation.py` (driven: entered, exit asserted VISIBLE, left through it) |
+| Every template that loads `inlineplayer.js` also loads `lib/photofit.js`. The profile page hand-copies the in-post player's asset list, so it missed the module and fell back to a centred cover on a photo its author had fitted. | `verify_library.py` (matched on the `skribl_asset()` call, never on the comment beside it) |
 | Every mandatory external lane writes an attestation NAMING THE TREE it describes. A lane that is merely claimed by a CI job is pending, not covered — existence of a job is not a result. | `verify_docs.py` (mechanism calibrated against a wrong-tree attestation) |
 | Both editors build the pen palette from `lib/palette.js` — same list, same order, from the lib and not from a copy. | `verify_parity.py` |
 | Every grey the chrome paints is a token, not a literal — including the `rgb()` function form, which the first version of the ratchet could not see. | `verify_surfaces.py` |
@@ -719,7 +720,7 @@ rather than a shared rule.
 | `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
-| `photofit.js` | Pad+Flip+in-post | Photo fit geometry — the part both editors and the player must agree on. |
+| `photofit.js` | Pad+Flip+library+in-post | Photo fit geometry — the part both editors and the player must agree on. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
 | `pointbudget.js` | Flip | The DOCUMENT's budget — the numbers the editors were spending without being able to see them. |

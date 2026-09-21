@@ -852,6 +852,21 @@
          * renders nothing. */
         var iw = under.image.naturalWidth || size.w, ih = under.image.naturalHeight || size.h;
         var PF = global.SkriblPhotoFit;
+        /* SAY SO RATHER THAN QUIETLY GUESS. The fallback below is the old
+         * centred cover, and when the profile stage turned out not to load
+         * this module the fallback rendered a cropped photo in silence -- a
+         * fail-open guard written the same day three others were closed for
+         * failing open. A host who omits the module now gets a warning naming
+         * it; the templates in this tree are held to it by verify_library.py,
+         * which reads the script tags rather than trusting this comment. */
+        if (!PF && !global.__skriblPhotoFitWarned) {
+          global.__skriblPhotoFitWarned = true;
+          if (global.console && console.warn) {
+            console.warn('skribl: lib/photofit.js is not loaded; the ' +
+                         'background photo will be centred and cropped ' +
+                         'instead of using the fit its author chose.');
+          }
+        }
         if (PF) {
           var r = PF.rect(iw, ih, size.w, size.h,
                           { fit: under.fit, offX: under.offX,

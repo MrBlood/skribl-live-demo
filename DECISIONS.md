@@ -9246,7 +9246,7 @@ something is), `verify_posted` 122/122, `verify_takedown` 49/49 (asserted on
 the BYTES of the output, not the absence of a word). Calibrated per component:
 seven mutations, each red on its own pins and nowhere else.
 
-## Unsealed, on top of v305 -- the instrument that measured the runner and called it the cache
+## v306 -- the instrument that measured the runner and called it the cache
 
 v305's own CI run went red on `verify_framecache` (21/23) in the sqlite job,
 on both of its PLAYER assertions at once: "the heavy frame is rasterised
@@ -9298,7 +9298,7 @@ test. End a measurement when the work it is measuring has demonstrably
 happened, and keep the clock only as a backstop that fails under its own
 name.
 
-## Unsealed, on top of v305 -- the media lifecycle failed open in three places
+## v306, cont. -- the media lifecycle failed open in three places
 
 An external acquisition-style audit of the v305 package found a cluster of
 data-integrity defects in the media claim/sweep system. All three were
@@ -9369,7 +9369,7 @@ that AttributeError as "no claims". Failing closed turned it into a skipped
 delete. The double was taught to say what is true of it -- no database, so no
 claims table -- rather than the production guard being loosened to accept it.
 
-## Unsealed, on top of v305 -- the external audit's P1 tier
+## v306, cont. -- the external audit's P1 tier
 
 Seven of the audit's ten P1 items, plus the two that needed the owner's call.
 
@@ -9458,7 +9458,7 @@ from this container at all -- it needs the owner's hands on real devices, and
 recording anything else would be inventing evidence, which is the one thing
 this tree's whole apparatus exists to prevent.
 
-## Unsealed, on top of v305 -- the feed box cropped what the author fitted
+## v306, cont. -- the feed box cropped what the author fitted
 
 Owner, from the profile stage: "the pug in the background FIT the screen on
 the editor and the original player. now he is cut off?"
@@ -9512,7 +9512,7 @@ module reference to null reddens the contain pin alone, 102/103.
 is recorded here as a known gap rather than quietly left in the comment that
 used to cover for all three.
 
-## Unsealed, on top of v305 -- the link people share gets full screen too
+## v306, cont. -- the link people share gets full screen too
 
 Owner, holding the copied link beside the profile stage: "shouldn't there be a
 full screen on this player too? why do the players not share the same
@@ -9570,3 +9570,40 @@ harmless only because the canvas keeps its own ratio inside that box. The
 player's new rule sets no aspect at all and lets max bounds letterbox it --
 which is the lesson the in-post player's stretch bug taught, applied rather
 than repeated.
+
+## Unsealed, on top of v305 -- the fix that reached every surface but the one reported
+
+The owner reported the profile stage cropping a background photo, three times.
+The first fix taught the in-post player to read the author's fit through
+lib/photofit.js, was pinned on pixels in both directions, and was measured
+green on /feed. It did not reach the page the report was about.
+
+**skribl_library.html lists the in-post player's scripts BY HAND** instead of
+using skribl_inline_assets(). So when photofit.js joined that macro, the
+profile stage silently did not get it, `global.SkriblPhotoFit` was undefined
+there, and inlineplayer.js took its fallback branch -- a centred cover, which
+is the exact defect the change was meant to end. Measured on the stage's own
+canvas: the photo's left and right edges sat at 2% and 98% of the canvas
+width, meaning its sides were cropped; with the module served those columns
+are background.
+
+**THE FALLBACK IS WHAT HID IT, AND I WROTE IT THE SAME DAY I CLOSED THREE
+OTHERS FOR FAILING OPEN.** `if (PF) {...} else { centred cover }` renders a
+plausible picture and says nothing, so the only signal was a person looking at
+their own dog. It warns once to the console now. A host that omits the module
+still gets a drawing rather than a blank box -- that part was right -- but it
+is told which module is missing and what it is getting instead.
+
+**The gate reads the script tags, not the prose.** A substring search for
+"photofit.js" in the template would pass on the comment explaining why it is
+there, which is the absence-check trap this tree has hit three times. The
+assertion matches the `skribl_asset('...')` call itself, counts both halves of
+the pair per template, and is calibrated by deleting the line again: red on
+exactly that, 92/93.
+
+**What generalises.** A page that hand-copies an asset list is a second copy of
+a dependency list, and a second copy drifts -- this one drifted the moment the
+first copy gained an entry. The gate is the cheap half of the answer; using
+the macro would be the other half, and is not done here because the library
+page's script block is ordered around its own needs and rewriting it during a
+seal is the wrong time to find out what that ordering was for.
