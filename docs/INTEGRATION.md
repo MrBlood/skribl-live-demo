@@ -47,7 +47,9 @@ That is the whole integration. You now have:
     GET  /skribl/s/<public_id>/poster     the in-post poster (the drawing, or a blank)
     POST /skribl/api/skribls              create
     GET  /skribl/api/skribls              feed listing (metadata only)
-    GET  /skribl/api/skribls/<id>         one Skribl, with payload
+    GET  /skribl/api/skribls/<id>         one Skribl, with payload (and a counted play)
+    DELETE /skribl/api/skribls/<id>       take it down: by its author, or with the revocation key
+    PATCH  /skribl/api/skribls/<id>       change its visibility, on the same terms
     GET  /skribl/media/<key>              stored media, authorised per post
     GET  /skribl/feed                     PREVIEW of the in-post player — below
     GET  /skribl/library                  the profile's Skribls tab — below
@@ -104,10 +106,11 @@ work without it.
 
 **What it costs and when.** `skribl_inline_assets()` pulls five files —
 `inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
-`lib/canvassizes.js`, `lib/holdtiming.js` and `lib/sharecard.js` — under 26 KB
-served, ratcheted by `harness/verify_inline.py`. Per post, idle, it costs ONE
-image: the poster at `/s/<id>/poster`, about 20 KB, which your CDN can
-cache. `GET /api/skribls/<id>` is
+`lib/canvassizes.js`, `lib/holdtiming.js` and `lib/audiosession.js` — under a
+byte ratchet `harness/verify_inline.py` prints and holds (this sentence used to
+quote the number and name `lib/sharecard.js`, which v281 dropped from the
+macro; run the suite). Per post, idle, it costs ONE image: the poster at
+`/s/<id>/poster`, a few tens of kilobytes, which your CDN can cache. `GET /api/skribls/<id>` is
 issued on the first tap and never again for that post. Do not prefetch it: that
 endpoint returns the whole payload, base64 audio included.
 
@@ -264,7 +267,9 @@ where a full player is too much.
 
 Pass the id to the macro rather than wrapping it in a div of your own — `attach`
 takes the player element itself. `skribl_inline_draft(id, controls=false)` drops
-the mute/loop cluster for a page that has its own transport.
+the mute/loop cluster for a page that has its own transport, and
+`progress=false` hides the player's own progress hairline for a page that
+draws its own scrub track — `/library` passes both.
 
 **Posting.** One `POST /api/skribls` with the payload, plus whatever your post
 needs: `title` (what `/s/<id>` unfurls with), `caption`, and
@@ -831,7 +836,9 @@ approaches:
 * **You own migrations.** Call `attach_to_metadata(db.metadata)` and let your
   Alembic autogenerate pick the tables up with everything else.
 * **Skribl owns its migrations.** Run `alembic upgrade head` against
-  `skribl/migrations` with `DATABASE_URL` set. Current head: `b7e2f9a41c55`.
+  `skribl/migrations` with `DATABASE_URL` set. The head is whatever
+  `python -m alembic heads` prints there; a revision id typed into this
+  sentence sat four migrations stale before it was removed.
 
 Do not do both for the same tables.
 
@@ -904,15 +911,19 @@ This is not a daemon and does not schedule itself; cadence is your cron's job.
 
 ## What stays yours
 
-Authentication, roles, the moderation queue, abuse reports, notifications and
-the feed page itself. Skribl has no user table and no concept of staff — it
-receives `current_user_id` from you and exposes decisions rather than making
-them. An admin UI inside the blueprint would need its own authentication beside
-the one you already have, which is how a system ends up with two answers to "is
-this person staff?" and an attacker using the weaker one.
+Authentication, roles, moderation decisions, notifications and the feed page
+itself. Skribl has no user table and no concept of staff — it receives
+`current_user_id` from you and exposes decisions rather than making them. An
+admin UI inside the blueprint would need its own authentication beside the one
+you already have, which is how a system ends up with two answers to "is this
+person staff?" and an attacker using the weaker one.
 
-`lib/report.js` is a JavaScript **error** reporter for the maintainer. It is not
-abuse reporting; users reporting content is a host feature.
+What Skribl does hold is the **queue**: `POST /api/skribls/<id>/report` writes
+a row a reader filed, and `python -m skribl.takedown --reports` lists them for
+whoever runs the site. Acting on a report — hiding, deleting, answering — is
+the operator's decision, made with that tool or your own; nothing in Skribl
+acts on a report by itself. `lib/report.js` is something else: a JavaScript
+**error** reporter for the maintainer, not abuse reporting.
 
 ## Checking your integration
 

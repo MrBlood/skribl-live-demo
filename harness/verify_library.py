@@ -310,7 +310,10 @@ with sync_playwright() as sp:
           "gallery" in pg.inner_text("#pStats").lower(), pg.inner_text("#pStats"))
     pg.evaluate("() => document.querySelector('.posted-row[data-id=\"%s\"] .posted-main').click()" % ids[0])
     pg.wait_for_timeout(1200)
-    check("...and the other is unlisted", pg.inner_text("#pStats").strip() == "unlisted", pg.inner_text("#pStats"))
+    # ONE VOCABULARY. The row, the chip and the stage all say "link only" for
+    # an unlisted post; the stage said "unlisted" until the v304 proofread.
+    check("...and the other is link only, in the row's own words",
+          pg.inner_text("#pStats").strip() == "link only", pg.inner_text("#pStats"))
 
     # ---- the actions on a row, and the filter (v304) -----------------------
     print("\nLIBRARY — a row can do what the tray could, and more")
@@ -393,7 +396,7 @@ with sync_playwright() as sp:
     # is the case a phone shows) and one without (a plain row keeps its one
     # action beside the title, which is the case that widened the column).
     # Both must hold; they are red under different mutations.
-    for _vw, _sheet in ((320, True), (390, True), (320, False)):
+    for _vw, _sheet in ((320, True), (360, True), (390, True), (320, False)):
         _mctx = b.new_context(viewport={"width": _vw, "height": 844}, device_scale_factor=2,
                               is_mobile=True, has_touch=True)
         _mp = _mctx.new_page()
@@ -462,7 +465,62 @@ with sync_playwright() as sp:
     check("...and the empty state says what this list is",
           o_empty["shown"] and "in this browser only" in o_empty["words"] and "not an account" in o_empty["words"],
           str(o_empty))
+    # ONE EMPTY STATE, NOT TWO. lib/postedui.js renders its own "Nothing
+    # posted yet" into the list, and the page renders "Nothing here yet"
+    # under it; on the profile both showed, stacked, until the v304
+    # proofread. The page owns it here (opts.pageEmpty), so the list renders
+    # nothing. Counted as VISIBLE blocks whose text opens with "Nothing", so
+    # a second message anywhere on the page fails this rather than only the
+    # one that was there.
+    o_nothing = other.evaluate("""() => [...document.querySelectorAll('#postedList *, #libEmpty')]
+        .filter(el => /^\\s*Nothing/.test(el.textContent) && el.getClientRects().length && getComputedStyle(el).display !== 'none'
+                      && !el.querySelector('p, div'))
+        .map(el => el.textContent.trim().slice(0, 30))""")
+    check("an empty profile says so ONCE", len(o_nothing) == 1 and not other.query_selector("#postedList .posted-empty"),
+          str(o_nothing))
     other.close()
+
+    # ---- the header points somewhere (v304 proofread) ---------------------
+    print("\nLIBRARY — the header names the page and points at the gallery and the editor")
+    hp = ctx.new_page()
+    hp.set_viewport_size({"width": 390, "height": 844})
+    browsing.goto(hp, BASE, "/library")
+    hp.wait_for_timeout(400)
+    head = hp.evaluate("""() => { const g = document.getElementById('libGallery'), m = document.getElementById('libMake');
+        const h = el => el ? el.getBoundingClientRect().height : 0;
+        return { tag: (document.querySelector('.brand .tag') || {}).textContent,
+                 label: (document.querySelector('.brand') || {getAttribute: () => null}).getAttribute('aria-label'),
+                 gallery: g ? g.getAttribute('href') : null, make: m ? m.getAttribute('href') : null,
+                 gh: h(g), mh: h(m), ghost: !!document.querySelector('.top .ghost') }; }""")
+    check("the bar says library, not player", head["tag"] == "library" and head["label"] == "Skribl library", str(head))
+    check("Gallery and Make one are in the bar, pointing at /gallery and the Pad",
+          (head["gallery"] or "").endswith("/gallery") and (head["make"] or "").endswith("/skribl-pad") and not head["ghost"],
+          str(head))
+    check("...and both answer a tap 44px tall at phone width", head["gh"] >= 44 and head["mh"] >= 44, f"{head['gh']} / {head['mh']}")
+    hp.close()
+
+    # ---- an entry from before v304 (v304 proofread) ------------------------
+    # lib/posted.js recorded no visibility until v304, and no editor post
+    # before v304 sent one, so every such entry is unlisted -- the server's
+    # default -- and gets the switch. The first cut treated it as unknown
+    # and offered nothing.
+    print("\nLIBRARY — a browser-kept entry from before v304 is link only, and gets the switch")
+    legacy = b.new_page(viewport={"width": 1280, "height": 1000})
+    browsing.goto(legacy, BASE, "/library")
+    legacy.evaluate("""(id) => localStorage.setItem('skribl_posted_v1', JSON.stringify([
+        { id: id, url: '/s/' + id, title: 'legacy entry', kind: 'pad', pages: 1, tok: 'legacy-key-abcdefghijklmnopqrstuvwxyz012345', at: Date.now() }]))""", ids[0])
+    legacy.reload(wait_until="load")
+    legacy.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.library")
+    legacy.wait_for_timeout(1200)
+    lg = legacy.evaluate("""(id) => { const r = document.querySelector('.posted-row[data-id="' + id + '"]');
+        if (!r) return null;
+        const g = r.querySelector('.posted-gallery');
+        return { sub: r.querySelector('.posted-sub').textContent, gallery: g ? g.textContent : null,
+                 pressed: g ? g.getAttribute('aria-pressed') : null, stage: document.getElementById('pStats').textContent.trim() }; }""", ids[0])
+    check("the row says link only and offers the switch, unpressed",
+          bool(lg) and "link only" in lg["sub"] and lg["gallery"] == "Link only" and lg["pressed"] == "false", str(lg))
+    check("...and the stage, which selected it at boot, says the same", bool(lg) and lg["stage"] == "link only", str(lg))
+    legacy.close()
 
     # A HOST WITH ACCOUNTS: data-skribl-me set means the listing's author
     # filter, and the browser's list is ignored. The attribute is what the
@@ -487,7 +545,54 @@ with sync_playwright() as sp:
           any("user_id=host-user-42" in u for u in listing_reqs), str(listing_reqs))
     check("...and the browser's own list is not shown",
           not (set(h_tiles) & set(ids)), f"{h_tiles}")
+    # A HOST'S PROFILE IS NOT A BROWSER'S LIST (v304 proofread). Two sentences
+    # described lib/posted.js on a page that never reads it: the empty state's
+    # "kept in this browser only" and the panel's footer about site data and
+    # local saves. Both are gone under a host identity; the empty state itself
+    # stays, because this author has nothing yet.
+    hw = host.evaluate("""() => { const vis = el => !!el && !el.hidden && el.getClientRects().length > 0;
+        return { empty: vis(document.getElementById('libEmpty')), local: vis(document.getElementById('libEmptyLocal')),
+                 foot: vis(document.querySelector('#postedPanel .posted-foot-top')),
+                 words: document.getElementById('libEmpty').innerText }; }""")
+    check("an empty host profile shows the empty state without the browser-only sentence",
+          hw["empty"] and not hw["local"] and "in this browser only" not in hw["words"], str(hw))
+    check("...and the panel's footer about site data and local saves is not shown", not hw["foot"], str(hw))
     host.close()
+
+    # THE HOST'S ROWS SAY ONLY WHAT THE LISTING KNOWS. The listing defers the
+    # payload, so a row has no kind (the first cut called every one a
+    # "replay" with a pencil on it), and an author's private post is
+    # "private", not "link only" -- a private post is not reachable by link.
+    # The listing is answered here with the shape GET /api/skribls returns,
+    # so the branch is driven without a second host database.
+    host2 = ctx.new_page()
+    host2.set_viewport_size({"width": 1280, "height": 1000})
+    host2.route(re.compile(r"/library$"), _as_host)
+    _fake = {"items": [
+        {"id": ids[1], "title": "host public", "caption": None, "has_audio": False, "views": 0,
+         "user_id": "host-user-42", "visibility": "public", "created_at": "2026-09-20T10:00:00+00:00"},
+        {"id": ids[0], "title": "host private", "caption": None, "has_audio": False, "views": 0,
+         "user_id": "host-user-42", "visibility": "private", "created_at": "2026-09-20T09:00:00+00:00"}],
+        "next_cursor": None}
+    host2.route(re.compile(r"/api/skribls\?.*user_id=host-user-42"),
+                lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps(_fake)))
+    browsing.goto(host2, BASE, "/library")
+    host2.wait_for_timeout(900)
+    hr = host2.evaluate("""(ids) => ids.map(id => { const r = document.querySelector('.posted-row[data-id="' + id + '"]');
+        if (!r) return null;
+        const g = r.querySelector('.posted-gallery');
+        return { sub: r.querySelector('.posted-sub').textContent, badge: !!r.querySelector('.posted-thumb svg'),
+                 gallery: g ? g.textContent : null, pressed: g ? g.getAttribute('aria-pressed') : null,
+                 del: !!r.querySelector('.posted-delete') }; })""", ids)
+    check("a host row does not call itself a replay or wear a kind badge it cannot know",
+          all(x and "replay" not in x["sub"] and "page" not in x["sub"] and not x["badge"] for x in hr), str(hr))
+    check("the author's private post says private, and its switch reads Private, unpressed",
+          hr[0] and "private" in hr[0]["sub"] and "link only" not in hr[0]["sub"]
+          and hr[0]["gallery"] == "Private" and hr[0]["pressed"] == "false", str(hr[0]))
+    check("...and the public one says in the gallery, switch pressed, both with Delete (the host authorises by author)",
+          hr[1] and "in the gallery" in hr[1]["sub"] and hr[1]["pressed"] == "true" and hr[0]["del"] and hr[1]["del"], str(hr[1]))
+    check("...and no empty state shows over rows", not host2.evaluate("() => { const e = document.getElementById('libEmpty'); return !e.hidden; }"))
+    host2.close()
     ctx.close()
 
     # THE SERVER SIDE OF THE SEAM: the attribute comes from the blueprint's

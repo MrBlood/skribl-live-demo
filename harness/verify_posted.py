@@ -96,9 +96,13 @@ with sync_playwright() as p:
     pg.goto(f"{BASE}/library", wait_until="load")
     pg.wait_for_timeout(900)
     check("the list UI is published on the profile", pg.evaluate("() => !!window.SkriblPostedUI"))
-    empty = pg.inner_text("#postedList")
+    # THE PAGE OWNS THE EMPTY STATE on the profile (v304 proofread): the list
+    # renders nothing into #postedList, and #libEmpty under it is the one
+    # invitation. verify_library pins that there is exactly one.
+    empty = pg.inner_text("#libEmpty")
     check("the empty state invites rather than apologises",
-          "nothing posted yet" in empty.lower() and "post" in empty.lower(),
+          "nothing here yet" in empty.lower() and "post a skribl" in empty.lower()
+          and pg.inner_text("#postedList").strip() == "",
           repr(empty[:80]))
     check("the footer says this is browser-only, not an account",
           "browser" in pg.inner_text("#postedPanel").lower(),

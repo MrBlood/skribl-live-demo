@@ -8666,10 +8666,13 @@ script had already run; a pin on a side effect that the fix removed; a pin on
 the visible box that could not see a band. And one mutation was itself wrong.
 The rule in CLAUDE.md is not decoration.
 
-## Unsealed, on top of v303 -- the final acquisition review, and the seal's margin
+## v304 -- the final acquisition review, and the seal's margin
 
-**THIS HEADING CARRIES NO NUMBER ON PURPOSE**, as the v278 note explains; it
-takes one at the next seal.
+**THIS ENTRY AND THE SIX AFTER IT WERE WRITTEN UNSEALED AND NUMBERED AT THE
+SEAL,** in the v278 manner: while the work was in the tree they sat under
+"Unsealed, on top of v303", because a numbered heading claims a sealed tree,
+and the number went on when `release_run.py` froze this tree and passed.
+Everything below was true as written before the seal and is true after it.
 
 **THE FINAL REVIEW ACCEPTED v303.** The auditor's final acquisition review of
 the sealed packet independently recomputed the frozen tree hash from the
@@ -8713,7 +8716,7 @@ parallel with the seal; their outcome is recorded in this entry when the
 owner reports it, which is the same place every other outcome the harness
 cannot reach has been recorded since v278's "Music works".
 
-## Unsealed, on top of v303 -- the public gallery, opt-in (v304 when sealed)
+## v304, cont. -- the public gallery, opt-in
 
 The owner's product question, in two halves: "Should there be a library
 button in the ... menu and the library contains all my skribls?" and "Should
@@ -8763,7 +8766,7 @@ identity check in `verify_identity.py`; `harness/browsing.py` waits on its
 boot flag. Calibrated per component: each mutation red only on its own pins
 (the calibration log is in the PR).
 
-## Unsealed, on top of v303 -- Report on every tile (v304 when sealed)
+## v304, cont. -- Report on every tile
 
 The second half of "Build the public gallery, opt-in, with Report on every
 tile." The gallery is the first place strangers meet each other's work, and
@@ -8816,7 +8819,7 @@ not the newest file by name, which is how the first draft was chained and
 what `verify_migrations` caught -- and its digests are pinned in
 `RELEASED.txt`. Calibrated per component; the log is in the PR.
 
-## Unsealed, on top of v303 -- the library is the profile's, and a profile is somebody's (v304 when sealed)
+## v304, cont. -- the library is the profile's, and a profile is somebody's
 
 The owner, the day after the gallery landed: "The library looks different."
 It was not -- the page was byte-identical to v303 at phone width, and the
@@ -8861,7 +8864,7 @@ sees none of them, a host identity switches the page to the author filter
 stage enters and leaves full screen. Calibrated per component; the log is in
 the PR.
 
-## Unsealed, on top of v303 -- Your Skribls is the profile page (v304 when sealed)
+## v304, cont. -- Your Skribls is the profile page
 
 The owner, thinking about what the product should logically have: a drafts
 folder, a profile library, a public gallery. Drafts are "Save a backup" and
@@ -8930,7 +8933,7 @@ omitting it (inlineplayer.js requires the element and keeps writing its
 width), and the profile is the one caller; `verify_library` pins one
 progress, the scrub.
 
-## Unsealed, on top of v303 -- the gallery searches, and lists Hot by plays (v304 when sealed)
+## v304, cont. -- the gallery searches, and lists Hot by plays
 
 The owner: "a public gallery that is searchable and lists HOT skribls based
 on views". The two constraints that shaped it: there are no accounts, so a
@@ -8971,3 +8974,89 @@ gallery's tabs and box against the server's own answer, and the hash in the
 row. Migration `d8e1f4a2b7c3` on `c4d9e2f7a1b6`, digests pinned.
 Calibrated per component; the log is in the PR.
 
+
+## v304, cont. -- the proofread, and the bug check before the seal
+
+The owner, before the seal: "Proofread all docs. Nothing stale. Check how it
+works. Make sure everything is there -- all functions. Check for bugs and
+fix. Then seal." Read against the tree, not recalled -- every current
+document, the help drawer, and the four v304 surfaces -- and this is what
+the read found. The bug check before a seal has found something every time
+it has been asked for (v302, v303); this one found eight things, none of
+which a green harness had seen.
+
+**STALE, AND WHY EACH ONE WAS.** Two numbers typed into prose in the file
+whose opening section is about not doing that: START-HERE's "6 Alembic
+revisions" (sixteen on disk) and a bare run that "hangs" (fixed by `setsid`
+in v226 and still warned about). INTEGRATION.md named `lib/sharecard.js` in
+the in-post macro's file list and a served byte count -- v281 dropped the
+one and the ratchet has moved since the other -- and typed the migration
+head, four migrations stale. README's in-post section said the idle image
+is the branded card, which v287 replaced with `/s/<id>/poster` and the
+README's own route table already said so, two screens down. README's
+profile section described the grid of share cards and a mock, neither of
+which is on the page. INTEGRATION's "what stays yours" listed abuse reports
+as a host feature the day after Report shipped. FUTURE.md was still
+"deliberately not doing" ranked feeds and multi-take; the Hot tab is one
+and "+ Add take" is the other. harness/README's identity bullet had been
+cut in half by the three v304 bullets inserted into it. The help drawer's
+Your Skribls tip said removing a row "removes the row, not the Skribl",
+which is what the ✕ does and not what Delete does. Each is fixed by
+pointing at the generated record where one exists and by saying what is
+true where none does.
+
+**THE PROFILE SAID "NOTHING YET" TWICE.** lib/postedui.js renders its own
+empty state into the list and skribl_library.html renders one under it;
+on the profile both showed, stacked, and every suite that opened an empty
+profile read the one it was looking for. The page owns it now
+(`opts.pageEmpty`), and the pin counts visible blocks that open with
+"Nothing" rather than looking for the one that was there.
+
+**A HOST'S PROFILE IS NOT A BROWSER'S LIST, and two sentences said it was.**
+With a host identity the page reads the author's listing and never
+lib/posted.js, yet its empty state said the list is "kept in this browser
+only" and the panel's footer explained site data and local saves. Both
+describe the store; both are gone under an identity. A host row called
+itself a "replay" with a pencil on it because the first cut hardcoded
+`kind: 'pad'` -- the listing defers the payload, so a row cannot know, and
+now says nothing it does not. An author's private post read "link only",
+which a private post is not; it says "private", and its switch says so
+before offering the gallery. And the empty state flashed before the first
+page answered.
+
+**ONE VOCABULARY FOR ONE FACT.** The chip said "Link only", the row said
+"link only", the stage said "unlisted". A post from before v304 recorded
+no visibility at all -- lib/posted.js did not keep one, and no editor post
+before v304 sent one -- so it was rendered as unknown and got no switch,
+when every such post is unlisted: the server's default, not a guess. Store
+rows without a visibility are unlisted now and get the switch; a host row
+without one stays unknown, because there it would be a guess.
+
+**THE LIBRARY'S HEADER SAID "PLAYER" AND POINTED NOWHERE.** The mock's
+chrome, still there: the tag, the aria-label and a wireframe pill reading
+"profile · skribls tab". The bar says library and carries Gallery and Make
+one, the way the gallery's bar carries Yours and Make one; the two pages
+point at each other now. At 360 and below the mark's word yields to the
+two links (360 is the design target; the first cut ran 46px past the edge
+there and the overflow pin caught it), and the pins measure the bar at
+320, 360 and 390.
+
+**AND THE HELP SAYS WHAT DELETE DOES.** The tip names Delete as the thing
+that takes a Skribl down for everyone, by the key this browser holds, and
+Copy key as the way to keep that key; the player tip names the Gallery
+link. `verify_help` pins both arms of the drawer.
+
+Pinned by `verify_library.py` (one empty state; the stage's word; the
+legacy entry's switch; the host profile's words, rows and private post
+through a listing answered in the listing's own shape; the header's links
+and their tap bands at three widths) and `verify_help.py`. Calibrated per
+component -- thirteen mutations, each red on its own pins and nowhere else;
+the log is in the PR.
+
+**Still open, so it is not rediscovered.** The three product items the
+final review left (FUTURE.md 6g, Flip's 40px band below 360, the settle
+transient) stand at the owner's word. A host row cannot say whether it is
+a Pad or a Flip because the listing carries no kind; a column on the post
+would be the honest fix and is a schema change nobody has asked for. The
+device smokes (iPhone, VoiceOver, NVDA) are recorded here when the owner
+reports them.

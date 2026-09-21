@@ -104,9 +104,22 @@
       text-transform: uppercase; color: var(--text-2);
     }
     .top .spacer { flex: 1; }
-    .top .ghost {
-      font-family: var(--font-mono); font-size: 12px; color: var(--text-3);
-      border: 1px solid var(--hairline); border-radius: 999px; padding: 6px 12px;
+    .top .nav { display: flex; align-items: center; gap: 8px; }
+    .top .navlink {
+      display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
+      border-radius: 999px; border: 1px solid var(--hairline); color: var(--text-2);
+      font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap;
+    }
+    .top .navlink:hover { color: var(--text); background: var(--control); }
+    .top .navlink.make { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .top .navlink.make:hover { filter: brightness(1.08); color: #fff; }
+    /* 360 IS THE DESIGN TARGET AND 320 THE SAFETY NET (START-HERE). The mark,
+       its word and two pills are wider than either; the word is the thing
+       the two links already say, so it goes first, and the pills tighten. */
+    @media (max-width: 380px) {
+      .brand .tag { display: none; }
+      .top { gap: 10px; }
+      .top .navlink { padding: 0 11px; font-size: 12px; }
     }
   
     /* ---- profile header --------------------------------------------------- */
@@ -294,12 +307,19 @@
       data-skribl-pad="{{ url_for('.skribl_editor') }}">
 <div class="wrap">
   <div class="top">
-    <div class="brand" role="img" aria-label="Skribl player">
+    <div class="brand" role="img" aria-label="Skribl library">
       <span class="mark">{% include 'skribl/_skribl_brand_mark.html' %}</span>
-      <span class="tag">player</span>
+      <span class="tag">library</span>
     </div>
     <div class="spacer"></div>
-    <div class="ghost">profile · skribls tab</div>
+    {# The gallery and the editor, beside the profile: the gallery's header
+       points here ("Yours"), and until the v304 proofread nothing here
+       pointed anywhere -- the bar said "player" and carried a wireframe
+       label. Both answer a tap 44px tall, like every header control. #}
+    <nav class="nav" aria-label="Elsewhere">
+      <a href="{{ url_for('.skribl_gallery') }}" class="navlink" id="libGallery">Gallery</a>
+      <a href="{{ url_for('.skribl_editor') }}" class="navlink make" id="libMake">Make one</a>
+    </nav>
   </div>
 
   {# IDENTITY IS THE HOST'S. Skribl has no user table — GET /api/skribls returns

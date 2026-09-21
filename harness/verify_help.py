@@ -112,6 +112,24 @@ with sync_playwright() as p:
     check("the help states Size and Pages do not apply to PNG",
           "png" in text and ("current page" in text or "full size" in text),
           "the sheet says 'applies to video and GIF'; the help should agree")
+    # v304, at the proofread: the library page and the player's Gallery link.
+    # Matched on the words the feature put there, on BOTH editors (the drawer
+    # is one partial, but each editor renders its own arm of it).
+    check("Flip's help says Delete in Your Skribls takes the Skribl down for everyone, by the key this browser holds",
+          "takes the skribl down for everyone" in text and "copy key" in text,
+          "until the proofread it said removing a row 'removes the row, not the Skribl' and nothing about Delete")
+    check("...and that the shared player links to the Gallery",
+          "gallery</strong> to see what others chose to show" in
+          pg.evaluate("() => (document.getElementById('helpDrawer') || document.body).innerHTML.toLowerCase()"),
+          "the player grew a Gallery link in v304")
+    pg.close()
+    pg = b.new_page()
+    pg.goto(f"{BASE}/skribl-pad", wait_until="load")
+    pg.wait_for_timeout(1400)
+    ptext = pg.evaluate("() => (document.getElementById('helpDrawer') || document.body).textContent.toLowerCase()")
+    check("Pad's help says the same about Delete and the key",
+          "takes the skribl down for everyone" in ptext and "copy key" in ptext)
+    check("...and about the player's Gallery link", "to see what others chose to show" in ptext)
     pg.close()
 
     # -----------------------------------------------------------------------
