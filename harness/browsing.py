@@ -134,3 +134,80 @@ def goto(page, base, path, *, settle=150, boot_timeout=5000, require_boot=None):
     if settle:
         page.wait_for_timeout(settle)
     return page
+
+
+def submit_post(page, *, timeout_ms=20000, step_ms=200):
+    """Press the Pad's Post button and wait for the sheet to say what happened.
+
+    Returns {"url": <the share link or None>, "status": <the POST's HTTP status
+    or None>, "label": <the sheet's status text>, "console": [...warnings]}.
+
+    THREE FIXTURES USED TO CLICK, SLEEP A FIXED SPAN AND GREP THE DOM FOR '/s/'
+    (verify_player_photo, verify_sharecard, verify_visual). Every push to main
+    from v304's first gallery merge failed exactly those three, in both CI
+    jobs, with "no /s/ URL found" and nothing else. Instrumented, the failure
+    read: POST 201, the sheet says "Posted!". The post was fine. What the
+    scrape had been finding was the Your Skribls DRAWER, which the editor
+    included and re-rendered after a post -- a row whose href is the share
+    link -- and v304 moved that drawer to the profile page (#186), so the
+    editor's DOM no longer carries the link at all. Three fixtures depended on
+    a surface they never named, and the merge that moved it ran the suites it
+    knew about. So: read the URL from the POST's own response, which is the
+    server's answer and the thing post_one() in verify_library reads; poll
+    for the result row rather than sleeping; and when neither comes, carry
+    the status and the sheet's words out through the check, which is the
+    channel the runner reads. A fixture that fails should say why.
+    """
+    seen = {"status": None, "url": None}
+    console = []
+
+    def _on_response(r):
+        try:
+            if r.request.method == "POST" and r.url.split("?")[0].endswith("/api/skribls"):
+                seen["status"] = r.status
+                if r.ok:
+                    body = r.json()
+                    u = body.get("url") if isinstance(body, dict) else None
+                    if u:
+                        seen["url"] = u if u.startswith("http") else (r.url.split("/api/")[0] + u)
+        except Exception:
+            pass
+
+    def _on_console(m):
+        try:
+            if m.type in ("warning", "error"):
+                console.append(m.text[:160])
+        except Exception:
+            pass
+
+    page.on("response", _on_response)
+    page.on("console", _on_console)
+    page.click("#postSubmitBtn")
+    url = None
+    waited = 0
+    while waited < timeout_ms:
+        page.wait_for_timeout(step_ms)
+        waited += step_ms
+        state = page.evaluate("""() => {
+            const row = document.getElementById('postResult');
+            const shown = !!row && !row.hidden;
+            const v = [...document.querySelectorAll('*')].map(e => e.value || e.href || '')
+              .find(v => typeof v === 'string' && v.includes('/s/'));
+            const label = (document.getElementById('postStatusLabel') || {}).textContent || '';
+            const btn = document.getElementById('postSubmitBtn');
+            return { shown, url: v || null, label, idle: !!btn && !btn.disabled };
+        }""")
+        if state["shown"] and (seen["url"] or state["url"]):
+            url = seen["url"] or state["url"]
+            break
+        # The sheet has settled without a result: an error state re-enables
+        # the button ("Try again"); do not sit out the whole timeout for it.
+        if seen["status"] is not None and state["idle"] and waited >= 1500:
+            break
+    try:
+        page.remove_listener("response", _on_response)
+        page.remove_listener("console", _on_console)
+    except Exception:
+        pass
+    return {"url": url, "status": seen["status"], "label": (state or {}).get("label", ""),
+            "console": console[:3]}

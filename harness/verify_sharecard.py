@@ -127,15 +127,12 @@ with sync_playwright() as sp:
     pg.click("#postBtn")
     pg.wait_for_timeout(1000)
     pg.fill("#postTitleInput", "Pad card fixture")
-    pg.click("#postSubmitBtn")
-    pg.wait_for_timeout(7000)
-    pad_url = pg.evaluate("""() => {
-        const v = [...document.querySelectorAll('*')].map(e => e.value || e.href || '')
-          .find(v => typeof v === 'string' && v.includes('/s/'));
-        return v || null; }""")
+    posted = browsing.submit_post(pg)
+    pad_url = posted["url"]
     pg.close()
     pad_id = re.search(r"/s/([A-Za-z0-9_-]+)", pad_url).group(1) if pad_url else None
-    check("a Pad Skribl was posted (fixture)", bool(pad_id), str(pad_url))
+    check("a Pad Skribl was posted (fixture)", bool(pad_id),
+          str(pad_url) if pad_id else f"POST {posted['status']}; sheet says {posted['label']!r}; console {posted['console']}")
 
     # FLIP --------------------------------------------------------------------
     pg = b.new_page(viewport={"width": 1280, "height": 900})
