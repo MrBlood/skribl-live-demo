@@ -2489,9 +2489,16 @@ with sync_playwright() as _pp_:
     for _path, _open in (("/skribl-pad", ("#menuBtn", "#helpItem")), ("/flip", ("#moreBtn", "#miInfo"))):
         _hp = _pb.new_page(viewport={"width": 390, "height": 844})
         _hp.goto(BASE + _path, wait_until="load"); _hp.wait_for_timeout(1200)
+        # The pill is put up and HELD: the editor's autosave loop would take a
+        # hand-shown pill down again within a second (a saved pill self-hides),
+        # which is the module's behaviour and not the rule under test. The rule
+        # is the stylesheet's: a shown pill fades while a covering surface is
+        # open and returns when it closes. So the module's show() is stubbed
+        # once the pill is up, and the 0.3s fade is waited out at each step.
         _hp.evaluate("() => { if (window.SkriblHints) window.SkriblHints.hide(); const a = document.getElementById('autosaveStatus');"
-                     " if (a) { a.hidden = false; a.classList.add('show', 'partial'); } }")
-        _hp.wait_for_timeout(200)
+                     " if (a) { a.hidden = false; a.classList.add('show', 'partial'); }"
+                     " window.SkriblAutosavePill.show = function () {}; window.SkriblAutosavePill.hide = function () {}; }")
+        _hp.wait_for_timeout(500)
         _before = float(_hp.evaluate("() => getComputedStyle(document.getElementById('autosaveStatus')).opacity"))
         _hp.click(_open[0]); _hp.wait_for_timeout(300); _hp.click(_open[1]); _hp.wait_for_timeout(700)
         _st = _hp.evaluate("""() => { const a = document.getElementById('autosaveStatus'), x = document.getElementById('autosaveStatusDismiss');
@@ -2499,7 +2506,7 @@ with sync_playwright() as _pp_:
                      pe: getComputedStyle(a).pointerEvents, xpe: x ? getComputedStyle(x).pointerEvents : 'none' }; }""")
         check(f"{_path}: with How it works open the pill is hidden and its × takes no taps",
               _st["help"] and _before > 0.9 and _st["pill"] < 0.05 and _st["pe"] == "none" and _st["xpe"] == "none", str(_st))
-        _hp.keyboard.press("Escape"); _hp.wait_for_timeout(700)
+        _hp.keyboard.press("Escape"); _hp.wait_for_timeout(1000)
         _after = float(_hp.evaluate("() => getComputedStyle(document.getElementById('autosaveStatus')).opacity"))
         check(f"{_path}: ...and it returns when the drawer closes", _after > 0.9, str(_after))
         _hp.close()
