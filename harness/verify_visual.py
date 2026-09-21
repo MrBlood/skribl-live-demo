@@ -169,13 +169,10 @@ with sync_playwright() as p:
     pg.click("#postBtn")
     pg.wait_for_timeout(800)
     pg.fill("#postTitleInput", "visual")
-    pg.click("#postSubmitBtn")
-    pg.wait_for_timeout(6000)
-    link = pg.evaluate("""() => {
-        const v = [...document.querySelectorAll('*')].map(e => e.value || e.href || '')
-          .find(v => typeof v === 'string' && v.includes('/s/'));
-        return v || null; }""")
-    check("posting produced a share link (fixture)", bool(link), "no /s/ URL found")
+    posted = browsing.submit_post(pg)
+    link = posted["url"]
+    check("posting produced a share link (fixture)", bool(link),
+          "" if link else f"no /s/ URL; POST {posted['status']}; sheet says {posted['label']!r}; console {posted['console']}")
     pg.close()
 
     if not link:

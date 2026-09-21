@@ -9060,3 +9060,35 @@ a Pad or a Flip because the listing carries no kind; a column on the post
 would be the honest fix and is a schema change nobody has asked for. The
 device smokes (iPhone, VoiceOver, NVDA) are recorded here when the owner
 reports them.
+
+## v304, cont. -- the three fixtures that were reading the drawer
+
+**EVERY PUSH TO MAIN SINCE THE GALLERY LANDED WAS RED, and the seal found
+it.** `verify_sharecard`, `verify_player_photo` and `verify_visual` failed
+their Pad-post fixture in both full-harness CI jobs from #183 on, with "no
+/s/ URL found" and nothing else; the postgres job then skipped writing its
+attestation, so no seal could be a FULL RELEASE PASS until this was fixed.
+Instrumented -- the POST's status and the sheet's own words carried out
+through the check -- the failure read: `POST 201; sheet says 'Posted!'`.
+The post was fine. The three fixtures had never read the response: they
+slept a fixed span and grepped every element's `value` and `href` for
+`/s/`, and what that found was the Your Skribls DRAWER, which the editor
+included and re-rendered after a post, with the share link as a row's
+href. #186 moved the drawer to the profile page, the editor's DOM stopped
+carrying the link, and three fixtures failed on a surface they had never
+named. The merge that moved it ran the suites it knew about; CLAUDE.md's
+"the sample IS the full run" was written for exactly this and was not
+followed.
+
+`browsing.submit_post()` is the one way a fixture presses Post now: it
+reads the URL from the POST's own response (the server's answer, and what
+`post_one()` in verify_library always read), polls for the result row
+rather than sleeping, and on failure names the status, the sheet's status
+text and the console. Calibrated on three known-bad cases (a 400, a 500 --
+where the Pad quietly saves locally -- and a dropped request), each
+returning no URL and the reason; the three suites are the known-good case,
+green on the clean tree. Two lessons, both already written down and both
+paid for again: read the answer from the channel that carries it, not from
+what happens to be lying around the DOM; and a change that moves a surface
+runs the whole harness, because the fixtures that depended on it do not
+know they did.

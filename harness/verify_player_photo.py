@@ -138,17 +138,14 @@ with sync_playwright() as sp:
 
     pg.click("#postBtn")
     pg.wait_for_timeout(1200)
-    pg.click("#postSubmitBtn")
-    pg.wait_for_timeout(9000)
-    link = pg.evaluate("""() => {
-        const v = [...document.querySelectorAll('*')].map(e => e.value || e.href || '')
-          .find(v => typeof v === 'string' && v.includes('/s/'));
-        return v || null; }""")
+    posted = browsing.submit_post(pg)
+    link = posted["url"]
     pg.close()
 
     if not link:
         check("posting produced a share link (fixture)", False,
-              f"no /s/ URL; editor errors: {ed_errs[:2]}")
+              f"no /s/ URL; POST {posted['status']}; sheet says {posted['label']!r}; "
+              f"console {posted['console']}; editor errors: {ed_errs[:2]}")
         print("\n" + "=" * 62 + "\n0/1 passed  FAILURES: fixture")
         sys.exit(1)
     print(f"    authored {link}, editor ink {editor['ink']}\n")
