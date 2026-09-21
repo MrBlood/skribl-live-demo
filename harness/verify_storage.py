@@ -337,8 +337,17 @@ try:
         def all(self): return self._rows
 
     class _FakeSession:
+        # get_bind() IS PART OF THE CONTRACT, not an optional extra (EXT-P0-2).
+        # This double modelled only the reference query, and the sweeper's
+        # claim lookup used to swallow every exception — so the AttributeError
+        # raised here was silently read as "there are no claims" and the sweep
+        # deleted. Now that uncertainty stops a delete, the double has to say
+        # what is actually true of it: it has no database behind it, so there
+        # is no claims table to consult. None is the honest answer, and
+        # pending_media_ready(None) is False.
         def __init__(self, keys): self._keys = [(k,) for k in keys]
         def query(self, *_a, **_k): return _FakeQuery(self._keys)
+        def get_bind(self, *_a, **_k): return None
 
     print("\nSTORAGE — a failed write cleans up its own temp file")
     # v200 follow-up review, F9 / v199 F18: iter_keys ignores *.part BY DESIGN

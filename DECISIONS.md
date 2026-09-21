@@ -9297,3 +9297,74 @@ fix:** a threshold on elapsed time reports the runner, not the thing under
 test. End a measurement when the work it is measuring has demonstrably
 happened, and keep the clock only as a backstop that fails under its own
 name.
+
+## Unsealed, on top of v305 -- the media lifecycle failed open in three places
+
+An external acquisition-style audit of the v305 package found a cluster of
+data-integrity defects in the media claim/sweep system. All three were
+confirmed against source before anything was changed, and they compose into
+one path: a post is published, committed and durable while pointing at media
+a concurrent sweep has already deleted.
+
+**EXT-P0-1, and the reason it survived a release.** `creation.py` wraps
+`claim_media()` in `try/except` under a comment block insisting THIS FAILS THE
+POST RATHER THAN DEGRADING -- a comment written in v278, when an audit found
+an `except Exception: pass` here and it was removed. But the swallow had not
+been removed; it had moved one function down. `storage.claim_media` ended
+`except Exception: return 0`, so the caller's handler was unreachable and its
+return value was discarded. The v278 fix restored the same defect in a new
+shape.
+
+The pin was worse than useless. `verify_createpost` monkeypatched
+`claim_media` with a stub that RAISES, so it proved the caller handles a
+raising helper while the shipped helper could not raise. **A mock whose
+failure mode is not the implementation's is not a test of the
+implementation** -- and this one had already caught two vacuity traps in the
+same block (wrong payload slot, inline store), which is how thoroughly a
+green assertion can be looked at and still be looking at nothing.
+
+claim_media now raises `MediaClaimError` when it tried and failed, and returns
+0 only for its designed no-ops (no keys, no engine, no table). The caller
+checks the COUNT rather than trusting a failure mode, so a short claim is
+refused whatever the reason. Both guards are independent on purpose.
+
+**EXT-P0-2.** The sweeper's claim lookup ended `except Exception: return
+set()`, giving one answer to "there are no claims" and "I could not find out
+whether there are claims" -- on the one path in the tree that DELETES. It
+fails closed now, and the designed case (no table) is asked explicitly instead
+of being inferred from a swallowed error.
+
+The first draft of that fix guarded only the batch read, and the calibration
+is what exposed it: reverting the guard CRASHED the suite instead of reddening
+it, which led to a SECOND unguarded `_claimed()` -- the per-key re-check
+immediately before the delete, the half that actually closes H3. Skipping the
+chunk earlier had meant the test never reached it. **A mutation that crashes
+instead of failing is telling you the fix is in the wrong place.**
+
+**EXT-P0-3.** `pending_media_ready(engine)` took an engine and ignored it,
+caching into one process-global bool set by whichever engine asked first.
+Both directions are reachable and both are wrong: an unmigrated database
+answering first pins False, so a migrated one silently stops writing claims
+and loses this whole guard; a migrated one answering first pins True, so an
+unmigrated one attempts the insert the cache exists to prevent. Keyed per
+engine now, weakly.
+
+**Calibrated per component**, each red on its own pins and nowhere else:
+claim_media swallowing again reddens the helper pin; the sweeper swallowing
+again reddens both fail-closed pins; one global bool reddens both engine pins;
+and the pre-fix claim path entire -- swallowing helper plus a caller that only
+catches -- reddens the caller pin with the outcome **ACCEPTED**, which is the
+audit's scenario reproduced exactly: a post committed successfully against
+media that was never reserved.
+
+That last arm needed a BEFORE INSERT trigger rather than a dropped table.
+Dropping the table breaks everything that touches it, so the post dies of some
+later error and "refused" proves nothing about this guard; the trigger fails
+the claim INSERT while every other statement stays healthy, which is the
+narrow, silent case that does the damage.
+
+One regression came out of it, found by an existing suite: `verify_storage`'s
+`_FakeSession` had no `get_bind()`, and the old swallow had been absorbing
+that AttributeError as "no claims". Failing closed turned it into a skipped
+delete. The double was taught to say what is true of it -- no database, so no
+claims table -- rather than the production guard being loosened to accept it.
