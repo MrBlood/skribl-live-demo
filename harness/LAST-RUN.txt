@@ -1,5 +1,5 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-21T03:18:44Z
+UTC timestamp           : 2026-09-21T03:19:26Z
 Host                    : Linux x86_64
 Tree SHA-256            : c73e358325fcaad40527f6278c85d7c52bd85f7b44678dc067765727287b2a17
 Git commit              : d55e23b
@@ -16,18 +16,18 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.sLmTykHXms/harness.db)
+Database reset          : yes (fresh /tmp/tmp.LQS4gMjCMa/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_stamps.py
+Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_icons.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
 suites requested : 1
-  verify_stamps.py: ok — 70/70 passed
-assertions passed: 70   (skipped suites contribute 0)
+  verify_icons.py: ok — 37/37 passed
+assertions passed: 37   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
