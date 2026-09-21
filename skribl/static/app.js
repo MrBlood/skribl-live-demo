@@ -4334,6 +4334,7 @@ function showPlayerError(msg, canRetry) {
   const pRestart = document.getElementById('playerRestartBtn');
   const pLoop = document.getElementById('playerLoopBtn');
   const pMute = document.getElementById('playerMuteBtn');
+  const pFull = document.getElementById('playerFullBtn');
   const pCopy = document.getElementById('playerCopyBtn');
   const pFill = document.getElementById('playerProgressFill');
   const pTrack = document.getElementById('playerProgress');
@@ -4710,6 +4711,50 @@ function showPlayerError(msg, canRetry) {
     running ? pause() : play();
   });
   if (pRestart) pRestart.addEventListener('click', restart);
+  // FULL SCREEN, the control the shared link was missing. The profile stage
+  // has had it since v304 while /s/<id> — the page a person actually sends
+  // somebody — did not. The two players are separate implementations for a
+  // reason (this one is the editor's engine; the in-post one is built to a
+  // host's byte budget), but that is an argument about CODE, not about which
+  // buttons a viewer gets.
+  //
+  // SHOWN ONLY IF IT CAN WORK. fullscreenEnabled is false in an iframe without
+  // allowfullscreen and on iOS Safari for non-video elements, and a button that
+  // silently does nothing is worse than no button — the same rule Mute follows
+  // two lines up. webkit* spellings included because that is what older iPadOS
+  // answers to, which is a device this project is actually used on.
+  const _fsWrap = canvas && canvas.parentElement;
+  const _fsReq = _fsWrap && (_fsWrap.requestFullscreen || _fsWrap.webkitRequestFullscreen);
+  const _fsOn = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  if (pFull && _fsReq && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
+    pFull.hidden = false;
+    const _syncFull = () => {
+      const on = _fsOn() === _fsWrap;
+      pFull.setAttribute('aria-pressed', on ? 'true' : 'false');
+      pFull.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+      // The canvas is sized from its box, and the box just changed shape.
+      if (typeof layoutPlayerCanvas === 'function') layoutPlayerCanvas();
+    };
+    pFull.addEventListener('click', () => {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (_fsOn()) { if (exit) exit.call(document); return; }
+      // Promise-returning in modern browsers, undefined in older ones; the
+      // catch is on the value, not assumed.
+      const r = _fsReq.call(_fsWrap);
+      if (r && r.catch) r.catch(() => {});
+    });
+    // The exit control inside the fullscreened subtree — see the note beside
+    // it in skribl_player.html. Same handler, so there is one way out and it
+    // cannot drift from the way in.
+    const _fsExit = document.getElementById('playerFullExit');
+    if (_fsExit) _fsExit.addEventListener('click', () => {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (_fsOn() && exit) exit.call(document);
+    });
+    document.addEventListener('fullscreenchange', _syncFull);
+    document.addEventListener('webkitfullscreenchange', _syncFull);
+  }
+
   if (pLoop) pLoop.addEventListener('click', () => {
     loop = !loop;
     pLoop.classList.toggle('active', loop);

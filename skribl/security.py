@@ -181,6 +181,28 @@ def _validate_embed_origins(raw):
 
 
 # --- CSP + security headers, scoped to the blueprint ------------------------
+def resolve_request_limit(host_cap):
+    """The effective request-size cap: the LOWER of the two configured values.
+
+    Split out of register_security's closure so the rule is reachable from a
+    test without standing up a request (EXT-P1-5). Both callers -- the body
+    bound and the gzip expansion bound -- go through here, which is what keeps
+    a compressed body from being measured against a different number than the
+    bytes it expands to.
+
+    `host_cap` is the app's MAX_CONTENT_LENGTH, or a falsy value if unset.
+    SKRIBL_MAX_REQUEST_BYTES participates ONLY when it is present in the
+    environment: taking min() against this function's own default would make
+    Skribl's 25 MB a silent ceiling on every host that deliberately set a
+    larger one, which is breaking working deployments in order to honour a
+    variable nobody set.
+    """
+    env_set = os.environ.get("SKRIBL_MAX_REQUEST_BYTES") is not None
+    skribl_cap = _env_int("SKRIBL_MAX_REQUEST_BYTES", 25_000_000, minimum=1024)
+    caps = [c for c in (host_cap or None, skribl_cap if env_set else None) if c]
+    return min(caps) if caps else skribl_cap
+
+
 def register_security(bp, skribl_version, player_target="_blank"):
     # --- Content Security Policy ---------------------------------------------
     # Deferred until v105 for a good reason: while gifenc/mp4-muxer came from
@@ -266,11 +288,23 @@ def register_security(bp, skribl_version, player_target="_blank"):
         follow-up review, F3) — so a host that set the Skribl-specific cap to
         1 MB bounded the COMPRESSED bytes at 1 MB and the EXPANDED bytes at
         25 MB: the configured limit was bypassed by anything gzipped. The
-        host's MAX_CONTENT_LENGTH, when set, wins for both.
+        host's MAX_CONTENT_LENGTH, when set, won for both -- and that was
+        precedence rather than a limit (EXT-P1-5). app.py always sets
+        MAX_CONTENT_LENGTH, so in the standalone app SKRIBL_MAX_REQUEST_BYTES
+        was inert: an operator who set it to 1 MB got 25 MB and no warning.
+        A cap somebody configured is not advice.
+
+        THE LOWER OF THE TWO WINS, BUT ONLY WHERE BOTH WERE CHOSEN, and the
+        distinction is the whole fix. Taking min() of the host's value and this
+        function's 25 MB DEFAULT would turn Skribl's default into a silent
+        ceiling on every host that deliberately set a larger one -- breaking
+        working deployments in the name of honouring a variable nobody set. So
+        the environment value participates only when it is actually present in
+        the environment; unset, the host's number governs alone, exactly as
+        before.
         """
-        return (current_app.config.get("MAX_CONTENT_LENGTH")
-                or _env_int("SKRIBL_MAX_REQUEST_BYTES", 25_000_000,
-                            minimum=1024))
+        return resolve_request_limit(
+            current_app.config.get("MAX_CONTENT_LENGTH"))
 
     @bp.before_request
     def _bound_request():
@@ -328,6 +362,16 @@ def register_security(bp, skribl_version, player_target="_blank"):
             plain = dec.decompress(request.get_data(cache=False), limit)
             if dec.unconsumed_tail or not dec.eof:
                 raise ValueError("body expands past MAX_CONTENT_LENGTH")
+            # TRAILING BYTES ARE A REFUSAL, NOT LEFTOVERS (EXT-P1-6). eof says
+            # the FIRST gzip member ended; anything after it lands in
+            # unused_data and was silently dropped. A body of two concatenated
+            # members therefore had its second half ignored while the request
+            # was answered 2xx -- the sender and the server disagreeing about
+            # what was posted, which is the shape request smuggling takes when
+            # a proxy and an origin split a body differently. Skribl speaks
+            # single-member gzip; anything else is refused rather than guessed.
+            if dec.unused_data:
+                raise ValueError("trailing data after the gzip member")
         except Exception:
             return jsonify({"error": "Malformed compressed request body."}), 400
         request._cached_data = plain

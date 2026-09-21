@@ -920,11 +920,29 @@ def register_routes(bp, *, index_route=False):
                 return jsonify({"error": "user_id is too long."}), 400
             author = normalise_user_id(author)
             q = q.filter(SkriblPost.user_id == author)
-            # Private posts are visible on their author's own listing, and only
-            # there. Unlisted stay out of listings entirely — they are reachable
-            # by link, which is what "unlisted" means.
+            # AN AUTHOR'S OWN LISTING SHOWS EVERYTHING THEY OWN (EXT-P1-12).
+            # This used to be in_(("public", "private")) under a comment
+            # reasoning that "unlisted stay out of listings entirely — they are
+            # reachable by link, which is what unlisted means". That is true of
+            # PUBLIC listings and false of this one. Unlisted is what a post
+            # gets when its author does not tick "Show in the public gallery",
+            # which is the default and therefore most posts; the signed-in
+            # profile is the page that asks "what have I made"; so the
+            # authenticated profile hid nearly everything its owner had, and
+            # anyone who lost a link had no way back to their own work.
+            #
+            # It also split the product in two. With no accounts, "Your
+            # Skribls" is what this browser posted, unlisted included, because
+            # they are yours (see the /library route). The same sentence has to
+            # be true when a host signs somebody in, or "yours" means one thing
+            # standalone and another thing mounted.
+            #
+            # Still only ever for the owner: the branch is already gated on a
+            # viewer who IS this author, and the else below is unchanged, so
+            # nothing unlisted or private reaches anybody else's request.
             if viewer is not None and author == normalise_user_id(viewer):
-                q = q.filter(SkriblPost.visibility.in_(("public", "private")))
+                q = q.filter(SkriblPost.visibility.in_(
+                    ("public", "unlisted", "private")))
             else:
                 q = q.filter(SkriblPost.visibility == "public")
         else:
@@ -1030,7 +1048,20 @@ def register_routes(bp, *, index_route=False):
                 s.flush()
         except sa.exc.IntegrityError:
             return False
-        post.views_total = (post.views_total or 0) + 1
+        # ATOMIC, NOT READ-MODIFY-WRITE (EXT-P1-4). This was
+        # `post.views_total = (post.views_total or 0) + 1`, which reads the
+        # value into Python and writes back a number computed from a snapshot.
+        # The uniqueness row above stops ONE viewer being counted twice; it
+        # does nothing about two DIFFERENT viewers whose requests interleave,
+        # and those are exactly the requests a popular post gets. Both read N,
+        # both write N+1, one play is gone. Under-counting is silent, permanent
+        # and worst on the posts that matter most, and Hot ranks on this
+        # column. The database does the addition now, so concurrent increments
+        # serialise on the row instead of racing in the application.
+        s.query(SkriblPost).filter(SkriblPost.id == post.id).update(
+            {SkriblPost.views_total:
+                sa.func.coalesce(SkriblPost.views_total, 0) + 1},
+            synchronize_session=False)
         # THE JANITOR RIDES THE WRITE, not the read: only a NEW row triggers
         # it, so the work is proportional to plays rather than to page loads,
         # and it is bounded and best-effort. A deployment that never schedules

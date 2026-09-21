@@ -4554,6 +4554,46 @@ body.player-mode .app {
   box-sizing: border-box;
 }
 
+/* FULL SCREEN on the player, the control the shared link was missing until the
+   owner asked for it. The wrapper is what goes fullscreen, so it has to stop
+   being a sized box and become the screen; layoutPlayerCanvas() then measures
+   the new box and resizes the canvas from it.
+
+   NO ASPECT RATIO IS HARD-CODED HERE, deliberately. The profile stage's
+   fullscreen rule says `calc(100vh * 16 / 9)`, which assumes every drawing is
+   16:9 and is only harmless because the canvas keeps its own ratio inside the
+   box. The canvas is a replaced element with width and height auto, so max
+   bounds alone letterbox it correctly at ANY shape — which is the lesson the
+   in-post player's stretch bug taught, applied rather than repeated. */
+.canvas-wrap:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  /* TOKENS, NOT THE LITERALS THIS WAS COPIED WITH. The stage's rule says
+     `background: #000` and `rgba(6,7,10,.72)`, but it lives in a TEMPLATE;
+     these lines are in the stylesheet, where verify_theme and verify_surfaces
+     hold every neutral to a token so the chrome can follow a light theme. Both
+     went red on the first draft of this rule, which is the gates doing exactly
+     their job on a copy-paste. --surface-deep IS #06070a, so this is the same
+     ink by its name. */
+  background: var(--surface-deep);
+  display: grid;
+  place-items: center;
+}
+.full-exit { display: none; position: absolute; top: 14px; right: 14px; z-index: 3;
+  width: 44px; height: 44px; background: var(--surface-deep);
+  border-color: var(--hairline-strong); color: var(--text-primary); }
+.canvas-wrap:fullscreen .full-exit { display: grid; place-items: center; }
+.canvas-wrap:fullscreen > canvas {
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+}
+
 body.player-mode .canvas-wrap {
   flex: none;
   max-width: 100%;

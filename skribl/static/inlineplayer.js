@@ -747,15 +747,44 @@
       if (music && !music.data) music = null;
       el.classList.toggle('is-silent', !music);
 
-      /* The underlay: background colour, then a photo or base snapshot. Both
-       * are just an image under the strokes here — the photo's fit/opacity/blur
-       * controls are authoring state the editor applies through CSS on its own
-       * <img>, and reproducing that stack in a feed box is not worth a second
+      /* The underlay: background colour, then a photo or base snapshot.
+       *
+       * THE AUTHORED FIT TRAVELS WITH THE PHOTO, and this used to throw it
+       * away. The comment here read that the fit/opacity/blur controls are
+       * "authoring state the editor applies through CSS on its own <img>, and
+       * reproducing that stack in a feed box is not worth a second
        * implementation of it. Cover is the fit a feed wants and the editor's
-       * default. */
+       * default." Cover is the editor's DEFAULT; it is not what the author
+       * chose once they touched the control. A photo composed with Fit was
+       * letterboxed in the editor and on /s/<id> and CROPPED here -- on the
+       * profile stage, the feed and every host embed -- which is the owner's
+       * report: "the pug in the background FIT the screen on the editor and
+       * the original player. now he is cut off."
+       *
+       * And there is no second implementation to write: lib/photofit.js has
+       * owned this geometry since the day Pad, Flip and the player each had
+       * their own copy of it and one could not read what another wrote. Using
+       * it is the cheap option; the expensive one was the hard-coded Math.max
+       * that disagreed with two other surfaces.
+       *
+       * opacity and blur are still NOT reproduced here -- they are a canvas
+       * filter rather than geometry, and a photo authored at 40% still paints
+       * opaque in a feed box. Stated because it is a known remaining gap, not
+       * because it is fine. */
       under = { color: (f0.background && f0.background.color) || (payload.background || {}).color || null,
-                image: null };
-      var src = (f0.photo && f0.photo.data) || f0.baseSnapshot || payload.baseSnapshot || null;
+                image: null, fit: null, offX: 0.5, offY: 0.5, zoom: 1 };
+      var ph = f0.photo || null;
+      if (ph && ph.data) {
+        /* Only a PHOTO carries a fit. A base snapshot is already the canvas's
+         * own size and shape, so every mode agrees on it and the default
+         * stands. */
+        under.fit = ph.fit;
+        var off = ph.offset || {};
+        if (off.x != null) under.offX = off.x;
+        if (off.y != null) under.offY = off.y;
+        if (ph.zoom != null) under.zoom = ph.zoom;
+      }
+      var src = (ph && ph.data) || f0.baseSnapshot || payload.baseSnapshot || null;
       if (src) {
         var img = new global.Image();
         /* THE REPAINT MUST NOT MOVE TIME. This used to be render(elapsed, true)
@@ -816,11 +845,23 @@
         ctx.fillRect(0, 0, size.w, size.h);
       }
       if (under && under.image) {
-        /* Cover: fill the canvas, crop the overflow, centred. */
+        /* THE SAME GEOMETRY THE EDITORS AND THE EXPORT USE — one module, so a
+         * photo cannot land in three places on three surfaces. The fallback is
+         * the old centred cover, kept only for the case where the module did
+         * not load: a drawing that renders slightly wrong beats a box that
+         * renders nothing. */
         var iw = under.image.naturalWidth || size.w, ih = under.image.naturalHeight || size.h;
-        var k = Math.max(size.w / iw, size.h / ih);
-        var dw = iw * k, dh = ih * k;
-        ctx.drawImage(under.image, (size.w - dw) / 2, (size.h - dh) / 2, dw, dh);
+        var PF = global.SkriblPhotoFit;
+        if (PF) {
+          var r = PF.rect(iw, ih, size.w, size.h,
+                          { fit: under.fit, offX: under.offX,
+                            offY: under.offY, zoom: under.zoom });
+          ctx.drawImage(under.image, r.x, r.y, r.w, r.h);
+        } else {
+          var k = Math.max(size.w / iw, size.h / ih);
+          var dw = iw * k, dh = ih * k;
+          ctx.drawImage(under.image, (size.w - dw) / 2, (size.h - dh) / 2, dw, dh);
+        }
       }
     }
 

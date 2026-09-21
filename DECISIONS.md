@@ -9368,3 +9368,205 @@ One regression came out of it, found by an existing suite: `verify_storage`'s
 that AttributeError as "no claims". Failing closed turned it into a skipped
 delete. The double was taught to say what is true of it -- no database, so no
 claims table -- rather than the production guard being loosened to accept it.
+
+## Unsealed, on top of v305 -- the external audit's P1 tier
+
+Seven of the audit's ten P1 items, plus the two that needed the owner's call.
+
+**EXT-P1-4, views_total lost updates.** `post.views_total = (post.views_total
+or 0) + 1` reads the value into Python and writes back a number computed from
+a snapshot. The uniqueness row stops ONE viewer being counted twice; it does
+nothing about two DIFFERENT viewers interleaving, which is what a popular post
+gets. The database does the addition now.
+
+The pin is asserted on the SQL the route emits, and that was the second
+attempt. The first staged the stale read directly -- session A reads, B
+commits underneath, A writes -- and SQLite refused it outright ("database is
+locked"), because the scenario needs two concurrent writers and SQLite has
+one. Threads would have made it a test that fails once a month on somebody
+else's machine. The emitted statement is not a proxy for the mechanism: a
+read-modify-write can only produce `SET views_total=?`, and an atomic
+increment can only name the column on both sides.
+
+**EXT-P1-5, a cap that was advice.** `_request_limit` returned
+`MAX_CONTENT_LENGTH or <env>`, which is precedence, not a limit; app.py always
+sets MAX_CONTENT_LENGTH, so an operator who configured
+SKRIBL_MAX_REQUEST_BYTES to 1 MB got 25 MB and no warning. The lower of the
+two wins now -- **but only where both were chosen**, and that half matters as
+much as the fix: min() against this function's own 25 MB default would turn
+Skribl's default into a silent ceiling on every host that deliberately raised
+MAX_CONTENT_LENGTH, breaking working deployments in order to honour a variable
+nobody set. The audit asked for min(); min() alone would have been a
+regression.
+
+**The probe for it was vacuous and the calibration is what said so.** The
+first version posted a 20,000-character caption, which the column refuses at
+300 -- so the request was rejected by VALIDATION and the assertion passed
+identically whether the size cap had been consulted or not. Reverting the fix
+left it green. It posts a large VALID body now and asserts 413 exactly, the
+status only the size bound produces. A 400 can no longer stand in for it.
+
+**EXT-P1-6, gzip.** zlib's `eof` says the FIRST member ended; anything after
+it sat in `unused_data` and was dropped in silence, so a two-member body had
+its second half ignored behind a 201. Sender and server disagreeing about what
+was posted is the shape request smuggling takes. Refused now.
+
+**EXT-P1-12, an author could not find their own work.** The own-listing filter
+was `("public", "private")`, under a comment reasoning that unlisted posts
+"stay out of listings entirely". True of PUBLIC listings, false of the page
+that answers "what have I made". Unlisted is the default, so the signed-in
+profile hid nearly everything its owner had. It also split the product in two:
+with no accounts, "Your Skribls" has always included unlisted, because they
+are yours. Both modes answer the same way now; nothing widened for anybody
+else, and the other-viewer and anonymous cases are driven rather than assumed.
+
+**EXT-P1-13, copy describing the wrong ownership model.** The help drawer
+explained that Your Skribls is what this browser posted and that Delete works
+because this browser holds the key. Every clause is false once a host signs
+somebody in -- the posts belong to the account, they survive clearing site
+data, and there is no key to keep safe. Two sentences now, chosen by
+`skribl_signed_in` from the blueprint's context processor. Pinned on BOTH
+editors in BOTH modes: a shared include rendered under two identities is two
+instances until each has been driven.
+
+**EXT-P1-10, CI installed whatever was newest.** `pip install playwright
+Pillow`, ignoring harness/requirements.txt -- the file that exists because
+playwright's version is coupled to a Chromium build number on disk and pins a
+deliberately narrow range for it. All four jobs install from that file now.
+
+**EXT-P1-11, the gunicorn ceiling (owner's call, taken).** `<24.0` was written
+when 23 was current; gunicorn is at 26.2.0, so the ceiling had become a
+three-major freeze on the one process facing the internet. Tested before it
+moved: 26.2.0 migrated with `alembic upgrade head` and served Pad, Flip, the
+gallery, the library, the feed, the API, a posted Skribl's player and a
+gzipped POST, on two workers, with nothing in the log. Ceiling raised to
+`<27.0` and the hashed lock regenerated. Gunicorn 26 opens a control socket at
+`$HOME/.gunicorn/gunicorn.ctl`; the owner chose to keep the default.
+
+**EXT-P1-9, the PR gate (owner's call, taken).** Pull requests ran verify_boot
+alone while the full battery ran only after merge -- and this repository's own
+history records fixtures going red on main that no pull request could have
+caught. The smoke job now runs every suite needing neither a browser nor the
+shared server: 765 assertions, measured at 59 seconds locally, against ~45
+minutes for the full sqlite job. That ratio is the argument. Browser and
+timing suites stay post-merge, where a slow job costs nobody's attention.
+
+**Not done, and why.** EXT-P1-7 (reseal the exact delivered artifact) is a
+seal, and this tier is unsealed by definition; it resolves when v306 is
+sealed. EXT-P1-8 (physical iPhone, VoiceOver, NVDA results) cannot be produced
+from this container at all -- it needs the owner's hands on real devices, and
+recording anything else would be inventing evidence, which is the one thing
+this tree's whole apparatus exists to prevent.
+
+## Unsealed, on top of v305 -- the feed box cropped what the author fitted
+
+Owner, from the profile stage: "the pug in the background FIT the screen on
+the editor and the original player. now he is cut off?"
+
+A background photo's fit is authoring state and it travels in the payload
+(`photo.fit`, with offset and zoom). The editor honours it. `/s/<id>` honours
+it -- it maps the value onto a DOM layer's CSS `object-fit`. The in-post
+player hard-coded a centred cover and discarded it, so a photo composed with
+Fit was letterboxed on two surfaces and CROPPED on the third: the profile
+stage, the feed, and every host embed.
+
+**Measured before anything was theorised, and the theory would have been
+wrong.** The obvious suspect was v305's letterbox fix, which had just changed
+this canvas's geometry. It is not: with a 1000x250 photo authored `contain` on
+an 800x600 canvas, `/s/` reported `object-fit: contain` while the in-post
+canvas came back solid photo at 6%, 50% and 94% of its height. That is cover,
+two thirds of the image cropped away, and it is older than the letterbox work.
+What v305 changed is how the crop LOOKS -- the canvas used to be stretched, so
+the same defect read as general distortion rather than as cropping.
+
+**The comment above that line argued for it, and the argument was wrong on its
+own terms.** It read that the fit/opacity/blur controls are "authoring state
+the editor applies through CSS on its own <img>, and reproducing that stack in
+a feed box is not worth a second implementation of it. Cover is the fit a feed
+wants and the editor's default." Cover is the editor's DEFAULT; it is not what
+the author chose once they touched the control. And there was no second
+implementation to write: `lib/photofit.js` has owned this geometry since Pad,
+Flip and the player each kept their own copy and one could not read the
+vocabulary another wrote -- its header carries that story. The hard-coded
+`Math.max` WAS the second implementation.
+
+**The ratchet moved, and the argument is written at the ratchet.** The embed
+had 17 bytes of headroom. Loading the module costs 1,155 B served and the fit
+capture costs 464 B in inlineplayer.js: 33,483 -> 35,102, or 4.8%, and
+EMBED_RATCHET goes to 35,200. The only way to hold the old number was to write
+the rect maths a second time inside the player, which is re-making the exact
+defect the module exists to prevent. Spending against a ratchet is the rule;
+this is the case where the cheap option is the wrong one.
+
+**Pinned on pixels, both ways.** A spy on `drawImage` would pass just as
+happily if the module returned nonsense, and a substring search for the
+module's name would pass on the comment explaining it. The fixture is a solid
+photo four times wider than tall on a 4:3 canvas, so the modes are not subtly
+different pictures: contain leaves the background showing at top and bottom
+(16,20,24), cover paints every row. Both arms are asserted, so a player that
+simply letterboxed everything would fail the second. Calibrated: forcing the
+module reference to null reddens the contain pin alone, 102/103.
+
+**Still not reproduced in a feed box: opacity and blur.** A photo authored at
+40% paints opaque there. That is a canvas filter rather than geometry, and it
+is recorded here as a known gap rather than quietly left in the comment that
+used to cover for all three.
+
+## Unsealed, on top of v305 -- the link people share gets full screen too
+
+Owner, holding the copied link beside the profile stage: "shouldn't there be a
+full screen on this player too? why do the players not share the same
+functions?"
+
+**The answer to the second question is yes, they are different code, and no,
+that was never a reason for this.** `/s/<id>` runs app.js in player-mode -- the
+editor's own engine. The profile stage, the feed and every host embed run
+inlineplayer.js, a separate small implementation built to a host's byte budget.
+That split is deliberate and it is about CODE. Nothing about it says which
+buttons a viewer gets, and the drift ran the wrong way: the stage gained full
+screen in v304 and the page a person actually SENDS somebody did not.
+
+Fixed, with the stage's own glyph character for character so the two surfaces
+read as one product.
+
+**The harness found the hole that mattered, not review.** Only the fullscreened
+subtree renders, so the transport row -- including the button that got you
+there -- is off screen. The first version had no way out but Escape: a key not
+every device has and not everybody knows. The assertion that leaves full screen
+TIMED OUT clicking a button that no longer existed on screen, which is the
+product telling the truth through the instrument. `#playerFullExit` lives
+inside the fullscreened element now, exactly as the stage's `#fullExit` does.
+
+**And the first shape of that assertion was wrong twice.** Pressing Escape went
+red because Escape belongs to the browser's fullscreen chrome, which a headless
+run does not have -- the page never sees it. Then clicking the transport button
+again CRASHED the suite on a 30-second timeout instead of failing, so a
+mutation removing the exit control read as a broken harness rather than as the
+defect. It asks whether the exit is on screen BEFORE using it now, so its
+absence is one named red line. **A mutation that crashes instead of failing is
+telling you the assertion is the wrong shape** -- the second time that rule has
+earned itself in this release.
+
+**Three ratchets moved and each argument is written at the ratchet**: HTML
+12,000 -> 12,750 (measured 12,647: 409 B of button, 238 B of exit control), JS
+153,800 -> 154,000 (measured 153,911), CSS unchanged with room to spare. The JS
+TARGET stays 153,800 on purpose: a ratchet moving to admit a missing control is
+not a target being given up on, and the two numbers disagreeing is the honest
+record of that.
+
+**The token gates caught the copy-paste, which is what they are for.** The
+first draft of the player's rule carried the stage's literals with it --
+`background: #000`, `rgba(6,7,10,.72)`, `color: #eef` -- and `verify_theme`
+and `verify_surfaces` both went red naming them. The stage gets away with
+those because its rule lives in a TEMPLATE; these lines are in the stylesheet,
+where every neutral has to be a token or the chrome cannot follow a light
+theme. `--surface-deep` is #06070a, so the fix was the same ink by its name.
+Worth recording because the literals arrived by copying a working rule, which
+is the way this particular mistake always arrives.
+
+**Also noted, not changed:** the stage's fullscreen rule hard-codes
+`calc(100vh * 16 / 9)`, which assumes every drawing is 16:9. It is currently
+harmless only because the canvas keeps its own ratio inside that box. The
+player's new rule sets no aspect at all and lets max bounds letterbox it --
+which is the lesson the in-post player's stretch bug taught, applied rather
+than repeated.

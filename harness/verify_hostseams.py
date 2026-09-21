@@ -294,6 +294,39 @@ except TypeError as exc:
     check("a non-callable filter is refused at configuration time", True, str(exc))
 
 
+print("\nEXT-P1-13 — the help drawer describes the ownership model in force")
+# The "Your Skribls" tip described the browser-held model unconditionally:
+# "everything you have posted from this browser", Delete working "because this
+# browser holds the key", the list "saved in this browser only" and removed by
+# clearing site data. Every clause is false once a host signs somebody in --
+# the posts belong to the ACCOUNT, they are listed by author, they survive
+# clearing site data, and there is no key to keep safe. Copy that confidently
+# describes the wrong ownership model is a trust problem: it tells people their
+# work is more fragile than it is, or less.
+#
+# ASSERTED ON BOTH SURFACES AND BOTH MODES. A shared include rendered under two
+# identities is two instances until each has been driven -- Pad and Flip both
+# include this drawer, and a fix that reached one template's copy of the
+# condition would look green on a census that only visited the other.
+_KEY_CLAIM = "this browser holds the key"
+_ACCOUNT_CLAIM = "belong to your account"
+
+for _route, _surface in (("/skribl-pad", "Pad"), ("/flip", "Flip")):
+    _anon_html = host_app(None)[0].test_client().get(_route).get_data(as_text=True)
+    _in_html = host_app(7)[0].test_client().get(_route).get_data(as_text=True)
+
+    check(f"the probe is real: {_surface} renders the Your Skribls tip at all",
+          "Your Skribls</span>" in _anon_html and "Your Skribls</span>" in _in_html,
+          "without the tip present, every assertion below passes vacuously")
+    check(f"{_surface}, anonymous: the browser-held model is still described",
+          _KEY_CLAIM in _anon_html and _ACCOUNT_CLAIM not in _anon_html,
+          "standalone is exactly where that copy is true, and it must not "
+          "have been traded away for the signed-in case")
+    check(f"{_surface}, signed in: the account model is described instead",
+          _ACCOUNT_CLAIM in _in_html and _KEY_CLAIM not in _in_html,
+          "the key sentence surviving here is the defect: there is no browser "
+          "key, and clearing site data does not remove an account's posts")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

@@ -27,6 +27,15 @@
       <button type="button" class="player-btn" id="playerMuteBtn" aria-label="Mute" aria-pressed="false" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
       </button>
+      {#- Full screen: the profile stage has had it since v304 and the link a
+          person actually SHARES did not, which is the wrong way round. Hidden
+          until app.js confirms the API exists, the same way Mute is hidden
+          until there is audio — a control that cannot work should not be on
+          screen. Same glyph as the stage's #btnFull so the two surfaces are
+          recognisably one product. -#}
+      <button type="button" class="player-btn" id="playerFullBtn" aria-label="Full screen" aria-pressed="false" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+      </button>
     </div>
     <button type="button" class="player-link" id="playerCopyBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>

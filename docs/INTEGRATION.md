@@ -74,11 +74,21 @@ here.
 
 **Whose Skribls it shows.** When you supply `create_blueprint(current_user_id=
 ...)`, the page reads `GET /api/skribls?user_id=<that id>` — the listing's own
-author filter, which shows an author their public and private posts and keeps
-unlisted ones out of every listing. With no identity supplied (the standalone
+author filter, which shows an author **everything they own: public, unlisted
+and private**. Unlisted stays out of every listing but the owner's own; that
+is what unlisted means, and it changed in EXT-P1-12, where the filter had been
+`("public", "private")`. Since unlisted is what a post gets when its author
+does not tick "Show in the public gallery" — the default, so most posts — the
+signed-in profile had been hiding nearly everything its owner had made, and
+anyone who lost a link had no way back to their own work. Nothing widened for
+anybody else: a different signed-in user, and an anonymous viewer, still see
+only the public ones.
+
+With no identity supplied (the standalone
 app), it shows the list the browser kept of what it posted — the same record
 the ••• menu's "Your Skribls" shows, unlisted posts included — and says on the
-page that this is a browser's list, not an account. `/gallery` is the public
+page that this is a browser's list, not an account. The two modes now answer
+"what have I made" the same way, which they did not before. `/gallery` is the public
 page; `/library` never was, and until the gallery existed the difference was
 invisible because nothing posted from the editors was public.
 

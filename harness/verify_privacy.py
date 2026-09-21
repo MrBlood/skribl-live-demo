@@ -287,6 +287,61 @@ check("every by-id post lookup is paired with a visibility check",
       _guards >= _loads, f"{_loads} lookups, {_guards} guards")
 check("the guard is used on at least three surfaces", _guards >= 3, str(_guards))
 
+# ---------------------------------------------------------------------------
+# EXT-P1-12: an author's own listing shows everything they own.
+#
+# GET /api/skribls?user_id=<me> filtered to ("public", "private") for the
+# author themselves, under a comment reasoning that unlisted posts "stay out of
+# listings entirely -- they are reachable by link, which is what unlisted
+# means". True of PUBLIC listings; false of this one. Unlisted is what a post
+# gets when its author does not tick "Show in the public gallery" -- the
+# default, so most posts -- and this is the page that answers "what have I
+# made". The signed-in profile hid nearly everything its owner had, and anyone
+# who lost a link had no route back to their own work. It also split the
+# product: with no accounts, "Your Skribls" has always included unlisted,
+# because they are yours.
+print("\nEXT-P1-12 — the author's own listing")
+
+_mine = _app_as(1)[0].test_client()
+_made = {}
+for _vis in ("public", "unlisted", "private"):
+    _rr = _mine.post("/api/skribls", json={
+        "title": f"p1-12 {_vis}", "visibility": _vis,
+        "frames": [{"strokes": [], "strokeGroups": [],
+                    "background": {"color": "#101418"}}]})
+    _made[_vis] = (_rr.get_json() or {}).get("id")
+    check(f"the probe is real: a {_vis} post exists",
+          _rr.status_code == 201 and _made[_vis],
+          f"{_rr.status_code} — without it the listing assertions are vacuous")
+
+
+def _listed_titles(client, uid):
+    _b = client.get(f"/api/skribls?user_id={uid}").get_json() or {}
+    return {i.get("title") for i in _b.get("items", [])}
+
+
+_own = _listed_titles(_mine, 1)
+check("EXT-P1-12: the author sees their own UNLISTED post on their listing",
+      "p1-12 unlisted" in _own,
+      f"{sorted(_own)} — unlisted is the default, so hiding it here empties "
+      f"the profile of nearly everything its owner made")
+check("...and still sees public and private there",
+      {"p1-12 public", "p1-12 private"} <= _own, f"{sorted(_own)}")
+
+# THE HALF THAT MUST NOT MOVE. Widening the owner's own view is only safe
+# while everybody else's stays exactly as narrow, so both other readers are
+# driven rather than assumed.
+_other = _listed_titles(_app_as(999)[0].test_client(), 1)
+_anon = _listed_titles(_app_as(None)[0].test_client(), 1)
+check("EXT-P1-12: another signed-in user sees ONLY the public one",
+      _other == {"p1-12 public"} or ("p1-12 unlisted" not in _other
+                                     and "p1-12 private" not in _other),
+      f"{sorted(_other)}")
+check("EXT-P1-12: an anonymous viewer sees ONLY the public one",
+      "p1-12 unlisted" not in _anon and "p1-12 private" not in _anon,
+      f"{sorted(_anon)}")
+
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
@@ -296,5 +351,6 @@ print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
 # passed" and the aggregate counted it as PASS with a failed assertion inside.
 # Eight suites shared this hole, verify_amber among them — which is very likely
 # what the "flake" earlier in this session actually was.
+
 import sys
 sys.exit(1 if bad else 0)
