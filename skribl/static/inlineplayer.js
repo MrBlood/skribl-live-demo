@@ -50,15 +50,21 @@
  *         per frame, holds honoured through lib/holdtiming.js), the background
  *         colour, a photo or base-snapshot underlay, and the posted audio loop.
  *
- * DOES NOT: the wet/dry stroke compositor (app.js makeStrokeCompositor). A
- *         stroke authored below 100% opacity is drawn here as overlapping
- *         stamps, so its overlaps bead darker than they do on /s/<id>. This is
- *         the one KNOWN fidelity gap and it is named here rather than left to
- *         be discovered: the compositor is ~60 lines of offscreen canvas work
- *         per stroke, and at feed scale — twenty boxes, one playing — it is not
- *         obviously worth the allocation. verify_inline.py pins the gap with an
- *         OPAQUE drawing so the pixel comparison stays meaningful; if this ever
- *         gets the compositor, that fixture is where to widen the proof.
+ * ALSO PLAYS, SINCE v279: the wet/dry stroke compositor (makeCompositor
+ *         below, app.js's makeStrokeCompositor in miniature). This block said
+ *         "DOES NOT" for twenty-odd releases after it did — a stroke below
+ *         100% opacity is composited once here, not stamped — and ended with
+ *         "if this ever gets the compositor, that fixture is where to widen
+ *         the proof", which is what v279 did and this paragraph did not
+ *         follow. verify_inline.py pins it by rendering the same translucent
+ *         drawing twice, once with the compositor disabled at source.
+ *
+ * NO KNOWN FIDELITY GAP, and the last one closed is worth naming because it
+ *         survived so long: until v305 the canvas was given a definite CSS
+ *         width AND height, so the box's max-width/max-height clamped each
+ *         axis on its own and every drawing that is not 16:9 was STRETCHED —
+ *         216% on a 9:16 one. See adopt(). A gap in the SHAPE of the drawing
+ *         outlived a gap in its shading because nothing measured the aspect.
  *
  * ===========================================================================
  * THE PRODUCT RULES, WHICH ARE NOT ARBITRARY
@@ -382,7 +388,7 @@
   /* Wraps a visible context. Returns null when the payload has no translucent
    * stroke at all, so an opaque drawing — which is most of them — allocates
    * nothing and takes the same path it always did. */
-  function makeCompositor(visCtx, visCanvas, strokes) {
+  function makeCompositor(visCtx, visCanvas, strokes, ratio) {
     var any = false;
     for (var i = 0; i < strokes.length; i++) {
       if (!strokes[i].erase && parseStrokeAlpha(strokes[i].color) < 1) {
@@ -392,7 +398,16 @@
     }
     if (!any) return null;
 
-    var dpr = visCanvas.width / (visCanvas.clientWidth || visCanvas.width) || 1;
+    /* THE SCALE THE VISIBLE CONTEXT IS ALREADY USING, handed in by the
+     * caller. This used to be derived as backing/clientWidth, which happened
+     * to equal the device pixel ratio only while the canvas's CSS width was
+     * pinned to the drawing's logical size. It is not any more -- the canvas
+     * letterboxes at its intrinsic ratio (inlineplayer.css) -- so a derived
+     * figure would be the display scale, not the transform's, and every
+     * see-through stroke would composite at the wrong size. The offscreen
+     * layers must match ctx.setTransform in adopt(), so they take the same
+     * number rather than a second opinion about it. */
+    var dpr = ratio || (visCanvas.width / (visCanvas.clientWidth || visCanvas.width)) || 1;
     var dry = document.createElement('canvas');
     var wet = document.createElement('canvas');
     dry.width = wet.width = visCanvas.width;
@@ -493,11 +508,11 @@
     return a;
   }
 
-  function paintStatic(ctx, strokes, canvas) {
+  function paintStatic(ctx, strokes, canvas, ratio) {
     /* The idle poster and every non-replay repaint come through here, so the
      * compositor has to be on this path too — otherwise a post looks right
      * while playing and wrong the moment it settles. */
-    var comp = canvas ? makeCompositor(ctx, canvas, strokes) : null;
+    var comp = canvas ? makeCompositor(ctx, canvas, strokes, ratio) : null;
     var fn = (typeof window !== 'undefined' && window.SkriblStrokeLayers
               && window.SkriblStrokeLayers.uniformRun)
       ? window.SkriblStrokeLayers.uniformRun : uniformRun;
@@ -581,6 +596,9 @@
     var payload = null, loading = false, failed = false;
     var timeline = null, flipFrames = null, flipMs = null, flipFps = 12;
     var totalMs = 0, size = null, under = null;
+    /* The scale ctx.setTransform is set to in adopt(), so the compositor's
+       offscreen layers can match it instead of inferring it from CSS. */
+    var pixelRatio = 1;
     var state = 'idle';                       // idle | playing | paused
     var elapsed = 0, t0 = 0, raf = null, drawn = 0;
     /* The page and progress this player last PAINTED, which is how
@@ -693,14 +711,34 @@
       size = logicalSize(payload);
 
       var dpr = Math.min(global.devicePixelRatio || 1, 2);
+      pixelRatio = dpr;
       canvas.width = Math.round(size.w * dpr);
       canvas.height = Math.round(size.h * dpr);
-      /* CSS size is the LOGICAL size; inlineplayer.css caps it at the box with
-       * max-width/max-height, which preserves the aspect because a canvas is a
-       * replaced element. The drawing is therefore letterboxed, never
-       * stretched. */
-      canvas.style.width = size.w + 'px';
-      canvas.style.height = size.h + 'px';
+      /* NO CSS SIZE IS SET, AND THAT IS THE LETTERBOX.
+       *
+       * This used to set canvas.style.width/height to the drawing's logical
+       * size, with a comment saying max-width/max-height then preserved the
+       * aspect "because a canvas is a replaced element". They do not. A
+       * replaced element whose width AND height are both definite has each
+       * axis clamped by its own maximum, independently -- so a 9:16 drawing
+       * in the 16:9 box came out 386x217 instead of 122x217, stretched 216%,
+       * and a 4:3 one by 33%. It was wrong on the feed, in the profile's
+       * stage and in any host's embed, from the day this file was written;
+       * the owner caught it on the profile page, where the stage is big
+       * enough to see it (v305). /s/<id> was never affected -- app.js fits
+       * the canvas itself.
+       *
+       * With both auto, the bitmap's own dimensions are the intrinsic ratio
+       * and the two maximums letterbox it. Measured at 9:16, 4:3 and 1:1, at
+       * desktop and phone widths, on the stage and in the feed.
+       *
+       * THE COMPOSITOR'S SCALE WAS THE SECOND HALF OF THIS. It derived the
+       * device pixel ratio as backing/clientWidth, which was only ever the
+       * true ratio while this CSS width was pinned -- and max-width was
+       * already clamping it, so the offscreen layers ran ~1.94x out and every
+       * see-through stroke composited at about twice its size. That inflation
+       * is what carried verify_inline's ink gate over a floor calibrated on
+       * it. The ratio is passed in now; see makeCompositor. */
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       canvas.hidden = false;
 
@@ -836,9 +874,9 @@
            * Skribl". A flip-only edit broke every REPLAY post on the feed. */
           if (H && H.drawOf(fr)) {
             var n = H.dueCount(fr, shown.progress);
-            if (n) paintStatic(ctx, fr.strokes.slice(0, n), canvas);
+            if (n) paintStatic(ctx, fr.strokes.slice(0, n), canvas, pixelRatio);
           } else {
-            paintStatic(ctx, fr.strokes, canvas);
+            paintStatic(ctx, fr.strokes, canvas, pixelRatio);
           }
         }
         setNib(null);
@@ -851,7 +889,7 @@
          * tick, which is the beading it exists to prevent. Built once per full
          * repaint, and `full` is exactly the set of things that move time
          * backwards: start, seek, loop, resize. */
-        if (full) { clear(); drawn = 0; comp = makeCompositor(ctx, canvas, timeline); }
+        if (full) { clear(); drawn = 0; comp = makeCompositor(ctx, canvas, timeline, pixelRatio); }
         drawn = replayTo(ctx, timeline, drawn, at, comp);
         if (comp && drawn >= timeline.length) comp.finish();
         setNib(state === 'playing' && drawn > 0 && drawn < timeline.length

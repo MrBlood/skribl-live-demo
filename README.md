@@ -157,9 +157,11 @@ whole flow — pad icon, overlay, attach, re-edit, post — and
 `harness/verify_inline.py` is the proof — including that the in-post player and
 the sealed player, playing the same posted drawing from the same clock, are at
 the same point and have drawn the same thing. The wet/dry compositor gap that
-header used to describe is closed as of v279, so there is no known rendering
-difference; see `skribl/static/inlineplayer.js` for the measurement and
-`docs/INTEGRATION.md` for the host-side details.
+header used to describe is closed as of v279, and the one after it — every
+drawing that is not 16:9 shown stretched, because the canvas was sized in a way
+that let the box clamp each axis on its own — as of v305. There is no known
+rendering difference; see `skribl/static/inlineplayer.js` for the measurement
+and `docs/INTEGRATION.md` for the host-side details.
 
 ## The profile's Skribls tab, and the public gallery
 

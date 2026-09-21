@@ -291,9 +291,20 @@ holds, the background colour, a photo or base-snapshot underlay, the posted
 audio loop — and, since the v277 review, the wet/dry stroke compositor. A
 stroke below 100% opacity used to be drawn here as a row of translucent stamps,
 so its overlaps stacked and the feed showed a scalloped, banded version of a
-drawing that is smooth on `/s/<id>`. There is no known fidelity gap now. The
-header of `skribl/static/inlineplayer.js` carries the measurement, and
-`verify_inline.py` pins it with a translucent fixture.
+drawing that is smooth on `/s/<id>`.
+
+**And it keeps the drawing's shape.** The box is 16:9 because that is the
+widest canvas a drawing can have; anything else letterboxes inside it. Until
+v305 it did not — the canvas carried a definite CSS width and height, so the
+box's two maximums clamped each axis separately and a 9:16 drawing was drawn
+216% too wide, in your feed as much as in Skribl's own. If you style the embed,
+do not give `.skribl-inline-canvas` a width or a height: `auto` is what lets
+the bitmap's own ratio drive the fit.
+
+There is no known fidelity gap now. The header of
+`skribl/static/inlineplayer.js` carries the measurement, and `verify_inline.py`
+pins both — the compositor with a translucent fixture rendered twice, the
+aspect at 9:16, 4:3 and 1:1.
 
 ## When your composer is a form, not a browser
 

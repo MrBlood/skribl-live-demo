@@ -71,14 +71,16 @@
 
 /* The generic fallback card is cropped the same way — see inlineplayer.js. */
 
-/* Letterboxed at the DRAWING's aspect, centred, never stretched: a drawing
-   posted at 4:5 stretched into a 16:9 box is a different picture. */
+/* Letterboxed at the DRAWING's aspect, never stretched. width/height MUST
+   stay auto: both definite clamps each axis alone. DECISIONS v305. */
 .skribl-inline-canvas {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   display: block;
+  width: auto;
+  height: auto;
   max-width: 100%;
   max-height: 100%;
 }

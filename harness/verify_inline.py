@@ -405,11 +405,28 @@ with sync_playwright() as sp:
     # as accumulating translucent stamps has far less ink than the same stroke
     # composited once, because the overlaps eat it.
     #
-    # 145,014 without the compositor against 177,246 with it, on this fixture,
-    # floor-subtracted — so the floor is set well below the composited figure
-    # and well above the stamped one. It is a wide gate deliberately: it is
-    # pinning "the compositor ran", not a pixel count.
-    STAMPED_INK_MAX = 160_000
+    # BOTH ARMS ARE MEASURED IN THIS RUN, and the constant that used to sit
+    # here is gone. It read STAMPED_INK_MAX = 160_000, with 145,014 stamped
+    # against 177,246 composited — and the composited figure was inflated by a
+    # bug this suite could not see. inlineplayer.js derived the compositor's
+    # scale as backing/clientWidth, true only while the canvas's CSS width was
+    # pinned to the drawing's logical size; max-width was already clamping that
+    # width, so the offscreen layers were scaled ~1.94x and every composited
+    # stroke was painted about twice its size. That is what carried the number
+    # over the floor. Fixing the letterbox (v305) made the scale honest and the
+    # figure fell to 82,443 — under a floor that had been calibrated on the
+    # defect.
+    #
+    # The direction was wrong too. Translucent light strokes on a dark ground
+    # STACK when stamped, so stamping is the BRIGHTER render: measured here,
+    # 141,649 stamped against 82,443 composited. The compositor exists to stop
+    # that stacking, so it must produce LESS ink, not more. The old sentence
+    # said the opposite and the old gate asserted the opposite, and both passed
+    # because the scale bug pushed the number the way the gate wanted.
+    #
+    # So: render the same drawing twice, once with the compositor disabled at
+    # source, and compare the two. No constant to rot, and the comparison is
+    # the mutation.
 
     tl_pts = []
     for _i in range(240):
@@ -427,26 +444,54 @@ with sync_playwright() as sp:
         headers={"Content-Type": "application/json"})
     id_tl = json.loads(urllib.request.urlopen(_tl_req, timeout=20).read())["id"]
 
-    p3 = b.new_page(viewport={"width": 620, "height": 900})
-    browsing.goto(p3, BASE, "/feed")
-    p3.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_tl)
-    p3.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'",
-                         arg=id_tl, timeout=15000)
-    # Long enough for the whole 2.9s replay plus the final bake.
-    p3.wait_for_timeout(5000)
-    tl_grid = p3.evaluate(GRID, f'[data-skribl-id="{id_tl}"] .skribl-inline-canvas')
-    p3.close()
+    def _tl_ink(disable_compositor):
+        """Play the translucent fixture in the feed and return its ink.
+
+        `disable_compositor` patches the SERVED inlineplayer.js so
+        makeCompositor returns null — the drawing, the colours and the
+        geometry are identical in both arms, so the compositor is the only
+        variable. Changing the alpha instead would change the picture, which
+        is the confounded control this suite's note above warns about."""
+        pg = b.new_page(viewport={"width": 620, "height": 900})
+        if disable_compositor:
+            def _kill(route):
+                r = route.fetch()
+                src, n = re.subn(r"if \(!any\)\s*return null;",
+                                 "if (true) return null;", r.text())
+                # A mutation that silently fails to apply reads as a pass.
+                assert n == 1, f"compositor kill anchor matched {n}x"
+                route.fulfill(response=r, body=src)
+            pg.route(re.compile(r"inlineplayer\.js"), _kill)
+        browsing.goto(pg, BASE, "/feed")
+        pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_tl)
+        pg.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'",
+                             arg=id_tl, timeout=15000)
+        # Long enough for the whole 2.9s replay plus the final bake.
+        pg.wait_for_timeout(5000)
+        g = pg.evaluate(GRID, f'[data-skribl-id="{id_tl}"] .skribl-inline-canvas')
+        pg.close()
+        if not g:
+            return None, None
+        _floor = min(g)
+        return sum(v - _floor for v in g), g
+
+    tl_ink, tl_grid = _tl_ink(False)
+    stamped_ink, _ = _tl_ink(True)
 
     check("a translucent drawing renders at all in the feed", bool(tl_grid))
-    if tl_grid:
-        _floor = min(tl_grid)
-        tl_ink = sum(v - _floor for v in tl_grid)
+    if tl_ink is not None and stamped_ink is not None:
+        # The drawing is still THERE. "Less ink" must not be reachable by
+        # rendering nothing, which is the other way this could go green.
+        check("the composited drawing is actually painted",
+              tl_ink > stamped_ink * 0.25,
+              f"composited ink {tl_ink} against {stamped_ink} stamped — a near-"
+              "empty canvas would also have 'less ink' than the stamped one")
         check("a 50%-opacity stroke is composited, not stamped",
-              tl_ink > STAMPED_INK_MAX,
-              f"ink {tl_ink} — under {STAMPED_INK_MAX} means the overlaps are "
-              "stacking, which is the scalloped, banded rendering the wet/dry "
-              "compositor exists to prevent. Measured: 145,014 stamped, "
-              "177,246 composited, 185,205 on /s/<id>")
+              tl_ink < stamped_ink * 0.8,
+              f"composited ink {tl_ink} is not materially below the {stamped_ink} "
+              "the same drawing scores with the compositor disabled — the "
+              "overlaps are stacking, which is the scalloped, banded rendering "
+              "the wet/dry compositor exists to prevent")
 
     # ---- LOOP, AND THE MUSIC THAT MUST STOP WITH THE DRAWING ---------------
     #
@@ -1358,6 +1403,58 @@ with sync_playwright() as sp:
         check(f"the compose lifecycle costs a host no more than "
               f"{COMPOSE_RATCHET:,} bytes",
               _ch_bytes <= COMPOSE_RATCHET, f"{_ch_bytes:,} B served")
+
+    # ---- THE DRAWING KEEPS ITS SHAPE (v305) --------------------------------
+    #
+    # The box is 16:9 because that is the widest canvas a drawing can have, so
+    # every other shape has to letterbox inside it. It did not: the canvas was
+    # given a definite CSS width AND height, which max-width/max-height then
+    # clamped one axis at a time, so a 9:16 drawing was painted 386x217 rather
+    # than 122x217 -- stretched 216%. Wrong since the file was written, on the
+    # feed and in every host's embed, and caught by the owner on the profile's
+    # stage, where it is large enough to see.
+    #
+    # MEASURED ON THE RENDER, not on the CSS: the aspect the eye gets is the
+    # canvas's own bounding box, and it must equal the aspect of the bitmap
+    # that was drawn. Three shapes, because the error's size depends on how far
+    # the drawing is from 16:9 and one landscape fixture would have shown a
+    # third of it. Two widths, because the box is fluid.
+    print("\nIN-POST — a drawing keeps its own aspect in a 16:9 box")
+    for _label, _cw, _chh in (("9:16", 450, 800), ("4:3", 816, 612), ("1:1", 700, 700)):
+        _pts = [{"x": 30 + i * 8, "y": 30 + i * 14, "color": "#e9ecf5", "size": 8,
+                 "t": i * 30, "start": i == 0, "erase": False} for i in range(40)]
+        _sid = json.loads(urllib.request.urlopen(urllib.request.Request(
+            BASE + "/api/skribls", method="POST",
+            data=json.dumps({"frames": [{"strokes": _pts, "strokeGroups": [len(_pts)]}],
+                             "canvasSize": {"cssWidth": _cw, "cssHeight": _chh},
+                             "title": f"aspect {_label}", "visibility": "public"}).encode(),
+            headers={"Content-Type": "application/json"}), timeout=20).read())["id"]
+        for _vw in (1280, 390):
+            _ap = b.new_page(viewport={"width": _vw, "height": 900})
+            browsing.goto(_ap, BASE, "/feed")
+            _ap.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", _sid)
+            _ap.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'",
+                                  arg=_sid, timeout=15000)
+            _ap.wait_for_timeout(1200)
+            _m = _ap.evaluate("""(id) => {
+                const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
+                if (!c) return null;
+                const r = c.getBoundingClientRect();
+                const box = c.closest('.skribl-inline').getBoundingClientRect();
+                return { drawn: c.width / c.height, shown: r.width / r.height,
+                         w: Math.round(r.width), h: Math.round(r.height),
+                         bw: Math.round(box.width), bh: Math.round(box.height) }; }""", _sid)
+            _ap.close()
+            check(f"{_label} at {_vw}px: the drawing is shown at its own aspect, not the box's",
+                  _m and abs(_m["shown"] - _m["drawn"]) < 0.02,
+                  f"drawn {_m['drawn']:.3f}, shown {_m['shown']:.3f} "
+                  f"({_m['w']}x{_m['h']} in a {_m['bw']}x{_m['bh']} box)" if _m else "no canvas")
+            # ...AND IT STILL FITS. A letterbox that overflows the box is a
+            # different defect with the same cause, and a check on the aspect
+            # alone would pass straight through it.
+            check(f"{_label} at {_vw}px: ...and it fits inside the box",
+                  _m and _m["w"] <= _m["bw"] + 1 and _m["h"] <= _m["bh"] + 1,
+                  f"{_m['w']}x{_m['h']} in {_m['bw']}x{_m['bh']}" if _m else "no canvas")
 
     b.close()
 
