@@ -83,7 +83,7 @@
     where the macro grows an element and the copy does not. Building the worked
     example in examples/host_app found it, because a host trying to preview a
     draft has no macro to call and would copy the same block a third time. #}
-{% macro _skribl_inline_insides(controls=true) -%}
+{% macro _skribl_inline_insides(controls=true, progress=true) -%}
   <canvas class="skribl-inline-canvas" hidden></canvas>
   <div class="skribl-inline-veil">
     <div class="skribl-inline-play">
@@ -114,7 +114,11 @@
     </button>
   </div>
 {% endif %}
-  <div class="skribl-inline-prog"></div>
+  {# progress=false HIDES the hairline rather than omitting it: inlineplayer.js
+     requires the element (its absence means "not the macro's markup") and
+     keeps writing its width; a page with a scrub track of its own (the
+     profile) shows one progress, not two (owner, from an iPhone, v304). #}
+  <div class="skribl-inline-prog"{% if not progress %} hidden{% endif %}></div>
   <div class="skribl-inline-nib"></div>
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
@@ -141,7 +145,7 @@
 {{ _skribl_inline_insides() }}</div>
 {%- endmacro %}
 
-{% macro skribl_inline_draft(id='', controls=true) -%}
+{% macro skribl_inline_draft(id='', controls=true, progress=true) -%}
 {#  A DRAFT: the same player, on a payload that has not been posted.
 
     Three deliberate absences, each load-bearing:
@@ -162,11 +166,12 @@
     own: attach() takes the player element itself, so a wrapper carrying the id
     hands it the wrong node and nothing renders.
 
-    controls=false drops the mute/loop cluster, for a page that has a transport
+    controls=false drops the mute/loop cluster, and progress=false hides the
+    progress hairline, for a page that has a transport
     of its own — the profile tab's stage is the one in this tree. Both buttons
     are null-guarded in inlineplayer.js, so their absence is a supported state
     rather than a thing to work around with a hidden element.
 #}
 <div class="skribl-inline is-muted is-silent"{% if id %} id="{{ id }}"{% endif %}>
-{{ _skribl_inline_insides(controls=controls) }}</div>
+{{ _skribl_inline_insides(controls=controls, progress=progress) }}</div>
 {%- endmacro %}

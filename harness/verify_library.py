@@ -168,6 +168,16 @@ with sync_playwright() as sp:
     moving = pg.evaluate("""() => ({
         frac: parseFloat(document.getElementById('scrubFill').style.width) || 0,
         label: document.getElementById('tElapsed').textContent })""")
+    # ONE PROGRESS, NOT TWO (owner, from an iPhone, v304): the in-post player
+    # draws a hairline along its bottom edge, and this page has a scrub track
+    # of its own under the title. Both moving together read as two players.
+    # The macro's progress=false hides the hairline -- hides, because
+    # inlineplayer.js requires the element -- and the scrub is the progress.
+    _bars = pg.evaluate("""() => { const p = document.querySelector('#stageBox .skribl-inline-prog');
+        return { present: !!p, shown: !!p && getComputedStyle(p).display !== 'none',
+                 scrub: getComputedStyle(document.getElementById('scrub')).display !== 'none' }; }""")
+    check("the stage shows one progress: the scrub track, and the player's hairline is hidden",
+          _bars["present"] and not _bars["shown"] and _bars["scrub"], str(_bars))
     check("play advances the scrub and the clock",
           0 < moving["frac"] < 100 and not moving["label"].startswith("0:00 /"),
           json.dumps(moving))

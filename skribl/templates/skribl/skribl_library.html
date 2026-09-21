@@ -335,7 +335,10 @@
             hand-copied from the macro — the third such copy in the tree, found
             by the gate in verify_inline.py. The hidden mute button they carried
             was dead weight: inlineplayer.js null-guards both controls. #}
-        {{ skribl_inline_draft('stageBox', controls=false) }}
+        {# ...and WITHOUT its progress hairline: the scrub track under the
+           title is this page's progress, and two bars moving together read
+           as two players (owner, from an iPhone, v304). #}
+        {{ skribl_inline_draft('stageBox', controls=false, progress=false) }}
         {# The way out of full screen, INSIDE the element that is full screen:
            the transport is not on the display then, and Escape is the
            browser's, not this page's. Shown by CSS only under :fullscreen. #}
