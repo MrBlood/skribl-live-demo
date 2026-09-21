@@ -1,22 +1,22 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-21T03:19:26Z
+UTC timestamp           : 2026-09-21T15:51:56Z
 Host                    : Linux x86_64
-Tree SHA-256            : c73e358325fcaad40527f6278c85d7c52bd85f7b44678dc067765727287b2a17
-Git commit              : d55e23b
+Tree SHA-256            : 57bfe4d5a7494582af5ff8f616e2a210d4dd20fcf7eeb0c4870944d947ec63bf
+Git commit              : c0a3d75
 Source state            : generated-only dirty
                             README.md
                             START-HERE.md
                             docs/HANDOFF.md
                             harness/LAST-RUN.txt
                             harness/README.md
-SKRIBL_VERSION          : v304
+SKRIBL_VERSION          : v305
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.LQS4gMjCMa/harness.db)
+Database reset          : yes (fresh /tmp/tmp.uHPzxbTtXD/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -69,18 +69,18 @@ suites requested : 104
   verify_hold.py: ok — 62/62 passed
   verify_hostconfig.py: ok — 55/55 passed
   verify_hostseams.py: ok — 32/32 passed
-  verify_hot.py: ok — 33/33 passed
+  verify_hot.py: ok — 47/47 passed
   verify_icons.py: ok — 37/37 passed
   verify_identity.py: ok — 44/44 passed
   verify_inbetween.py: ok — 67/67 passed
-  verify_inline.py: ok — 86/86 passed
+  verify_inline.py: ok — 99/99 passed
   verify_input.py: ok — 9/9 passed
   verify_integration.py: ok — 14/14 passed
   verify_jsstrip.py: ok — 28/28 passed
   verify_keys.py: ok — 9/9 passed
   verify_layout.py: ok — 119/119 passed
   verify_lib.py: ok — 8/8 passed
-  verify_library.py: ok — 83/83 passed
+  verify_library.py: ok — 92/92 passed
   verify_liquify.py: ok — 32/32 passed
   verify_loopcap.py: ok — 22/22 passed
   verify_media.py: ok — 24/24 passed
@@ -99,7 +99,7 @@ suites requested : 104
   verify_pillfit.py: ok — 24/24 passed
   verify_player_isolation.py: ok — 27/27 passed
   verify_player_photo.py: ok — 9/9 passed
-  verify_posted.py: ok — 119/119 passed
+  verify_posted.py: ok — 122/122 passed
   verify_postgres.py: SKIPPED (0 assertions) — cannot connect to PostgreSQL at the configured DSN (OperationalError)
   verify_prefix.py: ok — 33/33 passed
   verify_pressure.py: ok — 27/27 passed
@@ -109,7 +109,7 @@ suites requested : 104
   verify_review.py: ok — 284/284 passed
   verify_s3.py: ok — 30/30 passed
   verify_scrub.py: ok — 17/17 passed
-  verify_seam.py: ok — 272/272 passed
+  verify_seam.py: ok — 273/273 passed
   verify_select.py: ok — 55/55 passed
   verify_sharecard.py: ok — 27/27 passed
   verify_sharedrules.py: ok — 89/89 passed
@@ -121,17 +121,17 @@ suites requested : 104
   verify_strokegroups.py: ok — 24/24 passed
   verify_surfaces.py: ok — 12/12 passed
   verify_sweepjob.py: ok — 52/52 passed
-  verify_takedown.py: ok — 45/45 passed
+  verify_takedown.py: ok — 49/49 passed
   verify_theme.py: ok — 86/86 passed
   verify_tilereport.py: ok — 30/30 passed
   verify_tips.py: ok — 59/59 passed
   verify_tools.py: ok — 130/130 passed
   verify_tray.py: ok — 121/121 passed
   verify_tween.py: ok — 161/161 passed
-  verify_txcontract.py: ok — 83/83 passed
+  verify_txcontract.py: ok — 84/84 passed
   verify_ux.py: ok — 375/375 passed
   verify_version.py: ok — 30/30 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 5654   (skipped suites contribute 0)
+assertions passed: 5699   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
