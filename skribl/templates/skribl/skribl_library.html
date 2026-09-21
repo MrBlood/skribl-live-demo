@@ -163,7 +163,11 @@
     .now .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-bright); box-shadow: 0 0 10px var(--accent-bright); }
     .now .lbl { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); }
     .stageCanvasWrap { margin: 12px 15px 0; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--hairline-soft); position: relative; }
-    .stageCanvasWrap canvas { display: block; width: 100%; height: auto; }
+    /* NO SIZING RULE ON THE STAGE'S CANVAS. This said width:100%/height:auto,
+       left over from the mock that drew its own canvas here; the stage is the
+       in-post player now, and that rule would pin the width definite and bring
+       back the stretch inlineplayer.css exists to avoid. The player letterboxes
+       itself. */
     .replay-nib { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.25); transform: translate(-50%,-50%); opacity: 0; pointer-events: none; }
     .pmeta { padding: 13px 16px 4px; }
     .pmeta .ptitle { font-size: 18px; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
@@ -284,7 +288,6 @@
     .stageCanvasWrap:fullscreen { margin: 0; border: 0; border-radius: 0; background: #000;
       display: grid; place-items: center; }
     .stageCanvasWrap:fullscreen .skribl-inline { width: min(100vw, calc(100vh * 16 / 9)); max-height: 100vh; }
-    .stageCanvasWrap:fullscreen .skribl-inline canvas { max-height: 100vh; width: auto; margin: 0 auto; }
     .full-exit { display: none; position: absolute; top: 14px; right: 14px; z-index: 3; width: 44px; height: 44px;
       background: rgba(6,7,10,.72); border-color: rgba(255,255,255,.18); color: #eef; }
     .stageCanvasWrap:fullscreen .full-exit { display: grid; }

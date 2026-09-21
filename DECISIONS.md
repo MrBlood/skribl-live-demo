@@ -9092,3 +9092,74 @@ paid for again: read the answer from the channel that carries it, not from
 what happens to be lying around the DOM; and a change that moves a surface
 runs the whole harness, because the fixtures that depended on it do not
 know they did.
+
+## Unsealed, on top of v304 -- the in-post player was stretching every drawing that is not 16:9 (v305 when sealed)
+
+The owner, with a screenshot of the profile page: "the image in the player is
+stretched". It was, and not only there.
+
+**MEASURED FIRST, BECAUSE THE MECHANISM WAS NOT THE OBVIOUS ONE.** A 9:16
+drawing on the stage rendered 386x217 where it should have been 122x217 --
+stretched 216%; 4:3 by 33%; 1:1 by 78%. Every drawing was being forced into
+the box's own shape. The suspect was the profile page's stylesheet, which does
+carry a canvas rule; the browser said otherwise, so the page was not the cause.
+`inlineplayer.js` set `canvas.style.width` and `.height` to the drawing's
+logical size, under a comment claiming `max-width`/`max-height` then preserved
+the aspect "because a canvas is a replaced element". They do not. A replaced
+element whose width AND height are both definite has each axis clamped by its
+own maximum, independently, and the ratio is lost. With both `auto` the
+bitmap's intrinsic ratio drives the fit and the maximums letterbox it.
+
+**IT WAS NEVER ONLY THE PROFILE.** The stage is the in-post player, so the feed
+had it too, and so did every host's embed, from the day the file was written.
+`/s/<id>` was never affected: app.js fits its own canvas. The owner saw it on
+the profile because that is the first surface that shows one drawing large.
+Measured after the fix at 9:16, 4:3 and 1:1, at desktop and phone widths, on
+the stage and in the feed.
+
+**THE SECOND HALF WAS THE COMPOSITOR'S SCALE, AND IT WAS HIDING IN THE FIRST.**
+`makeCompositor` derived the device pixel ratio as backing/clientWidth. That
+equals the true ratio only while the canvas's CSS width is exactly the logical
+size -- and `max-width` was already clamping it, so the offscreen wet/dry
+layers ran about 1.94x out and every see-through stroke composited at roughly
+twice its size. The ratio is passed in now, from the value `ctx.setTransform`
+was set to. Rendering the same drawing against the sealed player, cell by cell,
+the fix moves the in-post player closer to it: 2,177 differing cells against
+3,026.
+
+**AND THAT INFLATION WAS HOLDING UP A GREEN ASSERTION.** `verify_inline`'s
+"a 50%-opacity stroke is composited, not stamped" compared ink against a
+hardcoded floor of 160,000, calibrated at "145,014 stamped, 177,246
+composited". Both the floor and the sentence beside it were wrong. Translucent
+light strokes on a dark ground STACK when stamped, so stamping is the brighter
+render and the compositor must produce LESS ink, not more: measured here,
+141,649 stamped against 82,443 composited. The old gate asserted the opposite
+and passed only because the scale defect pushed the composited figure over the
+floor. Fixing the scale dropped it to 82,443 and the gate went red -- the
+defect's removal breaking the check that was supposed to protect it, which is
+how a confounded instrument announces itself. It renders the same drawing twice
+now, once with the compositor disabled by patching the served source, and
+compares the two arms in the same run. No constant to rot, and the second arm
+IS the mutation. A companion assertion holds that the composited drawing is
+still actually painted, because "less ink" is also what drawing nothing scores.
+
+**WHAT ELSE THE READ FOUND.** `inlineplayer.js`'s header still said the file
+"DOES NOT" implement the compositor, under a paragraph ending "if this ever
+gets the compositor, that fixture is where to widen the proof" -- which v279
+did, twenty-odd releases before this. README and INTEGRATION both said there
+was no known fidelity gap; there was, in the SHAPE of the drawing rather than
+its shading, and nothing measured the aspect. INTEGRATION now also tells a host
+styling the embed not to give the canvas a width or a height.
+
+**THE BYTE RATCHET WAS SPENT AGAINST, NOT RAISED.** The embed had 48 bytes of
+slack and the fix needed two declarations plus a warning. CSS comments are
+served to every host; JS comments are not, because `jsstrip.py` removes them.
+So the reasoning went into `inlineplayer.js`, the stylesheet kept two lines,
+and the ratchet stands at 33,500 with the embed at 33,483.
+
+Pinned by `verify_inline.py` (the aspect at three shapes and two widths in the
+feed, and the two-arm compositor gate) and `verify_library.py` (the stage, at
+two shapes -- its own assertion, because the page's own canvas rule could lose
+it there alone). Calibrated per component: four mutations -- a definite CSS
+width, the JS setting the CSS size again, the page's canvas rule restored, the
+compositor deriving its own scale -- each red on its own pins and nowhere else.

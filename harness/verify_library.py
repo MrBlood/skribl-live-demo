@@ -522,6 +522,55 @@ with sync_playwright() as sp:
     check("...and the stage, which selected it at boot, says the same", bool(lg) and lg["stage"] == "link only", str(lg))
     legacy.close()
 
+    # ---- THE STAGE DOES NOT STRETCH THE DRAWING (v305) ---------------------
+    #
+    # The owner, from the profile page: "the image in the player is stretched".
+    # It was, by 216% on a 9:16 drawing: the in-post player gave its canvas a
+    # definite CSS width AND height, and the box's max-width/max-height then
+    # clamped each axis on its own instead of preserving the ratio. The fix is
+    # in inlineplayer.css/.js and verify_inline pins it on the feed; this pins
+    # it HERE, because the stage is where it was seen and because this page
+    # used to carry a rule of its own (.stageCanvasWrap canvas { width: 100% })
+    # that would bring the whole thing back on its own. Same surface, different
+    # way to lose it -- so it gets its own assertion rather than trusting the
+    # feed's.
+    print("\nLIBRARY — the stage shows the drawing at its own aspect")
+    _shapes = [("9:16", 450, 800), ("4:3", 816, 612)]
+    for _label, _cw, _chh in _shapes:
+        _sp = ctx.new_page()
+        _sp.set_viewport_size({"width": 1280, "height": 1000})
+        browsing.goto(_sp, BASE, "/library")
+        _mk = _sp.evaluate("""async (cs) => {
+            const pts = []; for (let i = 0; i < 40; i++) pts.push({ x: 30 + i * 8,
+              y: 30 + i * 14, color: '#e9ecf5', size: 8, t: i * 30, start: i === 0, erase: false });
+            const r = await fetch('/api/skribls', { method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ frames: [{ strokes: pts, strokeGroups: [40] }],
+                canvasSize: cs, title: 'aspect ' + cs.cssWidth + 'x' + cs.cssHeight }) });
+            return await r.json(); }""", {"cssWidth": _cw, "cssHeight": _chh})
+        _sp.evaluate("""(e) => localStorage.setItem('skribl_posted_v1', JSON.stringify(
+            [{ id: e.id, url: e.url, title: 'aspect', kind: 'pad', pages: 1,
+               visibility: 'unlisted', tok: e.deleteToken || null, at: Date.now() }]))""", _mk)
+        _sp.reload(wait_until="load")
+        _sp.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.library")
+        _sp.wait_for_timeout(2500)
+        _m = _sp.evaluate("""() => {
+            const c = document.querySelector('#stageBox .skribl-inline-canvas');
+            if (!c || !c.width) return null;
+            const r = c.getBoundingClientRect();
+            const box = c.closest('.skribl-inline').getBoundingClientRect();
+            return { drawn: c.width / c.height, shown: r.width / r.height,
+                     w: Math.round(r.width), h: Math.round(r.height),
+                     bw: Math.round(box.width), bh: Math.round(box.height) }; }""")
+        _sp.close()
+        check(f"the stage shows a {_label} drawing at {_label}, not at the box's shape",
+              _m and abs(_m["shown"] - _m["drawn"]) < 0.02,
+              f"drawn {_m['drawn']:.3f}, shown {_m['shown']:.3f} "
+              f"({_m['w']}x{_m['h']} in a {_m['bw']}x{_m['bh']} box)" if _m else "no canvas on the stage")
+        check(f"...and the {_label} drawing fits inside the stage",
+              _m and _m["w"] <= _m["bw"] + 1 and _m["h"] <= _m["bh"] + 1,
+              f"{_m['w']}x{_m['h']} in {_m['bw']}x{_m['bh']}" if _m else "no canvas on the stage")
+
     # A HOST WITH ACCOUNTS: data-skribl-me set means the listing's author
     # filter, and the browser's list is ignored. The attribute is what the
     # server renders from create_blueprint(current_user_id=...) — pinned on
