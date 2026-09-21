@@ -8917,6 +8917,19 @@ each red on its own pin. The stat under the profile's name reads "posted"
 now, not "loaded"; the count is what this browser posted, not a page of a
 listing.
 
+**AND TWO MORE FROM THE SAME PHONE.** The amber "Media missing" pill sat on
+top of the open How it works drawer: the list of surfaces the pill yields
+to (v294: the drawers; then the menus, at the owner's word) had never had
+the help drawer, the report sheet or Flip's post and export sheets on it.
+It does now -- same rule, same mechanism, the × losing its taps with the
+pill -- and `verify_ux` drives it on both editors through the menu row. And
+the profile's stage showed two progress bars: the in-post player's own
+hairline along its bottom edge and the page's scrub track under the title.
+The macro takes `progress=false` now, which HIDES the hairline rather than
+omitting it (inlineplayer.js requires the element and keeps writing its
+width), and the profile is the one caller; `verify_library` pins one
+progress, the scrub.
+
 ## Unsealed, on top of v303 -- the gallery searches, and lists Hot by plays (v304 when sealed)
 
 The owner: "a public gallery that is searchable and lists HOT skribls based

@@ -2853,7 +2853,17 @@ body:has(#drawPanel:not([hidden])) .autosave-status,
    .menu-overlay covers Pad's ⋯ menu, export and post sheets in one
    selector; #moreMenu is Flip's. */
 body:has(.menu-overlay:not([hidden])) .autosave-status,
-body:has(#moreMenu:not([hidden])) .autosave-status {
+body:has(#moreMenu:not([hidden])) .autosave-status,
+/* ...and the help drawer and Flip's post and export sheets were missing
+   from it in turn (owner, from an iPhone, v304: the amber "Media missing"
+   pill sat on top of How it works). One list, every surface that covers
+   the page; the pill returns when it closes. Each entry names the element
+   that CARRIES the hidden attribute: the report sheet is not here because
+   its overlay is what hides, and .menu-overlay above already covers it --
+   naming #reportSheet matched always and hid the pill for good, which the
+   pin that drives this rule caught on the clean tree. */
+body:has(#helpDrawer:not([hidden])) .autosave-status,
+body:has(.flip-export:not([hidden])) .autosave-status {
   opacity: 0;
   pointer-events: none;
 }
@@ -2867,7 +2877,9 @@ body:has(#moreMenu:not([hidden])) .autosave-status {
 body:has(.tab-panel:not([hidden])) .autosave-dismiss,
 body:has(#drawPanel:not([hidden])) .autosave-dismiss,
 body:has(.menu-overlay:not([hidden])) .autosave-dismiss,
-body:has(#moreMenu:not([hidden])) .autosave-dismiss {
+body:has(#moreMenu:not([hidden])) .autosave-dismiss,
+body:has(#helpDrawer:not([hidden])) .autosave-dismiss,
+body:has(.flip-export:not([hidden])) .autosave-dismiss {
   pointer-events: none;
 }
 .autosave-status[hidden] { display: none; }
