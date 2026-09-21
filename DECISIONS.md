@@ -9093,7 +9093,7 @@ what happens to be lying around the DOM; and a change that moves a surface
 runs the whole harness, because the fixtures that depended on it do not
 know they did.
 
-## Unsealed, on top of v304 -- the in-post player was stretching every drawing that is not 16:9 (v305 when sealed)
+## v305 -- the in-post player was stretching every drawing that is not 16:9
 
 The owner, with a screenshot of the profile page: "the image in the player is
 stretched". It was, and not only there.
@@ -9164,7 +9164,7 @@ it there alone). Calibrated per component: four mutations -- a definite CSS
 width, the JS setting the CSS size again, the page's canvas rule restored, the
 compositor deriving its own scale -- each red on its own pins and nowhere else.
 
-## Unsealed, on top of v304 -- the pre-seal audit of the gallery and the profile (v305 when sealed)
+## v305, cont. -- the pre-seal audit of the gallery and the profile
 
 The owner packaged the post-v304 tree for the outside auditor before sealing,
 with a handover note saying what the archives were and which check would not
