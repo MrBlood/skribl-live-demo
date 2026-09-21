@@ -9246,7 +9246,7 @@ something is), `verify_posted` 122/122, `verify_takedown` 49/49 (asserted on
 the BYTES of the output, not the absence of a word). Calibrated per component:
 seven mutations, each red on its own pins and nowhere else.
 
-## Unsealed, on top of v305 -- the instrument that measured the runner and called it the cache
+## v306 -- the instrument that measured the runner and called it the cache
 
 v305's own CI run went red on `verify_framecache` (21/23) in the sqlite job,
 on both of its PLAYER assertions at once: "the heavy frame is rasterised
@@ -9298,7 +9298,7 @@ test. End a measurement when the work it is measuring has demonstrably
 happened, and keep the clock only as a backstop that fails under its own
 name.
 
-## Unsealed, on top of v305 -- the media lifecycle failed open in three places
+## v306, cont. -- the media lifecycle failed open in three places
 
 An external acquisition-style audit of the v305 package found a cluster of
 data-integrity defects in the media claim/sweep system. All three were
@@ -9369,7 +9369,7 @@ that AttributeError as "no claims". Failing closed turned it into a skipped
 delete. The double was taught to say what is true of it -- no database, so no
 claims table -- rather than the production guard being loosened to accept it.
 
-## Unsealed, on top of v305 -- the external audit's P1 tier
+## v306, cont. -- the external audit's P1 tier
 
 Seven of the audit's ten P1 items, plus the two that needed the owner's call.
 
@@ -9458,7 +9458,7 @@ from this container at all -- it needs the owner's hands on real devices, and
 recording anything else would be inventing evidence, which is the one thing
 this tree's whole apparatus exists to prevent.
 
-## Unsealed, on top of v305 -- the feed box cropped what the author fitted
+## v306, cont. -- the feed box cropped what the author fitted
 
 Owner, from the profile stage: "the pug in the background FIT the screen on
 the editor and the original player. now he is cut off?"
@@ -9512,7 +9512,7 @@ module reference to null reddens the contain pin alone, 102/103.
 is recorded here as a known gap rather than quietly left in the comment that
 used to cover for all three.
 
-## Unsealed, on top of v305 -- the link people share gets full screen too
+## v306, cont. -- the link people share gets full screen too
 
 Owner, holding the copied link beside the profile stage: "shouldn't there be a
 full screen on this player too? why do the players not share the same
