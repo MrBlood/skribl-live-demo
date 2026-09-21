@@ -1194,10 +1194,19 @@ body.player-mode .app {
   display: grid;
   place-items: center;
 }
-.full-exit { display: none; position: absolute; top: 14px; right: 14px; z-index: 3;
-  width: 44px; height: 44px; background: var(--surface-deep);
+/* TWO CLASSES, NOT ONE, AND THAT IS THE WHOLE FIX. This was `.full-exit`,
+   which ties on specificity with `.player-btn` -- the other class the same
+   button carries -- so the winner was decided by which rule came LAST in the
+   sheet. .player-btn does, 185 lines later, so `display: none` lost and the
+   exit control sat on the player at all times: a close button on a page with
+   nothing to close. Shipped, and the owner saw it before any assertion did,
+   because the pin only ever checked that the control APPEARS in full screen.
+   `.player-btn.full-exit` outranks `.player-btn` outright, so the rule no
+   longer depends on where it sits. */
+.player-btn.full-exit { display: none; position: absolute; top: 14px; right: 14px;
+  z-index: 3; width: 44px; height: 44px; background: var(--surface-deep);
   border-color: var(--hairline-strong); color: var(--text-primary); }
-.canvas-wrap:fullscreen .full-exit { display: grid; place-items: center; }
+.canvas-wrap:fullscreen .player-btn.full-exit { display: grid; place-items: center; }
 .canvas-wrap:fullscreen > canvas {
   max-width: 100vw;
   max-height: 100vh;

@@ -1127,6 +1127,12 @@ with sync_playwright() as sp:
     # and does nothing would satisfy any assertion about the DOM. Headless
     # Chromium does honour requestFullscreen from a click (checked before this
     # was written), so the state is asserted from document.fullscreenElement.
+    _EXIT_VISIBILITY = """() => {
+        const e = document.getElementById('playerFullExit');
+        if (!e) return 'ABSENT';
+        const r = e.getBoundingClientRect();
+        return (r.width > 0 && r.height > 0) ? 'VISIBLE' : 'HIDDEN';
+    }"""
     print("\nFULL SCREEN — the link people share has the control the stage has")
     _fp = b.new_page(viewport={"width": 1200, "height": 900})
     _fp.goto(link, wait_until="load")
@@ -1140,6 +1146,18 @@ with sync_playwright() as sp:
                           " return b ? !b.hidden : 'NO BUTTON'; }")
     check("the player offers a full screen control when the API is there",
           _shown is True, str(_shown))
+
+    # THE ARM THAT WAS MISSING, and its absence shipped. The exit control is
+    # asserted VISIBLE inside full screen further down; nothing checked it is
+    # INVISIBLE outside it, so `.full-exit` tying with `.player-btn` on
+    # specificity -- and losing, because .player-btn comes 185 lines later in
+    # the sheet -- put a close button on the player at all times. The owner saw
+    # it before any assertion did. One arm of a two-state control is not a pin.
+    _exit_at_rest = _fp.evaluate(_EXIT_VISIBILITY)
+    check("...and the way OUT of full screen is not on screen until you are in it",
+          _exit_at_rest == "HIDDEN",
+          f"{_exit_at_rest} — a close control on a page with nothing to close "
+          f"is what a specificity tie with .player-btn produced")
     if _shown is True:
         _fp.click("#playerFullBtn")
         _fp.wait_for_timeout(700)
@@ -1160,12 +1178,7 @@ with sync_playwright() as sp:
         # removes the control could then be read as a broken harness rather
         # than as the defect it is. Asking whether it is on screen first turns
         # that into one named red line.
-        _exit_seen = _fp.evaluate("""() => {
-            const e = document.getElementById('playerFullExit');
-            if (!e) return 'ABSENT';
-            const r = e.getBoundingClientRect();
-            return (r.width > 0 && r.height > 0) ? 'VISIBLE' : 'HIDDEN';
-        }""")
+        _exit_seen = _fp.evaluate(_EXIT_VISIBILITY)
         check("...and a way OUT is on screen while full screen, not just Escape",
               _exit_seen == "VISIBLE",
               f"{_exit_seen} — only the fullscreened subtree renders, so the "

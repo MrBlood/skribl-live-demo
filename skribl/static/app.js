@@ -4723,36 +4723,42 @@ function showPlayerError(msg, canRetry) {
   // silently does nothing is worse than no button — the same rule Mute follows
   // two lines up. webkit* spellings included because that is what older iPadOS
   // answers to, which is a device this project is actually used on.
+  // ONE WAY OUT, SHARED. The transport button and the exit control inside the
+  // fullscreened subtree both leave through _fsOff, so they cannot drift; it
+  // also bought back most of what this feature cost verify_jsstrip's 153,600
+  // target, which is a documented achievement rather than a ratchet and was
+  // worth spending against before proposing to move.
   const _fsWrap = canvas && canvas.parentElement;
   const _fsReq = _fsWrap && (_fsWrap.requestFullscreen || _fsWrap.webkitRequestFullscreen);
-  const _fsOn = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  const _fsOn = () => document.fullscreenElement || document.webkitFullscreenElement;
+  const _fsOff = () => {
+    const x = document.exitFullscreen || document.webkitExitFullscreen;
+    if (_fsOn() && x) x.call(document);
+  };
   if (pFull && _fsReq && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
     pFull.hidden = false;
     const _syncFull = () => {
       const on = _fsOn() === _fsWrap;
-      pFull.setAttribute('aria-pressed', on ? 'true' : 'false');
+      pFull.setAttribute('aria-pressed', '' + on);
       pFull.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
       // The canvas is sized from its box, and the box just changed shape.
-      if (typeof layoutPlayerCanvas === 'function') layoutPlayerCanvas();
+      // Called directly: it is a function declaration in this same scope, so
+      // the typeof guard the first draft carried was checking nothing.
+      layoutPlayerCanvas();
     };
     pFull.addEventListener('click', () => {
-      const exit = document.exitFullscreen || document.webkitExitFullscreen;
-      if (_fsOn()) { if (exit) exit.call(document); return; }
+      if (_fsOn()) return _fsOff();
       // Promise-returning in modern browsers, undefined in older ones; the
       // catch is on the value, not assumed.
       const r = _fsReq.call(_fsWrap);
       if (r && r.catch) r.catch(() => {});
     });
     // The exit control inside the fullscreened subtree — see the note beside
-    // it in skribl_player.html. Same handler, so there is one way out and it
-    // cannot drift from the way in.
+    // it in skribl_player.html. The SAME handler as the button above.
     const _fsExit = document.getElementById('playerFullExit');
-    if (_fsExit) _fsExit.addEventListener('click', () => {
-      const exit = document.exitFullscreen || document.webkitExitFullscreen;
-      if (_fsOn() && exit) exit.call(document);
-    });
-    document.addEventListener('fullscreenchange', _syncFull);
-    document.addEventListener('webkitfullscreenchange', _syncFull);
+    if (_fsExit) _fsExit.addEventListener('click', _fsOff);
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(e =>
+      document.addEventListener(e, _syncFull));
   }
 
   if (pLoop) pLoop.addEventListener('click', () => {
