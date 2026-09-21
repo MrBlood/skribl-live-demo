@@ -157,7 +157,19 @@ is its own shape and cannot be handed to the New order). A play is counted
 when a payload is fetched (`GET /api/skribls/<id>`), once per client hash
 per post per UTC day, into `skribl_views`, with the running total on the
 post as `views` in the listing; a host that does not commit on GET does not
-count plays. The gallery has Report on every tile: `POST /api/skribls/<id>/report` takes a reason from
+count plays.
+
+**Those rows are not kept for ever, and that is a contract you can rely on.** A
+view row lives `SKRIBL_VIEW_RETENTION_DAYS` (default 10) and is then deleted;
+the lifetime figure survives on the post as `views_total`, which is what the UI
+shows. The purge never deletes inside the seven-day Hot window whatever you
+configure, so a shorter retention gives you a shorter retention rather than a
+ranking reading rows that are gone. It runs two ways: a bounded, best-effort
+sweep on the request that writes a view, so a deployment that schedules nothing
+still does not accumulate, and `purge_views()` for you to schedule — see
+*Maintenance jobs*.
+
+The gallery has Report on every tile: `POST /api/skribls/<id>/report` takes a reason from
 `skribl.core.REPORT_REASONS` and an optional note, writes one row per
 (post, reporter) into `skribl_reports`, and takes nothing down. The queue is
 read with `python -m skribl.takedown --reports`; the same tool's `--visibility
@@ -919,6 +931,24 @@ reclaims nothing tells you which. Call `storage.sweep_orphans_report()` directly
 if you would rather schedule it in-process.
 
 This is not a daemon and does not schedule itself; cadence is your cron's job.
+
+**Retaining view rows only as long as they are used.**
+
+```python
+from skribl import purge_views
+
+purge_views(db.session)          # a bounded batch of rows past the window
+db.session.commit()              # yours, as with every other write here
+```
+
+`skribl_views` exists so Hot can rank by plays in the last seven days. Rows
+older than `SKRIBL_VIEW_RETENTION_DAYS` (default 10, floored at the Hot window)
+serve nothing, so they go; `SKRIBL_VIEW_CLEANUP_BATCH` (default 500) bounds one
+call. `purge_views` flushes and does not commit, like `create_post` and
+`delete_post` — the transaction is yours. Schedule it if you want the table
+trimmed predictably; the route that writes a view already calls it
+opportunistically, so doing nothing is also defensible. The lifetime play count
+is unaffected: it lives on the post as `views_total`.
 
 ## What stays yours
 

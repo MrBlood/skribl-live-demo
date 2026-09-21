@@ -111,6 +111,45 @@
     }).catch(function () { done(false, 'Could not reach the server.'); });
   }
 
+  /* COPY, AND WHETHER IT ACTUALLY WORKED (PRESEAL-002).
+   *
+   * Resolves true only when the text reached the clipboard: the Clipboard API
+   * resolving, or execCommand RETURNING TRUE. Both callers used to claim
+   * success unconditionally -- the profile stage's button ran its "Link
+   * copied" handler as both arms of .then(), and this module's own row button
+   * ran it after `try { execCommand('copy') }`, which does not throw when it
+   * merely returns false. Telling somebody their link is copied when it is not
+   * strands the share they were making, so the answer travels back now and
+   * each caller says what happened.
+   *
+   * One implementation, exported, because the page has two copy buttons and
+   * the stage's had grown its own weaker version. */
+  function copyText(text) {
+    var api = global.navigator && global.navigator.clipboard;
+    if (api && typeof api.writeText === 'function') {
+      return api.writeText(text).then(function () { return true; },
+                                      function () { return legacyCopy(text); });
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  /* execCommand needs a real selection, and a detached input is not focusable
+     on iOS -- so the field is attached, read-only and off-screen rather than
+     display:none, which would make it unselectable. */
+  function legacyCopy(text) {
+    var doc = global.document;
+    var t = doc.createElement('input');
+    t.setAttribute('readonly', '');
+    t.value = text;
+    t.style.cssText = 'position:fixed;top:-1000px;left:0;opacity:0';
+    doc.body.appendChild(t);
+    t.select();
+    var ok = false;
+    try { ok = !!doc.execCommand('copy'); } catch (e) { ok = false; }
+    t.remove();
+    return ok;
+  }
+
   /* Status for assistive technology as well as eyes. The list has no toast of
      its own, so this writes into a polite live region the drawer owns. */
   function announce(msg) {
@@ -200,38 +239,26 @@
     }
 
     function copy(text, btn) {
-      function done() {
-        var was = btn.dataset.label || btn.textContent;
-        btn.dataset.label = was;
-        btn.textContent = 'Copied';
-        btn.classList.add('done');
-        // A timer per button: two quick copies on different rows would
-        // otherwise leave the first stuck reading "Copied".
+      var was = btn.dataset.label || btn.textContent;
+      btn.dataset.label = was;
+      // A timer per button: two quick copies on different rows would
+      // otherwise leave the first stuck reading "Copied".
+      function say(label, good) {
+        btn.textContent = label;
+        btn.classList.toggle('done', !!good);
         clearTimeout(btn._t);
         btn._t = setTimeout(function () {
           btn.textContent = btn.dataset.label;
           btn.classList.remove('done');
         }, 1400);
       }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
-      } else {
-        fallback(text, done);
-      }
-    }
-
-    // execCommand needs a real selection, and a detached input is not focusable
-    // on iOS — so the field is attached, read-only, and off-screen rather than
-    // display:none, which would make it unselectable.
-    function fallback(text, done) {
-      var t = document.createElement('input');
-      t.setAttribute('readonly', '');
-      t.value = text;
-      t.style.cssText = 'position:fixed;top:-1000px;left:0;opacity:0';
-      document.body.appendChild(t);
-      t.select();
-      try { document.execCommand('copy'); done(); } catch (e) {}
-      t.remove();
+      copyText(text).then(function (ok) {
+        if (ok) { say('Copied', true); return; }
+        // The link is on the row already, so there is something to point at
+        // rather than a dead end.
+        say("Couldn't copy");
+        announce("Couldn't copy the link — open the row's title to get it");
+      });
     }
 
     function render() {
@@ -570,5 +597,5 @@
     return { open: open, close: close, render: render };
   }
 
-  global.SkriblPostedUI = { init: init };
+  global.SkriblPostedUI = { init: init, copyText: copyText };
 })(window);

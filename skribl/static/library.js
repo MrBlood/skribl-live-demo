@@ -81,6 +81,22 @@
   var btnMute = document.getElementById('btnMute');
   var btnShare = document.getElementById('btnShare');
 
+  /* THE TRANSPORT IS DEAD UNTIL SOMETHING IS ON THE STAGE (PRESEAL-005).
+     Play, Restart, Loop and Copy link were enabled from the first paint and
+     silently did nothing; Loop even toggled its own pressed state, which is a
+     control reporting a change it did not make. They come alive when a
+     payload has been adopted. Mute is not in this list: refresh() owns it,
+     because whether it means anything depends on the drawing having sound. */
+  function transportLive(on) {
+    [btnPlay, btnRestart, btnLoop, btnShare].forEach(function (b) {
+      if (b) b.disabled = !on;
+    });
+    if (scrub) {
+      scrub.setAttribute('aria-disabled', String(!on));
+      scrub.classList.toggle('inert', !on);
+    }
+  }
+
   var items = [];          /* every row loaded so far, newest first */
   var cursor = null;       /* the keyset cursor for the next page */
   var current = null;      /* the item on the stage */
@@ -146,6 +162,7 @@
         } else {
           player.adopt(payload);
         }
+        transportLive(true);
         refresh();
       })
       .catch(function () {
@@ -177,6 +194,8 @@
   }
 
   tick = setInterval(refresh, 100);
+  transportLive(false);
+  if (btnMute) btnMute.disabled = true;
 
   btnPlay.addEventListener('click', function () { if (player) { player.toggle(); refresh(); } });
   btnRestart.addEventListener('click', function () {
@@ -198,14 +217,27 @@
   btnShare.addEventListener('click', function () {
     if (!current) return;
     var url = location.origin + playerBase + '/' + current.id;
-    var done = function () {
-      var t = btnShare.title;
-      btnShare.title = 'Link copied';
-      setTimeout(function () { btnShare.title = t; }, 1400);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(done, done);
-    } else { done(); }
+    /* SAYS WHAT HAPPENED (PRESEAL-002). This ran its "Link copied" handler as
+       BOTH arms of .then(), and again when there was no Clipboard API at all,
+       so a refused copy was reported as a completed one. lib/postedui.js owns
+       the one copy implementation and answers whether the text got there. */
+    var rest = 'Copy link';
+    function say(msg) {
+      btnShare.title = msg;
+      btnShare.setAttribute('aria-label', msg);
+      var live = document.getElementById('postedStatus');
+      if (live) live.textContent = msg;
+      clearTimeout(btnShare._t);
+      btnShare._t = setTimeout(function () {
+        btnShare.title = rest;
+        btnShare.setAttribute('aria-label', rest);
+      }, 1600);
+    }
+    var copier = window.SkriblPostedUI && window.SkriblPostedUI.copyText;
+    if (!copier) { say("Couldn't copy the link"); return; }
+    copier(url).then(function (ok) {
+      say(ok ? 'Link copied' : "Couldn't copy the link");
+    });
   });
 
   /* ---- full screen -------------------------------------------------------

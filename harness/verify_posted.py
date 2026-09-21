@@ -157,6 +157,44 @@ with sync_playwright() as p:
     href = pg.get_attribute("#postedList a", "href")
     check("the row links to the player", "/s/" in (href or ""), str(href))
 
+    # ---- COPY SAYS WHAT HAPPENED (PRESEAL-002) -----------------------------
+    #
+    # The row's Copy link ran its success handler after
+    # `try { document.execCommand('copy') }`, which does NOT throw when it
+    # merely returns false -- so a refused copy still read "Copied". The
+    # profile stage's button had the same shape on its clipboard path. One
+    # helper answers whether the text arrived now (lib/postedui.js copyText),
+    # and both callers report it.
+    #
+    # DRIVEN ON THIS PAGE, because the rows live in THIS browser's storage: a
+    # fresh page is a fresh context and an empty list, which is what the first
+    # cut of this pin measured -- it reported "no row to drive" rather than
+    # the behaviour, and said so instead of passing.
+    _orig_clip = pg.evaluate("""() => {
+        window.__origExec = document.execCommand;
+        window.__origClip = Object.getOwnPropertyDescriptor(navigator, 'clipboard') ? 1 : 0;
+        Object.defineProperty(navigator, 'clipboard', {
+          value: { writeText: function () { return Promise.reject(new Error('denied')); } },
+          configurable: true });
+        document.execCommand = function () { return false; };
+        return !!document.querySelector('#postedList .posted-copy'); }""")
+    check("there is a row with Copy link to drive", bool(_orig_clip))
+    if _orig_clip:
+        pg.click("#postedList .posted-copy")
+        pg.wait_for_timeout(700)
+        _lbl = pg.evaluate("""() => {
+            const b = document.querySelector('#postedList .posted-copy');
+            return { label: b ? b.textContent : null,
+                     done: b ? b.classList.contains('done') : null,
+                     live: (document.getElementById('postedStatus') || {}).textContent || '' }; }""")
+        check("a copy that failed does not report itself as done",
+              _lbl["label"] != "Copied" and not _lbl["done"], str(_lbl))
+        check("...and the row says so where a screen reader hears it",
+              "couldn't copy" in _lbl["live"].lower(), str(_lbl))
+    # Put the page back, so nothing after this inherits a refusing clipboard.
+    pg.evaluate("""() => { document.execCommand = window.__origExec;
+        delete navigator.clipboard; }""")
+
     # -----------------------------------------------------------------------
     print("\nYOUR SKRIBLS — removing an entry does not delete the Skribl")
     pid = entry.get("id")

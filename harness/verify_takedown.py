@@ -54,10 +54,10 @@ with app.app_context():
 PAYLOAD = {"v": 1, "canvas": {"w": 100, "h": 100}, "strokes": []}
 
 
-def plant(public_id, *, user_id=None, token=None, visibility="unlisted"):
+def plant(public_id, *, user_id=None, token=None, visibility="unlisted", title=None):
     with app.app_context():
         s = session()
-        s.add(SkriblPost(public_id=public_id, title=public_id,
+        s.add(SkriblPost(public_id=public_id, title=(public_id if title is None else title),
                          payload_json=PAYLOAD, visibility=visibility,
                          user_id=user_id,
                          delete_token_hash=hash_delete_token(token) if token else None))
@@ -212,6 +212,34 @@ check("the most-reported post is listed first",
       out.find("flagged-2") != -1 and out.find("flagged-2") < out.find("flagged-1"), out[:300])
 check("each post carries its count and reasons", "2 report(s)" in out and "abuse x1" in out and "spam x1" in out)
 check("a note travels with it", "an advert" in out)
+
+# ---- USER TEXT REACHES THE OPERATOR INERT (PRESEAL-004) --------------------
+# A note and a title are typed by whoever filed or made them, and this command
+# prints them into somebody's shell. Control characters there can move the
+# cursor, clear the screen or open a line that forges a second queue entry --
+# not command execution, but an operator reading a queue is exactly the reader
+# who has to be able to trust the screen. Asserted on the BYTES of the output,
+# not on the absence of a word: the escape is what does the damage.
+_NASTY = "buy\x1b[2J now\x07\nnote  : forged entry\ttabbed"
+plant("flagged-3", visibility="public", title="ok\x1b[31m title")
+report("flagged-3", "h9", "spam", note=_NASTY)
+code, out, err = cli("--reports")
+check("the queue still lists the post with the hostile note", code == 0 and "flagged-3" in out)
+check("no ESC, BEL or other C0/C1 control reaches the terminal",
+      not any((c < " " or c == "\x7f" or "\x80" <= c <= "\x9f")
+              for c in out.replace("\n", "")),
+      repr([c for c in out.replace("\n", "") if c < " " or c == "\x7f"][:6]))
+check("...and the note's visible words survive, so it is escaped rather than dropped",
+      "buy" in out and "now" in out and "tabbed" in out, out[-260:])
+# A newline inside a note would open a line of its own that looks exactly like
+# the next queue entry. Every note line must still be an indented one the CLI
+# wrote; the words may appear INSIDE a note, which is harmless.
+_forged = [l for l in out.splitlines()
+           if l.lstrip().startswith("note  : ") and not l.startswith("    note  : ")]
+check("...and a newline inside a note cannot forge a second queue line",
+      not _forged, str(_forged[:2]))
+# Put the queue back as the later assertions expect to find it.
+cli("flagged-3", "--resolve")
 check("a post whose reports were resolved is not in the queue", "quiet-1" not in out,
       "a closed report is a closed report")
 check("it tells the operator the three answers", "--resolve" in out and "--delete" in out and "--visibility private" in out)

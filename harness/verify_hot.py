@@ -218,8 +218,83 @@ with sync_playwright() as sp:
     pg.wait_for_timeout(1200)
     none = pg.evaluate("() => ({ none: !document.getElementById('galleryNone').hidden, empty: !document.getElementById('galleryEmpty').hidden, tiles: document.querySelectorAll('#galleryList .tile').length })")
     check("no match shows 'nothing matches', not the empty gallery", none["none"] and not none["empty"] and none["tiles"] == 0, str(none))
+    # THE BOX SAYS WHAT IT SEARCHES (PRESEAL-006). It said "Search titles…"
+    # while the server matches title AND caption, so the wider half of the
+    # feature was invisible. Asserted with the copy AND a caption-only search
+    # driven through the box, because the words are only true if the behaviour
+    # is.
+    _ph = pg.get_attribute("#galleryQ", "placeholder") or ""
+    check("the box says it searches captions too", "caption" in _ph.lower(), repr(_ph))
+    pg.fill("#galleryQ", "howls")          # lives only in alpha wolf's CAPTION
+    pg.wait_for_timeout(1400)
+    _cap = pg.evaluate("() => [...document.querySelectorAll('#galleryList .tile .tt')].map(t => t.textContent)")
+    check("...and a word that is only in a caption finds its post",
+          bool(_cap) and any("alpha wolf" in t for t in _cap),
+          f"caption-only search returned {_cap}")
+    pg.fill("#galleryQ", "")
+    pg.wait_for_timeout(900)
     check("no page errors", not errs, "; ".join(errs[:2]))
     pg.close()
+
+    # ---- THE LATEST INTENT WINS (PRESEAL-001) ---------------------------
+    #
+    # gallery.js used to begin load() with `if (loading) return`. Tapping Hot,
+    # or typing, while a listing was still in flight set sort/query and then
+    # threw the reload away, and nothing re-issued it when the first request
+    # settled: the grid rendered the OLD answer under a bar saying Hot. On a
+    # slow phone that is the ordinary case, not a rare one.
+    #
+    # DRIVEN AT THE RACE, not near it: the first listing is held open by the
+    # route until the tab has been clicked, so the click lands while the
+    # request really is pending. The suite's other gallery assertions wait
+    # ~1.2s between actions and cannot reach this.
+    print("\nHOT 5b — a tab or a search during an in-flight request is not dropped")
+    for _what, _act, _wanted in (
+            ("the Hot tab", lambda q: q.click('.tab[data-sort="hot"]'), "sort=hot"),
+            ("a search", lambda q: q.fill("#galleryQ", "beta fish"), "q=beta")):
+        rp = br.new_page(viewport={"width": 1280, "height": 900})
+        seen, held = [], {"done": False}
+        rp.on("request", lambda rq: seen.append(rq.url) if "/api/skribls?" in rq.url else None)
+
+        def _hold(route):
+            # Hold ONLY the first listing, and let it go after the click.
+            if held["done"]:
+                route.continue_()
+                return
+            held["done"] = True
+            for _ in range(60):
+                if held.get("release"):
+                    break
+                rp.wait_for_timeout(100)
+            route.continue_()
+        rp.route(re.compile(r"/api/skribls\?"), _hold)
+        rp.goto(BASE + "/gallery", wait_until="commit")
+        # The page is up but the listing is still open: act now.
+        rp.wait_for_selector('.tab[data-sort="hot"]', timeout=15000)
+        _act(rp)
+        held["release"] = True
+        rp.wait_for_timeout(2500)
+        _sent = [u for u in seen if _wanted in u]
+        check(f"{_what} during a pending request is actually sent",
+              bool(_sent), f"requests: {seen}")
+        _state = rp.evaluate("""() => ({
+            hot: (document.querySelector('.tab[data-sort="hot"]') || {}).getAttribute
+                 ? document.querySelector('.tab[data-sort="hot"]').getAttribute('aria-pressed') : null,
+            q: (document.getElementById('galleryQ') || {}).value,
+            titles: [...document.querySelectorAll('#galleryList .tile .tt')].map(t => t.textContent) })""")
+        # AND THE GRID AGREES WITH THE BAR. Asserting only that the request
+        # went would pass on a page that issued it and then rendered the
+        # stale response over the top.
+        if _wanted == "sort=hot":
+            _st, _srv = listing(sort="hot", limit=3)
+            check("...and the grid is the Hot answer, not the stale one",
+                  _state["titles"][:1] == titles(_srv)[:1],
+                  f"page {_state['titles'][:1]} vs server {titles(_srv)[:1]}")
+        else:
+            check("...and the grid holds only what the search asked for",
+                  bool(_state["titles"]) and all("beta fish" in t.lower() for t in _state["titles"]),
+                  f"q={_state['q']!r} -> {_state['titles']}")
+        rp.close()
     br.close()
 
 # ------------------------------------------------------------------ section 6
@@ -233,6 +308,73 @@ if have_db:
               bool(row) and re.fullmatch(r"[0-9a-f]{64}", row.viewer_hash or "") is not None
               and "127.0.0.1" not in (row.viewer_hash or ""), str(row.viewer_hash)[:20])
         check("the day is a UTC date", bool(row) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", row.day or "") is not None, str(row.day))
+
+# ------------------------------------------------------------------ section 7
+print("\nHOT 7 — a view row does not outlive the window it serves")
+# PRESEAL-003 of the pre-v305 audit: skribl_views kept one pseudonymous row per
+# (post, client hash, UTC day) for the life of the post, while the only thing
+# that reads them is the last HOT_DAYS. views_total already carries the lifetime
+# figure the UI shows, so the old rows served nothing. They are purged now.
+#
+# ASSERTED ON ALL THREE HALVES, because a purge that gets any one of them wrong
+# is worse than no purge: the old rows must GO, the recent ones must STAY (or
+# Hot silently starts ranking on a window it no longer has), and views_total
+# must not move (or the lifetime count becomes a function of when a janitor
+# last ran).
+if have_db:
+    from skribl.core import HOT_DAYS as _HOT_DAYS        # noqa: E402
+    from skribl.views import purge_views, view_cutoff    # noqa: E402
+
+    _pid = post(f"{TAG} retention")
+    for _d in (40, 30, 20):
+        plant_view(_pid, _d, f"ancient-{_d}")
+    for _d in (1, 3):
+        plant_view(_pid, _d, f"recent-{_d}")
+    _before, _total_before = view_rows(_pid)
+    check("the fixture has old and recent view rows", _before == 5, f"{_before} rows")
+    _hot_before = titles(listing(sort="hot", limit=40)[1])
+
+    with _app.app_context():
+        _s = session()
+        _gone = purge_views(_s)
+        _s.commit()
+    _after, _total_after = view_rows(_pid)
+    check("the rows past the retention window are deleted",
+          _after == 2 and _gone >= 3, f"{_before} -> {_after} rows, purge reported {_gone}")
+    check("...the rows inside the window are kept",
+          _after == 2, f"{_after} rows left, expected the two recent ones")
+    check("...and views_total is untouched, so the lifetime count is not a "
+          "function of when the janitor ran",
+          _total_after == _total_before, f"{_total_before} -> {_total_after}")
+    _hot_after = titles(listing(sort="hot", limit=40)[1])
+    check("...and Hot still ranks the same posts in the same order",
+          _hot_after == _hot_before, f"{_hot_before[:3]} -> {_hot_after[:3]}")
+
+    # THE HOT WINDOW IS A FLOOR. A host asking for a retention shorter than the
+    # window must get a shorter retention AND a correct Hot, not a ranking
+    # reading rows that were deleted underneath it.
+    _now = datetime.now(timezone.utc)
+    check("a retention shorter than HOT_DAYS is clamped to HOT_DAYS",
+          (_now - view_cutoff(1)).days == (_now - view_cutoff(_HOT_DAYS)).days
+          and (_now - view_cutoff(1)).days >= _HOT_DAYS - 1,
+          f"asked 1 day, cutoff is {(_now - view_cutoff(1)).days} days back")
+    # ...and a longer one is honoured, or the clamp would just be a constant.
+    check("...while a longer retention is honoured",
+          (_now - view_cutoff(30)).days > (_now - view_cutoff(_HOT_DAYS)).days,
+          f"30 -> {(_now - view_cutoff(30)).days} days back")
+
+    # BOUNDED: one call cannot turn into an unbounded delete.
+    for _d in (50, 51, 52):
+        plant_view(_pid, _d, f"batch-{_d}")
+    with _app.app_context():
+        _s = session()
+        _n = purge_views(_s, batch=2)
+        _s.commit()
+    check("the purge respects its batch size", _n == 2, f"deleted {_n} with batch=2")
+    with _app.app_context():
+        _s = session()
+        purge_views(_s)
+        _s.commit()
 
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")

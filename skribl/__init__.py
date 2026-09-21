@@ -44,9 +44,16 @@ from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
                      session, set_visibility_policy)
 from .routes import register_routes
 from .security import register_security
+from .views import purge_views
 
 __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            "SkriblBase", "create_all", "session",
+           # RETENTION for the rows Hot is computed from. A maintenance
+           # entrypoint like sweep_orphans: the host schedules it and owns the
+           # commit. The route that writes a view also calls it
+           # opportunistically, so a host that schedules nothing still does
+           # not accumulate for ever. See skribl/views.py.
+           "purge_views",
            # Server-side creation, for a host whose composer is a FORM rather
            # than a browser calling POST /api/skribls. Same validation, same
            # media handling, same transaction as the host's own rows. See
