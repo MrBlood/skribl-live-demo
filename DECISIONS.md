@@ -9780,3 +9780,64 @@ too" recorded, as noted-not-changed, that the stage's rule hard-codes
 `calc(100vh * 16 / 9)` and that the player's new rule "sets no aspect at all
 and lets max bounds letterbox it". The stage's number is gated now, and the
 player's rule is deleted -- it never applied.
+
+## Unsealed, on top of v306 -- the feed box fades and softens the photo too
+
+The last known fidelity gap between the in-post player and the sealed one, and
+the only one this tree had written down as open rather than discovered.
+
+**THE EDITOR AND `/s/<id>` CHEAT, AND A FEED BOX CANNOT.** Both hang the
+background photo in a real `<img>` behind the canvas, so opacity and blur are
+two lines of CSS on an element the browser composites for them. The in-post
+player draws everything into one canvas and has no element to style, so the
+same two authored choices are `globalAlpha` and `ctx.filter` or they are
+nothing. They were nothing. A photo composed at 40% painted fully opaque in
+every feed, every profile stage and every host embed; one composed soft painted
+sharp.
+
+**The header of `inlineplayer.js` said so, three lines from the code that
+should have done it.** "opacity and blur are still NOT reproduced here ...
+stated because it is a known remaining gap, not because it is fine." Honest,
+and it sat there through the photo-fit work that was closing exactly this class
+of defect on the same surface, in the same function, for the same reason.
+Writing a gap down is not the same as fixing it, and a comment is where a
+defect goes to be tolerated.
+
+**THE BLUR RADIUS NEEDED NO CONVERSION, and that is worth recording because
+converting it by hand is what would have made it wrong.** Canvas filters work
+in user space, and `adopt()` already scales the context by the device pixel
+ratio, so `blur(12px)` covers the same distance across the drawing as the
+editor's `filter: blur(12px)` -- on a 1x screen and a 2x one alike. The
+temptation was to multiply by `pixelRatio` somewhere.
+
+**TWO PROPERTIES, TWO ASSERTIONS, and the mutation is what proves they are not
+one.** A single "the photo looks different" row is green on a tree that
+reproduces the opacity and drops the blur, and green again the other way round.
+So each is measured by the thing only it can change: the 40% fixture is checked
+against its composite over the authored ground (green 92, against 200 for a
+photo at full strength), and blur is checked on a two-tone photo with one hard
+vertical edge, because blurring a solid colour returns the solid colour and an
+assertion built on one would pass whether or not the blur ran. Removing only
+the `globalAlpha` line reddens only the opacity row; removing only the
+`ctx.filter` line reddens only the blur row.
+
+**AND THE FIRST BLUR PROBE MEASURED IN THE WRONG PLACE.** It sampled 16px
+either side of the edge on an 800px drawing, where `blur(12px)` -- standard
+deviation 6px, so 2.7 sigma out -- has almost entirely resolved: it read a
+128-point step sharp against 106 blurred and called a working blur missing. At
+4px either side the same fixture reads 128 against 32. The instrument was
+wrong, not the tree, which is the third time this tier of work has produced a
+broken instrument before it produced a broken product.
+
+**The ratchet, 35,500 -> 35,700, measured 35,616.** 116 B, all of it the
+feature; 18 B came back first by assigning `globalAlpha` rather than asking
+whether it is already 1. This is the same sentence the compositor bought at
+29,000 -> 32,000 and photofit at 33,500 -> 35,200: a feed representation must
+not change the drawing's appearance. Three raises, one argument, and nothing
+else has ever moved this number -- the in-post player's cost is almost entirely
+the cost of not being a different-looking product.
+
+**Both restores are unconditional.** An alpha or a filter left set leaks into
+the ink drawn immediately after it, which would be a far worse defect than the
+one this closes, and the guard that skips the restore is exactly how that
+happens.

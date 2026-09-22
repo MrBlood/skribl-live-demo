@@ -329,14 +329,20 @@ letterboxed in the editor and on `/s/<id>` and cropped in your feed. It reads
 `lib/photofit.js` now — the same module both editors and `/s/<id>` read — which
 is why that file is one of the assets `skribl_inline_assets()` loads.
 
-ONE KNOWN GAP REMAINS: a background photo's **opacity and blur** are not
-reproduced in a feed box. Those are a canvas filter rather than geometry, so a
-photo authored at 40% paints opaque here and one authored soft paints sharp.
-The drawing, its timing, its audio and the photo's placement all match. The
-header of `skribl/static/inlineplayer.js` carries the measurement, and
-`verify_inline.py` pins what is closed — the compositor with a translucent
-fixture rendered twice, the aspect at 9:16, 4:3 and 1:1, and both fits of a
-photo sampled across the canvas.
+**And it fades and softens that photo the way the author did.** Opacity and
+blur were the last gap: the editor and `/s/<id>` hang the photo in a real
+`<img>` and let CSS do both, while a feed box has one canvas and did neither,
+so a photo composed at 40% painted opaque in your feed and one composed soft
+painted sharp. They are `globalAlpha` and `ctx.filter` now, and the blur radius
+needs no conversion — canvas filters work in user space and the context is
+already scaled by the device pixel ratio, so `blur(12px)` covers the same
+distance as the editor's `filter: blur(12px)` on a 1x screen and a 2x one.
+
+There is no known fidelity gap now. `verify_inline.py` pins each closure with a
+row that goes red without it — the compositor with a translucent fixture
+rendered twice, the aspect at 9:16, 4:3 and 1:1, both fits of a photo sampled
+across the canvas, a 40% photo measured against its composite over the
+background, and a hard edge whose step collapses under an authored blur.
 
 ## When your composer is a form, not a browser
 
