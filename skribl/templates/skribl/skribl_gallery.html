@@ -146,13 +146,6 @@
     }
     .tile .tileFull:hover { color: var(--text); background: var(--control); }
     .tile .tileFull svg { width: 19px; height: 19px; }
-    /* THE WRAPPER TAKES THE DISPLAY AND THE COMPONENT SIZES ITSELF INSIDE IT.
-       Not one rule here touches .skribl-inline, per this page's standing note
-       above — and note what is NOT written: the 16/9. The component already
-       carries `aspect-ratio` (inlineplayer.css), so giving it a height and a
-       max-width lets the ratio resolve the other side. The profile's
-       .stageCanvasWrap does restate the number and says in its own comment
-       that nothing gates the pair; this avoids needing the pair at all. */
     /* The two marks, over the drawing, in the corners the profile's rows use:
        kind bottom left, sound top right. Decoration — the words are in
        .tileSr, which a screen reader gets and the eye does not. 18px is the
@@ -171,42 +164,24 @@
     .tileStage { display: block; position: relative; }
     .tileStage:fullscreen { background: #000; display: flex;
       align-items: center; justify-content: center; width: 100vw; height: 100vh; }
-    /* THE BOX TAKES THE WHOLE DISPLAY, and two definite axes are the whole
-       rule. `.skribl-inline` is 16:9 because a feed needs every tile the same
-       shape; a screen does not, and holding that ratio here would letterbox the
-       drawing TWICE — once into a 16:9 box, then again inside it. Definite
-       width AND height override `aspect-ratio` outright, so there is nothing
-       to turn off and no ratio named here.
-
+    /* NOT ONE RULE HERE REACHES INSIDE THE PLAYER, which is this page's
+       standing note at the top and was briefly untrue: the first cut styled the
+       component's poster and canvas from here. That is a page hand-writing the
+       component's internals — the copy verify_inline's gate exists to stop, and
+       it caught it on main.
+       The division is clean now. The WRAPPER takes the display; the component's
+       own `is-immersive` rules (inlineplayer.css) say what that means for the
+       parts only it should style, and gallery.js turns the class on.
+       Two definite axes here, so `aspect-ratio` is overridden outright and no
+       ratio is named — the box is 16:9 because a feed needs every tile the same
+       shape, and a screen does not.
        (`height: 100%` inside `display: grid` was the first draft and never
-       resolved at all — a percentage height against an auto grid area is
-       treated as auto, so the box fell back to content size and measured
-       800x450 at the BOTTOM of a 1400x900 screen: the owner's screenshot, then
-       the console. `aspect-ratio: auto` and `max-width: none` went in with the
-       fix and a mutation showed both were doing nothing, which is exactly what
-       a redundant declaration that LOOKS load-bearing costs later.) */
-    .tileStage:fullscreen .skribl-inline {
-      width: 100vw; height: 100vh; border: 0; border-radius: 0; }
-    /* AND FULL SIZE SHOWS THE DRAWING, NOT THE CARD. The poster is the 1200x630
-       share card, cropped by inlineplayer.css to hide its wordmark band — a
-       deliberate crop that is right in a feed tile and wrong on a whole screen,
-       where it simply cuts the picture off (measured: the poster ran 151->1249
-       across a box of 300->1100). gallery.js paints the finished drawing on the
-       canvas when the stage opens, and this hides the card while it is up. */
-    .tileStage:fullscreen .skribl-inline-poster { display: none; }
-    /* AND THE DRAWING SCALES UP, which `max-width: 100%` alone never does.
-       The canvas is sized `auto` with two maximums (inlineplayer.css), which
-       SHRINKS a bitmap bigger than its box and leaves a smaller one at its
-       natural size — right in a 310px tile, where every drawing is bigger than
-       the box, and wrong on a screen: an 816x612 drawing measured 816x612 in
-       a 900x900 display instead of filling it.
-       `object-fit: contain` is the one declaration that fits a replaced
-       element both ways and keeps its ratio; the canvas box becomes the whole
-       display and the picture is letterboxed inside it, centred by
-       object-position's default. */
-    .tileStage:fullscreen .skribl-inline-canvas {
-      width: 100%; height: 100%; max-width: none; max-height: none;
-      object-fit: contain; }
+       resolved at all: a percentage height against an auto grid area is treated
+       as auto, so the box fell back to content size and measured 800x450 at the
+       BOTTOM of a 1400x900 screen — the owner's screenshot, then the console.) */
+    .tileStage { display: block; position: relative; }
+    .tileStage:fullscreen { background: #000; display: flex;
+      align-items: center; justify-content: center; width: 100vw; height: 100vh; }
     .tile .report:hover { color: var(--text); background: var(--control); }
     .tile .report[data-reported] { color: var(--text-3); }
     .tile .thead { align-items: center; }

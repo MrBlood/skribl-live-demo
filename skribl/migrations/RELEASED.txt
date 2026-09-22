@@ -9,6 +9,27 @@
 # 86171614cb85 in place; the v137 corrections were added by editing
 # e4b7c9a15d2f in place. Both were no-ops exactly where they were needed.
 #
+#
+# a2f6c8b30e14's digest changed once, the day it was written, and the reason is
+# the one case this file's rule does not cover: IT HAD NEVER SUCCEEDED ANYWHERE
+# DURABLE. Its backfill read every payload into Python 200 rows at a time and
+# ran the production box out of memory -- the Procfile is
+# `alembic upgrade head && gunicorn app:app`, so the deploy died before the
+# server started and the host kept serving the previous build. The revision
+# rolled back, so no durable database was ever stamped at it.
+#
+# That is what makes editing it right rather than forbidden. The rule above
+# exists because an edited migration is a SILENT NO-OP for any database that
+# already ran it; here there is no such database, and adding a new revision
+# would not have helped either -- `upgrade head` runs this one first and it
+# would have run out of memory again before reaching the fix.
+#
+# The backfill is dialect-native SQL now, so no payload crosses into Python at
+# all. Both engines are exercised: verify_migrations drives it on SQLite and
+# verify_postgres runs the chain against a real PostgreSQL in CI, and the suite
+# asserts the SQL agrees with the revision's own Python reference on every
+# payload shape, malformed ones included.
+#
 # verify_migrations.py fails if any digest below changes. To change migration
 # BEHAVIOUR, add a revision. To add a genuinely new revision, append its digest.
 #
@@ -57,7 +78,7 @@ eca1461367bfa31ab5b4882548c143bc5183d74438024e6962644f14d1863b66  f0a3d81b47e2
 510c82c5239eb0f41b2996c3cba23f9d7983784daab5a516ca93de4cc1beffff  b7d240ac91e3
 848aafb58c36b76d5b2e301e7ac2cb10582e254a1eaec362ce8107c3ce92f6f0  c4d9e2f7a1b6
 7d4ed8f31dfb5e3bbc3b15faf40068f87cbae0e04ba10812058ada6b988ef751  d8e1f4a2b7c3
-e164560c2911c01b7be5b5499ff7057f9af36bd0351a5577623c45687642dc86  a2f6c8b30e14
+17760234073d53ed412f46c6915c2b0437b3d03f65ae09ff559eee535e859c5a  a2f6c8b30e14
 
 # ---- UPGRADE-PATH DIGESTS ------------------------------------------------
 # The normalised AST of every released upgrade(), which is the half of a
@@ -82,4 +103,4 @@ upgrade 4f0bf8f93993d1bea0ce3874c556698cb9560dfe1aab45a1128238974a906f40  f0a3d8
 upgrade f25467dc47798eb963774df74ef98356678a029aed78252a4ec53fcff0f82cf2  f7c2e0a934d1
 upgrade 0e034bcb81f034d6ead7dbf8733817463d47018ca7f4e6e2d750cecc11108839  c4d9e2f7a1b6
 upgrade 23076ca01cef9f8b76724b5f1cebe83617faa2920999990a94a55a966f53e297  d8e1f4a2b7c3
-upgrade ce396a81b050cb4bb60ac99e01b51caed08d8c2c6d3cdc9d8239e410253aadd3  a2f6c8b30e14
+upgrade f31491c6e3060d2cf02dd7820f43795d1424382ff9a563c656ed4ca8808ab777  a2f6c8b30e14

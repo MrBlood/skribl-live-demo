@@ -10444,3 +10444,76 @@ check read the stage immediately after boot and had always passed on timing;
 moving the boot sequence by a few milliseconds turned it red for a stage that
 was about to be perfectly fine. A race that only ever passed is not a check, so
 it waits now.
+
+## Unsealed, on top of v306, cont. -- the migration that took the site down
+
+Two merged releases sat invisible for hours and the owner kept photographing a
+site three changes behind. Both causes are mine and neither was in the code the
+screenshots were of.
+
+### The backfill read the column the whole design exists not to read
+
+    Running upgrade d8e1f4a2b7c3 -> a2f6c8b30e14, v307: ...
+    ==> Out of memory (used over 512Mi)
+
+`kind` and `pages` exist because the listing DEFERS `payload_json` -- measured
+at 9.75 ms against 1.04 ms, and written in the revision's own docstring four
+lines above the loop that then read every payload into Python, two hundred rows
+at a time, to compute two small values from them. On the demo's real data --
+44-page Flips with music and a background photo -- that is hundreds of megabytes
+in one chunk.
+
+The Procfile is `alembic upgrade head && gunicorn app:app`. A failed migration
+means no server, so the host kept serving the previous build and every deploy
+since has failed the same way.
+
+**The work happens in SQL now**, one statement per engine, so no payload crosses
+into Python at all. The objection that stopped me writing it that way the first
+time was real -- "a migration correct on one engine is a migration that is
+wrong" -- and the answer is not to avoid the branch, it is to run both:
+`verify_migrations` drives SQLite and `verify_postgres` runs the chain against a
+real PostgreSQL in CI. Both were exercised here, locally, against eleven payload
+shapes including a scalar payload, a list payload, an empty `frames`, a
+non-array `frames` and a `playbackMode` nobody recognises. Zero mismatches
+against the revision's own Python reference on both engines. The Python loop
+survives for an engine neither branch knows, chunked to 10.
+
+**AND EDITING A RELEASED REVISION IS THE RIGHT CALL EXACTLY ONCE, HERE.**
+`RELEASED.txt` forbids it because an edited migration is a silent no-op for any
+database that already ran it. No durable database ever ran this one: it rolled
+back on the only production it has. And adding a new revision would not have
+helped -- `upgrade head` runs this one first and would have run out of memory
+again before reaching the fix. The digest change is recorded in `RELEASED.txt`
+with that reasoning, beside the two the file already carries.
+
+### And the gallery was hand-writing the player's internals
+
+The same push went red on `verify_inline`: "no template hand-writes the in-post
+player's internals -- they are the macro's, once." The full-screen work styled
+the component's poster and canvas from the gallery's own sheet. The page's
+standing note says "not one rule touches .skribl-inline", I quoted it in a
+comment explaining that I was respecting it by wrapping the box, and then
+reached inside for the two parts that mattered.
+
+The gate is right, and the fix is the division it implies: the PAGE owns its
+wrapper and says WHEN; the COMPONENT owns `is-immersive` and says what that
+means for its own parts. Which is also the better architecture -- immersive is
+now a capability of the embed itself, available to `/feed` and to a host, and
+a CSS state rather than the Fullscreen API, which is what will make it work on
+an iPhone where that API does not exist for anything but `<video>`.
+
+Ratchet 35,900 -> 36,300, measured 36,231. Fifth raise, same sentence as the
+other four, and the first that ADDS a capability rather than repairing one. Two
+things were spent against it first: the comment beside those three rules was ten
+lines and 614 B in its first draft -- more than the rules -- because CSS
+comments are served, which this file has now learned twice; and
+`max-width: none; max-height: none` went in with them until a measurement showed
+the canvas fills its box without them.
+
+**What generalises, and it is the same lesson twice in one release:** I ran the
+suites I thought were affected and not the ones that were. `verify_migrations`
+caught an unregistered revision in the PR gate last time; `verify_inline` caught
+this one only after the merge, because I changed a template that renders the
+in-post player and did not think of the suite that owns it. The affected set is
+not "the suites about the thing I meant to change" -- it is every suite that
+reads a file I touched.
