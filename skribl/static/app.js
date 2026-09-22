@@ -4100,7 +4100,12 @@ function showPlayerError(msg, canRetry) {
     // caps at 1:1, which sized the canvas to the page while the wrapper filled
     // the screen. It cannot be fixed in the sheet — the inline width
     // layoutPlayerCanvas writes beats any rule. DECISIONS, v306.
-    if (fsFull) return Math.min(innerWidth / authorW, innerHeight / authorH);
+    // The WRAPPER's own box, not the window: in full screen the top-layer
+    // element is the container, and it is 20px narrower than innerWidth
+    // wherever the document behind it still has a scrollbar. Measuring the box
+    // is also what layoutEditorCanvas does.
+    if (fsFull) return Math.min(canvasWrap.clientWidth / authorW,
+                                canvasWrap.clientHeight / authorH);
     // Measure the COLUMN the canvas actually lives in, not the viewport. This
     // used to be `window.innerWidth - 40`, and .app has a max-width: on a 1023px
     // viewport the column is 718px, so the scale came out at the 1:1 cap and the
@@ -4739,21 +4744,21 @@ function showPlayerError(msg, canRetry) {
   // skribl_player.html — so there, full screen would render a subtree with no
   // exit in it. verify_player_isolation drives that page.
   const _fsExit = document.getElementById('playerFullExit');
-  const _fsReq = canvasWrap && (canvasWrap.requestFullscreen || canvasWrap.webkitRequestFullscreen);
-  const _fsOn = () => document.fullscreenElement || document.webkitFullscreenElement;
-  // Unguarded: _fsOn() is truthy only when something IS fullscreen.
-  const _fsOff = () => { if (_fsOn()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); };
+  const _fsReq = canvasWrap.requestFullscreen || canvasWrap.webkitRequestFullscreen;
+  // Unguarded: fsFull is true only while our wrapper IS the fullscreen element.
+  const _fsOff = () => { if (fsFull) (document.exitFullscreen || document.webkitExitFullscreen).call(document); };
   if (pFull && _fsExit && _fsReq && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
     pFull.hidden = false;
     const _syncFull = () => {
-      const on = _fsOn() === canvasWrap;
+      const on = (document.fullscreenElement
+                  || document.webkitFullscreenElement) === canvasWrap;
       fsFull = on;
       pFull.setAttribute('aria-pressed', '' + on);
       pFull.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
       layoutPlayerCanvas();      // the box just changed shape
     };
     pFull.addEventListener('click', () => {
-      if (_fsOn()) return _fsOff();
+      if (fsFull) return _fsOff();
       // Promise-returning in modern browsers, undefined in older ones; the
       // catch is on the value, not assumed.
       const r = _fsReq.call(canvasWrap);

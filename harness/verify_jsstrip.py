@@ -279,14 +279,22 @@ with sync_playwright() as sp:
     # separate player entry point, and the v199 handoff concluded it does not.
     # The number is the evidence for the second.
     #
-    # THE MARGIN IS NOW SINGLE DIGITS, which is the honest state of it and is
-    # why the printed figure below is the margin rather than the total. The
-    # next feature on this surface does not have room to be paid for by
-    # tightening its own wiring twice. It has to come out of the 5 editor
-    # globals and the editor-only code paths verify_player_isolation still
-    # counts on the player -- carving, which is the work this target exists to
-    # argue is possible -- and NOT out of raising this line again. A target
-    # raised once per release is a record of spending, not an achievement.
+    # AND THE RULE WRITTEN HERE WAS TESTED WITHIN THE HOUR. This paragraph
+    # first said the margin was single digits and that the next spend had to
+    # come out of carving rather than out of raising the line again. Making
+    # full screen measure the WRAPPER's box instead of the window -- the
+    # correct fix, because a scrollbar gutter can make the two differ -- then
+    # wanted 20 B more than existed. It came out of the same block: a
+    # `canvasWrap &&` guard on a reference dereferenced unguarded three hundred
+    # lines above, two reads of document.fullscreenElement that the fsFull flag
+    # already answers, and a one-line helper with a single caller. The number
+    # did not move, and the margin is printed below so the next person does not
+    # have to work it out.
+    #
+    # The rule stands: this target comes out of the 5 editor globals and the
+    # editor-only paths verify_player_isolation still counts on the player, not
+    # out of this line. A target raised once per release is a record of
+    # spending, not an achievement.
     # "-109 B under" is what this line used to say when it FAILED, which reads
     # as a margin and is a deficit. Over and under are named, not signed.
     _margin = 153_800 - lean_total

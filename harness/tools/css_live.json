@@ -116,7 +116,8 @@
     "body.player-mode .canvas-area",
     "body.player-mode .canvas-wrap",
     "body.player-mode .header",
-    "html"
+    "html",
+    "html:has(:fullscreen)"
   ],
   "editor": [
     "#canvas",
@@ -581,6 +582,7 @@
     "body:not(.player-mode) .canvas-area",
     "body:not(.player-mode) .canvas-wrap",
     "body:not(.player-mode) .canvas-wrap #canvas",
-    "html"
+    "html",
+    "html:has(:fullscreen)"
   ]
 }

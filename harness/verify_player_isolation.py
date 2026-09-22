@@ -1211,10 +1211,36 @@ with sync_playwright() as sp:
         # defect's signature is precisely "the same width as at rest".
         _sz = _fp.evaluate("""
             () => { const c = document.querySelector('.canvas-wrap > canvas');
-                    if (!c) return {w: 0, h: 0, vw: 0, vh: 0};
-                    const r = c.getBoundingClientRect();
+                    const w = document.querySelector('.canvas-wrap');
+                    if (!c || !w) return {w: 0, h: 0, vw: 0, vh: 0, ww: 0, wh: 0};
+                    const r = c.getBoundingClientRect(), q = w.getBoundingClientRect();
+                    const d = document.documentElement;
                     return {w: Math.round(r.width), h: Math.round(r.height),
-                            vw: window.innerWidth, vh: window.innerHeight}; }""")
+                            ww: Math.round(q.width), wh: Math.round(q.height),
+                            vw: d.clientWidth, vh: d.clientHeight,
+                            iw: window.innerWidth, ih: window.innerHeight}; }""")
+        # MEASURED AGAINST clientWidth/clientHeight, NOT innerWidth. The first
+        # version of this row used window.innerWidth and read 1180 against
+        # 1200: innerWidth counts the scrollbar of the document still laid out
+        # behind the top layer, and the fullscreen element's containing block
+        # does not. 20px of nothing. The same mistake was live one line below,
+        # where the scale branch divided by innerWidth; it measures the
+        # wrapper's own box now, which is what layoutEditorCanvas does too.
+        #
+        # THE WRAPPER FIRST, because it is the element that went fullscreen and
+        # because the rows below are about the drawing inside it. Measured
+        # rather than assumed: the Fullscreen spec's UA stylesheet sizes the
+        # top-layer element with `width: 100% !important`, which outranks both
+        # styles.css's `.canvas-wrap:fullscreen { width: 100vw }` and the
+        # inline width layoutPlayerCanvas writes. Those declarations therefore
+        # say what the UA already says; they are kept as belt and braces for an
+        # engine that does not apply the spec'd rule, and this row is what
+        # would notice if no layer supplied it.
+        check("...and the wrapper that went full screen IS the screen",
+              _sz["ww"] >= _sz["vw"] - 2 and _sz["wh"] >= _sz["vh"] - 2,
+              f"wrapper {_sz['ww']}x{_sz['wh']} in a {_sz['vw']}x{_sz['vh']} "
+              f"screen (innerWidth {_sz['iw']}) — the element in the top "
+              f"layer has to fill it before anything inside it can")
         check("...and the drawing FILLS the screen rather than staying page-sized",
               _rest_w and _sz["w"] >= _rest_w * 1.25,
               f"full screen {_sz['w']}x{_sz['h']} in a {_sz['vw']}x{_sz['vh']} "

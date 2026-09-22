@@ -294,6 +294,17 @@
    overlay-scrollbar platforms and mobile. Unconditional (was scoped away from
    the player in v81) so there's no gutter toggle during the player's startup. */
 html { scrollbar-gutter: stable both-edges; }
+/* ...EXCEPT WHILE SOMETHING IS FULL SCREEN, and this cost 20px of screen
+   before anybody measured it. `stable both-edges` reserves a gutter on each
+   edge of the root scroll box so the layout does not shift when a scrollbar
+   appears, which shrinks the box a fixed-position element resolves `100%`
+   against. The fullscreened wrapper therefore came out 1180px wide in a
+   1200px screen, sitting 10px in, with the page showing either side --
+   measured, in verify_player_isolation's full screen block. The document is
+   `overflow: hidden` while an element is fullscreen (the UA does that), so the
+   gutter is reserving room for a scrollbar that cannot appear. Where :has() is
+   not supported the behaviour is what it was, which is the 20px, not a break. */
+html:has(:fullscreen) { scrollbar-gutter: auto; }
 
 /* Skribl scrollbars — thin thumb on carbon, everywhere; colour follows --ui-line.
    Matches the Flip frame strip; applies to the help drawer, panels, page scroll, etc. */
@@ -4576,6 +4587,13 @@ body.player-mode .app {
    box. The JS branch fits the authored shape at ANY ratio — the lesson the
    in-post player's stretch bug taught, applied rather than repeated. */
 .canvas-wrap:fullscreen {
+  /* BELT AND BRACES, MEASURED AS SUCH. The Fullscreen spec's UA stylesheet
+     sizes the top-layer element with `width: 100% !important` and
+     `max-width: none !important`, which outranks these four lines and the
+     inline width layoutPlayerCanvas writes; Chromium fills the wrapper with or
+     without them. They stay for an engine that does not apply the spec'd rule,
+     and verify_player_isolation measures the wrapper against the screen so
+     that "some layer supplies this" is asserted rather than assumed. */
   width: 100vw;
   height: 100vh;
   max-width: 100vw;
