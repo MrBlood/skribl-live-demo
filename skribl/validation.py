@@ -46,6 +46,39 @@ def _payload_has_audio(payload):
     return bool((music or {}).get("data"))
 
 
+def _payload_pages(payload):
+    """How many frames a posted Skribl has. A classic Skribl is a 1-frame one."""
+    if not isinstance(payload, dict):
+        return 1
+    frames = payload.get("frames")
+    return max(1, len(frames)) if isinstance(frames, list) else 1
+
+
+def _payload_kind(payload):
+    """'flip' or 'pad' — WHICH EDITOR MADE IT, as the players decide it.
+
+    THE SAME TEST inlineplayer.js's isFlip() and app.js use, ported rather than
+    invented: an explicit `playbackMode` wins, and otherwise more than one frame
+    means flip. A one-page Flip document replays as a still, which is what it
+    is, so this answers 'pad' for it — and so does every player. A second
+    definition here would let a tile's badge disagree with the drawing under it.
+
+    WHY IT IS STORED AT ALL. The listing endpoint defers `payload_json` on
+    purpose (measured: 9.75 ms against 1.04 ms), so a tile cannot look. The
+    gallery therefore showed no pen and no book and there was no way to tell
+    which a post was (owner). Denormalised at post time like `has_audio`
+    beside it, from the same payload, in the same tick.
+
+    Pure + import-light so it can be unit-tested headless.
+    """
+    if not isinstance(payload, dict):
+        return "pad"
+    mode = payload.get("playbackMode")
+    if mode:
+        return "flip" if mode == "flip" else "pad"
+    return "flip" if _payload_pages(payload) > 1 else "pad"
+
+
 # --- Server-side media validation (INTEGRATION §7) ---------------------------
 # The post endpoint is public and unauthenticated, and every media item arrives as
 # a base64 data URL inside payload_json. Until now the only limit was

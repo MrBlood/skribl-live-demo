@@ -12,6 +12,8 @@
      styles.css's token vocabulary; the map below speaks it in this page's
      palette, both ramps. #}
   <link rel="stylesheet" href="{{ skribl_asset('posted.css') }}">
+  {# tooltip.css travels with lib/tooltip.js — see that sheet's header. #}
+  <link rel="stylesheet" href="{{ skribl_asset('tooltip.css') }}">
   {# The profile's Skribls tab: real posts from GET /api/skribls on the shared
      in-post player, since v275 (verify_library.py). This comment called it a
      concept preview of demo drawings until SK-AUD-011 read it as current.
@@ -442,10 +444,15 @@
         <h2>Your skribls</h2>
         {# THE FILTER (v304): the two states a post of yours can be in, plus
            all. Not Pad/Flip — the listing does not say which a post is. #}
+        {# The titles say what the one-word labels cannot; lib/tooltip.js
+           draws them, on a pointer that hovers. #}
         <div class="chips" role="group" aria-label="Show">
-          <button type="button" class="chip active" data-filter="all" aria-pressed="true">All</button>
-          <button type="button" class="chip" data-filter="public" aria-pressed="false">In the gallery</button>
-          <button type="button" class="chip" data-filter="unlisted" aria-pressed="false">Link only</button>
+          <button type="button" class="chip active" data-filter="all" aria-pressed="true"
+                  title="Every Skribl this browser knows about">All</button>
+          <button type="button" class="chip" data-filter="public" aria-pressed="false"
+                  title="The ones anyone can find in the public gallery">In the gallery</button>
+          <button type="button" class="chip" data-filter="unlisted" aria-pressed="false"
+                  title="The ones only someone with the link can reach">Link only</button>
         </div>
         <label class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
@@ -506,6 +513,12 @@
   </script>
   <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/recoverykey.js') }}" defer></script>
+  {# TOOLTIPS ON THIS PAGE TOO (owner: "we are missing tooltips on gallery and
+     library"). Every control here already carries a `title`; nothing was
+     drawing them, so the browser's own unstyled chrome was all you got.
+     Desktop only, by the module's design: it suppresses itself on coarse
+     pointers, where a "tooltip" fires on tap and covers what you pressed. #}
+  <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('library.js') }}" defer></script>
 </body>

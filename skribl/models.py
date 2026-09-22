@@ -406,6 +406,18 @@ class SkriblPost(SkriblBase):
     caption = Column(String(MAX_CAPTION_CHARS), nullable=True)
     payload_json = Column(JSON, nullable=False)
     has_audio = Column(Boolean, default=False, nullable=False)
+    # WHICH EDITOR MADE IT, and how many pages -- denormalised at post time from
+    # the same payload has_audio comes from, for the same reason: the listing
+    # defers payload_json deliberately (9.75 ms against 1.04 ms, measured), so a
+    # tile cannot look. Without these the gallery showed neither pen nor book
+    # and there was no way to tell a Flip from a replay (owner).
+    #
+    # NULLABLE, and null means "written before this column existed and not yet
+    # backfilled", not "unknown kind". The migration backfills every existing
+    # row; a null that survives it renders as nothing rather than as a guess --
+    # the same rule the row's own has_audio follows.
+    kind = Column(String(8), nullable=True)
+    pages = Column(Integer, nullable=True)
     # PLAYS, COUNTED (v304). One per client per post per day -- the rows in
     # skribl_views are the record and this is their running total, kept on
     # the post so a listing can show it without a join. server_default so
@@ -543,6 +555,10 @@ class SkriblPost(SkriblBase):
             "title": self.title,
             "caption": self.caption,
             "has_audio": bool(self.has_audio),
+            # See the columns: null is "not backfilled", and the client renders
+            # a null as nothing. `bool()` here would be the has_audio bug again.
+            "kind": self.kind or None,
+            "pages": int(self.pages) if self.pages else None,
             "views": int(self.views_total or 0),
             "user_id": self.user_id,
             "visibility": self.visibility,

@@ -633,8 +633,39 @@ with sync_playwright() as p:
     if nrows == 1 and pd.evaluate(READ):     # still there to tap (not under the arm mutation)
         pd.click("#postedList .posted-row-local .posted-del")
         pd.wait_for_timeout(300)
-    check("the second tap deletes the entry AND its bytes",
-          nrows == 1 and len(pd.evaluate(READ)) == 0 and not pd.evaluate(HAS_BLOB, lid))
+    # THE BYTES OUTLIVE THE TAP BY EXACTLY ONE DECISION (v307). This used to
+    # assert that the second tap deleted the entry AND its bytes in the same
+    # breath, which was right while the tap was final. The x is undoable for
+    # twelve seconds now, and an undo that restored the entry while the payload
+    # was already gone would put back a row whose link opens nothing -- so the
+    # bytes are HELD for the window and dropped when it closes.
+    #
+    # The invariant this row has always guarded is unchanged and is asserted in
+    # two halves below: a removed local save's blob never outlives the decision.
+    # What moved is when the decision is made.
+    check("the second tap removes the entry",
+          nrows == 1 and len(pd.evaluate(READ)) == 0,
+          "the entry is still in the index after an armed second tap")
+    check("...and HOLDS its bytes while undo is on offer",
+          nrows == 1 and pd.evaluate(HAS_BLOB, lid),
+          "dropped at removal time — undo would restore a row whose link "
+          "opens nothing, which is worse than no undo")
+    check("...behind a shelf that says so",
+          nrows == 1 and pd.evaluate(
+              "() => { const u = document.getElementById('postedUndo'); "
+              "return !!u && !u.hidden; }"),
+          "bytes held for a window nobody was told about")
+    # DISMISS IS THE COMMIT, and it is driven rather than waited out: the
+    # twelve seconds are a product choice, not something to sleep through in a
+    # browser test. It is also the honest affordance -- somebody who has
+    # decided gets the space back when they say so.
+    if nrows == 1:
+        pd.click("#postedUndoX")
+        pd.wait_for_timeout(200)
+    check("...and dismissing the shelf deletes the bytes",
+          nrows == 1 and not pd.evaluate(HAS_BLOB, lid),
+          "the blob survived the decision — this is the orphan the sweep "
+          "exists to collect, and it should never have been made")
 
     # EVICTION IS THE DISCLOSED POLICY, and it is a different thing from the
     # sweep: when the store is genuinely full, reclaim() drops the OLDEST local

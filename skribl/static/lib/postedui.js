@@ -76,6 +76,17 @@
     return null;
   }
 
+  /* WHERE it was, not just what it was. lib/posted.js keeps the list in
+     insertion order and never sorts it, so a row's position IS its index and
+     restoring without one would silently reorder the list. Read from the same
+     stored state byId() reads, for the same reason. */
+  function indexOf(id) {
+    var api = global.SkriblPosted;
+    var all = (api && api.list) ? api.list() : [];
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return i;
+    return 0;
+  }
+
   /* Server-side deletion, authorised by the capability this browser holds.
      NO ROUTE LITERAL — the API base is injected, for the same reason
      lib/posted.js refuses to hand-write '/s/': a literal is wrong the moment
@@ -226,6 +237,73 @@
     var backdrop = document.getElementById('postedBackdrop');
     var closeEl = document.getElementById('postedClose');
     var recoverEl = document.getElementById('postedRecover');
+    var undoEl = document.getElementById('postedUndo');
+    var undoMsgEl = document.getElementById('postedUndoMsg');
+    var undoBtn = document.getElementById('postedUndoBtn');
+    var undoX = document.getElementById('postedUndoX');
+
+    /* THE x WAS THE ONLY ACT HERE WITH NO WAY BACK (owner: "is there a way to
+       put the row back after you've taken it down? how would you ever see it
+       again?"). Delete is undone by nothing and says so; Clear list asks
+       first; but the x -- which removes the row AND this browser's copy of
+       the revocation key -- was a single armed tap away from permanent, and
+       the only route back was a recovery key the same tap had just discarded.
+
+       Twelve seconds, one button, and the entry goes back where it was with
+       its key and its timestamp (store.restore). The bytes of a local save
+       are kept for the same twelve seconds (store.remove's keepBlob) so the
+       restored row is not a link to nothing.
+
+       THE ARMING STAYS. Undo is a repair and arming is a warning, and they
+       answer different failures: arming stops the tap you did not mean to
+       make, undo returns the one you meant and regretted. The armed tap also
+       still says what it costs, because after twelve seconds it costs it. */
+    var pending = null;      /* { entry, index, local, timer } */
+
+    function commitUndo() {
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      if (pending.local) store.dropBlob(pending.entry.id);
+      pending = null;
+      if (undoEl) undoEl.hidden = true;
+    }
+
+    function offerUndo(entry, index, local, word) {
+      commitUndo();                       /* one shelf; the older one commits */
+      pending = { entry: entry, index: index, local: local, timer: null };
+      pending.timer = setTimeout(commitUndo, 12000);
+      if (undoMsgEl) undoMsgEl.textContent = word;
+      if (undoEl) undoEl.hidden = false;
+      announce(word + ' Undo is available for a few seconds.');
+    }
+
+    /* DISMISS COMMITS, it does not merely hide. A local save's bytes are held
+       for the window (store.remove's keepBlob), so a shelf that only closed
+       would leave them until the timer -- and somebody who has decided should
+       get the space back when they say so, not twelve seconds later. It is
+       also the deterministic commit a suite can drive: the timer is a product
+       choice and not a thing to wait out in a browser test. */
+    if (undoX) undoX.addEventListener('click', commitUndo);
+
+    if (undoBtn) undoBtn.addEventListener('click', function () {
+      if (!pending) return;
+      var p = pending;
+      clearTimeout(p.timer);
+      pending = null;
+      if (undoEl) undoEl.hidden = true;
+      var r = store.restore(p.entry, p.index);
+      render();
+      if (r.durable) {
+        announce('Put back.');
+      } else {
+        /* The same failure add() reports and for the same reason: the write
+           was refused, so the row is on screen and not in storage, and the
+           key it carried is about to be lost for real. Say so and hand the
+           key over rather than letting the list look right. */
+        announce('Could not put it back — this browser refused to store it. '
+                 + (p.entry.tok ? 'The key is ' + p.entry.tok : ''));
+      }
+    });
 
     function open() {
       if (!isDialog) { render(); return; }
@@ -344,7 +422,8 @@
               '<span class="posted-sub">' + esc(sub) + '</span>' +
             '</a>' +
             '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" data-local="1" ' +
-              'aria-label="Delete this save from this device">' +
+              'aria-label="Delete this save from this device"' +
+              ' title="Delete the only copy of this drawing \u2014 undoable for a few seconds">' +
               '✕</button>' +
           '</div>';
         }
@@ -392,11 +471,20 @@
               (vis ? ' \u00b7 ' + esc(visWord) : '') + '</span>' +
           '</a>' +
           '<span class="posted-actions">' +
-          '<button type="button" class="posted-copy" data-url="' + esc(url) + '">Copy link</button>' +
+          /* EVERY TITLE BELOW SAYS WHAT THE LABEL DOES NOT. A tooltip on
+             "Copy link" reading "Copy link" is noise that teaches people to
+             ignore the next one, so each says the consequence: what is copied,
+             what survives, what stops working. lib/tooltip.js moves these to
+             data-tip and draws them, and suppresses itself on coarse pointers
+             where there is no hover. The aria-labels are untouched — a screen
+             reader gets those, and the two must not fight. */
+          '<button type="button" class="posted-copy" data-url="' + esc(url) +
+            '" title="Copy this Skribl\u2019s share link">Copy link</button>' +
           /* SHARE, where the system has a sheet (v304): the same rule the
              post sheets follow — shown only where navigator.share exists. */
           (global.navigator && global.navigator.share
-            ? '<button type="button" class="posted-share" data-url="' + esc(url) + '" data-title="' + esc(e.title || 'A Skribl') + '">Share</button>'
+            ? '<button type="button" class="posted-share" data-url="' + esc(url) + '" data-title="' + esc(e.title || 'A Skribl') + '"' +
+                ' title="Hand the link to another app">Share</button>'
             : '') +
           /* THE GALLERY SWITCH (v304): in or out of the public gallery, the
              same choice the post sheet offered, changeable after the fact by
@@ -404,7 +492,9 @@
           (may && vis
             ? '<button type="button" class="posted-gallery' + (inGallery ? ' on' : '') + '" data-gallery="' + esc(e.id) +
                 '" aria-pressed="' + (inGallery ? 'true' : 'false') + '" aria-label="' +
-                (inGallery ? 'In the public gallery. Tap to make it link only' : esc(offWord) + '. Tap to show it in the public gallery') + '">' +
+                (inGallery ? 'In the public gallery. Tap to make it link only' : esc(offWord) + '. Tap to show it in the public gallery') + '"' +
+                ' title="' + (inGallery ? 'Anyone can find this in the gallery. Tap to make it link only'
+                                        : 'Only someone with the link can reach this. Tap to put it in the gallery') + '">' +
                 (inGallery ? 'In gallery' : esc(offWord)) + '</button>'
             : '') +
           /* TWO DIFFERENT ACTIONS, AND THEY USED TO BE ONE BUTTON. The \u2715
@@ -417,7 +507,8 @@
              nothing honest to offer, so nothing is offered. */
           (may
             ? '<button type="button" class="posted-delete" data-delete="' +
-                esc(e.id) + '" aria-label="Delete this Skribl for everyone">' +
+                esc(e.id) + '" aria-label="Delete this Skribl for everyone"' +
+                ' title="Take it down for everyone. The link stops working and this cannot be undone">' +
                 'Delete</button>' +
               /* THE KEY ITSELF, offered for copying. Everything above assumes
                  this browser will still be here when the person changes their
@@ -428,11 +519,13 @@
                  where a key exists, for the same reason Delete is. */
               (e.tok ? '<button type="button" class="posted-key" data-key="' +
                 esc(e.id) + '" aria-label="Copy the recovery key for this ' +
-                'Skribl">Copy key</button>' : '')
+                'Skribl" title="Copy the key that can delete this Skribl from any browser. ' +
+                'Nothing can reissue it">Copy key</button>' : '')
             : '') +
           '</span>' +
           '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" ' +
-            'aria-label="Remove from this list, keeping the Skribl online">' +
+            'aria-label="Remove from this list, keeping the Skribl online"' +
+            ' title="Forget this row. The Skribl stays online \u2014 undoable for a few seconds">' +
             '\u2715</button>' +
         '</div>';
       }).join('');
@@ -517,9 +610,11 @@
            than a browser confirm. */
         if (!arm(d, 'Tap again to delete this save from this device',
                  'Delete this save from this device')) return;
-        store.remove(d.dataset.del);
-        announce('Deleted from this device');
+        var lent = byId(d.dataset.del), lidx = indexOf(d.dataset.del);
+        store.remove(d.dataset.del, true);
         render();
+        if (lent) offerUndo(lent, lidx, true, 'Deleted from this device.');
+        else announce('Deleted from this device');
         return;
       }
       if (d) {
@@ -528,13 +623,14 @@
         //
         // It DOES throw away the revocation capability, though, so it is worth
         // saying once. Only asked when there is something to lose.
-        var ent = byId(d.dataset.del);
+        var ent = byId(d.dataset.del), idx = indexOf(d.dataset.del);
         if (ent && ent.tok && !arm(d,
               'Tap again to remove — the Skribl stays online, but this ' +
               "browser's copy of the key goes with the entry",
               'Remove from this list, keeping the Skribl online')) return;
-        store.remove(d.dataset.del);
+        store.remove(d.dataset.del, true);
         render();
+        if (ent) offerUndo(ent, idx, false, 'Removed from this list.');
         return;
       }
 

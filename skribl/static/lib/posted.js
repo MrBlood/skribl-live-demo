@@ -200,7 +200,18 @@
     return write(list);
   }
 
-  function remove(id) {
+  /* `keepBlob` DEFERS THE BYTES, IT DOES NOT SPARE THEM. The x on a row is
+     undoable for a few seconds (lib/postedui.js), and an undo that restored
+     the index entry while the payload was already gone would put back a row
+     whose link opens nothing. So the UI removes with keepBlob and calls
+     dropBlob() itself when the window closes.
+
+     If the tab is closed inside that window the blob is orphaned -- and
+     orphaned is a state this store already has an answer for: sweepOrphans()
+     defines an unindexed 'skribl_post_*' blob as unreachable and collects it
+     on the next write that needs room. Leaking bytes until then is the
+     cheaper failure; deleting them first makes undo a lie. */
+  function remove(id, keepBlob) {
     var list = read().filter(function (e) { return e.id !== id; });
     write(list);
     // ...AND THE PAYLOAD. Removing only the index entry left a multi-megabyte
@@ -208,8 +219,28 @@
     // reachable at #skribl=<id>, and still holding its share of a ~5MB origin
     // quota. Deleting from the tray and watching storage stay full is exactly
     // how this was found.
-    dropBlob(id);
+    if (!keepBlob) dropBlob(id);
     return list;
+  }
+
+  /* PUT ONE BACK, where it was, as it was.
+     add() is the wrong tool for this and the difference is the point: add()
+     unshifts to the top and stamps `at: Date.now()`, so undoing a removal with
+     it would move the row to the head of the list and relabel a Skribl from
+     last week as posted just now. This splices the ORIGINAL object back at the
+     index it came from, timestamp and revocation key included.
+
+     Returns add()'s shape, because the failure that matters is the same one:
+     a quota or a private window can refuse the write, and then the key is
+     genuinely gone and the user has to be given the chance to copy it. An
+     undo that silently does not undo is worse than no undo. */
+  function restore(entry, index) {
+    if (!entry || !entry.id) return { list: read(), durable: false, key: null };
+    var list = read().filter(function (e) { return e.id !== entry.id; });
+    var at = Math.max(0, Math.min(list.length, parseInt(index, 10) || 0));
+    list.splice(at, 0, entry);
+    var durable = write(list);
+    return { list: list, durable: durable, key: durable ? null : (entry.tok || null) };
   }
 
   function clear() {
@@ -354,6 +385,8 @@
     capped: capped,
     canPersist: canPersist,
     remove: remove,
+    restore: restore,
+    dropBlob: dropBlob,
     update: update,
     clear: clear,
     sweepOrphans: sweepOrphans,

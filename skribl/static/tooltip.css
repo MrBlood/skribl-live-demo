@@ -1,0 +1,42 @@
+/* tooltip.css -- the styled tooltip lib/tooltip.js draws.
+ *
+ * MOVED OUT OF styles.css, for the reason posted.css was: the tooltip is not
+ * an editor thing. /library and /gallery are pages about drawings rather than
+ * tools, they carry their own token vocabulary and they deliberately do not
+ * load styles.css -- so a rule only styles.css had could not reach them, and
+ * the alternative was a third and fourth copy of it.
+ *
+ * Loaded by: both editors, the profile and the gallery -- every page that
+ * loads lib/tooltip.js. NOT by the player: /s/<id> has never loaded the
+ * module, so the copy cssgraph was emitting into player.css was styling an
+ * element that page never creates.
+ *
+ * TOKENS. Same vocabulary posted.css speaks (--surface-control-hover,
+ * --hairline-strong, --text-primary). The editors define all of it; the two
+ * standalone pages map it onto their own palettes. Add a token here and those
+ * maps need it too.
+ *
+ * A native `title` tooltip cannot be styled -- not the corners, not the
+ * colour, not the delay. It is OS chrome. lib/tooltip.js moves every title to
+ * data-tip and draws this instead, and suppresses itself entirely on coarse
+ * pointers, where there is no hover and a "tooltip" would fire on tap and
+ * cover what you just pressed.
+ */
+.skribl-tip {
+  position: fixed; z-index: 400; pointer-events: none;
+  max-width: 260px; padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--surface-control-hover);
+  border: 1px solid var(--hairline-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color: var(--text-primary);
+  font-size: 12px; line-height: 1.45; text-align: center;
+  opacity: 0; transform: translateY(3px);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.skribl-tip.below { transform: translateY(-3px); }
+.skribl-tip.in { opacity: 1; transform: translateY(0); }
+.skribl-tip[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .skribl-tip { transition: none; }
+}

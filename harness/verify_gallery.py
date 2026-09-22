@@ -458,6 +458,97 @@ with sync_playwright() as _spg:
     _pg2.close()
     _bg.close()
 
+
+# ---------------------------------------------------------------------------
+print("\nGALLERY — a tile says WHAT it is, and the listing can say so without a payload")
+# THE GAP (owner): "on public gallery it doesn't show a pen, book - no way to
+# tell which". The listing defers `payload_json` on purpose (9.75 ms against
+# 1.04 ms), so a tile could not look; v307 puts `kind` and `pages` on the post,
+# written at post time by the SAME test the players use to decide it.
+#
+# DRIVEN THROUGH REAL POSTS of each shape, including the one with no explicit
+# playbackMode, because that is the branch a second implementation would get
+# wrong: more than one frame means flip, and a one-page Flip document is a
+# replay, which is what every player already says about it.
+_SHAPES = (("a replay", "replay", 1, "pad", 1),
+           ("a flip", "flip", 6, "flip", 6),
+           ("no mode, one frame", None, 1, "pad", 1),
+           ("no mode, three frames", None, 3, "flip", 3))
+_made = {}
+for _title, _mode, _n, _wantkind, _wantpages in _SHAPES:
+    _frames = [{"strokes": [{"x": 10, "y": 10, "color": "#fff", "size": 6, "t": 0},
+                            {"x": 200, "y": 150, "color": "#fff", "size": 6, "t": 120}],
+                "strokeGroups": [2]} for _ in range(_n)]
+    _body = {"title": _title, "version": 2, "schemaVersion": 2, "visibility": "public",
+             "canvasSize": {"cssWidth": 800, "cssHeight": 600}, "frames": _frames}
+    if _mode:
+        _body["playbackMode"] = _mode
+    _rq = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(_rq, timeout=20) as _r:
+        _made[_title] = (json.loads(_r.read().decode())["id"], _wantkind, _wantpages)
+
+_listing = api("/api/skribls?limit=60")
+_by_id = {i["id"]: i for i in _listing.get("items", [])}
+for _title, (_id, _wantkind, _wantpages) in _made.items():
+    _item = _by_id.get(_id)
+    check(f"the listing says {_title!r} is a {_wantkind} of {_wantpages} page(s)",
+          bool(_item) and _item.get("kind") == _wantkind and _item.get("pages") == _wantpages,
+          f"listing said kind={_item.get('kind')!r} pages={_item.get('pages')!r}"
+          if _item else "the post is not in the listing at all")
+
+with sync_playwright() as _spk:
+    _bk = _spk.chromium.launch()
+    _pk = _bk.new_context().new_page()
+    _pk.set_viewport_size({"width": 1100, "height": 1100})
+    browsing.goto(_pk, BASE, "/gallery")
+    _pk.wait_for_timeout(2000)
+    _marks = _pk.evaluate("""() => { const m = {};
+        document.querySelectorAll('.tile').forEach(t => {
+          m[t.getAttribute('data-id')] = {
+            kind: !!t.querySelector('.tileKind'),
+            sr: (t.querySelector('.tileSr') || {}).textContent || '' }; });
+        return m; }""")
+    for _title, (_id, _wantkind, _wantpages) in _made.items():
+        _m = _marks.get(_id)
+        _word = f"{_wantpages} pages" if _wantkind == "flip" and _wantpages > 1 else (
+            "a flip" if _wantkind == "flip" else "a replay")
+        check(f"...and the tile for {_title!r} carries a mark saying so",
+              bool(_m) and _m["kind"] and _word in _m["sr"],
+              f"mark={_m['kind'] if _m else '?'} sr={(_m or {}).get('sr')!r}, wanted {_word!r}")
+    # THE MARKS ARE DECORATION AND THE WORDS ARE THE CONTENT. Two unlabelled
+    # glyphs would tell a screen reader nothing, so the badges are aria-hidden
+    # and .tileSr carries the sentence. Asserted because it is the half that
+    # cannot be seen to be missing.
+    _a11y = _pk.evaluate("""() => ({
+        hidden: [...document.querySelectorAll('.tileMarks')]
+                  .every(m => m.getAttribute('aria-hidden') === 'true'),
+        marks: document.querySelectorAll('.tileMarks').length,
+        offscreen: [...document.querySelectorAll('.tileSr')].every(s => {
+                     const r = s.getBoundingClientRect(); return r.width <= 2 && r.height <= 2; }) })""")
+    check("the marks are decoration (aria-hidden) and the words are text a reader gets",
+          _a11y["marks"] > 0 and _a11y["hidden"] and _a11y["offscreen"],
+          f"{_a11y} — a visible .tileSr would print the sentence twice, and an "
+          f"unhidden glyph would announce as an empty image")
+    # TOOLTIPS, which this page had none of (owner). The module is loaded and
+    # started here; it moves every `title` to `data-tip` and draws its own.
+    # Asserted on data-tip, not on `title`, because the module REMOVES the
+    # title -- so a page that loaded the sheet and not the module would still
+    # have titles and would fail this, which is the point.
+    _tips = _pk.evaluate("""() => ({
+        started: !!window.SkriblTooltip,
+        tabs: [...document.querySelectorAll('.tab')].every(b => !!b.getAttribute('data-tip')),
+        reports: [...document.querySelectorAll('.report')].every(b => !!b.getAttribute('data-tip')),
+        leftovers: document.querySelectorAll('.tab[title], .report[title]').length })""")
+    check("the gallery draws tooltips: every tab and every Report carries one",
+          _tips["started"] and _tips["tabs"] and _tips["reports"],
+          str(_tips))
+    check("...and the native title is gone, so the browser's own does not stack under it",
+          _tips["leftovers"] == 0,
+          f"{_tips['leftovers']} controls still carry a title attribute")
+    _pk.close()
+    _bk.close()
+
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")
 sys.exit(0 if passed == len(results) else 1)

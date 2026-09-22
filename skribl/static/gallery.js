@@ -43,6 +43,31 @@
     return Math.round(mins / 1440) + 'd';
   }
 
+  /* The two marks a tile can carry, in the app's own shapes: lib/postedui.js
+     draws the same pen and the same book on the profile's rows, and a Flip is
+     marked with a book everywhere in this product. Copied rather than shared
+     because postedui.js is the profile's module and this page does not load
+     it -- three lines of path data against a dependency on a module built for
+     a different surface. */
+  var ICON_FLIP =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
+    + ' stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/>'
+    + '<path d="M12 6.5v13.3"/></svg>';
+  var ICON_PAD =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
+    + ' stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
+  var ICON_SOUND =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+    + ' stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>'
+    + '<path d="M19.5 5.5a9 9 0 0 1 0 13"/></svg>';
+
+  /* The module is loaded by the page and started here; it suppresses itself
+     on coarse pointers, so on a phone this call does nothing by design. */
+  if (window.SkriblTooltip) window.SkriblTooltip.init();
+
   function tile(item) {
     var art = document.createElement('article');
     art.className = 'tile';
@@ -74,6 +99,8 @@
     rep.className = 'report';
     rep.setAttribute('data-report', item.id);
     rep.setAttribute('aria-label', 'Report ' + (item.title || 'this Skribl'));
+    /* Says what the word does not: where a report goes and what it is for. */
+    rep.title = 'Tell the operators something is wrong with this one';
     rep.textContent = 'Report';
     rep.addEventListener('click', function () { openReport(item.id, rep); });
     head.appendChild(rep);
@@ -128,6 +155,44 @@
       poster.setAttribute('src', poster.getAttribute('src').replace('__ID__', encodeURIComponent(item.id)));
       poster.setAttribute('alt', item.title || 'A Skribl');
     }
+    /* WHAT IT IS, ON THE TILE (owner: "on public gallery it doesn't show a
+       pen, book - no way to tell which"). The listing could not say until
+       v307 put `kind` and `pages` on the post; it still defers the payload.
+
+       The same two marks the profile's rows use, in the same two corners:
+       kind at bottom left, sound at top right. Both are decoration over the
+       drawing, so both are aria-hidden and the WORDS go in one visually
+       hidden line -- a screen reader gets "Flip, 6 pages, with sound" as
+       text, not two unlabelled glyphs.
+
+       A NULL DRAWS NOTHING. `kind` is null on a row written before the
+       column existed and not yet backfilled, and `has_audio` is null when
+       nothing answered; a badge over either would be a guess printed as a
+       fact, which is the bug this tree just fixed on the profile. */
+    var marks = document.createElement('div');
+    marks.className = 'tileMarks';
+    marks.setAttribute('aria-hidden', 'true');
+    if (item.kind === 'flip' || item.kind === 'pad') {
+      marks.insertAdjacentHTML('beforeend',
+        '<span class="tileMark tileKind">' + (item.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>');
+    }
+    if (item.has_audio === true) {
+      marks.insertAdjacentHTML('beforeend', '<span class="tileMark tileSound">' + ICON_SOUND + '</span>');
+    }
+    if (marks.firstChild) stage.appendChild(marks);
+
+    var says = [];
+    if (item.kind === 'flip') says.push(item.pages > 1 ? item.pages + ' pages' : 'a flip');
+    else if (item.kind === 'pad') says.push('a replay');
+    if (item.has_audio === true) says.push('with sound');
+    else if (item.has_audio === false) says.push('silent');
+    if (says.length) {
+      var sr = document.createElement('span');
+      sr.className = 'tileSr';
+      sr.textContent = says.join(', ');
+      head.appendChild(sr);
+    }
+
     stage.appendChild(frag);
     art.appendChild(stage);
 

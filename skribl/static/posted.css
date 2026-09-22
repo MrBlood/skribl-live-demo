@@ -18,6 +18,39 @@
  * loads it. Add a token here and the profile's map needs it too --
  * verify_library reads the computed styles of a row on the profile. */
 
+/* ---- the undo shelf -------------------------------------------------------
+   Reversible for twelve seconds, and saying so is the whole feature: an undo
+   nobody can see is a keyboard shortcut for people who already know. Sits
+   above the list rather than floating over it, because a toast on a phone
+   lands on the row you just pressed -- the same reason lib/tooltip.js
+   suppresses itself on coarse pointers.
+   34 visible and 44 to a finger, like every other control on this page
+   (SK-AUD-005, and verify_layout measures it). */
+.posted-undo { display: flex; align-items: center; gap: 10px;
+  margin: 0 0 10px; padding: 8px 12px; border-radius: 10px;
+  background: var(--surface-tint); border: 1px solid var(--ui-line);
+  font-size: 12.5px; color: var(--text-primary); }
+.posted-undo[hidden] { display: none; }
+.posted-undo-msg { flex: 1 1 auto; min-width: 0; }
+.posted-undo-btn { flex: 0 0 auto; font: inherit; font-weight: 600;
+  background: transparent; border: 1px solid var(--line-strong);
+  color: var(--text-primary); border-radius: 8px; padding: 0 12px;
+  min-height: 34px; cursor: pointer;
+  position: relative; z-index: 1; --tap-grow: 5px; }
+.posted-undo-btn::before { content: ''; position: absolute;
+  inset: calc(-1 * var(--tap-grow)) 0; }
+.posted-undo-btn:hover { border-color: var(--ui-line); }
+/* Dismiss: commits the removal now rather than in twelve seconds. Same 34/44
+   floors as every other control on this page. */
+.posted-undo-x { flex: 0 0 auto; font: inherit; font-size: 12px;
+  background: none; border: 0; color: var(--text-secondary);
+  border-radius: 6px; min-width: 34px; min-height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; z-index: 1; --tap-grow: 5px; }
+.posted-undo-x::before { content: ''; position: absolute;
+  inset: calc(-1 * var(--tap-grow)); }
+.posted-undo-x:hover { color: var(--text-primary); }
+
 /* ---- Your Skribls tray ----------------------------------------------------
    Reuses .help-search / .help-search-count so the two drawers share one field
    treatment rather than growing a second one that drifts. */

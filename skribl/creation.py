@@ -69,6 +69,7 @@ from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
 from .deletion import hash_delete_token
 from .storage import claim_media, externalise_payload, pending_media_ready
 from .validation import (_iter_media_items, _payload_has_audio,
+                         _payload_kind, _payload_pages,
                          _validate_payload_complexity, _validate_payload_extra,
                          _validate_payload_media)
 
@@ -409,6 +410,8 @@ def create_post(payload, *, author_id=None, media_store=None,
                     caption=caption,
                     payload_json=stored_payload,
                     has_audio=has_audio,
+                    kind=_payload_kind(payload),
+                    pages=_payload_pages(payload),
                     visibility=visibility,
                     delete_token_hash=delete_token_hash,
                 )

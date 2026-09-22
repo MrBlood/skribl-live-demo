@@ -964,6 +964,97 @@ with sync_playwright() as _sp3:
     _p3.close()
     _b3.close()
 
+
+# ---------------------------------------------------------------------------
+print("\nLIBRARY — the row's x is reversible, and the page says what its controls cost")
+# THE GAP (owner): "is there a way to put the row back after you've taken it
+# down? how would you ever see it again?" There was not. The x removed the row
+# AND this browser's copy of the revocation key, and the only route back was a
+# recovery key the same tap had just discarded.
+#
+# THE INDEX IS THE ASSERTION, not just the presence. `add()` unshifts and
+# stamps a fresh timestamp, so undoing with it would move the row to the top of
+# the list and relabel a Skribl from last week as posted just now. This removes
+# the MIDDLE of three and requires the middle back.
+with sync_playwright() as _sp4:
+    _b4 = _sp4.chromium.launch()
+    _p4 = _b4.new_context().new_page()
+    _p4.set_viewport_size({"width": 1280, "height": 1000})
+    browsing.goto(_p4, BASE, "/library")
+    _p4.evaluate("""() => { localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({ id: 'u3', url: '/s/u3', title: 'Third', kind: 'pad', pages: 1, tok: 'k3' });
+        window.SkriblPosted.add({ id: 'u2', url: '/s/u2', title: 'Second', kind: 'flip', pages: 4, tok: 'k2' });
+        window.SkriblPosted.add({ id: 'u1', url: '/s/u1', title: 'First', kind: 'pad', pages: 1, tok: 'k1' }); }""")
+    _p4.reload(wait_until="load")
+    _p4.wait_for_timeout(1200)
+    _ids = lambda: _p4.evaluate("() => window.SkriblPosted.list().map(e => e.id).join(',')")
+    check("three rows, u2 in the middle (fixture)", _ids() == "u1,u2,u3", _ids())
+    # Armed, so two taps -- the warning stays, because arming stops the tap you
+    # did not mean and undo returns the one you meant and regretted.
+    _p4.evaluate("""() => { const b = [...document.querySelectorAll('.posted-row')]
+        .find(r => r.getAttribute('data-id') === 'u2').querySelector('.posted-del');
+        b.click(); b.click(); }""")
+    _p4.wait_for_timeout(400)
+    check("the x removes the row", _ids() == "u1,u3", _ids())
+    _shelf = _p4.evaluate("""() => { const u = document.getElementById('postedUndo');
+        return { shown: !!u && !u.hidden,
+                 msg: (document.getElementById('postedUndoMsg') || {}).textContent || '' }; }""")
+    check("...and an undo shelf appears saying what happened",
+          _shelf["shown"] and "Removed" in _shelf["msg"],
+          f"{_shelf} — an undo nobody can see is a shortcut for people who "
+          f"already know it is there")
+    _p4.click("#postedUndoBtn")
+    _p4.wait_for_timeout(400)
+    check("Undo puts it back WHERE IT WAS, not at the top",
+          _ids() == "u1,u2,u3",
+          f"{_ids()} — add() would have made this u2,u1,u3 and restamped its date")
+    check("...with the revocation key it was carrying",
+          _p4.evaluate("() => (window.SkriblPosted.list().find(e => e.id === 'u2') || {}).tok") == "k2",
+          "a row put back without its key is a row that can no longer be withdrawn")
+    check("...and the shelf goes away",
+          _p4.evaluate("() => document.getElementById('postedUndo').hidden"),
+          "a shelf offering to undo something already undone")
+    # THE BLOB SURVIVES THE WINDOW. A local save's bytes live under
+    # 'skribl_post_<id>'; dropping them at removal time would make undo restore
+    # a row whose link opens nothing.
+    _p4.evaluate("""() => { localStorage.setItem('skribl_posted_v1', '[]');
+        localStorage.setItem('skribl_post_loc1', '{"frames":[]}');
+        window.SkriblPosted.add({ id: 'loc1', url: '/x#skribl=loc1', title: 'On this device',
+                                  kind: 'pad', pages: 1, local: true }); }""")
+    _p4.reload(wait_until="load")
+    _p4.wait_for_timeout(1000)
+    _p4.evaluate("""() => { const b = document.querySelector('.posted-row .posted-del');
+        b.click(); b.click(); }""")
+    _p4.wait_for_timeout(400)
+    check("a local save's BYTES are kept while its undo is offered",
+          _p4.evaluate("() => localStorage.getItem('skribl_post_loc1') !== null"),
+          "undo would restore a row whose link opens nothing")
+    _p4.click("#postedUndoBtn")
+    _p4.wait_for_timeout(400)
+    check("...and undo brings back the row and the bytes together",
+          _p4.evaluate("() => window.SkriblPosted.list().length") == 1
+          and _p4.evaluate("() => localStorage.getItem('skribl_post_loc1') !== null"),
+          "the entry is back but the payload is gone")
+
+    # TOOLTIPS, which this page had none of (owner). Asserted on data-tip
+    # rather than on `title`, because the module REMOVES the title -- so a page
+    # that loaded the sheet and not the module would still have titles and
+    # would fail this, which is the point.
+    _tips = _p4.evaluate("""() => ({
+        started: !!window.SkriblTooltip,
+        chips: [...document.querySelectorAll('.chip')].every(b => !!b.getAttribute('data-tip')),
+        foot: ['postedRecover', 'postedClear']
+                .every(id => !!(document.getElementById(id) || {}).getAttribute
+                             && !!document.getElementById(id).getAttribute('data-tip')),
+        leftovers: document.querySelectorAll('.chip[title], #postedRecover[title], #postedClear[title]').length })""")
+    check("the profile draws tooltips: every filter chip and both foot buttons carry one",
+          _tips["started"] and _tips["chips"] and _tips["foot"], str(_tips))
+    check("...and the native title is gone, so the browser's own does not stack under it",
+          _tips["leftovers"] == 0,
+          f"{_tips['leftovers']} controls still carry a title attribute")
+    _p4.close()
+    _b4.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)

@@ -1592,9 +1592,6 @@ body.player-mode #canvas {
      rather than shrinking to pill height. Was 32/17. */
   .icon-btn { width: 44px; height: 44px; border-color: var(--hairline); }
   .icon-btn svg { width: 24px; height: 24px; }}
-@media (prefers-reduced-motion: reduce) {
-  .skribl-tip { transition: none; }
-}
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .tune-shell, .tune-panel { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .name-shell, .name-panel { transition: none; } }

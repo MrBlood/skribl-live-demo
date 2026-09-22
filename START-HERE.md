@@ -753,7 +753,7 @@ rather than a shared rule.
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
 | `theme.js` | Pad+Flip | Light/dark chrome — the stored setting, and the one place that applies it. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |
-| `tooltip.js` | Pad+Flip | Styled tooltips, replacing the browser's. |
+| `tooltip.js` | Pad+Flip+library+gallery | Styled tooltips, replacing the browser's. |
 | `zoomstep.js` | Pad+Flip | The loop-detail magnification stepper — the ladder, the chrome, and the rule for stepping it, in one place because Pad and Flip both draw this control. |
 <!-- /GEN:MODULE-INDEX -->
 
