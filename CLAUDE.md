@@ -81,6 +81,24 @@ as real defects. Each of these reached a commit or a run:
 
 A green check is not evidence until it has been shown to go red.
 
+**A MUTATION TO A TEMPLATE IS INVISIBLE UNTIL THE SERVER IS BOUNCED.**
+`harness/bootstrap.sh` runs Flask with `--no-reload`, so Jinja caches every
+template it has already compiled. Edit a `.html` file, re-run the suite, and it
+reads the OLD markup — the mutation comes back green and the calibration proves
+nothing. Restart the server (same database is fine) and confirm with
+`curl -s http://127.0.0.1:5001/<page> | grep <the mutated selector>` before
+believing either colour. Static `.js` and `.css` are read per request and need
+no bounce; only templates do.
+
+**AND A RECT IS NOT A PAINT.** `getBoundingClientRect()` says where a box WOULD
+be and says nothing about an ancestor clipping it — a clipped element keeps its
+geometry and loses only its pixels. An assertion about whether something is
+VISIBLE has to ask what is painted (`document.elementFromPoint` at a point
+inside it), never where its coordinates are. The v308 overhang check went green
+on a badge `overflow: hidden` had made invisible, with the rect reading exactly
+the offsets the fix intended. Size and position are questions coordinates CAN
+answer; visibility is not one of them.
+
 **Mutate per COMPONENT, not once per change** (learned in v212, where it was
 the only thing that caught the error). A single all-or-nothing revert can show
 red for one component's sake while another's assertion pins nothing. That

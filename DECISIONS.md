@@ -10517,3 +10517,69 @@ this one only after the merge, because I changed a template that renders the
 in-post player and did not think of the suite that owns it. The affected set is
 not "the suites about the thing I meant to change" -- it is every suite that
 reads a file I touched.
+
+### The badges moved off the controls, and two instruments were wrong
+
+Three owner screenshots, one of each surface, and all three were the same kind
+of mistake: a decision made on one page copied onto another where the ground
+underneath it is different.
+
+**The visibility word sat on a line of its own.** `in the gallery` was the only
+thing ever put inside `.pstats` — a block built for a social-count row this page
+does not render — so it hung under the title with 10px of margin over it while
+the sound pill and the age shared the line above. It is the third fact about a
+post and it is on that line now, as `#pVis`, with the dot as a `::before` so the
+punctuation stays out of the accessible name and `hidden` still empties it
+cleanly. That last part is the empty-pill bug from two releases ago, avoided by
+having read it: a span with a `::before` cannot be emptied with `textContent`.
+
+**The pen sat on the play button, on every tile.** `.tileKind` was at bottom
+left because that is where the profile's ROW puts it — and a row has nothing
+underneath, while a tile has the in-post player, whose control cluster is at
+left 9 / bottom 9. Both surfaces moved their kind badge to the top edge,
+opposite the sound badge. **Same badge, different ground: the corner was never
+the decision, "not on top of anything" was**, and only one of the two pages had
+anything there to be on top of.
+
+**And the speaker could not hang off the thumb because the thumb was clipping
+it.** The profile's 84px poster is a share card scaled 128.0488% and pulled up
+5.4878% to crop the wordmark away, so it overflows its box by ~30px a side and
+something must clip it — but `overflow: hidden` on `.posted-thumb` clipped the
+badges with it, which is why this thumb carried a smaller badge than the 42px
+one in the drawer. The picture has its own box now (`.posted-shot`) so the clip
+lands on the only thing that needs one.
+
+Two things found on the way. `.st` in the library page's stylesheet was
+unscoped, and the only element on that page carrying the class is the one
+`<path class="st">` inside the brand mark, which the header includes — a page
+rule setting `display: flex` and a mono font on a shared component's internal
+path. Found by grepping for who USES the class rather than by reading the rule,
+which is the only way that one shows up. And the hotfix left `.tileStage` and
+its `:fullscreen` pair declared twice, identically.
+
+#### The instruments, both of which were wrong first
+
+**A TEMPLATE MUTATION IS INVISIBLE WITHOUT A SERVER RESTART.**
+`harness/bootstrap.sh` runs Flask with `--no-reload`, so Jinja caches every
+template it has compiled. The first mutation here — unscoping `.st` — came back
+green, and the tree was fine: the server was still serving the pre-mutation
+HTML. `curl | grep` for the mutated selector said so in one line. Every
+calibration that edits a `.html` file needs the server bounced first, or it
+proves nothing; a static `.js` or `.css` edit does not, because those are read
+per request. This is the same failure as a green check that has never been shown
+to go red, arriving by a route the existing rules did not name.
+
+**AND A RECT IS NOT A PAINT.** The first draft of the overhang assertion
+compared the badge's rect to the thumb's. With `overflow: hidden` put back on
+the thumb — the exact defect — the rect still read `outRight: 7, outTop: 7`,
+because a clipped box keeps its geometry and loses only its pixels. The
+assertion went green on a badge nobody can see. It probes
+`document.elementFromPoint` at a point outside the thumb and inside the badge's
+circle now, and asks what is actually painted there. **An assertion about
+whether something is VISIBLE cannot be built out of coordinates**, and the
+neighbouring size assertion is left on the rect deliberately, because size is a
+question coordinates can answer.
+
+The gallery mutation is worth one more line: putting `.tileKind` back to
+`bottom: 8px` reddened the overlap check on all 24 tiles. The owner photographed
+one card; every card had it.

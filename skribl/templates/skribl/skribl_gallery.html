@@ -147,23 +147,25 @@
     .tile .tileFull:hover { color: var(--text); background: var(--control); }
     .tile .tileFull svg { width: 19px; height: 19px; }
     /* The two marks, over the drawing, in the corners the profile's rows use:
-       kind bottom left, sound top right. Decoration — the words are in
+       kind top left, sound top right. Decoration — the words are in
        .tileSr, which a screen reader gets and the eye does not. 18px is the
-       size at which a pen and a book are distinguishable; 14 was a smudge. */
+       size at which a pen and a book are distinguishable; 14 was a smudge.
+       KIND WAS BOTTOM LEFT and that is the corner the in-post player draws
+       its transport in, so on every tile the pen or the book sat on top of
+       the play button (owner's screenshot). The two badges share the top
+       edge now, at opposite ends, which is far enough apart to read as two
+       facts. The profile's row moved with it — same badge, same corner. */
     .tileMark { position: absolute; z-index: 2; display: grid; place-items: center;
       width: 24px; height: 24px; padding: 3px; border-radius: 6px;
       background: rgba(6,7,10,.72); color: #dfe6f2; pointer-events: none; }
     .tileMark svg { width: 18px; height: 18px; display: block; }
-    .tileKind { left: 8px; bottom: 8px; }
+    .tileKind { left: 8px; top: 8px; }
     .tileSound { right: 8px; top: 8px; color: #7ee2a8; }
     /* The words behind the marks. Not `display: none` — that takes it out of
        the accessibility tree too, which is the whole point of having it. */
     .tileSr { position: absolute; width: 1px; height: 1px; margin: -1px;
       padding: 0; border: 0; overflow: hidden; white-space: nowrap;
       clip: rect(0 0 0 0); clip-path: inset(50%); }
-    .tileStage { display: block; position: relative; }
-    .tileStage:fullscreen { background: #000; display: flex;
-      align-items: center; justify-content: center; width: 100vw; height: 100vh; }
     /* NOT ONE RULE HERE REACHES INSIDE THE PLAYER, which is this page's
        standing note at the top and was briefly untrue: the first cut styled the
        component's poster and canvas from here. That is a page hand-writing the

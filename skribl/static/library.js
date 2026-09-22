@@ -71,7 +71,7 @@
   var pTitle = document.getElementById('pTitle');
   var pKind = document.getElementById('pKind');
   var pMeta = document.getElementById('pMeta');
-  var pStats = document.getElementById('pStats');
+  var pVis = document.getElementById('pVis');
   var scrub = document.getElementById('scrub');
   var scrubFill = document.getElementById('scrubFill');
   var tElapsed = document.getElementById('tElapsed');
@@ -149,10 +149,15 @@
     pKind.hidden = !sound;
     /* The same three words the row uses (lib/postedui.js): in the gallery,
        link only, or the state's own name. A host row may not know; say
-       nothing rather than guess. */
-    pStats.textContent = !item.visibility ? ''
+       nothing rather than guess.
+       HIDDEN when there is nothing to say, for the same reason the sound pill
+       above is: this span carries a `\u00B7` in a ::before, so an emptied one
+       would leave a bare dot on the meta line. */
+    var vis = !item.visibility ? ''
       : item.visibility === 'public' ? 'in the gallery'
       : item.visibility === 'unlisted' ? 'link only' : item.visibility;
+    pVis.textContent = vis;
+    pVis.hidden = !vis;
   }
 
   function select(item) {
