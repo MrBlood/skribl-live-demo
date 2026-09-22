@@ -10009,3 +10009,90 @@ no separate entry point, not as a number to drive to zero.
 of whether the work is worth it. Writing the measurement next to the number
 turns "5 is not 0" into a decision somebody can make, which is the point of
 measuring.
+
+## Unsealed, on top of v306, cont. -- the library row, from an iPhone
+
+The owner sent two photographs of a real phone and three of Chrome's device
+emulation. On the phone, one row in Your Skribls was laid out differently from
+the row above it. Same page, same template, same stylesheet.
+
+**FLEX WRAPS BEFORE IT SHRINKS, and that is the whole defect.** `.posted-sub`
+is `white-space: nowrap` on purpose -- the meta line ("replay . 13 hours ago .
+in the gallery") is the row's identity and must not ellipsise into nothing. So
+`.posted-main`'s flex base size is the FULL width of whatever that string
+happens to be, and a wrapping flex line moves the item that does not fit onto
+the next line rather than squeezing the items already on it. Which item moved
+therefore depended on how long that particular row's meta string was:
+
+    "replay . 13 hours ago . in the gallery"   the TEXT BLOCK dropped below
+                                                the thumbnail
+    "6 pages . 1 day ago . in the gallery"     the x dropped, alone, to the
+                                                left, under nothing
+    "replay . last week . link only"           correct
+
+Three shapes on one page, row by row. The old comment at that media query
+promised "the x keeps the title line's right edge"; it was asserted in prose
+and enforced by nothing.
+
+**A grid makes the title line structural.** Three columns -- `auto minmax(0,
+1fr) auto` -- so the thumb, the text and the x are on row 1 at every width and
+every meta length, and `minmax(0, 1fr)` is what finally lets the text
+ellipsise instead of shoving its neighbours off the line. The actions span all
+three columns on row 2. No `order`, no `flex-basis: 100%`, nothing that
+depends on measuring.
+
+**And the indent is given back below 400px.** Indenting the action strip past
+the thumbnail makes it read as this row's rather than the list's, which is
+worth 52px in the drawer and 94px on /library -- until 94px of a 360px row is
+what pushes five buttons onto a second line. Below 400 it is returned. The
+breakpoint is where the strip stopped fitting, not a round number: the owner's
+own report was "at 421px it all seems to fit the way it was intended".
+
+**THE TOUCH-TARGET FLOOR HAD NEVER BEEN APPLIED TO THESE TWO PAGES**, which is
+the finding worth more than the layout. SK-AUD-005 decided 34px visible and
+44px to a finger, and `verify_layout`'s touch-target section walked Pad and
+Flip -- the two editors -- and nothing else. /library and /gallery were built
+after it and were never added. Measured: 14 controls under the floor on
+/library and 3 on /gallery. The smallest was the row's own x, at 22x22, the
+smallest control in the application, sitting directly above Delete. The x
+forgets a row; Delete takes the Skribl down for everyone.
+
+The fix is the `--tap-grow` `::before` band this project already uses, plus a
+34px minimum on the pill itself, plus `min-height: 34px` on the library's
+action buttons where the page's own sheet had said 32 -- under even the
+VISIBLE floor. Both pages now read 0 controls under 44.
+
+**The band is vertical only, and the reason is worth keeping.** These controls
+sit in a 6px-gapped strip. A band on the sides would overlap the neighbour's,
+and which control a tap lands on would then depend on paint order. Height is
+the floor that matters (44 is Apple's number, and it is about a fingertip, not
+a rectangle); the width is the pill plus whatever is free beside it -- the same
+rule `verify_layout` already states for the editors' packed rows.
+
+**The row gap had to go to 12 for the same reason.** The action strip wraps to
+two lines on a phone; with a 6px row gap, the 6px bands of the two rows met in
+the middle and whichever button came later in the DOM took the overlap. Copy
+link -- first button, with Copy key directly beneath it -- measured 40 while
+its four neighbours measured 45. 12 is exactly two bands: they touch and never
+overlap.
+
+**THE COMMENT COST MORE THAN THE RULE.** The gallery half of this lives in
+`inlineplayer.css`, which is inside the in-post player's byte ratchet, and the
+first draft of the note beside that two-line rule was seven lines and 470 B.
+jsstrip strips JavaScript comments; nothing strips CSS comments, and a
+stylesheet a host downloads carries every character of its prose. The sheet
+now carries one line and the reasoning is here. In a file inside somebody
+else's byte budget, the habit of explaining generously has to invert.
+
+The ratchet moved 35,700 -> 35,900, measured 35,814. Fourth raise; all four
+bought the same sentence, that the embed must not be a worse product than the
+real thing. The pill stays 30px -- two 44px slabs over a small tile is a
+different product -- and only the band grows, which costs no pixels.
+
+**What generalises:** a gate that names the surfaces it walks will not notice
+a surface that did not exist when it was written. `verify_layout`'s floor was
+not wrong; it was complete for a tree with two pages in it. The new section
+loops the page list, so /library and /gallery are now in it by construction --
+and it asserts a tile exists on /gallery before trusting the floor row, because
+the first version of that arm measured six controls on an empty page and
+called it a pass.

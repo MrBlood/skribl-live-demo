@@ -193,6 +193,7 @@
 
 .skribl-inline-mute,
 .skribl-inline-loop {
+  position: relative;
   width: 30px;
   height: 30px;
   border-radius: 8px;
@@ -205,6 +206,10 @@
   padding: 0;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
+
+/* 30 visible, 44 to a finger (SK-AUD-005); why is in DECISIONS. */
+.skribl-inline-mute::before,
+.skribl-inline-loop::before { content: ''; position: absolute; inset: -8px; }
 
 /* A silent Skribl has nothing to mute, so it shows no mute button at all
    rather than a control that does nothing. Loop stays: a silent drawing still
