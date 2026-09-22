@@ -285,9 +285,20 @@
     .state b { color: var(--text-2); font-weight: 600; }
     .state a { color: var(--accent-tint); }
     .state[hidden] { display: none; }
-    /* FULL SCREEN: the stage wrap owns the display; the player keeps its own
-       aspect (inlineplayer.css sets it from the payload) and is fitted to the
-       shorter side. Black ground, as a cinema is. */
+    /* FULL SCREEN: the stage wrap owns the display and the in-post player box
+       is fitted to the shorter side of it. Black ground, as a cinema is.
+
+       THE 16/9 HERE IS THE BOX'S RATIO, NOT THE DRAWING'S, and this comment
+       used to say the opposite -- "the player keeps its own aspect
+       (inlineplayer.css sets it from the payload)". It does not: .skribl-inline
+       carries a hard-coded `aspect-ratio: 16 / 9`, because 16:9 is the widest
+       canvas lib/canvassizes.js offers and anything narrower letterboxes
+       INSIDE that box. So the result on screen is right -- a 1:1 drawing is
+       centred with ground either side, exactly as it is in a feed -- but the
+       reason written here was wrong, and the number below is a COPY of the one
+       in inlineplayer.css. Change that ratio and this line has to move with
+       it; nothing gates the pair, which is the cost of the duplication and is
+       why it is stated rather than left to be discovered. */
     .stageCanvasWrap:fullscreen { margin: 0; border: 0; border-radius: 0; background: #000;
       display: grid; place-items: center; }
     .stageCanvasWrap:fullscreen .skribl-inline { width: min(100vw, calc(100vh * 16 / 9)); max-height: 100vh; }

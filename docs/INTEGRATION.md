@@ -323,10 +323,20 @@ box's two maximums clamped each axis separately and a 9:16 drawing was drawn
 do not give `.skribl-inline-canvas` a width or a height: `auto` is what lets
 the bitmap's own ratio drive the fit.
 
-There is no known fidelity gap now. The header of
-`skribl/static/inlineplayer.js` carries the measurement, and `verify_inline.py`
-pins both — the compositor with a translucent fixture rendered twice, the
-aspect at 9:16, 4:3 and 1:1.
+**And it frames a background photo the way the author framed it.** Until v306
+the underlay was hard-coded to `cover`, so a photo composed with **Fit** was
+letterboxed in the editor and on `/s/<id>` and cropped in your feed. It reads
+`lib/photofit.js` now — the same module both editors and `/s/<id>` read — which
+is why that file is one of the assets `skribl_inline_assets()` loads.
+
+ONE KNOWN GAP REMAINS: a background photo's **opacity and blur** are not
+reproduced in a feed box. Those are a canvas filter rather than geometry, so a
+photo authored at 40% paints opaque here and one authored soft paints sharp.
+The drawing, its timing, its audio and the photo's placement all match. The
+header of `skribl/static/inlineplayer.js` carries the measurement, and
+`verify_inline.py` pins what is closed — the compositor with a translucent
+fixture rendered twice, the aspect at 9:16, 4:3 and 1:1, and both fits of a
+photo sampled across the canvas.
 
 ## When your composer is a form, not a browser
 

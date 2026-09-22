@@ -317,6 +317,17 @@
    overlay-scrollbar platforms and mobile. Unconditional (was scoped away from
    the player in v81) so there's no gutter toggle during the player's startup. */
 html { scrollbar-gutter: stable both-edges; }
+/* ...EXCEPT WHILE SOMETHING IS FULL SCREEN, and this cost 20px of screen
+   before anybody measured it. `stable both-edges` reserves a gutter on each
+   edge of the root scroll box so the layout does not shift when a scrollbar
+   appears, which shrinks the box a fixed-position element resolves `100%`
+   against. The fullscreened wrapper therefore came out 1180px wide in a
+   1200px screen, sitting 10px in, with the page showing either side --
+   measured, in verify_player_isolation's full screen block. The document is
+   `overflow: hidden` while an element is fullscreen (the UA does that), so the
+   gutter is reserving room for a scrollbar that cannot appear. Where :has() is
+   not supported the behaviour is what it was, which is the 20px, not a break. */
+html:has(:fullscreen) { scrollbar-gutter: auto; }
 
 /* Skribl scrollbars — thin thumb on carbon, everywhere; colour follows --ui-line.
    Matches the Flip frame strip; applies to the help drawer, panels, page scroll, etc. */
@@ -1167,16 +1178,33 @@ body.player-mode .app {
 
 /* FULL SCREEN on the player, the control the shared link was missing until the
    owner asked for it. The wrapper is what goes fullscreen, so it has to stop
-   being a sized box and become the screen; layoutPlayerCanvas() then measures
-   the new box and resizes the canvas from it.
+   being a sized box and become the screen, and `place-items: center` is what
+   holds the drawing in the middle of it.
+
+   THE CANVAS IS SIZED IN JAVASCRIPT, NOT HERE, and the first draft of this
+   block believed otherwise. It carried a `.canvas-wrap:fullscreen > canvas`
+   rule setting width and height to auto under 100vw/100vh caps, reasoning that
+   a replaced element with auto sizes letterboxes itself at any shape. That
+   rule never applied for one frame: layoutPlayerCanvas() writes an INLINE
+   width and height onto the canvas, inline beats a stylesheet, and it runs
+   again on `fullscreenchange` — so the drawing stayed at the size it had in
+   the page (551px in a 1200px screen, measured) inside a black field, while
+   every assertion about the control passed. The rule is gone and
+   layoutPlayerCanvas() branches on the fullscreen element instead.
 
    NO ASPECT RATIO IS HARD-CODED HERE, deliberately. The profile stage's
    fullscreen rule says `calc(100vh * 16 / 9)`, which assumes every drawing is
    16:9 and is only harmless because the canvas keeps its own ratio inside the
-   box. The canvas is a replaced element with width and height auto, so max
-   bounds alone letterbox it correctly at ANY shape — which is the lesson the
+   box. The JS branch fits the authored shape at ANY ratio — the lesson the
    in-post player's stretch bug taught, applied rather than repeated. */
 .canvas-wrap:fullscreen {
+  /* BELT AND BRACES, MEASURED AS SUCH. The Fullscreen spec's UA stylesheet
+     sizes the top-layer element with `width: 100% !important` and
+     `max-width: none !important`, which outranks these four lines and the
+     inline width layoutPlayerCanvas writes; Chromium fills the wrapper with or
+     without them. They stay for an engine that does not apply the spec'd rule,
+     and verify_player_isolation measures the wrapper against the screen so
+     that "some layer supplies this" is asserted rather than assumed. */
   width: 100vw;
   height: 100vh;
   max-width: 100vw;
@@ -1194,16 +1222,19 @@ body.player-mode .app {
   display: grid;
   place-items: center;
 }
-.full-exit { display: none; position: absolute; top: 14px; right: 14px; z-index: 3;
-  width: 44px; height: 44px; background: var(--surface-deep);
+/* TWO CLASSES, NOT ONE, AND THAT IS THE WHOLE FIX. This was `.full-exit`,
+   which ties on specificity with `.player-btn` -- the other class the same
+   button carries -- so the winner was decided by which rule came LAST in the
+   sheet. .player-btn does, 185 lines later, so `display: none` lost and the
+   exit control sat on the player at all times: a close button on a page with
+   nothing to close. Shipped, and the owner saw it before any assertion did,
+   because the pin only ever checked that the control APPEARS in full screen.
+   `.player-btn.full-exit` outranks `.player-btn` outright, so the rule no
+   longer depends on where it sits. */
+.player-btn.full-exit { display: none; position: absolute; top: 14px; right: 14px;
+  z-index: 3; width: 44px; height: 44px; background: var(--surface-deep);
   border-color: var(--hairline-strong); color: var(--text-primary); }
-.canvas-wrap:fullscreen .full-exit { display: grid; place-items: center; }
-.canvas-wrap:fullscreen > canvas {
-  max-width: 100vw;
-  max-height: 100vh;
-  width: auto;
-  height: auto;
-}
+.canvas-wrap:fullscreen .player-btn.full-exit { display: grid; place-items: center; }
 
 body.player-mode .canvas-wrap {
   flex: none;

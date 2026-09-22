@@ -31,11 +31,9 @@
     ".canvas-wrap",
     ".canvas-wrap.locked",
     ".canvas-wrap:fullscreen",
-    ".canvas-wrap:fullscreen .full-exit",
-    ".canvas-wrap:fullscreen > canvas",
+    ".canvas-wrap:fullscreen .player-btn.full-exit",
     ".duration-badge",
     ".duration-badge[hidden]",
-    ".full-exit",
     ".header",
     ".header .brand .brand-mark",
     ".header:has(#playWrap:not([hidden])) .brand > span",
@@ -53,6 +51,7 @@
     ".player-btn",
     ".player-btn svg",
     ".player-btn.active",
+    ".player-btn.full-exit",
     ".player-btn.primary",
     ".player-btn.primary svg",
     ".player-btn.primary:hover",
@@ -117,7 +116,8 @@
     "body.player-mode .canvas-area",
     "body.player-mode .canvas-wrap",
     "body.player-mode .header",
-    "html"
+    "html",
+    "html:has(:fullscreen)"
   ],
   "editor": [
     "#canvas",
@@ -582,6 +582,7 @@
     "body:not(.player-mode) .canvas-area",
     "body:not(.player-mode) .canvas-wrap",
     "body:not(.player-mode) .canvas-wrap #canvas",
-    "html"
+    "html",
+    "html:has(:fullscreen)"
   ]
 }

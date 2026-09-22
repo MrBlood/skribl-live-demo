@@ -312,9 +312,36 @@ if _marker in _appjs:
     # lib/strokelayers.js and flip.js. Those took the addition from 20 lines to
     # 8. NOT shaved further -- deleting prose that exists nowhere else to hit a
     # ceiling is the habit the note above warns about, twice.
+    # 1760 -> 1790 at v306, measured 1764, and the spending came first as
+    # always: 11 lines of my own new prose came back out of playerFitScale,
+    # layoutPlayerCanvas and the fullscreen block before this number moved, and
+    # what is left is the branch itself plus four lines saying why a second
+    # measurement exists.
+    #
+    # What grew: playerFitScale answers "what scale fits the box", and full
+    # screen is a different box. Everything else in that function measures
+    # `.app` — max-width 720px — and caps the scale at 1:1, which is right for
+    # a drawing in a page column and wrong for one that owns the screen. The
+    # canvas therefore stayed page-sized inside a wrapper that filled the
+    # display. That is PLAYER code in the player, which is the distinction this
+    # assertion exists to police, and the two assertions that police it
+    # directly both still hold.
+    #
+    # AND THE HEADROOM WAS ALREADY GONE, which is the part worth recording.
+    # v297 left 30 lines deliberately, "so the next edit here is a decision
+    # rather than an accident". The fullscreen feature earlier in v306 spent
+    # every one of them and landed on 1760 exactly — passing by zero — and
+    # nothing said so, because a ratchet met exactly is green. The next line
+    # over then read as this fix's fault rather than as the previous change
+    # having used the last of the budget. 26 lines of headroom now, and a
+    # figure met exactly is worth treating as a warning.
+    #
+    # The old failure message said "was 1339", a figure from before four carves
+    # and three raises. A ratchet's message should state what it MEASURED, not
+    # carry a number nobody has re-checked since v282.
     check("the player's reachable set has not ballooned",
-          _player_lines <= 1760,
-          f"{_player_lines} lines reachable, was 1339")
+          _player_lines <= 1790,
+          f"{_player_lines} lines reachable against a ceiling of 1,790")
     # THIS ASSERTION USED TO READ `_editor_lines > _player_lines`, under the
     # name "a split is still worth doing". It was a TODO wearing a test's
     # clothes: it could only pass while the work was OUTSTANDING, and it went

@@ -1373,7 +1373,31 @@ with sync_playwright() as sp:
     # could not read the vocabulary another wrote (its header has the story), so
     # the cheap-looking option is the one that re-makes the original defect. The
     # embed grows 3.4% and every surface agrees about where a photo goes.
-    EMBED_RATCHET = 35_200
+    # RAISED AGAIN, 35,200 -> 35,500, MEASURED 35,385 — and this raise is a
+    # correction of the one above rather than a new feature's bill.
+    #
+    # THE FIGURE ABOVE WAS TAKEN BEFORE THE FILE STOPPED CHANGING. "33,483 ->
+    # 35,102" was measured when the fit capture landed. The profile stage then
+    # turned out not to load lib/photofit.js at all, inlineplayer.js grew a
+    # warn-once notice naming the missing module (283 B served, measured by
+    # stripping just that block), and nobody re-measured: 35,102 + 283 = 35,385
+    # against a ceiling of 35,200. The full battery is what said so, three
+    # pull requests later. A ratchet raised from a design-time number is a
+    # ratchet raised from a number that is about to be wrong; the measurement
+    # belongs at the END of the change.
+    #
+    # SPENT AGAINST FIRST, and there was nothing honest to spend. The only
+    # 185 B available is the warn notice itself, and that notice exists
+    # BECAUSE the silent fallback beside it shipped a cropped photo to the
+    # owner's own profile page and said nothing — cutting it to a stub to hit
+    # a number would be paying for the ceiling with the thing the ceiling is
+    # supposed to protect. The flag name and the console guard would give back
+    # perhaps 45 B, which does not reach and is not worth the obscurity.
+    #
+    # 115 B of headroom, and the margin is printed below rather than left to
+    # be worked out, because the lesson of this raise is that a number nobody
+    # re-reads goes stale in one release.
+    EMBED_RATCHET = 35_500
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -1402,10 +1426,14 @@ with sync_playwright() as sp:
     # the loop's job and not this line's.
     check("the embed macro names exactly the six assets a host pays for",
           len(embed_urls) == 6, str(embed_urls))
+    _embed_margin = EMBED_RATCHET - total
     check(f"the in-post player costs a host no more than {EMBED_RATCHET:,} bytes "
           f"of CSS and JavaScript",
           total <= EMBED_RATCHET,
-          f"{total:,} B served: " + ", ".join(f"{k} {v:,}" for k, v in served.items()))
+          f"{total:,} B served ("
+          + (f"{_embed_margin:,} B of margin left" if _embed_margin >= 0
+             else f"OVER by {-_embed_margin:,} B") + "): "
+          + ", ".join(f"{k} {v:,}" for k, v in served.items()))
 
     # THE COMPOSE COST, on its own ratchet. A host's composer page pays this and
     # a host's feed does not, so blurring the two into one number would hide

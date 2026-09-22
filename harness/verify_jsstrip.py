@@ -257,9 +257,52 @@ with sync_playwright() as sp:
     print(f"    keeping our own leading block comments would add {_banner:,} B "
           f"across {len(player_js)} player scripts (jsstrip's keep_banner=False)")
 
-    check("REACHES the 153,600 target (strip + whitespace collapse)",
-          lean_total <= 153_600,
-          f"lean_total {lean_total:,} B ({153_600 - lean_total:,} B under)")
+    # 153,600 -> 153,800, and this is a target moving rather than a ratchet, so
+    # it says why. Full screen on /s/<id> cost the player 231 B of wiring; 171 B
+    # of that was given back first by sharing one exit handler between the two
+    # controls, dropping a typeof guard that was checking a function
+    # declaration in its own scope, and building aria-pressed from the boolean.
+    # The remaining 140 B buys the control the canonical share surface was
+    # missing, which the owner asked for and then waived this number over.
+    #
+    # THE NUMBER HAS NOT MOVED AGAIN SINCE, and the fix that would have moved
+    # it paid for itself instead. Making full screen actually ENLARGE the
+    # drawing -- the wrapper filled the screen while the canvas kept its page
+    # size -- wanted another 169 B. It came out of the same block rather than
+    # out of this target: `_fsWrap` was a second handle on `canvasWrap`, the
+    # exit helper was guarding a method that cannot be missing once something
+    # is fullscreen, and the scale branch reads a flag `_syncFull` already
+    # computes for the control's label instead of re-reading the document.
+    #
+    # WHAT THE TARGET IS FOR, so the next person does not read it as slack:
+    # START-HERE concluded from a function count that reaching it needs a
+    # separate player entry point, and the v199 handoff concluded it does not.
+    # The number is the evidence for the second.
+    #
+    # AND THE RULE WRITTEN HERE WAS TESTED WITHIN THE HOUR. This paragraph
+    # first said the margin was single digits and that the next spend had to
+    # come out of carving rather than out of raising the line again. Making
+    # full screen measure the WRAPPER's box instead of the window -- the
+    # correct fix, because a scrollbar gutter can make the two differ -- then
+    # wanted 20 B more than existed. It came out of the same block: a
+    # `canvasWrap &&` guard on a reference dereferenced unguarded three hundred
+    # lines above, two reads of document.fullscreenElement that the fsFull flag
+    # already answers, and a one-line helper with a single caller. The number
+    # did not move, and the margin is printed below so the next person does not
+    # have to work it out.
+    #
+    # The rule stands: this target comes out of the 5 editor globals and the
+    # editor-only paths verify_player_isolation still counts on the player, not
+    # out of this line. A target raised once per release is a record of
+    # spending, not an achievement.
+    # "-109 B under" is what this line used to say when it FAILED, which reads
+    # as a margin and is a deficit. Over and under are named, not signed.
+    _margin = 153_800 - lean_total
+    check("REACHES the 153,800 target (strip + whitespace collapse)",
+          lean_total <= 153_800,
+          f"lean_total {lean_total:,} B — "
+          + (f"{_margin:,} B of margin left" if _margin >= 0
+             else f"OVER the target by {-_margin:,} B"))
 
     pg.close()
     b.close()

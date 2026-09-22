@@ -837,6 +837,38 @@ check("every template that loads inlineplayer.js also loads lib/photofit.js",
       f"— without it the player falls back to a centred cover and crops a "
       f"photo its author fitted")
 
+# ---------------------------------------------------------------------------
+# THE STAGE'S FULL SCREEN RULE CARRIES A COPY OF THE BOX'S ASPECT RATIO.
+#
+# skribl_library.html sizes the fullscreened player with
+# `width: min(100vw, calc(100vh * 16 / 9))`, and 16/9 there is not a property
+# of the drawing -- it is .skribl-inline's own `aspect-ratio`, hard-coded in
+# inlineplayer.css because 16:9 is the widest canvas lib/canvassizes.js offers
+# and everything narrower letterboxes inside it. The comment beside that rule
+# used to claim the player "sets it from the payload", which would have made
+# the copy harmless; it does not, so the two numbers have to agree or the
+# fullscreen box stops matching the player inside it.
+#
+# BOTH READ FROM THE DECLARATIONS, never from the prose around them: one from
+# the `aspect-ratio` property, one from inside the calc().
+print("\nFULL SCREEN — the stage's box matches the player's own ratio")
+_css = (ROOT / "skribl" / "static" / "inlineplayer.css").read_text(encoding="utf-8")
+_lib = (ROOT / "skribl" / "templates" / "skribl"
+        / "skribl_library.html").read_text(encoding="utf-8")
+_box = re.search(r"aspect-ratio:\s*(\d+)\s*/\s*(\d+)", _css)
+_stage = re.search(r"calc\(\s*100vh\s*\*\s*(\d+)\s*/\s*(\d+)\s*\)", _lib)
+check("both ratios were actually found, not defaulted",
+      bool(_box) and bool(_stage),
+      f"inlineplayer.css: {_box.groups() if _box else 'NOT FOUND'}; "
+      f"skribl_library.html: {_stage.groups() if _stage else 'NOT FOUND'} — a "
+      f"regex that matches nothing compares nothing and passes")
+check("the stage's fullscreen width uses the player box's own aspect ratio",
+      bool(_box) and bool(_stage) and _box.groups() == _stage.groups(),
+      f"player box {_box.group(1) if _box else '?'}:{_box.group(2) if _box else '?'} "
+      f"against stage rule {_stage.group(1) if _stage else '?'}:"
+      f"{_stage.group(2) if _stage else '?'} — a fullscreen box of one shape "
+      f"around a player of another puts ground where the drawing should be")
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)
