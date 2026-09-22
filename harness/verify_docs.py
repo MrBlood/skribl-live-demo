@@ -1487,6 +1487,51 @@ check("docs/INTEGRATION.md names every seam a host can pass",
 # committed attestations actually name must return at once, without sleeping;
 # and no hold asked for must not hold. A hold that returned immediately, or
 # that reported a lane verified on expiry, is the v303 margin back, or worse.
+# ---------------------------------------------------------------------------
+# A PARTIAL RUN MUST NOT PUBLISH ITSELF AS THE PROJECT'S RESULT.
+#
+# run_harness.sh stamps the generated stanzas after EVERY invocation, which is
+# what keeps them current after a full battery -- and what put a deliberately
+# reddened one-suite calibration run into START-HERE.md twice in one session.
+# The existing narrowing guard cannot catch it: that one compares against
+# RELEASE.md and engages only when RELEASE.md describes the CURRENT tree, which
+# mid-change it does not.
+#
+# DRIVEN ON THE PREDICATE, with synthetic records, because the alternative is
+# running stamp_docs against the real documents to see whether they move.
+print("\nDOCS — a run that did not walk the tree does not get to stamp it")
+import stamp_docs as _sd                                              # noqa: E402
+
+_disk = _sd.suites_on_disk()
+check("the suite count comes from the tree, not from a constant",
+      _disk > 50,
+      f"{_disk} verify_*.py on disk — a zero here would disable the guard "
+      f"entirely, since nothing can cover fewer suites than none")
+
+_whole = {"suites": _disk - 2, "skipped": ["verify_mp4.py", "verify_postgres.py"]}
+check("a run that reached every suite, two of them skipping, covers the tree",
+      _sd.covers_tree(_whole, _disk),
+      f"{_sd.coverage(_whole)} of {_disk} — a SKIP is still the runner having "
+      f"walked to that suite, which is the question this asks")
+
+_one = {"suites": 1, "skipped": []}
+check("...and a one-suite calibration run does NOT",
+      not _sd.covers_tree(_one, _disk),
+      f"{_sd.coverage(_one)} of {_disk} — this is the record that reached "
+      f"START-HERE.md twice, reading 'RUN NOT GREEN' about a suite reddened "
+      f"on purpose")
+
+_batch = {"suites": 6, "skipped": []}
+check("...nor does a release_run batch, which is the same shape",
+      not _sd.covers_tree(_batch, _disk),
+      f"{_sd.coverage(_batch)} of {_disk} — release_run.py rewrites the record "
+      f"to cover every batch BEFORE it stamps, so the seal is unaffected")
+
+check("the guard cannot be switched off by an empty tree",
+      _sd.covers_tree(_one, 0),
+      "with no suites on disk there is nothing to under-cover, and refusing "
+      "every stamp forever would be the worse failure")
+
 print("\nDOCS — the seal holds before its final render until every external lane attests")
 _lanes = ["verify_mp4.py", "verify_postgres.py"]
 _slept, _said, _t = [], [], [0.0]

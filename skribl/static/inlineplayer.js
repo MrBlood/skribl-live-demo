@@ -767,12 +767,21 @@
        * it is the cheap option; the expensive one was the hard-coded Math.max
        * that disagreed with two other surfaces.
        *
-       * opacity and blur are still NOT reproduced here -- they are a canvas
-       * filter rather than geometry, and a photo authored at 40% still paints
-       * opaque in a feed box. Stated because it is a known remaining gap, not
-       * because it is fine. */
+       * OPACITY AND BLUR TRAVEL TOO, as of v307, and this note used to say
+       * they did not. The editor and /s/<id> put the photo in a real <img>
+       * behind the canvas and let CSS fade and soften it; a feed box has one
+       * canvas and nothing else, so the same two choices are globalAlpha and
+       * ctx.filter. A photo authored at 40% painted opaque here, and one
+       * authored soft painted sharp, on every host embed.
+       *
+       * THE BLUR RADIUS NEEDS NO CONVERSION, which is the reason it is one
+       * line. ctx.filter works in user space, and the context is scaled by
+       * the device pixel ratio in adopt(), so `blur(12px)` here covers the
+       * same distance across the drawing as `filter: blur(12px)` on the
+       * editor's img -- on a 1x screen and a 2x one alike. Writing the
+       * conversion by hand is what would have made it wrong. */
       under = { color: (f0.background && f0.background.color) || (payload.background || {}).color || null,
-                image: null, fit: null, offX: 0.5, offY: 0.5, zoom: 1 };
+                image: null, fit: null, offX: 0.5, offY: 0.5, zoom: 1, op: 1, bl: 0 };
       var ph = f0.photo || null;
       if (ph && ph.data) {
         /* Only a PHOTO carries a fit. A base snapshot is already the canvas's
@@ -783,6 +792,8 @@
         if (off.x != null) under.offX = off.x;
         if (off.y != null) under.offY = off.y;
         if (ph.zoom != null) under.zoom = ph.zoom;
+        if (ph.opacity != null) under.op = ph.opacity;
+        if (ph.blur != null) under.bl = ph.blur;
       }
       var src = (ph && ph.data) || f0.baseSnapshot || payload.baseSnapshot || null;
       if (src) {
@@ -867,6 +878,13 @@
                          'instead of using the fit its author chose.');
           }
         }
+        /* Set around BOTH branches, so the fallback cannot quietly paint a
+           photo at full strength while the module path fades it. Restored
+           unconditionally: a filter or an alpha left on leaks into the ink
+           drawn immediately after it, which is a far worse defect than the
+           one this fixes. */
+        ctx.globalAlpha = under.op;
+        if (under.bl > 0) ctx.filter = 'blur(' + under.bl + 'px)';
         if (PF) {
           var r = PF.rect(iw, ih, size.w, size.h,
                           { fit: under.fit, offX: under.offX,
@@ -877,6 +895,8 @@
           var dw = iw * k, dh = ih * k;
           ctx.drawImage(under.image, (size.w - dw) / 2, (size.h - dh) / 2, dw, dh);
         }
+        ctx.globalAlpha = 1;
+        ctx.filter = 'none';
       }
     }
 

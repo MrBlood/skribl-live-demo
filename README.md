@@ -165,12 +165,17 @@ letterboxed in the editor and on `/s/<id>` and cropped in every feed box — as
 of v306, by reading `lib/photofit.js` rather than writing a fourth copy of the
 arithmetic.
 
-ONE KNOWN DIFFERENCE REMAINS, and it is stated here rather than left for a
-reader to discover: a background photo's **opacity and blur** are not
-reproduced in a feed box. They are a canvas filter rather than geometry, so a
-photo authored at 40% paints opaque here. See
-`skribl/static/inlineplayer.js` for the measurement and `docs/INTEGRATION.md`
-for the host-side details.
+and the fourth — a background photo's **opacity and blur**, which the editor
+and `/s/<id>` apply as CSS on a real `<img>` and a feed box, having only a
+canvas, applied not at all — as of v307. A photo composed at 40% painted
+opaque in every feed and every host embed; one composed soft painted sharp.
+
+There is no known rendering difference now, and that sentence has been wrong
+here before: it was written while the opacity gap was open and stated in
+`inlineplayer.js`'s own header three lines from the code. What makes it
+checkable rather than hopeful is that each closure has a pin that goes red
+without it — see `harness/verify_inline.py`, `skribl/static/inlineplayer.js`
+for the measurements, and `docs/INTEGRATION.md` for the host-side details.
 
 ## The profile's Skribls tab, and the public gallery
 

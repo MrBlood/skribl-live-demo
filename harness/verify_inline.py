@@ -1397,7 +1397,37 @@ with sync_playwright() as sp:
     # 115 B of headroom, and the margin is printed below rather than left to
     # be worked out, because the lesson of this raise is that a number nobody
     # re-reads goes stale in one release.
-    EMBED_RATCHET = 35_500
+    # RAISED 35,500 -> 35,700, MEASURED 35,616, for the last fidelity gap this
+    # player had left. 116 B, and every one of them is the feature.
+    #
+    # WHAT THE BYTES BUY: a background photo's opacity and blur. The editor and
+    # /s/<id> hang the photo in a real <img> behind the canvas and let CSS fade
+    # and soften it; a feed box has one canvas and nothing else, so the same two
+    # authored choices are globalAlpha and ctx.filter or they are nothing. They
+    # were nothing. A photo composed at 40% painted fully opaque in every feed,
+    # every profile stage and every host embed, and one composed soft painted
+    # sharp. Measured on an 800x600 canvas: the 40% fixture read green 200 (the
+    # photo at full strength) where the authored composite over the background
+    # is 92, and a hard edge under blur(12px) kept its full 128-point step.
+    # After: 92, and the step falls to 32.
+    #
+    # THE SAME ARGUMENT THE COMPOSITOR MADE AT 29,000 -> 32,000 AND PHOTOFIT AT
+    # 33,500 -> 35,200: a feed representation must not change the drawing's
+    # appearance. This ratchet has now been spent three times on exactly that
+    # sentence and nothing else, which is the pattern worth noticing -- the
+    # in-post player's costs are almost entirely the cost of not being a
+    # different-looking product.
+    #
+    # SPENT AGAINST FIRST, and 18 B came back: the alpha is assigned rather than
+    # guarded, because setting globalAlpha to 1 costs less than asking whether
+    # it is 1. The only other 100 B within reach is the warn-once notice naming
+    # a missing lib/photofit.js, which exists because the silent fallback beside
+    # it shipped a cropped photo to the owner's own profile page and said
+    # nothing. Paying for a ceiling with the thing the ceiling protects is not
+    # spending, it is borrowing.
+    #
+    # 84 B of headroom, printed below rather than left to be derived.
+    EMBED_RATCHET = 35_700
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -1532,10 +1562,49 @@ with sync_playwright() as sp:
         return "data:image/png;base64," + _b64.b64encode(_buf.getvalue()).decode()
 
 
+    def _split_photo(w, h, left, right):
+        """Two flat halves with ONE hard vertical edge down the middle.
+
+        A solid colour is useless for a blur probe: blurring it returns itself,
+        so an assertion built on one would pass whether or not the blur ran.
+        An edge is the only thing a blur can be seen in."""
+        try:
+            from PIL import Image                                       # noqa: E402
+        except ImportError:
+            return None
+        _im = Image.new("RGB", (w, h), left)
+        _im.paste(Image.new("RGB", (w // 2, h), right), (w // 2, 0))
+        _buf = _io.BytesIO()
+        _im.save(_buf, format="PNG")
+        return "data:image/png;base64," + _b64.b64encode(_buf.getvalue()).decode()
+
+
     _PHOTO = _solid_photo(1000, 250, (0, 200, 120))
+    _EDGE = _split_photo(800, 600, (0, 200, 120), (255, 72, 176))
     if _PHOTO is None:
         print("  (Pillow missing: the photo-fit pins cannot build a fixture)")
     else:
+        def _post_photo(pg, photo, **ph):
+            """Post one Skribl whose only variable is the photo's own state."""
+            _spec = dict(fit="cover", offset={"x": 0.5, "y": 0.5}, zoom=1,
+                         opacity=1, blur=0)
+            _spec.update(ph)
+            _spec["data"] = photo
+            return pg.evaluate("""async ([spec]) => {
+                const r = await fetch('/api/skribls', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        title: 'photo state', visibility: 'public',
+                        playbackMode: 'replay',
+                        canvasSize: {cssWidth: 800, cssHeight: 600},
+                        frames: [{
+                            strokes: [{x: 100, y: 100, color: '#ff48b0', size: 8, t: 0, start: true},
+                                      {x: 700, y: 500, color: '#ff48b0', size: 8, t: 200}],
+                            strokeGroups: [2],
+                            background: {color: '#101418'},
+                            photo: spec}]})});
+                return (await r.json()).id; }""", [_spec])
+
         def _post_with_fit(pg, fit):
             return pg.evaluate("""async ([photo, fit]) => {
                 const r = await fetch('/api/skribls', {
@@ -1557,6 +1626,9 @@ with sync_playwright() as sp:
         browsing.goto(_fp, BASE, "/skribl-pad")
         _id_contain = _post_with_fit(_fp, "contain")
         _id_cover = _post_with_fit(_fp, "cover")
+        _id_faded = _post_photo(_fp, _PHOTO, opacity=0.4)
+        _id_sharp = _post_photo(_fp, _EDGE, blur=0) if _EDGE else None
+        _id_blurred = _post_photo(_fp, _EDGE, blur=12) if _EDGE else None
         _fp.close()
 
         _rp = b.new_page(viewport={"width": 1280, "height": 900})
@@ -1599,6 +1671,72 @@ with sync_playwright() as sp:
             check("...and a photo authored COVER still fills it",
                   _is_photo(_v["top"]) and _is_photo(_v["mid"]) and _is_photo(_v["bot"]),
                   f"top={_v['top']} mid={_v['mid']} bot={_v['bot']}")
+        # ---- OPACITY AND BLUR, the last known fidelity gap ------------------
+        #
+        # THE HEADER OF inlineplayer.js DECLARED THIS ONE OPEN, which is the
+        # honest half; the other half is that a photo authored at 40% painted
+        # opaque in every feed box and in every host embed, while the editor
+        # and /s/<id> both faded it. Those two use a real <img> behind the
+        # canvas and let CSS do it; a feed box has one canvas and nothing else,
+        # so the same choice has to be made with globalAlpha and ctx.filter.
+        #
+        # TWO PROPERTIES, TWO ASSERTIONS, never one. A single "the photo looks
+        # different" row passes while one of the pair is still discarded, which
+        # is the same trap as pinning one arm of a two-state control: an
+        # opacity row is green on a tree that drops the blur, and a blur row is
+        # green on a tree that drops the opacity. Each is measured by the thing
+        # only it can change.
+        def _mid(sid):
+            _rp.evaluate("(id) => { const p = window.SkriblInline.find(id);"
+                         " if (p) p.play(); }", sid)
+            _rp.wait_for_timeout(1200)
+            return _rp.evaluate('''(id) => {
+                const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
+                if (!c || c.width <= 300) return null;
+                const x = c.getContext('2d');
+                const px = (fx, fy) => { const d = x.getImageData(Math.round(c.width * fx),
+                                                                 Math.round(c.height * fy), 1, 1).data;
+                                         return [d[0], d[1], d[2]]; };
+                /* Columns 4px either side of the photo's own hard edge, on an
+                   800px-wide drawing. The first version sampled at 48% and
+                   52% -- 16px out -- where CSS blur(12px) (stdDev 6px, so
+                   2.7 sigma) has almost entirely resolved: it read 128 sharp
+                   against 106 blurred and called a working blur missing. The
+                   blur has to be measured where it acts. */
+                return {mid: px(0.5, 0.5), lo: px(0.495, 0.5), hi: px(0.505, 0.5)}; }''', sid)
+
+        _f = _mid(_id_faded)
+        check("the probe is real: the faded box adopted a payload and painted",
+              _f is not None, str(_f))
+        if _f:
+            # rgb(0,200,120) at 40% over the authored ground rgb(16,20,24) is
+            # about (6, 92, 62). Full strength is (0, 200, 120). The green
+            # channel is the discriminator and it is not close.
+            _g = _f["mid"][1]
+            check("a photo authored at 40% is FADED in the feed box, not opaque",
+                  60 < _g < 130,
+                  f"mid={_f['mid']} — green {_g}; ~92 is the authored 40% over "
+                  f"the background, ~200 is the opacity being discarded")
+
+        if _id_sharp and _id_blurred:
+            _s2, _b2 = _mid(_id_sharp), _mid(_id_blurred)
+            check("the probe is real: both edge boxes adopted a payload and painted",
+                  _s2 is not None and _b2 is not None, f"sharp={_s2} blurred={_b2}")
+            if _s2 and _b2:
+                # ANTI-VACUITY FIRST: the unblurred fixture must actually show a
+                # step, or "the blurred one is smoother" compares two smooth
+                # things and means nothing.
+                _step = abs(_s2["lo"][1] - _s2["hi"][1])
+                check("the unblurred fixture really does carry a hard edge",
+                      _step > 100,
+                      f"lo={_s2['lo']} hi={_s2['hi']} — a {_step}-point step; "
+                      f"without one there is nothing for a blur to soften")
+                _soft = abs(_b2["lo"][1] - _b2["hi"][1])
+                check("...and a photo authored BLURRED is soft across that edge",
+                      _step > 100 and _soft < _step * 0.6,
+                      f"the step is {_step} sharp against {_soft} blurred — a "
+                      f"blurred photo that keeps its edge is the blur being "
+                      f"discarded, which is what a feed box used to do")
         _rp.close()
 
     b.close()

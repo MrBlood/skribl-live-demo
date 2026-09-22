@@ -151,6 +151,15 @@ On PASS, `harness/stamp_docs.py` writes the counts into the docs. **Do not
 edit a tracked file once a run has frozen its tree hash**, or the sealed
 record describes a tree that no longer exists; restart the run instead.
 
+**The generated stanzas no longer follow a partial run.** `run_harness.sh`
+stamps the counts into the docs after every invocation, which is what keeps
+them current — and what put a deliberately reddened one-suite calibration run
+into `START-HERE.md` twice in one session, both times reaching a commit.
+`stamp_docs.py` now refuses to stamp a record that did not walk every suite on
+disk, so a calibration run leaves the docs describing the last run that did.
+The restore-before-committing habit is still worth having; it is no longer the
+only thing standing between a mutation test and a published result.
+
 **And do not run `run_harness.sh` AFTER the release run.** Every invocation
 rewrites `harness/LAST-RUN.txt`, so one ad-hoc suite replaces the whole-run
 record with a one-suite record, and the checkpoint is deleted on success so
