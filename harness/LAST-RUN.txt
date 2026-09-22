@@ -1,15 +1,9 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-22T02:51:28Z
+UTC timestamp           : 2026-09-22T13:42:26Z
 Host                    : Linux x86_64
-Tree SHA-256            : f39b16c50d47dcfa4689542b89bd0637e3a2cd56adcde73e3a4331955e48cae7
-Git commit              : e5040dd
-Source state            : generated-only dirty
-                            README.md
-                            START-HERE.md
-                            docs/HANDOFF.md
-                            harness/LAST-RUN.txt
-                            harness/MP4-ATTESTATION.txt
-                            harness/README.md
+Tree SHA-256            : 9593b8c73721aeaa2c054ca767634864951e1e03073ef55225cde19308216f85
+Git commit              : 2b469cf
+Source state            : clean
 SKRIBL_VERSION          : v306
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -17,17 +11,16 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.24htWoywbW/harness.db)
+Database reset          : yes (fresh /tmp/tmp.Dm5Aq5Y8iw/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_icons.py
+Command                 : ./harness/run_harness.sh 
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-# whole release run: 55 batches recorded as one run
 suites requested : 104
   verify_a11y.py: ok — 282/282 passed
   verify_amber.py: ok — 87/87 passed
@@ -49,7 +42,7 @@ suites requested : 104
   verify_deletion.py: ok — 65/65 passed
   verify_deletion_foundation.py: ok — 17/17 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: ok — 107/107 passed  (3 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from; the two committed attestations name different trees (a seal is in progress), so the no-hold side is not driven)
+  verify_docs.py: ok — 115/115 passed
   verify_dots.py: ok — 11/11 passed
   verify_drafts.py: ok — 31/31 passed
   verify_example.py: ok — 32/32 passed
@@ -74,12 +67,12 @@ suites requested : 104
   verify_icons.py: ok — 37/37 passed
   verify_identity.py: ok — 44/44 passed
   verify_inbetween.py: ok — 67/67 passed
-  verify_inline.py: ok — 103/103 passed
+  verify_inline.py: ok — 108/108 passed
   verify_input.py: ok — 9/9 passed
   verify_integration.py: ok — 14/14 passed
   verify_jsstrip.py: ok — 28/28 passed
   verify_keys.py: ok — 9/9 passed
-  verify_layout.py: ok — 119/119 passed
+  verify_layout.py: ok — 141/141 passed
   verify_lib.py: ok — 8/8 passed
   verify_library.py: ok — 95/95 passed
   verify_liquify.py: ok — 32/32 passed
@@ -133,6 +126,6 @@ suites requested : 104
   verify_ux.py: ok — 375/375 passed
   verify_version.py: ok — 30/30 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 5751   (skipped suites contribute 0)
+assertions passed: 5786   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
