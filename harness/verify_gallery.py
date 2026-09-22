@@ -639,6 +639,168 @@ with sync_playwright() as _spk:
     _pk.close()
     _bk.close()
 
+# ---------------------------------------------------------------------------
+# THE CARD: who made it, and the caption over the drawing (v308)
+#
+# WHY THE LISTING IS INTERCEPTED. Skribl has no user table, so this demo's
+# every post has user_id NULL and the server can never put an author on a tile
+# here -- verify_hostseams drives the API side with a real resolver. What is
+# under test on THIS side is the renderer: given an author, does the card draw
+# one, and given none, does it draw nothing. Rewriting the one response is the
+# only way to ask that question of the real page, and it keeps the two halves
+# pinned separately rather than through one end-to-end fixture that would go
+# green if either half alone worked.
+print("\nGALLERY — the card says who made it, and hides the words until asked")
+with sync_playwright() as _spa:
+    _ba = _spa.chromium.launch()
+    _pa = _ba.new_context().new_page()
+    _pa.set_viewport_size({"width": 1100, "height": 1000})
+
+    _AUTHOR = {"id": "7", "display_name": "Mr. B", "username": "bigballbaron",
+               "avatar_url": BASE + "/static/skribl/icon-192.png",
+               "url": "https://example.test/u/bigballbaron", "verified": True}
+    # A HOSTILE URL IN A HOST-SUPPLIED FIELD. `author.url` becomes an href on
+    # something people click, and the resolver is the host's function reading
+    # the host's database -- so it is not trusted to hold a web address.
+    _EVIL = {"id": "9", "display_name": "Clicky", "username": "clicky",
+             "url": "javascript:window.__pwned = 1"}
+
+    def _inject(route):
+        r = route.fetch()
+        try:
+            data = r.json()
+        except Exception:
+            route.fulfill(response=r)
+            return
+        items = data.get("items") or []
+        for i, item in enumerate(items):
+            if i == 0:
+                item["author"] = dict(_AUTHOR)
+                item["caption"] = "a caption that lives over the drawing"
+            elif i == 1:
+                item["author"] = dict(_EVIL)
+            # every other row keeps NO author, which is the absence case
+        route.fulfill(response=r, json=data)
+
+    _pa.route("**/api/skribls?*", _inject)
+    browsing.goto(_pa, BASE, "/gallery")
+    _pa.wait_for_timeout(2200)
+
+    _card = _pa.evaluate("""() => {
+        const t = document.querySelectorAll('.tile');
+        const a = t[0] && t[0].querySelector('.tauth');
+        const img = a && a.querySelector('.tavatar img');
+        return {
+          tiles: t.length,
+          has: !!a, tag: a ? a.tagName : null, href: a ? (a.getAttribute('href') || '') : '',
+          dn: a ? (a.querySelector('.tdn') || {}).textContent : null,
+          un: a ? (a.querySelector('.tun') || {}).textContent : null,
+          tick: !!(a && a.querySelector('.tverified')),
+          avatar: img ? img.getAttribute('src') : null,
+          /* the block sits between the head and the drawing, which is where
+             the owner asked for it ("at the top under the title") */
+          belowHead: !!(a && t[0].querySelector('.thead') &&
+            a.getBoundingClientRect().top >= t[0].querySelector('.thead').getBoundingClientRect().bottom - 1),
+          aboveStage: !!(a && t[0].querySelector('.tileStage') &&
+            a.getBoundingClientRect().bottom <= t[0].querySelector('.tileStage').getBoundingClientRect().top + 1),
+          /* and the tiles with no author draw no block at all */
+          blocks: document.querySelectorAll('.tauth').length,
+        }; }""")
+    check("the fixture really produced a grid to measure",
+          _card["tiles"] >= 3, f"{_card['tiles']} tiles — fewer than three and "
+          f"the absence assertion below has nothing to be absent from")
+    check("a described author is drawn on the card: name, @handle, avatar, tick",
+          _card["has"] and _card["dn"] == "Mr. B" and _card["un"] == "@bigballbaron"
+          and _card["tick"] and (_card["avatar"] or "").endswith("icon-192.png"),
+          str(_card) + " \u2014 a null avatar can also mean the image 404'd: the "
+          "element's own onerror swaps it for an initial, which is the fallback "
+          "working and the fixture wrong")
+    check("...under the title and above the drawing",
+          _card["belowHead"] and _card["aboveStage"], str(_card))
+    check("...and a post with no author draws NO block, not an empty one",
+          _card["blocks"] == 2,
+          f"{_card['blocks']} .tauth blocks for 2 described authors out of "
+          f"{_card['tiles']} tiles")
+
+    _evil = _pa.evaluate("""() => {
+        const a = [...document.querySelectorAll('.tauth')]
+                    .find(x => (x.textContent || '').indexOf('clicky') >= 0);
+        return { found: !!a, tag: a ? a.tagName : null,
+                 href: a ? (a.getAttribute('href') || '') : '' }; }""")
+    check("a javascript: author URL never becomes an href",
+          _evil["found"] and _evil["tag"] == "DIV" and not _evil["href"],
+          f"{_evil} — the name still renders, as plain text; only the link is refused")
+
+    # THE CAPTION, OVER THE DRAWING. Asserted by PAINT and geometry, not by
+    # the class alone: `opacity` is what hides it (the text stays in the
+    # accessibility tree), so "hidden" here means a computed opacity of 0.
+    #
+    # READ AFTER THE TRANSITION, NEVER DURING IT. The first draft clicked and
+    # read `opacity` in the same evaluate(), and getComputedStyle returns the
+    # INTERPOLATED value mid-transition -- so a working toggle measured 0 and
+    # this went red on correct code, while the "off again" half went green for
+    # that same wrong reason. Each step now waits longer than the .16s.
+    #
+    # The mouse is parked off the grid first: `@media (hover: hover)` is live
+    # in this desktop browser, so a pointer resting on a tile would reveal the
+    # caption on its own and the toggle's effect would be unmeasurable.
+    _pa.mouse.move(5, 5)
+    _pa.wait_for_timeout(300)
+    _cap = _pa.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const cap = t.querySelector('.tileCap');
+        const st = t.querySelector('.tileStage');
+        const btn = t.querySelector('.tileCapBtn');
+        if (!cap || !st || !btn) return { missing: !cap ? 'cap' : (!st ? 'stage' : 'btn') };
+        const cr = cap.getBoundingClientRect(), sr = st.getBoundingClientRect();
+        return { text: cap.textContent,
+                 rest: getComputedStyle(cap).opacity,
+                 inStage: cr.top >= sr.top - 1 && cr.bottom <= sr.bottom + 1,
+                 pressed0: btn.getAttribute('aria-pressed') }; }""")
+    if not _cap.get("missing"):
+        for _step, _keys in ((1, ("on", "pressed1")), (2, ("off", "pressed2"))):
+            _pa.evaluate("() => document.querySelector('.tile .tileCapBtn').click()")
+            _pa.wait_for_timeout(400)
+            _got = _pa.evaluate("""() => [
+                getComputedStyle(document.querySelector('.tile .tileCap')).opacity,
+                document.querySelector('.tile .tileCapBtn').getAttribute('aria-pressed')]""")
+            _cap[_keys[0]], _cap[_keys[1]] = _got[0], _got[1]
+    check("the caption is drawn over the drawing, not as a block under it",
+          not _cap.get("missing") and _cap["inStage"]
+          and _cap["text"] == "a caption that lives over the drawing",
+          str(_cap))
+    check("...invisible at rest, and the toggle turns it on and off again",
+          not _cap.get("missing") and _cap["rest"] == "0" and _cap["on"] == "1"
+          and _cap["off"] == "0", str(_cap))
+    check("...and the toggle says which state it is in",
+          _cap.get("pressed0") == "false" and _cap.get("pressed1") == "true"
+          and _cap.get("pressed2") == "false", str(_cap))
+
+    # A CAPTION A READER CANNOT GET TO IS WORSE THAN ONE THAT TAKES A HOVER.
+    # `opacity: 0` keeps the text in the accessibility tree; `display: none`
+    # or `hidden` would not, and either would have looked identical on screen.
+    _a11ycap = _pa.evaluate("""() => {
+        const cap = document.querySelector('.tile .tileCap');
+        const cs = getComputedStyle(cap);
+        return { display: cs.display, visibility: cs.visibility,
+                 hidden: cap.hasAttribute('hidden'),
+                 w: Math.round(cap.getBoundingClientRect().width) }; }""")
+    check("the hidden caption is still text a screen reader reaches",
+          _a11ycap["display"] != "none" and _a11ycap["visibility"] != "hidden"
+          and not _a11ycap["hidden"] and _a11ycap["w"] > 0,
+          f"{_a11ycap} — display:none or hidden would look the same and read as nothing")
+
+    # HOVER IS THE OTHER WAY IN, where a hover exists at all. The test browser
+    # is a desktop Chromium, so `@media (hover: hover)` is live here.
+    _pa.hover(".tile .tileStage")
+    _pa.wait_for_timeout(300)
+    _hov = _pa.evaluate("() => getComputedStyle(document.querySelector('.tile .tileCap')).opacity")
+    check("hovering a tile reveals its caption without a click",
+          _hov == "1", f"opacity {_hov} while hovering the tile")
+
+    _pa.close()
+    _ba.close()
+
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")
 sys.exit(0 if passed == len(results) else 1)
