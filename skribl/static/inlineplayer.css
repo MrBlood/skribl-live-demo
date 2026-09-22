@@ -69,6 +69,13 @@
   transition: opacity 0.22s;
 }
 
+/* IMMERSIVE (v307): the page adds the class, the component owns the rules —
+   see DECISIONS. CSS comments are served; that is why this is one line. */
+.skribl-inline.is-immersive { width: 100%; height: 100%; border: 0; border-radius: 0; }
+.skribl-inline.is-immersive .skribl-inline-poster { display: none; }
+.skribl-inline.is-immersive .skribl-inline-canvas {
+  width: 100%; height: 100%; object-fit: contain; }
+
 /* The generic fallback card is cropped the same way — see inlineplayer.js. */
 
 /* Letterboxed at the DRAWING's aspect, never stretched. width/height MUST

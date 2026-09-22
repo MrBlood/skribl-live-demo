@@ -442,26 +442,30 @@ with sync_playwright() as _spg:
     check("...and each one answers a 44px tap and says which Skribl it opens",
           _g["named"] and _g["square"] and min(_g["square"]) >= 44,
           f"smallest {min(_g['square']) if _g['square'] else 0}px, named={_g['named']}")
-    # THE RATIO IS NOT RESTATED, which is the point of doing it this way. The
-    # component carries `aspect-ratio` in inlineplayer.css; the fullscreen rule
-    # gives it a height and a max-width and lets the ratio resolve the other
-    # side. The profile's .stageCanvasWrap DOES restate 16/9 and says in its own
-    # comment that nothing gates the pair — so this asserts the absence, by
-    # parsing the rule rather than searching the file for a number that also
-    # appears in the prose explaining it.
+    # WHERE THE FULL-SIZE RULES LIVE, which is the division this page got wrong
+    # once and had caught on main. The gallery owns its WRAPPER; the component
+    # owns everything about itself. The first cut styled the player's poster and
+    # canvas from this page's sheet -- a page hand-writing the component's
+    # internals, which verify_inline forbids outright.
+    #
+    # Asserted as two halves rather than one, because either alone passes on the
+    # broken arrangement: the page could carry a correct wrapper rule AND the
+    # copies, and the component could carry the immersive rules while the page
+    # still duplicated them.
     _sheet = (pathlib.Path(__file__).resolve().parent.parent
               / "skribl" / "templates" / "skribl" / "skribl_gallery.html").read_text()
-    _rule = re.search(r"\.tileStage:fullscreen \.skribl-inline \{([^}]*)\}", _sheet)
-    # A NUMERIC ratio is the thing to forbid; `aspect-ratio: auto` is the
-    # opposite of restating one -- it takes the component's 16:9 OFF, which is
-    # what lets the drawing use the whole display instead of being letterboxed
-    # into a 16:9 box first and then into the screen.
-    _body = _rule.group(1) if _rule else ""
-    check("the gallery's fullscreen rule does not restate the player's aspect ratio",
-          bool(_rule) and not re.search(r"aspect-ratio\s*:\s*[^;]*\d", _body)
-          and not re.search(r"\d+\s*/\s*\d+", _body),
-          f"rule body {_body.strip()!r} — a second copy of 16/9 here is a pair "
-          f"nothing gates")
+    _wrap = re.search(r"\.tileStage:fullscreen \{([^}]*)\}", _sheet)
+    check("the gallery styles its own wrapper, and names no aspect ratio doing it",
+          bool(_wrap) and not re.search(r"\d+\s*/\s*\d+", _wrap.group(1)),
+          f"rule body {(_wrap.group(1).strip() if _wrap else 'MISSING')!r} — a "
+          f"second copy of 16/9 here is a pair nothing gates")
+    _comp = (pathlib.Path(__file__).resolve().parent.parent
+             / "skribl" / "static" / "inlineplayer.css").read_text()
+    check("...and the component owns what immersive MEANS for its own parts",
+          ".skribl-inline.is-immersive" in _comp
+          and "object-fit: contain" in _comp,
+          "the immersive rules are not in inlineplayer.css — if they moved back "
+          "into a page, that page is hand-writing the player's internals again")
 
     # WHAT FULL SIZE ACTUALLY SHOWS (owner, from the deployed gallery: "full
     # page image cuts off, then on play it doesn't go all the way to edge on

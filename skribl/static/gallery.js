@@ -167,6 +167,14 @@
       var onFs = function () {
         var box = stage.querySelector('.skribl-inline');
         var pl = box && box._skriblInline;
+        if (!box) return;
+        /* THE PAGE SAYS WHEN, THE COMPONENT SAYS WHAT. `is-immersive` is the
+           component's own state (inlineplayer.css): it hides the share card and
+           lets the drawing scale to whatever contains it. Those rules used to
+           live in this page's sheet, reaching into the player's internals —
+           which is the copy verify_inline's gate exists to stop, and it caught
+           it on main. */
+        box.classList.toggle('is-immersive', fsEl() === stage);
         if (!pl) return;
         if (fsEl() === stage) { pl.play(); return; }
         pl.pause();

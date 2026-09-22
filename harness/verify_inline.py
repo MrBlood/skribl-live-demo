@@ -1449,10 +1449,35 @@ with sync_playwright() as sp:
     # must not be a worse product than the real thing". Nothing else has ever
     # moved this number.
     #
-    # 86 B of headroom, printed here rather than left to be derived, because
-    # the lesson of the raise before this one is that a margin nobody re-reads
-    # goes stale in one release.
-    EMBED_RATCHET = 35_900
+    # RAISED 35,900 -> 36,300, MEASURED 36,231, for immersive mode: the drawing
+    # on the whole of whatever contains it. 69 B of headroom.
+    #
+    # AND THE GATE BELOW IS WHY IT IS SPENT HERE AT ALL. The gallery shipped
+    # these three rules in its OWN sheet, reaching into the player's poster and
+    # canvas from a page — which is exactly what "no template hand-writes the
+    # in-post player's internals" forbids, and it caught it on main after the
+    # merge. The choice was never "component or page"; it was "component, or a
+    # copy of the component's internals in every page that wants full size".
+    # The gate is right and the bytes are what being right costs.
+    #
+    # WHAT THEY BUY, on every surface including a host's: the share card is
+    # hidden (it is cropped to hide its wordmark, which at screen size just cuts
+    # the picture off) and the canvas gets `object-fit: contain` (sized `auto`
+    # with two maximums it SHRINKS a big drawing and leaves a small one at its
+    # own size -- an 816x612 drawing measured 816x612 on a 900x900 screen).
+    #
+    # FIFTH RAISE, SAME SENTENCE: 29,000 (compositor), 33,500 (photo fit),
+    # 35,700 (opacity and blur), 35,900 (the tap band), now this. Every one
+    # bought "the embed must not be a worse product than the real thing", and
+    # this one adds a capability the embed did not have rather than repairing
+    # one it had wrong.
+    #
+    # SPENT AGAINST FIRST, TWICE. The first draft of the comment beside those
+    # rules was ten lines and cost 614 B -- more than the rules -- because CSS
+    # comments are SERVED, which this file has now learned twice. And
+    # `max-width: none; max-height: none` went in with them until a measurement
+    # showed the canvas fills the box without them.
+    EMBED_RATCHET = 36_300
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
