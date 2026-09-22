@@ -10112,3 +10112,52 @@ carried by a neighbour's fix; the table is in `verify_layout.py` beside the
 section. The seventh is the one worth naming: with the fixture disabled on an
 empty database, the tile row goes red while both floor rows stay GREEN on six
 controls. That is the pass this block was returning before the fixture existed.
+
+## Unsealed, on top of v306, cont. -- the search box that grew when you tapped it
+
+The owner, from a phone: the library search magnifies. It is iOS Safari's
+focus zoom -- below 16px on a focused text control, Safari scales the whole
+page up and does not reliably scale it back, so you type one word and are left
+panning a magnified screen.
+
+**THE RULE WAS ALREADY IN THE TREE AND ENFORCED NOWHERE.** `styles.css` has
+carried it at `.zoom-hud .zoom-val-input` since the zoom HUD was written --
+"Keep it exactly 16px -- do NOT lower this" -- and every field in both editors
+is 16. The profile page was written later, with its own stylesheet, and its
+`.search input` is 12.5px. Nothing connected the two. A rule that lives in a
+comment holds until somebody writes a new sheet, and this project now has four
+pages that deliberately do not load `styles.css`.
+
+So it is a gate: `verify_a11y`'s A11Y 11b, reading the COMPUTED font size on
+the real element -- not grepping a stylesheet for `font-size`, because the
+value that matters is the one that wins after the cascade, and because this
+repository has a rule about matching the mechanism rather than the word.
+
+**AND IT HAD TO DRIVE THE PAGE TO FIND THE FIELD THE RULE CAME FROM.** A
+closed drawer's input is in the markup and computes a size, so a DOM walk
+covers it. Two fields are not in the markup at all until something builds
+them: the recovery overlays, which `lib/recoverykey.js` appends to `<body>`,
+and the zoom HUD's %, which the editors replace with an `<input>` on click.
+The first draft of the section walked the DOM and stopped there. Dropping
+`.zoom-val-input` to 13px left **both editors green** -- a gate blind to the
+one field the tree had already documented, which is worse than no gate,
+because it would have been cited. It clicks `#zoomVal` and opens the recovery
+overlay before measuring now, and the same mutation goes red on both editors.
+
+**The other way to stop the zoom is the wrong one.** `maximum-scale=1` and
+`user-scalable=no` also prevent it, and they do it by taking pinch-zoom away
+from everybody -- which is exactly the defect A11Y 11 was written to catch
+after Flip shipped `user-scalable=no` on the surface with the smallest
+controls. The two sections are each other's guard rail: satisfy 11b that way
+and 11 goes red.
+
+Calibration, three components: the library search back to 12.5 reddens the
+library row; `.zoom-val-input` to 13 reddens both editors; an `<input>` added
+to the player reddens the player's row, which asserts the property that page
+actually has -- it has no text control at all -- rather than a floor over an
+empty list, which would pass forever.
+
+**What generalises:** a constant that is correct in five places and written
+down in one comment is not a policy, it is five coincidences. The tell is a
+new surface that does not load the old stylesheet; this tree now has four of
+those, and each one is a fresh chance to not inherit something.

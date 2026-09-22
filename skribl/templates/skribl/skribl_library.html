@@ -215,7 +215,17 @@
     .chip.active { background: var(--accent); border-color: transparent; color: #0b0616; font-weight: 600; }
     .search { position: relative; }
     /* min-height 44: an input has no ::before to grow a tap band with, so the box is the box. */
-    .search input { width: 180px; max-width: 44vw; min-height: 44px; box-sizing: border-box; font-family: var(--font-mono); font-size: 12.5px; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 12px 7px 30px; outline: none; }
+    /* 16px, NOT 12.5. Below 16 iOS Safari magnifies the whole page when the
+       field takes focus and does not reliably zoom back, so you type one word
+       and are left panning a magnified screen -- the owner's report was that
+       the library search grows when you tap it. styles.css has said this at
+       .zoom-hud .zoom-val-input since the zoom HUD was written; this page has
+       its own sheet and never inherited the rule, which is why the rule is now
+       a gate (verify_a11y, A11Y 11b) and not only a comment.
+       The field is a little wider to hold the same words at the larger size.
+       NOT fixed with maximum-scale=1: that takes pinch-zoom away from
+       everybody, and A11Y 11 fails any page that tries it. */
+    .search input { width: 200px; max-width: 48vw; min-height: 44px; box-sizing: border-box; font-family: var(--font-mono); font-size: 16px; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 12px 7px 30px; outline: none; }
     .search input:focus { border-color: var(--accent); }
     .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-3); }
   

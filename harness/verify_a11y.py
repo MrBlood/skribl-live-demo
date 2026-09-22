@@ -1015,6 +1015,97 @@ with sync_playwright() as p:
         check(f"{_name} at 200% zoom: the primary control is on screen", _z["primary"], _primary)
         _zc.close()
 
+    # --------------------------------------------------------- section 11b
+    print("\nA11Y 11b — no text control MAKES iOS zoom")
+    # THE MIRROR IMAGE OF 11, AND THE SAME HARM FROM THE OTHER SIDE. Above:
+    # a page must not forbid the person zooming. Here: a page must not zoom
+    # FOR them. iOS Safari magnifies the whole page when a focused text
+    # control computes under 16px, and it does not reliably zoom back — you
+    # type one word and are left on a magnified screen, panning.
+    #
+    # THE KNOWLEDGE WAS ALREADY IN THE TREE AND ENFORCED NOWHERE. styles.css
+    # says it at .zoom-hud .zoom-val-input ("Keep it exactly 16px — do NOT
+    # lower this"), and the editors' fields are all 16. The profile page was
+    # written later, with its own sheet, and its search field is 12.5px: the
+    # library search box grows when you tap it, which is how the owner found
+    # this, on a phone. A rule repeated in comments is a rule that holds until
+    # somebody writes a new stylesheet.
+    #
+    # THE FLOOR IS THE MECHANISM'S, not a design preference: 16.0 exactly,
+    # because that is the number WebKit compares against. And the check reads
+    # the COMPUTED size on the real element rather than grepping a stylesheet
+    # for "font-size", because the value that matters is the one that wins
+    # after the cascade, and this repository has a rule about matching the
+    # mechanism instead of the word.
+    #
+    # NOT `maximum-scale=1`. That is the other way to stop the zoom and it is
+    # the wrong one — it takes pinch-zoom away from everybody, which is the
+    # exact defect section 11 above exists to catch. The two sections are each
+    # other's guard rail: satisfy this one that way and that one goes red.
+    IOS_ZOOM_FLOOR = 16.0
+    TEXT_CONTROLS = """() => {
+      const SKIP = ['checkbox','radio','range','color','file','button','submit','hidden','image','reset'];
+      const out = [];
+      for (const el of document.querySelectorAll('input, textarea, select')) {
+        if (SKIP.indexOf((el.type || '').toLowerCase()) >= 0) continue;
+        out.push({ id: el.id || el.name || el.className.toString().trim().slice(0, 26) || el.tagName,
+                   fs: Math.round(parseFloat(getComputedStyle(el).fontSize) * 100) / 100 });
+      }
+      return out; }"""
+    for _path, _name, _least in (("/", "Pad", 6), ("/flip", "Flip", 8),
+                                 ("/s/" + _pid, "the player", 0),
+                                 ("/library", "the library", 3),
+                                 ("/feed", "the host feed", 1),
+                                 ("/gallery", "the gallery", 2)):
+        _pg = browser.new_page(viewport={"width": 390, "height": 844})
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(700)
+        # THE FIELDS THAT DO NOT EXIST UNTIL SOMETHING OPENS THEM. A closed
+        # drawer's field is in the markup and computes a font size, so the DOM
+        # walk covers it; a field BUILT on demand is not there at all and the
+        # walk sees nothing. Two of those, and both had to be driven:
+        #
+        #   the recovery overlays  lib/recoverykey.js appends them to <body>
+        #   the zoom HUD's %       app.js/flip.js replace #zoomVal's text with
+        #                          an <input> on click
+        #
+        # The second one is the reason this reveal step exists at all. Its
+        # rule in styles.css is where this whole floor is written down ("Keep
+        # it exactly 16px — do NOT lower this"), and the first draft of this
+        # section could not see it: dropping that rule to 13px left both
+        # editors GREEN. A gate blind to the one field the tree had already
+        # documented would have been worse than no gate.
+        _pg.evaluate("""() => {
+          try { window.SkriblRecoveryKey && window.SkriblRecoveryKey.openRecover(); } catch (e) {}
+          try { const z = document.getElementById('zoomVal'); if (z) z.click(); } catch (e) {}
+        }""")
+        _pg.wait_for_timeout(250)
+        _fields = _pg.evaluate(TEXT_CONTROLS)
+        _pg.close()
+        if _least == 0:
+            # THE PLAYER HAS NONE, AND THAT IS THE ASSERTION. A floor row over
+            # an empty list passes forever, so this page gets the property it
+            # actually has instead: /s/<id> is a page you watch, not one you
+            # type into. Add a field to it and this goes red, which is the
+            # moment to decide what size it is — the same trade the counted
+            # rows below make, stated the only way it can be stated at zero.
+            check(f"{_name}: has no text control at all — nothing on it can trigger the zoom",
+                  not _fields,
+                  ", ".join(f"{f['id']} {f['fs']}px" for f in _fields[:4]))
+            continue
+        # A WALK THAT FOUND NOTHING PASSES EVERYTHING. Each page's count is
+        # written down, so a template that stops rendering its fields — or a
+        # selector that stops matching them — fails here instead of going quiet.
+        check(f"{_name}: there are text controls on the page to measure",
+              len(_fields) >= _least,
+              f"found {len(_fields)}, expected at least {_least}")
+        _small = [f for f in _fields if f["fs"] < IOS_ZOOM_FLOOR]
+        check(f"{_name}: every text control is at least {IOS_ZOOM_FLOOR:.0f}px, so focusing one does not magnify the page",
+              not _small,
+              ", ".join(f"{f['id']} {f['fs']}px" for f in _small[:4])
+              or f"{len(_fields)} controls, smallest "
+                 f"{min(f['fs'] for f in _fields)}px")
+
     # ------------------------------------------------------------ section 12
     print("\nA11Y 12 — every segmented control is a named group whose options say what they are")
     # Outside review of v290, findings 7 and 8. Tips said role="group"
