@@ -65,12 +65,31 @@ for doc in DOCS:
 # later. run_harness.sh now re-stamps immediately after writing the record, so
 # the docs are current after any run; what this assertion catches is a tree
 # COMMITTED with stale stanzas.
-stamp = subprocess.run([sys.executable, "harness/stamp_docs.py", "--check"],
-                       cwd=ROOT, capture_output=True, text=True)
-check("stamp_docs.py --check reports the docs as current",
-      stamp.returncode == 0,
-      (stamp.stdout or stamp.stderr).strip().splitlines()[-1:] and
-      (stamp.stdout or stamp.stderr).strip().splitlines()[-1] or "")
+#
+# AND IT IS NOT APPLICABLE AFTER A PARTIAL RUN, which is the other half of the
+# guard stamp_docs.py now carries. A one-suite run still rewrites
+# LAST-RUN.txt -- release_run.py drives batches through run_harness.sh and
+# accumulates that file, so it cannot stop being written -- but the stanzas are
+# deliberately NOT stamped from it any more. Comparing the two then reports a
+# disagreement that is the guard working, which would make
+# `run_harness.sh one_suite.py && python3 harness/verify_docs.py` red for
+# everyone, forever: the single most common command in this project.
+#
+# So the check asks what the record IS before asking whether the docs match it.
+import stamp_docs as _sd_check                                        # noqa: E402
+
+_rec = _sd_check.read_run()
+if not _sd_check.covers_tree(_rec):
+    print(f"  [n/a ] stamp_docs.py --check — the record describes "
+          f"{_sd_check.coverage(_rec)} of {_sd_check.suites_on_disk()} suites, "
+          f"so the stanzas are correctly not stamped from it")
+else:
+    stamp = subprocess.run([sys.executable, "harness/stamp_docs.py", "--check"],
+                           cwd=ROOT, capture_output=True, text=True)
+    check("stamp_docs.py --check reports the docs as current",
+          stamp.returncode == 0,
+          (stamp.stdout or stamp.stderr).strip().splitlines()[-1:] and
+          (stamp.stdout or stamp.stderr).strip().splitlines()[-1] or "")
 
 print("\nDOCS — every file this documentation names actually exists")
 # The stanza promised a verify_docs.py that did not exist. Any harness file

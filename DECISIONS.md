@@ -9882,8 +9882,76 @@ Calibrated both ways against the real thing as well: a one-suite run leaves the
 sealed v306 stanza untouched, and a deliberately corrupted stanza is repaired
 by a whole-tree record.
 
+**AND THE GUARD NEEDED ITS OTHER HALF, found by the next command typed.**
+`verify_docs` compares the stanzas against `LAST-RUN.txt`, and a partial run
+still WRITES that file -- it has to, because `release_run.py` drives batches
+through `run_harness.sh` and accumulates the record from it. So the moment the
+stamp stopped following a partial run, the comparison started reporting a
+disagreement that was the guard working correctly, which would have made
+`run_harness.sh one_suite.py && python3 harness/verify_docs.py` red for
+everyone, forever -- the single most common command in this project. The check
+now asks what the record IS before asking whether the docs match it, and
+reports not-applicable when the record does not cover the tree. Calibrated on
+all three states: partial record is n/a, whole-tree record with the right
+stanza passes, whole-tree record with a corrupted stanza still fails.
+
+A guard that makes the ordinary workflow lie is not a guard, and the second
+half was one command away from being discovered by somebody else.
+
 **What generalises.** The tree already had this rule twice -- once for scratch
 probes, once for release batches -- each written narrowly for the accident that
 prompted it. Two narrow rules with the same shape are one general rule that
 nobody has written yet, and the gap between them is where the third accident
 lives.
+
+## Unsealed, on top of v306, cont. -- the instrument predicted its own failure and kept the threshold
+
+The sealed v306 tree went red on `main`. `verify_framecache`'s two player
+rows failed in the **postgres** CI job -- the one that runs the whole battery
+beside a PostgreSQL service container, and therefore the slowest machine this
+project runs on -- while the sqlite job, the branch run of the same tree, and
+two local batteries all passed.
+
+**IT IS THE SUITE THIS RELEASE REWROTE.** v306's first act was replacing that
+section's 1-second sampling window with "count to six light paints", because
+the window was measuring the runner. The replacement is better and still
+wrong in the same direction: it counted to six or gave up after 15 seconds,
+and giving up failed.
+
+**The comment in the file had already written the failing row down.** The
+calibration table recorded `200x  FAIL  deadline` with the sentence "at that
+starvation three loops genuinely do not fit 15s". That is the observed
+failure, in advance, in the file, left as a threshold. **Writing down that a
+threshold will fail is not a mitigation** -- it is a prediction filed where
+nobody has to act on it.
+
+**The real error was never the size of the number.** "The heavy frame is
+rasterised exactly once" is true of two loops and of thirty; the loop count is
+there only to stop the claim being vacuous. Tying the VERDICT to how many
+loops fit in a window made a property of the cache depend on the speed of the
+box. The run now collects for as long as it needs, stops early once it has
+plenty, and asserts on what it got: at least two loops for evidence, and
+exactly one rasterisation however many loops that turned out to be. A slow
+runner shortens the evidence instead of inventing a cache bug.
+
+**Calibrated by driving both paths rather than trusting them.** Asking for 999
+light paints so the deadline ends the run collected 24 loops in 3s and both
+rows passed on what was there -- the verdict does not depend on how the
+observation ended. Cutting the window to 1.2s under 200x CPU throttling
+collected one light paint, and both rows went red naming a playback failure
+rather than a cache bug; the "exactly once" row is gated on having enough
+evidence, so a vacuous one cannot read as a pass. The 200x row that failed in
+CI now completes in 17.0s.
+
+The reduced-loop path could not be reached by throttling alone -- past about
+500x an earlier `wait_for_function` in the suite times out first -- so the
+two-loop floor is a margin rather than a road this runs down. Stated plainly,
+because an unexercised branch is worth nothing and this one was exercised from
+the other side.
+
+**What generalises, and it is the third instance this release:** a threshold
+chosen before anything measured it, met exactly or nearly, is a failure with a
+date on it. `verify_hold`'s 8x WAS its measurement. The player's line ratchet
+was met exactly at 1760. This one had its failing row written in the file.
+None of the three was found by review; each was found by a machine slower or
+faster than the one the number came from.

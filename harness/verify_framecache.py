@@ -294,20 +294,60 @@ with sync_playwright() as p:
         # which is what finally reproduced the CI failure -- eight spinners on
         # four cores did not, and that wrong guess is why this is written down:
         #
-        #     throttle   old (1000ms window)      new (counts to 6)
-        #        1x      PASS  light=16           PASS    354ms
-        #       20x      PASS  light=8            PASS    893ms
-        #       50x      FAIL  light=1            PASS   2204ms
-        #      100x      FAIL  light=1 heavy=0    PASS   6547ms
-        #      200x      FAIL  light=1            FAIL   deadline
+        #     throttle   v306 (1s window)    v306 (count to 6)   now
+        #        1x      PASS  light=16      PASS    354ms       PASS   344ms
+        #       20x      PASS  light=8       PASS    893ms       PASS
+        #       50x      FAIL  light=1       PASS   2204ms       PASS
+        #      100x      FAIL  light=1 h=0   PASS   6547ms       PASS  6265ms
+        #      200x      FAIL  light=1       FAIL   deadline     PASS 16980ms
         #
-        # The 100x row is the CI failure exactly: heavy 0 and light 1, so BOTH
-        # player assertions go red together, which is the signature that was
-        # observed. The 200x row is the backstop doing its job -- at that
-        # starvation three loops genuinely do not fit 15s, and it says
-        # 'deadline' instead of blaming the cache.
+        # The 100x row is the first CI failure exactly: heavy 0 and light 1, so
+        # BOTH player assertions went red together. THE 200x ROW IS THE SECOND
+        # ONE, and it was predicted in this comment before it happened -- "at
+        # that starvation three loops genuinely do not fit 15s". The postgres
+        # CI job is that starved: it runs the whole battery beside a PostgreSQL
+        # service container, and it went red on the SEALED v306 tree while the
+        # sqlite job and two local batteries on the same tree passed.
+        #
+        # Writing down that a threshold will fail, and leaving the threshold,
+        # is not a mitigation. The window is 30s now, but the window is no
+        # longer what decides the verdict -- see below.
+        # AND THEN THE BACKSTOP FIRED ON A RUNNER, WHICH IS THE ROW ABOVE.
+        # The 200x line predicted it in writing -- "at that starvation three
+        # loops genuinely do not fit 15s" -- and the postgres CI job is that
+        # starved: it runs the whole battery beside a PostgreSQL service
+        # container, and it went red on the sealed v306 tree while the sqlite
+        # job and two local batteries on the same tree passed.
+        #
+        # THE REAL MISTAKE WAS MAKING THE VERDICT DEPEND ON HOW MANY LOOPS FIT,
+        # not the size of the number. "The heavy frame is rasterised exactly
+        # once" is true of two loops and of thirty; the loop count is only
+        # there to stop the claim being vacuous. So the run now collects for as
+        # long as it needs, stops early once it has plenty, and asserts on
+        # WHAT IT GOT: at least MIN_LIGHT light paints for evidence, and
+        # exactly one rasterisation however many loops that turned out to be.
+        # A slow runner now produces a smaller but still valid observation
+        # instead of a failure, and only a player that cannot manage two loops
+        # in 30s fails -- which is a playback failure and says so.
+        #
+        # CALIBRATED ON BOTH ARMS, by driving the paths rather than trusting
+        # them. Asking for 999 light paints so the DEADLINE ends the run
+        # collected 24 loops in 3s and both rows still passed on what was
+        # there: the verdict does not depend on how the observation ended.
+        # Cutting the window to 1.2s under 200x throttle collected 1 light
+        # paint, and both rows went red naming a playback failure rather than
+        # a cache bug -- including the "exactly once" row, which is gated on
+        # having enough evidence so that a vacuous one cannot read as a pass.
+        #
+        # The reduced-loop path could NOT be reached by throttling alone: past
+        # about 500x an earlier wait_for_function in this suite times out
+        # first, so the MIN_LOOPS floor is a margin rather than a road this
+        # runs down. Said plainly because an unexercised branch is worth
+        # nothing, and this one was exercised the other way.
         LOOPS = 3
         WANT_LIGHT = LOOPS * 2
+        MIN_LOOPS = 2
+        MIN_LIGHT = MIN_LOOPS * 2
         pstate = pl.evaluate("""(want) => new Promise(res => {
             const paints = [];
             const _ps = paintStrokesStatic;
@@ -325,23 +365,28 @@ with sync_playwright() as p:
             };
             document.getElementById('playerLoopBtn').click();
             document.getElementById('playerPlayBtn').click();
-            setTimeout(() => done('deadline'), 15000);
+            setTimeout(() => done('deadline'), 30000);
         })""", WANT_LIGHT)
         pcounts = pstate["paints"]
         heavy_pl = [n for n in pcounts if n >= 1500]
         light_pl = [n for n in pcounts if 0 < n < 1500]
+        _loops_seen = len(light_pl) // 2
         check("player: playback really looped (the once-only claim is not vacuous)",
-              pstate["reason"] == "looped" and len(light_pl) >= WANT_LIGHT,
-              f"{len(light_pl)} light paints in {pstate['ms']}ms, ended by "
-              f"{pstate['reason']} — 'deadline' means the player never got "
-              f"through {LOOPS} loops, which is an instrument or a playback "
-              f"failure and NOT evidence about the cache")
-        check("player: the heavy frame is rasterised exactly once across those loops",
-              len(heavy_pl) == 1,
+              len(light_pl) >= MIN_LIGHT,
+              f"{len(light_pl)} light paints — about {_loops_seen} loop(s) — in "
+              f"{pstate['ms']}ms, ended by {pstate['reason']}. Fewer than "
+              f"{MIN_LOOPS} loops is a playback failure, NOT evidence about "
+              f"the cache: the assertion below would be vacuous on a player "
+              f"that never replayed anything")
+        check("player: the heavy frame is rasterised exactly once, however many "
+              "loops ran",
+              len(light_pl) >= MIN_LIGHT and len(heavy_pl) == 1,
               f"{len(heavy_pl)} rasterisations over {len(pcounts)} paints in "
-              f"{LOOPS} loops — a viewer's phone replays every loop, and "
-              f"v259's memo only stopped repaints of the frame already on "
-              f"screen")
+              f"about {_loops_seen} loop(s) — a viewer's phone replays every "
+              f"loop, and v259's memo only stopped repaints of the frame "
+              f"already on screen. The count is read from the run rather than "
+              f"assumed, so a slow machine shortens the evidence instead of "
+              f"inventing a cache bug")
         check("player: no page errors", not perrs, "; ".join(perrs[:2]))
         pl.close()
 
