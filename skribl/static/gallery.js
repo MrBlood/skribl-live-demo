@@ -241,9 +241,15 @@
        than not having one — the same rule library.js states at its own. */
     var stage = document.createElement('div');
     stage.className = 'tileStage';
-    var fsEl = function () { return document.fullscreenElement || document.webkitFullscreenElement || null; };
-    var fsReq = stage.requestFullscreen || stage.webkitRequestFullscreen;
-    if ((document.fullscreenEnabled || document.webkitFullscreenEnabled) && fsReq) {
+    /* THE CONTROL IS UNCONDITIONAL NOW, and that is the whole change. It used
+       to appear only where `document.fullscreenEnabled` said yes, on the sound
+       rule that a button which cannot work should not be on screen -- which on
+       an iPhone meant no way to enlarge a drawing on the one device where it
+       is smallest (owner, twice). lib/immersive.js takes the real API where
+       there is one and pins the stage over the viewport where there is not, so
+       there is always something for the button to do. */
+    var imm = null;      /* set below, once, with its onChange in hand */
+    if (window.SkriblImmersive) {
       var full = document.createElement('button');
       full.type = 'button';
       full.className = 'tileFull';
@@ -253,13 +259,26 @@
         + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
         + '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>'
         + '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
-      full.addEventListener('click', function () {
-        if (fsEl() === stage) {
-          (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-          return;
-        }
-        try { var p = fsReq.call(stage); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      full.addEventListener('click', function (e) {
+        e.stopPropagation();
+        imm.toggle();
       });
+      /* A WAY OUT, INSIDE THE THING (owner: "also no x (which is fine) on full
+         screen" -- fine on the real API, where Escape and the system gesture
+         both work, and not fine at all in the fallback, where the page is
+         still the page and nothing else exits it). The profile's stage has
+         had this since v304 and the gallery did not, which is the same
+         two-surfaces-one-product problem as the full screen control itself. */
+      var exit = document.createElement('button');
+      exit.type = 'button';
+      exit.className = 'tileExit';
+      exit.title = 'Leave full screen';
+      exit.setAttribute('aria-label', 'Leave full screen');
+      exit.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+        + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+      exit.addEventListener('click', function (e) { e.stopPropagation(); imm.close(); });
+      stage.appendChild(exit);
       /* WHAT A FULL SCREEN SHOWS. Idle, a tile shows the POSTER -- the share
          card, cropped to keep its wordmark band out of frame -- and the canvas
          sits at time zero underneath it, which for a replay is blank. That
@@ -280,9 +299,11 @@
          transport the profile's stage already drives.
 
          Reset on the way out so the tile goes back to being a tile. */
-      var onFs = function () {
+      var onFs = function (big) {
         var box = stage.querySelector('.skribl-inline');
         var pl = box && box._skriblInline;
+        full.setAttribute('aria-pressed', big ? 'true' : 'false');
+        full.title = big ? 'Leave full screen' : 'Full screen';
         if (!box) return;
         /* THE PAGE SAYS WHEN, THE COMPONENT SAYS WHAT. `is-immersive` is the
            component's own state (inlineplayer.css): it hides the share card and
@@ -290,14 +311,13 @@
            live in this page's sheet, reaching into the player's internals —
            which is the copy verify_inline's gate exists to stop, and it caught
            it on main. */
-        box.classList.toggle('is-immersive', fsEl() === stage);
+        box.classList.toggle('is-immersive', !!big);
         if (!pl) return;
-        if (fsEl() === stage) { pl.play(); return; }
+        if (big) { pl.play(); return; }
         pl.pause();
         if (pl.state().loaded) pl.seek(0);
       };
-      document.addEventListener('fullscreenchange', onFs);
-      document.addEventListener('webkitfullscreenchange', onFs);
+      imm = window.SkriblImmersive.attach(stage, { onChange: onFs });
       head.insertBefore(full, rep);
     }
 

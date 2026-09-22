@@ -361,12 +361,35 @@
        in inlineplayer.css. Change that ratio and this line has to move with
        it; nothing gates the pair, which is the cost of the duplication and is
        why it is stated rather than left to be discovered. */
-    .stageCanvasWrap:fullscreen { margin: 0; border: 0; border-radius: 0; background: #000;
+    /* FULL SIZE WITHOUT A FULLSCREEN API (lib/immersive.js). iOS Safari has
+       one for <video> and nothing else, so on the device where a drawing is
+       smallest there was no way to make it bigger -- this page correctly hid a
+       control that could not work, and the result was the owner's "i am not
+       seeing full screen on gallery or library on iphone".
+       `.is-immersive-page` is written into the SAME rules as `:fullscreen`,
+       deliberately: a fallback that drifts from the real thing is two
+       full-screen modes and the person cannot tell which one they are in. Only
+       the pinning differs, because that is the only part an API was doing. */
+    /* The page behind an immersive overlay must not scroll: a drawing filling
+       the screen with somebody else's post sliding past underneath it is worse
+       than no full size at all. Set by lib/immersive.js on <html>, cleared on
+       the way out. */
+    html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
+    .stageCanvasWrap:fullscreen, .stageCanvasWrap.is-immersive-page {
+      margin: 0; border: 0; border-radius: 0; background: #000;
       display: grid; place-items: center; }
-    .stageCanvasWrap:fullscreen .skribl-inline { width: min(100vw, calc(100vh * 16 / 9)); max-height: 100vh; }
+    .stageCanvasWrap.is-immersive-page {
+      position: fixed; inset: 0; z-index: 2147483000;
+      /* 100dvh, not 100vh: on a phone `vh` is the tallest the viewport ever
+         gets, so with the URL bar showing the bottom of the drawing would sit
+         underneath it. */
+      width: 100vw; height: 100dvh; }
+    .stageCanvasWrap:fullscreen .skribl-inline,
+    .stageCanvasWrap.is-immersive-page .skribl-inline { width: min(100vw, calc(100vh * 16 / 9)); max-height: 100vh; }
     .full-exit { display: none; position: absolute; top: 14px; right: 14px; z-index: 3; width: 44px; height: 44px;
       background: rgba(6,7,10,.72); border-color: rgba(255,255,255,.18); color: #eef; }
-    .stageCanvasWrap:fullscreen .full-exit { display: grid; }
+    .stageCanvasWrap:fullscreen .full-exit,
+    .stageCanvasWrap.is-immersive-page .full-exit { display: grid; }
     .more-wrap { display: flex; justify-content: center; margin-top: 16px; }
     .more { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .04em; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 10px 20px; cursor: pointer; transition: background .15s, border-color .15s; }
     .more:hover { background: var(--control-hi); border-color: #3a4658; }
@@ -547,6 +570,7 @@
      drawing them, so the browser's own unstyled chrome was all you got.
      Desktop only, by the module's design: it suppresses itself on coarse
      pointers, where a "tooltip" fires on tap and covers what you pressed. #}
+  <script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('library.js') }}" defer></script>

@@ -454,7 +454,12 @@ with sync_playwright() as _spg:
     # still duplicated them.
     _sheet = (pathlib.Path(__file__).resolve().parent.parent
               / "skribl" / "templates" / "skribl" / "skribl_gallery.html").read_text()
-    _wrap = re.search(r"\.tileStage:fullscreen \{([^}]*)\}", _sheet)
+    # The selector picks up whatever else shares the rule -- `:fullscreen` got
+    # `.is-immersive-page` beside it when the iPhone fallback landed, and a
+    # pattern that insisted on `:fullscreen {` alone went red on a correct
+    # tree. What is under test is the rule BODY, so match up to the brace
+    # rather than spelling out a selector list that is expected to grow.
+    _wrap = re.search(r"\.tileStage:fullscreen[^{]*\{([^}]*)\}", _sheet)
     check("the gallery styles its own wrapper, and names no aspect ratio doing it",
           bool(_wrap) and not re.search(r"\d+\s*/\s*\d+", _wrap.group(1)),
           f"rule body {(_wrap.group(1).strip() if _wrap else 'MISSING')!r} — a "
@@ -800,6 +805,110 @@ with sync_playwright() as _spa:
 
     _pa.close()
     _ba.close()
+
+
+# ---------------------------------------------------------------------------
+# FULL SIZE ON A PHONE (v308)
+#
+# WHAT IS SIMULATED AND WHY IT HAS TO BE. iOS Safari implements the Fullscreen
+# API for `<video>` and nothing else, and this page did the right thing with
+# that answer -- it hid the control, on the rule that a button which cannot
+# work should not be on screen. The result was the owner's "i am not seeing
+# full screen on gallery or library on iphone": the device where a drawing is
+# smallest was the device with no way to make it bigger.
+#
+# The harness browser HAS the API, so the phone's case is unreachable without
+# taking it away. The init script removes exactly what lib/immersive.js probes
+# -- both `*fullscreenEnabled` flags and both request methods -- before any
+# page script runs. That is the real fork, not an approximation of it.
+print("\nGALLERY — full size on a browser with no Fullscreen API")
+with sync_playwright() as _spi:
+    _bi = _spi.chromium.launch()
+    _pi = _bi.new_context().new_page()
+    _pi.set_viewport_size({"width": 390, "height": 844})
+    # STATEMENTS, NOT A FUNCTION EXPRESSION. add_init_script takes script
+    # SOURCE and runs it; `() => {...}` is source that evaluates to a function
+    # nobody calls, so the first draft neutered nothing and the page kept its
+    # API. It still went green on every row below -- because headless Chromium
+    # REJECTS requestFullscreen without a trusted gesture, and the rejection
+    # path lands in the same fallback. Two ways in, one of them tested by
+    # accident; the flag check above is what caught it.
+    _pi.add_init_script("""
+      try { Object.defineProperty(document, 'fullscreenEnabled',
+        { configurable: true, get: function () { return false; } }); } catch (e) {}
+      try { Object.defineProperty(document, 'webkitFullscreenEnabled',
+        { configurable: true, get: function () { return false; } }); } catch (e) {}
+      try { delete Element.prototype.requestFullscreen; } catch (e) {}
+      try { delete Element.prototype.webkitRequestFullscreen; } catch (e) {}
+    """)
+    browsing.goto(_pi, BASE, "/gallery")
+    _pi.wait_for_timeout(2200)
+
+    _has = _pi.evaluate("""() => ({
+        api: !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
+        tiles: document.querySelectorAll('.tile').length,
+        buttons: document.querySelectorAll('.tileFull').length,
+        exits: document.querySelectorAll('.tileExit').length })""")
+    check("the simulation is real: this page believes it has no Fullscreen API",
+          _has["api"] is False,
+          f"{_has} \u2014 with the API still present every row below would be "
+          f"testing the path that already worked")
+    check("...and every tile still offers full size",
+          _has["tiles"] > 0 and _has["buttons"] == _has["tiles"],
+          f"{_has} \u2014 this is the iPhone, where the control used to be absent")
+    check("...each with a way back out inside the drawing",
+          _has["exits"] == _has["tiles"],
+          f"{_has} \u2014 in the fallback the page is still the page, and nothing "
+          f"but this button leaves it: no Escape from the browser, no system gesture")
+
+    _pi.evaluate("() => document.querySelector('.tile .tileFull').click()")
+    _pi.wait_for_timeout(700)
+    _big = _pi.evaluate("""() => {
+        const st = document.querySelector('.tile .tileStage');
+        const r = st.getBoundingClientRect();
+        const box = st.querySelector('.skribl-inline');
+        return { w: Math.round(r.width), h: Math.round(r.height),
+                 vw: window.innerWidth, vh: window.innerHeight,
+                 left: Math.round(r.left), top: Math.round(r.top),
+                 pinned: getComputedStyle(st).position,
+                 immersive: !!(box && box.classList.contains('is-immersive')),
+                 locked: getComputedStyle(document.documentElement).overflow,
+                 exitSeen: getComputedStyle(st.querySelector('.tileExit')).display }; }""")
+    # MEASURED AGAINST THE VIEWPORT, not against the class. `position: fixed`
+    # is resolved against the nearest ancestor with a transform, a filter or
+    # containment rather than against the viewport, so a tile inside a
+    # transformed card would carry the class and sit in a 300px box. The only
+    # honest question is how big it actually got.
+    check("pressing it puts the drawing over the whole viewport",
+          _big["pinned"] == "fixed" and _big["left"] == 0 and _big["top"] == 0
+          and abs(_big["w"] - _big["vw"]) <= 1 and abs(_big["h"] - _big["vh"]) <= 2,
+          f"{_big} \u2014 a transformed or contained ancestor turns `fixed` into "
+          f"`absolute` and this is what catches it")
+    check("...the component is told what immersive means for its own parts",
+          _big["immersive"] is True,
+          f"{_big} \u2014 the page says WHEN and inlineplayer.css says WHAT")
+    check("...the page behind it cannot scroll",
+          _big["locked"] == "hidden",
+          f"{_big} \u2014 somebody else's post sliding past under a full-size "
+          f"drawing is worse than no full size at all")
+    check("...and the way out is on screen",
+          _big["exitSeen"] == "grid", str(_big))
+
+    _pi.evaluate("() => document.querySelector('.tile .tileExit').click()")
+    _pi.wait_for_timeout(600)
+    _back = _pi.evaluate("""() => {
+        const st = document.querySelector('.tile .tileStage');
+        const box = st.querySelector('.skribl-inline');
+        return { pinned: getComputedStyle(st).position,
+                 locked: getComputedStyle(document.documentElement).overflow,
+                 immersive: !!(box && box.classList.contains('is-immersive')),
+                 w: Math.round(st.getBoundingClientRect().width) }; }""")
+    check("leaving puts the tile back, the scroll back, and the component back",
+          _back["pinned"] != "fixed" and _back["locked"] != "hidden"
+          and _back["immersive"] is False and _back["w"] < 390,
+          f"{_back} \u2014 a page left locked is a page nobody can use again")
+    _pi.close()
+    _bi.close()
 
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")

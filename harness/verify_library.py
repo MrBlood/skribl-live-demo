@@ -1305,6 +1305,87 @@ with sync_playwright() as _sp5:
     _p5.close()
     _b5.close()
 
+# ---------------------------------------------------------------------------
+# FULL SIZE ON A PHONE (v308) -- the stage's half of the same fix.
+#
+# The gallery's tile and this page's stage are one product to the person using
+# them, and they were both hidden on the same device for the same reason: iOS
+# Safari has a Fullscreen API for `<video>` and nothing else, so
+# `document.fullscreenEnabled` is false and both pages correctly hid a control
+# that could not work. The init script takes the API away here too -- it is the
+# only way to reach the phone's path from a browser that has one.
+#
+# THE TWO SURFACES ARE ASSERTED SEPARATELY AND DIFFERENTLY, per the standing
+# rule: a shared fix does not mean a shared assertion. The gallery's stage is
+# built per tile in JS and its exit control had to be CREATED; this one is in
+# the template and already existed, so what is in doubt here is whether the
+# control is OFFERED at all -- it used to be `hidden` outright on a phone.
+print("\nLIBRARY — full size on a browser with no Fullscreen API")
+with sync_playwright() as _spf:
+    _bf = _spf.chromium.launch()
+    _pf = _bf.new_context().new_page()
+    _pf.set_viewport_size({"width": 390, "height": 844})
+    _pf.add_init_script("""
+      try { Object.defineProperty(document, 'fullscreenEnabled',
+        { configurable: true, get: function () { return false; } }); } catch (e) {}
+      try { Object.defineProperty(document, 'webkitFullscreenEnabled',
+        { configurable: true, get: function () { return false; } }); } catch (e) {}
+      try { delete Element.prototype.requestFullscreen; } catch (e) {}
+      try { delete Element.prototype.webkitRequestFullscreen; } catch (e) {}
+    """)
+    browsing.goto(_pf, BASE, "/library")
+    _pf.wait_for_timeout(1800)
+    _off = _pf.evaluate("""() => ({
+        api: !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
+        offered: !document.getElementById('btnFull').hidden })""")
+    check("the simulation is real: the profile believes it has no Fullscreen API",
+          _off["api"] is False,
+          f"{_off} \u2014 with the API present this row tests the path that worked")
+    check("...and the stage still OFFERS full size",
+          _off["offered"] is True,
+          f"{_off} \u2014 this control was `hidden` on a phone, which is the "
+          f"owner's 'i am not seeing full screen on gallery or library on iphone'")
+
+    _pf.evaluate("() => document.getElementById('btnFull').click()")
+    _pf.wait_for_timeout(700)
+    _big = _pf.evaluate("""() => {
+        const w = document.querySelector('.stageCanvasWrap');
+        const r = w.getBoundingClientRect();
+        return { w: Math.round(r.width), h: Math.round(r.height),
+                 vw: window.innerWidth, vh: window.innerHeight,
+                 left: Math.round(r.left), top: Math.round(r.top),
+                 pinned: getComputedStyle(w).position,
+                 locked: getComputedStyle(document.documentElement).overflow,
+                 exit: getComputedStyle(document.getElementById('fullExit')).display,
+                 pressed: document.getElementById('btnFull').getAttribute('aria-pressed') }; }""")
+    # AGAINST THE VIEWPORT, not against the class: `position: fixed` resolves
+    # against the nearest transformed, filtered or contained ancestor rather
+    # than the viewport, and this stage sits inside a `position: sticky` panel
+    # with `overflow: hidden` -- neither of which should trap it, which is
+    # exactly the kind of "should" worth measuring.
+    check("pressing it puts the stage over the whole viewport",
+          _big["pinned"] == "fixed" and _big["left"] == 0 and _big["top"] == 0
+          and abs(_big["w"] - _big["vw"]) <= 1 and abs(_big["h"] - _big["vh"]) <= 2,
+          f"{_big} \u2014 the sticky panel around this one has `overflow: hidden`, "
+          f"and a fixed child escaping it is the thing under test")
+    check("...with the way out on screen and the control saying where it is",
+          _big["exit"] == "grid" and _big["pressed"] == "true", str(_big))
+    check("...and the page behind it cannot scroll",
+          _big["locked"] == "hidden", str(_big))
+
+    _pf.evaluate("() => document.getElementById('fullExit').click()")
+    _pf.wait_for_timeout(600)
+    _back = _pf.evaluate("""() => ({
+        pinned: getComputedStyle(document.querySelector('.stageCanvasWrap')).position,
+        locked: getComputedStyle(document.documentElement).overflow,
+        pressed: document.getElementById('btnFull').getAttribute('aria-pressed') })""")
+    check("leaving puts the stage back and unlocks the page",
+          _back["pinned"] != "fixed" and _back["locked"] != "hidden"
+          and _back["pressed"] == "false",
+          f"{_back} \u2014 a page left locked is a page nobody can use again")
+    _pf.close()
+    _bf.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)

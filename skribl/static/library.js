@@ -280,32 +280,31 @@
      alone, and a button that did nothing there would be worse than none.
      Escape leaves through the browser; the button leaves too, and its
      pressed state follows the document, not a flag of its own. */
-  var fsEl = function () { return document.fullscreenElement || document.webkitFullscreenElement || null; };
-  var fsOn = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled)
-             && stageWrap && (stageWrap.requestFullscreen || stageWrap.webkitRequestFullscreen);
-  if (btnFull && fsOn) {
+  /* FULL SIZE, ON EVERY DEVICE (lib/immersive.js). This used to be gated on
+     `document.fullscreenEnabled`, and the gate was right on its own terms: a
+     control that cannot work should not be on screen. What it produced was the
+     owner's complaint -- "i am not seeing full screen on gallery or library on
+     iphone" -- because iOS Safari has the API for <video> and nothing else, so
+     the device where a drawing is smallest was the device with no way to make
+     it bigger. The module takes the real API where there is one and pins the
+     stage over the viewport where there is not, so the control always has
+     something to do and no longer has to be hidden. */
+  if (btnFull && stageWrap && window.SkriblImmersive) {
     btnFull.hidden = false;
-    btnFull.addEventListener('click', function () {
-      if (fsEl() === stageWrap) {
-        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-      } else {
-        var req = stageWrap.requestFullscreen || stageWrap.webkitRequestFullscreen;
-        try { var p = req.call(stageWrap); if (p && p.catch) p.catch(function () {}); } catch (e) {}
-      }
-    });
-    var syncFull = function () {
-      var on = fsEl() === stageWrap;
-      btnFull.classList.toggle('on', on);
-      btnFull.setAttribute('aria-pressed', String(on));
+    var syncFull = function (on) {
+      btnFull.classList.toggle('on', !!on);
+      btnFull.setAttribute('aria-pressed', String(!!on));
       btnFull.title = on ? 'Leave full screen' : 'Full screen';
       btnFull.setAttribute('aria-label', btnFull.title);
     };
+    var imm = window.SkriblImmersive.attach(stageWrap, { onChange: syncFull });
+    btnFull.addEventListener('click', function () { imm.toggle(); });
+    /* THE EXIT IS NOT DECORATION AND IT IS LESS OPTIONAL THAN IT WAS. Under
+       the real API only the fullscreened subtree renders, so the transport row
+       is off screen and Escape is the only other way out; in the FALLBACK the
+       page is still the page, and nothing at all exits it but this button. */
     var fullExit = document.getElementById('fullExit');
-    if (fullExit) fullExit.addEventListener('click', function () {
-      if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-    });
-    document.addEventListener('fullscreenchange', syncFull);
-    document.addEventListener('webkitfullscreenchange', syncFull);
+    if (fullExit) fullExit.addEventListener('click', function () { imm.close(); });
   }
 
   scrub.addEventListener('click', function (e) {
