@@ -514,15 +514,52 @@ with sync_playwright() as _p2:
     if made:
         # Anti-vacuity: if the "heavy" frame is not actually expensive to paint,
         # evenness is free and the assertions below prove nothing.
-        cost = _t.evaluate("""() => {
-          const one = (i) => { idx = i; const t0 = performance.now();
-            for (let k = 0; k < 4; k++) render();
-            return (performance.now() - t0) / 4; };
-          return { heavy: +one(1).toFixed(2), light: +one(0).toFixed(2) }; }""")
+        #
+        # THE THRESHOLD SAT EXACTLY ON THE MEASUREMENT, which is the same
+        # pathology as a byte ratchet met exactly: green, and one hiccup from
+        # red. This asked for 8x from four paints of each frame -- 1.2ms of
+        # wall clock for the light one, close enough to performance.now()'s
+        # resolution and to a scheduler hiccup that the ratio wandered between
+        # 6.5x and 8.3x run to run on one idle box. It failed a full battery on
+        # a tree whose every real assertion here passed, which is an instrument
+        # calling a tree wrong.
+        #
+        # Measured properly -- 20 paints a batch, both frames warmed, the
+        # minimum of three batches each, a minimum because noise only ever ADDS
+        # time -- the true ratio is 7.8x to 8.2x, and it moves by 0.4x rather
+        # than 1.8x. So 8 was not a margin above the real figure; it WAS the
+        # real figure, chosen before anything measured it.
+        #
+        # 6x, because "far more expensive" means the same thing at 6x as at 8x
+        # and neither number was ever derived from anything. What the check
+        # exists to catch is a fixture whose heavy frame is not heavy -- a
+        # ratio near 1 -- and 6x catches that with room for the machine to
+        # breathe. The fixture was left alone deliberately: making the tween
+        # denser would raise the ratio and also change what the pacing
+        # assertions below are pacing.
+        cost = _t.evaluate("""
+          () => {
+            /* One batch: 20 paints, returned as a per-paint mean. 4 paints
+               of a 0.3ms frame is 1.2ms of wall clock, which is close
+               enough to performance.now()'s resolution and to a scheduler
+               hiccup for the ratio to wander by a third between runs. */
+            const batch = (i) => { idx = i; const t0 = performance.now();
+              for (let k = 0; k < 20; k++) render();
+              return (performance.now() - t0) / 20; };
+            /* Warm both, then take the MINIMUM of three batches each.
+               A minimum is the right estimator for a cost floor: noise
+               only ever adds time, so the smallest observation is the one
+               least contaminated by whatever else the box was doing. */
+            batch(0); batch(1);
+            const best = (i) => Math.min(batch(i), batch(i), batch(i));
+            const light = best(0), heavy = best(1);
+            return { heavy: +heavy.toFixed(2), light: +light.toFixed(2),
+                     ratio: +(heavy / light).toFixed(1) }; }""")
         check("the heavy frame really is far more expensive to paint",
-              cost["heavy"] > cost["light"] * 8,
-              f"heavy {cost['heavy']}ms vs light {cost['light']}ms — "
-              f"too close for this test to mean anything")
+              cost["ratio"] >= 6,
+              f"heavy {cost['heavy']}ms vs light {cost['light']}ms "
+              f"({cost['ratio']}x, wanted 6x or more) — below that the frame "
+              f"pacing assertions below are free and prove nothing")
 
         # Time frames as the viewer sees them: gap between successive
         # PRESENTATIONS. This used to wrap window.render, which was a proxy for
