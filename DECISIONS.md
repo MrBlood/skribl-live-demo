@@ -10096,3 +10096,19 @@ loops the page list, so /library and /gallery are now in it by construction --
 and it asserts a tile exists on /gallery before trusting the floor row, because
 the first version of that arm measured six controls on an empty page and
 called it a pass.
+
+**And the gate found two more while being written.** Extending it turned up a
+control nobody had measured and a floor nobody had asserted. The library's
+filter chips are 28px tall with a 44px `::before` band over them, so they have
+always answered a tap and have never been big enough to aim at -- the hit
+floor alone would have called them fine forever. The visible floor now runs on
+both pages, with the exemption written per CONTROL rather than per page: the
+in-post transport pills are named and stay 30px, and the other nine controls
+on /gallery are measured, where the first draft exempted the whole page for
+one decision's sake.
+
+Seven components, seven separate mutations, each red on its own row and no row
+carried by a neighbour's fix; the table is in `verify_layout.py` beside the
+section. The seventh is the one worth naming: with the fixture disabled on an
+empty database, the tile row goes red while both floor rows stay GREEN on six
+controls. That is the pass this block was returning before the fixture existed.

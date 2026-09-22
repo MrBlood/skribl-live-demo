@@ -428,6 +428,22 @@ with sync_playwright() as p:
     #
     # None of it width-dependent: identical at 375, 390 and 430. A gate that
     # covers two of four pages is not a policy, it is a habit that stopped.
+    #
+    # CALIBRATED PER COMPONENT, seven of them, each reverted on its own against
+    # this block. Every one went red on the row named, and no row is carried by
+    # another component's fix:
+    #
+    #   the × loses its pill and band        tap row     posted-del 23px (pill 22)
+    #   action buttons back to min-height 32 SEE row     four at 32px
+    #   the chips lose their 34px minimum    SEE row     three at 28px
+    #   the strip loses its ::before band    tap row     four at 35px (pill 34)
+    #   the row goes back to flex-wrap       one-line    tops [378, 389, 495]
+    #   the transport pills lose their band  tap row     loop 31px (pill 30)
+    #   the fixture, on an empty database    tile row    0 players -- and the two
+    #                                                    floor rows stayed GREEN
+    #                                                    on 6 controls, which is
+    #                                                    the vacuous pass the
+    #                                                    tile row exists to catch
     print("\nLAYOUT 3b — the pages the floor never reached")
 
     # A GALLERY WITH NO TILES MEASURES THE HEADER AND PASSES. The first run of
@@ -476,6 +492,31 @@ with sync_playwright() as p:
                   ", ".join(f"{h['id']} {h['hitH']}px (pill {h['visH']}px)"
                             for h in short[:4])
                   or f"{len(hits)} controls, shortest {min(h['hitH'] for h in hits)}px")
+
+            # AND THE VISIBLE FLOOR, WHICH THE HIT FLOOR DOES NOT IMPLY. The
+            # band is invisible, so a page can answer 44 to a finger with a
+            # 22px pill -- a target you cannot see to aim at, on a list whose
+            # neighbours delete things. Both of the numbers this section
+            # found were hiding behind a band that was already there: the
+            # library's action buttons said `min-height: 32px`, under even
+            # the visible floor, and its filter chips measured 28 with a 44px
+            # ::before over them since the day they were written.
+            #
+            # THE EXEMPTION IS NAMED, NOT THE PAGE. The in-post player's
+            # transport pills stay 30px on purpose: a feed tile is small and
+            # two 44px slabs over somebody's drawing is a different product,
+            # so there the band IS the fix. Exempting /gallery wholesale --
+            # the first draft -- would have bought that one decision at the
+            # price of never measuring the other nine controls on the page.
+            EXEMPT_VIS = ("skribl-inline-loop", "skribl-inline-mute")
+            small = [h for h in hits
+                     if h["visH"] < MIN_TOUCH_PX
+                     and not any(c in h["id"] for c in EXEMPT_VIS)]
+            check(f"{label} @{w}px ...and every pill is {MIN_TOUCH_PX}px you can SEE",
+                  not small,
+                  ", ".join(f"{h['id']} {h['visH']}px" for h in small[:4])
+                  or f"{len(hits)} controls, smallest countable "
+                     f"{min([h['visH'] for h in hits if not any(c in h['id'] for c in EXEMPT_VIS)] or [0])}px")
 
             # THE TITLE LINE IS STRUCTURAL, which it was not until the row
             # became a grid. `.posted-sub` is `white-space: nowrap`, so
