@@ -9841,3 +9841,49 @@ the cost of not being a different-looking product.
 the ink drawn immediately after it, which would be a far worse defect than the
 one this closes, and the guard that skips the restore is exactly how that
 happens.
+
+## Unsealed, on top of v306, cont. -- a calibration run published itself, twice
+
+`run_harness.sh` stamps the generated counts into README.md, START-HERE.md,
+docs/HANDOFF.md and harness/README.md after EVERY invocation. That is what
+keeps the stanzas current after a full battery, and it is why reddening a check
+on purpose -- the calibration this project REQUIRES of every new assertion --
+writes **"RUN NOT GREEN — 1 suite(s) failed"** into four documents.
+
+It reached a commit twice in one session. The second time was three hours after
+I wrote a DECISIONS paragraph about the first, in a commit whose subject was
+about stale documents. **A habit that fails twice in one day is not a habit, it
+is a missing guard.**
+
+**THE EXISTING GUARD COULD NOT COVER IT, AND SAID SO.** `stamp_docs.py` already
+refuses to let a one-batch run narrow a release-wide record -- but only when
+`RELEASE.md` describes the CURRENT tree, and a calibration run happens
+mid-change, when it does not. The scratch-probe rule beside it is the right
+shape (a `_probe_*.py` is not a result about the project) and too narrow: it
+matches on the leading underscore in a filename.
+
+**The general rule is the same sentence with the condition widened: a run that
+did not walk every suite on disk is not a result about the tree.** It needs no
+release record and no tree comparison, which is precisely why it works in the
+window where the damage happens. A SKIP still counts as walked -- the runner
+reached the suite and the suite declined -- because the question is whether the
+invocation covered the tree, not whether the tree is proven.
+
+**Driven on the predicate, not on the documents.** `covers_tree(run, on_disk)`
+is split out of `main()` so `verify_docs` can put four synthetic records
+through it -- the whole tree with two skips, one suite, a release batch, and an
+empty tree -- rather than running the stamp against the real files and looking
+to see whether they moved. A guard whose only evidence is "I ran it once and
+nothing changed" is a guard nobody can re-check. The empty-tree row is there
+because a zero suite count would otherwise disable the guard silently, and
+refusing every stamp forever would be the worse failure.
+
+Calibrated both ways against the real thing as well: a one-suite run leaves the
+sealed v306 stanza untouched, and a deliberately corrupted stanza is repaired
+by a whole-tree record.
+
+**What generalises.** The tree already had this rule twice -- once for scratch
+probes, once for release batches -- each written narrowly for the accident that
+prompted it. Two narrow rules with the same shape are one general rule that
+nobody has written yet, and the gap between them is where the third accident
+lives.

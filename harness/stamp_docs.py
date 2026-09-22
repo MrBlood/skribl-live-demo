@@ -159,6 +159,33 @@ def _release_assertions(frozen_tree):
     return int(a.group(1)) if a else None
 
 
+def suites_on_disk():
+    """How many verify_*.py the tree actually has."""
+    return len(list((ROOT / "harness").glob("verify_*.py")))
+
+
+def coverage(run):
+    """How many suites the recorded run accounted for, reported or skipped.
+
+    A skip is COVERAGE OF THE RECORD, not coverage of the project: the run
+    reached the suite and the suite declined. That is the right unit here,
+    because the question this answers is "did this invocation walk the tree",
+    not "is the tree proven".
+    """
+    return run["suites"] + len(run["skipped"])
+
+
+def covers_tree(run, on_disk=None):
+    """True when the run walked every suite on disk.
+
+    Split out of main() so it can be driven with synthetic records instead of
+    against the real documents — a guard whose only test is "I ran it once and
+    the docs did not change" is a guard nobody can re-check.
+    """
+    total = suites_on_disk() if on_disk is None else on_disk
+    return not total or coverage(run) >= total
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true",
@@ -188,6 +215,37 @@ def main():
         print("         A throwaway _probe_*.py is not a result about the "
               "project and must not be stamped into the docs.")
         return 0    # not an error: the probe itself ran fine
+
+    # A RUN THAT DID NOT COVER THE TREE IS NOT A RESULT ABOUT THE TREE.
+    #
+    # The scratch-probe rule above is this one, narrowed to names beginning
+    # with '_'. The general case cost two commits in one session: reddening
+    # verify_library on purpose -- the calibration this project REQUIRES of
+    # every new check -- stamped "RUN NOT GREEN — 1 suite(s) failed" into
+    # START-HERE.md, and the commit that followed carried it. The same thing
+    # happened again three hours later with verify_inline, in a session that
+    # had just written a DECISIONS paragraph about the first one. A habit that
+    # fails twice in one day is not a habit, it is a missing guard.
+    #
+    # THE NARROWING GUARD BELOW CANNOT COVER IT, and says so about the scratch
+    # case: it engages only when RELEASE.md describes the CURRENT tree, and a
+    # one-suite run happens mid-change, when it does not. This rule needs no
+    # release record and no tree comparison -- it asks whether the run touched
+    # every suite on disk, which is knowable from the record alone.
+    #
+    # Not an error: the suite itself ran fine and its exit code is the caller's
+    # answer. The docs are simply left describing the last run that did cover
+    # the tree, which is what a committed tree should carry.
+    _on_disk = suites_on_disk()
+    _covered = coverage(run)
+    if _on_disk and not covers_tree(run) and not args.check and not args.force:
+        print(f"REFUSED: this run covered {_covered} of {_on_disk} suites on "
+              f"disk ({', '.join(run.get('names', [])[:4]) or 'unnamed'}"
+              f"{'...' if len(run.get('names', [])) > 4 else ''}).")
+        print("         A partial run is not a result about the project. The "
+              "stanzas are left\n         describing the last run that covered "
+              "the tree; --force overrides.")
+        return 0
 
     # DO NOT LET A ONE-BATCH RUN OVERWRITE A RELEASE-WIDE RECORD.
     #
