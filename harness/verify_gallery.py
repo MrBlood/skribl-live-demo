@@ -26,6 +26,7 @@ every other suite posted publicly too.
 """
 import gzip
 import json
+import pathlib
 import os
 import re
 import sys
@@ -397,6 +398,65 @@ with sync_playwright() as sp:
     pg.close()
 
     b.close()
+
+
+# ---------------------------------------------------------------------------
+print("\nGALLERY — a drawing can be watched full size")
+# THE GAP (owner): the profile's stage has a fullscreen control and /s/<id> has
+# one; the page where the drawings actually ARE had none, and its transport
+# stays on screen while a Skribl plays, so there was no way to see one big.
+#
+# THE WRAPPER IS FULLSCREENED, NOT THE COMPONENT. This page's standing rule is
+# that no rule of its own touches .skribl-inline, so gallery.js wraps each
+# player in .tileStage and that takes the display.
+with sync_playwright() as _spg:
+    _bg = _spg.chromium.launch()
+    _cg = _bg.new_context()
+    _pg2 = _cg.new_page()
+    _pg2.set_viewport_size({"width": 900, "height": 900})
+    post_public_api("fullscreen fixture")
+    browsing.goto(_pg2, BASE, "/gallery")
+    _pg2.wait_for_timeout(1800)
+    _n = _pg2.evaluate("() => document.querySelectorAll('.tile').length")
+    check("there are tiles to measure", _n > 0,
+          f"{_n} tiles — an empty gallery cannot fail any row below")
+    _g = _pg2.evaluate("""() => ({
+        tiles: document.querySelectorAll('.tile').length,
+        stages: document.querySelectorAll('.tileStage').length,
+        buttons: document.querySelectorAll('.tileFull').length,
+        wrapped: document.querySelectorAll('.tileStage .skribl-inline').length,
+        named: [...document.querySelectorAll('.tileFull')]
+                 .every(b => (b.getAttribute('aria-label') || '').length > 10),
+        square: [...document.querySelectorAll('.tileFull')].map(b => {
+                  const r = b.getBoundingClientRect();
+                  return Math.round(Math.min(r.width, r.height)); }) }) """)
+    check("every tile carries a full-screen control",
+          _g["buttons"] == _g["tiles"] and _g["tiles"] > 0,
+          f"{_g['buttons']} controls on {_g['tiles']} tiles")
+    check("...and every player is inside the wrapper that takes the display",
+          _g["wrapped"] == _g["tiles"],
+          f"{_g['wrapped']} of {_g['tiles']} players wrapped — a player outside "
+          f".tileStage has nothing to fullscreen")
+    check("...and each one answers a 44px tap and says which Skribl it opens",
+          _g["named"] and _g["square"] and min(_g["square"]) >= 44,
+          f"smallest {min(_g['square']) if _g['square'] else 0}px, named={_g['named']}")
+    # THE RATIO IS NOT RESTATED, which is the point of doing it this way. The
+    # component carries `aspect-ratio` in inlineplayer.css; the fullscreen rule
+    # gives it a height and a max-width and lets the ratio resolve the other
+    # side. The profile's .stageCanvasWrap DOES restate 16/9 and says in its own
+    # comment that nothing gates the pair — so this asserts the absence, by
+    # parsing the rule rather than searching the file for a number that also
+    # appears in the prose explaining it.
+    _sheet = (pathlib.Path(__file__).resolve().parent.parent
+              / "skribl" / "templates" / "skribl" / "skribl_gallery.html").read_text()
+    _rule = re.search(r"\.tileStage:fullscreen \.skribl-inline \{([^}]*)\}", _sheet)
+    check("the gallery's fullscreen rule does not restate the player's aspect ratio",
+          bool(_rule) and "aspect-ratio" not in _rule.group(1)
+          and not re.search(r"\d+\s*/\s*\d+", _rule.group(1)),
+          f"rule body {(_rule.group(1).strip() if _rule else 'MISSING')!r} — a second "
+          f"copy of 16/9 here is a pair nothing gates")
+    _pg2.close()
+    _bg.close()
 
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")

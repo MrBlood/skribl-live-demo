@@ -4726,7 +4726,9 @@ async function shareSkribl(){
         visibility:(_pubBox && _pubBox.checked) ? 'public' : 'unlisted',
         // Revocation capability: the server's when the answer carried one, the
         // one this client minted when it did not (a replay) — see lib/posted.js.
-        tok: data.deleteToken || (_shareIdem && _shareIdem.tok) || null });
+        tok: data.deleteToken || (_shareIdem && _shareIdem.tok) || null,
+        // The server's reading of the payload, not this client's guess.
+        has_audio: typeof data.hasAudio === 'boolean' ? data.hasAudio : null });
       _shareIdem=null;   // confirmed: the next post is new work
       if(window._skriblPostedUI) window._skriblPostedUI.render();
       // Checked since v280, for the reason editor_post.js states at the same

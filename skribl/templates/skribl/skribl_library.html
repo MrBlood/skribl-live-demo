@@ -275,9 +275,17 @@
     .posted-thumb { width: 84px; height: 63px; border-radius: 8px; overflow: hidden; background: #0b0d12; position: relative; }
     .posted-thumb .posted-poster { position: absolute; left: 50%; transform: translateX(-50%); top: -5.4878%; height: 128.0488%; width: auto; max-width: none; }
     /* The kind's icon as a badge over the poster: a Flip is marked with the
-       book here as everywhere else. */
-    .posted-thumb svg { position: absolute; left: 4px; bottom: 4px; width: 14px; height: 14px; padding: 3px;
-      border-radius: 6px; background: rgba(6,7,10,.7); color: #dfe6f2; }
+       book here as everywhere else. 18, not 14 -- at 14 with 3px of padding the
+       pen and the book were a smudge on an 84px poster and the owner could not
+       tell them apart. The badge is not a control, so no touch floor applies;
+       it only has to be legible. */
+    .posted-thumb svg { position: absolute; left: 4px; bottom: 4px; width: 18px; height: 18px; padding: 3px;
+      border-radius: 6px; background: rgba(6,7,10,.72); color: #dfe6f2; }
+    /* Sound, top right -- the opposite corner, because it answers a different
+       question from the kind and two badges in one corner read as one blob.
+       The dot is the "yes" and the ring keeps it off the drawing. */
+    .posted-thumb svg.posted-sound { left: auto; right: 4px; bottom: auto; top: 4px;
+      color: #7ee2a8; background: rgba(6,7,10,.72); }
     .posted-count { margin: 0 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
     /* Tap targets on this page (verify_a11y's census): the foot's two text
        buttons and the filter chips are small by design, so each carries a

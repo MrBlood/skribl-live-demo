@@ -52,6 +52,12 @@
 /* SVG now, not a font glyph: the two characters rendered at whatever weight and
    baseline the system font chose, so they sat unevenly beside each other. */
 .posted-thumb svg { width: 17px; height: 17px; display: block; }
+/* The drawer's thumb is a 42x34 glyph tile, not a poster, so the kind icon is
+   the tile's whole content and the sound badge rides its top-right corner. */
+.posted-thumb { position: relative; }
+.posted-thumb svg.posted-sound { position: absolute; right: -2px; top: -2px;
+  width: 12px; height: 12px; padding: 1px; border-radius: 5px;
+  background: var(--surface-panel); color: #7ee2a8; }
 .posted-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column;
   gap: 2px; text-decoration: none; color: inherit; }
 .posted-title { font-size: 13px; color: var(--text-primary);

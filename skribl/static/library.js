@@ -132,7 +132,12 @@
     current = item;
     pTitle.textContent = item.title || 'Untitled Skribl';
     pMeta.textContent = when(item.created_at);
-    pKind.textContent = item.has_audio ? 'with sound' : 'silent';
+    /* THREE STATES. `item.has_audio ? 'with sound' : 'silent'` called every
+       unknown SILENT, and until the field existed at all that was every
+       browser-kept row -- music included. An unknown says nothing, the same
+       way the row's kind does. */
+    pKind.textContent = item.has_audio === true ? 'with sound'
+                      : item.has_audio === false ? 'silent' : '';
     /* The same three words the row uses (lib/postedui.js): in the gallery,
        link only, or the state's own name. A host row may not know; say
        nothing rather than guess. */
@@ -296,7 +301,11 @@
        default -- not unknown. A host row without one is unknown. */
     return { id: e.id, title: e.title || '', caption: '',
              created_at: e.at ? new Date(e.at).toISOString() : (e.created_at || null),
-             has_audio: !!e.has_audio, visibility: e.visibility || (me ? '' : 'unlisted') };
+             /* NOT `!!e.has_audio`: that collapsed "no sound" and "nobody
+                said" into the same false, which is what put SILENT on a
+                Skribl with music. */
+             has_audio: e.has_audio === true ? true : e.has_audio === false ? false : null,
+             visibility: e.visibility || (me ? '' : 'unlisted') };
   }
 
   function passes(e) {

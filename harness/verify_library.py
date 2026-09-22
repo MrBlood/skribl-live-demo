@@ -869,6 +869,101 @@ check("the stage's fullscreen width uses the player box's own aspect ratio",
       f"{_stage.group(2) if _stage else '?'} — a fullscreen box of one shape "
       f"around a player of another puts ground where the drawing should be")
 
+
+# ---------------------------------------------------------------------------
+print("\nLIBRARY — the stage says SILENT only when it KNOWS the Skribl is silent")
+# THE BUG (owner, from /library): a Skribl WITH music was labelled SILENT.
+# `lib/posted.js` stored no audio flag at all, so every browser-kept row read
+# `has_audio` as undefined, and `library.js` rendered `e.has_audio ? 'with
+# sound' : 'silent'` — which turns "nobody said" into a claim of silence.
+#
+# THREE STATES, and this drives all three, because a two-state assertion is
+# what shipped the defect. The value now comes from the SERVER's own reading of
+# the payload (the create response's hasAudio, the same field feed_dict
+# reports), so a row and a listing cannot disagree about one post.
+# THE VALUE COMES FROM THE SERVER, AND A MUTATION SAID SO. The rows below seed
+# the store directly, which pins the client's three states and pins NOTHING
+# about where the truth comes from: deleting `body["hasAudio"]` from the create
+# response left every one of them green. So the response is asserted on its own
+# terms, through a real post, one with audio bytes and one without.
+_WAV = ("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAA"
+        "ZGF0YQAAAAA=")
+
+
+def _post_sound(title, music):
+    _frame = {"strokes": [{"x": 10, "y": 10, "color": "#fff", "size": 6, "t": 0, "start": True},
+                          {"x": 200, "y": 150, "color": "#fff", "size": 6, "t": 120}],
+              "strokeGroups": [2], "background": {"color": "#101418"}}
+    if music:
+        _frame["music"] = {"data": _WAV, "name": "a.wav"}
+    _body = {"title": title, "version": 2, "schemaVersion": 2, "playbackMode": "replay",
+             "canvasSize": {"cssWidth": 800, "cssHeight": 600}, "frames": [_frame]}
+    _rq = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(_rq, timeout=20) as _r:
+        return json.loads(_r.read().decode())
+
+
+_withsnd = _post_sound("sound: yes", True)
+_nosnd = _post_sound("sound: no", False)
+check("the create response says a post WITH audio bytes has sound",
+      _withsnd.get("hasAudio") is True,
+      f"hasAudio={_withsnd.get('hasAudio')!r} — the client has no other way to "
+      f"know, and guessing is what put SILENT on a Skribl with music")
+check("...and says a post WITHOUT them does not",
+      _nosnd.get("hasAudio") is False,
+      f"hasAudio={_nosnd.get('hasAudio')!r} — a response that always says True "
+      f"would pass the row above and be just as wrong")
+
+with sync_playwright() as _sp3:
+    _b3 = _sp3.chromium.launch()
+    _c3 = _b3.new_context()
+    _p3 = _c3.new_page()
+    _p3.set_viewport_size({"width": 1280, "height": 1000})
+    browsing.goto(_p3, BASE, "/library")
+    _p3.evaluate("""() => { localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({ id: 'sndYes', url: '/s/sndYes', title: 'Has music',
+          kind: 'pad', pages: 1, tok: 'k', visibility: 'public', has_audio: true });
+        window.SkriblPosted.add({ id: 'sndNo', url: '/s/sndNo', title: 'No music',
+          kind: 'pad', pages: 1, tok: 'k', visibility: 'unlisted', has_audio: false });
+        window.SkriblPosted.add({ id: 'sndUnk', url: '/s/sndUnk', title: 'Never said',
+          kind: 'pad', pages: 1, tok: 'k', visibility: 'unlisted' }); }""")
+    _p3.reload(wait_until="load")
+    _p3.wait_for_timeout(1500)
+    # THE STORE KEEPS THE THIRD STATE. `!!entry.has_audio` at either end
+    # collapses "no" and "nobody said" into one false, which is the defect.
+    _kept = _p3.evaluate("() => { const m = {}; "
+                         "window.SkriblPosted.list().forEach(e => { m[e.id] = e.has_audio; }); "
+                         "return m; }")
+    check("the store keeps sound as three states, not two",
+          _kept.get("sndYes") is True and _kept.get("sndNo") is False
+          and _kept.get("sndUnk") is None,
+          f"stored {_kept} — null is 'nobody said' and must not become false")
+    for _id, _title, _want in (("sndYes", "Has music", "with sound"),
+                               ("sndNo", "No music", "silent"),
+                               ("sndUnk", "Never said", "")):
+        _p3.evaluate("""(t) => [...document.querySelectorAll('.posted-title')]
+            .find(e => e.textContent === t).closest('.posted-main').click()""", _title)
+        _p3.wait_for_timeout(700)
+        _said = _p3.evaluate("() => (document.getElementById('pKind') || {}).textContent")
+        check(f"the stage says {_want or '(nothing)'!r} for a Skribl whose sound is "
+              + {"with sound": "known to be there", "silent": "known to be absent"}
+                .get(_want, "UNKNOWN"),
+              (_said or "").strip() == _want,
+              f"said {(_said or '').strip()!r}, wanted {_want!r}")
+    # AND THE BADGE FOLLOWS THE SAME RULE. A note on a row whose sound is
+    # unknown would be the same lie in a different corner.
+    _badges = _p3.evaluate("""() => { const m = {};
+        document.querySelectorAll('.posted-row').forEach(r => {
+          m[r.getAttribute('data-id')] = !!r.querySelector('.posted-sound'); });
+        return m; }""")
+    check("the sound badge is drawn on the known-yes row and on neither other",
+          _badges.get("sndYes") is True and _badges.get("sndNo") is False
+          and _badges.get("sndUnk") is False,
+          f"badges {_badges}")
+    _p3.close()
+    _b3.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)

@@ -10161,3 +10161,68 @@ empty list, which would pass forever.
 down in one comment is not a policy, it is five coincidences. The tell is a
 new surface that does not load the old stylesheet; this tree now has four of
 those, and each one is a fresh chance to not inherit something.
+
+## Unsealed, on top of v306, cont. -- SILENT on a Skribl with music
+
+The owner, from /library: the stage said SILENT under a Skribl that has sound.
+
+**THE FIELD DID NOT EXIST.** `lib/posted.js`'s `add()` records id, url, title,
+kind, pages, visibility, key, local and a timestamp -- and no audio flag, ever.
+So every browser-kept row read `e.has_audio` as `undefined`, and `library.js`
+rendered `item.has_audio ? 'with sound' : 'silent'`, which turns "nobody said"
+into a claim. Every row this browser had posted said SILENT, music or not.
+
+**THE ANSWER COMES FROM THE SERVER, because the client should not be asked.**
+The create response now carries `hasAudio`, from the same `_payload_has_audio()`
+the post itself was measured with and the same value `feed_dict()` reports, so
+a row and a listing cannot disagree about one post. The alternative -- having
+each editor look at its own payload -- would be a third implementation of a
+question already answered twice.
+
+**AND THE STORE KEEPS THREE STATES, because it genuinely has three.** The
+server said yes, the server said no, or nothing answered: a local save, a
+recovered key, or a row written before the field existed. Null renders as
+nothing, the same way an unknown `kind` already does. `!!entry.has_audio` at
+either end collapses the last two into false, which IS the defect.
+
+The same rule fixed a smaller lie beside it: `recoverykey.js` added a recovered
+entry as `kind: 'pad', pages: 1` -- a guess dressed as a fact, so a recovered
+Flip listed itself as a replay with a pencil on it. A recovered entry knows an
+id and a key; everything else is null now.
+
+**A MUTATION FOUND THE HALF THAT WAS PINNED BY NOTHING.** The first draft of
+the pin seeded the store directly with the three values and drove the stage,
+which proves the client's rendering and proves nothing about where the value
+comes from: deleting `body["hasAudio"]` from the create response left every row
+GREEN. The response is now asserted on its own terms, through two real posts --
+one carrying audio bytes, one not -- and the second of those is what stops a
+response that always says True from passing.
+
+## Unsealed, on top of v306, cont. -- a Skribl can be watched full size from the gallery
+
+The profile's stage has a fullscreen control and `/s/<id>` has one. The page
+where the drawings actually are had none, and its transport stays on screen
+while a Skribl plays, so there was no way to see one big (owner).
+
+One per tile, beside Report, 44px square, and present only where the API is --
+iPhone Safari has fullscreen for `<video>` alone, and a control that did
+nothing there would be worse than not having one, which is the rule
+`library.js` already states at its own.
+
+**THE WRAPPER TAKES THE DISPLAY, NOT THE COMPONENT.** This page's standing note
+says "Not one rule touches `.skribl-inline`: the component is the component",
+and a `:fullscreen` rule on it would be exactly that. `gallery.js` wraps each
+player in `.tileStage`; the wrapper goes fullscreen and the component sizes
+itself inside it -- the same shape the profile's `.stageCanvasWrap` uses.
+
+**And it does NOT restate 16/9, which the profile's rule does.** That rule's own
+comment admits the number is a copy of the one in `inlineplayer.css` and that
+nothing gates the pair. The component already carries `aspect-ratio`, so giving
+it `height: 100%; max-width: 100%` lets the ratio resolve the other side and
+there is no pair to gate. `verify_gallery` asserts the absence by parsing the
+rule body rather than searching the file for a number that also appears in the
+prose explaining it -- which is this tree's rule about checks for absence.
+
+Six components calibrated, each reverted alone: the server's field, the store's
+third state, `library.js`'s two-state render, the badge, the gallery control,
+and the restated ratio. Every one red on its own row.

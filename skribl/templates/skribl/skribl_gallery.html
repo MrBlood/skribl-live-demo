@@ -129,6 +129,27 @@
       background: none; border: 0; border-radius: 8px; color: var(--text-3);
       font: inherit; font-size: 12.5px; cursor: pointer;
     }
+    /* Watch it big. Sits beside Report and answers a tap 44px square like it. */
+    .tile .tileFull {
+      margin-left: 6px; flex: none; width: 44px; height: 44px; padding: 0;
+      display: inline-grid; place-items: center;
+      background: none; border: 0; border-radius: 8px; color: var(--text-3);
+      cursor: pointer;
+    }
+    .tile .tileFull:hover { color: var(--text); background: var(--control); }
+    .tile .tileFull svg { width: 19px; height: 19px; }
+    /* THE WRAPPER TAKES THE DISPLAY AND THE COMPONENT SIZES ITSELF INSIDE IT.
+       Not one rule here touches .skribl-inline, per this page's standing note
+       above — and note what is NOT written: the 16/9. The component already
+       carries `aspect-ratio` (inlineplayer.css), so giving it a height and a
+       max-width lets the ratio resolve the other side. The profile's
+       .stageCanvasWrap does restate the number and says in its own comment
+       that nothing gates the pair; this avoids needing the pair at all. */
+    .tileStage { display: block; }
+    .tileStage:fullscreen { background: #000; display: grid; place-items: center;
+      width: 100vw; height: 100vh; }
+    .tileStage:fullscreen .skribl-inline {
+      width: auto; height: 100%; max-width: 100%; border: 0; border-radius: 0; }
     .tile .report:hover { color: var(--text); background: var(--control); }
     .tile .report[data-reported] { color: var(--text-3); }
     .tile .thead { align-items: center; }

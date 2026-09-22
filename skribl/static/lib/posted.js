@@ -157,6 +157,16 @@
          pressure could remove. Listed, the blob is live; the row says "on
          this device" and offers no link to send. */
       local: !!entry.local,
+      /* SOUND, AND "NOBODY SAID" IS A VALUE. This field did not exist, so
+         every consumer read undefined and lib/library.js turned that into the
+         word SILENT -- on Skribls with music. Three states, because the store
+         genuinely has three: the server answered yes, the server answered no,
+         or nothing answered (a local save, a recovered key, an entry written
+         before this field). Only a real boolean is recorded; anything else is
+         null, and a null renders as nothing rather than as a guess.
+         Same shape as `visibility` and `kind` above, for the same reason. */
+      has_audio: entry.has_audio === true ? true
+               : entry.has_audio === false ? false : null,
       at: Date.now()
     });
     /* THE RETURN SHAPE IS THE FINDING. `add()` used to return the list and
