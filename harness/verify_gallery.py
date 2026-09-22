@@ -401,6 +401,8 @@ with sync_playwright() as sp:
 
 
 # ---------------------------------------------------------------------------
+_FS_GEOM = "() => { const t = document.querySelector('.tileStage');\n        const box = t.querySelector('.skribl-inline');\n        const c = t.querySelector('.skribl-inline-canvas');\n        const p = t.querySelector('.skribl-inline-poster');\n        const r = e => { const b = e.getBoundingClientRect();\n          return { l: Math.round(b.left), t: Math.round(b.top),\n                   w: Math.round(b.width), h: Math.round(b.height) }; };\n        const pl = box._skriblInline;\n        return { vw: innerWidth, vh: innerHeight, box: r(box), canvas: r(c),\n                 fit: getComputedStyle(c).objectFit,\n                 poster: r(p), st: pl ? pl.state() : null }; }"
+_POSTER_BACK = "() => document.querySelector('.tileStage .skribl-inline-poster').getBoundingClientRect().width > 0"
 print("\nGALLERY — a drawing can be watched full size")
 # THE GAP (owner): the profile's stage has a fullscreen control and /s/<id> has
 # one; the page where the drawings actually ARE had none, and its transport
@@ -450,11 +452,59 @@ with sync_playwright() as _spg:
     _sheet = (pathlib.Path(__file__).resolve().parent.parent
               / "skribl" / "templates" / "skribl" / "skribl_gallery.html").read_text()
     _rule = re.search(r"\.tileStage:fullscreen \.skribl-inline \{([^}]*)\}", _sheet)
+    # A NUMERIC ratio is the thing to forbid; `aspect-ratio: auto` is the
+    # opposite of restating one -- it takes the component's 16:9 OFF, which is
+    # what lets the drawing use the whole display instead of being letterboxed
+    # into a 16:9 box first and then into the screen.
+    _body = _rule.group(1) if _rule else ""
     check("the gallery's fullscreen rule does not restate the player's aspect ratio",
-          bool(_rule) and "aspect-ratio" not in _rule.group(1)
-          and not re.search(r"\d+\s*/\s*\d+", _rule.group(1)),
-          f"rule body {(_rule.group(1).strip() if _rule else 'MISSING')!r} — a second "
-          f"copy of 16/9 here is a pair nothing gates")
+          bool(_rule) and not re.search(r"aspect-ratio\s*:\s*[^;]*\d", _body)
+          and not re.search(r"\d+\s*/\s*\d+", _body),
+          f"rule body {_body.strip()!r} — a second copy of 16/9 here is a pair "
+          f"nothing gates")
+
+    # WHAT FULL SIZE ACTUALLY SHOWS (owner, from the deployed gallery: "full
+    # page image cuts off, then on play it doesn't go all the way to edge on
+    # left"). Both halves measured, because both were wrong:
+    #
+    #   the box   `height: 100%` never resolved against an auto grid area, so
+    #             it fell back to content size: 800x450 at the BOTTOM of a
+    #             1400x900 screen.
+    #   the card  the poster is the 1200x630 share card, cropped by
+    #             inlineplayer.css to keep its wordmark out of frame. Right at
+    #             tile size; at screen size it just cuts the picture off --
+    #             measured running 151->1249 across a box of 300->1100.
+    _pg2.evaluate("() => document.querySelector('.tileStage').requestFullscreen()")
+    _pg2.wait_for_timeout(1800)
+    _fs = _pg2.evaluate(_FS_GEOM)
+    check("full screen: the box fills the display, top-left to bottom-right",
+          _fs["box"]["w"] == _fs["vw"] and _fs["box"]["h"] == _fs["vh"]
+          and _fs["box"]["l"] == 0 and _fs["box"]["t"] == 0,
+          f"{_fs['box']} in {_fs['vw']}x{_fs['vh']} — the first draft measured "
+          f"800x450 at the bottom of the screen")
+    check("...and the drawing is painted on the canvas, not left as a cropped card",
+          _fs["poster"]["w"] == 0 and _fs["canvas"]["w"] > 0,
+          f"poster {_fs['poster']}, canvas {_fs['canvas']}")
+    check("...which means the payload got loaded, because a tile has none until asked",
+          bool(_fs["st"]) and _fs["st"]["loaded"],
+          f"{_fs['st']} — hiding the card without loading it would have traded a "
+          f"cropped picture for a black screen")
+    # AND IT USES THE WHOLE DISPLAY. The box is 16:9 so a feed's tiles are all
+    # one shape; holding that ratio on a screen letterboxes the drawing TWICE.
+    # These fixtures are 4:3, so on a wider display the canvas should be as tall
+    # as the screen and narrower than it -- never shorter than it.
+    check("...and the drawing SCALES UP to the display rather than sitting at its own size",
+          _fs["canvas"]["w"] == _fs["vw"] and _fs["canvas"]["h"] == _fs["vh"]
+          and _fs["fit"] == "contain",
+          f"canvas {_fs['canvas']} object-fit={_fs['fit']!r} in "
+          f"{_fs['vw']}x{_fs['vh']} — `max-width: 100%` only ever shrinks, so an "
+          f"816x612 drawing measured 816x612 on a 900x900 screen. contain is "
+          f"what fits it both ways and keeps its ratio.")
+    _pg2.evaluate("() => document.exitFullscreen()")
+    _pg2.wait_for_timeout(600)
+    check("...and leaving puts the tile back, card and all",
+          _pg2.evaluate(_POSTER_BACK),
+          "the tile is still showing the drawing where its poster belongs")
     _pg2.close()
     _bg.close()
 

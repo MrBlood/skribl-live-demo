@@ -62,6 +62,41 @@
     '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>' +
     '<path d="M19.5 5.5a9 9 0 0 1 0 13"/></svg>';
 
+  /* THE ROW'S ACTIONS, AS ICONS ON A PHONE (owner: "use icons instead of
+     words on phones... maybe left justify").
+     Five word-labelled pills wrapped to two lines on a 390px screen and sat
+     indented under nothing. Each button carries its icon AND its word now; the
+     sheet hides the word at the compact tier, so the same markup is a labelled
+     pill on a desktop and a 34px icon on a phone, and the strip fits one line
+     left-aligned under the thumbnail.
+     THE WORD IS STILL THE ACCESSIBLE NAME where a button has no aria-label of
+     its own, which is why it is hidden with `display: none` inside a labelled
+     button rather than deleted -- and why the ones whose label is only an icon
+     carry an explicit aria-label below. */
+  var ICONS = {
+    link: '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/>'
+        + '<path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
+    share: '<path d="M12 3v12"/><path d="m8 7 4-4 4 4"/>'
+         + '<path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/>'
+         + '<path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/>',
+    trash: '<path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'
+         + '<path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>',
+    key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/>'
+       + '<path d="m17 6 2 2"/><path d="m14 9 2 2"/>'
+  };
+
+  function glyph(name) {
+    return '<svg class="posted-ico" viewBox="0 0 24 24" fill="none"'
+         + ' stroke="currentColor" stroke-width="1.9" stroke-linecap="round"'
+         + ' stroke-linejoin="round" aria-hidden="true">' + ICONS[name] + '</svg>';
+  }
+
+  /* The label a button shows, and the one copy()/arm() swap. Wrapped so the
+     feedback replaces the WORD and leaves the icon alone -- `btn.textContent =
+     'Copied'` would have deleted the svg with it. */
+  function lbl(text) { return '<span class="posted-lbl">' + esc(text) + '</span>'; }
+
   /* The entry, so the click handler works from stored state rather than from
      what the DOM happens to say. */
   function byId(id) {
@@ -206,14 +241,20 @@
     }
     btn.dataset.armed = '1';
     btn.classList.add('armed');
-    if (armedText) { btn.dataset.label = btn.textContent; btn.textContent = armedText; }
+    /* Same reason as copy()'s: write the WORD, keep the icon, and force the
+       word visible while the button is armed -- an armed control that shows
+       only a trash icon has not warned anybody. */
+    var slot = btn.querySelector('.posted-lbl') || btn;
+    if (armedText) { btn.dataset.label = slot.textContent; slot.textContent = armedText;
+                     btn.classList.add('said'); }
     btn.setAttribute('aria-label', warning);
     announce(warning);
     clearTimeout(btn._arm);
     btn._arm = setTimeout(function () {
       btn.dataset.armed = '';
       btn.classList.remove('armed');
-      if (armedText && btn.dataset.label) btn.textContent = btn.dataset.label;
+      if (armedText && btn.dataset.label) slot.textContent = btn.dataset.label;
+      btn.classList.remove('said');
       btn.setAttribute('aria-label', restLabel);
     }, 4000);
     return false;
@@ -329,17 +370,25 @@
     }
 
     function copy(text, btn) {
-      var was = btn.dataset.label || btn.textContent;
+      /* THE LABEL, NOT THE BUTTON. This wrote btn.textContent, which was fine
+         while a button was one word and deletes the icon now that it is an
+         icon plus a word. `.said` forces the word visible for the moment the
+         feedback is up, because at the compact tier it is hidden -- otherwise
+         "Copied" would be announced and never shown. */
+      var slot = btn.querySelector('.posted-lbl') || btn;
+      var was = btn.dataset.label || slot.textContent;
       btn.dataset.label = was;
       // A timer per button: two quick copies on different rows would
       // otherwise leave the first stuck reading "Copied".
       function say(label, good) {
-        btn.textContent = label;
+        slot.textContent = label;
+        btn.classList.add('said');
         btn.classList.toggle('done', !!good);
         clearTimeout(btn._t);
         btn._t = setTimeout(function () {
-          btn.textContent = btn.dataset.label;
+          slot.textContent = btn.dataset.label;
           btn.classList.remove('done');
+          btn.classList.remove('said');
         }, 1400);
       }
       copyText(text).then(function (ok) {
@@ -467,8 +516,14 @@
             esc(global.SKRIBL_PLAYER_TARGET || '_blank') + '" rel="noopener"' +
             (onSelect ? ' data-select="' + esc(e.id) + '"' : '') + '>' +
             '<span class="posted-title">' + esc(e.title || 'Untitled Skribl') + '</span>' +
+            /* ONCE, NOT TWICE. The gallery switch below is a button that
+               both STATES this Skribl's visibility and changes it, so a row
+               carrying it said "link only" in the meta line and "Link only"
+               on the button two inches apart (owner, screenshot 4). The word
+               stays where there is no button — a row this browser holds no key
+               for cannot change it, so something has to say it. */
             '<span class="posted-sub">' + esc(sub) +
-              (vis ? ' \u00b7 ' + esc(visWord) : '') + '</span>' +
+              ((vis && !(may && vis)) ? ' \u00b7 ' + esc(visWord) : '') + '</span>' +
           '</a>' +
           '<span class="posted-actions">' +
           /* EVERY TITLE BELOW SAYS WHAT THE LABEL DOES NOT. A tooltip on
@@ -479,12 +534,14 @@
              where there is no hover. The aria-labels are untouched — a screen
              reader gets those, and the two must not fight. */
           '<button type="button" class="posted-copy" data-url="' + esc(url) +
-            '" title="Copy this Skribl\u2019s share link">Copy link</button>' +
+            '" aria-label="Copy this Skribl\u2019s share link"' +
+            ' title="Copy this Skribl\u2019s share link">' + glyph('link') + lbl('Copy link') + '</button>' +
           /* SHARE, where the system has a sheet (v304): the same rule the
              post sheets follow — shown only where navigator.share exists. */
           (global.navigator && global.navigator.share
             ? '<button type="button" class="posted-share" data-url="' + esc(url) + '" data-title="' + esc(e.title || 'A Skribl') + '"' +
-                ' title="Hand the link to another app">Share</button>'
+                ' aria-label="Share this Skribl" title="Hand the link to another app">' +
+                glyph('share') + lbl('Share') + '</button>'
             : '') +
           /* THE GALLERY SWITCH (v304): in or out of the public gallery, the
              same choice the post sheet offered, changeable after the fact by
@@ -495,7 +552,8 @@
                 (inGallery ? 'In the public gallery. Tap to make it link only' : esc(offWord) + '. Tap to show it in the public gallery') + '"' +
                 ' title="' + (inGallery ? 'Anyone can find this in the gallery. Tap to make it link only'
                                         : 'Only someone with the link can reach this. Tap to put it in the gallery') + '">' +
-                (inGallery ? 'In gallery' : esc(offWord)) + '</button>'
+                glyph(inGallery ? 'globe' : 'link') +
+                lbl(inGallery ? 'In gallery' : offWord) + '</button>'
             : '') +
           /* TWO DIFFERENT ACTIONS, AND THEY USED TO BE ONE BUTTON. The \u2715
              removed the local entry and nothing else — the Skribl stayed live
@@ -509,7 +567,7 @@
             ? '<button type="button" class="posted-delete" data-delete="' +
                 esc(e.id) + '" aria-label="Delete this Skribl for everyone"' +
                 ' title="Take it down for everyone. The link stops working and this cannot be undone">' +
-                'Delete</button>' +
+                glyph('trash') + lbl('Delete') + '</button>' +
               /* THE KEY ITSELF, offered for copying. Everything above assumes
                  this browser will still be here when the person changes their
                  mind, and an audit was right that the assumption is the weak
@@ -520,7 +578,7 @@
               (e.tok ? '<button type="button" class="posted-key" data-key="' +
                 esc(e.id) + '" aria-label="Copy the recovery key for this ' +
                 'Skribl" title="Copy the key that can delete this Skribl from any browser. ' +
-                'Nothing can reissue it">Copy key</button>' : '')
+                'Nothing can reissue it">' + glyph('key') + lbl('Copy key') + '</button>' : '')
             : '') +
           '</span>' +
           '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" ' +

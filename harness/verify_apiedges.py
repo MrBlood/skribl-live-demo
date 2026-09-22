@@ -291,6 +291,95 @@ check("a small unknown key still rides along, as it is meant to", st10 == 201,
       f"{st10} {b10.get('error')} — rejecting unknown keys outright would make "
       f"every client change need a server release")
 
+
+print("\nMETA — a listing is not a play")
+# WHY THIS ENDPOINT EXISTS. `kind`, `pages` and `has_audio` were each added
+# after posts were already being made, so every row a BROWSER wrote before them
+# is missing all three, and a client that renders an unknown honestly then
+# shows nothing. The migration backfilled the database; /api/skribls/meta is
+# how lib/library.js backfills the browser.
+#
+# AND WHY IT IS NOT `GET /api/skribls/<id>`. That one answers with the whole
+# payload -- megabytes, which is the cost the deferred listing exists to
+# avoid -- and it COUNTS A PLAY, because it is the fetch a player makes.
+# Reconciling thirty rows through it would have added thirty plays to
+# somebody's own counts, silently. That is the row below that matters most.
+_mk = lambda t, mode, n, vis: post(
+    {"title": t, "visibility": vis, "playbackMode": mode,
+     "canvasSize": {"cssWidth": 800, "cssHeight": 600},
+     "frames": [{"strokes": [{"x": 5, "y": 5, "color": "#fff", "size": 4, "t": 0},
+                             {"x": 90, "y": 90, "color": "#fff", "size": 4, "t": 60}],
+                 "strokeGroups": [2]} for _ in range(n)]})[1]["id"]
+_pub = _mk("meta public", "replay", 1, "public")
+_unl = _mk("meta unlisted", "flip", 5, "unlisted")
+
+_st, _body = get(f"/api/skribls/meta?ids={_pub},{_unl}")
+_items = {i["id"]: i for i in _body.get("items", [])}
+check("meta answers for the ids the caller names", _st == 200 and len(_items) == 2,
+      f"{_st} {len(_items)} items")
+check("...with the fields a row is missing, and no payload",
+      _items.get(_pub, {}).get("kind") == "pad"
+      and _items.get(_unl, {}).get("kind") == "flip"
+      and _items.get(_unl, {}).get("pages") == 5
+      and "payload" not in _items.get(_pub, {}),
+      str(_items)[:180])
+# KNOWING THE ID IS THE CAPABILITY -- the same rule visible_to already applies,
+# because an unlisted post is readable by whoever holds its link.
+check("...including an unlisted one, which its link-holder may already read",
+      _unl in _items, "an unlisted post is not a private one")
+
+_st, _body = get(f"/api/skribls/meta?ids={_pub},ZZZnotreal9")
+check("an id that does not exist is absent, never a 403 or a 404",
+      _st == 200 and len(_body.get("items", [])) == 1,
+      f"{_st} {len(_body.get('items', []))} — a different answer for a real id "
+      f"than for an invented one confirms which ids exist")
+_st, _body = get("/api/skribls/meta?ids=")
+check("no ids is an empty answer, not an error and not the whole table",
+      _st == 200 and _body.get("items") == [], f"{_st} {str(_body)[:60]}")
+
+# THE ROW THIS ENDPOINT WAS WRITTEN FOR, and its calibration in the same
+# breath. A counter that never moves would pass "meta counts nothing" forever,
+# so the per-id fetch is made FIRST and asserted to move it. Plays are
+# idempotent per client per day by design, so this is the one direction the
+# proof can run: 0 -> 1 on a real fetch, then 1 -> 1 across five meta reads.
+_plays = lambda pid: {i["id"]: i["views"]
+                      for i in get("/api/skribls?limit=80")[1].get("items", [])}.get(pid)
+# A POST NOTHING HAS FETCHED, which is what makes this measurable at all. Plays
+# are idempotent per client per day (v304), so on a post this client has
+# ALREADY played, a second counting read changes nothing and an endpoint that
+# wrongly counted would look innocent. The first draft of these two rows used
+# such a post and a mutation proved it: making meta call _count_view() left
+# them green. Order matters as much: meta first, on a virgin post, then the
+# per-id fetch.
+_virgin = _mk("meta virgin", "replay", 1, "public")
+check("the fresh post starts at zero plays (fixture)", _plays(_virgin) == 0,
+      f"{_plays(_virgin)} — a post that already had a play cannot show this")
+for _ in range(5):
+    get(f"/api/skribls/meta?ids={_virgin}")
+check("five meta reads on a post nothing has played leave it at zero",
+      _plays(_virgin) == 0,
+      f"{_plays(_virgin)} — reconciling a list of rows through the per-id "
+      f"endpoint would have added a play per row to the owner's own counts, "
+      f"silently. A listing is not a play.")
+get(f"/api/skribls/{_virgin}")
+check("...and the per-id fetch on the SAME post counts one, so the row above "
+      "measures something",
+      _plays(_virgin) == 1,
+      f"{_plays(_virgin)} — if this stays 0 the counter is broken and the row "
+      f"above proves nothing")
+
+# THE CAP, MEASURED WHERE IT BITES. Eighty copies of one id was the first
+# draft, and the IN () clause collapses them to one row whether the list is
+# capped or not -- a mutation that removed the cap entirely left it green.
+# Sixty junk ids FIRST and the real one LAST is the shape that can tell:
+# capped at 50, the real id never reaches the query.
+_junk = ",".join("aaaaaaaaaa%d" % _i for _i in range(60))
+_st, _body = get(f"/api/skribls/meta?ids={_junk},{_pub}")
+check("the id list is capped, so this cannot be used to walk the table",
+      _st == 200 and len(_body.get("items", [])) == 0,
+      f"{len(_body.get('items', []))} items — the 61st id was answered, so the "
+      f"cap is not applied before the query")
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

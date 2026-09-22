@@ -155,21 +155,34 @@
   .posted-row-keyed .posted-main,  .posted-row-many .posted-main  { grid-row: 1; }
   .posted-row-keyed .posted-del,   .posted-row-many .posted-del   {
     grid-row: 1; grid-column: 3; justify-self: end; }
+  /* LEFT JUSTIFIED UNDER THE THUMBNAIL, and the words become icons (owner:
+     "there is no reason the buttons shouldn't be left justified under the
+     thumbnail. it forces them to be in two rows when you could do one").
+     The indent was 52px here and 94px on the profile, spent so the strip read
+     as this row's rather than the list's — and it was buying that with the
+     space that forced the wrap. Aligned to the row's own left edge it reads as
+     this row's anyway, and five 34px icons with 6px between them are 194px, so
+     a 360px screen fits them on one line with room to spare.
+     flex-wrap stays as the safety net, not as the expected state. */
   .posted-row-keyed .posted-actions, .posted-row-many .posted-actions {
     grid-row: 2; grid-column: 1 / -1; justify-content: flex-start;
-    /* Indented to the text column so the buttons read as this row's rather
-       than as the list's — but only where that indent is affordable. Below
-       400px it costs 94px of a 360px row, which is what pushes five buttons
-       onto a second line, so it is given back. */
-    padding-left: 52px;
-    /* The strip still wraps, with a min-width of 0, so a phone with Share on
-       every row cannot widen the row, the column, and the page with it
-       (owner, from an iPhone, v304). */
-    flex-wrap: wrap; min-width: 0; }
+    padding-left: 0; flex-wrap: wrap; min-width: 0; }
+  /* THE WORD GOES, THE ICON STAYS — and the word is still the accessible name
+     for anything without an aria-label, so it is hidden rather than removed.
+     `.said` puts it back for the moment copy() or arm() has something to say:
+     "Copied" that is announced and never shown is not feedback, and an armed
+     Delete showing only a trash icon has not warned anybody. */
+  .posted-actions .posted-lbl { display: none; }
+  .posted-actions button.said .posted-lbl { display: inline; }
+  .posted-actions button { padding-left: 8px; padding-right: 8px; }
+  .posted-actions button.said { padding-left: 9px; padding-right: 9px; }
 }
-@media (max-width: 399px) {
-  .posted-row-keyed .posted-actions, .posted-row-many .posted-actions {
-    padding-left: 0; }
+/* The icon itself. Sized once, here, so both surfaces that load this sheet
+   agree; hidden on a wide screen, where the word is the label. */
+.posted-ico { width: 17px; height: 17px; display: none; flex: 0 0 auto; }
+@media (max-width: 640px) {
+  .posted-ico { display: block; }
+  .posted-actions button.said .posted-ico { display: none; }
 }
 /* The destructive sibling of .posted-copy. Danger-toned so it does not read
    as another neutral utility beside "Copy link", and only rendered at all when

@@ -144,6 +144,36 @@
         }
         try { var p = fsReq.call(stage); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       });
+      /* WHAT A FULL SCREEN SHOWS. Idle, a tile shows the POSTER -- the share
+         card, cropped to keep its wordmark band out of frame -- and the canvas
+         sits at time zero underneath it, which for a replay is blank. That
+         crop is right at tile size and wrong at screen size: it just cuts the
+         picture off (the owner's screenshot, then the measurement: the poster
+         ran 151->1249 across a box of 300->1100).
+         So the card is hidden while the stage is up (the sheet does that) and
+         the drawing takes its place: FULL SCREEN PLAYS IT, which is what that
+         control means everywhere else.
+
+         PLAY, not seek-to-the-end, and the measurement is why. A tile does not
+         fetch its payload until somebody presses play -- a feed of fifty must
+         not pull fifty payloads -- so `loaded` is false on a tile you have
+         only looked at, and seeking a player with nothing in it paints
+         nothing. Hiding the card would then have traded a cropped picture for
+         a black screen. play() is the one call that loads AND shows, and it
+         costs the embed nothing: this is the gallery's code driving the
+         transport the profile's stage already drives.
+
+         Reset on the way out so the tile goes back to being a tile. */
+      var onFs = function () {
+        var box = stage.querySelector('.skribl-inline');
+        var pl = box && box._skriblInline;
+        if (!pl) return;
+        if (fsEl() === stage) { pl.play(); return; }
+        pl.pause();
+        if (pl.state().loaded) pl.seek(0);
+      };
+      document.addEventListener('fullscreenchange', onFs);
+      document.addEventListener('webkitfullscreenchange', onFs);
       head.insertBefore(full, rep);
     }
 

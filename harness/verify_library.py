@@ -149,6 +149,16 @@ with sync_playwright() as sp:
           "og-card" not in _landed, f"landed on {_landed}")
 
     # ---- the stage IS the in-post player -----------------------------------
+    # WAITED FOR, not assumed. select() fetches the payload and attaches the
+    # player when it arrives, so `players()` is legitimately empty for the
+    # instant after the page boots. This read it immediately and passed on
+    # timing alone -- until v307's reconcile moved the boot sequence by a few
+    # milliseconds and it started reporting `null` for a stage that was about
+    # to be perfectly fine. A race that only ever passed is not a check.
+    pg.wait_for_function("""() => { const el = document.getElementById('stageBox');
+        const p = window.SkriblInline && window.SkriblInline.players()
+                   .filter(x => x.el === el)[0];
+        return !!(p && p.state().loaded); }""", timeout=15000)
     st = pg.evaluate("""() => {
         const el = document.getElementById('stageBox');
         const p = window.SkriblInline && window.SkriblInline.players()
@@ -499,12 +509,16 @@ with sync_playwright() as sp:
     check("...and both answer a tap 44px tall at phone width", head["gh"] >= 44 and head["mh"] >= 44, f"{head['gh']} / {head['mh']}")
     hp.close()
 
-    # ---- an entry from before v304 (v304 proofread) ------------------------
-    # lib/posted.js recorded no visibility until v304, and no editor post
-    # before v304 sent one, so every such entry is unlisted -- the server's
-    # default -- and gets the switch. The first cut treated it as unknown
-    # and offered nothing.
-    print("\nLIBRARY — a browser-kept entry from before v304 is link only, and gets the switch")
+    # ---- an entry from before v304 (v304 proofread; rewritten v307) --------
+    # lib/posted.js recorded no visibility until v304, so a legacy entry has
+    # none. It used to be ASSUMED unlisted -- the server's default, and a fair
+    # guess -- and v307 stopped guessing: the reconcile asks /api/skribls/meta
+    # and the row shows what the post actually is. This fixture's post is
+    # PUBLIC, so the guess and the truth disagree, which is what makes it worth
+    # asserting. What has not changed is the point of the section: a legacy
+    # entry still gets the switch. The first cut treated it as unknown and
+    # offered nothing.
+    print("\nLIBRARY — a browser-kept entry from before v304 gets the switch, and its REAL state")
     legacy = b.new_page(viewport={"width": 1280, "height": 1000})
     browsing.goto(legacy, BASE, "/library")
     legacy.evaluate("""(id) => localStorage.setItem('skribl_posted_v1', JSON.stringify([
@@ -517,9 +531,19 @@ with sync_playwright() as sp:
         const g = r.querySelector('.posted-gallery');
         return { sub: r.querySelector('.posted-sub').textContent, gallery: g ? g.textContent : null,
                  pressed: g ? g.getAttribute('aria-pressed') : null, stage: document.getElementById('pStats').textContent.trim() }; }""", ids[0])
-    check("the row says link only and offers the switch, unpressed",
-          bool(lg) and "link only" in lg["sub"] and lg["gallery"] == "Link only" and lg["pressed"] == "false", str(lg))
-    check("...and the stage, which selected it at boot, says the same", bool(lg) and lg["stage"] == "link only", str(lg))
+    check("the legacy entry gets the switch, reading the post's REAL state",
+          bool(lg) and lg["gallery"] == "In gallery" and lg["pressed"] == "true",
+          f"{lg} — this post is public; before the reconcile the row assumed "
+          f"the server's default and said Link only about a Skribl anyone "
+          f"could already find")
+    check("...and the row does NOT also say it in words, two inches away",
+          bool(lg) and "link only" not in lg["sub"] and "in the gallery" not in lg["sub"],
+          f"{lg} — the switch states it and changes it; the meta line saying "
+          f"the same thing is the duplication the owner photographed")
+    check("...while the stage, which has no switch, still says it in words",
+          bool(lg) and lg["stage"] == "in the gallery",
+          f"{lg} — drop it there and nothing on the stage says what the "
+          f"Skribl's visibility is")
     legacy.close()
 
     # ---- THE STAGE DOES NOT STRETCH THE DRAWING (v305) ---------------------
@@ -721,11 +745,20 @@ with sync_playwright() as sp:
                  del: !!r.querySelector('.posted-delete') }; })""", ids)
     check("a host row does not call itself a replay or wear a kind badge it cannot know",
           all(x and "replay" not in x["sub"] and "page" not in x["sub"] and not x["badge"] for x in hr), str(hr))
-    check("the author's private post says private, and its switch reads Private, unpressed",
-          hr[0] and "private" in hr[0]["sub"] and "link only" not in hr[0]["sub"]
-          and hr[0]["gallery"] == "Private" and hr[0]["pressed"] == "false", str(hr[0]))
-    check("...and the public one says in the gallery, switch pressed, both with Delete (the host authorises by author)",
-          hr[1] and "in the gallery" in hr[1]["sub"] and hr[1]["pressed"] == "true" and hr[0]["del"] and hr[1]["del"], str(hr[1]))
+    # THE SWITCH SAYS IT, ONCE (v307). These asserted the word in the meta line
+    # AND on the button -- which is what the rows carried, and what the owner
+    # photographed: "you say LINK ONLY or GALLERY 2 times in each".
+    check("the author's private post reads Private on its switch, unpressed",
+          hr[0] and hr[0]["gallery"] == "Private" and hr[0]["pressed"] == "false",
+          str(hr[0]))
+    check("...and the public one reads In gallery, pressed, both with Delete (the host authorises by author)",
+          hr[1] and hr[1]["gallery"] == "In gallery" and hr[1]["pressed"] == "true"
+          and hr[0]["del"] and hr[1]["del"], str(hr[1]))
+    check("...and neither says it twice",
+          hr[0] and hr[1]
+          and "private" not in hr[0]["sub"] and "link only" not in hr[0]["sub"]
+          and "in the gallery" not in hr[1]["sub"],
+          f"{hr[0]} / {hr[1]}")
     check("...and no empty state shows over rows", not host2.evaluate("() => { const e = document.getElementById('libEmpty'); return !e.hidden; }"))
     host2.close()
     ctx.close()
@@ -1054,6 +1087,122 @@ with sync_playwright() as _sp4:
           f"{_tips['leftovers']} controls still carry a title attribute")
     _p4.close()
     _b4.close()
+
+
+# ---------------------------------------------------------------------------
+print("\nLIBRARY — the browser's own rows are backfilled, and the row says each thing once")
+# WHAT THE OWNER SAW: a library with no pen, no book and no sound note on
+# anything they had actually posted. Rendering was right and the DATA was old --
+# `kind`, `pages` and `has_audio` were each added after posts were already being
+# made, so every row this browser wrote before them reads undefined, and a
+# client that renders an unknown honestly shows nothing. The migration
+# backfilled the database; this is the browser's half.
+_WAVB = ("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAAC"
+         "ABAAZGF0YQAAAAA=")
+
+
+def _mkpost(title, mode, n, music, vis):
+    _fr = []
+    for _i in range(n):
+        _f = {"strokes": [{"x": 10, "y": 10, "color": "#fff", "size": 6, "t": 0},
+                          {"x": 200, "y": 150, "color": "#fff", "size": 6, "t": 99}],
+              "strokeGroups": [2]}
+        if music and _i == 0:
+            _f["music"] = {"data": _WAVB, "name": "a.wav"}
+        _fr.append(_f)
+    _b = {"title": title, "version": 2, "schemaVersion": 2, "visibility": vis,
+          "canvasSize": {"cssWidth": 800, "cssHeight": 600}, "frames": _fr}
+    if mode:
+        _b["playbackMode"] = mode
+    _rq = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_b).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(_rq, timeout=20) as _r:
+        return json.loads(_r.read().decode())["id"]
+
+
+_oldsnd = _mkpost("old, with music", "replay", 1, True, "unlisted")
+_oldflip = _mkpost("old flip", "flip", 6, False, "unlisted")
+
+# An entry shaped the way a pre-v307 one is: the three fields simply absent.
+_STRIP = """(ids) => { localStorage.setItem('skribl_posted_v1', '[]');
+    ids.forEach(function (id, i) {
+      window.SkriblPosted.add({ id: id, url: '/s/' + id, title: 'Row ' + i, tok: 'k' + i });
+    });
+    var l = JSON.parse(localStorage.getItem('skribl_posted_v1'));
+    l.forEach(function (x) { delete x.kind; delete x.pages; delete x.has_audio;
+                             delete x.visibility; });
+    localStorage.setItem('skribl_posted_v1', JSON.stringify(l)); }"""
+
+with sync_playwright() as _sp5:
+    _b5 = _sp5.chromium.launch()
+    _p5 = _b5.new_context().new_page()
+    _p5.set_viewport_size({"width": 1280, "height": 1000})
+    browsing.goto(_p5, BASE, "/library")
+    _p5.wait_for_timeout(400)
+    _p5.evaluate(_STRIP, [_oldsnd, _oldflip])
+    _pre = _p5.evaluate("() => window.SkriblPosted.list()"
+                        ".map(e => [e.kind, e.pages, e.has_audio]) ")
+    check("the fixture really is a pre-backfill list (all three fields absent)",
+          all(v is None for row in _pre for v in row),
+          f"{_pre} — if the fixture already carried them, every row below "
+          f"would pass without the reconcile doing anything")
+    _p5.reload(wait_until="load")
+    _p5.wait_for_timeout(2500)
+    _post = _p5.evaluate("() => { const m = {}; window.SkriblPosted.list()"
+                         ".forEach(e => { m[e.id] = [e.kind, e.pages, e.has_audio]; }); return m; }")
+    check("the reconcile fills in what the server knows",
+          _post.get(_oldsnd) == ["pad", 1, True]
+          and _post.get(_oldflip) == ["flip", 6, False],
+          f"{_post} — these rows are what the owner's library was full of")
+    _seen = _p5.evaluate("""() => { const m = {};
+        document.querySelectorAll('.posted-row').forEach(r => {
+          m[r.getAttribute('data-id')] = {
+            sub: (r.querySelector('.posted-sub') || {}).textContent || '',
+            snd: !!r.querySelector('.posted-sound') }; });
+        return m; }""")
+    check("...so the row finally says what it is",
+          "replay" in _seen.get(_oldsnd, {}).get("sub", "")
+          and "6 pages" in _seen.get(_oldflip, {}).get("sub", ""),
+          str(_seen))
+    check("...and the sound badge appears on the one with music, and only that one",
+          _seen.get(_oldsnd, {}).get("snd") is True
+          and _seen.get(_oldflip, {}).get("snd") is False,
+          str(_seen))
+
+    # THE EMPTY PILL. Blanking the text left the pill's border and padding on
+    # screen -- a ghost under the title with nothing in it (owner's screenshot).
+    _p5.evaluate("""(id) => [...document.querySelectorAll('.posted-row')]
+        .find(r => r.getAttribute('data-id') === id)
+        .querySelector('.posted-main').click()""", _oldsnd)
+    _p5.wait_for_timeout(600)
+    check("a known sound shows the pill", 
+          not _p5.evaluate("() => document.getElementById('pKind').hidden")
+          and _p5.evaluate("() => document.getElementById('pKind').textContent") == "with sound",
+          _p5.evaluate("() => document.getElementById('pKind').textContent"))
+    # STILL UNKNOWN AFTER THE RECONCILE, which is the case that keeps this
+    # reachable: a row whose post the server does not have — deleted, or from
+    # another deployment. The reconcile asks and gets nothing back, so the
+    # field stays unknown and the stage must still not draw a bordered box
+    # with nothing in it. (A local save is the other such row and cannot be
+    # used here: its title NAVIGATES rather than selecting.)
+    _p5.evaluate("""() => { localStorage.setItem('skribl_posted_v1', JSON.stringify(
+        [{ id: 'gonefromsrv', url: '/s/gonefromsrv', title: 'No longer there',
+           kind: 'pad', pages: 1, at: Date.now() }])); }""")
+    _p5.reload(wait_until="load")
+    _p5.wait_for_timeout(2000)
+    _p5.evaluate("() => document.querySelector('.posted-row .posted-main').click()")
+    _p5.wait_for_timeout(500)
+    _ghost = _p5.evaluate("""() => { const k = document.getElementById('pKind');
+        const r = k.getBoundingClientRect();
+        return { hidden: k.hidden, text: k.textContent, w: Math.round(r.width),
+                 h: Math.round(r.height) }; }""")
+    check("an UNKNOWN sound shows no pill at all — not an empty one",
+          _ghost["hidden"] and _ghost["w"] == 0 and _ghost["h"] == 0,
+          f"{_ghost} — a local save has no server post to ask, so this is still "
+          f"reachable after the reconcile, and a bordered box with nothing in "
+          f"it is what the owner photographed")
+    _p5.close()
+    _b5.close()
 
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]

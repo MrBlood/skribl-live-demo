@@ -197,6 +197,18 @@
     if (!hit) return false;
     if (patch && (patch.visibility === 'public' || patch.visibility === 'unlisted')) hit.visibility = patch.visibility;
     if (patch && typeof patch.title === 'string') hit.title = patch.title.slice(0, 80);
+    /* THE THREE FIELDS A ROW CAN BE MISSING (v307). `kind`, `pages` and
+       `has_audio` were each added after posts were already being made, so
+       every entry written before them reads undefined and every client that
+       renders it correctly shows nothing -- no pen, no book, no sound note,
+       on the owner's own library. The database was backfilled by a migration;
+       these let the BROWSER be backfilled too, from /api/skribls/meta.
+       Only real values land: a null or a missing key leaves what was there,
+       so a reconcile that half-answers cannot erase a field it did not
+       mention. */
+    if (patch && (patch.kind === 'pad' || patch.kind === 'flip')) hit.kind = patch.kind;
+    if (patch && parseInt(patch.pages, 10) > 0) hit.pages = parseInt(patch.pages, 10);
+    if (patch && typeof patch.has_audio === 'boolean') hit.has_audio = patch.has_audio;
     return write(list);
   }
 

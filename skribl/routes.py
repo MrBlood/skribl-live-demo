@@ -88,6 +88,12 @@ def _decode_cursor(cursor):
 # from one sort handed to the other decodes as unusable, which is a 400, the
 # same answer a mangled cursor gets.
 MAX_QUERY_CHARS = 80
+# HOW MANY IDS /api/skribls/meta will answer for in one request. The browser's
+# list is capped at lib/posted.js's LIMIT of 200 plus any older entry still
+# holding a key, so a full reconcile is a handful of requests rather than one;
+# a cap is what stops the endpoint being a way to walk the table. 50 keeps the
+# IN () clause small on every engine.
+META_MAX_IDS = 50
 # HOT_DAYS moved to skribl.core at v305 so skribl/views.py's purge reads the
 # same window it must never delete inside of. Imported below with the rest.
 
@@ -1083,6 +1089,46 @@ def register_routes(bp, *, index_route=False):
         except Exception:                                    # pragma: no cover
             pass
         return True
+
+    @bp.get("/api/skribls/meta")
+    def get_skribl_meta():
+        """Metadata for ids the caller already holds. No payload, NO PLAY.
+
+        WHY IT EXISTS. The browser's "Your Skribls" list is a local record, and
+        rows written before a field existed do not have it — `kind`, `pages` and
+        `has_audio` were all added after posts were already being made, so the
+        owner's own library showed no pen, no book and no sound note on
+        everything they had. The database was backfilled by a migration; this is
+        how the BROWSER gets backfilled.
+
+        AND IT MUST NOT BE `GET /api/skribls/<id>`. That endpoint answers with
+        the whole payload — megabytes, which is the cost this whole design
+        avoids — and it COUNTS A PLAY, because it is the fetch a player makes.
+        Reconciling a list of thirty rows through it would have pulled thirty
+        payloads and added thirty plays to somebody's own counts, silently. A
+        listing is not a play.
+
+        KNOWING THE ID IS THE CAPABILITY, which is the same rule the rest of
+        this API follows: `visible_to` already answers True for public AND
+        unlisted, because an unlisted post is readable by whoever holds its
+        link. Ids that are not visible are simply absent from the answer —
+        never 403, which would confirm they exist.
+
+        CAPPED, so it cannot be walked. Ids are 11 characters of URL-safe
+        base64; a caller who can guess them does not need this endpoint.
+        """
+        raw = (request.args.get("ids") or "").strip()
+        if not raw:
+            return jsonify({"items": []})
+        ids = [i for i in (p.strip() for p in raw.split(",")) if i][:META_MAX_IDS]
+        ids = [i for i in ids if _valid_public_id(i)]
+        if not ids:
+            return jsonify({"items": []})
+        rows = (session().query(SkriblPost)
+                .filter(SkriblPost.public_id.in_(ids))
+                .all())
+        viewer = bp.skribl_current_user_id()
+        return jsonify({"items": [r.feed_dict() for r in rows if r.visible_to(viewer)]})
 
     @bp.get("/api/skribls/<public_id>")
     def get_skribl(public_id):

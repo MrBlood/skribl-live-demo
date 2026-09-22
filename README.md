@@ -110,6 +110,7 @@ harness/                   Browser test suites (Playwright) + release tooling
 | `GET /api/skribls/<id>` | Fetch one post as JSON. |
 | `PATCH /api/skribls/<id>` | Revoke, or re-publish. |
 | `POST /api/skribls/<id>/report` | Report a post: one reason from a closed set, into the operator's queue. |
+| `GET /api/skribls/meta` | Metadata for ids the caller already holds. |
 | `/feed` | The demo host page: the in-post player and composer over the real listing. |
 | `/flip` | Flip — the frame-by-frame animator. |
 | `/gallery` | The public gallery: every Skribl its author chose to show, newest first. |
