@@ -24,6 +24,13 @@
       <button type="button" class="player-btn" id="playerLoopBtn" aria-label="Loop" aria-pressed="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
       </button>
+      {#- Speed: the VIEWER's, not the author's. `replayRate` is the same
+          number the Pad's preview row sets, and app.js's comment there is why
+          sharing it is safe -- speed describes the act of looking and never
+          the work, so it is not in the payload and serializeSkribl() has a pin
+          saying so. One button cycling 1x -> 2x -> 1/2x rather than three: this
+          row is what the drawing has to share the screen with. -#}
+      <button type="button" class="player-btn player-rate" id="playerRateBtn" aria-label="Playback speed">1&times;</button>
       <button type="button" class="player-btn" id="playerMuteBtn" aria-label="Mute" aria-pressed="false" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
       </button>
@@ -36,15 +43,21 @@
       <button type="button" class="player-btn" id="playerFullBtn" aria-label="Full screen" aria-pressed="false" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
       </button>
+      {#- COPY LINK AND GALLERY ARE IN THE ROW NOW (owner: "put LINK as icon in
+          the play row and an icon for Gallery somewhere to free up space...
+          it would be cool if the drawing was the showcase instead of all the
+          stuff on the bottom taking up so much space"). They were two
+          full-width rows under the transport, which on a phone is most of what
+          is below the drawing. The link glyph is the one every feed uses and
+          the words survive as accessible names; Gallery stays an anchor, so it
+          is still a link you can open in a new tab. -#}
+      <button type="button" class="player-btn" id="playerCopyBtn" aria-label="Copy link" title="Copy this Skribl's link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      </button>
+      <a href="{{ url_for('.skribl_gallery') }}" class="player-btn" id="playerGalleryLink" aria-label="Public gallery" title="Skribls people chose to show">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z"/></svg>
+      </a>
     </div>
-    <button type="button" class="player-link" id="playerCopyBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-      Copy link
-    </button>
-    {# The way to everyone else's (v304): the gallery, as a quiet link beside
-       the copy control. Plain words, no icon — the player's HTML sits close
-       to its ratchet (verify_player_isolation.py). #}
-    <a href="{{ url_for('.skribl_gallery') }}" class="player-link" id="playerGalleryLink">Gallery</a>
     <a href="{{ url_for('.skribl_editor') }}" class="player-cta">
       <span class="cta-star" aria-hidden="true">&#x2736;</span>
       Make your own Skribl

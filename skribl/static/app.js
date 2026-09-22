@@ -4348,6 +4348,7 @@ function showPlayerError(msg, canRetry) {
   const pMute = document.getElementById('playerMuteBtn');
   const pFull = document.getElementById('playerFullBtn');
   const pCopy = document.getElementById('playerCopyBtn');
+  const pRate = document.getElementById('playerRateBtn');
   const pFill = document.getElementById('playerProgressFill');
   const pTrack = document.getElementById('playerProgress');
 
@@ -4478,6 +4479,13 @@ function showPlayerError(msg, canRetry) {
       const offset = dur > 0 ? (((elapsedMs / 1000) % dur) + dur) % dur : 0;
       const src = audioCtx.createBufferSource();
       src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = dur;
+      /* THE MUSIC KEEPS UP, AND PITCH-SHIFTS DOING IT -- the same trade the
+         preview path makes a thousand lines up, for the same reason: a clip
+         running at its own rate under a 2x drawing drifts a whole take out of
+         sync, and a drawing that finishes while its music is halfway through
+         is worse to watch than a chipmunk. The stored clip is untouched; this
+         is one playback's rate. */
+      try { src.playbackRate.value = (typeof replayRate === 'number' ? replayRate : 1); } catch (e) {}
       src.connect(paGain);
       try { src.start(0, offset); } catch (e) { return false; }
       paSource = src;
@@ -4580,8 +4588,25 @@ function showPlayerError(msg, canRetry) {
     return (clientX - rect.left) / rect.width;
   }
 
+  /* THE VIEWER'S SPEED (owner: "it sometimes draws too fast or slow and I'd
+     like to control that"). One number, `replayRate`, already defined above
+     for the Pad's preview -- and the comment there says why it is safe to
+     reuse: speed describes the ACT OF LOOKING and never the work, which is
+     why serializeSkribl() must not learn about it and why there is a pin on
+     exactly that. A viewer choosing to watch at half speed is the same kind
+     of choice as an author reviewing a draft at double.
+
+     ONLY THE CLOCK IS SCALED. The stored `t` values are the artifact and are
+     never touched, so a slow watch cannot rewrite the timing somebody drew.
+     Everything downstream -- the flip hold table, the stroke timeline, the
+     progress fraction -- keeps working off the scaled elapsed without knowing
+     a rate exists. */
+  function segElapsed() {
+    return (performance.now() - segStart) * replayRate;
+  }
+
   function frame() {
-    const elapsed = elapsedBase + (performance.now() - segStart);
+    const elapsed = elapsedBase + segElapsed();
     if (isFlip) {
       const cycT = flipDurMs ? (elapsed % flipDurMs) : 0;
       /* THROUGH displayAt(): no instant of the live clock supplies progress 1
@@ -4610,7 +4635,7 @@ function showPlayerError(msg, canRetry) {
 
   // Late-decode hook (module scopes differ): when the buffer arrives
   // mid-playback, start the loop where the drawing already is.
-  window._skriblLateAudio = () => { if (running) paStartAtElapsed(elapsedBase + (performance.now() - segStart)); };
+  window._skriblLateAudio = () => { if (running) paStartAtElapsed(elapsedBase + segElapsed()); };
 
   function play() {
     if (running || (!timeline.length && !isFlip)) return;
@@ -4684,7 +4709,7 @@ function showPlayerError(msg, canRetry) {
     if (!running) return;
     running = false;
     cancelAnimationFrame(rafId);
-    elapsedBase += performance.now() - segStart;
+    elapsedBase += segElapsed();
     audioPause();
     setPlayIcon();
     syncAudioSession();
@@ -4834,6 +4859,39 @@ function showPlayerError(msg, canRetry) {
     pTrack.style.cursor = 'pointer';
     pTrack.addEventListener('mousedown', onScrubStart);
     pTrack.addEventListener('touchstart', onScrubStart, { passive: false });
+  }
+
+  /* SPEED, AS ONE BUTTON THAT SHOWS WHAT IT IS. A three-way segmented control
+     would be three more things beside a drawing the owner asked to give more
+     room to; a button labelled with the CURRENT rate answers "how fast is
+     this" and "how do I change it" with the same pixels.
+
+     CHANGING SPEED MID-PLAY RE-ANCHORS THE CLOCK. `elapsedBase` is scaled
+     time already banked and `segStart` is a wall-clock instant, so a new rate
+     must bank the old segment at the OLD rate before it applies -- otherwise
+     the whole segment so far is retroactively re-timed and the drawing jumps.
+     The audio is restarted at the position the drawing is actually at, which
+     is also what picks up the new playbackRate. */
+  function showRate() {
+    if (!pRate) return;
+    var w = replayRate === 0.5 ? '\u00BD\u00D7' : replayRate + '\u00D7';
+    pRate.textContent = w;
+    pRate.title = 'Speed: ' + w + ' \u2014 tap to change';
+    pRate.setAttribute('aria-label', pRate.title);
+  }
+  if (pRate) {
+    showRate();
+    pRate.addEventListener('click', () => {
+      const at = running ? elapsedBase + segElapsed() : elapsedBase;
+      const next = REPLAY_RATES[(REPLAY_RATES.indexOf(replayRate) + 1) % REPLAY_RATES.length];
+      setReplayRate(next);
+      showRate();
+      if (running) {
+        elapsedBase = at;
+        segStart = performance.now();
+        paStartAtElapsed(at);
+      }
+    });
   }
 
   if (pCopy) pCopy.addEventListener('click', async () => {

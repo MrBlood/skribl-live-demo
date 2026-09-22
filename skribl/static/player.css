@@ -1356,7 +1356,14 @@ body.player-mode #canvas {
 .player-caption { font-size: 14px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4; }
 .player-caption[hidden] { display: none; }
 
-.player-controls { display: flex; gap: 12px; align-items: center; }
+/* WRAPS, because the row is eight controls now rather than five and 12px of
+   gap between 46px circles runs past a 390px phone. Centred so a wrapped
+   second line reads as part of the same cluster. The order is deliberate:
+   the things you press while WATCHING come first (restart, play, loop, speed,
+   mute, full) and the things you press when you are DONE last (copy the link,
+   go to the gallery). */
+.player-controls { display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 10px; align-items: center; }
 
 .player-progress {
   width: 100%;
@@ -1387,28 +1394,11 @@ body.player-mode #canvas {
   transition: width 0.08s linear;
 }
 
-.player-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-family: inherit;
-  padding: 6px 12px;
-  border-radius: 8px;
-  transition: color 0.15s ease, background 0.15s ease;
-}
-.player-link svg { width: 15px; height: 15px; }
-/* 27px tall: the 44px box via --tap-grow, like every sub-44 control here. */
-.player-link { position: relative; z-index: 1; --tap-grow: 9px; }
-.player-link::before {
-  content: ''; position: absolute; inset: calc(-1 * var(--tap-grow));
-  background: transparent; border-radius: inherit;
-}
-.player-link:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), 0.04); }
+/* `.player-link` was here: two full-width rows under the transport, Copy link
+   and Gallery, which on a phone were most of what sat below the drawing. Both
+   are 46px buttons IN the transport row now (_skribl_player_controls.html) and
+   nothing carries the class, so the rules went with them. The --tap-grow band
+   they needed went too: a .player-btn is already 46px square. */
 
 .player-btn {
   display: flex;
