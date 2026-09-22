@@ -1364,6 +1364,13 @@ body.player-mode #canvas {
    go to the gallery). */
 .player-controls { display: flex; flex-wrap: wrap; justify-content: center;
   gap: 10px; align-items: center; }
+/* Gallery is an anchor so it can still be opened in a new tab; it has to be
+   told it is not a link-looking thing. */
+a.player-btn { text-decoration: none; }
+/* Speed is the one control in this row whose CONTENT is its label. Tabular
+   figures so 1x and 2x do not jiggle the row's width as it cycles. */
+.player-rate { font-family: var(--font-mono); font-size: 14px; font-weight: 600;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 
 .player-progress {
   width: 100%;
