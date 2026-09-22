@@ -201,6 +201,8 @@ SEED_POSTED = """
       window.SkriblPosted.add({id:'seedB', url:'/s/seedB', kind:'flip', pages:6,
         title:'Unending J', tok:'k', visibility:'unlisted'}); }"""
 
+ROW_STRIP = "() => { const r = document.querySelector('.posted-row-keyed');\n  if (!r) return null;\n  const acts = r.querySelector('.posted-actions');\n  const thumb = r.querySelector('.posted-thumb');\n  const btns = [...acts.querySelectorAll('button')];\n  const tops = new Set(btns.map(b => Math.round(b.getBoundingClientRect().top)));\n  return { thumbL: Math.round(thumb.getBoundingClientRect().left),\n           actsL: Math.round(btns[0].getBoundingClientRect().left),\n           lines: tops.size, n: btns.length,\n           right: Math.max(...btns.map(b => Math.round(b.getBoundingClientRect().right))),\n           words: btns.filter(b => { const l = b.querySelector('.posted-lbl');\n                     return l && getComputedStyle(l).display !== 'none'; }).length,\n           icons: btns.filter(b => { const i = b.querySelector('.posted-ico');\n                     return i && getComputedStyle(i).display !== 'none'; }).length,\n           named: btns.every(b => (b.getAttribute('aria-label') || '').length > 8) }; }"
+
 ROW_LINE = """
     () => { const row = document.querySelector('.posted-row-keyed');
       if (!row) return null;
@@ -535,6 +537,65 @@ with sync_playwright() as p:
                 check(f"library @{w}px ...and the actions are BELOW it",
                       rowy["acts"] > max(line),
                       f"actions top {rowy['acts']} against title line {max(line)}")
+
+    # THE ROW'S ACTIONS ON A PHONE (owner: "there is no reason the buttons
+    # shouldn't be left justified under the thumbnail. it forces them to be in
+    # two rows when you could do one... use icons instead of words on phones").
+    #
+    # They were indented 94px past the thumbnail on this page and 52px in the
+    # drawer, which is what spent the width that forced the wrap. Left-aligned
+    # with the row's own edge and reduced to icons, five of them are 199px, so
+    # they fit one line at 360 with room over.
+    #
+    # THE WORD IS STILL THE ACCESSIBLE NAME for a button without an explicit
+    # aria-label, so it is HIDDEN rather than removed -- and every one of these
+    # carries an aria-label anyway, asserted below, because an icon-only
+    # control whose name is a hidden span is one refactor from being unnamed.
+    for _w in (360, 390):
+        _page = ctx.new_page()
+        _page.set_viewport_size({"width": _w, "height": 900})
+        browsing.goto(_page, BASE, "/library")
+        _page.evaluate(SEED_POSTED)
+        _page.reload(wait_until="load")
+        _page.wait_for_timeout(1400)
+        _strip = _page.evaluate(ROW_STRIP)
+        _page.close()
+        if not _strip:
+            check(f"library @{_w}px — found a keyed row to measure", False)
+            continue
+        # THE FIRST BUTTON'S edge, not the strip's. A mutation that put the
+        # 94px indent back left this green: `padding-left` moves the content
+        # and not the element's own box, so the strip's left never moved and
+        # the check was reading a number the defect cannot change.
+        check(f"library @{_w}px the actions start at the thumbnail's own left edge",
+              _strip["actsL"] == _strip["thumbL"],
+              f"first button at {_strip['actsL']}, thumb at {_strip['thumbL']} — "
+              f"the indent is what the owner asked to lose")
+        check(f"library @{_w}px ...and all {_strip['n']} of them fit ONE line",
+              _strip["lines"] == 1 and _strip["right"] <= _w,
+              f"{_strip['lines']} line(s), rightmost edge {_strip['right']} of {_w}")
+        check(f"library @{_w}px ...as icons, with the words put away",
+              _strip["icons"] == _strip["n"] and _strip["words"] == 0,
+              f"{_strip['icons']} icons and {_strip['words']} words showing on "
+              f"{_strip['n']} buttons")
+        check(f"library @{_w}px ...each still saying what it does, to a reader",
+              _strip["named"],
+              "an icon whose only name is a hidden span is one refactor from "
+              "being an unnamed button")
+    # AND THE WORDS COME BACK on a screen with room for them, which is the
+    # other half: this is a compact-tier treatment, not a redesign.
+    _wide = ctx.new_page()
+    _wide.set_viewport_size({"width": 1100, "height": 900})
+    browsing.goto(_wide, BASE, "/library")
+    _wide.evaluate(SEED_POSTED)
+    _wide.reload(wait_until="load")
+    _wide.wait_for_timeout(1400)
+    _ws = _wide.evaluate(ROW_STRIP)
+    _wide.close()
+    check("library @1100px the words are back and the icons are away",
+          bool(_ws) and _ws["words"] == _ws["n"] and _ws["icons"] == 0,
+          f"{_ws} — a desktop row reading as five unlabelled glyphs is the "
+          f"opposite trade")
 
     # ------------------------------------------------------------ section 4
     print("\nLAYOUT 4 — leaving Pad cannot silently discard work")

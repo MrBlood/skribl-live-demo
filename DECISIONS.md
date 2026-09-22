@@ -10333,3 +10333,114 @@ removal now rather than in twelve seconds — the honest affordance for somebody
 who has already decided and wants the space back, and the deterministic commit
 a suite can drive, because a twelve-second window is a product choice and not
 something to sleep through in a browser test.
+
+## Unsealed, on top of v306, cont. -- the owner's second pass, measured
+
+Five reports from the deployed site, and the console disagreed with my guesses
+twice, so every one of these is a measurement.
+
+### Full screen was showing the share card, cropped, in the bottom half
+
+"Full page image cuts off, then on play it doesn't go all the way to edge on
+left." Three separate faults, and only the first was where I looked:
+
+**The box never filled the screen.** `height: 100%` on a grid item whose grid
+area is itself auto-height resolves to `auto`, so the box fell back to CONTENT
+size and measured 800x450 at the BOTTOM of a 1400x900 display. Two definite
+axes -- `width: 100vw; height: 100vh` -- are the whole rule; they also override
+`aspect-ratio` outright, so the 16:9 the tile needs is gone without naming it.
+(`aspect-ratio: auto` and `max-width: none` went in with the fix and a mutation
+showed both did nothing. Removed. A redundant declaration that LOOKS
+load-bearing is a trap for whoever edits it next.)
+
+**What it was showing was the POSTER, not the drawing.** The poster is the
+1200x630 share card, cropped by `inlineplayer.css` to keep its wordmark band
+out of frame -- correct in a tile and, at screen size, simply the picture cut
+off: measured running 151->1249 across a box of 300->1100. Hidden while the
+stage is up.
+
+**And hiding it revealed the third: a tile has no payload.** It does not fetch
+one until somebody presses play -- a feed of fifty must not pull fifty payloads
+-- so `loaded` is false on a tile you have only looked at, and the canvas is
+0x0. Hiding the card would have traded a cropped picture for a black screen.
+Full screen PLAYS it now, which is what that control means everywhere else.
+
+**Then it still did not fill the display.** `max-width: 100%` only ever
+SHRINKS: an 816x612 drawing measured 816x612 on a 900x900 screen. `object-fit:
+contain` is the one declaration that fits a replaced element both ways.
+
+### The empty pill, and why the badges looked like they never shipped
+
+The pill under the title was blanked for an unknown sound and its border and
+padding stayed -- a ghost with nothing in it. Hidden now, not blanked.
+
+But the reason it was EVER unknown is the bigger finding. `kind`, `pages` and
+`has_audio` were each added after posts were already being made, so every row
+this browser wrote before them reads undefined, and a client that renders an
+unknown honestly shows nothing. The owner's library had no pen, no book and no
+sound note on anything they had actually posted. **Rendering was right and the
+data was old.** The migration backfilled the database; nothing backfilled the
+browser.
+
+`GET /api/skribls/meta?ids=...` does, and what it is NOT is the point: the
+per-id endpoint answers with the whole payload and COUNTS A PLAY, so
+reconciling thirty rows through it would have pulled thirty payloads and added
+thirty plays to the owner's own counts, silently. A listing is not a play.
+
+**Two mutations found the pins for it blind.** Plays are idempotent per client
+per day, so a test on a post this client had already played could not see meta
+counting one -- making the endpoint call `_count_view()` left it GREEN. It uses
+a virgin post now, meta first, per-id second. And the cap test sent eighty
+copies of ONE id, which `IN ()` collapses whether capped or not; sixty junk ids
+followed by the real one is the shape that can tell.
+
+### The row said its visibility twice
+
+"You say LINK ONLY or GALLERY 2 times in each (next to time and as a button)."
+It did: the meta line and the switch, two inches apart. The switch both states
+it and changes it, so the word stays only where there is no switch -- a row
+this browser holds no key for cannot change it, and something has to say it.
+
+### The phone row: left-justified, one line, icons
+
+"There is no reason the buttons shouldn't be left justified under the
+thumbnail. It forces them to be in two rows when you could do one... use icons
+instead of words on phones."
+
+The indent was 52px in the drawer and 94px on the profile, bought so the strip
+read as this row's rather than the list's -- and paid for with the width that
+forced the wrap. Aligned to the row's own left edge it reads as this row's
+anyway. Each button carries its icon AND its word; the sheet hides the word
+below 640px, so the same markup is a labelled pill on a desktop and a 34px icon
+on a phone. Measured: four buttons on one line ending at x=183 of a 360px
+screen, words back at 1100.
+
+The word is still the accessible name for a button without an explicit
+aria-label, so it is hidden rather than removed -- and `.said` puts it back for
+the moment `copy()` or `arm()` has something to say, because "Copied" that is
+announced and never shown is not feedback and an armed Delete showing only a
+trash icon has not warned anybody.
+
+**And a mutation caught the check measuring the wrong box.** Putting the 94px
+indent back left it green: `padding-left` moves the CONTENT and not the
+element, so the strip's own left edge never moved. It reads the first button's
+edge now.
+
+### The bug the reconcile exposed, which was older than any of this
+
+`select()` guarded its payload response with `current !== item` -- object
+IDENTITY. The reconcile replaces the current item with an equal one when it
+learns a row's kind, so the payload arrived, the guard concluded "a later
+selection won", and the stage sat loading forever. No error anywhere: the fetch
+was a 200 and the failure was a silent early return.
+
+The question that guard is asking is "is this still the Skribl on the stage",
+and the id is what that is about. Comparing by id is also strictly more correct
+than identity was: select A, select B, select A again, and A's first response is
+now usable rather than discarded.
+
+**What generalises:** the same equal-but-not-identical trap, in the suite. A
+check read the stage immediately after boot and had always passed on timing;
+moving the boot sequence by a few milliseconds turned it red for a stage that
+was about to be perfectly fine. A race that only ever passed is not a check, so
+it waits now.

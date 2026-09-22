@@ -128,22 +128,36 @@
 
   /* ---- the stage ---------------------------------------------------------- */
 
-  function select(item) {
-    current = item;
+  /* THE WORDS ABOVE THE TRANSPORT. Split out of select() so the reconcile can
+     refresh them WITHOUT re-selecting: select() also loads the payload, and
+     that fetch is what counts a play. */
+  function showMeta(item) {
     pTitle.textContent = item.title || 'Untitled Skribl';
     pMeta.textContent = when(item.created_at);
     /* THREE STATES. `item.has_audio ? 'with sound' : 'silent'` called every
        unknown SILENT, and until the field existed at all that was every
        browser-kept row -- music included. An unknown says nothing, the same
        way the row's kind does. */
-    pKind.textContent = item.has_audio === true ? 'with sound'
-                      : item.has_audio === false ? 'silent' : '';
+    /* HIDDEN, NOT BLANK. Emptying the text left the pill's own border and
+       padding on screen — a 20px ghost under the title with nothing in it
+       (owner's screenshot). A control that says nothing should not be there.
+       With the reconcile above this is now rare rather than universal, but it
+       is still reachable: a local save has no server post to ask. */
+    var sound = item.has_audio === true ? 'with sound'
+              : item.has_audio === false ? 'silent' : '';
+    pKind.textContent = sound;
+    pKind.hidden = !sound;
     /* The same three words the row uses (lib/postedui.js): in the gallery,
        link only, or the state's own name. A host row may not know; say
        nothing rather than guess. */
     pStats.textContent = !item.visibility ? ''
       : item.visibility === 'public' ? 'in the gallery'
       : item.visibility === 'unlisted' ? 'link only' : item.visibility;
+  }
+
+  function select(item) {
+    current = item;
+    showMeta(item);
     scrubFill.style.width = '0%';
     tElapsed.textContent = '0:00 / 0:00';
     setPlayIcon(false);
@@ -159,7 +173,17 @@
         return r.json();
       })
       .then(function (body) {
-        if (current !== item) return;      /* a later selection won */
+        /* IS THIS STILL THE SKRIBL ON THE STAGE — asked by id, not by object
+           identity. `current !== item` was the guard, and it answered "a later
+           selection won" for anything that merely REPLACED the current item
+           with an equal one: v307's reconcile does exactly that when it learns
+           a row's kind or sound, so the payload arrived, this returned, and the
+           stage sat there loading forever with no error anywhere (the fetch was
+           a 200; the throw was a silent early return).
+           The id is what the question is actually about. It is also strictly
+           more correct than identity was: select A, select B, select A again,
+           and A's first response is now usable instead of discarded. */
+        if (!current || current.id !== item.id) return;
         var payload = (body && (body.skribl || body.payload)) || body;
         if (!player) {
           player = window.SkriblInline.attach(stageBox, payload);
@@ -396,9 +420,67 @@
     window._skriblPostedUI = ui;
     if (!ui) return;
     if (!me) {
+      reconcile();
       var first = window.SkriblPosted.list().filter(function (e) { return e && e.id && !e.local; })[0];
       if (first) select(asItem(first));
     }
+  }
+
+  /* BACKFILL THE BROWSER, the way the migration backfilled the database.
+     `kind`, `pages` and `has_audio` were each added after posts were already
+     being made, so every row this browser wrote before them reads undefined —
+     and every client that renders an unknown honestly then shows nothing. The
+     result was a library with no pen, no book and no sound note on anything
+     the owner had actually posted, which looks exactly like a feature that did
+     not ship. Rendering was right; the data was old.
+
+     GET /api/skribls/meta, NOT /api/skribls/<id>. The per-id endpoint answers
+     with the whole payload and COUNTS A PLAY — reconciling thirty rows through
+     it would have pulled thirty payloads and added thirty plays to the owner's
+     own counts. A listing is not a play.
+
+     Local saves are skipped: there is no server post to ask about. Failure is
+     silent and harmless — the rows render exactly as they did before, which is
+     the state this repairs rather than one it creates. */
+  function reconcile() {
+    var store = window.SkriblPosted;
+    if (!store) return;
+    var stale = store.list().filter(function (e) {
+      return e && e.id && !e.local
+          && (!e.kind || typeof e.has_audio !== 'boolean');
+    }).map(function (e) { return e.id; });
+    if (!stale.length) return;
+    var chunks = [];
+    for (var i = 0; i < stale.length; i += 50) chunks.push(stale.slice(i, i + 50));
+    Promise.all(chunks.map(function (ids) {
+      return fetch(api + '/meta?ids=' + encodeURIComponent(ids.join(',')),
+                   { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : { items: [] }; })
+        .catch(function () { return { items: [] }; });
+    })).then(function (answers) {
+      var touched = 0;
+      answers.forEach(function (body) {
+        (body.items || []).forEach(function (it) {
+          if (store.update(it.id, { kind: it.kind, pages: it.pages,
+                                    has_audio: it.has_audio,
+                                    visibility: it.visibility })) touched++;
+        });
+      });
+      /* Only repaint when something actually moved: a reconcile that changed
+         nothing must not stamp over the row the person has already selected. */
+      if (touched && ui) {
+        ui.render();
+        /* THE WORDS, NOT THE WHOLE SELECTION. select() loads the payload, and
+           the payload fetch is the one that COUNTS A PLAY -- re-selecting here
+           made the stage fetch the same Skribl twice on every boot and count
+           the owner a second play for looking at their own library once. The
+           reconcile only ever learns metadata, so it only writes metadata. */
+        if (current) {
+          var fresh = store.list().filter(function (e) { return e.id === current.id; })[0];
+          if (fresh) { current = asItem(fresh); showMeta(current); }
+        }
+      }
+    });
   }
 
   function loadPage() {
