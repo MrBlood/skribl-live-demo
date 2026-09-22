@@ -9607,3 +9607,176 @@ first copy gained an entry. The gate is the cheap half of the answer; using
 the macro would be the other half, and is not done here because the library
 page's script block is ordered around its own needs and rewriting it during a
 seal is the wrong time to find out what that ordering was for.
+
+## v306, cont. -- the pass before the seal, and what a green suite was hiding
+
+The owner: "before you seal I want you to give the project a one over, search
+for inconsistencies, staleness, bugs, and any other problems or regressions
+that may be present. Once you fix all your finds, do it again to make sure it
+is clean. check the how it works to make sure it's current. Then check
+everything one more time. I want this to be the cleanest tree ever."
+
+**FULL SCREEN ON THE SHARED LINK NEVER MADE THE DRAWING BIGGER, and the
+feature shipped with five assertions that all passed on that.** The control
+appeared, `document.fullscreenElement` was the canvas wrapper, `aria-pressed`
+flipped, the exit control was on screen inside the fullscreened subtree and
+the page came back out through it. Not one of them measured the drawing.
+Measured now: 551x551 in a 1200x900 screen, which is the size it had in the
+page, centred in a black field.
+
+Two things put it there. `layoutPlayerCanvas()` sizes the canvas from `.app`,
+whose max-width is 720px, and caps the scale at 1:1 -- correct for a drawing
+in a page column, wrong for one that owns the display -- and it runs again on
+`fullscreenchange`, so entering full screen re-applied the page measurement.
+And the stylesheet rule written to handle exactly this,
+`.canvas-wrap:fullscreen > canvas { width: auto; height: auto; }`, could never
+apply: `layoutPlayerCanvas` writes an INLINE width, and inline beats a
+stylesheet. The rule was dead from the moment it was written. It is gone, and
+`playerFitScale()` -- whose whole job is "what scale fits the box" -- branches
+on the fullscreen flag instead.
+
+**The arm that was missing is the one that measures the thing the feature is
+FOR.** Every assertion about a control is an assertion about a control. "Does
+the drawing fill the screen" is the product claim, and it was nowhere. The new
+row reads 551x551 on the broken tree and 900x900 on the fixed one in the same
+screen, and a second row pins that the authored shape survives the growth,
+because filling a screen by stretching is the v305 in-post defect wearing a
+different surface.
+
+**AND THE EDITOR OFFERED THE SAME CONTROL WITH NO WAY OUT OF IT.**
+`_skribl_player_controls.html` is included by `skribl_editor.html` as well as
+by `skribl_player.html` -- byte-identical, no `kind` branch -- so the button
+appeared on both. `#playerFullExit` cannot live in that partial: it has to sit
+inside `.canvas-wrap`, which the partial is not part of, so it is written into
+the player template alone. The editor page runs `initPlayer()` for the
+`#skribl=<id>` local fallback `editor_post.js` hands back when posting fails,
+and on that page full screen would have rendered a subtree containing no exit
+control at all. Only the fullscreened subtree renders, so the transport row --
+including the button that got you there -- is off screen. That is precisely
+the trap `#playerFullExit` was added to close, re-opened on the surface nobody
+thought to look at. The control is gated on the exit existing, and the row
+that pins it drives the editor page through the fallback's own localStorage
+key rather than reading the template for an absence.
+
+**TWO RATCHETS HAD BEEN RAISED FROM NUMBERS TAKEN BEFORE THE CHANGE FINISHED,
+and only a full battery could say so.**
+
+The embed was argued up to 35,200 with "33,483 -> 35,102", honest when
+written. The profile stage then turned out not to load `lib/photofit.js`,
+`inlineplayer.js` grew a warn-once notice naming the missing module, and
+nobody re-measured. That notice is 283 B served; 35,102 + 283 = 35,385,
+against a ceiling of 35,200. Three pull requests went by. Raised to 35,500,
+and nothing honest was available to spend first -- the only 185 B within reach
+is the notice itself, which exists because the silent fallback beside it
+shipped a cropped photo to the owner's own profile page and said nothing.
+
+The player's reachable-line ratchet is the more interesting one. v297 left 30
+lines of headroom on purpose, writing "so the next edit here is a decision
+rather than an accident". The fullscreen feature earlier in v306 spent all 30
+and landed on 1760 exactly. **A ratchet met exactly is green**, so nothing said
+so, and the sizing fix that followed read as the change that broke it. 11
+lines of this pass's own prose came back out before the number moved -- one of
+them citing a jsstrip target that had itself been raised since.
+
+Both failure messages print the MARGIN now rather than the total alone. The
+jsstrip target's message used to say "-109 B under" when it failed, which
+reads as a margin and is a deficit.
+
+**A MUTATION RUN LEFT ITS RECORD IN A COMMITTED DOCUMENT.** `run_harness.sh`
+re-stamps the generated counts into the docs immediately after writing
+`harness/LAST-RUN.txt`. Reddening `verify_library` on purpose -- the
+calibration this repository requires -- therefore wrote "RUN NOT GREEN -- 1
+suite(s) failed" into START-HERE.md, and the commit that followed picked it up
+beside the real edit. `verify_docs` caught it on the next full battery. The
+habit of restoring the stanza before committing has to cover the calibration
+runs too, not just the ad-hoc ones.
+
+**STALE CLAIMS, all of them the same shape: a sentence that was true when
+written and describes a file that has moved since.**
+
+- START-HERE said the in-post player "loads THREE of these". It loads four;
+  `photofit.js` arrived in this release. The same sentence said "exactly two"
+  until v281, when `audiosession.js` arrived. A hand-typed count of a list a
+  template owns goes stale silently, and `verify_inline.py` is what actually
+  pins the set.
+- README and `docs/INTEGRATION.md` both said there is no known rendering
+  difference between the in-post player and the sealed one. There is: a
+  background photo's **opacity and blur** are not reproduced in a feed box --
+  they are a canvas filter rather than geometry, and `inlineplayer.js`'s own
+  header says so. A gap stated in the source and denied in the guide a host
+  reads is worse than a gap stated in neither.
+- `skribl_library.html` sizes the fullscreened stage with
+  `calc(100vh * 16 / 9)` under a comment claiming the player "keeps its own
+  aspect (inlineplayer.css sets it from the payload)". It does not:
+  `.skribl-inline` hard-codes `aspect-ratio: 16 / 9`. What is on screen was
+  right and the reason beside it was wrong, which made a duplicated constant
+  look like a derived one. `verify_library` reads both declarations and
+  compares them now.
+
+**HOW IT WORKS, checked against the tree rather than against itself.** The
+shared player's controls are listed there, and full screen was missing from
+the list. The drawer called the loop control "Repeat", a word that appears on
+no control -- its accessible name is "Loop" -- and said nothing about dragging
+the progress bar or nudging it with the arrow keys, which `lib/scrubkeys.js`
+exists to provide. The image-framing tip now says the framing travels with the
+Skribl, which is this release's photo fix stated where the person who chooses
+the framing will read it.
+
+**AND PINNING THE CLAIM FOUND A THIRD DEFECT, which is the whole argument for
+pinning the claim rather than the apparatus.** A row added to measure the
+fullscreened WRAPPER -- the element in the top layer, before anything inside it
+-- read 1180x900 in a 1200x900 screen. `html { scrollbar-gutter: stable
+both-edges }` reserves a gutter on each edge of the root scroll box so the
+layout does not shift when a scrollbar appears, and that shrinks the box a
+fixed-position element resolves `100%` against, which is what the Fullscreen
+spec's UA rule sizes the top-layer element with at `!important`. The document
+is `overflow: hidden` while an element is fullscreen, so the gutter was holding
+room for a scrollbar that cannot appear, and full screen was 10px in from each
+edge with the page showing either side. `html:has(:fullscreen) {
+scrollbar-gutter: auto }` gives it back.
+
+The scale branch had the same mistake one line away -- it divided by
+`window.innerWidth`, which counts the gutter -- so on an engine without
+`:has()` it would have sized the drawing to 1200 inside an 1180 box and
+`overflow: hidden` would have cropped the difference. It measures the wrapper's
+own box now, which is what `layoutEditorCanvas` has always done.
+
+**THE RULE WRITTEN AT THE JSSTRIP TARGET WAS TESTED WITHIN THE HOUR.** That
+note had just said the next spend must come out of carving and not out of
+raising the line again. The wrapper measurement then wanted 20 B more than
+existed. It came out of the same block: a `canvasWrap &&` guard on a reference
+dereferenced unguarded three hundred lines above, two reads of
+`document.fullscreenElement` that the `fsFull` flag already answers, and a
+one-line helper with a single caller. The target did not move, and the margin
+went from 4 B to 25 B.
+
+**AN INSTRUMENT SAT EXACTLY ON ITS OWN MEASUREMENT, TOO.** `verify_hold`'s
+anti-vacuity precondition -- "the heavy frame really is far more expensive to
+paint" -- asked for 8x from four paints of each frame. Four paints of the light
+frame is about 1.2ms, close enough to `performance.now()`'s resolution and to a
+scheduler hiccup that the ratio wandered between 6.5x and 8.3x on one idle box.
+It failed a full battery on a tree whose every real assertion in that suite
+passed exactly. Measured properly -- 20 paints a batch, both frames warmed, the
+minimum of three batches each, because noise only ever ADDS time -- the true
+ratio is 7.8x to 8.2x and moves by 0.4x. So 8 was never a margin above the real
+figure; it WAS the figure, chosen before anything measured it. 6x now, which
+still catches what the check exists to catch: a fixture whose heavy frame is
+not heavy.
+
+**Three things this release met exactly and called green**: a line ratchet at
+1760, a paint-cost threshold at 8x, and a byte target at 4 B of margin. A
+figure met exactly is a warning, not a pass, and none of the three said so.
+
+**What generalises, and it is one sentence: measure at the END of a change,
+and measure the thing the change is for.** Both ratchets were raised from
+mid-change numbers. The fullscreen feature was pinned by five assertions about
+its control and none about its picture. The stage's ratio was described rather
+than compared. Each is the same error at a different scale -- checking the
+apparatus instead of the result. The corollary earned this release: a number
+met exactly is a number nobody measured against.
+
+**Superseded:** the note at the end of "the link people share gets full screen
+too" recorded, as noted-not-changed, that the stage's rule hard-codes
+`calc(100vh * 16 / 9)` and that the player's new rule "sets no aspect at all
+and lets max bounds letterbox it". The stage's number is gated now, and the
+player's rule is deleted -- it never applied.
