@@ -10226,3 +10226,110 @@ prose explaining it -- which is this tree's rule about checks for absence.
 Six components calibrated, each reverted alone: the server's field, the store's
 third state, `library.js`'s two-state render, the badge, the gallery control,
 and the restated ratio. Every one red on its own row.
+
+## Unsealed, on top of v306, cont. -- a tile that says what it is, an x you can take back, and tooltips on the two pages that had none
+
+Three owner reports, one change, because they share a surface.
+
+### The gallery could not say which
+
+"On public gallery it doesn't show a pen, book - no way to tell which."
+
+**The listing cannot look at the payload, and that is a decision, not an
+oversight.** `feed_dict()` defers `payload_json` on purpose -- measured at
+9.75 ms against 1.04 ms for a page of fifty -- so a tile has nothing to read.
+`kind` and `pages` are columns now, denormalised at post time from the same
+payload `has_audio` comes from, in the same tick.
+
+**The derivation is PORTED, not invented.** `_payload_kind()` is the test
+`inlineplayer.js`'s `isFlip()` and `app.js` already use: an explicit
+`playbackMode` wins, and otherwise more than one frame means flip. A one-page
+Flip document replays as a still, so this answers 'pad' for it -- and so does
+every player. A second definition would let a tile's badge disagree with the
+drawing under it, and the calibration confirms the branch is live: deleting the
+frame-count fallback goes red on a post made with no `playbackMode` at all.
+
+**The migration backfills, and the backfill is the cost of not shipping a badge
+that works only for posts made after the upgrade.** In Python rather than SQL,
+because the two engines spell JSON extraction differently and a migration
+correct on one of them is a migration that is wrong. Chunked by id; only one
+chunk of `payload_json` is live at a time. `_kind()` is COPIED into the
+revision rather than imported: Alembic revisions are frozen, and importing the
+application's function would make this one replay differently after the next
+refactor of it.
+
+Null still means "written before the column and not yet backfilled", and still
+renders as nothing -- the same rule `has_audio` follows, for the same reason.
+The marks are `aria-hidden` decoration and the words live in one visually
+hidden line, so a reader gets "6 pages, with sound" as a sentence rather than
+two unlabelled glyphs.
+
+And `library.js`'s host rows can stop saying they cannot know. They read
+`kind: null, pages: 0` under a comment explaining that the listing defers the
+payload. It still does; it carries the kind anyway.
+
+### The x had no way back
+
+"Is there a way to put the row back after you've taken it down? how would you
+ever see it again?"
+
+There was not. The x removed the row AND this browser's copy of the revocation
+key, and the only route back was a recovery key the same tap had just
+discarded. Twelve seconds, one visible shelf, and the entry goes back.
+
+**`restore()`, not `add()`, and the difference is the assertion.** `add()`
+unshifts and stamps `at: Date.now()`, so undoing with it would move the row to
+the head of the list and relabel a Skribl from last week as posted just now.
+`restore()` splices the ORIGINAL object back at the index it came from. The
+pin removes the MIDDLE of three and requires the middle back; with `add()` it
+reads `u2,u1,u3`.
+
+**`keepBlob` defers the bytes, it does not spare them.** A local save's payload
+lives under `skribl_post_<id>`; dropping it at removal time would make undo
+restore a row whose link opens nothing. The UI drops it when the window closes.
+If the tab is closed inside the window the blob is orphaned -- and orphaned is a
+state this store already answers: `sweepOrphans()` collects it on the next write
+that needs room. Leaking until then is the cheaper failure; deleting first makes
+undo a lie.
+
+**The arming stays.** Arming stops the tap you did not mean to make; undo
+returns the one you meant and regretted. They answer different failures, and
+after twelve seconds the armed tap's warning is still true.
+
+### The two pages had no tooltips
+
+`.skribl-tip` lived in `styles.css`, which /library and /gallery deliberately
+do not load -- they are pages about drawings, not tools, and carry their own
+token vocabulary. So the rules moved to `tooltip.css`, which travels with
+`lib/tooltip.js`: both editors, the profile, the gallery.
+
+**Not the player, and that turned out to be a subtraction.** `/s/<id>` has
+never loaded the module, so the copy `cssgraph` was emitting into `player.css`
+was styling an element that page never creates. The re-emit removed it.
+
+**Every title says what the label does not.** A tooltip on "Copy link" reading
+"Copy link" is noise that teaches people to ignore the next one, so each says
+the consequence: what is copied, what survives, what stops working. The
+`aria-label`s are untouched -- a screen reader gets those, and the two must not
+fight.
+
+**And the check reads `data-tip`, not `title`.** The module MOVES the title and
+removes it, so asserting on `title` would pass on a page that loaded the sheet
+and never started the module -- which is exactly the mutation, and it goes red.
+
+Eight components calibrated, each reverted alone: the post's columns, the
+no-`playbackMode` branch, `feed_dict`, the tile's mark, the gallery's `init()`,
+`restore()` against `add()`, `keepBlob`, and the profile's `init()`.
+
+**And the undo displaced an invariant that was correct while the tap was
+final.** `verify_posted` asserted "the second tap deletes the entry AND its
+bytes" — one breath, because the removal was one act. It is two now: the entry
+goes, the bytes wait for the decision. The row is not weakened, it is split,
+and the invariant it has always guarded is the same one: a removed local save's
+blob never outlives the decision. What moved is when the decision is made.
+
+Which is why the shelf carries a Dismiss as well as an Undo. It commits the
+removal now rather than in twelve seconds — the honest affordance for somebody
+who has already decided and wants the space back, and the deterministic commit
+a suite can drive, because a twelve-second window is a product choice and not
+something to sleep through in a browser test.

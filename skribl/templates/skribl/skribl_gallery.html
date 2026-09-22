@@ -19,6 +19,8 @@
   {% include 'skribl/_skribl_theme_boot.html' %}
   {% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets, skribl_inline %}
   {{ skribl_inline_assets() }}
+  {# tooltip.css travels with lib/tooltip.js — see that sheet's header. #}
+  <link rel="stylesheet" href="{{ skribl_asset('tooltip.css') }}">
   <style>
     /* The page's own chrome, in the app's tokens for both ramps. styles.css is
        the editor's stylesheet and is not loaded here — this page has no tool
@@ -39,6 +41,11 @@
       --accent-2: #5b8cff;
       --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      /* tooltip.css's three names, on this palette — the same shape the
+         profile uses for posted.css's vocabulary. */
+      --surface-control-hover: var(--control-hi);
+      --hairline-strong: rgba(255,255,255,0.16);
+      --text-primary: var(--text);
     }
     :root[data-theme="light"] {
       color-scheme: light;
@@ -50,6 +57,7 @@
       --text: #14171d;
       --text-2: #4b5563;
       --text-3: #6b7280;
+      --hairline-strong: rgba(0,0,0,0.18);
     }
     * { box-sizing: border-box; }
     body {
@@ -145,7 +153,22 @@
        max-width lets the ratio resolve the other side. The profile's
        .stageCanvasWrap does restate the number and says in its own comment
        that nothing gates the pair; this avoids needing the pair at all. */
-    .tileStage { display: block; }
+    /* The two marks, over the drawing, in the corners the profile's rows use:
+       kind bottom left, sound top right. Decoration — the words are in
+       .tileSr, which a screen reader gets and the eye does not. 18px is the
+       size at which a pen and a book are distinguishable; 14 was a smudge. */
+    .tileMark { position: absolute; z-index: 2; display: grid; place-items: center;
+      width: 24px; height: 24px; padding: 3px; border-radius: 6px;
+      background: rgba(6,7,10,.72); color: #dfe6f2; pointer-events: none; }
+    .tileMark svg { width: 18px; height: 18px; display: block; }
+    .tileKind { left: 8px; bottom: 8px; }
+    .tileSound { right: 8px; top: 8px; color: #7ee2a8; }
+    /* The words behind the marks. Not `display: none` — that takes it out of
+       the accessibility tree too, which is the whole point of having it. */
+    .tileSr { position: absolute; width: 1px; height: 1px; margin: -1px;
+      padding: 0; border: 0; overflow: hidden; white-space: nowrap;
+      clip: rect(0 0 0 0); clip-path: inset(50%); }
+    .tileStage { display: block; position: relative; }
     .tileStage:fullscreen { background: #000; display: grid; place-items: center;
       width: 100vw; height: 100vh; }
     .tileStage:fullscreen .skribl-inline {
@@ -210,8 +233,12 @@
        filtering or ranking of its own. #}
     <div class="bar">
       <div class="tabs" role="group" aria-label="Order">
-        <button type="button" class="tab active" data-sort="new" aria-pressed="true">New</button>
-        <button type="button" class="tab" data-sort="hot" aria-pressed="false">Hot</button>
+        {# The titles say what "New" and "Hot" cannot; lib/tooltip.js draws
+           them, on a pointer that hovers. #}
+        <button type="button" class="tab active" data-sort="new" aria-pressed="true"
+                title="Newest first">New</button>
+        <button type="button" class="tab" data-sort="hot" aria-pressed="false"
+                title="Most played in the last seven days">Hot</button>
       </div>
       <form class="find" id="galleryFind" role="search">
         <input type="search" id="galleryQ" placeholder="Search titles and captions…" aria-label="Search the gallery" autocomplete="off" maxlength="80">
@@ -279,6 +306,9 @@
 <template id="skriblTileTpl">{{ skribl_inline('__ID__') }}</template>
 {# lib/modalfocus.js: the report sheet's focus management -- the same module
    every aria-modal surface on the editors uses. #}
+{# See the note in skribl_library.html: the controls carry titles and
+   nothing was drawing them. Desktop only, by the module's design. #}
+<script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
 <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
 <script src="{{ skribl_asset('gallery.js') }}" defer></script>
 </body>

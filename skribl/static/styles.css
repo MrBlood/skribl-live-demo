@@ -5458,28 +5458,10 @@ body.player-mode #canvas {
 .report-primary { background: var(--ui-active); border-color: transparent; color: #fff; }
 
 /* ---- tooltips -------------------------------------------------------------
-   A native `title` tooltip cannot be styled — not the corners, not the colour,
-   not the delay. It is OS chrome. lib/tooltip.js moves every title to data-tip
-   and draws this instead. Suppressed entirely on coarse pointers, where there
-   is no hover and a "tooltip" would fire on tap and cover what you pressed. */
-.skribl-tip {
-  position: fixed; z-index: 400; pointer-events: none;
-  max-width: 260px; padding: 7px 10px;
-  border-radius: 10px;
-  background: var(--surface-control-hover);
-  border: 1px solid var(--hairline-strong);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  color: var(--text-primary);
-  font-size: 12px; line-height: 1.45; text-align: center;
-  opacity: 0; transform: translateY(3px);
-  transition: opacity 0.14s ease, transform 0.14s ease;
-}
-.skribl-tip.below { transform: translateY(-3px); }
-.skribl-tip.in { opacity: 1; transform: translateY(0); }
-.skribl-tip[hidden] { display: none; }
-@media (prefers-reduced-motion: reduce) {
-  .skribl-tip { transition: none; }
-}
+   IN tooltip.css, NOT HERE. The rules moved out when /library and /gallery
+   needed them: those pages carry their own token vocabulary and do not load
+   this sheet, so a rule that lived here could not reach them. Every page that
+   loads lib/tooltip.js loads tooltip.css beside it. */
 
 /* ---- first-use hints ------------------------------------------------------
    A tooltip says what a control is; a hint says how to drive it, once. Sits

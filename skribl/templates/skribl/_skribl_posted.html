@@ -22,8 +22,24 @@
        -- save it, then lose the browser -- held the credential and had no way
        to spend it. Sits beside Clear list because this is where somebody
        goes when the list is not what they expected. #}
-    <button type="button" id="postedRecover" class="posted-clearbtn">Use a recovery key</button>
-    <button type="button" id="postedClear" class="posted-clearbtn">Clear list</button>
+    <button type="button" id="postedRecover" class="posted-clearbtn"
+            title="Put a Skribl back in this list using the key you saved for it">Use a recovery key</button>
+    <button type="button" id="postedClear" class="posted-clearbtn"
+            title="Empty this browser's list. The Skribls stay online, and their keys go">Clear list</button>
+  </div>
+
+  {# The undo shelf: the x on a row is reversible for twelve seconds, and a
+     reversible act has to SAY so or it is not one. Hidden until there is
+     something to put back; lib/postedui.js owns it. #}
+  <div class="posted-undo" id="postedUndo" hidden>
+    <span class="posted-undo-msg" id="postedUndoMsg"></span>
+    <button type="button" class="posted-undo-btn" id="postedUndoBtn">Undo</button>
+    {# Dismiss is the OTHER answer, and it is not decoration: it commits the
+       removal now instead of in twelve seconds. A local save's bytes are held
+       for the window, and somebody who has decided should not have to wait
+       out a timer to get the space back. #}
+    <button type="button" class="posted-undo-x" id="postedUndoX"
+            aria-label="Dismiss — keep the removal">&#10005;</button>
   </div>
 
   <div class="posted-list" id="postedList"></div>

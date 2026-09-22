@@ -300,6 +300,7 @@
        editor post before v304 sent one, so it is unlisted -- the server's
        default -- not unknown. A host row without one is unknown. */
     return { id: e.id, title: e.title || '', caption: '',
+             kind: e.kind || null, pages: e.pages || 0,
              created_at: e.at ? new Date(e.at).toISOString() : (e.created_at || null),
              /* NOT `!!e.has_audio`: that collapsed "no sound" and "nobody
                 said" into the same false, which is what put SILENT on a
@@ -412,12 +413,20 @@
       })
       .then(function (body) {
         (body.items || []).forEach(function (i) {
-          /* No kind: the listing defers the payload, so a host row does not
-             know whether it is a Pad or a Flip, and the row says nothing it
-             cannot know (lib/postedui.js). */
+          /* THE LISTING CARRIES THE KIND NOW (v307). It still defers the
+             PAYLOAD -- that has not changed and is not going to -- but `kind`
+             and `pages` are columns on the post, written at post time from the
+             same payload `has_audio` comes from, so a host row can say which
+             it is without one. This read `kind: null, pages: 0` under a
+             comment explaining that it could not know; it can.
+             A null still means "not backfilled" and still renders as
+             nothing. */
           hostRows.push({ id: i.id, url: playerBase + '/' + encodeURIComponent(i.id), title: i.title || '',
-                          kind: null, pages: 0, at: i.created_at ? Date.parse(i.created_at) : Date.now(),
-                          visibility: i.visibility || '', has_audio: !!i.has_audio, owned: true, tok: null });
+                          kind: i.kind || null, pages: i.pages || 0,
+                          at: i.created_at ? Date.parse(i.created_at) : Date.now(),
+                          visibility: i.visibility || '',
+                          has_audio: i.has_audio === true ? true : i.has_audio === false ? false : null,
+                          owned: true, tok: null });
         });
         items = hostRows.map(asItem);
         cursor = body.next_cursor || null;
@@ -448,6 +457,10 @@
         foot.textContent = "Couldn't load the listing.";
       });
   }
+
+  /* The module is loaded by the page and started here; it suppresses itself
+     on coarse pointers, so on a phone this call does nothing by design. */
+  if (window.SkriblTooltip) window.SkriblTooltip.init();
 
   boot();
   loadPage();
