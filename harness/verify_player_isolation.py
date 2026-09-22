@@ -1438,10 +1438,15 @@ with sync_playwright() as sp:
     # were most of what sat below the drawing. Both are buttons in the
     # transport row now.
     #
-    # ASSERTED AS THE RATIO ON A PHONE, not as "the row has N children": the
-    # ask was about how much of the screen the drawing gets, and a later change
-    # that moves the chrome somewhere else without shrinking it should fail
-    # this too.
+    # THREE ASSERTIONS, AND THE CALIBRATION SAYS WHICH ONE IS THE PIN. Putting
+    # the two link rows back reddens the two STRUCTURAL rows below and leaves
+    # the ratio green: chrome went 259 -> 330 against a 370px drawing, so the
+    # drawing still had more room and the ratio could not tell. The ratio is
+    # therefore a FLOOR on the achievement -- it goes red when the chrome grows
+    # past the drawing, whatever causes that -- and not the pin on this change.
+    # Both are worth having and it is worth saying which is which, because a
+    # comment claiming the ratio catches this would be a claim the mutation
+    # test had already contradicted.
     pg.set_viewport_size({"width": 390, "height": 844})
     pg.wait_for_timeout(400)
     _room = pg.evaluate("""() => {
