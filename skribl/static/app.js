@@ -4084,9 +4084,7 @@ function showPlayerError(msg, canRetry) {
   // — it measures ~243px bare and ~267px with a caption, and with the 40px app
   // padding + 20px gap on top, that produced 80–100px of overflow and vertical
   // scroll. Falls back to a safe constant if the shell can't be measured yet.
-  /* Whether the WRAPPER is the fullscreen element — see playerFitScale. Kept
-     as a flag rather than read from the document because the fullscreen block
-     below already computes exactly this for the control's label. */
+  /* Whether the WRAPPER is the fullscreen element — see playerFitScale. */
   let fsFull = false;
   function playerReservedV() {
     const shellEl = document.getElementById('playerShell');
@@ -4098,21 +4096,10 @@ function showPlayerError(msg, canRetry) {
     return shellEl.getBoundingClientRect().height + padV + gap;
   }
   function playerFitScale() {
-    // FULL SCREEN IS A DIFFERENT BOX, and until this line existed it was not
-    // treated as one: everything below measures `.app`, whose max-width is
-    // 720px, and caps the scale at 1:1 -- right for a drawing in a page
-    // column, wrong for one that owns the screen. The UA's `:fullscreen` rule
-    // gives the WRAPPER the whole display with !important, so the wrapper
-    // looked right while the canvas kept its page size: a 551px drawing
-    // centred in 1200px of black, with the exit control, the aria-pressed
-    // state and the wrapper assertion all green. The stylesheet cannot fix it
-    // either -- layoutPlayerCanvas writes an inline width, and inline beats
-    // any rule a sheet could carry, which is why the
-    // `.canvas-wrap:fullscreen > canvas` rule that used to sit in styles.css
-    // never applied for a single frame.
-    //
-    // fsFull rather than a fullscreenElement read: _syncFull already computes
-    // it for the control's label, and it is the only thing that changes it.
+    // FULL SCREEN IS A DIFFERENT BOX: everything below measures `.app` and
+    // caps at 1:1, which sized the canvas to the page while the wrapper filled
+    // the screen. It cannot be fixed in the sheet — the inline width
+    // layoutPlayerCanvas writes beats any rule. DECISIONS, v306.
     if (fsFull) return Math.min(innerWidth / authorW, innerHeight / authorH);
     // Measure the COLUMN the canvas actually lives in, not the viewport. This
     // used to be `window.innerWidth - 40`, and .app has a max-width: on a 1023px
@@ -4743,27 +4730,18 @@ function showPlayerError(msg, canRetry) {
   // silently does nothing is worse than no button — the same rule Mute follows
   // two lines up. webkit* spellings included because that is what older iPadOS
   // answers to, which is a device this project is actually used on.
-  // ONE WAY OUT, SHARED. The transport button and the exit control inside the
-  // fullscreened subtree both leave through _fsOff, so they cannot drift; it
-  // also bought back most of what this feature cost verify_jsstrip's 153,600
-  // target, which is a documented achievement rather than a ratchet and was
-  // worth spending against before proposing to move.
-  // canvasWrap, not a second handle on it: `.canvas-wrap` IS the canvas's
-  // parent, and it is the element the isolation suite asserts goes fullscreen.
-  // AND ONLY IF THERE IS A WAY OUT. This same controls partial is included by
-  // the EDITOR, which runs this player for the `#skribl=<id>` local fallback
-  // when posting to the server failed -- and #playerFullExit lives in
-  // skribl_player.html, not in the partial, so on that page there is no exit
-  // control inside the fullscreened subtree. Only that subtree renders, so the
-  // transport row including the button that got you there is off screen: the
-  // sole way back would be a key some devices do not have. That is the trap
-  // #playerFullExit was added to close, and offering the control on a page
-  // without it would have re-opened it on another surface.
+  // ONE WAY OUT, SHARED: both controls leave through _fsOff, so they cannot
+  // drift. What this block cost the player's size target is argued at the
+  // target, in verify_jsstrip.py, where the number lives.
+  // canvasWrap, not a second handle on it: `.canvas-wrap` IS the canvas's parent.
+  // AND ONLY IF THERE IS A WAY OUT. The EDITOR includes this same partial and
+  // runs this player for the `#skribl=` fallback, but #playerFullExit lives in
+  // skribl_player.html — so there, full screen would render a subtree with no
+  // exit in it. verify_player_isolation drives that page.
   const _fsExit = document.getElementById('playerFullExit');
   const _fsReq = canvasWrap && (canvasWrap.requestFullscreen || canvasWrap.webkitRequestFullscreen);
   const _fsOn = () => document.fullscreenElement || document.webkitFullscreenElement;
-  // Unguarded on purpose: _fsOn() is only truthy when something IS fullscreen,
-  // and a document that got there has a way back.
+  // Unguarded: _fsOn() is truthy only when something IS fullscreen.
   const _fsOff = () => { if (_fsOn()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); };
   if (pFull && _fsExit && _fsReq && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
     pFull.hidden = false;
@@ -4772,10 +4750,7 @@ function showPlayerError(msg, canRetry) {
       fsFull = on;
       pFull.setAttribute('aria-pressed', '' + on);
       pFull.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
-      // The canvas is sized from its box, and the box just changed shape.
-      // Called directly: it is a function declaration in this same scope, so
-      // the typeof guard the first draft carried was checking nothing.
-      layoutPlayerCanvas();
+      layoutPlayerCanvas();      // the box just changed shape
     };
     pFull.addEventListener('click', () => {
       if (_fsOn()) return _fsOff();

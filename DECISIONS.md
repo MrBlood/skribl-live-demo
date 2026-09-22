@@ -9571,7 +9571,7 @@ player's new rule sets no aspect at all and lets max bounds letterbox it --
 which is the lesson the in-post player's stretch bug taught, applied rather
 than repeated.
 
-## Unsealed, on top of v305 -- the fix that reached every surface but the one reported
+## v306, cont. -- the fix that reached every surface but the one reported
 
 The owner reported the profile stage cropping a background photo, three times.
 The first fix taught the in-post player to read the author's fit through
