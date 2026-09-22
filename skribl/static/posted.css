@@ -52,6 +52,12 @@
 /* SVG now, not a font glyph: the two characters rendered at whatever weight and
    baseline the system font chose, so they sat unevenly beside each other. */
 .posted-thumb svg { width: 17px; height: 17px; display: block; }
+/* The drawer's thumb is a 42x34 glyph tile, not a poster, so the kind icon is
+   the tile's whole content and the sound badge rides its top-right corner. */
+.posted-thumb { position: relative; }
+.posted-thumb svg.posted-sound { position: absolute; right: -2px; top: -2px;
+  width: 12px; height: 12px; padding: 1px; border-radius: 5px;
+  background: var(--surface-panel); color: #7ee2a8; }
 .posted-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column;
   gap: 2px; text-decoration: none; color: inherit; }
 .posted-title { font-size: 13px; color: var(--text-primary);
@@ -61,7 +67,27 @@
    line. The actions yield (they stack, below) — the words never do. */
 .posted-sub { font-size: 11px; color: var(--text-secondary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.posted-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+/* 12px BETWEEN WRAPPED ROWS, not 6. The strip wraps to two lines on a phone,
+   and with a 6px row gap the 6px bands of the two rows met in the middle:
+   whichever button came later in the DOM took the overlap, so Copy link --
+   the first button, with Copy key directly beneath it -- answered 40px
+   while its four neighbours answered 45. 12 is exactly two bands, so they
+   touch and never overlap. */
+.posted-actions { display: flex; align-items: center; column-gap: 6px;
+  row-gap: 12px; flex: 0 0 auto; }
+/* THE BAND IS VERTICAL ONLY, on purpose. These sit in a 6px-gapped strip, so
+   a band on the sides would overlap the neighbour and make which control a tap
+   lands on depend on paint order. Height is the floor that matters (44, Apple's
+   number); the width is the pill plus whatever is free beside it, which is the
+   same rule verify_layout states for the editors' packed rows. */
+.posted-actions button { position: relative; z-index: 1; }
+.posted-actions button { --tap-grow: 6px; }
+.posted-actions button::before { content: ''; position: absolute;
+  inset: calc(-1 * var(--tap-grow)) 0; }
+/* The row's own link is 40 tall and needs 2px a side. Its band stops at the
+   row gap so it cannot reach the action strip below it. */
+.posted-main { position: relative; z-index: 1; }
+.posted-main::before { content: ''; position: absolute; inset: -2px 0; }
 /* On a phone, a row with more than one action (.posted-row-many: every
    keyed row, and every row where the system has a share sheet) puts them
    on their own line under the title, indented past the thumb so they read
@@ -69,15 +95,48 @@
    is unchanged. A width query
    rather than the size class: the drawer is shared and the Pad does not load
    lib/sizeclass.js — this sheet's own compact tier is max-width 640. */
+/* A GRID, BECAUSE FLEX WRAPS BEFORE IT SHRINKS and that is the whole defect.
+   `.posted-sub` is `white-space: nowrap` on purpose (above): the words never
+   yield. That makes `.posted-main`'s flex base size the FULL width of the meta
+   string, and a wrapping flex line pushes whatever does not fit onto the next
+   line rather than squeezing what is already there. So which item fell off
+   depended on how long that row's meta happened to be:
+
+     "replay · 13 hours ago · in the gallery"  the TEXT BLOCK dropped under
+                                               the thumbnail
+     "6 pages · 1 day ago · in the gallery"    the × dropped, alone, to the left
+     "replay · last week · link only"          correct
+
+   One page, three shapes, row by row — which is how the owner found it, from
+   an iPhone: "the second thumb down". The old comment here promised "the ×
+   keeps the title line's right edge"; it was asserted and never enforced.
+
+   Three columns make the title line structural at every width and every meta
+   length, and `minmax(0, 1fr)` is what lets the text ellipsise instead of
+   shoving its neighbours off. The actions span all three on their own row. */
 @media (max-width: 640px) {
-  .posted-row-keyed, .posted-row-many { flex-wrap: wrap; }
+  .posted-row-keyed, .posted-row-many {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center; column-gap: 10px; row-gap: 8px; }
+  .posted-row-keyed .posted-thumb, .posted-row-many .posted-thumb { grid-row: 1; }
+  .posted-row-keyed .posted-main,  .posted-row-many .posted-main  { grid-row: 1; }
+  .posted-row-keyed .posted-del,   .posted-row-many .posted-del   {
+    grid-row: 1; grid-column: 3; justify-self: end; }
   .posted-row-keyed .posted-actions, .posted-row-many .posted-actions {
-    order: 2; flex: 1 1 100%; justify-content: flex-start; padding-left: 52px;
-    /* ...and the strip wraps too, with a min-width of 0, so a phone with Share
-       on every row cannot widen the row, the column, and the page with it
+    grid-row: 2; grid-column: 1 / -1; justify-content: flex-start;
+    /* Indented to the text column so the buttons read as this row's rather
+       than as the list's — but only where that indent is affordable. Below
+       400px it costs 94px of a 360px row, which is what pushes five buttons
+       onto a second line, so it is given back. */
+    padding-left: 52px;
+    /* The strip still wraps, with a min-width of 0, so a phone with Share on
+       every row cannot widen the row, the column, and the page with it
        (owner, from an iPhone, v304). */
     flex-wrap: wrap; min-width: 0; }
-  .posted-row-keyed .posted-del, .posted-row-many .posted-del { order: 1; }
+}
+@media (max-width: 399px) {
+  .posted-row-keyed .posted-actions, .posted-row-many .posted-actions {
+    padding-left: 0; }
 }
 /* The destructive sibling of .posted-copy. Danger-toned so it does not read
    as another neutral utility beside "Copy link", and only rendered at all when
@@ -108,8 +167,21 @@
   padding: 5px 9px; border-radius: 8px; cursor: pointer; }
 .posted-key:hover { color: var(--text-primary); }
 .posted-key.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
+/* 34 VISIBLE, 44 TO A FINGER — the two floors SK-AUD-005 decided, which this
+   row had never been measured against: /library and /gallery were outside
+   verify_layout's touch-target section, which only ever walked Pad and Flip.
+   Measured before: 22x22, the smallest control in the app, sitting directly
+   above Delete. The × forgets a row; Delete takes the Skribl down for
+   everyone. A small target with a dangerous neighbour is the one combination
+   worth fixing first.
+   Same --tap-grow ::before every sub-44 control here uses. */
 .posted-del { flex: 0 0 auto; background: none; border: 0; color: var(--text-secondary);
-  font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+  font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  min-width: 34px; min-height: 34px; display: inline-flex;
+  align-items: center; justify-content: center;
+  position: relative; z-index: 1; --tap-grow: 5px; }
+.posted-del::before { content: ''; position: absolute;
+  inset: calc(-1 * var(--tap-grow)); }
 .posted-del:hover { color: var(--danger, var(--danger)); }
 /* A LOCAL save's × arms before it deletes (SK-AUD-010): the armed tap reads
    as the danger it is, like every other armed control here. */

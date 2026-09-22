@@ -561,7 +561,9 @@
           // The create response carries the revocation capability exactly
           // once for an anonymous post. Stored here, and since v281 also
           // re-enterable through Your Skribls if the author kept a copy.
-          tok: res.deleteToken || null
+          tok: res.deleteToken || null,
+          // The server's reading of the payload, not this client's guess.
+          has_audio: typeof res.hasAudio === 'boolean' ? res.hasAudio : null
         });
         if (window._skriblPostedUI) window._skriblPostedUI.render();
         // THE RETURN VALUE IS CHECKED NOW. It was discarded until v280, so a

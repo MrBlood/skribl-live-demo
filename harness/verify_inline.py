@@ -1426,8 +1426,33 @@ with sync_playwright() as sp:
     # nothing. Paying for a ceiling with the thing the ceiling protects is not
     # spending, it is borrowing.
     #
-    # 84 B of headroom, printed below rather than left to be derived.
-    EMBED_RATCHET = 35_700
+    # RAISED 35,700 -> 35,900, MEASURED 35,814, for the tap band on the loop
+    # and mute pills. 114 B, and the owner approved the cost before it was
+    # spent, having asked for the targets to be fixed knowing they were here.
+    #
+    # WHAT THE BYTES BUY: a control a finger can hit. Measured on /gallery,
+    # the loop pill answered 31x31 to elementFromPoint against the 44 this
+    # project decided in SK-AUD-005 -- the only control on that page under the
+    # floor, and a control every host embed carries. The pill STAYS 30px: a
+    # feed tile is small and two 44px slabs over somebody's drawing is a
+    # different product. Only the band grows, which costs no pixels.
+    #
+    # AND THE COMMENT COST MORE THAN THE RULE, which is the lesson worth
+    # keeping. The first draft of the note beside that rule was seven lines and
+    # 470 B, because CSS comments are SERVED -- jsstrip strips JavaScript, not
+    # stylesheets. The reasoning lives in DECISIONS now and the sheet carries
+    # one line. In a file inside a host's byte budget, prose is not free and
+    # the habit of explaining generously has to invert.
+    #
+    # FOURTH RAISE, SAME SENTENCE. 29,000 (compositor), 33,500 (photo fit),
+    # 35,700 (opacity and blur), now this: every one of them bought "the embed
+    # must not be a worse product than the real thing". Nothing else has ever
+    # moved this number.
+    #
+    # 86 B of headroom, printed here rather than left to be derived, because
+    # the lesson of the raise before this one is that a margin nobody re-reads
+    # goes stale in one release.
+    EMBED_RATCHET = 35_900
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

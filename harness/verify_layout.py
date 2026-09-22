@@ -161,6 +161,54 @@ HIT_GEOMETRY = """() => {
   });
 }"""
 
+PAGE_HIT_GEOMETRY = """
+    () => {
+      const sel = 'button, a[href], input, select, [role="button"]';
+      const own = (el, x, y) => { const t = document.elementFromPoint(x, y);
+                                  return !!(t && (t === el || el.contains(t))); };
+      const out = [];
+      for (const el of document.querySelectorAll(sel)) {
+        if (!el.offsetParent || el.disabled) continue;
+        el.scrollIntoView({block: 'center', inline: 'center'});
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height || r.top < 0 || r.bottom > innerHeight) continue;
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (!own(el, cx, cy)) continue;
+        let up = 0, down = 0;
+        while (up < 30 && own(el, cx, cy - up - 0.5)) up++;
+        while (down < 30 && own(el, cx, cy + down + 0.5)) down++;
+        out.push({ id: el.id || el.className.toString().trim().slice(0, 26),
+                   visH: Math.round(r.height), hitH: up + down });
+      }
+      return out; }"""
+
+GALLERY_FIXTURE = """
+    async () => {
+      const r = await fetch('/api/skribls', { method: 'POST',
+        headers: (window.skriblPostHeaders ? window.skriblPostHeaders()
+                  : {'Content-Type': 'application/json'}),
+        body: JSON.stringify({ title: 'Floor fixture', visibility: 'public',
+          playbackMode: 'replay', canvasSize: {cssWidth: 800, cssHeight: 600},
+          frames: [{ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,start:true},
+                               {x:400,y:300,color:'#fff',size:6,t:100}],
+                     strokeGroups: [2], background: {color:'#101418'} }] }) });
+      return r.status; }"""
+
+SEED_POSTED = """
+    () => { localStorage.setItem('skribl_posted_v1', '[]');
+      window.SkriblPosted.add({id:'seedA', url:'/s/seedA', kind:'pad', pages:1,
+        title:'A rather long title that will not fit', tok:'k', visibility:'public'});
+      window.SkriblPosted.add({id:'seedB', url:'/s/seedB', kind:'flip', pages:6,
+        title:'Unending J', tok:'k', visibility:'unlisted'}); }"""
+
+ROW_LINE = """
+    () => { const row = document.querySelector('.posted-row-keyed');
+      if (!row) return null;
+      const y = (sel) => { const e = row.querySelector(sel);
+                           return e ? Math.round(e.getBoundingClientRect().top) : null; };
+      return { thumb: y('.posted-thumb'), main: y('.posted-main'),
+               del: y('.posted-del'), acts: y('.posted-actions') }; }"""
+
 HEADER_GEOMETRY = """() => {
   const h = document.querySelector('.header');
   const a = document.querySelector('.actions');
@@ -363,6 +411,130 @@ with sync_playwright() as p:
                   not short,
                   ", ".join(f"{h['id']} {h['hitH']}px (pill {h['visH']}px)" for h in short[:4])
                   or f"{len(hits)} controls, shortest {min(h['hitH'] for h in hits)}px")
+
+    # THE TWO PAGES THIS SECTION NEVER WALKED (owner, from an iPhone).
+    #
+    # Everything above measures Pad and Flip. /library and /gallery were never
+    # in it, and neither had ever been measured against the floors this file
+    # decides. What was there when they finally were:
+    #
+    #   /library  the row × answered 23x23 -- the smallest control in the app,
+    #             directly above Delete. The × forgets a row; Delete takes the
+    #             Skribl down for everyone.
+    #             the five action buttons, 33 (an explicit min-height: 32px)
+    #             the row's own title link, 41
+    #   /gallery  the in-post player's loop pill, 31 -- and that control ships
+    #             in every host embed, not just here
+    #
+    # None of it width-dependent: identical at 375, 390 and 430. A gate that
+    # covers two of four pages is not a policy, it is a habit that stopped.
+    #
+    # CALIBRATED PER COMPONENT, seven of them, each reverted on its own against
+    # this block. Every one went red on the row named, and no row is carried by
+    # another component's fix:
+    #
+    #   the × loses its pill and band        tap row     posted-del 23px (pill 22)
+    #   action buttons back to min-height 32 SEE row     four at 32px
+    #   the chips lose their 34px minimum    SEE row     three at 28px
+    #   the strip loses its ::before band    tap row     four at 35px (pill 34)
+    #   the row goes back to flex-wrap       one-line    tops [378, 389, 495]
+    #   the transport pills lose their band  tap row     loop 31px (pill 30)
+    #   the fixture, on an empty database    tile row    0 players -- and the two
+    #                                                    floor rows stayed GREEN
+    #                                                    on 6 controls, which is
+    #                                                    the vacuous pass the
+    #                                                    tile row exists to catch
+    print("\nLAYOUT 3b — the pages the floor never reached")
+
+    # A GALLERY WITH NO TILES MEASURES THE HEADER AND PASSES. The first run of
+    # this block found six controls on /gallery -- the brand, two tabs, search
+    # and Retry -- because the harness database has no public posts, so the
+    # loop pill this section exists to catch was not on the page at all. One
+    # public post is the fixture, and the tile count is asserted before the
+    # floor is, so "0 under 44" can never again mean "nothing was there".
+    _seedpg = ctx.new_page()
+    browsing.goto(_seedpg, BASE, "/skribl-pad")
+    _posted = _seedpg.evaluate(GALLERY_FIXTURE)
+    _seedpg.close()
+    check("gallery fixture: a public Skribl exists to draw tiles from",
+          _posted in (200, 201),
+          f"POST /api/skribls answered {_posted} — without a tile the rows "
+          f"below measure the header and prove nothing")
+
+    for label, path, seed in (("library", "/library", SEED_POSTED),
+                              ("gallery", "/gallery", None)):
+        for w in (360, 390, 430):
+            page = ctx.new_page()
+            page.set_viewport_size({"width": w, "height": 900})
+            browsing.goto(page, BASE, path)
+            if seed:
+                page.evaluate(seed)
+                page.reload(wait_until="load")
+            page.wait_for_timeout(1200)
+            hits = page.evaluate(PAGE_HIT_GEOMETRY)
+            page_tiles = page.evaluate(
+                "() => document.querySelectorAll('.skribl-inline').length")
+            rowy = page.evaluate(ROW_LINE) if seed else None
+            page.close()
+            if not hits:
+                check(f"{label} @{w}px — found controls to hit-test", False,
+                      "an empty page measures nothing and passes everything")
+                continue
+            if label == "gallery":
+                _tiles = page_tiles
+                check(f"gallery @{w}px — tiles are on the page to measure",
+                      _tiles > 0,
+                      f"{_tiles} in-post players; the loop pill only exists on "
+                      f"a tile, so an empty gallery cannot fail the floor")
+            short = [h for h in hits if h["hitH"] < HIT_TOUCH_PX]
+            check(f"{label} @{w}px every control answers a tap {HIT_TOUCH_PX}px tall",
+                  not short,
+                  ", ".join(f"{h['id']} {h['hitH']}px (pill {h['visH']}px)"
+                            for h in short[:4])
+                  or f"{len(hits)} controls, shortest {min(h['hitH'] for h in hits)}px")
+
+            # AND THE VISIBLE FLOOR, WHICH THE HIT FLOOR DOES NOT IMPLY. The
+            # band is invisible, so a page can answer 44 to a finger with a
+            # 22px pill -- a target you cannot see to aim at, on a list whose
+            # neighbours delete things. Both of the numbers this section
+            # found were hiding behind a band that was already there: the
+            # library's action buttons said `min-height: 32px`, under even
+            # the visible floor, and its filter chips measured 28 with a 44px
+            # ::before over them since the day they were written.
+            #
+            # THE EXEMPTION IS NAMED, NOT THE PAGE. The in-post player's
+            # transport pills stay 30px on purpose: a feed tile is small and
+            # two 44px slabs over somebody's drawing is a different product,
+            # so there the band IS the fix. Exempting /gallery wholesale --
+            # the first draft -- would have bought that one decision at the
+            # price of never measuring the other nine controls on the page.
+            EXEMPT_VIS = ("skribl-inline-loop", "skribl-inline-mute")
+            small = [h for h in hits
+                     if h["visH"] < MIN_TOUCH_PX
+                     and not any(c in h["id"] for c in EXEMPT_VIS)]
+            check(f"{label} @{w}px ...and every pill is {MIN_TOUCH_PX}px you can SEE",
+                  not small,
+                  ", ".join(f"{h['id']} {h['visH']}px" for h in small[:4])
+                  or f"{len(hits)} controls, smallest countable "
+                     f"{min([h['visH'] for h in hits if not any(c in h['id'] for c in EXEMPT_VIS)] or [0])}px")
+
+            # THE TITLE LINE IS STRUCTURAL, which it was not until the row
+            # became a grid. `.posted-sub` is `white-space: nowrap`, so
+            # `.posted-main`'s flex base was the whole meta string and a
+            # wrapping flex line pushes rather than squeezes -- so which item
+            # fell off depended on how long THAT ROW's meta happened to be:
+            # a long one dropped the text block under the thumbnail, a shorter
+            # one dropped the × alone to the left, a shorter one still was
+            # fine. One page, three shapes, row by row.
+            if rowy and rowy.get("thumb") is not None:
+                line = [rowy["thumb"], rowy["main"], rowy["del"]]
+                check(f"library @{w}px the thumb, the title and the × share one line",
+                      max(line) - min(line) < 40,
+                      f"tops {line} — a spread this large means one of them "
+                      f"wrapped, which is the defect the grid replaced")
+                check(f"library @{w}px ...and the actions are BELOW it",
+                      rowy["acts"] > max(line),
+                      f"actions top {rowy['acts']} against title line {max(line)}")
 
     # ------------------------------------------------------------ section 4
     print("\nLAYOUT 4 — leaving Pad cannot silently discard work")

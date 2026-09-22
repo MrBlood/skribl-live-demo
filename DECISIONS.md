@@ -10009,3 +10009,220 @@ no separate entry point, not as a number to drive to zero.
 of whether the work is worth it. Writing the measurement next to the number
 turns "5 is not 0" into a decision somebody can make, which is the point of
 measuring.
+
+## Unsealed, on top of v306, cont. -- the library row, from an iPhone
+
+The owner sent two photographs of a real phone and three of Chrome's device
+emulation. On the phone, one row in Your Skribls was laid out differently from
+the row above it. Same page, same template, same stylesheet.
+
+**FLEX WRAPS BEFORE IT SHRINKS, and that is the whole defect.** `.posted-sub`
+is `white-space: nowrap` on purpose -- the meta line ("replay . 13 hours ago .
+in the gallery") is the row's identity and must not ellipsise into nothing. So
+`.posted-main`'s flex base size is the FULL width of whatever that string
+happens to be, and a wrapping flex line moves the item that does not fit onto
+the next line rather than squeezing the items already on it. Which item moved
+therefore depended on how long that particular row's meta string was:
+
+    "replay . 13 hours ago . in the gallery"   the TEXT BLOCK dropped below
+                                                the thumbnail
+    "6 pages . 1 day ago . in the gallery"     the x dropped, alone, to the
+                                                left, under nothing
+    "replay . last week . link only"           correct
+
+Three shapes on one page, row by row. The old comment at that media query
+promised "the x keeps the title line's right edge"; it was asserted in prose
+and enforced by nothing.
+
+**A grid makes the title line structural.** Three columns -- `auto minmax(0,
+1fr) auto` -- so the thumb, the text and the x are on row 1 at every width and
+every meta length, and `minmax(0, 1fr)` is what finally lets the text
+ellipsise instead of shoving its neighbours off the line. The actions span all
+three columns on row 2. No `order`, no `flex-basis: 100%`, nothing that
+depends on measuring.
+
+**And the indent is given back below 400px.** Indenting the action strip past
+the thumbnail makes it read as this row's rather than the list's, which is
+worth 52px in the drawer and 94px on /library -- until 94px of a 360px row is
+what pushes five buttons onto a second line. Below 400 it is returned. The
+breakpoint is where the strip stopped fitting, not a round number: the owner's
+own report was "at 421px it all seems to fit the way it was intended".
+
+**THE TOUCH-TARGET FLOOR HAD NEVER BEEN APPLIED TO THESE TWO PAGES**, which is
+the finding worth more than the layout. SK-AUD-005 decided 34px visible and
+44px to a finger, and `verify_layout`'s touch-target section walked Pad and
+Flip -- the two editors -- and nothing else. /library and /gallery were built
+after it and were never added. Measured: 14 controls under the floor on
+/library and 3 on /gallery. The smallest was the row's own x, at 22x22, the
+smallest control in the application, sitting directly above Delete. The x
+forgets a row; Delete takes the Skribl down for everyone.
+
+The fix is the `--tap-grow` `::before` band this project already uses, plus a
+34px minimum on the pill itself, plus `min-height: 34px` on the library's
+action buttons where the page's own sheet had said 32 -- under even the
+VISIBLE floor. Both pages now read 0 controls under 44.
+
+**The band is vertical only, and the reason is worth keeping.** These controls
+sit in a 6px-gapped strip. A band on the sides would overlap the neighbour's,
+and which control a tap lands on would then depend on paint order. Height is
+the floor that matters (44 is Apple's number, and it is about a fingertip, not
+a rectangle); the width is the pill plus whatever is free beside it -- the same
+rule `verify_layout` already states for the editors' packed rows.
+
+**The row gap had to go to 12 for the same reason.** The action strip wraps to
+two lines on a phone; with a 6px row gap, the 6px bands of the two rows met in
+the middle and whichever button came later in the DOM took the overlap. Copy
+link -- first button, with Copy key directly beneath it -- measured 40 while
+its four neighbours measured 45. 12 is exactly two bands: they touch and never
+overlap.
+
+**THE COMMENT COST MORE THAN THE RULE.** The gallery half of this lives in
+`inlineplayer.css`, which is inside the in-post player's byte ratchet, and the
+first draft of the note beside that two-line rule was seven lines and 470 B.
+jsstrip strips JavaScript comments; nothing strips CSS comments, and a
+stylesheet a host downloads carries every character of its prose. The sheet
+now carries one line and the reasoning is here. In a file inside somebody
+else's byte budget, the habit of explaining generously has to invert.
+
+The ratchet moved 35,700 -> 35,900, measured 35,814. Fourth raise; all four
+bought the same sentence, that the embed must not be a worse product than the
+real thing. The pill stays 30px -- two 44px slabs over a small tile is a
+different product -- and only the band grows, which costs no pixels.
+
+**What generalises:** a gate that names the surfaces it walks will not notice
+a surface that did not exist when it was written. `verify_layout`'s floor was
+not wrong; it was complete for a tree with two pages in it. The new section
+loops the page list, so /library and /gallery are now in it by construction --
+and it asserts a tile exists on /gallery before trusting the floor row, because
+the first version of that arm measured six controls on an empty page and
+called it a pass.
+
+**And the gate found two more while being written.** Extending it turned up a
+control nobody had measured and a floor nobody had asserted. The library's
+filter chips are 28px tall with a 44px `::before` band over them, so they have
+always answered a tap and have never been big enough to aim at -- the hit
+floor alone would have called them fine forever. The visible floor now runs on
+both pages, with the exemption written per CONTROL rather than per page: the
+in-post transport pills are named and stay 30px, and the other nine controls
+on /gallery are measured, where the first draft exempted the whole page for
+one decision's sake.
+
+Seven components, seven separate mutations, each red on its own row and no row
+carried by a neighbour's fix; the table is in `verify_layout.py` beside the
+section. The seventh is the one worth naming: with the fixture disabled on an
+empty database, the tile row goes red while both floor rows stay GREEN on six
+controls. That is the pass this block was returning before the fixture existed.
+
+## Unsealed, on top of v306, cont. -- the search box that grew when you tapped it
+
+The owner, from a phone: the library search magnifies. It is iOS Safari's
+focus zoom -- below 16px on a focused text control, Safari scales the whole
+page up and does not reliably scale it back, so you type one word and are left
+panning a magnified screen.
+
+**THE RULE WAS ALREADY IN THE TREE AND ENFORCED NOWHERE.** `styles.css` has
+carried it at `.zoom-hud .zoom-val-input` since the zoom HUD was written --
+"Keep it exactly 16px -- do NOT lower this" -- and every field in both editors
+is 16. The profile page was written later, with its own stylesheet, and its
+`.search input` is 12.5px. Nothing connected the two. A rule that lives in a
+comment holds until somebody writes a new sheet, and this project now has four
+pages that deliberately do not load `styles.css`.
+
+So it is a gate: `verify_a11y`'s A11Y 11b, reading the COMPUTED font size on
+the real element -- not grepping a stylesheet for `font-size`, because the
+value that matters is the one that wins after the cascade, and because this
+repository has a rule about matching the mechanism rather than the word.
+
+**AND IT HAD TO DRIVE THE PAGE TO FIND THE FIELD THE RULE CAME FROM.** A
+closed drawer's input is in the markup and computes a size, so a DOM walk
+covers it. Two fields are not in the markup at all until something builds
+them: the recovery overlays, which `lib/recoverykey.js` appends to `<body>`,
+and the zoom HUD's %, which the editors replace with an `<input>` on click.
+The first draft of the section walked the DOM and stopped there. Dropping
+`.zoom-val-input` to 13px left **both editors green** -- a gate blind to the
+one field the tree had already documented, which is worse than no gate,
+because it would have been cited. It clicks `#zoomVal` and opens the recovery
+overlay before measuring now, and the same mutation goes red on both editors.
+
+**The other way to stop the zoom is the wrong one.** `maximum-scale=1` and
+`user-scalable=no` also prevent it, and they do it by taking pinch-zoom away
+from everybody -- which is exactly the defect A11Y 11 was written to catch
+after Flip shipped `user-scalable=no` on the surface with the smallest
+controls. The two sections are each other's guard rail: satisfy 11b that way
+and 11 goes red.
+
+Calibration, three components: the library search back to 12.5 reddens the
+library row; `.zoom-val-input` to 13 reddens both editors; an `<input>` added
+to the player reddens the player's row, which asserts the property that page
+actually has -- it has no text control at all -- rather than a floor over an
+empty list, which would pass forever.
+
+**What generalises:** a constant that is correct in five places and written
+down in one comment is not a policy, it is five coincidences. The tell is a
+new surface that does not load the old stylesheet; this tree now has four of
+those, and each one is a fresh chance to not inherit something.
+
+## Unsealed, on top of v306, cont. -- SILENT on a Skribl with music
+
+The owner, from /library: the stage said SILENT under a Skribl that has sound.
+
+**THE FIELD DID NOT EXIST.** `lib/posted.js`'s `add()` records id, url, title,
+kind, pages, visibility, key, local and a timestamp -- and no audio flag, ever.
+So every browser-kept row read `e.has_audio` as `undefined`, and `library.js`
+rendered `item.has_audio ? 'with sound' : 'silent'`, which turns "nobody said"
+into a claim. Every row this browser had posted said SILENT, music or not.
+
+**THE ANSWER COMES FROM THE SERVER, because the client should not be asked.**
+The create response now carries `hasAudio`, from the same `_payload_has_audio()`
+the post itself was measured with and the same value `feed_dict()` reports, so
+a row and a listing cannot disagree about one post. The alternative -- having
+each editor look at its own payload -- would be a third implementation of a
+question already answered twice.
+
+**AND THE STORE KEEPS THREE STATES, because it genuinely has three.** The
+server said yes, the server said no, or nothing answered: a local save, a
+recovered key, or a row written before the field existed. Null renders as
+nothing, the same way an unknown `kind` already does. `!!entry.has_audio` at
+either end collapses the last two into false, which IS the defect.
+
+The same rule fixed a smaller lie beside it: `recoverykey.js` added a recovered
+entry as `kind: 'pad', pages: 1` -- a guess dressed as a fact, so a recovered
+Flip listed itself as a replay with a pencil on it. A recovered entry knows an
+id and a key; everything else is null now.
+
+**A MUTATION FOUND THE HALF THAT WAS PINNED BY NOTHING.** The first draft of
+the pin seeded the store directly with the three values and drove the stage,
+which proves the client's rendering and proves nothing about where the value
+comes from: deleting `body["hasAudio"]` from the create response left every row
+GREEN. The response is now asserted on its own terms, through two real posts --
+one carrying audio bytes, one not -- and the second of those is what stops a
+response that always says True from passing.
+
+## Unsealed, on top of v306, cont. -- a Skribl can be watched full size from the gallery
+
+The profile's stage has a fullscreen control and `/s/<id>` has one. The page
+where the drawings actually are had none, and its transport stays on screen
+while a Skribl plays, so there was no way to see one big (owner).
+
+One per tile, beside Report, 44px square, and present only where the API is --
+iPhone Safari has fullscreen for `<video>` alone, and a control that did
+nothing there would be worse than not having one, which is the rule
+`library.js` already states at its own.
+
+**THE WRAPPER TAKES THE DISPLAY, NOT THE COMPONENT.** This page's standing note
+says "Not one rule touches `.skribl-inline`: the component is the component",
+and a `:fullscreen` rule on it would be exactly that. `gallery.js` wraps each
+player in `.tileStage`; the wrapper goes fullscreen and the component sizes
+itself inside it -- the same shape the profile's `.stageCanvasWrap` uses.
+
+**And it does NOT restate 16/9, which the profile's rule does.** That rule's own
+comment admits the number is a copy of the one in `inlineplayer.css` and that
+nothing gates the pair. The component already carries `aspect-ratio`, so giving
+it `height: 100%; max-width: 100%` lets the ratio resolve the other side and
+there is no pair to gate. `verify_gallery` asserts the absence by parsing the
+rule body rather than searching the file for a number that also appears in the
+prose explaining it -- which is this tree's rule about checks for absence.
+
+Six components calibrated, each reverted alone: the server's field, the store's
+third state, `library.js`'s two-state render, the badge, the gallery control,
+and the restated ratio. Every one red on its own row.

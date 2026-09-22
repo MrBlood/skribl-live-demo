@@ -716,6 +716,15 @@ def register_routes(bp, *, index_route=False):
         #
         # Absent for an owned post: that one is authorised by its owner and a
         # second credential would only be something else to leak.
+        # WHETHER IT HAS SOUND, from the server's own reading of the payload.
+        # The client that just posted cannot be trusted to answer this and was
+        # never asked: lib/posted.js stored no audio flag at all, so every
+        # browser-kept row rendered `has_audio` as undefined and the profile
+        # page labelled every one of them SILENT -- including the ones with
+        # music (owner, from /library). Same value _payload_has_audio() computed
+        # a moment ago and the same one feed_dict() reports, so the row and the
+        # listing cannot disagree.
+        body["hasAudio"] = bool(made.post.has_audio)
         if made.delete_token:
             body["deleteToken"] = made.delete_token
         return jsonify(body), 201

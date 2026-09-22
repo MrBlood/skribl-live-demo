@@ -50,6 +50,18 @@
     ' stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
 
+  /* HAS SOUND. Top right, opposite the kind badge at bottom left, because the
+     two answer different questions and stacking them in one corner makes both
+     harder to read. Only drawn where the answer is KNOWN to be yes: a null
+     (a local save, a recovered key, a row written before the store carried the
+     field) shows nothing rather than claiming silence, which is the bug this
+     badge shipped alongside the fix for. */
+  var ICON_SOUND =
+    '<svg class="posted-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+    ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>' +
+    '<path d="M19.5 5.5a9 9 0 0 1 0 13"/></svg>';
+
   /* The entry, so the click handler works from stored state rather than from
      what the DOM happens to say. */
   function byId(id) {
@@ -361,7 +373,8 @@
              is marked with the book everywhere else in the app. */
           '<span class="posted-thumb posted-thumb-' + esc(e.kind || 'any') + '" aria-hidden="true">' +
             (poster ? '<img class="posted-poster" src="' + esc(poster(e.id)) + '" alt="" loading="lazy" decoding="async">' : '') +
-            (e.kind === 'flip' ? ICON_FLIP : e.kind === 'pad' ? ICON_PAD : '') + '</span>' +
+            (e.kind === 'flip' ? ICON_FLIP : e.kind === 'pad' ? ICON_PAD : '') +
+            (e.has_audio === true ? ICON_SOUND : '') + '</span>' +
           /* HONOURS player_target, which it did not until v281. __init__.py
              names this link as one of the three "watch it" paths and says
              _blank is their DEFAULT and that a host passing _self "takes

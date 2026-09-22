@@ -337,7 +337,13 @@
       var base = global.SKRIBL_PLAYER_BASE || '';
       var kept = global.SkriblPosted.add({
         id: v.id, url: base ? base + '/' + v.id : null,
-        title: 'Recovered Skribl', kind: 'pad', pages: 1, tok: v.key
+        /* WHAT A RECOVERED ENTRY ACTUALLY KNOWS: an id and a key. `kind:
+           'pad', pages: 1` was a guess dressed as a fact -- a recovered Flip
+           listed itself as a replay with a pencil on it -- and `has_audio`
+           is unknown for the same reason. Null all three; the row says only
+           what it can support. */
+        title: 'Recovered Skribl', kind: null, pages: 0, has_audio: null,
+        tok: v.key
       });
       if (global._skriblPostedUI) global._skriblPostedUI.render();
       /* The key is NOT verified against the server here, and saying so matters:

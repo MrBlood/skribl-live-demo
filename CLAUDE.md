@@ -32,6 +32,23 @@ in the PR: that local run is what justifies CI's PR-side trim (below).
   skribl/static/player.css`.
 - All work goes on the branch the session names; it is reused across PRs.
 
+**A TEXT CONTROL UNDER 16px MAKES iOS MAGNIFY THE PAGE, and it is a gate now
+because it was a comment before.** iOS Safari zooms the whole page when a
+focused input computes under 16px and does not reliably zoom back, so the
+person types one word and is left panning. `styles.css` has said so at
+`.zoom-hud .zoom-val-input` since the zoom HUD was written; the profile page
+was written later with its own sheet, never inherited the rule, and shipped a
+12.5px search field. **Any new surface, any new stylesheet: every `input`,
+`textarea` and `select` that takes text is at least 16px.** `verify_a11y`'s
+A11Y 11b reads the COMPUTED size on the real element, on all five pages, and
+drives open the two fields that are built on demand (the recovery overlays and
+the zoom HUD's %) — the first draft missed the second and went green on a 13px
+mutation of the very rule the floor came from.
+
+And never `maximum-scale=1` or `user-scalable=no`. That is the other way to
+stop the zoom and it takes pinch-zoom away from everybody; A11Y 11 fails any
+page that tries it, so the two sections are each other's guard rail.
+
 **Gates that bite, in `verify_docs.py`:** every `lib/*.js` must be named in
 some `.md` (the shared-module index in START-HERE.md is where); no document
 may name a repo file that is not there; no doc may hand-type a tree hash or

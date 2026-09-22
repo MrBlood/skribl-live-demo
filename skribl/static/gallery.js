@@ -82,6 +82,44 @@
     /* The macro rendered the poster URL with the placeholder in it, so the
        real one is that same server-built path with the id substituted — no
        path is assembled here, which keeps this correct under a url_prefix. */
+    /* FULL SCREEN, PER TILE (owner: "since the controls stay on the screen
+       when playing, there should be a way to watch full size"). The gallery
+       had no way to watch a drawing big: the profile stage has one, /s/<id>
+       has one, and the page where the drawings actually are had none.
+
+       THE WRAPPER IS FULLSCREENED, NOT THE PLAYER. This page's own comment
+       says "Not one rule touches .skribl-inline: the component is the
+       component", and a `:fullscreen` rule on it would be exactly that. The
+       wrapper takes the display and the component sizes itself inside it,
+       which is the same shape the profile's .stageCanvasWrap uses.
+
+       The button exists only where the API does. iPhone Safari has fullscreen
+       for <video> alone, and a control that did nothing there would be worse
+       than not having one — the same rule library.js states at its own. */
+    var stage = document.createElement('div');
+    stage.className = 'tileStage';
+    var fsEl = function () { return document.fullscreenElement || document.webkitFullscreenElement || null; };
+    var fsReq = stage.requestFullscreen || stage.webkitRequestFullscreen;
+    if ((document.fullscreenEnabled || document.webkitFullscreenEnabled) && fsReq) {
+      var full = document.createElement('button');
+      full.type = 'button';
+      full.className = 'tileFull';
+      full.title = 'Full screen';
+      full.setAttribute('aria-label', 'Watch ' + (item.title || 'this Skribl') + ' full screen');
+      full.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+        + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>'
+        + '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+      full.addEventListener('click', function () {
+        if (fsEl() === stage) {
+          (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+          return;
+        }
+        try { var p = fsReq.call(stage); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      });
+      head.insertBefore(full, rep);
+    }
+
     var frag = tpl.content.cloneNode(true);
     var box = frag.querySelector('[data-skribl-inline]');
     box.setAttribute('data-skribl-id', item.id);
@@ -90,7 +128,8 @@
       poster.setAttribute('src', poster.getAttribute('src').replace('__ID__', encodeURIComponent(item.id)));
       poster.setAttribute('alt', item.title || 'A Skribl');
     }
-    art.appendChild(frag);
+    stage.appendChild(frag);
+    art.appendChild(stage);
 
     if (item.caption) {
       var tc = document.createElement('p');

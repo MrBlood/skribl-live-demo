@@ -204,12 +204,28 @@
     .libhead h2 { font-size: 15px; font-weight: 700; letter-spacing: .02em; margin: 0; color: var(--text); }
     .libhead .cnt { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
     .chips { display: flex; gap: 7px; margin-left: auto; }
-    .chip { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .04em; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--hairline); background: transparent; color: var(--text-2); cursor: pointer; transition: .15s; }
+    /* min-height 34 is the VISIBLE floor (SK-AUD-005). These measured 28 —
+       padding and a 11.5px line and nothing asking for more. The ::before
+       band below already gave them 44 to a finger, which is why nothing
+       noticed: a control can answer a tap and still be too small to aim
+       at, and an invisible band is no help to the eye. */
+    .chip { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .04em; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--hairline); background: transparent; color: var(--text-2); cursor: pointer; transition: .15s;
+      min-height: 34px; display: inline-flex; align-items: center; }
     .chip:hover { border-color: #34506a; color: var(--text); }
     .chip.active { background: var(--accent); border-color: transparent; color: #0b0616; font-weight: 600; }
     .search { position: relative; }
     /* min-height 44: an input has no ::before to grow a tap band with, so the box is the box. */
-    .search input { width: 180px; max-width: 44vw; min-height: 44px; box-sizing: border-box; font-family: var(--font-mono); font-size: 12.5px; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 12px 7px 30px; outline: none; }
+    /* 16px, NOT 12.5. Below 16 iOS Safari magnifies the whole page when the
+       field takes focus and does not reliably zoom back, so you type one word
+       and are left panning a magnified screen -- the owner's report was that
+       the library search grows when you tap it. styles.css has said this at
+       .zoom-hud .zoom-val-input since the zoom HUD was written; this page has
+       its own sheet and never inherited the rule, which is why the rule is now
+       a gate (verify_a11y, A11Y 11b) and not only a comment.
+       The field is a little wider to hold the same words at the larger size.
+       NOT fixed with maximum-scale=1: that takes pinch-zoom away from
+       everybody, and A11Y 11 fails any page that tries it. */
+    .search input { width: 200px; max-width: 48vw; min-height: 44px; box-sizing: border-box; font-family: var(--font-mono); font-size: 16px; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 12px 7px 30px; outline: none; }
     .search input:focus { border-color: var(--accent); }
     .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-3); }
   
@@ -259,9 +275,17 @@
     .posted-thumb { width: 84px; height: 63px; border-radius: 8px; overflow: hidden; background: #0b0d12; position: relative; }
     .posted-thumb .posted-poster { position: absolute; left: 50%; transform: translateX(-50%); top: -5.4878%; height: 128.0488%; width: auto; max-width: none; }
     /* The kind's icon as a badge over the poster: a Flip is marked with the
-       book here as everywhere else. */
-    .posted-thumb svg { position: absolute; left: 4px; bottom: 4px; width: 14px; height: 14px; padding: 3px;
-      border-radius: 6px; background: rgba(6,7,10,.7); color: #dfe6f2; }
+       book here as everywhere else. 18, not 14 -- at 14 with 3px of padding the
+       pen and the book were a smudge on an 84px poster and the owner could not
+       tell them apart. The badge is not a control, so no touch floor applies;
+       it only has to be legible. */
+    .posted-thumb svg { position: absolute; left: 4px; bottom: 4px; width: 18px; height: 18px; padding: 3px;
+      border-radius: 6px; background: rgba(6,7,10,.72); color: #dfe6f2; }
+    /* Sound, top right -- the opposite corner, because it answers a different
+       question from the kind and two badges in one corner read as one blob.
+       The dot is the "yes" and the ring keeps it off the drawing. */
+    .posted-thumb svg.posted-sound { left: auto; right: 4px; bottom: auto; top: 4px;
+      color: #7ee2a8; background: rgba(6,7,10,.72); }
     .posted-count { margin: 0 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
     /* Tap targets on this page (verify_a11y's census): the foot's two text
        buttons and the filter chips are small by design, so each carries a
@@ -272,14 +296,21 @@
     .chip::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
     .posted-title { font-size: 14px; font-weight: 600; }
     .posted-sub { font-family: var(--font-mono); }
-    .posted-actions button { min-height: 32px; }
+    /* 34 is the VISIBLE floor (SK-AUD-005); the 44 a finger gets comes from
+       the ::before band in posted.css. This said 32 — under even the
+       visible floor — and /library was never in the gate that would have
+       said so. */
+    .posted-actions button { min-height: 34px; }
     .posted-gallery { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
       border: 1px solid var(--hairline-strong); color: var(--text-secondary); padding: 5px 9px; border-radius: 8px; cursor: pointer; }
     .posted-gallery.on { color: var(--accent-tint); border-color: rgba(124,92,255,0.5); background: rgba(124,92,255,0.12); }
     .posted-share { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
       border: 1px solid var(--hairline-strong); color: var(--text-secondary); padding: 5px 9px; border-radius: 8px; cursor: pointer; }
     .posted-foot-top { border-bottom: 1px solid var(--hairline); margin-bottom: 12px; padding: 0 0 10px; }
+    /* 94, not 52: this page's thumb is 84px wide, not the drawer's 42. Given
+       back below 400px with the sheet's own rule — see posted.css. */
     @media (max-width: 640px) { .posted-row-keyed .posted-actions, .posted-row-many .posted-actions { padding-left: 94px; } }
+    @media (max-width: 399px) { .posted-row-keyed .posted-actions, .posted-row-many .posted-actions { padding-left: 0; } }
     .empty { grid-column: 1 / -1; text-align: center; color: var(--text-3); font-family: var(--font-mono); font-size: 13px; padding: 40px 0; }
     .state { text-align: center; color: var(--text-3); font-size: 14px; line-height: 1.7; padding: 36px 0; margin: 0; }
     .state b { color: var(--text-2); font-weight: 600; }
