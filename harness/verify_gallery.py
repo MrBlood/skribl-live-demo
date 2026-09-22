@@ -584,6 +584,42 @@ with sync_playwright() as _spk:
           _a11y["marks"] > 0 and _a11y["hidden"] and _a11y["offscreen"],
           f"{_a11y} — a visible .tileSr would print the sentence twice, and an "
           f"unhidden glyph would announce as an empty image")
+    # ...AND NEITHER MARK SITS ON A CONTROL. The kind badge was placed at
+    # bottom left because that is where the profile's row puts it -- but a
+    # row has nothing underneath, and a tile has the in-post player, whose
+    # control cluster is at left 9 / bottom 9. So the pen or the book was
+    # drawn on top of play, mute and loop on every tile (owner's
+    # screenshot). Both badges moved to the top edge.
+    #
+    # ASSERTED AS AN INTERSECTION OF THE TWO LIVE RECTS, not as "the badge
+    # is at the top": the overlap is the defect and the corner is only the
+    # current fix, so a later change that moves the transport instead
+    # should fail this too. The cluster is measured while it is invisible
+    # (opacity 0 until hover or play), which is fine -- opacity does not
+    # move a box, and a control that is one hover away from visible is one
+    # hover away from being covered.
+    _over = _pk.evaluate("""() => {
+        const hit = (a, b) => !(a.right <= b.left || b.right <= a.left ||
+                                a.bottom <= b.top || b.bottom <= a.top);
+        const out = { pairs: 0, over: [] };
+        document.querySelectorAll('.tile').forEach(t => {
+          const c = t.querySelector('.skribl-inline-controls');
+          if (!c) return;
+          const cr = c.getBoundingClientRect();
+          if (!cr.width || !cr.height) return;
+          t.querySelectorAll('.tileMark').forEach(k => {
+            const kr = k.getBoundingClientRect();
+            if (!kr.width) return;
+            out.pairs++;
+            if (hit(kr, cr)) out.over.push(t.getAttribute('data-id') + '/' +
+                                           (k.getAttribute('class') || ''));
+          });
+        });
+        return out; }""")
+    check("no mark is drawn over the tile player's transport",
+          _over["pairs"] > 0 and not _over["over"],
+          f"{_over['pairs']} badge/cluster pairs measured, overlapping on {_over['over']}"
+          " — zero pairs would mean this measured nothing at all")
     # TOOLTIPS, which this page had none of (owner). The module is loaded and
     # started here; it moves every `title` to `data-tip` and draws its own.
     # Asserted on data-tip, not on `title`, because the module REMOVES the

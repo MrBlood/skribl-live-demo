@@ -173,11 +173,22 @@
     .replay-nib { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.25); transform: translate(-50%,-50%); opacity: 0; pointer-events: none; }
     .pmeta { padding: 13px 16px 4px; }
     .pmeta .ptitle { font-size: 18px; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
-    .pmeta .prow { display: flex; align-items: center; gap: 10px; margin-top: 6px; color: var(--text-2); font-family: var(--font-mono); font-size: 12px; }
+    .pmeta .prow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; color: var(--text-2); font-family: var(--font-mono); font-size: 12px; }
     .kind { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--hairline); color: var(--text-2); }
     .kind svg { width: 12px; height: 12px; }
     .kind.pad { color: #ffd7ea; border-color: #5a2a44; background: rgba(255,72,176,.08); }
     .kind.flip { color: #cfe0ff; border-color: #26406a; background: rgba(0,120,191,.10); }
+    /* WHICH WAY IT WAS POSTED, on the meta line -- not on a line of its own.
+       It was the only thing ever put inside `.pstats`, a block built for a
+       social-count row this page does not render, so "in the gallery" sat
+       alone under the title with 10px of margin above it (owner's
+       screenshot). It is the third fact about the post, beside the sound pill
+       and the age, and it belongs beside them.
+       The dot is DECORATION and deliberately a pseudo-element: the accessible
+       name of this span is the word, and `content` keeps the punctuation out
+       of it. `hidden` is what empties it -- a bare `textContent = ''` would
+       leave the dot behind, which is the empty-pill bug one line up. */
+    #pVis::before { content: '\00B7'; margin-right: 10px; color: var(--text-3); }
     /* A control that cannot act says so rather than looking live (PRESEAL-005). */
     .tbtn:disabled { opacity: 0.4; cursor: default; }
     .scrub[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
@@ -257,37 +268,56 @@
     .card .ct { font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; margin-bottom: 5px; }
     .card .cm { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
     .card .cm .dur { color: var(--text-2); }
-    /* Social counts — the skribls.net post model (like / repost / reply). */
-    .st { display: flex; align-items: center; gap: 12px; margin-top: 8px; font-family: var(--font-mono);
+    /* Social counts — the skribls.net post model (like / repost / reply).
+       SCOPED TO .card, and the scope is the point rather than the style:
+       unscoped, `.st` also matched the one `<path class="st">` inside the
+       brand mark, which this page's header includes -- a page rule reaching
+       into a shared component's internals by accident, which is the shape of
+       bug verify_inline's gate caught on the gallery a release ago. Two
+       letters is too short a name to leave loose in a page stylesheet. */
+    .card .st { display: flex; align-items: center; gap: 12px; margin-top: 8px; font-family: var(--font-mono);
       font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
-    .st span { display: inline-flex; align-items: center; gap: 4px; }
-    .st svg { width: 13px; height: 13px; }
-    .st .like { color: #ff7fb2; }
-    .pstats { display: flex; align-items: center; gap: 16px; margin-top: 10px; font-family: var(--font-mono);
-      font-size: 12.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
-    .pstats span { display: inline-flex; align-items: center; gap: 6px; }
-    .pstats svg { width: 15px; height: 15px; }
-    .pstats .like { color: #ff7fb2; }
+    .card .st span { display: inline-flex; align-items: center; gap: 4px; }
+    .card .st svg { width: 13px; height: 13px; }
+    .card .st .like { color: #ff7fb2; }
+    /* `.pstats` was here and is gone with the div it styled: see #pVis above. */
   
     /* The rows on this page: a list with a poster, not a tray in a drawer. */
     .posted-panel { display: flex; flex-direction: column; }
     .posted-list { padding: 0; overflow: visible; }
     .posted-row { padding: 10px; }
     .posted-row.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-    .posted-thumb { width: 84px; height: 63px; border-radius: 8px; overflow: hidden; background: #0b0d12; position: relative; }
+    /* THE CLIP IS ON .posted-shot AND NOT ON THE THUMB, which is what lets a
+       badge hang off the corner. The poster is a share card scaled 128.0488%
+       and pulled up 5.4878% so the wordmark falls outside (lib/sharecard.js
+       band()), so it overflows the box by ~30px a side and SOMETHING has to
+       clip it -- but `overflow: hidden` on the thumb clipped the badges with
+       it, and a speaker tucked inside an 84px poster is the small one the
+       owner could not read. One wrapper around the picture alone separates
+       the two jobs; the drawer emits no poster, so it emits no wrapper. */
+    .posted-thumb { width: 84px; height: 63px; border-radius: 8px; overflow: visible; background: #0b0d12; position: relative; }
+    .posted-thumb .posted-shot { position: absolute; inset: 0; border-radius: 8px; overflow: hidden; }
     .posted-thumb .posted-poster { position: absolute; left: 50%; transform: translateX(-50%); top: -5.4878%; height: 128.0488%; width: auto; max-width: none; }
     /* The kind's icon as a badge over the poster: a Flip is marked with the
        book here as everywhere else. 18, not 14 -- at 14 with 3px of padding the
        pen and the book were a smudge on an 84px poster and the owner could not
        tell them apart. The badge is not a control, so no touch floor applies;
-       it only has to be legible. */
-    .posted-thumb svg { position: absolute; left: 4px; bottom: 4px; width: 18px; height: 18px; padding: 3px;
-      border-radius: 6px; background: rgba(6,7,10,.72); color: #dfe6f2; }
-    /* Sound, top right -- the opposite corner, because it answers a different
-       question from the kind and two badges in one corner read as one blob.
-       The dot is the "yes" and the ring keeps it off the drawing. */
-    .posted-thumb svg.posted-sound { left: auto; right: 4px; bottom: auto; top: 4px;
-      color: #7ee2a8; background: rgba(6,7,10,.72); }
+       it only has to be legible.
+       TOP left, not bottom left, and the reason belongs to the OTHER surface:
+       the gallery tile copied these corners onto a tile that has the in-post
+       player under it, and bottom left is where that player draws its
+       transport -- so the pen sat on the play button (owner's screenshot).
+       The two surfaces are kept the same on purpose, so both moved. */
+    .posted-thumb svg { position: absolute; left: 4px; top: 4px; width: 18px; height: 18px; padding: 3px;
+      border-radius: 6px; background: rgba(6,7,10,.72); color: #dfe6f2; z-index: 1; }
+    /* Sound, over the OPPOSITE corner and half outside it -- the drawer's
+       42px tile has always hung its speaker off the corner at -2px and this
+       84px one did not, so the bigger thumb carried the smaller badge. 22px
+       and a circle now, with an opaque fill and a ring so it reads against
+       both the poster and the page behind the overhang. */
+    .posted-thumb svg.posted-sound { left: auto; right: -7px; top: -7px;
+      width: 22px; height: 22px; padding: 4px; border-radius: 999px;
+      color: #7ee2a8; background: #0b0d12; box-shadow: 0 0 0 1.5px rgba(6,7,10,.9); }
     .posted-count { margin: 0 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
     /* Tap targets on this page (verify_a11y's census): the foot's two text
        buttons and the filter chips are small by design, so each carries a
@@ -418,8 +448,8 @@
         <div class="prow">
           <span class="kind" id="pKind"></span>
           <span id="pMeta"></span>
+          <span id="pVis" hidden></span>
         </div>
-        <div class="pstats" id="pStats"></div>
       </div>
       <div class="scrub" id="scrub"><div class="fill" id="scrubFill"></div></div>
       <div class="transport">

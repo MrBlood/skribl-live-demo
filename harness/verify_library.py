@@ -317,13 +317,51 @@ with sync_playwright() as sp:
     pg.evaluate("() => document.querySelector('.posted-row[data-id=\"%s\"] .posted-main').click()" % ids[1])
     pg.wait_for_timeout(1200)
     check("the stage says the ticked one is in the gallery",
-          "gallery" in pg.inner_text("#pStats").lower(), pg.inner_text("#pStats"))
+          "gallery" in pg.inner_text("#pVis").lower(), pg.inner_text("#pVis"))
     pg.evaluate("() => document.querySelector('.posted-row[data-id=\"%s\"] .posted-main').click()" % ids[0])
     pg.wait_for_timeout(1200)
     # ONE VOCABULARY. The row, the chip and the stage all say "link only" for
     # an unlisted post; the stage said "unlisted" until the v304 proofread.
     check("...and the other is link only, in the row's own words",
-          pg.inner_text("#pStats").strip() == "link only", pg.inner_text("#pStats"))
+          pg.inner_text("#pVis").strip() == "link only", pg.inner_text("#pVis"))
+
+    # ONE LINE, NOT TWO. The word lived in `.pstats` -- a block built for a
+    # social-count row this page never renders -- so it sat alone under the
+    # title with 10px of margin over it (owner's screenshot). Asserted as
+    # "the same line box as the age", which is what the eye complained
+    # about, rather than as "it is inside .prow", which a stray
+    # `display: block` on the span would still satisfy.
+    _line = pg.evaluate("""() => {
+        const v = document.getElementById('pVis'), m = document.getElementById('pMeta');
+        const vr = v.getBoundingClientRect(), mr = m.getBoundingClientRect();
+        return { top: Math.round(vr.top - mr.top), left: Math.round(vr.left - mr.right),
+                 w: Math.round(vr.width), inRow: !!v.closest('.prow'),
+                 pstats: document.querySelectorAll('.pstats').length }; }""")
+    check("the visibility word shares the meta line with the age",
+          _line["w"] > 0 and _line["inRow"] and abs(_line["top"]) <= 1 and _line["left"] > 0,
+          f"{_line} \u2014 wanted the same top as #pMeta and a start to its right")
+    check("...and nothing is left of the block it used to sit in",
+          _line["pstats"] == 0, f"{_line['pstats']} .pstats elements still in the page")
+
+    # WHILE WE WERE IN THAT BLOCK: `.st` next door was unscoped, and the
+    # only element on this page carrying that class is the one `<path
+    # class="st">` inside the brand mark, which the header includes. So a
+    # page stylesheet was setting `display: flex` on a shared component's
+    # internal path -- the same shape of bug verify_inline caught on the
+    # gallery, found by grepping for who actually uses the class rather
+    # than by reading the rule. It is `.card .st` now.
+    #
+    # Measured on the real path, not on the source: a rule scoped to a
+    # container that happens to contain the mark would read as fixed in
+    # the stylesheet and still be wrong here.
+    _mark_ink = pg.evaluate("""() => {
+        const p = document.querySelector('.brand-mark path.st');
+        if (!p) return { missing: true };
+        const cs = getComputedStyle(p);
+        return { display: cs.display, font: cs.fontFamily.indexOf('mono') >= 0 }; }""")
+    check("no page rule reaches the brand mark's own path",
+          not _mark_ink.get("missing") and _mark_ink["display"] != "flex",
+          f"{_mark_ink} \u2014 an unscoped `.st` in this page's sheet matches it")
 
     # ---- the actions on a row, and the filter (v304) -----------------------
     print("\nLIBRARY — a row can do what the tray could, and more")
@@ -338,6 +376,42 @@ with sync_playwright() as sp:
     check("Share is offered exactly where the system has a share sheet", acts["share"] == acts["canShare"],
           f"share button={acts['share']} navigator.share={acts['canShare']}")
     check("the row's picture is the poster, with the kind's icon as a badge", acts["poster"] and acts["badge"], str(acts))
+
+    # THE TWO BADGES, MEASURED (owner: the speaker is "slightly too small"
+    # and should hang off the thumb the way the drawer's 42px tile always
+    # has). Three separate properties, because three separate things were
+    # wrong and a single "it looks right" would pin none of them:
+    #
+    #   CLIP      the speaker cannot cross the thumb's corner while
+    #             `.posted-thumb` carries `overflow: hidden`, so the pin
+    #             here is .posted-shot -- the wrapper that took the clip
+    #             off the thumb and left it on the picture, which is the
+    #             only part that needs one. The overhang ITSELF is
+    #             measured further down, on a row that has sound.
+    #   CORNER    the kind moved from bottom left to top left, because
+    #             bottom left is where the in-post player draws its
+    #             transport on the OTHER surface that shares these corners
+    #             (verify_gallery pins the overlap itself).
+    #
+    _mark = pg.evaluate("""(id) => {
+        const r = document.querySelector('.posted-row[data-id="' + id + '"]');
+        const th = r.querySelector('.posted-thumb');
+        const kind = r.querySelector('.posted-thumb svg:not(.posted-sound)');
+        if (!th || !kind) return { missing: true };
+        const tr = th.getBoundingClientRect(), kr = kind.getBoundingClientRect();
+        const out = { fromTop: Math.round(kr.top - tr.top),
+                      fromBottom: Math.round(tr.bottom - kr.bottom),
+                      shot: !!r.querySelector('.posted-shot'), shotClips: false };
+        const sh = r.querySelector('.posted-shot');
+        if (sh) out.shotClips = getComputedStyle(sh).overflow === 'hidden';
+        return out; }""", ids[1])
+    check("the kind badge is in the thumb's TOP left, not the corner the transport uses",
+          not _mark.get("missing") and _mark["fromTop"] < _mark["fromBottom"],
+          f"{_mark} \u2014 wanted fromTop < fromBottom")
+    check("the picture carries the clip, not the thumb (.posted-shot)",
+          bool(_mark.get("shot")) and bool(_mark.get("shotClips")),
+          f"{_mark} \u2014 with the clip back on .posted-thumb the badge below is cut off")
+
     check("the unlisted post's switch reads link only, unpressed",
           acts["gallery"] == "Link only" and acts["pressed"] == "false", str(acts))
 
@@ -530,7 +604,7 @@ with sync_playwright() as sp:
         if (!r) return null;
         const g = r.querySelector('.posted-gallery');
         return { sub: r.querySelector('.posted-sub').textContent, gallery: g ? g.textContent : null,
-                 pressed: g ? g.getAttribute('aria-pressed') : null, stage: document.getElementById('pStats').textContent.trim() }; }""", ids[0])
+                 pressed: g ? g.getAttribute('aria-pressed') : null, stage: document.getElementById('pVis').textContent.trim() }; }""", ids[0])
     check("the legacy entry gets the switch, reading the post's REAL state",
           bool(lg) and lg["gallery"] == "In gallery" and lg["pressed"] == "true",
           f"{lg} — this post is public; before the reconcile the row assumed "
@@ -994,6 +1068,33 @@ with sync_playwright() as _sp3:
           _badges.get("sndYes") is True and _badges.get("sndNo") is False
           and _badges.get("sndUnk") is False,
           f"badges {_badges}")
+    # AND IT HANGS OFF THE CORNER, WHICH IS READ BY PAINTING AND NOT BY
+    # ARITHMETIC. A rect says where the box WOULD be and says nothing
+    # about the ancestor clipping it -- which is exactly the defect, since
+    # the badge's rect was already outside the thumb while `overflow:
+    # hidden` on `.posted-thumb` cut it off. So the assertion probes a
+    # point OUTSIDE the thumb and inside the badge's circle and asks the
+    # document what is painted there.
+    _over = _p3.evaluate("""() => {
+        const r = document.querySelector('.posted-row[data-id="sndYes"]');
+        const th = r.querySelector('.posted-thumb');
+        const snd = r.querySelector('.posted-thumb svg.posted-sound');
+        if (!th || !snd) return { missing: true };
+        const tr = th.getBoundingClientRect(), sr = snd.getBoundingClientRect();
+        const el = document.elementFromPoint(tr.right + 3, tr.top - 3);
+        return { w: Math.round(sr.width),
+                 outRight: Math.round(sr.right - tr.right),
+                 outTop: Math.round(tr.top - sr.top),
+                 hit: !!(el && (el === snd || (el.closest && el.closest('svg.posted-sound')))),
+                 hitWas: el ? (el.tagName + '.' + (el.getAttribute('class') || '')) : null }; }""")
+    check("the sound badge is bigger than the kind badge it used to match",
+          not _over.get("missing") and _over["w"] >= 20,
+          f"{_over} \u2014 wanted 20px or more; it was 18, the kind badge's size")
+    check("...and it hangs off the thumb's corner, and is PAINTED there",
+          not _over.get("missing") and _over["outRight"] > 0 and _over["outTop"] > 0
+          and _over["hit"] is True,
+          f"{_over} \u2014 a rect outside the thumb with nothing painted in it "
+          f"is a badge an ancestor is still clipping")
     _p3.close()
     _b3.close()
 

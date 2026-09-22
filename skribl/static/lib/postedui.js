@@ -50,7 +50,7 @@
     ' stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
 
-  /* HAS SOUND. Top right, opposite the kind badge at bottom left, because the
+  /* HAS SOUND. Top right, opposite the kind badge at top left, because the
      two answer different questions and stacking them in one corner makes both
      harder to read. Only drawn where the answer is KNOWN to be yes: a null
      (a local save, a recovered key, a row written before the store carried the
@@ -500,7 +500,11 @@
              kind's icon always -- as a badge over the poster, because a Flip
              is marked with the book everywhere else in the app. */
           '<span class="posted-thumb posted-thumb-' + esc(e.kind || 'any') + '" aria-hidden="true">' +
-            (poster ? '<img class="posted-poster" src="' + esc(poster(e.id)) + '" alt="" loading="lazy" decoding="async">' : '') +
+            /* THE PICTURE GETS ITS OWN BOX so that the clip it needs is not
+               also applied to the badges beside it -- see .posted-shot in
+               skribl_library.html. No poster, no wrapper: the drawer's thumb
+               is a glyph tile and has nothing to clip. */
+            (poster ? '<span class="posted-shot"><img class="posted-poster" src="' + esc(poster(e.id)) + '" alt="" loading="lazy" decoding="async"></span>' : '') +
             (e.kind === 'flip' ? ICON_FLIP : e.kind === 'pad' ? ICON_PAD : '') +
             (e.has_audio === true ? ICON_SOUND : '') + '</span>' +
           /* HONOURS player_target, which it did not until v281. __init__.py
