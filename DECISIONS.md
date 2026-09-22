@@ -9955,3 +9955,57 @@ date on it. `verify_hold`'s 8x WAS its measurement. The player's line ratchet
 was met exactly at 1760. This one had its failing row written in the file.
 None of the three was found by review; each was found by a machine slower or
 faster than the one the number came from.
+
+## Unsealed, on top of v306, cont. -- the carve that was measured and not made
+
+`verify_player_isolation` counts five editor globals the player still carries,
+against a stated target of 0, and `verify_jsstrip`'s note names that as where
+the next byte spend must come from. So the carve was scoped properly. It is
+not being made, and the measurement is written at the ratchet so the next
+person inherits the analysis rather than the number.
+
+**All five are unreachable from the player.** The reachability walk
+`verify_seam` runs puts `setTool`, `pressureSize`, `saveDraft`, `addRecent` and
+`attachSegSlider` in the editor-only set, and none of their `app.js` call sites
+is player-reachable either. The player downloads about 5.7 KB of source it can
+never execute.
+
+**And one of them has been staying behind for a reason that was never about
+it.** `editor_draw.js`'s "WHAT STAYS BEHIND" note lists `drawLine()`,
+`drawDot()`, `getPos()`, `pressureSize()`, `_eraserSize()` and `_brushWidth()`
+as "still in app.js, because replayTimelineToCanvas hands drawLine/drawDot to
+the PLAYER as its painters". That is true of the two painters and false of
+`pressureSize`, which has no caller in app.js at all and is reached only from
+two lines in `editor_draw.js` itself; the `window.__skriblPressureSize` beside
+its definition is a harness seam, not a reader. It was grouped with its
+neighbours in v213 and the player has carried it since. **Corrected in place --
+a wrong reason in a load-bearing comment is the defect here, and it is fixed
+whether or not the function ever moves.**
+
+**THE OBSTACLE IS NOT CORRECTNESS.** Every call site of all five is inside a
+function; there is not one load-time caller, which was the thing that could
+have made the move unsafe. (Establishing that took two passes: a brace-depth
+scan reported five top-level callers, and all five turned out to be the
+function's own name inside a COMMENT. The tool was doing a substring match on
+prose -- the exact trap this repository has a rule about, walked into while
+checking something else.)
+
+**What stopped it was judgement about where each belongs.** `saveDraft` has an
+obvious home in `editor_draft.js` and `pressureSize` in `editor_draw.js`;
+`setTool` and `addRecent` have a defensible one; `attachSegSlider` has none,
+and `editor_tools.js` is an IIFE, so a function declared there would stop being
+the global its four callers read. A new `editor_shared.js` would take all five
+and be a file whose contents are "things that had nowhere better to go".
+
+**And the payoff is bytes against a refactor of core paths.** 5.7 KB on a
+154 KB player is 2.5%, bought by moving tool selection, stylus pressure and
+autosave between files. This tree's stopping condition asks for "a specific
+duplicated or obsolete concept with concrete maintenance cost"; these are
+correctly-written editor code that happens to share a file with the player,
+which is a different thing. The target exists as EVIDENCE that the player needs
+no separate entry point, not as a number to drive to zero.
+
+**What generalises:** a ratchet with a target of 0 invites the work regardless
+of whether the work is worth it. Writing the measurement next to the number
+turns "5 is not 0" into a decision somebody can make, which is the point of
+measuring.

@@ -15,7 +15,20 @@
 // WHAT STAYS BEHIND, and this is the line that matters: drawLine(), drawDot(),
 // getPos(), pressureSize(), _eraserSize() and _brushWidth() are all still in
 // app.js, because replayTimelineToCanvas hands drawLine/drawDot to the PLAYER
-// as its painters. Only the code that turns a gesture into points moved. The
+// as its painters.
+//
+// THAT REASON COVERS drawLine AND drawDot, AND NOT pressureSize, which this
+// sentence has been grouping with them since v213. Measured: pressureSize has
+// no caller in app.js at all and is unreachable from the player's entry point.
+// Its only call sites are the two below, in this file; `window
+// .__skriblPressureSize` beside its definition is a harness seam, not a
+// reader. It stayed behind by association with the painters it sits near, not
+// because anything replaying a drawing needs it — and the player has carried
+// it ever since. Corrected rather than moved: see the note at
+// verify_player_isolation's EDITOR_GLOBALS for the measurement and for why the
+// move is a decision rather than a tidy-up.
+//
+// Only the code that turns a gesture into points moved. The
 // rule from editor_music.js applies — a binding declared here does not exist
 // on the player at all — so the LISTENERS moved with the functions: a
 // `canvas.addEventListener('mousedown', startDraw)` left behind in app.js

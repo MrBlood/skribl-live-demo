@@ -100,6 +100,44 @@ check = make_check(results)
 # Editor-only globals. Every one of these was CONFIRMED PRESENT on a real player
 # page before this suite was written — a list of plausible names would prove
 # nothing, since an absent-but-never-there symbol passes for free.
+# MEASURED, so the next person does not have to redo the analysis to decide.
+#
+# All five of these are unreachable from the player's entry point -- the same
+# reachability walk verify_seam.py runs puts every one of them in the
+# editor-only set, and none of their app.js call sites is player-reachable
+# either. The player downloads roughly 5.7 KB of source it can never execute.
+# Where each is actually called:
+#
+#   pressureSize      editor_draw.js, twice, and nothing else. Its neighbour
+#                     comment in that file claimed it stays in app.js because
+#                     replayTimelineToCanvas hands drawLine/drawDot to the
+#                     player -- true of those two, never of this one. Corrected
+#                     there.
+#   setTool           editor_draw, editor_shapes, editor_tune, lib/eyedropper,
+#                     lib/toolshelf
+#   saveDraft         editor_menu, editor_post
+#   addRecent         lib/recentcolors
+#   attachSegSlider   editor_export, editor_music, editor_shapes, editor_tools
+#
+# NOT MOVED, AND THAT IS A DECISION. Every call site is inside a function --
+# there is not one load-time caller, which was the thing that could have made
+# the move unsafe -- so the obstacle is not correctness, it is judgement about
+# where each belongs. saveDraft has an obvious home in editor_draft.js and
+# pressureSize in editor_draw.js; setTool and addRecent have a defensible one;
+# attachSegSlider has none, and editor_tools.js is an IIFE, so a function
+# declared there would stop being the global its four callers read. A new
+# editor_shared.js would take all five and would be a file whose contents are
+# "things that had nowhere better to go".
+#
+# What the target is FOR is evidence that the player needs no separate entry
+# point (see verify_jsstrip's note). Five editor-only globals on a 154 KB
+# player is a 2.5% saving against a refactor of tool selection, stylus
+# pressure and autosave -- core editor paths, for bytes. This tree's own
+# stopping condition asks for "a specific duplicated or obsolete concept with
+# concrete maintenance cost"; these are correctly-written editor code that
+# happens to share a file with the player, which is a different thing. The
+# measurement is here so the move can be chosen on its merits rather than
+# started because a number reads 5.
 EDITOR_GLOBALS = [
     "setTool",           # tool selection — the player has no tools
     "pressureSize",      # stylus capture
