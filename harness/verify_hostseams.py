@@ -147,6 +147,66 @@ app_d, _ = host_app(7, author_resolver=lambda uid: None)
 author = app_d.test_client().get(f"/api/skribls/{_pid}").get_json()["author"]
 check("a resolver returning nothing degrades to the default, not a 500",
       author == {"id": "7"}, json.dumps(author))
+
+# ---- #8b: the LISTING carries the author too (v308) -------------------------
+# The gallery renders from GET /api/skribls and never fetches a payload until
+# somebody presses play, so a grid of tiles had a user_id and no way to turn it
+# into a name -- the author block existed on the single-post GET alone. The
+# owner's ask ("there needs to be a place on the card where it says who created
+# the skribl with their avatar") is a LISTING feature.
+_calls = []
+
+
+def _counting_resolver(uid):
+    _calls.append(uid)
+    return {"username": f"user{uid}", "display_name": "Real Person",
+            "avatar_url": "https://example.test/a.png", "verified": True}
+
+
+app_l, db_l = host_app(7, author_resolver=_counting_resolver)
+c_l = app_l.test_client()
+# Three more posts by the same author, so the memo below has something to
+# collapse. Four rows, one distinct user_id.
+for _i in range(3):
+    assert c_l.post("/api/skribls", json=body(f"listed-{_i}")).status_code == 201
+_listing = c_l.get("/api/skribls?limit=50").get_json()["items"]
+_mine = [i for i in _listing if i.get("user_id") == "7"]
+check("every listed post of a described author carries an author block",
+      len(_mine) >= 4 and all(i.get("author", {}).get("username") == "user7"
+                              for i in _mine),
+      f"{len(_mine)} rows, authors "
+      f"{[i.get('author', {}).get('username') for i in _mine][:6]}")
+check("...with the fields a card draws: name, handle, avatar, the tick",
+      all({"display_name", "username", "avatar_url", "verified"}
+          <= set(i["author"]) for i in _mine),
+      json.dumps(_mine[0].get("author")) if _mine else "no rows")
+check("...and the id stays authoritative there as well",
+      all(i["author"].get("id") == "7" for i in _mine),
+      json.dumps(_mine[0].get("author")) if _mine else "no rows")
+# ONE CALL PER DISTINCT AUTHOR, NOT ONE PER ROW. The resolver is the HOST'S
+# function and a host's natural implementation is a SELECT, so a page of fifty
+# tiles by one author would issue fifty queries for one row. Asserted by
+# counting calls, which is the only way to see it: the response is identical
+# either way, which is exactly why this would have shipped unnoticed.
+_distinct = len(set(_calls))
+check("the resolver is called once per DISTINCT author, not once per row",
+      len(_calls) == _distinct and _distinct >= 1,
+      f"{len(_calls)} calls for {_distinct} distinct id(s) over "
+      f"{len(_mine)} rows — a per-row resolver is a query per tile")
+
+# AN ANONYMOUS POST GETS NO AUTHOR KEY AT ALL. Not {"id": null}: the client
+# renders an absent author as nothing, and "nobody is named" is the honest
+# answer for a post made with no host signed in -- which is every post the
+# standalone demo has ever taken.
+app_anon, _ = host_app(None, author_resolver=_counting_resolver)
+c_anon = app_anon.test_client()
+assert c_anon.post("/api/skribls", json=body("no-author-at-all")).status_code == 201
+_anon_rows = [i for i in c_anon.get("/api/skribls?limit=50").get_json()["items"]
+              if i.get("user_id") is None]
+check("an anonymous post carries NO author key, rather than an empty one",
+      len(_anon_rows) >= 1 and all("author" not in i for i in _anon_rows),
+      f"{len(_anon_rows)} anonymous rows; first = "
+      f"{json.dumps(_anon_rows[0])[:160] if _anon_rows else 'none'}")
 # The seam is app-local like the visibility policy. Two Skribl apps in one
 # process must not share author naming — that is the bug set_visibility_policy
 # was reshaped to avoid, and a new global would reintroduce it.
@@ -326,6 +386,90 @@ for _route, _surface in (("/skribl-pad", "Pad"), ("/flip", "Flip")):
           _ACCOUNT_CLAIM in _in_html and _KEY_CLAIM not in _in_html,
           "the key sentence surviving here is the defect: there is no browser "
           "key, and clearing site data does not remove an account's posts")
+
+# ---------------------------------------------------------------------------
+# THE DEMO'S STAND-IN IDENTITY (v308)
+#
+# Skribl has no user table, so this repo's demo has always posted anonymously
+# and its gallery cards have no author to draw. SKRIBL_DEMO_IDENTITY makes the
+# demo behave the way skribls.net will -- one signed-in user, described through
+# the same set_author_resolver hook -- which is the only way to LOOK at the
+# feature here. It is also a deploy-time switch on a live service, and this
+# tree has already lost an afternoon to a deploy that failed on startup, so
+# both paths through it are exercised rather than reasoned about.
+print("\nTHE DEMO IDENTITY — off by default, fails closed, and names its own switch")
+import importlib                                                    # noqa: E402
+_appmod = importlib.import_module("app")
+_saved = {k: os.environ.get(k) for k in
+          ("SKRIBL_DEMO_IDENTITY", "SKRIBL_DEMO_IDENTITY_NAME",
+           "SKRIBL_DEMO_IDENTITY_AVATAR", "SKRIBL_DEMO_IDENTITY_URL",
+           "SKRIBL_DEMO_IDENTITY_VERIFIED", "SKRIBL_CSRF_PROTECT",
+           "DATABASE_URL", "SECRET_KEY", "SKRIBL_ALLOW_EPHEMERAL_SECRET")}
+
+
+def _env(**kw):
+    for k, v in kw.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+
+
+try:
+    _env(DATABASE_URL=DB_URL, SECRET_KEY="harness-demo-identity",
+         SKRIBL_ALLOW_EPHEMERAL_SECRET="1")
+
+    # OFF BY DEFAULT. Unset, nothing in that block runs and the demo is
+    # exactly as anonymous as it was -- which matters because the live demo
+    # is running without it right now.
+    _env(SKRIBL_DEMO_IDENTITY=None, SKRIBL_CSRF_PROTECT=None)
+    _off = _appmod.create_app()
+    check("with no SKRIBL_DEMO_IDENTITY the demo stays anonymous",
+          _off.blueprints["skribl"].skribl_current_user_id() is None,
+          "an identity nobody asked for would put a name on every new post")
+
+    # FAILS CLOSED, AND SAYS WHICH SWITCH. init_skribl refuses an id without
+    # CSRF (a cookie identity with no CSRF lets any page post as the user);
+    # its message cannot know about this env var, so the demo raises first in
+    # its own words. A deploy that fails is fine; one that fails unreadably
+    # costs an afternoon.
+    _env(SKRIBL_DEMO_IDENTITY="bigballbaron", SKRIBL_CSRF_PROTECT=None)
+    _msg = ""
+    try:
+        _appmod.create_app()
+    except RuntimeError as e:
+        _msg = str(e)
+    check("an identity without CSRF is refused, naming SKRIBL_CSRF_PROTECT",
+          "SKRIBL_CSRF_PROTECT" in _msg,
+          f"raised {_msg[:140]!r} — an operator reads this in a deploy log")
+
+    # AND ON, IT DESCRIBES EXACTLY ONE PERSON.
+    _env(SKRIBL_DEMO_IDENTITY="bigballbaron", SKRIBL_CSRF_PROTECT="1",
+         SKRIBL_DEMO_IDENTITY_NAME="Mr. B",
+         SKRIBL_DEMO_IDENTITY_AVATAR="https://media.example.test/skull.png",
+         SKRIBL_DEMO_IDENTITY_URL="https://example.test/u/bigballbaron",
+         SKRIBL_DEMO_IDENTITY_VERIFIED="1")
+    _on = _appmod.create_app()
+    check("with it set, the demo signs one user in",
+          _on.blueprints["skribl"].skribl_current_user_id() == "bigballbaron",
+          "this id is what goes on a new post's user_id")
+    with _on.app_context():
+        _me = skribl.models.author_dict("bigballbaron")
+        _other = skribl.models.author_dict("somebody-else")
+    check("...and describes them with the fields a card draws",
+          _me.get("display_name") == "Mr. B" and _me.get("username") == "bigballbaron"
+          and _me.get("avatar_url", "").endswith("skull.png")
+          and _me.get("verified") is True and _me.get("id") == "bigballbaron",
+          json.dumps(_me))
+    # ONE ID, ONE ANSWER. A resolver that returned this name for every user_id
+    # would be a lie the moment a second author existed -- and `author_dict`
+    # puts the REAL id back over anything the resolver returns, so the answer
+    # would carry somebody else's id beside this name.
+    check("...and nobody else is described as them",
+          _other == {"id": "somebody-else"}, json.dumps(_other))
+finally:
+    for _k, _v in _saved.items():
+        _env(**{_k: _v})
 
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"

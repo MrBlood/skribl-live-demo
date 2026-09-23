@@ -339,9 +339,42 @@ if _marker in _appjs:
     # The old failure message said "was 1339", a figure from before four carves
     # and three raises. A ratchet's message should state what it MEASURED, not
     # carry a number nobody has re-checked since v282.
+    #
+    # 1790 -> 1810 at v308 for the viewer's speed control, measured 1793.
+    # Owner: "on players (across surfaces) should there be a speed control for
+    # PAD? it sometimes draws too fast or slow and I'd like to control that".
+    #
+    # WHAT IT COSTS: segElapsed(), three lines, which is the ONE place the
+    # replay clock is scaled -- the flip hold table, the stroke timeline and
+    # the progress fraction all keep working off it without knowing a rate
+    # exists; and showRate(), which writes the button's own label. `replayRate`
+    # itself is not new: it has been in app.js since the Pad's preview row.
+    #
+    # TWO SPENDS WERE TRIED AND BOTH BOUGHT EXACTLY ZERO, which is worth
+    # recording because the reasoning looked sound both times:
+    #
+    #   - collapsing three statements in the click handler onto one line. The
+    #     handler is an ANONYMOUS arrow passed to addEventListener, and this
+    #     measurement sums the spans of NAMED functions -- so nothing inside it
+    #     is counted and nothing could be saved there.
+    #   - moving the explaining comment out of that handler, on the theory
+    #     that a comment inside a counted span costs what a statement costs.
+    #     True in general (a span is start line to end line, prose included)
+    #     and irrelevant here, for the same reason.
+    #
+    # The number did not move for either, and both were reverted rather than
+    # left in: a collapsed line that buys nothing is just a less readable line.
+    #
+    # The one spend that WOULD have worked is inlining `* replayRate` at the
+    # three sites segElapsed() serves, deleting the function for exactly the
+    # three lines needed. Refused: that duplicates the rate multiplication at
+    # three call sites, which is the shape of thing this file's notes keep
+    # warning about, and the whole design virtue is that the clock is scaled
+    # once. A ceiling is there to make an addition argue for itself, not to
+    # buy three lines with a duplication.
     check("the player's reachable set has not ballooned",
-          _player_lines <= 1790,
-          f"{_player_lines} lines reachable against a ceiling of 1,790")
+          _player_lines <= 1810,
+          f"{_player_lines} lines reachable against a ceiling of 1,810")
     # THIS ASSERTION USED TO READ `_editor_lines > _player_lines`, under the
     # name "a split is still worth doing". It was a TODO wearing a test's
     # clothes: it could only pass while the work was OUTSTANDING, and it went

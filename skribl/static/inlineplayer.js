@@ -11,6 +11,41 @@
  * where twenty posts are on screen, nineteen of them are not Skribls, and the
  * one that is has to behave like an image that happens to move.
  *
+ * ===========================================================================
+ * WHAT THE STYLESHEET USED TO SAY, AND WHY IT SAYS IT HERE NOW (v308)
+ * ===========================================================================
+ *
+ * jsstrip.py removes these comments from the response; nothing does that for
+ * CSS, so every word in inlineplayer.css is downloaded by every host on every
+ * page that embeds a Skribl. The file's own header has said so since the
+ * poster crop landed, and 42% of it had become comments anyway. The line that
+ * decides what goes where is NOT length, it is audience: a host reads that
+ * stylesheet before overriding something, so the tokens, the geometry numbers
+ * and the defensive declarations stay there. PRODUCT reasoning — why the
+ * component behaves as it does — belongs here, and this is it.
+ *
+ * TWO VIEWER CONTROLS, AND ONLY TWO: mute and loop. Scrub, speed and
+ * frame-step still belong on the full player at /s/<id> — a post that grows a
+ * transport stops being a post — but these two are about whether the thing in
+ * front of you keeps making noise and keeps moving, which is the viewer's
+ * business in a way that seeking is not.
+ *
+ * They share one cluster at bottom left so a post has one control area rather
+ * than two, and so a silent Skribl (which hides mute) does not leave a lone
+ * button floating in the corner.
+ *
+ * LOOP IS ON BY DEFAULT, so the lit state is the RESTING state and the button
+ * dims when it is switched OFF — the opposite of mute, whose resting state is
+ * muted. Each reads as "what is currently true", not "what this button does".
+ *
+ * A SILENT SKRIBL HAS NOTHING TO MUTE, so it shows no mute button at all
+ * rather than a control that does nothing. Loop stays: a silent drawing still
+ * repeats.
+ *
+ * And the poster's arithmetic, which the stylesheet now states once instead of
+ * twice: auto width keeps the card's 1200:630, making the image 2.439x the box
+ * height against a 1.778x box, and the centred excess is clipped.
+ *
  * So this is a second, much smaller thing, and the honest way to describe it is
  * that it is a SECOND IMPLEMENTATION of playback. This project has a name for
  * that shape and a suite for it: verify_sharedrules.py exists because "the
@@ -978,15 +1013,36 @@
      * DRAWING's, and the canvas is letterboxed between them — so this maps
      * through the two live rects rather than assuming they are the same box.
      * Getting this wrong puts the pen next to the line instead of on it, which
-     * is worse than no nib at all. */
+     * is worse than no nib at all.
+     *
+     * AND THE CANVAS ELEMENT IS NOT ALWAYS THE DRAWING. There are two sizing
+     * models here and this used to know about one of them:
+     *
+     *   tile       width/height auto under max-width/max-height 100%, so the
+     *              ELEMENT box is exactly the drawing and a rect is enough.
+     *   immersive  width/height 100% with `object-fit: contain`, so the element
+     *              box is the whole container and the bitmap is letterboxed
+     *              INSIDE it. getBoundingClientRect() reports the container.
+     *
+     * So in full screen the nib was mapped across the screen while the line was
+     * drawn across the smaller contained box, and sat up and to the left of its
+     * own stroke (the owner's screenshot). `object-fit` has to stay: max-width
+     * only ever SHRINKS a canvas, and full screen needs it to grow.
+     *
+     * The fix is to stop reading the element box and derive the CONTENT box —
+     * the same arithmetic `contain` does. It reduces to the element box in tile
+     * mode (there the two axes' scales are equal and both offsets are zero), so
+     * one mapping now serves both, and a third sizing model cannot bring this
+     * back. */
     function setNib(p) {
-      if (!p) { nib.style.opacity = '0'; return; }
-      var cr = canvas.getBoundingClientRect();
-      var br = el.getBoundingClientRect();
-      if (!cr.width || !cr.height) { nib.style.opacity = '0'; return; }
-      nib.style.left = ((cr.left - br.left) + (p.x / size.w) * cr.width) + 'px';
-      nib.style.top = ((cr.top - br.top) + (p.y / size.h) * cr.height) + 'px';
-      nib.style.opacity = '1';
+      var st = nib.style;
+      if (!p) { st.opacity = '0'; return; }
+      var cr = canvas.getBoundingClientRect(), br = el.getBoundingClientRect();
+      if (!cr.width || !cr.height) { st.opacity = '0'; return; }
+      var s = Math.min(cr.width / size.w, cr.height / size.h);
+      st.left = cr.left - br.left + (cr.width - size.w * s) / 2 + p.x * s + 'px';
+      st.top = cr.top - br.top + (cr.height - size.h * s) / 2 + p.y * s + 'px';
+      st.opacity = '1';
     }
 
     /* ---- audio ---------------------------------------------------------- */

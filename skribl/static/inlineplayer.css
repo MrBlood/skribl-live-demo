@@ -7,13 +7,12 @@
  *
  * IT FOLLOWS THE HOST'S THEME: every colour reads a custom property with its
  * own value as the fallback — `var(--bg-elev, #12151c)`. Tokens consumed, all
- * optional: --bg-elev, --border, --radius, --accent, --accent-2. The reasoning
- * is in inlineplayer.js's header, where jsstrip removes it from the response.
+ * optional: --bg-elev, --border, --radius, --accent, --accent-2.
  *
- * THE REASONING LIVES IN inlineplayer.js's HEADER, not here, and that is
- * deliberate: jsstrip.py removes comments from a JavaScript response and
- * nothing does that for CSS, so prose in this file is prose every host
- * downloads. What is kept below is the numbers and where they come from.
+ * PROSE HERE IS PROSE EVERY HOST DOWNLOADS: jsstrip.py strips a JavaScript
+ * response and nothing does that for CSS. So PRODUCT reasoning lives in
+ * inlineplayer.js's header, and what stays here is the numbers, and the notes
+ * a host needs in order to override something safely.
  *
  * The three geometry facts, all from lib/sharecard.js and all asserted against
  * it by verify_inline.py:
@@ -56,10 +55,9 @@
   position: absolute;
   top: -5.4878%;                 /* band().offset — 27/492 of the box height */
   height: 128.0488%;             /* band().scale  — 630/492 of the box height */
-  /* auto width keeps the card's 1200:630, making the image 2.439x the box
-     height against a 1.778x box; the centred excess is clipped. max-width is
-     defeated explicitly — a host's `img { max-width: 100% }` would squash it
-     back and pull the wordmark into frame. */
+  /* max-width is defeated ON PURPOSE: a host's `img { max-width: 100% }` would
+     squash the card back and pull the wordmark into frame. (The 1200:630
+     arithmetic is in this file's header.) */
   width: auto;
   max-width: none;
   left: 50%;
@@ -175,15 +173,7 @@
 
 .skribl-inline.is-playing .skribl-inline-dur { opacity: 0; }
 
-/* TWO viewer controls, and only two: mute and loop. Scrub, speed and
-   frame-step still belong on the full player at /s/<id> — a post that grows a
-   transport stops being a post — but these two are about whether the thing in
-   front of you keeps making noise and keeps moving, which is the viewer's
-   business in a way that seeking is not.
-
-   They share one cluster at bottom-left so a post has one control area rather
-   than two, and so a silent Skribl (which hides mute) does not leave a lone
-   button floating in the corner. */
+/* Mute and loop only, one cluster, bottom left. Why: inlineplayer.js. */
 .skribl-inline-controls {
   position: absolute;
   left: 9px;
@@ -218,9 +208,7 @@
 .skribl-inline-mute::before,
 .skribl-inline-loop::before { content: ''; position: absolute; inset: -8px; }
 
-/* A silent Skribl has nothing to mute, so it shows no mute button at all
-   rather than a control that does nothing. Loop stays: a silent drawing still
-   repeats. */
+/* Silent: no mute button at all. Loop stays — a silent drawing repeats. */
 .skribl-inline.is-silent .skribl-inline-mute { display: none; }
 
 .skribl-inline-mute:hover,
@@ -232,9 +220,7 @@
   outline-offset: 1px;
 }
 
-/* LOOP IS ON BY DEFAULT, so the lit state is the resting state and the button
-   dims when it is switched OFF — the opposite of mute, whose resting state is
-   muted. Each reads as "what is currently true", not "what this button does". */
+/* Loop is ON by default, so LIT is the resting state (mute is the opposite). */
 .skribl-inline-loop {
   color: var(--accent, #cfc4ff);
   border-color: color-mix(in srgb, var(--accent, #7c5cff) 45%, transparent);

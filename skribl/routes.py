@@ -1046,7 +1046,41 @@ def register_routes(bp, *, index_route=False):
             items = [r.feed_dict() for r in rows]
             nxt = _encode_cursor(rows[-1]) if (rows and has_more) else None
 
+        _attach_authors(items)
         return jsonify({"items": items, "next_cursor": nxt})
+
+    def _attach_authors(items):
+        """Describe each item's author, resolving each DISTINCT user_id once.
+
+        WHY THE LISTING AND NOT JUST THE POST. `GET /api/skribls/<id>` has
+        carried `author` since the resolver landed, but the gallery renders
+        from the LISTING and never fetches a payload until somebody presses
+        play -- so a grid of tiles had a user_id and no way to turn it into a
+        name. The owner's ask ("there needs to be a place on the card where it
+        says who created the skribl with their avatar") is a listing feature.
+
+        MEMOISED PER REQUEST, and that is not a micro-optimisation. The
+        resolver is the HOST'S function (models.set_author_resolver) and a
+        host's natural implementation is a SELECT. A page of 50 tiles from one
+        author would call it 50 times and issue 50 queries for one row; a feed
+        is exactly the shape where that bites. Distinct ids only.
+
+        A post with no author (`user_id` is NULL -- every post made without a
+        signed-in host, which is all of them standalone) gets NO `author` key
+        at all rather than `{"id": null}`. The client renders the absence as
+        nothing, and "nothing" is the honest answer: an anonymous post has no
+        name to print. An empty object would have to be told apart from a real
+        author with no name, which is a distinction nobody wants to make
+        client-side.
+        """
+        seen = {}
+        for item in items:
+            uid = item.get("user_id")
+            if uid is None:
+                continue
+            if uid not in seen:
+                seen[uid] = author_dict(uid)
+            item["author"] = seen[uid]
 
     def _count_view(post):
         who = _rate_key(_client_ip())

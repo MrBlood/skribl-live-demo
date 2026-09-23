@@ -32,6 +32,93 @@
      touch the page while its own number is still the current one. See load(). */
   var gen = 0;
 
+  /* A LINK THE HOST SUPPLIED IS STILL SOMEBODY ELSE'S STRING. `author.url`
+     comes from the host's resolver, which a host may well build from a
+     database column, so it is not trusted to be a web address: an
+     `href="javascript:..."` runs on click, and a tile is a thing people click.
+     Only http and https, and only after the URL parser agrees -- a scheme
+     check on the raw text is the substring search this tree keeps learning
+     not to write. A relative path is allowed by resolving it against this
+     document first, which is what makes a host's `/u/name` work.
+     Anything else yields null and the name renders as plain text. */
+  function safeHref(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    var u;
+    try { u = new URL(raw, document.baseURI); } catch (e) { return null; }
+    return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null;
+  }
+
+  /* WHO MADE IT, under the title (owner: "at the top under the title which
+     probably makes more sense").
+
+     SKRIBL HAS NO USER TABLE and this does not invent one. Everything here is
+     what the host's resolver returned for the post's user_id
+     (models.set_author_resolver, docs/INTEGRATION.md) -- display_name,
+     username, avatar_url, url, verified -- and the field names are the ones
+     skribls.net already renders in its own post head. No author, no block:
+     an anonymous post has no name to print, and a placeholder would be a
+     claim about who drew it.
+
+     The avatar falls back to an initial on a tinted disc rather than to a
+     broken image or a silhouette, which is what the host does for a user with
+     no photo; `onerror` covers a URL that resolves and then 404s, because a
+     cracked-image glyph in a grid of drawings reads as a broken page. */
+  function authorBlock(a) {
+    var name = (a && (a.display_name || a.username)) || '';
+    if (!name) return null;
+    var handle = a.username ? '@' + a.username : '';
+    var wrap = document.createElement(safeHref(a.url) ? 'a' : 'div');
+    wrap.className = 'tauth';
+    if (wrap.tagName === 'A') {
+      wrap.href = safeHref(a.url);
+      /* The tile is not a link, so this one does not need to escape a click
+         handler -- but the stage below IS interactive, and a bubbled click
+         that both navigates and plays is neither. */
+      wrap.addEventListener('click', function (e) { e.stopPropagation(); });
+    }
+
+    var av = document.createElement('span');
+    av.className = 'tavatar';
+    av.setAttribute('aria-hidden', 'true');
+    var src = safeHref(a.avatar_url);
+    if (src) {
+      var img = document.createElement('img');
+      img.src = src;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.addEventListener('error', function () {
+        img.remove();
+        av.textContent = name.charAt(0).toUpperCase();
+      });
+      av.appendChild(img);
+    } else {
+      av.textContent = name.charAt(0).toUpperCase();
+    }
+    wrap.appendChild(av);
+
+    var dn = document.createElement('span');
+    dn.className = 'tdn';
+    dn.textContent = name;
+    wrap.appendChild(dn);
+    /* The tick is the HOST'S claim, not Skribl's -- Skribl has nothing to
+       verify with. Titled so it says whose claim it is. */
+    if (a.verified) {
+      var vf = document.createElement('span');
+      vf.className = 'tverified';
+      vf.textContent = '\u2713';
+      vf.title = 'Verified by the site this Skribl was posted from';
+      wrap.appendChild(vf);
+    }
+    if (handle) {
+      var un = document.createElement('span');
+      un.className = 'tun';
+      un.textContent = handle;
+      wrap.appendChild(un);
+    }
+    return wrap;
+  }
+
   function when(iso) {
     if (!iso) return '';
     var d = new Date(iso);
@@ -58,6 +145,14 @@
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
     + ' stroke-linecap="round" stroke-linejoin="round">'
     + '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
+  /* The caption's toggle: a speech bubble with lines in it, which is the
+     glyph every feed uses for "there are words here". */
+  var ICON_CAP =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+    ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-2.8-.4L3 21l1.9-5A8.2 8.2 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>' +
+    '<path d="M8.5 10.5h8"/><path d="M8.5 14h5"/></svg>';
+
   var ICON_SOUND =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
     + ' stroke-linecap="round" stroke-linejoin="round">'
@@ -104,7 +199,28 @@
     rep.textContent = 'Report';
     rep.addEventListener('click', function () { openReport(item.id, rep); });
     head.appendChild(rep);
+    /* THE CAPTION'S TOGGLE, beside Report, and only where there is a caption
+       to show. It lives in the head with the other controls rather than over
+       the drawing: the drawing's four corners are already spoken for -- kind
+       top left, sound top right, the player's transport bottom left, the
+       duration bottom right -- and a fifth thing in that space is how the pen
+       ended up on the play button. */
+    if (item.caption) {
+      var cb = document.createElement('button');
+      cb.type = 'button';
+      cb.className = 'tileCapBtn';
+      cb.setAttribute('aria-pressed', 'false');
+      cb.setAttribute('aria-label', 'Show the description');
+      cb.title = 'Show the description';
+      cb.innerHTML = ICON_CAP;
+      head.appendChild(cb);
+    }
     art.appendChild(head);
+
+    /* WHO MADE IT. Absent unless the host's resolver described somebody --
+       see authorBlock(). */
+    var who = item.author ? authorBlock(item.author) : null;
+    if (who) art.appendChild(who);
 
     /* The macro rendered the poster URL with the placeholder in it, so the
        real one is that same server-built path with the id substituted — no
@@ -125,9 +241,15 @@
        than not having one — the same rule library.js states at its own. */
     var stage = document.createElement('div');
     stage.className = 'tileStage';
-    var fsEl = function () { return document.fullscreenElement || document.webkitFullscreenElement || null; };
-    var fsReq = stage.requestFullscreen || stage.webkitRequestFullscreen;
-    if ((document.fullscreenEnabled || document.webkitFullscreenEnabled) && fsReq) {
+    /* THE CONTROL IS UNCONDITIONAL NOW, and that is the whole change. It used
+       to appear only where `document.fullscreenEnabled` said yes, on the sound
+       rule that a button which cannot work should not be on screen -- which on
+       an iPhone meant no way to enlarge a drawing on the one device where it
+       is smallest (owner, twice). lib/immersive.js takes the real API where
+       there is one and pins the stage over the viewport where there is not, so
+       there is always something for the button to do. */
+    var imm = null;      /* set below, once, with its onChange in hand */
+    if (window.SkriblImmersive) {
       var full = document.createElement('button');
       full.type = 'button';
       full.className = 'tileFull';
@@ -137,13 +259,26 @@
         + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
         + '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>'
         + '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
-      full.addEventListener('click', function () {
-        if (fsEl() === stage) {
-          (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-          return;
-        }
-        try { var p = fsReq.call(stage); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      full.addEventListener('click', function (e) {
+        e.stopPropagation();
+        imm.toggle();
       });
+      /* A WAY OUT, INSIDE THE THING (owner: "also no x (which is fine) on full
+         screen" -- fine on the real API, where Escape and the system gesture
+         both work, and not fine at all in the fallback, where the page is
+         still the page and nothing else exits it). The profile's stage has
+         had this since v304 and the gallery did not, which is the same
+         two-surfaces-one-product problem as the full screen control itself. */
+      var exit = document.createElement('button');
+      exit.type = 'button';
+      exit.className = 'tileExit';
+      exit.title = 'Leave full screen';
+      exit.setAttribute('aria-label', 'Leave full screen');
+      exit.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+        + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+      exit.addEventListener('click', function (e) { e.stopPropagation(); imm.close(); });
+      stage.appendChild(exit);
       /* WHAT A FULL SCREEN SHOWS. Idle, a tile shows the POSTER -- the share
          card, cropped to keep its wordmark band out of frame -- and the canvas
          sits at time zero underneath it, which for a replay is blank. That
@@ -164,9 +299,11 @@
          transport the profile's stage already drives.
 
          Reset on the way out so the tile goes back to being a tile. */
-      var onFs = function () {
+      var onFs = function (big) {
         var box = stage.querySelector('.skribl-inline');
         var pl = box && box._skriblInline;
+        full.setAttribute('aria-pressed', big ? 'true' : 'false');
+        full.title = big ? 'Leave full screen' : 'Full screen';
         if (!box) return;
         /* THE PAGE SAYS WHEN, THE COMPONENT SAYS WHAT. `is-immersive` is the
            component's own state (inlineplayer.css): it hides the share card and
@@ -174,14 +311,13 @@
            live in this page's sheet, reaching into the player's internals —
            which is the copy verify_inline's gate exists to stop, and it caught
            it on main. */
-        box.classList.toggle('is-immersive', fsEl() === stage);
+        box.classList.toggle('is-immersive', !!big);
         if (!pl) return;
-        if (fsEl() === stage) { pl.play(); return; }
+        if (big) { pl.play(); return; }
         pl.pause();
         if (pl.state().loaded) pl.seek(0);
       };
-      document.addEventListener('fullscreenchange', onFs);
-      document.addEventListener('webkitfullscreenchange', onFs);
+      imm = window.SkriblImmersive.attach(stage, { onChange: onFs });
       head.insertBefore(full, rep);
     }
 
@@ -234,11 +370,33 @@
     stage.appendChild(frag);
     art.appendChild(stage);
 
+    /* THE CAPTION, OVER THE DRAWING (owner: "description could go on screen
+       on hover and on phone put a little icon toggle that reveals description
+       over skribl"). It used to sit under the stage as a block, which on a
+       grid of tiles is the tallest thing on a card that is supposed to be
+       showing a drawing.
+
+       IT IS ALWAYS IN THE DOM AND ALWAYS IN THE ACCESSIBILITY TREE. `opacity`
+       and not `display` or `hidden`, deliberately: a caption a screen reader
+       cannot reach is worse than a caption that takes a hover, and this text
+       is the only description the post has. `pointer-events: none` so the
+       scrim never eats a play tap while it is faded out.
+
+       Two ways in, because a phone has no hover and a desktop reader may want
+       it to STAY: the toggle pins it (`.cap-on`, driven below) and hover or
+       keyboard focus reveals it transiently where hover exists. */
     if (item.caption) {
       var tc = document.createElement('p');
-      tc.className = 'tc';
+      tc.className = 'tileCap';
       tc.textContent = item.caption;
-      art.appendChild(tc);
+      stage.appendChild(tc);
+      var btn = head.querySelector('.tileCapBtn');
+      if (btn) btn.addEventListener('click', function () {
+        var on = stage.classList.toggle('cap-on');
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        btn.setAttribute('aria-label', on ? 'Hide the description' : 'Show the description');
+        btn.title = on ? 'Hide the description' : 'Show the description';
+      });
     }
     return art;
   }

@@ -79,6 +79,30 @@ def post_public_api(title):
         return json.loads(r.read().decode())["id"]
 
 
+def slow_pad_post(title, seconds=6):
+    """A public replay long enough to watch the pen move.
+
+    The paging fixture above is twelve points over 1.3 s, which on a fast
+    machine is done before a screenshot; the nib is only drawn WHILE a replay
+    is running (`setNib(null)` the moment it finishes), so a short drawing
+    gives a probe nothing to measure. This one is a diagonal across the whole
+    canvas, so every axis of the mapping is exercised rather than a band in
+    the middle.
+    """
+    n = 160
+    pts = [{"x": 20 + i * (776 / (n - 1)), "y": 20 + i * (572 / (n - 1)),
+            "color": "#ffffff", "size": 10, "t": i * (seconds * 1000 / (n - 1))}
+           for i in range(n)]
+    body = {"title": title, "version": 2, "schemaVersion": 2, "visibility": "public",
+            "playbackMode": "replay",
+            "frames": [{"strokes": pts, "strokeGroups": [len(pts)]}],
+            "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+    req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode())["id"]
+
+
 def draw(pg, sel):
     box = pg.locator(sel).bounding_box()
     cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
@@ -454,7 +478,12 @@ with sync_playwright() as _spg:
     # still duplicated them.
     _sheet = (pathlib.Path(__file__).resolve().parent.parent
               / "skribl" / "templates" / "skribl" / "skribl_gallery.html").read_text()
-    _wrap = re.search(r"\.tileStage:fullscreen \{([^}]*)\}", _sheet)
+    # The selector picks up whatever else shares the rule -- `:fullscreen` got
+    # `.is-immersive-page` beside it when the iPhone fallback landed, and a
+    # pattern that insisted on `:fullscreen {` alone went red on a correct
+    # tree. What is under test is the rule BODY, so match up to the brace
+    # rather than spelling out a selector list that is expected to grow.
+    _wrap = re.search(r"\.tileStage:fullscreen[^{]*\{([^}]*)\}", _sheet)
     check("the gallery styles its own wrapper, and names no aspect ratio doing it",
           bool(_wrap) and not re.search(r"\d+\s*/\s*\d+", _wrap.group(1)),
           f"rule body {(_wrap.group(1).strip() if _wrap else 'MISSING')!r} — a "
@@ -638,6 +667,378 @@ with sync_playwright() as _spk:
           f"{_tips['leftovers']} controls still carry a title attribute")
     _pk.close()
     _bk.close()
+
+# ---------------------------------------------------------------------------
+# THE CARD: who made it, and the caption over the drawing (v308)
+#
+# WHY THE LISTING IS INTERCEPTED. Skribl has no user table, so this demo's
+# every post has user_id NULL and the server can never put an author on a tile
+# here -- verify_hostseams drives the API side with a real resolver. What is
+# under test on THIS side is the renderer: given an author, does the card draw
+# one, and given none, does it draw nothing. Rewriting the one response is the
+# only way to ask that question of the real page, and it keeps the two halves
+# pinned separately rather than through one end-to-end fixture that would go
+# green if either half alone worked.
+print("\nGALLERY — the card says who made it, and hides the words until asked")
+with sync_playwright() as _spa:
+    _ba = _spa.chromium.launch()
+    _pa = _ba.new_context().new_page()
+    _pa.set_viewport_size({"width": 1100, "height": 1000})
+
+    _AUTHOR = {"id": "7", "display_name": "Mr. B", "username": "bigballbaron",
+               "avatar_url": BASE + "/static/skribl/icon-192.png",
+               "url": "https://example.test/u/bigballbaron", "verified": True}
+    # A HOSTILE URL IN A HOST-SUPPLIED FIELD. `author.url` becomes an href on
+    # something people click, and the resolver is the host's function reading
+    # the host's database -- so it is not trusted to hold a web address.
+    _EVIL = {"id": "9", "display_name": "Clicky", "username": "clicky",
+             "url": "javascript:window.__pwned = 1"}
+
+    def _inject(route):
+        r = route.fetch()
+        try:
+            data = r.json()
+        except Exception:
+            route.fulfill(response=r)
+            return
+        items = data.get("items") or []
+        for i, item in enumerate(items):
+            if i == 0:
+                item["author"] = dict(_AUTHOR)
+                item["caption"] = "a caption that lives over the drawing"
+            elif i == 1:
+                item["author"] = dict(_EVIL)
+            # every other row keeps NO author, which is the absence case
+        route.fulfill(response=r, json=data)
+
+    _pa.route("**/api/skribls?*", _inject)
+    browsing.goto(_pa, BASE, "/gallery")
+    _pa.wait_for_timeout(2200)
+
+    _card = _pa.evaluate("""() => {
+        const t = document.querySelectorAll('.tile');
+        const a = t[0] && t[0].querySelector('.tauth');
+        const img = a && a.querySelector('.tavatar img');
+        return {
+          tiles: t.length,
+          has: !!a, tag: a ? a.tagName : null, href: a ? (a.getAttribute('href') || '') : '',
+          dn: a ? (a.querySelector('.tdn') || {}).textContent : null,
+          un: a ? (a.querySelector('.tun') || {}).textContent : null,
+          tick: !!(a && a.querySelector('.tverified')),
+          avatar: img ? img.getAttribute('src') : null,
+          /* the block sits between the head and the drawing, which is where
+             the owner asked for it ("at the top under the title") */
+          belowHead: !!(a && t[0].querySelector('.thead') &&
+            a.getBoundingClientRect().top >= t[0].querySelector('.thead').getBoundingClientRect().bottom - 1),
+          aboveStage: !!(a && t[0].querySelector('.tileStage') &&
+            a.getBoundingClientRect().bottom <= t[0].querySelector('.tileStage').getBoundingClientRect().top + 1),
+          /* and the tiles with no author draw no block at all */
+          blocks: document.querySelectorAll('.tauth').length,
+        }; }""")
+    check("the fixture really produced a grid to measure",
+          _card["tiles"] >= 3, f"{_card['tiles']} tiles — fewer than three and "
+          f"the absence assertion below has nothing to be absent from")
+    check("a described author is drawn on the card: name, @handle, avatar, tick",
+          _card["has"] and _card["dn"] == "Mr. B" and _card["un"] == "@bigballbaron"
+          and _card["tick"] and (_card["avatar"] or "").endswith("icon-192.png"),
+          str(_card) + " \u2014 a null avatar can also mean the image 404'd: the "
+          "element's own onerror swaps it for an initial, which is the fallback "
+          "working and the fixture wrong")
+    check("...under the title and above the drawing",
+          _card["belowHead"] and _card["aboveStage"], str(_card))
+    check("...and a post with no author draws NO block, not an empty one",
+          _card["blocks"] == 2,
+          f"{_card['blocks']} .tauth blocks for 2 described authors out of "
+          f"{_card['tiles']} tiles")
+
+    _evil = _pa.evaluate("""() => {
+        const a = [...document.querySelectorAll('.tauth')]
+                    .find(x => (x.textContent || '').indexOf('clicky') >= 0);
+        return { found: !!a, tag: a ? a.tagName : null,
+                 href: a ? (a.getAttribute('href') || '') : '' }; }""")
+    check("a javascript: author URL never becomes an href",
+          _evil["found"] and _evil["tag"] == "DIV" and not _evil["href"],
+          f"{_evil} — the name still renders, as plain text; only the link is refused")
+
+    # THE CAPTION, OVER THE DRAWING. Asserted by PAINT and geometry, not by
+    # the class alone: `opacity` is what hides it (the text stays in the
+    # accessibility tree), so "hidden" here means a computed opacity of 0.
+    #
+    # READ AFTER THE TRANSITION, NEVER DURING IT. The first draft clicked and
+    # read `opacity` in the same evaluate(), and getComputedStyle returns the
+    # INTERPOLATED value mid-transition -- so a working toggle measured 0 and
+    # this went red on correct code, while the "off again" half went green for
+    # that same wrong reason. Each step now waits longer than the .16s.
+    #
+    # The mouse is parked off the grid first: `@media (hover: hover)` is live
+    # in this desktop browser, so a pointer resting on a tile would reveal the
+    # caption on its own and the toggle's effect would be unmeasurable.
+    _pa.mouse.move(5, 5)
+    _pa.wait_for_timeout(300)
+    _cap = _pa.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const cap = t.querySelector('.tileCap');
+        const st = t.querySelector('.tileStage');
+        const btn = t.querySelector('.tileCapBtn');
+        if (!cap || !st || !btn) return { missing: !cap ? 'cap' : (!st ? 'stage' : 'btn') };
+        const cr = cap.getBoundingClientRect(), sr = st.getBoundingClientRect();
+        return { text: cap.textContent,
+                 rest: getComputedStyle(cap).opacity,
+                 inStage: cr.top >= sr.top - 1 && cr.bottom <= sr.bottom + 1,
+                 pressed0: btn.getAttribute('aria-pressed') }; }""")
+    if not _cap.get("missing"):
+        for _step, _keys in ((1, ("on", "pressed1")), (2, ("off", "pressed2"))):
+            _pa.evaluate("() => document.querySelector('.tile .tileCapBtn').click()")
+            _pa.wait_for_timeout(400)
+            _got = _pa.evaluate("""() => [
+                getComputedStyle(document.querySelector('.tile .tileCap')).opacity,
+                document.querySelector('.tile .tileCapBtn').getAttribute('aria-pressed')]""")
+            _cap[_keys[0]], _cap[_keys[1]] = _got[0], _got[1]
+    check("the caption is drawn over the drawing, not as a block under it",
+          not _cap.get("missing") and _cap["inStage"]
+          and _cap["text"] == "a caption that lives over the drawing",
+          str(_cap))
+    check("...invisible at rest, and the toggle turns it on and off again",
+          not _cap.get("missing") and _cap["rest"] == "0" and _cap["on"] == "1"
+          and _cap["off"] == "0", str(_cap))
+    check("...and the toggle says which state it is in",
+          _cap.get("pressed0") == "false" and _cap.get("pressed1") == "true"
+          and _cap.get("pressed2") == "false", str(_cap))
+
+    # A CAPTION A READER CANNOT GET TO IS WORSE THAN ONE THAT TAKES A HOVER.
+    # `opacity: 0` keeps the text in the accessibility tree; `display: none`
+    # or `hidden` would not, and either would have looked identical on screen.
+    _a11ycap = _pa.evaluate("""() => {
+        const cap = document.querySelector('.tile .tileCap');
+        const cs = getComputedStyle(cap);
+        return { display: cs.display, visibility: cs.visibility,
+                 hidden: cap.hasAttribute('hidden'),
+                 w: Math.round(cap.getBoundingClientRect().width) }; }""")
+    check("the hidden caption is still text a screen reader reaches",
+          _a11ycap["display"] != "none" and _a11ycap["visibility"] != "hidden"
+          and not _a11ycap["hidden"] and _a11ycap["w"] > 0,
+          f"{_a11ycap} — display:none or hidden would look the same and read as nothing")
+
+    # HOVER IS THE OTHER WAY IN, where a hover exists at all. The test browser
+    # is a desktop Chromium, so `@media (hover: hover)` is live here.
+    _pa.hover(".tile .tileStage")
+    _pa.wait_for_timeout(300)
+    _hov = _pa.evaluate("() => getComputedStyle(document.querySelector('.tile .tileCap')).opacity")
+    check("hovering a tile reveals its caption without a click",
+          _hov == "1", f"opacity {_hov} while hovering the tile")
+
+    _pa.close()
+    _ba.close()
+
+
+# ---------------------------------------------------------------------------
+# FULL SIZE ON A PHONE (v308)
+#
+# WHAT IS SIMULATED AND WHY IT HAS TO BE. iOS Safari implements the Fullscreen
+# API for `<video>` and nothing else, and this page did the right thing with
+# that answer -- it hid the control, on the rule that a button which cannot
+# work should not be on screen. The result was the owner's "i am not seeing
+# full screen on gallery or library on iphone": the device where a drawing is
+# smallest was the device with no way to make it bigger.
+#
+# The harness browser HAS the API, so the phone's case is unreachable without
+# taking it away. The init script removes exactly what lib/immersive.js probes
+# -- both `*fullscreenEnabled` flags and both request methods -- before any
+# page script runs. That is the real fork, not an approximation of it.
+print("\nGALLERY — full size on a browser with no Fullscreen API")
+with sync_playwright() as _spi:
+    _bi = _spi.chromium.launch()
+    _pi = _bi.new_context().new_page()
+    _pi.set_viewport_size({"width": 390, "height": 844})
+    # STATEMENTS, NOT A FUNCTION EXPRESSION. add_init_script takes script
+    # SOURCE and runs it; `() => {...}` is source that evaluates to a function
+    # nobody calls, so the first draft neutered nothing and the page kept its
+    # API. It still went green on every row below -- because headless Chromium
+    # REJECTS requestFullscreen without a trusted gesture, and the rejection
+    # path lands in the same fallback. Two ways in, one of them tested by
+    # accident; the flag check above is what caught it.
+    _pi.add_init_script("""
+      try { Object.defineProperty(document, 'fullscreenEnabled',
+        { configurable: true, get: function () { return false; } }); } catch (e) {}
+      try { Object.defineProperty(document, 'webkitFullscreenEnabled',
+        { configurable: true, get: function () { return false; } }); } catch (e) {}
+      try { delete Element.prototype.requestFullscreen; } catch (e) {}
+      try { delete Element.prototype.webkitRequestFullscreen; } catch (e) {}
+    """)
+    # Newest first, so this is tile 0 and the rows below know which drawing
+    # they are watching rather than taking whatever the grid happened to hold.
+    _slow = slow_pad_post("a pen you can follow")
+    browsing.goto(_pi, BASE, "/gallery")
+    _pi.wait_for_timeout(2200)
+
+    _has = _pi.evaluate("""() => ({
+        api: !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
+        tiles: document.querySelectorAll('.tile').length,
+        buttons: document.querySelectorAll('.tileFull').length,
+        exits: document.querySelectorAll('.tileExit').length })""")
+    check("the simulation is real: this page believes it has no Fullscreen API",
+          _has["api"] is False,
+          f"{_has} \u2014 with the API still present every row below would be "
+          f"testing the path that already worked")
+    check("...and every tile still offers full size",
+          _has["tiles"] > 0 and _has["buttons"] == _has["tiles"],
+          f"{_has} \u2014 this is the iPhone, where the control used to be absent")
+    check("...each with a way back out inside the drawing",
+          _has["exits"] == _has["tiles"],
+          f"{_has} \u2014 in the fallback the page is still the page, and nothing "
+          f"but this button leaves it: no Escape from the browser, no system gesture")
+
+    _pi.evaluate("() => document.querySelector('.tile .tileFull').click()")
+    _pi.wait_for_timeout(700)
+    _big = _pi.evaluate("""() => {
+        const st = document.querySelector('.tile .tileStage');
+        const r = st.getBoundingClientRect();
+        const box = st.querySelector('.skribl-inline');
+        return { w: Math.round(r.width), h: Math.round(r.height),
+                 vw: window.innerWidth, vh: window.innerHeight,
+                 left: Math.round(r.left), top: Math.round(r.top),
+                 pinned: getComputedStyle(st).position,
+                 immersive: !!(box && box.classList.contains('is-immersive')),
+                 locked: getComputedStyle(document.documentElement).overflow,
+                 exitSeen: getComputedStyle(st.querySelector('.tileExit')).display }; }""")
+    # MEASURED AGAINST THE VIEWPORT, not against the class. `position: fixed`
+    # is resolved against the nearest ancestor with a transform, a filter or
+    # containment rather than against the viewport, so a tile inside a
+    # transformed card would carry the class and sit in a 300px box. The only
+    # honest question is how big it actually got.
+    check("pressing it puts the drawing over the whole viewport",
+          _big["pinned"] == "fixed" and _big["left"] == 0 and _big["top"] == 0
+          and abs(_big["w"] - _big["vw"]) <= 1 and abs(_big["h"] - _big["vh"]) <= 2,
+          f"{_big} \u2014 a transformed or contained ancestor turns `fixed` into "
+          f"`absolute` and this is what catches it")
+    check("...the component is told what immersive means for its own parts",
+          _big["immersive"] is True,
+          f"{_big} \u2014 the page says WHEN and inlineplayer.css says WHAT")
+    check("...the page behind it cannot scroll",
+          _big["locked"] == "hidden",
+          f"{_big} \u2014 somebody else's post sliding past under a full-size "
+          f"drawing is worse than no full size at all")
+    check("...and the way out is on screen",
+          _big["exitSeen"] == "grid", str(_big))
+
+    # ---- THE PEN IS ON THE LINE (v308) ------------------------------------
+    # Owner's screenshot, gallery full screen: the nib sat up and to the left
+    # of the stroke it was drawing. setNib() mapped the point through
+    # canvas.getBoundingClientRect(), which IS the drawing in a tile
+    # (width/height auto under max-width 100%) and is the whole container in
+    # immersive (width/height 100% + object-fit: contain, bitmap letterboxed
+    # inside). So the nib was spread across the screen while the line was drawn
+    # across the contained box.
+    #
+    # ASSERTED AGAINST THE CONTENT BOX, DERIVED FROM THE ASPECT RATIO -- which
+    # is what `contain` is DEFINED to do, not a copy of what the code does. A
+    # test that recomputed the implementation's formula would agree with it
+    # whatever it said.
+    #
+    # THE PROBE PROVES ITSELF FIRST. On a 390x844 phone a 16:9 drawing is
+    # letterboxed to about 219px of a 844px box, so the element box is ~625px
+    # taller than the content box and the two predictions are nowhere near each
+    # other. If that gap were small the rows below could not tell a fixed nib
+    # from a broken one, so the gap is asserted before the nib is.
+    _nib = _pi.evaluate("""async () => {
+        const st = document.querySelector('.tile .tileStage');
+        const cv = st.querySelector('.skribl-inline-canvas');
+        const nb = st.querySelector('.skribl-inline-nib');
+        if (!cv || !nb) return { missing: !cv ? 'canvas' : 'nib' };
+        const ar = cv.width / cv.height;            /* the drawing's own shape */
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        const out = { ar: Math.round(ar * 100) / 100, samples: [], outside: 0,
+                      gap: 0, hidden: 0 };
+        for (let i = 0; i < 14; i++) {
+          await sleep(120);
+          const cr = cv.getBoundingClientRect();
+          const nr = nb.getBoundingClientRect();
+          if (!cr.width || !cr.height) continue;
+          /* the content box `contain` paints into */
+          const cw = Math.min(cr.width, cr.height * ar);
+          const ch = Math.min(cr.height, cr.width / ar);
+          const cx = cr.left + (cr.width - cw) / 2;
+          const cy = cr.top + (cr.height - ch) / 2;
+          /* BEFORE the visibility gate: the probe's own validity is a fact
+             about the LAYOUT and must be measurable even on a frame where the
+             nib happens to be hidden. Measuring it after cost a run. */
+          out.gap = Math.max(out.gap, Math.round(cr.height - ch), Math.round(cr.width - cw));
+          if (getComputedStyle(nb).opacity === '0') { out.hidden++; continue; }
+          const nx = nr.left + nr.width / 2, ny = nr.top + nr.height / 2;
+          const ok = nx >= cx - 2 && nx <= cx + cw + 2 && ny >= cy - 2 && ny <= cy + ch + 2;
+          if (!ok) out.outside++;
+          out.samples.push([Math.round(nx - cx), Math.round(ny - cy),
+                            Math.round(cw), Math.round(ch), ok ? 1 : 0]);
+        }
+        return out; }""")
+    check("the probe can tell a fixed nib from a broken one",
+          not _nib.get("missing") and _nib["gap"] >= 200,
+          f"{_nib.get('gap')}px between the element box and the content box "
+          f"\u2014 under a letterbox this thin the two mappings agree and the "
+          f"row below would pass on the defect")
+    check("the nib is drawn ON the drawing, not across the whole screen",
+          not _nib.get("missing") and len(_nib["samples"]) >= 4
+          and _nib["outside"] == 0,
+          f"{_nib.get('outside')} of {len(_nib.get('samples', []))} samples "
+          f"outside the drawing\u2019s content box ({_nib.get('hidden')} frames "
+          f"with the nib hidden); [dx, dy, w, h, ok] = "
+          f"{_nib.get('samples', [])[:6]}")
+
+    _pi.evaluate("() => document.querySelector('.tile .tileExit').click()")
+    _pi.wait_for_timeout(600)
+
+    # ...AND THE SAME FORMULA IN A TILE, which is the claim the fix actually
+    # makes: one mapping for both sizing models. In a tile the element box IS
+    # the drawing, so the content box and the element box coincide and NO
+    # mutation of setNib can be caught here -- the two mappings agree by
+    # construction. Said plainly because a reader could otherwise take this row
+    # for a second pin on the same defect. What it guards is the REDUCTION: if
+    # the formula is ever "simplified" in a way that stops collapsing to the
+    # element box when the scales match, a tile's pen goes wrong and this is
+    # what notices.
+    _pi.evaluate("() => { const b = document.querySelector('.tile .skribl-inline');"
+                 " if (b && b._skriblInline) b._skriblInline.play(); }")
+    _tile = _pi.evaluate("""async () => {
+        const st = document.querySelector('.tile .tileStage');
+        const cv = st.querySelector('.skribl-inline-canvas');
+        const nb = st.querySelector('.skribl-inline-nib');
+        if (!cv || !nb) return { missing: true };
+        const ar = cv.width / cv.height;
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        const out = { samples: 0, outside: 0, gap: 0 };
+        for (let i = 0; i < 10; i++) {
+          await sleep(120);
+          const cr = cv.getBoundingClientRect(), nr = nb.getBoundingClientRect();
+          if (!cr.width || !cr.height) continue;
+          const cw = Math.min(cr.width, cr.height * ar);
+          const ch = Math.min(cr.height, cr.width / ar);
+          out.gap = Math.max(out.gap, Math.round(cr.height - ch), Math.round(cr.width - cw));
+          if (getComputedStyle(nb).opacity === '0') continue;
+          const cx = cr.left + (cr.width - cw) / 2, cy = cr.top + (cr.height - ch) / 2;
+          const nx = nr.left + nr.width / 2, ny = nr.top + nr.height / 2;
+          out.samples++;
+          if (!(nx >= cx - 2 && nx <= cx + cw + 2 && ny >= cy - 2 && ny <= cy + ch + 2))
+            out.outside++;
+        }
+        return out; }""")
+    check("...and on a tile, where the element box IS the drawing",
+          not _tile.get("missing") and _tile["samples"] >= 3
+          and _tile["outside"] == 0 and _tile["gap"] <= 2,
+          f"{_tile} \u2014 a gap above zero here would mean the tile has started "
+          f"letterboxing too, and this row would be measuring the other case")
+    _back = _pi.evaluate("""() => {
+        const st = document.querySelector('.tile .tileStage');
+        const box = st.querySelector('.skribl-inline');
+        return { pinned: getComputedStyle(st).position,
+                 locked: getComputedStyle(document.documentElement).overflow,
+                 immersive: !!(box && box.classList.contains('is-immersive')),
+                 w: Math.round(st.getBoundingClientRect().width) }; }""")
+    check("leaving puts the tile back, the scroll back, and the component back",
+          _back["pinned"] != "fixed" and _back["locked"] != "hidden"
+          and _back["immersive"] is False and _back["w"] < 390,
+          f"{_back} \u2014 a page left locked is a page nobody can use again")
+    _pi.close()
+    _bi.close()
 
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")

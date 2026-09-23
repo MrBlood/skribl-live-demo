@@ -130,7 +130,57 @@
     .tile .thead { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
     .tile .tt { font-weight: 700; font-size: 14px; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .tile .tm { margin-left: auto; flex: none; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
-    .tile .tc { font-size: 13.5px; color: var(--text-2); overflow-wrap: anywhere; margin: 0; }
+    /* WHO MADE IT, under the title. Skribl has no user table: every field
+       here is what the HOST's resolver returned for the post's user_id, and
+       the names match the ones skribls.net already renders in its own post
+       head (display name, @handle, avatar, the verified tick). A post with no
+       author renders no block at all -- see authorBlock() in gallery.js.
+       The avatar is 22px because this is a caption line and not a post head;
+       the disc is the host's own no-photo fallback, an initial on a tint. */
+    .tauth { display: flex; align-items: center; gap: 6px; min-width: 0;
+      margin: 0 0 2px; padding: 0; font-size: 12.5px; color: var(--text-2);
+      text-decoration: none; }
+    a.tauth:hover .tdn { text-decoration: underline; }
+    .tavatar { flex: none; width: 22px; height: 22px; border-radius: 50%;
+      overflow: hidden; display: grid; place-items: center;
+      background: linear-gradient(135deg, #3a3f4b, #232730);
+      color: #fff; font-size: 11px; font-weight: 700; line-height: 1; }
+    .tavatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .tdn { font-weight: 600; color: var(--text); overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .tverified { flex: none; color: var(--accent); font-size: 11px; }
+    .tun { flex: none; font-family: var(--font-mono); font-size: 11.5px;
+      color: var(--text-3); overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; min-width: 0; }
+    /* THE CAPTION IS OVER THE DRAWING NOW, not a block under it -- the card
+       is meant to be showing a drawing, and the description was the tallest
+       thing on it. `opacity`, never `display` or `hidden`: the text stays in
+       the accessibility tree at all times, because it is the only description
+       the post has and a caption a reader cannot reach is worse than one that
+       takes a hover. `pointer-events: none` so a faded scrim never eats a
+       tap meant for play.
+       Two ways in, because a phone has no hover and a desktop reader may want
+       it to STAY: the toggle beside Report pins it (.cap-on), and hover or
+       keyboard focus reveals it transiently where a hover exists at all. */
+    .tileCap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+      margin: 0; padding: 26px 10px 10px; font-size: 13px; line-height: 1.35;
+      color: #f2f5fa; overflow-wrap: anywhere; pointer-events: none;
+      background: linear-gradient(to top, rgba(6,7,10,.92) 40%, rgba(6,7,10,0));
+      opacity: 0; transition: opacity .16s; }
+    .tileStage.cap-on .tileCap { opacity: 1; }
+    @media (hover: hover) {
+      .tile:hover .tileCap, .tile:focus-within .tileCap { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) { .tileCap { transition: none; } }
+    .tile .tileCapBtn {
+      margin-left: 6px; flex: none; width: 44px; height: 44px; padding: 0;
+      display: inline-grid; place-items: center;
+      background: none; border: 0; border-radius: 8px; color: var(--text-3);
+      cursor: pointer;
+    }
+    .tile .tileCapBtn:hover { color: var(--text); background: var(--control); }
+    .tile .tileCapBtn[aria-pressed="true"] { color: var(--accent); }
+    .tile .tileCapBtn svg { width: 18px; height: 18px; }
     /* ---- Report, on every tile, and the one sheet they share ---------- */
     .tile .report {
       margin-left: 6px; flex: none; min-height: 44px; min-width: 44px; padding: 0 10px;
@@ -146,6 +196,18 @@
     }
     .tile .tileFull:hover { color: var(--text); background: var(--control); }
     .tile .tileFull svg { width: 19px; height: 19px; }
+    /* The way back out, over the drawing and only while it IS full size. The
+       profile's stage has had one since v304; this page had none, which was
+       fine while the only way in was the real API (Escape and the system
+       gesture both work there) and is not fine at all in the fallback, where
+       the page is still the page and nothing else leaves it. */
+    .tileExit { display: none; position: absolute; top: 14px; right: 14px; z-index: 4;
+      width: 44px; height: 44px; place-items: center; border-radius: 10px;
+      background: rgba(6,7,10,.72); border: 1px solid rgba(255,255,255,.18);
+      color: #eef; cursor: pointer; }
+    .tileStage:fullscreen .tileExit,
+    .tileStage.is-immersive-page .tileExit { display: grid; }
+    .tileExit svg { width: 20px; height: 20px; }
     /* The two marks, over the drawing, in the corners the profile's rows use:
        kind top left, sound top right. Decoration — the words are in
        .tileSr, which a screen reader gets and the eye does not. 18px is the
@@ -181,9 +243,30 @@
        resolved at all: a percentage height against an auto grid area is treated
        as auto, so the box fell back to content size and measured 800x450 at the
        BOTTOM of a 1400x900 screen — the owner's screenshot, then the console.) */
+    /* The page behind an immersive overlay must not scroll: a drawing filling
+       the screen with somebody else's post sliding past underneath it is worse
+       than no full size at all. Set by lib/immersive.js on <html>, cleared on
+       the way out. */
+    html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
     .tileStage { display: block; position: relative; }
-    .tileStage:fullscreen { background: #000; display: flex;
-      align-items: center; justify-content: center; width: 100vw; height: 100vh; }
+    /* FULL SIZE WITHOUT A FULLSCREEN API (lib/immersive.js). iOS Safari has
+       one for <video> and nothing else, so on the device where a drawing is
+       smallest there was no way to make it bigger -- both pages correctly hid
+       a control that could not work, and the result was the owner's "i am not
+       seeing full screen on gallery or library on iphone".
+       `.is-immersive-page` is the same geometry as `:fullscreen`, pinned over
+       the viewport instead of handed to the compositor. The two are written as
+       one rule on purpose: a state that drifts from the real thing is two
+       full-screen modes, and the person cannot tell which one they are in.
+       `100dvh` and not `100vh`: on a phone `vh` is the tallest the viewport
+       ever gets, so with the URL bar showing the bottom of the drawing sits
+       under it. */
+    .tileStage:fullscreen, .tileStage.is-immersive-page {
+      background: #000; display: flex; align-items: center; justify-content: center;
+      width: 100vw; height: 100vh; }
+    .tileStage.is-immersive-page {
+      position: fixed; inset: 0; z-index: 2147483000;
+      width: 100vw; height: 100dvh; margin: 0; border-radius: 0; }
     .tile .report:hover { color: var(--text); background: var(--control); }
     .tile .report[data-reported] { color: var(--text-3); }
     .tile .thead { align-items: center; }
@@ -319,7 +402,8 @@
    every aria-modal surface on the editors uses. #}
 {# See the note in skribl_library.html: the controls carry titles and
    nothing was drawing them. Desktop only, by the module's design. #}
-<script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
 <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
 <script src="{{ skribl_asset('gallery.js') }}" defer></script>
 </body>

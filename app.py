@@ -176,6 +176,65 @@ def create_app():
     if os.environ.get("SKRIBL_CSRF_PROTECT", "0") == "1":
         csrf = skribl.security.double_submit_csrf()
 
+    # ---- a demo identity, so the gallery card has an author to show --------
+    #
+    # SKRIBL HAS NO USER TABLE, deliberately: a host signs people in and tells
+    # Skribl who they are (docs/INTEGRATION.md). This demo has no accounts, so
+    # every post it has ever taken carries `user_id = NULL` and every gallery
+    # card renders with no author -- which is the honest answer for an
+    # anonymous post and a useless one for looking at the feature.
+    #
+    # SKRIBL_DEMO_IDENTITY stands in for the host. Set it to a handle and this
+    # app behaves the way skribls.net will: one signed-in user, whose id goes
+    # on new posts, described by the same `set_author_resolver` hook a real
+    # host uses. OFF by default -- unset, nothing here runs and the demo is
+    # exactly as anonymous as it was. Posts made BEFORE it is set stay
+    # anonymous, because their user_id is already NULL and this invents
+    # nothing retroactively.
+    #
+    # The optional companions are all display: _NAME, _AVATAR, _URL, _VERIFIED.
+    _demo_id = (os.environ.get("SKRIBL_DEMO_IDENTITY") or "").strip()
+    current_user_id = None
+    if _demo_id:
+        if csrf is None:
+            # init_skribl raises on this pairing and is right to (an id from a
+            # cookie with no CSRF means any page can post as the signed-in
+            # user). Said here in the demo's own words, naming the demo's own
+            # switch, because its message cannot know about this env var.
+            raise RuntimeError(
+                "SKRIBL_DEMO_IDENTITY signs a user in, so this demo needs CSRF "
+                "on as well: set SKRIBL_CSRF_PROTECT=1. (Skribl refuses the "
+                "pairing itself -- see init_skribl -- because a cookie identity "
+                "without CSRF lets any page post as the signed-in user.)")
+        current_user_id = lambda: _demo_id          # noqa: E731
+
+        _demo_author = {"username": _demo_id}
+        _name = (os.environ.get("SKRIBL_DEMO_IDENTITY_NAME") or "").strip()
+        _avatar = (os.environ.get("SKRIBL_DEMO_IDENTITY_AVATAR") or "").strip()
+        _url = (os.environ.get("SKRIBL_DEMO_IDENTITY_URL") or "").strip()
+        if _name:
+            _demo_author["display_name"] = _name
+        if _avatar:
+            _demo_author["avatar_url"] = _avatar
+        if _url:
+            _demo_author["url"] = _url
+        if (os.environ.get("SKRIBL_DEMO_IDENTITY_VERIFIED") or "").strip().lower() \
+                in ("1", "true", "yes"):
+            _demo_author["verified"] = True
+
+        def _resolve_author(user_id, _who=_demo_id, _d=_demo_author):
+            """The one identity this demo knows. Anybody else stays a bare id.
+
+            A resolver that described EVERY user_id with this one name would be
+            a lie the moment a second author existed, and `author_dict` puts
+            the real id back over anything returned here -- so the mismatch
+            would be visible in the response and confusing rather than wrong.
+            One id, one answer.
+            """
+            return dict(_d) if user_id == _who else None
+
+        skribl.models.set_author_resolver(_resolve_author, app)
+
     # Media backend. 'inline' (default) is v131: base64 data URLs stay inside
     # payload_json. 'local' externalises them to content-addressed files served
     # by the blueprint. An S3 deployment subclasses MediaStore and passes it in.
@@ -214,6 +273,9 @@ def create_app():
     skribl.init_skribl(app, session=lambda: db.session,
                        url_prefix=url_prefix, static_url_path=static_url_path,
                        csrf=csrf, media_store=media_store,
+                       # None unless SKRIBL_DEMO_IDENTITY named somebody; see
+                       # the block above. A host passes its real one here.
+                       current_user_id=current_user_id,
                        # Shared-cache opt-in for /media and the share card.
                        # OFF unless the deployment declares it: visibility is
                        # revocable, and `public` cache headers outlive a

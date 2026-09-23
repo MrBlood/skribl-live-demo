@@ -998,7 +998,36 @@ with sync_playwright() as sp:
     # given up on, and the two numbers disagreeing is the honest record of
     # that. The player's JS budget is the tightest in the tree and the next
     # person to spend it should have to argue as well.
-    BYTES_RATCHET, BYTES_TARGET = 154_000, 153_800
+    # RAISED 154,000 -> 154,800 for the viewer's speed control, measured
+    # 154,535 (app.js 136,510 -> 137,134). The TARGET stays 153,800, for the
+    # same reason the line above gives: a ratchet moving to admit a control is
+    # not a target being abandoned, and the two numbers disagreeing is the
+    # honest record.
+    #
+    # Owner: "on players (across surfaces) should there be a speed control for
+    # PAD? it sometimes draws too fast or slow and I'd like to control that".
+    #
+    # SPENT AGAINST FIRST, as this ceiling's own precedent requires, and the
+    # spending is most of why the number is not larger. Nothing was invented:
+    # `replayRate`, `REPLAY_RATES` and `setReplayRate` have been in app.js
+    # since the Pad's preview row, and its comment there is what makes reuse
+    # correct rather than convenient -- speed describes the act of LOOKING and
+    # never the work, so it is not in the payload and serializeSkribl() has a
+    # pin saying so. A viewer watching at half speed is making the same kind of
+    # choice as an author reviewing a draft at double, which is why they share
+    # one number and one stored preference.
+    #
+    # What the 535 B actually buys: segElapsed() (the clock, scaled in one
+    # place so the flip hold table, the stroke timeline and the progress
+    # fraction all keep working without knowing a rate exists), the
+    # re-anchoring on a mid-play change, one playbackRate line so the music
+    # keeps up, and the button's own label. The first draft cost 633 B; the
+    # three-way title sentence went to one string before this number moved.
+    #
+    # The PAGE's own HTML paid the other half of this feature and paid it
+    # DOWN -- see HTML_RATCHET below, where two full-width link rows came out
+    # of the layout and three controls went into the transport for a net 233 B.
+    BYTES_RATCHET, BYTES_TARGET = 154_800, 153_800
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
@@ -1058,7 +1087,28 @@ with sync_playwright() as sp:
     # out is Escape: a key not every device has and not every person knows.
     # The harness found this rather than review: the assertion that leaves
     # full screen timed out clicking a button that was no longer on screen.
-    HTML_RATCHET = 12_750
+    #
+    # RAISED 12,750 -> 13,050 for the transport the owner asked for, measured
+    # 12,983. Two things landed and one thing left:
+    #
+    #   + a speed button (the viewer's rate; see BYTES_RATCHET above)
+    #   + Copy link and Gallery, as 46px buttons IN the transport row
+    #   - the two full-width `.player-link` ROWS they used to be, and the
+    #     `.player-link` rules in styles.css with them (the CSS budget went
+    #     DOWN, and it is the same feature paying)
+    #
+    # Owner: "maybe we could enlarge the drawing to the biggest it can be for
+    # whatever screen it's on by putting LINK as icon in the play row and
+    # putting an icon for Gallery somewhere to free up space... it would be
+    # cool if the drawing or flip was the showcase instead of all the stuff
+    # (rows) on the bottom taking up so much space". On a 390px phone those
+    # two rows were most of what sat below the drawing.
+    #
+    # SPENT AGAINST FIRST: the gallery glyph was four stroked `<rect>`s with
+    # rounded corners in the first draft and is one filled `<path>` now, which
+    # is 100 B of the 233 this is actually asking for. A raise this small for
+    # three controls is only possible because two rows of markup left.
+    HTML_RATCHET = 13_050
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
@@ -1380,6 +1430,109 @@ with sync_playwright() as sp:
           not _missing,
           f"missing on: {_missing or 'neither'} — the stage and the shared link "
           f"are one product to the person using them")
+
+    # ---- THE DRAWING IS THE SHOWCASE (v308) -------------------------------
+    # Owner: "it would be cool if the drawing or flip was the showcase instead
+    # of all the stuff (rows) on the bottom taking up so much space". Copy link
+    # and Gallery were two FULL-WIDTH rows under the transport; on a phone they
+    # were most of what sat below the drawing. Both are buttons in the
+    # transport row now.
+    #
+    # THREE ASSERTIONS, AND THE CALIBRATION SAYS WHICH ONE IS THE PIN. Putting
+    # the two link rows back reddens the two STRUCTURAL rows below and leaves
+    # the ratio green: chrome went 259 -> 330 against a 370px drawing, so the
+    # drawing still had more room and the ratio could not tell. The ratio is
+    # therefore a FLOOR on the achievement -- it goes red when the chrome grows
+    # past the drawing, whatever causes that -- and not the pin on this change.
+    # Both are worth having and it is worth saying which is which, because a
+    # comment claiming the ratio catches this would be a claim the mutation
+    # test had already contradicted.
+    pg.set_viewport_size({"width": 390, "height": 844})
+    pg.wait_for_timeout(400)
+    _room = pg.evaluate("""() => {
+        const shell = document.getElementById('playerShell');
+        const row = document.querySelector('.player-controls');
+        const cv = document.querySelector('.player-stage canvas, .player-canvas, canvas');
+        if (!shell || !row || !cv) return { missing: !shell ? 'shell' : (!row ? 'row' : 'canvas') };
+        const sr = shell.getBoundingClientRect(), cr = cv.getBoundingClientRect();
+        const inRow = (id) => {
+          const el = document.getElementById(id);
+          return !!(el && row.contains(el));
+        };
+        return { drawing: Math.round(cr.height), chrome: Math.round(sr.height),
+                 copyInRow: inRow('playerCopyBtn'),
+                 galleryInRow: inRow('playerGalleryLink'),
+                 rateInRow: inRow('playerRateBtn'),
+                 leftoverLinks: document.querySelectorAll('.player-link').length }; }""")
+    check("Copy link, Gallery and Speed are all IN the transport row",
+          not _room.get("missing") and _room["copyInRow"] and _room["galleryInRow"]
+          and _room["rateInRow"], str(_room))
+    check("...and nothing is left of the two full-width rows they were",
+          not _room.get("missing") and _room["leftoverLinks"] == 0,
+          f"{_room} — a surviving .player-link is a row still taking the width")
+    check("on a phone the drawing gets more room than the chrome under it",
+          not _room.get("missing") and _room["drawing"] > _room["chrome"],
+          f"drawing {_room.get('drawing')}px against {_room.get('chrome')}px of "
+          f"player shell — the drawing is what the page is for")
+    pg.set_viewport_size({"width": 1200, "height": 900})
+    pg.wait_for_timeout(300)
+
+    # ---- THE VIEWER'S SPEED (v308) ----------------------------------------
+    # Owner: "on players (across surfaces) should there be a speed control for
+    # PAD? it sometimes draws too fast or slow and I'd like to control that".
+    _cycle = []
+    for _ in range(4):
+        _cycle.append(pg.evaluate(
+            "() => document.getElementById('playerRateBtn').textContent.trim()"))
+        pg.evaluate("() => document.getElementById('playerRateBtn').click()")
+        pg.wait_for_timeout(120)
+    check("the speed button cycles 1x, 2x, half, and comes back",
+          _cycle == ["1×", "2×", "½×", "1×"],
+          f"{_cycle} — a control whose label does not follow its own state "
+          f"is a control nobody can read")
+
+    # IT SCALES THE CLOCK, AND THAT IS MEASURED BY PLAYING. A label that
+    # changes and a replay that does not is exactly the bug this is for, and
+    # nothing about the button's own state can see the difference. Same wall
+    # time, twice the rate, so materially more of the drawing should be done.
+    def _progress_after(rate, ms=1400):
+        pg.evaluate("() => { const b = document.getElementById('playerRestartBtn');"
+                    " if (b) b.click(); }")
+        pg.wait_for_timeout(200)
+        pg.evaluate("() => { const p = document.getElementById('playerPlayBtn');"
+                    " if (p && p.getAttribute('aria-label') === 'Pause') p.click(); }")
+        for _ in range(4):
+            now = pg.evaluate(
+                "() => document.getElementById('playerRateBtn').textContent.trim()")
+            if now == rate:
+                break
+            pg.evaluate("() => document.getElementById('playerRateBtn').click()")
+            pg.wait_for_timeout(80)
+        pg.evaluate("() => document.getElementById('playerRestartBtn').click()")
+        pg.wait_for_timeout(ms)
+        out = pg.evaluate(
+            "() => parseFloat(document.getElementById('playerProgressFill').style.width) || 0")
+        pg.evaluate("() => { const p = document.getElementById('playerPlayBtn');"
+                    " if (p && p.getAttribute('aria-label') === 'Pause') p.click(); }")
+        return out
+
+    _at1 = _progress_after("1×")
+    _at2 = _progress_after("2×")
+    _athalf = _progress_after("½×")
+    check("2x really does play the drawing faster, not just say so",
+          _at1 > 1 and _at2 > _at1 * 1.5,
+          f"after the same wall time: 1x reached {_at1:.1f}%, 2x reached "
+          f"{_at2:.1f}% — a label that changes over an unchanged clock is "
+          f"the whole defect this control could have shipped with")
+    check("...and half speed really is slower",
+          _at1 > 1 and _athalf < _at1 * 0.75,
+          f"1x reached {_at1:.1f}%, half reached {_athalf:.1f}%")
+    # Restore, so nothing downstream inherits a rate through localStorage.
+    for _ in range(4):
+        if pg.evaluate("() => document.getElementById('playerRateBtn').textContent.trim()") == "1\u00d7":
+            break
+        pg.evaluate("() => document.getElementById('playerRateBtn').click()")
+        pg.wait_for_timeout(80)
 
     pg.close()
     b.close()
