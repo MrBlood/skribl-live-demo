@@ -10697,3 +10697,88 @@ canvas size as a column on the post, which `inlineplayer.js`'s header has
 already recorded as a schema change and not one to make in passing. The same
 bands are in `/feed` and on the profile, and they have been since the in-post
 player shipped.
+
+### The tile showed the card, and the card contains the drawing
+
+The bands either side of a gallery drawing were not a layout mistake; they were
+the share card. A tile shows `/s/<id>/poster` until somebody presses play, that
+poster IS the card, and the card CONTAINS the drawing: a 4:3 drawing is a 656px
+picture in the middle of a 1200px card. The stylesheet's crop removed the brand
+strip and nothing else, so what reached the tile was 110px of card ground and
+the card's own plate border on each side of the picture — a frame inside a
+frame, on every tile, on every host that embeds the player. The owner
+photographed it and asked for it fixed; the previous release had written it up
+as out of scope, naming exactly the reason it was.
+
+**The reason was a column.** `inlineplayer.js`'s header already said cropping
+the poster to the DRAWING needs the canvas size, and that this is a schema
+change not to be made in passing. So it was made on purpose: `canvas_w` and
+`canvas_h` join `kind` and `pages` on the post, written at post time from the
+same payload in the same tick, because the listing endpoint defers
+`payload_json` deliberately (9.75 ms against 1.04 ms for a page of fifty) and a
+tile cannot look inside the post it is showing.
+
+Nullable, and the null is honest rather than lazy: `canvasSize` is optional in a
+payload and a Skribl authored before Pad had a size picker has none at all. A
+null renders as the band crop the tile used before the column — never as a
+guessed 4:3, which would frame the picture WRONGLY instead of framing it widely.
+That is also why there is no sweep-up default at the end of the v309 backfill,
+which is the one place it differs from v307's: `kind` had an honest answer for a
+row it could not read ('pad', which is what every player shows one) and a canvas
+size does not.
+
+**The framing.** `fitPoster()` puts the card's `drawingRect()` exactly where the
+canvas will land and clips the rest away — rounded to the plate's own corner
+radius and inset by its hairline, so no part of the card survives into the tile.
+Idle and playing became one composition: pressing play changes what moves, not
+where it is. A plain rectangular clip was tried first and leaves four violet
+arcs in the corners, because the card clips the drawing into a rounded rect
+before it strokes the boundary.
+
+`lib/sharecard.js` now names `PLATE_R` and `PLATE_LW`, which `lib/postedcard.js`
+had been drawing from literals and the player needed to know in order to remove.
+
+**What it cost, and the two cheaper ideas that are worse.** +1,081 B of
+JavaScript, −242 B of CSS, net +805 B on the embed, argued at the ratchet.
+Cropping the poster server-side is the obvious alternative and costs the
+deployed app a Pillow dependency and a PNG decode per uncached poster — a C
+extension in `requirements.txt` for a cosmetic crop. Computing the numbers in
+the template ships ~80 B per post instead of ~1 KB cached once, which is worse
+from about a dozen posts on, and puts card arithmetic in a page — the exact
+thing `verify_inline`'s gate forbids and caught on the gallery a release ago.
+The carve is the stylesheet's "three geometry facts" paragraph, which that
+file's own header says belongs in `inlineplayer.js` (CSS comments are served to
+every host and nothing strips them) and which had to be rewritten anyway,
+because the band crop it describes is the no-script fallback now. It was also
+still naming `/s/<id>/card.png`, which has not been the poster's route since
+v287.
+
+#### The instruments
+
+**A RECT IS NOT A PAINT, and `clip-path` is the property that proves it.** The
+framing assertion cannot read the poster's rectangle: `getBoundingClientRect()`
+reports the whole card whatever is visible, by construction, because clipping
+does not move the box. It walks the box's centre row and column with
+`elementFromPoint` instead, which answers what is actually hit, and compares the
+painted region to where the canvas lands after pressing play on the SAME tile.
+That is also why the row asserts agreement rather than remembered pixel counts:
+the numbers change with the column width, the agreement does not.
+
+**The known-bad case arrived on its own.** The fixture posted to prove the
+listing answers null for a payload with no `canvasSize` was the newest post, so
+it became tile 0 — and the framing rows went red against it, reporting a poster
+painted 507px wide against a 379px canvas. The instrument was calibrated by
+accident before it was calibrated on purpose. The probe now selects the first
+tile that HAS a size, and says in its own comment why.
+
+**A regex over source matches the comment about the number.** The seven card
+constants the player inlines are read out of the jsstrip-ed source, not the
+file, so a sentence explaining a literal cannot be mistaken for the literal.
+That is the same failure this tree has now hit in four files.
+
+**And one line was withdrawn rather than defended.** Removing the migration's
+half-written-row sweep changes nothing any suite can see: every branch above it
+writes the pair or writes neither. The line stays as a guard on a future branch
+and its comment now says plainly that no test reddens it, instead of implying
+one does. What the suite pins is the outcome — no row leaves the revision
+carrying one edge alone.

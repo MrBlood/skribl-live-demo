@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-23T03:59:38Z
+UTC timestamp           : 2026-09-23T11:09:28Z
 Host                    : Linux x86_64
-Tree SHA-256            : 24bc0a24b7bc7cf4bdbccc6d99b809653a183de502ffa035c0cf9c8dea604e60
-Git commit              : 8a8e432
+Tree SHA-256            : 46fa82b10daf1b4aa0f5cb9462c91c23026278a756e941403643476051ac5ba9
+Git commit              : 104b0c2
 Source state            : clean
 SKRIBL_VERSION          : v306
 Python                  : 3.12.3
@@ -11,7 +11,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.M9sGw55pVH/harness.db)
+Database reset          : yes (fresh /tmp/tmp.hI94ERl8wS/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -57,7 +57,7 @@ suites requested : 104
   verify_flipmotion.py: ok — 27/27 passed
   verify_framecache.py: ok — 23/23 passed
   verify_fuzz.py: ok — 7/7 passed
-  verify_gallery.py: ok — 104/104 passed
+  verify_gallery.py: ok — 109/109 passed
   verify_gifenc.py: ok — 39/39 passed
   verify_help.py: ok — 65/65 passed
   verify_hold.py: ok — 62/62 passed
@@ -67,7 +67,7 @@ suites requested : 104
   verify_icons.py: ok — 37/37 passed
   verify_identity.py: ok — 44/44 passed
   verify_inbetween.py: ok — 67/67 passed
-  verify_inline.py: ok — 108/108 passed
+  verify_inline.py: ok — 110/110 passed
   verify_input.py: ok — 9/9 passed
   verify_integration.py: ok — 14/14 passed
   verify_jsstrip.py: ok — 28/28 passed
@@ -80,7 +80,7 @@ suites requested : 104
   verify_media.py: ok — 24/24 passed
   verify_mediaauthz.py: ok — 48/48 passed
   verify_medialimits.py: ok — 76/76 passed
-  verify_migrations.py: ok — 67/67 passed
+  verify_migrations.py: ok — 70/70 passed
   verify_mimeparity.py: ok — 26/26 passed
   verify_move.py: ok — 82/82 passed
   verify_mp4.py: SKIPPED (0 assertions) — WebCodecs present but no H.264 profile is supported: {'avc1.42001f': False, 'avc1.4d0028': False, 'avc1.640028': False}
@@ -126,6 +126,6 @@ suites requested : 104
   verify_ux.py: ok — 375/375 passed
   verify_version.py: ok — 30/30 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 5942   (skipped suites contribute 0)
+assertions passed: 5952   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
