@@ -1199,10 +1199,25 @@
      * "shouldn't the nib be scaled to the size of the player, rather than stay
      * the same size no matter where it occurs?").
      *
-     * 13 units of the AUTHOR's canvas, which is 8px at the tile scale this was
-     * drawn for and grows and shrinks from there. Clamped at both ends: below
-     * about five pixels a dot is not a pen tip, it is dirt on the screen, and
-     * above twenty-two it stops being a nib and starts being a cursor.
+     * BUT NOT IN PROPORTION, and that correction is the whole of the second
+     * pass. The first cut scaled it LINEARLY -- a fixed number of authored
+     * units -- which is right for a stroke and wrong for a nib: the drawing
+     * quadrupled in full screen and so did the bead, and the owner got a ball
+     * sitting on a pug ("full size looks good but nib is huge now"). A nib is
+     * the POINT OF CONTACT of a pen. A pen held over a bigger picture is still
+     * a pen; its tip does not grow with the paper.
+     *
+     * So the size is a DAMPED function of the scale -- the square root of it.
+     * It still answers to how big the drawing is, which is what the library's
+     * 84px thumb needed, and it answers a great deal less, which is what full
+     * screen needed. Measured on a 816x612 drawing: the card's 360px-wide
+     * canvas gives 4.0px and a 1280px full screen gives 5.7px, against 5.7 and
+     * 16.9 under the linear law. The owner's own calibration, in one sentence:
+     * "the size of the nib on the small player is the size it should be on the
+     * full page player. it should probably be smaller on small player."
+     *
+     * Clamped at both ends: below about four pixels a dot is not a pen tip, it
+     * is dirt on the screen, and above nine it is a cursor rather than a nib.
      *
      * ONE CUSTOM PROPERTY, and the sheet derives the ring from it with a
      * calc(). This runs on every frame of every replay, so it writes only when
@@ -1218,7 +1233,8 @@
     function nibSize(s) {
       if (s === nibAt) return;
       nibAt = s;
-      nib.style.setProperty('--nb', Math.max(5, Math.min(22, 13 * s)) + 'px');
+      nib.style.setProperty('--nb',
+        Math.max(4, Math.min(9, 5 * Math.sqrt(s))) + 'px');
     }
 
     function setNib(p) {
@@ -1228,6 +1244,21 @@
       if (!cr.width || !cr.height) { st.opacity = '0'; return; }
       var s = Math.min(cr.width / size.w, cr.height / size.h);
       nibSize(s);
+      /* THE NIB TAKES THE INK IT IS LAYING DOWN. It was a white dot whatever
+       * colour the pen was, which reads as a cursor hovering over the drawing
+       * rather than as the pen making it -- and the shared-link player has
+       * tinted its bead since it was written (app.js's nibRGB), so the two
+       * implementations disagreed about something a person sees side by side.
+       *
+       * The colour goes in raw and the SHEET handles the awkward part: a
+       * stroke may carry alpha, and a half-transparent bead over a dark canvas
+       * is barely there. inlineplayer.css lays the ink over an opaque white
+       * base, so a faint pen gives a pale nib rather than a ghost -- the same
+       * intent as the other player's alpha strip, without a colour parser in
+       * a file a host pays for by the byte.
+       *
+       * Erasing keeps the neutral bead: there is no ink to take. */
+      st.setProperty('--nib-c', (!p.erase && p.color) || '#fff');
       st.left = cr.left - br.left + (cr.width - size.w * s) / 2 + p.x * s + 'px';
       st.top = cr.top - br.top + (cr.height - size.h * s) / 2 + p.y * s + 'px';
       st.opacity = '1';

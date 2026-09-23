@@ -2279,6 +2279,75 @@ with sync_playwright() as _spi:
     _pi.close()
     _bi.close()
 
+# ---------------------------------------------------------------------------
+print("\nGALLERY \u2014 the nib is the pen, not a cursor over it")
+# TWO PROPERTIES THAT PULL AGAINST EACH OTHER, both the owner's. Pinned at 8px
+# of CSS the bead was a boulder on an 84px library thumb; scaled in proportion
+# it became a ball in full screen ("full size looks good but nib is huge now").
+# So the size is asked as a RANGE: it grows with the drawing, and by less than
+# the drawing grows. A nib is the point of contact of a pen, and a pen held
+# over a bigger picture is still a pen.
+#
+# ITS OWN SECTION, AND THAT IS THE POINT OF IT. The first two drafts of these
+# rows were spliced into the full-screen census above, which arrives at its
+# measurements in an order of its own: one read both ends after the click and
+# reported the drawing SHRINKING by 0.32x, the other read the resting end on a
+# card that had never been played and found no canvas at all. A page of its
+# own plays the card, measures, enlarges, measures, and disturbs nothing.
+with sync_playwright() as _spn:
+    _bn = _spn.chromium.launch()
+    _pn = _bn.new_context().new_page()
+    _pn.set_viewport_size({"width": 1100, "height": 900})
+    post_public_api("nib fixture")
+    browsing.goto(_pn, BASE, "/gallery")
+    _pn.wait_for_timeout(1800)
+    _NIB = """() => {
+        const t = document.querySelector(".tile");
+        const n = t && t.querySelector(".skribl-inline-nib");
+        const c = t && t.querySelector("canvas");
+        if (!n || !c) return { missing: true };
+        const cs = getComputedStyle(n);
+        return { nib: +n.getBoundingClientRect().width.toFixed(2),
+                 canvas: Math.round(c.getBoundingClientRect().width),
+                 painted: cs.opacity !== "0",
+                 ink: n.style.getPropertyValue("--nib-c"),
+                 bg: cs.backgroundImage,
+                 ring: cs.boxShadow }; }"""
+    _pn.evaluate("() => { const s = document.querySelector('.tile .tileStage');"
+                 " if (s) s.dispatchEvent(new PointerEvent('pointerdown',"
+                 " {bubbles: true})); }")
+    _pn.evaluate("() => document.querySelector('.tile .skfull-card .skfull-play').click()")
+    _pn.wait_for_timeout(1500)
+    _n1 = _pn.evaluate(_NIB)
+    check("a nib is on screen while a card plays, with a size to grow from",
+          not _n1.get("missing") and _n1["painted"] and (_n1.get("nib") or 0) > 0
+          and (_n1.get("canvas") or 0) > 0,
+          f"{_n1} \u2014 the ratio below needs both ends, and a card that never "
+          f"started has neither a canvas nor a bead")
+    _pn.evaluate("() => document.querySelector('.tile .skfull-card .skfull-full').click()")
+    _pn.wait_for_timeout(1600)
+    _n2 = _pn.evaluate(_NIB)
+    _gn = (_n2.get("nib") or 0) / (_n1.get("nib") or 1)
+    _gc = (_n2.get("canvas") or 0) / (_n1.get("canvas") or 1)
+    check("the nib grows with the drawing, and by less than the drawing grows",
+          not _n2.get("missing") and 1.0 < _gn < _gc,
+          f"the bead grew {_gn:.2f}x while the drawing grew {_gc:.2f}x "
+          f"({_n1.get('nib')}px to {_n2.get('nib')}px) \u2014 at 1.00 it is "
+          f"pinned in CSS and at {_gc:.2f} it is a ball in full screen; the "
+          f"whole point is that it is neither")
+    _white = ("", "#fff", "#ffffff", "white")
+    check("...and it is drawn in the ink it is laying down, not in white",
+          (_n2.get("ink") or "").strip().lower() not in _white
+          and "rgb" in (_n2.get("bg") or "")
+          and "rgb" in (_n2.get("ring") or ""),
+          f"{_n2} \u2014 the fixture draws in a colour, so a bead reporting "
+          f"white is a cursor hovering over somebody's drawing rather than "
+          f"the pen making it; the ring has to take it too, or the dot is the "
+          f"ink and the halo round it is somebody else's")
+    _pn.close()
+    _bn.close()
+
+
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")
 sys.exit(0 if passed == len(results) else 1)

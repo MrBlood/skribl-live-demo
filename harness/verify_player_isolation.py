@@ -1491,12 +1491,23 @@ with sync_playwright() as sp:
               f"{_nib_fs} \u2014 the bead is placed from the wrapper's corner and "
               f"scaled by its width; in full screen the wrapper is the screen "
               f"and the canvas is centred in it, so both were wrong at once")
-        check("...and it is a size in the DRAWING, not a size on the screen",
-              not _nib_fs.get("missing") and _nib_fs["nib"] > _NIB_REST + 2,
-              f"full screen {_nib_fs.get('nib')}px against {_NIB_REST}px in the "
-              f"page \u2014 fixed at 14px it was the one element whose whole job "
-              f"is to say how big a pen is and which did not answer to how big "
-              f"the drawing is")
+        # A SIZE IN THE DRAWING, AND DAMPED. Two failures to separate and one
+        # row cannot do it, so the property is a RANGE rather than a floor:
+        # the bead has to grow with the drawing, and by less than the drawing
+        # grows. A nib fixed in CSS sits at the bottom of that range (it was,
+        # at 14px, and was a boulder on a thumb); a nib scaled linearly sits at
+        # the top (it was, for one round, and the owner got a ball on a pug:
+        # "full size looks good but nib is huge now"). A nib is the point of
+        # contact of a pen, and a pen held over a bigger picture is still a
+        # pen.
+        _grew = (_nib_fs.get("nib") or 0) / (_NIB_REST or 1)
+        _drew = (_sz["w"] or 0) / (_rest_w or 1)
+        check("...and it is a size in the DRAWING, damped",
+              not _nib_fs.get("missing") and 1.0 < _grew < _drew,
+              f"the bead grew {_grew:.2f}x while the drawing grew {_drew:.2f}x "
+              f"({_NIB_REST}px to {_nib_fs.get('nib')}px) \u2014 at 1.00 it is "
+              f"pinned in CSS and at {_drew:.2f} it is a ball in full screen; "
+              f"the whole point is that it is neither")
 
         # EXITED THROUGH THAT CONTROL, and
         # getting here took two wrong turns worth recording. Escape first:

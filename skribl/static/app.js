@@ -4425,10 +4425,18 @@ function showPlayerError(msg, canRetry) {
     if (!p) { nib.hidden = true; return; }
     const g = nibGeom();
     const s = g.s;
-    // A SIZE IN THE DRAWING, not a size on the screen: the same 13 authored
-    // units and the same clamp the in-post player uses, so a nib means the
-    // same thing on a card, on a profile row and on a shared link.
-    nib.style.setProperty('--nb', Math.max(7, Math.min(30, 22 * s)) + 'px');
+    // A SIZE IN THE DRAWING, not a size on the screen -- and DAMPED, by the
+    // same square root and for the same reason inlineplayer.js states at
+    // length: a nib is the point of contact of a pen, and a pen held over a
+    // bigger picture is still a pen. Scaled linearly it became a ball in full
+    // screen.
+    //
+    // 1.75x the in-post player's numbers, which is the ratio the two fixed
+    // sizes had (14px here against 8px there) and is not arbitrary: this bead
+    // is a radial gradient whose inner 30% is the only opaque part, so it has
+    // to be wider than a solid dot to read as the same size of point.
+    nib.style.setProperty('--nb',
+      Math.max(7, Math.min(16, 8.75 * Math.sqrt(s))) + 'px');
     nib.style.left = (g.ox + p.x * s) + 'px';
     nib.style.top = (g.oy + p.y * s) + 'px';
     nib.classList.toggle('erase', !!p.erase);
