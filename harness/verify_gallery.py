@@ -608,6 +608,43 @@ for _title, (_id, _wantkind, _wantpages) in _made.items():
           f"listing said kind={_item.get('kind')!r} pages={_item.get('pages')!r}"
           if _item else "the post is not in the listing at all")
 
+# AND HOW BIG THE DRAWING IS (v309), on the same row and for the same reason:
+# the tile frames its idle poster onto the drawing, and the listing is the only
+# place it can learn the shape without fetching the payload it deliberately
+# defers.
+#
+# THE ABSENCE IS THE OTHER HALF. `canvasSize` is OPTIONAL in a payload -- a
+# Skribl from before Pad had a size picker simply has none -- so the honest
+# answer for one is null, and the component then keeps the crop it had before
+# the column. Posted here as a real payload with the key left out, because
+# "the listing reports the size" is satisfied by a column that reports 816x612
+# for everything.
+_nosize = {"title": TAG + " no canvasSize", "version": 2, "schemaVersion": 2,
+           "visibility": "public",
+           "frames": [{"strokes": [{"x": 5, "y": 5, "color": "#fff", "size": 4, "t": 0},
+                                   {"x": 90, "y": 70, "color": "#fff", "size": 4, "t": 90}],
+                       "strokeGroups": [2]}]}
+_rq2 = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_nosize).encode(),
+                              headers={"Content-Type": "application/json"})
+with urllib.request.urlopen(_rq2, timeout=20) as _r2:
+    _nosize_id = json.loads(_r2.read().decode())["id"]
+
+_listing2 = api("/api/skribls?limit=60")
+_by_id2 = {i["id"]: i for i in _listing2.get("items", [])}
+_sized = _by_id2.get(next(iter(_made.values()))[0]) or {}
+_unsized = _by_id2.get(_nosize_id) or {}
+check("the listing carries the drawing's size, so a tile can frame its poster",
+      _sized.get("canvas_w") == 800 and _sized.get("canvas_h") == 600,
+      f"canvas_w={_sized.get('canvas_w')!r} canvas_h={_sized.get('canvas_h')!r} "
+      f"\u2014 posted at 800x600; without this the tile shows the share card's "
+      f"own ground and plate border either side of the drawing")
+check("...and answers null for a payload that never said, rather than guessing",
+      _unsized.get("id") == _nosize_id
+      and _unsized.get("canvas_w") is None and _unsized.get("canvas_h") is None,
+      f"{ {k: _unsized.get(k) for k in ('id', 'canvas_w', 'canvas_h')} } \u2014 a "
+      f"guessed 4:3 would frame the picture WRONGLY, which is worse than framing "
+      f"it widely; the component keeps the band crop on a null")
+
 with sync_playwright() as _spk:
     _bk = _spk.chromium.launch()
     _pk = _bk.new_context().new_page()
@@ -1053,6 +1090,49 @@ with sync_playwright() as _spa:
           f"{_pace} — a bar that never syncs cannot notice another post "
           f"claiming the page's sound, and would pass the row above trivially")
 
+    # WHERE THE POSTER IS PAINTED, scanned rather than read off its rect --
+    # `clip-path` is the one property that makes a rect a lie by construction,
+    # so getBoundingClientRect() reports the whole card whatever is visible.
+    # elementFromPoint answers what is actually hit, and a clipped region does
+    # not hit. Walk the box's centre row and centre column for the first and
+    # last point that lands on the poster.
+    FRAME_JS = """() => {
+        /* THE FIRST TILE THAT KNOWS ITS SIZE, not simply the first tile. The
+           grid also carries posts whose payload never said -- the suite posts
+           one deliberately -- and those keep the band crop by design, so
+           measuring tile 0 blindly measures whichever fixture happens to be
+           newest. (It did: the unsized fixture landed first and reddened these
+           rows, which is the known-bad case arriving for free.) */
+        const tiles = [...document.querySelectorAll('.tile')];
+        const n = tiles.findIndex(x => x.querySelector('[data-skribl-w]'));
+        const t = tiles[n < 0 ? 0 : n];
+        const box = t.querySelector('.skribl-inline');
+        const r = box.getBoundingClientRect();
+        const cy = Math.round(r.top + r.height / 2);
+        const cx = Math.round(r.left + r.width / 2);
+        const on = (x, y) => { const e = document.elementFromPoint(x, y);
+          return !!(e && e.classList.contains('skribl-inline-poster')); };
+        let l = null, rr = null, tp = null, bt = null;
+        for (let x = Math.ceil(r.left); x < r.right; x++) if (on(x, cy)) { l = x; break; }
+        for (let x = Math.floor(r.right) - 1; x >= r.left; x--) if (on(x, cy)) { rr = x; break; }
+        for (let y = Math.ceil(r.top); y < r.bottom; y++) if (on(cx, y)) { tp = y; break; }
+        for (let y = Math.floor(r.bottom) - 1; y >= r.top; y--) if (on(cx, y)) { bt = y; break; }
+        return { n: n, w: box.getAttribute('data-skribl-w'),
+                 h: box.getAttribute('data-skribl-h'),
+                 box: [Math.round(r.width), Math.round(r.height)],
+                 painted: l === null ? null
+                   : [l - Math.round(r.left), tp - Math.round(r.top),
+                      rr - l + 1, bt - tp + 1] }; }"""
+
+    CANVAS_JS = """(n) => {
+        const t = document.querySelectorAll('.tile')[n];
+        const box = t.querySelector('.skribl-inline');
+        const cv = t.querySelector('.skribl-inline-canvas');
+        const br = box.getBoundingClientRect(), cr = cv.getBoundingClientRect();
+        return { hidden: cv.hasAttribute('hidden'),
+                 rect: [Math.round(cr.left - br.left), Math.round(cr.top - br.top),
+                        Math.round(cr.width), Math.round(cr.height)] }; }"""
+
     # The idle play cue, read three ways at once; see the rows that use it.
     CUE_JS = """() => {
         const t = document.querySelector('.tile');
@@ -1095,6 +1175,52 @@ with sync_playwright() as _spa:
           not _cue.get("missing") and _cue["bare"] and not _cue["playing"],
           f"{_cue} — a card that never went bare would pass the row above "
           f"while saying nothing about the class that hid the veil")
+
+    # ---- THE IDLE POSTER IS THE DRAWING, NOT THE CARD AROUND IT (v309) ----
+    #
+    # A tile shows the share card until somebody presses play, and the card
+    # CONTAINS the drawing: a 4:3 drawing sits in a 656px picture in the middle
+    # of a 1200px card, so the old band crop left 110px of card ground and the
+    # card's own plate border on each side. A picture inside a frame inside a
+    # card, on every tile (owner: "fix the share card bands too").
+    #
+    # ASSERTED AS AGREEMENT WITH THE CANVAS, not against remembered numbers.
+    # The claim worth pinning is not "the poster is 284px wide", which changes
+    # with the column width; it is that the poster lands where the drawing will
+    # -- so the measurement is taken twice on the same tile, idle and playing,
+    # and the two are compared. A band crop fails this by a mile: it paints the
+    # full width of the box.
+    _frame = _pa.evaluate(FRAME_JS)
+    check("the tile knows the drawing's size, so there is something to frame",
+          _frame["w"] and _frame["h"],
+          f"{_frame} \u2014 without data-skribl-w/h the component keeps the band "
+          f"crop, and every row below would be measuring the old behaviour")
+    _pa.evaluate("(n) => document.querySelectorAll('.tile')[n]"
+                 ".querySelector('.skfull-play').click()", _frame["n"])
+    _pa.wait_for_timeout(1200)
+    _cv = _pa.evaluate(CANVAS_JS, _frame["n"])
+    check("...and the canvas is up, so there is something to compare it to",
+          not _cv["hidden"] and _cv["rect"][2] > 0 and _cv["rect"][3] > 0,
+          f"{_cv} \u2014 a hidden canvas has a zero rect and everything agrees "
+          f"with nothing")
+    _dev = ([abs(a - b) for a, b in zip(_frame["painted"], _cv["rect"])]
+            if _frame["painted"] else None)
+    # The tolerance is the PLATE: fitPoster insets the clip by PLATE_LW so the
+    # card's accent hairline does not survive into the tile, which costs the
+    # drawing its outermost card pixel on each edge. At tile size that is 2-3
+    # device pixels, and it is the only difference there should be.
+    check("the idle poster is painted where the drawing will be, not where the card is",
+          _frame["painted"] and _dev and max(_dev) <= 6,
+          f"poster painted {_frame['painted']} against canvas {_cv['rect']}, "
+          f"worst edge off by {max(_dev) if _dev else 'n/a'}px \u2014 the band crop "
+          f"paints the whole box width and fails this by ~{_frame['box'][0] - _cv['rect'][2]}px")
+    # PUT THE TILE BACK. The rows above had to press play to have a canvas to
+    # compare against, and the block below presses play itself and asserts the
+    # result is 'playing' -- on a tile already running, that click is a pause.
+    _pa.evaluate("""(n) => { const t = document.querySelectorAll('.tile')[n];
+        const pl = (t.querySelector('.skribl-inline') || {})._skriblInline;
+        if (pl) { pl.pause(); pl.seek(0); } }""", _frame["n"])
+    _pa.wait_for_timeout(300)
 
     # THE CARD'S FOOTER DRIVES THE PLAYER, the same way the full-screen bar
     # does and for the same reason: a control that keeps its own state lies

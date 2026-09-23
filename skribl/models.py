@@ -418,6 +418,21 @@ class SkriblPost(SkriblBase):
     # the same rule the row's own has_audio follows.
     kind = Column(String(8), nullable=True)
     pages = Column(Integer, nullable=True)
+    # HOW BIG THE DRAWING IS, for the same reason and on the same terms (v309).
+    # A tile shows the share CARD until somebody presses play, and the card
+    # contains the drawing with its own ground around it -- so a 4:3 drawing
+    # rendered a picture inside a plate inside a tile, with 110px of card
+    # either side (owner: "fix the share card bands"). The client can crop the
+    # card back to the drawing, lib/sharecard.js drawingRect() being the
+    # arithmetic, but only if it knows the drawing's shape.
+    #
+    # NULLABLE, and null is honest: `canvasSize` is optional in a payload and
+    # a Skribl authored before Pad had a size picker has none at all. A null
+    # renders as the band crop the tile used before this column, never as a
+    # guessed 4:3 -- which would frame the picture wrongly rather than framing
+    # it widely.
+    canvas_w = Column(Integer, nullable=True)
+    canvas_h = Column(Integer, nullable=True)
     # PLAYS, COUNTED (v304). One per client per post per day -- the rows in
     # skribl_views are the record and this is their running total, kept on
     # the post so a listing can show it without a join. server_default so
@@ -559,6 +574,10 @@ class SkriblPost(SkriblBase):
             # a null as nothing. `bool()` here would be the has_audio bug again.
             "kind": self.kind or None,
             "pages": int(self.pages) if self.pages else None,
+            # BOTH OR NEITHER. One edge without the other frames nothing, and a
+            # client that received a width alone would have to invent a height.
+            "canvas_w": int(self.canvas_w) if (self.canvas_w and self.canvas_h) else None,
+            "canvas_h": int(self.canvas_h) if (self.canvas_w and self.canvas_h) else None,
             "views": int(self.views_total or 0),
             "user_id": self.user_id,
             "visibility": self.visibility,

@@ -215,6 +215,34 @@
  * not taken over saying that, and the first screenshot of the post-like
  * gallery card was two dozen black rectangles under two dozen neat footers.
  *
+ * ===========================================================================
+ * THE IDLE POSTER, AND THE THREE GEOMETRY FACTS THE STYLESHEET USED TO CARRY
+ * ===========================================================================
+ *
+ * A tile shows /s/<id>/poster until somebody presses play: the post's own
+ * share card, or a blank canvas when it has none -- never the branded card,
+ * which cropped to a drawing's band reads as a fragment of an advert (v287,
+ * SK-BUG-006). The card is 1200x630 and CONTAINS the drawing, so there are
+ * two ways to show one in a 16:9 box, and this player now does both:
+ *
+ *   NO SCRIPT, OR NO CANVAS SIZE -- the band crop, which is the stylesheet's
+ *   two literals. The card is scaled to 128.0488% of the box height (630/492)
+ *   and pulled up 5.4878% (27/492), which puts the wordmark and the padding
+ *   outside the box. The box is 16:9 because that is the widest canvas a
+ *   drawing can have (lib/canvassizes.js) and the drawing is centred in the
+ *   card, so a symmetric side crop removes ground and never picture. A 1:1
+ *   drawing then leaves 22% of the box as ground rather than 59%.
+ *
+ *   WITH THE DRAWING'S SIZE -- fitPoster(), below, which frames the card's
+ *   drawingRect() exactly where the canvas will land and clips the rest away.
+ *   That 22% of ground was still the CARD's ground, with the card's plate
+ *   border around the picture: a frame inside a frame on every tile, which
+ *   the owner photographed ("fix the share card bands too"). Idle and playing
+ *   are one composition now.
+ *
+ * Both halves are asserted against the real lib/sharecard.js by
+ * verify_inline.py, which evaluates the module rather than trusting the copy.
+ *
  * `is-immersive` — THIS IS THE WHOLE SCREEN NOW. The box loses its border and
  * its radius and fills whatever contains it, the canvas is letterboxed inside
  * with object-fit, the share card goes (a crop that is right at tile size just
@@ -608,6 +636,74 @@
   function fmt(ms) {
     var s = Math.max(0, Math.round(ms / 1000));
     return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  }
+
+  /* ---- the poster, framed where the canvas will be ------------------------ */
+
+  /* THE CARD CONTAINS THE DRAWING, which is the whole problem this solves.
+   *
+   * A tile shows the share card until somebody presses play. The card is
+   * 1200x630 with the drawing CONTAINED inside it -- so a 4:3 drawing sits in
+   * a 656px-wide picture in the middle of a 1200px card, and the stylesheet's
+   * band crop (which removes the brand strip and nothing else) leaves 110px of
+   * card ground and the card's own plate border showing on each side. Every
+   * gallery tile was a picture inside a frame inside a card, and the owner
+   * photographed it: "fix the share card bands too".
+   *
+   * THE POSTER NOW LANDS EXACTLY WHERE THE CANVAS WILL. Same rectangle, same
+   * letterbox, so pressing play changes what moves and not where it is. That
+   * is the property worth having: the idle state stops being a different
+   * composition from the playing one.
+   *
+   * IT NEEDS THE DRAWING'S SHAPE and cannot look it up -- the listing defers
+   * `payload_json` on purpose, which is why `canvas_w`/`canvas_h` are columns
+   * on the post as of v309. The page writes them onto the box as
+   * data-skribl-w/h; WITHOUT them nothing here runs and the stylesheet's band
+   * crop stands, which is exactly what a row that predates the column gets.
+   *
+   * THE ARITHMETIC IS lib/sharecard.js drawingRect(), inlined rather than
+   * imported for the reason the macro's own note gives: a page that only
+   * DISPLAYS Skribls is not charged for loading the module that COMPOSES the
+   * card. verify_inline.py evaluates the real module against these literals,
+   * so the copy cannot drift without a suite going red.
+   */
+  /* The card, in card pixels. AREA_W/AREA_H are CARD_W - PAD*2 and
+   * CARD_H - PAD - FOOTER with PAD 54 and FOOTER 84; written out rather than
+   * derived because every byte of this file is downloaded by every host. */
+  var CARD_W = 1200, CARD_H = 630, AREA_W = 1092, AREA_H = 492, FOOT = 84;
+  /* The box's own aspect, from .skribl-inline's `aspect-ratio: 16 / 9` -- the
+   * widest canvas a drawing can have (lib/canvassizes.js). Every percentage
+   * below resolves against the box, so this is the one shape they assume.
+   * PLATE_R / PLATE_IN are lib/sharecard.js's PLATE_R and PLATE_LW. */
+  var BOX_A = 16 / 9, PLATE_R = 18, PLATE_IN = 2;
+
+  function fitPoster(img, w, h) {
+    /* Where the card put the drawing: drawingRect(), rounding included --
+     * matching the card's own rounding is what makes one scale factor exact
+     * on both axes below. */
+    var sc = Math.min(AREA_W / w, AREA_H / h);
+    var dw = Math.round(w * sc), dh = Math.round(h * sc);
+    if (!(dw > 0 && dh > 0)) return;
+    var dx = Math.round((CARD_W - dw) / 2), dy = Math.round((CARD_H - FOOT - dh) / 2);
+    /* Where the CANVAS will be, in units of the box's HEIGHT. The component
+     * letterboxes it, so whichever axis runs out first decides: cw is the
+     * width, ch the height, and ch = cw / a covers both cases at once. */
+    var a = dw / dh, cw = Math.min(a, BOX_A), ch = cw / a;
+    /* One factor, card pixels -> box-height units, so the image scales
+     * uniformly and the drawing's rect lands on the canvas's rect. */
+    var k = cw / dw, st = img.style, i = PLATE_IN;
+    function p(n, of) { return n / of * 100 + '%'; }
+    st.width = p(CARD_W * k, BOX_A);
+    st.height = p(CARD_H * k, 1);
+    st.left = p((BOX_A - cw) / 2 - dx * k, BOX_A);
+    st.top = p((1 - ch) / 2 - dy * k, 1);
+    /* The stylesheet centres the band crop with a transform; this one is
+     * positioned outright, so the transform has to go or it shifts twice. */
+    st.transform = 'none';
+    st.maxWidth = 'none';
+    st.clipPath = 'inset(' + p(dy + i, CARD_H) + ' ' + p(CARD_W - dx - dw + i, CARD_W)
+      + ' ' + p(CARD_H - dy - dh + i, CARD_H) + ' ' + p(dx + i, CARD_W)
+      + ' round ' + p(PLATE_R - i, dw - i * 2) + '/' + p(PLATE_R - i, dh - i * 2) + ')';
   }
 
   /* ---- one box ----------------------------------------------------------- */
@@ -1298,6 +1394,12 @@
       /* A post whose card 404s (a store that lost the thumbnail, a host without
        * the card route) must not show a broken-image glyph in the feed. */
       poster.addEventListener('error', function () { poster.hidden = true; });
+      /* THE DRAWING'S SHAPE, if the page knows it (v309). Absent -- an old row,
+       * a payload with no canvasSize, a host that has not passed it through --
+       * the stylesheet's band crop stands. See fitPoster above. */
+      var pw = +el.getAttribute('data-skribl-w');
+      var ph = +el.getAttribute('data-skribl-h');
+      if (pw > 0 && ph > 0) fitPoster(poster, pw, ph);
     }
 
     applySound();

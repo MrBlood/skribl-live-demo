@@ -1157,6 +1157,38 @@ with sync_playwright() as sp:
           abs(geom["offset"] - geom["wantOffset"]) < 0.01,
           f"{geom['offset']:.4f} vs {geom['wantOffset']:.4f}")
 
+    # THE PLAYER'S OWN COPY OF THE CARD'S ARITHMETIC (v309). fitPoster() frames
+    # the idle poster onto the drawing's rect, which needs drawingRect()'s
+    # constants and the plate's radius and hairline -- and it inlines them
+    # rather than loading lib/sharecard.js, for the reason the macro's note
+    # gives: a page that only DISPLAYS Skribls is not charged for the module
+    # that COMPOSES one. That is the right trade and it is also how two files
+    # drift apart, so the literals are read out of the player and compared to
+    # the module evaluated above.
+    #
+    # READ FROM THE STRIPPED SOURCE, NOT THE FILE. A regex over the raw file
+    # would happily match a number inside a comment explaining the number --
+    # which is the "check the mechanism, not the word" failure this tree has
+    # hit three times. jsstrip removes every comment first, so what is matched
+    # is a declaration.
+    sys.path.insert(0, str(ROOT))
+    from skribl.jsstrip import strip_bytes as _strip                # noqa: E402
+    _ipsrc = _strip((ROOT / "skribl" / "static" / "inlineplayer.js").read_bytes()).decode()
+    _lits = {k: int(v) for k, v in re.findall(
+        r"\b(CARD_W|CARD_H|AREA_W|AREA_H|FOOT|PLATE_R|PLATE_IN)\s*=\s*(\d+)\b", _ipsrc)}
+    _mod = cp.evaluate("""() => { const S = window.SkriblShareCard;
+        return { CARD_W: S.CARD_W, CARD_H: S.CARD_H, AREA_W: S.AREA_W,
+                 AREA_H: S.AREA_H, FOOT: S.FOOTER,
+                 PLATE_R: S.PLATE_R, PLATE_IN: S.PLATE_LW }; }""")
+    check("the in-post player's inlined card constants are all seven of them",
+          set(_lits) == set(_mod),
+          f"found {sorted(_lits)} against {sorted(_mod)} \u2014 a constant that "
+          f"stopped being a declaration stops being compared, silently")
+    check("...and every one equals lib/sharecard.js",
+          _lits == _mod,
+          f"{_lits} against {_mod} \u2014 the player inlines these to save a host "
+          f"the module; this row is what stops the copy drifting from it")
+
     # AND THE SAME NUMBERS ON THE OTHER SIDE. The card is composited from this
     # module's geometry too — by lib/postedcard.js, which the EDITORS load and a
     # feed does not (it has no drawing to composite; see that file's header). If
@@ -1533,7 +1565,51 @@ with sync_playwright() as sp:
     # 35,400 -> 35,920, measured 35,884, pinned 36 B above it. Net against the
     # carve: 898 B out, 456 B back, so a host still downloads 442 B less than
     # before this release touched the file.
-    EMBED_RATCHET = 35_920
+    # ---- v309, THE POSTER STOPS SHOWING THE CARD AROUND THE DRAWING -------
+    #
+    # +1,081 B of JavaScript, -242 B of CSS, net +805 B. Both halves argued
+    # here, because a raise that only names its spend is a number nobody can
+    # check.
+    #
+    # WHAT IT BUYS. A tile shows the share card until somebody presses play,
+    # and the card CONTAINS the drawing: a 4:3 drawing sits in a 656px picture
+    # in the middle of a 1200px card, so the band crop left 110px of card
+    # ground AND the card's own plate border showing on each side. Every tile
+    # in the gallery was a picture inside a frame inside a card, on every host
+    # that embeds this player, and the owner photographed it: "fix the share
+    # card bands too". fitPoster() frames the card's drawingRect() exactly
+    # where the canvas will land and clips the rest away, so idle and playing
+    # are one composition and pressing play changes what moves, not where it
+    # is.
+    #
+    # WHY IT COSTS A KILOBYTE AND NOT A HUNDRED BYTES. The framing is not a
+    # constant: it depends on the drawing's shape against the box's, which
+    # decides both which axis letterboxes and how far the card must be scaled
+    # for its inner rect to reach that size. Four positions, a clip inset and
+    # a corner radius, all computed per post. A stylesheet cannot express it
+    # because percentages resolve against the box and the answer depends on
+    # the DRAWING.
+    #
+    # THE ALTERNATIVES, AND WHY THEY ARE WORSE. Cropping the poster
+    # server-side is the obvious one and costs the deployed app a Pillow
+    # dependency plus a PNG decode per uncached poster -- a C extension in
+    # requirements.txt for a cosmetic crop. Storing a second, pre-cropped
+    # image at post time grows every payload and leaves every existing post
+    # uncropped. Putting the numbers in the markup ships ~80 B per post
+    # instead of ~1 KB cached once, which is worse from about a dozen posts
+    # on, and puts card arithmetic in a template -- the exact thing the gate
+    # above forbids.
+    #
+    # THE CARVE, -242 B: the stylesheet's "three geometry facts" paragraph.
+    # That file's own header says product reasoning belongs in
+    # inlineplayer.js's -- CSS comments are served to every host and nothing
+    # strips them -- and the paragraph had to be rewritten anyway, because the
+    # band crop it describes is the NO-SCRIPT FALLBACK now rather than the
+    # only path. It also named /s/<id>/card.png, which has not been the
+    # poster's route since v287.
+    #
+    # 35,920 -> 36,760, measured 36,725, pinned 35 B above it.
+    EMBED_RATCHET = 36_760
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

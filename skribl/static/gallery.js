@@ -385,6 +385,15 @@
     var frag = tpl.content.cloneNode(true);
     var box = frag.querySelector('[data-skribl-inline]');
     box.setAttribute('data-skribl-id', item.id);
+    /* THE DRAWING'S SHAPE, so the component can frame the idle poster where the
+       canvas will be rather than showing the share card's ground either side of
+       it (v309). Null on a row written before the column, and the component
+       then keeps the band crop -- so this is written only when the listing
+       actually answered, never as a default. */
+    if (item.canvas_w && item.canvas_h) {
+      box.setAttribute('data-skribl-w', item.canvas_w);
+      box.setAttribute('data-skribl-h', item.canvas_h);
+    }
     var poster = box.querySelector('.skribl-inline-poster');
     if (poster) {
       poster.setAttribute('src', poster.getAttribute('src').replace('__ID__', encodeURIComponent(item.id)));

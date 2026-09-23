@@ -676,6 +676,85 @@ try:
 except Exception as _e6:    # noqa: BLE001
     check("the deploy's migration wiring is inspectable", False, repr(_e6))
 
+print("\nMIGRATIONS \u2014 v309's SQL backfill answers what the app's Python answers")
+# THREE SPELLINGS OF ONE RULE. `canvas_w`/`canvas_h` are written at post time by
+# validation._payload_canvas and backfilled by the v309 revision, which spells
+# the same test in PostgreSQL, in SQLite and in a Python fallback for any other
+# engine. Nothing but this section stops the three drifting, and a drift is
+# silent: a row simply frames its poster the old way forever.
+#
+# THE SQLITE BRANCH IS DRIVEN FOR REAL, against a table seeded with the shapes
+# a payload actually takes -- not the helper called directly. The v279 finding
+# beside this one was PLACEMENT rather than logic, and a test that calls the
+# helper stays green through exactly that bug.
+_v309_path = (ROOT / "skribl" / "migrations" / "versions"
+              / "b5c1e7d92a34_v309_post_canvas_size.py")
+_spec9 = _ilu.spec_from_file_location("_v309_canvas", _v309_path)
+_v309 = _ilu.module_from_spec(_spec9)
+_spec9.loader.exec_module(_v309)
+
+sys.path.insert(0, str(ROOT))
+from skribl.validation import _payload_canvas as _pycanvas        # noqa: E402
+
+# Every shape that has ever been posted or feared: the ordinary case, a Skribl
+# from before Pad had a size picker, and the seven ways `canvasSize` can be
+# present and still mean nothing.
+_SHAPES = [
+    ("a real drawing",            {"canvasSize": {"cssWidth": 816, "cssHeight": 612}}),
+    ("a square one",              {"canvasSize": {"cssWidth": 707, "cssHeight": 707}}),
+    ("no canvasSize at all",      {"frames": []}),
+    ("canvasSize null",           {"canvasSize": None}),
+    ("canvasSize not an object",  {"canvasSize": "816x612"}),
+    ("one edge only",             {"canvasSize": {"cssWidth": 816}}),
+    ("a float edge",              {"canvasSize": {"cssWidth": 816.5, "cssHeight": 612}}),
+    ("a zero edge",               {"canvasSize": {"cssWidth": 0, "cssHeight": 612}}),
+    ("an edge past the cap",      {"canvasSize": {"cssWidth": 99999, "cssHeight": 612}}),
+    ("a numeric STRING edge",     {"canvasSize": {"cssWidth": "816", "cssHeight": 612}}),
+    ("a boolean edge",            {"canvasSize": {"cssWidth": True, "cssHeight": 612}}),
+]
+
+_eng9 = sa.create_engine("sqlite://")
+with _eng9.begin() as c:
+    c.exec_driver_sql("CREATE TABLE skribl_posts "
+                      "(id INTEGER PRIMARY KEY, payload_json TEXT)")
+    for _lbl, _pl in _SHAPES:
+        c.exec_driver_sql("INSERT INTO skribl_posts (payload_json) VALUES (?)",
+                          (json.dumps(_pl),))
+    # And one row whose payload is not JSON at all, which the app answers
+    # (None, None) for and the SQL must not choke on.
+    c.exec_driver_sql("INSERT INTO skribl_posts (payload_json) VALUES (?)",
+                      ("not json {",))
+
+with _eng9.begin() as _conn9:
+    _ctx9 = MigrationContext.configure(_conn9)
+    with Operations.context(_ctx9):
+        _v309.upgrade()
+
+with _eng9.connect() as _c9:
+    _got9 = [(r[0], r[1]) for r in _c9.exec_driver_sql(
+        "SELECT canvas_w, canvas_h FROM skribl_posts ORDER BY id").fetchall()]
+
+_want9 = [_pycanvas(pl) for _lbl, pl in _SHAPES] + [(None, None)]
+_rows9 = [(lbl, w, g) for (lbl, _), w, g in
+          zip(_SHAPES + [("not JSON at all", None)], _want9, _got9)]
+_bad9 = [r for r in _rows9 if tuple(r[1]) != tuple(r[2])]
+check("SQLite: the v309 backfill agrees with _payload_canvas on every shape",
+      not _bad9,
+      "; ".join(f"{lbl}: python {w} sql {g}" for lbl, w, g in _bad9) or
+      f"{len(_rows9)} shapes agree")
+# A backfill that wrote NULL everywhere would pass the row above only if the
+# Python agreed, which it does not for the two real drawings -- but say it out
+# loud, because "they agree" is the kind of claim a broken pair satisfies.
+check("...and the two real drawings were actually filled in, not left null",
+      _got9[0] == (816, 612) and _got9[1] == (707, 707),
+      f"{_got9[:2]} \u2014 a backfill that wrote nothing agrees with a Python "
+      f"that returned nothing, and neither would be doing its job")
+# BOTH EDGES OR NEITHER, which the revision enforces with a sweep at the end.
+check("...and no row carries one edge without the other",
+      all((w is None) == (h is None) for w, h in _got9),
+      f"{_got9} \u2014 a width with no height frames nothing and would make a "
+      f"client invent the number it is missing")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

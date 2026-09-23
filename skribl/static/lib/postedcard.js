@@ -37,6 +37,7 @@
      * loads without sharecard.js composites exactly as it always did. */
     var SC = global.SkriblShareCard;
     return SC || { CARD_W: 1200, CARD_H: 630, FOOTER: 84,
+                   PLATE_R: 18, PLATE_LW: 2,
                    drawingRect: function (w, h) {
                      var aw = 1092, ah = 492;
                      var k = Math.min(aw / w, ah / h);
@@ -65,6 +66,7 @@
       if (typeof document === 'undefined') return null;
       var G = geom();
       var CARD_W = G.CARD_W, CARD_H = G.CARD_H, FOOTER = G.FOOTER;
+      var PLATE_R = G.PLATE_R, PLATE_LW = G.PLATE_LW;
       var card = document.createElement('canvas');
       card.width = CARD_W; card.height = CARD_H;
       var c = card.getContext('2d');
@@ -82,13 +84,13 @@
       if (flat && flat.width && flat.height) {
         var r = G.drawingRect(flat.width, flat.height);
         c.save();
-        roundRect(c, r.x, r.y, r.w, r.h, 18);
+        roundRect(c, r.x, r.y, r.w, r.h, PLATE_R);
         c.clip();
         c.drawImage(flat, r.x, r.y, r.w, r.h);   /* flat is opaque: bg baked in */
         c.restore();
-        c.lineWidth = 2;
+        c.lineWidth = PLATE_LW;
         c.strokeStyle = 'rgba(124,92,255,0.45)';
-        roundRect(c, r.x, r.y, r.w, r.h, 18);
+        roundRect(c, r.x, r.y, r.w, r.h, PLATE_R);
         c.stroke();
       }
 
