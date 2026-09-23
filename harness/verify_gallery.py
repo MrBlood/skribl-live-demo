@@ -425,7 +425,7 @@ with sync_playwright() as sp:
 
 
 # ---------------------------------------------------------------------------
-_FS_GEOM = "() => { const t = document.querySelector('.tileStage');\n        const box = t.querySelector('.skribl-inline');\n        const c = t.querySelector('.skribl-inline-canvas');\n        const p = t.querySelector('.skribl-inline-poster');\n        const r = e => { const b = e.getBoundingClientRect();\n          return { l: Math.round(b.left), t: Math.round(b.top),\n                   w: Math.round(b.width), h: Math.round(b.height) }; };\n        const pl = box._skriblInline;\n        return { vw: innerWidth, vh: innerHeight, box: r(box), canvas: r(c),\n                 fit: getComputedStyle(c).objectFit,\n                 poster: r(p), st: pl ? pl.state() : null }; }"
+_FS_GEOM = "() => { const t = document.querySelector('.tileStage');\n        const box = t.querySelector('.skribl-inline');\n        const c = t.querySelector('.skribl-inline-canvas');\n        const p = t.querySelector('.skribl-inline-poster');\n        const r = e => { const b = e.getBoundingClientRect();\n          return { l: Math.round(b.left), t: Math.round(b.top),\n                   w: Math.round(b.width), h: Math.round(b.height) }; };\n        const pl = box._skriblInline;\n        const band = Math.round(parseFloat(getComputedStyle(t).paddingBottom) || 0);\n        return { vw: innerWidth, vh: innerHeight, band: band,\n                 usable: innerHeight - band, box: r(box), canvas: r(c),\n                 fit: getComputedStyle(c).objectFit,\n                 poster: r(p), st: pl ? pl.state() : null }; }"
 _POSTER_BACK = "() => document.querySelector('.tileStage .skribl-inline-poster').getBoundingClientRect().width > 0"
 print("\nGALLERY — a drawing can be watched full size")
 # THE GAP (owner): the profile's stage has a fullscreen control and /s/<id> has
@@ -544,6 +544,96 @@ with sync_playwright() as _spg:
     _pg2.evaluate("() => document.querySelector('.tile .skfull-card .skfull-full').click()")
     _pg2.wait_for_timeout(900)
     _l1 = _loops("in full screen")
+
+    # ---- FULL SCREEN, WHERE THE DRAWING IS THE WHOLE SCREEN ---------------
+    #
+    # THE BAR IS NOT ALLOWED TO STAND ON THE DRAWING. It is absolutely
+    # positioned at the bottom with a scrim over it, which is how a video
+    # player works and is wrong for a drawing: a video's bottom strip is
+    # usually nothing, and a drawing's bottom edge is part of the picture. The
+    # owner, of a pug whose feet were behind the controls: "fullscreen where
+    # the controls cover the bottom of the canvas?"
+    #
+    # ASKED AS AN OVERLAP OF TWO PAINTED BOXES. The canvas is the drawing's
+    # own element and the bar is opaque enough to hide whatever is under it, so
+    # "the canvas ends at or above where the bar begins" is the whole property.
+    # The reserved band is reported alongside it, because a zero band with a
+    # zero overlap would mean the bar had simply failed to render.
+    _band = _pg2.evaluate("""() => {
+        const st = document.querySelector('.tileStage');
+        const bar = st && st.querySelector('.skfull:not(.skfull-card)');
+        const cv = st && st.querySelector('canvas');
+        if (!st || !bar || !cv) return { missing: true };
+        const b = bar.getBoundingClientRect(), c = cv.getBoundingClientRect();
+        return { host: st.classList.contains('skfull-host'),
+                 band: Math.round(parseFloat(getComputedStyle(st).paddingBottom) || 0),
+                 barH: Math.round(b.height),
+                 canvas: [Math.round(c.width), Math.round(c.height)],
+                 overlap: Math.round(Math.max(0, c.bottom - b.top)) }; }""")
+    check("in full screen the bar stands below the drawing, not on it",
+          not _band.get("missing") and _band["barH"] > 20
+          and _band["overlap"] == 0,
+          f"{_band} \u2014 the bar is absolute and the drawing does not know it "
+          f"is there; the host has to reserve the height or the bottom of "
+          f"every drawing is behind the controls")
+    check("...and the band it reserves is the height the bar actually became",
+          not _band.get("missing") and _band["host"]
+          and abs(_band["band"] - _band["barH"]) <= 1,
+          f"{_band} \u2014 measured and not assumed: this height moves with the "
+          f"safe-area inset and the resolved font, so a number in the sheet "
+          f"would be right on this machine and wrong on a phone")
+
+    # THE LABEL IS A REPORT ON THE PLAYER AND MUST NEVER BE THE CASUALTY OF
+    # THE PLAYER HAVING A BAD MOMENT.
+    #
+    # The owner has reported "the 1x speed does not change when clicked" twice
+    # and it has not reproduced here -- headless, on the real Fullscreen API
+    # and on the fallback, with and without a listed rate, the control cycles
+    # and the drawing changes speed (the rows in the immersive section measure
+    # the drawing itself doing it). What IS reachable, and is what these two
+    # rows pin, is the way that symptom can be produced without the control
+    # being broken at all: setRate rebuilds the audio graph on an AudioContext
+    # the browser is allowed to take away, a throw from in there used to escape
+    # with the new rate already applied, and the repaint that was the NEXT line
+    # never ran. The player is at 2x; the button says 1x; the person presses it
+    # again and gets ½x, which is not what the label promised either.
+    #
+    # DRIVEN BY MAKING THE THROW HAPPEN, not by hoping for one: the probe wraps
+    # the player's own setRate so it applies the rate and then throws, which is
+    # exactly the shape of the failure. Without the `finally` this row goes red
+    # and the one above it stays green, which is the whole reason there are two.
+    _rate = _pg2.evaluate("""() => {
+        const st = document.querySelector('.tileStage');
+        const box = st && st.querySelector('[data-skribl-inline]');
+        const btn = st && st.querySelector('.skfull:not(.skfull-card) .skfull-rate');
+        const pl = box && box._skriblInline;
+        if (!pl || !btn) return { missing: true };
+        const label = () => (btn.textContent || '').trim();
+        const out = {};
+        pl.setRate(1); btn.click();
+        out.plain = [pl.rate(), label()];
+
+        const real = pl.setRate;
+        pl.setRate = function (r) { real.call(pl, r); throw new Error('probe'); };
+        const before = pl.rate();
+        try { btn.click(); } catch (e) { out.escaped = true; }
+        pl.setRate = real;
+        out.thrown = [before, pl.rate(), label()];
+        pl.setRate(1);
+        return out; }""")
+    check("pressing the speed control changes the speed and says so",
+          not _rate.get("missing") and _rate["plain"][0] != 1
+          and _rate["plain"][1] == (str(_rate["plain"][0]) + "\u00d7"),
+          f"{_rate} \u2014 the ordinary case, and the one that has never failed "
+          f"here; without it the row below could pass on a control that only "
+          f"ever answers when something goes wrong")
+    check("...and still says so when the player throws on the way",
+          not _rate.get("missing") and _rate["thrown"][1] != _rate["thrown"][0]
+          and _rate["thrown"][2] == "\u00bd\u00d7",
+          f"{_rate} \u2014 the rate was applied and the repaint was not, so the "
+          f"label reported a speed the player had already left. That is a "
+          f"control that looks dead while working, which is the report we have")
+
     # OUT BY THE BUTTON, NOT BY ESCAPE. Under the real Fullscreen API Escape
     # works; in the FALLBACK -- which is what a headless Chromium gets without a
     # user gesture, and what an iPhone gets -- the page is still the page and
@@ -641,11 +731,18 @@ with sync_playwright() as _spg:
     _pg2.evaluate("() => document.querySelector('.tileStage').requestFullscreen()")
     _pg2.wait_for_timeout(1800)
     _fs = _pg2.evaluate(_FS_GEOM)
+    # `usable`, NOT `vh`, AND THE BAND IS NAMED RATHER THAN SUBTRACTED
+    # QUIETLY. The full-screen bar reserves its own measured height on the host
+    # since v310 -- it used to be absolutely positioned over the drawing, and
+    # the drawing's bottom edge went behind the controls -- so "the whole
+    # display" now means the display minus that band. The band is asserted to
+    # be a real number on its own row below; a reservation of zero would make
+    # this row pass by being back where it started.
     check("full screen: the box fills the display, top-left to bottom-right",
-          _fs["box"]["w"] == _fs["vw"] and _fs["box"]["h"] == _fs["vh"]
+          _fs["box"]["w"] == _fs["vw"] and _fs["box"]["h"] == _fs["usable"]
           and _fs["box"]["l"] == 0 and _fs["box"]["t"] == 0,
-          f"{_fs['box']} in {_fs['vw']}x{_fs['vh']} — the first draft measured "
-          f"800x450 at the bottom of the screen")
+          f"{_fs['box']} in {_fs['vw']}x{_fs['vh']} less a {_fs['band']}px bar "
+          f"band — the first draft measured 800x450 at the bottom of the screen")
     check("...and the drawing is painted on the canvas, not left as a cropped card",
           _fs["poster"]["w"] == 0 and _fs["canvas"]["w"] > 0,
           f"poster {_fs['poster']}, canvas {_fs['canvas']}")
@@ -658,8 +755,8 @@ with sync_playwright() as _spg:
     # These fixtures are 4:3, so on a wider display the canvas should be as tall
     # as the screen and narrower than it -- never shorter than it.
     check("...and the drawing SCALES UP to the display rather than sitting at its own size",
-          _fs["canvas"]["w"] == _fs["vw"] and _fs["canvas"]["h"] == _fs["vh"]
-          and _fs["fit"] == "contain",
+          _fs["canvas"]["w"] == _fs["vw"] and _fs["canvas"]["h"] == _fs["usable"]
+          and _fs["band"] > 20 and _fs["fit"] == "contain",
           f"canvas {_fs['canvas']} object-fit={_fs['fit']!r} in "
           f"{_fs['vw']}x{_fs['vh']} — `max-width: 100%` only ever shrinks, so an "
           f"816x612 drawing measured 816x612 on a 900x900 screen. contain is "
@@ -1106,7 +1203,47 @@ with sync_playwright() as _spa:
     # claim that carries across: the description must be reachable. A clamp
     # kept it reachable by never hiding it; this keeps it reachable by a
     # control that is always present when there is anything to read.
-    _cap = _pa.evaluate("() => {\n        const t = [...document.querySelectorAll('.tile')];\n        const one = t[0];\n        const cap = one && one.querySelector('.tcap');\n        const wrap = one && one.querySelector('.tcapWrap');\n        const st = one && one.querySelector('.tileStage');\n        const btn = one && one.querySelector('.tileCapBtn');\n        if (!cap || !wrap || !st || !btn) return { missing: true };\n        const h = e => Math.round(e.getBoundingClientRect().height);\n        const cardH = e => Math.round(e.getBoundingClientRect().height);\n        const shutCard = cardH(one), shutWrap = h(wrap);\n        btn.click();\n        const openCard = cardH(one), openWrap = h(wrap);\n        const pressed = btn.getAttribute('aria-pressed');\n        const expanded = btn.getAttribute('aria-expanded');\n        btn.click();\n        return { text: cap.textContent,\n                 /* the words go BELOW the drawing, so opening does not shove\n                    the picture down the page under the reader */\n                 belowStage: wrap.getBoundingClientRect().top\n                             >= st.getBoundingClientRect().bottom - 1,\n                 inHead: !!btn.closest('.thead'),\n                 word: (btn.textContent || '').trim(),\n                 labelled: (btn.getAttribute('aria-label') || '').length > 8,\n                 reach: (() => { const r = btn.getBoundingClientRect();\n                   const b = getComputedStyle(btn, '::before');\n                   return Math.round(r.height + Math.abs(parseFloat(b.top) || 0) * 2); })(),\n                 shutWrap: shutWrap, openWrap: openWrap,\n                 shutCard: shutCard, openCard: openCard,\n                 shutAgain: h(wrap), pressed: pressed, expanded: expanded }; }")
+    # SETTLED, NOT SAMPLED THE INSTANT THE CLASS CHANGES. This read the
+    # heights synchronously after `btn.click()` and passed, which it could only
+    # do while one of the accordion's two properties was NOT animated: the
+    # instant flip of `content-visibility` was giving the paragraph its height
+    # in the same frame while the track was still at 0fr. Both halves ease now,
+    # so a synchronous read sees the START of the movement -- zero -- and the
+    # row went red on a working accordion. A probe that depends on a jump is a
+    # probe that fails the moment the jump is fixed.
+    _cap = _pa.evaluate("""() => new Promise(resolve => {
+        const t = [...document.querySelectorAll('.tile')];
+        const one = t[0];
+        const cap = one && one.querySelector('.tcap');
+        const wrap = one && one.querySelector('.tcapWrap');
+        const st = one && one.querySelector('.tileStage');
+        const btn = one && one.querySelector('.tileCapBtn');
+        if (!cap || !wrap || !st || !btn) { resolve({ missing: true }); return; }
+        const h = e => Math.round(e.getBoundingClientRect().height);
+        const shutCard = h(one), shutWrap = h(wrap);
+        btn.click();
+        setTimeout(() => {
+          const openCard = h(one), openWrap = h(wrap);
+          const pressed = btn.getAttribute('aria-pressed');
+          const expanded = btn.getAttribute('aria-expanded');
+          btn.click();
+          setTimeout(() => resolve({
+            text: cap.textContent,
+            /* the words go BELOW the drawing, so opening does not shove the
+               picture down the page under the reader */
+            belowStage: wrap.getBoundingClientRect().top
+                        >= st.getBoundingClientRect().bottom - 1,
+            inHead: !!btn.closest('.thead'),
+            word: (btn.textContent || '').trim(),
+            labelled: (btn.getAttribute('aria-label') || '').length > 8,
+            reach: (() => { const r = btn.getBoundingClientRect();
+              const b = getComputedStyle(btn, '::before');
+              return Math.round(r.height + Math.abs(parseFloat(b.top) || 0) * 2); })(),
+            shutWrap: shutWrap, openWrap: openWrap,
+            shutCard: shutCard, openCard: openCard,
+            shutAgain: h(wrap), pressed: pressed, expanded: expanded }), 450);
+        }, 450);
+      })""")
     check("the caption opens below the drawing, from a mark in the head",
           not _cap.get("missing") and _cap["belowStage"] and _cap["inHead"],
           f"{_cap} \u2014 opening it ABOVE the picture would push the drawing "
@@ -1161,6 +1298,327 @@ with sync_playwright() as _spa:
           f"tier is not doing anything and the next long name will clip again")
     _pa.set_viewport_size({"width": 1100, "height": 1000})
     _pa.wait_for_timeout(300)
+
+    # ---- THE CARD AFTER THE OWNER READ IT ON THE DEPLOYED SITE ------------
+    #
+    # Eight findings, and the four below are the ones a card at rest can be
+    # asked about. The rate control and the full-screen band are driven in the
+    # immersive section at the foot of this file, where a stage is already the
+    # whole display.
+
+    # A GLYPH WITH A viewBox AND NO SIZE FILLS WHAT CONTAINS IT, which is the
+    # entire defect: `.tileMore svg` has been capped at 16px since it was
+    # written and its twin in the same head never was, so the description mark
+    # painted a 44px bubble beside a 16px ellipsis ("the enormous chat
+    # bubble"). Both marks are measured, and against EACH OTHER rather than
+    # against a number -- two marks on one line being the same size is the
+    # property, and a number in this file would go stale the day the line's
+    # scale changes.
+    _marks = _pa.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const cap = t.querySelector('.tileCapBtn'), more = t.querySelector('.tileMore');
+        if (!cap || !more) return { missing: true };
+        const box = e => { const r = e.getBoundingClientRect();
+                           return [Math.round(r.width), Math.round(r.height)]; };
+        const glyph = e => box(e.querySelector('svg'));
+        /* A SPEECH BUBBLE CANNOT BE DRAWN WITHOUT A CURVE, and lines of text
+           are drawn without one -- so the command letters say which glyph is
+           in there without this file hard-coding path data it would then have
+           to be kept in step with. `a`/`A` is the arc the bubble's body needs
+           and `c`/`C`/`s`/`S`/`q`/`Q` its tail. */
+        const d = [...cap.querySelectorAll('svg path')]
+                    .map(x => x.getAttribute('d') || '').join(' ');
+        return { capBtn: box(cap), moreBtn: box(more),
+                 capGlyph: glyph(cap), moreGlyph: glyph(more),
+                 paths: cap.querySelectorAll('svg path').length,
+                 curved: /[aAcCsSqQtT]/.test(d) }; }""")
+    check("the description mark's glyph is the size of the mark beside it",
+          not _marks.get("missing") and _marks["capGlyph"] == _marks["moreGlyph"],
+          f"{_marks} \u2014 the ellipsis has been capped at 16 since it was "
+          f"written; the mark that shipped beside it had no such rule and drew "
+          f"itself at the full 44 of its box")
+    check("...inside a box that is still the 44 a finger needs",
+          not _marks.get("missing") and _marks["capBtn"] == [44, 44]
+          and _marks["moreBtn"] == [44, 44],
+          f"{_marks} \u2014 capping the glyph must not cap the target: the three "
+          f"touch rules are only satisfiable by a 44px box with a small glyph "
+          f"centred in it")
+    check("...and what it draws is a body of text, not a conversation",
+          not _marks.get("missing") and _marks["paths"] == 3
+          and _marks["curved"] is False,
+          f"{_marks} \u2014 a bubble needs an arc for its body and a curve for "
+          f"its tail; ranged straight lines need neither. A bubble promises a "
+          f"reply, and there is nothing on a Skribl to reply to")
+
+    # OPENING ONE CARD'S DESCRIPTION MUST NOT GROW THE CARD BESIDE IT. A grid
+    # row stretches every item to its tallest, so the dead space the accordion
+    # was built to remove was simply handed to the neighbour ("it accordioned
+    # open and it opened the card next to it").
+    #
+    # ASSERTED AS THE BEHAVIOUR AND NOT AS `align-items`, because the value
+    # that produces the bug is the INITIAL one: a check reading `normal` and
+    # complaining would be a check nobody could have written before seeing the
+    # screenshot, and a check reading `start` would pass the day somebody
+    # gives the row a height some other way.
+    _rowmate = _pa.evaluate("""() => new Promise(resolve => {
+        const t = [...document.querySelectorAll('.tile')];
+        if (t.length < 2) { resolve({ missing: true }); return; }
+        const h = e => Math.round(e.getBoundingClientRect().height);
+        const a = t[0], b = t[1];
+        /* the two share a grid row only if they share a top edge */
+        const sameRow = Math.abs(a.getBoundingClientRect().top
+                               - b.getBoundingClientRect().top) < 2;
+        const btn = a.querySelector('.tileCapBtn');
+        if (!btn) { resolve({ missing: true }); return; }
+        const shutA = h(a), shutB = h(b);
+        btn.click();
+        /* SETTLED. The accordion eases in both directions now, so a height
+           read in the same frame as the click is the height it is leaving. */
+        setTimeout(() => {
+          const openA = h(a), openB = h(b);
+          btn.click();
+          setTimeout(() => resolve({ sameRow: sameRow, shutA: shutA, shutB: shutB,
+            openA: openA, openB: openB,
+            grewA: openA - shutA, grewB: openB - shutB,
+            backA: h(a) }), 450);
+        }, 450);
+      })""")
+    check("opening a description grows THAT card",
+          not _rowmate.get("missing") and _rowmate["sameRow"]
+          and _rowmate["grewA"] > 10 and _rowmate["backA"] == _rowmate["shutA"],
+          f"{_rowmate} \u2014 without this the row below is measuring an "
+          f"accordion that never opened, and would pass on a dead toggle")
+    check("...and leaves the card beside it exactly the height it was",
+          not _rowmate.get("missing") and _rowmate["grewB"] == 0,
+          f"{_rowmate} \u2014 a stretched grid row gave the neighbour the height "
+          f"and none of the words, which is the empty space under the drawing "
+          f"this whole accordion exists to remove")
+
+    # AND THE SHUT IS AS SMOOTH AS THE OPEN. `content-visibility` has no
+    # interpolable values, so the close used to flip it to `hidden` at once:
+    # the element stopped contributing its CONTENTS' height in one frame, and
+    # the track spent 240ms animating a collapse that had already happened.
+    #
+    # THE FIRST DRAFT OF THIS ROW WENT GREEN ON THAT EXACT MUTATION, and it is
+    # worth writing down why. It asked only whether the wrapper's height was
+    # somewhere between nothing and the open height part way through -- and
+    # `content-visibility: hidden` does NOT remove the element's own padding,
+    # which this sheet also eases. So the row was watching 22px of padding
+    # ease to nothing and calling it an animated close, on a tree where the
+    # words had vanished instantly. A measurement that a broken tree satisfies
+    # is not a measurement.
+    #
+    # Two things are asked now, and the padding can answer neither:
+    #   the height mid-close is still ABOVE what padding alone could produce,
+    #     so the text is still in there taking up room
+    #   `content-visibility` still computes `visible` mid-close, which is the
+    #     mechanism itself -- `transition-behavior: allow-discrete` holding the
+    #     visible value until the end is the entire fix
+    _shut = _pa.evaluate("""() => new Promise(resolve => {
+        const t = document.querySelector('.tile');
+        const wrap = t.querySelector('.tcapWrap');
+        const cap = t.querySelector('.tcap');
+        const btn = t.querySelector('.tileCapBtn');
+        if (!wrap || !cap || !btn) { resolve({ missing: true }); return; }
+        const h = () => Math.round(wrap.getBoundingClientRect().height);
+        btn.click();                         /* open */
+        setTimeout(() => {
+          const open = h();
+          const cs = getComputedStyle(cap);
+          /* what the box would still measure with its contents skipped: the
+             padding this sheet puts on the paragraph, and nothing else */
+          const padOnly = Math.round((parseFloat(cs.paddingTop) || 0)
+                                   + (parseFloat(cs.paddingBottom) || 0));
+          btn.click();                       /* and shut, watched */
+          /* ON THE FRAME AFTER, not on a timer. The track and the padding ease
+             on the same curve, so by 50ms the padding is most of the way down
+             too and the two trees are twenty pixels apart; one frame in they
+             are fifty. Two rAFs because the first is the frame the transition
+             starts on. */
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            const early = h(), vis = getComputedStyle(cap).contentVisibility;
+            setTimeout(() => resolve({ open: open, padOnly: padOnly,
+              early: early, vis: vis, settled: h() }), 400);
+          }));
+        }, 450);
+      })""")
+    _pa.wait_for_timeout(900)
+    check("closing a description takes the words down with it, gradually",
+          not _shut.get("missing") and _shut["open"] > _shut["padOnly"] + 20
+          and _shut["early"] > _shut["padOnly"] + 10 and _shut["settled"] == 0,
+          f"{_shut} \u2014 a first frame at or near the padding means the words "
+          f"stopped contributing height the instant the class came off, and "
+          f"what is easing is an empty box")
+    check("...because the element keeps rendering its contents until it has",
+          not _shut.get("missing") and _shut["vis"] == "visible",
+          f"{_shut} \u2014 `content-visibility` has no interpolable values, so "
+          f"without `transition-behavior: allow-discrete` it flips at the "
+          f"start of the close and there is nothing left to animate")
+
+    # THE HEAD'S BUTTONS SAY NOTHING ABOUT THE DRAWING. `:focus-within` on the
+    # card matched the whole card, and a button keeps focus after a click --
+    # so reading the description raised the transport, and closing it could
+    # not lower it, because that peek is the sticky kind with no timer behind
+    # it ("when I reclicked the bubble, it closed - but it left the controls
+    # still on screen").
+    #
+    # OPACITY AND NOT A CLASS: the bar is in the DOM at every moment by design,
+    # so what is being asked is whether it is PAINTED.
+    _reveal = _pa.evaluate("""() => new Promise(resolve => {
+        const t = document.querySelector('.tile');
+        const bar = t.querySelector('.skfull-card');
+        const cap = t.querySelector('.tileCapBtn');
+        const more = t.querySelector('.tileMore');
+        const inStage = t.querySelector('.tileStage .skfull-card .skfull-play');
+        if (!bar || !cap || !more || !inStage) { resolve({ missing: true }); return; }
+        /* SETTLED, and this probe had to learn it the hard way: the bar eases
+           its opacity over 180ms, so reading the value in the same frame as
+           the focus() returns whatever it was BEFORE -- which for the two
+           head buttons is the answer the row wants, and would be the answer
+           it got on a broken tree too. An instrument that cannot go red is
+           not an instrument. */
+        const o = () => getComputedStyle(bar).opacity;
+        const seen = {};
+        const step = (el, key, next) => {
+          el.focus();
+          setTimeout(() => { seen[key] = o(); el.blur();
+                             setTimeout(next, 260); }, 260);
+        };
+        step(cap, 'cap', () => step(more, 'more',
+             () => step(inStage, 'stage', () => resolve(seen))));
+      })""")
+    check("focus on a head button leaves the transport where it was",
+          not _reveal.get("missing") and _reveal["cap"] == "0"
+          and _reveal["more"] == "0",
+          f"{_reveal} \u2014 the description toggle and the overflow trigger are "
+          f"in the head; neither is a control of the drawing, and a card-wide "
+          f"`:focus-within` could not tell the difference")
+    check("...and focus inside the stage still summons it",
+          not _reveal.get("missing") and _reveal["stage"] == "1",
+          f"{_reveal} \u2014 scoping the reveal must not take the bar away from a "
+          f"keyboard: a transport that cannot be tabbed to is a transport a "
+          f"keyboard does not have")
+
+    # AND THE PROBE PUTS THE CARD BACK, which is not housekeeping but the
+    # assertion it looks like housekeeping for. Focusing into the stage above
+    # summoned the transport on purpose; the blur that follows starts the 2.6s
+    # recede rather than hiding it at once, because a bar that vanishes the
+    # instant focus moves is a bar a keyboard cannot use. Waiting it out and
+    # then asking is both the tidy-up and the pin -- and without the tidy-up
+    # the footer census three screens down reads a card that is still lit and
+    # reports a permanently visible transport that is not there. (A probe that
+    # leaves state behind has broken three other sections of this suite before.)
+    _pa.wait_for_timeout(3200)
+    _recede = _pa.evaluate("""() => {
+        const bar = document.querySelector('.tile .skfull-card');
+        return bar ? getComputedStyle(bar).opacity : null; }""")
+    check("the transport recedes on its own once nothing is using it",
+          _recede == "0",
+          f"opacity {_recede!r} \u2014 the touch reveal is on a timer so the "
+          f"drawing gets the card back; a reveal with no way down is a card "
+          f"that is lit from its first tap to its last")
+
+    # THE TWO PAGES WEAR THE LOCKUP THE SAME WAY. The gallery's is an <a>
+    # (it is the way back to the editor) and the library's is a <div>, so an
+    # unstyled anchor put a browser underline under the word GALLERY and
+    # nothing under LIBRARY -- two pages of one product, differing in the one
+    # element that says which product it is (owner: "get rid of the underlined
+    # GALLERY (LIBRARY is also not underlined)").
+    #
+    # `text-decoration-line` and not the shorthand: the shorthand resolves to
+    # a string carrying the colour and style too, which move with the theme.
+    _brand = _pa.evaluate("""() => {
+        const b = document.querySelector('.brand');
+        const t = b && b.querySelector('.tag');
+        if (!b || !t) return { missing: true };
+        return { tag: t.textContent.trim(),
+                 brand: getComputedStyle(b).textDecorationLine,
+                 word: getComputedStyle(t).textDecorationLine }; }""")
+    check("the wordmark carries no underline, on either the link or the word",
+          not _brand.get("missing") and _brand["brand"] == "none"
+          and _brand["word"] == "none",
+          f"{_brand} \u2014 an <a> with no `text-decoration` is underlined by the "
+          f"browser, and the library's lockup is a <div> that never was")
+
+    # THE CARD'S MENU IS THE MENU THIS PRODUCT ALREADY HAS. The first cut
+    # invented its own -- no glyphs, 8px corners, flush text -- so somebody who
+    # had met the editor's menu met a different one here ("should have icons
+    # and use the same styling as all the menus. although report could be a red
+    # flag").
+    #
+    # MEASURED AGAINST styles.css's OWN NUMBERS, which are the definition of
+    # "the same styling": an 18px leading glyph, 12px between glyph and words,
+    # 44px rows. This page does not load that sheet (it is the editor's, and
+    # six thousand lines of it), so the values are matched rather than shared
+    # and this row is what keeps the two from drifting apart silently.
+    _menu = _pa.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const more = t && t.querySelector('.tileMore');
+        if (!more) return { missing: true };
+        more.click();
+        const items = [...document.querySelectorAll('.cardMenu .cmItem')];
+        if (!items.length) return { missing: true };
+        const rep = document.querySelector('.cardMenu .cmReport');
+        const plain = items.find(i => i !== rep);
+        const cs = e => getComputedStyle(e);
+        const out = {
+          items: items.length,
+          withGlyph: items.filter(i => !!i.querySelector('svg')).length,
+          glyph: (() => { const g = items[0].querySelector('svg');
+                   const r = g.getBoundingClientRect();
+                   return [Math.round(r.width), Math.round(r.height)]; })(),
+          display: cs(items[0]).display,
+          gap: cs(items[0]).columnGap,
+          row: Math.round(items[0].getBoundingClientRect().height),
+          reportColour: rep ? cs(rep).color : null,
+          plainColour: plain ? cs(plain).color : null,
+          reportGlyphColour: rep && rep.querySelector('svg')
+                             ? cs(rep.querySelector('svg')).color : null,
+        };
+        more.click();
+        return out; }""")
+    check("every row on the card menu carries a glyph, at the size the app uses",
+          not _menu.get("missing") and _menu["items"] >= 3
+          and _menu["withGlyph"] == _menu["items"] and _menu["glyph"] == [18, 18],
+          f"{_menu} \u2014 18px and 12px are styles.css's `.menu-item` numbers; "
+          f"matched rather than imported, because this page does not load the "
+          f"editor's sheet and should not start")
+    check("...laid out the way that menu lays a row out",
+          not _menu.get("missing") and _menu["display"] == "flex"
+          and _menu["gap"] == "12px" and _menu["row"] >= 44,
+          f"{_menu} \u2014 a row under 44 is a row a finger misses, and this menu "
+          f"opens on a phone")
+    check("...and Report is the one row that looks like it acts on someone else",
+          not _menu.get("missing")
+          and _menu["reportColour"] != _menu["plainColour"]
+          and _menu["reportGlyphColour"] == _menu["reportColour"],
+          f"{_menu} \u2014 the glyph has to take the colour too, or the row reads "
+          f"as a red word with somebody else's icon beside it")
+
+    # THE DRAWING IS MATTED. Edge to edge is how a post carries a photograph,
+    # which has no frame of its own; this component draws its own border and
+    # corner, so flush put that border one pixel inside the card's on the same
+    # radius -- invisible at the aspects that letterbox and not at the one that
+    # fills the box ("canvas borders hit card border and it's weird looking").
+    # Every tile, because the finding was about the ONE card in a grid whose
+    # drawing happened to match the stage.
+    _mat = _pa.evaluate("""() => {
+        const out = { tiles: 0, worst: 999 };
+        document.querySelectorAll('.tile').forEach(t => {
+          const s = t.querySelector('.tileStage');
+          if (!s) return;
+          const a = t.getBoundingClientRect(), b = s.getBoundingClientRect();
+          out.tiles++;
+          out.worst = Math.min(out.worst, b.left - a.left, a.right - b.right,
+                                          a.bottom - b.bottom);
+        });
+        out.worst = Math.round(out.worst);
+        return out; }""")
+    check("no card's drawing is flush with the card's own edge",
+          _mat["tiles"] >= 2 and _mat["worst"] >= 8,
+          f"{_mat} \u2014 measured on every tile and reported as the worst, "
+          f"because the card that showed this was the one whose drawing "
+          f"happened to fill its stage exactly")
 
     # ---- THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE (v308) ------------
     # Direction B puts the transport under the drawing. Rather than write a

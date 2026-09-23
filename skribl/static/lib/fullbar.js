@@ -236,9 +236,19 @@
     bRate.addEventListener('click', function () {
       var pl = player();
       if (!pl) return;
+      /* sync() RUNS WHATEVER setRate DOES, and that is what the `finally` is
+       * for. It used to be the line after, so anything thrown inside --
+       * setRate rebuilds the audio graph, on a context the browser is allowed
+       * to take away -- skipped the repaint and left the label reading 1x over
+       * a player that had already changed speed. A person pressing a control
+       * that does not change is looking at a broken control whether the cause
+       * is the control or the report on it, and the owner has now reported
+       * "the 1x speed does not change when clicked" twice.
+       *
+       * (setRate no longer lets that throw escape either; both halves are
+       * here because either one alone leaves the other's failure silent.) */
       var i = RATES.indexOf(pl.rate());
-      pl.setRate(RATES[(i + 1) % RATES.length]);
-      sync();
+      try { pl.setRate(RATES[(i + 1) % RATES.length]); } finally { sync(); }
     });
     if (bExit) bExit.addEventListener('click', function () {
       if (opts.onExit) opts.onExit();
@@ -349,6 +359,37 @@
       if (tick) global.clearTimeout(tick);
       raf = null;
       tick = null;
+    }
+
+    /* ---- the band the bar occupies, published to the thing it sits on ----
+     *
+     * IN FULL SCREEN THE BAR IS NOT ALLOWED TO STAND ON THE DRAWING. It is
+     * absolutely positioned at the bottom with a scrim, on the reasoning that
+     * a picture reads fine under a soft gradient -- which is how a video
+     * player works and is wrong here, because a drawing is the entire content
+     * and its bottom edge is part of it. The owner, on a pug whose feet were
+     * behind the controls: "fullscreen where the controls cover the bottom of
+     * the canvas?"
+     *
+     * So the host reserves the bar's height as padding and the drawing is
+     * centred in what is left. MEASURED AND NOT ASSUMED: the bar's height
+     * moves with the safe-area inset, the scrub row, the text metrics of
+     * whatever font resolved, and a hard-coded number would be right on this
+     * machine and wrong on a phone with a home indicator. A ResizeObserver
+     * answers with whatever the bar actually became.
+     *
+     * The CARD's bar does no such thing -- it is hidden in full screen, and
+     * on a card the overlay is the point. Two bars share this wrapper, so the
+     * card's is filtered out here rather than at the CSS, or the last one to
+     * measure would win. */
+    if (opts.variant !== 'skfull-card') {
+      wrap.classList.add('skfull-host');
+      if (global.ResizeObserver) {
+        new global.ResizeObserver(function (rec) {
+          var h = rec[0] ? rec[0].target.offsetHeight : 0;
+          wrap.style.setProperty('--skfull-band', (h || 0) + 'px');
+        }).observe(bar);
+      }
     }
 
     sync();

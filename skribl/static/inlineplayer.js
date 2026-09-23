@@ -804,7 +804,15 @@
         if (!(r > 0)) return rate;
         if (state === 'playing') { elapsed += segElapsed(); t0 = now(); }
         rate = r;
-        if (state === 'playing') startAudio();
+        /* The drawing's speed is already changed by the line above; the audio
+         * graph is a second, weaker thing. It is rebuilt on an AudioContext
+         * the browser is allowed to take away, and a throw from in here used
+         * to escape setRate with the new rate already applied -- so the caller
+         * never got its return, never repainted, and the control reported a
+         * speed the player was no longer running at. Silence is a degradation
+         * and a lying label is a bug, which is the same order of preference
+         * the decode path states a few hundred lines down. */
+        if (state === 'playing') { try { startAudio(); } catch (e) {} }
         return rate;
       },
       rate: function () { return rate; },
@@ -1184,12 +1192,42 @@
      * mode (there the two axes' scales are equal and both offsets are zero), so
      * one mapping now serves both, and a third sizing model cannot bring this
      * back. */
+    /* AND THE NIB IS A SIZE IN THE DRAWING, NOT A SIZE ON THE SCREEN. It was
+     * 8px of CSS wherever it appeared, so the same dot was a boulder on an
+     * 84px library thumb and a speck on a 1280px full screen -- the one thing
+     * on the surface that did not answer to how big the drawing is (owner:
+     * "shouldn't the nib be scaled to the size of the player, rather than stay
+     * the same size no matter where it occurs?").
+     *
+     * 13 units of the AUTHOR's canvas, which is 8px at the tile scale this was
+     * drawn for and grows and shrinks from there. Clamped at both ends: below
+     * about five pixels a dot is not a pen tip, it is dirt on the screen, and
+     * above twenty-two it stops being a nib and starts being a cursor.
+     *
+     * ONE CUSTOM PROPERTY, and the sheet derives the ring from it with a
+     * calc(). This runs on every frame of every replay, so it writes only when
+     * the scale MOVES -- and it writes one value rather than three.
+     *
+     * THE SHEET CARRIES NO COMMENT ABOUT ANY OF THIS, and that is deliberate
+     * rather than an omission: CSS comments are served to every host and
+     * nothing strips them, which is that file's own standing rule. The first
+     * cut explained `--nb` beside the rule and cost 264 B of somebody else's
+     * bandwidth to do it. `--nb` is documented here, where the explanation is
+     * free, and the rule there is three declarations a reader can follow. */
+    var nibAt = -1;
+    function nibSize(s) {
+      if (s === nibAt) return;
+      nibAt = s;
+      nib.style.setProperty('--nb', Math.max(5, Math.min(22, 13 * s)) + 'px');
+    }
+
     function setNib(p) {
       var st = nib.style;
       if (!p) { st.opacity = '0'; return; }
       var cr = canvas.getBoundingClientRect(), br = el.getBoundingClientRect();
       if (!cr.width || !cr.height) { st.opacity = '0'; return; }
       var s = Math.min(cr.width / size.w, cr.height / size.h);
+      nibSize(s);
       st.left = cr.left - br.left + (cr.width - size.w * s) / 2 + p.x * s + 'px';
       st.top = cr.top - br.top + (cr.height - size.h * s) / 2 + p.y * s + 'px';
       st.opacity = '1';

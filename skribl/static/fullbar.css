@@ -33,6 +33,25 @@
   font-family: inherit;
 }
 
+/* THE WHOLE DRAWING STAYS VISIBLE IN FULL SCREEN. The bar overlays, so the
+   thing it overlays has to stand back: the host reserves the bar's measured
+   height (lib/fullbar.js writes `--skfull-band` from a ResizeObserver) and
+   centres its content in what is left. The scrim then falls on the letterbox
+   rather than on the picture, which is the difference between a control that
+   floats over a video and a control that stands on somebody's drawing
+   (owner, of a pug whose feet were behind the buttons).
+
+   `box-sizing: border-box` is stated rather than inherited: this sheet is
+   loaded by pages that may or may not set it globally, and on a `100vh`
+   element a content-box reading turns the reservation into an overflow. The
+   fallback of 0px is what a browser without ResizeObserver gets, and that is
+   the behaviour this rule replaced -- no reservation, bar over the drawing. */
+.skfull-host:fullscreen,
+.skfull-host.is-immersive-page {
+  box-sizing: border-box;
+  padding-bottom: var(--skfull-band, 0px);
+}
+
 /* THE SCRUBBER GETS ITS OWN ROW, which is the one layout decision here worth
    stating: squeezed between the buttons it is a 6px target on a phone, and a
    6px target is not a target. */
@@ -226,9 +245,19 @@
   transition: opacity 0.18s ease;
 }
 /* Hover and focus are the pointer's answer; `.ctl-on` is the page's, for the
-   touch reveal and for the whole time a drawing is playing. */
-.tile:hover .skfull.skfull-card,
-.tile:focus-within .skfull.skfull-card,
+   touch reveal and for the whole time a drawing is playing.
+
+   THE STAGE ASKS BOTH QUESTIONS, NOT THE CARD. These were `.tile:hover` and
+   `.tile:focus-within`, which is every pixel of the card including its head --
+   so the transport appeared while the pointer was over somebody's name, and
+   pressing the description toggle left it up for good, because a button keeps
+   focus after a click and `:focus-within` had no reason to ever stop matching
+   (owner: "when I reclicked the bubble, it closed - but it left the controls
+   still on screen"). The bar belongs to the drawing; the drawing is the stage.
+   gallery.js scopes its own pointer and focus listeners the same way, and the
+   two halves have to agree or the class and the selector fight. */
+.tileStage:hover .skfull.skfull-card,
+.tileStage:focus-within .skfull.skfull-card,
 .tile.ctl-on .skfull.skfull-card {
   opacity: 1;
   pointer-events: auto;

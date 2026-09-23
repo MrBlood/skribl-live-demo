@@ -88,9 +88,15 @@
 /* The drawer's thumb is a 42x34 glyph tile, not a poster, so the kind icon is
    the tile's whole content and the sound badge rides its top-right corner. */
 .posted-thumb { position: relative; }
+/* THE ACCENT, NOT A GREEN. `#7ee2a8` was the only green anywhere in this
+   product, so the badge read as a status light -- something reporting health
+   -- rather than as a property of the Skribl (owner: "leave speaker, but make
+   it a different color (purple maybe?)"). The accent is what everything else
+   that means "this has something" is drawn in. The literal is the fallback
+   for a surface that has not defined the token. */
 .posted-thumb svg.posted-sound { position: absolute; right: -2px; top: -2px;
   width: 12px; height: 12px; padding: 1px; border-radius: 5px;
-  background: var(--surface-panel); color: #7ee2a8; }
+  background: var(--surface-panel); color: var(--accent, #7c5cff); }
 .posted-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column;
   gap: 2px; text-decoration: none; color: inherit; }
 .posted-title { font-size: 13px; color: var(--text-primary);
@@ -100,6 +106,13 @@
    line. The actions yield (they stack, below) — the words never do. */
 .posted-sub { font-size: 11px; color: var(--text-secondary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* THE KIND MARK, STANDING IN FRONT OF THE FACT IT QUALIFIES. Sized to the
+   line rather than to a badge, and nudged down two pixels because an icon's
+   optical centre and a 11px baseline are not the same place. Inline, not a
+   flex child: the sub line ellipsises, and a flex row would take that away
+   from the words. */
+.posted-sub svg { width: 13px; height: 13px; vertical-align: -2px;
+  margin-right: 5px; }
 /* 12px BETWEEN WRAPPED ROWS, not 6. The strip wraps to two lines on a phone,
    and with a 6px row gap the 6px bands of the two rows met in the middle:
    whichever button came later in the DOM took the overlap, so Copy link --

@@ -4104,8 +4104,20 @@ function showPlayerError(msg, canRetry) {
     // element is the container, and it is 20px narrower than innerWidth
     // wherever the document behind it still has a scrollbar. Measuring the box
     // is also what layoutEditorCanvas does.
+    // LESS THE BAR'S BAND. The transport is moved into the wrapper in full
+    // screen and sits over the bottom edge, so the space a drawing may use is
+    // the box minus that. clientHeight INCLUDES padding, so the padding the
+    // sheet uses to centre the canvas does not come off here and the number
+    // has to be subtracted by hand -- if it were not, the scale and the
+    // centring would disagree and the drawing would be pushed off the top.
+    // ONE SOURCE FOR THE BAND. `--pbar` is the height _syncFull measured when
+    // it moved the bar in; reading it back is both shorter than a second DOM
+    // lookup and the only way the scale and the sheet's centring cannot
+    // disagree -- they are then the same number rather than two measurements
+    // of the same thing taken at different moments.
     if (fsFull) return Math.min(canvasWrap.clientWidth / authorW,
-                                canvasWrap.clientHeight / authorH);
+      Math.max(1, canvasWrap.clientHeight
+        - (parseFloat(canvasWrap.style.getPropertyValue('--pbar')) || 0)) / authorH);
     // Measure the COLUMN the canvas actually lives in, not the viewport. This
     // used to be `window.innerWidth - 40`, and .app has a max-width: on a 1023px
     // viewport the column is 718px, so the scale came out at the 1:1 cap and the
@@ -4386,20 +4398,39 @@ function showPlayerError(msg, canRetry) {
   nib.className = 'player-nib';
   nib.hidden = true;
   if (canvasWrap) canvasWrap.appendChild(nib);
-  function nibScale() {
-    // Authored CSS px -> current display px. canvasWrap is the fitted rect, so
-    // its width over the authored width is the live scale (handles rotate/resize).
-    const dispW = (canvasWrap && canvasWrap.clientWidth) || authorW;
-    return authorW ? dispW / authorW : 1;
+  // THE CANVAS, NOT THE WRAPPER. This measured canvasWrap on the premise stated
+  // above it -- that layoutPlayerCanvas sizes the wrapper to the fitted display
+  // rect -- which is true on the page and false in full screen: the Fullscreen
+  // UA stylesheet forces the top-layer element to `width: 100% !important`, so
+  // the wrapper becomes the whole screen and the canvas is CENTRED inside it.
+  // The nib was then scaled by the screen's width over the drawing's and placed
+  // from the screen's corner, and rode across the display nowhere near its own
+  // line. The in-post player had the same defect from the same premise and
+  // fixed it the same way (inlineplayer.js's setNib); this is that fix, on the
+  // other implementation, where it was never made.
+  //
+  // Reduces to the old arithmetic at rest, where the two boxes coincide and
+  // both offsets are zero -- so one mapping serves the page, full screen, and
+  // whatever sizes the wrapper next.
+  function nibGeom() {
+    const cr = canvas.getBoundingClientRect();
+    const wr = canvasWrap.getBoundingClientRect();
+    return { s: (authorW && cr.width) ? cr.width / authorW : 1,
+             ox: cr.left - wr.left, oy: cr.top - wr.top };
   }
   function showNibAtIndex(nextIdx) {
     // replayTimelineToCanvas returns the NEXT index, so the point just drawn is
     // nextIdx - 1. Nothing drawn yet (index 0) -> keep the nib hidden.
     const p = nextIdx > 0 ? timeline[nextIdx - 1] : null;
     if (!p) { nib.hidden = true; return; }
-    const s = nibScale();
-    nib.style.left = (p.x * s) + 'px';
-    nib.style.top = (p.y * s) + 'px';
+    const g = nibGeom();
+    const s = g.s;
+    // A SIZE IN THE DRAWING, not a size on the screen: the same 13 authored
+    // units and the same clamp the in-post player uses, so a nib means the
+    // same thing on a card, on a profile row and on a shared link.
+    nib.style.setProperty('--nb', Math.max(7, Math.min(30, 22 * s)) + 'px');
+    nib.style.left = (g.ox + p.x * s) + 'px';
+    nib.style.top = (g.oy + p.y * s) + 'px';
     nib.classList.toggle('erase', !!p.erase);
     // Tint the bead to the ink; erasing keeps the neutral hollow ring.
     if (!p.erase) nib.style.setProperty('--nib-rgb', nibRGB(p.color));
@@ -4774,12 +4805,38 @@ function showPlayerError(msg, canRetry) {
   const _fsOff = () => { if (fsFull) (document.exitFullscreen || document.webkitExitFullscreen).call(document); };
   if (pFull && _fsExit && _fsReq && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
     pFull.hidden = false;
+    // THE TRANSPORT TRAVELS WITH THE DRAWING. Only the top-layer subtree
+    // renders in full screen, so a transport left in .player-shell is a
+    // transport that is not on screen: the owner photographed a full-screen
+    // drawing with a close button and nothing else on it. The row is moved in
+    // and moved back, rather than duplicated, so there is one of every control
+    // and every handler bound to it stays bound.
+    //
+    // RESTORED TO A REMEMBERED ANCHOR, not appended: .player-shell is meta,
+    // bar, call-to-action, brand, and appending would put the transport under
+    // the brand line on the way out. #playerBar's next sibling on the way in
+    // is where it goes back.
+    const _bar = document.getElementById('playerBar');
+    let _barHome = null;
     const _syncFull = () => {
       const on = (document.fullscreenElement
                   || document.webkitFullscreenElement) === canvasWrap;
       fsFull = on;
       pFull.setAttribute('aria-pressed', '' + on);
       pFull.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+      if (_bar) {
+        if (on) {
+          if (!_barHome) _barHome = _bar.nextSibling;
+          canvasWrap.appendChild(_bar);
+          // The band the sheet reserves so the canvas is centred ABOVE the
+          // bar. Read after the move, when the bar has a box in its new home.
+          canvasWrap.style.setProperty('--pbar', _bar.offsetHeight + 'px');
+        } else {
+          canvasWrap.style.removeProperty('--pbar');
+          const shell = document.getElementById('playerShell');
+          if (shell) shell.insertBefore(_bar, _barHome);
+        }
+      }
       layoutPlayerCanvas();      // the box just changed shape
     };
     pFull.addEventListener('click', () => {
