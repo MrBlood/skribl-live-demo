@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-22T13:42:26Z
+UTC timestamp           : 2026-09-23T02:31:28Z
 Host                    : Linux x86_64
-Tree SHA-256            : 9593b8c73721aeaa2c054ca767634864951e1e03073ef55225cde19308216f85
-Git commit              : 2b469cf
+Tree SHA-256            : dd8d4c909cc8654cad36aa4cc00e90bf3cc87b1640506636ada0916666791661
+Git commit              : 4be3dbf
 Source state            : clean
 SKRIBL_VERSION          : v306
 Python                  : 3.12.3
@@ -11,7 +11,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.Dm5Aq5Y8iw/harness.db)
+Database reset          : yes (fresh /tmp/tmp.un5MhH2EXT/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -22,9 +22,9 @@ Command                 : ./harness/run_harness.sh
 
 ================ AGGREGATE (machine-generated) ================
 suites requested : 104
-  verify_a11y.py: ok — 282/282 passed
+  verify_a11y.py: ok — 293/293 passed
   verify_amber.py: ok — 87/87 passed
-  verify_apiedges.py: ok — 45/45 passed
+  verify_apiedges.py: ok — 54/54 passed
   verify_assetcache.py: ok — 12/12 passed
   verify_audio.py: ok — 18/18 passed
   verify_audiosession.py: ok — 32/32 passed
@@ -42,7 +42,7 @@ suites requested : 104
   verify_deletion.py: ok — 65/65 passed
   verify_deletion_foundation.py: ok — 17/17 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: ok — 115/115 passed
+  verify_docs.py: ok — 113/113 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)
   verify_dots.py: ok — 11/11 passed
   verify_drafts.py: ok — 31/31 passed
   verify_example.py: ok — 32/32 passed
@@ -57,12 +57,12 @@ suites requested : 104
   verify_flipmotion.py: ok — 27/27 passed
   verify_framecache.py: ok — 23/23 passed
   verify_fuzz.py: ok — 7/7 passed
-  verify_gallery.py: ok — 40/40 passed
+  verify_gallery.py: ok — 94/94 passed
   verify_gifenc.py: ok — 39/39 passed
   verify_help.py: ok — 65/65 passed
   verify_hold.py: ok — 62/62 passed
   verify_hostconfig.py: ok — 55/55 passed
-  verify_hostseams.py: ok — 38/38 passed
+  verify_hostseams.py: ok — 48/48 passed
   verify_hot.py: ok — 49/49 passed
   verify_icons.py: ok — 37/37 passed
   verify_identity.py: ok — 44/44 passed
@@ -72,9 +72,9 @@ suites requested : 104
   verify_integration.py: ok — 14/14 passed
   verify_jsstrip.py: ok — 28/28 passed
   verify_keys.py: ok — 9/9 passed
-  verify_layout.py: ok — 141/141 passed
+  verify_layout.py: ok — 150/150 passed
   verify_lib.py: ok — 8/8 passed
-  verify_library.py: ok — 95/95 passed
+  verify_library.py: ok — 135/135 passed
   verify_liquify.py: ok — 32/32 passed
   verify_loopcap.py: ok — 22/22 passed
   verify_media.py: ok — 24/24 passed
@@ -91,9 +91,9 @@ suites requested : 104
   verify_pagespan.py: ok — 56/56 passed
   verify_parity.py: ok — 143/143 passed
   verify_pillfit.py: ok — 24/24 passed
-  verify_player_isolation.py: ok — 43/43 passed
+  verify_player_isolation.py: ok — 49/49 passed
   verify_player_photo.py: ok — 9/9 passed
-  verify_posted.py: ok — 122/122 passed
+  verify_posted.py: ok — 125/125 passed
   verify_postgres.py: SKIPPED (0 assertions) — cannot connect to PostgreSQL at the configured DSN (OperationalError)
   verify_prefix.py: ok — 33/33 passed
   verify_pressure.py: ok — 27/27 passed
@@ -103,7 +103,7 @@ suites requested : 104
   verify_review.py: ok — 284/284 passed
   verify_s3.py: ok — 30/30 passed
   verify_scrub.py: ok — 17/17 passed
-  verify_seam.py: ok — 273/273 passed
+  verify_seam.py: ok — 279/279 passed
   verify_select.py: ok — 55/55 passed
   verify_sharecard.py: ok — 27/27 passed
   verify_sharedrules.py: ok — 89/89 passed
@@ -126,6 +126,6 @@ suites requested : 104
   verify_ux.py: ok — 375/375 passed
   verify_version.py: ok — 30/30 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 5786   (skipped suites contribute 0)
+assertions passed: 5932   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
