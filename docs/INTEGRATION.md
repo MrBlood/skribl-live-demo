@@ -974,6 +974,38 @@ if you would rather schedule it in-process.
 
 This is not a daemon and does not schedule itself; cadence is your cron's job.
 
+**Filling in canvas sizes on posts written before v309.** A tile shows the
+post's share card, and the card is 1200x630 with the drawing centred inside it.
+Cropping the card back to just the drawing needs the drawing's size, which v309
+added as two nullable columns. Posts created since then carry it; older ones
+have NULL and fall back to the crop every tile used before that column existed
+— a little wide, never wrong. This command fills them in.
+
+```bash
+python -m skribl.backfill_canvas --app yourapp:create_app           # rehearse
+python -m skribl.backfill_canvas --app yourapp:create_app --write   # fill them in
+```
+
+`--app` takes `module:attribute` as above. Dry run is the default. `--batch`
+(default 200) is rows per statement and `--limit` stops after that many rows.
+
+**It is deliberately not part of the migration, and that is the interesting
+part.** It was, and it took this project's own deployment down twice in an
+afternoon — once on a cast the planner ran before the guard written above it,
+once on the connection dying mid-statement because every JSON operator on a
+`json` column re-parses the whole document and the statement used five of them
+per row. Neither failure was noticed by a schema that was already correct: the
+columns add in milliseconds, and the *data* work is what took the time and the
+memory. If your deploy runs `alembic upgrade head` before starting the server,
+anything expensive in a migration is an outage waiting for a big enough table.
+
+So this reads one small object per row rather than the payload, commits each
+batch as it goes, and is safe to interrupt — the work queue is "rows where
+`canvas_w IS NULL`", so re-running it skips what is already done. Exit codes as
+elsewhere: **0** it ran, **1** at least one batch failed and the rows before it
+are committed, **2** it could not run at all. Run it whenever you like, or not
+at all.
+
 **Retaining view rows only as long as they are used.**
 
 ```python

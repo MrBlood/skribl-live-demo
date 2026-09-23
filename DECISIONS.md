@@ -10782,3 +10782,117 @@ writes the pair or writes neither. The line stays as a guard on a future branch
 and its comment now says plainly that no test reddens it, instead of implying
 one does. What the suite pins is the outcome — no row leaves the revision
 carrying one edge alone.
+
+### The same revision took the deploy down twice, and the second one was not a bug
+
+v309's backfill shipped correct SQL and the deploy still died:
+
+    psycopg.OperationalError: consuming input failed:
+    SSL error: unexpected eof while reading
+
+The backend went away mid-statement. Every JSON operator on a `json` column
+detoasts and re-parses the WHOLE document, and the statement called five of
+them per row — so a table of multi-megabyte drawings was parsed five times a
+row, in one statement, on a small instance. That is v307's out-of-memory
+lesson moved from Python into the database rather than answered: the first fix
+stopped Python holding the payloads and handed the same work to a process with
+less room to refuse it.
+
+**The mistake was never the SQL, either time.** It was that COSMETIC DATA WORK
+SAT IN THE DEPLOY'S CRITICAL PATH. `Procfile` is
+`alembic upgrade head && gunicorn app:app`, so anything in an `upgrade()` gates
+the server — and what this one computed is a nicer crop for tiles authored
+before the column existed. A null canvas size is a supported state; the tile
+falls back to the band crop every post used last week. A picture framed a
+little wide is not worth an outage, and a schema change that cannot fail is
+worth a great deal.
+
+So `upgrade()` adds two nullable columns and returns. Adding a nullable column
+with no default is a catalogue update: no table rewrite, no payload read,
+nothing to run out of memory or time. The backfill is
+`python -m skribl.backfill_canvas`, run when somebody chooses rather than while
+a release waits on it. It is `backfill_canvas` and not `backfill` because
+`storage.backfill_media` already owns that word here.
+
+**The general rule this tree now holds: a migration may change the SHAPE of the
+data, and a command changes the data.** The two have different failure budgets.
+A schema change is allowed to gate a deploy because a server on the wrong shape
+is broken anyway; a data pass is not, because a server on the old data is
+merely last week's.
+
+#### The command, and the two bugs its own fixture found
+
+  * **Paging on `canvas_w IS NULL` alone cannot make progress.** A row with no
+    size to write is still NULL on the next pass and comes back for ever.
+    Guarding the spin — stop when a batch fills nothing — turns the hang into a
+    truncated run: seventeen rows, a batch of five, quit after ten, the rest
+    never looked at. An in-run **id cursor** is the fix; `IS NULL` still keeps
+    the work queue honest ACROSS runs, so an interrupted pass resumes.
+  * **SQLite's `json_extract` RAISES on a payload that is not valid JSON.** One
+    such row kills the batch and takes the rows behind it. `json_valid()` gates
+    it through **`CASE`** — not through a `WHERE` conjunct, which is the same
+    ordering assumption that killed the first deploy. `CASE WHEN … THEN … END`
+    is order-guaranteed; a conjunct is not, on any engine.
+
+Both were found by a fixture with hostile payloads **in the middle** and
+fillable rows **behind them**. A fixture of tidy rows agrees with either bug.
+
+#### The instruments
+
+The extraction sends the `canvasSize` sub-object and never the payload, and
+that is pinned as its own row rather than inferred from the results — selecting
+`payload_json` still fills the columns correctly on a small fixture, which is
+precisely why the assertion that matters is about the STATEMENT. Four mutations,
+run per component: data work back in `upgrade()` (2 rows red in
+`verify_migrations`, plus both digest rows); the id cursor replaced by the
+shipped early-stop guard (3 red on SQLite, 2 on PostgreSQL); the `CASE` guard
+dropped (4 red on SQLite, **and PostgreSQL still 5/5**, which is the per-engine
+separation being proved rather than assumed); `SELECT id, payload_json` on the
+PostgreSQL branch (3 red).
+
+Removing the cursor **without** putting the guard back does not redden anything
+— it hangs, because the queue never shrinks. That is why the mutation is the
+bug as shipped and not the diff reversed: a mutation that turns a suite into a
+timeout has not been shown to go red.
+
+`verify_postgres`'s teardown now closes the session before `DROP SCHEMA …
+CASCADE`. `run()` leaves its session idle-in-transaction holding a lock on the
+probe table, and the drop waits on it for ever — which presents as a suite that
+produced no output at all, indistinguishable from one that never started.
+
+**And the module was renamed before it was pushed.** `skribl/backfill.py`
+passed every suite and collided with `storage.backfill_media` in the only place
+that matters, a reader's head. `verify_seam` caught something else in the same
+file on the same run: `import json` and `from sqlalchemy import text` sat inside
+the functions that used them, which is the "import below first use" failure this
+tree has now had in five suites and, for the first time, a shipped module.
+
+#### `--app` took what FLASK_APP takes, except it did not
+
+Three commands share one `--app` resolver (`sweep._load_app`; `takedown`
+imports it and `backfill_canvas` now does too), and it read "callable" as
+"factory". **A Flask application is itself callable** — `Flask.__call__` is the
+WSGI entry point — so `--app app:app` called the application with no arguments
+and reported
+
+    --app: calling app:app raised TypeError: Flask.__call__() missing 2
+    required positional arguments: 'environ' and 'start_response'
+
+blaming the host for passing a perfectly good app. Every command's docstring
+has said `--app` takes what `FLASK_APP` takes, and `FLASK_APP` takes both
+forms. Ask what the object IS before deciding to call it.
+
+It survived three releases because both older commands DEFAULT to the factory,
+so nobody typed the other form. The new command's default was `app:app` and it
+failed on its own first smoke test — which is the argument for running a new
+CLI once by hand even when a suite drives its internals.
+
+Pinned as six rows, `(command, form)`, because one resolver serving three
+commands is three instances until each has been driven — the modal-census
+lesson in another costume. A seventh asserts the three are the SAME function
+object, so a fourth command that copies it instead regresses alone and says so.
+
+The same smoke test found the summary line reading `0 looked at, 0 would fill`
+after the batch read had failed outright. The exit code was already 1 and a
+scheduler reads that; a person reads the line, and that line is also what a
+healthy finished table prints. It now names the failure.

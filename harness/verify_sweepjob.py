@@ -320,6 +320,41 @@ check("an unimportable --app exits 2, not 1", code == 2, f"exit {code}")
 check("…with one line on stderr and no traceback",
       "Traceback" not in err and err.count("\n") <= 1, err[:160])
 
+# `--app` TAKES WHAT FLASK_APP TAKES, WHICH IS BOTH FORMS -- and one of them
+# did not work. The resolver read "callable" as "factory", but a Flask
+# application is ITSELF callable: `Flask.__call__` is the WSGI entry point, so
+# `--app app:app` called the application with no arguments and reported
+#
+#     --app: calling app:app raised TypeError: Flask.__call__() missing 2
+#     required positional arguments: 'environ' and 'start_response'
+#
+# -- blaming the host for passing a perfectly good app. Found by running a new
+# command whose default happened to be `app:app`; the two older commands default
+# to the factory, which is why three releases never met it.
+#
+# KEYED BY (COMMAND, FORM), because one resolver serving three commands is three
+# instances until each has been driven. `takedown` and `backfill_canvas` import
+# this function from `sweep` rather than copying it, and that is the property
+# worth pinning: a fourth command that copies it instead can regress alone.
+for _cmd in ("skribl.sweep", "skribl.takedown", "skribl.backfill_canvas"):
+    for _form, _spec in (("the app object", "app:app"),
+                         ("the factory", "app:create_app")):
+        _p = subprocess.run([sys.executable, "-m", _cmd, "--app", _spec,
+                             *(["--list-keys"] if _cmd == "skribl.sweep" else
+                               ["--reports"] if _cmd == "skribl.takedown" else
+                               ["--limit", "1"])],
+                            cwd=ROOT, env=ENV, capture_output=True, text=True)
+        check(f"{_cmd} resolves --app given {_form}",
+              _p.returncode != 2 and "is not a Flask application" not in _p.stderr
+              and "raised TypeError" not in _p.stderr,
+              f"exit {_p.returncode} — {_p.stderr.strip()[:150]}")
+
+check("...and the three commands share ONE resolver rather than a copy each",
+      all(__import__(m, fromlist=["_load_app"])._load_app
+          is __import__("skribl.sweep", fromlist=["_load_app"])._load_app
+          for m in ("skribl.takedown", "skribl.backfill_canvas")),
+      "a second spelling of `--app` is a second thing to fix when this recurs")
+
 code, out, err = cli(env=dict(ENV, SKRIBL_MEDIA_BACKEND="inline"))
 check("an inline deployment is told there is nothing to sweep, and exits 0",
       code == 0 and "payload_json" in out, f"exit {code} — {out.strip()[:100]}")
