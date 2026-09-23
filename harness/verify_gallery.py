@@ -2301,7 +2301,10 @@ with sync_playwright() as _spn:
     post_public_api("nib fixture")
     browsing.goto(_pn, BASE, "/gallery")
     _pn.wait_for_timeout(1800)
-    _NIB = """() => {
+    # A RAW STRING, because this block carries JavaScript regexes and
+    # `\(` is not a Python escape -- it survives as a literal today and is
+    # a SyntaxWarning now and an error later.
+    _NIB = r"""() => {
         const t = document.querySelector(".tile");
         const n = t && t.querySelector(".skribl-inline-nib");
         const c = t && t.querySelector("canvas");
@@ -2323,18 +2326,24 @@ with sync_playwright() as _spn:
         const ah = +(box && box.getAttribute("data-skribl-h")) || 0;
         const cr = c.getBoundingClientRect();
         const sc = (aw && ah) ? Math.min(cr.width / aw, cr.height / ah) : 0;
-        /* EVERY LAYER OF THE RING, as channel triples. The first draft of
-           the row below asked whether the shadow string contained "rgb",
-           which rgba(255,255,255,.22) does -- the white it was supposed to
-           have stopped being. And the answer it wanted then is the wrong
-           answer now: the ring is DELIBERATELY not the ink, because a
-           tinted halo round a tinted dot is one colour and that colour is
-           the stroke's, so the bead vanished into its own line. */
-        const layers = (cs.boxShadow.match(/rgba?\([^)]*\)/g) || [])
-          .map(x => (x.match(/[\d.]+/g) || []).slice(0, 3).map(Number));
+        /* THE HALO'S COLOUR AND ITS BLUR, which are the two halves of "a
+           little glow of colour". A shadow's lengths are offset-x, offset-y,
+           BLUR, spread -- and blur is what makes a halo a halo rather than a
+           ring, which is the whole of the distinction this row exists to
+           hold. Read after the colour is stripped out, so the colour's own
+           numbers cannot be mistaken for lengths.
+
+           Channels that are all equal are a grey whatever notation they
+           arrive in, and a grey here is the white ring this replaced. */
+        const sh = cs.boxShadow;
+        const col = (sh.match(/rgba?\([^)]*\)|color\([^)]*\)/) || [""])[0];
+        const lens = sh.replace(col, "").match(/-?[\d.]+px/g) || [];
+        const ch = (col.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
         return { nib: +n.getBoundingClientRect().width.toFixed(2),
                  canvas: Math.round(cr.width), scale: +sc.toFixed(4),
-                 layers: layers,
+                 haloBlur: lens.length > 2 ? parseFloat(lens[2]) : 0,
+                 haloCh: ch, haloGrey: ch.length === 3
+                   && Math.max.apply(null, ch) - Math.min.apply(null, ch) < 0.02,
                  painted: cs.opacity !== "0",
                  ink: n.style.getPropertyValue("--nib-c"),
                  bg: cs.backgroundImage,
@@ -2373,24 +2382,31 @@ with sync_playwright() as _spn:
           f"{_n2} \u2014 the fixture draws in a colour, so a bead reporting "
           f"white is a cursor hovering over somebody's drawing rather than "
           f"the pen making it")
-    # AND THE RING IS NOT THE INK, which is the correction the ink made
-    # necessary and is the opposite of what this row asked a draft ago. A
-    # tinted halo round a tinted dot is ONE colour, and that colour is the
-    # colour of the stroke the bead is sitting on -- so the tip disappeared
-    # into its own line and read as a slightly thicker bit of line.
+    # AND IT IS SEPARATED FROM ITSELF BY A GLOW, not by a ring. This row has
+    # now been written three ways, and the sequence is the argument:
     #
-    # A light hairline and a dark one outside it: whatever the ink is and
-    # whatever is behind it, one of the pair contrasts. It is how a marker on
-    # a map is drawn, and for the same reason. Asserted as "light then dark",
-    # because a single ring of either colour is the failure -- one of them is
-    # always the same as something it has to be told apart from.
-    _ly = _n2.get("layers") or []
-    check("...inside a ring that is NOT the ink, so the tip reads on its own stroke",
-          len(_ly) >= 2 and len(_ly[0]) == 3 and len(_ly[1]) == 3
-          and min(_ly[0]) > 200 and max(_ly[1]) < 60,
-          f"ring layers {_ly} \u2014 wanted a light hairline and a dark one "
-          f"outside it; one layer, or a layer the colour of the ink, is a "
-          f"halo that vanishes on exactly the stroke it is marking")
+    #   the ring TAKES the ink   which made it one colour with the stroke
+    #                            under it, and the tip vanished into its own
+    #                            line
+    #   a hard two-tone hairline which separates them, and looks like a cursor
+    #                            doing it (owner: "make outer contrast ring a
+    #                            little glow of color, not white ring")
+    #   a blurred halo of the    which adds light over the stroke rather than
+    #   same ink                 drawing a line across it: the tip is the
+    #                            brightest point on its own line and nothing
+    #                            foreign is introduced to make it so
+    #
+    # So two properties, and each one alone is a state this has already been
+    # in: the halo is BLURRED (a ring has a blur of zero) and it is COLOURED
+    # (a grey is the white ring, whatever notation it arrives in).
+    check("...inside a halo that is a glow and not a ring",
+          (_n2.get("haloBlur") or 0) > 2,
+          f"blur {_n2.get('haloBlur')}px, halo {_n2.get('haloCh')} \u2014 a blur "
+          f"of zero is a hard edge, which is the hairline this replaced")
+    check("...and the glow is the ink's own colour, not a white one",
+          _n2.get("haloGrey") is False and len(_n2.get("haloCh") or []) == 3,
+          f"halo {_n2.get('haloCh')} \u2014 equal channels are a grey, and a grey "
+          f"here is the cursor-like ring the owner asked to be rid of")
     _pn.close()
     _bn.close()
 

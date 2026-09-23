@@ -1257,14 +1257,27 @@
        * intent as the other player's alpha strip, without a colour parser in
        * a file a host pays for by the byte.
        *
-       * AND THE RING IS NOT THE INK, which is the correction the ink itself
-       * made necessary. A tinted halo round a tinted dot is one colour, and
-       * that colour is the colour of the stroke it is sitting on -- so the
-       * bead disappeared into its own line and read as a slightly thicker
-       * bit of line rather than as a pen. The sheet draws a light hairline
-       * and a dark one outside it instead: whatever the ink is and whatever
-       * is behind it, ONE of the pair contrasts. It is how a marker on a map
-       * is drawn, and for the same reason.
+       * AND THE INK NEEDS SEPARATING FROM ITSELF, which is the question the
+       * ink created and which took two answers to settle. A tip the colour of
+       * the stroke under it disappears into that stroke and reads as a
+       * slightly thicker bit of line rather than as a pen.
+       *
+       * The first answer was a hard two-tone hairline, light over dark, the
+       * way a marker on a map is drawn. It separates them and it looks like a
+       * cursor doing it (owner: "make outer contrast ring a little glow of
+       * color, not white ring"). The second is a BLURRED halo of the same
+       * ink: it adds light over the stroke rather than drawing a line across
+       * it, so the tip is the brightest point on its own line and nothing
+       * foreign has been introduced to make it so. The shared-link player has
+       * been drawn this way since it was written.
+       *
+       * AND IT HAS TO BLOOM PAST THE STROKE TO DO ANY OF THAT. The first cut
+       * of the halo was 6px of blur at 55%, which on a 12px stroke of the
+       * same colour is invisible -- rendered and looked at, not reasoned
+       * about: the tip was simply gone. 8px of blur and 3px of spread at 90%
+       * puts the glow's edge outside the line it is ending, so there is a
+       * soft bloom around the tip and the eye finds it. Below that it is not
+       * a glow, it is the stroke.
        *
        * Erasing keeps the neutral bead: there is no ink to take. */
       st.setProperty('--nib-c', (!p.erase && p.color) || '#fff');
