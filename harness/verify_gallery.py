@@ -1395,40 +1395,65 @@ with sync_playwright() as _spa:
           f"this whole accordion exists to remove")
 
     # AND THE SHUT IS AS SMOOTH AS THE OPEN. `content-visibility` has no
-    # interpolable values, so the close used to flip it to `hidden` at once and
-    # the collapse the track was animating had already happened.
+    # interpolable values, so the close used to flip it to `hidden` at once:
+    # the element stopped contributing its CONTENTS' height in one frame, and
+    # the track spent 240ms animating a collapse that had already happened.
     #
-    # MEASURED MID-TRANSITION, not read off the stylesheet: the declaration
-    # that fixes this is `transition-behavior`, which a browser that does not
-    # know it drops silently -- so a check that read the rule would report a
-    # smooth close on an engine that cannot do one. Samples inside the first
-    # half of a 240ms transition; any height strictly between nothing and the
-    # open height means the box is on its way down rather than already gone.
+    # THE FIRST DRAFT OF THIS ROW WENT GREEN ON THAT EXACT MUTATION, and it is
+    # worth writing down why. It asked only whether the wrapper's height was
+    # somewhere between nothing and the open height part way through -- and
+    # `content-visibility: hidden` does NOT remove the element's own padding,
+    # which this sheet also eases. So the row was watching 22px of padding
+    # ease to nothing and calling it an animated close, on a tree where the
+    # words had vanished instantly. A measurement that a broken tree satisfies
+    # is not a measurement.
+    #
+    # Two things are asked now, and the padding can answer neither:
+    #   the height mid-close is still ABOVE what padding alone could produce,
+    #     so the text is still in there taking up room
+    #   `content-visibility` still computes `visible` mid-close, which is the
+    #     mechanism itself -- `transition-behavior: allow-discrete` holding the
+    #     visible value until the end is the entire fix
     _shut = _pa.evaluate("""() => new Promise(resolve => {
         const t = document.querySelector('.tile');
         const wrap = t.querySelector('.tcapWrap');
+        const cap = t.querySelector('.tcap');
         const btn = t.querySelector('.tileCapBtn');
-        if (!wrap || !btn) { resolve({ missing: true }); return; }
-        const h = () => wrap.getBoundingClientRect().height;
+        if (!wrap || !cap || !btn) { resolve({ missing: true }); return; }
+        const h = () => Math.round(wrap.getBoundingClientRect().height);
         btn.click();                         /* open */
         setTimeout(() => {
           const open = h();
+          const cs = getComputedStyle(cap);
+          /* what the box would still measure with its contents skipped: the
+             padding this sheet puts on the paragraph, and nothing else */
+          const padOnly = Math.round((parseFloat(cs.paddingTop) || 0)
+                                   + (parseFloat(cs.paddingBottom) || 0));
           btn.click();                       /* and shut, watched */
-          const seen = [];
-          [50, 90, 130].forEach(ms => setTimeout(() => {
-            seen.push(Math.round(h()));
-            if (seen.length === 3) resolve({ open: Math.round(open), seen: seen,
-              mid: seen.filter(v => v > 2 && v < Math.round(open) - 2).length,
-              settled: Math.round(h()) });
-          }, ms));
-        }, 400);
+          /* ON THE FRAME AFTER, not on a timer. The track and the padding ease
+             on the same curve, so by 50ms the padding is most of the way down
+             too and the two trees are twenty pixels apart; one frame in they
+             are fifty. Two rAFs because the first is the frame the transition
+             starts on. */
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            const early = h(), vis = getComputedStyle(cap).contentVisibility;
+            setTimeout(() => resolve({ open: open, padOnly: padOnly,
+              early: early, vis: vis, settled: h() }), 400);
+          }));
+        }, 450);
       })""")
     _pa.wait_for_timeout(900)
-    check("closing a description animates rather than vanishing",
-          not _shut.get("missing") and _shut["open"] > 10 and _shut["mid"] >= 1,
-          f"{_shut} \u2014 every sample at nothing means the box stopped "
-          f"contributing height the instant the class came off, and the track "
-          f"animated a collapse that had already happened")
+    check("closing a description takes the words down with it, gradually",
+          not _shut.get("missing") and _shut["open"] > _shut["padOnly"] + 20
+          and _shut["early"] > _shut["padOnly"] + 10 and _shut["settled"] == 0,
+          f"{_shut} \u2014 a first frame at or near the padding means the words "
+          f"stopped contributing height the instant the class came off, and "
+          f"what is easing is an empty box")
+    check("...because the element keeps rendering its contents until it has",
+          not _shut.get("missing") and _shut["vis"] == "visible",
+          f"{_shut} \u2014 `content-visibility` has no interpolable values, so "
+          f"without `transition-behavior: allow-discrete` it flips at the "
+          f"start of the close and there is nothing left to animate")
 
     # THE HEAD'S BUTTONS SAY NOTHING ABOUT THE DRAWING. `:focus-within` on the
     # card matched the whole card, and a button keeps focus after a click --
