@@ -477,6 +477,19 @@ with sync_playwright() as _spg:
           _g["tiles"] > 0 and _g["perTile"] == [1],
           f"{_g['buttons']} controls on {_g['tiles']} tiles, counts per tile "
           f"{_g['perTile']} — two is the defect this row exists for")
+    # NO STRAIGHT RULE ACROSS A ROUNDED JOIN. The footer had `border-top: 1px`
+    # and it ran the full width of the card, straight under a stage whose own
+    # border is rounded, so the two met at the radius and the corner read as a
+    # mistake (owner: "doesn't look good with the canvas border touching it
+    # because it has the rounded sides"). Asserted as the pairing rather than
+    # as a bare zero: a rule under a SQUARE stage would be a design choice, and
+    # what was wrong here is a straight line meeting a curve.
+    _rule = _pg2.evaluate("() => {\n        const f = document.querySelector('.tile .skfull-card');\n        const st = document.querySelector('.tile .tileStage');\n        if (!f || !st) return { ok: false };\n        const cs = getComputedStyle(f);\n        const sb = getComputedStyle(st.querySelector('.skribl-inline') || st);\n        return { ok: true,\n                 topRule: parseFloat(cs.borderTopWidth) || 0,\n                 radius: parseFloat(sb.borderTopLeftRadius) || 0 }; }")
+    check("the card's footer draws no rule across the stage's rounded corner",
+          _rule.get("ok") and _rule["topRule"] == 0 and _rule["radius"] > 0,
+          f"{_rule} \u2014 border-top {_rule.get('topRule')}px under a "
+          f"{_rule.get('radius')}px corner radius; the padding does the separating")
+
     check("...and it is the footer's, from the shared bar",
           _g["buttons"] > 0 and _g["inFooter"] == _g["buttons"],
           f"{_g['inFooter']} of {_g['buttons']} inside .skfull-card — a control "
@@ -485,6 +498,85 @@ with sync_playwright() as _spg:
           _g["wrapped"] == _g["tiles"],
           f"{_g['wrapped']} of {_g['tiles']} players wrapped — a player outside "
           f".tileStage has nothing to fullscreen")
+
+    # THE SAME CENSUS FOR LOOP, AND IT HAS TO SURVIVE A ROUND TRIP. The card's
+    # footer carries loop; so does the COMPONENT's own cluster, which `is-bare`
+    # suppresses. The card set that class at build and `onFs` then toggled it
+    # with full screen -- so LEAVING full size stripped it and the second loop
+    # button came back for good (owner: "when you hover on the card the button
+    # in bottom right (recycle/loop) shows and it's redundant").
+    #
+    # COUNTED AFTER A ROUND TRIP, not at rest, because at rest the broken tree
+    # passes: the class is correct until something removes it. A census taken
+    # on a freshly painted grid would have shipped this twice.
+    # A RECT IS NOT A PAINT, and this census needed two goes to say so properly.
+    #
+    # `offsetParent !== null` was the first try and it is a BOX test: the
+    # FULL-SCREEN bar lives inside the tile and is hidden by opacity, so it
+    # keeps its box and loses only its pixels, and the row reported two loop
+    # controls per tile on a tree that was correct.
+    #
+    # `elementFromPoint` was the second and it is viewport-bound: it answers
+    # null for anything scrolled out of view, so the twenty tiles below the fold
+    # reported ZERO and the counts came back [0, 1]. Right question, instrument
+    # that can only be asked about one screenful.
+    #
+    # `checkVisibility` is the one that fits: it is paint semantics (opacity and
+    # visibility on the element AND its ancestors, which is exactly the bar's
+    # hiding mechanism) and it does not care where the element is scrolled to.
+    def _loops(tag):
+        return _pg2.evaluate("""() => {
+            const painted = b => !!b && b.checkVisibility &&
+                b.checkVisibility({ opacityProperty: true, visibilityProperty: true,
+                                    contentVisibilityAuto: true });
+            const isLoop = b => /repeat|loop|plays once/i.test(
+                (b.getAttribute('aria-label') || '') + ' ' + (b.title || ''));
+            const tiles = [...document.querySelectorAll('.tile')];
+            const per = tiles.map(t =>
+                [...t.querySelectorAll('button')].filter(b => isLoop(b) && painted(b)).length);
+            return { perTile: [...new Set(per)].sort(),
+                     clusters: [...document.querySelectorAll('.skribl-inline-controls')]
+                                 .filter(painted).length,
+                     bare: document.querySelectorAll('.tileStage .skribl-inline.is-bare').length,
+                     tiles: tiles.length }; }""")
+
+    _l0 = _loops("at rest")
+    _pg2.evaluate("() => document.querySelector('.tile .skfull-card .skfull-full').click()")
+    _pg2.wait_for_timeout(900)
+    _l1 = _loops("in full screen")
+    # OUT BY THE BUTTON, NOT BY ESCAPE. Under the real Fullscreen API Escape
+    # works; in the FALLBACK -- which is what a headless Chromium gets without a
+    # user gesture, and what an iPhone gets -- the page is still the page and
+    # `.tileExit` is the only way out. This suite's own full-screen section says
+    # so in as many words. Pressing Escape left the probe INSIDE full screen, so
+    # the "back out" census was the "in full screen" one measured twice and the
+    # row reported a defect that a browser says is not there: painted loop
+    # controls on one tile go 1 at rest, 2 in full screen (the card's, plus the
+    # full-screen bar's own, which is correct), 1 again after the exit.
+    _pg2.evaluate("() => { const b = document.querySelector('.tile .tileExit') || document.querySelector('.tile .skfull-card .skfull-full'); if (b) b.click(); }")
+    _pg2.wait_for_timeout(900)
+    _l2 = _loops("back out")
+    check("the full-screen round trip actually came back out",
+          _l1["perTile"] != _l2["perTile"],
+          f"full {_l1['perTile']} vs back {_l2['perTile']} \u2014 identical counts "
+          f"mean the exit never fired, and the row below is then asserting "
+          f"about full screen while claiming to be about the way out")
+
+    check("every tile carries a loop control — exactly one, at rest",
+          _l0["perTile"] == [1] and _l0["bare"] == _l0["tiles"],
+          f"counts per tile {_l0['perTile']}, {_l0['bare']} of {_l0['tiles']} "
+          f"players bare — the footer has loop, so the component's cluster must "
+          f"not also be on the stage")
+    # IN full screen the bar's own loop IS painted and the card's is behind it,
+    # which is correct and not what this row is about -- `_l1` is recorded for
+    # the detail line only. What must hold is the state on the way BACK.
+    check("...and STILL exactly one after a full-screen round trip",
+          _l2["perTile"] == [1] and _l2["clusters"] == 0
+          and _l2["bare"] == _l2["tiles"],
+          f"at rest {_l0['perTile']} / full {_l1['perTile']} / back {_l2['perTile']}; "
+          f"{_l2['clusters']} component clusters visible, {_l2['bare']} of "
+          f"{_l2['tiles']} still bare — `is-bare` is permanent on a card, and a "
+          f"toggle keyed to full screen is what un-set it on the way out")
     # 36 DRAWN, 44 TO A FINGER. The footer's buttons are the bar's, so they are
     # the bar's shape too: a 36px disc with a ::before band out to 44. The 44 is
     # therefore not in this rect and is not asserted from it -- verify_a11y
@@ -844,9 +936,21 @@ with sync_playwright() as _spa:
           titleInNames: !!(a && a.querySelector('.tnames .tt')),
           aboveStage: !!(a && t[0].querySelector('.tileStage') &&
             a.getBoundingClientRect().bottom <= t[0].querySelector('.tileStage').getBoundingClientRect().top + 1),
-          solos: document.querySelectorAll('.tsolo').length,
-          /* and the tiles with no author draw no block at all */
+          /* THE UNATTRIBUTED CARD, which now has a shape instead of a gap.
+             `.tanon` is a `.tauth` too -- same column, so the grid keeps one
+             rhythm -- and what makes it honest is what it does NOT carry. */
+          anon: document.querySelectorAll('.tanon').length,
           blocks: document.querySelectorAll('.tauth').length,
+          solos: document.querySelectorAll('.tsolo').length,
+          anonWord: (document.querySelector('.tanon .tdn') || {}).textContent,
+          /* a claim about a person would be any of these */
+          anonClaims: [...document.querySelectorAll('.tanon')].some(
+            x => x.tagName === 'A' || x.querySelector('.tun') ||
+                 x.querySelector('.tverified') || x.querySelector('.tavatar img') ||
+                 (x.querySelector('.tavatar') || {}).textContent),
+          /* and it still carries the title, in the same slot a named one does */
+          anonTitled: [...document.querySelectorAll('.tanon')]
+            .every(x => !!x.querySelector('.tnames .tt')),
         }; }""")
     check("the fixture really produced a grid to measure",
           _card["tiles"] >= 3, f"{_card['tiles']} tiles — fewer than three and "
@@ -861,12 +965,59 @@ with sync_playwright() as _spa:
           _card["inHead"] and _card["titleInNames"] and _card["aboveStage"],
           f"{_card} \u2014 direction B: who first, then what, the way a post head "
           f"reads; the title used to share a flex row with the time and two buttons")
-    check("...and a post with no author draws NO author block",
-          _card["blocks"] == 2 and _card["solos"] == _card["tiles"] - 2,
-          f"{_card['blocks']} .tauth blocks and {_card['solos']} unattributed "
-          f"heads out of {_card['tiles']} tiles \u2014 `.tauth` means somebody is "
-          f"named, which is what makes its absence readable; the unattributed "
-          f"card uses `.tsolo` so it cannot borrow the meaning")
+    # INVERTED IN v310, AND THE INVERSION IS THE POINT. This row used to read
+    # "a post with no author draws NO author block" and it guarded a gap: a
+    # card with a hole where every neighbour has a face, which the owner read
+    # as broken the first time they saw a grid of them. The fix is to name the
+    # STATE rather than leave the slot empty, so the assertion has to guard the
+    # achievement instead -- every unattributed card draws `.tanon`, and none
+    # of them claims a person. An assertion that can only pass while the gap
+    # survives is a TODO in a test's clothes (verify_seam's split, v281).
+    check("...and a post with no author draws the ANONYMOUS block, not a gap",
+          _card["anon"] == _card["tiles"] - 2 and _card["blocks"] == _card["tiles"]
+          and _card["solos"] == 0 and _card["anonWord"] == "Anonymous",
+          f"{_card['anon']} .tanon of {_card['tiles']} tiles, {_card['blocks']} "
+          f"blocks, {_card['solos']} legacy .tsolo, word "
+          f"{_card['anonWord']!r} \u2014 every card carries a block now; the "
+          f"unattributed one says which kind it is")
+    # THE META RUN READS AS THREE THINGS, NOT ONE STRING. "3d 2 plays Report"
+    # (owner: "looks weird because they run together"). Asserted as STRUCTURE
+    # and as measured GAPS, not as a rendered string: a substring check would
+    # pass on the prose in this comment, and the separator is a pseudo-element
+    # that textContent cannot see anyway.
+    _meta = _pa.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const m = t.querySelector('.tmeta');
+        const rep = t.querySelector('.report');
+        if (!m || !rep) return { ok: false };
+        const sep = getComputedStyle(t.querySelector('.plays'), '::before');
+        const mr = m.getBoundingClientRect(), rr = rep.getBoundingClientRect();
+        return { ok: true,
+                 /* age and plays live together, under one parent */
+                 grouped: !!(m.querySelector('.tm') && m.querySelector('.plays')),
+                 /* and Report is NOT in it: it is an action, not a fact */
+                 actionOut: !m.contains(rep),
+                 sep: (sep.content || '').replace(/["\']/g, ''),
+                 /* the gap to the action is wider than the gap inside the facts */
+                 innerGap: parseFloat(getComputedStyle(m).gap) || 0,
+                 outerGap: Math.round(rr.left - mr.right) }; }""")
+    check("the head's two facts are one group and Report is not in it",
+          _meta.get("ok") and _meta["grouped"] and _meta["actionOut"],
+          f"{_meta} \u2014 age and plays are things the post IS; Report is a "
+          f"thing you DO to it, and they were three flat siblings sharing one gap")
+    check("...with a separator between the facts and more air before the action",
+          _meta.get("ok") and _meta["sep"] == "\u00b7"
+          and _meta["outerGap"] > _meta["innerGap"],
+          f"separator {_meta.get('sep')!r}, inner gap {_meta.get('innerGap')}px vs "
+          f"{_meta.get('outerGap')}px before Report \u2014 if the outer gap is not "
+          f"the wider one the grouping is decorative and the row still runs on")
+
+    check("...and that block claims nothing about a person",
+          not _card["anonClaims"] and _card["anonTitled"],
+          f"claims={_card['anonClaims']} titled={_card['anonTitled']} \u2014 no "
+          f"handle, no link, no tick, no avatar image and no INITIAL (an initial "
+          f"is a letter of a name that does not exist); the title still sits in "
+          f"`.tnames` exactly where a named card puts it")
 
     _evil = _pa.evaluate("""() => {
         const a = [...document.querySelectorAll('.tauth')]
@@ -1358,6 +1509,80 @@ with sync_playwright() as _spi:
           f"drawing is worse than no full size at all")
     check("...and the way out is on screen",
           _big["exitSeen"] == "grid", str(_big))
+
+    # ---- THE SPEED CONTROL MOVES THE CLOCK EVERYBODY READS (v310) ---------
+    # Owner: "the 1x button on full screen does nothing when pushed." It did
+    # something: the DRAWING doubled. What did not move was `state().elapsedMs`,
+    # which added the wall-clock segment since the last anchor to a bank of
+    # SCALED time -- so the scrubber and the time readout, the only feedback a
+    # viewer gets, went on reporting 1x. A control whose every visible effect
+    # is invisible is a control that does nothing, and the owner was right.
+    #
+    # MEASURED ON THE DRAWING AND ON THE BAR, and the row needs BOTH. The first
+    # probe written for this bug read `state().elapsedMs` alone and agreed with
+    # the bug -- the field under test was the instrument. The drawing's own
+    # progress hairline is driven by the render loop's clock, which was always
+    # correct, so it is the independent witness: the assertion is that the two
+    # AGREE, which is false while either one is wrong.
+    def _advance(rate, ms=900):
+        _pi.evaluate("""(r) => { const p = document.querySelector(
+            '.tile .tileStage .skribl-inline')._skriblInline;
+            p.pause(); p.seek(0); p.setRate(r); }""", rate)
+        _pi.wait_for_timeout(120)
+        _pi.evaluate("""() => document.querySelector(
+            '.tile .tileStage .skribl-inline')._skriblInline.play()""")
+        _pi.wait_for_timeout(ms)
+        out = _pi.evaluate("""() => {
+            const st = document.querySelector('.tile .tileStage');
+            const pct = e => parseFloat((e && e.style.width || '0').replace('%','')) || 0;
+            return { draw: pct(st.querySelector('.skribl-inline-prog')),
+                     bar: pct(document.querySelector('.skfull-fill')),
+                     rate: st.querySelector('.skribl-inline')._skriblInline.rate() }; }""")
+        _pi.evaluate("""() => document.querySelector(
+            '.tile .tileStage .skribl-inline')._skriblInline.pause()""")
+        return out
+
+    _r1 = _advance(1)
+    _r2 = _advance(2)
+    check("the drawing really runs at the rate it was given",
+          _r1["draw"] > 2 and _r2["draw"] > 2
+          and abs(_r2["draw"] / max(_r1["draw"], 0.01) - 2) < 0.35,
+          f"1x {_r1['draw']:.1f}% vs 2x {_r2['draw']:.1f}% of the replay in the "
+          f"same wall clock — the ratio is the assertion; the absolute "
+          f"percentages move with how long the fixture's replay is")
+    # PUT IT BACK. These two rows leave the player at rate 2 and mid-replay, and
+    # the sections below share this page: the nib probe sampled 14 frames with
+    # the replay already finished (a 2x replay ends in half the wall clock it
+    # budgeted) and the bar-drives-the-player row read r0 == 2 where it asserts
+    # 1. Both went red against a tree that was right. A probe that leaves global
+    # state behind is an instrument that breaks the next instrument.
+    # PLAYING, AND LEFT WHERE IT WAS. Entering full screen calls pl.play(), so
+    # that is the state the sections below were written against, and each way
+    # of getting it wrong broke a different one of them:
+    #
+    #   left paused      the nib does not exist while stopped -- 14 frames
+    #                    sampled with it hidden -- and the bar row presses
+    #                    pause and asserts PAUSED, which needs something to
+    #                    pause
+    #   left at rate 2   the bar row reads r0 and asserts 1
+    #   left seek(0)     the ink row measured a replay one frame old and
+    #                    found 85 pixels of drawing on the canvas
+    #
+    # So: restore the rate, restore the playing, and do NOT rewind. `_advance`
+    # leaves it part-way through, which is where full screen would have it by
+    # now anyway. Three rows in three sections, each red against a correct
+    # tree, all from one probe tidying up after itself wrongly.
+    _pi.evaluate("""() => { const p = document.querySelector(
+        '.tile .tileStage .skribl-inline')._skriblInline;
+        p.setRate(1); p.play(); }""")
+    _pi.wait_for_timeout(250)
+
+    check("...and the bar the viewer reads agrees with it at every rate",
+          abs(_r1["bar"] - _r1["draw"]) < 1.5 and abs(_r2["bar"] - _r2["draw"]) < 1.5,
+          f"1x drawing {_r1['draw']:.1f}% bar {_r1['bar']:.1f}%; "
+          f"2x drawing {_r2['draw']:.1f}% bar {_r2['bar']:.1f}% — the bar reads "
+          f"state().elapsedMs, which banked scaled time and then added WALL time "
+          f"to it, so at 2x it showed half the truth and the control looked dead")
 
     # ---- THE PEN IS ON THE LINE (v308) ------------------------------------
     # Owner's screenshot, gallery full screen: the nib sat up and to the left

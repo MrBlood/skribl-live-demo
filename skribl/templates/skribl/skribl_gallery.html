@@ -161,7 +161,19 @@
        The name was being cut by the head being 44px + 51px too full -- see the
        expander's note below and the count's above. Kept anyway: a property
        that quietly cancels `flex: 1` is a trap the next widening walks into. */
-    .tile .tm { flex: none; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
+    /* THE META RUN: age, plays, Report. They were three peers separated by one
+       8px gap and read as a single run-on string -- "3d 2 plays Report"
+       (owner: "looks weird because they run together"). Two of them are FACTS
+       about the post and the third is an ACTION on it, so the grouping follows
+       that: the facts sit together with a middot between them, and Report is
+       pushed off with its own space and its own colour. No vertical rule --
+       this card just lost one straight line and does not need another. */
+    .tile .tmeta { flex: none; display: flex; align-items: baseline; gap: 6px;
+      color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
+    .tile .tm { flex: none; }
+    /* The separator is the pseudo-element's, so nothing has to append a
+       character that would then need stripping to read the numbers back. */
+    .tile .plays::before { content: '\00b7'; margin-right: 6px; opacity: 0.75; }
     /* WHO MADE IT, under the title. Skribl has no user table: every field
        here is what the HOST's resolver returned for the post's user_id, and
        the names match the ones skribls.net already renders in its own post
@@ -175,10 +187,14 @@
     a.tauth:hover .tdn { text-decoration: underline; }
     .tnames { min-width: 0; }
     .tline { display: flex; align-items: center; gap: 5px; min-width: 0; }
-    /* The unattributed card: same column, no avatar, and NOT `.tauth` -- see
-       gallery.js. The title carries the weight the name would have had. */
-    .tsolo { display: flex; min-width: 0; flex: 1 1 auto; }
-    .tsolo .tt { font-weight: 650; color: var(--text); font-size: 14px; margin-top: 0; }
+    /* THE UNATTRIBUTED CARD IS A CARD, not a gap. `.tanon` is the same column
+       as a named one so the grid keeps one rhythm, and everything that would
+       be a CLAIM about a person is absent: no handle, no link, no tick, and a
+       plain disc rather than an initial. The word is dimmer than a name
+       because it is a state and not somebody. */
+    .tanon .tdn-anon { font-weight: 500; color: var(--text-3); font-style: normal; }
+    .tavatar-anon { background: var(--control, rgba(255, 255, 255, 0.06));
+      border: 1px solid var(--hairline); }
     .tavatar { flex: none; width: 34px; height: 34px; border-radius: 50%;
       overflow: hidden; display: grid; place-items: center;
       background: linear-gradient(135deg, #3a3f4b, #232730);
@@ -231,10 +247,15 @@
     .tile .tileCapBtn[hidden] { display: none; }
     .tile .tileCapBtn:hover { text-decoration: underline; }
     /* ---- Report, on every tile, and the one sheet they share ---------- */
+    /* SET APART FROM THE FACTS BESIDE IT: 14px of space rather than 6, and a
+       dimmer resting colour, because it is the only thing in the head anybody
+       can press by accident. The 44px box is the touch floor (SK-AUD-005) and
+       is bigger than the ink, so the extra margin is measured from the BOX and
+       still reads as one gap, not two. */
     .tile .report {
-      margin-left: 6px; flex: none; min-height: 44px; min-width: 44px; padding: 0 10px;
+      margin-left: 14px; flex: none; min-height: 44px; min-width: 44px; padding: 0 10px;
       background: none; border: 0; border-radius: 8px; color: var(--text-3);
-      font: inherit; font-size: 12.5px; cursor: pointer;
+      font: inherit; font-size: 12.5px; cursor: pointer; opacity: 0.8;
     }
     /* Watch it big is the FOOTER's button now (lib/fullbar.js, .skfull-full).
        A `.tileFull` lived here too, beside Report, and stayed after the card
@@ -317,7 +338,7 @@
     .tileStage.is-immersive-page {
       position: fixed; inset: 0; z-index: 2147483000;
       width: 100vw; height: 100dvh; margin: 0; border-radius: 0; }
-    .tile .report:hover { color: var(--text); background: var(--control); }
+    .tile .report:hover { color: var(--text); background: var(--control); opacity: 1; }
     .tile .report[data-reported] { color: var(--text-3); }
     .tile .thead { align-items: center; }
     .sheet {

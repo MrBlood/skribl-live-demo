@@ -197,13 +197,20 @@
    and the fact that it is ALWAYS shown: a card's footer is not conditional on
    anything, so it opts out of the :fullscreen gate above.
    --------------------------------------------------------------------------- */
+/* NO RULE ABOVE THE CARD'S FOOTER. It had `border-top: 1px solid` and the
+   line ran the full width of the card, straight under a stage whose own border
+   is rounded -- so the two met at the radius and the corner read as a mistake
+   rather than a join (owner: "the bottom line just below the canvas that
+   separates the player doesn't look good with the canvas border touching it
+   because it has the rounded sides. maybe just remove the straight line?").
+   The padding below does the separating, which is what it was already doing
+   everywhere the line was not. */
 .skfull.skfull-card {
   display: flex;
   flex-direction: column;
   position: static;
-  padding: 9px 11px;
+  padding: 11px 11px 10px;
   background: none;
-  border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
   color: inherit;
 }
 .skfull-card .skfull-row { gap: 8px; }

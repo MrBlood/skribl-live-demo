@@ -62,10 +62,48 @@
      The avatar falls back to an initial on a tinted disc rather than to a
      broken image or a silhouette, which is what the host does for a user with
      no photo; `onerror` covers a URL that resolves and then 404s, because a
-     cracked-image glyph in a grid of drawings reads as a broken page. */
+     cracked-image glyph in a grid of drawings reads as a broken page.
+
+     AND AN UNNAMED POST SAYS SO OUT LOUD. This function used to return null
+     and the card drew no author at all, on the reasoning that "a placeholder
+     would be a claim about who drew it". Half of that is right and the
+     conclusion was not: a card with a hole where every neighbour has a face
+     reads as BROKEN, not as anonymous, and the owner read it that way the
+     first time they saw a grid of them. The answer is to name the STATE --
+     "Anonymous" on a plain disc -- which invents no person and is the same
+     move as a null canvas size falling back to the band crop rather than
+     guessing 4:3. Say unknown out loud; never guess.
+
+     `isAnon` is what keeps that honest. It carries no handle, no link, no
+     tick and no initial, so nothing on it can be mistaken for somebody's
+     identity, and `.tanon` is what the suite asserts on. */
+  /* THE UNATTRIBUTED CARD, given a shape instead of a gap. No handle, no
+     link, no tick, no initial -- an initial would be a letter of a name that
+     does not exist. A neutral disc and one word. */
+  function anonBlock() {
+    var wrap = document.createElement('div');
+    wrap.className = 'tauth tanon';
+    var av = document.createElement('span');
+    av.className = 'tavatar tavatar-anon';
+    av.setAttribute('aria-hidden', 'true');
+    var names = document.createElement('div');
+    names.className = 'tnames';
+    var line = document.createElement('div');
+    line.className = 'tline';
+    var dn = document.createElement('span');
+    dn.className = 'tdn tdn-anon';
+    dn.textContent = 'Anonymous';
+    line.appendChild(dn);
+    names.appendChild(line);
+    wrap.appendChild(av);
+    wrap.appendChild(names);
+    return wrap;
+  }
+
   function authorBlock(a) {
     var name = (a && (a.display_name || a.username)) || '';
-    if (!name) return null;
+    var isAnon = !name;
+    if (isAnon) return anonBlock();
     var handle = a.username ? '@' + a.username : '';
     var wrap = document.createElement(safeHref(a.url) ? 'a' : 'div');
     wrap.className = 'tauth';
@@ -208,31 +246,26 @@
        than sharing a flex row with the time, the play count and two buttons. */
     var head = document.createElement('div');
     head.className = 'thead';
-    var who = item.author ? authorBlock(item.author) : null;
+    /* EVERY CARD GETS A BLOCK, named or not -- authorBlock() answers for both
+       and `.tanon` is how the suite tells them apart. The old shape here was a
+       null check with a `.tsolo` fallback that drew the title alone, which is
+       the gap this change is about. */
+    var who = authorBlock(item.author);
     var tt = document.createElement('div');
     tt.className = 'tt';
     tt.textContent = item.title || 'Untitled Skribl';
-    if (who) {
-      who.querySelector('.tnames').appendChild(tt);
-      head.appendChild(who);
-    } else {
-      /* An anonymous post has no name to print, so the title leads -- and it
-         does NOT borrow `.tauth`. That class means "somebody is named here",
-         which is what makes its absence readable; reusing it as a layout box
-         would put one on all 24 tiles and quietly retire the assertion that
-         an unattributed post draws no author. Different job, different name. */
-      var solo = document.createElement('div');
-      solo.className = 'tsolo';
-      var names = document.createElement('div');
-      names.className = 'tnames';
-      names.appendChild(tt);
-      solo.appendChild(names);
-      head.appendChild(solo);
-    }
+    who.querySelector('.tnames').appendChild(tt);
+    head.appendChild(who);
     var tm = document.createElement('span');
     tm.className = 'tm';
     tm.textContent = when(item.created_at);
-    head.appendChild(tm);
+    /* THE TWO FACTS TRAVEL TOGETHER, and Report does not. They were three
+       siblings of `.thead` separated by one gap, which is why the row read as
+       "3d 2 plays Report" with nothing telling the eye where one ended. Age
+       and plays are both things the post IS; Report is a thing you DO to it. */
+    var meta = document.createElement('div');
+    meta.className = 'tmeta';
+    meta.appendChild(tm);
     /* PLAYS, as counted (v304): the seven-day count under Hot, the total
        otherwise. Zero says nothing rather than "0 plays". */
     var n = sort === 'hot' ? (item.views_recent || 0) : (item.views || 0);
@@ -240,8 +273,9 @@
       var pl = document.createElement('span');
       pl.className = 'plays';
       pl.textContent = n + (n === 1 ? ' play' : ' plays');
-      head.appendChild(pl);
+      meta.appendChild(pl);
     }
+    head.appendChild(meta);
     /* REPORT, ON EVERY TILE. The button carries the post's id; the sheet is
        one, shared, and opened with it. */
     var rep = document.createElement('button');
@@ -362,10 +396,19 @@
            can see. The sync on the way back out is what repaints the footer's
            play glyph after full screen paused it. */
         if (foot) { foot.running(!big); foot.sync(); }
-        /* BARE means the host supplies the transport. Without it the
-           component's own cluster and duration chip sit under the bar, which
-           is the two-transports screenshot this whole change is about. */
-        if (box) box.classList.toggle('is-bare', !!big);
+        /* BARE IS PERMANENT ON A CARD, so nothing here touches it. This line
+           used to be `toggle('is-bare', !!big)`, written when full screen was
+           the only thing on this page that supplied a transport -- so leaving
+           full screen STRIPPED the class the card had added at build time and
+           the component's own mute/loop cluster came back on the stage, under
+           a footer that already has both. One round trip through full screen
+           and the tile kept a second loop button for good (owner: "when you
+           hover on the card the button in bottom right (recycle/loop) shows
+           and it's redundant because it is on the player").
+
+           The card sets `is-bare` once, in build(), because the footer is
+           there from the first paint to the last. A toggle keyed to full
+           screen is answering a question nobody on this page asks. */
         if (!box) return;
         /* THE PAGE SAYS WHEN, THE COMPONENT SAYS WHAT. `is-immersive` is the
            component's own state (inlineplayer.css): it hides the share card and
