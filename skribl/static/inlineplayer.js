@@ -809,8 +809,23 @@
       },
       rate: function () { return rate; },
       state: function () {
+        /* segElapsed(), NOT `now() - t0`. The segment since the last anchor is
+         * WALL time and `elapsed` is banked SCALED time, so adding the two raw
+         * reports the replay running at 1x however fast it is really drawing.
+         * Everything a viewer can see about the clock reads this field -- the
+         * scrubber fill, the time readout, fullbar's end detection -- so at 2x
+         * the drawing doubled and the bar crawled at half the true progress,
+         * and the speed control looked DEAD (owner: "the 1x button on full
+         * screen does nothing when pushed"). The render loop had it right all
+         * along (`var at = elapsed + segElapsed()`), which is why the drawing
+         * obeyed the rate and nothing else did.
+         *
+         * Measured, one tile, one second of wall clock at each rate:
+         *     rate 1   drawing 16.66%   this field 1015ms
+         *     rate 2   drawing 33.06%   this field 1006ms
+         * The first probe of this bug read THIS FIELD and agreed with it. */
         return { id: id, state: state, totalMs: totalMs,
-                 elapsedMs: state === 'playing' ? elapsed + (now() - t0) : elapsed,
+                 elapsedMs: state === 'playing' ? elapsed + segElapsed() : elapsed,
                  kind: flipFrames ? 'flip' : 'replay', hasAudio: !!music,
                  muted: !soundOn(), loaded: !!payload, failed: failed };
       },

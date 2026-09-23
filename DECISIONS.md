@@ -10896,3 +10896,131 @@ The same smoke test found the summary line reading `0 looked at, 0 would fill`
 after the batch read had failed outright. The exit code was already 1 and a
 scheduler reads that; a person reads the line, and that line is also what a
 healthy finished table prints. It now names the failure.
+
+### The gallery cards, photographed on the live site and taken apart
+
+Five things the owner saw on the deployed cards, and the interesting part is
+that only two of them were visible as defects in the code.
+
+**The speed control looked dead because its every visible effect was
+invisible.** `state().elapsedMs` added the WALL-clock segment since the last
+anchor to a bank of SCALED time, so the drawing obeyed the rate and the
+scrubber, the time readout and the end detection all went on reporting 1x.
+Measured, one second of wall clock: drawing 16.66% against 33.06%, the field
+1015ms against 1006ms. The render loop had always had it right, which is why
+nobody noticed for as long as nobody pressed the button.
+
+**A second loop button appeared on any card that had been full-screened once.**
+The card adds `is-bare` at build — the footer supplies the transport — and
+`onFs` then TOGGLED it with full screen, so leaving full size stripped the
+class and the component's own cluster came back for good. The library carried
+the same inverted line, where it hid only the duration chip because that page
+calls the macro with `controls=false`; removing the toggle outright there
+would have regressed it, so it gets the class permanently instead. One wrong
+question, two surfaces, two different symptoms.
+
+**The rest were composition.** A straight rule ran the width of the card under
+a stage with rounded corners and met it at the radius. The head's three
+trailing items were flat siblings sharing one gap, so "3d 2 plays Report" read
+as one string rather than two facts and an action. And an unattributed card
+drew no author block at all, which reads as broken rather than as anonymous.
+
+#### Then the canvas was cleared, and the card became one shape
+
+The owner's next pass asked for three more, which turned out to be one change:
+everything sitting on the drawing or deciding the card's height moves into the
+head's fact run, the only row that can absorb it for free.
+
+**A caption made a card two lines taller than its neighbour**, and in a grid
+the short card's row stretches to match — the dead space at the bottom. The
+caption is closed to zero at rest and opens from a mark in the head. Measured,
+24 cards with half captioned: one distinct height closed; opening one takes
+that card alone from 416 to 474.
+
+A card with nothing to say draws NO mark, rather than the words "no msg" the
+owner suggested. A label announcing an absence is furniture on every silent
+card, and the ask was simplicity; absence already says it.
+
+**The anonymous avatar is the Skribl star** on the accent blend at 135deg,
+drawn as SVG rather than typed as U+1F7CD — almost no system font carries that
+codepoint, so the character is a tofu box on most phones. Same class of
+failure the avatar's `onerror` exists to avoid for a 404'd photo.
+
+#### What went wrong, which is most of what was learned
+
+**SOURCE ORDER BEAT THE SAME MISTAKE TWICE IN ONE CHANGE.** A media query adds
+no specificity, and neither does a second single-class rule:
+
+    .tavatar-anon         tied with .tavatar and lost; the star came out on
+                          the no-photo grey
+    @media { .tileKind }  tied with .tile .tileMark and lost; the rule was
+                          served, matched, and the marks still measured 16px
+                          wide inside a block that said display: none
+
+Both are two-class now, and the second is declared after the rules it has to
+beat rather than beside the count it belongs with.
+
+**AND THE SUITE CAUGHT A REGRESSION THE EYE DID NOT.** Folding two glyphs into
+the head cost the display NAME the space it needs at 390 — `at 390 the display
+name is not ellipsised` went red the moment they landed. The marks stand down
+under 560 for the same reason the play count already does. The caption's mark
+stays at every width: it is the only one of the three that is a control, and
+with the caption shut it is the only way to read the message at all.
+
+**SIX ASSERTIONS WERE INVERTED RATHER THAN DELETED.** The v308 rows pinned a
+clamped two-line caption with "Show more" beneath it — and a clamp still
+occupies its two lines, which is the bug. Three designs have now stood in that
+place and each row is its own predecessor's opposite; what carries across all
+three, and is the only thing that does, is that the description stays
+reachable. The full-screen `marks == "none"` row was STRENGTHENED instead: no
+badge is on the stage at all now, so the weaker form would pass on a stage that
+had grown a new badge and a new rule to hide it.
+
+#### The instruments, four of which were wrong before the tree was
+
+Every one of these agreed with the thing it was testing.
+
+- **The first rate probe read the broken field.** `state().elapsedMs` was both
+  the bug and the measurement, so it reported the control working. The
+  drawing's own progress hairline is driven by the render loop's clock and is
+  the independent witness; the assertion is that the two AGREE.
+- **The loop census asked twice and got the wrong question both times.**
+  `offsetParent !== null` is a BOX test, true of the opacity-hidden
+  full-screen bar; `elementFromPoint` is a VIEWPORT test, null for the twenty
+  tiles below the fold. `checkVisibility` is neither.
+- **The round trip pressed Escape**, which does not leave full screen in the
+  fallback path — this suite's own comment says so — so the "back out" census
+  was the "in full screen" one measured twice.
+- **One probe broke three other sections by tidying up after itself wrongly.**
+  Left paused, the nib does not exist; left at rate 2, the bar row reads 2
+  where it asserts 1; left rewound, the ink row finds 85 pixels of drawing.
+  Restore what was borrowed in the state it was borrowed in.
+
+**And one mutation came back GREEN, which is the most useful result in the
+set.** Flipping the caption accordion's `0fr` track to `1fr` reddens nothing,
+because `content-visibility: hidden` makes the element skip its contents and
+contribute no height whatever the track says. The track ANIMATES; the
+content-visibility guarantees the zero. Either one alone leaves a card that
+still looks right, so the pair is written down where the next reader will
+find it.
+
+#### A suite that reported FAIL with every row green
+
+Main went red on the v309 hotfix merge and the report was misleading in an
+unusual direction: `verify_postgres.py: FAIL — exit 1, 20/25 passed`, with
+every row printing PASS and no FAILED line under any of them.
+
+`ok = sum(...)` sat at what used to be the last line before the summary. The
+BACKFILL section went in below it, so `ok` counted twenty while `len(results)`
+counted twenty-five, and the exit code compared the two. Nothing was wrong with
+the backfill, the tree, or the five new assertions.
+
+The tally moved to the foot of the file, after the last thing that can append
+to `results`. **A count computed before the last row exists is a stale number
+waiting for the next section**, and this file had been one section away from
+that for as long as the line had been there.
+
+The shortfall now says which kind it is. A pass count below the total with
+nothing listed under it is an accounting failure in the suite, not a test
+failure, and it reads exactly like five silent ones — which is what sent
+somebody hunting a backfill bug that was never there.

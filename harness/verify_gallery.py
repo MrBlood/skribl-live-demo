@@ -477,6 +477,19 @@ with sync_playwright() as _spg:
           _g["tiles"] > 0 and _g["perTile"] == [1],
           f"{_g['buttons']} controls on {_g['tiles']} tiles, counts per tile "
           f"{_g['perTile']} — two is the defect this row exists for")
+    # NO STRAIGHT RULE ACROSS A ROUNDED JOIN. The footer had `border-top: 1px`
+    # and it ran the full width of the card, straight under a stage whose own
+    # border is rounded, so the two met at the radius and the corner read as a
+    # mistake (owner: "doesn't look good with the canvas border touching it
+    # because it has the rounded sides"). Asserted as the pairing rather than
+    # as a bare zero: a rule under a SQUARE stage would be a design choice, and
+    # what was wrong here is a straight line meeting a curve.
+    _rule = _pg2.evaluate("() => {\n        const f = document.querySelector('.tile .skfull-card');\n        const st = document.querySelector('.tile .tileStage');\n        if (!f || !st) return { ok: false };\n        const cs = getComputedStyle(f);\n        const sb = getComputedStyle(st.querySelector('.skribl-inline') || st);\n        return { ok: true,\n                 topRule: parseFloat(cs.borderTopWidth) || 0,\n                 radius: parseFloat(sb.borderTopLeftRadius) || 0 }; }")
+    check("the card's footer draws no rule across the stage's rounded corner",
+          _rule.get("ok") and _rule["topRule"] == 0 and _rule["radius"] > 0,
+          f"{_rule} \u2014 border-top {_rule.get('topRule')}px under a "
+          f"{_rule.get('radius')}px corner radius; the padding does the separating")
+
     check("...and it is the footer's, from the shared bar",
           _g["buttons"] > 0 and _g["inFooter"] == _g["buttons"],
           f"{_g['inFooter']} of {_g['buttons']} inside .skfull-card — a control "
@@ -485,6 +498,85 @@ with sync_playwright() as _spg:
           _g["wrapped"] == _g["tiles"],
           f"{_g['wrapped']} of {_g['tiles']} players wrapped — a player outside "
           f".tileStage has nothing to fullscreen")
+
+    # THE SAME CENSUS FOR LOOP, AND IT HAS TO SURVIVE A ROUND TRIP. The card's
+    # footer carries loop; so does the COMPONENT's own cluster, which `is-bare`
+    # suppresses. The card set that class at build and `onFs` then toggled it
+    # with full screen -- so LEAVING full size stripped it and the second loop
+    # button came back for good (owner: "when you hover on the card the button
+    # in bottom right (recycle/loop) shows and it's redundant").
+    #
+    # COUNTED AFTER A ROUND TRIP, not at rest, because at rest the broken tree
+    # passes: the class is correct until something removes it. A census taken
+    # on a freshly painted grid would have shipped this twice.
+    # A RECT IS NOT A PAINT, and this census needed two goes to say so properly.
+    #
+    # `offsetParent !== null` was the first try and it is a BOX test: the
+    # FULL-SCREEN bar lives inside the tile and is hidden by opacity, so it
+    # keeps its box and loses only its pixels, and the row reported two loop
+    # controls per tile on a tree that was correct.
+    #
+    # `elementFromPoint` was the second and it is viewport-bound: it answers
+    # null for anything scrolled out of view, so the twenty tiles below the fold
+    # reported ZERO and the counts came back [0, 1]. Right question, instrument
+    # that can only be asked about one screenful.
+    #
+    # `checkVisibility` is the one that fits: it is paint semantics (opacity and
+    # visibility on the element AND its ancestors, which is exactly the bar's
+    # hiding mechanism) and it does not care where the element is scrolled to.
+    def _loops(tag):
+        return _pg2.evaluate("""() => {
+            const painted = b => !!b && b.checkVisibility &&
+                b.checkVisibility({ opacityProperty: true, visibilityProperty: true,
+                                    contentVisibilityAuto: true });
+            const isLoop = b => /repeat|loop|plays once/i.test(
+                (b.getAttribute('aria-label') || '') + ' ' + (b.title || ''));
+            const tiles = [...document.querySelectorAll('.tile')];
+            const per = tiles.map(t =>
+                [...t.querySelectorAll('button')].filter(b => isLoop(b) && painted(b)).length);
+            return { perTile: [...new Set(per)].sort(),
+                     clusters: [...document.querySelectorAll('.skribl-inline-controls')]
+                                 .filter(painted).length,
+                     bare: document.querySelectorAll('.tileStage .skribl-inline.is-bare').length,
+                     tiles: tiles.length }; }""")
+
+    _l0 = _loops("at rest")
+    _pg2.evaluate("() => document.querySelector('.tile .skfull-card .skfull-full').click()")
+    _pg2.wait_for_timeout(900)
+    _l1 = _loops("in full screen")
+    # OUT BY THE BUTTON, NOT BY ESCAPE. Under the real Fullscreen API Escape
+    # works; in the FALLBACK -- which is what a headless Chromium gets without a
+    # user gesture, and what an iPhone gets -- the page is still the page and
+    # `.tileExit` is the only way out. This suite's own full-screen section says
+    # so in as many words. Pressing Escape left the probe INSIDE full screen, so
+    # the "back out" census was the "in full screen" one measured twice and the
+    # row reported a defect that a browser says is not there: painted loop
+    # controls on one tile go 1 at rest, 2 in full screen (the card's, plus the
+    # full-screen bar's own, which is correct), 1 again after the exit.
+    _pg2.evaluate("() => { const b = document.querySelector('.tile .tileExit') || document.querySelector('.tile .skfull-card .skfull-full'); if (b) b.click(); }")
+    _pg2.wait_for_timeout(900)
+    _l2 = _loops("back out")
+    check("the full-screen round trip actually came back out",
+          _l1["perTile"] != _l2["perTile"],
+          f"full {_l1['perTile']} vs back {_l2['perTile']} \u2014 identical counts "
+          f"mean the exit never fired, and the row below is then asserting "
+          f"about full screen while claiming to be about the way out")
+
+    check("every tile carries a loop control — exactly one, at rest",
+          _l0["perTile"] == [1] and _l0["bare"] == _l0["tiles"],
+          f"counts per tile {_l0['perTile']}, {_l0['bare']} of {_l0['tiles']} "
+          f"players bare — the footer has loop, so the component's cluster must "
+          f"not also be on the stage")
+    # IN full screen the bar's own loop IS painted and the card's is behind it,
+    # which is correct and not what this row is about -- `_l1` is recorded for
+    # the detail line only. What must hold is the state on the way BACK.
+    check("...and STILL exactly one after a full-screen round trip",
+          _l2["perTile"] == [1] and _l2["clusters"] == 0
+          and _l2["bare"] == _l2["tiles"],
+          f"at rest {_l0['perTile']} / full {_l1['perTile']} / back {_l2['perTile']}; "
+          f"{_l2['clusters']} component clusters visible, {_l2['bare']} of "
+          f"{_l2['tiles']} still bare — `is-bare` is permanent on a card, and a "
+          f"toggle keyed to full screen is what un-set it on the way out")
     # 36 DRAWN, 44 TO A FINGER. The footer's buttons are the bar's, so they are
     # the bar's shape too: a 36px disc with a ::before band out to 44. The 44 is
     # therefore not in this rect and is not asserted from it -- verify_a11y
@@ -844,9 +936,21 @@ with sync_playwright() as _spa:
           titleInNames: !!(a && a.querySelector('.tnames .tt')),
           aboveStage: !!(a && t[0].querySelector('.tileStage') &&
             a.getBoundingClientRect().bottom <= t[0].querySelector('.tileStage').getBoundingClientRect().top + 1),
-          solos: document.querySelectorAll('.tsolo').length,
-          /* and the tiles with no author draw no block at all */
+          /* THE UNATTRIBUTED CARD, which now has a shape instead of a gap.
+             `.tanon` is a `.tauth` too -- same column, so the grid keeps one
+             rhythm -- and what makes it honest is what it does NOT carry. */
+          anon: document.querySelectorAll('.tanon').length,
           blocks: document.querySelectorAll('.tauth').length,
+          solos: document.querySelectorAll('.tsolo').length,
+          anonWord: (document.querySelector('.tanon .tdn') || {}).textContent,
+          /* a claim about a person would be any of these */
+          anonClaims: [...document.querySelectorAll('.tanon')].some(
+            x => x.tagName === 'A' || x.querySelector('.tun') ||
+                 x.querySelector('.tverified') || x.querySelector('.tavatar img') ||
+                 (x.querySelector('.tavatar') || {}).textContent),
+          /* and it still carries the title, in the same slot a named one does */
+          anonTitled: [...document.querySelectorAll('.tanon')]
+            .every(x => !!x.querySelector('.tnames .tt')),
         }; }""")
     check("the fixture really produced a grid to measure",
           _card["tiles"] >= 3, f"{_card['tiles']} tiles — fewer than three and "
@@ -861,12 +965,96 @@ with sync_playwright() as _spa:
           _card["inHead"] and _card["titleInNames"] and _card["aboveStage"],
           f"{_card} \u2014 direction B: who first, then what, the way a post head "
           f"reads; the title used to share a flex row with the time and two buttons")
-    check("...and a post with no author draws NO author block",
-          _card["blocks"] == 2 and _card["solos"] == _card["tiles"] - 2,
-          f"{_card['blocks']} .tauth blocks and {_card['solos']} unattributed "
-          f"heads out of {_card['tiles']} tiles \u2014 `.tauth` means somebody is "
-          f"named, which is what makes its absence readable; the unattributed "
-          f"card uses `.tsolo` so it cannot borrow the meaning")
+    # INVERTED IN v310, AND THE INVERSION IS THE POINT. This row used to read
+    # "a post with no author draws NO author block" and it guarded a gap: a
+    # card with a hole where every neighbour has a face, which the owner read
+    # as broken the first time they saw a grid of them. The fix is to name the
+    # STATE rather than leave the slot empty, so the assertion has to guard the
+    # achievement instead -- every unattributed card draws `.tanon`, and none
+    # of them claims a person. An assertion that can only pass while the gap
+    # survives is a TODO in a test's clothes (verify_seam's split, v281).
+    check("...and a post with no author draws the ANONYMOUS block, not a gap",
+          _card["anon"] == _card["tiles"] - 2 and _card["blocks"] == _card["tiles"]
+          and _card["solos"] == 0 and _card["anonWord"] == "Anonymous",
+          f"{_card['anon']} .tanon of {_card['tiles']} tiles, {_card['blocks']} "
+          f"blocks, {_card['solos']} legacy .tsolo, word "
+          f"{_card['anonWord']!r} \u2014 every card carries a block now; the "
+          f"unattributed one says which kind it is")
+    # THE META RUN READS AS THREE THINGS, NOT ONE STRING. "3d 2 plays Report"
+    # (owner: "looks weird because they run together"). Asserted as STRUCTURE
+    # and as measured GAPS, not as a rendered string: a substring check would
+    # pass on the prose in this comment, and the separator is a pseudo-element
+    # that textContent cannot see anyway.
+    _meta = _pa.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const m = t.querySelector('.tmeta');
+        const rep = t.querySelector('.report');
+        if (!m || !rep) return { ok: false };
+        const sep = getComputedStyle(t.querySelector('.plays'), '::before');
+        const mr = m.getBoundingClientRect(), rr = rep.getBoundingClientRect();
+        return { ok: true,
+                 /* age and plays live together, under one parent */
+                 grouped: !!(m.querySelector('.tm') && m.querySelector('.plays')),
+                 /* and Report is NOT in it: it is an action, not a fact */
+                 actionOut: !m.contains(rep),
+                 sep: (sep.content || '').replace(/["\']/g, ''),
+                 /* the gap to the action is wider than the gap inside the facts */
+                 innerGap: parseFloat(getComputedStyle(m).gap) || 0,
+                 outerGap: Math.round(rr.left - mr.right) }; }""")
+    check("the head's two facts are one group and Report is not in it",
+          _meta.get("ok") and _meta["grouped"] and _meta["actionOut"],
+          f"{_meta} \u2014 age and plays are things the post IS; Report is a "
+          f"thing you DO to it, and they were three flat siblings sharing one gap")
+    check("...with a separator between the facts and more air before the action",
+          _meta.get("ok") and _meta["sep"] == "\u00b7"
+          and _meta["outerGap"] > _meta["innerGap"],
+          f"separator {_meta.get('sep')!r}, inner gap {_meta.get('innerGap')}px vs "
+          f"{_meta.get('outerGap')}px before Report \u2014 if the outer gap is not "
+          f"the wider one the grouping is decorative and the row still runs on")
+
+    check("...and that block claims nothing about a person",
+          not _card["anonClaims"] and _card["anonTitled"],
+          f"claims={_card['anonClaims']} titled={_card['anonTitled']} \u2014 no "
+          f"handle, no link, no tick, no avatar image and no INITIAL (an initial "
+          f"is a letter of a name that does not exist); the title still sits in "
+          f"`.tnames` exactly where a named card puts it")
+
+    # ---- THE CARD IS ONE SHAPE, AND THE DRAWING IS ALONE ON IT (v310) ----
+    # Three owner asks in one census, because they are one change: the badges
+    # came off the picture and joined the head's fact run, the caption stopped
+    # deciding how tall a card is, and the unattributed avatar became the
+    # Skribl star.
+    _card2 = _pa.evaluate("() => {\n        const t = [...document.querySelectorAll('.tile')];\n        const caps = [...document.querySelectorAll('.tile')].filter(\n            x => x.querySelector('.tcapWrap'));\n        return {\n          tiles: t.length,\n          captioned: caps.length,\n          /* NOTHING OVER THE DRAWING but the idle affordance. */\n          marksOnStage: document.querySelectorAll('.tileStage .tileMarks').length,\n          marksInHead: document.querySelectorAll('.thead .tileMarks').length,\n          soundOnStage: document.querySelectorAll('.tileStage .tileSound').length,\n          kindOnStage: document.querySelectorAll('.tileStage .tileKind').length,\n          /* the cap mark exists exactly where a caption does */\n          capBtns: document.querySelectorAll('.tileCapBtn').length,\n          capBtnsInHead: document.querySelectorAll('.thead .tileCapBtn').length,\n          strayCapBtns: t.filter(x => !!x.querySelector('.tileCapBtn')\n                                   !== !!x.querySelector('.tcapWrap')).length,\n          /* one height for the whole grid, captioned or not */\n          heights: [...new Set(t.map(x => Math.round(\n                     x.getBoundingClientRect().height)))].sort((a, b) => a - b),\n          /* and a closed caption contributes none of it */\n          closedCapH: Math.round(Math.max(0, ...[...document.querySelectorAll(\n                     '.tile:not(.cap-open) .tcapWrap')].map(\n                     x => x.getBoundingClientRect().height))),\n          /* the star, on the accent blend */\n          anonStar: [...document.querySelectorAll('.tavatar-anon')].every(\n                     x => !!x.querySelector('svg')),\n          anonBg: (() => { const a = document.querySelector('.tavatar-anon');\n                     return a ? getComputedStyle(a).backgroundImage : ''; })(),\n        }; }")
+    check("the fixture has captioned AND uncaptioned cards to compare",
+          _card2["tiles"] >= 3 and 0 < _card2["captioned"] < _card2["tiles"],
+          f"{_card2['captioned']} captioned of {_card2['tiles']} \u2014 a grid that "
+          f"is all one or all the other cannot fail the height row below")
+    check("nothing is drawn over the drawing: no kind, no sound, no marks",
+          _card2["marksOnStage"] == 0 and _card2["soundOnStage"] == 0
+          and _card2["kindOnStage"] == 0 and _card2["marksInHead"] > 0,
+          f"{_card2['marksOnStage']} mark groups on the stage, "
+          f"{_card2['kindOnStage']} kind, {_card2['soundOnStage']} sound; "
+          f"{_card2['marksInHead']} in the head \u2014 the owner asked for the "
+          f"canvas back: nothing but drawing")
+    check("...and EVERY card is the same height, captioned or not",
+          len(_card2["heights"]) == 1 and _card2["closedCapH"] == 0,
+          f"heights {_card2['heights']}, tallest closed caption "
+          f"{_card2['closedCapH']}px \u2014 a caption that costs height makes its "
+          f"neighbour's row stretch, which is the dead space at the bottom of "
+          f"the card beside it")
+    check("...the mark that opens a caption is in the head, and only where "
+          "there is one",
+          _card2["capBtns"] == _card2["captioned"] and _card2["strayCapBtns"] == 0
+          and _card2["capBtnsInHead"] == _card2["capBtns"],
+          f"{_card2['capBtns']} marks for {_card2['captioned']} captions, "
+          f"{_card2['strayCapBtns']} mismatched, {_card2['capBtnsInHead']} in the "
+          f"head \u2014 a card with nothing to say draws no mark at all, rather "
+          f"than a control announcing an absence")
+    check("...and the anonymous avatar is the Skribl star on the accent blend",
+          _card2["anonStar"] and "135deg" in _card2["anonBg"]
+          and "124, 92, 255" in _card2["anonBg"],
+          f"star={_card2['anonStar']} bg={_card2['anonBg'][:80]!r} \u2014 drawn as "
+          f"SVG, not typed as U+1F7CD, which is tofu on most phones")
 
     _evil = _pa.evaluate("""() => {
         const a = [...document.querySelectorAll('.tauth')]
@@ -880,101 +1068,50 @@ with sync_playwright() as _spa:
     # THE CAPTION, OVER THE DRAWING. Asserted by PAINT and geometry, not by
     # the class alone: `opacity` is what hides it (the text stays in the
     # accessibility tree), so "hidden" here means a computed opacity of 0.
-    # THE CAPTION CAME OFF THE ART (v308, direction B). It was a scrim over
-    # the drawing because a poster-first card had nowhere else to put it; a
-    # post-like card has room for words, so it is text under the title,
-    # clamped to two lines, and the toggle EXPANDS it rather than revealing
-    # it.
+    # THE CAPTION IS AN ACCORDION IN THE CARD, NOT A CLAMP ABOVE THE DRAWING
+    # (v310). Three designs have now stood here and each assertion below is the
+    # PREVIOUS one inverted, which is the honest way to retire a row:
     #
-    # WHAT THE OLD ASSERTIONS WERE PROTECTING SURVIVES, and it is worth
-    # saying which part: the text had to stay in the accessibility tree at
-    # all times, which is why the scrim used `opacity` and never `display`.
-    # A clamp keeps that for free -- the text is present, and a reader that
-    # does not paint is not affected by a line limit. What goes is the
-    # hover branch, because nothing is hidden any more.
-    _cap = _pa.evaluate("""() => {
-        const t = document.querySelector('.tile');
-        const cap = t.querySelector('.tcap');
-        const st = t.querySelector('.tileStage');
-        const btn = t.querySelector('.tileCapBtn');
-        if (!cap || !st || !btn) return { missing: !cap ? 'cap' : (!st ? 'stage' : 'btn') };
-        const cr = cap.getBoundingClientRect(), sr = st.getBoundingClientRect();
-        const cs = getComputedStyle(cap);
-        const shut = Math.round(cr.height);
-        btn.click();
-        const open = Math.round(cap.getBoundingClientRect().height);
-        const pressed = btn.getAttribute('aria-pressed');
-        btn.click();
-        return { text: cap.textContent,
-                 aboveStage: cr.bottom <= sr.top + 1,
-                 clamp: cs.webkitLineClamp || cs.lineClamp,
-                 display: cs.display, visibility: cs.visibility,
-                 hidden: cap.hasAttribute('hidden'),
-                 shut: shut, open: open, pressed: pressed,
-                 shutAgain: Math.round(cap.getBoundingClientRect().height) }; }""")
-    check("the caption is text under the title, not a scrim on the drawing",
-          not _cap.get("missing") and _cap["aboveStage"]
-          and _cap["text"].startswith("a description long enough"),
-          f"{_cap} \u2014 nothing needs to sit on the picture once the card has"
-          f" somewhere to put words")
-    check("...clamped at rest, and the toggle opens it and shuts it again",
-          not _cap.get("missing") and _cap["clamp"] in ("2", 2)
-          and _cap["open"] > _cap["shut"] and _cap["shutAgain"] == _cap["shut"],
-          f"{_cap} \u2014 a clamp that never opens is a description nobody can"
-          f" finish reading")
-    check("...and the toggle says which state it is in",
-          _cap.get("pressed") == "true", str(_cap))
-
-    # The expander, both cards at once, and the clamp's real height.
-    MORE_JS = """() => {
-        const t = [...document.querySelectorAll('.tile')];
-        const one = t[0], two = t[1];
-        const btn = one && one.querySelector('.tileCapBtn');
-        const cap = one && one.querySelector('.tcap');
-        if (!btn || !cap) return { missing: true };
-        const r = btn.getBoundingClientRect(), cr = cap.getBoundingClientRect();
-        const line = parseFloat(getComputedStyle(cap).lineHeight);
-        const b2 = two && two.querySelector('.tileCapBtn');
-        const c2 = two && two.querySelector('.tcap');
-        return {
-          shown: getComputedStyle(btn).display,
-          word: (btn.textContent || '').trim(),
-          inHead: !!btn.closest('.thead'),
-          afterCap: cap.nextElementSibling === btn,
-          reach: Math.round(r.height) >= 34,
-          capH: Math.round(cr.height), line: Math.round(line),
-          shortShown: b2 ? getComputedStyle(b2).display : 'no-btn',
-          shortClipped: c2 ? c2.scrollHeight > c2.clientHeight + 1 : null }; }"""
-
-    _more = _pa.evaluate(MORE_JS)
-    # WHERE THE EXPANDER LIVES, AND WHERE IT DOES NOT. It was a glyph in the
-    # head beside Report, which cost 44px of the row the display NAME is in --
-    # the row below measures what that cost. It is a word under the sentence
-    # now, and the head is the name's again.
-    check("the caption's expander is a word under the caption, not a glyph in the head",
-          not _more.get("missing") and _more["shown"] != "none"
-          and _more["word"].lower() == "show more"
-          and _more["afterCap"] and not _more["inHead"],
-          f"{_more} \u2014 a speech bubble beside Report does not say 'there is "
-          f"more of this sentence'; two words under the sentence do")
-    # AND ONLY WHERE THE CLAMP ACTUALLY BITES. Tile 1's caption is one line,
-    # so its control must not exist -- asserted on a DIFFERENT card from the
-    # row above, because "it is drawn" and "it is drawn only when needed" are
-    # two claims and one page can satisfy the first while failing the second.
-    check("...and it is absent on a caption the clamp does not fold",
-          not _more.get("missing") and _more["shortClipped"] is False
-          and _more["shortShown"] in ("none", "no-btn"),
-          f"{_more} \u2014 every captioned card used to carry a button that "
-          f"expanded nothing, which is a control that lies about there being more")
-    # THE CLAMP DOES NOT LEAK. `overflow: hidden` clips at the PADDING box, so
-    # a padding-bottom is clipped region the third line shows through: the card
-    # rendered two lines, an ellipsis, and a third line sliced in half. Two
-    # lines of text is the whole box, within a pixel of rounding.
-    check("...and the clamped caption is exactly two lines tall, with nothing under them",
-          not _more.get("missing")
-          and abs(_more["capH"] - 2 * _more["line"]) <= 2,
-          f"{_more} \u2014 {_more.get('capH')}px against {2 * _more.get('line', 0)}px "
-          f"for two lines: anything more is a line bleeding through the clip")
+    #   v307  a scrim OVER the drawing, revealed on hover. Asserted that the
+    #         text stayed in the accessibility tree at all times, which is why
+    #         the scrim used `opacity` and never `display`.
+    #   v308  text under the title, clamped to two lines, "Show more" beneath
+    #         it. Asserted the clamp was exactly two lines and that the word
+    #         appeared only where the clamp actually bit.
+    #   v310  closed to ZERO at rest, opened by a mark in the head. The clamp
+    #         rows cannot survive this and are not meant to: a clamped caption
+    #         still occupies its two lines, and occupying them is what made one
+    #         card taller than its neighbour (owner: "there has to be a way for
+    #         the cards to be the same size with no weird space at the bottom").
+    #
+    # WHAT EVERY VERSION HAS PROTECTED IS THE SAME THING, and it is the only
+    # claim that carries across: the description must be reachable. A clamp
+    # kept it reachable by never hiding it; this keeps it reachable by a
+    # control that is always present when there is anything to read.
+    _cap = _pa.evaluate("() => {\n        const t = [...document.querySelectorAll('.tile')];\n        const one = t[0];\n        const cap = one && one.querySelector('.tcap');\n        const wrap = one && one.querySelector('.tcapWrap');\n        const st = one && one.querySelector('.tileStage');\n        const btn = one && one.querySelector('.tileCapBtn');\n        if (!cap || !wrap || !st || !btn) return { missing: true };\n        const h = e => Math.round(e.getBoundingClientRect().height);\n        const cardH = e => Math.round(e.getBoundingClientRect().height);\n        const shutCard = cardH(one), shutWrap = h(wrap);\n        btn.click();\n        const openCard = cardH(one), openWrap = h(wrap);\n        const pressed = btn.getAttribute('aria-pressed');\n        const expanded = btn.getAttribute('aria-expanded');\n        btn.click();\n        return { text: cap.textContent,\n                 /* the words go BELOW the drawing, so opening does not shove\n                    the picture down the page under the reader */\n                 belowStage: wrap.getBoundingClientRect().top\n                             >= st.getBoundingClientRect().bottom - 1,\n                 inHead: !!btn.closest('.thead'),\n                 word: (btn.textContent || '').trim(),\n                 labelled: (btn.getAttribute('aria-label') || '').length > 8,\n                 reach: (() => { const r = btn.getBoundingClientRect();\n                   const b = getComputedStyle(btn, '::before');\n                   return Math.round(r.height + Math.abs(parseFloat(b.top) || 0) * 2); })(),\n                 shutWrap: shutWrap, openWrap: openWrap,\n                 shutCard: shutCard, openCard: openCard,\n                 shutAgain: h(wrap), pressed: pressed, expanded: expanded }; }")
+    check("the caption opens below the drawing, from a mark in the head",
+          not _cap.get("missing") and _cap["belowStage"] and _cap["inHead"],
+          f"{_cap} \u2014 opening it ABOVE the picture would push the drawing "
+          f"down the page under the reader's cursor; and the mark belongs in the "
+          f"run that already carries the post's other facts (owner)")
+    check("...it costs the card NO height while shut, and opens it when pressed",
+          not _cap.get("missing") and _cap["shutWrap"] == 0
+          and _cap["openWrap"] > 0 and _cap["openCard"] > _cap["shutCard"]
+          and _cap["shutAgain"] == 0,
+          f"{_cap} \u2014 shut must be exactly zero, not a clamp's two lines: a "
+          f"caption that occupies height is what made one card taller than the "
+          f"card beside it")
+    check("...and the mark says which state it is in, and is a control to a finger",
+          not _cap.get("missing") and _cap["pressed"] == "true"
+          and _cap["expanded"] == "true" and _cap["labelled"]
+          and _cap["reach"] >= 34,
+          f"{_cap} \u2014 aria-expanded is what a screen reader reads off a "
+          f"disclosure; the glyph is drawn small and banded out to a finger")
+    check("...and it is a GLYPH now, not the words 'Show more'",
+          not _cap.get("missing") and _cap["word"] == "",
+          f"word={_cap.get('word')!r} \u2014 the v308 row asserted the opposite and "
+          f"was right for a control that sat under the sentence; in a fact run "
+          f"beside a pen and a book, a word is the odd one out")
 
     # THE NAME IS NEVER APPROXIMATE. A clipped handle still reads as a handle;
     # a clipped display name reads as a different person. Measured at 390,
@@ -1359,6 +1496,80 @@ with sync_playwright() as _spi:
     check("...and the way out is on screen",
           _big["exitSeen"] == "grid", str(_big))
 
+    # ---- THE SPEED CONTROL MOVES THE CLOCK EVERYBODY READS (v310) ---------
+    # Owner: "the 1x button on full screen does nothing when pushed." It did
+    # something: the DRAWING doubled. What did not move was `state().elapsedMs`,
+    # which added the wall-clock segment since the last anchor to a bank of
+    # SCALED time -- so the scrubber and the time readout, the only feedback a
+    # viewer gets, went on reporting 1x. A control whose every visible effect
+    # is invisible is a control that does nothing, and the owner was right.
+    #
+    # MEASURED ON THE DRAWING AND ON THE BAR, and the row needs BOTH. The first
+    # probe written for this bug read `state().elapsedMs` alone and agreed with
+    # the bug -- the field under test was the instrument. The drawing's own
+    # progress hairline is driven by the render loop's clock, which was always
+    # correct, so it is the independent witness: the assertion is that the two
+    # AGREE, which is false while either one is wrong.
+    def _advance(rate, ms=900):
+        _pi.evaluate("""(r) => { const p = document.querySelector(
+            '.tile .tileStage .skribl-inline')._skriblInline;
+            p.pause(); p.seek(0); p.setRate(r); }""", rate)
+        _pi.wait_for_timeout(120)
+        _pi.evaluate("""() => document.querySelector(
+            '.tile .tileStage .skribl-inline')._skriblInline.play()""")
+        _pi.wait_for_timeout(ms)
+        out = _pi.evaluate("""() => {
+            const st = document.querySelector('.tile .tileStage');
+            const pct = e => parseFloat((e && e.style.width || '0').replace('%','')) || 0;
+            return { draw: pct(st.querySelector('.skribl-inline-prog')),
+                     bar: pct(document.querySelector('.skfull-fill')),
+                     rate: st.querySelector('.skribl-inline')._skriblInline.rate() }; }""")
+        _pi.evaluate("""() => document.querySelector(
+            '.tile .tileStage .skribl-inline')._skriblInline.pause()""")
+        return out
+
+    _r1 = _advance(1)
+    _r2 = _advance(2)
+    check("the drawing really runs at the rate it was given",
+          _r1["draw"] > 2 and _r2["draw"] > 2
+          and abs(_r2["draw"] / max(_r1["draw"], 0.01) - 2) < 0.35,
+          f"1x {_r1['draw']:.1f}% vs 2x {_r2['draw']:.1f}% of the replay in the "
+          f"same wall clock — the ratio is the assertion; the absolute "
+          f"percentages move with how long the fixture's replay is")
+    # PUT IT BACK. These two rows leave the player at rate 2 and mid-replay, and
+    # the sections below share this page: the nib probe sampled 14 frames with
+    # the replay already finished (a 2x replay ends in half the wall clock it
+    # budgeted) and the bar-drives-the-player row read r0 == 2 where it asserts
+    # 1. Both went red against a tree that was right. A probe that leaves global
+    # state behind is an instrument that breaks the next instrument.
+    # PLAYING, AND LEFT WHERE IT WAS. Entering full screen calls pl.play(), so
+    # that is the state the sections below were written against, and each way
+    # of getting it wrong broke a different one of them:
+    #
+    #   left paused      the nib does not exist while stopped -- 14 frames
+    #                    sampled with it hidden -- and the bar row presses
+    #                    pause and asserts PAUSED, which needs something to
+    #                    pause
+    #   left at rate 2   the bar row reads r0 and asserts 1
+    #   left seek(0)     the ink row measured a replay one frame old and
+    #                    found 85 pixels of drawing on the canvas
+    #
+    # So: restore the rate, restore the playing, and do NOT rewind. `_advance`
+    # leaves it part-way through, which is where full screen would have it by
+    # now anyway. Three rows in three sections, each red against a correct
+    # tree, all from one probe tidying up after itself wrongly.
+    _pi.evaluate("""() => { const p = document.querySelector(
+        '.tile .tileStage .skribl-inline')._skriblInline;
+        p.setRate(1); p.play(); }""")
+    _pi.wait_for_timeout(250)
+
+    check("...and the bar the viewer reads agrees with it at every rate",
+          abs(_r1["bar"] - _r1["draw"]) < 1.5 and abs(_r2["bar"] - _r2["draw"]) < 1.5,
+          f"1x drawing {_r1['draw']:.1f}% bar {_r1['bar']:.1f}%; "
+          f"2x drawing {_r2['draw']:.1f}% bar {_r2['bar']:.1f}% — the bar reads "
+          f"state().elapsedMs, which banked scaled time and then added WALL time "
+          f"to it, so at 2x it showed half the truth and the control looked dead")
+
     # ---- THE PEN IS ON THE LINE (v308) ------------------------------------
     # Owner's screenshot, gallery full screen: the nib sat up and to the left
     # of the stroke it was drawing. setNib() mapped the point through
@@ -1464,11 +1675,20 @@ with sync_playwright() as _spi:
           and _bar["ownControls"] == "none" and _bar["ownDur"] == "none",
           f"{_bar} \u2014 two transports on one drawing is the screenshot this "
           f"change is about")
+    # STRENGTHENED IN v310 RATHER THAN RETIRED. It used to read `marks ==
+    # "none"`: the badges were on the stage and a media query hid them in full
+    # screen, so the honest question was whether that rule fired. They are not
+    # on the stage at ALL now -- they moved into the head, because the owner
+    # asked for the drawing to be alone on the canvas everywhere and not only
+    # when it fills the display -- so the stronger claim is available and the
+    # weaker one would now pass on a stage that had grown a new badge and a new
+    # rule to hide it.
     check("...nothing is drawn over the art but the way out",
-          not _bar.get("missing") and _bar["marks"] == "none",
+          not _bar.get("missing") and _bar["marks"] == "no-marks",
           f"{_bar} \u2014 'which of these is which' is a question you have in a "
           f"GRID, and the owner photographed a pen and a speaker over a "
-          f"full-screen drawing")
+          f"full-screen drawing; the answer is now that no badge is ever on the "
+          f"stage, so there is nothing for a media query to hide")
     check("...and the scrubber has its own row above the buttons",
           not _bar.get("missing") and _bar["scrubOwnRow"],
           f"{_bar} \u2014 squeezed between the buttons it is a 6px target on a "

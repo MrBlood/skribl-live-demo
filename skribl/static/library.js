@@ -68,6 +68,19 @@
 
   var stageBox = document.getElementById('stageBox');
   var stageWrap = stageBox.closest('.stageCanvasWrap');
+  /* BARE FROM THE FIRST PAINT, NOT ONLY IN FULL SCREEN. This page owns the
+     transport under the stage at every size, so the component's own duration
+     chip is a second answer to "how long is this" whenever it is visible --
+     and the macro is already called with controls=false, so the chip is all
+     `is-bare` suppresses here.
+
+     It used to be toggled by syncFull(), i.e. ON in full screen and OFF the
+     rest of the time, which is backwards: full screen is the one moment the
+     page's own row is off the display. The gallery had the same line and the
+     same inversion, where it cost a duplicated loop button on every card that
+     had been full-screened once. Different surfaces, different symptom, one
+     wrong question -- so it is answered here once, at build. */
+  stageBox.classList.add('is-bare');
   var pTitle = document.getElementById('pTitle');
   var pKind = document.getElementById('pKind');
   var pMeta = document.getElementById('pMeta');
@@ -310,10 +323,6 @@
       btnFull.title = on ? 'Leave full screen' : 'Full screen';
       btnFull.setAttribute('aria-label', btnFull.title);
       if (fbar) fbar.running(!!on);
-      /* The page's transport below the stage stays where it is; what yields is
-         the COMPONENT's own chrome, which would otherwise sit under the bar. */
-      var box = stageWrap.querySelector('.skribl-inline');
-      if (box) box.classList.toggle('is-bare', !!on);
     };
     var imm = window.SkriblImmersive.attach(stageWrap, { onChange: syncFull });
     btnFull.addEventListener('click', function () { imm.toggle(); });
