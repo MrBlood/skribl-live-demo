@@ -1477,7 +1477,31 @@ with sync_playwright() as sp:
     # comments are SERVED, which this file has now learned twice. And
     # `max-width: none; max-height: none` went in with them until a measurement
     # showed the canvas fills the box without them.
-    EMBED_RATCHET = 36_300
+    # ---- v308: LOWERED 36,300 -> 35,400, which is the first time this has
+    # ---- moved DOWN, and the reason it could is worth more than the bytes.
+    #
+    # The note above says the CSS "is left alone deliberately: it is the
+    # smaller half, it is the part a host is most likely to read before
+    # overriding something". That is still right, and it is not a reason to
+    # ship 42% of the file as comments, which is what it had become (4,232 B of
+    # 10,015). The line is not LENGTH, it is AUDIENCE:
+    #
+    #   stays   the token list, the poster geometry, and the defensive
+    #           declarations -- `max-width: none` and why -- because a host
+    #           reads those before overriding something, which is the exact
+    #           case the note is protecting.
+    #   moves   PRODUCT reasoning: why there are two controls and not five,
+    #           why loop is lit at rest, why a silent post hides mute. A host
+    #           overriding a rule does not need it; jsstrip strips it from the
+    #           JavaScript response; and this file's own header has said since
+    #           the poster crop landed that it belongs in inlineplayer.js.
+    #
+    # Same words, none of the weight -- the same trade the paragraph above
+    # records for the 2,800 B of crop explanation. 898 B of CSS, and the new
+    # floor is pinned 19 B above what landed, so the full-screen bar and the
+    # post-like card that follow have to argue for their own bytes rather than
+    # quietly spending a carve somebody else paid for.
+    EMBED_RATCHET = 35_400
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
