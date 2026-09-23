@@ -84,7 +84,14 @@ def _load_app(spec):
         target = getattr(module, attr)
     except AttributeError:
         _die(f"--app: {module_name!r} has no attribute {attr!r}.")
-    if callable(target):
+    # AN APPLICATION IS ITSELF CALLABLE, so "callable means factory" is wrong.
+    # `Flask.__call__` is the WSGI entry point, and calling it with no arguments
+    # raises `missing 2 required positional arguments: 'environ' and
+    # 'start_response'` -- which this reported as "calling app:app raised
+    # TypeError", blaming the host for passing a perfectly good app. The
+    # docstring has always said `--app` takes what FLASK_APP takes, and FLASK_APP
+    # takes both; ask what the object IS before deciding to call it.
+    if not hasattr(target, "app_context") and callable(target):
         try:
             target = target()
         except Exception as exc:

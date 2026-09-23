@@ -1,7 +1,7 @@
 """Fill in `canvas_w` / `canvas_h` on posts written before v309.
 
-    python -m skribl.backfill_canvas --app app:app            # what it would do
-    python -m skribl.backfill_canvas --app app:app --write    # do it
+    python -m skribl.backfill_canvas            # what it would do
+    python -m skribl.backfill_canvas --write    # do it
 
 `backfill_canvas`, NOT `backfill`: `storage.backfill_media` already owns that
 word here -- it converts inline base64 payloads to an external store, and
@@ -51,52 +51,24 @@ EXIT CODES, because this may be run from a scheduler:
     2  it could not run at all -- bad --app, no session, bad flags
 """
 import argparse
-import importlib
 import json
 import sys
 
 from sqlalchemy import text
 
 from .models import session as resolve_session
+from .sweep import EXIT_CANNOT_RUN, _die, _load_app
 from .validation import _payload_canvas
 
 EXIT_OK = 0
 EXIT_PARTIAL = 1
-EXIT_CANNOT_RUN = 2
+# EXIT_CANNOT_RUN and the `--app` resolver come from `sweep`, which is where the
+# other two commands get them: one spelling of "that is not a Flask app" rather
+# than three that drift. `takedown` already imports it from there.
 
 #: Rows per statement. Small enough that one batch is quick even when every
 #: payload in it is megabytes, which is the case that killed the migration.
 DEFAULT_BATCH = 200
-
-
-def _die(message):
-    print(f"skribl.backfill_canvas: {message}", file=sys.stderr)
-    raise SystemExit(EXIT_CANNOT_RUN)
-
-
-def _load_app(spec):
-    """Resolve `module:attribute` to a Flask application. Exits 2 on failure."""
-    if ":" not in spec:
-        _die(f"--app must be module:attribute (got {spec!r}).")
-    module_name, attr = spec.split(":", 1)
-    try:
-        module = importlib.import_module(module_name)
-    except Exception as exc:                                    # noqa: BLE001
-        _die(f"--app: could not import {module_name!r}: "
-             f"{type(exc).__name__}: {exc}")
-    try:
-        target = getattr(module, attr)
-    except AttributeError:
-        _die(f"--app: {module_name!r} has no attribute {attr!r}.")
-    if callable(target):
-        try:
-            target = target()
-        except Exception as exc:                                # noqa: BLE001
-            _die(f"--app: calling {spec} raised {type(exc).__name__}: {exc}")
-    if not hasattr(target, "app_context"):
-        _die(f"--app: {spec} is not a Flask application "
-             f"(got {type(target).__name__}).")
-    return target
 
 
 def _extract_sql(dialect):
@@ -215,8 +187,9 @@ def build_parser():
     p = argparse.ArgumentParser(
         prog="python -m skribl.backfill_canvas",
         description="Fill canvas_w/canvas_h on posts written before v309.")
-    p.add_argument("--app", default="app:app",
-                   help="module:attribute of the Flask app (default app:app)")
+    p.add_argument("--app", default="app:create_app",
+                   help="module:attribute of the Flask app "
+                        "(default app:create_app, as sweep and takedown)")
     p.add_argument("--batch", type=int, default=DEFAULT_BATCH,
                    help=f"rows per statement (default {DEFAULT_BATCH})")
     p.add_argument("--limit", type=int, default=None,
@@ -242,8 +215,14 @@ def main(argv=None, out=None):
         seen, filled, failed = run(session, batch=args.batch, limit=args.limit,
                                    write=args.write, out=out)
     verb = "filled" if args.write else "would fill"
+    # THE LAST LINE MUST NOT READ AS SUCCESS WHEN A BATCH FAILED. The exit code
+    # already says so and a scheduler reads that; a person reads this, and
+    # "0 looked at, 0 would fill" is what a healthy, already-finished table also
+    # prints. A run against a database with no `skribl_posts` table printed
+    # exactly that.
     print(f"{seen} looked at, {filled} {verb}"
-          + ("" if args.write else "  (dry run — pass --write to do it)"),
+          + ("" if args.write else "  (dry run — pass --write to do it)")
+          + (f"  — {failed} BATCH(ES) FAILED, exit 1" if failed else ""),
           file=out)
     return EXIT_PARTIAL if failed else EXIT_OK
 

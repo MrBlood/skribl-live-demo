@@ -10866,3 +10866,33 @@ that matters, a reader's head. `verify_seam` caught something else in the same
 file on the same run: `import json` and `from sqlalchemy import text` sat inside
 the functions that used them, which is the "import below first use" failure this
 tree has now had in five suites and, for the first time, a shipped module.
+
+#### `--app` took what FLASK_APP takes, except it did not
+
+Three commands share one `--app` resolver (`sweep._load_app`; `takedown`
+imports it and `backfill_canvas` now does too), and it read "callable" as
+"factory". **A Flask application is itself callable** — `Flask.__call__` is the
+WSGI entry point — so `--app app:app` called the application with no arguments
+and reported
+
+    --app: calling app:app raised TypeError: Flask.__call__() missing 2
+    required positional arguments: 'environ' and 'start_response'
+
+blaming the host for passing a perfectly good app. Every command's docstring
+has said `--app` takes what `FLASK_APP` takes, and `FLASK_APP` takes both
+forms. Ask what the object IS before deciding to call it.
+
+It survived three releases because both older commands DEFAULT to the factory,
+so nobody typed the other form. The new command's default was `app:app` and it
+failed on its own first smoke test — which is the argument for running a new
+CLI once by hand even when a suite drives its internals.
+
+Pinned as six rows, `(command, form)`, because one resolver serving three
+commands is three instances until each has been driven — the modal-census
+lesson in another costume. A seventh asserts the three are the SAME function
+object, so a fourth command that copies it instead regresses alone and says so.
+
+The same smoke test found the summary line reading `0 looked at, 0 would fill`
+after the batch read had failed outright. The exit code was already 1 and a
+scheduler reads that; a person reads the line, and that line is also what a
+healthy finished table prints. It now names the failure.
