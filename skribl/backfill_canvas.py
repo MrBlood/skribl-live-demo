@@ -1,7 +1,12 @@
 """Fill in `canvas_w` / `canvas_h` on posts written before v309.
 
-    python -m skribl.backfill --app app:app            # what it would do
-    python -m skribl.backfill --app app:app --write    # do it
+    python -m skribl.backfill_canvas --app app:app            # what it would do
+    python -m skribl.backfill_canvas --app app:app --write    # do it
+
+`backfill_canvas`, NOT `backfill`: `storage.backfill_media` already owns that
+word here -- it converts inline base64 payloads to an external store, and
+`verify_backfill.py` is its suite. Two unrelated backfills answering to one name
+is a maintenance cost paid every time somebody reads either.
 
 WHY THIS IS A COMMAND AND NOT A MIGRATION, which is the whole point of the
 file. It WAS a migration, and it took the site down twice in one afternoon.
@@ -47,7 +52,10 @@ EXIT CODES, because this may be run from a scheduler:
 """
 import argparse
 import importlib
+import json
 import sys
+
+from sqlalchemy import text
 
 from .models import session as resolve_session
 from .validation import _payload_canvas
@@ -62,7 +70,7 @@ DEFAULT_BATCH = 200
 
 
 def _die(message):
-    print(f"skribl.backfill: {message}", file=sys.stderr)
+    print(f"skribl.backfill_canvas: {message}", file=sys.stderr)
     raise SystemExit(EXIT_CANNOT_RUN)
 
 
@@ -135,7 +143,6 @@ def _sizes_from(raw):
     reader expects, rather than re-deciding what a valid size is here. Two
     spellings of that rule is exactly what the SQL version kept getting wrong.
     """
-    import json
     if raw is None:
         return (None, None)
     if isinstance(raw, (bytes, bytearray)):
@@ -150,8 +157,6 @@ def _sizes_from(raw):
 
 def run(session, batch=DEFAULT_BATCH, limit=None, write=False, out=sys.stdout):
     """Fill the columns in batches. Returns (looked_at, filled, failed_batches)."""
-    from sqlalchemy import text
-
     dialect = session.get_bind().dialect.name
     select_sql = text(_extract_sql(dialect))
     update_sql = text("UPDATE skribl_posts SET canvas_w = :w, canvas_h = :h "
@@ -208,7 +213,7 @@ def run(session, batch=DEFAULT_BATCH, limit=None, write=False, out=sys.stdout):
 
 def build_parser():
     p = argparse.ArgumentParser(
-        prog="python -m skribl.backfill",
+        prog="python -m skribl.backfill_canvas",
         description="Fill canvas_w/canvas_h on posts written before v309.")
     p.add_argument("--app", default="app:app",
                    help="module:attribute of the Flask app (default app:app)")

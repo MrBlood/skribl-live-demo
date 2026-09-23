@@ -462,7 +462,7 @@ print("\nBACKFILL — canvas sizes, against the payload shapes a real gallery ho
 # so every payload in it is well formed and none is large. The gap was the
 # DATA, not the engine.
 #
-# The backfill is a command now (`python -m skribl.backfill`), so it cannot
+# The backfill is a command now (`python -m skribl.backfill_canvas`), so it cannot
 # take a deploy with it -- and this is where its PostgreSQL extraction is
 # driven against payloads chosen to be hostile.
 _SHAPES = [
@@ -495,7 +495,7 @@ try:
     import sqlalchemy as _sa9                                     # noqa: E402
     from sqlalchemy.orm import Session as _Session9               # noqa: E402
     sys.path.insert(0, str(ROOT))
-    from skribl import backfill as _bf9                           # noqa: E402
+    from skribl import backfill_canvas as _bf9                    # noqa: E402
     from skribl.validation import _payload_canvas as _pyc9        # noqa: E402
 
     _schema = "v309probe_" + uuid.uuid4().hex[:8]

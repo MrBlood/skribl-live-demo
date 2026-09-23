@@ -23,7 +23,7 @@ picture wrongly instead of framing it widely. Same rule as `has_audio` and
 
 AND THE NULL IS WHY THIS REVISION CARRIES NO DATA WORK. See upgrade(): the
 backfill lived here, took the deploy down twice, and now lives in
-`skribl/backfill.py`, where it runs in bounded batches outside the release
+`skribl/backfill_canvas.py`, where it runs in bounded batches outside the release
 path. Because a null is a supported state, a post that has not been backfilled
 yet is not broken -- it simply looks the way it did last week.
 
@@ -40,7 +40,7 @@ depends_on = None
 
 
 def upgrade():
-    """TWO COLUMNS, AND NOTHING ELSE. The backfill is `python -m skribl.backfill`.
+    """TWO COLUMNS, AND NOTHING ELSE. The backfill is `python -m skribl.backfill_canvas`.
 
     THIS REVISION HAS NOW FAILED A DEPLOY TWICE, and the second time is why
     there is no data work left in it.

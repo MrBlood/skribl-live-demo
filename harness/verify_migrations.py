@@ -711,7 +711,7 @@ check("...and it reads no payload: no execute, no get_bind, no dialect branch",
 
 sys.path.insert(0, str(ROOT))
 from skribl.validation import _payload_canvas as _pycanvas        # noqa: E402
-from skribl import backfill as _bf                                # noqa: E402
+from skribl import backfill_canvas as _bf                        # noqa: E402
 
 print("\nMIGRATIONS \u2014 the backfill command answers what the app's Python answers")
 # TWO SPELLINGS OF ONE RULE, down from three. The command extracts `canvasSize`

@@ -61,7 +61,7 @@
 #
 # So upgrade() now adds two nullable columns and returns -- a catalogue update
 # that reads no payload and cannot run out of memory or time. The backfill is
-# `python -m skribl.backfill`, batched, id-paged, resumable and safe to
+# `python -m skribl.backfill_canvas`, batched, id-paged, resumable and safe to
 # interrupt, run when somebody chooses rather than while a release waits on it.
 # verify_migrations asserts BOTH halves: that upgrade() calls nothing but
 # op.add_column, and that the command survives the hostile payload shapes a real
@@ -116,7 +116,7 @@ eca1461367bfa31ab5b4882548c143bc5183d74438024e6962644f14d1863b66  f0a3d81b47e2
 848aafb58c36b76d5b2e301e7ac2cb10582e254a1eaec362ce8107c3ce92f6f0  c4d9e2f7a1b6
 7d4ed8f31dfb5e3bbc3b15faf40068f87cbae0e04ba10812058ada6b988ef751  d8e1f4a2b7c3
 17760234073d53ed412f46c6915c2b0437b3d03f65ae09ff559eee535e859c5a  a2f6c8b30e14
-07bf90c482c2c1f4d267c4be76c8a1274e13f29ce23aff79b7ef3019874b113d  b5c1e7d92a34
+b78fb136e15aed9384f92f44d03cdf0b6f23c9e8117279e13146b0f53e4cfc26  b5c1e7d92a34
 
 # ---- UPGRADE-PATH DIGESTS ------------------------------------------------
 # The normalised AST of every released upgrade(), which is the half of a
@@ -142,4 +142,4 @@ upgrade f25467dc47798eb963774df74ef98356678a029aed78252a4ec53fcff0f82cf2  f7c2e0
 upgrade 0e034bcb81f034d6ead7dbf8733817463d47018ca7f4e6e2d750cecc11108839  c4d9e2f7a1b6
 upgrade 23076ca01cef9f8b76724b5f1cebe83617faa2920999990a94a55a966f53e297  d8e1f4a2b7c3
 upgrade f31491c6e3060d2cf02dd7820f43795d1424382ff9a563c656ed4ca8808ab777  a2f6c8b30e14
-upgrade 4a5f5f05e4aa7246e38f13d0c16bceca0f3b1881c789d9d41c99e9fa90c6fde8  b5c1e7d92a34
+upgrade 2244972f923bc057d215b03460bacefcf734fb8a532b189665b13a632a209953  b5c1e7d92a34
