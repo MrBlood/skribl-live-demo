@@ -338,7 +338,15 @@ with sync_playwright() as p:
         # from any tile's Report button. The census posts a public fixture
         # first so there is a tile to open it from; Escape closes it and
         # focus goes back to the button (unnamed, so: not <body>).
-        ("/gallery", "reportSheet"): ("click:.tile .report", None),
+        # TWO CLICKS SINCE v310. Report was a permanent word in the card's
+        # head; it is behind the tile's overflow menu now, so the path to the
+        # sheet is the menu and then the item. This recipe IS the path a person
+        # takes -- when it stopped existing the suite did not report a missing
+        # control, it hung for thirty seconds on a click that could never land
+        # and crashed before printing a single row. A census that drives the
+        # real thing fails loudly when the real thing moves, which is the
+        # point of driving it.
+        ("/gallery", "reportSheet"): ("click:.tile .tileMore|click:.cmReport", None),
     }
 
     def _draw_on_pad(pg):

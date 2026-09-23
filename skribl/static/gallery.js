@@ -80,6 +80,12 @@
   /* THE UNATTRIBUTED CARD, given a shape instead of a gap. No handle, no
      link, no tick, no initial -- an initial would be a letter of a name that
      does not exist. A neutral disc and one word. */
+  var ICON_MORE =
+    '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<circle cx="5" cy="12" r="1.9" fill="currentColor"/>' +
+    '<circle cx="12" cy="12" r="1.9" fill="currentColor"/>' +
+    '<circle cx="19" cy="12" r="1.9" fill="currentColor"/></svg>';
+
   /* A speech mark, for the card that has something to say. */
   var ICON_CAP =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
@@ -88,13 +94,24 @@
     'L3 20l1.3-3.7A8.2 8.2 0 0 1 3 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 9 8.4z"/>' +
     '</svg>';
 
-  /* The six-pointed pinwheel, swept: each point leads with a straight edge and
-     trails into the centre, which is what makes it turn rather than sit. */
+  /* U+1F7CD, SIX POINTED PINWHEEL STAR. Six, and the first draft had EIGHT --
+     the owner asked for the skribls.net star and got a generic sparkle, "too
+     fat" and a different shape entirely.
+
+     The geometry: outer vertices every 60 degrees, inner vertices offset from
+     the midpoint by a SKEW of 16 degrees. That offset is the whole pinwheel --
+     at zero it is a plain symmetric hexagram, and the lean is what makes each
+     point read as turning rather than sitting. The inner radius is 3.15 to the
+     outer's 10.6; a hexagram's would be 6.1, which is the fat the owner saw.
+
+     Generated rather than hand-drawn, because twelve vertices placed by eye
+     are twelve chances to make an asymmetric shape asymmetric in the wrong
+     place. */
   var ICON_STAR =
     '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
-    '<path fill="currentColor" d="M12 1.6l2.1 6.0 5.6-2.9-2.9 5.6 6.0 2.1-6.0 2.1' +
-    ' 2.9 5.6-5.6-2.9-2.1 6.0-2.1-6.0-5.6 2.9 2.9-5.6-6.0-2.1 6.0-2.1-2.9-5.6' +
-    ' 5.6 2.9z"/></svg>';
+    '<path fill="currentColor" d="M12 1.4L14.27 9.81L21.18 6.7L15.03 12.87' +
+    'L21.18 17.3L12.76 15.06L12 22.6L9.73 14.19L2.82 17.3L8.97 11.13L2.82 6.7' +
+    'L11.24 8.94Z"/></svg>';
 
   function anonBlock() {
     var wrap = document.createElement('div');
@@ -216,11 +233,6 @@
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
     + ' stroke-linecap="round" stroke-linejoin="round">'
     + '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
-  var ICON_SOUND =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
-    + ' stroke-linecap="round" stroke-linejoin="round">'
-    + '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>'
-    + '<path d="M19.5 5.5a9 9 0 0 1 0 13"/></svg>';
 
   /* The module is loaded by the page and started here; it suppresses itself
      on coarse pointers, so on a phone this call does nothing by design. */
@@ -283,17 +295,44 @@
       meta.appendChild(pl);
     }
     head.appendChild(meta);
-    /* REPORT, ON EVERY TILE. The button carries the post's id; the sheet is
-       one, shared, and opened with it. */
+    /* THE OVERFLOW, ON EVERY TILE. Report used to be a word here, permanently,
+       beside two facts -- which is how the head came to read as one run-on
+       string, and why the owner's auditor asked for it to move: "reduce or
+       remove permanently visible secondary controls."
+
+       Report is the rarest thing anybody does to a card and it had the
+       loudest slot in the head. Behind the menu it is still one tap from every
+       tile, and the head is down to who, what and when.
+
+       ONE MENU, SHARED, like the report sheet it opens. Twenty-four menus in
+       the DOM is twenty-four sets of listeners for a thing only ever open
+       once. */
     var rep = document.createElement('button');
     rep.type = 'button';
-    rep.className = 'report';
-    rep.setAttribute('data-report', item.id);
-    rep.setAttribute('aria-label', 'Report ' + (item.title || 'this Skribl'));
-    /* Says what the word does not: where a report goes and what it is for. */
-    rep.title = 'Tell the operators something is wrong with this one';
-    rep.textContent = 'Report';
-    rep.addEventListener('click', function () { openReport(item.id, rep); });
+    /* NOT `tileMark`. It sat in the head beside the kind glyph and borrowed
+       that class for its colour, and `.tile .tileMark` fixes width and height
+       at 16 -- equal specificity, later in the sheet, so the control's own 34px
+       lost and verify_layout's visible touch floor failed at 360, 390 and 430.
+       
+       Source order has now decided three things in this change that were meant
+       to be decided by intent. The fix is not another selector: a control is
+       not a mark, so it does not carry the mark's class. */
+    rep.className = 'tileMore';
+    rep.setAttribute('data-more', item.id);
+    rep.setAttribute('aria-haspopup', 'menu');
+    rep.setAttribute('aria-expanded', 'false');
+    rep.setAttribute('aria-label', 'More for ' + (item.title || 'this Skribl'));
+    rep.title = 'More';
+    rep.innerHTML = ICON_MORE;
+    rep.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openMenu(item, rep);
+    });
+    /* A SIBLING OF THE FACT RUN, NOT A MEMBER OF IT. It was appended to
+       `.tmeta` first and the suite caught it: age and plays are things the
+       post IS, and this opens the things you can DO to it, so it sits outside
+       the group with its own air -- the same place, and the same reasoning, as
+       the Report word it replaces. Visually it is still the row's last item. */
     head.appendChild(rep);
     art.appendChild(head);
 
@@ -479,9 +518,15 @@
       marks.insertAdjacentHTML('beforeend',
         '<span class="tileMark tileKind">' + (item.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>');
     }
-    if (item.has_audio === true) {
-      marks.insertAdjacentHTML('beforeend', '<span class="tileMark tileSound">' + ICON_SOUND + '</span>');
-    }
+    /* NO SOUND BADGE. It was a green speaker beside the kind glyph and the
+       owner took it off: "lose the green speaker icon. not necessary if there
+       is music it will play." Which is right -- the badge announced a fact
+       that announces itself one tap later, and it was the only coloured thing
+       in a row that is otherwise quiet.
+
+       The WORDS stay in the visually hidden line below. That line describes
+       the post to a screen reader, not the badges, and "with sound" is worth
+       knowing before you commit to playing something. */
     /* Appended to the head's fact run, not to the stage. `marks` is built
        above and placed here because the head is assembled before the stage
        exists; the meta element is the one that has been carrying age and
@@ -540,7 +585,7 @@
 
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'tileMark tileCapBtn';
+      btn.className = 'tileCapBtn';
       btn.setAttribute('aria-pressed', 'false');
       btn.setAttribute('aria-expanded', 'false');
       btn.innerHTML = ICON_CAP;
@@ -564,7 +609,24 @@
        written here would contradict the reason that module exists inside a day
        of it landing. */
     if (window.SkriblFullBar) {
-      foot = window.SkriblFullBar.attach(art, {
+      /* ATTACHED TO THE STAGE, NOT THE CARD, and that is the whole change.
+         The bar used to sit BELOW the drawing as a permanent row -- which is
+         the "full media-player toolbar at all times" the owner's auditor asked
+         to be rid of, and which the owner then read as clutter across a grid
+         of twenty-four cards.
+
+         Overlaid on the artwork's bottom edge instead, it costs the card no
+         height at all: the drawing grows by the row's worth, which is the same
+         brief's "make the artwork area larger relative to the surrounding
+         controls". And because the element is always in the DOM and only ever
+         changes opacity, nothing reflows when it appears and a screen reader
+         can reach every control at any moment -- a bar BUILT on first play
+         cannot be announced before that play.
+
+         SAME MODULE, SAME CONTROLS. What changed is when they are visible;
+         building a second transport inside the byte-budgeted component would
+         contradict the reason lib/fullbar.js exists. */
+      foot = window.SkriblFullBar.attach(stage, {
         variant: 'skfull-card',
         controls: ['play', 'loop', 'mute', 'full'],
         who: false,
@@ -582,6 +644,46 @@
       var box0 = stage.querySelector('.skribl-inline');
       if (box0) box0.classList.add('is-bare');
       foot.running(true);
+
+      /* WHEN THE CONTROLS ARE THERE. At rest the card offers one thing to do,
+         which is the honest count: at 0:00 there is nothing to scrub, nothing
+         to mute (nothing is making a sound yet) and the loop has not come
+         round. They are not withheld, they have nothing to act on.
+
+         Hover and focus-within are CSS. Playing and the touch reveal are
+         state, because a phone has no hover: a tap on the artwork that is not
+         on a control summons them, and they recede after a quiet interval so
+         the drawing gets the card back. Keyboard focus never starts that
+         timer -- a bar that vanishes from under a tab key is a bar a keyboard
+         cannot use. */
+      var hideT = null;
+      function peek(sticky) {
+        art.classList.add('ctl-on');
+        clearTimeout(hideT);
+        if (sticky) return;
+        hideT = setTimeout(function () {
+          if (art.contains(document.activeElement)) return;
+          art.classList.remove('ctl-on');
+        }, 2600);
+      }
+      stage.addEventListener('pointerdown', function (e) {
+        if (e.target.closest('.skfull')) return;
+        peek(false);
+      });
+      art.addEventListener('focusin', function () { peek(true); });
+      art.addEventListener('focusout', function () {
+        if (!art.contains(document.activeElement)) peek(false);
+      });
+      if (box0 && box0._skriblInline) {
+        /* The player does not emit events, so the card watches the state it
+           already polls for the bar's own sync. Cheap: this is the same
+           quarter-second tick the footer runs while stopped. */
+        setInterval(function () {
+          var st = box0._skriblInline.state();
+          if (st.state === 'playing') peek(true);
+          else if (art.classList.contains('ctl-on')) peek(false);
+        }, 400);
+      }
     }
     return art;
   }
@@ -669,6 +771,156 @@
     status.hidden = !msg;
     status.classList.toggle('error', !!bad);
   }
+
+  /* ---- THE CARD MENU ------------------------------------------------------
+     One element for the whole grid, built on first use and moved to whichever
+     button asked for it.
+
+     VIEWER ACTIONS ONLY, and that is a scope decision worth stating rather
+     than hiding. The auditor asked for an owner variant -- Open, Edit, Copy
+     link, Share, visibility, Delete -- and two of those cannot be honoured
+     here. This page does not know who you are: `data-skribl-me` is emitted by
+     the LIBRARY template and not this one, so the card cannot tell your Skribl
+     from anybody else's. And there is no Edit: `PATCH /api/skribls/<id>`
+     accepts exactly one field, visibility, because a posted Skribl's payload
+     is immutable by design -- an "edit" would be a duplicate into a new draft,
+     which is a product decision and not a menu item.
+
+     Both owner actions already exist on /library, where the page does know
+     whose profile it is. Wiring them here needs the gallery route to pass the
+     signed-in id, which is a small change with a real authorisation question
+     attached, so it is left for its own pass rather than smuggled into this
+     one. */
+  var menuEl = null, menuFor = null, menuOpener = null;
+
+  function closeMenu(refocus) {
+    if (!menuEl || menuEl.hidden) return;
+    menuEl.hidden = true;
+    if (menuOpener) {
+      menuOpener.setAttribute('aria-expanded', 'false');
+      if (refocus) menuOpener.focus();
+    }
+    menuFor = null; menuOpener = null;
+  }
+
+  function menuItem(label, onPick, hook) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cmItem' + (hook ? ' ' + hook : '');
+    b.setAttribute('role', 'menuitem');
+    b.textContent = label;
+    b.addEventListener('click', function () { closeMenu(false); onPick(); });
+    return b;
+  }
+
+  function buildMenu() {
+    var m = document.createElement('div');
+    m.className = 'cardMenu';
+    m.setAttribute('role', 'menu');
+    m.hidden = true;
+    /* ARROW KEYS MOVE, ESCAPE LEAVES, and the focus goes back to the button
+       that opened it -- a menu that dumps focus at the top of the document is
+       a menu a keyboard cannot use twice. */
+    m.addEventListener('keydown', function (e) {
+      var items = [].slice.call(m.querySelectorAll('.cmItem'));
+      var i = items.indexOf(document.activeElement);
+      if (e.key === 'Escape') { e.preventDefault(); closeMenu(true); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        var n = e.key === 'ArrowDown' ? i + 1 : i - 1;
+        if (n < 0) n = items.length - 1;
+        if (n >= items.length) n = 0;
+        if (items[n]) items[n].focus();
+      }
+    });
+    document.body.appendChild(m);
+    return m;
+  }
+
+  /* `sayOn`, NOT `say`. This file already had a module-level `say(msg, bad)`
+     for the report sheet's status line, and a second `function say` in the same
+     scope does not shadow it locally -- the later declaration hoists and wins
+     for EVERY caller. So openReport's own `say('')` started calling this one
+     with a button of '' and threw before it reached SkriblModal.open, and the
+     only symptom was two a11y rows saying focus never entered the sheet.
+     Nothing reported a redefinition; JavaScript does not consider it an error. */
+  function sayOn(button, msg, rest) {
+    button.title = msg;
+    button.setAttribute('aria-label', msg);
+    var live = document.getElementById('galleryStatus');
+    if (live) live.textContent = msg;
+    clearTimeout(button._t);
+    button._t = setTimeout(function () {
+      button.title = rest;
+      button.setAttribute('aria-label', rest);
+    }, 1600);
+  }
+
+  function openMenu(item, button) {
+    if (menuFor === item.id && menuEl && !menuEl.hidden) { closeMenu(true); return; }
+    if (!menuEl) menuEl = buildMenu();
+    menuEl.innerHTML = '';
+    /* Substituted, not assembled -- the same move the poster makes, so a host
+       running the blueprint under a url_prefix gets a correct link without
+       this file knowing the route. */
+    var tpl = document.body.getAttribute('data-skribl-player') || '';
+    var url = location.origin + tpl.replace('__ID__', encodeURIComponent(item.id));
+    var rest = 'More';
+
+    menuEl.appendChild(menuItem('Open', function () {
+      window.open(url, '_blank', 'noopener');
+    }));
+    /* ONE COPY IMPLEMENTATION, AND IT ANSWERS WHETHER THE TEXT ARRIVED.
+       lib/postedui.js owns it; a handler that reports success from both arms
+       of a promise is PRESEAL-002, and it shipped once already. */
+    menuEl.appendChild(menuItem('Copy link', function () {
+      var copier = window.SkriblPostedUI && window.SkriblPostedUI.copyText;
+      if (!copier) { sayOn(button, "Couldn't copy the link", rest); return; }
+      copier(url).then(function (ok) {
+        sayOn(button, ok ? 'Link copied' : "Couldn't copy the link", rest);
+      });
+    }));
+    /* Share only where the platform has one. A "Share..." that silently does
+       nothing is worse than an item that is not there. */
+    if (navigator.share) {
+      menuEl.appendChild(menuItem('Share\u2026', function () {
+        navigator.share({ title: item.title || 'A Skribl', url: url })
+          .catch(function () {});
+      }));
+    }
+    var hr = document.createElement('div');
+    hr.className = 'cmDiv';
+    menuEl.appendChild(hr);
+    /* `cmReport` is a HOOK, not a style: verify_a11y's modal census drives the
+       real path to the report sheet, and that path is now two clicks. A recipe
+       that matched the word would break the day the word changes. */
+    menuEl.appendChild(menuItem('Report', function () {
+      openReport(item.id, button);
+    }, 'cmReport'));
+
+    /* PLACED AGAINST THE VIEWPORT, not just below the button: a card in the
+       last row would otherwise open a menu below the fold. */
+    menuEl.hidden = false;
+    var r = button.getBoundingClientRect();
+    var mh = menuEl.offsetHeight, mw = menuEl.offsetWidth;
+    var top = r.bottom + 6;
+    if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
+    var left = Math.min(r.right - mw, window.innerWidth - mw - 8);
+    menuEl.style.top = (top + window.scrollY) + 'px';
+    menuEl.style.left = (Math.max(8, left) + window.scrollX) + 'px';
+
+    menuFor = item.id; menuOpener = button;
+    button.setAttribute('aria-expanded', 'true');
+    var first = menuEl.querySelector('.cmItem');
+    if (first) first.focus();
+  }
+
+  document.addEventListener('click', function (e) {
+    if (menuEl && !menuEl.hidden && !menuEl.contains(e.target)) closeMenu(false);
+  });
+  window.addEventListener('resize', function () { closeMenu(false); });
+  /* A menu pinned to a button that has scrolled away points at nothing. */
+  window.addEventListener('scroll', function () { closeMenu(false); }, true);
 
   function openReport(id, button) {
     reporting = { id: id, button: button };

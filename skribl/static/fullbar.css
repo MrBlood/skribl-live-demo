@@ -208,18 +208,48 @@
 .skfull.skfull-card {
   display: flex;
   flex-direction: column;
-  position: static;
-  padding: 11px 11px 10px;
-  background: none;
-  color: inherit;
+  /* OVER THE ARTWORK'S BOTTOM EDGE, not below it. `position: static` put this
+     in the card's flow as a permanent row; absolute takes its height back and
+     gives it to the drawing. The scrim is the bar's own, so the controls stay
+     legible over a pale drawing without the card needing a plate. */
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 26px 11px 10px;
+  background: linear-gradient(to top, rgba(6, 7, 10, 0.82) 38%,
+                                      rgba(6, 7, 10, 0) 100%);
+  color: #e7e9ea;
+  /* NOT display:none. The element stays in the layout and in the
+     accessibility tree at every moment; only its paint comes and goes. A bar
+     built on first play cannot be announced, reached by tab, or counted. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+/* Hover and focus are the pointer's answer; `.ctl-on` is the page's, for the
+   touch reveal and for the whole time a drawing is playing. */
+.tile:hover .skfull.skfull-card,
+.tile:focus-within .skfull.skfull-card,
+.tile.ctl-on .skfull.skfull-card {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* IN FULL SCREEN THE OTHER BAR HAS IT. Both live inside .tileStage now, and
+   two transports over one drawing is the screenshot that started all of this. */
+.tileStage.is-immersive-page .skfull.skfull-card,
+.tileStage:fullscreen .skfull.skfull-card { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .skfull.skfull-card { transition: none; }
 }
 .skfull-card .skfull-row { gap: 8px; }
 .skfull-card .skfull-btn {
   width: 40px;
   height: 40px;
-  border-color: var(--hairline, rgba(255, 255, 255, 0.14));
-  background: var(--control, rgba(255, 255, 255, 0.06));
-  color: var(--text, #e7e9ea);
+  /* Fixed values, not theme tokens, and deliberately: these sit on the
+     DRAWING now rather than on the card's surface, so they have to read
+     against whatever somebody drew rather than against --panel. */
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(10, 12, 18, 0.55);
+  color: #e7e9ea;
   position: relative;
   z-index: 1;
 }
@@ -237,9 +267,9 @@
 }
 .skfull-card .skfull-track {
   height: 5px;
-  background: var(--control, rgba(255, 255, 255, 0.14));
+  background: rgba(255, 255, 255, 0.26);
 }
-.skfull-card .skfull-time { width: auto; color: var(--text-3, #8b97a8); }
+.skfull-card .skfull-time { width: auto; color: #c7cedb; }
 
 /* Under 420 the controls keep their size and the gaps give way: a viewer who
    cannot reach play is stuck, one who cannot read a timestamp is only curious. */
