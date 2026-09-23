@@ -24,6 +24,29 @@
 # would not have helped either -- `upgrade head` runs this one first and it
 # would have run out of memory again before reaching the fix.
 #
+# b5c1e7d92a34's digest changed once, hours after it was written, for the SAME
+# reason and with a different mistake. Its PostgreSQL backfill guarded two casts
+# with json_typeof() checks written above them -- which reads like a funnel and
+# is not one. PostgreSQL sorts WHERE quals by estimated cost and is free to run
+# a cast before the guard that was supposed to protect it; EXPLAIN showed the
+# regex hoisted above every json_typeof. On a gallery holding one post whose
+# cssWidth is an object that is
+#
+#     invalid input syntax for type numeric: "{"a":1}"
+#
+# and the deploy exited 1 before gunicorn started. The revision's transaction
+# rolled back, so again no durable database was ever stamped at it, and again a
+# new revision could not have helped: `upgrade head` runs this one first.
+#
+# The WHERE clause now contains nothing that can raise on any JSON value in any
+# order, and the cast lives in the SET list, which is evaluated only for rows
+# the clause already selected. verify_postgres asserts that property directly --
+# every conjunct is run ALONE against a table of hostile payload shapes, because
+# a check that runs the whole statement passes or fails on the PLANNER's choice
+# and this is a bug about the planner's choice. It went green against the
+# broken SQL until it was rewritten that way.
+#
+#
 # The backfill is dialect-native SQL now, so no payload crosses into Python at
 # all. Both engines are exercised: verify_migrations drives it on SQLite and
 # verify_postgres runs the chain against a real PostgreSQL in CI, and the suite
@@ -104,5 +127,5 @@ upgrade f25467dc47798eb963774df74ef98356678a029aed78252a4ec53fcff0f82cf2  f7c2e0
 upgrade 0e034bcb81f034d6ead7dbf8733817463d47018ca7f4e6e2d750cecc11108839  c4d9e2f7a1b6
 upgrade 23076ca01cef9f8b76724b5f1cebe83617faa2920999990a94a55a966f53e297  d8e1f4a2b7c3
 upgrade f31491c6e3060d2cf02dd7820f43795d1424382ff9a563c656ed4ca8808ab777  a2f6c8b30e14
-5fdcbcbd4dc70a4cb6d1c85c6fa05121c4114c6955a7503dc79a32f4c44a3697  b5c1e7d92a34
-upgrade c5181f61f7ab398643e39754fd691927994e6eff4e36e8133bf9d13ade470486  b5c1e7d92a34
+44bdc909c669040c99e94642accf325d757233bb7718461809aa307c3ed1cfac  b5c1e7d92a34
+upgrade 6b52f594854122baa7f03a15b9adb9d18f49f9556f1102fa0f7ea7a366c02bde  b5c1e7d92a34

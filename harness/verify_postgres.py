@@ -443,6 +443,205 @@ else:
 f3_log.close()
 
 ok = sum(1 for o, _ in results if o)
+print("\nMIGRATION — v309's backfill against the payload shapes a real gallery holds")
+# WHY THIS SECTION EXISTS, and it is the most expensive lesson in this file.
+#
+# v309 shipped, CI was green on every job, and the deploy died:
+#
+#     invalid input syntax for type numeric: "{"a":1}"
+#     Exited with status 1 while running your code.
+#
+# `alembic upgrade head` gates gunicorn in the Procfile, so Render kept serving
+# the previous build and the release was invisible for an hour.
+#
+# CI HAD RUN THE WHOLE CHAIN ON REAL POSTGRESQL and could not have caught it:
+# this suite migrates a database whose rows it posted through the API, so every
+# payload in it is well formed. The backfill never met a hostile one. The gap
+# was not the engine -- it was the DATA.
+#
+# THE BUG WAS AN ASSUMPTION ABOUT `AND`. The first version guarded its casts
+# with json_typeof() checks written above them, which reads like a funnel and
+# is not one: PostgreSQL sorts quals by estimated cost, and EXPLAIN showed the
+# regex hoisted above every guard. A cast therefore ran against a value its
+# guard had not rejected. The fix is to put nothing that CAN raise in the WHERE
+# clause at all -- see the revision -- and this section is what holds it there.
+#
+# Driven on a SCRATCH SCHEMA, not the suite's long-lived one: that database is
+# already stamped past v309, so the revision would not run again, and seeding
+# hostile rows into it would outlive the run.
+_SHAPES = [
+    ('an ordinary drawing',        '{"canvasSize":{"cssWidth":816,"cssHeight":612}}', (816, 612)),
+    ('a square one',               '{"canvasSize":{"cssWidth":707,"cssHeight":707}}', (707, 707)),
+    ('no canvasSize at all',       '{"frames":[]}', (None, None)),
+    ('canvasSize null',            '{"canvasSize":null}', (None, None)),
+    ('canvasSize a string',        '{"canvasSize":"816x612"}', (None, None)),
+    ('canvasSize an array',        '{"canvasSize":["816","612"]}', (None, None)),
+    ('canvasSize a boolean',       '{"canvasSize":true}', (None, None)),
+    ('one edge only',              '{"canvasSize":{"cssWidth":816}}', (None, None)),
+    ('a float edge',               '{"canvasSize":{"cssWidth":816.5,"cssHeight":612}}', (None, None)),
+    ('a zero edge',                '{"canvasSize":{"cssWidth":0,"cssHeight":612}}', (None, None)),
+    ('an edge past the cap',       '{"canvasSize":{"cssWidth":99999,"cssHeight":612}}', (None, None)),
+    ('a numeric STRING edge',      '{"canvasSize":{"cssWidth":"816","cssHeight":612}}', (None, None)),
+    ('a boolean edge',             '{"canvasSize":{"cssWidth":true,"cssHeight":612}}', (None, None)),
+    # THE ROW THAT KILLED THE DEPLOY.
+    ('an OBJECT where an edge goes', '{"canvasSize":{"cssWidth":{"a":1},"cssHeight":612}}', (None, None)),
+    ('an ARRAY where an edge goes', '{"canvasSize":{"cssWidth":[816],"cssHeight":612}}', (None, None)),
+    ('an exponent edge',           '{"canvasSize":{"cssWidth":1e3,"cssHeight":612}}', (None, None)),
+    ('a payload that is an array', '[1,2,3]', (None, None)),
+    ('a payload that is a string', '"a string"', (None, None)),
+    ('a payload that is a number', '123', (None, None)),
+]
+try:
+    import importlib.util as _ilu9
+    import sqlalchemy as _sa9
+    from alembic.migration import MigrationContext as _MC9
+    from alembic.operations import Operations as _Op9
+
+    _sp9 = _ilu9.spec_from_file_location(
+        "_v309pg", ROOT / "skribl" / "migrations" / "versions"
+                   / "b5c1e7d92a34_v309_post_canvas_size.py")
+    _v309 = _ilu9.module_from_spec(_sp9)
+    _sp9.loader.exec_module(_v309)
+
+    _schema = "v309probe_" + uuid.uuid4().hex[:8]
+    _eng9 = _sa9.create_engine(SA_DSN)
+    with _eng9.begin() as _c9:
+        _c9.exec_driver_sql(f'CREATE SCHEMA "{_schema}"')
+    try:
+        _eng9s = _sa9.create_engine(
+            SA_DSN, connect_args={"options": f"-csearch_path={_schema}"})
+        with _eng9s.begin() as _c9:
+            _c9.exec_driver_sql(
+                "CREATE TABLE skribl_posts (id serial primary key, "
+                "payload_json json, canvas_w int, canvas_h int)")
+            for _lbl, _pl, _want in _SHAPES:
+                _c9.exec_driver_sql(
+                    "INSERT INTO skribl_posts (payload_json) VALUES (%s)", (_pl,))
+            # A payload that is SQL NULL, which no branch may choke on either.
+            _c9.exec_driver_sql("INSERT INTO skribl_posts (payload_json) VALUES (NULL)")
+            # The columns the revision adds; add_column would collide with them,
+            # so drop them and let upgrade() put them back exactly as it does in
+            # production.
+            _c9.exec_driver_sql("ALTER TABLE skribl_posts DROP COLUMN canvas_w, "
+                                "DROP COLUMN canvas_h")
+
+        _err9 = None
+        try:
+            with _eng9s.begin() as _c9:
+                _ctx9 = _MC9.configure(_c9)
+                with _Op9.context(_ctx9):
+                    _v309.upgrade()
+        except Exception as _e9:                                  # noqa: BLE001
+            _err9 = _e9
+
+        check("v309's backfill survives every payload shape a gallery holds",
+              _err9 is None,
+              f"{type(_err9).__name__}: {str(_err9)[:180]}" if _err9 else
+              f"{len(_SHAPES) + 1} shapes, including the object-valued edge that "
+              f"exited the deploy with status 1")
+
+        # AND THE ROW THAT ACTUALLY PINS IT, because the run above does not.
+        #
+        # The first version of this section ran the migration end to end on
+        # these shapes and went GREEN against the exact SQL that killed the
+        # deploy. It had to: on twenty rows with no statistics the planner
+        # happened to order the quals the way they are written, and the bug is
+        # that the order is the PLANNER's to choose. A check that depends on
+        # the plan cannot pin a bug about the plan.
+        #
+        # So the invariant is asserted directly: EVERY CONJUNCT OF THE WHERE
+        # CLAUSE MUST BE SAFE ON ITS OWN. If a predicate raises when run by
+        # itself, then there exists a plan in which it runs before whatever was
+        # supposed to guard it, and the migration is one ANALYZE away from
+        # exiting the deploy with status 1. Run alone, order cannot hide it.
+        #
+        # The conjuncts are split out of the revision's own SQL, respecting
+        # quotes and parentheses -- the statement, not a sentence about it.
+        # `AND` IS NOT ALWAYS A CONJUNCTION: `BETWEEN x AND y` carries one of
+        # its own, and the first splitter cut straight through it -- which made
+        # the row below go red on the broken migration for the WRONG reason, a
+        # syntax error rather than the cast it exists to catch, and would have
+        # gone red on any healthy BETWEEN as well. A check that fails the right
+        # case with the wrong evidence is still a broken check.
+        def _conjuncts(where):
+            out, buf, depth, quote, pending_between = [], "", 0, False, 0
+            i = 0
+            while i < len(where):
+                ch = where[i]
+                if quote:
+                    buf += ch
+                    quote = ch != "'"
+                    i += 1
+                    continue
+                if ch == "'":
+                    quote = True; buf += ch; i += 1; continue
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                word = ""
+                if (ch.isalpha() and (i == 0 or not (where[i - 1].isalnum()
+                                                     or where[i - 1] == "_"))):
+                    j = i
+                    while j < len(where) and (where[j].isalnum() or where[j] == "_"):
+                        j += 1
+                    word = where[i:j].upper()
+                if depth == 0 and word == "BETWEEN":
+                    pending_between += 1
+                if depth == 0 and word == "AND":
+                    if pending_between:
+                        pending_between -= 1        # this AND belongs to BETWEEN
+                    else:
+                        out.append(buf.strip()); buf = ""; i += 3; continue
+                buf += ch; i += 1
+            if buf.strip():
+                out.append(buf.strip())
+            return [c for c in out if c]
+
+        _pgsrc = Path(_sp9.origin).read_text(encoding="utf-8")
+        _pgblk = _pgsrc[_pgsrc.index('if dialect == "postgresql":'):
+                        _pgsrc.index('elif dialect == "sqlite":')]
+        _stmt = _pgblk[_pgblk.index("UPDATE skribl_posts"):]
+        _stmt = _stmt[:_stmt.index('"""')]
+        _where = _stmt[_stmt.upper().index("WHERE ") + 6:]
+        _cjs = [c.replace(":edge", str(_v309.MAX_EDGE)) for c in _conjuncts(_where)]
+        _raised = []
+        for _cj in _cjs:
+            try:
+                with _eng9s.connect() as _c9:
+                    _c9.exec_driver_sql(
+                        f"SELECT count(*) FROM skribl_posts WHERE {_cj}").fetchone()
+            except Exception as _ec:                              # noqa: BLE001
+                _raised.append((_cj[:70], str(_ec).splitlines()[0][:90]))
+        check("...and every conjunct of that WHERE clause is safe ON ITS OWN",
+              len(_cjs) >= 5 and not _raised,
+              f"{len(_raised)} of {len(_cjs)} raise alone: "
+              + "; ".join(f"{c!r} -> {e}" for c, e in _raised)
+              if _raised else
+              f"all {len(_cjs)} conjuncts survive every shape unguarded \u2014 so no "
+              f"plan can put one before the guard it needed")
+
+        if _err9 is None:
+            with _eng9s.connect() as _c9:
+                _got9 = _c9.exec_driver_sql(
+                    "SELECT canvas_w, canvas_h FROM skribl_posts ORDER BY id"
+                ).fetchall()
+            _rows9 = [(lbl, want, tuple(got))
+                      for (lbl, _pl, want), got in zip(_SHAPES, _got9)]
+            _bad9 = [r for r in _rows9 if r[1] != r[2]]
+            check("...and fills in exactly what the app's own reader would",
+                  not _bad9,
+                  "; ".join(f"{lbl}: want {w} got {g}" for lbl, w, g in _bad9)
+                  or f"{len(_rows9)} shapes agree with _payload_canvas")
+            check("...and the SQL-NULL payload came through as null, not as a crash",
+                  tuple(_got9[-1]) == (None, None), str(_got9[-1]))
+    finally:
+        with _eng9.begin() as _c9:
+            _c9.exec_driver_sql(f'DROP SCHEMA "{_schema}" CASCADE')
+except Exception as _e9outer:                                     # noqa: BLE001
+    check("the v309 backfill is drivable on PostgreSQL", False,
+          f"{type(_e9outer).__name__}: {str(_e9outer)[:200]}")
+
 print("\n" + "=" * 60)
 print(f"{ok}/{len(results)} passed")
 for o, n in results:

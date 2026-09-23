@@ -93,6 +93,34 @@ def upgrade():
     # present and the other not -- which is the only thing that keeps three
     # spellings of one rule honest.
     if dialect == "postgresql":
+        # NOTHING THAT CAN RAISE GOES IN THIS WHERE CLAUSE, and the first
+        # version of this revision is why the deploy died rather than shipped.
+        #
+        # It read like a funnel: check the payload is an object, then that
+        # `canvasSize` is an object, then that the two edges are numbers, THEN
+        # cast them. PostgreSQL does not evaluate AND in the order it is
+        # written -- the planner sorts quals by estimated cost -- so the casts
+        # ran against values the guards above them had not yet rejected. On a
+        # gallery holding one post whose cssWidth is an object, that is
+        #
+        #     invalid input syntax for type numeric: "{"a":1}"
+        #
+        # and `alembic upgrade head` gates gunicorn, so the deploy exited 1 and
+        # Render kept serving the previous build. EXPLAIN says it plainly: the
+        # regex was hoisted ABOVE every json_typeof guard.
+        #
+        # So this clause now contains only predicates that cannot raise on any
+        # JSON value, in any order: `IS NULL`, `json_typeof` (total on valid
+        # json), and a regex on `#>>` (which yields NULL rather than erroring
+        # when the path does not resolve, including into a scalar or an array).
+        #
+        # THE CAST MOVED TO THE SET LIST, which is evaluated only for rows the
+        # WHERE has selected -- that order IS guaranteed. `^[0-9]{1,4}$` is what
+        # makes it total: digits only, so no float, no exponent, no string; at
+        # most four of them, so the value cannot overflow an int. MAX_EDGE is
+        # 4096 and frozen, so four digits always covers every legal size; the
+        # statement after this one clears anything outside the range, on plain
+        # integer comparisons that cannot raise either.
         bind.execute(sa.text("""
             UPDATE skribl_posts SET
               canvas_w = (payload_json #>> '{canvasSize,cssWidth}')::int,
@@ -102,13 +130,16 @@ def upgrade():
               AND json_typeof(payload_json->'canvasSize') = 'object'
               AND json_typeof(payload_json #> '{canvasSize,cssWidth}') = 'number'
               AND json_typeof(payload_json #> '{canvasSize,cssHeight}') = 'number'
-              AND (payload_json #>> '{canvasSize,cssWidth}') ~ '^[0-9]+$'
-              AND (payload_json #>> '{canvasSize,cssHeight}') ~ '^[0-9]+$'
-              AND (payload_json #>> '{canvasSize,cssWidth}')::numeric
-                    BETWEEN 1 AND :edge
-              AND (payload_json #>> '{canvasSize,cssHeight}')::numeric
-                    BETWEEN 1 AND :edge
-        """), {"edge": MAX_EDGE})
+              AND (payload_json #>> '{canvasSize,cssWidth}') ~ '^[0-9]{1,4}$'
+              AND (payload_json #>> '{canvasSize,cssHeight}') ~ '^[0-9]{1,4}$'
+        """))
+        # The range, on the columns rather than on the JSON: 0 and 9999 pass
+        # the regex and are not legal sizes. Integer comparisons, so this one
+        # is order-proof by construction.
+        bind.execute(sa.text(
+            "UPDATE skribl_posts SET canvas_w = NULL, canvas_h = NULL "
+            "WHERE canvas_w < 1 OR canvas_h < 1 "
+            "OR canvas_w > :edge OR canvas_h > :edge"), {"edge": MAX_EDGE})
     elif dialect == "sqlite":
         # json_type(...) = 'integer' is the whole-number test: SQLite reports
         # 'real' for 612.5 and 'text' for "612", so a float or a numeric string
@@ -168,13 +199,13 @@ def upgrade():
     # number the client would have to complete by guessing.
     #
     # NO TEST CAN REDDEN THIS LINE TODAY, and saying so is the point. Every
-    # branch above writes the pair or writes neither -- the two SQL statements
-    # require both keys before they update, the Python loop skips a row it
-    # could not read whole -- so removing this changes nothing that
-    # verify_migrations can see, and a mutation proved exactly that. It stays
-    # as a guard on a FUTURE branch, not as a claim anything is verified here.
-    # What the suite does pin is the outcome: no row leaves this revision
-    # carrying one edge alone.
+    # branch above writes the pair or writes neither -- each SQL statement
+    # requires both keys before it updates, the Python loop skips a row it
+    # could not read whole, and the PostgreSQL range clear nulls the two
+    # together -- so removing this changes nothing that verify_migrations can
+    # see, and a mutation proved exactly that. It stays as a guard on a FUTURE
+    # branch, not as a claim anything is verified here. What the suite does
+    # pin is the outcome: no row leaves this revision carrying one edge alone.
     bind.execute(sa.text(
         "UPDATE skribl_posts SET canvas_w = NULL, canvas_h = NULL "
         "WHERE canvas_w IS NULL OR canvas_h IS NULL"))
