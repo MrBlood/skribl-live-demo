@@ -180,7 +180,12 @@
        that: the facts sit together with a middot between them, and Report is
        pushed off with its own space and its own colour. No vertical rule --
        this card just lost one straight line and does not need another. */
-    .tile .tmeta { flex: none; display: flex; align-items: baseline; gap: 6px;
+    /* CENTRE, NOT BASELINE. An SVG glyph has no baseline to sit on -- the box
+       aligns on its own bottom edge, which put the pen a couple of pixels
+       below the type beside it and made the run look assembled rather than
+       set (owner: "the pen/book is not centered with the other stuff on the
+       line next to it"). Text and glyphs only line up on a shared centre. */
+    .tile .tmeta { flex: none; display: flex; align-items: center; gap: 6px;
       color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
     .tile .tm { flex: none; }
     /* The separator is the pseudo-element's, so nothing has to append a
@@ -268,6 +273,35 @@
       overflow-wrap: anywhere; content-visibility: hidden; }
     .tile.cap-open .tcap { padding: 10px 13px 12px; content-visibility: visible; }
 
+    /* ---- the card's overflow menu ------------------------------------- */
+    .sr-live { position: absolute; width: 1px; height: 1px; margin: -1px;
+      padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+      border: 0; }
+    .cardMenu { position: absolute; z-index: 60; min-width: 176px; padding: 6px;
+      background: var(--panel); border: 1px solid var(--hairline);
+      border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.34);
+      display: flex; flex-direction: column; }
+    .cardMenu[hidden] { display: none; }
+    .cmItem { display: block; width: 100%; text-align: left; min-height: 40px;
+      padding: 0 12px; background: none; border: 0; border-radius: 8px;
+      color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+    .cmItem:hover { background: var(--control); }
+    .cmItem:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .cmDiv { height: 1px; margin: 5px 8px; background: var(--hairline); }
+    /* The trigger is a mark like the others, so it sits on the same centre
+       line and carries the same 44px band to a finger. */
+    /* Set apart from the facts, like the Report word before it: 14px rather
+       than the run's 6, so the eye reads two facts and then a way in. The
+       head is flex-start, so this centres itself against the run's first line
+       rather than floating at the top of a two-line head. */
+    .tile .tileMore { position: relative; padding: 0; border: 0; background: none;
+      cursor: pointer; color: var(--text-3); width: 16px; height: 16px;
+      flex: none; margin-left: 14px; margin-top: 1px;
+      display: inline-grid; place-items: center; }
+    .tile .tileMore::before { content: ''; position: absolute; inset: -14px; }
+    .tile .tileMore:hover, .tile .tileMore[aria-expanded="true"] { color: var(--text); }
+    .tile .tileMore svg { width: 16px; height: 16px; display: block; }
+
     /* ---- Report, on every tile, and the one sheet they share ---------- */
     /* SET APART FROM THE FACTS BESIDE IT: 14px of space rather than 6, and a
        dimmer resting colour, because it is the only thing in the head anybody
@@ -316,7 +350,6 @@
     .tile .tileMark { display: inline-grid; place-items: center;
       width: 16px; height: 16px; color: var(--text-3); }
     .tile .tileMark svg { width: 15px; height: 15px; display: block; }
-    .tile .tileSound { color: #7ee2a8; }
     /* The one mark that is a CONTROL, so it gets a control's affordances: a
        44px band to a finger, a lit state while the caption is open, and it is
        the only thing in the run that can be pressed. */
@@ -342,7 +375,7 @@
        a control rather than a label, and with the caption closed at rest it is
        the only way to read the message at all. */
     @media (max-width: 560px) {
-      .tile .tileKind, .tile .tileSound { display: none; }
+      .tile .tileKind { display: none; }
     }
     /* The rule that hid these in full screen went with them. It said "which
        of these is which is a question you have in a GRID" -- still true, and
@@ -375,6 +408,15 @@
        the way out. */
     html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
     .tileStage { display: block; position: relative; }
+    /* ONE PROGRESS INDICATOR, NOT TWO. The component draws a hairline along
+       the bottom of the drawing and the bar now overlays that same edge with a
+       real scrubber, so a playing card had a purple line under a purple line.
+       `is-bare` hides the component's controls and duration chip but not this,
+       because on a host that supplies no bar the hairline IS the progress --
+       which is why it is hidden here, on the page that does supply one, rather
+       than in the component. Hidden, not omitted: inlineplayer.js requires the
+       element and keeps writing its width, and the macro's own note says so. */
+    .tileStage .skribl-inline-prog { display: none; }
     /* FULL SIZE WITHOUT A FULLSCREEN API (lib/immersive.js). iOS Safari has
        one for <video> and nothing else, so on the device where a drawing is
        smallest there was no way to make it bigger -- both pages correctly hid
@@ -430,6 +472,14 @@
   </style>
 </head>
 <body data-skribl-api="{{ url_for('.list_skribls') }}"
+      {# THE WHOLE TEMPLATED URL, PLACEHOLDER AND ALL, which is the shape this
+         page already uses for the poster: "the real one is that same
+         server-built path with the id substituted -- no path is assembled
+         here, which keeps this correct under a url_prefix." Slicing the base
+         off in the template needed `len`, which is not a Jinja builtin, and
+         reassembling a route in JavaScript is the thing the poster's note
+         exists to forbid. #}
+      data-skribl-player="{{ url_for('.skribl_player', public_id='__ID__') }}"
       data-skribl-csrf="{{ skribl_csrf_token }}">
 <div class="wrap">
   <header class="top">
@@ -528,10 +578,22 @@
    every aria-modal surface on the editors uses. #}
 {# See the note in skribl_library.html: the controls carry titles and
    nothing was drawing them. Desktop only, by the module's design. #}
+{# What the menu says out loud. A copy that reports itself only by retitling
+   a button tells a screen reader nothing. #}
+<p id="galleryStatus" class="sr-live" role="status" aria-live="polite"></p>
 <script src="{{ skribl_asset('lib/fullbar.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
 <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
+  {# ONE COPY IMPLEMENTATION, NOT TWO. The card menu's Copy link needs
+     SkriblPostedUI.copyText, which answers whether the text actually reached
+     the clipboard -- a handler that reports success from both arms of a
+     promise is PRESEAL-002 and it shipped once. This module does NOT
+     self-initialise (it exposes {init, copyText} and nothing runs until
+     init() is called, which this page never does), so it costs a deferred,
+     cross-page-cached fetch and changes nothing else. Re-spelling copyText
+     inside gallery.js would be cheaper in bytes and is the mistake. #}
+  <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
 <script src="{{ skribl_asset('gallery.js') }}" defer></script>
 </body>
 </html>

@@ -562,16 +562,27 @@ with sync_playwright() as _spg:
           f"mean the exit never fired, and the row below is then asserting "
           f"about full screen while claiming to be about the way out")
 
-    check("every tile carries a loop control — exactly one, at rest",
-          _l0["perTile"] == [1] and _l0["bare"] == _l0["tiles"],
-          f"counts per tile {_l0['perTile']}, {_l0['bare']} of {_l0['tiles']} "
-          f"players bare — the footer has loop, so the component's cluster must "
-          f"not also be on the stage")
+    # ZERO AT REST IS THE ASSERTION NOW. This read "exactly one" and pinned a
+    # permanently visible footer; the transport is contextual since v310, so a
+    # resting card offers one affordance -- play -- and nothing else. That is
+    # the honest count rather than a withholding: at 0:00 there is nothing to
+    # scrub, nothing to mute (nothing is making a sound) and the loop has not
+    # come round.
+    #
+    # What the old row was really protecting -- that the component's own
+    # cluster never appears alongside the page's -- is the `bare` half, and it
+    # is kept exactly as it was.
+    check("a resting card paints NO transport control, and stays bare",
+          _l0["perTile"] == [0] and _l0["clusters"] == 0
+          and _l0["bare"] == _l0["tiles"],
+          f"counts per tile {_l0['perTile']}, {_l0['clusters']} component "
+          f"clusters painted, {_l0['bare']} of {_l0['tiles']} players bare — at "
+          f"rest the card offers play and nothing else")
     # IN full screen the bar's own loop IS painted and the card's is behind it,
     # which is correct and not what this row is about -- `_l1` is recorded for
     # the detail line only. What must hold is the state on the way BACK.
-    check("...and STILL exactly one after a full-screen round trip",
-          _l2["perTile"] == [1] and _l2["clusters"] == 0
+    check("...and STILL none after a full-screen round trip",
+          _l2["perTile"] == [0] and _l2["clusters"] == 0
           and _l2["bare"] == _l2["tiles"],
           f"at rest {_l0['perTile']} / full {_l1['perTile']} / back {_l2['perTile']}; "
           f"{_l2['clusters']} component clusters visible, {_l2['bare']} of "
@@ -827,16 +838,21 @@ with sync_playwright() as _spk:
             /* the way out of full screen is allowed to be over the art: it is
                the one control with nowhere else to live */
             if (c.classList.contains('tileExit')) return;
+            /* AND SO IS THE TRANSPORT, SINCE v310. It is over the drawing's
+               bottom edge on purpose now -- see the row below, which asserts
+               the thing that actually matters: that it is INVISIBLE at rest
+               and therefore not on the picture when nobody is using it. */
+            if (c.closest('.skfull')) return;
             const r = c.getBoundingClientRect();
             if (r.width && r.height) out.inArt.push(c.className.split(' ')[0]);
           });
         });
         return out; }""")
-    check("nothing a viewer presses sits inside the drawing",
+    check("nothing a viewer presses sits inside the drawing, transport aside",
           _inside["tiles"] > 0 and not _inside["inArt"],
           f"{_inside['tiles']} tiles measured, controls inside the art: "
-          f"{sorted(set(_inside['inArt']))} \u2014 the transport is a footer now, "
-          f"and the pen on the play button is what that move was for")
+          f"{sorted(set(_inside['inArt']))} \u2014 the transport earns its place "
+          f"over the art by being invisible at rest; nothing else does")
     # TOOLTIPS, which this page had none of (owner). The module is loaded and
     # started here; it moves every `title` to `data-tip` and draws its own.
     # Asserted on data-tip, not on `title`, because the module REMOVES the
@@ -988,7 +1004,9 @@ with sync_playwright() as _spa:
     _meta = _pa.evaluate("""() => {
         const t = document.querySelector('.tile');
         const m = t.querySelector('.tmeta');
-        const rep = t.querySelector('.report');
+        /* `.report` was a word in the head until v310; the action lives in
+           the overflow menu now and `.tileMore` is its trigger. */
+        const rep = t.querySelector('.tileMore');
         if (!m || !rep) return { ok: false };
         const sep = getComputedStyle(t.querySelector('.plays'), '::before');
         const mr = m.getBoundingClientRect(), rr = rep.getBoundingClientRect();
@@ -1165,17 +1183,43 @@ with sync_playwright() as _spa:
           withFoot: tiles.filter(x => x.querySelector('.skfull-card')).length,
           btns: [...f.querySelectorAll('.skfull-btn')].map(b => b.className.split(' ')[1]),
           track: !!f.querySelector('.skfull-track'),
-          belowArt: !!(st && f.getBoundingClientRect().top
-                       >= st.getBoundingClientRect().bottom - 1),
+          /* OVER the art's bottom edge, inside it, rather than under the
+             whole card -- and only as far up as a control row needs. */
+          overArt: !!(st && st.contains(f)
+                      && f.getBoundingClientRect().bottom
+                         <= st.getBoundingClientRect().bottom + 1
+                      && f.getBoundingClientRect().height
+                         < st.getBoundingClientRect().height * 0.5),
+          restOpacity: getComputedStyle(f).opacity,
+          /* present and reachable at rest even while unpainted: a bar built on
+             first play cannot be tabbed to, announced, or counted */
+          reachableAtRest: !!f.querySelector('.skfull-play'),
           bare: !!(box && box.classList.contains('is-bare')),
           ownDur: (() => { const d = t.querySelector('.skribl-inline-dur');
                            return d ? getComputedStyle(d).display : 'absent'; })(),
           /* the full-screen bar's own row must NOT be showing on a card */
           fullBars: t.querySelectorAll('.skfull:not(.skfull-card)').length }; }""")
-    check("every card carries the transport, under the drawing",
+    # INVERTED IN v310, AND THE PREVIOUS FORM IS WHY. It read "under the
+    # drawing" and pinned direction B's permanent footer row -- which the
+    # owner's auditor asked to be rid of ("avoid showing a full media-player
+    # toolbar at all times") and which the owner then read as clutter across a
+    # grid: "it reads as clutter". The bar is over the art's bottom edge now,
+    # costs the card no height, and is UNPAINTED until somebody wants it.
+    #
+    # The claim that carries across both designs is the one kept here: every
+    # card has a transport, it is the shared module's, and it is reachable.
+    # What changed is where it sits and when you can see it.
+    check("every card carries the transport, over the drawing's bottom edge",
           not _foot.get("missing") and _foot["withFoot"] == _foot["tiles"]
-          and _foot["belowArt"] and _foot["track"],
-          f"{_foot} \u2014 direction B is a footer, not a scrim")
+          and _foot["overArt"] and _foot["track"],
+          f"{_foot} \u2014 overlaid, so the drawing gets the row's height back")
+    check("...and it is invisible at rest, but present and reachable",
+          not _foot.get("missing") and _foot["restOpacity"] == "0"
+          and _foot["reachableAtRest"],
+          f"opacity {_foot.get('restOpacity')}, play button present "
+          f"{_foot.get('reachableAtRest')} \u2014 opacity and not display, because "
+          f"a bar removed from the tree cannot be tabbed to or announced, and "
+          f"one BUILT on first play cannot be either")
     check("...built by lib/fullbar.js, not hand-rolled beside it",
           not _foot.get("missing")
           and _foot["btns"] == ['skfull-play', 'skfull-loop', 'skfull-mute', 'skfull-full'],
