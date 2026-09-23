@@ -186,6 +186,20 @@ On PASS, `harness/stamp_docs.py` writes the counts into the docs. **Do not
 edit a tracked file once a run has frozen its tree hash**, or the sealed
 record describes a tree that no longer exists; restart the run instead.
 
+**RESTORE `LAST-RUN.txt` ONLY WHEN THE RUN SHOULD NOT BE PUBLISHED.** The habit
+below is right after a calibration run, a one-suite run or a RED one, and wrong
+after a full green one — and applied by reflex it destroys the very record you
+just spent forty minutes earning. v308: a full battery went green at 5,928,
+`run_harness.sh` stamped the four docs, and `git show HEAD:harness/LAST-RUN.txt
+> harness/LAST-RUN.txt` then put the PREVIOUS run's record back before the diff
+was even read. The docs said 5,928, the record said 5,786, and the PR gate
+caught it as `stamp_docs.py --check` reporting four files STALE.
+
+The record cannot be reconstructed: the only way back to those counts is
+another full run. So ask which run the docs should describe BEFORE touching
+that file — and if the answer is "this one", commit `harness/LAST-RUN.txt`
+alongside the stanzas rather than restoring it.
+
 **The generated stanzas no longer follow a partial run.** `run_harness.sh`
 stamps the counts into the docs after every invocation, which is what keeps
 them current — and what put a deliberately reddened one-suite calibration run

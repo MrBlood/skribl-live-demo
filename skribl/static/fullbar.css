@@ -1,0 +1,172 @@
+/* The full-screen bar's sheet. Travels with lib/fullbar.js — that file's
+   header says what the bar is for and why both surfaces share one.
+
+   Loaded by the gallery and the profile, which are Skribl's own pages, so
+   unlike inlineplayer.css this one is not downloaded by a host and its prose
+   costs a stranger nothing.
+
+   The bar is hidden until its wrapper is actually full size. The two ways in
+   are the real Fullscreen API and `.is-immersive-page`, the CSS state
+   lib/immersive.js falls back to on iOS Safari, which has the API for <video>
+   and nothing else; both are written into one selector list here for the same
+   reason they are in each page's own sheet — a fallback that drifts from the
+   real thing is two full-screen modes and nobody can tell which one they are
+   in. */
+.skfull { display: none; }
+:fullscreen > .skfull,
+.is-immersive-page > .skfull {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  box-sizing: border-box;
+  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+  /* A scrim rather than a slab: the drawing runs under it and a hard edge
+     across a picture is worse than a soft one. */
+  background: linear-gradient(to top, rgba(6, 7, 10, 0.96), rgba(6, 7, 10, 0.82) 62%,
+                                      rgba(6, 7, 10, 0));
+  color: #e7e9ea;
+  font-family: inherit;
+}
+
+/* THE SCRUBBER GETS ITS OWN ROW, which is the one layout decision here worth
+   stating: squeezed between the buttons it is a 6px target on a phone, and a
+   6px target is not a target. */
+.skfull-scrub { display: flex; align-items: center; gap: 12px; }
+.skfull-time {
+  flex: none;
+  width: 42px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #c4cddb;
+}
+.skfull-dur { text-align: right; color: #8b97a8; }
+.skfull-track {
+  flex: 1 1 auto;
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+}
+/* 6px drawn, 44 to a finger — the --tap-grow shape the editors use. */
+.skfull-track::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
+}
+.skfull-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #7c5cff);
+}
+
+.skfull-row { display: flex; align-items: center; gap: 10px; }
+.skfull-btn {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e7e9ea;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.skfull-btn svg { width: 17px; height: 17px; display: block; }
+.skfull-btn:hover { background: rgba(255, 255, 255, 0.12); }
+.skfull-btn:disabled { opacity: 0.4; cursor: default; }
+.skfull-btn:focus-visible { outline: 2px solid var(--accent, #7c5cff); outline-offset: 2px; }
+
+.skfull-play {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  background: var(--accent, #7c5cff);
+  color: #fff;
+}
+.skfull-play svg { width: 19px; height: 19px; }
+.skfull-play:hover { background: var(--accent, #7c5cff); filter: brightness(1.08); }
+
+/* Lit is the RESTING state for repeat, dim is off — the same reading the
+   component's own loop button uses, because they are the same fact. */
+.skfull-loop.on {
+  color: var(--accent, #cfc4ff);
+  border-color: color-mix(in srgb, var(--accent, #7c5cff) 45%, transparent);
+  background: color-mix(in srgb, var(--accent, #7c5cff) 14%, transparent);
+}
+.skfull-rate {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Who and what. Full screen is the one place with no card around the drawing
+   to read, so the bar carries it. */
+.skfull-who {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-left: 6px;
+}
+.skfull-av {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #3a3f4b, #232730);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.skfull-av[hidden] { display: none; }
+.skfull-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.skfull-words { min-width: 0; }
+.skfull-title {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.skfull-by {
+  margin-top: 1px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11.5px;
+  color: #8b97a8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.skfull-by[hidden] { display: none; }
+
+/* Under 420px the words yield before the controls do: a viewer who cannot
+   reach play is stuck, and one who cannot read the title is only curious. */
+@media (max-width: 420px) {
+  :fullscreen > .skfull,
+  .is-immersive-page > .skfull { padding-left: 12px; padding-right: 12px; }
+  .skfull-row { gap: 7px; }
+  .skfull-by { display: none; }
+}

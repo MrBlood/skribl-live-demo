@@ -715,6 +715,7 @@ rather than a shared rule.
 | `eyedropper.js` | Pad+Flip | Eyedropper — the armed-state machine, shared by both editors. |
 | `floodfill.js` | Flip | Flood fill, expressed in the only vocabulary this project has: strokes. |
 | `framebitmap.js` | Flip+player | Frame bitmaps — a painted page is rasterised once per playback, shared rule. |
+| `fullbar.js` | library+gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
 | `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |

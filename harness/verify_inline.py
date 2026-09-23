@@ -1501,7 +1501,39 @@ with sync_playwright() as sp:
     # floor is pinned 19 B above what landed, so the full-screen bar and the
     # post-like card that follow have to argue for their own bytes rather than
     # quietly spending a carve somebody else paid for.
-    EMBED_RATCHET = 35_400
+    # ---- v308, THE SPEND, against the carve two paragraphs up -------------
+    #
+    # The carve pinned this at 35,400, 19 B over what landed, so the features
+    # that motivated it would still have to argue. They do, here, and the two
+    # pieces are named separately because they are separate decisions.
+    #
+    # +132 B, `.is-bare`. The class means THE HOST SUPPLIES THE TRANSPORT: the
+    # component hides its own control cluster, its duration chip and its idle
+    # veil, and shows the drawing only. Owner, from two screenshots of one
+    # feature: "the two full screens should look identical with controls
+    # present on the bottom... all the stuff should be on the bottom". A page
+    # cannot do this for itself -- the gate a dozen lines up forbids a template
+    # naming the component's internals and caught exactly that on the gallery a
+    # release ago -- so the class is the component's and the decision is the
+    # page's. `:is()` rather than three selectors is 60 B of the 132, and one
+    # rule is also the clearer writing: the three parts are one idea.
+    #
+    # +324 B, the viewer's SPEED. Owner: "on players (across surfaces) should
+    # there be a speed control for PAD?" -- and full screen on the gallery and
+    # the profile is driven by THIS player, not by app.js, so "across surfaces"
+    # could not be satisfied without it. Only the clock is scaled, in one place
+    # (segElapsed), so the flip hold table, the stroke timeline and the progress
+    # fraction keep working without knowing a rate exists; the stored `t` values
+    # are never touched. The music rides the same rate and pitch-shifts doing
+    # it, which is the trade /s/ already makes for the same reason.
+    #
+    # Per PLAYER and not per page, deliberately: a feed scrolls past twenty of
+    # these and a rate chosen on one says nothing about the next.
+    #
+    # 35,400 -> 35,920, measured 35,884, pinned 36 B above it. Net against the
+    # carve: 898 B out, 456 B back, so a host still downloads 442 B less than
+    # before this release touched the file.
+    EMBED_RATCHET = 35_920
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

@@ -1373,6 +1373,53 @@ with sync_playwright() as _spf:
     check("...and the page behind it cannot scroll",
           _big["locked"] == "hidden", str(_big))
 
+    # ---- THE SAME BAR THE GALLERY'S TILE GETS (v308) ----------------------
+    # Owner, holding a screenshot of each: this page's full screen had a way
+    # out and no controls, the gallery's had controls and no way out, and
+    # neither looked like the other. "In the end the two full screens should
+    # look identical with controls present on the bottom."
+    #
+    # THE LIST IS SPELLED OUT AND IT IS THE SAME LITERAL verify_gallery USES.
+    # That is the point: a change to lib/fullbar.js reddens both suites
+    # together, and a change to one PAGE reddens only that one. A count, or
+    # each suite asserting "whatever this page renders", could not tell those
+    # two apart -- and "they drifted" is the defect, not "one is wrong".
+    _lbar = _pf.evaluate("""() => {
+        const w = document.querySelector('.stageCanvasWrap');
+        const bar = w.querySelector('.skfull');
+        const box = w.querySelector('.skribl-inline');
+        if (!bar) return { missing: true };
+        const br = bar.getBoundingClientRect(), wr = w.getBoundingClientRect();
+        const t = bar.querySelector('.skfull-track');
+        const p = bar.querySelector('.skfull-play');
+        return {
+          shown: getComputedStyle(bar).display,
+          btns: [...bar.querySelectorAll('.skfull-btn')].map(b => b.className.split(' ')[1]),
+          bare: !!(box && box.classList.contains('is-bare')),
+          /* ABSENT IS A REAL ANSWER HERE, not a probe failure. The stage
+             attaches the player with its own transport already supplied, so
+             this embed is built without a control cluster at all -- which is
+             why the owner's screenshot of THIS full screen had no controls
+             while the gallery's had two sets. Either way what matters is that
+             the component is not showing a second transport. */
+          ownControls: !box ? 'no-box'
+            : (box.querySelector('.skribl-inline-controls')
+               ? getComputedStyle(box.querySelector('.skribl-inline-controls')).display
+               : 'absent'),
+          atBottom: Math.round(wr.bottom - br.bottom),
+          scrubOwnRow: !!(t && p && t.getBoundingClientRect().bottom
+                          <= p.getBoundingClientRect().top + 1) }; }""")
+    check("the profile's full screen carries the SAME bar as the gallery's tile",
+          not _lbar.get("missing") and _lbar["shown"] == "flex"
+          and _lbar["btns"] == ['skfull-restart', 'skfull-play', 'skfull-loop',
+                                'skfull-mute', 'skfull-rate', 'skfull-exit'],
+          f"{_lbar} \u2014 this literal is the one verify_gallery asserts; the "
+          f"two surfaces drifting apart is the defect, not either being wrong")
+    check("...at the bottom, scrubber on its own row, component's transport yielding",
+          not _lbar.get("missing") and _lbar["atBottom"] <= 1
+          and _lbar["scrubOwnRow"] and _lbar["bare"]
+          and _lbar["ownControls"] in ("none", "absent"), str(_lbar))
+
     _pf.evaluate("() => document.getElementById('fullExit').click()")
     _pf.wait_for_timeout(600)
     _back = _pf.evaluate("""() => ({

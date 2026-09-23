@@ -634,6 +634,7 @@
     /* The scale ctx.setTransform is set to in adopt(), so the compositor's
        offscreen layers can match it instead of inferring it from CSS. */
     var pixelRatio = 1;
+    var rate = 1;                             // the viewer's speed; see frame()
     var state = 'idle';                       // idle | playing | paused
     var elapsed = 0, t0 = 0, raf = null, drawn = 0;
     /* The page and progress this player last PAINTED, which is how
@@ -673,6 +674,19 @@
        * to stop. */
       setLoop: function (on) { setLooping(on); },
       looping: function () { return looping; },
+      /* Changing rate mid-play RE-ANCHORS the clock: `elapsed` is scaled time
+       * already banked and `t0` is a wall-clock instant, so the new rate must
+       * not be applied retroactively to the segment so far or the drawing
+       * jumps. Bank at the old rate, then restart both clocks. */
+      setRate: function (r) {
+        r = +r;
+        if (!(r > 0)) return rate;
+        if (state === 'playing') { elapsed += segElapsed(); t0 = now(); }
+        rate = r;
+        if (state === 'playing') startAudio();
+        return rate;
+      },
+      rate: function () { return rate; },
       state: function () {
         return { id: id, state: state, totalMs: totalMs,
                  elapsedMs: state === 'playing' ? elapsed + (now() - t0) : elapsed,
@@ -1088,6 +1102,11 @@
       srcNode = ac.createBufferSource();
       srcNode.buffer = buffer;
       srcNode.loop = true;
+      /* A clip at its own rate under a 2x drawing drifts a whole take out of
+       * sync, and a drawing that finishes while its music is halfway through is
+       * worse to watch than a chipmunk. One playback's rate; the stored clip is
+       * untouched. */
+      try { srcNode.playbackRate.value = rate; } catch (e) {}
       gainNode = ac.createGain();
       gainNode.gain.value = soundOn() ? 1 : 0;
       srcNode.connect(gainNode);
@@ -1134,8 +1153,21 @@
 
     /* ---- transport ------------------------------------------------------ */
 
+    /* THE VIEWER'S SPEED, and only the CLOCK is scaled -- the stored `t` values
+     * are the artifact and are never touched, so watching slowly cannot rewrite
+     * the timing somebody drew. Everything downstream (the flip hold table, the
+     * stroke timeline, the progress fraction) keeps working off the scaled
+     * elapsed without knowing a rate exists, which is the same shape app.js
+     * uses for the Pad's preview and for /s/.
+     *
+     * Per PLAYER, not per page: a feed scrolls past twenty of these and a rate
+     * chosen on one is not a statement about the next. The full-screen bar is
+     * where it is offered (lib/fullbar.js); a post in a feed still has two
+     * controls and no transport. */
+    function segElapsed() { return (now() - t0) * rate; }
+
     function frame() {
-      var at = elapsed + (now() - t0);
+      var at = elapsed + segElapsed();
       if (at >= totalMs) {
         /* Both kinds loop by DEFAULT, for different reasons: a Flip document IS
          * a loop, and a Pad replay that stopped dead on the finished drawing
@@ -1189,7 +1221,7 @@
 
     function pause() {
       if (state !== 'playing') return;
-      elapsed += now() - t0;
+      elapsed += segElapsed();
       if (raf) global.cancelAnimationFrame(raf);
       raf = null;
       state = 'paused';

@@ -299,11 +299,38 @@
          transport the profile's stage already drives.
 
          Reset on the way out so the tile goes back to being a tile. */
+      /* THE BAR IS THE SAME OBJECT THE PROFILE'S STAGE USES (lib/fullbar.js).
+         The two full screens diverged because each page built its own; neither
+         builds one now. It lives INSIDE the wrapper because only the
+         fullscreened subtree renders. */
+      var bar = window.SkriblFullBar ? window.SkriblFullBar.attach(stage, {
+        player: function () {
+          var b = stage.querySelector('.skribl-inline');
+          return (b && b._skriblInline) || null;
+        },
+        meta: function () {
+          var a = item.author || {};
+          return { title: item.title,
+                   name: a.display_name || a.username || '',
+                   handle: a.username ? '@' + a.username : '',
+                   avatar: safeHref(a.avatar_url) };
+        },
+        onExit: function () { if (imm) imm.close(); }
+      }) : null;
+
       var onFs = function (big) {
         var box = stage.querySelector('.skribl-inline');
         var pl = box && box._skriblInline;
         full.setAttribute('aria-pressed', big ? 'true' : 'false');
         full.title = big ? 'Leave full screen' : 'Full screen';
+        /* The bar follows the clock on a frame loop, so it runs only while it
+           is on screen: a rAF per hidden bar per tile is a feed burning
+           battery on nothing. */
+        if (bar) bar.running(!!big);
+        /* BARE means the host supplies the transport. Without it the
+           component's own cluster and duration chip sit under the bar, which
+           is the two-transports screenshot this whole change is about. */
+        if (box) box.classList.toggle('is-bare', !!big);
         if (!box) return;
         /* THE PAGE SAYS WHEN, THE COMPONENT SAYS WHAT. `is-immersive` is the
            component's own state (inlineplayer.css): it hides the share card and
