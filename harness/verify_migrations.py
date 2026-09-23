@@ -676,84 +676,122 @@ try:
 except Exception as _e6:    # noqa: BLE001
     check("the deploy's migration wiring is inspectable", False, repr(_e6))
 
-print("\nMIGRATIONS \u2014 v309's SQL backfill answers what the app's Python answers")
-# THREE SPELLINGS OF ONE RULE. `canvas_w`/`canvas_h` are written at post time by
-# validation._payload_canvas and backfilled by the v309 revision, which spells
-# the same test in PostgreSQL, in SQLite and in a Python fallback for any other
-# engine. Nothing but this section stops the three drifting, and a drift is
-# silent: a row simply frames its poster the old way forever.
+print("\nMIGRATIONS \u2014 v309 adds columns and nothing else; the backfill is a command")
+# THE MIGRATION MUST NOT BE ABLE TO TAKE THE SITE DOWN, which is a claim about
+# what is NOT in it. `Procfile` is `alembic upgrade head && gunicorn app:app`,
+# so anything in upgrade() gates the server -- and this revision's backfill
+# exited the deploy twice in one afternoon, once on a cast that ran before its
+# guard and once with the backend dropping the connection mid-statement.
 #
-# THE SQLITE BRANCH IS DRIVEN FOR REAL, against a table seeded with the shapes
-# a payload actually takes -- not the helper called directly. The v279 finding
-# beside this one was PLACEMENT rather than logic, and a test that calls the
-# helper stays green through exactly that bug.
+# ASSERTED ON THE PARSED FUNCTION, not on a substring of the file: the docstring
+# explaining all of this necessarily contains the words the naive check would
+# look for, which is the "match the mechanism, not the word" failure this tree
+# has hit in four files now.
 _v309_path = (ROOT / "skribl" / "migrations" / "versions"
               / "b5c1e7d92a34_v309_post_canvas_size.py")
-_spec9 = _ilu.spec_from_file_location("_v309_canvas", _v309_path)
-_v309 = _ilu.module_from_spec(_spec9)
-_spec9.loader.exec_module(_v309)
+_v309_tree = ast.parse(_v309_path.read_text(encoding="utf-8"))
+_v309_up = next((n for n in _v309_tree.body
+                 if isinstance(n, ast.FunctionDef) and n.name == "upgrade"), None)
+_calls9 = [n.func.attr for n in ast.walk(_v309_up)
+           if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)] \
+    if _v309_up else []
+# `Column` and `Integer` are sa.Column(...)/sa.Integer() inside the two
+# add_column calls -- the schema being described, not work being done.
+check("v309's upgrade() only adds columns \u2014 it runs no data statement",
+      _v309_up is not None
+      and set(_calls9) <= {"add_column", "Column", "Integer"}
+      and _calls9.count("add_column") == 2,
+      f"calls: {_calls9} \u2014 a backfill here gates gunicorn, and this one took "
+      f"the site down twice before it moved out")
+check("...and it reads no payload: no execute, no get_bind, no dialect branch",
+      _v309_up is not None
+      and not {"execute", "get_bind"} & set(_calls9),
+      f"calls: {_calls9} \u2014 every JSON operator on a json column detoasts the "
+      f"whole document, which is what dropped the connection")
 
 sys.path.insert(0, str(ROOT))
 from skribl.validation import _payload_canvas as _pycanvas        # noqa: E402
+from skribl import backfill as _bf                                # noqa: E402
 
-# Every shape that has ever been posted or feared: the ordinary case, a Skribl
-# from before Pad had a size picker, and the seven ways `canvasSize` can be
-# present and still mean nothing.
+print("\nMIGRATIONS \u2014 the backfill command answers what the app's Python answers")
+# TWO SPELLINGS OF ONE RULE, down from three. The command extracts `canvasSize`
+# in SQL -- one parse per row, and only the small object crosses the wire --
+# and then decides with validation._payload_canvas itself, so the rule cannot
+# drift the way a hand-written SQL copy of it did.
+#
+# DRIVEN FOR REAL against a table seeded with the shapes a payload actually
+# takes, INCLUDING unfillable ones in the middle and a fillable one after them.
+# That ordering is not decoration: the first version of the loop paged on
+# "canvas_w IS NULL" alone, could not step past a row it could not fill, and
+# stopped early with the rest never looked at. A fixture of tidy payloads
+# agrees with that bug.
 _SHAPES = [
     ("a real drawing",            {"canvasSize": {"cssWidth": 816, "cssHeight": 612}}),
-    ("a square one",              {"canvasSize": {"cssWidth": 707, "cssHeight": 707}}),
     ("no canvasSize at all",      {"frames": []}),
     ("canvasSize null",           {"canvasSize": None}),
     ("canvasSize not an object",  {"canvasSize": "816x612"}),
+    ("canvasSize an array",       {"canvasSize": ["816", "612"]}),
     ("one edge only",             {"canvasSize": {"cssWidth": 816}}),
     ("a float edge",              {"canvasSize": {"cssWidth": 816.5, "cssHeight": 612}}),
     ("a zero edge",               {"canvasSize": {"cssWidth": 0, "cssHeight": 612}}),
     ("an edge past the cap",      {"canvasSize": {"cssWidth": 99999, "cssHeight": 612}}),
     ("a numeric STRING edge",     {"canvasSize": {"cssWidth": "816", "cssHeight": 612}}),
     ("a boolean edge",            {"canvasSize": {"cssWidth": True, "cssHeight": 612}}),
+    ("an OBJECT where an edge goes",
+                                  {"canvasSize": {"cssWidth": {"a": 1}, "cssHeight": 612}}),
+    # AFTER that run of unfillable rows, and again last, because a loop that
+    # cannot step past one would never reach either.
+    ("a square one",              {"canvasSize": {"cssWidth": 707, "cssHeight": 707}}),
+    ("a wide one",                {"canvasSize": {"cssWidth": 1024, "cssHeight": 576}}),
 ]
 
 _eng9 = sa.create_engine("sqlite://")
 with _eng9.begin() as c:
-    c.exec_driver_sql("CREATE TABLE skribl_posts "
-                      "(id INTEGER PRIMARY KEY, payload_json TEXT)")
+    c.exec_driver_sql("CREATE TABLE skribl_posts (id INTEGER PRIMARY KEY, "
+                      "payload_json TEXT, canvas_w INTEGER, canvas_h INTEGER)")
     for _lbl, _pl in _SHAPES:
         c.exec_driver_sql("INSERT INTO skribl_posts (payload_json) VALUES (?)",
                           (json.dumps(_pl),))
-    # And one row whose payload is not JSON at all, which the app answers
-    # (None, None) for and the SQL must not choke on.
     c.exec_driver_sql("INSERT INTO skribl_posts (payload_json) VALUES (?)",
                       ("not json {",))
 
-with _eng9.begin() as _conn9:
-    _ctx9 = MigrationContext.configure(_conn9)
-    with Operations.context(_ctx9):
-        _v309.upgrade()
-
-with _eng9.connect() as _c9:
-    _got9 = [(r[0], r[1]) for r in _c9.exec_driver_sql(
-        "SELECT canvas_w, canvas_h FROM skribl_posts ORDER BY id").fetchall()]
+import io as _io9                                                 # noqa: E402
+from sqlalchemy.orm import Session as _Session9                   # noqa: E402
+_sess9 = _Session9(_eng9)
+# A batch SMALLER than the run of unfillable rows, so the paging is exercised
+# rather than hidden by a batch that happens to span the whole table.
+_seen9, _filled9, _failed9 = _bf.run(_sess9, batch=3, write=True, out=_io9.StringIO())
+_got9 = [(r[0], r[1]) for r in _sess9.execute(
+    sa.text("SELECT canvas_w, canvas_h FROM skribl_posts ORDER BY id")).fetchall()]
 
 _want9 = [_pycanvas(pl) for _lbl, pl in _SHAPES] + [(None, None)]
 _rows9 = [(lbl, w, g) for (lbl, _), w, g in
           zip(_SHAPES + [("not JSON at all", None)], _want9, _got9)]
 _bad9 = [r for r in _rows9 if tuple(r[1]) != tuple(r[2])]
-check("SQLite: the v309 backfill agrees with _payload_canvas on every shape",
-      not _bad9,
-      "; ".join(f"{lbl}: python {w} sql {g}" for lbl, w, g in _bad9) or
-      f"{len(_rows9)} shapes agree")
-# A backfill that wrote NULL everywhere would pass the row above only if the
-# Python agreed, which it does not for the two real drawings -- but say it out
-# loud, because "they agree" is the kind of claim a broken pair satisfies.
-check("...and the two real drawings were actually filled in, not left null",
-      _got9[0] == (816, 612) and _got9[1] == (707, 707),
-      f"{_got9[:2]} \u2014 a backfill that wrote nothing agrees with a Python "
-      f"that returned nothing, and neither would be doing its job")
-# BOTH EDGES OR NEITHER, which the revision enforces with a sweep at the end.
+check("SQLite: the backfill agrees with _payload_canvas on every shape",
+      not _bad9 and not _failed9,
+      "; ".join(f"{lbl}: python {w} got {g}" for lbl, w, g in _bad9) or
+      f"{len(_rows9)} shapes agree, {_failed9} failed batches")
+check("...and it looked at EVERY row, not just up to the first it could not fill",
+      _seen9 == len(_SHAPES) + 1,
+      f"{_seen9} of {len(_SHAPES) + 1} \u2014 paging on `IS NULL` alone stops dead "
+      f"at a row that has no size to write, and the rows after it never load")
+check("...and the fillable rows AFTER that run were actually filled",
+      _got9[-3] == (707, 707) and _got9[-2] == (1024, 576),
+      f"{_got9[-3:]} \u2014 these sit behind four rows in a row that cannot be "
+      f"filled, which is the arrangement the first loop could not get past")
 check("...and no row carries one edge without the other",
       all((w is None) == (h is None) for w, h in _got9),
       f"{_got9} \u2014 a width with no height frames nothing and would make a "
       f"client invent the number it is missing")
+# RE-RUNNING IS CHEAP AND CHANGES NOTHING. The command is the thing an operator
+# runs by hand, possibly twice, possibly after an interruption.
+_seen10, _filled10, _failed10 = _bf.run(_sess9, batch=3, write=True,
+                                        out=_io9.StringIO())
+check("...and a second run fills nothing and skips every row it already did",
+      _filled10 == 0 and _failed10 == 0 and _seen10 < _seen9,
+      f"second run looked at {_seen10} and filled {_filled10} \u2014 the work queue "
+      f"is `canvas_w IS NULL`, so what is done stays done")
 
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +

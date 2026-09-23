@@ -24,34 +24,48 @@
 # would not have helped either -- `upgrade head` runs this one first and it
 # would have run out of memory again before reaching the fix.
 #
-# b5c1e7d92a34's digest changed once, hours after it was written, for the SAME
-# reason and with a different mistake. Its PostgreSQL backfill guarded two casts
-# with json_typeof() checks written above them -- which reads like a funnel and
-# is not one. PostgreSQL sorts WHERE quals by estimated cost and is free to run
-# a cast before the guard that was supposed to protect it; EXPLAIN showed the
-# regex hoisted above every json_typeof. On a gallery holding one post whose
-# cssWidth is an object that is
+# b5c1e7d92a34's digest changed TWICE, both times within a day of being written,
+# both times for the same reason a2f6c8b30e14's did: IT HAD NEVER SUCCEEDED
+# ANYWHERE DURABLE. Each attempt exited the deploy before gunicorn started, so
+# the revision's transaction rolled back and no database was ever stamped at it.
+# A new revision could not have helped either time -- `upgrade head` runs this
+# one first, and it would have failed again before reaching the fix.
+#
+# THE FIRST EDIT fixed a cast that ran before the guard written above it. The
+# PostgreSQL backfill guarded two casts with json_typeof() checks written above
+# them, which reads like a funnel and is not one: PostgreSQL sorts WHERE quals
+# by estimated cost and is free to run a cast before the guard meant to protect
+# it, and EXPLAIN showed the regex hoisted above every json_typeof. One post
+# whose cssWidth was an object gave
 #
 #     invalid input syntax for type numeric: "{"a":1}"
 #
-# and the deploy exited 1 before gunicorn started. The revision's transaction
-# rolled back, so again no durable database was ever stamped at it, and again a
-# new revision could not have helped: `upgrade head` runs this one first.
+# THE SECOND EDIT removed the backfill from this revision altogether, because
+# the rewritten SQL was correct and the deploy died anyway:
 #
-# The WHERE clause now contains nothing that can raise on any JSON value in any
-# order, and the cast lives in the SET list, which is evaluated only for rows
-# the clause already selected. verify_postgres asserts that property directly --
-# every conjunct is run ALONE against a table of hostile payload shapes, because
-# a check that runs the whole statement passes or fails on the PLANNER's choice
-# and this is a bug about the planner's choice. It went green against the
-# broken SQL until it was rewritten that way.
+#     psycopg.OperationalError: consuming input failed:
+#     SSL error: unexpected eof while reading
 #
+# The backend went away mid-statement. Every JSON operator on a `json` column
+# detoasts and re-parses the WHOLE document, and the statement called five of
+# them per row -- so a table of multi-megabyte drawings was parsed five times a
+# row, in one statement, on a small instance. Correct SQL, fatal cost, which is
+# the v307 out-of-memory lesson moved from Python into the database.
 #
-# The backfill is dialect-native SQL now, so no payload crosses into Python at
-# all. Both engines are exercised: verify_migrations drives it on SQLite and
-# verify_postgres runs the chain against a real PostgreSQL in CI, and the suite
-# asserts the SQL agrees with the revision's own Python reference on every
-# payload shape, malformed ones included.
+# WHAT THE SECOND FAILURE ACTUALLY TAUGHT, and the reason this note is long:
+# the bug was never the SQL. It was that COSMETIC DATA WORK SAT IN THE DEPLOY'S
+# CRITICAL PATH. `Procfile` is `alembic upgrade head && gunicorn app:app`, so
+# anything in an upgrade() can take the site down, and what this one computed
+# was a nicer crop for old tiles. A null canvas size is a supported state; a
+# post that has not been backfilled looks the way it did last week.
+#
+# So upgrade() now adds two nullable columns and returns -- a catalogue update
+# that reads no payload and cannot run out of memory or time. The backfill is
+# `python -m skribl.backfill`, batched, id-paged, resumable and safe to
+# interrupt, run when somebody chooses rather than while a release waits on it.
+# verify_migrations asserts BOTH halves: that upgrade() calls nothing but
+# op.add_column, and that the command survives the hostile payload shapes a real
+# gallery holds. verify_postgres drives the same command against a real cluster.
 #
 # verify_migrations.py fails if any digest below changes. To change migration
 # BEHAVIOUR, add a revision. To add a genuinely new revision, append its digest.
@@ -102,6 +116,7 @@ eca1461367bfa31ab5b4882548c143bc5183d74438024e6962644f14d1863b66  f0a3d81b47e2
 848aafb58c36b76d5b2e301e7ac2cb10582e254a1eaec362ce8107c3ce92f6f0  c4d9e2f7a1b6
 7d4ed8f31dfb5e3bbc3b15faf40068f87cbae0e04ba10812058ada6b988ef751  d8e1f4a2b7c3
 17760234073d53ed412f46c6915c2b0437b3d03f65ae09ff559eee535e859c5a  a2f6c8b30e14
+07bf90c482c2c1f4d267c4be76c8a1274e13f29ce23aff79b7ef3019874b113d  b5c1e7d92a34
 
 # ---- UPGRADE-PATH DIGESTS ------------------------------------------------
 # The normalised AST of every released upgrade(), which is the half of a
@@ -127,5 +142,4 @@ upgrade f25467dc47798eb963774df74ef98356678a029aed78252a4ec53fcff0f82cf2  f7c2e0
 upgrade 0e034bcb81f034d6ead7dbf8733817463d47018ca7f4e6e2d750cecc11108839  c4d9e2f7a1b6
 upgrade 23076ca01cef9f8b76724b5f1cebe83617faa2920999990a94a55a966f53e297  d8e1f4a2b7c3
 upgrade f31491c6e3060d2cf02dd7820f43795d1424382ff9a563c656ed4ca8808ab777  a2f6c8b30e14
-44bdc909c669040c99e94642accf325d757233bb7718461809aa307c3ed1cfac  b5c1e7d92a34
-upgrade 6b52f594854122baa7f03a15b9adb9d18f49f9556f1102fa0f7ea7a366c02bde  b5c1e7d92a34
+upgrade 4a5f5f05e4aa7246e38f13d0c16bceca0f3b1881c789d9d41c99e9fa90c6fde8  b5c1e7d92a34
