@@ -984,6 +984,85 @@ with sync_playwright() as _spi:
           f"with the nib hidden); [dx, dy, w, h, ok] = "
           f"{_nib.get('samples', [])[:6]}")
 
+    # ---- ONE BAR, AND IT IS THE PROFILE'S BAR (v308) ----------------------
+    # Owner, holding two screenshots of the same feature: "the two full screens
+    # should look identical with controls present on the bottom. all the stuff
+    # should be on the bottom." They diverged because each page built its own,
+    # so neither builds one now -- lib/fullbar.js does, and both call it.
+    #
+    # THE CONTROL SET IS SPELLED OUT rather than counted. A count passes on the
+    # wrong six. verify_library asserts the SAME list against the profile's
+    # stage, so a change to the module reddens both together and a change to
+    # one PAGE reddens only that one, which is the distinction worth keeping.
+    _bar = _pi.evaluate("""() => {
+        const st = document.querySelector('.tile .tileStage');
+        const bar = st.querySelector('.skfull');
+        const box = st.querySelector('.skribl-inline');
+        const marks = st.querySelector('.tileMarks');
+        if (!bar) return { missing: true };
+        const br = bar.getBoundingClientRect(), sr = st.getBoundingClientRect();
+        return {
+          shown: getComputedStyle(bar).display,
+          btns: [...bar.querySelectorAll('.skfull-btn')].map(b => b.className.split(' ')[1]),
+          bare: !!(box && box.classList.contains('is-bare')),
+          ownControls: box ? getComputedStyle(box.querySelector('.skribl-inline-controls')).display : '?',
+          ownDur: box ? getComputedStyle(box.querySelector('.skribl-inline-dur')).display : '?',
+          marks: marks ? getComputedStyle(marks).display : 'no-marks',
+          atBottom: Math.round(sr.bottom - br.bottom),
+          scrubOwnRow: (() => {
+            const t = bar.querySelector('.skfull-track');
+            const p = bar.querySelector('.skfull-play');
+            return !!(t && p && t.getBoundingClientRect().bottom
+                      <= p.getBoundingClientRect().top + 1);
+          })(),
+          title: (bar.querySelector('.skfull-title') || {}).textContent }; }""")
+    check("full screen carries one bar, at the bottom, with the agreed controls",
+          not _bar.get("missing") and _bar["shown"] == "flex"
+          and _bar["btns"] == ['skfull-restart', 'skfull-play', 'skfull-loop', 'skfull-mute',
+                'skfull-rate', 'skfull-exit']
+          and _bar["atBottom"] <= 1, str(_bar))
+    check("...the component's own transport yields to it",
+          not _bar.get("missing") and _bar["bare"]
+          and _bar["ownControls"] == "none" and _bar["ownDur"] == "none",
+          f"{_bar} \u2014 two transports on one drawing is the screenshot this "
+          f"change is about")
+    check("...nothing is drawn over the art but the way out",
+          not _bar.get("missing") and _bar["marks"] == "none",
+          f"{_bar} \u2014 'which of these is which' is a question you have in a "
+          f"GRID, and the owner photographed a pen and a speaker over a "
+          f"full-screen drawing")
+    check("...and the scrubber has its own row above the buttons",
+          not _bar.get("missing") and _bar["scrubOwnRow"],
+          f"{_bar} \u2014 squeezed between the buttons it is a 6px target on a "
+          f"phone, which is not a target")
+
+    # THE BAR DRIVES THE PLAYER, rather than keeping a state of its own. Pause
+    # through the bar and the PLAYER has to be paused, not merely the icon.
+    _pi.evaluate("() => document.querySelector('.skfull-play').click()")
+    _pi.wait_for_timeout(400)
+    _drive = _pi.evaluate("""() => {
+        const st = document.querySelector('.tile .tileStage');
+        const pl = st.querySelector('.skribl-inline')._skriblInline;
+        const bar = st.querySelector('.skfull');
+        const before = pl.state().state;
+        const r0 = pl.rate();
+        bar.querySelector('.skfull-rate').click();
+        const r1 = pl.rate();
+        const label = bar.querySelector('.skfull-rate').textContent;
+        bar.querySelector('.skfull-loop').click();
+        return { paused: before, r0: r0, r1: r1, label: label,
+                 loop: pl.looping(),
+                 lit: bar.querySelector('.skfull-loop').classList.contains('on') }; }""")
+    check("the bar drives the player: pause pauses it, speed changes its rate",
+          _drive["paused"] == "paused" and _drive["r0"] == 1
+          and _drive["r1"] == 2 and _drive["label"] == "2\u00d7",
+          f"{_drive} \u2014 a bar that moved its own icon and left the clock alone "
+          f"is the defect this could most easily have shipped with")
+    check("...and repeat reads what is TRUE, not what the button would do",
+          _drive["lit"] == _drive["loop"],
+          f"{_drive} \u2014 lit is the resting state, the same reading the "
+          f"component's own loop button uses")
+
     _pi.evaluate("() => document.querySelector('.tile .tileExit').click()")
     _pi.wait_for_timeout(600)
 

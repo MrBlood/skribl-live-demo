@@ -67,10 +67,13 @@
   transition: opacity 0.22s;
 }
 
-/* IMMERSIVE (v307): the page adds the class, the component owns the rules —
-   see DECISIONS. CSS comments are served; that is why this is one line. */
+/* IMMERSIVE and BARE: the page adds the class, the component owns the rules.
+   BARE means the host supplies the transport, so this one hides its own and
+   keeps only the drawing. Why, in inlineplayer.js. */
 .skribl-inline.is-immersive { width: 100%; height: 100%; border: 0; border-radius: 0; }
-.skribl-inline.is-immersive .skribl-inline-poster { display: none; }
+.skribl-inline.is-immersive .skribl-inline-poster,
+.skribl-inline.is-bare :is(.skribl-inline-controls, .skribl-inline-dur,
+  .skribl-inline-veil) { display: none; }
 .skribl-inline.is-immersive .skribl-inline-canvas {
   width: 100%; height: 100%; object-fit: contain; }
 

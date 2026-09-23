@@ -19,6 +19,8 @@
   {% include 'skribl/_skribl_theme_boot.html' %}
   {% from 'skribl/_skribl_inline_player.html' import skribl_inline_assets, skribl_inline %}
   {{ skribl_inline_assets() }}
+  {# fullbar.css travels with lib/fullbar.js — see that sheet's header. #}
+  <link rel="stylesheet" href="{{ skribl_asset('fullbar.css') }}">
   {# tooltip.css travels with lib/tooltip.js — see that sheet's header. #}
   <link rel="stylesheet" href="{{ skribl_asset('tooltip.css') }}">
   <style>
@@ -223,6 +225,13 @@
     .tileMark svg { width: 18px; height: 18px; display: block; }
     .tileKind { left: 8px; top: 8px; }
     .tileSound { right: 8px; top: 8px; color: #7ee2a8; }
+    /* AND NOT IN FULL SCREEN. "which of these is which" is a question you have
+       in a GRID; with one drawing filling the display it is answered by the
+       drawing. The owner's full-screen screenshot has a pen top-left and a
+       speaker top-right over an otherwise clean picture, and nothing over the
+       art but the way out is the rule the bar below is built to. */
+    .tileStage:fullscreen .tileMarks,
+    .tileStage.is-immersive-page .tileMarks { display: none; }
     /* The words behind the marks. Not `display: none` — that takes it out of
        the accessibility tree too, which is the whole point of having it. */
     .tileSr { position: absolute; width: 1px; height: 1px; margin: -1px;
@@ -402,7 +411,8 @@
    every aria-modal surface on the editors uses. #}
 {# See the note in skribl_library.html: the controls carry titles and
    nothing was drawing them. Desktop only, by the module's design. #}
-<script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/fullbar.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
 <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
 <script src="{{ skribl_asset('gallery.js') }}" defer></script>

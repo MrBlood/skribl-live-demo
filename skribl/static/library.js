@@ -291,11 +291,29 @@
      something to do and no longer has to be hidden. */
   if (btnFull && stageWrap && window.SkriblImmersive) {
     btnFull.hidden = false;
+    /* THE SAME BAR THE GALLERY'S TILE USES (lib/fullbar.js). This page had an
+       exit and no controls; the gallery had controls and no exit; neither
+       looked like the other, which is what the owner photographed. Neither
+       page builds one now. */
+    var fbar = window.SkriblFullBar ? window.SkriblFullBar.attach(stageWrap, {
+      player: function () { return player; },
+      meta: function () {
+        return current ? { title: current.title,
+                           name: me || '',
+                           handle: me ? '@' + me : '' } : null;
+      },
+      onExit: function () { imm.close(); }
+    }) : null;
     var syncFull = function (on) {
       btnFull.classList.toggle('on', !!on);
       btnFull.setAttribute('aria-pressed', String(!!on));
       btnFull.title = on ? 'Leave full screen' : 'Full screen';
       btnFull.setAttribute('aria-label', btnFull.title);
+      if (fbar) fbar.running(!!on);
+      /* The page's transport below the stage stays where it is; what yields is
+         the COMPONENT's own chrome, which would otherwise sit under the bar. */
+      var box = stageWrap.querySelector('.skribl-inline');
+      if (box) box.classList.toggle('is-bare', !!on);
     };
     var imm = window.SkriblImmersive.attach(stageWrap, { onChange: syncFull });
     btnFull.addEventListener('click', function () { imm.toggle(); });
