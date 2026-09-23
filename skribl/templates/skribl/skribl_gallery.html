@@ -115,6 +115,18 @@
        looks. Measured at 390 with the count in: the row packs to the pixel and
        the display name is ellipsised while the handle is not. Hiding the count
        returns 51px to the name, which is more than it needed. */
+    /* THE MARKS GO WITH IT, and this suite caught that they had to. Folding
+       the kind and sound glyphs into the head added ~44px back to a row that
+       was already measured to the pixel at 390, and `at 390 the display name
+       is not ellipsised` went red the moment they landed: dnCut true, 55px of
+       slack gone. The count's own note above says why the NAME wins any fight
+       for that space -- who made it and what it is called are why anybody
+       looks -- and a pen next to a book is a question you can answer by
+       pressing play.
+
+       The CAPTION mark stays at every width. It is the only one of the three
+       that is a control rather than a label, and it is the only way to read
+       the message at all now that the caption is closed at rest. */
     @media (max-width: 560px) { .tile .plays { display: none; } }
     .state { text-align: center; color: var(--text-3); font-size: 14px; padding: 40px 0; line-height: 1.7; }
     .state b { color: var(--text-2); font-weight: 600; }
@@ -193,8 +205,18 @@
        plain disc rather than an initial. The word is dimmer than a name
        because it is a state and not somebody. */
     .tanon .tdn-anon { font-weight: 500; color: var(--text-3); font-style: normal; }
-    .tavatar-anon { background: var(--control, rgba(255, 255, 255, 0.06));
-      border: 1px solid var(--hairline); }
+    /* THE SKRIBL STAR, on the accent blend at 135deg (owner). It is drawn as
+       SVG rather than typed as U+1F7CD: almost no system font carries that
+       codepoint, so the character would be a tofu box on most phones -- the
+       same failure the avatar's onerror exists to avoid for a 404'd photo.
+
+       TWO CLASSES, NOT ONE, and that is load-bearing rather than tidy:
+       `.tavatar` sets its own grey disc gradient and is declared LATER in this
+       sheet, so a single-class `.tavatar-anon` ties on specificity and loses on
+       source order -- the star came out on the no-photo grey. */
+    .tavatar.tavatar-anon { background: linear-gradient(135deg, var(--accent) 0%,
+      var(--accent-2) 100%); color: #fff; border: 0; }
+    .tavatar.tavatar-anon svg { width: 19px; height: 19px; display: block; }
     .tavatar { flex: none; width: 34px; height: 34px; border-radius: 50%;
       overflow: hidden; display: grid; place-items: center;
       background: linear-gradient(135deg, #3a3f4b, #232730);
@@ -216,36 +238,36 @@
        reveals -- so the text is always present and always reachable, which is
        what the opacity trick was protecting, without anything sitting on the
        picture. */
-    /* THE GAP UNDER THE CAPTION IS A MARGIN, NOT PADDING, and that is what
-       makes the clamp work. `overflow: hidden` clips at the PADDING box, so a
-       10px padding-bottom is 10px of clipped region the third line shows
-       through: the card rendered two clamped lines, an ellipsis, and then a
-       third line sliced in half underneath it. */
-    .tcap { margin: 0 0 10px; padding: 0 13px; font-size: 13px; line-height: 1.4;
-      color: var(--text-2); overflow-wrap: anywhere;
-      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
-      overflow: hidden; }
-    .tile.cap-open .tcap { display: block; -webkit-line-clamp: unset; }
-    /* "Show more", UNDER the sentence it belongs to. It was a 44px glyph in
-       the head beside Report; the head is where the NAME lives, and at 390px
-       those 44px were the difference between "Mr. B" and "Mr…". A word under
-       the text also says what it does, which a speech bubble did not. */
-    .tile .tileCapBtn {
-      align-self: flex-start; margin: -6px 0 8px; padding: 10px 13px;
-      display: inline-block; position: relative;
-      background: none; border: 0; color: var(--accent);
-      font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
-    }
-    /* Drawn small, 44px to a finger — the same band every control here uses. */
-    .tile .tileCapBtn::before { content: ''; position: absolute;
-      left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
-    /* `hidden` LOSES TO AN EXPLICIT display, always. The rule above sets
-       inline-block, which outranks the UA sheet's [hidden] { display: none },
-       so gallery.js hiding this button did nothing at all until this line --
-       the attribute was set, the DOM agreed it was hidden, and the button was
-       still on the card. */
-    .tile .tileCapBtn[hidden] { display: none; }
-    .tile .tileCapBtn:hover { text-decoration: underline; }
+    /* CLOSED AT REST, SO IT COSTS NO HEIGHT. A card with a caption used to be
+       two lines taller than one without, and in a grid the neighbour's row
+       stretches to match -- the dead space at the bottom the owner
+       photographed. `grid-template-rows: 0fr -> 1fr` is the accordion: it
+       animates, it needs no measured pixel height, and the closed state is
+       genuinely zero rather than a clamp with `overflow: hidden` (which still
+       occupies its two lines). The inner element needs `min-height: 0` or the
+       0fr track refuses to collapse below its content.
+
+       `content-visibility: hidden` on the closed state keeps the text out of
+       the accessibility tree and out of Find-in-page while it is shut, which
+       is what `hidden` would do if we could use it on an animating box.
+
+       BOTH HALVES ARE LOAD-BEARING AND THEY DO DIFFERENT JOBS, which a
+       mutation had to say out loud: flipping the 0fr track to 1fr on its own
+       reddens NOTHING, because `content-visibility: hidden` makes the element
+       skip its contents entirely and contribute no height whatever the track
+       says. The track is what ANIMATES; the content-visibility is what
+       guarantees the zero. Removing either one alone leaves a card that still
+       looks right, which is exactly why the pair is written down here: the
+       calibration that flipped only the track came back green and proved
+       nothing at all. */
+    .tile .tcapWrap { display: grid; grid-template-rows: 0fr;
+      transition: grid-template-rows 0.22s ease; }
+    .tile.cap-open .tcapWrap { grid-template-rows: 1fr; }
+    .tcap { margin: 0; padding: 0 13px; min-height: 0; overflow: hidden;
+      font-size: 13px; line-height: 1.4; color: var(--text-2);
+      overflow-wrap: anywhere; content-visibility: hidden; }
+    .tile.cap-open .tcap { padding: 10px 13px 12px; content-visibility: visible; }
+
     /* ---- Report, on every tile, and the one sheet they share ---------- */
     /* SET APART FROM THE FACTS BESIDE IT: 14px of space rather than 6, and a
        dimmer resting colour, because it is the only thing in the head anybody
@@ -281,19 +303,52 @@
        the play button (owner's screenshot). The two badges share the top
        edge now, at opposite ends, which is far enough apart to read as two
        facts. The profile's row moved with it — same badge, same corner. */
-    .tileMark { position: absolute; z-index: 2; display: grid; place-items: center;
-      width: 24px; height: 24px; padding: 3px; border-radius: 6px;
-      background: rgba(6,7,10,.72); color: #dfe6f2; pointer-events: none; }
-    .tileMark svg { width: 18px; height: 18px; display: block; }
-    .tileKind { left: 8px; top: 8px; }
-    .tileSound { right: 8px; top: 8px; color: #7ee2a8; }
-    /* AND NOT IN FULL SCREEN. "which of these is which" is a question you have
-       in a GRID; with one drawing filling the display it is answered by the
-       drawing. The owner's full-screen screenshot has a pen top-left and a
-       speaker top-right over an otherwise clean picture, and nothing over the
-       art but the way out is the rule the bar below is built to. */
-    .tileStage:fullscreen .tileMarks,
-    .tileStage.is-immersive-page .tileMarks { display: none; }
+    /* THE MARKS ARE IN THE HEAD NOW, NOT ON THE PICTURE. They were absolutely
+       positioned in two corners of the stage; the owner asked for the canvas
+       back ("the canvas needs to be clean, nothing but drawing") and for these
+       to join the line that already carries the post's other facts. So they
+       are in normal flow inside `.tmeta`, sized to the type around them rather
+       than to a badge, and they have no plate: a chip over a drawing needs a
+       background to stay legible, a glyph on the card's own ground does not.
+
+       `.tileMarks` keeps its name and is now just a group inside the run. */
+    .tile .tileMarks { display: inline-flex; align-items: center; gap: 6px; }
+    .tile .tileMark { display: inline-grid; place-items: center;
+      width: 16px; height: 16px; color: var(--text-3); }
+    .tile .tileMark svg { width: 15px; height: 15px; display: block; }
+    .tile .tileSound { color: #7ee2a8; }
+    /* The one mark that is a CONTROL, so it gets a control's affordances: a
+       44px band to a finger, a lit state while the caption is open, and it is
+       the only thing in the run that can be pressed. */
+    .tile .tileCapBtn { position: relative; padding: 0; border: 0;
+      background: none; cursor: pointer; color: var(--text-3); }
+    .tile .tileCapBtn::before { content: ''; position: absolute; inset: -14px; }
+    .tile .tileCapBtn:hover { color: var(--text); }
+    .tile.cap-open .tileCapBtn { color: var(--accent); }
+    /* THE MARKS STAND DOWN ON A ONE-UP CARD, for the reason the play count
+       above already does: at 390 the head is measured to the pixel, and
+       folding these in cost the display NAME the 44px it needed -- `at 390 the
+       display name is not ellipsised` went red the moment they landed.
+
+       DECLARED HERE, NOT UP WITH THE COUNT, and that is the whole point of the
+       placement. A media query adds NO specificity, so `@media { .tile
+       .tileKind }` and `.tile .tileMark` tie at (0,2,0) and the later one
+       wins -- and `.tile .tileMark { display: inline-grid }` is later. The
+       rule was served, matched, and lost: the marks measured 16px wide inside
+       a media query that said display: none. Same trap as the star's avatar
+       gradient, twice in one change.
+
+       The CAPTION mark is not in here. It is the only one of the three that is
+       a control rather than a label, and with the caption closed at rest it is
+       the only way to read the message at all. */
+    @media (max-width: 560px) {
+      .tile .tileKind, .tile .tileSound { display: none; }
+    }
+    /* The rule that hid these in full screen went with them. It said "which
+       of these is which is a question you have in a GRID" -- still true, and
+       the answer is now that they are never on the drawing at all, so there
+       is nothing left to hide when one fills the display. A selector that can
+       no longer match is a claim about a layout that no longer exists. */
     /* The words behind the marks. Not `display: none` — that takes it out of
        the accessibility tree too, which is the whole point of having it. */
     .tileSr { position: absolute; width: 1px; height: 1px; margin: -1px;

@@ -80,12 +80,35 @@
   /* THE UNATTRIBUTED CARD, given a shape instead of a gap. No handle, no
      link, no tick, no initial -- an initial would be a letter of a name that
      does not exist. A neutral disc and one word. */
+  /* A speech mark, for the card that has something to say. */
+  var ICON_CAP =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+    ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' +
+    ' focusable="false"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-4.2-.9' +
+    'L3 20l1.3-3.7A8.2 8.2 0 0 1 3 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 9 8.4z"/>' +
+    '</svg>';
+
+  /* The six-pointed pinwheel, swept: each point leads with a straight edge and
+     trails into the centre, which is what makes it turn rather than sit. */
+  var ICON_STAR =
+    '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<path fill="currentColor" d="M12 1.6l2.1 6.0 5.6-2.9-2.9 5.6 6.0 2.1-6.0 2.1' +
+    ' 2.9 5.6-5.6-2.9-2.1 6.0-2.1-6.0-5.6 2.9 2.9-5.6-6.0-2.1 6.0-2.1-2.9-5.6' +
+    ' 5.6 2.9z"/></svg>';
+
   function anonBlock() {
     var wrap = document.createElement('div');
     wrap.className = 'tauth tanon';
     var av = document.createElement('span');
     av.className = 'tavatar tavatar-anon';
     av.setAttribute('aria-hidden', 'true');
+    /* THE SKRIBL STAR, drawn rather than typed. U+1F7CD names the shape the
+       owner means (six-pointed pinwheel) and almost no system font carries
+       it, so a codepoint would render as a tofu box on most of the phones
+       this page is read on -- which is the same class of mistake as the
+       cracked-image glyph the avatar's onerror exists to avoid. Inline SVG
+       renders identically everywhere and inherits currentColor. */
+    av.innerHTML = ICON_STAR;
     var names = document.createElement('div');
     names.className = 'tnames';
     var line = document.createElement('div');
@@ -203,37 +226,21 @@
      on coarse pointers, so on a phone this call does nothing by design. */
   if (window.SkriblTooltip) window.SkriblTooltip.init();
 
-  /* WHICH CAPTIONS HAVE MORE TO SHOW. The toggle is only worth a control
-     where the clamp is actually cutting the text off, and at two lines most
-     captions are not being cut: every captioned card carried a button that
-     expanded nothing. A paragraph is clipped when its content is taller than
-     its box, which is one read of scrollHeight against clientHeight -- done
-     for the whole grid at once, because each read forces layout.
+  /* capToggles() WAS HERE AND IS NOT NEEDED ANY MORE. It measured, for every
+     captioned card, whether a two-line clamp was actually cutting the text --
+     because an expander that expands nothing is worse than no expander -- and
+     re-ran on resize, since the same caption clips at 390 and does not at
+     1280.
 
-     A card that is OPEN is left alone. Its clamp is off, so it measures as
-     un-clipped, and hiding the button there would take away the only way to
-     close it again.
+     None of that question exists now. The caption is CLOSED at rest and
+     contributes no height, so the mark that opens it is warranted by the
+     caption existing rather than by the clamp biting, which is a fact the
+     listing already carries and no layout read can disagree with. One fewer
+     forced layout per card per resize, and one fewer thing to be wrong.
 
-     Re-run on resize because the clamp is two LINES and the column width
-     decides how much text a line holds: the same caption clips at 390 and
-     does not at 1280. */
-  function capToggles() {
-    var caps = document.querySelectorAll('.tile .tcap');
-    for (var i = 0; i < caps.length; i++) {
-      var cap = caps[i];
-      var card = cap.closest('.tile');
-      var btn = card && card.querySelector('.tileCapBtn');
-      if (!btn) continue;
-      if (card.classList.contains('cap-open')) { btn.hidden = false; continue; }
-      btn.hidden = cap.scrollHeight <= cap.clientHeight + 1;
-    }
-  }
+     The measure is gone; what it was protecting is not. verify_gallery still
+     asserts that a card with no caption draws no mark. */
 
-  var capTimer = null;
-  window.addEventListener('resize', function () {
-    if (capTimer) clearTimeout(capTimer);
-    capTimer = setTimeout(capToggles, 150);
-  });
 
   function tile(item) {
     var art = document.createElement('article');
@@ -446,9 +453,18 @@
        pen, book - no way to tell which"). The listing could not say until
        v307 put `kind` and `pages` on the post; it still defers the payload.
 
-       The same two marks the profile's rows use, in the same two corners:
-       kind at bottom left, sound at top right. Both are decoration over the
-       drawing, so both are aria-hidden and the WORDS go in one visually
+       NOT OVER THE DRAWING ANY MORE. They sat in two corners of the stage and
+       the owner asked for the canvas back: "no need to show speaker in upper
+       right corner - in fact, the canvas needs to be clean, nothing but
+       drawing. maybe the pen/book can go up in the top line with 3d 2play
+       report?" So they join the head's meta run, which is already where the
+       post's other facts are -- kind leads it, sound closes it, and the
+       drawing is left alone.
+
+       What stays on the stage is the idle veil and its play triangle, which
+       are not decoration: they are the affordance that says this moves, and a
+       card without them reads as a black rectangle (v309, the same owner, the
+       same page). Both are aria-hidden and the WORDS go in one visually
        hidden line -- a screen reader gets "Flip, 6 pages, with sound" as
        text, not two unlabelled glyphs.
 
@@ -466,7 +482,11 @@
     if (item.has_audio === true) {
       marks.insertAdjacentHTML('beforeend', '<span class="tileMark tileSound">' + ICON_SOUND + '</span>');
     }
-    if (marks.firstChild) stage.appendChild(marks);
+    /* Appended to the head's fact run, not to the stage. `marks` is built
+       above and placed here because the head is assembled before the stage
+       exists; the meta element is the one that has been carrying age and
+       plays since the run was grouped. */
+    if (marks.firstChild) meta.insertBefore(marks, meta.firstChild);
 
     var says = [];
     if (item.kind === 'flip') says.push(item.pages > 1 ? item.pages + ' pages' : 'a flip');
@@ -488,38 +508,55 @@
        for words, so it is text under the title, clamped to two lines, and the
        toggle EXPANDS it rather than revealing it. Nothing needs to sit on the
        picture. */
+    /* EVERY CARD IS THE SAME HEIGHT, AND THE CAPTION IS WHY IT WAS NOT.
+       The text sat between the head and the stage, so a card with a caption
+       was two lines taller than one without -- and in a grid the short card's
+       ROW stretches to match, which is the dead space at the bottom the owner
+       photographed: "the message takes up space which, when next to a card
+       with no caption, makes the card next to it have that empty space at the
+       bottom. there has to be a way for the cards to be the same size."
+
+       So the caption no longer contributes height at rest. It is collapsed to
+       zero and opened by a mark in the HEAD's fact run, where there is already
+       a row and no vertical cost -- the owner's own suggestion ("a button /
+       toggle to show msg... if one is it accordions out to show it"), with one
+       departure: a card with nothing to say draws NO mark rather than the
+       words "no msg". A label announcing an absence is still furniture on
+       every silent card, and the ask was simplicity. Absence says it.
+
+       The accordion opens BELOW the drawing, not above it: opening it above
+       would push the picture down the page under the reader's cursor. */
     if (item.caption) {
+      /* The wrapper is the accordion (a 0fr/1fr grid row) and the paragraph is
+         what it collapses; one element cannot be both, because the track that
+         animates has to sit outside the content whose height it is hiding. */
+      var cw = document.createElement('div');
+      cw.className = 'tcapWrap';
       var tc = document.createElement('p');
       tc.className = 'tcap';
       tc.textContent = item.caption;
-      art.insertBefore(tc, stage);
-      /* THE EXPANDER SITS UNDER THE TEXT IT EXPANDS, and it used to sit in the
-         head beside Report as a speech-bubble glyph. Two things were wrong
-         with that. It was 44px of the head's width on every captioned card,
-         and the head is where the NAME lives: at 390px the row packed to the
-         pixel and ellipsised "Mr. B" to "Mr…" and the handle with it, which is
-         the one thing on a post that must never be approximate. And a glyph
-         beside a Report button does not read as "there is more of this
-         sentence" -- a word under the sentence does.
+      cw.appendChild(tc);
+      art.appendChild(cw);
 
-         Hidden until the clamp actually bites; capToggles() measures. */
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'tileCapBtn';
+      btn.className = 'tileMark tileCapBtn';
       btn.setAttribute('aria-pressed', 'false');
-      btn.textContent = 'Show more';
-      btn.hidden = true;
-      art.insertBefore(btn, stage);
+      btn.setAttribute('aria-expanded', 'false');
+      btn.innerHTML = ICON_CAP;
+      meta.appendChild(btn);
+      var label = function (on) {
+        btn.setAttribute('aria-label', on ? 'Hide the description'
+                                          : 'Read the description');
+        btn.title = btn.getAttribute('aria-label');
+      };
       btn.addEventListener('click', function () {
         var on = art.classList.toggle('cap-open');
         btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        btn.textContent = on ? 'Show less' : 'Show more';
-        btn.setAttribute('aria-label', on ? 'Show less of the description'
-                                          : 'Show the whole description');
-        btn.title = btn.getAttribute('aria-label');
+        btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+        label(on);
       });
-      btn.setAttribute('aria-label', 'Show the whole description');
-      btn.title = 'Show the whole description';
+      label(false);
     }
 
     /* THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE, from the same builder
@@ -593,10 +630,6 @@
         var items = (body && body.items) || [];
         for (var i = 0; i < items.length; i++) list.appendChild(tile(items[i]));
         if (items.length) window.SkriblInline.mount(list);
-        /* ONCE PER PAGE OF TILES, not once per tile: the measure below reads
-           layout, and reading it inside the append loop would make the grid
-           reflow between every card. */
-        if (items.length) capToggles();
         cursor = (body && body.next_cursor) || null;
         more.hidden = !cursor;
         /* Two empty states: nothing in the gallery at all, and nothing that

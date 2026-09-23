@@ -1019,6 +1019,43 @@ with sync_playwright() as _spa:
           f"is a letter of a name that does not exist); the title still sits in "
           f"`.tnames` exactly where a named card puts it")
 
+    # ---- THE CARD IS ONE SHAPE, AND THE DRAWING IS ALONE ON IT (v310) ----
+    # Three owner asks in one census, because they are one change: the badges
+    # came off the picture and joined the head's fact run, the caption stopped
+    # deciding how tall a card is, and the unattributed avatar became the
+    # Skribl star.
+    _card2 = _pa.evaluate("() => {\n        const t = [...document.querySelectorAll('.tile')];\n        const caps = [...document.querySelectorAll('.tile')].filter(\n            x => x.querySelector('.tcapWrap'));\n        return {\n          tiles: t.length,\n          captioned: caps.length,\n          /* NOTHING OVER THE DRAWING but the idle affordance. */\n          marksOnStage: document.querySelectorAll('.tileStage .tileMarks').length,\n          marksInHead: document.querySelectorAll('.thead .tileMarks').length,\n          soundOnStage: document.querySelectorAll('.tileStage .tileSound').length,\n          kindOnStage: document.querySelectorAll('.tileStage .tileKind').length,\n          /* the cap mark exists exactly where a caption does */\n          capBtns: document.querySelectorAll('.tileCapBtn').length,\n          capBtnsInHead: document.querySelectorAll('.thead .tileCapBtn').length,\n          strayCapBtns: t.filter(x => !!x.querySelector('.tileCapBtn')\n                                   !== !!x.querySelector('.tcapWrap')).length,\n          /* one height for the whole grid, captioned or not */\n          heights: [...new Set(t.map(x => Math.round(\n                     x.getBoundingClientRect().height)))].sort((a, b) => a - b),\n          /* and a closed caption contributes none of it */\n          closedCapH: Math.round(Math.max(0, ...[...document.querySelectorAll(\n                     '.tile:not(.cap-open) .tcapWrap')].map(\n                     x => x.getBoundingClientRect().height))),\n          /* the star, on the accent blend */\n          anonStar: [...document.querySelectorAll('.tavatar-anon')].every(\n                     x => !!x.querySelector('svg')),\n          anonBg: (() => { const a = document.querySelector('.tavatar-anon');\n                     return a ? getComputedStyle(a).backgroundImage : ''; })(),\n        }; }")
+    check("the fixture has captioned AND uncaptioned cards to compare",
+          _card2["tiles"] >= 3 and 0 < _card2["captioned"] < _card2["tiles"],
+          f"{_card2['captioned']} captioned of {_card2['tiles']} \u2014 a grid that "
+          f"is all one or all the other cannot fail the height row below")
+    check("nothing is drawn over the drawing: no kind, no sound, no marks",
+          _card2["marksOnStage"] == 0 and _card2["soundOnStage"] == 0
+          and _card2["kindOnStage"] == 0 and _card2["marksInHead"] > 0,
+          f"{_card2['marksOnStage']} mark groups on the stage, "
+          f"{_card2['kindOnStage']} kind, {_card2['soundOnStage']} sound; "
+          f"{_card2['marksInHead']} in the head \u2014 the owner asked for the "
+          f"canvas back: nothing but drawing")
+    check("...and EVERY card is the same height, captioned or not",
+          len(_card2["heights"]) == 1 and _card2["closedCapH"] == 0,
+          f"heights {_card2['heights']}, tallest closed caption "
+          f"{_card2['closedCapH']}px \u2014 a caption that costs height makes its "
+          f"neighbour's row stretch, which is the dead space at the bottom of "
+          f"the card beside it")
+    check("...the mark that opens a caption is in the head, and only where "
+          "there is one",
+          _card2["capBtns"] == _card2["captioned"] and _card2["strayCapBtns"] == 0
+          and _card2["capBtnsInHead"] == _card2["capBtns"],
+          f"{_card2['capBtns']} marks for {_card2['captioned']} captions, "
+          f"{_card2['strayCapBtns']} mismatched, {_card2['capBtnsInHead']} in the "
+          f"head \u2014 a card with nothing to say draws no mark at all, rather "
+          f"than a control announcing an absence")
+    check("...and the anonymous avatar is the Skribl star on the accent blend",
+          _card2["anonStar"] and "135deg" in _card2["anonBg"]
+          and "124, 92, 255" in _card2["anonBg"],
+          f"star={_card2['anonStar']} bg={_card2['anonBg'][:80]!r} \u2014 drawn as "
+          f"SVG, not typed as U+1F7CD, which is tofu on most phones")
+
     _evil = _pa.evaluate("""() => {
         const a = [...document.querySelectorAll('.tauth')]
                     .find(x => (x.textContent || '').indexOf('clicky') >= 0);
@@ -1031,101 +1068,50 @@ with sync_playwright() as _spa:
     # THE CAPTION, OVER THE DRAWING. Asserted by PAINT and geometry, not by
     # the class alone: `opacity` is what hides it (the text stays in the
     # accessibility tree), so "hidden" here means a computed opacity of 0.
-    # THE CAPTION CAME OFF THE ART (v308, direction B). It was a scrim over
-    # the drawing because a poster-first card had nowhere else to put it; a
-    # post-like card has room for words, so it is text under the title,
-    # clamped to two lines, and the toggle EXPANDS it rather than revealing
-    # it.
+    # THE CAPTION IS AN ACCORDION IN THE CARD, NOT A CLAMP ABOVE THE DRAWING
+    # (v310). Three designs have now stood here and each assertion below is the
+    # PREVIOUS one inverted, which is the honest way to retire a row:
     #
-    # WHAT THE OLD ASSERTIONS WERE PROTECTING SURVIVES, and it is worth
-    # saying which part: the text had to stay in the accessibility tree at
-    # all times, which is why the scrim used `opacity` and never `display`.
-    # A clamp keeps that for free -- the text is present, and a reader that
-    # does not paint is not affected by a line limit. What goes is the
-    # hover branch, because nothing is hidden any more.
-    _cap = _pa.evaluate("""() => {
-        const t = document.querySelector('.tile');
-        const cap = t.querySelector('.tcap');
-        const st = t.querySelector('.tileStage');
-        const btn = t.querySelector('.tileCapBtn');
-        if (!cap || !st || !btn) return { missing: !cap ? 'cap' : (!st ? 'stage' : 'btn') };
-        const cr = cap.getBoundingClientRect(), sr = st.getBoundingClientRect();
-        const cs = getComputedStyle(cap);
-        const shut = Math.round(cr.height);
-        btn.click();
-        const open = Math.round(cap.getBoundingClientRect().height);
-        const pressed = btn.getAttribute('aria-pressed');
-        btn.click();
-        return { text: cap.textContent,
-                 aboveStage: cr.bottom <= sr.top + 1,
-                 clamp: cs.webkitLineClamp || cs.lineClamp,
-                 display: cs.display, visibility: cs.visibility,
-                 hidden: cap.hasAttribute('hidden'),
-                 shut: shut, open: open, pressed: pressed,
-                 shutAgain: Math.round(cap.getBoundingClientRect().height) }; }""")
-    check("the caption is text under the title, not a scrim on the drawing",
-          not _cap.get("missing") and _cap["aboveStage"]
-          and _cap["text"].startswith("a description long enough"),
-          f"{_cap} \u2014 nothing needs to sit on the picture once the card has"
-          f" somewhere to put words")
-    check("...clamped at rest, and the toggle opens it and shuts it again",
-          not _cap.get("missing") and _cap["clamp"] in ("2", 2)
-          and _cap["open"] > _cap["shut"] and _cap["shutAgain"] == _cap["shut"],
-          f"{_cap} \u2014 a clamp that never opens is a description nobody can"
-          f" finish reading")
-    check("...and the toggle says which state it is in",
-          _cap.get("pressed") == "true", str(_cap))
-
-    # The expander, both cards at once, and the clamp's real height.
-    MORE_JS = """() => {
-        const t = [...document.querySelectorAll('.tile')];
-        const one = t[0], two = t[1];
-        const btn = one && one.querySelector('.tileCapBtn');
-        const cap = one && one.querySelector('.tcap');
-        if (!btn || !cap) return { missing: true };
-        const r = btn.getBoundingClientRect(), cr = cap.getBoundingClientRect();
-        const line = parseFloat(getComputedStyle(cap).lineHeight);
-        const b2 = two && two.querySelector('.tileCapBtn');
-        const c2 = two && two.querySelector('.tcap');
-        return {
-          shown: getComputedStyle(btn).display,
-          word: (btn.textContent || '').trim(),
-          inHead: !!btn.closest('.thead'),
-          afterCap: cap.nextElementSibling === btn,
-          reach: Math.round(r.height) >= 34,
-          capH: Math.round(cr.height), line: Math.round(line),
-          shortShown: b2 ? getComputedStyle(b2).display : 'no-btn',
-          shortClipped: c2 ? c2.scrollHeight > c2.clientHeight + 1 : null }; }"""
-
-    _more = _pa.evaluate(MORE_JS)
-    # WHERE THE EXPANDER LIVES, AND WHERE IT DOES NOT. It was a glyph in the
-    # head beside Report, which cost 44px of the row the display NAME is in --
-    # the row below measures what that cost. It is a word under the sentence
-    # now, and the head is the name's again.
-    check("the caption's expander is a word under the caption, not a glyph in the head",
-          not _more.get("missing") and _more["shown"] != "none"
-          and _more["word"].lower() == "show more"
-          and _more["afterCap"] and not _more["inHead"],
-          f"{_more} \u2014 a speech bubble beside Report does not say 'there is "
-          f"more of this sentence'; two words under the sentence do")
-    # AND ONLY WHERE THE CLAMP ACTUALLY BITES. Tile 1's caption is one line,
-    # so its control must not exist -- asserted on a DIFFERENT card from the
-    # row above, because "it is drawn" and "it is drawn only when needed" are
-    # two claims and one page can satisfy the first while failing the second.
-    check("...and it is absent on a caption the clamp does not fold",
-          not _more.get("missing") and _more["shortClipped"] is False
-          and _more["shortShown"] in ("none", "no-btn"),
-          f"{_more} \u2014 every captioned card used to carry a button that "
-          f"expanded nothing, which is a control that lies about there being more")
-    # THE CLAMP DOES NOT LEAK. `overflow: hidden` clips at the PADDING box, so
-    # a padding-bottom is clipped region the third line shows through: the card
-    # rendered two lines, an ellipsis, and a third line sliced in half. Two
-    # lines of text is the whole box, within a pixel of rounding.
-    check("...and the clamped caption is exactly two lines tall, with nothing under them",
-          not _more.get("missing")
-          and abs(_more["capH"] - 2 * _more["line"]) <= 2,
-          f"{_more} \u2014 {_more.get('capH')}px against {2 * _more.get('line', 0)}px "
-          f"for two lines: anything more is a line bleeding through the clip")
+    #   v307  a scrim OVER the drawing, revealed on hover. Asserted that the
+    #         text stayed in the accessibility tree at all times, which is why
+    #         the scrim used `opacity` and never `display`.
+    #   v308  text under the title, clamped to two lines, "Show more" beneath
+    #         it. Asserted the clamp was exactly two lines and that the word
+    #         appeared only where the clamp actually bit.
+    #   v310  closed to ZERO at rest, opened by a mark in the head. The clamp
+    #         rows cannot survive this and are not meant to: a clamped caption
+    #         still occupies its two lines, and occupying them is what made one
+    #         card taller than its neighbour (owner: "there has to be a way for
+    #         the cards to be the same size with no weird space at the bottom").
+    #
+    # WHAT EVERY VERSION HAS PROTECTED IS THE SAME THING, and it is the only
+    # claim that carries across: the description must be reachable. A clamp
+    # kept it reachable by never hiding it; this keeps it reachable by a
+    # control that is always present when there is anything to read.
+    _cap = _pa.evaluate("() => {\n        const t = [...document.querySelectorAll('.tile')];\n        const one = t[0];\n        const cap = one && one.querySelector('.tcap');\n        const wrap = one && one.querySelector('.tcapWrap');\n        const st = one && one.querySelector('.tileStage');\n        const btn = one && one.querySelector('.tileCapBtn');\n        if (!cap || !wrap || !st || !btn) return { missing: true };\n        const h = e => Math.round(e.getBoundingClientRect().height);\n        const cardH = e => Math.round(e.getBoundingClientRect().height);\n        const shutCard = cardH(one), shutWrap = h(wrap);\n        btn.click();\n        const openCard = cardH(one), openWrap = h(wrap);\n        const pressed = btn.getAttribute('aria-pressed');\n        const expanded = btn.getAttribute('aria-expanded');\n        btn.click();\n        return { text: cap.textContent,\n                 /* the words go BELOW the drawing, so opening does not shove\n                    the picture down the page under the reader */\n                 belowStage: wrap.getBoundingClientRect().top\n                             >= st.getBoundingClientRect().bottom - 1,\n                 inHead: !!btn.closest('.thead'),\n                 word: (btn.textContent || '').trim(),\n                 labelled: (btn.getAttribute('aria-label') || '').length > 8,\n                 reach: (() => { const r = btn.getBoundingClientRect();\n                   const b = getComputedStyle(btn, '::before');\n                   return Math.round(r.height + Math.abs(parseFloat(b.top) || 0) * 2); })(),\n                 shutWrap: shutWrap, openWrap: openWrap,\n                 shutCard: shutCard, openCard: openCard,\n                 shutAgain: h(wrap), pressed: pressed, expanded: expanded }; }")
+    check("the caption opens below the drawing, from a mark in the head",
+          not _cap.get("missing") and _cap["belowStage"] and _cap["inHead"],
+          f"{_cap} \u2014 opening it ABOVE the picture would push the drawing "
+          f"down the page under the reader's cursor; and the mark belongs in the "
+          f"run that already carries the post's other facts (owner)")
+    check("...it costs the card NO height while shut, and opens it when pressed",
+          not _cap.get("missing") and _cap["shutWrap"] == 0
+          and _cap["openWrap"] > 0 and _cap["openCard"] > _cap["shutCard"]
+          and _cap["shutAgain"] == 0,
+          f"{_cap} \u2014 shut must be exactly zero, not a clamp's two lines: a "
+          f"caption that occupies height is what made one card taller than the "
+          f"card beside it")
+    check("...and the mark says which state it is in, and is a control to a finger",
+          not _cap.get("missing") and _cap["pressed"] == "true"
+          and _cap["expanded"] == "true" and _cap["labelled"]
+          and _cap["reach"] >= 34,
+          f"{_cap} \u2014 aria-expanded is what a screen reader reads off a "
+          f"disclosure; the glyph is drawn small and banded out to a finger")
+    check("...and it is a GLYPH now, not the words 'Show more'",
+          not _cap.get("missing") and _cap["word"] == "",
+          f"word={_cap.get('word')!r} \u2014 the v308 row asserted the opposite and "
+          f"was right for a control that sat under the sentence; in a fact run "
+          f"beside a pen and a book, a word is the odd one out")
 
     # THE NAME IS NEVER APPROXIMATE. A clipped handle still reads as a handle;
     # a clipped display name reads as a different person. Measured at 390,
@@ -1689,11 +1675,20 @@ with sync_playwright() as _spi:
           and _bar["ownControls"] == "none" and _bar["ownDur"] == "none",
           f"{_bar} \u2014 two transports on one drawing is the screenshot this "
           f"change is about")
+    # STRENGTHENED IN v310 RATHER THAN RETIRED. It used to read `marks ==
+    # "none"`: the badges were on the stage and a media query hid them in full
+    # screen, so the honest question was whether that rule fired. They are not
+    # on the stage at ALL now -- they moved into the head, because the owner
+    # asked for the drawing to be alone on the canvas everywhere and not only
+    # when it fills the display -- so the stronger claim is available and the
+    # weaker one would now pass on a stage that had grown a new badge and a new
+    # rule to hide it.
     check("...nothing is drawn over the art but the way out",
-          not _bar.get("missing") and _bar["marks"] == "none",
+          not _bar.get("missing") and _bar["marks"] == "no-marks",
           f"{_bar} \u2014 'which of these is which' is a question you have in a "
           f"GRID, and the owner photographed a pen and a speaker over a "
-          f"full-screen drawing")
+          f"full-screen drawing; the answer is now that no badge is ever on the "
+          f"stage, so there is nothing for a media query to hide")
     check("...and the scrubber has its own row above the buttons",
           not _bar.get("missing") and _bar["scrubOwnRow"],
           f"{_bar} \u2014 squeezed between the buttons it is a 6px target on a "
