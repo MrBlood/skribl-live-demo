@@ -4735,7 +4735,17 @@ body.player-mode #canvas {
      Defaults to white so an unset nib matches the original hardcoded look. */
   --nib-rgb: 255,255,255;
   background: radial-gradient(circle, rgba(var(--nib-rgb),0.95) 0 30%, rgba(var(--nib-rgb),0.25) 60%, transparent 70%);
-  box-shadow: 0 0 10px 2px rgba(var(--nib-rgb),0.45);
+  /* THE SAME TWO-TONE HAIRLINE THE IN-POST PLAYER WEARS, inside the glow
+     this bead has always had. Once the tip takes the ink it is laying down it
+     is the same colour as the stroke under it, so on its own line it reads as
+     a slightly thicker bit of line rather than as a pen. The glow alone does
+     not fix that -- it is the ink colour too. A light hairline and a dark one
+     outside it always leave ONE of the pair visible, whatever the ink and
+     whatever the drawing behind it, which is why a marker on a map is drawn
+     this way and not with a single outline. */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9),
+              0 0 0 2px rgba(6, 7, 10, 0.5),
+              0 0 10px 2px rgba(var(--nib-rgb),0.45);
   transition: opacity 0.12s ease;
 }
 .player-nib[hidden] { display: none; }

@@ -264,8 +264,9 @@
   width: var(--nb, 8px);
   height: var(--nb, 8px);
   border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 0 0 calc(var(--nb, 8px) * 0.38) rgba(255, 255, 255, 0.22);
+  background: linear-gradient(var(--nib-c, #fff), var(--nib-c, #fff)), #fff;
+  box-shadow: 0 0 0 1.25px rgba(255, 255, 255, 0.92),
+              0 0 0 2.5px rgba(6, 7, 10, 0.5);
   transform: translate(-50%, -50%);
   opacity: 0;
   pointer-events: none;

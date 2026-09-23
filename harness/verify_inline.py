@@ -1610,7 +1610,7 @@ with sync_playwright() as sp:
     #
     # 35,920 -> 36,760, measured 36,725, pinned 35 B above it.
     #
-    # 36,760 -> 37,000, measured 36,957, pinned 43 B above it. THE NIB IS A
+    # 36,760 -> 37,200, measured 37,124, pinned 76 B above it. THE NIB IS A
     # SIZE IN THE DRAWING NOW, not a size on the screen. It was 8px of CSS
     # wherever it appeared, so the one element that is supposed to say "a pen
     # is here, this size" was the only thing on the surface that did not answer
@@ -1620,9 +1620,36 @@ with sync_playwright() as sp:
     # occurs?"). The player already computes that scale every frame for the
     # nib's POSITION; this spends the bytes to use it for the size too.
     #
-    # +46 B of CSS (`var(--nb, 8px)` twice and a calc() for the ring, in place
-    # of three literals) and +151 B of script, which is a scale cache, a clamp
-    # and one setProperty.
+    # +144 B of CSS and +220 B of script, ONE ENTRY FOR THE WHOLE NIB PASS
+    # rather than a raise per round: the size, the damping and the ink are one
+    # piece of work in one release, and three notes about the same element
+    # would be noise at a number that is supposed to make the next person
+    # argue. What the bytes are:
+    #
+    #   SIZE      `var(--nb, 8px)` twice and a calc() for the ring, in place of
+    #             three literals; a scale cache, a clamp and one setProperty.
+    #   DAMPING   a square root. The first cut scaled the bead LINEARLY, which
+    #             is right for a stroke and wrong for a nib -- the drawing
+    #             quadrupled in full screen and so did the bead (owner: "full
+    #             size looks good but nib is huge now"). A nib is the point of
+    #             contact of a pen, and a pen held over a bigger picture is
+    #             still a pen.
+    #   INK       the bead takes the colour it is laying down. It was white
+    #             whatever the pen was, which reads as a cursor hovering over
+    #             the drawing rather than as the pen making it -- and the
+    #             shared-link player has tinted its bead since it was written,
+    #             so the two implementations disagreed about something a person
+    #             sees side by side.
+    #
+    # THE ALPHA IS HANDLED IN THE SHEET, and that is where the CSS half mostly
+    # went: a stroke may carry alpha (`rgba()`, and the 8-digit hex a Motion
+    # Smear writes -- app.js has anyStrokeAlpha for exactly this), and a
+    # half-transparent bead over a dark canvas is barely there. The ink is laid
+    # over an opaque white base, so a faint pen gives a pale nib rather than a
+    # ghost. That is the same intent as the other player's alpha strip, bought
+    # for one declaration instead of a colour parser in a file a host pays for
+    # by the byte. `color-mix` draws the ring from the same colour; a browser
+    # too old for it drops that one declaration and keeps the dot.
     #
     # THE CARVE, -264 B: the paragraph explaining `--nb` beside the CSS rule.
     # That file's header says product reasoning belongs in inlineplayer.js's,
@@ -1631,7 +1658,7 @@ with sync_playwright() as sp:
     # for. The explanation is in the script, where it costs nothing, and the
     # rule is three declarations a reader can follow without it. Without that
     # carve this change was 461 B rather than 197.
-    EMBED_RATCHET = 37_000
+    EMBED_RATCHET = 37_200
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

@@ -2279,6 +2279,122 @@ with sync_playwright() as _spi:
     _pi.close()
     _bi.close()
 
+# ---------------------------------------------------------------------------
+print("\nGALLERY \u2014 the nib is the pen, not a cursor over it")
+# TWO PROPERTIES THAT PULL AGAINST EACH OTHER, both the owner's. Pinned at 8px
+# of CSS the bead was a boulder on an 84px library thumb; scaled in proportion
+# it became a ball in full screen ("full size looks good but nib is huge now").
+# So the size is asked as a RANGE: it grows with the drawing, and by less than
+# the drawing grows. A nib is the point of contact of a pen, and a pen held
+# over a bigger picture is still a pen.
+#
+# ITS OWN SECTION, AND THAT IS THE POINT OF IT. The first two drafts of these
+# rows were spliced into the full-screen census above, which arrives at its
+# measurements in an order of its own: one read both ends after the click and
+# reported the drawing SHRINKING by 0.32x, the other read the resting end on a
+# card that had never been played and found no canvas at all. A page of its
+# own plays the card, measures, enlarges, measures, and disturbs nothing.
+with sync_playwright() as _spn:
+    _bn = _spn.chromium.launch()
+    _pn = _bn.new_context().new_page()
+    _pn.set_viewport_size({"width": 1100, "height": 900})
+    post_public_api("nib fixture")
+    browsing.goto(_pn, BASE, "/gallery")
+    _pn.wait_for_timeout(1800)
+    _NIB = """() => {
+        const t = document.querySelector(".tile");
+        const n = t && t.querySelector(".skribl-inline-nib");
+        const c = t && t.querySelector("canvas");
+        if (!n || !c) return { missing: true };
+        const cs = getComputedStyle(n);
+        /* THE SCALE, NOT THE CANVAS'S WIDTH, and the difference is what
+           the first draft of the row below got wrong. On a card the
+           canvas element IS the drawing; in full screen it is the
+           container and the drawing is letterboxed inside it by
+           object-fit, so the two are not the same measurement. And the
+           limiting axis can CHANGE between them -- width-limited on the
+           card, height-limited on a screen -- which is exactly how a
+           linearly scaled bead slipped under a test that compared it to
+           the canvas width: 2.86x against 3.06x, green, on the law the
+           owner had just rejected. The scale is what the player itself
+           uses, so it is what the bead has to be judged against. */
+        const box = t.querySelector("[data-skribl-inline]");
+        const aw = +(box && box.getAttribute("data-skribl-w")) || 0;
+        const ah = +(box && box.getAttribute("data-skribl-h")) || 0;
+        const cr = c.getBoundingClientRect();
+        const sc = (aw && ah) ? Math.min(cr.width / aw, cr.height / ah) : 0;
+        /* EVERY LAYER OF THE RING, as channel triples. The first draft of
+           the row below asked whether the shadow string contained "rgb",
+           which rgba(255,255,255,.22) does -- the white it was supposed to
+           have stopped being. And the answer it wanted then is the wrong
+           answer now: the ring is DELIBERATELY not the ink, because a
+           tinted halo round a tinted dot is one colour and that colour is
+           the stroke's, so the bead vanished into its own line. */
+        const layers = (cs.boxShadow.match(/rgba?\([^)]*\)/g) || [])
+          .map(x => (x.match(/[\d.]+/g) || []).slice(0, 3).map(Number));
+        return { nib: +n.getBoundingClientRect().width.toFixed(2),
+                 canvas: Math.round(cr.width), scale: +sc.toFixed(4),
+                 layers: layers,
+                 painted: cs.opacity !== "0",
+                 ink: n.style.getPropertyValue("--nib-c"),
+                 bg: cs.backgroundImage,
+                 ring: cs.boxShadow }; }"""
+    _pn.evaluate("() => { const s = document.querySelector('.tile .tileStage');"
+                 " if (s) s.dispatchEvent(new PointerEvent('pointerdown',"
+                 " {bubbles: true})); }")
+    _pn.evaluate("() => document.querySelector('.tile .skfull-card .skfull-play').click()")
+    _pn.wait_for_timeout(1500)
+    _n1 = _pn.evaluate(_NIB)
+    check("a nib is on screen while a card plays, with a size to grow from",
+          not _n1.get("missing") and _n1["painted"] and (_n1.get("nib") or 0) > 0
+          and (_n1.get("scale") or 0) > 0,
+          f"{_n1} \u2014 the ratio below needs both ends, and a card that never "
+          f"started has neither a canvas nor a bead")
+    _pn.evaluate("() => document.querySelector('.tile .skfull-card .skfull-full').click()")
+    _pn.wait_for_timeout(1600)
+    _n2 = _pn.evaluate(_NIB)
+    _gn = (_n2.get("nib") or 0) / (_n1.get("nib") or 1)
+    _gs = (_n2.get("scale") or 0) / (_n1.get("scale") or 1)
+    # WELL under, not merely under. A linearly scaled bead grows by EXACTLY the
+    # scale, so `< _gs` alone separates the two laws by nothing but rounding --
+    # and with the limiting axis changing between a card and a screen it does
+    # not even do that reliably. Three quarters is comfortably clear of the
+    # square root (1.72x against a 2.95x scale here) and nowhere near linear.
+    check("the nib grows with the drawing, and by much less than the drawing grows",
+          not _n2.get("missing") and 1.0 < _gn < _gs * 0.75,
+          f"the bead grew {_gn:.2f}x while the drawing's scale grew {_gs:.2f}x "
+          f"({_n1.get('nib')}px to {_n2.get('nib')}px) \u2014 at 1.00 it is "
+          f"pinned in CSS and at {_gs:.2f} it is a ball in full screen; the "
+          f"whole point is that it is neither")
+    _white = ("", "#fff", "#ffffff", "white")
+    check("...and the DOT is drawn in the ink it is laying down, not in white",
+          (_n2.get("ink") or "").strip().lower() not in _white
+          and "rgb" in (_n2.get("bg") or ""),
+          f"{_n2} \u2014 the fixture draws in a colour, so a bead reporting "
+          f"white is a cursor hovering over somebody's drawing rather than "
+          f"the pen making it")
+    # AND THE RING IS NOT THE INK, which is the correction the ink made
+    # necessary and is the opposite of what this row asked a draft ago. A
+    # tinted halo round a tinted dot is ONE colour, and that colour is the
+    # colour of the stroke the bead is sitting on -- so the tip disappeared
+    # into its own line and read as a slightly thicker bit of line.
+    #
+    # A light hairline and a dark one outside it: whatever the ink is and
+    # whatever is behind it, one of the pair contrasts. It is how a marker on
+    # a map is drawn, and for the same reason. Asserted as "light then dark",
+    # because a single ring of either colour is the failure -- one of them is
+    # always the same as something it has to be told apart from.
+    _ly = _n2.get("layers") or []
+    check("...inside a ring that is NOT the ink, so the tip reads on its own stroke",
+          len(_ly) >= 2 and len(_ly[0]) == 3 and len(_ly[1]) == 3
+          and min(_ly[0]) > 200 and max(_ly[1]) < 60,
+          f"ring layers {_ly} \u2014 wanted a light hairline and a dark one "
+          f"outside it; one layer, or a layer the colour of the ink, is a "
+          f"halo that vanishes on exactly the stroke it is marking")
+    _pn.close()
+    _bn.close()
+
+
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")
 sys.exit(0 if passed == len(results) else 1)
