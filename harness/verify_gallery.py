@@ -2307,8 +2307,31 @@ with sync_playwright() as _spn:
         const c = t && t.querySelector("canvas");
         if (!n || !c) return { missing: true };
         const cs = getComputedStyle(n);
+        /* THE SCALE, NOT THE CANVAS'S WIDTH, and the difference is what
+           the first draft of the row below got wrong. On a card the
+           canvas element IS the drawing; in full screen it is the
+           container and the drawing is letterboxed inside it by
+           object-fit, so the two are not the same measurement. And the
+           limiting axis can CHANGE between them -- width-limited on the
+           card, height-limited on a screen -- which is exactly how a
+           linearly scaled bead slipped under a test that compared it to
+           the canvas width: 2.86x against 3.06x, green, on the law the
+           owner had just rejected. The scale is what the player itself
+           uses, so it is what the bead has to be judged against. */
+        const box = t.querySelector("[data-skribl-inline]");
+        const aw = +(box && box.getAttribute("data-skribl-w")) || 0;
+        const ah = +(box && box.getAttribute("data-skribl-h")) || 0;
+        const cr = c.getBoundingClientRect();
+        const sc = (aw && ah) ? Math.min(cr.width / aw, cr.height / ah) : 0;
+        /* A RING THE COLOUR OF THE INK IS NOT GREY, which is the whole
+           of the second row. Asking whether the shadow string contains
+           "rgb" passes on rgba(255,255,255,.22) -- the white it is
+           supposed to have stopped being. Channels that are all equal
+           are a grey, whatever notation they arrive in. */
+        const ch = (cs.boxShadow.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
         return { nib: +n.getBoundingClientRect().width.toFixed(2),
-                 canvas: Math.round(c.getBoundingClientRect().width),
+                 canvas: Math.round(cr.width), scale: +sc.toFixed(4),
+                 ringGrey: ch.length === 3 && ch[0] === ch[1] && ch[1] === ch[2],
                  painted: cs.opacity !== "0",
                  ink: n.style.getPropertyValue("--nib-c"),
                  bg: cs.backgroundImage,
@@ -2321,25 +2344,30 @@ with sync_playwright() as _spn:
     _n1 = _pn.evaluate(_NIB)
     check("a nib is on screen while a card plays, with a size to grow from",
           not _n1.get("missing") and _n1["painted"] and (_n1.get("nib") or 0) > 0
-          and (_n1.get("canvas") or 0) > 0,
+          and (_n1.get("scale") or 0) > 0,
           f"{_n1} \u2014 the ratio below needs both ends, and a card that never "
           f"started has neither a canvas nor a bead")
     _pn.evaluate("() => document.querySelector('.tile .skfull-card .skfull-full').click()")
     _pn.wait_for_timeout(1600)
     _n2 = _pn.evaluate(_NIB)
     _gn = (_n2.get("nib") or 0) / (_n1.get("nib") or 1)
-    _gc = (_n2.get("canvas") or 0) / (_n1.get("canvas") or 1)
-    check("the nib grows with the drawing, and by less than the drawing grows",
-          not _n2.get("missing") and 1.0 < _gn < _gc,
-          f"the bead grew {_gn:.2f}x while the drawing grew {_gc:.2f}x "
+    _gs = (_n2.get("scale") or 0) / (_n1.get("scale") or 1)
+    # WELL under, not merely under. A linearly scaled bead grows by EXACTLY the
+    # scale, so `< _gs` alone separates the two laws by nothing but rounding --
+    # and with the limiting axis changing between a card and a screen it does
+    # not even do that reliably. Three quarters is comfortably clear of the
+    # square root (1.72x against a 2.95x scale here) and nowhere near linear.
+    check("the nib grows with the drawing, and by much less than the drawing grows",
+          not _n2.get("missing") and 1.0 < _gn < _gs * 0.75,
+          f"the bead grew {_gn:.2f}x while the drawing's scale grew {_gs:.2f}x "
           f"({_n1.get('nib')}px to {_n2.get('nib')}px) \u2014 at 1.00 it is "
-          f"pinned in CSS and at {_gc:.2f} it is a ball in full screen; the "
+          f"pinned in CSS and at {_gs:.2f} it is a ball in full screen; the "
           f"whole point is that it is neither")
     _white = ("", "#fff", "#ffffff", "white")
     check("...and it is drawn in the ink it is laying down, not in white",
           (_n2.get("ink") or "").strip().lower() not in _white
           and "rgb" in (_n2.get("bg") or "")
-          and "rgb" in (_n2.get("ring") or ""),
+          and _n2.get("ringGrey") is False,
           f"{_n2} \u2014 the fixture draws in a colour, so a bead reporting "
           f"white is a cursor hovering over somebody's drawing rather than "
           f"the pen making it; the ring has to take it too, or the dot is the "

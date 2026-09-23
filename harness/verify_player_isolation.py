@@ -1328,6 +1328,59 @@ with sync_playwright() as sp:
           f"{_NIB_REST_STATE} — the known-good arm: if this cannot find ink "
           f"under a correctly placed nib, the full-screen row below is "
           f"measuring the probe and not the player")
+    # ---- A SIZE IN THE DRAWING, AND DAMPED -------------------------------
+    #
+    # Two failures on opposite sides of one property, so the row asks for a
+    # range. A nib pinned in CSS does not grow at all (it was, at 14px, and was
+    # a boulder on a thumb); a nib scaled in proportion grows exactly as much
+    # as the drawing (it was, for one round, and the owner got a ball on a pug:
+    # "full size looks good but nib is huge now"). A nib is the point of
+    # contact of a pen, and a pen held over a bigger picture is still a pen.
+    #
+    # MEASURED ACROSS TWO VIEWPORT WIDTHS, NOT ACROSS FULL SCREEN, and that is
+    # this row's second draft. Between this page and a full screen the drawing's
+    # scale moves by about a quarter -- so a linearly scaled bead rounded to
+    # whole pixels came out at 1.24x against a 1.25x drawing and went GREEN on
+    # the law the owner had just rejected. At 390 against 1180 the scale moves
+    # by 1.7, which is enough: measured, the damped bead grows 1.19x and a
+    # linear one 1.78x against the same 1.72x drawing, so the gate sits between
+    # them at 0.9 of the drawing's growth.
+    #
+    # NINE TENTHS AND NOT THREE QUARTERS, because the CLAMP is in the way at
+    # this end of the range: at 390 the bead wants 5.7px and the floor gives it
+    # 7, which flattens the ratio the law would otherwise produce. The floor is
+    # not negotiable -- under about seven pixels this bead, a radial gradient
+    # whose inner third is the only opaque part, is not a pen tip -- so the row
+    # is written to hold with it rather than pretending it is not there.
+    _NIB_AT = """() => {
+        const c = document.querySelector('.canvas-wrap > canvas');
+        const n = document.querySelector('.player-nib');
+        if (!c || !n || n.hidden) return { missing: true };
+        return { nib: +n.getBoundingClientRect().width.toFixed(2),
+                 draw: +c.getBoundingClientRect().width.toFixed(2) }; }"""
+    _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
+                 " if (b) b.click(); }")
+    _fp.wait_for_timeout(700)
+    _fp.set_viewport_size({"width": 390, "height": 844})
+    _fp.wait_for_timeout(500)
+    _small = _fp.evaluate(_NIB_AT)
+    _fp.set_viewport_size({"width": 1180, "height": 900})
+    _fp.wait_for_timeout(500)
+    _big = _fp.evaluate(_NIB_AT)
+    _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
+                 " if (b) b.click(); }")
+    _fp.wait_for_timeout(200)
+    _gn = (_big.get("nib") or 0) / (_small.get("nib") or 1)
+    _gd = (_big.get("draw") or 0) / (_small.get("draw") or 1)
+    check("the nib grows with the drawing, and by much less than the drawing grows",
+          not _small.get("missing") and not _big.get("missing")
+          and _gd > 1.5 and 1.0 < _gn < _gd * 0.9,
+          f"the bead grew {_gn:.2f}x while the drawing grew {_gd:.2f}x "
+          f"({_small.get('nib')}px to {_big.get('nib')}px) \u2014 at 1.00 it is "
+          f"pinned in CSS and at {_gd:.2f} it is a ball on a big screen; the "
+          f"whole point is that it is neither, and a scale range under 2x "
+          f"cannot tell the two apart")
+
     _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
                  " if (b) b.click(); }")
     _fp.wait_for_timeout(200)
@@ -1491,23 +1544,6 @@ with sync_playwright() as sp:
               f"{_nib_fs} \u2014 the bead is placed from the wrapper's corner and "
               f"scaled by its width; in full screen the wrapper is the screen "
               f"and the canvas is centred in it, so both were wrong at once")
-        # A SIZE IN THE DRAWING, AND DAMPED. Two failures to separate and one
-        # row cannot do it, so the property is a RANGE rather than a floor:
-        # the bead has to grow with the drawing, and by less than the drawing
-        # grows. A nib fixed in CSS sits at the bottom of that range (it was,
-        # at 14px, and was a boulder on a thumb); a nib scaled linearly sits at
-        # the top (it was, for one round, and the owner got a ball on a pug:
-        # "full size looks good but nib is huge now"). A nib is the point of
-        # contact of a pen, and a pen held over a bigger picture is still a
-        # pen.
-        _grew = (_nib_fs.get("nib") or 0) / (_NIB_REST or 1)
-        _drew = (_sz["w"] or 0) / (_rest_w or 1)
-        check("...and it is a size in the DRAWING, damped",
-              not _nib_fs.get("missing") and 1.0 < _grew < _drew,
-              f"the bead grew {_grew:.2f}x while the drawing grew {_drew:.2f}x "
-              f"({_NIB_REST}px to {_nib_fs.get('nib')}px) \u2014 at 1.00 it is "
-              f"pinned in CSS and at {_drew:.2f} it is a ball in full screen; "
-              f"the whole point is that it is neither")
 
         # EXITED THROUGH THAT CONTROL, and
         # getting here took two wrong turns worth recording. Escape first:
