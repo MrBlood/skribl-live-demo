@@ -769,8 +769,20 @@ with sync_playwright() as _spa:
                 # probe could not tell a working toggle from a dead one, and
                 # said so: shut 28, open 28.
                 item["caption"] = ('a description long enough to need more than two lines on a card this wide, so that the clamp has something to fold and the toggle has something to unfold, which a one-line caption cannot show')
+                # A PLAY COUNT, so the narrow-tier row below has something to
+                # stand down. The listing's own fixtures post with 0 views and
+                # gallery.js draws no count at all for those -- against which
+                # "the count is hidden at 390" is green on a page that never
+                # had one.
+                item["views"] = 42
             elif i == 1:
                 item["author"] = dict(_EVIL)
+                # SHORT ON PURPOSE, and it is the other half of the toggle
+                # rows below: a caption the clamp does not fold is the case
+                # where the control must NOT be drawn, and without one on the
+                # page "the toggle appears where it is needed" passes on a
+                # grid that draws it everywhere.
+                item["caption"] = "one short line"
             # every other row keeps NO author, which is the absence case
         route.fulfill(response=r, json=data)
 
@@ -875,6 +887,88 @@ with sync_playwright() as _spa:
           f" finish reading")
     check("...and the toggle says which state it is in",
           _cap.get("pressed") == "true", str(_cap))
+
+    # The expander, both cards at once, and the clamp's real height.
+    MORE_JS = """() => {
+        const t = [...document.querySelectorAll('.tile')];
+        const one = t[0], two = t[1];
+        const btn = one && one.querySelector('.tileCapBtn');
+        const cap = one && one.querySelector('.tcap');
+        if (!btn || !cap) return { missing: true };
+        const r = btn.getBoundingClientRect(), cr = cap.getBoundingClientRect();
+        const line = parseFloat(getComputedStyle(cap).lineHeight);
+        const b2 = two && two.querySelector('.tileCapBtn');
+        const c2 = two && two.querySelector('.tcap');
+        return {
+          shown: getComputedStyle(btn).display,
+          word: (btn.textContent || '').trim(),
+          inHead: !!btn.closest('.thead'),
+          afterCap: cap.nextElementSibling === btn,
+          reach: Math.round(r.height) >= 34,
+          capH: Math.round(cr.height), line: Math.round(line),
+          shortShown: b2 ? getComputedStyle(b2).display : 'no-btn',
+          shortClipped: c2 ? c2.scrollHeight > c2.clientHeight + 1 : null }; }"""
+
+    _more = _pa.evaluate(MORE_JS)
+    # WHERE THE EXPANDER LIVES, AND WHERE IT DOES NOT. It was a glyph in the
+    # head beside Report, which cost 44px of the row the display NAME is in --
+    # the row below measures what that cost. It is a word under the sentence
+    # now, and the head is the name's again.
+    check("the caption's expander is a word under the caption, not a glyph in the head",
+          not _more.get("missing") and _more["shown"] != "none"
+          and _more["word"].lower() == "show more"
+          and _more["afterCap"] and not _more["inHead"],
+          f"{_more} \u2014 a speech bubble beside Report does not say 'there is "
+          f"more of this sentence'; two words under the sentence do")
+    # AND ONLY WHERE THE CLAMP ACTUALLY BITES. Tile 1's caption is one line,
+    # so its control must not exist -- asserted on a DIFFERENT card from the
+    # row above, because "it is drawn" and "it is drawn only when needed" are
+    # two claims and one page can satisfy the first while failing the second.
+    check("...and it is absent on a caption the clamp does not fold",
+          not _more.get("missing") and _more["shortClipped"] is False
+          and _more["shortShown"] in ("none", "no-btn"),
+          f"{_more} \u2014 every captioned card used to carry a button that "
+          f"expanded nothing, which is a control that lies about there being more")
+    # THE CLAMP DOES NOT LEAK. `overflow: hidden` clips at the PADDING box, so
+    # a padding-bottom is clipped region the third line shows through: the card
+    # rendered two lines, an ellipsis, and a third line sliced in half. Two
+    # lines of text is the whole box, within a pixel of rounding.
+    check("...and the clamped caption is exactly two lines tall, with nothing under them",
+          not _more.get("missing")
+          and abs(_more["capH"] - 2 * _more["line"]) <= 2,
+          f"{_more} \u2014 {_more.get('capH')}px against {2 * _more.get('line', 0)}px "
+          f"for two lines: anything more is a line bleeding through the clip")
+
+    # THE NAME IS NEVER APPROXIMATE. A clipped handle still reads as a handle;
+    # a clipped display name reads as a different person. Measured at 390,
+    # which is where the head's row is genuinely full, and on the card that
+    # ALSO carries a caption and its expander -- the crowded case, not the
+    # roomy one.
+    _pa.set_viewport_size({"width": 390, "height": 900})
+    _pa.wait_for_timeout(400)
+    _narrow = _pa.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const dn = t.querySelector('.tdn'), un = t.querySelector('.tun');
+        const plays = t.querySelector('.plays');
+        const head = t.querySelector('.thead');
+        return { w: window.innerWidth,
+                 dnCut: dn.scrollWidth > dn.clientWidth + 1,
+                 dnText: dn.textContent,
+                 unThere: !!un,
+                 plays: plays ? getComputedStyle(plays).display : 'absent',
+                 slack: Math.round(head.getBoundingClientRect().width)
+                        - [...head.children].reduce((a, e) =>
+                            a + e.getBoundingClientRect().width, 0) }; }""")
+    check("at 390 the display name is not ellipsised",
+          _narrow["w"] == 390 and _narrow["dnCut"] is False,
+          f"{_narrow} \u2014 `margin-left: auto` on the time ate the free space "
+          f"before the name could have it, and this said 'Mr\u2026'")
+    check("...because the count stood down, not because the head had room to spare",
+          _narrow["plays"] == "none" and _narrow["unThere"],
+          f"{_narrow} \u2014 if the row still fits with the count in it, this "
+          f"tier is not doing anything and the next long name will clip again")
+    _pa.set_viewport_size({"width": 1100, "height": 1000})
+    _pa.wait_for_timeout(300)
 
     # ---- THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE (v308) ------------
     # Direction B puts the transport under the drawing. Rather than write a

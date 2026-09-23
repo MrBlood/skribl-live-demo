@@ -148,12 +148,19 @@
        share a flex row with the time, the play count and two buttons. */
     .tile .tt { font-size: 13.5px; color: var(--text-2); overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; min-width: 0; margin-top: 1px; }
-    /* NO `margin-left: auto` HERE, and that one property was the phone bug.
-       An auto margin absorbs every pixel of free space in the row BEFORE the
-       flexible items get any, so `.tauth` never grew past its content and the
-       name was ellipsised to "M." on a 390px card while 66px of the row sat
-       empty between the time and Report. `.tauth` is `flex: 1 1 auto`; that
-       is already what pushes the meta to the right edge. */
+    /* NO `margin-left: auto` HERE. An auto margin absorbs every pixel of free
+       space in the row BEFORE the flexible items get any, so `.tauth` never
+       grew past its content: 66px sat empty between the time and Report while
+       the head looked crowded. `.tauth` is `flex: 1 1 auto`, which is already
+       what pushes the meta to the right edge, so the margin bought nothing and
+       defeated the growth it looked like it was arranging.
+
+       IT WAS NOT THE TRUNCATION, and the mutation is what says so: put the
+       auto margin back today and every row stays green, because a content-
+       sized `.tauth` is still wide enough once the expander has left the head.
+       The name was being cut by the head being 44px + 51px too full -- see the
+       expander's note below and the count's above. Kept anyway: a property
+       that quietly cancels `flex: 1` is a trap the next widening walks into. */
     .tile .tm { flex: none; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
     /* WHO MADE IT, under the title. Skribl has no user table: every field
        here is what the HOST's resolver returned for the post's user_id, and
@@ -208,7 +215,7 @@
        those 44px were the difference between "Mr. B" and "Mr…". A word under
        the text also says what it does, which a speech bubble did not. */
     .tile .tileCapBtn {
-      align-self: flex-start; margin: -4px 0 10px; padding: 6px 13px;
+      align-self: flex-start; margin: -6px 0 8px; padding: 10px 13px;
       display: inline-block; position: relative;
       background: none; border: 0; color: var(--accent);
       font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
