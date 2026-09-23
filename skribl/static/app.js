@@ -4425,18 +4425,18 @@ function showPlayerError(msg, canRetry) {
     if (!p) { nib.hidden = true; return; }
     const g = nibGeom();
     const s = g.s;
-    // A SIZE IN THE DRAWING, not a size on the screen -- and DAMPED, by the
-    // same square root and for the same reason inlineplayer.js states at
-    // length: a nib is the point of contact of a pen, and a pen held over a
-    // bigger picture is still a pen. Scaled linearly it became a ball in full
-    // screen.
+    // A SIZE IN THE PEN, by the same rule and for the reasons inlineplayer.js
+    // states at length: `p.size * s` is how wide the stroke comes out on this
+    // screen, and a nib is a little over that. It answers to the scale and to
+    // the pen at once, and cannot be out of proportion with the line it is
+    // making, because it is defined against that line.
     //
-    // 1.75x the in-post player's numbers, which is the ratio the two fixed
-    // sizes had (14px here against 8px there) and is not arbitrary: this bead
-    // is a radial gradient whose inner 30% is the only opaque part, so it has
-    // to be wider than a solid dot to read as the same size of point.
+    // 1.9x rather than 1.4x, which is the shape of THIS bead and not a
+    // different opinion: it is a radial gradient whose inner 30% is the only
+    // opaque part, so the element has to be wider than a solid dot for the
+    // visible point to come out the same size.
     nib.style.setProperty('--nb',
-      Math.max(7, Math.min(16, 8.75 * Math.sqrt(s))) + 'px');
+      Math.max(5, Math.min(90, 1.9 * (p.size || 8) * s)) + 'px');
     nib.style.left = (g.ox + p.x * s) + 'px';
     nib.style.top = (g.oy + p.y * s) + 'px';
     nib.classList.toggle('erase', !!p.erase);
