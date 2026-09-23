@@ -114,6 +114,22 @@ in-post player is the other shape:
 demonstration, not a dependency: the two macros above are the product and they
 work without it.
 
+**Pass the drawing's size if you have it.** `skribl_inline` takes two optional
+arguments, `canvas_w` and `canvas_h` — `post.canvas_w` and `post.canvas_h`, or
+the two keys of the same name off the listing JSON:
+
+```jinja
+{{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h) }}
+```
+
+With them, the idle poster is framed exactly where the drawing will be when it
+plays. Without them it is cropped to the share card's full band, which for a
+drawing that is not 16:9 leaves the card's own ground and its plate border
+either side of the picture. They are optional because `canvasSize` is optional
+in a payload and because upgrading the package must not silently change the
+shape of a host's posters; both or neither, since one edge alone frames
+nothing. A post written before v309 answers null for both and gets the band.
+
 **What it costs and when.** `skribl_inline_assets()` pulls five files —
 `inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
 `lib/canvassizes.js`, `lib/holdtiming.js` and `lib/audiosession.js` — under a

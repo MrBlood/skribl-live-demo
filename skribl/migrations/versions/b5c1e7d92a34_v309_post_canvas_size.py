@@ -166,6 +166,15 @@ def upgrade():
     # Belt and braces for a half-written row: if one branch ever lands a width
     # without a height, neither is usable, so clear both rather than serve a
     # number the client would have to complete by guessing.
+    #
+    # NO TEST CAN REDDEN THIS LINE TODAY, and saying so is the point. Every
+    # branch above writes the pair or writes neither -- the two SQL statements
+    # require both keys before they update, the Python loop skips a row it
+    # could not read whole -- so removing this changes nothing that
+    # verify_migrations can see, and a mutation proved exactly that. It stays
+    # as a guard on a FUTURE branch, not as a claim anything is verified here.
+    # What the suite does pin is the outcome: no row leaves this revision
+    # carrying one edge alone.
     bind.execute(sa.text(
         "UPDATE skribl_posts SET canvas_w = NULL, canvas_h = NULL "
         "WHERE canvas_w IS NULL OR canvas_h IS NULL"))
