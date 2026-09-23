@@ -1518,6 +1518,28 @@ with sync_playwright() as _spa:
           f"drawing gets the card back; a reveal with no way down is a card "
           f"that is lit from its first tap to its last")
 
+    # THE TWO PAGES WEAR THE LOCKUP THE SAME WAY. The gallery's is an <a>
+    # (it is the way back to the editor) and the library's is a <div>, so an
+    # unstyled anchor put a browser underline under the word GALLERY and
+    # nothing under LIBRARY -- two pages of one product, differing in the one
+    # element that says which product it is (owner: "get rid of the underlined
+    # GALLERY (LIBRARY is also not underlined)").
+    #
+    # `text-decoration-line` and not the shorthand: the shorthand resolves to
+    # a string carrying the colour and style too, which move with the theme.
+    _brand = _pa.evaluate("""() => {
+        const b = document.querySelector('.brand');
+        const t = b && b.querySelector('.tag');
+        if (!b || !t) return { missing: true };
+        return { tag: t.textContent.trim(),
+                 brand: getComputedStyle(b).textDecorationLine,
+                 word: getComputedStyle(t).textDecorationLine }; }""")
+    check("the wordmark carries no underline, on either the link or the word",
+          not _brand.get("missing") and _brand["brand"] == "none"
+          and _brand["word"] == "none",
+          f"{_brand} \u2014 an <a> with no `text-decoration` is underlined by the "
+          f"browser, and the library's lockup is a <div> that never was")
+
     # THE CARD'S MENU IS THE MENU THIS PRODUCT ALREADY HAS. The first cut
     # invented its own -- no glyphs, 8px corners, flush text -- so somebody who
     # had met the editor's menu met a different one here ("should have icons

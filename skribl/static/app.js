@@ -4110,12 +4110,14 @@ function showPlayerError(msg, canRetry) {
     // sheet uses to centre the canvas does not come off here and the number
     // has to be subtracted by hand -- if it were not, the scale and the
     // centring would disagree and the drawing would be pushed off the top.
-    if (fsFull) {
-      const _pb = document.getElementById('playerBar');
-      const _band = (_pb && _pb.offsetHeight) || 0;
-      return Math.min(canvasWrap.clientWidth / authorW,
-                      Math.max(1, canvasWrap.clientHeight - _band) / authorH);
-    }
+    // ONE SOURCE FOR THE BAND. `--pbar` is the height _syncFull measured when
+    // it moved the bar in; reading it back is both shorter than a second DOM
+    // lookup and the only way the scale and the sheet's centring cannot
+    // disagree -- they are then the same number rather than two measurements
+    // of the same thing taken at different moments.
+    if (fsFull) return Math.min(canvasWrap.clientWidth / authorW,
+      Math.max(1, canvasWrap.clientHeight
+        - (parseFloat(canvasWrap.style.getPropertyValue('--pbar')) || 0)) / authorH);
     // Measure the COLUMN the canvas actually lives in, not the viewport. This
     // used to be `window.innerWidth - 40`, and .app has a max-width: on a 1023px
     // viewport the column is 718px, so the scale came out at the 1:1 cap and the

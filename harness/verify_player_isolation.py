@@ -1027,7 +1027,37 @@ with sync_playwright() as sp:
     # The PAGE's own HTML paid the other half of this feature and paid it
     # DOWN -- see HTML_RATCHET below, where two full-width link rows came out
     # of the layout and three controls went into the transport for a net 233 B.
-    BYTES_RATCHET, BYTES_TARGET = 154_800, 153_800
+    # RAISED 154,800 -> 155,300 so full screen HAS a transport, measured
+    # 155,197 (app.js 137,371 -> 137,796). The TARGET stays 153,800, for the
+    # reason the first raise gives: this is a ratchet admitting a control the
+    # surface was missing, not a target being let go.
+    #
+    # WHAT WAS MISSING. Full screen renders only the top-layer subtree, and the
+    # transport is in .player-shell BELOW the wrapper that goes full screen --
+    # so a person who pressed the control got a drawing, a close button, and no
+    # way to pause, scrub, loop or change speed. The owner photographed it.
+    #
+    # SPENT AGAINST FIRST, as this ceiling's precedent requires. Nothing was
+    # duplicated: a second transport rendered into the wrapper would be a
+    # second set of controls, a second set of handlers and a second thing to
+    # keep in step with the player -- which is the mistake lib/fullbar.js
+    # exists on the other two surfaces to avoid. The row is MOVED, so there is
+    # one of every control and every listener stays bound to it. The layout
+    # cost nothing at all: #playerBar is `display: contents` at rest.
+    #
+    # What the 397 B buys: the move and the move back to a remembered anchor
+    # (.player-shell is meta, bar, call-to-action, brand -- appending would put
+    # the transport under the brand line), the band the sheet reserves so the
+    # bar stands below the drawing rather than on it, and that band coming off
+    # the fit scale so the centring and the scale agree. The band is read back
+    # from the custom property rather than measured twice, which is where the
+    # first draft's extra 43 B went.
+    #
+    # The nib's mapping is in this number too and is a FIX, not a feature: it
+    # measured the wrapper on the premise that layoutPlayerCanvas sizes it to
+    # the fitted rect, which full screen makes false, so the bead rode across
+    # the screen nowhere near its own line.
+    BYTES_RATCHET, BYTES_TARGET = 155_300, 153_800
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
@@ -1246,6 +1276,33 @@ with sync_playwright() as sp:
           _exit_at_rest == "HIDDEN",
           f"{_exit_at_rest} — a close control on a page with nothing to close "
           f"is what a specificity tie with .player-btn produced")
+    _NIB_ON_INK_SRC = """() => {
+            const c = document.querySelector('.canvas-wrap > canvas');
+            const n = document.querySelector('.player-nib');
+            if (!c || !n || n.hidden) return { missing: true };
+            const cr = c.getBoundingClientRect(), nr = n.getBoundingClientRect();
+            const cx = nr.left + nr.width / 2, cy = nr.top + nr.height / 2;
+            const inside = cx >= cr.left && cx <= cr.right
+                        && cy >= cr.top && cy <= cr.bottom;
+            const out = { inside: inside, nib: Math.round(nr.width),
+                          canvas: [Math.round(cr.width), Math.round(cr.height)] };
+            if (!inside) return out;
+            const bx = Math.round((cx - cr.left) / cr.width * c.width);
+            const by = Math.round((cy - cr.top) / cr.height * c.height);
+            const r = Math.max(4, Math.round(c.width / cr.width * 5));
+            const x0 = Math.max(0, bx - r), y0 = Math.max(0, by - r);
+            const w = Math.min(c.width - x0, r * 2), h = Math.min(c.height - y0, r * 2);
+            let best = 0;
+            try {
+              const d = c.getContext('2d').getImageData(x0, y0, w, h).data;
+              for (let i = 0; i < d.length; i += 4) {
+                const v = Math.min(d[i], d[i + 1], d[i + 2]) * (d[i + 3] / 255);
+                if (v > best) best = v;
+              }
+            } catch (e) { out.err = String(e); return out; }
+            out.ink = Math.round(best);
+            return out; }"""
+
     _rest = _fp.evaluate("""
         () => { const c = document.querySelector('.canvas-wrap > canvas');
                 if (!c) return {w: 0, h: 0};
@@ -1255,6 +1312,25 @@ with sync_playwright() as sp:
     check("precondition: the canvas has a measurable size in the page",
           _rest_w > 0 and _rest_h > 0,
           f"{_rest} — the growth assertion below needs a size to grow from")
+    # THE NIB AT REST, AND THAT IT IS ON ITS LINE HERE TOO. Both arms of the
+    # full-screen pair below need this one: the size, to say full screen's is
+    # bigger, and the ink, to say the probe can tell a nib that is on its
+    # stroke from one that is not. Without the second arm the row in full
+    # screen could go red for a probe that never finds ink anywhere.
+    _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
+                 " if (b) b.click(); }")
+    _fp.wait_for_timeout(900)
+    _NIB_REST_STATE = _fp.evaluate(_NIB_ON_INK_SRC)
+    _NIB_REST = _NIB_REST_STATE.get("nib") or 0
+    check("the nib rides its stroke in the page, at the page's scale",
+          _NIB_REST_STATE.get("inside") and _NIB_REST_STATE.get("ink", 0) > 120
+          and _NIB_REST > 0,
+          f"{_NIB_REST_STATE} — the known-good arm: if this cannot find ink "
+          f"under a correctly placed nib, the full-screen row below is "
+          f"measuring the probe and not the player")
+    _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
+                 " if (b) b.click(); }")
+    _fp.wait_for_timeout(200)
     if _shown is True:
         _fp.click("#playerFullBtn")
         _fp.wait_for_timeout(700)
@@ -1340,6 +1416,87 @@ with sync_playwright() as sp:
               f"{_sz['w']}x{_sz['h']} against the authored "
               f"{_rest_w}x{_rest_h} — filling the screen by stretching is the "
               f"v305 in-post defect reappearing on another surface")
+
+        # ---- AND THERE IS SOMETHING TO PRESS ---------------------------
+        #
+        # Only the top-layer subtree renders. The transport lives in
+        # .player-shell, BELOW the wrapper that goes full screen, so pressing
+        # the control gave a drawing, a close button and nothing else -- which
+        # is what the owner photographed. #playerBar is moved into the wrapper
+        # on the way in and back on the way out.
+        #
+        # ASKED AS WHAT IS PAINTED. Every one of these controls exists in the
+        # document at all times and has a perfectly good rect whether or not it
+        # is in the rendered subtree; `elementFromPoint` at the middle of the
+        # play button is the only form of the question that a control outside
+        # the top layer fails.
+        _bar = _fp.evaluate("""() => {
+            const w = document.querySelector('.canvas-wrap');
+            const b = document.getElementById('playerBar');
+            const c = document.querySelector('.canvas-wrap > canvas');
+            if (!w || !b || !c) return { missing: true };
+            const play = document.getElementById('playerPlayBtn');
+            const br = b.getBoundingClientRect(), cr = c.getBoundingClientRect();
+            const pr = play.getBoundingClientRect();
+            const hit = document.elementFromPoint(pr.left + pr.width / 2,
+                                                  pr.top + pr.height / 2);
+            const shown = id => { const e = document.getElementById(id);
+                                  return e ? getComputedStyle(e).display : 'absent'; };
+            return { inWrap: w.contains(b),
+                     painted: !!(hit && play.contains(hit)),
+                     barH: Math.round(br.height),
+                     band: Math.round(parseFloat(getComputedStyle(w).paddingBottom) || 0),
+                     overlap: Math.round(Math.max(0, cr.bottom - br.top)),
+                     copy: shown('playerCopyBtn'), gallery: shown('playerGalleryLink') }; }""")
+        check("...and the transport came with it, painted and pressable",
+              not _bar.get("missing") and _bar["inWrap"] and _bar["painted"],
+              f"{_bar} \u2014 a control outside the fullscreened subtree keeps its "
+              f"rect and loses its pixels, so this asks what is under the "
+              f"pointer rather than where the box is")
+        check("...standing below the drawing rather than on it",
+              not _bar.get("missing") and _bar["barH"] > 20
+              and _bar["overlap"] == 0 and abs(_bar["band"] - _bar["barH"]) <= 1,
+              f"{_bar} \u2014 the bar is absolute and the drawing does not know it "
+              f"is there; the wrapper reserves the measured height, and the fit "
+              f"scale subtracts the same number so the two cannot disagree")
+        check("...and the two ways OFF this drawing stand down while it fills the screen",
+              not _bar.get("missing") and _bar["copy"] == "none"
+              and _bar["gallery"] == "none",
+              f"{_bar} \u2014 Copy link and Gallery both take a person somewhere "
+              f"else, which is the one thing full screen is not for")
+
+        # ---- THE NIB RIDES ITS OWN LINE --------------------------------
+        #
+        # showNibAtIndex measured canvasWrap, on the premise stated above it
+        # that layoutPlayerCanvas sizes the wrapper to the fitted display rect.
+        # True on the page. False here: the Fullscreen UA sheet forces the
+        # top-layer element to `width: 100% !important`, so the wrapper is the
+        # whole screen and the canvas is centred inside it -- the bead was
+        # scaled by the screen's width over the drawing's and placed from the
+        # screen's corner, and rode hundreds of pixels from its own stroke.
+        #
+        # ASKED OF THE PIXELS UNDER IT, not of its coordinates. A rect says
+        # where a box is; whether the nib is ON the line is a question only the
+        # bitmap can answer, and the bitmap is what a person is looking at.
+        # The fixture draws white on a dark ground, so "is there ink here" is a
+        # brightness sample in a small neighbourhood -- small enough that being
+        # a nib's width off still fails it.
+        _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
+                     " if (b) b.click(); }")
+        _fp.wait_for_timeout(900)
+        _nib_fs = _fp.evaluate(_NIB_ON_INK_SRC)
+        check("...and the nib is drawn ON the stroke it is leading",
+              not _nib_fs.get("missing") and _nib_fs["inside"]
+              and _nib_fs.get("ink", 0) > 120,
+              f"{_nib_fs} \u2014 the bead is placed from the wrapper's corner and "
+              f"scaled by its width; in full screen the wrapper is the screen "
+              f"and the canvas is centred in it, so both were wrong at once")
+        check("...and it is a size in the DRAWING, not a size on the screen",
+              not _nib_fs.get("missing") and _nib_fs["nib"] > _NIB_REST + 2,
+              f"full screen {_nib_fs.get('nib')}px against {_NIB_REST}px in the "
+              f"page \u2014 fixed at 14px it was the one element whose whole job "
+              f"is to say how big a pen is and which did not answer to how big "
+              f"the drawing is")
 
         # EXITED THROUGH THAT CONTROL, and
         # getting here took two wrong turns worth recording. Escape first:

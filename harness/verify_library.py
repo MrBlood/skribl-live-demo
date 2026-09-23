@@ -368,14 +368,21 @@ with sync_playwright() as sp:
     acts = pg.evaluate("""(id) => { const r = document.querySelector('.posted-row[data-id="' + id + '"]');
         return { buttons: [...r.querySelectorAll('.posted-actions button')].map(b => b.className.split(' ')[0]),
                  share: !!r.querySelector('.posted-share'), canShare: !!navigator.share,
-                 poster: !!r.querySelector('.posted-poster'), badge: !!r.querySelector('.posted-thumb svg'),
+                 poster: !!r.querySelector('.posted-poster'),
+                 badge: !!r.querySelector('.posted-sub svg'),
+                 thumbKind: !!r.querySelector('.posted-thumb svg:not(.posted-sound)'),
                  gallery: (r.querySelector('.posted-gallery') || {}).textContent,
                  pressed: (r.querySelector('.posted-gallery') || {getAttribute: () => null}).getAttribute('aria-pressed') }; }""", ids[0])
     check("a keyed row offers Copy link, the gallery switch, Delete and Copy key",
           {"posted-copy", "posted-gallery", "posted-delete", "posted-key"} <= set(acts["buttons"]), str(acts["buttons"]))
     check("Share is offered exactly where the system has a share sheet", acts["share"] == acts["canShare"],
           f"share button={acts['share']} navigator.share={acts['canShare']}")
-    check("the row's picture is the poster, with the kind's icon as a badge", acts["poster"] and acts["badge"], str(acts))
+    check("the row's picture is the poster, with the kind's icon beside the words",
+          acts["poster"] and acts["badge"] and not acts["thumbKind"],
+          f"{acts} \u2014 the pen and the book were badges in the poster's corner, "
+          f"competing with an 84x63 drawing for the same box; they stand in "
+          f"front of the fact they qualify now, and the corner is the sound "
+          f"badge's alone")
 
     # THE TWO BADGES, MEASURED (owner: the speaker is "slightly too small"
     # and should hang off the thumb the way the drawer's 42px tile always
@@ -388,26 +395,37 @@ with sync_playwright() as sp:
     #             off the thumb and left it on the picture, which is the
     #             only part that needs one. The overhang ITSELF is
     #             measured further down, on a row that has sound.
-    #   CORNER    the kind moved from bottom left to top left, because
-    #             bottom left is where the in-post player draws its
-    #             transport on the OTHER surface that shares these corners
-    #             (verify_gallery pins the overlap itself).
+    #   PLACE     the kind is IN THE WORDS and no longer on the poster at
+    #             all. It was a badge in the thumb's top-left corner, which
+    #             is a reading of a 17px glyph against whatever the drawing
+    #             happens to put behind it; in front of "replay" it is part
+    #             of the sentence the row already says. Measured as being
+    #             LEFT of the words rather than merely present, because a
+    #             mark after them qualifies nothing.
     #
     _mark = pg.evaluate("""(id) => {
         const r = document.querySelector('.posted-row[data-id="' + id + '"]');
-        const th = r.querySelector('.posted-thumb');
-        const kind = r.querySelector('.posted-thumb svg:not(.posted-sound)');
-        if (!th || !kind) return { missing: true };
-        const tr = th.getBoundingClientRect(), kr = kind.getBoundingClientRect();
-        const out = { fromTop: Math.round(kr.top - tr.top),
-                      fromBottom: Math.round(tr.bottom - kr.bottom),
-                      shot: !!r.querySelector('.posted-shot'), shotClips: false };
+        const sub = r.querySelector('.posted-sub');
+        const kind = sub && sub.querySelector('svg');
+        const out = { shot: !!r.querySelector('.posted-shot'), shotClips: false,
+                      inSub: !!kind,
+                      onThumb: !!r.querySelector('.posted-thumb svg:not(.posted-sound)') };
         const sh = r.querySelector('.posted-shot');
         if (sh) out.shotClips = getComputedStyle(sh).overflow === 'hidden';
+        if (kind && sub) {
+          const kr = kind.getBoundingClientRect(), sr = sub.getBoundingClientRect();
+          out.fromLeft = Math.round(kr.left - sr.left);
+          out.width = Math.round(kr.width);
+          /* the glyph has to be ON the line, not floating above or below it */
+          out.centred = Math.abs((kr.top + kr.bottom) / 2
+                               - (sr.top + sr.bottom) / 2) <= 3;
+        }
         return out; }""", ids[1])
-    check("the kind badge is in the thumb's TOP left, not the corner the transport uses",
-          not _mark.get("missing") and _mark["fromTop"] < _mark["fromBottom"],
-          f"{_mark} \u2014 wanted fromTop < fromBottom")
+    check("the kind mark leads the words it qualifies, and is not on the poster",
+          _mark.get("inSub") and not _mark.get("onThumb")
+          and _mark.get("fromLeft") == 0 and _mark.get("centred"),
+          f"{_mark} \u2014 a mark after the words qualifies nothing, and one off "
+          f"the line reads as a second row")
     check("the picture carries the clip, not the thumb (.posted-shot)",
           bool(_mark.get("shot")) and bool(_mark.get("shotClips")),
           f"{_mark} \u2014 with the clip back on .posted-thumb the badge below is cut off")
@@ -524,11 +542,18 @@ with sync_playwright() as sp:
     if fs_enabled:
         pg.click("#btnFull")
         pg.wait_for_timeout(600)
+        # THE CLASS LIST, NOT THE WHOLE STRING. This compared className to
+        # "stageCanvasWrap" exactly, which asserts the absence of every class
+        # anything might ever add -- and lib/fullbar.js adds `skfull-host` to
+        # whatever it attaches to, so a change about the bar's reserved height
+        # reddened a row about which element went full screen.
         fs = pg.evaluate("""() => ({ el: document.fullscreenElement ? document.fullscreenElement.className : null,
+            isStage: !!(document.fullscreenElement
+                        && document.fullscreenElement.classList.contains('stageCanvasWrap')),
             pressed: document.getElementById('btnFull').getAttribute('aria-pressed'),
             exitShown: getComputedStyle(document.getElementById('fullExit')).display !== 'none' })""")
         check("the stage wrap goes full screen, the button says pressed, and the way out is inside",
-              fs["el"] == "stageCanvasWrap" and fs["pressed"] == "true" and fs["exitShown"], str(fs))
+              fs["isStage"] and fs["pressed"] == "true" and fs["exitShown"], str(fs))
         pg.click("#fullExit")
         pg.wait_for_timeout(600)
         fs2 = pg.evaluate("""() => ({ el: document.fullscreenElement,
@@ -1087,6 +1112,27 @@ with sync_playwright() as _sp3:
                  outTop: Math.round(tr.top - sr.top),
                  hit: !!(el && (el === snd || (el.closest && el.closest('svg.posted-sound')))),
                  hitWas: el ? (el.tagName + '.' + (el.getAttribute('class') || '')) : null }; }""")
+    # AND IT IS THE PRODUCT'S OWN COLOUR. `#7ee2a8` was the only green
+    # anywhere in this tree, so the one badge left on the poster read as a
+    # status light -- something reporting health -- rather than as a property
+    # of the Skribl (owner: "leave speaker, but make it a different color
+    # (purple maybe?)"). Compared against the RESOLVED accent rather than a
+    # literal, so the row survives the palette moving and still fails a
+    # hard-coded colour that merely happens to match it today.
+    _sndc = _p3.evaluate("""() => {
+        const s = document.querySelector(".posted-thumb svg.posted-sound");
+        if (!s) return { missing: true };
+        const probe = document.createElement("span");
+        probe.style.color = "var(--accent)";
+        document.body.appendChild(probe);
+        const want = getComputedStyle(probe).color;
+        probe.remove();
+        return { got: getComputedStyle(s).color, want: want }; }""")
+    check("...and is drawn in the accent, not in the one green",
+          not _sndc.get("missing") and _sndc["got"] == _sndc["want"],
+          f"{_sndc} \u2014 a green pip beside a drawing is a status light, and "
+          f"having sound is not a state of health")
+
     check("the sound badge is bigger than the kind badge it used to match",
           not _over.get("missing") and _over["w"] >= 20,
           f"{_over} \u2014 wanted 20px or more; it was 18, the kind badge's size")
