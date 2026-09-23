@@ -442,7 +442,14 @@ else:
         f3.kill()
 f3_log.close()
 
-ok = sum(1 for o, _ in results if o)
+# THE TALLY IS TAKEN AT THE FOOT OF THE FILE, NOT HERE. It used to be this
+# line, which was the last line before the summary until a section was added
+# below it -- and then `ok` counted the rows above while `len(results)` counted
+# all of them, so the suite reported "20/25 passed" with every single row
+# green and no FAILED line under it. CI went red on a tree where nothing was
+# wrong, and the report said so in a way that looked like five silent
+# failures. A count that is computed before the last thing that can change it
+# is a stale number waiting for the next section.
 print("\nBACKFILL — canvas sizes, against the payload shapes a real gallery holds")
 # WHY THIS SECTION EXISTS, and it is the most expensive lesson in this file.
 #
@@ -583,8 +590,18 @@ except Exception as _e9outer:                                     # noqa: BLE001
           f"{type(_e9outer).__name__}: {str(_e9outer)[:200]}")
 
 print("\n" + "=" * 60)
+ok = sum(1 for o, _ in results if o)
 print(f"{ok}/{len(results)} passed")
 for o, n in results:
     if not o:
         print(f"  FAILED: {n}")
+# AND THE ARITHMETIC HAS TO AGREE WITH THE ROWS. A shortfall with nothing listed
+# under it is not a test failure, it is an accounting failure in this file, and
+# it reads exactly like the former -- which is what sent somebody looking for a
+# bug in the backfill that was never there. Say which it is.
+_missing = len(results) - ok - sum(1 for o, _ in results if not o)
+if _missing:
+    print(f"  !! {_missing} assertions are unaccounted for: the pass count was "
+          f"taken before every row had been appended. This is a bug in "
+          f"verify_postgres.py, not in the tree under test.")
 raise SystemExit(0 if ok == len(results) else 1)
