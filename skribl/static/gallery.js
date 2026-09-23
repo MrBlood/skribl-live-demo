@@ -97,10 +97,20 @@
     }
     wrap.appendChild(av);
 
+    /* The names go in their own box so the TITLE can sit under them (direction
+       B): avatar on the left, then name / handle / title stacked beside it,
+       which is the post head skribls.net already renders. */
+    var names = document.createElement('div');
+    names.className = 'tnames';
+    wrap.appendChild(names);
+    var line = document.createElement('div');
+    line.className = 'tline';
+    names.appendChild(line);
+
     var dn = document.createElement('span');
     dn.className = 'tdn';
     dn.textContent = name;
-    wrap.appendChild(dn);
+    line.appendChild(dn);
     /* The tick is the HOST'S claim, not Skribl's -- Skribl has nothing to
        verify with. Titled so it says whose claim it is. */
     if (a.verified) {
@@ -108,13 +118,13 @@
       vf.className = 'tverified';
       vf.textContent = '\u2713';
       vf.title = 'Verified by the site this Skribl was posted from';
-      wrap.appendChild(vf);
+      line.appendChild(vf);
     }
     if (handle) {
       var un = document.createElement('span');
       un.className = 'tun';
       un.textContent = handle;
-      wrap.appendChild(un);
+      line.appendChild(un);
     }
     return wrap;
   }
@@ -145,14 +155,6 @@
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
     + ' stroke-linecap="round" stroke-linejoin="round">'
     + '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
-  /* The caption's toggle: a speech bubble with lines in it, which is the
-     glyph every feed uses for "there are words here". */
-  var ICON_CAP =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
-    ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-2.8-.4L3 21l1.9-5A8.2 8.2 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>' +
-    '<path d="M8.5 10.5h8"/><path d="M8.5 14h5"/></svg>';
-
   var ICON_SOUND =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
     + ' stroke-linecap="round" stroke-linejoin="round">'
@@ -163,17 +165,70 @@
      on coarse pointers, so on a phone this call does nothing by design. */
   if (window.SkriblTooltip) window.SkriblTooltip.init();
 
+  /* WHICH CAPTIONS HAVE MORE TO SHOW. The toggle is only worth a control
+     where the clamp is actually cutting the text off, and at two lines most
+     captions are not being cut: every captioned card carried a button that
+     expanded nothing. A paragraph is clipped when its content is taller than
+     its box, which is one read of scrollHeight against clientHeight -- done
+     for the whole grid at once, because each read forces layout.
+
+     A card that is OPEN is left alone. Its clamp is off, so it measures as
+     un-clipped, and hiding the button there would take away the only way to
+     close it again.
+
+     Re-run on resize because the clamp is two LINES and the column width
+     decides how much text a line holds: the same caption clips at 390 and
+     does not at 1280. */
+  function capToggles() {
+    var caps = document.querySelectorAll('.tile .tcap');
+    for (var i = 0; i < caps.length; i++) {
+      var cap = caps[i];
+      var card = cap.closest('.tile');
+      var btn = card && card.querySelector('.tileCapBtn');
+      if (!btn) continue;
+      if (card.classList.contains('cap-open')) { btn.hidden = false; continue; }
+      btn.hidden = cap.scrollHeight <= cap.clientHeight + 1;
+    }
+  }
+
+  var capTimer = null;
+  window.addEventListener('resize', function () {
+    if (capTimer) clearTimeout(capTimer);
+    capTimer = setTimeout(capToggles, 150);
+  });
+
   function tile(item) {
     var art = document.createElement('article');
     art.className = 'tile';
     art.setAttribute('data-id', item.id);
 
+    /* DIRECTION B, the post-like card (owner picked it from three). The head
+       is the shape skribls.net already renders in its own post head: who, then
+       what. The title sits UNDER the name the way a post's body does, rather
+       than sharing a flex row with the time, the play count and two buttons. */
     var head = document.createElement('div');
     head.className = 'thead';
-    var tt = document.createElement('span');
+    var who = item.author ? authorBlock(item.author) : null;
+    var tt = document.createElement('div');
     tt.className = 'tt';
     tt.textContent = item.title || 'Untitled Skribl';
-    head.appendChild(tt);
+    if (who) {
+      who.querySelector('.tnames').appendChild(tt);
+      head.appendChild(who);
+    } else {
+      /* An anonymous post has no name to print, so the title leads -- and it
+         does NOT borrow `.tauth`. That class means "somebody is named here",
+         which is what makes its absence readable; reusing it as a layout box
+         would put one on all 24 tiles and quietly retire the assertion that
+         an unattributed post draws no author. Different job, different name. */
+      var solo = document.createElement('div');
+      solo.className = 'tsolo';
+      var names = document.createElement('div');
+      names.className = 'tnames';
+      names.appendChild(tt);
+      solo.appendChild(names);
+      head.appendChild(solo);
+    }
     var tm = document.createElement('span');
     tm.className = 'tm';
     tm.textContent = when(item.created_at);
@@ -199,28 +254,9 @@
     rep.textContent = 'Report';
     rep.addEventListener('click', function () { openReport(item.id, rep); });
     head.appendChild(rep);
-    /* THE CAPTION'S TOGGLE, beside Report, and only where there is a caption
-       to show. It lives in the head with the other controls rather than over
-       the drawing: the drawing's four corners are already spoken for -- kind
-       top left, sound top right, the player's transport bottom left, the
-       duration bottom right -- and a fifth thing in that space is how the pen
-       ended up on the play button. */
-    if (item.caption) {
-      var cb = document.createElement('button');
-      cb.type = 'button';
-      cb.className = 'tileCapBtn';
-      cb.setAttribute('aria-pressed', 'false');
-      cb.setAttribute('aria-label', 'Show the description');
-      cb.title = 'Show the description';
-      cb.innerHTML = ICON_CAP;
-      head.appendChild(cb);
-    }
     art.appendChild(head);
 
-    /* WHO MADE IT. Absent unless the host's resolver described somebody --
-       see authorBlock(). */
-    var who = item.author ? authorBlock(item.author) : null;
-    if (who) art.appendChild(who);
+
 
     /* The macro rendered the poster URL with the placeholder in it, so the
        real one is that same server-built path with the id substituted — no
@@ -249,20 +285,15 @@
        there is one and pins the stage over the viewport where there is not, so
        there is always something for the button to do. */
     var imm = null;      /* set below, once, with its onChange in hand */
+    var foot = null;     /* the card's transport row, built after the stage */
     if (window.SkriblImmersive) {
-      var full = document.createElement('button');
-      full.type = 'button';
-      full.className = 'tileFull';
-      full.title = 'Full screen';
-      full.setAttribute('aria-label', 'Watch ' + (item.title || 'this Skribl') + ' full screen');
-      full.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
-        + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        + '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>'
-        + '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
-      full.addEventListener('click', function (e) {
-        e.stopPropagation();
-        imm.toggle();
-      });
+      /* THE CONTROL IS IN THE FOOTER AND NOWHERE ELSE. This block used to build
+         a second one, `.tileFull`, in the card's head -- correct while the head
+         was the only place a tile had for a button, and a duplicate the moment
+         direction B gave the card a transport row that already carries full
+         screen. The first screenshot of the new card showed both, on all 24
+         tiles: same glyph, same action, eight pixels apart. One control per
+         thing a person can do. */
       /* A WAY OUT, INSIDE THE THING (owner: "also no x (which is fine) on full
          screen" -- fine on the real API, where Escape and the system gesture
          both work, and not fine at all in the fallback, where the page is
@@ -321,12 +352,16 @@
       var onFs = function (big) {
         var box = stage.querySelector('.skribl-inline');
         var pl = box && box._skriblInline;
-        full.setAttribute('aria-pressed', big ? 'true' : 'false');
-        full.title = big ? 'Leave full screen' : 'Full screen';
         /* The bar follows the clock on a frame loop, so it runs only while it
            is on screen: a rAF per hidden bar per tile is a feed burning
            battery on nothing. */
         if (bar) bar.running(!!big);
+        /* AND THE CARD'S ROW STOPS WHILE THE STAGE IS UP. Two bars over one
+           drawing, one of them behind a pinned overlay, is two clocks read
+           from the same player to paint one of them into a viewport nobody
+           can see. The sync on the way back out is what repaints the footer's
+           play glyph after full screen paused it. */
+        if (foot) { foot.running(!big); foot.sync(); }
         /* BARE means the host supplies the transport. Without it the
            component's own cluster and duration chip sit under the bar, which
            is the two-transports screenshot this whole change is about. */
@@ -345,12 +380,20 @@
         if (pl.state().loaded) pl.seek(0);
       };
       imm = window.SkriblImmersive.attach(stage, { onChange: onFs });
-      head.insertBefore(full, rep);
     }
 
     var frag = tpl.content.cloneNode(true);
     var box = frag.querySelector('[data-skribl-inline]');
     box.setAttribute('data-skribl-id', item.id);
+    /* THE DRAWING'S SHAPE, so the component can frame the idle poster where the
+       canvas will be rather than showing the share card's ground either side of
+       it (v309). Null on a row written before the column, and the component
+       then keeps the band crop -- so this is written only when the listing
+       actually answered, never as a default. */
+    if (item.canvas_w && item.canvas_h) {
+      box.setAttribute('data-skribl-w', item.canvas_w);
+      box.setAttribute('data-skribl-h', item.canvas_h);
+    }
     var poster = box.querySelector('.skribl-inline-poster');
     if (poster) {
       poster.setAttribute('src', poster.getAttribute('src').replace('__ID__', encodeURIComponent(item.id)));
@@ -397,33 +440,68 @@
     stage.appendChild(frag);
     art.appendChild(stage);
 
-    /* THE CAPTION, OVER THE DRAWING (owner: "description could go on screen
-       on hover and on phone put a little icon toggle that reveals description
-       over skribl"). It used to sit under the stage as a block, which on a
-       grid of tiles is the tallest thing on a card that is supposed to be
-       showing a drawing.
-
-       IT IS ALWAYS IN THE DOM AND ALWAYS IN THE ACCESSIBILITY TREE. `opacity`
-       and not `display` or `hidden`, deliberately: a caption a screen reader
-       cannot reach is worse than a caption that takes a hover, and this text
-       is the only description the post has. `pointer-events: none` so the
-       scrim never eats a play tap while it is faded out.
-
-       Two ways in, because a phone has no hover and a desktop reader may want
-       it to STAY: the toggle pins it (`.cap-on`, driven below) and hover or
-       keyboard focus reveals it transiently where hover exists. */
+    /* THE CAPTION CAME OFF THE ART. It was a scrim over the drawing because a
+       poster-first card had nowhere else to put it; a post-like card has room
+       for words, so it is text under the title, clamped to two lines, and the
+       toggle EXPANDS it rather than revealing it. Nothing needs to sit on the
+       picture. */
     if (item.caption) {
       var tc = document.createElement('p');
-      tc.className = 'tileCap';
+      tc.className = 'tcap';
       tc.textContent = item.caption;
-      stage.appendChild(tc);
-      var btn = head.querySelector('.tileCapBtn');
-      if (btn) btn.addEventListener('click', function () {
-        var on = stage.classList.toggle('cap-on');
+      art.insertBefore(tc, stage);
+      /* THE EXPANDER SITS UNDER THE TEXT IT EXPANDS, and it used to sit in the
+         head beside Report as a speech-bubble glyph. Two things were wrong
+         with that. It was 44px of the head's width on every captioned card,
+         and the head is where the NAME lives: at 390px the row packed to the
+         pixel and ellipsised "Mr. B" to "Mr…" and the handle with it, which is
+         the one thing on a post that must never be approximate. And a glyph
+         beside a Report button does not read as "there is more of this
+         sentence" -- a word under the sentence does.
+
+         Hidden until the clamp actually bites; capToggles() measures. */
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tileCapBtn';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.textContent = 'Show more';
+      btn.hidden = true;
+      art.insertBefore(btn, stage);
+      btn.addEventListener('click', function () {
+        var on = art.classList.toggle('cap-open');
         btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        btn.setAttribute('aria-label', on ? 'Hide the description' : 'Show the description');
-        btn.title = on ? 'Hide the description' : 'Show the description';
+        btn.textContent = on ? 'Show less' : 'Show more';
+        btn.setAttribute('aria-label', on ? 'Show less of the description'
+                                          : 'Show the whole description');
+        btn.title = btn.getAttribute('aria-label');
       });
+      btn.setAttribute('aria-label', 'Show the whole description');
+      btn.title = 'Show the whole description';
+    }
+
+    /* THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE, from the same builder
+       (lib/fullbar.js) with a different control list. A second transport
+       written here would contradict the reason that module exists inside a day
+       of it landing. */
+    if (window.SkriblFullBar) {
+      foot = window.SkriblFullBar.attach(art, {
+        variant: 'skfull-card',
+        controls: ['play', 'loop', 'mute', 'full'],
+        who: false,
+        scrubRow: false,
+        player: function () {
+          var b = stage.querySelector('.skribl-inline');
+          return (b && b._skriblInline) || null;
+        },
+        onFull: function () { if (imm) imm.toggle(); },
+        isFull: function () { return !!(imm && imm.isOn()); }
+      });
+      /* The component's own cluster and duration chip yield on the card for
+         the same reason they do in full screen: the page took the transport
+         over, and two of them on one drawing is the defect. */
+      var box0 = stage.querySelector('.skribl-inline');
+      if (box0) box0.classList.add('is-bare');
+      foot.running(true);
     }
     return art;
   }
@@ -472,6 +550,10 @@
         var items = (body && body.items) || [];
         for (var i = 0; i < items.length; i++) list.appendChild(tile(items[i]));
         if (items.length) window.SkriblInline.mount(list);
+        /* ONCE PER PAGE OF TILES, not once per tile: the measure below reads
+           layout, and reading it inside the append loop would make the grid
+           reflow between every card. */
+        if (items.length) capToggles();
         cursor = (body && body.next_cursor) || null;
         more.hidden = !cursor;
         /* Two empty states: nothing in the gallery at all, and nothing that

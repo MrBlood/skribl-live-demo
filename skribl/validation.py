@@ -79,6 +79,52 @@ def _payload_kind(payload):
     return "flip" if _payload_pages(payload) > 1 else "pad"
 
 
+def _payload_canvas(payload):
+    """The drawing's own size, as (w, h), or (None, None) when it has none.
+
+    WHY IT IS STORED, and this is the third column on this row for the same
+    reason. The listing defers `payload_json` deliberately (9.75 ms against
+    1.04 ms for a page of fifty), so a tile cannot look inside the post -- and
+    the tile needs this one to frame its idle poster.
+
+    THE BANDS THIS EXISTS TO REMOVE. A tile shows the share card until somebody
+    presses play, and the card CONTAINS the drawing: a 4:3 drawing in a
+    1200x630 card leaves 110px of card ground and the card's plate border on
+    each side of the picture, which the tile then shows as a frame around a
+    frame. The client can crop the card back to just the drawing -- the
+    arithmetic is lib/sharecard.js drawingRect() and has been there since the
+    card was written -- but only if it knows the shape of the drawing, which
+    until now lived nowhere a listing could reach.
+
+    `canvasSize` is OPTIONAL in a payload and always has been: a Skribl
+    authored before Pad had a size picker simply has none, and
+    lib/canvassizes.js supplies the default at play time. So this answers
+    (None, None) rather than guessing, and a null renders as today's band crop
+    -- the same rule `kind` and `has_audio` follow on the same row.
+
+    Pure + import-light so it can be unit-tested headless. MAX_CANVAS_EDGE is
+    defined further down this file and read at CALL time, which is why this
+    reads correctly from up here; nothing may call this during module import.
+    """
+    if not isinstance(payload, dict):
+        return (None, None)
+    cs = payload.get("canvasSize")
+    if not isinstance(cs, dict):
+        return (None, None)
+    w, h = cs.get("cssWidth"), cs.get("cssHeight")
+    for v in (w, h):
+        # THE SAME TEST _validate_payload_complexity applies on the way in,
+        # written again rather than trusted: a host constructing SkriblPost
+        # directly never passes through that function, and this one decides
+        # what a tile will use for geometry. MAX_CANVAS_EDGE is read live here
+        # and FROZEN in the v309 migration, which is the difference between a
+        # rule the app enforces now and a rule a revision enforced then.
+        if isinstance(v, bool) or not isinstance(v, int) \
+                or v < 1 or v > MAX_CANVAS_EDGE:
+            return (None, None)
+    return (w, h)
+
+
 # --- Server-side media validation (INTEGRATION §7) ---------------------------
 # The post endpoint is public and unauthenticated, and every media item arrives as
 # a base64 data URL inside payload_json. Until now the only limit was

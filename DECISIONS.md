@@ -10583,3 +10583,202 @@ question coordinates can answer.
 The gallery mutation is worth one more line: putting `.tileKind` back to
 `bottom: 8px` reddened the overlap check on all 24 tiles. The owner photographed
 one card; every card had it.
+
+## Unsealed, on top of v306, cont. -- the gallery becomes a page of posts
+
+The owner's sentence was the brief: "gallery needs to be completely redesigned.
+it just doesn't look good... gallery needs to be stunning, simple, intuitive,
+have controls, and be elegant. right now it is not." Three card directions were
+mocked up as real pages -- poster-first, post-like, cinema strip -- and the
+owner picked the post-like one ("I like b a lot"), which is the shape
+skribls.net already renders in its own post head. So a Skribl reads as a post
+rather than as a widget: avatar, display name, tick, handle and title on top,
+the drawing in the middle, one control row along the bottom.
+
+### One transport, built once, at two sizes
+
+The full-screen bar (`lib/fullbar.js`) landed a day earlier because the two full
+screens had diverged -- the profile's stage had a way out and no controls, the
+gallery's tile had controls and no way out. Direction B wants a transport under
+every card, and writing a second one in `gallery.js` would have contradicted
+that module's reason for existing inside a day of it landing. `attach()` takes
+what varies instead:
+
+    full screen  restart play loop mute rate | who | exit, scrubber on its own
+                 row, shown only while the wrapper is up
+    card footer  play loop mute | scrubber inline | time | full, always shown
+
+What a control DOES, how it reads the player's state, and the rule that lit
+means "currently true" are shared -- which is the half that actually rots when
+it is copied.
+
+### What the first screenshots of B showed, which was not what the mockup showed
+
+The card went green in its suite and looked wrong on the page. Photographing it
+with real drawings and a real identity on it -- the demo identity resolver, the
+owner's own handle and avatar -- found five things a green suite had not.
+
+**Two full-screen buttons, on all 24 tiles.** `.tileFull` was in the card's head
+from before the redesign, correct while the head was the only place a tile had
+for a button; the footer carries `.skfull-full` since. Same glyph, same action,
+eight pixels apart. The census that was supposed to cover this asserted "every
+tile carries a full-screen control", which is true of a tile with two. It is an
+equality per tile now, and a control is counted by what its label says it does
+rather than by its class, so renaming the duplicate does not satisfy it.
+
+**A black rectangle where the drawing goes.** `is-bare` means the host supplies
+the TRANSPORT, and it was also hiding the idle veil -- the wash and the play
+triangle that tell a person a still picture is a recording. A grid of bare cards
+gave no sign any of it moved. Only `is-immersive` drops the veil now, where the
+bar is unmissable and a wash over the whole picture is only dimmer art. The
+reasoning moved into `inlineplayer.js`'s header, which is where that stylesheet
+has said its product reasoning lives since v308 and where it costs a host
+nothing; the pointer had been dangling.
+
+**A frame loop per card.** `lib/fullbar.js` follows the clock on rAF, which is
+right for one bar over one drawing and wrong for 24 cards repainting the same
+0:00 sixty times a second. The module's own comment already said a HIDDEN bar
+must not cost a frame; a visible-but-stopped one costs the same and was not
+covered. The loop reads the player and picks its own next beat -- a frame while
+playing, a quarter second while not -- and the card's row stops entirely while
+its stage is up. Measured: busiest footer rewrote itself 3 times in 800 ms
+across 24 cards, against 48 for the frame loop.
+
+**"Mr…" where the name goes.** At 390 the head packed to the pixel and
+ellipsised the display name while leaving the handle whole, which is the wrong
+way round: a clipped handle still reads as a handle. Two things were taking the
+room -- the caption's expander, 44px of glyph in the row the name lives in, and
+the play count. The expander moved under the caption as the words "Show more",
+which is both where it belongs and what it means; the count stands down under
+560px, where who made it beats how many watched.
+
+**An expander that expanded nothing.** Clamped at two lines, most captions are
+under two lines, so every captioned card carried the control. It is measured now
+-- `scrollHeight` against `clientHeight`, for the whole grid at once because
+each read forces layout, and again on resize because the same caption clips at
+390 and does not at 1280.
+
+And the clamp itself leaked: `overflow: hidden` clips at the PADDING box, so
+`padding-bottom: 10px` was 10px of clipped region the third line showed through.
+Two clamped lines, an ellipsis, and a third line sliced in half under it. The
+gap is a margin.
+
+### The instruments, and one claim a mutation took away
+
+`hidden` LOSES TO AN EXPLICIT `display`. The head rule set `inline-grid`, which
+outranks the UA sheet's `[hidden] { display: none }`, so the first cut of the
+measure set the attribute, the DOM agreed the button was hidden, and 44px of
+button stayed on the card. Found by measuring the rect rather than by trusting
+`.hidden`.
+
+A MUTATION THAT ONLY CHANGES AN INITIAL VALUE PROVES NOTHING when something
+later sets it properly. The first mutation for "the expander is absent where the
+clamp does not fold" flipped `btn.hidden = true` to `false` at construction --
+and `capToggles()` hid it again a moment later. Green against a broken
+instrument. The mutation has to disable the MEASURE.
+
+And one claim was withdrawn rather than shipped. The commit that fixed the head
+said `margin-left: auto` on the time was the truncation: an auto margin absorbs
+every pixel of free space before the flexible items get any, so `.tauth` never
+grew past its content. True, and not the bug -- put the margin back today and
+every row stays green, because a content-sized `.tauth` is wide enough once the
+expander has left the head. The margin is still gone, because a property that
+cancels `flex: 1` is a trap the next widening walks into, but it is documented
+as tidying now. **The mutation is also how a fix finds out it was not the fix.**
+
+### Left alone, on purpose
+
+A tile shows the post's share card until somebody presses play, and the card
+contains the drawing with the brand band cropped away -- so a drawing that is
+not 16:9 shows the card's own ground either side of it, with the card's plate
+border around the picture. It is most visible on a two-up desktop card, which is
+where the drawing is largest. Cropping the poster to the DRAWING would need the
+canvas size as a column on the post, which `inlineplayer.js`'s header has
+already recorded as a schema change and not one to make in passing. The same
+bands are in `/feed` and on the profile, and they have been since the in-post
+player shipped.
+
+### The tile showed the card, and the card contains the drawing
+
+The bands either side of a gallery drawing were not a layout mistake; they were
+the share card. A tile shows `/s/<id>/poster` until somebody presses play, that
+poster IS the card, and the card CONTAINS the drawing: a 4:3 drawing is a 656px
+picture in the middle of a 1200px card. The stylesheet's crop removed the brand
+strip and nothing else, so what reached the tile was 110px of card ground and
+the card's own plate border on each side of the picture — a frame inside a
+frame, on every tile, on every host that embeds the player. The owner
+photographed it and asked for it fixed; the previous release had written it up
+as out of scope, naming exactly the reason it was.
+
+**The reason was a column.** `inlineplayer.js`'s header already said cropping
+the poster to the DRAWING needs the canvas size, and that this is a schema
+change not to be made in passing. So it was made on purpose: `canvas_w` and
+`canvas_h` join `kind` and `pages` on the post, written at post time from the
+same payload in the same tick, because the listing endpoint defers
+`payload_json` deliberately (9.75 ms against 1.04 ms for a page of fifty) and a
+tile cannot look inside the post it is showing.
+
+Nullable, and the null is honest rather than lazy: `canvasSize` is optional in a
+payload and a Skribl authored before Pad had a size picker has none at all. A
+null renders as the band crop the tile used before the column — never as a
+guessed 4:3, which would frame the picture WRONGLY instead of framing it widely.
+That is also why there is no sweep-up default at the end of the v309 backfill,
+which is the one place it differs from v307's: `kind` had an honest answer for a
+row it could not read ('pad', which is what every player shows one) and a canvas
+size does not.
+
+**The framing.** `fitPoster()` puts the card's `drawingRect()` exactly where the
+canvas will land and clips the rest away — rounded to the plate's own corner
+radius and inset by its hairline, so no part of the card survives into the tile.
+Idle and playing became one composition: pressing play changes what moves, not
+where it is. A plain rectangular clip was tried first and leaves four violet
+arcs in the corners, because the card clips the drawing into a rounded rect
+before it strokes the boundary.
+
+`lib/sharecard.js` now names `PLATE_R` and `PLATE_LW`, which `lib/postedcard.js`
+had been drawing from literals and the player needed to know in order to remove.
+
+**What it cost, and the two cheaper ideas that are worse.** +1,081 B of
+JavaScript, −242 B of CSS, net +805 B on the embed, argued at the ratchet.
+Cropping the poster server-side is the obvious alternative and costs the
+deployed app a Pillow dependency and a PNG decode per uncached poster — a C
+extension in `requirements.txt` for a cosmetic crop. Computing the numbers in
+the template ships ~80 B per post instead of ~1 KB cached once, which is worse
+from about a dozen posts on, and puts card arithmetic in a page — the exact
+thing `verify_inline`'s gate forbids and caught on the gallery a release ago.
+The carve is the stylesheet's "three geometry facts" paragraph, which that
+file's own header says belongs in `inlineplayer.js` (CSS comments are served to
+every host and nothing strips them) and which had to be rewritten anyway,
+because the band crop it describes is the no-script fallback now. It was also
+still naming `/s/<id>/card.png`, which has not been the poster's route since
+v287.
+
+#### The instruments
+
+**A RECT IS NOT A PAINT, and `clip-path` is the property that proves it.** The
+framing assertion cannot read the poster's rectangle: `getBoundingClientRect()`
+reports the whole card whatever is visible, by construction, because clipping
+does not move the box. It walks the box's centre row and column with
+`elementFromPoint` instead, which answers what is actually hit, and compares the
+painted region to where the canvas lands after pressing play on the SAME tile.
+That is also why the row asserts agreement rather than remembered pixel counts:
+the numbers change with the column width, the agreement does not.
+
+**The known-bad case arrived on its own.** The fixture posted to prove the
+listing answers null for a payload with no `canvasSize` was the newest post, so
+it became tile 0 — and the framing rows went red against it, reporting a poster
+painted 507px wide against a 379px canvas. The instrument was calibrated by
+accident before it was calibrated on purpose. The probe now selects the first
+tile that HAS a size, and says in its own comment why.
+
+**A regex over source matches the comment about the number.** The seven card
+constants the player inlines are read out of the jsstrip-ed source, not the
+file, so a sentence explaining a literal cannot be mistaken for the literal.
+That is the same failure this tree has now hit in four files.
+
+**And one line was withdrawn rather than defended.** Removing the migration's
+half-written-row sweep changes nothing any suite can see: every branch above it
+writes the pair or writes neither. The line stays as a guard on a future branch
+and its comment now says plainly that no test reddens it, instead of implying
+one does. What the suite pins is the outcome — no row leaves the revision
+carrying one edge alone.

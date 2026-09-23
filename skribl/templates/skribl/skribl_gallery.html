@@ -110,6 +110,12 @@
       background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 0 16px; }
     .find input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
     .tile .plays { flex: none; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
+    /* A ONE-UP CARD'S HEAD IS FULL, so something has to go, and the play count
+       is the least of it: who made it and what it is called are why anybody
+       looks. Measured at 390 with the count in: the row packs to the pixel and
+       the display name is ellipsised while the handle is not. Hiding the count
+       returns 51px to the name, which is more than it needed. */
+    @media (max-width: 560px) { .tile .plays { display: none; } }
     .state { text-align: center; color: var(--text-3); font-size: 14px; padding: 40px 0; line-height: 1.7; }
     .state b { color: var(--text-2); font-weight: 600; }
     .state[hidden] { display: none; }
@@ -123,15 +129,39 @@
     .btn[hidden] { display: none; }
 
     /* ---- the grid ------------------------------------------------------ */
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
-    @media (max-width: 400px) { .grid { grid-template-columns: minmax(0, 1fr); } }   /* not a bare 1fr: see the profile's note */
+    /* TWO-UP, NOT auto-fill (direction B). A 280px minimum put three and four
+       across a desktop, and at that width the drawing was smaller than the
+       chrome around it -- which is the complaint that started this. One up on
+       a phone; not a bare 1fr, see the profile's note. */
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+    /* The card is a POST: head, words, drawing, one control row. No padding on
+       the card itself -- the drawing runs edge to edge between its bands, the
+       way a post's media does. */
     .tile {
-      background: var(--panel); border: 1px solid var(--hairline); border-radius: 14px;
-      padding: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0;
+      background: var(--panel); border: 1px solid var(--hairline); border-radius: 16px;
+      display: flex; flex-direction: column; min-width: 0; overflow: hidden;
     }
-    .tile .thead { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-    .tile .tt { font-weight: 700; font-size: 14px; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-    .tile .tm { margin-left: auto; flex: none; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
+    .tile .thead { display: flex; align-items: flex-start; gap: 8px; min-width: 0;
+      padding: 12px 13px 10px; }
+    /* The TITLE sits under the name, the way a post's body does. It used to
+       share a flex row with the time, the play count and two buttons. */
+    .tile .tt { font-size: 13.5px; color: var(--text-2); overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; min-width: 0; margin-top: 1px; }
+    /* NO `margin-left: auto` HERE. An auto margin absorbs every pixel of free
+       space in the row BEFORE the flexible items get any, so `.tauth` never
+       grew past its content: 66px sat empty between the time and Report while
+       the head looked crowded. `.tauth` is `flex: 1 1 auto`, which is already
+       what pushes the meta to the right edge, so the margin bought nothing and
+       defeated the growth it looked like it was arranging.
+
+       IT WAS NOT THE TRUNCATION, and the mutation is what says so: put the
+       auto margin back today and every row stays green, because a content-
+       sized `.tauth` is still wide enough once the expander has left the head.
+       The name was being cut by the head being 44px + 51px too full -- see the
+       expander's note below and the count's above. Kept anyway: a property
+       that quietly cancels `flex: 1` is a trap the next widening walks into. */
+    .tile .tm { flex: none; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
     /* WHO MADE IT, under the title. Skribl has no user table: every field
        here is what the HOST's resolver returned for the post's user_id, and
        the names match the ones skribls.net already renders in its own post
@@ -139,65 +169,76 @@
        author renders no block at all -- see authorBlock() in gallery.js.
        The avatar is 22px because this is a caption line and not a post head;
        the disc is the host's own no-photo fallback, an initial on a tint. */
-    .tauth { display: flex; align-items: center; gap: 6px; min-width: 0;
+    .tauth { display: flex; align-items: flex-start; gap: 9px; min-width: 0; flex: 1 1 auto;
       margin: 0 0 2px; padding: 0; font-size: 12.5px; color: var(--text-2);
       text-decoration: none; }
     a.tauth:hover .tdn { text-decoration: underline; }
-    .tavatar { flex: none; width: 22px; height: 22px; border-radius: 50%;
+    .tnames { min-width: 0; }
+    .tline { display: flex; align-items: center; gap: 5px; min-width: 0; }
+    /* The unattributed card: same column, no avatar, and NOT `.tauth` -- see
+       gallery.js. The title carries the weight the name would have had. */
+    .tsolo { display: flex; min-width: 0; flex: 1 1 auto; }
+    .tsolo .tt { font-weight: 650; color: var(--text); font-size: 14px; margin-top: 0; }
+    .tavatar { flex: none; width: 34px; height: 34px; border-radius: 50%;
       overflow: hidden; display: grid; place-items: center;
       background: linear-gradient(135deg, #3a3f4b, #232730);
-      color: #fff; font-size: 11px; font-weight: 700; line-height: 1; }
+      color: #fff; font-size: 14px; font-weight: 700; line-height: 1; }
     .tavatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .tdn { font-weight: 600; color: var(--text); overflow: hidden;
+    .tdn { font-weight: 650; font-size: 14px; color: var(--text); overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .tverified { flex: none; color: var(--accent); font-size: 11px; }
-    .tun { flex: none; font-family: var(--font-mono); font-size: 11.5px;
+    /* The handle yields before the name does. `flex: none` made it rigid, so
+       under pressure the DISPLAY NAME was the only thing left to cut -- the
+       wrong way round: a clipped handle still reads as a handle, a clipped
+       name reads as a different person. */
+    .tun { flex: 0 1 auto; font-family: var(--font-mono); font-size: 11.5px;
       color: var(--text-3); overflow: hidden; text-overflow: ellipsis;
       white-space: nowrap; min-width: 0; }
-    /* THE CAPTION IS OVER THE DRAWING NOW, not a block under it -- the card
-       is meant to be showing a drawing, and the description was the tallest
-       thing on it. `opacity`, never `display` or `hidden`: the text stays in
-       the accessibility tree at all times, because it is the only description
-       the post has and a caption a reader cannot reach is worse than one that
-       takes a hover. `pointer-events: none` so a faded scrim never eats a
-       tap meant for play.
-       Two ways in, because a phone has no hover and a desktop reader may want
-       it to STAY: the toggle beside Report pins it (.cap-on), and hover or
-       keyboard focus reveals it transiently where a hover exists at all. */
-    .tileCap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
-      margin: 0; padding: 26px 10px 10px; font-size: 13px; line-height: 1.35;
-      color: #f2f5fa; overflow-wrap: anywhere; pointer-events: none;
-      background: linear-gradient(to top, rgba(6,7,10,.92) 40%, rgba(6,7,10,0));
-      opacity: 0; transition: opacity .16s; }
-    .tileStage.cap-on .tileCap { opacity: 1; }
-    @media (hover: hover) {
-      .tile:hover .tileCap, .tile:focus-within .tileCap { opacity: 1; }
-    }
-    @media (prefers-reduced-motion: reduce) { .tileCap { transition: none; } }
+    /* THE CAPTION CAME OFF THE ART. It was a scrim over the drawing because a
+       poster-first card had nowhere else to put it; a post-like card has room
+       for words. Clamped to two lines, and the toggle EXPANDS rather than
+       reveals -- so the text is always present and always reachable, which is
+       what the opacity trick was protecting, without anything sitting on the
+       picture. */
+    /* THE GAP UNDER THE CAPTION IS A MARGIN, NOT PADDING, and that is what
+       makes the clamp work. `overflow: hidden` clips at the PADDING box, so a
+       10px padding-bottom is 10px of clipped region the third line shows
+       through: the card rendered two clamped lines, an ellipsis, and then a
+       third line sliced in half underneath it. */
+    .tcap { margin: 0 0 10px; padding: 0 13px; font-size: 13px; line-height: 1.4;
+      color: var(--text-2); overflow-wrap: anywhere;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+      overflow: hidden; }
+    .tile.cap-open .tcap { display: block; -webkit-line-clamp: unset; }
+    /* "Show more", UNDER the sentence it belongs to. It was a 44px glyph in
+       the head beside Report; the head is where the NAME lives, and at 390px
+       those 44px were the difference between "Mr. B" and "Mr…". A word under
+       the text also says what it does, which a speech bubble did not. */
     .tile .tileCapBtn {
-      margin-left: 6px; flex: none; width: 44px; height: 44px; padding: 0;
-      display: inline-grid; place-items: center;
-      background: none; border: 0; border-radius: 8px; color: var(--text-3);
-      cursor: pointer;
+      align-self: flex-start; margin: -6px 0 8px; padding: 10px 13px;
+      display: inline-block; position: relative;
+      background: none; border: 0; color: var(--accent);
+      font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
     }
-    .tile .tileCapBtn:hover { color: var(--text); background: var(--control); }
-    .tile .tileCapBtn[aria-pressed="true"] { color: var(--accent); }
-    .tile .tileCapBtn svg { width: 18px; height: 18px; }
+    /* Drawn small, 44px to a finger — the same band every control here uses. */
+    .tile .tileCapBtn::before { content: ''; position: absolute;
+      left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+    /* `hidden` LOSES TO AN EXPLICIT display, always. The rule above sets
+       inline-block, which outranks the UA sheet's [hidden] { display: none },
+       so gallery.js hiding this button did nothing at all until this line --
+       the attribute was set, the DOM agreed it was hidden, and the button was
+       still on the card. */
+    .tile .tileCapBtn[hidden] { display: none; }
+    .tile .tileCapBtn:hover { text-decoration: underline; }
     /* ---- Report, on every tile, and the one sheet they share ---------- */
     .tile .report {
       margin-left: 6px; flex: none; min-height: 44px; min-width: 44px; padding: 0 10px;
       background: none; border: 0; border-radius: 8px; color: var(--text-3);
       font: inherit; font-size: 12.5px; cursor: pointer;
     }
-    /* Watch it big. Sits beside Report and answers a tap 44px square like it. */
-    .tile .tileFull {
-      margin-left: 6px; flex: none; width: 44px; height: 44px; padding: 0;
-      display: inline-grid; place-items: center;
-      background: none; border: 0; border-radius: 8px; color: var(--text-3);
-      cursor: pointer;
-    }
-    .tile .tileFull:hover { color: var(--text); background: var(--control); }
-    .tile .tileFull svg { width: 19px; height: 19px; }
+    /* Watch it big is the FOOTER's button now (lib/fullbar.js, .skfull-full).
+       A `.tileFull` lived here too, beside Report, and stayed after the card
+       grew a transport row -- so every tile carried the same glyph twice. */
     /* The way back out, over the drawing and only while it IS full size. The
        profile's stage has had one since v304; this page had none, which was
        fine while the only way in was the real API (Escape and the system

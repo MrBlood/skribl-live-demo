@@ -73,6 +73,8 @@
 .skfull-row { display: flex; align-items: center; gap: 10px; }
 .skfull-btn {
   flex: none;
+  position: relative;
+  z-index: 1;
   width: 42px;
   height: 42px;
   padding: 0;
@@ -85,6 +87,21 @@
   font: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+/* 42 DRAWN, 44 TO A FINGER, AND THE BAND IS SQUARE. It inherited the button's
+   `border-radius: 50%` in the first cut, which makes the "44px box" a 44px
+   CIRCLE -- it never reaches the corners, and verify_a11y reported dead space
+   at the right and bottom edges while verify_layout measured 43px where 44 was
+   wanted. A tap target is a rectangle; the thing drawn inside it is the round
+   part. */
+.skfull-btn::before {
+  content: '';
+  position: absolute;
+  /* -2, not -1. A 42px button with a 1px band spans [-1, 43) and the 44th
+     pixel falls just OUTSIDE it, which verify_layout reports as 43px and
+     verify_a11y as dead space at the right and bottom edges. The band has to
+     CONTAIN the 44px box, not meet it exactly. */
+  inset: -2px;
 }
 .skfull-btn svg { width: 17px; height: 17px; display: block; }
 .skfull-btn:hover { background: rgba(255, 255, 255, 0.12); }
@@ -169,4 +186,57 @@
   .is-immersive-page > .skfull { padding-left: 12px; padding-right: 12px; }
   .skfull-row { gap: 7px; }
   .skfull-by { display: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   THE CARD FOOTER: the same bar, at card size (direction B).
+
+   Same builder, same control behaviour, fewer controls and no scrub row of its
+   own — lib/fullbar.js's header says which two configurations exist and why
+   there is one builder rather than two transports. What changes here is size
+   and the fact that it is ALWAYS shown: a card's footer is not conditional on
+   anything, so it opts out of the :fullscreen gate above.
+   --------------------------------------------------------------------------- */
+.skfull.skfull-card {
+  display: flex;
+  flex-direction: column;
+  position: static;
+  padding: 9px 11px;
+  background: none;
+  border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.1));
+  color: inherit;
+}
+.skfull-card .skfull-row { gap: 8px; }
+.skfull-card .skfull-btn {
+  width: 40px;
+  height: 40px;
+  border-color: var(--hairline, rgba(255, 255, 255, 0.14));
+  background: var(--control, rgba(255, 255, 255, 0.06));
+  color: var(--text, #e7e9ea);
+  position: relative;
+  z-index: 1;
+}
+/* 40 drawn, 46 to a finger: comfortably over the 44 floor rather than exactly
+   on it, and still short of the 8px gap, so two neighbours' bands cannot touch
+   and steal each other's edge. */
+.skfull-card .skfull-btn::before { inset: -3px; }
+.skfull-card .skfull-btn svg { width: 15px; height: 15px; }
+.skfull-card .skfull-play {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: var(--accent, #7c5cff);
+  color: #fff;
+}
+.skfull-card .skfull-track {
+  height: 5px;
+  background: var(--control, rgba(255, 255, 255, 0.14));
+}
+.skfull-card .skfull-time { width: auto; color: var(--text-3, #8b97a8); }
+
+/* Under 420 the controls keep their size and the gaps give way: a viewer who
+   cannot reach play is stuck, one who cannot read a timestamp is only curious. */
+@media (max-width: 420px) {
+  .skfull.skfull-card { padding: 8px 9px; }
+  .skfull-card .skfull-row { gap: 6px; }
 }

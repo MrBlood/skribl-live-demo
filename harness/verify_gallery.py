@@ -446,26 +446,54 @@ with sync_playwright() as _spg:
     _n = _pg2.evaluate("() => document.querySelectorAll('.tile').length")
     check("there are tiles to measure", _n > 0,
           f"{_n} tiles — an empty gallery cannot fail any row below")
-    _g = _pg2.evaluate("""() => ({
-        tiles: document.querySelectorAll('.tile').length,
-        stages: document.querySelectorAll('.tileStage').length,
-        buttons: document.querySelectorAll('.tileFull').length,
-        wrapped: document.querySelectorAll('.tileStage .skribl-inline').length,
-        named: [...document.querySelectorAll('.tileFull')]
-                 .every(b => (b.getAttribute('aria-label') || '').length > 10),
-        square: [...document.querySelectorAll('.tileFull')].map(b => {
-                  const r = b.getBoundingClientRect();
-                  return Math.round(Math.min(r.width, r.height)); }) }) """)
-    check("every tile carries a full-screen control",
-          _g["buttons"] == _g["tiles"] and _g["tiles"] > 0,
-          f"{_g['buttons']} controls on {_g['tiles']} tiles")
+    # ONE CONTROL PER THING A PERSON CAN DO, and this is counted rather than
+    # merely found because the defect was a SECOND one, not a missing one. The
+    # card's head carried `.tileFull` from before direction B and the footer
+    # carries `.skfull-full` since; both shipped, on all 24 tiles, same glyph
+    # eight pixels apart. "A full-screen control exists" was green on that.
+    #
+    # So the count is per tile and it is an equality: a tile with two fails
+    # here exactly as a tile with none does. Anything that can enter or leave
+    # full size is counted -- the footer's button, a head button if one comes
+    # back, and any other control whose label says "full screen" -- so the row
+    # cannot be satisfied by renaming the duplicate.
+    _g = _pg2.evaluate("""() => {
+        const tiles = [...document.querySelectorAll('.tile')];
+        const fulls = t => [...t.querySelectorAll('button')].filter(b =>
+            /full screen/i.test((b.getAttribute('aria-label') || '') + ' '
+                                + (b.title || '')) && b.offsetParent !== null);
+        const all = tiles.flatMap(fulls);
+        return {
+          tiles: tiles.length,
+          stages: document.querySelectorAll('.tileStage').length,
+          buttons: all.length,
+          perTile: [...new Set(tiles.map(t => fulls(t).length))].sort(),
+          inFooter: all.filter(b => b.closest('.skfull-card')).length,
+          wrapped: document.querySelectorAll('.tileStage .skribl-inline').length,
+          named: all.every(b => (b.getAttribute('aria-label') || '').length > 10),
+          square: all.map(b => { const r = b.getBoundingClientRect();
+                  return Math.round(Math.min(r.width, r.height)); }) }; } """)
+    check("every tile carries a full-screen control — exactly one",
+          _g["tiles"] > 0 and _g["perTile"] == [1],
+          f"{_g['buttons']} controls on {_g['tiles']} tiles, counts per tile "
+          f"{_g['perTile']} — two is the defect this row exists for")
+    check("...and it is the footer's, from the shared bar",
+          _g["buttons"] > 0 and _g["inFooter"] == _g["buttons"],
+          f"{_g['inFooter']} of {_g['buttons']} inside .skfull-card — a control "
+          f"built by the page again is the divergence lib/fullbar.js ended")
     check("...and every player is inside the wrapper that takes the display",
           _g["wrapped"] == _g["tiles"],
           f"{_g['wrapped']} of {_g['tiles']} players wrapped — a player outside "
           f".tileStage has nothing to fullscreen")
-    check("...and each one answers a 44px tap and says which Skribl it opens",
-          _g["named"] and _g["square"] and min(_g["square"]) >= 44,
-          f"smallest {min(_g['square']) if _g['square'] else 0}px, named={_g['named']}")
+    # 36 DRAWN, 44 TO A FINGER. The footer's buttons are the bar's, so they are
+    # the bar's shape too: a 36px disc with a ::before band out to 44. The 44 is
+    # therefore not in this rect and is not asserted from it -- verify_a11y
+    # measures the band where it can be measured, by walking elementFromPoint
+    # over the real element. What belongs here is the VISIBLE floor.
+    check("...and each one is drawn at the visible floor and carries a name",
+          _g["named"] and _g["square"] and min(_g["square"]) >= 34,
+          f"smallest {min(_g['square']) if _g['square'] else 0}px drawn, "
+          f"named={_g['named']} — the 44px reach is verify_a11y's row")
     # WHERE THE FULL-SIZE RULES LIVE, which is the division this page got wrong
     # once and had caught on main. The gallery owns its WRAPPER; the component
     # owns everything about itself. The first cut styled the player's poster and
@@ -580,6 +608,43 @@ for _title, (_id, _wantkind, _wantpages) in _made.items():
           f"listing said kind={_item.get('kind')!r} pages={_item.get('pages')!r}"
           if _item else "the post is not in the listing at all")
 
+# AND HOW BIG THE DRAWING IS (v309), on the same row and for the same reason:
+# the tile frames its idle poster onto the drawing, and the listing is the only
+# place it can learn the shape without fetching the payload it deliberately
+# defers.
+#
+# THE ABSENCE IS THE OTHER HALF. `canvasSize` is OPTIONAL in a payload -- a
+# Skribl from before Pad had a size picker simply has none -- so the honest
+# answer for one is null, and the component then keeps the crop it had before
+# the column. Posted here as a real payload with the key left out, because
+# "the listing reports the size" is satisfied by a column that reports 816x612
+# for everything.
+_nosize = {"title": TAG + " no canvasSize", "version": 2, "schemaVersion": 2,
+           "visibility": "public",
+           "frames": [{"strokes": [{"x": 5, "y": 5, "color": "#fff", "size": 4, "t": 0},
+                                   {"x": 90, "y": 70, "color": "#fff", "size": 4, "t": 90}],
+                       "strokeGroups": [2]}]}
+_rq2 = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_nosize).encode(),
+                              headers={"Content-Type": "application/json"})
+with urllib.request.urlopen(_rq2, timeout=20) as _r2:
+    _nosize_id = json.loads(_r2.read().decode())["id"]
+
+_listing2 = api("/api/skribls?limit=60")
+_by_id2 = {i["id"]: i for i in _listing2.get("items", [])}
+_sized = _by_id2.get(next(iter(_made.values()))[0]) or {}
+_unsized = _by_id2.get(_nosize_id) or {}
+check("the listing carries the drawing's size, so a tile can frame its poster",
+      _sized.get("canvas_w") == 800 and _sized.get("canvas_h") == 600,
+      f"canvas_w={_sized.get('canvas_w')!r} canvas_h={_sized.get('canvas_h')!r} "
+      f"\u2014 posted at 800x600; without this the tile shows the share card's "
+      f"own ground and plate border either side of the drawing")
+check("...and answers null for a payload that never said, rather than guessing",
+      _unsized.get("id") == _nosize_id
+      and _unsized.get("canvas_w") is None and _unsized.get("canvas_h") is None,
+      f"{ {k: _unsized.get(k) for k in ('id', 'canvas_w', 'canvas_h')} } \u2014 a "
+      f"guessed 4:3 would frame the picture WRONGLY, which is worse than framing "
+      f"it widely; the component keeps the band crop on a null")
+
 with sync_playwright() as _spk:
     _bk = _spk.chromium.launch()
     _pk = _bk.new_context().new_page()
@@ -645,10 +710,41 @@ with sync_playwright() as _spk:
           });
         });
         return out; }""")
-    check("no mark is drawn over the tile player's transport",
-          _over["pairs"] > 0 and not _over["over"],
-          f"{_over['pairs']} badge/cluster pairs measured, overlapping on {_over['over']}"
-          " — zero pairs would mean this measured nothing at all")
+    # THE PREMISE MOVED, SO THE ASSERTION DID (v308, direction B). This used to
+    # measure a badge against the component's own control cluster, because the
+    # cluster sat at bottom left OF THE DRAWING and the pen landed on the play
+    # button. On a post-like card the transport is a FOOTER under the drawing
+    # and the component's own cluster is hidden (`is-bare`), so there is no
+    # pair left to overlap -- which is why this went to zero pairs rather than
+    # to zero overlaps.
+    #
+    # Zero pairs is the old assertion passing vacuously, so it is replaced
+    # rather than relaxed: what is true now, and worth keeping true, is that
+    # NOTHING a viewer presses is inside the drawing. That is the stronger
+    # claim -- it fails if any control moves back onto the picture, whichever
+    # control it is.
+    _inside = _pk.evaluate("""() => {
+        const out = { tiles: 0, inArt: [] };
+        document.querySelectorAll('.tile').forEach(t => {
+          const st = t.querySelector('.tileStage');
+          if (!st) return;
+          out.tiles++;
+          const sr = st.getBoundingClientRect();
+          t.querySelectorAll('button, a[href]').forEach(c => {
+            if (!st.contains(c)) return;
+            /* the way out of full screen is allowed to be over the art: it is
+               the one control with nowhere else to live */
+            if (c.classList.contains('tileExit')) return;
+            const r = c.getBoundingClientRect();
+            if (r.width && r.height) out.inArt.push(c.className.split(' ')[0]);
+          });
+        });
+        return out; }""")
+    check("nothing a viewer presses sits inside the drawing",
+          _inside["tiles"] > 0 and not _inside["inArt"],
+          f"{_inside['tiles']} tiles measured, controls inside the art: "
+          f"{sorted(set(_inside['inArt']))} \u2014 the transport is a footer now, "
+          f"and the pen on the play button is what that move was for")
     # TOOLTIPS, which this page had none of (owner). The module is loaded and
     # started here; it moves every `title` to `data-tip` and draws its own.
     # Asserted on data-tip, not on `title`, because the module REMOVES the
@@ -705,9 +801,25 @@ with sync_playwright() as _spa:
         for i, item in enumerate(items):
             if i == 0:
                 item["author"] = dict(_AUTHOR)
-                item["caption"] = "a caption that lives over the drawing"
+                # LONG ON PURPOSE. The first fixture was one line, so the
+                # clamp folded nothing and opening it changed no height -- the
+                # probe could not tell a working toggle from a dead one, and
+                # said so: shut 28, open 28.
+                item["caption"] = ('a description long enough to need more than two lines on a card this wide, so that the clamp has something to fold and the toggle has something to unfold, which a one-line caption cannot show')
+                # A PLAY COUNT, so the narrow-tier row below has something to
+                # stand down. The listing's own fixtures post with 0 views and
+                # gallery.js draws no count at all for those -- against which
+                # "the count is hidden at 390" is green on a page that never
+                # had one.
+                item["views"] = 42
             elif i == 1:
                 item["author"] = dict(_EVIL)
+                # SHORT ON PURPOSE, and it is the other half of the toggle
+                # rows below: a caption the clamp does not fold is the case
+                # where the control must NOT be drawn, and without one on the
+                # page "the toggle appears where it is needed" passes on a
+                # grid that draws it everywhere.
+                item["caption"] = "one short line"
             # every other row keeps NO author, which is the absence case
         route.fulfill(response=r, json=data)
 
@@ -728,10 +840,11 @@ with sync_playwright() as _spa:
           avatar: img ? img.getAttribute('src') : null,
           /* the block sits between the head and the drawing, which is where
              the owner asked for it ("at the top under the title") */
-          belowHead: !!(a && t[0].querySelector('.thead') &&
-            a.getBoundingClientRect().top >= t[0].querySelector('.thead').getBoundingClientRect().bottom - 1),
+          inHead: !!(a && a.closest('.thead')),
+          titleInNames: !!(a && a.querySelector('.tnames .tt')),
           aboveStage: !!(a && t[0].querySelector('.tileStage') &&
             a.getBoundingClientRect().bottom <= t[0].querySelector('.tileStage').getBoundingClientRect().top + 1),
+          solos: document.querySelectorAll('.tsolo').length,
           /* and the tiles with no author draw no block at all */
           blocks: document.querySelectorAll('.tauth').length,
         }; }""")
@@ -744,12 +857,16 @@ with sync_playwright() as _spa:
           str(_card) + " \u2014 a null avatar can also mean the image 404'd: the "
           "element's own onerror swaps it for an initial, which is the fallback "
           "working and the fixture wrong")
-    check("...under the title and above the drawing",
-          _card["belowHead"] and _card["aboveStage"], str(_card))
-    check("...and a post with no author draws NO block, not an empty one",
-          _card["blocks"] == 2,
-          f"{_card['blocks']} .tauth blocks for 2 described authors out of "
-          f"{_card['tiles']} tiles")
+    check("...at the top of the card, with the title under the name",
+          _card["inHead"] and _card["titleInNames"] and _card["aboveStage"],
+          f"{_card} \u2014 direction B: who first, then what, the way a post head "
+          f"reads; the title used to share a flex row with the time and two buttons")
+    check("...and a post with no author draws NO author block",
+          _card["blocks"] == 2 and _card["solos"] == _card["tiles"] - 2,
+          f"{_card['blocks']} .tauth blocks and {_card['solos']} unattributed "
+          f"heads out of {_card['tiles']} tiles \u2014 `.tauth` means somebody is "
+          f"named, which is what makes its absence readable; the unattributed "
+          f"card uses `.tsolo` so it cannot borrow the meaning")
 
     _evil = _pa.evaluate("""() => {
         const a = [...document.querySelectorAll('.tauth')]
@@ -763,69 +880,390 @@ with sync_playwright() as _spa:
     # THE CAPTION, OVER THE DRAWING. Asserted by PAINT and geometry, not by
     # the class alone: `opacity` is what hides it (the text stays in the
     # accessibility tree), so "hidden" here means a computed opacity of 0.
+    # THE CAPTION CAME OFF THE ART (v308, direction B). It was a scrim over
+    # the drawing because a poster-first card had nowhere else to put it; a
+    # post-like card has room for words, so it is text under the title,
+    # clamped to two lines, and the toggle EXPANDS it rather than revealing
+    # it.
     #
-    # READ AFTER THE TRANSITION, NEVER DURING IT. The first draft clicked and
-    # read `opacity` in the same evaluate(), and getComputedStyle returns the
-    # INTERPOLATED value mid-transition -- so a working toggle measured 0 and
-    # this went red on correct code, while the "off again" half went green for
-    # that same wrong reason. Each step now waits longer than the .16s.
-    #
-    # The mouse is parked off the grid first: `@media (hover: hover)` is live
-    # in this desktop browser, so a pointer resting on a tile would reveal the
-    # caption on its own and the toggle's effect would be unmeasurable.
-    _pa.mouse.move(5, 5)
-    _pa.wait_for_timeout(300)
+    # WHAT THE OLD ASSERTIONS WERE PROTECTING SURVIVES, and it is worth
+    # saying which part: the text had to stay in the accessibility tree at
+    # all times, which is why the scrim used `opacity` and never `display`.
+    # A clamp keeps that for free -- the text is present, and a reader that
+    # does not paint is not affected by a line limit. What goes is the
+    # hover branch, because nothing is hidden any more.
     _cap = _pa.evaluate("""() => {
         const t = document.querySelector('.tile');
-        const cap = t.querySelector('.tileCap');
+        const cap = t.querySelector('.tcap');
         const st = t.querySelector('.tileStage');
         const btn = t.querySelector('.tileCapBtn');
         if (!cap || !st || !btn) return { missing: !cap ? 'cap' : (!st ? 'stage' : 'btn') };
         const cr = cap.getBoundingClientRect(), sr = st.getBoundingClientRect();
+        const cs = getComputedStyle(cap);
+        const shut = Math.round(cr.height);
+        btn.click();
+        const open = Math.round(cap.getBoundingClientRect().height);
+        const pressed = btn.getAttribute('aria-pressed');
+        btn.click();
         return { text: cap.textContent,
-                 rest: getComputedStyle(cap).opacity,
-                 inStage: cr.top >= sr.top - 1 && cr.bottom <= sr.bottom + 1,
-                 pressed0: btn.getAttribute('aria-pressed') }; }""")
-    if not _cap.get("missing"):
-        for _step, _keys in ((1, ("on", "pressed1")), (2, ("off", "pressed2"))):
-            _pa.evaluate("() => document.querySelector('.tile .tileCapBtn').click()")
-            _pa.wait_for_timeout(400)
-            _got = _pa.evaluate("""() => [
-                getComputedStyle(document.querySelector('.tile .tileCap')).opacity,
-                document.querySelector('.tile .tileCapBtn').getAttribute('aria-pressed')]""")
-            _cap[_keys[0]], _cap[_keys[1]] = _got[0], _got[1]
-    check("the caption is drawn over the drawing, not as a block under it",
-          not _cap.get("missing") and _cap["inStage"]
-          and _cap["text"] == "a caption that lives over the drawing",
-          str(_cap))
-    check("...invisible at rest, and the toggle turns it on and off again",
-          not _cap.get("missing") and _cap["rest"] == "0" and _cap["on"] == "1"
-          and _cap["off"] == "0", str(_cap))
+                 aboveStage: cr.bottom <= sr.top + 1,
+                 clamp: cs.webkitLineClamp || cs.lineClamp,
+                 display: cs.display, visibility: cs.visibility,
+                 hidden: cap.hasAttribute('hidden'),
+                 shut: shut, open: open, pressed: pressed,
+                 shutAgain: Math.round(cap.getBoundingClientRect().height) }; }""")
+    check("the caption is text under the title, not a scrim on the drawing",
+          not _cap.get("missing") and _cap["aboveStage"]
+          and _cap["text"].startswith("a description long enough"),
+          f"{_cap} \u2014 nothing needs to sit on the picture once the card has"
+          f" somewhere to put words")
+    check("...clamped at rest, and the toggle opens it and shuts it again",
+          not _cap.get("missing") and _cap["clamp"] in ("2", 2)
+          and _cap["open"] > _cap["shut"] and _cap["shutAgain"] == _cap["shut"],
+          f"{_cap} \u2014 a clamp that never opens is a description nobody can"
+          f" finish reading")
     check("...and the toggle says which state it is in",
-          _cap.get("pressed0") == "false" and _cap.get("pressed1") == "true"
-          and _cap.get("pressed2") == "false", str(_cap))
+          _cap.get("pressed") == "true", str(_cap))
 
-    # A CAPTION A READER CANNOT GET TO IS WORSE THAN ONE THAT TAKES A HOVER.
-    # `opacity: 0` keeps the text in the accessibility tree; `display: none`
-    # or `hidden` would not, and either would have looked identical on screen.
+    # The expander, both cards at once, and the clamp's real height.
+    MORE_JS = """() => {
+        const t = [...document.querySelectorAll('.tile')];
+        const one = t[0], two = t[1];
+        const btn = one && one.querySelector('.tileCapBtn');
+        const cap = one && one.querySelector('.tcap');
+        if (!btn || !cap) return { missing: true };
+        const r = btn.getBoundingClientRect(), cr = cap.getBoundingClientRect();
+        const line = parseFloat(getComputedStyle(cap).lineHeight);
+        const b2 = two && two.querySelector('.tileCapBtn');
+        const c2 = two && two.querySelector('.tcap');
+        return {
+          shown: getComputedStyle(btn).display,
+          word: (btn.textContent || '').trim(),
+          inHead: !!btn.closest('.thead'),
+          afterCap: cap.nextElementSibling === btn,
+          reach: Math.round(r.height) >= 34,
+          capH: Math.round(cr.height), line: Math.round(line),
+          shortShown: b2 ? getComputedStyle(b2).display : 'no-btn',
+          shortClipped: c2 ? c2.scrollHeight > c2.clientHeight + 1 : null }; }"""
+
+    _more = _pa.evaluate(MORE_JS)
+    # WHERE THE EXPANDER LIVES, AND WHERE IT DOES NOT. It was a glyph in the
+    # head beside Report, which cost 44px of the row the display NAME is in --
+    # the row below measures what that cost. It is a word under the sentence
+    # now, and the head is the name's again.
+    check("the caption's expander is a word under the caption, not a glyph in the head",
+          not _more.get("missing") and _more["shown"] != "none"
+          and _more["word"].lower() == "show more"
+          and _more["afterCap"] and not _more["inHead"],
+          f"{_more} \u2014 a speech bubble beside Report does not say 'there is "
+          f"more of this sentence'; two words under the sentence do")
+    # AND ONLY WHERE THE CLAMP ACTUALLY BITES. Tile 1's caption is one line,
+    # so its control must not exist -- asserted on a DIFFERENT card from the
+    # row above, because "it is drawn" and "it is drawn only when needed" are
+    # two claims and one page can satisfy the first while failing the second.
+    check("...and it is absent on a caption the clamp does not fold",
+          not _more.get("missing") and _more["shortClipped"] is False
+          and _more["shortShown"] in ("none", "no-btn"),
+          f"{_more} \u2014 every captioned card used to carry a button that "
+          f"expanded nothing, which is a control that lies about there being more")
+    # THE CLAMP DOES NOT LEAK. `overflow: hidden` clips at the PADDING box, so
+    # a padding-bottom is clipped region the third line shows through: the card
+    # rendered two lines, an ellipsis, and a third line sliced in half. Two
+    # lines of text is the whole box, within a pixel of rounding.
+    check("...and the clamped caption is exactly two lines tall, with nothing under them",
+          not _more.get("missing")
+          and abs(_more["capH"] - 2 * _more["line"]) <= 2,
+          f"{_more} \u2014 {_more.get('capH')}px against {2 * _more.get('line', 0)}px "
+          f"for two lines: anything more is a line bleeding through the clip")
+
+    # THE NAME IS NEVER APPROXIMATE. A clipped handle still reads as a handle;
+    # a clipped display name reads as a different person. Measured at 390,
+    # which is where the head's row is genuinely full, and on the card that
+    # ALSO carries a caption and its expander -- the crowded case, not the
+    # roomy one.
+    _pa.set_viewport_size({"width": 390, "height": 900})
+    _pa.wait_for_timeout(400)
+    _narrow = _pa.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const dn = t.querySelector('.tdn'), un = t.querySelector('.tun');
+        const plays = t.querySelector('.plays');
+        const head = t.querySelector('.thead');
+        return { w: window.innerWidth,
+                 dnCut: dn.scrollWidth > dn.clientWidth + 1,
+                 dnText: dn.textContent,
+                 unThere: !!un,
+                 plays: plays ? getComputedStyle(plays).display : 'absent',
+                 slack: Math.round(head.getBoundingClientRect().width)
+                        - [...head.children].reduce((a, e) =>
+                            a + e.getBoundingClientRect().width, 0) }; }""")
+    check("at 390 the display name is not ellipsised",
+          _narrow["w"] == 390 and _narrow["dnCut"] is False,
+          f"{_narrow} \u2014 `margin-left: auto` on the time ate the free space "
+          f"before the name could have it, and this said 'Mr\u2026'")
+    check("...because the count stood down, not because the head had room to spare",
+          _narrow["plays"] == "none" and _narrow["unThere"],
+          f"{_narrow} \u2014 if the row still fits with the count in it, this "
+          f"tier is not doing anything and the next long name will clip again")
+    _pa.set_viewport_size({"width": 1100, "height": 1000})
+    _pa.wait_for_timeout(300)
+
+    # ---- THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE (v308) ------------
+    # Direction B puts the transport under the drawing. Rather than write a
+    # second one in gallery.js -- which would contradict lib/fullbar.js's
+    # reason for existing within a day of it landing -- the card calls the
+    # SAME builder with a different control list.
+    #
+    # ASSERTED AS "the same class of thing, configured differently": the
+    # footer's controls carry the module's own `skfull-` names, so a card that
+    # grew a hand-rolled transport would fail this even if it looked right.
+    _foot = _pa.evaluate("""() => {
+        const tiles = [...document.querySelectorAll('.tile')];
+        const t = tiles[0];
+        const f = t.querySelector('.skfull-card');
+        if (!f) return { missing: true, withFoot: 0, tiles: tiles.length };
+        const st = t.querySelector('.tileStage');
+        const box = t.querySelector('.skribl-inline');
+        return {
+          tiles: tiles.length,
+          withFoot: tiles.filter(x => x.querySelector('.skfull-card')).length,
+          btns: [...f.querySelectorAll('.skfull-btn')].map(b => b.className.split(' ')[1]),
+          track: !!f.querySelector('.skfull-track'),
+          belowArt: !!(st && f.getBoundingClientRect().top
+                       >= st.getBoundingClientRect().bottom - 1),
+          bare: !!(box && box.classList.contains('is-bare')),
+          ownDur: (() => { const d = t.querySelector('.skribl-inline-dur');
+                           return d ? getComputedStyle(d).display : 'absent'; })(),
+          /* the full-screen bar's own row must NOT be showing on a card */
+          fullBars: t.querySelectorAll('.skfull:not(.skfull-card)').length }; }""")
+    check("every card carries the transport, under the drawing",
+          not _foot.get("missing") and _foot["withFoot"] == _foot["tiles"]
+          and _foot["belowArt"] and _foot["track"],
+          f"{_foot} \u2014 direction B is a footer, not a scrim")
+    check("...built by lib/fullbar.js, not hand-rolled beside it",
+          not _foot.get("missing")
+          and _foot["btns"] == ['skfull-play', 'skfull-loop', 'skfull-mute', 'skfull-full'],
+          f"{_foot} \u2014 the `skfull-` names are the module's; a card that grew "
+          f"its own transport would fail here even looking identical")
+    check("...and the component's own chrome yields to it on a card too",
+          not _foot.get("missing") and _foot["bare"]
+          and _foot["ownDur"] in ("none", "absent"),
+          f"{_foot} \u2014 two transports on one drawing is the defect, in a grid "
+          f"as much as in full screen")
+
+    # Counts each footer's own DOM rewrites over a window; see the rows that use it.
+    PACE_JS = """(ms) => new Promise(res => {
+        const foots = [...document.querySelectorAll('.tile .skfull-card')];
+        const counts = foots.map(() => 0);
+        const obs = foots.map((f, i) => {
+          const o = new MutationObserver(recs => { counts[i] += recs.length ? 1 : 0; });
+          o.observe(f, { subtree: true, childList: true,
+                         attributes: true, characterData: true });
+          return o; });
+        setTimeout(() => {
+          obs.forEach(o => o.disconnect());
+          res({ tiles: foots.length,
+                worst: counts.length ? Math.max.apply(null, counts) : 0,
+                total: counts.reduce((a, b) => a + b, 0) }); }, ms); })"""
+    # AN IDLE GRID IS NOT A RUNNING ONE, and this row is the reason the card's
+    # loop paces itself. lib/fullbar.js follows the clock on a frame loop, which
+    # is right for ONE bar over ONE drawing in full screen and wrong for a
+    # gallery, where `running(true)` on every card meant a rAF per card
+    # repainting the same 0:00 sixty times a second. The module's own comment
+    # already said a hidden bar must not cost a frame; a visible-but-stopped
+    # one costs the same and was not covered.
+    #
+    # MEASURED AS WORK DONE, not as which timer was used. Each sync() rewrites
+    # the footer's glyphs, its fill width and its clock, so a MutationObserver
+    # over the footers counts syncs directly and does not care whether the next
+    # beat came from rAF or setTimeout — a later rewrite that keeps rAF but
+    # skips the writes would still be cheap, and should still pass.
+    PACE_MS = 800
+    _pace = _pa.evaluate(PACE_JS, PACE_MS)
+    _budget = max(2, round(PACE_MS / 250.0) + 2)
+    check("a grid of stopped cards paces its bars instead of running them",
+          _pace["tiles"] > 0 and _pace["worst"] <= _budget,
+          f"busiest footer rewrote itself {_pace['worst']} times in {PACE_MS} ms "
+          f"across {_pace['tiles']} cards (budget {_budget}) — a frame loop is "
+          f"~{round(PACE_MS * 0.06)} and is what this row exists to catch")
+    check("...and they are still following it, not stopped dead",
+          _pace["total"] > 0,
+          f"{_pace} — a bar that never syncs cannot notice another post "
+          f"claiming the page's sound, and would pass the row above trivially")
+
+    # WHERE THE POSTER IS PAINTED, scanned rather than read off its rect --
+    # `clip-path` is the one property that makes a rect a lie by construction,
+    # so getBoundingClientRect() reports the whole card whatever is visible.
+    # elementFromPoint answers what is actually hit, and a clipped region does
+    # not hit. Walk the box's centre row and centre column for the first and
+    # last point that lands on the poster.
+    FRAME_JS = """() => {
+        /* THE FIRST TILE THAT KNOWS ITS SIZE, not simply the first tile. The
+           grid also carries posts whose payload never said -- the suite posts
+           one deliberately -- and those keep the band crop by design, so
+           measuring tile 0 blindly measures whichever fixture happens to be
+           newest. (It did: the unsized fixture landed first and reddened these
+           rows, which is the known-bad case arriving for free.) */
+        const tiles = [...document.querySelectorAll('.tile')];
+        const n = tiles.findIndex(x => x.querySelector('[data-skribl-w]'));
+        const t = tiles[n < 0 ? 0 : n];
+        const box = t.querySelector('.skribl-inline');
+        const r = box.getBoundingClientRect();
+        const cy = Math.round(r.top + r.height / 2);
+        const cx = Math.round(r.left + r.width / 2);
+        const on = (x, y) => { const e = document.elementFromPoint(x, y);
+          return !!(e && e.classList.contains('skribl-inline-poster')); };
+        let l = null, rr = null, tp = null, bt = null;
+        for (let x = Math.ceil(r.left); x < r.right; x++) if (on(x, cy)) { l = x; break; }
+        for (let x = Math.floor(r.right) - 1; x >= r.left; x--) if (on(x, cy)) { rr = x; break; }
+        for (let y = Math.ceil(r.top); y < r.bottom; y++) if (on(cx, y)) { tp = y; break; }
+        for (let y = Math.floor(r.bottom) - 1; y >= r.top; y--) if (on(cx, y)) { bt = y; break; }
+        return { n: n, w: box.getAttribute('data-skribl-w'),
+                 h: box.getAttribute('data-skribl-h'),
+                 box: [Math.round(r.width), Math.round(r.height)],
+                 painted: l === null ? null
+                   : [l - Math.round(r.left), tp - Math.round(r.top),
+                      rr - l + 1, bt - tp + 1] }; }"""
+
+    CANVAS_JS = """(n) => {
+        const t = document.querySelectorAll('.tile')[n];
+        const box = t.querySelector('.skribl-inline');
+        const cv = t.querySelector('.skribl-inline-canvas');
+        const br = box.getBoundingClientRect(), cr = cv.getBoundingClientRect();
+        return { hidden: cv.hasAttribute('hidden'),
+                 rect: [Math.round(cr.left - br.left), Math.round(cr.top - br.top),
+                        Math.round(cr.width), Math.round(cr.height)] }; }"""
+
+    # The idle play cue, read three ways at once; see the rows that use it.
+    CUE_JS = """() => {
+        const t = document.querySelector('.tile');
+        const box = t && t.querySelector('.skribl-inline');
+        const veil = t && t.querySelector('.skribl-inline-veil');
+        const disc = t && t.querySelector('.skribl-inline-play');
+        if (!box || !veil || !disc) return { missing: true };
+        const r = disc.getBoundingClientRect();
+        const cx = Math.round(r.left + r.width / 2);
+        const cy = Math.round(r.top + r.height / 2);
+        const hit = document.elementFromPoint(cx, cy);
+        return {
+          shownVeil: getComputedStyle(veil).display,
+          shownDisc: getComputedStyle(disc).display,
+          opacity: +getComputedStyle(veil).opacity,
+          w: Math.round(r.width), h: Math.round(r.height),
+          playing: box.classList.contains('is-playing'),
+          bare: box.classList.contains('is-bare'),
+          underIt: !!(hit && box.contains(hit)) }; }"""
+    # AND THE DRAWING STILL SAYS IT MOVES. `is-bare` means the host supplies
+    # the TRANSPORT; it briefly meant the host supplies the idle veil too, and
+    # the veil is not a control -- it is the wash and the play triangle that
+    # tell a person a still picture is a recording. The first screenshot of
+    # direction B was 24 black rectangles under 24 neat footers.
+    #
+    # NOT ASSERTED FROM THE RECT ALONE (a rect is not a paint, and this tree
+    # has been fooled by one before). The veil is pointer-events: none, so
+    # elementFromPoint cannot return it and cannot be the whole instrument
+    # either. Three facts together: the disc is DISPLAYED, the veil is not
+    # transparent, and the point it is drawn at is inside this tile's own
+    # player rather than behind the footer or the next card.
+    _cue = _pa.evaluate(CUE_JS)
+    check("an idle card still shows the play cue over the drawing",
+          not _cue.get("missing") and _cue["shownVeil"] != "none"
+          and _cue["shownDisc"] != "none" and _cue["opacity"] > 0.5
+          and _cue["w"] >= 40 and _cue["h"] >= 40 and _cue["underIt"],
+          f"{_cue} — `is-bare` takes the buttons, never the affordance: "
+          f"without it a card is a black rectangle that looks broken")
+    check("...and it is the BARE card being measured, not a card without one",
+          not _cue.get("missing") and _cue["bare"] and not _cue["playing"],
+          f"{_cue} — a card that never went bare would pass the row above "
+          f"while saying nothing about the class that hid the veil")
+
+    # ---- THE IDLE POSTER IS THE DRAWING, NOT THE CARD AROUND IT (v309) ----
+    #
+    # A tile shows the share card until somebody presses play, and the card
+    # CONTAINS the drawing: a 4:3 drawing sits in a 656px picture in the middle
+    # of a 1200px card, so the old band crop left 110px of card ground and the
+    # card's own plate border on each side. A picture inside a frame inside a
+    # card, on every tile (owner: "fix the share card bands too").
+    #
+    # ASSERTED AS AGREEMENT WITH THE CANVAS, not against remembered numbers.
+    # The claim worth pinning is not "the poster is 284px wide", which changes
+    # with the column width; it is that the poster lands where the drawing will
+    # -- so the measurement is taken twice on the same tile, idle and playing,
+    # and the two are compared. A band crop fails this by a mile: it paints the
+    # full width of the box.
+    _frame = _pa.evaluate(FRAME_JS)
+    check("the tile knows the drawing's size, so there is something to frame",
+          _frame["w"] and _frame["h"],
+          f"{_frame} \u2014 without data-skribl-w/h the component keeps the band "
+          f"crop, and every row below would be measuring the old behaviour")
+    _pa.evaluate("(n) => document.querySelectorAll('.tile')[n]"
+                 ".querySelector('.skfull-play').click()", _frame["n"])
+    _pa.wait_for_timeout(1200)
+    _cv = _pa.evaluate(CANVAS_JS, _frame["n"])
+    check("...and the canvas is up, so there is something to compare it to",
+          not _cv["hidden"] and _cv["rect"][2] > 0 and _cv["rect"][3] > 0,
+          f"{_cv} \u2014 a hidden canvas has a zero rect and everything agrees "
+          f"with nothing")
+    _dev = ([abs(a - b) for a, b in zip(_frame["painted"], _cv["rect"])]
+            if _frame["painted"] else None)
+    # The tolerance is the PLATE: fitPoster insets the clip by PLATE_LW so the
+    # card's accent hairline does not survive into the tile, which costs the
+    # drawing its outermost card pixel on each edge. At tile size that is 2-3
+    # device pixels, and it is the only difference there should be.
+    check("the idle poster is painted where the drawing will be, not where the card is",
+          _frame["painted"] and _dev and max(_dev) <= 6,
+          f"poster painted {_frame['painted']} against canvas {_cv['rect']}, "
+          f"worst edge off by {max(_dev) if _dev else 'n/a'}px \u2014 the band crop "
+          f"paints the whole box width and fails this by ~{_frame['box'][0] - _cv['rect'][2]}px")
+    # PUT THE TILE BACK. The rows above had to press play to have a canvas to
+    # compare against, and the block below presses play itself and asserts the
+    # result is 'playing' -- on a tile already running, that click is a pause.
+    _pa.evaluate("""(n) => { const t = document.querySelectorAll('.tile')[n];
+        const pl = (t.querySelector('.skribl-inline') || {})._skriblInline;
+        if (pl) { pl.pause(); pl.seek(0); } }""", _frame["n"])
+    _pa.wait_for_timeout(300)
+
+    # THE CARD'S FOOTER DRIVES THE PLAYER, the same way the full-screen bar
+    # does and for the same reason: a control that keeps its own state lies
+    # the moment anything else moves the thing it is about.
+    _pa.evaluate("() => document.querySelector('.tile .skfull-play').click()")
+    _pa.wait_for_timeout(700)
+    _fdrive = _pa.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const pl = (t.querySelector('.skribl-inline') || {})._skriblInline;
+        const f = t.querySelector('.skfull-card');
+        if (!pl) return { noPlayer: true };
+        const st = pl.state();
+        const loopBefore = pl.looping();
+        f.querySelector('.skfull-loop').click();
+        return { state: st.state, loaded: st.loaded,
+                 loopBefore: loopBefore, loopAfter: pl.looping(),
+                 lit: f.querySelector('.skfull-loop').classList.contains('on') }; }""")
+    check("pressing play on a card plays THAT card's drawing",
+          not _fdrive.get("noPlayer") and _fdrive["state"] == "playing"
+          and _fdrive["loaded"],
+          f"{_fdrive} \u2014 the footer holds no state of its own; it asks the "
+          f"player, which is what keeps it honest when a replay ends by itself")
+    check("...and repeat reads what is true of the player",
+          not _fdrive.get("noPlayer")
+          and _fdrive["loopAfter"] != _fdrive["loopBefore"]
+          and _fdrive["lit"] == _fdrive["loopAfter"], str(_fdrive))
+
+    # A CAPTION A READER CANNOT GET TO IS WORSE THAN ONE THAT TAKES A HOVER,
+    # and that was the whole argument for `opacity` over `display` when this
+    # was a scrim. A line clamp keeps it: the text is in the tree whole, and
+    # a reader that does not paint is not affected by a limit on lines.
     _a11ycap = _pa.evaluate("""() => {
-        const cap = document.querySelector('.tile .tileCap');
+        const cap = document.querySelector('.tile .tcap');
         const cs = getComputedStyle(cap);
         return { display: cs.display, visibility: cs.visibility,
                  hidden: cap.hasAttribute('hidden'),
-                 w: Math.round(cap.getBoundingClientRect().width) }; }""")
-    check("the hidden caption is still text a screen reader reaches",
+                 chars: (cap.textContent || '').length }; }""")
+    check("the clamped caption is still the WHOLE text a screen reader reaches",
           _a11ycap["display"] != "none" and _a11ycap["visibility"] != "hidden"
-          and not _a11ycap["hidden"] and _a11ycap["w"] > 0,
-          f"{_a11ycap} — display:none or hidden would look the same and read as nothing")
-
-    # HOVER IS THE OTHER WAY IN, where a hover exists at all. The test browser
-    # is a desktop Chromium, so `@media (hover: hover)` is live here.
-    _pa.hover(".tile .tileStage")
-    _pa.wait_for_timeout(300)
-    _hov = _pa.evaluate("() => getComputedStyle(document.querySelector('.tile .tileCap')).opacity")
-    check("hovering a tile reveals its caption without a click",
-          _hov == "1", f"opacity {_hov} while hovering the tile")
+          and not _a11ycap["hidden"]
+          and _a11ycap["chars"] == len('a description long enough to need more than two lines on a card this wide, so that the clamp has something to fold and the toggle has something to unfold, which a one-line caption cannot show'),
+          f"{_a11ycap} \u2014 a clamp hides lines, never characters; truncating the"
+          f" TEXT would read as a shorter description rather than a folded one")
 
     _pa.close()
     _ba.close()
@@ -874,7 +1312,7 @@ with sync_playwright() as _spi:
     _has = _pi.evaluate("""() => ({
         api: !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
         tiles: document.querySelectorAll('.tile').length,
-        buttons: document.querySelectorAll('.tileFull').length,
+        buttons: document.querySelectorAll('.tile .skfull-card .skfull-full').length,
         exits: document.querySelectorAll('.tileExit').length })""")
     check("the simulation is real: this page believes it has no Fullscreen API",
           _has["api"] is False,
@@ -888,7 +1326,7 @@ with sync_playwright() as _spi:
           f"{_has} \u2014 in the fallback the page is still the page, and nothing "
           f"but this button leaves it: no Escape from the browser, no system gesture")
 
-    _pi.evaluate("() => document.querySelector('.tile .tileFull').click()")
+    _pi.evaluate("() => document.querySelector('.tile .skfull-card .skfull-full').click()")
     _pi.wait_for_timeout(700)
     _big = _pi.evaluate("""() => {
         const st = document.querySelector('.tile .tileStage');

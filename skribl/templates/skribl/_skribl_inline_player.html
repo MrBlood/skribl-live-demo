@@ -133,13 +133,27 @@
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl') -%}
+{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None) -%}
 {# is-muted and is-silent are the pre-script truth: sound is off by default, and
    nothing yet knows whether this Skribl has any. inlineplayer.js clears
-   is-silent when the payload turns out to carry a loop. #}
+   is-silent when the payload turns out to carry a loop.
+
+   canvas_w/canvas_h are the DRAWING's size — `post.canvas_w`, `post.canvas_h`,
+   or the same two keys off the listing JSON. Pass them and the idle poster is
+   framed exactly where the canvas will be, instead of showing the share card's
+   own ground and plate border either side of a drawing that is not 16:9. Leave
+   them out and the poster keeps the band crop it had before v309, which is
+   also what a post written before that column gets: OPTIONAL, because a host
+   who upgrades the package without touching their template must not have their
+   posters change shape, and because `canvasSize` is itself optional in a
+   payload. Both or neither — one edge alone frames nothing. #}
 <div class="skribl-inline is-muted is-silent"
      data-skribl-inline
      data-skribl-id="{{ public_id }}"
+{%- if canvas_w and canvas_h %}
+     data-skribl-w="{{ canvas_w }}"
+     data-skribl-h="{{ canvas_h }}"
+{%- endif %}
      data-skribl-api="{{ url_for(bp ~ '.create_skribl') }}"
      role="button"
      tabindex="0"

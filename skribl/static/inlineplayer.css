@@ -14,15 +14,11 @@
  * inlineplayer.js's header, and what stays here is the numbers, and the notes
  * a host needs in order to override something safely.
  *
- * The three geometry facts, all from lib/sharecard.js and all asserted against
- * it by verify_inline.py:
- *   - the poster is /s/<id>/card.png, a 1200x630 branded card, cropped back to
- *     the drawing: scaled to 128.0488% of the box height (630/492) and pulled
- *     up 5.4878% (27/492), which puts the wordmark and padding outside;
- *   - the box is 16:9 because that is the widest canvas a drawing can have
- *     (lib/canvassizes.js), and the drawing is centred in the card, so a
- *     symmetric side crop removes ground and never picture;
- *   - a 1:1 drawing then leaves 22% of the box as ground rather than 59%.
+ * The poster's two literals below, 128.0488% and -5.4878%, are 630/492 and
+ * 27/492 from lib/sharecard.js band(), and they are the NO-SCRIPT FALLBACK:
+ * inlineplayer.js reframes the poster onto the drawing itself wherever the
+ * page knows the drawing's size. Both are asserted against the real module by
+ * verify_inline.py. The arithmetic and the why: inlineplayer.js's header.
  */
 
 .skribl-inline {
@@ -68,12 +64,12 @@
 }
 
 /* IMMERSIVE and BARE: the page adds the class, the component owns the rules.
-   BARE means the host supplies the transport, so this one hides its own and
-   keeps only the drawing. Why, in inlineplayer.js. */
+   BARE hides the transport and keeps the veil; IMMERSIVE hides both the share
+   card and the veil. Why, in inlineplayer.js. */
 .skribl-inline.is-immersive { width: 100%; height: 100%; border: 0; border-radius: 0; }
-.skribl-inline.is-immersive .skribl-inline-poster,
-.skribl-inline.is-bare :is(.skribl-inline-controls, .skribl-inline-dur,
-  .skribl-inline-veil) { display: none; }
+.skribl-inline.is-immersive :is(.skribl-inline-poster, .skribl-inline-veil),
+.skribl-inline.is-bare :is(.skribl-inline-controls, .skribl-inline-dur) {
+  display: none; }
 .skribl-inline.is-immersive .skribl-inline-canvas {
   width: 100%; height: 100%; object-fit: contain; }
 

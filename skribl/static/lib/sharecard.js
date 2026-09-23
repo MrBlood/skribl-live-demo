@@ -85,8 +85,18 @@
              aspect: CARD_W / AREA_H };
   }
 
+  /* The PLATE: the rounded corner the drawing is clipped to on the card, and
+   * the accent hairline stroked on that same boundary. Named here because two
+   * other files need them and neither should re-measure by eye --
+   * lib/postedcard.js draws them, and inlineplayer.js clips the idle poster
+   * back to just the drawing and has to know how much of the edge is chrome.
+   * verify_inline.py evaluates this module against the player's inlined copy. */
+  var PLATE_R = 18;    /* corner radius, card pixels */
+  var PLATE_LW = 2;    /* hairline width, centred on the rect's edge */
+
   var api = { CARD_W: CARD_W, CARD_H: CARD_H, PAD: PAD, FOOTER: FOOTER,
               AREA_W: AREA_W, AREA_H: AREA_H,
+              PLATE_R: PLATE_R, PLATE_LW: PLATE_LW,
               drawingRect: drawingRect, band: band };
   if (typeof window !== 'undefined') window.SkriblShareCard = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

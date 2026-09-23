@@ -23,9 +23,27 @@
  * implementation is the defect verify_sharedrules.py exists about.
  *
  * AND THE COMPONENT'S OWN CHROME YIELDS. The page adds `is-bare` to the player
- * (inlineplayer.css), which hides its cluster, its duration chip and its idle
- * veil. Without that there are two transports on screen, which is the thing
- * being fixed.
+ * (inlineplayer.css), which hides its cluster and its duration chip. Without
+ * that there are two transports on screen, which is the thing being fixed. It
+ * does NOT hide the idle veil: that is the play cue, not a control, and a card
+ * that drops it is a black rectangle with no sign it moves.
+ *
+ * ===========================================================================
+ * TWO CONFIGURATIONS, ONE BUILDER (v308, direction B)
+ * ===========================================================================
+ *
+ * The owner picked the post-like card, whose footer is a transport under the
+ * drawing — which is this bar, with fewer controls and no scrub row of its
+ * own. Building a second one in gallery.js would contradict the paragraph
+ * above within a day of writing it, so `attach` takes what varies instead:
+ *
+ *   full screen  restart play loop mute rate | who | exit, scrubber on its
+ *                own row, shown only while the wrapper is up.
+ *   card footer  play loop mute | scrubber inline | time | full, always shown.
+ *
+ * Everything else — what a control DOES, how it reads the player's state, the
+ * rule that lit means "currently true" — is shared, which is the half that
+ * actually rots when it is copied.
  */
 (function (global) {
   'use strict';
@@ -58,6 +76,8 @@
     sound: svg('<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>'
                + '<path d="M19.5 5.5a9 9 0 0 1 0 13"/>'),
     muted: svg('<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/>'),
+    full: svg('<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>'
+              + '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>'),
     exit: svg('<path d="M8 8H5a2 2 0 0 1-2-2V3"/><path d="M16 8h3a2 2 0 0 0 2-2V3"/>'
               + '<path d="M8 16H5a2 2 0 0 0-2 2v3"/><path d="M16 16h3a2 2 0 0 1 2 2v3"/>')
   };
@@ -86,12 +106,18 @@
     opts = opts || {};
     var getPlayer = opts.player || function () { return null; };
     var getMeta = opts.meta || function () { return null; };
+    /* The full-screen set is the default, so the surface that named this
+       module does not have to spell itself out. */
+    var want = opts.controls || ['restart', 'play', 'loop', 'mute', 'rate'];
+    var ownRow = opts.scrubRow !== false;
+    var showWho = opts.who !== false;
 
     var bar = doc.createElement('div');
-    bar.className = 'skfull';
+    bar.className = 'skfull' + (opts.variant ? ' ' + opts.variant : '');
 
-    /* THE SCRUBBER GETS ITS OWN ROW. Squeezed between the buttons it is a 6px
-       target on a phone, which is not a target. */
+    /* THE SCRUBBER GETS ITS OWN ROW IN FULL SCREEN. Squeezed between the
+       buttons it is a 6px target on a phone, which is not a target. On a card
+       the row is shorter and it rides inline, where there is width for it. */
     var scrub = doc.createElement('div');
     scrub.className = 'skfull-scrub';
     var at = doc.createElement('span');
@@ -107,47 +133,62 @@
     var dur = doc.createElement('span');
     dur.className = 'skfull-time skfull-dur';
     dur.textContent = '0:00';
-    scrub.appendChild(at);
-    scrub.appendChild(track);
-    scrub.appendChild(dur);
-    bar.appendChild(scrub);
 
     var row = doc.createElement('div');
     row.className = 'skfull-row';
 
-    var bRestart = btn('skfull-restart', 'Restart', ICON.restart);
-    var bPlay = btn('skfull-play', 'Play', ICON.play);
-    var bLoop = btn('skfull-loop', 'Repeat', ICON.loop);
-    var bMute = btn('skfull-mute', 'Mute', ICON.sound);
-    var bRate = btn('skfull-rate', 'Speed', '');
-    bRate.textContent = '1×';
-    row.appendChild(bRestart);
-    row.appendChild(bPlay);
-    row.appendChild(bLoop);
-    row.appendChild(bMute);
-    row.appendChild(bRate);
+    var made = {};
+    made.restart = btn('skfull-restart', 'Restart', ICON.restart);
+    made.play = btn('skfull-play', 'Play', ICON.play);
+    made.loop = btn('skfull-loop', 'Repeat', ICON.loop);
+    made.mute = btn('skfull-mute', 'Mute', ICON.sound);
+    made.rate = btn('skfull-rate', 'Speed', '');
+    made.rate.textContent = '1\u00d7';
+    made.full = btn('skfull-full', 'Full screen', ICON.full);
+    var bRestart = made.restart, bPlay = made.play, bLoop = made.loop;
+    var bMute = made.mute, bRate = made.rate;
+
+    if (ownRow) {
+      scrub.appendChild(at);
+      scrub.appendChild(track);
+      scrub.appendChild(dur);
+      bar.appendChild(scrub);
+    }
+    for (var i = 0; i < want.length; i++) {
+      if (made[want[i]]) row.appendChild(made[want[i]]);
+    }
+    /* Inline: the track takes the space the meta line would have, and the one
+       time shown is the DURATION, because a card is answering "how long is
+       this" rather than "where am I". */
+    if (!ownRow) { row.appendChild(track); row.appendChild(dur); }
 
     /* WHO AND WHAT, on the same bar. Full screen is the one place a viewer has
-       no card around the drawing to read, so the bar carries it. */
-    var who = doc.createElement('div');
-    who.className = 'skfull-who';
+       no card around the drawing to read, so the bar carries it there — and
+       does not on a card, where the head says it already. */
     var av = doc.createElement('span');
     av.className = 'skfull-av';
     av.setAttribute('aria-hidden', 'true');
-    var words = doc.createElement('div');
-    words.className = 'skfull-words';
     var tTitle = doc.createElement('div');
     tTitle.className = 'skfull-title';
     var tWho = doc.createElement('div');
     tWho.className = 'skfull-by';
-    words.appendChild(tTitle);
-    words.appendChild(tWho);
-    who.appendChild(av);
-    who.appendChild(words);
-    row.appendChild(who);
+    if (showWho) {
+      var who = doc.createElement('div');
+      who.className = 'skfull-who';
+      var words = doc.createElement('div');
+      words.className = 'skfull-words';
+      words.appendChild(tTitle);
+      words.appendChild(tWho);
+      who.appendChild(av);
+      who.appendChild(words);
+      row.appendChild(who);
+    }
 
-    var bExit = btn('skfull-exit', 'Leave full screen', ICON.exit);
-    row.appendChild(bExit);
+    var bExit = null;
+    if (!opts.controls || want.indexOf('exit') >= 0 || opts.onExit) {
+      bExit = btn('skfull-exit', 'Leave full screen', ICON.exit);
+      if (!opts.controls || want.indexOf('exit') >= 0) row.appendChild(bExit);
+    }
     bar.appendChild(row);
     wrap.appendChild(bar);
 
@@ -165,6 +206,10 @@
     }
 
     track.addEventListener('click', seekTo);
+    if (made.full) made.full.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (opts.onFull) opts.onFull();
+    });
     bRestart.addEventListener('click', function () {
       var pl = player();
       if (!pl) return;
@@ -195,7 +240,7 @@
       pl.setRate(RATES[(i + 1) % RATES.length]);
       sync();
     });
-    bExit.addEventListener('click', function () {
+    if (bExit) bExit.addEventListener('click', function () {
       if (opts.onExit) opts.onExit();
     });
 
@@ -234,9 +279,20 @@
       var el = (st && st.elapsedMs) || 0;
       fill.style.width = (total ? Math.min(1, el / total) * 100 : 0) + '%';
       at.textContent = mmss(el);
-      dur.textContent = mmss(total);
+      /* A card answers "how long is this"; full screen answers "where am I",
+         and shows both. */
+      dur.textContent = ownRow ? mmss(total)
+        : (playing || el > 0 ? mmss(el) + ' / ' + mmss(total) : mmss(total));
       track.setAttribute('aria-valuenow', String(Math.round(total ? el / total * 100 : 0)));
 
+      if (made.full) {
+        var big = !!(opts.isFull && opts.isFull());
+        made.full.setAttribute('aria-pressed', String(big));
+        made.full.title = big ? 'Leave full screen' : 'Full screen';
+        made.full.setAttribute('aria-label', made.full.title);
+      }
+
+      if (!showWho) return;
       var m = getMeta() || {};
       tTitle.textContent = m.title || 'Untitled Skribl';
       tWho.textContent = m.name ? (m.handle ? m.name + ' · ' + m.handle : m.name)
@@ -260,15 +316,39 @@
 
     /* The clock moves without anybody pressing anything, so the bar follows it
        on a frame loop while it is on screen and stops dead when it is not — a
-       rAF per hidden bar per tile is a feed burning battery on nothing. */
-    var raf = null;
-    function loop() {
+       rAF per hidden bar per tile is a feed burning battery on nothing.
+
+       AND A BAR THAT IS ON SCREEN BUT IDLE IS THE SAME WASTE AT LOWER VOLUME.
+       Full screen is one bar over one drawing and can afford every frame; a
+       gallery is one bar per card and the cards are almost all stopped, so
+       `running(true)` on a 24-tile grid meant 24 loops repainting the same
+       0:00 sixty times a second. The loop therefore reads the player and
+       chooses its own next beat: a frame while it is PLAYING, because the
+       scrubber has to move smoothly, and a quarter second while it is not,
+       because the only thing that changes on a stopped card is somebody else
+       claiming the page's sound — which may be noticed late and must not be
+       missed. Every control still calls sync() itself, so nothing a person
+       does here waits on the tick. */
+    var IDLE_MS = 250;
+    var raf = null, tick = null;
+    function beat() {
       sync();
-      raf = global.requestAnimationFrame(loop);
+      var pl = player();
+      var st = pl ? pl.state() : null;
+      if (st && st.state === 'playing') {
+        tick = null;
+        raf = global.requestAnimationFrame(beat);
+      } else {
+        raf = null;
+        tick = global.setTimeout(beat, IDLE_MS);
+      }
     }
     function running(on) {
-      if (on && !raf) loop();
-      if (!on && raf) { global.cancelAnimationFrame(raf); raf = null; }
+      if (on) { if (!raf && !tick) beat(); return; }
+      if (raf) global.cancelAnimationFrame(raf);
+      if (tick) global.clearTimeout(tick);
+      raf = null;
+      tick = null;
     }
 
     sync();
