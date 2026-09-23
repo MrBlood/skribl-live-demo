@@ -2323,15 +2323,18 @@ with sync_playwright() as _spn:
         const ah = +(box && box.getAttribute("data-skribl-h")) || 0;
         const cr = c.getBoundingClientRect();
         const sc = (aw && ah) ? Math.min(cr.width / aw, cr.height / ah) : 0;
-        /* A RING THE COLOUR OF THE INK IS NOT GREY, which is the whole
-           of the second row. Asking whether the shadow string contains
-           "rgb" passes on rgba(255,255,255,.22) -- the white it is
-           supposed to have stopped being. Channels that are all equal
-           are a grey, whatever notation they arrive in. */
-        const ch = (cs.boxShadow.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+        /* EVERY LAYER OF THE RING, as channel triples. The first draft of
+           the row below asked whether the shadow string contained "rgb",
+           which rgba(255,255,255,.22) does -- the white it was supposed to
+           have stopped being. And the answer it wanted then is the wrong
+           answer now: the ring is DELIBERATELY not the ink, because a
+           tinted halo round a tinted dot is one colour and that colour is
+           the stroke's, so the bead vanished into its own line. */
+        const layers = (cs.boxShadow.match(/rgba?\([^)]*\)/g) || [])
+          .map(x => (x.match(/[\d.]+/g) || []).slice(0, 3).map(Number));
         return { nib: +n.getBoundingClientRect().width.toFixed(2),
                  canvas: Math.round(cr.width), scale: +sc.toFixed(4),
-                 ringGrey: ch.length === 3 && ch[0] === ch[1] && ch[1] === ch[2],
+                 layers: layers,
                  painted: cs.opacity !== "0",
                  ink: n.style.getPropertyValue("--nib-c"),
                  bg: cs.backgroundImage,
@@ -2364,14 +2367,30 @@ with sync_playwright() as _spn:
           f"pinned in CSS and at {_gs:.2f} it is a ball in full screen; the "
           f"whole point is that it is neither")
     _white = ("", "#fff", "#ffffff", "white")
-    check("...and it is drawn in the ink it is laying down, not in white",
+    check("...and the DOT is drawn in the ink it is laying down, not in white",
           (_n2.get("ink") or "").strip().lower() not in _white
-          and "rgb" in (_n2.get("bg") or "")
-          and _n2.get("ringGrey") is False,
+          and "rgb" in (_n2.get("bg") or ""),
           f"{_n2} \u2014 the fixture draws in a colour, so a bead reporting "
           f"white is a cursor hovering over somebody's drawing rather than "
-          f"the pen making it; the ring has to take it too, or the dot is the "
-          f"ink and the halo round it is somebody else's")
+          f"the pen making it")
+    # AND THE RING IS NOT THE INK, which is the correction the ink made
+    # necessary and is the opposite of what this row asked a draft ago. A
+    # tinted halo round a tinted dot is ONE colour, and that colour is the
+    # colour of the stroke the bead is sitting on -- so the tip disappeared
+    # into its own line and read as a slightly thicker bit of line.
+    #
+    # A light hairline and a dark one outside it: whatever the ink is and
+    # whatever is behind it, one of the pair contrasts. It is how a marker on
+    # a map is drawn, and for the same reason. Asserted as "light then dark",
+    # because a single ring of either colour is the failure -- one of them is
+    # always the same as something it has to be told apart from.
+    _ly = _n2.get("layers") or []
+    check("...inside a ring that is NOT the ink, so the tip reads on its own stroke",
+          len(_ly) >= 2 and len(_ly[0]) == 3 and len(_ly[1]) == 3
+          and min(_ly[0]) > 200 and max(_ly[1]) < 60,
+          f"ring layers {_ly} \u2014 wanted a light hairline and a dark one "
+          f"outside it; one layer, or a layer the colour of the ink, is a "
+          f"halo that vanishes on exactly the stroke it is marking")
     _pn.close()
     _bn.close()
 

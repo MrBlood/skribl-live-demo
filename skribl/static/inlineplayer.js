@@ -1257,6 +1257,15 @@
        * intent as the other player's alpha strip, without a colour parser in
        * a file a host pays for by the byte.
        *
+       * AND THE RING IS NOT THE INK, which is the correction the ink itself
+       * made necessary. A tinted halo round a tinted dot is one colour, and
+       * that colour is the colour of the stroke it is sitting on -- so the
+       * bead disappeared into its own line and read as a slightly thicker
+       * bit of line rather than as a pen. The sheet draws a light hairline
+       * and a dark one outside it instead: whatever the ink is and whatever
+       * is behind it, ONE of the pair contrasts. It is how a marker on a map
+       * is drawn, and for the same reason.
+       *
        * Erasing keeps the neutral bead: there is no ink to take. */
       st.setProperty('--nib-c', (!p.erase && p.color) || '#fff');
       st.left = cr.left - br.left + (cr.width - size.w * s) / 2 + p.x * s + 'px';
