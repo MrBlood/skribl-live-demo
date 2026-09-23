@@ -68,12 +68,12 @@
 }
 
 /* IMMERSIVE and BARE: the page adds the class, the component owns the rules.
-   BARE means the host supplies the transport, so this one hides its own and
-   keeps only the drawing. Why, in inlineplayer.js. */
+   BARE hides the transport and keeps the veil; IMMERSIVE hides both the share
+   card and the veil. Why, in inlineplayer.js. */
 .skribl-inline.is-immersive { width: 100%; height: 100%; border: 0; border-radius: 0; }
-.skribl-inline.is-immersive .skribl-inline-poster,
-.skribl-inline.is-bare :is(.skribl-inline-controls, .skribl-inline-dur,
-  .skribl-inline-veil) { display: none; }
+.skribl-inline.is-immersive :is(.skribl-inline-poster, .skribl-inline-veil),
+.skribl-inline.is-bare :is(.skribl-inline-controls, .skribl-inline-dur) {
+  display: none; }
 .skribl-inline.is-immersive .skribl-inline-canvas {
   width: 100%; height: 100%; object-fit: contain; }
 

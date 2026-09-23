@@ -195,6 +195,31 @@
  * read response.redirected knows. One extra request per post, in a component
  * whose whole idle contract is "one cached image", to slightly improve a
  * fallback whose content is vertically centred anyway. Not worth it.
+ *
+ * ===========================================================================
+ * TWO CLASSES A HOST PAGE MAY ADD: `is-bare` AND `is-immersive`
+ * ===========================================================================
+ *
+ * The page adds the class; the component owns what it means. Both are in
+ * inlineplayer.css, and the reasoning is here because CSS comments are served.
+ *
+ * `is-bare` — THE HOST SUPPLIES THE TRANSPORT. The component's own cluster
+ * (mute, repeat) and its duration chip are hidden, because the page has drawn
+ * its own; two transports over one drawing is a defect, not a choice. The
+ * gallery's card footer and both full-screen bars are lib/fullbar.js driving
+ * this player's handle, so this is what they add.
+ *
+ * IT DOES NOT HIDE THE VEIL, and it did for one commit. The veil is the dark
+ * wash and the play triangle over a drawing that has not started: it is not a
+ * control, it is the sentence "this moves". A host taking the BUTTONS over has
+ * not taken over saying that, and the first screenshot of the post-like
+ * gallery card was two dozen black rectangles under two dozen neat footers.
+ *
+ * `is-immersive` — THIS IS THE WHOLE SCREEN NOW. The box loses its border and
+ * its radius and fills whatever contains it, the canvas is letterboxed inside
+ * with object-fit, the share card goes (a crop that is right at tile size just
+ * cuts the picture off at screen size) and the veil goes with it: at that size
+ * the bar is unmissable and a wash over the whole picture is only dimmer art.
  */
 (function (global) {
   'use strict';

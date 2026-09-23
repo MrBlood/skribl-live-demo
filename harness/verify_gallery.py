@@ -446,26 +446,54 @@ with sync_playwright() as _spg:
     _n = _pg2.evaluate("() => document.querySelectorAll('.tile').length")
     check("there are tiles to measure", _n > 0,
           f"{_n} tiles — an empty gallery cannot fail any row below")
-    _g = _pg2.evaluate("""() => ({
-        tiles: document.querySelectorAll('.tile').length,
-        stages: document.querySelectorAll('.tileStage').length,
-        buttons: document.querySelectorAll('.tileFull').length,
-        wrapped: document.querySelectorAll('.tileStage .skribl-inline').length,
-        named: [...document.querySelectorAll('.tileFull')]
-                 .every(b => (b.getAttribute('aria-label') || '').length > 10),
-        square: [...document.querySelectorAll('.tileFull')].map(b => {
-                  const r = b.getBoundingClientRect();
-                  return Math.round(Math.min(r.width, r.height)); }) }) """)
-    check("every tile carries a full-screen control",
-          _g["buttons"] == _g["tiles"] and _g["tiles"] > 0,
-          f"{_g['buttons']} controls on {_g['tiles']} tiles")
+    # ONE CONTROL PER THING A PERSON CAN DO, and this is counted rather than
+    # merely found because the defect was a SECOND one, not a missing one. The
+    # card's head carried `.tileFull` from before direction B and the footer
+    # carries `.skfull-full` since; both shipped, on all 24 tiles, same glyph
+    # eight pixels apart. "A full-screen control exists" was green on that.
+    #
+    # So the count is per tile and it is an equality: a tile with two fails
+    # here exactly as a tile with none does. Anything that can enter or leave
+    # full size is counted -- the footer's button, a head button if one comes
+    # back, and any other control whose label says "full screen" -- so the row
+    # cannot be satisfied by renaming the duplicate.
+    _g = _pg2.evaluate("""() => {
+        const tiles = [...document.querySelectorAll('.tile')];
+        const fulls = t => [...t.querySelectorAll('button')].filter(b =>
+            /full screen/i.test((b.getAttribute('aria-label') || '') + ' '
+                                + (b.title || '')) && b.offsetParent !== null);
+        const all = tiles.flatMap(fulls);
+        return {
+          tiles: tiles.length,
+          stages: document.querySelectorAll('.tileStage').length,
+          buttons: all.length,
+          perTile: [...new Set(tiles.map(t => fulls(t).length))].sort(),
+          inFooter: all.filter(b => b.closest('.skfull-card')).length,
+          wrapped: document.querySelectorAll('.tileStage .skribl-inline').length,
+          named: all.every(b => (b.getAttribute('aria-label') || '').length > 10),
+          square: all.map(b => { const r = b.getBoundingClientRect();
+                  return Math.round(Math.min(r.width, r.height)); }) }; } """)
+    check("every tile carries a full-screen control — exactly one",
+          _g["tiles"] > 0 and _g["perTile"] == [1],
+          f"{_g['buttons']} controls on {_g['tiles']} tiles, counts per tile "
+          f"{_g['perTile']} — two is the defect this row exists for")
+    check("...and it is the footer's, from the shared bar",
+          _g["inFooter"] == _g["tiles"],
+          f"{_g['inFooter']} of {_g['buttons']} inside .skfull-card — a control "
+          f"built by the page again is the divergence lib/fullbar.js ended")
     check("...and every player is inside the wrapper that takes the display",
           _g["wrapped"] == _g["tiles"],
           f"{_g['wrapped']} of {_g['tiles']} players wrapped — a player outside "
           f".tileStage has nothing to fullscreen")
-    check("...and each one answers a 44px tap and says which Skribl it opens",
-          _g["named"] and _g["square"] and min(_g["square"]) >= 44,
-          f"smallest {min(_g['square']) if _g['square'] else 0}px, named={_g['named']}")
+    # 36 DRAWN, 44 TO A FINGER. The footer's buttons are the bar's, so they are
+    # the bar's shape too: a 36px disc with a ::before band out to 44. The 44 is
+    # therefore not in this rect and is not asserted from it -- verify_a11y
+    # measures the band where it can be measured, by walking elementFromPoint
+    # over the real element. What belongs here is the VISIBLE floor.
+    check("...and each one is drawn at the visible floor and carries a name",
+          _g["named"] and _g["square"] and min(_g["square"]) >= 34,
+          f"smallest {min(_g['square']) if _g['square'] else 0}px drawn, "
+          f"named={_g['named']} — the 44px reach is verify_a11y's row")
     # WHERE THE FULL-SIZE RULES LIVE, which is the division this page got wrong
     # once and had caught on main. The gallery owns its WRAPPER; the component
     # owns everything about itself. The first cut styled the player's poster and
@@ -891,6 +919,89 @@ with sync_playwright() as _spa:
           f"{_foot} \u2014 two transports on one drawing is the defect, in a grid "
           f"as much as in full screen")
 
+    # Counts each footer's own DOM rewrites over a window; see the rows that use it.
+    PACE_JS = """(ms) => new Promise(res => {
+        const foots = [...document.querySelectorAll('.tile .skfull-card')];
+        const counts = foots.map(() => 0);
+        const obs = foots.map((f, i) => {
+          const o = new MutationObserver(recs => { counts[i] += recs.length ? 1 : 0; });
+          o.observe(f, { subtree: true, childList: true,
+                         attributes: true, characterData: true });
+          return o; });
+        setTimeout(() => {
+          obs.forEach(o => o.disconnect());
+          res({ tiles: foots.length,
+                worst: counts.length ? Math.max.apply(null, counts) : 0,
+                total: counts.reduce((a, b) => a + b, 0) }); }, ms); })"""
+    # AN IDLE GRID IS NOT A RUNNING ONE, and this row is the reason the card's
+    # loop paces itself. lib/fullbar.js follows the clock on a frame loop, which
+    # is right for ONE bar over ONE drawing in full screen and wrong for a
+    # gallery, where `running(true)` on every card meant a rAF per card
+    # repainting the same 0:00 sixty times a second. The module's own comment
+    # already said a hidden bar must not cost a frame; a visible-but-stopped
+    # one costs the same and was not covered.
+    #
+    # MEASURED AS WORK DONE, not as which timer was used. Each sync() rewrites
+    # the footer's glyphs, its fill width and its clock, so a MutationObserver
+    # over the footers counts syncs directly and does not care whether the next
+    # beat came from rAF or setTimeout — a later rewrite that keeps rAF but
+    # skips the writes would still be cheap, and should still pass.
+    PACE_MS = 800
+    _pace = _pa.evaluate(PACE_JS, PACE_MS)
+    _budget = max(2, round(PACE_MS / 250.0) + 2)
+    check("a grid of stopped cards paces its bars instead of running them",
+          _pace["tiles"] > 0 and _pace["worst"] <= _budget,
+          f"busiest footer rewrote itself {_pace['worst']} times in {PACE_MS} ms "
+          f"across {_pace['tiles']} cards (budget {_budget}) — a frame loop is "
+          f"~{round(PACE_MS * 0.06)} and is what this row exists to catch")
+    check("...and they are still following it, not stopped dead",
+          _pace["total"] > 0,
+          f"{_pace} — a bar that never syncs cannot notice another post "
+          f"claiming the page's sound, and would pass the row above trivially")
+
+    # The idle play cue, read three ways at once; see the rows that use it.
+    CUE_JS = """() => {
+        const t = document.querySelector('.tile');
+        const box = t && t.querySelector('.skribl-inline');
+        const veil = t && t.querySelector('.skribl-inline-veil');
+        const disc = t && t.querySelector('.skribl-inline-play');
+        if (!box || !veil || !disc) return { missing: true };
+        const r = disc.getBoundingClientRect();
+        const cx = Math.round(r.left + r.width / 2);
+        const cy = Math.round(r.top + r.height / 2);
+        const hit = document.elementFromPoint(cx, cy);
+        return {
+          shownVeil: getComputedStyle(veil).display,
+          shownDisc: getComputedStyle(disc).display,
+          opacity: +getComputedStyle(veil).opacity,
+          w: Math.round(r.width), h: Math.round(r.height),
+          playing: box.classList.contains('is-playing'),
+          bare: box.classList.contains('is-bare'),
+          underIt: !!(hit && box.contains(hit)) }; }"""
+    # AND THE DRAWING STILL SAYS IT MOVES. `is-bare` means the host supplies
+    # the TRANSPORT; it briefly meant the host supplies the idle veil too, and
+    # the veil is not a control -- it is the wash and the play triangle that
+    # tell a person a still picture is a recording. The first screenshot of
+    # direction B was 24 black rectangles under 24 neat footers.
+    #
+    # NOT ASSERTED FROM THE RECT ALONE (a rect is not a paint, and this tree
+    # has been fooled by one before). The veil is pointer-events: none, so
+    # elementFromPoint cannot return it and cannot be the whole instrument
+    # either. Three facts together: the disc is DISPLAYED, the veil is not
+    # transparent, and the point it is drawn at is inside this tile's own
+    # player rather than behind the footer or the next card.
+    _cue = _pa.evaluate(CUE_JS)
+    check("an idle card still shows the play cue over the drawing",
+          not _cue.get("missing") and _cue["shownVeil"] != "none"
+          and _cue["shownDisc"] != "none" and _cue["opacity"] > 0.5
+          and _cue["w"] >= 40 and _cue["h"] >= 40 and _cue["underIt"],
+          f"{_cue} — `is-bare` takes the buttons, never the affordance: "
+          f"without it a card is a black rectangle that looks broken")
+    check("...and it is the BARE card being measured, not a card without one",
+          not _cue.get("missing") and _cue["bare"] and not _cue["playing"],
+          f"{_cue} — a card that never went bare would pass the row above "
+          f"while saying nothing about the class that hid the veil")
+
     # THE CARD'S FOOTER DRIVES THE PLAYER, the same way the full-screen bar
     # does and for the same reason: a control that keeps its own state lies
     # the moment anything else moves the thing it is about.
@@ -981,7 +1092,7 @@ with sync_playwright() as _spi:
     _has = _pi.evaluate("""() => ({
         api: !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
         tiles: document.querySelectorAll('.tile').length,
-        buttons: document.querySelectorAll('.tileFull').length,
+        buttons: document.querySelectorAll('.tile .skfull-card .skfull-full').length,
         exits: document.querySelectorAll('.tileExit').length })""")
     check("the simulation is real: this page believes it has no Fullscreen API",
           _has["api"] is False,
@@ -995,7 +1106,7 @@ with sync_playwright() as _spi:
           f"{_has} \u2014 in the fallback the page is still the page, and nothing "
           f"but this button leaves it: no Escape from the browser, no system gesture")
 
-    _pi.evaluate("() => document.querySelector('.tile .tileFull').click()")
+    _pi.evaluate("() => document.querySelector('.tile .skfull-card .skfull-full').click()")
     _pi.wait_for_timeout(700)
     _big = _pi.evaluate("""() => {
         const st = document.querySelector('.tile .tileStage');

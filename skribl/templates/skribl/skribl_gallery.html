@@ -207,15 +207,9 @@
       background: none; border: 0; border-radius: 8px; color: var(--text-3);
       font: inherit; font-size: 12.5px; cursor: pointer;
     }
-    /* Watch it big. Sits beside Report and answers a tap 44px square like it. */
-    .tile .tileFull {
-      margin-left: 6px; flex: none; width: 44px; height: 44px; padding: 0;
-      display: inline-grid; place-items: center;
-      background: none; border: 0; border-radius: 8px; color: var(--text-3);
-      cursor: pointer;
-    }
-    .tile .tileFull:hover { color: var(--text); background: var(--control); }
-    .tile .tileFull svg { width: 19px; height: 19px; }
+    /* Watch it big is the FOOTER's button now (lib/fullbar.js, .skfull-full).
+       A `.tileFull` lived here too, beside Report, and stayed after the card
+       grew a transport row -- so every tile carried the same glyph twice. */
     /* The way back out, over the drawing and only while it IS full size. The
        profile's stage has had one since v304; this page had none, which was
        fine while the only way in was the real API (Escape and the system

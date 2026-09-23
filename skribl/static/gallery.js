@@ -277,20 +277,15 @@
        there is one and pins the stage over the viewport where there is not, so
        there is always something for the button to do. */
     var imm = null;      /* set below, once, with its onChange in hand */
+    var foot = null;     /* the card's transport row, built after the stage */
     if (window.SkriblImmersive) {
-      var full = document.createElement('button');
-      full.type = 'button';
-      full.className = 'tileFull';
-      full.title = 'Full screen';
-      full.setAttribute('aria-label', 'Watch ' + (item.title || 'this Skribl') + ' full screen');
-      full.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
-        + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        + '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/>'
-        + '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
-      full.addEventListener('click', function (e) {
-        e.stopPropagation();
-        imm.toggle();
-      });
+      /* THE CONTROL IS IN THE FOOTER AND NOWHERE ELSE. This block used to build
+         a second one, `.tileFull`, in the card's head -- correct while the head
+         was the only place a tile had for a button, and a duplicate the moment
+         direction B gave the card a transport row that already carries full
+         screen. The first screenshot of the new card showed both, on all 24
+         tiles: same glyph, same action, eight pixels apart. One control per
+         thing a person can do. */
       /* A WAY OUT, INSIDE THE THING (owner: "also no x (which is fine) on full
          screen" -- fine on the real API, where Escape and the system gesture
          both work, and not fine at all in the fallback, where the page is
@@ -349,12 +344,16 @@
       var onFs = function (big) {
         var box = stage.querySelector('.skribl-inline');
         var pl = box && box._skriblInline;
-        full.setAttribute('aria-pressed', big ? 'true' : 'false');
-        full.title = big ? 'Leave full screen' : 'Full screen';
         /* The bar follows the clock on a frame loop, so it runs only while it
            is on screen: a rAF per hidden bar per tile is a feed burning
            battery on nothing. */
         if (bar) bar.running(!!big);
+        /* AND THE CARD'S ROW STOPS WHILE THE STAGE IS UP. Two bars over one
+           drawing, one of them behind a pinned overlay, is two clocks read
+           from the same player to paint one of them into a viewport nobody
+           can see. The sync on the way back out is what repaints the footer's
+           play glyph after full screen paused it. */
+        if (foot) { foot.running(!big); foot.sync(); }
         /* BARE means the host supplies the transport. Without it the
            component's own cluster and duration chip sit under the bar, which
            is the two-transports screenshot this whole change is about. */
@@ -373,7 +372,6 @@
         if (pl.state().loaded) pl.seek(0);
       };
       imm = window.SkriblImmersive.attach(stage, { onChange: onFs });
-      head.insertBefore(full, rep);
     }
 
     var frag = tpl.content.cloneNode(true);
@@ -464,7 +462,7 @@
        written here would contradict the reason that module exists inside a day
        of it landing. */
     if (window.SkriblFullBar) {
-      var foot = window.SkriblFullBar.attach(art, {
+      foot = window.SkriblFullBar.attach(art, {
         variant: 'skfull-card',
         controls: ['play', 'loop', 'mute', 'full'],
         who: false,

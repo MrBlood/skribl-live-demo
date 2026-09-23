@@ -23,9 +23,10 @@
  * implementation is the defect verify_sharedrules.py exists about.
  *
  * AND THE COMPONENT'S OWN CHROME YIELDS. The page adds `is-bare` to the player
- * (inlineplayer.css), which hides its cluster, its duration chip and its idle
- * veil. Without that there are two transports on screen, which is the thing
- * being fixed.
+ * (inlineplayer.css), which hides its cluster and its duration chip. Without
+ * that there are two transports on screen, which is the thing being fixed. It
+ * does NOT hide the idle veil: that is the play cue, not a control, and a card
+ * that drops it is a black rectangle with no sign it moves.
  *
  * ===========================================================================
  * TWO CONFIGURATIONS, ONE BUILDER (v308, direction B)
@@ -315,15 +316,39 @@
 
     /* The clock moves without anybody pressing anything, so the bar follows it
        on a frame loop while it is on screen and stops dead when it is not — a
-       rAF per hidden bar per tile is a feed burning battery on nothing. */
-    var raf = null;
-    function loop() {
+       rAF per hidden bar per tile is a feed burning battery on nothing.
+
+       AND A BAR THAT IS ON SCREEN BUT IDLE IS THE SAME WASTE AT LOWER VOLUME.
+       Full screen is one bar over one drawing and can afford every frame; a
+       gallery is one bar per card and the cards are almost all stopped, so
+       `running(true)` on a 24-tile grid meant 24 loops repainting the same
+       0:00 sixty times a second. The loop therefore reads the player and
+       chooses its own next beat: a frame while it is PLAYING, because the
+       scrubber has to move smoothly, and a quarter second while it is not,
+       because the only thing that changes on a stopped card is somebody else
+       claiming the page's sound — which may be noticed late and must not be
+       missed. Every control still calls sync() itself, so nothing a person
+       does here waits on the tick. */
+    var IDLE_MS = 250;
+    var raf = null, tick = null;
+    function beat() {
       sync();
-      raf = global.requestAnimationFrame(loop);
+      var pl = player();
+      var st = pl ? pl.state() : null;
+      if (st && st.state === 'playing') {
+        tick = null;
+        raf = global.requestAnimationFrame(beat);
+      } else {
+        raf = null;
+        tick = global.setTimeout(beat, IDLE_MS);
+      }
     }
     function running(on) {
-      if (on && !raf) loop();
-      if (!on && raf) { global.cancelAnimationFrame(raf); raf = null; }
+      if (on) { if (!raf && !tick) beat(); return; }
+      if (raf) global.cancelAnimationFrame(raf);
+      if (tick) global.clearTimeout(tick);
+      raf = null;
+      tick = null;
     }
 
     sync();
