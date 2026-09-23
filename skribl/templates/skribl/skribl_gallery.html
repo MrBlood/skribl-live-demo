@@ -294,11 +294,13 @@
        than the run's 6, so the eye reads two facts and then a way in. The
        head is flex-start, so this centres itself against the run's first line
        rather than floating at the top of a two-line head. */
+    /* 34 visible, glyph 16 -- see the caption mark above. `margin-left: 5px`
+       rather than 14: the box now carries its own air, so the old margin on
+       top of it read as a gap twice over. */
     .tile .tileMore { position: relative; padding: 0; border: 0; background: none;
-      cursor: pointer; color: var(--text-3); width: 16px; height: 16px;
-      flex: none; margin-left: 14px; margin-top: 1px;
+      cursor: pointer; color: var(--text-3); width: 44px; height: 44px;
+      flex: none; margin-left: 0;
       display: inline-grid; place-items: center; }
-    .tile .tileMore::before { content: ''; position: absolute; inset: -14px; }
     .tile .tileMore:hover, .tile .tileMore[aria-expanded="true"] { color: var(--text); }
     .tile .tileMore svg { width: 16px; height: 16px; display: block; }
 
@@ -347,15 +349,40 @@
 
        `.tileMarks` keeps its name and is now just a group inside the run. */
     .tile .tileMarks { display: inline-flex; align-items: center; gap: 6px; }
+    /* The kind glyph is a LABEL and stays 16: nothing presses it, so the
+       touch floor does not apply and a 34px box would only add air. */
     .tile .tileMark { display: inline-grid; place-items: center;
       width: 16px; height: 16px; color: var(--text-3); }
+    /* The two pressable ones do NOT carry this class -- see gallery.js. They
+       are controls with a touch floor, not labels, and borrowing a label's
+       class to get its colour is how the floor was lost. */
     .tile .tileMark svg { width: 15px; height: 15px; display: block; }
     /* The one mark that is a CONTROL, so it gets a control's affordances: a
        44px band to a finger, a lit state while the caption is open, and it is
        the only thing in the run that can be pressed. */
+    /* 34 VISIBLE, NOT 16 WITH A BAND OVER IT. verify_layout's floor is the
+       element's own height, on purpose: "the band is invisible, so a page can
+       answer 44 to a finger with a 22px pill -- a target you cannot see to aim
+       at". These went in at 16px with a ::before out to 44 and the gallery
+       failed at 360, 390 and 430.
+       
+       The GLYPH stays 16. Only the box grows, and it is transparent, so the
+       row looks exactly the same and the target is real. The named exemption
+       in that suite is for the in-post player's pills over a drawing, which
+       these are not: this is a text row.
+
+       44, NOT 34, and three rules had to agree before that was clear:
+         verify_layout  the pill is at least 34px you can SEE
+         verify_layout  every control answers a tap 44px tall
+         verify_a11y    no control leaves dead space inside its 44px box
+       34 visible with a ::before band out to 44 satisfies the first two and
+       fails the third, because the band is not the element. One 44px box with
+       a 16px glyph centred in it satisfies all three, and is exactly what the
+       Report WORD it replaces was. The box is transparent; the air was always
+       there. */
     .tile .tileCapBtn { position: relative; padding: 0; border: 0;
-      background: none; cursor: pointer; color: var(--text-3); }
-    .tile .tileCapBtn::before { content: ''; position: absolute; inset: -14px; }
+      background: none; cursor: pointer; color: var(--text-3);
+      width: 44px; height: 44px; display: inline-grid; place-items: center; }
     .tile .tileCapBtn:hover { color: var(--text); }
     .tile.cap-open .tileCapBtn { color: var(--accent); }
     /* THE MARKS STAND DOWN ON A ONE-UP CARD, for the reason the play count

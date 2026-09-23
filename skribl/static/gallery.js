@@ -309,7 +309,15 @@
        once. */
     var rep = document.createElement('button');
     rep.type = 'button';
-    rep.className = 'tileMark tileMore';
+    /* NOT `tileMark`. It sat in the head beside the kind glyph and borrowed
+       that class for its colour, and `.tile .tileMark` fixes width and height
+       at 16 -- equal specificity, later in the sheet, so the control's own 34px
+       lost and verify_layout's visible touch floor failed at 360, 390 and 430.
+       
+       Source order has now decided three things in this change that were meant
+       to be decided by intent. The fix is not another selector: a control is
+       not a mark, so it does not carry the mark's class. */
+    rep.className = 'tileMore';
     rep.setAttribute('data-more', item.id);
     rep.setAttribute('aria-haspopup', 'menu');
     rep.setAttribute('aria-expanded', 'false');
@@ -577,7 +585,7 @@
 
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'tileMark tileCapBtn';
+      btn.className = 'tileCapBtn';
       btn.setAttribute('aria-pressed', 'false');
       btn.setAttribute('aria-expanded', 'false');
       btn.innerHTML = ICON_CAP;
