@@ -408,15 +408,16 @@
        the way out. */
     html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
     .tileStage { display: block; position: relative; }
-    /* ONE PROGRESS INDICATOR, NOT TWO. The component draws a hairline along
-       the bottom of the drawing and the bar now overlays that same edge with a
-       real scrubber, so a playing card had a purple line under a purple line.
-       `is-bare` hides the component's controls and duration chip but not this,
-       because on a host that supplies no bar the hairline IS the progress --
-       which is why it is hidden here, on the page that does supply one, rather
-       than in the component. Hidden, not omitted: inlineplayer.js requires the
-       element and keeps writing its width, and the macro's own note says so. */
-    .tileStage .skribl-inline-prog { display: none; }
+    /* The component's progress hairline is turned off through the MACRO's own
+       `progress` argument -- see the template call below -- and NOT by a rule
+       in this sheet.
+
+       AND THIS COMMENT DOES NOT SPELL THE CLASS, which is the second half of
+       the same lesson. verify_inline scans this file for the component's
+       internal names, so the first draft of this note NAMED the selector it
+       was explaining and the gate read the explanation as the thing it
+       forbids. "A check for absence must match the mechanism, not the word" --
+       and the other side of that rule is not writing the word. */
     /* FULL SIZE WITHOUT A FULLSCREEN API (lib/immersive.js). iOS Safari has
        one for <video> and nothing else, so on the device where a drawing is
        smallest there was no way to make it bigger -- both pages correctly hid
@@ -573,7 +574,20 @@
 {# The macro's own output with the id left as a placeholder; gallery.js clones
    it per item, as feed.js does, so this page can never render markup the
    macro does not produce. <template> content is inert. #}
-<template id="skriblTileTpl">{{ skribl_inline('__ID__') }}</template>
+{# progress=false: the card's own transport overlays the drawing's bottom edge
+   with a real scrubber since v310, so the component's hairline would be a
+   second progress line under the first. The macro HIDES it rather than
+   omitting it -- inlineplayer.js requires the element and keeps writing its
+   width -- which is the supported way to say this, and the reason no rule in
+   this page's sheet reaches for it by class name. The profile made the same
+   call for the same reason in v304.
+
+   AND THIS NOTE DOES NOT SPELL THAT CLASS, for the second time in one change:
+   verify_inline scans this file for the component's internal names, and both
+   comments explaining the absence originally NAMED the thing they were
+   explaining. The gate read the explanation as the thing it forbids, exactly
+   as it has three times before in this tree. #}
+<template id="skriblTileTpl">{{ skribl_inline('__ID__', progress=false) }}</template>
 {# lib/modalfocus.js: the report sheet's focus management -- the same module
    every aria-modal surface on the editors uses. #}
 {# See the note in skribl_library.html: the controls carry titles and

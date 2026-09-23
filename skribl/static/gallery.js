@@ -795,10 +795,10 @@
     menuFor = null; menuOpener = null;
   }
 
-  function menuItem(label, onPick) {
+  function menuItem(label, onPick, hook) {
     var b = document.createElement('button');
     b.type = 'button';
-    b.className = 'cmItem';
+    b.className = 'cmItem' + (hook ? ' ' + hook : '');
     b.setAttribute('role', 'menuitem');
     b.textContent = label;
     b.addEventListener('click', function () { closeMenu(false); onPick(); });
@@ -829,7 +829,14 @@
     return m;
   }
 
-  function say(button, msg, rest) {
+  /* `sayOn`, NOT `say`. This file already had a module-level `say(msg, bad)`
+     for the report sheet's status line, and a second `function say` in the same
+     scope does not shadow it locally -- the later declaration hoists and wins
+     for EVERY caller. So openReport's own `say('')` started calling this one
+     with a button of '' and threw before it reached SkriblModal.open, and the
+     only symptom was two a11y rows saying focus never entered the sheet.
+     Nothing reported a redefinition; JavaScript does not consider it an error. */
+  function sayOn(button, msg, rest) {
     button.title = msg;
     button.setAttribute('aria-label', msg);
     var live = document.getElementById('galleryStatus');
@@ -860,9 +867,9 @@
        of a promise is PRESEAL-002, and it shipped once already. */
     menuEl.appendChild(menuItem('Copy link', function () {
       var copier = window.SkriblPostedUI && window.SkriblPostedUI.copyText;
-      if (!copier) { say(button, "Couldn't copy the link", rest); return; }
+      if (!copier) { sayOn(button, "Couldn't copy the link", rest); return; }
       copier(url).then(function (ok) {
-        say(button, ok ? 'Link copied' : "Couldn't copy the link", rest);
+        sayOn(button, ok ? 'Link copied' : "Couldn't copy the link", rest);
       });
     }));
     /* Share only where the platform has one. A "Share..." that silently does
@@ -876,7 +883,12 @@
     var hr = document.createElement('div');
     hr.className = 'cmDiv';
     menuEl.appendChild(hr);
-    menuEl.appendChild(menuItem('Report', function () { openReport(item.id, button); }));
+    /* `cmReport` is a HOOK, not a style: verify_a11y's modal census drives the
+       real path to the report sheet, and that path is now two clicks. A recipe
+       that matched the word would break the day the word changes. */
+    menuEl.appendChild(menuItem('Report', function () {
+      openReport(item.id, button);
+    }, 'cmReport'));
 
     /* PLACED AGAINST THE VIEWPORT, not just below the button: a card in the
        last row would otherwise open a menu below the fold. */

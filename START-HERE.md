@@ -739,7 +739,7 @@ rather than a shared rule.
 | `posted.js` | Pad+Flip+library | Your Skribls — a local record of what you have posted. |
 | `postedaudio.js` | Pad+Flip | What a POST stores, which is deliberately not what an EXPORT downloads. |
 | `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
-| `postedui.js` | library | Your Skribls — rendering. |
+| `postedui.js` | library+gallery | Your Skribls — rendering. |
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
 | `recoverykey.js` | Pad+Flip+library | Both ends of an anonymous author's revocation key: showing one, taking one back, and standing between a bulk clear and the keys it would discard. |

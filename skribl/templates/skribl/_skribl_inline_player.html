@@ -133,7 +133,7 @@
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None) -%}
+{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true) -%}
 {# is-muted and is-silent are the pre-script truth: sound is off by default, and
    nothing yet knows whether this Skribl has any. inlineplayer.js clears
    is-silent when the payload turns out to carry a loop.
@@ -166,7 +166,11 @@
   <img class="skribl-inline-poster"
        src="{{ url_for(bp ~ '.skribl_poster', public_id=public_id) }}"
        alt="{{ alt }}" loading="lazy" decoding="async">
-{{ _skribl_inline_insides() }}</div>
+{# `progress` reaches the insides the same way the draft macro passes it. A
+   host whose own surface draws a scrubber over the drawing wants one progress
+   indicator, not two; the gallery's card transport is the first caller to say
+   so. Default true, so every existing call is unchanged. #}
+{{ _skribl_inline_insides(progress=progress) }}</div>
 {%- endmacro %}
 
 {% macro skribl_inline_draft(id='', controls=true, progress=true) -%}
