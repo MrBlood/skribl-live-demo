@@ -4095,26 +4095,32 @@ function showPlayerError(msg, canRetry) {
     const gap = (parseFloat(cs.rowGap) || parseFloat(cs.gap) || 0);
     return shellEl.getBoundingClientRect().height + padV + gap;
   }
+  // FULL SCREEN IS A DIFFERENT BOX: everything below measures `.app` and caps
+  // at 1:1, which sized the canvas to the page while the wrapper filled the
+  // screen. It cannot be fixed in the sheet — the inline width
+  // layoutPlayerCanvas writes beats any rule. DECISIONS, v306.
+  //
+  // The WRAPPER's own box, not the window: in full screen the top-layer
+  // element is the container, and it is 20px narrower than innerWidth wherever
+  // the document behind it still has a scrollbar. Measuring the box is also
+  // what layoutEditorCanvas does.
+  //
+  // LESS THE BAR'S BAND. The transport is moved into the wrapper in full
+  // screen and sits over the bottom edge, so the space a drawing may use is the
+  // box minus that. clientHeight INCLUDES padding, so the padding the sheet
+  // uses to centre the canvas does not come off here and the number has to be
+  // subtracted by hand -- if it were not, the scale and the centring would
+  // disagree and the drawing would be pushed off the top. `--pbar` is the
+  // height _syncFull measured when it moved the bar in, so reading it back is
+  // both shorter than a second DOM lookup and the only way the two cannot
+  // disagree: they are then the same number, not two measurements of it.
+  //
+  // THE PROSE IS OUT HERE AND NOT IN THE BODY, which is not style. verify_seam
+  // measures the player's reachable set as the sum of its NAMED functions'
+  // spans, start line to end line, prose included -- so a paragraph inside a
+  // counted function costs exactly what a statement costs. Out here it costs
+  // nothing and says the same thing.
   function playerFitScale() {
-    // FULL SCREEN IS A DIFFERENT BOX: everything below measures `.app` and
-    // caps at 1:1, which sized the canvas to the page while the wrapper filled
-    // the screen. It cannot be fixed in the sheet — the inline width
-    // layoutPlayerCanvas writes beats any rule. DECISIONS, v306.
-    // The WRAPPER's own box, not the window: in full screen the top-layer
-    // element is the container, and it is 20px narrower than innerWidth
-    // wherever the document behind it still has a scrollbar. Measuring the box
-    // is also what layoutEditorCanvas does.
-    // LESS THE BAR'S BAND. The transport is moved into the wrapper in full
-    // screen and sits over the bottom edge, so the space a drawing may use is
-    // the box minus that. clientHeight INCLUDES padding, so the padding the
-    // sheet uses to centre the canvas does not come off here and the number
-    // has to be subtracted by hand -- if it were not, the scale and the
-    // centring would disagree and the drawing would be pushed off the top.
-    // ONE SOURCE FOR THE BAND. `--pbar` is the height _syncFull measured when
-    // it moved the bar in; reading it back is both shorter than a second DOM
-    // lookup and the only way the scale and the sheet's centring cannot
-    // disagree -- they are then the same number rather than two measurements
-    // of the same thing taken at different moments.
     if (fsFull) return Math.min(canvasWrap.clientWidth / authorW,
       Math.max(1, canvasWrap.clientHeight
         - (parseFloat(canvasWrap.style.getPropertyValue('--pbar')) || 0)) / authorH);
@@ -4418,23 +4424,27 @@ function showPlayerError(msg, canRetry) {
     return { s: (authorW && cr.width) ? cr.width / authorW : 1,
              ox: cr.left - wr.left, oy: cr.top - wr.top };
   }
+  // replayTimelineToCanvas returns the NEXT index, so the point just drawn is
+  // nextIdx - 1. Nothing drawn yet (index 0) -> keep the nib hidden.
+  //
+  // A SIZE IN THE PEN, by the same rule and for the reasons inlineplayer.js
+  // states at length: `p.size * s` is how wide the stroke comes out on this
+  // screen, and a nib is a little over that. It answers to the scale and to the
+  // pen at once, and cannot be out of proportion with the line it is making,
+  // because it is defined against that line.
+  //
+  // 1.9x rather than 1.4x, which is the shape of THIS bead and not a different
+  // opinion: it is a radial gradient whose inner 30% is the only opaque part,
+  // so the element has to be wider than a solid dot for the visible point to
+  // come out the same size.
+  //
+  // Out here rather than in the body for the reason playerFitScale's note
+  // gives: a counted span includes its prose.
   function showNibAtIndex(nextIdx) {
-    // replayTimelineToCanvas returns the NEXT index, so the point just drawn is
-    // nextIdx - 1. Nothing drawn yet (index 0) -> keep the nib hidden.
     const p = nextIdx > 0 ? timeline[nextIdx - 1] : null;
     if (!p) { nib.hidden = true; return; }
     const g = nibGeom();
     const s = g.s;
-    // A SIZE IN THE PEN, by the same rule and for the reasons inlineplayer.js
-    // states at length: `p.size * s` is how wide the stroke comes out on this
-    // screen, and a nib is a little over that. It answers to the scale and to
-    // the pen at once, and cannot be out of proportion with the line it is
-    // making, because it is defined against that line.
-    //
-    // 1.9x rather than 1.4x, which is the shape of THIS bead and not a
-    // different opinion: it is a radial gradient whose inner 30% is the only
-    // opaque part, so the element has to be wider than a solid dot for the
-    // visible point to come out the same size.
     nib.style.setProperty('--nb',
       Math.max(5, Math.min(90, 1.9 * (p.size || 8) * s)) + 'px');
     nib.style.left = (g.ox + p.x * s) + 'px';
