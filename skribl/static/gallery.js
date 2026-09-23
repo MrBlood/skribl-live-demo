@@ -86,13 +86,19 @@
     '<circle cx="12" cy="12" r="1.9" fill="currentColor"/>' +
     '<circle cx="19" cy="12" r="1.9" fill="currentColor"/></svg>';
 
-  /* A speech mark, for the card that has something to say. */
+  /* LINES OF TEXT, NOT A SPEECH BUBBLE. A bubble is the shape every product
+     on a phone uses for a CONVERSATION -- a reply, a comment, a thread -- and
+     what this control opens is the author's own description, which nobody can
+     answer (there are no comments on a Skribl and the post is immutable once
+     made). The owner read the bubble as the wrong promise before reading it as
+     the wrong size: "not sure that's the best icon for caption/description".
+
+     Three ranged lines is the settled glyph for a body of text, and it is
+     already the shape of the description the card is hiding. */
   var ICON_CAP =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
-    ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' +
-    ' focusable="false"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-4.2-.9' +
-    'L3 20l1.3-3.7A8.2 8.2 0 0 1 3 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 9 8.4z"/>' +
-    '</svg>';
+    ' stroke-linecap="round" aria-hidden="true" focusable="false">' +
+    '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h9"/></svg>';
 
   /* U+1F7CD, SIX POINTED PINWHEEL STAR. Six, and the first draft had EIGHT --
      the owner asked for the skribls.net star and got a generic sparkle, "too
@@ -662,17 +668,36 @@
         clearTimeout(hideT);
         if (sticky) return;
         hideT = setTimeout(function () {
-          if (art.contains(document.activeElement)) return;
+          /* The stage for the same reason the listeners above use it: focus
+             parked on the description toggle is not somebody using the bar. */
+          if (stage.contains(document.activeElement)) return;
           art.classList.remove('ctl-on');
         }, 2600);
       }
+      /* THE STAGE, NOT THE CARD, and that is the whole of the bug the owner
+         found: "when I reclicked the bubble, it closed - but it left the
+         controls still on screen".
+
+         These two listeners were on the card. The description toggle and the
+         overflow button live in the card's HEAD, and a button keeps focus
+         after a click, so pressing either one raised `focusin` on the card,
+         which summoned the transport and -- because that peek is the STICKY
+         kind, the one a keyboard gets so a bar cannot vanish from under a tab
+         key -- left it up with no timer to take it down again. Reading the
+         description turned the transport on, and closing the description
+         could not turn it off, because nothing about the description had
+         anything to do with the transport.
+
+         Scoped to the stage, focus means what it is supposed to mean here:
+         somebody has tabbed into the transport itself. The head's buttons no
+         longer say anything about the drawing. */
       stage.addEventListener('pointerdown', function (e) {
         if (e.target.closest('.skfull')) return;
         peek(false);
       });
-      art.addEventListener('focusin', function () { peek(true); });
-      art.addEventListener('focusout', function () {
-        if (!art.contains(document.activeElement)) peek(false);
+      stage.addEventListener('focusin', function () { peek(true); });
+      stage.addEventListener('focusout', function () {
+        if (!stage.contains(document.activeElement)) peek(false);
       });
       if (box0 && box0._skriblInline) {
         /* The player does not emit events, so the card watches the state it
@@ -803,12 +828,42 @@
     menuFor = null; menuOpener = null;
   }
 
-  function menuItem(label, onPick, hook) {
+  /* The menu's own glyphs, in the stroked 24-box every other icon on this page
+     is drawn in. Same four the editor's sheet uses for the same four ideas:
+     an arrow leaving a frame for Open, two linked rings for a link, a node
+     graph for Share, a flag for Report. `.cmItem svg` caps them at 18px --
+     the mistake the caption mark made is one rule away at all times. */
+  var MENU_ICON = {
+    open: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'
+        + '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/>'
+        + '<path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+    share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/>'
+        + '<circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/>'
+        + '<line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/>',
+    flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V4s-1 1-4 1-5-2-8-2-4 1-4 1z"/>'
+        + '<line x1="4" y1="22" x2="4" y2="15"/>'
+  };
+  function menuGlyph(name) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+      + ' stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"'
+      + ' aria-hidden="true" focusable="false">' + MENU_ICON[name] + '</svg>';
+  }
+
+  /* THE GLYPH IS MARKUP AND THE LABEL IS NOT, which is the whole reason the
+     words go in through `textContent` on a span of their own rather than into
+     the same innerHTML as the icon. A title or a caption is somebody else's
+     text; this menu's labels are ours today and the next item added here may
+     not be. One habit, kept where it costs nothing. */
+  function menuItem(label, onPick, hook, glyph) {
     var b = document.createElement('button');
     b.type = 'button';
     b.className = 'cmItem' + (hook ? ' ' + hook : '');
     b.setAttribute('role', 'menuitem');
-    b.textContent = label;
+    if (glyph) b.innerHTML = menuGlyph(glyph);
+    var t = document.createElement('span');
+    t.textContent = label;
+    b.appendChild(t);
     b.addEventListener('click', function () { closeMenu(false); onPick(); });
     return b;
   }
@@ -869,7 +924,7 @@
 
     menuEl.appendChild(menuItem('Open', function () {
       window.open(url, '_blank', 'noopener');
-    }));
+    }, '', 'open'));
     /* ONE COPY IMPLEMENTATION, AND IT ANSWERS WHETHER THE TEXT ARRIVED.
        lib/postedui.js owns it; a handler that reports success from both arms
        of a promise is PRESEAL-002, and it shipped once already. */
@@ -879,14 +934,14 @@
       copier(url).then(function (ok) {
         sayOn(button, ok ? 'Link copied' : "Couldn't copy the link", rest);
       });
-    }));
+    }, '', 'link'));
     /* Share only where the platform has one. A "Share..." that silently does
        nothing is worse than an item that is not there. */
     if (navigator.share) {
       menuEl.appendChild(menuItem('Share\u2026', function () {
         navigator.share({ title: item.title || 'A Skribl', url: url })
           .catch(function () {});
-      }));
+      }, '', 'share'));
     }
     var hr = document.createElement('div');
     hr.className = 'cmDiv';
@@ -896,7 +951,7 @@
        that matched the word would break the day the word changes. */
     menuEl.appendChild(menuItem('Report', function () {
       openReport(item.id, button);
-    }, 'cmReport'));
+    }, 'cmReport danger', 'flag'));
 
     /* PLACED AGAINST THE VIEWPORT, not just below the button: a card in the
        last row would otherwise open a menu below the fold. */

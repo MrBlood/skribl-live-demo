@@ -48,6 +48,10 @@
       --surface-control-hover: var(--control-hi);
       --hairline-strong: rgba(255,255,255,0.16);
       --text-primary: var(--text);
+      /* styles.css's `--danger`, for the one destructive row on the card
+         menu. Named here rather than hard-coded at the rule, so the light
+         ramp below can answer it the way the editor's does. */
+      --danger: #f4326f;
     }
     :root[data-theme="light"] {
       color-scheme: light;
@@ -60,6 +64,7 @@
       --text-2: #4b5563;
       --text-3: #6b7280;
       --hairline-strong: rgba(0,0,0,0.18);
+      --danger: #c1104a;
     }
     * { box-sizing: border-box; }
     body {
@@ -145,7 +150,16 @@
        across a desktop, and at that width the drawing was smaller than the
        chrome around it -- which is the complaint that started this. One up on
        a phone; not a bare 1fr, see the profile's note. */
-    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    /* `align-items: start` AND NOT THE DEFAULT, which is the whole of the
+       caption accordion's layout bug. A grid row stretches its items to the
+       tallest one, so opening ONE card's description grew the card beside it
+       to match and left that card forty pixels of nothing under its drawing --
+       the dead space the accordion was built to remove, handed to the
+       neighbour instead (owner: "it accordioned open and it opened the card
+       next to it"). Start-aligned, each card is exactly as tall as what it
+       holds, and a card with its description shut is the same height it was. */
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px;
+      align-items: start; }
     @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
     /* The card is a POST: head, words, drawing, one control row. No padding on
        the card itself -- the drawing runs edge to edge between its bands, the
@@ -265,13 +279,44 @@
        looks right, which is exactly why the pair is written down here: the
        calibration that flipped only the track came back green and proved
        nothing at all. */
+    /* AND THE OPEN HAS TO BE AS SMOOTH AS THE TRACK, which the first cut was
+       not: the track animated and everything else jumped. Two properties were
+       stepping rather than easing, and each on its own was enough to read as a
+       stutter.
+
+       PADDING. The paragraph's 10/12px of vertical air arrived in one frame at
+       the start of the open and left in one frame at the start of the close,
+       so 22px of the movement happened instantly and the remaining track
+       animation looked like it was catching up. It eases on the same curve as
+       the track now.
+
+       CONTENT-VISIBILITY. Its two values are not interpolable, so the close
+       flipped straight to `hidden` and the element stopped contributing height
+       AT ONCE -- the collapse the track was in the middle of animating had
+       already happened. `transition-behavior: allow-discrete` holds the
+       visible value for the length of the transition and flips it at the end,
+       which is what makes the shut as smooth as the open. It is declared
+       SEPARATELY from the `transition` shorthand on purpose: written inline as
+       `content-visibility 0.24s allow-discrete`, a browser that does not know
+       the keyword throws out the WHOLE shorthand and the accordion loses every
+       animation it has. As its own declaration it is ignored in isolation, and
+       such a browser gets the old instant close and nothing worse.
+
+       The pair is still load-bearing in the way the note below describes. */
     .tile .tcapWrap { display: grid; grid-template-rows: 0fr;
-      transition: grid-template-rows 0.22s ease; }
+      transition: grid-template-rows 0.24s cubic-bezier(0.2, 0.7, 0.2, 1); }
     .tile.cap-open .tcapWrap { grid-template-rows: 1fr; }
     .tcap { margin: 0; padding: 0 13px; min-height: 0; overflow: hidden;
       font-size: 13px; line-height: 1.4; color: var(--text-2);
-      overflow-wrap: anywhere; content-visibility: hidden; }
-    .tile.cap-open .tcap { padding: 10px 13px 12px; content-visibility: visible; }
+      overflow-wrap: anywhere; opacity: 0; content-visibility: hidden;
+      transition: padding 0.24s cubic-bezier(0.2, 0.7, 0.2, 1),
+                  opacity 0.18s ease, content-visibility 0.24s;
+      transition-behavior: allow-discrete; }
+    .tile.cap-open .tcap { padding: 10px 13px 12px; opacity: 1;
+      content-visibility: visible; }
+    @media (prefers-reduced-motion: reduce) {
+      .tile .tcapWrap, .tcap { transition: none; }
+    }
 
     /* ---- the card's overflow menu ------------------------------------- */
     .sr-live { position: absolute; width: 1px; height: 1px; margin: -1px;
@@ -282,12 +327,36 @@
       border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.34);
       display: flex; flex-direction: column; }
     .cardMenu[hidden] { display: none; }
-    .cmItem { display: block; width: 100%; text-align: left; min-height: 40px;
-      padding: 0 12px; background: none; border: 0; border-radius: 8px;
-      color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+    /* THE SAME MENU THE REST OF THE PRODUCT HAS, measurement for measurement.
+       The editor's sheet (styles.css `.menu-item`) is where this vocabulary
+       lives: an 18px leading glyph, 12px between glyph and words, 12px/14px of
+       padding, a 10px corner, 14px text at weight 500, and one destructive row
+       in the danger colour. The first cut of this menu invented its own --
+       no icons, 8px corners, flush text -- so a person who had seen the
+       editor's menu met a different one here (owner: "should have icons and
+       use the same styling as all the menus").
+
+       MATCHED RATHER THAN IMPORTED, and that is a decision and not laziness:
+       styles.css is the EDITOR's sheet and this page does not load it (see the
+       note at the head of this block). Pulling in a 6,000-line stylesheet to
+       borrow forty of them would cost every reader of the gallery the whole
+       editor's CSS. The numbers are copied; if they move there, they move
+       here, and a person seeing both sees one product either way. */
+    .cmItem { display: flex; align-items: center; gap: 12px; width: 100%;
+      text-align: left; min-height: 44px; padding: 12px 14px; background: none;
+      border: 0; border-radius: 10px; color: var(--text); font: inherit;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: background 0.15s ease; -webkit-tap-highlight-color: transparent; }
+    .cmItem svg { width: 18px; height: 18px; flex: none; color: var(--text-3); }
     .cmItem:hover { background: var(--control); }
     .cmItem:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-    .cmDiv { height: 1px; margin: 5px 8px; background: var(--hairline); }
+    /* Report is the one row on this menu that does something to somebody
+       else's post, and the owner asked for it to look like it ("although
+       report could be a red flag"). `.menu-item.danger` is the editor's name
+       for exactly this and carries exactly this treatment. */
+    .cmItem.danger { color: var(--danger); }
+    .cmItem.danger svg { color: var(--danger); }
+    .cmDiv { height: 1px; margin: 6px 8px; background: var(--hairline); }
     /* The trigger is a mark like the others, so it sits on the same centre
        line and carries the same 44px band to a finger. */
     /* Set apart from the facts, like the Report word before it: 14px rather
@@ -383,6 +452,14 @@
     .tile .tileCapBtn { position: relative; padding: 0; border: 0;
       background: none; cursor: pointer; color: var(--text-3);
       width: 44px; height: 44px; display: inline-grid; place-items: center; }
+    /* THE GLYPH IS CAPPED AND THE BOX IS NOT, which is the one line this
+       control was missing. `.tileMore svg` has carried `width: 16px` since it
+       was written; the caption mark was given the same 44px box and no such
+       rule, so its SVG took the whole grid cell and painted a 44px speech
+       bubble beside a 16px ellipsis (owner: "the enormous chat bubble (why so
+       big?)"). An `<svg>` with a viewBox and no size is not small by default
+       -- it fills what contains it. */
+    .tile .tileCapBtn svg { width: 16px; height: 16px; display: block; }
     .tile .tileCapBtn:hover { color: var(--text); }
     .tile.cap-open .tileCapBtn { color: var(--accent); }
     /* THE MARKS STAND DOWN ON A ONE-UP CARD, for the reason the play count
@@ -434,7 +511,23 @@
        than no full size at all. Set by lib/immersive.js on <html>, cleared on
        the way out. */
     html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
-    .tileStage { display: block; position: relative; }
+    /* THE DRAWING IS MATTED, NOT GLUED TO THE FRAME. It used to run the full
+       width of the card, on the note above that a post's media does -- true of
+       a photograph, which has no frame of its own, and not true here: the
+       component draws its own 1px border and 16px corner, so edge to edge put
+       that border one pixel inside the card's, on the same radius. At most
+       aspects the letterbox hid it. At the one aspect that fills the box it
+       did not, and the card read as a rectangle with its drawing welded to the
+       rim (owner, of the card whose drawing happened to match: "canvas borders
+       hit card border and it's weird looking").
+
+       13px is the head's own inset, so the drawing's left edge lines up with
+       the avatar above it rather than sitting 13px outside it -- the mat reads
+       as the card's margin and not as a second decision. Every card in the
+       grid now frames its drawing the same way whatever shape the drawing is,
+       which is the part a grid makes obvious and a single card never does. */
+    .tileStage { display: block; position: relative;
+      margin: 0 13px 13px; border-radius: 12px; overflow: hidden; }
     /* The component's progress hairline is turned off through the MACRO's own
        `progress` argument -- see the template call below -- and NOT by a rule
        in this sheet.
@@ -457,9 +550,13 @@
        `100dvh` and not `100vh`: on a phone `vh` is the tallest the viewport
        ever gets, so with the URL bar showing the bottom of the drawing sits
        under it. */
+    /* `margin: 0` and a square corner on BOTH halves: the mat above belongs to
+       a card in a grid, and a stage that IS the display has no card around it
+       to be inset from. The fallback already said so for its own reasons; the
+       real API needs it too now that the resting state has a margin. */
     .tileStage:fullscreen, .tileStage.is-immersive-page {
       background: #000; display: flex; align-items: center; justify-content: center;
-      width: 100vw; height: 100vh; }
+      width: 100vw; height: 100vh; margin: 0; border-radius: 0; }
     .tileStage.is-immersive-page {
       position: fixed; inset: 0; z-index: 2147483000;
       width: 100vw; height: 100dvh; margin: 0; border-radius: 0; }

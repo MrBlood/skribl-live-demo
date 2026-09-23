@@ -804,7 +804,15 @@
         if (!(r > 0)) return rate;
         if (state === 'playing') { elapsed += segElapsed(); t0 = now(); }
         rate = r;
-        if (state === 'playing') startAudio();
+        /* The drawing's speed is already changed by the line above; the audio
+         * graph is a second, weaker thing. It is rebuilt on an AudioContext
+         * the browser is allowed to take away, and a throw from in here used
+         * to escape setRate with the new rate already applied -- so the caller
+         * never got its return, never repainted, and the control reported a
+         * speed the player was no longer running at. Silence is a degradation
+         * and a lying label is a bug, which is the same order of preference
+         * the decode path states a few hundred lines down. */
+        if (state === 'playing') { try { startAudio(); } catch (e) {} }
         return rate;
       },
       rate: function () { return rate; },

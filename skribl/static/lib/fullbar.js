@@ -236,9 +236,29 @@
     bRate.addEventListener('click', function () {
       var pl = player();
       if (!pl) return;
-      var i = RATES.indexOf(pl.rate());
-      pl.setRate(RATES[(i + 1) % RATES.length]);
-      sync();
+      /* A DEAD BUTTON HID IN `indexOf`. It is an exact match on a float or
+       * -1, and -1 + 1 is 0 -- so ANY rate the list does not hold sent the
+       * player to RATES[0], which for a player already at RATES[0] is a press
+       * that sets the speed it already has, repaints the same label, and looks
+       * to the person pressing it exactly like a control that does nothing
+       * (owner, twice: "the 1x speed does not change when clicked").
+       *
+       * The player accepts any positive rate, so the list is a menu and not
+       * the domain: nothing stops a host, a restored session, or a later
+       * control from leaving it at 1.25. Ask for the first rate that is NOT
+       * the current one and the button moves from wherever it finds itself.
+       *
+       * AND sync() RUNS WHATEVER setRate DOES. It used to be the line after,
+       * so anything thrown inside -- the audio graph is rebuilt in there, on a
+       * context the browser may have taken away -- skipped the repaint and
+       * left the label reading 1x over a player that had already changed
+       * speed. The label is a report on the player and must never be the
+       * casualty of the player having a bad moment. */
+      var cur = pl.rate();
+      var i = RATES.indexOf(cur);
+      var next = i >= 0 ? RATES[(i + 1) % RATES.length]
+                        : (RATES[0] !== cur ? RATES[0] : RATES[1]);
+      try { pl.setRate(next); } finally { sync(); }
     });
     if (bExit) bExit.addEventListener('click', function () {
       if (opts.onExit) opts.onExit();
@@ -349,6 +369,37 @@
       if (tick) global.clearTimeout(tick);
       raf = null;
       tick = null;
+    }
+
+    /* ---- the band the bar occupies, published to the thing it sits on ----
+     *
+     * IN FULL SCREEN THE BAR IS NOT ALLOWED TO STAND ON THE DRAWING. It is
+     * absolutely positioned at the bottom with a scrim, on the reasoning that
+     * a picture reads fine under a soft gradient -- which is how a video
+     * player works and is wrong here, because a drawing is the entire content
+     * and its bottom edge is part of it. The owner, on a pug whose feet were
+     * behind the controls: "fullscreen where the controls cover the bottom of
+     * the canvas?"
+     *
+     * So the host reserves the bar's height as padding and the drawing is
+     * centred in what is left. MEASURED AND NOT ASSUMED: the bar's height
+     * moves with the safe-area inset, the scrub row, the text metrics of
+     * whatever font resolved, and a hard-coded number would be right on this
+     * machine and wrong on a phone with a home indicator. A ResizeObserver
+     * answers with whatever the bar actually became.
+     *
+     * The CARD's bar does no such thing -- it is hidden in full screen, and
+     * on a card the overlay is the point. Two bars share this wrapper, so the
+     * card's is filtered out here rather than at the CSS, or the last one to
+     * measure would win. */
+    if (opts.variant !== 'skfull-card') {
+      wrap.classList.add('skfull-host');
+      if (global.ResizeObserver) {
+        new global.ResizeObserver(function (rec) {
+          var h = rec[0] ? rec[0].target.offsetHeight : 0;
+          wrap.style.setProperty('--skfull-band', (h || 0) + 'px');
+        }).observe(bar);
+      }
     }
 
     sync();
