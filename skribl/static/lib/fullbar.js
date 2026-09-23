@@ -236,29 +236,19 @@
     bRate.addEventListener('click', function () {
       var pl = player();
       if (!pl) return;
-      /* A DEAD BUTTON HID IN `indexOf`. It is an exact match on a float or
-       * -1, and -1 + 1 is 0 -- so ANY rate the list does not hold sent the
-       * player to RATES[0], which for a player already at RATES[0] is a press
-       * that sets the speed it already has, repaints the same label, and looks
-       * to the person pressing it exactly like a control that does nothing
-       * (owner, twice: "the 1x speed does not change when clicked").
+      /* sync() RUNS WHATEVER setRate DOES, and that is what the `finally` is
+       * for. It used to be the line after, so anything thrown inside --
+       * setRate rebuilds the audio graph, on a context the browser is allowed
+       * to take away -- skipped the repaint and left the label reading 1x over
+       * a player that had already changed speed. A person pressing a control
+       * that does not change is looking at a broken control whether the cause
+       * is the control or the report on it, and the owner has now reported
+       * "the 1x speed does not change when clicked" twice.
        *
-       * The player accepts any positive rate, so the list is a menu and not
-       * the domain: nothing stops a host, a restored session, or a later
-       * control from leaving it at 1.25. Ask for the first rate that is NOT
-       * the current one and the button moves from wherever it finds itself.
-       *
-       * AND sync() RUNS WHATEVER setRate DOES. It used to be the line after,
-       * so anything thrown inside -- the audio graph is rebuilt in there, on a
-       * context the browser may have taken away -- skipped the repaint and
-       * left the label reading 1x over a player that had already changed
-       * speed. The label is a report on the player and must never be the
-       * casualty of the player having a bad moment. */
-      var cur = pl.rate();
-      var i = RATES.indexOf(cur);
-      var next = i >= 0 ? RATES[(i + 1) % RATES.length]
-                        : (RATES[0] !== cur ? RATES[0] : RATES[1]);
-      try { pl.setRate(next); } finally { sync(); }
+       * (setRate no longer lets that throw escape either; both halves are
+       * here because either one alone leaves the other's failure silent.) */
+      var i = RATES.indexOf(pl.rate());
+      try { pl.setRate(RATES[(i + 1) % RATES.length]); } finally { sync(); }
     });
     if (bExit) bExit.addEventListener('click', function () {
       if (opts.onExit) opts.onExit();
