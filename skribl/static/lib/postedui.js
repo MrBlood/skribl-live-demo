@@ -449,6 +449,14 @@
           : e.kind === 'flip' ? (e.pages + (e.pages === 1 ? ' page' : ' pages'))
           : e.kind === 'pad' ? 'replay' : '';
         var sub = (kindWord ? kindWord + ' \u00b7 ' : '') + store.ago(e.at);
+        /* The pen or the book, for the row that has a picture to put it
+           beside rather than on top of. Empty for a host listing, which
+           carries no kind and must not be given one. */
+        var kindGlyph = e.kind === 'flip' ? ICON_FLIP
+                      : e.kind === 'pad' ? ICON_PAD : '';
+        var kindMark = kindGlyph
+          ? '<span class="posted-kind" aria-hidden="true">' + kindGlyph + '</span>'
+          : '';
         // NO route literal. A '/s/' fallback here is exactly what v132 removed
         // from flip.js: it silently posts the wrong URL under a url_prefix, and
         // verify_seam.py exists to catch it. The stored entry carries the url
@@ -505,7 +513,18 @@
                skribl_library.html. No poster, no wrapper: the drawer's thumb
                is a glyph tile and has nothing to clip. */
             (poster ? '<span class="posted-shot"><img class="posted-poster" src="' + esc(poster(e.id)) + '" alt="" loading="lazy" decoding="async"></span>' : '') +
-            (e.kind === 'flip' ? ICON_FLIP : e.kind === 'pad' ? ICON_PAD : '') +
+            /* THE KIND MARK MOVES TO THE WORDS WHERE THERE IS A PICTURE, and
+               stays the tile's whole content where there is not.
+               Over a poster it was a badge in the top-left corner, competing
+               with the drawing for the same 84x63 box; in the sub line it
+               stands directly in front of the fact it qualifies -- "a pen,
+               replay, a day ago" reads as one statement, which a corner badge
+               and a separate word do not (owner: "move the pencil/book before
+               replay/pages").
+               The DRAWER has no poster at all: its 42x34 thumb IS this glyph,
+               so removing it there would leave an empty tile. Same branch,
+               same expression, keyed on whether a picture exists. */
+            (poster ? '' : kindGlyph) +
             (e.has_audio === true ? ICON_SOUND : '') + '</span>' +
           /* HONOURS player_target, which it did not until v281. __init__.py
              names this link as one of the three "watch it" paths and says
@@ -526,7 +545,7 @@
                on the button two inches apart (owner, screenshot 4). The word
                stays where there is no button — a row this browser holds no key
                for cannot change it, so something has to say it. */
-            '<span class="posted-sub">' + esc(sub) +
+            '<span class="posted-sub">' + (poster ? kindMark : '') + esc(sub) +
               ((vis && !(may && vis)) ? ' \u00b7 ' + esc(visWord) : '') + '</span>' +
           '</a>' +
           '<span class="posted-actions">' +

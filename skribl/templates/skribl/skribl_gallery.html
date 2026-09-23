@@ -83,7 +83,14 @@
     .top { display: flex; align-items: center; gap: 12px; padding-bottom: 18px; }
     /* min-height 44: the lockup is a link, and a 24px mark is not a tap
        target (verify_a11y's hit-box census; the header is 44 tall anyway). */
-    .brand { display: flex; align-items: center; gap: 6px; min-height: 44px; }
+    /* `text-decoration: none` because the lockup is an <a> and the library's
+       is a <div>: the browser was underlining the word GALLERY and nothing
+       underlines LIBRARY, so the two pages wore the same lockup differently
+       (owner: "get rid of the underlined GALLERY"). It stays a link -- it is
+       the way back to the editor from here -- and simply stops being drawn
+       like body copy. */
+    .brand { display: flex; align-items: center; gap: 6px; min-height: 44px;
+      text-decoration: none; }
     .brand .brand-mark { height: 24px; width: auto; display: block; overflow: visible; color: var(--text); }
     /* The mark's ink: the gradient stops _skribl_brand_mark.html carries, as
        the library colours them. Without these the signature paints black. */

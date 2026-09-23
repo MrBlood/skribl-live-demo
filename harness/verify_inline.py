@@ -1609,7 +1609,29 @@ with sync_playwright() as sp:
     # poster's route since v287.
     #
     # 35,920 -> 36,760, measured 36,725, pinned 35 B above it.
-    EMBED_RATCHET = 36_760
+    #
+    # 36,760 -> 37,000, measured 36,957, pinned 43 B above it. THE NIB IS A
+    # SIZE IN THE DRAWING NOW, not a size on the screen. It was 8px of CSS
+    # wherever it appeared, so the one element that is supposed to say "a pen
+    # is here, this size" was the only thing on the surface that did not answer
+    # to how big the drawing is -- a boulder on an 84px library thumb and a
+    # speck on a 1280px full screen (owner: "shouldn't the nib be scaled to the
+    # size of the player, rather than stay the same size no matter where it
+    # occurs?"). The player already computes that scale every frame for the
+    # nib's POSITION; this spends the bytes to use it for the size too.
+    #
+    # +46 B of CSS (`var(--nb, 8px)` twice and a calc() for the ring, in place
+    # of three literals) and +151 B of script, which is a scale cache, a clamp
+    # and one setProperty.
+    #
+    # THE CARVE, -264 B: the paragraph explaining `--nb` beside the CSS rule.
+    # That file's header says product reasoning belongs in inlineplayer.js's,
+    # for exactly this reason -- CSS comments are served to every host and
+    # nothing strips them, so a paragraph there is bandwidth somebody else pays
+    # for. The explanation is in the script, where it costs nothing, and the
+    # rule is three declarations a reader can follow without it. Without that
+    # carve this change was 461 B rather than 197.
+    EMBED_RATCHET = 37_000
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

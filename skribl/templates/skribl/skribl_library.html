@@ -319,7 +319,13 @@
        both the poster and the page behind the overhang. */
     .posted-thumb svg.posted-sound { left: auto; right: -7px; top: -7px;
       width: 22px; height: 22px; padding: 4px; border-radius: 999px;
-      color: #7ee2a8; background: #0b0d12; box-shadow: 0 0 0 1.5px rgba(6,7,10,.9); }
+      color: var(--accent); background: #0b0d12; box-shadow: 0 0 0 1.5px rgba(6,7,10,.9); }
+    /* The kind mark is in the WORDS on this page now, not on the poster: an
+       84x63 thumb is the drawing, and a badge in its corner was competing
+       with it. The rule above is what is left of that pair -- sound is a
+       property of the post that the words do not carry, so it keeps its
+       corner. */
+    .posted-sub svg { color: var(--text-3); }
     .posted-count { margin: 0 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
     /* Tap targets on this page (verify_a11y's census): the foot's two text
        buttons and the filter chips are small by design, so each carries a

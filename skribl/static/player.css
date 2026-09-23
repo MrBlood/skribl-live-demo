@@ -1236,6 +1236,54 @@ body.player-mode .app {
   border-color: var(--hairline-strong); color: var(--text-primary); }
 .canvas-wrap:fullscreen .player-btn.full-exit { display: grid; place-items: center; }
 
+/* THE TRANSPORT GOES FULL SCREEN WITH THE DRAWING. Full screen renders only
+   the top-layer subtree, and the transport row lives in .player-shell below
+   the wrapper -- so it was not on screen at all, and the owner photographed
+   the result: a drawing, a close button, and nothing to press. app.js moves
+   #playerBar into .canvas-wrap on the way in and back on the way out.
+
+   `display: contents` at rest so the wrapper generates no box: the scrubber
+   and the button row stay direct flex children of the shell, exactly as they
+   were before there was anything around them. */
+.player-bar { display: contents; }
+.canvas-wrap:fullscreen .player-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  box-sizing: border-box;
+  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+  /* A scrim rather than a slab, the same shape lib/fullbar.js uses on the
+     gallery and the profile: a hard edge across a picture is worse than a
+     soft one, and the three surfaces should be recognisably one product. */
+  background: linear-gradient(to top, rgba(6, 7, 10, 0.96),
+                                      rgba(6, 7, 10, 0.82) 62%,
+                                      rgba(6, 7, 10, 0));
+}
+/* COPY LINK AND GALLERY STAND DOWN IN FULL SCREEN. Both take a person off
+   this drawing, which is the one thing full screen is for; the transport is
+   what belongs over a picture filling the display. They are a tap away again
+   the moment the drawing is not. */
+.canvas-wrap:fullscreen #playerCopyBtn,
+.canvas-wrap:fullscreen #playerGalleryLink { display: none; }
+/* AND THE BAR DOES NOT STAND ON THE DRAWING. `--pbar` is the bar's measured
+   height, written by app.js; the wrapper centres its canvas in the grid's
+   CONTENT box, so reserving the band here is what keeps the bottom of a
+   drawing out from behind the controls. playerFitScale() subtracts the same
+   number, because clientHeight includes padding and the scale has to agree
+   with the centring. */
+.canvas-wrap:fullscreen { padding-bottom: var(--pbar, 0px); }
+/* THE TRACK TAKES THE WIDTH IT IS GIVEN. `max-width: 340px` is right under a
+   centred column and wrong across a screen: a scrubber a quarter of the way
+   along a 1900px bar reads as a progress meter somebody forgot to finish. Full
+   screen is also where a drawing is long enough that seeking to a moment
+   matters, and a 340px track is a coarse instrument for it. */
+.canvas-wrap:fullscreen .player-progress { max-width: none; }
+
 body.player-mode .canvas-wrap {
   flex: none;
   max-width: 100%;
@@ -1283,9 +1331,14 @@ body.player-mode #canvas {
    point via the negative margin; positioned in display px by the player JS. */
 .player-nib {
   position: absolute;
-  width: 14px;
-  height: 14px;
-  margin: -7px 0 0 -7px;
+  /* `--nb` is written by app.js from the drawing's own scale, so the bead is
+     the same size relative to the artwork on a 390px phone and on a full
+     screen; 14px is what it was fixed at and is the fallback before a replay
+     has run. The negative margin centres it, so it is half of whatever --nb
+     resolved to rather than a literal. */
+  width: var(--nb, 14px);
+  height: var(--nb, 14px);
+  margin: calc(var(--nb, 14px) / -2) 0 0 calc(var(--nb, 14px) / -2);
   border-radius: 50%;
   pointer-events: none;
   z-index: 6;
