@@ -978,15 +978,36 @@
      * DRAWING's, and the canvas is letterboxed between them — so this maps
      * through the two live rects rather than assuming they are the same box.
      * Getting this wrong puts the pen next to the line instead of on it, which
-     * is worse than no nib at all. */
+     * is worse than no nib at all.
+     *
+     * AND THE CANVAS ELEMENT IS NOT ALWAYS THE DRAWING. There are two sizing
+     * models here and this used to know about one of them:
+     *
+     *   tile       width/height auto under max-width/max-height 100%, so the
+     *              ELEMENT box is exactly the drawing and a rect is enough.
+     *   immersive  width/height 100% with `object-fit: contain`, so the element
+     *              box is the whole container and the bitmap is letterboxed
+     *              INSIDE it. getBoundingClientRect() reports the container.
+     *
+     * So in full screen the nib was mapped across the screen while the line was
+     * drawn across the smaller contained box, and sat up and to the left of its
+     * own stroke (the owner's screenshot). `object-fit` has to stay: max-width
+     * only ever SHRINKS a canvas, and full screen needs it to grow.
+     *
+     * The fix is to stop reading the element box and derive the CONTENT box —
+     * the same arithmetic `contain` does. It reduces to the element box in tile
+     * mode (there the two axes' scales are equal and both offsets are zero), so
+     * one mapping now serves both, and a third sizing model cannot bring this
+     * back. */
     function setNib(p) {
-      if (!p) { nib.style.opacity = '0'; return; }
-      var cr = canvas.getBoundingClientRect();
-      var br = el.getBoundingClientRect();
-      if (!cr.width || !cr.height) { nib.style.opacity = '0'; return; }
-      nib.style.left = ((cr.left - br.left) + (p.x / size.w) * cr.width) + 'px';
-      nib.style.top = ((cr.top - br.top) + (p.y / size.h) * cr.height) + 'px';
-      nib.style.opacity = '1';
+      var st = nib.style;
+      if (!p) { st.opacity = '0'; return; }
+      var cr = canvas.getBoundingClientRect(), br = el.getBoundingClientRect();
+      if (!cr.width || !cr.height) { st.opacity = '0'; return; }
+      var s = Math.min(cr.width / size.w, cr.height / size.h);
+      st.left = cr.left - br.left + (cr.width - size.w * s) / 2 + p.x * s + 'px';
+      st.top = cr.top - br.top + (cr.height - size.h * s) / 2 + p.y * s + 'px';
+      st.opacity = '1';
     }
 
     /* ---- audio ---------------------------------------------------------- */

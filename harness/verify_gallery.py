@@ -79,6 +79,30 @@ def post_public_api(title):
         return json.loads(r.read().decode())["id"]
 
 
+def slow_pad_post(title, seconds=6):
+    """A public replay long enough to watch the pen move.
+
+    The paging fixture above is twelve points over 1.3 s, which on a fast
+    machine is done before a screenshot; the nib is only drawn WHILE a replay
+    is running (`setNib(null)` the moment it finishes), so a short drawing
+    gives a probe nothing to measure. This one is a diagonal across the whole
+    canvas, so every axis of the mapping is exercised rather than a band in
+    the middle.
+    """
+    n = 160
+    pts = [{"x": 20 + i * (776 / (n - 1)), "y": 20 + i * (572 / (n - 1)),
+            "color": "#ffffff", "size": 10, "t": i * (seconds * 1000 / (n - 1))}
+           for i in range(n)]
+    body = {"title": title, "version": 2, "schemaVersion": 2, "visibility": "public",
+            "playbackMode": "replay",
+            "frames": [{"strokes": pts, "strokeGroups": [len(pts)]}],
+            "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+    req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode())["id"]
+
+
 def draw(pg, sel):
     box = pg.locator(sel).bounding_box()
     cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
@@ -841,6 +865,9 @@ with sync_playwright() as _spi:
       try { delete Element.prototype.requestFullscreen; } catch (e) {}
       try { delete Element.prototype.webkitRequestFullscreen; } catch (e) {}
     """)
+    # Newest first, so this is tile 0 and the rows below know which drawing
+    # they are watching rather than taking whatever the grid happened to hold.
+    _slow = slow_pad_post("a pen you can follow")
     browsing.goto(_pi, BASE, "/gallery")
     _pi.wait_for_timeout(2200)
 
@@ -894,8 +921,111 @@ with sync_playwright() as _spi:
     check("...and the way out is on screen",
           _big["exitSeen"] == "grid", str(_big))
 
+    # ---- THE PEN IS ON THE LINE (v308) ------------------------------------
+    # Owner's screenshot, gallery full screen: the nib sat up and to the left
+    # of the stroke it was drawing. setNib() mapped the point through
+    # canvas.getBoundingClientRect(), which IS the drawing in a tile
+    # (width/height auto under max-width 100%) and is the whole container in
+    # immersive (width/height 100% + object-fit: contain, bitmap letterboxed
+    # inside). So the nib was spread across the screen while the line was drawn
+    # across the contained box.
+    #
+    # ASSERTED AGAINST THE CONTENT BOX, DERIVED FROM THE ASPECT RATIO -- which
+    # is what `contain` is DEFINED to do, not a copy of what the code does. A
+    # test that recomputed the implementation's formula would agree with it
+    # whatever it said.
+    #
+    # THE PROBE PROVES ITSELF FIRST. On a 390x844 phone a 16:9 drawing is
+    # letterboxed to about 219px of a 844px box, so the element box is ~625px
+    # taller than the content box and the two predictions are nowhere near each
+    # other. If that gap were small the rows below could not tell a fixed nib
+    # from a broken one, so the gap is asserted before the nib is.
+    _nib = _pi.evaluate("""async () => {
+        const st = document.querySelector('.tile .tileStage');
+        const cv = st.querySelector('.skribl-inline-canvas');
+        const nb = st.querySelector('.skribl-inline-nib');
+        if (!cv || !nb) return { missing: !cv ? 'canvas' : 'nib' };
+        const ar = cv.width / cv.height;            /* the drawing's own shape */
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        const out = { ar: Math.round(ar * 100) / 100, samples: [], outside: 0,
+                      gap: 0, hidden: 0 };
+        for (let i = 0; i < 14; i++) {
+          await sleep(120);
+          const cr = cv.getBoundingClientRect();
+          const nr = nb.getBoundingClientRect();
+          if (!cr.width || !cr.height) continue;
+          /* the content box `contain` paints into */
+          const cw = Math.min(cr.width, cr.height * ar);
+          const ch = Math.min(cr.height, cr.width / ar);
+          const cx = cr.left + (cr.width - cw) / 2;
+          const cy = cr.top + (cr.height - ch) / 2;
+          /* BEFORE the visibility gate: the probe's own validity is a fact
+             about the LAYOUT and must be measurable even on a frame where the
+             nib happens to be hidden. Measuring it after cost a run. */
+          out.gap = Math.max(out.gap, Math.round(cr.height - ch), Math.round(cr.width - cw));
+          if (getComputedStyle(nb).opacity === '0') { out.hidden++; continue; }
+          const nx = nr.left + nr.width / 2, ny = nr.top + nr.height / 2;
+          const ok = nx >= cx - 2 && nx <= cx + cw + 2 && ny >= cy - 2 && ny <= cy + ch + 2;
+          if (!ok) out.outside++;
+          out.samples.push([Math.round(nx - cx), Math.round(ny - cy),
+                            Math.round(cw), Math.round(ch), ok ? 1 : 0]);
+        }
+        return out; }""")
+    check("the probe can tell a fixed nib from a broken one",
+          not _nib.get("missing") and _nib["gap"] >= 200,
+          f"{_nib.get('gap')}px between the element box and the content box "
+          f"\u2014 under a letterbox this thin the two mappings agree and the "
+          f"row below would pass on the defect")
+    check("the nib is drawn ON the drawing, not across the whole screen",
+          not _nib.get("missing") and len(_nib["samples"]) >= 4
+          and _nib["outside"] == 0,
+          f"{_nib.get('outside')} of {len(_nib.get('samples', []))} samples "
+          f"outside the drawing\u2019s content box ({_nib.get('hidden')} frames "
+          f"with the nib hidden); [dx, dy, w, h, ok] = "
+          f"{_nib.get('samples', [])[:6]}")
+
     _pi.evaluate("() => document.querySelector('.tile .tileExit').click()")
     _pi.wait_for_timeout(600)
+
+    # ...AND THE SAME FORMULA IN A TILE, which is the claim the fix actually
+    # makes: one mapping for both sizing models. In a tile the element box IS
+    # the drawing, so the content box and the element box coincide and NO
+    # mutation of setNib can be caught here -- the two mappings agree by
+    # construction. Said plainly because a reader could otherwise take this row
+    # for a second pin on the same defect. What it guards is the REDUCTION: if
+    # the formula is ever "simplified" in a way that stops collapsing to the
+    # element box when the scales match, a tile's pen goes wrong and this is
+    # what notices.
+    _pi.evaluate("() => { const b = document.querySelector('.tile .skribl-inline');"
+                 " if (b && b._skriblInline) b._skriblInline.play(); }")
+    _tile = _pi.evaluate("""async () => {
+        const st = document.querySelector('.tile .tileStage');
+        const cv = st.querySelector('.skribl-inline-canvas');
+        const nb = st.querySelector('.skribl-inline-nib');
+        if (!cv || !nb) return { missing: true };
+        const ar = cv.width / cv.height;
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        const out = { samples: 0, outside: 0, gap: 0 };
+        for (let i = 0; i < 10; i++) {
+          await sleep(120);
+          const cr = cv.getBoundingClientRect(), nr = nb.getBoundingClientRect();
+          if (!cr.width || !cr.height) continue;
+          const cw = Math.min(cr.width, cr.height * ar);
+          const ch = Math.min(cr.height, cr.width / ar);
+          out.gap = Math.max(out.gap, Math.round(cr.height - ch), Math.round(cr.width - cw));
+          if (getComputedStyle(nb).opacity === '0') continue;
+          const cx = cr.left + (cr.width - cw) / 2, cy = cr.top + (cr.height - ch) / 2;
+          const nx = nr.left + nr.width / 2, ny = nr.top + nr.height / 2;
+          out.samples++;
+          if (!(nx >= cx - 2 && nx <= cx + cw + 2 && ny >= cy - 2 && ny <= cy + ch + 2))
+            out.outside++;
+        }
+        return out; }""")
+    check("...and on a tile, where the element box IS the drawing",
+          not _tile.get("missing") and _tile["samples"] >= 3
+          and _tile["outside"] == 0 and _tile["gap"] <= 2,
+          f"{_tile} \u2014 a gap above zero here would mean the tile has started "
+          f"letterboxing too, and this row would be measuring the other case")
     _back = _pi.evaluate("""() => {
         const st = document.querySelector('.tile .tileStage');
         const box = st.querySelector('.skribl-inline');
