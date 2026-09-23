@@ -97,10 +97,20 @@
     }
     wrap.appendChild(av);
 
+    /* The names go in their own box so the TITLE can sit under them (direction
+       B): avatar on the left, then name / handle / title stacked beside it,
+       which is the post head skribls.net already renders. */
+    var names = document.createElement('div');
+    names.className = 'tnames';
+    wrap.appendChild(names);
+    var line = document.createElement('div');
+    line.className = 'tline';
+    names.appendChild(line);
+
     var dn = document.createElement('span');
     dn.className = 'tdn';
     dn.textContent = name;
-    wrap.appendChild(dn);
+    line.appendChild(dn);
     /* The tick is the HOST'S claim, not Skribl's -- Skribl has nothing to
        verify with. Titled so it says whose claim it is. */
     if (a.verified) {
@@ -108,13 +118,13 @@
       vf.className = 'tverified';
       vf.textContent = '\u2713';
       vf.title = 'Verified by the site this Skribl was posted from';
-      wrap.appendChild(vf);
+      line.appendChild(vf);
     }
     if (handle) {
       var un = document.createElement('span');
       un.className = 'tun';
       un.textContent = handle;
-      wrap.appendChild(un);
+      line.appendChild(un);
     }
     return wrap;
   }
@@ -168,12 +178,33 @@
     art.className = 'tile';
     art.setAttribute('data-id', item.id);
 
+    /* DIRECTION B, the post-like card (owner picked it from three). The head
+       is the shape skribls.net already renders in its own post head: who, then
+       what. The title sits UNDER the name the way a post's body does, rather
+       than sharing a flex row with the time, the play count and two buttons. */
     var head = document.createElement('div');
     head.className = 'thead';
-    var tt = document.createElement('span');
+    var who = item.author ? authorBlock(item.author) : null;
+    var tt = document.createElement('div');
     tt.className = 'tt';
     tt.textContent = item.title || 'Untitled Skribl';
-    head.appendChild(tt);
+    if (who) {
+      who.querySelector('.tnames').appendChild(tt);
+      head.appendChild(who);
+    } else {
+      /* An anonymous post has no name to print, so the title leads -- and it
+         does NOT borrow `.tauth`. That class means "somebody is named here",
+         which is what makes its absence readable; reusing it as a layout box
+         would put one on all 24 tiles and quietly retire the assertion that
+         an unattributed post draws no author. Different job, different name. */
+      var solo = document.createElement('div');
+      solo.className = 'tsolo';
+      var names = document.createElement('div');
+      names.className = 'tnames';
+      names.appendChild(tt);
+      solo.appendChild(names);
+      head.appendChild(solo);
+    }
     var tm = document.createElement('span');
     tm.className = 'tm';
     tm.textContent = when(item.created_at);
@@ -217,10 +248,7 @@
     }
     art.appendChild(head);
 
-    /* WHO MADE IT. Absent unless the host's resolver described somebody --
-       see authorBlock(). */
-    var who = item.author ? authorBlock(item.author) : null;
-    if (who) art.appendChild(who);
+
 
     /* The macro rendered the poster URL with the placeholder in it, so the
        real one is that same server-built path with the id substituted — no
@@ -412,18 +440,48 @@
        Two ways in, because a phone has no hover and a desktop reader may want
        it to STAY: the toggle pins it (`.cap-on`, driven below) and hover or
        keyboard focus reveals it transiently where hover exists. */
+    /* THE CAPTION CAME OFF THE ART. It was a scrim over the drawing because a
+       poster-first card had nowhere else to put it; a post-like card has room
+       for words, so it is text under the title, clamped to two lines, and the
+       toggle EXPANDS it rather than revealing it. Nothing needs to sit on the
+       picture. */
     if (item.caption) {
       var tc = document.createElement('p');
-      tc.className = 'tileCap';
+      tc.className = 'tcap';
       tc.textContent = item.caption;
-      stage.appendChild(tc);
+      art.insertBefore(tc, stage);
       var btn = head.querySelector('.tileCapBtn');
       if (btn) btn.addEventListener('click', function () {
-        var on = stage.classList.toggle('cap-on');
+        var on = art.classList.toggle('cap-open');
         btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        btn.setAttribute('aria-label', on ? 'Hide the description' : 'Show the description');
-        btn.title = on ? 'Hide the description' : 'Show the description';
+        btn.setAttribute('aria-label', on ? 'Show less' : 'Show the whole description');
+        btn.title = btn.getAttribute('aria-label');
       });
+    }
+
+    /* THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE, from the same builder
+       (lib/fullbar.js) with a different control list. A second transport
+       written here would contradict the reason that module exists inside a day
+       of it landing. */
+    if (window.SkriblFullBar) {
+      var foot = window.SkriblFullBar.attach(art, {
+        variant: 'skfull-card',
+        controls: ['play', 'loop', 'mute', 'full'],
+        who: false,
+        scrubRow: false,
+        player: function () {
+          var b = stage.querySelector('.skribl-inline');
+          return (b && b._skriblInline) || null;
+        },
+        onFull: function () { if (imm) imm.toggle(); },
+        isFull: function () { return !!(imm && imm.isOn()); }
+      });
+      /* The component's own cluster and duration chip yield on the card for
+         the same reason they do in full screen: the page took the transport
+         over, and two of them on one drawing is the defect. */
+      var box0 = stage.querySelector('.skribl-inline');
+      if (box0) box0.classList.add('is-bare');
+      foot.running(true);
     }
     return art;
   }

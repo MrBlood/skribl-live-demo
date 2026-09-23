@@ -645,10 +645,41 @@ with sync_playwright() as _spk:
           });
         });
         return out; }""")
-    check("no mark is drawn over the tile player's transport",
-          _over["pairs"] > 0 and not _over["over"],
-          f"{_over['pairs']} badge/cluster pairs measured, overlapping on {_over['over']}"
-          " — zero pairs would mean this measured nothing at all")
+    # THE PREMISE MOVED, SO THE ASSERTION DID (v308, direction B). This used to
+    # measure a badge against the component's own control cluster, because the
+    # cluster sat at bottom left OF THE DRAWING and the pen landed on the play
+    # button. On a post-like card the transport is a FOOTER under the drawing
+    # and the component's own cluster is hidden (`is-bare`), so there is no
+    # pair left to overlap -- which is why this went to zero pairs rather than
+    # to zero overlaps.
+    #
+    # Zero pairs is the old assertion passing vacuously, so it is replaced
+    # rather than relaxed: what is true now, and worth keeping true, is that
+    # NOTHING a viewer presses is inside the drawing. That is the stronger
+    # claim -- it fails if any control moves back onto the picture, whichever
+    # control it is.
+    _inside = _pk.evaluate("""() => {
+        const out = { tiles: 0, inArt: [] };
+        document.querySelectorAll('.tile').forEach(t => {
+          const st = t.querySelector('.tileStage');
+          if (!st) return;
+          out.tiles++;
+          const sr = st.getBoundingClientRect();
+          t.querySelectorAll('button, a[href]').forEach(c => {
+            if (!st.contains(c)) return;
+            /* the way out of full screen is allowed to be over the art: it is
+               the one control with nowhere else to live */
+            if (c.classList.contains('tileExit')) return;
+            const r = c.getBoundingClientRect();
+            if (r.width && r.height) out.inArt.push(c.className.split(' ')[0]);
+          });
+        });
+        return out; }""")
+    check("nothing a viewer presses sits inside the drawing",
+          _inside["tiles"] > 0 and not _inside["inArt"],
+          f"{_inside['tiles']} tiles measured, controls inside the art: "
+          f"{sorted(set(_inside['inArt']))} \u2014 the transport is a footer now, "
+          f"and the pen on the play button is what that move was for")
     # TOOLTIPS, which this page had none of (owner). The module is loaded and
     # started here; it moves every `title` to `data-tip` and draws its own.
     # Asserted on data-tip, not on `title`, because the module REMOVES the
@@ -705,7 +736,11 @@ with sync_playwright() as _spa:
         for i, item in enumerate(items):
             if i == 0:
                 item["author"] = dict(_AUTHOR)
-                item["caption"] = "a caption that lives over the drawing"
+                # LONG ON PURPOSE. The first fixture was one line, so the
+                # clamp folded nothing and opening it changed no height -- the
+                # probe could not tell a working toggle from a dead one, and
+                # said so: shut 28, open 28.
+                item["caption"] = ('a description long enough to need more than two lines on a card this wide, so that the clamp has something to fold and the toggle has something to unfold, which a one-line caption cannot show')
             elif i == 1:
                 item["author"] = dict(_EVIL)
             # every other row keeps NO author, which is the absence case
@@ -728,10 +763,11 @@ with sync_playwright() as _spa:
           avatar: img ? img.getAttribute('src') : null,
           /* the block sits between the head and the drawing, which is where
              the owner asked for it ("at the top under the title") */
-          belowHead: !!(a && t[0].querySelector('.thead') &&
-            a.getBoundingClientRect().top >= t[0].querySelector('.thead').getBoundingClientRect().bottom - 1),
+          inHead: !!(a && a.closest('.thead')),
+          titleInNames: !!(a && a.querySelector('.tnames .tt')),
           aboveStage: !!(a && t[0].querySelector('.tileStage') &&
             a.getBoundingClientRect().bottom <= t[0].querySelector('.tileStage').getBoundingClientRect().top + 1),
+          solos: document.querySelectorAll('.tsolo').length,
           /* and the tiles with no author draw no block at all */
           blocks: document.querySelectorAll('.tauth').length,
         }; }""")
@@ -744,12 +780,16 @@ with sync_playwright() as _spa:
           str(_card) + " \u2014 a null avatar can also mean the image 404'd: the "
           "element's own onerror swaps it for an initial, which is the fallback "
           "working and the fixture wrong")
-    check("...under the title and above the drawing",
-          _card["belowHead"] and _card["aboveStage"], str(_card))
-    check("...and a post with no author draws NO block, not an empty one",
-          _card["blocks"] == 2,
-          f"{_card['blocks']} .tauth blocks for 2 described authors out of "
-          f"{_card['tiles']} tiles")
+    check("...at the top of the card, with the title under the name",
+          _card["inHead"] and _card["titleInNames"] and _card["aboveStage"],
+          f"{_card} \u2014 direction B: who first, then what, the way a post head "
+          f"reads; the title used to share a flex row with the time and two buttons")
+    check("...and a post with no author draws NO author block",
+          _card["blocks"] == 2 and _card["solos"] == _card["tiles"] - 2,
+          f"{_card['blocks']} .tauth blocks and {_card['solos']} unattributed "
+          f"heads out of {_card['tiles']} tiles \u2014 `.tauth` means somebody is "
+          f"named, which is what makes its absence readable; the unattributed "
+          f"card uses `.tsolo` so it cannot borrow the meaning")
 
     _evil = _pa.evaluate("""() => {
         const a = [...document.querySelectorAll('.tauth')]
@@ -763,69 +803,136 @@ with sync_playwright() as _spa:
     # THE CAPTION, OVER THE DRAWING. Asserted by PAINT and geometry, not by
     # the class alone: `opacity` is what hides it (the text stays in the
     # accessibility tree), so "hidden" here means a computed opacity of 0.
+    # THE CAPTION CAME OFF THE ART (v308, direction B). It was a scrim over
+    # the drawing because a poster-first card had nowhere else to put it; a
+    # post-like card has room for words, so it is text under the title,
+    # clamped to two lines, and the toggle EXPANDS it rather than revealing
+    # it.
     #
-    # READ AFTER THE TRANSITION, NEVER DURING IT. The first draft clicked and
-    # read `opacity` in the same evaluate(), and getComputedStyle returns the
-    # INTERPOLATED value mid-transition -- so a working toggle measured 0 and
-    # this went red on correct code, while the "off again" half went green for
-    # that same wrong reason. Each step now waits longer than the .16s.
-    #
-    # The mouse is parked off the grid first: `@media (hover: hover)` is live
-    # in this desktop browser, so a pointer resting on a tile would reveal the
-    # caption on its own and the toggle's effect would be unmeasurable.
-    _pa.mouse.move(5, 5)
-    _pa.wait_for_timeout(300)
+    # WHAT THE OLD ASSERTIONS WERE PROTECTING SURVIVES, and it is worth
+    # saying which part: the text had to stay in the accessibility tree at
+    # all times, which is why the scrim used `opacity` and never `display`.
+    # A clamp keeps that for free -- the text is present, and a reader that
+    # does not paint is not affected by a line limit. What goes is the
+    # hover branch, because nothing is hidden any more.
     _cap = _pa.evaluate("""() => {
         const t = document.querySelector('.tile');
-        const cap = t.querySelector('.tileCap');
+        const cap = t.querySelector('.tcap');
         const st = t.querySelector('.tileStage');
         const btn = t.querySelector('.tileCapBtn');
         if (!cap || !st || !btn) return { missing: !cap ? 'cap' : (!st ? 'stage' : 'btn') };
         const cr = cap.getBoundingClientRect(), sr = st.getBoundingClientRect();
+        const cs = getComputedStyle(cap);
+        const shut = Math.round(cr.height);
+        btn.click();
+        const open = Math.round(cap.getBoundingClientRect().height);
+        const pressed = btn.getAttribute('aria-pressed');
+        btn.click();
         return { text: cap.textContent,
-                 rest: getComputedStyle(cap).opacity,
-                 inStage: cr.top >= sr.top - 1 && cr.bottom <= sr.bottom + 1,
-                 pressed0: btn.getAttribute('aria-pressed') }; }""")
-    if not _cap.get("missing"):
-        for _step, _keys in ((1, ("on", "pressed1")), (2, ("off", "pressed2"))):
-            _pa.evaluate("() => document.querySelector('.tile .tileCapBtn').click()")
-            _pa.wait_for_timeout(400)
-            _got = _pa.evaluate("""() => [
-                getComputedStyle(document.querySelector('.tile .tileCap')).opacity,
-                document.querySelector('.tile .tileCapBtn').getAttribute('aria-pressed')]""")
-            _cap[_keys[0]], _cap[_keys[1]] = _got[0], _got[1]
-    check("the caption is drawn over the drawing, not as a block under it",
-          not _cap.get("missing") and _cap["inStage"]
-          and _cap["text"] == "a caption that lives over the drawing",
-          str(_cap))
-    check("...invisible at rest, and the toggle turns it on and off again",
-          not _cap.get("missing") and _cap["rest"] == "0" and _cap["on"] == "1"
-          and _cap["off"] == "0", str(_cap))
+                 aboveStage: cr.bottom <= sr.top + 1,
+                 clamp: cs.webkitLineClamp || cs.lineClamp,
+                 display: cs.display, visibility: cs.visibility,
+                 hidden: cap.hasAttribute('hidden'),
+                 shut: shut, open: open, pressed: pressed,
+                 shutAgain: Math.round(cap.getBoundingClientRect().height) }; }""")
+    check("the caption is text under the title, not a scrim on the drawing",
+          not _cap.get("missing") and _cap["aboveStage"]
+          and _cap["text"].startswith("a description long enough"),
+          f"{_cap} \u2014 nothing needs to sit on the picture once the card has"
+          f" somewhere to put words")
+    check("...clamped at rest, and the toggle opens it and shuts it again",
+          not _cap.get("missing") and _cap["clamp"] in ("2", 2)
+          and _cap["open"] > _cap["shut"] and _cap["shutAgain"] == _cap["shut"],
+          f"{_cap} \u2014 a clamp that never opens is a description nobody can"
+          f" finish reading")
     check("...and the toggle says which state it is in",
-          _cap.get("pressed0") == "false" and _cap.get("pressed1") == "true"
-          and _cap.get("pressed2") == "false", str(_cap))
+          _cap.get("pressed") == "true", str(_cap))
 
-    # A CAPTION A READER CANNOT GET TO IS WORSE THAN ONE THAT TAKES A HOVER.
-    # `opacity: 0` keeps the text in the accessibility tree; `display: none`
-    # or `hidden` would not, and either would have looked identical on screen.
+    # ---- THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE (v308) ------------
+    # Direction B puts the transport under the drawing. Rather than write a
+    # second one in gallery.js -- which would contradict lib/fullbar.js's
+    # reason for existing within a day of it landing -- the card calls the
+    # SAME builder with a different control list.
+    #
+    # ASSERTED AS "the same class of thing, configured differently": the
+    # footer's controls carry the module's own `skfull-` names, so a card that
+    # grew a hand-rolled transport would fail this even if it looked right.
+    _foot = _pa.evaluate("""() => {
+        const tiles = [...document.querySelectorAll('.tile')];
+        const t = tiles[0];
+        const f = t.querySelector('.skfull-card');
+        if (!f) return { missing: true, withFoot: 0, tiles: tiles.length };
+        const st = t.querySelector('.tileStage');
+        const box = t.querySelector('.skribl-inline');
+        return {
+          tiles: tiles.length,
+          withFoot: tiles.filter(x => x.querySelector('.skfull-card')).length,
+          btns: [...f.querySelectorAll('.skfull-btn')].map(b => b.className.split(' ')[1]),
+          track: !!f.querySelector('.skfull-track'),
+          belowArt: !!(st && f.getBoundingClientRect().top
+                       >= st.getBoundingClientRect().bottom - 1),
+          bare: !!(box && box.classList.contains('is-bare')),
+          ownDur: (() => { const d = t.querySelector('.skribl-inline-dur');
+                           return d ? getComputedStyle(d).display : 'absent'; })(),
+          /* the full-screen bar's own row must NOT be showing on a card */
+          fullBars: t.querySelectorAll('.skfull:not(.skfull-card)').length }; }""")
+    check("every card carries the transport, under the drawing",
+          not _foot.get("missing") and _foot["withFoot"] == _foot["tiles"]
+          and _foot["belowArt"] and _foot["track"],
+          f"{_foot} \u2014 direction B is a footer, not a scrim")
+    check("...built by lib/fullbar.js, not hand-rolled beside it",
+          not _foot.get("missing")
+          and _foot["btns"] == ['skfull-play', 'skfull-loop', 'skfull-mute', 'skfull-full'],
+          f"{_foot} \u2014 the `skfull-` names are the module's; a card that grew "
+          f"its own transport would fail here even looking identical")
+    check("...and the component's own chrome yields to it on a card too",
+          not _foot.get("missing") and _foot["bare"]
+          and _foot["ownDur"] in ("none", "absent"),
+          f"{_foot} \u2014 two transports on one drawing is the defect, in a grid "
+          f"as much as in full screen")
+
+    # THE CARD'S FOOTER DRIVES THE PLAYER, the same way the full-screen bar
+    # does and for the same reason: a control that keeps its own state lies
+    # the moment anything else moves the thing it is about.
+    _pa.evaluate("() => document.querySelector('.tile .skfull-play').click()")
+    _pa.wait_for_timeout(700)
+    _fdrive = _pa.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const pl = (t.querySelector('.skribl-inline') || {})._skriblInline;
+        const f = t.querySelector('.skfull-card');
+        if (!pl) return { noPlayer: true };
+        const st = pl.state();
+        const loopBefore = pl.looping();
+        f.querySelector('.skfull-loop').click();
+        return { state: st.state, loaded: st.loaded,
+                 loopBefore: loopBefore, loopAfter: pl.looping(),
+                 lit: f.querySelector('.skfull-loop').classList.contains('on') }; }""")
+    check("pressing play on a card plays THAT card's drawing",
+          not _fdrive.get("noPlayer") and _fdrive["state"] == "playing"
+          and _fdrive["loaded"],
+          f"{_fdrive} \u2014 the footer holds no state of its own; it asks the "
+          f"player, which is what keeps it honest when a replay ends by itself")
+    check("...and repeat reads what is true of the player",
+          not _fdrive.get("noPlayer")
+          and _fdrive["loopAfter"] != _fdrive["loopBefore"]
+          and _fdrive["lit"] == _fdrive["loopAfter"], str(_fdrive))
+
+    # A CAPTION A READER CANNOT GET TO IS WORSE THAN ONE THAT TAKES A HOVER,
+    # and that was the whole argument for `opacity` over `display` when this
+    # was a scrim. A line clamp keeps it: the text is in the tree whole, and
+    # a reader that does not paint is not affected by a limit on lines.
     _a11ycap = _pa.evaluate("""() => {
-        const cap = document.querySelector('.tile .tileCap');
+        const cap = document.querySelector('.tile .tcap');
         const cs = getComputedStyle(cap);
         return { display: cs.display, visibility: cs.visibility,
                  hidden: cap.hasAttribute('hidden'),
-                 w: Math.round(cap.getBoundingClientRect().width) }; }""")
-    check("the hidden caption is still text a screen reader reaches",
+                 chars: (cap.textContent || '').length }; }""")
+    check("the clamped caption is still the WHOLE text a screen reader reaches",
           _a11ycap["display"] != "none" and _a11ycap["visibility"] != "hidden"
-          and not _a11ycap["hidden"] and _a11ycap["w"] > 0,
-          f"{_a11ycap} — display:none or hidden would look the same and read as nothing")
-
-    # HOVER IS THE OTHER WAY IN, where a hover exists at all. The test browser
-    # is a desktop Chromium, so `@media (hover: hover)` is live here.
-    _pa.hover(".tile .tileStage")
-    _pa.wait_for_timeout(300)
-    _hov = _pa.evaluate("() => getComputedStyle(document.querySelector('.tile .tileCap')).opacity")
-    check("hovering a tile reveals its caption without a click",
-          _hov == "1", f"opacity {_hov} while hovering the tile")
+          and not _a11ycap["hidden"]
+          and _a11ycap["chars"] == len('a description long enough to need more than two lines on a card this wide, so that the clamp has something to fold and the toggle has something to unfold, which a one-line caption cannot show'),
+          f"{_a11ycap} \u2014 a clamp hides lines, never characters; truncating the"
+          f" TEXT would read as a shorter description rather than a folded one")
 
     _pa.close()
     _ba.close()

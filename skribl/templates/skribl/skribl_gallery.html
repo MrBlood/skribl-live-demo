@@ -123,14 +123,25 @@
     .btn[hidden] { display: none; }
 
     /* ---- the grid ------------------------------------------------------ */
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
-    @media (max-width: 400px) { .grid { grid-template-columns: minmax(0, 1fr); } }   /* not a bare 1fr: see the profile's note */
+    /* TWO-UP, NOT auto-fill (direction B). A 280px minimum put three and four
+       across a desktop, and at that width the drawing was smaller than the
+       chrome around it -- which is the complaint that started this. One up on
+       a phone; not a bare 1fr, see the profile's note. */
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+    /* The card is a POST: head, words, drawing, one control row. No padding on
+       the card itself -- the drawing runs edge to edge between its bands, the
+       way a post's media does. */
     .tile {
-      background: var(--panel); border: 1px solid var(--hairline); border-radius: 14px;
-      padding: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0;
+      background: var(--panel); border: 1px solid var(--hairline); border-radius: 16px;
+      display: flex; flex-direction: column; min-width: 0; overflow: hidden;
     }
-    .tile .thead { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-    .tile .tt { font-weight: 700; font-size: 14px; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .tile .thead { display: flex; align-items: flex-start; gap: 8px; min-width: 0;
+      padding: 12px 13px 10px; }
+    /* The TITLE sits under the name, the way a post's body does. It used to
+       share a flex row with the time, the play count and two buttons. */
+    .tile .tt { font-size: 13.5px; color: var(--text-2); overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; min-width: 0; margin-top: 1px; }
     .tile .tm { margin-left: auto; flex: none; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
     /* WHO MADE IT, under the title. Skribl has no user table: every field
        here is what the HOST's resolver returned for the post's user_id, and
@@ -139,16 +150,22 @@
        author renders no block at all -- see authorBlock() in gallery.js.
        The avatar is 22px because this is a caption line and not a post head;
        the disc is the host's own no-photo fallback, an initial on a tint. */
-    .tauth { display: flex; align-items: center; gap: 6px; min-width: 0;
+    .tauth { display: flex; align-items: flex-start; gap: 9px; min-width: 0; flex: 1 1 auto;
       margin: 0 0 2px; padding: 0; font-size: 12.5px; color: var(--text-2);
       text-decoration: none; }
     a.tauth:hover .tdn { text-decoration: underline; }
-    .tavatar { flex: none; width: 22px; height: 22px; border-radius: 50%;
+    .tnames { min-width: 0; }
+    .tline { display: flex; align-items: center; gap: 5px; min-width: 0; }
+    /* The unattributed card: same column, no avatar, and NOT `.tauth` -- see
+       gallery.js. The title carries the weight the name would have had. */
+    .tsolo { display: flex; min-width: 0; flex: 1 1 auto; }
+    .tsolo .tt { font-weight: 650; color: var(--text); font-size: 14px; margin-top: 0; }
+    .tavatar { flex: none; width: 34px; height: 34px; border-radius: 50%;
       overflow: hidden; display: grid; place-items: center;
       background: linear-gradient(135deg, #3a3f4b, #232730);
-      color: #fff; font-size: 11px; font-weight: 700; line-height: 1; }
+      color: #fff; font-size: 14px; font-weight: 700; line-height: 1; }
     .tavatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .tdn { font-weight: 600; color: var(--text); overflow: hidden;
+    .tdn { font-weight: 650; font-size: 14px; color: var(--text); overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .tverified { flex: none; color: var(--accent); font-size: 11px; }
     .tun { flex: none; font-family: var(--font-mono); font-size: 11.5px;
@@ -164,16 +181,17 @@
        Two ways in, because a phone has no hover and a desktop reader may want
        it to STAY: the toggle beside Report pins it (.cap-on), and hover or
        keyboard focus reveals it transiently where a hover exists at all. */
-    .tileCap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
-      margin: 0; padding: 26px 10px 10px; font-size: 13px; line-height: 1.35;
-      color: #f2f5fa; overflow-wrap: anywhere; pointer-events: none;
-      background: linear-gradient(to top, rgba(6,7,10,.92) 40%, rgba(6,7,10,0));
-      opacity: 0; transition: opacity .16s; }
-    .tileStage.cap-on .tileCap { opacity: 1; }
-    @media (hover: hover) {
-      .tile:hover .tileCap, .tile:focus-within .tileCap { opacity: 1; }
-    }
-    @media (prefers-reduced-motion: reduce) { .tileCap { transition: none; } }
+    /* THE CAPTION CAME OFF THE ART. It was a scrim over the drawing because a
+       poster-first card had nowhere else to put it; a post-like card has room
+       for words. Clamped to two lines, and the toggle EXPANDS rather than
+       reveals -- so the text is always present and always reachable, which is
+       what the opacity trick was protecting, without anything sitting on the
+       picture. */
+    .tcap { margin: 0; padding: 0 13px 10px; font-size: 13px; line-height: 1.4;
+      color: var(--text-2); overflow-wrap: anywhere;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+      overflow: hidden; }
+    .tile.cap-open .tcap { display: block; -webkit-line-clamp: unset; }
     .tile .tileCapBtn {
       margin-left: 6px; flex: none; width: 44px; height: 44px; padding: 0;
       display: inline-grid; place-items: center;
