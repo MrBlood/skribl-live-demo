@@ -79,6 +79,31 @@ def post_public_api(title):
         return json.loads(r.read().decode())["id"]
 
 
+def two_pen_post(title, thin=10, thick=26, seconds=14):
+    """One public replay drawn with two pens, so the nib's law can be read off
+    a single card.
+
+    THE SIZES ARE CHOSEN SO NEITHER CLAMPS. The bead has a floor -- a hairline
+    on an 84px thumb renders under two pixels and a two-pixel dot is dirt on
+    the screen -- and a fixture that trips it measures the floor rather than
+    the rule. At the width this suite's cards come out, 10 and 26 render about
+    4.4px and 11.5px, which is clear of it at both ends.
+    """
+    n, half = 240, 120
+    pts = [{"x": 60 + i * 5.5, "y": 200, "color": "#ff48b0", "size": thin,
+            "t": i * (seconds * 1000 / n)} for i in range(half)]
+    pts += [{"x": 60 + i * 5.5, "y": 430, "color": "#5ac8ff", "size": thick,
+             "t": (half + i) * (seconds * 1000 / n)} for i in range(half)]
+    body = {"title": title, "version": 2, "schemaVersion": 2, "visibility": "public",
+            "playbackMode": "replay",
+            "frames": [{"strokes": pts, "strokeGroups": [half, half]}],
+            "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+    req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode())["id"]
+
+
 def slow_pad_post(title, seconds=6):
     """A public replay long enough to watch the pen move.
 
@@ -2280,133 +2305,122 @@ with sync_playwright() as _spi:
     _bi.close()
 
 # ---------------------------------------------------------------------------
-print("\nGALLERY \u2014 the nib is the pen, not a cursor over it")
-# TWO PROPERTIES THAT PULL AGAINST EACH OTHER, both the owner's. Pinned at 8px
-# of CSS the bead was a boulder on an 84px library thumb; scaled in proportion
-# it became a ball in full screen ("full size looks good but nib is huge now").
-# So the size is asked as a RANGE: it grows with the drawing, and by less than
-# the drawing grows. A nib is the point of contact of a pen, and a pen held
-# over a bigger picture is still a pen.
+print("\nGALLERY \u2014 the nib is a size in the PEN")
+# THE THIRD LAW THIS HAS HAD, and the first that makes every observation true
+# at once. The bead was 8px of CSS wherever it appeared, so the same dot was a
+# boulder on an 84px library thumb and a speck on a 1280px full screen. Scaling
+# it by the drawing's SCALE fixed that and produced a ball in full screen.
+# Damping the scale fixed the ball and made the bead smaller than the stroke it
+# was leading. Each answer was right about the thing in front of it and wrong
+# about the thing the owner said next.
 #
-# ITS OWN SECTION, AND THAT IS THE POINT OF IT. The first two drafts of these
-# rows were spliced into the full-screen census above, which arrives at its
-# measurements in an order of its own: one read both ends after the click and
-# reported the drawing SHRINKING by 0.32x, the other read the resting end on a
-# card that had never been played and found no canvas at all. A page of its
-# own plays the card, measures, enlarges, measures, and disturbs nothing.
+# The measure that settles it is the one the owner had all along: "the way it
+# was before all this was fine. The nib was slightly bigger than pen size with
+# a halo." A nib is the tip of a pen, so its size is the PEN's size as
+# rendered -- `p.size * s` is exactly how wide the stroke comes out on this
+# screen, and a little over that is a tip leading its own line.
+#
+# TWO PENS AND TWO SCALES, because the two wrong laws each survive one of them:
+# anything keyed to the scale alone gives one bead for both pens on a card, and
+# anything fixed in CSS gives one bead at both scales. Only a law that reads
+# both answers all four readings.
 with sync_playwright() as _spn:
     _bn = _spn.chromium.launch()
     _pn = _bn.new_context().new_page()
     _pn.set_viewport_size({"width": 1100, "height": 900})
-    post_public_api("nib fixture")
+    _PENS = {"#ff48b0": 10, "#5ac8ff": 26}
+    two_pen_post("nib fixture")
     browsing.goto(_pn, BASE, "/gallery")
     _pn.wait_for_timeout(1800)
-    # A RAW STRING, because this block carries JavaScript regexes and
-    # `\(` is not a Python escape -- it survives as a literal today and is
-    # a SyntaxWarning now and an error later.
     _NIB = r"""() => {
         const t = document.querySelector(".tile");
         const n = t && t.querySelector(".skribl-inline-nib");
         const c = t && t.querySelector("canvas");
-        if (!n || !c) return { missing: true };
-        const cs = getComputedStyle(n);
-        /* THE SCALE, NOT THE CANVAS'S WIDTH, and the difference is what
-           the first draft of the row below got wrong. On a card the
-           canvas element IS the drawing; in full screen it is the
-           container and the drawing is letterboxed inside it by
-           object-fit, so the two are not the same measurement. And the
-           limiting axis can CHANGE between them -- width-limited on the
-           card, height-limited on a screen -- which is exactly how a
-           linearly scaled bead slipped under a test that compared it to
-           the canvas width: 2.86x against 3.06x, green, on the law the
-           owner had just rejected. The scale is what the player itself
-           uses, so it is what the bead has to be judged against. */
-        const box = t.querySelector("[data-skribl-inline]");
-        const aw = +(box && box.getAttribute("data-skribl-w")) || 0;
-        const ah = +(box && box.getAttribute("data-skribl-h")) || 0;
+        const b = t && t.querySelector("[data-skribl-inline]");
+        if (!n || !c || !b) return { missing: true };
+        const aw = +b.getAttribute("data-skribl-w") || 0;
+        const ah = +b.getAttribute("data-skribl-h") || 0;
         const cr = c.getBoundingClientRect();
+        /* MIN OF BOTH AXES. On a card the canvas element IS the drawing; in
+           full screen it is the container and object-fit letterboxes the
+           drawing inside it, so width alone overstates the scale. An earlier
+           row in this file measured width and let a linearly scaled bead
+           through because of it. */
         const sc = (aw && ah) ? Math.min(cr.width / aw, cr.height / ah) : 0;
-        /* THE HALO'S COLOUR AND ITS BLUR, which are the two halves of "a
-           little glow of colour". A shadow's lengths are offset-x, offset-y,
-           BLUR, spread -- and blur is what makes a halo a halo rather than a
-           ring, which is the whole of the distinction this row exists to
-           hold. Read after the colour is stripped out, so the colour's own
-           numbers cannot be mistaken for lengths.
-
-           Channels that are all equal are a grey whatever notation they
-           arrive in, and a grey here is the white ring this replaced. */
+        const cs = getComputedStyle(n);
         const sh = cs.boxShadow;
         const col = (sh.match(/rgba?\([^)]*\)|color\([^)]*\)/) || [""])[0];
         const lens = sh.replace(col, "").match(/-?[\d.]+px/g) || [];
         const ch = (col.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
         return { nib: +n.getBoundingClientRect().width.toFixed(2),
-                 canvas: Math.round(cr.width), scale: +sc.toFixed(4),
-                 haloBlur: lens.length > 2 ? parseFloat(lens[2]) : 0,
-                 haloCh: ch, haloGrey: ch.length === 3
-                   && Math.max.apply(null, ch) - Math.min.apply(null, ch) < 0.02,
-                 painted: cs.opacity !== "0",
-                 ink: n.style.getPropertyValue("--nib-c"),
+                 scale: +sc.toFixed(4), painted: cs.opacity !== "0",
+                 ink: (n.style.getPropertyValue("--nib-c") || "").trim(),
                  bg: cs.backgroundImage,
-                 ring: cs.boxShadow }; }"""
-    _pn.evaluate("() => { const s = document.querySelector('.tile .tileStage');"
-                 " if (s) s.dispatchEvent(new PointerEvent('pointerdown',"
-                 " {bubbles: true})); }")
+                 haloBlur: lens.length > 2 ? parseFloat(lens[2]) : 0,
+                 haloCh: ch,
+                 haloGrey: ch.length === 3
+                   && Math.max.apply(null, ch) - Math.min.apply(null, ch) < 0.02 }; }"""
+
+    def _read(want, tries=26):
+        """The bead while the pen we asked for is the one drawing."""
+        for _ in range(tries):
+            d = _pn.evaluate(_NIB)
+            if not d.get("missing") and d["painted"] and d["ink"] == want:
+                d["pen"] = _PENS[want]
+                d["onScreen"] = d["pen"] * d["scale"]
+                d["ratio"] = d["nib"] / d["onScreen"] if d["onScreen"] else 0
+                return d
+            _pn.wait_for_timeout(500)
+        return {"missing": True, "wanted": want}
+
     _pn.evaluate("() => document.querySelector('.tile .skfull-card .skfull-play').click()")
-    _pn.wait_for_timeout(1500)
-    _n1 = _pn.evaluate(_NIB)
-    check("a nib is on screen while a card plays, with a size to grow from",
-          not _n1.get("missing") and _n1["painted"] and (_n1.get("nib") or 0) > 0
-          and (_n1.get("scale") or 0) > 0,
-          f"{_n1} \u2014 the ratio below needs both ends, and a card that never "
-          f"started has neither a canvas nor a bead")
+    _thin = _read("#ff48b0")
+    _thick = _read("#5ac8ff")
+    check("on one card, a fine pen and a thick one get different beads",
+          not _thin.get("missing") and not _thick.get("missing")
+          and _thick["nib"] > _thin["nib"] * 1.8,
+          f"fine {_thin.get('nib')}px, thick {_thick.get('nib')}px \u2014 one bead "
+          f"for both pens is a law keyed to the drawing's scale and blind to "
+          f"the pen, which is what this replaced")
+    check("...each a little wider than the stroke it is leading",
+          1.2 < _thin.get("ratio", 0) < 1.7 and 1.2 < _thick.get("ratio", 0) < 1.7,
+          f"fine {_thin.get('nib')}px on a {_thin.get('onScreen', 0):.1f}px stroke "
+          f"({_thin.get('ratio', 0):.2f}x), thick {_thick.get('nib')}px on "
+          f"{_thick.get('onScreen', 0):.1f}px ({_thick.get('ratio', 0):.2f}x) "
+          f"\u2014 the owner's own measure: slightly bigger than pen size")
+
     _pn.evaluate("() => document.querySelector('.tile .skfull-card .skfull-full').click()")
-    _pn.wait_for_timeout(1600)
-    _n2 = _pn.evaluate(_NIB)
-    _gn = (_n2.get("nib") or 0) / (_n1.get("nib") or 1)
-    _gs = (_n2.get("scale") or 0) / (_n1.get("scale") or 1)
-    # WELL under, not merely under. A linearly scaled bead grows by EXACTLY the
-    # scale, so `< _gs` alone separates the two laws by nothing but rounding --
-    # and with the limiting axis changing between a card and a screen it does
-    # not even do that reliably. Three quarters is comfortably clear of the
-    # square root (1.72x against a 2.95x scale here) and nowhere near linear.
-    check("the nib grows with the drawing, and by much less than the drawing grows",
-          not _n2.get("missing") and 1.0 < _gn < _gs * 0.75,
-          f"the bead grew {_gn:.2f}x while the drawing's scale grew {_gs:.2f}x "
-          f"({_n1.get('nib')}px to {_n2.get('nib')}px) \u2014 at 1.00 it is "
-          f"pinned in CSS and at {_gs:.2f} it is a ball in full screen; the "
-          f"whole point is that it is neither")
+    _pn.wait_for_timeout(1500)
+    _big = _read("#5ac8ff")
+    check("the same pen gets a bigger bead when the drawing is bigger",
+          not _big.get("missing") and _big["scale"] > _thick["scale"] * 1.5
+          and _big["nib"] > _thick["nib"] * 1.5,
+          f"{_thick.get('nib')}px at scale {_thick.get('scale')} against "
+          f"{_big.get('nib')}px at {_big.get('scale')} \u2014 a bead fixed in CSS "
+          f"is the same at both, which is the boulder on a thumb and the speck "
+          f"on a screen this started from")
+    check("...and it is the SAME little-wider-than-the-pen when it does",
+          1.2 < _big.get("ratio", 0) < 1.7,
+          f"{_big.get('nib')}px on a {_big.get('onScreen', 0):.1f}px stroke "
+          f"({_big.get('ratio', 0):.2f}x) \u2014 the ratio is the law; if it moves "
+          f"with the scale then the scale is still in it somewhere")
+
+    # THE INK AND THE HALO, which are the other two things the owner asked for
+    # and which the size has no opinion about.
     _white = ("", "#fff", "#ffffff", "white")
-    check("...and the DOT is drawn in the ink it is laying down, not in white",
-          (_n2.get("ink") or "").strip().lower() not in _white
-          and "rgb" in (_n2.get("bg") or ""),
-          f"{_n2} \u2014 the fixture draws in a colour, so a bead reporting "
-          f"white is a cursor hovering over somebody's drawing rather than "
-          f"the pen making it")
-    # AND IT IS SEPARATED FROM ITSELF BY A GLOW, not by a ring. This row has
-    # now been written three ways, and the sequence is the argument:
-    #
-    #   the ring TAKES the ink   which made it one colour with the stroke
-    #                            under it, and the tip vanished into its own
-    #                            line
-    #   a hard two-tone hairline which separates them, and looks like a cursor
-    #                            doing it (owner: "make outer contrast ring a
-    #                            little glow of color, not white ring")
-    #   a blurred halo of the    which adds light over the stroke rather than
-    #   same ink                 drawing a line across it: the tip is the
-    #                            brightest point on its own line and nothing
-    #                            foreign is introduced to make it so
-    #
-    # So two properties, and each one alone is a state this has already been
-    # in: the halo is BLURRED (a ring has a blur of zero) and it is COLOURED
-    # (a grey is the white ring, whatever notation it arrives in).
+    check("the bead is drawn in the ink it is laying down, not in white",
+          _big.get("ink", "").lower() not in _white and "rgb" in (_big.get("bg") or ""),
+          f"ink {_big.get('ink')!r}, background {_big.get('bg')!r} \u2014 a bead "
+          f"reporting white is a cursor hovering over somebody's drawing "
+          f"rather than the pen making it")
     check("...inside a halo that is a glow and not a ring",
-          (_n2.get("haloBlur") or 0) > 2,
-          f"blur {_n2.get('haloBlur')}px, halo {_n2.get('haloCh')} \u2014 a blur "
-          f"of zero is a hard edge, which is the hairline this replaced")
+          (_big.get("haloBlur") or 0) > 2,
+          f"blur {_big.get('haloBlur')}px \u2014 a blur of zero is a hard edge, "
+          f"which is the cursor-like hairline this replaced")
     check("...and the glow is the ink's own colour, not a white one",
-          _n2.get("haloGrey") is False and len(_n2.get("haloCh") or []) == 3,
-          f"halo {_n2.get('haloCh')} \u2014 equal channels are a grey, and a grey "
-          f"here is the cursor-like ring the owner asked to be rid of")
+          _big.get("haloGrey") is False and len(_big.get("haloCh") or []) == 3,
+          f"halo {_big.get('haloCh')} \u2014 equal channels are a grey, and a grey "
+          f"here is the white ring the owner asked to be rid of")
     _pn.close()
     _bn.close()
 

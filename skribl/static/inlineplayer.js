@@ -1192,49 +1192,45 @@
      * mode (there the two axes' scales are equal and both offsets are zero), so
      * one mapping now serves both, and a third sizing model cannot bring this
      * back. */
-    /* AND THE NIB IS A SIZE IN THE DRAWING, NOT A SIZE ON THE SCREEN. It was
-     * 8px of CSS wherever it appeared, so the same dot was a boulder on an
-     * 84px library thumb and a speck on a 1280px full screen -- the one thing
-     * on the surface that did not answer to how big the drawing is (owner:
-     * "shouldn't the nib be scaled to the size of the player, rather than stay
-     * the same size no matter where it occurs?").
+    /* THE NIB IS A SIZE IN THE PEN, which is the third law this has had and
+     * the first one that makes every observation true at once.
      *
-     * BUT NOT IN PROPORTION, and that correction is the whole of the second
-     * pass. The first cut scaled it LINEARLY -- a fixed number of authored
-     * units -- which is right for a stroke and wrong for a nib: the drawing
-     * quadrupled in full screen and so did the bead, and the owner got a ball
-     * sitting on a pug ("full size looks good but nib is huge now"). A nib is
-     * the POINT OF CONTACT of a pen. A pen held over a bigger picture is still
-     * a pen; its tip does not grow with the paper.
+     * It was 8px of CSS wherever it appeared, so the same dot was a boulder on
+     * an 84px library thumb and a speck on a 1280px full screen. Scaling it by
+     * the drawing's SCALE fixed that and produced a ball in full screen.
+     * Damping the scale fixed the ball and made the bead smaller than the
+     * stroke it was leading. Each answer was right about the thing in front of
+     * it and wrong about the thing the owner said next.
      *
-     * So the size is a DAMPED function of the scale -- the square root of it.
-     * It still answers to how big the drawing is, which is what the library's
-     * 84px thumb needed, and it answers a great deal less, which is what full
-     * screen needed. Measured on a 816x612 drawing: the card's 360px-wide
-     * canvas gives 4.0px and a 1280px full screen gives 5.7px, against 5.7 and
-     * 16.9 under the linear law. The owner's own calibration, in one sentence:
-     * "the size of the nib on the small player is the size it should be on the
-     * full page player. it should probably be smaller on small player."
+     * The measure that settles it is the one the owner had all along: "the way
+     * it was before all this was fine. The nib was slightly bigger than pen
+     * size with a halo." A nib is the tip of a pen. Its size is the PEN's
+     * size, rendered -- `p.size * s` is exactly how wide the stroke it is
+     * drawing comes out on this screen, and a little over that is a tip
+     * leading its own line.
      *
-     * Clamped at both ends: below about four pixels a dot is not a pen tip, it
-     * is dirt on the screen, and above nine it is a cursor rather than a nib.
+     * It answers to the scale (a thumb renders the stroke small, so the bead
+     * is small) and to the pen (a hairline gets a small bead and a marker a
+     * big one), and it cannot be out of proportion with the line it is making
+     * because it is DEFINED against that line.
      *
-     * ONE CUSTOM PROPERTY, and the sheet derives the ring from it with a
-     * calc(). This runs on every frame of every replay, so it writes only when
-     * the scale MOVES -- and it writes one value rather than three.
+     * THE CLAMP IS A GUARD, NOT A RANGE, and the first numbers I gave it were
+     * a range: a ceiling of 26 caught a 22px pen in full screen, where the
+     * stroke renders 32px wide, and handed back a bead SMALLER than the line
+     * it was leading -- 0.82x, which is the rule broken by the thing that was
+     * supposed to be protecting it. A rule defined against the stroke does not
+     * need protecting from big strokes. The floor is what earns its place (a
+     * hairline on an 84px thumb renders under two pixels, and a two-pixel dot
+     * is dirt on the screen); the ceiling is only there so a pathological
+     * payload cannot paint the whole card.
      *
-     * THE SHEET CARRIES NO COMMENT ABOUT ANY OF THIS, and that is deliberate
-     * rather than an omission: CSS comments are served to every host and
-     * nothing strips them, which is that file's own standing rule. The first
-     * cut explained `--nb` beside the rule and cost 264 B of somebody else's
-     * bandwidth to do it. `--nb` is documented here, where the explanation is
-     * free, and the rule there is three declarations a reader can follow. */
+     * Applied only when it MOVES: this runs on every frame of every replay and
+     * the pen changes at a stroke boundary, not at a frame. */
     var nibAt = -1;
-    function nibSize(s) {
-      if (s === nibAt) return;
-      nibAt = s;
-      nib.style.setProperty('--nb',
-        Math.max(4, Math.min(9, 5 * Math.sqrt(s))) + 'px');
+    function nibSize(w) {
+      if (w === nibAt) return;
+      nibAt = w;
+      nib.style.setProperty('--nb', Math.max(4, Math.min(64, 1.4 * w)) + 'px');
     }
 
     function setNib(p) {
@@ -1243,7 +1239,7 @@
       var cr = canvas.getBoundingClientRect(), br = el.getBoundingClientRect();
       if (!cr.width || !cr.height) { st.opacity = '0'; return; }
       var s = Math.min(cr.width / size.w, cr.height / size.h);
-      nibSize(s);
+      nibSize((p.size || 8) * s);
       /* THE NIB TAKES THE INK IT IS LAYING DOWN. It was a white dot whatever
        * colour the pen was, which reads as a cursor hovering over the drawing
        * rather than as the pen making it -- and the shared-link player has

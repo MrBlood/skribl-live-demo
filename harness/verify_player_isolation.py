@@ -1328,30 +1328,26 @@ with sync_playwright() as sp:
           f"{_NIB_REST_STATE} — the known-good arm: if this cannot find ink "
           f"under a correctly placed nib, the full-screen row below is "
           f"measuring the probe and not the player")
-    # ---- A SIZE IN THE DRAWING, AND DAMPED -------------------------------
+    # ---- A SIZE IN THE PEN ------------------------------------------------
     #
-    # Two failures on opposite sides of one property, so the row asks for a
-    # range. A nib pinned in CSS does not grow at all (it was, at 14px, and was
-    # a boulder on a thumb); a nib scaled in proportion grows exactly as much
-    # as the drawing (it was, for one round, and the owner got a ball on a pug:
-    # "full size looks good but nib is huge now"). A nib is the point of
-    # contact of a pen, and a pen held over a bigger picture is still a pen.
+    # A nib is the tip of a pen, so its size is the PEN's size as rendered:
+    # `p.size * s` is how wide the stroke comes out on this screen, and a
+    # little over that is a tip leading its own line. The owner's own measure,
+    # after three laws that each answered the last screenshot and not the one
+    # before it: "the way it was before all this was fine. The nib was
+    # slightly bigger than pen size with a halo."
     #
-    # MEASURED ACROSS TWO VIEWPORT WIDTHS, NOT ACROSS FULL SCREEN, and that is
-    # this row's second draft. Between this page and a full screen the drawing's
-    # scale moves by about a quarter -- so a linearly scaled bead rounded to
-    # whole pixels came out at 1.24x against a 1.25x drawing and went GREEN on
-    # the law the owner had just rejected. At 390 against 1180 the scale moves
-    # by 1.7, which is enough: measured, the damped bead grows 1.19x and a
-    # linear one 1.78x against the same 1.72x drawing, so the gate sits between
-    # them at 0.9 of the drawing's growth.
+    # ONE PEN AND TWO WIDTHS IS WHAT THIS SURFACE CAN OFFER, so the law reduces
+    # here to "the bead is proportional to the rendered stroke" -- with the pen
+    # held constant, that is proportional to the scale. The other half of the
+    # law, that it reads the PEN and not only the scale, needs two pens on one
+    # drawing and is pinned in verify_gallery, where a card can carry both.
     #
-    # NINE TENTHS AND NOT THREE QUARTERS, because the CLAMP is in the way at
-    # this end of the range: at 390 the bead wants 5.7px and the floor gives it
-    # 7, which flattens the ratio the law would otherwise produce. The floor is
-    # not negotiable -- under about seven pixels this bead, a radial gradient
-    # whose inner third is the only opaque part, is not a pen tip -- so the row
-    # is written to hold with it rather than pretending it is not there.
+    # Measured across 390 and 1180 rather than across full screen: between the
+    # page and a screen the scale moves by about a quarter, and at that range
+    # rounding to whole pixels swamps the difference between one law and
+    # another -- a linearly scaled bead came out at 1.24x against 1.25x once
+    # and went green on a law that had just been rejected.
     _NIB_AT = """() => {
         const c = document.querySelector('.canvas-wrap > canvas');
         const n = document.querySelector('.player-nib');
@@ -1372,14 +1368,14 @@ with sync_playwright() as sp:
     _fp.wait_for_timeout(200)
     _gn = (_big.get("nib") or 0) / (_small.get("nib") or 1)
     _gd = (_big.get("draw") or 0) / (_small.get("draw") or 1)
-    check("the nib grows with the drawing, and by much less than the drawing grows",
+    check("the bead tracks the stroke as the drawing is resized",
           not _small.get("missing") and not _big.get("missing")
-          and _gd > 1.5 and 1.0 < _gn < _gd * 0.9,
+          and _gd > 1.5 and abs(_gn - _gd) < 0.12,
           f"the bead grew {_gn:.2f}x while the drawing grew {_gd:.2f}x "
-          f"({_small.get('nib')}px to {_big.get('nib')}px) \u2014 at 1.00 it is "
-          f"pinned in CSS and at {_gd:.2f} it is a ball on a big screen; the "
-          f"whole point is that it is neither, and a scale range under 2x "
-          f"cannot tell the two apart")
+          f"({_small.get('nib')}px to {_big.get('nib')}px) \u2014 with the pen "
+          f"held constant the stroke grows exactly as the drawing does, so the "
+          f"bead has to as well; at 1.00 it is pinned in CSS, and anything "
+          f"between is a law that reads the scale through a filter of its own")
 
     _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
                  " if (b) b.click(); }")
