@@ -155,14 +155,6 @@
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"'
     + ' stroke-linecap="round" stroke-linejoin="round">'
     + '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
-  /* The caption's toggle: a speech bubble with lines in it, which is the
-     glyph every feed uses for "there are words here". */
-  var ICON_CAP =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
-    ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-2.8-.4L3 21l1.9-5A8.2 8.2 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>' +
-    '<path d="M8.5 10.5h8"/><path d="M8.5 14h5"/></svg>';
-
   var ICON_SOUND =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
     + ' stroke-linecap="round" stroke-linejoin="round">'
@@ -172,6 +164,38 @@
   /* The module is loaded by the page and started here; it suppresses itself
      on coarse pointers, so on a phone this call does nothing by design. */
   if (window.SkriblTooltip) window.SkriblTooltip.init();
+
+  /* WHICH CAPTIONS HAVE MORE TO SHOW. The toggle is only worth a control
+     where the clamp is actually cutting the text off, and at two lines most
+     captions are not being cut: every captioned card carried a button that
+     expanded nothing. A paragraph is clipped when its content is taller than
+     its box, which is one read of scrollHeight against clientHeight -- done
+     for the whole grid at once, because each read forces layout.
+
+     A card that is OPEN is left alone. Its clamp is off, so it measures as
+     un-clipped, and hiding the button there would take away the only way to
+     close it again.
+
+     Re-run on resize because the clamp is two LINES and the column width
+     decides how much text a line holds: the same caption clips at 390 and
+     does not at 1280. */
+  function capToggles() {
+    var caps = document.querySelectorAll('.tile .tcap');
+    for (var i = 0; i < caps.length; i++) {
+      var cap = caps[i];
+      var card = cap.closest('.tile');
+      var btn = card && card.querySelector('.tileCapBtn');
+      if (!btn) continue;
+      if (card.classList.contains('cap-open')) { btn.hidden = false; continue; }
+      btn.hidden = cap.scrollHeight <= cap.clientHeight + 1;
+    }
+  }
+
+  var capTimer = null;
+  window.addEventListener('resize', function () {
+    if (capTimer) clearTimeout(capTimer);
+    capTimer = setTimeout(capToggles, 150);
+  });
 
   function tile(item) {
     var art = document.createElement('article');
@@ -230,22 +254,6 @@
     rep.textContent = 'Report';
     rep.addEventListener('click', function () { openReport(item.id, rep); });
     head.appendChild(rep);
-    /* THE CAPTION'S TOGGLE, beside Report, and only where there is a caption
-       to show. It lives in the head with the other controls rather than over
-       the drawing: the drawing's four corners are already spoken for -- kind
-       top left, sound top right, the player's transport bottom left, the
-       duration bottom right -- and a fifth thing in that space is how the pen
-       ended up on the play button. */
-    if (item.caption) {
-      var cb = document.createElement('button');
-      cb.type = 'button';
-      cb.className = 'tileCapBtn';
-      cb.setAttribute('aria-pressed', 'false');
-      cb.setAttribute('aria-label', 'Show the description');
-      cb.title = 'Show the description';
-      cb.innerHTML = ICON_CAP;
-      head.appendChild(cb);
-    }
     art.appendChild(head);
 
 
@@ -423,21 +431,6 @@
     stage.appendChild(frag);
     art.appendChild(stage);
 
-    /* THE CAPTION, OVER THE DRAWING (owner: "description could go on screen
-       on hover and on phone put a little icon toggle that reveals description
-       over skribl"). It used to sit under the stage as a block, which on a
-       grid of tiles is the tallest thing on a card that is supposed to be
-       showing a drawing.
-
-       IT IS ALWAYS IN THE DOM AND ALWAYS IN THE ACCESSIBILITY TREE. `opacity`
-       and not `display` or `hidden`, deliberately: a caption a screen reader
-       cannot reach is worse than a caption that takes a hover, and this text
-       is the only description the post has. `pointer-events: none` so the
-       scrim never eats a play tap while it is faded out.
-
-       Two ways in, because a phone has no hover and a desktop reader may want
-       it to STAY: the toggle pins it (`.cap-on`, driven below) and hover or
-       keyboard focus reveals it transiently where hover exists. */
     /* THE CAPTION CAME OFF THE ART. It was a scrim over the drawing because a
        poster-first card had nowhere else to put it; a post-like card has room
        for words, so it is text under the title, clamped to two lines, and the
@@ -448,13 +441,33 @@
       tc.className = 'tcap';
       tc.textContent = item.caption;
       art.insertBefore(tc, stage);
-      var btn = head.querySelector('.tileCapBtn');
-      if (btn) btn.addEventListener('click', function () {
+      /* THE EXPANDER SITS UNDER THE TEXT IT EXPANDS, and it used to sit in the
+         head beside Report as a speech-bubble glyph. Two things were wrong
+         with that. It was 44px of the head's width on every captioned card,
+         and the head is where the NAME lives: at 390px the row packed to the
+         pixel and ellipsised "Mr. B" to "Mr…" and the handle with it, which is
+         the one thing on a post that must never be approximate. And a glyph
+         beside a Report button does not read as "there is more of this
+         sentence" -- a word under the sentence does.
+
+         Hidden until the clamp actually bites; capToggles() measures. */
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tileCapBtn';
+      btn.setAttribute('aria-pressed', 'false');
+      btn.textContent = 'Show more';
+      btn.hidden = true;
+      art.insertBefore(btn, stage);
+      btn.addEventListener('click', function () {
         var on = art.classList.toggle('cap-open');
         btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        btn.setAttribute('aria-label', on ? 'Show less' : 'Show the whole description');
+        btn.textContent = on ? 'Show less' : 'Show more';
+        btn.setAttribute('aria-label', on ? 'Show less of the description'
+                                          : 'Show the whole description');
         btn.title = btn.getAttribute('aria-label');
       });
+      btn.setAttribute('aria-label', 'Show the whole description');
+      btn.title = 'Show the whole description';
     }
 
     /* THE FOOTER IS THE FULL-SCREEN BAR AT CARD SIZE, from the same builder
@@ -528,6 +541,10 @@
         var items = (body && body.items) || [];
         for (var i = 0; i < items.length; i++) list.appendChild(tile(items[i]));
         if (items.length) window.SkriblInline.mount(list);
+        /* ONCE PER PAGE OF TILES, not once per tile: the measure below reads
+           layout, and reading it inside the append loop would make the grid
+           reflow between every card. */
+        if (items.length) capToggles();
         cursor = (body && body.next_cursor) || null;
         more.hidden = !cursor;
         /* Two empty states: nothing in the gallery at all, and nothing that

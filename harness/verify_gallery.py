@@ -478,7 +478,7 @@ with sync_playwright() as _spg:
           f"{_g['buttons']} controls on {_g['tiles']} tiles, counts per tile "
           f"{_g['perTile']} — two is the defect this row exists for")
     check("...and it is the footer's, from the shared bar",
-          _g["inFooter"] == _g["tiles"],
+          _g["buttons"] > 0 and _g["inFooter"] == _g["buttons"],
           f"{_g['inFooter']} of {_g['buttons']} inside .skfull-card — a control "
           f"built by the page again is the divergence lib/fullbar.js ended")
     check("...and every player is inside the wrapper that takes the display",
