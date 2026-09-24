@@ -2757,6 +2757,76 @@ with sync_playwright() as _spw:
     _bw.close()
 
 
+print("\nGALLERY — a discarded card stops costing anything")
+# THE BEAT RESCHEDULES FROM INSIDE ITSELF, so nothing outside it ever ends.
+# lib/fullbar.js runs a frame while its drawing plays and a quarter second
+# while it does not; the grid empties and rebuilds on every search and every
+# sort change, and no caller called running(false) on the way out. Each
+# discarded card therefore kept a 4Hz timer alive for the life of the PAGE,
+# reading state off a subtree that had left the document and could then never
+# be collected.
+#
+# COUNTED, NOT INSPECTED. A leak is a RATE, and no census of the DOM can see
+# it: the detached cards are not in the DOM to be counted, which is the whole
+# problem. So this wraps setTimeout before any page script runs and counts
+# calls per visible card, which is flat when the beats belong to what is on
+# screen and climbs with every grid ever built when they do not.
+#
+# STATEMENTS, NOT A FUNCTION EXPRESSION -- add_init_script takes script SOURCE,
+# and an arrow function is source that evaluates to a function nobody calls.
+# The first draft of this probe measured 0 for 24 live cards that way and read
+# as a clean tree.
+with sync_playwright() as _spl:
+    _bl = _spl.chromium.launch()
+    _cl = _bl.new_context(color_scheme="dark", viewport={"width": 1280, "height": 900})
+    _pl = _cl.new_page()
+    _pl.add_init_script("""
+        window.__skTimers = 0;
+        (function () {
+          var st = window.setTimeout;
+          window.setTimeout = function () {
+            window.__skTimers++; return st.apply(this, arguments);
+          };
+        })();
+    """)
+    browsing.goto(_pl, BASE, "/gallery")
+    _pl.wait_for_selector(".tile", timeout=15000)
+    _pl.wait_for_timeout(1000)
+
+    def _per_card(page, ms=1500):
+        page.evaluate("() => { window.__skTimers = 0; }")
+        page.wait_for_timeout(ms)
+        n = page.evaluate("() => document.querySelectorAll('.tile').length")
+        return page.evaluate("() => window.__skTimers"), n
+
+    _t0, _n0 = _per_card(_pl)
+    _rate0 = _t0 / max(1, _n0)
+    # The bars have to be BEATING for the rest of this to mean anything. The
+    # obvious form of the fix -- stop when the host is not connected -- freezes
+    # every bar instead, because attach() runs while the tile is still being
+    # assembled. That tree reads 0 here.
+    check("the card transports are beating at all on a fresh grid",
+          _n0 > 0 and _rate0 > 3,
+          f"{_t0} timer calls / 1.5s across {_n0} cards ({_rate0:.1f} each) — "
+          f"under 3 means the beat stopped before it ever ran, which is a "
+          f"frozen scrubber and a frozen play icon on every tile")
+
+    for _i in range(4):
+        _pl.fill("#galleryQ", "a" if _i % 2 == 0 else "")
+        _pl.wait_for_timeout(1000)
+    _pl.wait_for_timeout(900)
+    _t1, _n1 = _per_card(_pl)
+    _rate1 = _t1 / max(1, _n1)
+    check("...and four grid rebuilds later it costs the same per visible card",
+          _rate1 <= _rate0 * 1.4,
+          f"{_rate1:.1f} calls per visible card against {_rate0:.1f} on the "
+          f"first grid — a rate that climbs with grids BUILT rather than grids "
+          f"SHOWN is the discarded cards still beating, and holding their whole "
+          f"subtree alive with them")
+    _pl.close()
+    _bl.close()
+
+
 print("\nGALLERY — the bar recedes from a POINTER too, and comes back to a move")
 # THE CLASS IS NOT THE PAINT, and the block above asserts the class. `.ctl-on`
 # came off on its 2.6s timer exactly as pinned -- and `.tileStage:hover` put
