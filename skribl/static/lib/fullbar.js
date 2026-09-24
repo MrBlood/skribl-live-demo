@@ -147,6 +147,12 @@
     made.full = btn('skfull-full', 'Full screen', ICON.full);
     var bRestart = made.restart, bPlay = made.play, bLoop = made.loop;
     var bMute = made.mute, bRate = made.rate;
+    /* The speed this control last ASKED for, per bar. Null until the first
+       press, so an untouched bar steps from whatever the player reports and
+       nothing changes for the surfaces that were already working. See the
+       rate handler for why a control that reads only the player cannot
+       advance when the player stops agreeing with it. */
+    var wanted = null;
 
     if (ownRow) {
       scrub.appendChild(at);
@@ -247,8 +253,36 @@
        *
        * (setRate no longer lets that throw escape either; both halves are
        * here because either one alone leaves the other's failure silent.) */
-      var i = RATES.indexOf(pl.rate());
-      try { pl.setRate(RATES[(i + 1) % RATES.length]); } finally { sync(); }
+      /* THE STEP IS TAKEN FROM WHAT THIS CONTROL LAST ASKED FOR WHENEVER THE
+       * PLAYER DISAGREES WITH IT, and that is the third report's fix.
+       *
+       * Reading `pl.rate()` and stepping from it is correct only while the
+       * handle answering is the one the last press wrote to. When it is not
+       * -- a player rebuilt under the bar, a handle swapped for another card's
+       * -- the read comes back at the default and the cycle recomputes the
+       * SAME next value every press. That is exactly the owner's third
+       * report, in all three of its shapes: "goes to 2x and sticks at 2x"
+       * (read says 1, so 2 every time), "got one to ½x and it stays there",
+       * and "in the gallery it does nothing at all" -- because an UNKNOWN
+       * rate gives indexOf -1, and (-1 + 1) % 3 is 0, so every press asks for
+       * 1x and a control already at 1x looks dead. Three symptoms, one cause.
+       *
+       * It could not be reproduced here: Chromium, touch or click, one tile
+       * or eight, cycles 1 → 2 → ½ → 1 and calls setRate exactly once per tap.
+       * The reports are from iOS Safari and this container has no WebKit to
+       * drive, so this hardens the failure rather than having watched it.
+       *
+       * `wanted` is NOT a copy of the player's state for display -- the label
+       * below still reads the player, so it cannot lie about the speed being
+       * run. It is only this control's memory of its own last request, which
+       * is the one thing the player cannot tell it. */
+      var now = pl.rate();
+      var from = (wanted !== null && now !== wanted) ? wanted : now;
+      var i = RATES.indexOf(from);
+      if (i < 0) i = RATES.indexOf(wanted);   // still unknown: our own last ask
+      if (i < 0) i = 0;                       // first press on a strange rate
+      wanted = RATES[(i + 1) % RATES.length];
+      try { pl.setRate(wanted); } finally { sync(); }
     });
     if (bExit) bExit.addEventListener('click', function () {
       if (opts.onExit) opts.onExit();

@@ -2731,6 +2731,84 @@ with sync_playwright() as _spw:
     _bw.close()
 
 
+
+print("\nGALLERY — the speed control advances even when the player disagrees")
+# THE OWNER REPORTED THIS THREE TIMES and the first two fixes were aimed at
+# what could be seen from here: a throw escaping setRate, and a label painted
+# before the write. Both were real. Neither was this.
+#
+# Stepping from `pl.rate()` is right only while the handle answering is the one
+# the last press wrote to. When it is not, the read comes back at the default
+# and the cycle recomputes the same next value every press -- "goes to 2x and
+# sticks", "stuck at 1/2x", and, for a rate the list does not contain, indexOf
+# -1 and (-1+1)%3 == 0, so every press asks for 1x and a control already at 1x
+# does nothing at all. Three shapes, one cause.
+#
+# A PLAYER THAT LIES IS THE FIXTURE, because that is the condition, and no
+# real-browser tap can produce it here: Chromium cycles correctly with touch or
+# click, one tile or eight. The suite therefore drives the CONTROL against a
+# handle that reports a rate of its own choosing -- which is what the failing
+# surface looks like from the button's side.
+_RATE_DRIVE = r"""(mode) => {
+    const btn = [...document.querySelectorAll('.skfull-rate')]
+                  .find(b => b.offsetParent !== null);
+    if (!btn) return { missing: true };
+    const host = btn.closest('.skfull-host');
+    const box = host && host.querySelector('.skribl-inline');
+    const pl = box && box._skriblInline;
+    if (!pl) return { missing: true };
+    if (!pl.__realSetRate) {
+        pl.__realSetRate = pl.setRate.bind(pl);
+        pl.__realRate = pl.rate.bind(pl);
+    }
+    const asked = [];
+    pl.setRate = function (r) { asked.push(r); return pl.__realSetRate(r); };
+    if (mode === 'stuck') {
+        /* The handle answers 1 whatever was written -- a player rebuilt under
+           the bar. Pressing must still walk the list. */
+        pl.rate = function () { return 1; };
+    } else if (mode === 'unknown') {
+        /* A rate the list does not contain: the indexOf -1 case. */
+        pl.rate = function () { return 1.75; };
+    }
+    for (let i = 0; i < 3; i++) btn.click();
+    pl.setRate = pl.__realSetRate;
+    pl.rate = pl.__realRate;
+    return { asked: asked };
+}"""
+with sync_playwright() as _spr:
+    _br = _spr.chromium.launch()
+    _pr = _br.new_context(viewport={"width": 390, "height": 900}).new_page()
+    post_public_api("speed control fixture")
+    browsing.goto(_pr, BASE, "/gallery")
+    _pr.wait_for_timeout(1800)
+    _pr.hover(".tile .tileStage")
+    _pr.wait_for_timeout(300)
+    _pr.click(".tile .skfull-card .skfull-full", force=True)
+    _pr.wait_for_timeout(900)
+
+    _healthy = _pr.evaluate(_RATE_DRIVE, "healthy")
+    check("with an honest player the speed walks the whole list",
+          _healthy.get("asked") == [2, 0.5, 1],
+          f"asked {_healthy.get('asked')} — three presses must visit every "
+          f"speed and come home; this is the surface that already worked and "
+          f"must keep working")
+    _stuck = _pr.evaluate(_RATE_DRIVE, "stuck")
+    check("...and it still walks it when the player reports a stale rate",
+          _stuck.get("asked") == [2, 0.5, 1],
+          f"asked {_stuck.get('asked')} — [2, 2, 2] is the owner's 'it goes to "
+          f"2x and stays stuck at 2x': the control recomputed the same step "
+          f"every press because the handle kept answering 1")
+    _unknown = _pr.evaluate(_RATE_DRIVE, "unknown")
+    check("...and when the player reports a rate the list does not contain",
+          len(set(_unknown.get("asked") or [])) == 3,
+          f"asked {_unknown.get('asked')} — [1, 1, 1] is indexOf returning -1 "
+          f"and (-1+1)%3 landing on 1x every time, which is the 'it does "
+          f"nothing at all' report")
+    _pr.close()
+    _br.close()
+
+
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")
 sys.exit(0 if passed == len(results) else 1)
