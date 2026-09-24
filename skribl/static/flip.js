@@ -677,24 +677,20 @@ function saveNow(){
     return;
   }
   _sessionOwnedDraft = true;
-  // v231: MEDIA BYTES NEVER GO TO localStorage. They used to, and the spill to
-  // IndexedDB below only happened once the write had already FAILED — which
-  // made a ~5 MB origin quota the thing standing between a user and their
-  // drawing. A background photo and especially a music track are base64 data
-  // URLs, inflated 4/3 by the encoding; a 30s WAV is ~6.7 MB on its own. One
-  // owner-reported symptom was the Pad's autosave failing outright, because
-  // Flip's draft was sitting on 2.7 MB of a shared 5 MB budget.
+  // MEDIA BYTES NEVER GO TO localStorage. A background photo and especially a
+  // music track are base64 data URLs, inflated 4/3 by the encoding; a 30s WAV
+  // is ~6.7 MB on its own. Written there, a ~5 MB origin quota becomes the
+  // thing standing between a user and their drawing -- and the budget is
+  // SHARED, so Flip's draft sitting on 2.7 MB makes the Pad's autosave fail.
   //
-  // So the spill is the NORMAL path now, not the emergency one: strokes and
-  // media METADATA go to localStorage (small, synchronous, fast to restore),
-  // media BYTES go to IndexedDB, whose quota is measured in hundreds of MB.
-  // The restore side already knew how to merge the two — it was written for
-  // the quota case and has been correct all along; all that changed is that it
-  // is now reached on purpose rather than after a failure.
+  // So the spill to IndexedDB is the NORMAL path, not the emergency one:
+  // strokes and media METADATA go to localStorage (small, synchronous, fast to
+  // restore), media BYTES go to IndexedDB, whose quota is measured in hundreds
+  // of MB. The restore side merges the two.
   //
-  // The Pad reached the same conclusion years earlier by a different route:
-  // serializeAutosave() in app.js stores "metadata only — no bytes". This is
-  // Flip catching up, with the bytes kept rather than dropped.
+  // app.js's serializeAutosave() stores "metadata only -- no bytes" for the
+  // same reason. This is the same rule with the bytes kept rather than
+  // dropped.
   const hasMedia = !!(bgImage || musicData);
   // BOTH, not just the library. lib/draftstore.js loads and defines its API
   // whether or not IndexedDB exists — it reports the absence by rejecting, which
@@ -709,27 +705,22 @@ function saveNow(){
     // synchronous write and no IndexedDB round trip.
     try {
       localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip({ recipes: true })));
-      // v238: 'saved' when this write omitted nothing AND nothing is waiting;
-      // amber when a media record IS waiting to be re-added.
+      // 'saved' when this write omitted nothing AND nothing is waiting; amber
+      // when a media record IS waiting to be re-added.
       //
-      // THIS IS NOT A REVERT OF v235, it is the half of it that was missing.
-      // v235 was answering a live report — amber sitting permanently on a
-      // drawing, on every save, with no way to clear it — and it removed the
-      // pill instead of the dead end. The cost showed up in verify_amber: reload
-      // a session whose track genuinely never saved and it said "Saved" with the
-      // track gone. Both states are the SAME state in the draft (mediaOmitted
-      // set, a pending record restored, no bytes), so there is nothing here to
-      // discriminate on. Either the warning is shown or the loss is silent.
+      // BOTH STATES ARE THE SAME STATE IN THE DRAFT -- mediaOmitted set, a
+      // pending record restored, no bytes -- so there is nothing here to
+      // discriminate on. Either the warning is shown or the loss is silent, and
+      // silent means reloading a session whose track never saved says "Saved"
+      // with the track gone.
       //
-      // What made the old amber intolerable was never that it was wrong — it was
-      // that it went nowhere. The re-add card was the only control that cleared
-      // a pending record, and that card measures 0x0 until its drawer is
-      // opened. So the pill became the route to it (lib/autosavepill.js): the
-      // warning is true, and one tap reaches the Re-add and Dismiss it is
-      // telling you about. Since v294 the pill carries its own × as well, so
-      // the record can be given up without the drawer trip at all. Either way
-      // the record is cleared, which schedules a save, which reports plain
-      // 'saved' — the amber ends because the situation did.
+      // What makes a permanent amber intolerable is not that it is wrong, it is
+      // that it goes nowhere. The re-add card is the only control that clears a
+      // pending record, and that card measures 0x0 until its drawer is opened.
+      // So the pill is the route to it (lib/autosavepill.js), and carries its
+      // own x as well, so the record can be given up without the drawer trip.
+      // Either way the record is cleared, which schedules a save, which reports
+      // plain 'saved' -- the amber ends because the situation did.
       //
       // A pending record is checked rather than hasMedia because reaching here
       // means hasMedia is FALSE: there is no photo and no track on this page, so
@@ -1057,19 +1048,18 @@ function tryRestore(){
         _mediaFetchPending = true;
         SkriblDraftStore.get('flip:draft').then((rec) => {
           if (!rec || !rec.json) return;
-          // The guard here USED to be `localStorage.getItem(KEY) !== raw` — a
-          // byte comparison of the record as it was when the read started. That
-          // was serviceable while this path only ran after a quota failure, and
-          // it is wrong now that it is how media normally comes back: every
-          // save rewrites `savedAt`, so any autosave landing in the gap made the
-          // string differ and the merge was refused as "edited since". The
-          // media then never returned from a restore that had done nothing
-          // wrong. verify_fix.py caught it the moment the path became normal.
+          // NOT a byte comparison of the record as it was when the read
+          // started (`localStorage.getItem(KEY) !== raw`). Every save rewrites
+          // `savedAt`, so any autosave landing in the gap makes the string
+          // differ and the merge is refused as "edited since" -- and the media
+          // never returns from a restore that did nothing wrong. Serviceable
+          // while this path only ran after a quota failure; wrong now that it
+          // is how media normally comes back.
           //
           // What actually has to be true is narrower: nothing may overwrite
           // media the session already has. If bgImage or musicData is set by
           // the time this lands, the user has loaded something newer and these
-          // bytes are stale — refuse them individually below. Identity is
+          // bytes are stale -- refuse them individually below. Identity is
           // still checked by NAME against the meta the lite record carries, so
           // a swapped file is refused and same-name bytes from one save earlier
           // are the same file.
@@ -2458,24 +2448,18 @@ function buildStrip(){
          || ev.target.closest('.pageops')) return;
       // Shift is the desktop gesture: "…through here", from wherever you are.
       if(ev.shiftKey){ ev.preventDefault(); extendSpanTo(i); return; }
-      /* HOLD UNTIL IT BUMPS, THEN DRAG — v295, and the reasoning it replaces is
-         worth keeping because it was right in a vacuum and wrong on a phone.
-         The old rule read: "the two gestures cannot collide because they are
-         separated by what the finger does FIRST — move within 450ms and it is a
-         reorder, stay put and it becomes a sweep." On a strip that SCROLLS
-         horizontally, "move within 450ms" is also how you scroll, so a flick
-         reordered a page and a tap that drifted six pixels suppressed its own
-         click. Reported twice from a phone.
+      /* HOLD UNTIL IT BUMPS, THEN DRAG. A THRESHOLD CANNOT SEPARATE REORDER
+         FROM SCROLL, because any scroll long enough passes any threshold. The
+         rule that reads well in a vacuum -- "move within 450ms and it is a
+         reorder, stay put and it becomes a sweep" -- is exactly how you scroll
+         a strip that scrolls horizontally, so a flick reorders a page and a tap
+         that drifts six pixels suppresses its own click.
 
-         A threshold cannot separate them, because any scroll long enough passes
-         any threshold. A HOLD can, and by construction rather than by guess:
-         you cannot hold still for 400 ms while flicking. So the hold arms the
-         reorder, the tile lifts and the device buzzes to say so, and any
-         movement BEFORE that disarms it completely — that gesture was a scroll
-         or a tap, and neither should ever move a page.
-
-         This is also the idiom every phone already teaches, which is the part
-         no amount of cleverness in here could buy. */
+         A HOLD separates them by construction: you cannot hold still for 400 ms
+         while flicking. So the hold arms the reorder, the tile lifts and the
+         device buzzes to say so, and any movement BEFORE that disarms it
+         completely -- that gesture was a scroll or a tap, and neither should
+         ever move a page. It is also the idiom every phone already teaches. */
       clearTimeout(_pdragArmTimer);
       _pdragArmTimer = setTimeout(()=>{
         if(!_pdrag || _pdrag.armed) return;
@@ -5754,23 +5738,22 @@ function translateFrames(idxs, dx, dy){
     for(const pt of f.strokes){ pt.x += dx; pt.y += dy; }
   }
 }
-/* ---------- v227: Select — marquee a subset of THIS page, then drag it ------
-   Ported from Pad's SkriblSelectTool (editor_draw.js), which v219 left in place
+/* ---------- Select -- marquee a subset of THIS page, then drag it ----------
+   Ported from Pad's SkriblSelectTool (editor_draw.js), which still carries it
    with its button removed. The geometry is the shared lib/selection.js; what is
    Flip's is where the points live and how the operation is undone.
 
-   WHY IT IS SAFE HERE AND WAS NOT ON PAD. v219 pulled Select from Pad because
-   Pad records a timed performance: moving points that are already recorded made
-   replay draw a stroke at its NEW position at its OLD timestamp. Flip has no
-   timeline within a page — playback reveals strokes in index order — so moving
-   a point changes only where it is, never when. Flip's own Move mode has
-   translated whole pages this way since v213.
+   WHY IT IS SAFE HERE AND WAS NOT ON PAD. Select was pulled from Pad because
+   Pad records a timed performance: moving points that are already recorded
+   makes replay draw a stroke at its NEW position at its OLD timestamp. Flip has
+   no timeline within a page -- playback reveals strokes in index order -- so
+   moving a point changes only where it is, never when.
 
    UNDO IS AN OPERATION, NOT A SNAPSHOT, and that is the whole reason this port
-   is short. Pad had to clone the selected point objects BEFORE snapshotting or
-   `strokes.slice()` aliased them and Ctrl+Z silently restored the moved
+   is short. Pad has to clone the selected point objects BEFORE snapshotting or
+   `strokes.slice()` aliases them and Ctrl+Z silently restores the moved
    position. Flip's actionLog stores what was done, so undoing a selection move
-   is the same translation with the sign flipped — there is nothing to alias. */
+   is the same translation with the sign flipped -- there is nothing to alias. */
 
 /* Translate ONLY the points the selection covers. translateFrames() moves whole
    pages; this is the same operation narrowed to index ranges, and it is what
@@ -5862,21 +5845,16 @@ function selRestore(pts){
     p.x = o.x; p.y = o.y; if(o.size != null) p.size = o.size; }
 }
 
-/* ---------- v237: the in-between, renamed in v295 --------------------------
-   A GENERATED PAGE THAT LOOKS LIKE A LONG EXPOSURE.
+/* ---------- MOTION SMEAR: a generated page that looks like a long exposure ---
 
-   THE BUTTON NOW SAYS MOTION SMEAR, and the code below is unchanged by that.
-   "In-between" is what an animator calls a single intermediate POSE, and
-   this has never produced one: it integrates the whole path between two
-   pages into one exposure, on purpose, and every property described below
-   is about that. The name was the only thing making a promise the effect
-   does not keep, so the name is what changed (v295; outside review of
-   v294). The identifier stays `addtween` and this suite stays
-   verify_tween.py -- an internal name for an algorithm nobody is
-   replacing. A real In-between, which emits ONE pose and therefore costs
-   roughly a source page rather than 26 of them, is a separate feature and
-   is not built yet; when it exists it takes the primary slot and this one
-   moves under it.
+   The identifier is `addtween` and the suite is verify_tween.py -- an internal
+   name for an algorithm nobody is replacing. The BUTTON says Motion Smear
+   because "in-between" is what an animator calls a single intermediate POSE and
+   this has never produced one: it integrates the whole path between two pages
+   into one exposure, on purpose. A real In-between, which emits ONE pose and
+   therefore costs roughly a source page rather than 26 of them, is a separate
+   feature and is not built yet; when it exists it takes the primary slot and
+   this one moves under it.
 
    The reference is stop-motion: a puppet photographed while it MOVED, so one
    frame integrates the whole path between two poses. What sells it is not the
@@ -5901,22 +5879,16 @@ function selRestore(pts){
    to interpolate, and rather than guess at a pairing and produce a mess, this
    refuses and says why.
 
-   BLURRED as of v237, and NOT via ctx.filter. The note that stood here said a
-   real gaussian was one render attribute away and that the attribute was a
-   contract the PLAYER would have to honour -- true, and the reason it waited.
-   It turned out not to be the only way.
-
-   The thing worth seeing is WHAT was missing. The sample sequence is already a
-   smear ALONG the motion; that is what a long exposure is, and it was never the
-   defect. What made it read as a stack of copies rather than something moving
-   is that every ghost still ended in the crisp round cap of the brush that drew
-   it: there was no softness ACROSS the motion. A blur is a radial falloff, and
-   a radial falloff can be DRAWN -- each sample is emitted as a few concentric
-   passes, widest and faintest first so the crisp core lands on top of its own
-   halo. It costs points instead of a format contract, and every pass is an
-   ordinary stroke, so a Skribl made this way opens in a player that predates
-   the feature. That is the whole reason to prefer it: a format change is the
-   last resort, not the first design. */
+   BLURRED, AND NOT VIA ctx.filter. The sample sequence is already a smear ALONG
+   the motion; that is what a long exposure is, and it was never the defect.
+   What makes it read as a stack of copies rather than something moving is that
+   every ghost ends in the crisp round cap of the brush that drew it: there is
+   no softness ACROSS the motion. A blur is a radial falloff, and a radial
+   falloff can be DRAWN -- each sample is emitted as a few concentric passes,
+   widest and faintest first so the crisp core lands on top of its own halo. It
+   costs points instead of a format contract, and every pass is an ordinary
+   stroke, so a Skribl made this way opens in a player that predates the
+   feature. A format change is the last resort, not the first design. */
 
 /* The point budget again, and for the same reason as liquify's: the server
    refuses a frame over MAX_POINTS_PER_FRAME (20,000), so a feature that
@@ -5925,41 +5897,40 @@ function selRestore(pts){
    page gets the full 26 samples, a heavy one gets fewer and a coarser exposure,
    and a page too heavy for even a handful says so rather than producing a
    frame the server will reject. */
-/* THE LIGHT SMEAR — a pose with a trail behind it, not an exposure.
+/* THE LIGHT SMEAR -- a pose with a trail behind it, not an exposure.
 
    The exposure below emits every stroke N times over M blur passes: 6,960 points
-   for one ball, against 174 for the drawing it was made from. Measured on the
-   owner's own file, that is what made the editor crawl -- buildStrip repaints a
-   thumbnail of every page on every insert, and its cost tracks POINTS, not page
-   count: 31 pages came to 599ms of strip rebuild with heavy pages and 93ms with
-   light ones, so the fifteenth smear took 697ms to add and the first took 302ms.
+   for one ball, against 174 for the drawing it was made from. That is what makes
+   the editor crawl -- buildStrip repaints a thumbnail of every page on every
+   insert, and its cost tracks POINTS, not page count: 31 pages come to 599ms of
+   strip rebuild with heavy pages and 93ms with light ones, so the fifteenth
+   smear takes 697ms to add and the first took 302ms.
 
-   A light page is the same motion said in a tenth of the ink: ONE crisp in-between
-   at the midpoint, which is the position the eye actually reads, plus a short
-   faint trail behind it for the sense of travel. The trail is resampled COARSE --
-   a ghost at 9% alpha behind a moving figure carries no detail worth the drawing's
+   A light page is the same motion said in a tenth of the ink: ONE crisp pose at
+   the midpoint, which is the position the eye actually reads, plus a short faint
+   trail behind it for the sense of travel. The trail is resampled COARSE -- a
+   ghost at 9% alpha behind a moving figure carries no detail worth the drawing's
    full point count, and that is where the rest of the weight was. */
 /* HOW MANY GHOSTS IS A PROPERTY OF THE BRUSH, NOT A CONSTANT.
 
-   Six was set on a 49px ball travelling 59px: the ghosts land ~5px apart, well
-   inside the ball's own width, so they overlap and read as one smear. The owner
-   then smeared a 3px LINE travelling 220px. The same six ghosts land 18px apart
-   with nothing 18px wide to bridge them, and the page reads as six separate
-   lines -- the failure the exposure had, at a tenth of the cost.
+   Six suits a 49px ball travelling 59px: the ghosts land ~5px apart, well inside
+   the ball's own width, so they overlap and read as one smear. On a 3px LINE
+   travelling 220px the same six land 18px apart with nothing 18px wide to bridge
+   them, and the page reads as six separate lines -- the failure the exposure had,
+   at a tenth of the cost.
 
    So the spacing is chosen, not the count: ghosts sit a fraction of a brush
    width apart, which is what makes them merge. A wide brush moving a little
    needs a handful; a hairline crossing the page needs many.
 
-   THE ALPHA DOES NOT FALL WITH THE COUNT, though -- dividing a fixed ink budget
-   among the ghosts was the first thing tried here and it is wrong. Ghosts do not
-   stack everywhere they exist, only where the brush covers the SAME pixel, and
-   once the spacing is a fraction of the brush that coverage is a constant
-   (1/OVERLAP of them) no matter how long the trail is. Budgeting by count dimmed
-   the ball from the 0.20 the ask was to 0.109 while changing nothing
-   about whether it reads as a slab. What is corrected below is COVERAGE, which
-   only departs from that constant when a clamp forces it to: a barely-moving
-   wide brush piles MIN ghosts on one spot, and that is the case worth thinning. */
+   THE ALPHA DOES NOT FALL WITH THE COUNT. Dividing a fixed ink budget among the
+   ghosts is wrong: ghosts do not stack everywhere they exist, only where the
+   brush covers the SAME pixel, and once the spacing is a fraction of the brush
+   that coverage is a constant (1/OVERLAP of them) no matter how long the trail
+   is. Budgeting by count dims a 0.20 ball to 0.109 while changing nothing about
+   whether it reads as a slab. What is corrected below is COVERAGE, which only
+   departs from that constant when a clamp forces it to: a barely-moving wide
+   brush piles MIN ghosts on one spot, and that is the case worth thinning. */
 const SMEAR_TRAIL_OVERLAP = 0.7;  // ghost spacing, as a fraction of brush width
 const SMEAR_TRAIL_MIN = 4;
 const SMEAR_TRAIL_MAX = 28;       // bounds the cost of a hairline crossing the page
@@ -6184,19 +6155,19 @@ function tweenPlan(per, groupsPer, atFps, reserve){
   return { passes: 1, n: bare };
 }
 
-/* ---------- v296: WHICH STROKE IS WHICH ------------------------------------
+/* ---------- WHICH STROKE IS WHICH ------------------------------------------
 
-   Strokes paired by DRAWING ORDER, and the two pages had to hold the same
-   number of them. Both halves of that were wrong on real drawings, and the
-   owner hit each in turn: redraw a pose and the outline pairs with the mouth;
-   draw the next pose freehand and the counts differ, so the answer is a
-   refusal -- "this one has 5, the next has 7" -- with no way forward.
+   Pairing strokes by DRAWING ORDER, and requiring the two pages to hold the
+   same number of them, is wrong on real drawings in both halves: redraw a pose
+   and the outline pairs with the mouth; draw the next pose freehand and the
+   counts differ, so the answer is a refusal -- "this one has 5, the next has 7"
+   -- with no way forward.
 
-   The pairing is MEASURED now. Every candidate was scored against nine
-   fixtures whose correct pairing is stated rather than admired: same order,
-   scrambled order, whole figure travelling, five against seven, seven against
-   five, four same-length limbs, a limb redrawn backwards, scrambled AND
-   travelling, and one stroke replaced by an unrelated one.
+   The pairing is MEASURED. Every candidate was scored against nine fixtures
+   whose correct pairing is stated rather than admired: same order, scrambled
+   order, whole figure travelling, five against seven, seven against five, four
+   same-length limbs, a limb redrawn backwards, scrambled AND travelling, and
+   one stroke replaced by an unrelated one.
 
      measure                          fixtures solved
      stroke length alone                    8/9   <- and only by accident; the
@@ -6214,26 +6185,25 @@ function tweenPlan(per, groupsPer, atFps, reserve){
    page is compared about its OWN centre, so a figure that walks across the
    page still pairs head to head.
 
-   THE REJECTION IS A LENGTH GUARD, and getting there cost three wrong turns.
+   THE REJECTION IS A LENGTH GUARD:
 
      rejection                  kept   MISPAIRED   MOTION DROPPED
      none                      61/61       2              0
      length guard alone        61/61       1              0
      length guard + a ratio    60/61       1              1
 
-   THE RIGHT-HAND COLUMN IS THE ONE THAT DECIDED IT, and it only exists because
-   the first scoring was wrong. Every unpaired stroke was counted the same,
-   which made a setting look best while it was quietly rejecting the swinging
-   arm. They are not the same. A STILL stroke left unpaired is drawn once --
-   exactly what it looks like, so it costs nothing. The stroke that MOVED, left
-   unpaired, means the smear leaves the motion out: the feature failing
-   silently, which is worse than a visible wrong answer because nobody can see
-   what to report.
+   THE RIGHT-HAND COLUMN IS THE ONE THAT DECIDES IT. Counting every unpaired
+   stroke the same makes a setting look best while it is quietly rejecting the
+   swinging arm. They are not the same. A STILL stroke left unpaired is drawn
+   once -- exactly what it looks like, so it costs nothing. The stroke that
+   MOVED, left unpaired, means the smear leaves the motion out: the feature
+   failing silently, which is worse than a visible wrong answer because nobody
+   can see what to report.
 
    A COST CEILING IS WRONG IN PRINCIPLE, whatever its value, because big motion
    IS big distance -- so a ceiling rejects exactly the stroke somebody wants
-   smeared. Measured: an arm swinging 145 degrees, dropped. The first fixtures
-   all moved a little, which is why the set could not see it.
+   smeared. Measured: an arm swinging 145 degrees, dropped. Fixtures that all
+   move a little cannot see it.
 
    A RUNNER-UP RATIO reads well and earns nothing. Accept a pair only when it
    beats that stroke's second choice -- and a stroke that moved far is barely
@@ -6359,10 +6329,7 @@ function tweenShapeCost(A, B){
   }
   return { cost: Math.min(fwd, rev) / n, reversed: rev < fwd };
 }
-/* ---------- v296: A STROKE THAT DID NOT MOVE IS NOT SAMPLED ----------------
-
-   This is what makes the effect look right without anybody aiming it, and the
-   reason it is worth doing is measured rather than assumed.
+/* ---------- A STROKE THAT DID NOT MOVE IS NOT SAMPLED ----------------------
 
    THERE IS NO FREE SAMPLING. An exposure lays down 27 translucent copies of a
    stroke plus its halo passes, and that greys and fattens the stroke whether
@@ -6390,31 +6357,31 @@ function tweenShapeCost(A, B){
    there is often NO box that picks out the one you mean -- measured: a box
    drawn around the arm selected the body and the leg with it. Nobody has to
    draw that box now. Aiming by hand still works and still overrides. */
-/* BOTH STROKES READ AT THE SAME PARAMETER, and over the WHOLE of it. This
-   walked `i < Math.min(a.length, b.length)` while computing its parameter as
-   `i / (a.length - 1)`, so when a was the denser of the two the loop ran out
-   long before the parameter reached 1 and the comparison saw only the LEADING
-   FRACTION of a. Measured on an arm anchored at the origin, 100px long, drawn
-   with 400 points on one page and redrawn with 4 points swung 40 degrees on
-   the next -- the tip travels 68px against a 6px brush:
+/* BOTH STROKES READ AT THE SAME PARAMETER, and over the WHOLE of it. Walking
+   `i < Math.min(a.length, b.length)` while computing the parameter as
+   `i / (a.length - 1)` means that when a is the denser of the two the loop runs
+   out long before the parameter reaches 1, and the comparison sees only the
+   LEADING FRACTION of a. Measured on an arm anchored at the origin, 100px long,
+   drawn with 400 points on one page and redrawn with 4 points swung 40 degrees
+   on the next -- the tip travels 68px against a 6px brush:
 
        tweenHeldStill(dense, sparse)   held still     (1% of the arc compared)
        tweenHeldStill(sparse, dense)   moved
 
-   The answer depended on which page was drawn more carefully, and in the
-   dropping direction: through tweenAlign the arm went to `unpaired` and was
-   drawn once, so the one stroke that moved is the one the in-between left out.
+   The answer depends on which page was drawn more carefully, and in the
+   dropping direction: through tweenAlign the arm goes to `unpaired` and is
+   drawn once, so the one stroke that moved is the one the smear leaves out.
    That is the silent failure the note above calls the worst outcome, and it
-   needs no unusual drawing to reach -- one pose taken slowly and the next
-   taken fast is how anybody animates.
+   needs no unusual drawing to reach -- one pose taken slowly and the next taken
+   fast is how anybody animates.
 
-   WALKING BOTH BY INDEX IS NOT THE FIX, and measuring said so. Reading each
-   stroke at the nearest VERTEX to a shared parameter makes the quantisation
-   the whole answer: on a straight 100px line held perfectly still, four
-   vertices against four hundred land up to 17px apart for no reason but the
-   count, and the same arm that used to be wrongly called still is then
-   wrongly called moved. GEOMETRY DESCRIBES THE DRAWING; SAMPLING DESCRIBES HOW
-   WE OBSERVED IT. Displacement is a question about the first.
+   WALKING BOTH BY INDEX IS NOT THE FIX. Reading each stroke at the nearest
+   VERTEX to a shared parameter makes the quantisation the whole answer: on a
+   straight 100px line held perfectly still, four vertices against four hundred
+   land up to 17px apart for no reason but the count, and the same arm that was
+   wrongly called still is then wrongly called moved. GEOMETRY DESCRIBES THE
+   DRAWING; SAMPLING DESCRIBES HOW WE OBSERVED IT. Displacement is a question
+   about the first.
 
    So both runs are resampled BY ARC LENGTH to a common count -- tweenResample,
    the same walk tweenAlign performs on the pair it is about to interpolate, so

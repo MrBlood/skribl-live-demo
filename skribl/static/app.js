@@ -229,16 +229,15 @@ function updateEmptyHint() {
   syncRecordBtn();
 }
 
-// AUTO-RECORD (v288, owner's call after the v287 audit). The first stroke on a
-// blank canvas has armed a take since the auto-arm in editor_draw.js, so an
-// idle "Record" beside "Recording starts automatically" was two ways to say one
-// thing — the dual mental model the audit flagged. The header button now
-// exists for what only a button can do: STOP a take in progress, and start one
-// over ink that is on the canvas but not in a take (a restored draft's
-// unrecorded pixels), where the auto-arm deliberately does not fire. On an
-// empty canvas and on a finished take it is gone — the canvas itself, and the
-// "+ Add take" pill, are the affordances. Called from updateEmptyHint (every
-// hasContent transition) and from the two ends of a take; the player's stub
+// AUTO-RECORD. The first stroke on a blank canvas arms a take (the auto-arm in
+// editor_draw.js), so an idle "Record" beside "Recording starts automatically"
+// is two ways to say one thing -- a dual mental model. The header button exists
+// for what only a button can do: STOP a take in progress, and start one over
+// ink that is on the canvas but not in a take (a restored draft's unrecorded
+// pixels), where the auto-arm deliberately does not fire. On an empty canvas
+// and on a finished take it is gone -- the canvas itself, and the "+ Add take"
+// pill, are the affordances. Called from updateEmptyHint (every hasContent
+// transition) and from the two ends of a take; the player's stub
 // (_authoringCtl) takes the property harmlessly.
 function syncRecordBtn() {
   recordBtn.hidden = !recording && !(hasContent && !recorded);
@@ -1289,10 +1288,10 @@ function formatDuration(ms) {
 }
 
 // ---- Pause handling ---------------------------------------------------
-// The 50ms cap below was hardcoded at BOTH gap sites and never surfaced, so
-// the single largest thing separating "how it was drawn" from "how it plays
-// back" was a magic number no one could see or change: a drawing made with
-// long thinking pauses replayed with those pauses silently squeezed out.
+// The 50ms cap below was hardcoded at BOTH gap sites and never surfaced, so the
+// single largest thing separating "how it was drawn" from "how it plays back"
+// was a magic number nobody could see or change: a drawing made with long
+// thinking pauses replayed with those pauses silently squeezed out.
 //
 // IT TRAVELS IN THE PAYLOAD, deliberately. The PLAYER builds its timeline with
 // this same function, so a device-local setting would mean the editor's Play
@@ -1300,8 +1299,8 @@ function formatDuration(ms) {
 // writes `pauseMode` and loadSkribl() adopts it, which makes the choice part of
 // the work rather than part of the browser.
 //
-// `tight` is 50 — the shipped behaviour — so an unset or unknown value replays
-// exactly as before.
+// `tight` is 50 -- the shipped behaviour -- so an unset or unknown value
+// replays exactly as before.
 const PAUSE_CAPS = { keep: Infinity, trim: 250, tight: 50 };
 let pauseMode = 'tight';
 function pauseCapMs() {
@@ -1804,17 +1803,17 @@ if (playScrub) {
   const actions = document.getElementById('actions');
   const header = document.querySelector('.header');
   if (!brand || !brandText || !actions || !header) return;
-  // v210 (owner's iPhone): the test used to be scrollWidth > clientWidth. That
-  // detects the cluster pushing PAST the header's edge — but on a phone the
-  // header's controls are laid out on top of the wordmark, so nothing pushes
-  // past anything: at 375 the tune glyph painted over the "d" of "Pad" and at
-  // 320 both the glyph and the record dot sat INSIDE the wordmark, while
-  // scrollWidth stayed equal to clientWidth and the collapse never fired.
-  // Measure the actual thing: does the first control clear the wordmark's
-  // right edge with a real gap? Overflow is still checked as a second test.
+  // NOT `scrollWidth > clientWidth`. That detects the cluster pushing PAST the
+  // header's edge -- but on a phone the header's controls are laid out ON TOP
+  // of the wordmark, so nothing pushes past anything: at 375 the tune glyph
+  // paints over the "d" of "Pad" and at 320 both the glyph and the record dot
+  // sit INSIDE the wordmark, while scrollWidth stays equal to clientWidth and
+  // the collapse never fires. Measure the actual thing: does the first control
+  // clear the wordmark's right edge with a real gap? Overflow is still checked
+  // as a second test.
   // 8, not 12: measured at 375 with a take saved, the fully-collapsed cluster
   // clears the brand by 5px before the gap step and 8+ after it. A 12px floor
-  // forced Post to drop its label at 375 for 4px of air; 8 keeps the word on
+  // forces Post to drop its label at 375 for 4px of air; 8 keeps the word on
   // the phone that matters most and still shows daylight past the mark.
   const MIN_GAP = 8;   // px between the brand (mark or wordmark) and the first control
   function firstControlLeft() {
@@ -3295,17 +3294,16 @@ function stopWebAudioLoop() {
   _waUnlock = null;
   if (_waLoopSource) { try { _waLoopSource.stop(); } catch (e) {} try { _waLoopSource.disconnect(); } catch (e) {} _waLoopSource = null; }
 }
-// F3 (v207 review): the unlock used to be `resume()` with the Promise thrown
-// away, and Pad's ordinary Play reaches here from INSIDE clearAndRestore's
-// Image.onload callback — i.e. after the click gesture has already returned.
-// iOS Safari can still report 'suspended' until resume's promise resolves, so
-// start() ran against a context that never unlocked and the replay was silent.
-// That is precisely the class the v203 player fix (A1) closed for the player;
-// the editor replay never got it. Same shape as A1 here: resume is called
-// INSIDE the gesture (unlockWebAudio, from the Play handler), the promise is
-// RETAINED, and the source starts only once it resolves. The drawing does not
-// wait — it is already running from clearAndRestore — only the audio start is
-// gated, and nothing is swallowed by a silent catch.
+// THE RESUME PROMISE IS RETAINED, not thrown away. Pad's ordinary Play reaches
+// here from INSIDE clearAndRestore's Image.onload callback -- after the click
+// gesture has already returned. iOS Safari can still report 'suspended' until
+// resume's promise resolves, so calling `resume()` and discarding the promise
+// runs start() against a context that never unlocked, and the replay is silent.
+// So resume is called INSIDE the gesture (unlockWebAudio, from the Play
+// handler), the promise is RETAINED, and the source starts only once it
+// resolves. The drawing does not wait -- it is already running from
+// clearAndRestore -- only the audio start is gated, and nothing is swallowed by
+// a silent catch.
 let _waUnlock = null;      // resume() promise captured in the click gesture
 let _waGen = 0;            // a stop during unlock must not be overtaken by a late start
 function unlockWebAudio() {
@@ -3651,16 +3649,15 @@ function loadSkribl(data) {
 
   // Music — restore full audio + trim points (reversible)
   if (data.music && data.music.data) {
-    // BUG A (v210). Loop bounds used to be installed ONLY inside the <audio>
-    // element's 'loadedmetadata' handler below. trimEnd starts at 0, and iOS
-    // defers media loading until playback is requested, so on a shared link the
-    // event routinely had not fired when the user tapped Play: trimEnd was
-    // still 0, buildLoopAudioBuffer() saw a zero-length loop window, returned
-    // null with no exception, and nothing was ever constructed. Silent on
-    // iPhone, fine on desktop, invisible to every headless test — until the
-    // harness suppressed the event and reproduced it exactly.
+    // THE SERIALIZED LOOP BOUNDS ARE AUTHORITY AND ARE INSTALLED SYNCHRONOUSLY
+    // HERE, not only inside the <audio> element's 'loadedmetadata' handler
+    // below. trimEnd starts at 0, and iOS defers media loading until playback
+    // is requested, so on a shared link the event routinely has not fired when
+    // the user taps Play: trimEnd is still 0, buildLoopAudioBuffer() sees a
+    // zero-length loop window, returns null with no exception, and nothing is
+    // ever constructed. Silent on iPhone, fine on desktop, invisible to every
+    // headless test until the harness suppresses the event.
     //
-    // The serialized values are authority and are installed SYNCHRONOUSLY here.
     // trimEnd stays null when the payload omits it; the default needs a real
     // duration, and the decoded buffer supplies that below. loadedmetadata may
     // still refresh the element and the editor's drawer UI, but it is no longer
@@ -3780,30 +3777,27 @@ bindEl('draftInput', 'change', (e) => {
 // over its ratchet; the player never re-adds anything.
 
 // ==================== EXPORT / POST COMPOSER ====================
-// Both sections now live in editor_export.js and editor_post.js, loaded ONLY
-// by the editor template. They were self-contained IIFEs (checked: nothing
-// outside them referenced anything they defined), and the player executed
-// initExport() and initPostComposer() on every shared link to wire up
-// controls it does not have. Moved verbatim, not rewritten.
+// Both sections live in editor_export.js and editor_post.js, loaded ONLY by the
+// editor template. They are self-contained IIFEs, and keeping them here made
+// the player execute initExport() and initPostComposer() on every shared link
+// to wire up controls it does not have.
 // ==================== READ-ONLY PLAYER ====================
 // Two ways to enter the read-only player, ONE code path once the post is in hand:
-//   (a) Flask path player — the /s/<id> template sets window.SKRIBL_MODE="player"
+//   (a) Flask path player -- the /s/<id> template sets window.SKRIBL_MODE="player"
 //       and window.SKRIBL_PLAYER_ID. We fetch the post from SKRIBL_API_BASE.
-//   (b) Local hash player — a #skribl=<id> hash (from the localStorage fallback
+//   (b) Local hash player -- a #skribl=<id> hash (from the localStorage fallback
 //       post). We read it back out of localStorage.
-// Neither present → this is the editor, so bail and leave it untouched. Both
+// Neither present -> this is the editor, so bail and leave it untouched. Both
 // sources yield the same wrapper shape { title, caption, hasAudio, skribl }, so
 // everything below (canvas sizing, loadSkribl, the playback orchestrator) is
 // identical regardless of source. It reuses loadSkribl() + the shared Play path
 // (replayTimelineToCanvas), so the player is never a second timeline loop.
-// A load failure used to show a transient toast and return, leaving the visitor
-// on a blank dark page once the toast faded (the player shell stays hidden until
-// a load succeeds). Instead, surface a persistent error panel with a retry and a
-// link to the editor. Enters player-mode and hides the shell so the panel is the
-// only thing shown.
+// A load failure surfaces a persistent error panel with a retry and a link to
+// the editor: a transient toast leaves the visitor on a blank dark page once it
+// fades, because the player shell stays hidden until a load succeeds.
 // canRetry: a reload can only help when the failure was the network's. For a
 // 404 the Skribl is not there and "Try again" is a promise the button cannot
-// keep (v287 audit SK-BUG-005), so it is not offered.
+// keep, so it is not offered.
 function showPlayerError(msg, canRetry) {
   document.body.classList.add('player-mode');
   const shell = document.getElementById('playerShell');
@@ -4094,18 +4088,16 @@ function showPlayerError(msg, canRetry) {
   function flipProgressAt(cycT) {
     return _hold ? _hold.progressAt(flipMs, flipFrames, cycT) : 0;
   }
-  /* A FLIP FRAME IS STATIC, SO PAINTING IT TWICE IS PURE WASTE, and the RAF
-     loop was asking for it about five times per frame: requestAnimationFrame
-     runs at the display's rate while the flipbook advances at fps, so at 12fps
-     on a 60Hz screen four of every five paints redrew a picture already on
-     screen.
+  /* A FLIP FRAME IS STATIC, SO PAINTING IT TWICE IS PURE WASTE, and a plain RAF
+     loop asks for it about five times per frame: requestAnimationFrame runs at
+     the display's rate while the flipbook advances at fps, so at 12fps on a
+     60Hz screen four of every five paints redraw a picture already on screen.
 
-     Invisible while every page costs the same. A key page measured 0.4ms, so
-     the extra four cost 1.6ms of a 83ms budget and nobody noticed. A blurred
-     in-between of the same drawing measured 41ms -- 26 samples of every stroke,
-     five passes each -- and five of those is 205ms of work for 83ms of wall
-     clock, which the loop simply cannot deliver. Reported as "it slows way down
-     when it shows the in-between slides", and that is what it was.
+     Invisible while every page costs the same. A key page measures 0.4ms, so
+     the extra four cost 1.6ms of an 83ms budget. A blurred in-between of the
+     same drawing measures 41ms -- 26 samples of every stroke, five passes each
+     -- and five of those is 205ms of work for 83ms of wall clock, which the
+     loop simply cannot deliver.
 
      The memo is safe because the backing store is only cleared by
      sizePlayerCanvas(), which resets it; a plain resize deliberately re-lays
@@ -4113,11 +4105,11 @@ function showPlayerError(msg, canRetry) {
      end-of-play paint go through here too and are correct without forcing: if
      the frame they want is already the one on screen, not repainting it is the
      right answer. */
-  /* v262: and a frame is rasterised at most ONCE per loaded document. The memo
-     above stops repaints of the frame already on screen; this stops repaints of
-     a frame the player has ALREADY shown once. A generated in-between is
+  /* And a frame is rasterised at most ONCE per loaded document. The memo above
+     stops repaints of the frame already on screen; this stops repaints of a
+     frame the player has ALREADY shown once. A generated in-between is
      thousands of points and repainting it on every loop costs ~100-200ms on a
-     phone — the same stall the editor had, fixed by the same shared rule
+     phone -- the same stall the editor had, fixed by the same shared rule
      (lib/framebitmap.js): first paint is captured at the displayed resolution,
      every later visit is one drawImage. Keys are frame indices because the
      player's frames never change; the store is dropped only with the backing
@@ -4608,16 +4600,15 @@ function showPlayerError(msg, canRetry) {
     running ? pause() : play();
   });
   if (pRestart) pRestart.addEventListener('click', restart);
-  // FULL SCREEN, the control the shared link was missing. The profile stage
-  // has had it since v304 while /s/<id> — the page a person actually sends
-  // somebody — did not. The two players are separate implementations for a
-  // reason (this one is the editor's engine; the in-post one is built to a
-  // host's byte budget), but that is an argument about CODE, not about which
-  // buttons a viewer gets.
+  // FULL SCREEN. The profile stage has it and /s/<id> -- the page a person
+  // actually sends somebody -- must too. The two players are separate
+  // implementations for a reason (this one is the editor's engine; the in-post
+  // one is built to a host's byte budget), but that is an argument about CODE,
+  // not about which buttons a viewer gets.
   //
   // SHOWN ONLY IF IT CAN WORK. fullscreenEnabled is false in an iframe without
   // allowfullscreen and on iOS Safari for non-video elements, and a button that
-  // silently does nothing is worse than no button — the same rule Mute follows
+  // silently does nothing is worse than no button -- the same rule Mute follows
   // two lines up. webkit* spellings included because that is what older iPadOS
   // answers to, which is a device this project is actually used on.
   // ONE WAY OUT, SHARED: both controls leave through _fsOff, so they cannot
@@ -4626,7 +4617,7 @@ function showPlayerError(msg, canRetry) {
   // canvasWrap, not a second handle on it: `.canvas-wrap` IS the canvas's parent.
   // AND ONLY IF THERE IS A WAY OUT. The EDITOR includes this same partial and
   // runs this player for the `#skribl=` fallback, but #playerFullExit lives in
-  // skribl_player.html — so there, full screen would render a subtree with no
+  // skribl_player.html -- so there, full screen would render a subtree with no
   // exit in it. verify_player_isolation drives that page.
   const _fsExit = document.getElementById('playerFullExit');
   const _fsReq = canvasWrap.requestFullscreen || canvasWrap.webkitRequestFullscreen;
