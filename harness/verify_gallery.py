@@ -1030,11 +1030,15 @@ with sync_playwright() as _spk:
     # sync, so one press used to hand this card back four native tooltips.
     # Driven here and not only in verify_tips because the contract row there
     # writes a label itself; this one presses the button a person presses.
+    # `.skfull-card`, NOT `.tileStage .skfull-play`: every stage holds TWO
+    # transports -- the card's and the full-screen one, which is display:none
+    # until the stage is full size. The unqualified selector resolved to 48
+    # buttons on 24 cards and picked a hidden one.
     _pk.hover(".tileStage")
     _pk.wait_for_timeout(250)
-    _pk.click(".tileStage .skfull-play")
+    _pk.click(".tileStage .skfull-card .skfull-play")
     _pk.wait_for_timeout(500)
-    _tr = _pk.evaluate("""() => { const b = document.querySelector('.tileStage .skfull-play');
+    _tr = _pk.evaluate("""() => { const b = document.querySelector('.tileStage .skfull-card .skfull-play');
         return { title: b.hasAttribute('title'), tip: b.getAttribute('data-tip'),
                  name: b.getAttribute('aria-label') }; }""")
     check("the card transport's live label is adopted too, not a native tooltip put back",

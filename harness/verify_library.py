@@ -725,12 +725,13 @@ with sync_playwright() as sp:
         _cp.wait_for_timeout(2000)
         _cp.click("#btnShare")
         _cp.wait_for_timeout(900)
-        # `data-tip` FIRST. This page runs lib/tooltip.js on a fine pointer, and
-        # since v310 the module adopts a title written AFTER load as well as at
-        # it -- so the answer this button gives is in data-tip here and in
-        # `title` on a phone. The assertion is about the words.
+        # WHEREVER THE WORDS ARE, `title` FIRST. This page runs lib/tooltip.js on
+        # a fine pointer, and since v310 the module adopts a title written AFTER
+        # load as well as at it -- so this answer is in data-tip here and in
+        # `title` on a phone, and for the tick after the write it is in `title`
+        # either way. The assertion is about the words.
         _said = _cp.evaluate("""() => ({
-            title: (b => b.getAttribute('data-tip') || b.title)(document.getElementById('btnShare')),
+            title: (b => b.title || b.getAttribute('data-tip'))(document.getElementById('btnShare')),
             label: document.getElementById('btnShare').getAttribute('aria-label'),
             native: document.getElementById('btnShare').hasAttribute('title'),
             live: (document.getElementById('postedStatus') || {}).textContent || '',
