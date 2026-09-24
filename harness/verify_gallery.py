@@ -983,10 +983,16 @@ with sync_playwright() as _spk:
     _tips = _pk.evaluate("""() => ({
         started: !!window.SkriblTooltip,
         tabs: [...document.querySelectorAll('.tab')].every(b => !!b.getAttribute('data-tip')),
-        reports: [...document.querySelectorAll('.report')].every(b => !!b.getAttribute('data-tip')),
-        leftovers: document.querySelectorAll('.tab[title], .report[title]').length })""")
-    check("the gallery draws tooltips: every tab and every Report carries one",
-          _tips["started"] and _tips["tabs"] and _tips["reports"],
+        /* `.tileMore`, NOT `.report`. The Report word became a menu item in
+           v310 and this row kept asking about `.report`: [].every() is TRUE,
+           so the assertion went green on an empty set, and would have gone
+           green with the tooltip module unloaded. COUNTED first, then
+           measured -- a census of nothing is not a census. */
+        mores: document.querySelectorAll('.tileMore').length,
+        tipped: [...document.querySelectorAll('.tileMore')].every(b => !!b.getAttribute('data-tip')),
+        leftovers: document.querySelectorAll('.tab[title], .tileMore[title]').length })""")
+    check("the gallery draws tooltips: every tab and every tile menu carries one",
+          _tips["started"] and _tips["tabs"] and _tips["mores"] > 0 and _tips["tipped"],
           str(_tips))
     check("...and the native title is gone, so the browser's own does not stack under it",
           _tips["leftovers"] == 0,

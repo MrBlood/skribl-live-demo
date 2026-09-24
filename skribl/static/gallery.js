@@ -949,9 +949,9 @@
     /* `cmReport` is a HOOK, not a style: verify_a11y's modal census drives the
        real path to the report sheet, and that path is now two clicks. A recipe
        that matched the word would break the day the word changes. */
-    menuEl.appendChild(menuItem('Report', function () {
-      openReport(item.id, button);
-    }, 'cmReport danger', 'flag'));
+    menuEl.appendChild(menuItem(
+      button.getAttribute('data-reported') === '1' ? 'Reported' : 'Report',
+      function () { openReport(item.id, button); }, 'cmReport danger', 'flag'));
 
     /* PLACED AGAINST THE VIEWPORT, not just below the button: a card in the
        last row would otherwise open a menu below the fold. */
@@ -1025,11 +1025,13 @@
         .then(function (j) { throw new Error(j.error || ('Could not send (HTTP ' + r.status + ').')); });
       return r.json();
     }).then(function () {
-      /* SAID ON THE TILE: the button becomes the record that this reader
-         reported this post, and cannot be pressed again this page-load. The
-         server would answer a second one the same way and write nothing. */
-      target.button.textContent = 'Reported';
-      target.button.setAttribute('aria-pressed', 'true');
+      /* SAID ON THE TILE, WITHOUT EATING THE CONTROL. `target.button` was the
+         Report word until v310 and writing 'Reported' into it was the record;
+         it is the tile's ••• now, so the same line replaced a 34px glyph with
+         a word that does not fit and labelled a menu opener with the last
+         thing done through it. The mark stays an ATTRIBUTE, and the record is
+         said where the reader goes looking: the menu's flag reads Reported,
+         and the sheet opens with nothing left to send. */
       target.button.setAttribute('data-reported', '1');
       say('Thanks. The people who run this site will look at it.');
       send.disabled = true;

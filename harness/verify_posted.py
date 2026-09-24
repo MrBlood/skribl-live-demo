@@ -1157,16 +1157,33 @@ with sync_playwright() as _p:
                        ".textContent.match(/[\u25A6\u270E]/)"),
           "a font glyph renders at whatever weight the system font chooses")
 
-    for _kind in ("flip", "pad"):
-        check(f"a {_kind} entry uses an inline SVG icon",
-              _pg.evaluate(f"() => !!document.querySelector("
-                           f"'.posted-thumb-{_kind} svg')"),
-              "still a text glyph")
+    # WHERE THE MARK LIVES IS PART OF THE ASSERTION. It sat on the thumb until
+    # v310 and stands in front of the words now (owner: "move the pencil/book
+    # before replay/pages"), so these rows ask the ROW for its mark rather than
+    # the thumb: a row that LOST the mark and a row that merely moved it read
+    # the same to a thumb-only query, and only the first is a regression. The
+    # row's own id says whose mark it is -- .posted-kind alone would be
+    # satisfied by the other row's.
+    for _kind, _id in (("flip", "ic1"), ("pad", "ic2")):
+        _mark = _pg.evaluate(
+            '(id) => { const r = document.querySelector('
+            '    \'.posted-row[data-id="\' + id + \'"]\');'
+            '  if (!r) return null;'
+            '  const sub = r.querySelector(".posted-sub");'
+            '  const k = r.querySelector(".posted-kind");'
+            '  return { there: !!(k && k.querySelector("svg")),'
+            '           inSub: !!(k && sub && sub.contains(k)),'
+            '           first: !!(sub && sub.firstElementChild === k) }; }', _id)
+        check(f"a {_kind} entry uses an inline SVG icon, in front of the words it qualifies",
+              bool(_mark) and _mark["there"] and _mark["inSub"] and _mark["first"],
+              f"{_mark} \u2014 still a text glyph, or back on the thumb")
 
     # The Flip icon must be the SAME path the header uses to open Flip. Compared
     # by geometry, not by eye: a different book would pass a "has an svg" check.
-    _tray = _pg.evaluate("() => document.querySelector("
-                         "'.posted-thumb-flip svg path').getAttribute('d')")
+    _tray = _pg.evaluate(
+        '() => { const r = document.querySelector(\'.posted-row[data-id="ic1"]\');'
+        '  const el = r && r.querySelector(\'.posted-kind svg path\');'
+        '  return el ? el.getAttribute(\'d\') : null; }')
     _pd = _b.new_page()
     _pd.goto(f"{BASE}/skribl-pad", wait_until="load")
     _pd.wait_for_timeout(1200)
@@ -1177,10 +1194,13 @@ with sync_playwright() as _p:
           f"tray {_tray!r} vs header {_hdr!r}")
     _pd.close()
 
+    # COUNTED, THEN MEASURED. `.posted-thumb svg` matched only the sound badge
+    # once the mark moved, and an .every() over an empty list is true.
+    _sizes = _pg.evaluate("() => [...document.querySelectorAll('.posted-kind svg')]"
+                          ".map(s => s.getBoundingClientRect().width)")
     check("the tray icons render at a visible size",
-          _pg.evaluate("() => [...document.querySelectorAll('.posted-thumb svg')]"
-                       ".every(s => s.getBoundingClientRect().width > 10)"),
-          "present but collapsed")
+          len(_sizes) >= 2 and all(w > 10 for w in _sizes),
+          f"{_sizes} \u2014 collapsed, or not there at all")
     _b.close()
 
 summarise_and_exit()
