@@ -82,20 +82,35 @@
        v311: the visibility toggle borrowed `link` for its off state, so a
        link-only row drew the same chain twice -- once meaning "copy the
        link" and once meaning "only the link reaches this" -- and neither
-       tooltip is reachable on the phone the icons were drawn for. Two
-       glyphs that are about the same subject and not the same ACT, so:
-       an eye struck through for "not on show", stacked picture cards for
-       "on show in the gallery". A globe was not wrong so much as vague --
-       it says public, where the destination is a specific page on this
-       site with pictures on it. verify_posted's uniqueness row now fails
-       any row that repeats a glyph, whatever the two buttons are. */
-    gallery: '<rect x="3" y="7" width="12" height="12" rx="2"/>'
-           + '<path d="M7 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2"/>'
-           + '<circle cx="6.8" cy="11" r="1.3"/>'
-           + '<path d="m3.4 17 3.3-3.3 2.6 2.6 2-2 3.2 3.2"/>',
-    eyeOff: '<path d="M2 12s3.6-7 10-7c1.7 0 3.2.5 4.5 1.2"/>'
-          + '<path d="M19.6 8.6A15.4 15.4 0 0 1 22 12s-3.6 7-10 7c-1.6 0-3.1-.4-4.4-1.1"/>'
-          + '<path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m3 3 18 18"/>',
+       tooltip is reachable on the phone the icons were drawn for.
+
+       DRAWN AT 20px AND JUDGED AT 20px, which is the size the row uses and
+       not the size an icon is designed at. The first pair failed there and
+       nowhere else: a globe replaced by stacked picture-cards (a card, a
+       card behind it, a sun and a hill inside the front one) and an eye
+       struck through. Both are fine drawings at 44px and both turn to
+       porridge at 20 -- four curves and a diagonal inside a 20px box is
+       more ink than the box holds. Six candidates were rendered at the real
+       size before either was replaced.
+
+       AND EACH ONE HAS TO STAND ALONE. A toggle shows one state at a time,
+       so the pair is never seen together and cannot explain itself by
+       contrast -- which is what ruled out the tidiest candidate, a full grid
+       against a single card: side by side it reads as "many" against "one",
+       and alone the single card is a rounded rectangle meaning nothing.
+       A four-square grid says a page with things on it; a closed eye says
+       not on show. Different metaphors, and each legible by itself, which
+       for a toggle beats a matched pair that needs its twin. */
+    gallery: '<rect x="3" y="3" width="8" height="8" rx="2"/>'
+           + '<rect x="13" y="3" width="8" height="8" rx="2"/>'
+           + '<rect x="3" y="13" width="8" height="8" rx="2"/>'
+           + '<rect x="13" y="13" width="8" height="8" rx="2"/>',
+    /* A LID AND THREE LASHES, and no slash -- the slash is what wrecked the
+       first draft. A quadratic bow rather than an arc so the lid's deepest
+       point is at the centre and the two ends meet the lashes cleanly. */
+    eyeShut: '<path d="M3 10q9 9 18 0"/><path d="m4.4 12.4-1.6 2.6"/>'
+           + '<path d="m9 15.1-.7 2.9"/><path d="m15 15.1.7 2.9"/>'
+           + '<path d="m19.6 12.4 1.6 2.6"/>',
     trash: '<path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'
          + '<path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>',
     key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/>'
@@ -610,7 +625,7 @@
                 (inGallery ? 'In the public gallery. Tap to make it link only' : esc(offWord) + '. Tap to show it in the public gallery') + '"' +
                 ' title="' + (inGallery ? 'Anyone can find this in the gallery. Tap to make it link only'
                                         : 'Only someone with the link can reach this. Tap to put it in the gallery') + '">' +
-                glyph(inGallery ? 'gallery' : 'eyeOff') +
+                glyph(inGallery ? 'gallery' : 'eyeShut') +
                 lbl(inGallery ? 'In gallery' : offWord) + '</button>'
             : '') +
           /* DELETE IS THE ONLY DESTRUCTIVE ACT ON A POSTED ROW NOW. There

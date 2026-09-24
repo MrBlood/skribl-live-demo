@@ -161,17 +161,26 @@
      keeps `grid-column: 1 / -1` on the action strip meaning the full width
      rather than silently becoming a two-column span if a third item is ever
      put back on this line. */
-  /* LEFT JUSTIFIED UNDER THE THUMBNAIL, and the words become icons (owner:
-     "there is no reason the buttons shouldn't be left justified under the
-     thumbnail. it forces them to be in two rows when you could do one").
-     The indent was 52px here and 94px on the profile, spent so the strip read
-     as this row's rather than the list's — and it was buying that with the
-     space that forced the wrap. Aligned to the row's own left edge it reads as
-     this row's anyway, and five 34px icons with 6px between them are 194px, so
-     a 360px screen fits them on one line with room to spare.
+  /* UNDER THE TITLE, NOT UNDER THE THUMBNAIL (v311), which is the second
+     answer to a question first asked in v293 and answered the other way
+     round then: "there is no reason the buttons shouldn't be left justified
+     under the thumbnail. it forces them to be in two rows when you could do
+     one."
+     BOTH ANSWERS WERE RIGHT FOR THEIR TREE, and the fact that changed
+     between them is the icons. In v293 the strip was five WORD-labelled
+     pills, and a 94px indent genuinely cost it the width that forced the
+     wrap, so the indent had to go. The same release turned those words into
+     icons at this tier, and five 34px icons with 6px between them are
+     194px: 194 + 94 is 288 against 340 of content at 360px, the narrowest
+     width measured, so the indent no longer costs anything it has to spend.
+     What it buys back is the reading -- the strip hangs off the title it
+     belongs to instead of starting under a picture, and the thumbnail's
+     left edge stays the one vertical line in the row.
+     `grid-column: 2` IS the alignment. Aligning with padding would put the
+     thumb's width in two places and leave them to drift.
      flex-wrap stays as the safety net, not as the expected state. */
   .posted-row-keyed .posted-actions, .posted-row-many .posted-actions {
-    grid-row: 2; grid-column: 1 / -1; justify-content: flex-start;
+    grid-row: 2; grid-column: 2 / -1; justify-content: flex-start;
     padding-left: 0; flex-wrap: wrap; min-width: 0; }
   /* THE WORD GOES, THE ICON STAYS — and the word is still the accessible name
      for anything without an aria-label, so it is hidden rather than removed.

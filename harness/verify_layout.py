@@ -201,7 +201,7 @@ SEED_POSTED = """
       window.SkriblPosted.add({id:'seedB', url:'/s/seedB', kind:'flip', pages:6,
         title:'Unending J', tok:'k', visibility:'unlisted'}); }"""
 
-ROW_STRIP = "() => { const r = document.querySelector('.posted-row-keyed');\n  if (!r) return null;\n  const acts = r.querySelector('.posted-actions');\n  const thumb = r.querySelector('.posted-thumb');\n  const btns = [...acts.querySelectorAll('button')];\n  const tops = new Set(btns.map(b => Math.round(b.getBoundingClientRect().top)));\n  return { thumbL: Math.round(thumb.getBoundingClientRect().left),\n           actsL: Math.round(btns[0].getBoundingClientRect().left),\n           lines: tops.size, n: btns.length,\n           right: Math.max(...btns.map(b => Math.round(b.getBoundingClientRect().right))),\n           words: btns.filter(b => { const l = b.querySelector('.posted-lbl');\n                     return l && getComputedStyle(l).display !== 'none'; }).length,\n           icons: btns.filter(b => { const i = b.querySelector('.posted-ico');\n                     return i && getComputedStyle(i).display !== 'none'; }).length,\n           named: btns.every(b => (b.getAttribute('aria-label') || '').length > 8) }; }"
+ROW_STRIP = "() => { const r = document.querySelector('.posted-row-keyed');\n  if (!r) return null;\n  const acts = r.querySelector('.posted-actions');\n  const thumb = r.querySelector('.posted-thumb');\n  const btns = [...acts.querySelectorAll('button')];\n  const tops = new Set(btns.map(b => Math.round(b.getBoundingClientRect().top)));\n  const main = r.querySelector('.posted-main');\n  return { thumbL: Math.round(thumb.getBoundingClientRect().left),\n           mainL: Math.round(main.getBoundingClientRect().left),\n           actsL: Math.round(btns[0].getBoundingClientRect().left),\n           lines: tops.size, n: btns.length,\n           right: Math.max(...btns.map(b => Math.round(b.getBoundingClientRect().right))),\n           words: btns.filter(b => { const l = b.querySelector('.posted-lbl');\n                     return l && getComputedStyle(l).display !== 'none'; }).length,\n           icons: btns.filter(b => { const i = b.querySelector('.posted-ico');\n                     return i && getComputedStyle(i).display !== 'none'; }).length,\n           named: btns.every(b => (b.getAttribute('aria-label') || '').length > 8) }; }"
 
 # `del` WAS THE THIRD ITEM ON THE TITLE LINE and v311 took it off a posted
 # row (the x that removed the entry without touching the Skribl). It is read
@@ -562,10 +562,12 @@ with sync_playwright() as p:
     # shouldn't be left justified under the thumbnail. it forces them to be in
     # two rows when you could do one... use icons instead of words on phones").
     #
-    # They were indented 94px past the thumbnail on this page and 52px in the
-    # drawer, which is what spent the width that forced the wrap. Left-aligned
-    # with the row's own edge and reduced to icons, five of them are 199px, so
-    # they fit one line at 360 with room over.
+    # TWO CHANGES CAME OUT OF THAT AND ONLY ONE OF THEM STUCK. The words became
+    # icons, which is what freed the width; the strip also moved to the row's
+    # own left edge, which was the cheaper of the two and is the one v311 gave
+    # back -- the strip is indented to the TITLE again, and five icons at 34px
+    # still fit one line at 360. The rows below assert both halves, because
+    # the indent is only affordable while the strip stays on one line.
     #
     # THE WORD IS STILL THE ACCESSIBLE NAME for a button without an explicit
     # aria-label, so it is HIDDEN rather than removed -- and every one of these
@@ -583,14 +585,26 @@ with sync_playwright() as p:
         if not _strip:
             check(f"library @{_w}px — found a keyed row to measure", False)
             continue
-        # THE FIRST BUTTON'S edge, not the strip's. A mutation that put the
-        # 94px indent back left this green: `padding-left` moves the content
-        # and not the element's own box, so the strip's left never moved and
-        # the check was reading a number the defect cannot change.
-        check(f"library @{_w}px the actions start at the thumbnail's own left edge",
-              _strip["actsL"] == _strip["thumbL"],
-              f"first button at {_strip['actsL']}, thumb at {_strip['thumbL']} — "
-              f"the indent is what the owner asked to lose")
+        # THE FIRST BUTTON'S edge, not the strip's. A mutation that moved the
+        # indent left this green when it read the strip: `padding-left` moves
+        # the content and not the element's own box, so the strip's left never
+        # moved and the check was reading a number the defect cannot change.
+        #
+        # AND IT IS THE TITLE'S EDGE IT HAS TO MATCH NOW, not the thumb's.
+        # v293 put the strip under the thumbnail because five WORD-labelled
+        # pills plus a 94px indent wrapped; the same release turned the words
+        # into icons, and v311 spent the width the icons freed on the indent
+        # again -- the strip hangs off the title it belongs to. Asserted
+        # against `.posted-main`'s measured left rather than against 94, so a
+        # sheet that changes the thumb's size cannot leave this row describing
+        # a number nothing on the page has any more. The one-line row below is
+        # what stops the indent costing a wrap, and the two only make sense
+        # together.
+        check(f"library @{_w}px the actions line up with the title, not the thumb",
+              _strip["actsL"] == _strip["mainL"],
+              f"first button at {_strip['actsL']}, title at {_strip['mainL']}, "
+              f"thumb at {_strip['thumbL']} — equal to the THUMB's left is "
+              f"the v293 layout the owner asked to move off")
         check(f"library @{_w}px ...and all {_strip['n']} of them fit ONE line",
               _strip["lines"] == 1 and _strip["right"] <= _w,
               f"{_strip['lines']} line(s), rightmost edge {_strip['right']} of {_w}")
