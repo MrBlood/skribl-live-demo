@@ -48,8 +48,7 @@
     return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null;
   }
 
-  /* WHO MADE IT, under the title (owner: "at the top under the title which
-     probably makes more sense").
+  /* WHO MADE IT, under the title.
 
      SKRIBL HAS NO USER TABLE and this does not invent one. Everything here is
      what the host's resolver returned for the post's user_id
@@ -64,15 +63,11 @@
      no photo; `onerror` covers a URL that resolves and then 404s, because a
      cracked-image glyph in a grid of drawings reads as a broken page.
 
-     AND AN UNNAMED POST SAYS SO OUT LOUD. This function used to return null
-     and the card drew no author at all, on the reasoning that "a placeholder
-     would be a claim about who drew it". Half of that is right and the
-     conclusion was not: a card with a hole where every neighbour has a face
-     reads as BROKEN, not as anonymous, and the owner read it that way the
-     first time they saw a grid of them. The answer is to name the STATE --
-     "Anonymous" on a plain disc -- which invents no person and is the same
-     move as a null canvas size falling back to the band crop rather than
-     guessing 4:3. Say unknown out loud; never guess.
+     AND AN UNNAMED POST SAYS SO OUT LOUD. A card with a hole where every
+     neighbour has a face reads as BROKEN, not as anonymous. Naming the STATE
+     -- "Anonymous" on a plain disc -- invents no person, and is the same move
+     as a null canvas size falling back to the band crop rather than guessing
+     4:3. Say unknown out loud; never guess.
 
      `isAnon` is what keeps that honest. It carries no handle, no link, no
      tick and no initial, so nothing on it can be mistaken for somebody's
@@ -86,33 +81,27 @@
     '<circle cx="12" cy="12" r="1.9" fill="currentColor"/>' +
     '<circle cx="19" cy="12" r="1.9" fill="currentColor"/></svg>';
 
-  /* LINES OF TEXT, NOT A SPEECH BUBBLE. A bubble is the shape every product
-     on a phone uses for a CONVERSATION -- a reply, a comment, a thread -- and
-     what this control opens is the author's own description, which nobody can
-     answer (there are no comments on a Skribl and the post is immutable once
-     made). The owner read the bubble as the wrong promise before reading it as
-     the wrong size: "not sure that's the best icon for caption/description".
-
-     Three ranged lines is the settled glyph for a body of text, and it is
-     already the shape of the description the card is hiding. */
+  /* LINES OF TEXT, NOT A SPEECH BUBBLE. A bubble is what every product on a
+     phone uses for a CONVERSATION, and what this opens is the author's own
+     description, which nobody can answer -- there are no comments on a Skribl
+     and a post is immutable once made. Three ranged lines is the settled glyph
+     for a body of text, and the shape of the thing the card is hiding. */
   var ICON_CAP =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
     ' stroke-linecap="round" aria-hidden="true" focusable="false">' +
     '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h9"/></svg>';
 
-  /* U+1F7CD, SIX POINTED PINWHEEL STAR. Six, and the first draft had EIGHT --
-     the owner asked for the skribls.net star and got a generic sparkle, "too
-     fat" and a different shape entirely.
+  /* U+1F7CD, SIX POINTED PINWHEEL STAR -- the skribls.net mark, not a
+     generic sparkle.
 
      The geometry: outer vertices every 60 degrees, inner vertices offset from
      the midpoint by a SKEW of 16 degrees. That offset is the whole pinwheel --
      at zero it is a plain symmetric hexagram, and the lean is what makes each
-     point read as turning rather than sitting. The inner radius is 3.15 to the
-     outer's 10.6; a hexagram's would be 6.1, which is the fat the owner saw.
+     point read as turning rather than sitting. Inner radius 3.15 to the
+     outer's 10.6; a hexagram's would be 6.1, which reads fat.
 
-     Generated rather than hand-drawn, because twelve vertices placed by eye
-     are twelve chances to make an asymmetric shape asymmetric in the wrong
-     place. */
+     Generated rather than hand-drawn: twelve vertices placed by eye are twelve
+     chances to make an asymmetric shape asymmetric in the wrong place. */
   var ICON_STAR =
     '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
     '<path fill="currentColor" d="M12 1.4L14.27 9.81L21.18 6.7L15.03 12.87' +
@@ -125,12 +114,11 @@
     var av = document.createElement('span');
     av.className = 'tavatar tavatar-anon';
     av.setAttribute('aria-hidden', 'true');
-    /* THE SKRIBL STAR, drawn rather than typed. U+1F7CD names the shape the
-       owner means (six-pointed pinwheel) and almost no system font carries
-       it, so a codepoint would render as a tofu box on most of the phones
-       this page is read on -- which is the same class of mistake as the
-       cracked-image glyph the avatar's onerror exists to avoid. Inline SVG
-       renders identically everywhere and inherits currentColor. */
+    /* THE SKRIBL STAR, drawn rather than typed. Almost no system font carries
+       U+1F7CD, so a codepoint renders as a tofu box on most of the phones this
+       page is read on -- the same class of mistake as the cracked-image glyph
+       the avatar's onerror exists to avoid. Inline SVG renders identically
+       everywhere and inherits currentColor. */
     av.innerHTML = ICON_STAR;
     var names = document.createElement('div');
     names.className = 'tnames';
@@ -265,10 +253,9 @@
     art.className = 'tile';
     art.setAttribute('data-id', item.id);
 
-    /* DIRECTION B, the post-like card (owner picked it from three). The head
-       is the shape skribls.net already renders in its own post head: who, then
-       what. The title sits UNDER the name the way a post's body does, rather
-       than sharing a flex row with the time, the play count and two buttons. */
+    /* THE POST-LIKE CARD. The head is the shape skribls.net renders in its
+       own post head: who, then what. The title sits UNDER the name the way a
+       post's body does. */
     var head = document.createElement('div');
     head.className = 'thead';
     /* EVERY CARD GETS A BLOCK, named or not -- authorBlock() answers for both
@@ -280,14 +267,11 @@
     tt.className = 'tt';
     tt.textContent = item.title || 'Untitled Skribl';
     /* THE TITLE IS THE HEAD'S SECOND ROW, NOT THE NAME BLOCK'S SECOND LINE.
-       It used to live inside `.tnames`, which made its width whatever was
-       left after the fact run and the menu -- so the richer the post, the
-       less of its own name you could read. A captioned card at 390 showed
-       49% of this title before the count was even allowed on a phone, and
-       25% with the count in. The title is what the card is FOR, so its width
-       is now the card's, and the facts take theirs from the name line
-       instead (which fits, because the handle stands down at that width).
-       The head is a grid for this: see the sheet. */
+       Inside `.tnames` its width was whatever the fact run and the menu left,
+       so the richer the post, the less of its own name you could read. The
+       title is what the card is FOR, so its width is the card's; the facts
+       take theirs from the name line, where the handle stands down at that
+       width. The head is a grid for this: see the sheet. */
     head.appendChild(who);
     var tm = document.createElement('span');
     tm.className = 'tm';
@@ -299,8 +283,8 @@
     var meta = document.createElement('div');
     meta.className = 'tmeta';
     meta.appendChild(tm);
-    /* PLAYS, as counted (v304): the seven-day count under Hot, the total
-       otherwise. Zero says nothing rather than "0 plays". */
+    /* PLAYS, as counted: the seven-day count under Hot, the total otherwise.
+       Zero says nothing rather than "0 plays". */
     var n = sort === 'hot' ? (item.views_recent || 0) : (item.views || 0);
     if (n > 0) {
       var pl = document.createElement('span');
@@ -309,16 +293,12 @@
       meta.appendChild(pl);
     }
     head.appendChild(meta);
-    /* THE OVERFLOW, ON EVERY TILE. Report used to be a word here, permanently,
-       beside two facts -- which is how the head came to read as one run-on
-       string, and why the owner's auditor asked for it to move: "reduce or
-       remove permanently visible secondary controls."
+    /* THE OVERFLOW, ON EVERY TILE. Report is the rarest thing anybody does to
+       a card and it had the loudest slot in the head, which is what made that
+       head read as one run-on string. Behind the menu it is still one tap from
+       every tile, and the head is down to who, what and when.
 
-       Report is the rarest thing anybody does to a card and it had the
-       loudest slot in the head. Behind the menu it is still one tap from every
-       tile, and the head is down to who, what and when.
-
-       ONE MENU, SHARED, like the report sheet it opens. Twenty-four menus in
+       ONE MENU, SHARED, like the report sheet it opens: twenty-four menus in
        the DOM is twenty-four sets of listeners for a thing only ever open
        once. */
     var rep = document.createElement('button');
@@ -358,10 +338,8 @@
     /* The macro rendered the poster URL with the placeholder in it, so the
        real one is that same server-built path with the id substituted — no
        path is assembled here, which keeps this correct under a url_prefix. */
-    /* FULL SCREEN, PER TILE (owner: "since the controls stay on the screen
-       when playing, there should be a way to watch full size"). The gallery
-       had no way to watch a drawing big: the profile stage has one, /s/<id>
-       has one, and the page where the drawings actually are had none.
+    /* FULL SCREEN, PER TILE -- the page where the drawings actually are needs
+       what the profile stage and /s/<id> already have.
 
        THE WRAPPER IS FULLSCREENED, NOT THE PLAYER. This page's own comment
        says "Not one rule touches .skribl-inline: the component is the
@@ -374,29 +352,21 @@
        than not having one — the same rule library.js states at its own. */
     var stage = document.createElement('div');
     stage.className = 'tileStage';
-    /* THE CONTROL IS UNCONDITIONAL NOW, and that is the whole change. It used
-       to appear only where `document.fullscreenEnabled` said yes, on the sound
-       rule that a button which cannot work should not be on screen -- which on
-       an iPhone meant no way to enlarge a drawing on the one device where it
-       is smallest (owner, twice). lib/immersive.js takes the real API where
-       there is one and pins the stage over the viewport where there is not, so
-       there is always something for the button to do. */
+    /* THE CONTROL IS UNCONDITIONAL. Gating it on `fullscreenEnabled` meant no
+       way to enlarge a drawing on the one device where it is smallest, because
+       iPhone Safari has fullscreen for <video> alone. lib/immersive.js takes
+       the real API where there is one and pins the stage over the viewport
+       where there is not, so there is always something for the button to do. */
     var imm = null;      /* set below, once, with its onChange in hand */
     var foot = null;     /* the card's transport row, built after the stage */
     if (window.SkriblImmersive) {
-      /* THE CONTROL IS IN THE FOOTER AND NOWHERE ELSE. This block used to build
-         a second one, `.tileFull`, in the card's head -- correct while the head
-         was the only place a tile had for a button, and a duplicate the moment
-         direction B gave the card a transport row that already carries full
-         screen. The first screenshot of the new card showed both, on all 24
-         tiles: same glyph, same action, eight pixels apart. One control per
-         thing a person can do. */
-      /* A WAY OUT, INSIDE THE THING (owner: "also no x (which is fine) on full
-         screen" -- fine on the real API, where Escape and the system gesture
-         both work, and not fine at all in the fallback, where the page is
-         still the page and nothing else exits it). The profile's stage has
-         had this since v304 and the gallery did not, which is the same
-         two-surfaces-one-product problem as the full screen control itself. */
+      /* THE CONTROL IS IN THE FOOTER AND NOWHERE ELSE. The head carried one too
+         while it was the only place a tile had for a button; the card's
+         transport row carries full screen now, and two of the same glyph eight
+         pixels apart is one too many. One control per thing a person can do. */
+      /* A WAY OUT, INSIDE THE THING. Under the real API Escape and the system
+         gesture both work; in the FALLBACK the page is still the page and
+         nothing else exits it. */
       var exit = document.createElement('button');
       exit.type = 'button';
       exit.className = 'tileExit';
@@ -410,9 +380,8 @@
       /* WHAT A FULL SCREEN SHOWS. Idle, a tile shows the POSTER -- the share
          card, cropped to keep its wordmark band out of frame -- and the canvas
          sits at time zero underneath it, which for a replay is blank. That
-         crop is right at tile size and wrong at screen size: it just cuts the
-         picture off (the owner's screenshot, then the measurement: the poster
-         ran 151->1249 across a box of 300->1100).
+         crop is right at tile size and wrong at screen size, where it simply
+         cuts the picture off.
          So the card is hidden while the stage is up (the sheet does that) and
          the drawing takes its place: FULL SCREEN PLAYS IT, which is what that
          control means everywhere else.
@@ -459,19 +428,12 @@
            can see. The sync on the way back out is what repaints the footer's
            play glyph after full screen paused it. */
         if (foot) { foot.running(!big); foot.sync(); }
-        /* BARE IS PERMANENT ON A CARD, so nothing here touches it. This line
-           used to be `toggle('is-bare', !!big)`, written when full screen was
-           the only thing on this page that supplied a transport -- so leaving
-           full screen STRIPPED the class the card had added at build time and
-           the component's own mute/loop cluster came back on the stage, under
-           a footer that already has both. One round trip through full screen
-           and the tile kept a second loop button for good (owner: "when you
-           hover on the card the button in bottom right (recycle/loop) shows
-           and it's redundant because it is on the player").
-
-           The card sets `is-bare` once, in build(), because the footer is
-           there from the first paint to the last. A toggle keyed to full
-           screen is answering a question nobody on this page asks. */
+        /* BARE IS PERMANENT ON A CARD, so nothing here touches it. Toggling
+           `is-bare` with full screen STRIPS the class build() added, and the
+           component's own mute/loop cluster comes back on the stage under a
+           footer that already has both -- one round trip and the tile keeps a
+           second loop button for good. The footer is there from the first
+           paint to the last, so the class is set once, in build(). */
         if (!box) return;
         /* THE PAGE SAYS WHEN, THE COMPONENT SAYS WHAT. `is-immersive` is the
            component's own state (inlineplayer.css): it hides the share card and
@@ -505,17 +467,12 @@
       poster.setAttribute('src', poster.getAttribute('src').replace('__ID__', encodeURIComponent(item.id)));
       poster.setAttribute('alt', item.title || 'A Skribl');
     }
-    /* WHAT IT IS, ON THE TILE (owner: "on public gallery it doesn't show a
-       pen, book - no way to tell which"). The listing could not say until
-       v307 put `kind` and `pages` on the post; it still defers the payload.
+    /* WHAT IT IS, ON THE TILE. The listing carries `kind` and `pages` on the
+       post; it still defers the payload.
 
-       NOT OVER THE DRAWING ANY MORE. They sat in two corners of the stage and
-       the owner asked for the canvas back: "no need to show speaker in upper
-       right corner - in fact, the canvas needs to be clean, nothing but
-       drawing. maybe the pen/book can go up in the top line with 3d 2play
-       report?" So they join the head's meta run, which is already where the
-       post's other facts are -- kind leads it, sound closes it, and the
-       drawing is left alone.
+       NOT OVER THE DRAWING. THE CANVAS CARRIES NOTHING BUT THE DRAWING, so
+       these join the head's meta run, where the post's other facts already are
+       -- kind leads it, sound closes it.
 
        What stays on the stage is the idle veil and its play triangle, which
        are not decoration: they are the affordance that says this moves, and a
@@ -535,11 +492,9 @@
       marks.insertAdjacentHTML('beforeend',
         '<span class="tileMark tileKind">' + (item.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>');
     }
-    /* NO SOUND BADGE. It was a green speaker beside the kind glyph and the
-       owner took it off: "lose the green speaker icon. not necessary if there
-       is music it will play." Which is right -- the badge announced a fact
-       that announces itself one tap later, and it was the only coloured thing
-       in a row that is otherwise quiet.
+    /* NO SOUND BADGE. It announced a fact that announces itself one tap
+       later, and it was the only coloured thing in a row that is otherwise
+       quiet.
 
        The WORDS stay in the visually hidden line below. That line describes
        the post to a screen reader, not the badges, and "with sound" is worth
@@ -571,20 +526,15 @@
        toggle EXPANDS it rather than revealing it. Nothing needs to sit on the
        picture. */
     /* EVERY CARD IS THE SAME HEIGHT, AND THE CAPTION IS WHY IT WAS NOT.
-       The text sat between the head and the stage, so a card with a caption
-       was two lines taller than one without -- and in a grid the short card's
-       ROW stretches to match, which is the dead space at the bottom the owner
-       photographed: "the message takes up space which, when next to a card
-       with no caption, makes the card next to it have that empty space at the
-       bottom. there has to be a way for the cards to be the same size."
+       Text between the head and the stage made a captioned card two lines
+       taller, and in a grid the short card's ROW stretches to match, leaving
+       dead space under its drawing.
 
-       So the caption no longer contributes height at rest. It is collapsed to
-       zero and opened by a mark in the HEAD's fact run, where there is already
-       a row and no vertical cost -- the owner's own suggestion ("a button /
-       toggle to show msg... if one is it accordions out to show it"), with one
-       departure: a card with nothing to say draws NO mark rather than the
-       words "no msg". A label announcing an absence is still furniture on
-       every silent card, and the ask was simplicity. Absence says it.
+       So the caption contributes no height at rest: collapsed to zero, opened
+       by a mark in the HEAD's fact run where there is already a row and no
+       vertical cost. A card with nothing to say draws NO mark rather than the
+       words "no msg" -- a label announcing an absence is furniture on every
+       silent card. Absence says it.
 
        The accordion opens BELOW the drawing, not above it: opening it above
        would push the picture down the page under the reader's cursor. */
@@ -626,18 +576,11 @@
        written here would contradict the reason that module exists inside a day
        of it landing. */
     if (window.SkriblFullBar) {
-      /* ATTACHED TO THE STAGE, NOT THE CARD, and that is the whole change.
-         The bar used to sit BELOW the drawing as a permanent row -- which is
-         the "full media-player toolbar at all times" the owner's auditor asked
-         to be rid of, and which the owner then read as clutter across a grid
-         of twenty-four cards.
-
-         Overlaid on the artwork's bottom edge instead, it costs the card no
-         height at all: the drawing grows by the row's worth, which is the same
-         brief's "make the artwork area larger relative to the surrounding
-         controls". And because the element is always in the DOM and only ever
+      /* ATTACHED TO THE STAGE, NOT THE CARD. Overlaid on the artwork's bottom
+         edge it costs the card no height -- the drawing grows by the row's
+         worth. And because the element is always in the DOM and only ever
          changes opacity, nothing reflows when it appears and a screen reader
-         can reach every control at any moment -- a bar BUILT on first play
+         can reach every control at any moment: a bar BUILT on first play
          cannot be announced before that play.
 
          SAME MODULE, SAME CONTROLS. What changed is when they are visible;
@@ -690,43 +633,30 @@
           /* The stage for the same reason the listeners above use it: focus
              parked on the description toggle is not somebody using the bar.
 
-             AND `:focus-visible`, NOT `:focus`, WHICH IS THE WHOLE OF THE BUG
-             THE OWNER REPORTED AS "the controls never go away". Tapping the
-             artwork to play FOCUSES the player element, so plain `:focus` was
-             true on every phone tap -- the timer fired, took this branch, and
-             returned WITHOUT RE-ARMING, which left the bar up for the life of
-             the card. Measured: `ctl-on` still set six seconds in; blur the
-             element and it drops 2.6s later, exactly as designed.
+             AND `:focus-visible`, NOT `:focus`. Tapping the artwork to play
+             FOCUSES the player element, so plain `:focus` is true on every
+             tap: the timer fires, takes this branch, and returns WITHOUT
+             RE-ARMING, leaving the bar up for the life of the card.
 
-             `:focus-visible` is the platform's own answer to "did a person
-             navigate here, or just touch the screen": a pointer focus does
-             not match it, a tab does. So the keyboard keeps the bar it needs
-             and a finger gets the drawing back. A browser that does not know
-             the selector throws from matches(), and there the OLD behaviour
-             is the safe one -- a bar that overstays beats a bar that vanishes
-             from under a tab key. */
+             `:focus-visible` is the platform's answer to "did a person
+             navigate here, or just touch the screen": a pointer focus does not
+             match it, a tab does. A browser that does not know the selector
+             throws from matches(), and there the OLD behaviour is the safe one
+             -- a bar that overstays beats one that vanishes under a tab key. */
           var a = document.activeElement;
           if (a && stage.contains(a) && keyboardFocus(a)) return;
           art.classList.remove('ctl-on');
         }, 2600);
       }
-      /* THE STAGE, NOT THE CARD, and that is the whole of the bug the owner
-         found: "when I reclicked the bubble, it closed - but it left the
-         controls still on screen".
+      /* THE STAGE, NOT THE CARD. On the card, the description toggle and the
+         overflow button live in the HEAD -- and a button keeps focus after a
+         click, so pressing either raised `focusin` on the card and summoned
+         the transport with the STICKY peek, which arms no timer. Reading the
+         description turned the transport on and closing it could not turn it
+         off.
 
-         These two listeners were on the card. The description toggle and the
-         overflow button live in the card's HEAD, and a button keeps focus
-         after a click, so pressing either one raised `focusin` on the card,
-         which summoned the transport and -- because that peek is the STICKY
-         kind, the one a keyboard gets so a bar cannot vanish from under a tab
-         key -- left it up with no timer to take it down again. Reading the
-         description turned the transport on, and closing the description
-         could not turn it off, because nothing about the description had
-         anything to do with the transport.
-
-         Scoped to the stage, focus means what it is supposed to mean here:
-         somebody has tabbed into the transport itself. The head's buttons no
-         longer say anything about the drawing. */
+         Scoped to the stage, focus means what it should here: somebody has
+         tabbed into the transport itself. */
       stage.addEventListener('pointerdown', function (e) {
         if (e.target.closest('.skfull')) return;
         peek(false);
@@ -747,23 +677,13 @@
       stage.addEventListener('focusout', function () {
         if (!stage.contains(document.activeElement)) peek(false);
       });
-      /* THE 400ms TICK IS GONE, and it was never alive: its guard read
-         `box0._skriblInline` at CARD-BUILD time and the player sets that
-         property when it boots, which is later, so the interval was never
-         created. A calibration found it -- mutating the body to pin the bar
-         again went green, because a dead branch cannot fail.
+      /* NO POLLING TICK HERE, and do not add one to arm the fade: peek(false)
+         CLEARS and re-arms the 2.6s timer, so anything calling it on a beat
+         re-arms it forever and a stopped card's bar never recedes.
 
-         IT IS DELETED RATHER THAN WOKEN, and the reason is written two
-         paragraphs into the body it used to have: on a stopped card it called
-         peek(false), which CLEARS and re-arms the 2.6s fade. A 400ms tick
-         doing that re-arms the timer forever, so the bar on a stopped card
-         would never recede -- the opposite of what the owner asked for, and a
-         defect the dead code was hiding by not running.
-
-         Nothing is lost. The fade is armed by the tap that raises the bar,
-         and by `focusout`; it survives the replay ending because the timer is
-         wall-clock, not playback. The bar's own clock is fullbar.js's
-         business and it paces itself. */
+         The fade is armed by the tap that raises the bar and by `focusout`,
+         and it survives the replay ending because the timer is wall-clock
+         rather than playback. The bar's own clock is fullbar.js's business. */
     }
     return art;
   }
@@ -778,8 +698,8 @@
      * typing, while the first listing was still in flight set `sort`/`query`
      * and then threw the reload away, and nothing re-issued it when the old
      * request settled. The grid then rendered the OLD answer under a bar
-     * saying Hot, or under a search term it had never sent -- on a slow phone,
-     * routinely (PRESEAL-001 of the pre-v305 audit).
+     * saying Hot, or under a search term it had never sent -- routinely, on a
+     * slow connection.
      *
      * So only PAGING is guarded here, against a double tap on Load more. A
      * reset always goes, and the generation below makes the superseded
@@ -856,21 +776,16 @@
      One element for the whole grid, built on first use and moved to whichever
      button asked for it.
 
-     VIEWER ACTIONS ONLY, and that is a scope decision worth stating rather
-     than hiding. The auditor asked for an owner variant -- Open, Edit, Copy
-     link, Share, visibility, Delete -- and two of those cannot be honoured
-     here. This page does not know who you are: `data-skribl-me` is emitted by
-     the LIBRARY template and not this one, so the card cannot tell your Skribl
-     from anybody else's. And there is no Edit: `PATCH /api/skribls/<id>`
-     accepts exactly one field, visibility, because a posted Skribl's payload
-     is immutable by design -- an "edit" would be a duplicate into a new draft,
-     which is a product decision and not a menu item.
+     VIEWER ACTIONS ONLY, and the owner ones cannot be honoured here. This
+     page does not know who you are: `data-skribl-me` is emitted by the LIBRARY
+     template and not this one, so the card cannot tell your Skribl from
+     anybody else's. And there is no Edit: `PATCH /api/skribls/<id>` accepts
+     exactly one field, visibility, because a posted Skribl's payload is
+     immutable by design.
 
-     Both owner actions already exist on /library, where the page does know
-     whose profile it is. Wiring them here needs the gallery route to pass the
-     signed-in id, which is a small change with a real authorisation question
-     attached, so it is left for its own pass rather than smuggled into this
-     one. */
+     Both owner actions exist on /library, where the page does know whose
+     profile it is. Wiring them here needs the gallery route to pass the
+     signed-in id, which carries a real authorisation question. */
   var menuEl = null, menuFor = null, menuOpener = null;
 
   function closeMenu(refocus) {
@@ -1089,13 +1004,12 @@
         .then(function (j) { throw new Error(j.error || ('Could not send (HTTP ' + r.status + ').')); });
       return r.json();
     }).then(function () {
-      /* SAID ON THE TILE, WITHOUT EATING THE CONTROL. `target.button` was the
-         Report word until v310 and writing 'Reported' into it was the record;
-         it is the tile's ••• now, so the same line replaced a 34px glyph with
-         a word that does not fit and labelled a menu opener with the last
-         thing done through it. The mark stays an ATTRIBUTE, and the record is
-         said where the reader goes looking: the menu's flag reads Reported,
-         and the sheet opens with nothing left to send. */
+      /* SAID ON THE TILE, WITHOUT EATING THE CONTROL. `target.button` is the
+         tile's ••• , so writing a word into it replaces a 34px glyph with text
+         that does not fit and labels a menu opener with the last thing done
+         through it. The mark stays an ATTRIBUTE, and the record is said where
+         the reader looks: the menu's flag reads Reported, and the sheet opens
+         with nothing left to send. */
       target.button.setAttribute('data-reported', '1');
       say('Thanks. The people who run this site will look at it.');
       send.disabled = true;
