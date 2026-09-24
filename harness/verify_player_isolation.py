@@ -553,611 +553,82 @@ with sync_playwright() as sp:
 
 
     DOM_RATCHET, DOM_TARGET = 0, 0          # reached: the shell is out of the player
-    # 232,000 until v199, and RED at 234,611: app.js grew 3,635 B across
-    # v194-v198 while this collector read content-length, which is the GZIPPED
-    # length, so nothing could see it. Both halves are fixed — the measurement
-    # reads r.body(), and skribl/jsstrip.py strips comments at serve time — and
-    # this is the post-strip number, set at exactly today's value in the same
-    # spirit as CSS_RATCHET below. The comments still exist in every source
-    # file; they are simply no longer parsed by a browser that will never read
-    # them. verify_jsstrip.py is what proves the strip preserves meaning.
-    # 142,344 = 142,220 (v204) + 119 B: the v206 cross-load guard in the
-    # draft-input handler — refuses a Flip .skribl in Pad with directions,
-    # instead of silently loading an EMPTY drawing that said "Draft loaded"
-    # (data loss dressed as success). Golfed to its irreducible condition +
-    # message. It stays in app.js because the PLAYER template also carries
-    # #draftInput, so the handler is not editor-only and could not be moved
-    # to editor_menu.js. RAISE FLAGGED FOR OWNER: same category as the two
-    # prior approved raises (A1 audio, grid hook) — small, functional,
-    # user-protecting, golfed first. History of the number: 141,730 / 141,824
-    # lows after real cuts; +430 (A1) / +60 (grid hook) / +119 (this) raised.
-    # 142,370 = 142,344 (v206) + 23 B: v208's F4 fix — beginRecording() closes
-    # the Pad tune drawer via `window._skriblClosePadTune?.()` (optional
-    # chaining; the hook itself lives in editor-only editor_tune.js). Golfed to
-    # one call. APPROVED by the owner in the v209 session, with the three
-    # prior raises (A1 audio, grid hook, cross-load guard).
-    # 142,880 = 142,370 (v208) + 510 B: v209's F3 fix — Pad replay's Web Audio
-    # unlock. resume() is now called INSIDE the Play gesture (unlockWebAudio),
-    # its promise is retained, and the loop source starts only once that
-    # resolves; a generation counter stops a late start overtaking a stop.
-    # Golfed from 623 B (one closure instead of a second top-level function,
-    # the file's own dense one-liner style). APPROVED by the owner at the v209
-    # seal. Same category as the four prior approved raises and, specifically,
-    # the same FIX as A1 (+430 B) applied to the editor replay A1 missed.
+    # WHAT THIS NUMBER IS, because this project has had three byte figures in
+    # play at once and an unlabelled one is a future ambiguity: len(r.body())
+    # over the .js responses the player actually fetches, AFTER
+    # skribl/jsstrip.py removes comments at serve time, BEFORE gzip. Not source
+    # bytes and not wire bytes. Source cost is larger; the gzip figure is
+    # smaller and is only ever quoted as "downloaded".
     #
-    # AND THE CHEAPER ANSWER, MEASURED, FOR WHOEVER TAKES THE NEXT PASS: the
-    # whole Web Audio loop block (_waLoopSource … webAudioLoopSongTime) is
-    # ~2,060 code bytes and is EDITOR-ONLY — startWebAudioLoop, playMusicLooped
-    # and startLoopPreview are reached from the Play button and the music
-    # drawer, never from the player, which has its own pa* audio path. Moving
-    # it to an editor-only file the way editor_tune.js went would CUT roughly
-    # four times this raise. Not done here on purpose: an audio fix and an
-    # externalisation in one pass makes a silent replay unattributable. Watch
-    # stopWebAudioLoop — 8 call sites, several on teardown paths.
-    # 143,217 = 142,880 (v209) + 337 B: v210's player-audio fix — the bug a
-    # real iPhone found and 2,337 assertions could not. paStartAtElapsed no
-    # longer constructs a source on a suspended context (it awaits the unlock
-    # and re-checks a generation across the await), stopWebAudioLoop/paStop
-    # invalidate pending starts, and a REJECTED resume no longer starts anyway
-    # (v209 review F1+F2). Includes deleting A1's unreachable retry. RAISE
-    # FLAGGED FOR OWNER: the largest single functional raise since A1 (+430),
-    # and for the same class of defect A1 was meant to fix but did not.
+    # Two consequences worth stating, because both have been got wrong here:
+    # reading content-length measures the GZIPPED length and hides growth
+    # entirely, and comments in these files are FREE on this ratchet -- naming
+    # a pattern in place costs nothing a viewer downloads.
     #
-    # A temporary on-device diagnostic (audiodebug.js, wrapping the real Web
-    # Audio API rather than hooking app.js) was used to trace this on the
-    # owner's iPhone and then REMOVED before sealing — its useful checks live
-    # in verify_audiostate now. If a runtime debugger is ever wanted again it
-    # needs its own contract; it must not ride into the player budget.
-    # 144,301 = 143,217 + 1,084 B: the native-<audio> HANDOFF. Refusing to
-    # start on a suspended context is right, but on the owner's iPhone the
-    # AudioContext never reaches 'running' at all — Test Seam (native <audio>)
-    # plays there while Preview Loop (Web Audio) does not — so refusing alone
-    # turned intermittent silence into total silence. startWebAudioLoop() now
-    # takes an onFail handler and the two callers' native paths were split into
-    # callable functions (playNativeLooped, startLoopPreviewNative) so they are
-    # reachable when the unlock fails ASYNCHRONOUSLY, including a 600 ms timeout
-    # for a resume() that never settles — iOS does that instead of rejecting.
-    # RAISE FLAGGED FOR OWNER, and this one is big.
-    #
-    # HONEST COUNTER-ARGUMENT the owner should weigh: most of this is EDITOR
-    # code sitting in the player's budget. The externalisation noted below
-    # (~2,060 B of Web Audio loop code that the player never executes) would
-    # more than pay for it. If the answer is "not another raise", the cut is
-    # available and identified — it is deferred only to keep an audio fix and a
-    # code move in separate builds.
-    # 145,053 = 144,301 + 752 B: BUG A + BUG B, the two deterministic causes of
-    # iPhone-silent shared links, both reproduced in the harness before being
-    # fixed (verify_audiostate, 16 pins, both mutation-tested against the exact
-    # historical mistakes). A: loop bounds installed synchronously from the
-    # payload and finalised from the decoded buffer, so loadedmetadata is no
-    # longer load-bearing. B: window.SkriblPayload.currentFrameMedia(), the
-    # writer-side accessor for current-frame media, so the post-time crop stops
-    # guarding on a field serializeSkribl() stopped producing at v2. RAISE
-    # FLAGGED FOR OWNER. All temporary AUDIODEBUG instrumentation and
-    # audiodebug.js were removed before this figure was taken; verify_seam
-    # dropping 124 -> 121 is the evidence the extra file is gone.
-    # 145,649 = 145,053 + 596 B: the header fit (v210). fitBrand measured
-    # scrollWidth, which never grows when the cluster OVERLAPS the wordmark;
-    # it now measures the real gap to the brand and sheds in cost order
-    # (wordmark, Record label, inter-control gap, Post label), plus the
-    # currentFrameMedia accessor. Owner: "don't worry about the ratchet, just
-    # make the whole thing fixed" — set to fit. Full accounting for every raise
-    # this arc is above; the externalisation gives most of it back.
-    # 145,881 = 145,649 + 232 B: pixel-snapping the header cluster, which is
-    # what closed verify_cssplit's twice-failing 4x34 sub-pixel strip at the
-    # source rather than loosening a zero-tolerance pixel test. Owner: set to
-    # fit. FINAL v210 figure.
-    # 145,994 = 145,881 + 113 B: Space+drag fix (v211). The grab-pan
-    # intercept was gated on zoom>1, so at 100% Space+drag DREW A LINE
-    # (desktop); Space now always claims the drag and startDraw refuses
-    # a stroke while it is held. Pinned on both editors at both zoom states,
-    # mutation-tested (the old gate back -> pad@100% fails, magnified passes).
-    # Reported: set to fit.
-    # 146,911 = 145,994 + 917 B: v210 review H1 (player native-<audio>
-    # fallback when Web Audio cannot unlock — rejection, never-settles, or
-    # resume landing on a still-suspended context — aligned to the drawing,
-    # paused by paStop) and the F2 decode-await comments in app.js. Owner:
-    # set to fit. The ~2,060 B editor-only Web Audio loop externalisation
-    # noted above is now worth doing in its own build — it would recover
-    # most of this arc's raises.
-    # 147,120 = 146,911 + 209 B: v212 trim-strip repaint. drawWaveform() sized
-    # #waveformCanvas from musicTrack's rect with no guard and is called ONLY
-    # from the decode chain, so a decode landing while the music drawer was shut
-    # sized the canvas to 0 (which CLEARS it), painted zero peaks, and nothing
-    # ever repainted — the strip stayed blank while Loop Detail, guarded and
-    # re-called from updateTrimUI(), drew correctly from the same buffer.
-    # Guard on both editors + a repaint from Pad's openDrawer() music branch.
-    # Reported: reported from a phone. Set to fit. NOTE THE COST IS ALMOST ALL
-    # COMMENT: 2,428 B of source, 209 B served, because jsstrip removes the
-    # rest at serve time — the third "sized from a rect with no layout yet" bug
-    # in this drawer, and naming the pattern in place is worth 209 B.
-    # 147,685 = 147,120 + 565 B: v213 eraser-width extraction. The `size * 3`
-    # multiplier existed in SEVEN places across the two editors, including both
-    # eraser-CURSOR sites, where a drifted copy leaves the ring lying about how
-    # much it erases. `_eraserSize()` and the #eraserSeg wiring both live in
-    # app.js, so the PLAYER carries them; lib/erasersize.js itself is loaded
-    # only by the two editor templates (verified: 0 hits in skribl_player.html).
-    # Reported: set to fit — this is a scratch build, not a seal.
-    # WORTH KNOWING: the wiring block is editor-only work sitting in the shared
-    # file, exactly the shape editor_music.js and editor_photo.js were carved
-    # out of. If the tool row keeps growing, that carve is the place to give
-    # this back rather than raising again.
-    # 148,138 = 147,685 + 453 B: v213 pause handling. The 50ms idle-gap cap was
-    # hardcoded at both gap sites; it is now PAUSE_CAPS + pauseMode, written into
-    # the payload by serializeSkribl and adopted by loadSkribl. The player pays
-    # for this ON PURPOSE — it builds its timeline with the same
-    # buildPlaybackTimeline(), so without the adopt the author's replay and the
-    # viewer's would differ on the same Skribl (mutation-measured: 1,903ms
-    # against 410ms). This is the rare case where player bytes buy player
-    # correctness rather than editor furniture. Owner: set to fit; scratch build.
-    # 148,413 = 148,138 + 275 B: v213 pressure extraction. PRESSURE_MIN and its
-    # curve existed once per surface; both now route through lib/pressure.js,
-    # which is loaded by the two EDITOR templates only (0 hits in the player
-    # template). The player pays only for the delegating branch inside
-    # pressureSize(), which it never calls — the same editor-wiring-in-a-shared-
-    # file shape noted at the eraser raise. Owner: set to fit; scratch build.
-    # 148,787 = 148,413 + 374 B: v213 shift-to-constrain. lib/constrain.js is
-    # editor-only (0 hits in the player template); the player carries the guarded
-    # branches inside continueDraw/snapStrokeToFinal, which it never reaches
-    # because it never draws. Third raise in this arc from editor-only work
-    # living in app.js — the running total since v212 is ~1,667 B, and carving
-    # the draw path into an editor bundle is now the obvious way to repay it
-    # rather than raising a fourth time. Owner: set to fit; scratch build.
-    # 149,641 = 151,978 - 2,337 B. A RATCHET THAT WENT DOWN.
-    #
-    # The shape tool's preview/commit helpers and its kind picker were added to
-    # app.js and cost the PLAYER 3,191 B for a tool it can never select — the
-    # largest editor-only addition to the shared file since v212, bigger than
-    # the five before it combined, leaving 1,622 B of headroom. They now live in
-    # editor_shapes.js, the third carve after editor_music.js and
-    # editor_photo.js, and the player keeps three guarded call sites instead of
-    # the implementation.
-    #
-    # It does not undo the whole 3,191: app.js still carries the branches and
-    # the hook checks. It DOES turn a 1,622 B headroom into 3,959 B, which is
-    # the difference between "the next feature does not fit" and "it does".
-    #
-    # The lesson worth keeping is the ordering. Building the feature in the
-    # shared file and carving afterwards cost a ratchet raise and this second
-    # pass; the draw path was already the obvious third carve before the shape
-    # tool was written. Carve first when the target is a tool the player has no
-    # use for.
-    # 151,010 = 149,641 + 1,369 B: v213 preview speed. Unlike the shape tool,
-    # this one CANNOT be carved the way editor_shapes.js was: the rate is read
-    # by editorReplayFrame() and by startWebAudioLoop(), both of which live in
-    # app.js because the player shares the audio path. Carving it would mean
-    # splitting the replay loop itself, which is a bigger change than the
-    # feature. The seg wiring did go to editor_shapes.js.
-    # Headroom to target after this: 2,590 B. Owner: set to fit; scratch build.
-    # 145,125 = 151,712 - 6,587 B. THE SECOND RATCHET THAT WENT DOWN, and by
-    # far the larger: the whole stroke CAPTURE path now lives in editor_draw.js
-    # (startDraw, continueDraw, snapStrokeToFinal, commitActiveStroke,
-    # commitStrokeWithMirrors, endDraw, and the canvas and window listeners
-    # that drive them).
-    #
-    # The player loads app.js to REPLAY a finished drawing; it never captures
-    # one, so it had been carrying every byte of that path. drawLine(),
-    # drawDot(), getPos(), pressureSize(), _eraserSize() and _brushWidth() stay
-    # behind, because replayTimelineToCanvas hands drawLine/drawDot to the
-    # player as its painters — only the gesture-to-points code moved.
-    #
-    # Headroom to target: 1,888 -> 8,475 B. Done BEFORE selection rather than
-    # after, which is the lesson from the shape tool: building in the shared
-    # file and carving afterwards cost a raise and a second pass.
-    # 145,320 = 145,125 + 195 B: v213 selection. THE CARVE PAYING FOR ITSELF —
-    # the entire tool (marquee, hit-testing, move, undo) cost the player 195 B,
-    # against 3,191 B for the shape tool built the other way round. All of it
-    # lives in editor_draw.js and lib/selection.js, both editor-only; app.js
-    # gained only setTool's select branch and the selection-clearing call.
-    # Headroom to target: 8,280 B.
-    # 145,465 = 145,320 + 145 B: v213 pinch reveals the zoom HUD. beginPinch()
-    # and the _skriblRevealZoomHud hook are in app.js because ZoomView and the
-    # HUD are shared with the player's own pan/zoom. Small, and it buys the
-    # magnify button being hidden on skinny phones without stranding a
-    # pinch-zoomed user with no Fit. Headroom to target: 8,135 B.
-    # 145,669 = 145,465 + 204 B of SERVED, COMMENT-STRIPPED JavaScript, which is
-    # what this ratchet measures: len(r.body()) over the .js responses the player
-    # actually fetches, after skribl/jsstrip.py removes comments at serve time,
-    # before gzip. Not source bytes and not wire bytes — this project has had
-    # all three in play at once, so an unlabelled byte figure is a future
-    # ambiguity. Source cost here is larger; the gzip figure is smaller and is
-    # only ever quoted as "downloaded".
-    #
-    # v214 touchcancel cleanup. The Loop Detail pan
-    # and the scrub drag are in app.js and the player shares both, so it pays
-    # for cleanup it also benefits from — a cancelled scrub on the player would
-    # have left playback frozen with the listener live. Headroom: 7,931 B.
-    # 145,920 = 145,669 + 251 B of SERVED, COMMENT-STRIPPED JavaScript: v214
-    # loadSkribl generation token. The player CALLS loadSkribl for every shared
-    # link, so it pays for this and benefits from it — a viewer opening a second
-    # Skribl before the first finished decoding had the same overwrite.
-    # Headroom: 7,680 B.
-    # 150,945 = 145,920 + 5,025 B: v219. RAISED ON THE OWNER'S INSTRUCTION, and
-    # the weakest entry in this log — recorded as such rather than dressed up.
-    #
-    # Every raise above names the feature that bought it and argues why the
-    # PLAYER pays. This one cannot, and the reason is itself the finding: v219
-    # was built without a harness run, so no raise was logged as each change
-    # landed. The 5,025 B is the accumulated cost of a whole release measured in
-    # one lump — correctness and layout work, the leave guard, the magnify
-    # restore, the tool-pill fix — and the per-feature attribution that every
-    # earlier line has is gone for good. That is the concrete price of building
-    # without running, and it is worth more here as a warning than as a number.
-    #
-    # Still inside the 153,600 target. Headroom after this: 2,655 B — the
-    # tightest this project has been, and roughly one feature from the target it
-    # has been told repeatedly not to treat as reachable by extraction.
-    #
-    # CARVE CANDIDATE, MEASURED, FOR WHOEVER NEEDS HEADROOM NEXT: the Pad leave
-    # guard (flipBtn/leaveSheet/leaveGo wiring, app.js ~5,430-5,490) is ~4,021 B
-    # of source and is strictly editor-only — the player's template has no
-    # #flipBtn and no #leaveSheet, so it downloads and parses all of it to run
-    # none of it. It did not go into editor_draw.js here because carving under a
-    # failing ratchet mid-release is how v132 happened: the carve is a real
-    # change and wants its own run, not a scramble to make a number go green.
-    #
-    # AND IT MAY DELETE ITSELF. DESIGN-DIRECTION.md's second item is durable
-    # drafts, after which Pad's guard should be REMOVED rather than moved — it
-    # exists only because localStorage cannot hold media bytes. A session that
-    # lands IndexedDB and then deletes this block should find the ratchet back
-    # under 147,000 without carving anything.
-    # 151,845 = 150,945 + 900 B of SERVED, COMMENT-STRIPPED JavaScript: v220
-    # pointer identity. THE PLAYER PAYS AND THE PLAYER BENEFITS — the scrub is a
-    # player control, and it read `e.touches[0]`, which is the first contact on
-    # the SCREEN rather than the one on the track. A viewer holding the phone
-    # with a thumb touching the glass scrubbed to wherever the thumb was.
-    #
-    # The 900 B is code, not prose: jsstrip removes comments from the response,
-    # so the ~3,480 B of raw growth in app.js costs the player nothing. What it
-    # buys, measured:
-    #   eventPoint()          one helper replacing the positional read at 5 sites
-    #                         in app.js and 5 more in the editor-only files
-    #   _pinchPair()          the pinch owns its two contacts BY IDENTIFIER, so a
-    #                         third finger cannot take a slot mid-gesture
-    #   targetTouches guards  beginPinch/pressureSize/getPos read the element's
-    #                         own contacts rather than the screen's
-    #
-    # The defect this closes, reproduced in-harness before the fix and pinned by
-    # counterexample after it: with a thumb resting off-canvas, a Pad stroke drew
-    # at x=56 (the thumb) instead of x=201 (the drawing finger). Reverting getPos
-    # alone reproduces x=56, so both halves are load-bearing. DESIGN-DIRECTION.md
-    # calls this the first promise a drawing app makes.
-    #
-    # Headroom after this: 1,755 B. Tighter still, and the carve candidate below
-    # is unchanged and now the obvious next move for whoever needs room.
-    # 151,845 -> 153,000 for lib/audiosession.js (~1,293 B served). THE COST IS
-    # REAL AND THE HEADROOM IS NOW SMALL: 600 B to the target, down from 1,755.
-    # Spent because without it a shared link's music is SILENT on any iPhone
-    # with the ringer switch off — iOS routes Web Audio into a session that
-    # switch mutes and leaves <audio> alone. A player nobody can hear is worse
-    # than a player 1.2 KB larger, and the target is still met.
-    #
-    # The module was 1,650 B first, building its silent clip byte by byte; that
-    # read better and this ratchet is not the place to pay 360 B for legibility,
-    # so it carries a base64 constant instead.
-    #
-    # 153,000 -> 150,000 = A THIRD RATCHET THAT WENT DOWN, by 3,305 measured B,
-    # and the sequence that produced it is the argument for the discipline.
-    #
-    # An external review of v277 said 600 B was not meaningful headroom
-    # "particularly while the audio-session behavior still needs lifecycle
-    # work". Its other finding WAS that lifecycle work: the /s player claimed
-    # the iOS session on the play/pause tap before the branch deciding which it
-    # was, and released it nowhere. Fixing that took the player to 153,251 B —
-    # 251 over this ratchet — so the prediction and its proof landed inside one
-    # change. The review also said not to solve it by raising the target.
-    #
-    # Repaid from initMoreTools(), now editor_tools.js: the "More" drawer and
-    # its six tool controls, every branch guarded on an element or a lib the
-    # player template does not load, so the player parsed ~4.9 KB of source to
-    # run nothing at all. Behaviour-preserving for the player by construction
-    # rather than by an argument about reachability — none of the six libs is in
-    # skribl_player.html, so every branch was already false.
-    #
-    # Pinned just above the new floor, as every raise here has been: 149,946
-    # measured, 150,000 set, 3,654 B to target. The lesson is the one the shape
-    # tool's carve already recorded and this release had to learn twice — carve
-    # first when the target is furniture the player has no use for.
-    #
-    # 150,000 -> 152,000 for lib/scrubkeys.js (1,489 B) and app.js's two call
-    # sites (+559 B). An accessibility audit of v278 found the shared player's
-    # progress bar was a bare div with mousedown/touchstart: a link sent to a
-    # stranger could not be seeked by keyboard at all, and Pad and Flip both
-    # DECLARED role="slider" while supplying no tabindex, no aria-valuenow and
-    # no key handler — announcing to a screen reader a control that could not
-    # be focused or moved.
-    #
-    # This is capability, not furniture, and it is capability the /s/<id> page
-    # specifically needs: it is the surface a person who did not make the
-    # drawing arrives at. Shared as a lib rather than written three times, so
-    # the step size and the value reporting cannot drift between surfaces.
-    # 152,000 -> 151,000 in v281: dropping lib/photofit.js, which the player
-    # loads and cannot reach, took JS from 151,994 to 150,839. The old ratchet
-    # had six bytes of headroom and was the reason given for keeping new work
-    # off this surface; the constraint was partly dead weight.
-    #
-    # 151,000 -> 152,100 for PER-PAGE DRAW, measured at 152,054 B and pinned
-    # just above it so the next addition has to argue for itself. What the
-    # bytes bought: lib/holdtiming.js gained the millisecond model a page that
-    # draws itself requires — a stroke timeline is not a whole number of fps
-    # slots at any frame rate, so the cumulative table could no longer be
-    # denominated in them — and app.js gained the reveal path that honours it,
-    # which is what makes a shared link show the drawing draw.
-    #
-    # WHAT WAS SPENT BEFORE ASKING, because v281's note on the embed ratchet is
-    # right that a raise taken without argument is a saving banked as slack:
-    # the slot-denominated half of holdtiming.js (table/units/durationMs/
-    # indexAt/slotMs) was DELETED rather than kept beside the new one, and
-    # app.js's inline fallback deliberately does not reimplement the reveal —
-    # without the lib a drawing page plays as a still one, which is exactly
-    # what this player did before the field existed. Those two took the cost
-    # from +2,535 B to +1,215 B. What remains is the feature itself.
-    #
-    # 152,100 -> 152,300, measured 152,220, and this one buys no feature at
-    # all: it corrects the one above. Per-page draw shipped with the reveal
-    # arithmetic — progress in, stroke count out — written separately on each
-    # surface that renders it, and the copies disagreed at the ends of the
-    # range. lib/holdtiming.js now owns that as dueCount(), which is the same
-    # module and the same reason it already owns how long a page lasts.
-    #
-    # Spent before asking, on this surface: app.js's copy was DELETED, not
-    # left beside the module's, so the player gives back 168 B of the module's
-    # 334 and the net is 166. The fallback rule is unchanged and still costs
-    # nothing — without the lib a drawing page plays as a still one rather
-    # than reimplementing the reveal here.
-    #
-    # 152,300 -> 152,900, measured 152,794, and like the one above it corrects
-    # rather than adds. dueCount() and pageMs() were each right and could not,
-    # composed with indexAtMs(), ever produce a drawing page's final state: the
-    # clock left the page at exactly the instant its progress would have
-    # reached 1. lib/holdtiming.js gains displayAt() (331 B) and this player
-    # routes its flip loop through it (243 B).
-    #
-    # The scrub path deliberately does NOT: a drag asks for a page and must get
-    # that page, so it keeps the direct call it already had. That is the whole
-    # of the surface's share — no second copy of the guard, and the fallback
-    # rule is untouched and still free.
-    #
-    # 152,900 -> 153,000, measured 152,969, v290: +81 B in app.js so the error
-    # panel knows WHICH failure it is showing. A missing Skribl answers 404 now
-    # (v287 audit SK-BUG-005) and "Try again" is withheld for it — a reload
-    # cannot make a missing Skribl appear — while a network failure keeps it.
-    # The previous tree sat 12 B under the ceiling, so there was nothing on
-    # this surface to spend first that was not a comment.
-    #
-    # 153,000 -> 150,500, measured 149,960, v294: THE RATCHET WENT DOWN AGAIN,
-    # by 3,389 measured B, after v294, 5 had pushed it OVER (153,349) with the
-    # load-based photo re-apply — code the player never runs, in the file it
-    # downloads. The whole re-add block (that re-apply, and the pending cards'
-    # Re-add / Dismiss buttons) is editor_draft.js's now. Lowered to the
-    # measurement plus a 540 B allowance, the same margin the ceiling has
-    # always carried, so the next editor-only addition to app.js is caught
-    # rather than absorbed.
-    # 150,500 -> 150,600, measured 150,517, v297: lib/strokelayers.js gains
-    # uniformRun, the rule that a see-through run of one colour and one width is
-    # drawn as a SINGLE canvas path rather than a dot plus a line per segment.
-    # Per segment it composites against itself wherever the round caps overlap,
-    # and a Motion Smear ghost written at alpha 46/255 painted at 83.
-    #
-    # That raise noted that this surface was PAYING for the rule without
-    # spending it — app.js did not call uniformRun, so the sealed player still
-    # beaded a smear — and said the change would cost more than 17 B and should
-    # argue for itself. Here it is, arguing.
-    #
-    # 150,600 -> 151,500, measured 151,376, v297: app.js's paintStrokesStatic
-    # walks runs and draws a uniform see-through one as a single path, and
-    # makeStrokeCompositor gains pathFn to lay that run onto the dry layer in
-    # order. Measured on this surface: a ghost written at alpha 46/255 painted
-    # at 83 before, 46 after, on BOTH settings of the stroke-layers flag —
-    # which is the branch that mattered, the compositor being on by default.
-    # paintStrokesStatic is where the player renders a Flip document's frames,
-    # so this is what a share link has been showing.
-    #
-    # Spent before asking, twice over. At the previous raise uniformRun was
-    # compacted three times (-36 B measured). Here app.js carries NO inline
-    # fallback for it (-296 B measured): that is this file's own precedent for
-    # this very module — the overBudget call beside it treats an absent lib as
-    # "not over budget" rather than keeping a second copy — so without the lib
-    # a run simply paints the way it did before. The prose lives in
-    # lib/strokelayers.js and flip.js; jsstrip means comments here are free
-    # anyway, which the previous raise recorded after believing otherwise.
-    #
-    # 151,500 -> 153,800, measured 153,227, v302: uniformAlpha, and the wet-layer
-    # route for the runs it identifies. uniformRun above asks "can this be ONE
-    # path?" -- one colour, one width. Compositing asks something narrower: "is
-    # there ONE alpha?" A smudge writes per-point colour AND size, so a generated
-    # ghost fails the first question while still passing the second, falls to the
-    # per-segment walk, and compounds at its own translucent round caps.
-    #
-    # Measured in Flip on a smeared ring after a 60-step smudge, one run written
-    # at alpha 0.0314 where a single path paints 8:
-    #
-    #     midpoint between vertices   11.2    1.4x
-    #     at the vertices             15.1    1.9x, a 35% ripple
-    #     after the change             8.0    1.0x, ripple 0%
-    #
-    # The ripple sits at the ghost's own point spacing, which is what makes it a
-    # visible mesh rather than a haze. THIS SURFACE HAS THE SAME DEFECT AND IT IS
-    # THE ONE STRANGERS SEE: paintStrokesStatic is where a share link renders a
-    # Flip document, parseStrokeAlpha reads rgba() and not hex-8 by the same
-    # deliberate asymmetry, and a fix only the author can see is half a fix.
-    #
-    # Compacted before asking, per this file's own precedent. The prose for
-    # uniformAlpha lives in flip.js paintStatic, which is in no byte budget;
-    # lib/strokelayers.js keeps seven lines and a pointer, which is what its
-    # uniformRun note already says to do (-804 B measured). app.js carries no
-    # inline fallback for it, as it carries none for uniformRun.
-    #
-    # It is still a bigger raise than the two before it (100 B and 900 B), and it
-    # was put to the owner as such rather than absorbed. Pinned at the
-    # measurement plus the same 540 B allowance the ceiling has always carried,
-    # so the next addition argues for itself as this one did.
-    # RAISED 153,800 -> 154,000 for the full screen wiring, measured 153,911
-    # (app.js 136,279 -> 136,510). The TARGET stays 153,800: this is a ratchet
-    # moving to admit a control the surface was missing, not a target being
-    # given up on, and the two numbers disagreeing is the honest record of
-    # that. The player's JS budget is the tightest in the tree and the next
-    # person to spend it should have to argue as well.
-    # RAISED 154,000 -> 154,800 for the viewer's speed control, measured
-    # 154,535 (app.js 136,510 -> 137,134). The TARGET stays 153,800, for the
-    # same reason the line above gives: a ratchet moving to admit a control is
-    # not a target being abandoned, and the two numbers disagreeing is the
-    # honest record.
-    #
-    # Reported: "on players (across surfaces) should there be a speed control for
-    # PAD? it sometimes draws too fast or slow and I'd like to control that".
-    #
-    # SPENT AGAINST FIRST, as this ceiling's own precedent requires, and the
-    # spending is most of why the number is not larger. Nothing was invented:
-    # `replayRate`, `REPLAY_RATES` and `setReplayRate` have been in app.js
-    # since the Pad's preview row, and its comment there is what makes reuse
-    # correct rather than convenient -- speed describes the act of LOOKING and
-    # never the work, so it is not in the payload and serializeSkribl() has a
-    # pin saying so. A viewer watching at half speed is making the same kind of
-    # choice as an author reviewing a draft at double, which is why they share
-    # one number and one stored preference.
-    #
-    # What the 535 B actually buys: segElapsed() (the clock, scaled in one
-    # place so the flip hold table, the stroke timeline and the progress
-    # fraction all keep working without knowing a rate exists), the
-    # re-anchoring on a mid-play change, one playbackRate line so the music
-    # keeps up, and the button's own label. The first draft cost 633 B; the
-    # three-way title sentence went to one string before this number moved.
-    #
-    # The PAGE's own HTML paid the other half of this feature and paid it
-    # DOWN -- see HTML_RATCHET below, where two full-width link rows came out
-    # of the layout and three controls went into the transport for a net 233 B.
-    # RAISED 154,800 -> 155,300 so full screen HAS a transport, measured
-    # 155,197 (app.js 137,371 -> 137,796). The TARGET stays 153,800, for the
-    # reason the first raise gives: this is a ratchet admitting a control the
-    # surface was missing, not a target being let go.
-    #
-    # WHAT WAS MISSING. Full screen renders only the top-layer subtree, and the
-    # transport is in .player-shell BELOW the wrapper that goes full screen --
-    # so a person who pressed the control got a drawing, a close button, and no
-    # way to pause, scrub, loop or change speed. The owner photographed it.
-    #
-    # SPENT AGAINST FIRST, as this ceiling's precedent requires. Nothing was
-    # duplicated: a second transport rendered into the wrapper would be a
-    # second set of controls, a second set of handlers and a second thing to
-    # keep in step with the player -- which is the mistake lib/fullbar.js
-    # exists on the other two surfaces to avoid. The row is MOVED, so there is
-    # one of every control and every listener stays bound to it. The layout
-    # cost nothing at all: #playerBar is `display: contents` at rest.
-    #
-    # What the 397 B buys: the move and the move back to a remembered anchor
-    # (.player-shell is meta, bar, call-to-action, brand -- appending would put
-    # the transport under the brand line), the band the sheet reserves so the
-    # bar stands below the drawing rather than on it, and that band coming off
-    # the fit scale so the centring and the scale agree. The band is read back
-    # from the custom property rather than measured twice, which is where the
-    # first draft's extra 43 B went.
-    #
-    # The nib's mapping is in this number too and is a FIX, not a feature: it
-    # measured the wrapper on the premise that layoutPlayerCanvas sizes it to
-    # the fitted rect, which full screen makes false, so the bead rode across
-    # the screen nowhere near its own line.
-    # ---- v310: LOWERED 155,300 -> 150,300, AND THE TARGET IS NOW MET ----
-    #
-    # Measured 149,820 (app.js 137,796 -> 132,419). Four photo-drawer functions
-    # left app.js for editor_photo.js: normalizePhotoDataURL,
-    # resetPhotoAdjustments, beginPhotoDrag and dragZoomPan, 177 lines whose
-    # every call site was already in an editor-only module. A person reading a
-    # shared Skribl has no photo drawer and was downloading its upload decoder
-    # on every link.
-    #
-    # THE RATCHET NOW SITS BELOW THE TARGET, and that inversion is the point
-    # rather than an oversight: 153,800 has been the number this file was
-    # aiming AT since it was written, and the player is under it for the first
-    # time. The target stays where it is as the record of what was aimed for;
-    # the ratchet moves to just above what was achieved, because a ratchet five
+    # THE RATCHET SITS BELOW THE TARGET, and the inversion is the point. 153,800
+    # is what this file has been aiming AT since it was written; the player is
+    # under it. The target stays as the record of what was aimed for, and the
+    # ratchet moves to just above what was achieved, because a ratchet five
     # kilobytes above the measurement stops asking anything of the next change.
     #
-    # WHAT IS LEFT: 1,365 lines of editor-only code still in app.js and still
-    # shipped to every player. The music preview cluster is the next carve and
-    # is harder -- its callers are still inside app.js, where the photo
-    # cluster's were not.
+    # THE RULES THIS LEDGER ESTABLISHED, which are what survives of it. The
+    # per-raise arithmetic is in git; these are the parts that govern:
+    #
+    #   CARVE FIRST when the target is furniture the player has no use for.
+    #   Building a feature in the shared file and carving afterwards has cost a
+    #   ratchet raise and a second pass every time -- the shape tool (3,191 B
+    #   raised, then 2,337 B carved back) against selection, built the other way
+    #   round, at 195 B.
+    #
+    #   SPEND AGAINST A RAISE BEFORE ASKING FOR IT. Delete the code a new module
+    #   replaces rather than keeping both; carry no inline fallback for a lib
+    #   whose absence has a defined, weaker behaviour. Raises here have come
+    #   down by a third to a half that way before the number moved.
+    #
+    #   PIN JUST ABOVE THE MEASUREMENT, plus the 540 B allowance the ceiling has
+    #   always carried, so the next addition argues for itself.
+    #
+    #   A RAISE ADMITTING A CONTROL THE SURFACE WAS MISSING moves the ratchet
+    #   and NOT the target. The two numbers disagreeing is the honest record.
+    #
+    #   BUILDING WITHOUT RUNNING DESTROYS ATTRIBUTION. One release landed as a
+    #   5,025 B lump because no raise was logged as each change went in, and the
+    #   per-feature accounting every other entry has is gone for good.
+    #
+    # WHAT IS LEFT, for whoever needs headroom next: ~1,365 lines of editor-only
+    # code still in app.js and still shipped to every player. The music preview
+    # cluster is the next carve and is harder than the photo one was, because
+    # its callers are still inside app.js where the photo cluster's were not.
+    # The Pad leave guard (flipBtn/leaveSheet/leaveGo wiring) is ~4,021 B of
+    # source, strictly editor-only, and may delete itself instead: it exists
+    # only because localStorage cannot hold media bytes, so durable drafts
+    # would remove it rather than move it.
     BYTES_RATCHET, BYTES_TARGET = 150_300, 153_800
-    # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
-    # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
-    # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
-    # stroke=currentColor (theme ink) and the dash-draw animation are both
-    # impossible through an <img>. Still a ratchet: pinned just above the new
-    # floor so the next kilobyte has to argue for itself like this one did.
-    # (Template was 56,716 B before the editor shell came out.)
-    # Re-pinned 10,500 -> 10,800 at v272: the signature is now inked with the
-    # accent gradient, and the <linearGradient> defs ride in the same inline
-    # svg for the same reason the paths do (~140 B measured; a url(#) stroke
-    # cannot reference styles an <img> would strip). Same discipline: just
-    # above the new floor of 10,640.
-    # 10,800 -> 10,900 for one <script> tag: lib/audiosession.js, without which
-    # this page is silent on a silent-mode iPhone. See the JS ratchet above.
-    # 10,900 -> 11,000 for one <script> tag: lib/scrubkeys.js, without which
-    # this page cannot be seeked from a keyboard. Same reasoning as the JS
-    # ratchet above.
-    # 11,000 -> 10,900: one fewer <script> tag, 10,946 -> 10,872.
-    # 10,900 -> 11,200 at v288 for the inline theme boot (_skribl_theme_boot.html,
-    # ~270 B): an embedding host passes ?theme=light and the attribute has to
-    # land before first paint or the frame flashes dark — the same no-flash
-    # rule verify_theme pins for the editors. Just above the new floor of 11,171.
-    # 11,200 -> 11,300 at v292: the boot resolves "system" through
-    # prefers-color-scheme before first paint (~150 B, a storage that throws
-    # falling through to the OS included), so a bare page follows the OS
-    # without a flash. Measured 11,327.
-    # 11,400 -> 11,500 for the canvas's accessible name (SK-AUD-004): role=img
-    # and an aria-label carrying the post's title, server-rendered because
-    # app.js is on the JS ratchet and its reachable lines sit at their ceiling.
-    # ~90 B; the player's one canvas was the only thing on the page with no
-    # name. Measured 11,418 against the old ceiling of 11,400.
-    # 11,500 -> 12,000 for the app's identity (SK-AUD-013): a manifest link,
-    # a theme-color meta carrying both grounds, an icon and a touch icon
-    # (_skribl_app_identity.html, ~360 B) and the boot's re-stamp of that
-    # meta for a light page (~80 B). Without them a shared link added to a
-    # Home Screen wore a screenshot for an icon. Measured 11,859.
-    # RAISED 12,000 -> 12,750 FOR FULL SCREEN, measured 12,647: the transport
-    # button (409 B) and the exit control inside the fullscreened subtree
-    # (238 B), which is not optional -- see below.
+    # The page's own HTML. The brand is the one-stroke skribl signature INLINE
+    # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
+    # <linearGradient> defs), and inline is load-bearing rather than lazy:
+    # stroke=currentColor, the dash-draw animation and a url(#) gradient stroke
+    # are all impossible through an <img>. The theme boot is inline for the same
+    # class of reason -- the attribute has to land before first paint or an
+    # embedded frame flashes dark.
     #
-    # Owner, holding the copied link beside the profile stage: "shouldn't there
-    # be a full screen on this player too? why do the players not share the
-    # same functions?" The stage has had full screen since v304 and /s/<id> --
-    # the page a person actually SENDS somebody -- did not. The two players are
-    # separate implementations for a real reason (this one is the editor's
-    # engine; the in-post one is built to a host's byte budget), but that is an
-    # argument about CODE, not about which buttons a viewer gets, and nothing
-    # made the canonical share surface the poorer of the two on purpose.
+    # Same discipline as the JS ratchet: pinned just above the measured floor,
+    # spent against before raising, and a raise that admits a missing control
+    # moves the ratchet and not the target. The full-screen EXIT control inside
+    # the fullscreened subtree is not decoration -- only that subtree renders,
+    # so the transport row including the button that got you there is off
+    # screen, and without an exit in it the only way out is Escape, a key not
+    # every device has and not every person knows. The harness found that, not
+    # review: the assertion that leaves full screen timed out clicking a button
+    # no longer on screen.
     #
-    # 409 B of button and glyph on a page whose whole HTML is 12 KB. The glyph
-    # is the stage's, character for character, so the two surfaces stay
-    # recognisably one product rather than two takes on the same idea.
+    # The transport row carries Copy link and Gallery as 46px buttons because
+    # the two full-width `.player-link` ROWS they used to be were most of what
+    # sat below the drawing on a 390px phone. That feature paid on both budgets:
+    # the `.player-link` rules left styles.css with them and the CSS figure went
+    # DOWN.
     #
-    # THE EXIT CONTROL IS NOT DECORATION. Only the fullscreened subtree
-    # renders, so the transport row -- including the button that got you there
-    # -- is off screen, and without an exit inside that subtree the only way
-    # out is Escape: a key not every device has and not every person knows.
-    # The harness found this rather than review: the assertion that leaves
-    # full screen timed out clicking a button that was no longer on screen.
-    #
-    # RAISED 12,750 -> 13,050 for the transport the ask was, measured
-    # 12,983. Two things landed and one thing left:
-    #
-    #   + a speed button (the viewer's rate; see BYTES_RATCHET above)
-    #   + Copy link and Gallery, as 46px buttons IN the transport row
-    #   - the two full-width `.player-link` ROWS they used to be, and the
-    #     `.player-link` rules in styles.css with them (the CSS budget went
-    #     DOWN, and it is the same feature paying)
-    #
-    # Reported: "maybe we could enlarge the drawing to the biggest it can be for
-    # whatever screen it's on by putting LINK as icon in the play row and
-    # putting an icon for Gallery somewhere to free up space... it would be
-    # cool if the drawing or flip was the showcase instead of all the stuff
-    # (rows) on the bottom taking up so much space". On a 390px phone those
-    # two rows were most of what sat below the drawing.
-    #
-    # SPENT AGAINST FIRST: the gallery glyph was four stroked `<rect>`s with
-    # rounded corners in the first draft and is one filled `<path>` now, which
-    # is 100 B of the 233 this is actually asking for. A raise this small for
-    # three controls is only possible because two rows of markup left.
+    # (The template was 56,716 B before the editor shell came out.)
     HTML_RATCHET = 13_050
 
     present = pg.evaluate(
