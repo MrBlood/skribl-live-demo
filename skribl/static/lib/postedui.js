@@ -93,21 +93,28 @@
        more ink than the box holds. Six candidates were rendered at the real
        size before either was replaced.
 
-       AND EACH ONE HAS TO STAND ALONE. A toggle shows one state at a time,
-       so the pair is never seen together and cannot explain itself by
-       contrast -- which is what ruled out the tidiest candidate, a full grid
-       against a single card: side by side it reads as "many" against "one",
-       and alone the single card is a rounded rectangle meaning nothing.
-       A four-square grid says a page with things on it; a closed eye says
-       not on show. Different metaphors, and each legible by itself, which
-       for a toggle beats a matched pair that needs its twin. */
-    gallery: '<rect x="3" y="3" width="8" height="8" rx="2"/>'
-           + '<rect x="13" y="3" width="8" height="8" rx="2"/>'
-           + '<rect x="3" y="13" width="8" height="8" rx="2"/>'
-           + '<rect x="13" y="13" width="8" height="8" rx="2"/>',
+       AND EACH ONE HAS TO STAND ALONE, because a toggle shows one state at a
+       time: the pair is never seen together and cannot explain itself by
+       contrast. That is what ruled out the tidiest candidate, a four-square
+       grid against a single card -- side by side it reads as "many" against
+       "one", and alone the single card is a rounded rectangle meaning
+       nothing.
+       AN OPEN EYE AND A CLOSED ONE (owner, from four pairs rendered at 20px)
+       satisfies both tests at once, which no other candidate did: the two
+       are the same object in two states, AND either one alone says whether
+       this Skribl is on show. A four-square grid names the DESTINATION and
+       reads well by itself, so it was the other strong answer; it loses
+       because its off state has to change the subject, and a toggle whose
+       two halves are different objects makes the person read rather than
+       recognise. The words beside them still name the destination on a
+       screen with room for words -- "In gallery" against "Link only". */
+    eyeOpen: '<path d="M2.5 12S6.2 5.5 12 5.5 21.5 12 21.5 12 17.8 18.5 12'
+           + ' 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.7"/>',
     /* A LID AND THREE LASHES, and no slash -- the slash is what wrecked the
-       first draft. A quadratic bow rather than an arc so the lid's deepest
-       point is at the centre and the two ends meet the lashes cleanly. */
+       first draft, an eye struck through whose diagonal lay along the
+       almond's own axis so the two tangled at 20px. A quadratic bow rather
+       than an arc so the lid's deepest point is at the centre and the two
+       ends meet the lashes cleanly. */
     eyeShut: '<path d="M3 10q9 9 18 0"/><path d="m4.4 12.4-1.6 2.6"/>'
            + '<path d="m9 15.1-.7 2.9"/><path d="m15 15.1.7 2.9"/>'
            + '<path d="m19.6 12.4 1.6 2.6"/>',
@@ -625,7 +632,7 @@
                 (inGallery ? 'In the public gallery. Tap to make it link only' : esc(offWord) + '. Tap to show it in the public gallery') + '"' +
                 ' title="' + (inGallery ? 'Anyone can find this in the gallery. Tap to make it link only'
                                         : 'Only someone with the link can reach this. Tap to put it in the gallery') + '">' +
-                glyph(inGallery ? 'gallery' : 'eyeShut') +
+                glyph(inGallery ? 'eyeOpen' : 'eyeShut') +
                 lbl(inGallery ? 'In gallery' : offWord) + '</button>'
             : '') +
           /* DELETE IS THE ONLY DESTRUCTIVE ACT ON A POSTED ROW NOW. There
