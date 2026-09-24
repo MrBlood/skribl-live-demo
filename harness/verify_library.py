@@ -725,15 +725,25 @@ with sync_playwright() as sp:
         _cp.wait_for_timeout(2000)
         _cp.click("#btnShare")
         _cp.wait_for_timeout(900)
+        # `data-tip` FIRST. This page runs lib/tooltip.js on a fine pointer, and
+        # since v310 the module adopts a title written AFTER load as well as at
+        # it -- so the answer this button gives is in data-tip here and in
+        # `title` on a phone. The assertion is about the words.
         _said = _cp.evaluate("""() => ({
-            title: document.getElementById('btnShare').title,
+            title: (b => b.getAttribute('data-tip') || b.title)(document.getElementById('btnShare')),
             label: document.getElementById('btnShare').getAttribute('aria-label'),
+            native: document.getElementById('btnShare').hasAttribute('title'),
             live: (document.getElementById('postedStatus') || {}).textContent || '',
             copied: window.__copied || null })""")
         _cp.close()
         if _want_ok:
             check(f"when {_case}, it says the link is copied — and it really was",
                   "copied" in _said["title"].lower() and bool(_said["copied"]), str(_said))
+            # ...IN ONE TOOLTIP. The answer is written to `title`, and this page
+            # runs lib/tooltip.js: until v310 that write reinstated the browser's
+            # own tooltip under the drawn one and nothing took it away again.
+            check("...and it says it once, in the drawn tooltip and not a native one",
+                  _said["native"] is False, f"{_said} — both tooltips would show")
         else:
             check(f"when {_case}, it does NOT say the link is copied",
                   "link copied" not in _said["title"].lower()

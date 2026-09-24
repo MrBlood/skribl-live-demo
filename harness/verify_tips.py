@@ -82,6 +82,33 @@ with sync_playwright() as p:
         n = pg.evaluate("() => document.querySelectorAll('[data-tip]').length")
         check(f"{surface}: tooltips were adopted", n > 20, f"only {n}")
 
+        # AND IT STAYS THAT WAY, which is the half the census above cannot see.
+        # Every LIVE label in this app is written to `title`: Flip's page bar
+        # re-scopes Delete, Copy and Move on every selection; the Pad's replay
+        # speed button rewrites its own; the gallery card's transport rewrites
+        # Play/Pause, Repeating and the sound state on every sync. Until v310
+        # the module's observer watched for added NODES only, so the first
+        # state change put the browser's own tooltip back UNDER the drawn one
+        # and nothing ever took it away again -- permanent, on four surfaces,
+        # and invisible to a load-time census.
+        #
+        # Pinned as the CONTRACT rather than through one control: what the fix
+        # governs is "nothing this module has adopted keeps a title", and the
+        # controls that break it differ per surface. The driven cases live
+        # where the controls do -- verify_gallery drives the card's ••• and its
+        # transport, verify_library the share button, verify_pagespan Flip's
+        # page bar, all of which read the words back out of data-tip now.
+        _re = pg.evaluate("""() => {
+            const b = document.querySelector('[data-tip]');
+            b.title = 'a label written after load';
+            return new Promise(r => setTimeout(() => r({
+              who: b.id || b.className,
+              title: b.hasAttribute('title'),
+              tip: b.getAttribute('data-tip') }), 80)); }""")
+        check(f"{surface}: a label written after load is adopted, not left as a second tooltip",
+              _re["title"] is False and _re["tip"] == "a label written after load",
+              f"{_re} — a title on an adopted control is the native tooltip back, for good")
+
         # '#imageBtn' on Flip, NOT '#magnifyBtn'. This suite hovered a control
         # that does not exist on that surface and hung for 30s waiting for it.
         # v219 restored Magnify to PAD's toolbar at 641px+ ("a phone has pinch,

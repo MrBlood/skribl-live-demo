@@ -11256,3 +11256,95 @@ where it belonged -- wiring a drawer's button is the drawer's business.
 carve moves FUNCTIONS, never STATE, and never a reference evaluated at load.
 `editor_music.js`'s header has said the first two since it was written. The
 third is this release's addition to the rule.
+
+## v310, cont. -- the reds a partial run found, and the tooltip that came back
+
+The release run for v310 reached batch 27 of 55 and had already found three
+reds, all of them this session's own work, none of them caught by the suites
+that were run when that work landed. That is the whole case for the full
+battery, and it is also the case against believing a targeted run: the changes
+that broke these three suites were each verified against the suite that owned
+the surface, and the damage was next door every time.
+
+**TWO SUITES CRASHED ON CONTROLS THAT HAD MOVED.** `verify_tilereport` drove
+`button.report[data-report]`, which stopped existing the day the Report word
+left the tile's head for its ••• menu. `verify_posted` asked the THUMB for the
+pen and the book, which moved in front of the words at the owner's request in
+the same session. Both threw on a null, which is the loud failure and the
+lucky one.
+
+**AND THE CRASH WAS HIDING A DEFECT.** Rewriting the report suite for the
+two-click path meant reading the success handler, which still said
+
+    target.button.textContent = 'Reported';
+
+`target.button` was the Report word when that line was written and is the •••
+now. So reporting a post replaced a 34px glyph with a word that does not fit
+its box, and renamed the tile's menu after the last thing done through it. The
+mark is an attribute now; the record is said where the reader goes looking --
+the menu's flag reads Reported and the sheet opens with nothing left to send.
+Nobody read that line for six commits. The suite that drove the path found it
+in one.
+
+**TWO ASSERTIONS THAT COULD NOT FAIL, from the same cause.** The gallery's
+tooltip census asked whether every `.report` carried a `data-tip`, and
+`verify_posted`'s icon-size row asked the same of `.posted-thumb svg`. Both
+selectors had stopped matching anything, and `[].every()` is TRUE -- so each
+was green on a page with the module unloaded and the icons gone. They COUNT
+before they measure now.
+
+**THE GENERAL SHAPE, and it is the reason this entry is long.** Moving a
+control produces exactly two kinds of stale assertion, and they are not equally
+visible. A suite that DRIVES the old selector crashes, and the run says so. A
+suite that CENSUSES it goes quietly green forever. Both happened here, in the
+same release, from the same two moves. So: when a control changes its class,
+its home or its markup, grep the harness for the old selector and read every
+hit -- the crashes will announce themselves and the censuses will not.
+
+**AND ONE HARD-CODED NEUTRAL.** `verify_surfaces` caught the full-screen player
+bar painting `rgba(6, 7, 10, a)` directly. One grey outside `:root` is one
+control that stays dark when the theme flips, and it is the only thing that
+would catch it. It takes `--surface-deep-rgb`, which names the same `#06070a`
+the ramp already held.
+
+**CALIBRATION CAUGHT MY OWN INSTRUMENT.** The replacement row for the moved
+kind mark asserted that it stands in front of the words it qualifies, by
+comparing `sub.firstElementChild` against the mark. The words are a TEXT node,
+so the mark is the first ELEMENT whether it leads the line or trails it: run
+against a tree with the mark moved back behind the words -- the one thing the
+row exists to see -- it went green. `firstChild` sees the words. Two mutations
+per component, not one: "the mark is gone" and "the mark is in the wrong
+place" are different failures and only the second found this.
+
+**THEN THE TOOLTIP CAME BACK, ON FOUR SURFACES.** `lib/tooltip.js` moves every
+`title` to `data-tip` and REMOVES the title -- that removal is the whole point,
+because a native tooltip cannot be styled and stacks under the drawn one a
+second later. Its observer watched for added NODES.
+
+Every live label in this app is written to `title` after load. Flip's page bar
+re-scopes Delete, Copy and Move on every selection. The Pad's replay speed
+button rewrites its own. `lib/fullbar.js` rewrites Play/Pause, Repeating, the
+sound state and the speed on every sync, on both the gallery card and the
+profile stage. The gallery card's caption toggle rewrites its own on every
+press. Not one of those is an added node, so not one was re-adopted: the first
+state change handed the control its native tooltip back, under the drawn one,
+for the life of the page.
+
+The observer takes `attributes: true, attributeFilter: ['title']` now, and
+`adopt()` -- which searched DESCENDANTS only, and so walked past the single
+element both observer arms hand it -- includes its root. No loop: `adopt` ends
+by removing the title, whose mutation finds nothing to take, and the `data-tip`
+it writes is not watched.
+
+**WHICH IS ITS OWN RULE.** A module that takes ownership of an attribute owns
+it for the page's LIFE, not for its first frame. The load-time census
+(`verify_tips`: "no native title attributes remain") was true and useless: it
+measured the one moment when nothing had happened yet. The contract is pinned
+on both editors now -- a label written after load is adopted -- and the driven
+cases sit where the controls do: the card's ••• and its transport in
+`verify_gallery`, the share button in `verify_library`, Flip's page bar in
+`verify_pagespan`.
+
+Three suites had been reading these labels out of `title`, and passed only
+because the app wrote them back after adoption. They read the words wherever
+the words are now, which is the assertion they always meant to make.

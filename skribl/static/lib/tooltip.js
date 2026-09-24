@@ -108,7 +108,17 @@
   }
 
   function adopt(root) {
-    var nodes = (root || document).querySelectorAll('[title]');
+    /* THE ROOT COUNTS. `querySelectorAll` searches DESCENDANTS, so adopt(el)
+       on a single control -- which is what both observer arms below hand it --
+       walked past the very element it was given. It only ever mattered for a
+       control added as one node with a title of its own, which is most of
+       them. */
+    var found = (root || document).querySelectorAll('[title]');
+    var nodes = [];
+    if (root && root.nodeType === 1 && root.hasAttribute && root.hasAttribute('title')) {
+      nodes.push(root);
+    }
+    for (var k = 0; k < found.length; k++) nodes.push(found[k]);
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       var t = n.getAttribute('title');
@@ -167,12 +177,29 @@
     if (typeof MutationObserver !== 'undefined') {
       new MutationObserver(function (muts) {
         for (var i = 0; i < muts.length; i++) {
+          /* A CONTROL GIVEN ITS TITLE BACK IS A CONTROL THIS MODULE HAS NOT
+             ADOPTED, and the node arm cannot see it: nothing was added. Live
+             labels are written as `title` all over this app -- the transport's
+             Play/Pause, Repeating, the sound state and the speed; the gallery
+             card's caption toggle; a tile menu's answer to Copy link -- and
+             every one of those writes reinstated the native tooltip UNDER the
+             drawn one, permanently, on the first state change. Adopting on the
+             attribute is what makes "this module owns the words" true for the
+             whole page life rather than for its first frame.
+
+             No loop: adopt() ends by REMOVING the title, whose mutation finds
+             no title to take, and the data-tip it writes is not watched. */
+          if (muts[i].type === 'attributes') {
+            if (muts[i].target.nodeType === 1) adopt(muts[i].target);
+            continue;
+          }
           var added = muts[i].addedNodes;
           for (var j = 0; j < added.length; j++) {
             if (added[j].nodeType === 1) adopt(added[j]);
           }
         }
-      }).observe(document.body, { childList: true, subtree: true });
+      }).observe(document.body, { childList: true, subtree: true,
+                                  attributes: true, attributeFilter: ['title'] });
     }
 
     return { show: show, hide: hide, adopt: adopt };

@@ -1024,6 +1024,22 @@ with sync_playwright() as _spk:
     check("...and it goes back to the name that says which tile it belongs to",
           _back["title"] is False and _back["name"] == _name0 and _back["tip"] == "More",
           f"{_back} vs the name it started with {_name0!r}")
+
+    # THE TRANSPORT IS THE COMMONEST LIVE LABEL ON THIS PAGE -- lib/fullbar.js
+    # rewrites Play/Pause, Repeating, the sound state and the speed on EVERY
+    # sync, so one press used to hand this card back four native tooltips.
+    # Driven here and not only in verify_tips because the contract row there
+    # writes a label itself; this one presses the button a person presses.
+    _pk.hover(".tileStage")
+    _pk.wait_for_timeout(250)
+    _pk.click(".tileStage .skfull-play")
+    _pk.wait_for_timeout(500)
+    _tr = _pk.evaluate("""() => { const b = document.querySelector('.tileStage .skfull-play');
+        return { title: b.hasAttribute('title'), tip: b.getAttribute('data-tip'),
+                 name: b.getAttribute('aria-label') }; }""")
+    check("the card transport's live label is adopted too, not a native tooltip put back",
+          _tr["title"] is False and _tr["tip"] in ("Play", "Pause")
+          and _tr["tip"] == _tr["name"], str(_tr))
     _pk.close()
     _bk.close()
 

@@ -172,15 +172,22 @@ with sync_playwright() as p:
               page.evaluate("() => pbWho.getAttribute('aria-label')"))
         # pbHold left the page bar in v226 — the hold badge on the tile is
         # the control now, and it has its own section below.
+        # WHEREVER THE WORDS ARE. flip.js writes these labels to `title`, and on
+        # a fine pointer lib/tooltip.js moves every title to `data-tip` and
+        # removes it -- including the ones written after load, since v310. So
+        # the label is in one attribute or the other depending on whether the
+        # module is running, and this suite is about the WORDS, not about which
+        # attribute is holding them.
+        words = "(el => el.getAttribute('data-tip') || el.title)"
         for el, want in (("pbDel", "Delete these 3 pages"),
                          ("pbCopy", "Copy these 3 pages"),
                          ("pbLeft", "Move these 3 pages left")):
-            check(f"{el} re-scopes its own label", 
-                  page.evaluate(f"() => {el}.title") == want,
-                  page.evaluate(f"() => {el}.title"))
+            check(f"{el} re-scopes its own label",
+                  page.evaluate(f"() => {words}({el})") == want,
+                  page.evaluate(f"() => {words}({el})"))
         check("MUTATION: with no range the same controls say 'this page'",
-              page.evaluate("""() => { clearSpan(true); buildStrip();
-                return pbDel.title; }""") == "Delete this page",
+              page.evaluate(f"""() => {{ clearSpan(true); buildStrip();
+                return {words}(pbDel); }}""") == "Delete this page",
               "if they read the same either way, the re-scoping is decoration")
 
         print("\nOPERATE — copy, paste, delete, hold and move a run")

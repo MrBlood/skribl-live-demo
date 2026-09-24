@@ -899,17 +899,6 @@
      with a button of '' and threw before it reached SkriblModal.open, and the
      only symptom was two a11y rows saying focus never entered the sheet.
      Nothing reported a redefinition; JavaScript does not consider it an error. */
-  /* THE TOOLTIP MODULE OWNS THE WORDS once it has adopted a control. It MOVES
-     `title` to `data-tip` and REMOVES the title -- that removal is what stops
-     the browser's own tooltip doubling under the drawn one -- and its observer
-     watches for added NODES, not changed attributes. So a `title` written back
-     onto an adopted control is a second, unstyled tooltip that stays for the
-     life of the page, and nothing re-adopts it. Write where the words are. */
-  function tipOn(el, msg) {
-    if (el.hasAttribute('data-tip')) el.setAttribute('data-tip', msg);
-    else el.title = msg;
-  }
-
   function sayOn(button, msg) {
     /* WHAT IT SAID BEFORE IS WHAT IT GOES BACK TO, read off the button here
        rather than passed in. Both callers passed the literal 'More', which is
@@ -921,13 +910,13 @@
                        name: button.getAttribute('aria-label') || '' };
     }
     var rest = button._rest;
-    tipOn(button, msg);
+    button.title = msg;
     button.setAttribute('aria-label', msg);
     var live = document.getElementById('galleryStatus');
     if (live) live.textContent = msg;
     clearTimeout(button._t);
     button._t = setTimeout(function () {
-      tipOn(button, rest.tip);
+      button.title = rest.tip;
       if (rest.name) button.setAttribute('aria-label', rest.name);
     }, 1600);
   }
