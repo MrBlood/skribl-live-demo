@@ -201,7 +201,7 @@ with sync_playwright() as p:
         page.wait_for_timeout(80)
         check("copying a run takes the whole run",
               page.evaluate("() => pageClip.length") == 3)
-        # v226: paste is a ghost tile standing in the gap it will fill, not a
+        # Paste is a ghost tile standing in the gap it will fill, not a
         # button in a column. It has to say WHERE as much as what, so its
         # POSITION is the assertion that matters.
         ghost = page.evaluate("""() => {

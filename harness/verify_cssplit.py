@@ -196,7 +196,7 @@ try:
         ("player-phone", plain["url"], (390, 844), []),
         ("player-photo", photo["url"], (1280, 900), []),
         ("player-404", "/s/nope", (1280, 900), []),
-        # v207: the loop/mute buttons' PRESSED state. Every player scene was
+        # The loop/mute buttons' PRESSED state. Every player scene was
         # static, so .player-btn.active (a JS-toggled class, not the :active
         # pseudo) never matched at rest and cssgraph dropped it from
         # player.css — the Repeat button worked but never lit up, so it read
@@ -218,7 +218,7 @@ try:
 
     shots = pathlib.Path(tempfile.mkdtemp())
 
-    # v211: because FREEZE squares corners for the pixel comparison, the split
+    # Because FREEZE squares corners for the pixel comparison, the split
     # could in principle drop a border-radius without this suite seeing it.
     # So radius is compared by COMPUTED STYLE instead, on the player's
     # controls, between the split sheet and the full one — the same
@@ -250,7 +250,7 @@ try:
                     status=200, content_type="text/css", body=styles))
             pg.goto(BASE + path, wait_until="load")
             pg.wait_for_timeout(1800)
-            # v211: park the pointer. Pages share one browser context, and the
+            # Park the pointer. Pages share one browser context, and the
             # mouse position persists across new_page(); if the previous pass's
             # last scene left it over where a control lands in THIS scene, that
             # control is :hover in one pass and not the other — a 1-3 RGB
@@ -280,7 +280,7 @@ try:
                 pass
             pg.add_style_tag(content=FREEZE)
             pg.wait_for_timeout(400)
-            # v210: settle JS-driven LAYOUT too, not just CSS transitions. The
+            # Settle JS-driven LAYOUT too, not just CSS transitions. The
             # header's fitBrand runs on ResizeObserver + requestAnimationFrame
             # and sheds classes by measuring; under batch load one pass could
             # capture a frame before that settled and the other after — a 4x34

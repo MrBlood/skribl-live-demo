@@ -204,7 +204,7 @@ with sync_playwright() as p:
     # deletes the route and keeps the warning, every assertion above still passes
     # and the product is back to the state its owner already rejected once. These
     # are the assertions that would fail.
-    # v294: the control is the pill's TEXT, not the pill. A × sits beside it,
+    # The control is the pill's TEXT, not the pill. A × sits beside it,
     # and a button inside a role=button is invalid nesting; the status stays a
     # status and holds two controls.
     pill = pg2.evaluate("""() => { const el = document.getElementById('autosaveStatus');

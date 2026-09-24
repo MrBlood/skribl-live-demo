@@ -204,7 +204,7 @@ with app.app_context():
     on_disk_before = any(k == key for k, _ in store.iter_keys())
     check("and the bytes are on disk", on_disk_before)
 
-    # v266: the pending-media claim the post wrote to bridge the sweep race is
+    # The pending-media claim the post wrote to bridge the sweep race is
     # cleared when the post commits — the association protects the object from
     # here. If it lingered, it would keep protecting the media for its whole TTL
     # even after the post is deleted below, and the sweep could not reclaim it.

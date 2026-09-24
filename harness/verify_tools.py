@@ -321,7 +321,7 @@ with sync_playwright() as _b4:
     _p4.goto(BASE + "/", wait_until="load"); _p4.wait_for_timeout(800)
     _p4.evaluate("() => localStorage.clear()")
     _p4.reload(wait_until="load"); _p4.wait_for_timeout(800)
-    # v288: no idle Record button (a stroke arms the take). This suite measures
+    # No idle Record button (a stroke arms the take). This suite measures
     # capture mechanics, so it arms the take directly rather than through a
     # first pen stroke that would enter the geometry it reads.
     _p4.evaluate("() => { if (!recording) beginRecording(false); }"); _p4.wait_for_timeout(300)

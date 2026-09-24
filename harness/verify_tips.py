@@ -267,7 +267,7 @@ with sync_playwright() as p:
     dismiss_intro(mp)                 # reset re-arms flip-intro; this tests page-move
     mp.evaluate("() => { addFrame(true); addFrame(true); }")
     mp.wait_for_timeout(400)
-    # v227: at 390px this is the COMPACT surface and there is no page bar — the
+    # At 390px this is the COMPACT surface and there is no page bar — the
     # move happens through the ⋯ on the active tile. The viewport stays at phone
     # width because the assertion below it is about the hint not covering the
     # filmstrip, which is a phone-layout concern.

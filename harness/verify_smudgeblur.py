@@ -297,7 +297,7 @@ with sync_playwright() as p:
         page.mouse.up()
         page.wait_for_timeout(400)
         after = page.evaluate(SNAP)
-        # v256: BLUR IS A HALO NOW, so it emits passes and the arrays grow. The
+        # BLUR IS A HALO NOW, so it emits passes and the arrays grow. The
         # old shape of this section pinned "adds and removes NO points", which
         # was correct for a tool that recoloured in place -- and recolouring in
         # place is precisely why it never softened anything.

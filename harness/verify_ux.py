@@ -74,7 +74,7 @@ with sync_playwright() as p:
         desc: document.getElementById('exportVideoDesc').textContent })""")
     check("Flip labels the button with a container", multi["title"].strip() in ("Video (MP4)", "Video (WebM)"),
           multi["title"])
-    # v269: the container lives in the TITLE only — the description carries the
+    # The container lives in the TITLE only — the description carries the
     # tradeoff, and repeating "WebM" in both lines said it twice.
     check("Flip's description does NOT repeat the container",
           "MP4" not in multi["desc"] and "WebM" not in multi["desc"], multi["desc"])
@@ -105,7 +105,7 @@ with sync_playwright() as p:
         desc: document.getElementById('exportVideoDesc').textContent })""")
     check("Pad labels the container", padlbl["title"].strip() in ("Video (MP4)", "Video (WebM)"),
           padlbl["title"])
-    # v269: same rule as Flip — the title names the container once, the
+    # Same rule as Flip — the title names the container once, the
     # description keeps to the tradeoff.
     check("Pad's desc does NOT repeat the container",
           "MP4" not in padlbl["desc"] and "WebM" not in padlbl["desc"], padlbl["desc"])
@@ -242,7 +242,7 @@ with sync_playwright() as _p:
     # first, so an arithmetic "free space" figure hides the squeeze and reports
     # room that is not there; that is how the first pass concluded FLIPMODE
     # needed 440px when it actually clears at 360.
-    # v220.x: the three text tiers (FLIPMODE/FLIP/FM) were replaced by a single
+    # The three text tiers (FLIPMODE/FLIP/FM) were replaced by a single
     # ~28px fanned-stack mark, smaller than the smallest tier was. The tier
     # assertion's INTENT survives: at every width the tiers used to cover,
     # exactly one visible mark, carrying the word for assistive tech.
@@ -255,7 +255,7 @@ with sync_playwright() as _p:
           const r = m ? m.getBoundingClientRect() : {width: 0, height: 0};
           return { visible: !!m && r.width > 10 && r.height > 10,
                    label: (w && w.getAttribute('aria-label')) || '' }; }""")
-        # v269: the unified lockup — the shared SKRIBL sticker plus a mode tag —
+        # The unified lockup — the shared SKRIBL sticker plus a mode tag —
         # labels this surface "Skribl Flip" (was "Flipmode" back when each mode
         # wore its own sticker).
         check(f"at {_w}px the mark is visible and labelled",
@@ -596,7 +596,7 @@ with sync_playwright() as _p:
           }
           return n;
         }""")
-        # v269: the fresh canvas preset follows the viewport (a 393px phone opens
+        # The fresh canvas preset follows the viewport (a 393px phone opens
         # 9:16), and the grid derives its column count from the canvas ASPECT —
         # so the expected line count is computed the same way the overlay does,
         # rather than assuming the old fixed 4:3's 8 columns.
@@ -869,7 +869,7 @@ with _sp204() as _p:
     check("V205-fix: the tune button matches the menu button's size",
           sizes.get("tuneBtn") == sizes.get("menuBtn"),
           f"tune {sizes.get('tuneBtn')} vs menu {sizes.get('menuBtn')}")
-    # v225: the header row is 36, not 44 — Flip's size, adopted on Pad so the two
+    # The header row is 36, not 44 — Flip's size, adopted on Pad so the two
     # headers stop reading as two design systems. The 44px TAP band is not given
     # up; it moved to the ::before via --tap-grow, so assert BOTH: the painted
     # box is 36 and the hit box is still at least 44. Pinning only the visual
@@ -948,7 +948,7 @@ with _sp204() as _p:
     # drawer would have no visible opener. And stopping must NOT reopen it.
     pg.click("#tuneBtn"); pg.wait_for_timeout(300)
     check("F4 setup: tune drawer is open before the take", pg.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
-    # v288: no idle Record button. This page already holds a finished take (the
+    # No idle Record button. This page already holds a finished take (the
     # V205 block above), so the canvas is locked and the way to start another
     # take is the "+ Add take" pill — the same beginRecording path, which is
     # what must close the drawer.
@@ -969,7 +969,7 @@ with _sp204() as _p:
           rad == "12px", f"border-radius {rad}")
     fpx.close()
 
-    # v206: Flip's grid toggle must LIGHT when on, like its .onion-tint siblings.
+    # Flip's grid toggle must LIGHT when on, like its .onion-tint siblings.
     # It toggled 'on' (unstyled) instead of 'active' since v204, so the overlay
     # drew but the button stayed dark. Pin all three siblings to .active.
     fg = _b.new_page(viewport={"width": 1280, "height": 900})
@@ -1010,7 +1010,7 @@ with _sp204() as _p:
             const b = document.querySelector('#fineTuneBody .nudge-btn').getBoundingClientRect();
             return { over: gr.right > vw + 1, scrollX: document.documentElement.scrollWidth > vw + 1, nudgeW: Math.round(b.width) }; }""")
         check(f"V206: nudge grid fits at {pw}px (no overflow)", fit and not fit["over"] and not fit["scrollX"], str(fit))
-        # v207: the pills themselves must not overlap or spill their column. On
+        # The pills themselves must not overlap or spill their column. On
         # phone the groups STACK (one per row) — the earlier three-on-a-row
         # squeeze put 120px pills into 93px columns and they overlapped at 390.
         _ov = mp.evaluate("""() => { const ecs = [...document.querySelectorAll('#fineTuneBody .edge-controls')].map(e => e.getBoundingClientRect());
@@ -1200,7 +1200,7 @@ with _sp204() as _p:
     }""")
     check("V204: Flip shows the intro toast on first load",
           toast and ("New here" in toast or "How it works" in toast), str(toast)[:50])
-    # v206: the intro is a NORMAL small timed toast (the v205 panel is retired —
+    # The intro is a NORMAL small timed toast (the v205 panel is retired —
     # it hid the pointer and could leave a dead zone) that carries a tap-through
     # "How it works ->" action opening the help drawer.
     check("V206: the intro toast is NOT the retired panel variant",
@@ -1219,18 +1219,18 @@ with _sp204() as _p:
     fp.evaluate("() => { const c = document.getElementById('helpClose'); if (c) c.click(); }")
     fp.wait_for_timeout(400)
 
-    # v206: menu verbiage aligned across editors + Clear all in BOTH menus.
+    # Menu verbiage aligned across editors + Clear all in BOTH menus.
     # (pg was closed above; open a fresh Pad page for the Pad-side checks.)
     pg = _b.new_page(viewport={"width": 1280, "height": 900})
     pg.goto(BASE + "/", wait_until="load"); pg.wait_for_timeout(600)
     pad_items = pg.evaluate("() => [...document.querySelectorAll('#menuSheet .menu-item, .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
     flip_items = fp.evaluate("() => [...document.querySelectorAll('#moreMenu .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
     def has(items, s): return any(s in x for x in items)
-    # v269: the extension moved out of the action's name into a sub-label —
+    # The extension moved out of the action's name into a sub-label —
     # "Save draft" is the action, ".skribl" is a detail. Parity still holds:
     # both editors carry the same words, and neither puts "(.skribl)" back in
     # the label itself.
-    # v292: a backup, not a draft — autosave is the persistence model, the file
+    # A backup, not a draft — autosave is the persistence model, the file
     # is the copy you keep or move.
     check("V269: Pad menu says 'Save a backup' like Flip", has(pad_items, "Save a backup"), str(pad_items))
     check("V269: Pad menu says 'Open a backup…' like Flip", has(pad_items, "Open a backup"), str(pad_items))
@@ -1262,7 +1262,7 @@ with _sp204() as _p:
           "Pad Skribl" in ftoast or "Skribl Pad" in ftoast, repr(ftoast)[:80])
     pg.close()
 
-    # v206: the Flip image/music drawer must SURVIVE picking a file. Flip's file
+    # The Flip image/music drawer must SURVIVE picking a file. Flip's file
     # inputs live at the page root (outside the panels), and when the OS dialog
     # returns the browser fires click on that input; the click-outside handler
     # read it as "outside" and closed the drawer the instant a file was chosen —
@@ -1338,7 +1338,7 @@ with _sp204() as _p:
     check("FORMAT: ...and FLIPS — page index advances on Play", df.evaluate("() => playing") and _i1 != _i2, f"idx {_i1} -> {_i2}")
     df.close()
 
-    # v207: the player's Repeat (loop) button must VISIBLY light when pressed.
+    # The player's Repeat (loop) button must VISIBLY light when pressed.
     # .player-btn.active is a JS-toggled class; every player scene in the
     # css-live capture was static, so cssgraph dropped the rule from player.css
     # and the button toggled loop internally but never lit — it read as dead.
@@ -1361,7 +1361,7 @@ with _sp204() as _p:
               _lit["active"] and _lit["bg"] == "rgb(124, 92, 255)", str(_lit))
         _pl.close()
 
-    # v207: at 641px (the desktop breakpoint's first pixel) after recording,
+    # At 641px (the desktop breakpoint's first pixel) after recording,
     # "Post to Skribl" wrapped to THREE lines (59px pill), Record wrapped too,
     # and the header overflowed. Pills must never wrap; Post keeps its short
     # label until ~720px where the long one genuinely fits.
@@ -1374,13 +1374,13 @@ with _sp204() as _p:
             const ph = p.getBoundingClientRect().height, rh = r.getBoundingClientRect().height;
             return { overflow: h.scrollWidth > h.clientWidth + 1, postH: Math.round(ph), recordH: Math.round(rh), headerH: Math.round(h.getBoundingClientRect().height) }; }""")
         check(f"V207: at {pw}px post-record the header does not overflow", not _g["overflow"], str(_g))
-        # v288: Record is hidden after a take (recordH reads 0); Post is the pill
+        # Record is hidden after a take (recordH reads 0); Post is the pill
         # that can still wrap here.
         check(f"V207: at {pw}px the Post pill is single-line (<=48px tall, not wrapped)",
               _g["postH"] <= 48, str(_g))
         _n.close()
 
-    # v207: onion on/off moved from the header into the tune drawer's Onion row
+    # Onion on/off moved from the header into the tune drawer's Onion row
     # (frees header space), styled as an .onion-tint toggle so it lights ORANGE
     # like grid / motion / tint. setOnion() and the row-mute behaviour unchanged.
     # The orange below is the dark theme's shade (v292: a bare page follows the OS, so ask for dark).
@@ -1454,7 +1454,7 @@ with _sp204() as _p:
         check(f"V207: {nm} loop-detail focus group shares the tool group's radius",
               _zi and _zi["matchesToolGroup"] is True, str(_zi))
         check(f"V207: {nm} loop-detail slider highlight is visible on the selected cell", _zi and _zi["sliderVisible"], str(_zi))
-        # v254: the magnification half is a STEPPER, not a .seg, so it is pinned
+        # The magnification half is a STEPPER, not a .seg, so it is pinned
         # against the shell it was deliberately given instead — .edge-controls,
         # the "step this value" control sitting directly below it in the same
         # panel. Reading edgeRadius rather than typing 11px keeps that stated as
@@ -1532,7 +1532,7 @@ with _sp204() as _p:
               and _zb["floorStuck"] == 1, str(_zb))
         _z.close()
 
-    # v207: help pills that name a real tappable control carry that control's
+    # Help pills that name a real tappable control carry that control's
     # actual glyph (same SVG the button renders); concept pills (Brush size,
     # Pressure) do not. And the Onion-skin text no longer says "in the header"
     # (onion moved to the tune drawer this release).
@@ -1551,7 +1551,7 @@ with _sp204() as _p:
     check("V207: help no longer says the onion button is 'in the header'", not _ic["saysHeader"])
     _h.close()
 
-    # v207: the eyedropper — the one control in the colour row that lacked its
+    # The eyedropper — the one control in the colour row that lacked its
     # 44pt tap area (the dots beside it had theirs). Box stays 30px (dot-sized,
     # on purpose); icon 16->18 to match tier-2 toggles; tap area added. And the
     # help pill's glyph must be the button's OWN glyph, not a lookalike.
@@ -1575,7 +1575,7 @@ with _sp204() as _p:
             check("V207: the help Eyedropper pill uses the button's OWN glyph (not a lookalike)", _bp and _bp == _hp, f"btn {str(_bp)[:30]} vs help {str(_hp)[:30]}")
         _e.close()
 
-    # v207: icons are SVG, not Unicode text glyphs. The Flip page bar was MIXED
+    # Icons are SVG, not Unicode text glyphs. The Flip page bar was MIXED
     # (Hold/Artwork SVG, Move/Move/Copy/Delete text: ◀ ▶ ⧉ ✕) and the add-page
     # buttons used the fullwidth ＋ — text glyphs render at different weights
     # across fonts/platforms and did not match their SVG neighbours. Hold's
@@ -1594,7 +1594,7 @@ with _sp204() as _p:
           _ic2["adds"] and all(a["svg"] and not a["hasFullwidthPlus"] for a in _ic2["adds"]), str(_ic2["adds"]))
     _s.close()
 
-    # v207: COMPREHENSIVE phone fit. Measures every interactive control's real
+    # COMPREHENSIVE phone fit. Measures every interactive control's real
     # rectangle (not container boxes — that is how the nudge-grid overlap slipped
     # past an earlier "fits" check): nothing off-screen, no horizontal page
     # scroll, no same-row overlap between distinct controls. Both editors, each
@@ -1700,7 +1700,7 @@ with _sp204() as _p:
             _r = _f.evaluate(_AUDIT)
             check(f"PHONE {nm}@{pw}: ...with music loaded + fine-tune open", _AUDIT_OK(_r), str(_r))
             _f.close()
-    # v210: the header brand vs the control cluster, both states, three widths.
+    # The header brand vs the control cluster, both states, three widths.
     # State 1 (first load): the wordmark shows and the cluster must clear it —
     # or the wordmark must collapse. State 2 (take saved): the wordmark is
     # hidden by CSS and the cluster must still keep a real gap from the MARK,
@@ -1749,7 +1749,7 @@ with _sp204() as _p:
         # missing mark makes the gap LARGER and the assertion greener. Measure
         # the mark itself. The brand is logo-only — there is no wordmark behind
         # it — so a hidden mark leaves nothing naming the surface.
-        # v269: the mark is an <img class="brand-mark"> (cached static SVG), so
+        # The mark is an <img class="brand-mark"> (cached static SVG), so
         # probe the class, not the svg element.
         _mk = _h.evaluate("() => { const s = document.querySelector('.brand > span .brand-mark');"
                           " if (!s) return 0; const r = s.getBoundingClientRect();"

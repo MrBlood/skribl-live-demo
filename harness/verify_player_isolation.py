@@ -670,7 +670,7 @@ with sync_playwright() as sp:
     # byte ratchet notices the SIZE coming back; this notices the CODE coming
     # back, which is the thing that matters and which a later raise would hide.
     _player_js = (ROOT / "skribl" / "templates" / "skribl" / "skribl_player.html").read_text(encoding="utf-8")
-    # v273: this named FOUR carves in a hardcoded tuple while NINE editor_*.js
+    # This named FOUR carves in a hardcoded tuple while NINE editor_*.js
     # files existed, so editor_draft, editor_export, editor_menu, editor_post and
     # editor_tune could each have drifted back onto the player with nothing to
     # catch it — and a tenth carve would have been unguarded on the day it landed.

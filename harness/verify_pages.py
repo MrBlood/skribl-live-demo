@@ -55,7 +55,7 @@ with sync_playwright() as p:
     errs = []
     flip.on("pageerror", lambda e: errs.append(str(e)))
     browsing.goto(flip, BASE, "/flip")
-    # v205: the intro toast is a center panel that does NOT auto-dismiss, so it
+    # The intro toast is a center panel that does NOT auto-dismiss, so it
     # sits over the canvas until closed. Dismiss it before drawing, or every
     # draw() lands on the panel instead of the canvas.
     flip.evaluate("() => { try { localStorage.setItem('skribl_hints_seen_v1',"
@@ -68,7 +68,7 @@ with sync_playwright() as p:
         draw(flip, "#pad", 70 + i * 30, 90, n=10 + i * 6)
 
     print("\nONION — depth and tint")
-    # v129: onion depth/tint moved out of the header into the settings drawer, so
+    # Onion depth/tint moved out of the header into the settings drawer, so
     # they are opened rather than revealed, and the row DIMS when onion is off
     # instead of hiding (hiding made the panel jump height while toggling).
     flip.click("#tuneBtn")
@@ -134,7 +134,7 @@ with sync_playwright() as p:
         else { window.__stableH = h; window.__stableN = 0; }
         return window.__stableN >= 3;
     }""", polling=100, timeout=8000)
-    # v130: the drawer animates (grid-template-rows), so state is a CLASS, not the
+    # The drawer animates (grid-template-rows), so state is a CLASS, not the
     # hidden attribute — and closed must mean zero height, not merely not-open.
     check("the drawer closes again",
           flip.evaluate("() => !document.getElementById('tuneShell').classList.contains('open')"))
@@ -166,7 +166,7 @@ with sync_playwright() as p:
     check("the page you were on stays the page you're on",
           flip.evaluate("() => idx") == cur - 1, f"idx {cur} -> {flip.evaluate('() => idx')}")
 
-    # v124: per-page controls moved OUT of the tile into #pagebar, so the guards
+    # Per-page controls moved OUT of the tile into #pagebar, so the guards
     # are asserted there. The thumbnail carries no controls at all now.
     flip.evaluate("() => go(0)"); flip.wait_for_timeout(250)
     check("Move-left is disabled on the first page",
@@ -200,7 +200,7 @@ with sync_playwright() as p:
               .every(b => b.getBoundingClientRect().height >= 38)"""))
     # margin-left:auto resolves to a pixel value, so assert the OUTCOME — a real
     # gap between Delete and its neighbour — rather than the declaration.
-    # v226: pbHold retired to the tile's own badge, so Delete's left-hand
+    # PbHold retired to the tile's own badge, so Delete's left-hand
     # neighbour is Copy now. Still asserting the OUTCOME — a real gap —
     # rather than which button happens to sit beside it.
     check("Delete is visually separated from the other actions",
@@ -565,7 +565,7 @@ with sync_playwright() as p:
               _label.lower() in left["names"][_id].lower(),
               f"reads {left['names'][_id]!r}")
 
-    # v295: THE NAME WAS THE PROMISE. This effect integrates the whole path
+    # THE NAME WAS THE PROMISE. This effect integrates the whole path
     # between two poses; "in-between" is an animator's word for one intermediate
     # POSE, which it has never produced. The label was the only thing that said
     # otherwise, so nothing a user can read on these controls may say it again --

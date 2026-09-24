@@ -110,7 +110,7 @@ check("no document references a harness suite that does not exist",
 # in the repo, not just DOCS: a suite documented only in e.g. DECISIONS.md is
 # documented.
 #
-# v281: GENERATED DOCUMENTS DO NOT COUNT AS DOCUMENTATION, and until now they
+# GENERATED DOCUMENTS DO NOT COUNT AS DOCUMENTATION, and until now they
 # did. harness/RELEASE.md carries a per-suite results table listing every suite
 # by construction, so "named in at least one .md" was satisfied for ANY suite
 # the moment a release run finished — including 17 that no hand-written
@@ -144,7 +144,7 @@ check("every harness suite on disk is named in at least one .md",
       not _undocumented,
       ", ".join(_undocumented) + " — add each to harness/README.md at least")
 
-# v223: the same rule for the SHARED MODULES, and for the same reason. lib/ is
+# The same rule for the SHARED MODULES, and for the same reason. lib/ is
 # where a rule lives once instead of twice, so a module nobody can find is a
 # module that gets reimplemented in one of the two editors — which is the exact
 # drift verify_parity.py and verify_sharedrules.py exist to catch. Eight of the
@@ -210,7 +210,7 @@ gone = sorted(p for p in paths if not _resolves(p))
 check("no document names a repo file that is not there",
       not gone, ", ".join(gone))
 
-# v273: the reverse of the check above, in two dimensions the docs had drifted
+# The reverse of the check above, in two dimensions the docs had drifted
 # on unnoticed. Both were found by cross-checking the tree against every .md and
 # both had real gaps; neither could have been found by reading, because what is
 # missing from a document is invisible while you read it.
@@ -264,7 +264,7 @@ check("every SKRIBL_* the code reads is named in a doc or .env.example",
       not _undoc_env,
       ", ".join(_undoc_env) + " — a knob nobody can find is a knob nobody sets")
 
-# v273: the harness's own dependencies were declared NOWHERE until this release.
+# The harness's own dependencies were declared NOWHERE until this release.
 # harness/README.md said `pip install flask_sqlalchemy` — one package of the
 # eight a run needs — and neither Playwright nor Pillow appeared in any file. A
 # release run reached batch 42 of 44 before dying on the absence of Pillow, and
@@ -1260,7 +1260,7 @@ else:
           f"{_all_runners - _std_runners} non-standard runner(s) — a cost "
           "claim is sayable again, so the check above stands down")
 
-# v273: CLAUDE.md has always said "no doc may hand-type a tree hash or an
+# CLAUDE.md has always said "no doc may hand-type a tree hash or an
 # assertion count outside the generated stanza". The tree-hash half was
 # enforced below; the assertion-count half never was, and the audit found
 # THIRTY-SIX typed per-suite counts across six files with TWENTY-EIGHT of them
@@ -1325,7 +1325,7 @@ CLAIMS = [
      ("skribl/static/lib/eventpoint.js", r"targetTouches"),
      [r"Migrate to Pointer Events",
       r"pointer identity[^.\n]{0,60}(prerequisite|not deferrable|still open)",
-      # v273: and these missed START-HERE's known-open 5, which called the
+      # And these missed START-HERE's known-open 5, which called the
       # touches[0] lead "UNTESTED" for the several releases after v264 tested,
       # measured and fixed it. A session read that entry and went looking for a
       # bug that was already closed. Name the MECHANISM, not the conclusion.
@@ -1335,7 +1335,7 @@ CLAIMS = [
      ("harness/verify_postgres.py", r"no OVER-admission"),
      [r"NOT yet verified on PostgreSQL across processes",
       r"not[^.\n]{0,30}verified[^.\n]{0,40}across processes",
-      # v273: the two above missed START-HERE's known-open 4, which read
+      # The two above missed START-HERE's known-open 4, which read
       # "PostgreSQL is UNVERIFIED, not passing" for the several releases AFTER
       # the suite started passing. Neither pattern contains the word the writer
       # actually reached for. Match the CAPABILITY plus a denial word near it,

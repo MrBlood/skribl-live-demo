@@ -163,7 +163,7 @@ with sync_playwright() as p:
             .filter(t => MediaRecorder.isTypeSupported(t)); }""")
     check("MediaRecorder has at least one usable type", bool(mr), str(mr))
 
-    # v104: gifenc is vendored too, so this flipped from "undefined, and that is
+    # Gifenc is vendored too, so this flipped from "undefined, and that is
     # handled" to "present". The encoder itself is exercised in verify_gifenc.py;
     # all this needs to pin is that the second vendored library didn't disturb the
     # first, and that no jsdelivr script origin survives on the page.

@@ -102,7 +102,7 @@ with sync_playwright() as p:
           f"{pad_sizes} vs {flip_sizes}")
     fp.close()
 
-    # v269: the default is the preset bestFor() picks for Pad's band — a real
+    # The default is the preset bestFor() picks for Pad's band — a real
     # table row chosen by fit, never a viewport echo.
     _pfit = pg.evaluate("""() => {
         const t = window.SkriblCanvasSizes;

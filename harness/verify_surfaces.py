@@ -71,7 +71,7 @@ shared = sorted(app_fns & flip_fns)
 # genuinely draw strokes — and collapsing it is a redesign, not a cleanup. The
 # number is here so that it goes DOWN over time and so that anyone adding the
 # 58th parallel implementation has to change this line and think about why.
-# v211: 57 -> 58. The new shared name is startLoopPreviewNative — the native
+# 57 -> 58. The new shared name is startLoopPreviewNative — the native
 # <audio> fallback for Preview Loop, reachable asynchronously when Web Audio
 # cannot unlock — added to BOTH editors by the v210 review's F1 (Flip) after
 # Pad got it in v209. That is exactly the "fix made twice" this ratchet exists
@@ -80,7 +80,7 @@ shared = sorted(app_fns & flip_fns)
 # Audio loop into a shared lib (an old handoff's suggestion), which would take
 # startWebAudioLoop, stopWebAudioLoop, webAudioLoopSongTime, and this
 # fallback OUT of both files and move this number the right way.
-# v213: 58 -> 60. The two new shared names are _eraserSize and _brushWidth.
+# 58 -> 60. The two new shared names are _eraserSize and _brushWidth.
 #
 # THINKING ABOUT WHY, which is what this line is for. Both are four-line
 # ADAPTERS, not parallel implementations: the eraser multiplier lives once in
