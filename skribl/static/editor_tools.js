@@ -4,7 +4,7 @@
 // the PLAYER downloaded, parsed and then did nothing with — every branch in it
 // is guarded on an element or a lib that the player template does not have:
 //
-//   smoothSeg  + lib/smoothing.js      brushSeg   + lib/brush.js
+//   smoothSeg  + lib/smoothing.js      brushSeg   + lib/brushes.js
 //   eraserSeg  + lib/erasersize.js     pressureSeg + lib/pressure.js
 //   eyedropperBtn + lib/eyedropper.js  clearDrawerBtn
 //

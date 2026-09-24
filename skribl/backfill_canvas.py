@@ -57,7 +57,7 @@ import sys
 from sqlalchemy import text
 
 from .models import session as resolve_session
-from .sweep import EXIT_CANNOT_RUN, _die, _load_app
+from .sweep import _die, _load_app
 from .validation import _payload_canvas
 
 EXIT_OK = 0

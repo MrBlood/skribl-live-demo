@@ -329,13 +329,35 @@ print("\nSURFACES — stylesheets keep no rule nothing can match")
 _SHEETS = sorted(_ST.rglob("*.css"))
 _decomment = lambda t: re.sub(r"/\*.*?\*/", "", t, flags=re.S)
 
-_applied = []
+# WHAT COUNTS AS APPLYING A CLASS, and three separate things about it were
+# wrong. NO CLASS NAME IS SPELLED IN THIS NOTE, deliberately: the haystack
+# below is every .py in the tree, so an example written here would be the
+# evidence that keeps its own subject alive. That is the third mistake, and it
+# was made while fixing the first two.
+#
+# A SUBSTRING IS NOT A TOKEN. Membership by `in` reports a class as applied
+# whenever some LONGER name ends with it -- a different class sharing a tail.
+# This project's own rule about absence checks ("match the tag, the token, the
+# parsed structure -- never the human sentence around it") was broken in the
+# gate written to enforce it, and three rule-sets hid there. Class names are
+# tokens, and `-` is not a word character, so the boundary must exclude it.
+#
+# AND A GENERATED FILE MUST NOT VOUCH FOR ITS OWN INPUT. cssgraph's recorded
+# live-selector set is derived FROM these sheets, so including it let every
+# dead selector cite its own reflection as proof it was alive. Nine more
+# rule-sets hid behind that, a whole retired drawer among them. Prose stays --
+# a class named in DECISIONS.md or in a suite is usually a real reference --
+# but nothing generated from the stylesheets may be evidence about them.
+_GENERATED = {ROOT / "harness" / "tools" / "css_live.json"}
+_applied_tokens = set()
 for _p in ROOT.rglob("*"):
     if not _p.is_file() or ".git" in _p.parts or "__pycache__" in _p.parts:
         continue
+    if _p in _GENERATED:
+        continue
     if _p.suffix in (".html", ".js", ".py", ".md", ".txt", ".json", ".yml", ".yaml", ".sh"):
-        _applied.append(_p.read_text(encoding="utf-8", errors="ignore"))
-_applied = "".join(_applied)
+        _applied_tokens |= set(re.findall(r"[A-Za-z][\w-]*",
+                                          _p.read_text(encoding="utf-8", errors="ignore")))
 
 def _rulesets(css):
     """(selector, depth) for every rule-set, at any nesting depth."""
@@ -360,7 +382,7 @@ for _sheet in _SHEETS:
         _parts = [q.strip() for q in _clean.split(",") if q.strip()]
         if not _parts:
             continue
-        if all(any(c not in _applied
+        if all(any(c not in _applied_tokens
                    for c in re.findall(r"\.([a-z][a-z0-9-]{2,})", q)) and
                re.findall(r"\.([a-z][a-z0-9-]{2,})", q)
                for q in _parts):

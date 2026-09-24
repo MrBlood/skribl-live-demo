@@ -2407,34 +2407,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .nudge-btn:hover { background: var(--line); color: var(--text-strong); }
 .nudge-btn:active { background: var(--ui-active); color: #fff; }
 
-.step-btn {
-  width: 22px;
-  height: 22px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--line);
-  color: var(--text-tool);
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.step-btn:hover {
-  background: var(--line-strong);
-  color: #fff;
-}
-
-.step-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
 .zoom-handle[hidden] { display: none; }
 
 .zoom-handle {
@@ -2538,7 +2510,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    stacked sliders 12px apart therefore had bands overlapping by 10px, and where
    two hit areas overlap the winner is DOM order -- so the lower slider was
    quietly taking the bottom of the upper one's band. 22 is exactly the two
-   overhangs, and it is the number that lets Zoom and Blur drop .slider-tight. */
+   overhangs, and it is the number that lets Zoom and Blur take a full band
+   instead of opting out of one. */
 .photo-opacity-row + .photo-opacity-row {
   margin-top: 22px;
 }
@@ -2605,28 +2578,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   margin-bottom: -11px;
   background: transparent;
   cursor: pointer;
-}
-
-/* THE EXCEPTIONS, and each is a measured collision rather than a preference.
-   A 44px box on these overlaps a NEIGHBOURING control, and where two hit areas
-   overlap the winner is decided by DOM order and stacking -- so growing them
-   would silently move a tap target rather than enlarge it:
-
-     shapeSides vs Sides/Corners  5-7px   shapeSides vs the kind buttons 1-7px
-
-   photoZoom and photoBlur were on this list and are not any more: v258 gave the
-   image drawer the row spacing the note asked for -- 22px between sliders, which
-   is exactly the two 11px overhangs, plus clearance above the first and below
-   the last -- and both now carry a full 44px band that belongs to them at every
-   sampled point.
-
-   The fix for the two that remain is row spacing in the shape popover, which is
-   a layout change and is not smuggled in here. Until then they keep the 22px box
-   they shipped with. */
-.slider.slider-tight {
-  height: 22px;
-  margin-top: 0;
-  margin-bottom: 0;
 }
 
 .slider:focus,
@@ -3074,9 +3025,6 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
    size is brought into line. */
 .header .icon-btn { width: 44px; height: 44px; }
 .header .icon-btn svg { width: 24px; height: 24px; }
-/* Flip Mode entry point — an <a> styled as an icon button. */
-.flip-btn { text-decoration: none; }
-.flip-btn svg { width: 24px; height: 24px; }
 .icon-btn:active { transform: scale(0.94); }
 /* ---- Unified header-button hover (v90) --------------------------------------
    Goal: every header button lifts by the SAME subtle amount as Record always did,
@@ -4958,13 +4906,13 @@ a.player-btn { text-decoration: none; }
   }
   .duration-badge { display: none !important; }
 
-  /* A — while recording, hide Help + ⋯ + canvas-settings so the timer/stop
-     never overflow the header. They return the moment recording stops.
-     Magnifier stays. The tune (canvas-settings) button joined this set in
-     v204-fix: it added ~40px to the header and is meaningless mid-record
-     (you do not adjust the grid while capturing), and its width was pushing
-     the record indicator onto the wordmark at ~600px. */
-  body.recording #helpBtn,
+  /* A — while recording, hide ⋯ and canvas-settings so the timer/stop never
+     overflow the header. They return the moment recording stops. Magnifier
+     stays. The tune (canvas-settings) button is in this set because it adds
+     ~40px to the header and is meaningless mid-record — you do not adjust the
+     grid while capturing — and its width pushed the record indicator onto the
+     wordmark at ~600px. Help left the header for the ⋯ menu, so it is not
+     here: #menuBtn hides the row it now lives in. */
   body.recording #tuneBtn,
   body.recording #menuBtn { display: none; }
 }

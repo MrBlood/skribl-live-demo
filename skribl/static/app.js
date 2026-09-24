@@ -960,10 +960,8 @@ bindEl('colorGroup', 'click', (e) => {
   updateCurrentColorChip();
 });
 
-// Reflect the active pen color on the always-visible chip in the More tools toggle.
+// Reflect the active pen colour on the tool shelf's chip.
 function updateCurrentColorChip() {
-  const chip = document.getElementById('currentColorChip');
-  if (chip) chip.style.background = color;
   const toolChip = document.getElementById('toolColorChip');
   if (toolChip) toolChip.style.background = color;
 }
@@ -1164,23 +1162,6 @@ function stopPicking() {
 // The "More" drawer's wiring lived here and is now editor_tools.js — every
 // branch in it was guarded on an element or a lib the player does not load, so
 // the player was parsing ~4.9 KB to run nothing. See that file's header.
-const tabSlider = document.getElementById('tabSlider');
-const tabBgSlider = document.getElementById('tabBgSlider');
-
-function updateTabSlider(activeBtn) {
-  if (!tabSlider || !activeBtn) return;
-  tabSlider.style.width = activeBtn.offsetWidth + 'px';
-  tabSlider.style.transform = `translateX(${activeBtn.offsetLeft}px)`;
-  if (tabBgSlider) {
-    tabBgSlider.style.width = activeBtn.offsetWidth + 'px';
-    tabBgSlider.style.transform = `translateX(${activeBtn.offsetLeft}px)`;
-  }
-}
-
-setTimeout(() => {
-  updateTabSlider(document.querySelector('.tab-btn.active'));
-}, 50);
-
 // Toolbar drawers: the exclusive-open machine lives in lib/drawers.js
 // (shared with Flip); only Pad's hooks and its scroll behaviour are here.
 // Per-name hooks below reproduce the old openDrawer() exactly: leaving any
@@ -2795,7 +2776,6 @@ function canEncodeWebP() {
 }
 
 // Pure geometry: target draw size preserving aspect ratio, never upscaling.
-// Mirrored by tooling/photo_resize_test.js — keep that copy in sync if you edit.
 function photoTargetDims(w, h, maxEdge) {
   if (!w || !h) return { w: w || 0, h: h || 0 };
   const longest = Math.max(w, h);
@@ -5468,21 +5448,6 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
   if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
 })();
 
-// The inspector describes the ACTIVE MODE only. Absent, not greyed: a greyed
-// control still costs a glance and still invites a tap, and showing colour or
-// brush while the eraser is selected is a small lie about what the tool does.
-function syncInspectorToTool(nextTool) {
-  const eraser = nextTool === 'eraser';
-  ['colorGroup', 'bgGroup', 'paintTargetSeg', 'brushRow', 'opacityRow'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (id === 'colorGroup')      el.hidden = eraser || el.dataset.target !== currentPaintTarget();
-    else if (id === 'bgGroup')    el.hidden = eraser || el.dataset.target !== currentPaintTarget();
-    else                          el.hidden = eraser;
-  });
-  const er = document.getElementById('eraserRow');
-  if (er) er.hidden = !eraser;
-}
 function currentPaintTarget() {
   const on = document.querySelector('#paintTargetSeg button.active');
   return on ? on.dataset.target : 'stroke';

@@ -11,7 +11,6 @@ route by literal path any more — see the context processor in __init__.py.
 """
 import base64
 import binascii
-import os
 from datetime import datetime, timedelta, timezone
 
 from flask import (abort, current_app, g, jsonify, redirect, render_template,
@@ -22,13 +21,12 @@ import sqlalchemy as sa
 
 from .core import (HOT_DAYS, MAX_REPORT_NOTE_CHARS, REPORT_REASONS,
                    MAX_CARD_BYTES,
-                   OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE, SKRIBL_VERSION,
                    THEME_GROUND, _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblReport, SkriblView,
                      _visibility_policy, as_utc, normalise_user_id,
                      session, feed_filter, author_dict)
 from .views import purge_views
-from .storage import KEY_RE, LocalDiskStore
+from .storage import KEY_RE
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_key, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
 from .validation import _decode_data_url_image

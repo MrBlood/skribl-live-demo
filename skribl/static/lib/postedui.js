@@ -263,10 +263,16 @@
   function init(opts) {
     opts = opts || {};
     var store = global.SkriblPosted;
-    var drawer = document.getElementById('postedDrawer') || document.getElementById('postedPanel');
+    /* THE PANEL IS A SECTION ON A PAGE, NOT A DIALOG. "Your Skribls" was a
+       drawer inside the editors until it became the profile page; the drawer's
+       markup went with it and this module kept its open/close machinery, gated
+       on a `role="dialog"` no live element carries. Nothing called open() or
+       close() either -- every caller uses render() -- so the whole apparatus
+       ran never: two listeners on ids the tree does not create, an Escape
+       branch behind a false flag, and six rule-sets in posted.css that styled
+       the shell. Removed together, markup, script and style. */
+    var drawer = document.getElementById('postedPanel');
     if (!store || !drawer) return null;
-
-    var isDialog = drawer.getAttribute('role') === 'dialog';
     var source = typeof opts.source === 'function' ? opts.source : null;
     var poster = typeof opts.poster === 'function' ? opts.poster : null;
     var onSelect = typeof opts.onSelect === 'function' ? opts.onSelect : null;
@@ -275,8 +281,6 @@
     var countEl = document.getElementById('postedCount');
     var searchEl = document.getElementById('postedSearch');
     var clearEl = document.getElementById('postedClear');
-    var backdrop = document.getElementById('postedBackdrop');
-    var closeEl = document.getElementById('postedClose');
     var recoverEl = document.getElementById('postedRecover');
     var undoEl = document.getElementById('postedUndo');
     var undoMsgEl = document.getElementById('postedUndoMsg');
@@ -345,29 +349,6 @@
                  + (p.entry.tok ? 'The key is ' + p.entry.tok : ''));
       }
     });
-
-    function open() {
-      if (!isDialog) { render(); return; }
-      drawer.hidden = false;
-      drawer.classList.add('open');
-      render();
-      /* The manual focus stays — search is the right first stop here and
-         modalfocus would pick whatever comes first in the DOM. What was
-         missing is everything around it: Tab escaped into the page behind,
-         and closing dropped focus entirely. SkriblModal.open() installs the
-         trap and remembers the opener; the timeout then moves focus on to
-         search inside the same dialog, which the trap is happy with. */
-      if (global.SkriblModal) global.SkriblModal.open(drawer);
-      if (searchEl) setTimeout(function () { try { searchEl.focus(); } catch (e) {} }, 40);
-    }
-
-    function close() {
-      if (!isDialog) return;
-      drawer.classList.remove('open');
-      drawer.hidden = true;
-      if (searchEl) searchEl.value = '';
-      if (global.SkriblModal) global.SkriblModal.close(drawer);
-    }
 
     function copy(text, btn) {
       /* THE LABEL, NOT THE BUTTON. This wrote btn.textContent, which was fine
@@ -747,8 +728,6 @@
     if (recoverEl) recoverEl.addEventListener('click', function () {
       if (global.SkriblRecoveryKey) global.SkriblRecoveryKey.openRecover();
     });
-    if (closeEl) closeEl.addEventListener('click', close);
-    if (backdrop) backdrop.addEventListener('click', close);
     if (clearEl) clearEl.addEventListener('click', function () {
       /* KEYS ARE NOT HISTORY, AND THIS CONTROL USED TO TREAT THEM AS HISTORY.
          Two taps emptied the whole store — including every revocation key —
@@ -779,12 +758,8 @@
         }, 3000);
       }
     });
-    document.addEventListener('keydown', function (e) {
-      if (isDialog && e.key === 'Escape' && !drawer.hidden && (!searchEl || !searchEl.value)) close();
-    });
-
     render();
-    return { open: open, close: close, render: render };
+    return { render: render };
   }
 
   global.SkriblPostedUI = { init: init, copyText: copyText };

@@ -26,7 +26,6 @@ from sqlalchemy import (Boolean, CheckConstraint, Column, DateTime,
                         String)
 from sqlalchemy import event
 from sqlalchemy.types import TypeDecorator
-from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase
 
 
