@@ -292,69 +292,139 @@
        A control that keeps a copy is a control that lies the moment anything
        else moves the thing it is about — a replay ending, a row being swapped
        under the stage, another post claiming the page's sound. */
+    /* WRITE ONLY WHAT CHANGED, and this is not a micro-optimisation -- it is
+       why the speed button did not answer a press.
+     *
+     * `sync()` runs on a FRAME while the drawing plays, and it used to assign
+     * every label, icon and title unconditionally. `innerHTML =` and
+     * `textContent =` REPLACE a node's children even when the new value is
+     * identical, so the bar tore its own buttons apart and rebuilt them about
+     * 67 times a second. Measured on a playing card: 1,750 DOM mutation
+     * records per second, 134 rebuilds of the play and mute buttons in two
+     * seconds, and the rate button's own contents replaced under the pointer.
+     *
+     * A press whose element is removed and re-inserted between the mousedown
+     * and the mouseup produces NO CLICK -- the node keeps its listeners, so
+     * pointerdown and pointerup still arrive, which is exactly what the
+     * owner's console showed: six down/up pairs in a row with no click
+     * between them, then one that got through. "It works sometimes" is what a
+     * race against a 60Hz rebuild looks like from the outside.
+     *
+     * The title writes had a second cost: `lib/tooltip.js` watches the
+     * `title` attribute, so 345 title writes a second woke its observer 345
+     * times a second to move the same string to `data-tip` and strip it
+     * again, which sync then restored on the next frame. The two modules were
+     * fighting each other at frame rate.
+     *
+     * So: compare first, assign only on a difference. The bar reads the same
+     * and stops rebuilding itself. */
+    /* COMPARING AGAINST THE DOM IS NOT ENOUGH, and both exceptions cost a
+       frame's worth of rebuilding until they were found by measuring again
+       after the first attempt:
+
+       `innerHTML` RE-SERIALISES. The value read back is the browser's own
+       spelling of the markup -- attribute order and self-closing tags
+       normalised -- so `el.innerHTML !== ICON.play` was true every time for an
+       icon that had not changed, and the guard rebuilt exactly what it was
+       meant to protect. Remember the string we SET instead.
+
+       AND THE TITLE IS NOT OURS ALONE. `lib/tooltip.js` moves `title` to
+       `data-tip` and removes it, on purpose, so the native bubble cannot
+       stack under the drawn one -- which means `el.title` reads back empty
+       for a title that is perfectly current, and a DOM comparison re-set it
+       on every frame, waking that module's observer to strip it again. The
+       two were fighting at frame rate. Comparing against our own last value
+       ends it, and updating `data-tip` where tooltip has taken over keeps the
+       drawn bubble honest. */
+    function setHTML(el, html) {
+      if (el._skHTML === html) return;
+      el._skHTML = html;
+      el.innerHTML = html;
+    }
+    function setText(el, txt) { if (el.textContent !== txt) el.textContent = txt; }
+    function attr(el, name, val) {
+      if (el.getAttribute(name) !== val) el.setAttribute(name, val);
+    }
+    function title(el, txt) {
+      if (el._skTitle === txt) return;
+      el._skTitle = txt;
+      if (el.hasAttribute('data-tip')) el.setAttribute('data-tip', txt);
+      else el.title = txt;
+    }
+    /* Title and aria-label travel together everywhere in this bar. */
+    function label(el, txt) { title(el, txt); attr(el, 'aria-label', txt); }
+
     function sync() {
       var pl = player();
       var st = pl ? pl.state() : null;
       var playing = !!st && st.state === 'playing';
-      bPlay.innerHTML = playing ? ICON.pause : ICON.play;
-      bPlay.title = playing ? 'Pause' : 'Play';
-      bPlay.setAttribute('aria-label', bPlay.title);
+      setHTML(bPlay, playing ? ICON.pause : ICON.play);
+      label(bPlay, playing ? 'Pause' : 'Play');
 
       var loop = !!(pl && pl.looping());
       bLoop.classList.toggle('on', loop);
-      bLoop.setAttribute('aria-pressed', String(loop));
-      bLoop.title = loop ? 'Repeating' : 'Plays once';
+      attr(bLoop, 'aria-pressed', String(loop));
+      title(bLoop, loop ? 'Repeating' : 'Plays once');
 
       var SI = global.SkriblInline;
       var on = !!(SI && SI.soundOn());
       var has = !!(st && st.hasAudio);
-      bMute.innerHTML = on ? ICON.sound : ICON.muted;
-      bMute.disabled = !has;
-      bMute.title = !has ? 'This Skribl has no sound' : (on ? 'Sound is on' : 'Sound is off');
-      bMute.setAttribute('aria-label', bMute.title);
-      bMute.setAttribute('aria-pressed', String(!on));
+      setHTML(bMute, on ? ICON.sound : ICON.muted);
+      if (bMute.disabled !== !has) bMute.disabled = !has;
+      label(bMute, !has ? 'This Skribl has no sound' : (on ? 'Sound is on' : 'Sound is off'));
+      attr(bMute, 'aria-pressed', String(!on));
 
       var r = pl ? pl.rate() : 1;
-      bRate.textContent = r === 0.5 ? '½×' : r + '×';
-      bRate.title = 'Speed: ' + bRate.textContent + ' — tap to change';
-      bRate.setAttribute('aria-label', bRate.title);
+      setText(bRate, r === 0.5 ? '½×' : r + '×');
+      label(bRate, 'Speed: ' + bRate.textContent + ' — tap to change');
 
       var total = (st && st.totalMs) || 0;
       var el = (st && st.elapsedMs) || 0;
-      fill.style.width = (total ? Math.min(1, el / total) * 100 : 0) + '%';
-      at.textContent = mmss(el);
+      var w = (total ? Math.min(1, el / total) * 100 : 0) + '%';
+      if (fill.style.width !== w) fill.style.width = w;
+      setText(at, mmss(el));
       /* A card answers "how long is this"; full screen answers "where am I",
          and shows both. */
-      dur.textContent = ownRow ? mmss(total)
-        : (playing || el > 0 ? mmss(el) + ' / ' + mmss(total) : mmss(total));
-      track.setAttribute('aria-valuenow', String(Math.round(total ? el / total * 100 : 0)));
+      setText(dur, ownRow ? mmss(total)
+        : (playing || el > 0 ? mmss(el) + ' / ' + mmss(total) : mmss(total)));
+      attr(track, 'aria-valuenow', String(Math.round(total ? el / total * 100 : 0)));
 
       if (made.full) {
         var big = !!(opts.isFull && opts.isFull());
-        made.full.setAttribute('aria-pressed', String(big));
-        made.full.title = big ? 'Leave full screen' : 'Full screen';
-        made.full.setAttribute('aria-label', made.full.title);
+        attr(made.full, 'aria-pressed', String(big));
+        label(made.full, big ? 'Leave full screen' : 'Full screen');
       }
 
       if (!showWho) return;
       var m = getMeta() || {};
-      tTitle.textContent = m.title || 'Untitled Skribl';
-      tWho.textContent = m.name ? (m.handle ? m.name + ' · ' + m.handle : m.name)
-                                : (m.handle || '');
-      tWho.hidden = !tWho.textContent;
-      av.textContent = '';
-      av.hidden = !m.name && !m.handle;
-      if (m.avatar) {
-        var img = doc.createElement('img');
-        img.src = m.avatar;
-        img.alt = '';
-        img.addEventListener('error', function () {
-          img.remove();
+      setText(tTitle, m.title || 'Untitled Skribl');
+      setText(tWho, m.name ? (m.handle ? m.name + ' · ' + m.handle : m.name)
+                           : (m.handle || ''));
+      if (tWho.hidden !== !tWho.textContent) tWho.hidden = !tWho.textContent;
+      var wantHidden = !m.name && !m.handle;
+      if (av.hidden !== wantHidden) av.hidden = wantHidden;
+      /* THE AVATAR IS REBUILT ONLY WHEN THE PERSON CHANGES. It used to be
+         emptied and re-made on every call -- and on a bar that syncs per
+         frame that is a NEW <img> element, with a new src and a new error
+         listener, sixty times a second for a picture that never changed.
+         The key is what the avatar is FOR: this person's face. While that
+         string holds, the node already on screen is correct. */
+      var key = (m.avatar || '') + '|' + (m.name || '') + '|' + (m.handle || '');
+      if (av._skKey !== key) {
+        av._skKey = key;
+        av.textContent = '';
+        if (m.avatar) {
+          var img = doc.createElement('img');
+          img.src = m.avatar;
+          img.alt = '';
+          img.addEventListener('error', function () {
+            img.remove();
+            av.textContent = (m.name || m.handle || '?').replace('@', '').charAt(0).toUpperCase();
+          });
+          av.appendChild(img);
+        } else if (!wantHidden) {
           av.textContent = (m.name || m.handle || '?').replace('@', '').charAt(0).toUpperCase();
-        });
-        av.appendChild(img);
-      } else if (!av.hidden) {
-        av.textContent = (m.name || m.handle || '?').replace('@', '').charAt(0).toUpperCase();
+        }
       }
     }
 

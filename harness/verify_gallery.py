@@ -1838,10 +1838,36 @@ with sync_playwright() as _spa:
           f"busiest footer rewrote itself {_pace['worst']} times in {PACE_MS} ms "
           f"across {_pace['tiles']} cards (budget {_budget}) — a frame loop is "
           f"~{round(PACE_MS * 0.06)} and is what this row exists to catch")
+    # NOT "it wrote something", WHICH IS THE PROXY THIS ROW USED TO TRUST.
+    # It counted DOM rewrites as evidence the bar was still following the
+    # clock -- and the comment above it already foresaw the flaw: "a later
+    # rewrite that keeps rAF but skips the writes would still be cheap, and
+    # should still pass." v311 is that rewrite. `sync()` now compares before
+    # it assigns, because writing unconditionally on a frame loop was tearing
+    # the buttons apart under the pointer and eating clicks. A stopped bar and
+    # a bar with nothing to change look identical through a MutationObserver.
+    #
+    # So ask the question the row actually means: change something the bar
+    # REFLECTS, and see whether it notices. Sound is the page-wide fact the
+    # original note names, and the mute control is where it lands.
+    _resp = _pa.evaluate("""async () => {
+        const f = document.querySelector('.tile .skfull-card');
+        const m = f && f.querySelector('.skfull-mute');
+        const SI = window.SkriblInline;
+        if (!f || !m || !SI) return { missing: true };
+        const before = m.innerHTML;
+        SI.setSoundOn(!SI.soundOn());
+        await new Promise(r => setTimeout(r, 600));
+        const after = m.innerHTML;
+        SI.setSoundOn(!SI.soundOn());
+        await new Promise(r => setTimeout(r, 600));
+        return { changed: before !== after, restored: m.innerHTML === before };
+    }""")
     check("...and they are still following it, not stopped dead",
-          _pace["total"] > 0,
-          f"{_pace} — a bar that never syncs cannot notice another post "
-          f"claiming the page's sound, and would pass the row above trivially")
+          _resp.get("changed") is True and _resp.get("restored") is True,
+          f"{_resp!r} — the bar must still notice another post claiming the "
+          f"page's sound; a bar that never syncs would pass the row above "
+          f"trivially, and this is the fact it would miss")
 
     # WHERE THE POSTER IS PAINTED, scanned rather than read off its rect --
     # `clip-path` is the one property that makes a rect a lie by construction,
@@ -2861,6 +2887,85 @@ with sync_playwright() as _spt:
           f"gesture; that is the owner's 'takes pushing it many times'")
     _pt.close()
     _bt.close()
+
+
+
+print("\nGALLERY — the transport does not rebuild itself under the pointer")
+# THE OWNER'S CONSOLE FOUND THIS, not the suite: pointerdown and pointerup on
+# the speed button, over and over, with NO CLICK between them, and then one
+# press that got through. That is what a race looks like from the outside, and
+# the race was the bar against itself.
+#
+# `sync()` runs on a FRAME while a drawing plays and assigned every icon,
+# label and title unconditionally. `innerHTML =` and `textContent =` replace a
+# node's children even when the value is identical, so the bar tore its own
+# buttons apart about 67 times a second. A press whose element is removed and
+# re-inserted between the mousedown and the mouseup yields NO CLICK -- the node
+# keeps its listeners, so the pointer events still arrive, which is exactly
+# what the console showed.
+#
+# Measured on a playing card: 3,509 mutation records and 690 title writes in
+# two seconds, against 365 and 0 once the writes were guarded.
+#
+# THE GUARD ITSELF HAD TWO TRAPS, and both were found by measuring again rather
+# than by reading: `innerHTML` reads back RE-SERIALISED, so comparing against
+# it never matched; and `lib/tooltip.js` deliberately removes `title`, so
+# comparing against the DOM re-set it every frame and woke that module to strip
+# it again. This asserts the OUTCOME -- no churn -- so any future guard that
+# looks right and does not work is still caught.
+_CHURN = r"""async (ms) => {
+    const btn = [...document.querySelectorAll('.skfull-rate')]
+                  .find(b => b.offsetParent !== null);
+    if (!btn) return { missing: true };
+    const stage = btn.closest('.skfull-host');
+    const box = stage && stage.querySelector('.skribl-inline');
+    const pl = box && box._skriblInline;
+    if (!pl) return { missing: true };
+    if (pl.state().state !== 'playing') pl.play && pl.play();
+    const seen = { controls: 0, records: 0 };
+    const mo = new MutationObserver(list => {
+        seen.records += list.length;
+        list.forEach(m => {
+            if (m.type !== 'childList') return;
+            const t = m.target;
+            /* A CONTROL rebuilding its own contents is the defect; the clock's
+               own text is not, because the clock genuinely changes. */
+            if (t.nodeType === 1 && t.closest && t.closest('.skfull-btn')) seen.controls++;
+        });
+    });
+    mo.observe(stage, { subtree: true, childList: true, attributes: true });
+    await new Promise(r => setTimeout(r, ms));
+    mo.disconnect();
+    seen.playing = pl.state().state === 'playing';
+    return seen;
+}"""
+with sync_playwright() as _spc:
+    _bc = _spc.chromium.launch()
+    _pc = _bc.new_context(viewport={"width": 1280, "height": 900}).new_page()
+    post_public_api("churn fixture")
+    browsing.goto(_pc, BASE, "/gallery")
+    _pc.wait_for_timeout(1800)
+    _pc.evaluate("""() => { const t = document.querySelector('.tile');
+        t.scrollIntoView({block:'center'});
+        t.querySelector('.skfull-card .skfull-full').click(); }""")
+    _pc.wait_for_timeout(900)
+    _c = _pc.evaluate(_CHURN, 1500)
+    check("the churn probe found a playing drawing to measure",
+          not _c.get("missing") and _c.get("playing") is True,
+          f"{_c!r} — a stopped player syncs on a quarter-second beat instead of "
+          f"a frame, so a stopped fixture would pass this section without "
+          f"exercising the case it exists for")
+    check("...and no control rebuilds its own contents while it plays",
+          _c.get("controls", 1) == 0,
+          f"{_c.get('controls')} rebuilds of a .skfull-btn's children in 1.5s "
+          f"— a button replaced between a mousedown and a mouseup produces no "
+          f"click, which is the owner's 'it takes pushing it many times'")
+    check("...and the bar's total mutation rate stays sane",
+          _c.get("records", 9999) < 600,
+          f"{_c.get('records')} mutation records in 1.5s — it was ~2,600 at "
+          f"that rate before the writes were guarded")
+    _pc.close()
+    _bc.close()
 
 
 passed = sum(1 for r in results if r[0])
