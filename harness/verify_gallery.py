@@ -1124,7 +1124,20 @@ with sync_playwright() as _spa:
           /* the block sits between the head and the drawing, which is where
              the owner asked for it ("at the top under the title") */
           inHead: !!(a && a.closest('.thead')),
-          titleInNames: !!(a && a.querySelector('.tnames .tt')),
+          /* THE READING ORDER, NOT THE PARENT. This asked for `.tnames .tt`
+             until v311, when the title became the head's own second row so it
+             could have the card's width instead of the scraps left beside the
+             fact run. "Who first, then what" is a position: the title is in
+             the head, and it sits BELOW the name line. A parent check called
+             that a regression while the card read exactly as intended. */
+          titleUnderName: (() => {
+            const hd = t[0].querySelector('.thead');
+            const tt = hd && hd.querySelector('.tt');
+            const ln = hd && hd.querySelector('.tline');
+            if (!hd || !tt || !ln) return false;
+            return tt.getBoundingClientRect().top
+                   >= ln.getBoundingClientRect().bottom - 1;
+          })(),
           aboveStage: !!(a && t[0].querySelector('.tileStage') &&
             a.getBoundingClientRect().bottom <= t[0].querySelector('.tileStage').getBoundingClientRect().top + 1),
           /* THE UNATTRIBUTED CARD, which now has a shape instead of a gap.
@@ -1140,8 +1153,20 @@ with sync_playwright() as _spa:
                  x.querySelector('.tverified') || x.querySelector('.tavatar img') ||
                  (x.querySelector('.tavatar') || {}).textContent),
           /* and it still carries the title, in the same slot a named one does */
-          anonTitled: [...document.querySelectorAll('.tanon')]
-            .every(x => !!x.querySelector('.tnames .tt')),
+          /* Same re-aim as titleUnderName, for the unattributed card: the
+             title is the HEAD's second row now, not a child of `.tnames`, so
+             ask the head it belongs to. COUNTED before it is measured --
+             `[].every()` is true, and this suite has shipped a census over a
+             selector that had stopped matching. */
+          anonTitledN: [...document.querySelectorAll('.tanon')].length,
+          anonTitled: [...document.querySelectorAll('.tanon')].length > 0 &&
+            [...document.querySelectorAll('.tanon')].every(x => {
+              const hd = x.closest('.thead');
+              const tt = hd && hd.querySelector('.tt');
+              const ln = hd && hd.querySelector('.tline');
+              return !!(tt && ln && tt.getBoundingClientRect().top
+                        >= ln.getBoundingClientRect().bottom - 1);
+            }),
         }; }""")
     check("the fixture really produced a grid to measure",
           _card["tiles"] >= 3, f"{_card['tiles']} tiles — fewer than three and "
@@ -1153,7 +1178,7 @@ with sync_playwright() as _spa:
           "element's own onerror swaps it for an initial, which is the fallback "
           "working and the fixture wrong")
     check("...at the top of the card, with the title under the name",
-          _card["inHead"] and _card["titleInNames"] and _card["aboveStage"],
+          _card["inHead"] and _card["titleUnderName"] and _card["aboveStage"],
           f"{_card} \u2014 direction B: who first, then what, the way a post head "
           f"reads; the title used to share a flex row with the time and two buttons")
     # INVERTED IN v310, AND THE INVERSION IS THE POINT. This row used to read
@@ -1209,8 +1234,8 @@ with sync_playwright() as _spa:
           not _card["anonClaims"] and _card["anonTitled"],
           f"claims={_card['anonClaims']} titled={_card['anonTitled']} \u2014 no "
           f"handle, no link, no tick, no avatar image and no INITIAL (an initial "
-          f"is a letter of a name that does not exist); the title still sits in "
-          f"`.tnames` exactly where a named card puts it")
+          f"is a letter of a name that does not exist); the title sits below "
+          f"the name line exactly where a named card puts it")
 
     # ---- THE CARD IS ONE SHAPE, AND THE DRAWING IS ALONE ON IT (v310) ----
     # Three owner asks in one census, because they are one change: the badges
@@ -1362,6 +1387,7 @@ with sync_playwright() as _spa:
                  dnCut: dn.scrollWidth > dn.clientWidth + 1,
                  dnText: dn.textContent,
                  unThere: !!un,
+                 unShown: !!(un && getComputedStyle(un).display !== 'none'),
                  plays: plays ? getComputedStyle(plays).display : 'absent',
                  slack: Math.round(head.getBoundingClientRect().width)
                         - [...head.children].reduce((a, e) =>
@@ -1370,10 +1396,20 @@ with sync_playwright() as _spa:
           _narrow["w"] == 390 and _narrow["dnCut"] is False,
           f"{_narrow} \u2014 `margin-left: auto` on the time ate the free space "
           f"before the name could have it, and this said 'Mr\u2026'")
-    check("...because the count stood down, not because the head had room to spare",
-          _narrow["plays"] == "none" and _narrow["unThere"],
-          f"{_narrow} \u2014 if the row still fits with the count in it, this "
-          f"tier is not doing anything and the next long name will clip again")
+    # THE TIER CHANGED HANDS IN v311, AND THIS ASSERTION MOVED WITH IT rather
+    # than being deleted. It used to read "...because the COUNT stood down",
+    # pinning the v310 arrangement where the play count was hidden below 560
+    # to buy the name its room. The count is the thing a gallery is for and it
+    # is back at every width; what stands down now is the HANDLE, which is
+    # redundant beside a name and an avatar. The claim is unchanged in shape --
+    # the row fits because something yielded, not because it was roomy -- so
+    # the assertion still goes red if the next change quietly takes the slack
+    # from the name again.
+    check("...because the HANDLE stood down, not because the head had room to spare",
+          _narrow["plays"] != "none" and _narrow["unShown"] is False,
+          f"{_narrow} \u2014 the count must be showing at 390 (it is what a "
+          f"gallery is for) and the handle must not; if both fit, this tier is "
+          f"not doing anything and the next long name will clip again")
     _pa.set_viewport_size({"width": 1100, "height": 1000})
     _pa.wait_for_timeout(300)
 
@@ -2476,6 +2512,355 @@ with sync_playwright() as _spn:
           f"here is the white ring the owner asked to be rid of")
     _pn.close()
     _bn.close()
+
+
+
+print("\nGALLERY — the title has the card's width, and the bar gets out of the way")
+# TWO THINGS NOTHING IN THIS SUITE COULD SEE, both found by the owner looking
+# at a real card on a real phone.
+#
+# THE TITLE'S WIDTH USED TO DEPEND ON WHAT ELSE THE POST HAD. It lived inside
+# `.tnames`, beside the avatar, with the fact run and the menu as siblings --
+# so every glyph the head gained (a description mark, the play count) came out
+# of the title. Measured at 390 on a CAPTIONED card: 49% of the title readable
+# before the count was allowed on a phone, 25% with it. The suite was green
+# throughout, because it asked what the head CONTAINED and never what any of
+# it measured. The fixture here carries a caption for that reason -- a plain
+# post has a shorter fact run and does not reach the failure.
+#
+# THE TRANSPORT USED TO SIT ON THE DRAWING FOR THE WHOLE REPLAY. A 400ms tick
+# asked for the STICKY peek while playing, and a tap moved focus into the
+# stage, which asked for it again -- and sticky arms no timer. Both are gone;
+# what remains is: a finger raises the bar for 2.6s, a keyboard keeps it.
+_CAP_TITLE = "Sideways Ball with music and background photo"
+_CAP_TEXT = ("A study of a ball rolling sideways, drawn over a photo, with a "
+             "loop underneath. Long enough to earn the description mark.")
+
+
+def _captioned_post(title, caption, seconds=2):
+    """A public post WITH a caption, so the head carries the description mark.
+
+    The mark is a control and stays at every width, unlike the kind glyph and
+    the count -- so it is the fact run's floor, and the case the title has to
+    survive."""
+    n = 14
+    pts = [{"x": 90 + i * 46, "y": 150 + (i % 4) * 44, "color": "#5ac8ff",
+            "size": 12, "t": i * (seconds * 1000 / n)} for i in range(n)]
+    body = {"title": title, "caption": caption, "version": 2, "schemaVersion": 2,
+            "visibility": "public", "playbackMode": "replay",
+            "frames": [{"strokes": pts, "strokeGroups": [n]}],
+            "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+    req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode())["id"]
+
+
+_FIT = r"""() => {
+    const t = document.querySelector(".tile");
+    if (!t) return { missing: true };
+    const tt = t.querySelector(".tt"), av = t.querySelector(".tavatar");
+    const pl = t.querySelector(".plays"), hd = t.querySelector(".thead");
+    if (!tt || !av || !hd) return { missing: true };
+    /* Where the first GLYPH starts, not where the box starts: the optical
+       nudge is on the box and the eye reads the glyph. */
+    const rg = document.createRange(); rg.selectNodeContents(tt);
+    /* A RECT IS NOT A PAINT. The count has been in the DOM and invisible
+       before now, so ask what is drawn where it claims to be. */
+    const seen = e => {
+        if (!e) return false;
+        const b = e.getBoundingClientRect();
+        if (!b.width || !b.height) return false;
+        const el = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
+        return !!el && (e === el || e.contains(el));
+    };
+    return {
+        titleW: Math.round(tt.clientWidth), titleNeed: Math.round(tt.scrollWidth),
+        /* The CONTENT box. clientWidth includes the head's 13px gutters, so
+           comparing a title against it can never come out level. */
+        headInner: Math.round(hd.clientWidth
+                   - parseFloat(getComputedStyle(hd).paddingLeft)
+                   - parseFloat(getComputedStyle(hd).paddingRight)),
+        /* What the title WOULD have had beside the fact run and the menu --
+           the layout this change replaces. Measured, not assumed. */
+        besideFacts: Math.round(hd.clientWidth
+                     - parseFloat(getComputedStyle(hd).paddingLeft)
+                     - parseFloat(getComputedStyle(hd).paddingRight)
+                     - (t.querySelector(".tmeta") ? t.querySelector(".tmeta").getBoundingClientRect().width : 0)
+                     - (t.querySelector(".tileMore") ? t.querySelector(".tileMore").getBoundingClientRect().width : 0)
+                     - (av ? av.getBoundingClientRect().width : 0)),
+        offset: +(rg.getBoundingClientRect().left
+                  - av.getBoundingClientRect().left).toFixed(1),
+        playsPainted: seen(pl),
+        capMark: !!t.querySelector(".tileCapBtn"),
+    };
+}"""
+
+with sync_playwright() as _spw:
+    _bw = _spw.chromium.launch()
+    _cw = _bw.new_context(color_scheme="dark", viewport={"width": 390, "height": 1200})
+    _pw = _cw.new_page()
+    _cap_id = _captioned_post(_CAP_TITLE, _CAP_TEXT)
+    # A PLAY, OR THERE IS NO COUNT TO FIND. `gallery.js` renders nothing at
+    # zero ("Zero says nothing rather than '0 plays'"), so a fixture that was
+    # never played tests the empty case and reports it as a missing count.
+    # This GET is the same fetch a real play makes; see routes._count_view.
+    with urllib.request.urlopen(BASE + f"/api/skribls/{_cap_id}", timeout=20) as _cv:
+        _cv.read()
+    browsing.goto(_pw, BASE, "/gallery")
+    _pw.wait_for_timeout(1800)
+    _f = _pw.evaluate(_FIT)
+
+    check("the fixture really is the hard case: a captioned card",
+          _f.get("capMark") is True,
+          f"{_f!r} — no description mark means the fact run is short and "
+          f"this section is measuring the easy card it was written to avoid")
+    # THE TITLE SPANS THE HEAD'S CONTENT BOX. Against `clientWidth` this could
+    # never come out level -- that box includes the 13px gutters -- so it asks
+    # for the content width the probe computes.
+    #
+    # AND EVERY READ BELOW NAMES A KEY THE PROBE RETURNS. A calibration run
+    # caught this assertion reading a key that had been renamed: `.get(k, 0)`
+    # answered 0, `89 >= 0 - 6` was true, and the check was green on the exact
+    # tree it exists to catch -- 89px of title, printed in its own failure
+    # message as "inside a Nonepx head". A default is a fallback for a value,
+    # never for a NAME, so the presence of the keys is its own assertion now.
+    check("the title-fit probe returned the fields these checks read",
+          all(_f.get(k) is not None
+              for k in ("titleW", "titleNeed", "headInner", "besideFacts", "offset")),
+          f"{_f!r} — a missing key silently becomes the default and takes the "
+          f"assertion below green with it")
+    check("the title spans the head rather than sharing a line with the facts",
+          _f.get("titleW", 0) >= (_f.get("headInner") or 0) - 4,
+          f"title {_f.get('titleW')}px inside a {_f.get('headInner')}px head box "
+          f"— a title narrower than the head's content width is back beside the "
+          f"fact run, which is the layout that showed a quarter of it at 390")
+    # NOT "every title fits": any title can be made longer than any card. The
+    # claim is that the title gets the CARD's width rather than the scraps left
+    # beside the facts, so it is a comparison against the old arrangement,
+    # measured on this very card.
+    check("...which is materially more room than sharing the line gave it",
+          _f.get("titleW", 0) >= (_f.get("besideFacts") or 0) + 40,
+          f"title {_f.get('titleW')}px against {_f.get('besideFacts')}px beside "
+          f"the fact run — less than 40px of gain means the head's own contents "
+          f"have grown back into the title's row")
+    check("...and a title of ordinary length is readable at 390",
+          _f.get("titleNeed", 1) <= _f.get("titleW", 0) + 1,
+          f"needs {_f.get('titleNeed')}px, has {_f.get('titleW')}px — this "
+          f"fixture's title is the length a real one runs to")
+    # The nudge is an optical correction and reads as a bug without this note:
+    # flush measures 0 and LOOKS wrong, because a circle meets the line at one
+    # point while the text sits on it throughout.
+    check("the title is optically level with the avatar, not flush with it",
+          0 < _f.get("offset", -1) <= 4,
+          f"offset {_f.get('offset')}px from the avatar's left edge — 0 is "
+          f"mathematically flush and reads as the title poking out left; more "
+          f"than 4 is an indent somebody will read as intentional")
+    check("the play count is painted on a phone",
+          _f.get("playsPainted") is True,
+          f"{_f!r} — the count stood down under 560px until v311; if it is "
+          f"back in the DOM but not painted, something is covering it")
+
+    # THE BAR, DRIVEN. A long replay, so "while playing" is a real window --
+    # a 2s fixture ends before the 2.6s fade and would prove nothing.
+    _LONG = 60
+    _lpts = [{"x": 60 + (i % 40) * 8, "y": 140 + (i // 40) * 60, "color": "#ff48b0",
+              "size": 12, "t": i * 260} for i in range(_LONG)]
+    _lbody = {"title": "long replay, for the fade", "version": 2, "schemaVersion": 2,
+              "visibility": "public", "playbackMode": "replay",
+              "frames": [{"strokes": _lpts, "strokeGroups": [_LONG]}],
+              "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+    _lreq = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_lbody).encode(),
+                                   headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(_lreq, timeout=20) as _r:
+        _r.read()
+    browsing.goto(_pw, BASE, "/gallery")
+    _pw.wait_for_timeout(1800)
+    _state = r"""() => {
+        const t = document.querySelector(".tile");
+        const b = t && t.querySelector(".skribl-inline");
+        return { on: !!(t && t.classList.contains("ctl-on")),
+                 playing: !!(b && (b.className || "").indexOf("is-playing") >= 0) };
+    }"""
+    _pw.click(".tile .tileStage")
+    _pw.wait_for_timeout(400)
+    _raised = _pw.evaluate(_state)
+    check("a tap on the artwork raises the transport",
+          _raised.get("on") is True, f"{_raised!r}")
+    _pw.wait_for_timeout(3000)
+    _faded = _pw.evaluate(_state)
+    check("...and it recedes while the replay is STILL PLAYING",
+          _faded.get("on") is False and _faded.get("playing") is True,
+          f"{_faded!r} — on=True with playing=True is the sticky peek the "
+          f"400ms tick used to ask for, which parked the bar on the drawing "
+          f"for the whole replay; playing=False means the fixture ended early "
+          f"and this assertion proved nothing")
+    _pw.click(".tile .tileStage")
+    _pw.wait_for_timeout(300)
+    check("...and a second tap brings it back",
+          _pw.evaluate(_state).get("on") is True, "a faded bar with no way back")
+
+    # THE KEYBOARD HALF, ON ITS OWN PAGE. The sticky peek exists so a bar
+    # cannot vanish from under a tab key, and a fix that fades for a finger
+    # must not take that away -- which a finger-only test cannot notice.
+    _ck = _bw.new_context(color_scheme="dark", viewport={"width": 390, "height": 1200})
+    _pk = _ck.new_page()
+    browsing.goto(_pk, BASE, "/gallery")
+    _pk.wait_for_timeout(1800)
+    _inside = False
+    for _ in range(40):
+        _pk.keyboard.press("Tab")
+        _inside = _pk.evaluate("""() => {
+            const t = document.querySelector(".tile");
+            return !!(t && t.querySelector(".tileStage").contains(document.activeElement));
+        }""")
+        if _inside:
+            break
+    check("a keyboard can reach the transport at all",
+          _inside is True, "40 tabs never landed inside the stage")
+    _pk.wait_for_timeout(3200)
+    check("...and the bar it tabbed into does NOT vanish under it",
+          _pk.evaluate("""() => {
+              const t = document.querySelector(".tile");
+              return !!(t && t.classList.contains("ctl-on"));
+          }""") is True,
+          "the fade took the bar away from a keyboard user, which is the "
+          "regression the ':focus-visible' guard exists to prevent")
+    _pk.close()
+    _pw.close()
+    _bw.close()
+
+
+
+print("\nGALLERY — the speed control advances even when the player disagrees")
+# THE OWNER REPORTED THIS THREE TIMES and the first two fixes were aimed at
+# what could be seen from here: a throw escaping setRate, and a label painted
+# before the write. Both were real. Neither was this.
+#
+# Stepping from `pl.rate()` is right only while the handle answering is the one
+# the last press wrote to. When it is not, the read comes back at the default
+# and the cycle recomputes the same next value every press -- "goes to 2x and
+# sticks", "stuck at 1/2x", and, for a rate the list does not contain, indexOf
+# -1 and (-1+1)%3 == 0, so every press asks for 1x and a control already at 1x
+# does nothing at all. Three shapes, one cause.
+#
+# A PLAYER THAT LIES IS THE FIXTURE, because that is the condition, and no
+# real-browser tap can produce it here: Chromium cycles correctly with touch or
+# click, one tile or eight. The suite therefore drives the CONTROL against a
+# handle that reports a rate of its own choosing -- which is what the failing
+# surface looks like from the button's side.
+_RATE_DRIVE = r"""(mode) => {
+    const btn = [...document.querySelectorAll('.skfull-rate')]
+                  .find(b => b.offsetParent !== null);
+    if (!btn) return { missing: true };
+    const host = btn.closest('.skfull-host');
+    const box = host && host.querySelector('.skribl-inline');
+    const pl = box && box._skriblInline;
+    if (!pl) return { missing: true };
+    if (!pl.__realSetRate) {
+        pl.__realSetRate = pl.setRate.bind(pl);
+        pl.__realRate = pl.rate.bind(pl);
+    }
+    const asked = [];
+    pl.setRate = function (r) { asked.push(r); return pl.__realSetRate(r); };
+    if (mode === 'stuck') {
+        /* The handle answers 1 whatever was written -- a player rebuilt under
+           the bar. Pressing must still walk the list. */
+        pl.rate = function () { return 1; };
+    } else if (mode === 'unknown') {
+        /* A rate the list does not contain: the indexOf -1 case. */
+        pl.rate = function () { return 1.75; };
+    }
+    for (let i = 0; i < 3; i++) btn.click();
+    pl.setRate = pl.__realSetRate;
+    pl.rate = pl.__realRate;
+    return { asked: asked };
+}"""
+with sync_playwright() as _spr:
+    _br = _spr.chromium.launch()
+    _pr = _br.new_context(viewport={"width": 390, "height": 900}).new_page()
+    post_public_api("speed control fixture")
+    browsing.goto(_pr, BASE, "/gallery")
+    _pr.wait_for_timeout(1800)
+    _pr.hover(".tile .tileStage")
+    _pr.wait_for_timeout(300)
+    _pr.click(".tile .skfull-card .skfull-full", force=True)
+    _pr.wait_for_timeout(900)
+
+    _healthy = _pr.evaluate(_RATE_DRIVE, "healthy")
+    check("with an honest player the speed walks the whole list",
+          _healthy.get("asked") == [2, 0.5, 1],
+          f"asked {_healthy.get('asked')} — three presses must visit every "
+          f"speed and come home; this is the surface that already worked and "
+          f"must keep working")
+    _stuck = _pr.evaluate(_RATE_DRIVE, "stuck")
+    check("...and it still walks it when the player reports a stale rate",
+          _stuck.get("asked") == [2, 0.5, 1],
+          f"asked {_stuck.get('asked')} — [2, 2, 2] is the owner's 'it goes to "
+          f"2x and stays stuck at 2x': the control recomputed the same step "
+          f"every press because the handle kept answering 1")
+    _unknown = _pr.evaluate(_RATE_DRIVE, "unknown")
+    check("...and when the player reports a rate the list does not contain",
+          len(set(_unknown.get("asked") or [])) == 3,
+          f"asked {_unknown.get('asked')} — [1, 1, 1] is indexOf returning -1 "
+          f"and (-1+1)%3 landing on 1x every time, which is the 'it does "
+          f"nothing at all' report")
+    _pr.close()
+    _br.close()
+
+
+
+print("\nGALLERY — the transport's controls do not wait for a second tap")
+# "the button is not very responsive, it takes pushing it many times, there is
+# a lag" -- the owner, on the speed control, after its cycling was fixed.
+#
+# WITHOUT `touch-action: manipulation` Safari holds a tap for about 300ms to
+# see whether a second one is coming. Every press lands late, and a press made
+# inside that window is read as the start of a double-tap zoom and dropped --
+# so pressing again, which is what a person does when the first press seemed
+# not to work, is the press that disappears. flip.css has carried this rule
+# since Flip shipped; this shared bar never got it.
+#
+# COMPUTED, ON THE REAL BUTTON, and on every control rather than one: the
+# property is inherited-ish in effect (a parent's `manipulation` covers a child
+# that does not set it), so a rule that reaches only some of the bar would read
+# as fixed from any single sample.
+_TOUCH = r"""() => {
+    const names = ['skfull-play', 'skfull-loop', 'skfull-mute',
+                   'skfull-rate', 'skfull-full'];
+    const out = {}; let n = 0;
+    names.forEach(c => {
+        const b = document.querySelector('.' + c);
+        if (!b) { out[c] = 'absent'; return; }
+        n++;
+        out[c] = getComputedStyle(b).touchAction;
+    });
+    out.__found = n;
+    return out;
+}"""
+with sync_playwright() as _spt:
+    _bt = _spt.chromium.launch()
+    _pt = _bt.new_context(viewport={"width": 390, "height": 900},
+                          is_mobile=True, has_touch=True).new_page()
+    post_public_api("tap latency fixture")
+    browsing.goto(_pt, BASE, "/gallery")
+    _pt.wait_for_timeout(1800)
+    _ta = _pt.evaluate(_TOUCH)
+    # COUNTED BEFORE MEASURED: every control absent would make the census below
+    # vacuously true, and this suite has shipped that mistake before.
+    check("the bar's controls are on the page to be measured",
+          _ta.get("__found", 0) >= 4,
+          f"{_ta!r} — fewer than four controls found, so the check below "
+          f"would pass by having nothing to look at")
+    _bad = {k: v for k, v in _ta.items()
+            if k != "__found" and v not in ("manipulation", "absent")}
+    check("...and every one of them drops the double-tap wait",
+          not _bad,
+          f"{_bad!r} — 'auto' is the ~300ms hold before a tap becomes a "
+          f"click, and the tap made inside it is swallowed as a double-tap "
+          f"gesture; that is the owner's 'takes pushing it many times'")
+    _pt.close()
+    _bt.close()
 
 
 passed = sum(1 for r in results if r[0])

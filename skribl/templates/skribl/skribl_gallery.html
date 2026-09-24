@@ -139,7 +139,15 @@
        The CAPTION mark stays at every width. It is the only one of the three
        that is a control rather than a label, and it is the only way to read
        the message at all now that the caption is closed at rest. */
-    @media (max-width: 560px) { .tile .plays { display: none; } }
+    /* THE COUNT STAYS AT EVERY WIDTH NOW, and the note above records why it
+       ever stood down: the name line was packing to the pixel against the
+       caption's 44px expander AND the count. The expander moved under the
+       caption two tiers ago, and the title left this row entirely in v311, so
+       the arithmetic that justified hiding the count is gone -- measured, a
+       short name loses nothing to it, and a long one was ellipsised whether
+       it showed or not. What pays for it at 390 is the HANDLE, which is the
+       redundant thing beside a name and an avatar. */
+    @media (max-width: 560px) { .tile .tun { display: none; } }
     .state { text-align: center; color: var(--text-3); font-size: 14px; padding: 40px 0; line-height: 1.7; }
     .state b { color: var(--text-2); font-weight: 600; }
     .state[hidden] { display: none; }
@@ -175,8 +183,32 @@
       background: var(--panel); border: 1px solid var(--hairline); border-radius: 16px;
       display: flex; flex-direction: column; min-width: 0; overflow: hidden;
     }
-    .tile .thead { display: flex; align-items: flex-start; gap: 8px; min-width: 0;
-      padding: 12px 13px 10px; }
+    /* A GRID, AND THE TITLE SPANS IT. As a flex row the head held the avatar,
+       the name and the title in ONE item and the fact run beside it, so the
+       run's width came out of the title as well as the name -- and the run
+       grows with what the post HAS (a description mark, a sound glyph, the
+       count). The richer the post, the less of its title you could read:
+       measured at 390 on a captioned card, 49% of it, and 25% once the count
+       was allowed on a phone.
+
+       Row 1 is who and the facts. Row 2 is the title, across every column, so
+       its width is the card's and no longer depends on what else is up there.
+       `.tauth` is `display: contents` because the avatar and the names are
+       grid items here, not a nested box. */
+    .tile .thead { display: grid; grid-template-columns: auto 1fr auto auto;
+      align-items: center; column-gap: 9px; row-gap: 3px; min-width: 0;
+      padding: 12px 13px 11px; }
+    .tile .thead .tauth { display: contents; }
+    .tile .thead .tavatar  { grid-column: 1; grid-row: 1; }
+    .tile .thead .tnames   { grid-column: 2; grid-row: 1; min-width: 0; }
+    .tile .thead .tmeta    { grid-column: 3; grid-row: 1; }
+    .tile .thead .tileMore { grid-column: 4; grid-row: 1; }
+    /* TWO PIXELS, AND THEY ARE AN OPTICAL CORRECTION, NOT A MISTAKE. Flush at
+       the same x, the avatar's circle meets that line at a single point while
+       the title sits on it for its whole length, so the title reads as poking
+       out to the left (owner: "it looks like it is further left"). The nudge
+       is what makes them look level; measuring them will show 2px. */
+    .tile .thead .tt { grid-column: 1 / -1; grid-row: 2; padding-left: 2px; }
     /* The TITLE sits under the name, the way a post's body does. It used to
        share a flex row with the time, the play count and two buttons. */
     .tile .tt { font-size: 13.5px; color: var(--text-2); overflow: hidden;
@@ -557,7 +589,13 @@
     .tileStage.is-immersive-page {
       position: fixed; inset: 0; z-index: 2147483000;
       width: 100vw; height: 100dvh; margin: 0; border-radius: 0; }
-    .tile .thead { align-items: center; }
+    /* (The bare `.tile .thead { align-items: center }` that used to sit here
+       is gone. It arrived with the Report WORD in v304, when the head was one
+       line and a 44px button needed centring against it; its siblings went
+       when Report moved into the menu, and it was left behind overriding the
+       `flex-start` written for the two-line head -- same specificity, later in
+       the file. The head declares its own alignment now, once, where it is
+       defined.) */
     .sheet {
       position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
       background: rgba(0,0,0,0.5); padding: 16px;
