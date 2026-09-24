@@ -42,27 +42,16 @@
   --surface-nudge: #232734;         /* the +/- step buttons beside a slider */
   --surface-nudge-hover: #2c3140;
 
-  /* ---- v230: the rest of the neutral ramp -------------------------------
-     PHASE 1 OF LIGHT MODE, and it changes nothing you can see. Every value
-     below is the literal that used to sit at the call site, moved here
-     unaltered -- 156 of them across the two sheets. The point is that the
-     chrome's colours are now in one place, so a light palette becomes a second
-     block rather than an archaeology exercise.
+  /* ---- the rest of the neutral ramp -------------------------------------
+     Every neutral the chrome paints lives here rather than at its call site,
+     so a light palette is a second block rather than an archaeology exercise.
 
-     DELIBERATELY NOT COLLAPSED. Several of these are within a couple of
-     luminance steps of each other and could merge, but merging them here would
-     be a visual change smuggled into a mechanical one -- and the two are
-     indistinguishable in a diff. The ramp gets designed in phase 2, where a
-     light value has to be chosen for each of these anyway and the duplicates
-     fall out on purpose.
-
-     Two things stayed literal:
+     Two things stay literal:
        * #0d0f14 -- the CANVAS default background. That is the document's own
          colour: saved, shared, exported. A Skribl must not change because the
          person looking at it prefers a light UI.
        * #fff -- almost every use is text sitting on a coloured fill, and white
          on violet stays white in either theme. */
-
   /* Surfaces */
   --surface-deep: #06070a;        /* the toolbar row's ground, below base */
   --surface-sheet: #12151b;
@@ -83,18 +72,15 @@
   /* Text, dimmest first */
   /* NOT FOR TEXT A USER HAS TO READ. Measured against every surface in this
      ramp, --text-faint reaches 2.99-3.37:1 and --text-dim 2.68-3.02:1, both
-     under WCAG AA's 4.5:1 for normal-size text — and an accessibility audit of
-     v278 found them carrying instructions, trim times, optional-field state
-     and character counters, at 10-13px, which makes it worse in practice than
-     the ratio alone suggests.
-     There is no dimmer tier that also passes: --text-muted (#7d8496) is
-     4.61:1 against the lightest surface here, so anything meaningfully fainter
-     fails somewhere. --text-dim survives for DISABLED controls and
-     placeholders, where the text-contrast requirement does not apply.
-     Everything a user reads uses --text-muted; verify_a11y.py holds that line.
-
-     --text-faint/-2 were dropped in v281: defined, used by no rule, unable to
-     pass. verify_a11y.py fails such a token now. */
+     under WCAG AA's 4.5:1 for normal-size text -- and they were carrying
+     instructions, trim times, optional-field state and character counters at
+     10-13px, which is worse in practice than the ratio alone suggests.
+     There is no dimmer tier that also passes: --text-muted (#7d8496) is 4.61:1
+     against the lightest surface here, so anything meaningfully fainter fails
+     somewhere. --text-dim survives for DISABLED controls and placeholders,
+     where the text-contrast requirement does not apply. Everything a user reads
+     uses --text-muted; verify_a11y.py holds that line and fails a token that is
+     defined, used by no rule and unable to pass. */
   --text-soft: #8a93a6;
   --text-soft-2: #8b93a5;
   --text-soft-3: #8b97a8;
@@ -104,7 +90,7 @@
   --text-tool-lit: #aeb6c4;       /* .tool-open at rest */
   --text-bright-2: #c8cdd6;
   --text-bright: #c8cede;
-  --text-brightest: #cdd3de;      /* size dots -- deliberately brighter, v205 */
+  --text-brightest: #cdd3de;      /* size dots -- deliberately brighter */
   --text-strong-2: #e6e9f0;
   --text-strong-3: #e7e9ee;
   --text-strong: #e7e9ea;
@@ -160,37 +146,34 @@
   --text-secondary: #9aa2b1;
   --text-muted: #7d8496;
   --text-dim: #575f6e;
-  /* The increased-contrast counterparts (v292; outside review of v291,
-     SK-AUD-015). Mapped over the four above under prefers-contrast: more, at
-     the end of this sheet; defined HERE so the media block holds no literal
-     and the light ramp below carries its own four. muted clears 8.8:1 on the
-     lightest chrome surface, dim 6.3:1 — dim is decoration, not reading. */
+  /* The increased-contrast counterparts. Mapped over the four above under
+     prefers-contrast: more, at the end of this sheet; defined HERE so the media
+     block holds no literal and the light ramp below carries its own four.
+     muted clears 8.8:1 on the lightest chrome surface, dim 6.3:1 -- dim is
+     decoration, not reading. */
   --text-muted-hc: #b8bfcc;
   --text-dim-hc: #9aa2b1;
   --hairline-hc: rgba(255,255,255,0.22);
   --hairline-strong-hc: rgba(255,255,255,0.34);
 
-  /* The ink the signature is written in — the brand's pen in BOTH themes
-     (owner, having seen the violet daylight ink: "I think the dark should
-     be purple too"). accent-bright rather than the accent itself: the same
-     hue family as Post and the Record dot but a step lighter, so the
-     signature glows like neon against the dark header without duplicating
-     the one saturated fill the accent budget spends on Post. The halo
-     behind it is the same hue, so ink and glow read as one lit stroke.
-     White (--text-primary) was the first draft; it read as chalk, and the
-     brand lived only in the halo. */
+  /* The ink the signature is written in -- the brand's pen in BOTH themes.
+     accent-bright rather than the accent itself: the same hue family as Post
+     and the Record dot but a step lighter, so the signature glows like neon
+     against the dark header without duplicating the one saturated fill the
+     accent budget spends on Post. The halo behind it is the same hue, so ink
+     and glow read as one lit stroke. White (--text-primary) reads as chalk and
+     leaves the brand living only in the halo. */
   --brand-ink: var(--accent-bright);
 
-  /* The header's rim — a border that is FELT, not seen (owner: "not one
-     that's visible... almost black to make it pop out a little more").
-     Darker than both the card and the page in dark mode, so the card reads
-     cut out and floating; the light block flips it to a near-white edge
-     that reads as light catching the card. Deliberately NOT a hairline
-     token: hairlines are lighter than their surface and read as lines,
-     this is darker/lighter than everything and reads as an edge. */
+  /* The header's rim -- a border that is FELT, not seen. Darker than both the
+     card and the page in dark mode, so the card reads cut out and floating;
+     the light block flips it to a near-white edge that reads as light catching
+     the card. Deliberately NOT a hairline token: hairlines are lighter than
+     their surface and read as lines, this is darker (or lighter) than
+     everything and reads as an edge. */
   --header-rim: rgba(0, 0, 0, 0.55);
 
-  /* The letterpress relief on the signature (owner picked SINK over pop,
+  /* The letterpress relief on the signature (SINK, not pop,
      and asked for the old purple halo to go). A bright lower edge and a
      dark upper shade press the strokes INTO the card — light from above,
      ink sitting in its own groove. A whole filter list in one token so
@@ -211,10 +194,10 @@
   --accent-bright: #9179ff;
   --accent-glow: rgba(0,0,0,0.32);
 
-  /* Demoted-UI roles (v220.x). The CLASSIFICATION below is permanent — every
-     former accent call-site now names its role — but the VALUES are a dial.
-     Currently pointed back AT the accent: the owner tried the full demotion
-     and found it flat, so this is the undo. Three palettes, one edit apart:
+  /* Demoted-UI roles. The CLASSIFICATION is permanent -- every former accent
+     call-site names its role -- but the VALUES are a dial. Currently pointed
+     back AT the accent; the full demotion was tried and read flat. Three
+     palettes, one edit apart:
 
        FULL ACCENT (current)       QUIET (tried, too flat)   TINTED QUIET (untried)
        --ui-hi:     #7c5cff;       --ui-hi:     #e7e9ea;     --ui-hi:     #cfc9f2;
@@ -224,7 +207,7 @@
                                                              --focus-ring: rgba(207,201,242,0.9);
 
      TINTED QUIET is the usual answer to "quiet reads dead": neutrals carrying
-     the accent's hue at low saturation, so the UI is calm but not gray.
+     the accent's hue at low saturation, so the UI is calm but not grey.
      Two-stop gradients (scrub/export fills, scrollbars) were flattened to
      solid fills during the demotion and stay solid at every setting. */
   --ui-hi: #7c5cff;
@@ -239,22 +222,17 @@
      that it was a decision. */
   --on-canvas-rgb: 246,247,249;
 
-  /* Semantic colours (v233). These are the SECOND half of light mode, and the
-     half that phase 1 could not see. That pass moved neutrals — greys are what
-     a theme obviously flips — and left every chromatic literal alone. But the
-     danger red, the warn amber and the ok green were all picked to sit on a
-     near-black ground, and on a white one they wash out: #f4326f measures
-     3.32:1 against the menu sheet, which is below AA for body text and is what
-     "Clear all" is written in.
+  /* Semantic colours. The danger red, the warn amber and the ok green were all
+     picked to sit on a near-black ground, and on a white one they wash out:
+     #f4326f measures 3.32:1 against the menu sheet, below AA for body text and
+     what "Clear all" is written in. The light ramp restates them darker at the
+     same hues.
 
-     Values here are the dark ones unchanged, so this block moves no pixel; the
-     light ramp restates them darker at the same hues. The three -soft variants
-     are kept apart rather than collapsed for the same reason --text-soft has
-     three: they are three different call sites that happen to be near each
-     other, and merging them would silently repaint dark mode.
-
-     --danger-fill is the odd one out — a SOLID red button with white text, not
-     text on a surface — so it stays put in both themes. */
+     The three -soft variants are kept apart rather than collapsed for the same
+     reason --text-soft has three: they are three different call sites that
+     happen to be near each other, and merging them would silently repaint dark
+     mode. --danger-fill is the odd one out -- a SOLID red button with white
+     text, not text on a surface -- so it stays put in both themes. */
   --danger: #f4326f;
   --danger-mid: #e0576b;
   --danger-soft: #ff9d9d;
@@ -263,13 +241,13 @@
   --danger-fill: #b3283f;
   --warn: #ffd23f;
   --warn-2: #ff9f43;
-  /* Lifted from #1bcf8f (H159 S77% L46%) to H159 S80% L55%. The old one was
-     not short of CONTRAST — 9.6:1 on the base ground — it was short of VIVIDNESS,
-     and it is spent almost entirely on 6-7px dots: the toolbar's music and image
-     tab-dots, the autosave dot, the post sheet's sound marker. At that size hue
-     reads weakly and lightness carries the signal, so a mid-lightness green
-     reads as grey-green at a glance. Owner's call: "a little too dull".
-     Not raised further: past ~L60 it goes mint and stops reading as "ready". */
+  /* H159 S80% L55%, lifted from #1bcf8f (H159 S77% L46%). The old value was
+     not short of CONTRAST -- 9.6:1 on the base ground -- it was short of
+     VIVIDNESS, and it is spent almost entirely on 6-7px dots: the toolbar's
+     music and image tab-dots, the autosave dot, the post sheet's sound marker.
+     At that size hue reads weakly and lightness carries the signal, so a
+     mid-lightness green reads as grey-green at a glance. Not raised further:
+     past ~L60 it goes mint and stops reading as "ready". */
   --good: #30e8a7;
   /* The same colour as components, for the glows and tints that used to hardcode
      rgba(27, 207, 143, …) — three of them, which would have silently kept the
@@ -369,27 +347,27 @@ body {
   padding: 14px 18px;
   margin: 12px;
   border-radius: 16px;
-  /* No HAIRLINE — but a RIM. The hairline ban stands for the reason below:
+  /* No HAIRLINE -- but a RIM. The hairline ban stands for the reason below:
      the canvas owns the only visible outline on the screen. What the header
-     wears instead is --header-rim (owner: "not one that's visible... almost
-     black [dark] / almost white [light] to make it pop"), which is darker
-     than everything around it in dark mode and lighter than everything in
-     light — so it never reads as a LINE competing with the canvas ring, it
-     reads as the card's own edge: cut out of the dark, or catching the
-     light. The original reasoning, kept because it still governs: the
-     canvas carries a 1px ring (--canvas-ring), and when the header and
-     toolbar each carried one too, at almost the same radius, three
-     concentric outlined rectangles fought and the eye could not tell which
-     was the subject. rgba over the near-black page plus the 26px-blur
-     shadow below still does the raising; the rim only sharpens the cut.
-     A box-shadow RING, not a border, and that is load-bearing: a border
-     eats 2px of interior width, and the 390px header fit is measured to
-     the pixel (the v269 pin caught exactly that — Post shed its label the
-     moment a real border went in). The ring paints just outside the edge
-     and costs the layout nothing.
+     wears instead is --header-rim, darker than everything around it in dark
+     mode and lighter than everything in light -- so it never reads as a LINE
+     competing with the canvas ring, it reads as the card's own edge: cut out
+     of the dark, or catching the light.
+
+     The ban itself: the canvas carries a 1px ring (--canvas-ring), and when the
+     header and toolbar each carried one too, at almost the same radius, three
+     concentric outlined rectangles fought and the eye could not tell which was
+     the subject. rgba over the near-black page plus the 26px-blur shadow below
+     does the raising; the rim only sharpens the cut.
+
+     A box-shadow RING, not a border, and that is load-bearing: a border eats
+     2px of interior width, and the 390px header fit is measured to the pixel --
+     Post sheds its label the moment a real border goes in. The ring paints just
+     outside the edge and costs the layout nothing.
+
      Shared by Pad and Flip (flip.css only adjusts padding and gap) and
-     inherited by the player through the derived sheet, so the three
-     surfaces stay one design. */
+     inherited by the player through the derived sheet, so the three surfaces
+     stay one design. */
   background: rgba(var(--surface-well-2-rgb), 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -423,7 +401,7 @@ body {
    which room you are in (PAD / FLIP / PLAYER). One system instead of a
    different sticker per mode. */
 .brand-tag {
-  /* Tiny but legible (owner's spec): small, tight, caps. 10px/700 with a
+  /* Tiny but legible: small, tight, caps. 10px/700 with a
      modest .12em track — wide tracking at this size read airy, not tight. */
   font-weight: 700;
   font-size: 10px;
@@ -434,47 +412,44 @@ body {
      same visual baseline. */
   padding-top: 3px;
 }
-/* The gradient the signature is inked with (owner-picked from a rendered
-   mock): accent melting to accent-2, the same pair in both themes — and ONE
-   sweep across the whole line of handwriting (owner: "start with skribl and
-   end at the end rather than doing each word"). The stops live HERE as CSS
-   so they stay tokens; the three lockup svgs (the mark partial and both
-   word svgs) carry the <linearGradient> that references them, in
-   userSpaceOnUse units of the shared 30-unit hand: the mark runs 0 -> the
-   lockup's full width (brand_sweep, passed by the including page) and the
-   word's gradient starts at the matching NEGATIVE x, so violet at the s of
-   skribl reaches blue only at the d of pad / the p of flip. A standalone
-   mark (player, library) defaults to its own width — a full sweep across
-   just the signature.
+/* The gradient the signature is inked with: accent melting to accent-2, the
+   same pair in both themes, and ONE sweep across the whole line of handwriting
+   rather than one per word. The stops live HERE as CSS so they stay tokens; the
+   three lockup svgs (the mark partial and both word svgs) carry the
+   <linearGradient> that references them, in userSpaceOnUse units of the shared
+   30-unit hand: the mark runs 0 -> the lockup's full width (brand_sweep, passed
+   by the including page) and the word's gradient starts at the matching
+   NEGATIVE x, so violet at the s of skribl reaches blue only at the d of pad /
+   the p of flip. A standalone mark (player, library) defaults to its own width
+   -- a full sweep across just the signature.
    --brand-ink stays defined beneath this: it is the solid-pen fallback for
    anything that renders the lockup without the gradient defs, and the
-   letterpress relief (--brand-relief) presses the gradient ink exactly as
-   it pressed the solid. */
+   letterpress relief (--brand-relief) presses the gradient ink exactly as it
+   pressed the solid. */
 .brand-grad-a { stop-color: var(--accent); }
 .brand-grad-b { stop-color: var(--accent-2); }
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
-   buttons / Flip's back arrow) — one size at every width, per the wordmark
-   parity pin. Selector is deliberately (0,3,1): it must OUTRANK the ≤340
+   buttons / Flip's back arrow) -- one size at every width, per the wordmark
+   parity pin. Selector is deliberately (0,3,1): it must OUTRANK the <=340
    player-only tier rule `.header .brand svg { 30px }` further down, which
    otherwise catches this mark too and squashes it to 30x30. */
-/* ...and this is where the wordmark opts OUT of it. "PLAYER-ONLY" above was
-   true of the intent and false of the selector: Pad's wordmark is also a
-   `.brand svg`, so it was inheriting a 34px tile's rounded corners and drop
-   shadow. On the near-black header a black shadow over a black ground is
-   invisible and nobody could see the mistake — light mode rendered it as a
-   pale rounded rectangle around the wordmark's bounding box, and SKRIBL PAD
-   looked like a sticker stuck onto the header. Flip was never affected: its
-   mark lives in .flip-word, not .brand.
+/* ...and this is where the wordmark opts OUT of it. That rule is player-only in
+   INTENT and not in selector: Pad's wordmark is also a `.brand svg`, so it
+   inherits a 34px tile's rounded corners and drop shadow. On the near-black
+   header a black shadow over a black ground is invisible; light mode renders it
+   as a pale rounded rectangle around the wordmark's bounding box, and SKRIBL PAD
+   looks like a sticker stuck onto the header. Flip is unaffected: its mark lives
+   in .flip-word, not .brand.
    Undone HERE rather than by narrowing `.brand svg` itself, because cssgraph
    matches emitted blocks by comparing selector STRINGS against a recorded live
-   set — rewriting that selector drops the whole block out of player.css and
+   set -- rewriting that selector drops the whole block out of player.css and
    takes the player's own logo tile with it. */
-/* v269: the mark is the one-stroke skribl signature (inline SVG in the shared
-   partial). SIGNATURE-sized, deliberately — 20px, not a 44px block: it should
+/* The mark is the one-stroke skribl signature (inline SVG in the shared
+   partial). SIGNATURE-sized, deliberately -- 20px, not a 44px block: it should
    read as a word someone left on the chrome, not a logo asking to be looked
-   at. The zeroed radius and shadow keep the old `.brand svg` tile rule from
-   ever dressing it up again. overflow visible: the skew and tail sit a hair
-   outside the viewBox and must not be clipped. */
+   at. The zeroed radius and shadow keep the `.brand svg` tile rule from ever
+   dressing it up again. overflow visible: the skew and tail sit a hair outside
+   the viewBox and must not be clipped. */
 .header .brand .brand-mark {
   height: 36px;
   width: auto;
@@ -487,7 +462,7 @@ body {
      same pen wherever they inherit from. */
   color: var(--brand-ink, var(--text-primary));
   /* Letterpress, not glow. The halo era (0 0 5px accent at 30%) ended when
-     the ink itself went purple and the owner chose the pressed-in look and
+     the ink itself went purple and the pressed-in look was chosen over
      asked for the glow to go: the relief token presses the strokes into
      the card — bright ledge below, shade above — per theme. */
   filter: var(--brand-relief);
@@ -529,7 +504,7 @@ body {
   gap: 7px;
   transition: filter 0.15s ease, transform 0.18s var(--spring), background 0.2s ease, box-shadow 0.2s ease;
   letter-spacing: 0.1px;
-  white-space: nowrap;   /* v207: a pill must never wrap into a 3-line blob (it did at 641px) */
+  white-space: nowrap;   /* a pill must never wrap into a 3-line blob; it did at 641px */
 }
 
 .btn svg {
@@ -626,14 +601,14 @@ body {
   min-width: 0;
   min-height: 0;
   /* Matches the 24px Flip's fitPad() reserves. Without it the canvas presses
-     against the column edge on a narrow screen — and now that the canvas has a
-     2px ring, the ring sits flush against the app border.
+     against the column edge on a narrow screen -- and with the canvas's 2px
+     ring, the ring sits flush against the app border.
      22px TOP, same number and same reason as Flip's stage: the two drawer
      shells above this area (name, tune) each tuck under the header with a
-     -10px margin, pulling the canvas up 20px — more than the header's 12px
-     bottom margin gives back. On desktop the canvas usually has slack, so
-     nobody saw it; on a tall phone the 9:16 preset fills the area exactly and
-     the canvas slid UNDER the floating header (owner's iPhone screenshot).
+     -10px margin, pulling the canvas up 20px -- more than the header's 12px
+     bottom margin gives back. On desktop the canvas usually has slack; on a
+     tall phone the 9:16 preset fills the area exactly and the canvas slides
+     UNDER the floating header.
      layoutEditorCanvas() and the boot best-fit both derive available space
      from this computed padding, so the canvas pays with a few px of scale,
      never overflow. */
@@ -657,15 +632,15 @@ body.player-mode .canvas-area { display: contents; }
   cursor: crosshair;
   /* Same reason as Flip's #pad: an inset vignette alone gives no findable edge
      on a dim panel. Held in a variable because every state below replaces
-     box-shadow wholesale — .recording did, and Pad enters it on the FIRST
-     STROKE, so the edge vanished exactly when it was needed. */
-  /* INSET, not an outer spread (v202 review amendment, A2). A box-shadow
-     painted OUTSIDE the box contributes nothing to layout, so once the fitted
-     wrapper reached its width ceiling (~461px viewports) the 2px ring painted
-     past the container edge and was clipped: the frame's left and right sides
-     simply vanished while the canvas stayed. Inset paints within the border
-     box — unclippable at the edge, zero layout change, and every state rule
-     below that swaps box-shadow wholesale still re-includes this variable. */
+     box-shadow wholesale -- .recording does, and Pad enters it on the FIRST
+     STROKE, so the edge would vanish exactly when it is needed. */
+  /* INSET, not an outer spread. A box-shadow painted OUTSIDE the box
+     contributes nothing to layout, so once the fitted wrapper reaches its width
+     ceiling (~461px viewports) a 2px ring paints past the container edge and is
+     clipped: the frame's left and right sides vanish while the canvas stays.
+     Inset paints within the border box -- unclippable at the edge, zero layout
+     change, and every state rule below that swaps box-shadow wholesale still
+     re-includes this variable. */
   --canvas-ring: inset 0 0 0 1px rgba(var(--wash-rgb), 0.18);
   /* Rounded to match Flip's canvas. Two editors in one app should not disagree
      about the shape of the thing you draw on. */
@@ -777,7 +752,7 @@ body.player-mode .canvas-area { display: contents; }
   object-fit: cover;
   /* Safari does not reliably clip a transformed child ( .zoom-layer carries
      transform/will-change ) to a parent's rounded overflow:hidden — on the
-     owner's iPhone every photo's square corners punched through the canvas
+     on an iPhone every photo's square corners punched through the canvas
      frame's rounded edge ("image covers edge of canvas"). Chromium clips
      fine, which is why no desktop screenshot ever showed it. Round the
      image itself so its corners match the frame regardless of who clips. */
@@ -888,13 +863,10 @@ body.player-mode .canvas-area { display: contents; }
 /* THE TOOLBAR OWNS THE BOTTOM EDGE ON EVERY WIDTH, so the banner is seated a
    toolbar higher on every width: 56px of toolbar + its 12px bottom margin +
    20px of air = 88px, floating over the canvas's bottom edge with the tools
-   fully visible beneath. This rule used to live inside a max-width: 640px
-   query, written when a phone report showed the banner landing ON the tools
-   (worst in light theme, where the two surfaces sit close in tone) — and the
-   20px anchor above was left for desktop on the belief that its bottom edge
-   was empty air. It is not: at 1280x900 the banner covered Eraser, Shape,
-   colour, Undo and Redo until the person chose (v287 audit SK-BUG-007).
-   verify_drafts measures the overlap on both widths. */
+   fully visible beneath. NOT inside a max-width: 640px query, and not a 20px
+   anchor on desktop: a desktop bottom edge is not empty air either -- at
+   1280x900 a 20px banner covers Eraser, Shape, colour, Undo and Redo until the
+   person chooses. verify_drafts measures the overlap on both widths. */
 .restore-banner {
   bottom: calc(88px + env(safe-area-inset-bottom));
 }
@@ -954,7 +926,7 @@ body.player-mode .canvas-area { display: contents; }
 
 /* Icon-only header button */
 .icon-btn {
-  /* v205-fix: standardized to the tier-1 primary size + rounded-square shape,
+  /* Standardized to the tier-1 primary size + rounded-square shape,
      matching .tool-open, so Pad's header (Flip Mode, menu, tune) reads as one
      button family with Flip's header instead of a mix of circles and squares.
      Was 36px circle / 18px icon. Keeps its border (the subtle bordered look
@@ -1177,8 +1149,7 @@ body.player-mode .app {
   box-sizing: border-box;
 }
 
-/* FULL SCREEN on the player, the control the shared link was missing until the
-   owner asked for it. The wrapper is what goes fullscreen, so it has to stop
+/* FULL SCREEN on the player. The wrapper is what goes fullscreen, so it has to stop
    being a sized box and become the screen, and `place-items: center` is what
    holds the drawing in the middle of it.
 
@@ -1227,9 +1198,9 @@ body.player-mode .app {
    which ties on specificity with `.player-btn` -- the other class the same
    button carries -- so the winner was decided by which rule came LAST in the
    sheet. .player-btn does, 185 lines later, so `display: none` lost and the
-   exit control sat on the player at all times: a close button on a page with
-   nothing to close. Shipped, and the owner saw it before any assertion did,
-   because the pin only ever checked that the control APPEARS in full screen.
+   exit control sits on the player at all times: a close button on a page with
+   nothing to close. A pin that only checks the control APPEARS in full screen
+   never sees it.
    `.player-btn.full-exit` outranks `.player-btn` outright, so the rule no
    longer depends on where it sits. */
 .player-btn.full-exit { display: none; position: absolute; top: 14px; right: 14px;
@@ -1239,8 +1210,8 @@ body.player-mode .app {
 
 /* THE TRANSPORT GOES FULL SCREEN WITH THE DRAWING. Full screen renders only
    the top-layer subtree, and the transport row lives in .player-shell below
-   the wrapper -- so it was not on screen at all, and the owner photographed
-   the result: a drawing, a close button, and nothing to press. app.js moves
+   the wrapper -- so without help it is not on screen at all: a drawing, a close
+   button, and nothing to press. app.js moves
    #playerBar into .canvas-wrap on the way in and back on the way out.
 
    `display: contents` at rest so the wrapper generates no box: the scrubber
@@ -1351,7 +1322,7 @@ body.player-mode #canvas {
      briefly and was the wrong answer to a real question: the tip takes the
      ink, so it is the colour of the stroke under it, and something has to
      separate the two. A white ring does separate them and looks like a
-     cursor doing it (owner: "make outer contrast ring a little glow of
+     cursor doing it (a glow of the ink, not a white ring; see
      color, not white ring"). A BLURRED halo of the same ink separates them
      differently -- it adds light over the stroke instead of drawing a line
      across it, so the tip is the brightest point on its own line without
@@ -1648,7 +1619,7 @@ a.player-btn { text-decoration: none; }
   .play-wrap { border-color: var(--hairline); }
   .duration-badge { border-left-color: var(--hairline); font-size: 12.5px; padding: 0 13px 0 11px; }
 
-  /* v205-fix: keep the header icon buttons at the tier-1 size (44/24) even in
+  /* Keep the header icon buttons at the tier-1 size (44/24) even in
      the compact/recording state, so they stay uniform with the tune opener
      rather than shrinking to pill height. Was 32/17. */
   .icon-btn { width: 44px; height: 44px; border-color: var(--hairline); }
@@ -1681,45 +1652,43 @@ a.player-btn { text-decoration: none; }
 
 /* Magnify is shown wherever the GESTURE is missing and the button FITS.
    ---------------------------------------------------------------------------
-   This used to be `@media (max-width: 640px) { #magnifyBtn { display: none } }`
-   — width as a stand-in for "this is a phone, it has pinch". Width is a poor
-   proxy for input: a tablet at 810px has pinch, and a desktop window dragged
-   to 500px has a mouse and nothing else. The wide rule also made the v213
-   400px floor below it unreachable — dead code that had carefully measured the
-   one number that actually mattered.
+   Hiding it by width alone uses width as a stand-in for "this is a phone, it
+   has pinch", and width is a poor proxy for input: a tablet at 810px has pinch,
+   and a desktop window dragged to 500px has a mouse and nothing else. A wide
+   width rule also makes the measured floors below unreachable.
 
    `pointer: coarse` asks the real question. Where a pinch exists the button is
-   redundant below 640 and stays hidden exactly as before; where it does not,
-   the button survives down to the width at which it physically stops fitting.
+   redundant below 640 and stays hidden; where it does not, the button survives
+   down to the width at which it physically stops fitting.
 
    THE FLOORS ARE MEASURED, per surface, forcing the button visible and reading
    the row's content span against its available width:
 
        Flip   400px   12px spare  (fails at 375: -2px, and scrolls at 390)
-       Pad    430px   12px spare  (wraps at 414 — Pad's row is the longer one,
+       Pad    430px   12px spare  (wraps at 414 -- Pad's row is the longer one,
                                    it carries a colour-drawer tile and a second
                                    separator that Flip does not)
 
    Below those the button goes regardless of input, because there is nowhere to
-   put it. Between them and 640 a mouse keeps its only zoom affordance — which
-   on Flip is a band 240px wide that previously had none at all. */
+   put it. Between them and 640 a mouse keeps its only zoom affordance -- which
+   on Flip is a band 240px wide that would otherwise have none at all. */
 @media (pointer: coarse) and (max-width: 640px) {
   #magnifyBtn { display: none; }
 }
 
-/* ---------- v225: the merged Play pill is 36 tall like its neighbours ------
-   `.header .actions .btn { height: 36px }` brought Record and Post to 36, and
-   Play came with them -- but Play is not the outer box. It sits inside
-   `.play-wrap`, the shell that merges it with the duration badge, and the wrap
-   had no height of its own: it hugged a 36px button and added its own 1px
-   border top and bottom. Measured at 1280: Record [100, 36], Post [138, 36],
-   playWrap [92, 38]. Two pixels, on the one control in the row that is a
-   different shape from the others, which is exactly where two pixels show.
+/* ---------- the merged Play pill is 36 tall like its neighbours ------------
+   `.header .actions .btn { height: 36px }` brings Record and Post to 36, and
+   Play with them -- but Play is not the outer box. It sits inside `.play-wrap`,
+   the shell that merges it with the duration badge, and left to itself the wrap
+   hugs a 36px button and adds its own 1px border top and bottom. Measured at
+   1280: Record [100, 36], Post [138, 36], playWrap [92, 38]. Two pixels, on the
+   one control in the row that is a different shape from the others, which is
+   exactly where two pixels show.
 
    The wrap takes the 36 (border-box, so the border is inside it) and the button
    inside comes down to 34 to fit. The divider needs no rule -- `.duration-badge`
    is `align-self: stretch`, so it follows the wrap's content box and stays
-   full-height, as it was at 38.
+   full-height.
 
    Desktop only. Below 641 the wrap goes transparent and borderless and the
    button carries its own border again, so the outer box is already 36 there and
@@ -1729,42 +1698,36 @@ a.player-btn { text-decoration: none; }
   .play-wrap > #playBtn.btn.play { height: 34px; }
 }
 
-/* ---------- v232: light mode --------------------------------------------
-   PHASE 2. Phase 1 moved every neutral the chrome paints into :root without
-   changing a pixel; this block is what that was for. Nothing here is new
-   plumbing -- it redefines the same tokens and the whole interface follows.
+/* ---------- light mode --------------------------------------------------
+   Nothing here is new plumbing: it redefines the same tokens :root declares
+   above, and the whole interface follows.
 
-   DARK IS THE BASE, so this inverts the usual pattern: `:root` above stays
-   dark and light is what the stamp opts into. There are two states here, not
-   three: light applies when, and only when, something has put
-   data-theme="light" on <html>. The paragraph below says why there is no
-   third, system-following state.
+   DARK IS THE BASE, so this inverts the usual pattern -- `:root` stays dark and
+   light is what the stamp opts into. Light applies when, and only when,
+   something has put data-theme="light" on <html>.
 
    THE RAMP IS MIRRORED BY RELATIONSHIP, NOT BY ARITHMETIC. Inverting each
-   luminance mechanically gives you a light theme where every contrast is
-   technically preserved and nothing looks right: the darkest surface is the
-   one the eye reads as furthest back, and in a light interface that is the
-   LIGHTEST. So --surface-deep, the toolbar row's ground, becomes white, and
-   the ramp climbs away from it in the opposite direction. The cool blue-grey
-   hue the dark palette carries (~220deg, low saturation) is kept throughout;
-   a neutral grey here would read as a different product.
+   luminance mechanically gives a light theme where every contrast is
+   technically preserved and nothing looks right: the darkest surface is the one
+   the eye reads as furthest back, and in a light interface that is the
+   LIGHTEST. So --surface-deep, the toolbar row's ground, becomes white and the
+   ramp climbs away from it in the opposite direction. The cool blue-grey hue
+   the dark palette carries (~220deg, low saturation) is kept throughout; a
+   neutral grey here would read as a different product.
 
-   THE CANVAS IS NOT IN THIS BLOCK, deliberately, and that is the owner's call.
-   The drawing's background is the document's own colour -- saved, shared,
-   exported -- so a Skribl looks the same to every viewer whatever their
-   interface is set to.
+   THE CANVAS IS NOT IN THIS BLOCK, deliberately. The drawing's background is
+   the document's own colour -- saved, shared, exported -- so a Skribl looks the
+   same to every viewer whatever their interface is set to.
 
    The accent family is untouched. #7c5cff sits at L110 and works on both a
-   near-black and a white ground, which is why it was picked. */
-/* NO `@media (prefers-color-scheme: light)` BLOCK, and that is still a
-   decision, for a different reason than it was. v232 made light opt-in and
-   dark the default for everyone; v292 (outside review of v291, SK-AUD-014)
-   follows the device's appearance until a person chooses otherwise: with
-   nothing stored the page follows prefers-color-scheme, and an explicit dark
-   or light ignores it. That resolution lives in _skribl_theme_boot.html and
-   lib/theme.js, which stamp data-theme="light" on <html> before first paint.
-   The stylesheet keeps ONE light ramp, the block below, keyed on that
-   attribute; a media rule would be a second copy of it to drift. */
+   near-black and a white ground, which is why it was picked.
+
+   NO `@media (prefers-color-scheme: light)` BLOCK. With nothing stored the page
+   follows the device's appearance; an explicit dark or light ignores it. That
+   resolution lives in _skribl_theme_boot.html and lib/theme.js, which stamp
+   data-theme="light" on <html> before first paint. The stylesheet keeps ONE
+   light ramp, keyed on that attribute; a media rule would be a second copy of
+   it to drift. */
 :root[data-theme="light"] {
   color-scheme: light;   /* the counterpart of the note on :root */
 
@@ -1822,7 +1785,7 @@ a.player-btn { text-decoration: none; }
   --text-heading:            #171c25;
   --text-primary:            #11161e;
   --text-on-accent-soft:     #3a2a80;   /* text on a translucent accent fill */
-  /* The signature switches pens in daylight (owner: "black on white looks
+  /* The signature switches pens in daylight ("black on white looks
      wrong"). Near-black cursive on a light header lost everything the dark
      lockup has — the halo disappears against white, and heavy dark script
      reads as handwriting, not identity. A deep violet in the accent's own
@@ -1878,24 +1841,21 @@ a.player-btn { text-decoration: none; }
 
 }
 
-/* --- the recovery-key panel: moved to posted.css (v304) --------------------
+/* --- the recovery-key panel: moved to posted.css --------------------
    Loaded by both editors and by the profile page; see skribl/static/posted.css. */
 
-/* ---------- Increased contrast and forced colours (v292) ----------
-   Outside review of v291, SK-AUD-015: the sheet handled reduced motion and
-   two colour ramps, and nothing else the platform can ask for.
-
+/* ---------- Increased contrast and forced colours ----------
    PREFERS-CONTRAST: MORE swaps four tokens for the -hc counterparts defined
-   beside them in each ramp. Tokens, not literals: the ratchets that keep
-   every neutral in :root (verify_surfaces) and every neutral overridden for
-   light (verify_theme) read this block as a mapping, which is what it is.
+   beside them in each ramp. Tokens, not literals: the ratchets that keep every
+   neutral in :root (verify_surfaces) and every neutral overridden for light
+   (verify_theme) read this block as a mapping, which is what it is.
 
-   FORCED COLOURS replace every background with a system colour, so a state
-   told by background alone vanishes: the seg's sliding pill, a lit toggle's
-   tint. Under forced colours the edge does the telling — an outline, which
-   moves no layout — in the system's own Highlight, and the resting options
-   get a ButtonText edge so a row of three still reads as three. verify_a11y
-   section 14 emulates both and reads the computed styles. */
+   FORCED COLOURS replace every background with a system colour, so a state told
+   by background alone vanishes: the seg's sliding pill, a lit toggle's tint.
+   Under forced colours the edge does the telling -- an outline, which moves no
+   layout -- in the system's own Highlight, and the resting options get a
+   ButtonText edge so a row of three still reads as three. verify_a11y section
+   14 emulates both and reads the computed styles. */
 @media (prefers-contrast: more) {
   :root, :root[data-theme="light"] {
     --text-muted: var(--text-muted-hc);

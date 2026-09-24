@@ -19,27 +19,16 @@
   --surface-nudge: #232734;         /* the +/- step buttons beside a slider */
   --surface-nudge-hover: #2c3140;
 
-  /* ---- v230: the rest of the neutral ramp -------------------------------
-     PHASE 1 OF LIGHT MODE, and it changes nothing you can see. Every value
-     below is the literal that used to sit at the call site, moved here
-     unaltered -- 156 of them across the two sheets. The point is that the
-     chrome's colours are now in one place, so a light palette becomes a second
-     block rather than an archaeology exercise.
+  /* ---- the rest of the neutral ramp -------------------------------------
+     Every neutral the chrome paints lives here rather than at its call site,
+     so a light palette is a second block rather than an archaeology exercise.
 
-     DELIBERATELY NOT COLLAPSED. Several of these are within a couple of
-     luminance steps of each other and could merge, but merging them here would
-     be a visual change smuggled into a mechanical one -- and the two are
-     indistinguishable in a diff. The ramp gets designed in phase 2, where a
-     light value has to be chosen for each of these anyway and the duplicates
-     fall out on purpose.
-
-     Two things stayed literal:
+     Two things stay literal:
        * #0d0f14 -- the CANVAS default background. That is the document's own
          colour: saved, shared, exported. A Skribl must not change because the
          person looking at it prefers a light UI.
        * #fff -- almost every use is text sitting on a coloured fill, and white
          on violet stays white in either theme. */
-
   /* Surfaces */
   --surface-deep: #06070a;        /* the toolbar row's ground, below base */
   --surface-sheet: #12151b;
@@ -60,18 +49,15 @@
   /* Text, dimmest first */
   /* NOT FOR TEXT A USER HAS TO READ. Measured against every surface in this
      ramp, --text-faint reaches 2.99-3.37:1 and --text-dim 2.68-3.02:1, both
-     under WCAG AA's 4.5:1 for normal-size text — and an accessibility audit of
-     v278 found them carrying instructions, trim times, optional-field state
-     and character counters, at 10-13px, which makes it worse in practice than
-     the ratio alone suggests.
-     There is no dimmer tier that also passes: --text-muted (#7d8496) is
-     4.61:1 against the lightest surface here, so anything meaningfully fainter
-     fails somewhere. --text-dim survives for DISABLED controls and
-     placeholders, where the text-contrast requirement does not apply.
-     Everything a user reads uses --text-muted; verify_a11y.py holds that line.
-
-     --text-faint/-2 were dropped in v281: defined, used by no rule, unable to
-     pass. verify_a11y.py fails such a token now. */
+     under WCAG AA's 4.5:1 for normal-size text -- and they were carrying
+     instructions, trim times, optional-field state and character counters at
+     10-13px, which is worse in practice than the ratio alone suggests.
+     There is no dimmer tier that also passes: --text-muted (#7d8496) is 4.61:1
+     against the lightest surface here, so anything meaningfully fainter fails
+     somewhere. --text-dim survives for DISABLED controls and placeholders,
+     where the text-contrast requirement does not apply. Everything a user reads
+     uses --text-muted; verify_a11y.py holds that line and fails a token that is
+     defined, used by no rule and unable to pass. */
   --text-soft: #8a93a6;
   --text-soft-2: #8b93a5;
   --text-soft-3: #8b97a8;
@@ -81,7 +67,7 @@
   --text-tool-lit: #aeb6c4;       /* .tool-open at rest */
   --text-bright-2: #c8cdd6;
   --text-bright: #c8cede;
-  --text-brightest: #cdd3de;      /* size dots -- deliberately brighter, v205 */
+  --text-brightest: #cdd3de;      /* size dots -- deliberately brighter */
   --text-strong-2: #e6e9f0;
   --text-strong-3: #e7e9ee;
   --text-strong: #e7e9ea;
@@ -137,37 +123,34 @@
   --text-secondary: #9aa2b1;
   --text-muted: #7d8496;
   --text-dim: #575f6e;
-  /* The increased-contrast counterparts (v292; outside review of v291,
-     SK-AUD-015). Mapped over the four above under prefers-contrast: more, at
-     the end of this sheet; defined HERE so the media block holds no literal
-     and the light ramp below carries its own four. muted clears 8.8:1 on the
-     lightest chrome surface, dim 6.3:1 — dim is decoration, not reading. */
+  /* The increased-contrast counterparts. Mapped over the four above under
+     prefers-contrast: more, at the end of this sheet; defined HERE so the media
+     block holds no literal and the light ramp below carries its own four.
+     muted clears 8.8:1 on the lightest chrome surface, dim 6.3:1 -- dim is
+     decoration, not reading. */
   --text-muted-hc: #b8bfcc;
   --text-dim-hc: #9aa2b1;
   --hairline-hc: rgba(255,255,255,0.22);
   --hairline-strong-hc: rgba(255,255,255,0.34);
 
-  /* The ink the signature is written in — the brand's pen in BOTH themes
-     (owner, having seen the violet daylight ink: "I think the dark should
-     be purple too"). accent-bright rather than the accent itself: the same
-     hue family as Post and the Record dot but a step lighter, so the
-     signature glows like neon against the dark header without duplicating
-     the one saturated fill the accent budget spends on Post. The halo
-     behind it is the same hue, so ink and glow read as one lit stroke.
-     White (--text-primary) was the first draft; it read as chalk, and the
-     brand lived only in the halo. */
+  /* The ink the signature is written in -- the brand's pen in BOTH themes.
+     accent-bright rather than the accent itself: the same hue family as Post
+     and the Record dot but a step lighter, so the signature glows like neon
+     against the dark header without duplicating the one saturated fill the
+     accent budget spends on Post. The halo behind it is the same hue, so ink
+     and glow read as one lit stroke. White (--text-primary) reads as chalk and
+     leaves the brand living only in the halo. */
   --brand-ink: var(--accent-bright);
 
-  /* The header's rim — a border that is FELT, not seen (owner: "not one
-     that's visible... almost black to make it pop out a little more").
-     Darker than both the card and the page in dark mode, so the card reads
-     cut out and floating; the light block flips it to a near-white edge
-     that reads as light catching the card. Deliberately NOT a hairline
-     token: hairlines are lighter than their surface and read as lines,
-     this is darker/lighter than everything and reads as an edge. */
+  /* The header's rim -- a border that is FELT, not seen. Darker than both the
+     card and the page in dark mode, so the card reads cut out and floating;
+     the light block flips it to a near-white edge that reads as light catching
+     the card. Deliberately NOT a hairline token: hairlines are lighter than
+     their surface and read as lines, this is darker (or lighter) than
+     everything and reads as an edge. */
   --header-rim: rgba(0, 0, 0, 0.55);
 
-  /* The letterpress relief on the signature (owner picked SINK over pop,
+  /* The letterpress relief on the signature (SINK, not pop,
      and asked for the old purple halo to go). A bright lower edge and a
      dark upper shade press the strokes INTO the card — light from above,
      ink sitting in its own groove. A whole filter list in one token so
@@ -188,10 +171,10 @@
   --accent-bright: #9179ff;
   --accent-glow: rgba(0,0,0,0.32);
 
-  /* Demoted-UI roles (v220.x). The CLASSIFICATION below is permanent — every
-     former accent call-site now names its role — but the VALUES are a dial.
-     Currently pointed back AT the accent: the owner tried the full demotion
-     and found it flat, so this is the undo. Three palettes, one edit apart:
+  /* Demoted-UI roles. The CLASSIFICATION is permanent -- every former accent
+     call-site names its role -- but the VALUES are a dial. Currently pointed
+     back AT the accent; the full demotion was tried and read flat. Three
+     palettes, one edit apart:
 
        FULL ACCENT (current)       QUIET (tried, too flat)   TINTED QUIET (untried)
        --ui-hi:     #7c5cff;       --ui-hi:     #e7e9ea;     --ui-hi:     #cfc9f2;
@@ -201,7 +184,7 @@
                                                              --focus-ring: rgba(207,201,242,0.9);
 
      TINTED QUIET is the usual answer to "quiet reads dead": neutrals carrying
-     the accent's hue at low saturation, so the UI is calm but not gray.
+     the accent's hue at low saturation, so the UI is calm but not grey.
      Two-stop gradients (scrub/export fills, scrollbars) were flattened to
      solid fills during the demotion and stay solid at every setting. */
   --ui-hi: #7c5cff;
@@ -216,22 +199,17 @@
      that it was a decision. */
   --on-canvas-rgb: 246,247,249;
 
-  /* Semantic colours (v233). These are the SECOND half of light mode, and the
-     half that phase 1 could not see. That pass moved neutrals — greys are what
-     a theme obviously flips — and left every chromatic literal alone. But the
-     danger red, the warn amber and the ok green were all picked to sit on a
-     near-black ground, and on a white one they wash out: #f4326f measures
-     3.32:1 against the menu sheet, which is below AA for body text and is what
-     "Clear all" is written in.
+  /* Semantic colours. The danger red, the warn amber and the ok green were all
+     picked to sit on a near-black ground, and on a white one they wash out:
+     #f4326f measures 3.32:1 against the menu sheet, below AA for body text and
+     what "Clear all" is written in. The light ramp restates them darker at the
+     same hues.
 
-     Values here are the dark ones unchanged, so this block moves no pixel; the
-     light ramp restates them darker at the same hues. The three -soft variants
-     are kept apart rather than collapsed for the same reason --text-soft has
-     three: they are three different call sites that happen to be near each
-     other, and merging them would silently repaint dark mode.
-
-     --danger-fill is the odd one out — a SOLID red button with white text, not
-     text on a surface — so it stays put in both themes. */
+     The three -soft variants are kept apart rather than collapsed for the same
+     reason --text-soft has three: they are three different call sites that
+     happen to be near each other, and merging them would silently repaint dark
+     mode. --danger-fill is the odd one out -- a SOLID red button with white
+     text, not text on a surface -- so it stays put in both themes. */
   --danger: #f4326f;
   --danger-mid: #e0576b;
   --danger-soft: #ff9d9d;
@@ -240,13 +218,13 @@
   --danger-fill: #b3283f;
   --warn: #ffd23f;
   --warn-2: #ff9f43;
-  /* Lifted from #1bcf8f (H159 S77% L46%) to H159 S80% L55%. The old one was
-     not short of CONTRAST — 9.6:1 on the base ground — it was short of VIVIDNESS,
-     and it is spent almost entirely on 6-7px dots: the toolbar's music and image
-     tab-dots, the autosave dot, the post sheet's sound marker. At that size hue
-     reads weakly and lightness carries the signal, so a mid-lightness green
-     reads as grey-green at a glance. Owner's call: "a little too dull".
-     Not raised further: past ~L60 it goes mint and stops reading as "ready". */
+  /* H159 S80% L55%, lifted from #1bcf8f (H159 S77% L46%). The old value was
+     not short of CONTRAST -- 9.6:1 on the base ground -- it was short of
+     VIVIDNESS, and it is spent almost entirely on 6-7px dots: the toolbar's
+     music and image tab-dots, the autosave dot, the post sheet's sound marker.
+     At that size hue reads weakly and lightness carries the signal, so a
+     mid-lightness green reads as grey-green at a glance. Not raised further:
+     past ~L60 it goes mint and stops reading as "ready". */
   --good: #30e8a7;
   /* The same colour as components, for the glows and tints that used to hardcode
      rgba(27, 207, 143, …) — three of them, which would have silently kept the
@@ -356,27 +334,27 @@ body {
   padding: 14px 18px;
   margin: 12px;
   border-radius: 16px;
-  /* No HAIRLINE — but a RIM. The hairline ban stands for the reason below:
+  /* No HAIRLINE -- but a RIM. The hairline ban stands for the reason below:
      the canvas owns the only visible outline on the screen. What the header
-     wears instead is --header-rim (owner: "not one that's visible... almost
-     black [dark] / almost white [light] to make it pop"), which is darker
-     than everything around it in dark mode and lighter than everything in
-     light — so it never reads as a LINE competing with the canvas ring, it
-     reads as the card's own edge: cut out of the dark, or catching the
-     light. The original reasoning, kept because it still governs: the
-     canvas carries a 1px ring (--canvas-ring), and when the header and
-     toolbar each carried one too, at almost the same radius, three
-     concentric outlined rectangles fought and the eye could not tell which
-     was the subject. rgba over the near-black page plus the 26px-blur
-     shadow below still does the raising; the rim only sharpens the cut.
-     A box-shadow RING, not a border, and that is load-bearing: a border
-     eats 2px of interior width, and the 390px header fit is measured to
-     the pixel (the v269 pin caught exactly that — Post shed its label the
-     moment a real border went in). The ring paints just outside the edge
-     and costs the layout nothing.
+     wears instead is --header-rim, darker than everything around it in dark
+     mode and lighter than everything in light -- so it never reads as a LINE
+     competing with the canvas ring, it reads as the card's own edge: cut out
+     of the dark, or catching the light.
+
+     The ban itself: the canvas carries a 1px ring (--canvas-ring), and when the
+     header and toolbar each carried one too, at almost the same radius, three
+     concentric outlined rectangles fought and the eye could not tell which was
+     the subject. rgba over the near-black page plus the 26px-blur shadow below
+     does the raising; the rim only sharpens the cut.
+
+     A box-shadow RING, not a border, and that is load-bearing: a border eats
+     2px of interior width, and the 390px header fit is measured to the pixel --
+     Post sheds its label the moment a real border goes in. The ring paints just
+     outside the edge and costs the layout nothing.
+
      Shared by Pad and Flip (flip.css only adjusts padding and gap) and
-     inherited by the player through the derived sheet, so the three
-     surfaces stay one design. */
+     inherited by the player through the derived sheet, so the three surfaces
+     stay one design. */
   background: rgba(var(--surface-well-2-rgb), 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -410,7 +388,7 @@ body {
    which room you are in (PAD / FLIP / PLAYER). One system instead of a
    different sticker per mode. */
 .brand-tag {
-  /* Tiny but legible (owner's spec): small, tight, caps. 10px/700 with a
+  /* Tiny but legible: small, tight, caps. 10px/700 with a
      modest .12em track — wide tracking at this size read airy, not tight. */
   font-weight: 700;
   font-size: 10px;
@@ -432,7 +410,7 @@ body {
    below catches any svg inside .brand, and it is later in the file. */
 /* padding-top 0: the base .brand-tag still carries the 3px optical seat from
    the TEXT-tag era, which grew this wrapper to 39px and centered the word
-   svg 1.5px below the signature — measured, and the owner saw it ("flip and
+   svg 1.5px below the signature -- measured and visible ("flip and
    pad look like they sit lower than skribl"). Both svgs are 36px of the same
    30-unit box, so with the seat gone, centering aligns tops and therefore
    baselines exactly. No align-self either (a flex-end leftover compounded
@@ -442,7 +420,7 @@ body {
      viewBox, so the flex gap alone cannot seat the word next to the ink —
      pull the word back under that air. Net ink-to-ink ≈ one word space. */
   margin-left: -8px;
-  /* SAME INK as the signature — owner: "the exact same lettering as skribl".
+  /* SAME INK as the signature -- the exact same lettering as skribl.
      Same color, same halo — and at the SAME 36px of the same 30-unit box
      with the same stroke-width 2.3, it is literally the same pen: mark and
      word share one baseline, one x-height band, one line of handwriting.
@@ -454,47 +432,44 @@ body {
   height: 36px; width: auto; display: block; overflow: visible;
   border-radius: 0; box-shadow: none;
 }
-/* The gradient the signature is inked with (owner-picked from a rendered
-   mock): accent melting to accent-2, the same pair in both themes — and ONE
-   sweep across the whole line of handwriting (owner: "start with skribl and
-   end at the end rather than doing each word"). The stops live HERE as CSS
-   so they stay tokens; the three lockup svgs (the mark partial and both
-   word svgs) carry the <linearGradient> that references them, in
-   userSpaceOnUse units of the shared 30-unit hand: the mark runs 0 -> the
-   lockup's full width (brand_sweep, passed by the including page) and the
-   word's gradient starts at the matching NEGATIVE x, so violet at the s of
-   skribl reaches blue only at the d of pad / the p of flip. A standalone
-   mark (player, library) defaults to its own width — a full sweep across
-   just the signature.
+/* The gradient the signature is inked with: accent melting to accent-2, the
+   same pair in both themes, and ONE sweep across the whole line of handwriting
+   rather than one per word. The stops live HERE as CSS so they stay tokens; the
+   three lockup svgs (the mark partial and both word svgs) carry the
+   <linearGradient> that references them, in userSpaceOnUse units of the shared
+   30-unit hand: the mark runs 0 -> the lockup's full width (brand_sweep, passed
+   by the including page) and the word's gradient starts at the matching
+   NEGATIVE x, so violet at the s of skribl reaches blue only at the d of pad /
+   the p of flip. A standalone mark (player, library) defaults to its own width
+   -- a full sweep across just the signature.
    --brand-ink stays defined beneath this: it is the solid-pen fallback for
    anything that renders the lockup without the gradient defs, and the
-   letterpress relief (--brand-relief) presses the gradient ink exactly as
-   it pressed the solid. */
+   letterpress relief (--brand-relief) presses the gradient ink exactly as it
+   pressed the solid. */
 .brand-grad-a { stop-color: var(--accent); }
 .brand-grad-b { stop-color: var(--accent-2); }
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
-   buttons / Flip's back arrow) — one size at every width, per the wordmark
-   parity pin. Selector is deliberately (0,3,1): it must OUTRANK the ≤340
+   buttons / Flip's back arrow) -- one size at every width, per the wordmark
+   parity pin. Selector is deliberately (0,3,1): it must OUTRANK the <=340
    player-only tier rule `.header .brand svg { 30px }` further down, which
    otherwise catches this mark too and squashes it to 30x30. */
-/* ...and this is where the wordmark opts OUT of it. "PLAYER-ONLY" above was
-   true of the intent and false of the selector: Pad's wordmark is also a
-   `.brand svg`, so it was inheriting a 34px tile's rounded corners and drop
-   shadow. On the near-black header a black shadow over a black ground is
-   invisible and nobody could see the mistake — light mode rendered it as a
-   pale rounded rectangle around the wordmark's bounding box, and SKRIBL PAD
-   looked like a sticker stuck onto the header. Flip was never affected: its
-   mark lives in .flip-word, not .brand.
+/* ...and this is where the wordmark opts OUT of it. That rule is player-only in
+   INTENT and not in selector: Pad's wordmark is also a `.brand svg`, so it
+   inherits a 34px tile's rounded corners and drop shadow. On the near-black
+   header a black shadow over a black ground is invisible; light mode renders it
+   as a pale rounded rectangle around the wordmark's bounding box, and SKRIBL PAD
+   looks like a sticker stuck onto the header. Flip is unaffected: its mark lives
+   in .flip-word, not .brand.
    Undone HERE rather than by narrowing `.brand svg` itself, because cssgraph
    matches emitted blocks by comparing selector STRINGS against a recorded live
-   set — rewriting that selector drops the whole block out of player.css and
+   set -- rewriting that selector drops the whole block out of player.css and
    takes the player's own logo tile with it. */
-/* v269: the mark is the one-stroke skribl signature (inline SVG in the shared
-   partial). SIGNATURE-sized, deliberately — 20px, not a 44px block: it should
+/* The mark is the one-stroke skribl signature (inline SVG in the shared
+   partial). SIGNATURE-sized, deliberately -- 20px, not a 44px block: it should
    read as a word someone left on the chrome, not a logo asking to be looked
-   at. The zeroed radius and shadow keep the old `.brand svg` tile rule from
-   ever dressing it up again. overflow visible: the skew and tail sit a hair
-   outside the viewBox and must not be clipped. */
+   at. The zeroed radius and shadow keep the `.brand svg` tile rule from ever
+   dressing it up again. overflow visible: the skew and tail sit a hair outside
+   the viewBox and must not be clipped. */
 .header .brand .brand-mark {
   height: 36px;
   width: auto;
@@ -507,7 +482,7 @@ body {
      same pen wherever they inherit from. */
   color: var(--brand-ink, var(--text-primary));
   /* Letterpress, not glow. The halo era (0 0 5px accent at 30%) ended when
-     the ink itself went purple and the owner chose the pressed-in look and
+     the ink itself went purple and the pressed-in look was chosen over
      asked for the glow to go: the relief token presses the strokes into
      the card — bright ledge below, shade above — per theme. */
   filter: var(--brand-relief);
@@ -557,7 +532,7 @@ body {
   gap: 7px;
   transition: filter 0.15s ease, transform 0.18s var(--spring), background 0.2s ease, box-shadow 0.2s ease;
   letter-spacing: 0.1px;
-  white-space: nowrap;   /* v207: a pill must never wrap into a 3-line blob (it did at 641px) */
+  white-space: nowrap;   /* a pill must never wrap into a 3-line blob; it did at 641px */
 }
 
 .btn svg {
@@ -590,7 +565,7 @@ body {
 /* The stop square follows the button's ink. The idle whisper-of-purple rule
    above kept painting the glyph accent while text, border and wash had all
    turned recording-crimson — one purple square inside an otherwise crimson
-   pill (owner: "does that stop button look weird?"). The icon is drawn with
+   pill. The icon is drawn with
    fill="currentColor", so this hands it back to the cascade. */
 .btn.record.active svg { color: currentColor; }
 
@@ -687,14 +662,14 @@ body {
   min-width: 0;
   min-height: 0;
   /* Matches the 24px Flip's fitPad() reserves. Without it the canvas presses
-     against the column edge on a narrow screen — and now that the canvas has a
-     2px ring, the ring sits flush against the app border.
+     against the column edge on a narrow screen -- and with the canvas's 2px
+     ring, the ring sits flush against the app border.
      22px TOP, same number and same reason as Flip's stage: the two drawer
      shells above this area (name, tune) each tuck under the header with a
-     -10px margin, pulling the canvas up 20px — more than the header's 12px
-     bottom margin gives back. On desktop the canvas usually has slack, so
-     nobody saw it; on a tall phone the 9:16 preset fills the area exactly and
-     the canvas slid UNDER the floating header (owner's iPhone screenshot).
+     -10px margin, pulling the canvas up 20px -- more than the header's 12px
+     bottom margin gives back. On desktop the canvas usually has slack; on a
+     tall phone the 9:16 preset fills the area exactly and the canvas slides
+     UNDER the floating header.
      layoutEditorCanvas() and the boot best-fit both derive available space
      from this computed padding, so the canvas pays with a few px of scale,
      never overflow. */
@@ -749,17 +724,16 @@ body:not(.player-mode) .canvas-wrap {
   }
 }
 
-/* The #canvas min-height floor (400px, or 50vh under the <=640px query) predates
-   the placeholder above: it existed so the canvas had SOME presence before JS
-   sized it. Now the wrap provides that, and the floor actively fights it — at
-   420x850 the floor is 425px inside a 282px wrap, so the canvas overflowed its
-   own frame and `overflow: hidden` clipped it. Found by verify_visual.py within
-   minutes of that suite existing, having shipped in v193's predecessor.
-   layoutEditorCanvas() already sets minHeight = '0' inline, so this only ever
-   applies before app.js runs — the settled layout is identical either way.
+/* NO #canvas min-height floor. A floor (400px, or 50vh under the <=640px
+   query) exists only to give the canvas SOME presence before JS sizes it; the
+   wrap's placeholder above provides that, and the floor then fights it -- at
+   420x850 a 425px floor inside a 282px wrap overflows the frame and
+   `overflow: hidden` clips it. layoutEditorCanvas() sets minHeight = '0'
+   inline, so such a rule only ever applies before app.js runs and the settled
+   layout is identical either way.
 
-   Descendant, not child: #canvas sits inside a .zoom-layer div, so `>` matched
-   nothing and the first version of this fix silently did nothing. */
+   Descendant, not child: #canvas sits inside a .zoom-layer div, so `>` matches
+   nothing and a rule written that way silently does nothing. */
 body:not(.player-mode) .canvas-wrap #canvas {
   min-height: 0;
 }
@@ -770,15 +744,15 @@ body:not(.player-mode) .canvas-wrap #canvas {
   cursor: crosshair;
   /* Same reason as Flip's #pad: an inset vignette alone gives no findable edge
      on a dim panel. Held in a variable because every state below replaces
-     box-shadow wholesale — .recording did, and Pad enters it on the FIRST
-     STROKE, so the edge vanished exactly when it was needed. */
-  /* INSET, not an outer spread (v202 review amendment, A2). A box-shadow
-     painted OUTSIDE the box contributes nothing to layout, so once the fitted
-     wrapper reached its width ceiling (~461px viewports) the 2px ring painted
-     past the container edge and was clipped: the frame's left and right sides
-     simply vanished while the canvas stayed. Inset paints within the border
-     box — unclippable at the edge, zero layout change, and every state rule
-     below that swaps box-shadow wholesale still re-includes this variable. */
+     box-shadow wholesale -- .recording does, and Pad enters it on the FIRST
+     STROKE, so the edge would vanish exactly when it is needed. */
+  /* INSET, not an outer spread. A box-shadow painted OUTSIDE the box
+     contributes nothing to layout, so once the fitted wrapper reaches its width
+     ceiling (~461px viewports) a 2px ring paints past the container edge and is
+     clipped: the frame's left and right sides vanish while the canvas stays.
+     Inset paints within the border box -- unclippable at the edge, zero layout
+     change, and every state rule below that swaps box-shadow wholesale still
+     re-includes this variable. */
   --canvas-ring: inset 0 0 0 1px rgba(var(--wash-rgb), 0.18);
   /* Rounded to match Flip's canvas. Two editors in one app should not disagree
      about the shape of the thing you draw on. */
@@ -1202,13 +1176,12 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
   box-shadow: 0 0 3px rgba(255, 210, 63, 0.35);
 }
 
-/* .tab-dot-empty is RETIRED. Photo and Music used to carry a grey twin that a
+/* .tab-dot-empty is RETIRED. Photo and Music carried a grey twin that a
    :has() rule swapped for the live dot, so an empty tab still showed a circle.
-   It was answering "is there no media?", which is not a question a resting
-   toolbar should be answering, and it put two permanent marks on a row that has
-   just spent a version getting quieter. Nothing attached is now simply the icon;
-   a dot appears only when there is something to say -- green for present, amber
-   for remembered-but-missing.
+   It answered "is there no media?", which is not a question a resting toolbar
+   should be answering, and it put two permanent marks on the row. Nothing
+   attached is now simply the icon; a dot appears only when there is something
+   to say -- green for present, amber for remembered-but-missing.
    Reversal: restore this rule and the two <span class="tab-dot-empty"> in
    skribl_editor.html and skribl_flip.html. Nothing else used the class. */
 
@@ -1234,21 +1207,19 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
 /* ---------- Floating tool bar (resting) ---------- */
 /* No tray chrome. Flip's .flip-tools has never had any, and the controls carry
    their own affordances: the tool group is a pill, undo/redo are bordered
-   tiles, the colour ring is a circle. The tray was a frame drawn around things
-   already framed — and with the canvas ring it made two concentric outlined
+   tiles, the colour ring is a circle. A tray is a frame drawn around things
+   already framed -- and with the canvas ring it makes two concentric outlined
    rectangles competing for the eye. The canvas is the subject; it keeps the
-   only frame. (The header did the same in 31ed04f.)
+   only frame.
+
    ONLY the chrome goes: border, background, blur and shadow. The LAYOUT stays
-   exactly as measured — fit-content width, the auto margin, max-width, gap and
-   padding, and the whole responsive ladder below. That ladder encodes owner
-   decisions this change has no business touching: v217 measured 343px on one
-   row at 375 with 8px to spare, the sizing is deliberately tuned for 360px
-   because it is a very common Android width, and v213 chose to WRAP rather
-   than shrink because shaving the buttons puts the tap target under the 44px
-   minimum. Flip shrinks to 36px and then 34px at its narrow tiers; that is the
-   trade Pad already considered and declined, and removing a background is not
-   a reason to re-open it. Pad therefore still wraps to two rows at 320-344,
-   deliberately, now without a box drawn around it. */
+   exactly as measured -- fit-content width, the auto margin, max-width, gap and
+   padding, and the whole responsive ladder below. That ladder is measured: 343px
+   on one row at 375 with 8px to spare, tuned for 360px because it is a very
+   common Android width, and it WRAPS rather than shrinks because shaving the
+   buttons puts the tap target under the 44px minimum. Flip shrinks to 36px and
+   then 34px at its narrow tiers; that is the trade Pad considered and declined.
+   Pad therefore wraps to two rows at 320-344, deliberately. */
 .toolbar {
   display: flex;
   align-items: center;
@@ -1260,19 +1231,18 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
   position: relative;
   z-index: 41;
 }
-/* .tool-sep is RETIRED (v224). It was a 1px line with 5px margins either side,
-   and it was doing two jobs badly: drawing a divider in a row that had just lost
-   every other line it owned (the tray went in 31ed04f), and standing in for the
-   whitespace that actually separates groups.
+/* .tool-sep is RETIRED. It was a 1px line with 5px margins either side, doing
+   two jobs badly: drawing a divider in a row that had lost every other line it
+   owned, and standing in for the whitespace that actually separates groups.
 
    Measured before removing it: a separator plus its own gaps is worth about
    15px, and the grouping margins below need roughly that much anyway. Dropping
-   both saved 2px at 1280 and cost 6px at 390 -- so this is NOT a width change,
-   it is a "one fewer line drawn on screen" change, and the width is a wash.
-   Anything wanting a divider back should re-add this rule and the two spans in
+   both saved 2px at 1280 and cost 6px at 390 -- so it is NOT a width change, it
+   is a "one fewer line drawn on screen" change, and the width is a wash.
+   Anything wanting a divider back re-adds this rule and the two spans in
    skribl_editor.html / skribl_flip.html; nothing else referenced the class.
 
-   Groups are now made of air. The row reads: what the mark looks like (the tool
+   Groups are made of air. The row reads: what the mark looks like (the tool
    pill and the colour ring), what happened to the drawing (undo, redo), and what
    is on the page or how you are looking at it (image, music, magnify). */
 .toolbar #colorOpenBtn { margin-left: 8px; }
@@ -1286,7 +1256,7 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
   transition: background .15s ease, color .15s ease;
 }
 .tool-open { --icon-size: 24px; }   /* what .tool-open .tab-dot measures from */
-.tool-open svg { width: 24px; height: 24px; }  /* v205-fix: standardized tier-1 icon 21->24 */
+.tool-open svg { width: 24px; height: 24px; }  /* standardized tier-1 icon 21->24 */
 .tool-open:hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); }
 
 /* Magnify tool — lit (accent) when its zoom pill is showing. */
@@ -1320,25 +1290,18 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
 .tool-open .tab-dot,
 .post-sound .tab-dot {
   position: absolute;
-  /* HALF IN, HALF OUT. The dot's centre sits on the icon box's top-right corner
-     (+12.5, -12.5 from the icon's centre), so it straddles the edge the way it
-     did before v224 -- the old `top: 6px; right: 6px` on a 44px button landed in
-     exactly this place. What changed is the ANCHOR, not the look: measuring from
-     50% tracks the 24px icon, which is centred whatever the button does, so
-     desktop and phone finally agree. Measuring from the button's own edges was
-     the bug, and it is why the dot sat somewhere different at 34px wide.
-     Fully tucked inside (+8, -8) was tried first and read as a mark ON the
-     glyph rather than a badge attached to it. */
-  /* 0.4 -- the dot's centre sits just inside the ICON BOX's top-right corner,
-     and the number is set by the BUTTON, not by taste.
+  /* HALF IN, HALF OUT, AND ANCHORED TO THE ICON RATHER THAN THE BUTTON. The
+     dot's centre sits just inside the ICON BOX's top-right corner. The icon is
+     centred whatever the button does, so one rule holds one look at every
+     width; measuring from the button's own edges does not -- the same 6px that
+     lands on the corner at 44px lands 3.5px INSIDE the icon's right edge at 36.
 
-     0.5 puts the centre exactly on the icon box corner, which is where the
-     pre-v224 `top: 6px; right: 6px` resolved to on a 44px desktop button. It
-     looks right there and it is what the owner's reference screenshot shows.
-     But the button shrinks to 36 and 34 on phones while the icon stays 24, and
-     .tool-open carries a 12px corner radius, so the dot ran into the rounded
-     corner of the lit box. Measured as diagonal clearance between the dot's
-     outer edge and the corner's painted surface:
+     0.4, not 0.5, and the number is set by the BUTTON. 0.5 puts the centre
+     exactly on the icon box corner and looks right there, but the button
+     shrinks to 36 and 34 on phones while the icon stays 24, and .tool-open
+     carries a 12px corner radius, so the dot runs into the rounded corner of
+     the lit box. Diagonal clearance between the dot's outer edge and the
+     corner's painted surface:
 
          tier                    0.5      0.4
          Pad  desktop  44/24    +5.67    +9.07
@@ -1348,22 +1311,16 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
          Flip <=392    34/21    +0.72    +3.69
          Flip <=359    32/21    -0.69    +2.28
 
-     Two tiers were NEGATIVE: the dot was crossing the accent ring of an open
+     Two tiers go NEGATIVE at 0.5 -- the dot crossing the accent ring of an open
      drawer, which is the state it is most visible in. 0.4 is the largest offset
-     that clears every tier by about two pixels. The cost is 2.4px of inward
-     travel on desktop, where there was never a clearance problem -- paid so the
-     dot sits in the same place relative to the icon at every width, which is
-     the property the button-anchored rule could not hold.
+     that clears every tier by about two pixels, at the cost of 2.4px of inward
+     travel on desktop where there was never a clearance problem.
 
-     Measuring from the button was the original bug. The same 6px that landed on
-     the corner at 44 landed 3.5px INSIDE the icon's right edge at 36 -- one
-     rule, two looks. Anchoring to the icon holds one look everywhere.
-
-     0.375 was tried too, on a reading of "half in, half out" as half over the
-     ARTWORK: both glyphs stop at (21, 3) in their 24-unit viewBox rather than at
-     the box corner, so 9 units puts the dot squarely on the stroke and it reads
-     as a mark ON the icon rather than a badge attached to it. Rejected on sight.
-     0.4 is 9.6 units -- close in arithmetic, but it clears the stroke.
+     0.375 reads "half in, half out" as half over the ARTWORK: both glyphs stop
+     at (21, 3) in their 24-unit viewBox rather than at the box corner, so 9
+     units puts the dot squarely on the stroke and it reads as a mark ON the
+     icon rather than a badge attached to it. 0.4 is 9.6 units -- close in
+     arithmetic, and it clears the stroke.
 
      -3.5px is half the 7px dot, turning a centre into a left/top edge.
 
@@ -1610,7 +1567,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   cursor: pointer; flex-shrink: 0;
   transition: background .15s ease, color .15s ease;
 }
-.eyedropper-btn svg { width: 18px; height: 18px; }  /* v207: tier-2 glyph size, matches drawer toggles */
+.eyedropper-btn svg { width: 18px; height: 18px; }  /* tier-2 glyph size, matches drawer toggles */
 
 /* Eyedropper loupe — the magnified press-drag picker (lib/eyedropper.js
    builds and drives it; geometry constants there match the 120/4 here).
@@ -1731,15 +1688,15 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-seg);
   padding: 3px;
-  /* --seg-h was declared in four places and read in none, so a seg's height
-     came from `font: inherit` -> `line-height: inherit`: it was as tall as
-     whatever contained it, and it followed the INSTALLED FONT's metrics. The
-     same stylesheet rendered #hintSeg at 20px in headless Chromium and 23px on
-     a Mac, while .pb — which states `height: 38px` — matched exactly. A control
-     whose size depends on the viewer's font stack cannot be asserted.
-     Deliberately NO fallback: an undefined var() makes `height` compute to
-     `auto`, so a seg that has not been measured keeps its current behaviour and
-     opting one in is a one-line, one-control decision. */
+  /* --seg-h must be declared AND read. Left unread, a seg's height comes from
+     `font: inherit` -> `line-height: inherit`: as tall as whatever contains it,
+     following the INSTALLED FONT's metrics. The same stylesheet renders #hintSeg
+     at 20px in headless Chromium and 23px on a Mac, while .pb -- which states
+     `height: 38px` -- matches exactly. A control whose size depends on the
+     viewer's font stack cannot be asserted. Deliberately NO fallback: an
+     undefined var() makes `height` compute to `auto`, so a seg that has not
+     been measured keeps its current behaviour and opting one in is a one-line,
+     one-control decision. */
   height: var(--seg-h);
   box-sizing: border-box;
   align-items: stretch;
@@ -1749,7 +1706,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border: 0; background: transparent;
   color: var(--text-secondary);
   font: inherit; font-weight: 500; font-size: 13px;
-  /* v206: standardized with the tune-drawer sliders — roomier horizontal
+  /* Standardized with the tune-drawer sliders — roomier horizontal
      padding, and the label centered in its cell. Not a fixed width (these
      carry text of varying length: "On"/"Off", "16:9"), so each cell sizes to
      its label; only the rhythm and centering are shared. Was 5px 11px. */
@@ -1820,7 +1777,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 @media (max-width: 640px) {
   /* Breathing room for the pen row's nine items (8 dots + eyedropper) on a
      phone. At 28px the gaps closed to ~7px and the selected dot's white ring
-     nearly touched its neighbour (owner: "the pen colors are crowded — the
+     nearly touched its neighbour ("the pen colors are crowded -- the
      pink is too close to white"). 26px buys ~10px gaps; taps stay ≥44 via
      the bumped --tap-grow / input overhang below. */
   .color-dot, .bg-swatch { width: 26px; height: 26px; }
@@ -1891,7 +1848,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    used to be fixed boxes (34px pen, 42px background) around a 28–30px swatch,
    which pushed the custom swatch out of line with its row and left the old
    "+" badge floating on empty background a corner away from the thing it
-   labelled (owner, zoomed in: "the swatch looks weird... there's white
+   labelled (zoomed in: "the swatch looks weird... there's white
    there — fit it perfectly"). */
 .color-custom-wrap,
 .bg-custom-wrap {
@@ -1920,7 +1877,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    button already established: a rainbow ring, not a fake preset. Before this
    it shipped with an inline fill identical to the last preset beside it, so
    the one control that opens the full picker read as a redundant seventh
-   swatch (owner, from the phone: "that plus is too small to tell what it is
+   swatch (from a phone: "that plus is too small to tell what it is
    ... is it important?" — it is; it is the picker; the rainbow now says so
    by itself and the badge is gone). border: 0 matters: the base swatch's
    2.5px transparent border let the gradient bleed past the 12px radius as
@@ -1933,7 +1890,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 /* Once a colour is picked the middle shows it, but the spectrum stays as a
    ring around it: the swatch keeps saying "the full picker lives here"
-   instead of impersonating an eighth preset (owner: "there is no way to know
+   instead of impersonating an eighth preset ("there is no way to know
    that that is the color selector after you pick a color — it just looks
    like a blue now"). JS sets --custom-color and this class rather than an
    inline background, which used to paint the rainbow out entirely. */
@@ -2417,7 +2374,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .nudge-btn {
-  /* v206 (option A): 26 -> 32 visual, readable but still compact enough for
+  /* 26 -> 32 visual, readable but still compact enough for
      the three side-by-side Start/End/Step columns; the invisible 44pt tap
      area (button-system block) does the rest. The readout between - and +
      keeps their tap areas from overlapping each other. */
@@ -2696,7 +2653,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .opacity-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  /* 24, not 16. v250 made the HIT AREA 44px, which is invisible -- the control
+  /* 24, not 16. The HIT AREA is 44px, which is invisible -- the control
      was then easy to grab and looked exactly as small as before, which is what
      got reported. This is the visible half. iOS draws about a 28pt thumb on a
      4pt track; 16 was roughly half that. 28 was tried and crowds the row, and
@@ -2754,7 +2711,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   object-fit: cover;
   /* Safari does not reliably clip a transformed child ( .zoom-layer carries
      transform/will-change ) to a parent's rounded overflow:hidden — on the
-     owner's iPhone every photo's square corners punched through the canvas
+     on an iPhone every photo's square corners punched through the canvas
      frame's rounded edge ("image covers edge of canvas"). Chromium clips
      fine, which is why no desktop screenshot ever showed it. Round the
      image itself so its corners match the frame regardless of who clips. */
@@ -2856,24 +2813,18 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    what the user is actually looking at. */
 body:has(.tab-panel:not([hidden])) .autosave-status,
 body:has(#drawPanel:not([hidden])) .autosave-status,
-/* The ⋯ menus and sheets were missing from this list, so the amber
-   "Media missing" warning sat ON TOP of Flip's open menu, colliding with
-   its rows (owner: "that media thing should disappear when I click menu,
-   then reappear when I close menu"). Same rule, same reasoning as the
-   drawers: the surface the user just opened is what they are looking at,
-   and the pill — warning included — returns the moment it closes.
-   .menu-overlay covers Pad's ⋯ menu, export and post sheets in one
-   selector; #moreMenu is Flip's. */
+/* Every surface that COVERS the page suppresses the amber "Media missing"
+   warning, or it sits on top of the thing the user just opened. Same reasoning
+   as the drawers: the surface they just opened is what they are looking at, and
+   the pill -- warning included -- returns the moment it closes.
+   .menu-overlay covers Pad's menu, export and post sheets in one selector;
+   #moreMenu is Flip's. */
 body:has(.menu-overlay:not([hidden])) .autosave-status,
 body:has(#moreMenu:not([hidden])) .autosave-status,
-/* ...and the help drawer and Flip's post and export sheets were missing
-   from it in turn (owner, from an iPhone, v304: the amber "Media missing"
-   pill sat on top of How it works). One list, every surface that covers
-   the page; the pill returns when it closes. Each entry names the element
-   that CARRIES the hidden attribute: the report sheet is not here because
-   its overlay is what hides, and .menu-overlay above already covers it --
-   naming #reportSheet matched always and hid the pill for good, which the
-   pin that drives this rule caught on the clean tree. */
+/* Each entry names the element that CARRIES the hidden attribute. The report
+   sheet is not here because its OVERLAY is what hides, and .menu-overlay above
+   already covers it -- naming #reportSheet matches always and hides the pill for
+   good, which the pin that drives this rule caught on the clean tree. */
 body:has(#helpDrawer:not([hidden])) .autosave-status,
 body:has(.flip-export:not([hidden])) .autosave-status {
   opacity: 0;
@@ -2915,19 +2866,18 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
    the pulsing amber of an in-flight save. */
 .autosave-status.partial .autosave-dot { background: var(--warn); }
 .autosave-status.partial { color: var(--warn); }
-/* ---- The pill when it has somewhere to go (lib/autosavepill.js, v294) ----
+/* ---- The pill when it has somewhere to go (lib/autosavepill.js) ----
    Both editors: a pending record with no bytes behind it makes the pill's TEXT
-   a control that opens the drawer holding the re-add card, and shows a × that
-   does what the card's Dismiss does. These lived in flip.css from v238 to v294
-   as "Flip only", while the Pad could be in exactly the same state.
+   a control that opens the drawer holding the re-add card, and shows a x that
+   does what the card's Dismiss does.
 
-   pointer-events IS THE WHOLE FIX. The base pill sets `pointer-events: none`
-   so a status that happens to sit over a control cannot eat the tap meant for
-   it — right while the pill is only a status, and exactly why making it
-   tappable is a CSS change and not just a listener. A ring in the warn colour,
-   so the affordance and the severity are the same signal. NOT a transform on
-   :active — lib/pillfit.js lifts the pill with translateY and a transform
-   here would replace the lift, out from under the finger pressing it. */
+   pointer-events IS THE WHOLE FIX. The base pill sets `pointer-events: none` so
+   a status that happens to sit over a control cannot eat the tap meant for it
+   -- right while the pill is only a status, and exactly why making it tappable
+   is a CSS change and not just a listener. A ring in the warn colour, so the
+   affordance and the severity are the same signal. NOT a transform on :active
+   -- lib/pillfit.js lifts the pill with translateY and a transform here would
+   replace the lift, out from under the finger pressing it. */
 .autosave-status.actionable { pointer-events: auto; box-shadow: 0 0 0 1px var(--warn) inset; }
 .autosave-status.actionable #autosaveStatusText { cursor: pointer; }
 .autosave-status.actionable:hover { background: rgba(var(--surface-control-rgb), 0.95); }
@@ -2943,7 +2893,7 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
    ever changes, and named here so the next reader does not mistake it for the
    mechanism that is doing the work. */
 .autosave-status.actionable.blocked { pointer-events: none; }
-/* A THUMB TARGET, NOT A GLYPH. 44px each way (the owner's phone: "so small
+/* A THUMB TARGET, NOT A GLYPH. 44px each way (on a phone: "so small
    when you push it you are over the canvas and likely to draw"), with negative
    margins so the pill's own box stays the same height: the hit area reaches
    8px above and below the pill and 6px past its right edge, and a near miss
@@ -2957,13 +2907,12 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
   position: relative;
 }
 /* A BUTTON YOU CAN SEE, AT THE SIZE IT IS. An invisible 44px target stops the
-   accidental stroke and does nothing for the aiming: nothing on screen says
-   the button is bigger than its glyph, so a person still squints at a 12px ×
-   (owner: "should the button be big so people don't stress trying to hit the
-   little x"). The puck below is the button as far as the eye is concerned —
-   drawn at rest, filled when pressed — and the 44px box around it is the
-   forgiveness margin, not the affordance. The pressed state is this same
-   circle rather than the whole box, which is what used to overhang the pill. */
+   accidental stroke and does nothing for the aiming: nothing on screen says the
+   button is bigger than its glyph, so a person still squints at a 12px x. The
+   puck below is the button as far as the eye is concerned -- drawn at rest,
+   filled when pressed -- and the 44px box around it is the forgiveness margin,
+   not the affordance. The pressed state is this same circle rather than the
+   whole box, which would overhang the pill. */
 .autosave-dismiss::before {
   content: ""; position: absolute; width: 26px; height: 26px; border-radius: 50%;
   background: rgba(var(--wash-rgb), 0.10);
@@ -3031,13 +2980,10 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
 /* THE TOOLBAR OWNS THE BOTTOM EDGE ON EVERY WIDTH, so the banner is seated a
    toolbar higher on every width: 56px of toolbar + its 12px bottom margin +
    20px of air = 88px, floating over the canvas's bottom edge with the tools
-   fully visible beneath. This rule used to live inside a max-width: 640px
-   query, written when a phone report showed the banner landing ON the tools
-   (worst in light theme, where the two surfaces sit close in tone) — and the
-   20px anchor above was left for desktop on the belief that its bottom edge
-   was empty air. It is not: at 1280x900 the banner covered Eraser, Shape,
-   colour, Undo and Redo until the person chose (v287 audit SK-BUG-007).
-   verify_drafts measures the overlap on both widths. */
+   fully visible beneath. NOT inside a max-width: 640px query, and not a 20px
+   anchor on desktop: a desktop bottom edge is not empty air either -- at
+   1280x900 a 20px banner covers Eraser, Shape, colour, Undo and Redo until the
+   person chooses. verify_drafts measures the overlap on both widths. */
 .restore-banner {
   bottom: calc(88px + env(safe-area-inset-bottom));
 }
@@ -3097,7 +3043,7 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
 
 /* Icon-only header button */
 .icon-btn {
-  /* v205-fix: standardized to the tier-1 primary size + rounded-square shape,
+  /* Standardized to the tier-1 primary size + rounded-square shape,
      matching .tool-open, so Pad's header (Flip Mode, menu, tune) reads as one
      button family with Flip's header instead of a mix of circles and squares.
      Was 36px circle / 18px icon. Keeps its border (the subtle bordered look
@@ -3120,7 +3066,7 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
 
 .icon-btn svg { width: 24px; height: 24px; }
 
-/* v205-fix: the two round header actions (Flip-mode book, ⋯ menu) sat at
+/* The two round header actions (Flip-mode book, ⋯ menu) sat at
    36px/18px beside the 44px/21px tune opener, so they read as smaller,
    mismatched siblings. Match them to the tune button's footprint and glyph
    size. Scoped to .header, and only two .icon-btn exist there, so nothing
@@ -3388,15 +3334,14 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   gap: 8px;
 }
 
-/* THE SAME FIELD AS .post-input, deliberately. It was invented instead of
-   matched, and picked up 13.5px text — below the 16px threshold this file
-   documents TWICE (see .zoom-hud .zoom-val-input) as the point where iOS
-   Safari zooms the whole page on focus. Tapping it on an iPhone zoomed the
-   page. It also read as inert, and that was the same mistake seen from the
-   other side: its solid #171b23 fill sits five units off the sheet's ground,
-   where .post-input's translucent lift reads as a well the way the title and
-   caption fields do. Matching the app's existing text field fixes both, and
-   the author is already typing into two of them one sheet over. */
+/* THE SAME FIELD AS .post-input, deliberately, rather than a second one
+   invented beside it. An invented field picks up 13.5px text -- below the 16px
+   threshold this file documents TWICE (see .zoom-hud .zoom-val-input) as the
+   point where iOS Safari zooms the whole page on focus -- and reads as inert,
+   because a solid #171b23 fill sits five units off the sheet's ground where
+   .post-input's translucent lift reads as a well, the way the title and caption
+   fields do. Matching the app's existing text field fixes both, and the author
+   is already typing into two of them one sheet over. */
 .export-nameinput {
   flex: 1;
   min-width: 0;
@@ -3485,21 +3430,20 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .export-opt-group .export-opt:hover:not(:disabled) { background: rgba(124,92,255,0.08); border-color: transparent; }
 .export-opt-group .export-gif-toggle { border-top: 1px solid var(--hairline); padding-top: 10px; }
 
-/* GIF background toggle (segmented) — uses the shared sliding-pill highlight
+/* GIF background toggle (segmented) -- uses the shared sliding-pill highlight
    (.seg-slider via attachSegSlider), same as the smoothing/focus/magnifier
    controls.
 
-   AN INLINE ROW, SIZED TO ITS CONTENT. It was `width: 100%`, commented "Full
-   width so both labels fit" — and that reason did not survive being measured:
-   "Solid" and "Transparent" at 12px/600 need about 200px, and there is ~330px
-   inside the card on a 390px phone. What full width actually bought was a
-   160px violet pill, 41% of a phone screen and the brightest thing on the
-   sheet — louder than the three buttons that do the exporting, for a setting
-   belonging to one of them.
+   AN INLINE ROW, SIZED TO ITS CONTENT. `width: 100%` does not survive being
+   measured: "Solid" and "Transparent" at 12px/600 need about 200px, and there
+   is ~330px inside the card on a 390px phone. What full width buys is a 160px
+   violet pill, 41% of a phone screen and the brightest thing on the sheet --
+   louder than the three buttons that do the exporting, for a setting belonging
+   to one of them.
 
-   Inline it reads as GIF → background → solid rather than as a question the
+   Inline it reads as GIF -> background -> solid rather than as a question the
    sheet is asking. It wraps to two lines below ~340px of card, which is the
-   stacked layout it used to have, so nothing is lost where it is tight. */
+   stacked layout, so nothing is lost where it is tight. */
 .export-gif-toggle {
   display: flex;
   align-items: center;
@@ -3662,7 +3606,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   font-weight: 500;
 }
 
-/* THE PUBLIC CHOICE (v304): one checkbox row, shared by the Pad's post sheet
+/* THE PUBLIC CHOICE: one checkbox row, shared by the Pad's post sheet
    and Flip's share sheet (flip.css does not restyle it). The native box is
    visually replaced by .post-check-box so it reads in both ramps and under
    forced colours; the input stays in the tree, focusable and labelled by the
@@ -3841,7 +3785,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 .post-watch .play-badge svg { width: 12px; height: 12px; }
 
-/* THE RESULT IS ONE ROW (v293): Watch / Share / Copy link, the shape of
+/* THE RESULT IS ONE ROW: Watch / Share / Copy link, the shape of
    Flip's .flip-share-actions. The row takes the CTA's margins so the buttons
    in it carry none, and share the width evenly (Share is absent where
    navigator.share is). Only Watch keeps the border pulse: three chips
@@ -3850,7 +3794,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .post-result[hidden] { display: none; }
 .post-result .post-submit { flex: 1 1 0; min-width: 0; margin: 0; padding: 12px 4px; }
 /* Three across a 390px phone is 103px each. "Copy link" at the CTA's 14px with
-   a 17px glyph and 8px gap wrapped to two lines (measured, first cut of v293);
+   a 17px glyph and 8px gap wrap to two lines (measured);
    the labels do not wrap, and the two soft chips run a size tighter. */
 .post-result .post-submit > span:last-child { white-space: nowrap; }
 .post-result .post-result-soft { animation: none; gap: 6px; font-size: 13px; }
@@ -3931,16 +3875,16 @@ body.player-mode #canvasEmptyHint { display: none !important; }
        min-content height of zero — the one child that can be crushed to
        nothing, while every item around it keeps its text and padding. So the
        grabber vanished only on devices, with display:block and its margins
-       still holding the empty space open (owner, three times: "the grab is
+       still holding the empty space open ("the grab is
        still not there"). Measured 0px tall at a 620px viewport before this. */
     flex: none;
     width: 40px;
     height: 5px;
     border-radius: 999px;
-    /* Third calibration of this pill, each one owner-driven. hairline-strong
+    /* Third calibration of this pill. hairline-strong
        was invisible; text-secondary at .45 read on a desktop monitor and
        died on a real phone (OLED black + screenshot compression), and the
-       owner asked where it was AGAIN with fresh content-hashed CSS. .7 of
+       it was still hard to find with fresh content-hashed CSS. .7 of
        text-secondary is unmistakable on the dark sheet and still quiet on
        the light one — roughly Apple's own grabber weight. */
     background: var(--text-secondary);
@@ -4232,7 +4176,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   border-radius: 999px;
   padding: 3px 9px;
   white-space: nowrap;
-  display: inline-flex; align-items: center; gap: 5px;   /* v207: room for the tool icon */
+  display: inline-flex; align-items: center; gap: 5px;   /* room for the tool icon */
   flex-shrink: 0;
   margin-top: 2px;
   letter-spacing: 0.02em;
@@ -4408,7 +4352,7 @@ input:focus-visible {
 
   .icon-btn svg { width: 17px; height: 17px; }
 
-  /* v205-fix: header actions stay matched to the tune opener at this width.
+  /* Header actions stay matched to the tune opener at this width.
      Phone tier-1 steps down one notch from desktop's 44/24 to 40/22. */
   .header .icon-btn { width: 40px; height: 40px; }
   .header .icon-btn svg { width: 22px; height: 22px; }
@@ -4465,21 +4409,18 @@ input:focus-visible {
 
   #previewLoopBtn { grid-column: 1 / -1; }
 
-  /* v207: three [- value +] pills DO NOT fit on one row once the nudge buttons
-     are the 30/32px tier-2 size (three ~120px pills need ~380px; a 390px phone
-     has ~290px of grid). Squeezing all three produced overlapping pills at 390
-     and a wrap at 363, so v207 stacked them one per row.
-     v210 (owner's iPhone): one-per-row reads as three tall stacked pills.
-     TWO fit comfortably (~250px), so Start and End sit side by side, each a
-     compact label-over-pill column, and Step size takes its own full row
-     underneath. Two-up is a wider column than the three-up that failed, and
-     the phone audit measures every pill's rectangle, so the v207 overlap
-     class is still guarded. */
+  /* Three [- value +] pills DO NOT fit on one row once the nudge buttons are
+     the 30/32px tier-2 size: three ~120px pills need ~380px and a 390px phone
+     has ~290px of grid, which gives overlapping pills at 390 and a wrap at 363.
+     One per row reads as three tall stacked pills. TWO fit comfortably
+     (~250px), so Start and End sit side by side, each a compact label-over-pill
+     column, and Step size takes its own full row underneath. The phone audit
+     measures every pill's rectangle, so the overlap is still guarded. */
   .finetune-grid {
     /* Each column must hold a whole [- 00.00s +] pill: MEASURED 128px at
        every phone width. minmax(130) + 10px gap = 270 fits the 275/290px
        grids at 375/390 and drops to one column at 363 (263px grid) and 320
-       (220px) rather than spilling the pill — v207's exact bug class, which
+       (220px) rather than spilling the pill -- the exact bug class, which
        verify_ux caught again at 363 while this was being built. */
     display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 10px 10px; align-items: stretch;
@@ -4503,31 +4444,26 @@ input:focus-visible {
 /* Step size joins Start and End as a third column WHENEVER a third column
    exists, and only takes its own full-width row when it does not.
    ---------------------------------------------------------------------------
-   `grid-column: 1 / -1` on the third group used to be unconditional inside the
-   max-640 block, so Step size was pushed onto its own row even at widths where
-   auto-fit had already laid out three columns and left one of them empty.
-   Measured: the grid is `repeat(auto-fit, minmax(130px, 1fr))` and it resolves
-   to THREE columns at 640 (173px each), 560 (147px) and 510 (130px), against a
-   control that is 128px wide at every one of them. At 640 that is 45px of room
-   going spare while the label sat alone on a row underneath.
-   auto-fit drops to two columns between 510px and 508px (measured by sweeping
-   the viewport 2px at a time), so 509 is the exact width at which the span
-   becomes necessary rather than merely inherited.
+   An unconditional `grid-column: 1 / -1` on the third group inside the max-640
+   block pushes Step size onto its own row even at widths where auto-fit has
+   already laid out three columns and left one empty. The grid is
+   `repeat(auto-fit, minmax(130px, 1fr))` and it resolves to THREE columns at
+   640 (173px each), 560 (147px) and 510 (130px), against a control 128px wide
+   at every one of them -- 45px spare at 640 while the label sits alone on a row
+   underneath. auto-fit drops to two columns between 510px and 508px (swept 2px
+   at a time), so 509 is the exact width at which the span becomes necessary
+   rather than merely inherited.
+
    Below it Start and End stay two-up with Step size full width beneath, which
    is right: Step size is a MODIFIER -- it changes what Start and End do -- so it
    should not look like a third edge.
 
-   WHAT CHANGED IN v254 is where that row puts things. It was
-   `justify-content: space-between` with `flex: 1` on the label, which pins the
-   name to the far left and its control to the far right and leaves the eye to
-   cross the whole panel to connect them. Note that it MEASURES snug -- the flex
-   gap really is 10px -- because `flex: 1` stretches the label's BOX while its
-   text stays left-aligned inside it; the numbers and the screenshot disagreed,
-   and the screenshot was right.
-
-   This revises a v210 decision that was taken deliberately and checked on a real
-   phone. It is revised because the owner looked at it again and said it read as
-   wrong, which is the same evidence that put it there. */
+   The row is NOT `justify-content: space-between` with `flex: 1` on the label:
+   that pins the name to the far left and its control to the far right and
+   leaves the eye to cross the whole panel to connect them. It MEASURES snug
+   either way -- the flex gap really is 10px -- because `flex: 1` stretches the
+   label's BOX while its text stays left-aligned inside it. The numbers and the
+   screenshot disagree here, and the screenshot is right. */
 @media (max-width: 509px) {
   .edge-group:nth-child(3) {
     grid-column: 1 / -1;
@@ -4566,8 +4502,7 @@ body.player-mode .app {
   box-sizing: border-box;
 }
 
-/* FULL SCREEN on the player, the control the shared link was missing until the
-   owner asked for it. The wrapper is what goes fullscreen, so it has to stop
+/* FULL SCREEN on the player. The wrapper is what goes fullscreen, so it has to stop
    being a sized box and become the screen, and `place-items: center` is what
    holds the drawing in the middle of it.
 
@@ -4616,9 +4551,9 @@ body.player-mode .app {
    which ties on specificity with `.player-btn` -- the other class the same
    button carries -- so the winner was decided by which rule came LAST in the
    sheet. .player-btn does, 185 lines later, so `display: none` lost and the
-   exit control sat on the player at all times: a close button on a page with
-   nothing to close. Shipped, and the owner saw it before any assertion did,
-   because the pin only ever checked that the control APPEARS in full screen.
+   exit control sits on the player at all times: a close button on a page with
+   nothing to close. A pin that only checks the control APPEARS in full screen
+   never sees it.
    `.player-btn.full-exit` outranks `.player-btn` outright, so the rule no
    longer depends on where it sits. */
 .player-btn.full-exit { display: none; position: absolute; top: 14px; right: 14px;
@@ -4628,8 +4563,8 @@ body.player-mode .app {
 
 /* THE TRANSPORT GOES FULL SCREEN WITH THE DRAWING. Full screen renders only
    the top-layer subtree, and the transport row lives in .player-shell below
-   the wrapper -- so it was not on screen at all, and the owner photographed
-   the result: a drawing, a close button, and nothing to press. app.js moves
+   the wrapper -- so without help it is not on screen at all: a drawing, a close
+   button, and nothing to press. app.js moves
    #playerBar into .canvas-wrap on the way in and back on the way out.
 
    `display: contents` at rest so the wrapper generates no box: the scrubber
@@ -4740,7 +4675,7 @@ body.player-mode #canvas {
      briefly and was the wrong answer to a real question: the tip takes the
      ink, so it is the colour of the stroke under it, and something has to
      separate the two. A white ring does separate them and looks like a
-     cursor doing it (owner: "make outer contrast ring a little glow of
+     cursor doing it (a glow of the ink, not a white ring; see
      color, not white ring"). A BLURRED halo of the same ink separates them
      differently -- it adds light over the stroke instead of drawing a line
      across it, so the tip is the brightest point on its own line without
@@ -4967,26 +4902,23 @@ a.player-btn { text-decoration: none; }
 }
 
 
-/* ---------- Pass 2: toolbar undo/redo (icon-only) ----------
-   Filled and bordered as of the tray removal, matching Flip's .t-btn exactly
-   (var(--surface-control) on var(--hairline-strong)). Borderless was right
-   while the tray was there: the tray supplied the surface, and a fill inside a
-   fill would have been a box in a box. With the tray gone these were the only
-   two controls on the row with no affordance of their own — the tool group is
-   a pill, the colour ring is a circle, image and music carry dots — so they
-   read as bare glyphs floating on the page.
-   This is the bordered-action tier the sheet already names at .icon-btn ("the
-   subtle bordered look distinguishes these bordered actions from the
-   borderless .tool-open"). Undo and redo are actions; the tool toggles stay
-   borderless, so the row still says which controls DO something and which
-   SELECT something. Geometry is untouched — 40x44 keeps the measured tap
-   target; only the surface is new. */
+/* ---------- Toolbar undo/redo (icon-only) ----------
+   Filled and bordered, matching Flip's .t-btn exactly (var(--surface-control) on
+   var(--hairline-strong)). Borderless is right only while a tray supplies the
+   surface, since a fill inside a fill is a box in a box. Without one these are
+   the only two controls on the row with no affordance of their own -- the tool
+   group is a pill, the colour ring is a circle, image and music carry dots -- so
+   they read as bare glyphs floating on the page.
+
+   This is the bordered-action tier .icon-btn already names. Undo and redo are
+   actions; the tool toggles stay borderless, so the row still says which
+   controls DO something and which SELECT something. */
 /* 40x40, not 40x44. A bordered box is the only control in this row whose exact
-   shape is visible, and at 40x44 it read as a stretched rectangle sitting beside
+   shape is visible, and at 40x44 it reads as a stretched rectangle sitting beside
    a pill and a circle. The 44px TAP band is not given up -- it moves to the
-   ::before, the same --tap-grow mechanism .color-dot, .onion-tint and .pb have
-   used since v205-fix (see the block near "Invisible expanded tap area"). Width
-   is unchanged at every tier, so this costs the row nothing. */
+   ::before, the same --tap-grow mechanism .color-dot, .onion-tint and .pb use
+   (see the block near "Invisible expanded tap area"). Width is unchanged at
+   every tier, so this costs the row nothing. */
 .toolbar .undo-btn {
   width: 40px; height: 40px; padding: 0; border-radius: 12px;
   position: relative; z-index: 1; --tap-grow: 2px;
@@ -5209,7 +5141,7 @@ a.player-btn { text-decoration: none; }
   }
   /* The chrome left but the pill's 16px side paddings stayed, so a bare
      "● Record" carried invisible air on both flanks — the tune icon looked
-     stranded ~25px away while every other control sat 9px apart (owner,
+     stranded ~25px away while every other control sat 9px apart (
      from the phone view: "why is tune drawer icon so far from record?").
      A bare glyph gets glyph padding. Selector matches the late
      `.header .actions .btn { padding: 0 16px }` density rule's specificity,
@@ -5232,7 +5164,7 @@ a.player-btn { text-decoration: none; }
   .toolbar { margin: 12px 6px; max-width: calc(100% - 12px); gap: 1px; }
 }
 
-/* v207: 641-720px is "desktop" by breakpoint but has no room for the full
+/* 641-720px is "desktop" by breakpoint but has no room for the full
    "Post to Skribl" + "Record" + "Play" labels the desktop layout enables — at
    exactly 641px Post wrapped to THREE lines (59px tall) and the header
    overflowed. Keep the short "Post" label until ~720px, where the full text
@@ -5263,10 +5195,10 @@ a.player-btn { text-decoration: none; }
      gap sets off Post (the commit) and then ⋯ (overflow). */
   .actions { gap: 3px; }
   .btn.post { margin-left: 11px; }
-  #menuBtn, #moreBtn { margin-left: 8px; margin-right: 2px; }     /* + edge breathing room; Flip's ⋯ too (v293) */
+  #menuBtn, #moreBtn { margin-left: 8px; margin-right: 2px; }     /* + edge breathing room; Flip's ⋯ too */
 
   /* Toolbar magnify sized to match Pen/Eraser. */
-  .magnify-tool svg { width: 22px; height: 22px; }  /* v205-fix: phone tier-1 icon */
+  .magnify-tool svg { width: 22px; height: 22px; }  /* phone tier-1 icon */
 }
 
 /* ===================================================================
@@ -5286,7 +5218,7 @@ a.player-btn { text-decoration: none; }
   /* Symmetry for the recording bar. On the left, the collapsed brand is a
      zero-width flex item that still earns the header's 10px gap, so the rec
      pill sits 24px in (14 padding + 10 phantom). The Stop pill's right flank
-     had only the bare 14 (owner, of the recording header: "padding on
+     had only the bare 14 (of the recording header: "padding on
      right"). Mirror the phantom, and two rounded pills float evenly inside
      the rounded card. */
   body.recording .actions { margin-right: 10px; }
@@ -5295,15 +5227,13 @@ a.player-btn { text-decoration: none; }
      header keeps clear space to its right. That case is static and stays here:
      recording always needs the room, at every mobile width.
 
-     The take-saved case USED to be hidden here too, by a sibling selector
-     `.header:has(#playWrap:not([hidden])) .brand > span`. It was written at
-     v210 for the old 108px icon+wordmark lockup, which genuinely could not
-     share the bar with a take's controls. The v221 mark is 70px and that
-     premise is gone — but the rule stayed, so on a phone the mark vanished the
-     moment recording stopped and never came back, at EVERY width, including
-     430 where ~89px of room was sitting empty. That is the bug this retires.
+     The take-saved case is NOT hidden here. A sibling selector
+     `.header:has(#playWrap:not([hidden])) .brand > span` suits a 108px
+     icon+wordmark lockup that genuinely cannot share the bar with a take's
+     controls; the mark is 70px now, and such a rule hides it at EVERY width the
+     moment recording stops -- including 430, where ~89px of room sits empty.
 
-     Narrow widths are now owned by initBrandFit()'s `brand-collapsed` shed in
+     Narrow widths are owned by initBrandFit()'s `brand-collapsed` shed in
      app.js, which measures the real gap and hides the mark only where it truly
      cannot fit. A static rule cannot tell 430 from 320; the measurement can.
      To reverse: restore the `:has(#playWrap...)` selector below and the shed
@@ -5340,7 +5270,7 @@ a.player-btn { text-decoration: none; }
   .play-wrap { border-color: var(--hairline); }
   .duration-badge { border-left-color: var(--hairline); font-size: 12.5px; padding: 0 13px 0 11px; }
 
-  /* v205-fix: keep the header icon buttons at the tier-1 size (44/24) even in
+  /* Keep the header icon buttons at the tier-1 size (44/24) even in
      the compact/recording state, so they stay uniform with the tune opener
      rather than shrinking to pill height. Was 32/17. */
   .icon-btn { width: 44px; height: 44px; border-color: var(--hairline); }
@@ -5452,7 +5382,7 @@ a.player-btn { text-decoration: none; }
 }
 /* THE PILLS WERE 12PX TALL. With no --seg-h the seg hugged its buttons, and a
    button with `padding: 0` is as tall as its 11px line: On/Off, Dark/Light,
-   4:3/16:9 were twelve-pixel targets at the bottom of both menus (owner, v290:
+   4:3/16:9 were twelve-pixel targets at the bottom of both menus (from a phone:
    "the slider pills are small"). 34px is the export sheet's segs plus two;
    the buttons stretch to fill it (the .mb-scope treatment), at 12px type. */
 .menu-row .seg { --seg-h: 34px; }
@@ -5463,16 +5393,15 @@ a.player-btn { text-decoration: none; }
   color: var(--text-secondary);
 }
 .menu-row .canvas-seg, .menu-row .hint-seg, .menu-row .theme-seg { margin-left: auto; }
-/* Tips is two buttons and Canvas is four, so right-aligning both left a 99px
-   hole between the word "Tips" and its switch while "Canvas" sat snug against
+/* Tips is two buttons and Canvas is four, so right-aligning both leaves a 99px
+   hole between the word "Tips" and its switch while "Canvas" sits snug against
    its own. Matching the widths closes it, and the three rows read as a set.
    THE WIDTH IS SET BY THE FULLEST ROW, not the emptiest: at 140px the theme
-   row's "System" had 2px beside it and "16:9" under 5px (owner, v293, from a
-   phone: "theme and canvas sliders look cramped"). 160px is the theme row's
-   three labels at 8px a side with a little over; the pills share the seg from
-   their own content (basis auto) rather than in equal quarters, so a long
-   label is not cut to a short one's cell. The phone sheet is full-width and
-   has the room for more. verify_tips reads the room beside every pill. */
+   row's "System" has 2px beside it and "16:9" under 5px. 160px is the theme
+   row's three labels at 8px a side with a little over; the pills share the seg
+   from their own content (basis auto) rather than in equal quarters, so a long
+   label is not cut to a short one's cell. The phone sheet is full-width and has
+   the room for more. verify_tips reads the room beside every pill. */
 .menu-row .hint-seg, .menu-row .theme-seg, .menu-row .canvas-seg { width: var(--menu-seg-w, 160px); flex: none; }   /* one width, and NO flex-shrink: squeezed segs came out 146 and 151 */
 .menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .canvas-seg button { flex: 1 1 auto; }
 .menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .canvas-seg button { min-width: 0; padding: 0 8px; font-size: 12px; }
@@ -5484,7 +5413,7 @@ a.player-btn { text-decoration: none; }
 }
 .menu-row-note:empty { display: none; }
 
-/* ---- Your Skribls: moved to posted.css (v304) -------------------------------
+/* ---- Your Skribls: moved to posted.css -------------------------------
    The tray's rules live with the profile page that hosts the list now
    (/library), and the editors load posted.css beside this sheet for the
    recovery-key panel it also holds. Nothing here; see skribl/static/posted.css. */
@@ -5617,7 +5546,7 @@ a.player-btn { text-decoration: none; }
 .skribl-hint[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
 
-/* Action link inside a hint (v206): "How it works ->". The hint stays a
+/* Action link inside a hint: "How it works ->". The hint stays a
    normal small, timed, tap-to-dismiss toast; the link is the tap-through to
    the full guide for anyone who wants more than the one-liner. */
 .skribl-hint-text { display: block; }
@@ -5637,7 +5566,7 @@ a.player-btn { text-decoration: none; }
 }
 
 /* ============================================================
-   Tune drawer + grid overlay (v204) — Pad gained the tune drawer
+   Tune drawer + grid overlay -- Pad gained the tune drawer
    that holds Grid. These rules are lifted verbatim from flip.css
    (same tokens, which styles.css also defines) EXCEPT .tune-shell's
    margin: Flip's header is a floating card (margin 7px) so its drawer
@@ -5646,11 +5575,11 @@ a.player-btn { text-decoration: none; }
    ============================================================ */
 .onion-tint {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; padding: 0;  /* v205-fix: tier-2 toggle = the 32px segment height it shares a row with (was 22, briefly 28) */
+  width: 32px; height: 32px; padding: 0;  /* tier-2 toggle = the 32px segment height it shares a row with (was 22, briefly 28) */
   border: 1px solid var(--hairline-strong); border-radius: var(--r-pill);
   background: transparent; color: var(--text-secondary); cursor: pointer;
 }
-.onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
+.onion-tint svg { width: 18px; height: 18px; }  /* tier-2 (32px box) */
 /* ON is the accent, like every other selected control. This class began life on
    the onion controls and its amber leaked to every switch that borrowed it —
    Grid and Stroke layers lit orange in an otherwise purple chrome. */
@@ -5661,7 +5590,7 @@ a.player-btn { text-decoration: none; }
 .tune-shell {
   display: grid; grid-template-rows: 0fr;
   transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
-  /* Identical to Flip (v204-fix): the header is a floating card (margin 7px),
+  /* Identical to Flip: the header is a floating card (margin 7px),
      so the drawer matches its inset and tucks up under the card's rounded
      bottom, reading as one object opening. Was margin:0 / bottom-flush when
      the button lived in the toolbar; the button is in the header now. */
@@ -5734,7 +5663,7 @@ a.player-btn { text-decoration: none; }
 body.playing .flip-grid { display: none; }
 
 /* ============================================================
-   BUTTON SYSTEM — tap areas + states (v205-fix)
+   BUTTON SYSTEM -- tap areas + states
    One documented block for the app-wide interaction rules, so they are
    defined once and applied consistently to both editors.
 
@@ -5856,13 +5785,13 @@ body.playing .flip-grid { display: none; }
 
 
 
-/* v207: help pills show the actual button glyph beside the name — people match
+/* Help pills show the actual button glyph beside the name — people match
    shapes, not words — using the same SVG the real control renders. */
 .help-pill-ic { display: inline-flex; flex: none; color: var(--ui-hi); }
 .help-pill-ic svg { width: 12px; height: 12px; }
 
 /* ============================================================
-   v210 PHONE LAYOUT — three real-device findings (owner's iPhone, v209)
+   PHONE LAYOUT -- three real-device findings
    ============================================================ */
 
 /* 1. Onion tint on the RIGHT EDGE of the tune drawer. Headless measured a
@@ -5880,7 +5809,7 @@ body.playing .flip-grid { display: none; }
 }
 
 /* 3. Header: the control cluster must never sit against — or under — the
-   brand. Two states, both measured on the owner's iPhone and reproduced here:
+   brand. Two states, both measured on a real phone and reproduced here:
    on FIRST LOAD at 375 the tune glyph painted over the "d" of "Pad"; with a
    TAKE SAVED the cluster (tune + record + play + Post + ⋯) is wider than the
    room to the right of the logo, and .actions{flex:1;min-width:0} let it
@@ -5916,7 +5845,7 @@ body.playing .flip-grid { display: none; }
    the gap at 6px — nothing left to shed without orphaning a mode (the Flip
    link has no menu entry). Six controls x 4px + a 4px logo cut recovers 28;
    the remaining 22 comes from the tightest gap that still reads as separate
-   controls. Tier-1 stays 40 everywhere else, per the owner's size table. */
+   controls. Tier-1 stays 40 everywhere else, per the size table. */
 @media (max-width: 340px) {
   .header .actions button.icon-btn, .header .actions a.icon-btn,
   .header .btn.play,
@@ -5934,30 +5863,29 @@ body.playing .flip-grid { display: none; }
   .header.gap-collapsed { padding-left: 10px; padding-right: 10px; }
 }
 
-/* ---------- v213: the tool row holds THREE tools ----------
+/* ---------- the tool row holds THREE tools ----------
    Pen and Eraser sized comfortably at 13px side padding, which left the row
    157px wide once Shape joined and overflowed a 375px phone by 52px (measured,
    not estimated). Labels were already hidden below 640px, so the room has to
    come from padding and icon size rather than from text.
    min-height stays 44px: the tap target must not shrink, only the width. */
 @media (max-width: 640px) {
-  /* RELAXED AT v217. The squeeze above it was written when Shape joined a TEN
-     control row and overflowed 375px by 52px. That row is now EIGHT — Select is
-     gone from Pad and magnify is desktop-only — so the emergency measures were
-     still crushing a row that had room. Measured at 375px: 343px on one row
-     with 8px to spare.
+  /* RELAXED. The emergency squeeze above it was written when Shape joined a TEN
+     control row and overflowed 375px by 52px. That row is EIGHT -- Select is
+     gone from Pad and magnify is desktop-only -- so the squeeze was crushing a
+     row that had room. Measured at 375px: 343px on one row with 8px to spare.
 
      What could NOT be relaxed, also measured: growing the controls to 38px, or
      the buttons to their desktop padding, wraps at 375px. The bar hits its own
      max-width and wraps rather than overflowing. So the room went into SPACING
-     — the gap and the separators — rather than into size, which is where it
+     -- the gap and the separators -- rather than into size, which is where it
      shows anyway: the icons read as cramped because they were 1px apart. */
   /* SIZED FOR 360px, not 375. 360 is a very common Android width, and at the
-     previous spacing the row wrapped there — a two-row bar on a large share of
+     previous spacing the row wrapped there -- a two-row bar on a large share of
      phones rather than a rare fallback. Measured: 326px, one row from 360 up.
 
      The 10px came from the tool-group's internal button padding, NOT from the
-     controls: they stay at 34px. Shrinking them to 33px reached the same width
+     controls: they stay at 34px. Shrinking them to 33px reaches the same width
      while making the tap targets worse, and they are already under target. */
   #toolGroup .tool-btn { padding: 9px 7px; }
   #toolGroup .tool-btn svg { width: 22px; height: 22px; }
@@ -5980,47 +5908,42 @@ body.playing .flip-grid { display: none; }
   .toolbar #imageOpenBtn { margin-left: 6px; }
 }
 
-/* ---------- v213: the tool row holds FOUR tools ----------
-   Pen, Eraser, Shape and now Select. At 375px that is 31px too wide, and the
-   room can no longer come from padding: the buttons are already ~37px and
-   shaving to ~30px puts the tap target below the 44px minimum, which is a
-   worse trade than a taller toolbar.
-   So the row WRAPS instead of shrinking — the same thing Flip's .flip-tools has
-   always done. `width: fit-content` has to go with it, or the row sizes itself
-   to its unwrapped content and wrapping never triggers. */
+/* ---------- the tool row holds FOUR tools ----------
+   Pen, Eraser, Shape, Select. At 375px that is 31px too wide, and the room
+   cannot come from padding: the buttons are already ~37px and shaving to ~30px
+   puts the tap target below the 44px minimum, which is a worse trade than a
+   taller toolbar.
+   So the row WRAPS instead of shrinking -- the same thing Flip's .flip-tools
+   has always done. `width: fit-content` has to go with it, or the row sizes
+   itself to its unwrapped content and wrapping never triggers. */
 @media (max-width: 640px) {
   .toolbar { flex-wrap: wrap; justify-content: center; width: auto; max-width: 100%; }
 }
 
-/* ---------- v213: skinny phones drop the magnify button ----------
-   Nine controls in the row once Select joined, which wrapped and left the music
-   button orphaned alone on a second line. Magnify is the one that can go: PINCH
-   already zooms on touch, and beginPinch() now reveals the zoom HUD, so Fit
-   stays reachable without the button. Removing it puts the row back on ONE line
-   at 375 and 390 with no tap target shrunk.
-   Above this width there is room, so the button stays — it is the only zoom
-   affordance for a mouse.
-
-   THIS RULE IS NOW DEAD and is kept only as the record of where 400px came
-   from. A later change added a blanket `max-width: 640px` hide that supersedes
-   it, so the number this block measured stopped having any effect. The live
-   floors — 400 for Flip, 430 for Pad, both re-measured — are in the magnify
-   block further down, alongside the pointer:coarse gate that replaced the
-   blanket rule. Do not re-add a width-only hide here. */
+/* ---------- skinny phones drop the magnify button ----------
+   THIS RULE IS DEAD and is kept only as the record of where 400px came from: a
+   blanket `max-width: 640px` hide supersedes it. The live floors -- 400 for
+   Flip, 430 for Pad, both re-measured -- are in the magnify block further down,
+   alongside the pointer:coarse gate that replaced the blanket rule. Do not
+   re-add a width-only hide here.
+   What it measured: nine controls in the row wrap and leave the music button
+   orphaned on a second line. Magnify is the one that can go, because PINCH
+   already zooms on touch and beginPinch() reveals the zoom HUD, so Fit stays
+   reachable without the button. */
 
 /* ===================================================================
-   Colour control — spectrum ring, current-colour core            v215
+   Colour control -- spectrum ring, current-colour core
    ===================================================================
-   The plain disc said WHAT colour you were on and nothing said it was
-   tappable; a bare wheel says the opposite. Ring is the affordance, core is
-   the state, and the core keeps most of the pixels because that is what the
-   disc was doing right.
+   A plain disc says WHAT colour you are on and nothing says it is tappable; a
+   bare wheel says the opposite. Ring is the affordance, core is the state, and
+   the core keeps most of the pixels because that is what the disc was doing
+   right.
 
-   THE RING IS ON THE WRAPPER, DELIBERATELY. app.js:669 and flip.js:1609 both
-   set the colour as an INLINE background, and an inline style beats any rule
-   here. Put the gradient on the element the JS writes to and the FIRST colour
-   change erases it — while initial render still looks correct, so an assertion
-   that checks load-time would never see it. Assert after a colour change. */
+   THE RING IS ON THE WRAPPER, DELIBERATELY. app.js and flip.js both set the
+   colour as an INLINE background, and an inline style beats any rule here. Put
+   the gradient on the element the JS writes to and the FIRST colour change
+   erases it -- while initial render still looks correct, so an assertion that
+   checks load-time would never see it. Assert after a colour change. */
 .color-ring {
   position: relative;
   width: 26px; height: 26px;
@@ -6124,28 +6047,26 @@ body.playing .flip-grid { display: none; }
 
 /* Magnify is shown wherever the GESTURE is missing and the button FITS.
    ---------------------------------------------------------------------------
-   This used to be `@media (max-width: 640px) { #magnifyBtn { display: none } }`
-   — width as a stand-in for "this is a phone, it has pinch". Width is a poor
-   proxy for input: a tablet at 810px has pinch, and a desktop window dragged
-   to 500px has a mouse and nothing else. The wide rule also made the v213
-   400px floor below it unreachable — dead code that had carefully measured the
-   one number that actually mattered.
+   Hiding it by width alone uses width as a stand-in for "this is a phone, it
+   has pinch", and width is a poor proxy for input: a tablet at 810px has pinch,
+   and a desktop window dragged to 500px has a mouse and nothing else. A wide
+   width rule also makes the measured floors below unreachable.
 
    `pointer: coarse` asks the real question. Where a pinch exists the button is
-   redundant below 640 and stays hidden exactly as before; where it does not,
-   the button survives down to the width at which it physically stops fitting.
+   redundant below 640 and stays hidden; where it does not, the button survives
+   down to the width at which it physically stops fitting.
 
    THE FLOORS ARE MEASURED, per surface, forcing the button visible and reading
    the row's content span against its available width:
 
        Flip   400px   12px spare  (fails at 375: -2px, and scrolls at 390)
-       Pad    430px   12px spare  (wraps at 414 — Pad's row is the longer one,
+       Pad    430px   12px spare  (wraps at 414 -- Pad's row is the longer one,
                                    it carries a colour-drawer tile and a second
                                    separator that Flip does not)
 
    Below those the button goes regardless of input, because there is nowhere to
-   put it. Between them and 640 a mouse keeps its only zoom affordance — which
-   on Flip is a band 240px wide that previously had none at all. */
+   put it. Between them and 640 a mouse keeps its only zoom affordance -- which
+   on Flip is a band 240px wide that would otherwise have none at all. */
 @media (pointer: coarse) and (max-width: 640px) {
   #magnifyBtn { display: none; }
 }
@@ -6206,7 +6127,7 @@ body.playing .flip-grid { display: none; }
 .pop-grip:active { cursor: grabbing; }
 /* A PINNED pop (dragged, so it no longer auto-dismisses) still gets out of
    the way while a shape is being drawn: the press handlers veil it for the
-   duration of the gesture and the release brings it back (owner: "would it
+   duration of the gesture and the release brings it back ("would it
    be smart if the poly shape menu disappears when you start making a
    shape?"). Visibility, not [hidden] — its state, position and pin survive. */
 .shape-pop.pop-veiled { visibility: hidden; pointer-events: none; }
@@ -6404,28 +6325,20 @@ body.playing .flip-grid { display: none; }
 .tune-row .seg button:first-of-type::before { left: -5px; }   /* of-type: lib/segslider.js puts its highlight first */
 .tune-row .seg button:last-of-type::before  { right: -5px; }
 
-/* ---------- v225: the header is a 36px row, and tune/⋯ have no box ----------
-   Flip's header already read this way and Pad's did not: Flip draws its tune
-   and ⋯ as bare glyphs, Pad drew them as 44px bordered tiles with a fill. Side
-   by side the same two controls looked like two different design systems, and
-   the boxed pair was the heavier of the two on the surface with more in its
-   header.
+/* ---------- the header is a 36px row, and tune/... have no box ----------
+   Pad and Flip draw the same two controls, so they look the same: bare glyphs,
+   not 44px bordered tiles with a fill. A bordered tile on a bare header is a
+   frame around nothing -- `.icon-btn`'s border and fill are the "bordered
+   action" tier, which earns its place while the header sits in a tray. The
+   class keeps its border everywhere else; only the header's two openers drop it.
 
-   The box goes. `.icon-btn`'s border and fill were the v205-fix "bordered
-   action" tier, which earned its place while the header sat in a tray -- the
-   tray went in 31ed04f and a bordered tile on a bare header is a frame around
-   nothing. The class keeps its border everywhere else; only the header's two
-   openers drop it.
+   36, not 44, across the whole row -- tune, ..., Record, Play, Post. The 44px
+   TAP band is not given up: it moves to the ::before, the --tap-grow mechanism
+   .color-dot and .toolbar .undo-btn already use.
 
-   36, not 44, across the whole row -- tune, ⋯, Record, Play, Post -- because
-   that is the size Flip's header already used and the one the owner picked
-   looking at both. The 44px TAP band is not given up: it moves to the ::before,
-   the --tap-grow mechanism .color-dot and .toolbar .undo-btn already use.
-
-   Placed LAST so it beats the per-tier .icon-btn rules above (44 at the default,
-   40 at 3530, 44 again in the compact state at 4218). Those tiers exist to keep
-   the row uniform at each width; the row is uniform at 36 now, so one late rule
-   is simpler than editing four. */
+   Placed LAST so it beats the per-tier .icon-btn rules above. Those tiers exist
+   to keep the row uniform at each width; the row is uniform at 36 now, so one
+   late rule is simpler than editing four. */
 .header #tuneBtn, .header #menuBtn {
   width: 36px; height: 36px;
   border: none; background: none;
@@ -6461,25 +6374,23 @@ body.playing .flip-grid { display: none; }
 }
 .header .actions .btn.play { height: 36px; }
 
-/* Flip's back arrow left the header in v293 — the way back to the Pad is a
+/* Flip's back arrow is not in the header -- the way back to the Pad is a
    row in Flip's ⋯ menu, the mirror of the Pad's Flip Mode row, so the two
-   headers hold the same five things. Its rules lived here (v225). */
+   headers hold the same five things. Its rules lived here. */
 
-/* ---------- v225: a lit .tool-open must be SQUARE ---------------------------
-   Borderless, .tool-open paints nothing and its box is invisible -- so nobody
-   noticed it was 34x44 or 36x44 on phones. But an OPEN drawer, and magnify
-   while active, fill that box with rgba(124,92,255,.16) and an inset ring, and
-   then the only lit thing in the row is an elongated pill standing beside the
-   square tiles this version spent its time squaring. The shape was always
-   wrong; the fill is just what made it visible.
+/* ---------- a lit .tool-open must be SQUARE ---------------------------------
+   Borderless, .tool-open paints nothing and its box is invisible, so a 34x44 or
+   36x44 goes unnoticed. But an OPEN drawer, and magnify while active, fill that
+   box with rgba(124,92,255,.16) and an inset ring, and then the only lit thing
+   in the row is an elongated pill standing beside square tiles.
 
    Painted square at every tier, with the 44px tap band on the ::before -- the
-   same trade .toolbar .undo-btn and the header's openers already take. Width is
+   same trade .toolbar .undo-btn and the header's openers take. Width is
    untouched, so the row's measured ladder does not move by a pixel.
 
-   Both surfaces: Flip's .flip-tools .tool-open carried the same 36x44 / 34x44 /
-   32x44 pairs, put there deliberately in the spacing pass to hold the tap band
-   before this mechanism was applied to it. */
+   Both surfaces: Flip's .flip-tools .tool-open carries the same 36x44 / 34x44 /
+   32x44 pairs, put there in the spacing pass to hold the tap band before this
+   mechanism existed. */
 .tool-open { position: relative; z-index: 1; }
 .tool-open::before {
   content: ""; position: absolute; inset: calc(-1 * var(--tap-grow, 0px));
@@ -6492,19 +6403,19 @@ body.playing .flip-grid { display: none; }
   .toolbar .tool-open { height: 34px; --tap-grow: 5px; }   /* 34 visual -> 44 tap */
 }
 
-/* ---------- v225: the merged Play pill is 36 tall like its neighbours ------
-   `.header .actions .btn { height: 36px }` brought Record and Post to 36, and
-   Play came with them -- but Play is not the outer box. It sits inside
-   `.play-wrap`, the shell that merges it with the duration badge, and the wrap
-   had no height of its own: it hugged a 36px button and added its own 1px
-   border top and bottom. Measured at 1280: Record [100, 36], Post [138, 36],
-   playWrap [92, 38]. Two pixels, on the one control in the row that is a
-   different shape from the others, which is exactly where two pixels show.
+/* ---------- the merged Play pill is 36 tall like its neighbours ------------
+   `.header .actions .btn { height: 36px }` brings Record and Post to 36, and
+   Play with them -- but Play is not the outer box. It sits inside `.play-wrap`,
+   the shell that merges it with the duration badge, and left to itself the wrap
+   hugs a 36px button and adds its own 1px border top and bottom. Measured at
+   1280: Record [100, 36], Post [138, 36], playWrap [92, 38]. Two pixels, on the
+   one control in the row that is a different shape from the others, which is
+   exactly where two pixels show.
 
    The wrap takes the 36 (border-box, so the border is inside it) and the button
    inside comes down to 34 to fit. The divider needs no rule -- `.duration-badge`
    is `align-self: stretch`, so it follows the wrap's content box and stays
-   full-height, as it was at 38.
+   full-height.
 
    Desktop only. Below 641 the wrap goes transparent and borderless and the
    button carries its own border again, so the outer box is already 36 there and
@@ -6514,14 +6425,13 @@ body.playing .flip-grid { display: none; }
   .play-wrap > #playBtn.btn.play { height: 34px; }
 }
 
-/* ---------- v226: the tool tray ------------------------------------------
-   SHARED BY PAD AND FLIP. The bottom row was holding two populations out of one width
+/* ---------- the tool tray ------------------------------------------------
+   SHARED BY PAD AND FLIP. The bottom row holds two populations out of one width
    budget: the mark-making tools, which are open-ended, and the document
-   controls (colour, undo, redo, image, music, magnify), which are not. Sharing
-   one shelf meant every new tool competed with undo for the same pixels, so
-   each addition was a fresh six-breakpoint fitting exercise. Measured: a fourth
-   cell takes the pill 121 -> 158px and wraps the row at 320, 344, 360, 375, 390
-   and 431.
+   controls (colour, undo, redo, image, music, magnify), which are not. On one
+   shelf every new tool competes with undo for the same pixels, so each addition
+   is a fresh six-breakpoint fitting exercise. Measured: a fourth cell takes the
+   pill 121 -> 158px and wraps the row at 320, 344, 360, 375, 390 and 431.
 
    The tray decouples them. The shelf holds at most SHELF_MAX cells; everything
    else lives in a panel anchored above the row. The pill's width therefore
@@ -6592,42 +6502,36 @@ body.playing .flip-grid { display: none; }
   .tool-tray { grid-template-columns: repeat(3, 1fr); }
 }
 
-/* ---------- v232: light mode --------------------------------------------
-   PHASE 2. Phase 1 moved every neutral the chrome paints into :root without
-   changing a pixel; this block is what that was for. Nothing here is new
-   plumbing -- it redefines the same tokens and the whole interface follows.
+/* ---------- light mode --------------------------------------------------
+   Nothing here is new plumbing: it redefines the same tokens :root declares
+   above, and the whole interface follows.
 
-   DARK IS THE BASE, so this inverts the usual pattern: `:root` above stays
-   dark and light is what the stamp opts into. There are two states here, not
-   three: light applies when, and only when, something has put
-   data-theme="light" on <html>. The paragraph below says why there is no
-   third, system-following state.
+   DARK IS THE BASE, so this inverts the usual pattern -- `:root` stays dark and
+   light is what the stamp opts into. Light applies when, and only when,
+   something has put data-theme="light" on <html>.
 
    THE RAMP IS MIRRORED BY RELATIONSHIP, NOT BY ARITHMETIC. Inverting each
-   luminance mechanically gives you a light theme where every contrast is
-   technically preserved and nothing looks right: the darkest surface is the
-   one the eye reads as furthest back, and in a light interface that is the
-   LIGHTEST. So --surface-deep, the toolbar row's ground, becomes white, and
-   the ramp climbs away from it in the opposite direction. The cool blue-grey
-   hue the dark palette carries (~220deg, low saturation) is kept throughout;
-   a neutral grey here would read as a different product.
+   luminance mechanically gives a light theme where every contrast is
+   technically preserved and nothing looks right: the darkest surface is the one
+   the eye reads as furthest back, and in a light interface that is the
+   LIGHTEST. So --surface-deep, the toolbar row's ground, becomes white and the
+   ramp climbs away from it in the opposite direction. The cool blue-grey hue
+   the dark palette carries (~220deg, low saturation) is kept throughout; a
+   neutral grey here would read as a different product.
 
-   THE CANVAS IS NOT IN THIS BLOCK, deliberately, and that is the owner's call.
-   The drawing's background is the document's own colour -- saved, shared,
-   exported -- so a Skribl looks the same to every viewer whatever their
-   interface is set to.
+   THE CANVAS IS NOT IN THIS BLOCK, deliberately. The drawing's background is
+   the document's own colour -- saved, shared, exported -- so a Skribl looks the
+   same to every viewer whatever their interface is set to.
 
    The accent family is untouched. #7c5cff sits at L110 and works on both a
-   near-black and a white ground, which is why it was picked. */
-/* NO `@media (prefers-color-scheme: light)` BLOCK, and that is still a
-   decision, for a different reason than it was. v232 made light opt-in and
-   dark the default for everyone; v292 (outside review of v291, SK-AUD-014)
-   follows the device's appearance until a person chooses otherwise: with
-   nothing stored the page follows prefers-color-scheme, and an explicit dark
-   or light ignores it. That resolution lives in _skribl_theme_boot.html and
-   lib/theme.js, which stamp data-theme="light" on <html> before first paint.
-   The stylesheet keeps ONE light ramp, the block below, keyed on that
-   attribute; a media rule would be a second copy of it to drift. */
+   near-black and a white ground, which is why it was picked.
+
+   NO `@media (prefers-color-scheme: light)` BLOCK. With nothing stored the page
+   follows the device's appearance; an explicit dark or light ignores it. That
+   resolution lives in _skribl_theme_boot.html and lib/theme.js, which stamp
+   data-theme="light" on <html> before first paint. The stylesheet keeps ONE
+   light ramp, keyed on that attribute; a media rule would be a second copy of
+   it to drift. */
 :root[data-theme="light"] {
   color-scheme: light;   /* the counterpart of the note on :root */
 
@@ -6685,7 +6589,7 @@ body.playing .flip-grid { display: none; }
   --text-heading:            #171c25;
   --text-primary:            #11161e;
   --text-on-accent-soft:     #3a2a80;   /* text on a translucent accent fill */
-  /* The signature switches pens in daylight (owner: "black on white looks
+  /* The signature switches pens in daylight ("black on white looks
      wrong"). Near-black cursive on a light header lost everything the dark
      lockup has — the halo disappears against white, and heavy dark script
      reads as handwriting, not identity. A deep violet in the accent's own
@@ -6741,24 +6645,21 @@ body.playing .flip-grid { display: none; }
 
 }
 
-/* --- the recovery-key panel: moved to posted.css (v304) --------------------
+/* --- the recovery-key panel: moved to posted.css --------------------
    Loaded by both editors and by the profile page; see skribl/static/posted.css. */
 
-/* ---------- Increased contrast and forced colours (v292) ----------
-   Outside review of v291, SK-AUD-015: the sheet handled reduced motion and
-   two colour ramps, and nothing else the platform can ask for.
-
+/* ---------- Increased contrast and forced colours ----------
    PREFERS-CONTRAST: MORE swaps four tokens for the -hc counterparts defined
-   beside them in each ramp. Tokens, not literals: the ratchets that keep
-   every neutral in :root (verify_surfaces) and every neutral overridden for
-   light (verify_theme) read this block as a mapping, which is what it is.
+   beside them in each ramp. Tokens, not literals: the ratchets that keep every
+   neutral in :root (verify_surfaces) and every neutral overridden for light
+   (verify_theme) read this block as a mapping, which is what it is.
 
-   FORCED COLOURS replace every background with a system colour, so a state
-   told by background alone vanishes: the seg's sliding pill, a lit toggle's
-   tint. Under forced colours the edge does the telling — an outline, which
-   moves no layout — in the system's own Highlight, and the resting options
-   get a ButtonText edge so a row of three still reads as three. verify_a11y
-   section 14 emulates both and reads the computed styles. */
+   FORCED COLOURS replace every background with a system colour, so a state told
+   by background alone vanishes: the seg's sliding pill, a lit toggle's tint.
+   Under forced colours the edge does the telling -- an outline, which moves no
+   layout -- in the system's own Highlight, and the resting options get a
+   ButtonText edge so a row of three still reads as three. verify_a11y section
+   14 emulates both and reads the computed styles. */
 @media (prefers-contrast: more) {
   :root, :root[data-theme="light"] {
     --text-muted: var(--text-muted-hc);
