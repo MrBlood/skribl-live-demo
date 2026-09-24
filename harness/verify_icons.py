@@ -1,4 +1,4 @@
-"""v239 — the tool tray's icons, measured as RENDERED rather than as authored.
+"""The tool tray's icons, measured as RENDERED rather than as authored.
 
 THE REPORT was four words: "Fill is a weak icon." It was, and the reason was
 measurable. Rendered and thresholded, Fill's ink filled 15x16 of its 24 box

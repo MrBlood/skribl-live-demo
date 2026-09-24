@@ -1,4 +1,4 @@
-"""v225 — a translucent stroke must survive a repaint unchanged.
+"""A translucent stroke must survive a repaint unchanged.
 
 Outside review of v224, finding R2, and the reviewer was right to rank it: the
 project's own reviewer notes described this fix and admitted **it is not pinned

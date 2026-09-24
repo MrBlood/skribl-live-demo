@@ -98,7 +98,7 @@
        stops carry these classes, and styles.css colours them; this page does
        not load styles.css (by design, above), so without these two lines the
        stops fall to the SVG default and the signature paints BLACK on the dark
-       ground (owner, v294, from a phone). Same tokens as styles.css's rules;
+       ground (v294, from a phone). Same tokens as styles.css's rules;
        verify_library reads the computed stop colours on every page that carries
        the mark. */
     .brand-grad-a { stop-color: var(--accent); }
@@ -156,7 +156,7 @@
     /* minmax(0, 1fr), NOT 1fr: a bare 1fr is minmax(auto, 1fr), whose minimum
        is the content's minimum, so one row that would not shrink (a title
        beside its actions) widened the column, the card, and the page past
-       the phone's right edge (owner, from an iPhone, v304). Zero lets the
+       the phone's right edge (from an iPhone). Zero lets the
        column hold at the viewport and the rows shrink inside it. */
     @media (max-width: 900px) { .stage { grid-template-columns: minmax(0, 1fr); } }
   
@@ -468,7 +468,7 @@
             was dead weight: inlineplayer.js null-guards both controls. #}
         {# ...and WITHOUT its progress hairline: the scrub track under the
            title is this page's progress, and two bars moving together read
-           as two players (owner, from an iPhone, v304). #}
+           as two players (from an iPhone). #}
         {{ skribl_inline_draft('stageBox', controls=false, progress=false) }}
         {# The way out of full screen, INSIDE the element that is full screen:
            the transport is not on the display then, and Escape is the
@@ -574,7 +574,7 @@
   </script>
   <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/recoverykey.js') }}" defer></script>
-  {# TOOLTIPS ON THIS PAGE TOO (owner: "we are missing tooltips on gallery and
+  {# TOOLTIPS ON THIS PAGE TOO ("we are missing tooltips on gallery and
      library"). Every control here already carries a `title`; nothing was
      drawing them, so the browser's own unstyled chrome was all you got.
      Desktop only, by the module's design: it suppresses itself on coarse

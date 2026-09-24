@@ -143,7 +143,7 @@ with sync_playwright() as p:
           "bring it back would open an empty drawer")
 
     print("\nFLIP — the amber with nothing to re-add can be acknowledged (v294)")
-    # Owner, from a phone: "Saved without media ... stays and doesn't fade and
+    # From a phone: "Saved without media ... stays and doesn't fade and
     # media is there. It never leaves." The warning is true — the bytes did not
     # reach the store — and it had no exit. The × acknowledges it for the
     # session; a change of state speaks again.
@@ -253,7 +253,7 @@ with sync_playwright() as p:
           opened["w"] > 100 and opened["h"] > 20,
           f"{opened['w']}x{opened['h']} — an element can be `hidden: false` and "
           "still measure 0x0 inside a collapsed drawer, which is exactly the "
-          "state the owner reported as a warning with no way out")
+          "state the report was as a warning with no way out")
     # THE LOOP CLOSES. A warning you can act on but never end is the same dead
     # end wearing a button.
     dismissed, dwhy = try_click(pg2, "#musicPendingDismiss")
@@ -275,7 +275,7 @@ with sync_playwright() as p:
           "sends the user to an empty drawer")
 
     print("\nFLIP — the pill carries its own Dismiss (v294)")
-    # Owner, v294, from a phone: "the re-add media button doesn't go away
+    # From a phone: "the re-add media button doesn't go away
     # unless I click it or go to the drawer and x out." The card's Dismiss is
     # the only thing that ended the amber, two taps away. The pill has a × of
     # its own that does the same thing. The pending record is put back the
@@ -386,7 +386,7 @@ with sync_playwright() as p:
     pgm.add_init_script("Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
     pgm.goto(BASE+"/skribl-pad", wait_until="load"); pgm.wait_for_timeout(1200)
     pgm.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
-    # The 9:16 canvas a portrait phone actually shows (the owner's screenshot):
+    # The 9:16 canvas a portrait phone actually shows (from a screenshot):
     # it reaches the bottom of the screen, which is where the pill lives.
     pgm.evaluate("() => { const b = document.querySelector('#canvasSeg [data-size=\"tall\"]'); if (b) b.click(); }")
     pgm.wait_for_timeout(600)
@@ -488,7 +488,7 @@ with sync_playwright() as p:
     pg5.close()
 
     print("\nPAD — a refused store write names its reason where a phone can carry it (v294)")
-    # Owner, from a phone, twice: "Saved without media" with the media loaded,
+    # From a phone, twice: "Saved without media" with the media loaded,
     # then after a reload "Media missing — tap to re-add". The bytes never
     # reached the store, and the code swallowed the reason: a silent catch on
     # the write, a silent miss on the restore. There is no console on a phone;

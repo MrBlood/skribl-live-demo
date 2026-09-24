@@ -186,7 +186,7 @@ with sync_playwright() as sp:
     moving = pg.evaluate("""() => ({
         frac: parseFloat(document.getElementById('scrubFill').style.width) || 0,
         label: document.getElementById('tElapsed').textContent })""")
-    # ONE PROGRESS, NOT TWO (owner, from an iPhone, v304): the in-post player
+    # ONE PROGRESS, NOT TWO (from an iPhone, v304): the in-post player
     # draws a hairline along its bottom edge, and this page has a scrub track
     # of its own under the title. Both moving together read as two players.
     # The macro's progress=false hides the hairline -- hides, because
@@ -392,7 +392,7 @@ with sync_playwright() as sp:
           f"front of the fact they qualify now, and the corner is the sound "
           f"badge's alone")
 
-    # THE TWO BADGES, MEASURED (owner: the speaker is "slightly too small"
+    # THE TWO BADGES, MEASURED (the speaker is "slightly too small"
     # and should hang off the thumb the way the drawer's 42px tile always
     # has). Three separate properties, because three separate things were
     # wrong and a single "it looks right" would pin none of them:
@@ -495,7 +495,7 @@ with sync_playwright() as sp:
     ids_left = [ids[0]]
 
     # ---- a phone: Share on every row, and nothing runs past the edge -------
-    # Owner, from an iPhone: the page ran over the right margin. The grid's
+    # From an iPhone: the page ran over the right margin. The grid's
     # one column was a bare 1fr, whose minimum is its content's minimum, so a
     # row that would not shrink (a title beside its actions) widened the
     # column, the card and the page. minmax(0, 1fr) holds the column at the
@@ -646,7 +646,7 @@ with sync_playwright() as sp:
     check("...and the row does NOT also say it in words, two inches away",
           bool(lg) and "link only" not in lg["sub"] and "in the gallery" not in lg["sub"],
           f"{lg} — the switch states it and changes it; the meta line saying "
-          f"the same thing is the duplication the owner photographed")
+          f"the same thing is the duplication a screenshot showed")
     check("...while the stage, which has no switch, still says it in words",
           bool(lg) and lg["stage"] == "in the gallery",
           f"{lg} — drop it there and nothing on the stage says what the "
@@ -924,7 +924,7 @@ with sync_playwright() as sp:
           not stale, ", ".join(stale))
 
     print("\nBRAND — the mark is drawn in the accent on every page that carries it")
-    # Owner, v294, from a phone: on /library the skribl mark top-left was
+    # From a phone: on /library the skribl mark top-left was
     # BLACK on the dark ground. The mark is one partial stroked with a
     # gradient whose two stops carry .brand-grad-a / .brand-grad-b, and those
     # classes are coloured only in styles.css. The library inlines its own
@@ -1023,7 +1023,7 @@ check("the stage's fullscreen width uses the player box's own aspect ratio",
 
 # ---------------------------------------------------------------------------
 print("\nLIBRARY — the stage says SILENT only when it KNOWS the Skribl is silent")
-# THE BUG (owner, from /library): a Skribl WITH music was labelled SILENT.
+# THE BUG (from /library): a Skribl WITH music was labelled SILENT.
 # `lib/posted.js` stored no audio flag at all, so every browser-kept row read
 # `has_audio` as undefined, and `library.js` rendered `e.has_audio ? 'with
 # sound' : 'silent'` — which turns "nobody said" into a claim of silence.
@@ -1134,7 +1134,7 @@ with sync_playwright() as _sp3:
     # AND IT IS THE PRODUCT'S OWN COLOUR. `#7ee2a8` was the only green
     # anywhere in this tree, so the one badge left on the poster read as a
     # status light -- something reporting health -- rather than as a property
-    # of the Skribl (owner: "leave speaker, but make it a different color
+    # of the Skribl ("leave speaker, but make it a different color
     # (purple maybe?)"). Compared against the RESOLVED accent rather than a
     # literal, so the row survives the palette moving and still fails a
     # hard-coded colour that merely happens to match it today.
@@ -1166,7 +1166,7 @@ with sync_playwright() as _sp3:
 
 # ---------------------------------------------------------------------------
 print("\nLIBRARY — the row's x is reversible, and the page says what its controls cost")
-# THE GAP (owner): "is there a way to put the row back after you've taken it
+# THE GAP : "is there a way to put the row back after you've taken it
 # down? how would you ever see it again?" There was not. The x removed the row
 # AND this browser's copy of the revocation key, and the only route back was a
 # recovery key the same tap had just discarded.
@@ -1235,7 +1235,7 @@ with sync_playwright() as _sp4:
           and _p4.evaluate("() => localStorage.getItem('skribl_post_loc1') !== null"),
           "the entry is back but the payload is gone")
 
-    # TOOLTIPS, which this page had none of (owner). Asserted on data-tip
+    # TOOLTIPS, which this page had none of . Asserted on data-tip
     # rather than on `title`, because the module REMOVES the title -- so a page
     # that loaded the sheet and not the module would still have titles and
     # would fail this, which is the point.
@@ -1366,7 +1366,7 @@ with sync_playwright() as _sp5:
           _ghost["hidden"] and _ghost["w"] == 0 and _ghost["h"] == 0,
           f"{_ghost} — a local save has no server post to ask, so this is still "
           f"reachable after the reconcile, and a bordered box with nothing in "
-          f"it is what the owner photographed")
+          f"it is what a screenshot showed")
     _p5.close()
     _b5.close()
 

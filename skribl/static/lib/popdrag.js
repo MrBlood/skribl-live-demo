@@ -2,7 +2,7 @@
  *
  * WHY. The shape picker anchors above its tool and stays open while a kind
  * has knobs to offer, which means it stands on the exact patch of canvas
- * under the toolbar (owner: "those kind of menus should have a corner you
+ * under the toolbar ("those kind of menus should have a corner you
  * can grab and move so you can start a shape under them"). A press on the
  * canvas already shoves it aside for that one gesture; this is the other
  * half — grab the pill at its top and put the panel where it isn't in the

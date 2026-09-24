@@ -1,4 +1,4 @@
-"""v109 — drag-to-reorder, and per-page hold (the first payload-format change).
+"""Drag-to-reorder, and per-page hold (the first payload-format change).
 
 `hold` is the first new payload field since the frame format itself, so the whole
 suite is built around one rule: **it must be additive in both directions.**

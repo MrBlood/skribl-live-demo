@@ -1035,7 +1035,7 @@ with sync_playwright() as p:
     # says it at .zoom-hud .zoom-val-input ("Keep it exactly 16px — do NOT
     # lower this"), and the editors' fields are all 16. The profile page was
     # written later, with its own sheet, and its search field is 12.5px: the
-    # library search box grows when you tap it, which is how the owner found
+    # library search box grows when you tap it, which is how it was found
     # this, on a phone. A rule repeated in comments is a rule that holds until
     # somebody writes a new stylesheet.
     #

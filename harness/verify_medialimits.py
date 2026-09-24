@@ -1,4 +1,4 @@
-"""v224 — do the media resource limits stop a decompression bomb, and only that?
+"""Do the media resource limits stop a decompression bomb, and only that?
 
 Outside review, finding #5. Until now the media checks proved TYPE and BYTES:
 the declared subtype had to match the leading bytes, and the base64 had to be

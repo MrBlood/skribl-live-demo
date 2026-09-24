@@ -649,10 +649,10 @@ with sync_playwright() as sp:
     # fit. FINAL v210 figure.
     # 145,994 = 145,881 + 113 B: Space+drag fix (v211). The grab-pan
     # intercept was gated on zoom>1, so at 100% Space+drag DREW A LINE
-    # (owner, desktop); Space now always claims the drag and startDraw refuses
+    # (desktop); Space now always claims the drag and startDraw refuses
     # a stroke while it is held. Pinned on both editors at both zoom states,
     # mutation-tested (the old gate back -> pad@100% fails, magnified passes).
-    # Owner: set to fit.
+    # Reported: set to fit.
     # 146,911 = 145,994 + 917 B: v210 review H1 (player native-<audio>
     # fallback when Web Audio cannot unlock — rejection, never-settles, or
     # resume landing on a still-suspended context — aligned to the drawing,
@@ -667,7 +667,7 @@ with sync_playwright() as sp:
     # ever repainted — the strip stayed blank while Loop Detail, guarded and
     # re-called from updateTrimUI(), drew correctly from the same buffer.
     # Guard on both editors + a repaint from Pad's openDrawer() music branch.
-    # Owner: reported from a phone. Set to fit. NOTE THE COST IS ALMOST ALL
+    # Reported: reported from a phone. Set to fit. NOTE THE COST IS ALMOST ALL
     # COMMENT: 2,428 B of source, 209 B served, because jsstrip removes the
     # rest at serve time — the third "sized from a rect with no layout yet" bug
     # in this drawer, and naming the pattern in place is worth 209 B.
@@ -677,7 +677,7 @@ with sync_playwright() as sp:
     # much it erases. `_eraserSize()` and the #eraserSeg wiring both live in
     # app.js, so the PLAYER carries them; lib/erasersize.js itself is loaded
     # only by the two editor templates (verified: 0 hits in skribl_player.html).
-    # Owner: set to fit — this is a scratch build, not a seal.
+    # Reported: set to fit — this is a scratch build, not a seal.
     # WORTH KNOWING: the wiring block is editor-only work sitting in the shared
     # file, exactly the shape editor_music.js and editor_photo.js were carved
     # out of. If the tool row keeps growing, that carve is the place to give
@@ -1004,7 +1004,7 @@ with sync_playwright() as sp:
     # not a target being abandoned, and the two numbers disagreeing is the
     # honest record.
     #
-    # Owner: "on players (across surfaces) should there be a speed control for
+    # Reported: "on players (across surfaces) should there be a speed control for
     # PAD? it sometimes draws too fast or slow and I'd like to control that".
     #
     # SPENT AGAINST FIRST, as this ceiling's own precedent requires, and the
@@ -1138,7 +1138,7 @@ with sync_playwright() as sp:
     # The harness found this rather than review: the assertion that leaves
     # full screen timed out clicking a button that was no longer on screen.
     #
-    # RAISED 12,750 -> 13,050 for the transport the owner asked for, measured
+    # RAISED 12,750 -> 13,050 for the transport the ask was, measured
     # 12,983. Two things landed and one thing left:
     #
     #   + a speed button (the viewer's rate; see BYTES_RATCHET above)
@@ -1147,7 +1147,7 @@ with sync_playwright() as sp:
     #     `.player-link` rules in styles.css with them (the CSS budget went
     #     DOWN, and it is the same feature paying)
     #
-    # Owner: "maybe we could enlarge the drawing to the biggest it can be for
+    # Reported: "maybe we could enlarge the drawing to the biggest it can be for
     # whatever screen it's on by putting LINK as icon in the play row and
     # putting an icon for Gallery somewhere to free up space... it would be
     # cool if the drawing or flip was the showcase instead of all the stuff
@@ -1256,7 +1256,7 @@ with sync_playwright() as sp:
     # ------------------------------------------------------------------
     # FULL SCREEN ON THE SHARED LINK, and the parity question behind it.
     #
-    # Owner: "shouldn't there be a full screen on this player too? why do the
+    # Reported: "shouldn't there be a full screen on this player too? why do the
     # players not share the same functions?" The profile stage has had it since
     # v304; /s/<id>, the page somebody is actually SENT, had not.
     #
@@ -1491,7 +1491,7 @@ with sync_playwright() as sp:
         # Only the top-layer subtree renders. The transport lives in
         # .player-shell, BELOW the wrapper that goes full screen, so pressing
         # the control gave a drawing, a close button and nothing else -- which
-        # is what the owner photographed. #playerBar is moved into the wrapper
+        # is what a screenshot showed. #playerBar is moved into the wrapper
         # on the way in and back on the way out.
         #
         # ASKED AS WHAT IS PAINTED. Every one of these controls exists in the
@@ -1652,7 +1652,7 @@ with sync_playwright() as sp:
           f"are one product to the person using them")
 
     # ---- THE DRAWING IS THE SHOWCASE (v308) -------------------------------
-    # Owner: "it would be cool if the drawing or flip was the showcase instead
+    # Reported: "it would be cool if the drawing or flip was the showcase instead
     # of all the stuff (rows) on the bottom taking up so much space". Copy link
     # and Gallery were two FULL-WIDTH rows under the transport; on a phone they
     # were most of what sat below the drawing. Both are buttons in the
@@ -1698,7 +1698,7 @@ with sync_playwright() as sp:
     pg.wait_for_timeout(300)
 
     # ---- THE VIEWER'S SPEED (v308) ----------------------------------------
-    # Owner: "on players (across surfaces) should there be a speed control for
+    # Reported: "on players (across surfaces) should there be a speed control for
     # PAD? it sometimes draws too fast or slow and I'd like to control that".
     _cycle = []
     for _ in range(4):

@@ -727,7 +727,7 @@ def register_routes(bp, *, index_route=False):
         # never asked: lib/posted.js stored no audio flag at all, so every
         # browser-kept row rendered `has_audio` as undefined and the profile
         # page labelled every one of them SILENT -- including the ones with
-        # music (owner, from /library). Same value _payload_has_audio() computed
+        # music (from /library). Same value _payload_has_audio() computed
         # a moment ago and the same one feed_dict() reports, so the row and the
         # listing cannot disagree.
         body["hasAudio"] = bool(made.post.has_audio)

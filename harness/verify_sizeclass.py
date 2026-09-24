@@ -1,4 +1,4 @@
-"""v226/v228 — one size decision, made once, where a rule can refer to it.
+"""One size decision, made once, where a rule can refer to it.
 
 WHY. `flip.css` carried eight `max-width` rules — 359, 360, 392, 400, 440, 559,
 560, 640 — and `styles.css` has its own set. That is not a responsive design; it

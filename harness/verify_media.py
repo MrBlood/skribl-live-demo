@@ -1,4 +1,4 @@
-"""v105 — server-side media validation on POST /api/skribls (INTEGRATION §7).
+"""Server-side media validation on POST /api/skribls (INTEGRATION §7).
 
 The post endpoint is public and unauthenticated, and all media arrives as base64
 data URLs inside payload_json. The only previous limit was MAX_CONTENT_LENGTH on

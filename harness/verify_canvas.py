@@ -1,4 +1,4 @@
-"""v110 — variable canvas size, and the help text catching up with the features.
+"""Variable canvas size, and the help text catching up with the features.
 
 The canvas was hardcoded to 640x460. The *payload* has always carried canvasSize
 and the player has always honoured it (`establishEditorCanvas` in app.js), so this

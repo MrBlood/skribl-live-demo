@@ -1,4 +1,4 @@
-"""v232 — Smudge and Blur: the same sweep, two different verbs.
+"""Smudge and Blur: the same sweep, two different verbs.
 
 WHY BLUR NEARLY DID NOT EXIST. A frame is `{strokes, strokeGroups}` — a flat
 array of `{x, y, color, size, t, erase, start}`. Liquify works because

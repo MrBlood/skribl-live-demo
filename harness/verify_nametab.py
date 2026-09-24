@@ -1,4 +1,4 @@
-"""v269 — the skribl NAME, shared by Pad and Flip.
+"""The skribl NAME, shared by Pad and Flip.
 
 A skribl gets a title from the ⋯ overflow menu ("Name this skribl"), which drops
 a drawer (the same motion as Tune). v268 hung this off a persistent header tab;

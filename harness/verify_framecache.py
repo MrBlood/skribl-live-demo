@@ -2,7 +2,7 @@
 
 WHY THIS EXISTS. A generated in-between is thousands of stroke points and both
 playback surfaces repainted every one of them on every visit. Measured at 4x
-CPU throttle (roughly a mid-range phone) on the owner's real 46-page file: one
+CPU throttle (roughly a mid-range phone) on a real 46-page file: one
 11,826-point in-between costs ~215ms against a 41.7ms slot at 24fps, and a
 1.92s loop took 6.2s of wall clock. The v260/v261 exposure thinning reduced
 that to ~123ms per page — better, and still three times the slot. No point

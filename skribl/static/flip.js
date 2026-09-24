@@ -196,7 +196,7 @@ let pageClip = null;
    silently kills every line after it. `spanAnchor` is where a range began;
    `idx` is always its other end, so a span needs exactly one extra number. */
 /* v295: _spanSweep and its 450 ms tile hold are gone — the hold now arms a
-   REORDER, which is what a phone teaches and what the owner asked for twice.
+   REORDER, which is what a phone teaches and what the ask was twice.
    Selecting a range moved to "Select through here" in a page's own ⋯ popover,
    beside Move and Copy, which already speak in spans. */
 let spanAnchor = null, _pdragArmTimer = null;
@@ -5956,7 +5956,7 @@ function selRestore(pts){
    stack everywhere they exist, only where the brush covers the SAME pixel, and
    once the spacing is a fraction of the brush that coverage is a constant
    (1/OVERLAP of them) no matter how long the trail is. Budgeting by count dimmed
-   the ball from the 0.20 the owner asked for to 0.109 while changing nothing
+   the ball from the 0.20 the ask was to 0.109 while changing nothing
    about whether it reads as a slab. What is corrected below is COVERAGE, which
    only departs from that constant when a clamp forces it to: a barely-moving
    wide brush piles MIN ghosts on one spot, and that is the case worth thinning. */
@@ -6969,7 +6969,7 @@ function buildTween(a, b, want){
          -- and those are the ones at the far end of the trail. At the shipped
          cap that cut the first quarter of the ramp (t^2 < 3/51 for t < 0.24),
          so the visible trail reached ~75% of the half-gap it was allowed and
-         the owner saw it stop short. The ramp now runs from the floor to the
+         it was seen stop short. The ramp now runs from the floor to the
          cap: the farthest ghost is the faintest one that can be painted, and
          it sits where the object came from. The cull stays as a guard for a
          cap that is itself under the floor (a very light weight over a pile),
@@ -8155,7 +8155,7 @@ function fieldEnd(){
   // empty canvas must not push a no-op the user then has to press through.
   if(!touched || !before || !f){
     // ...but SILENCE IS NOT THE SAME AS NOTHING TO SAY. v240 added a note for
-    // one case, a photo showing, because the owner reported the tool looking
+    // one case, a photo showing, because the report was the tool looking
     // broken. The case underneath it is commoner and was left mute: a drag that
     // simply missed the ink. You aim slightly off your line, nothing happens,
     // nothing is said, and the tool reads as broken for exactly the same reason.
@@ -10054,7 +10054,7 @@ if (window.SkriblHints) {
   // Short, timed toast + a tap-through to the full guide (v206). The long
   // v205 panel tried to explain everything inline and got in the way; this
   // says the one essential thing and offers the rest one tap away.
-  // Owner: just the link, no explanatory sentence — the guide is one tap away.
+  // Asked for: just the link, no explanatory sentence — the guide is one tap away.
   window.SkriblHints.show('flip-intro',
     'New here?',
     { anchor: 'top-right',

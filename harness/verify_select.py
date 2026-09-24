@@ -133,7 +133,7 @@ with sync_playwright() as p:
     # and it should cost a deliberate edit here. Liquify joined at v236 — same
     # division as select, since it edits geometry already on the page.
     #
-    # ⚑ RATCHET RAISED, v227, FLAGGED FOR THE OWNER — and it is the SECOND copy
+    # ⚑ RATCHET RAISED, v227, FLAGGED — and it is the SECOND copy
     # of this ratchet. verify_tray.py holds the other one, was updated when
     # "artmove" joined, and this file was missed until the release run found it.
     # Two exact rosters in two suites is one more than the mechanism needs;

@@ -1,4 +1,4 @@
-"""v107 — onion-skin depth + tint, page reorder / copy-paste, and clear redo.
+"""Onion-skin depth + tint, page reorder / copy-paste, and clear redo.
 
 Three items off the (since-retired) roadmap's Flip and Pad feature lists.
 

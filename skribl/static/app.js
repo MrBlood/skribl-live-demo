@@ -357,7 +357,7 @@ function makeHistoryState() {
   // NO pixel snapshot in the normal case — this ran on EVERY stroke start,
   // and a full-resolution canvas copy is ~17MB on a desktop hi-DPI canvas:
   // 30 of them alive was half a gigabyte pinned for undo, and a thousand
-  // dots was a thousand 17MB allocations (owner: "a drawing of space is
+  // dots was a thousand 17MB allocations ("a drawing of space is
   // breaking the machine"). The canvas at any stroke boundary IS
   // preRecordSnapshot + paintStrokesStatic(strokes) — the exact identity
   // stopPlayback already relies on to restore the drawing after every
@@ -4448,7 +4448,7 @@ function showPlayerError(msg, canRetry) {
     return (clientX - rect.left) / rect.width;
   }
 
-  /* THE VIEWER'S SPEED (owner: "it sometimes draws too fast or slow and I'd
+  /* THE VIEWER'S SPEED ("it sometimes draws too fast or slow and I'd
      like to control that"). One number, `replayRate`, already defined above
      for the Pad's preview -- and the comment there says why it is safe to
      reuse: speed describes the ACT OF LOOKING and never the work, which is
@@ -4636,7 +4636,7 @@ function showPlayerError(msg, canRetry) {
     pFull.hidden = false;
     // THE TRANSPORT TRAVELS WITH THE DRAWING. Only the top-layer subtree
     // renders in full screen, so a transport left in .player-shell is a
-    // transport that is not on screen: the owner photographed a full-screen
+    // transport that is not on screen: a screenshot showed a full-screen
     // drawing with a close button and nothing else on it. The row is moved in
     // and moved back, rather than duplicated, so there is one of every control
     // and every handler bound to it stays bound.
@@ -5235,7 +5235,7 @@ window.addEventListener('touchcancel', _pinchEnd);
 
   // Hold Space and drag to grab-pan.
   //
-  // v211 (owner, desktop): this used to gate BOTH the intercept and the
+  // v211 (desktop): this used to gate BOTH the intercept and the
   // cursor on `zoom > 1`. At 100% the guard was false, the capture-phase
   // intercept skipped, and startDraw ran — so Space+drag DREW A LINE. That is
   // the wrong failure even when there is nothing to pan: the universal

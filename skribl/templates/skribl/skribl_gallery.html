@@ -86,7 +86,7 @@
     /* `text-decoration: none` because the lockup is an <a> and the library's
        is a <div>: the browser was underlining the word GALLERY and nothing
        underlines LIBRARY, so the two pages wore the same lockup differently
-       (owner: "get rid of the underlined GALLERY"). It stays a link -- it is
+       ("get rid of the underlined GALLERY"). It stays a link -- it is
        the way back to the editor from here -- and simply stops being drawn
        like body copy. */
     .brand { display: flex; align-items: center; gap: 6px; min-height: 44px;
@@ -170,7 +170,7 @@
        tallest one, so opening ONE card's description grew the card beside it
        to match and left that card forty pixels of nothing under its drawing --
        the dead space the accordion was built to remove, handed to the
-       neighbour instead (owner: "it accordioned open and it opened the card
+       neighbour instead ("it accordioned open and it opened the card
        next to it"). Start-aligned, each card is exactly as tall as what it
        holds, and a card with its description shut is the same height it was. */
     .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px;
@@ -206,7 +206,7 @@
     /* TWO PIXELS, AND THEY ARE AN OPTICAL CORRECTION, NOT A MISTAKE. Flush at
        the same x, the avatar's circle meets that line at a single point while
        the title sits on it for its whole length, so the title reads as poking
-       out to the left (owner: "it looks like it is further left"). The nudge
+       out to the left ("it looks like it is further left"). The nudge
        is what makes them look level; measuring them will show 2px. */
     .tile .thead .tt { grid-column: 1 / -1; grid-row: 2; padding-left: 2px; }
     /* The TITLE sits under the name, the way a post's body does. It used to
@@ -228,7 +228,7 @@
        that quietly cancels `flex: 1` is a trap the next widening walks into. */
     /* THE META RUN: age, plays, Report. They were three peers separated by one
        8px gap and read as a single run-on string -- "3d 2 plays Report"
-       (owner: "looks weird because they run together"). Two of them are FACTS
+       ("looks weird because they run together"). Two of them are FACTS
        about the post and the third is an ACTION on it, so the grouping follows
        that: the facts sit together with a middot between them, and Report is
        pushed off with its own space and its own colour. No vertical rule --
@@ -236,7 +236,7 @@
     /* CENTRE, NOT BASELINE. An SVG glyph has no baseline to sit on -- the box
        aligns on its own bottom edge, which put the pen a couple of pixels
        below the type beside it and made the run look assembled rather than
-       set (owner: "the pen/book is not centered with the other stuff on the
+       set ("the pen/book is not centered with the other stuff on the
        line next to it"). Text and glyphs only line up on a shared centre. */
     .tile .tmeta { flex: none; display: flex; align-items: center; gap: 6px;
       color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
@@ -263,7 +263,7 @@
        plain disc rather than an initial. The word is dimmer than a name
        because it is a state and not somebody. */
     .tanon .tdn-anon { font-weight: 500; color: var(--text-3); font-style: normal; }
-    /* THE SKRIBL STAR, on the accent blend at 135deg (owner). It is drawn as
+    /* THE SKRIBL STAR, on the accent blend at 135deg . It is drawn as
        SVG rather than typed as U+1F7CD: almost no system font carries that
        codepoint, so the character would be a tofu box on most phones -- the
        same failure the avatar's onerror exists to avoid for a 404'd photo.
@@ -372,7 +372,7 @@
        padding, a 10px corner, 14px text at weight 500, and one destructive row
        in the danger colour. The first cut of this menu invented its own --
        no icons, 8px corners, flush text -- so a person who had seen the
-       editor's menu met a different one here (owner: "should have icons and
+       editor's menu met a different one here ("should have icons and
        use the same styling as all the menus").
 
        MATCHED RATHER THAN IMPORTED, and that is a decision and not laziness:
@@ -438,7 +438,7 @@
        edge now, at opposite ends, which is far enough apart to read as two
        facts. The profile's row moved with it — same badge, same corner. */
     /* THE MARKS ARE IN THE HEAD NOW, NOT ON THE PICTURE. They were absolutely
-       positioned in two corners of the stage; the owner asked for the canvas
+       positioned in two corners of the stage; the ask was for the canvas
        back ("the canvas needs to be clean, nothing but drawing") and for these
        to join the line that already carries the post's other facts. So they
        are in normal flow inside `.tmeta`, sized to the type around them rather
@@ -485,7 +485,7 @@
        control was missing. `.tileMore svg` has carried `width: 16px` since it
        was written; the caption mark was given the same 44px box and no such
        rule, so its SVG took the whole grid cell and painted a 44px speech
-       bubble beside a 16px ellipsis (owner: "the enormous chat bubble (why so
+       bubble beside a 16px ellipsis ("the enormous chat bubble (why so
        big?)"). An `<svg>` with a viewBox and no size is not small by default
        -- it fills what contains it. */
     .tile .tileCapBtn svg { width: 16px; height: 16px; display: block; }
@@ -547,7 +547,7 @@
        that border one pixel inside the card's, on the same radius. At most
        aspects the letterbox hid it. At the one aspect that fills the box it
        did not, and the card read as a rectangle with its drawing welded to the
-       rim (owner, of the card whose drawing happened to match: "canvas borders
+       rim (of the card whose drawing happened to match: "canvas borders
        hit card border and it's weird looking").
 
        13px is the head's own inset, so the drawing's left edge lines up with

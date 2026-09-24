@@ -1,9 +1,9 @@
-"""v230 — Fill, and the constraint that shaped it.
+"""Fill, and the constraint that shaped it.
 
 WHY THIS TOOL IS INTERESTING. A Skribl frame is `{strokes, strokeGroups}` — a
 flat array of `{x, y, color, size, t, erase, start}` — and the player replays
 those points and nothing else. There is no fill primitive. Adding one is a
-format change the player must honour, which is the owner's call, so Fill earns
+format change the player must honour, which is a product call, so Fill earns
 its place by producing STROKES, the way Shape already turns a drag into a path.
 
 The saving is that `paintSeg()` draws `drawLine(prev -> point)` at

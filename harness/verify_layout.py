@@ -414,7 +414,7 @@ with sync_playwright() as p:
                   ", ".join(f"{h['id']} {h['hitH']}px (pill {h['visH']}px)" for h in short[:4])
                   or f"{len(hits)} controls, shortest {min(h['hitH'] for h in hits)}px")
 
-    # THE TWO PAGES THIS SECTION NEVER WALKED (owner, from an iPhone).
+    # THE TWO PAGES THIS SECTION NEVER WALKED (from an iPhone).
     #
     # Everything above measures Pad and Flip. /library and /gallery were never
     # in it, and neither had ever been measured against the floors this file
@@ -538,7 +538,7 @@ with sync_playwright() as p:
                       rowy["acts"] > max(line),
                       f"actions top {rowy['acts']} against title line {max(line)}")
 
-    # THE ROW'S ACTIONS ON A PHONE (owner: "there is no reason the buttons
+    # THE ROW'S ACTIONS ON A PHONE ("there is no reason the buttons
     # shouldn't be left justified under the thumbnail. it forces them to be in
     # two rows when you could do one... use icons instead of words on phones").
     #

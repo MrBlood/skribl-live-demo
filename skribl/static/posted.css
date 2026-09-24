@@ -90,7 +90,7 @@
 .posted-thumb { position: relative; }
 /* THE ACCENT, NOT A GREEN. `#7ee2a8` was the only green anywhere in this
    product, so the badge read as a status light -- something reporting health
-   -- rather than as a property of the Skribl (owner: "leave speaker, but make
+   -- rather than as a property of the Skribl ("leave speaker, but make
    it a different color (purple maybe?)"). The accent is what everything else
    that means "this has something" is drawn in. The literal is the fallback
    for a surface that has not defined the token. */

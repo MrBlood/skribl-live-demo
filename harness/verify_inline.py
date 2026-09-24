@@ -1576,7 +1576,7 @@ with sync_playwright() as sp:
     # in the middle of a 1200px card, so the band crop left 110px of card
     # ground AND the card's own plate border showing on each side. Every tile
     # in the gallery was a picture inside a frame inside a card, on every host
-    # that embeds this player, and the owner photographed it: "fix the share
+    # that embeds this player, and a screenshot showed it: "fix the share
     # card bands too". fitPoster() frames the card's drawingRect() exactly
     # where the canvas will land and clips the rest away, so idle and playing
     # are one composition and pressing play changes what moves, not where it
@@ -1615,7 +1615,7 @@ with sync_playwright() as sp:
     # wherever it appeared, so the one element that is supposed to say "a pen
     # is here, this size" was the only thing on the surface that did not answer
     # to how big the drawing is -- a boulder on an 84px library thumb and a
-    # speck on a 1280px full screen (owner: "shouldn't the nib be scaled to the
+    # speck on a 1280px full screen ("shouldn't the nib be scaled to the
     # size of the player, rather than stay the same size no matter where it
     # occurs?"). The player already computes that scale every frame for the
     # nib's POSITION; this spends the bytes to use it for the size too.
@@ -1630,7 +1630,7 @@ with sync_playwright() as sp:
     #             three literals; a scale cache, a clamp and one setProperty.
     #   DAMPING   a square root. The first cut scaled the bead LINEARLY, which
     #             is right for a stroke and wrong for a nib -- the drawing
-    #             quadrupled in full screen and so did the bead (owner: "full
+    #             quadrupled in full screen and so did the bead ("full
     #             size looks good but nib is huge now"). A nib is the point of
     #             contact of a pen, and a pen held over a bigger picture is
     #             still a pen.

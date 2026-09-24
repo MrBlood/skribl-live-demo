@@ -282,7 +282,7 @@
     btnFull.hidden = false;
     /* THE SAME BAR THE GALLERY'S TILE USES (lib/fullbar.js). This page had an
        exit and no controls; the gallery had controls and no exit; neither
-       looked like the other, which is what the owner photographed. Neither
+       looked like the other, which is what a screenshot showed. Neither
        page builds one now. */
     var fbar = window.SkriblFullBar ? window.SkriblFullBar.attach(stageWrap, {
       player: function () { return player; },

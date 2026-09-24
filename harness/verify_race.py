@@ -1,4 +1,4 @@
-"""v102 (c) — the Pad could persist a garbage loop.
+"""The Pad must not persist a garbage loop.
 
 `audioEl._fileName` is set as soon as the file is picked, but `trimEnd` isn't
 written until `loadedmetadata` fires. An autosave landing in that window used to

@@ -9,7 +9,7 @@ times for three unrelated reasons:
 
 That is the server refusing a share. It is not a cosmetic failure — the user
 has finished a drawing and the app will not let them post it — and every
-occurrence was found the same way: in production, by the owner, on a phone.
+occurrence was found the same way: in production, on a phone.
 The three causes were a second pointer landing mid-stroke, a page change
 mid-stroke, and a shape committing its group before its points. Nothing they
 had in common was visible in a diff, and no feature suite would have caught

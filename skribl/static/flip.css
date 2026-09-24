@@ -608,7 +608,7 @@
      above. */
   .addcol { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px;
     padding: 10px 12px; align-items: center; }
-  /* Real buttons, not placeholders (owner: "the dashed buttons need to look
+  /* Real buttons, not placeholders ("the dashed buttons need to look
      more premium"). Dashed-and-hollow is this app's vocabulary for "nothing
      here yet" — the paste ghost, the liquify reach — but Duplicate/Blank/
      In-between are ACTIONS, so they wear the page bar's own recipe (solid

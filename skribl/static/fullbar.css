@@ -39,7 +39,7 @@
    centres its content in what is left. The scrim then falls on the letterbox
    rather than on the picture, which is the difference between a control that
    floats over a video and a control that stands on somebody's drawing
-   (owner, of a pug whose feet were behind the buttons).
+   (of a pug whose feet were behind the buttons).
 
    `box-sizing: border-box` is stated rather than inherited: this sheet is
    loaded by pages that may or may not set it globally, and on a `100vh`
@@ -238,7 +238,7 @@
 /* NO RULE ABOVE THE CARD'S FOOTER. It had `border-top: 1px solid` and the
    line ran the full width of the card, straight under a stage whose own border
    is rounded -- so the two met at the radius and the corner read as a mistake
-   rather than a join (owner: "the bottom line just below the canvas that
+   rather than a join ("the bottom line just below the canvas that
    separates the player doesn't look good with the canvas border touching it
    because it has the rounded sides. maybe just remove the straight line?").
    The padding below does the separating, which is what it was already doing
@@ -271,7 +271,7 @@
    so the transport appeared while the pointer was over somebody's name, and
    pressing the description toggle left it up for good, because a button keeps
    focus after a click and `:focus-within` had no reason to ever stop matching
-   (owner: "when I reclicked the bubble, it closed - but it left the controls
+   ("when I reclicked the bubble, it closed - but it left the controls
    still on screen"). The bar belongs to the drawing; the drawing is the stage.
    gallery.js scopes its own pointer and focus listeners the same way, and the
    two halves have to agree or the class and the selector fight. */

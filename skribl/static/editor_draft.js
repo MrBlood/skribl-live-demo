@@ -197,7 +197,7 @@ function currentMusicMeta() {
    lib/autosavepill.js since v294, one owner for both editors. The Pad hands it
    the three facts only the Pad knows. Until v294 the Pad's copy said "Saved
    without media", did nothing when tapped, and with a pending record and no
-   bytes reported plain green (owner: "shouldn't they be unified?"). */
+   bytes reported plain green ("shouldn't they be unified?"). */
 function _pendingMusicLost() {
   return !!(typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta && !(audioEl && audioEl._fileName));
 }

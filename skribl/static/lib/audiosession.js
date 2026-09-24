@@ -38,7 +38,7 @@
  * iOS ONLY. Everywhere else Web Audio already ignores the switch (there is no
  * switch), so the Control Center side effect would be pure cost.
  *
- * CONFIRMED ON A PHONE, 5 Sep 2026: the owner reported music audible in silent
+ * CONFIRMED ON A PHONE, 5 Sep 2026: the report was music audible in silent
  * mode on the same iPhone that found the bug. That is the only evidence there
  * can be for the OUTCOME.
  *

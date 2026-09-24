@@ -1,23 +1,22 @@
-"""v106 — two UX fixes: honest export labels, and an undoable "Clear all".
+"""Honest export labels, and an undoable "Clear all".
 
-1. FORMAT DISCLOSURE. The Pad has always labelled its export button with the
-   container the browser will actually produce ("Video (MP4)" / "Video (WebM)").
-   Flip never did — it said "Video" and then silently handed you WebM on any
-   browser without WebCodecs H.264. Closes the last item in the retired roadmap's "Known
-   caveats to close". Flip's label now mirrors exportVideo()'s real decision,
-   including the subtle case where music is present but AAC is unavailable, where
-   the MP4 path deliberately bails rather than ship a silent video.
+1. FORMAT DISCLOSURE. The Pad labels its export button with the container the
+   browser will actually produce ("Video (MP4)" / "Video (WebM)"). Flip must
+   mirror exportVideo()'s real decision the same way, including the subtle case
+   where music is present but AAC is unavailable and the MP4 path deliberately
+   bails rather than ship a silent video. Saying "Video" and then handing over
+   WebM on any browser without WebCodecs H.264 is the defect.
 
-2. UNDOABLE CLEAR ALL. "Clear all" wiped strokes, music, photo and background,
-   then called clearAutosave() — so the recovery copy went too. The two-tap arm
-   guarded the accidental tap; nothing could undo a deliberate one. It now
+2. UNDOABLE CLEAR ALL. "Clear all" wipes strokes, music, photo and background.
+   Calling clearAutosave() with it takes the recovery copy too, so the two-tap
+   arm guards the accidental tap and nothing undoes a deliberate one. It
    snapshots through serializeSkribl() and restores through loadSkribl(), the
    same pair the draft and autosave paths use, so media comes back with no
    parallel restore logic.
 
 Note this sandbox's Chromium has VideoEncoder but no avc1, so the expected format
-here is WebM on both surfaces — which is exactly the case the old Flip label got
-wrong, and therefore the useful one to pin.
+here is WebM on both surfaces -- which is exactly the case a bare "Video" label
+gets wrong, and therefore the useful one to pin.
 """
 from playwright.sync_api import sync_playwright
 import browsing
@@ -1978,7 +1977,7 @@ with _sp() as _p3:
     _b.close()
 
 
-# v211 (owner, desktop): Space+drag DREW A LINE instead of grab-panning.
+# v211 (desktop): Space+drag DREW A LINE instead of grab-panning.
 # Both editors gated the pan intercept on zoom>1, so at 100% the drag fell
 # through to the drawing tool. And Flip draws on pointerdown, which fires
 # BEFORE the mousedown the intercept listened for — a capture-phase mousedown

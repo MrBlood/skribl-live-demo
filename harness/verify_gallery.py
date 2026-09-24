@@ -453,7 +453,7 @@ with sync_playwright() as sp:
 _FS_GEOM = "() => { const t = document.querySelector('.tileStage');\n        const box = t.querySelector('.skribl-inline');\n        const c = t.querySelector('.skribl-inline-canvas');\n        const p = t.querySelector('.skribl-inline-poster');\n        const r = e => { const b = e.getBoundingClientRect();\n          return { l: Math.round(b.left), t: Math.round(b.top),\n                   w: Math.round(b.width), h: Math.round(b.height) }; };\n        const pl = box._skriblInline;\n        const band = Math.round(parseFloat(getComputedStyle(t).paddingBottom) || 0);\n        return { vw: innerWidth, vh: innerHeight, band: band,\n                 usable: innerHeight - band, box: r(box), canvas: r(c),\n                 fit: getComputedStyle(c).objectFit,\n                 poster: r(p), st: pl ? pl.state() : null }; }"
 _POSTER_BACK = "() => document.querySelector('.tileStage .skribl-inline-poster').getBoundingClientRect().width > 0"
 print("\nGALLERY — a drawing can be watched full size")
-# THE GAP (owner): the profile's stage has a fullscreen control and /s/<id> has
+# THE GAP : the profile's stage has a fullscreen control and /s/<id> has
 # one; the page where the drawings actually ARE had none, and its transport
 # stays on screen while a Skribl plays, so there was no way to see one big.
 #
@@ -505,7 +505,7 @@ with sync_playwright() as _spg:
     # NO STRAIGHT RULE ACROSS A ROUNDED JOIN. The footer had `border-top: 1px`
     # and it ran the full width of the card, straight under a stage whose own
     # border is rounded, so the two met at the radius and the corner read as a
-    # mistake (owner: "doesn't look good with the canvas border touching it
+    # mistake ("doesn't look good with the canvas border touching it
     # because it has the rounded sides"). Asserted as the pairing rather than
     # as a bare zero: a rule under a SQUARE stage would be a design choice, and
     # what was wrong here is a straight line meeting a curve.
@@ -528,7 +528,7 @@ with sync_playwright() as _spg:
     # footer carries loop; so does the COMPONENT's own cluster, which `is-bare`
     # suppresses. The card set that class at build and `onFs` then toggled it
     # with full screen -- so LEAVING full size stripped it and the second loop
-    # button came back for good (owner: "when you hover on the card the button
+    # button came back for good ("when you hover on the card the button
     # in bottom right (recycle/loop) shows and it's redundant").
     #
     # COUNTED AFTER A ROUND TRIP, not at rest, because at rest the broken tree
@@ -611,7 +611,7 @@ with sync_playwright() as _spg:
     # THE LABEL IS A REPORT ON THE PLAYER AND MUST NEVER BE THE CASUALTY OF
     # THE PLAYER HAVING A BAD MOMENT.
     #
-    # The owner has reported "the 1x speed does not change when clicked" twice
+    # It has been reported "the 1x speed does not change when clicked" twice
     # and it has not reproduced here -- headless, on the real Fullscreen API
     # and on the fallback, with and without a listed rate, the control cycles
     # and the drawing changes speed (the rows in the immersive section measure
@@ -742,7 +742,7 @@ with sync_playwright() as _spg:
           "the immersive rules are not in inlineplayer.css — if they moved back "
           "into a page, that page is hand-writing the player's internals again")
 
-    # WHAT FULL SIZE ACTUALLY SHOWS (owner, from the deployed gallery: "full
+    # WHAT FULL SIZE ACTUALLY SHOWS (from the deployed gallery: "full
     # page image cuts off, then on play it doesn't go all the way to edge on
     # left"). Both halves measured, because both were wrong:
     #
@@ -797,7 +797,7 @@ with sync_playwright() as _spg:
 
 # ---------------------------------------------------------------------------
 print("\nGALLERY — a tile says WHAT it is, and the listing can say so without a payload")
-# THE GAP (owner): "on public gallery it doesn't show a pen, book - no way to
+# THE GAP : "on public gallery it doesn't show a pen, book - no way to
 # tell which". The listing defers `payload_json` on purpose (9.75 ms against
 # 1.04 ms), so a tile could not look; v307 puts `kind` and `pages` on the post,
 # written at post time by the SAME test the players use to decide it.
@@ -975,7 +975,7 @@ with sync_playwright() as _spk:
           f"{_inside['tiles']} tiles measured, controls inside the art: "
           f"{sorted(set(_inside['inArt']))} \u2014 the transport earns its place "
           f"over the art by being invisible at rest; nothing else does")
-    # TOOLTIPS, which this page had none of (owner). The module is loaded and
+    # TOOLTIPS, which this page had none of . The module is loaded and
     # started here; it moves every `title` to `data-tip` and draws its own.
     # Asserted on data-tip, not on `title`, because the module REMOVES the
     # title -- so a page that loaded the sheet and not the module would still
@@ -1122,7 +1122,7 @@ with sync_playwright() as _spa:
           tick: !!(a && a.querySelector('.tverified')),
           avatar: img ? img.getAttribute('src') : null,
           /* the block sits between the head and the drawing, which is where
-             the owner asked for it ("at the top under the title") */
+             it was asked for ("at the top under the title") */
           inHead: !!(a && a.closest('.thead')),
           /* THE READING ORDER, NOT THE PARENT. This asked for `.tnames .tt`
              until v311, when the title became the head's own second row so it
@@ -1197,7 +1197,7 @@ with sync_playwright() as _spa:
           f"{_card['anonWord']!r} \u2014 every card carries a block now; the "
           f"unattributed one says which kind it is")
     # THE META RUN READS AS THREE THINGS, NOT ONE STRING. "3d 2 plays Report"
-    # (owner: "looks weird because they run together"). Asserted as STRUCTURE
+    # ("looks weird because they run together"). Asserted as STRUCTURE
     # and as measured GAPS, not as a rendered string: a substring check would
     # pass on the prose in this comment, and the separator is a pseudo-element
     # that textContent cannot see anyway.
@@ -1252,7 +1252,7 @@ with sync_playwright() as _spa:
           and _card2["kindOnStage"] == 0 and _card2["marksInHead"] > 0,
           f"{_card2['marksOnStage']} mark groups on the stage, "
           f"{_card2['kindOnStage']} kind, {_card2['soundOnStage']} sound; "
-          f"{_card2['marksInHead']} in the head \u2014 the owner asked for the "
+          f"{_card2['marksInHead']} in the head \u2014 the ask was for the "
           f"canvas back: nothing but drawing")
     check("...and EVERY card is the same height, captioned or not",
           len(_card2["heights"]) == 1 and _card2["closedCapH"] == 0,
@@ -1299,7 +1299,7 @@ with sync_playwright() as _spa:
     #   v310  closed to ZERO at rest, opened by a mark in the head. The clamp
     #         rows cannot survive this and are not meant to: a clamped caption
     #         still occupies its two lines, and occupying them is what made one
-    #         card taller than its neighbour (owner: "there has to be a way for
+    #         card taller than its neighbour ("there has to be a way for
     #         the cards to be the same size with no weird space at the bottom").
     #
     # WHAT EVERY VERSION HAS PROTECTED IS THE SAME THING, and it is the only
@@ -1351,7 +1351,7 @@ with sync_playwright() as _spa:
           not _cap.get("missing") and _cap["belowStage"] and _cap["inHead"],
           f"{_cap} \u2014 opening it ABOVE the picture would push the drawing "
           f"down the page under the reader's cursor; and the mark belongs in the "
-          f"run that already carries the post's other facts (owner)")
+          f"run that already carries the post's other facts ")
     check("...it costs the card NO height while shut, and opens it when pressed",
           not _cap.get("missing") and _cap["shutWrap"] == 0
           and _cap["openWrap"] > 0 and _cap["openCard"] > _cap["shutCard"]
@@ -1636,7 +1636,7 @@ with sync_playwright() as _spa:
     # (it is the way back to the editor) and the library's is a <div>, so an
     # unstyled anchor put a browser underline under the word GALLERY and
     # nothing under LIBRARY -- two pages of one product, differing in the one
-    # element that says which product it is (owner: "get rid of the underlined
+    # element that says which product it is ("get rid of the underlined
     # GALLERY (LIBRARY is also not underlined)").
     #
     # `text-decoration-line` and not the shorthand: the shorthand resolves to
@@ -1774,7 +1774,7 @@ with sync_playwright() as _spa:
     # INVERTED IN v310, AND THE PREVIOUS FORM IS WHY. It read "under the
     # drawing" and pinned direction B's permanent footer row -- which the
     # owner's auditor asked to be rid of ("avoid showing a full media-player
-    # toolbar at all times") and which the owner then read as clutter across a
+    # toolbar at all times") and which then read as clutter across a
     # grid: "it reads as clutter". The bar is over the art's bottom edge now,
     # costs the card no height, and is UNPAINTED until somebody wants it.
     #
@@ -1961,7 +1961,7 @@ with sync_playwright() as _spa:
     # CONTAINS the drawing: a 4:3 drawing sits in a 656px picture in the middle
     # of a 1200px card, so the old band crop left 110px of card ground and the
     # card's own plate border on each side. A picture inside a frame inside a
-    # card, on every tile (owner: "fix the share card bands too").
+    # card, on every tile ("fix the share card bands too").
     #
     # ASSERTED AS AGREEMENT WITH THE CANVAS, not against remembered numbers.
     # The claim worth pinning is not "the poster is 284px wide", which changes
@@ -2139,12 +2139,12 @@ with sync_playwright() as _spi:
           _big["exitSeen"] == "grid", str(_big))
 
     # ---- THE SPEED CONTROL MOVES THE CLOCK EVERYBODY READS (v310) ---------
-    # Owner: "the 1x button on full screen does nothing when pushed." It did
+    # Reported: "the 1x button on full screen does nothing when pushed." It did
     # something: the DRAWING doubled. What did not move was `state().elapsedMs`,
     # which added the wall-clock segment since the last anchor to a bank of
     # SCALED time -- so the scrubber and the time readout, the only feedback a
     # viewer gets, went on reporting 1x. A control whose every visible effect
-    # is invisible is a control that does nothing, and the owner was right.
+    # is invisible is a control that does nothing, and that reading was right.
     #
     # MEASURED ON THE DRAWING AND ON THE BAR, and the row needs BOTH. The first
     # probe written for this bug read `state().elapsedMs` alone and agreed with
@@ -2328,7 +2328,7 @@ with sync_playwright() as _spi:
     check("...nothing is drawn over the art but the way out",
           not _bar.get("missing") and _bar["marks"] == "no-marks",
           f"{_bar} \u2014 'which of these is which' is a question you have in a "
-          f"GRID, and the owner photographed a pen and a speaker over a "
+          f"GRID, and a screenshot showed a pen and a speaker over a "
           f"full-screen drawing; the answer is now that no badge is ever on the "
           f"stage, so there is nothing for a media query to hide")
     check("...and the scrubber has its own row above the buttons",
@@ -2427,9 +2427,9 @@ print("\nGALLERY \u2014 the nib is a size in the PEN")
 # it by the drawing's SCALE fixed that and produced a ball in full screen.
 # Damping the scale fixed the ball and made the bead smaller than the stroke it
 # was leading. Each answer was right about the thing in front of it and wrong
-# about the thing the owner said next.
+# about the thing said next.
 #
-# The measure that settles it is the one the owner had all along: "the way it
+# The measure that settles it is the one stated all along: "the way it
 # was before all this was fine. The nib was slightly bigger than pen size with
 # a halo." A nib is the tip of a pen, so its size is the PEN's size as
 # rendered -- `p.size * s` is exactly how wide the stroke comes out on this
@@ -2520,7 +2520,7 @@ with sync_playwright() as _spn:
           f"({_big.get('ratio', 0):.2f}x) \u2014 the ratio is the law; if it moves "
           f"with the scale then the scale is still in it somewhere")
 
-    # THE INK AND THE HALO, which are the other two things the owner asked for
+    # THE INK AND THE HALO, which are the other two things the ask was
     # and which the size has no opinion about.
     _white = ("", "#fff", "#ffffff", "white")
     check("the bead is drawn in the ink it is laying down, not in white",
@@ -2542,7 +2542,7 @@ with sync_playwright() as _spn:
 
 
 print("\nGALLERY — the title has the card's width, and the bar gets out of the way")
-# TWO THINGS NOTHING IN THIS SUITE COULD SEE, both found by the owner looking
+# TWO THINGS NOTHING IN THIS SUITE COULD SEE, both found in use looking
 # at a real card on a real phone.
 #
 # THE TITLE'S WIDTH USED TO DEPEND ON WHAT ELSE THE POST HAD. It lived inside

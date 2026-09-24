@@ -62,7 +62,7 @@
     '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>' +
     '<path d="M19.5 5.5a9 9 0 0 1 0 13"/></svg>';
 
-  /* THE ROW'S ACTIONS, AS ICONS ON A PHONE (owner: "use icons instead of
+  /* THE ROW'S ACTIONS, AS ICONS ON A PHONE ("use icons instead of
      words on phones... maybe left justify").
      Five word-labelled pills wrapped to two lines on a 390px screen and sat
      indented under nothing. Each button carries its icon AND its word now; the
@@ -283,7 +283,7 @@
     var undoBtn = document.getElementById('postedUndoBtn');
     var undoX = document.getElementById('postedUndoX');
 
-    /* THE x WAS THE ONLY ACT HERE WITH NO WAY BACK (owner: "is there a way to
+    /* THE x WAS THE ONLY ACT HERE WITH NO WAY BACK ("is there a way to
        put the row back after you've taken it down? how would you ever see it
        again?"). Delete is undone by nothing and says so; Clear list asks
        first; but the x -- which removes the row AND this browser's copy of
@@ -519,7 +519,7 @@
                with the drawing for the same 84x63 box; in the sub line it
                stands directly in front of the fact it qualifies -- "a pen,
                replay, a day ago" reads as one statement, which a corner badge
-               and a separate word do not (owner: "move the pencil/book before
+               and a separate word do not ("move the pencil/book before
                replay/pages").
                The DRAWER has no poster at all: its 42x34 thumb IS this glyph,
                so removing it there would leave an empty tile. Same branch,
@@ -542,7 +542,7 @@
             /* ONCE, NOT TWICE. The gallery switch below is a button that
                both STATES this Skribl's visibility and changes it, so a row
                carrying it said "link only" in the meta line and "Link only"
-               on the button two inches apart (owner, screenshot 4). The word
+               on the button two inches apart (screenshot 4). The word
                stays where there is no button — a row this browser holds no key
                for cannot change it, so something has to say it. */
             '<span class="posted-sub">' + (poster ? kindMark : '') + esc(sub) +

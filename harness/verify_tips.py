@@ -423,7 +423,7 @@ with sync_playwright() as p:
           f"tips {heights['tips']} vs canvas {heights['canvas']} — two segmented "
           "controls stacked at different heights read as a mistake")
 
-    # Owner, v293, from a phone: "theme and canvas sliders look cramped." One
+    # From a phone: "theme and canvas sliders look cramped." One
     # shared width (140px) fitted the two-pill Tips row and squeezed the others:
     # measured, "System" had 2px beside it and "16:9" under 5px. The room is
     # the pill's box less its glyphs, halved — read from a Range around the

@@ -271,7 +271,7 @@ with sync_playwright() as sp:
     # controls, dropping a typeof guard that was checking a function
     # declaration in its own scope, and building aria-pressed from the boolean.
     # The remaining 140 B buys the control the canonical share surface was
-    # missing, which the owner asked for and then waived this number over.
+    # missing, which the ask was and then waived this number over.
     #
     # THE NUMBER HAS NOT MOVED AGAIN SINCE, and the fix that would have moved
     # it paid for itself instead. Making full screen actually ENLARGE the
@@ -315,7 +315,7 @@ with sync_playwright() as sp:
     # justification -- which is the failure mode the rule exists to prevent.
     #
     # WHAT HAPPENED. The margin here was 25 B. The viewer's speed control
-    # (owner: "on players (across surfaces) should there be a speed control for
+    # ("on players (across surfaces) should there be a speed control for
     # PAD? it sometimes draws too fast or slow") costs 760 B of stripped player
     # JS: segElapsed(), showRate(), the cycle handler, and one playbackRate
     # line so the music keeps up. Measured before and after, not estimated:

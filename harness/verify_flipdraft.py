@@ -1,6 +1,6 @@
 """Flip's draft: strokes in localStorage, media bytes in IndexedDB.
 
-THE BUG THIS CLOSES was reported by the owner as "autosave is failing on pad".
+THE BUG THIS CLOSES was reported as "autosave is failing on pad".
 It was not Pad's fault. localStorage is capped at roughly 5 MB PER ORIGIN and
 both editors share it, and Flip was writing its media into that budget as base64
 data URLs — inflated 4/3 by the encoding, so a 30-second WAV is ~6.7 MB on its

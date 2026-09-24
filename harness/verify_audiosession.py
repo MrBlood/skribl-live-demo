@@ -4,7 +4,7 @@ THE BUG. On iOS, Web Audio is routed into an "ambient" audio session that the
 hardware ringer switch silences; an <audio> element is not. So on a phone set to
 silent, Test Seam (a plain <audio>) plays while Preview Loop (Web Audio) does
 not — and neither does a posted Skribl's music in a feed, because
-inlineplayer.js is Web Audio too. Found by the owner on their own phone.
+inlineplayer.js is Web Audio too. Found in use, on a real phone.
 
 WHY EVERY EXISTING GUARD MISSED IT, and this is the part worth keeping: app.js
 has an elaborate hand-off for a context that never unlocks, and every one of its
@@ -432,6 +432,6 @@ print("\n" + "=" * 62)
 print(f"{passed}/{len(results)} passed"
       + ("" if not bad else "\nFAILURES:\n  - " + "\n  - ".join(bad)))
 print("\nNOTE: none of the above proves an iPhone in silent mode is audible."
-      "\n      The device did: confirmed by the owner on 5 Sep 2026. This suite"
+      "\n      The device did: confirmed on the device on 5 Sep 2026. This suite"
       "\n      guards the mechanism behind that confirmation, not the outcome.")
 sys.exit(1 if bad else 0)

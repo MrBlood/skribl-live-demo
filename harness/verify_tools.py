@@ -1,4 +1,4 @@
-"""v213 — the tool work: settings that had no control, and two new tools.
+"""The tool work: settings that had no control, and two tools added with them.
 
 Split out of verify_ux.py, which had reached 366 assertions and a dozen browser
 launches and stopped finishing inside a single invocation. A suite that cannot

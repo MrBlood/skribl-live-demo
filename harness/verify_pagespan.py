@@ -1,4 +1,4 @@
-"""v226 — a run of pages is one object, and the controls already there operate on it.
+"""A run of pages is one object, and the controls already there operate on it.
 
 WHAT THIS IS. Flip's strip is a film; the thing a person reaches for is "these
 four frames". Until now every page operation meant exactly one page, so
