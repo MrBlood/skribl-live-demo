@@ -279,7 +279,15 @@
     var tt = document.createElement('div');
     tt.className = 'tt';
     tt.textContent = item.title || 'Untitled Skribl';
-    who.querySelector('.tnames').appendChild(tt);
+    /* THE TITLE IS THE HEAD'S SECOND ROW, NOT THE NAME BLOCK'S SECOND LINE.
+       It used to live inside `.tnames`, which made its width whatever was
+       left after the fact run and the menu -- so the richer the post, the
+       less of its own name you could read. A captioned card at 390 showed
+       49% of this title before the count was even allowed on a phone, and
+       25% with the count in. The title is what the card is FOR, so its width
+       is now the card's, and the facts take theirs from the name line
+       instead (which fits, because the handle stands down at that width).
+       The head is a grid for this: see the sheet. */
     head.appendChild(who);
     var tm = document.createElement('span');
     tm.className = 'tm';
@@ -340,6 +348,9 @@
        the group with its own air -- the same place, and the same reasoning, as
        the Report word it replaces. Visually it is still the row's last item. */
     head.appendChild(rep);
+    /* Last, so the DOM order is the reading order: who, then the facts, then
+       what it is called. The grid places it across every column. */
+    head.appendChild(tt);
     art.appendChild(head);
 
 
@@ -662,6 +673,14 @@
          the drawing gets the card back. Keyboard focus never starts that
          timer -- a bar that vanishes from under a tab key is a bar a keyboard
          cannot use. */
+      /* True only when the element was reached the way a keyboard reaches it.
+         Kept out of peek() so the fallback is stated once: an engine without
+         `:focus-visible` throws from matches(), and answering true there
+         keeps the pre-v311 behaviour for it rather than inventing a new one. */
+      function keyboardFocus(el) {
+        try { return el.matches(':focus-visible'); }
+        catch (e) { return true; }
+      }
       var hideT = null;
       function peek(sticky) {
         art.classList.add('ctl-on');
@@ -669,8 +688,25 @@
         if (sticky) return;
         hideT = setTimeout(function () {
           /* The stage for the same reason the listeners above use it: focus
-             parked on the description toggle is not somebody using the bar. */
-          if (stage.contains(document.activeElement)) return;
+             parked on the description toggle is not somebody using the bar.
+
+             AND `:focus-visible`, NOT `:focus`, WHICH IS THE WHOLE OF THE BUG
+             THE OWNER REPORTED AS "the controls never go away". Tapping the
+             artwork to play FOCUSES the player element, so plain `:focus` was
+             true on every phone tap -- the timer fired, took this branch, and
+             returned WITHOUT RE-ARMING, which left the bar up for the life of
+             the card. Measured: `ctl-on` still set six seconds in; blur the
+             element and it drops 2.6s later, exactly as designed.
+
+             `:focus-visible` is the platform's own answer to "did a person
+             navigate here, or just touch the screen": a pointer focus does
+             not match it, a tab does. So the keyboard keeps the bar it needs
+             and a finger gets the drawing back. A browser that does not know
+             the selector throws from matches(), and there the OLD behaviour
+             is the safe one -- a bar that overstays beats a bar that vanishes
+             from under a tab key. */
+          var a = document.activeElement;
+          if (a && stage.contains(a) && keyboardFocus(a)) return;
           art.classList.remove('ctl-on');
         }, 2600);
       }
@@ -695,7 +731,19 @@
         if (e.target.closest('.skfull')) return;
         peek(false);
       });
-      stage.addEventListener('focusin', function () { peek(true); });
+      /* STICKY ONLY FOR A KEYBOARD, and this is the line that actually pinned
+         the bar. A tap on the artwork moves focus INTO the stage (the player
+         element carries tabindex="0"), so `focusin` fired on every tap and
+         asked for the sticky peek -- which clears the timer the pointerdown
+         just armed and arms nothing in its place. The bar was up for good,
+         whatever the timer's own guard said.
+
+         The distinction the sticky peek exists for is a keyboard one: a bar
+         must not vanish from under a tab key. So ask which kind of focus this
+         is, and let a finger have the ordinary fading peek. */
+      stage.addEventListener('focusin', function (e) {
+        peek(keyboardFocus(e.target));
+      });
       stage.addEventListener('focusout', function () {
         if (!stage.contains(document.activeElement)) peek(false);
       });
@@ -705,8 +753,25 @@
            quarter-second tick the footer runs while stopped. */
         setInterval(function () {
           var st = box0._skriblInline.state();
-          if (st.state === 'playing') peek(true);
-          else if (art.classList.contains('ctl-on')) peek(false);
+          /* PLAYING NO LONGER PINS THE BAR, and this line is the owner's
+             "can you make it so when playing the controls evaporate". It used
+             to call peek(TRUE) here -- the sticky kind, which arms no timer --
+             every 400ms for as long as the replay ran, so a playing card held
+             its transport over the drawing until it stopped. The drawing is
+             the thing; a bar parked on top of it for the whole replay is the
+             chrome the card spent v310 removing.
+
+             Doing NOTHING is the fix, and calling peek(false) here would not
+             be: it clears and re-arms the 2.6s timer, so a 400ms tick would
+             re-arm it forever and the bar would never fall. The tap that
+             started the replay already armed a timer; this leaves it to run,
+             and a tap on the artwork raises the bar again for another 2.6s
+             (the pointerdown listener above).
+
+             Stopped is unchanged: if the bar is up with nothing playing, arm
+             the fade so it recedes on its own. */
+          if (st.state === 'playing') return;
+          if (art.classList.contains('ctl-on')) peek(false);
         }, 400);
       }
     }
