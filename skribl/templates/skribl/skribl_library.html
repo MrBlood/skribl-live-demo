@@ -299,6 +299,15 @@
        the two jobs; the drawer emits no poster, so it emits no wrapper. */
     .posted-thumb { width: 84px; height: 63px; border-radius: 8px; overflow: visible; background: #0b0d12; position: relative; }
     .posted-thumb .posted-shot { position: absolute; inset: 0; border-radius: 8px; overflow: hidden; }
+    /* THESE NUMBERS ARE THE FALLBACK NOW, not the crop. They frame the share
+       card so its wordmark band falls outside the box, which hides the
+       branding and shows whatever the card had in the middle -- on an 84x63
+       tile, a 16:9 drawing letterboxed on a plate came out as a stamp between
+       two slabs of grey. library.js crops to the drawing's own rectangle
+       instead (fitShots), from the canvas size the row carries, and its inline
+       lengths override every declaration here. What is left standing is the
+       answer for a row whose shape nothing has said yet: the reconcile has
+       not reached it, or it predates the v309 columns. */
     .posted-thumb .posted-poster { position: absolute; left: 50%; transform: translateX(-50%); top: -5.4878%; height: 128.0488%; width: auto; max-width: none; }
     /* WHAT IS LEFT OF THE KIND BADGE, which is its stacking and nothing else.
        The pen and the book were drawn in the poster's top-left corner here,

@@ -78,8 +78,24 @@
         + '<path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
     share: '<path d="M12 3v12"/><path d="m8 7 4-4 4 4"/>'
          + '<path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',
-    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/>'
-         + '<path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/>',
+    /* ONE GLYPH PER ACTION IN A ROW, which the strip did not manage until
+       v311: the visibility toggle borrowed `link` for its off state, so a
+       link-only row drew the same chain twice -- once meaning "copy the
+       link" and once meaning "only the link reaches this" -- and neither
+       tooltip is reachable on the phone the icons were drawn for. Two
+       glyphs that are about the same subject and not the same ACT, so:
+       an eye struck through for "not on show", stacked picture cards for
+       "on show in the gallery". A globe was not wrong so much as vague --
+       it says public, where the destination is a specific page on this
+       site with pictures on it. verify_posted's uniqueness row now fails
+       any row that repeats a glyph, whatever the two buttons are. */
+    gallery: '<rect x="3" y="7" width="12" height="12" rx="2"/>'
+           + '<path d="M7 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2"/>'
+           + '<circle cx="6.8" cy="11" r="1.3"/>'
+           + '<path d="m3.4 17 3.3-3.3 2.6 2.6 2-2 3.2 3.2"/>',
+    eyeOff: '<path d="M2 12s3.6-7 10-7c1.7 0 3.2.5 4.5 1.2"/>'
+          + '<path d="M19.6 8.6A15.4 15.4 0 0 1 22 12s-3.6 7-10 7c-1.6 0-3.1-.4-4.4-1.1"/>'
+          + '<path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m3 3 18 18"/>',
     trash: '<path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'
          + '<path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>',
     key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/>'
@@ -221,17 +237,20 @@
     });
   }
 
-  /* ARMED, NOT confirm() (SK-AUD-014). The two destructive controls here --
-     the × on a keyed row, which throws away this browser's copy of the
-     revocation key, and Delete, which takes the Skribl down for everyone --
-     asked with window.confirm(): the one browser-painted dialog left in a
-     product whose every other destructive act is an armed second tap (Flip's
-     tile delete and Clear, this drawer's own Clear list, the local row's ×).
-     Same contract now: the first tap arms the button, says what the second
-     will do in its accessible name and through the drawer's live region, and
-     disarms itself after a few seconds; the second tap does it. The
-     consequence wording is kept whole, because the presentation was the
-     defect and the words were not. Returns true when the tap is the second. */
+  /* ARMED, NOT confirm() (SK-AUD-014). The destructive controls here asked
+     with window.confirm(): the one browser-painted dialog left in a product
+     whose every other destructive act is an armed second tap (Flip's tile
+     delete and Clear, this panel's own Clear list).
+     There were three -- Delete, which takes the Skribl down for everyone; a
+     local row's ×, which destroys the only copy of a drawing; and a keyed
+     row's ×, which threw away this browser's copy of the revocation key.
+     v311 took the last one out rather than keep making it safe, so two arm
+     through here now and the contract is unchanged: the first tap arms the
+     button, says what the second will do in its accessible name and through
+     the panel's live region, and disarms itself after a few seconds; the
+     second tap does it. The consequence wording is kept whole, because the
+     presentation was the defect and the words were not. Returns true when
+     the tap is the second. */
   function arm(btn, warning, restLabel, armedText) {
     if (btn.dataset.armed === '1') {
       clearTimeout(btn._arm);
@@ -287,35 +306,39 @@
     var undoBtn = document.getElementById('postedUndoBtn');
     var undoX = document.getElementById('postedUndoX');
 
-    /* THE x WAS THE ONLY ACT HERE WITH NO WAY BACK ("is there a way to
-       put the row back after you've taken it down? how would you ever see it
-       again?"). Delete is undone by nothing and says so; Clear list asks
-       first; but the x -- which removes the row AND this browser's copy of
-       the revocation key -- was a single armed tap away from permanent, and
-       the only route back was a recovery key the same tap had just discarded.
+    /* THE ONE ACT HERE WITH NO WAY BACK ("is there a way to put the row back
+       after you've taken it down? how would you ever see it again?"). Delete
+       is undone by nothing and says so; Clear list asks first; but a local
+       save's x destroys the only copy of a drawing, one armed tap from
+       permanent, with no server behind it to ask again.
 
        Twelve seconds, one button, and the entry goes back where it was with
-       its key and its timestamp (store.restore). The bytes of a local save
-       are kept for the same twelve seconds (store.remove's keepBlob) so the
-       restored row is not a link to nothing.
+       its timestamp (store.restore). The bytes are kept for the same twelve
+       seconds (store.remove's keepBlob) so the restored row is not a link to
+       nothing, and dropped the moment the window closes.
+
+       IT SERVED THE POSTED ROW'S x TOO until v311 took that control out, and
+       the shelf is the one piece of it that keeps its job unchanged. `local`
+       is gone from the record because there is only one kind of removal left
+       to undo: an entry whose blob is this browser's to drop.
 
        THE ARMING STAYS. Undo is a repair and arming is a warning, and they
        answer different failures: arming stops the tap you did not mean to
        make, undo returns the one you meant and regretted. The armed tap also
        still says what it costs, because after twelve seconds it costs it. */
-    var pending = null;      /* { entry, index, local, timer } */
+    var pending = null;      /* { entry, index, timer } */
 
     function commitUndo() {
       if (!pending) return;
       clearTimeout(pending.timer);
-      if (pending.local) store.dropBlob(pending.entry.id);
+      store.dropBlob(pending.entry.id);
       pending = null;
       if (undoEl) undoEl.hidden = true;
     }
 
-    function offerUndo(entry, index, local, word) {
+    function offerUndo(entry, index, word) {
       commitUndo();                       /* one shelf; the older one commits */
-      pending = { entry: entry, index: index, local: local, timer: null };
+      pending = { entry: entry, index: index, timer: null };
       pending.timer = setTimeout(commitUndo, 12000);
       if (undoMsgEl) undoMsgEl.textContent = word;
       if (undoEl) undoEl.hidden = false;
@@ -342,11 +365,13 @@
         announce('Put back.');
       } else {
         /* The same failure add() reports and for the same reason: the write
-           was refused, so the row is on screen and not in storage, and the
-           key it carried is about to be lost for real. Say so and hand the
-           key over rather than letting the list look right. */
-        announce('Could not put it back — this browser refused to store it. '
-                 + (p.entry.tok ? 'The key is ' + p.entry.tok : ''));
+           was refused, so the row is on screen and not in storage. It used to
+           read out the entry's recovery key here, which was the right answer
+           while a POSTED row could be undone -- that key was the thing about
+           to be lost for real. A local save has no key and never had one, so
+           the sentence resolved to a trailing space on the only removal this
+           shelf can still be offered for. */
+        announce('Could not put it back — this browser refused to store it.');
       }
     });
 
@@ -387,8 +412,23 @@
       var hits = all.filter(function (e) {
         return (!q || (e.title || '').toLowerCase().indexOf(q) >= 0) && (!filter || filter(e));
       });
+      paint(all, hits, q);
+      /* AFTER THE LIST IS ON THE PAGE, NOT BEFORE IT, which is why paint() is
+         a function now and this line is not where it used to be.
+         onRender ran FIRST, so a host that touched the rows in it touched the
+         PREVIOUS render's rows and had its work overwritten by the innerHTML
+         a few lines later. /library does exactly that twice: it marks the
+         playing row `active`, which silently came off on every re-render --
+         pick a Skribl, then type in the search box, and the highlight is gone
+         though the same Skribl is still on the stage -- and since v311 it
+         also crops each thumbnail to its drawing, which simply did nothing.
+         The name says when it runs; there is no reason it should have been a
+         pre-render hook, and three early exits in paint() are why the call
+         could not simply be moved to the end of the old body. */
       if (opts.onRender) opts.onRender(all, hits);
+    }
 
+    function paint(all, hits, q) {
       if (countEl) {
         countEl.textContent = !all.length ? ''
           : q ? (hits.length + ' of ' + all.length)
@@ -448,7 +488,8 @@
         // .posted-row-keyed: three actions, not one; on the compact size class
         // they stack under the title (v293 — the meta line wrapped a word per
         // line beside them on a phone). The actions share one wrapper so the
-        // stylesheet can move them as a group; the × stays on the title line.
+        // stylesheet can move them as a group, and since v311 that wrapper is
+        // the whole of a posted row's controls — see the × below.
         if (isLocal) {
           return '<div class="posted-row posted-row-local" data-id="' + esc(e.id) + '">' +
             '<span class="posted-thumb posted-thumb-' + esc(e.kind) + '" aria-hidden="true">' +
@@ -493,7 +534,20 @@
                also applied to the badges beside it -- see .posted-shot in
                skribl_library.html. No poster, no wrapper: the drawer's thumb
                is a glyph tile and has nothing to clip. */
-            (poster ? '<span class="posted-shot"><img class="posted-poster" src="' + esc(poster(e.id)) + '" alt="" loading="lazy" decoding="async"></span>' : '') +
+            /* THE DRAWING'S SHAPE, WHERE THE ROW KNOWS IT (v311), written
+               onto the wrapper exactly as gallery.js writes it onto a card's
+               box -- same attribute names, so a reader who has met one has
+               met both. The PAGE decides what to do with it: this module
+               renders a list and does not know how big its host draws a
+               thumb. /library crops the picture to the drawing with it
+               (library.js); a host that does nothing gets the stylesheet's
+               band crop, which is what every row got before the store
+               learned the field. */
+            (poster ? '<span class="posted-shot"'
+                    + (e.canvas_w && e.canvas_h
+                        ? ' data-skribl-w="' + esc(e.canvas_w) + '" data-skribl-h="' + esc(e.canvas_h) + '"'
+                        : '')
+                    + '><img class="posted-poster" src="' + esc(poster(e.id)) + '" alt="" loading="lazy" decoding="async"></span>' : '') +
             /* THE KIND MARK MOVES TO THE WORDS WHERE THERE IS A PICTURE, and
                stays the tile's whole content where there is not.
                Over a poster it was a badge in the top-left corner, competing
@@ -556,14 +610,25 @@
                 (inGallery ? 'In the public gallery. Tap to make it link only' : esc(offWord) + '. Tap to show it in the public gallery') + '"' +
                 ' title="' + (inGallery ? 'Anyone can find this in the gallery. Tap to make it link only'
                                         : 'Only someone with the link can reach this. Tap to put it in the gallery') + '">' +
-                glyph(inGallery ? 'globe' : 'link') +
+                glyph(inGallery ? 'gallery' : 'eyeOff') +
                 lbl(inGallery ? 'In gallery' : offWord) + '</button>'
             : '') +
-          /* TWO DIFFERENT ACTIONS, AND THEY USED TO BE ONE BUTTON. The \u2715
-             removed the local entry and nothing else — the Skribl stayed live
-             and the link kept working — which an audit of v278 called out as
-             making recovery WORSE: it threw away the only handle the person
-             had on a post they might want to withdraw.
+          /* DELETE IS THE ONLY DESTRUCTIVE ACT ON A POSTED ROW NOW. There
+             were two, and the other was a \u2715 at the row's right edge
+             that removed the local ENTRY and nothing else — the Skribl
+             stayed live and the link kept working.
+             That \u2715 has been the hardest control on this page to explain
+             since v278, when an audit called it a recovery HAZARD: it threw
+             away the only handle somebody had on a post they might want to
+             withdraw. v281 gave it an arming tap, v291 an undo shelf, v293 a
+             34px target and a grid column of its own — four releases spent
+             making a control safe rather than asking whether it earns a place
+             beside a trash can that means something else entirely. Two
+             remove-shaped controls in one row is a misfire waiting on a
+             phone, and it is not a misfire that can be taken back.
+             WHAT GOES WITH IT, said plainly because it is a real loss: a row
+             this browser holds no key for can no longer be dismissed on its
+             own. Clear list is the way out, and it takes the whole list.
              "Delete" appears only when this browser holds the revocation
              capability for the post (see lib/posted.js). Without it there is
              nothing honest to offer, so nothing is offered. */
@@ -585,10 +650,6 @@
                 'Nothing can reissue it">' + glyph('key') + lbl('Copy key') + '</button>' : '')
             : '') +
           '</span>' +
-          '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" ' +
-            'aria-label="Remove from this list, keeping the Skribl online"' +
-            ' title="Forget this row. The Skribl stays online \u2014 undoable for a few seconds">' +
-            '\u2715</button>' +
         '</div>';
       }).join('');
     }
@@ -664,35 +725,23 @@
         if (kent && kent.tok) copy(kent.tok, k);
         return;
       }
+      /* THE ONLY ✕ LEFT IS A LOCAL SAVE'S, and that one is not a
+         bookkeeping act: a local save exists nowhere else, so its ✕ is
+         the delete. `dataset.local` is therefore no longer the branch that
+         tells two ✕s apart — it is the assertion that this is the only
+         kind there is. A posted row emits no ✕ at all since v311. */
       var d = ev.target.closest('.posted-del');
       if (d && d.dataset.local) {
-        /* For a LOCAL save the × destroys the only copy, so it arms first —
-           the same two-tap contract Flip's tile delete and this drawer's own
-           Clear list use, and spoken through the drawer's live region rather
-           than a browser confirm. */
+        /* It destroys the only copy, so it arms first — the same two-tap
+           contract Flip's tile delete and Clear list use, spoken through the
+           panel's live region rather than a browser confirm. */
         if (!arm(d, 'Tap again to delete this save from this device',
                  'Delete this save from this device')) return;
         var lent = byId(d.dataset.del), lidx = indexOf(d.dataset.del);
         store.remove(d.dataset.del, true);
         render();
-        if (lent) offerUndo(lent, lidx, true, 'Deleted from this device.');
+        if (lent) offerUndo(lent, lidx, 'Deleted from this device.');
         else announce('Deleted from this device');
-        return;
-      }
-      if (d) {
-        // Removes the entry, NOT the Skribl. The link keeps working, which is
-        // why this is not a confirm dialog — nothing is destroyed.
-        //
-        // It DOES throw away the revocation capability, though, so it is worth
-        // saying once. Only asked when there is something to lose.
-        var ent = byId(d.dataset.del), idx = indexOf(d.dataset.del);
-        if (ent && ent.tok && !arm(d,
-              'Tap again to remove — the Skribl stays online, but this ' +
-              "browser's copy of the key goes with the entry",
-              'Remove from this list, keeping the Skribl online')) return;
-        store.remove(d.dataset.del, true);
-        render();
-        if (ent) offerUndo(ent, idx, false, 'Removed from this list.');
         return;
       }
 

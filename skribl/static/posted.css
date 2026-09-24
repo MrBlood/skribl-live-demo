@@ -141,7 +141,10 @@
 
    One page, three shapes, row by row — which is how the owner found it, from
    an iPhone: "the second thumb down". The old comment here promised "the ×
-   keeps the title line's right edge"; it was asserted and never enforced.
+   keeps the title line's right edge"; it was asserted and never enforced, and
+   v311 answered it by taking the × out of a posted row altogether. The grid
+   is what kept the OTHER two shapes from happening and is still load-bearing:
+   the defect was never the × alone.
 
    Three columns make the title line structural at every width and every meta
    length, and `minmax(0, 1fr)` is what lets the text ellipsise instead of
@@ -152,8 +155,12 @@
     align-items: center; column-gap: 10px; row-gap: 8px; }
   .posted-row-keyed .posted-thumb, .posted-row-many .posted-thumb { grid-row: 1; }
   .posted-row-keyed .posted-main,  .posted-row-many .posted-main  { grid-row: 1; }
-  .posted-row-keyed .posted-del,   .posted-row-many .posted-del   {
-    grid-row: 1; grid-column: 3; justify-self: end; }
+  /* THE THIRD COLUMN IS EMPTY AND STAYS DECLARED. It held the x, which v311
+     took out of posted rows; `auto` on an empty track resolves to 0, so the
+     title line is the same two columns it was, and the declaration is what
+     keeps `grid-column: 1 / -1` on the action strip meaning the full width
+     rather than silently becoming a two-column span if a third item is ever
+     put back on this line. */
   /* LEFT JUSTIFIED UNDER THE THUMBNAIL, and the words become icons (owner:
      "there is no reason the buttons shouldn't be left justified under the
      thumbnail. it forces them to be in two rows when you could do one").
@@ -216,9 +223,10 @@
    row had never been measured against: /library and /gallery were outside
    verify_layout's touch-target section, which only ever walked Pad and Flip.
    Measured before: 22x22, the smallest control in the app, sitting directly
-   above Delete. The × forgets a row; Delete takes the Skribl down for
-   everyone. A small target with a dangerous neighbour is the one combination
-   worth fixing first.
+   above Delete — a small target with a dangerous neighbour, which is the one
+   combination worth fixing first. v311 separated them properly by taking the
+   × off a posted row; what is left is a LOCAL save's, which has no Delete
+   beside it and needs the floor on its own account.
    Same --tap-grow ::before every sub-44 control here uses. */
 .posted-del { flex: 0 0 auto; background: none; border: 0; color: var(--text-secondary);
   font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px;
@@ -228,8 +236,8 @@
 .posted-del::before { content: ''; position: absolute;
   inset: calc(-1 * var(--tap-grow)); }
 .posted-del:hover { color: var(--danger, var(--danger)); }
-/* A LOCAL save's × arms before it deletes (SK-AUD-010): the armed tap reads
-   as the danger it is, like every other armed control here. */
+/* It arms before it deletes (SK-AUD-010): the armed tap reads as the danger
+   it is, like every other armed control here. */
 .posted-del.armed { color: var(--danger); }
 .posted-empty { text-align: center; padding: 34px 16px; }
 .posted-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 5px; }
@@ -237,9 +245,22 @@
 /* Above the list since v292 (outside review of v291, SK-AUD-020): the
    browser-local truth is read BEFORE the list reads as a library. */
 .posted-foot-top { border-top: 0; border-bottom: 1px solid var(--hairline); }
+/* THE NOTE WRAPS, THE LINKS DO NOT. `space-between` on one nowrap row is what
+   floated "Use a recovery key" and "Clear list" against the right edge of a
+   seven-line paragraph; with the paragraph down to one sentence they share a
+   row honestly on a wide screen, and on a phone the note takes the full width
+   and the two links drop beneath it rather than being squeezed against it.
+   `flex: 1 1 100%` is the whole mechanism: a full-width basis forces the wrap
+   at the compact tier and nothing else changes. */
 .posted-foot { border-top: 1px solid var(--hairline); padding: 10px 16px;
+  flex-wrap: wrap;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   font-size: 11px; color: var(--text-secondary); }
+.posted-foot-note { min-width: 0; }
+.posted-foot-acts { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; }
+@media (max-width: 640px) {
+  .posted-foot-note { flex: 1 1 100%; }
+}
 .posted-clearbtn { background: none; border: 0; color: var(--text-secondary);
   font: inherit; font-size: 11px; cursor: pointer; text-decoration: underline;
   padding: 0; flex: 0 0 auto; }

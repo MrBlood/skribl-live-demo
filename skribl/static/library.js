@@ -345,6 +345,38 @@
     return (e.visibility || '') === showing;
   }
 
+  /* THE THUMBNAIL IS THE DRAWING, NOT THE CARD. The picture behind each row
+     is the share card -- 1200x630, a wordmark band across the foot and the
+     drawing letterboxed on a plate in the middle -- and the stylesheet showed
+     it by scaling to 128% and pulling up 5.5% so the band fell outside. That
+     is a crop chosen to hide the branding, not to show the drawing: on an
+     84x63 tile a 16:9 Skribl came out as a stamp between two slabs of plate,
+     which is what the owner was looking at when they asked whether the page
+     looked right.
+     Cropped to the drawing's own rectangle instead, the tile is all drawing at
+     every canvas shape -- the same thing the gallery card does with the same
+     arithmetic (SkriblInline.fitPoster, `fill` for cover rather than contain).
+     THE BOX IS MEASURED, NOT ASSUMED: every length fitPoster writes is a
+     percentage of this element, so it needs the aspect the browser actually
+     laid out, and a sheet that changes the thumb's size needs no second edit
+     here. A shot with no shape on it keeps the band crop, which is what a row
+     the reconcile has not reached yet gets -- and it is a real state on the
+     first paint after a post, not a hypothetical. */
+  function fitShots() {
+    var fit = window.SkriblInline && window.SkriblInline.fitPoster;
+    if (!fit || !listEl) return;
+    Array.prototype.forEach.call(
+      listEl.querySelectorAll('.posted-shot[data-skribl-w][data-skribl-h]'),
+      function (shot) {
+        var img = shot.querySelector('.posted-poster');
+        var w = +shot.getAttribute('data-skribl-w');
+        var h = +shot.getAttribute('data-skribl-h');
+        var box = shot.getBoundingClientRect();
+        if (!img || !(w > 0 && h > 0) || !(box.width > 0 && box.height > 0)) return;
+        fit(img, w, h, box.width / box.height, true);
+      });
+  }
+
   function words(all, hits) {
     var q = (search && search.value.trim()) || '';
     statCount.textContent = all.length;
@@ -358,6 +390,7 @@
         c.classList.toggle('active', c.getAttribute('data-id') === current.id);
       });
     }
+    fitShots();
   }
 
   function renderGrid() { if (ui) ui.render(); }
@@ -453,7 +486,8 @@
     if (!store) return;
     var stale = store.list().filter(function (e) {
       return e && e.id && !e.local
-          && (!e.kind || typeof e.has_audio !== 'boolean');
+          && (!e.kind || typeof e.has_audio !== 'boolean'
+              || !(e.canvas_w > 0 && e.canvas_h > 0));
     }).map(function (e) { return e.id; });
     if (!stale.length) return;
     var chunks = [];
@@ -469,6 +503,7 @@
         (body.items || []).forEach(function (it) {
           if (store.update(it.id, { kind: it.kind, pages: it.pages,
                                     has_audio: it.has_audio,
+                                    canvas_w: it.canvas_w, canvas_h: it.canvas_h,
                                     visibility: it.visibility })) touched++;
         });
       });
@@ -505,11 +540,14 @@
              not going to change -- but `kind` and `pages` are columns on the
              post, written at post time from the same payload `has_audio` comes
              from, so a row can say which it is without one. A null means "not
-             backfilled" and renders as nothing. */
+             backfilled" and renders as nothing. `canvas_w`/`canvas_h` are two
+             more of them, and the host branch needs no reconcile to learn
+             them: the listing has answered with them since v309. */
           hostRows.push({ id: i.id, url: playerBase + '/' + encodeURIComponent(i.id), title: i.title || '',
                           kind: i.kind || null, pages: i.pages || 0,
                           at: i.created_at ? Date.parse(i.created_at) : Date.now(),
                           visibility: i.visibility || '',
+                          canvas_w: i.canvas_w || 0, canvas_h: i.canvas_h || 0,
                           has_audio: i.has_audio === true ? true : i.has_audio === false ? false : null,
                           owned: true, tok: null });
         });

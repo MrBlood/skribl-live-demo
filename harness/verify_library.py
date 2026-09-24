@@ -1165,29 +1165,36 @@ with sync_playwright() as _sp3:
 
 
 # ---------------------------------------------------------------------------
-print("\nLIBRARY — the row's x is reversible, and the page says what its controls cost")
+print("\nLIBRARY — deleting a local save is reversible, and the page says what its controls cost")
 # THE GAP : "is there a way to put the row back after you've taken it
-# down? how would you ever see it again?" There was not. The x removed the row
-# AND this browser's copy of the revocation key, and the only route back was a
-# recovery key the same tap had just discarded.
+# down? how would you ever see it again?" There was not.
+#
+# IT WAS ASKED ABOUT THE POSTED ROW'S x, which v311 removed outright — the
+# owner's answer to four releases of making that control safe. The shelf it
+# produced did not go with it, because the removal it now covers is the worse
+# one: a LOCAL save exists nowhere but this browser, so its x destroys the only
+# copy of a drawing and no server can be asked again. Same shelf, same twelve
+# seconds, driven here through the control that still exists.
 #
 # THE INDEX IS THE ASSERTION, not just the presence. `add()` unshifts and
 # stamps a fresh timestamp, so undoing with it would move the row to the top of
-# the list and relabel a Skribl from last week as posted just now. This removes
-# the MIDDLE of three and requires the middle back.
+# the list and relabel a drawing from last week as saved just now. This removes
+# the MIDDLE of three and requires the middle back, with its own date.
 with sync_playwright() as _sp4:
     _b4 = _sp4.chromium.launch()
     _p4 = _b4.new_context().new_page()
     _p4.set_viewport_size({"width": 1280, "height": 1000})
     browsing.goto(_p4, BASE, "/library")
     _p4.evaluate("""() => { localStorage.setItem('skribl_posted_v1', '[]');
-        window.SkriblPosted.add({ id: 'u3', url: '/s/u3', title: 'Third', kind: 'pad', pages: 1, tok: 'k3' });
-        window.SkriblPosted.add({ id: 'u2', url: '/s/u2', title: 'Second', kind: 'flip', pages: 4, tok: 'k2' });
-        window.SkriblPosted.add({ id: 'u1', url: '/s/u1', title: 'First', kind: 'pad', pages: 1, tok: 'k1' }); }""")
+        for (const id of ['u1', 'u2', 'u3']) localStorage.setItem('skribl_post_' + id, '{"frames":[]}');
+        window.SkriblPosted.add({ id: 'u3', url: '/p#skribl=u3', title: 'Third', kind: 'pad', pages: 1, local: true });
+        window.SkriblPosted.add({ id: 'u2', url: '/p#skribl=u2', title: 'Second', kind: 'flip', pages: 4, local: true });
+        window.SkriblPosted.add({ id: 'u1', url: '/p#skribl=u1', title: 'First', kind: 'pad', pages: 1, local: true }); }""")
     _p4.reload(wait_until="load")
     _p4.wait_for_timeout(1200)
     _ids = lambda: _p4.evaluate("() => window.SkriblPosted.list().map(e => e.id).join(',')")
     check("three rows, u2 in the middle (fixture)", _ids() == "u1,u2,u3", _ids())
+    _was = _p4.evaluate("() => (window.SkriblPosted.list().find(e => e.id === 'u2') || {}).at")
     # Armed, so two taps -- the warning stays, because arming stops the tap you
     # did not mean and undo returns the one you meant and regretted.
     _p4.evaluate("""() => { const b = [...document.querySelectorAll('.posted-row')]
@@ -1199,17 +1206,18 @@ with sync_playwright() as _sp4:
         return { shown: !!u && !u.hidden,
                  msg: (document.getElementById('postedUndoMsg') || {}).textContent || '' }; }""")
     check("...and an undo shelf appears saying what happened",
-          _shelf["shown"] and "Removed" in _shelf["msg"],
+          _shelf["shown"] and "Deleted" in _shelf["msg"],
           f"{_shelf} — an undo nobody can see is a shortcut for people who "
           f"already know it is there")
     _p4.click("#postedUndoBtn")
     _p4.wait_for_timeout(400)
     check("Undo puts it back WHERE IT WAS, not at the top",
           _ids() == "u1,u2,u3",
-          f"{_ids()} — add() would have made this u2,u1,u3 and restamped its date")
-    check("...with the revocation key it was carrying",
-          _p4.evaluate("() => (window.SkriblPosted.list().find(e => e.id === 'u2') || {}).tok") == "k2",
-          "a row put back without its key is a row that can no longer be withdrawn")
+          f"{_ids()} — add() would have made this u2,u1,u3")
+    check("...with the date it was carrying, not a fresh one",
+          _p4.evaluate("() => (window.SkriblPosted.list().find(e => e.id === 'u2') || {}).at") == _was,
+          "add() restamps; a row put back as 'just now' is a row that lies "
+          "about when the drawing was made")
     check("...and the shelf goes away",
           _p4.evaluate("() => document.getElementById('postedUndo').hidden"),
           "a shelf offering to undo something already undone")
@@ -1234,6 +1242,82 @@ with sync_playwright() as _sp4:
           _p4.evaluate("() => window.SkriblPosted.list().length") == 1
           and _p4.evaluate("() => localStorage.getItem('skribl_post_loc1') !== null"),
           "the entry is back but the payload is gone")
+
+    # THE ROW'S PICTURE IS THE DRAWING, NOT THE CARD (v311). The poster is the
+    # 1200x630 share card; the stylesheet framed it at 128% and pulled it up so
+    # the wordmark band fell outside the box, which hides the branding and
+    # shows whatever the card had in the middle. On an 84x63 tile that made a
+    # 16:9 Skribl a stamp between two slabs of plate — the state the owner was
+    # looking at when they asked whether the page looked right.
+    #
+    # ASSERTED AS A COVERING, which is what "cropped to the drawing" MEANS and
+    # is a question geometry can answer honestly: map the drawing's rectangle
+    # (lib/sharecard.js drawingRect, in card pixels) through wherever the image
+    # actually landed, and require it to reach every edge of the thumb. A
+    # letterboxed tile fails on the axis the bands are on. And require it not
+    # to overshoot on BOTH axes: a cover is the smallest scale that reaches,
+    # so one axis has to land flush, and a check that only asked "does it
+    # reach" would pass on an image blown up to any size at all.
+    #
+    # THE FIXTURE IS 9:16 AND THAT IS THE WHOLE CALIBRATION. The band crop
+    # scales the card so its 492px drawing BAND fills the thumb's height and
+    # centres it, which for a drawing at least as wide as the thumb (4:3 and
+    # 16:9, two of the four presets) lands on exactly the same pixels the new
+    # crop does -- both rows below pass on the OLD code with either of those.
+    # The two that do not are `square` and `tall`: a 9:16 Skribl came out 35px
+    # wide in an 84px box with 24px of plate down each side. Written against a
+    # 16:9 fixture first, all four rows here went green on the band crop, which
+    # is the vacuous pass CLAUDE.md says to go looking for before believing an
+    # instrument.
+    _p4.evaluate("""() => { localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({ id: 'wide1', url: '/s/wide1', title: 'Tall', kind: 'pad', pages: 1 });
+        window.SkriblPosted.add({ id: 'noshape', url: '/s/noshape', title: 'Unknown shape', kind: 'pad', pages: 1 });
+        window.SkriblPosted.update('wide1', { canvas_w: 531, canvas_h: 944 }); }""")
+    _p4.reload(wait_until="load")
+    _p4.wait_for_timeout(1400)
+    _crop = _p4.evaluate("""() => {
+        const CARD_W = 1200, CARD_H = 630, AREA_W = 1092, AREA_H = 492, FOOT = 84;
+        const out = {};
+        for (const id of ['wide1', 'noshape']) {
+          const r = document.querySelector('.posted-row[data-id="' + id + '"]');
+          const shot = r && r.querySelector('.posted-shot');
+          const img = r && r.querySelector('.posted-poster');
+          if (!shot || !img) { out[id] = null; continue; }
+          const sb = shot.getBoundingClientRect(), ib = img.getBoundingClientRect();
+          const w = +shot.getAttribute('data-skribl-w'), h = +shot.getAttribute('data-skribl-h');
+          const e = { shaped: !!(w > 0 && h > 0), inline: img.style.width !== '',
+                      boxW: Math.round(sb.width), boxH: Math.round(sb.height) };
+          if (e.shaped) {
+            const sc = Math.min(AREA_W / w, AREA_H / h);
+            const dw = Math.round(w * sc), dh = Math.round(h * sc);
+            const dx = Math.round((CARD_W - dw) / 2), dy = Math.round((CARD_H - FOOT - dh) / 2);
+            const L = ib.left + ib.width * dx / CARD_W, R = ib.left + ib.width * (dx + dw) / CARD_W;
+            const T = ib.top + ib.height * dy / CARD_H,  B = ib.top + ib.height * (dy + dh) / CARD_H;
+            e.coversX = L <= sb.left + 0.5 && R >= sb.right - 0.5;
+            e.coversY = T <= sb.top + 0.5 && B >= sb.bottom - 0.5;
+            e.slackX = +(R - L - sb.width).toFixed(1);
+            e.slackY = +(B - T - sb.height).toFixed(1);
+          }
+          out[id] = e; }
+        return out; }""")
+    _wide, _none = _crop.get("wide1"), _crop.get("noshape")
+    check("a row that knows its drawing's shape says so on the picture's wrapper",
+          bool(_wide) and _wide["shaped"] and _wide["inline"],
+          f"{_crop} — without data-skribl-w/h on .posted-shot, library.js has "
+          f"nothing to crop with and the band crop stands")
+    check("...and the drawing covers the thumbnail on both axes",
+          bool(_wide) and _wide.get("coversX") and _wide.get("coversY"),
+          f"{_wide} — a False here is the letterbox: the drawing does not "
+          f"reach one pair of edges, so what does is plate")
+    check("...at the smallest scale that reaches, so one axis lands flush",
+          bool(_wide) and min(abs(_wide.get("slackX", 99)),
+                              abs(_wide.get("slackY", 99))) < 1.5,
+          f"slack {_wide} — both axes overshooting means the picture was "
+          f"simply enlarged, not fitted")
+    check("...and a row whose shape nothing has said keeps the band crop",
+          bool(_none) and not _none["shaped"] and not _none["inline"],
+          f"{_none} — fitShots must leave an unshaped row's picture alone "
+          f"rather than crop it to a guess")
 
     # TOOLTIPS, which this page had none of . Asserted on data-tip
     # rather than on `title`, because the module REMOVES the title -- so a page
