@@ -2757,6 +2757,133 @@ with sync_playwright() as _spw:
     _bw.close()
 
 
+print("\nGALLERY — the bar recedes from a POINTER too, and comes back to a move")
+# THE CLASS IS NOT THE PAINT, and the block above asserts the class. `.ctl-on`
+# came off on its 2.6s timer exactly as pinned -- and `.tileStage:hover` put
+# the bar straight back, because a hover has no clock. Measured on a playing
+# card with the pointer resting on the drawing: opacity 1 at +3.2s and still 1
+# at +7.2s, with `.ctl-on` already false. A person watching a loop with the
+# mouse parked on it never got the drawing back.
+#
+# So every row here reads `elementFromPoint` at the bar's own centre. A class
+# census cannot see this defect; it is the one that did not.
+#
+# A GRID AND A PLAYER WANT DIFFERENT THINGS, and the card is both in turn. At
+# REST it is a thumbnail and hover is the affordance that says it has controls.
+# While PLAYING it is a player, and a player's controls recede from the picture
+# and return when the pointer moves. Four components carry that, and each row
+# below is red on its own mutation:
+#
+#   lib/fullbar.js   publishes `.is-playing` on the host it was attached to
+#   fullbar.css      scopes the hover reveal to `:not(.is-playing)`
+#   gallery.js       re-arms the fade on real pointer movement in the stage
+#   fullbar.css      holds a bar open under a cursor that is ON it
+with sync_playwright() as _spf:
+    _bf = _spf.chromium.launch()
+    _cf = _bf.new_context(color_scheme="dark", viewport={"width": 1280, "height": 900})
+    _pf = _cf.new_page()
+    browsing.goto(_pf, BASE, "/gallery")
+    _pf.wait_for_selector(".tile .tileStage", timeout=15000)
+    _pf.wait_for_timeout(1200)
+
+    # PAINT, at the bar's own centre. A rect says where the bar WOULD be and an
+    # opacity-0 ancestor does not move it, so only what is painted there can
+    # answer "is this on screen".
+    _PAINT = r"""() => {
+        const t = document.querySelector(".tile");
+        const s = t && t.querySelector(".tileStage");
+        const bar = t && t.querySelector(".skfull.skfull-card");
+        if (!t || !s || !bar) return { missing: true };
+        const r = bar.getBoundingClientRect();
+        const mid = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { painted: !!(mid && bar.contains(mid)),
+                 opacity: +getComputedStyle(bar).opacity,
+                 ctlOn: t.classList.contains("ctl-on"),
+                 isPlaying: s.classList.contains("is-playing") };
+    }"""
+    _sbox = _pf.locator(".tile .tileStage").first.bounding_box()
+    _cx = _sbox["x"] + _sbox["width"] / 2
+    _cy = _sbox["y"] + _sbox["height"] / 2
+
+    # 1. THE GRID AFFORDANCE SURVIVES. Hover on a card at REST shows its bar and
+    #    keeps showing it -- narrowing the selector to a state must not take the
+    #    thumbnail's affordance away, which is the cost of retiring `:hover`
+    #    outright rather than scoping it.
+    _pf.mouse.move(_cx, _cy)
+    _pf.wait_for_timeout(3200)
+    _idle = _pf.evaluate(_PAINT)
+    check("hovering a card at REST shows its transport, with no clock on it",
+          _idle.get("painted") is True and _idle.get("isPlaying") is False,
+          f"{_idle!r} — painted=False means the hover reveal was retired rather "
+          f"than scoped, and a stopped tile now offers nothing to a mouse")
+
+    # 2. AND A PLAYING CARD'S BAR GOES, WITH THE POINTER STILL ON THE DRAWING.
+    #    This is the row the old class census could not fail.
+    _pf.mouse.click(_cx, _cy)
+    _pf.wait_for_timeout(500)
+    _up = _pf.evaluate(_PAINT)
+    check("the transport is up when the drawing starts, and knows it is playing",
+          _up.get("painted") is True and _up.get("isPlaying") is True,
+          f"{_up!r} — isPlaying=False is lib/fullbar.js not publishing the "
+          f"state, and every row below it is then measuring the resting case")
+    _pf.wait_for_timeout(3200)
+    _gone = _pf.evaluate(_PAINT)
+    check("...and it RECEDES while the pointer rests on the playing drawing",
+          _gone.get("painted") is False and _gone.get("isPlaying") is True,
+          f"{_gone!r} — painted=True with ctlOn=False is `:hover` putting the "
+          f"bar back the moment the timer let go of it, which is the defect: "
+          f"opacity 1 at +3.2s and still 1 at +7.2s on the tree before this")
+
+    # 3. AND A MOVE BRINGS IT BACK. Without this the only way to a faded bar is
+    #    to press the picture, which PAUSES the thing you were watching.
+    _pf.mouse.move(_cx + 30, _cy + 20)
+    _pf.wait_for_timeout(300)
+    _back = _pf.evaluate(_PAINT)
+    check("...and moving the pointer over the drawing summons it again",
+          _back.get("painted") is True,
+          f"{_back!r} — a bar that only a click can raise is a bar you have to "
+          f"pause the drawing to reach")
+    _pf.wait_for_timeout(3200)
+    _gone2 = _pf.evaluate(_PAINT)
+    check("...and coming to rest fades it a second time",
+          _gone2.get("painted") is False,
+          f"{_gone2!r} — a re-arm that does not re-arm the TIMER leaves the bar "
+          f"up for good after the first twitch, which is the old bug wearing a "
+          f"pointermove listener")
+
+    # 4. IT NEVER FADES FROM UNDER THE CURSOR REACHING FOR IT. The bar cannot
+    #    resurrect itself this way -- faded it is `pointer-events: none`, so
+    #    there is nothing under the pointer to match -- so this only holds open
+    #    a bar that is already up.
+    _pf.mouse.move(_cx + 40, _cy + 25)
+    _pf.wait_for_timeout(300)
+    _bbox = _pf.locator(".tile .skfull.skfull-card").first.bounding_box()
+    _pf.mouse.move(_bbox["x"] + 30, _bbox["y"] + _bbox["height"] / 2)
+    _pf.wait_for_timeout(3200)
+    _onbar = _pf.evaluate(_PAINT)
+    check("a cursor parked ON the transport keeps it, timer or no timer",
+          _onbar.get("painted") is True,
+          f"{_onbar!r} — the controls faded out from under the pointer that "
+          f"came to use them, which is worse than a bar that overstays")
+
+    # 5. AND STOPPING HANDS IT BACK TO HOVER. The two behaviours are one
+    #    property of STATE, so leaving the playing state has to restore the
+    #    resting one -- a card that stops and keeps fading is the grid
+    #    affordance lost by the back door.
+    _pf.mouse.move(_cx, _cy)
+    _pf.wait_for_timeout(250)
+    _pf.mouse.click(_cx, _cy)
+    _pf.wait_for_timeout(3200)
+    _stopped = _pf.evaluate(_PAINT)
+    check("...and a card that has STOPPED goes back to answering hover",
+          _stopped.get("painted") is True and _stopped.get("isPlaying") is False,
+          f"{_stopped!r} — isPlaying=True after a pause is lib/fullbar.js "
+          f"publishing a state it never clears; painted=False is the resting "
+          f"reveal lost to the scoping")
+    _pf.close()
+    _bf.close()
+
+
 
 print("\nGALLERY — the speed control advances even when the player disagrees")
 # REPORTED THREE TIMES, and the first two fixes were aimed at

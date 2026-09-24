@@ -677,13 +677,45 @@
       stage.addEventListener('focusout', function () {
         if (!stage.contains(document.activeElement)) peek(false);
       });
-      /* NO POLLING TICK HERE, and do not add one to arm the fade: peek(false)
-         CLEARS and re-arms the 2.6s timer, so anything calling it on a beat
-         re-arms it forever and a stopped card's bar never recedes.
+      /* MOVING THE POINTER IS THE ONLY THING THAT SUMMONS THE BAR WHILE A
+         DRAWING PLAYS, which is what makes this a player rather than a grid
+         tile. fullbar.css hands the playing case over to `.ctl-on` (its hover
+         rule is scoped to `:not(.is-playing)`), so without this the bar could
+         only be raised by a click, and a viewer who let it fade would have to
+         press the picture -- which pauses it -- to get the controls back.
 
-         The fade is armed by the tap that raises the bar and by `focusout`,
-         and it survives the replay ending because the timer is wall-clock
-         rather than playback. The bar's own clock is fullbar.js's business. */
+         A MOVE, NOT A POSITION. `:hover` is a state and has no clock; movement
+         is an event and can re-arm one. Park the mouse and the 2.6s timer runs
+         out and the drawing gets its card back; twitch it and the bar returns.
+         That is what a video player does and what a still pointer should mean.
+
+         THROTTLED, AND THIS IS NOT OPTIONAL. peek() writes a class and resets a
+         timer, and pointermove fires per frame while a mouse is moving -- the
+         churn the speed button was lost to, on the element the speed button is
+         in. One call per 200ms is finer than any fade a person can perceive and
+         coarse enough to cost nothing.
+
+         ONLY WHILE PLAYING. At rest the card is a thumbnail and hover owns the
+         reveal, so re-arming here would fight that selector and leave a stopped
+         card's bar cycling on a timer nobody asked for.
+
+         NO POLLING TICK, still: peek(false) CLEARS and re-arms, so anything
+         calling it on a BEAT re-arms it forever and a stopped card's bar never
+         recedes. Real movement is not a beat -- it stops when the person does,
+         which is exactly the signal wanted here. */
+      var moveT = 0;
+      stage.addEventListener('pointermove', function (e) {
+        if (!stage.classList.contains('is-playing')) return;
+        if (e.pointerType === 'touch') return;
+        var now = Date.now();
+        if (now - moveT < 200) return;
+        moveT = now;
+        peek(false);
+      });
+      /* The fade is armed by the tap that raises the bar, by `focusout`, and by
+         the pointer coming to rest above; it survives the replay ending because
+         the timer is wall-clock rather than playback. The bar's own clock is
+         fullbar.js's business. */
     }
     return art;
   }

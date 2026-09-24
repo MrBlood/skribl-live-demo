@@ -288,7 +288,28 @@
    covered better, because the class can tell a tab from a tap and a selector
    cannot. The note above says these two halves have to agree; this is them
    agreeing, with the JS owning focus outright. */
-.tileStage:hover .skfull.skfull-card,
+/* AND HOVER ANSWERS FOR A CARD AT REST, NOT FOR ONE THAT IS PLAYING.
+   `:hover` has no clock. A pointer parked on a looping drawing held the bar
+   over it for as long as it was left there -- the fade worked, `.ctl-on` came
+   off on its 2.6s timer, and this selector put the bar straight back. Measured
+   on a playing card: opacity 1 at +3.2s and still 1 at +7.2s, with `.ctl-on`
+   already false.
+
+   A GRID AND A PLAYER WANT DIFFERENT THINGS, so each gets the one it wants. At
+   REST the card is a thumbnail and hover is the affordance that says it has
+   controls -- that is the case this rule was written for and it keeps it. While
+   PLAYING it is a player, and a player's controls recede from the picture and
+   come back when the pointer moves; `.is-playing` is published by
+   lib/fullbar.js's own sync, and gallery.js re-arms the timer on real pointer
+   movement inside the stage.
+
+   THE BAR ITSELF IS THE EXCEPTION, and it has to be: a control that fades out
+   from under the cursor reaching for it is worse than one that overstays. It
+   cannot resurrect itself from the faded state, because `pointer-events: none`
+   means there is nothing there to hover -- this only holds open a bar that is
+   already up. */
+.tileStage:not(.is-playing):hover .skfull.skfull-card,
+.tileStage .skfull.skfull-card:hover,
 .tile.ctl-on .skfull.skfull-card {
   opacity: 1;
   pointer-events: auto;

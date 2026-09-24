@@ -311,6 +311,17 @@
       var pl = player();
       var st = pl ? pl.state() : null;
       var playing = !!st && st.state === 'playing';
+      /* PUBLISHED TO THE HOST, because a surface may want to style itself on
+         it -- the card narrows its hover reveal to a drawing that is NOT
+         playing, so a playing one is the transport's own to show and hide.
+         Guarded rather than written every beat: this runs on a rAF while a
+         drawing plays, and an unconditional write is the churn the speed
+         button was lost to. classList.toggle would not mutate the token list
+         here, but reading the flag first also keeps this off the hot path. */
+      if (wrap._skPlaying !== playing) {
+        wrap._skPlaying = playing;
+        wrap.classList.toggle('is-playing', playing);
+      }
       setHTML(bPlay, playing ? ICON.pause : ICON.play);
       label(bPlay, playing ? 'Pause' : 'Play');
 
