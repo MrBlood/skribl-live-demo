@@ -11364,3 +11364,11 @@ PREVIOUS ones -- and `verify_pagespan`'s mutation row reads immediately after
 `buildStrip()`, so it got back the label it had just replaced and went red on a
 correct tree. `title` first, `data-tip` second: freshest wins, and the empty
 string a removed title leaves falls straight through.
+
+**AND THE DRAWN TOOLTIP WAS STALE TOO, not merely doubled.** The calibration
+against a module with the attribute arm removed reported the card's transport
+as `{'title': True, 'tip': 'Play', 'name': 'Pause'}`: `data-tip` still held the
+label from the moment of adoption, so the tooltip Skribl DRAWS said Play over a
+button that was pausing. The native tooltip coming back was the visible half;
+the drawn one freezing at its first value was the half nobody would have
+reported, because a tooltip that is merely wrong looks like a tooltip.

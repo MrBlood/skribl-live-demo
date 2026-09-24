@@ -132,9 +132,17 @@ with sync_playwright() as sp:
           len(payload_reqs) == 1,
           f"{len(payload_reqs)} payload fetch(es) for {tiles} tiles: "
           f"{payload_reqs}")
+    # COUNTED, THEN MEASURED: an .every() over an empty list is TRUE, so a page
+    # that rendered no pictures at all would answer this the same as one that
+    # rendered them all correctly. Two of these went green on nothing for a
+    # whole release elsewhere in the harness before anybody noticed.
+    _posters = pg.evaluate("""() => {
+        const imgs = [...document.querySelectorAll('#postedList .posted-poster')];
+        return { n: imgs.length,
+                 ok: imgs.every(i => /\\/s\\/[^/]+\\/poster$/.test(i.getAttribute('src'))) }; }""")
     check("every tile's picture is the poster, which is one cached image",
-          pg.evaluate("""() => [...document.querySelectorAll('#postedList .posted-poster')]
-             .every(i => /\\/s\\/[^/]+\\/poster$/.test(i.getAttribute('src')))"""))
+          _posters["n"] == tiles and _posters["ok"],
+          f"{_posters} for {tiles} tiles")
     # FOLLOWED, not read. These fixtures are posted through serializeSkribl()
     # and carry no thumbnail, so whatever the tile's src is, the bytes that
     # arrive are the server's fallback — and the fallback used to be the
