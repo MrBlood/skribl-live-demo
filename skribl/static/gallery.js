@@ -747,33 +747,23 @@
       stage.addEventListener('focusout', function () {
         if (!stage.contains(document.activeElement)) peek(false);
       });
-      if (box0 && box0._skriblInline) {
-        /* The player does not emit events, so the card watches the state it
-           already polls for the bar's own sync. Cheap: this is the same
-           quarter-second tick the footer runs while stopped. */
-        setInterval(function () {
-          var st = box0._skriblInline.state();
-          /* PLAYING NO LONGER PINS THE BAR, and this line is the owner's
-             "can you make it so when playing the controls evaporate". It used
-             to call peek(TRUE) here -- the sticky kind, which arms no timer --
-             every 400ms for as long as the replay ran, so a playing card held
-             its transport over the drawing until it stopped. The drawing is
-             the thing; a bar parked on top of it for the whole replay is the
-             chrome the card spent v310 removing.
+      /* THE 400ms TICK IS GONE, and it was never alive: its guard read
+         `box0._skriblInline` at CARD-BUILD time and the player sets that
+         property when it boots, which is later, so the interval was never
+         created. A calibration found it -- mutating the body to pin the bar
+         again went green, because a dead branch cannot fail.
 
-             Doing NOTHING is the fix, and calling peek(false) here would not
-             be: it clears and re-arms the 2.6s timer, so a 400ms tick would
-             re-arm it forever and the bar would never fall. The tap that
-             started the replay already armed a timer; this leaves it to run,
-             and a tap on the artwork raises the bar again for another 2.6s
-             (the pointerdown listener above).
+         IT IS DELETED RATHER THAN WOKEN, and the reason is written two
+         paragraphs into the body it used to have: on a stopped card it called
+         peek(false), which CLEARS and re-arms the 2.6s fade. A 400ms tick
+         doing that re-arms the timer forever, so the bar on a stopped card
+         would never recede -- the opposite of what the owner asked for, and a
+         defect the dead code was hiding by not running.
 
-             Stopped is unchanged: if the bar is up with nothing playing, arm
-             the fade so it recedes on its own. */
-          if (st.state === 'playing') return;
-          if (art.classList.contains('ctl-on')) peek(false);
-        }, 400);
-      }
+         Nothing is lost. The fade is armed by the tap that raises the bar,
+         and by `focusout`; it survives the replay ending because the timer is
+         wall-clock, not playback. The bar's own clock is fullbar.js's
+         business and it paces itself. */
     }
     return art;
   }

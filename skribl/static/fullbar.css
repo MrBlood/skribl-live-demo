@@ -275,8 +275,20 @@
    still on screen"). The bar belongs to the drawing; the drawing is the stage.
    gallery.js scopes its own pointer and focus listeners the same way, and the
    two halves have to agree or the class and the selector fight. */
+/* `:focus-within` IS GONE FROM THIS LIST, and it was the CSS twin of a bug
+   already fixed in the JS. A click puts focus on the player element, which
+   carries tabindex="0" -- so `:focus-within` matched after any mouse press and
+   held the bar open for the life of the page, exactly as `focusin` asking for
+   the sticky peek used to. The owner saw the JS half fixed and the bar still
+   sitting there: "shouldn't those controls fade out? they don't."
+
+   Nothing is lost for a keyboard. gallery.js already raises `.ctl-on` and
+   keeps it raised for a KEYBOARD focus (`peek(keyboardFocus(e.target))`), so
+   the case this selector existed for is covered by the class below -- and
+   covered better, because the class can tell a tab from a tap and a selector
+   cannot. The note above says these two halves have to agree; this is them
+   agreeing, with the JS owning focus outright. */
 .tileStage:hover .skfull.skfull-card,
-.tileStage:focus-within .skfull.skfull-card,
 .tile.ctl-on .skfull.skfull-card {
   opacity: 1;
   pointer-events: auto;

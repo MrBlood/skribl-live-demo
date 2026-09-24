@@ -2964,6 +2964,93 @@ with sync_playwright() as _spc:
           _c.get("records", 9999) < 600,
           f"{_c.get('records')} mutation records in 1.5s — it was ~2,600 at "
           f"that rate before the writes were guarded")
+    # AND THE BAR STILL RECEDES ON A CARD THAT IS NOT PLAYING, which is the
+    # case a revived 400ms tick would break. That tick was dead code -- its
+    # guard read the player handle at card-build time, before the player sets
+    # it -- and deleting it was right rather than waking it: its stopped
+    # branch called peek(false), which CLEARS and re-arms the 2.6s fade, so a
+    # 400ms beat would re-arm it forever and a stopped card's bar would never
+    # fall. This row fails if anyone puts it back.
+    _stopfade = _pc.evaluate("""async () => {
+        const t = document.querySelector('.tile');
+        const stage = t.querySelector('.tileStage');
+        const box = stage.querySelector('.skribl-inline');
+        const pl = box && box._skriblInline;
+        if (!pl) return { missing: true };
+        if (pl.pause) pl.pause();
+        await new Promise(r => setTimeout(r, 200));
+        /* Raise the bar the way a finger does, then leave it alone. */
+        stage.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 200));
+        const raised = t.classList.contains('ctl-on');
+        await new Promise(r => setTimeout(r, 3200));
+        return { raised, still: t.classList.contains('ctl-on'),
+                 playing: pl.state().state === 'playing' };
+    }""")
+    check("a stopped card raises its bar on a tap",
+          _stopfade.get("raised") is True, f"{_stopfade!r}")
+    check("...and lets it recede again without anything else happening",
+          _stopfade.get("still") is False,
+          f"{_stopfade!r} — a bar still up 3.2s after the only tap means "
+          f"something is re-arming the fade on a beat, which is what the dead "
+          f"400ms tick did on the stopped branch it never reached")
+    # A MOUSE CLICK MUST NOT PIN THE BAR, which is the CSS twin of the
+    # `focusin` fix and the half the owner caught still broken: "shouldn't
+    # those controls fade out? they don't." A click focuses the player element
+    # (tabindex="0"), so `.tileStage:focus-within` matched for the life of the
+    # page and held the footer at opacity 1 however correctly the JS timer had
+    # already dropped `.ctl-on`.
+    #
+    # A REAL MOUSE, NOT `.focus()`. The first draft of this row focused the
+    # player in script and FAILED against a fixed tree: Chromium can treat a
+    # programmatic focus as a keyboard one, so `:focus-visible` matched and the
+    # JS pinned the bar exactly as it should for a tab key. Only a real press
+    # produces the pointer focus this row is about.
+    #
+    # AND WITH THE POINTER MOVED AWAY, because `:hover` legitimately holds the
+    # bar while it is on the artwork -- measuring under the cursor would pass
+    # on the broken tree too.
+    # A PAGE OF ITS OWN. The card above is in FULL SCREEN by now, and an
+    # immersive stage is `position: fixed; inset: 0` -- it covers the whole
+    # viewport, so there is nowhere to move the pointer "off the card" and
+    # `:hover` stays true wherever it goes. The first draft measured that and
+    # read it as the bug.
+    _pf = _bc.new_context(viewport={"width": 1280, "height": 900}).new_page()
+    browsing.goto(_pf, BASE, "/gallery")
+    _pf.wait_for_timeout(1800)
+    _stg = _pf.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        t.scrollIntoView({ block: 'center' });
+        const r = t.querySelector('.tileStage').getBoundingClientRect();
+        return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };
+    }""")
+    _pf.mouse.move(_stg["x"], _stg["y"])
+    _pf.wait_for_timeout(150)
+    _pf.mouse.click(_stg["x"], _stg["y"])
+    _pf.wait_for_timeout(400)
+    _focused = _pf.evaluate("""() => {
+        const s = document.querySelector('.tile .tileStage');
+        return s.contains(document.activeElement);
+    }""")
+    check("a real click leaves focus inside the stage, as it does in a browser",
+          _focused is True,
+          "focus did not land inside the stage, so this row cannot see the bug "
+          "it exists for")
+    _pf.mouse.move(4, 4)            # off the card: `:hover` must stop applying
+    _pf.wait_for_timeout(3200)
+    _pinned = _pf.evaluate("""() => {
+        const t = document.querySelector('.tile');
+        const f = t.querySelector('.skfull-card');
+        return { ctlOn: t.classList.contains('ctl-on'),
+                 opacity: getComputedStyle(f).opacity,
+                 hovered: t.querySelector('.tileStage').matches(':hover') };
+    }""")
+    check("...and the bar recedes once the pointer leaves, not pinned by that focus",
+          _pinned.get("opacity") == "0" and _pinned.get("hovered") is False,
+          f"{_pinned!r} — opacity 1 with the pointer away and ctl-on false is "
+          f"the CSS holding the bar open on `:focus-within` after the JS has "
+          f"correctly let go")
+    _pf.close()
     _pc.close()
     _bc.close()
 
