@@ -1164,6 +1164,10 @@ with sync_playwright() as _p:
     # the same to a thumb-only query, and only the first is a regression. The
     # row's own id says whose mark it is -- .posted-kind alone would be
     # satisfied by the other row's.
+    # firstCHILD, not firstElementChild: the words beside the mark are a TEXT
+    # node, so an element-only comparison finds the mark first whether it leads
+    # the line or trails it. The calibration ran the mark back behind the words
+    # and this row went green -- on the one thing it is here to see.
     for _kind, _id in (("flip", "ic1"), ("pad", "ic2")):
         _mark = _pg.evaluate(
             '(id) => { const r = document.querySelector('
@@ -1173,7 +1177,7 @@ with sync_playwright() as _p:
             '  const k = r.querySelector(".posted-kind");'
             '  return { there: !!(k && k.querySelector("svg")),'
             '           inSub: !!(k && sub && sub.contains(k)),'
-            '           first: !!(sub && sub.firstElementChild === k) }; }', _id)
+            '           first: !!(sub && sub.firstChild === k) }; }', _id)
         check(f"a {_kind} entry uses an inline SVG icon, in front of the words it qualifies",
               bool(_mark) and _mark["there"] and _mark["inSub"] and _mark["first"],
               f"{_mark} \u2014 still a text glyph, or back on the thumb")

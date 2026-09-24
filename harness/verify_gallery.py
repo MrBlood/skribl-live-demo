@@ -997,6 +997,33 @@ with sync_playwright() as _spk:
     check("...and the native title is gone, so the browser's own does not stack under it",
           _tips["leftovers"] == 0,
           f"{_tips['leftovers']} controls still carry a title attribute")
+
+    # AND IT STAYS GONE AFTER THE MENU HAS SAID SOMETHING. Copy link answers on
+    # the button it was opened from, and that answer used to be written to
+    # `title` -- which the module had already removed, and whose observer
+    # watches for added NODES, not changed attributes. So one copy put the
+    # browser's own tooltip back under the drawn one for the life of the page,
+    # and the restore wrote the literal 'More' over a name that said WHICH
+    # tile's menu it was. DRIVEN, not read: the whole defect is in what the
+    # handler does, and no markup census can see it.
+    _name0 = _pk.evaluate("() => document.querySelector('.tileMore').getAttribute('aria-label')")
+    _pk.click('.tileMore')
+    _pk.wait_for_timeout(200)
+    _pk.click('.cardMenu .cmItem:has-text("Copy link")')
+    _pk.wait_for_timeout(300)
+    _said = _pk.evaluate("""() => { const b = document.querySelector('.tileMore');
+        return { title: b.hasAttribute('title'), tip: b.getAttribute('data-tip'),
+                 name: b.getAttribute('aria-label') }; }""")
+    check("the menu answers in the drawn tooltip, not in a native one it puts back",
+          _said["title"] is False and _said["tip"] and _said["tip"] != "More",
+          str(_said))
+    _pk.wait_for_timeout(1800)
+    _back = _pk.evaluate("""() => { const b = document.querySelector('.tileMore');
+        return { title: b.hasAttribute('title'), tip: b.getAttribute('data-tip'),
+                 name: b.getAttribute('aria-label') }; }""")
+    check("...and it goes back to the name that says which tile it belongs to",
+          _back["title"] is False and _back["name"] == _name0 and _back["tip"] == "More",
+          f"{_back} vs the name it started with {_name0!r}")
     _pk.close()
     _bk.close()
 

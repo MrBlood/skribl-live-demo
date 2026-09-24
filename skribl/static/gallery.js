@@ -899,15 +899,36 @@
      with a button of '' and threw before it reached SkriblModal.open, and the
      only symptom was two a11y rows saying focus never entered the sheet.
      Nothing reported a redefinition; JavaScript does not consider it an error. */
-  function sayOn(button, msg, rest) {
-    button.title = msg;
+  /* THE TOOLTIP MODULE OWNS THE WORDS once it has adopted a control. It MOVES
+     `title` to `data-tip` and REMOVES the title -- that removal is what stops
+     the browser's own tooltip doubling under the drawn one -- and its observer
+     watches for added NODES, not changed attributes. So a `title` written back
+     onto an adopted control is a second, unstyled tooltip that stays for the
+     life of the page, and nothing re-adopts it. Write where the words are. */
+  function tipOn(el, msg) {
+    if (el.hasAttribute('data-tip')) el.setAttribute('data-tip', msg);
+    else el.title = msg;
+  }
+
+  function sayOn(button, msg) {
+    /* WHAT IT SAID BEFORE IS WHAT IT GOES BACK TO, read off the button here
+       rather than passed in. Both callers passed the literal 'More', which is
+       not this button's name: it is "More for <title>", so a screen reader can
+       tell twenty-four of them apart. Every Copy link renamed one of them to
+       plain "More" and left it that way. */
+    if (!button._rest) {
+      button._rest = { tip: button.getAttribute('data-tip') || button.title || '',
+                       name: button.getAttribute('aria-label') || '' };
+    }
+    var rest = button._rest;
+    tipOn(button, msg);
     button.setAttribute('aria-label', msg);
     var live = document.getElementById('galleryStatus');
     if (live) live.textContent = msg;
     clearTimeout(button._t);
     button._t = setTimeout(function () {
-      button.title = rest;
-      button.setAttribute('aria-label', rest);
+      tipOn(button, rest.tip);
+      if (rest.name) button.setAttribute('aria-label', rest.name);
     }, 1600);
   }
 
@@ -920,7 +941,6 @@
        this file knowing the route. */
     var tpl = document.body.getAttribute('data-skribl-player') || '';
     var url = location.origin + tpl.replace('__ID__', encodeURIComponent(item.id));
-    var rest = 'More';
 
     menuEl.appendChild(menuItem('Open', function () {
       window.open(url, '_blank', 'noopener');
@@ -930,9 +950,9 @@
        of a promise is PRESEAL-002, and it shipped once already. */
     menuEl.appendChild(menuItem('Copy link', function () {
       var copier = window.SkriblPostedUI && window.SkriblPostedUI.copyText;
-      if (!copier) { sayOn(button, "Couldn't copy the link", rest); return; }
+      if (!copier) { sayOn(button, "Couldn't copy the link"); return; }
       copier(url).then(function (ok) {
-        sayOn(button, ok ? 'Link copied' : "Couldn't copy the link", rest);
+        sayOn(button, ok ? 'Link copied' : "Couldn't copy the link");
       });
     }, '', 'link'));
     /* Share only where the platform has one. A "Share..." that silently does
