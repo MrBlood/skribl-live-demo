@@ -2778,6 +2778,26 @@ print("\nGALLERY — the bar recedes from a POINTER too, and comes back to a mov
 #   fullbar.css      scopes the hover reveal to `:not(.is-playing)`
 #   gallery.js       re-arms the fade on real pointer movement in the stage
 #   fullbar.css      holds a bar open under a cursor that is ON it
+#
+# CALIBRATED, AND ONE OF THE FIVE COULD NOT BE ISOLATED. Measured, one mutation
+# at a time, each against the whole suite:
+#
+#   hover left unscoped (the defect)   180/182   RECEDES, and fades a second time
+#   `.is-playing` not published        179/182   ...and the two rows above it
+#   no pointermove re-arm              180/182   summons it again, and the row
+#                                                after it, which cannot raise a
+#                                                bar there is no way to raise
+#   no `.skfull-card:hover`            181/182   parked ON the transport, alone
+#   hover retired, not scoped          the run does not finish
+#
+# THE LAST ONE IS NOT A ROW GOING RED, and it is recorded that way rather than
+# counted as one. The resting reveal is load-bearing for an EARLIER section:
+# "a tile says WHAT it is" clicks `.tileStage .skfull-card .skfull-play` on an
+# IDLE tile, so with no hover reveal that click has nothing to hit and the run
+# dies there on a 30s locator timeout, hundreds of assertions before this one.
+# The suite catches the mutation, loudly; what it cannot do is attribute it to
+# the row below. Do not spend another pass trying -- the behaviour is pinned
+# twice over, and a width-scoped or inverted mutation lands on the same click.
 with sync_playwright() as _spf:
     _bf = _spf.chromium.launch()
     _cf = _bf.new_context(color_scheme="dark", viewport={"width": 1280, "height": 900})
