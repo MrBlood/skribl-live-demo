@@ -11190,3 +11190,69 @@ make the next person argue.
 `BYTES_RATCHET` 154,800 -> 155,300 so full screen has a transport at all. The
 target stays 153,800, because this is a ratchet admitting a control the surface
 was missing and not a target being let go.
+
+## v310, cont. -- the debt the target named, paid instead of spent again
+
+The seal stopped on a red gate, and the gate was right.
+
+`verify_jsstrip` asserts that the player's JavaScript, stripped of comments and
+collapsed, REACHES a size target. It was passing with 65 B of margin. This
+release's player work -- a transport for a full screen that had none, the nib's
+mapping fix, the nib's size and ink -- costs 679 B, so it went over by 614.
+
+**THE NUMBER HAD ALREADY BEEN SPENT ONCE, AND SAID SO.** v308 raised that
+target from 153,800 to 154,600 for the viewer's speed control, wrote at the
+number that it was breaking the rule two paragraphs above it, named the debt it
+was deferring, and recorded that "the owner can reverse this trade". The
+alternatives it listed were *carve first and ship after* and *do not ship the
+control*.
+
+Raising it a second release running would have hollowed it out completely: a
+target moved once per release is not a target, it is a log of what was spent.
+So the choice went to the owner with the three options priced, and the answer
+was "do the right thing. Make it a cleaner better tree."
+
+**THE CARVE.** Four functions out of `app.js` and into `editor_photo.js`:
+`normalizePhotoDataURL`, `resetPhotoAdjustments`, `beginPhotoDrag` and
+`dragZoomPan` -- 177 lines that decode an upload, reset the adjustment sliders
+and drag the backdrop about. Every one of their call sites was ALREADY in an
+editor-only module, so the player could not name them and was downloading them
+anyway, on every shared link, because they sat in the file it loads.
+
+    app.js parsed      137,796 -> 132,419 B
+    player JS, lean    155,214 -> 149,820 B
+    editor-only in app.js  1,554 -> 1,365 lines
+
+The target is met for the first time since it was set, with 3,980 B to spare,
+and BOTH ratchets follow the measurement down -- 155,843 -> 150,300 in
+`verify_jsstrip`, 155,300 -> 150,300 in `verify_player_isolation`. A ratchet six
+kilobytes above the measurement is not a ratchet; it is a number that lets the
+next four changes through without any of them having to say why, which is the
+state those files' own notes spent two releases arguing against.
+
+**WHICH CLUSTER, AND WHY THAT ONE.** The photo drawer's was the only cluster
+whose call sites were all already outside `app.js`. The music preview cluster
+is bigger (~223 lines) and is the next one, and it is harder: its callers are
+still inside `app.js`, so moving it means moving them or proving they are
+editor-only in turn. That is named here as a figure rather than a feeling --
+1,365 lines of editor-only code still ship to every player -- because the
+alternative is the next person finding a mystery.
+
+**AND IT BROKE THE PAD ONCE, INVISIBLY TO EVERYTHING BUT ONE ROW.**
+`bindEl('resetPhotoBtn', 'click', resetPhotoAdjustments)` sits at `app.js`'s TOP
+LEVEL and passes the handler BY REFERENCE, so the name has to exist at the
+moment that line runs -- and a function carved into a file that loads *after*
+`app.js` does not. The Pad threw a ReferenceError on load and abandoned every
+line after it, which then took `photoUploadBtn`'s declaration down and produced
+a second error naming a variable the change never touched.
+
+Nothing about the page looked broken. `verify_boot`'s "the script reached its
+last line" is the row that caught it, and this is exactly the failure it was
+written for: a top-level throw leaves the page rendering and some suffix of the
+behaviour simply gone. The binding travels with the function now, which is
+where it belonged -- wiring a drawer's button is the drawer's business.
+
+**THE GENERAL SHAPE**, since this is the third time this tree has hit it: a
+carve moves FUNCTIONS, never STATE, and never a reference evaluated at load.
+`editor_music.js`'s header has said the first two since it was written. The
+third is this release's addition to the rule.
