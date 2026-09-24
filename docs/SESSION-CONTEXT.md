@@ -94,6 +94,19 @@ seal and CI, suites that discard their servers' stderr, and PostgreSQL are in
   under a traceback that looks like a server bug. Export the bootstrap's
   (`DATABASE_URL=sqlite:////tmp/skribl-fresh-<stamp>.db`, printed as `db:` at
   start) and it passes; `run_harness.sh` does this for every suite.
+
+  **AND THE FALLBACK FILE MAY EXIST, WHICH IS THE WORSE CASE.** "No such
+  table" at least looks like a configuration problem. A leftover
+  `instance/skribl_demo.db` from an earlier session is a database that
+  ANSWERS -- on the schema it had when it was abandoned. v310 lost twenty
+  minutes to `verify_review` reporting `[500, 500, 500]` on three posts,
+  which reads as a genuine server fault in the posting path; it was a
+  pre-v307 file with no `kind` column, reached by a subprocess the suite
+  spawns with `os.environ`. The tell is that the traceback names a COLUMN
+  rather than a table. `instance/` is git-ignored, so it survives every
+  branch switch and is invisible to `git status`: delete it, export the
+  bootstrap's `DATABASE_URL`, and re-run before believing a red suite that
+  only touches the database.
 - **Stop a server by port, never by a pattern typed on the same line.**
   `fuser -k 5001/tcp` or `kill $(lsof -ti :5001)`. `ss` and `netstat` are not
   installed in the remote container, and `pgrep -f <pattern>` matches the shell
