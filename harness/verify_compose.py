@@ -369,7 +369,14 @@ with sync_playwright() as sp:
         "        var d = document.getElementById('postSoundDot');"
         "        return { hidden: m.hidden, pending: d.classList.contains('pending'),"
         "                 bg: getComputedStyle(d).backgroundColor,"
-        "                 title: m.getAttribute('title'),"
+        # WHEREVER THE WORDS ARE, `title` FIRST. editor_post.js writes this
+        # marker's words to `title` after load, and on a fine pointer
+        # lib/tooltip.js moves every title to `data-tip` and removes it --
+        # including the ones written after load, since v310. For the tick
+        # that wrote it the new words are still in `title`, so freshest
+        # first and the empty string a removed title leaves falls through.
+        "                 title: (m.getAttribute('title')"
+        "                         || m.getAttribute('data-tip')),"
         "                 sr: document.getElementById('postSoundText').textContent,"
         "                 tag: m.tagName }; }")
     check("a loaded loop shows the marker", st["hidden"] is False, json.dumps(st))
