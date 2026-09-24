@@ -11348,3 +11348,19 @@ cases sit where the controls do: the card's ••• and its transport in
 Three suites had been reading these labels out of `title`, and passed only
 because the app wrote them back after adoption. They read the words wherever
 the words are now, which is the assertion they always meant to make.
+
+**AND THE PIN FOR IT FOUND TWO MORE THINGS.** The row that drives the card's
+transport asked for `.tileStage .skfull-play`, and Playwright answered with 48
+buttons across 24 cards: every stage holds TWO transports, the card's and the
+full-screen one, and the first match was the hidden one. A selector that
+resolves to more elements than the page has of that thing is a selector
+describing the wrong population, and it says so in the log if you read it.
+
+**AND `data-tip` IS ONE TICK BEHIND A WRITE.** The three suites that read these
+labels "wherever the words are" asked `data-tip` first and fell back to
+`title`. The module adopts on a MutationObserver, so for the rest of the tick
+that wrote it the new words are in `title` while `data-tip` still holds the
+PREVIOUS ones -- and `verify_pagespan`'s mutation row reads immediately after
+`buildStrip()`, so it got back the label it had just replaced and went red on a
+correct tree. `title` first, `data-tip` second: freshest wins, and the empty
+string a removed title leaves falls straight through.
