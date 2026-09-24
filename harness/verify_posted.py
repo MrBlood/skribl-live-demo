@@ -261,6 +261,16 @@ with sync_playwright() as p:
           len(_glyphs) == 2 and all(g["n"] >= 3 for g in _glyphs),
           f"{_glyphs} — a row with fewer than three actions cannot show the "
           f"collision this row exists to catch")
+    # AND IT CATCHES AN ICON THAT IS MISSING, not only one that is repeated --
+    # which is worth knowing because the missing case is the one that actually
+    # happened. Rewriting the icon table to replace this pair, the trash and
+    # the key went out with them; `ICONS[name]` was then undefined, both
+    # buttons rendered the literal "undefined" inside their svg, and this row
+    # read 4 buttons and 3 distinct glyphs exactly as it does for a duplicate.
+    # Calibrated by deleting those two entries again: 128/129, this row and no
+    # other. A gate written for one failure that happens to cover its
+    # neighbour is worth saying out loud, because the next person will assume
+    # it does not.
     check("no two actions in one row draw the same glyph",
           bool(_glyphs) and all(g["n"] == g["uniq"] for g in _glyphs),
           f"{_glyphs} — n against uniq: a row where they differ has one "
