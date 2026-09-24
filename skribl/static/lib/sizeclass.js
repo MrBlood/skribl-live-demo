@@ -39,7 +39,7 @@
  * query it replaced said regular. verify_sizeclass caught that at the time and
  * the viewport won, correctly, because the claim being made was "no-op".
  *
- * THE OWNER THEN SUPPLIED THE CASE THAT SETTLES IT. The host site reserves a
+ * AND THE CASE THAT SETTLES IT IS A REAL HOST. The host site reserves a
  * COLUMN for Pad and Flip — around 510px, to be confirmed. Inside a 1400px
  * window that column is 510px wide, and `window.innerWidth` says 1400: the app
  * would classify REGULAR and lay out a persistent command row into a space that

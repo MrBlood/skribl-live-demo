@@ -2,7 +2,7 @@
 """Build minimal .skribl documents for tests, in memory.
 
 WHY THIS EXISTS. The format's load -> render -> play path was pinned by two
-files the OWNER had asked for as DEMOS — drawings to look at — which a later
+files asked for as DEMOS -- drawings to look at -- which a later
 session quietly promoted into regression fixtures. That is backwards twice
 over: it made 2.7 MB of somebody's artwork load-bearing, and it meant the
 tested properties (24 pages at 12fps; enough ink to prove rendering; a replay

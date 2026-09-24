@@ -1257,7 +1257,7 @@ with sync_playwright() as _sp4:
 
 # ---------------------------------------------------------------------------
 print("\nLIBRARY — the browser's own rows are backfilled, and the row says each thing once")
-# WHAT THE OWNER SAW: a library with no pen, no book and no sound note on
+# WHAT THE PAGE SHOWED: a library with no pen, no book and no sound note on
 # anything they had actually posted. Rendering was right and the DATA was old --
 # `kind`, `pages` and `has_audio` were each added after posts were already being
 # made, so every row this browser wrote before them reads undefined, and a

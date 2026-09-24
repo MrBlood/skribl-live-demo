@@ -1413,7 +1413,7 @@ with sync_playwright() as _spa:
     _pa.set_viewport_size({"width": 1100, "height": 1000})
     _pa.wait_for_timeout(300)
 
-    # ---- THE CARD AFTER THE OWNER READ IT ON THE DEPLOYED SITE ------------
+    # ---- THE CARD AS IT READS ON THE DEPLOYED SITE ------------------------
     #
     # Eight findings, and the four below are the ones a card at rest can be
     # asked about. The rate control and the full-screen band are driven in the
@@ -2759,7 +2759,7 @@ with sync_playwright() as _spw:
 
 
 print("\nGALLERY — the speed control advances even when the player disagrees")
-# THE OWNER REPORTED THIS THREE TIMES and the first two fixes were aimed at
+# REPORTED THREE TIMES, and the first two fixes were aimed at
 # what could be seen from here: a throw escaping setRate, and a label painted
 # before the write. Both were real. Neither was this.
 #
@@ -2891,7 +2891,7 @@ with sync_playwright() as _spt:
 
 
 print("\nGALLERY — the transport does not rebuild itself under the pointer")
-# THE OWNER'S CONSOLE FOUND THIS, not the suite: pointerdown and pointerup on
+# A BROWSER CONSOLE FOUND THIS, not the suite: pointerdown and pointerup on
 # the speed button, over and over, with NO CLICK between them, and then one
 # press that got through. That is what a race looks like from the outside, and
 # the race was the bar against itself.
