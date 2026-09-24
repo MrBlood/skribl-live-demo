@@ -195,7 +195,7 @@ let pageClip = null;
    flip.js is a classic script, and a `let` reached during init throws and
    silently kills every line after it. `spanAnchor` is where a range began;
    `idx` is always its other end, so a span needs exactly one extra number. */
-/* v295: _spanSweep and its 450 ms tile hold are gone — the hold now arms a
+/* _spanSweep and its 450 ms tile hold are gone — the hold now arms a
    REORDER, which is what a phone teaches and what the ask was twice.
    Selecting a range moved to "Select through here" in a page's own ⋯ popover,
    beside Move and Copy, which already speak in spans. */
@@ -533,7 +533,7 @@ function scheduleSave(){ clearTimeout(_saveT); _saveT = setTimeout(saveNow, 800)
 // rebuild everything except the files themselves and prompt the user to re-add
 // them. Used only by the localStorage autosave, which has a ~5 MB quota; the
 // .skribl draft download (saveDraft) still serializes the full media.
-/* ---------- v295: a generated page is a RECIPE in the draft ----------------
+/* ---------- a generated page is a RECIPE in the draft ----------------
 
    WHAT THIS FIXES, reported from a phone with no media loaded at all:
 
@@ -2260,7 +2260,7 @@ function disarmAll(){
   if(armedDel >= 0){ const prev=_tiles()[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } armedDel=-1; }
   if(armedClear){ armedClear=false; const cb=document.getElementById('clear'); if(cb){ cb.classList.remove('armed'); cb.title='Delete all pages (keeps music and background)'; const cl=document.getElementById('clearLabel'); if(cl) cl.textContent='Clear all pages'; } }
 }
-/* ---- page toolbar (v124) --------------------------------------------------
+/* ---- page toolbar --------------------------------------------------
    Acts on the SELECTED page. syncPagebar() is called from buildStrip(), which
    already runs after every mutation, so there is no second place to keep in
    step. Disabled during playback for the same reason the strip is inert then. */
@@ -2272,7 +2272,7 @@ const pbWho=document.getElementById('pbWho'), pbLeft=document.getElementById('pb
 // The Pad shows the recorded length beside Play; Flip can state its animation
 // length exactly — total hold units over fps. Same badge, same m:ss format.
 const flipDurationEl=document.getElementById('flipDuration');
-// v128: the Pad counts UP in its badge while playing (editorReplayFrame ->
+// the Pad counts UP in its badge while playing (editorReplayFrame ->
 // formatDuration(elapsed)), then restores the total on stop. Flip showed a static
 // total, so during playback there was no sense of progress. Same behaviour here,
 // driven by rAF rather than the play timer so the readout is smooth regardless of
@@ -2399,7 +2399,7 @@ function buildStrip(){
       if(i === _sp.to) el.classList.add('span-last');
     }
     const _numTxt = (_sp && i === _sp.from) ? SkriblPageSpan.label(_sp) : String(i+1);
-    // THE BADGE IS THE CONTROL (v226, stage 2). It used to render only when the
+    // THE BADGE IS THE CONTROL (stage 2). It used to render only when the
     // hold was above 1, which made it a readout: there was no way to START a
     // hold from the strip, so a page-bar button existed to do it. Now it is
     // always a button — and CSS keeps a ×1 badge hidden unless the tile is the
@@ -2520,7 +2520,7 @@ function buildStrip(){
       go(i);
     });
     strip.appendChild(el); drawThumb(el.querySelector('canvas'), f);
-    // THE PASTE GHOST (v226, stage 2). A button in the add column said WHAT;
+    // THE PASTE GHOST (stage 2). A button in the add column said WHAT;
     // it could not say WHERE, and "after the current page" is a rule the user
     // had to know rather than see. A dashed tile standing in the gap the pages
     // will occupy says both at once, and it disappears with the clipboard.
@@ -2541,7 +2541,7 @@ function buildStrip(){
   // Built here rather than in the template, which is why a template-wide
   // tooltip pass could not reach them. lib/tooltip.js adopts late markup via a
   // MutationObserver, so a title written here is picked up like any other.
-  // v207: SVG plus, not the U+FF0B fullwidth '＋' text glyph — that character
+  // SVG plus, not the U+FF0B fullwidth '＋' text glyph — that character
   // renders at different weights across fonts/platforms and did not match the
   // SVG icons in the page bar beside it.
   col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Duplicate</button>'
@@ -2603,7 +2603,7 @@ function flipOverlayOpen(){
   return false;
 }
 
-/* ---- compact page actions (v227, stage 4) ----------------------------------
+/* ---- compact page actions (stage 4) ----------------------------------
  * On the compact surface the persistent page bar is gone and this menu carries
  * what it carried. The design note is explicit that this step waits on ONE
  * thing: every operation must stay reachable and announced, because a filmstrip
@@ -3299,7 +3299,7 @@ function updateToolState(){
   playBtn.title = playBtn.disabled ? 'Add a second page to flip'
     : (frames.some(frameDraw) ? 'Flip through the pages — drawing pages draw themselves'
                              : 'Flip through the pages');
-  // v126: hide the whole control until there is something to play, matching the
+  // hide the whole control until there is something to play, matching the
   // Pad (playWrap.hidden = !recorded). Showing "Flip it · 0:00" on a one-page
   // animation advertises an action that cannot run. Reuses playBtn.disabled
   // rather than restating the condition, so the two can never disagree — but
@@ -3334,7 +3334,7 @@ function renderPartial(f, count){ ctx.clearRect(0,0,CW,CH); drawBackdrop(ctx); p
  * the bug lib/holdtiming.js was extracted to end, and keeping a second one
  * alive beside the fix would have re-created it. */
 
-/* v262: a page is rasterised at most ONCE per playback. Repainting a generated
+/* a page is rasterised at most ONCE per playback. Repainting a generated
    in-between costs ~123ms at 4x CPU throttle (a mid-range phone) even after the
    v261 rebuild, against a 41.7ms slot at 24fps — no point budget makes
    re-rasterising the same static picture every loop fit. So the first paint of
@@ -3626,7 +3626,7 @@ function setColor(hex){
   // swatches ringed at once and the wrong one appearing selected.
   setTool('pen');   // picking a colour returns you to the pen, like the Pad
 }
-/* ---------- v226: the tool shelf and its overflow tray --------------------
+/* ---------- the tool shelf and its overflow tray --------------------
    The mechanics live in lib/toolshelf.js and are shared with Pad — see that
    file's header for why the row needed this at all. What stays here is what is
    genuinely Flip's: which tools exist, and how a tool is applied.
@@ -6455,7 +6455,7 @@ function tweenMatch(inkA, inkB){
 /* Two pages can be interpolated only if their strokes line up: same number of
    groups, same number of points in each. Returns null when they do not, and the
    caller turns that into a sentence rather than a shrug. */
-/* ---------- v255: making the in-between accept HAND-DRAWN poses -------------
+/* ---------- making the in-between accept HAND-DRAWN poses -------------
 
    WHAT REFUSED, AND WHY IT WAS TOO STRICT. tweenMismatch demanded that the two
    pages be structurally identical -- the same number of strokes AND the same
@@ -6527,7 +6527,7 @@ function tweenRuns(f){
   return out;
 }
 
-/* ---------- v296: the smear counts what you can SEE -------------------------
+/* ---------- the smear counts what you can SEE -------------------------
 
    Reported with a picture: two pages, each showing two lines, the second made
    by duplicating the first, rubbing out the diagonal and drawing a new one.
@@ -6615,7 +6615,7 @@ function tweenVisible(f){
   return { ink: ink, erase: erase, inkSpans: inkSpans };
 }
 
-/* ---------- v296: AIMING a smear at the part that moves ----------------------
+/* ---------- AIMING a smear at the part that moves ----------------------
 
    The effect reads as motion when ONE part of a drawing moves and the rest
    holds still, and as a grey blob when the whole figure travels. Every bad
@@ -6714,7 +6714,7 @@ function tweenAlign(a, b){
 function tweenMismatch(a, b){
   if(!a || !b) return 'two pages';
   if(!a.strokes.length || !b.strokes.length) return 'two pages with drawing on them';
-  /* v255: the POINT counts are no longer part of this. They used to be, and
+  /* the POINT counts are no longer part of this. They used to be, and
      that made a hand-redrawn pose refuse -- see the tweenAlign note above. The
      stroke COUNT still is: pairing three strokes against four means choosing
      which one has no partner, and that guess is still declined.
@@ -7285,7 +7285,7 @@ function addTween(){
        + rep.carried + ' drawn once' + closedNote));
 }
 
-/* ---------- v295: the in-between, for real ----------------------------------
+/* ---------- the in-between, for real ----------------------------------
 
    ONE POSE, NOT THE WHOLE PATH. Motion Smear above integrates every instant
    between two pages into a single exposure. This emits the drawing AT one
@@ -7747,7 +7747,7 @@ function addInbetween(){
   chip('In-between added');
 }
 
-/* ---------- v236: liquify ----------------------------------------------------
+/* ---------- liquify ----------------------------------------------------
    IT IS CALLED LIQUIFY BECAUSE IT IS NOT A SMUDGE, and the name was the second
    thing to get right. Built as "Smudge" first, which is what was asked for and
    what the mental slot is called — then renamed, because the word promises
@@ -8186,7 +8186,7 @@ function smudgeMove(pt){
   return hit;
 }
 
-/* ---------- v256: blur that actually softens an edge -------------------------
+/* ---------- blur that actually softens an edge -------------------------
 
    WHAT SHIPPED UNTIL NOW WAS A FADE. The old blur mixed each touched point
    toward bgColor and widened it. Measured on a vertical slice through a line:
@@ -8450,7 +8450,7 @@ function liquifyEnd(){
   return at;
 }
 
-/* ---------- v229: mirror, duplicate, cut and paste -------------------------
+/* ---------- mirror, duplicate, cut and paste -------------------------
    All four rewrite one page's strokes wholesale rather than editing in place,
    and all four share ONE undo shape: a before/after pair of that page's strokes
    and strokeGroups.
@@ -9749,7 +9749,7 @@ const _renderFlipGridDensity = _wireGridDensity(function(){ return grid; }, func
 // so the overlay drew but the button never lit. gridEl (the overlay canvas)
 // still uses .on — that is its own display class, unrelated to the button.
 gridBtn.addEventListener('click',()=>{ grid=!grid; if(grid) syncGrid(); gridBtn.classList.toggle('active',grid); gridEl.classList.toggle('on',grid); gridBtn.setAttribute('aria-checked',String(grid)); _renderFlipGridDensity(); });
-// v129: the settings drawer. Kept deliberately dumb — it only shows/hides; every
+// the settings drawer. Kept deliberately dumb — it only shows/hides; every
 // control inside keeps its existing handler, so behaviour is unchanged.
 const tuneBtn=document.getElementById('tuneBtn'), tunePanel=document.getElementById('tunePanel');
 const tuneShell=document.getElementById('tuneShell');

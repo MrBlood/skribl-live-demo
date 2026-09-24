@@ -153,7 +153,7 @@
   body.playing .flip-tool-badge { display: none !important; }
 
   .fps-group { display: inline-flex; align-items: center; gap: 7px; }
-  /* v126: was accent + glow — identical to .btn.post, so Flip had TWO primary
+  /* was accent + glow — identical to .btn.post, so Flip had TWO primary
      buttons and the eye had nowhere to land. styles.css calls Post "the one bold
      purple moment"; this is a preview control, so it now matches the Pad's Play:
      subtle fill, hairline border, no glow. */
@@ -496,7 +496,7 @@
     .flip-tools .t-btn { width: 34px; height: 34px; --tap-grow: 5px; }   /* 34 visual -> 44 tap */
     .flip-tools { --seg-row-h: 44px; }
   }
-  /* v124: 88x62 left the per-page controls at 18x18 — a third of the 44px touch
+  /* 88x62 left the per-page controls at 18x18 — a third of the 44px touch
      target both Apple and Google recommend, on a tile carrying five of them.
      Widened so the controls can grow without covering the drawing. */
   .frame { position: relative; flex: 0 0 auto; width: 104px; height: 72px; border-radius: 10px; overflow: hidden;
@@ -1009,7 +1009,7 @@
   left: 30px;             /* was right:24px, which crowded the ✕. Sits after the
                              page number instead, clear of both. */
   z-index: 2;
-  /* v226: a <button>, not a <div> — the badge cycles the hold now. Button UA
+  /* a <button>, not a <div> — the badge cycles the hold now. Button UA
      styles have to be undone explicitly or it inherits a system border and the
      platform font. */
   border: 0;
@@ -1311,7 +1311,7 @@
 /* v206's Clear-all danger/armed states are styles.css's .menu-item.danger /
    .armed now that the row IS a .menu-item (v290). */
 
-/* v207: the add-page buttons' plus is an SVG glyph (was the fullwidth text
+/* the add-page buttons' plus is an SVG glyph (was the fullwidth text
    character), sized to sit on the label's baseline. */
 .addbtn { display: inline-flex; align-items: center; gap: 6px; }
 .addbtn .addbtn-ic { width: 13px; height: 13px; flex: none; }

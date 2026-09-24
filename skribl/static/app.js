@@ -841,7 +841,7 @@ function bindEl(id, ev, fn, opts) {
 
 
 const toolGroupEl = document.getElementById('toolGroup');
-/* ---------- v226: the tool shelf and its overflow tray --------------------
+/* ---------- the tool shelf and its overflow tray --------------------
    The mechanics live in lib/toolshelf.js and are shared with Flip — see that
    file's header for why the row needed this at all. What stays here is what is
    genuinely Pad's: which tools exist, and what applying one does to the canvas.

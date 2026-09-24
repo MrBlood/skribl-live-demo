@@ -108,7 +108,7 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
     updateTrimUI();
   });
   window.SkriblZoomStep.sync(zoomMag);
-  // v207: the groups ARE .seg pills now (styles.css owns the shell + cells),
+  // the groups ARE .seg pills now (styles.css owns the shell + cells),
   // so the old injected rounded-rect styles are gone. Only the bar layout is
   // styled here, and it is styled in styles.css: Flip built the same sheet in
   // its own string and had already lost the 640px rule from it.
