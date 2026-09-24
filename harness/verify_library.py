@@ -132,9 +132,17 @@ with sync_playwright() as sp:
           len(payload_reqs) == 1,
           f"{len(payload_reqs)} payload fetch(es) for {tiles} tiles: "
           f"{payload_reqs}")
+    # COUNTED, THEN MEASURED: an .every() over an empty list is TRUE, so a page
+    # that rendered no pictures at all would answer this the same as one that
+    # rendered them all correctly. Two of these went green on nothing for a
+    # whole release elsewhere in the harness before anybody noticed.
+    _posters = pg.evaluate("""() => {
+        const imgs = [...document.querySelectorAll('#postedList .posted-poster')];
+        return { n: imgs.length,
+                 ok: imgs.every(i => /\\/s\\/[^/]+\\/poster$/.test(i.getAttribute('src'))) }; }""")
     check("every tile's picture is the poster, which is one cached image",
-          pg.evaluate("""() => [...document.querySelectorAll('#postedList .posted-poster')]
-             .every(i => /\\/s\\/[^/]+\\/poster$/.test(i.getAttribute('src')))"""))
+          _posters["n"] == tiles and _posters["ok"],
+          f"{_posters} for {tiles} tiles")
     # FOLLOWED, not read. These fixtures are posted through serializeSkribl()
     # and carry no thumbnail, so whatever the tile's src is, the bytes that
     # arrive are the server's fallback — and the fallback used to be the
@@ -725,15 +733,26 @@ with sync_playwright() as sp:
         _cp.wait_for_timeout(2000)
         _cp.click("#btnShare")
         _cp.wait_for_timeout(900)
+        # WHEREVER THE WORDS ARE, `title` FIRST. This page runs lib/tooltip.js on
+        # a fine pointer, and since v310 the module adopts a title written AFTER
+        # load as well as at it -- so this answer is in data-tip here and in
+        # `title` on a phone, and for the tick after the write it is in `title`
+        # either way. The assertion is about the words.
         _said = _cp.evaluate("""() => ({
-            title: document.getElementById('btnShare').title,
+            title: (b => b.title || b.getAttribute('data-tip'))(document.getElementById('btnShare')),
             label: document.getElementById('btnShare').getAttribute('aria-label'),
+            native: document.getElementById('btnShare').hasAttribute('title'),
             live: (document.getElementById('postedStatus') || {}).textContent || '',
             copied: window.__copied || null })""")
         _cp.close()
         if _want_ok:
             check(f"when {_case}, it says the link is copied — and it really was",
                   "copied" in _said["title"].lower() and bool(_said["copied"]), str(_said))
+            # ...IN ONE TOOLTIP. The answer is written to `title`, and this page
+            # runs lib/tooltip.js: until v310 that write reinstated the browser's
+            # own tooltip under the drawn one and nothing took it away again.
+            check("...and it says it once, in the drawn tooltip and not a native one",
+                  _said["native"] is False, f"{_said} — both tooltips would show")
         else:
             check(f"when {_case}, it does NOT say the link is copied",
                   "link copied" not in _said["title"].lower()

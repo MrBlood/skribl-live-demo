@@ -899,15 +899,25 @@
      with a button of '' and threw before it reached SkriblModal.open, and the
      only symptom was two a11y rows saying focus never entered the sheet.
      Nothing reported a redefinition; JavaScript does not consider it an error. */
-  function sayOn(button, msg, rest) {
+  function sayOn(button, msg) {
+    /* WHAT IT SAID BEFORE IS WHAT IT GOES BACK TO, read off the button here
+       rather than passed in. Both callers passed the literal 'More', which is
+       not this button's name: it is "More for <title>", so a screen reader can
+       tell twenty-four of them apart. Every Copy link renamed one of them to
+       plain "More" and left it that way. */
+    if (!button._rest) {
+      button._rest = { tip: button.getAttribute('data-tip') || button.title || '',
+                       name: button.getAttribute('aria-label') || '' };
+    }
+    var rest = button._rest;
     button.title = msg;
     button.setAttribute('aria-label', msg);
     var live = document.getElementById('galleryStatus');
     if (live) live.textContent = msg;
     clearTimeout(button._t);
     button._t = setTimeout(function () {
-      button.title = rest;
-      button.setAttribute('aria-label', rest);
+      button.title = rest.tip;
+      if (rest.name) button.setAttribute('aria-label', rest.name);
     }, 1600);
   }
 
@@ -920,7 +930,6 @@
        this file knowing the route. */
     var tpl = document.body.getAttribute('data-skribl-player') || '';
     var url = location.origin + tpl.replace('__ID__', encodeURIComponent(item.id));
-    var rest = 'More';
 
     menuEl.appendChild(menuItem('Open', function () {
       window.open(url, '_blank', 'noopener');
@@ -930,9 +939,9 @@
        of a promise is PRESEAL-002, and it shipped once already. */
     menuEl.appendChild(menuItem('Copy link', function () {
       var copier = window.SkriblPostedUI && window.SkriblPostedUI.copyText;
-      if (!copier) { sayOn(button, "Couldn't copy the link", rest); return; }
+      if (!copier) { sayOn(button, "Couldn't copy the link"); return; }
       copier(url).then(function (ok) {
-        sayOn(button, ok ? 'Link copied' : "Couldn't copy the link", rest);
+        sayOn(button, ok ? 'Link copied' : "Couldn't copy the link");
       });
     }, '', 'link'));
     /* Share only where the platform has one. A "Share..." that silently does
@@ -949,9 +958,9 @@
     /* `cmReport` is a HOOK, not a style: verify_a11y's modal census drives the
        real path to the report sheet, and that path is now two clicks. A recipe
        that matched the word would break the day the word changes. */
-    menuEl.appendChild(menuItem('Report', function () {
-      openReport(item.id, button);
-    }, 'cmReport danger', 'flag'));
+    menuEl.appendChild(menuItem(
+      button.getAttribute('data-reported') === '1' ? 'Reported' : 'Report',
+      function () { openReport(item.id, button); }, 'cmReport danger', 'flag'));
 
     /* PLACED AGAINST THE VIEWPORT, not just below the button: a card in the
        last row would otherwise open a menu below the fold. */
@@ -1025,11 +1034,13 @@
         .then(function (j) { throw new Error(j.error || ('Could not send (HTTP ' + r.status + ').')); });
       return r.json();
     }).then(function () {
-      /* SAID ON THE TILE: the button becomes the record that this reader
-         reported this post, and cannot be pressed again this page-load. The
-         server would answer a second one the same way and write nothing. */
-      target.button.textContent = 'Reported';
-      target.button.setAttribute('aria-pressed', 'true');
+      /* SAID ON THE TILE, WITHOUT EATING THE CONTROL. `target.button` was the
+         Report word until v310 and writing 'Reported' into it was the record;
+         it is the tile's ••• now, so the same line replaced a 34px glyph with
+         a word that does not fit and labelled a menu opener with the last
+         thing done through it. The mark stays an ATTRIBUTE, and the record is
+         said where the reader goes looking: the menu's flag reads Reported,
+         and the sheet opens with nothing left to send. */
       target.button.setAttribute('data-reported', '1');
       say('Thanks. The people who run this site will look at it.');
       send.disabled = true;

@@ -117,6 +117,7 @@
   --surface-panel-rgb: 19,22,28;      /* = #13161c */
   --surface-well-2-rgb: 23,26,34;     /* = #171a22 */
   --surface-control-rgb: 23,27,35;    /* = #171b23 */
+  --surface-deep-rgb: 6,7,10;         /* = #06070a */
   --line-rgb: 37,43,55;               /* = #252b37 */
 
   /* The wash behind every hover fill and translucent hairline. Held as an RGB
@@ -4649,9 +4650,9 @@ body.player-mode .app {
   /* A scrim rather than a slab, the same shape lib/fullbar.js uses on the
      gallery and the profile: a hard edge across a picture is worse than a
      soft one, and the three surfaces should be recognisably one product. */
-  background: linear-gradient(to top, rgba(6, 7, 10, 0.96),
-                                      rgba(6, 7, 10, 0.82) 62%,
-                                      rgba(6, 7, 10, 0));
+  background: linear-gradient(to top, rgba(var(--surface-deep-rgb), .96),
+                                      rgba(var(--surface-deep-rgb), .82) 62%,
+                                      rgba(var(--surface-deep-rgb), 0));
 }
 /* COPY LINK AND GALLERY STAND DOWN IN FULL SCREEN. Both take a person off
    this drawing, which is the one thing full screen is for; the transport is
@@ -6715,6 +6716,7 @@ body.playing .flip-grid { display: none; }
   --surface-panel-rgb:       241,243,247;
   --surface-well-2-rgb:      234,238,244;
   --surface-control-rgb:     237,240,244;
+  --surface-deep-rgb:        255,255,255;   /* = #ffffff, the light --surface-deep */
   --line-rgb:                224,229,236;
 
   /* Semantic colours, restated for a light ground. Same hues, dropped in

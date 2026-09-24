@@ -235,8 +235,16 @@ with sync_playwright() as sp:
     src_total = sum((STATIC / f).stat().st_size for f in player_js)
     lean_total = sum(len(strip_bytes((STATIC / f).read_bytes(), f))
                      for f in player_js)
+    # 155,843 -> 150,300 at v310, measured 149,820. A RATCHET SIX KILOBYTES
+    # ABOVE THE MEASUREMENT IS NOT A RATCHET: it is a number that will let the
+    # next four features through without any of them having to say why, which
+    # is the state this file's own notes spent two releases arguing against.
+    # The carve that bought the room (four photo-drawer functions out of app.js
+    # and into editor_photo.js -- see the target below) is what makes lowering
+    # it honest rather than aspirational, and 480 B of margin is the same order
+    # the previous pin used.
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 155_843,
+          lean_total <= 150_300,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a
@@ -330,9 +338,47 @@ with sync_playwright() as sp:
     #
     # The 800 B is the measurement plus 65 B, not a round number chosen for
     # comfort: the next addition should have to argue as this one did.
-    _margin = 154_600 - lean_total
-    check("REACHES the 154,600 target (strip + whitespace collapse)",
-          lean_total <= 154_600,
+    #
+    # ---- v310: LOWERED 154,600 -> 153,800, WHICH IS THE RAISE GIVEN BACK ----
+    #
+    # Measured 149,820, so the target is met with 3,980 B to spare -- met for
+    # the first time since it was set, and met by the carve the note above
+    # named as the debt rather than by another move of the line.
+    #
+    # WHAT WAS CARVED. Four functions out of app.js and into editor_photo.js:
+    # normalizePhotoDataURL, resetPhotoAdjustments, beginPhotoDrag and
+    # dragZoomPan, 177 lines whose every call site was already in an
+    # editor-only module. A person reading a shared Skribl has no photo drawer
+    # and was downloading its upload decoder on every link. app.js 137,796 ->
+    # 132,419 B parsed; lean_total 155,214 -> 149,820.
+    #
+    # THE RAISE IS REVERSED, NOT JUST SURVIVED. v308's note said the honest
+    # alternatives were "carve first, ship the control after" and "do not ship
+    # the control", and that it was named "so the owner can reverse this
+    # trade". The owner did: "do the right thing. Make it a cleaner better
+    # tree." So the number goes back to what it was before that release spent
+    # it, rather than being left at the spent value with a comfortable margin.
+    #
+    # WHAT IS LEFT OF THE DEBT, so the next person finds a figure and not a
+    # feeling: 1,365 lines of editor-only code still sit in app.js and still
+    # ship to every player. The photo drawer was the cluster whose call sites
+    # were ALL already outside app.js, which is what made it safe to move at
+    # the end of a long session. The music preview cluster (~223 lines:
+    # startWebAudioLoop, startLoopPreviewNative, playNativeLooped,
+    # startLoopPreview, playMusicLooped) is the next one and is harder,
+    # because its callers are still inside app.js.
+    #
+    # AND THE CARVE BROKE THE PAD ONCE, which is worth recording because the
+    # failure was invisible to every gate but one. `bindEl('resetPhotoBtn',
+    # 'click', resetPhotoAdjustments)` sits at app.js's TOP LEVEL and passes
+    # the handler BY REFERENCE, so the name has to exist when that line runs --
+    # and a function carved into a file that loads after app.js does not. The
+    # Pad threw a ReferenceError on load and abandoned every line after it.
+    # verify_boot's "the script reached its last line" is what caught it. The
+    # binding travels with the function now.
+    _margin = 153_800 - lean_total
+    check("REACHES the 153,800 target (strip + whitespace collapse)",
+          lean_total <= 153_800,
           f"lean_total {lean_total:,} B — "
           + (f"{_margin:,} B of margin left" if _margin >= 0
              else f"OVER the target by {-_margin:,} B"))

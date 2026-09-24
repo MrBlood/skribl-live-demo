@@ -194,14 +194,33 @@ with sync_playwright() as sp:
     browsing.goto(pg, BASE, "/gallery")
     pg.wait_for_timeout(600)
 
+    # TWO CLICKS SINCE v310: the Report word left the tile head for the overflow
+    # menu, so the path to the sheet is ••• then the flag. Driven, not asserted
+    # from markup -- a menu that renders a Report item and never opens the sheet
+    # would pass a census of its items and fail every person who used it.
+    def open_report(post_id):
+        pg.click(f'.tileMore[data-more="{post_id}"]')
+        pg.wait_for_timeout(250)
+        pg.click('.cardMenu .cmReport')
+        pg.wait_for_timeout(300)
+
     per_tile = pg.evaluate("""() => {
         const tiles = [...document.querySelectorAll('#galleryList .tile')];
         return { tiles: tiles.length,
-                 buttons: tiles.filter(t => t.querySelector('button.report[data-report]')).length,
-                 ids: tiles.filter(t => t.querySelector('button.report').getAttribute('data-report') === t.getAttribute('data-id')).length }; }""")
-    check("every tile carries a Report button naming its own post",
+                 buttons: tiles.filter(t => t.querySelector('button.tileMore[data-more]')).length,
+                 ids: tiles.filter(t => t.querySelector('button.tileMore').getAttribute('data-more') === t.getAttribute('data-id')).length }; }""")
+    check("every tile carries a menu button naming its own post",
           per_tile["tiles"] > 0 and per_tile["buttons"] == per_tile["tiles"] and per_tile["ids"] == per_tile["tiles"],
           str(per_tile))
+    pg.click(f'.tileMore[data-more="{third}"]')
+    pg.wait_for_timeout(250)
+    menu_rep = pg.evaluate("""() => { const i = document.querySelector('.cardMenu .cmReport');
+        return { there: !!i, text: i ? i.textContent.trim() : null,
+                 glyph: !!(i && i.querySelector('svg')) }; }""")
+    check("...and its menu offers Report, with the flag beside the word",
+          menu_rep["there"] and menu_rep["text"] == "Report" and menu_rep["glyph"], str(menu_rep))
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(200)
     sheet = pg.evaluate("""() => { const d = document.getElementById('reportSheet');
         return { role: d.getAttribute('role'), modal: d.getAttribute('aria-modal'), hidden: d.hidden,
                  reasons: [...d.querySelectorAll('input[name=reason]')].map(i => i.value) }; }""")
@@ -217,8 +236,8 @@ with sync_playwright() as sp:
     order = pg.evaluate("() => [...document.querySelectorAll('#galleryList .tile')].map(t => t.getAttribute('data-id'))")
     check("the reported tile is neither first nor last on the page",
           third in order and 0 < order.index(third) < len(order) - 1, f"{order.index(third) if third in order else '?'} of {len(order)}")
-    pg.click(f'button.report[data-report="{third}"]')
-    pg.wait_for_timeout(450)
+    open_report(third)
+    pg.wait_for_timeout(200)
     check("opening moves focus into the sheet",
           pg.evaluate("() => document.getElementById('reportSheet').contains(document.activeElement)"))
     pg.click('#reportSheet input[value="copyright"]')
@@ -230,16 +249,27 @@ with sync_playwright() as sp:
           and (sent.get("body") or {}).get("reason") == "copyright"
           and (sent.get("body") or {}).get("note") == "traced from a poster", str(sent))
     st_text = pg.evaluate("() => document.getElementById('reportStatus').textContent")
-    btn = pg.evaluate(f"""() => {{ const b = document.querySelector('button.report[data-report="{third}"]');
-        return {{ text: b.textContent.trim(), reported: b.getAttribute('data-reported'), disabled: b.disabled }}; }}""")
+    btn = pg.evaluate(f"""() => {{ const b = document.querySelector('.tileMore[data-more="{third}"]');
+        return {{ glyph: !!b.querySelector('svg'), text: b.textContent.trim(),
+                  reported: b.getAttribute('data-reported'), disabled: b.disabled }}; }}""")
     check("the sheet thanks the reader", "thanks" in st_text.lower(), st_text)
-    check("the tile's button becomes the record and stays pressable",
-          btn["text"] == "Reported" and btn["reported"] == "1" and not btn["disabled"], str(btn))
+    # THE MARK IS AN ATTRIBUTE, NOT THE BUTTON'S CONTENT. Writing 'Reported'
+    # into this button is what v310 did on the day the Report word became a
+    # menu item: it swapped the ••• glyph for a word in a 34px box, and told
+    # every later reader that the tile's menu was called Reported.
+    check("the tile's menu button keeps its glyph and takes the mark",
+          btn["glyph"] and btn["text"] == "" and btn["reported"] == "1" and not btn["disabled"],
+          str(btn))
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(500)
-    landed = pg.evaluate("() => { const a = document.activeElement; return a === document.body ? '(body)' : (a.getAttribute('data-report') || a.id || a.tagName); }")
+    landed = pg.evaluate("() => { const a = document.activeElement; return a === document.body ? '(body)' : (a.getAttribute('data-more') || a.id || a.tagName); }")
     check("Escape closes it and focus returns to the button that opened it", landed == third, f"focus on {landed!r}")
-    pg.click(f'button.report[data-report="{third}"]')
+    pg.click(f'.tileMore[data-more="{third}"]')
+    pg.wait_for_timeout(250)
+    said = pg.evaluate("() => { const i = document.querySelector('.cardMenu .cmReport'); return i ? i.textContent.trim() : null; }")
+    check("the menu now says Reported, so the record is where the reader looks",
+          said == "Reported", repr(said))
+    pg.click('.cardMenu .cmReport')
     pg.wait_for_timeout(400)
     again = pg.evaluate("""() => ({ open: !document.getElementById('reportSheet').hidden,
         send: document.getElementById('reportSend').disabled,
@@ -252,8 +282,7 @@ with sync_playwright() as sp:
     # A refused request is said in the sheet, and the sheet stays open to try again.
     pg.route(re.compile(r"/report$"), lambda route: route.fulfill(status=429, content_type="application/json",
                                                                    body=json.dumps({"error": "slow down"})))
-    pg.click(f'button.report[data-report="{target}"]')
-    pg.wait_for_timeout(300)
+    open_report(target)
     pg.click("#reportSend")
     pg.wait_for_timeout(600)
     refused = pg.evaluate("""() => ({ open: !document.getElementById('reportSheet').hidden,

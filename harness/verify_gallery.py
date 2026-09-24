@@ -983,14 +983,67 @@ with sync_playwright() as _spk:
     _tips = _pk.evaluate("""() => ({
         started: !!window.SkriblTooltip,
         tabs: [...document.querySelectorAll('.tab')].every(b => !!b.getAttribute('data-tip')),
-        reports: [...document.querySelectorAll('.report')].every(b => !!b.getAttribute('data-tip')),
-        leftovers: document.querySelectorAll('.tab[title], .report[title]').length })""")
-    check("the gallery draws tooltips: every tab and every Report carries one",
-          _tips["started"] and _tips["tabs"] and _tips["reports"],
+        /* `.tileMore`, NOT `.report`. The Report word became a menu item in
+           v310 and this row kept asking about `.report`: [].every() is TRUE,
+           so the assertion went green on an empty set, and would have gone
+           green with the tooltip module unloaded. COUNTED first, then
+           measured -- a census of nothing is not a census. */
+        mores: document.querySelectorAll('.tileMore').length,
+        tipped: [...document.querySelectorAll('.tileMore')].every(b => !!b.getAttribute('data-tip')),
+        leftovers: document.querySelectorAll('.tab[title], .tileMore[title]').length })""")
+    check("the gallery draws tooltips: every tab and every tile menu carries one",
+          _tips["started"] and _tips["tabs"] and _tips["mores"] > 0 and _tips["tipped"],
           str(_tips))
     check("...and the native title is gone, so the browser's own does not stack under it",
           _tips["leftovers"] == 0,
           f"{_tips['leftovers']} controls still carry a title attribute")
+
+    # AND IT STAYS GONE AFTER THE MENU HAS SAID SOMETHING. Copy link answers on
+    # the button it was opened from, and that answer used to be written to
+    # `title` -- which the module had already removed, and whose observer
+    # watches for added NODES, not changed attributes. So one copy put the
+    # browser's own tooltip back under the drawn one for the life of the page,
+    # and the restore wrote the literal 'More' over a name that said WHICH
+    # tile's menu it was. DRIVEN, not read: the whole defect is in what the
+    # handler does, and no markup census can see it.
+    _name0 = _pk.evaluate("() => document.querySelector('.tileMore').getAttribute('aria-label')")
+    _pk.click('.tileMore')
+    _pk.wait_for_timeout(200)
+    _pk.click('.cardMenu .cmItem:has-text("Copy link")')
+    _pk.wait_for_timeout(300)
+    _said = _pk.evaluate("""() => { const b = document.querySelector('.tileMore');
+        return { title: b.hasAttribute('title'), tip: b.getAttribute('data-tip'),
+                 name: b.getAttribute('aria-label') }; }""")
+    check("the menu answers in the drawn tooltip, not in a native one it puts back",
+          _said["title"] is False and _said["tip"] and _said["tip"] != "More",
+          str(_said))
+    _pk.wait_for_timeout(1800)
+    _back = _pk.evaluate("""() => { const b = document.querySelector('.tileMore');
+        return { title: b.hasAttribute('title'), tip: b.getAttribute('data-tip'),
+                 name: b.getAttribute('aria-label') }; }""")
+    check("...and it goes back to the name that says which tile it belongs to",
+          _back["title"] is False and _back["name"] == _name0 and _back["tip"] == "More",
+          f"{_back} vs the name it started with {_name0!r}")
+
+    # THE TRANSPORT IS THE COMMONEST LIVE LABEL ON THIS PAGE -- lib/fullbar.js
+    # rewrites Play/Pause, Repeating, the sound state and the speed on EVERY
+    # sync, so one press used to hand this card back four native tooltips.
+    # Driven here and not only in verify_tips because the contract row there
+    # writes a label itself; this one presses the button a person presses.
+    # `.skfull-card`, NOT `.tileStage .skfull-play`: every stage holds TWO
+    # transports -- the card's and the full-screen one, which is display:none
+    # until the stage is full size. The unqualified selector resolved to 48
+    # buttons on 24 cards and picked a hidden one.
+    _pk.hover(".tileStage")
+    _pk.wait_for_timeout(250)
+    _pk.click(".tileStage .skfull-card .skfull-play")
+    _pk.wait_for_timeout(500)
+    _tr = _pk.evaluate("""() => { const b = document.querySelector('.tileStage .skfull-card .skfull-play');
+        return { title: b.hasAttribute('title'), tip: b.getAttribute('data-tip'),
+                 name: b.getAttribute('aria-label') }; }""")
+    check("the card transport's live label is adopted too, not a native tooltip put back",
+          _tr["title"] is False and _tr["tip"] in ("Play", "Pause")
+          and _tr["tip"] == _tr["name"], str(_tr))
     _pk.close()
     _bk.close()
 

@@ -9781,7 +9781,7 @@ too" recorded, as noted-not-changed, that the stage's rule hard-codes
 and lets max bounds letterbox it". The stage's number is gated now, and the
 player's rule is deleted -- it never applied.
 
-## Unsealed, on top of v306 -- the feed box fades and softens the photo too
+## v310 -- the feed box fades and softens the photo too
 
 The last known fidelity gap between the in-post player and the sealed one, and
 the only one this tree had written down as open rather than discovered.
@@ -9842,7 +9842,7 @@ the ink drawn immediately after it, which would be a far worse defect than the
 one this closes, and the guard that skips the restore is exactly how that
 happens.
 
-## Unsealed, on top of v306, cont. -- a calibration run published itself, twice
+## v310, cont. -- a calibration run published itself, twice
 
 `run_harness.sh` stamps the generated counts into README.md, START-HERE.md,
 docs/HANDOFF.md and harness/README.md after EVERY invocation. That is what
@@ -9904,7 +9904,7 @@ prompted it. Two narrow rules with the same shape are one general rule that
 nobody has written yet, and the gap between them is where the third accident
 lives.
 
-## Unsealed, on top of v306, cont. -- the instrument predicted its own failure and kept the threshold
+## v310, cont. -- the instrument predicted its own failure and kept the threshold
 
 The sealed v306 tree went red on `main`. `verify_framecache`'s two player
 rows failed in the **postgres** CI job -- the one that runs the whole battery
@@ -9956,7 +9956,7 @@ was met exactly at 1760. This one had its failing row written in the file.
 None of the three was found by review; each was found by a machine slower or
 faster than the one the number came from.
 
-## Unsealed, on top of v306, cont. -- the carve that was measured and not made
+## v310, cont. -- the carve that was measured and not made
 
 `verify_player_isolation` counts five editor globals the player still carries,
 against a stated target of 0, and `verify_jsstrip`'s note names that as where
@@ -10010,7 +10010,7 @@ of whether the work is worth it. Writing the measurement next to the number
 turns "5 is not 0" into a decision somebody can make, which is the point of
 measuring.
 
-## Unsealed, on top of v306, cont. -- the library row, from an iPhone
+## v310, cont. -- the library row, from an iPhone
 
 The owner sent two photographs of a real phone and three of Chrome's device
 emulation. On the phone, one row in Your Skribls was laid out differently from
@@ -10113,7 +10113,7 @@ section. The seventh is the one worth naming: with the fixture disabled on an
 empty database, the tile row goes red while both floor rows stay GREEN on six
 controls. That is the pass this block was returning before the fixture existed.
 
-## Unsealed, on top of v306, cont. -- the search box that grew when you tapped it
+## v310, cont. -- the search box that grew when you tapped it
 
 The owner, from a phone: the library search magnifies. It is iOS Safari's
 focus zoom -- below 16px on a focused text control, Safari scales the whole
@@ -10162,7 +10162,7 @@ down in one comment is not a policy, it is five coincidences. The tell is a
 new surface that does not load the old stylesheet; this tree now has four of
 those, and each one is a fresh chance to not inherit something.
 
-## Unsealed, on top of v306, cont. -- SILENT on a Skribl with music
+## v310, cont. -- SILENT on a Skribl with music
 
 The owner, from /library: the stage said SILENT under a Skribl that has sound.
 
@@ -10198,7 +10198,7 @@ GREEN. The response is now asserted on its own terms, through two real posts --
 one carrying audio bytes, one not -- and the second of those is what stops a
 response that always says True from passing.
 
-## Unsealed, on top of v306, cont. -- a Skribl can be watched full size from the gallery
+## v310, cont. -- a Skribl can be watched full size from the gallery
 
 The profile's stage has a fullscreen control and `/s/<id>` has one. The page
 where the drawings actually are had none, and its transport stays on screen
@@ -10227,7 +10227,7 @@ Six components calibrated, each reverted alone: the server's field, the store's
 third state, `library.js`'s two-state render, the badge, the gallery control,
 and the restated ratio. Every one red on its own row.
 
-## Unsealed, on top of v306, cont. -- a tile that says what it is, an x you can take back, and tooltips on the two pages that had none
+## v310, cont. -- a tile that says what it is, an x you can take back, and tooltips on the two pages that had none
 
 Three owner reports, one change, because they share a surface.
 
@@ -10334,7 +10334,7 @@ who has already decided and wants the space back, and the deterministic commit
 a suite can drive, because a twelve-second window is a product choice and not
 something to sleep through in a browser test.
 
-## Unsealed, on top of v306, cont. -- the owner's second pass, measured
+## v310, cont. -- the owner's second pass, measured
 
 Five reports from the deployed site, and the console disagreed with my guesses
 twice, so every one of these is a measurement.
@@ -10445,7 +10445,7 @@ moving the boot sequence by a few milliseconds turned it red for a stage that
 was about to be perfectly fine. A race that only ever passed is not a check, so
 it waits now.
 
-## Unsealed, on top of v306, cont. -- the migration that took the site down
+## v310, cont. -- the migration that took the site down
 
 Two merged releases sat invisible for hours and the owner kept photographing a
 site three changes behind. Both causes are mine and neither was in the code the
@@ -10584,7 +10584,7 @@ The gallery mutation is worth one more line: putting `.tileKind` back to
 `bottom: 8px` reddened the overlap check on all 24 tiles. The owner photographed
 one card; every card had it.
 
-## Unsealed, on top of v306, cont. -- the gallery becomes a page of posts
+## v310, cont. -- the gallery becomes a page of posts
 
 The owner's sentence was the brief: "gallery needs to be completely redesigned.
 it just doesn't look good... gallery needs to be stunning, simple, intuitive,
@@ -11024,3 +11024,351 @@ The shortfall now says which kind it is. A pass count below the total with
 nothing listed under it is an accounting failure in the suite, not a test
 failure, and it reads exactly like five silent ones — which is what sent
 somebody hunting a backfill bug that was never there.
+
+## v310, cont. -- the card the owner read back to us, and four laws for one nib
+
+The gallery card went out, the owner opened it on the deployed site, and sent
+back fourteen things across two messages. None of them was a crash. All of
+them were the difference between a surface that works and one that is
+finished, which is the only kind of report this stage of a product gets.
+
+**WHY THE NUMBER JUMPS FROM v306.** Four batches of work were written into this
+tree as though they were four releases -- thirteen files cite `v307`, `v308`,
+`v309` and `v310` in their comments -- and none of them was ever sealed. The
+number here is the one the tree already believes. Sealing this as v307 would
+have made roughly thirty comments wrong in order to make one counter right.
+
+### The card
+
+**A GLYPH WITH A viewBox AND NO SIZE FILLS WHAT CONTAINS IT.** `.tileMore svg`
+has been capped at 16px since it was written; its twin in the same head never
+was, so the description mark painted a 44px speech bubble beside a 16px
+ellipsis. One missing declaration, and the owner's first word for it was
+"enormous". It is three ranged lines of text now rather than a bubble, because
+a bubble is what every product on a phone uses for a CONVERSATION and a
+Skribl's description is not one -- there is nothing to reply to.
+
+**A GRID ROW STRETCHES TO ITS TALLEST ITEM**, so opening one card's description
+grew the card beside it. The dead space the accordion exists to remove was
+being handed to the neighbour. `align-items: start`.
+
+**AND `content-visibility` HAS NO INTERPOLABLE VALUES**, so the close flipped
+it to `hidden` at the START and the collapse the track was animating had
+already happened. `transition-behavior: allow-discrete` holds the visible value
+to the end -- declared separately from the `transition` shorthand, because a
+browser that does not know the keyword throws out the whole shorthand and the
+accordion loses every animation it has.
+
+**`:focus-within` ON THE CARD MATCHED THE HEAD.** A button keeps focus after a
+click and the peek it raised is the sticky kind, so reading the description
+turned the transport on and closing it could not turn it off. Both the selector
+and the listeners ask the STAGE now. The head's buttons say nothing about the
+drawing.
+
+**THE DRAWING WAS GLUED TO THE CARD'S RIM.** Edge to edge is how a post carries
+a photograph, which has no frame of its own; this component draws its own
+border and corner, so flush put that border one pixel inside the card's on the
+same radius. Invisible at the aspects that letterbox, and not at the one that
+fills the box. It is matted by the head's own 13px.
+
+### The two players
+
+**FULL SCREEN ON A SHARED LINK HAD NO CONTROLS AT ALL.** Only the top-layer
+subtree renders, and the transport lives in `.player-shell` BELOW the wrapper
+that goes full screen -- so what a person got was a drawing, a close button and
+nothing to press. The row is MOVED into the wrapper and back, not duplicated: a
+second transport would be a second set of handlers to keep in step with the
+player, which is the mistake `lib/fullbar.js` exists on the other two surfaces
+to avoid. `display: contents` at rest, so the wrapper costs the column nothing.
+
+**AND THE BAR WAS STANDING ON THE DRAWING**, on all three surfaces. It is
+absolutely positioned with a scrim, which is how a video player works and is
+wrong for a drawing: a video's bottom strip is usually nothing and a drawing's
+bottom edge is part of the picture. Each host reserves the bar's MEASURED
+height now -- measured because it moves with the safe-area inset and the
+resolved font, so a literal would be right on one machine and wrong on a phone.
+
+**THE NIB WAS MAPPED ACROSS THE SCREEN** on `/s/<id>`, and had been since it
+was written. `showNibAtIndex` measured the wrapper on the premise, stated in
+the comment above it, that `layoutPlayerCanvas` sizes the wrapper to the fitted
+display rect. True on the page. False in full screen, where the Fullscreen UA
+stylesheet forces the top-layer element to `width: 100% !important` and the
+canvas is centred inside it -- so the bead was scaled by the screen's width
+over the drawing's AND placed from the screen's corner, and rode hundreds of
+pixels from its own stroke. The in-post player had this identical defect from
+this identical premise and fixed it a release ago; this is that fix on the
+other implementation, where it was never made.
+
+### Four laws for one nib
+
+Worth the space, because the sequence is the lesson and not the answer.
+
+    fixed at 8px of CSS        a boulder on an 84px library thumb, a speck on
+                               a 1280px full screen
+    scaled by the SCALE        fixed the thumb and the screen; a ball in full
+                               screen
+    the scale, DAMPED (root)   fixed the ball; the bead ended up smaller than
+                               the stroke it was leading
+    a size in the PEN          answers all of it
+
+Each answer was right about the screenshot in front of it and wrong about the
+one that came next -- and each was a reasonable reading of the report it was
+answering. What ended it was the owner's own measure, offered as a memory
+rather than as a specification: "the way it was before all this was fine. The
+nib was slightly bigger than pen size with a halo."
+
+**A NIB IS THE TIP OF A PEN, SO ITS SIZE IS THE PEN'S.** `p.size * s` is
+exactly how wide the stroke it is drawing comes out on this screen, and 1.4x
+that is a tip leading its own line. It answers to the scale (a thumb renders
+the stroke small, so the bead is small) AND to the pen (a hairline gets a small
+bead, a marker a big one), and it cannot be out of proportion with the line it
+is making, because it is DEFINED against that line. Measured 1.40x at both pens
+on one card and 1.40x again in full screen.
+
+**THE CLAMP WAS A RANGE AND IS NOW A GUARD.** A ceiling of 26 caught a 22px pen
+in full screen, where the stroke renders 32px wide, and handed back a bead of
+0.82x its own line -- the rule broken by the thing protecting it. A rule
+defined against the stroke does not need protecting from big strokes.
+
+**AND THE BEAD CARRIES THE INK**, which took three tries of its own. White
+whatever the pen was reads as a cursor hovering over the drawing rather than
+the pen making it, and the shared-link player had tinted its bead since it was
+written -- so two implementations disagreed about something a person sees side
+by side. But the ink makes the tip the colour of the stroke under it, and a
+tinted halo round a tinted dot is ONE colour: the bead vanished into its own
+line. A hard two-tone hairline separates them and looks like a cursor doing it.
+A BLURRED halo of the same ink adds light over the stroke instead of drawing a
+line across it, so the tip is the brightest point on its own line and nothing
+foreign is introduced to make it so.
+
+It has to bloom PAST the stroke to do any of that, which was found by rendering
+it rather than reasoning about it: at 6px of blur and 55% the halo sits inside
+a 12px stroke of the same colour and the tip is simply gone. That reached a
+screenshot, and the nib could not be found in it.
+
+### What the instruments did
+
+**FOUR ROWS WENT GREEN ON THE DEFECT THEY EXISTED TO CATCH**, over one arc, and
+three of them are the same mistake wearing different clothes:
+
+- the card's nib row compared the bead to the canvas's WIDTH. On a card the
+  canvas element IS the drawing; in full screen it is the container with the
+  drawing letterboxed inside it, and the limiting axis CHANGES between them --
+  so a linearly scaled bead grew 2.86x against a width that grew 3.06x;
+- the shared link's compared across full screen, where the scale moves by a
+  quarter, so rounding to whole pixels swamped the difference between one law
+  and another: 1.24x against 1.25x, green, on the law just rejected;
+- the ring row asked whether the shadow string contained `"rgb"`, which
+  `rgba(255, 255, 255, 0.22)` does;
+- the accordion's close row asked whether the wrapper's height was somewhere
+  between nothing and the open height part way through. `content-visibility:
+  hidden` removes an element's CONTENTS and not its own padding, and this sheet
+  eases that padding too -- so the row watched 22px of padding ease to nothing
+  and called it an animated close, with the words already gone.
+
+Three more probes read their answer in the same frame as the click that changes
+it, on surfaces that ease over 180-240ms: every one was reading the value the
+page was LEAVING, and would have passed on the tree that shipped the bug. A
+fourth left the touch reveal lit and reddened a footer census three screens
+away.
+
+**THE LESSON IS NOT "MEASURE MORE CAREFULLY".** It is that a geometric
+assertion has to name which box it means, and that a probe on an animated
+surface has to say when it is reading. Both are questions this tree already
+knew to ask -- `A RECT IS NOT A PAINT` has been at the head of the working
+agreements since v308 -- and they were asked again anyway, three times, by
+somebody who had read it.
+
+### Ratchets
+
+`EMBED_RATCHET` 36,760 -> 37,200 for the nib's size, damping and ink, with a
+264 B carve of a CSS comment that was costing every host bandwidth to explain a
+custom property. One entry for the whole pass rather than a raise per round:
+three notes about the same element would be noise at a number whose job is to
+make the next person argue.
+
+`BYTES_RATCHET` 154,800 -> 155,300 so full screen has a transport at all. The
+target stays 153,800, because this is a ratchet admitting a control the surface
+was missing and not a target being let go.
+
+## v310, cont. -- the debt the target named, paid instead of spent again
+
+The seal stopped on a red gate, and the gate was right.
+
+`verify_jsstrip` asserts that the player's JavaScript, stripped of comments and
+collapsed, REACHES a size target. It was passing with 65 B of margin. This
+release's player work -- a transport for a full screen that had none, the nib's
+mapping fix, the nib's size and ink -- costs 679 B, so it went over by 614.
+
+**THE NUMBER HAD ALREADY BEEN SPENT ONCE, AND SAID SO.** v308 raised that
+target from 153,800 to 154,600 for the viewer's speed control, wrote at the
+number that it was breaking the rule two paragraphs above it, named the debt it
+was deferring, and recorded that "the owner can reverse this trade". The
+alternatives it listed were *carve first and ship after* and *do not ship the
+control*.
+
+Raising it a second release running would have hollowed it out completely: a
+target moved once per release is not a target, it is a log of what was spent.
+So the choice went to the owner with the three options priced, and the answer
+was "do the right thing. Make it a cleaner better tree."
+
+**THE CARVE.** Four functions out of `app.js` and into `editor_photo.js`:
+`normalizePhotoDataURL`, `resetPhotoAdjustments`, `beginPhotoDrag` and
+`dragZoomPan` -- 177 lines that decode an upload, reset the adjustment sliders
+and drag the backdrop about. Every one of their call sites was ALREADY in an
+editor-only module, so the player could not name them and was downloading them
+anyway, on every shared link, because they sat in the file it loads.
+
+    app.js parsed      137,796 -> 132,419 B
+    player JS, lean    155,214 -> 149,820 B
+    editor-only in app.js  1,554 -> 1,365 lines
+
+The target is met for the first time since it was set, with 3,980 B to spare,
+and BOTH ratchets follow the measurement down -- 155,843 -> 150,300 in
+`verify_jsstrip`, 155,300 -> 150,300 in `verify_player_isolation`. A ratchet six
+kilobytes above the measurement is not a ratchet; it is a number that lets the
+next four changes through without any of them having to say why, which is the
+state those files' own notes spent two releases arguing against.
+
+**WHICH CLUSTER, AND WHY THAT ONE.** The photo drawer's was the only cluster
+whose call sites were all already outside `app.js`. The music preview cluster
+is bigger (~223 lines) and is the next one, and it is harder: its callers are
+still inside `app.js`, so moving it means moving them or proving they are
+editor-only in turn. That is named here as a figure rather than a feeling --
+1,365 lines of editor-only code still ship to every player -- because the
+alternative is the next person finding a mystery.
+
+**AND IT BROKE THE PAD ONCE, INVISIBLY TO EVERYTHING BUT ONE ROW.**
+`bindEl('resetPhotoBtn', 'click', resetPhotoAdjustments)` sits at `app.js`'s TOP
+LEVEL and passes the handler BY REFERENCE, so the name has to exist at the
+moment that line runs -- and a function carved into a file that loads *after*
+`app.js` does not. The Pad threw a ReferenceError on load and abandoned every
+line after it, which then took `photoUploadBtn`'s declaration down and produced
+a second error naming a variable the change never touched.
+
+Nothing about the page looked broken. `verify_boot`'s "the script reached its
+last line" is the row that caught it, and this is exactly the failure it was
+written for: a top-level throw leaves the page rendering and some suffix of the
+behaviour simply gone. The binding travels with the function now, which is
+where it belonged -- wiring a drawer's button is the drawer's business.
+
+**THE GENERAL SHAPE**, since this is the third time this tree has hit it: a
+carve moves FUNCTIONS, never STATE, and never a reference evaluated at load.
+`editor_music.js`'s header has said the first two since it was written. The
+third is this release's addition to the rule.
+
+## v310, cont. -- the reds a partial run found, and the tooltip that came back
+
+The release run for v310 reached batch 27 of 55 and had already found three
+reds, all of them this session's own work, none of them caught by the suites
+that were run when that work landed. That is the whole case for the full
+battery, and it is also the case against believing a targeted run: the changes
+that broke these three suites were each verified against the suite that owned
+the surface, and the damage was next door every time.
+
+**TWO SUITES CRASHED ON CONTROLS THAT HAD MOVED.** `verify_tilereport` drove
+`button.report[data-report]`, which stopped existing the day the Report word
+left the tile's head for its ••• menu. `verify_posted` asked the THUMB for the
+pen and the book, which moved in front of the words at the owner's request in
+the same session. Both threw on a null, which is the loud failure and the
+lucky one.
+
+**AND THE CRASH WAS HIDING A DEFECT.** Rewriting the report suite for the
+two-click path meant reading the success handler, which still said
+
+    target.button.textContent = 'Reported';
+
+`target.button` was the Report word when that line was written and is the •••
+now. So reporting a post replaced a 34px glyph with a word that does not fit
+its box, and renamed the tile's menu after the last thing done through it. The
+mark is an attribute now; the record is said where the reader goes looking --
+the menu's flag reads Reported and the sheet opens with nothing left to send.
+Nobody read that line for six commits. The suite that drove the path found it
+in one.
+
+**TWO ASSERTIONS THAT COULD NOT FAIL, from the same cause.** The gallery's
+tooltip census asked whether every `.report` carried a `data-tip`, and
+`verify_posted`'s icon-size row asked the same of `.posted-thumb svg`. Both
+selectors had stopped matching anything, and `[].every()` is TRUE -- so each
+was green on a page with the module unloaded and the icons gone. They COUNT
+before they measure now.
+
+**THE GENERAL SHAPE, and it is the reason this entry is long.** Moving a
+control produces exactly two kinds of stale assertion, and they are not equally
+visible. A suite that DRIVES the old selector crashes, and the run says so. A
+suite that CENSUSES it goes quietly green forever. Both happened here, in the
+same release, from the same two moves. So: when a control changes its class,
+its home or its markup, grep the harness for the old selector and read every
+hit -- the crashes will announce themselves and the censuses will not.
+
+**AND ONE HARD-CODED NEUTRAL.** `verify_surfaces` caught the full-screen player
+bar painting `rgba(6, 7, 10, a)` directly. One grey outside `:root` is one
+control that stays dark when the theme flips, and it is the only thing that
+would catch it. It takes `--surface-deep-rgb`, which names the same `#06070a`
+the ramp already held.
+
+**CALIBRATION CAUGHT MY OWN INSTRUMENT.** The replacement row for the moved
+kind mark asserted that it stands in front of the words it qualifies, by
+comparing `sub.firstElementChild` against the mark. The words are a TEXT node,
+so the mark is the first ELEMENT whether it leads the line or trails it: run
+against a tree with the mark moved back behind the words -- the one thing the
+row exists to see -- it went green. `firstChild` sees the words. Two mutations
+per component, not one: "the mark is gone" and "the mark is in the wrong
+place" are different failures and only the second found this.
+
+**THEN THE TOOLTIP CAME BACK, ON FOUR SURFACES.** `lib/tooltip.js` moves every
+`title` to `data-tip` and REMOVES the title -- that removal is the whole point,
+because a native tooltip cannot be styled and stacks under the drawn one a
+second later. Its observer watched for added NODES.
+
+Every live label in this app is written to `title` after load. Flip's page bar
+re-scopes Delete, Copy and Move on every selection. The Pad's replay speed
+button rewrites its own. `lib/fullbar.js` rewrites Play/Pause, Repeating, the
+sound state and the speed on every sync, on both the gallery card and the
+profile stage. The gallery card's caption toggle rewrites its own on every
+press. Not one of those is an added node, so not one was re-adopted: the first
+state change handed the control its native tooltip back, under the drawn one,
+for the life of the page.
+
+The observer takes `attributes: true, attributeFilter: ['title']` now, and
+`adopt()` -- which searched DESCENDANTS only, and so walked past the single
+element both observer arms hand it -- includes its root. No loop: `adopt` ends
+by removing the title, whose mutation finds nothing to take, and the `data-tip`
+it writes is not watched.
+
+**WHICH IS ITS OWN RULE.** A module that takes ownership of an attribute owns
+it for the page's LIFE, not for its first frame. The load-time census
+(`verify_tips`: "no native title attributes remain") was true and useless: it
+measured the one moment when nothing had happened yet. The contract is pinned
+on both editors now -- a label written after load is adopted -- and the driven
+cases sit where the controls do: the card's ••• and its transport in
+`verify_gallery`, the share button in `verify_library`, Flip's page bar in
+`verify_pagespan`.
+
+Three suites had been reading these labels out of `title`, and passed only
+because the app wrote them back after adoption. They read the words wherever
+the words are now, which is the assertion they always meant to make.
+
+**AND THE PIN FOR IT FOUND TWO MORE THINGS.** The row that drives the card's
+transport asked for `.tileStage .skfull-play`, and Playwright answered with 48
+buttons across 24 cards: every stage holds TWO transports, the card's and the
+full-screen one, and the first match was the hidden one. A selector that
+resolves to more elements than the page has of that thing is a selector
+describing the wrong population, and it says so in the log if you read it.
+
+**AND `data-tip` IS ONE TICK BEHIND A WRITE.** The three suites that read these
+labels "wherever the words are" asked `data-tip` first and fell back to
+`title`. The module adopts on a MutationObserver, so for the rest of the tick
+that wrote it the new words are in `title` while `data-tip` still holds the
+PREVIOUS ones -- and `verify_pagespan`'s mutation row reads immediately after
+`buildStrip()`, so it got back the label it had just replaced and went red on a
+correct tree. `title` first, `data-tip` second: freshest wins, and the empty
+string a removed title leaves falls straight through.
+
+**AND THE DRAWN TOOLTIP WAS STALE TOO, not merely doubled.** The calibration
+against a module with the attribute arm removed reported the card's transport
+as `{'title': True, 'tip': 'Play', 'name': 'Pause'}`: `data-tip` still held the
+label from the moment of adoption, so the tooltip Skribl DRAWS said Play over a
+button that was pausing. The native tooltip coming back was the visible half;
+the drawn one freezing at its first value was the half nobody would have
+reported, because a tooltip that is merely wrong looks like a tooltip.

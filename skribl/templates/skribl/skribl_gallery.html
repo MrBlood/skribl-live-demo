@@ -380,17 +380,7 @@
     .tile .tileMore:hover, .tile .tileMore[aria-expanded="true"] { color: var(--text); }
     .tile .tileMore svg { width: 16px; height: 16px; display: block; }
 
-    /* ---- Report, on every tile, and the one sheet they share ---------- */
-    /* SET APART FROM THE FACTS BESIDE IT: 14px of space rather than 6, and a
-       dimmer resting colour, because it is the only thing in the head anybody
-       can press by accident. The 44px box is the touch floor (SK-AUD-005) and
-       is bigger than the ink, so the extra margin is measured from the BOX and
-       still reads as one gap, not two. */
-    .tile .report {
-      margin-left: 14px; flex: none; min-height: 44px; min-width: 44px; padding: 0 10px;
-      background: none; border: 0; border-radius: 8px; color: var(--text-3);
-      font: inherit; font-size: 12.5px; cursor: pointer; opacity: 0.8;
-    }
+    /* ---- the report sheet every tile's menu opens --------------------- */
     /* Watch it big is the FOOTER's button now (lib/fullbar.js, .skfull-full).
        A `.tileFull` lived here too, beside Report, and stayed after the card
        grew a transport row -- so every tile carried the same glyph twice. */
@@ -567,8 +557,6 @@
     .tileStage.is-immersive-page {
       position: fixed; inset: 0; z-index: 2147483000;
       width: 100vw; height: 100dvh; margin: 0; border-radius: 0; }
-    .tile .report:hover { color: var(--text); background: var(--control); opacity: 1; }
-    .tile .report[data-reported] { color: var(--text-3); }
     .tile .thead { align-items: center; }
     .sheet {
       position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;

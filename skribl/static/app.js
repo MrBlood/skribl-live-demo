@@ -2407,32 +2407,6 @@ function setLoopToDrawingLength() {
   updateTrimUI();
 }
 
-function resetPhotoAdjustments() {
-  photoFit = 'cover';
-  photoOpacityVal_ = 1;
-  photoBlur_ = 0;
-  photoOffsetX = 0.5; photoOffsetY = 0.5;
-  photoZoom = 1; setZoomSliderUI();
-  photoBgImg.style.objectFit = 'cover';
-  photoBgImg.style.opacity = 1;
-  photoBgImg.style.filter = '';
-  applyPhotoPosition();
-  const opEl = document.getElementById('photoOpacity');
-  opEl.value = 100;
-  _authoringCtl('photoOpacityVal').textContent = '100%';
-  updateSliderFill(opEl);
-  const blEl = document.getElementById('photoBlur');
-  if (blEl) {
-    blEl.value = 0;
-    _authoringCtl('photoBlurVal').textContent = '0px';
-    updateSliderFill(blEl);
-  }
-  document.querySelectorAll('.photo-fit-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.fit === 'cover');
-  });
-  initPhotoFitSlider();
-  updateRepositionUI();
-}
 
 
 
@@ -2493,7 +2467,6 @@ document.querySelectorAll('.nudge-btn[data-which]').forEach(btn => {
 
 matchDrawingBtn.addEventListener('click', setLoopToDrawingLength);
 
-bindEl('resetPhotoBtn', 'click', resetPhotoAdjustments);
 let previewingLoop = false;
 let previewLoopTimer = null;
 let seamTimer = null;
@@ -2832,87 +2805,6 @@ function photoTargetDims(w, h, maxEdge) {
   return { w: Math.round(w * scale), h: Math.round(h * scale) };
 }
 
-// Decode → (optionally) downscale → re-encode. Opaque images re-encode as JPEG
-// (the size win); images with any transparency re-encode as PNG so alpha is
-// preserved. Returns a smaller data URL, or the original untouched if the
-// re-encode isn't actually smaller or anything fails (so a photo is never lost).
-// On-device only: createImageBitmap, the canvas encode/inspect, and EXIF
-// orientation can't be exercised headless — this function is never called at load
-// time (only from the import handler), so the harness only *defines* it.
-async function normalizePhotoDataURL(file, originalDataUrl) {
-  try {
-    if (typeof createImageBitmap !== 'function' ||
-        typeof document === 'undefined' || !document.createElement) {
-      return originalDataUrl;   // no decode path available — keep the original
-    }
-    // imageOrientation:'from-image' bakes EXIF rotation into the pixels so the
-    // stored image matches what the <img> preview shows; toDataURL then drops the
-    // EXIF tag, so no downstream viewer double-rotates. Fall back to the no-option
-    // form on engines that reject the options bag.
-    let bmp;
-    try {
-      bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
-    } catch (optErr) {
-      bmp = await createImageBitmap(file);
-    }
-    const srcW = bmp.width, srcH = bmp.height;
-    const t = photoTargetDims(srcW, srcH, PHOTO_MAX_EDGE);
-    const cv = document.createElement('canvas');
-    cv.width = t.w; cv.height = t.h;
-    const c = cv.getContext('2d');
-    if ('imageSmoothingQuality' in c) c.imageSmoothingQuality = 'high';
-    c.drawImage(bmp, 0, 0, t.w, t.h);   // no bg fill — keep any transparency intact
-    if (bmp.close) bmp.close();
-    // A background photo can be a truly transparent PNG (sticker / line-art).
-    // JPEG has no alpha, so flattening it here would freeze the transparent
-    // regions to a single color and they'd stop tracking the live canvas
-    // background — editor vs player, or a later bg change, then disagree. So keep
-    // alpha as PNG and only re-encode opaque images as JPEG (where the size win
-    // matters and there's no transparency to lose). JPEG inputs are always opaque,
-    // so skip the pixel scan for them.
-    let hasAlpha = false;
-    if (file.type !== 'image/jpeg' && file.type !== 'image/jpg') {
-      try {
-        const px = c.getImageData(0, 0, t.w, t.h).data;
-        for (let i = 3; i < px.length; i += 4) {
-          if (px[i] !== 255) { hasAlpha = true; break; }
-        }
-      } catch (readErr) {
-        hasAlpha = true;   // couldn't inspect — assume alpha, prefer lossless PNG
-      }
-    }
-    // Prefer WebP when the browser can encode it: it keeps alpha (so transparent
-    // images stay transparent instead of falling back to bulky lossless PNG) and
-    // beats JPEG on opaque photos. When WebP isn't available, keep the original
-    // behaviour exactly — PNG for alpha, JPEG for opaque. The alpha detect and the
-    // "only keep it if smaller" guard below both still apply, so a see-through
-    // background still tracks the live canvas colour and nothing ever gets larger.
-    const webpOK = canEncodeWebP();
-    let out, outFormat;
-    if (hasAlpha) {
-      if (webpOK) { out = cv.toDataURL('image/webp', PHOTO_WEBP_ALPHA_QUALITY); outFormat = 'webp-alpha'; }
-      else        { out = cv.toDataURL('image/png');                            outFormat = 'png'; }
-    } else {
-      if (webpOK) { out = cv.toDataURL('image/webp', PHOTO_WEBP_QUALITY);       outFormat = 'webp'; }
-      else        { out = cv.toDataURL('image/jpeg', PHOTO_JPEG_QUALITY);       outFormat = 'jpeg'; }
-    }
-    const smaller = !!(out && originalDataUrl && out.length < originalDataUrl.length);
-    if (typeof window !== 'undefined' && window.__SKRIBL_PHOTO_DEBUG) {
-      try {
-        console.log('[photo] normalize', {
-          srcW: srcW, srcH: srcH, outW: t.w, outH: t.h,
-          format: outFormat,
-          origBytes: originalDataUrl ? originalDataUrl.length : null,
-          outBytes: out ? out.length : null,
-          kept: smaller ? 'downscaled' : 'original'
-        });
-      } catch (logErr) { /* debug only */ }
-    }
-    return smaller ? out : originalDataUrl;
-  } catch (e) {
-    return originalDataUrl;   // any failure → keep the original, never lose it
-  }
-}
 
 
 
@@ -3007,41 +2899,6 @@ function setZoomSliderUI() {
   if (typeof updateSliderFill === 'function') updateSliderFill(z);
 }
 
-// Drag the background. Attaches window listeners for the duration of one drag
-// (like the loop-trim handles) so the pointer can leave the canvas mid-drag.
-function beginPhotoDrag(e) {
-  const start = getPos(e);
-  const startOX = photoOffsetX, startOY = photoOffsetY;
-  // Use the authored logical size (matches getPos above and the export path's
-  // drawPhotoFitted); getPos now returns authored px, so overflow must too.
-  const { width: w, height: h } = getCanvasLogicalSize();
-  const iw = photoBgImg.naturalWidth || w, ih = photoBgImg.naturalHeight || h;
-  const scale = Math.max(w / iw, h / ih) * photoZoom;   // cover scale × zoom
-  const overflowX = iw * scale - w;              // cropped-off width  (>0 if cropped)
-  const overflowY = ih * scale - h;              // cropped-off height
-  const move = (ev) => {
-    ev.preventDefault();
-    const p = getPos(ev);
-    const dx = p.x - start.x, dy = p.y - start.y;
-    // Dragging the image right (dx>0) reveals its LEFT side, so offset decreases.
-    if (overflowX > 0) photoOffsetX = Math.max(0, Math.min(1, startOX - dx / overflowX));
-    if (overflowY > 0) photoOffsetY = Math.max(0, Math.min(1, startOY - dy / overflowY));
-    applyPhotoPosition();
-  };
-  const up = () => {
-    window.removeEventListener('mousemove', move);
-    window.removeEventListener('mouseup', up);
-    window.removeEventListener('touchmove', move);
-    window.removeEventListener('touchend', up);
-    window.removeEventListener('touchcancel', up);
-    if (typeof scheduleAutosave === 'function') scheduleAutosave();
-  };
-  window.addEventListener('mousemove', move);
-  window.addEventListener('mouseup', up);
-  window.addEventListener('touchmove', move, { passive: false });
-  window.addEventListener('touchend', up);
-  window.addEventListener('touchcancel', up);
-}
 
 
 // Paint the WebKit track fill up to the thumb (Chrome/Safari have no native
@@ -3152,52 +3009,6 @@ function updateZoomPanSlider() {
   if (typeof updateSliderFill === 'function') updateSliderFill(s);
 }
 
-// Drag the Loop Detail waveform to pan the window. Ignores drags that start on
-// an edge handle (those resize the loop) so the two never fight.
-function dragZoomPan(wrap) {
-  if (!wrap) return;
-  const cx = (e) => SkriblEventPoint.at(e).clientX;
-  function onStart(e) {
-    if (!audioEl || !Number.isFinite(audioDuration) || audioDuration <= 0) return;
-    if (e.target.closest('.zoom-handle')) return;   // let the handle drag win
-    e.preventDefault();
-    const rect = wrap.getBoundingClientRect();
-    const zw = getZoomWindow();
-    const startCenter = (zw.start + zw.end) / 2;
-    const winDur = zw.duration;
-    const startX = cx(e);
-    wrap.classList.add('panning');
-    function onMove(ev) {
-      const dx = cx(ev) - startX;
-      // Drag right → reveal earlier audio → center moves earlier.
-      const deltaT = -(dx / rect.width) * winDur;
-      const half = winDur / 2;
-      const lo = half, hi = Math.max(half, audioDuration - half);
-      zoomCenter = Math.max(lo, Math.min(startCenter + deltaT, hi));
-      zoomFocus = 'free';
-      syncZoomFocusButtons();
-      updateTrimUI();
-    }
-    function onEnd() {
-      wrap.classList.remove('panning');
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-      window.removeEventListener('touchcancel', onEnd);
-    }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    // touchcancel too — see the note in editor_music.js. A cancelled
-    // sequence never fires touchend, so cleanup keyed only to touchend
-    // leaves the move listener installed and the drag state set.
-    window.addEventListener('touchend', onEnd);
-    window.addEventListener('touchcancel', onEnd);
-  }
-  wrap.addEventListener('mousedown', onStart);
-  wrap.addEventListener('touchstart', onStart, { passive: false });
-}
 
 
 
@@ -4095,26 +3906,32 @@ function showPlayerError(msg, canRetry) {
     const gap = (parseFloat(cs.rowGap) || parseFloat(cs.gap) || 0);
     return shellEl.getBoundingClientRect().height + padV + gap;
   }
+  // FULL SCREEN IS A DIFFERENT BOX: everything below measures `.app` and caps
+  // at 1:1, which sized the canvas to the page while the wrapper filled the
+  // screen. It cannot be fixed in the sheet — the inline width
+  // layoutPlayerCanvas writes beats any rule. DECISIONS, v306.
+  //
+  // The WRAPPER's own box, not the window: in full screen the top-layer
+  // element is the container, and it is 20px narrower than innerWidth wherever
+  // the document behind it still has a scrollbar. Measuring the box is also
+  // what layoutEditorCanvas does.
+  //
+  // LESS THE BAR'S BAND. The transport is moved into the wrapper in full
+  // screen and sits over the bottom edge, so the space a drawing may use is the
+  // box minus that. clientHeight INCLUDES padding, so the padding the sheet
+  // uses to centre the canvas does not come off here and the number has to be
+  // subtracted by hand -- if it were not, the scale and the centring would
+  // disagree and the drawing would be pushed off the top. `--pbar` is the
+  // height _syncFull measured when it moved the bar in, so reading it back is
+  // both shorter than a second DOM lookup and the only way the two cannot
+  // disagree: they are then the same number, not two measurements of it.
+  //
+  // THE PROSE IS OUT HERE AND NOT IN THE BODY, which is not style. verify_seam
+  // measures the player's reachable set as the sum of its NAMED functions'
+  // spans, start line to end line, prose included -- so a paragraph inside a
+  // counted function costs exactly what a statement costs. Out here it costs
+  // nothing and says the same thing.
   function playerFitScale() {
-    // FULL SCREEN IS A DIFFERENT BOX: everything below measures `.app` and
-    // caps at 1:1, which sized the canvas to the page while the wrapper filled
-    // the screen. It cannot be fixed in the sheet — the inline width
-    // layoutPlayerCanvas writes beats any rule. DECISIONS, v306.
-    // The WRAPPER's own box, not the window: in full screen the top-layer
-    // element is the container, and it is 20px narrower than innerWidth
-    // wherever the document behind it still has a scrollbar. Measuring the box
-    // is also what layoutEditorCanvas does.
-    // LESS THE BAR'S BAND. The transport is moved into the wrapper in full
-    // screen and sits over the bottom edge, so the space a drawing may use is
-    // the box minus that. clientHeight INCLUDES padding, so the padding the
-    // sheet uses to centre the canvas does not come off here and the number
-    // has to be subtracted by hand -- if it were not, the scale and the
-    // centring would disagree and the drawing would be pushed off the top.
-    // ONE SOURCE FOR THE BAND. `--pbar` is the height _syncFull measured when
-    // it moved the bar in; reading it back is both shorter than a second DOM
-    // lookup and the only way the scale and the sheet's centring cannot
-    // disagree -- they are then the same number rather than two measurements
-    // of the same thing taken at different moments.
     if (fsFull) return Math.min(canvasWrap.clientWidth / authorW,
       Math.max(1, canvasWrap.clientHeight
         - (parseFloat(canvasWrap.style.getPropertyValue('--pbar')) || 0)) / authorH);
@@ -4418,23 +4235,27 @@ function showPlayerError(msg, canRetry) {
     return { s: (authorW && cr.width) ? cr.width / authorW : 1,
              ox: cr.left - wr.left, oy: cr.top - wr.top };
   }
+  // replayTimelineToCanvas returns the NEXT index, so the point just drawn is
+  // nextIdx - 1. Nothing drawn yet (index 0) -> keep the nib hidden.
+  //
+  // A SIZE IN THE PEN, by the same rule and for the reasons inlineplayer.js
+  // states at length: `p.size * s` is how wide the stroke comes out on this
+  // screen, and a nib is a little over that. It answers to the scale and to the
+  // pen at once, and cannot be out of proportion with the line it is making,
+  // because it is defined against that line.
+  //
+  // 1.9x rather than 1.4x, which is the shape of THIS bead and not a different
+  // opinion: it is a radial gradient whose inner 30% is the only opaque part,
+  // so the element has to be wider than a solid dot for the visible point to
+  // come out the same size.
+  //
+  // Out here rather than in the body for the reason playerFitScale's note
+  // gives: a counted span includes its prose.
   function showNibAtIndex(nextIdx) {
-    // replayTimelineToCanvas returns the NEXT index, so the point just drawn is
-    // nextIdx - 1. Nothing drawn yet (index 0) -> keep the nib hidden.
     const p = nextIdx > 0 ? timeline[nextIdx - 1] : null;
     if (!p) { nib.hidden = true; return; }
     const g = nibGeom();
     const s = g.s;
-    // A SIZE IN THE PEN, by the same rule and for the reasons inlineplayer.js
-    // states at length: `p.size * s` is how wide the stroke comes out on this
-    // screen, and a nib is a little over that. It answers to the scale and to
-    // the pen at once, and cannot be out of proportion with the line it is
-    // making, because it is defined against that line.
-    //
-    // 1.9x rather than 1.4x, which is the shape of THIS bead and not a
-    // different opinion: it is a radial gradient whose inner 30% is the only
-    // opaque part, so the element has to be wider than a solid dot for the
-    // visible point to come out the same size.
     nib.style.setProperty('--nb',
       Math.max(5, Math.min(90, 1.9 * (p.size || 8) * s)) + 'px');
     nib.style.left = (g.ox + p.x * s) + 'px';

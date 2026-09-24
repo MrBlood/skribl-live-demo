@@ -172,15 +172,24 @@ with sync_playwright() as p:
               page.evaluate("() => pbWho.getAttribute('aria-label')"))
         # pbHold left the page bar in v226 — the hold badge on the tile is
         # the control now, and it has its own section below.
+        # WHEREVER THE WORDS ARE, AND `title` FIRST. flip.js writes these labels
+        # to `title`; on a fine pointer lib/tooltip.js moves every title to
+        # `data-tip` and removes it, including the ones written after load since
+        # v310. The module adopts on a MutationObserver, so for the rest of the
+        # tick that wrote it the new words are in `title` and `data-tip` still
+        # holds the previous ones -- the mutation row below reads immediately
+        # after buildStrip() and got the label it had just replaced. Freshest
+        # first, and the empty string a removed title leaves falls through.
+        words = "(el => el.title || el.getAttribute('data-tip'))"
         for el, want in (("pbDel", "Delete these 3 pages"),
                          ("pbCopy", "Copy these 3 pages"),
                          ("pbLeft", "Move these 3 pages left")):
-            check(f"{el} re-scopes its own label", 
-                  page.evaluate(f"() => {el}.title") == want,
-                  page.evaluate(f"() => {el}.title"))
+            check(f"{el} re-scopes its own label",
+                  page.evaluate(f"() => {words}({el})") == want,
+                  page.evaluate(f"() => {words}({el})"))
         check("MUTATION: with no range the same controls say 'this page'",
-              page.evaluate("""() => { clearSpan(true); buildStrip();
-                return pbDel.title; }""") == "Delete this page",
+              page.evaluate(f"""() => {{ clearSpan(true); buildStrip();
+                return {words}(pbDel); }}""") == "Delete this page",
               "if they read the same either way, the re-scoping is decoration")
 
         print("\nOPERATE — copy, paste, delete, hold and move a run")

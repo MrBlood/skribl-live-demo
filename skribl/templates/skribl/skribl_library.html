@@ -300,18 +300,19 @@
     .posted-thumb { width: 84px; height: 63px; border-radius: 8px; overflow: visible; background: #0b0d12; position: relative; }
     .posted-thumb .posted-shot { position: absolute; inset: 0; border-radius: 8px; overflow: hidden; }
     .posted-thumb .posted-poster { position: absolute; left: 50%; transform: translateX(-50%); top: -5.4878%; height: 128.0488%; width: auto; max-width: none; }
-    /* The kind's icon as a badge over the poster: a Flip is marked with the
-       book here as everywhere else. 18, not 14 -- at 14 with 3px of padding the
-       pen and the book were a smudge on an 84px poster and the owner could not
-       tell them apart. The badge is not a control, so no touch floor applies;
-       it only has to be legible.
-       TOP left, not bottom left, and the reason belongs to the OTHER surface:
-       the gallery tile copied these corners onto a tile that has the in-post
-       player under it, and bottom left is where that player draws its
-       transport -- so the pen sat on the play button (owner's screenshot).
-       The two surfaces are kept the same on purpose, so both moved. */
-    .posted-thumb svg { position: absolute; left: 4px; top: 4px; width: 18px; height: 18px; padding: 3px;
-      border-radius: 6px; background: rgba(6,7,10,.72); color: #dfe6f2; z-index: 1; }
+    /* WHAT IS LEFT OF THE KIND BADGE, which is its stacking and nothing else.
+       The pen and the book were drawn in the poster's top-left corner here,
+       and the gallery's tile was kept in step with it deliberately. Neither is
+       true now: the mark stands in front of the words it qualifies on this
+       page, and the gallery's stage carries no badge at all. The rule that
+       positioned and sized it therefore matched only the sound badge, which
+       overrides every one of those declarations -- forty bytes describing a
+       decision the page has stopped making, and a paragraph explaining a
+       corner nothing sits in.
+       `z-index` is the exception and is the reason this rule still exists: the
+       sound badge does not set one, and without it the badge stacks under the
+       poster's own box. */
+    .posted-thumb svg { z-index: 1; }
     /* Sound, over the OPPOSITE corner and half outside it -- the drawer's
        42px tile has always hung its speaker off the corner at -2px and this
        84px one did not, so the bigger thumb carried the smaller badge. 22px

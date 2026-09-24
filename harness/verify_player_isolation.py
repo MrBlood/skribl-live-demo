@@ -1057,7 +1057,27 @@ with sync_playwright() as sp:
     # measured the wrapper on the premise that layoutPlayerCanvas sizes it to
     # the fitted rect, which full screen makes false, so the bead rode across
     # the screen nowhere near its own line.
-    BYTES_RATCHET, BYTES_TARGET = 155_300, 153_800
+    # ---- v310: LOWERED 155,300 -> 150,300, AND THE TARGET IS NOW MET ----
+    #
+    # Measured 149,820 (app.js 137,796 -> 132,419). Four photo-drawer functions
+    # left app.js for editor_photo.js: normalizePhotoDataURL,
+    # resetPhotoAdjustments, beginPhotoDrag and dragZoomPan, 177 lines whose
+    # every call site was already in an editor-only module. A person reading a
+    # shared Skribl has no photo drawer and was downloading its upload decoder
+    # on every link.
+    #
+    # THE RATCHET NOW SITS BELOW THE TARGET, and that inversion is the point
+    # rather than an oversight: 153,800 has been the number this file was
+    # aiming AT since it was written, and the player is under it for the first
+    # time. The target stays where it is as the record of what was aimed for;
+    # the ratchet moves to just above what was achieved, because a ratchet five
+    # kilobytes above the measurement stops asking anything of the next change.
+    #
+    # WHAT IS LEFT: 1,365 lines of editor-only code still in app.js and still
+    # shipped to every player. The music preview cluster is the next carve and
+    # is harder -- its callers are still inside app.js, where the photo
+    # cluster's were not.
+    BYTES_RATCHET, BYTES_TARGET = 150_300, 153_800
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —

@@ -1,26 +1,28 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-23T11:09:28Z
+UTC timestamp           : 2026-09-24T04:38:02Z
 Host                    : Linux x86_64
-Tree SHA-256            : 46fa82b10daf1b4aa0f5cb9462c91c23026278a756e941403643476051ac5ba9
-Git commit              : 104b0c2
-Source state            : clean
-SKRIBL_VERSION          : v306
+Tree SHA-256            : e4b57c8afb397186d95e40d1a8fbd93a788ca42287479fb14a51813c9d69b20b
+Git commit              : 9429eba
+Source state            : generated-only dirty
+                            harness/LAST-RUN.txt
+SKRIBL_VERSION          : v310
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.hI94ERl8wS/harness.db)
+Database reset          : yes (fresh /tmp/tmp.nC8nYhx0Xr/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : ./harness/run_harness.sh 
+Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_icons.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
+# whole release run: 55 batches recorded as one run
 suites requested : 104
   verify_a11y.py: ok — 293/293 passed
   verify_amber.py: ok — 87/87 passed
@@ -42,7 +44,7 @@ suites requested : 104
   verify_deletion.py: ok — 65/65 passed
   verify_deletion_foundation.py: ok — 17/17 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: ok — 113/113 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)
+  verify_docs.py: ok — 111/111 passed  (3 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from; the two committed attestations name different trees (a seal is in progress), so the no-hold side is not driven)
   verify_dots.py: ok — 11/11 passed
   verify_drafts.py: ok — 31/31 passed
   verify_example.py: ok — 32/32 passed
@@ -57,7 +59,7 @@ suites requested : 104
   verify_flipmotion.py: ok — 27/27 passed
   verify_framecache.py: ok — 23/23 passed
   verify_fuzz.py: ok — 7/7 passed
-  verify_gallery.py: ok — 109/109 passed
+  verify_gallery.py: ok — 151/151 passed
   verify_gifenc.py: ok — 39/39 passed
   verify_help.py: ok — 65/65 passed
   verify_hold.py: ok — 62/62 passed
@@ -74,13 +76,13 @@ suites requested : 104
   verify_keys.py: ok — 9/9 passed
   verify_layout.py: ok — 150/150 passed
   verify_lib.py: ok — 8/8 passed
-  verify_library.py: ok — 135/135 passed
+  verify_library.py: ok — 137/137 passed
   verify_liquify.py: ok — 32/32 passed
   verify_loopcap.py: ok — 22/22 passed
   verify_media.py: ok — 24/24 passed
   verify_mediaauthz.py: ok — 48/48 passed
   verify_medialimits.py: ok — 76/76 passed
-  verify_migrations.py: ok — 70/70 passed
+  verify_migrations.py: ok — 74/74 passed
   verify_mimeparity.py: ok — 26/26 passed
   verify_move.py: ok — 82/82 passed
   verify_mp4.py: SKIPPED (0 assertions) — WebCodecs present but no H.264 profile is supported: {'avc1.42001f': False, 'avc1.4d0028': False, 'avc1.640028': False}
@@ -91,10 +93,10 @@ suites requested : 104
   verify_pagespan.py: ok — 56/56 passed
   verify_parity.py: ok — 143/143 passed
   verify_pillfit.py: ok — 24/24 passed
-  verify_player_isolation.py: ok — 49/49 passed
+  verify_player_isolation.py: ok — 55/55 passed
   verify_player_photo.py: ok — 9/9 passed
   verify_posted.py: ok — 125/125 passed
-  verify_postgres.py: SKIPPED (0 assertions) — cannot connect to PostgreSQL at the configured DSN (OperationalError)
+  verify_postgres.py: SKIPPED (0 assertions) — the psycopg driver is not installed
   verify_prefix.py: ok — 33/33 passed
   verify_pressure.py: ok — 27/27 passed
   verify_privacy.py: ok — 54/54 passed
@@ -103,7 +105,7 @@ suites requested : 104
   verify_review.py: ok — 284/284 passed
   verify_s3.py: ok — 30/30 passed
   verify_scrub.py: ok — 17/17 passed
-  verify_seam.py: ok — 279/279 passed
+  verify_seam.py: ok — 280/280 passed
   verify_select.py: ok — 55/55 passed
   verify_sharecard.py: ok — 27/27 passed
   verify_sharedrules.py: ok — 89/89 passed
@@ -114,18 +116,18 @@ suites requested : 104
   verify_storage.py: ok — 38/38 passed
   verify_strokegroups.py: ok — 24/24 passed
   verify_surfaces.py: ok — 12/12 passed
-  verify_sweepjob.py: ok — 59/59 passed
+  verify_sweepjob.py: ok — 66/66 passed
   verify_takedown.py: ok — 49/49 passed
   verify_theme.py: ok — 86/86 passed
-  verify_tilereport.py: ok — 30/30 passed
-  verify_tips.py: ok — 59/59 passed
+  verify_tilereport.py: ok — 32/32 passed
+  verify_tips.py: ok — 61/61 passed
   verify_tools.py: ok — 130/130 passed
   verify_tray.py: ok — 121/121 passed
   verify_tween.py: ok — 161/161 passed
-  verify_txcontract.py: ok — 89/89 passed
+  verify_txcontract.py: ok — 90/90 passed
   verify_ux.py: ok — 375/375 passed
   verify_version.py: ok — 30/30 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 5952   (skipped suites contribute 0)
+assertions passed: 6017   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
