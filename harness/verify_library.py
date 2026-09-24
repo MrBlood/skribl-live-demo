@@ -1319,6 +1319,39 @@ with sync_playwright() as _sp4:
           f"{_none} — fitShots must leave an unshaped row's picture alone "
           f"rather than crop it to a guess")
 
+    # THE PLAYING ROW STAYS MARKED WHILE THE LIST IS RE-DRAWN, which it did not
+    # until v311. postedui's onRender hook ran BEFORE the list was painted, so
+    # /library's `active` toggle walked the PREVIOUS render's rows and was
+    # overwritten by the innerHTML a few lines later. Pick a Skribl, type in
+    # the search box, and the highlight came off a Skribl that was still on the
+    # stage — the page saying nothing is selected while something plainly is.
+    #
+    # DRIVEN THROUGH THE SEARCH BOX rather than by calling render(): the point
+    # is a re-render somebody causes without touching the list, and a hook
+    # ordering is exactly the kind of defect a direct call can step around.
+    _p4.evaluate("""() => { localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({ id: 'actB', url: '/s/actB', title: 'Beta', kind: 'pad', pages: 1 });
+        window.SkriblPosted.add({ id: 'actA', url: '/s/actA', title: 'Alpha', kind: 'pad', pages: 1 }); }""")
+    _p4.reload(wait_until="load")
+    _p4.wait_for_timeout(1400)
+    _p4.click('.posted-row[data-id="actB"] .posted-main')
+    _p4.wait_for_timeout(600)
+    _act = lambda: _p4.evaluate(
+        "() => { const r = document.querySelector('.posted-row[data-id=\"actB\"]');"
+        "  return r ? r.classList.contains('active') : null; }")
+    check("picking a Skribl marks its row",
+          _act() is True,
+          "nothing to lose if it was never marked — this row is the fixture "
+          "for the one below")
+    _p4.fill("#postedSearch", "Bet")
+    _p4.wait_for_timeout(600)
+    check("...and the mark survives a re-render the search box caused",
+          _act() is True,
+          "the row is still on screen and still on the stage, and the page "
+          "has stopped saying so: onRender ran before the list was painted")
+    _p4.fill("#postedSearch", "")
+    _p4.wait_for_timeout(400)
+
     # TOOLTIPS, which this page had none of . Asserted on data-tip
     # rather than on `title`, because the module REMOVES the title -- so a page
     # that loaded the sheet and not the module would still have titles and
