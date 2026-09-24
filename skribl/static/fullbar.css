@@ -94,6 +94,25 @@
   flex: none;
   position: relative;
   z-index: 1;
+  /* DOUBLE-TAP ZOOM IS WHY THIS BAR FELT SLOW ON A PHONE, and the owner's
+     words for it were "the button is not very responsive, it takes pushing it
+     many times, there is a lag". Without this, Safari holds a tap for about
+     300ms to see whether a second one is coming -- so every press lands late,
+     and a press made inside that window is read as the start of a double-tap
+     gesture and thrown away rather than delivered. Press twice quickly, as a
+     person does when the first press seemed not to work, and the second one
+     is the press that disappears.
+
+     `manipulation` keeps tap, scroll and PINCH and drops only the double-tap
+     zoom, which is the distinction that matters here: `user-scalable=no` and
+     `maximum-scale=1` would also end the delay and would take pinch-zoom away
+     from everybody, and this repository fails any page that tries them.
+
+     flip.css has said all of this since the Flip app shipped, at
+     `.flip-app button` -- the same fix, on that surface's controls, with the
+     same reasoning written above it. This shared bar never got it, which is
+     why a Skribl's transport felt slower than the editor's own buttons. */
+  touch-action: manipulation;
   width: 42px;
   height: 42px;
   padding: 0;

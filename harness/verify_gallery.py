@@ -2809,6 +2809,60 @@ with sync_playwright() as _spr:
     _br.close()
 
 
+
+print("\nGALLERY — the transport's controls do not wait for a second tap")
+# "the button is not very responsive, it takes pushing it many times, there is
+# a lag" -- the owner, on the speed control, after its cycling was fixed.
+#
+# WITHOUT `touch-action: manipulation` Safari holds a tap for about 300ms to
+# see whether a second one is coming. Every press lands late, and a press made
+# inside that window is read as the start of a double-tap zoom and dropped --
+# so pressing again, which is what a person does when the first press seemed
+# not to work, is the press that disappears. flip.css has carried this rule
+# since Flip shipped; this shared bar never got it.
+#
+# COMPUTED, ON THE REAL BUTTON, and on every control rather than one: the
+# property is inherited-ish in effect (a parent's `manipulation` covers a child
+# that does not set it), so a rule that reaches only some of the bar would read
+# as fixed from any single sample.
+_TOUCH = r"""() => {
+    const names = ['skfull-play', 'skfull-loop', 'skfull-mute',
+                   'skfull-rate', 'skfull-full'];
+    const out = {}; let n = 0;
+    names.forEach(c => {
+        const b = document.querySelector('.' + c);
+        if (!b) { out[c] = 'absent'; return; }
+        n++;
+        out[c] = getComputedStyle(b).touchAction;
+    });
+    out.__found = n;
+    return out;
+}"""
+with sync_playwright() as _spt:
+    _bt = _spt.chromium.launch()
+    _pt = _bt.new_context(viewport={"width": 390, "height": 900},
+                          is_mobile=True, has_touch=True).new_page()
+    post_public_api("tap latency fixture")
+    browsing.goto(_pt, BASE, "/gallery")
+    _pt.wait_for_timeout(1800)
+    _ta = _pt.evaluate(_TOUCH)
+    # COUNTED BEFORE MEASURED: every control absent would make the census below
+    # vacuously true, and this suite has shipped that mistake before.
+    check("the bar's controls are on the page to be measured",
+          _ta.get("__found", 0) >= 4,
+          f"{_ta!r} — fewer than four controls found, so the check below "
+          f"would pass by having nothing to look at")
+    _bad = {k: v for k, v in _ta.items()
+            if k != "__found" and v not in ("manipulation", "absent")}
+    check("...and every one of them drops the double-tap wait",
+          not _bad,
+          f"{_bad!r} — 'auto' is the ~300ms hold before a tap becomes a "
+          f"click, and the tap made inside it is swallowed as a double-tap "
+          f"gesture; that is the owner's 'takes pushing it many times'")
+    _pt.close()
+    _bt.close()
+
+
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")
 sys.exit(0 if passed == len(results) else 1)
