@@ -1210,13 +1210,14 @@ with sync_playwright() as sp:
     # argue for itself. The in-post player's entire reason for existing is that
     # it is small; a version of it that grows toward app.js should fail here
     # rather than be discovered on somebody's feed.
+    #
     # MEASURED AT THE URLs THE PAGE ACTUALLY REQUESTS, bust and all. Fetching
-    # /static/skribl/inlineplayer.js bare measures the wrong thing: skribl/
-    # jsstrip.py removes comments from the RESPONSE only for the file's real
-    # content bust (verify_assetcache.py explains why a fabricated one buys no
-    # work), and this file is mostly comments. Bare, it read 28,739 B; what a
+    # /static/skribl/inlineplayer.js bare measures the wrong thing:
+    # skribl/jsstrip.py removes comments from the RESPONSE only for the file's
+    # real content bust (verify_assetcache.py explains why a fabricated one buys
+    # no work), and this file is mostly comments. Bare it reads 28,739 B; what a
     # host downloads is a third of that. A ratchet on the unstripped number
-    # would have priced every explanatory comment as if it shipped.
+    # would price every explanatory comment as if it shipped.
     #
     # THE CSS IS NOT STRIPPED and is a third of the figure. jsstrip.py is
     # JavaScript-only and cssgraph.py only derives player.css from styles.css,
@@ -1226,438 +1227,34 @@ with sync_playwright() as sp:
     # inventing a third asset pipeline to save 5 KB is not a trade this project
     # should make twice.
     #
-    # AND THE CSS IS WHERE THIS RATCHET BITES FIRST. Cropping the poster added
-    # lib/sharecard.js (993 B) and, at first, 2,800 B of explanation in
-    # inlineplayer.css — which took the total past 27,000 and was the right
-    # failure: that prose ships to every host on every page. It moved into
-    # inlineplayer.js's header, where jsstrip removes it from the response, and
-    # the CSS kept the numbers and a pointer. Same words, a third of the weight.
+    # AND THE CSS IS WHERE THIS RATCHET BITES FIRST -- a paragraph there is
+    # bandwidth somebody else pays for. Product reasoning belongs in
+    # inlineplayer.js's header, where jsstrip removes it from the response; the
+    # stylesheet keeps the numbers and a pointer. That carve has twice been the
+    # difference between a raise and none.
     #
-    # Pinned just above the floor that landed, the way verify_player_isolation.py
-    # pins its own: the next kilobyte has to argue for itself, and a version of
-    # this player growing toward app.js fails here rather than being discovered
-    # on somebody's feed.
+    # THE RULES, which are what survives of the per-raise history git holds:
     #
-    # 25,000 -> 26,000, and the ratchet earned it a second time. What pushed it
-    # over was 782 B of TRANSPORT on the player handle — play, pause, toggle,
-    # setLoop, and the branch that stops at the end instead of looping — added
-    # so the profile's Skribls tab (/library) could DRIVE this player rather
-    # than be a third replay implementation. verify_library.py gates that at
-    # the source: no requestAnimationFrame in library.js.
+    #   PIN JUST ABOVE THE MEASURED FLOOR, every time.
     #
-    # A feed therefore pays for a transport it never uses, and that is the
-    # honest cost of the trade: a few hundred bytes against three surfaces that
-    # cannot disagree about how a drawing replays. Carving it out would put a
-    # second request on the profile to save a third of a kilobyte on the feed.
-    # If this number moves again, the question is whether the FEED is the caller
-    # that needs it.
+    #   SPEND AGAINST A RAISE BEFORE ASKING FOR IT -- move prose out of the CSS,
+    #   compact the module, delete what the new code replaces.
     #
-    # 26,000 -> 27,500 for the LOOP CONTROL: a post's second viewer control,
-    # about 1.5 KB across the stylesheet and the handler. Unlike the transport
-    # above, this one is paid for by the caller that uses it — the feed is
-    # exactly where somebody wants a two-second drawing to stop repeating.
-    # 27,500 -> 29,500 for lib/audiosession.js. The estimate when the change was
-    # specced was ~800 B and the first implementation served at 1,650 — twice
-    # it — because it built its own silent WAV byte by byte; the ratchet was
-    # raised against THAT number and the raise has not been revisited since.
+    #   SAY WHICH CALLER PAYS. The transport on the player handle is used by
+    #   /library, not by a feed, so a feed pays for something it never runs:
+    #   that is the honest cost of three surfaces that cannot disagree about how
+    #   a drawing replays, and carving it out would put a second request on the
+    #   profile to save a third of a kilobyte on the feed. The loop control, by
+    #   contrast, is paid for by the caller that wants it.
     #
-    # THE COMMENT THAT USED TO SIT HERE DESCRIBED THAT FIRST IMPLEMENTATION IN
-    # THE PRESENT TENSE, and it had not shipped for several releases: the module
-    # carries a base64 constant and serves at ~1,293 B, which is what
-    # verify_player_isolation.py's ratchet says twenty lines into its own note.
-    # Two ratchets in one tree stating contradictory facts about the same file
-    # is worse than either being wrong alone, because each looks corroborated.
-    # Caught in an external review of v277, not by a gate — the numbers here are
-    # prose, and prose is not checked.
+    #   A NUMBER IN PROSE IS NOT CHECKED. Two ratchets in this tree once stated
+    #   contradictory sizes for lib/audiosession.js, each looking corroborated
+    #   by the other, and the stale one was quietly holding 500 B of slack open.
+    #   An outside review caught it; no gate could.
     #
-    # 29,500 -> 29,000, measured: 28,907 B served, of which lib/audiosession.js
-    # is 1,362 — not the 1,650 the old comment claimed. Pinned just above the
-    # floor like every other number here, which also means the 500 B of slack
-    # that the wrong figure was quietly holding open is now closed.
-    #
-    # 29,000 -> 32,000 FOR THE WET/DRY COMPOSITOR, 2,913 B measured (31,820
-    # served). The largest single raise this number has taken, and the one with
-    # the clearest thing to point at: without it a stroke below 100% opacity was
-    # drawn here as a row of translucent stamps, so its overlaps stacked and the
-    # feed showed a scalloped, banded version of a drawing that is smooth on
-    # /s/<id>. The v277 review put it plainly — in a drawing product the drawing
-    # IS the content, and a feed representation should not change how it looks.
-    #
-    # Measured on ONE surface with the feature absent, because the obvious
-    # cross-surface comparison is confounded (an opaque control scored worse:
-    # the two players fit the drawing to different boxes). Same fixture, this
-    # player only: 145,014 ink without, 177,246 with, against 185,205 on
-    # /s/<id>. The gap to canonical closes from 21.7% to 4.3%, and the residual
-    # is that same fit difference.
-    #
-    # The old header's reason for NOT doing this said "at feed scale — twenty
-    # boxes, one playing". That figure was wrong: play() settles every other
-    # player, so exactly one is ever playing and the cost is two offscreen
-    # canvases. It also allocates nothing at all for an all-opaque payload,
-    # which is most of them — makeCompositor returns null and the direct path
-    # is unchanged.
-    #
-    # THE COST IS PAID BY THE SURFACE
-    # THAT NEEDS IT, which is the rule: without it a posted Skribl's music is
-    # silent in a feed on any iPhone with the ringer switch off. This player is
-    # Web Audio, and iOS routes Web Audio into a session that switch mutes while
-    # leaving <audio> elements alone — which is why Test Seam has always played
-    # on the owner's phone and Preview Loop has not. A silent held <audio>
-    # session is the fix, and it has to ship wherever the player does.
-    # 32,000 -> 31,000 in v281, when dropping lib/sharecard.js from the macro
-    # took the measured total from 31,820 B to 30,827 B. A ratchet moves down
-    # when the truth is smaller; leaving it at 32,000 would have banked the
-    # saving as slack for the next thing to spend without arguing for it.
-    #
-    # 31,000 -> 31,900 for PER-PAGE DRAW, measured at 31,800 B. This is the
-    # argument v281 asked the next spender to make, so here it is: a page
-    # marked `draw` replays its own strokes instead of snapping in, and the
-    # in-post player is the surface where that matters most — it is the one a
-    # reader meets without choosing to. Without these bytes a Skribl posted
-    # with drawing pages plays in a feed as an ordinary flip, which is the
-    # preview/post divergence this whole release exists to end. The cost is
-    # holdtiming.js's millisecond model (1,293 -> 1,937 B) plus the reveal in
-    # inlineplayer.js; the module's slot-denominated half was deleted rather
-    # than carried alongside, which is why it is 644 B and not double.
-    #
-    # It does not spend all of what v281 banked: 31,900 against the 32,000 that
-    # stood before, so the saving is still worth something.
-    #
-    # 31,900 -> 32,000, measured at 31,970, and this one is NOT a feature. The
-    # per-page draw above shipped with the reveal arithmetic written out on
-    # each surface separately, and this player's copy asked the wrong question:
-    # it decided a page was still whenever its progress was 0, which is also
-    # what a drawing page reads at the instant it begins. So on the feed — and
-    # nowhere else — a Draw-on page appeared FINISHED for its first frame and
-    # then wiped and redrew. lib/holdtiming.js now owns progress -> strokes as
-    # dueCount(), the same way it already owned how long a page lasts.
-    #
-    # The module grew 1,937 -> 2,271 B and this player shrank 17,751 -> 17,587,
-    # because its copy went; the net is 170 B to make four surfaces agree at a
-    # boundary where they did not. That spends the rest of what v281 banked and
-    # goes no further: 32,000 is exactly where the ratchet stood before that
-    # saving, so the embed has never been more expensive than it already was.
-    # The next spender inherits no slack and has to argue as v281 asked.
-    #
-    # 32,000 -> 32,500, measured 32,417, AND THE NEXT SPENDER WAS THE VERY NEXT
-    # RELEASE, so here is the argument that paragraph demanded.
-    #
-    # v286 centralized how long a page lasts and how much of it is revealed,
-    # and an outside review then found that the two, composed, could never show
-    # a drawing page FINISHED: indexAtMs() owns a page over [start, end), so
-    # the clock leaves at the instant progress would reach 1, and dueCount()
-    # releases the last point only at 1. Measured on the same 26-point page
-    # this suite posts: the 26th point was never due while that page was up.
-    # Its final mark never appeared, and where that point began a stroke the
-    # whole stroke was missing.
-    #
-    # So this is not a feature and there is no cheaper version of it. The bytes
-    # are displayAt() in the module (331 B) and this player calling it (116 B).
-    # Spent before asking, again: the jump path passes displayAt() no `last`
-    # rather than re-deriving index and progress beside it, which is 82 B and
-    # one fewer place that could disagree about what a scrub shows.
-    #
-    # It does cross the 32,000 that stood before v281 banked its saving. Said
-    # plainly: a host now pays 417 B more than at any previous point in this
-    # file's history, and what that buys is a player that does not silently
-    # drop the last mark of every drawing page.
-    # 32,500 -> 33,500, measured 33,406, and this one buys no feature: it
-    # removes a defect this player has always had and nobody had measured.
-    #
-    # A Motion Smear's ghosts are see-through strokes whose alpha rides in an
-    # 8-digit hex colour, and parseStrokeAlpha matches rgba() only -- so the
-    # wet/dry compositor above, whose whole job is to stop a translucent stroke
-    # stacking against itself, has never seen one. Drawn dot-then-line-per-
-    # segment, a ghost written at alpha 46/255 painted at 83 and the trail wore
-    # a ladder of bright bands, ON EVERY FEED SHOWING A SMEAR. The owner spotted
-    # it in a render; no assertion here could, because nothing measured it.
-    #
-    # The fix is a single canvas path per uniform run, which cannot stack
-    # against itself and is FEWER canvas calls than the walk it replaces. It is
-    # the same fidelity argument the compositor made at 29,000 -> 32,000, for a
-    # third of the bytes: a feed representation must not change the drawing's
-    # appearance.
-    #
-    # WHAT WAS SPENT BEFORE ASKING, which is this ratchet's rule. The shared
-    # rule lives in lib/strokelayers.js, so this file carries only the inline
-    # fallback every lib here gets -- lib/strokelayers.js is NOT among the
-    # embed's assets and adding it would have cost a request and more bytes
-    # than the fallback. The fallback and the run walk were then compacted
-    # (-101 B measured) and every word of the reasoning lives in flip.js, which
-    # is in no byte budget, rather than here -- though jsstrip means comments in
-    # THIS file were never the cost. What remains, 906 B, is the code.
-    # RAISED 33,500 -> 35,200, and the argument belongs here rather than in a
-    # commit message. MEASURED, not estimated: lib/photofit.js is 1,155 B
-    # served and inlineplayer.js grows 464 B (18,738 -> 19,202) for the fit
-    # capture and the call. 33,483 -> 35,102, which is 4.8%.
-    #
-    # WHAT THE BYTES BUY: the in-post player hard-coded a centred cover and
-    # discarded the fit the author chose, so a photo composed with Fit was
-    # letterboxed in the editor and on /s/<id> and CROPPED on the profile
-    # stage, in the feed, and in every host embed. Measured on an 800x600
-    # canvas with a 1000x250 photo authored `contain`: /s/ reported
-    # object-fit:contain while the in-post canvas came back solid photo at 6%,
-    # 50% and 94% of its height -- cover, two thirds of the image cropped away.
-    #
-    # WHY NOT SPEND AGAINST IT INSTEAD: the only way to keep the number was to
-    # write the rect maths a second time inside inlineplayer.js. lib/photofit.js
-    # exists BECAUSE Pad, Flip and the player each had their own copy and one
-    # could not read the vocabulary another wrote (its header has the story), so
-    # the cheap-looking option is the one that re-makes the original defect. The
-    # embed grows 3.4% and every surface agrees about where a photo goes.
-    # RAISED AGAIN, 35,200 -> 35,500, MEASURED 35,385 — and this raise is a
-    # correction of the one above rather than a new feature's bill.
-    #
-    # THE FIGURE ABOVE WAS TAKEN BEFORE THE FILE STOPPED CHANGING. "33,483 ->
-    # 35,102" was measured when the fit capture landed. The profile stage then
-    # turned out not to load lib/photofit.js at all, inlineplayer.js grew a
-    # warn-once notice naming the missing module (283 B served, measured by
-    # stripping just that block), and nobody re-measured: 35,102 + 283 = 35,385
-    # against a ceiling of 35,200. The full battery is what said so, three
-    # pull requests later. A ratchet raised from a design-time number is a
-    # ratchet raised from a number that is about to be wrong; the measurement
-    # belongs at the END of the change.
-    #
-    # SPENT AGAINST FIRST, and there was nothing honest to spend. The only
-    # 185 B available is the warn notice itself, and that notice exists
-    # BECAUSE the silent fallback beside it shipped a cropped photo to the
-    # owner's own profile page and said nothing — cutting it to a stub to hit
-    # a number would be paying for the ceiling with the thing the ceiling is
-    # supposed to protect. The flag name and the console guard would give back
-    # perhaps 45 B, which does not reach and is not worth the obscurity.
-    #
-    # 115 B of headroom, and the margin is printed below rather than left to
-    # be worked out, because the lesson of this raise is that a number nobody
-    # re-reads goes stale in one release.
-    # RAISED 35,500 -> 35,700, MEASURED 35,616, for the last fidelity gap this
-    # player had left. 116 B, and every one of them is the feature.
-    #
-    # WHAT THE BYTES BUY: a background photo's opacity and blur. The editor and
-    # /s/<id> hang the photo in a real <img> behind the canvas and let CSS fade
-    # and soften it; a feed box has one canvas and nothing else, so the same two
-    # authored choices are globalAlpha and ctx.filter or they are nothing. They
-    # were nothing. A photo composed at 40% painted fully opaque in every feed,
-    # every profile stage and every host embed, and one composed soft painted
-    # sharp. Measured on an 800x600 canvas: the 40% fixture read green 200 (the
-    # photo at full strength) where the authored composite over the background
-    # is 92, and a hard edge under blur(12px) kept its full 128-point step.
-    # After: 92, and the step falls to 32.
-    #
-    # THE SAME ARGUMENT THE COMPOSITOR MADE AT 29,000 -> 32,000 AND PHOTOFIT AT
-    # 33,500 -> 35,200: a feed representation must not change the drawing's
-    # appearance. This ratchet has now been spent three times on exactly that
-    # sentence and nothing else, which is the pattern worth noticing -- the
-    # in-post player's costs are almost entirely the cost of not being a
-    # different-looking product.
-    #
-    # SPENT AGAINST FIRST, and 18 B came back: the alpha is assigned rather than
-    # guarded, because setting globalAlpha to 1 costs less than asking whether
-    # it is 1. The only other 100 B within reach is the warn-once notice naming
-    # a missing lib/photofit.js, which exists because the silent fallback beside
-    # it shipped a cropped photo to the owner's own profile page and said
-    # nothing. Paying for a ceiling with the thing the ceiling protects is not
-    # spending, it is borrowing.
-    #
-    # RAISED 35,700 -> 35,900, MEASURED 35,814, for the tap band on the loop
-    # and mute pills. 114 B, and the owner approved the cost before it was
-    # spent, having asked for the targets to be fixed knowing they were here.
-    #
-    # WHAT THE BYTES BUY: a control a finger can hit. Measured on /gallery,
-    # the loop pill answered 31x31 to elementFromPoint against the 44 this
-    # project decided in SK-AUD-005 -- the only control on that page under the
-    # floor, and a control every host embed carries. The pill STAYS 30px: a
-    # feed tile is small and two 44px slabs over somebody's drawing is a
-    # different product. Only the band grows, which costs no pixels.
-    #
-    # AND THE COMMENT COST MORE THAN THE RULE, which is the lesson worth
-    # keeping. The first draft of the note beside that rule was seven lines and
-    # 470 B, because CSS comments are SERVED -- jsstrip strips JavaScript, not
-    # stylesheets. The reasoning lives in DECISIONS now and the sheet carries
-    # one line. In a file inside a host's byte budget, prose is not free and
-    # the habit of explaining generously has to invert.
-    #
-    # FOURTH RAISE, SAME SENTENCE. 29,000 (compositor), 33,500 (photo fit),
-    # 35,700 (opacity and blur), now this: every one of them bought "the embed
-    # must not be a worse product than the real thing". Nothing else has ever
-    # moved this number.
-    #
-    # RAISED 35,900 -> 36,300, MEASURED 36,231, for immersive mode: the drawing
-    # on the whole of whatever contains it. 69 B of headroom.
-    #
-    # AND THE GATE BELOW IS WHY IT IS SPENT HERE AT ALL. The gallery shipped
-    # these three rules in its OWN sheet, reaching into the player's poster and
-    # canvas from a page — which is exactly what "no template hand-writes the
-    # in-post player's internals" forbids, and it caught it on main after the
-    # merge. The choice was never "component or page"; it was "component, or a
-    # copy of the component's internals in every page that wants full size".
-    # The gate is right and the bytes are what being right costs.
-    #
-    # WHAT THEY BUY, on every surface including a host's: the share card is
-    # hidden (it is cropped to hide its wordmark, which at screen size just cuts
-    # the picture off) and the canvas gets `object-fit: contain` (sized `auto`
-    # with two maximums it SHRINKS a big drawing and leaves a small one at its
-    # own size -- an 816x612 drawing measured 816x612 on a 900x900 screen).
-    #
-    # FIFTH RAISE, SAME SENTENCE: 29,000 (compositor), 33,500 (photo fit),
-    # 35,700 (opacity and blur), 35,900 (the tap band), now this. Every one
-    # bought "the embed must not be a worse product than the real thing", and
-    # this one adds a capability the embed did not have rather than repairing
-    # one it had wrong.
-    #
-    # SPENT AGAINST FIRST, TWICE. The first draft of the comment beside those
-    # rules was ten lines and cost 614 B -- more than the rules -- because CSS
-    # comments are SERVED, which this file has now learned twice. And
-    # `max-width: none; max-height: none` went in with them until a measurement
-    # showed the canvas fills the box without them.
-    # ---- v308: LOWERED 36,300 -> 35,400, which is the first time this has
-    # ---- moved DOWN, and the reason it could is worth more than the bytes.
-    #
-    # The note above says the CSS "is left alone deliberately: it is the
-    # smaller half, it is the part a host is most likely to read before
-    # overriding something". That is still right, and it is not a reason to
-    # ship 42% of the file as comments, which is what it had become (4,232 B of
-    # 10,015). The line is not LENGTH, it is AUDIENCE:
-    #
-    #   stays   the token list, the poster geometry, and the defensive
-    #           declarations -- `max-width: none` and why -- because a host
-    #           reads those before overriding something, which is the exact
-    #           case the note is protecting.
-    #   moves   PRODUCT reasoning: why there are two controls and not five,
-    #           why loop is lit at rest, why a silent post hides mute. A host
-    #           overriding a rule does not need it; jsstrip strips it from the
-    #           JavaScript response; and this file's own header has said since
-    #           the poster crop landed that it belongs in inlineplayer.js.
-    #
-    # Same words, none of the weight -- the same trade the paragraph above
-    # records for the 2,800 B of crop explanation. 898 B of CSS, and the new
-    # floor is pinned 19 B above what landed, so the full-screen bar and the
-    # post-like card that follow have to argue for their own bytes rather than
-    # quietly spending a carve somebody else paid for.
-    # ---- v308, THE SPEND, against the carve two paragraphs up -------------
-    #
-    # The carve pinned this at 35,400, 19 B over what landed, so the features
-    # that motivated it would still have to argue. They do, here, and the two
-    # pieces are named separately because they are separate decisions.
-    #
-    # +132 B, `.is-bare`. The class means THE HOST SUPPLIES THE TRANSPORT: the
-    # component hides its own control cluster, its duration chip and its idle
-    # veil, and shows the drawing only. Owner, from two screenshots of one
-    # feature: "the two full screens should look identical with controls
-    # present on the bottom... all the stuff should be on the bottom". A page
-    # cannot do this for itself -- the gate a dozen lines up forbids a template
-    # naming the component's internals and caught exactly that on the gallery a
-    # release ago -- so the class is the component's and the decision is the
-    # page's. `:is()` rather than three selectors is 60 B of the 132, and one
-    # rule is also the clearer writing: the three parts are one idea.
-    #
-    # +324 B, the viewer's SPEED. Owner: "on players (across surfaces) should
-    # there be a speed control for PAD?" -- and full screen on the gallery and
-    # the profile is driven by THIS player, not by app.js, so "across surfaces"
-    # could not be satisfied without it. Only the clock is scaled, in one place
-    # (segElapsed), so the flip hold table, the stroke timeline and the progress
-    # fraction keep working without knowing a rate exists; the stored `t` values
-    # are never touched. The music rides the same rate and pitch-shifts doing
-    # it, which is the trade /s/ already makes for the same reason.
-    #
-    # Per PLAYER and not per page, deliberately: a feed scrolls past twenty of
-    # these and a rate chosen on one says nothing about the next.
-    #
-    # 35,400 -> 35,920, measured 35,884, pinned 36 B above it. Net against the
-    # carve: 898 B out, 456 B back, so a host still downloads 442 B less than
-    # before this release touched the file.
-    # ---- v309, THE POSTER STOPS SHOWING THE CARD AROUND THE DRAWING -------
-    #
-    # +1,081 B of JavaScript, -242 B of CSS, net +805 B. Both halves argued
-    # here, because a raise that only names its spend is a number nobody can
-    # check.
-    #
-    # WHAT IT BUYS. A tile shows the share card until somebody presses play,
-    # and the card CONTAINS the drawing: a 4:3 drawing sits in a 656px picture
-    # in the middle of a 1200px card, so the band crop left 110px of card
-    # ground AND the card's own plate border showing on each side. Every tile
-    # in the gallery was a picture inside a frame inside a card, on every host
-    # that embeds this player, and a screenshot showed it: "fix the share
-    # card bands too". fitPoster() frames the card's drawingRect() exactly
-    # where the canvas will land and clips the rest away, so idle and playing
-    # are one composition and pressing play changes what moves, not where it
-    # is.
-    #
-    # WHY IT COSTS A KILOBYTE AND NOT A HUNDRED BYTES. The framing is not a
-    # constant: it depends on the drawing's shape against the box's, which
-    # decides both which axis letterboxes and how far the card must be scaled
-    # for its inner rect to reach that size. Four positions, a clip inset and
-    # a corner radius, all computed per post. A stylesheet cannot express it
-    # because percentages resolve against the box and the answer depends on
-    # the DRAWING.
-    #
-    # THE ALTERNATIVES, AND WHY THEY ARE WORSE. Cropping the poster
-    # server-side is the obvious one and costs the deployed app a Pillow
-    # dependency plus a PNG decode per uncached poster -- a C extension in
-    # requirements.txt for a cosmetic crop. Storing a second, pre-cropped
-    # image at post time grows every payload and leaves every existing post
-    # uncropped. Putting the numbers in the markup ships ~80 B per post
-    # instead of ~1 KB cached once, which is worse from about a dozen posts
-    # on, and puts card arithmetic in a template -- the exact thing the gate
-    # above forbids.
-    #
-    # THE CARVE, -242 B: the stylesheet's "three geometry facts" paragraph.
-    # That file's own header says product reasoning belongs in
-    # inlineplayer.js's -- CSS comments are served to every host and nothing
-    # strips them -- and the paragraph had to be rewritten anyway, because the
-    # band crop it describes is the NO-SCRIPT FALLBACK now rather than the
-    # only path. It also named /s/<id>/card.png, which has not been the
-    # poster's route since v287.
-    #
-    # 35,920 -> 36,760, measured 36,725, pinned 35 B above it.
-    #
-    # 36,760 -> 37,200, measured 37,124, pinned 76 B above it. THE NIB IS A
-    # SIZE IN THE DRAWING NOW, not a size on the screen. It was 8px of CSS
-    # wherever it appeared, so the one element that is supposed to say "a pen
-    # is here, this size" was the only thing on the surface that did not answer
-    # to how big the drawing is -- a boulder on an 84px library thumb and a
-    # speck on a 1280px full screen ("shouldn't the nib be scaled to the
-    # size of the player, rather than stay the same size no matter where it
-    # occurs?"). The player already computes that scale every frame for the
-    # nib's POSITION; this spends the bytes to use it for the size too.
-    #
-    # +144 B of CSS and +220 B of script, ONE ENTRY FOR THE WHOLE NIB PASS
-    # rather than a raise per round: the size, the damping and the ink are one
-    # piece of work in one release, and three notes about the same element
-    # would be noise at a number that is supposed to make the next person
-    # argue. What the bytes are:
-    #
-    #   SIZE      `var(--nb, 8px)` twice and a calc() for the ring, in place of
-    #             three literals; a scale cache, a clamp and one setProperty.
-    #   DAMPING   a square root. The first cut scaled the bead LINEARLY, which
-    #             is right for a stroke and wrong for a nib -- the drawing
-    #             quadrupled in full screen and so did the bead ("full
-    #             size looks good but nib is huge now"). A nib is the point of
-    #             contact of a pen, and a pen held over a bigger picture is
-    #             still a pen.
-    #   INK       the bead takes the colour it is laying down. It was white
-    #             whatever the pen was, which reads as a cursor hovering over
-    #             the drawing rather than as the pen making it -- and the
-    #             shared-link player has tinted its bead since it was written,
-    #             so the two implementations disagreed about something a person
-    #             sees side by side.
-    #
-    # THE ALPHA IS HANDLED IN THE SHEET, and that is where the CSS half mostly
-    # went: a stroke may carry alpha (`rgba()`, and the 8-digit hex a Motion
-    # Smear writes -- app.js has anyStrokeAlpha for exactly this), and a
-    # half-transparent bead over a dark canvas is barely there. The ink is laid
-    # over an opaque white base, so a faint pen gives a pale nib rather than a
-    # ghost. That is the same intent as the other player's alpha strip, bought
-    # for one declaration instead of a colour parser in a file a host pays for
-    # by the byte. `color-mix` draws the ring from the same colour; a browser
-    # too old for it drops that one declaration and keeps the dot.
-    #
-    # THE CARVE, -264 B: the paragraph explaining `--nb` beside the CSS rule.
-    # That file's header says product reasoning belongs in inlineplayer.js's,
-    # for exactly this reason -- CSS comments are served to every host and
-    # nothing strips them, so a paragraph there is bandwidth somebody else pays
-    # for. The explanation is in the script, where it costs nothing, and the
-    # rule is three declarations a reader can follow without it. Without that
-    # carve this change was 461 B rather than 197.
+    #   MEASURE A FEATURE ON ONE SURFACE WITH IT ABSENT. The obvious
+    #   cross-surface comparison is confounded -- an opaque control scores worse,
+    #   because the two players fit the drawing to different boxes.
     EMBED_RATCHET = 37_200
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:

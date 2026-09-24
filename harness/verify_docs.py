@@ -702,7 +702,7 @@ check("MUTATION: a local failure is FAIL whatever the lanes say",
       _rr.release_status(False, [], "clean") == "FAIL"
       and _rr.release_status(False, ["x"], "dirty") == "FAIL")
 
-# ---------------------------------------------------------------------- v299
+# --------------------------------------------------------------------------
 # AND IT TOOK THE SOURCE STATE LAST. `state` was not a parameter of
 # release_status at all, so a run on a dirty tree rendered
 #

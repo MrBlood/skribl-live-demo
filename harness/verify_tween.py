@@ -1,20 +1,14 @@
 """Motion Smear: a generated page that looks like a long exposure.
 
-THE BUTTON SAID "IN-BETWEEN" UNTIL v295 AND THE EFFECT NEVER WAS ONE. An
-in-between, to an animator, is a single intermediate POSE; this integrates
-the WHOLE PATH between two poses into one page, deliberately, and every
-property pinned below is a property of doing that. Renaming it is the whole
-of that change: not one assertion here moved, because nothing about the
-effect moved. This file keeps its name, and so does `addtween` -- an
-internal name for an algorithm nobody is replacing. The prose below still says
-"in-between" throughout: it narrates what was decided when it was decided, and
-rewriting it would make the history read as though the name had always been
-right. Where a paragraph described something that no longer EXISTS rather than
-something since renamed, it has been corrected and says so.
+THE NAME. An in-between, to an animator, is a single intermediate POSE; this
+integrates the WHOLE PATH between two poses into one page, deliberately, and
+every property pinned below is a property of doing that. The file keeps its
+name, and so does `addtween` -- an internal name for an algorithm nobody is
+replacing.
 
 WHAT IT IMITATES. Stop-motion shot with the shutter open while the puppet moves,
 so one frame integrates the whole path between two poses. What sells that look is
-not blur — it is that the blur is UNEVEN. The feet, which barely travelled, come
+not blur -- it is that the blur is UNEVEN. The feet, which barely travelled, come
 out nearly sharp; the arms, which swung furthest, smear away to nothing.
 
 That gradient is why this can be done honestly in a stroke document. Sample the
@@ -22,7 +16,7 @@ motion between two pages at N steps and draw every step faintly: a point that
 hardly moves lays all N copies on top of each other and stays crisp; a point that
 travels far spreads them along its path and goes soft. Nobody authors the
 falloff. It is what integrating a motion MEANS, and it falls out of the
-arithmetic — which is the property this suite pins, because it is the one that
+arithmetic -- which is the property this suite pins, because it is the one that
 would be quietly lost if somebody "optimised" the sampling later.
 
 IT IS ORDINARY STROKE DATA. No new field, no raster layer, nothing the player
@@ -31,30 +25,30 @@ already honours it. So the generated page posts and replays like any other, and
 this suite proves that end to end rather than asserting it.
 
 THE POINT BUDGET IS THE HAZARD. Multiplying a page by 27 is exactly how a
-feature makes a drawing unpostable — the server refuses a frame over
+feature makes a drawing unpostable -- the server refuses a frame over
 MAX_POINTS_PER_FRAME (20,000), and it would refuse it at the moment the user
 tries to share, having given no earlier warning. N adapts to the page instead of
 being a constant, and there are assertions here for both ends of that.
 
 IT REFUSES RATHER THAN GUESSES. Interpolation needs the two pages to correspond
-— same strokes, moved — which is what Duplicate-then-drag produces. Two freehand
+-- same strokes, moved -- which is what Duplicate-then-drag produces. Two freehand
 redraws have nothing to pair, and inventing a pairing would produce a mess that
 looks like a bug in the tool rather than a limit of the idea.
 
 THE FADE IS AN 8-DIGIT HEX, AND THAT IS A PERFORMANCE DECISION, NOT A STYLE ONE.
 Both renderers decide whether to give a translucent stroke its own offscreen
-layer by matching the rgba() FUNCTION form — alphaOf in flip.js,
-parseStrokeAlpha in app.js, which is also the PLAYER's renderer — and neither
+layer by matching the rgba() FUNCTION form -- alphaOf in flip.js,
+parseStrokeAlpha in app.js, which is also the PLAYER's renderer -- and neither
 matches a hex, while canvas accumulates #rrggbbaa either way. An exposure is 27
-samples of every stroke, so a six-limb figure was 162 translucent strokes and
+samples of every stroke, so a six-limb figure is 162 translucent strokes and
 ~486 full-canvas operations per frame: 221 ms against a 12 fps budget of 83 ms,
-versus 5.8 ms as hex. Layering is also simply wrong for this content — it exists
+versus 5.8 ms as hex. Layering is also simply wrong for this content -- it exists
 to stop a stroke compounding at its own overlaps, and an exposure IS compounding
 overlaps.
 
 So this suite pins the RENDER COST, not the colour string. Teaching alphaOf to
-understand hex would make exposures slow again — not broken, just slow, which is
-exactly the kind of regression that ships — and a test on the string could stay
+understand hex would make exposures slow again -- not broken, just slow, which is
+exactly the kind of regression that ships -- and a test on the string could stay
 green while the heuristic around it changed.
 
 A FIX THAT ONLY APPLIES TO NEW DATA LEAVES EVERY USER WHO ALREADY HIT THE BUG
@@ -62,44 +56,37 @@ STILL HITTING IT. That happened three times in this one feature, each time
 reported again from the same phone after a fix had shipped. Hence: paintStatic
 carries a cost ceiling so pages built BEFORE the hex change paint direct
 (218 ms -> 5.1 ms) while a hand-drawn frame with six see-through strokes still
-layers — a ceiling, not a ban, and both halves are asserted. A "Rebuild
-in-betweens" menu item did the other half, re-running the generator over pages
-already built; it was REMOVED in v290 at the owner's call, on the grounds that a
-page which should be lighter is re-added rather than rebuilt. The ceiling is
-what carries old pages now, and it is the half that is pinned.
+layers -- a ceiling, not a ban, and both halves are asserted. The ceiling is what
+carries old pages; a page that should be lighter is re-added rather than rebuilt.
 
 TWO CEILINGS, NOT ONE, AND ONLY ONE IS FIXED. The postable limit is a constant
 (MAX_POINTS_PER_FRAME, 20,000). The render allowance is 1000/fps, so the same
-exposure that is comfortable at 12 fps has half the slot at 24 — which is how a
+exposure that is comfortable at 12 fps has half the slot at 24 -- which is how a
 document already inside the point budget still stalled. The plan fits both and
 never drops below TWEEN_MIN_SAMPLES, so the exposure coarsens rather than the
 document becoming unshareable.
 
-RECOGNISING A GENERATED PAGE TOOK THREE SIGNALS, because nothing in the format
-marked one and a false positive overwrites somebody's drawing: 8-digit hex ink,
-neighbours that still interpolate, and a run count that is an exact multiple of
-the source's. That heuristic went with Rebuild in v290 and nothing here asserts
-it. Since v295 a generated page IS marked, though not in the format: the editor
-keeps a recipe beside the frame in a WeakMap, which is what lets the draft store
-{k, n, passes} instead of the points. It is deliberately not a field on the
-frame — see "the frame itself is still strokes/strokeGroups/hold" below.
+A GENERATED PAGE IS MARKED, though not in the format: the editor keeps a recipe
+beside the frame in a WeakMap, which is what lets the draft store {k, n, passes}
+instead of the points. It is deliberately not a field on the frame -- see "the
+frame itself is still strokes/strokeGroups/hold" below. Nothing here has to
+RECOGNISE one from its ink any more, which took three signals and could not be
+made safe: a false positive overwrites somebody's drawing.
 
 NO BUDGET CLOSES A DEVICE GAP, which is why the frame bitmap cache exists.
-At 4x CPU throttle one in-between cost ~215 ms against a 41.7 ms slot. The frame
+At 4x CPU throttle one exposure cost ~215 ms against a 41.7 ms slot. The frame
 is STATIC, so lib/framebitmap.js captures a heavy page's first paint and every
 later visit is one drawImage, on both playback surfaces. Only pages past 1,500
 points earn a bitmap, captures happen at the displayed resolution, and past
-64 MB — or one failed allocation — frames paint direct: slower, never broken.
+64 MB -- or one failed allocation -- frames paint direct: slower, never broken.
 The play timer estimates a BLIT for cached frames, because subtracting a
 rasterisation cost that can no longer happen made cached loops rush.
 
-NO BLUR, DELIBERATELY. 26 unblurred samples are most of the way to the
-photograph and cost nothing, and the faint ribbing reads as a DRAWN in-between,
-which suits an app that looks like a printed zine. A real gaussian is one render
-attribute away — ctx.filter carries it and works in this engine — but that
-attribute is a contract the PLAYER would have to honour too, which is the same
-trap the `pressure` note in flip.js records. A decision to make on purpose, not
-a default to slide in.
+THE BLUR IS DRAWN, NOT ctx.filter. A render attribute is a contract the PLAYER
+would have to honour too, which is the same trap the `pressure` note in flip.js
+records. Each sample is emitted as a few concentric passes instead, widest and
+faintest first so the crisp core lands on top of its own halo -- ordinary
+strokes, so a Skribl made this way opens in a player that predates the feature.
 """
 import json
 import os
@@ -674,7 +661,7 @@ with sync_playwright() as p:
           f"{made} points — 27 samples of this page would be {900*27}, which the "
           f"server would refuse at the moment the user tried to share")
 
-    # ---------------------------------------------------------------- v295
+    # --------------------------------------------------------------------
     # THE DRAFT DOES NOT STORE THE POINTS. A smear is up to 27 samples of every
     # stroke, four passes deep, and the autosave wrote every one of them as
     # JSON: 722 KB for one page, so seven of them fill a 5 MB origin quota and
@@ -1250,7 +1237,7 @@ with sync_playwright() as p:
     check("and a page too heavy for any exposure is refused, not truncated",
           plans["absurd"] is None, str(plans["absurd"]))
 
-    # ---------------------------------------------------------------- v296
+    # --------------------------------------------------------------------
     # THE SMEAR COUNTS WHAT YOU CAN SEE.
     #
     # Reported with a picture: duplicate a page, rub the diagonal out, draw a
@@ -1365,7 +1352,7 @@ with sync_playwright() as p:
           f"{order['count']} ink strokes; the replacement drawn over the rubbed "
           f"area is being treated as rubbed out itself")
 
-    # ---------------------------------------------------------------- v296
+    # --------------------------------------------------------------------
     # AIMED AT THE PART THAT MOVES.
     print("\nAIMED — the selection is the argument the effect wanted")
     FIG = """(deg) => {
@@ -1485,7 +1472,7 @@ with sync_playwright() as p:
           f"{trip['was']} points saved, {trip['now']} rebuilt — a draft that "
           f"reloads different from the one it stored")
 
-    # ---------------------------------------------------------------- v296
+    # --------------------------------------------------------------------
     # PAIRED BY SHAPE, AND AIMED WITHOUT BEING ASKED.
     print("\nMATCHING — which stroke is which, and which of them moved")
     FIGM = """(deg, extra) => {
@@ -1561,7 +1548,7 @@ with sync_playwright() as p:
           return tweenMatch(ia, ib).map(m => m ? { j: m.j, rev: !!m.reversed } : null);
         }""", [a, b])
 
-    # ---------------------------------------------------------------- v300
+    # --------------------------------------------------------------------
     # THE INVARIANT, NOT A PATCH: two drawings with identical geometry and
     # completely different sampling must produce the same correspondence.
     #
@@ -1745,7 +1732,7 @@ with sync_playwright() as p:
           f"{same['chip']!r} — a page that looks like a copy of the one before "
           f"it needs to say why, or it reads as the tool being broken")
 
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # UNDO TAKES THE PAGE BACK, AND THE CARVE WITH IT.
     #
     # addTween inserted a page and cleared the redo stack but never wrote to
@@ -1798,7 +1785,7 @@ with sync_playwright() as p:
           _u["redone"] == _u["added"],
           f"{_u['redone']} vs {_u['added']}")
 
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # A STROKE THAT MOVED, DECLARED STILL BECAUSE IT WAS DRAWN CAREFULLY.
     #
     # tweenHeldStill decides whether a paired stroke is smeared or carried
@@ -1917,7 +1904,7 @@ with sync_playwright() as p:
           f"called MOVED because the two recordings hold different point counts. "
           f"Geometry describes the drawing; sampling describes how we observed it")
 
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # WHERE IN TIME THE SMEAR LANDS — and this is the smear's OWN assertion,
     # not a copy of the in-between's, because carveForInsert reports the slots
     # it freed and each button spends them at its own call site. Both said
@@ -1973,7 +1960,7 @@ with sync_playwright() as p:
             "writing a hard 1, the pair came out shorter than the pose had been "
             "and every page after it moved")
 
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # THE SMEAR DIES ON A ZERO GROUP TOO, and separately.
     #
     # Same defect, its own call site: a group is a stroke's point count and must
@@ -2012,7 +1999,7 @@ with sync_playwright() as p:
           f"{_z['chip']!r} — the stroke travels 220px, so a refusal would mean "
           f"the empty run had eaten the motion rather than the button")
 
-    # ---------------------------------------------------------------- v301
+    # --------------------------------------------------------------------
     # A SMEAR THE DOCUMENT CANNOT HOLD IS REFUSED BEFORE IT IS MADE.
     #
     # Every budget in this file is about ONE page against the server's per-frame
@@ -2127,7 +2114,7 @@ with sync_playwright() as p:
           f"{_ib.get('total')} against {_ib.get('limit')} — the late refusal at "
           f"POST is exactly what the early check exists to prevent")
 
-    # ---------------------------------------------------------------- v302
+    # --------------------------------------------------------------------
     # THE PAGE CEILING, WHICH IS THE ONE A LONG FLIPBOOK MEETS FIRST.
     #
     # v301 gave the client the DOCUMENT's point budget. Measuring it turned up
@@ -2287,7 +2274,7 @@ with sync_playwright() as p:
           f"{_ps.get('ptsPages')} pages, said {_ps.get('ptsSaid')!r} — nine pages "
           f"of 12 points into a document 88 short of the cap")
 
-    # ---------------------------------------------------------------- v302
+    # --------------------------------------------------------------------
     # SMEAR WEIGHT — a control, and honestly labelled as one.
     #
     # The v302 spike measured what this does NOT do: the shipped page at 50%

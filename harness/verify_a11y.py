@@ -1317,7 +1317,7 @@ with sync_playwright() as p:
               _c0 and _c1 and _c1["ratio"] >= 7 and _c1["muted"] != _c0["muted"],
               f"default {_c0}, more {_c1}")
         _pg.close()
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # A NAME THE BROWSER COMPUTES, ON THE POINTER TYPE THAT LOSES IT.
     #
     # lib/tooltip.js's adopt() copies `title` into data-tip and then removes it,

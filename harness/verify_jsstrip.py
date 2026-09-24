@@ -265,117 +265,40 @@ with sync_playwright() as sp:
     print(f"    keeping our own leading block comments would add {_banner:,} B "
           f"across {len(player_js)} player scripts (jsstrip's keep_banner=False)")
 
-    # 153,600 -> 153,800, and this is a target moving rather than a ratchet, so
-    # it says why. Full screen on /s/<id> cost the player 231 B of wiring; 171 B
-    # of that was given back first by sharing one exit handler between the two
-    # controls, dropping a typeof guard that was checking a function
-    # declaration in its own scope, and building aria-pressed from the boolean.
-    # The remaining 140 B buys the control the canonical share surface was
-    # missing, which the ask was and then waived this number over.
-    #
-    # THE NUMBER HAS NOT MOVED AGAIN SINCE, and the fix that would have moved
-    # it paid for itself instead. Making full screen actually ENLARGE the
-    # drawing -- the wrapper filled the screen while the canvas kept its page
-    # size -- wanted another 169 B. It came out of the same block rather than
-    # out of this target: `_fsWrap` was a second handle on `canvasWrap`, the
-    # exit helper was guarding a method that cannot be missing once something
-    # is fullscreen, and the scale branch reads a flag `_syncFull` already
-    # computes for the control's label instead of re-reading the document.
-    #
     # WHAT THE TARGET IS FOR, so the next person does not read it as slack:
     # START-HERE concluded from a function count that reaching it needs a
     # separate player entry point, and the v199 handoff concluded it does not.
-    # The number is the evidence for the second.
+    # The number is the evidence for the second, and it is met.
     #
-    # AND THE RULE WRITTEN HERE WAS TESTED WITHIN THE HOUR. This paragraph
-    # first said the margin was single digits and that the next spend had to
-    # come out of carving rather than out of raising the line again. Making
-    # full screen measure the WRAPPER's box instead of the window -- the
-    # correct fix, because a scrollbar gutter can make the two differ -- then
-    # wanted 20 B more than existed. It came out of the same block: a
-    # `canvasWrap &&` guard on a reference dereferenced unguarded three hundred
-    # lines above, two reads of document.fullscreenElement that the fsFull flag
-    # already answers, and a one-line helper with a single caller. The number
-    # did not move, and the margin is printed below so the next person does not
-    # have to work it out.
-    #
-    # The rule stands: this target comes out of the 5 editor globals and the
+    # THE RULE: this target comes out of the 5 editor globals and the
     # editor-only paths verify_player_isolation still counts on the player, not
     # out of this line. A target raised once per release is a record of
     # spending, not an achievement.
-    # "-109 B under" is what this line used to say when it FAILED, which reads
-    # as a margin and is a deficit. Over and under are named, not signed.
     #
-    # ---- v308: RAISED 153,800 -> 154,600, AGAINST THE RULE WRITTEN ABOVE ----
-    #
-    # Measured 154,535. The rule two paragraphs up says this target comes out
-    # of carving, not out of this line, and that a target raised once per
-    # release is a record of spending. This raise breaks that rule, on purpose,
-    # and says so rather than quietly moving a number and writing a tidy
-    # justification -- which is the failure mode the rule exists to prevent.
-    #
-    # WHAT HAPPENED. The margin here was 25 B. The viewer's speed control
-    # ("on players (across surfaces) should there be a speed control for
-    # PAD? it sometimes draws too fast or slow") costs 760 B of stripped player
-    # JS: segElapsed(), showRate(), the cycle handler, and one playbackRate
-    # line so the music keeps up. Measured before and after, not estimated:
-    # app.js 136,374 -> 137,134.
-    #
-    # WHAT WAS TRIED. Tightening the control itself -- collapsing showRate's
-    # three writes, dropping the per-rate title sentences -- is worth about
-    # 140 B of the 735, and the version in the tree already has most of it.
-    # Nothing else in the feature is removable without deleting the feature.
-    #
-    # WHAT WAS NOT TRIED, AND IS THE DEBT. The carve the rule points at: the
-    # five editor globals verify_player_isolation still counts on the player
-    # (GLOBALS_RATCHET 5, target 0) and the editor-only paths beside them.
-    # That is a real piece of work in code this change does not otherwise
-    # touch, and doing it badly at the end of a long session is how a player
-    # regression ships. It is named here so the next person finds a debt
-    # rather than a mystery, and so the owner can reverse this trade -- the
-    # honest alternatives were "carve first, ship the control after" and "do
-    # not ship the control", and both were available.
-    #
-    # The 800 B is the measurement plus 65 B, not a round number chosen for
-    # comfort: the next addition should have to argue as this one did.
-    #
-    # ---- v310: LOWERED 154,600 -> 153,800, WHICH IS THE RAISE GIVEN BACK ----
-    #
-    # Measured 149,820, so the target is met with 3,980 B to spare -- met for
-    # the first time since it was set, and met by the carve the note above
-    # named as the debt rather than by another move of the line.
-    #
-    # WHAT WAS CARVED. Four functions out of app.js and into editor_photo.js:
-    # normalizePhotoDataURL, resetPhotoAdjustments, beginPhotoDrag and
-    # dragZoomPan, 177 lines whose every call site was already in an
-    # editor-only module. A person reading a shared Skribl has no photo drawer
-    # and was downloading its upload decoder on every link. app.js 137,796 ->
-    # 132,419 B parsed; lean_total 155,214 -> 149,820.
-    #
-    # THE RAISE IS REVERSED, NOT JUST SURVIVED. v308's note said the honest
-    # alternatives were "carve first, ship the control after" and "do not ship
-    # the control", and that it was named "so the owner can reverse this
-    # trade". The owner did: "do the right thing. Make it a cleaner better
-    # tree." So the number goes back to what it was before that release spent
-    # it, rather than being left at the spent value with a comfortable margin.
+    # It has been broken exactly once, deliberately and in writing, to ship the
+    # viewer's speed control with 25 B of margin -- and then reversed by the
+    # carve the same note had named as the debt, rather than left at the spent
+    # value with a comfortable margin. That is the only way this line is
+    # allowed to move: name the debt when you spend, pay it when you can.
     #
     # WHAT IS LEFT OF THE DEBT, so the next person finds a figure and not a
-    # feeling: 1,365 lines of editor-only code still sit in app.js and still
-    # ship to every player. The photo drawer was the cluster whose call sites
-    # were ALL already outside app.js, which is what made it safe to move at
-    # the end of a long session. The music preview cluster (~223 lines:
-    # startWebAudioLoop, startLoopPreviewNative, playNativeLooped,
-    # startLoopPreview, playMusicLooped) is the next one and is harder,
-    # because its callers are still inside app.js.
+    # feeling: ~1,365 lines of editor-only code still sit in app.js and still
+    # ship to every player. The photo drawer was carvable because its call
+    # sites were ALL already outside app.js. The music preview cluster (~223
+    # lines: startWebAudioLoop, startLoopPreviewNative, playNativeLooped,
+    # startLoopPreview, playMusicLooped) is next and is harder, because its
+    # callers are still inside app.js.
     #
-    # AND THE CARVE BROKE THE PAD ONCE, which is worth recording because the
-    # failure was invisible to every gate but one. `bindEl('resetPhotoBtn',
+    # AND A CARVE CAN BREAK THE EDITOR INVISIBLY. `bindEl('resetPhotoBtn',
     # 'click', resetPhotoAdjustments)` sits at app.js's TOP LEVEL and passes
     # the handler BY REFERENCE, so the name has to exist when that line runs --
     # and a function carved into a file that loads after app.js does not. The
     # Pad threw a ReferenceError on load and abandoned every line after it.
-    # verify_boot's "the script reached its last line" is what caught it. The
-    # binding travels with the function now.
+    # verify_boot's "the script reached its last line" is the only gate that
+    # caught it. A binding travels with its function.
+    #
+    # "-109 B under" is what this line said when it FAILED, which reads as a
+    # margin and is a deficit. Over and under are named, not signed.
     _margin = 153_800 - lean_total
     check("REACHES the 153,800 target (strip + whitespace collapse)",
           lean_total <= 153_800,

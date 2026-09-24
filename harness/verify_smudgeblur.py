@@ -635,7 +635,7 @@ with sync_playwright() as p:
                   "is not", not (msg and "draw something first" in msg),
                   f"{msg!r} — there is a drawing on screen")
 
-        # ---------------------------------------------------------- v301
+        # --------------------------------------------------------------
         # A SMUDGE MUST NOT TURN A MOTION SMEAR SOLID.
         #
         # Reported from the app: a 2-3px drag on a generated Motion Smear put a
@@ -756,7 +756,7 @@ with sync_playwright() as p:
               f"names the mechanism where the pixel count names the symptom: "
               f"one of them going red alone is the more useful signal")
 
-        # ---------------------------------------------------------- v302
+        # --------------------------------------------------------------
         # A SMUDGE ON A MOTION SMEAR LEFT A MESH, AND IT WAS THE RENDERER.
         #
         # The reported picture: smudge a generated page and its tube turns into

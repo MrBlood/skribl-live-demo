@@ -712,7 +712,7 @@ with sync_playwright() as p:
     check("and moves it to the top", dedup and dedup[0]["id"] == "aaa",
           str([e["id"] for e in dedup]))
 
-    # ---------------------------------------------------------------- v280
+    # --------------------------------------------------------------------
     print("\nCUSTODY — the cap governs history and never authorisation")
     # THE FINDING, from an adversarial audit of v279. write() truncated with
     # `list.slice(0, LIMIT)` on every call, and v279 had just put the only copy

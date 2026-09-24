@@ -148,7 +148,7 @@ check("the same token is reused rather than rotated per request",
       again == token,
       "rotating per response breaks any client that cached the first one")
 
-# ------------------------------------------------------------------ v299
+# ----------------------------------------------------------------------
 # THE DESTRUCTIVE ROUTES, WHICH THE VALIDATOR DID NOT REACH UNTIL NOW.
 #
 # `bp.skribl_csrf` was consulted on POST and nowhere else, so DELETE and PATCH

@@ -204,7 +204,7 @@ with sync_playwright() as p:
                                      "size": 5, "t": 0, "erase": False,
                                      "start": True}],
                         "strokeGroups": [1], "hold": h}]}) is None
-    # ------------------------------------------------------------ v301
+    # ----------------------------------------------------------------
     # THE SAME SHAPE AGAIN, FOR THE DOCUMENT'S POINT BUDGET. MAX_TOTAL_POINTS
     # is a whole-Skribl limit the server owns, and until v301 no client tracked
     # it at all: the smear planner budgets a PAGE against the per-frame caps
@@ -687,7 +687,7 @@ with sync_playwright() as p:
     pg.close()
     browser.close()
 
-# ------------------------------------------------------------------ v299
+# ----------------------------------------------------------------------
 # THE FALLBACK BRANCH, WHICH NOTHING HAD EVER EXECUTED.
 #
 # Every lib call site in this tree carries an inline fallback for "a surface
