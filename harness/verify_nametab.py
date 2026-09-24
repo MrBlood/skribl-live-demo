@@ -1,4 +1,4 @@
-"""v269 — the skribl NAME, shared by Pad and Flip.
+"""The skribl NAME, shared by Pad and Flip.
 
 A skribl gets a title from the ⋯ overflow menu ("Name this skribl"), which drops
 a drawer (the same motion as Tune). v268 hung this off a persistent header tab;
@@ -48,7 +48,7 @@ def run(page, label, path):
     page.goto(BASE + path, wait_until="networkidle")
     page.wait_for_timeout(400)
 
-    # v269: naming moved off the canvas into the overflow menu. The persistent
+    # Naming moved off the canvas into the overflow menu. The persistent
     # header tab is gone; the menu carries a "Name this skribl" row instead.
     check(f"[{label}] the old persistent name tab is gone (naming is in the menu now)",
           page.query_selector("#nameTab") is None)

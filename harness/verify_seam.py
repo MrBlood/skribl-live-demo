@@ -341,7 +341,7 @@ if _marker in _appjs:
     # carry a number nobody has re-checked since v282.
     #
     # 1790 -> 1810 at v308 for the viewer's speed control, measured 1793.
-    # Owner: "on players (across surfaces) should there be a speed control for
+    # Reported: "on players (across surfaces) should there be a speed control for
     # PAD? it sometimes draws too fast or slow and I'd like to control that".
     #
     # WHAT IT COSTS: segElapsed(), three lines, which is the ONE place the

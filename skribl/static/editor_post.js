@@ -318,7 +318,7 @@
       // The form stays on screen at full strength as the record of what was
       // posted; its fields stay disabled (set by 'sending') until the sheet
       // is opened again. It used to sit at the sending state's half opacity
-      // with the title wiped (owner, v293, from a phone).
+      // with the title wiped (v293, from a phone).
       body.style.opacity = '';
     } else if (state === 'error') {
       posting = false;

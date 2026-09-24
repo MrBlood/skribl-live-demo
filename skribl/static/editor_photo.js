@@ -333,7 +333,7 @@ updateSliderFill(photoBlurEl);
   }
 })();
 
-/* ---- CARVED OUT OF app.js (v310) -----------------------------------------
+/* ---- CARVED OUT OF app.js -----------------------------------------
  *
  * Four functions whose every call site was already in this file or in
  * editor_draw.js, and which the player therefore cannot name -- but which the

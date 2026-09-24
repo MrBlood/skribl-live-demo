@@ -1,4 +1,4 @@
-"""v280 — the operator's door, for posts nobody else can withdraw.
+"""The operator's door, for posts nobody else can withdraw.
 
 THE FINDING, from an adversarial audit of v279. The v279 capability is minted
 at creation, so every row that predates the migration holds NULL and

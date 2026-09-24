@@ -80,7 +80,7 @@
   /* Popovers are FADE-ONLY, never climbed. They joined the target list so the
      pill would yield to them, and on a desktop that is what happened — but on
      a phone the shape pop's top sits mid-screen and the lift "fit", so
-     "Saving" rode the popover tower to halfway up the display (owner: "the
+     "Saving" rode the popover tower to halfway up the display ("the
      saving auto save... shows up half way up the screen"). The pill lifts
      over BARS; if the lifted spot still sits on a popover, it fades instead —
      which is what this file's own comment always claimed happened. */

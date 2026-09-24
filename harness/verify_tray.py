@@ -139,7 +139,7 @@ with sync_playwright() as p:
         # what the product IS, and it should cost somebody a deliberate edit
         # here rather than slipping in behind a `>=`.
         #
-        # ⚑ RATCHET RAISED, v226, FLAGGED FOR THE OWNER. Flip gains a sixth
+        # ⚑ RATCHET RAISED, v226, FLAGGED. Flip gains a sixth
         # entry, "artmove" — and it is NOT a new capability. Move artwork has
         # shipped since v124; it lived in the PAGE BAR, a row about pages,
         # holding the one control there that moves the drawing rather than the
@@ -148,7 +148,7 @@ with sync_playwright() as p:
         # the comment above intends — but read it as a control moving house,
         # not as a new tool.
         #
-        # ⚑ RATCHET RAISED, v238, FLAGGED FOR THE OWNER. Flip gains a tenth
+        # ⚑ RATCHET RAISED, v238, FLAGGED. Flip gains a tenth
         # entry, "stamp", and this one IS a new capability: a persistent,
         # multi-slot, tap-to-place clipboard. It adds nothing to the saved
         # format — a placed stamp is ordinary stroke groups — but it does add a

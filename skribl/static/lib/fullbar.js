@@ -1,49 +1,30 @@
 /* The full-screen bar: one transport, and the SAME one on both surfaces.
  *
- * THE BUG THIS EXISTS FOR. The owner sent two screenshots of the same feature:
- * the profile's stage full screen had a way out and no controls, the gallery's
- * tile full screen had controls and no way out, and neither looked like the
- * other. "In the end the two full screens should look identical with controls
- * present on the bottom. all the stuff should be on the bottom."
+ * Neither page builds its own; both call this. The failure mode of two copies
+ * is not that one is wrong today, it is that one is fixed tomorrow.
  *
- * They diverged because each page built its own. So neither page builds one
- * now: this module does, and both call it. Identical is then a property of the
- * code rather than a thing somebody keeps true by hand — the failure mode of
- * two copies is not that one is wrong today, it is that one is fixed tomorrow.
+ * IT MUST LIVE INSIDE THE FULLSCREENED ELEMENT. Under the real Fullscreen API
+ * only that subtree renders, so a bar sitting in the page would simply be gone.
  *
- * WHY IT LIVES INSIDE THE FULLSCREENED ELEMENT. Under the real Fullscreen API
- * only the fullscreened subtree renders, so a bar that sat in the page would
- * simply be gone. It is appended to the wrapper the page fullscreens, and shown
- * only while that wrapper is up.
+ * IT PLAYS NOTHING. Every control drives the in-post player's own handle
+ * (play/pause/seek/setLoop/setRate and the shared sound switch): the buttons
+ * are the page's, the clock is the player's. A second replay implementation is
+ * the defect verify_sharedrules.py exists about.
  *
- * WHAT IT DOES NOT DO. It does not play anything. Every control drives the
- * in-post player's own handle (play/pause/seek/setLoop/setRate and the module's
- * shared sound switch), which is the rule the profile's stage already follows:
- * the buttons are the page's, the clock is the player's. A second replay
- * implementation is the defect verify_sharedrules.py exists about.
+ * THE COMPONENT'S OWN CHROME YIELDS. The page adds `is-bare` to the player,
+ * hiding its cluster and duration chip, or there are two transports on screen.
+ * It does NOT hide the idle veil: that is the play cue, not a control, and a
+ * card without it is a black rectangle with no sign it moves.
  *
- * AND THE COMPONENT'S OWN CHROME YIELDS. The page adds `is-bare` to the player
- * (inlineplayer.css), which hides its cluster and its duration chip. Without
- * that there are two transports on screen, which is the thing being fixed. It
- * does NOT hide the idle veil: that is the play cue, not a control, and a card
- * that drops it is a black rectangle with no sign it moves.
- *
- * ===========================================================================
- * TWO CONFIGURATIONS, ONE BUILDER (v308, direction B)
- * ===========================================================================
- *
- * The owner picked the post-like card, whose footer is a transport under the
- * drawing — which is this bar, with fewer controls and no scrub row of its
- * own. Building a second one in gallery.js would contradict the paragraph
- * above within a day of writing it, so `attach` takes what varies instead:
+ * TWO CONFIGURATIONS, ONE BUILDER. `attach` takes what varies:
  *
  *   full screen  restart play loop mute rate | who | exit, scrubber on its
  *                own row, shown only while the wrapper is up.
  *   card footer  play loop mute | scrubber inline | time | full, always shown.
  *
- * Everything else — what a control DOES, how it reads the player's state, the
- * rule that lit means "currently true" — is shared, which is the half that
- * actually rots when it is copied.
+ * Everything else — what a control DOES, how it reads the player, the rule
+ * that lit means "currently true" — is shared, which is the half that rots
+ * when it is copied.
  */
 (function (global) {
   'use strict';
@@ -148,10 +129,8 @@
     var bRestart = made.restart, bPlay = made.play, bLoop = made.loop;
     var bMute = made.mute, bRate = made.rate;
     /* The speed this control last ASKED for, per bar. Null until the first
-       press, so an untouched bar steps from whatever the player reports and
-       nothing changes for the surfaces that were already working. See the
-       rate handler for why a control that reads only the player cannot
-       advance when the player stops agreeing with it. */
+       press, so an untouched bar steps from whatever the player reports. See
+       the rate handler for why reading the player alone cannot advance. */
     var wanted = null;
 
     if (ownRow) {
@@ -242,40 +221,26 @@
     bRate.addEventListener('click', function () {
       var pl = player();
       if (!pl) return;
-      /* sync() RUNS WHATEVER setRate DOES, and that is what the `finally` is
-       * for. It used to be the line after, so anything thrown inside --
-       * setRate rebuilds the audio graph, on a context the browser is allowed
-       * to take away -- skipped the repaint and left the label reading 1x over
-       * a player that had already changed speed. A person pressing a control
-       * that does not change is looking at a broken control whether the cause
-       * is the control or the report on it, and the owner has now reported
-       * "the 1x speed does not change when clicked" twice.
+      /* THE REPAINT IS IN A `finally`. setRate rebuilds the audio graph on an
+       * AudioContext the browser may take away; a throw from in there must not
+       * skip the repaint and leave the label reading a speed the player is no
+       * longer running. setRate does not let that throw escape either -- either
+       * half alone leaves the other's failure silent. */
+      /* THE STEP COMES FROM WHAT THIS CONTROL LAST ASKED FOR WHENEVER THE
+       * PLAYER DISAGREES WITH IT.
        *
-       * (setRate no longer lets that throw escape either; both halves are
-       * here because either one alone leaves the other's failure silent.) */
-      /* THE STEP IS TAKEN FROM WHAT THIS CONTROL LAST ASKED FOR WHENEVER THE
-       * PLAYER DISAGREES WITH IT, and that is the third report's fix.
+       * Stepping from `pl.rate()` is right only while the handle answering is
+       * the one the last press wrote to. When it is not -- a player rebuilt
+       * under the bar, a handle swapped for another card's -- the read comes
+       * back at the default and the cycle recomputes the SAME next value every
+       * press, so the speed sticks. An UNKNOWN rate is worse: indexOf gives
+       * -1, (-1 + 1) % 3 is 0, so every press asks for 1x and a control
+       * already at 1x looks dead.
        *
-       * Reading `pl.rate()` and stepping from it is correct only while the
-       * handle answering is the one the last press wrote to. When it is not
-       * -- a player rebuilt under the bar, a handle swapped for another card's
-       * -- the read comes back at the default and the cycle recomputes the
-       * SAME next value every press. That is exactly the owner's third
-       * report, in all three of its shapes: "goes to 2x and sticks at 2x"
-       * (read says 1, so 2 every time), "got one to ½x and it stays there",
-       * and "in the gallery it does nothing at all" -- because an UNKNOWN
-       * rate gives indexOf -1, and (-1 + 1) % 3 is 0, so every press asks for
-       * 1x and a control already at 1x looks dead. Three symptoms, one cause.
-       *
-       * It could not be reproduced here: Chromium, touch or click, one tile
-       * or eight, cycles 1 → 2 → ½ → 1 and calls setRate exactly once per tap.
-       * The reports are from iOS Safari and this container has no WebKit to
-       * drive, so this hardens the failure rather than having watched it.
-       *
-       * `wanted` is NOT a copy of the player's state for display -- the label
-       * below still reads the player, so it cannot lie about the speed being
-       * run. It is only this control's memory of its own last request, which
-       * is the one thing the player cannot tell it. */
+       * `wanted` is NOT a cached copy for display -- the label below still
+       * reads the player, so it cannot lie about the speed being run. It is
+       * this control's memory of its own last request, which is the one thing
+       * the player cannot tell it. */
       var now = pl.rate();
       var from = (wanted !== null && now !== wanted) ? wanted : now;
       var i = RATES.indexOf(from);
@@ -292,32 +257,20 @@
        A control that keeps a copy is a control that lies the moment anything
        else moves the thing it is about — a replay ending, a row being swapped
        under the stage, another post claiming the page's sound. */
-    /* WRITE ONLY WHAT CHANGED, and this is not a micro-optimisation -- it is
-       why the speed button did not answer a press.
+    /* WRITE ONLY WHAT CHANGED. Not a micro-optimisation: it is why the speed
+     * button did not answer a press.
      *
-     * `sync()` runs on a FRAME while the drawing plays, and it used to assign
-     * every label, icon and title unconditionally. `innerHTML =` and
-     * `textContent =` REPLACE a node's children even when the new value is
-     * identical, so the bar tore its own buttons apart and rebuilt them about
-     * 67 times a second. Measured on a playing card: 1,750 DOM mutation
-     * records per second, 134 rebuilds of the play and mute buttons in two
-     * seconds, and the rate button's own contents replaced under the pointer.
+     * `sync()` runs on a FRAME while the drawing plays. `innerHTML =` and
+     * `textContent =` REPLACE a node's children even when the value is
+     * identical, so assigning unconditionally rebuilt every button ~67 times a
+     * second. A PRESS WHOSE ELEMENT IS REMOVED AND RE-INSERTED BETWEEN THE
+     * MOUSEDOWN AND THE MOUSEUP PRODUCES NO CLICK -- the node keeps its
+     * listeners, so pointerdown and pointerup still arrive and only the click
+     * goes missing.
      *
-     * A press whose element is removed and re-inserted between the mousedown
-     * and the mouseup produces NO CLICK -- the node keeps its listeners, so
-     * pointerdown and pointerup still arrive, which is exactly what the
-     * owner's console showed: six down/up pairs in a row with no click
-     * between them, then one that got through. "It works sometimes" is what a
-     * race against a 60Hz rebuild looks like from the outside.
-     *
-     * The title writes had a second cost: `lib/tooltip.js` watches the
-     * `title` attribute, so 345 title writes a second woke its observer 345
-     * times a second to move the same string to `data-tip` and strip it
-     * again, which sync then restored on the next frame. The two modules were
-     * fighting each other at frame rate.
-     *
-     * So: compare first, assign only on a difference. The bar reads the same
-     * and stops rebuilding itself. */
+     * Titles cost twice: `lib/tooltip.js` watches the `title` attribute, so
+     * unconditional writes woke its observer every frame to move the same
+     * string to `data-tip` and strip it, which sync then restored. */
     /* COMPARING AGAINST THE DOM IS NOT ENOUGH, and both exceptions cost a
        frame's worth of rebuilding until they were found by measuring again
        after the first attempt:
@@ -358,6 +311,17 @@
       var pl = player();
       var st = pl ? pl.state() : null;
       var playing = !!st && st.state === 'playing';
+      /* PUBLISHED TO THE HOST, because a surface may want to style itself on
+         it -- the card narrows its hover reveal to a drawing that is NOT
+         playing, so a playing one is the transport's own to show and hide.
+         Guarded rather than written every beat: this runs on a rAF while a
+         drawing plays, and an unconditional write is the churn the speed
+         button was lost to. classList.toggle would not mutate the token list
+         here, but reading the flag first also keeps this off the hot path. */
+      if (wrap._skPlaying !== playing) {
+        wrap._skPlaying = playing;
+        wrap.classList.toggle('is-playing', playing);
+      }
       setHTML(bPlay, playing ? ICON.pause : ICON.play);
       label(bPlay, playing ? 'Pause' : 'Play');
 
@@ -403,12 +367,11 @@
       if (tWho.hidden !== !tWho.textContent) tWho.hidden = !tWho.textContent;
       var wantHidden = !m.name && !m.handle;
       if (av.hidden !== wantHidden) av.hidden = wantHidden;
-      /* THE AVATAR IS REBUILT ONLY WHEN THE PERSON CHANGES. It used to be
-         emptied and re-made on every call -- and on a bar that syncs per
-         frame that is a NEW <img> element, with a new src and a new error
-         listener, sixty times a second for a picture that never changed.
-         The key is what the avatar is FOR: this person's face. While that
-         string holds, the node already on screen is correct. */
+      /* THE AVATAR IS REBUILT ONLY WHEN THE PERSON CHANGES. On a bar that
+         syncs per frame, rebuilding means a NEW <img> with a new src and a new
+         error listener sixty times a second for a picture that never changed.
+         The key is what the avatar is FOR: while that string holds, the node
+         already on screen is correct. */
       var key = (m.avatar || '') + '|' + (m.name || '') + '|' + (m.handle || '');
       if (av._skKey !== key) {
         av._skKey = key;
@@ -467,24 +430,18 @@
 
     /* ---- the band the bar occupies, published to the thing it sits on ----
      *
-     * IN FULL SCREEN THE BAR IS NOT ALLOWED TO STAND ON THE DRAWING. It is
-     * absolutely positioned at the bottom with a scrim, on the reasoning that
-     * a picture reads fine under a soft gradient -- which is how a video
-     * player works and is wrong here, because a drawing is the entire content
-     * and its bottom edge is part of it. The owner, on a pug whose feet were
-     * behind the controls: "fullscreen where the controls cover the bottom of
-     * the canvas?"
+     * IN FULL SCREEN THE BAR MAY NOT STAND ON THE DRAWING. A video player can
+     * lay controls over a scrim; a drawing is the entire content and its bottom
+     * edge is part of it. The host reserves the bar's height as padding and
+     * centres the drawing in what is left.
      *
-     * So the host reserves the bar's height as padding and the drawing is
-     * centred in what is left. MEASURED AND NOT ASSUMED: the bar's height
-     * moves with the safe-area inset, the scrub row, the text metrics of
-     * whatever font resolved, and a hard-coded number would be right on this
-     * machine and wrong on a phone with a home indicator. A ResizeObserver
-     * answers with whatever the bar actually became.
+     * MEASURED, NOT ASSUMED: the height moves with the safe-area inset, the
+     * scrub row and the text metrics of whatever font resolved, so a constant
+     * would be right here and wrong on a phone with a home indicator.
      *
-     * The CARD's bar does no such thing -- it is hidden in full screen, and
-     * on a card the overlay is the point. Two bars share this wrapper, so the
-     * card's is filtered out here rather than at the CSS, or the last one to
+     * The CARD's bar does none of this -- it is hidden in full screen, and on
+     * a card the overlay is the point. Two bars share this wrapper, so the
+     * card's is filtered out here rather than in the CSS, or the last one to
      * measure would win. */
     if (opts.variant !== 'skfull-card') {
       wrap.classList.add('skfull-host');

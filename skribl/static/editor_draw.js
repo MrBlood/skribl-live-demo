@@ -311,7 +311,7 @@ function startDraw(e) {
   // bug it fixes: this used to run before the post-record lock, so on a
   // locked canvas the press closed the picker AND drew nothing — a menu
   // that reacts to a press the canvas then ignores reads as a broken tool
-  // (owner: "it goes away when I start, but it doesn't draw it"). The
+  // ("it goes away when I start, but it doesn't draw it"). The
   // picker now steps aside only for a press that actually draws; a
   // swallowed press leaves it standing while the toast explains.
   {

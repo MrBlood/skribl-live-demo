@@ -1,4 +1,4 @@
-"""v109 — drag-to-reorder, and per-page hold (the first payload-format change).
+"""Drag-to-reorder, and per-page hold (the first payload-format change).
 
 `hold` is the first new payload field since the frame format itself, so the whole
 suite is built around one rule: **it must be additive in both directions.**
@@ -128,7 +128,7 @@ with sync_playwright() as p:
     print("\nHOLD — the UI cycles and shows it")
     pg.evaluate("() => { go(0); }")
     pg.wait_for_timeout(200)
-    # v226: the page-bar Hold button retired and the BADGE on the tile is the
+    # The page-bar Hold button retired and the BADGE on the tile is the
     # control. It was already showing the value the button cycled, on the tile
     # the value belonged to — two pieces of interface for one fact, and the
     # better-placed one was the one you could not press.

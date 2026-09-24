@@ -1,4 +1,4 @@
-"""v224 — do the media resource limits stop a decompression bomb, and only that?
+"""Do the media resource limits stop a decompression bomb, and only that?
 
 Outside review, finding #5. Until now the media checks proved TYPE and BYTES:
 the declared subtype had to match the leading bytes, and the base64 had to be
@@ -377,7 +377,7 @@ import time  # noqa: E402  (only needed for this one assertion)
 _t0 = time.time()
 _res = V._jpeg_dimensions(_pathological)
 _ms = (time.time() - _t0) * 1000
-# v264: the walk still stops in bounded time, but a walk that STOPS at its cap
+# The walk still stops in bounded time, but a walk that STOPS at its cap
 # now reports _UNSCANNABLE, not None. None used to mean "accepted", and that was
 # the outside review's H1 bypass — a bomb hides its real SOF just past the cap
 # so the scan quits and the None is read as "safe". A cap-stop must fail closed.

@@ -1,4 +1,4 @@
-"""v224 — is the orphan sweep operable, and does it say what it did?
+"""Is the orphan sweep operable, and does it say what it did?
 
 Outside review, finding #6. `storage.sweep_orphans` has reclaimed disk since
 v180 and returned a list of keys. Two things were wrong with that as a

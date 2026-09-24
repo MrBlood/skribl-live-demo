@@ -712,7 +712,7 @@ with sync_playwright() as p:
     check("and moves it to the top", dedup and dedup[0]["id"] == "aaa",
           str([e["id"] for e in dedup]))
 
-    # ---------------------------------------------------------------- v280
+    # --------------------------------------------------------------------
     print("\nCUSTODY — the cap governs history and never authorisation")
     # THE FINDING, from an adversarial audit of v279. write() truncated with
     # `list.slice(0, LIMIT)` on every call, and v279 had just put the only copy
@@ -1158,7 +1158,7 @@ with sync_playwright() as _p:
           "a font glyph renders at whatever weight the system font chooses")
 
     # WHERE THE MARK LIVES IS PART OF THE ASSERTION. It sat on the thumb until
-    # v310 and stands in front of the words now (owner: "move the pencil/book
+    # v310 and stands in front of the words now ("move the pencil/book
     # before replay/pages"), so these rows ask the ROW for its mark rather than
     # the thumb: a row that LOST the mark and a row that merely moved it read
     # the same to a thumb-only query, and only the first is a regression. The

@@ -1,4 +1,4 @@
-"""v227 — the compact surface drops the row, and loses nothing.
+"""The compact surface drops the row, and loses nothing.
 
 STAGE 4 of the filmstrip plan, and the one that needed a decision. The design
 note's own condition for shipping it was not visual: **every operation must stay
@@ -8,7 +8,7 @@ written down.
 
 WHAT CHANGES, AND ONLY HERE. On compact the persistent page bar is hidden and
 the active tile carries a ⋯ that opens the same operations. On regular the bar
-stays exactly as it was — that was the owner's correction to the first draft of
+stays exactly as it was — that was a correction to the first draft of
 the design note, which had proposed hiding it everywhere: buttons are good on a
 big screen, and gestures teach nobody. Both halves are asserted, because a
 change scoped to one surface is only correct if it left the other alone.

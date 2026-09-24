@@ -1,4 +1,4 @@
-"""v224 — the four host seams from the outside review, exercised end to end.
+"""The four host seams from the outside review, exercised end to end.
 
 Findings #3, #4, #7 and #8 were all one shape of bug: the package DOCUMENTED an
 extension point that the code did not actually have, or shipped a demo value as

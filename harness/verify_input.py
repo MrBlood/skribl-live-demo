@@ -1,4 +1,4 @@
-"""v230 — the input samples the handler was throwing away.
+"""The input samples the handler was throwing away.
 
 THE REPORT, from the live demo: "when I draw circles fast we get a lot of
 straight line segments that make a curve. Drawing slowly smoothes it out."

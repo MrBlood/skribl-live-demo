@@ -1,4 +1,4 @@
-"""v224 — the three configuration defects from the outside review's low list.
+"""The three configuration defects from the outside review's low list.
 
 They look unrelated and are the same mistake three times: a number or a policy
 stated in more than one place, where only one of the copies could actually

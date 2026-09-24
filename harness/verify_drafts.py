@@ -416,8 +416,8 @@ with sync_playwright() as p:
           f"{late} — a write that has not landed in twelve seconds is not one a "
           "reload can count on, and 'Saving…' never fades on its own")
 
-    # ⚑ ASSERTION REVERSED, v238, FLAGGED FOR THE OWNER — and it is MY OWN
-    # assertion from v235 that is being reversed, on the owner's decision, not a
+    # ⚑ ASSERTION REVERSED, v238, FLAGGED — and it is MY OWN
+    # assertion from v235 that is being reversed, on a decision taken deliberately, not a
     # ratchet raised to fit a commit.
     #
     # v235 read the pending record as "a memo about a PAST loss, not a property

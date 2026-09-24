@@ -1,4 +1,4 @@
-"""v108 — export options: output size + page range (Flip).
+"""Export options: output size + page range (Flip).
 
 GIF export had a hardcoded 480px cap with no way out, and every export always
 covered every page. Both are now controlled from the export sheet, and — this is

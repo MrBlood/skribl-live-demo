@@ -1,253 +1,163 @@
 /* THE IN-POST PLAYER. What a Skribl looks like inside somebody else's feed.
  *
- * ===========================================================================
- * WHY THIS EXISTS SEPARATELY FROM THE PLAYER AT /s/<id>
- * ===========================================================================
+ * WHY IT IS NOT THE PLAYER AT /s/<id>
+ * -----------------------------------
+ * That one is a PAGE: app.js plus eight shared modules, a full app shell, a
+ * transport with scrub and loop and speed. Right for a shared link, where the
+ * Skribl is the whole reason the tab is open; wrong for a feed, where twenty
+ * posts are on screen and the one that is a Skribl has to behave like an image
+ * that happens to move.
  *
- * The sealed player is a PAGE: app.js plus eight shared modules, ~150 KB of
- * JavaScript, a full app shell, a transport with scrub and loop and speed, and
- * a brand moment that draws itself on load. That is right for a shared link,
- * where the Skribl is the whole reason the tab is open. It is wrong for a feed,
- * where twenty posts are on screen, nineteen of them are not Skribls, and the
- * one that is has to behave like an image that happens to move.
+ * So this is a SECOND IMPLEMENTATION of playback, and the editor and the
+ * player disagreeing is uniquely expensive because nothing an author can see
+ * reveals it. Three things keep them together, in descending order of strength:
  *
- * ===========================================================================
- * WHAT THE STYLESHEET USED TO SAY, AND WHY IT SAYS IT HERE NOW (v308)
- * ===========================================================================
+ *   1. THE RULES COME OUT OF lib/. Per-page holds through lib/holdtiming.js,
+ *      the default canvas size through lib/canvassizes.js. Neither is retyped.
+ *   2. WHAT IS RETYPED IS RETYPED VERBATIM AND SAYS SO. The gap cap and the
+ *      timeline build are app.js's buildPlaybackTimeline(); the two drawing
+ *      primitives are its drawDot/drawLine. Each carries a pointer to the
+ *      original. They were deliberately NOT extracted: a lib module adds a
+ *      fetched file to the player's critical path, which is the wrong price
+ *      for thirty shared lines.
+ *   3. harness/verify_inline.py ASSERTS THE ANSWERS MATCH. It posts one real
+ *      drawing, plays it in the sealed player and here, and compares reported
+ *      durations and rendered pixels at matched offsets. What is asserted is
+ *      not shared code but that the two cannot disagree about the ANSWER.
  *
+ * WHY THE PRODUCT REASONING IS HERE AND NOT IN inlineplayer.css
+ * ------------------------------------------------------------
  * jsstrip.py removes these comments from the response; nothing does that for
- * CSS, so every word in inlineplayer.css is downloaded by every host on every
- * page that embeds a Skribl. The file's own header has said so since the
- * poster crop landed, and 42% of it had become comments anyway. The line that
- * decides what goes where is NOT length, it is audience: a host reads that
- * stylesheet before overriding something, so the tokens, the geometry numbers
- * and the defensive declarations stay there. PRODUCT reasoning — why the
- * component behaves as it does — belongs here, and this is it.
+ * CSS, so every word of that stylesheet is downloaded by every host on every
+ * page that embeds a Skribl. The line is AUDIENCE, not length: a host reads
+ * the stylesheet before overriding something, so tokens, geometry numbers and
+ * defensive declarations stay there. Why the component behaves as it does
+ * belongs here.
  *
+ * WHAT IT PLAYS
+ * -------------
+ * Pad replay documents, Flip documents (holds through lib/holdtiming.js), the
+ * background colour, a photo or base-snapshot underlay, the posted audio loop,
+ * and the wet/dry stroke compositor (makeCompositor below, app.js's
+ * makeStrokeCompositor in miniature) so a stroke below 100% opacity is
+ * composited once rather than stamped.
+ *
+ * THE PRODUCT RULES
+ * -----------------
  * TWO VIEWER CONTROLS, AND ONLY TWO: mute and loop. Scrub, speed and
- * frame-step still belong on the full player at /s/<id> — a post that grows a
- * transport stops being a post — but these two are about whether the thing in
- * front of you keeps making noise and keeps moving, which is the viewer's
- * business in a way that seeking is not.
- *
- * They share one cluster at bottom left so a post has one control area rather
- * than two, and so a silent Skribl (which hides mute) does not leave a lone
- * button floating in the corner.
+ * frame-step belong on the full player -- a post that grows a transport stops
+ * being a post -- but these two are about whether the thing in front of you
+ * keeps making noise and keeps moving, which is the viewer's business in a way
+ * that seeking is not. They share one cluster at bottom left so a post has one
+ * control area, and so a silent Skribl (which hides mute) does not leave a
+ * lone button floating in the corner.
  *
  * LOOP IS ON BY DEFAULT, so the lit state is the RESTING state and the button
- * dims when it is switched OFF — the opposite of mute, whose resting state is
- * muted. Each reads as "what is currently true", not "what this button does".
- *
- * A SILENT SKRIBL HAS NOTHING TO MUTE, so it shows no mute button at all
- * rather than a control that does nothing. Loop stays: a silent drawing still
- * repeats.
- *
- * And the poster's arithmetic, which the stylesheet now states once instead of
- * twice: auto width keeps the card's 1200:630, making the image 2.439x the box
- * height against a 1.778x box, and the centred excess is clipped.
- *
- * So this is a second, much smaller thing, and the honest way to describe it is
- * that it is a SECOND IMPLEMENTATION of playback. This project has a name for
- * that shape and a suite for it: verify_sharedrules.py exists because "the
- * editor and the player disagreeing is uniquely expensive, since nothing an
- * author can see reveals it". A feed player that drifts from the shared link is
- * the same defect one surface further out — the author checks /s/<id>, it looks
- * right, and everyone else sees something else.
- *
- * Three things keep that from happening, in descending order of strength:
- *
- *   1. THE RULES COME OUT OF lib/. Per-page holds are read through
- *      lib/holdtiming.js — the module that exists precisely so the editor and
- *      the player cannot disagree about which page is on screen at time t. This
- *      file asks it the same question app.js asks it. The default canvas size
- *      for a payload that carries none comes from lib/canvassizes.js the same
- *      way. Neither rule is retyped here.
- *   2. WHAT IS RETYPED IS RETYPED VERBATIM, AND SAYS SO. The gap cap and the
- *      timeline build below are app.js's buildPlaybackTimeline(); the two
- *      drawing primitives are its drawDot/drawLine. Each carries a pointer to
- *      the original. They are ~30 lines in total and were NOT extracted into a
- *      lib module, deliberately: doing that adds a fetched file to the player's
- *      critical path, and verify_player_isolation.py's JS ratchet had 1,755 B
- *      of headroom when this was written. Paying that so a feed page can share
- *      thirty lines is the wrong trade.
- *   3. harness/verify_inline.py ASSERTS THE ANSWERS MATCH. It posts one real
- *      drawing, plays it in the sealed player and here, and compares the
- *      reported durations and the rendered pixels at matched offsets. That is
- *      the mechanism verify_sharedrules.py uses and the reason it is trusted:
- *      "what is asserted is not shared code but that they cannot disagree about
- *      the ANSWER."
- *
- * ===========================================================================
- * WHAT IT PLAYS, AND WHAT IT DELIBERATELY DOES NOT
- * ===========================================================================
- *
- * PLAYS:  Pad replay documents (strokes drawn over time), Flip documents (page
- *         per frame, holds honoured through lib/holdtiming.js), the background
- *         colour, a photo or base-snapshot underlay, and the posted audio loop.
- *
- * ALSO PLAYS, SINCE v279: the wet/dry stroke compositor (makeCompositor
- *         below, app.js's makeStrokeCompositor in miniature). This block said
- *         "DOES NOT" for twenty-odd releases after it did — a stroke below
- *         100% opacity is composited once here, not stamped — and ended with
- *         "if this ever gets the compositor, that fixture is where to widen
- *         the proof", which is what v279 did and this paragraph did not
- *         follow. verify_inline.py pins it by rendering the same translucent
- *         drawing twice, once with the compositor disabled at source.
- *
- * NO KNOWN FIDELITY GAP, and the last one closed is worth naming because it
- *         survived so long: until v305 the canvas was given a definite CSS
- *         width AND height, so the box's max-width/max-height clamped each
- *         axis on its own and every drawing that is not 16:9 was STRETCHED —
- *         216% on a 9:16 one. See adopt(). A gap in the SHAPE of the drawing
- *         outlived a gap in its shading because nothing measured the aspect.
- *
- * ===========================================================================
- * THE PRODUCT RULES, WHICH ARE NOT ARBITRARY
- * ===========================================================================
+ * dims when switched OFF -- the opposite of mute, whose resting state is muted.
+ * Each reads as "what is currently true", not "what this button does".
  *
  * ONE AT A TIME. Starting any Skribl settles every other one on the page. A
  * feed that can play two loops at once is a feed nobody scrolls twice.
  *
- * SOUND OFF BY DEFAULT, AND THE CHOICE IS THE VIEWER'S. Muted is the only
- * defensible default for media that starts on a tap in a public place, and
- * unmuting one post unmutes all of them for the session (sessionStorage, not
- * localStorage: a preference set in a feed should not follow someone into next
- * week).
+ * SOUND OFF BY DEFAULT, AND THE CHOICE IS THE VIEWER'S. Unmuting one post
+ * unmutes all of them for the session -- sessionStorage, not localStorage: a
+ * preference set in a feed should not follow someone into next week. Repeating
+ * is the viewer's too but PER POST: sound is environmental, repeating is a
+ * property of the drawing in front of you.
  *
- * REPEATING IS ALSO THE VIEWER'S, but PER POST rather than page-wide. Sound is
- * environmental; repeating is a property of the drawing in front of you, and a
- * two-second loop you want to watch twice says nothing about the next post. On
- * by default — that is what a post did before the control existed.
- *
- * WHEN A NON-LOOPING REPLAY ENDS, THE MUSIC ENDS WITH IT. The end of the replay
- * goes through pause(), which stops the audio in the same call, so a finished
- * drawing can never be left with a loop still playing under it. Those two are
- * the only viewer controls — see inlineplayer.css.
+ * WHEN A NON-LOOPING REPLAY ENDS, THE MUSIC ENDS WITH IT. The end of the
+ * replay goes through pause(), which stops the audio in the same call, so a
+ * finished drawing can never be left with a loop still playing under it.
  *
  * NOTHING FETCHES UNTIL SOMEBODY ASKS. The idle state is /s/<id>/card.png, one
  * cached image; GET /api/skribls/<id> is issued on the first play and never
- * again for that post. This is load-bearing, not an optimisation: that endpoint
- * returns the WHOLE payload, base64 audio included, and a feed that prefetched
- * twenty of those would move tens of megabytes to render thumbnails.
+ * again for that post. Load-bearing, not an optimisation: that endpoint returns
+ * the WHOLE payload, base64 audio included, and a feed that prefetched twenty
+ * of those would move tens of megabytes to render thumbnails.
  *
  * IT FOLLOWS THE HOST'S THEME, WITH ITS OWN VALUES AS FALLBACKS.
  * inlineplayer.css reads a custom property for every colour and supplies a
  * literal after the comma: `var(--bg-elev, #12151c)`. A host that defines those
- * tokens gets a player that changes with it — including live, because custom
- * properties cascade from :root and a theme switch is one attribute change up
- * there. A host that defines nothing gets the literals, which is exactly what
- * the file shipped with.
- *
- * The token NAMES are the ones a feed already has — --bg-elev, --border,
- * --radius, --accent, --accent-2 — rather than skribl-prefixed ones, because a
- * prefix would mean the host had to map their palette onto ours to get any
- * benefit, and then nobody would.
- *
- * The failure this avoids is a DARK-ONLY PLAYER IN A LIGHT FEED: a black
- * rectangle among white cards, which reads as broken rather than as styled. A
- * microblog with a light/dark toggle is the normal case, not the exotic one.
+ * tokens gets a player that changes with it, live, because custom properties
+ * cascade from :root. The token NAMES are the ones a feed already has --
+ * --bg-elev, --border, --radius, --accent, --accent-2 -- rather than
+ * skribl-prefixed ones, because a prefix would mean mapping their palette onto
+ * ours to get any benefit, and then nobody would. The failure this avoids is a
+ * dark-only player in a light feed: a black rectangle among white cards reads
+ * as broken rather than as styled.
  *
  * THE DRAWING ITSELF DOES NOT FOLLOW THE THEME. Its ground is the one the
- * author drew on and it is painted from the payload — the artwork is content,
+ * author drew on and it is painted from the payload -- the artwork is content,
  * not chrome, and recolouring it would be editing somebody's picture.
  *
- * THE POSTER IS THE SHARE CARD, CROPPED — and this is where that is explained,
- * because inlineplayer.css ships its comments to every host (jsstrip.py strips
- * a JavaScript response; nothing strips CSS) while these are stripped from
- * every response that carries them.
+ * THE IDLE POSTER
+ * ---------------
+ * A tile shows /s/<id>/poster: the post's own share card, or a blank canvas
+ * when it has none -- never the branded card, which cropped to a drawing's band
+ * reads as a fragment of an advert. The card is 1200x630 and CONTAINS the
+ * drawing, so there are two ways to show one in a 16:9 box and this player does
+ * both:
  *
- * /s/<id>/card.png is a 1200x630 branded card — the drawing contained inside a
- * bordered box under a "Skribl Pad" wordmark — because it was built to unfurl
- * on social scrapers, and it is the only per-post image the server has. Shown
- * whole it reads as an advert twenty times down a timeline. So the idle post
- * crops it back to the drawing. The crop is LITERALS in inlineplayer.css, not
- * a call: this page loaded lib/sharecard.js until v281 and never read
- * window.SkriblShareCard. verify_inline.py injects that module and compares
- * band() against these literals, so the arithmetic is still held to the
- * editors' — it just is not shipped to every feed page to do it.
+ *   NO SCRIPT, OR NO CANVAS SIZE -- the band crop, which is the stylesheet's
+ *   two literals: the card scaled to 128.0488% of box height (630/492) and
+ *   pulled up 5.4878% (27/492), putting the wordmark and padding outside the
+ *   box. Vertically that is exact, because for any canvas not wider than
+ *   2.22:1 -- every preset -- the drawing's height and y are identical in every
+ *   card. Horizontally it cannot be: the drawing's width inside the card
+ *   depends on its own aspect and nothing here knows it (canvasSize lives
+ *   inside payload_json, and GET /api/skribls DEFERS that column deliberately).
+ *   But the drawing is CENTRED, so a symmetric side crop removes only ground as
+ *   long as the box is at least as wide as the widest canvas a drawing can
+ *   have. That is 16:9 (lib/canvassizes.js), so the box is 16:9, and
+ *   verify_inline.py asserts the box is never narrower than the widest preset
+ *   -- adding a wider canvas size fails there rather than quietly cutting the
+ *   edges off every wide drawing in the feed.
  *
- * Vertically the crop is exact. The drawing is CONTAINED, so for any canvas not
- * wider than 2.22:1 — every preset — its height and its y are identical in
- * every card: 492 px of 630, starting at 27.
+ *   WITH THE DRAWING'S SIZE -- fitPoster(), below, which frames the card's
+ *   drawingRect() exactly where the canvas will land and clips the rest away.
+ *   The remaining ground was still the CARD's ground, with its plate border
+ *   around the picture: a frame inside a frame on every tile. Idle and playing
+ *   are one composition now.
  *
- * Horizontally it cannot be exact, and 16:9 is the best available answer. The
- * drawing's width inside the card depends on its own aspect, and nothing here
- * knows that: canvasSize lives inside payload_json, and GET /api/skribls DEFERS
- * that column deliberately (a feed of payloads is hundreds of megabytes). But
- * the drawing is CENTRED in the card, so a symmetric side crop can only remove
- * the card's ground — never the picture — as long as the window is at least as
- * wide as the widest canvas a drawing can have. That is 16:9
- * (lib/canvassizes.js), so the box is 16:9. Measured on a 1:1 drawing: 22% of
- * the box is ground, against 59% for the uncropped band. A portrait 9:16
- * drawing is still mostly ground, which is what a portrait picture in a
- * landscape box is. verify_inline.py asserts the box is never narrower than the
- * widest preset, so adding a wider canvas size fails there rather than quietly
- * cutting the edges off every wide drawing in the feed.
- *
- * A tight, per-post crop wants the canvas size as a real COLUMN on the post,
- * which is a schema change and is not being made in passing here.
+ * The crop is LITERALS in inlineplayer.css rather than a call into
+ * lib/sharecard.js, so that module is not shipped to every feed page;
+ * verify_inline.py injects it and compares band() and drawingRect() against
+ * these literals, so the arithmetic is still held to the editors'.
  *
  * THE GENERIC FALLBACK CARD IS CROPPED THE SAME WAY, deliberately. A post with
  * no stored thumbnail has /s/<id>/card.png REDIRECT to the static branded
  * og-card, and telling the two apart in the browser costs a request: the
  * redirect is invisible to an <img> (currentSrc reports the URL requested, not
- * the one that answered) and both images are 1200x630, so only a fetch that can
- * read response.redirected knows. One extra request per post, in a component
- * whose whole idle contract is "one cached image", to slightly improve a
- * fallback whose content is vertically centred anyway. Not worth it.
+ * the one that answered) and both are 1200x630, so only a fetch that can read
+ * response.redirected knows. One extra request per post, in a component whose
+ * whole idle contract is "one cached image", to slightly improve a fallback
+ * whose content is vertically centred anyway.
  *
- * ===========================================================================
- * TWO CLASSES A HOST PAGE MAY ADD: `is-bare` AND `is-immersive`
- * ===========================================================================
+ * THE CANVAS GETS ONE DEFINITE AXIS, NEVER TWO. Give it a CSS width AND height
+ * and the box's max-width/max-height clamp each axis on its own, stretching
+ * every drawing that is not 16:9 -- 216% on a 9:16 one. See adopt().
  *
- * The page adds the class; the component owns what it means. Both are in
- * inlineplayer.css, and the reasoning is here because CSS comments are served.
+ * TWO CLASSES A HOST PAGE MAY ADD
+ * -------------------------------
+ * The page adds the class; the component owns what it means.
  *
- * `is-bare` — THE HOST SUPPLIES THE TRANSPORT. The component's own cluster
+ * `is-bare` -- THE HOST SUPPLIES THE TRANSPORT. The component's own cluster
  * (mute, repeat) and its duration chip are hidden, because the page has drawn
  * its own; two transports over one drawing is a defect, not a choice. The
  * gallery's card footer and both full-screen bars are lib/fullbar.js driving
  * this player's handle, so this is what they add.
  *
- * IT DOES NOT HIDE THE VEIL, and it did for one commit. The veil is the dark
- * wash and the play triangle over a drawing that has not started: it is not a
- * control, it is the sentence "this moves". A host taking the BUTTONS over has
- * not taken over saying that, and the first screenshot of the post-like
- * gallery card was two dozen black rectangles under two dozen neat footers.
+ * IT DOES NOT HIDE THE VEIL. The veil is the dark wash and the play triangle
+ * over a drawing that has not started: it is not a control, it is the sentence
+ * "this moves". A host taking the BUTTONS over has not taken over saying that,
+ * and hiding it turns the gallery into two dozen black rectangles under two
+ * dozen neat footers.
  *
- * ===========================================================================
- * THE IDLE POSTER, AND THE THREE GEOMETRY FACTS THE STYLESHEET USED TO CARRY
- * ===========================================================================
- *
- * A tile shows /s/<id>/poster until somebody presses play: the post's own
- * share card, or a blank canvas when it has none -- never the branded card,
- * which cropped to a drawing's band reads as a fragment of an advert (v287,
- * SK-BUG-006). The card is 1200x630 and CONTAINS the drawing, so there are
- * two ways to show one in a 16:9 box, and this player now does both:
- *
- *   NO SCRIPT, OR NO CANVAS SIZE -- the band crop, which is the stylesheet's
- *   two literals. The card is scaled to 128.0488% of the box height (630/492)
- *   and pulled up 5.4878% (27/492), which puts the wordmark and the padding
- *   outside the box. The box is 16:9 because that is the widest canvas a
- *   drawing can have (lib/canvassizes.js) and the drawing is centred in the
- *   card, so a symmetric side crop removes ground and never picture. A 1:1
- *   drawing then leaves 22% of the box as ground rather than 59%.
- *
- *   WITH THE DRAWING'S SIZE -- fitPoster(), below, which frames the card's
- *   drawingRect() exactly where the canvas will land and clips the rest away.
- *   That 22% of ground was still the CARD's ground, with the card's plate
- *   border around the picture: a frame inside a frame on every tile, which
- *   the owner photographed ("fix the share card bands too"). Idle and playing
- *   are one composition now.
- *
- * Both halves are asserted against the real lib/sharecard.js by
- * verify_inline.py, which evaluates the module rather than trusting the copy.
- *
- * `is-immersive` — THIS IS THE WHOLE SCREEN NOW. The box loses its border and
- * its radius and fills whatever contains it, the canvas is letterboxed inside
- * with object-fit, the share card goes (a crop that is right at tile size just
- * cuts the picture off at screen size) and the veil goes with it: at that size
- * the bar is unmissable and a wash over the whole picture is only dimmer art.
+ * `is-immersive` -- THIS IS THE WHOLE SCREEN NOW. The box loses its border and
+ * radius and fills whatever contains it, the canvas is letterboxed inside with
+ * object-fit, the share card goes (a crop that is right at tile size just cuts
+ * the picture off at screen size) and the veil goes with it: at that size the
+ * bar is unmissable and a wash over the whole picture is only dimmer art.
  */
 (function (global) {
   'use strict';
@@ -277,30 +187,27 @@
     try { global.sessionStorage.setItem(SOUND_KEY, on ? '1' : '0'); } catch (e) {}
     /* THE UNMUTE TAP IS THE GESTURE. On iOS the ringer switch silences Web
      * Audio but not an <audio> element, so a posted Skribl's music is inaudible
-     * in a feed on a phone set to silent — this player is Web Audio (see the
+     * in a feed on a phone set to silent -- this player is Web Audio (see the
      * AudioContext below). Holding a silent <audio> session makes it audible.
      * Claimed only here, on an explicit unmute, never on load: see
      * lib/audiosession.js for why that distinction is the whole justification
      * for overriding the switch at all.
      *
-     * THE FEED'S CONTRACT IS DELIBERATELY DIFFERENT FROM THE /s PLAYER'S, and
-     * this is the paragraph that says so rather than leaving it to be inferred.
-     * The /s player holds the session only while it is AUDIBLY PLAYING, and
-     * releases on Pause, the last frame and Mute. The feed holds it for as long
-     * as SOUND IS ENABLED, whether or not anything is playing right now.
+     * THE FEED'S CONTRACT IS DELIBERATELY DIFFERENT FROM THE /s PLAYER'S. That
+     * one holds the session only while it is AUDIBLY PLAYING and releases on
+     * pause, the last frame and mute. The feed holds it for as long as SOUND IS
+     * ENABLED, whether or not anything is playing: sound here is one
+     * session-scoped preference shared by every post (SOUND_KEY, above) and
+     * posts start and stop as you scroll, so tying the session to "is a post
+     * playing" would drop and retake it on every card that scrolls past -- a
+     * Control Center entry flickering down a feed -- and would need a
+     * cross-player refcount to know when the LAST one stopped. Tying it to the
+     * preference gives one claim on unmute and one release on mute, which is
+     * the only pair of taps the viewer thinks of as sound on and off.
      *
-     * Why the difference: sound here is one session-scoped preference shared by
-     * every post in the list (SOUND_KEY, above), and posts start and stop as
-     * you scroll. Tying the session to "is a post playing" would drop and
-     * retake it on every card that scrolls in and out — a Control Center entry
-     * flickering on and off down a feed — and would need a cross-player
-     * refcount to know when the LAST one stopped. Tying it to the preference
-     * gives one claim on unmute and one release on mute, which is also the only
-     * pair of taps the viewer thinks of as turning sound on and off.
-     *
-     * The cost is honest and bounded: with sound on and nothing playing, iOS
-     * shows Skribl as playing media. Muting clears it. If that ever needs to be
-     * tightened, the refcount is the work, not a change of gesture. */
+     * The cost is bounded: with sound on and nothing playing, iOS shows Skribl
+     * as playing media. Muting clears it. Tightening that is the refcount, not
+     * a change of gesture. */
     if (global.SkriblAudioSession) {
       if (on) global.SkriblAudioSession.claim();
       else global.SkriblAudioSession.release();
@@ -411,47 +318,20 @@
    * bakes it down at the stroke's alpha when the stroke ends, so overlaps
    * inside one stroke do not stack.
    *
-   * THIS USED TO BE THE ONE KNOWN FIDELITY GAP, named in this header rather
-   * than left to be discovered, on the argument that ~60 lines of offscreen
-   * canvas work per stroke was not obviously worth it "at feed scale — twenty
-   * boxes, one playing". Two things were wrong with that.
+   * A CROSS-SURFACE COMPARISON CANNOT MEASURE THIS. Scoring this player
+   * against /s/<id> on verify_inline.py's 96x96 grid reports a large
+   * difference, but an OPAQUE control -- which the compositor cannot touch --
+   * scores worse still: most of it is the two surfaces fitting the drawing to
+   * different boxes, exactly as verify_inline's own note says they do. The
+   * clean instrument is ONE surface with the feature absent, which is how the
+   * suite pins it: same translucent fixture, compositor disabled at source.
    *
-   * The scale figure was wrong: play() settles every other player, so exactly
-   * ONE post is ever playing and the cost is two offscreen canvases, not
-   * forty.
-   *
-   * And the gap was much larger than "beads at its overlaps" suggested. An
-   * external review of v277 said a feed representation should not change the
-   * drawing's appearance, so it was measured rather than argued.
-   *
-   * THE FIRST MEASUREMENT WAS CONFOUNDED AND IS RECORDED HERE BECAUSE IT WAS
-   * NEARLY BELIEVED. Comparing this player against /s/<id> on the 96x96 grid
-   * verify_inline.py uses gave "19.2% of cells differ, 22% less ink" — until
-   * an OPAQUE control, which the compositor cannot touch, scored WORSE
-   * (ink ratio 0.446). Most of that difference was the two surfaces fitting
-   * the drawing to different boxes, exactly as verify_inline's own note says
-   * they do. A cross-surface comparison cannot isolate this feature.
-   *
-   * The clean instrument is ONE surface with the feature absent. Same fixture,
-   * a self-crossing stroke at 50% alpha, this player only:
-   *
-   *     compositor off   145,014 ink        21.7% under the canonical page
-   *     compositor on    177,246 ink         4.3% under it
-   *     /s/<id>          185,205 ink        (the reference)
-   *
-   * The residual 4.3% is that same canvas-fit difference, and the shapes now
-   * agree: scalloped edges and a banded interior before, one smooth translucent
-   * mark after. Side by side they WERE not the same drawing.
-   *
-   * IT COSTS 2,913 B SERVED, and the embed ratchet went 29,000 -> 32,000 to
-   * pay for it — the largest raise that number has taken. Recorded at the
-   * ratchet with this reasoning. An all-opaque payload, which is most of them,
-   * allocates nothing: makeCompositor returns null and the direct path is
-   * exactly what it was.
+   * An all-opaque payload, which is most of them, allocates nothing:
+   * makeCompositor returns null and the direct path is what it was.
    *
    * Ported from app.js makeStrokeCompositor rather than rewritten, and it
    * draws through this file's own drawDot/drawLine so the two implementations
-   * cannot drift in how a mark is shaped — only in where it is composited.
+   * cannot drift in how a mark is shaped -- only in where it is composited.
    */
   function parseStrokeAlpha(c) {
     if (typeof c !== 'string') return 1;
@@ -646,20 +526,17 @@
    * 1200x630 with the drawing CONTAINED inside it -- so a 4:3 drawing sits in
    * a 656px-wide picture in the middle of a 1200px card, and the stylesheet's
    * band crop (which removes the brand strip and nothing else) leaves 110px of
-   * card ground and the card's own plate border showing on each side. Every
-   * gallery tile was a picture inside a frame inside a card, and the owner
-   * photographed it: "fix the share card bands too".
+   * card ground and the card's own plate border showing on each side: a
+   * picture inside a frame inside a card, on every tile.
    *
    * THE POSTER NOW LANDS EXACTLY WHERE THE CANVAS WILL. Same rectangle, same
-   * letterbox, so pressing play changes what moves and not where it is. That
-   * is the property worth having: the idle state stops being a different
-   * composition from the playing one.
+   * letterbox, so pressing play changes what moves and not where it is.
    *
    * IT NEEDS THE DRAWING'S SHAPE and cannot look it up -- the listing defers
    * `payload_json` on purpose, which is why `canvas_w`/`canvas_h` are columns
-   * on the post as of v309. The page writes them onto the box as
-   * data-skribl-w/h; WITHOUT them nothing here runs and the stylesheet's band
-   * crop stands, which is exactly what a row that predates the column gets.
+   * on the post. The page writes them onto the box as data-skribl-w/h;
+   * WITHOUT them nothing here runs and the stylesheet's band crop stands,
+   * which is what a row predating the column gets.
    *
    * THE ARITHMETIC IS lib/sharecard.js drawingRect(), inlined rather than
    * imported for the reason the macro's own note gives: a page that only
@@ -714,17 +591,14 @@
     var id = el.getAttribute('data-skribl-id');
     /* The listing endpoint, written in by the macro from url_for(). A host may
      * mount Skribl under any prefix, so the component never assembles a URL
-     * from window.location or from a literal path — it appends an id to what
+     * from window.location or from a literal path -- it appends an id to what
      * the server said the endpoint is.
      *
-     * NO DEFAULT. This read used to fall back to '/api/skribls', which is the
-     * exact mistake the rest of this comment describes: on a host mounted at
-     * /skribl the fallback would have sent every payload fetch to a path that
-     * does not exist, and quietly — the box would just show its error panel.
-     * verify_seam.py scans client JS for route literals and caught it. A box
-     * with no endpoint attribute cannot fetch, so it says so (see load()),
-     * which is the honest failure. A DRAFT has no endpoint and needs none: it
-     * is attached by payload and never loads. */
+     * NO DEFAULT. A fallback of '/api/skribls' sends every payload fetch on a
+     * host mounted at /skribl to a path that does not exist, and quietly: the
+     * box just shows its error panel. A box with no endpoint attribute cannot
+     * fetch, so it says so (see load()). A DRAFT has no endpoint and needs
+     * none: it is attached by payload and never loads. */
     var api = (el.getAttribute('data-skribl-api') || '').replace(/\/+$/, '');
     var canvas = el.querySelector('.skribl-inline-canvas');
     var poster = el.querySelector('.skribl-inline-poster');
@@ -822,16 +696,11 @@
          * reports the replay running at 1x however fast it is really drawing.
          * Everything a viewer can see about the clock reads this field -- the
          * scrubber fill, the time readout, fullbar's end detection -- so at 2x
-         * the drawing doubled and the bar crawled at half the true progress,
-         * and the speed control looked DEAD (owner: "the 1x button on full
-         * screen does nothing when pushed"). The render loop had it right all
-         * along (`var at = elapsed + segElapsed()`), which is why the drawing
-         * obeyed the rate and nothing else did.
-         *
-         * Measured, one tile, one second of wall clock at each rate:
-         *     rate 1   drawing 16.66%   this field 1015ms
-         *     rate 2   drawing 33.06%   this field 1006ms
-         * The first probe of this bug read THIS FIELD and agreed with it. */
+         * the drawing doubles and the bar crawls at half the true progress,
+         * and the speed control looks DEAD. The render loop reads
+         * `elapsed + segElapsed()`, which is why the drawing obeys the rate
+         * even when nothing else does. A probe that reads THIS field instead
+         * of the pixels agrees with the bug. */
         return { id: id, state: state, totalMs: totalMs,
                  elapsedMs: state === 'playing' ? elapsed + segElapsed() : elapsed,
                  kind: flipFrames ? 'flip' : 'replay', hasAudio: !!music,
@@ -907,31 +776,22 @@
       pixelRatio = dpr;
       canvas.width = Math.round(size.w * dpr);
       canvas.height = Math.round(size.h * dpr);
-      /* NO CSS SIZE IS SET, AND THAT IS THE LETTERBOX.
+      /* NO CSS SIZE IS SET, AND THAT IS THE LETTERBOX. Setting
+       * canvas.style.width/height to the drawing's logical size does NOT let
+       * max-width/max-height preserve the aspect: a replaced element whose
+       * width AND height are both definite has each axis clamped by its own
+       * maximum, independently -- so a 9:16 drawing in the 16:9 box comes out
+       * stretched 216%, and a 4:3 one by 33%, on the feed, on the profile
+       * stage and in any host's embed. (/s/<id> is unaffected: app.js fits the
+       * canvas itself.) With both auto, the bitmap's own dimensions are the
+       * intrinsic ratio and the two maximums letterbox it.
        *
-       * This used to set canvas.style.width/height to the drawing's logical
-       * size, with a comment saying max-width/max-height then preserved the
-       * aspect "because a canvas is a replaced element". They do not. A
-       * replaced element whose width AND height are both definite has each
-       * axis clamped by its own maximum, independently -- so a 9:16 drawing
-       * in the 16:9 box came out 386x217 instead of 122x217, stretched 216%,
-       * and a 4:3 one by 33%. It was wrong on the feed, in the profile's
-       * stage and in any host's embed, from the day this file was written;
-       * the owner caught it on the profile page, where the stage is big
-       * enough to see it (v305). /s/<id> was never affected -- app.js fits
-       * the canvas itself.
-       *
-       * With both auto, the bitmap's own dimensions are the intrinsic ratio
-       * and the two maximums letterbox it. Measured at 9:16, 4:3 and 1:1, at
-       * desktop and phone widths, on the stage and in the feed.
-       *
-       * THE COMPOSITOR'S SCALE WAS THE SECOND HALF OF THIS. It derived the
-       * device pixel ratio as backing/clientWidth, which was only ever the
-       * true ratio while this CSS width was pinned -- and max-width was
-       * already clamping it, so the offscreen layers ran ~1.94x out and every
-       * see-through stroke composited at about twice its size. That inflation
-       * is what carried verify_inline's ink gate over a floor calibrated on
-       * it. The ratio is passed in now; see makeCompositor. */
+       * THE COMPOSITOR'S SCALE IS THE SECOND HALF OF THIS. Deriving the device
+       * pixel ratio as backing/clientWidth is only the true ratio while a CSS
+       * width is pinned; with max-width clamping, the offscreen layers run
+       * ~1.94x out and every see-through stroke composites at about twice its
+       * size -- inflation large enough to carry verify_inline's ink gate over
+       * a floor calibrated on it. The ratio is passed in; see makeCompositor. */
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       canvas.hidden = false;
 
@@ -942,37 +802,24 @@
 
       /* The underlay: background colour, then a photo or base snapshot.
        *
-       * THE AUTHORED FIT TRAVELS WITH THE PHOTO, and this used to throw it
-       * away. The comment here read that the fit/opacity/blur controls are
-       * "authoring state the editor applies through CSS on its own <img>, and
-       * reproducing that stack in a feed box is not worth a second
-       * implementation of it. Cover is the fit a feed wants and the editor's
-       * default." Cover is the editor's DEFAULT; it is not what the author
-       * chose once they touched the control. A photo composed with Fit was
-       * letterboxed in the editor and on /s/<id> and CROPPED here -- on the
-       * profile stage, the feed and every host embed -- which is the owner's
-       * report: "the pug in the background FIT the screen on the editor and
-       * the original player. now he is cut off."
+       * THE AUTHORED FIT TRAVELS WITH THE PHOTO. Cover is the editor's
+       * DEFAULT, not what the author chose once they touched the control: hard
+       * -coding it letterboxes a Fit photo in the editor and on /s/<id> and
+       * CROPS it here. And there is no second implementation to write --
+       * lib/photofit.js has owned this geometry since Pad, Flip and the player
+       * each had their own copy and one could not read what another wrote.
        *
-       * And there is no second implementation to write: lib/photofit.js has
-       * owned this geometry since the day Pad, Flip and the player each had
-       * their own copy of it and one could not read what another wrote. Using
-       * it is the cheap option; the expensive one was the hard-coded Math.max
-       * that disagreed with two other surfaces.
+       * OPACITY AND BLUR TRAVEL TOO. The editor and /s/<id> put the photo in a
+       * real <img> behind the canvas and let CSS fade and soften it; a feed box
+       * has one canvas and nothing else, so the same two choices are
+       * globalAlpha and ctx.filter.
        *
-       * OPACITY AND BLUR TRAVEL TOO, as of v307, and this note used to say
-       * they did not. The editor and /s/<id> put the photo in a real <img>
-       * behind the canvas and let CSS fade and soften it; a feed box has one
-       * canvas and nothing else, so the same two choices are globalAlpha and
-       * ctx.filter. A photo authored at 40% painted opaque here, and one
-       * authored soft painted sharp, on every host embed.
-       *
-       * THE BLUR RADIUS NEEDS NO CONVERSION, which is the reason it is one
-       * line. ctx.filter works in user space, and the context is scaled by
-       * the device pixel ratio in adopt(), so `blur(12px)` here covers the
-       * same distance across the drawing as `filter: blur(12px)` on the
-       * editor's img -- on a 1x screen and a 2x one alike. Writing the
-       * conversion by hand is what would have made it wrong. */
+       * THE BLUR RADIUS NEEDS NO CONVERSION, which is why it is one line.
+       * ctx.filter works in user space and the context is scaled by the device
+       * pixel ratio in adopt(), so `blur(12px)` here covers the same distance
+       * across the drawing as `filter: blur(12px)` on the editor's img, on a 1x
+       * screen and a 2x one alike. Writing the conversion by hand is what would
+       * make it wrong. */
       under = { color: (f0.background && f0.background.color) || (payload.background || {}).color || null,
                 image: null, fit: null, offX: 0.5, offY: 0.5, zoom: 1, op: 1, bl: 0 };
       var ph = f0.photo || null;
@@ -1104,15 +951,12 @@
         /* THROUGH displayAt() WHEN PLAYING, because no instant of the live
          * clock supplies progress 1 while a drawing page is still current, and
          * that page must reach its complete recorded state before the clock
-         * may leave it. `full` marks the repaints that move time backwards —
-         * `jump` is a SCRUB and only a scrub: someone dragging the bar asked
-         * for that page and must get it. Passing no `last` is how displayAt()
-         * is told there is nothing owed, so a jump lands where it aimed. A
-         * LOOP RESTART is not a jump —
-         * it is the clock coming round, and the page it is leaving is owed its
-         * last frame exactly as any other page turn is, which is why this
-         * cannot key off `full`: the loop repaints fully too. See
-         * lib/holdtiming.js. */
+         * may leave it. `jump` is a SCRUB and only a scrub: someone dragging
+         * the bar asked for that page and must get it, and passing no `last`
+         * is how displayAt() is told there is nothing owed. A LOOP RESTART is
+         * not a jump -- it is the clock coming round, and the page it leaves
+         * is owed its last frame as any page turn is, which is why this cannot
+         * key off `full`: the loop repaints fully too. See lib/holdtiming.js. */
         var shown = H
           ? H.displayAt(flipMs, flipFrames, cyc, jump ? null : lastShown)
           : { index: Math.min(flipFrames.length - 1,
@@ -1168,13 +1012,11 @@
     }
 
     /* The nib rides in the BOX's coordinate space while the point is in the
-     * DRAWING's, and the canvas is letterboxed between them — so this maps
-     * through the two live rects rather than assuming they are the same box.
-     * Getting this wrong puts the pen next to the line instead of on it, which
-     * is worse than no nib at all.
+     * DRAWING's, and the canvas is letterboxed between them, so this maps
+     * through the live rects rather than assuming they are the same box.
+     * Getting it wrong puts the pen next to the line instead of on it.
      *
-     * AND THE CANVAS ELEMENT IS NOT ALWAYS THE DRAWING. There are two sizing
-     * models here and this used to know about one of them:
+     * AND THE CANVAS ELEMENT IS NOT ALWAYS THE DRAWING. Two sizing models:
      *
      *   tile       width/height auto under max-width/max-height 100%, so the
      *              ELEMENT box is exactly the drawing and a rect is enough.
@@ -1182,47 +1024,31 @@
      *              box is the whole container and the bitmap is letterboxed
      *              INSIDE it. getBoundingClientRect() reports the container.
      *
-     * So in full screen the nib was mapped across the screen while the line was
-     * drawn across the smaller contained box, and sat up and to the left of its
-     * own stroke (the owner's screenshot). `object-fit` has to stay: max-width
-     * only ever SHRINKS a canvas, and full screen needs it to grow.
+     * Read the element box in immersive and the nib is mapped across the whole
+     * screen while the line is drawn across the smaller contained box, so it
+     * sits up and to the left of its own stroke. `object-fit` has to stay:
+     * max-width only ever SHRINKS a canvas and full screen needs it to grow.
+     * So derive the CONTENT box instead -- the same arithmetic `contain` does.
+     * It reduces to the element box in tile mode (equal scales, zero offsets),
+     * so one mapping serves both and a third sizing model cannot break it. */
+    /* THE NIB IS A SIZE IN THE PEN. A fixed 8px of CSS is a boulder on an 84px
+     * library thumb and a speck on a 1280px full screen; scaling it by the
+     * drawing's scale alone makes a ball in full screen. A nib is the tip of a
+     * pen, so its size is the PEN's size rendered: `p.size * s` is exactly how
+     * wide the stroke it is drawing comes out on this screen, and a little over
+     * that is a tip leading its own line. It answers to the scale (a thumb
+     * renders the stroke small, so the bead is small) and to the pen, and it
+     * cannot be out of proportion with the line it is making because it is
+     * DEFINED against that line.
      *
-     * The fix is to stop reading the element box and derive the CONTENT box —
-     * the same arithmetic `contain` does. It reduces to the element box in tile
-     * mode (there the two axes' scales are equal and both offsets are zero), so
-     * one mapping now serves both, and a third sizing model cannot bring this
-     * back. */
-    /* THE NIB IS A SIZE IN THE PEN, which is the third law this has had and
-     * the first one that makes every observation true at once.
-     *
-     * It was 8px of CSS wherever it appeared, so the same dot was a boulder on
-     * an 84px library thumb and a speck on a 1280px full screen. Scaling it by
-     * the drawing's SCALE fixed that and produced a ball in full screen.
-     * Damping the scale fixed the ball and made the bead smaller than the
-     * stroke it was leading. Each answer was right about the thing in front of
-     * it and wrong about the thing the owner said next.
-     *
-     * The measure that settles it is the one the owner had all along: "the way
-     * it was before all this was fine. The nib was slightly bigger than pen
-     * size with a halo." A nib is the tip of a pen. Its size is the PEN's
-     * size, rendered -- `p.size * s` is exactly how wide the stroke it is
-     * drawing comes out on this screen, and a little over that is a tip
-     * leading its own line.
-     *
-     * It answers to the scale (a thumb renders the stroke small, so the bead
-     * is small) and to the pen (a hairline gets a small bead and a marker a
-     * big one), and it cannot be out of proportion with the line it is making
-     * because it is DEFINED against that line.
-     *
-     * THE CLAMP IS A GUARD, NOT A RANGE, and the first numbers I gave it were
-     * a range: a ceiling of 26 caught a 22px pen in full screen, where the
-     * stroke renders 32px wide, and handed back a bead SMALLER than the line
-     * it was leading -- 0.82x, which is the rule broken by the thing that was
-     * supposed to be protecting it. A rule defined against the stroke does not
-     * need protecting from big strokes. The floor is what earns its place (a
-     * hairline on an 84px thumb renders under two pixels, and a two-pixel dot
-     * is dirt on the screen); the ceiling is only there so a pathological
-     * payload cannot paint the whole card.
+     * THE CLAMP IS A GUARD, NOT A RANGE. A ceiling low enough to be a range
+     * catches ordinary big pens -- a 22px pen renders 32px wide in full screen
+     * -- and hands back a bead SMALLER than its own stroke, which is the rule
+     * broken by the thing protecting it. A rule defined against the stroke does
+     * not need protecting from big strokes. The floor is what earns its place:
+     * a hairline on an 84px thumb renders under two pixels, and a two-pixel dot
+     * is dirt on the screen. The ceiling is only so a pathological payload
+     * cannot paint the whole card.
      *
      * Applied only when it MOVES: this runs on every frame of every replay and
      * the pen changes at a stroke boundary, not at a frame. */
@@ -1240,40 +1066,31 @@
       if (!cr.width || !cr.height) { st.opacity = '0'; return; }
       var s = Math.min(cr.width / size.w, cr.height / size.h);
       nibSize((p.size || 8) * s);
-      /* THE NIB TAKES THE INK IT IS LAYING DOWN. It was a white dot whatever
-       * colour the pen was, which reads as a cursor hovering over the drawing
-       * rather than as the pen making it -- and the shared-link player has
-       * tinted its bead since it was written (app.js's nibRGB), so the two
-       * implementations disagreed about something a person sees side by side.
+      /* THE NIB TAKES THE INK IT IS LAYING DOWN. A white dot whatever colour
+       * the pen is reads as a cursor hovering over the drawing rather than as
+       * the pen making it, and the shared-link player has tinted its bead since
+       * it was written (app.js's nibRGB).
        *
-       * The colour goes in raw and the SHEET handles the awkward part: a
-       * stroke may carry alpha, and a half-transparent bead over a dark canvas
-       * is barely there. inlineplayer.css lays the ink over an opaque white
-       * base, so a faint pen gives a pale nib rather than a ghost -- the same
-       * intent as the other player's alpha strip, without a colour parser in
-       * a file a host pays for by the byte.
+       * The colour goes in raw and the SHEET handles the awkward part: a stroke
+       * may carry alpha, and a half-transparent bead over a dark canvas is
+       * barely there. inlineplayer.css lays the ink over an opaque white base,
+       * so a faint pen gives a pale nib rather than a ghost -- the same intent
+       * as the other player's alpha strip, without a colour parser in a file a
+       * host pays for by the byte.
        *
-       * AND THE INK NEEDS SEPARATING FROM ITSELF, which is the question the
-       * ink created and which took two answers to settle. A tip the colour of
-       * the stroke under it disappears into that stroke and reads as a
-       * slightly thicker bit of line rather than as a pen.
+       * AND THE INK NEEDS SEPARATING FROM ITSELF. A tip the colour of the
+       * stroke under it disappears into that stroke and reads as a slightly
+       * thicker bit of line. A hard two-tone hairline separates them and looks
+       * like a cursor doing it; a BLURRED halo of the same ink adds light over
+       * the stroke instead of drawing a line across it, so the tip is the
+       * brightest point on its own line and nothing foreign was introduced to
+       * make it so.
        *
-       * The first answer was a hard two-tone hairline, light over dark, the
-       * way a marker on a map is drawn. It separates them and it looks like a
-       * cursor doing it (owner: "make outer contrast ring a little glow of
-       * color, not white ring"). The second is a BLURRED halo of the same
-       * ink: it adds light over the stroke rather than drawing a line across
-       * it, so the tip is the brightest point on its own line and nothing
-       * foreign has been introduced to make it so. The shared-link player has
-       * been drawn this way since it was written.
-       *
-       * AND IT HAS TO BLOOM PAST THE STROKE TO DO ANY OF THAT. The first cut
-       * of the halo was 6px of blur at 55%, which on a 12px stroke of the
-       * same colour is invisible -- rendered and looked at, not reasoned
-       * about: the tip was simply gone. 8px of blur and 3px of spread at 90%
-       * puts the glow's edge outside the line it is ending, so there is a
-       * soft bloom around the tip and the eye finds it. Below that it is not
-       * a glow, it is the stroke.
+       * AND IT HAS TO BLOOM PAST THE STROKE TO DO ANY OF THAT. 6px of blur at
+       * 55% on a 12px stroke of the same colour is invisible -- rendered and
+       * looked at, not reasoned about. 8px of blur and 3px of spread at 90%
+       * puts the glow's edge outside the line it is ending. Below that it is
+       * not a glow, it is the stroke.
        *
        * Erasing keeps the neutral bead: there is no ink to take. */
       st.setProperty('--nib-c', (!p.erase && p.color) || '#fff');

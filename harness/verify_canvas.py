@@ -1,4 +1,4 @@
-"""v110 — variable canvas size, and the help text catching up with the features.
+"""Variable canvas size, and the help text catching up with the features.
 
 The canvas was hardcoded to 640x460. The *payload* has always carried canvasSize
 and the player has always honoured it (`establishEditorCanvas` in app.js), so this
@@ -43,7 +43,7 @@ with sync_playwright() as p:
     # drift the presets themselves suffered from. The table is the contract;
     # that its labels are honest is asserted separately below.
     _table = {s["id"]: s for s in pg.evaluate("() => FLIP_SIZES")}
-    # v269: a fresh document starts on the preset that DISPLAYS LARGEST in this
+    # A fresh document starts on the preset that DISPLAYS LARGEST in this
     # device's stage (bestFor), not unconditionally on the first row — a
     # portrait phone opens 9:16 instead of a letterboxed 4:3. Still always a
     # real preset from the table, never a viewport-derived pair.
@@ -174,7 +174,7 @@ with sync_playwright() as _p:
 
     check("preset ids are unique",
           len({x["id"] for x in _sizes}) == len(_sizes))
-    # v269: the default is the table row bestFor() picks for this stage — a
+    # The default is the table row bestFor() picks for this stage — a
     # real preset (exact table dimensions), chosen by fit rather than position.
     _dflt = _pg.evaluate("""() => {
         const st = document.querySelector('.flip-stage');

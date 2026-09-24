@@ -36,7 +36,7 @@
     });
   }
 
-  // ---- Stroke layers (v213) -------------------------------------------------
+  // ---- Stroke layers -------------------------------------------------
   // The wet/dry compositor was already here and already on: strokeLayersOn() in
   // app.js reads `window.SKRIBL_STROKE_LAYERS !== false`, a global with no
   // control anywhere, so the only way to see the difference was to set it by
@@ -85,7 +85,7 @@
     });
   }
 
-  // ---- Pause handling (v213) ------------------------------------------------
+  // ---- Pause handling ------------------------------------------------
   // Writes through to app.js's setPauseMode(), which is what serializeSkribl()
   // posts and what the player adopts on load — so this is a property of the
   // DRAWING, not of this browser. The localStorage copy is only a default for
@@ -122,7 +122,7 @@
   }
 
 
-  // ---- Keyboard shortcuts (v213) --------------------------------------------
+  // ---- Keyboard shortcuts --------------------------------------------
   // Pad had FOUR bound keys in total (Ctrl+Z/Y, Enter, Escape) while Flip
   // already answered to p/e for the tools. Same two editors, same tool row, one
   // of them reachable from the keyboard.

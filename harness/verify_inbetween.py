@@ -302,7 +302,7 @@ with sync_playwright() as p:
           bool(help_txt) and "motion smear" in help_txt.lower(),
           (help_txt or "")[-200:])
 
-    # ---------------------------------------------------------------- v296
+    # --------------------------------------------------------------------
     # AN ERASED PAGE IS THE SAME PAGE TO BOTH BUTTONS.
     #
     # tweenMismatch counts visible ink since v296, and buildInbetween read
@@ -524,7 +524,7 @@ with sync_playwright() as p:
           f"shapes must come back; a changed profile is the pairing shifting "
           f"again on a page that was already generated")
 
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # UNDO ON AN IN-BETWEEN, WHICH FAILS DIFFERENTLY FROM UNDO ON A SMEAR.
     #
     # Both buttons carried the same defect — neither wrote to actionLog, so
@@ -536,7 +536,7 @@ with sync_playwright() as p:
     # group leaves a BLANK PAGE in the middle of the flip, and pressing undo
     # again then starts eating the artist's own drawing on the page before.
     # That is the scenario pinned here, on the surface that can produce it.
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # A ZERO STROKE-GROUP KILLED THE BUTTON, SILENTLY.
     #
     # A group is a stroke's point count and must be strictly positive --
@@ -583,7 +583,7 @@ with sync_playwright() as p:
     check("...and the page it makes says so",
           bool(_zero["chip"]), f"{_zero['chip']!r}")
 
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # A SHAPE THAT TURNED IS FITTED AS TURNED.
     #
     # ibPhase picks which rotation of a closed path lines up with pose A. It
@@ -677,7 +677,7 @@ with sync_playwright() as p:
           f"well, so residual alone picks one at random and the in-between "
           f"rotates a shape that never moved")
 
-    # ---------------------------------------------------------------- v300
+    # --------------------------------------------------------------------
     # THE PLAINEST THING THE FEATURE DOES, and until now the only one of the
     # corpus's expectations with no assertion behind it: a drawing that MOVED
     # and did nothing else. The half-turn above pins the case with a rotation in
@@ -819,7 +819,7 @@ with sync_playwright() as p:
           _iu.get("fps") == 12 and _iu.get("subdiv") == 1
           and _iu.get("holds") == [1, 1], str(_iu))
 
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # ONE POSE TAKEN SLOWLY, THE NEXT TAKEN FAST.
     #
     # tweenHeldStill decides whether a paired stroke is interpolated or carried
@@ -892,7 +892,7 @@ with sync_playwright() as p:
           f"{_amid['len']:.1f}px against the drawn {_a0['len']:.1f}px"
           if _amid else str(_amid))
 
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # A TAP IS ORDINARY DRAWING, and the in-between had three separate ways of
     # mishandling one. TWO MECHANISMS, in two functions, so they are mutated and
     # asserted separately below -- an all-or-nothing revert shows red for one of
@@ -998,7 +998,7 @@ with sync_playwright() as p:
           f"{_g1['len'] if _g1 else None} against {_g2['len'] if _g2 else None} — "
           f"the same two drawings in the other order must spend the same ink")
 
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # WHERE IN TIME THE MIDDLE POSE LANDS.
     #
     # carveForInsert took ONE slot off the pose however long the pose was held.
@@ -1060,7 +1060,7 @@ with sync_playwright() as p:
           + " — a longer pair moves every page after it, which is the bug the "
             "carve exists to prevent")
 
-    # ---------------------------------------------------------------- v300
+    # --------------------------------------------------------------------
     # WHAT YOU RUBBED OUT STAYS RUBBED OUT.
     #
     # buildInbetween walks tweenVisible(a).ink and nothing walked .erase, so a
@@ -1144,7 +1144,7 @@ with sync_playwright() as p:
           f"{_orub} — a hole made on THIS page is on the page you are "
           f"inserting after, so it comes through where it was put")
 
-    # ---------------------------------------------------------------- v300
+    # --------------------------------------------------------------------
     # THE PHASE SEARCH HAD A SCALING CLIFF, and this gates the work rather than
     # the clock.
     #

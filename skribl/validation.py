@@ -66,7 +66,7 @@ def _payload_kind(payload):
     WHY IT IS STORED AT ALL. The listing endpoint defers `payload_json` on
     purpose (measured: 9.75 ms against 1.04 ms), so a tile cannot look. The
     gallery therefore showed no pen and no book and there was no way to tell
-    which a post was (owner). Denormalised at post time like `has_audio`
+    which a post was . Denormalised at post time like `has_audio`
     beside it, from the same payload, in the same tick.
 
     Pure + import-light so it can be unit-tested headless.

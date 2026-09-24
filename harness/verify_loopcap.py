@@ -1,4 +1,4 @@
-"""v102 — the two audio-payload bugs from the v101 QA writeup.
+"""The two audio-payload bugs a QA pass found.
 
 (a) Flip ignored its own 20s loop cap on load: decodeForWaveform set
     trimEnd = audioDuration, so a 42s file loaded as a 42s "loop".

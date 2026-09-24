@@ -1,25 +1,11 @@
 /* The profile's Skribls tab: every Skribl this listing returns, with a
  * transport a post is not allowed to have.
  *
- * ===========================================================================
- * WHAT THIS REPLACED, AND WHY THAT MATTERED
- * ===========================================================================
+ * IT SHOWS REAL POSTS. A page that draws its own content cannot tell you
+ * whether the thing it is previewing WORKS; this reads GET /api/skribls and
+ * plays real payloads, so when it is wrong it is wrong about something.
  *
- * Until v275 this file was a MOCK. It carried its own tiny replay engine and a
- * table of hand-drawn motifs — a bolt, a cassette, a smiley — and rendered
- * those. Nothing on the page had ever been posted by anyone. It was registered
- * as a real route the whole time, so a host mounting Skribl got it in their own
- * URL space serving invented drawings, and README.md had to carry a warning
- * saying so.
- *
- * The problem with that was not the pretending. It was that a page which draws
- * its own content cannot tell you whether the thing it is previewing WORKS.
- * This one reads GET /api/skribls and plays real payloads, so when it is wrong
- * it is wrong about something.
- *
- * ===========================================================================
- * IT DOES NOT CONTAIN A PLAYER
- * ===========================================================================
+ * IT DOES NOT CONTAIN A PLAYER.
  *
  * The stage is inlineplayer.js — the same player the feed uses — driven through
  * the handle it exposes: play, pause, seek, setLoop, state. A third replay
@@ -36,11 +22,7 @@
  * page ABOUT the drawings — somebody came here to look at one — so scrub,
  * restart and a loop toggle belong.
  *
- * ===========================================================================
- * ONE PAYLOAD AT A TIME
- * ===========================================================================
- *
- * The grid tiles are share-card images, not players. Fifty mounted players each
+ * ONE PAYLOAD AT A TIME. The grid tiles are share-card images, not players. Fifty mounted players each
  * holding a payload is tens of megabytes for a page of thumbnails, and
  * GET /api/skribls returns metadata precisely so a listing does not have to pay
  * that. Selecting a tile fetches ONE payload and hands it to the stage.
@@ -74,12 +56,10 @@
      and the macro is already called with controls=false, so the chip is all
      `is-bare` suppresses here.
 
-     It used to be toggled by syncFull(), i.e. ON in full screen and OFF the
-     rest of the time, which is backwards: full screen is the one moment the
-     page's own row is off the display. The gallery had the same line and the
-     same inversion, where it cost a duplicated loop button on every card that
-     had been full-screened once. Different surfaces, different symptom, one
-     wrong question -- so it is answered here once, at build. */
+     DO NOT TOGGLE IT WITH FULL SCREEN. That is backwards -- full screen is
+     the one moment the page's own row is off the display -- and the inversion
+     costs a duplicated loop button on anything that has been full-screened
+     once. Answered once, at build. */
   stageBox.classList.add('is-bare');
   var pTitle = document.getElementById('pTitle');
   var pKind = document.getElementById('pKind');
@@ -152,8 +132,8 @@
        browser-kept row -- music included. An unknown says nothing, the same
        way the row's kind does. */
     /* HIDDEN, NOT BLANK. Emptying the text left the pill's own border and
-       padding on screen — a 20px ghost under the title with nothing in it
-       (owner's screenshot). A control that says nothing should not be there.
+       padding on screen — a 20px ghost under the title with nothing in it.
+       A control that says nothing should not be there.
        With the reconcile above this is now rare rather than universal, but it
        is still reachable: a local save has no server post to ask. */
     var sound = item.has_audio === true ? 'with sound'
@@ -192,15 +172,14 @@
       })
       .then(function (body) {
         /* IS THIS STILL THE SKRIBL ON THE STAGE — asked by id, not by object
-           identity. `current !== item` was the guard, and it answered "a later
-           selection won" for anything that merely REPLACED the current item
-           with an equal one: v307's reconcile does exactly that when it learns
-           a row's kind or sound, so the payload arrived, this returned, and the
-           stage sat there loading forever with no error anywhere (the fetch was
-           a 200; the throw was a silent early return).
-           The id is what the question is actually about. It is also strictly
-           more correct than identity was: select A, select B, select A again,
-           and A's first response is now usable instead of discarded. */
+           identity. `current !== item` answers "a later selection won" for
+           anything that merely REPLACED the current item with an equal one --
+           which the reconcile does when it learns a row's kind or sound, so the
+           payload arrives, this returns, and the stage loads forever with no
+           error anywhere (the fetch is a 200; the throw is a silent return).
+           The id is what the question is about, and it is strictly more
+           correct: select A, B, then A again, and A's first response is usable
+           rather than discarded. */
         if (!current || current.id !== item.id) return;
         var payload = (body && (body.skribl || body.payload)) || body;
         if (!player) {
@@ -293,20 +272,17 @@
      alone, and a button that did nothing there would be worse than none.
      Escape leaves through the browser; the button leaves too, and its
      pressed state follows the document, not a flag of its own. */
-  /* FULL SIZE, ON EVERY DEVICE (lib/immersive.js). This used to be gated on
-     `document.fullscreenEnabled`, and the gate was right on its own terms: a
-     control that cannot work should not be on screen. What it produced was the
-     owner's complaint -- "i am not seeing full screen on gallery or library on
-     iphone" -- because iOS Safari has the API for <video> and nothing else, so
-     the device where a drawing is smallest was the device with no way to make
-     it bigger. The module takes the real API where there is one and pins the
-     stage over the viewport where there is not, so the control always has
-     something to do and no longer has to be hidden. */
+  /* FULL SIZE, ON EVERY DEVICE (lib/immersive.js). Gating this on
+     `document.fullscreenEnabled` is right on its own terms and wrong in
+     practice: iOS Safari has the API for <video> and nothing else, so the
+     device where a drawing is smallest is the one with no way to enlarge it.
+     The module takes the real API where there is one and pins the stage over
+     the viewport where there is not. */
   if (btnFull && stageWrap && window.SkriblImmersive) {
     btnFull.hidden = false;
     /* THE SAME BAR THE GALLERY'S TILE USES (lib/fullbar.js). This page had an
        exit and no controls; the gallery had controls and no exit; neither
-       looked like the other, which is what the owner photographed. Neither
+       looked like the other, which is what a screenshot showed. Neither
        page builds one now. */
     var fbar = window.SkriblFullBar ? window.SkriblFullBar.attach(stageWrap, {
       player: function () { return player; },
@@ -343,9 +319,9 @@
   });
 
   /* ---- the list ----------------------------------------------------------
-     RENDERED BY lib/postedui.js — the same rows, actions and custody rules
-     the editors' drawer had until v304 — with this page's poster as each
-     row's picture and the title putting the Skribl on the stage. What this
+     RENDERED BY lib/postedui.js — the shared rows, actions and custody
+     rules — with this page's poster as each row's picture and the title
+     putting the Skribl on the stage. What this
      file owns is the POPULATION (whose Skribls; see below), the filter chip
      and the words around the list. */
   var ui = null;
@@ -460,10 +436,9 @@
   /* BACKFILL THE BROWSER, the way the migration backfilled the database.
      `kind`, `pages` and `has_audio` were each added after posts were already
      being made, so every row this browser wrote before them reads undefined —
-     and every client that renders an unknown honestly then shows nothing. The
-     result was a library with no pen, no book and no sound note on anything
-     the owner had actually posted, which looks exactly like a feature that did
-     not ship. Rendering was right; the data was old.
+     and a client that renders an unknown honestly then shows nothing, which
+     looks exactly like a feature that did not ship. Rendering is right; the
+     data is old.
 
      GET /api/skribls/meta, NOT /api/skribls/<id>. The per-id endpoint answers
      with the whole payload and COUNTS A PLAY — reconciling thirty rows through
@@ -502,10 +477,10 @@
       if (touched && ui) {
         ui.render();
         /* THE WORDS, NOT THE WHOLE SELECTION. select() loads the payload, and
-           the payload fetch is the one that COUNTS A PLAY -- re-selecting here
-           made the stage fetch the same Skribl twice on every boot and count
-           the owner a second play for looking at their own library once. The
-           reconcile only ever learns metadata, so it only writes metadata. */
+           the payload fetch is the one that COUNTS A PLAY -- re-selecting
+           here makes the stage fetch the same Skribl twice on every boot and
+           counts a second play for one look. The reconcile only ever learns
+           metadata, so it only writes metadata. */
         if (current) {
           var fresh = store.list().filter(function (e) { return e.id === current.id; })[0];
           if (fresh) { current = asItem(fresh); showMeta(current); }
@@ -526,14 +501,11 @@
       })
       .then(function (body) {
         (body.items || []).forEach(function (i) {
-          /* THE LISTING CARRIES THE KIND NOW (v307). It still defers the
-             PAYLOAD -- that has not changed and is not going to -- but `kind`
-             and `pages` are columns on the post, written at post time from the
-             same payload `has_audio` comes from, so a host row can say which
-             it is without one. This read `kind: null, pages: 0` under a
-             comment explaining that it could not know; it can.
-             A null still means "not backfilled" and still renders as
-             nothing. */
+          /* THE LISTING CARRIES THE KIND. It still defers the PAYLOAD -- that is
+             not going to change -- but `kind` and `pages` are columns on the
+             post, written at post time from the same payload `has_audio` comes
+             from, so a row can say which it is without one. A null means "not
+             backfilled" and renders as nothing. */
           hostRows.push({ id: i.id, url: playerBase + '/' + encodeURIComponent(i.id), title: i.title || '',
                           kind: i.kind || null, pages: i.pages || 0,
                           at: i.created_at ? Date.parse(i.created_at) : Date.now(),

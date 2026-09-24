@@ -51,7 +51,7 @@ print("\nSTATIC — the shared session is never committed or rolled back")
 # the same files so the violation cannot quietly return. Comments are excluded
 # (the contract is DESCRIBED in them, in exactly these words).
 #
-# v280: THE SCAN WAS TWO FILES AND THE CONTRACT IS THE WHOLE PACKAGE. An audit
+# THE SCAN WAS TWO FILES AND THE CONTRACT IS THE WHOLE PACKAGE. An audit
 # named this shape as a cross-cutting pattern — "tests validate representatives
 # where the contract is global" — and it was true here: skribl/takedown.py
 # could have been written with a commit in its request-shaped code and this
@@ -679,7 +679,7 @@ check("counterexample setup: the host commit failed", r.status_code >= 500,
 _bunlock()
 with _b.app_context():
     _rl3._tombstone_store(_bdb.engine).clear()
-    # v211: the release is now ALSO journaled to a sidecar file, so dropping
+    # The release is now ALSO journaled to a sidecar file, so dropping
     # memory alone no longer reproduces v208 — the journal rescues the retry
     # (which is the point of it). The counterexample must drop both.
     _jp = _rl3._journal_path(_bdb.engine)

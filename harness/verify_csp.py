@@ -1,4 +1,4 @@
-"""v105 — a real Content-Security-Policy, now that nothing off-origin is loaded.
+"""A real Content-Security-Policy, now that nothing off-origin is loaded.
 
 CSP was deferred for as long as gifenc/mp4-muxer came from jsdelivr: any workable
 policy needed a third-party script-src, and the CDN loaders were themselves inline

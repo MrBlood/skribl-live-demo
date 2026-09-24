@@ -1,4 +1,4 @@
-"""v105 — server-side media validation on POST /api/skribls (INTEGRATION §7).
+"""Server-side media validation on POST /api/skribls (INTEGRATION §7).
 
 The post endpoint is public and unauthenticated, and all media arrives as base64
 data URLs inside payload_json. The only previous limit was MAX_CONTENT_LENGTH on
@@ -42,7 +42,7 @@ def post(payload):
             return e.code, {"raw": body[:200].decode("utf-8", "replace")}
 
 
-# v111: the validator now checks magic numbers, so synthetic all-zero bytes are
+# The validator now checks magic numbers, so synthetic all-zero bytes are
 # (correctly) rejected. Fixtures carry a real signature for their declared type.
 _SIGS = {
     "image/png": b"\x89PNG\r\n\x1a\n",
@@ -50,7 +50,7 @@ _SIGS = {
     "image/gif": b"GIF89a",
     "image/webp": b"RIFF\x00\x00\x00\x00WEBP",   # v111: fourcc at offset 8 now required
     "image/bmp": b"BM",
-    # v114: audio is container-checked now, so fixtures need real headers.
+    # Audio is container-checked now, so fixtures need real headers.
     "audio/wav": b"RIFF\x00\x00\x00\x00WAVE",
     "audio/mpeg": b"ID3\x04\x00",
 }

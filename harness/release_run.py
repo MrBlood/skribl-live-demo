@@ -57,7 +57,7 @@ PG_ADVICE = ("Run the 'postgres' CI job in .github/workflows/harness.yml, or "
 GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
              "harness/README.md", "docs/HANDOFF.md", "START-HERE.md",
              "harness/RELEASE.md",
-             # v211: verify_postgres writes gunicorn logs beside itself; they
+             # Verify_postgres writes gunicorn logs beside itself; they
              # are run artefacts, not tree, and must not move the frozen hash
              # between batches (the F3 host log did exactly that once).
              "harness/.pg_gunicorn.log", "harness/.pg_f3_gunicorn.log",

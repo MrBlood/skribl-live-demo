@@ -154,7 +154,7 @@ function clearAllWithUndo() {
     // Skipped while media is still being prepared (mediaBusy), because the
     // snapshot would capture a half-loaded photo or track — same guard saveDraft
     // uses. In that case the clear still happens, just without the undo offer.
-    // v107: Undo now offers Redo, and Redo re-offers Undo — so the clear becomes a
+    // Undo now offers Redo, and Redo re-offers Undo — so the clear becomes a
     // toggle you can flip either way, rather than the one-shot restore v106 had.
     // Redo simply re-runs this same function, which re-snapshots the restored
     // document; no second snapshot is stored and the two can never fall out of sync.

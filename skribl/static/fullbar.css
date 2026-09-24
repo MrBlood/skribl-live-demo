@@ -39,7 +39,7 @@
    centres its content in what is left. The scrim then falls on the letterbox
    rather than on the picture, which is the difference between a control that
    floats over a video and a control that stands on somebody's drawing
-   (owner, of a pug whose feet were behind the buttons).
+   (of a pug whose feet were behind the buttons).
 
    `box-sizing: border-box` is stated rather than inherited: this sheet is
    loaded by pages that may or may not set it globally, and on a `100vh`
@@ -238,7 +238,7 @@
 /* NO RULE ABOVE THE CARD'S FOOTER. It had `border-top: 1px solid` and the
    line ran the full width of the card, straight under a stage whose own border
    is rounded -- so the two met at the radius and the corner read as a mistake
-   rather than a join (owner: "the bottom line just below the canvas that
+   rather than a join ("the bottom line just below the canvas that
    separates the player doesn't look good with the canvas border touching it
    because it has the rounded sides. maybe just remove the straight line?").
    The padding below does the separating, which is what it was already doing
@@ -271,12 +271,45 @@
    so the transport appeared while the pointer was over somebody's name, and
    pressing the description toggle left it up for good, because a button keeps
    focus after a click and `:focus-within` had no reason to ever stop matching
-   (owner: "when I reclicked the bubble, it closed - but it left the controls
+   ("when I reclicked the bubble, it closed - but it left the controls
    still on screen"). The bar belongs to the drawing; the drawing is the stage.
    gallery.js scopes its own pointer and focus listeners the same way, and the
    two halves have to agree or the class and the selector fight. */
-.tileStage:hover .skfull.skfull-card,
-.tileStage:focus-within .skfull.skfull-card,
+/* `:focus-within` IS GONE FROM THIS LIST, and it was the CSS twin of a bug
+   already fixed in the JS. A click puts focus on the player element, which
+   carries tabindex="0" -- so `:focus-within` matched after any mouse press and
+   held the bar open for the life of the page, exactly as `focusin` asking for
+   the sticky peek used to. The owner saw the JS half fixed and the bar still
+   sitting there: "shouldn't those controls fade out? they don't."
+
+   Nothing is lost for a keyboard. gallery.js already raises `.ctl-on` and
+   keeps it raised for a KEYBOARD focus (`peek(keyboardFocus(e.target))`), so
+   the case this selector existed for is covered by the class below -- and
+   covered better, because the class can tell a tab from a tap and a selector
+   cannot. The note above says these two halves have to agree; this is them
+   agreeing, with the JS owning focus outright. */
+/* AND HOVER ANSWERS FOR A CARD AT REST, NOT FOR ONE THAT IS PLAYING.
+   `:hover` has no clock. A pointer parked on a looping drawing held the bar
+   over it for as long as it was left there -- the fade worked, `.ctl-on` came
+   off on its 2.6s timer, and this selector put the bar straight back. Measured
+   on a playing card: opacity 1 at +3.2s and still 1 at +7.2s, with `.ctl-on`
+   already false.
+
+   A GRID AND A PLAYER WANT DIFFERENT THINGS, so each gets the one it wants. At
+   REST the card is a thumbnail and hover is the affordance that says it has
+   controls -- that is the case this rule was written for and it keeps it. While
+   PLAYING it is a player, and a player's controls recede from the picture and
+   come back when the pointer moves; `.is-playing` is published by
+   lib/fullbar.js's own sync, and gallery.js re-arms the timer on real pointer
+   movement inside the stage.
+
+   THE BAR ITSELF IS THE EXCEPTION, and it has to be: a control that fades out
+   from under the cursor reaching for it is worse than one that overstays. It
+   cannot resurrect itself from the faded state, because `pointer-events: none`
+   means there is nothing there to hover -- this only holds open a bar that is
+   already up. */
+.tileStage:not(.is-playing):hover .skfull.skfull-card,
+.tileStage .skfull.skfull-card:hover,
 .tile.ctl-on .skfull.skfull-card {
   opacity: 1;
   pointer-events: auto;

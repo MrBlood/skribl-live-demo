@@ -1,4 +1,4 @@
-"""v232 — Smudge and Blur: the same sweep, two different verbs.
+"""Smudge and Blur: the same sweep, two different verbs.
 
 WHY BLUR NEARLY DID NOT EXIST. A frame is `{strokes, strokeGroups}` — a flat
 array of `{x, y, color, size, t, erase, start}`. Liquify works because
@@ -297,7 +297,7 @@ with sync_playwright() as p:
         page.mouse.up()
         page.wait_for_timeout(400)
         after = page.evaluate(SNAP)
-        # v256: BLUR IS A HALO NOW, so it emits passes and the arrays grow. The
+        # BLUR IS A HALO NOW, so it emits passes and the arrays grow. The
         # old shape of this section pinned "adds and removes NO points", which
         # was correct for a tool that recoloured in place -- and recolouring in
         # place is precisely why it never softened anything.
@@ -635,7 +635,7 @@ with sync_playwright() as p:
                   "is not", not (msg and "draw something first" in msg),
                   f"{msg!r} — there is a drawing on screen")
 
-        # ---------------------------------------------------------- v301
+        # --------------------------------------------------------------
         # A SMUDGE MUST NOT TURN A MOTION SMEAR SOLID.
         #
         # Reported from the app: a 2-3px drag on a generated Motion Smear put a
@@ -756,7 +756,7 @@ with sync_playwright() as p:
               f"names the mechanism where the pixel count names the symptom: "
               f"one of them going red alone is the more useful signal")
 
-        # ---------------------------------------------------------- v302
+        # --------------------------------------------------------------
         # A SMUDGE ON A MOTION SMEAR LEFT A MESH, AND IT WAS THE RENDERER.
         #
         # The reported picture: smudge a generated page and its tube turns into

@@ -154,7 +154,7 @@ with app4.app_context():
         db4.text("select user_id from skribl_posts")).first()[0]
 # Text since v279 — see docs/INTEGRATION.md. An integer host is unaffected
 # everywhere except a raw read of the column, which this is.
-check("current_user_id decides authorship", str(owner) == "42",
+check("current_user_id decides authorship", str == "42",
       f"stored user_id={owner!r}")
 
 # A policy that is never consulted passes every test that only checks the

@@ -410,7 +410,7 @@ class SkriblPost(SkriblBase):
     # the same payload has_audio comes from, for the same reason: the listing
     # defers payload_json deliberately (9.75 ms against 1.04 ms, measured), so a
     # tile cannot look. Without these the gallery showed neither pen nor book
-    # and there was no way to tell a Flip from a replay (owner).
+    # and there was no way to tell a Flip from a replay .
     #
     # NULLABLE, and null means "written before this column existed and not yet
     # backfilled", not "unknown kind". The migration backfills every existing
@@ -422,7 +422,7 @@ class SkriblPost(SkriblBase):
     # A tile shows the share CARD until somebody presses play, and the card
     # contains the drawing with its own ground around it -- so a 4:3 drawing
     # rendered a picture inside a plate inside a tile, with 110px of card
-    # either side (owner: "fix the share card bands"). The client can crop the
+    # either side ("fix the share card bands"). The client can crop the
     # card back to the drawing, lib/sharecard.js drawingRect() being the
     # arithmetic, but only if it knows the drawing's shape.
     #

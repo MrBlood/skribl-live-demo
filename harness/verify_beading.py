@@ -1,4 +1,4 @@
-"""v225 — a translucent stroke must survive a repaint unchanged.
+"""A translucent stroke must survive a repaint unchanged.
 
 Outside review of v224, finding R2, and the reviewer was right to rank it: the
 project's own reviewer notes described this fix and admitted **it is not pinned
@@ -272,7 +272,7 @@ with sync_playwright() as p:
               f"raw {_ap and _ap['raw']['lit']} lit, layers-on "
               f"{_ap and _ap['on']['lit']}, layers-off {_ap and _ap['off']['lit']}")
 
-        # ---------------------------------------------------------------- v302
+        # --------------------------------------------------------------------
         # AND THE RUN A FIELD TOOL LEFT BEHIND, WHICH IS A DIFFERENT POPULATION.
         # Everything above is a UNIFORM run: one colour, one width, so uniformRun
         # gives it a single path and a single path cannot stack against itself.

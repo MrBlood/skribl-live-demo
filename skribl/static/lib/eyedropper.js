@@ -27,7 +27,7 @@
  *
  * THE LOUPE. Tap-to-sample has a physical flaw on the surface most people
  * pick colours on: a fingertip is forty pixels wide and the pixel being
- * sampled is under it (owner: "when you hit eye dropper it needs to open a
+ * sampled is under it ("when you hit eye dropper it needs to open a
  * magnified box so you can see what color you choose"). So an armed press
  * opens the standard loupe — a circle above the finger showing the stage
  * magnified, a reticle on the exact cell, the ring and a chip wearing the

@@ -1,4 +1,4 @@
-"""v238 — Stamps: the clipboard, grown up.
+"""Stamps: the clipboard, grown up.
 
 WHAT WAS ALREADY THERE. Flip has had a selection clipboard since v219: Cut
 remembers, Paste puts it back. Three things stopped it being the thing an

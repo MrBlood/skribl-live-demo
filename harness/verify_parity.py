@@ -988,7 +988,7 @@ with sync_playwright() as p:
         _pp.close(); _fp.close()
 
     print("\nPARITY — the two headers are one design")
-    # Owner, v293, from a phone: "flip top menu is super tight compared to
+    # From a phone: "flip top menu is super tight compared to
     # pad's spacing which feels appropriate." Pad's header holds five things —
     # wordmark, tune, play, a Post pill with its label, more. Flip's held six:
     # a back arrow first, and the compact tiers paid for it by dropping Post's

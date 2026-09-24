@@ -1035,7 +1035,7 @@ with sync_playwright() as p:
     # says it at .zoom-hud .zoom-val-input ("Keep it exactly 16px — do NOT
     # lower this"), and the editors' fields are all 16. The profile page was
     # written later, with its own sheet, and its search field is 12.5px: the
-    # library search box grows when you tap it, which is how the owner found
+    # library search box grows when you tap it, which is how it was found
     # this, on a phone. A rule repeated in comments is a rule that holds until
     # somebody writes a new stylesheet.
     #
@@ -1317,7 +1317,7 @@ with sync_playwright() as p:
               _c0 and _c1 and _c1["ratio"] >= 7 and _c1["muted"] != _c0["muted"],
               f"default {_c0}, more {_c1}")
         _pg.close()
-    # ---------------------------------------------------------------- v299
+    # --------------------------------------------------------------------
     # A NAME THE BROWSER COMPUTES, ON THE POINTER TYPE THAT LOSES IT.
     #
     # lib/tooltip.js's adopt() copies `title` into data-tip and then removes it,
