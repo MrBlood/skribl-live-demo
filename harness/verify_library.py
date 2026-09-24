@@ -1243,6 +1243,38 @@ with sync_playwright() as _sp4:
           and _p4.evaluate("() => localStorage.getItem('skribl_post_loc1') !== null"),
           "the entry is back but the payload is gone")
 
+    # CALIBRATED PER COMPONENT, six of them across this suite, verify_posted
+    # and verify_layout, each reverted on its own against a tree that was green
+    # before and after. Every one went red on the rows named and on no others,
+    # which is what says no row here is carried by another component's fix:
+    #
+    #   the row's x put back          posted  1 red: "offers no x to forget it"
+    #                                 layout  3 red: the no-x row at 360/390/430
+    #   the globe/link pair put back  posted  1 red: "no two actions draw the
+    #                                         same glyph" (4 buttons, 3 unique
+    #                                         on the link-only row) -- and its
+    #                                         companion "a DIFFERENT glyph in
+    #                                         each state" stayed GREEN, because
+    #                                         globe and link ARE different
+    #                                         pictures. Two rows about one
+    #                                         subject, measuring two things.
+    #   the long custody note back    posted  1 red: 50 words against the 24
+    #                                         the row allows
+    #   the eviction rule deleted     posted  1 red: only the How it works row;
+    #     from How it works                   both footer rows stayed green, so
+    #                                         each reads the surface it names
+    #   fitShots made a no-op         library 2 red: the two crop rows, at
+    #                                         slackX -48.5 -- the drawing 48.5px
+    #                                         narrower than an 84px box, which
+    #                                         is the 24px of plate a side the
+    #                                         owner was looking at
+    #   onRender back before paint()  library 3 red: those two AND "the mark
+    #                                         survives a re-render", the row
+    #                                         fitShots alone leaves green. That
+    #                                         row is why the hook ordering is
+    #                                         pinned on its own account rather
+    #                                         than as a side effect of the crop.
+    #
     # THE ROW'S PICTURE IS THE DRAWING, NOT THE CARD (v311). The poster is the
     # 1200x630 share card; the stylesheet framed it at 128% and pulled it up so
     # the wordmark band fell outside the box, which hides the branding and
