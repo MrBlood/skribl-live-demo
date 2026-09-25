@@ -828,6 +828,35 @@ try:
           "attestation",
           "postgres" in _rr.PG_ADVICE and "mp4" in _rr.MP4_ADVICE,
           f"{_rr.PG_ADVICE!r} / {_rr.MP4_ADVICE!r}")
+    # THE PER-SUITE ROW SAYS WHAT THE HEADER SAYS. An outside audit of v312
+    # read `skip | the psycopg driver is not installed` in the table, filed both
+    # external lanes as release gaps, and withdrew them on re-reading the
+    # header that called both verified. The row is driven here through the
+    # same fixtures: an attested lane's row names the attestation, and one for
+    # another tree must not borrow that wording.
+    _saved = dict(_rr.LANE_READERS)
+    try:
+        _rr.LANE_READERS["verify_postgres.py"] = (
+            lambda f: _rr.read_attestation(_good, f, "engine", ""), "FIXTURE")
+        _row_ok = _rr.skip_row_detail("verify_postgres.py", "LOCAL", "a" * 64)
+        _rr.LANE_READERS["verify_postgres.py"] = (
+            lambda f: _rr.read_attestation(_wrong, f, "engine", ""), "FIXTURE")
+        _row_stale = _rr.skip_row_detail("verify_postgres.py", "LOCAL", "a" * 64)
+    finally:
+        _rr.LANE_READERS.clear()
+        _rr.LANE_READERS.update(_saved)
+    check("a skipped suite whose lane is attested says so IN ITS ROW, naming "
+          "the file and keeping the local reason",
+          "externally attested for the tested tree: verified on postgresql"
+          in _row_ok and "FIXTURE" in _row_ok and "LOCAL" in _row_ok, _row_ok)
+    check("MUTATION: a row whose attestation names another tree says NOT "
+          "attested, never attested",
+          "NOT attested" in _row_stale and "externally attested"
+          not in _row_stale, _row_stale)
+    check("every lane SKIP_COVERAGE names has a reader in LANE_READERS, so no "
+          "attested lane can render as a bare skip",
+          set(_rr.SKIP_COVERAGE) <= set(_rr.LANE_READERS),
+          f"{sorted(set(_rr.SKIP_COVERAGE) - set(_rr.LANE_READERS))}")
 finally:
     for _p in (_good, _wrong, _failed):
         try:
