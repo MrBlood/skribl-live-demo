@@ -11509,3 +11509,202 @@ and needed DIFFERENT assertions, which is the v212 rule again: the crop rows go
 red for either, and only the highlight row separates the hook ordering from the
 crop itself. Both mutations were run; the crop no-op reddened two rows, the
 hook ordering reddened three.
+
+## v311, cont. -- what the seal found, which the entry above could not know
+
+The entry above was written before the release run, which is the normal order
+and has a normal cost: it describes the work and not the evidence. The first
+full battery on that tree was RED on three suites, all three introduced in the
+same branch, none of them shipped. They are recorded here because two of the
+three are invisible to the pull-request gate, and a session that reads only the
+entry above would conclude the work went in clean.
+
+### A comment pass took an argument out of a function call
+
+`verify_integration` read
+
+    check("current_user_id decides authorship", str == "42", ...)
+
+`str == "42"` compares the builtin TYPE to a string. It is False forever, so
+the row had been unable to answer its own question since the `(owner)` was
+stripped out of `str(owner)`. `git log -S` puts that on a comment pass in this
+same branch, one removing `(owner, vNNN)` attribution parentheticals from
+PROSE. Here the identical three characters were an argument list.
+
+It is the failure CLAUDE.md names outright -- do not edit mechanically where
+prose and code interleave -- and the third time this tree has paid for it. What
+makes this instance worth its own heading is the SHAPE of the damage: nothing
+about the host seam was broken. The suite stopped being able to tell, which is
+the quieter failure and the worse one, and only a full battery could catch it
+because this suite is not on the PR gate.
+
+Swept afterwards for the same shape two ways and found no second instance:
+every `==`/`!=` against a bare builtin across the Python tree, and every
+non-comment line those ten comment commits touched (51 candidates, all prose or
+CSS comments bar this one).
+
+### A page's feature, charged to every host
+
+`verify_inline` caps the in-post player at 37,200 bytes of CSS and JavaScript
+-- what a HOST downloads to embed a Skribl. The thumbnail crop put it at
+37,232. Measured rather than estimated: generalising the player's private
+`fitPoster` over box aspect and contain/cover and exporting it added 75 bytes,
+against 43 of headroom.
+
+THE RATCHET WAS NOT THE THING TO MOVE, and its own note says why: loosening one
+needs a reason written beside it or it is just a number that follows the code
+down. There was no reason worth writing. Those 75 bytes bought /library a crop
+and every host embedding a post would have paid for it.
+
+So the cost moved instead of the limit. `inlineplayer.js` went back to its
+pre-v311 bytes exactly and /library reads `lib/sharecard.js` -- 1,067 bytes, on
+a first-party page that can afford them. The source improved in the same move:
+the player inlines those constants PRECISELY so a host need not load the
+module, which makes its copy the derived one and sharecard the original. The
+crop's geometry is byte-identical either way; only the payer changed.
+
+### A caller outliving its function, and the dead CSS it was propping up
+
+`verify_player_isolation`'s "no page errors on the player" caught
+`updateTabSlider is not defined`. A real ReferenceError on a real page: the
+same branch removed the tab-slider block as dead and left its CALLER standing
+in the window resize listener.
+
+THE ERROR LINE UNDERSTATES IT. A throw there aborts the rest of the handler, so
+the photo-fit slider repositioning and `initToolSlider()` below it stopped
+running after any resize. `node --check` cannot see a call to a missing
+function -- it is valid syntax -- and neither can any suite that does not
+execute the page on a resize. Same shape as the helpBtn listener caught earlier
+the same day, and as the photo carve CLAUDE.md already records.
+
+Then the removal cascaded, usefully. With the dead call gone, `verify_surfaces`
+immediately named five `.tab-btn` rule-sets whose class nothing applies -- the
+selector string INSIDE the dead call had been the only thing making them look
+live to that gate. A dead call propping up dead CSS, each hiding the other.
+
+### One of the three was already on main, and nothing said so
+
+Worth separating, because lumping the three together overstates two of them and
+understates the first. Read off the main-branch battery for the PREVIOUS
+release (run 36058086725, on the squash of #221):
+
+    verify_integration.py      FAIL -- exit 1, 13/14 passed
+    verify_inline.py           ok -- 110/110
+    verify_player_isolation.py ok -- 55/55
+    RESULT: FAIL -- 1 suite(s) did not complete cleanly.
+
+So the `str(owner)` damage SHIPPED. main sat red for about five hours with one
+failing suite, and the deployed site was built from it. The other two were
+introduced inside v311's own branch and never left it -- the ReferenceError in
+particular arrived after that squash, which is why that run shows
+verify_player_isolation green.
+
+THE RED WAS NOT NOTICED BECAUSE NOTHING LOOKS. The pull-request gate ran and
+was green (this suite is not on it); the merge went in; the main battery went
+red an hour later into a tab nobody had open. It was found here only because
+the v311 seal happened to re-run the same suite on a tree that still carried
+the defect. A repository that gates on pull requests and verifies on main needs
+someone or something to READ the main result -- otherwise the trim has quietly
+converted a blocking check into a notification nobody receives.
+
+### What this says about where the gates sit
+
+The pull-request gate runs the boot suite plus everything needing neither a
+browser nor a server, and that trim is still right: three jobs at 40-90 minutes
+is a long time to sit on a pull request. But the three defects above divide
+cleanly by which instrument could see them, and none of them was the gate:
+
+  verify_integration       needs no browser and no server -- and is not on the
+                           gate, which is worth a look one day
+  verify_inline            needs both
+  verify_player_isolation  needs both
+
+Nothing here argues for widening the gate; the wall-clock reason for the trim
+is unchanged, and the seal did its job. It argues for not mistaking a green
+pull request for a verified tree, which is what the seal is for and why a red
+one is a result rather than a delay.
+
+## The third red on the postgres lane was a lost click, not a slow runner
+
+The v311 merge went to main and the battery reported failure again — one suite,
+one lane:
+
+    run 36086833134, main @ 8e3b5c9 (the v311 squash)
+      harness (sqlite)      pass, verify_framecache ok 23/23
+      harness (postgresql)  FAIL, verify_framecache 21/23
+        player: playback really looped (the once-only claim is not vacuous)
+        player: the heavy frame is rasterised exactly once, however many loops ran
+
+The same suite was 23/23 on the sealed v311 release run, 23/23 on the sqlite
+lane of that very commit, and 23/23 run by hand here. `verify_framecache` has
+now gone red on the postgres lane in v305, v306 and v311, and the file carries
+a long comment — with a CPU-throttle table — explaining that the lane is
+starved and that a wall-clock threshold "reports the runner, not the cache".
+
+It was not the clock. It was a race, and it had been in that section since it
+was written.
+
+The suite's readiness probe waits for `window.SkriblFrameBitmap` and
+`paintStrokesStatic`. Both of those exist the moment `app.js` is parsed. The
+player's transport is bound at the END of `initPlayer()` — an async IIFE whose
+first act is `await fetch('/api/skribls/<id>')`. So the probe can go true while
+`#playerLoopBtn` and `#playerPlayBtn` are still inert, and a `.click()` on an
+inert button is not an error: it dispatches, nothing listens, playback never
+starts, and the run ends on its deadline with one stray light paint and no
+rasterisation.
+
+That is the CI failure exactly — including "player: no page errors" passing
+beside it. A lost click and a starved runner are indistinguishable from the far
+end of a paint counter, which is why three releases read it as the latter.
+
+### Made, not waited for
+
+`GET /api/skribls/<id>` was given a 2.5s sleep — one temporary line in
+`skribl/routes.py`, reverted after — because that is what a runner whose
+database is mid-checkpoint serves. The postgres job's own container log for
+this run shows checkpoints writing for 106.7s, 112.2s and 74.5s, and the one
+request the player cannot start without is a read of that database.
+
+    suite     GET /api/skribls/<id>    result
+    before    12ms (normal)            23/23
+    before    +2500ms                  21/23  light=1 heavy=0, ended deadline
+    after     +2500ms                  23/23  armed after 27 clicks
+    after     12ms (normal)            23/23  armed after 2 clicks
+
+The fix asks the mechanism instead of the clock: the run clicks, reads back the
+state the handler itself writes (`aria-pressed` on Loop, `aria-label` on Play —
+nothing else in the tree writes either), and asks again 100ms later until the
+player reports itself looping and playing. A button not yet bound simply gets
+asked again. Loop still precedes Play, because the arming step only reaches
+Play once Loop reads true. The 30s deadline stays a backstop and stays out of
+the verdict.
+
+Both arms were then driven on the fixed suite, per component, so the fix is not
+an anaesthetic:
+
+    player never reads the cache (hit = null)    22/23, 3 rasterisations —
+      and "playback really looped" stays GREEN, because what broke was the
+      cache and not the playback
+    Play bound but inert (handler does nothing)  21/23, "THE TRANSPORT NEVER
+      ARMED after 300 click(s)" — the new branch exercised rather than merely
+      written down
+
+### What was left alone
+
+The same probe-then-click shape is in `verify_hold`, `verify_player_isolation`,
+`verify_audiostate` and `verify_audiosession`, which reach the transport through
+Playwright's `click()` — it waits for a button to be visible and never for a
+listener. None of them is red, so none of them was touched. The finding is
+written into `verify_framecache`'s comment so the next red on one of them is
+read in a minute rather than a session.
+
+### And the lesson that outranks the fix
+
+The file already contained the right instinct — "a fixed window measures the
+runner and calls it the cache" — and acted on it three times by adjusting the
+window. Each adjustment was reasonable and none of them could work, because the
+diagnosis was never tested: the failing lane was believed rather than
+reproduced. The rule at the head of `CLAUDE.md` says to run a new check against
+a case known BAD and a case known GOOD. This says the same thing about a
+FAILURE: a red you cannot reproduce on demand is a hypothesis, and tuning a
+number against a hypothesis is how the same bug survives three releases.

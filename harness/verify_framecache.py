@@ -344,6 +344,78 @@ with sync_playwright() as p:
         # first, so the MIN_LOOPS floor is a margin rather than a road this
         # runs down. Said plainly because an unexercised branch is worth
         # nothing, and this one was exercised the other way.
+        #
+        # AND THEN IT WENT RED A THIRD TIME, ON THE SAME LANE, AND THE CLOCK
+        # WAS NOT WHAT DID IT. v311's postgres job reported 21/23 with both
+        # player rows red again, while the sqlite job, a full local battery and
+        # the sealed release run on the identical tree all reported 23/23.
+        # Everything above would have you raise a number again. The cause is a
+        # RACE, and it was in this file from the day the section was written:
+        #
+        #   the probe above waits for `window.SkriblFrameBitmap` and
+        #   `paintStrokesStatic`, and BOTH exist the moment app.js is parsed --
+        #   while the transport is bound at the END of `initPlayer()`, which is
+        #   an async IIFE that first does `await fetch('/api/skribls/<id>')`.
+        #
+        # So the probe can pass while #playerLoopBtn and #playerPlayBtn are
+        # still inert, and a `.click()` on an inert button is not an error: it
+        # dispatches, nothing listens, playback never starts, and the run ends
+        # on the deadline with one stray light paint and no rasterisation.
+        # THAT IS THE EXACT CI SIGNATURE -- "heavy 0 and light 1, so BOTH
+        # player assertions went red together" -- which the table above filed
+        # under starvation because a slow machine and a lost click look the
+        # same from the far end of a paint counter.
+        #
+        # PROVED BY MAKING THE LANE, NOT BY WAITING FOR IT. `GET
+        # /api/skribls/<id>` was given a 2.5s sleep -- one temporary line in
+        # skribl/routes.py, reverted after -- which is what a runner mid-
+        # checkpoint serves, and the whole suite was run on both sides of it:
+        #
+        #   suite     GET /api/skribls/<id>    result
+        #   before    12ms (normal)            23/23
+        #   before    +2500ms                  21/23  light=1 heavy=0 deadline
+        #   after     +2500ms                  23/23  armed after 27 clicks
+        #   after     12ms (normal)            23/23  armed after 2 clicks
+        #
+        # The red row is the CI failure verbatim, down to "no page errors"
+        # passing beside it. And the fix is not an anaesthetic -- both arms of
+        # the verdict were driven on the FIXED suite, per component:
+        #
+        #   player never reads the cache (hit = null)   22/23  3 rasterisations
+        #     ...and "playback really looped" stays GREEN, because the cache
+        #        is what broke, not the playback
+        #   Play bound but inert (handler does nothing) 21/23  NEVER ARMED
+        #     ...which is the branch below saying so in words, exercised
+        #        rather than merely written down
+        #
+        # Also measured, and left alone deliberately: the same probe-then-click
+        # shape is in verify_hold, verify_player_isolation, verify_audiostate
+        # and verify_audiosession, which reach the transport through
+        # Playwright's click() -- it waits for a button to be VISIBLE and never
+        # for a listener. None of them is red, so none of them is fixed here.
+        # Written down so the next red on one of them is read in a minute
+        # instead of a session.
+        #
+        # The window is a few milliseconds locally, which is why this survived
+        # at all: Playwright's own round trip usually outruns a local fetch.
+        # The postgres job is where it does not -- that lane runs the whole
+        # battery beside a service container whose checkpoints wrote for 106s,
+        # 112s and 74s during the v311 run, and the one request this page
+        # cannot start without is a READ OF THAT DATABASE.
+        #
+        # THE FIX IS TO ASK THE MECHANISM, NOT THE CLOCK. The run now arms the
+        # transport instead of assuming it: it clicks, reads back the state the
+        # handler itself sets (`aria-pressed` on Loop, `aria-label` on Play --
+        # nothing else in the tree writes either), and clicks again until the
+        # player says it is looping and playing. A button that is not bound yet
+        # simply gets asked again 100ms later. Loop is still pressed before
+        # Play, because the arming step only reaches Play once Loop reads true.
+        #
+        # `arms` is carried out with the result and named in both details, so
+        # the next failure on this lane says which of the two it is: a run that
+        # never armed is a player that would not start, and a run that armed
+        # and still came up short is the starvation the table above describes.
+        # The deadline stays a backstop at 30s and stays out of the verdict.
         LOOPS = 3
         WANT_LIGHT = LOOPS * 2
         MIN_LOOPS = 2
@@ -352,9 +424,12 @@ with sync_playwright() as p:
             const paints = [];
             const _ps = paintStrokesStatic;
             const t0 = performance.now();
+            let arms = 0;
             const done = (reason) => {
                 window.paintStrokesStatic = _ps;
-                res({paints: paints.slice(), reason: reason,
+                res({paints: paints.slice(), reason: reason, arms: arms,
+                     armed: lp.getAttribute('aria-pressed') === 'true'
+                            && pp.getAttribute('aria-label') === 'Pause',
                      ms: Math.round(performance.now() - t0)});
             };
             window.paintStrokesStatic = function(arr) {
@@ -363,30 +438,48 @@ with sync_playwright() as p:
                 if (light >= want) setTimeout(() => done('looped'), 0);
                 return _ps(arr);
             };
-            document.getElementById('playerLoopBtn').click();
-            document.getElementById('playerPlayBtn').click();
+            const lp = document.getElementById('playerLoopBtn');
+            const pp = document.getElementById('playerPlayBtn');
+            /* Read back what the handler writes, not what the markup ships:
+               the template already carries aria-pressed="false" and
+               aria-label="Play", so only a CHANGE proves a listener ran. */
+            const beat = () => {
+                const looped = lp.getAttribute('aria-pressed') === 'true';
+                const going = pp.getAttribute('aria-label') === 'Pause';
+                if (looped && going) return;
+                arms++;
+                if (!looped) lp.click(); else pp.click();
+                setTimeout(beat, 100);
+            };
+            beat();
             setTimeout(() => done('deadline'), 30000);
         })""", WANT_LIGHT)
         pcounts = pstate["paints"]
         heavy_pl = [n for n in pcounts if n >= 1500]
         light_pl = [n for n in pcounts if 0 < n < 1500]
         _loops_seen = len(light_pl) // 2
+        _armed = ("the transport armed after %d click(s)" % pstate["arms"]
+                  if pstate["armed"] else
+                  "THE TRANSPORT NEVER ARMED after %d click(s) — the player "
+                  "never reported itself looping and playing, so this is a "
+                  "player that would not start, not a cache result"
+                  % pstate["arms"])
         check("player: playback really looped (the once-only claim is not vacuous)",
               len(light_pl) >= MIN_LIGHT,
               f"{len(light_pl)} light paints — about {_loops_seen} loop(s) — in "
-              f"{pstate['ms']}ms, ended by {pstate['reason']}. Fewer than "
-              f"{MIN_LOOPS} loops is a playback failure, NOT evidence about "
-              f"the cache: the assertion below would be vacuous on a player "
-              f"that never replayed anything")
+              f"{pstate['ms']}ms, ended by {pstate['reason']}; {_armed}. Fewer "
+              f"than {MIN_LOOPS} loops is a playback failure, NOT evidence "
+              f"about the cache: the assertion below would be vacuous on a "
+              f"player that never replayed anything")
         check("player: the heavy frame is rasterised exactly once, however many "
               "loops ran",
               len(light_pl) >= MIN_LIGHT and len(heavy_pl) == 1,
               f"{len(heavy_pl)} rasterisations over {len(pcounts)} paints in "
-              f"about {_loops_seen} loop(s) — a viewer's phone replays every "
-              f"loop, and v259's memo only stopped repaints of the frame "
-              f"already on screen. The count is read from the run rather than "
-              f"assumed, so a slow machine shortens the evidence instead of "
-              f"inventing a cache bug")
+              f"about {_loops_seen} loop(s); {_armed} — a viewer's phone "
+              f"replays every loop, and v259's memo only stopped repaints of "
+              f"the frame already on screen. The count is read from the run "
+              f"rather than assumed, so a slow machine shortens the evidence "
+              f"instead of inventing a cache bug")
         check("player: no page errors", not perrs, "; ".join(perrs[:2]))
         pl.close()
 
