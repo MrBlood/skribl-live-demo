@@ -154,7 +154,17 @@ with app4.app_context():
         db4.text("select user_id from skribl_posts")).first()[0]
 # Text since v279 — see docs/INTEGRATION.md. An integer host is unaffected
 # everywhere except a raw read of the column, which this is.
-check("current_user_id decides authorship", str == "42",
+#
+# `str(owner)`, AND THE ARGUMENT IS LOAD-BEARING. v311 found this reading
+# `str == "42"` -- a comparison between the builtin TYPE and a string, which is
+# False forever, so the row had been unable to answer its own question since a
+# comment pass stripped the `(owner)`. That pass was removing `(owner, vNNN)`
+# attribution parentheticals from PROSE; here the same three characters were an
+# argument list. Nothing about the host seam had broken; the instrument had.
+# It is the failure CLAUDE.md names -- do not edit mechanically where prose and
+# code interleave -- and the only thing that caught it was a full battery,
+# because this suite is not on the pull-request gate.
+check("current_user_id decides authorship", str(owner) == "42",
       f"stored user_id={owner!r}")
 
 # A policy that is never consulted passes every test that only checks the
