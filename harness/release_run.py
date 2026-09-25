@@ -674,6 +674,23 @@ def main():
         t = "\n".join(text.strip().splitlines()[-lines:])
         return t[-chars:] if len(t) > chars else t
 
+    # EVERY BATCH'S FULL OUTPUT IS KEPT, beside the checkpoint and outside the
+    # tree (v315). The record used to carry only a 25-line tail, which for a
+    # failed suite is run_harness.sh's aggregate stanza -- the suite's NAME,
+    # never the assertion that failed -- and the log itself was discarded. Each
+    # seal failure this cycle then needed a re-run just to learn which check
+    # broke. The failing lines now go into the record; the rest is on disk.
+    log_dir = pathlib.Path(str(state_path) + ".logs")
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        log_dir = None
+
+    def failing_lines(text, limit=20):
+        hits = [ln.strip()[:300] for ln in text.splitlines()
+                if re.match(r"^\s*\[FAIL\]", ln)]
+        return hits[:limit] + ([f"... and {len(hits) - limit} more"] if len(hits) > limit else [])
+
     for n, batch in enumerate(BATCHES, 1):
         if n <= done:
             continue
@@ -692,6 +709,13 @@ def main():
         r = subprocess.run([str(HARNESS / "run_harness.sh")] + batch,
                            cwd=ROOT, capture_output=True, text=True)
         out = r.stdout
+        log_path = None
+        if log_dir is not None:
+            try:
+                log_path = log_dir / f"batch-{n:03d}.log"
+                log_path.write_text(out + ("\n--- stderr ---\n" + r.stderr if r.stderr else ""))
+            except OSError:
+                log_path = None
         reported_here = set()
         # `(\w+) — ` used to be the status pattern, which silently failed to
         # match run_harness.sh's own skip line:
@@ -720,10 +744,12 @@ def main():
         # and the tail of the child's output are what distinguish a missing
         # dependency from a hung browser from a genuine assertion failure.
         silent = [s for s in batch if s not in reported_here]
-        if r.returncode != 0 or silent:
+        fails = failing_lines(out)
+        if r.returncode != 0 or silent or fails:
             diagnostics.append({
                 "batch": n, "suites": batch, "silent": silent,
                 "returncode": r.returncode,
+                "fails": fails, "log": str(log_path) if log_path else None,
                 "stdout": tail(out), "stderr": tail(r.stderr),
             })
             print(f"    !! batch {n} exited {r.returncode}"
@@ -843,6 +869,12 @@ def main():
             if d["silent"]:
                 lines.append("No output from: "
                              + ", ".join(f"`{s}`" for s in d["silent"]))
+            # .get(): a checkpoint written before v315 has neither key.
+            if d.get("fails"):
+                lines += ["", "Failing assertions:", "", "```", *d["fails"], "```"]
+            if d.get("log"):
+                lines += ["", f"Full output: `{d['log']}` (outside the tree; "
+                              f"this machine only)"]
             if d["stderr"]:
                 lines += ["", "stderr (tail):", "", "```", d["stderr"], "```"]
             if d["stdout"]:
