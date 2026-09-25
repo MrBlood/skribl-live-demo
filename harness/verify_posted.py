@@ -758,7 +758,7 @@ with sync_playwright() as p:
     _tip = pd2.evaluate("""() => {
         const d = document.getElementById('helpDrawer'); if (!d) return null;
         const t = [...d.querySelectorAll('.help-tip')].find(
-          e => /your skribls/i.test((e.querySelector('.help-pill') || {}).textContent || ''));
+          e => /your skribl library/i.test((e.querySelector('.help-pill') || {}).textContent || ''));
         return t ? t.innerText.toLowerCase() : null; }""")
     check("...and How it works states the eviction policy in full",
           bool(_tip) and "oldest" in _tip and "full" in _tip,

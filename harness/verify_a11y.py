@@ -347,6 +347,10 @@ with sync_playwright() as p:
         # real thing fails loudly when the real thing moves, which is the
         # point of driving it.
         ("/gallery", "reportSheet"): ("click:.tile .tileMore|click:.cmReport", None),
+        # THE PAGE MENU (v314): one partial on two pages, so two instances,
+        # each opened from its own header's ••• and handing focus back to it.
+        ("/library", "pageMenu"): ("click:#pageMenuBtn", "pageMenuBtn"),
+        ("/gallery", "pageMenu"): ("click:#pageMenuBtn", "pageMenuBtn"),
     }
 
     def _draw_on_pad(pg):

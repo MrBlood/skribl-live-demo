@@ -1616,6 +1616,61 @@ else:
     _not_applicable.append("the two committed attestations name different trees "
                            "(a seal is in progress), so the no-hold side is not driven")
 
+print("\nDOCS — somebody reads main: a red battery opens an issue, a green one closes it")
+# v314. main sat red twice with nobody reading it (DECISIONS v311, v312). The
+# `main-watch` job reads the three battery results and hands them to
+# harness/tools/mainwatch.py's decide(), which is driven here, case by case, on
+# every pull request -- the job itself only ever runs after a merge, so this is
+# the only place its logic is exercised before main needs it.
+sys.path.insert(0, str(ROOT / "harness" / "tools"))
+import mainwatch as _mw
+_S, _U = "abcdef1234567", "https://example/run/1"
+_ours = {"number": 7, "title": _mw.MARKER + " at abcdef1"}
+_other = {"number": 9, "title": "unrelated bug report"}
+_red = {"sqlite": "success", "postgres": "failure", "mp4": "success"}
+_green = {"sqlite": "success", "postgres": "success", "mp4": "success"}
+_cancel = {"sqlite": "success", "postgres": "cancelled", "mp4": "success"}
+
+_a = _mw.decide(_red, [_other], _S, _U)
+check("a red battery with no alarm open OPENS one, naming the failed job and the run",
+      [x[0] for x in _a] == ["open"] and "`postgres`" in _a[0][2] and _U in _a[0][2]
+      and "`sqlite`" not in _a[0][2], str(_a))
+_a = _mw.decide(_red, [_other, _ours], _S, _U)
+check("...and with one already open it COMMENTS on that one, rather than opening a second",
+      _a == [("comment", 7, _a[0][2])] if _a else False, str(_a))
+_a = _mw.decide(_green, [_other, _ours], _S, _U)
+check("a fully green battery CLOSES the open alarm, and touches nothing else",
+      [(x[0], x[1]) for x in _a] == [("close", 7)], str(_a))
+check("...and with no alarm open, green does nothing",
+      _mw.decide(_green, [_other], _S, _U) == [], "")
+check("a CANCELLED job neither raises nor clears the alarm -- it verified nothing",
+      _mw.decide(_cancel, [_ours], _S, _U) == [] and _mw.decide(_cancel, [], _S, _U) == [], "")
+check("an empty result set is not green", _mw.decide({}, [_ours], _S, _U) == [], "")
+
+# THE JOB, read as structure rather than grepped as words: its own block in
+# the workflow, and the five things that make it an alarm rather than a
+# decoration. Each is a way the first draft of a job like this goes quiet.
+_wft = (ROOT / ".github" / "workflows" / "harness.yml").read_text(encoding="utf-8")
+_mwb = re.search(r"^  main-watch:\n((?:    .*\n|\s*\n)+)", _wft, re.M)
+_mwb = _mwb.group(1) if _mwb else ""
+check("the main-watch job exists", bool(_mwb), "no `main-watch:` job in harness.yml")
+check("...it waits for all three battery jobs",
+      re.search(r"^    needs:\s*\[\s*sqlite\s*,\s*postgres\s*,\s*mp4\s*\]\s*$", _mwb, re.M) is not None,
+      "a job that does not need a lane cannot see it fail")
+_if = re.search(r"^    if:\s*(.+)$", _mwb, re.M)
+_if = _if.group(1) if _if else ""
+check("...it runs when they FAIL (always()) and only on a push to main",
+      "always()" in _if and "github.event_name == 'push'" in _if
+      and "github.ref == 'refs/heads/main'" in _if,
+      f"if: {_if!r} -- without always() GitHub skips it on a failed need, which "
+      f"is the only case it exists for")
+check("...its token can write issues and nothing broader",
+      re.search(r"^    permissions:\n      contents: read\n      issues: write\n", _mwb, re.M) is not None,
+      "permissions block missing or wider than contents:read + issues:write")
+check("...and it hands decide() every lane's result",
+      all(f'"{j}": "${{{{ needs.{j}.result }}}}"' in _mwb for j in ("sqlite", "postgres", "mp4"))
+      and "harness/tools/mainwatch.py" in _mwb, "JOB_RESULTS must name all three needs")
+
 bad = [r for r in results if not r[0]]
 # The leading "N/M passed" token is a contract run_harness.sh parses with a
 # LEADING-anchored regex, so trailing text is safe — that is how the FAILURES

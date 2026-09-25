@@ -23,6 +23,8 @@
   <link rel="stylesheet" href="{{ skribl_asset('fullbar.css') }}">
   {# tooltip.css travels with lib/tooltip.js — see that sheet's header. #}
   <link rel="stylesheet" href="{{ skribl_asset('tooltip.css') }}">
+  {# pagemenu.css travels with lib/pagemenu.js -- the ••• and its sheet (v314). #}
+  <link rel="stylesheet" href="{{ skribl_asset('pagemenu.css') }}">
   <style>
     /* The page's own chrome, in the app's tokens for both ramps. styles.css is
        the editor's stylesheet and is not loaded here — this page has no tool
@@ -105,9 +107,11 @@
       white-space: nowrap;
     }
     .make:hover { filter: brightness(1.08); }
-    .yours { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px;
-      text-decoration: none; color: var(--text-2); font-weight: 600; font-size: 14px; border: 1px solid var(--hairline); }
-    .yours:hover { color: var(--text); background: var(--control); }
+    /* 360 IS THE DESIGN TARGET AND 320 THE SAFETY NET (START-HERE). The mark,
+       its word, Make one and the ••• are 11px wider than 320; the word is what
+       the page's own heading already says, so it goes first -- the library's
+       header has made the same trade since v304. */
+    @media (max-width: 380px) { .brand .tag { display: none; } }
 
     /* ---- the heading, and the three states --------------------------- */
     h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 4px; }
@@ -646,9 +650,11 @@
       <span class="tag">gallery</span>
     </a>
     <span class="spacer"></span>
-    {# The profile, beside the feed: the two point at each other (v304). #}
-    <a href="{{ url_for('.skribl_library') }}" class="yours" id="galleryYours">Yours</a>
+    {# THE ••• REPLACED "Yours" (v314). The profile is a row in the page menu
+       now, beside every other surface and the theme; measured before building,
+       a third control here overflowed 390px by 27px. #}
     <a href="{{ url_for('.skribl_editor') }}" class="make" id="galleryMake">Make one</a>
+    <button type="button" class="pm-more" id="pageMenuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="pageMenu" title="Menu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
   </header>
 
   <main>
@@ -755,7 +761,10 @@
 <script src="{{ skribl_asset('lib/fullbar.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
+{% with here='gallery' %}{% include 'skribl/_skribl_page_menu.html' %}{% endwith %}
 <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/pagemenu.js') }}" defer></script>
   {# ONE COPY IMPLEMENTATION, NOT TWO. The card menu's Copy link needs
      SkriblPostedUI.copyText, which answers whether the text actually reached
      the clipboard -- a handler that reports success from both arms of a

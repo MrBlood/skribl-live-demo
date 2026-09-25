@@ -355,7 +355,7 @@ except TypeError as exc:
 
 
 print("\nEXT-P1-13 — the help drawer describes the ownership model in force")
-# The "Your Skribls" tip described the browser-held model unconditionally:
+# The "Your Skribls" tip (named "Your Skribl Library" since v314) described the browser-held model unconditionally:
 # "everything you have posted from this browser", Delete working "because this
 # browser holds the key", the list "saved in this browser only" and removed by
 # clearing site data. Every clause is false once a host signs somebody in --
@@ -375,8 +375,11 @@ for _route, _surface in (("/skribl-pad", "Pad"), ("/flip", "Flip")):
     _anon_html = host_app(None)[0].test_client().get(_route).get_data(as_text=True)
     _in_html = host_app(7)[0].test_client().get(_route).get_data(as_text=True)
 
-    check(f"the probe is real: {_surface} renders the Your Skribls tip at all",
-          "Your Skribls</span>" in _anon_html and "Your Skribls</span>" in _in_html,
+    # Keyed on the tip's own PILL, not the words: since v314 the name
+    # ("Your Skribl Library") is also the menu row's text a few lines away.
+    _PILL = '<span class="help-pill">Your Skribl Library</span>'
+    check(f"the probe is real: {_surface} renders the Your Skribl Library tip at all",
+          _PILL in _anon_html and _PILL in _in_html,
           "without the tip present, every assertion below passes vacuously")
     check(f"{_surface}, anonymous: the browser-held model is still described",
           _KEY_CLAIM in _anon_html and _ACCOUNT_CLAIM not in _anon_html,
