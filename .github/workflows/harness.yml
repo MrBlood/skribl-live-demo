@@ -464,3 +464,35 @@ jobs:
         with:
           name: mp4-attestation
           path: harness/MP4-ATTESTATION.txt
+
+  # SOMEBODY READS MAIN NOW (v314). The battery above runs after a merge, and
+  # for a long time nothing read its result: main sat red for about five hours
+  # after #221 and again after the v311 merge, both found by accident
+  # (DECISIONS v311, v312). The owner chose the reader: an issue, because
+  # GitHub already puts a new issue on the owner's phone. A red run opens one,
+  # or comments on the one already open; the next fully green run closes it.
+  # A cancelled run verified nothing and does neither.
+  #
+  # always(), because this job has to run precisely when the others FAILED --
+  # without it GitHub skips a dependent job on a failed need, and the alarm
+  # would be silent in the one case it exists for. Push to main only: a pull
+  # request never runs the battery, and a manual dispatch on a branch is
+  # somebody already watching. Its token can write issues and nothing else.
+  # The decision is harness/tools/mainwatch.py's decide(), which verify_docs
+  # drives case by case on every pull request.
+  main-watch:
+    name: main watch (a red main opens an issue)
+    needs: [sqlite, postgres, mp4]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Open, update or close the red-main issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_RESULTS: '{"sqlite": "${{ needs.sqlite.result }}", "postgres": "${{ needs.postgres.result }}", "mp4": "${{ needs.mp4.result }}"}'
+        run: python3 harness/tools/mainwatch.py

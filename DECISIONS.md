@@ -12004,6 +12004,55 @@ marking the current page, and the gallery keeping its word at 320 (11px over)
 each turned their own row red. Applying a choice without storing it turned
 the store and reload rows red.
 
+### Somebody reads main now
+
+The standing open item from v311 and v312 ("nothing reads the main result")
+is closed, by the owner's choice of reader: an issue. A final `main-watch` job
+runs after the three battery jobs on every push to main. If any of them
+FAILED it opens an issue titled "main is red at <sha>", or comments on the one
+already open, and GitHub puts that on the owner's phone. The next fully green
+push closes it. A cancelled run verified nothing and does neither.
+
+It runs under `always()`, because GitHub skips a dependent job whose needs
+failed, and failure is the only case this one exists for. Its token can write
+issues and nothing else. The decision is `harness/tools/mainwatch.py`'s
+`decide()`, driven case by case in verify_docs, which is on the pull-request
+gate. That matters because the job itself only ever runs after a merge.
+Calibrated with six mutations to the job and to `decide()`: no `always()`, mp4
+dropped from `needs`, a wider token, mp4 dropped from the results, a `decide()`
+that never comments, and "cancelled" counted as red. Each went red.
+
+Its first real exercise is the merge of this release. That run either stays
+silent or opens the first issue.
+
+### The second seal of this tree found another fixed wait
+
+The first v314 release run went FAIL on `verify_parity`, 142/143: "#canvasSeg
+pill covers its selected button on both". It passed six times on demand, idle
+and loaded. So the hypothesis was tested directly instead of waited for:
+every CSS transition was slowed tenfold through the DevTools Animation domain,
+and the check failed every time on the Pad, the pill 71px left of its button,
+settling to within half a pixel once its slide ended. The check waited for the
+pill to have ANY width, which is true from the first frame of a ~0.4s slide.
+
+It now waits until the pill reports no running animation (`getAnimations()`),
+with a 10s backstop that stays out of the verdict. Under the tenfold slowdown
+it measures 0.0px. With the shared placement code shifted 20px it still goes
+red on all three segs. Flip's pill does not slide on open and never failed
+this way: the same check on two surfaces had two different behaviours, which
+is the v212 rule again.
+
+The first mutation used for that calibration did nothing at all. It edited
+app.js's positioning fallback, which never runs because `lib/segslider.js`
+places every pill, and the suite stayed 143/143. It was caught only because a
+mutation is expected to go red and this one did not. The mutation that bit is
+in the shared module.
+
+This is the third suite in two releases to fail on a wait that stood in for a
+state (v312 framecache, v313 gallery, now parity). All three looked fine until
+the machine was busy or the animation slow, and none reproduced on the first
+try.
+
 ### Seen along the way, not fixed here
 
 The Pad ignored `?theme=dark` on a light device while the mockup was being

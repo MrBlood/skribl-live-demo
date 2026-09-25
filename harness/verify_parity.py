@@ -849,11 +849,24 @@ with sync_playwright() as p:
     #    MutationObserver, so a same-tick measurement reads zero.
     print("\nPARITY — segmented pills sit on their selected button")
 
-    def settle(pg_, sel, tries=20):
+    # ...and a fourth, found by the v314 seal: wait for the pill to STOP, not
+    # merely to exist. Pad's pill slides into place over ~0.4s when the menu
+    # opens, and "width > 0" is true from the first frame of that slide -- the
+    # check measured it mid-slide once in a release run (142/143). It did not
+    # reproduce in six runs, idle or loaded; slowing every transition tenfold
+    # through the DevTools Animation domain made it fail every time, 71px left
+    # of its button, and settle to within half a pixel once the slide ended.
+    # Flip's pill does not slide on open and never failed this way. So the
+    # wait asks the element whether a transition is still running
+    # (getAnimations), rather than guessing how long one takes; the 10s is a
+    # backstop, not the verdict.
+    def settle(pg_, sel, tries=100):
         for _ in range(tries):
-            w = pg_.evaluate("(s) => { const p = document.querySelector(s + ' > .seg-slider');"
-                             " return p ? p.getBoundingClientRect().width : 0; }", sel)
-            if w > 0:
+            st = pg_.evaluate("(s) => { const p = document.querySelector(s + ' > .seg-slider');"
+                              " if (!p) return null;"
+                              " return { w: p.getBoundingClientRect().width,"
+                              "          moving: p.getAnimations().some(a => a.playState === 'running') }; }", sel)
+            if st and st["w"] > 0 and not st["moving"]:
                 return True
             pg_.wait_for_timeout(100)
         return False
