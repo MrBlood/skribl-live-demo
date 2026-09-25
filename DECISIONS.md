@@ -11930,3 +11930,84 @@ reproduce would leave nothing but a count.
 Nothing reads the main branch's post-merge battery. This time it was read,
 by hand, because the handoff said to: `90c14e6`'s run went green about fifty
 minutes after the merge.
+
+## v314 -- a ••• on the gallery and the library, and one name for the profile
+
+v313 made the library follow the theme, and the owner asked the obvious next
+question from a phone: shouldn't the ••• menu be on the library and the
+gallery? Neither page could change the setting both now follow, so choosing
+light meant opening an editor.
+
+### What the menu carries, and what it deliberately does not
+
+The way to every surface (Skribl Pad, Skribl Flip, Your Skribl Library, the
+public gallery, with the current page marked `aria-current` and saying "You
+are here"), and the Theme choice through `lib/theme.js`, so choosing it here
+is choosing it everywhere. Nothing an editor owns, because a row with nothing
+on the page to act on is a broken promise.
+
+**Report a problem was in the mockup and is not in the build.** `report.js`
+would run on these pages, but its sheet is styled entirely by `styles.css`,
+which neither page loads. Bringing it would mean a second copy of editor
+stylesheet rules, the duplication SK312-006 was about. It stays in the editors
+until it has styling of its own.
+
+It is one partial (`_skribl_page_menu.html`, told which page it is on), one
+module (`lib/pagemenu.js`) and one sheet (`pagemenu.css`), written only in
+tokens both pages define in both ramps. Focus is `lib/modalfocus.js`'s, and
+the a11y census has a recipe per page, because a shared include is two
+instances.
+
+### The header was measured before it was built
+
+The mockup was drawn on the real pages, not from scratch, and the first
+rendering answered a question nobody had asked. A ••• beside Make one AND the
+existing secondary link overflowed 390px by 27-28px on both pages, and the
+gallery by 97px at 320. So the ••• REPLACES the secondary link (Gallery on
+the library, Yours on the gallery), whose destination is a menu row. The
+gallery also hides its page word under 380px, which is the trade the
+library's header has made since v304. Measured after: no overflow at 320,
+360 or 390 on either page.
+
+The gallery's cards already carry a ••• for their own menu, so the page has
+two. START-HERE warns against the same glyph for different collections. The
+owner looked at it in the mockup and kept the ••• anyway: it is larger,
+circled and in the header, and it matches the editors'.
+
+### One name
+
+The profile page had four names: "Your Skribls" in about thirty places,
+"Library" in its own lockup and URL, "Skribl Library" in the tab, and "Yours"
+on the gallery's pill. The owner chose "Your Skribl Library". It is now the
+text of both editors' menu rows, the page menu's row, the Help tip, the posted
+list's region, the page title and heading, and the recovery-key message. The
+list's own heading is "Skribls", so it does not repeat the page title directly
+above it. The LIBRARY lockup and `/library` are unchanged.
+
+**The rename missed a regex, and the full sweep caught it.** The search for
+the old name was case-sensitive, and `verify_posted` finds the Help tip with
+`/your skribls/i`, so that one check went red on the renamed tree. The same
+kind of miss as v311's mechanical comment pass, caught the same way, by
+running every suite the change could reach rather than the ones it obviously
+did. The Help probe in `verify_hostseams` matched a bare substring and now
+matches the pill's own tag, because the name is also the menu row's text a
+few lines away.
+
+### Calibrated per component
+
+26 new rows in `verify_library`, driven on both pages. Seven mutations, one
+component each, each red on its own rows and green elsewhere. The ••• removed
+from the library turned the library's rows red and left the gallery's green.
+The switch showing the effective mode instead of the stored choice turned
+"shows System" red. Removing Escape, not handing focus to the sheet, never
+marking the current page, and the gallery keeping its word at 320 (11px over)
+each turned their own row red. Applying a choice without storing it turned
+the store and reload rows red.
+
+### Seen along the way, not fixed here
+
+The Pad ignored `?theme=dark` on a light device while the mockup was being
+made: the editor seems to re-resolve after load and drop the URL's choice,
+which the boot partial says it honours "for this document only". That was
+not measured, and this entry does not claim it as a defect. It is worth
+driving before a host relies on the parameter.
