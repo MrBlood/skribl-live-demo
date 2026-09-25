@@ -39,7 +39,7 @@ import sys
 import wave
 import zlib
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 from assertions import make_check
 import browsing
 
@@ -177,13 +177,23 @@ with sync_playwright() as sp:
     print("\nPLAYER PHOTO — and it plays")
     before = pg.evaluate(STATE)["ink"]
     pg.click("#playerPlayBtn")
-    pg.wait_for_timeout(700)
-    mid = pg.evaluate(STATE)["ink"]
+    # STATES, NOT DELAYS. The fixture replays in about a second (Pad caps each
+    # recorded gap at 50ms), so a fixed 700ms could sample after the redraw had
+    # already finished, and a slow photo decode shifts the start the other way.
+    # Wait for the cleared canvas, then for the finished one; on a timeout,
+    # sample anyway so the check reports what was there.
+    def _ink_when(cond, timeout):
+        try:
+            return pg.wait_for_function(
+                f"(before) => {{ const i = ({STATE})().ink; return ({cond}) ? i : null; }}",
+                arg=before, timeout=timeout).json_value()
+        except PWTimeout:
+            return pg.evaluate(STATE)["ink"]
+    mid = _ink_when("i < before", 5000)
     check("pressing play restarts from a cleared canvas and redraws",
           mid < before,
           f"{before} inked before play, {mid} shortly after — playback never started")
-    pg.wait_for_timeout(3000)
-    end = pg.evaluate(STATE)["ink"]
+    end = _ink_when("i >= before * 0.9", 10000)
     check("and reaches the finished drawing again", end >= before * 0.9,
           f"ended at {end} against a poster of {before}")
     check("no page error appeared during playback", not errs,

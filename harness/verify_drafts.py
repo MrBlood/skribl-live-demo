@@ -25,7 +25,7 @@ from pathlib import Path
 from assertions import make_check
 
 try:
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 except ImportError:
     print("SKIP: playwright is not installed")
     sys.exit(0)
@@ -407,10 +407,17 @@ with sync_playwright() as p:
     mid = pg3.evaluate("() => document.getElementById('autosaveStatusText').textContent")
     check("Flip: a hanging spill says 'Saving…' while it is genuinely pending",
           mid == "Saving…", f"{mid!r}")
-    pg3.wait_for_timeout(11000)          # past SPILL_TIMEOUT_MS
-    late = pg3.evaluate("""() => { const el = document.getElementById('autosaveStatus');
+    # Past SPILL_TIMEOUT_MS (12s from the dispatch). Polled with a deadline
+    # well beyond it rather than slept to ~13.5s, which left about a second
+    # and a half for the image decode on a loaded runner.
+    _LATE = """() => { const el = document.getElementById('autosaveStatus');
         return { hidden: el.hidden,
-                 text: document.getElementById('autosaveStatusText').textContent }; }""")
+                 text: document.getElementById('autosaveStatusText').textContent }; }"""
+    try:
+        pg3.wait_for_function(f"() => ({_LATE})().text === 'Saved without media'", timeout=20000)
+    except PWTimeout:
+        pass
+    late = pg3.evaluate(_LATE)
     check("Flip: ...and does NOT sit there forever",
           late["text"] == "Saved without media" and late["hidden"] is False,
           f"{late} — a write that has not landed in twelve seconds is not one a "

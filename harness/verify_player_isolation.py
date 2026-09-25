@@ -28,7 +28,7 @@ import struct
 import sys
 import wave
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 from assertions import make_check
 from playerready import await_player, await_player_error
 import browsing
@@ -823,8 +823,16 @@ with sync_playwright() as sp:
     # screen could go red for a probe that never finds ink anywhere.
     _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
                  " if (b) b.click(); }")
-    _fp.wait_for_timeout(900)
-    _NIB_REST_STATE = _fp.evaluate(_NIB_ON_INK_SRC)
+    # A STATE, NOT A DELAY: the replay lasts about a second and a half (Pad
+    # caps each recorded gap at 50ms), so wait for the nib to be on its stroke
+    # rather than guessing when it will be; on a timeout, sample for the report.
+    try:
+        _NIB_REST_STATE = _fp.wait_for_function(
+            f"() => {{ const s = ({_NIB_ON_INK_SRC})(); "
+            f"return (s && s.inside && s.ink > 120 && s.nib > 0) ? s : null; }}",
+            timeout=6000).json_value()
+    except PWTimeout:
+        _NIB_REST_STATE = _fp.evaluate(_NIB_ON_INK_SRC)
     _NIB_REST = _NIB_REST_STATE.get("nib") or 0
     check("the nib rides its stroke in the page, at the page's scale",
           _NIB_REST_STATE.get("inside") and _NIB_REST_STATE.get("ink", 0) > 120
@@ -858,15 +866,25 @@ with sync_playwright() as sp:
         if (!c || !n || n.hidden) return { missing: true };
         return { nib: +n.getBoundingClientRect().width.toFixed(2),
                  draw: +c.getBoundingClientRect().width.toFixed(2) }; }"""
-    _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
-                 " if (b) b.click(); }")
-    _fp.wait_for_timeout(700)
-    _fp.set_viewport_size({"width": 390, "height": 844})
-    _fp.wait_for_timeout(500)
-    _small = _fp.evaluate(_NIB_AT)
-    _fp.set_viewport_size({"width": 1180, "height": 900})
-    _fp.wait_for_timeout(500)
-    _big = _fp.evaluate(_NIB_AT)
+    # ONE REPLAY PER SIZE. The nib's width depends on the pen and the scale,
+    # not on where in the drawing it is, so each size gets its own replay and
+    # its own wait for the nib to show. Resizing twice inside ONE replay needed
+    # that replay to outlast two resizes, and at ~1.5s it did not always.
+    def _nib_at(width, height):
+        _fp.set_viewport_size({"width": width, "height": height})
+        _fp.wait_for_timeout(300)                      # let the resize land
+        # Restart, not Play: Play toggles, and a replay still running from the
+        # step before would be PAUSED by it rather than started.
+        _fp.evaluate("() => { const b = document.getElementById('playerRestartBtn');"
+                     " if (b) b.click(); }")
+        try:
+            return _fp.wait_for_function(
+                f"() => {{ const s = ({_NIB_AT})(); return (s.missing || !s.nib) ? null : s; }}",
+                timeout=6000).json_value()
+        except PWTimeout:
+            return _fp.evaluate(_NIB_AT)
+    _small = _nib_at(390, 844)
+    _big = _nib_at(1180, 900)
     _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
                  " if (b) b.click(); }")
     _fp.wait_for_timeout(200)

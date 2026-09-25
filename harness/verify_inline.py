@@ -42,7 +42,7 @@ BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 try:
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 except Exception as exc:                                   # pragma: no cover
     print(f"SUITE-SKIPPED: playwright unavailable ({exc})")
     print("No assertions were executed. This is NOT evidence the feed player works.")
@@ -320,7 +320,19 @@ with sync_playwright() as sp:
     # in-post player loops, so sampling near the end reads a progress bar that
     # is either ~97% or has just wrapped to ~2% — and an assertion that accepts
     # both is an assertion that accepts anything.
-    pg.wait_for_timeout(1200)
+    # MID-REPLAY IS A STATE, NOT A DELAY: the first play also waits on the lazy
+    # payload fetch, so a fixed 1200ms sampled a player still loading whenever
+    # the fetch was slow. Wait until it is playing and between 40% and 85% of
+    # the way through (it loops, so the window comes round again), then sample
+    # everything below at once.
+    try:
+        pg.wait_for_function("""(id) => {
+            const p = window.SkriblInline.find(id); const s = p && p.state();
+            return !!(s && s.state === 'playing' && s.loaded && s.totalMs
+                      && s.elapsedMs >= 0.4 * s.totalMs && s.elapsedMs <= 0.85 * s.totalMs); }""",
+            arg=id_a, timeout=8000)
+    except PWTimeout:
+        pass
     st = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_a)
     check("tapping a post loads its payload and plays it",
           st and st["state"] == "playing" and st["loaded"] is True, json.dumps(st))
@@ -363,7 +375,13 @@ with sync_playwright() as sp:
     # ---- one at a time -----------------------------------------------------
     # A feed that can play two loops at once is a feed nobody scrolls twice.
     pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_b)
-    pg.wait_for_timeout(2500)
+    # B's first play waits on its own fetch; wait for the state, not a delay.
+    try:
+        pg.wait_for_function("""([a, b]) => window.SkriblInline.find(a).state().state === 'idle'
+                                && window.SkriblInline.find(b).state().state === 'playing'""",
+                             arg=[id_a, id_b], timeout=8000)
+    except PWTimeout:
+        pass
     a_after = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_a)
     b_after = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_b)
     check("starting one Skribl settles every other one on the page",
@@ -557,7 +575,11 @@ with sync_playwright() as sp:
     # appearing to do nothing until the next tap.
     pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"] "
                 ".skribl-inline-loop').click()", id_m)
-    pg.wait_for_timeout(700)
+    try:
+        pg.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'",
+                             arg=id_m, timeout=5000)
+    except PWTimeout:
+        pass
     resumed = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_m)
     check("turning it back on starts it again rather than doing nothing",
           resumed["state"] == "playing", json.dumps(resumed))
@@ -571,7 +593,12 @@ with sync_playwright() as sp:
         spacer.style.height = '250vh';
         document.body.appendChild(spacer);
         window.scrollTo(0, document.body.scrollHeight); }""")
-    pg.wait_for_timeout(1200)
+    # The IntersectionObserver's callback is the state; wait for it, not 1200ms.
+    try:
+        pg.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'idle'",
+                             arg=id_b, timeout=5000)
+    except PWTimeout:
+        pass
     scrolled = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_b)
     check("scrolling a playing post out of view settles it",
           scrolled["state"] == "idle",
@@ -1466,11 +1493,29 @@ with sync_playwright() as sp:
         _rp = b.new_page(viewport={"width": 1280, "height": 900})
         browsing.goto(_rp, BASE, "/feed")
 
-        def _rows(sid):
-            """Play the box through the module's own API, then sample it."""
+        def _painted(sid):
+            """Play the box, then wait until it has ADOPTED its payload and
+            painted a centre that differs from its corner -- a state that
+            includes the lazy fetch and the photo decode, which a fixed 1200ms
+            stood in for. On a timeout, carry on so the probe row reports."""
             _rp.evaluate("(id) => { const p = window.SkriblInline.find(id);"
                          " if (p) p.play(); }", sid)
-            _rp.wait_for_timeout(1200)
+            try:
+                _rp.wait_for_function("""(id) => {
+                    const p = window.SkriblInline.find(id);
+                    const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
+                    if (!p || !p.state().loaded || !c || c.width <= 300) return false;
+                    const x = c.getContext('2d');
+                    const a = x.getImageData(1, 1, 1, 1).data;
+                    const m = x.getImageData(Math.round(c.width / 2), Math.round(c.height / 2), 1, 1).data;
+                    return Math.abs(a[0] - m[0]) + Math.abs(a[1] - m[1]) + Math.abs(a[2] - m[2]) > 30; }""",
+                    arg=sid, timeout=8000)
+            except PWTimeout:
+                pass
+
+        def _rows(sid):
+            """Play the box through the module's own API, then sample it."""
+            _painted(sid)
             return _rp.evaluate("""(id) => {
                 const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
                 if (!c || c.width <= 300) return null;
@@ -1519,9 +1564,7 @@ with sync_playwright() as sp:
         # green on a tree that drops the opacity. Each is measured by the thing
         # only it can change.
         def _mid(sid):
-            _rp.evaluate("(id) => { const p = window.SkriblInline.find(id);"
-                         " if (p) p.play(); }", sid)
-            _rp.wait_for_timeout(1200)
+            _painted(sid)
             return _rp.evaluate('''(id) => {
                 const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
                 if (!c || c.width <= 300) return null;
