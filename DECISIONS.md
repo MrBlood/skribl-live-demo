@@ -11802,3 +11802,100 @@ the forty minutes, when what it fixes is what the evidence SAYS. The cheap
 alternative was to cut the pack from v311's commit, which would have been
 internally consistent and quietly a release behind on the only file that had
 anything new to say.
+
+## v313 -- what an outside audit of v312 got wrong, and what it got right
+
+The owner sent the sealed v312 pack to an outside auditor. The audit came back
+with twelve findings, and the auditor re-opened the archives after our
+response and withdrew three of them. Both halves are recorded here, because
+the withdrawals say more about this tree's evidence than the findings do.
+
+### Withdrawn: the two external lanes, read from the wrong line
+
+SK312-010 and SK312-011 filed MP4/H.264 and PostgreSQL as untested in the
+release, and the executive summary and the P0 list were built on them. Both
+lanes were attested for the exact tree: `harness/RELEASE.md`'s header said
+`mp4 (H.264) verified on chrome, 12 assertions` and `postgresql verified on
+postgresql, 25 assertions`, and both attestation files in the auditor's zip
+named `15cf2b6c25cc`. The auditor had read the per-suite table, where the rows
+said `skip | the psycopg driver is not installed` and nothing else.
+
+The auditor called that their error, and it was. It was also ours. The header
+had the answer, and the row forty lines below it read as the opposite. So the
+row now asks the same reader as the header (`release_run.LANE_READERS`) and
+says which case it is: "skipped here; externally attested for the tested
+tree: verified on postgresql, 25 assertions (`harness/POSTGRES-ATTESTATION.txt`)"
+followed by the local reason, or "NOT attested for this tree" when the file is
+missing, stale or failed. verify_docs drives both through fixtures. Both
+checks went red under a mutation that dropped the wording and under one that
+called every lane attested.
+
+In the same pass: `harness/package.py`'s explicit evidence list named the MP4
+attestation and not the PostgreSQL one, which shipped only because git tracks
+it -- the dependency that list's own comment says it refuses.
+
+### Withdrawn in its form, kept in substance: the duplicated controllers
+
+SK312-003 quoted FUTURE.md: eyedropper, recent colours, smoothing, photo
+adjustments and music trim, each implemented twice. All five had moved into
+`lib/` releases earlier, and both editors called them. The paragraph was
+stale, and the audit inherited it.
+
+**The first reply to the auditor overstated the correction**, and it is
+worth recording how. It said the duplication was "nearly gone", from a
+line-level clone detector that found 27 duplicated lines. Flip packs a
+function onto a line or two where app.js spreads it over twenty, so no line
+matches and the detector measured the formatting. Compared as TOKEN sequences,
+same-named functions give a very different answer: dozens of pairs, most
+0.85-1.00 similar, clustered in the music drawer and canvas zoom/pinch. The
+instrument was calibrated on two known cases before being believed
+(`initPaintTarget`, one block reformatted, scores 1.00; `frame`, two unrelated
+functions sharing a name, scores 0.04), and the correction reached the auditor
+before they replied. They agreed on both counts and asked for the measurement
+to exclude legitimate glue around shared modules, which is what the tool's
+`--min-tokens` floor is for.
+
+`harness/tools/editordup.py` is that measurement, and FUTURE.md §2 now names
+the real clusters from it. It names the clusters and leaves their sizes to
+the tool, so the next change to either editor cannot make its numbers
+stale.
+
+### Confirmed and fixed: the library's theme and type
+
+SK312-001: a light choice held on the editors and the gallery and fell off on
+/library, whose sheet still opened "Skribl is a dark-committed product". It
+now carries the same theme boot and a light ramp keyed on the same attribute,
+neutrals matched to the gallery's. `--accent-tint` is TEXT on this page (the
+handle, a lit toggle, a link), so it moves in light. Five dark-only literals
+became tokens.
+
+SK312-007: the stacks began with Archivo and IBM Plex Mono, which the page
+never serves. They begin with `system-ui` and `ui-monospace` now.
+
+verify_library gained a section driven the owner's way: a preference an editor
+stored, read by a page opened afterwards. It asserts the light and dark
+grounds, theme-color, no dark chrome surface in light, a two-theme contrast
+comparison over every text element (verify_theme's rule: no drop that lands
+under AA), and a census of the stacks that draw text. The first draft of that
+census failed the FIXED page on a bare "Arial". Six icon-only transport
+buttons do not inherit the page font and compute to the browser's default,
+and they draw no glyph in it. The census asked about every element when the
+property is about elements that draw text. A check that goes red on a page
+with nothing wrong with it is the same miscalibration as one that stays green
+on a broken one, in the other direction.
+
+### Confirmed and left open
+
+SK312-002 (Pad binds mouse and touch, Flip Pointer Events) is true, and it is
+now tied to the measurement: the canvas zoom and pinch copies are where the
+two event families meet, so consolidating them is the first step of that
+migration. It gets its own release. SK312-004 (the player CSS ratchet) and
+SK312-005 (toolbar density) were already the owner's open decisions.
+SK312-008 (a failed post saves locally, under a button called Post) is a
+design question for the owner, not a defect.
+
+### Still open, and still the owner's
+
+Nothing reads the main branch's post-merge battery. This time it was read,
+by hand, because the handoff said to: `90c14e6`'s run went green about fifty
+minutes after the merge.

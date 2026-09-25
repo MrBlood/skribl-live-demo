@@ -116,18 +116,18 @@ pairs every named function in Pad with the function of the same name in Flip
 and compares the bodies token by token. Its header says what it cannot see,
 and why every total it prints is a lower bound. On the tree after v312, most of
 the same-named pairs of 100 tokens or more were copies, and most of the copies
-were 0.85–1.00 similar. They cluster like this (function counts; run the tool for
-tokens):
+were 0.85–1.00 similar. They cluster like this, largest
+first (sizes are the tool's to print, not this paragraph's):
 
-    music drawer — trim handles, waveform and loop detail,
-      zoom window, loop preview, nudges                      15 functions
-    canvas zoom / pan / pinch (initCanvasZoom alone is the
-      largest single copy in either editor)                  7
-    draw drawer and tool wiring — paint target, grid
-      density, shape knobs, colour sampling                  6
-    drawer plumbing — pending-media cards, slider nudgers    2
-    MP4 export (exportViaWebCodecsMp4)                       1
-    stroke painter, draft save                               2
+    music drawer: trim handles, waveform and loop detail, zoom window,
+      loop preview, nudges
+    canvas zoom / pan / pinch (initCanvasZoom alone is the largest single
+      copy in either editor)
+    MP4 export (exportViaWebCodecsMp4)
+    draw drawer and tool wiring: paint target, grid density, shape
+      knobs, colour sampling
+    drawer plumbing: pending-media cards, slider nudgers
+    stroke painter, draft save
 
 Two of those are not what a reader of either file would guess. Pad's copy of
 the music drawer's loop-detail pan (`dragZoomPan`) lives in `editor_photo.js`,
