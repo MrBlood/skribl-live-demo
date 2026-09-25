@@ -164,7 +164,8 @@ def mb(n):
 
 
 def _human(r, out):
-    p = lambda *a: print(*a, file=out)
+    def p(line=""):
+        print(line, file=out)
     p(f"media store         : {r['store']}")
     p(f"database            : {r['dialect']}, {mb(r['database_bytes'])} in total"
       + (f"; skribl_posts {mb(r['posts_table_bytes'])}"
