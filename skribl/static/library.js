@@ -349,22 +349,39 @@
      is the share card -- 1200x630, a wordmark band across the foot and the
      drawing letterboxed on a plate in the middle -- and the stylesheet showed
      it by scaling to 128% and pulling up 5.5% so the band fell outside. That
-     is a crop chosen to hide the branding, not to show the drawing: on an
-     84x63 tile a 16:9 Skribl came out as a stamp between two slabs of plate,
-     which is what the owner was looking at when they asked whether the page
-     looked right.
-     Cropped to the drawing's own rectangle instead, the tile is all drawing at
-     every canvas shape -- the same thing the gallery card does with the same
-     arithmetic (SkriblInline.fitPoster, `fill` for cover rather than contain).
-     THE BOX IS MEASURED, NOT ASSUMED: every length fitPoster writes is a
+     hides the branding rather than showing the drawing: it happens to land on
+     the drawing for a 4:3 or 16:9 canvas and does not for the other two
+     presets, so a 9:16 Skribl came out 35px wide in an 84px box with 24px of
+     plate down each side. That is what the owner was looking at when they
+     asked whether the page looked right.
+
+     THE RECTANGLE COMES FROM lib/sharecard.js, the module that DEFINES it.
+     The first cut of this read it from inlineplayer.js instead, by
+     generalising that component's private fitPoster over box aspect and
+     contain/cover and exporting it -- which worked, and cost 75 bytes in the
+     file EVERY HOST downloads to embed a Skribl, for a crop only this page
+     performs. verify_inline's budget caught it 32 bytes over and was right to:
+     a host embedding a post should not pay for the profile page's thumbnails.
+     Reading sharecard here costs those bytes to /library alone, and buys a
+     better source at the same time -- inlineplayer inlines its own copy of
+     these constants precisely so hosts need not load this module, so that copy
+     is the derived one and this is the original.
+
+     COVER, NOT CONTAIN, which is the one thing this does differently from the
+     card and the tile: they letterbox the drawing into a frame, and a thumbnail
+     this small has no room to spend on bars. Whichever axis runs out LAST
+     decides, so the drawing fills the tile and the overflow is clipped by
+     .posted-shot.
+
+     THE BOX IS MEASURED, NOT ASSUMED: every length written below is a
      percentage of this element, so it needs the aspect the browser actually
      laid out, and a sheet that changes the thumb's size needs no second edit
      here. A shot with no shape on it keeps the band crop, which is what a row
-     the reconcile has not reached yet gets -- and it is a real state on the
-     first paint after a post, not a hypothetical. */
+     the reconcile has not reached yet gets -- a real state on the first paint
+     after a post, not a hypothetical. */
   function fitShots() {
-    var fit = window.SkriblInline && window.SkriblInline.fitPoster;
-    if (!fit || !listEl) return;
+    var S = window.SkriblShareCard;
+    if (!S || !listEl) return;
     Array.prototype.forEach.call(
       listEl.querySelectorAll('.posted-shot[data-skribl-w][data-skribl-h]'),
       function (shot) {
@@ -373,7 +390,27 @@
         var h = +shot.getAttribute('data-skribl-h');
         var box = shot.getBoundingClientRect();
         if (!img || !(w > 0 && h > 0) || !(box.width > 0 && box.height > 0)) return;
-        fit(img, w, h, box.width / box.height, true);
+        var r = S.drawingRect(w, h);          /* card pixels */
+        if (!(r.w > 0 && r.h > 0)) return;
+        /* Units of the BOX's height: width is A, height is 1. */
+        var A = box.width / box.height, a = r.w / r.h;
+        var cw = Math.max(a, A), ch = cw / a;
+        var k = cw / r.w, st = img.style, i = S.PLATE_LW;
+        function p(n, of) { return n / of * 100 + '%'; }
+        st.width = p(S.CARD_W * k, A);
+        st.height = p(S.CARD_H * k, 1);
+        st.left = p((A - cw) / 2 - r.x * k, A);
+        st.top = p((1 - ch) / 2 - r.y * k, 1);
+        /* The stylesheet centres the band crop with a transform; this one is
+           positioned outright, so the transform has to go or it shifts twice. */
+        st.transform = 'none';
+        st.maxWidth = 'none';
+        /* Clipped to the drawing INSIDE its plate hairline, so the accent
+           stroke on the card's edge is never in frame. */
+        st.clipPath = 'inset(' + p(r.y + i, S.CARD_H) + ' '
+          + p(S.CARD_W - r.x - r.w + i, S.CARD_W) + ' '
+          + p(S.CARD_H - r.y - r.h + i, S.CARD_H) + ' '
+          + p(r.x + i, S.CARD_W) + ')';
       });
   }
 

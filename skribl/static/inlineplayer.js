@@ -554,40 +554,25 @@
    * PLATE_R / PLATE_IN are lib/sharecard.js's PLATE_R and PLATE_LW. */
   var BOX_A = 16 / 9, PLATE_R = 18, PLATE_IN = 2;
 
-  /* `boxA` AND `fill` ARE FOR A BOX THAT IS NOT THIS COMPONENT'S. /library's
-   * row thumbnail is 84x63 and wants the drawing to FILL it -- there is no
-   * canvas behind it to line up with, and a 4:3 tile showing a 16:9 drawing
-   * letterboxed is two grey bands and a stamp-sized picture. Same arithmetic,
-   * two knobs: the aspect the percentages resolve against, and contain vs
-   * cover. Passing neither is this component's own case and behaves exactly
-   * as it did.
-   *
-   * IT IS EXPORTED (api.fitPoster) rather than copied. The note above already
-   * explains why the arithmetic is inlined here instead of imported from
-   * lib/sharecard.js -- a page that only DISPLAYS Skribls is not charged for
-   * the module that COMPOSES the card -- and /library loads this file anyway,
-   * so a third copy would buy nothing and drift on its own schedule. */
-  function fitPoster(img, w, h, boxA, fill) {
+  function fitPoster(img, w, h) {
     /* Where the card put the drawing: drawingRect(), rounding included --
      * matching the card's own rounding is what makes one scale factor exact
      * on both axes below. */
     var sc = Math.min(AREA_W / w, AREA_H / h);
     var dw = Math.round(w * sc), dh = Math.round(h * sc);
     if (!(dw > 0 && dh > 0)) return;
-    var A = boxA > 0 ? boxA : BOX_A;
     var dx = Math.round((CARD_W - dw) / 2), dy = Math.round((CARD_H - FOOT - dh) / 2);
-    /* Where the drawing will be, in units of the box's HEIGHT. Whichever axis
-     * runs out decides, and which one that is depends on the fit: to CONTAIN
-     * it is the first (min), to COVER it is the last (max). cw is the width,
-     * ch the height, and ch = cw / a covers both cases at once. */
-    var a = dw / dh, cw = fill ? Math.max(a, A) : Math.min(a, A), ch = cw / a;
+    /* Where the CANVAS will be, in units of the box's HEIGHT. The component
+     * letterboxes it, so whichever axis runs out first decides: cw is the
+     * width, ch the height, and ch = cw / a covers both cases at once. */
+    var a = dw / dh, cw = Math.min(a, BOX_A), ch = cw / a;
     /* One factor, card pixels -> box-height units, so the image scales
-     * uniformly and the drawing's rect lands where it is wanted. */
+     * uniformly and the drawing's rect lands on the canvas's rect. */
     var k = cw / dw, st = img.style, i = PLATE_IN;
     function p(n, of) { return n / of * 100 + '%'; }
-    st.width = p(CARD_W * k, A);
+    st.width = p(CARD_W * k, BOX_A);
     st.height = p(CARD_H * k, 1);
-    st.left = p((A - cw) / 2 - dx * k, A);
+    st.left = p((BOX_A - cw) / 2 - dx * k, BOX_A);
     st.top = p((1 - ch) / 2 - dy * k, 1);
     /* The stylesheet centres the band crop with a transform; this one is
      * positioned outright, so the transform has to go or it shifts twice. */
@@ -1377,10 +1362,6 @@
 
   var api = {
     mount: mount,
-    /* THE CROP, FOR A BOX THIS COMPONENT DOES NOT OWN. /library's row
-     * thumbnail is a share card and wants the drawing out of it; see
-     * fitPoster. Exported so the arithmetic has one home. */
-    fitPoster: fitPoster,
     /* A DRAFT'S SKRIBL, which has no id because it is not posted yet.
      *
      * The host's composer holds a payload (editor_compose.js hands it back) and
