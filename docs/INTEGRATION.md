@@ -273,7 +273,9 @@ wrong: the editor's `src` is set on first open and never in your markup (or
 every feed view downloads a drawing tool nobody opened); re-opening an
 already-loaded editor pushes the draft's payload in, so the editor shows what
 the DRAFT holds rather than whatever it kept from last time; `clear()` resets
-the frame, so removing a Skribl does not leave the next pad press reopening it;
+the frame, so removing a Skribl does not leave the next pad press reopening it
+(and the compose editor keeps no draft of its own, so the author's standalone
+Pad draft neither appears in a post nor is overwritten by one);
 and the origin is checked inbound and targeted outbound, never `'*'`.
 
 It does NOT post. Posting is yours — you write your own row and store the id on
