@@ -37,7 +37,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))          # the server-side seam check imports skribl
 
 try:
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 except Exception as exc:                                   # pragma: no cover
     print(f"SUITE-SKIPPED: playwright unavailable ({exc})")
     print("No assertions were executed. This is NOT evidence the library works.")
@@ -182,10 +182,21 @@ with sync_playwright() as sp:
 
     # ---- the transport -----------------------------------------------------
     pg.click("#btnPlay")
-    pg.wait_for_timeout(900)
-    moving = pg.evaluate("""() => ({
+    # MOVING IS A STATE, NOT A DELAY. The stage loops a ~1s fixture (Pad caps
+    # each recorded gap at 50ms) and the clock rounds to whole seconds, so a
+    # fixed 900ms sampled the "0:00" half of a cycle about as often as not,
+    # and the first play also waits on a lazy payload fetch. Sample the first
+    # frame that shows movement; on a timeout, sample anyway for the report.
+    _MOVING = """() => ({
         frac: parseFloat(document.getElementById('scrubFill').style.width) || 0,
-        label: document.getElementById('tElapsed').textContent })""")
+        label: document.getElementById('tElapsed').textContent })"""
+    try:
+        moving = pg.wait_for_function(
+            f"() => {{ const m = ({_MOVING})(); "
+            f"return (m.frac > 0 && m.frac < 100 && !m.label.startsWith('0:00 /')) ? m : null; }}",
+            timeout=6000).json_value()
+    except PWTimeout:
+        moving = pg.evaluate(_MOVING)
     # ONE PROGRESS, NOT TWO (from an iPhone, v304): the in-post player
     # draws a hairline along its bottom edge, and this page has a scrub track
     # of its own under the title. Both moving together read as two players.

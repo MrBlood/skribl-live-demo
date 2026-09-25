@@ -20,7 +20,7 @@ matching --r-frame exactly, flush to the canvas bottom, spanning wrap width less
 import math
 import sys
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 from assertions import make_check
 import browsing
 
@@ -96,9 +96,18 @@ with sync_playwright() as b_ctx:
         pg.click("#recordBtn")          # stop the take
         pg.wait_for_timeout(400)
         pg.click("#playBtn")
-        pg.wait_for_timeout(500)        # mid-replay
-
-        m = pg.evaluate(MEASURE)
+        # MID-REPLAY IS A STATE, NOT A DELAY. Pad replays cap each recorded gap
+        # at 50ms, so this scribble replays in well under a second and a fixed
+        # 500ms could land after hideScrub() on a fast machine. Take the
+        # measurement the first frame the bar is fully shown; if it never is,
+        # measure anyway so the check below reports what was there.
+        try:
+            m = pg.wait_for_function(
+                f"() => {{ const m = ({MEASURE})(); "
+                f"return (m && m.laidOut && m.w > 0 && m.opacity === 1) ? m : null; }}",
+                timeout=5000).json_value()
+        except PWTimeout:
+            m = pg.evaluate(MEASURE)
 
         # This one gates every assertion after it. If the replay never started,
         # the bar reads 0 wide and the inset comparisons below would compare
