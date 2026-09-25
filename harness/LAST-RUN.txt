@@ -1,18 +1,20 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-25T02:15:23Z
+UTC timestamp           : 2026-09-25T14:38:24Z
 Host                    : Linux x86_64
-Tree SHA-256            : 20ab9f66f381a5c4663e01d159ac3bf836523031a0764ef63da1144791fecf7a
-Git commit              : 053256d
+Tree SHA-256            : 15cf2b6c25cc9a445e0e2d8ed029df448d4b31ed2decb22e30b55544947e808d
+Git commit              : a112bed
 Source state            : generated-only dirty
                             harness/LAST-RUN.txt
-SKRIBL_VERSION          : v311
+                            harness/MP4-ATTESTATION.txt
+                            harness/POSTGRES-ATTESTATION.txt
+SKRIBL_VERSION          : v312
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.doDsohBnYK/harness.db)
+Database reset          : yes (fresh /tmp/tmp.gMShlcxQF2/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
