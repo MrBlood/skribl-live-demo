@@ -132,9 +132,10 @@ first (sizes are the tool's to print, not this paragraph's):
 Two of those are not what a reader of either file would guess. Pad's copy of
 the music drawer's loop-detail pan (`dragZoomPan`) lives in `editor_photo.js`,
 not `editor_music.js`. The canvas zoom and pinch copies are also where the two
-editors' different event families meet (Pad binds mouse and touch, Flip binds
-Pointer Events). So consolidating them is the natural first step of moving Pad
-onto Pointer Events, not a separate project.
+editors' event families met (Pad bound mouse and touch, Flip Pointer Events).
+Pad's canvas moved onto Pointer Events in v315 (SK312-002) with the pinch left
+on touch events as Flip's is, so consolidating the two zoom/pinch copies is now
+a same-model merge rather than a migration.
 
 The v142–v174 work moved eight modules into `static/lib/` (`canvassizes`,
 `posted`, `postedui`, `report`, `segslider`, `tooltip`, `hints`, `helpsearch`),
