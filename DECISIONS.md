@@ -11509,3 +11509,92 @@ and needed DIFFERENT assertions, which is the v212 rule again: the crop rows go
 red for either, and only the highlight row separates the hook ordering from the
 crop itself. Both mutations were run; the crop no-op reddened two rows, the
 hook ordering reddened three.
+
+## v311, cont. -- what the seal found, which the entry above could not know
+
+The entry above was written before the release run, which is the normal order
+and has a normal cost: it describes the work and not the evidence. The first
+full battery on that tree was RED on three suites, all three introduced in the
+same branch, none of them shipped. They are recorded here because two of the
+three are invisible to the pull-request gate, and a session that reads only the
+entry above would conclude the work went in clean.
+
+### A comment pass took an argument out of a function call
+
+`verify_integration` read
+
+    check("current_user_id decides authorship", str == "42", ...)
+
+`str == "42"` compares the builtin TYPE to a string. It is False forever, so
+the row had been unable to answer its own question since the `(owner)` was
+stripped out of `str(owner)`. `git log -S` puts that on a comment pass in this
+same branch, one removing `(owner, vNNN)` attribution parentheticals from
+PROSE. Here the identical three characters were an argument list.
+
+It is the failure CLAUDE.md names outright -- do not edit mechanically where
+prose and code interleave -- and the third time this tree has paid for it. What
+makes this instance worth its own heading is the SHAPE of the damage: nothing
+about the host seam was broken. The suite stopped being able to tell, which is
+the quieter failure and the worse one, and only a full battery could catch it
+because this suite is not on the PR gate.
+
+Swept afterwards for the same shape two ways and found no second instance:
+every `==`/`!=` against a bare builtin across the Python tree, and every
+non-comment line those ten comment commits touched (51 candidates, all prose or
+CSS comments bar this one).
+
+### A page's feature, charged to every host
+
+`verify_inline` caps the in-post player at 37,200 bytes of CSS and JavaScript
+-- what a HOST downloads to embed a Skribl. The thumbnail crop put it at
+37,232. Measured rather than estimated: generalising the player's private
+`fitPoster` over box aspect and contain/cover and exporting it added 75 bytes,
+against 43 of headroom.
+
+THE RATCHET WAS NOT THE THING TO MOVE, and its own note says why: loosening one
+needs a reason written beside it or it is just a number that follows the code
+down. There was no reason worth writing. Those 75 bytes bought /library a crop
+and every host embedding a post would have paid for it.
+
+So the cost moved instead of the limit. `inlineplayer.js` went back to its
+pre-v311 bytes exactly and /library reads `lib/sharecard.js` -- 1,067 bytes, on
+a first-party page that can afford them. The source improved in the same move:
+the player inlines those constants PRECISELY so a host need not load the
+module, which makes its copy the derived one and sharecard the original. The
+crop's geometry is byte-identical either way; only the payer changed.
+
+### A caller outliving its function, and the dead CSS it was propping up
+
+`verify_player_isolation`'s "no page errors on the player" caught
+`updateTabSlider is not defined`. A real ReferenceError on a real page: the
+same branch removed the tab-slider block as dead and left its CALLER standing
+in the window resize listener.
+
+THE ERROR LINE UNDERSTATES IT. A throw there aborts the rest of the handler, so
+the photo-fit slider repositioning and `initToolSlider()` below it stopped
+running after any resize. `node --check` cannot see a call to a missing
+function -- it is valid syntax -- and neither can any suite that does not
+execute the page on a resize. Same shape as the helpBtn listener caught earlier
+the same day, and as the photo carve CLAUDE.md already records.
+
+Then the removal cascaded, usefully. With the dead call gone, `verify_surfaces`
+immediately named five `.tab-btn` rule-sets whose class nothing applies -- the
+selector string INSIDE the dead call had been the only thing making them look
+live to that gate. A dead call propping up dead CSS, each hiding the other.
+
+### What this says about where the gates sit
+
+The pull-request gate runs the boot suite plus everything needing neither a
+browser nor a server, and that trim is still right: three jobs at 40-90 minutes
+is a long time to sit on a pull request. But the three defects above divide
+cleanly by which instrument could see them, and none of them was the gate:
+
+  verify_integration       needs no browser and no server -- and is not on the
+                           gate, which is worth a look one day
+  verify_inline            needs both
+  verify_player_isolation  needs both
+
+Nothing here argues for widening the gate; the wall-clock reason for the trim
+is unchanged, and the seal did its job. It argues for not mistaking a green
+pull request for a verified tree, which is what the seal is for and why a red
+one is a result rather than a delay.
