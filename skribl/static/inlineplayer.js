@@ -34,6 +34,16 @@
  * defensive declarations stay there. Why the component behaves as it does
  * belongs here.
  *
+ * WHAT MOVED HERE FROM THE STYLESHEET'S HEADER (v315), to pay for the title
+ * line under the player without raising the embed ratchet: inlineplayer.css is
+ * NOT styles.css and NOT player.css, and it is outside harness/tools/
+ * cssgraph.py's graph entirely (that tool derives player.css from
+ * styles.css). Its two poster literals, 128.0488% and -5.4878%, are 630/492
+ * and 27/492 from lib/sharecard.js band(); they are the no-script fallback,
+ * because this file reframes the poster onto the drawing itself wherever the
+ * page knows the drawing's size, and verify_inline.py asserts both against
+ * the real module.
+ *
  * WHAT IT PLAYS
  * -------------
  * Pad replay documents, Flip documents (holds through lib/holdtiming.js), the

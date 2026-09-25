@@ -133,7 +133,7 @@
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true) -%}
+{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None) -%}
 {# is-muted and is-silent are the pre-script truth: sound is off by default, and
    nothing yet knows whether this Skribl has any. inlineplayer.js clears
    is-silent when the payload turns out to carry a loop.
@@ -171,6 +171,14 @@
    indicator, not two; the gallery's card transport is the first caller to say
    so. Default true, so every existing call is unchanged. #}
 {{ _skribl_inline_insides(progress=progress) }}</div>
+{#- THE TITLE LINE (v315), under the player and outside it: pass `title` and a
+    line with the drawing's name and the word Skribl follows the box, the way a
+    caption follows a photo. Leave it out and nothing is rendered, so a host
+    that already prints the title in its own layout -- and every template
+    written before this -- is unchanged. It inherits the host's text colour. #}
+{%- if title %}
+<p class="skribl-inline-title"><b>{{ title }}</b><span>Skribl</span></p>
+{%- endif %}
 {%- endmacro %}
 
 {% macro skribl_inline_draft(id='', controls=true, progress=true) -%}
