@@ -388,13 +388,24 @@ with sync_playwright() as p:
         #     ...which is the branch below saying so in words, exercised
         #        rather than merely written down
         #
-        # Also measured, and left alone deliberately: the same probe-then-click
-        # shape is in verify_hold, verify_player_isolation, verify_audiostate
-        # and verify_audiosession, which reach the transport through
-        # Playwright's click() -- it waits for a button to be VISIBLE and never
-        # for a listener. None of them is red, so none of them is fixed here.
-        # Written down so the next red on one of them is read in a minute
-        # instead of a session.
+        # AND THE NOTE THAT STOOD HERE WAS WRONG, which is worth more than the
+        # fix. It said verify_hold, verify_player_isolation, verify_audiostate
+        # and verify_audiosession shared this shape because they reach the
+        # transport through Playwright's click(), "which waits for a button to
+        # be VISIBLE and never for a listener". Run against the same slow API:
+        #
+        #   verify_audiostate       29/29   click()
+        #   verify_audiosession     32/32   click()
+        #   verify_hold             60/61   samples a poster after a fixed wait
+        #   verify_player_isolation 40/44   samples four things after fixed waits
+        #
+        # click() is SOUND on this page: the shell ships `hidden` and is
+        # unhidden in the same synchronous task that binds the transport, so no
+        # paint can fall between them. What is fragile is a FIXED WAIT standing
+        # in for a load -- and a raw evaluate(() => el.click()), which is what
+        # this section used and which skips actionability entirely.
+        # harness/playerready.py has the latch and the whole measurement; the
+        # two suites that were fragile now use it.
         #
         # The window is a few milliseconds locally, which is why this survived
         # at all: Playwright's own round trip usually outruns a local fetch.

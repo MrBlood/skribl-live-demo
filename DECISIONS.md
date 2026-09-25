@@ -11691,6 +11691,10 @@ an anaesthetic:
 
 ### What was left alone
 
+**This section was wrong, and the next entry corrects it.** It is left standing
+because the way it was wrong is the same way the three earlier releases were
+wrong, one paragraph after saying so.
+
 The same probe-then-click shape is in `verify_hold`, `verify_player_isolation`,
 `verify_audiostate` and `verify_audiosession`, which reach the transport through
 Playwright's `click()` — it waits for a button to be visible and never for a
@@ -11708,3 +11712,64 @@ reproduced. The rule at the head of `CLAUDE.md` says to run a new check against
 a case known BAD and a case known GOOD. This says the same thing about a
 FAILURE: a red you cannot reproduce on demand is a hypothesis, and tuning a
 number against a hypothesis is how the same bug survives three releases.
+
+
+## The correction, one hour later: a diagnosis reused is a diagnosis untested
+
+The entry above closes by naming four suites as sharing the defect and leaving
+them alone. That claim was never measured. It was the framecache diagnosis
+applied by pattern-matching to any suite that touched `#playerPlayBtn` — which
+is precisely the move the same entry had just finished condemning.
+
+Run against the same deliberately slow `GET /api/skribls/<id>`:
+
+    verify_audiostate         29/29   reaches the transport through click()
+    verify_audiosession       32/32   reaches the transport through click()
+    verify_hold               60/61   samples the poster after a fixed wait
+    verify_player_isolation   40/44   samples four things after fixed waits
+
+Two of the four were never fragile, and the stated reason was wrong about the
+page. `_skribl_player_controls.html` ships `<div class="player-shell"
+id="playerShell" hidden>`, and `shell.hidden = false` runs in the SAME
+SYNCHRONOUS TASK as the `addEventListener` calls and the `setProgress(0)` that
+follow it — there is no top-level `await` in that stretch. The browser cannot
+paint a visible-but-inert button, so Playwright's `click()`, which waits for
+visibility, is sound here.
+
+### So the fragile shape is a different one
+
+Not "press a button that is not bound yet". Two things:
+
+  * **a fixed wait standing in for a load** — `wait_for_timeout(1200)` and then
+    sample, which is what both red suites do; and
+  * **a raw `evaluate(() => el.click())`**, which skips actionability
+    altogether — what `verify_framecache` did, and the actual mechanism of the
+    three-release bug.
+
+`harness/playerready.py` now holds the latch and the measurement. It waits for
+an inline width on `#playerProgressFill`, because `setProgress(0)` is the last
+statement of `initPlayer()` and `setProgress` is the only writer of that inline
+style in the tree, while the template ships the element with no style attribute
+at all. It is deliberately NOT the visibility proxy: that proxy is true only by
+coincidence, and one `await` added between the unhide and the last binding
+would turn it into a silent race with nothing to report it.
+
+It is also non-invasive, which the framecache arming loop is not — and has to
+be, because `verify_audiosession` asserts on what the player holds BEFORE
+anything is pressed, and a probing click would claim the very media session the
+assertion is about.
+
+### The lesson, which is the previous entry's own lesson arriving late
+
+The entry above ends: "a red you cannot reproduce on demand is a hypothesis,
+and tuning a number against a hypothesis is how one bug survives three
+releases." It then stated, as finding, an unreproduced hypothesis about four
+other files — and would have had the next session fix two suites that were not
+broken, by a mechanism that was not the mechanism.
+
+Writing the rule down does not execute it. The rig that proved the framecache
+race took about ten minutes to build and was still running when that claim was
+written; it was not pointed at the claim. **A diagnosis is cheap to reuse and
+that is exactly what makes it worth re-testing at each new surface** — which is
+what `CLAUDE.md`'s rule about two surfaces needing DIFFERENT assertions has
+been saying, in a different register, since v212.

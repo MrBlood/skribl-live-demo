@@ -30,6 +30,7 @@ import wave
 
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+from playerready import await_player, await_player_error
 import browsing
 
 BASE = "http://127.0.0.1:5001"
@@ -444,7 +445,13 @@ with sync_playwright() as sp:
                msg: (document.getElementById('playerErrorMsg') || {}).textContent || '' }; }"""
     _mp = b.new_page(viewport={"width": 1280, "height": 900})
     _mp.goto(BASE + "/s/not-a-real-id", wait_until="load")
-    _mp.wait_for_timeout(1200)
+    # THE PANEL, NOT A COUNT OF MILLISECONDS. This was wait_for_timeout(1200),
+    # which is a guess about how long the 404 takes to come back; against a
+    # deliberately slow /api/skribls/<id> it sampled an empty panel and read it
+    # as the page failing to say anything. await_player is the WRONG wait here
+    # -- this page never reaches initPlayer's end -- so the error path gets its
+    # own latch. Same defect, different surface, different signal.
+    await_player_error(_mp, what="/s/not-a-real-id")
     _m = _mp.evaluate(VIS)
     check("the page says the Skribl could not be found", _m["panel"] and "found" in _m["msg"], str(_m))
     check("...and offers no Try again for it", _m["retry"] is False,
@@ -745,6 +752,12 @@ with sync_playwright() as sp:
     print("\nFULL SCREEN — the link people share has the control the stage has")
     _fp = b.new_page(viewport={"width": 1200, "height": 900})
     _fp.goto(link, wait_until="load")
+    # Three rows below read this page -- the full-screen control, the nib on
+    # its stroke, the bead through a resize -- and all three went red against a
+    # slow API on the 1200ms guess that used to stand here, reporting a missing
+    # button and a nib with no size as though the player had lost them. The
+    # settle that follows is still a settle; it now starts from a defined zero.
+    await_player(_fp, what="the shared link's player")
     _fp.wait_for_timeout(1200)
 
     _api = _fp.evaluate("() => !!document.fullscreenEnabled")
