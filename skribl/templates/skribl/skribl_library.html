@@ -6,7 +6,7 @@
 {%- from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Skribl Library</title>
+  <title>Your Skribl Library</title>
   {% include 'skribl/_skribl_app_identity.html' %}
   {# The app's theme, stamped before first paint -- the same partial the
      editors and the gallery carry. Until v313 this page did not include it and
@@ -21,6 +21,8 @@
   <link rel="stylesheet" href="{{ skribl_asset('fullbar.css') }}">
   {# tooltip.css travels with lib/tooltip.js — see that sheet's header. #}
   <link rel="stylesheet" href="{{ skribl_asset('tooltip.css') }}">
+  {# pagemenu.css travels with lib/pagemenu.js -- the ••• and its sheet (v314). #}
+  <link rel="stylesheet" href="{{ skribl_asset('pagemenu.css') }}">
   {# The profile's Skribls tab: real posts from GET /api/skribls on the shared
      in-post player, since v275 (verify_library.py). This comment called it a
      concept preview of demo drawings until SK-AUD-011 read it as current.
@@ -468,18 +470,19 @@
       data-skribl-pad="{{ url_for('.skribl_editor') }}">
 <div class="wrap">
   <div class="top">
-    <div class="brand" role="img" aria-label="Skribl library">
+    <div class="brand" role="img" aria-label="Your Skribl Library">
       <span class="mark">{% include 'skribl/_skribl_brand_mark.html' %}</span>
       <span class="tag">library</span>
     </div>
     <div class="spacer"></div>
-    {# The gallery and the editor, beside the profile: the gallery's header
-       points here ("Yours"), and until the v304 proofread nothing here
-       pointed anywhere -- the bar said "player" and carried a wireframe
-       label. Both answer a tap 44px tall, like every header control. #}
+    {# The editor, and the page menu (v314). Until the v304 proofread nothing
+       here pointed anywhere; then a Gallery pill sat beside Make one. The •••
+       replaced it: the gallery is a row in the page menu, beside every other
+       surface and the theme, and a third control here overflowed 390px by
+       28px when measured. Both answer a tap 44px tall. #}
     <nav class="nav" aria-label="Elsewhere">
-      <a href="{{ url_for('.skribl_gallery') }}" class="navlink" id="libGallery">Gallery</a>
       <a href="{{ url_for('.skribl_editor') }}" class="navlink make" id="libMake">Make one</a>
+      <button type="button" class="pm-more" id="pageMenuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="pageMenu" title="Menu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
     </nav>
   </div>
 
@@ -491,7 +494,7 @@
      un-believed before it can be built on. #}
   <div class="profile">
     <div class="who">
-      <h1 class="name" id="whoName">Skribls</h1>
+      <h1 class="name" id="whoName">Your Skribl Library</h1>
       <div class="handle" id="whoHandle"></div>
       <div class="bio" id="whoBio">Everything you have posted, newest first, with
         the full playback controls a post keeps out of the way.</div>
@@ -552,7 +555,7 @@
     <!-- LIBRARY -->
     <section aria-label="Library">
       <div class="libhead">
-        <h2>Your skribls</h2>
+        <h2>Skribls</h2>
         {# THE FILTER (v304): the two states a post of yours can be in, plus
            all. Not Pad/Flip — the listing does not say which a post is. #}
         {# The titles say what the one-word labels cannot; lib/tooltip.js
@@ -567,7 +570,7 @@
         </div>
         <label class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
-          <input id="postedSearch" type="search" placeholder="title…" aria-label="Search your skribls" autocomplete="off">
+          <input id="postedSearch" type="search" placeholder="title…" aria-label="Search your Skribl Library" autocomplete="off">
         </label>
       </div>
       {# THE LIST IS YOUR SKRIBLS (v304): the same rows, the same actions, the
@@ -576,7 +579,7 @@
          putting the Skribl on the stage. #}
       {% include 'skribl/_skribl_posted.html' %}
       {# THE EMPTY STATE says what puts something here and what this list is,
-         in the words the menu's "Your Skribls" uses: kept in this browser,
+         in the words the menu's "Your Skribl Library" uses: kept in this browser,
          not an account. Hidden while there is anything to show. #}
       <p class="state" id="libEmpty" hidden>
         <b>Nothing here yet.</b><br>
@@ -637,7 +640,10 @@
     window.SKRIBL_PLAYER_TARGET = {{ skribl_player_target | tojson }};
     window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
   </script>
+  {% with here='library' %}{% include 'skribl/_skribl_page_menu.html' %}{% endwith %}
   <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/pagemenu.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/recoverykey.js') }}" defer></script>
   {# TOOLTIPS ON THIS PAGE TOO ("we are missing tooltips on gallery and
      library"). Every control here already carries a `title`; nothing was

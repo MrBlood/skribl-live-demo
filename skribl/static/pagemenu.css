@@ -1,0 +1,106 @@
+/* The page menu's sheet. Travels with lib/pagemenu.js and
+   _skribl_page_menu.html -- the partial's header says what it is for.
+
+   Loaded by the gallery and the library, and by nothing a host downloads.
+
+   WRITTEN ONLY IN TOKENS BOTH PAGES DEFINE (--panel, --control, --hairline,
+   --text, --text-2, --text-3, --accent, --font-ui), in both of their ramps, so
+   the sheet follows the theme with no light block of its own. Its shape is
+   the editors' menu sheet -- rounded top, a grab bar, 44px rows of icon and
+   two lines of words, a Theme row at the bottom -- written against these
+   pages' tokens rather than imported from styles.css, which neither page
+   loads. */
+
+/* The ••• in each header. Round, 44px, in the header's own hairline -- the
+   same weight as the gallery's "Yours" pill it replaced, so the header does
+   not get heavier for having gained a control. */
+.pm-more {
+  flex: none;
+  display: inline-grid; place-items: center;
+  width: 44px; height: 44px; padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: transparent; color: var(--text-2);
+  cursor: pointer;
+}
+.pm-more:hover { color: var(--text); background: var(--control); }
+.pm-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pm-more svg { width: 20px; height: 20px; }
+
+.pm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+:root[data-theme="light"] .pm-overlay { background: rgba(20, 23, 29, 0.28); }
+.pm-overlay[hidden] { display: none; }
+
+.pm-sheet {
+  box-sizing: border-box;
+  width: calc(100% - 20px);
+  max-width: 440px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  border-radius: 20px 20px 0 0;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-bottom: 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+  padding: 8px 6px calc(10px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--font-ui);
+  outline: none;
+}
+.pm-grab {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--text-3); opacity: 0.55;
+  margin: 4px auto 8px;
+}
+
+.pm-item {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 44px; box-sizing: border-box;
+  padding: 12px 14px; border-radius: 10px;
+  color: var(--text); text-decoration: none;
+  font-size: 14px; font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
+}
+.pm-item:hover { background: var(--control); }
+.pm-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pm-item svg { width: 18px; height: 18px; flex: none; color: var(--text-2); }
+.pm-item[aria-current="page"] svg { color: var(--accent); }
+.pm-text { display: flex; flex-direction: column; gap: 2px; }
+.pm-sub { font-size: 12px; font-weight: 400; color: var(--text-2); line-height: 1.35; }
+
+.pm-div { height: 1px; background: var(--hairline); margin: 6px 8px; }
+
+.pm-row {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 44px; padding: 5px 14px;
+}
+.pm-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
+.pm-seg {
+  margin-left: auto;
+  display: inline-flex; box-sizing: border-box;
+  width: 190px; height: 44px; padding: 4px;
+  border-radius: 999px;
+  background: var(--control);
+  border: 1px solid var(--hairline);
+}
+.pm-seg button {
+  flex: 1 1 0; min-width: 0;
+  border: 0; border-radius: 999px;
+  background: transparent; color: var(--text-2);
+  font: inherit; font-size: 12px; font-weight: 500;
+  cursor: pointer;
+}
+.pm-seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.pm-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .pm-sheet { animation: pm-rise 0.16s ease-out; }
+  @keyframes pm-rise { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+}

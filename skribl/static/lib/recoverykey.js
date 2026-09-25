@@ -431,7 +431,7 @@
           ? 'Copied ' + keyed.length + ' key(s). Paste them somewhere safe, '
             + 'then you can clear.'
           : 'Could not copy automatically — clearing stays disabled. Copy the '
-            + 'keys from Your Skribls one at a time instead.';
+            + 'keys from Your Skribl Library one at a time instead.';
         /* Only a CONFIRMED copy unlocks it. A failed clipboard write that
            still enabled the button would be the same false certainty this
            release removed from the DELETE path. */

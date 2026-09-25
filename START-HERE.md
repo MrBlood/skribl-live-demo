@@ -730,6 +730,7 @@ rather than a shared rule.
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
 | `modalfocus.js` | Pad+Flip+library+gallery | Focus for surfaces that declare aria-modal="true". |
 | `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
+| `pagemenu.js` | library+gallery | The page menu: the ••• on the gallery and the library, and what it opens. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
 | `photofit.js` | Pad+Flip+library+in-post | Photo fit geometry — the part both editors and the player must agree on. |
@@ -755,7 +756,7 @@ rather than a shared rule.
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
-| `theme.js` | Pad+Flip | Light/dark chrome — the stored setting, and the one place that applies it. |
+| `theme.js` | Pad+Flip+library+gallery | Light/dark chrome — the stored setting, and the one place that applies it. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |
 | `tooltip.js` | Pad+Flip+library+gallery | Styled tooltips, replacing the browser's. |
 | `zoomstep.js` | Pad+Flip | The loop-detail magnification stepper — the ladder, the chrome, and the rule for stepping it, in one place because Pad and Flip both draw this control. |

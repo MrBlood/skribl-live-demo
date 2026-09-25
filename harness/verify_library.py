@@ -598,20 +598,25 @@ with sync_playwright() as sp:
     other.close()
 
     # ---- the header points somewhere (v304 proofread) ---------------------
-    print("\nLIBRARY — the header names the page and points at the gallery and the editor")
+    # v314: the Gallery pill became a row in the page menu (the ••• beside
+    # Make one), and the page is named "Your Skribl Library" everywhere.
+    print("\nLIBRARY — the header names the page and carries Make one and the page menu")
     hp = ctx.new_page()
     hp.set_viewport_size({"width": 390, "height": 844})
     browsing.goto(hp, BASE, "/library")
     hp.wait_for_timeout(400)
-    head = hp.evaluate("""() => { const g = document.getElementById('libGallery'), m = document.getElementById('libMake');
+    head = hp.evaluate("""() => { const g = document.getElementById('pageMenuBtn'), m = document.getElementById('libMake');
         const h = el => el ? el.getBoundingClientRect().height : 0;
         return { tag: (document.querySelector('.brand .tag') || {}).textContent,
                  label: (document.querySelector('.brand') || {getAttribute: () => null}).getAttribute('aria-label'),
-                 gallery: g ? g.getAttribute('href') : null, make: m ? m.getAttribute('href') : null,
+                 title: document.title, h1: (document.getElementById('whoName') || {}).textContent,
+                 menu: g ? g.getAttribute('aria-controls') : null, make: m ? m.getAttribute('href') : null,
                  gh: h(g), mh: h(m), ghost: !!document.querySelector('.top .ghost') }; }""")
-    check("the bar says library, not player", head["tag"] == "library" and head["label"] == "Skribl library", str(head))
-    check("Gallery and Make one are in the bar, pointing at /gallery and the Pad",
-          (head["gallery"] or "").endswith("/gallery") and (head["make"] or "").endswith("/skribl-pad") and not head["ghost"],
+    check("the bar says library, and the page is named Your Skribl Library",
+          head["tag"] == "library" and head["label"] == "Your Skribl Library"
+          and head["title"] == "Your Skribl Library" and head["h1"] == "Your Skribl Library", str(head))
+    check("Make one and the page menu are in the bar, Make one pointing at the Pad",
+          head["menu"] == "pageMenu" and (head["make"] or "").endswith("/skribl-pad") and not head["ghost"],
           str(head))
     check("...and both answer a tap 44px tall at phone width", head["gh"] >= 44 and head["mh"] >= 44, f"{head['gh']} / {head['mh']}")
     hp.close()
@@ -1776,6 +1781,116 @@ with sync_playwright() as _spt:
           not _bad_fams and len(_L["fams"]) >= 2,
           "; ".join(_bad_fams[:4]) or f"{len(_L['fams'])} stack(s) seen")
     _bt.close()
+
+print("\nPAGE MENU — Library and Gallery carry a ••• menu: the way around, and the theme")
+# v314, owner's request after v313 made both pages follow the theme: a page
+# that follows a setting and offers no way to change it sends you back to an
+# editor to do it. The menu is ONE partial and ONE module on two pages, and a
+# shared include is two instances until each has been driven on its own page
+# (the modal-census lesson, v292) -- so every row below runs on both.
+#
+# The header had no room for a third control: measured before building, the
+# ••• beside Make one and the secondary link overflowed 390px by 27-28px on
+# both pages. So the ••• REPLACES that link, whose destination is a menu row.
+_PM_PAGES = (("/library", "library"), ("/gallery", "gallery"))
+with sync_playwright() as _spm:
+    _bm = _spm.chromium.launch()
+    for _path, _here in _PM_PAGES:
+        for _w in (320, 360, 390):
+            _pp = _bm.new_page(viewport={"width": _w, "height": 800})
+            browsing.goto(_pp, BASE, _path)
+            _pp.wait_for_timeout(500)
+            _fit = _pp.evaluate("""() => { const b = document.getElementById('pageMenuBtn');
+                if (!b) return null; const r = b.getBoundingClientRect();
+                const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return { over: document.documentElement.scrollWidth - innerWidth,
+                         right: r.right, w: r.width, h: r.height, painted: !!at && b.contains(at) }; }""")
+            check(f"{_here} at {_w}px: the ••• is in the header, painted, a 44px target, nothing overflows",
+                  _fit is not None and _fit["over"] <= 0 and _fit["right"] <= _w and _fit["painted"]
+                  and _fit["w"] >= 44 and _fit["h"] >= 44, str(_fit))
+            _pp.close()
+
+        _pp = _bm.new_page(viewport={"width": 390, "height": 844}, color_scheme="dark")
+        browsing.goto(_pp, BASE, _path)
+        _pp.wait_for_timeout(500)
+        _pp.evaluate("() => localStorage.removeItem('skribl_theme_v1')")
+        _pp.reload(wait_until="load")
+        _pp.wait_for_timeout(600)
+        _btn = _pp.evaluate("""() => { const b = document.getElementById('pageMenuBtn');
+            return b && { popup: b.getAttribute('aria-haspopup'), expanded: b.getAttribute('aria-expanded'),
+                          name: b.getAttribute('aria-label') }; }""")
+        check(f"{_here}: the ••• says what it opens and that it is closed",
+              bool(_btn) and _btn["popup"] == "dialog" and _btn["expanded"] == "false" and bool(_btn["name"]),
+              str(_btn))
+        if not _btn:
+            _pp.close()
+            continue
+        _pp.click("#pageMenuBtn")
+        _pp.wait_for_timeout(400)
+        _open = _pp.evaluate("""() => { const s = document.getElementById('pageMenu');
+            const r = s.getBoundingClientRect(); const at = document.elementFromPoint(r.left + r.width / 2, r.top + 30);
+            const links = {}; s.querySelectorAll('a[data-dest]').forEach(a => {
+              links[a.dataset.dest] = { href: a.getAttribute('href'), cur: a.getAttribute('aria-current') }; });
+            return { modal: s.getAttribute('aria-modal'), painted: !!at && s.contains(at),
+                     focusIn: s.contains(document.activeElement),
+                     expanded: document.getElementById('pageMenuBtn').getAttribute('aria-expanded'),
+                     links, rows: [...s.querySelectorAll('.pm-item')].map(e => e.textContent.trim().split('\\n')[0].trim()) }; }""")
+        check(f"{_here}: tapping ••• paints the menu, a modal with focus inside, and the button says open",
+              _open["modal"] == "true" and _open["painted"] and _open["focusIn"] and _open["expanded"] == "true",
+              str({k: _open[k] for k in ("modal", "painted", "focusIn", "expanded")}))
+        _L = _open["links"]
+        check(f"{_here}: it reaches Pad, Flip, Your Skribl Library and the gallery",
+              (_L.get("pad", {}).get("href") or "").endswith("/skribl-pad")
+              and (_L.get("flip", {}).get("href") or "").endswith("/flip")
+              and (_L.get("library", {}).get("href") or "").endswith("/library")
+              and (_L.get("gallery", {}).get("href") or "").endswith("/gallery"), str(_L))
+        check(f"{_here}: ...and marks THIS page as the current one, and only this one",
+              _L.get(_here, {}).get("cur") == "page"
+              and all(v.get("cur") is None for k, v in _L.items() if k != _here), str(_L))
+        # THE THEME: what the switch shows on open is the stored CHOICE.
+        _seg = lambda: _pp.evaluate("""() => [...document.querySelectorAll('#pageMenu [data-theme]')]
+            .filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.theme)""")
+        check(f"{_here}: with nothing stored the switch shows System", _seg() == ["system"], str(_seg()))
+        _pp.click("#pageMenu [data-theme='light']")
+        _pp.wait_for_timeout(300)
+        _st = _pp.evaluate("""() => ({ attr: document.documentElement.getAttribute('data-theme'),
+            stored: localStorage.getItem('skribl_theme_v1'), ground: getComputedStyle(document.body).backgroundColor })""")
+        check(f"{_here}: choosing Light repaints the page and stores the choice",
+              _st["attr"] == "light" and _st["stored"] == "light" and lum_ok(_st["ground"], light=True)
+              and _seg() == ["light"], f"{_st} seg={_seg()}")
+        _pp.keyboard.press("Escape")
+        _pp.wait_for_timeout(300)
+        _cl = _pp.evaluate("""() => ({ hidden: document.getElementById('pageMenuOverlay').hidden,
+            back: document.activeElement && document.activeElement.id,
+            expanded: document.getElementById('pageMenuBtn').getAttribute('aria-expanded') })""")
+        check(f"{_here}: Escape closes it and puts focus back on the •••",
+              _cl["hidden"] and _cl["back"] == "pageMenuBtn" and _cl["expanded"] == "false", str(_cl))
+        _pp.reload(wait_until="load")
+        _pp.wait_for_timeout(600)
+        _pp.click("#pageMenuBtn")
+        _pp.wait_for_timeout(300)
+        check(f"{_here}: the choice survives a reload, on the page and in the switch",
+              _pp.evaluate("() => document.documentElement.getAttribute('data-theme')") == "light"
+              and _seg() == ["light"], str(_seg()))
+        # The scrim closes it too; a tap on the sheet itself does not.
+        _pp.mouse.click(195, 20)
+        _pp.wait_for_timeout(300)
+        check(f"{_here}: a tap outside the sheet closes it",
+              _pp.evaluate("() => document.getElementById('pageMenuOverlay').hidden"))
+        # System follows the OS when it changes, from THIS page's switch.
+        _pp.click("#pageMenuBtn")
+        _pp.wait_for_timeout(300)
+        _pp.click("#pageMenu [data-theme='system']")
+        _pp.wait_for_timeout(200)
+        _pp.emulate_media(color_scheme="light")
+        _pp.wait_for_timeout(300)
+        _a1 = _pp.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        _pp.emulate_media(color_scheme="dark")
+        _pp.wait_for_timeout(300)
+        _a2 = _pp.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        check(f"{_here}: System follows the device, both ways", _a1 == "light" and _a2 is None, f"{_a1} / {_a2}")
+        _pp.close()
+    _bm.close()
 
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
