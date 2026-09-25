@@ -33,6 +33,10 @@
   const copyBtn = document.getElementById('postCopyBtn');
   const resultRow = document.getElementById('postResult');
   let lastPostUrl = null, lastPostTitle = '';
+  // The device-only save this open sheet made when the server did not answer
+  // (v315). If Try again then posts for real, this is the copy it replaces,
+  // so the library does not end up holding the same drawing twice.
+  let pendingLocalId = null;
   const status = document.getElementById('postStatus');
   const statusLabel = document.getElementById('postStatusLabel');
   const progressFill = document.getElementById('postProgressFill');
@@ -145,7 +149,7 @@
         // Network failure (offline / DNS / CORS) — temporary. Save locally so
         // the user's work isn't lost, but flag it so the UI won't claim "Posted".
         console.warn('sendSkribl: network error, saving locally —', netErr);
-        return saveLocalFallback(payload);
+        return saveLocalFallback(payload, true);
       }
       if (res.ok) {
         const data = await res.json().catch(() => null);
@@ -173,7 +177,7 @@
       // fake success; surface the real error so the user knows it wasn't shared.
       if (res.status >= 500) {
         console.warn('sendSkribl: server ' + res.status + ', saving locally');
-        return saveLocalFallback(payload);
+        return saveLocalFallback(payload, true);
       }
       let msg = 'Post rejected by the server (' + res.status + ').';
       try { const e = await res.json(); if (e && e.error) msg = e.error; } catch (e) {}
@@ -186,8 +190,11 @@
 
   // Persist to localStorage under an id; hand back a #skribl=<id> hash URL the
   // in-page player opens on THIS device only. `local:true` tells the composer to
-  // say "saved locally" rather than "posted/shared".
-  async function saveLocalFallback(payload) {
+  // say "Not posted" rather than "posted/shared". `retryable` is true when a
+  // server exists and did not answer (offline, a 5xx) -- the composer then
+  // offers Try again -- and false for a build with no server at all, where a
+  // retry would only make a second copy on this device.
+  async function saveLocalFallback(payload, retryable) {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const id = 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const post = {
@@ -203,7 +210,7 @@
     } catch (e) {
       throw new Error('Local storage full — could not save Skribl');
     }
-    return { id, url: '#skribl=' + id, local: true };
+    return { id, url: '#skribl=' + id, local: true, retryable: !!retryable };
   }
 
   // Flatten bg + photo + drawing into a single opaque canvas at native size.
@@ -369,6 +376,7 @@
 
   function openPost() {
     setState('idle');
+    pendingLocalId = null;
     syncSoundMark();
     // Ask before creating server state, not after — see lib/recoverykey.js.
     if (window.SkriblRecoveryKey) window.SkriblRecoveryKey.warnIfVolatile(sheet);
@@ -553,6 +561,12 @@
         });
         if (window._skriblPostedUI) window._skriblPostedUI.render();
       }
+      if (!localOnly && pendingLocalId && window.SkriblPosted) {
+        // Try again worked: the device-only copy from the first attempt is
+        // superseded by the post, bytes and all.
+        window.SkriblPosted.remove(pendingLocalId);
+        pendingLocalId = null;
+      }
       if (!localOnly && res && res.id && window.SkriblPosted) {
         const kept = window.SkriblPosted.add({
           id: res.id, url: res.url, kind: 'pad', pages: 1,
@@ -586,9 +600,28 @@
       if (typeof clearAutosave === 'function') clearAutosave();
       if (localOnly) {
         // Saved to this device only (no server, or a temporary server/network
-        // failure). Be honest — this is NOT a shared post.
-        statusLabel.textContent = 'Saved on this device only';
-        showToast('Saved locally — works on this device', null);
+        // failure). Be honest — this is NOT a shared post. v315 (SK312-008):
+        // it said "Saved on this device only" under a button called Post, and
+        // an outside audit pointed out that people scan outcomes rather than
+        // read them. It now leads with what did NOT happen, is drawn as a
+        // warning, and -- where a server exists -- keeps a way to finish the
+        // job in the sheet: Try again posts the same drawing.
+        statusLabel.textContent = 'Not posted \u2014 saved on this device';
+        status.classList.add('error');
+        showToast('Not posted \u2014 saved on this device', null);
+        // A retry that still could not reach the server makes a new save; the
+        // one it retried is dropped, so there is only ever one copy to find.
+        if (pendingLocalId && res && pendingLocalId !== res.id && window.SkriblPosted) {
+          window.SkriblPosted.remove(pendingLocalId);
+          if (window._skriblPostedUI) window._skriblPostedUI.render();
+        }
+        pendingLocalId = null;
+        if (res && res.retryable) {
+          pendingLocalId = res.id;
+          submitBtn.hidden = false;
+          submitBtn.disabled = false;
+          submitLabel.textContent = 'Try again';
+        }
       } else {
         showToast('Posted! 🎨', null);
       }

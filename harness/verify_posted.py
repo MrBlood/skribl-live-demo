@@ -645,9 +645,20 @@ with sync_playwright() as p:
           str((loc[0] if loc else {}).get("local")))
     check("...and its bytes are under the blob key", pd.evaluate(HAS_BLOB, lid),
           "no entry, so no id to look under" if not lid else "")
-    check("the status says on this device only",
-          "this device" in pd.inner_text("#postStatusLabel").lower(),
-          pd.inner_text("#postStatusLabel"))
+    # v315 (SK312-008): it leads with what did NOT happen, drawn as a warning,
+    # and offers the way to finish -- an outside audit pointed out that people
+    # scan an outcome rather than read it, and "Saved on this device only"
+    # under a button called Post scans as success.
+    _st = pd.evaluate("""() => ({ text: document.getElementById('postStatusLabel').textContent,
+        warn: document.getElementById('postStatus').classList.contains('error'),
+        retry: !document.getElementById('postSubmitBtn').hidden
+               && !document.getElementById('postSubmitBtn').disabled,
+        label: document.getElementById('postSubmitLabel').textContent })""")
+    check("the status says NOT POSTED, then where it is, drawn as a warning",
+          _st["text"].lower().startswith("not posted") and "this device" in _st["text"].lower()
+          and _st["warn"], str(_st))
+    check("...and the sheet offers Try again, live",
+          _st["retry"] and _st["label"] == "Try again", str(_st))
 
     pd.goto(f"{BASE}/library", wait_until="load")
     pd.wait_for_timeout(900)
@@ -656,8 +667,8 @@ with sync_playwright() as p:
     rows = pd.locator("#postedList .posted-row-local")
     nrows = rows.count()
     row = rows.first.inner_text() if nrows else ""
-    check("the tray shows it as a local row that says on this device only",
-          nrows == 1 and "on this device" in row.lower(),
+    check("the tray shows it as a local row that says not posted, on this device only",
+          nrows == 1 and "not posted" in row.lower() and "on this device" in row.lower(),
           f"{nrows} local rows; text {row[:60]!r}")
     check("...and offers nothing to send",
           nrows == 1 and pd.evaluate(
@@ -765,6 +776,44 @@ with sync_playwright() as p:
           f"{str(_tip)[:200]!r} — the policy has to be written down somewhere, "
           f"and this is where the rest of the browser-storage model is")
     pd2.close()
+
+    # -----------------------------------------------------------------------
+    print("\nYOUR SKRIBLS — Try again after a device-only save: one copy, then a real post")
+    # v315. Try again posts the same drawing from the same sheet. Two ways it
+    # can go and both are pinned: still no server, and the retry must REPLACE
+    # the device-only copy rather than add a second; the server is back, and
+    # the post must SUPERSEDE the copy, bytes and all -- otherwise the library
+    # keeps the same drawing twice, once as "not posted", which is the exact
+    # confusion the wording change exists to remove.
+    pr = local_post("Retry me")
+    first = [e for e in pr.evaluate(READ) if e.get("local")]
+    fid = str(first[0]["id"]) if first else ""
+    check("the fixture: one device-only save to retry", len(first) == 1, str(first)[:120])
+    pr.route(f"{API}**", lambda route: route.abort()
+             if route.request.method == "POST" else route.continue_())
+    pr.click("#postSubmitBtn")
+    pr.wait_for_timeout(2500)
+    pr.unroute(f"{API}**")
+    again = [e for e in pr.evaluate(READ) if e.get("local")]
+    check("a retry that still cannot reach the server REPLACES the copy, it does not add one",
+          len(again) == 1 and str(again[0]["id"]) != fid and not pr.evaluate(HAS_BLOB, fid),
+          f"{len(again)} local entries; first blob still there={pr.evaluate(HAS_BLOB, fid) if fid else None}")
+    sid = str(again[0]["id"]) if again else ""
+    pr.click("#postSubmitBtn")
+    for _ in range(60):
+        pr.wait_for_timeout(100)
+        if not [e for e in pr.evaluate(READ) if e.get("local")]:
+            break
+    after = pr.evaluate(READ)
+    check("...and one that reaches it POSTS, and the device-only copy is gone, bytes and all",
+          len(after) == 1 and not after[0].get("local") and not str(after[0]["id"]).startswith("local_")
+          and not pr.evaluate(HAS_BLOB, sid),
+          f"{after!r}"[:200])
+    check("...and the sheet says posted, not a warning",
+          pr.evaluate("() => !document.getElementById('postStatus').classList.contains('error')")
+          and "not posted" not in pr.inner_text("#postStatusLabel").lower(),
+          pr.inner_text("#postStatusLabel"))
+    pr.close()
 
     # -----------------------------------------------------------------------
     print("\nYOUR SKRIBLS — the store survives a hostile localStorage")
