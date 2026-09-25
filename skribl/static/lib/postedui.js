@@ -488,7 +488,7 @@
            listing carries no kind (the payload is deferred there), so a row
            from it says when it was posted and nothing it cannot know -- the
            first cut called every host row a "replay" with a pencil on it. */
-        var kindWord = isLocal ? 'on this device only'
+        var kindWord = isLocal ? 'not posted \u00b7 on this device only'
           : e.kind === 'flip' ? (e.pages + (e.pages === 1 ? ' page' : ' pages'))
           : e.kind === 'pad' ? 'replay' : '';
         var sub = (kindWord ? kindWord + ' \u00b7 ' : '') + store.ago(e.at);
