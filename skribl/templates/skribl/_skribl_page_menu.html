@@ -31,11 +31,21 @@
     <a class="pm-item" data-dest="library" href="{{ url_for('.skribl_library') }}"{% if here == 'library' %} aria-current="page"{% endif %}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="pm-text">Your Skribl Library<span class="pm-sub">{% if here == 'library' %}You are here{% else %}Everything you posted, with the player{% endif %}</span></span></a>
     <a class="pm-item" data-dest="gallery" href="{{ url_for('.skribl_gallery') }}"{% if here == 'gallery' %} aria-current="page"{% endif %}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="pm-text">Public gallery<span class="pm-sub">{% if here == 'gallery' %}You are here{% else %}Skribls people chose to show{% endif %}</span></span></a>
     <div class="pm-div"></div>
+    {# REPORT A PROBLEM (v315): the editors' diagnostic details, COPIED from
+       the row itself. Not the editors' sheet: the gallery already has a
+       dialog with that sheet's ids (Report this Skribl, a content report), and
+       a second "report" dialog on one page would be two meanings of one word.
+       The sub-line says what is copied and, after the tap, whether it was. #}
+    <button type="button" class="pm-item" data-pm-report><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span class="pm-text">Report a problem<span class="pm-sub" data-pm-report-status aria-live="polite">Copies details for a message — no drawings</span></span></button>
+    <div class="pm-div"></div>
     <div class="pm-row">
       <span class="pm-label" id="pageMenuThemeLabel">Theme</span>
       <span class="pm-seg" role="group" aria-labelledby="pageMenuThemeLabel">
         <button type="button" data-theme="system" aria-pressed="false" title="Follow the device's appearance setting">System</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button><button type="button" data-theme="light" aria-pressed="false">Light</button>
       </span>
     </div>
+    {# The version, as the editors' menus show it -- and what lib/report.js
+       reads for the first line of a report (.menu-version). #}
+    <div class="pm-version menu-version">Skribl · {{ skribl_version }}</div>
   </div>
 </div>

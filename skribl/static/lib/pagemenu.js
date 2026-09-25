@@ -60,6 +60,21 @@
         sync();
       });
     });
+    // Report a problem: collect with lib/report.js, copy with the one copy
+    // implementation (lib/postedui.js), and say in the row which happened.
+    var report = sheet.querySelector('[data-pm-report]');
+    var reportSays = sheet.querySelector('[data-pm-report-status]');
+    if (report && reportSays) {
+      report.addEventListener('click', function () {
+        var R = global.SkriblReport, P = global.SkriblPostedUI;
+        if (!R || !P) { reportSays.textContent = "Couldn't collect the details on this page"; return; }
+        P.copyText(R.collect()).then(function (ok) {
+          reportSays.textContent = ok
+            ? 'Copied — paste it into your message, with what went wrong'
+            : "Couldn't copy — your browser blocked the clipboard";
+        });
+      });
+    }
     // Another tab, or the device, changed it while the menu was open.
     if (Theme && Theme.onChange) Theme.onChange(sync);
     sync();
