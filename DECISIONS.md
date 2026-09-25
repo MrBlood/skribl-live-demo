@@ -11624,7 +11624,7 @@ is unchanged, and the seal did its job. It argues for not mistaking a green
 pull request for a verified tree, which is what the seal is for and why a red
 one is a result rather than a delay.
 
-## The third red on the postgres lane was a lost click, not a slow runner
+## v312 -- the third red on the postgres lane was a lost click, not a slow runner
 
 The v311 merge went to main and the battery reported failure again — one suite,
 one lane:
@@ -11714,7 +11714,7 @@ FAILURE: a red you cannot reproduce on demand is a hypothesis, and tuning a
 number against a hypothesis is how the same bug survives three releases.
 
 
-## The correction, one hour later: a diagnosis reused is a diagnosis untested
+## v312, cont. -- a diagnosis reused is a diagnosis untested
 
 The entry above closes by naming four suites as sharing the defect and leaving
 them alone. That claim was never measured. It was the framecache diagnosis
@@ -11773,3 +11773,32 @@ written; it was not pointed at the claim. **A diagnosis is cheap to reuse and
 that is exactly what makes it worth re-testing at each new surface** — which is
 what `CLAUDE.md`'s rule about two surfaces needing DIFFERENT assertions has
 been saying, in a different register, since v212.
+
+## v312, cont. -- a release with no product in it, sealed anyway
+
+`skribl/`, `app.py`, `alembic.ini` and `constraints.txt` are byte-identical to
+v311. Everything in this release is `DECISIONS.md` and four files under
+`harness/`. So it is worth writing down why it was sealed at all, because "no
+product changed" is the usual argument for not bothering.
+
+Two reasons, and the second is the real one.
+
+**The archive asserts that its evidence describes its tree.** `ARCHIVE-README.md`
+says so in its opening paragraph, and `harness/RELEASE.md` carries a computed
+tree hash to back it. After the two merges above, the sealed record named
+`20ab9f66f381` while the tree hashed `f2335a3819`. Packaging in that state would
+have shipped an archive whose own first claim was false — checkably false, by
+the hash it ships beside it. A seal is how that sentence becomes true again.
+
+**And the record is the thing that changed.** The entry above corrects a claim
+that was wrong in the previous sealed archive. An auditor reads `DECISIONS.md`
+second, because the read order in `CLAUDE.md` tells them to. Shipping a sealed
+pack that still contained the uncorrected version — while the correction sat in
+the repository — would put the wrong story in the artifact built for the person
+most likely to act on it.
+
+So: a release can be entirely documentation and instruments and still be worth
+the forty minutes, when what it fixes is what the evidence SAYS. The cheap
+alternative was to cut the pack from v311's commit, which would have been
+internally consistent and quietly a release behind on the only file that had
+anything new to say.
