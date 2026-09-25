@@ -11623,3 +11623,88 @@ Nothing here argues for widening the gate; the wall-clock reason for the trim
 is unchanged, and the seal did its job. It argues for not mistaking a green
 pull request for a verified tree, which is what the seal is for and why a red
 one is a result rather than a delay.
+
+## The third red on the postgres lane was a lost click, not a slow runner
+
+The v311 merge went to main and the battery reported failure again — one suite,
+one lane:
+
+    run 36086833134, main @ 8e3b5c9 (the v311 squash)
+      harness (sqlite)      pass, verify_framecache ok 23/23
+      harness (postgresql)  FAIL, verify_framecache 21/23
+        player: playback really looped (the once-only claim is not vacuous)
+        player: the heavy frame is rasterised exactly once, however many loops ran
+
+The same suite was 23/23 on the sealed v311 release run, 23/23 on the sqlite
+lane of that very commit, and 23/23 run by hand here. `verify_framecache` has
+now gone red on the postgres lane in v305, v306 and v311, and the file carries
+a long comment — with a CPU-throttle table — explaining that the lane is
+starved and that a wall-clock threshold "reports the runner, not the cache".
+
+It was not the clock. It was a race, and it had been in that section since it
+was written.
+
+The suite's readiness probe waits for `window.SkriblFrameBitmap` and
+`paintStrokesStatic`. Both of those exist the moment `app.js` is parsed. The
+player's transport is bound at the END of `initPlayer()` — an async IIFE whose
+first act is `await fetch('/api/skribls/<id>')`. So the probe can go true while
+`#playerLoopBtn` and `#playerPlayBtn` are still inert, and a `.click()` on an
+inert button is not an error: it dispatches, nothing listens, playback never
+starts, and the run ends on its deadline with one stray light paint and no
+rasterisation.
+
+That is the CI failure exactly — including "player: no page errors" passing
+beside it. A lost click and a starved runner are indistinguishable from the far
+end of a paint counter, which is why three releases read it as the latter.
+
+### Made, not waited for
+
+`GET /api/skribls/<id>` was given a 2.5s sleep — one temporary line in
+`skribl/routes.py`, reverted after — because that is what a runner whose
+database is mid-checkpoint serves. The postgres job's own container log for
+this run shows checkpoints writing for 106.7s, 112.2s and 74.5s, and the one
+request the player cannot start without is a read of that database.
+
+    suite     GET /api/skribls/<id>    result
+    before    12ms (normal)            23/23
+    before    +2500ms                  21/23  light=1 heavy=0, ended deadline
+    after     +2500ms                  23/23  armed after 27 clicks
+    after     12ms (normal)            23/23  armed after 2 clicks
+
+The fix asks the mechanism instead of the clock: the run clicks, reads back the
+state the handler itself writes (`aria-pressed` on Loop, `aria-label` on Play —
+nothing else in the tree writes either), and asks again 100ms later until the
+player reports itself looping and playing. A button not yet bound simply gets
+asked again. Loop still precedes Play, because the arming step only reaches
+Play once Loop reads true. The 30s deadline stays a backstop and stays out of
+the verdict.
+
+Both arms were then driven on the fixed suite, per component, so the fix is not
+an anaesthetic:
+
+    player never reads the cache (hit = null)    22/23, 3 rasterisations —
+      and "playback really looped" stays GREEN, because what broke was the
+      cache and not the playback
+    Play bound but inert (handler does nothing)  21/23, "THE TRANSPORT NEVER
+      ARMED after 300 click(s)" — the new branch exercised rather than merely
+      written down
+
+### What was left alone
+
+The same probe-then-click shape is in `verify_hold`, `verify_player_isolation`,
+`verify_audiostate` and `verify_audiosession`, which reach the transport through
+Playwright's `click()` — it waits for a button to be visible and never for a
+listener. None of them is red, so none of them was touched. The finding is
+written into `verify_framecache`'s comment so the next red on one of them is
+read in a minute rather than a session.
+
+### And the lesson that outranks the fix
+
+The file already contained the right instinct — "a fixed window measures the
+runner and calls it the cache" — and acted on it three times by adjusting the
+window. Each adjustment was reasonable and none of them could work, because the
+diagnosis was never tested: the failing lane was believed rather than
+reproduced. The rule at the head of `CLAUDE.md` says to run a new check against
+a case known BAD and a case known GOOD. This says the same thing about a
+FAILURE: a red you cannot reproduce on demand is a hypothesis, and tuning a
+number against a hypothesis is how the same bug survives three releases.

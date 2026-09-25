@@ -366,12 +366,35 @@ with sync_playwright() as p:
         # under starvation because a slow machine and a lost click look the
         # same from the far end of a paint counter.
         #
-        # Measured here, unthrottled, on a tree whose suite reports 23/23:
+        # PROVED BY MAKING THE LANE, NOT BY WAITING FOR IT. `GET
+        # /api/skribls/<id>` was given a 2.5s sleep -- one temporary line in
+        # skribl/routes.py, reverted after -- which is what a runner mid-
+        # checkpoint serves, and the whole suite was run on both sides of it:
         #
-        #   readiness probe passes, transport bound?   NO  (bound ~0-5ms later)
-        #   click-once, API answering normally         FAIL  light=1 heavy=0
-        #   click-once, API held 1.5s past the probe   FAIL  light=1 heavy=0
-        #   armed,      API held 1.5s past the probe   PASS  light=6 heavy=1
+        #   suite     GET /api/skribls/<id>    result
+        #   before    12ms (normal)            23/23
+        #   before    +2500ms                  21/23  light=1 heavy=0 deadline
+        #   after     +2500ms                  23/23  armed after 27 clicks
+        #   after     12ms (normal)            23/23  armed after 2 clicks
+        #
+        # The red row is the CI failure verbatim, down to "no page errors"
+        # passing beside it. And the fix is not an anaesthetic -- both arms of
+        # the verdict were driven on the FIXED suite, per component:
+        #
+        #   player never reads the cache (hit = null)   22/23  3 rasterisations
+        #     ...and "playback really looped" stays GREEN, because the cache
+        #        is what broke, not the playback
+        #   Play bound but inert (handler does nothing) 21/23  NEVER ARMED
+        #     ...which is the branch below saying so in words, exercised
+        #        rather than merely written down
+        #
+        # Also measured, and left alone deliberately: the same probe-then-click
+        # shape is in verify_hold, verify_player_isolation, verify_audiostate
+        # and verify_audiosession, which reach the transport through
+        # Playwright's click() -- it waits for a button to be VISIBLE and never
+        # for a listener. None of them is red, so none of them is fixed here.
+        # Written down so the next red on one of them is read in a minute
+        # instead of a session.
         #
         # The window is a few milliseconds locally, which is why this survived
         # at all: Playwright's own round trip usually outruns a local fetch.
