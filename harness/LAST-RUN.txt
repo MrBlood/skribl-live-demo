@@ -1,18 +1,18 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-24T04:38:02Z
+UTC timestamp           : 2026-09-25T02:15:23Z
 Host                    : Linux x86_64
-Tree SHA-256            : e4b57c8afb397186d95e40d1a8fbd93a788ca42287479fb14a51813c9d69b20b
-Git commit              : 9429eba
+Tree SHA-256            : 20ab9f66f381a5c4663e01d159ac3bf836523031a0764ef63da1144791fecf7a
+Git commit              : 053256d
 Source state            : generated-only dirty
                             harness/LAST-RUN.txt
-SKRIBL_VERSION          : v310
+SKRIBL_VERSION          : v311
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.nC8nYhx0Xr/harness.db)
+Database reset          : yes (fresh /tmp/tmp.doDsohBnYK/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -59,7 +59,7 @@ suites requested : 104
   verify_flipmotion.py: ok — 27/27 passed
   verify_framecache.py: ok — 23/23 passed
   verify_fuzz.py: ok — 7/7 passed
-  verify_gallery.py: ok — 151/151 passed
+  verify_gallery.py: ok — 184/184 passed
   verify_gifenc.py: ok — 39/39 passed
   verify_help.py: ok — 65/65 passed
   verify_hold.py: ok — 62/62 passed
@@ -74,9 +74,9 @@ suites requested : 104
   verify_integration.py: ok — 14/14 passed
   verify_jsstrip.py: ok — 28/28 passed
   verify_keys.py: ok — 9/9 passed
-  verify_layout.py: ok — 150/150 passed
+  verify_layout.py: ok — 153/153 passed
   verify_lib.py: ok — 8/8 passed
-  verify_library.py: ok — 137/137 passed
+  verify_library.py: ok — 143/143 passed
   verify_liquify.py: ok — 32/32 passed
   verify_loopcap.py: ok — 22/22 passed
   verify_media.py: ok — 24/24 passed
@@ -95,7 +95,7 @@ suites requested : 104
   verify_pillfit.py: ok — 24/24 passed
   verify_player_isolation.py: ok — 55/55 passed
   verify_player_photo.py: ok — 9/9 passed
-  verify_posted.py: ok — 125/125 passed
+  verify_posted.py: ok — 129/129 passed
   verify_postgres.py: SKIPPED (0 assertions) — the psycopg driver is not installed
   verify_prefix.py: ok — 33/33 passed
   verify_pressure.py: ok — 27/27 passed
@@ -128,6 +128,6 @@ suites requested : 104
   verify_ux.py: ok — 375/375 passed
   verify_version.py: ok — 30/30 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 6017   (skipped suites contribute 0)
+assertions passed: 6063   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
