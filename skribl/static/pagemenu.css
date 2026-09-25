@@ -69,6 +69,13 @@
   -webkit-tap-highlight-color: transparent;
 }
 .pm-item:hover { background: var(--control); }
+/* The Report row is a BUTTON among links: undo the button's own chrome so it
+   is the same row as the four above it. */
+.pm-version { padding: 8px 14px 2px; font-size: 11px; color: var(--text-3); }
+button.pm-item {
+  width: 100%; border: 0; background: transparent; cursor: pointer;
+  text-align: left; font: inherit; font-size: 14px; font-weight: 500;
+}
 .pm-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .pm-item svg { width: 18px; height: 18px; flex: none; color: var(--text-2); }
 .pm-item[aria-current="page"] svg { color: var(--accent); }

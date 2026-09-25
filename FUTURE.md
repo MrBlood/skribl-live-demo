@@ -355,6 +355,11 @@ most of it for none of the cost.
 
 ## 6e. The filmstrip reorders when you meant to scroll (owner, v295, from a phone)
 
+**CLOSED — kept for the reasoning.** `flip.js` now arms a reorder only after a
+hold, raised the slop to `STRIP_JITTER`, and abandons the reorder if the strip's
+own scrollLeft moved: both suggestions below, plus the hold. `verify_pages.py`
+pins it ("scrolling the strip does not reorder a page", and the flick case).
+
 REPORTED: the page thumbnails are hard to tap to switch pages, and they move too
 easily -- scrolling the strip drags a page out of order.
 

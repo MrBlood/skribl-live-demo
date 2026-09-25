@@ -1900,6 +1900,28 @@ with sync_playwright() as _spm:
         _pp.wait_for_timeout(300)
         _a2 = _pp.evaluate("() => document.documentElement.getAttribute('data-theme')")
         check(f"{_here}: System follows the device, both ways", _a1 == "light" and _a2 is None, f"{_a1} / {_a2}")
+        # REPORT A PROBLEM (v315): the row copies the editors' diagnostic
+        # details from here too. The clipboard is stubbed so the check reads
+        # WHAT was copied, not merely that a button was pressed.
+        _pp.evaluate("""() => { window.__copied = null;
+            navigator.clipboard.writeText = (t) => { window.__copied = t; return Promise.resolve(); }; }""")
+        if not _pp.evaluate("() => document.getElementById('pageMenuOverlay').hidden"):
+            _pp.keyboard.press("Escape")             # the System row above leaves it open
+        _pp.click("#pageMenuBtn")
+        _pp.wait_for_timeout(300)
+        _row = _pp.evaluate("""() => { const r = document.querySelector('#pageMenu [data-pm-report]');
+            return r ? { h: r.getBoundingClientRect().height, tag: r.tagName } : null; }""")
+        check(f"{_here}: the menu offers Report a problem, as a real 44px row",
+              _row is not None and _row["h"] >= 44 and _row["tag"] == "BUTTON", str(_row))
+        _pp.click("#pageMenu [data-pm-report]")
+        _pp.wait_for_function("() => window.__copied !== null", timeout=5000)
+        _rep = _pp.evaluate("""() => ({ text: window.__copied,
+            says: document.querySelector('#pageMenu [data-pm-report-status]').textContent }) """)
+        check(f"{_here}: ...which copies this page's details, and says it did",
+              (_rep["text"] or "").startswith("Skribl · v")
+              and f"Page: {_path}" in _rep["text"] and "Browser: " in _rep["text"]
+              and _rep["says"].startswith("Copied"),
+              f"says {_rep['says']!r}; copied {(_rep['text'] or '')[:80]!r}")
         _pp.close()
     _bm.close()
 
