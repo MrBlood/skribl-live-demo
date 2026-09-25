@@ -77,6 +77,7 @@ skribl/                    The blueprint package — everything Skribl owns
   validation.py            Payload + media validation and resource caps
   security.py              CSP, CSRF double-submit, security headers
   storage.py               Media stores: inline, local disk, S3
+  mediareport.py           `python -m skribl.mediareport`: media bytes held, read-only
   ratelimit.py             Per-IP quota (memory or shared DB backend)
   core.py                  SKRIBL_VERSION and shared constants
   templates/skribl/        Jinja templates + shared _skribl_*.html partials

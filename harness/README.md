@@ -212,6 +212,10 @@ A green check is not evidence until it has been shown to go red.
   refuses one delete must not abort the run, and `python -m skribl.sweep` is
   driven as a real subprocess so the exit codes asserted are the ones cron
   sees. No server, no browser — one of the cheapest suites here.
+- `verify_mediareport.py` — `python -m skribl.mediareport`, the read-only
+  measure of how much photo and music the database holds: planted posts with
+  known sizes across every base64 padding case, inline vs already-externalised,
+  growth by month, and a byte-identical database file after it runs.
 - `verify_hostseams.py` — the four host seams: the SQL `feed_filter` (including
   that a filtered feed still returns FULL pages and a cursor pointing at a row
   the viewer saw), `csrf=False` producing a working app, `visibility_values`,
