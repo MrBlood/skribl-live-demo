@@ -12,25 +12,42 @@
 <section id="postedPanel" class="posted-panel" aria-label="Your Skribls">
   {# The count the module writes: "3 Skribls", or "1 of 3" while searching. #}
   <div class="help-search-count posted-count" id="postedCount" aria-live="polite"></div>
+  {# ONE SENTENCE, MEASURED. This said all of it -- custody, key custody, and
+     the eviction rule for a Skribl saved on this device because posting
+     failed -- in forty-six words, which on a 390px phone is seven lines and
+     116px: fifteen per cent of the viewport spent on a caveat, above the
+     list it qualifies, before a single Skribl is visible. Every clause was
+     TRUE, and nothing about a true clause entitles it to be read first.
+     What stays is the part somebody can act on while looking at this page.
+     The eviction rule moved into the "Your Skribls" tip in How it works
+     (_skribl_help.html), where the rest of the browser-storage model already
+     lives and where a person goes when they want the whole answer. #}
   <div class="posted-foot posted-foot-top">
-    <span>Saved in this browser only &middot; clearing site data removes them,
-      and the key that can delete them &middot; a Skribl saved on this device
-      because posting failed is removed, oldest first, only when this
-      browser's storage is full and a drawing would otherwise be lost</span>
-    {# The other half of the recovery key. Until v281 the product could show
-       a key and never accept one back, so a user who did as they were told
-       -- save it, then lose the browser -- held the credential and had no way
-       to spend it. Sits beside Clear list because this is where somebody
-       goes when the list is not what they expected. #}
-    <button type="button" id="postedRecover" class="posted-clearbtn"
-            title="Put a Skribl back in this list using the key you saved for it">Use a recovery key</button>
-    <button type="button" id="postedClear" class="posted-clearbtn"
-            title="Empty this browser's list. The Skribls stay online, and their keys go">Clear list</button>
+    <span class="posted-foot-note">Saved in this browser only &middot; clearing
+      site data removes them, and the keys that delete them</span>
+    {# THEIR OWN ROW. They were floated to the right of the paragraph above,
+       so the text wrapped around a gap that had two links in it and the
+       links themselves landed wherever the last line finished. One short
+       note, then the two things you can do about it. #}
+    <span class="posted-foot-acts">
+      {# The other half of the recovery key. Until v281 the product could show
+         a key and never accept one back, so a user who did as they were told
+         -- save it, then lose the browser -- held the credential and had no
+         way to spend it. Sits beside Clear list because this is where
+         somebody goes when the list is not what they expected. #}
+      <button type="button" id="postedRecover" class="posted-clearbtn"
+              title="Put a Skribl back in this list using the key you saved for it">Use a recovery key</button>
+      <button type="button" id="postedClear" class="posted-clearbtn"
+              title="Empty this browser's list. The Skribls stay online, and their keys go">Clear list</button>
+    </span>
   </div>
 
-  {# The undo shelf: the x on a row is reversible for twelve seconds, and a
-     reversible act has to SAY so or it is not one. Hidden until there is
-     something to put back; lib/postedui.js owns it. #}
+  {# The undo shelf: deleting a LOCAL save is reversible for twelve seconds,
+     and a reversible act has to SAY so or it is not one. It served the posted
+     row's x as well until v311 removed that control; the shelf's job is
+     unchanged, and the removal it covers is now the one that destroys the
+     only copy of a drawing. Hidden until there is something to put back;
+     lib/postedui.js owns it. #}
   <div class="posted-undo" id="postedUndo" hidden>
     <span class="posted-undo-msg" id="postedUndoMsg"></span>
     <button type="button" class="posted-undo-btn" id="postedUndoBtn">Undo</button>

@@ -292,7 +292,6 @@ redoBtn.addEventListener('click', () => {
   if (redoStack.length === 0) redoBtn.disabled = true;
 });
 
-const helpBtn = document.getElementById('helpBtn');       // legacy header button (now null in editor)
 const helpItem = document.getElementById('helpItem');     // "How it works" — moved into the ⋯ menu
 const helpDrawer = document.getElementById('helpDrawer');
 const helpClose = document.getElementById('helpClose');
@@ -313,7 +312,6 @@ function openHelpDrawer() {
   });
 }
 
-if (helpBtn) helpBtn.addEventListener('click', openHelpDrawer);
 if (helpItem) helpItem.addEventListener('click', () => { closeMenu(true); openHelpDrawer(); });
 
 function closeHelpDrawer() {

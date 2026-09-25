@@ -9,7 +9,6 @@ import gzip
 import hashlib
 import hmac
 import io
-import ipaddress
 import re as _re
 import os
 import secrets

@@ -196,52 +196,104 @@ with sync_playwright() as p:
         delete navigator.clipboard; }""")
 
     # -----------------------------------------------------------------------
-    print("\nYOUR SKRIBLS — removing an entry does not delete the Skribl")
+    print("\nYOUR SKRIBLS — a posted row cannot be forgotten, and wears one glyph per act")
     pid = entry.get("id")
 
-    # THE ✕ ASKS FIRST WHEN THERE IS SOMETHING TO LOSE (v279): an audit of v278
-    # pointed out that ✕ removed the local record while the Skribl stayed live,
-    # and since v279 that record also holds the only key that can delete it, so
-    # discarding it silently forfeits revocation. A token-less entry still goes
-    # without friction.
+    # WHAT THIS SECTION USED TO PIN, and why the pin moved. A posted row
+    # carried a ✕ that removed the local ENTRY while the Skribl stayed live —
+    # and, since v279, threw away the only key that could delete it. Four
+    # releases were spent making that control safe: an arming tap (v279), a
+    # 34px target (v293), an undo shelf (v291), a grid column of its own.
+    # v311 asked the other question instead, and the owner's answer was to
+    # take it out: a row's destructive control is Delete, and there is one.
     #
-    # IT ARMS RATHER THAN confirm()s (SK-AUD-014; acquisition audit of v302):
-    # the browser-painted dialog was the one destructive confirmation in the
-    # product that did not use the armed second tap everything else does. So
-    # the first tap must NOT remove, must say what the second will do — in the
-    # button's own name and through the drawer's live region — and the second
-    # tap removes. (The old version accepted a dialog; Playwright dismisses
-    # dialogs by default, and a dialog that appears now is itself a failure.)
-    _asked = []
-    pg.on("dialog", lambda d: (_asked.append(d.message), d.dismiss()))
+    # SO THE ASSERTION INVERTS. "The first tap arms" could only ever pass
+    # while the ✕ existed; what guards the ground now is its ABSENCE, which
+    # is the shape CLAUDE.md asks for — a check that goes red when the thing
+    # achieved is LOST, not one that goes red when the work succeeds.
+    _shape = pg.evaluate("""() => {
+        const rows = [...document.querySelectorAll('#postedList .posted-row')];
+        return rows.map(r => ({
+          id: r.getAttribute('data-id'),
+          local: r.classList.contains('posted-row-local'),
+          dels: r.querySelectorAll('.posted-del').length,
+          deletes: r.querySelectorAll('.posted-delete').length })); }""")
+    _posted = [r for r in _shape if not r["local"]]
+    check("a posted row offers no ✕ to forget it with",
+          bool(_posted) and all(r["dels"] == 0 for r in _posted),
+          f"{_shape} — the remove-from-list ✕ came back")
+    check("...and Delete is still the one destructive control it does offer",
+          bool(_posted) and all(r["deletes"] == 1 for r in _posted),
+          f"{_shape} — a keyed row with no Delete has nothing to take it down "
+          f"with, which is the opposite failure")
+    # THE WAY OUT IS NOT GONE, IT IS COARSER, and that is the cost of the
+    # trade rather than an oversight: a row this browser holds no key for can
+    # now only leave the list with every other row. Clear list has to be
+    # there, and has to be reachable, or the trade is a dead end.
+    check("...and Clear list is still there to empty the list with",
+          pg.is_visible("#postedClear"),
+          "the only remaining way to drop a row is gone too")
 
-    _has_tok = pg.evaluate("() => !!(window.SkriblPosted.list()[0]||{}).tok")
-    pg.click("#postedList .posted-del")
+    # ONE GLYPH PER ACT, WHICH THIS ROW DID NOT MANAGE UNTIL v311. The
+    # visibility toggle borrowed the chain from Copy link for its OFF state,
+    # so a link-only row drew the same picture twice — once meaning "copy the
+    # link", once meaning "only the link reaches this" — and on the phone
+    # these icons were drawn for, neither tooltip is reachable to tell them
+    # apart. Keyed by the SVG's own contents, not by a class name: two
+    # buttons could always be told apart by their classes, which is exactly
+    # why a duplicated PICTURE went unnoticed for seven releases.
+    pg.evaluate("""() => {
+        localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({ id: 'glyphpub', title: 'In the gallery', kind: 'pad',
+                                  pages: 1, tok: 'k', visibility: 'public' });
+        window.SkriblPosted.add({ id: 'glyphoff', title: 'Link only', kind: 'pad',
+                                  pages: 1, tok: 'k', visibility: 'unlisted' });
+        if (window._skriblPostedUI) window._skriblPostedUI.render(); }""")
     pg.wait_for_timeout(300)
-    if _has_tok:
-        _armed = len(pg.evaluate(READ)) == 1
-        check("the first tap on a keyed row's ✕ arms rather than removes",
-              _armed, str(pg.evaluate(READ)))
-        # Read only while the row exists: under the mutation that removes on
-        # the first tap the button is gone, and waiting for it wedges the run.
-        _name = (pg.get_attribute("#postedList .posted-del", "aria-label") or "") if _armed else ""
-        _live = pg.inner_text("#postedStatus")
-        check("...and says the key goes with the entry, in its name and aloud",
-              "key" in _name.lower() and "key" in _live.lower(),
-              f"name {_name!r}; live {_live!r}")
-        check("...with no browser dialog", not _asked, str(_asked))
-        # Only while the row is still there: under the mutation that removes
-        # on the first tap there is nothing left to click, and a click on a
-        # missing row would wedge the run instead of failing the pin above.
-        if pg.evaluate(READ):
-            pg.click("#postedList .posted-del")
-            pg.wait_for_timeout(400)
-    check("the entry is gone from the list", pg.evaluate(READ) == [])
+    _glyphs = pg.evaluate("""() => {
+        const rows = [...document.querySelectorAll('#postedList .posted-row')];
+        return rows.map(r => {
+          const icos = [...r.querySelectorAll('.posted-actions button .posted-ico')]
+            .map(i => i.innerHTML.replace(/\\s+/g, ' ').trim());
+          return { id: r.getAttribute('data-id'), n: icos.length,
+                   uniq: new Set(icos).size }; }); }""")
+    check("both visibility states are on the page to compare (fixture)",
+          len(_glyphs) == 2 and all(g["n"] >= 3 for g in _glyphs),
+          f"{_glyphs} — a row with fewer than three actions cannot show the "
+          f"collision this row exists to catch")
+    # AND IT CATCHES AN ICON THAT IS MISSING, not only one that is repeated --
+    # which is worth knowing because the missing case is the one that actually
+    # happened. Rewriting the icon table to replace this pair, the trash and
+    # the key went out with them; `ICONS[name]` was then undefined, both
+    # buttons rendered the literal "undefined" inside their svg, and this row
+    # read 4 buttons and 3 distinct glyphs exactly as it does for a duplicate.
+    # Calibrated by deleting those two entries again: 128/129, this row and no
+    # other. A gate written for one failure that happens to cover its
+    # neighbour is worth saying out loud, because the next person will assume
+    # it does not.
+    check("no two actions in one row draw the same glyph",
+          bool(_glyphs) and all(g["n"] == g["uniq"] for g in _glyphs),
+          f"{_glyphs} — n against uniq: a row where they differ has one "
+          f"picture standing for two different acts")
+    # AND THE TWO ROWS DIFFER FROM EACH OTHER, which uniqueness within a row
+    # does not imply: a toggle that drew the same glyph in both states would
+    # pass every row above and still say nothing about which state it is in.
+    _states = pg.evaluate("""() => {
+        const g = (id) => { const b = document.querySelector(
+            '.posted-row[data-id="' + id + '"] .posted-gallery .posted-ico');
+          return b ? b.innerHTML.replace(/\\s+/g, ' ').trim() : null; };
+        return { on: g('glyphpub'), off: g('glyphoff') }; }""")
+    check("...and the gallery switch draws a DIFFERENT glyph in each state",
+          _states["on"] and _states["off"] and _states["on"] != _states["off"],
+          f"on {str(_states['on'])[:40]!r}; off {str(_states['off'])[:40]!r}")
+
+    # NOTHING ABOVE TOUCHED THE SERVER, which is the point of a row that can
+    # no longer be forgotten: the post this page was seeded from is still
+    # exactly where it was.
     with urllib.request.urlopen(f"{API}/{pid}", timeout=15) as r:
         still = json.loads(r.read())
-    check("but the Skribl is still on the server",
-          still.get("id") == pid,
-          "removing a row must not destroy the post")
+    check("and the Skribl this page was seeded from is untouched on the server",
+          still.get("id") == pid)
     pg.close()
 
     # -----------------------------------------------------------------------
@@ -684,11 +736,34 @@ with sync_playwright() as p:
           and not pd2.evaluate(HAS_BLOB, lid2),
           f"freed {freed}; entries {len(pd2.evaluate(READ))}; "
           f"blob {pd2.evaluate(HAS_BLOB, lid2) if lid2 else 'n/a'}")
+    # AND IT IS STILL DISCLOSED, somewhere a person can reach. It used to be
+    # the fourth clause of a forty-six-word paragraph above the list, which on
+    # a 390px phone was seven lines and 116px of caveat read before a single
+    # Skribl was visible; v311 cut that note to the one sentence somebody can
+    # act on while looking at the page and moved this rule into the "Your
+    # Skribls" tip in How it works, beside the rest of the browser-storage
+    # model. Both halves are pinned, because the failure this row guards
+    # against is the policy going undisclosed -- and a move is one edit away
+    # from a deletion.
     pd2.goto(f"{BASE}/library", wait_until="load")
     pd2.wait_for_timeout(900)
     foot = pd2.inner_text("#postedPanel .posted-foot-top").lower()
-    check("...and the tray states that policy where the saves are listed",
-          "oldest" in foot and "full" in foot, foot[:120])
+    check("the list still says whose browser it is and what clears it",
+          "this browser" in foot and "site data" in foot, foot[:160])
+    check("...in a sentence short enough to be read, not a paragraph",
+          len(foot.split()) <= 24,
+          f"{len(foot.split())} words: {foot[:160]}")
+    pd2.goto(f"{BASE}/skribl-pad", wait_until="load")
+    pd2.wait_for_timeout(1200)
+    _tip = pd2.evaluate("""() => {
+        const d = document.getElementById('helpDrawer'); if (!d) return null;
+        const t = [...d.querySelectorAll('.help-tip')].find(
+          e => /your skribls/i.test((e.querySelector('.help-pill') || {}).textContent || ''));
+        return t ? t.innerText.toLowerCase() : null; }""")
+    check("...and How it works states the eviction policy in full",
+          bool(_tip) and "oldest" in _tip and "full" in _tip,
+          f"{str(_tip)[:200]!r} — the policy has to be written down somewhere, "
+          f"and this is where the rest of the browser-storage model is")
     pd2.close()
 
     # -----------------------------------------------------------------------

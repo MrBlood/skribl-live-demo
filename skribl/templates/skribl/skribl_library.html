@@ -299,6 +299,15 @@
        the two jobs; the drawer emits no poster, so it emits no wrapper. */
     .posted-thumb { width: 84px; height: 63px; border-radius: 8px; overflow: visible; background: #0b0d12; position: relative; }
     .posted-thumb .posted-shot { position: absolute; inset: 0; border-radius: 8px; overflow: hidden; }
+    /* THESE NUMBERS ARE THE FALLBACK NOW, not the crop. They frame the share
+       card so its wordmark band falls outside the box, which hides the
+       branding and shows whatever the card had in the middle -- on an 84x63
+       tile, a 16:9 drawing letterboxed on a plate came out as a stamp between
+       two slabs of grey. library.js crops to the drawing's own rectangle
+       instead (fitShots), from the canvas size the row carries, and its inline
+       lengths override every declaration here. What is left standing is the
+       answer for a row whose shape nothing has said yet: the reconcile has
+       not reached it, or it predates the v309 columns. */
     .posted-thumb .posted-poster { position: absolute; left: 50%; transform: translateX(-50%); top: -5.4878%; height: 128.0488%; width: auto; max-width: none; }
     /* WHAT IS LEFT OF THE KIND BADGE, which is its stacking and nothing else.
        The pen and the book were drawn in the poster's top-left corner here,
@@ -542,13 +551,28 @@
   {# The player, and the two shared rule modules it reads. Same four files a
      host embeds — see templates/skribl/_skribl_inline_player.html. #}
   <link rel="stylesheet" href="{{ skribl_asset('inlineplayer.css') }}">
+  {# lib/sharecard.js DEFINES where the card puts the drawing, and library.js
+     crops each row's thumbnail to that rectangle. The in-post player inlines
+     its own copy of these constants so a HOST embedding a Skribl is not
+     charged for this module; /library is first-party and can afford the
+     kilobyte, so it reads the original rather than widening the component
+     every host downloads. #}
+  <script src="{{ skribl_asset('lib/sharecard.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/holdtiming.js') }}" defer></script>
-    {# lib/sharecard.js IS NOT LOADED HERE either, for the same reason as the
-     in-post macro this page mirrors: inlineplayer.js never reads
-     window.SkriblShareCard. The library page inherited the asset list rather
-     than the requirement. Removed in v281; verify_library.py passes without
-     it. #}
+    {# lib/sharecard.js CAME BACK IN v311, and the reason it went is worth
+     keeping beside the reason it returned. v281 removed it because this page
+     had inherited the in-post macro's asset list rather than a requirement --
+     inlineplayer.js never reads window.SkriblShareCard, it inlines the
+     constants instead so a HOST is not charged for the module. Nothing on
+     this page needed it, so it went.
+     Something does now: library.js crops each row's thumbnail to the
+     rectangle sharecard DEFINES. The first cut got that rectangle by widening
+     inlineplayer's private fitPoster and exporting it, which put 75 bytes of
+     this page's feature into the file every host downloads -- verify_inline's
+     budget caught it 32 over. Loaded here, the cost lands on the page that
+     uses it and the arithmetic has one home, the original rather than the
+     copy. The tag is above, with the rest of the hand-kept list. #}
   {# lib/photofit.js: WHERE A BACKGROUND PHOTO LANDS. This page loads the
      in-post player's assets BY HAND rather than through skribl_inline_assets(),
      so when photofit.js joined that macro this page silently did not get it --

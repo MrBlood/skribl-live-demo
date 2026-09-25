@@ -407,8 +407,40 @@
        missed. Every control still calls sync() itself, so nothing a person
        does here waits on the tick. */
     var IDLE_MS = 250;
-    var raf = null, tick = null;
+    var raf = null, tick = null, hosted = false;
     function beat() {
+      /* A BAR WHOSE HOST HAS LEFT THE DOCUMENT STOPS ITSELF, and without this
+         nothing ever stops it. The beat reschedules from inside itself, so a
+         card discarded by the grid -- every search, every sort change, the
+         gallery empties `list` and builds new tiles -- keeps a quarter-second
+         timer alive for the life of the PAGE, reading state off a detached
+         tree that can then never be collected. Nobody calls running(false) on
+         the way out, and asking every caller to remember is the kind of
+         bookkeeping that is correct once and wrong after the next surface is
+         added.
+
+         Measured on the gallery, 24 tiles on screen throughout: 6 timer calls
+         per visible card per 1.5s before a reset, 30 after four of them --
+         five grids' worth of beats, four of them invisible.
+
+         `isConnected`, not a flag: it is the browser's own answer and cannot
+         drift from the truth. Full screen does NOT detach -- lib/immersive.js
+         goes through the Fullscreen API and a class, never a reparent -- so
+         this only ever fires on a host that has really gone, and the callers
+         that toggle running() for a scene still own that.
+
+         AND IT HAS TO HAVE BEEN CONNECTED FIRST. attach() runs while the tile
+         is still being assembled -- the gallery builds the whole card and puts
+         it in the grid afterwards -- so a bare `!isConnected` is TRUE on the
+         very first beat and stops every bar before it has run once. Measured
+         that way: 0 timers for 24 visible cards, the scrubber and the play
+         icon frozen on all of them. Latch on the first connected beat instead,
+         so a host that has not arrived yet keeps its idle beat and only a host
+         that has LEFT stops. */
+      if (wrap) {
+        if (wrap.isConnected) hosted = true;
+        else if (hosted) { running(false); return; }
+      }
       sync();
       var pl = player();
       var st = pl ? pl.state() : null;

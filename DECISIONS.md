@@ -11372,3 +11372,140 @@ label from the moment of adoption, so the tooltip Skribl DRAWS said Play over a
 button that was pausing. The native tooltip coming back was the visible half;
 the drawn one freezing at its first value was the half nobody would have
 reported, because a tooltip that is merely wrong looks like a tooltip.
+
+## v311 -- the library row, read on a phone
+
+The owner opened `/library` on a phone and asked one question: "Does this look
+right? If not what would make it look more premium?" Four answers, and a fifth
+thing found on the way.
+
+### Forty-six words above the list
+
+The custody note said all of it -- saved in this browser, clearing site data
+takes the keys with it, and the eviction rule for a Skribl saved on this device
+because posting failed. Every clause was true. On a 390px screen it was seven
+lines and 116px: fifteen per cent of the viewport spent on a caveat, read
+before a single Skribl was visible.
+
+Nothing about a true clause entitles it to be read first. One sentence stays --
+the part somebody can act on while looking at the page -- and the eviction rule
+moved into the "Your Skribls" tip in How it works, where the rest of the
+browser-storage model already lives. Measured after: the note is 33px over two
+lines, and the two links sit on their own row instead of being floated against
+a paragraph that wrapped around them.
+
+The gate that pinned the eviction sentence to the footer followed the text
+rather than being deleted, and it is now two rows: the list still says whose
+browser it is and in how many words, and How it works still states the policy
+in full. A move is one edit away from a deletion.
+
+### The x, after four releases of being made safe
+
+A posted row carried a x that removed the local ENTRY and nothing else -- the
+Skribl stayed live, the link kept working. An audit of v278 called it a
+recovery HAZARD, because the entry it discarded held the only key that could
+take the post down. v279 gave it an arming tap, v291 an undo shelf, v293 a 34px
+target and a grid column of its own.
+
+Four releases spent making a control safe, and none of them asking whether it
+earned a place beside a trash can that means something else entirely. On a
+phone, two remove-shaped controls one above the other is a misfire that cannot
+be taken back. Owner's call: it goes.
+
+WHAT GOES WITH IT is recorded here because it is a real loss and not an
+oversight: a row this browser holds no key for can no longer be dismissed on
+its own. Clear list is the way out, and it takes the whole list. A LOCAL save's
+x stays, because for a local save the x IS the delete -- it destroys the only
+copy of a drawing, and no server can be asked again.
+
+The undo shelf did not go with it. The removal it now covers is the worse one,
+so the shelf's job is unchanged and `local` is gone from its record: there is
+only one kind of removal left to undo.
+
+### One glyph per act, judged at the size the row uses
+
+The visibility toggle borrowed the chain from Copy link for its off state, so a
+link-only row drew the same picture twice -- once meaning "copy the link", once
+meaning "only the link reaches this" -- and on a phone neither tooltip is
+reachable to tell them apart. Seven releases, unnoticed, because two buttons
+could always be told apart by their CLASSES. The gate is keyed on the svg's own
+contents now, and it fails any row that repeats a picture whatever the buttons
+are.
+
+The first replacement pair failed at 20px and nowhere else. Stacked
+picture-cards (a card, a card behind it, a sun and a hill inside the front one)
+and an eye struck through are fine drawings at 44px; at 20 they are more ink
+than the box holds, and the eye's slash lies along the almond's own axis so the
+two tangle. Six candidates were rendered at the real size before either was
+replaced, then four PAIRS, because a toggle shows one state at a time and each
+icon has to read alone. That ruled out the tidiest candidate -- a four-square
+grid against a single card, "many" against "one" side by side and mute on its
+own.
+
+The owner picked an open eye against a closed one, the only candidate that
+passes both tests: one object in two states, and either half legible by itself.
+What it gives up is the destination -- an eye says whether a Skribl is on show,
+a grid would have named where it goes -- and the words carry that where there
+is room for them, "In gallery" against "Link only".
+
+A postscript on the gate, because it is the kind of thing the next person will
+assume is untrue: it catches a MISSING icon as well as a repeated one. Replacing
+the pair took the trash and the key out of the table with them; `ICONS[name]`
+came back undefined, both buttons rendered the literal "undefined" inside their
+svg, and the row read four buttons and three distinct glyphs exactly as it does
+for a duplicate.
+
+### The thumbnail was the card, not the drawing
+
+The 84x63 tile showed the share card framed so its wordmark band fell outside
+the box -- a crop chosen to hide the branding, not to show the drawing. It is
+cropped to the drawing's own rectangle now, from the canvas size the row
+carries, reconciled into the browser store from `/api/skribls/meta` (which has
+answered with it since v309). The arithmetic is `inlineplayer.js`'s
+`fitPoster`, generalised over the box aspect and contain/cover and exported,
+rather than written a third time.
+
+THE FIRST FIXTURE WAS 16:9 AND ALL FOUR NEW ASSERTIONS PASSED ON THE UNFIXED
+TREE. The band crop scales the card so its 492px drawing band fills the thumb's
+height and centres it, which for any drawing at least as wide as the tile --
+4:3 and 16:9, two of the four presets -- lands on exactly the pixels the new
+crop does. The two that were broken are `square` and `tall`: a 9:16 Skribl came
+out 35px wide in an 84px box with 24px of plate down each side. The suite uses
+a 9:16 fixture, and the calibration record carries the number the mutation
+produced, -48.5px of slack on the x axis.
+
+So this fixes half the presets. That is worth stating plainly, because "the
+thumbnails were letterboxed" is the wrong summary and would send somebody
+looking for a defect in the two that were always right.
+
+### The strip moves back under the title
+
+v293 put the row's actions at the row's own left edge, under the thumbnail, on
+the owner's reasoning: "there is no reason the buttons shouldn't be left
+justified under the thumbnail. it forces them to be in two rows when you could
+do one." v311 puts them back under the title, on the owner's reasoning again.
+
+Both calls were right for their tree, and the fact that changed between them is
+the icons. In v293 the strip was five WORD-labelled pills and 94px of indent
+genuinely cost the width that forced the wrap; the same release turned those
+words into icons, and the width came back. Measured: first button and title
+both at x=119, thumb at 25, four icons ending at 277 of 360. The assertion that
+pinned the old alignment is inverted rather than deleted, and reads
+`.posted-main`'s measured left rather than the literal 94 -- a sheet that
+changes the thumb's size cannot leave it describing a number nothing on the
+page has.
+
+### And the hook that ran too early
+
+`lib/postedui.js` called its `onRender` hook BEFORE writing the list, so
+everything a host did in it was overwritten by the `innerHTML` a few lines
+later. `/library` marks the playing row `active` there: pick a Skribl, then type
+in the search box, and the highlight came off a row that was still on the stage.
+The thumbnail crop simply did nothing for the same reason, which is how it was
+found.
+
+`render()` now paints and then calls the hook. The two failures share a cause
+and needed DIFFERENT assertions, which is the v212 rule again: the crop rows go
+red for either, and only the highlight row separates the hook ordering from the
+crop itself. Both mutations were run; the crop no-op reddened two rows, the
+hook ordering reddened three.

@@ -209,6 +209,17 @@
     if (patch && (patch.kind === 'pad' || patch.kind === 'flip')) hit.kind = patch.kind;
     if (patch && parseInt(patch.pages, 10) > 0) hit.pages = parseInt(patch.pages, 10);
     if (patch && typeof patch.has_audio === 'boolean') hit.has_audio = patch.has_audio;
+    /* AND THE DRAWING'S SHAPE (v311), on the same terms. /library crops the
+       row's thumbnail to the drawing instead of showing the share card's
+       band, which it can only do knowing what shape the drawing was; the
+       server has carried `canvas_w`/`canvas_h` as columns since v309 and
+       /api/skribls/meta already answers with them. BOTH OR NEITHER: a width
+       without a height is not a shape, and half of one would make the crop
+       arithmetic divide by zero rather than fall back to the band. */
+    if (patch && parseInt(patch.canvas_w, 10) > 0 && parseInt(patch.canvas_h, 10) > 0) {
+      hit.canvas_w = parseInt(patch.canvas_w, 10);
+      hit.canvas_h = parseInt(patch.canvas_h, 10);
+    }
     return write(list);
   }
 
