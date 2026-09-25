@@ -1647,6 +1647,136 @@ with sync_playwright() as _spf:
     _pf.close()
     _bf.close()
 
+print("\nLIBRARY — it follows the app's theme, in the faces it actually has")
+# SK312-001 and SK312-007, outside audit of v312. Choose light in an editor,
+# open the gallery, then the library: the first two followed and the library
+# stayed dark, because its sheet said "Skribl is a dark-committed product"
+# -- true when it was written, and not since the editors grew a light ramp. And
+# its stacks began with Archivo and IBM Plex Mono, which the page never serves
+# (font-src 'self', no @font-face), so which face drew the page depended on
+# what the visitor happened to have installed.
+#
+# The legibility rule is verify_theme's, for the same reason it gives there:
+# light is answerable for not REGRESSING, so each text element is measured in
+# both themes, may not fall under 3:1, and may not lose more than 15% unless
+# what it lands on still clears AA outright.
+_THEME_SWEEP = """() => {
+  const rel = c => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92
+                       : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const num = s => { const m = (s || '').match(/[\\d.]+/g);
+    return m && m.length >= 3 ? m.map(Number) : null; };
+  const opaque = raw => { const m = num(raw); return m && (m.length < 4 || m[3] > 0.85) ? m : null; };
+  // Artwork is not chrome: the stage, a poster and whatever is laid over one
+  // paint the drawing's colours in either theme, and are meant to.
+  const ART = '.stageCanvasWrap, .posted-thumb, .card .art';
+  const ground = el => { for (let n = el; n; n = n.parentElement) {
+      const m = opaque(getComputedStyle(n).backgroundColor); if (m) return m; }
+    return opaque(getComputedStyle(document.body).backgroundColor) || [0, 0, 0]; };
+  const text = {}, darkSurfaces = [];
+  let i = 0;
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.closest(ART) || el.closest('[hidden]')) continue;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || +cs.opacity === 0) continue;
+    const bg = opaque(cs.backgroundColor);
+    if (bg && rel(bg) < 0.05) darkSurfaces.push((el.id || el.className.toString().slice(0, 30) || el.tagName)
+                                               + ' ' + cs.backgroundColor);
+    const own = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    if (!own) continue;
+    const fg = num(cs.color), g = ground(el);
+    const a = rel(fg), b = rel(g);
+    const key = (el.id || el.className.toString().slice(0, 30) || el.tagName) + '#' + (i++);
+    text[key] = { ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
+                  what: cs.color + ' on rgb(' + g.slice(0, 3).join(',') + ')' };
+  }
+  // Only what DRAWS TEXT: an icon-only button computes to the browser's
+  // default face and renders nothing in it, and the first draft of this
+  // census failed on exactly that -- a bare "Arial" on six transport buttons
+  // with no glyph among them.
+  const fams = new Set();
+  for (const el of [document.body, ...document.querySelectorAll('body *')]) {
+    if (el.closest('[hidden]')) continue;
+    const draws = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())
+      || (el.matches('input, textarea, select') && (el.value || el.placeholder));
+    if (draws) fams.add(getComputedStyle(el).fontFamily);
+  }
+  return { text, darkSurfaces, fams: [...fams],
+           attr: document.documentElement.getAttribute('data-theme'),
+           body: getComputedStyle(document.body).backgroundColor,
+           meta: (document.querySelector('meta[name=theme-color]') || {}).content || '' };
+}"""
+_SYSTEM_FIRST = ("system-ui", "-apple-system", "ui-monospace", "ui-sans-serif",
+                 "ui-serif", "ui-rounded", "sans-serif", "monospace", "serif")
+
+
+def _hex(c):
+    return "#" + "".join(f"{int(v):02x}" for v in re.findall(r"[\d.]+", c)[:3])
+
+
+def lum_ok(c, light):
+    r, g, b = (float(v) for v in re.findall(r"[\d.]+", c)[:3])
+    y = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return y > 150 if light else y < 60
+
+
+with sync_playwright() as _spt:
+    _bt = _spt.chromium.launch()
+    _ct = _bt.new_context()
+    _pt = _ct.new_page()
+    _pt.set_viewport_size({"width": 1280, "height": 1000})
+    _tA = _mkpost("theme row one", "replay", 1, True, "public")
+    _tB = _mkpost("theme row two", "flip", 3, False, "unlisted")
+    browsing.goto(_pt, BASE, "/library")
+    _pt.evaluate("""(ids) => { localStorage.setItem('skribl_posted_v1', '[]');
+        ids.forEach(function (id, i) { window.SkriblPosted.add({ id: id, url: '/s/' + id,
+          title: 'Theme row ' + i, tok: 'k' + i }); }); }""", [_tA, _tB])
+    _seen_t = {}
+    for _mode in ("dark", "light"):
+        # The owner's path, not a query string: the preference an editor
+        # stored, read by a page that was opened afterwards.
+        _pt.evaluate("(m) => localStorage.setItem('skribl_theme_v1', m)", _mode)
+        _pt.reload(wait_until="load")
+        _pt.wait_for_timeout(2000)
+        _pt.evaluate("() => { const r = document.querySelector('.posted-row .posted-main');"
+                     " if (r) r.click(); }")
+        _pt.wait_for_timeout(600)
+        _seen_t[_mode] = _pt.evaluate(_THEME_SWEEP)
+    _L, _D = _seen_t["light"], _seen_t["dark"]
+    check("light: a light preference stored by an editor is light here too",
+          _L["attr"] == "light" and lum_ok(_L["body"], light=True),
+          f"data-theme={_L['attr']!r}, body {_L['body']}")
+    check("dark: and a dark one is still the page it always was",
+          _D["attr"] is None and lum_ok(_D["body"], light=False),
+          f"data-theme={_D['attr']!r}, body {_D['body']}")
+    check("light: the browser chrome follows the page (theme-color is the ground)",
+          _L["meta"].lower() == _hex(_L["body"]),
+          f"meta {_L['meta']} vs body {_hex(_L['body'])}")
+    check("light: no chrome surface is still painting a dark ground",
+          not _L["darkSurfaces"], "; ".join(_L["darkSurfaces"][:5]))
+    check("the sweep measured the page, not an empty one",
+          len(_L["text"]) >= 20 and len(_D["text"]) == len(_L["text"]),
+          f"{len(_L['text'])} light / {len(_D['text'])} dark text elements")
+    _floor, _drops = [], []
+    for _k, _lm in _L["text"].items():
+        _dm = _D["text"].get(_k)
+        if _lm["ratio"] < 3.0:
+            _floor.append(f"{_k} {_lm['what']} {_lm['ratio']:.2f}:1")
+        if _dm and _lm["ratio"] < 4.5 and _lm["ratio"] < _dm["ratio"] * 0.85:
+            _drops.append(f"{_k} {_dm['ratio']:.2f} -> {_lm['ratio']:.2f}")
+    check("light: nothing readable falls below 3:1", not _floor, "; ".join(_floor[:5]))
+    check("light: no text is MEANINGFULLY less legible than in dark", not _drops,
+          "; ".join(_drops[:5]))
+    _bad_fams = sorted({f for f in _L["fams"] + _D["fams"]
+                        if f.split(",")[0].strip().strip('"\'') not in _SYSTEM_FIRST})
+    check("every font stack that draws text begins with a face the platform "
+          "guarantees -- none with one the page never serves",
+          not _bad_fams and len(_L["fams"]) >= 2,
+          "; ".join(_bad_fams[:4]) or f"{len(_L['fams'])} stack(s) seen")
+    _bt.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)

@@ -30,6 +30,7 @@ import pathlib
 import os
 import re
 import sys
+import time
 import urllib.request
 from assertions import make_check
 import browsing
@@ -330,17 +331,31 @@ with sync_playwright() as sp:
     check("every poster URL carries its own post's id", macro["idInPoster"] == macro["boxes"], str(macro))
 
     # The tile plays: the real player, mounted, on the real payload.
+    # ASKED UNTIL IT IS TRUE, not sampled once after a fixed 1.5s. A Pad
+    # drawing replays at its recorded pace, so what is on the canvas at 1.5s
+    # is a function of how fast the machine is: the v313 release run failed
+    # here once with a partial drawing, and a loaded box reproduced it three
+    # times in three (85, 198, 142 pixels) while an idle one passed three in
+    # three. That is the "fixed wait standing in for a load" shape the v312
+    # entry named. The deadline is a backstop and stays out of the verdict; a
+    # player that plays and never draws still fails, at the deadline.
     pg.click(f'[data-skribl-id="{pad_public}"]')
-    pg.wait_for_timeout(1500)
-    st = pg.evaluate("""(id) => { const el = document.querySelector('[data-skribl-id="' + id + '"]');
+    _ink_js = """(id) => { const el = document.querySelector('[data-skribl-id="' + id + '"]');
         const c = el.querySelector('.skribl-inline-canvas');
         const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
         let n = 0; for (let i = 0; i < d.length; i += 4)
           if (Math.abs(d[i]-d[0]) + Math.abs(d[i+1]-d[1]) + Math.abs(d[i+2]-d[2]) > 24) n++;
-        return { playing: el.classList.contains('is-playing') || el.classList.contains('is-paused'), ink: n }; }""",
-        pad_public)
+        return { playing: el.classList.contains('is-playing') || el.classList.contains('is-paused'), ink: n }; }"""
+    _t0 = time.monotonic()
+    while True:
+        st = pg.evaluate(_ink_js, pad_public)
+        if st["ink"] > 200 or time.monotonic() - _t0 > 20:
+            break
+        pg.wait_for_timeout(150)
+    _waited = time.monotonic() - _t0
     check("tapping a tile plays it on the in-post player", st["playing"], str(st))
-    check("...and the drawing is on its canvas", st["ink"] > 200, f"{st['ink']} pixels")
+    check("...and the drawing is on its canvas", st["ink"] > 200,
+          f"{st['ink']} pixels after {_waited:.1f}s")
 
     # THE THEME: a Skribl page, so the ground follows the app's theme, and the
     # browser chrome (the theme-color meta) follows the page.

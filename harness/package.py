@@ -66,15 +66,20 @@ def evidence_files():
     # THE SEALED RECORD SHIPS WITH THE EVIDENCE, whatever git thinks of it.
     #
     # This comment used to read "generated evidence is gitignored by design",
-    # which was wrong twice: all three files are tracked, and an outside audit
+    # which was wrong twice: all of these files are tracked, and an outside audit
     # noticed the claim while looking at them sitting in the source manifest.
     # The union below is therefore REDUNDANT today — tracked("harness") already
     # returns them — and it stays anyway, because the contract it states is not
     # "git happens to track these" but "an evidence package without the run
     # record it describes is not evidence". If these are ever untracked or moved
     # behind a .gitignore, that contract should survive the change silently.
+    # POSTGRES-ATTESTATION.txt was missing from this list from the day the
+    # postgres lane became attestable (#176) to v312: it shipped only because
+    # git tracks it, which is the exact dependency the note above refuses.
     keep |= {p for p in ("harness/RELEASE.md", "harness/LAST-RUN.txt",
-                         "harness/MP4-ATTESTATION.txt") if (ROOT / p).is_file()}
+                         "harness/MP4-ATTESTATION.txt",
+                         "harness/POSTGRES-ATTESTATION.txt")
+             if (ROOT / p).is_file()}
     return sorted(keep)
 
 

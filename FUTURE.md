@@ -95,19 +95,53 @@ not classification. Do not spend the day rediscovering that.
 
 ### The two editors duplicate their controllers
 
-`app.js` and `flip.js` both drive the *same* shared partials —
-`_skribl_draw_drawer.html`, `_skribl_music_drawer.html`,
-`_skribl_image_drawer.html` — with two independent implementations of the
-eyedropper, recent colours, smoothing, photo adjustments and music trimming.
+`app.js` (with the `editor_*.js` carves) and `flip.js` both drive the *same*
+shared partials — `_skribl_draw_drawer.html`, `_skribl_music_drawer.html`,
+`_skribl_image_drawer.html`. Every fix to code that exists twice must be made
+twice, by someone who remembers there are two. Most of this project's
+recurring bugs are that sentence playing out.
 
-Every fix must be made twice, by someone who remembers there are two. Most of
-this project's recurring bugs are that sentence playing out.
+**This paragraph used to name the wrong code, and an outside audit quoted it.**
+Until v312 it listed the eyedropper, recent colours, smoothing, photo
+adjustments and music trimming as the duplicated controllers. By then every one
+of those rules lived once, in `lib/eyedropper.js`, `lib/recentcolors.js`,
+`lib/smoothing.js`, `lib/photofit.js` and `lib/looptrim.js`, and both editors
+called them. The v312 audit filed the old list as a High finding and withdrew
+it on reading the source. The problem was real and the list was stale: nobody
+had measured what was still written twice, so the paragraph kept describing the
+last time somebody looked.
 
-The v142–v174 work moved eight modules into `static/lib/` — `canvassizes`,
-`posted`, `postedui`, `report`, `segslider`, `tooltip`, `hints`, `helpsearch` —
-each shared by both surfaces then (`postedui` renders on the profile page alone
-since v304). **That is the pattern to continue.** The drawer
-controllers are the next and largest candidate.
+**Measure it, do not remember it:** `python3 harness/tools/editordup.py`. It
+pairs every named function in Pad with the function of the same name in Flip
+and compares the bodies token by token. Its header says what it cannot see,
+and why every total it prints is a lower bound. On the tree after v312, most of
+the same-named pairs of 100 tokens or more were copies, and most of the copies
+were 0.85–1.00 similar. They cluster like this, largest
+first (sizes are the tool's to print, not this paragraph's):
+
+    music drawer: trim handles, waveform and loop detail, zoom window,
+      loop preview, nudges
+    canvas zoom / pan / pinch (initCanvasZoom alone is the largest single
+      copy in either editor)
+    MP4 export (exportViaWebCodecsMp4)
+    draw drawer and tool wiring: paint target, grid density, shape
+      knobs, colour sampling
+    drawer plumbing: pending-media cards, slider nudgers
+    stroke painter, draft save
+
+Two of those are not what a reader of either file would guess. Pad's copy of
+the music drawer's loop-detail pan (`dragZoomPan`) lives in `editor_photo.js`,
+not `editor_music.js`. The canvas zoom and pinch copies are also where the two
+editors' different event families meet (Pad binds mouse and touch, Flip binds
+Pointer Events). So consolidating them is the natural first step of moving Pad
+onto Pointer Events, not a separate project.
+
+The v142–v174 work moved eight modules into `static/lib/` (`canvassizes`,
+`posted`, `postedui`, `report`, `segslider`, `tooltip`, `hints`, `helpsearch`),
+and later releases moved the five named above. **That is the pattern to
+continue**, and the music drawer is the next and largest candidate. A small
+same-named pair is often legitimate glue around a shared module. The tool's
+`--min-tokens` floor exists so that glue is not counted as debt.
 
 ---
 

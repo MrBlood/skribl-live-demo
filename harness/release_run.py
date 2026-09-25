@@ -369,21 +369,51 @@ def external_coverage(frozen, skipped):
     Returns (attested, pending) as display strings. Anything in `pending` means
     the local record cannot speak for that lane.
     """
-    readers = {"verify_mp4.py": mp4_attestation,
-               "verify_postgres.py": postgres_attestation}
     attested, pending = [], []
     for name in skipped:
         lane = SKIP_COVERAGE.get(name)
         if lane is None:
             pending.append(f"`{name}` — NOT covered anywhere")
-        elif name in readers:
-            line = readers[name](frozen)
+        elif name in LANE_READERS:
+            line = LANE_READERS[name][0](frozen)
             (attested if line.startswith("verified") else pending).append(
                 f"`{name}` — {line.split(',')[0]}")
         else:
             pending.append(f"`{name}` — claimed by the `{lane}` CI job, "
                            "no tree-bound attestation reaches this run")
     return attested, pending
+
+
+#: Which reader answers for which skipped suite, and the file it reads. One
+#: table, used by the coverage summary AND by the per-suite rows, so the two
+#: cannot disagree about whether a lane is attested.
+LANE_READERS = {"verify_mp4.py": (mp4_attestation, ATTESTATION),
+                "verify_postgres.py": (postgres_attestation, PG_ATTESTATION)}
+
+
+def skip_row_detail(name, detail, frozen):
+    """The detail cell for a skipped suite's row in RELEASE.md's table.
+
+    The row used to carry only the LOCAL reason -- "the psycopg driver is not
+    installed" -- while the header, forty lines up, said the same suite was
+    verified for this tree by its CI lane. An outside audit of v312 read the
+    row, filed MP4 and PostgreSQL as release gaps, and withdrew both once it
+    re-read the header. The header was right and the table made the misread
+    easy, so the row now says which of the two it is, from the same reader.
+    """
+    lane = SKIP_COVERAGE.get(name)
+    if lane is None:
+        return f"skipped here, NOT covered anywhere — local reason: {detail}"
+    if name not in LANE_READERS:
+        return (f"skipped here, claimed by the `{lane}` CI job with no "
+                f"tree-bound attestation — local reason: {detail}")
+    reader, path = LANE_READERS[name]
+    line = reader(frozen)
+    if line.startswith("verified"):
+        return (f"skipped here; externally attested for the tested tree: "
+                f"{line} (`{path}`) — local reason: {detail}")
+    return (f"skipped here, NOT attested for this tree: "
+            f"{line.split(' — ')[0]} — local reason: {detail}")
 
 
 def release_status(ok, pending, state):
@@ -795,7 +825,9 @@ def main():
     lines += [
         "| suite | result | detail |", "| --- | --- | --- |",
     ]
-    lines += [f"| `{n}` | {s} | {d} |" for n, s, d in sorted(rows)]
+    lines += [f"| `{n}` | {s} | "
+              f"{skip_row_detail(n, d, frozen) if s == 'skip' else d} |"
+              for n, s, d in sorted(rows)]
     if never:
         lines += ["", "**Suites that reported nothing:** " +
                   ", ".join(f"`{s}`" for s in never)]

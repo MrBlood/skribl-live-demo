@@ -113,10 +113,14 @@ seal and CI, suites that discard their servers' stderr, and PostgreSQL are in
   that is running the `pgrep` when the pattern is in that command line — it has
   killed the session's shell more than once. Put a pattern in a separate script,
   or bracket its first character (`"[r]elease_run.py"`).
-- **Long work goes in the background.** The agent sandbox caps a foreground
-  command well below the length of a release run, and background processes are
-  reaped while the session is idle. `release_run.py` checkpoints for exactly
-  this; run it under `nohup`, or in `--budget` slices, and re-invoke.
+- **Long work goes in the background, through the agent's TRACKED runner.**
+  The agent sandbox caps a foreground command well below the length of a
+  release run. A process detached with `setsid`, `nohup` or `disown` is reaped
+  at a turn boundary, silently: the v312 release run died that way at batch
+  3/55. This advice used to recommend `nohup`. The tool's own background mode is
+  tracked and survives the turn. `release_run.py` checkpoints either way, so
+  re-invoke a reaped run WITHOUT `--restart`, which would discard the
+  checkpoint.
 - **Egress goes through a proxy with opinions.** `*.onrender.com` and GitHub's
   artifact blob storage are refused (a 403 on CONNECT), so the live deploy is
   unverifiable from here and CI artifacts cannot be downloaded — transcribe from
