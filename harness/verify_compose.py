@@ -427,6 +427,65 @@ with sync_playwright() as sp:
     check("no page errors from the marker", not perrs, "; ".join(perrs[:2]))
     pad.close()
 
+    # ---- the drawing goes where the cursor was (v315) ------------------------
+    # The owner's question: write a paragraph, attach a Skribl, write more --
+    # does it land where it was attached? It does, on this page, through a
+    # marker the composer writes at the caret; the feed splits the post there.
+    # Driven through the real iframe, because the composer's half of this runs
+    # in onDone, which only the editor's "Add to post" reaches.
+    print("\nCOMPOSE — the drawing lands where the cursor was")
+    pi = b.new_page(viewport={"width": 1240, "height": 980}, color_scheme="dark")
+    ierrs = []
+    pi.on("pageerror", lambda e: ierrs.append(str(e)))
+    browsing.goto(pi, BASE, "/feed")
+    TOP, BOTTOM = "Made this on the bus.", "Loop it to see where I stopped."
+    _caret = """([top, bottom]) => { const t = document.getElementById('composerText');
+        t.value = top + '\\n' + bottom; t.focus();
+        t.selectionStart = t.selectionEnd = top.length + 1; }"""
+
+    def attach_one():
+        pi.click("#padBtn")
+        pi.wait_for_timeout(4000)
+        fi = pi.frame_locator("#padFrame")
+        draw(pi, fi.locator("#canvas").bounding_box(), turns=2, n=40)
+        pi.wait_for_timeout(300)
+        fi.locator("#recordBtn").click()
+        pi.wait_for_timeout(300)
+        fi.locator("#postBtn").click()
+        pi.wait_for_timeout(900)
+        fi.locator("#postSubmitBtn").click()
+        pi.wait_for_timeout(3000)
+
+    pi.evaluate(_caret, [TOP, BOTTOM])
+    attach_one()
+    _txt = pi.evaluate("() => document.getElementById('composerText').value")
+    check("attaching writes the marker at the cursor, on a line of its own",
+          _txt == TOP + "\n[skribl]\n" + BOTTOM, repr(_txt))
+    pi.click("#removeSkriblBtn")
+    pi.wait_for_timeout(300)
+    _txt = pi.evaluate("() => document.getElementById('composerText').value")
+    check("...and removing the drawing takes the marker out with it",
+          "[skribl]" not in _txt and TOP in _txt and BOTTOM in _txt, repr(_txt))
+    pi.evaluate(_caret, [TOP, BOTTOM])
+    attach_one()
+    pi.click("#postBtn")
+    pi.wait_for_timeout(5000)
+    _order = pi.evaluate("""() => {
+        const post = document.querySelector('#feedList .post');
+        if (!post) return null;
+        return [...post.children].map(e => e.matches('[data-skribl-inline], .skribl-inline') ? 'PLAYER'
+               : e.classList.contains('pbody') ? 'TEXT:' + e.textContent
+               : e.classList.contains('skribl-inline-title') ? 'TITLE' : e.className); }""")
+    _texts = [x for x in (_order or []) if isinstance(x, str) and x.startswith("TEXT:")]
+    check("the posted feed shows the words before, then the drawing, then the words after",
+          bool(_order) and "PLAYER" in _order
+          and _order.index("TEXT:" + TOP) < _order.index("PLAYER") < _order.index("TEXT:" + BOTTOM),
+          str(_order))
+    check("...and the marker itself is never shown",
+          all("[skribl]" not in x for x in _texts), str(_texts))
+    check("no page errors placing the drawing", not ierrs, "; ".join(ierrs[:2]))
+    pi.close()
+
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)
