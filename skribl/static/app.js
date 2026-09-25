@@ -179,7 +179,13 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', () => {
   resizeCanvas();
-  updateTabSlider(document.querySelector('.tab-btn.active'));
+  /* A CALL TO updateTabSlider STOOD HERE and its function did not. v311 took
+     out the tab-slider block as dead and left this caller behind, so every
+     resize threw `updateTabSlider is not defined` -- and a throw here ABORTS
+     the rest of this handler, which is the part that mattered: the photo-fit
+     slider and initToolSlider() below never ran again after any resize.
+     Found by verify_player_isolation's "no page errors on the player", which
+     is why that row reads page errors rather than asserting a behaviour. */
   const activeFitBtn = document.querySelector('.photo-fit-btn.active');
   if (activeFitBtn && photoFitSlider) {
     const allBtns = [...document.querySelectorAll('.photo-fit-btn')];

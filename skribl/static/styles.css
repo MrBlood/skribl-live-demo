@@ -1126,35 +1126,6 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
   z-index: 30;
 }
 
-.tab-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 14px 0;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  position: relative;
-  transition: color 0.2s ease, background 0.2s ease;
-}
-
-.tab-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-.tab-btn:hover { color: var(--text-secondary); }
-
-.tab-btn.active {
-  color: var(--text-primary);
-  border-bottom-color: transparent;
-}
 
 .tab-dot {
   display: inline-block;
@@ -4316,10 +4287,6 @@ input:focus-visible {
 
   #canvas { min-height: 50vh; }
 
-  .tab-btn {
-    font-size: 12px;
-    padding: 11px 0;
-  }
 
   .tab-panel {
     padding: 14px 16px;
