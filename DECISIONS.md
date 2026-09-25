@@ -11582,6 +11582,31 @@ immediately named five `.tab-btn` rule-sets whose class nothing applies -- the
 selector string INSIDE the dead call had been the only thing making them look
 live to that gate. A dead call propping up dead CSS, each hiding the other.
 
+### One of the three was already on main, and nothing said so
+
+Worth separating, because lumping the three together overstates two of them and
+understates the first. Read off the main-branch battery for the PREVIOUS
+release (run 36058086725, on the squash of #221):
+
+    verify_integration.py      FAIL -- exit 1, 13/14 passed
+    verify_inline.py           ok -- 110/110
+    verify_player_isolation.py ok -- 55/55
+    RESULT: FAIL -- 1 suite(s) did not complete cleanly.
+
+So the `str(owner)` damage SHIPPED. main sat red for about five hours with one
+failing suite, and the deployed site was built from it. The other two were
+introduced inside v311's own branch and never left it -- the ReferenceError in
+particular arrived after that squash, which is why that run shows
+verify_player_isolation green.
+
+THE RED WAS NOT NOTICED BECAUSE NOTHING LOOKS. The pull-request gate ran and
+was green (this suite is not on it); the merge went in; the main battery went
+red an hour later into a tab nobody had open. It was found here only because
+the v311 seal happened to re-run the same suite on a tree that still carried
+the defect. A repository that gates on pull requests and verifies on main needs
+someone or something to READ the main result -- otherwise the trim has quietly
+converted a blocking check into a notification nobody receives.
+
 ### What this says about where the gates sit
 
 The pull-request gate runs the boot suite plus everything needing neither a
