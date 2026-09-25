@@ -867,6 +867,11 @@ read correctly — and several were found by the owner on a real phone after the
 suite was green. Screenshots caught what assertions did not: a canvas picker
 that painted a purple bar over its own menu passed 21/21 first.
 
+What a phone catches and a headless browser cannot is written down as
+`docs/DEVICE-CHECKLIST.md` — about fifteen minutes on an iPhone, before a
+release that will be shown to people and after any change to input, audio,
+zoom or text size.
+
 The pattern worth carrying: **when a change touches a surface, write the
 assertion that reproduces the OLD behaviour first**, and prefer measuring what
 is rendered over what the code was told to do.
