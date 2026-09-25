@@ -1325,7 +1325,20 @@ with _sp204() as _p:
     check("FORMAT: a replay .skribl loads in Pad", dp.evaluate("() => typeof strokes !== 'undefined' && strokes.length > 800"),
           f"strokes={_nstrokes}")
     check("FORMAT: ...and renders ink on the canvas", _ink(dp, "#canvas") > 2000, f"ink={_ink(dp,'#canvas')}")
-    dp.click("#playBtn"); dp.wait_for_timeout(1200); _a = _ink(dp, "#canvas"); dp.wait_for_timeout(1200); _b2 = _ink(dp, "#canvas")
+    # GROWS OVER TIME, measured as a state: Play clears and redraws, so take the
+    # first reading below the finished drawing, then wait for a larger one.
+    # Two fixed 1.2s samples failed whenever the replay ended inside the first.
+    _full = _ink(dp, "#canvas")
+    dp.click("#playBtn")
+    _a, _b2 = _full, -1                                   # -1: never grew, which must fail
+    for _ in range(80):                                   # up to ~8s
+        dp.wait_for_timeout(100)
+        _now = _ink(dp, "#canvas")
+        if _a == _full and _now < _full:
+            _a = _now
+        elif _a < _full and _now > _a:
+            _b2 = _now
+            break
     check("FORMAT: ...and REPLAYS — the drawing grows over time on Play", _b2 > _a, f"ink {_a} -> {_b2}")
     dp.close()
     df = _b.new_page(viewport={"width": 1280, "height": 900}); df.goto(BASE + "/flip", wait_until="load"); df.wait_for_timeout(800)

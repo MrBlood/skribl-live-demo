@@ -575,7 +575,11 @@ with sync_playwright() as sp:
     # appearing to do nothing until the next tap.
     pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"] "
                 ".skribl-inline-loop').click()", id_m)
-    pg.wait_for_timeout(700)
+    try:
+        pg.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'",
+                             arg=id_m, timeout=5000)
+    except PWTimeout:
+        pass
     resumed = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_m)
     check("turning it back on starts it again rather than doing nothing",
           resumed["state"] == "playing", json.dumps(resumed))
@@ -589,7 +593,12 @@ with sync_playwright() as sp:
         spacer.style.height = '250vh';
         document.body.appendChild(spacer);
         window.scrollTo(0, document.body.scrollHeight); }""")
-    pg.wait_for_timeout(1200)
+    # The IntersectionObserver's callback is the state; wait for it, not 1200ms.
+    try:
+        pg.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'idle'",
+                             arg=id_b, timeout=5000)
+    except PWTimeout:
+        pass
     scrolled = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_b)
     check("scrolling a playing post out of view settles it",
           scrolled["state"] == "idle",
@@ -1484,11 +1493,29 @@ with sync_playwright() as sp:
         _rp = b.new_page(viewport={"width": 1280, "height": 900})
         browsing.goto(_rp, BASE, "/feed")
 
-        def _rows(sid):
-            """Play the box through the module's own API, then sample it."""
+        def _painted(sid):
+            """Play the box, then wait until it has ADOPTED its payload and
+            painted a centre that differs from its corner -- a state that
+            includes the lazy fetch and the photo decode, which a fixed 1200ms
+            stood in for. On a timeout, carry on so the probe row reports."""
             _rp.evaluate("(id) => { const p = window.SkriblInline.find(id);"
                          " if (p) p.play(); }", sid)
-            _rp.wait_for_timeout(1200)
+            try:
+                _rp.wait_for_function("""(id) => {
+                    const p = window.SkriblInline.find(id);
+                    const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
+                    if (!p || !p.state().loaded || !c || c.width <= 300) return false;
+                    const x = c.getContext('2d');
+                    const a = x.getImageData(1, 1, 1, 1).data;
+                    const m = x.getImageData(Math.round(c.width / 2), Math.round(c.height / 2), 1, 1).data;
+                    return Math.abs(a[0] - m[0]) + Math.abs(a[1] - m[1]) + Math.abs(a[2] - m[2]) > 30; }""",
+                    arg=sid, timeout=8000)
+            except PWTimeout:
+                pass
+
+        def _rows(sid):
+            """Play the box through the module's own API, then sample it."""
+            _painted(sid)
             return _rp.evaluate("""(id) => {
                 const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
                 if (!c || c.width <= 300) return null;
@@ -1537,9 +1564,7 @@ with sync_playwright() as sp:
         # green on a tree that drops the opacity. Each is measured by the thing
         # only it can change.
         def _mid(sid):
-            _rp.evaluate("(id) => { const p = window.SkriblInline.find(id);"
-                         " if (p) p.play(); }", sid)
-            _rp.wait_for_timeout(1200)
+            _painted(sid)
             return _rp.evaluate('''(id) => {
                 const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
                 if (!c || c.width <= 300) return null;

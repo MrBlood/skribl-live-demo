@@ -38,7 +38,7 @@ import browsing
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 try:
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 except Exception as exc:                                   # pragma: no cover
     print(f"SUITE-SKIPPED: playwright unavailable ({exc})")
     print("No assertions were executed. This is NOT evidence the gallery works.")
@@ -47,6 +47,19 @@ except Exception as exc:                                   # pragma: no cover
 results = []
 check = make_check(results)
 TAG = "gal" + os.urandom(4).hex()
+
+
+def _until(pg, fn, cond, timeout=7000, arg=None):
+    """Sample `fn` (a JS function source) the first frame `cond` holds for its
+    value `v`, or once more at the deadline so the check can report what was
+    there. For STATES that a fixed wait used to stand in for: a timer's recede,
+    a lazy fetch finishing. The deadline is generous on purpose -- the defects
+    these rows pin are permanent (a bar that never recedes), not late."""
+    src = (f"(arg) => {{ const v = ({fn})(arg); return ({cond}) ? v : null; }}")
+    try:
+        return pg.wait_for_function(src, arg=arg, timeout=timeout).json_value()
+    except PWTimeout:
+        return pg.evaluate(fn, arg) if arg is not None else pg.evaluate(fn)
 
 
 def api(path):
@@ -1637,10 +1650,9 @@ with sync_playwright() as _spa:
     # the footer census three screens down reads a card that is still lit and
     # reports a permanently visible transport that is not there. (A probe that
     # leaves state behind has broken three other sections of this suite before.)
-    _pa.wait_for_timeout(3200)
-    _recede = _pa.evaluate("""() => {
+    _recede = _until(_pa, """() => {
         const bar = document.querySelector('.tile .skfull-card');
-        return bar ? getComputedStyle(bar).opacity : null; }""")
+        return bar ? getComputedStyle(bar).opacity : null; }""", "v === '0'")
     check("the transport recedes on its own once nothing is using it",
           _recede == "0",
           f"opacity {_recede!r} \u2014 the touch reveal is on a timer so the "
@@ -1991,8 +2003,9 @@ with sync_playwright() as _spa:
           f"crop, and every row below would be measuring the old behaviour")
     _pa.evaluate("(n) => document.querySelectorAll('.tile')[n]"
                  ".querySelector('.skfull-play').click()", _frame["n"])
-    _pa.wait_for_timeout(1200)
-    _cv = _pa.evaluate(CANVAS_JS, _frame["n"])
+    # The canvas is up once the lazy fetch lands -- a state, not 1200ms.
+    _cv = _until(_pa, CANVAS_JS, "!v.hidden && v.rect[2] > 0 && v.rect[3] > 0",
+                 arg=_frame["n"])
     check("...and the canvas is up, so there is something to compare it to",
           not _cv["hidden"] and _cv["rect"][2] > 0 and _cv["rect"][3] > 0,
           f"{_cv} \u2014 a hidden canvas has a zero rect and everything agrees "
@@ -2728,8 +2741,7 @@ with sync_playwright() as _spw:
     _raised = _pw.evaluate(_state)
     check("a tap on the artwork raises the transport",
           _raised.get("on") is True, f"{_raised!r}")
-    _pw.wait_for_timeout(3000)
-    _faded = _pw.evaluate(_state)
+    _faded = _until(_pw, _state, "v.on === false")
     check("...and it recedes while the replay is STILL PLAYING",
           _faded.get("on") is False and _faded.get("playing") is True,
           f"{_faded!r} — on=True with playing=True is the sticky peek the "
@@ -2931,8 +2943,7 @@ with sync_playwright() as _spf:
           _up.get("painted") is True and _up.get("isPlaying") is True,
           f"{_up!r} — isPlaying=False is lib/fullbar.js not publishing the "
           f"state, and every row below it is then measuring the resting case")
-    _pf.wait_for_timeout(3200)
-    _gone = _pf.evaluate(_PAINT)
+    _gone = _until(_pf, _PAINT, "v.painted === false")
     check("...and it RECEDES while the pointer rests on the playing drawing",
           _gone.get("painted") is False and _gone.get("isPlaying") is True,
           f"{_gone!r} — painted=True with ctlOn=False is `:hover` putting the "
@@ -2948,8 +2959,7 @@ with sync_playwright() as _spf:
           _back.get("painted") is True,
           f"{_back!r} — a bar that only a click can raise is a bar you have to "
           f"pause the drawing to reach")
-    _pf.wait_for_timeout(3200)
-    _gone2 = _pf.evaluate(_PAINT)
+    _gone2 = _until(_pf, _PAINT, "v.painted === false")
     check("...and coming to rest fades it a second time",
           _gone2.get("painted") is False,
           f"{_gone2!r} — a re-arm that does not re-arm the TIMER leaves the bar "
@@ -3269,14 +3279,13 @@ with sync_playwright() as _spc:
           "focus did not land inside the stage, so this row cannot see the bug "
           "it exists for")
     _pf.mouse.move(4, 4)            # off the card: `:hover` must stop applying
-    _pf.wait_for_timeout(3200)
-    _pinned = _pf.evaluate("""() => {
+    _pinned = _until(_pf, """() => {
         const t = document.querySelector('.tile');
         const f = t.querySelector('.skfull-card');
         return { ctlOn: t.classList.contains('ctl-on'),
                  opacity: getComputedStyle(f).opacity,
                  hovered: t.querySelector('.tileStage').matches(':hover') };
-    }""")
+    }""", "v.opacity === '0' && v.hovered === false")
     check("...and the bar recedes once the pointer leaves, not pinned by that focus",
           _pinned.get("opacity") == "0" and _pinned.get("hovered") is False,
           f"{_pinned!r} — opacity 1 with the pointer away and ctl-on false is "

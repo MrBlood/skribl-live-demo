@@ -37,7 +37,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 EXAMPLE = ROOT / "examples" / "host_app"
 
 try:
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 except Exception as exc:                                   # pragma: no cover
     print(f"SUITE-SKIPPED: playwright unavailable ({exc})")
     print("No assertions were executed. This is NOT evidence the example works.")
@@ -278,7 +278,12 @@ try:
         # host's page.
         pg.evaluate("""() => { var p = window.SkriblInline.players()[0];
                                p.play(); }""")
-        pg.wait_for_timeout(1200)
+        # The fetch is part of this, so wait for movement, not 1200ms.
+        try:
+            pg.wait_for_function("() => window.SkriblInline.players()[0].state().elapsedMs > 100",
+                                 timeout=8000)
+        except PWTimeout:
+            pass
         moved = pg.evaluate("""() => { var p = window.SkriblInline.players()[0];
                                        return p.state().elapsedMs; }""")
         check("it plays — the payload fetched through the PREFIXED api",
