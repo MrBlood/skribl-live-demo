@@ -97,9 +97,14 @@ with sync_playwright() as sp:
     outside = pg.evaluate("() => drawing")
     pg.mouse.up()
     s2 = pg.evaluate(STATE)
+    beyond = pg.evaluate("""() => { const n = strokeGroups[strokeGroups.length - 1];
+        const w = getCanvasLogicalSize().width;
+        return strokes.slice(-n).filter(p => p.x > w).length; }""")
     check("a stroke that leaves the canvas and comes back is still ONE stroke",
           s2["groups"] == 2 and outside is True and s2["last"] >= 6,
           f"{s2}; drawing while outside: {outside}")
+    check("...and it kept following the pointer out there (pointer capture)",
+          beyond >= 2, f"{beyond} captured points past the right edge")
 
     # A second pointer lands mid-stroke: refused, not a restart, not a join.
     pg.mouse.move(box["x"] + box["width"] * 0.2, box["y"] + box["height"] * 0.8)
