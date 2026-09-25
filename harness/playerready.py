@@ -65,6 +65,35 @@ says so instead of leaving a bare Playwright timeout.
 
 A fixed sleep AFTER this is a different thing and stays where a suite has one:
 waiting for an animation to settle is a real wait. Waiting for a load is not.
+The settles left in place did not move; they now start from a defined zero.
+
+WHAT THE TWO SUITES WERE ACTUALLY LOSING, which is worse than the failures
+that led here. Against the slow API they did not simply report fewer passes --
+they reported fewer ASSERTIONS, because the rows that failed were the
+calibration arms other rows are gated on:
+
+    verify_hold              60/61 -> 62/62   1 assertion was not running
+    verify_player_isolation  40/44 -> 55/55  11 assertions were not running
+
+The one in verify_hold is "on /s/ too, a Draw-on page reaches its last stroke
+before the page turns". The eleven in verify_player_isolation are the WHOLE
+full-screen section of the shared link -- among them "a way OUT is on screen
+while full screen", "the drawing FILLS the screen rather than staying
+page-sized" and "the transport came with it, painted and pressable". A suite
+printing 40/44 looks like four small problems. It had quietly stopped asking
+eleven questions about the page people are actually sent.
+
+CALIBRATED ON THE LATCH ITSELF, not just on the suites it fixed. With
+setProgress(0) removed from initPlayer -- the one statement this reads --
+against the same pages:
+
+    tree          await_player                 await_player_error
+    unmutated     returned  2537ms             returned  2520ms
+    mutated       RAISED at the timeout,       returned  2510ms
+                  naming the missing style
+
+So it reads that signal rather than elapsing a clock, and the two latches are
+independent: breaking the success path does not quietly satisfy the error one.
 """
 
 # One reader, one writer. Matched on the MECHANISM -- the inline style the
@@ -89,4 +118,33 @@ def await_player(page, timeout_ms=30000, what="the /s/ player"):
             f"initPlayer() did not reach its last statement. Either the page "
             f"took the showPlayerError path (no post to play), or the read of "
             f"/api/skribls/<id> outlasted the window. Original: {exc}"
+        ) from exc
+
+
+# The ERROR path needs its own latch, and that is not a detail. `await_player`
+# waits for something initPlayer only reaches on success, so a page that took
+# showPlayerError would sit there until the timeout -- the wait would be
+# correct about the player and useless to the assertion. Same defect, different
+# surface, different signal: CLAUDE.md's rule that two surfaces sharing a fix
+# may need DIFFERENT assertions, met in the one file that fixes both.
+PLAYER_ERROR_SHOWN = ("() => { const p = document.getElementById('playerError');"
+                      " return !!p && !p.hidden && p.offsetParent !== null; }")
+
+
+def await_player_error(page, timeout_ms=30000, what="the /s/ error panel"):
+    """Block until this page has SHOWN its player-error panel.
+
+    The panel is server-rendered and starts hidden; showPlayerError is the only
+    thing that reveals it, so a visible panel means the failure path ran --
+    which is the event the assertions about its wording and its Try again
+    button are waiting for.
+    """
+    try:
+        page.wait_for_function(PLAYER_ERROR_SHOWN, timeout=timeout_ms)
+    except Exception as exc:                      # noqa: BLE001 - re-raised
+        raise AssertionError(
+            f"{what} never appeared within {timeout_ms}ms: #playerError is "
+            f"still hidden, so showPlayerError did not run. Either the page "
+            f"loaded a post after all, or the read of /api/skribls/<id> "
+            f"outlasted the window. Original: {exc}"
         ) from exc

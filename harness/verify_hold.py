@@ -19,6 +19,7 @@ from playwright.sync_api import sync_playwright
 
 import os
 from assertions import make_check
+from playerready import await_player
 import browsing
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -259,6 +260,11 @@ with sync_playwright() as p:
         perrs = []
         player.on("pageerror", lambda e, _p=perrs: _p.append(str(e)))
         player.goto(f"{BASE}/s/{pid}", wait_until="load")
+        # The 1800ms below is proving a NEGATIVE -- that no pageerror arrives --
+        # and a window for that is legitimate. What was wrong is where it
+        # started: on a slow API most of it was spent loading, so the suite
+        # watched for errors in a player that had not run yet.
+        await_player(player, what=f"the {label} Skribl's player")
         player.wait_for_timeout(1800)
         check(f"the {label} Skribl loads in the player with no errors",
               not perrs, "; ".join(perrs[:2]))
@@ -333,7 +339,14 @@ with sync_playwright() as p:
             """
             pg2 = ctx.new_page()
             pg2.goto(f"{BASE}/s/{pid}", wait_until="load")
-            pg2.wait_for_selector("#canvas", timeout=15000)
+            # #canvas IS SERVER-RENDERED MARKUP and waiting for it proves
+            # nothing about the player -- it is in the HTML before any script
+            # runs. This is the row that went red against a slow API ("the idle
+            # poster shows the corner mark ... (calibration)" measured 0): the
+            # poster had not been drawn, and the calibration arm read that as a
+            # probe which cannot see. The 1200ms stays -- letting the poster
+            # SETTLE is a real wait -- and now begins once there is one.
+            await_player(pg2, what="the idle-poster fixture's player")
             pg2.wait_for_timeout(1200)          # let the idle poster settle
             armed = pg2.evaluate(SAMPLER, "#canvas")
             pg2.wait_for_timeout(120)
