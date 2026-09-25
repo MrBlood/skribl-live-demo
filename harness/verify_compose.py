@@ -454,12 +454,16 @@ with sync_playwright() as sp:
         t.value = top + '\\n' + bottom; t.focus();
         t.selectionStart = t.selectionEnd = top.length + 1; }"""
 
-    blank_on_open = []
-
-    def attach_one():
+    # COMPOSE KEEPS NO PAD DRAFT (v315). It used to share the Pad's autosave
+    # slot, which is how this section first went red: the removed drawing was
+    # restored on the next open as a finished take, and nothing could be drawn.
+    # Asserted AS THE PAD OPENS, because a restored take then blocks drawing and
+    # the rest of the flow crashes before a later check could name the cause.
+    def attach_one(blank_claim):
         pi.click("#padBtn")
         pi.wait_for_timeout(4000)
-        blank_on_open.append(pi.evaluate(EDITOR_INK))
+        _ink = pi.evaluate(EDITOR_INK)
+        check(blank_claim, _ink == 0, f"{_ink} inked pixels as the Pad opened")
         fi = pi.frame_locator("#padFrame")
         draw(pi, fi.locator("#canvas").bounding_box(), turns=2, n=40)
         pi.wait_for_timeout(300)
@@ -471,7 +475,7 @@ with sync_playwright() as sp:
         pi.wait_for_timeout(3000)
 
     pi.evaluate(_caret, [TOP, BOTTOM])
-    attach_one()
+    attach_one("the composer's Pad opens blank, not on the author's own Pad draft")
     _txt = pi.evaluate("() => document.getElementById('composerText').value")
     check("attaching writes the marker at the cursor, on a line of its own",
           _txt == TOP + "\n[skribl]\n" + BOTTOM, repr(_txt))
@@ -481,14 +485,7 @@ with sync_playwright() as sp:
     check("...and removing the drawing takes the marker out with it",
           "[skribl]" not in _txt and TOP in _txt and BOTTOM in _txt, repr(_txt))
     pi.evaluate(_caret, [TOP, BOTTOM])
-    attach_one()
-    # COMPOSE KEEPS NO PAD DRAFT (v315). It used to share the Pad's autosave
-    # slot, which is how this section first went red: the removed drawing was
-    # restored on the next open as a finished take, and nothing could be drawn.
-    check("the composer's Pad opens blank, not on the author's own Pad draft",
-          blank_on_open[:1] == [0], f"inked pixels on first open: {blank_on_open[:1]}")
-    check("...and a drawing removed from the post does not come back on the next open",
-          blank_on_open[1:2] == [0], f"inked pixels on reopen: {blank_on_open[1:2]}")
+    attach_one("...and a drawing removed from the post does not come back on the next open")
     check("attaching to a post leaves the author's own Pad draft exactly as it was",
           bool(OWN_DRAFT) and pi.evaluate(_SLOT) == OWN_DRAFT,
           "the slot changed" if pi.evaluate(_SLOT) != OWN_DRAFT else "unchanged")
