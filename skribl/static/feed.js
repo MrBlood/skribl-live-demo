@@ -40,6 +40,17 @@
     return Math.round(mins / 1440) + 'd';
   }
 
+  /* Where the author put the drawing in their text. Typed into the composer
+     on attach and split on in row(); a host that stores the position its own
+     way (an attachment offset, a node in a rich-text document) needs neither. */
+  var MARK = '[skribl]';
+  function textBlock(words) {
+    var el = document.createElement('div');
+    el.className = 'pbody';
+    el.textContent = words;
+    return el;
+  }
+
   function row(item) {
     var post = document.createElement('article');
     post.className = 'post';
@@ -62,15 +73,18 @@
     head.appendChild(meta);
     post.appendChild(head);
 
-    if (item.title || item.caption) {
-      var body = document.createElement('div');
-      body.className = 'pbody';
-      /* The CAPTION is the post's text; the title exists for what /s/<id>
-         unfurls with, and a host composer derives both from the same words —
-         so printing them together says everything twice. */
-      body.textContent = item.caption || item.title;
-      post.appendChild(body);
-    }
+    /* THE SKRIBL SITS WHERE THE AUTHOR PUT IT (v315). The composer writes
+       MARK into the text at the cursor when a drawing is attached; here the
+       text is split at the first one, words before it above the player and
+       words after it below. No marker -- a post written before this, or one
+       whose author deleted it -- keeps the old order: text, then drawing.
+       A real host does the same with its OWN post body; the marker is this
+       page's stand-in for that, since it has no post table (see below). */
+    var cap = item.caption || '';
+    var at = cap.indexOf(MARK);
+    var before = (at >= 0 ? cap.slice(0, at) : cap).trim();
+    var after = at >= 0 ? cap.slice(at + MARK.length).trim() : '';
+    if (before) post.appendChild(textBlock(before));
 
     var frag = tpl.content.cloneNode(true);
     var box = frag.querySelector('[data-skribl-inline]');
@@ -93,6 +107,26 @@
       poster.setAttribute('alt', item.title || 'A Skribl');
     }
     post.appendChild(frag);
+    /* The title under the player (v315), as the macro's `title=` renders it
+       for a host's server-side feed. Shown only when it is the drawing's own
+       name: not the "Untitled Skribl" default, and not the opening words of
+       the post itself, which a host that derives one from the other would
+       otherwise print twice. Compared with whitespace collapsed, because a
+       derived title is one line and the post it came from need not be. */
+    var flat = function (x) { return x.replace(MARK, ' ').replace(/\s+/g, ' ').trim(); };
+    var name = (item.title || '').trim();
+    if (name && name !== 'Untitled Skribl' && flat(cap).indexOf(flat(name)) !== 0) {
+      var line = document.createElement('p');
+      line.className = 'skribl-inline-title';
+      var b = document.createElement('b');
+      b.textContent = name;
+      var kind = document.createElement('span');
+      kind.textContent = 'Skribl';
+      line.appendChild(b);
+      line.appendChild(kind);
+      post.appendChild(line);
+    }
+    if (after) post.appendChild(textBlock(after));
     return post;
   }
 
@@ -138,6 +172,20 @@
     compose.status.classList.toggle('error', !!bad);
   }
 
+  /* PUT THE DRAWING WHERE THE CURSOR IS (v315): MARK goes into the text at
+     the caret, on a line of its own, the first time a drawing is attached.
+     Re-attaching after an edit leaves the marker where the author has since
+     moved it. One per post, so a second MARK is never written. */
+  function placeMark() {
+    var t = compose.text;
+    if (t.value.indexOf(MARK) >= 0) return;
+    var at = typeof t.selectionStart === 'number' ? t.selectionStart : t.value.length;
+    var head = t.value.slice(0, at), tail = t.value.slice(at);
+    var ins = (head && !/\n$/.test(head) ? '\n' : '') + MARK + (/^\n/.test(tail) ? '' : '\n');
+    t.value = head + ins + tail;
+    t.selectionStart = t.selectionEnd = (head + ins).length;
+  }
+
   function syncPostBtn() {
     /* A post needs something in it. Text alone is a post; a Skribl alone is a
        post; neither is not. */
@@ -170,6 +218,7 @@
     onClose: function () { compose.overlay.hidden = true; },
     onDone: function (payload) {
       compose.payload = payload;
+      placeMark();
       showAttached();
     }
   });
@@ -179,6 +228,7 @@
   document.getElementById('padCloseBtn').addEventListener('click', pad.close);
   document.getElementById('removeSkriblBtn').addEventListener('click', function () {
     compose.payload = null;
+    compose.text.value = compose.text.value.replace(MARK + '\n', '').replace(MARK, '');
     compose.attachWrap.hidden = true;
     if (compose.player) compose.player.settle();
     pad.clear();
@@ -202,7 +252,11 @@
        "unlisted" because that is what a link-sharing product should do, and a
        feed's composer is exactly the caller that means otherwise. */
     var body = Object.assign({}, compose.payload, {
-      title: words.slice(0, 80) || 'Untitled Skribl',
+      /* The drawing's own name when it has one; otherwise the post's words,
+         which is what /s/<id> unfurls with. The marker is never a title. */
+      title: (compose.payload.title && compose.payload.title !== 'Untitled Skribl')
+        ? compose.payload.title
+        : (words.replace(MARK, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Untitled Skribl'),
       caption: words,
       visibility: 'public'
     });

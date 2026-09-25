@@ -1255,7 +1255,11 @@ with sync_playwright() as sp:
     #   MEASURE A FEATURE ON ONE SURFACE WITH IT ABSENT. The obvious
     #   cross-surface comparison is confounded -- an opaque control scores worse,
     #   because the two players fit the drawing to different boxes.
-    EMBED_RATCHET = 37_200
+    # v315: 37,200 -> 36,800. The title line cost ~340 B of CSS and was paid
+    # for by moving ~740 B of the stylesheet's header, which was reasoning
+    # rather than values, into inlineplayer.js's (stripped) header. Measured
+    # after both: 36,763 B.
+    EMBED_RATCHET = 36_800
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -1605,6 +1609,103 @@ check("no template hand-writes the in-post player's internals — they are the "
 check("and there IS a draft macro, so a host previewing one need not copy them",
       "macro skribl_inline_draft" in
       (ROOT / "skribl" / "templates" / "skribl" / _macro_file).read_text(encoding="utf-8"))
+
+
+print("\nINLINE — the title line under the player (v315)")
+# The owner picked it from a mock: the drawing's name under the player, the
+# way a caption follows a photo. OPT-IN through the macro, so a host that
+# prints the title in its own layout, and every template written before this,
+# renders exactly what it did. Rendered in-process here because the question is
+# what the MACRO emits; the feed below is the browser half.
+sys.path.insert(0, str(ROOT))
+from flask import render_template_string as _rts
+from app import app as _app
+_T = ("{% from 'skribl/_skribl_inline_player.html' import skribl_inline %}"
+      "{{ skribl_inline('abc123', title=t) }}")
+with _app.test_request_context():
+    _with = _rts(_T, t='Flower <i>for</i> you & me')
+    _without = _rts(_T, t=None)
+check("with a title, the macro puts one title line AFTER the player, not inside it",
+      _with.count('class="skribl-inline-title"') == 1
+      and _with.index('class="skribl-inline-title"') > _with.rindex("</div>"),
+      _with[-200:])
+check("...the title is escaped, never markup",
+      "Flower &lt;i&gt;for&lt;/i&gt; you &amp; me" in _with and "<i>for</i>" not in _with,
+      _with[-160:])
+check("without one, nothing is rendered -- an existing host's template is unchanged",
+      "skribl-inline-title" not in _without, _without[-120:])
+
+try:
+    from playwright.sync_api import sync_playwright as _spw
+except Exception:
+    _spw = None
+if _spw:
+    _tb = {"title": "Title line fixture", "version": 2, "schemaVersion": 2, "visibility": "public",
+           "canvasSize": {"cssWidth": 800, "cssHeight": 600},
+           "frames": [{"strokes": [{"x": 10, "y": 10, "color": "#fff", "size": 6, "t": 0},
+                                   {"x": 300, "y": 200, "color": "#fff", "size": 6, "t": 99}],
+                       "strokeGroups": [2]}]}
+    _rq = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_tb).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(_rq, timeout=20) as _r:
+        _tid = json.loads(_r.read().decode())["id"]
+    with _spw() as _pw:
+        _b = _pw.chromium.launch()
+        _pg = _b.new_page(viewport={"width": 390, "height": 844})
+        browsing.goto(_pg, BASE, "/feed")
+        _pg.wait_for_timeout(1500)
+        _tl = _pg.evaluate("""(id) => {
+            const box = document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]');
+            if (!box) return null;
+            const post = box.parentElement;
+            const line = post.querySelector('.skribl-inline-title');
+            const bodies = [...post.querySelectorAll('.pbody')].map(e => e.textContent);
+            if (!line) return { line: null, bodies };
+            const lr = line.getBoundingClientRect(), br = box.getBoundingClientRect();
+            return { name: line.querySelector('b').textContent, kind: line.querySelector('span').textContent,
+                     below: lr.top >= br.bottom - 1, h: lr.height, bodies }; }""", _tid)
+        check("the feed shows a post's title on a line under its player, marked Skribl",
+              bool(_tl) and _tl.get("name") == "Title line fixture" and _tl.get("kind") == "Skribl"
+              and _tl.get("below") and _tl.get("h", 0) > 0, str(_tl))
+        check("...and a post with no caption does not print its title twice",
+              bool(_tl) and "Title line fixture" not in _tl.get("bodies", []), str(_tl))
+
+        # PLACEMENT (v315): where the marker is, the drawing is. And the title
+        # line is the drawing's NAME: never the default, never a copy of the
+        # post's own opening words (the demo composer derives one from the
+        # other when the drawing has no name).
+        def _mk(title, caption):
+            _bd = dict(_tb, title=title, caption=caption)
+            _rq2 = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_bd).encode(),
+                                          headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(_rq2, timeout=20) as _r2:
+                return json.loads(_r2.read().decode())["id"]
+        _placed = _mk("Named drawing", "Above the drawing.\n[skribl]\nBelow the drawing.")
+        _plain = _mk("Plain named", "Just words, no marker.")
+        _derived = _mk("Morning sketch on the bus", "Morning sketch on the bus")
+        _untitled = _mk("Untitled Skribl", "Words only.")
+        browsing.goto(_pg, BASE, "/feed")
+        _pg.wait_for_timeout(1500)
+        _SHAPE = """(id) => { const box = document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]');
+            if (!box) return null;
+            return [...box.parentElement.children].map(e => e === box ? 'PLAYER'
+              : e.classList.contains('pbody') ? 'TEXT:' + e.textContent
+              : e.classList.contains('skribl-inline-title') ? 'TITLE:' + e.querySelector('b').textContent
+              : '-').filter(x => x !== '-'); }"""
+        _s = _pg.evaluate(_SHAPE, _placed)
+        check("a marker puts the drawing between the words: text, player, title, text",
+              _s == ["TEXT:Above the drawing.", "PLAYER", "TITLE:Named drawing", "TEXT:Below the drawing."],
+              str(_s))
+        _s = _pg.evaluate(_SHAPE, _plain)
+        check("...no marker keeps the old order: text, then the player",
+              _s == ["TEXT:Just words, no marker.", "PLAYER", "TITLE:Plain named"], str(_s))
+        _s = _pg.evaluate(_SHAPE, _derived)
+        check("...a title that is only the post's opening words gets no title line",
+              _s == ["TEXT:Morning sketch on the bus", "PLAYER"], str(_s))
+        _s = _pg.evaluate(_SHAPE, _untitled)
+        check("...and neither does the Untitled Skribl default",
+              _s == ["TEXT:Words only.", "PLAYER"], str(_s))
+        _b.close()
 
 
 passed = sum(1 for ok, _ in results if ok)

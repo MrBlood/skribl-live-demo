@@ -1,24 +1,12 @@
-/* The in-post player's stylesheet.
- *
- * NOT styles.css and NOT player.css. This is the only Skribl CSS meant to load
- * inside SOMEBODY ELSE'S page, so every rule is scoped under .skribl-inline and
- * nothing outside the component is selected. It is outside cssgraph.py's graph
- * entirely — that tool derives player.css from styles.css.
+/* The in-post player's stylesheet: the only Skribl CSS that loads inside
+ * somebody else's page, so every rule is scoped under .skribl-inline.
  *
  * IT FOLLOWS THE HOST'S THEME: every colour reads a custom property with its
- * own value as the fallback — `var(--bg-elev, #12151c)`. Tokens consumed, all
- * optional: --bg-elev, --border, --radius, --accent, --accent-2.
+ * own value as the fallback. Tokens consumed, all optional: --bg-elev,
+ * --border, --radius, --accent, --accent-2.
  *
- * PROSE HERE IS PROSE EVERY HOST DOWNLOADS: jsstrip.py strips a JavaScript
- * response and nothing does that for CSS. So PRODUCT reasoning lives in
- * inlineplayer.js's header, and what stays here is the numbers, and the notes
- * a host needs in order to override something safely.
- *
- * The poster's two literals below, 128.0488% and -5.4878%, are 630/492 and
- * 27/492 from lib/sharecard.js band(), and they are the NO-SCRIPT FALLBACK:
- * inlineplayer.js reframes the poster onto the drawing itself wherever the
- * page knows the drawing's size. Both are asserted against the real module by
- * verify_inline.py. The arithmetic and the why: inlineplayer.js's header.
+ * 128.0488% and -5.4878% below are the poster's no-script fallback crop. Why,
+ * and everything else that is reasoning rather than a value: inlineplayer.js.
  */
 
 .skribl-inline {
@@ -293,3 +281,8 @@
   .skribl-inline * { transition: none !important; }
   .skribl-inline-play.is-busy::after { animation: none; }
 }
+
+/* The optional title line under the player (skribl_inline title=...). */
+.skribl-inline-title{display:flex;align-items:baseline;gap:8px;margin:8px 2px 0;font-size:14px;line-height:1.3}
+.skribl-inline-title b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skribl-inline-title span{flex:none;font-size:12px;opacity:.6}

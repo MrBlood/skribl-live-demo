@@ -45,6 +45,15 @@
 // user which files to re-add, with their settings already in place.
 const AUTOSAVE_KEY = 'skribl_autosave_v1';
 
+// COMPOSE MODE KEEPS NO PAD DRAFT (v315). The Pad opened from a host's composer
+// is drawing an attachment, and the host holds that drawing (composehost.js).
+// Sharing this slot did three wrong things: a drawing removed from the post
+// came back on the next open, an unrelated Pad draft appeared inside someone's
+// post, and "Add to post" left its drawing to overwrite the author's own Pad
+// draft. So compose neither restores from nor writes to the slot or the media
+// store — the ordinary Pad's draft is untouched by anything done in a post.
+const PAD_DRAFT_OFF = (typeof window !== 'undefined' && window.SKRIBL_MODE === 'compose');
+
 // ---- The durability model (external review P0-2 / #19) ----------------------
 // Every mutating edit bumps draftRev (in scheduleAutosave — the same triggers
 // that always meant "something changed"). A write that SUCCEEDS records the
@@ -79,7 +88,7 @@ const _mediaSeq = { photo: 0, music: 0 };
 const MEDIA_STORE_TIMEOUT_MS = 12000;   // Flip's SPILL_TIMEOUT_MS, for the same reason
 function storeMediaBytes(kind) {
   const file = _mediaFile[kind];
-  if (!file) return;
+  if (!file || PAD_DRAFT_OFF) return;
   if (!window.SkriblDraftStore) { mediaDraft[kind] = 'failed'; return; }
   if (mediaDraft[kind] === 'saving') return;   // one write in flight at a time; a hung one is given up below
   const seq = ++_mediaSeq[kind];
@@ -234,7 +243,7 @@ function showAutosaveStatus(state) {
 
 function writeAutosave() {
   // Player mode is read-only — never mutate the editor's autosave.
-  if (document.body.classList.contains('player-mode')) return;
+  if (document.body.classList.contains('player-mode') || PAD_DRAFT_OFF) return;
   // Nothing meaningful on the canvas AND nothing undone to preserve → clear any
   // stale save. (Keep it when redo is pending, so undoing to blank then reloading
   // can still redo the undone strokes.)
@@ -357,10 +366,11 @@ function scheduleAutosave() {
 
 function clearAutosave() {
   clearTimeout(autosaveTimer);
-  try { localStorage.removeItem(AUTOSAVE_KEY); durableRev = draftRev; } catch (e) {}
+  if (PAD_DRAFT_OFF) durableRev = draftRev;
+  else try { localStorage.removeItem(AUTOSAVE_KEY); durableRev = draftRev; } catch (e) {}
   // The draft is being deliberately discarded (posted, or cleared) — the
   // media bytes belong to it and go with it.
-  if (window.SkriblDraftStore) {
+  if (window.SkriblDraftStore && !PAD_DRAFT_OFF) {
     SkriblDraftStore.del('pad:photo').catch(() => {});
     SkriblDraftStore.del('pad:music').catch(() => {});
   }
@@ -550,7 +560,7 @@ function restoreAutosave(data) {
   //
   // SAFE AT PARSE TIME: app.js calls resizeCanvas() synchronously while it
   // loads, so the canvas has its real size before this file runs.
-  const saved = readAutosave();
+  const saved = PAD_DRAFT_OFF ? null : readAutosave();
   if (saved) {
     restoreAutosave(saved);
     sessionOwnedDraft = true;

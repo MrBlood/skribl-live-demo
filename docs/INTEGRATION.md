@@ -273,7 +273,9 @@ wrong: the editor's `src` is set on first open and never in your markup (or
 every feed view downloads a drawing tool nobody opened); re-opening an
 already-loaded editor pushes the draft's payload in, so the editor shows what
 the DRAFT holds rather than whatever it kept from last time; `clear()` resets
-the frame, so removing a Skribl does not leave the next pad press reopening it;
+the frame, so removing a Skribl does not leave the next pad press reopening it
+(and the compose editor keeps no draft of its own, so the author's standalone
+Pad draft neither appears in a post nor is overwritten by one);
 and the origin is checked inbound and targeted outbound, never `'*'`.
 
 It does NOT post. Posting is yours — you write your own row and store the id on
@@ -359,6 +361,45 @@ row that goes red without it — the compositor with a translucent fixture
 rendered twice, the aspect at 9:16, 4:3 and 1:1, both fits of a photo sampled
 across the canvas, a 40% photo measured against its composite over the
 background, and a hard edge whose step collapses under an authored blur.
+
+## Placing the Skribl inside the post's text
+
+A post can be a paragraph, then the drawing, then more words. Skribl does not
+decide where the drawing goes: `{{ skribl_inline(post.skribl_id) }}` renders
+wherever your template calls it, and a page can hold as many as it likes. What
+your side needs is somewhere to keep the position, and a render that honours it.
+One Skribl per post is the shape this section describes.
+
+**Keep the position when the drawing is attached.** When "Add to post" hands
+your composer the payload, record where the author's cursor was. How depends on
+your composer: a plain textarea can take a marker at the caret, a rich-text
+editor can insert a Skribl node, and a form can store a character offset beside
+the text. The `/skribl/feed` demo does the first. It writes `[skribl]` on a line
+of its own at the cursor, and because it has no post table, that marker travels
+in the Skribl's caption. Your post body is the right place for it on your side.
+
+**Render the text in two halves.** Split at the stored position: words before
+it, then the player, then words after it.
+
+```jinja
+{% set parts = post.body.split('[skribl]', 1) %}
+<p>{{ parts[0] }}</p>
+{{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h,
+                 title=post.skribl_title) }}
+{% if parts|length > 1 %}<p>{{ parts[1] }}</p>{% endif %}
+```
+
+A post with no marker (written before you added this, or one whose author
+deleted it) splits into one part and keeps the old order: text, then drawing.
+Escape each half as you already escape post text. The marker is a position,
+never markup.
+
+**The title line.** Pass `title=` and a line with the drawing's name and the
+word Skribl renders under the player, the way a caption follows a photo. Leave
+it out and nothing renders. That is the right choice if your layout already
+prints the title, and it is what every template written before this does. Pass
+the drawing's own name, not the opening words of the post: a title derived from
+the post text prints those words twice.
 
 ## When your composer is a form, not a browser
 

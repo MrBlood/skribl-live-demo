@@ -427,6 +427,88 @@ with sync_playwright() as sp:
     check("no page errors from the marker", not perrs, "; ".join(perrs[:2]))
     pad.close()
 
+    # ---- the drawing goes where the cursor was (v315) ------------------------
+    # The owner's question: write a paragraph, attach a Skribl, write more --
+    # does it land where it was attached? It does, on this page, through a
+    # marker the composer writes at the caret; the feed splits the post there.
+    # Driven through the real iframe, because the composer's half of this runs
+    # in onDone, which only the editor's "Add to post" reaches.
+    print("\nCOMPOSE — the drawing lands where the cursor was")
+    ictx = b.new_context(viewport={"width": 1240, "height": 980}, color_scheme="dark")
+    pi = ictx.new_page()
+    ierrs = []
+    pi.on("pageerror", lambda e: ierrs.append(str(e)))
+    # The author has a Pad draft of their own in this browser before they ever
+    # compose a post: a real one, drawn on the ordinary Pad and autosaved.
+    _SLOT = "() => localStorage.getItem('skribl_autosave_v1')"
+    own = ictx.new_page()
+    browsing.goto(own, BASE, "/skribl-pad")
+    own.wait_for_timeout(1500)
+    draw(own, own.locator("#canvas").bounding_box(), turns=3, n=40)
+    own.wait_for_function("() => !!localStorage.getItem('skribl_autosave_v1')", timeout=10000)
+    own.close()   # its pagehide flush rewrites the slot, so read it after
+    browsing.goto(pi, BASE, "/feed")
+    OWN_DRAFT = pi.evaluate(_SLOT)
+    TOP, BOTTOM = "Made this on the bus.", "Loop it to see where I stopped."
+    _caret = """([top, bottom]) => { const t = document.getElementById('composerText');
+        t.value = top + '\\n' + bottom; t.focus();
+        t.selectionStart = t.selectionEnd = top.length + 1; }"""
+
+    # COMPOSE KEEPS NO PAD DRAFT (v315). It used to share the Pad's autosave
+    # slot, which is how this section first went red: the removed drawing was
+    # restored on the next open as a finished take, and nothing could be drawn.
+    # Asserted AS THE PAD OPENS, because a restored take then blocks drawing and
+    # the rest of the flow crashes before a later check could name the cause.
+    def attach_one(blank_claim):
+        pi.click("#padBtn")
+        pi.wait_for_timeout(4000)
+        _ink = pi.evaluate(EDITOR_INK)
+        check(blank_claim, _ink == 0, f"{_ink} inked pixels as the Pad opened")
+        fi = pi.frame_locator("#padFrame")
+        draw(pi, fi.locator("#canvas").bounding_box(), turns=2, n=40)
+        pi.wait_for_timeout(300)
+        fi.locator("#recordBtn").click()
+        pi.wait_for_timeout(300)
+        fi.locator("#postBtn").click()
+        pi.wait_for_timeout(900)
+        fi.locator("#postSubmitBtn").click()
+        pi.wait_for_timeout(3000)
+
+    pi.evaluate(_caret, [TOP, BOTTOM])
+    attach_one("the composer's Pad opens blank, not on the author's own Pad draft")
+    _txt = pi.evaluate("() => document.getElementById('composerText').value")
+    check("attaching writes the marker at the cursor, on a line of its own",
+          _txt == TOP + "\n[skribl]\n" + BOTTOM, repr(_txt))
+    pi.click("#removeSkriblBtn")
+    pi.wait_for_timeout(300)
+    _txt = pi.evaluate("() => document.getElementById('composerText').value")
+    check("...and removing the drawing takes the marker out with it",
+          "[skribl]" not in _txt and TOP in _txt and BOTTOM in _txt, repr(_txt))
+    pi.evaluate(_caret, [TOP, BOTTOM])
+    attach_one("...and a drawing removed from the post does not come back on the next open")
+    check("attaching to a post leaves the author's own Pad draft exactly as it was",
+          bool(OWN_DRAFT) and pi.evaluate(_SLOT) == OWN_DRAFT,
+          "the slot changed" if pi.evaluate(_SLOT) != OWN_DRAFT else "unchanged")
+    pi.click("#postBtn")
+    pi.wait_for_timeout(5000)
+    _order = pi.evaluate("""() => {
+        const post = document.querySelector('#feedList .post');
+        if (!post) return null;
+        return [...post.children].map(e => e.matches('[data-skribl-inline], .skribl-inline') ? 'PLAYER'
+               : e.classList.contains('pbody') ? 'TEXT:' + e.textContent
+               : e.classList.contains('skribl-inline-title') ? 'TITLE' : e.className); }""")
+    _texts = [x for x in (_order or []) if isinstance(x, str) and x.startswith("TEXT:")]
+    check("the posted feed shows the words before, then the drawing, then the words after",
+          bool(_order) and "PLAYER" in _order
+          and _order.index("TEXT:" + TOP) < _order.index("PLAYER") < _order.index("TEXT:" + BOTTOM),
+          str(_order))
+    check("...and no title line, because the title the composer derived IS those words",
+          bool(_order) and "TITLE" not in _order, str(_order))
+    check("...and the marker itself is never shown",
+          all("[skribl]" not in x for x in _texts), str(_texts))
+    check("no page errors placing the drawing", not ierrs, "; ".join(ierrs[:2]))
+    ictx.close()
+
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)
