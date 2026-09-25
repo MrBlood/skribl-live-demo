@@ -11894,6 +11894,37 @@ SK312-005 (toolbar density) were already the owner's open decisions.
 SK312-008 (a failed post saves locally, under a button called Post) is a
 design question for the owner, not a defect.
 
+### What the first seal of this tree found
+
+The first release run of v313 went FAIL on one assertion: `verify_gallery`
+183/184, "...and the drawing is on its canvas". Nothing in this release
+touches the gallery. Its CI jobs were green on the same commit, and the suite
+passed alone. The record could not name the assertion: the runner's per-suite
+logs are temporary, and the batch diagnostics keep a tail that did not reach
+it. So it was reproduced before any theory was allowed. Three idle runs were
+3/3 green. Three with six busy loops on the box were 3/3 red, at 85, 198 and
+142 pixels.
+
+Those are partial drawings, not blank canvases. The check clicked a tile,
+waited a fixed 1.5s and counted ink once, and the tile replays its drawing and
+loops it, so a single sample lands wherever the replay happens to be. Under
+the same load the fixed check found the full drawing within 0.3-0.4s, so a
+slow first reveal is NOT what the old check tripped on. A sample landing
+mid-replay or just after a loop restart fits what was seen. Which of the two
+it was was not measured, and this entry does not claim either. It
+is the "fixed wait standing in for a load" shape the v312 entry named in
+`verify_hold` and `verify_player_isolation`, found a third time in a suite
+nobody had looked at for it. The check now asks until the ink is there, with a
+20s backstop that stays out of the verdict. Calibrated under the same load
+that broke it: 3/3 green, ink at 0.3-0.4s. Against a player whose stroke,
+fill and drawImage do nothing it goes red: 0 pixels at the 20.2s deadline.
+
+**Worth knowing for next time, and not fixed here:** a failing suite's full
+output does not survive a release run. The per-suite logs live in a temp
+directory that is deleted, and RELEASE.md's batch diagnostics keep a bounded
+tail. This failure was nameable only because it reproduced. One that does not
+reproduce would leave nothing but a count.
+
 ### Still open, and still the owner's
 
 Nothing reads the main branch's post-merge battery. This time it was read,
