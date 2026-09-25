@@ -8,9 +8,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Library</title>
   {% include 'skribl/_skribl_app_identity.html' %}
+  {# The app's theme, stamped before first paint -- the same partial the
+     editors and the gallery carry. Until v313 this page did not include it and
+     stayed dark whatever the person had chosen (SK312-001). #}
+  {% include 'skribl/_skribl_theme_boot.html' %}
   {# posted.css: Your Skribls' rows and the recovery-key overlays, in
      styles.css's token vocabulary; the map below speaks it in this page's
-     palette, both ramps. #}
+     palette, both ramps (this said "both ramps" for releases while the page
+     had one). #}
   <link rel="stylesheet" href="{{ skribl_asset('posted.css') }}">
   {# fullbar.css travels with lib/fullbar.js — see that sheet's header. #}
   <link rel="stylesheet" href="{{ skribl_asset('fullbar.css') }}">
@@ -20,18 +25,24 @@
      in-post player, since v275 (verify_library.py). This comment called it a
      concept preview of demo drawings until SK-AUD-011 read it as current.
      CSP-safe: inline <style> is allowed but inline <script> is not, so the
-     logic lives in the self-hosted library.js. Google Fonts is blocked by
-     font-src 'self', so the CSS font stacks fall back to system faces on
-     purpose. #}
+     logic lives in the self-hosted library.js. The type is the platform's
+     own (system-ui, ui-monospace): font-src is 'self' and the page serves no
+     face, so a stack that named one first -- it named Archivo and IBM Plex
+     Mono until v313 -- drew in whatever the visitor happened to have
+     installed (SK312-007). #}
   <style>
-    /* Skribl is a dark-committed product (styles.css sets color-scheme:dark), so
-       this page commits to dark too and paints every ground and colour explicitly
-       so it holds on any host. Chrome tokens are lifted from the app's styles.css;
-       the Riso ink palette is the DRAWING palette (lib/palette.js) and is used
-       only inside the artwork, which never follows the chrome theme. */
+    /* BOTH RAMPS, keyed on the data-theme the boot above stamps -- the same
+       shape as the gallery's sheet. This comment used to open "Skribl is a
+       dark-committed product", which stopped being true when the editors grew
+       a light ramp and stayed written here until an outside audit of v312
+       (SK312-001): a light choice held on the editor and the gallery and fell
+       off on this page. Every ground and colour is still painted explicitly so
+       the page holds on any host. The Riso ink palette is the DRAWING palette
+       (lib/palette.js) and is used only inside the artwork, which never
+       follows the chrome theme. */
     :root {
       color-scheme: dark;
-      --base: #0b0d12;
+      --base: {{ skribl_theme_ground.dark }};
       --deep: #06070a;
       --raised: #0f1218;
       --panel: #13161c;
@@ -56,14 +67,44 @@
       --ink-blue: #0078bf;
       --r: 12px;
       --r-sm: 9px;
-      --font-ui: 'Archivo', system-ui, -apple-system, sans-serif;
-      --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+      --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
       /* posted.css's vocabulary (styles.css's names), on this palette. */
       --surface-panel: var(--panel); --surface-control: var(--control); --surface-control-hover: var(--control-hi);
       --surface-sheet: var(--panel); --surface-well: var(--control); --surface-tint: rgba(124,92,255,0.08); --surface-tint-lit: rgba(124,92,255,0.14);
       --hairline-strong: #2e3542; --line-strong: #3a4658; --line-mid: var(--hairline); --ui-line: var(--accent); --ui-hi: var(--accent-bright);
       --text-primary: var(--text); --text-secondary: var(--text-2); --text-strong: var(--text); --text-muted: var(--text-2); --text-tool-3: var(--text-3);
       --accent-tint-2: var(--accent-tint); --danger: #f4326f; --danger-soft: #ff8fae;
+      /* The kind pills' inks, and the hover edge. Literals at their rules
+         until v313, tuned for the dark ground and nothing else. */
+      --kind-pad-ink: #ffd7ea; --kind-pad-edge: #5a2a44;
+      --kind-flip-ink: #cfe0ff; --kind-flip-edge: #26406a;
+      --hover-edge: #3a4658;
+    }
+    /* The light ramp. Neutrals are the gallery's values where the gallery has
+       the token, so the two pages read as one product side by side; the
+       accent family is unchanged except --accent-tint, which is TEXT here (the
+       handle, a lit toggle, a link) and needs a dark ink on a light ground. */
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --base: {{ skribl_theme_ground.light }};
+      --deep: #e9ecf2;
+      --raised: #ffffff;
+      --panel: #ffffff;
+      --control: #f1f3f7;
+      --control-hi: #e7eaf0;
+      --pop: #ffffff;
+      --hairline: #d9dee7;
+      --hairline-soft: #e3e7ee;
+      --text: #14171d;
+      --text-2: #4b5563;
+      --text-3: #6b7280;
+      --accent-tint: #5b3fd6;
+      --hairline-strong: rgba(0,0,0,0.18); --line-strong: #b8c0cc;
+      --danger: #c1104a; --danger-soft: #b0103f;
+      --kind-pad-ink: #a3185f; --kind-pad-edge: #f0bfd8;
+      --kind-flip-ink: #1f4f99; --kind-flip-edge: #b9cdea;
+      --hover-edge: #b8c0cc;
     }
   
     * { box-sizing: border-box; }
@@ -178,8 +219,8 @@
     .pmeta .prow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; color: var(--text-2); font-family: var(--font-mono); font-size: 12px; }
     .kind { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--hairline); color: var(--text-2); }
     .kind svg { width: 12px; height: 12px; }
-    .kind.pad { color: #ffd7ea; border-color: #5a2a44; background: rgba(255,72,176,.08); }
-    .kind.flip { color: #cfe0ff; border-color: #26406a; background: rgba(0,120,191,.10); }
+    .kind.pad { color: var(--kind-pad-ink); border-color: var(--kind-pad-edge); background: rgba(255,72,176,.08); }
+    .kind.flip { color: var(--kind-flip-ink); border-color: var(--kind-flip-edge); background: rgba(0,120,191,.10); }
     /* WHICH WAY IT WAS POSTED, on the meta line -- not on a line of its own.
        It was the only thing ever put inside `.pstats`, a block built for a
        social-count row this page does not render, so "in the gallery" sat
@@ -205,7 +246,7 @@
     .tbtn { position: relative; z-index: 1; }
     .tbtn::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
     .tbtn.play { width: 46px; height: 46px; background: linear-gradient(150deg, var(--accent-bright), var(--accent)); border-color: transparent; color: #0b0616; box-shadow: 0 5px 18px var(--accent-glow); }
-    .tbtn.on { color: var(--accent-tint); border-color: #3a336a; background: rgba(124,92,255,.14); }
+    .tbtn.on { color: var(--accent-tint); border-color: rgba(124,92,255,.45); background: rgba(124,92,255,.14); }
     .transport .telapsed { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
     /* Six buttons and a clock do not fit one row at phone width (the full-
        screen button, v304, made it six): the clock takes its own row. */
@@ -226,7 +267,7 @@
        at, and an invisible band is no help to the eye. */
     .chip { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .04em; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--hairline); background: transparent; color: var(--text-2); cursor: pointer; transition: .15s;
       min-height: 34px; display: inline-flex; align-items: center; }
-    .chip:hover { border-color: #34506a; color: var(--text); }
+    .chip:hover { border-color: var(--hover-edge); color: var(--text); }
     .chip.active { background: var(--accent); border-color: transparent; color: #0b0616; font-weight: 600; }
     .search { position: relative; }
     /* min-height 44: an input has no ::before to grow a tap band with, so the box is the box. */
@@ -246,7 +287,7 @@
   
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 14px; }
     .card { text-align: left; padding: 0; background: var(--raised); border: 1px solid var(--hairline); border-radius: var(--r); overflow: hidden; cursor: pointer; transition: transform .13s, border-color .13s, box-shadow .13s; }
-    .card:hover { transform: translateY(-3px); border-color: #3a4658; box-shadow: 0 12px 26px rgba(0,0,0,.42); }
+    .card:hover { transform: translateY(-3px); border-color: var(--hover-edge); box-shadow: 0 12px 26px rgba(0,0,0,.42); }
     .card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 12px 30px var(--accent-glow); }
     .card .art { position: relative; aspect-ratio: 4/3; }
     .card .art canvas { display: block; width: 100%; height: 100%; }
@@ -410,7 +451,7 @@
     .stageCanvasWrap.is-immersive-page .full-exit { display: grid; }
     .more-wrap { display: flex; justify-content: center; margin-top: 16px; }
     .more { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .04em; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 10px 20px; cursor: pointer; transition: background .15s, border-color .15s; }
-    .more:hover { background: var(--control-hi); border-color: #3a4658; }
+    .more:hover { background: var(--control-hi); border-color: var(--hover-edge); }
     .more .rem { color: var(--text-3); }
     .more svg { width: 15px; height: 15px; }
     .foot { margin-top: 30px; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); text-align: center; }
