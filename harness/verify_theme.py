@@ -579,6 +579,26 @@ with sync_playwright() as p:
           _attr(pg3) == "light", f"data-theme={_attr(pg3)!r}")
     pg3.close()
 
+    # THE PAGES THAT ALSO LOAD lib/theme.js (v315). The player above does not,
+    # which is why every row there was green while theme.js's own apply(get())
+    # at load undid the parameter a moment later on every page that does --
+    # including the compose Pad a host iframes. Sampled after that script has
+    # run, with a stored DARK the URL must beat.
+    pg4 = browser.new_page(viewport={"width": 1000, "height": 900}, color_scheme="dark")
+    pg4.goto(BASE + "/", wait_until="load")
+    pg4.evaluate(f"() => localStorage.setItem('{KEY}', 'dark')")
+    for _path in ("/", "/flip", "/gallery", "/library", "/skribl-pad?compose=1"):
+        _u = _path + ("&" if "?" in _path else "?") + "theme=light"
+        pg4.goto(BASE + _u, wait_until="load")
+        pg4.wait_for_function("() => !!window.SkriblTheme", timeout=10000)
+        pg4.wait_for_timeout(300)
+        check(f"{_u}: the URL still wins after lib/theme.js has run",
+              _attr(pg4) == "light", f"data-theme={_attr(pg4)!r} with 'dark' stored")
+    pg4.evaluate("() => window.SkriblTheme.set('dark')")
+    check("...and a choice made in the menu beats the URL for the rest of the page",
+          _attr(pg4) is None, f"data-theme={_attr(pg4)!r}")
+    pg4.close()
+
     # No flash: light lands with every script file blocked, so it was the
     # inline boot and not something deferred.
     naked3 = browser.new_page(viewport={"width": 1000, "height": 900})
