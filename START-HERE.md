@@ -748,7 +748,7 @@ rather than a shared rule.
 | `segslider.js` | Pad+Flip | Keeps a .seg-slider pill aligned to the selected button in a .seg group. |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
-| `sharecard.js` | Pad+Flip | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
+| `sharecard.js` | Pad+Flip+library | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
 | `sizeclass.js` | Flip | One size decision, made once, for the whole app. |
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
