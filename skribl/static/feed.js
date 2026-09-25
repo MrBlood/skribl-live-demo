@@ -111,9 +111,11 @@
        for a host's server-side feed. Shown only when it is the drawing's own
        name: not the "Untitled Skribl" default, and not the opening words of
        the post itself, which a host that derives one from the other would
-       otherwise print twice. */
+       otherwise print twice. Compared with whitespace collapsed, because a
+       derived title is one line and the post it came from need not be. */
+    var flat = function (x) { return x.replace(MARK, ' ').replace(/\s+/g, ' ').trim(); };
     var name = (item.title || '').trim();
-    if (name && name !== 'Untitled Skribl' && cap.replace(MARK, '').trim().indexOf(name) !== 0) {
+    if (name && name !== 'Untitled Skribl' && flat(cap).indexOf(flat(name)) !== 0) {
       var line = document.createElement('p');
       line.className = 'skribl-inline-title';
       var b = document.createElement('b');

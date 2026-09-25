@@ -434,18 +434,32 @@ with sync_playwright() as sp:
     # Driven through the real iframe, because the composer's half of this runs
     # in onDone, which only the editor's "Add to post" reaches.
     print("\nCOMPOSE — the drawing lands where the cursor was")
-    pi = b.new_page(viewport={"width": 1240, "height": 980}, color_scheme="dark")
+    ictx = b.new_context(viewport={"width": 1240, "height": 980}, color_scheme="dark")
+    pi = ictx.new_page()
     ierrs = []
     pi.on("pageerror", lambda e: ierrs.append(str(e)))
+    # The author has a Pad draft of their own in this browser before they ever
+    # compose a post: a real one, drawn on the ordinary Pad and autosaved.
+    _SLOT = "() => localStorage.getItem('skribl_autosave_v1')"
+    own = ictx.new_page()
+    browsing.goto(own, BASE, "/skribl-pad")
+    own.wait_for_timeout(1500)
+    draw(own, own.locator("#canvas").bounding_box(), turns=3, n=40)
+    own.wait_for_function("() => !!localStorage.getItem('skribl_autosave_v1')", timeout=10000)
+    own.close()   # its pagehide flush rewrites the slot, so read it after
     browsing.goto(pi, BASE, "/feed")
+    OWN_DRAFT = pi.evaluate(_SLOT)
     TOP, BOTTOM = "Made this on the bus.", "Loop it to see where I stopped."
     _caret = """([top, bottom]) => { const t = document.getElementById('composerText');
         t.value = top + '\\n' + bottom; t.focus();
         t.selectionStart = t.selectionEnd = top.length + 1; }"""
 
+    blank_on_open = []
+
     def attach_one():
         pi.click("#padBtn")
         pi.wait_for_timeout(4000)
+        blank_on_open.append(pi.evaluate(EDITOR_INK))
         fi = pi.frame_locator("#padFrame")
         draw(pi, fi.locator("#canvas").bounding_box(), turns=2, n=40)
         pi.wait_for_timeout(300)
@@ -468,6 +482,16 @@ with sync_playwright() as sp:
           "[skribl]" not in _txt and TOP in _txt and BOTTOM in _txt, repr(_txt))
     pi.evaluate(_caret, [TOP, BOTTOM])
     attach_one()
+    # COMPOSE KEEPS NO PAD DRAFT (v315). It used to share the Pad's autosave
+    # slot, which is how this section first went red: the removed drawing was
+    # restored on the next open as a finished take, and nothing could be drawn.
+    check("the composer's Pad opens blank, not on the author's own Pad draft",
+          blank_on_open[:1] == [0], f"inked pixels on first open: {blank_on_open[:1]}")
+    check("...and a drawing removed from the post does not come back on the next open",
+          blank_on_open[1:2] == [0], f"inked pixels on reopen: {blank_on_open[1:2]}")
+    check("attaching to a post leaves the author's own Pad draft exactly as it was",
+          bool(OWN_DRAFT) and pi.evaluate(_SLOT) == OWN_DRAFT,
+          "the slot changed" if pi.evaluate(_SLOT) != OWN_DRAFT else "unchanged")
     pi.click("#postBtn")
     pi.wait_for_timeout(5000)
     _order = pi.evaluate("""() => {
@@ -481,10 +505,12 @@ with sync_playwright() as sp:
           bool(_order) and "PLAYER" in _order
           and _order.index("TEXT:" + TOP) < _order.index("PLAYER") < _order.index("TEXT:" + BOTTOM),
           str(_order))
+    check("...and no title line, because the title the composer derived IS those words",
+          bool(_order) and "TITLE" not in _order, str(_order))
     check("...and the marker itself is never shown",
           all("[skribl]" not in x for x in _texts), str(_texts))
     check("no page errors placing the drawing", not ierrs, "; ".join(ierrs[:2]))
-    pi.close()
+    ictx.close()
 
     b.close()
 
