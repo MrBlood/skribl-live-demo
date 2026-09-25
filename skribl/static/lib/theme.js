@@ -59,8 +59,21 @@
     try { return !!(global.matchMedia && global.matchMedia('(prefers-color-scheme: light)').matches); }
     catch (e) { return false; }
   }
+  /* ?theme=light|dark ON THE URL WINS FOR THIS DOCUMENT (v288), here as in
+   * the inline boot. It used to be read ONLY there, so this file's own
+   * apply(get()) at load undid it a moment later on every page that loads
+   * this file -- the editors, the gallery, the library, and the compose Pad a
+   * host iframes with the theme it wants. A choice made in the menu replaces
+   * it for the rest of the document: the person outranks the URL. */
+  var urlTheme = null;
+  try {
+    var q = /[?&]theme=(light|dark)(?:&|$)/.exec(global.location.search || '');
+    urlTheme = q ? q[1] : null;
+  } catch (e) { urlTheme = null; }
+
   /* The EFFECTIVE mode: what the chrome wears right now. */
   function get() {
+    if (urlTheme) return urlTheme;
     var m = mode();
     if (m === SYSTEM) return osLight() ? LIGHT : DARK;
     return m;
@@ -96,6 +109,7 @@
   }
   function set(choice) {
     var c = (choice === LIGHT || choice === DARK) ? choice : SYSTEM;
+    urlTheme = null;
     write(c);
     apply(get());
     notify();
