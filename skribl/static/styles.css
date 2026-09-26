@@ -5986,7 +5986,7 @@ body.playing .flip-grid { display: none; }
    themes. A card mid-screen on wide screens; a bottom sheet on a phone, where
    the thumb is. The paired [hidden] rules are the usual defence: an explicit
    display defeats [hidden] otherwise. */
-.sdrafts-scrim { position: fixed; inset: 0; z-index: 90; background: rgba(4, 5, 8, .55); }
+.sdrafts-scrim { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.55); }
 .sdrafts-scrim[hidden] { display: none; }
 .sdrafts-sheet {
   position: fixed; z-index: 91; left: 50%; top: 50%; transform: translate(-50%, -50%);

@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 from flask import current_app, g, jsonify, request, url_for
 
 from .core import _env_int
+from .drafts import max_drafts   # the one reading of SKRIBL_MAX_DRAFTS
 from .jsstrip import strip_bytes, strip_css_bytes
 
 # Text-ish types only. Images, audio and video are already compressed;
@@ -212,11 +213,6 @@ def _signed_in(bp):
         return False
 
 
-def _drafts_limit():
-    from .drafts import max_drafts   # the one reading of SKRIBL_MAX_DRAFTS
-    return max_drafts()
-
-
 def register_security(bp, skribl_version, player_target="_blank"):
     # --- Content Security Policy ---------------------------------------------
     # Deferred until v105 for a good reason: while gifenc/mp4-muxer came from
@@ -283,7 +279,7 @@ def register_security(bp, skribl_version, player_target="_blank"):
                 # is signed in, this browser's otherwise (lib/savedrafts.js).
                 "skribl_drafts_api": url_for(".list_saved_drafts"),
                 "skribl_signed_in": _signed_in(bp),
-                "skribl_drafts_limit": _drafts_limit(),
+                "skribl_drafts_limit": max_drafts(),
                 "skribl_api_base": url_for(".create_skribl"),
                 "skribl_player_base": url_for(".skribl_player", public_id="").rstrip("/"),
                 "skribl_player_target": player_target}

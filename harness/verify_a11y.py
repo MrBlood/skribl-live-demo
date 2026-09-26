@@ -351,6 +351,12 @@ with sync_playwright() as p:
         # each opened from its own header's ••• and handing focus back to it.
         ("/library", "pageMenu"): ("click:#pageMenuBtn", "pageMenuBtn"),
         ("/gallery", "pageMenu"): ("click:#pageMenuBtn", "pageMenuBtn"),
+        # SAVED DRAFTS (v316): lib/savedrafts.js builds the sheet the first
+        # time ⋯ Open a draft… is pressed, on both editors, so it is primed
+        # below like the recovery-key overlays. Escape returns focus to the
+        # row that opened it, which is inside the menu and closed by then.
+        ("/", "savedDraftsSheet"):     ("click:#menuBtn|click:#openCloudDraftItem", None),
+        ("/flip", "savedDraftsSheet"): ("click:#moreBtn|click:#openCloudDraftItem", None),
     }
 
     def _draw_on_pad(pg):
@@ -417,6 +423,10 @@ with sync_playwright() as p:
             pg.evaluate(f"window.SkriblRecoveryKey && window.SkriblRecoveryKey.{_prime}")
             pg.wait_for_timeout(150)
             pg.evaluate(f"window.SkriblRecoveryKey && window.SkriblRecoveryKey.{_shut}")
+        # The saved-drafts sheet, built on first open (v316): open it and
+        # shut it through the product's own entry points.
+        pg.evaluate("window.SkriblSavedDrafts && window.SkriblSavedDrafts.open"
+                    " && (window.SkriblSavedDrafts.open(), window.SkriblSavedDrafts.close())")
         pg.wait_for_timeout(150)
         # (route, id), NOT id: a shared partial's dialog is one instance per
         # page it is included on, and each page's script may drive it

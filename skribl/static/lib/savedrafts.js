@@ -152,10 +152,9 @@
     sheet.hidden = true;
     sheet.setAttribute('role', 'dialog');
     sheet.setAttribute('aria-modal', 'true');
-    sheet.setAttribute('aria-labelledby', 'savedDraftsTitle');
+    sheet.setAttribute('aria-label', 'Your drafts');
     var head = el('div', 'sdrafts-head');
     var h = el('h2', 'sdrafts-title', 'Your drafts');
-    h.id = 'savedDraftsTitle';
     var close = el('button', 'sdrafts-close');
     close.type = 'button';
     close.setAttribute('aria-label', 'Close');
@@ -167,7 +166,6 @@
       ? 'Saved to your account, on every device you sign in on.'
       : 'Saved on this browser only.');
     listEl = el('div', 'sdrafts-list');
-    listEl.id = 'savedDraftsList';
     sheet.appendChild(head);
     sheet.appendChild(sub);
     sheet.appendChild(listEl);
