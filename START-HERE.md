@@ -731,13 +731,16 @@ rather than a shared rule.
 | `inputsamples.js` | Flip | The points the browser already captured and the handler was throwing away. |
 | `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things answer at once. |
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
+| `loopwave.js` | Pad+Flip | The music drawer's zoomed loop view: which stretch of the track it shows, where the two trim handles sit in it, and the waveform drawn into it. |
 | `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
 | `modalfocus.js` | Pad+Flip+library+gallery | Focus for surfaces that declare aria-modal="true". |
 | `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `pagemenu.js` | library+gallery | The page menu: the ••• on the gallery and the library, and what it opens. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
+| `painttarget.js` | Pad+Flip | The draw drawer's paint-target seg (Pen or Background) and the pills on its segmented rows: wired once for both editors (SK312-003, v315). |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
+| `pendingcards.js` | Pad+Flip | The "re-add your file" cards in the Image and Music drawers, and the tab dots that hint media is waiting: one implementation for both editors (SK312-003, v315; refreshPendingCards was 0.76 alike in app.js and flip.js). |
 | `photofit.js` | Pad+Flip+library+in-post | Photo fit geometry — the part both editors and the player must agree on. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
