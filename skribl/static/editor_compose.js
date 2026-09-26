@@ -133,6 +133,11 @@
 
   function ready() {
     hideDuplicateFields();
+    /* The header's × (compose mode only): back to the host's post. The host
+     * closes its overlay on cancel and keeps the frame, so the drawing is
+     * still there when the author presses the Skribl button again. */
+    var close = doc.getElementById('composeCloseBtn');
+    if (close) close.addEventListener('click', api.cancel);
     /* Announced AFTER the editor's own scripts have run, so a host that replies
      * immediately with a payload finds loadSkribl() defined. */
     send('skribl:compose:ready');

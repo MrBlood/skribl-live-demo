@@ -509,6 +509,60 @@ with sync_playwright() as sp:
     check("no page errors placing the drawing", not ierrs, "; ".join(ierrs[:2]))
     ictx.close()
 
+    # THE HEADER IN COMPOSE MODE (owner, v316: option B of the mock). A host's
+    # floating close sat on the Pad's ⋯ on a phone, and the header called the
+    # attach "Post". Compose mode now leads with the editor's own × beside the
+    # skribl wordmark, and the button says Add. The × is driven with a REAL
+    # click at its centre in the overlay, which is also the painted check: a
+    # covered × would not close anything.
+    print("\nCOMPOSE — the header: × beside the wordmark, Add, nothing on the ⋯")
+    for _vp in ({"width": 360, "height": 740}, {"width": 1280, "height": 900}):
+        _hc = b.new_context(viewport=_vp, is_mobile=_vp["width"] < 700, has_touch=_vp["width"] < 700)
+        _hp = _hc.new_page()
+        browsing.goto(_hp, BASE, "/feed")
+        check(f"@{_vp['width']}: the feed floats no close of its own over the editor",
+              _hp.locator("#padCloseBtn").count() == 0)
+        _hp.click("#padBtn")
+        _hp.wait_for_timeout(3500)
+        _hf = [x for x in _hp.frames if "compose=1" in x.url][0]
+        _hf.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _hfr = _hp.frame_locator("#padFrame")
+        draw(_hp, _hfr.locator("#canvas").bounding_box(), n=40)
+        _hf.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }")
+        _hp.wait_for_timeout(600)
+        _g = _hf.evaluate("""() => { if (!document.getElementById('composeCloseBtn')) return null;
+            const b = (id) => document.getElementById(id).getBoundingClientRect();
+            const x = b('composeCloseBtn'), m = b('menuBtn'), br = document.querySelector('.brand').getBoundingClientRect();
+            const lab = document.querySelector('#postBtn .btn-label');
+            return { xRight: Math.round(x.right), brandLeft: Math.round(br.left), brandW: Math.round(br.width),
+                     menuLeft: Math.round(m.left), label: lab.innerText.trim(),
+                     labelShown: getComputedStyle(lab).display !== 'none' && lab.getBoundingClientRect().width > 0 }; }""")
+        _want = "Add" if _vp["width"] < 700 else "Add to post"
+        check(f"@{_vp['width']}: × first, then the skribl wordmark, and the ⋯ well clear of both",
+              bool(_g) and _g["xRight"] <= _g["brandLeft"] + 1 and _g["brandW"] > 20
+              and _g["menuLeft"] > _g["xRight"] + 100, str(_g))
+        _lab = _hf.evaluate("() => document.querySelector('#postBtn .btn-label').innerText.trim()")
+        check(f"@{_vp['width']}: the attach button says {_want!r}, in words",
+              _lab == _want and (not _g or _g["labelShown"]), repr(_lab))
+        if _g:
+            _xb = _hfr.locator("#composeCloseBtn").bounding_box()
+            _hp.mouse.click(_xb["x"] + _xb["width"] / 2, _xb["y"] + _xb["height"] / 2)
+            _hp.wait_for_timeout(600)
+        check(f"@{_vp['width']}: a real tap on × closes the overlay",
+              bool(_g) and _hp.evaluate("() => document.getElementById('padOverlay').hidden") is True)
+        if _g:
+            _hp.click("#padBtn")
+            _hp.wait_for_timeout(1200)
+        check(f"@{_vp['width']}: ...and the drawing is still there when the Skribl button reopens it",
+              bool(_g) and _hf.evaluate("() => hasContent === true"))
+        _hc.close()
+    _sp = b.new_page(viewport={"width": 1280, "height": 900})
+    browsing.goto(_sp, BASE, "/skribl-pad")
+    check("the standalone Pad has no × and still says Post",
+          _sp.locator("#composeCloseBtn").count() == 0
+          and _sp.evaluate("() => document.querySelector('#postBtn .btn-label').innerText.trim()") == "Post to Skribl")
+    _sp.close()
+
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)
