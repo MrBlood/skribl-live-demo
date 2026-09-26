@@ -875,11 +875,29 @@ body.stroking .zoom-hud { pointer-events: none; }
    transition, so the delay applies only on the way out of view; the return
    uses the base transition and is immediate. prefers-reduced-motion zeroes
    the transitions globally, leaving an instant, honest swap. */
-.header, .toolbar { transition: opacity 0.25s ease; }
-body.stroking .header,
+.toolbar { transition: opacity 0.25s ease; }
 body.stroking .toolbar {
   opacity: 0.1;
   transition: opacity 0.3s ease 0.12s;
+}
+/* THE HEADER RECEDES BY ITS CONTENTS, NEVER BY ITS OWN OPACITY (v315). The
+   header is frosted glass (backdrop-filter), and WebKit -- every browser on
+   an iPhone -- can fail to repaint a backdrop-filter element after its
+   opacity animates: the owner's phone showed a finished take with the
+   toolbar back at full strength and the header's slot EMPTY. So what fades is
+   what sits on the card, and the card's own glass, fill and ring step away
+   while the pen is down and come back as plain property changes. Same look,
+   and the blurred element is never the one being faded. */
+.header > * { transition: opacity 0.25s ease; }
+body.stroking .header > * {
+  opacity: 0.1;
+  transition: opacity 0.3s ease 0.12s;
+}
+body.stroking .header {
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 /* The pill keeps its own base transition (it fades itself with .show); only
    the stroking override joins the recede. The coachmark toast

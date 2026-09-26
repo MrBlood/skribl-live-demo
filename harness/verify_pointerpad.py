@@ -166,6 +166,24 @@ with sync_playwright() as sp:
         header: +getComputedStyle(document.querySelector('.header')).opacity }) """)
     check("after a touch stroke and a pinch the header is back at full strength",
           chrome["stroking"] is False and chrome["header"] > 0.9, str(chrome))
+    # THE GLASS IS NEVER THE THING FADED (v315). The header is backdrop-filter
+    # glass, and WebKit can fail to repaint such an element after its opacity
+    # animates -- the owner's iPhone showed the header's slot empty after a
+    # take. So during a stroke the header ELEMENT stays at opacity 1 while its
+    # contents whisper, and afterwards the glass is back.
+    pg.evaluate("() => document.body.classList.add('stroking')")
+    pg.wait_for_timeout(700)
+    mid = pg.evaluate("""() => { const h = document.querySelector('.header'), cs = getComputedStyle(h);
+        return { self: +cs.opacity, kids: [...h.children].map(k => +getComputedStyle(k).opacity),
+                 glass: cs.webkitBackdropFilter || cs.backdropFilter }; }""")
+    pg.evaluate("() => document.body.classList.remove('stroking')")
+    pg.wait_for_timeout(500)
+    after = pg.evaluate("""() => { const cs = getComputedStyle(document.querySelector('.header'));
+        return { self: +cs.opacity, glass: cs.webkitBackdropFilter || cs.backdropFilter }; }""")
+    check("while drawing, the header's contents fade but the glass element itself is never faded",
+          mid["self"] == 1 and mid["kids"] and max(mid["kids"]) <= 0.15, str(mid))
+    check("...and after the stroke the header's glass is back",
+          after["self"] == 1 and "blur" in (after["glass"] or ""), str(after))
     # A touch on the canvas is Pad's, never the browser's: the touchstart and
     # touchmove are prevented, which is what stops iOS zooming or scrolling
     # the page under a drawing finger (touch-action alone is not enough there).
