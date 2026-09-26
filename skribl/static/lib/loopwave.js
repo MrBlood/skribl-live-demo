@@ -124,5 +124,42 @@
     }
   }
 
-  global.SkriblLoopWave = { zoomWindow: zoomWindow, handles: handles, drawZoom: drawZoom };
+  /* o: {canvas, ctx, track, buffer} -- the whole-track strip above the loop
+   * handles, sized to the track. (drawWaveform in both editors, v315.)
+   *
+   * THE rect.width GUARD IS THE FIX, NOT A NICETY. Sizing a canvas from a
+   * 0-wide rect is not a no-op: it sets canvas.width = 0, which CLEARS the
+   * bitmap, and the loop then paints zero peaks. The decode chain calls this
+   * once, so if the music drawer was shut at that instant (a draft reload, or
+   * a file picked and the drawer closed before decode landed -- easier on a
+   * phone) the strip stayed empty for the session while Loop Detail, which
+   * always had the guard and is repainted on every trim change, was drawn.
+   * Bailing keeps the last good bitmap; the drawer's open repaints it once
+   * the panel has real layout. */
+  function drawStrip(o) {
+    var canvas = o.canvas, ctx = o.ctx, buffer = o.buffer;
+    if (!buffer || !o.track || !canvas) return;
+    var rect = o.track.getBoundingClientRect();
+    if (!rect.width) return;
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    var data = buffer.getChannelData(0);
+    var samples = canvas.width || 1;
+    var blockSize = Math.max(1, Math.floor(data.length / samples));
+    var h = canvas.height, mid = h / 2;
+    ctx.clearRect(0, 0, canvas.width, h);
+    ctx.fillStyle = '#3a4150';
+    for (var i = 0; i < samples; i++) {
+      var s = i * blockSize, min = 1, max = -1;
+      for (var j = 0; j < blockSize; j++) {
+        var v = data[s + j] || 0;
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+      var y1 = mid + min * mid * 0.85, y2 = mid + max * mid * 0.85;
+      ctx.fillRect(i, y1, 1, Math.max(1, y2 - y1));
+    }
+  }
+
+  global.SkriblLoopWave = { zoomWindow: zoomWindow, handles: handles, drawZoom: drawZoom, drawStrip: drawStrip };
 })(window);
