@@ -953,6 +953,57 @@ with sync_playwright() as p:
             check("@390px, where the controls fit, the toolbar is untouched (no scroll mode)",
                   not last["scroll"] and peak == 0, str(last))
 
+    # ---- a toast never covers a control (owner's audit, v315) ------------
+    # "Take saved" and "Loop set to your drawing length" were anchored to
+    # buttons that are HIDDEN when they fire (Record once the take ends, the
+    # upload button once a track loads); a hidden anchor measures 0x0 at the
+    # top of the page, so the first landed on the header -- on iPad over the
+    # very Play it names -- and the second on the toolbar. Driven for real at
+    # a phone and a tablet size: end a take, then add music; each toast, once
+    # shown, must overlap neither the header nor the toolbar.
+    print("\nLAYOUT — a toast never covers the header or the toolbar")
+    import math as _m, struct as _st
+    def _wav(sec=3.0, rate=8000):
+        n = int(sec * rate)
+        fr = b"".join(_st.pack("<h", int(9000 * _m.sin(2 * _m.pi * 330 * i / rate))) for i in range(n))
+        return (b"RIFF" + _st.pack("<I", 36 + len(fr)) + b"WAVEfmt " + _st.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
+                + b"data" + _st.pack("<I", len(fr)) + fr)
+    OVER = """() => { const t = document.getElementById('toast');
+        if (!t || t.hidden || !t.classList.contains('show')) return { shown: false };
+        const a = t.getBoundingClientRect(), hit = (el) => { if (!el) return false;
+          const r = el.getBoundingClientRect(); if (!(r.width || r.height)) return false;
+          return a.top < r.bottom && a.bottom > r.top && a.left < r.right && a.right > r.left; };
+        return { shown: true, text: t.textContent.slice(0, 40), top: Math.round(a.top),
+                 header: hit(document.querySelector('.header')), toolbar: hit(document.getElementById('toolBar')) }; }"""
+    for _w, _vp in (("390", {"width": 390, "height": 844}), ("820", {"width": 820, "height": 1180})):
+        _ctx = browser.new_context(viewport=_vp, is_mobile=_vp["width"] < 700, has_touch=_vp["width"] < 700)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, "/")
+        _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _box = _pg.locator("#canvas").bounding_box()
+        _cx, _cy = _box["x"] + _box["width"] / 2, _box["y"] + _box["height"] / 2
+        _pg.mouse.move(_cx, _cy); _pg.mouse.down()
+        for _i in range(30):
+            _pg.mouse.move(_cx + _i * 4, _cy + (_i % 5) * 6); _pg.wait_for_timeout(12)
+        _pg.mouse.up(); _pg.wait_for_timeout(300)
+        _pg.evaluate("() => document.getElementById('recordBtn').click()")
+        _pg.wait_for_timeout(450)
+        _take = _pg.evaluate(OVER)
+        check(f"@{_w}: 'Take saved' shows clear of the header and the toolbar",
+              _take.get("shown") and not _take["header"] and not _take["toolbar"], str(_take))
+        _pg.wait_for_timeout(3200)
+        _pg.evaluate("() => document.getElementById('musicOpenBtn').click()"); _pg.wait_for_timeout(500)
+        _pg.set_input_files("#musicInput", {"name": "m.wav", "mimeType": "audio/wav", "buffer": _wav()})
+        _loop = {"shown": False}
+        for _ in range(40):
+            _pg.wait_for_timeout(100)
+            _loop = _pg.evaluate(OVER)
+            if _loop.get("shown") and "Loop" in _loop.get("text", ""): break
+        check(f"@{_w}: 'Loop set' shows clear of the header and the toolbar",
+              _loop.get("shown") and "Loop" in _loop.get("text", "") and not _loop["header"] and not _loop["toolbar"],
+              str(_loop))
+        _ctx.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

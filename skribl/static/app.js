@@ -2189,10 +2189,33 @@ function showToast(msg, anchorEl, action) {
   toast.style.bottom = '';
   toast.style.top = '';
 
-  if (anchorEl) {
+  // A TOAST NEVER COVERS A CONTROL (owner's audit, v315). Two things put it
+  // on one. An anchor that is HIDDEN when the toast fires -- Record once the
+  // take has ended, the music upload button once a track is loaded -- measures
+  // 0x0 at the top of the page, so "Take saved" landed on the header (on iPad,
+  // over the very Play it tells you to press) and "Loop set to your drawing
+  // length" on the toolbar. And the no-anchor case pinned itself to the top of
+  // the screen, which is where the header is. So: an anchor with no box counts
+  // as no anchor; the fallback sits just under the header; and a placement
+  // that would still overlap the header or the toolbar takes the fallback.
+  const box = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return (r.width || r.height) ? r : null;
+  };
+  const anchorRect = box(anchorEl);
+  const belowHeader = () => {
+    const h = box(document.querySelector('.header'));
+    toast.style.position = 'fixed';
+    toast.style.top = (h && h.bottom > 0)
+      ? Math.round(h.bottom + 8) + 'px'
+      : 'calc(16px + env(safe-area-inset-top))';
+    toast.style.bottom = 'auto';
+  };
+  if (anchorRect) {
     toast.style.position = 'absolute';
     const appRect = document.querySelector('.app').getBoundingClientRect();
-    const rect = anchorEl.getBoundingClientRect();
+    const rect = anchorRect;
     const mid = rect.top - appRect.top + rect.height / 2;
     // Position above or below the anchor depending on space
     if (mid > appRect.height / 2) {
@@ -2202,12 +2225,14 @@ function showToast(msg, anchorEl, action) {
       toast.style.top = (rect.bottom - appRect.top + 10) + 'px';
       toast.style.bottom = 'auto';
     }
+    const t = toast.getBoundingClientRect();
+    const hits = (el) => {
+      const r = box(el);
+      return r && t.top < r.bottom && t.bottom > r.top && t.left < r.right && t.right > r.left;
+    };
+    if (hits(document.querySelector('.header')) || hits(document.getElementById('toolBar'))) belowHeader();
   } else {
-    // No anchor → pin to the top of the viewport so it's always visible,
-    // even when the app is taller than the screen and scrolled.
-    toast.style.position = 'fixed';
-    toast.style.top = 'calc(16px + env(safe-area-inset-top))';
-    toast.style.bottom = 'auto';
+    belowHeader();
   }
 
   requestAnimationFrame(() => toast.classList.add('show'));
