@@ -48,10 +48,12 @@ MAKE_PNG_FILE = """async () => {
 DRAW_STROKE = """() => {
   const cv = document.getElementById('drawCanvas') || document.querySelector('canvas');
   const r = cv.getBoundingClientRect();
-  const opts = (x, y) => ({ bubbles: true, clientX: r.left + x, clientY: r.top + y, button: 0 });
-  cv.dispatchEvent(new MouseEvent('mousedown', opts(30, 30)));
-  cv.dispatchEvent(new MouseEvent('mousemove', opts(90, 70)));
-  cv.dispatchEvent(new MouseEvent('mouseup',   opts(90, 70)));
+  // Pointer events: the Pad draws on them since v315 (SK312-002).
+  const opts = (x, y) => ({ bubbles: true, cancelable: true, clientX: r.left + x, clientY: r.top + y,
+                            button: 0, pointerId: 1, pointerType: 'mouse', isPrimary: true });
+  cv.dispatchEvent(new PointerEvent('pointerdown', opts(30, 30)));
+  cv.dispatchEvent(new PointerEvent('pointermove', opts(90, 70)));
+  cv.dispatchEvent(new PointerEvent('pointerup',   opts(90, 70)));
   return (typeof strokes !== 'undefined') ? strokes.length : -1;
 }"""
 

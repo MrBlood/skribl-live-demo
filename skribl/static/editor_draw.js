@@ -236,9 +236,10 @@ function startDraw(e) {
   // Space held = grab-pan mode; never a stroke (v211).
   if (window._skriblSpaceHeld && window._skriblSpaceHeld()) return;
   // Two (or more) fingers ON THE CANVAS → magnify/pan gesture, never a stroke.
-  // Handled before preventDefault/anything else so it can cleanly abort a
-  // nascent 1-finger stroke that the first finger just began. Guarded on
-  // ZoomView so the player (no zoom) behaves exactly as before.
+  // Since v315 that is decided by the canvas's own touchstart listener (below
+  // the bindings at the end of this file), not here: this is reached from
+  // pointerdown, which carries no Touch list. The check stays for a caller
+  // that passes a TouchEvent, and the rule it encodes stands:
   //
   // targetTouches, NOT touches. `touches` is every contact on the SCREEN,
   // including ones that never came near the canvas — a thumb resting on the
@@ -542,7 +543,54 @@ function commitActiveStroke() {
   currentStroke = [];
 }
 
-canvas.addEventListener('mousedown', startDraw);
+// ---- Input: POINTER EVENTS, as Flip (SK312-002, v315) -----------------------
+// Pad bound mouse* and touch* separately while Flip bound Pointer Events: two
+// input state machines for one drawing surface, and the one on the product's
+// main editor was the older. Now one: a stroke BELONGS TO ONE POINTER (its
+// pointerId, captured on down), which is Flip's rule for the reason Flip's
+// pointerdown note gives -- a palm or second finger must not steer or restart
+// a stroke another pointer is drawing. Capture also replaces the window
+// mousemove that used to keep a stroke following the cursor off the canvas:
+// the captured pointer's moves arrive HERE wherever it goes.
+//
+// THE PINCH STAYS ON TOUCH EVENTS, exactly as in Flip: lib/pinchgesture.js
+// works on Touch lists, and a second finger's pointerdown arrives BEFORE the
+// touchstart that reports two fingers -- so that pointerdown is refused by the
+// ownership guard below, and the touchstart then aborts the first finger's
+// stroke and starts the pinch.
+//
+// preventDefault() on pointerdown (startDraw) SUPPRESSES the compatibility
+// mouse events for that press. Everything Pad hangs off a stroke therefore
+// listens for pointer events: photo drag, the eraser/shape cursor, the
+// autosave trigger. A mousemove/mouseup listener added for a canvas press
+// would never fire -- verify_pointerpad drives each of them with a real mouse.
+let strokePointerId = null;
+canvas.addEventListener('pointerdown', (e) => {
+  if (pinching) return;
+  if (drawing && strokePointerId !== null && e.pointerId !== strokePointerId) return;
+  startDraw(e);
+  if (drawing) {
+    strokePointerId = e.pointerId;
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* synthetic or already released */ }
+  }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (drawing && strokePointerId !== null && e.pointerId !== strokePointerId) return;
+  continueDraw(e);
+});
+function _endStrokeFor(e) {
+  if (strokePointerId !== null && e && e.pointerId !== strokePointerId) return;
+  strokePointerId = null;
+  if (drawing) endDraw();
+}
+canvas.addEventListener('pointerup', _endStrokeFor);
+canvas.addEventListener('pointercancel', _endStrokeFor);
+// Two fingers ON THE CANVAS: the pinch. targetTouches for the reason given at
+// startDraw's note; ZoomView-guarded so a surface without zoom never pinches.
+canvas.addEventListener('touchstart', (e) => {
+  const t = e.targetTouches || e.touches;
+  if (typeof ZoomView !== 'undefined' && ZoomView && t && t.length >= 2) beginPinch(e);
+}, { passive: false });
 // The other half of the pinned-pop veil in startDraw: ANY release lifts it.
 // Window-level and unconditional, so no draw path — commit, cancel, a press
 // the lock check swallowed — can leave the panel invisible.
@@ -554,9 +602,7 @@ window.addEventListener('pointercancel', () => {
   const p = document.getElementById('shapePop');
   if (p) p.classList.remove('pop-veiled');
 }, true);
-canvas.addEventListener('mousemove', continueDraw);
-canvas.addEventListener('mouseup', endDraw);
-/* NO mouseleave -> endDraw.
+/* NO pointerleave -> endDraw.
  *
  * It ended the stroke the moment the cursor crossed the canvas edge, so
  * sweeping a line out past the border and back produced two strokes with a gap
@@ -568,26 +614,9 @@ canvas.addEventListener('mouseup', endDraw);
  * pointer, the canvas clips what falls outside, and coming back resumes the
  * same stroke. The window handlers below still commit on mouseup anywhere and
  * on losing focus, so a stroke can never be left painted but unrecorded. */
-window.addEventListener('mousemove', (e) => {
-  if (!drawing) return;
-  // DO NOT DOUBLE-CAPTURE. This listener exists only so a stroke keeps
-  // following the pointer once it leaves the canvas; over the canvas the
-  // element's own mousemove has already handled this very event, and it then
-  // BUBBLES here. Measured before this guard: 21 mousemove events produced 41
-  // captured points. Two costs, neither visible as a wrong pixel — the replay
-  // array and the posted payload carry twice the points they need, and
-  // continueDraw()'s stabiliser lerps TWICE per event toward the same position,
-  // so smoothing converged at one rate over the canvas and half that outside
-  // it. The slider therefore meant two different things depending on where the
-  // pointer was. `composedPath` covers a canvas inside a shadow root; the
-  // target check alone is enough today.
-  if (e.target === canvas) return;
-  continueDraw(e);
-});
-canvas.addEventListener('touchstart', startDraw);
-canvas.addEventListener('touchmove', continueDraw);
-canvas.addEventListener('touchend', endDraw);
-canvas.addEventListener('touchcancel', endDraw);
+// (The window mousemove that did this before pointer capture is gone, and
+// with it the double-capture it had to guard against: 21 moves had produced
+// 41 points once. Capture delivers each move exactly once, to the canvas.)
 
 // Right-click on the canvas: commit the current stroke, then suppress the
 // browser context menu so it can't interrupt drawing mid-stroke.
@@ -597,7 +626,7 @@ canvas.addEventListener('contextmenu', (e) => {
 });
 // Releasing the mouse outside the canvas, or the window losing focus, also
 // commits — otherwise an interrupted stroke stays painted but unrecorded.
-window.addEventListener('mouseup', () => { if (drawing) endDraw(); });
+window.addEventListener('pointerup', _endStrokeFor);
 window.addEventListener('blur', () => { if (drawing) commitActiveStroke(); });
 
 // Published for app.js's record-stop path — the only caller outside this file.

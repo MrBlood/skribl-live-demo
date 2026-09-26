@@ -61,22 +61,18 @@ for name in ("flip.js", "app.js"):
     check(f"{name} stores no `pressure` field on a point",
           not any("pressure" in ln for ln in _point_lines),
           "a pressure key on the point would be invisible to the player")
-    # The two files gate DIFFERENTLY because they bind different event
-    # families, and asserting the same string on both is how a dead-code
-    # implementation passes review. flip.js binds Pointer Events; app.js binds
-    # mousedown/touchstart, where `pointerType` does not exist at all.
-    if name == "flip.js":
-        check("flip.js gates on pointerType 'pen'", "pointerType" in src and "'pen'" in src)
-        check("flip.js reads PointerEvent.pressure", "e.pressure" in src)
-    else:
-        check("app.js gates on touchType 'stylus', not on pointerType",
-              "touchType" in src and "'stylus'" in src,
-              "app.js binds mousedown/touchstart — a pointerType check here is "
-              "dead code that can never fire")
-        check("app.js reads Touch.force", ".force" in src)
-        check("app.js does not rely on pointerType alone",
-              src.count("touchType") >= 1,
-              "the only gate is a field these events do not carry")
+    # Both editors bind Pointer Events since v315 (SK312-002), so both gate on
+    # a pen and read PointerEvent.pressure. app.js ALSO keeps its Touch.force
+    # reader, gated on touchType 'stylus', for a caller that passes a
+    # TouchEvent -- the path Pad drew on before. That the pen reading actually
+    # REACHES a stroke is verify_pointerpad's end-to-end row, driven by a CDP
+    # pen with force; a string here only says the reader exists.
+    check(f"{name} gates on pointerType 'pen'", "pointerType" in src and "'pen'" in src)
+    check(f"{name} reads PointerEvent.pressure", "e.pressure" in src)
+    if name == "app.js":
+        check("app.js keeps the stylus-only gate on its Touch.force reader",
+              "touchType" in src and "'stylus'" in src and ".force" in src,
+              "an ungated force read would vary FINGER strokes on force screens")
 
 try:
     from playwright.sync_api import sync_playwright
@@ -165,16 +161,16 @@ with sync_playwright() as p:
     # ---------------------------------------------------------------------
     print("\nPRESSURE — section 3: Pad")
     #
-    # Pad binds mousedown/touchstart, NOT Pointer Events. The first version of
+    # (History: Pad bound mousedown/touchstart until v315. The first version of
     # this feature checked `e.pointerType === 'pen'` here, which is a field
     # those events do not carry — dead code that could never fire, and which
     # source review would have passed. Pad's reader is Touch.force gated on
     # touchType === 'stylus'.
     #
     # touchType is an iOS extension and the Touch constructor does not accept
-    # it, so an Apple Pencil stroke CANNOT be synthesised in Chromium. This
-    # section therefore splits into what is measurable here and what is not,
-    # rather than pretending. A skip contributes zero assertions.
+    # it, so a TOUCH-EVENT Apple Pencil stroke cannot be synthesised in
+    # Chromium; the pointer-event pen that Pad now draws on can, and is, in
+    # verify_pointerpad. This section keeps the mapping's arithmetic.)
     pd = b.new_page()
     perrs = []
     pd.on("pageerror", lambda e: perrs.append(str(e)))
@@ -235,9 +231,9 @@ with sync_playwright() as p:
           abs(press(0.2, erase=True) - nominal) < 1e-6)
 
     # 3c. What is NOT covered here, stated rather than implied.
-    print("  [SKIP] Pad: an on-device Apple Pencil stroke — Chromium cannot")
-    print("         synthesise Touch.touchType, so the event plumbing from")
-    print("         touchstart/touchmove into pressureSize is UNVERIFIED here.")
+    # 3c. The pen's event plumbing into a stroke is no longer unverified: since
+    # v315 Pad draws on Pointer Events, and verify_pointerpad drives a CDP pen
+    # with rising force and asserts the widths follow it.
     print("         Needs a real iPad. This skip is not coverage.")
 
     b.close()

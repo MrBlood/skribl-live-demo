@@ -1216,8 +1216,8 @@ if _SELECT_TOOL_ON_PAD:
 # stays green against a listener wired to the wrong cleanup. Each path is driven
 # as a real gesture, cancelled, then moved AGAIN — the trim must not follow.
 #
-# Left deliberately unpaired: the three scheduleAutosave touchend handlers in
-# app.js. Those are save triggers, not drag cleanups; nothing keeps state alive
+# Left deliberately unpaired: the scheduleAutosave touchend handlers in
+# editor_draft.js. Those are save triggers, not drag cleanups; nothing keeps state alive
 # after them, so pairing would be cargo-culting the shape of the fix.
 print("\nV214a — touchcancel ends a drag, on every music gesture path")
 
@@ -1333,7 +1333,9 @@ _TOUCH_ALLOW = {
     # Autosave triggers, not drag cleanups: nothing stays alive after them, so a
     # cancelled touch simply does not schedule a save it did not need to. Pairing
     # these would be copying the shape of the fix rather than its substance.
-    ("canvas", "scheduleAutosave"),
+    # (The canvas's own was a third until v315, when Pad moved to Pointer
+    # Events and that trigger became a pointerup; the stale-entry check below
+    # is what said so.)
     ("musicTrack", "scheduleAutosave"),
     ("zoomTrackWrap", "scheduleAutosave"),
 }

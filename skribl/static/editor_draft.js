@@ -577,8 +577,9 @@ function restoreAutosave(data) {
   }
 
   // Triggers: schedule an autosave whenever the drawing meaningfully changes.
-  canvas.addEventListener('mouseup', scheduleAutosave);
-  canvas.addEventListener('touchend', scheduleAutosave);
+  // pointerup (v315): Pad draws on Pointer Events and prevents the pointerdown,
+  // so a canvas mouseup never fires after a mouse stroke.
+  canvas.addEventListener('pointerup', scheduleAutosave);
   // Authoring controls, absent from the player's template. bindEl() already
   // exists for exactly this and null-checks; these three predate it.
   bindEl('recordBtn', 'click', scheduleAutosave);

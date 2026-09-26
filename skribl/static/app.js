@@ -761,20 +761,17 @@ let lockToastShown = false;
    the player, the replay path, every exporter and every already-released
    client honour it without changing, and an old payload stays a valid new one.
 
-   PAD IS NOT FLIP. Flip binds Pointer Events and reads `e.pressure`. Pad binds
-   `mousedown`/`touchstart` (see the bindings below), where PointerEvent fields
-   do not exist — an `e.pointerType === 'pen'` check here is dead code that
-   silently never fires, which is exactly what the first draft of this was.
-   Migrating Pad to Pointer Events would touch the pinch handler, the
-   capture-phase space-drag and the mouse/touch split throughout, so the narrow
-   correct reader is `Touch.force`.
-
-   Gated on `touchType === 'stylus'` (iOS/iPadOS, i.e. Apple Pencil). Force is
-   also reported for FINGERS on force-capable screens, so an ungated read would
-   make ordinary touch drawing vary in width — a change to how every existing
-   user's lines look. Android touch events expose no touchType, so a stylus
-   there draws at constant width: narrower than ideal, and correct rather than
-   guessing.
+   PAD DRAWS ON POINTER EVENTS SINCE v315, as Flip does (SK312-002; the
+   bindings are at the end of editor_draw.js). A stylus is `pointerType
+   'pen'` and its `e.pressure` is read here; a finger is `'touch'` and a mouse
+   `'mouse'`, and neither is read -- force is also reported for FINGERS on
+   force-capable screens, so an ungated read would make ordinary touch drawing
+   vary in width, a change to how every existing user's lines look. The
+   `Touch.force`/`touchType === 'stylus'` branch below is what Pad read while
+   it was on touch events (the first draft here checked pointerType on a
+   TouchEvent and silently never fired); it is kept for a caller that still
+   passes one. An Android stylus, which touch events never identified, now
+   gets pressure too.
 
    PRESSURE_MIN keeps the lightest touch visible instead of vanishing. Erasing
    is exempt — a variable-width eraser leaves streaks you cannot see. */

@@ -826,9 +826,11 @@ first rather than trust a snapshot — which is the whole reason this replaced i
   editor state through a bare identifier, not off `window`.
 * **A retry must accept on the property the assertion checks.** A WebM test
   retried on byte count and asserted on duration; it flaked three times.
-* **The two editors bind DIFFERENT event families.** Flip uses Pointer Events,
-  Pad uses `mousedown`/`touchstart`. Code written for one is dead in the other,
-  silently.
+* **Both editors draw on Pointer Events (Pad since v315, SK312-002); the pinch
+  is on touch events in both.** The trap that remains: a stroke's pointerdown is
+  prevented, which suppresses the compatibility MOUSE events for that press, so
+  a `mousemove`/`mouseup` listener hung off a canvas stroke never fires.
+  `verify_pointerpad.py` drives each such listener with real input.
 * **Finish all documentation BEFORE the final harness run.** `run_harness.sh`
   calls `stamp_docs.py` itself, and the run recorded LAST is the one stamped —
   so the recorded set must be the final invocation. Regenerate `SHA256SUMS`

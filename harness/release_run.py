@@ -185,6 +185,7 @@ BATCHES = [
     ["verify_medialimits.py"],
     ["verify_sweepjob.py"],                # unrecorded
     ["verify_mediareport.py"],             # CLI subprocess, own temp database
+    ["verify_pointerpad.py"],              # real CDP input on the Pad (SK312-002)
     # store: drives a CLI as a subprocess against its own temp database, so it
     # wants no neighbour's server or schema in the way.
     ["verify_takedown.py"],

@@ -216,6 +216,12 @@ A green check is not evidence until it has been shown to go red.
   measure of how much photo and music the database holds: planted posts with
   known sizes across every base64 padding case, inline vs already-externalised,
   growth by month, and a byte-identical database file after it runs.
+- `verify_pointerpad.py` — Pad draws on Pointer Events (SK312-002), driven by
+  REAL input through CDP: mouse, one-finger touch, a two-finger pinch, a pen
+  with force, a stroke that leaves the canvas, a second pointer mid-stroke, and
+  the three listeners hung off a stroke that a prevented pointerdown would
+  silence if they still waited for mouse events (eraser ring, photo drag,
+  autosave).
 - `verify_hostseams.py` — the four host seams: the SQL `feed_filter` (including
   that a filtered feed still returns FULL pages and a cursor pointing at a row
   the viewer saw), `csrf=False` producing a working app, `visibility_values`,

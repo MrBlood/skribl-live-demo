@@ -13,7 +13,11 @@
 //
 // LOAD ORDER: classic script reading globals app.js declares. After app.js, and
 // out of skribl_player.html.
-canvasWrap.addEventListener('mousemove', (e) => {
+// POINTERMOVE, not mousemove (v315): a stroke's pointerdown is prevented, which
+// suppresses the compatibility mouse events -- so a mousemove ring stood still
+// for the whole of a mouse erase. Touch keeps its own touchmove below.
+canvasWrap.addEventListener('pointermove', (e) => {
+  if (e.pointerType === 'touch') return;
   // The shape badge rides the same pointer tracking as the eraser ring: the
   // shape kind is chosen on the toolbar, so without this there is nothing at
   // the point of drawing saying what the next drag will make.
@@ -485,19 +489,18 @@ function beginPhotoDrag(e) {
     if (overflowY > 0) photoOffsetY = Math.max(0, Math.min(1, startOY - dy / overflowY));
     applyPhotoPosition();
   };
+  // Pointer events (v315): the press that started this is a prevented
+  // pointerdown, which suppresses mousemove/mouseup for it -- a mouse drag of
+  // the photo would never move. Pointer events carry mouse, pen and touch.
   const up = () => {
-    window.removeEventListener('mousemove', move);
-    window.removeEventListener('mouseup', up);
-    window.removeEventListener('touchmove', move);
-    window.removeEventListener('touchend', up);
-    window.removeEventListener('touchcancel', up);
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
     if (typeof scheduleAutosave === 'function') scheduleAutosave();
   };
-  window.addEventListener('mousemove', move);
-  window.addEventListener('mouseup', up);
-  window.addEventListener('touchmove', move, { passive: false });
-  window.addEventListener('touchend', up);
-  window.addEventListener('touchcancel', up);
+  window.addEventListener('pointermove', move, { passive: false });
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
 }
 
 // Drag the Loop Detail waveform to pan the window. Ignores drags that start on
