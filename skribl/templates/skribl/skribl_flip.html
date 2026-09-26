@@ -369,6 +369,16 @@
          treatment with Pad via lib/nametab.js; #nameItemSub echoes the name. #}
       <button type="button" class="menu-item" id="nameItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span class="menu-item-text">Name this skribl<span class="menu-item-sub" id="nameItemSub">Untitled</span></span></button>
       <div class="menu-divider"></div>
+      {# Saved drafts (v316): to the account when signed in, this browser
+         otherwise. lib/savedrafts.js wires both rows and says which. #}
+      <button type="button" class="menu-item" id="saveCloudDraftItem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.5 13 3 3 0 0 0 6 19z"/><path d="M12 12v6"/><path d="M9.5 14.5 12 12l2.5 2.5"/></svg>
+        <span class="menu-item-text">Save draft<span class="menu-item-sub">{{ "To your account" if skribl_signed_in else "On this browser" }}</span></span>
+      </button>
+      <button type="button" class="menu-item" id="openCloudDraftItem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 13h8M8 16h5"/></svg>
+        <span class="menu-item-text">Open a draft&hellip;<span class="menu-item-sub">Your saved drafts</span></span>
+      </button>
       <button type="button" class="menu-item" id="miSave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span class="menu-item-text">Save a backup<span class="menu-item-sub">A .skribl file to keep or move</span></span></button>
       <button type="button" class="menu-item" id="miLoad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span class="menu-item-text">Open a backup&hellip;<span class="menu-item-sub">A .skribl file you saved</span></span></button>
       <button type="button" class="menu-item" id="miExport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Export…</span></button>
@@ -515,6 +525,7 @@
      broken silently. Nonced, matching the Pad and Player. -->
 <script nonce="{{ csp_nonce }}">
   window.SKRIBL_MODE = "flip";
+  window.SKRIBL_DRAFTS = { api: {{ skribl_drafts_api | tojson }}, signedIn: {{ skribl_signed_in | tojson }}, limit: {{ skribl_drafts_limit | tojson }} };
   {% if compose %}window.SKRIBL_COMPOSE = "flip";{% endif %}
   window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
@@ -620,6 +631,7 @@
   <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/draftstore.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/savedrafts.js') }}" defer></script>
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
   {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}
 </body>

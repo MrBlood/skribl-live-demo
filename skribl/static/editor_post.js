@@ -248,6 +248,8 @@
     }
   }
 
+  // Saved drafts' list picture (lib/savedrafts.js) is the same flattening.
+  window.skriblPreviewCanvas = function () { return buildPreviewCanvas(); };
   function buildPreviewDataURL() {
     const out = buildPreviewCanvas();
     return out ? out.toDataURL('image/png') : null;

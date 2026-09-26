@@ -4423,9 +4423,9 @@ function loadDraftFile(file){
   };
   r.readAsText(file);
 }
-// COMPOSE: re-opening the host's Skribl button puts the animation it holds
-// back on the canvas, through the same applyPayload() a draft file uses.
-if(FLIP_COMPOSE) window.SkriblComposeLoad = function(d){
+// ONE LOADER for a Flip draft object that is not a file: the composer's
+// re-open and a saved draft (v316). The same applyPayload() a draft file uses.
+function applyFlipDraftObject(d){
   if(!d || !Array.isArray(d.frames) || !d.frames.length) return;
   if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
   applyPayload(d);
@@ -4434,7 +4434,24 @@ if(FLIP_COMPOSE) window.SkriblComposeLoad = function(d){
   ensureAudio();
   if (musicData) decodeForWaveform();
   fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
-};
+  scheduleSave();
+}
+if(FLIP_COMPOSE) window.SkriblComposeLoad = applyFlipDraftObject;
+// Saved drafts (v316): see lib/savedrafts.js and editor_menu.js's Pad twin.
+document.addEventListener('DOMContentLoaded', () => {
+  if(!window.SkriblSavedDrafts) return;
+  window.SkriblSavedDrafts.init({
+    kind: 'flip',
+    serialize: () => serializeFlip({ recipes: true }),
+    load: applyFlipDraftObject,
+    hasContent: () => !nothingToShare(),
+    thumbnail: () => { const c=document.createElement('canvas'); c.width=CW; c.height=CH;
+      drawFrameTo(c.getContext('2d'), frames.find(f => f && f.strokes && f.strokes.length) || frames[0]); return c; },
+    otherUrl: () => { const a=document.getElementById('padBtn'); return a ? a.getAttribute('href') : null; },
+    closeMenu: () => closeMenu(),
+    toast: (m) => chip(m)
+  });
+});
 draftInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(file) loadDraftFile(file); });
 
 /* ---- export: PNG (current frame) + WebM (the loop) ---- */
@@ -9464,6 +9481,7 @@ function invalidateClearUndo(){
 // synthetic clicks at the drawer's button, riding its armed state — one
 // control's business logic coupled to another control's confirmation UI.
 function clearAllPages(){
+  if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.forget();   // a new Skribl is a new draft
   clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv };
   /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
      subdiv only ever grew: a cleared page kept the finer time grid of the pages

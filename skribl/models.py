@@ -23,7 +23,7 @@ from flask import current_app
 from .core import MAX_CAPTION_CHARS, MAX_REPORT_NOTE_CHARS, MAX_TITLE_CHARS
 from sqlalchemy import (Boolean, CheckConstraint, Column, DateTime,
                         ForeignKey, ForeignKeyConstraint, Index, Integer, JSON,
-                        String)
+                        String, Text)
 from sqlalchemy import event
 from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm import DeclarativeBase
@@ -371,6 +371,40 @@ def _visibility_policy():
     except (ImportError, RuntimeError):
         pass
     return _VISIBILITY_POLICY
+
+
+class SkriblDraft(SkriblBase):
+    """A draft saved to the author's ACCOUNT (v316, owner: "save skribl drafts,
+    not on my machine as a file", so a drawing made today can be opened from a
+    host's composer tomorrow and added to a post).
+
+    NOT A POST. A draft is never public, never listed, has no share link and no
+    player: it is read and written by its owner only, and routes answer 404 for
+    anybody else's exactly as for one that does not exist. `payload_json` is the
+    EDITOR's own draft serialisation (Pad's serializeSkribl, Flip's
+    serializeFlip), the same object a .skribl backup file holds, so opening a
+    draft is the path opening a backup already takes. Media stays inline: a
+    draft is bounded by the same payload checks a post is, and by
+    SKRIBL_MAX_DRAFTS per author.
+    """
+    __tablename__ = "skribl_drafts"
+
+    id = Column(Integer, primary_key=True)
+    public_id = Column(String(32), unique=True, nullable=False, index=True)
+    user_id = Column(UserId, nullable=False, index=True)
+    kind = Column(String(8), nullable=False)             # 'pad' | 'flip'
+    title = Column(String(MAX_TITLE_CHARS), nullable=False)
+    payload_json = Column(JSON, nullable=False)
+    thumbnail = Column(Text, nullable=True)              # small data:image/jpeg
+    size_bytes = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True),
+                        default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True),
+                        default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        Index("ix_skribl_drafts_user_updated", "user_id", "updated_at"),
+    )
 
 
 class SkriblPost(SkriblBase):

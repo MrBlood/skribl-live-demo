@@ -105,6 +105,11 @@ harness/                   Browser test suites (Playwright) + release tooling
 | route | purpose |
 |---|---|
 | `/` | Standalone-site root, registered only when index_route=True. |
+| `GET /api/drafts` | The signed-in author's saved drafts: a list, no payloads. |
+| `POST /api/drafts` | Save a draft to the signed-in author's account. |
+| `DELETE /api/drafts/<draft_id>` | Delete one of your saved drafts. |
+| `GET /api/drafts/<draft_id>` | Open one of your saved drafts, with its payload. |
+| `PUT /api/drafts/<draft_id>` | Overwrite one of your saved drafts. |
 | `GET /api/skribls` | Feed-shaped listing: metadata only, cursor-paginated. |
 | `POST /api/skribls` | Create a post. |
 | `DELETE /api/skribls/<id>` | Take a post down — by its author, or with the revocation key issued at post time. |
@@ -260,6 +265,7 @@ All optional in development, where safe defaults apply. **`SECRET_KEY` is requir
 | `SKRIBL_MAX_AUDIO_BYTES` | 12000000 | Per-item audio cap |
 | `SKRIBL_MAX_IMAGE_BYTES` | 8000000 | Per-item image cap |
 | `SKRIBL_RATE_MAX_POSTS` | 20 | Posts per IP per hour |
+| `SKRIBL_MAX_DRAFTS` | 25 | Saved drafts one signed-in author keeps |
 
 ## Deploy
 

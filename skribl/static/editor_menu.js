@@ -96,6 +96,8 @@ function resetAll() {
 // snapshot would capture a half-loaded photo or track. The clear still happens in
 // that case, just without the undo offer.
 function clearAllWithUndo() {
+  // A new Skribl is a new draft: the next Save must not overwrite the old one.
+  if (window.SkriblSavedDrafts) window.SkriblSavedDrafts.forget();
   let snap = null;
   if (mediaBusy === 0) {
     try { snap = serializeSkribl(); } catch (err) { snap = null; }
@@ -336,3 +338,22 @@ helpBackdrop.addEventListener('click', closeHelpDrawer);
 // Show the "Skribl Pad" wordmark whenever the header has room for it, and drop
 // to logo-only when it doesn't (after a take, while recording, on tiny screens)
 // — measured, not a fixed breakpoint, so it adapts to every state and width.
+
+
+// Saved drafts (v316): ⋯ "Save draft" / "Open a draft…". lib/savedrafts.js owns
+// the list and the storage; the Pad hands it its own serialise and load, the
+// same pair a .skribl backup uses. A Flip draft opens in Flip, through the
+// Flip Mode row's own link (so a composer session stays one).
+document.addEventListener('DOMContentLoaded', function () {
+  if (!window.SkriblSavedDrafts) return;
+  window.SkriblSavedDrafts.init({
+    kind: 'pad',
+    serialize: function () { return serializeSkribl(); },
+    load: function (d) { loadSkribl(d); },
+    hasContent: function () { return !!(hasContent || (typeof strokes !== 'undefined' && strokes.length)); },
+    thumbnail: function () { return window.skriblPreviewCanvas ? window.skriblPreviewCanvas() : document.getElementById('canvas'); },
+    otherUrl: function () { var a = document.getElementById('flipBtn'); return a ? a.getAttribute('href') : null; },
+    closeMenu: function () { if (typeof closeMenu === 'function') closeMenu(true); },
+    toast: function (m) { showToast(m, document.getElementById('menuBtn')); }
+  });
+});

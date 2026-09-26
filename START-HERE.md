@@ -756,6 +756,7 @@ rather than a shared rule.
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
 | `recoverykey.js` | Pad+Flip+library | Both ends of an anonymous author's revocation key: showing one, taking one back, and standing between a bulk clear and the keys it would discard. |
 | `report.js` | Pad+Flip+library+gallery | "Report a problem" — the context, collected once, for both editors. |
+| `savedrafts.js` | Pad+Flip | Saved drafts — ⋯ "Save draft" and "Open a draft…" on both editors (v316). |
 | `scrubkeys.js` | Pad+Flip+player | Keyboard operation and live value for the three playback scrubbers. |
 | `segslider.js` | Pad+Flip | Keeps a .seg-slider pill aligned to the selected button in a .seg group. |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
