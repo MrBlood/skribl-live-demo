@@ -1579,7 +1579,17 @@ a.player-btn { text-decoration: none; }
 
   /* Wider tray (header + toolbar kept aligned at 6px) so the standalone
      magnify fits even at 360px; tighter gap does the last few pixels. */
-  .header  { margin: 12px 6px; }}
+  .header  { margin: 12px 6px; }
+
+  /* The header STAYS when a drawer opens. On a phone the drawers sit below
+     the toolbar, and opening one scrolls the page to reveal it — which took
+     Post, Play and ⋯ off the top of the screen (owner's iPhone, v315 polish
+     list). Sticky, not fixed: at rest it is exactly where it was and costs the
+     layout nothing; it only pins once the page scrolls. It already carries a
+     blurred, translucent ground and z-index 30 (above the canvas, below the
+     toolbar's pops and every sheet), and body.stroking already fades it to
+     nothing while a finger draws beneath it. Pad and Flip share the rule. */
+  .header { position: sticky; top: 6px; }}
 
 /* ===================================================================
    Apple header polish (v75): Record keeps its label (sheds when tight),

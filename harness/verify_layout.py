@@ -1004,6 +1004,30 @@ with sync_playwright() as p:
               str(_loop))
         _ctx.close()
 
+    # On a phone a drawer opens below the toolbar and the page scrolls to
+    # reveal it; that took Post, Play and ⋯ off the top of the screen (owner,
+    # iPhone). The header now pins. Asked of what is PAINTED, not of a rect:
+    # the point at Post's centre must hit Post once the drawer has scrolled
+    # the page. Both editors, since they share the header rule.
+    print("\nLAYOUT — on a phone, an open drawer does not take the header away")
+    HIT = """() => { const p = document.getElementById('postBtn'), r = p.getBoundingClientRect();
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        const el = (y >= 0 && y <= innerHeight) ? document.elementFromPoint(x, y) : null;
+        // Post is disabled until a take exists, and disabled is pointer-events:
+        // none, so the hit test looks through it; ask for the HEADER it sits in.
+        return { scrollY: Math.round(scrollY), top: Math.round(r.top), hit: !!(el && p.closest('.header').contains(el)) }; }"""
+    for _route, _open in (("/", "colorOpenBtn"), ("/flip", "musicBtn")):
+        _ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, _route)
+        _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _pg.evaluate("(id) => document.getElementById(id).click()", _open)
+        _pg.wait_for_timeout(1600)
+        _h = _pg.evaluate(HIT)
+        check(f"{_route} @390: with a drawer open and the page scrolled, Post is still on screen",
+              _h["scrollY"] > 40 and _h["hit"], str(_h))
+        _ctx.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]
