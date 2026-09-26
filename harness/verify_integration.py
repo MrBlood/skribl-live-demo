@@ -15,6 +15,7 @@ host's front page with a drawing editor. No error, no warning.
 Runs in-process with Flask's test client — no server, no browser, so it is
 fast and has no port to collide on.
 """
+import json
 import sys
 from pathlib import Path
 from assertions import make_check
@@ -120,6 +121,151 @@ check("and the share URL it returns respects the prefix",
       f"returned {url!r}")
 check("and that share URL actually resolves",
       bool(url) and c3.get(url).status_code == 200)
+
+# THE GUIDE'S OWN EXAMPLE, RUN AS WRITTEN. docs/INTEGRATION.md opens with "The
+# smallest thing that works" and calls it the whole integration; nothing ran
+# it. Every host this suite builds commits in after_request, so none of them
+# could see what a site copying that block got (v316, a from-scratch host
+# outside the repo): POST /api/skribls answered 201, the editor said Posted!,
+# and no row was ever written — the contract says the host commits, and the
+# block showed no commit. The code is lifted out of the document itself, so
+# the guide cannot drift from what is checked; only its database moves to a
+# temporary file, and durability is read on a separate connection.
+print("\nINTEGRATION — the guide's smallest example, copied verbatim, keeps a post")
+import re as _re, sqlite3 as _sqlite3, tempfile as _tempfile, os as _os
+_guide = (ROOT / "docs" / "INTEGRATION.md").read_text(encoding="utf-8")
+_sec = _guide.split("## The smallest thing that works", 1)[1]
+_m = _re.search(r"```python\n(.*?)```", _sec, _re.S)
+check("the guide's smallest example is a python block under its heading", bool(_m))
+if _m:
+    _dbfile = _os.path.join(_tempfile.mkdtemp(), "guide.db")
+    _src = _m.group(1)
+    check("...and it names the database the reader will see", '"sqlite:///site.db"' in _src,
+          "the substitution below would silently not happen")
+    _src = _src.replace('"sqlite:///site.db"', repr("sqlite:///" + _dbfile))
+    _ns = {"__name__": "guide_example"}
+    exec(compile(_src, "docs/INTEGRATION.md#smallest", "exec"), _ns)
+    _gc = _ns["app"].test_client()
+    _r = _gc.post("/skribl/api/skribls", json=payload(title="from the guide"))
+    _rows = _sqlite3.connect(_dbfile).execute("select count(*) from skribl_posts").fetchone()[0]
+    check("a post made through it is still there after the request",
+          _r.status_code == 201 and _rows == 1,
+          f"POST {_r.status_code}, rows on a fresh connection: {_rows} — a 201 with "
+          "no row is a host that never commits: the example has to show the commit")
+
+# ...and the same block, from an EMPTY folder holding nothing but a copy of
+# skribl/. The guide says that directory is the whole runtime; a template, a
+# static file or a module that quietly lives elsewhere in this repository
+# would pass every in-tree suite and fail the first site that vendors it.
+print("\nINTEGRATION — skribl/ alone, copied into an empty project, runs the guide's example")
+if _m:
+    import shutil as _shutil, subprocess as _subprocess
+    _proj = _tempfile.mkdtemp()
+    _shutil.copytree(ROOT / "skribl", _os.path.join(_proj, "skribl"),
+                     ignore=_shutil.ignore_patterns("__pycache__"))
+    with open(_os.path.join(_proj, "hostapp.py"), "w", encoding="utf-8") as _f:
+        _f.write(_m.group(1))
+    _probe = (
+        "import hostapp, json\n"
+        "c = hostapp.app.test_client()\n"
+        "pages = {u: c.get(u).status_code for u in ('/skribl/skribl-pad', '/skribl/flip', '/skribl/library', '/skribl/gallery', '/skribl/feed')}\n"
+        "r = c.post('/skribl/api/skribls', json=" + repr(payload(title="vendored")) + ")\n"
+        "url = (r.get_json() or {}).get('url', '')\n"
+        "static = c.get('/skribl/static/skribl/app.js').status_code\n"
+        "print(json.dumps({'pages': pages, 'post': r.status_code, 'player': c.get(url).status_code if url else None, 'static': static}))\n")
+    _env = dict(_os.environ, PYTHONPATH=_proj)
+    _p = _subprocess.run([sys.executable, "-c", _probe], cwd=_proj, env=_env,
+                         capture_output=True, text=True, timeout=120)
+    try:
+        import json as _json
+        _res = _json.loads(_p.stdout.strip().splitlines()[-1])
+    except Exception:
+        _res = None
+    check("every page, a post, its player and a static file answer from the vendored copy",
+          bool(_res) and all(v == 200 for v in _res["pages"].values())
+          and _res["post"] == 201 and _res["player"] == 200 and _res["static"] == 200,
+          str(_res) if _res else (_p.stderr.strip().splitlines() or ["no output"])[-1][:300])
+
+# A host with Flask-WTF's CSRFProtect switched on site-wide refused every
+# Skribl post with a 400 (v316, the from-scratch host): Flask-WTF checks POSTs
+# before Skribl's view runs and reads only its own header names. The guide now
+# carries a recipe; this runs it, lifted from the page, with CSRFProtect on.
+print("\nINTEGRATION — the guide's Flask-WTF recipe: the page's token posts, no token is refused")
+try:
+    import flask_wtf  # noqa: F401  (harness/requirements.txt names it)
+    _have_wtf = True
+except ImportError:
+    _have_wtf = False
+check("Flask-WTF is installed, so this section runs (harness/requirements.txt)", _have_wtf)
+_wsec = _guide.split("already runs Flask-WTF's `CSRFProtect`", 1)
+_wm = _re.search(r"```python\n(.*?)```", _wsec[1], _re.S) if len(_wsec) == 2 else None
+check("the recipe is a python block after its paragraph", bool(_wm))
+if _have_wtf and _wm:
+    _wapp = Flask("guide_wtf")
+    _wapp.config.update(SQLALCHEMY_DATABASE_URI="sqlite:///:memory:", SECRET_KEY="host-secret")
+    _wdb = SQLAlchemy(_wapp)
+    skribl.models.attach_to_metadata(_wdb.metadata)
+    _wns = {"app": _wapp, "db": _wdb, "skribl": skribl}
+    exec(compile(_wm.group(1), "docs/INTEGRATION.md#flask-wtf", "exec"), _wns)
+
+    @_wapp.after_request
+    def _wcommit(resp):
+        if resp.status_code < 500:
+            _wdb.session.commit()
+        return resp
+
+    with _wapp.app_context():
+        _wdb.create_all()
+    _wc = _wapp.test_client()
+    _page = _wc.get("/skribl/skribl-pad").get_data(as_text=True)
+    _tm = _re.search(r"window\.SKRIBL_CSRF_TOKEN = (\"[^\"]*\")", _page)
+    _tok = json.loads(_tm.group(1)) if _tm else ""
+    check("the editor page renders Flask-WTF's token", bool(_tok), repr(_tok)[:60])
+    _no = _wc.post("/skribl/api/skribls", json=payload(title="no token"))
+    _yes = _wc.post("/skribl/api/skribls", json=payload(title="with token"),
+                    headers={"X-Skribl-CSRF": _tok})
+    check("with CSRFProtect on, a post carrying the page's token is created, one without is refused",
+          _yes.status_code == 201 and _no.status_code in (400, 403),
+          f"with token {_yes.status_code}, without {_no.status_code}")
+
+# A host that sets its OWN Content-Security-Policy on every response (Flask-
+# Talisman's default does, `default-src 'self'`) replaced Skribl's on Skribl's
+# pages: its after_request runs after the blueprint's, and Skribl only
+# setdefault()s. The editor's nonced inline scripts, inline styles and data:
+# images were all blocked and nothing could be posted (v316, a from-scratch
+# host). Skribl now has the last word on its OWN pages and none on the host's.
+# Emulated with a plain handler rather than Talisman, registered both BEFORE
+# and AFTER Skribl is mounted: which one runs last depends on that order.
+print("\nINTEGRATION — Skribl's pages keep Skribl's CSP under a host that sets its own")
+HOST_CSP = "default-src 'self'; object-src 'none'"
+for _when in ("before", "after"):
+    _capp = Flask("csp_host_" + _when)
+    _capp.config.update(SQLALCHEMY_DATABASE_URI="sqlite:///:memory:", SECRET_KEY="k")
+    _cdb = SQLAlchemy(_capp)
+    skribl.models.attach_to_metadata(_cdb.metadata)
+
+    def _host_csp(resp):
+        resp.headers["Content-Security-Policy"] = HOST_CSP
+        return resp
+    if _when == "before":
+        _capp.after_request(_host_csp)
+    skribl.init_skribl(_capp, session=lambda: _cdb.session, url_prefix="/skribl")
+    if _when == "after":
+        _capp.after_request(_host_csp)
+
+    @_capp.route("/")
+    def _chome():
+        return "host"
+    with _capp.app_context():
+        _cdb.create_all()
+    _cc = _capp.test_client()
+    _pr = _cc.get("/skribl/skribl-pad")
+    _pcsp = _pr.headers.get("Content-Security-Policy", "")
+    _nm = _re.search(r'nonce="([^"]+)"', _pr.get_data(as_text=True))
+    check(f"host handler registered {_when} Skribl: the editor carries Skribl's policy, with the page's nonce",
+          bool(_nm) and f"'nonce-{_nm.group(1)}'" in _pcsp and _pcsp != HOST_CSP, _pcsp[:90])
+    check(f"host handler registered {_when} Skribl: the host's own page keeps the host's policy",
+          _cc.get("/").headers.get("Content-Security-Policy") == HOST_CSP)
 
 print("\nINTEGRATION — the host owns the schema")
 # attach_to_metadata is the ONLY thing that makes a host's db.create_all() see

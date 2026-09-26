@@ -1051,6 +1051,54 @@ with sync_playwright() as p:
               f"rest {_rest}, drawer open {_open}")
         _ctx.close()
 
+    # During a replay the toolbar fades out but keeps its band (so the canvas
+    # never resizes); on a phone that band sat EMPTY under a 5px bar pressed on
+    # the canvas rim (owner, iPhone). The scrubber now lives in the band. Asked
+    # of the painted pixel at the bar's centre, and of where that centre is.
+    print("\nLAYOUT — on a phone, the replay scrubber sits in the toolbar's band")
+    _ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    _pg = _ctx.new_page()
+    browsing.goto(_pg, BASE, "/")
+    _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    _bx = _pg.locator("#canvas").bounding_box()
+    _cx, _cy = _bx["x"] + _bx["width"] / 2, _bx["y"] + _bx["height"] / 2
+    _pg.mouse.move(_cx, _cy); _pg.mouse.down()
+    for _i in range(60):
+        _pg.mouse.move(_cx + (_i % 20) * 6, _cy + (_i // 20) * 20); _pg.wait_for_timeout(30)
+    _pg.mouse.up()
+    _pg.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }")
+    _pg.wait_for_timeout(300)
+    _pg.evaluate("() => document.getElementById('playBtn').click()")
+    _pg.wait_for_timeout(600)
+    _sc = _pg.evaluate("""() => { const s = document.getElementById('playScrub').getBoundingClientRect(),
+        t = document.getElementById('toolBar').getBoundingClientRect(), y = s.top + s.height / 2, x = s.left + s.width / 2;
+        const el = document.elementFromPoint(x, y);
+        return { y: Math.round(y), band: [Math.round(t.top), Math.round(t.bottom)], w: Math.round(s.width),
+                 painted: !!(el && el.closest('#playScrub')) }; }""")
+    check("@390: while replaying, the scrubber is painted inside the toolbar's band, toolbar-wide",
+          _sc["band"][0] < _sc["y"] < _sc["band"][1] and _sc["painted"] and _sc["w"] > 300, str(_sc))
+    _ctx.close()
+
+    # Smear weight reused the 34px DIGIT cell of the Speed/Onion segments for
+    # WORDS, so "Normal" and "Strong" ran into each other at every phone width.
+    # Asked of the text's own box, not scrollWidth (which reads a few px over
+    # even for a button that fits).
+    print("\nLAYOUT — Flip's tune segments fit their words")
+    FIT = """() => [...document.querySelectorAll('#tunePanel .seg button')].filter(b => b.offsetParent).map(b => {
+        const r = document.createRange(); r.selectNodeContents(b); const cs = getComputedStyle(b);
+        const room = b.getBoundingClientRect().width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        return [b.textContent.trim(), Math.round(r.getBoundingClientRect().width * 10) / 10, Math.round(room * 10) / 10]; })
+        .filter(x => x[0] && x[1] > x[2] + 0.5)"""
+    for _w in (360, 430):
+        _ctx = browser.new_context(viewport={"width": _w, "height": 844}, is_mobile=True, has_touch=True)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, "/flip")
+        _pg.evaluate("() => document.getElementById('tuneBtn').click()")
+        _pg.wait_for_timeout(600)
+        _over = _pg.evaluate(FIT)
+        check(f"/flip @{_w}: no tune segment's label is wider than its cell", not _over, str(_over))
+        _ctx.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

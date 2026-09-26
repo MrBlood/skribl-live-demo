@@ -48,3 +48,8 @@ Pillow>=10.0,<14.0
 # 1.62 does not launch against it. The range below is deliberately narrow for
 # that reason: widen it only after checking the browser you actually have.
 playwright>=1.55,<1.57
+
+# Flask-WTF — verify_integration runs docs/INTEGRATION.md's recipe for a host
+# that already has CSRFProtect switched on site-wide. Without it that section
+# cannot run; the guide's most common real-world CSRF setup would go unchecked.
+flask-wtf>=1.2,<2.0

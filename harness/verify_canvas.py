@@ -112,8 +112,8 @@ with sync_playwright() as p:
     pad = ctx.new_page()
     browsing.goto(pad, BASE, "/")
     pad_help = pad.content()
-    check("Pad help explains Clear all can be undone",
-          "Undo" in pad_help and "Clear all" in pad_help)
+    check("Pad help explains New Skribl can be undone",
+          "Undo" in pad_help and "New Skribl" in pad_help)
     check("Pad help names the video format honestly",
           "WebM" in pad_help and "MP4" in pad_help)
     # "9:16 appears anywhere on the Pad page" was a proxy for "Pad has no

@@ -51,6 +51,9 @@ MEASURE = """() => {
     insetRight: wb.right - sb.right,
     gapBelow: sb.top - wb.bottom,
     wrapW: wb.width,
+    bandMid: (() => { const t = document.getElementById('toolBar').getBoundingClientRect(); return t.top + t.height / 2; })(),
+    bandW: document.getElementById('toolBar').getBoundingClientRect().width,
+    mid: sb.top + sb.height / 2,
     rFrame: parseFloat(getComputedStyle(document.documentElement)
                          .getPropertyValue('--r-frame')) || 0,
   };
@@ -131,19 +134,32 @@ with sync_playwright() as b_ctx:
               abs(m["insetLeft"] - m["insetRight"]) <= 1,
               f"left={round(m['insetLeft'], 2)}, right={round(m['insetRight'], 2)}")
 
-        check(f"[{label}] the inset is the frame's corner radius, read from the token",
-              abs(m["insetLeft"] - m["rFrame"]) <= 1,
-              f"inset={round(m['insetLeft'], 2)} vs --r-frame={m['rFrame']} — "
-              "a hard-coded inset would drift the moment the token moved")
+        if label == "phone":
+            # v316 (owner, iPhone): on a phone the toolbar fades for a replay but
+            # keeps its band, and a bar on the canvas rim left that band EMPTY
+            # under it. The phone's scrubber lives in the band instead —
+            # centred on it, toolbar-wide less 16px each side. The rim contract
+            # below is the desktop's, where the toolbar is not a thumb zone.
+            check(f"[{label}] it sits centred in the faded toolbar's band",
+                  abs(m["mid"] - m["bandMid"]) <= 2,
+                  f"bar centre {round(m['mid'], 1)} vs band centre {round(m['bandMid'], 1)}")
+            check(f"[{label}] it spans the toolbar's band, 16px in from each end",
+                  abs(m["w"] - (m["bandW"] - 32)) <= 1.5,
+                  f"w={round(m['w'], 1)}, band={round(m['bandW'], 1)}")
+        else:
+            check(f"[{label}] the inset is the frame's corner radius, read from the token",
+                  abs(m["insetLeft"] - m["rFrame"]) <= 1,
+                  f"inset={round(m['insetLeft'], 2)} vs --r-frame={m['rFrame']} — "
+                  "a hard-coded inset would drift the moment the token moved")
 
-        check(f"[{label}] it spans the flat bottom span, not the full width",
-              abs(m["w"] - (m["wrapW"] - 2 * m["rFrame"])) <= 1.5,
-              f"w={round(m['w'], 1)}, wrap={round(m['wrapW'], 1)} — spanning the "
-              "full width puts the ends past where the frame has curved away")
+            check(f"[{label}] it spans the flat bottom span, not the full width",
+                  abs(m["w"] - (m["wrapW"] - 2 * m["rFrame"])) <= 1.5,
+                  f"w={round(m['w'], 1)}, wrap={round(m['wrapW'], 1)} — spanning the "
+                  "full width puts the ends past where the frame has curved away")
 
-        check(f"[{label}] it hangs flush from the canvas bottom",
-              abs(m["gapBelow"]) <= 1,
-              f"gap={round(m['gapBelow'], 2)}px")
+            check(f"[{label}] it hangs flush from the canvas bottom",
+                  abs(m["gapBelow"]) <= 1,
+                  f"gap={round(m['gapBelow'], 2)}px")
 
         check(f"[{label}] it renders as a pill, not a rectangle",
               m["radius"] >= m["h"] / 2 and m["overflow"] == "hidden",

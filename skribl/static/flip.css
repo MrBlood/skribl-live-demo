@@ -814,6 +814,11 @@
   width: 34px; padding: 5px 0; font-size: 12px;
   display: inline-flex; align-items: center; justify-content: center;
 }
+/* ...except Smear weight, which borrowed the digit cell for WORDS: "Normal"
+   and "Strong" are 36-39px of text in a 34px box, so the three ran into one
+   another ("LightNormaStrong") at every phone width. Its cells size to their
+   words. */
+#smearWeightSeg button { width: auto; flex: 0 0 auto; padding: 5px 9px; }
 
 .onion-tint {
   display: inline-flex;

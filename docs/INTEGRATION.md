@@ -15,6 +15,15 @@ The planning record that used to live here was retired in the v263 cleanup; it l
 
 ## The smallest thing that works
 
+**Getting it into your project.** Skribl is the `skribl/` directory: its
+Python, templates, static files and migrations travel together, and nothing
+else in this repository is needed at runtime. Copy that directory into your
+project (or vendor it as a submodule) so `import skribl` resolves. It needs
+Flask 3 and SQLAlchemy 2; the example below also uses Flask-SQLAlchemy, which
+Skribl itself never imports. Alembic only if you run its migrations — see
+"Database and migrations". `verify_integration.py` copies the directory alone
+into an empty folder and runs this example there, so the claim is checked.
+
 ```python
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -34,11 +43,28 @@ skribl.models.attach_to_metadata(db.metadata)
 # 2. Mount it. `session` is required; everything else has a default.
 skribl.init_skribl(app, session=lambda: db.session, url_prefix="/skribl")
 
+# 3. Commit the request. Skribl flushes into YOUR transaction and never
+#    commits it (see "Transaction ownership"). Without this, POST answers 201,
+#    the editor says Posted!, and nothing is ever saved. after_request, not
+#    teardown_request: a commit that fails must still be able to change the
+#    response. Skip it on a 5xx; the rollback is the safety net for the rest.
+@app.after_request
+def commit_request(response):
+    if response.status_code < 500:
+        db.session.commit()
+    return response
+
+@app.teardown_request
+def rollback_request(exc):
+    db.session.rollback()
+
 with app.app_context():
     db.create_all()
 ```
 
-That is the whole integration. You now have:
+That is the whole integration. If your site already commits per request (most
+do, one way or another), step 3 is the hook you have: it only has to run
+before the response leaves. You now have:
 
     GET  /skribl/skribl-pad               the record-and-replay drawing editor
     GET  /skribl/flip                     the frame-by-frame animation editor
@@ -932,6 +958,42 @@ that combination rather than logging a warning nobody reads. Pass
 your authentication is not cookie-based (a bearer token cannot be ridden, and
 such a host is not wrong).
 
+**If your site already runs Flask-WTF's `CSRFProtect`, hand Skribl that
+instead.** Switched on site-wide, `CSRFProtect` checks every POST before
+Skribl's view runs, and it only reads its own headers: Skribl's pages send
+their token as `X-Skribl-CSRF`, so every post is refused with a 400 and the
+editor cannot say why. Give Skribl Flask-WTF's token and validator, and let
+Flask-WTF read Skribl's header:
+
+```python
+from flask import g
+from flask_wtf.csrf import CSRFProtect, generate_csrf, validate_csrf
+from wtforms.validators import ValidationError
+
+app.config["WTF_CSRF_HEADERS"] = ["X-CSRFToken", "X-CSRF-Token", "X-Skribl-CSRF"]
+CSRFProtect(app)
+
+def skribl_csrf_prepare():
+    g.skribl_csrf_token = generate_csrf()   # what Skribl's pages render and send
+
+def skribl_csrf_validate(req):
+    try:
+        validate_csrf(req.headers.get("X-Skribl-CSRF"))
+        return True
+    except ValidationError:
+        return False
+
+skribl.init_skribl(app, session=lambda: db.session, url_prefix="/skribl",
+                   csrf=(skribl_csrf_prepare, lambda response: response,
+                         skribl_csrf_validate))
+```
+
+The token lives in Flask's session, as Flask-WTF keeps it, so there is no
+cookie for Skribl to set (the middle element passes the response through).
+`verify_integration.py` runs this block, lifted from this page, with
+`CSRFProtect` on: a post carrying the page's token is created, one without it
+is refused.
+
 ## Database and migrations
 
 Skribl ships Alembic migrations for its own seven tables (`skribl_posts`,
@@ -947,6 +1009,32 @@ approaches:
   sentence sat four migrations stale before it was removed.
 
 Do not do both for the same tables.
+
+## Your site's security headers
+
+**Skribl's pages carry Skribl's Content-Security-Policy, even when your site
+sets its own; your pages keep yours.** A site-wide policy such as Flask-
+Talisman's default (`default-src 'self'`) cannot work on Skribl's pages: they
+need a per-request nonce for their inline scripts, inline style attributes,
+and `data:`/`blob:` for images, audio and fetches. Before v316 a host handler
+that wrote the header unconditionally replaced Skribl's, and the editor could
+not post at all. Now Skribl reasserts its own enforcing policy on responses
+from its own endpoints, after every host handler, whichever order you
+registered them in. It touches nothing else: your other headers, and every
+page that is not Skribl's, stay exactly as your site sets them.
+
+If you must own the header on Skribl's pages too, set `SKRIBL_CSP=off` and
+write a policy that includes Skribl's nonce, which is `g.csp_nonce` for the
+request. `SKRIBL_CSP=report-only` never overrides an enforcing policy of yours.
+
+One more header to know: Talisman also sends `X-Frame-Options: SAMEORIGIN`,
+which stops another origin framing the player. Skribl deliberately sends no
+frame restriction on the player page (`SKRIBL_EMBED_ORIGINS` names who may
+embed it), so if you embed `/s/<id>` from a different origin, exempt that
+page from your framing header.
+
+`verify_integration.py` pins the precedence with a host handler registered
+before and after Skribl is mounted.
 
 ## Configuration
 

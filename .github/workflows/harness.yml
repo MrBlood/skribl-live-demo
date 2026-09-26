@@ -102,6 +102,10 @@ jobs:
       # verify_surfaces joined after #236: a module exporting a name no page
       # reads went green on the PR and red on main. It reads source only
       # (run with port 5001 down: 12/12).
+      # verify_integration joined in v316: it runs docs/INTEGRATION.md's own
+      # examples (the smallest host, a vendored skribl/ copy, the Flask-WTF
+      # recipe) in-process with Flask's test client — no browser, no server —
+      # and the guide's opening example had been losing every post unseen.
       - name: Run the boot and source suites
         run: |
           ./harness/run_harness.sh \
@@ -109,7 +113,7 @@ jobs:
             verify_txcontract.py verify_privacy.py verify_migrations.py \
             verify_createpost.py verify_sweepjob.py verify_deletion.py \
             verify_backfill.py verify_hostseams.py verify_mediareport.py \
-            verify_surfaces.py
+            verify_surfaces.py verify_integration.py
       # run_harness.sh exits 0 on a skip, so a suite that quietly declined to
       # run would leave this job green having proved nothing. None of these is
       # designed to skip, so ANY skip is a failure -- the guard is generalised
