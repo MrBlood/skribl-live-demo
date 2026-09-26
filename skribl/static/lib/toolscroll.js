@@ -72,6 +72,6 @@
   }
   if (document.readyState === 'complete') start();
   else window.addEventListener('load', start);
-
-  window.SkriblToolScroll = { fit: fit };
+  // Exports nothing on purpose: it wires itself, and verify_surfaces refuses a
+  // page that loads a module whose exports nothing on that page reads.
 })();

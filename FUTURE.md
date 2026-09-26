@@ -134,8 +134,11 @@ the music drawer's loop-detail pan (`dragZoomPan`) lives in `editor_photo.js`,
 not `editor_music.js`. The canvas zoom and pinch copies are also where the two
 editors' event families met (Pad bound mouse and touch, Flip Pointer Events).
 Pad's canvas moved onto Pointer Events in v315 (SK312-002) with the pinch left
-on touch events as Flip's is, so consolidating the two zoom/pinch copies is now
-a same-model merge rather than a migration.
+on touch events as Flip's is, and the same release merged the magnifier:
+`lib/canvaszoom.js` is now the one zoom/pan/HUD/grip/wheel/Space-drag for both
+editors (Pad's copy as the base), which also took it out of the player's
+download. The pinch pair (`beginPinch`, `_pinchMove`) is the remaining copy
+in that corner; `harness/tools/editordup.py` lists what else is left.
 
 The v142–v174 work moved eight modules into `static/lib/` (`canvassizes`,
 `posted`, `postedui`, `report`, `segslider`, `tooltip`, `hints`, `helpsearch`),

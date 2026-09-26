@@ -610,7 +610,10 @@ with sync_playwright() as sp:
     # source, strictly editor-only, and may delete itself instead: it exists
     # only because localStorage cannot hold media bytes, so durable drafts
     # would remove it rather than move it.
-    BYTES_RATCHET, BYTES_TARGET = 150_300, 153_800
+    # v315: the canvas magnifier left app.js for lib/canvaszoom.js (editors
+    # only, SK312-003), taking ~8.9 KB of served JS off every player load. The
+    # ratchet follows it down so the room is not quietly spent again.
+    BYTES_RATCHET, BYTES_TARGET = 140_200, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
