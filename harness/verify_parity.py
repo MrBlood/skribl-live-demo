@@ -1099,6 +1099,42 @@ with sync_playwright() as p:
               f"{_gd}")
         _q.close()
 
+    # ---- the re-add cards: one module now, driven on each editor ----------
+    # lib/pendingcards.js replaced app.js's and flip.js's refreshPendingCards.
+    # A pending track shows its card with the loop and marks the tab dot; once
+    # nothing is pending and nothing is loaded the dot is HIDDEN, not merely
+    # un-pending (v294: a bare class removal left a green "has media" dot).
+    # That second half was pinned nowhere until this section.
+    print("\nPARITY — the re-add cards and tab dots, on both editors")
+    RA = """() => {
+        const g = (id) => document.getElementById(id);
+        pendingMusicMeta = { name: 'loop.mp3', trimStart: 2, trimEnd: 6.5 };
+        pendingPhotoMeta = { fit: 'contain', opacity: 0.5 };
+        refreshPendingCards();
+        const on = { m: !g('musicPending').hidden, mName: g('musicPendingName').textContent,
+                     mMeta: g('musicPendingMeta').textContent,
+                     mDot: !g('musicTabDot').hidden && g('musicTabDot').classList.contains('pending'),
+                     p: !g('photoPending').hidden, pName: g('photoPendingName').textContent,
+                     pMeta: g('photoPendingMeta').textContent };
+        pendingMusicMeta = null; pendingPhotoMeta = null;
+        refreshPendingCards();
+        const off = { m: !g('musicPending').hidden, p: !g('photoPending').hidden,
+                      mDot: !g('musicTabDot').hidden, pDot: !g('photoTabDot').hidden };
+        return { on: on, off: off }; }"""
+    for _route in ("/skribl-pad", "/flip"):
+        _q = b.new_page(viewport={"width": 900, "height": 1100})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _r = _q.evaluate(RA)
+        _on, _off = _r["on"], _r["off"]
+        check(f"{_route}: a pending track shows its card, the loop and a pending dot",
+              _on["m"] and _on["mName"] == "loop.mp3" and _on["mMeta"] == "Loop 0:02–0:06 · 4.5s" and _on["mDot"],
+              f"{_on}")
+        check(f"{_route}: a pending photo shows its card, a fallback name and its settings",
+              _on["p"] and _on["pName"] == "Your image" and _on["pMeta"] == "Fit · 50% opacity", f"{_on}")
+        check(f"{_route}: with nothing pending or loaded, both cards AND both dots are hidden",
+              not any(_off.values()), f"{_off}")
+        _q.close()
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))
