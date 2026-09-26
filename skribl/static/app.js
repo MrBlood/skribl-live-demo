@@ -4810,17 +4810,6 @@ function resetMusicToggle() { musicEnabled = true; syncLayerToggle(document.getE
 // ===========================================================================
 
 // --- pinch gesture (called from startDraw when a 2nd finger lands) ----------
-let _pinch = null;   // { startDist, lastDist, lastMid }
-
-function _touchMid(t0, t1) {
-  const r = canvasWrap.getBoundingClientRect();
-  return { x: (t0.clientX + t1.clientX) / 2 - r.left,
-           y: (t0.clientY + t1.clientY) / 2 - r.top };
-}
-function _touchDist(t0, t1) {
-  return Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
-}
-
 // Undo the nascent 1-finger stroke the first finger began just before the
 // second landed — restore the pre-stroke snapshot startDraw pushed, and if that
 // stroke had auto-armed a fresh recording, unwind it too. So a pinch never
@@ -4863,79 +4852,9 @@ function abortStrokeForPinch() {
   _autoArmedThisStroke = false;
 }
 
-function beginPinch(e) {
-  // Image reposition owns its own gestures; leave it alone.
-  if (typeof repositioning !== 'undefined' && repositioning) return;
-  if (!ZoomView) return;
-  // A pinch turns the magnifier on if it's off — pinching should never feel dead.
-  if (typeof ZoomView.enabled === 'function' && !ZoomView.enabled()) {
-    if (typeof ZoomView.enable === 'function') ZoomView.enable();
-  }
-  // The two fingers of THIS pinch are the ones on the canvas, not the first two
-  // on the screen. See the note at the call site in editor_draw.js.
-  const _own = SkriblPinch.own(e);
-  if (!_own || _own.length < 2) return;
-  if (typeof e.preventDefault === 'function') e.preventDefault();
-  // Show the HUD too, not just the zoom: Fit lives there, and on a skinny phone
-  // the magnify button that would otherwise reveal it is hidden.
-  //
-  // AFTER the two-finger check, not before. Enabling the magnifier is a visible
-  // state change and it used to happen on any call that reached this function,
-  // including the ones that then bailed out one line later — so a gesture that
-  // was never a pinch still turned zoom on. Nothing about revealing the HUD
-  // needs to precede knowing that this is a pinch.
-  if (typeof ZoomView.enabled === 'function' && !ZoomView.enabled()) {
-    if (typeof ZoomView.enable === 'function') ZoomView.enable();
-  }
-  if (window._skriblRevealZoomHud) window._skriblRevealZoomHud();
-  abortStrokeForPinch();
-  pinching = true;
-  const t0 = _own[0], t1 = _own[1];
-  // Remember WHICH two fingers. _pinchMove is bound to window and reads the
-  // screen-wide list, so a third contact — the resting thumb again — could
-  // otherwise take a slot and the pinch would be computed from a pair that
-  // includes a finger standing still, halving the apparent zoom.
-  _pinch = {
-    ids: [t0.identifier, t1.identifier],
-    startDist: _touchDist(t0, t1), lastDist: _touchDist(t0, t1),
-    lastMid: _touchMid(t0, t1)
-  };
-}
-
-function _pinchMove(e) {
-  if (!pinching || !_pinch) return;
-  const pair = SkriblPinch.pair(e, _pinch && _pinch.ids);
-  if (!pair) return;
-  e.preventDefault();
-  const t0 = pair[0], t1 = pair[1];
-  const dist = _touchDist(t0, t1);
-  const mid = _touchMid(t0, t1);
-  if (_pinch.lastDist > 0) {
-    const factor = dist / _pinch.lastDist;
-    ZoomView.zoomAt(factor, mid.x, mid.y);       // scale about the pinch midpoint
-  }
-  ZoomView.panBy(mid.x - _pinch.lastMid.x, mid.y - _pinch.lastMid.y);  // two-finger pan
-  _pinch.lastDist = dist;
-  _pinch.lastMid = mid;
-}
-
-function _pinchEnd(e) {
-  if (!pinching) return;
-  // End the pinch as soon as either of ITS OWN fingers lifts. A single remaining
-  // finger will NOT resume drawing (it never fired a fresh touchstart); the user
-  // lifts and taps again to draw — standard, and avoids a stray line.
-  //
-  // Counting to two instead would leave the pinch live when one of its fingers
-  // lifted while an unrelated resting contact kept the screen-wide total at two:
-  // the gesture would then be steered by a pair that no longer exists.
-  if (SkriblPinch.pair(e, _pinch && _pinch.ids)) return;
-  pinching = false;
-  _pinch = null;
-}
-
-window.addEventListener('touchmove', _pinchMove, { passive: false });
-window.addEventListener('touchend', _pinchEnd);
-window.addEventListener('touchcancel', _pinchEnd);
+// beginPinch / the pinch's move and end live in lib/canvaszoom.js since v315,
+// with the zoom they drive (one gesture for both editors). What stays here is
+// Pad's own half, above: abortStrokeForPinch, passed in as the pinch's onStart.
 
 // --- zoom controller + pill -------------------------------------------------
 // The magnifier -- zoom, pan, HUD, grip, wheel and Space-drag -- lives in
@@ -4945,7 +4864,16 @@ window.addEventListener('touchcancel', _pinchEnd);
 (function initCanvasZoom() {
   if (document.body.classList.contains('player-mode')) return;
   if (!window.SkriblCanvasZoom) return;
-  ZoomView = window.SkriblCanvasZoom.create({ wrap: canvasWrap, panToast: true });
+  ZoomView = window.SkriblCanvasZoom.create({
+    wrap: canvasWrap, panToast: true,
+    pinch: {
+      surface: canvas,
+      // Image reposition owns its own gestures; leave it alone.
+      canStart: function () { return !(typeof repositioning !== 'undefined' && repositioning); },
+      onStart: abortStrokeForPinch,
+      set: function (on) { pinching = on; }
+    }
+  });
 })();
 
 /* ---- canvas size (Pad) ----------------------------------------------------
