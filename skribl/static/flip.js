@@ -273,7 +273,7 @@ let framePaintMs = [];
 // -- the one you actually watch after pressing the button -- still stuttered.
 let msPerPoint = 0;
 let strokePointerId = null;   // the pointer that owns the stroke in progress
-let ZoomView = null, pinching = false, _pinch = null;                        // canvas magnify (pinch/pan)
+let ZoomView = null, pinching = false;                        // canvas magnify (pinch/pan)
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
 /* v227 Select. These live UP HERE, with the other early state, and not beside
    the functions that use them 3000 lines below. `let` is in its temporal dead
@@ -2113,48 +2113,9 @@ function abortStrokeForPinch(){
   drawing=false; curCount=0; smoothPt=null; lastRaw=null; strokeFrame=null; strokePointerId=null; render();
   document.body.classList.remove('stroking');   // aborted stroke: the chrome returns too
 }
-/* eventPoint / pinch helpers: lib/eventpoint.js, one implementation shared with
-   Pad and the player. Written out here once and rejected by verify_surfaces.py,
-   which counts names defined in both app.js and flip.js — correctly, since this
-   one reads nothing but its argument. */
-function _touchDist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
-function _touchMid(a,b){ const r=document.querySelector('.flip-wrap').getBoundingClientRect();
-  return { x:(a.clientX+b.clientX)/2 - r.left, y:(a.clientY+b.clientY)/2 - r.top }; }
-function beginPinch(e){
-  if(playing || reposMode || !ZoomView) return;
-  if(ZoomView.enabled && !ZoomView.enabled()) ZoomView.enable();   // pinch turns the magnifier on
-  // The pinch's two fingers are the ones on the CANVAS, not the first two on
-  // the screen, and it remembers WHICH two: _pinchMove is bound to window and
-  // reads the screen-wide list, so a third contact could otherwise take a slot
-  // and the gesture would be computed from a pair including a finger standing
-  // still. Same fix as app.js's beginPinch.
-  const own = SkriblPinch.own(e);
-  if(!own || own.length<2) return;
-  if(e.cancelable) e.preventDefault();
-  abortStrokeForPinch(); pinching=true;
-  const t0=own[0], t1=own[1];
-  _pinch={ ids:[t0.identifier,t1.identifier], lastDist:_touchDist(t0,t1), lastMid:_touchMid(t0,t1) };
-}
-function _pinchMove(e){
-  if(!pinching || !_pinch || !ZoomView) return;
-  const pair=SkriblPinch.pair(e, _pinch && _pinch.ids);
-  if(!pair) return;
-  if(e.cancelable) e.preventDefault();
-  const t0=pair[0], t1=pair[1];
-  const dist=_touchDist(t0,t1), mid=_touchMid(t0,t1);
-  if(_pinch.lastDist>0) ZoomView.zoomAt(dist/_pinch.lastDist, mid.x, mid.y);
-  ZoomView.panBy(mid.x-_pinch.lastMid.x, mid.y-_pinch.lastMid.y);
-  _pinch.lastDist=dist; _pinch.lastMid=mid;
-}
-// Ends when either of ITS OWN fingers lifts, not when the screen drops below
-// two contacts — an unrelated resting finger must not keep the pinch alive.
-function _pinchEnd(e){ if(!pinching) return; if(SkriblPinch.pair(e, _pinch && _pinch.ids)) return; pinching=false; _pinch=null; }
-// targetTouches: two fingers ON THE PAD is a pinch; a finger resting elsewhere
-// on the page plus one on the pad is a stroke.
-pad.addEventListener('touchstart', e=>{ const t=e.targetTouches||e.touches; if(t && t.length>=2) beginPinch(e); }, {passive:false});
-window.addEventListener('touchmove', _pinchMove, {passive:false});
-window.addEventListener('touchend', _pinchEnd);
-window.addEventListener('touchcancel', _pinchEnd);
+// The pinch (begin, move, end, the two-finger touchstart on the pad) lives in
+// lib/canvaszoom.js since v315, one gesture for both editors; Flip passes its
+// own half -- abortStrokeForPinch above, and when a pinch may start.
 
 // The magnifier lives in lib/canvaszoom.js since v315 (SK312-003) -- Pad's
 // implementation, shared. What Flip owns is passed in:
@@ -2170,7 +2131,9 @@ window.addEventListener('touchcancel', _pinchEnd);
   ZoomView = window.SkriblCanvasZoom.create({
     wrap: flipWrap, spaceOnlyWhenZoomed: true,
     keyRegistry: { surface: 'flip', label: 'hold to grab-pan the magnified canvas' },
-    onPaint: (z) => { pad.style.cursor = z > 1.001 ? 'crosshair' : ''; }
+    onPaint: (z) => { pad.style.cursor = z > 1.001 ? 'crosshair' : ''; },
+    pinch: { surface: pad, canStart: () => !playing && !reposMode,
+             onStart: abortStrokeForPinch, set: (on) => { pinching = on; } }
   });
 })();
 

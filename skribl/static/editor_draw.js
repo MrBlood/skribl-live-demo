@@ -250,7 +250,7 @@ function startDraw(e) {
   // `targetTouches` is the subset that started on this element, which is what
   // "two fingers on the canvas" always meant.
   const _canvasTouches = e.targetTouches || e.touches;
-  if (ZoomView && _canvasTouches && _canvasTouches.length >= 2) { beginPinch(e); return; }
+  if (ZoomView && _canvasTouches && _canvasTouches.length >= 2) { ZoomView.beginPinch(e); return; }
   e.preventDefault();
   _autoArmedThisStroke = false;
   // Ignore non-primary mouse buttons (right/middle click). A right-click
@@ -589,7 +589,7 @@ canvas.addEventListener('pointercancel', _endStrokeFor);
 // startDraw's note; ZoomView-guarded so a surface without zoom never pinches.
 canvas.addEventListener('touchstart', (e) => {
   const t = e.targetTouches || e.touches;
-  if (typeof ZoomView !== 'undefined' && ZoomView && t && t.length >= 2) { beginPinch(e); return; }
+  if (t && t.length >= 2) return;   // the pinch: lib/canvaszoom.js's own touchstart takes it
   // iOS SAFARI, NOT CSS, DECIDES WHETHER A FINGER ON THE CANVAS ZOOMS THE PAGE.
   // Pad's touch listeners used to preventDefault every touchstart/touchmove on
   // the canvas, and that -- more than `touch-action: none`, which iOS honours

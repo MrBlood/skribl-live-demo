@@ -19,6 +19,12 @@
  *                       Space at any zoom.
  *   keyRegistry         {surface, label}: register the Space pan with the
  *                       shared KeyRegistry, scoped to "zoomed" (Flip)
+ *   pinch               the two-finger gesture (v315, the second merge):
+ *                       {surface, canStart(), onStart(), set(on)} -- the
+ *                       element two fingers land on, whether a pinch may
+ *                       begin now, how to abort the stroke the first finger
+ *                       began, and the editor's own `pinching` flag, which
+ *                       its stroke code reads.
  *
  * The editors only -- the player has no #zoomLayer and does not load this.
  * create() returns the object both editors already called ZoomView, with the
@@ -315,6 +321,57 @@
     global.addEventListener('mouseup', function () {
       if (spaceDragging) { spaceDragging = false; wrap.style.cursor = spaceHeld ? 'grab' : ''; }
     });
+
+    // ---- the pinch: two fingers on the drawing magnify and pan it ----------
+    // Two fingers ON THE SURFACE (targetTouches -- a thumb resting on the
+    // header is not the second finger), remembered by identifier so a third
+    // contact cannot take a slot, and ended as soon as either of ITS OWN
+    // fingers lifts. A single remaining finger does not resume drawing; the
+    // person lifts and taps again. lib/pinchgesture.js holds the pair logic.
+    var P = opts.pinch, pinch = null;
+    function touchMid(a, b) {
+      var r = wrap.getBoundingClientRect();
+      return { x: (a.clientX + b.clientX) / 2 - r.left, y: (a.clientY + b.clientY) / 2 - r.top };
+    }
+    function touchDist(a, b) { return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
+    view.beginPinch = function (e) {
+      if (!P || (P.canStart && !P.canStart())) return;
+      var own = global.SkriblPinch && global.SkriblPinch.own(e);
+      if (!own || own.length < 2) return;
+      if (e.cancelable) e.preventDefault();
+      // The magnifier comes on with the pinch, HUD and all -- a pinch should
+      // never feel dead -- and only once it is known to BE a pinch.
+      view.enable();
+      if (P.onStart) P.onStart();
+      if (P.set) P.set(true);
+      var t0 = own[0], t1 = own[1];
+      pinch = { ids: [t0.identifier, t1.identifier], lastDist: touchDist(t0, t1), lastMid: touchMid(t0, t1) };
+    };
+    if (P && P.surface) {
+      P.surface.addEventListener('touchstart', function (e) {
+        var t = e.targetTouches || e.touches;
+        if (t && t.length >= 2) view.beginPinch(e);
+      }, { passive: false });
+      global.addEventListener('touchmove', function (e) {
+        if (!pinch) return;
+        var pair = global.SkriblPinch.pair(e, pinch.ids);
+        if (!pair) return;
+        if (e.cancelable) e.preventDefault();
+        var dist = touchDist(pair[0], pair[1]), mid = touchMid(pair[0], pair[1]);
+        if (pinch.lastDist > 0) view.zoomAt(dist / pinch.lastDist, mid.x, mid.y);   // about the midpoint
+        view.panBy(mid.x - pinch.lastMid.x, mid.y - pinch.lastMid.y);               // two-finger pan
+        pinch.lastDist = dist;
+        pinch.lastMid = mid;
+      }, { passive: false });
+      var endPinch = function (e) {
+        if (!pinch) return;
+        if (global.SkriblPinch.pair(e, pinch.ids)) return;
+        pinch = null;
+        if (P.set) P.set(false);
+      };
+      global.addEventListener('touchend', endPinch);
+      global.addEventListener('touchcancel', endPinch);
+    }
 
     render(false);
     return view;
