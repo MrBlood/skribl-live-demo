@@ -614,7 +614,8 @@ with sync_playwright() as sp:
     # only, SK312-003), taking ~8.9 KB of served JS off every player load. The
     # ratchet follows it down so the room is not quietly spent again.
     # ...and the pinch followed it into the lib (v315, same release): 137,967.
-    BYTES_RATCHET, BYTES_TARGET = 138_500, 153_800
+    # ...and the zoomed loop view (lib/loopwave.js, same release): 134,328.
+    BYTES_RATCHET, BYTES_TARGET = 134_900, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
