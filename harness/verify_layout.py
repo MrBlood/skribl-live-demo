@@ -1028,6 +1028,29 @@ with sync_playwright() as p:
               _h["scrollY"] > 40 and _h["hit"], str(_h))
         _ctx.close()
 
+    # Flip's stage had `flex: 1 1 52vh`, and a flex basis outranks the height
+    # sizeStage() writes: at rest the stage grew into the slack and the canvas
+    # was fitted to it; a drawer took the slack away, the stage fell back to
+    # 52vh, and the page-action row (Duplicate, Blank...) sat ON the canvas —
+    # owner, iPhone, and the iPad did it too. A drawer must not change the stage.
+    print("\nLAYOUT — Flip: opening a drawer leaves the stage and the canvas alone")
+    STAGE = """() => { const s = document.querySelector('.flip-stage').getBoundingClientRect(),
+        p = document.getElementById('pad').getBoundingClientRect();
+        return { stageH: Math.round(s.height), padBottom: Math.round(p.bottom), stageBottom: Math.round(s.bottom) }; }"""
+    for _vp in ({"width": 390, "height": 844}, {"width": 820, "height": 1180}):
+        _ctx = browser.new_context(viewport=_vp, is_mobile=_vp["width"] < 700, has_touch=True)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, "/flip")
+        _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _rest = _pg.evaluate(STAGE)
+        _pg.evaluate("() => document.getElementById('musicBtn').click()")
+        _pg.wait_for_timeout(1200)
+        _open = _pg.evaluate(STAGE)
+        check(f"/flip @{_vp['width']}: the stage keeps its height and the canvas stays inside it",
+              _open["stageH"] == _rest["stageH"] and _open["padBottom"] <= _open["stageBottom"] + 1,
+              f"rest {_rest}, drawer open {_open}")
+        _ctx.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]
