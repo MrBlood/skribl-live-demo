@@ -618,7 +618,13 @@ with sync_playwright() as p:
     # defines it, and the pill is sampled from the first frame.
     pg7.add_init_script("""(() => { let real;
         Object.defineProperty(window, 'SkriblDraftStore', { configurable: true, get: () => real,
-          set: (v) => { const orig = v.put.bind(v); window.__puts = 0; v.put = (k, val) => { window.__puts++; return orig(k, val); }; real = v; } });
+          set: (v) => { const orig = v.put.bind(v); window.__puts = 0; v.put = (k, val) => { window.__puts++; return orig(k, val); };
+                        // A SLOW STORE, deterministically (v315): the healthy-restore row below went
+                        // red only when the machine was loaded -- the store answered after the 200 ms
+                        // post-restore autosave, which then called the track missing. 800 ms makes
+                        // that the case every run instead of the unlucky one.
+                        const g = v.get.bind(v); v.get = (k) => new Promise(r => setTimeout(() => r(g(k)), 800));
+                        real = v; } });
         window.__pillTexts = [];
         setInterval(() => { const el = document.getElementById('autosaveStatus'); if (el && !el.hidden) window.__pillTexts.push(document.getElementById('autosaveStatusText').textContent); }, 100); })();""")
     pg7.reload(wait_until="load"); pg7.wait_for_timeout(6000)
