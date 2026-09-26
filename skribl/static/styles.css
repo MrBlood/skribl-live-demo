@@ -6612,3 +6612,32 @@ body.playing .flip-grid { display: none; }
   }
   .seg-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }
+
+
+/* ---- The toolbar as one scrolling row, only where it does not fit (v315) ----
+   lib/toolscroll.js adds .tb-scroll when the controls are wider than the bar
+   (the smallest phones), and removes it everywhere else, so no layout that
+   fits is touched. The last tool is cut off by the edge -- the owner's "as
+   long as you see part of it" -- and NOT faded with a mask: a mask applies to
+   every descendant, fixed ones included, and would erase the popovers
+   wherever they left the bar's box. The popovers that hang from
+   the bar are fixed to the viewport at --tb-top in this mode, because a
+   scrolling element clips its children on both axes. */
+.toolbar.tb-scroll {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.toolbar.tb-scroll::-webkit-scrollbar { display: none; }
+.toolbar.tb-scroll > * { flex: none; }
+.toolbar.tb-scroll .shape-pop,
+.toolbar.tb-scroll .tool-tray {
+  position: fixed;
+  bottom: auto;
+  top: auto;
+  bottom: calc(100vh - var(--tb-top, 100vh) + 8px);
+  bottom: calc(100dvh - var(--tb-top, 100dvh) + 8px);
+}
