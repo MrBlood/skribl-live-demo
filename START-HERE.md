@@ -731,6 +731,7 @@ rather than a shared rule.
 | `inputsamples.js` | Flip | The points the browser already captured and the handler was throwing away. |
 | `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things answer at once. |
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
+| `loopwave.js` | Pad+Flip | The music drawer's zoomed loop view: which stretch of the track it shows, where the two trim handles sit in it, and the waveform drawn into it. |
 | `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
 | `modalfocus.js` | Pad+Flip+library+gallery | Focus for surfaces that declare aria-modal="true". |

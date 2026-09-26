@@ -5083,28 +5083,17 @@ function updateTrimUI(){
   requestZoomWaveformDraw(); updateZoomHandles(); if(typeof updateZoomPanSlider==='function') updateZoomPanSlider();
 }
 
+// Maths, handles and waveform of the zoomed loop view: lib/loopwave.js (v315), shared with Pad.
 function getZoomWindow(){
-  const loopDuration=Math.max(0, trimEnd-trimStart);
-  const contextSeconds=Math.max(1, Math.min(4, loopDuration*0.25));
-  const halfSpan=(loopDuration/2+contextSeconds)/zoomMag;
-  let center;
-  if(zoomCenter!=null) center=zoomCenter;
-  else if(zoomFocus==='start') center=trimStart;
-  else if(zoomFocus==='end') center=trimEnd;
-  else center=(trimStart+trimEnd)/2;
-  const lo=halfSpan, hi=Math.max(halfSpan, audioDuration-halfSpan);
-  center=Math.max(lo, Math.min(center, hi));
-  let start=Math.max(0, center-halfSpan), end=Math.min(audioDuration, center+halfSpan);
-  if(end-start<0.001) end=Math.min(audioDuration, start+0.001);
-  return { start, end, duration: Math.max(0.001, end-start) };
+  return SkriblLoopWave.zoomWindow({ start:trimStart, end:trimEnd, duration:audioDuration, mag:zoomMag, center:zoomCenter, focus:zoomFocus });
 }
 function syncZoomFocusButtons(){ document.querySelectorAll('.zoom-mag-btn[data-focus]').forEach(b=>{ b.classList.toggle('active', zoomFocus!=='free' && b.dataset.focus===zoomFocus); }); }
 function updateZoomHandles(){
   if(!zoomTrackWrap||!zoomHandleStart||!zoomHandleEnd) return;
   if(!Number.isFinite(audioDuration)||audioDuration<=0) return;
-  const zw=getZoomWindow(), startPct=((trimStart-zw.start)/zw.duration)*100, endPct=((trimEnd-zw.start)/zw.duration)*100;
-  zoomHandleStart.style.left=startPct+'%'; zoomHandleEnd.style.left=endPct+'%';
-  zoomHandleStart.hidden=!(startPct>=-2&&startPct<=102); zoomHandleEnd.hidden=!(endPct>=-2&&endPct<=102);
+  const hd=SkriblLoopWave.handles(trimStart, trimEnd, getZoomWindow());
+  zoomHandleStart.style.left=hd.startPct+'%'; zoomHandleEnd.style.left=hd.endPct+'%';
+  zoomHandleStart.hidden=!hd.startShown; zoomHandleEnd.hidden=!hd.endShown;
 }
 let zoomDrawPending=false;
 function requestZoomWaveformDraw(){ if(zoomDrawPending) return; zoomDrawPending=true; requestAnimationFrame(()=>{ zoomDrawPending=false; if(currentAudioBuffer) drawWaveform(currentAudioBuffer); drawZoomWaveform(); }); }
@@ -5126,25 +5115,8 @@ function drawWaveform(audioBuffer){
 }
 function drawZoomWaveform(){
   if(!currentAudioBuffer||!zoomWaveformCanvas) return;
-  const rect=zoomWaveformCanvas.getBoundingClientRect(); if(!rect.width) return;
-  const dpr=window.devicePixelRatio||1; zoomWaveformCanvas.width=Math.round(rect.width*dpr); zoomWaveformCanvas.height=Math.round(rect.height*dpr);
-  zoomWaveformCtx.setTransform(dpr,0,0,dpr,0,0); const w=rect.width, h=rect.height, mid=h/2;
-  const loopDuration=trimEnd-trimStart, zw=getZoomWindow(), zst=zw.start, zdur=zw.duration;
-  zoomWaveformCtx.fillStyle='#161a22'; zoomWaveformCtx.fillRect(0,0,w,h);
-  const data=currentAudioBuffer.getChannelData(0), sr=currentAudioBuffer.sampleRate;
-  const startSample=Math.max(0,Math.floor(zst*sr)), endSample=Math.min(data.length,Math.floor(zw.end*sr));
-  const totalSamples=Math.max(1,endSample-startSample), spp=Math.max(1,Math.floor(totalSamples/w));
-  zoomWaveformCtx.fillStyle='#3a4150';
-  for(let x=0;x<w;x++){ const a=startSample+x*spp, b=Math.min(a+spp,endSample); let mn=1,mx=-1; for(let i=a;i<b;i++){ const v=data[i]||0; if(v<mn)mn=v; if(v>mx)mx=v; } zoomWaveformCtx.fillRect(x, mid+mn*mid*0.9, 1, Math.max(1,(mid+mx*mid*0.9)-(mid+mn*mid*0.9))); }
-  const lsX=((trimStart-zst)/zdur)*w, leX=((trimEnd-zst)/zdur)*w;
-  zoomWaveformCtx.fillStyle='rgba(124,92,255,0.2)'; zoomWaveformCtx.fillRect(lsX,0,leX-lsX,h);
-  zoomWaveformCtx.fillStyle='#7c5cff';
-  for(let x=Math.floor(lsX);x<Math.ceil(leX);x++){ const a=startSample+x*spp, b=Math.min(a+spp,endSample); let mn=1,mx=-1; for(let i=a;i<b;i++){ const v=data[i]||0; if(v<mn)mn=v; if(v>mx)mx=v; } zoomWaveformCtx.fillRect(x, mid+mn*mid*0.9, 1, Math.max(1,(mid+mx*mid*0.9)-(mid+mn*mid*0.9))); }
-  zoomWaveformCtx.fillStyle='#7c5cff'; zoomWaveformCtx.fillRect(lsX,0,2,h); zoomWaveformCtx.fillRect(leX-2,0,2,h);
-  if(loopCrossfadeMs>0 && loopDuration>0){ const loopFrames=Math.floor(loopDuration*sr); const xf=Math.min(Math.floor((loopCrossfadeMs/1000)*sr), Math.floor(loopFrames/2)); const xfW=((xf/sr)/zdur)*w;
-    if(xfW>0){ const headX=lsX, tailX=leX-xfW; zoomWaveformCtx.fillStyle='rgba(255,176,32,0.22)'; zoomWaveformCtx.fillRect(headX,0,xfW,h); zoomWaveformCtx.fillRect(tailX,0,xfW,h); zoomWaveformCtx.fillStyle='rgba(255,176,32,0.9)'; for(let yy=0;yy<h;yy+=9){ zoomWaveformCtx.fillRect(headX+xfW-1,yy,1.5,5); zoomWaveformCtx.fillRect(tailX,yy,1.5,5); } } }
-  zoomWaveformCtx.fillStyle='#2e3340'; zoomWaveformCtx.fillRect(0,mid,w,1);
-  if(loopZoomLabel){ const xfL=loopCrossfadeMs>0?('  \u00b7  xfade '+loopCrossfadeMs+'ms'):''; loopZoomLabel.textContent=formatTimeH(trimStart)+' \u2192 '+formatTimeH(trimEnd)+' ['+loopDuration.toFixed(2)+'s]'+xfL; }
+  SkriblLoopWave.drawZoom({ canvas:zoomWaveformCanvas, ctx:zoomWaveformCtx, buffer:currentAudioBuffer,
+    trimStart, trimEnd, crossfadeMs:loopCrossfadeMs, zw:getZoomWindow(), label:loopZoomLabel, formatTime:formatTimeH });
 }
 
 function dragHandle(handle, isStart){

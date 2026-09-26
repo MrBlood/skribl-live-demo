@@ -2044,25 +2044,16 @@ const zoomTrackWrap = document.getElementById('zoomTrackWrap');
 let zoomMag = 1;
 let zoomFocus = 'loop';   // 'loop' | 'start' | 'end' | 'free'
 let zoomCenter = null;    // explicit pan center (seconds); null = derive from focus
+// The zoomed loop view's maths, handles and waveform live in lib/loopwave.js
+// since v315 (SK312-003), one implementation for both editors. The player loads
+// app.js but not the lib and has no music drawer; the fallback keeps any
+// playback path that asks from throwing there.
 function getZoomWindow() {
-  const loopDuration = Math.max(0, trimEnd - trimStart);
-  const contextSeconds = Math.max(1, Math.min(4, loopDuration * 0.25));
-  const halfSpan = (loopDuration / 2 + contextSeconds) / zoomMag;
-  // Panning (drag / slider) sets an explicit center; otherwise the focus anchor
-  // (whole loop / start edge / end edge) decides it. Either way the center is
-  // clamped so the window never runs off the ends of the song.
-  let center;
-  if (zoomCenter != null) center = zoomCenter;
-  else if (zoomFocus === 'start') center = trimStart;
-  else if (zoomFocus === 'end') center = trimEnd;
-  else center = (trimStart + trimEnd) / 2;
-  const lo = halfSpan;
-  const hi = Math.max(halfSpan, audioDuration - halfSpan);
-  center = Math.max(lo, Math.min(center, hi));
-  let start = Math.max(0, center - halfSpan);
-  let end = Math.min(audioDuration, center + halfSpan);
-  if (end - start < 0.001) end = Math.min(audioDuration, start + 0.001);
-  return { start, end, duration: Math.max(0.001, end - start) };
+  if (!window.SkriblLoopWave) {
+    return { start: 0, end: audioDuration || 0, duration: Math.max(0.001, audioDuration || 0) };
+  }
+  return window.SkriblLoopWave.zoomWindow({ start: trimStart, end: trimEnd, duration: audioDuration,
+                                            mag: zoomMag, center: zoomCenter, focus: zoomFocus });
 }
 
 // Reflect the active focus anchor on the Loop/Start/End buttons; nothing is
@@ -2074,21 +2065,13 @@ function syncZoomFocusButtons() {
 }
 
 function updateZoomHandles() {
-  if (!zoomTrackWrap || !zoomHandleStart || !zoomHandleEnd) return;
+  if (!zoomTrackWrap || !zoomHandleStart || !zoomHandleEnd || !window.SkriblLoopWave) return;
   if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
-  const zw = getZoomWindow();
-  const zoomStartTime = zw.start;
-  const zoomDuration = zw.duration;
-
-  const startPct = ((trimStart - zoomStartTime) / zoomDuration) * 100;
-  const endPct = ((trimEnd - zoomStartTime) / zoomDuration) * 100;
-
-  zoomHandleStart.style.left = startPct + '%';
-  zoomHandleEnd.style.left = endPct + '%';
-  // Hide a handle that has scrolled outside the magnified window (e.g. the far
-  // edge when you're zoomed in on the other one).
-  zoomHandleStart.hidden = !(startPct >= -2 && startPct <= 102);
-  zoomHandleEnd.hidden = !(endPct >= -2 && endPct <= 102);
+  const hd = window.SkriblLoopWave.handles(trimStart, trimEnd, getZoomWindow());
+  zoomHandleStart.style.left = hd.startPct + '%';
+  zoomHandleEnd.style.left = hd.endPct + '%';
+  zoomHandleStart.hidden = !hd.startShown;
+  zoomHandleEnd.hidden = !hd.endShown;
 }
 
 
@@ -2132,114 +2115,10 @@ function requestZoomWaveformDraw() {
 }
 
 function drawZoomWaveform() {
-  if (!currentAudioBuffer || !zoomWaveformCanvas) return;
-  const rect = zoomWaveformCanvas.getBoundingClientRect();
-  if (!rect.width) return;
-  const dpr = window.devicePixelRatio || 1;
-  zoomWaveformCanvas.width = Math.round(rect.width * dpr);
-  zoomWaveformCanvas.height = Math.round(rect.height * dpr);
-  zoomWaveformCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const w = rect.width;
-  const h = rect.height;
-  const mid = h / 2;
-
-  // Window comes from the shared helper (focus + magnification aware).
-  const loopDuration = trimEnd - trimStart;
-  const zw = getZoomWindow();
-  const zoomStartTime = zw.start;
-  const zoomEndTime = zw.end;
-  const zoomDuration = zw.duration;
-
-  // Background
-  zoomWaveformCtx.fillStyle = '#161a22';
-  zoomWaveformCtx.fillRect(0, 0, w, h);
-
-  const data = currentAudioBuffer.getChannelData(0);
-  const sampleRate = currentAudioBuffer.sampleRate;
-  const startSample = Math.max(0, Math.floor(zoomStartTime * sampleRate));
-  const endSample = Math.min(data.length, Math.floor(zoomEndTime * sampleRate));
-  const totalSamples = Math.max(1, endSample - startSample);
-  const samplesPerPixel = Math.max(1, Math.floor(totalSamples / w));
-
-  // Draw full waveform in muted color
-  zoomWaveformCtx.fillStyle = '#3a4150';
-  for (let x = 0; x < w; x++) {
-    const sStart = startSample + x * samplesPerPixel;
-    const sEnd = Math.min(sStart + samplesPerPixel, endSample);
-    let min = 1, max = -1;
-    for (let i = sStart; i < sEnd; i++) {
-      const v = data[i] || 0;
-      if (v < min) min = v;
-      if (v > max) max = v;
-    }
-    const y1 = mid + min * mid * 0.9;
-    const y2 = mid + max * mid * 0.9;
-    zoomWaveformCtx.fillRect(x, y1, 1, Math.max(1, y2 - y1));
-  }
-
-  // Highlight the selected loop region
-  const loopStartX = ((trimStart - zoomStartTime) / zoomDuration) * w;
-  const loopEndX = ((trimEnd - zoomStartTime) / zoomDuration) * w;
-
-  zoomWaveformCtx.fillStyle = 'rgba(124, 92, 255, 0.2)';
-  zoomWaveformCtx.fillRect(loopStartX, 0, loopEndX - loopStartX, h);
-
-  // Redraw loop section waveform in purple
-  zoomWaveformCtx.fillStyle = '#7c5cff';
-  for (let x = Math.floor(loopStartX); x < Math.ceil(loopEndX); x++) {
-    const sStart = startSample + x * samplesPerPixel;
-    const sEnd = Math.min(sStart + samplesPerPixel, endSample);
-    let min = 1, max = -1;
-    for (let i = sStart; i < sEnd; i++) {
-      const v = data[i] || 0;
-      if (v < min) min = v;
-      if (v > max) max = v;
-    }
-    const y1 = mid + min * mid * 0.9;
-    const y2 = mid + max * mid * 0.9;
-    zoomWaveformCtx.fillRect(x, y1, 1, Math.max(1, y2 - y1));
-  }
-
-  // Loop boundary lines
-  zoomWaveformCtx.fillStyle = '#7c5cff';
-  zoomWaveformCtx.fillRect(loopStartX, 0, 2, h);
-  zoomWaveformCtx.fillRect(loopEndX - 2, 0, 2, h);
-
-  // Crossfade region (bake-only). The posted/exported loop folds its TAIL over
-  // its HEAD (equal-power), so the last `xfade` of the loop is blended into the
-  // first `xfade`. Shade both bands in amber and dash their inner edges, using
-  // the SAME xfadeFrames clamp as bake time (see buildTrimmedLoopWav) so the
-  // picture matches exactly what gets posted — including the "can't exceed half
-  // the loop" cap.
-  if (loopCrossfadeMs > 0 && loopDuration > 0) {
-    const loopFrames = Math.floor(loopDuration * sampleRate);
-    const xfadeFrames = Math.min(
-      Math.floor((loopCrossfadeMs / 1000) * sampleRate),
-      Math.floor(loopFrames / 2)
-    );
-    const xfadeW = ((xfadeFrames / sampleRate) / zoomDuration) * w;
-    if (xfadeW > 0) {
-      const headX = loopStartX;          // fade-in: the loop tail is mixed in here
-      const tailX = loopEndX - xfadeW;    // folded over the head / trimmed from the end
-      zoomWaveformCtx.fillStyle = 'rgba(255, 176, 32, 0.22)';
-      zoomWaveformCtx.fillRect(headX, 0, xfadeW, h);
-      zoomWaveformCtx.fillRect(tailX, 0, xfadeW, h);
-      zoomWaveformCtx.fillStyle = 'rgba(255, 176, 32, 0.9)';
-      for (let yy = 0; yy < h; yy += 9) {
-        zoomWaveformCtx.fillRect(headX + xfadeW - 1, yy, 1.5, 5);
-        zoomWaveformCtx.fillRect(tailX, yy, 1.5, 5);
-      }
-    }
-  }
-
-  // Center line
-  zoomWaveformCtx.fillStyle = '#2e3340';
-  zoomWaveformCtx.fillRect(0, mid, w, 1);
-
-  if (loopZoomLabel) {
-    const xfLabel = loopCrossfadeMs > 0 ? `  ·  xfade ${loopCrossfadeMs}ms` : '';
-    loopZoomLabel.textContent = `${formatTimeH(trimStart)} → ${formatTimeH(trimEnd)} [${loopDuration.toFixed(2)}s]${xfLabel}`;
-  }
+  if (!currentAudioBuffer || !zoomWaveformCanvas || !window.SkriblLoopWave) return;
+  window.SkriblLoopWave.drawZoom({ canvas: zoomWaveformCanvas, ctx: zoomWaveformCtx, buffer: currentAudioBuffer,
+    trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs, zw: getZoomWindow(),
+    label: loopZoomLabel, formatTime: formatTimeH });
 }
 
 function drawWaveform(audioBuffer) {
