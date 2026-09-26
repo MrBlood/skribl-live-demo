@@ -207,10 +207,21 @@ function currentMusicMeta() {
    the three facts only the Pad knows. Until v294 the Pad's copy said "Saved
    without media", did nothing when tapped, and with a pending record and no
    bytes reported plain green ("shouldn't they be unified?"). */
+// A RESTORE IN FLIGHT IS NOT A LOSS (v315). The bytes come back from
+// IndexedDB asynchronously, and the fresh autosave written 200 ms after a
+// restore asked "is this pending file here yet?" -- on a slow phone, or with
+// the store slow to answer, it was not, and the pill said "Media missing — tap
+// to re-add" about a track that arrived a moment later. Reproduced with the
+// store's get() delayed 800 ms. reAddMediaFromStore's missed() is the ONE place
+// a restore raises that amber, as its own comment says; until it has answered,
+// the file is on its way, not missing.
+const _restoring = { photo: false, music: false };
 function _pendingMusicLost() {
+  if (_restoring.music) return false;
   return !!(typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta && !(audioEl && audioEl._fileName));
 }
 function _pendingPhotoLost() {
+  if (_restoring.photo) return false;
   return !!(typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta
             && !(photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName));
 }
@@ -669,10 +680,12 @@ function reAddMediaFromStore(kind, inputId, meta) {
   // stays, and the pill says so and is the route to the re-add card. This is
   // the ONE place the route amber is raised on restore.
   const missed = (why) => {
+    _restoring[kind] = false;
     console.error('[skribl] ' + kind + ' bytes: not restored from the store: ' + why);
     showAutosaveStatus('saved-no-media');
   };
   if (!window.SkriblDraftStore) { missed('no store'); return; }
+  _restoring[kind] = true;
   SkriblDraftStore.get('pad:' + kind).then((rec) => {
     // The stored bytes must be THE file the metadata describes — a name
     // mismatch means the draft and the blob are from different sessions,
@@ -690,6 +703,7 @@ function reAddMediaFromStore(kind, inputId, meta) {
     _fromStore[kind] = true;
     input.dispatchEvent(new Event('change', { bubbles: true }));
     _fromStore[kind] = false;   // consumed by the capture listener above; never left armed
+    _restoring[kind] = false;   // handed to the attach pipeline, which says so itself from here
   }).catch((e) => { missed(_errName(e)); });
 }
 
