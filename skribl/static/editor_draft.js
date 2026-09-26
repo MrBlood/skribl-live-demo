@@ -857,7 +857,16 @@ document.addEventListener('visibilitychange', () => {
   //       draft durable. With working storage the guard never fires — the
   //       direction doc's intended end state. With broken storage it fires
   //       for exactly the work that would be lost.
-  const atRisk = () => !flushPadDraft();
+  //   compose (v316): the Pad in a host's composer keeps no draft at all, so
+  //       every drawing on the canvas is at risk when Flip Mode is chosen —
+  //       and the sheet says so in those words, not the storage ones.
+  const atRisk = () => PAD_DRAFT_OFF ? !!(hasContent || strokes.length) : !flushPadDraft();
+  if (PAD_DRAFT_OFF) {
+    const t = document.getElementById('leaveSheetTitle'), bd = leaveSheet.querySelector('.leave-body');
+    if (t) t.textContent = 'Switch to Flip?';
+    if (bd) bd.textContent = 'Flip starts fresh. Anything you haven\u2019t added to your post yet will be lost.';
+    leaveGo.textContent = 'Switch';
+  }
   // A store write still in flight is not yet at risk and not yet safe: it gets
   // this long to land before the sheet is the answer (v294 audit, finding 6).
   // "Not durable" used to include 'saving', so the sheet opened for up to the

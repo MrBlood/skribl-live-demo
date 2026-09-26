@@ -54,8 +54,10 @@ says so.
 3. **Render** `{{ skribl_inline_assets() }}` once in the base template's
    `<head>`, and `{{ skribl_inline(post.skribl_id, canvas_w=..., canvas_h=...) }}`
    inside `.post-media` for a post that has one.
-4. **Composer**: a Skribl button beside GIF and video that opens the Pad in
-   compose mode and fills a hidden field; the view calls
+4. **Composer**: ONE Skribl button beside GIF and video that opens the Pad in
+   compose mode (Flip is one ⋯ tap away inside it, v316) and fills a hidden
+   field; the overlay is full-screen on a phone and floats no close of its own
+   (the editor's header has one). The view calls
    `skribl.create_post()`. `hasMedia()` in `composer.js` has to count it, or a
    post that is only a drawing keeps Post disabled. If the site uses the
    `[skribl]` placement marker, `effectiveLen()` should not count it toward

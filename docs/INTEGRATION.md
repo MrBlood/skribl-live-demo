@@ -332,7 +332,25 @@ it, or you skip the browser entirely and call `create_post()` server-side (see
 below). A module that posted for you would have to guess which.
 
 Use `pad.setPayload(existing)` before the first open to re-edit the Skribl on a
-post that is already saved.
+post that is already saved. For an animation, say so:
+`pad.setPayload(existing, 'flip')`.
+
+**One button, both editors.** Your composer needs one Skribl button, not two.
+The Pad opens; its ⋯ menu's "Flip Mode" row, while composing, opens Flip in
+the same frame, in compose mode, and Flip's "Skribl Pad" row comes back.
+Either one ends in "Add to post" and hands back a payload; switching with
+unadded work on the canvas asks first, because compose mode keeps no draft.
+The frame can therefore hold either editor, so the handshake names it (`ready`
+and `done` carry `editor: 'pad' | 'flip'`) and `composehost.js` hands a drawing
+back only to the editor that made it — a one-page animation and a Pad drawing
+share a payload shape. Reopening shows whichever editor holds the drawing.
+
+**The editor brings its own close.** In compose mode both editors lead their
+header with a × beside the skribl wordmark; it sends `skribl:compose:cancel`
+and `composehost.js` closes your overlay, keeping the frame, so the drawing is
+still there on the next press. Do not float a close of your own over the
+frame: on a phone it lands on the editor's ⋯ button. On a phone, give the
+overlay the whole screen, as a phone composer does; the header needs the room.
 
 **The handshake** underneath it, four messages, all `postMessage` — you need
 this only if you are not using the module:

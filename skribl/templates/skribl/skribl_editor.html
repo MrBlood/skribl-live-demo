@@ -171,7 +171,10 @@
       </button>
       {# A 40px icon could not say what Flip Mode IS. A menu row can. Still an
          <a href> so open-in-new-tab works, still id="flipBtn" so the guard binds. #}
-      <a href="{{ url_for('.skribl_flip') }}" id="flipBtn" class="menu-item">
+      {# Composing, Flip Mode opens Flip IN the composer (?compose=1): one
+         Skribl button on the host, and the switch keeps "Add to post" (owner,
+         v316). #}
+      <a href="{{ url_for('.skribl_flip') }}{% if compose %}?compose=1{% endif %}" id="flipBtn" class="menu-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/><path d="M12 6.5v13.3"/></svg>
         <span class="menu-item-text">Flip Mode<span class="menu-item-sub">Make an animation page by page &mdash; a separate draft from this one</span></span>
       </a>
@@ -515,6 +518,7 @@
        already branches on SKRIBL_MODE for the player, so this is the existing
        mechanism rather than a second one. #}
     window.SKRIBL_MODE = {{ ("compose" if compose else "editor") | tojson }};
+    {% if compose %}window.SKRIBL_COMPOSE = "pad";{% endif %}
     window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
     window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};

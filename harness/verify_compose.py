@@ -556,6 +556,87 @@ with sync_playwright() as sp:
         check(f"@{_vp['width']}: ...and the drawing is still there when the Skribl button reopens it",
               bool(_g) and _hf.evaluate("() => hasContent === true"))
         _hc.close()
+    # FLIP, FROM THE SAME BUTTON (owner, v316: "couldn't you just select flip
+    # from the menu once you've opened the editor?"). The host has ONE Skribl
+    # button; the Pad's ⋯ "Flip Mode" row, while composing, opens Flip in the
+    # SAME frame in compose mode, and Flip's "Skribl Pad" row comes back. The
+    # frame then holds either editor, so the handshake names the editor and a
+    # drawing is handed back only to the one that made it.
+    print("\nCOMPOSE — Flip from the Pad's ⋯, and back")
+    def _cur(pg):
+        return [x for x in pg.frames if x.parent_frame is not None][0]
+    _fc = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    _fp = _fc.new_page()
+    _ferrs = []
+    _fp.on("pageerror", lambda e: _ferrs.append(str(e)))
+    _fposts = []
+    _fp.on("request", lambda r: _fposts.append(r.url) if r.method == "POST" and "/api/skribls" in r.url else None)
+    browsing.goto(_fp, BASE, "/feed")
+    _fp.click("#padBtn")
+    _fp.wait_for_timeout(3000)
+    _ff = _cur(_fp)
+    _ff.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    _ff.evaluate("() => { localStorage.removeItem('skribl_flip_autosave_v1'); document.getElementById('menuBtn').click(); }")
+    _fp.wait_for_timeout(400)
+    _ff.evaluate("() => document.getElementById('flipBtn').click()")
+    _fp.wait_for_timeout(3500)
+    _ff = _cur(_fp)
+    _ff.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    _hdr = _ff.evaluate("""() => ({ path: location.pathname + location.search, x: !!document.getElementById('composeCloseBtn'),
+        label: document.querySelector('#postBtn .btn-label').innerText.trim(),
+        submit: document.getElementById('flipShareSubmit').textContent.trim() })""")
+    check("the Pad's Flip Mode row opens Flip in the composer, with × and Add",
+          _hdr["path"].endswith("/flip?compose=1") and _hdr["x"] and _hdr["label"] == "Add"
+          and _hdr["submit"] == "Add to post", str(_hdr))
+    _ffr = _fp.frame_locator("#padFrame")
+    for _dy in (0, 30):
+        _bx = _ffr.locator("#pad").bounding_box()
+        _cx, _cy = _bx["x"] + _bx["width"] / 2, _bx["y"] + _bx["height"] / 2 + _dy
+        _fp.mouse.move(_cx - 50, _cy); _fp.mouse.down()
+        for _i in range(30):
+            _fp.mouse.move(_cx - 50 + _i * 3, _cy + math.sin(_i / 5) * 25); _fp.wait_for_timeout(15)
+        _fp.mouse.up()
+        if _dy == 0:
+            _ff.evaluate("() => addFrame()")
+    _fp.wait_for_timeout(1200)
+    check("composing, Flip writes no draft of its own",
+          _ff.evaluate("() => localStorage.getItem('skribl_flip_autosave_v1') === null"))
+    _ff.evaluate("() => document.getElementById('postBtn').click()")
+    _fp.wait_for_timeout(600)
+    _ff.evaluate("() => document.getElementById('flipShareSubmit').click()")
+    _fp.wait_for_timeout(2500)
+    check("Add to post closes the overlay and attaches the animation, publishing nothing",
+          _fp.evaluate("() => document.getElementById('padOverlay').hidden") is True and not _fposts,
+          f"POSTs: {_fposts}")
+    _fp.click("#padBtn")
+    _fp.wait_for_timeout(1500)
+    _ff = _cur(_fp)
+    _re = _ff.evaluate("() => ({ path: location.pathname + location.search, pages: frames.length })")
+    check("reopening brings back Flip, holding both pages",
+          _re["path"].endswith("/flip?compose=1") and _re["pages"] == 2, str(_re))
+    _ff.evaluate("() => document.getElementById('moreBtn').click()")
+    _fp.wait_for_timeout(400)
+    _ff.evaluate("() => document.getElementById('padBtn').click()")
+    _fp.wait_for_timeout(700)
+    _sh = _ff.evaluate("""() => ({ shown: !document.getElementById('leaveSheet').hidden,
+        title: document.getElementById('leaveSheetTitle').textContent, go: document.getElementById('leaveGo').textContent })""")
+    check("switching back with an animation on the canvas asks first, in the composer's words",
+          _sh["shown"] and _sh["title"] == "Switch to Skribl Pad?" and _sh["go"] == "Switch", str(_sh))
+    _ff.evaluate("() => document.getElementById('leaveGo').click()")
+    _fp.wait_for_timeout(3000)
+    _ff = _cur(_fp)
+    _pb = _ff.evaluate("() => ({ path: location.pathname + location.search, blank: !hasContent })")
+    check("...and the Pad opens in the composer, blank: Flip's animation is not pushed into it",
+          _pb["path"].endswith("/skribl-pad?compose=1") and _pb["blank"], str(_pb))
+    check("no page errors across the switch", not _ferrs, "; ".join(_ferrs[:2]))
+    _fc.close()
+    _sf = b.new_page(viewport={"width": 1280, "height": 900})
+    browsing.goto(_sf, BASE, "/flip")
+    check("the standalone Flip has no × and still says Post",
+          _sf.locator("#composeCloseBtn").count() == 0
+          and _sf.evaluate("() => document.querySelector('#postBtn .btn-label').innerText.trim()") == "Post to Skribl")
+    _sf.close()
+
     _sp = b.new_page(viewport={"width": 1280, "height": 900})
     browsing.goto(_sp, BASE, "/skribl-pad")
     check("the standalone Pad has no × and still says Post",
