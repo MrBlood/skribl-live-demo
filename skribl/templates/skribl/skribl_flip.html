@@ -525,7 +525,7 @@
      broken silently. Nonced, matching the Pad and Player. -->
 <script nonce="{{ csp_nonce }}">
   window.SKRIBL_MODE = "flip";
-  window.SKRIBL_DRAFTS = { api: {{ skribl_drafts_api | tojson }}, signedIn: {{ skribl_signed_in | tojson }}, limit: 25 };
+  window.SKRIBL_DRAFTS = { api: {{ skribl_drafts_api | tojson }}, signedIn: {{ skribl_signed_in | tojson }}, limit: {{ skribl_drafts_limit | tojson }} };
   {% if compose %}window.SKRIBL_COMPOSE = "flip";{% endif %}
   window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};

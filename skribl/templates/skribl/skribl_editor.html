@@ -528,7 +528,7 @@
        already branches on SKRIBL_MODE for the player, so this is the existing
        mechanism rather than a second one. #}
     window.SKRIBL_MODE = {{ ("compose" if compose else "editor") | tojson }};
-  window.SKRIBL_DRAFTS = { api: {{ skribl_drafts_api | tojson }}, signedIn: {{ skribl_signed_in | tojson }}, limit: 25 };
+  window.SKRIBL_DRAFTS = { api: {{ skribl_drafts_api | tojson }}, signedIn: {{ skribl_signed_in | tojson }}, limit: {{ skribl_drafts_limit | tojson }} };
     {% if compose %}window.SKRIBL_COMPOSE = "pad";{% endif %}
     window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};

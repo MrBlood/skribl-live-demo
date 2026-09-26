@@ -1,0 +1,429 @@
+#!/usr/bin/env python3
+"""verify_clouddrafts: drafts saved to an account, and opened in a composer (v316).
+
+The owner's words: "a way to save skribl drafts (not on my machine as a file),
+so I could just click the pen to add a skribl to the post, load the saved
+skribl, then add it to post." Section 4 is that sentence, driven end to end in
+a real host's composer; the rest is what has to hold for it to be safe.
+
+Runs against examples/host_app — a real host with real sign-in, the
+double-submit CSRF triple and its own composer — spawned on a free port with
+its own database, so it needs no shared server. SKRIBL_MAX_DRAFTS is 3 here so
+the cap can be reached in a few saves.
+
+  1  The API: signed-out is 401, CSRF is required on writes, the payload is
+     validated like a post, the cap is 409, and somebody else's draft is the
+     same 404 a missing one is — for read, overwrite AND delete.
+  2  Nothing a draft does publishes: no skribl_posts row, no Library entry.
+  3  The editors say where drafts go: the account when signed in, this browser
+     when not, and the limit on the page is the server's.
+  4  The composer: draw, ⋯ Save draft, close, open the pen again (blank),
+     ⋯ Open a draft, Add to post, Post. The post is the saved drawing.
+  5  Signed out, drafts live in this browser and survive a reload.
+"""
+import json
+import os
+import pathlib
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+EXAMPLE = ROOT / "examples" / "host_app"
+
+try:
+    from playwright.sync_api import sync_playwright
+except Exception as exc:                                   # pragma: no cover
+    print(f"SUITE-SKIPPED: playwright unavailable ({exc})")
+    print("No assertions were executed. This is NOT evidence drafts work.")
+    raise SystemExit(77)
+
+import sqlalchemy as sa
+from assertions import make_check
+import browsing
+
+results = []
+check = make_check(results)
+CAP = 3
+
+
+def free_port():
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+PORT = free_port()
+BASE = f"http://127.0.0.1:{PORT}"
+_tmp = tempfile.mkdtemp()
+DB_URL = f"sqlite:///{_tmp}/example.db"
+env = dict(os.environ, EXAMPLE_DATABASE_URL=DB_URL,
+           EXAMPLE_SECRET="harness-clouddrafts", SKRIBL_RATE_MAX_POSTS="100000",
+           SKRIBL_MAX_DRAFTS=str(CAP), PYTHONPATH=str(ROOT))
+subprocess.run(
+    [sys.executable, "-c",
+     "import app as ex; a = ex.create_app();"
+     " ctx = a.app_context(); ctx.push(); ex.db.create_all();"
+     " ex.db.session.add_all([ex.User(handle='ada'), ex.User(handle='grace')]);"
+     " ex.db.session.commit()"],
+    cwd=str(EXAMPLE), env=env, check=True, capture_output=True)
+proc = subprocess.Popen(
+    [sys.executable, "-m", "flask", "--app", "app", "run", "--port", str(PORT), "--no-reload"],
+    cwd=str(EXAMPLE), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+
+def wait_ready(timeout=30):
+    end = time.time() + timeout
+    while time.time() < end:
+        if proc.poll() is not None:
+            return False
+        try:
+            with socket.create_connection(("127.0.0.1", PORT), 0.5):
+                return True
+        except OSError:
+            time.sleep(0.3)
+    return False
+
+
+def durable(query):
+    eng = sa.create_engine(DB_URL)
+    try:
+        with eng.connect() as c:
+            return c.execute(sa.text(query)).scalar()
+    finally:
+        eng.dispose()
+
+
+def draw(pg, box, turns=3, n=50):
+    import math
+    cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    pg.mouse.move(cx, cy)
+    pg.mouse.down()
+    for i in range(n):
+        t = i / float(n - 1)
+        a = t * turns * 2 * math.pi
+        r = 10 + t * min(box["width"], box["height"]) * 0.3
+        pg.mouse.move(cx + math.cos(a) * r, cy + math.sin(a) * r)
+        pg.wait_for_timeout(10)
+    pg.mouse.up()
+
+
+def sign_in(pg, index):
+    browsing.goto(pg, BASE, "/", require_boot=False)
+    pg.select_option("select[name=uid]", index=index)
+    pg.click("button:has-text('Sign in')")
+    pg.wait_for_timeout(600)
+
+
+def api(pg, method, path, body=None, csrf=True):
+    """A request from the signed-in browser's own cookie jar."""
+    token = pg.evaluate("() => window.SKRIBL_CSRF_TOKEN || ''") if csrf else ""
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["X-Skribl-CSRF"] = token
+    kw = {"headers": headers}
+    if body is not None:
+        kw["data"] = json.dumps(body)
+    r = pg.request.fetch(BASE + "/skribl/api/drafts" + path, method=method, **kw)
+    try:
+        data = r.json()
+    except Exception:
+        data = None
+    return r.status, data
+
+
+# Strokes on the Pad live under frames[] (payload version 2).
+STROKES = "(s => s.frames.reduce((n, f) => n + (f.strokes || []).length, 0))"
+
+
+def pad_strokes(pg):
+    return pg.evaluate("() => " + STROKES
+                       + "(document.getElementById('padFrame').contentWindow.serializeSkribl())")
+
+
+def menu_click(fr, item, btn="#menuBtn"):
+    fr.locator(btn).click()
+    fr.locator(item).wait_for(state="visible", timeout=5000)
+    fr.locator(item).click()
+
+
+try:
+    if not wait_ready():
+        err = proc.stderr.read().decode("utf-8", "replace")[-1500:] if proc.stderr else ""
+        sys.exit(f"SKIP: the example app did not start on port {PORT}.\n{err}")
+
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+
+        # ---------------------------------------------------------------- 1
+        print("\n1 — THE API: OWNER ONLY, CSRF, VALIDATED, CAPPED")
+        anon = b.new_context().new_page()
+        browsing.goto(anon, BASE, "/skribl/skribl-pad", require_boot=False)
+        st, _ = api(anon, "GET", "")
+        check("signed out, the list is 401", st == 401, str(st))
+        st, _ = api(anon, "POST", "", {"kind": "pad", "payload": {}})
+        check("signed out, a save is 401", st in (401, 403), str(st))
+
+        ctx_a = b.new_context(viewport={"width": 1180, "height": 900})
+        pa = ctx_a.new_page()
+        errs = []
+        pa.on("pageerror", lambda e: errs.append(str(e)))
+        sign_in(pa, 0)
+        browsing.goto(pa, BASE, "/skribl/skribl-pad", require_boot=False)
+        pa.wait_for_timeout(1500)
+        draw(pa, pa.locator("#canvas").bounding_box())
+        pa.wait_for_timeout(300)
+        payload = pa.evaluate("() => serializeSkribl()")
+        check("a real Pad serialisation to save", isinstance(payload, dict) and payload,
+              str(type(payload)))
+
+        st, lst = api(pa, "GET", "")
+        check("signed in, an empty list and the server's limit",
+              st == 200 and lst.get("items") == [] and lst.get("limit") == CAP,
+              f"{st} {lst}")
+        st, made = api(pa, "POST", "", {"kind": "pad", "title": "Spiral", "payload": payload},
+                       csrf=False)
+        check("a save WITHOUT the CSRF header is refused", st in (400, 403), str(st))
+        st, made = api(pa, "POST", "", {"kind": "pad", "title": "Spiral", "payload": payload})
+        check("a save with it is 201, with an id", st == 201 and made and made.get("id"),
+              f"{st} {made}")
+        did = (made or {}).get("id", "none")
+        st, got = api(pa, "GET", "/" + did)
+        check("reading it back returns the same drawing",
+              st == 200 and got.get("payload") == payload and got.get("title") == "Spiral",
+              f"{st}")
+        st, lst = api(pa, "GET", "")
+        check("the list carries no payloads (it is a list, not a download)",
+              st == 200 and len(lst["items"]) == 1 and "payload" not in lst["items"][0],
+              json.dumps(lst)[:200])
+        st, _ = api(pa, "PUT", "/" + did, {"kind": "pad", "title": "Spiral 2", "payload": payload})
+        st2, got = api(pa, "GET", "/" + did)
+        check("an overwrite keeps the id and takes the new title",
+              st == 200 and got.get("title") == "Spiral 2", f"{st} {got and got.get('title')}")
+        st, bad = api(pa, "POST", "", {"kind": "pad", "payload": "not an object"})
+        check("a payload that is not an object is 400", st == 400, f"{st} {bad}")
+        st, bad = api(pa, "POST", "", {"kind": "movie", "payload": payload})
+        check("an unknown kind is 400", st == 400, f"{st} {bad}")
+        st, bad = api(pa, "POST", "", {"kind": "pad", "payload": payload,
+                                       "thumbnail": "javascript:alert(1)"})
+        check("a thumbnail that is not an image data URL is 400", st == 400, f"{st} {bad}")
+        # 201 frames: over SKRIBL_MAX_FRAMES, the bound a post meets.
+        huge = dict(payload, frames=payload["frames"] * 201)
+        st, bad = api(pa, "POST", "", {"kind": "pad", "payload": huge})
+        check("a payload over a post's bounds is refused like a post's",
+              st in (400, 413), f"{st} {(bad or {}).get('error', '')[:80]}")
+
+        for i in range(CAP - 1):
+            api(pa, "POST", "", {"kind": "pad", "title": f"fill {i}", "payload": payload})
+        st, over = api(pa, "POST", "", {"kind": "pad", "title": "one too many", "payload": payload})
+        check(f"the {CAP + 1}th draft is 409 with words a person can act on",
+              st == 409 and "Delete one" in (over or {}).get("error", ""), f"{st} {over}")
+        st, _ = api(pa, "PUT", "/" + did, {"kind": "pad", "title": "Spiral 3", "payload": payload})
+        check("AT the cap, overwriting an existing draft still works", st == 200, str(st))
+
+        # Somebody else.
+        ctx_b = b.new_context()
+        pb = ctx_b.new_page()
+        sign_in(pb, 1)
+        browsing.goto(pb, BASE, "/skribl/skribl-pad", require_boot=False)
+        st, lst = api(pb, "GET", "")
+        check("another user lists none of them", st == 200 and lst["items"] == [], f"{st} {lst}")
+        st_r, _ = api(pb, "GET", "/" + did)
+        st_m, _ = api(pb, "GET", "/nosuchdraft")
+        check("another user reading it gets the SAME 404 a missing id gets",
+              st_r == 404 and st_m == 404, f"theirs {st_r}, missing {st_m}")
+        st_w, _ = api(pb, "PUT", "/" + did, {"kind": "pad", "title": "hijack", "payload": payload})
+        st_d, _ = api(pb, "DELETE", "/" + did)
+        check("and cannot overwrite or delete it (404 both)", st_w == 404 and st_d == 404,
+              f"PUT {st_w}, DELETE {st_d}")
+        check("the owner's draft is untouched by those attempts",
+              durable(f"SELECT title FROM skribl_drafts WHERE public_id='{did}'") == "Spiral 3")
+
+        # ---------------------------------------------------------------- 2
+        print("\n2 — A DRAFT PUBLISHES NOTHING")
+        check("no skribl_posts row exists after all of that",
+              durable("SELECT COUNT(*) FROM skribl_posts") == 0)
+        lib = pa.request.get(BASE + "/skribl/library")
+        check("and the owner's Library does not list drafts as posts",
+              "Spiral 3" not in lib.text(), f"status {lib.status}")
+
+        # Back to one draft for the browser sections.
+        st, lst = api(pa, "GET", "")
+        for it in lst["items"]:
+            if it["id"] != did:
+                api(pa, "DELETE", "/" + it["id"])
+        st, lst = api(pa, "GET", "")
+        check("delete works (back to one)", len(lst["items"]) == 1, str(len(lst["items"])))
+
+        # ---------------------------------------------------------------- 3
+        print("\n3 — THE EDITORS SAY WHERE A DRAFT GOES")
+        for path in ("/skribl/skribl-pad", "/skribl/flip"):
+            browsing.goto(pa, BASE, path, require_boot=False)
+            pa.wait_for_timeout(800)
+            cfg = pa.evaluate("() => window.SKRIBL_DRAFTS")
+            where = pa.evaluate("() => window.SkriblSavedDrafts && window.SkriblSavedDrafts.where()")
+            check(f"{path} signed in: the account, with the server's limit",
+                  cfg and cfg.get("signedIn") is True and cfg.get("limit") == CAP
+                  and where == "account", f"{cfg} where={where}")
+            pa.locator("#moreBtn" if "flip" in path else "#menuBtn").click()
+            sub = pa.locator("#saveCloudDraftItem").inner_text()
+            check(f"{path} ⋯ Save draft says 'To your account'", "account" in sub.lower(), sub)
+            pa.keyboard.press("Escape")
+        browsing.goto(anon, BASE, "/skribl/skribl-pad", require_boot=False)
+        anon.wait_for_timeout(800)
+        where = anon.evaluate("() => window.SkriblSavedDrafts && window.SkriblSavedDrafts.where()")
+        check("signed out: this browser", where == "browser", str(where))
+
+        # ---------------------------------------------------------------- 4
+        print("\n4 — THE PEN, A SAVED DRAWING, ADD TO POST")
+        browsing.goto(pa, BASE, "/", require_boot=False)
+        pa.click("#padBtn")
+        pa.wait_for_timeout(4500)
+        fr = pa.frame_locator("#padFrame")
+        draw(pa, fr.locator("#canvas").bounding_box(), turns=5)
+        pa.wait_for_timeout(300)
+        pa.evaluate("() => document.getElementById('padFrame').contentWindow.SkriblName.set('Composer wave')")
+        menu_click(fr, "#saveCloudDraftItem")
+        pa.wait_for_timeout(1500)
+        n = durable("SELECT COUNT(*) FROM skribl_drafts")
+        check("⋯ Save draft inside the composer stores it on the account", n == 2, str(n))
+        saved_strokes = pad_strokes(pa)
+
+        # Abandon: close the overlay without adding.
+        fr.locator("#composeCloseBtn").click()
+        pa.wait_for_timeout(800)
+        check("closing the editor attached nothing",
+              pa.evaluate("() => document.getElementById('attach').hidden") is True)
+        pa.click("#padBtn")
+        pa.wait_for_timeout(1500)
+        # Closing is not discarding: composehost keeps the frame, and with it
+        # the canvas, until the host's Remove. So the canvas is still busy, and
+        # scribbling more makes it DIFFERENT from the saved draft.
+        check("reopening the pen keeps what was on the canvas (close is not discard)",
+              pad_strokes(pa) == saved_strokes, f"{pad_strokes(pa)} vs {saved_strokes}")
+        draw(pa, fr.locator("#canvas").bounding_box(), turns=2, n=30)
+        pa.wait_for_timeout(300)
+        busy = pad_strokes(pa)
+        check("more scribble makes the canvas differ from the draft", busy != saved_strokes,
+              f"{busy}")
+
+        menu_click(fr, "#openCloudDraftItem")
+        fr.locator("#savedDraftsSheet .sdrafts-open").first.wait_for(timeout=5000)
+        rows = fr.locator("#savedDraftsSheet .sdrafts-name").all_inner_texts()
+        check("⋯ Open a draft lists the account's drafts, newest first",
+              rows[:1] == ["Composer wave"] and len(rows) == 2, str(rows))
+        fr.locator("#savedDraftsSheet .sdrafts-open").first.click()
+        pa.wait_for_timeout(600)
+        meta = fr.locator("#savedDraftsSheet .sdrafts-meta").first.inner_text()
+        check("with work on the canvas, the first tap only ASKS",
+              "replaces" in meta and pad_strokes(pa) == busy, f"{meta!r} {pad_strokes(pa)}")
+        fr.locator("#savedDraftsSheet .sdrafts-open").first.click()
+        pa.wait_for_timeout(1500)
+        got = pad_strokes(pa)
+        check("the second tap puts the saved drawing on the canvas",
+              got == saved_strokes and got > 0, f"{got} vs saved {saved_strokes}")
+        sheet_hidden = pa.evaluate("() => document.getElementById('padFrame').contentDocument"
+                                   ".getElementById('savedDraftsSheet').hidden")
+        check("and closes the sheet", sheet_hidden is True, str(sheet_hidden))
+        name = pa.evaluate("() => document.getElementById('padFrame').contentWindow.SkriblName.get()")
+        check("with the draft's name", name == "Composer wave", repr(name))
+
+        fr.locator("#postBtn").click()
+        pa.wait_for_timeout(1000)
+        fr.locator("#postSubmitBtn").click()
+        pa.wait_for_timeout(3500)
+        check("Add to post attaches it",
+              pa.evaluate("() => !document.getElementById('attach').hidden") is True)
+        attached = pa.evaluate(
+            "() => " + STROKES + "(JSON.parse(document.getElementById('skriblPayload').value))")
+        check("the attached drawing is the saved one", attached == saved_strokes,
+              f"{attached} vs {saved_strokes}")
+        pa.fill("#body", "from a saved draft")
+        pa.click("#postBtn")
+        pa.wait_for_url(BASE + "/", timeout=20000)
+        pa.wait_for_timeout(1500)
+        check("posting it makes exactly one Skribl, authored by the signed-in user",
+              durable("SELECT COUNT(*) FROM skribl_posts") == 1
+              and str(durable("SELECT user_id FROM skribl_posts LIMIT 1")) == "1")
+        check("and the draft is KEPT (the author deletes it when done)",
+              durable("SELECT COUNT(*) FROM skribl_drafts") == 2)
+
+        # --------------------------------------------------------------- 4b
+        print("\n4b — A FLIP DRAFT, FROM THE PAD'S COMPOSER")
+        browsing.goto(pa, BASE, "/skribl/flip", require_boot=False)
+        pa.wait_for_timeout(1500)
+        pa.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        for page in (0, 1):
+            draw(pa, pa.locator("#pad").bounding_box(), turns=2, n=30)
+            if page == 0:
+                pa.evaluate("() => addFrame()")
+        pa.evaluate("() => window.SkriblName.set('Bounce')")
+        pa.wait_for_timeout(300)
+        menu_click(pa, "#saveCloudDraftItem", btn="#moreBtn")
+        pa.wait_for_timeout(1500)
+        check("Flip's ⋯ Save draft stores a flip draft on the account",
+              durable("SELECT COUNT(*) FROM skribl_drafts WHERE kind='flip'") == 1)
+
+        browsing.goto(pa, BASE, "/", require_boot=False)
+        pa.click("#padBtn")
+        pa.wait_for_timeout(4000)
+        fr = pa.frame_locator("#padFrame")
+        menu_click(fr, "#openCloudDraftItem")
+        fr.locator("#savedDraftsSheet .sdrafts-open").first.wait_for(timeout=5000)
+        meta = fr.locator("#savedDraftsSheet .sdrafts-meta").first.inner_text()
+        check("the Pad lists it, saying it opens in Flip", "opens in Flip" in meta, meta)
+        fr.locator("#savedDraftsSheet .sdrafts-open").first.click()
+        pa.wait_for_timeout(4500)
+        flip_frame = next(f for f in pa.frames if "/skribl/flip" in f.url)
+        inner = flip_frame.evaluate("""() => ({ path: location.pathname + location.search,
+            pages: frames.length, name: SkriblName.get(), mode: window.SKRIBL_COMPOSE })""")
+        check("one tap hands over to Flip IN THE COMPOSER, the id cleaned off the URL",
+              inner["path"] == "/skribl/flip?compose=1" and inner["mode"] == "flip", str(inner))
+        check("holding the saved animation and its name",
+              inner["pages"] == 2 and inner["name"] == "Bounce", str(inner))
+        pa.evaluate("() => document.getElementById('padFrame').contentDocument.getElementById('postBtn').click()")
+        pa.wait_for_timeout(600)
+        pa.evaluate("() => document.getElementById('padFrame').contentDocument"
+                    ".getElementById('flipShareSubmit').click()")
+        pa.wait_for_timeout(2500)
+        att = pa.evaluate("""() => { var v = document.getElementById('skriblPayload').value;
+            return { shown: !document.getElementById('attach').hidden,
+                     frames: v ? JSON.parse(v).frames.length : 0 }; }""")
+        check("Add to post attaches the two-page animation",
+              att["shown"] and att["frames"] == 2, str(att))
+
+        # ---------------------------------------------------------------- 5
+        print("\n5 — SIGNED OUT: THIS BROWSER, AND IT SURVIVES A RELOAD")
+        browsing.goto(anon, BASE, "/skribl/skribl-pad", require_boot=False)
+        anon.wait_for_timeout(1200)
+        draw(anon, anon.locator("#canvas").bounding_box())
+        anon.wait_for_timeout(300)
+        before = durable("SELECT COUNT(*) FROM skribl_drafts")
+        menu_click(anon, "#saveCloudDraftItem")
+        anon.wait_for_timeout(1200)
+        after = durable("SELECT COUNT(*) FROM skribl_drafts")
+        check("a signed-out save touches no table", after == before, f"{before} -> {after}")
+        browsing.goto(anon, BASE, "/skribl/skribl-pad", require_boot=False)
+        anon.wait_for_timeout(1200)
+        menu_click(anon, "#openCloudDraftItem")
+        anon.locator("#savedDraftsSheet .sdrafts-open").first.wait_for(timeout=5000)
+        check("after a reload the browser draft is listed",
+              anon.locator("#savedDraftsSheet .sdrafts-row").count() == 1)
+
+        check("no page errors", not errs, "; ".join(errs[:3]))
+        b.close()
+finally:
+    proc.terminate()
+    try:
+        proc.wait(timeout=10)
+    except Exception:
+        proc.kill()
+
+passed = sum(1 for ok, _ in results if ok)
+bad = [n for ok, n in results if not ok]
+print("\n" + "=" * 62)
+print(f"{passed}/{len(results)} passed"
+      + ("" if not bad else "\nFAILURES:\n  - " + "\n  - ".join(bad)))
+sys.exit(1 if bad else 0)
