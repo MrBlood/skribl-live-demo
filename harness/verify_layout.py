@@ -1004,6 +1004,53 @@ with sync_playwright() as p:
               str(_loop))
         _ctx.close()
 
+    # On a phone a drawer opens below the toolbar and the page scrolls to
+    # reveal it; that took Post, Play and ⋯ off the top of the screen (owner,
+    # iPhone). The header now pins. Asked of what is PAINTED, not of a rect:
+    # the point at Post's centre must hit Post once the drawer has scrolled
+    # the page. Both editors, since they share the header rule.
+    print("\nLAYOUT — on a phone, an open drawer does not take the header away")
+    HIT = """() => { const p = document.getElementById('postBtn'), r = p.getBoundingClientRect();
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        const el = (y >= 0 && y <= innerHeight) ? document.elementFromPoint(x, y) : null;
+        // Post is disabled until a take exists, and disabled is pointer-events:
+        // none, so the hit test looks through it; ask for the HEADER it sits in.
+        return { scrollY: Math.round(scrollY), top: Math.round(r.top), hit: !!(el && p.closest('.header').contains(el)) }; }"""
+    for _route, _open in (("/", "colorOpenBtn"), ("/flip", "musicBtn")):
+        _ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, _route)
+        _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _pg.evaluate("(id) => document.getElementById(id).click()", _open)
+        _pg.wait_for_timeout(1600)
+        _h = _pg.evaluate(HIT)
+        check(f"{_route} @390: with a drawer open and the page scrolled, Post is still on screen",
+              _h["scrollY"] > 40 and _h["hit"], str(_h))
+        _ctx.close()
+
+    # Flip's stage had `flex: 1 1 52vh`, and a flex basis outranks the height
+    # sizeStage() writes: at rest the stage grew into the slack and the canvas
+    # was fitted to it; a drawer took the slack away, the stage fell back to
+    # 52vh, and the page-action row (Duplicate, Blank...) sat ON the canvas —
+    # owner, iPhone, and the iPad did it too. A drawer must not change the stage.
+    print("\nLAYOUT — Flip: opening a drawer leaves the stage and the canvas alone")
+    STAGE = """() => { const s = document.querySelector('.flip-stage').getBoundingClientRect(),
+        p = document.getElementById('pad').getBoundingClientRect();
+        return { stageH: Math.round(s.height), padBottom: Math.round(p.bottom), stageBottom: Math.round(s.bottom) }; }"""
+    for _vp in ({"width": 390, "height": 844}, {"width": 820, "height": 1180}):
+        _ctx = browser.new_context(viewport=_vp, is_mobile=_vp["width"] < 700, has_touch=True)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, "/flip")
+        _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _rest = _pg.evaluate(STAGE)
+        _pg.evaluate("() => document.getElementById('musicBtn').click()")
+        _pg.wait_for_timeout(1200)
+        _open = _pg.evaluate(STAGE)
+        check(f"/flip @{_vp['width']}: the stage keeps its height and the canvas stays inside it",
+              _open["stageH"] == _rest["stageH"] and _open["padBottom"] <= _open["stageBottom"] + 1,
+              f"rest {_rest}, drawer open {_open}")
+        _ctx.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

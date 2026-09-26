@@ -1032,6 +1032,21 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   50%  { box-shadow: 0 0 0 3px rgba(124,92,255,0.55); }
   100% { box-shadow: 0 0 0 1px rgba(124,92,255,0.32); }
 }
+/* Phones: a breathing FILL, not a ring. Play is a bare glyph at this width, so
+   the pulsing ring drew a hollow outline around nothing — it read as a focus
+   ring left stuck on the button (owner's iPhone, v315), and on Flip the wrap's
+   overflow:hidden clipped the box-shadow so there was no signal at all. A
+   tinted disc says "this is on" the way an active control does everywhere
+   else in the header, and the stop glyph takes the accent so the disc and the
+   glyph read as one thing. Pad and Flip get the SAME treatment. */
+@keyframes playBreathe {
+  0%, 100% { background-color: rgba(124,92,255,0.14); }
+  50%      { background-color: rgba(124,92,255,0.28); }
+}
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .play-wrap > #playBtn.btn.play.playing,
+  .flip-play-wrap:has(.btn.flip-play.playing) { animation: none; }
+}
 
 /* ---------- Mobile ---------- */
 @media (max-width: 640px) {
@@ -1564,7 +1579,17 @@ a.player-btn { text-decoration: none; }
 
   /* Wider tray (header + toolbar kept aligned at 6px) so the standalone
      magnify fits even at 360px; tighter gap does the last few pixels. */
-  .header  { margin: 12px 6px; }}
+  .header  { margin: 12px 6px; }
+
+  /* The header STAYS when a drawer opens. On a phone the drawers sit below
+     the toolbar, and opening one scrolls the page to reveal it — which took
+     Post, Play and ⋯ off the top of the screen (owner's iPhone, v315 polish
+     list). Sticky, not fixed: at rest it is exactly where it was and costs the
+     layout nothing; it only pins once the page scrolls. It already carries a
+     blurred, translucent ground and z-index 30 (above the canvas, below the
+     toolbar's pops and every sheet), and body.stroking already fades it to
+     nothing while a finger draws beneath it. Pad and Flip share the rule. */
+  .header { position: sticky; top: 6px; }}
 
 /* ===================================================================
    Apple header polish (v75): Record keeps its label (sheds when tight),

@@ -125,7 +125,42 @@ function sizeStage(){
   // The settings drawer takes real height when open; without it here the stage
   // keeps its full size and pushes the strip off the bottom of the screen.
   const used = px('.header') + px('.tune-shell') + px('.flip-tools') + px('.flip-chip') + px('.strip-wrap') + 30;
-  stage.style.height = Math.max(220, window.innerHeight - used) + 'px';
+  let h = Math.max(220, window.innerHeight - used);
+  // THE STAGE IS THIS HEIGHT, NOT WHATEVER FLEX GIVES IT. The CSS rule is
+  // `flex: 1 1 52vh` (the pre-script fallback), and a flex basis outranks
+  // `height`: at rest the stage GREW into the slack under the strip, fitPad
+  // sized the canvas to that, and opening a drawer took the slack away — the
+  // stage dropped to 52vh with the canvas still sized for the grown box, so
+  // the page-action row sat on top of the canvas (owner, iPhone). So flex is
+  // switched off here and the slack is measured instead of grown into: the
+  // page's in-flow extent, minus whatever an open drawer adds, against the
+  // viewport. Same size at rest as before; a drawer no longer changes it.
+  // The floor is the CSS basis (52vh), read before flex is switched off: it is
+  // what kept the canvas usable while the Tune panel is open on a phone, and
+  // that behaviour is not what this change is about.
+  stage.style.flex = '';
+  const floor = parseFloat(getComputedStyle(stage).flexBasis) || 0;
+  stage.style.flex = '0 0 auto';
+  stage.style.height = h + 'px';
+  const app = stage.parentElement, drawers = document.getElementById('flipDrawers');
+  if(app){
+    const top = app.getBoundingClientRect().top;
+    let extent = 0;
+    for(const el of app.children){
+      const cs = getComputedStyle(el);
+      if(cs.position === 'fixed' || cs.position === 'absolute' || cs.display === 'none') continue;
+      extent = Math.max(extent, el.getBoundingClientRect().bottom + parseFloat(cs.marginBottom || 0) - top);
+    }
+    extent += parseFloat(getComputedStyle(app).paddingBottom || 0);
+    if(drawers){
+      const dcs = getComputedStyle(drawers);
+      extent -= Math.max(0, drawers.offsetHeight - parseFloat(dcs.paddingTop || 0) - parseFloat(dcs.paddingBottom || 0));
+    }
+    const slack = Math.round(window.innerHeight - extent);
+    if(slack > 0) h += slack;
+  }
+  h = Math.max(h, Math.round(floor));
+  stage.style.height = h + 'px';
   fitPad();
 }
 // Pin the grid overlay to the canvas's actual rendered box (offsetWidth/Height
@@ -9692,7 +9727,11 @@ const restored = tryRestore();
 onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));
 if(onionGroup){ onionGroup.hidden=false; const _r=document.getElementById('tuneOnionRow'); if(_r) _r.classList.toggle('muted', !onion); }
 syncCanvasSeg();
-sizeStage(); buildStrip(); render(); sizeFill(); setBg(bgColor);
+// sizeStage() twice: the strip is 25px tall until buildStrip() fills it, and
+// the stage's height is now what sizeStage() says rather than what flex hands
+// it, so the first measure (taken with an empty strip) is too tall until the
+// second one. The best-fit pick below reads the stage, so it must be the real one.
+sizeStage(); buildStrip(); sizeStage(); render(); sizeFill(); setBg(bgColor);
 updateFlipEmptyHint();
 // Yank the whisper the moment a stroke starts, so it is not sitting under it.
 pad.addEventListener('pointerdown', () => {

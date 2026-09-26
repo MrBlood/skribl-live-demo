@@ -1175,6 +1175,44 @@ with sync_playwright() as p:
               isinstance(_r, dict) and _r["before"]["ink"] > 500 and _r["after"] == _r["before"], f"{_r}")
         _q.close()
 
+    # On a phone Play is a bare glyph, so the desktop's pulsing RING drew a
+    # hollow outline around nothing — it read as a focus ring stuck on the
+    # button (owner, iPhone) — and Flip's wrap clipped it away entirely. The
+    # playing state is a tinted disc on both: the element the eye reads as
+    # the control carries the accent fill, and nothing draws a ring.
+    print("\nPARITY — on a phone, playing is a tinted disc on both, never a ring")
+    DISC = """(o) => { const btn = document.getElementById(o.btn);
+        const disc = o.wrap ? btn.closest(o.wrap) : btn;
+        const bg = getComputedStyle(disc).backgroundColor.match(/[\\d.]+/g).map(Number);
+        return { playing: btn.classList.contains('playing'), bg: bg,
+                 ring: [getComputedStyle(disc).boxShadow, getComputedStyle(btn).boxShadow] }; }"""
+    for _route, _btn, _wrap, _cv in (("/skribl-pad", "playBtn", None, "#canvas"),
+                                     ("/flip", "play", ".flip-play-wrap", "#pad")):
+        _q = b.new_page(viewport={"width": 390, "height": 844})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        for _ in range(2 if _route == "/flip" else 1):
+            _bx = _q.locator(_cv).bounding_box()
+            _cx, _cy = _bx["x"] + _bx["width"] / 2, _bx["y"] + _bx["height"] / 2
+            _q.mouse.move(_cx, _cy); _q.mouse.down()
+            for _i in range(30):
+                _q.mouse.move(_cx + math.cos(_i / 4) * 60, _cy + math.sin(_i / 4) * 60)
+                _q.wait_for_timeout(30)
+            _q.mouse.up()
+            if _route == "/flip" and _ == 0:
+                _q.evaluate("() => addFrame()")
+        if _route == "/skribl-pad":
+            _q.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }")
+        _q.wait_for_timeout(300)
+        _q.evaluate("(id) => document.getElementById(id).click()", _btn)
+        _q.wait_for_timeout(150)
+        _d = _q.evaluate(DISC, {"btn": _btn, "wrap": _wrap})
+        _bg = _d["bg"]
+        _tinted = (len(_bg) == 4 and _bg[3] >= 0.1 and _bg[2] > 200 and _bg[2] > _bg[0] + 80)
+        check(f"{_route}: playing at 390px is an accent-tinted disc with no ring",
+              _d["playing"] and _tinted and all(r == "none" for r in _d["ring"]), f"{_d}")
+        _q.close()
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))
