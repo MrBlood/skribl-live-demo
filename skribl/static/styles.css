@@ -5981,6 +5981,50 @@ body.playing .flip-grid { display: none; }
    left edge. And it was nested inside #menuSheet, so it only appeared when the
    overflow menu opened and clicking Flip looked like it did nothing at all.
    A modal has to be top level and it has to own its own styles. */
+/* SAVED DRAFTS (v316, lib/savedrafts.js): the list ⋯ "Open a draft…" shows.
+   Built on demand, on the leave sheet's surface tokens so it sits in both
+   themes. A card mid-screen on wide screens; a bottom sheet on a phone, where
+   the thumb is. The paired [hidden] rules are the usual defence: an explicit
+   display defeats [hidden] otherwise. */
+.sdrafts-scrim { position: fixed; inset: 0; z-index: 90; background: rgba(4, 5, 8, .55); }
+.sdrafts-scrim[hidden] { display: none; }
+.sdrafts-sheet {
+  position: fixed; z-index: 91; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(460px, calc(100vw - 32px)); max-height: min(640px, calc(100vh - 48px));
+  display: flex; flex-direction: column;
+  background: var(--surface-pop); border: 1px solid var(--hairline, #252a35);
+  border-radius: 18px; padding: 18px 16px 12px; box-shadow: 0 24px 60px rgba(0,0,0,.6);
+}
+.sdrafts-sheet[hidden] { display: none; }
+.sdrafts-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px; }
+.sdrafts-title { margin: 0; font-size: 18px; font-weight: 640; color: var(--text-heading); letter-spacing: -.01em; }
+.sdrafts-close { width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent;
+  color: var(--text-tool-2); font-size: 16px; cursor: pointer; }
+.sdrafts-sub { margin: 4px 4px 12px; font-size: 13px; color: var(--text-muted); }
+.sdrafts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.sdrafts-empty { margin: 18px 4px; font-size: 14px; color: var(--text-muted); text-align: center; }
+.sdrafts-row { display: flex; align-items: center; gap: 6px; border-radius: 12px; }
+.sdrafts-row.armed { background: rgba(124, 92, 255, .12); }
+.sdrafts-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px;
+  padding: 8px; border: 0; border-radius: 12px; background: transparent; color: inherit;
+  font: inherit; text-align: left; cursor: pointer; }
+.sdrafts-open:hover { background: rgba(var(--wash-rgb), .06); }
+.sdrafts-thumb { flex: 0 0 auto; width: 64px; height: 48px; border-radius: 8px; overflow: hidden;
+  background: #0d0f14; border: 1px solid var(--hairline, #252a35); }
+.sdrafts-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.sdrafts-words { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.sdrafts-name { font-size: 15px; font-weight: 600; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sdrafts-meta { font-size: 12.5px; color: var(--text-muted); }
+.sdrafts-del { flex: 0 0 auto; min-width: 40px; height: 40px; padding: 0 10px; border-radius: 20px;
+  border: 1px solid transparent; background: transparent; color: var(--text-tool-2);
+  font: inherit; font-size: 13px; cursor: pointer; }
+.sdrafts-del.armed { color: var(--danger); border-color: rgba(244, 50, 111, .5); background: rgba(244, 50, 111, .12); }
+@media (max-width: 640px) {
+  .sdrafts-sheet { top: auto; bottom: 0; transform: translateX(-50%); width: 100%;
+    max-height: 78vh; border-radius: 18px 18px 0 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+}
+
 .leave-scrim {
   position: fixed; inset: 0; z-index: 90;
   background: rgba(0,0,0,.55);

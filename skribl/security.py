@@ -202,6 +202,16 @@ def resolve_request_limit(host_cap):
     return min(caps) if caps else skribl_cap
 
 
+def _signed_in(bp):
+    """Whether the host says someone is signed in. Never raises: a resolver
+    that fails outside a user's request answers "no", which keeps drafts in
+    the browser rather than breaking the page."""
+    try:
+        return bp.skribl_current_user_id() is not None
+    except Exception:
+        return False
+
+
 def register_security(bp, skribl_version, player_target="_blank"):
     # --- Content Security Policy ---------------------------------------------
     # Deferred until v105 for a good reason: while gifenc/mp4-muxer came from
@@ -264,6 +274,10 @@ def register_security(bp, skribl_version, player_target="_blank"):
         return {"csp_nonce": getattr(g, "csp_nonce", ""),
                 "skribl_version": skribl_version,
                 "skribl_csrf_token": getattr(g, "skribl_csrf_token", ""),
+                # Saved drafts (v316): the account's list when a host says who
+                # is signed in, this browser's otherwise (lib/savedrafts.js).
+                "skribl_drafts_api": url_for(".list_saved_drafts"),
+                "skribl_signed_in": _signed_in(bp),
                 "skribl_api_base": url_for(".create_skribl"),
                 "skribl_player_base": url_for(".skribl_player", public_id="").rstrip("/"),
                 "skribl_player_target": player_target}
