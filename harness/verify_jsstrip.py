@@ -36,6 +36,7 @@ import json
 import re
 import pathlib
 import sys
+import time
 import urllib.request
 
 from playwright.sync_api import sync_playwright
@@ -330,6 +331,13 @@ with sync_playwright() as sp:
         // instrument, not the strip, going red.
         return el.tagName + '|' + kv.sort().join('|'); })"""
     CALM = "*,*::before,*::after{transition:none!important;animation:none!important;caret-color:auto!important}"
+    # ONE CLOCK FOR BOTH LOADS. The gallery prints each post's age ("now",
+    # "1m"), and the fixture above is seconds old: when the minute turned
+    # between the stripped load and the raw one, the age text changed width and
+    # four boxes beside it "differed" -- red on main in both CI jobs, green
+    # locally on a gallery too short to reach it. Different TEXT, not different
+    # styling; the instrument, not the strip. Both loads now read the same time.
+    FROZEN = time.time()
 
     def _sig(path, raw):
         ctx = b.new_context(viewport={"width": 390, "height": 844}, reduced_motion="reduce")
@@ -340,6 +348,7 @@ with sync_playwright() as sp:
                 resp = route.fetch(url=u.split("?")[0])
                 route.fulfill(response=resp, body=resp.body())
             p.route(re.compile(r".*\.css(\?.*)?$"), _swap)
+        p.clock.set_fixed_time(FROZEN)
         p.goto(BASE + path, wait_until="load")
         p.add_style_tag(content=CALM)
         p.wait_for_timeout(1200)
