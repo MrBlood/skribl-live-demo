@@ -831,6 +831,11 @@ body:not(.player-mode) .canvas-area { position: relative; }
   box-shadow: 0 0 8px rgba(124, 92, 255, 0.55);
   border-radius: 0 0 0 5px;
 }
+/* Phones: the bar sits in the faded toolbar's band (positionScrub), a real
+   thumb-zone scrubber rather than a hairline on the canvas rim — a little
+   thicker, on a visible track, with a fully rounded fill. */
+.play-scrub.in-bar { height: 6px; background: rgba(var(--wash-rgb), 0.12); }
+.play-scrub.in-bar .play-scrub-fill { border-radius: 999px; }
 /* Reduced motion: don't fade, just show/hide. */
 @media (prefers-reduced-motion: reduce) {
   .play-scrub { transition: none; }
@@ -1050,7 +1055,10 @@ body.stroking .skribl-hint {
   justify-content: center;
   gap: 8px;
   pointer-events: none;
-  color: rgba(var(--on-canvas-rgb), 0.28);
+  /* Legible, still quiet (v316 polish, owner's iPhone): at .28/.20 the hint
+     measured ~2.3:1 and ~1.8:1 on the canvas and read as a smudge in daylight.
+     Now ~5.8:1 and ~4.6:1 — a hint you can read, a step below real controls. */
+  color: rgba(var(--on-canvas-rgb), 0.55);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.2px;
@@ -1067,7 +1075,7 @@ body.stroking .skribl-hint {
 .canvas-empty-sub {
   font-size: 12px;
   font-weight: 500;
-  color: rgba(var(--on-canvas-rgb), 0.20);
+  color: rgba(var(--on-canvas-rgb), 0.47);
   letter-spacing: 0;
   max-width: 240px;
   text-align: center;
@@ -5618,6 +5626,8 @@ a.player-btn { text-decoration: none; }
 }
 .name-done:hover { filter: brightness(1.06); }
 @media (prefers-reduced-motion: reduce) { .name-shell, .name-panel { transition: none; } }
+.tune-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-muted); padding: 8px 0 4px; }
 .tune-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
 .tune-row + .tune-row { border-top: 1px solid var(--hairline); }
 /* margin-right:auto clusters each row's controls on the RIGHT edge (label left,

@@ -1621,6 +1621,19 @@ function positionScrub() {
   if (!playScrub || playScrub.hidden || !canvasArea) return;
   const a = canvasArea.getBoundingClientRect();
   const w = canvasWrap.getBoundingClientRect();
+  // Phones: the toolbar fades out for a replay but keeps its band, so the
+  // canvas never resizes, and that band sat EMPTY under a bar pressed against
+  // the canvas rim (owner, iPhone). The band is where the thumb is: the
+  // scrubber moves into it, toolbar-wide and centred.
+  const t = document.getElementById('toolBar').getBoundingClientRect();
+  const inBar = innerWidth <= 640 && t.height > 0;
+  playScrub.classList.toggle('in-bar', inBar);
+  if (inBar) {
+    playScrub.style.left = (t.left - a.left + 16) + 'px';
+    playScrub.style.width = (t.width - 32) + 'px';
+    playScrub.style.top = (t.top + t.height / 2 - a.top - 3) + 'px';
+    return;
+  }
   // Inset by the frame's corner radius at BOTH ends so the bar spans only the
   // flat part of the canvas bottom. Full width put its ends level with the
   // rounded corners, where the frame has already curved away. Read from the
@@ -4696,7 +4709,7 @@ function abortStrokeForPinch() {
     if (!preset) return;
     if (locked()) {
       if (typeof showToast === 'function') {
-        showToast('Canvas is locked once you have drawn — clear all to change it');
+        showToast('Canvas is locked once you have drawn — start a New Skribl to change it');
       }
       sync();
       return;

@@ -680,7 +680,10 @@ body.player-mode .canvas-area { display: contents; }
   justify-content: center;
   gap: 8px;
   pointer-events: none;
-  color: rgba(var(--on-canvas-rgb), 0.28);
+  /* Legible, still quiet (v316 polish, owner's iPhone): at .28/.20 the hint
+     measured ~2.3:1 and ~1.8:1 on the canvas and read as a smudge in daylight.
+     Now ~5.8:1 and ~4.6:1 — a hint you can read, a step below real controls. */
+  color: rgba(var(--on-canvas-rgb), 0.55);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.2px;

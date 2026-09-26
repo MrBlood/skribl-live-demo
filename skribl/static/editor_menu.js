@@ -102,7 +102,7 @@ function clearAllWithUndo() {
   }
   resetAll();
   if (!snap) return;
-  showToast('Cleared everything', null, {
+  showToast('New Skribl', null, {
     label: 'Undo',
     onClick: () => {
       try {
@@ -122,8 +122,8 @@ function clearAllWithUndo() {
   const item = document.getElementById('clearMenuItem');
   if (!item) return;
   let armed = false, armTimer = null;
-  const label = item.querySelector('span');
-  const disarm = () => { clearTimeout(armTimer); armed = false; item.classList.remove('armed'); if (label) label.textContent = 'Clear all'; };
+  const label = item.querySelector('.new-label');
+  const disarm = () => { clearTimeout(armTimer); armed = false; item.classList.remove('armed'); if (label) label.textContent = 'New Skribl'; };
   // THE ARM HOLDS UNTIL THE PERSON LEAVES IT, not for three seconds (v292;
   // outside review of v291, SK-AUD-018): it disarms when the menu closes, when
   // focus leaves the item, and on a long safety net. A destructive action
@@ -134,12 +134,12 @@ function clearAllWithUndo() {
   window._skriblDisarmClearAll = disarm;
   item.addEventListener('focusout', () => { if (armed) disarm(); });
   item.addEventListener('click', () => {
-    if (recording) { showToast('Stop recording before clearing', item); return; }
+    if (recording) { showToast('Stop recording before starting a new one', item); return; }
     if (!armed) {
       armed = true;
       item.classList.add('armed');
-      if (label) label.textContent = 'Tap again to clear all';
-      announce('Tap again to clear all');
+      if (label) label.textContent = 'Tap again to start over';
+      announce('Tap again to start over');
       clearTimeout(armTimer);
       armTimer = setTimeout(disarm, 20000);
       return;   // keep the menu open for the confirm tap

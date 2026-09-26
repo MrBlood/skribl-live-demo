@@ -1240,8 +1240,14 @@ with _sp204() as _p:
           not has(pad_items, "(.skribl)") and not has(flip_items, "(.skribl)"),
           str([x for x in pad_items + flip_items if "(.skribl)" in x]))
     check("V206: Pad menu says 'Export…' like Flip", has(pad_items, "Export\u2026"), str(pad_items))
-    check("V206: Flip menu has 'Clear all' (was drawer-only; 'pages' dropped in v290 for the Pad's words)", has(flip_items, "Clear all"), str(flip_items))
-    check("V206: Pad menu has 'Clear all'", has(pad_items, "Clear all"), str(pad_items))
+    # v316: the row is "New Skribl" now, first in both menus (owner) — same id,
+    # same arm, same Undo.
+    check("V316: Flip menu has 'New Skribl'", has(flip_items, "New Skribl"), str(flip_items))
+    check("V316: Pad menu has 'New Skribl'", has(pad_items, "New Skribl"), str(pad_items))
+    _first = lambda page_, sel: page_.evaluate(f"() => {{ const m = document.querySelector('{sel}'); const b = m && m.querySelector('.menu-item'); return b ? b.id : null; }}")
+    check("V316: New Skribl is the FIRST row of both menus",
+          _first(pg, "#menuSheet") == "clearMenuItem" and _first(fp, "#moreMenu") == "miClearAll",
+          f"pad {_first(pg, '#menuSheet')}, flip {_first(fp, '#moreMenu')}")
     # .skribl file input accepts the types iOS tags an unknown-ext JSON file with
     for page_, nm in ((pg, "Pad"), (fp, "Flip")):
         acc = page_.evaluate("() => document.getElementById('draftInput').getAttribute('accept')")

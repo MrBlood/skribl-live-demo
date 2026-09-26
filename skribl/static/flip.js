@@ -9637,13 +9637,13 @@ bindEl('miInfo', 'click',()=>{ closeMenu(); openHelpDrawer(); });
 // again. The armed label is also spoken (announceConfirm).
 (function(){
   const item=document.getElementById('miClearAll'); if(!item) return;
-  const label=item.querySelector('.menu-item-text, span:not([class])'); let armed=false, t=null;
-  const disarm=()=>{ clearTimeout(t); armed=false; item.classList.remove('armed'); if(label) label.textContent='Clear all'; };
+  const label=item.querySelector('.new-label'); let armed=false, t=null;
+  const disarm=()=>{ clearTimeout(t); armed=false; item.classList.remove('armed'); if(label) label.textContent='New Skribl'; };
   item.addEventListener('click',e=>{ e.stopPropagation();
     if(playing) return;
     const empty = frames.length===1 && frames[0].strokes.length===0;
-    if(empty){ chip('Nothing to clear'); closeMenu(); return; }
-    if(!armed){ armed=true; item.classList.add('armed'); if(label) label.textContent='Tap again to clear all'; announceConfirm('Tap again to clear all'); clearTimeout(t); t=setTimeout(disarm,20000); return; }
+    if(empty){ chip('Already a fresh one'); closeMenu(); return; }
+    if(!armed){ armed=true; item.classList.add('armed'); if(label) label.textContent='Tap again to start over'; announceConfirm('Tap again to start over'); clearTimeout(t); t=setTimeout(disarm,20000); return; }
     disarm(); closeMenu(); disarmAll();
     clearAllPages();
   });
