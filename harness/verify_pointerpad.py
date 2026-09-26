@@ -159,6 +159,28 @@ with sync_playwright() as sp:
     check("two fingers on the canvas pinch-zoom the view",
           s["zoom"] is not None and s["zoom"] > (z0 or 1) + 0.1, f"zoom {z0} -> {s['zoom']}")
     check("...and the pinch drew nothing", s["groups"] == 1, str(s))
+    # THE HEADER COMES BACK (v315, the owner's first look on a phone: "no top
+    # menu"). The chrome fades while a stroke is down; after a touch stroke and
+    # a pinch the page must not be left in that state.
+    chrome = pg.evaluate("""() => ({ stroking: document.body.classList.contains('stroking'),
+        header: +getComputedStyle(document.querySelector('.header')).opacity }) """)
+    check("after a touch stroke and a pinch the header is back at full strength",
+          chrome["stroking"] is False and chrome["header"] > 0.9, str(chrome))
+    # A touch on the canvas is Pad's, never the browser's: the touchstart and
+    # touchmove are prevented, which is what stops iOS zooming or scrolling
+    # the page under a drawing finger (touch-action alone is not enough there).
+    prevented = pg.evaluate("""() => { const c = document.getElementById('canvas');
+        const r = c.getBoundingClientRect();
+        const t = new Touch({ identifier: 9, target: c, clientX: r.left + 20, clientY: r.top + 20 });
+        const mk = (k) => new TouchEvent(k, { touches: [t], targetTouches: [t], changedTouches: [t],
+                                              bubbles: true, cancelable: true });
+        const a = mk('touchstart'), m = mk('touchmove');
+        c.dispatchEvent(a); c.dispatchEvent(m);
+        c.dispatchEvent(new TouchEvent('touchend', { touches: [], targetTouches: [], changedTouches: [t],
+                                                     bubbles: true, cancelable: true }));
+        return [a.defaultPrevented, m.defaultPrevented]; }""")
+    check("a one-finger touch on the canvas is not left to the browser (no page zoom/scroll)",
+          prevented == [True, True], str(prevented))
     check("no page errors from touch", not errs, "; ".join(errs[:2]))
     ctx.close()
 

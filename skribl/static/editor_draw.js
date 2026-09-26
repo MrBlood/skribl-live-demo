@@ -589,8 +589,31 @@ canvas.addEventListener('pointercancel', _endStrokeFor);
 // startDraw's note; ZoomView-guarded so a surface without zoom never pinches.
 canvas.addEventListener('touchstart', (e) => {
   const t = e.targetTouches || e.touches;
-  if (typeof ZoomView !== 'undefined' && ZoomView && t && t.length >= 2) beginPinch(e);
+  if (typeof ZoomView !== 'undefined' && ZoomView && t && t.length >= 2) { beginPinch(e); return; }
+  // iOS SAFARI, NOT CSS, DECIDES WHETHER A FINGER ON THE CANVAS ZOOMS THE PAGE.
+  // Pad's touch listeners used to preventDefault every touchstart/touchmove on
+  // the canvas, and that -- more than `touch-action: none`, which iOS honours
+  // less completely than Chromium -- is what kept a drawing gesture, a quick
+  // double tap or a pinch from zooming or scrolling the whole page and pushing
+  // the header off the screen. The pointer migration dropped those calls; the
+  // owner's first look on a phone found the header gone. They are restored
+  // here, touch-only: pointer events have already fired by now, so this
+  // suppresses the browser's gesture and nothing of Pad's.
+  if (e.cancelable) e.preventDefault();
 }, { passive: false });
+canvas.addEventListener('touchmove', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+// THE CHROME MUST NEVER STAY FADED. body.stroking dims the header and toolbar
+// to a whisper while a stroke is down; any release anywhere -- including one
+// the canvas never hears on a platform that drops a pointer event -- ends
+// that state, and ends the stroke with it.
+function _releaseChrome(e) {
+  if (drawing && (strokePointerId === null || !e || e.pointerId === undefined || e.pointerId === strokePointerId)) _endStrokeFor(e);
+  if (!drawing) document.body.classList.remove('stroking');
+}
+window.addEventListener('pointercancel', _releaseChrome, true);
+window.addEventListener('touchend', (e) => { if (!e.touches || e.touches.length === 0) _releaseChrome(null); }, true);
+window.addEventListener('touchcancel', () => _releaseChrome(null), true);
+canvas.addEventListener('lostpointercapture', (e) => { if (drawing && e.pointerId === strokePointerId) _endStrokeFor(e); });
 // The other half of the pinned-pop veil in startDraw: ANY release lifts it.
 // Window-level and unconditional, so no draw path — commit, cancel, a press
 // the lock check swallowed — can leave the panel invisible.
