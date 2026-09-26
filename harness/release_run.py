@@ -133,6 +133,7 @@ BATCHES = [
     # root. This one never touches a store.
     ["verify_createpost.py", "verify_deletion.py"],
     ["verify_example.py"],                 # measures — records a real drawing
+    ["verify_clouddrafts.py"],             # measures — real drawings in its own host app (v316)
     ["verify_audiosession.py"],            # measures — audio off an analyser tap
     ["verify_library.py"],                 # unrecorded
     # store: posts through both editors' sheets to the shared server (one
