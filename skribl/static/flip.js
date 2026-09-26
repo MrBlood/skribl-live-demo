@@ -5062,20 +5062,8 @@ function updateZoomHandles(){
 let zoomDrawPending=false;
 function requestZoomWaveformDraw(){ if(zoomDrawPending) return; zoomDrawPending=true; requestAnimationFrame(()=>{ zoomDrawPending=false; if(currentAudioBuffer) drawWaveform(currentAudioBuffer); drawZoomWaveform(); }); }
 function drawWaveform(audioBuffer){
-  // Same guard as Pad's copy, for the same reason — see the long comment on
-  // app.js's drawWaveform. A 0-wide rect CLEARS the bitmap and paints nothing,
-  // and drawZoomWaveform() below has always had this line while this one did
-  // not, which is why Loop Detail rendered and the strip above it did not.
-  // Flip recovers more often than Pad (requestZoomWaveformDraw repaints BOTH
-  // canvases and reveal() calls it on music open), so the window here is
-  // narrower — but the unguarded wipe is identical, and a repaint that lands
-  // while the panel is still mid-animation reintroduces it.
-  if(!audioBuffer||!musicTrack||!waveformCanvas) return;
-  const rect=musicTrack.getBoundingClientRect(); if(!rect.width) return;
-  waveformCanvas.width=rect.width; waveformCanvas.height=rect.height;
-  const data=audioBuffer.getChannelData(0); const samples=waveformCanvas.width||1; const blockSize=Math.max(1,Math.floor(data.length/samples));
-  const h=waveformCanvas.height, mid=h/2; waveformCtx.clearRect(0,0,waveformCanvas.width,h); waveformCtx.fillStyle='#3a4150';
-  for(let i=0;i<samples;i++){ const s=i*blockSize; let mn=1,mx=-1; for(let j=0;j<blockSize;j++){ const v=data[s+j]||0; if(v<mn)mn=v; if(v>mx)mx=v; } const y1=mid+mn*mid*0.85, y2=mid+mx*mid*0.85; waveformCtx.fillRect(i,y1,1,Math.max(1,y2-y1)); }
+  // lib/loopwave.js, shared with Pad; its blank-strip guard is documented there.
+  SkriblLoopWave.drawStrip({ canvas:waveformCanvas, ctx:waveformCtx, track:musicTrack, buffer:audioBuffer });
 }
 function drawZoomWaveform(){
   if(!currentAudioBuffer||!zoomWaveformCanvas) return;

@@ -2121,55 +2121,11 @@ function drawZoomWaveform() {
     label: loopZoomLabel, formatTime: formatTimeH });
 }
 
+// The whole-track strip: lib/loopwave.js (editors only; the player has no
+// music drawer and does not load it). Its blank-strip guard is documented there.
 function drawWaveform(audioBuffer) {
-  if (!audioBuffer || !musicTrack || !waveformCanvas) return;
-  const rect = musicTrack.getBoundingClientRect();
-  // THE THIRD "sized from a rect with no layout yet" BUG IN THIS DRAWER, and
-  // the first one that left a canvas permanently blank rather than briefly
-  // wrong. Sizing a canvas from a 0-wide rect is not a no-op: it sets
-  // canvas.width = 0, which CLEARS the bitmap, and the loop below then paints
-  // zero peaks. The decode chain calls this exactly once, so if the music
-  // drawer happened to be shut at that instant — a draft reload, or picking a
-  // file and closing the drawer before decode lands, both slower and so easier
-  // to hit on a phone — the strip stayed empty for the rest of the session.
-  //
-  // drawZoomWaveform() has carried this same guard for a while and therefore
-  // never showed the bug: it is re-called from updateTrimUI(), so any trim
-  // nudge, drag or label refresh repaints it. That asymmetry is what a user
-  // sees — Loop Detail drawn, the strip above it blank, one decoded buffer
-  // behind both. Bailing here keeps the last good bitmap instead of wiping it;
-  // openDrawer()'s music branch is what schedules the repaint once the panel
-  // has real layout.
-  if (!rect.width) return;
-  waveformCanvas.width = rect.width;
-  waveformCanvas.height = rect.height;
-
-  const data = audioBuffer.getChannelData(0);
-  const samples = waveformCanvas.width;
-  const blockSize = Math.floor(data.length / samples);
-  const peaks = [];
-
-  for (let i = 0; i < samples; i++) {
-    const start = i * blockSize;
-    let min = 1.0, max = -1.0;
-    for (let j = 0; j < blockSize; j++) {
-      const v = data[start + j] || 0;
-      if (v < min) min = v;
-      if (v > max) max = v;
-    }
-    peaks.push([min, max]);
-  }
-
-  const h = waveformCanvas.height;
-  const mid = h / 2;
-  waveformCtx.clearRect(0, 0, waveformCanvas.width, h);
-  waveformCtx.fillStyle = '#3a4150';
-  for (let i = 0; i < peaks.length; i++) {
-    const [min, max] = peaks[i];
-    const y1 = mid + min * mid * 0.85;
-    const y2 = mid + max * mid * 0.85;
-    waveformCtx.fillRect(i, y1, 1, Math.max(1, y2 - y1));
-  }
+  if (!window.SkriblLoopWave) return;
+  window.SkriblLoopWave.drawStrip({ canvas: waveformCanvas, ctx: waveformCtx, track: musicTrack, buffer: audioBuffer });
 }
 
 const musicUploadBtn = _authoringCtl('musicUploadBtn');

@@ -617,7 +617,8 @@ with sync_playwright() as sp:
     # ...and the zoomed loop view (lib/loopwave.js, same release): 134,328.
     # ...and the paint-target seg (lib/painttarget.js, same release): 133,197.
     # ...and the re-add cards (lib/pendingcards.js, same release): 131,384.
-    BYTES_RATCHET, BYTES_TARGET = 131_900, 153_800
+    # ...and the whole-track strip (lib/loopwave.js drawStrip): 130,609.
+    BYTES_RATCHET, BYTES_TARGET = 131_100, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

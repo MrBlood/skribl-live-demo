@@ -1135,6 +1135,46 @@ with sync_playwright() as p:
               not any(_off.values()), f"{_off}")
         _q.close()
 
+    # ---- the whole-track strip keeps its drawing when it has no layout ----
+    # lib/loopwave.js drawStrip, one copy since v315. Sizing a canvas from a
+    # 0-wide rect CLEARS it, and decode draws the strip once: with the drawer
+    # shut at that instant the strip stayed blank for the session. The guard
+    # that prevents it was pinned by nothing (removing it left every suite
+    # green). The property, on each editor: a redraw with no layout keeps the
+    # last good bitmap.
+    print("\nPARITY — the music strip survives a redraw with the drawer shut")
+    STRIP = """() => {
+        const buf = currentAudioBuffer;
+        const ink = () => { const c = waveformCanvas; if (!c.width) return 0;
+            const px = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0;
+            for (let i = 3; i < px.length; i += 4) if (px[i]) n++; return n; };
+        const prev = musicTrack.getAttribute('style') || '';
+        if (!musicTrack.getBoundingClientRect().width) return 'the music drawer did not open';
+        drawWaveform(buf); const before = { w: waveformCanvas.width, ink: ink() };
+        musicTrack.setAttribute('style', prev + ';display:none');
+        drawWaveform(buf); const after = { w: waveformCanvas.width, ink: ink() };
+        musicTrack.setAttribute('style', prev);
+        return { before: before, after: after }; }"""
+    for _route in ("/skribl-pad", "/flip"):
+        _q = b.new_page(viewport={"width": 900, "height": 1100})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        # A real track and the real drawer: the trim track has no box until a
+        # track is loaded and the drawer is open, and no positioning escapes a
+        # display:none ancestor (the first draft read the canvas's default
+        # 300px as a draw and measured nothing).
+        _q.set_input_files("#musicInput", files=[{"name": "strip.wav", "mimeType": "audio/wav",
+                                                  "buffer": wav_bytes(2.0)}])
+        _q.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
+        _q.evaluate("(r) => { const panel = document.getElementById('musicPanel');"
+                    " if (r.indexOf('flip') < 0) { if (!panel || panel.hidden) openDrawer('music'); }"
+                    " else if (!panel || panel.hidden) document.getElementById('musicBtn').click(); }", _route)
+        _q.wait_for_timeout(900)
+        _r = _q.evaluate(STRIP)
+        check(f"{_route}: the strip draws, and a redraw with no layout leaves it drawn",
+              isinstance(_r, dict) and _r["before"]["ink"] > 500 and _r["after"] == _r["before"], f"{_r}")
+        _q.close()
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))
