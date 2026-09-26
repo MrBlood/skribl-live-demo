@@ -2156,99 +2156,22 @@ window.addEventListener('touchmove', _pinchMove, {passive:false});
 window.addEventListener('touchend', _pinchEnd);
 window.addEventListener('touchcancel', _pinchEnd);
 
+// The magnifier lives in lib/canvaszoom.js since v315 (SK312-003) -- Pad's
+// implementation, shared. What Flip owns is passed in:
+//  * Space has two owners here BY DESIGN and they are scoped to be mutually
+//    exclusive: not zoomed -> play/stop (registered near the bottom of this
+//    file); zoomed -> hold to grab-pan. So Space pans only while zoomed, and is
+//    registered with KeyRegistry under that scope. The draw-suppression lives in
+//    the pointerdown stroke start, which refuses while Space is held at ANY zoom.
+//  * The drawing surface shows a crosshair while zoomed.
 (function initCanvasZoom(){
-  const layer=document.getElementById('zoomLayer'), hud=document.getElementById('zoomHud'), flipWrap=document.querySelector('.flip-wrap');
-  if(!layer || !hud || !flipWrap) return;
-  const MIN=1, MAX=4, STEP=0.5; let zoom=1, panX=0, panY=0, magnifyOn=false;
-  function wrapSize(){ const r=flipWrap.getBoundingClientRect(); return { w:r.width||1, h:r.height||1 }; }
-  function clampPan(){ const {w,h}=wrapSize(); panX=Math.min(0,Math.max(w*(1-zoom),panX)); panY=Math.min(0,Math.max(h*(1-zoom),panY)); if(zoom<=1){panX=0;panY=0;} }
-  function paint(animate){ clampPan(); layer.classList.toggle('zoom-anim',!!animate);
-    layer.style.transform = zoom===1 ? '' : 'translate('+panX+'px,'+panY+'px) scale('+zoom+')';
-    const v=document.getElementById('zoomVal'); if(v && !v.querySelector('input')) v.textContent=Math.round(zoom*100)+'%';
-    hud.classList.toggle('zoomed', zoom>1.001);
-    const zin=document.getElementById('zoomInBtn'), zout=document.getElementById('zoomOutBtn');
-    if(zin) zin.disabled=zoom>=MAX-0.001; if(zout) zout.disabled=zoom<=MIN+0.001;
-    pad.style.cursor = zoom>1.001 ? 'crosshair' : '';
-    if(animate) setTimeout(()=>layer.classList.remove('zoom-anim'),200);
-  }
-  ZoomView={
-    isZoomed:()=>zoom>1.001, enabled:()=>magnifyOn, enable(){ if(!magnifyOn) setMagnify(true); },
-    get:()=>({zoom,panX,panY}),
-    zoomAt(factor,cx,cy){ const nz=Math.min(MAX,Math.max(MIN,zoom*factor)); if(nz===zoom) return; const coordX=(cx-panX)/zoom, coordY=(cy-panY)/zoom; panX=cx-coordX*nz; panY=cy-coordY*nz; zoom=nz; paint(false); },
-    panBy(dx,dy){ panX+=dx; panY+=dy; paint(false); },
-    step(dir){ const {w,h}=wrapSize(); this.zoomAt((Math.min(MAX,Math.max(MIN,zoom+dir*STEP)))/zoom, w/2, h/2); paint(true); },
-    fit(){ zoom=1; panX=0; panY=0; paint(true); },
-    setPct(pct){ const s=wrapSize(); const target=Math.min(MAX,Math.max(MIN,(pct||0)/100)); this.zoomAt(target/zoom, s.w/2, s.h/2); paint(true); },
-    reclamp(){ paint(false); }
-  };
-  bindEl('zoomInBtn', 'click',()=>ZoomView.step(1));
-  bindEl('zoomOutBtn', 'click',()=>ZoomView.step(-1));
-  bindEl('zoomFitBtn', 'click',()=>ZoomView.fit());
-  const magnifyBtn=document.getElementById('magnifyBtn');
-  function setMagnify(on){
-    // The button zooms the CENTRE. Aiming it needs scroll or space-drag, which
-    // lived only in the help drawer under a separate heading — findable only if
-    // you already knew to look. Shown once, the first time magnify is enabled.
-    if(on && window.SkriblHints){
-      window.SkriblHints.show('magnify-pan',
-        'Zoomed in. Scroll — or hold Space and drag — to move to the part you want.');
-    }
-    magnifyOn=on; hud.hidden=!on; if(magnifyBtn){ magnifyBtn.classList.toggle('active',on); magnifyBtn.setAttribute('aria-pressed', on?'true':'false'); } if(!on) ZoomView.fit(); }
-  if(magnifyBtn) magnifyBtn.addEventListener('click',()=>setMagnify(!magnifyOn));
-  // click the % to type an exact zoom
-  const valEl=document.getElementById('zoomVal'); valEl.title='Click to type a zoom %';
-  valEl.addEventListener('click',()=>{ if(valEl.querySelector('input')) return; const cur=Math.round(zoom*100); valEl.textContent='';
-    const inp=document.createElement('input'); inp.type='text'; inp.inputMode='numeric'; inp.setAttribute('enterkeyhint','done'); inp.maxLength=4; inp.className='zoom-val-input'; inp.value=String(cur); valEl.appendChild(inp);
-    const backdrop=document.createElement('div'); backdrop.className='zoom-edit-backdrop'; flipWrap.appendChild(backdrop); inp.focus(); inp.select(); let done=false;
-    function commit(apply){ if(done) return; done=true; if(backdrop.parentNode) backdrop.remove(); const n=apply?parseInt(inp.value,10):NaN; if(!isNaN(n)){ ZoomView.setPct(n); } else { if(inp.parentNode) inp.remove(); paint(false); } }
-    backdrop.addEventListener('pointerdown',e=>{ e.preventDefault(); commit(true); });
-    inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(true); } else if(e.key==='Escape'){ e.preventDefault(); commit(false); } });
-    inp.addEventListener('blur',()=>commit(true));
+  const flipWrap=document.querySelector('.flip-wrap');
+  if(!window.SkriblCanvasZoom || !flipWrap) return;
+  ZoomView = window.SkriblCanvasZoom.create({
+    wrap: flipWrap, spaceOnlyWhenZoomed: true,
+    keyRegistry: { surface: 'flip', label: 'hold to grab-pan the magnified canvas' },
+    onPaint: (z) => { pad.style.cursor = z > 1.001 ? 'crosshair' : ''; }
   });
-  window.addEventListener('resize',()=>{ if(zoom>1) paint(false); });
-  // grip: drag the pill, dock to the nearest corner
-  const grip=document.getElementById('zoomGrip'); let snapEl=null, dragging=false, grabDX=0, grabDY=0;
-  function corners(){ const r=flipWrap.getBoundingClientRect(); const pw=hud.offsetWidth, ph=hud.offsetHeight, m=12;
-    return { tl:{key:'tl',x:m,y:m}, tr:{key:'tr',x:r.width-pw-m,y:m}, bl:{key:'bl',x:m,y:r.height-ph-m}, br:{key:'br',x:r.width-pw-m,y:r.height-ph-m} }; }
-  function nearestCorner(x,y){ const c=corners(); let best=null,bd=Infinity; for(const k in c){ const d=Math.hypot(x-c[k].x,y-c[k].y); if(d<bd){bd=d;best=c[k];} } return best; }
-  function ptr(ev){ const t=SkriblEventPoint.at(ev); return {x:t.clientX,y:t.clientY}; }
-  function gripStart(ev){ ev.preventDefault(); ev.stopPropagation(); const r=hud.getBoundingClientRect(), wrapR=flipWrap.getBoundingClientRect(), p=ptr(ev);
-    grabDX=p.x-r.left; grabDY=p.y-r.top; dragging=true; hud.classList.add('dragging');
-    hud.style.right='auto'; hud.style.bottom='auto'; hud.style.left=(r.left-wrapR.left)+'px'; hud.style.top=(r.top-wrapR.top)+'px';
-    snapEl=document.createElement('div'); snapEl.className='zoom-snap'; snapEl.style.height=hud.offsetHeight+'px'; flipWrap.appendChild(snapEl);
-    if(ev.type==='mousedown'){ window.addEventListener('mousemove',gripMove); window.addEventListener('mouseup',gripEnd); }
-    else { window.addEventListener('touchmove',gripMove,{passive:false}); window.addEventListener('touchend',gripEnd); window.addEventListener('touchcancel',gripEnd); } }
-  function gripMove(ev){ if(!dragging) return; ev.preventDefault(); const wrapR=flipWrap.getBoundingClientRect(), p=ptr(ev);
-    let x=Math.max(0,Math.min(wrapR.width-hud.offsetWidth, p.x-wrapR.left-grabDX)), y=Math.max(0,Math.min(wrapR.height-hud.offsetHeight, p.y-wrapR.top-grabDY));
-    hud.style.left=x+'px'; hud.style.top=y+'px'; const near=nearestCorner(x,y); if(snapEl){ snapEl.style.left=near.x+'px'; snapEl.style.top=near.y+'px'; } }
-  function gripEnd(){ if(!dragging) return; dragging=false; hud.classList.remove('dragging');
-    const x=parseFloat(hud.style.left)||0, y=parseFloat(hud.style.top)||0, near=nearestCorner(x,y);
-    hud.style.left=''; hud.style.top=''; hud.style.right=''; hud.style.bottom=''; hud.setAttribute('data-corner',near.key);
-    if(snapEl){ snapEl.remove(); snapEl=null; }
-    window.removeEventListener('mousemove',gripMove); window.removeEventListener('mouseup',gripEnd); window.removeEventListener('touchmove',gripMove); window.removeEventListener('touchend',gripEnd); window.removeEventListener('touchcancel',gripEnd); }
-  grip.addEventListener('mousedown',gripStart); grip.addEventListener('touchstart',gripStart,{passive:false});
-  // wheel pans while zoomed (Shift → horizontal)
-  flipWrap.addEventListener('wheel',(e)=>{ if(zoom<=1) return; e.preventDefault(); let dx=e.deltaX, dy=e.deltaY; if(e.shiftKey && dx===0){ dx=dy; dy=0; } panX-=dx; panY-=dy; paint(false); }, {passive:false});
-  // hold Space and drag to grab-pan (desktop)
-  let spaceHeld=false, spaceDragging=false, lastX=0, lastY=0;
-  // Flip's Space has two owners by DESIGN and they are scoped to be mutually
-  // exclusive: not zoomed -> play/stop (registered near the bottom of this
-  // file); zoomed -> hold to grab-pan. v211 briefly dropped this scope so
-  // Space+drag would stop drawing at 100% too, and verify_keys caught the
-  // resulting double registration — correctly: at 100% a Space keydown was
-  // then BOTH a play toggle and a pan arm. So the registry split stands, and
-  // the draw-suppression (the actual owner-reported bug) lives where it
-  // belongs: in the pointerdown stroke start, which refuses while Space is
-  // held at ANY zoom. Pan stays a zoomed-only affordance on Flip.
-  KeyRegistry.register({surface:'flip', label:'hold to grab-pan the magnified canvas',
-    keys:['Space'], scope:()=>ZoomView && ZoomView.isZoomed()});
-  window.addEventListener('keydown',(e)=>{ if(e.code==='Space' && !typingTarget(e.target)){ spaceHeld=true; if(ZoomView && ZoomView.isZoomed()){ e.preventDefault(); flipWrap.style.cursor=spaceDragging?'grabbing':'grab'; } } });
-  window.addEventListener('keyup',(e)=>{ if(e.code==='Space'){ spaceHeld=false; spaceDragging=false; flipWrap.style.cursor=''; } });
-  flipWrap.addEventListener('mousedown',(e)=>{ if(spaceHeld && ZoomView && ZoomView.isZoomed()){ spaceDragging=true; lastX=e.clientX; lastY=e.clientY; flipWrap.style.cursor='grabbing'; e.preventDefault(); e.stopPropagation(); } }, true);
-  window._skriblSpaceHeld = () => spaceHeld;
-  window.addEventListener('mousemove',(e)=>{ if(!spaceDragging) return; panX+=e.clientX-lastX; panY+=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY; paint(false); });
-  window.addEventListener('mouseup',()=>{ if(spaceDragging){ spaceDragging=false; flipWrap.style.cursor=spaceHeld?'grab':''; } });
-  paint(false);
 })();
 
 /* ---- frame strip ---- */
