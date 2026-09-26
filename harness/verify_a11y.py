@@ -1570,6 +1570,33 @@ check("the token that replaced them clears 4.5:1 on EVERY surface",
       f"worst {_worst:.2f}:1 — a token that passes on the darkest panel and "
       "fails on the lightest one has not fixed anything")
 
+# The empty-canvas hint is the first thing a new person reads, and it sat at
+# ~2.4:1 (title) and ~1.8:1 (the line under it) on the canvas — a smudge in
+# daylight on the owner's iPhone. It is a hint, so it stays quieter than a
+# control, but it is READ, so it clears AA. Measured from the painted colours on
+# both editors, over the canvas default the document starts on.
+print("\nA11Y 15 — the empty-canvas hint is legible on both editors")
+_CANVAS = "#0d0f14"
+_HINT = """() => [...document.querySelectorAll('.canvas-empty-hint, .canvas-empty-sub')]
+    .filter(e => e.closest('.canvas-empty-hint') && getComputedStyle(e).display !== 'none')
+    .map(e => [e.className, getComputedStyle(e).color])"""
+def _blend(css, bg):
+    v = [float(x) for x in re.findall(r"[\d.]+", css)]
+    a = v[3] if len(v) > 3 else 1.0
+    b = [int(bg[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join("%02x" % round(a * f + (1 - a) * g) for f, g in zip(v[:3], b))
+with sync_playwright() as _hp:
+    _hb = _hp.chromium.launch()
+    for _route in ("/", "/flip"):
+        _pg = _hb.new_page(viewport={"width": 390, "height": 844})
+        browsing.goto(_pg, BASE, _route)
+        _found = _pg.evaluate(_HINT)
+        _ratios = {c: round(ratio(_blend(col, _CANVAS), _CANVAS), 2) for c, col in _found}
+        check(f"{_route}: the hint's title and its line both clear 4.5:1 on the canvas",
+              len(_ratios) == 2 and min(_ratios.values()) >= 4.5, str(_ratios))
+        _pg.close()
+    _hb.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [n for ok, n in results if not ok]
 print("\n" + "=" * 62)

@@ -1213,6 +1213,22 @@ with sync_playwright() as p:
               _d["playing"] and _tinted and all(r == "none" for r in _d["ring"]), f"{_d}")
         _q.close()
 
+    # The header's Tune button is a bare sliders glyph — no room for a word on
+    # a phone — so the panel it opens names itself, in the button's own words.
+    print("\nPARITY — the Tune panel names itself on both, in the button's words")
+    for _route in ("/skribl-pad", "/flip"):
+        _q = b.new_page(viewport={"width": 390, "height": 844})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _q.evaluate("() => document.getElementById('tuneBtn').click()"); _q.wait_for_timeout(700)
+        _t = _q.evaluate("""() => { const t = document.querySelector('#tunePanel .tune-title'); if (!t) return null;
+            const r = t.getBoundingClientRect(), el = document.elementFromPoint(r.left + 4, r.top + r.height / 2);
+            return { text: t.textContent.trim(), label: document.getElementById('tuneBtn').getAttribute('aria-label'),
+                     painted: el === t, first: t === document.getElementById('tunePanel').firstElementChild }; }""")
+        check(f"{_route}: the open panel shows its title first, and it is the button's name",
+              bool(_t) and _t["painted"] and _t["first"] and _t["text"].lower() == (_t["label"] or "").lower(), str(_t))
+        _q.close()
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))
