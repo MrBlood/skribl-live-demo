@@ -32,6 +32,9 @@ from .ratelimit import (_client_ip, _rate_commit_post, _rate_key, _rate_limited,
 from .validation import _decode_data_url_image
 from .creation import (CLIENT_TOKEN_RE, SkriblIdempotencyRace, SkriblRejected,
                        SkriblUnavailable, create_post)
+from .drafts import (DraftNotFound, DraftRejected, delete_draft, get_draft,
+                     list_drafts, save_draft)
+from .drafts import max_drafts as _max_drafts
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
                        set_post_visibility)
 
@@ -1347,6 +1350,70 @@ def register_routes(bp, *, index_route=False):
             return None
         tok = data.get("deleteToken")
         return tok if isinstance(tok, str) and tok else None
+
+    # ---- drafts saved to the author's account (v316; skribl/drafts.py) ----
+    # Owner only, every verb: someone else's draft is the same 404 as a
+    # missing one. Signed-out is 401, which is the editors' cue to keep drafts
+    # in the browser instead. Writes are CSRF-checked exactly as posts are, and
+    # nothing here commits: the host owns the transaction.
+    def _draft_body():
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            raise DraftRejected("Body must be a JSON object.")
+        return data
+
+    def _draft_error(exc):
+        return jsonify({"error": exc.message}), getattr(exc, "status", 404)
+
+    @bp.get("/api/drafts")
+    def list_saved_drafts():
+        try:
+            return jsonify({"items": list_drafts(bp.skribl_current_user_id()),
+                            "limit": _max_drafts()})
+        except DraftRejected as exc:
+            return _draft_error(exc)
+
+    @bp.get("/api/drafts/<draft_id>")
+    def get_saved_draft(draft_id):
+        try:
+            return jsonify(get_draft(bp.skribl_current_user_id(), draft_id))
+        except (DraftRejected, DraftNotFound) as exc:
+            return _draft_error(exc)
+
+    @bp.post("/api/drafts")
+    def create_saved_draft():
+        if not _csrf_ok():
+            return _csrf_refusal()
+        try:
+            data = _draft_body()
+            out = save_draft(bp.skribl_current_user_id(), data.get("payload"),
+                             kind=data.get("kind"), title=data.get("title"),
+                             thumbnail=data.get("thumbnail"))
+            return jsonify(out), 201
+        except (DraftRejected, DraftNotFound) as exc:
+            return _draft_error(exc)
+
+    @bp.put("/api/drafts/<draft_id>")
+    def update_saved_draft(draft_id):
+        if not _csrf_ok():
+            return _csrf_refusal()
+        try:
+            data = _draft_body()
+            return jsonify(save_draft(bp.skribl_current_user_id(), data.get("payload"),
+                                      kind=data.get("kind"), title=data.get("title"),
+                                      thumbnail=data.get("thumbnail"), public_id=draft_id))
+        except (DraftRejected, DraftNotFound) as exc:
+            return _draft_error(exc)
+
+    @bp.delete("/api/drafts/<draft_id>")
+    def delete_saved_draft(draft_id):
+        if not _csrf_ok():
+            return _csrf_refusal()
+        try:
+            delete_draft(bp.skribl_current_user_id(), draft_id)
+            return "", 204
+        except (DraftRejected, DraftNotFound) as exc:
+            return _draft_error(exc)
 
     @bp.delete("/api/skribls/<public_id>")
     def delete_skribl(public_id):
