@@ -63,5 +63,19 @@ says so.
    `[skribl]` placement marker, `effectiveLen()` should not count it toward
    the 300 characters, as it already skips a video link.
 
+5. **Author it.** The view that publishes calls
+   `skribl.create_post(payload, author_id=<the signed-in user's id>)`, and the
+   blueprint is mounted with `current_user_id`. That id is what puts the post
+   in the author's `/library` on every device they sign in on; a post created
+   without it is anonymous and appears in nobody's Library.
+6. **Drafts must carry the drawing.** "Add to post" publishes nothing: the
+   drawing lives in the open page until Post, so an abandoned post leaves no
+   Skribl, no Library entry and no spent quota behind. The flip side is that a
+   tab closed before Post loses it, and the compose editor keeps no draft of
+   its own on purpose. `composer.js`'s Save draft sends only `body` and
+   `draft_id`; to keep an attached Skribl, the draft save has to include its
+   hidden field too, and reopening the draft has to hand it back
+   (`pad.setPayload(payload, editor)`) before the Skribl button is pressed.
+
 The player needs nothing from `media.skribls.net`: its poster and payload come
 from Skribl's own routes under the site's prefix.

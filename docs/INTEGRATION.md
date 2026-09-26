@@ -12,7 +12,7 @@ right.
 The planning record that used to live here was retired in the v263 cleanup; it lives in git history.
 
 Mounting into skribls.net specifically: `docs/SKRIBLS-NET.md` records what the
-real site's pages showed and the four changes it needs.
+real site's pages showed and the changes it needs.
 
 ---
 
