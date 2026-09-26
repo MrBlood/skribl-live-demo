@@ -4983,49 +4983,13 @@ function syncMediaUI(){ syncPhotoUI(); syncMusicUI(); refreshPendingCards(); if(
 // The Draw/Image/Music drawers are shared partials, so Flip already HAS the Pad's
 // #musicPending / #photoPending re-add cards in its DOM — it just never drove them.
 // Runs last inside syncMediaUI, because syncPhotoUI/syncMusicUI reset the tab dots.
-function fmtLoopTime(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return m+':'+String(s).padStart(2,'0'); }
 function refreshPendingCards(){
-  const mCard=document.getElementById('musicPending'), pCard=document.getElementById('photoPending');
-  const mUp=document.getElementById('musicUploadBtn'), pUp=document.getElementById('photoUploadBtn');
-  const mDot=document.getElementById('musicTabDot'),  pDot=document.getElementById('photoTabDot');
-  if(mCard){
-    if(pendingMusicMeta && !musicData){
-      document.getElementById('musicPendingName').textContent = pendingMusicMeta.name || 'Your track';
-      let meta='Loop saved';
-      if(pendingMusicMeta.trimStart!=null && pendingMusicMeta.trimEnd!=null){
-        const len=pendingMusicMeta.trimEnd-pendingMusicMeta.trimStart;
-        meta='Loop '+fmtLoopTime(pendingMusicMeta.trimStart)+'–'+fmtLoopTime(pendingMusicMeta.trimEnd)+' · '+len.toFixed(1)+'s';
-      }
-      document.getElementById('musicPendingMeta').textContent=meta;
-      mCard.hidden=false; if(mUp) mUp.hidden=true;
-      if(mDot){ mDot.hidden=false; mDot.classList.add('pending'); }
-    } else {
-      mCard.hidden=true; if(mUp) mUp.hidden=false;
-      // Restore hidden, not just the class. The branch above sets hidden=false
-      // for the pending dot; dropping only 'pending' here left a VISIBLE dot
-      // with no pending styling — which renders in the "has media" green —
-      // until syncMusicUI() next ran and hid it. Dismissing the re-add card
-      // turned the dot green, and opening the drawer made it vanish.
-      if(mDot){ mDot.classList.remove('pending'); mDot.hidden = !musicData; }
-    }
-  }
-  if(pCard){
-    if(pendingPhotoMeta && !bgImage){
-      document.getElementById('photoPendingName').textContent = pendingPhotoMeta.name || 'Your image';
-      const parts=[];
-      if(pendingPhotoMeta.fit) parts.push({cover:'Fill',contain:'Fit',fill:'Stretch',stretch:'Stretch'}[pendingPhotoMeta.fit] || pendingPhotoMeta.fit);
-      if(pendingPhotoMeta.opacity!=null) parts.push(Math.round(pendingPhotoMeta.opacity*100)+'% opacity');
-      if(pendingPhotoMeta.blur) parts.push(pendingPhotoMeta.blur+'px blur');
-      if(pendingPhotoMeta.zoom && pendingPhotoMeta.zoom!==1) parts.push(Math.round(pendingPhotoMeta.zoom*100)+'% zoom');
-      document.getElementById('photoPendingMeta').textContent = parts.length ? parts.join(' · ') : 'Adjustments saved';
-      pCard.hidden=false; if(pUp) pUp.hidden=true;
-      if(pDot){ pDot.hidden=false; pDot.classList.add('pending'); }
-    } else {
-      pCard.hidden=true; if(pUp) pUp.hidden=false;
-      // Same as the music dot above: restore hidden, not just the class.
-      if(pDot){ pDot.classList.remove('pending'); pDot.hidden = !bgImage; }
-    }
-  }
+  // Drawn by lib/pendingcards.js, shared with the Pad; Flip hands in its state.
+  if(!window.SkriblPendingCards) return;
+  window.SkriblPendingCards.render({
+    music:{ meta: pendingMusicMeta, loaded: !!musicData, has: !!musicData },
+    photo:{ meta: pendingPhotoMeta, loaded: !!bgImage, has: !!bgImage },
+  });
 }
 
 // image controls
@@ -5083,28 +5047,17 @@ function updateTrimUI(){
   requestZoomWaveformDraw(); updateZoomHandles(); if(typeof updateZoomPanSlider==='function') updateZoomPanSlider();
 }
 
+// Maths, handles and waveform of the zoomed loop view: lib/loopwave.js (v315), shared with Pad.
 function getZoomWindow(){
-  const loopDuration=Math.max(0, trimEnd-trimStart);
-  const contextSeconds=Math.max(1, Math.min(4, loopDuration*0.25));
-  const halfSpan=(loopDuration/2+contextSeconds)/zoomMag;
-  let center;
-  if(zoomCenter!=null) center=zoomCenter;
-  else if(zoomFocus==='start') center=trimStart;
-  else if(zoomFocus==='end') center=trimEnd;
-  else center=(trimStart+trimEnd)/2;
-  const lo=halfSpan, hi=Math.max(halfSpan, audioDuration-halfSpan);
-  center=Math.max(lo, Math.min(center, hi));
-  let start=Math.max(0, center-halfSpan), end=Math.min(audioDuration, center+halfSpan);
-  if(end-start<0.001) end=Math.min(audioDuration, start+0.001);
-  return { start, end, duration: Math.max(0.001, end-start) };
+  return SkriblLoopWave.zoomWindow({ start:trimStart, end:trimEnd, duration:audioDuration, mag:zoomMag, center:zoomCenter, focus:zoomFocus });
 }
 function syncZoomFocusButtons(){ document.querySelectorAll('.zoom-mag-btn[data-focus]').forEach(b=>{ b.classList.toggle('active', zoomFocus!=='free' && b.dataset.focus===zoomFocus); }); }
 function updateZoomHandles(){
   if(!zoomTrackWrap||!zoomHandleStart||!zoomHandleEnd) return;
   if(!Number.isFinite(audioDuration)||audioDuration<=0) return;
-  const zw=getZoomWindow(), startPct=((trimStart-zw.start)/zw.duration)*100, endPct=((trimEnd-zw.start)/zw.duration)*100;
-  zoomHandleStart.style.left=startPct+'%'; zoomHandleEnd.style.left=endPct+'%';
-  zoomHandleStart.hidden=!(startPct>=-2&&startPct<=102); zoomHandleEnd.hidden=!(endPct>=-2&&endPct<=102);
+  const hd=SkriblLoopWave.handles(trimStart, trimEnd, getZoomWindow());
+  zoomHandleStart.style.left=hd.startPct+'%'; zoomHandleEnd.style.left=hd.endPct+'%';
+  zoomHandleStart.hidden=!hd.startShown; zoomHandleEnd.hidden=!hd.endShown;
 }
 let zoomDrawPending=false;
 function requestZoomWaveformDraw(){ if(zoomDrawPending) return; zoomDrawPending=true; requestAnimationFrame(()=>{ zoomDrawPending=false; if(currentAudioBuffer) drawWaveform(currentAudioBuffer); drawZoomWaveform(); }); }
@@ -5126,25 +5079,8 @@ function drawWaveform(audioBuffer){
 }
 function drawZoomWaveform(){
   if(!currentAudioBuffer||!zoomWaveformCanvas) return;
-  const rect=zoomWaveformCanvas.getBoundingClientRect(); if(!rect.width) return;
-  const dpr=window.devicePixelRatio||1; zoomWaveformCanvas.width=Math.round(rect.width*dpr); zoomWaveformCanvas.height=Math.round(rect.height*dpr);
-  zoomWaveformCtx.setTransform(dpr,0,0,dpr,0,0); const w=rect.width, h=rect.height, mid=h/2;
-  const loopDuration=trimEnd-trimStart, zw=getZoomWindow(), zst=zw.start, zdur=zw.duration;
-  zoomWaveformCtx.fillStyle='#161a22'; zoomWaveformCtx.fillRect(0,0,w,h);
-  const data=currentAudioBuffer.getChannelData(0), sr=currentAudioBuffer.sampleRate;
-  const startSample=Math.max(0,Math.floor(zst*sr)), endSample=Math.min(data.length,Math.floor(zw.end*sr));
-  const totalSamples=Math.max(1,endSample-startSample), spp=Math.max(1,Math.floor(totalSamples/w));
-  zoomWaveformCtx.fillStyle='#3a4150';
-  for(let x=0;x<w;x++){ const a=startSample+x*spp, b=Math.min(a+spp,endSample); let mn=1,mx=-1; for(let i=a;i<b;i++){ const v=data[i]||0; if(v<mn)mn=v; if(v>mx)mx=v; } zoomWaveformCtx.fillRect(x, mid+mn*mid*0.9, 1, Math.max(1,(mid+mx*mid*0.9)-(mid+mn*mid*0.9))); }
-  const lsX=((trimStart-zst)/zdur)*w, leX=((trimEnd-zst)/zdur)*w;
-  zoomWaveformCtx.fillStyle='rgba(124,92,255,0.2)'; zoomWaveformCtx.fillRect(lsX,0,leX-lsX,h);
-  zoomWaveformCtx.fillStyle='#7c5cff';
-  for(let x=Math.floor(lsX);x<Math.ceil(leX);x++){ const a=startSample+x*spp, b=Math.min(a+spp,endSample); let mn=1,mx=-1; for(let i=a;i<b;i++){ const v=data[i]||0; if(v<mn)mn=v; if(v>mx)mx=v; } zoomWaveformCtx.fillRect(x, mid+mn*mid*0.9, 1, Math.max(1,(mid+mx*mid*0.9)-(mid+mn*mid*0.9))); }
-  zoomWaveformCtx.fillStyle='#7c5cff'; zoomWaveformCtx.fillRect(lsX,0,2,h); zoomWaveformCtx.fillRect(leX-2,0,2,h);
-  if(loopCrossfadeMs>0 && loopDuration>0){ const loopFrames=Math.floor(loopDuration*sr); const xf=Math.min(Math.floor((loopCrossfadeMs/1000)*sr), Math.floor(loopFrames/2)); const xfW=((xf/sr)/zdur)*w;
-    if(xfW>0){ const headX=lsX, tailX=leX-xfW; zoomWaveformCtx.fillStyle='rgba(255,176,32,0.22)'; zoomWaveformCtx.fillRect(headX,0,xfW,h); zoomWaveformCtx.fillRect(tailX,0,xfW,h); zoomWaveformCtx.fillStyle='rgba(255,176,32,0.9)'; for(let yy=0;yy<h;yy+=9){ zoomWaveformCtx.fillRect(headX+xfW-1,yy,1.5,5); zoomWaveformCtx.fillRect(tailX,yy,1.5,5); } } }
-  zoomWaveformCtx.fillStyle='#2e3340'; zoomWaveformCtx.fillRect(0,mid,w,1);
-  if(loopZoomLabel){ const xfL=loopCrossfadeMs>0?('  \u00b7  xfade '+loopCrossfadeMs+'ms'):''; loopZoomLabel.textContent=formatTimeH(trimStart)+' \u2192 '+formatTimeH(trimEnd)+' ['+loopDuration.toFixed(2)+'s]'+xfL; }
+  SkriblLoopWave.drawZoom({ canvas:zoomWaveformCanvas, ctx:zoomWaveformCtx, buffer:currentAudioBuffer,
+    trimStart, trimEnd, crossfadeMs:loopCrossfadeMs, zw:getZoomWindow(), label:loopZoomLabel, formatTime:formatTimeH });
 }
 
 function dragHandle(handle, isStart){
@@ -9566,31 +9502,6 @@ bindEl('clearUndo', 'click',()=>{
   chip('Animation restored');
 });
 
-// Grid density — the shared setting in lib/gridoverlay.js. The seg only shows
-// while the grid is ON: a density control for an invisible grid is a control
-// whose effect you cannot see, which is how the onion-depth seg behaves too.
-function _wireGridDensity(isOnFn, repaintFn) {
-  var seg = document.getElementById('gridDensitySeg');
-  var group = document.getElementById('gridDensityGroup');
-  if (!seg || !window.SkriblGrid) return function () {};
-  function render() {
-    var cur = window.SkriblGrid.density();
-    var btns = seg.querySelectorAll('[data-density]');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].classList.toggle('on', btns[i].getAttribute('data-density') === cur);
-    }
-    if (group) group.hidden = !isOnFn();
-  }
-  seg.addEventListener('click', function (e) {
-    var b = e.target.closest ? e.target.closest('[data-density]') : null;
-    if (!b || !seg.contains(b)) return;
-    window.SkriblGrid.setDensity(b.getAttribute('data-density'));
-    render();
-    repaintFn();
-  });
-  render();
-  return render;
-}
 /* Smear weight — the same seg shape as grid density and mirror, because it is
    the same kind of choice and the roving-tabindex keyboard model already knows
    how to drive one. NO REPAINT on change: the setting applies to the NEXT
@@ -9615,7 +9526,8 @@ function _wireGridDensity(isOnFn, repaintFn) {
 })();
 const gridEl=document.getElementById('flipGrid'), gridBtn=document.getElementById('gridBtn');
 let grid=false;
-const _renderFlipGridDensity = _wireGridDensity(function(){ return grid; }, function(){ syncGrid(); });
+// Grid density: the seg is wired by lib/gridoverlay.js (SkriblGrid.wireDensity).
+const _renderFlipGridDensity = window.SkriblGrid ? window.SkriblGrid.wireDensity(function(){ return grid; }, function(){ syncGrid(); }) : function(){};
 // 'active', not 'on' (v206): the button is an .onion-tint toggle and that
 // family lights on .active — motion guides and onion tint both use it. Grid
 // kept its pre-tune-drawer 'on' class when it moved into the drawer (v204),
@@ -9931,44 +9843,7 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
    =================================================================== */
 
 
-(function initPaintTarget(){
-  const seg=document.getElementById('paintTargetSeg');
-  if(!seg) return;
-  seg.addEventListener('click',e=>{
-    const btn=e.target.closest('button[data-target]');
-    if(!btn) return;
-    const target=btn.dataset.target;
-    seg.querySelectorAll('button').forEach(b=>{
-      const on=b===btn;
-      b.classList.toggle('active', !!on);
-      b.setAttribute('aria-pressed', String(!!on));
-    });
-    ['colorGroup','bgGroup'].forEach(id=>{
-      const g=document.getElementById(id);
-      if(g) g.hidden = g.dataset.target!==target;
-    });
-    // Recent is a list of PEN colours. It sits between the two swatch grids as a
-    // sibling, so it stayed on screen in Background mode and read as "recent
-    // backgrounds" — which is what it was reported as. It belongs to the pen.
-    const recent = document.getElementById('recentRow');
-    if (recent) {
-      // Read the real state rather than inventing a flag: lib/recentcolors.js
-      // owns this row's visibility, and a parallel copy would drift from it.
-      const swatches = document.getElementById('recentColors');
-      const has = !!(swatches && swatches.children.length);
-      recent.hidden = (target !== 'stroke') || !has;
-    }
-    if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
-  });
-  if(window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
-})();
-
-(function trackDrawerSegs(){
-  ['smoothSeg','brushSeg','shapeSeg','pressureSeg','eraserSeg'].forEach(id=>{
-    const seg=document.getElementById(id);
-    if(seg&&window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
-  });
-})();
+// The paint-target seg and the drawer's seg pills: lib/painttarget.js.
 
 
 // NO NAVIGATION GUARD ON FLIP, deliberately. Flip persists pages, music and the

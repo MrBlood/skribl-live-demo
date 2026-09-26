@@ -103,6 +103,32 @@
       density = name;
       try { localStorage.setItem(KEY, density); } catch (e) {}
       return density;
+    },
+    /* The density seg, wired once for both editors (SK312-003; it was
+     * word-for-word in editor_tune.js and flip.js). The seg only shows while
+     * the grid is ON: a density control for an invisible grid is a control
+     * whose effect you cannot see. Returns render(), to call when the grid
+     * is toggled. */
+    wireDensity: function (isOnFn, repaintFn) {
+      var seg = document.getElementById('gridDensitySeg');
+      var group = document.getElementById('gridDensityGroup');
+      if (!seg) return function () {};
+      function render() {
+        var btns = seg.querySelectorAll('[data-density]');
+        for (var i = 0; i < btns.length; i++) {
+          btns[i].classList.toggle('on', btns[i].getAttribute('data-density') === density);
+        }
+        if (group) group.hidden = !isOnFn();
+      }
+      seg.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-density]') : null;
+        if (!b || !seg.contains(b)) return;
+        api.setDensity(b.getAttribute('data-density'));
+        render();
+        repaintFn();
+      });
+      render();
+      return render;
     }
   };
 
