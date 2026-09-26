@@ -469,6 +469,53 @@ with sync_playwright() as p:
                       during is False and after is False, f"during {during}, after {after}")
             pg.close()
 
+    # ---- 8. ...AND CLAIMS BEFORE IT WAKES THE AUDIO ENGINE -----------------
+    # Section 7 shipped and the owner's silenced iPhone still played Pad's Play
+    # without music. The one difference left between Play and Preview Loop,
+    # which IS heard, was ORDER: Preview Loop claims the session and then
+    # resumes the AudioContext; Pad's Play resumed first (its F3 gesture
+    # unlock) and claimed after. On iOS a context woken while the session is
+    # still ambient can stay on the silenced route. So both editors' Play must
+    # claim before any resume(), as Preview Loop does. Driven with the context
+    # reporting 'suspended', as an iPhone's does before its first sound --
+    # headless Chromium starts contexts running and would never call resume().
+    print("\n8 — ...AND CLAIMS BEFORE IT RESUMES THE AUDIO CONTEXT (Preview Loop's order)")
+    ORDER = """
+      window.__order = [];
+      const AC = window.AudioContext || window.webkitAudioContext;
+      Object.defineProperty(AC.prototype, 'state', { configurable: true, get() { return 'suspended'; } });
+      AC.prototype.resume = function () { window.__order.push('resume'); return new Promise(() => {}); };
+      const _play = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () {
+        if (this.src && this.src.indexOf('data:audio/wav') === 0 && this.loop) window.__order.push('claim');
+        return _play.apply(this, arguments);
+      };"""
+    for editor, route, play_id in (("Pad", "/", "playBtn"), ("Flip", "/flip", "play")):
+        pg = b.new_page(viewport={"width": 1280, "height": 900})
+        pg.add_init_script(AS_IPHONE)
+        pg.add_init_script(ORDER)
+        pg.goto(BASE + route, wait_until="load"); pg.wait_for_timeout(800)
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        pg.set_input_files("#musicInput", {"name": "m.wav", "mimeType": "audio/wav", "buffer": AUD})
+        pg.wait_for_function("() => typeof audioEl !== 'undefined' && !!audioEl", timeout=20000)
+        pg.wait_for_timeout(500)
+        if editor == "Pad":
+            scribble(pg, pg.locator("#canvas").bounding_box(), n=40)
+            pg.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }")
+            pg.wait_for_timeout(300)
+        else:
+            scribble(pg, pg.locator("#pad").bounding_box(), n=20)
+            pg.evaluate("() => addFrame()")
+            scribble(pg, pg.locator("#pad").bounding_box(), n=20)
+        pg.evaluate("() => { window.__order = []; }")
+        pg.evaluate("(id) => document.getElementById(id).click()", play_id); pg.wait_for_timeout(800)
+        order = pg.evaluate("() => window.__order")
+        first_resume = order.index("resume") if "resume" in order else None
+        check(f"{editor} Play: the session is claimed before the audio context is resumed",
+              "claim" in order and (first_resume is None or order.index("claim") < first_resume),
+              f"order {order}")
+        pg.close()
+
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)
