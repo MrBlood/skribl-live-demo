@@ -9538,31 +9538,6 @@ bindEl('clearUndo', 'click',()=>{
   chip('Animation restored');
 });
 
-// Grid density — the shared setting in lib/gridoverlay.js. The seg only shows
-// while the grid is ON: a density control for an invisible grid is a control
-// whose effect you cannot see, which is how the onion-depth seg behaves too.
-function _wireGridDensity(isOnFn, repaintFn) {
-  var seg = document.getElementById('gridDensitySeg');
-  var group = document.getElementById('gridDensityGroup');
-  if (!seg || !window.SkriblGrid) return function () {};
-  function render() {
-    var cur = window.SkriblGrid.density();
-    var btns = seg.querySelectorAll('[data-density]');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].classList.toggle('on', btns[i].getAttribute('data-density') === cur);
-    }
-    if (group) group.hidden = !isOnFn();
-  }
-  seg.addEventListener('click', function (e) {
-    var b = e.target.closest ? e.target.closest('[data-density]') : null;
-    if (!b || !seg.contains(b)) return;
-    window.SkriblGrid.setDensity(b.getAttribute('data-density'));
-    render();
-    repaintFn();
-  });
-  render();
-  return render;
-}
 /* Smear weight — the same seg shape as grid density and mirror, because it is
    the same kind of choice and the roving-tabindex keyboard model already knows
    how to drive one. NO REPAINT on change: the setting applies to the NEXT
@@ -9587,7 +9562,8 @@ function _wireGridDensity(isOnFn, repaintFn) {
 })();
 const gridEl=document.getElementById('flipGrid'), gridBtn=document.getElementById('gridBtn');
 let grid=false;
-const _renderFlipGridDensity = _wireGridDensity(function(){ return grid; }, function(){ syncGrid(); });
+// Grid density: the seg is wired by lib/gridoverlay.js (SkriblGrid.wireDensity).
+const _renderFlipGridDensity = window.SkriblGrid ? window.SkriblGrid.wireDensity(function(){ return grid; }, function(){ syncGrid(); }) : function(){};
 // 'active', not 'on' (v206): the button is an .onion-tint toggle and that
 // family lights on .active — motion guides and onion tint both use it. Grid
 // kept its pre-tune-drawer 'on' class when it moved into the drawer (v204),
@@ -9903,44 +9879,7 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
    =================================================================== */
 
 
-(function initPaintTarget(){
-  const seg=document.getElementById('paintTargetSeg');
-  if(!seg) return;
-  seg.addEventListener('click',e=>{
-    const btn=e.target.closest('button[data-target]');
-    if(!btn) return;
-    const target=btn.dataset.target;
-    seg.querySelectorAll('button').forEach(b=>{
-      const on=b===btn;
-      b.classList.toggle('active', !!on);
-      b.setAttribute('aria-pressed', String(!!on));
-    });
-    ['colorGroup','bgGroup'].forEach(id=>{
-      const g=document.getElementById(id);
-      if(g) g.hidden = g.dataset.target!==target;
-    });
-    // Recent is a list of PEN colours. It sits between the two swatch grids as a
-    // sibling, so it stayed on screen in Background mode and read as "recent
-    // backgrounds" — which is what it was reported as. It belongs to the pen.
-    const recent = document.getElementById('recentRow');
-    if (recent) {
-      // Read the real state rather than inventing a flag: lib/recentcolors.js
-      // owns this row's visibility, and a parallel copy would drift from it.
-      const swatches = document.getElementById('recentColors');
-      const has = !!(swatches && swatches.children.length);
-      recent.hidden = (target !== 'stroke') || !has;
-    }
-    if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
-  });
-  if(window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
-})();
-
-(function trackDrawerSegs(){
-  ['smoothSeg','brushSeg','shapeSeg','pressureSeg','eraserSeg'].forEach(id=>{
-    const seg=document.getElementById(id);
-    if(seg&&window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
-  });
-})();
+// The paint-target seg and the drawer's seg pills: lib/painttarget.js.
 
 
 // NO NAVIGATION GUARD ON FLIP, deliberately. Flip persists pages, music and the

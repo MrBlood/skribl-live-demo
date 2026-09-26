@@ -4918,55 +4918,13 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
    =================================================================== */
 
 
-// Paint target. Swaps WHICH grid is shown, not what the sheet shows: size,
-// opacity and brush stay put underneath and never move.
-(function initPaintTarget() {
-  const seg = document.getElementById('paintTargetSeg');
-  if (!seg) return;
-  seg.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-target]');
-    if (!btn) return;
-    const target = btn.dataset.target;
-    seg.querySelectorAll('button').forEach(b => {
-      const on = b === btn;
-      b.classList.toggle('active', !!on);
-      b.setAttribute('aria-pressed', String(!!on));
-    });
-    ['colorGroup', 'bgGroup'].forEach(id => {
-      const g = document.getElementById(id);
-      if (g) g.hidden = g.dataset.target !== target;
-    });
-    // Recent is a list of PEN colours. It sits between the two swatch grids as a
-    // sibling, so it stayed on screen in Background mode and read as "recent
-    // backgrounds" — which is what it was reported as. It belongs to the pen.
-    const recent = document.getElementById('recentRow');
-    if (recent) {
-      // Read the real state rather than inventing a flag: lib/recentcolors.js
-      // owns this row's visibility, and a parallel copy would drift from it.
-      const swatches = document.getElementById('recentColors');
-      const has = !!(swatches && swatches.children.length);
-      recent.hidden = (target !== 'stroke') || !has;
-    }
-    if (window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
-  });
-  if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
-})();
-
+// The paint-target seg and the drawer's seg pills are wired by lib/painttarget.js
+// (editors only; the player has no drawer).
 function currentPaintTarget() {
   const on = document.querySelector('#paintTargetSeg button.active');
   return on ? on.dataset.target : 'stroke';
 }
 
-// The draw drawer's segmented rows now carry a pill on BOTH surfaces. track()
-// rather than a one-shot place(): the drawer ships `hidden`, so at init the
-// buttons have no layout and any single call bails, leaving the pill at
-// opacity 0 — the exact bug lib/segslider.js was written for.
-(function trackDrawerSegs() {
-  ['smoothSeg', 'brushSeg', 'shapeSeg', 'pressureSeg', 'eraserSeg'].forEach(id => {
-    const seg = document.getElementById(id);
-    if (seg && window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
-  });
-})();
 
 // Media drawer rows route to the existing photo/music drawers. A router, so
 // nothing about their internals changes.

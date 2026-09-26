@@ -1051,6 +1051,54 @@ with sync_playwright() as p:
               f"pad mark {_ph and _ph['mark']} pad {_ph and _ph['pad']} h {_ph and _ph['height']}; flip mark {_fh and _fh['mark']} pad {_fh and _fh['pad']} h {_fh and _fh['height']}")
         _pp.close(); _fp.close()
 
+    # ---- paint target: one module now, driven on each editor --------------
+    # lib/painttarget.js replaced two word-for-word copies (app.js, flip.js).
+    # Emptying it left every suite green, so this drives it on BOTH routes:
+    # Background shows the background swatches and hides the pen's (and the
+    # pen-only Recent row); Stroke puts them back; the seg's pill follows.
+    print("\nPARITY — the paint-target seg swaps the swatch grid on both editors")
+    PT = """(t) => {
+        const seg = document.getElementById('paintTargetSeg');
+        const btn = seg && seg.querySelector('button[data-target="' + t + '"]');
+        if (!btn) return null;
+        btn.click();
+        const vis = (id) => { const e = document.getElementById(id); return !!e && !e.hidden; };
+        return { pressed: btn.getAttribute('aria-pressed'), color: vis('colorGroup'),
+                 bg: vis('bgGroup'), recent: vis('recentRow') }; }"""
+    for _route, _opener in (("/skribl-pad", "#colorOpenBtn"), ("/flip", "#colorCurrent")):
+        _q = b.new_page(viewport={"width": 900, "height": 1100})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        ensure_open(_q, _opener, "drawPanel")
+        _bg = _q.evaluate(PT, "background")
+        check(f"{_route}: Background shows the background swatches, hides the pen's and Recent",
+              _bg is not None and _bg["pressed"] == "true" and _bg["bg"] and not _bg["color"] and not _bg["recent"],
+              f"{_bg}")
+        settle(_q, "#paintTargetSeg")
+        _m = _q.evaluate(measure, "#paintTargetSeg")
+        check(f"{_route}: the paint-target pill moved to Background",
+              _m is not None and abs(_m["dLeft"]) <= 2 and abs(_m["dWidth"]) <= 2, f"{_m}")
+        _st = _q.evaluate(PT, "stroke")
+        check(f"{_route}: Stroke puts the pen's swatches back",
+              _st is not None and _st["pressed"] == "true" and _st["color"] and not _st["bg"], f"{_st}")
+        # Grid density: SkriblGrid.wireDensity, also one copy now. V213e drives
+        # it on Pad only; the seg shows with the grid, marks the pick, and hides
+        # again with the grid off -- on each editor.
+        _gd = _q.evaluate("""() => {
+            const g = document.getElementById('gridDensityGroup'), btn = document.getElementById('gridBtn');
+            if (!g || !btn) return null;
+            btn.click(); const shownOn = !g.hidden;
+            document.querySelector('#gridDensitySeg [data-density="coarse"]').click();
+            const marked = !!document.querySelector('#gridDensitySeg [data-density="coarse"].on');
+            const stored = window.SkriblGrid && window.SkriblGrid.density();
+            document.querySelector('#gridDensitySeg [data-density="medium"]').click();
+            btn.click();
+            return { shownOn: shownOn, marked: marked, stored: stored, hiddenOff: g.hidden }; }""")
+        check(f"{_route}: the grid-density seg shows with the grid, takes a pick, hides without it",
+              _gd is not None and _gd["shownOn"] and _gd["marked"] and _gd["stored"] == "coarse" and _gd["hiddenOff"],
+              f"{_gd}")
+        _q.close()
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))

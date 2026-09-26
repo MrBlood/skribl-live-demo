@@ -738,6 +738,7 @@ rather than a shared rule.
 | `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `pagemenu.js` | library+gallery | The page menu: the ••• on the gallery and the library, and what it opens. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
+| `painttarget.js` | Pad+Flip | The draw drawer's paint-target seg (Pen or Background) and the pills on its segmented rows: wired once for both editors (SK312-003, v315). |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
 | `photofit.js` | Pad+Flip+library+in-post | Photo fit geometry — the part both editors and the player must agree on. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |

@@ -47,35 +47,10 @@
   //
   // Read at STROKE START (startDraw sets _slActive once per stroke), so
   // toggling mid-stroke cannot split one stroke across two compositing modes.
-  // Grid density — the shared setting in lib/gridoverlay.js. The seg only shows
-  // while the grid is ON: a density control for an invisible grid is a control
-  // whose effect you cannot see, which is how the onion-depth seg behaves too.
-  function _wireGridDensity(isOnFn, repaintFn) {
-    var seg = document.getElementById('gridDensitySeg');
-    var group = document.getElementById('gridDensityGroup');
-    if (!seg || !window.SkriblGrid) return function () {};
-    function render() {
-      var cur = window.SkriblGrid.density();
-      var btns = seg.querySelectorAll('[data-density]');
-      for (var i = 0; i < btns.length; i++) {
-        btns[i].classList.toggle('on', btns[i].getAttribute('data-density') === cur);
-      }
-      if (group) group.hidden = !isOnFn();
-    }
-    seg.addEventListener('click', function (e) {
-      var b = e.target.closest ? e.target.closest('[data-density]') : null;
-      if (!b || !seg.contains(b)) return;
-      window.SkriblGrid.setDensity(b.getAttribute('data-density'));
-      render();
-      repaintFn();
-    });
-    render();
-    return render;
-  }
-
-  var _renderGridDensity = _wireGridDensity(
+  // Grid density — the seg is wired by lib/gridoverlay.js (SkriblGrid.wireDensity).
+  var _renderGridDensity = window.SkriblGrid ? window.SkriblGrid.wireDensity(
     function () { return gridOn; },
-    function () { window._skriblSyncPadGrid(); });
+    function () { window._skriblSyncPadGrid(); }) : function () {};
 
   // Stroke layers — shared setting in lib/strokelayers.js (Flip has the same
   // row). The compositing stays per-surface; only the switch is common.
