@@ -98,13 +98,18 @@ jobs:
       # ADD A SUITE HERE ONLY IF IT NEEDS NEITHER. One that quietly wants the
       # shared server passes locally and fails here, and a PR gate that cries
       # wolf gets ignored, which is worse than not having one.
+      #
+      # verify_surfaces joined after #236: a module exporting a name no page
+      # reads went green on the PR and red on main. It reads source only
+      # (run with port 5001 down: 12/12).
       - name: Run the boot and source suites
         run: |
           ./harness/run_harness.sh \
             verify_boot.py verify_docs.py verify_seam.py \
             verify_txcontract.py verify_privacy.py verify_migrations.py \
             verify_createpost.py verify_sweepjob.py verify_deletion.py \
-            verify_backfill.py verify_hostseams.py verify_mediareport.py
+            verify_backfill.py verify_hostseams.py verify_mediareport.py \
+            verify_surfaces.py
       # run_harness.sh exits 0 on a skip, so a suite that quietly declined to
       # run would leave this job green having proved nothing. None of these is
       # designed to skip, so ANY skip is a failure -- the guard is generalised
