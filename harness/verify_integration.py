@@ -121,6 +121,70 @@ check("and the share URL it returns respects the prefix",
 check("and that share URL actually resolves",
       bool(url) and c3.get(url).status_code == 200)
 
+# THE GUIDE'S OWN EXAMPLE, RUN AS WRITTEN. docs/INTEGRATION.md opens with "The
+# smallest thing that works" and calls it the whole integration; nothing ran
+# it. Every host this suite builds commits in after_request, so none of them
+# could see what a site copying that block got (v316, a from-scratch host
+# outside the repo): POST /api/skribls answered 201, the editor said Posted!,
+# and no row was ever written — the contract says the host commits, and the
+# block showed no commit. The code is lifted out of the document itself, so
+# the guide cannot drift from what is checked; only its database moves to a
+# temporary file, and durability is read on a separate connection.
+print("\nINTEGRATION — the guide's smallest example, copied verbatim, keeps a post")
+import re as _re, sqlite3 as _sqlite3, tempfile as _tempfile, os as _os
+_guide = (ROOT / "docs" / "INTEGRATION.md").read_text(encoding="utf-8")
+_sec = _guide.split("## The smallest thing that works", 1)[1]
+_m = _re.search(r"```python\n(.*?)```", _sec, _re.S)
+check("the guide's smallest example is a python block under its heading", bool(_m))
+if _m:
+    _dbfile = _os.path.join(_tempfile.mkdtemp(), "guide.db")
+    _src = _m.group(1)
+    check("...and it names the database the reader will see", '"sqlite:///site.db"' in _src,
+          "the substitution below would silently not happen")
+    _src = _src.replace('"sqlite:///site.db"', repr("sqlite:///" + _dbfile))
+    _ns = {"__name__": "guide_example"}
+    exec(compile(_src, "docs/INTEGRATION.md#smallest", "exec"), _ns)
+    _gc = _ns["app"].test_client()
+    _r = _gc.post("/skribl/api/skribls", json=payload(title="from the guide"))
+    _rows = _sqlite3.connect(_dbfile).execute("select count(*) from skribl_posts").fetchone()[0]
+    check("a post made through it is still there after the request",
+          _r.status_code == 201 and _rows == 1,
+          f"POST {_r.status_code}, rows on a fresh connection: {_rows} — a 201 with "
+          "no row is a host that never commits: the example has to show the commit")
+
+# ...and the same block, from an EMPTY folder holding nothing but a copy of
+# skribl/. The guide says that directory is the whole runtime; a template, a
+# static file or a module that quietly lives elsewhere in this repository
+# would pass every in-tree suite and fail the first site that vendors it.
+print("\nINTEGRATION — skribl/ alone, copied into an empty project, runs the guide's example")
+if _m:
+    import shutil as _shutil, subprocess as _subprocess
+    _proj = _tempfile.mkdtemp()
+    _shutil.copytree(ROOT / "skribl", _os.path.join(_proj, "skribl"),
+                     ignore=_shutil.ignore_patterns("__pycache__"))
+    with open(_os.path.join(_proj, "hostapp.py"), "w", encoding="utf-8") as _f:
+        _f.write(_m.group(1))
+    _probe = (
+        "import hostapp, json\n"
+        "c = hostapp.app.test_client()\n"
+        "pages = {u: c.get(u).status_code for u in ('/skribl/skribl-pad', '/skribl/flip', '/skribl/library', '/skribl/gallery', '/skribl/feed')}\n"
+        "r = c.post('/skribl/api/skribls', json=" + repr(payload(title="vendored")) + ")\n"
+        "url = (r.get_json() or {}).get('url', '')\n"
+        "static = c.get('/skribl/static/skribl/app.js').status_code\n"
+        "print(json.dumps({'pages': pages, 'post': r.status_code, 'player': c.get(url).status_code if url else None, 'static': static}))\n")
+    _env = dict(_os.environ, PYTHONPATH=_proj)
+    _p = _subprocess.run([sys.executable, "-c", _probe], cwd=_proj, env=_env,
+                         capture_output=True, text=True, timeout=120)
+    try:
+        import json as _json
+        _res = _json.loads(_p.stdout.strip().splitlines()[-1])
+    except Exception:
+        _res = None
+    check("every page, a post, its player and a static file answer from the vendored copy",
+          bool(_res) and all(v == 200 for v in _res["pages"].values())
+          and _res["post"] == 201 and _res["player"] == 200 and _res["static"] == 200,
+          str(_res) if _res else (_p.stderr.strip().splitlines() or ["no output"])[-1][:300])
+
 print("\nINTEGRATION — the host owns the schema")
 # attach_to_metadata is the ONLY thing that makes a host's db.create_all() see
 # Skribl's tables; without it the integrator gets zero tables and no error.

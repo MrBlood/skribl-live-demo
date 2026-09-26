@@ -15,6 +15,15 @@ The planning record that used to live here was retired in the v263 cleanup; it l
 
 ## The smallest thing that works
 
+**Getting it into your project.** Skribl is the `skribl/` directory: its
+Python, templates, static files and migrations travel together, and nothing
+else in this repository is needed at runtime. Copy that directory into your
+project (or vendor it as a submodule) so `import skribl` resolves. It needs
+Flask 3 and SQLAlchemy 2; the example below also uses Flask-SQLAlchemy, which
+Skribl itself never imports. Alembic only if you run its migrations — see
+"Database and migrations". `verify_integration.py` copies the directory alone
+into an empty folder and runs this example there, so the claim is checked.
+
 ```python
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -34,11 +43,28 @@ skribl.models.attach_to_metadata(db.metadata)
 # 2. Mount it. `session` is required; everything else has a default.
 skribl.init_skribl(app, session=lambda: db.session, url_prefix="/skribl")
 
+# 3. Commit the request. Skribl flushes into YOUR transaction and never
+#    commits it (see "Transaction ownership"). Without this, POST answers 201,
+#    the editor says Posted!, and nothing is ever saved. after_request, not
+#    teardown_request: a commit that fails must still be able to change the
+#    response. Skip it on a 5xx; the rollback is the safety net for the rest.
+@app.after_request
+def commit_request(response):
+    if response.status_code < 500:
+        db.session.commit()
+    return response
+
+@app.teardown_request
+def rollback_request(exc):
+    db.session.rollback()
+
 with app.app_context():
     db.create_all()
 ```
 
-That is the whole integration. You now have:
+That is the whole integration. If your site already commits per request (most
+do, one way or another), step 3 is the hook you have: it only has to run
+before the response leaves. You now have:
 
     GET  /skribl/skribl-pad               the record-and-replay drawing editor
     GET  /skribl/flip                     the frame-by-frame animation editor
