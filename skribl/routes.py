@@ -1367,6 +1367,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/api/drafts")
     def list_saved_drafts():
+        """The signed-in author's saved drafts: a list, no payloads."""
         try:
             return jsonify({"items": list_drafts(bp.skribl_current_user_id()),
                             "limit": _max_drafts()})
@@ -1375,6 +1376,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/api/drafts/<draft_id>")
     def get_saved_draft(draft_id):
+        """Open one of your saved drafts, with its payload."""
         try:
             return jsonify(get_draft(bp.skribl_current_user_id(), draft_id))
         except (DraftRejected, DraftNotFound) as exc:
@@ -1382,6 +1384,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.post("/api/drafts")
     def create_saved_draft():
+        """Save a draft to the signed-in author's account."""
         if not _csrf_ok():
             return _csrf_refusal()
         try:
@@ -1395,6 +1398,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.put("/api/drafts/<draft_id>")
     def update_saved_draft(draft_id):
+        """Overwrite one of your saved drafts."""
         if not _csrf_ok():
             return _csrf_refusal()
         try:
@@ -1407,6 +1411,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.delete("/api/drafts/<draft_id>")
     def delete_saved_draft(draft_id):
+        """Delete one of your saved drafts."""
         if not _csrf_ok():
             return _csrf_refusal()
         try:

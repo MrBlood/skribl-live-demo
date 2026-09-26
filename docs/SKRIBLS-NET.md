@@ -76,6 +76,13 @@ says so.
    `draft_id`; to keep an attached Skribl, the draft save has to include its
    hidden field too, and reopening the draft has to hand it back
    (`pad.setPayload(payload, editor)`) before the Skribl button is pressed.
+7. **Saved drafts come with the mount** (v316). Signed in, the Pad's and
+   Flip's ⋯ Save draft keeps a drawing on the author's account, and ⋯ Open a
+   draft… inside the composer puts it back on the canvas, ready to Add to post.
+   Nothing to build for it beyond item 1 (the `current_user_id` and CSRF it
+   already needs) and the migration that creates `skribl_drafts`. This is
+   separate from item 6: a saved Skribl draft outlives any one post; the
+   composer's draft of a POST still has to carry its own hidden field.
 
 The player needs nothing from `media.skribls.net`: its poster and payload come
 from Skribl's own routes under the site's prefix.

@@ -84,6 +84,9 @@ before the response leaves. You now have:
     GET  /skribl/library                  the profile's Skribls tab — below
     GET  /skribl/gallery                  the public gallery: every post whose author opted in; New / Hot tabs and search
     POST /skribl/api/skribls/<id>/report  report a post: one reason from a closed set, into an operator's queue
+    GET  /skribl/api/drafts               the signed-in author's saved drafts (list, no payloads)
+    POST /skribl/api/drafts               save a draft to the author's account
+    GET|PUT|DELETE /skribl/api/drafts/<id>  one draft: open, overwrite, delete (its author only)
 
 **`/library` is registered by the blueprint whether you want it or not**, like
 `/feed`. It is the profile's Skribls tab: what you posted, searchable by title,
@@ -538,6 +541,32 @@ way you already limit posting text.
 an anonymous post; do not leave it out and hope. There is no resolver here
 because a function that guesses the author is how every visitor once became
 user 1 and could read user 1's private posts.
+
+## Saved drafts: keep a drawing on the account, open it in the composer
+
+The Pad's and Flip's ⋯ menu carry **Save draft** and **Open a draft…**. With
+`current_user_id` set and someone signed in, a draft goes to the author's
+account (`skribl_drafts`, through `/api/drafts`), so it opens on any device they
+sign in on, and inside your composer: press the Skribl button, ⋯ Open a draft,
+pick it, Add to post. Signed out, or with no `current_user_id`, the same two
+rows keep drafts in that browser only, and the menu says which.
+
+* **A draft is not a post.** No link, no player, no listing, no visibility, no
+  Library entry, no spent post quota. Posting one does not delete it; the
+  author does, from the list.
+* **Its author only.** Anyone else, and a missing id, get the same 404 for
+  read, overwrite and delete. Signed out is 401. Writes need the CSRF header
+  your mount already supplies.
+* **The bounds a post meets**, plus `SKRIBL_MAX_DRAFTS` per author (409 at the
+  cap, with words that say to delete one; overwriting an existing draft still
+  works there).
+* **A Flip draft opened from the Pad** hands over to Flip in the same composer
+  (`?draft=<id>` on Flip's own menu link, dropped from the address once read),
+  so Add to post still lands in your form.
+* **No commit here either.** The routes flush; your `after_request` commits,
+  as for everything else (Transaction ownership, below).
+
+`harness/verify_clouddrafts.py` drives all of it in `examples/host_app`.
 
 ## Taking one back: delete and revoke
 
@@ -1037,9 +1066,9 @@ is refused.
 
 ## Database and migrations
 
-Skribl ships Alembic migrations for its own seven tables (`skribl_posts`,
+Skribl ships Alembic migrations for its own eight tables (`skribl_posts`,
 `skribl_post_media`, `skribl_rate_events`, `skribl_idempotency`,
-`skribl_pending_media`, `skribl_reports`, `skribl_views`). Two supported
+`skribl_pending_media`, `skribl_reports`, `skribl_views`, `skribl_drafts`). Two supported
 approaches:
 
 * **You own migrations.** Call `attach_to_metadata(db.metadata)` and let your
@@ -1090,7 +1119,8 @@ Two notes worth having in advance:
 
 * `SKRIBL_MODE` is **not** a server switch. It is a client-side template flag
   distinguishing editor from player, and it gates nothing on the server.
-* Every ceiling is **process-wide**. There is no per-user quota seam yet.
+* Every ceiling is **process-wide**. The one per-author number is
+  `SKRIBL_MAX_DRAFTS` (default 25): how many saved drafts one author keeps.
 * The 20-second audio loop ceiling is enforced in the CLIENT only. Since v224
   the server also caps duration (`SKRIBL_MAX_AUDIO_SECONDS`, default 900) — but
   **for WAV only**, whose header states its byte rate outright. For every
