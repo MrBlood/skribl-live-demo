@@ -958,6 +958,42 @@ that combination rather than logging a warning nobody reads. Pass
 your authentication is not cookie-based (a bearer token cannot be ridden, and
 such a host is not wrong).
 
+**If your site already runs Flask-WTF's `CSRFProtect`, hand Skribl that
+instead.** Switched on site-wide, `CSRFProtect` checks every POST before
+Skribl's view runs, and it only reads its own headers: Skribl's pages send
+their token as `X-Skribl-CSRF`, so every post is refused with a 400 and the
+editor cannot say why. Give Skribl Flask-WTF's token and validator, and let
+Flask-WTF read Skribl's header:
+
+```python
+from flask import g
+from flask_wtf.csrf import CSRFProtect, generate_csrf, validate_csrf
+from wtforms.validators import ValidationError
+
+app.config["WTF_CSRF_HEADERS"] = ["X-CSRFToken", "X-CSRF-Token", "X-Skribl-CSRF"]
+CSRFProtect(app)
+
+def skribl_csrf_prepare():
+    g.skribl_csrf_token = generate_csrf()   # what Skribl's pages render and send
+
+def skribl_csrf_validate(req):
+    try:
+        validate_csrf(req.headers.get("X-Skribl-CSRF"))
+        return True
+    except ValidationError:
+        return False
+
+skribl.init_skribl(app, session=lambda: db.session, url_prefix="/skribl",
+                   csrf=(skribl_csrf_prepare, lambda response: response,
+                         skribl_csrf_validate))
+```
+
+The token lives in Flask's session, as Flask-WTF keeps it, so there is no
+cookie for Skribl to set (the middle element passes the response through).
+`verify_integration.py` runs this block, lifted from this page, with
+`CSRFProtect` on: a post carrying the page's token is created, one without it
+is refused.
+
 ## Database and migrations
 
 Skribl ships Alembic migrations for its own seven tables (`skribl_posts`,

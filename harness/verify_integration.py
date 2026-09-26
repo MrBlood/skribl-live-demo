@@ -15,6 +15,7 @@ host's front page with a drawing editor. No error, no warning.
 Runs in-process with Flask's test client — no server, no browser, so it is
 fast and has no port to collide on.
 """
+import json
 import sys
 from pathlib import Path
 from assertions import make_check
@@ -184,6 +185,48 @@ if _m:
           bool(_res) and all(v == 200 for v in _res["pages"].values())
           and _res["post"] == 201 and _res["player"] == 200 and _res["static"] == 200,
           str(_res) if _res else (_p.stderr.strip().splitlines() or ["no output"])[-1][:300])
+
+# A host with Flask-WTF's CSRFProtect switched on site-wide refused every
+# Skribl post with a 400 (v316, the from-scratch host): Flask-WTF checks POSTs
+# before Skribl's view runs and reads only its own header names. The guide now
+# carries a recipe; this runs it, lifted from the page, with CSRFProtect on.
+print("\nINTEGRATION — the guide's Flask-WTF recipe: the page's token posts, no token is refused")
+try:
+    import flask_wtf  # noqa: F401  (harness/requirements.txt names it)
+    _have_wtf = True
+except ImportError:
+    _have_wtf = False
+check("Flask-WTF is installed, so this section runs (harness/requirements.txt)", _have_wtf)
+_wsec = _guide.split("already runs Flask-WTF's `CSRFProtect`", 1)
+_wm = _re.search(r"```python\n(.*?)```", _wsec[1], _re.S) if len(_wsec) == 2 else None
+check("the recipe is a python block after its paragraph", bool(_wm))
+if _have_wtf and _wm:
+    _wapp = Flask("guide_wtf")
+    _wapp.config.update(SQLALCHEMY_DATABASE_URI="sqlite:///:memory:", SECRET_KEY="host-secret")
+    _wdb = SQLAlchemy(_wapp)
+    skribl.models.attach_to_metadata(_wdb.metadata)
+    _wns = {"app": _wapp, "db": _wdb, "skribl": skribl}
+    exec(compile(_wm.group(1), "docs/INTEGRATION.md#flask-wtf", "exec"), _wns)
+
+    @_wapp.after_request
+    def _wcommit(resp):
+        if resp.status_code < 500:
+            _wdb.session.commit()
+        return resp
+
+    with _wapp.app_context():
+        _wdb.create_all()
+    _wc = _wapp.test_client()
+    _page = _wc.get("/skribl/skribl-pad").get_data(as_text=True)
+    _tm = _re.search(r"window\.SKRIBL_CSRF_TOKEN = (\"[^\"]*\")", _page)
+    _tok = json.loads(_tm.group(1)) if _tm else ""
+    check("the editor page renders Flask-WTF's token", bool(_tok), repr(_tok)[:60])
+    _no = _wc.post("/skribl/api/skribls", json=payload(title="no token"))
+    _yes = _wc.post("/skribl/api/skribls", json=payload(title="with token"),
+                    headers={"X-Skribl-CSRF": _tok})
+    check("with CSRFProtect on, a post carrying the page's token is created, one without is refused",
+          _yes.status_code == 201 and _no.status_code in (400, 403),
+          f"with token {_yes.status_code}, without {_no.status_code}")
 
 print("\nINTEGRATION — the host owns the schema")
 # attach_to_metadata is the ONLY thing that makes a host's db.create_all() see
