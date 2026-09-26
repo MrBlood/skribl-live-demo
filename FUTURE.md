@@ -82,8 +82,8 @@ JS, HTML, CSS, the sum and the gzipped total, and fails if any grows.
 **What genuinely remains:** `app.js` itself is still loaded by both surfaces and
 is still the largest single file the player pulls, and a handful of editor
 globals remain reachable there — the suite counts them against a ratchet whose
-target is zero. The outstanding size question is now CSS, not JS: the player's
-stylesheet sits well above `CSS_TARGET`, and its lever is
+target is zero. The player's CSS is under `CSS_TARGET` since v315, by serving it
+comment-stripped as the JavaScript already was; any further cut is
 `harness/tools/cssgraph.py`'s classifier rather than a carve.
 
 The v132 split was attempted and reverted (see `docs/REFACTOR-v132.md`) because

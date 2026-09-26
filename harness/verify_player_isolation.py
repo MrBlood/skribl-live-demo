@@ -711,7 +711,11 @@ with sync_playwright() as sp:
     # v194 size, and getting back under it is the first repayment. The target is
     # what a player-only stylesheet would plausibly cost; like BYTES_TARGET it
     # is the honest distance, not the next cut.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 123_283, 119_844, 40_000
+    # v315 (SK312-004, owner: "yes"): CSS is served comment-stripped like the
+    # JavaScript, and the ratchet moves to the SERVED size, which is what this
+    # has always measured (r.body()). Target met; the ratchet now stops growth
+    # from here, with a few hundred bytes of room rather than 40 KB of slack.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 29_500, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

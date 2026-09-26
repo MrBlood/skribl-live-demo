@@ -42,7 +42,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from skribl.jsstrip import strip_bytes, strip_comments   # noqa: E402
+from skribl.jsstrip import strip_bytes, strip_comments, strip_css_bytes   # noqa: E402
 from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
@@ -307,6 +307,64 @@ with sync_playwright() as sp:
              else f"OVER the target by {-_margin:,} B"))
 
     pg.close()
+
+    # ---- CSS (v315, SK312-004): stripped stylesheets must style identically --
+    # The player's stylesheet was 63% comments. Stripping it is only safe if
+    # the page it styles is the same page, so this compares EVERY element's
+    # full computed style with the stripped CSS against the same page with the
+    # raw files swapped back in (the unbusted URL, which is never stripped).
+    print("\nSTRIP — CSS: the stripped stylesheets style every element identically")
+    _req = urllib.request.Request(BASE + "/api/skribls", method="POST",
+        data=json.dumps({"frames": [{"strokes": [{"x": 10, "y": 10, "color": "#fff", "size": 4, "t": 0, "start": True},
+                                                {"x": 60, "y": 40, "color": "#fff", "size": 4, "t": 40}],
+                                     "strokeGroups": [2], "background": {"color": "#101418"}}],
+                         "title": "CSS strip fixture", "visibility": "public"}).encode(),
+        headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(_req, timeout=15) as _r:
+        _pid = json.loads(_r.read())["id"]
+    SIG = """() => [...document.querySelectorAll('*')].map(el => {
+        const cs = getComputedStyle(el), kv = [];
+        for (let i = 0; i < cs.length; i++) kv.push(cs[i] + ':' + cs.getPropertyValue(cs[i]));
+        // SORTED: Chromium enumerates custom properties in a different order on
+        // each load, which made every element "differ" before this -- the
+        // instrument, not the strip, going red.
+        return el.tagName + '|' + kv.sort().join('|'); })"""
+    CALM = "*,*::before,*::after{transition:none!important;animation:none!important;caret-color:auto!important}"
+
+    def _sig(path, raw):
+        ctx = b.new_context(viewport={"width": 390, "height": 844}, reduced_motion="reduce")
+        p = ctx.new_page()
+        if raw:
+            def _swap(route):
+                u = route.request.url
+                resp = route.fetch(url=u.split("?")[0])
+                route.fulfill(response=resp, body=resp.body())
+            p.route(re.compile(r".*\.css(\?.*)?$"), _swap)
+        p.goto(BASE + path, wait_until="load")
+        p.add_style_tag(content=CALM)
+        p.wait_for_timeout(1200)
+        out = p.evaluate(SIG)
+        ctx.close()
+        return out
+
+    for _path in ("/skribl-pad", "/flip", "/gallery", "/s/" + _pid):
+        lean_sig, raw_sig = _sig(_path, False), _sig(_path, True)
+        _diff = [i for i, (x, y) in enumerate(zip(lean_sig, raw_sig)) if x != y]
+        check(f"{_path.split('/')[1] or _path}: every element computes the same style, stripped or raw",
+              len(lean_sig) == len(raw_sig) and not _diff and len(lean_sig) > 20,
+              f"{len(lean_sig)} vs {len(raw_sig)} elements; {len(_diff)} differ"
+              + (f" (first: {lean_sig[_diff[0]][:80]}...)" if _diff else ""))
+
+    _raw_css = (ROOT / "skribl" / "static" / "player.css").read_bytes()
+    with urllib.request.urlopen(BASE + "/s/" + _pid) as _r:
+        _html = _r.read().decode()
+    _href = re.search(r'href="([^"]*player\.css\?v=[^"]*)"', _html)
+    _served_css = _served(_href.group(1))[0] if _href else b""
+    check("the player's stylesheet is served stripped, under the 40,000-byte target",
+          _href is not None and 0 < len(_served_css) <= 40_000 and len(_served_css) < len(_raw_css),
+          f"{len(_served_css):,} B served of {len(_raw_css):,} B on disk")
+    check("...and a legal banner in CSS survives the strip",
+          b"/*! keep */" in strip_css_bytes(b"/*! keep */\np{color:red}/* gone */\nq{}"))
     b.close()
 
 bad = [n for ok, n in results if not ok]
