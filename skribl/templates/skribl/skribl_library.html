@@ -626,6 +626,13 @@
      also loads this, because a hand-copied asset list is exactly the thing
      that drifts. #}
   <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
+  {# lib/audiosession.js: THE SAME DRIFT, FOR SOUND (v315). The macro loads it;
+     this list did not, so the player's unmute tap found nothing to claim and a
+     posted Skribl was silent here on an iPhone with the ringer switch off,
+     while Pad, Flip, the Gallery and /s/<id> were heard. The player null-guards
+     the module, which is why its absence made no error. verify_library asserts
+     the pair beside the photofit one. #}
+  <script src="{{ skribl_asset('lib/audiosession.js') }}" defer></script>
   <script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
   {# lib/posted.js: the list this browser kept of what it posted -- the
      profile's population when there are no accounts (v304; see the route). #}
