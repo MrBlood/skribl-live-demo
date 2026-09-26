@@ -704,7 +704,7 @@ rather than a shared rule.
 |---|---|---|
 | `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
-| `audiosession.js` | Pad+Flip+player+in-post | Making Web Audio audible on an iPhone whose ringer switch is off. |
+| `audiosession.js` | Pad+Flip+player+library+in-post | Making Web Audio audible on an iPhone whose ringer switch is off. |
 | `autosavepill.js` | Pad+Flip | lib/autosavepill.js — the autosave pill: one owner for its five states and, when media is missing, the way out. |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
 | `brushfield.js` | Flip | The arithmetic behind tools that act on ink already on the page. |

@@ -1004,6 +1004,20 @@ check("every template that loads inlineplayer.js also loads lib/photofit.js",
       f"— without it the player falls back to a centred cover and crops a "
       f"photo its author fitted")
 
+# AND THE SAME DRIFT, A SECOND TIME, FOR SOUND (v315, owner's iPhone). The
+# macro loads lib/audiosession.js; this page's hand-kept list did not, so the
+# player's unmute tap found no SkriblAudioSession to claim and a posted
+# Skribl's music stayed muted by the ringer switch -- in the Library only,
+# while Pad, Flip, the Gallery and /s/<id> were heard. Same mechanism as
+# photofit: the player null-guards the module, so its absence is silent.
+_no_session = [t for t in _needs
+               if not _call("lib/audiosession.js").search((_TPL / t).read_text(encoding="utf-8"))]
+check("every template that loads inlineplayer.js also loads lib/audiosession.js",
+      _needs and not _no_session,
+      f"loads the player: {_needs}; missing the iOS session: {_no_session or 'none'} "
+      f"— without it the unmute tap claims nothing and a phone set to silent "
+      f"plays the post without its music")
+
 # ---------------------------------------------------------------------------
 # THE STAGE'S FULL SCREEN RULE CARRIES A COPY OF THE BOX'S ASPECT RATIO.
 #
