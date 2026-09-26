@@ -2365,7 +2365,7 @@ function startLoopPreview() {
   };
   if (startWebAudioLoop(previewFallback)) {
     previewLoopTimer = setInterval(() => {
-      if (!previewingLoop || !_waLoopSource) return;
+      if (!previewingLoop || !_waLoop.playing()) return;
       const songTime = webAudioLoopSongTime();
       const pct = (songTime / audioDuration) * 100;
       if (playhead) { playhead.hidden = false; playhead.style.left = pct + '%'; }
@@ -3044,107 +3044,25 @@ function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopW
 // with loop=true — scheduled in the audio hardware clock, so it's gapless and
 // drift-free forever. Reuses buildLoopChannels for the crossfaded fold, so no
 // WAV round-trip: we build the AudioBuffer directly.
-let _waLoopSource = null;
-let _waLoopStartCtx = 0;   // audioCtx.currentTime when the loop started
-let _waLoopDuration = 0;   // loop clip length (seconds)
 function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBuffer({ currentAudioBuffer: currentAudioBuffer, audioCtx: audioCtx, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs }); }
-function stopWebAudioLoop() {
-  // Bump the generation FIRST (v209 review F1). v209 introduced _waGen with the
-  // comment "a stop during unlock must not be overtaken by a late start" and
-  // then never incremented it here — so Play, Stop, then a resume that resolves
-  // afterwards still started the loop, because the deferred go() saw its
-  // generation unchanged. The counter existed; the property did not. Clearing
-  // _waUnlock with it stops a stale promise from a previous Play standing in
-  // for the next one's unlock.
-  _waGen++;
-  _waUnlock = null;
-  if (_waLoopSource) { try { _waLoopSource.stop(); } catch (e) {} try { _waLoopSource.disconnect(); } catch (e) {} _waLoopSource = null; }
-}
-// THE RESUME PROMISE IS RETAINED, not thrown away. Pad's ordinary Play reaches
-// here from INSIDE clearAndRestore's Image.onload callback -- after the click
-// gesture has already returned. iOS Safari can still report 'suspended' until
-// resume's promise resolves, so calling `resume()` and discarding the promise
-// runs start() against a context that never unlocked, and the replay is silent.
-// So resume is called INSIDE the gesture (unlockWebAudio, from the Play
-// handler), the promise is RETAINED, and the source starts only once it
-// resolves. The drawing does not wait -- it is already running from
-// clearAndRestore -- only the audio start is gated, and nothing is swallowed by
-// a silent catch.
-let _waUnlock = null;      // resume() promise captured in the click gesture
-let _waGen = 0;            // a stop during unlock must not be overtaken by a late start
-function unlockWebAudio() {
-  if (!audioCtx || audioCtx.state !== 'suspended') return null;
-  try { const p = audioCtx.resume(); return (_waUnlock = (p && p.then) ? p : null); }
-  catch (e) { console.warn('skribl: resume threw', e); return null; }
-}
+// The engine itself -- unlock in the gesture, no source before 'running', the
+// generation counter, the hand-off to native <audio> -- is lib/audioloop.js's,
+// shared with Flip and the player. Its header says what each copy was missing.
+const _waLoop = window.SkriblAudioLoop.engine({
+  ctx: () => audioCtx,
+  build: buildLoopAudioBuffer,
+  rate: () => (typeof replayRate === 'number' ? replayRate : 1),
+});
+function stopWebAudioLoop() { _waLoop.stop(); }
+// Called from the Play handler INSIDE the gesture (F3): Play reaches start()
+// only after clearAndRestore's Image decode, when iOS no longer counts it.
+function unlockWebAudio() { return _waLoop.unlock(); }
 function startWebAudioLoop(onFail) {
   if (!audioCtx || !currentAudioBuffer) return false;
-  const buf = buildLoopAudioBuffer();
-  if (!buf) return false;
-  // Take the gesture-captured unlock BEFORE stopWebAudioLoop(), which clears
-  // _waUnlock to kill stale promises (F1). Without this, the Play handler's
-  // in-gesture resume would be discarded here and re-requested outside the
-  // gesture — silently undoing F3 while every ordering pin still passed.
-  const pending = _waUnlock;
-  stopWebAudioLoop();
-  const gen = ++_waGen, go = () => {
-    // 'running', not merely 'not suspended': a source begun on a context that
-    // is closed or still unlocking is silence that reports success, which is
-    // the whole v210 player lesson applied to the editor path too.
-    if (gen !== _waGen || !audioCtx || audioCtx.state !== 'running') return false;
-    const src = audioCtx.createBufferSource();
-    src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = buf.duration;
-    // Keep the music in lockstep with a sped-up preview. It pitch-shifts,
-    // which is the honest trade: music running at its own rate against a
-    // 2x drawing drifts a whole take out of sync, and that is worse to
-    // review against than a chipmunk. Only the preview is affected — the
-    // posted clip and the export are untouched.
-    try { src.playbackRate.value = (typeof replayRate === 'number' ? replayRate : 1); } catch (e) {}
-    src.connect(audioCtx.destination);
-    try { src.start(); } catch (e) { return false; }
-    _waLoopSource = src; _waLoopStartCtx = audioCtx.currentTime; _waLoopDuration = buf.duration;
-    return true;
-  };
-  if (audioCtx.state === 'running') return go();
-  // Suspended: prefer the promise captured in the gesture; if there is none
-  // (Preview Loop calls this synchronously from its OWN click) resume here,
-  // which is still inside that gesture. Consumed either way — a promise that
-  // resolved for an earlier play says nothing about a context iOS has since
-  // re-suspended.
-  // HANDING OFF, not just declining (v209 review F2, and the owner's iPhone).
-  // Refusing to start on a suspended context is correct but not sufficient: the
-  // callers below suppress their native <audio> fallback whenever this returns
-  // true, so a context that never reaches 'running' turned "intermittently
-  // silent" into "always silent, honestly". On that device Test Seam (native
-  // <audio>) plays while Preview Loop (Web Audio) does not, so native is the
-  // path that actually works there and must be reachable.
-  const fail = (why) => {
-    _waGen++;                      // nothing from this attempt may start later
-    if (onFail) { const f = onFail; onFail = null; console.warn('skribl: web audio unavailable — ' + why); f(); }
-  };
-  const p = pending || unlockWebAudio();
-  _waUnlock = null;
-  if (p && p.then) {
-    let settled = false;
-    p.then(() => { settled = true; if (!go()) fail('context not running after resume'); },
-           (e) => { settled = true; fail('resume rejected: ' + ((e && e.message) || e)); });
-    // iOS can leave resume() pending indefinitely rather than rejecting. Silence
-    // with no error is the worst outcome for the listener, so time it out.
-    setTimeout(() => { if (!settled && !_waLoopSource) fail('resume never settled'); }, 600);
-  } else if (p) {
-    if (!go()) fail('synchronous resume did not reach running');
-  } else {
-    fail('no AudioContext resume available');
-    return false;
-  }
-  return true;   // the Web Audio path IS the path taken; only its start defers
+  return _waLoop.start(onFail);
 }
 // Current position within the looping clip, mapped onto the song timeline.
-function webAudioLoopSongTime() {
-  if (!audioCtx || _waLoopDuration <= 0) return trimStart || 0;
-  const el = audioCtx.currentTime - _waLoopStartCtx;
-  return (trimStart || 0) + (el % _waLoopDuration);
-}
+function webAudioLoopSongTime() { return (trimStart || 0) + _waLoop.elapsed(); }
 // draft saved immediately after adding a big song/photo doesn't omit the bytes.
 let mediaBusy = 0;
 function beginMediaRead() {

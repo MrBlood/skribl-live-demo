@@ -96,8 +96,8 @@ with sync_playwright() as p:
 
     pl.evaluate("() => { const b=document.getElementById('playBtn'); if(b) b.click(); }")
     pl.wait_for_timeout(1500)
-    wa = pl.evaluate("""() => ({ src: typeof _waLoopSource!=='undefined' && !!_waLoopSource,
-                                dur: typeof _waLoopDuration!=='undefined' ? _waLoopDuration : null,
+    wa = pl.evaluate("""() => ({ src: typeof _waLoop!=='undefined' && !!_waLoop.source(),
+                                dur: typeof _waLoop!=='undefined' ? _waLoop.duration() : null,
                                 state: typeof audioCtx!=='undefined' && audioCtx ? audioCtx.state : null })""")
     # sample the analyser while it plays
     peak = 0.0; hashes = []
