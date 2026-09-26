@@ -54,10 +54,16 @@
  * cross-origin embed fails loudly instead of leaking a drawing to whoever is
  * framing it.
  *
- *   editor -> host   skribl:compose:ready    the editor is up; send a payload
- *                                            now if this is a re-edit
+ *   editor -> host   skribl:compose:ready    {editor} the editor is up; send
+ *                                            a payload now if this is a re-edit
  *   host   -> editor skribl:compose:load     {payload} put this back on canvas
- *   editor -> host   skribl:compose:done     {payload, preview, hasAudio}
+ *   editor -> host   skribl:compose:done     {payload, preview, hasAudio, editor}
+ *
+ * `editor` is 'pad' or 'flip' (v316). Composing, the Pad's ⋯ "Flip Mode" row
+ * opens Flip in the same frame and Flip's "Skribl Pad" row comes back, so the
+ * frame can hold either editor. A payload goes back only into the editor that
+ * made it: a one-page Flip and a Pad drawing are both `playbackMode: 'replay'`,
+ * so the payload cannot say which it is, and the message does.
  *   editor -> host   skribl:compose:cancel   closed without attaching
  *
  * `preview` is a flat PNG of the finished drawing, so the host can show
@@ -74,6 +80,8 @@
    * the same-origin blueprint case and is also the safe default — a wildcard
    * would post the drawing to whatever page happens to be framing us. */
   var HOST_ORIGIN = global.SKRIBL_COMPOSE_ORIGIN || global.location.origin;
+  /* Which editor this is. Set by its template; the Pad is the default. */
+  var EDITOR = global.SKRIBL_COMPOSE === 'flip' ? 'flip' : 'pad';
 
   function send(type, data) {
     var msg = { type: type };
@@ -107,11 +115,13 @@
      * Everything post-time has already happened by here. */
     deliver: function (payload, preview) {
       var media = global.SkriblPayload
-        ? global.SkriblPayload.currentFrameMedia(payload) : null;
+        ? global.SkriblPayload.currentFrameMedia(payload)
+        : (payload && payload.frames && payload.frames[0]) || null;
       send('skribl:compose:done', {
         payload: payload,
         preview: preview || null,
-        hasAudio: !!(media && media.music && media.music.data)
+        hasAudio: !!(media && media.music && media.music.data),
+        editor: EDITOR
       });
     },
     /* The host closing the overlay itself does not need this; it is for a
@@ -127,15 +137,22 @@
     if (!d || d.type !== 'skribl:compose:load' || !d.payload) return;
     /* Re-editing. loadSkribl() is the same function the player and the
      * draft-restore path use, so a re-opened drawing is restored exactly as a
-     * loaded draft is — including its pauseMode, which decides replay timing. */
-    if (typeof loadSkribl === 'function') loadSkribl(d.payload);
+     * loaded draft is — including its pauseMode, which decides replay timing.
+     * Flip supplies its own loader (window.SkriblComposeLoad). */
+    if (typeof global.SkriblComposeLoad === 'function') global.SkriblComposeLoad(d.payload);
+    else if (typeof loadSkribl === 'function') loadSkribl(d.payload);
   });
 
   function ready() {
     hideDuplicateFields();
+    /* The header's × (compose mode only): back to the host's post. The host
+     * closes its overlay on cancel and keeps the frame, so the drawing is
+     * still there when the author presses the Skribl button again. */
+    var close = doc.getElementById('composeCloseBtn');
+    if (close) close.addEventListener('click', api.cancel);
     /* Announced AFTER the editor's own scripts have run, so a host that replies
      * immediately with a payload finds loadSkribl() defined. */
-    send('skribl:compose:ready');
+    send('skribl:compose:ready', { editor: EDITOR });
   }
 
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', ready);

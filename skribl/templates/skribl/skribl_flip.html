@@ -32,9 +32,9 @@
          as one design. #}
       {# brand_sweep 95 = mark 65 + word origin offset (4px gap minus the -6px
          pull-back, in svg units) + flip's 31: one gradient, signature to p. #}
-      <span class="flip-word" role="img" aria-label="Skribl Flip" title="Skribl Flip">{% with brand_sweep=95 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}{# "flip", written by the same hand as the signature — one continuous stroke
+      {% if compose %}<div class="compose-lead"><button type="button" class="tool-open compose-close" id="composeCloseBtn" aria-label="Close — back to your post" title="Back to your post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>{% endif %}<span class="flip-word" role="img" aria-label="Skribl Flip" title="Skribl Flip">{% with brand_sweep=95 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}{# "flip", written by the same hand as the signature — one continuous stroke
    (f's descender loop, l's spike, i's hump, p's bowl), then the pen comes
-   back to dot the i, exactly like the mark's own lift. See Pad's tag note. #}<span class="brand-tag brand-tag--script"><svg viewBox="0 0 31 30" fill="none" stroke="url(#skink-f)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><defs><linearGradient id="skink-f" gradientUnits="userSpaceOnUse" x1="-64" y1="0" x2="31" y2="0"><stop offset="0" class="brand-grad-a"/><stop offset="1" class="brand-grad-b"/></linearGradient></defs><g transform="skewX(-8)"><path d="M 3.0,22.9 C 4.6,19.0 6.2,10.2 6.0,5.2 C 5.9,2.2 4.1,3.2 4.4,6.3 C 4.7,10.2 5.2,22.2 5.4,26.6 C 5.5,29.2 4.1,29.6 3.9,27.7 C 3.8,26.1 4.7,24.5 6.4,23.4 C 8.6,22.3 9.4,20.8 10.1,18.8 C 11.5,14.8 12.5,8.2 12.1,5.1 C 11.8,2.0 10.0,3.1 10.3,6.2 C 10.7,10.1 11.3,18.7 12.0,23.2 C 15.6,20.1 16.4,15.7 16.5,13.7 C 16.6,16.9 16.5,21.0 17.1,23.2 C 18.9,24.2 19.9,24.1 20.6,23.1 C 21.3,21.2 21.9,17.3 22.2,14.4 C 22.6,18.3 22.7,24.6 22.5,27.8 C 22.3,30.2 20.9,30.0 21.2,27.9 C 21.6,24.6 23.5,14.6 26.0,13.4 C 28.0,12.6 29.0,15.6 28.1,18.8 C 27.3,21.7 25.3,23.7 23.7,22.9 C 25.2,24.3 27.4,24.1 28.7,22.6 C 29.5,21.6 29.9,20.3 29.6,19.2"/><path d="M 17.4,9.9 C 17.8,9.6 18.3,9.8 18.0,10.2"/></g></svg></span></span>
+   back to dot the i, exactly like the mark's own lift. See Pad's tag note. #}<span class="brand-tag brand-tag--script"><svg viewBox="0 0 31 30" fill="none" stroke="url(#skink-f)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><defs><linearGradient id="skink-f" gradientUnits="userSpaceOnUse" x1="-64" y1="0" x2="31" y2="0"><stop offset="0" class="brand-grad-a"/><stop offset="1" class="brand-grad-b"/></linearGradient></defs><g transform="skewX(-8)"><path d="M 3.0,22.9 C 4.6,19.0 6.2,10.2 6.0,5.2 C 5.9,2.2 4.1,3.2 4.4,6.3 C 4.7,10.2 5.2,22.2 5.4,26.6 C 5.5,29.2 4.1,29.6 3.9,27.7 C 3.8,26.1 4.7,24.5 6.4,23.4 C 8.6,22.3 9.4,20.8 10.1,18.8 C 11.5,14.8 12.5,8.2 12.1,5.1 C 11.8,2.0 10.0,3.1 10.3,6.2 C 10.7,10.1 11.3,18.7 12.0,23.2 C 15.6,20.1 16.4,15.7 16.5,13.7 C 16.6,16.9 16.5,21.0 17.1,23.2 C 18.9,24.2 19.9,24.1 20.6,23.1 C 21.3,21.2 21.9,17.3 22.2,14.4 C 22.6,18.3 22.7,24.6 22.5,27.8 C 22.3,30.2 20.9,30.0 21.2,27.9 C 21.6,24.6 23.5,14.6 26.0,13.4 C 28.0,12.6 29.0,15.6 28.1,18.8 C 27.3,21.7 25.3,23.7 23.7,22.9 C 25.2,24.3 27.4,24.1 28.7,22.6 C 29.5,21.6 29.9,20.3 29.6,19.2"/><path d="M 17.4,9.9 C 17.8,9.6 18.3,9.8 18.0,10.2"/></g></svg></span></span>{% if compose %}</div>{% endif %}
       </div>
       <div class="actions flip-actions" id="actions">
         <button type="button" id="tuneBtn" class="tool-open tune-tool" aria-expanded="false" aria-controls="tunePanel" title="Playback speed and onion skin" aria-label="Playback settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"/><circle cx="15" cy="8" r="2.4" fill="var(--surface-raised)"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="16" r="2.4" fill="var(--surface-raised)"/></svg></button>
@@ -49,7 +49,7 @@
           </button>
           <span id="flipDuration" class="duration-badge">0:00</span>
         </div>
-        <button type="button" class="btn post" id="postBtn" disabled title="Post — get a shareable link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">Post<span class="post-long"> to Skribl</span></span></button>
+        <button type="button" class="btn post" id="postBtn" disabled title="Post — get a shareable link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">{% if compose %}Add<span class="post-long"> to post</span>{% else %}Post<span class="post-long"> to Skribl</span>{% endif %}</span></button>
         <button type="button" id="moreBtn" class="tool-open" aria-controls="moreMenu" title="More — save, export, help" aria-label="More" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
       </div>
     </div>
@@ -376,7 +376,9 @@
          same slot. Still an <a href> so open-in-new-tab works; the aria-label
          keeps the name the suites drive it by, and it contains the visible
          words. Flip navigates freely: it persists its work (verify_layout). #}
-      <a href="{{ url_for('.skribl_editor') }}" id="padBtn" class="menu-item" aria-label="Back to Skribl Pad">
+      {# Composing, the Pad row stays inside the composer (?compose=1), so the
+         switch keeps "Add to post" on both sides. #}
+      <a href="{{ url_for('.skribl_editor') }}{% if compose %}?compose=1{% endif %}" id="padBtn" class="menu-item" aria-label="Back to Skribl Pad">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
         <span class="menu-item-text">Skribl Pad<span class="menu-item-sub">Replay a drawing as it was drawn &mdash; a separate draft from this one</span></span>
       </a>
@@ -460,8 +462,11 @@
       <button type="button" class="flip-share-close" id="flipShareClose" aria-label="Close">&#x2715;</button>
 
       <div id="flipShareCompose">
-        <span class="flip-export-label">Post your Skribl</span>
-        <p class="flip-share-sub">Add a title and share it to Skribl</p>
+        <span class="flip-export-label">{{ "Add to your post" if compose else "Post your Skribl" }}</span>
+        <p class="flip-share-sub">{{ "It goes inline in the post, and plays there" if compose else "Add a title and share it to Skribl" }}</p>
+        {# Composing, the host's own composer owns the words and the visibility:
+           these stay in the page (flip.js reads them, null-safe or not) but hidden. #}
+        <div class="flip-share-fields"{% if compose %} hidden{% endif %}>
         <input type="text" id="flipShareTitle" aria-label="Title" class="flip-share-url" maxlength="{{ skribl_limits.title }}"
                placeholder="Untitled Skribl" autocomplete="off">
         <textarea id="flipShareCaption" aria-label="Caption" class="flip-share-url flip-share-caption" maxlength="{{ skribl_limits.caption }}"
@@ -476,6 +481,7 @@
           <span class="post-check-box" aria-hidden="true"></span>
           <span class="post-check-text">Show in the public gallery<span class="post-check-sub">Off, it is shared by its link only</span></span>
         </label>
+        </div>
         {# A failed post used to report itself only as a transient chip. On a
            phone that is easy to miss entirely, so a 500 read as "the button
            does nothing" rather than "it failed" — which is what happened when
@@ -484,7 +490,7 @@
         <div class="flip-share-error" id="flipShareError" role="alert" hidden></div>
         <div class="flip-share-actions">
           <button type="button" class="panel-btn" id="flipShareCancel">Cancel</button>
-          <button type="button" class="panel-btn flip-share-open" id="flipShareSubmit">Post to Skribl</button>
+          <button type="button" class="panel-btn flip-share-open" id="flipShareSubmit">{{ "Add to post" if compose else "Post to Skribl" }}</button>
         </div>
       </div>
 
@@ -509,6 +515,7 @@
      broken silently. Nonced, matching the Pad and Player. -->
 <script nonce="{{ csp_nonce }}">
   window.SKRIBL_MODE = "flip";
+  {% if compose %}window.SKRIBL_COMPOSE = "flip";{% endif %}
   window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
   window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
@@ -614,6 +621,7 @@
   <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/draftstore.js') }}" defer></script>
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
+  {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}
 </body>
 </html>
 

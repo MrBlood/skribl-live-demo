@@ -225,7 +225,6 @@
 
   document.getElementById('padBtn').addEventListener('click', pad.open);
   document.getElementById('editSkriblBtn').addEventListener('click', pad.open);
-  document.getElementById('padCloseBtn').addEventListener('click', pad.close);
   document.getElementById('removeSkriblBtn').addEventListener('click', function () {
     compose.payload = null;
     compose.text.value = compose.text.value.replace(MARK + '\n', '').replace(MARK, '');

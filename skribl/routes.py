@@ -297,7 +297,12 @@ def register_routes(bp, *, index_route=False):
         """Flip — the frame-by-frame animator."""
         # Flip Mode — the frame-by-frame animation editor (standalone page for now;
         # folds into the pad as an in-app mode in a later phase).
-        return render_template("skribl/skribl_flip.html")
+        # ?compose=1 is Flip opened inside a host's post composer, as the Pad's
+        # is (see skribl_editor above): "Add to post" hands the animation back
+        # and publishes nothing. Reached from the Pad's ⋯ "Flip Mode" row while
+        # composing, so a host needs one Skribl button, not two (owner, v316).
+        return render_template("skribl/skribl_flip.html",
+                               compose=request.args.get("compose") == "1")
 
     @bp.get("/library")
     def skribl_library():

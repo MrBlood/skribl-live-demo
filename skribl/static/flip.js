@@ -34,6 +34,13 @@ const FLIP_SIZES = window.SkriblCanvasSizes.SIZES;
 CW = FLIP_SIZES[0].w; CH = FLIP_SIZES[0].h;
 
 const AUTOSAVE_KEY = 'skribl_flip_autosave_v1';
+// COMPOSE MODE (v316): Flip opened inside a host's post composer, reached from
+// the Pad's ⋯ "Flip Mode" row while composing. Like the Pad's (editor_draft.js
+// PAD_DRAFT_OFF) it keeps NO draft: the host holds the animation it was handed,
+// and the author's own Flip draft is neither restored into a post nor
+// overwritten by one. "Add to post" hands the payload back through
+// editor_compose.js and publishes nothing.
+const FLIP_COMPOSE = window.SKRIBL_COMPOSE === 'flip';
 
 /* Fill's two numbers, named here rather than typed into doFill.
    TOLERANCE is how far from the tapped colour still counts as the same region.
@@ -697,6 +704,7 @@ function isQuotaError(e){
 }
 let _sessionOwnedDraft = false;   // set on the first non-empty save this session
 function saveNow(){
+  if (FLIP_COMPOSE) return;   // compose keeps no draft (see FLIP_COMPOSE)
   const empty = frames.length === 1 && frames[0].strokes.length === 0 && !bgImage && !musicData;
   if (empty) {
     // Only clear the slot if THIS session put real work in it — then an empty
@@ -1060,6 +1068,7 @@ function applyPayload(d){
 // Media the autosave had to drop (too big for localStorage). Mirrors the Pad:
 // the settings survive, the bytes don't, and the drawers show a "Re-add" card.
 function tryRestore(){
+  if (FLIP_COMPOSE) return false;   // compose starts blank; the host holds the work
   try {
     const raw = localStorage.getItem(AUTOSAVE_KEY);
     if (!raw) return false;
@@ -4408,12 +4417,24 @@ function loadDraftFile(file){
       // claiming the same 5s loop.
       if (musicData) decodeForWaveform();
       fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
-      try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip({ recipes: true }))); }catch(_){ }  // best-effort
+      if(!FLIP_COMPOSE){ try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip({ recipes: true }))); }catch(_){ } }  // best-effort
       chip(ok?'Draft loaded':'Loaded');
     }catch(err){ chip('Could not read file'); }
   };
   r.readAsText(file);
 }
+// COMPOSE: re-opening the host's Skribl button puts the animation it holds
+// back on the canvas, through the same applyPayload() a draft file uses.
+if(FLIP_COMPOSE) window.SkriblComposeLoad = function(d){
+  if(!d || !Array.isArray(d.frames) || !d.frames.length) return;
+  if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
+  applyPayload(d);
+  invalidateClearUndo();
+  loadBgImageObj(()=>{ applyBg(); render(); });
+  ensureAudio();
+  if (musicData) decodeForWaveform();
+  fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
+};
 draftInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(file) loadDraftFile(file); });
 
 /* ---- export: PNG (current frame) + WebM (the loop) ---- */
@@ -4552,6 +4573,27 @@ async function shareSkribl(){
     chip('Too big to post'); return;
   }
   if(playing) stop();
+  // COMPOSE: hand the animation back and publish nothing. Everything a post
+  // would carry is built by the same buildSharePayload() (the loop crop, the
+  // holds, the share card), so what the host attaches is what Flip would
+  // have posted. The host closes its overlay on receipt.
+  if(FLIP_COMPOSE && window.SkriblCompose){
+    sharing=true; chip('Adding…');
+    try{
+      if(window._skriblDecodePending){ try{ await window._skriblDecodePending; }catch(_){} }
+      const _payload=buildSharePayload();
+      delete _payload.visibility;           // the host's composer decides
+      const _flat=document.createElement('canvas'); _flat.width=CW; _flat.height=CH;
+      const _pick=frames.find(f => f && f.strokes && f.strokes.length) || frames[0];
+      drawFrameTo(_flat.getContext('2d'), _pick);
+      window.SkriblCompose.deliver(_payload, _flat.toDataURL('image/png'));
+      closeShare();
+    }catch(err){
+      console.error('[skribl] Add to post failed:', err);
+      showShareError('Could not add it to your post. Your animation is still here.');
+    }
+    sharing=false; return;
+  }
   sharing=true; chip('Posting…');
   try{
     // Feature-detected: compression must never be able to break posting.
@@ -9698,13 +9740,22 @@ function mediaBytesAtRisk(){
     if(window.SkriblModal) window.SkriblModal.open(sheet, padBtn); cancel.focus(); };
   const close=()=>{ sheet.hidden=true; if(scrim) scrim.hidden=true; if(window.SkriblModal) window.SkriblModal.close(sheet); };
   const leave=()=>{ released=true; window.location.href=padBtn.getAttribute('href'); };
+  // COMPOSING, the risk is the whole animation, not just media the store
+  // refused: compose keeps no draft, so switching to the Pad starts it fresh.
+  // Anything already added is safe with the host; what is on the canvas is not.
+  if(FLIP_COMPOSE){
+    const t=document.getElementById('leaveSheetTitle'), bd=sheet.querySelector('.leave-body');
+    if(t) t.textContent='Switch to Skribl Pad?';
+    if(bd) bd.textContent='The Pad starts fresh. Anything you haven\u2019t added to your post yet will be lost.';
+    go.textContent='Switch';
+  }
   padBtn.addEventListener('click',(e)=>{
     if(released) return;
     // A SECOND TAP WHILE THE FIRST IS WAITING must not start a second decision:
     // the poll below can still resolve to leave(), and it would then navigate
     // out from under the sheet this tap opened.
     if(waiting){ e.preventDefault(); e.stopPropagation(); return; }
-    if(!mediaBytesAtRisk()) return;
+    if(FLIP_COMPOSE ? nothingToShare() : !mediaBytesAtRisk()) return;
     e.preventDefault(); e.stopPropagation();
     closeMenu();   // the row lives in the ⋯ menu; the confirm must not stack on it
     if(inFlight() && !waiting){

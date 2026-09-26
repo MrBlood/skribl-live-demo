@@ -75,6 +75,14 @@
     var origin = opts.origin || global.location.origin;
 
     var payload = null;
+    /* Which editor made the payload, and which one the frame is showing now.
+       Composing, the frame can hold the Pad or Flip (the ⋯ menu switches), and
+       a drawing goes back only into the editor that made it: a one-page Flip
+       and a Pad drawing share a payload shape, so the payload cannot tell them
+       apart. Hosts written before v316 never see a difference: the Pad is the
+       default on both sides. */
+    var payloadEditor = 'pad';
+    var frameEditor = 'pad';
     var loaded = false;
     var open_ = false;
 
@@ -98,12 +106,14 @@
       var kind = d.type.slice(PREFIX.length);
       if (kind === 'ready') {
         loaded = true;
+        frameEditor = d.editor || 'pad';
         /* Re-editing: hand back what the draft is holding. A first open has no
            payload and sends nothing, which is what leaves the canvas blank. */
-        if (payload) post('load', { payload: payload });
+        if (payload && payloadEditor === frameEditor) post('load', { payload: payload });
         if (opts.onReady) opts.onReady();
       } else if (kind === 'done') {
         payload = d.payload;
+        payloadEditor = d.editor || 'pad';
         close();
         if (opts.onDone) opts.onDone(d.payload, d.preview, d.hasAudio);
       } else if (kind === 'cancel') {
@@ -121,7 +131,7 @@
            rule 2 does not apply yet. */
         loaded = false;
         frame.setAttribute('src', src);
-      } else if (loaded && payload) {
+      } else if (loaded && payload && payloadEditor === frameEditor) {
         /* RULE 2. Already loaded, so no second `ready` is coming; push the held
            drawing or the author reopens an empty canvas over their own work. */
         post('load', { payload: payload });
@@ -137,6 +147,7 @@
 
     function clear() {
       payload = null;
+      payloadEditor = frameEditor = 'pad';
       loaded = false;
       /* RULE 3. Drop the editor as well as the payload, so the next open starts
          blank rather than reopening the drawing just removed. */
@@ -151,7 +162,7 @@
       payload: function () { return payload; },
       /* Re-editing a Skribl already on a saved post: give the module the
          payload before the first open and `ready` will carry it in. */
-      setPayload: function (p) { payload = p || null; },
+      setPayload: function (p, editor) { payload = p || null; payloadEditor = editor || 'pad'; },
       destroy: function () {
         global.removeEventListener('message', onMessage);
         frame.setAttribute('src', BLANK);

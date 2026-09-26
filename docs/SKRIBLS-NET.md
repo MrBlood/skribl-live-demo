@@ -54,12 +54,28 @@ says so.
 3. **Render** `{{ skribl_inline_assets() }}` once in the base template's
    `<head>`, and `{{ skribl_inline(post.skribl_id, canvas_w=..., canvas_h=...) }}`
    inside `.post-media` for a post that has one.
-4. **Composer**: a Skribl button beside GIF and video that opens the Pad in
-   compose mode and fills a hidden field; the view calls
+4. **Composer**: ONE Skribl button beside GIF and video that opens the Pad in
+   compose mode (Flip is one ⋯ tap away inside it, v316) and fills a hidden
+   field; the overlay is full-screen on a phone and floats no close of its own
+   (the editor's header has one). The view calls
    `skribl.create_post()`. `hasMedia()` in `composer.js` has to count it, or a
    post that is only a drawing keeps Post disabled. If the site uses the
    `[skribl]` placement marker, `effectiveLen()` should not count it toward
    the 300 characters, as it already skips a video link.
+
+5. **Author it.** The view that publishes calls
+   `skribl.create_post(payload, author_id=<the signed-in user's id>)`, and the
+   blueprint is mounted with `current_user_id`. That id is what puts the post
+   in the author's `/library` on every device they sign in on; a post created
+   without it is anonymous and appears in nobody's Library.
+6. **Drafts must carry the drawing.** "Add to post" publishes nothing: the
+   drawing lives in the open page until Post, so an abandoned post leaves no
+   Skribl, no Library entry and no spent quota behind. The flip side is that a
+   tab closed before Post loses it, and the compose editor keeps no draft of
+   its own on purpose. `composer.js`'s Save draft sends only `body` and
+   `draft_id`; to keep an attached Skribl, the draft save has to include its
+   hidden field too, and reopening the draft has to hand it back
+   (`pad.setPayload(payload, editor)`) before the Skribl button is pressed.
 
 The player needs nothing from `media.skribls.net`: its poster and payload come
 from Skribl's own routes under the site's prefix.
