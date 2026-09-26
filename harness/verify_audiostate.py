@@ -317,6 +317,38 @@ with sync_playwright() as browser_ctx:
     check("H1 player: no source while suspended", "createBufferSource" not in ev and "start" not in ev, str(ev))
     check("H1 player: native <audio> handed the loop instead of going silent", "native-play" in ev, str(ev))
     pg.close()
+
+    # ---- v315: STOP STANDS THE HAND-OFF DOWN, on each editor. The loop
+    # engine is one copy now (lib/audioloop.js); before, Flip's fail() stood
+    # down after a Stop and Pad's did not, so Play -> Stop -> an unlock that
+    # hung or was refused started the native <audio> AFTER Stop. Reproduced on
+    # Pad (1 hand-off after Stop, both ways) before the engine moved. Both
+    # directions are pinned, so "never hand off" cannot pass for the fix: with
+    # no Stop the hand-off must still happen, exactly once.
+    STOPPED = """async (a) => {
+      const [mode, doStop] = a;
+      let rej = null;
+      audioCtx.resume = () => new Promise((_, r) => { rej = r; });
+      window.__handoff = 0;
+      startWebAudioLoop(() => { window.__handoff++; });
+      if (doStop) stopWebAudioLoop();
+      if (mode === 'reject') rej(new Error('denied'));
+      await new Promise(r => setTimeout(r, 900));      // past the 600 ms unlock timeout
+      return window.__handoff; }"""
+    for _route in ("/", "/flip"):
+        pg = b.new_page(viewport={"width": 1280, "height": 900})
+        pg.add_init_script(HANG)
+        pg.goto(BASE + _route, wait_until="load"); pg.wait_for_timeout(700)
+        pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
+        pg.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer"
+                             " && typeof audioCtx !== 'undefined' && !!audioCtx", timeout=20000)
+        _got = {(m, st): pg.evaluate(STOPPED, [m, st]) for m in ("hang", "reject") for st in (True, False)}
+        _name = "Pad" if _route == "/" else "Flip"
+        check(f"v315 {_name}: after Stop, neither a hung nor a refused unlock hands off to native <audio>",
+              _got[("hang", True)] == 0 and _got[("reject", True)] == 0, str(_got))
+        check(f"v315 {_name}: with no Stop, each hands off exactly once",
+              _got[("hang", False)] == 1 and _got[("reject", False)] == 1, str(_got))
+        pg.close()
     b.close()
 
 # ---- v211: v210 review F2 — the crop/decode readiness race, both editors.
