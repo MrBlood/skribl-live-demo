@@ -555,7 +555,33 @@ def register_security(bp, skribl_version, player_target="_blank"):
             header = ("Content-Security-Policy-Report-Only"
                       if csp_mode == "report-only" else "Content-Security-Policy")
             resp.headers.setdefault(header, policy)
+            # Remembered so the last-word hook below can put it back.
+            g.skribl_csp = (header, policy)
         return resp
+
+    # SKRIBL'S PAGES CARRY SKRIBL'S POLICY, EVEN UNDER A HOST THAT SETS ITS OWN
+    # (v316, a from-scratch host running Flask-Talisman with its defaults).
+    # The blueprint's after_request runs BEFORE the app's, so setdefault above
+    # lost to any host handler that writes the header unconditionally: the
+    # host's generic `default-src 'self'` replaced it on the editor, which
+    # blocked Skribl's nonced inline scripts, its inline styles and its data:
+    # images, and nothing could be posted. A host policy that does not know
+    # Skribl's per-request nonce cannot work on these pages, so on responses
+    # from THIS blueprint Skribl has the last word: a hook placed FIRST in the
+    # app's after_request list, which Flask runs in reverse, so it runs after
+    # every host handler whenever the host registered it. Only an enforcing
+    # policy is reasserted (report-only never overrides a host's enforcement),
+    # only on Skribl's own endpoints, and SKRIBL_CSP=off hands the header back
+    # to the host entirely. Other headers the host sets are left alone.
+    def _reassert_csp(resp):
+        mine = getattr(g, "skribl_csp", None)
+        if mine and mine[0] == "Content-Security-Policy" and request.blueprint == bp.name:
+            resp.headers["Content-Security-Policy"] = mine[1]
+        return resp
+
+    @bp.record_once
+    def _install_last_word(state):
+        state.app.after_request_funcs.setdefault(None, []).insert(0, _reassert_csp)
 
 
 def install_standalone_security(app):

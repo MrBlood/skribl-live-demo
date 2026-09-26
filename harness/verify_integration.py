@@ -228,6 +228,45 @@ if _have_wtf and _wm:
           _yes.status_code == 201 and _no.status_code in (400, 403),
           f"with token {_yes.status_code}, without {_no.status_code}")
 
+# A host that sets its OWN Content-Security-Policy on every response (Flask-
+# Talisman's default does, `default-src 'self'`) replaced Skribl's on Skribl's
+# pages: its after_request runs after the blueprint's, and Skribl only
+# setdefault()s. The editor's nonced inline scripts, inline styles and data:
+# images were all blocked and nothing could be posted (v316, a from-scratch
+# host). Skribl now has the last word on its OWN pages and none on the host's.
+# Emulated with a plain handler rather than Talisman, registered both BEFORE
+# and AFTER Skribl is mounted: which one runs last depends on that order.
+print("\nINTEGRATION — Skribl's pages keep Skribl's CSP under a host that sets its own")
+HOST_CSP = "default-src 'self'; object-src 'none'"
+for _when in ("before", "after"):
+    _capp = Flask("csp_host_" + _when)
+    _capp.config.update(SQLALCHEMY_DATABASE_URI="sqlite:///:memory:", SECRET_KEY="k")
+    _cdb = SQLAlchemy(_capp)
+    skribl.models.attach_to_metadata(_cdb.metadata)
+
+    def _host_csp(resp):
+        resp.headers["Content-Security-Policy"] = HOST_CSP
+        return resp
+    if _when == "before":
+        _capp.after_request(_host_csp)
+    skribl.init_skribl(_capp, session=lambda: _cdb.session, url_prefix="/skribl")
+    if _when == "after":
+        _capp.after_request(_host_csp)
+
+    @_capp.route("/")
+    def _chome():
+        return "host"
+    with _capp.app_context():
+        _cdb.create_all()
+    _cc = _capp.test_client()
+    _pr = _cc.get("/skribl/skribl-pad")
+    _pcsp = _pr.headers.get("Content-Security-Policy", "")
+    _nm = _re.search(r'nonce="([^"]+)"', _pr.get_data(as_text=True))
+    check(f"host handler registered {_when} Skribl: the editor carries Skribl's policy, with the page's nonce",
+          bool(_nm) and f"'nonce-{_nm.group(1)}'" in _pcsp and _pcsp != HOST_CSP, _pcsp[:90])
+    check(f"host handler registered {_when} Skribl: the host's own page keeps the host's policy",
+          _cc.get("/").headers.get("Content-Security-Policy") == HOST_CSP)
+
 print("\nINTEGRATION — the host owns the schema")
 # attach_to_metadata is the ONLY thing that makes a host's db.create_all() see
 # Skribl's tables; without it the integrator gets zero tables and no error.

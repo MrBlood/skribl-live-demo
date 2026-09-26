@@ -1010,6 +1010,32 @@ approaches:
 
 Do not do both for the same tables.
 
+## Your site's security headers
+
+**Skribl's pages carry Skribl's Content-Security-Policy, even when your site
+sets its own; your pages keep yours.** A site-wide policy such as Flask-
+Talisman's default (`default-src 'self'`) cannot work on Skribl's pages: they
+need a per-request nonce for their inline scripts, inline style attributes,
+and `data:`/`blob:` for images, audio and fetches. Before v316 a host handler
+that wrote the header unconditionally replaced Skribl's, and the editor could
+not post at all. Now Skribl reasserts its own enforcing policy on responses
+from its own endpoints, after every host handler, whichever order you
+registered them in. It touches nothing else: your other headers, and every
+page that is not Skribl's, stay exactly as your site sets them.
+
+If you must own the header on Skribl's pages too, set `SKRIBL_CSP=off` and
+write a policy that includes Skribl's nonce, which is `g.csp_nonce` for the
+request. `SKRIBL_CSP=report-only` never overrides an enforcing policy of yours.
+
+One more header to know: Talisman also sends `X-Frame-Options: SAMEORIGIN`,
+which stops another origin framing the player. Skribl deliberately sends no
+frame restriction on the player page (`SKRIBL_EMBED_ORIGINS` names who may
+embed it), so if you embed `/s/<id>` from a different origin, exempt that
+page from your framing header.
+
+`verify_integration.py` pins the precedence with a host handler registered
+before and after Skribl is mounted.
+
 ## Configuration
 
 The `SKRIBL_*` environment variables cover ceilings (frames, points, canvas
