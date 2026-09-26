@@ -424,6 +424,51 @@ with sync_playwright() as p:
           "the page's life, and a stale flag must not fake the recovery")
     pg.close()
 
+    # ---- 7. THE EDITORS' OWN PLAY BUTTON (v315, owner's iPhone) ----------
+    # Preview Loop claimed the session; Play, on either editor, did not. So on
+    # a phone set to silent, Preview Loop was heard and Play's music was not --
+    # found by the owner, with every suite green, because nothing asked. Play
+    # with music must hold the session and Stop must let it go; Play with no
+    # music has nothing to be heard and must not claim (a lock-screen entry
+    # for silence).
+    print("\n7 — THE EDITORS' PLAY HOLDS THE SESSION WHEN THERE IS MUSIC")
+    for editor, route, play_id in (("Pad", "/", "playBtn"), ("Flip", "/flip", "play")):
+        for music in (True, False):
+            pg = b.new_page(viewport={"width": 1280, "height": 900})
+            pg.add_init_script(AS_IPHONE)
+            pg.goto(BASE + route, wait_until="load"); pg.wait_for_timeout(800)
+            pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            if music:
+                pg.set_input_files("#musicInput", {"name": "m.wav", "mimeType": "audio/wav", "buffer": AUD})
+                pg.wait_for_function("() => typeof audioEl !== 'undefined' && !!audioEl", timeout=20000)
+                pg.wait_for_timeout(500)
+            if editor == "Pad":
+                scribble(pg, pg.locator("#canvas").bounding_box(), n=40)
+                # Drawing starts a take and Play is ignored mid-take; end it,
+                # as a person does before pressing Play.
+                pg.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }")
+                pg.wait_for_timeout(300)
+            else:
+                scribble(pg, pg.locator("#pad").bounding_box(), n=20)
+                pg.evaluate("() => addFrame()")
+                scribble(pg, pg.locator("#pad").bounding_box(), n=20)
+            before = pg.evaluate("() => window.SkriblAudioSession.active()")
+            # The music drawer can sit over Play after a file is added; the
+            # button's own click handler is what is under test, not the layout.
+            pg.evaluate("(id) => document.getElementById(id).click()", play_id); pg.wait_for_timeout(500)
+            during = pg.evaluate("() => window.SkriblAudioSession.active()")
+            pg.evaluate("(id) => document.getElementById(id).click()", play_id); pg.wait_for_timeout(400)
+            after = pg.evaluate("() => window.SkriblAudioSession.active()")
+            tag = f"{editor} Play {'with' if music else 'without'} music"
+            if music:
+                check(f"{tag}: holds the session while playing, and Stop releases it",
+                      before is False and during is True and after is False,
+                      f"before {before}, during {during}, after {after}")
+            else:
+                check(f"{tag}: never claims it (nothing to be heard)",
+                      during is False and after is False, f"during {during}, after {after}")
+            pg.close()
+
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

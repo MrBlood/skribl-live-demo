@@ -1505,6 +1505,9 @@ function stopPlayback() {
   playBtn.classList.remove('playing');
   if (audioEl) audioEl.pause();
   if (typeof stopWebAudioLoop === 'function') stopWebAudioLoop();
+  // Play's hold on the iOS playback session ends here -- unless Preview Loop
+  // is running, which still wants it.
+  if (!previewingLoop && window.SkriblAudioSession) window.SkriblAudioSession.release();
   hideEditorNib();
   hideScrub();
   document.body.classList.remove('replaying');
@@ -1704,6 +1707,12 @@ playBtn.addEventListener('click', () => {
   unlockWebAudio();   // F3: inside the gesture — clearAndRestore below may not
                       // call back until an Image decode has resolved, long
                       // after iOS stops treating this as a user activation.
+  // THE SILENT SWITCH. iOS mutes Web Audio while the ringer switch is off
+  // unless a playback session is held (lib/audiosession.js). Preview Loop
+  // claimed it and Play did not, so on a phone set to silent the take played
+  // without its music while Preview Loop was heard (owner, v315). Claimed on
+  // this tap, only when there is music; stopPlayback() releases it.
+  if (audioEl && window.SkriblAudioSession) window.SkriblAudioSession.claim();
   playing = true;
   playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>';
   playBtn.classList.add('playing');
@@ -2329,7 +2338,8 @@ function stopPreviewLoopAudio() {
 
 function stopLoopPreview() {
   previewingLoop = false;
-  if (window.SkriblAudioSession) window.SkriblAudioSession.release();
+  // Guarded on `playing`, as Flip's is: Play's own music still needs it.
+  if (!playing && window.SkriblAudioSession) window.SkriblAudioSession.release();
   if (audioEl) audioEl.pause();
   if (previewLoopTimer) clearInterval(previewLoopTimer);
   stopSeamTest();

@@ -4273,9 +4273,14 @@ function removeMusic(){ musicSelectionSeq++; if(typeof stopLoopPreview==='functi
   syncMediaUI(); scheduleSave(); }
 function startMusicNative(){ ensureAudio(); if(audioEl){ try{ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}} }
 function startMusic(){ if(!musicEnabled || musicMuted) return;
+  // The silent switch (lib/audiosession.js): Preview Loop held the iOS playback
+  // session and Flip it did not, so a phone set to silent played the animation
+  // without its music (owner, v315). Every caller is a tap or a key.
+  if(musicData && window.SkriblAudioSession) window.SkriblAudioSession.claim();   // only when there is something to hear
   if(startWebAudioLoop(startMusicNative)) return;               // gapless path; native reachable on async unlock failure
   startMusicNative(); }
-function stopMusic(){ stopWebAudioLoop(); if(audioEl){ try{ audioEl.pause(); }catch(_){}} }
+function stopMusic(){ stopWebAudioLoop(); if(audioEl){ try{ audioEl.pause(); }catch(_){}}
+  if(!previewingLoop && window.SkriblAudioSession) window.SkriblAudioSession.release(); }
 musicInput.addEventListener('change',async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value='';
   const _seq=++musicSelectionSeq; if(!file) return;
   const _de=await skriblDecodeCheckAudio(file);
