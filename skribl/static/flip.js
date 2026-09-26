@@ -4292,51 +4292,24 @@ musicInput.addEventListener('change',async e=>{ const file=e.target.files&&e.tar
    loop=true — scheduled on the audio hardware clock, so it's sample-accurate and
    never clicks or drifts. With a crossfade set, the loop's tail is equal-power
    folded over its head so the wrap is two originally-adjacent samples (smooth). */
-let _waLoopSource=null, _waLoopStartCtx=0, _waLoopDuration=0;
 function buildLoopChannels(buffer, startFrame, frames, xfadeFrames) { return window.SkriblAudioLoop.buildLoopChannels(buffer, startFrame, frames, xfadeFrames); }
 function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBuffer({ currentAudioBuffer: currentAudioBuffer, audioCtx: audioCtx, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs }); }
 // Crop to the loop for posting (same encoder the Pad uses). Post-only — the
 // draft keeps the full sample so the loop can still be re-trimmed.
 function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopWav({ currentAudioBuffer: currentAudioBuffer, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs }); }
-// v211 (v210 review F1): Flip kept the PRE-FIX shape Pad moved away from —
-// fire-and-forget resume(), then construct and start a source on a context
-// that may still be suspended, and return true, which suppressed the callers'
-// native <audio> fallback. A source object existing is not proof of sound;
-// this exact class is what silenced shared links on the owner's iPhone. Same
-// contract as Pad now: no source is constructed until the context reports
-// 'running'; a generation counter stops a late start after Stop; and when
-// the unlock rejects, never settles (iOS leaves resume() pending), or lands
-// on a context that still isn't running, `onFail` fires so the caller can
-// hand off to native <audio> ASYNCHRONOUSLY. Returns true meaning "the Web
-// Audio path was taken and will either play or call onFail" — never "sound".
-let _waGen=0;
-function stopWebAudioLoop(){ _waGen++; if(_waLoopSource){ try{_waLoopSource.stop();}catch(e){} try{_waLoopSource.disconnect();}catch(e){} _waLoopSource=null; } }
+// The engine -- unlock, no source before 'running', the generation counter,
+// the hand-off to native <audio> -- is lib/audioloop.js's, shared with Pad and
+// the player (v315). Flip's copy lacked Pad's gesture-captured unlock; Pad's
+// lacked Flip's stand-down after Stop. The header there has the history.
+const _waLoop=window.SkriblAudioLoop.engine({ ctx:()=>audioCtx, build:buildLoopAudioBuffer });
+function stopWebAudioLoop(){ _waLoop.stop(); }
 function startWebAudioLoop(onFail){
   if(!audioCtx || !currentAudioBuffer) return false;
-  const buf=buildLoopAudioBuffer(); if(!buf) return false;
-  stopWebAudioLoop();
-  const gen=++_waGen;
-  const go=()=>{
-    if(gen!==_waGen || !audioCtx || audioCtx.state!=='running') return false;
-    const src=audioCtx.createBufferSource(); src.buffer=buf; src.loop=true; src.loopStart=0; src.loopEnd=buf.duration;
-    src.connect(audioCtx.destination);
-    try{ src.start(); }catch(e){ return false; }
-    _waLoopSource=src; _waLoopStartCtx=audioCtx.currentTime; _waLoopDuration=buf.duration; return true;
-  };
-  const fail=(why)=>{ if(gen!==_waGen) return; _waGen++; if(onFail){ const f=onFail; onFail=null; console.warn('skribl: web audio unavailable — '+why); f(); } };
-  if(audioCtx.state==='running') return go();
-  let p=null; try{ p=audioCtx.resume(); }catch(e){ fail('resume threw'); return false; }
-  if(p && p.then){
-    let settled=false;
-    p.then(()=>{ settled=true; if(!go()) fail('context not running after resume'); },
-           (e)=>{ settled=true; fail('resume rejected: '+((e&&e.message)||e)); });
-    setTimeout(()=>{ if(!settled && !_waLoopSource) fail('resume never settled'); }, 600);
-  } else if(!go()){ fail('synchronous resume did not reach running'); return false; }
-  return true;
+  return _waLoop.start(onFail);
 }
 // Current playback position inside [trimStart,trimEnd], whichever engine is live.
 function loopPosition(){
-  if(_waLoopSource && _waLoopDuration>0 && audioCtx){ const e=((audioCtx.currentTime-_waLoopStartCtx)%_waLoopDuration); return trimStart+e; }
+  if(_waLoop.playing() && _waLoop.duration()>0 && audioCtx) return trimStart+_waLoop.elapsed();
   if(audioEl) return audioEl.currentTime;
   return trimStart;
 }
@@ -5237,7 +5210,7 @@ function setCrossfadeUI(){ const s=document.getElementById('crossfadeSlider'), v
     dragZoomPan(zoomWrap); }
   const finePanel=document.querySelector('.finetune-panel'); const cfRow=document.createElement('div'); cfRow.className='crossfade-row'; cfRow.innerHTML='<span class="crossfade-label">Crossfade</span><input type="range" id="crossfadeSlider" class="slider" min="0" max="500" value="0" step="5" aria-label="Loop crossfade length"><span class="crossfade-val" id="crossfadeVal">Off</span>';
   if(finePanel) finePanel.insertAdjacentElement('afterend', cfRow);
-  const cf=document.getElementById('crossfadeSlider'); if(cf){ cf.addEventListener('input',()=>{ loopCrossfadeMs=parseInt(cf.value,10)||0; setCrossfadeUI(); updateTrimUI(); scheduleSave(); if((previewingLoop&&_previewWA)||_waLoopSource) startWebAudioLoop(); }); addSliderNudgers(cf,{step:5}); setCrossfadeUI(); }
+  const cf=document.getElementById('crossfadeSlider'); if(cf){ cf.addEventListener('input',()=>{ loopCrossfadeMs=parseInt(cf.value,10)||0; setCrossfadeUI(); updateTrimUI(); scheduleSave(); if((previewingLoop&&_previewWA)||_waLoop.playing()) startWebAudioLoop(); }); addSliderNudgers(cf,{step:5}); setCrossfadeUI(); }
 })();
 
 // upload / toggle / remove

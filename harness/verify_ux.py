@@ -1850,8 +1850,14 @@ check("A1's unreachable retry is not reintroduced",
 check("player audio only constructs a source on a RUNNING context",
       "audioCtx.state !== 'running') return false;" in _appjs
       and "createBufferSource" in _appjs)
+# The editor loop engine is lib/audioloop.js's since v315 (one copy for Pad,
+# Flip and the player), so the rule is read THERE, and app.js must use it --
+# a pin on app.js's text alone would pass on an engine nobody calls.
+_loopjs = source.read_js(ROOT / "skribl" / "static" / "lib" / "audioloop.js")
 check("the editor loop applies the same rule",
-      "if (audioCtx.state === 'running') return go();" in _appjs)
+      "if (ctx.state === 'running') return go();" in _loopjs
+      and "c.state !== 'running') return false;" in _loopjs
+      and "SkriblAudioLoop.engine(" in _appjs)
 check("a failed unlock hands off to native audio instead of claiming success",
       "onFail" in _appjs and "playNativeLooped" in _appjs
       and "startLoopPreviewNative" in _appjs)

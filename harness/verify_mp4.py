@@ -177,6 +177,78 @@ with sync_playwright() as p:
           str(types))
     check("no page errors during the export", not errors, "; ".join(errors[:2]))
 
+    # ---- THE EDITORS' OWN EXPORT, clicked, on each editor (v315). ----------
+    # Everything above drives the vendored muxer with synthetic frames. NEITHER
+    # editor's exportViaWebCodecsMp4 had ever run anywhere: the sandbox has no
+    # WebCodecs, and this suite did not call it. So the real button is pressed
+    # on each editor and the file it hands to the download is inspected --
+    # captured at URL.createObjectURL, which both editors' downloads go
+    # through. video/mp4 (not the WebM fallback) proves the WebCodecs path was
+    # taken; the boxes prove the file is a streamable MP4 with one video track.
+    CAPTURE = """
+      window.__exports = [];
+      const _mk = URL.createObjectURL.bind(URL);
+      URL.createObjectURL = function (obj) {
+        if (obj && obj.type && obj.type.indexOf('video/') === 0) window.__exports.push(obj);
+        return _mk(obj);
+      };"""
+    INSPECT = """async () => {
+        const blob = window.__exports[window.__exports.length - 1];
+        const buf = new Uint8Array(await blob.arrayBuffer()), dv = new DataView(buf.buffer);
+        const boxes = []; let off = 0, moov = null;
+        while (off + 8 <= buf.length && boxes.length < 24) {
+            const size = dv.getUint32(off);
+            const type = String.fromCharCode(buf[off+4], buf[off+5], buf[off+6], buf[off+7]);
+            boxes.push({type, size}); if (type === 'moov') moov = buf.subarray(off, off + size);
+            if (size < 8) break; off += size;
+        }
+        let traks = 0;
+        if (moov) for (let i = 0; i + 4 <= moov.length; i++)
+            if (moov[i] === 0x74 && moov[i+1] === 0x72 && moov[i+2] === 0x61 && moov[i+3] === 0x6b) traks++;
+        return {type: blob.type, bytes: buf.length, boxes, traks}; }"""
+
+    def _draw(pg, sel, x0, y0, n=24):
+        box = pg.locator(sel).bounding_box()
+        pg.mouse.move(box["x"] + x0, box["y"] + y0); pg.mouse.down()
+        for i in range(n):
+            pg.mouse.move(box["x"] + x0 + i * 6, box["y"] + y0 + (i % 5) * 8)
+            pg.wait_for_timeout(15)
+        pg.mouse.up()
+
+    for editor in ("Pad", "Flip"):
+        pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        perrs = []
+        pg.on("pageerror", lambda e: perrs.append(str(e)))
+        pg.add_init_script(CAPTURE)
+        if editor == "Pad":
+            browsing.goto(pg, BASE, "/")
+            _draw(pg, "#canvas", 80, 80)
+            pg.evaluate("() => document.getElementById('exportItem').click()")
+        else:
+            browsing.goto(pg, BASE, "/flip")
+            for i in range(3):
+                if i: pg.evaluate("() => addFrame()")
+                _draw(pg, "#pad", 90 + i * 15, 100)
+            pg.evaluate("() => openExportSheet()")
+        pg.wait_for_timeout(1200)
+        pg.evaluate("() => document.getElementById('exportVideo').click()")
+        try:
+            pg.wait_for_function("() => window.__exports.length > 0", timeout=90000)
+            got = pg.evaluate(INSPECT)
+        except Exception as e:
+            got = {"type": None, "bytes": 0, "boxes": [], "traks": 0, "error": str(e)[:160]}
+        types = [b["type"] for b in got["boxes"]]
+        check(f"{editor}: the Video button produced an MP4, not the WebM fallback",
+              got["type"] == "video/mp4", f"{got.get('type')} {got.get('error', '')}")
+        check(f"{editor}: ftyp first, moov before mdat (streamable), boxes tile the file",
+              types[:1] == ["ftyp"] and "moov" in types and "mdat" in types
+              and types.index("moov") < types.index("mdat")
+              and sum(b["size"] for b in got["boxes"]) == got["bytes"], f"{types} {got['bytes']} B")
+        check(f"{editor}: one video track, and the file is not a stub",
+              got["traks"] == 1 and got["bytes"] > 4096, f"{got['traks']} trak, {got['bytes']} B")
+        check(f"{editor}: no page errors during its export", not perrs, "; ".join(perrs[:2]))
+        pg.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

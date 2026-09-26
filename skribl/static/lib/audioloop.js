@@ -180,7 +180,122 @@
              duration: lc.frames / lc.sampleRate };
   }
 
+  /* THE LIVE LOOP ENGINE: one for Pad, Flip and the player (SK312-003, v315).
+   *
+   * Plays the trimmed loop as an AudioBufferSourceNode with loop=true, on the
+   * audio hardware clock, so the wrap is gapless and never drifts. It was
+   * written out in app.js and flip.js, and each copy had a fix the other
+   * lacked, which is the cost this exists to end:
+   *
+   *   - Pad kept the resume() promise captured INSIDE the click gesture
+   *     (unlock), because its Play reaches start() from an Image.onload after
+   *     the gesture has returned; iOS then reports 'suspended' and a fresh
+   *     resume() out of the gesture never unlocks. Flip did not.
+   *   - Flip's fail() stood down when a Stop had come in between; Pad's did not,
+   *     so Play -> Stop -> an unlock that hung (iOS) or was refused handed off
+   *     to native <audio> and STARTED THE MUSIC AFTER STOP. Reproduced on Pad
+   *     before this file carried the engine; verify_audiosession pins it.
+   *   - Pad matched a sped-up preview's rate; Flip had no rate.
+   *
+   * THE CONTRACT (v209/v210 reviews): no source is built until the context
+   * reports 'running' -- a source begun on a suspended or closed context is
+   * silence that reports success; a generation counter stops a late start
+   * after stop(); and when the unlock rejects, never settles, or lands on a
+   * context that still is not running, onFail fires ONCE so the caller can hand
+   * off to native <audio>. start() returning true means "the Web Audio path was
+   * taken and will either play or call onFail" -- never "sound".
+   *
+   * o: { ctx: () => AudioContext|null, build: () => AudioBuffer|null,
+   *      rate: () => number (optional; 1 when absent) } */
+  function engine(o) {
+    var source = null, startCtx = 0, duration = 0, gen = 0, pendingUnlock = null;
+
+    function unlock() {
+      var ctx = o.ctx();
+      if (!ctx || ctx.state !== 'suspended') return null;
+      try { var p = ctx.resume(); return (pendingUnlock = (p && p.then) ? p : null); }
+      catch (e) { console.warn('skribl: resume threw', e); return null; }
+    }
+
+    function stop() {
+      // Generation FIRST (v209 review F1): a stop during an unlock must not be
+      // overtaken by a late start, and a stale promise from an earlier Play
+      // must not stand in for the next one's unlock.
+      gen++;
+      pendingUnlock = null;
+      if (source) {
+        try { source.stop(); } catch (e) {}
+        try { source.disconnect(); } catch (e) {}
+        source = null;
+      }
+    }
+
+    function start(onFail) {
+      var ctx = o.ctx();
+      if (!ctx) return false;
+      var buf = o.build();
+      if (!buf) return false;
+      // Take the gesture-captured unlock BEFORE stop(), which clears it.
+      var pending = pendingUnlock;
+      stop();
+      var mine = ++gen;
+      function go() {
+        var c = o.ctx();
+        if (mine !== gen || !c || c.state !== 'running') return false;
+        var src = c.createBufferSource();
+        src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = buf.duration;
+        // A sped-up preview keeps the music in lockstep (it pitch-shifts,
+        // which beats a take drifting out of sync). Preview only: the posted
+        // clip and the export are untouched.
+        try { src.playbackRate.value = o.rate ? o.rate() : 1; } catch (e) {}
+        src.connect(c.destination);
+        try { src.start(); } catch (e) { return false; }
+        source = src; startCtx = c.currentTime; duration = buf.duration;
+        return true;
+      }
+      function fail(why) {
+        if (mine !== gen) return;        // a stop or a newer start came in: stand down
+        gen++;                           // nothing from this attempt may start later
+        if (onFail) { var f = onFail; onFail = null; console.warn('skribl: web audio unavailable — ' + why); f(); }
+      }
+      if (ctx.state === 'running') return go();
+      // Suspended: prefer the promise captured in the gesture; with none,
+      // resume here (still inside the gesture for a synchronous caller).
+      // Consumed either way -- a promise that resolved for an earlier play
+      // says nothing about a context iOS has since re-suspended.
+      var p = pending || unlock();
+      pendingUnlock = null;
+      if (p && p.then) {
+        var settled = false;
+        p.then(function () { settled = true; if (!go()) fail('context not running after resume'); },
+               function (e) { settled = true; fail('resume rejected: ' + ((e && e.message) || e)); });
+        // iOS can leave resume() pending forever rather than rejecting.
+        setTimeout(function () { if (!settled && !source) fail('resume never settled'); }, 600);
+      } else if (p) {
+        if (!go()) fail('synchronous resume did not reach running');
+      } else {
+        fail('no AudioContext resume available');
+        return false;
+      }
+      return true;
+    }
+
+    return {
+      start: start, stop: stop, unlock: unlock,
+      playing: function () { return !!source; },
+      source: function () { return source; },
+      duration: function () { return duration; },
+      // Seconds into the loop clip, by the audio clock; add trimStart for song time.
+      elapsed: function () {
+        var c = o.ctx();
+        if (!c || duration <= 0) return 0;
+        return (c.currentTime - startCtx) % duration;
+      }
+    };
+  }
+
   global.SkriblAudioLoop = {
+    engine: engine,
     buildLoopChannels: buildLoopChannels,
     buildLoopAudioBuffer: buildLoopAudioBuffer,
     audioBufferToWavDataURL: audioBufferToWavDataURL,
