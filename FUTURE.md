@@ -134,18 +134,28 @@ the music drawer's loop-detail pan (`dragZoomPan`) lives in `editor_photo.js`,
 not `editor_music.js`. The canvas zoom and pinch copies are also where the two
 editors' event families met (Pad bound mouse and touch, Flip Pointer Events).
 Pad's canvas moved onto Pointer Events in v315 (SK312-002) with the pinch left
-on touch events as Flip's is, and the same release merged the magnifier:
-`lib/canvaszoom.js` is now the one zoom/pan/HUD/grip/wheel/Space-drag for both
-editors (Pad's copy as the base), which also took it out of the player's
-download. The pinch pair (`beginPinch`, `_pinchMove`) is the remaining copy
-in that corner; `harness/tools/editordup.py` lists what else is left.
+on touch events as Flip's is.
+
+**THE LIST ABOVE IS THE v312 MEASUREMENT, AND v315 CLOSED MOST OF IT.** Each
+of these is now one copy, in a module both editors call: the magnifier and
+pinch (`lib/canvaszoom.js`), the music trim drags (`lib/dragtrack.js`), the
+loop view and the waveform strip (`lib/loopwave.js`), the re-add cards
+(`lib/pendingcards.js`), the paint target and drawer pills
+(`lib/painttarget.js`), grid density (`lib/gridoverlay.js`), the live loop
+engine (`lib/audioloop.js`, which the player shares) and the MP4 encoder
+(`lib/mp4export.js`). Three of those merges found a bug that one editor had and
+the other did not -- the reason this section exists -- and each is pinned on
+both routes. What `harness/tools/editordup.py` still pairs is mostly small, or
+differs on purpose: the two editors draw different things (a stroke timeline
+against pages), and a shared function that had to know both would be worse than
+two short ones.
 
 The v142–v174 work moved eight modules into `static/lib/` (`canvassizes`,
 `posted`, `postedui`, `report`, `segslider`, `tooltip`, `hints`, `helpsearch`),
-and later releases moved the five named above. **That is the pattern to
-continue**, and the music drawer is the next and largest candidate. A small
-same-named pair is often legitimate glue around a shared module. The tool's
-`--min-tokens` floor exists so that glue is not counted as debt.
+and later releases moved the rest named above. A small same-named pair is often
+legitimate glue around a shared module; the tool's `--min-tokens` floor exists
+so that glue is not counted as debt. **Resume only for a named cost** -- a bug
+fixed in one copy and not the other is the signal -- not to move the number.
 
 ---
 
