@@ -1295,6 +1295,11 @@
     }
 
     el.addEventListener('click', function (e) {
+      /* A tap on the player is the player's. skribls.net makes a whole post a
+         link (article[data-href]) and exempts only a, button, video, audio and
+         .video-embed; this box is a div, so the tap started playback and then
+         navigated to the post page (v316, the real profile page). */
+      e.stopPropagation();
       if (muteBtn && muteBtn.contains(e.target)) return;
       if (state === 'playing') pause(); else play();
     });

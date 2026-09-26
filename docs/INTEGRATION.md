@@ -11,6 +11,9 @@ right.
 
 The planning record that used to live here was retired in the v263 cleanup; it lives in git history.
 
+Mounting into skribls.net specifically: `docs/SKRIBLS-NET.md` records what the
+real site's pages showed and the four changes it needs.
+
 ---
 
 ## The smallest thing that works
@@ -191,6 +194,26 @@ controls, and only two — no scrub, no speed, no frame-step; those live on
 
 One Skribl plays at a time, page-wide. Scrolling a playing post out of view
 settles it. A post whose payload will not load says so rather than sitting dead.
+
+**Posts you add after the page loads need one call.** The player mounts every
+`skribl_inline` box once, when the page loads. A feed that appends posts later
+(infinite scroll, "show new posts", a live update) has to mount the new ones:
+
+```js
+SkriblInline.mount(container);   // after inserting the new posts
+```
+
+It is safe to call again on the same boxes: one already mounted keeps its
+player, so passing the whole feed or `document` is fine. Mount after the posts
+are in the page, not while they sit in a detached fragment. On skribls.net that
+is one line in `infinitescroll.js`, beside the site's own `skriblEnhance` and
+`skriblObserveVideos` calls after `insertBefore`. Without it a Skribl on page
+two looks right, from its server-rendered poster, and does nothing when tapped.
+
+**Tapping the player never reaches your post's own link.** A feed that makes
+the whole post clickable (skribls.net's `article[data-href]`) keeps working:
+the player stops its own clicks, so a tap plays the drawing and stays on the
+page. Links and buttons elsewhere in the post are untouched.
 
 **Three things to know before you wire it up.**
 

@@ -1748,6 +1748,57 @@ if _spw:
         _s = _pg.evaluate(_SHAPE, _untitled)
         check("...and neither does the Untitled Skribl default",
               _s == ["TEXT:Words only.", "PLAYER"], str(_s))
+
+        # A TAP ON THE PLAYER IS THE PLAYER'S (v316). skribls.net makes a
+        # whole post a link: article[data-href] navigates on any click whose
+        # target is not inside a, button, label, .actions, video, audio or
+        # .video-embed. The player's box is a div, so on the real profile page
+        # a tap started playback and then left for /post/<n>. The host's rule
+        # is copied here onto the post the player sits in, and a real click
+        # (not a scripted one) goes to the box's centre.
+        print("\nIN-POST — a tap plays in place under a host that makes the whole post a link")
+        _pg.evaluate("""(id) => { const box = document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]');
+            const card = box.parentElement; window.__cardNav = 0;
+            card.addEventListener('click', (e) => {
+              if (e.target.closest('a, button, label, .actions, video, audio, .video-embed')) return;
+              window.__cardNav++; }); }""", _plain)
+        _pb = _pg.locator('.skribl-inline[data-skribl-id="' + _plain + '"]').first
+        _pb.scroll_into_view_if_needed()
+        _bb = _pb.bounding_box()
+        _pg.mouse.click(_bb["x"] + _bb["width"] / 2, _bb["y"] + _bb["height"] / 2)
+        _pg.wait_for_timeout(900)
+        _tap = _pg.evaluate("""(id) => ({ nav: window.__cardNav,
+            cls: document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]').className })""", _plain)
+        check("the tap starts the drawing and never reaches the post's own link",
+              _tap["nav"] == 0 and ("is-playing" in _tap["cls"] or "is-loading" in _tap["cls"]), str(_tap))
+
+        # POSTS ADDED AFTER LOAD (v316). skribls.net's infinite scroll appends
+        # server-rendered posts to the feed; the player mounts once, at load, so
+        # a Skribl on page two showed its poster and did nothing when tapped.
+        # docs/INTEGRATION.md now tells a host to call SkriblInline.mount() after
+        # inserting; this does what that host does: clone a posted box as fresh
+        # markup, insert it, mount, tap it for real. And mount() again over the
+        # whole page must not give any box a second player.
+        print("\nIN-POST — a post added after the page loaded plays once mounted, and re-mounting is safe")
+        _before = _pg.evaluate("() => SkriblInline.players().length")
+        _pg.evaluate("""(id) => { const src = document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]');
+            const tmp = document.createElement('div'); tmp.innerHTML = src.outerHTML;
+            const box = tmp.firstElementChild; box.classList.remove('is-playing', 'is-paused', 'is-loading');
+            box.id = 'lateSkribl'; const host = document.createElement('article');
+            host.appendChild(box); src.parentElement.parentElement.appendChild(host); }""", _derived)
+        _unmounted = _pg.evaluate("() => SkriblInline.players().length")
+        _pg.evaluate("() => { SkriblInline.mount(document); SkriblInline.mount(document); }")
+        _after = _pg.evaluate("() => SkriblInline.players().length")
+        _lb = _pg.locator("#lateSkribl")
+        _lb.scroll_into_view_if_needed()
+        _lbb = _lb.bounding_box()
+        _pg.mouse.click(_lbb["x"] + _lbb["width"] / 2, _lbb["y"] + _lbb["height"] / 2)
+        _pg.wait_for_timeout(900)
+        _lcls = _pg.evaluate("() => document.getElementById('lateSkribl').className")
+        check("mount() picks up the new box once, and calling it twice adds nothing more",
+              _unmounted == _before and _after == _before + 1, f"before {_before}, inserted {_unmounted}, after two mounts {_after}")
+        check("...and the late post plays when tapped",
+              "is-playing" in _lcls or "is-loading" in _lcls, _lcls)
         _b.close()
 
 
