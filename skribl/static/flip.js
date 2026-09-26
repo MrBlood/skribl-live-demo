@@ -5185,44 +5185,32 @@ function drawZoomWaveform(){
 }
 
 function dragHandle(handle, isStart){
-  function cx(e){ return SkriblEventPoint.at(e).clientX; }
-  function onStart(e){ e.preventDefault(); handle.classList.add('dragging');
-    function onMove(ev){ const rect=musicTrack.getBoundingClientRect(); let pct=(cx(ev)-rect.left)/rect.width; pct=Math.max(0,Math.min(1,pct)); const time=pct*audioDuration;
-      // Shared with Pad via lib/looptrim.js. 'constrain': the handle being
-      // dragged stops at the cap and the other end stays where the user put it.
-      const _t=window.SkriblLoopTrim.setHandle({start:trimStart,end:trimEnd,duration:audioDuration}, isStart?'start':'end', time, 'constrain');
-      trimStart=_t.start; trimEnd=_t.end;
-      updateTrimUI(); scheduleSave(); }
-    function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); window.removeEventListener('touchcancel',onEnd); }
-    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd); window.addEventListener('touchcancel',onEnd);
-  }
-  handle.addEventListener('mousedown',onStart); handle.addEventListener('touchstart',onStart,{passive:false});
+  // Plumbing (mouse, touch, touchcancel) is lib/dragtrack.js's, shared with Pad (v315).
+  SkriblDragTrack.bind(handle, (e)=>{ e.preventDefault(); handle.classList.add('dragging');
+    return { move(clientX){ const rect=musicTrack.getBoundingClientRect(); const pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width)); const time=pct*audioDuration;
+        // Shared with Pad via lib/looptrim.js. 'constrain': the handle being
+        // dragged stops at the cap and the other end stays where the user put it.
+        const _t=window.SkriblLoopTrim.setHandle({start:trimStart,end:trimEnd,duration:audioDuration}, isStart?'start':'end', time, 'constrain');
+        trimStart=_t.start; trimEnd=_t.end; updateTrimUI(); scheduleSave(); },
+      end(){ handle.classList.remove('dragging'); } }; });
 }
 dragHandle(handleStart,true); dragHandle(handleEnd,false);
 function dragRangeWindow(rangeEl){
-  function cx(e){ return SkriblEventPoint.at(e).clientX; }
-  function onStart(e){ if(!audioEl||!(audioDuration>0)) return; if(rangeEl.classList.contains('narrow')) return; e.preventDefault(); e.stopPropagation(); rangeEl.classList.add('dragging');
-    const rect=musicTrack.getBoundingClientRect(); const loopLength=trimEnd-trimStart; const grabTime=(cx(e)-rect.left)/rect.width*audioDuration; const grabOffset=grabTime-trimStart;
-    function onMove(ev){ const time=(cx(ev)-rect.left)/rect.width*audioDuration; let ns=time-grabOffset; ns=Math.max(0,Math.min(ns,audioDuration-loopLength)); trimStart=ns; trimEnd=ns+loopLength; updateTrimUI(); }
-    function onEnd(){ rangeEl.classList.remove('dragging'); scheduleSave(); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); window.removeEventListener('touchcancel',onEnd); }
-    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd); window.addEventListener('touchcancel',onEnd);
-  }
-  rangeEl.addEventListener('mousedown',onStart); rangeEl.addEventListener('touchstart',onStart,{passive:false});
+  SkriblDragTrack.bind(rangeEl, (e)=>{ if(!audioEl||!(audioDuration>0)) return null; if(rangeEl.classList.contains('narrow')) return null; e.preventDefault(); e.stopPropagation(); rangeEl.classList.add('dragging');
+    const rect=musicTrack.getBoundingClientRect(); const loopLength=trimEnd-trimStart; const grabTime=(SkriblEventPoint.at(e).clientX-rect.left)/rect.width*audioDuration; const grabOffset=grabTime-trimStart;
+    return { move(clientX){ const time=(clientX-rect.left)/rect.width*audioDuration; const ns=Math.max(0,Math.min(time-grabOffset,audioDuration-loopLength)); trimStart=ns; trimEnd=ns+loopLength; updateTrimUI(); },
+      end(){ rangeEl.classList.remove('dragging'); scheduleSave(); } }; });
 }
 dragRangeWindow(musicRange);
 function dragZoomHandle(handle, isStart){
-  function onStart(e){ e.preventDefault(); handle.classList.add('dragging');
-    function onMove(ev){ const clientX=SkriblEventPoint.at(ev).clientX; const rect=zoomTrackWrap.getBoundingClientRect(); const pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width)); const zw=getZoomWindow(); const time=zw.start+pct*(zw.end-zw.start);
-      // 'slide': the zoom track pushes the OTHER end to hold the cap. That
-      // differs from the main track above — declared, not accidental; see the
-      // module header.
-      const _t=window.SkriblLoopTrim.setHandle({start:trimStart,end:trimEnd,duration:audioDuration}, isStart?'start':'end', time, 'slide');
-      trimStart=_t.start; trimEnd=_t.end;
-      updateTrimUI(); scheduleSave(); }
-    function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); window.removeEventListener('touchcancel',onEnd); }
-    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd); window.addEventListener('touchcancel',onEnd);
-  }
-  handle.addEventListener('mousedown',onStart); handle.addEventListener('touchstart',onStart,{passive:false});
+  SkriblDragTrack.bind(handle, (e)=>{ e.preventDefault(); handle.classList.add('dragging');
+    return { move(clientX){ const rect=zoomTrackWrap.getBoundingClientRect(); const pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width)); const zw=getZoomWindow(); const time=zw.start+pct*(zw.end-zw.start);
+        // 'slide': the zoom track pushes the OTHER end to hold the cap. That
+        // differs from the main track above — declared, not accidental; see the
+        // module header.
+        const _t=window.SkriblLoopTrim.setHandle({start:trimStart,end:trimEnd,duration:audioDuration}, isStart?'start':'end', time, 'slide');
+        trimStart=_t.start; trimEnd=_t.end; updateTrimUI(); scheduleSave(); },
+      end(){ handle.classList.remove('dragging'); } }; });
 }
 dragZoomHandle(zoomHandleStart,true); dragZoomHandle(zoomHandleEnd,false);
 
@@ -5341,12 +5329,11 @@ testSeamBtn.addEventListener('click',()=>{ stopLoopPreview(); previewingLoop=tru
 
 // Loop Detail scroll + crossfade (injected, like the Pad)
 function updateZoomPanSlider(){ const s=document.getElementById('zoomPanSlider'); if(!s) return; if(!(audioDuration>0)){ s.value=500; return; } const zw=getZoomWindow(); const c=(zw.start+zw.end)/2; s.value=Math.round(Math.max(0,Math.min(1,c/audioDuration))*1000); updateSliderFill(s); }
-function dragZoomPan(wrap){ if(!wrap) return; const cx=(e)=>SkriblEventPoint.at(e).clientX;
-  function onStart(e){ if(!audioEl||!(audioDuration>0)) return; if(e.target.closest('.zoom-handle')) return; e.preventDefault(); const rect=wrap.getBoundingClientRect(); const zw=getZoomWindow(); const sc=(zw.start+zw.end)/2; const winDur=zw.duration; const sx=cx(e); wrap.classList.add('panning');
-    function onMove(ev){ const dx=cx(ev)-sx; const dt=-(dx/rect.width)*winDur; const half=winDur/2; const lo=half, hi=Math.max(half,audioDuration-half); zoomCenter=Math.max(lo,Math.min(sc+dt,hi)); zoomFocus='free'; syncZoomFocusButtons(); updateTrimUI(); }
-    function onEnd(){ wrap.classList.remove('panning'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); window.removeEventListener('touchcancel',onEnd); }
-    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd); window.addEventListener('touchcancel',onEnd); }
-  wrap.addEventListener('mousedown',onStart); wrap.addEventListener('touchstart',onStart,{passive:false});
+function dragZoomPan(wrap){
+  SkriblDragTrack.bind(wrap, (e)=>{ if(!audioEl||!(audioDuration>0)) return null; if(e.target.closest('.zoom-handle')) return null; e.preventDefault();
+    const rect=wrap.getBoundingClientRect(); const zw=getZoomWindow(); const sc=(zw.start+zw.end)/2; const winDur=zw.duration; const sx=SkriblEventPoint.at(e).clientX; wrap.classList.add('panning');
+    return { move(clientX){ const dt=-((clientX-sx)/rect.width)*winDur; const half=winDur/2; const lo=half, hi=Math.max(half,audioDuration-half); zoomCenter=Math.max(lo,Math.min(sc+dt,hi)); zoomFocus='free'; syncZoomFocusButtons(); updateTrimUI(); },
+      end(){ wrap.classList.remove('panning'); } }; });
 }
 function addSliderNudgers(el, opts){ opts=opts||{}; const wrap=document.createElement('span'); wrap.className='slider-nudge-wrap'; el.parentNode.insertBefore(wrap, el); wrap.appendChild(el);
   const mk=(txt,dir)=>{ const b=document.createElement('button'); b.type='button'; b.className='slider-nudge-btn'; b.textContent=txt; b.addEventListener('click',()=>{ if(opts.nudgeFn){ opts.nudgeFn(dir); } else { const step=opts.step||1; el.value=(+el.value)+dir*step; el.dispatchEvent(new Event('input',{bubbles:true})); } }); return b; };

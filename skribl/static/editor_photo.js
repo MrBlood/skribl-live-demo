@@ -506,48 +506,29 @@ function beginPhotoDrag(e) {
 // Drag the Loop Detail waveform to pan the window. Ignores drags that start on
 // an edge handle (those resize the loop) so the two never fight.
 function dragZoomPan(wrap) {
-  if (!wrap) return;
-  const cx = (e) => SkriblEventPoint.at(e).clientX;
-  function onStart(e) {
-    if (!audioEl || !Number.isFinite(audioDuration) || audioDuration <= 0) return;
-    if (e.target.closest('.zoom-handle')) return;   // let the handle drag win
+  SkriblDragTrack.bind(wrap, function (e) {
+    if (!audioEl || !Number.isFinite(audioDuration) || audioDuration <= 0) return null;
+    if (e.target.closest('.zoom-handle')) return null;   // let the handle drag win
     e.preventDefault();
     const rect = wrap.getBoundingClientRect();
     const zw = getZoomWindow();
     const startCenter = (zw.start + zw.end) / 2;
     const winDur = zw.duration;
-    const startX = cx(e);
+    const startX = SkriblEventPoint.at(e).clientX;
     wrap.classList.add('panning');
-    function onMove(ev) {
-      const dx = cx(ev) - startX;
-      // Drag right → reveal earlier audio → center moves earlier.
-      const deltaT = -(dx / rect.width) * winDur;
-      const half = winDur / 2;
-      const lo = half, hi = Math.max(half, audioDuration - half);
-      zoomCenter = Math.max(lo, Math.min(startCenter + deltaT, hi));
-      zoomFocus = 'free';
-      syncZoomFocusButtons();
-      updateTrimUI();
-    }
-    function onEnd() {
-      wrap.classList.remove('panning');
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-      window.removeEventListener('touchcancel', onEnd);
-    }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    // touchcancel too — see the note in editor_music.js. A cancelled
-    // sequence never fires touchend, so cleanup keyed only to touchend
-    // leaves the move listener installed and the drag state set.
-    window.addEventListener('touchend', onEnd);
-    window.addEventListener('touchcancel', onEnd);
-  }
-  wrap.addEventListener('mousedown', onStart);
-  wrap.addEventListener('touchstart', onStart, { passive: false });
+    return {
+      move: function (clientX) {
+        const deltaT = -((clientX - startX) / rect.width) * winDur;
+        const half = winDur / 2;
+        const lo = half, hi = Math.max(half, audioDuration - half);
+        zoomCenter = Math.max(lo, Math.min(startCenter + deltaT, hi));
+        zoomFocus = 'free';
+        syncZoomFocusButtons();
+        updateTrimUI();
+      },
+      end: function () { wrap.classList.remove('panning'); }
+    };
+  });
 }
 
 /* THE BINDING TRAVELS WITH THE FUNCTION, and leaving it behind is what the

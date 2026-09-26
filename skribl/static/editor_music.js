@@ -18,55 +18,28 @@
 // LOAD ORDER: classic script reading globals app.js declares. Keep it after
 // app.js, and out of skribl_player.html.
 function dragZoomHandle(handle, isStart) {
-  if (!handle) return;   // trim track is editor-only
-  function onStart(e) {
+  // The drag plumbing (mouse, touch, and the touchcancel a cancelled gesture
+  // needs) is lib/dragtrack.js's, shared with Flip since v315.
+  SkriblDragTrack.bind(handle, function (e) {
     e.preventDefault();
     handle.classList.add('dragging');
-
-    function onMove(ev) {
-      const clientX = SkriblEventPoint.at(ev).clientX;
-      const rect = zoomTrackWrap.getBoundingClientRect();
-      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      const zoom = getZoomWindow();
-      const time = zoom.start + pct * (zoom.end - zoom.start);
-
-      // Shared with Flip via lib/looptrim.js. 'slide': the zoom track pushes
-      // the OTHER end to hold the cap, unlike the main track below. The cap was
-      // a bare 20 here and in seven other places in this file, with no constant.
-      {
+    return {
+      move: function (clientX) {
+        const rect = zoomTrackWrap.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const zoom = getZoomWindow();
+        const time = zoom.start + pct * (zoom.end - zoom.start);
+        // Shared with Flip via lib/looptrim.js. 'slide': the zoom track pushes
+        // the OTHER end to hold the cap, unlike the main track below.
         const _t = window.SkriblLoopTrim.setHandle(
           { start: trimStart, end: trimEnd, duration: audioDuration },
           isStart ? 'start' : 'end', time, 'slide');
         trimStart = _t.start; trimEnd = _t.end;
-      }
-      updateTrimUI();
-    }
-
-    function onEnd() {
-      handle.classList.remove('dragging');
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-      window.removeEventListener('touchcancel', onEnd);
-    }
-
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-      // touchcancel, not just touchend. A browser or OS can CANCEL a touch
-      // sequence instead of ending it — a system gesture, an incoming call, a
-      // pointer taken over by scrolling. Cleaning up only on touchend leaves
-      // this drag's touchmove listener installed and the handle flagged
-      // dragging, so the next unrelated touch keeps moving a trim whose gesture
-      // is already over. Reproduced before fixing: after a cancel, trimStart
-      // went 1.129 -> 3.386 on a further move.
-    window.addEventListener('touchend', onEnd);
-    window.addEventListener('touchcancel', onEnd);
-  }
-
-  handle.addEventListener('mousedown', onStart);
-  handle.addEventListener('touchstart', onStart, { passive: false });
+        updateTrimUI();
+      },
+      end: function () { handle.classList.remove('dragging'); }
+    };
+  });
 }
 
 dragZoomHandle(zoomHandleStart, true);
@@ -315,53 +288,24 @@ musicRemove.addEventListener('click', (e) => {
 });
 
 function dragHandle(handle, isStart) {
-  if (!handle) return;   // trim track is editor-only
-  function getClientX(e) {
-    return SkriblEventPoint.at(e).clientX;
-  }
-
-  function onStart(e) {
+  SkriblDragTrack.bind(handle, function (e) {
     e.preventDefault();
     handle.classList.add('dragging');
-    function onMove(ev) {
-      const rect = musicTrack.getBoundingClientRect();
-      let pct = (getClientX(ev) - rect.left) / rect.width;
-      pct = Math.max(0, Math.min(1, pct));
-      const time = pct * audioDuration;
-      // 'constrain': the dragged handle stops at the cap; the other end does
-      // not move. Declared difference from the zoom track — see the module.
-      {
+    return {
+      move: function (clientX) {
+        const rect = musicTrack.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const time = pct * audioDuration;
+        // 'constrain': the dragged handle stops at the cap; the other end stays.
         const _t = window.SkriblLoopTrim.setHandle(
           { start: trimStart, end: trimEnd, duration: audioDuration },
           isStart ? 'start' : 'end', time, 'constrain');
         trimStart = _t.start; trimEnd = _t.end;
-      }
-      updateTrimUI();
-    }
-    function onEnd() {
-      handle.classList.remove('dragging');
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-      window.removeEventListener('touchcancel', onEnd);
-    }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-      // touchcancel, not just touchend. A browser or OS can CANCEL a touch
-      // sequence instead of ending it — a system gesture, an incoming call, a
-      // pointer taken over by scrolling. Cleaning up only on touchend leaves
-      // this drag's touchmove listener installed and the handle flagged
-      // dragging, so the next unrelated touch keeps moving a trim whose gesture
-      // is already over. Reproduced before fixing: after a cancel, trimStart
-      // went 1.129 -> 3.386 on a further move.
-    window.addEventListener('touchend', onEnd);
-    window.addEventListener('touchcancel', onEnd);
-  }
-
-  handle.addEventListener('mousedown', onStart);
-  handle.addEventListener('touchstart', onStart, { passive: false });
+        updateTrimUI();
+      },
+      end: function () { handle.classList.remove('dragging'); }
+    };
+  });
 }
 
 dragHandle(handleStart, true);
@@ -369,53 +313,27 @@ dragHandle(handleStart, true);
 dragHandle(handleEnd, false);
 
 function dragRangeWindow(rangeEl) {
-  if (!rangeEl) return;   // trim track is editor-only
-  function getClientX(e) {
-    return SkriblEventPoint.at(e).clientX;
-  }
-  function onStart(e) {
-    if (!audioEl || !Number.isFinite(audioDuration) || audioDuration <= 0) return;
-    if (rangeEl.classList.contains('narrow')) return;
+  SkriblDragTrack.bind(rangeEl, function (e) {
+    if (!audioEl || !Number.isFinite(audioDuration) || audioDuration <= 0) return null;
+    if (rangeEl.classList.contains('narrow')) return null;
     e.preventDefault();
     e.stopPropagation();
     rangeEl.classList.add('dragging');
     const rect = musicTrack.getBoundingClientRect();
     const loopLength = trimEnd - trimStart;
-    const grabTime = (getClientX(e) - rect.left) / rect.width * audioDuration;
+    const grabTime = (SkriblEventPoint.at(e).clientX - rect.left) / rect.width * audioDuration;
     const grabOffset = grabTime - trimStart; // where inside the loop we grabbed
-
-    function onMove(ev) {
-      const time = (getClientX(ev) - rect.left) / rect.width * audioDuration;
-      let newStart = time - grabOffset;
-      // Clamp so the whole window stays within the song, length unchanged.
-      newStart = Math.max(0, Math.min(newStart, audioDuration - loopLength));
-      trimStart = newStart;
-      trimEnd = newStart + loopLength;
-      updateTrimUI();
-    }
-    function onEnd() {
-      rangeEl.classList.remove('dragging');
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-      window.removeEventListener('touchcancel', onEnd);
-    }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-      // touchcancel, not just touchend. A browser or OS can CANCEL a touch
-      // sequence instead of ending it — a system gesture, an incoming call, a
-      // pointer taken over by scrolling. Cleaning up only on touchend leaves
-      // this drag's touchmove listener installed and the handle flagged
-      // dragging, so the next unrelated touch keeps moving a trim whose gesture
-      // is already over. Reproduced before fixing: after a cancel, trimStart
-      // went 1.129 -> 3.386 on a further move.
-    window.addEventListener('touchend', onEnd);
-    window.addEventListener('touchcancel', onEnd);
-  }
-  rangeEl.addEventListener('mousedown', onStart);
-  rangeEl.addEventListener('touchstart', onStart, { passive: false });
+    return {
+      move: function (clientX) {
+        const time = (clientX - rect.left) / rect.width * audioDuration;
+        const newStart = Math.max(0, Math.min(time - grabOffset, audioDuration - loopLength));
+        trimStart = newStart;
+        trimEnd = newStart + loopLength;
+        updateTrimUI();
+      },
+      end: function () { rangeEl.classList.remove('dragging'); }
+    };
+  });
 }
 
 dragRangeWindow(musicRange);

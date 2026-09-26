@@ -714,6 +714,7 @@ rather than a shared rule.
 | `composehost.js` | HOST | The pad button's lifecycle, for a HOST's composer. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
 | `draftstore.js` | Pad+Flip | Draft media persistence — the bytes localStorage cannot hold. |
+| `dragtrack.js` | Pad+Flip | A horizontal drag on a track: the plumbing, once, for both editors. |
 | `drawerdetent.js` | Pad+Flip | The draw drawer's HALF detent — one implementation, both editors. |
 | `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both editors had hand-rolled: named panels above/below a toolbar, at most one open, the opener button reflecting state, and a scroll that reveals the opened panel without stranding it under browser chrome. |
 | `erasersize.js` | Pad+Flip | Eraser size — shared by both editors. |
