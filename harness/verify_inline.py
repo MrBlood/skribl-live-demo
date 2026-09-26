@@ -1748,6 +1748,29 @@ if _spw:
         _s = _pg.evaluate(_SHAPE, _untitled)
         check("...and neither does the Untitled Skribl default",
               _s == ["TEXT:Words only.", "PLAYER"], str(_s))
+
+        # A TAP ON THE PLAYER IS THE PLAYER'S (v316). skribls.net makes a
+        # whole post a link: article[data-href] navigates on any click whose
+        # target is not inside a, button, label, .actions, video, audio or
+        # .video-embed. The player's box is a div, so on the real profile page
+        # a tap started playback and then left for /post/<n>. The host's rule
+        # is copied here onto the post the player sits in, and a real click
+        # (not a scripted one) goes to the box's centre.
+        print("\nIN-POST — a tap plays in place under a host that makes the whole post a link")
+        _pg.evaluate("""(id) => { const box = document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]');
+            const card = box.parentElement; window.__cardNav = 0;
+            card.addEventListener('click', (e) => {
+              if (e.target.closest('a, button, label, .actions, video, audio, .video-embed')) return;
+              window.__cardNav++; }); }""", _plain)
+        _pb = _pg.locator('.skribl-inline[data-skribl-id="' + _plain + '"]').first
+        _pb.scroll_into_view_if_needed()
+        _bb = _pb.bounding_box()
+        _pg.mouse.click(_bb["x"] + _bb["width"] / 2, _bb["y"] + _bb["height"] / 2)
+        _pg.wait_for_timeout(900)
+        _tap = _pg.evaluate("""(id) => ({ nav: window.__cardNav,
+            cls: document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]').className })""", _plain)
+        check("the tap starts the drawing and never reaches the post's own link",
+              _tap["nav"] == 0 and ("is-playing" in _tap["cls"] or "is-loading" in _tap["cls"]), str(_tap))
         _b.close()
 
 
