@@ -159,6 +159,46 @@ with sync_playwright() as sp:
     check("two fingers on the canvas pinch-zoom the view",
           s["zoom"] is not None and s["zoom"] > (z0 or 1) + 0.1, f"zoom {z0} -> {s['zoom']}")
     check("...and the pinch drew nothing", s["groups"] == 1, str(s))
+    # THE HEADER COMES BACK (v315, the owner's first look on a phone: "no top
+    # menu"). The chrome fades while a stroke is down; after a touch stroke and
+    # a pinch the page must not be left in that state.
+    chrome = pg.evaluate("""() => ({ stroking: document.body.classList.contains('stroking'),
+        header: +getComputedStyle(document.querySelector('.header')).opacity }) """)
+    check("after a touch stroke and a pinch the header is back at full strength",
+          chrome["stroking"] is False and chrome["header"] > 0.9, str(chrome))
+    # THE GLASS IS NEVER THE THING FADED (v315). The header is backdrop-filter
+    # glass, and WebKit can fail to repaint such an element after its opacity
+    # animates -- the owner's iPhone showed the header's slot empty after a
+    # take. So during a stroke the header ELEMENT stays at opacity 1 while its
+    # contents whisper, and afterwards the glass is back.
+    pg.evaluate("() => document.body.classList.add('stroking')")
+    pg.wait_for_timeout(700)
+    mid = pg.evaluate("""() => { const h = document.querySelector('.header'), cs = getComputedStyle(h);
+        return { self: +cs.opacity, kids: [...h.children].map(k => +getComputedStyle(k).opacity),
+                 glass: cs.webkitBackdropFilter || cs.backdropFilter }; }""")
+    pg.evaluate("() => document.body.classList.remove('stroking')")
+    pg.wait_for_timeout(500)
+    after = pg.evaluate("""() => { const cs = getComputedStyle(document.querySelector('.header'));
+        return { self: +cs.opacity, glass: cs.webkitBackdropFilter || cs.backdropFilter }; }""")
+    check("while drawing, the header's contents fade but the glass element itself is never faded",
+          mid["self"] == 1 and mid["kids"] and max(mid["kids"]) <= 0.15, str(mid))
+    check("...and after the stroke the header's glass is back",
+          after["self"] == 1 and "blur" in (after["glass"] or ""), str(after))
+    # A touch on the canvas is Pad's, never the browser's: the touchstart and
+    # touchmove are prevented, which is what stops iOS zooming or scrolling
+    # the page under a drawing finger (touch-action alone is not enough there).
+    prevented = pg.evaluate("""() => { const c = document.getElementById('canvas');
+        const r = c.getBoundingClientRect();
+        const t = new Touch({ identifier: 9, target: c, clientX: r.left + 20, clientY: r.top + 20 });
+        const mk = (k) => new TouchEvent(k, { touches: [t], targetTouches: [t], changedTouches: [t],
+                                              bubbles: true, cancelable: true });
+        const a = mk('touchstart'), m = mk('touchmove');
+        c.dispatchEvent(a); c.dispatchEvent(m);
+        c.dispatchEvent(new TouchEvent('touchend', { touches: [], targetTouches: [], changedTouches: [t],
+                                                     bubbles: true, cancelable: true }));
+        return [a.defaultPrevented, m.defaultPrevented]; }""")
+    check("a one-finger touch on the canvas is not left to the browser (no page zoom/scroll)",
+          prevented == [True, True], str(prevented))
     check("no page errors from touch", not errs, "; ".join(errs[:2]))
     ctx.close()
 
