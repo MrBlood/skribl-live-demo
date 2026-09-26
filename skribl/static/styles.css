@@ -4214,6 +4214,33 @@ input:focus-visible {
     animation: none;                 /* the wrap pulses, not the button */
   }
 }
+/* Phones: a breathing FILL, not a ring. Play is a bare glyph at this width, so
+   the pulsing ring drew a hollow outline around nothing — it read as a focus
+   ring left stuck on the button (owner's iPhone, v315), and on Flip the wrap's
+   overflow:hidden clipped the box-shadow so there was no signal at all. A
+   tinted disc says "this is on" the way an active control does everywhere
+   else in the header, and the stop glyph takes the accent so the disc and the
+   glyph read as one thing. Pad and Flip get the SAME treatment. */
+@keyframes playBreathe {
+  0%, 100% { background-color: rgba(124,92,255,0.14); }
+  50%      { background-color: rgba(124,92,255,0.28); }
+}
+@media (max-width: 640px) {
+  .play-wrap > #playBtn.btn.play.playing,
+  .flip-play-wrap:has(.btn.flip-play.playing) {
+    background-color: rgba(124,92,255,0.18);
+    border-color: transparent;
+    box-shadow: none;
+    animation: playBreathe 2.4s ease-in-out infinite;
+  }
+  .play-wrap > #playBtn.btn.play.playing,
+  .flip-play-wrap > .btn.flip-play.playing { color: var(--accent); text-shadow: none; }
+  .flip-play-wrap > .btn.flip-play.playing { animation: none; box-shadow: none; }
+}
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .play-wrap > #playBtn.btn.play.playing,
+  .flip-play-wrap:has(.btn.flip-play.playing) { animation: none; }
+}
 
 /* ---------- Mobile ---------- */
 @media (max-width: 640px) {
