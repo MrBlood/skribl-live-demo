@@ -1704,15 +1704,21 @@ playBtn.addEventListener('click', () => {
   if (playing) { stopPlayback(); return; }
   playTimeline = buildPlaybackTimeline();
   if (!playTimeline.length) return;
-  unlockWebAudio();   // F3: inside the gesture — clearAndRestore below may not
-                      // call back until an Image decode has resolved, long
-                      // after iOS stops treating this as a user activation.
   // THE SILENT SWITCH. iOS mutes Web Audio while the ringer switch is off
   // unless a playback session is held (lib/audiosession.js). Preview Loop
   // claimed it and Play did not, so on a phone set to silent the take played
   // without its music while Preview Loop was heard (owner, v315). Claimed on
   // this tap, only when there is music; stopPlayback() releases it.
+  //
+  // AND CLAIMED BEFORE THE UNLOCK BELOW, in Preview Loop's order. The first
+  // version of this fix claimed AFTER unlockWebAudio(), and the owner's
+  // silenced iPhone still played without music: a context resumed while the
+  // session is still ambient can stay on the silenced route. verify_audiosession
+  // section 8 pins the order on both editors.
   if (audioEl && window.SkriblAudioSession) window.SkriblAudioSession.claim();
+  unlockWebAudio();   // F3: inside the gesture — clearAndRestore below may not
+                      // call back until an Image decode has resolved, long
+                      // after iOS stops treating this as a user activation.
   playing = true;
   playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>';
   playBtn.classList.add('playing');
