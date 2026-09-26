@@ -629,7 +629,13 @@ with sync_playwright() as sp:
     #   +572 B  showToast never covers the header or the toolbar (a hidden
     #           anchor measured 0x0 and put "Take saved" over Play).
     # 131,796 measured; the ratchet sits just above it so the room is not spent.
-    BYTES_RATCHET, BYTES_TARGET = 131_900, 153_800
+    # RAISED AGAIN (v316 polish, owner's iPhone), for one named cost:
+    #   +362 B  on a phone the replay scrubber moves into the faded toolbar's
+    #           band instead of hanging off the canvas rim over an empty strip
+    #           (positionScrub, app.js), plus the canvas-lock toast's wording
+    #           now naming New Skribl.
+    # 132,158 measured.
+    BYTES_RATCHET, BYTES_TARGET = 132_200, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
