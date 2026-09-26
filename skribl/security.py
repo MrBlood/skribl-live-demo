@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 from flask import current_app, g, jsonify, request, url_for
 
 from .core import _env_int
-from .jsstrip import strip_bytes
+from .jsstrip import strip_bytes, strip_css_bytes
 
 # Text-ish types only. Images, audio and video are already compressed;
 # re-gzipping them spends CPU to make them marginally larger.
@@ -429,13 +429,17 @@ def register_security(bp, skribl_version, player_target="_blank"):
         # transfer is the same bad trade as gzip level 6 on a dynamic response.
         # An unbusted asset therefore serves its comments, which is correct
         # JavaScript either way — the file on disk is what it always was.
-        if bust and request.path.endswith(".js"):
+        # CSS too since v315 (SK312-004): the shared-link player's stylesheet
+        # was 63% comments. Same cache, same busted-only rule, same fallback.
+        if bust and request.path.endswith((".js", ".css")):
             strip_cache, _ = _app_caches()
             key = (request.path, bust)
             lean = strip_cache.get(key)
             if lean is None:
                 resp.direct_passthrough = False
-                lean = strip_bytes(resp.get_data(), request.path)
+                raw = resp.get_data()
+                lean = (strip_css_bytes(raw) if request.path.endswith(".css")
+                        else strip_bytes(raw, request.path))
                 if len(strip_cache) >= _STRIP_CACHE_MAX:
                     strip_cache.clear()           # bounded; refills on demand
                 strip_cache[key] = lean

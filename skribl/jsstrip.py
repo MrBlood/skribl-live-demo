@@ -407,3 +407,93 @@ def strip_bytes(data, name=""):
         return data
     packed = stripped.encode("utf-8")
     return packed if len(packed) < len(data) else data
+
+
+# ---- CSS, the same way (v315, SK312-004) -------------------------------------
+# player.css is generated from styles.css, and styles.css is this project's
+# design record: 63% of player.css was comment text, served to every visitor of
+# a shared link. Same principle as the JavaScript above -- the file on disk
+# keeps every word, the bytes a browser parses do not -- and the same fallback.
+#
+# A SCANNER, NOT A REGEX, for the same class of reason: `/*` inside a string
+# (`content: "/*"`) or an unquoted url() is not a comment. And a comment IS a
+# token separator: `0/**/1px` is two tokens, so when both neighbours are
+# name-or-number characters the comment leaves a space; `a/**/.b` is `a.b`, so
+# otherwise it leaves nothing.
+_CSS_WORD = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_%")
+
+
+def strip_css(src):
+    out = []
+    i, n = 0, len(src)
+    while i < n:
+        ch = src[i]
+        if ch in "\"'":
+            j = i + 1
+            while j < n and src[j] != ch:
+                j += 2 if src[j] == "\\" else 1
+            out.append(src[i:j + 1])
+            i = j + 1
+        elif src.startswith("url(", i) and not src.startswith(("url(\"", "url('"), i):
+            j = src.find(")", i)
+            j = n - 1 if j < 0 else j
+            out.append(src[i:j + 1])
+            i = j + 1
+        elif src.startswith("/*", i):
+            j = src.find("*/", i + 2)
+            if j < 0:
+                raise ValueError("unterminated comment")
+            body = src[i:j + 2]
+            if body.startswith("/*!") or _is_legal(body):
+                out.append(body)
+            else:
+                prev = out[-1][-1:] if out and out[-1] else ""
+                nxt = src[j + 2:j + 3]
+                if prev in _CSS_WORD and nxt in _CSS_WORD:
+                    out.append(" ")
+            i = j + 2
+        else:
+            j = i
+            while j < n and src[j] not in "\"'/u":
+                j += 1
+            if j == i:
+                j = i + 1
+            out.append(src[i:j])
+            i = j
+    text = "".join(out)
+    # The comments leave their lines behind; drop the lines that are now empty.
+    return "\n".join(ln.rstrip() for ln in text.split("\n") if ln.strip()) + "\n"
+
+
+def _css_skeleton(src):
+    """Every non-space character outside comments, as a round-trip witness."""
+    return "".join(strip_css(src).split())
+
+
+def strip_css_bytes(data):
+    """Comment-stripped CSS, or `data` unchanged if anything at all is off."""
+    try:
+        src = data.decode("utf-8")
+        lean = strip_css(src)
+        # Nothing but comments and whitespace may differ: re-stripping the
+        # output must change nothing, and no brace may have gone missing.
+        if strip_css(lean) != lean or lean.count("{") != src.count("{") - _comment_braces(src, "{") \
+                or lean.count("}") != src.count("}") - _comment_braces(src, "}"):
+            return data
+    except Exception:
+        return data
+    packed = lean.encode("utf-8")
+    return packed if len(packed) < len(data) else data
+
+
+def _comment_braces(src, brace):
+    total, i = 0, 0
+    while True:
+        a = src.find("/*", i)
+        if a < 0:
+            return total
+        b = src.find("*/", a + 2)
+        if b < 0:
+            return total
+        total += src[a:b + 2].count(brace)
+        i = b + 2
