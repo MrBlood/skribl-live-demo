@@ -1771,6 +1771,34 @@ if _spw:
             cls: document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]').className })""", _plain)
         check("the tap starts the drawing and never reaches the post's own link",
               _tap["nav"] == 0 and ("is-playing" in _tap["cls"] or "is-loading" in _tap["cls"]), str(_tap))
+
+        # POSTS ADDED AFTER LOAD (v316). skribls.net's infinite scroll appends
+        # server-rendered posts to the feed; the player mounts once, at load, so
+        # a Skribl on page two showed its poster and did nothing when tapped.
+        # docs/INTEGRATION.md now tells a host to call SkriblInline.mount() after
+        # inserting; this does what that host does: clone a posted box as fresh
+        # markup, insert it, mount, tap it for real. And mount() again over the
+        # whole page must not give any box a second player.
+        print("\nIN-POST — a post added after the page loaded plays once mounted, and re-mounting is safe")
+        _before = _pg.evaluate("() => SkriblInline.players().length")
+        _pg.evaluate("""(id) => { const src = document.querySelector('.skribl-inline[data-skribl-id="' + id + '"]');
+            const tmp = document.createElement('div'); tmp.innerHTML = src.outerHTML;
+            const box = tmp.firstElementChild; box.classList.remove('is-playing', 'is-paused', 'is-loading');
+            box.id = 'lateSkribl'; const host = document.createElement('article');
+            host.appendChild(box); src.parentElement.parentElement.appendChild(host); }""", _derived)
+        _unmounted = _pg.evaluate("() => SkriblInline.players().length")
+        _pg.evaluate("() => { SkriblInline.mount(document); SkriblInline.mount(document); }")
+        _after = _pg.evaluate("() => SkriblInline.players().length")
+        _lb = _pg.locator("#lateSkribl")
+        _lb.scroll_into_view_if_needed()
+        _lbb = _lb.bounding_box()
+        _pg.mouse.click(_lbb["x"] + _lbb["width"] / 2, _lbb["y"] + _lbb["height"] / 2)
+        _pg.wait_for_timeout(900)
+        _lcls = _pg.evaluate("() => document.getElementById('lateSkribl').className")
+        check("mount() picks up the new box once, and calling it twice adds nothing more",
+              _unmounted == _before and _after == _before + 1, f"before {_before}, inserted {_unmounted}, after two mounts {_after}")
+        check("...and the late post plays when tapped",
+              "is-playing" in _lcls or "is-loading" in _lcls, _lcls)
         _b.close()
 
 
