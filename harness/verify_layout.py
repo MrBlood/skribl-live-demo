@@ -150,7 +150,14 @@ HIT_GEOMETRY = """() => {
   const els = [...pick(bar), ...pick(hdr)]
     .filter(e => e.offsetParent !== null && !e.disabled && e.getBoundingClientRect().width > 0);
   const own = (el, x, y) => { const t = document.elementFromPoint(x, y); return !!(t && (t === el || el.contains(t))); };
-  return els.map(el => {
+  // A BAR THAT SCROLLS (v315, lib/toolscroll.js at the narrowest widths) is
+  // reached by scrolling it, so a control past its edge is measured once it is
+  // scrolled into view -- what a finger does, and what PAGE_HIT_GEOMETRY below
+  // already does for the page. Only inside a bar that actually scrolls: every
+  // bar that fits is measured exactly as before.
+  const scrolls = bar && bar.scrollWidth > bar.clientWidth + 1;
+  const out = els.map(el => {
+    if (scrolls && bar.contains(el)) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     const r = el.getBoundingClientRect();
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     let up = 0, down = 0;
@@ -159,6 +166,8 @@ HIT_GEOMETRY = """() => {
     return { id: el.id || el.className.toString().slice(0, 24),
              visH: +r.height.toFixed(1), hitH: up + down };
   });
+  if (scrolls) bar.scrollLeft = 0;
+  return out;
 }"""
 
 PAGE_HIT_GEOMETRY = """
@@ -910,6 +919,39 @@ with sync_playwright() as p:
               "overflow:visible let the text paint outside the pill by 4.9px "
               "at 320 and 4.7px at 360")
         pg.close()
+
+    # ------------------------------------------------ the scrolling toolbar
+    # v315 (SK312-005, the owner's choice): where the Pad's controls do not fit
+    # one row, the bar scrolls instead of wrapping, a tool is visibly cut off
+    # at its edge, and on load it glides to show there is more then settles
+    # back. Where they fit, nothing changes. Reduced motion: no glide.
+    print("\nLAYOUT — the Pad toolbar scrolls where it does not fit, and says so")
+    TB = """() => { const b = document.getElementById('toolBar'), r = b.getBoundingClientRect();
+        const cut = [...b.querySelectorAll(':scope > button')].filter(e => e.offsetParent)
+            .some(e => { const q = e.getBoundingClientRect(); return q.left < r.right && q.right > r.right + 4; });
+        return { scroll: b.classList.contains('tb-scroll'), h: Math.round(r.height),
+                 sl: Math.round(b.scrollLeft), cut: cut }; }"""
+    for w, motion in ((320, "no-preference"), (320, "reduce"), (390, "no-preference")):
+        tctx = browser.new_context(viewport={"width": w, "height": 640}, reduced_motion=motion)
+        pg = tctx.new_page()
+        pg.goto(BASE + "/skribl-pad", wait_until="load")
+        seen = [pg.evaluate(TB)]
+        for _ in range(28):                       # ~2.8s: the glide and the settle
+            pg.wait_for_timeout(100)
+            seen.append(pg.evaluate(TB))
+        tctx.close()
+        peak, last = max(x["sl"] for x in seen), seen[-1]
+        if w == 320 and motion == "no-preference":
+            check("@320px the Pad toolbar is ONE scrolling row with a tool cut off at its edge",
+                  last["scroll"] and last["h"] <= ONE_ROW_MAX_PX and seen[0]["cut"], str(seen[0]))
+            check("...and on load it glides to show the rest, then settles back to the start",
+                  peak > 5 and last["sl"] == 0, f"peak scrollLeft {peak}, settled at {last['sl']}")
+        elif w == 320:
+            check("@320px with reduced motion there is no glide, only the cut-off tool",
+                  last["scroll"] and peak == 0, f"peak scrollLeft {peak}")
+        else:
+            check("@390px, where the controls fit, the toolbar is untouched (no scroll mode)",
+                  not last["scroll"] and peak == 0, str(last))
 
     browser.close()
 

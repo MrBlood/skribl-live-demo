@@ -760,6 +760,7 @@ rather than a shared rule.
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
 | `theme.js` | Pad+Flip+library+gallery | Light/dark chrome — the stored setting, and the one place that applies it. |
+| `toolscroll.js` | Pad | The Pad toolbar on the smallest screens: one row that scrolls, and says so. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |
 | `tooltip.js` | Pad+Flip+library+gallery | Styled tooltips, replacing the browser's. |
 | `zoomstep.js` | Pad+Flip | The loop-detail magnification stepper — the ladder, the chrome, and the rule for stepping it, in one place because Pad and Flip both draw this control. |
