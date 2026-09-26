@@ -288,24 +288,10 @@
   // if WebCodecs, the codecs, or the muxer aren't present it returns false and
   // the caller falls back to the MediaRecorder path — so this is never worse
   // than today, and stays dormant until mp4-muxer is deployed.
-  async function pickAvcCodec(w, h) {
-    if (typeof VideoEncoder === 'undefined' || !VideoEncoder.isConfigSupported) return null;
-    const cands = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f', 'avc1.42e01e'];
-    for (const c of cands) {
-      try {
-        const r = await VideoEncoder.isConfigSupported({ codec: c, width: w, height: h, bitrate: 6000000, framerate: 30 });
-        if (r && r.supported) return c;
-      } catch (e) {}
-    }
-    return null;
-  }
-  async function aacSupported(sr, ch) {
-    if (typeof AudioEncoder === 'undefined' || !AudioEncoder.isConfigSupported) return false;
-    try {
-      const r = await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: sr, numberOfChannels: ch, bitrate: 128000 });
-      return !!(r && r.supported);
-    } catch (e) { return false; }
-  }
+  // The codec checks and the encoder pipeline are lib/mp4export.js's, shared
+  // with Flip (v315); these names stay for the label logic below.
+  function pickAvcCodec(w, h) { return window.SkriblMp4.pickAvcCodec(w, h); }
+  function aacSupported(sr, ch) { return window.SkriblMp4.aacSupported(sr, ch); }
 
   // What format will the Video button actually produce in THIS browser? Used to
   // label the export option honestly (MP4 vs WebM).
@@ -340,14 +326,9 @@
 
   async function exportViaWebCodecsMp4() {
     // ---- capability pre-check (NO UI side effects; false ⇒ clean fallback) ----
-    try { await skriblLoadVendor('mp4muxer'); } catch (e) { return false; }
-    const MM = window.Mp4Muxer;
-    if (!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
-    if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false;
-    const w = canvas.width & ~1, h = canvas.height & ~1;   // encoders want even dims
-    if (w < 2 || h < 2) return false;
-    const avcCodec = await pickAvcCodec(w, h);
-    if (!avcCodec) return false;
+    const ready = await window.SkriblMp4.prepare(canvas.width, canvas.height);
+    if (!ready) return false;
+    const w = ready.w, h = ready.h;
     const timeline = buildPlaybackTimeline();
     if (!timeline.length) return false;
 
@@ -378,21 +359,6 @@
     const cleanup = () => { videoBtn.disabled = false; pngBtn.disabled = false; };
 
     try {
-      const muxer = new MM.Muxer({
-        target: new MM.ArrayBufferTarget(),
-        video: { codec: 'avc', width: w, height: h },
-        audio: useAudio ? { codec: 'aac', numberOfChannels: audioBuf.numberOfChannels, sampleRate: audioBuf.sampleRate } : undefined,
-        fastStart: 'in-memory'    // moov at front → immediately playable file
-      });
-      let encErr = null;
-      const vEnc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => { encErr = e; } });
-      vEnc.configure({ codec: avcCodec, width: w, height: h, bitrate: 6000000, framerate: 30 });
-      let aEnc = null;
-      if (useAudio) {
-        aEnc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => { encErr = e; } });
-        aEnc.configure({ codec: 'mp4a.40.2', numberOfChannels: audioBuf.numberOfChannels, sampleRate: audioBuf.sampleRate, bitrate: 128000 });
-      }
-
       // Offscreen frame renderer (mirrors renderFrameUpTo in the MediaRecorder path).
       const rec = document.createElement('canvas'); rec.width = w; rec.height = h;
       const rctx = rec.getContext('2d');
@@ -418,60 +384,27 @@
         await new Promise((res) => { const im = new Image(); im.onload = () => { try { sctx.drawImage(im, 0, 0, w / dpr, h / dpr); } catch (e) {} res(); }; im.onerror = () => res(); im.src = preRecordSnapshot; });
       }
 
-      const fps = 30, frameDurUs = 1000000 / fps;
       const totalMs = timeline[timeline.length - 1].playT || 0;
       const holdMs = 700;
-      const totalFrames = Math.max(1, Math.ceil(((totalMs + holdMs) / 1000) * fps));
-      progressLabel.textContent = 'Encoding…';
       let ti = 0;
-      for (let f = 0; f < totalFrames; f++) {
-        if (_exportAbort) {
-          try { vEnc.close(); } catch (e) {}
-          try { if (aEnc) aEnc.close(); } catch (e) {}
-          progress.hidden = true; cleanup(); showToast('Export cancelled', null);
-          return true;
-        }
-        const elapsed = f * (1000 / fps);
-        if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn); comp.present(); }
-        else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
-        if (f === totalFrames - 1 && comp) { comp.finish(); comp.present(); }
-        composite();
-        const vf = new VideoFrame(rec, { timestamp: Math.round(f * frameDurUs), duration: Math.round(frameDurUs) });
-        vEnc.encode(vf, { keyFrame: (f % (fps * 2)) === 0 });
-        vf.close();
-        if (encErr) throw encErr;
-        if (vEnc.encodeQueueSize > 8) { await new Promise(r => setTimeout(r, 0)); }
-        if ((f & 7) === 0) { progressFill.style.width = Math.min(85, (f / totalFrames) * 85) + '%'; await new Promise(r => setTimeout(r, 0)); }
+      const buffer = await window.SkriblMp4.encode({
+        ready, canvas: rec, durationSec: (totalMs + holdMs) / 1000, audio: useAudio ? audioBuf : null,
+        drawFrame: (f, isLast) => {
+          const elapsed = f * (1000 / 30);
+          if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn); comp.present(); }
+          else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
+          if (isLast && comp) { comp.finish(); comp.present(); }
+          composite();
+        },
+        aborted: () => _exportAbort,
+        progress: (frac, label) => { progressFill.style.width = Math.min(100, frac * 100) + '%'; if (label) progressLabel.textContent = label; },
+      });
+      if (!buffer) {
+        progress.hidden = true; cleanup(); showToast('Export cancelled', null);
+        return true;
       }
-      await vEnc.flush();
-
-      // Audio: tile the baked loop across the full duration, encode in blocks.
-      if (useAudio && aEnc) {
-        progressLabel.textContent = 'Encoding audio…';
-        const sr = audioBuf.sampleRate, ch = audioBuf.numberOfChannels, loopLen = audioBuf.length;
-        const chans = []; for (let c = 0; c < ch; c++) chans.push(audioBuf.getChannelData(c));
-        const totalSamples = Math.ceil(((totalMs + holdMs) / 1000) * sr);
-        const blk = 1024; let pos = 0;
-        while (pos < totalSamples) {
-          const n = Math.min(blk, totalSamples - pos);
-          const data = new Float32Array(n * ch);         // f32-planar: [ch0…, ch1…]
-          for (let c = 0; c < ch; c++) { const src = chans[c]; const off = c * n; for (let k = 0; k < n; k++) { data[off + k] = src[(pos + k) % loopLen]; } }
-          const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: ch, timestamp: Math.round((pos / sr) * 1000000), data });
-          aEnc.encode(ad); ad.close();
-          if (encErr) throw encErr;
-          pos += n;
-          if ((pos % (blk * 32)) === 0) { await new Promise(r => setTimeout(r, 0)); }
-        }
-        await aEnc.flush();
-      }
-      if (encErr) throw encErr;
-
-      muxer.finalize();
-      const buffer = muxer.target.buffer;
-      progressFill.style.width = '100%'; progressLabel.textContent = 'Done!';
       downloadBlob(new Blob([buffer], { type: 'video/mp4' }), (window.SkriblName ? window.SkriblName.exportName('mp4') : 'skribl.mp4'));
       showToast('MP4 exported', null);
-      try { vEnc.close(); } catch (e) {} try { if (aEnc) aEnc.close(); } catch (e) {}
       cleanup();
       setTimeout(closeExport, 800);
       return true;

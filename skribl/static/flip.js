@@ -4757,25 +4757,15 @@ async function exportGIF(){
    with the trimmed/crossfaded music loop tiled across the clip. Capability-gated:
    returns false (clean) if WebCodecs/muxer/codecs are missing, so exportVideo()
    falls back to the WebM (MediaRecorder) path — never worse than before. ---- */
-async function pickAvcCodec(w,h){
-  if(typeof VideoEncoder==='undefined' || !VideoEncoder.isConfigSupported) return null;
-  for(const c of ['avc1.640028','avc1.4d0028','avc1.42001f','avc1.42e01e']){
-    try{ const r=await VideoEncoder.isConfigSupported({codec:c,width:w,height:h,bitrate:6000000,framerate:30}); if(r&&r.supported) return c; }catch(e){}
-  }
-  return null;
-}
-async function aacSupported(sr,ch){
-  if(typeof AudioEncoder==='undefined' || !AudioEncoder.isConfigSupported) return false;
-  try{ const r=await AudioEncoder.isConfigSupported({codec:'mp4a.40.2',sampleRate:sr,numberOfChannels:ch,bitrate:128000}); return !!(r&&r.supported); }catch(e){ return false; }
-}
+// The codec checks and the encoder pipeline are lib/mp4export.js's, shared with
+// the Pad (v315). Flip keeps what is its own: page-stepped frames, the export
+// range and loop count, and its progress chip.
+function pickAvcCodec(w,h){ return window.SkriblMp4.pickAvcCodec(w,h); }
+function aacSupported(sr,ch){ return window.SkriblMp4.aacSupported(sr,ch); }
 async function exportViaWebCodecsMp4(){
-  try{ await skriblLoadVendor('mp4muxer'); }catch(e){ return false; }
-  const MM=window.Mp4Muxer;
-  if(!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
-  if(typeof VideoEncoder==='undefined' || typeof VideoFrame==='undefined') return false;
   const _d=exDims(), _r=exRange();
-  const w=_d.w&~1, h=_d.h&~1; if(w<2||h<2) return false;   // encoders want even dims
-  const avcCodec=await pickAvcCodec(w,h); if(!avcCodec) return false;
+  const ready=await window.SkriblMp4.prepare(_d.w, _d.h); if(!ready) return false;
+  const w=ready.w, h=ready.h;
   if(frames.length<1) return false;
   // Audio: the trimmed/crossfaded loop from the music engine, if music is on.
   const hasAudio = !!musicData && musicEnabled && !musicMuted && !!currentAudioBuffer;
@@ -4787,51 +4777,19 @@ async function exportViaWebCodecsMp4(){
   }
   if(exporting) return true; exporting=true; exportShow('Encoding video…');
   try{
-    const muxer=new MM.Muxer({ target:new MM.ArrayBufferTarget(),
-      video:{codec:'avc',width:w,height:h},
-      audio: useAudio ? {codec:'aac',numberOfChannels:audioBuf.numberOfChannels,sampleRate:audioBuf.sampleRate} : undefined,
-      fastStart:'in-memory' });
-    let encErr=null;
-    const vEnc=new VideoEncoder({ output:(c,m)=>muxer.addVideoChunk(c,m), error:(e)=>{encErr=e;} });
-    vEnc.configure({ codec:avcCodec, width:w, height:h, bitrate:6000000, framerate:30 });
-    let aEnc=null;
-    if(useAudio){ aEnc=new AudioEncoder({ output:(c,m)=>muxer.addAudioChunk(c,m), error:(e)=>{encErr=e;} });
-      aEnc.configure({ codec:'mp4a.40.2', numberOfChannels:audioBuf.numberOfChannels, sampleRate:audioBuf.sampleRate, bitrate:128000 }); }
     const rec=document.createElement('canvas'); rec.width=w; rec.height=h; const rctx=rec.getContext('2d');
     rctx.setTransform(w/CW, 0, 0, h/CH, 0, 0);   // same reason as the WebM path
-    const encFps=30, frameDurUs=1000000/encFps;
     const loops = frames.length>1 ? exLoops : 1;              // from the export sheet; a single page has nothing to loop
     const _units=exportUnits(_r.from-1, _r.to-1);
     const totalSec=(_units.length/fps)*loops;
-    const totalFrames=Math.max(1, Math.ceil(totalSec*encFps));
-    for(let f=0; f<totalFrames; f++){
-      if(_exportAbort){ try{vEnc.close();}catch(e){} try{if(aEnc)aEnc.close();}catch(e){} exportHide(); chip('Export cancelled'); exporting=false; return true; }
-      const _u=_units[Math.floor((f/encFps)*fps)%_units.length];
-      drawFrameTo(rctx, frames[_u.i], _u.prog);
-      const vf=new VideoFrame(rec, { timestamp:Math.round(f*frameDurUs), duration:Math.round(frameDurUs) });
-      vEnc.encode(vf, { keyFrame:(f%(encFps*2))===0 }); vf.close();
-      if(encErr) throw encErr;
-      if(vEnc.encodeQueueSize>8) await new Promise(r=>setTimeout(r,0));
-      else if((f&7)===0){ exportSet((f/totalFrames)*(useAudio?0.8:1)); await new Promise(r=>setTimeout(r,0)); }
-    }
-    await vEnc.flush();
-    if(useAudio && aEnc){
-      exportSet(0.82,'Encoding audio…');
-      const sr=audioBuf.sampleRate, ch=audioBuf.numberOfChannels, loopLen=audioBuf.length;
-      const chans=[]; for(let c=0;c<ch;c++) chans.push(audioBuf.getChannelData(c));
-      const totalSamples=Math.ceil(totalSec*sr), blk=1024; let pos=0;
-      while(pos<totalSamples){ const n=Math.min(blk, totalSamples-pos); const data=new Float32Array(n*ch);
-        for(let c=0;c<ch;c++){ const src=chans[c], off=c*n; for(let k=0;k<n;k++){ data[off+k]=src[(pos+k)%loopLen]; } }
-        const ad=new AudioData({ format:'f32-planar', sampleRate:sr, numberOfFrames:n, numberOfChannels:ch, timestamp:Math.round((pos/sr)*1000000), data });
-        aEnc.encode(ad); ad.close(); if(encErr) throw encErr; pos+=n;
-        if((pos%(blk*32))===0){ exportSet(0.82+(pos/totalSamples)*0.16); await new Promise(r=>setTimeout(r,0)); }
-      }
-      await aEnc.flush();
-    }
-    if(encErr) throw encErr;
-    muxer.finalize();
-    download(new Blob([muxer.target.buffer],{type:'video/mp4'}), window.SkriblName ? window.SkriblName.exportName('mp4') : 'skribl-flip.mp4');
-    try{vEnc.close();}catch(e){} try{if(aEnc)aEnc.close();}catch(e){}
+    const buffer=await window.SkriblMp4.encode({
+      ready, canvas:rec, durationSec:totalSec, audio: useAudio ? audioBuf : null,
+      drawFrame:(f)=>{ const _u=_units[Math.floor((f/30)*fps)%_units.length]; drawFrameTo(rctx, frames[_u.i], _u.prog); },
+      aborted:()=>_exportAbort,
+      progress:(frac,label)=>exportSet(frac,label),
+    });
+    if(!buffer){ exportHide(); chip('Export cancelled'); exporting=false; return true; }
+    download(new Blob([buffer],{type:'video/mp4'}), window.SkriblName ? window.SkriblName.exportName('mp4') : 'skribl-flip.mp4');
     exportSet(1,'Done!'); setTimeout(exportHide,500); chip('MP4 exported'); exporting=false; return true;
   }catch(err){ console.error('WebCodecs MP4 export failed:', err); exportHide(); chip('MP4 failed — using WebM'); exporting=false; return false; }
 }

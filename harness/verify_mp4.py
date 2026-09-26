@@ -215,17 +215,34 @@ with sync_playwright() as p:
             pg.wait_for_timeout(15)
         pg.mouse.up()
 
-    for editor in ("Pad", "Flip"):
+    import math as _m, struct as _st
+    def _wav(seconds=2.0, rate=44100):
+        n = int(seconds * rate)
+        fr = b"".join(_st.pack("<h", int(9000 * _m.sin(2 * _m.pi * 330 * i / rate))) for i in range(n))
+        return (b"RIFF" + _st.pack("<I", 36 + len(fr)) + b"WAVEfmt " + _st.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
+                + b"data" + _st.pack("<I", len(fr)) + fr)
+    AAC = page.evaluate("""async () => (typeof AudioEncoder !== 'undefined' && AudioEncoder.isConfigSupported)
+        ? !!(await AudioEncoder.isConfigSupported({codec: 'mp4a.40.2', sampleRate: 44100, numberOfChannels: 1, bitrate: 128000})).supported
+        : false""")
+    print(f"  (AAC encoding in this browser: {AAC})")
+
+    # Two passes per editor. Silent: the video path. With music: the shared
+    # encoder also tiles the loop into the audio track -- or, where AAC cannot
+    # be encoded, the export must fall back to WebM rather than ship a silent MP4.
+    for editor, music in (("Pad", False), ("Flip", False), ("Pad", True), ("Flip", True)):
         pg = browser.new_page(viewport={"width": 1280, "height": 900})
         perrs = []
         pg.on("pageerror", lambda e: perrs.append(str(e)))
         pg.add_init_script(CAPTURE)
+        route = "/" if editor == "Pad" else "/flip"
+        browsing.goto(pg, BASE, route)
+        if music:
+            pg.set_input_files("#musicInput", files=[{"name": "m.wav", "mimeType": "audio/wav", "buffer": _wav()}])
+            pg.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=30000)
         if editor == "Pad":
-            browsing.goto(pg, BASE, "/")
             _draw(pg, "#canvas", 80, 80)
             pg.evaluate("() => document.getElementById('exportItem').click()")
         else:
-            browsing.goto(pg, BASE, "/flip")
             for i in range(3):
                 if i: pg.evaluate("() => addFrame()")
                 _draw(pg, "#pad", 90 + i * 15, 100)
@@ -238,15 +255,21 @@ with sync_playwright() as p:
         except Exception as e:
             got = {"type": None, "bytes": 0, "boxes": [], "traks": 0, "error": str(e)[:160]}
         types = [b["type"] for b in got["boxes"]]
-        check(f"{editor}: the Video button produced an MP4, not the WebM fallback",
-              got["type"] == "video/mp4", f"{got.get('type')} {got.get('error', '')}")
-        check(f"{editor}: ftyp first, moov before mdat (streamable), boxes tile the file",
-              types[:1] == ["ftyp"] and "moov" in types and "mdat" in types
-              and types.index("moov") < types.index("mdat")
-              and sum(b["size"] for b in got["boxes"]) == got["bytes"], f"{types} {got['bytes']} B")
-        check(f"{editor}: one video track, and the file is not a stub",
-              got["traks"] == 1 and got["bytes"] > 4096, f"{got['traks']} trak, {got['bytes']} B")
-        check(f"{editor}: no page errors during its export", not perrs, "; ".join(perrs[:2]))
+        tag = editor + (" with music" if music else "")
+        if music and not AAC:
+            check(f"{tag}: no AAC here, so the export fell back to WebM rather than a silent MP4",
+                  got["type"] == "video/webm", f"{got.get('type')} {got.get('error', '')}")
+        else:
+            check(f"{tag}: the Video button produced an MP4, not the WebM fallback",
+                  got["type"] == "video/mp4", f"{got.get('type')} {got.get('error', '')}")
+            check(f"{tag}: ftyp first, moov before mdat (streamable), boxes tile the file",
+                  types[:1] == ["ftyp"] and "moov" in types and "mdat" in types
+                  and types.index("moov") < types.index("mdat")
+                  and sum(b["size"] for b in got["boxes"]) == got["bytes"], f"{types} {got['bytes']} B")
+            want = 2 if music else 1
+            check(f"{tag}: {want} track(s) ({'video + audio' if music else 'video'}), and the file is not a stub",
+                  got["traks"] == want and got["bytes"] > 4096, f"{got['traks']} trak, {got['bytes']} B")
+        check(f"{tag}: no page errors during its export", not perrs, "; ".join(perrs[:2]))
         pg.close()
 
     browser.close()
