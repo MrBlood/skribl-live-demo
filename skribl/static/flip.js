@@ -4983,49 +4983,13 @@ function syncMediaUI(){ syncPhotoUI(); syncMusicUI(); refreshPendingCards(); if(
 // The Draw/Image/Music drawers are shared partials, so Flip already HAS the Pad's
 // #musicPending / #photoPending re-add cards in its DOM — it just never drove them.
 // Runs last inside syncMediaUI, because syncPhotoUI/syncMusicUI reset the tab dots.
-function fmtLoopTime(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return m+':'+String(s).padStart(2,'0'); }
 function refreshPendingCards(){
-  const mCard=document.getElementById('musicPending'), pCard=document.getElementById('photoPending');
-  const mUp=document.getElementById('musicUploadBtn'), pUp=document.getElementById('photoUploadBtn');
-  const mDot=document.getElementById('musicTabDot'),  pDot=document.getElementById('photoTabDot');
-  if(mCard){
-    if(pendingMusicMeta && !musicData){
-      document.getElementById('musicPendingName').textContent = pendingMusicMeta.name || 'Your track';
-      let meta='Loop saved';
-      if(pendingMusicMeta.trimStart!=null && pendingMusicMeta.trimEnd!=null){
-        const len=pendingMusicMeta.trimEnd-pendingMusicMeta.trimStart;
-        meta='Loop '+fmtLoopTime(pendingMusicMeta.trimStart)+'–'+fmtLoopTime(pendingMusicMeta.trimEnd)+' · '+len.toFixed(1)+'s';
-      }
-      document.getElementById('musicPendingMeta').textContent=meta;
-      mCard.hidden=false; if(mUp) mUp.hidden=true;
-      if(mDot){ mDot.hidden=false; mDot.classList.add('pending'); }
-    } else {
-      mCard.hidden=true; if(mUp) mUp.hidden=false;
-      // Restore hidden, not just the class. The branch above sets hidden=false
-      // for the pending dot; dropping only 'pending' here left a VISIBLE dot
-      // with no pending styling — which renders in the "has media" green —
-      // until syncMusicUI() next ran and hid it. Dismissing the re-add card
-      // turned the dot green, and opening the drawer made it vanish.
-      if(mDot){ mDot.classList.remove('pending'); mDot.hidden = !musicData; }
-    }
-  }
-  if(pCard){
-    if(pendingPhotoMeta && !bgImage){
-      document.getElementById('photoPendingName').textContent = pendingPhotoMeta.name || 'Your image';
-      const parts=[];
-      if(pendingPhotoMeta.fit) parts.push({cover:'Fill',contain:'Fit',fill:'Stretch',stretch:'Stretch'}[pendingPhotoMeta.fit] || pendingPhotoMeta.fit);
-      if(pendingPhotoMeta.opacity!=null) parts.push(Math.round(pendingPhotoMeta.opacity*100)+'% opacity');
-      if(pendingPhotoMeta.blur) parts.push(pendingPhotoMeta.blur+'px blur');
-      if(pendingPhotoMeta.zoom && pendingPhotoMeta.zoom!==1) parts.push(Math.round(pendingPhotoMeta.zoom*100)+'% zoom');
-      document.getElementById('photoPendingMeta').textContent = parts.length ? parts.join(' · ') : 'Adjustments saved';
-      pCard.hidden=false; if(pUp) pUp.hidden=true;
-      if(pDot){ pDot.hidden=false; pDot.classList.add('pending'); }
-    } else {
-      pCard.hidden=true; if(pUp) pUp.hidden=false;
-      // Same as the music dot above: restore hidden, not just the class.
-      if(pDot){ pDot.classList.remove('pending'); pDot.hidden = !bgImage; }
-    }
-  }
+  // Drawn by lib/pendingcards.js, shared with the Pad; Flip hands in its state.
+  if(!window.SkriblPendingCards) return;
+  window.SkriblPendingCards.render({
+    music:{ meta: pendingMusicMeta, loaded: !!musicData, has: !!musicData },
+    photo:{ meta: pendingPhotoMeta, loaded: !!bgImage, has: !!bgImage },
+  });
 }
 
 // image controls

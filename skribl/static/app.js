@@ -2911,67 +2911,15 @@ function applyPendingMusicSettings(meta) {
   updateTrimUI();
 }
 
-function fmtLoopTime(sec) {
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return m + ':' + String(s).padStart(2, '0');
-}
-
-// Build the human-readable settings summary for each pending card and toggle
-// the cards' visibility + the little tab dots that hint media is waiting.
+// The re-add cards and tab dots are drawn by lib/pendingcards.js (editors
+// only); Pad hands in its own state. The player has no drawers and no lib.
 function refreshPendingCards() {
-  const mCard = document.getElementById('musicPending');
-  const pCard = document.getElementById('photoPending');
-
-  if (mCard) {
-    if (pendingMusicMeta && !audioEl) {
-      _authoringCtl('musicPendingName').textContent = pendingMusicMeta.name;
-      let meta = 'Loop saved';
-      if (pendingMusicMeta.trimStart != null && pendingMusicMeta.trimEnd != null) {
-        const len = (pendingMusicMeta.trimEnd - pendingMusicMeta.trimStart);
-        meta = `Loop ${fmtLoopTime(pendingMusicMeta.trimStart)}–${fmtLoopTime(pendingMusicMeta.trimEnd)} · ${len.toFixed(1)}s`;
-      }
-      _authoringCtl('musicPendingMeta').textContent = meta;
-      mCard.hidden = false;
-      musicUploadBtn.hidden = true;
-      musicTabDot.hidden = false;
-      musicTabDot.classList.add('pending');
-    } else {
-      mCard.hidden = true;
-      musicUploadBtn.hidden = false;
-      // HIDDEN, not just un-pending — this function owns the dot (Flip's copy
-      // always did). Dismissing from the pill left a solid GREEN dot claiming
-      // media the session does not have, because only the card's own Dismiss
-      // button hid it (v294 bug check).
-      musicTabDot.classList.remove('pending');
-      musicTabDot.hidden = !(audioEl && audioEl._fileName);
-    }
-  }
-
-  if (pCard) {
-    if (pendingPhotoMeta && (!photoBgImg || photoBgImg.style.display === 'none')) {
-      _authoringCtl('photoPendingName').textContent = pendingPhotoMeta.name;
-      const parts = [];
-      if (pendingPhotoMeta.fit) {
-        const fitName = { cover: 'Fill', contain: 'Fit', stretch: 'Stretch' }[pendingPhotoMeta.fit] || pendingPhotoMeta.fit;
-        parts.push(fitName);
-      }
-      if (pendingPhotoMeta.opacity != null) parts.push(Math.round(pendingPhotoMeta.opacity * 100) + '% opacity');
-      if (pendingPhotoMeta.blur) parts.push(pendingPhotoMeta.blur + 'px blur');
-      if (pendingPhotoMeta.zoom && pendingPhotoMeta.zoom !== 1) parts.push(Math.round(pendingPhotoMeta.zoom * 100) + '% zoom');
-      _authoringCtl('photoPendingMeta').textContent = parts.length ? parts.join(' · ') : 'Adjustments saved';
-      pCard.hidden = false;
-      photoUploadBtn.hidden = true;
-      _authoringCtl('photoTabDot').hidden = false;
-      _authoringCtl('photoTabDot').classList.add('pending');
-    } else {
-      pCard.hidden = true;
-      photoUploadBtn.hidden = false;
-      { const d = document.getElementById('photoTabDot');
-        if (d) { d.classList.remove('pending');
-                 d.hidden = !(photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName); } }
-    }
-  }
+  if (!window.SkriblPendingCards) return;
+  const photoShown = !!(photoBgImg && photoBgImg.style.display !== 'none');
+  window.SkriblPendingCards.render({
+    music: { meta: pendingMusicMeta, loaded: !!audioEl, has: !!(audioEl && audioEl._fileName) },
+    photo: { meta: pendingPhotoMeta, loaded: photoShown, has: !!(photoShown && photoBgImg._fileName) },
+  });
 }
 
 // ===========================================================================

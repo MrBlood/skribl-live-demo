@@ -740,6 +740,7 @@ rather than a shared rule.
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
 | `painttarget.js` | Pad+Flip | The draw drawer's paint-target seg (Pen or Background) and the pills on its segmented rows: wired once for both editors (SK312-003, v315). |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
+| `pendingcards.js` | Pad+Flip | The "re-add your file" cards in the Image and Music drawers, and the tab dots that hint media is waiting: one implementation for both editors (SK312-003, v315; refreshPendingCards was 0.76 alike in app.js and flip.js). |
 | `photofit.js` | Pad+Flip+library+in-post | Photo fit geometry — the part both editors and the player must agree on. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
