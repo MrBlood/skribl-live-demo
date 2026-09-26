@@ -618,7 +618,18 @@ with sync_playwright() as sp:
     # ...and the paint-target seg (lib/painttarget.js, same release): 133,197.
     # ...and the re-add cards (lib/pendingcards.js, same release): 131,384.
     # ...and the whole-track strip (lib/loopwave.js drawStrip): 130,609.
-    BYTES_RATCHET, BYTES_TARGET = 131_100, 153_800
+    # ...and the live loop engine moved INTO lib/audioloop.js, which the player
+    #    loads (#243), with its stop-stands-down guard: 131,048 (still under).
+    # RAISED, TWICE, EACH FOR A NAMED COST (v315, owner's iPhone):
+    #   +176 B  Play claims the iOS playback session, claim before resume
+    #           (#245, #246): Play was silent on a phone set to silent. Those
+    #           two merged WITHOUT this suite being run, and main's battery
+    #           read 131,224 over a 131,100 ratchet -- this raise is also that
+    #           red's fix.
+    #   +572 B  showToast never covers the header or the toolbar (a hidden
+    #           anchor measured 0x0 and put "Take saved" over Play).
+    # 131,796 measured; the ratchet sits just above it so the room is not spent.
+    BYTES_RATCHET, BYTES_TARGET = 131_900, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
