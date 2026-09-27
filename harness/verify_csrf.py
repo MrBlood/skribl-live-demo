@@ -247,7 +247,8 @@ except Exception as _e4:      # noqa: BLE001
 print("\nSIGNED AND BOUND — a planted or borrowed token is refused (v317, security review)")
 # Plain double submit accepted ANY cookie value its header matched, so a
 # sibling subdomain that can plant a cookie planted a value it knew. Driven in
-# process against the triple itself, with the binding init_skribl installs.
+# process against the triple itself, with a binder installed here by hand;
+# verify_hostseams drives the one init_skribl installs, through the demo app.
 from flask import Flask as _Flask, g as _g, request as _rq
 import skribl.security as _sec
 _fa = _Flask("csrf-binding"); _fa.config["SECRET_KEY"] = "harness-csrf-binding"
@@ -276,8 +277,14 @@ check("a value planted by someone else (cookie and header match) is refused",
       _accepts("alice", "planted-by-a-sibling-subdomain") is False)
 check("a genuine token lifted from ANOTHER user's session is refused",
       _accepts("alice", _token_for("mallory")) is False)
+_pre = _token_for(None)
+_user["id"] = "alice"
+with _fa.test_request_context("/", headers={"Cookie": f"skribl_csrf={_pre}", HEADER: _pre}):
+    _prep()
+    _fresh = _g.skribl_csrf_is_new and _g.skribl_csrf_token != _pre
+    _ok_pre = _val(_rq)
 check("a token from before sign-in is refused once signed in (and a fresh one is issued)",
-      _accepts("alice", _token_for(None)) is False)
+      _ok_pre is False and _fresh is True, f"accepted={_ok_pre} reissued={_fresh}")
 _user["id"] = "alice"
 with _fa.test_request_context("/", headers={"Cookie": "skribl_csrf=planted"}):
     _prep()

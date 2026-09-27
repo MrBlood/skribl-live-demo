@@ -1038,7 +1038,9 @@ such a host is not wrong).
 **`double_submit_csrf()`'s token is signed, and bound to the signed-in user**
 (since v317). It is an HMAC under your `SECRET_KEY` over a nonce and the id
 `current_user_id` returns, so a value planted by a sibling subdomain fails the
-signature, and a genuine token lifted from another session fails the binding.
+signature, and a genuine token minted for another user (or for a signed-out
+page) fails the binding. It is bound to the user, not to the session: the same
+user's token from another of their own sessions is accepted, which is harmless.
 `init_skribl` installs the binding for you. A page loaded before sign-in holds
 a token for "nobody", so its first write after signing in is refused until the
 page reloads and picks up the new one: sign-in normally reloads anyway. With

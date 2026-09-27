@@ -607,6 +607,15 @@ check("...and a token minted for a DIFFERENT post",
 check("...and the post survived all three refusals",
       c8.get(f"/api/skribls/{_pid}").status_code == 200)
 
+# A token that is not a string is no token (third review): PATCH passed the
+# raw JSON value on, and a number or a list reached .encode() and answered an
+# unauthenticated 500. DELETE already type-checked; PATCH must refuse the same.
+_odd = [c8.patch(f"/api/skribls/{_pid}", json={"visibility": "private", "deleteToken": _v}).status_code
+        for _v in (5, [1], {"a": 1}, True)]
+check("a deleteToken that is not a string is refused (404), never a 500",
+      _odd == [404, 404, 404, 404], str(_odd))
+check("...and the post is still public", c8.get(f"/api/skribls/{_pid}").status_code == 200)
+
 # Revoke first — the softer of the two, and the one an unlisted link needs.
 r = c8.patch(f"/api/skribls/{_pid}",
              json={"visibility": "private", "deleteToken": _tok})

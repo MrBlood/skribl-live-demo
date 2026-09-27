@@ -593,6 +593,17 @@ def register_routes(bp, *, index_route=False):
         # shared IP's legitimate posting allowance. Both are checked before any
         # body parsing. 429 is a 4xx, so the composer's existing error path
         # surfaces this verbatim and refuses to fake a success (see sendSkribl).
+        #
+        # CSRF FIRST (v317, third review): a request another site forged is
+        # refused before it is charged, or any page the author visits could
+        # spend their connection's budget with auto-submitting forms and lock
+        # them out of posting for the hour. The check reads a header and a
+        # cookie, never the body, so it costs less than the charge does.
+        # It goes through the same pair the destructive routes use (an inline
+        # copy of the rule until v299). See _csrf_ok, below, for when it is
+        # enforced at all.
+        if not _csrf_ok():
+            return _csrf_refusal()
         client_ip = _client_ip()
         if _rate_limited(client_ip, "attempts"):
             return jsonify({
@@ -603,13 +614,6 @@ def register_routes(bp, *, index_route=False):
         # the insert, not here. Checking here and recording after the commit left a
         # window where concurrent requests all saw room and all committed.
         # (Review round 2, #2)
-
-        # CSRF, through the same pair the destructive routes use. This was an
-        # inline copy of the rule until v299, when DELETE and PATCH gained the
-        # check and a second copy would have been a third place for the three
-        # to drift apart. See _csrf_ok, below, for when it is enforced at all.
-        if not _csrf_ok():
-            return _csrf_refusal()
 
         # IDEMPOTENCY (outside review, P1). A response lost in transit leaves
         # the client unable to tell "never happened" from "happened and I
@@ -1244,11 +1248,11 @@ def register_routes(bp, *, index_route=False):
         # confirm the id exists. You can only report what you could see.
         if not _valid_public_id(public_id):
             return jsonify({"error": "Skribl not found."}), 404
+        if not _csrf_ok():
+            return _csrf_refusal()
         client_ip = _client_ip()
         if _rate_limited(client_ip, "attempts"):
             return jsonify({"error": "Too many requests. Try again later."}), 429
-        if not _csrf_ok():
-            return _csrf_refusal()
         post = session().query(SkriblPost).filter_by(public_id=public_id).first()
         if post is None or not post.visible_to(bp.skribl_current_user_id()):
             return jsonify({"error": "Skribl not found."}), 404
@@ -1397,10 +1401,10 @@ def register_routes(bp, *, index_route=False):
         """Save a draft to the signed-in author's account."""
         # Draft writes spend the same attempts budget posts do (v317, security
         # review): each is up to a full payload of validation and a row rewrite.
-        if _rate_limited(_client_ip(), "attempts"):
-            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         if not _csrf_ok():
             return _csrf_refusal()
+        if _rate_limited(_client_ip(), "attempts"):
+            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         try:
             data = _draft_body()
             out = save_draft(bp.skribl_current_user_id(), data.get("payload"),
@@ -1415,10 +1419,10 @@ def register_routes(bp, *, index_route=False):
         """Overwrite one of your saved drafts."""
         # Draft writes spend the same attempts budget posts do (v317, security
         # review): each is up to a full payload of validation and a row rewrite.
-        if _rate_limited(_client_ip(), "attempts"):
-            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         if not _csrf_ok():
             return _csrf_refusal()
+        if _rate_limited(_client_ip(), "attempts"):
+            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         try:
             data = _draft_body()
             return jsonify(save_draft(bp.skribl_current_user_id(), data.get("payload"),
@@ -1432,10 +1436,10 @@ def register_routes(bp, *, index_route=False):
         """Delete one of your saved drafts."""
         # Draft writes spend the same attempts budget posts do (v317, security
         # review): each is up to a full payload of validation and a row rewrite.
-        if _rate_limited(_client_ip(), "attempts"):
-            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         if not _csrf_ok():
             return _csrf_refusal()
+        if _rate_limited(_client_ip(), "attempts"):
+            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         try:
             delete_draft(bp.skribl_current_user_id(), draft_id)
             return "", 204

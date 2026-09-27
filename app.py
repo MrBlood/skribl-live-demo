@@ -236,14 +236,32 @@ def create_app():
             app.config["SESSION_COOKIE_SECURE"] = (
                 (os.environ.get("SKRIBL_DEMO_INSECURE_COOKIE") or "").strip() != "1")
 
+            from skribl.ratelimit import _client_ip, _rate_limited
+            # What the cookie holds is a MAC of the handle AND the key, not the
+            # handle (third review). A bare handle outlived the key: rotating a
+            # leaked SKRIBL_DEMO_LOGIN_KEY signed nobody out, because every
+            # cookie it had ever issued still said the same name. Now a new key
+            # is a new value, and every sign-in made with the old one is void.
+            # (Replaying a cookie copied before /demo-logout still works until
+            # the key or SECRET_KEY changes: Flask's session lives in the
+            # cookie, so there is no server-side record to strike it from.)
+            _demo_mark = hmac.new(
+                app.config["SECRET_KEY"].encode(),
+                ("skribl-demo|" + _demo_id + "|" + _demo_key).encode(),
+                "sha256").hexdigest()
+
             @app.route("/demo-login")
             def demo_login():
+                # Guesses spend the attempts budget every write spends, so the
+                # key cannot be tried at request speed.
+                if _rate_limited(_client_ip(), "attempts"):
+                    abort(429)
                 given = request.args.get("key", "")
                 # Constant-time, and a wrong key is a plain 404: the route does
                 # not confirm to a stranger that there is anything to guess.
                 if not hmac.compare_digest(given.encode(), _demo_key.encode()):
                     abort(404)
-                session["skribl_demo"] = _demo_id
+                session["skribl_demo"] = _demo_mark
                 session.permanent = True
                 return redirect("/")
 
@@ -253,7 +271,10 @@ def create_app():
                 return redirect("/")
 
             def current_user_id():
-                return _demo_id if session.get("skribl_demo") == _demo_id else None
+                mark = session.get("skribl_demo")
+                if isinstance(mark, str) and hmac.compare_digest(mark, _demo_mark):
+                    return _demo_id
+                return None
 
         _demo_author = {"username": _demo_id}
         _name = (os.environ.get("SKRIBL_DEMO_IDENTITY_NAME") or "").strip()

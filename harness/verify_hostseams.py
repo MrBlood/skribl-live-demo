@@ -475,6 +475,7 @@ try:
     with _on.test_request_context("/"):
         from flask import url_for as _u
         _drafts_url = _u("skribl.list_saved_drafts")
+        _pad_url = _u("skribl.skribl_editor")
     check("a stranger is not the owner: their drafts list is refused",
           _stranger.get(_drafts_url).status_code == 401, _drafts_url)
     check("a wrong key is a plain 404, and signs nobody in",
@@ -487,14 +488,81 @@ try:
     _ck = _login.headers.get("Set-Cookie", "")
     check("...with a cookie scripts cannot read, other sites cannot send, and plain http never carries",
           "HttpOnly" in _ck and "SameSite=Lax" in _ck and "Secure" in _ck, _ck[-120:])
+    with _owner.c.session_transaction(base_url="https://localhost") as _st:
+        _mark = _st.get("skribl_demo")
+    from flask import session as _sess
     with _on.test_request_context("/"):
-        from flask import session as _sess
-        _sess["skribl_demo"] = "bigballbaron"
+        _sess["skribl_demo"] = _mark
         _signed = _on.blueprints["skribl"].skribl_current_user_id()
     check("with it set, the signed-in browser is one user",
           _signed == "bigballbaron", "this id is what goes on a new post's user_id")
+    # THE COOKIE CARRIES A MARK OF THE KEY, NOT THE NAME (third review). A
+    # cookie saying only the handle outlived the key: rotating a leaked key
+    # signed nobody out. Both halves are pinned -- a session holding the bare
+    # handle (what every pre-fix cookie held) is nobody, and the SAME cookie
+    # presented to an app with a rotated key and the same SECRET_KEY is nobody.
+    with _on.test_request_context("/"):
+        _sess["skribl_demo"] = "bigballbaron"
+        _bare = _on.blueprints["skribl"].skribl_current_user_id()
+    check("a session holding just the handle signs nobody in",
+          _bare is None and _mark and _mark != "bigballbaron", repr(_bare))
+    _env(SKRIBL_DEMO_LOGIN_KEY=_KEY + "-rotated")
+    _rot = _appmod.create_app()
+    _env(SKRIBL_DEMO_LOGIN_KEY=_KEY)
+    with _rot.test_request_context("/"):
+        _sess["skribl_demo"] = _mark
+        _after = _rot.blueprints["skribl"].skribl_current_user_id()
+    check("rotating SKRIBL_DEMO_LOGIN_KEY signs out every browser the old key signed in",
+          _after is None, repr(_after))
+    # THE BINDING, THROUGH THE WIRING THE DEMO ACTUALLY RUNS (third review).
+    # verify_csrf drives the signed triple with a binder it installs itself;
+    # this is init_skribl's own `_binder(current_user_id)`. Without it every
+    # token is bound to nobody, and one minted for a signed-out page passes
+    # for the signed-in owner.
+    def _csrf_of(client):
+        client.c.get(_pad_url, base_url="https://localhost")
+        ck = client.c.get_cookie("skribl_csrf", domain="localhost")
+        return ck.value if ck else ""
+
+    # Sent from a client with NO cookie jar, carrying exactly the owner's
+    # session and the token under test: a jar would add its own skribl_csrf
+    # beside the one in the header, and the check would measure the jar.
+    _bare_client = _on.test_client(use_cookies=False)
+
+    def _draft_with(client, tok, addr="198.51.100.20"):
+        sess = client.c.get_cookie("session", domain="localhost")
+        return _bare_client.post(_drafts_url, base_url="https://localhost", json={"kind": "pad", "payload": {}},
+                                 headers={"X-Skribl-CSRF": tok,
+                                          "Cookie": f"session={sess.value}; skribl_csrf={tok}"},
+                                 environ_base={"REMOTE_ADDR": addr}).status_code
+    _anon_tok = _csrf_of(_Https(_on.test_client()))
+    _own_tok = _csrf_of(_owner)
+    _borrowed = _draft_with(_owner, _anon_tok)
+    _own = _draft_with(_owner, _own_tok)
+    check("a CSRF token minted for a signed-out page is refused for the signed-in owner (init_skribl binds it)",
+          _anon_tok and _borrowed == 403 and _own not in (403, 401), f"borrowed {_borrowed}, own {_own}, anon token {bool(_anon_tok)}")
+    # FORGED REQUESTS SPEND NOTHING (third review). The attempts charge came
+    # before the CSRF check, so another site's auto-submitting forms could
+    # use up the owner's hourly budget and lock them out of saving.
+    _on.config["SKRIBL_RATE_MAX_ATTEMPTS"] = 3
+    _forged = [_draft_with(_owner, "forged", addr="198.51.100.21") for _ in range(4)]
+    _after_forged = _draft_with(_owner, _own_tok, addr="198.51.100.21")
+    _on.config.pop("SKRIBL_RATE_MAX_ATTEMPTS", None)
+    check("forged writes are refused before they are charged: the owner's budget is intact after them",
+          _forged == [403] * 4 and _after_forged not in (403, 429), f"forged {_forged}, then {_after_forged}")
     _owner.get("/demo-logout")
     check("/demo-logout signs it out again", _owner.get(_drafts_url).status_code == 401, "")
+    # Guesses at the key spend the attempts budget: at the cap, even the right
+    # key is turned away, so it cannot be tried at request speed.
+    _on.config["SKRIBL_RATE_MAX_ATTEMPTS"] = 3
+    _guesser = _on.test_client()
+    _from = {"REMOTE_ADDR": "203.0.113.77"}     # a fresh bucket, not this run's
+    _codes = [_guesser.get(f"/demo-login?key=guess-{i:02d}-guess-guess", base_url="https://localhost",
+                           environ_base=_from).status_code for i in range(3)]
+    _codes.append(_guesser.get("/demo-login?key=" + _KEY, base_url="https://localhost",
+                               environ_base=_from).status_code)
+    check("guessing the key is rate limited (429 once the attempts budget is spent)",
+          _codes == [404, 404, 404, 429], str(_codes))
     with _on.app_context():
         _me = skribl.models.author_dict("bigballbaron")
         _other = skribl.models.author_dict("somebody-else")
