@@ -870,10 +870,18 @@ with server(SKRIBL_RATE_BACKEND="db", SKRIBL_RATE_MAX_POSTS=2,
     ts = [threading.Thread(target=fire_fresh) for _ in range(12)]
     for t in ts: t.start()
     for t in ts: t.join()
-    check("exactly two of twelve concurrent posts win the fresh quota",
-          fresh_out.count(201) == 2, str(sorted(fresh_out)))
-    check("the other ten are refused", fresh_out.count(429) == 10, str(sorted(fresh_out)))
-    check("no other status appeared", set(fresh_out) <= {201, 429}, str(sorted(set(fresh_out))))
+    # NEVER MORE THAN TWO -- the property the race exists to prove. Not
+    # "exactly two": a limiter that cannot take SQLite's lock within its 200 ms
+    # bound REFUSES (#13c, v264's contract: failing closed beats waving an
+    # unrecorded request through), so under heavy contention a slot can go
+    # unclaimed. Seen once in 25 loaded rounds on two pinned cores, with the
+    # server log naming the refusal. What must never appear is a 500: that was
+    # the host's post insert inheriting the limiter's 200 ms bound, red on main
+    # after v317 and fixed in ratelimit._bound_engine.
+    check("no more than two of twelve concurrent posts win the fresh quota, and at least one does",
+          1 <= fresh_out.count(201) <= 2, str(sorted(fresh_out)))
+    check("the rest are refused", fresh_out.count(429) == 12 - fresh_out.count(201), str(sorted(fresh_out)))
+    check("no other status appeared (no 500)", set(fresh_out) <= {201, 429}, str(sorted(set(fresh_out))))
 with A.create_app().app_context():
     rows = A.RateEvent.query.filter(A.RateEvent.bucket == "posts").count()
 check("post slot rows exist and are bounded", rows >= 2, f"{rows} posts rows")

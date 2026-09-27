@@ -25,6 +25,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -198,11 +199,30 @@ with sync_playwright() as sp:
     pg.on("request", lambda rq: reqs.append(rq.url) if "/api/skribls?" in rq.url else None)
     browsing.goto(pg, BASE, "/gallery")
     pg.wait_for_timeout(600)
+
+    # WAIT FOR THE ANSWER, NOT FOR A FIXED TIME. These checks slept 0.9-1.4 s
+    # after a click or a keystroke into a debounced search and then asserted:
+    # on a loaded machine the response could land after the look, and the
+    # suite went 32/34 once in a row of green runs. Each now waits (up to 8 s)
+    # for the page to show what it is about to be asked, then asserts it.
+    def until(cond, ms=8000):
+        t = time.time() + ms / 1000
+        while time.time() < t:
+            try:
+                if cond():
+                    return True
+            except Exception:
+                pass
+            pg.wait_for_timeout(100)
+        return False
+    TILES = "() => [...document.querySelectorAll('#galleryList .tile .tt')].map(t => t.textContent)"
     tabs = pg.evaluate("() => [...document.querySelectorAll('.tabs .tab')].map(t => [t.textContent.trim(), t.getAttribute('aria-pressed')])")
     check("New and Hot are the two tabs, New pressed", tabs == [["New", "true"], ["Hot", "false"]], str(tabs))
     check("the first request asked for sort=new and no q", any("sort=new" in u and "q=" not in u for u in reqs), str(reqs))
     pg.click('.tab[data-sort="hot"]')
-    pg.wait_for_timeout(1200)
+    until(lambda: any("sort=hot" in u for u in reqs))
+    _hot_first = titles(listing(sort="hot", limit=1)[1])[0]
+    until(lambda: pg.evaluate("() => (document.querySelector('#galleryList .tile .tt') || {}).textContent") == _hot_first)
     check("the Hot tab asks the server for sort=hot", any("sort=hot" in u for u in reqs), str(reqs[-1:]))
     first = pg.evaluate("() => (document.querySelector('#galleryList .tile .tt') || {}).textContent")
     st, srv = listing(sort="hot", limit=1)
@@ -210,12 +230,12 @@ with sync_playwright() as sp:
     plays = pg.evaluate("() => [...document.querySelectorAll('#galleryList .tile')].slice(0, 3).map(t => (t.querySelector('.plays') || {}).textContent || '')")
     check("a played tile says its plays; an unplayed one says nothing", any(re.match(r"\d+ plays?$", p) for p in plays), str(plays))
     pg.fill("#galleryQ", "beta fish")
-    pg.wait_for_timeout(1200)
+    until(lambda: any("q=beta" in u for u in reqs) and (lambda sh: sh and all("beta fish" in t.lower() for t in sh))(pg.evaluate(TILES)))
     shown = pg.evaluate("() => [...document.querySelectorAll('#galleryList .tile .tt')].map(t => t.textContent)")
     check("the box sends q and the page shows what came back",
           any("q=beta" in u for u in reqs) and all("beta fish" in t.lower() for t in shown) and shown, f"{reqs[-1:]} -> {shown}")
     pg.fill("#galleryQ", "zzzz-nothing-" + TAG)
-    pg.wait_for_timeout(1200)
+    until(lambda: pg.evaluate("() => !document.getElementById('galleryNone').hidden"))
     none = pg.evaluate("() => ({ none: !document.getElementById('galleryNone').hidden, empty: !document.getElementById('galleryEmpty').hidden, tiles: document.querySelectorAll('#galleryList .tile').length })")
     check("no match shows 'nothing matches', not the empty gallery", none["none"] and not none["empty"] and none["tiles"] == 0, str(none))
     # THE BOX SAYS WHAT IT SEARCHES (PRESEAL-006). It said "Search titles…"
@@ -226,7 +246,7 @@ with sync_playwright() as sp:
     _ph = pg.get_attribute("#galleryQ", "placeholder") or ""
     check("the box says it searches captions too", "caption" in _ph.lower(), repr(_ph))
     pg.fill("#galleryQ", "howls")          # lives only in alpha wolf's CAPTION
-    pg.wait_for_timeout(1400)
+    until(lambda: any("alpha wolf" in t for t in pg.evaluate(TILES)))
     _cap = pg.evaluate("() => [...document.querySelectorAll('#galleryList .tile .tt')].map(t => t.textContent)")
     check("...and a word that is only in a caption finds its post",
           bool(_cap) and any("alpha wolf" in t for t in _cap),
