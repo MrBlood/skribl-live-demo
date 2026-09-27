@@ -261,15 +261,36 @@ if _marker in _appjs:
                     _es[_ec] = (_est, _i); _ec = None
         _extracted += sum(b - a + 1 for a, b in _es.values())
 
+    # BY THE SCRIPT TAGS, NOT THE WORDS (v317 review; WORKING-AGREEMENTS: "a
+    # check for absence must match the mechanism"). This was a substring search
+    # over the template, so a comment explaining why the player does NOT load a
+    # file would have failed it. Now: the player template and every partial it
+    # includes, comments stripped, and only what a <script src> actually names.
+    def _player_scripts():
+        seen, srcs, todo = set(), set(), ["skribl_player.html"]
+        while todo:
+            name = todo.pop()
+            if name in seen:
+                continue
+            seen.add(name)
+            txt = _layout.template(name).read_text(encoding="utf-8")
+            txt = re.sub(r"\{#.*?#\}", "", txt, flags=re.S)
+            txt = re.sub(r"<!--.*?-->", "", txt, flags=re.S)
+            todo += [inc.split("/", 1)[-1] for inc in
+                     re.findall(r"\{%-?\s*include\s+['\"]([^'\"]+)['\"]", txt)]
+            for src in re.findall(r"<script\b[^>]*\bsrc=\"([^\"]+)\"", txt):
+                m = re.search(r"skribl_asset\(\s*['\"]([^'\"]+)['\"]", src)
+                srcs.add(m.group(1) if m else src)
+        return srcs
+    _pscripts = _player_scripts()
+    _never = {"editor_export.js", "editor_post.js", "editor_menu.js", "editor_music.js",
+              "editor_photo.js", "editor_shapes.js", "editor_draw.js", "editor_tune.js",
+              "lib/sheetswipe.js"}
+    check("the player's own scripts are found at all (else the next check proves nothing)",
+          "app.js" in _pscripts and "lib/eventpoint.js" in _pscripts, str(sorted(_pscripts)))
     check("the extracted editor bundles are not loaded by the player",
-          not any("editor_export.js" in _t or "editor_post.js" in _t
-                  or "editor_menu.js" in _t or "editor_music.js" in _t
-                  or "editor_photo.js" in _t or "editor_shapes.js" in _t
-                  or "editor_draw.js" in _t or "editor_tune.js" in _t
-                  or "lib/sheetswipe.js" in _t
-                  for _t in [_layout.template("skribl_player.html")
-                             .read_text(encoding="utf-8")]),
-          "the whole point of moving them is that the player never fetches them")
+          not (_never & _pscripts),
+          f"loaded: {sorted(_never & _pscripts)} — the whole point of moving them is that the player never fetches them")
 
     _editor_total = _editor_lines + _extracted
     print(f"    editor-only extracted to their own files: {_extracted} lines")
