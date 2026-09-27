@@ -216,12 +216,24 @@ function currentMusicMeta() {
 // a restore raises that amber, as its own comment says; until it has answered,
 // the file is on its way, not missing.
 const _restoring = { photo: false, music: false };
+/* IN HAND IS NOT MISSING (v317). The owner's iPhone, on reload: "Media
+   missing" for a second, then the photo loads and the draft saves. The store
+   HAD answered; the restore handed the file to the attach pipeline and stood
+   down, and the pipeline was still decoding a large map image -- so for that
+   moment nothing said "loading" and the pill said "lost". A file whose name is
+   the draft's is on its way in, whatever stage it is at. */
+function _inHand(kind, meta) {
+  const f = _mediaFile[kind];
+  return !!(f && meta && f.name === meta.name);
+}
 function _pendingMusicLost() {
   if (_restoring.music) return false;
+  if (typeof pendingMusicMeta !== 'undefined' && _inHand('music', pendingMusicMeta)) return false;
   return !!(typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta && !(audioEl && audioEl._fileName));
 }
 function _pendingPhotoLost() {
   if (_restoring.photo) return false;
+  if (typeof pendingPhotoMeta !== 'undefined' && _inHand('photo', pendingPhotoMeta)) return false;
   return !!(typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta
             && !(photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName));
 }
