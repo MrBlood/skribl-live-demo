@@ -1043,11 +1043,23 @@ check("F4 setup: the first statement group is bounded", _first == 200, str(_firs
 check("F4: the connection in use AFTER a commit is bounded too — the second "
       "write does not pay pysqlite's 5 s default", _second == 200,
       f"busy_timeout={_second} on the post-commit connection")
-with _f4_sm() as _s2:
-    _fresh = _s2.connection().exec_driver_sql("PRAGMA busy_timeout").scalar()
-check("F4: any later session on the same engine is bounded without calling "
-      "_bounded() at all (engine-level, cannot be forgotten)",
-      _fresh == 200, str(_fresh))
+# v317 follow-up: THE BOUND IS THE LIMITER'S, NOT THE ENGINE'S. The limiter
+# shares the host's engine, and this row used to assert that any later session
+# on it was bounded -- which is the leak: the host's post insert then waited
+# 200 ms for SQLite's lock, and under load a post answered 500 (verify_review
+# #13b, red on main). A session that is not the limiter's gets the host's wait
+# back, on every connection the limiter ever bounded.
+_f4_host = []
+for _ in range(3):
+    with _f4_sm() as _s2:
+        _f4_host.append(_s2.connection().exec_driver_sql("PRAGMA busy_timeout").scalar())
+check("F4: a later session that is not the limiter's gets the host's wait back "
+      "(pysqlite's 5 s), on every pooled connection",
+      _f4_host == [5000, 5000, 5000], str(_f4_host))
+with _f4_sm() as _s3:
+    _rl4._bounded(_s3)
+    _again = _s3.connection().exec_driver_sql("PRAGMA busy_timeout").scalar()
+check("F4: ...while a limiter session on the same engine is bounded again", _again == 200, str(_again))
 
 print("\nF3b (v265) — append and take do not interleave, so no release is lost")
 # OUTSIDE REVIEW OF v264, #3. _journal_take read the whole file then truncated

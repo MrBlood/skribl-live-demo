@@ -307,33 +307,68 @@ def _bounded(s):
     connection is bounded by an engine-level listener, installed once per
     engine, so it cannot be forgotten by a caller and cannot lapse across a
     commit. The direct PRAGMA below is kept as belt-and-braces for the very
-    first statement on a connection that pre-dates the listener."""
+    first statement on a connection that pre-dates the listener.
+
+    v317 follow-up: THE BOUND HAD LEAKED ONTO THE HOST. The limiter shares the
+    host's engine, and that checkout listener bounded EVERY checkout of it,
+    so after the first rate-limited request the host's own post insert waited
+    200 ms for SQLite's lock instead of pysqlite's 5 s. Under load (twelve
+    posts at once on a two-core CI runner) the insert lost that race and the
+    post answered 500; verify_review #13b went red on main, and reproduced
+    here on two pinned cores. Now the bound is per LIMITER TRANSACTION (the
+    session's after_begin, which fires again for the connection a commit
+    hands it), and every checkout first gives the connection back the host's
+    own wait, recorded the first time the limiter touched it."""
     conn = s.connection()
     if conn.dialect.name == "sqlite":
         _bound_engine(conn.engine)
-        conn.exec_driver_sql("PRAGMA busy_timeout=200")
+        if not s.info.get("skribl_bounded"):
+            s.info["skribl_bounded"] = True
+            sa.event.listen(s, "after_begin", _bound_on_begin)
+        _bound_now(conn)
     return s
+
+
+_HOST_BUSY = "skribl_host_busy_timeout"
+
+
+def _bound_now(conn):
+    """Bound this connection for the limiter, remembering the host's wait."""
+    info = conn.connection.info       # the pool record's: it outlives checkouts
+    if _HOST_BUSY not in info:
+        info[_HOST_BUSY] = int(conn.exec_driver_sql("PRAGMA busy_timeout").scalar() or 5000)
+    conn.exec_driver_sql("PRAGMA busy_timeout=200")
+
+
+def _bound_on_begin(session, transaction, connection):
+    if connection.dialect.name == "sqlite":
+        _bound_now(connection)
 
 
 _bounded_engines = weakref.WeakSet()
 
 
 def _bound_engine(engine):
-    """Attach the busy_timeout bound at checkout, once per limiter engine.
+    """Give every checkout of a shared engine back the HOST's lock wait.
 
-    'checkout' fires on every pool checkout, so a session that commits and
-    continues on a fresh connection is bounded again without anyone having
-    to remember to call _bounded() a second time.
+    'checkout' fires on every pool checkout. A connection the limiter bounded
+    goes back to the pool at 200 ms, and the next session to draw it may be
+    the host's: this restores the wait the host had (recorded by _bound_now),
+    so only the limiter's own transactions -- re-bounded in after_begin --
+    run bounded.
     """
     if engine in _bounded_engines:
         return
     _bounded_engines.add(engine)
 
     @sa.event.listens_for(engine, "checkout")
-    def _bound_on_checkout(dbapi_conn, connection_record, connection_proxy):
+    def _host_wait_on_checkout(dbapi_conn, connection_record, connection_proxy):
+        host = connection_record.info.get(_HOST_BUSY)
+        if host is None:
+            return
         try:
             cur = dbapi_conn.cursor()
-            cur.execute("PRAGMA busy_timeout=200")
+            cur.execute("PRAGMA busy_timeout=%d" % int(host))
             cur.close()
         except Exception:
             pass

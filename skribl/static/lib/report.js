@@ -110,7 +110,10 @@
       // console.error the write leaves are the only account of why.
       'Media store: ' + safe(function () {
         return (typeof indexedDB === 'undefined' ? 'no IndexedDB; ' : '')
-          + (global.skriblMediaStoreState ? global.skriblMediaStoreState() : 'n/a');
+          + (global.skriblMediaStoreState ? global.skriblMediaStoreState() : 'n/a')
+          // ...and whether the store itself is answering, and what it last
+          // said when it did not (after v317: "I saved a draft and nothing").
+          + (global.SkriblDraftStore && global.SkriblDraftStore.state ? '; ' + global.SkriblDraftStore.state() : '');
       }, '?'),
       'Screen: ' + safe(function () { return global.innerWidth + 'x' + global.innerHeight; }, '?')
         + ' @ ' + safe(function () { return global.devicePixelRatio || 1; }, 1) + 'x'

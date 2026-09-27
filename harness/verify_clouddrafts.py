@@ -551,17 +551,49 @@ try:
         menu_click(ph, "#openCloudDraftItem")
         ph.wait_for_timeout(6000)
         sheet = ph.evaluate("""() => { const l = document.querySelector('#savedDraftsSheet .sdrafts-list');
-            return { text: l ? l.textContent : null, retry: !!document.querySelector('#savedDraftsSheet .sdrafts-retry') }; }""")
+            return { text: l ? l.textContent : null, stalled: !!document.querySelector('#savedDraftsSheet .sdrafts-stalled') }; }""")
         check("storage that never answers: the sheet says so within seconds, not 'Loading…' for good",
-              sheet["text"] and "Loading" not in sheet["text"] and "did not answer" in sheet["text"],
+              sheet["text"] and "Loading" not in sheet["text"] and sheet["stalled"] and "slow to answer" in sheet["text"],
               repr(sheet["text"]))
-        check("and offers Try again", sheet["retry"] is True, str(sheet))
+        # THE SHELF (the owner's iPhone, after v317: "I saved a draft and
+        # nothing"). With IndexedDB hung, Save draft used to fail with the
+        # sheet's error; a saved draft is plain JSON, so it is kept in
+        # localStorage and moves into IndexedDB when it answers.
+        ph.evaluate("() => { SkriblSavedDrafts.close(); }")
+        draw(ph, ph.locator("#canvas").bounding_box())
+        ph.evaluate("() => { SkriblSavedDrafts.forget(); SkriblName.set('Kept while hung'); }")
+        kept = ph.evaluate("async () => { try { const s = await SkriblSavedDrafts.save(); return s ? s.id : null; } catch (e) { return null; } }")
+        ph.wait_for_timeout(300)
+        listed = ph.evaluate("async () => { try { return (await SkriblSavedDrafts.list()).map(i => i.title); } catch (e) { return ['ERR ' + e.message]; } }")
+        check("with storage hung, Save draft still saves, and the draft is listed",
+              bool(kept) and "Kept while hung" in listed, f"id={kept} list={listed}")
+        if not kept:     # nothing further can be asked of a store that kept nothing
+            hung.close(); raise SystemExit(f"{len(results) - len([r for r in results if r[0]])} failure(s): the shelf kept nothing")
+        ph.evaluate("() => { SkriblSavedDrafts.forget(); SkriblName.set('Deleted while hung'); }")
+        doomed = ph.evaluate("async () => { const s = await SkriblSavedDrafts.save(); await SkriblSavedDrafts.remove(s.id); return s.id; }")
+        report = ph.evaluate("() => SkriblDraftStore.state()")
+        check("...and 'Report a problem' can say the store is not answering",
+              "NOT answering" in report and "no answer" in report, report)
         ph.evaluate("() => { window.__hangIDB = false; }")
-        ph.click("#savedDraftsSheet .sdrafts-retry")
-        ph.wait_for_timeout(1500)
-        again = ph.evaluate("() => document.querySelector('#savedDraftsSheet .sdrafts-list').textContent")
-        check("when the storage answers again, Try again reaches it (a fresh open, not the dead one)",
-              "did not answer" not in again and "Loading" not in again, repr(again))
+        ph.wait_for_timeout(300)
+        # The next probe is at most PROBE_MS away; poll until the store answers.
+        after = ph.evaluate("""async () => { let titles = [];
+            for (let i = 0; i < 20; i++) {
+              titles = (await SkriblSavedDrafts.list()).map(i => i.title);
+              if (!SkriblDraftStore.degraded()) break;
+              await new Promise(r => setTimeout(r, 1000));
+            }
+            await new Promise(r => setTimeout(r, 1500));
+            const shelf = Object.keys(localStorage).filter(k => k.startsWith('skribl-shelf'));
+            const rec = await SkriblDraftStore.get('saved:' + arguments[0]);
+            return { titles, shelf, rec: rec ? rec.title : null, stalled: SkriblDraftStore.degraded() }; }""".replace("arguments[0]", repr(kept)))
+        check("when the storage answers, the draft moves into it and the shelf empties",
+              "Kept while hung" in after["titles"] and after["rec"] == "Kept while hung" and not after["shelf"]
+              and after["stalled"] is False, str(after))
+        again = ph.evaluate("async () => (await SkriblSavedDrafts.list()).map(i => i.title)")
+        check("...and a draft deleted while it was hung stays deleted",
+              "Deleted while hung" not in again and "Kept while hung" in again, str(again))
+        ph.evaluate(f"async () => {{ await SkriblSavedDrafts.remove({kept!r}); }}")
         hung.close()
         # A connection closed under the page (what WebKit does while it is in
         # the background): the next read gets one fresh connection, not an error.
