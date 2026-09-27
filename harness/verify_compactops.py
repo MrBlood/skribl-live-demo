@@ -133,7 +133,7 @@ with sync_playwright() as p:
         # existed when it was written. It therefore went red the moment the row
         # legitimately gained a fifth (Draw), reporting a correct mirror as a
         # failure, which is the "match the mechanism, not the word" rule in
-        # CLAUDE.md arriving from the opposite direction: a check that pins a
+        # WORKING-AGREEMENTS.md arriving from the opposite direction: a check that pins a
         # value cannot see whether the property still holds.
         #
         # Both sides are read out of the DOM now. The labels differ by design —

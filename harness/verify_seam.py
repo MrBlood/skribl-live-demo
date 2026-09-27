@@ -399,6 +399,27 @@ if _marker in _appjs:
           f"{_player_lines} — was 1,900+ vs 1,339 before the four carves")
 
 
+# ---------------------------------------------------------------------------
+print("\nSPLIT FRESHNESS — player.css is what the tool makes from styles.css")
+# verify_cssplit has asked this since the split, and it is right; but it also
+# boots a server and a browser, so it runs only AFTER merge. #259 edited
+# styles.css without re-emitting, passed its pull request, and turned main red
+# on this one line (v317). The regeneration itself needs neither a server nor a
+# browser, so the question lives here too, on the PR gate.
+import subprocess as _sp, tempfile as _tf
+_live = ROOT / "harness" / "tools" / "css_live.json"
+_out = Path(_tf.mkdtemp()) / "player.css"
+_run = _sp.run([sys.executable, str(ROOT / "harness" / "tools" / "cssgraph.py"),
+                "--emit", str(_live), str(_out)], cwd=ROOT, capture_output=True, text=True)
+_committed = (ROOT / "skribl" / "static" / "player.css").read_text(encoding="utf-8")
+_fresh = _out.read_text(encoding="utf-8") if _out.exists() else ""
+check("player.css is byte for byte what cssgraph emits from styles.css "
+      "(after editing styles.css: python3 harness/tools/cssgraph.py --emit "
+      "harness/tools/css_live.json skribl/static/player.css)",
+      _run.returncode == 0 and _committed == _fresh,
+      f"cssgraph exit {_run.returncode}; committed {len(_committed):,} vs "
+      f"regenerated {len(_fresh):,} chars")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

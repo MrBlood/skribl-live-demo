@@ -12,7 +12,7 @@ pin here:
   2. TICKED, THE KEY IS "public", and the post is in GET /api/skribls.
   3. IN COMPOSE MODE THERE IS NO BOX. The host's composer decides; a control
      here would be a second answer. The MECHANISM is the element's absence,
-     never a search for the words (CLAUDE.md: match the mechanism).
+     never a search for the words (WORKING-AGREEMENTS.md: match the mechanism).
 
 THE PAGE IS THE HOST'S RECIPE WITHOUT A COMPOSER (feed.js): clone the in-post
 macro per item, mount, page by the listing's own cursor. So the page's pins

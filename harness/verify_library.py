@@ -1329,7 +1329,7 @@ with sync_playwright() as _sp4:
     # The two that do not are `square` and `tall`: a 9:16 Skribl came out 35px
     # wide in an 84px box with 24px of plate down each side. Written against a
     # 16:9 fixture first, all four rows here went green on the band crop, which
-    # is the vacuous pass CLAUDE.md says to go looking for before believing an
+    # is the vacuous pass WORKING-AGREEMENTS.md says to go looking for before believing an
     # instrument.
     _p4.evaluate("""() => { localStorage.setItem('skribl_posted_v1', '[]');
         window.SkriblPosted.add({ id: 'wide1', url: '/s/wide1', title: 'Tall', kind: 'pad', pages: 1 });

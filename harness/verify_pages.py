@@ -331,11 +331,11 @@ with sync_playwright() as p:
     # THE SPEED IS THE POINT, AND A CLOCK IS THE WRONG WAY TO ASSERT IT.
     #
     # This was `cold > warm * 3` on wall-clock timings, with a wide margin
-    # precisely because CLAUDE.md warns these are noisy under load. The margin
+    # precisely because WORKING-AGREEMENTS.md warns these are noisy under load. The margin
     # was not the problem: the ASSERTION was. It passed every local run and
     # every sqlite CI job, and failed the PostgreSQL job twice on trees whose
     # own sqlite job passed -- that job's database logged 105s and 160s
-    # checkpoints mid-run, which is the contention CLAUDE.md documents. A pin
+    # checkpoints mid-run, which is the contention WORKING-AGREEMENTS.md documents. A pin
     # that goes red only when the box is busy reports on the box, not the tree,
     # and CANNOT tell the two apart. That makes it useless in both directions:
     # it cried wolf twice, and it would have said nothing if the cache broke on
@@ -539,7 +539,7 @@ with sync_playwright() as p:
         // The RENDERED name, not the source that produces it. flip.js carries
         // paragraphs explaining why this button is no longer called the
         // in-between, and a substring search over the file would read the
-        // explanation as the thing it is looking for (CLAUDE.md, three times).
+        // explanation as the thing it is looking for (WORKING-AGREEMENTS.md, three times).
         // What a user reads is the label plus the tooltip, so that is what is
         // collected here.
         names[id] = ((el ? el.textContent : '') + ' ' + (el ? el.title : ''))

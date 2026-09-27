@@ -61,7 +61,7 @@ def runtime_files():
 def evidence_files():
     keep = set(tracked("harness")) | set(tracked(".github")) | set(tracked("docs"))
     keep |= {f for f in ("DECISIONS.md", "START-HERE.md", "FUTURE.md",
-                         "DESIGN-DIRECTION.md", "CLAUDE.md", "ARCHIVE-README.md")
+                         "DESIGN-DIRECTION.md", "WORKING-AGREEMENTS.md", "ARCHIVE-README.md")
              if (ROOT / f).is_file()}
     # THE SEALED RECORD SHIPS WITH THE EVIDENCE, whatever git thinks of it.
     #

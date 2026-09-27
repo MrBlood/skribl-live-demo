@@ -213,7 +213,7 @@ with sync_playwright() as p:
     # TIMES heavier than an in-between -- which was true, and was the defect.
     # A smear is now a lead pose plus a few coarse ghosts, so the two are close
     # by construction, and the old pin could only go green again by putting the
-    # 6,960-point exposure back. CLAUDE.md names this shape: an assertion that
+    # 6,960-point exposure back. WORKING-AGREEMENTS.md names this shape: an assertion that
     # can only pass while the work is outstanding is a TODO in a test's
     # clothing. Guarding the ground instead -- a smear costs a small multiple of
     # the pose it is built around, and going back to an exposure fails here.

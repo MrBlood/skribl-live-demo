@@ -15,7 +15,7 @@ since disproved — on the same terms as `README.md`. Where a fact belongs to
 another file it is pointed at rather than copied. The one exception is §6, the
 history, which exists in one piece nowhere else.
 
-Read it after `CLAUDE.md`, whose rules bind, and before changing anything.
+Read it after `WORKING-AGREEMENTS.md`, whose rules bind, and before changing anything.
 
 ---
 
@@ -124,7 +124,7 @@ seal and CI, suites that discard their servers' stderr, and PostgreSQL are in
 - **Egress goes through a proxy with opinions.** `*.onrender.com` and GitHub's
   artifact blob storage are refused (a 403 on CONNECT), so the live deploy is
   unverifiable from here and CI artifacts cannot be downloaded — transcribe from
-  the job's own log instead, per CLAUDE.md. Unauthenticated GETs to
+  the job's own log instead, per WORKING-AGREEMENTS.md. Unauthenticated GETs to
   `api.github.com` work for public reads. Writes to GitHub go through the tools
   the session has for it, not `gh`. Loopback is in the proxy's exclusion list,
   so `curl http://127.0.0.1:5001/` needs no special flag; an earlier handoff
@@ -137,7 +137,7 @@ seal and CI, suites that discard their servers' stderr, and PostgreSQL are in
 - **Delete the corpus renderer's output before a release run.** The `.gitignore`
   entry keeps `git status` readable and does not keep the directory out of the
   frozen tree hash; its own comment says so, and a v302 seal found out.
-- **Do not start PostgreSQL during a seal.** CLAUDE.md carries the
+- **Do not start PostgreSQL during a seal.** WORKING-AGREEMENTS.md carries the
   measurement. `verify_postgres.py` skipping here is the designed
   configuration; the `postgres` CI job runs it and writes the attestation.
 
@@ -153,7 +153,7 @@ whole-run record of the last seal becomes a one-suite record. Driven directly
 against the bootstrap server a suite touches no record. If the runner was used
 anyway, restore the run record and the stamped documents from the last commit
 before committing; they hold no uncommitted work of yours, which is the one
-condition under which CLAUDE.md's rule against `git checkout` does not apply.
+condition under which WORKING-AGREEMENTS.md's rule against `git checkout` does not apply.
 
 **Every new assertion is calibrated per component before it is believed**, and
 the shape of the script that does it is worth keeping even though the script
@@ -161,7 +161,7 @@ itself is rewritten each time: back the files up with `cp` (never `git
 checkout` — the fix is uncommitted), apply ONE mutation whose anchor string is
 asserted to occur exactly once (a mutation that silently fails to apply reads
 as a pass), run only the pins that should move, restore by `cp`, and go to the
-next. Two surfaces sharing a fix may need different assertions; CLAUDE.md
+next. Two surfaces sharing a fix may need different assertions; WORKING-AGREEMENTS.md
 records why.
 
 **Commit with an explicit file list, push, open a pull request, quote the
@@ -187,7 +187,7 @@ any theory about why.
 
 ## 4. The seal, as it is actually executed
 
-CLAUDE.md's "Sealing a release" is the rule; this is the sequence that has
+WORKING-AGREEMENTS.md's "Sealing a release" is the rule; this is the sequence that has
 satisfied it, with the mechanics the rule leaves out.
 
 1. Bump `SKRIBL_VERSION` in `skribl/core.py`, write the DECISIONS entry, update
@@ -198,7 +198,7 @@ satisfied it, with the mechanics the rule leaves out.
 2. Delete the corpus renderer's output directory. Commit everything. Confirm
    `release_run.source_state()` says `clean`.
 3. Dispatch `harness.yml` on the branch carrying the exact tree being sealed.
-   Actions is free here (public repository, standard runners; CLAUDE.md says
+   Actions is free here (public repository, standard runners; WORKING-AGREEMENTS.md says
    why and how to check).
 4. Start `python3 harness/release_run.py --hold-lanes 3600` in the background,
    or in `--budget` slices with the same flag on every invocation. Every resume
@@ -318,7 +318,7 @@ number is the current one. This is the map, not the record.
   one-idea releases in six days, each a paragraph in the version log; the
   numbering restarts twice in the process. Pull requests replace direct pushes,
   the repository is cleaned for going public, the sealed-archive ceremony and
-  the attestation model take shape, and `CLAUDE.md` is written so a new
+  the attestation model take shape, and `WORKING-AGREEMENTS.md` is written so a new
   session inherits the rules rather than the conversation.
 - **3 to 8 September — audits and the seams (v273–v287).** A staleness sweep
   finds the map wrong where the code was right; the in-post player, compose
@@ -353,7 +353,7 @@ reported done. Tests on a phone against the live deploy and sends screenshots
 with one sentence each; that sentence is the bug report. Wants the thing to
 look right before wanting a knob for it. Asks for a bug check before a seal and
 expects it to find something. Wants to be asked before anything that could
-bill, and not asked about things that cannot — CLAUDE.md says why theatrical
+bill, and not asked about things that cannot — WORKING-AGREEMENTS.md says why theatrical
 permission costs real permission. Reviews arrive from an outside auditor
 working from a packet: per-merge diffs, changed files whole, the sealed
 records, the release archives, the CI job table, and a README that points at
@@ -370,7 +370,7 @@ In the order that would have saved the most time:
 1. **§1, then §2.** Check the ground, rebuild the environment, prove the server
    with a suite. Every environment trap above is either avoided by the script
    or written beside it.
-2. **Read `CLAUDE.md` as rules, not background.** Each "never" is a scar from
+2. **Read `WORKING-AGREEMENTS.md` as rules, not background.** Each "never" is a scar from
    this project. The two that have cost the most: the run-record rule (no
    `run_harness.sh` after a seal) and the uncommitted-work rule (no `git
    checkout` or `git stash` of a file holding work).
