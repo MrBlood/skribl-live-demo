@@ -53,6 +53,26 @@
     return x;
   }
 
+  /* A BUTTON THAT SAYS RE-ADD (v317). The owner, on an iPhone: "tap to
+     re-add ... the button doesn't work. The button makes the pill disappear."
+     The only thing on the pill that LOOKED like a button was the ×, and the ×
+     is Dismiss: it kept the drawing without its media, which is exactly the
+     pill vanishing and the yellow dots going out. The action now has a button
+     of its own, worded as the action, beside the ×; the text still answers a
+     tap as it did, so nothing that worked stops working. */
+  function ensureReadd(pill, x) {
+    var b = document.getElementById('autosaveStatusReadd');
+    if (b) return b;
+    b = document.createElement('button');
+    b.type = 'button';
+    b.id = 'autosaveStatusReadd';
+    b.className = 'autosave-readd';
+    b.textContent = 'Re-add';
+    b.hidden = true;
+    pill.insertBefore(b, x);
+    return b;
+  }
+
   // The 'show' class is added on the NEXT frame, and a save reports 'saving'
   // and its outcome in the same tick: a hide that only removed the class lost
   // the race to the frame still queued by 'saving', and an acknowledged pill
@@ -71,6 +91,9 @@
   function setActionable(pill, txt, on, amber) {
     pill.classList.toggle('actionable', !!on);
     var x = ensureDismiss(pill);
+    var readd = ensureReadd(pill, x);
+    readd.hidden = !on;
+    if (on) readd.title = 'Open the drawer holding the missing file';
     if (on) {
       txt.setAttribute('role', 'button');
       txt.setAttribute('tabindex', '0');
@@ -97,12 +120,17 @@
       if (cfg.open) cfg.open();
     };
     txt.addEventListener('click', go);
+    readd.addEventListener('click', go);
     txt.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') go(e);
     });
     x.addEventListener('click', function (e) {
       e.stopPropagation(); e.preventDefault();
-      if (pill.classList.contains('actionable')) { if (cfg.dismiss) cfg.dismiss(); return; }
+      /* AT ONCE (v317). Dismiss used to leave the pill up until the save it
+         schedules came back and replaced it -- a debounce plus a storage round
+         trip, which on the owner's iPhone was a visible lag before the pill
+         went. The decision is made on the tap; the save reports as saves do. */
+      if (pill.classList.contains('actionable')) { if (cfg.dismiss) cfg.dismiss(); hide(pill); return; }
       acknowledged = true;
       hide(pill);
     });
@@ -168,7 +196,7 @@
     // would send them to an empty drawer.
     else if (state === 'saved-no-media') {
       pill.classList.add('partial');
-      txt.textContent = pending ? 'Media missing — tap to re-add' : 'Saved without media';
+      txt.textContent = pending ? 'Media missing' : 'Saved without media';
     }
     else { txt.textContent = 'Saved'; }
     if (FAILURE[state]) announce(pill, txt.textContent);

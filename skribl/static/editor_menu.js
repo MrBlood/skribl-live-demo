@@ -103,12 +103,14 @@ function clearAllWithUndo() {
     try { snap = serializeSkribl(); } catch (err) { snap = null; }
   }
   resetAll();
+  const prevName = window.SkriblName && window.SkriblName.reset ? window.SkriblName.reset() : '';
   if (!snap) return;
   showToast('New Skribl', null, {
     label: 'Undo',
     onClick: () => {
       try {
         loadSkribl(snap);
+        if (window.SkriblName) window.SkriblName.set(prevName);   // the drawing's name comes back with it
         showToast('Restored', null, { label: 'Redo', onClick: clearAllWithUndo });
       } catch (err) {
         showToast('Couldn\u2019t restore that', null);

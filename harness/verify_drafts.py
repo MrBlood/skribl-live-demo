@@ -462,7 +462,7 @@ with sync_playwright() as p:
     pg4.wait_for_timeout(2500)
     stale = pg4.evaluate("() => document.getElementById('autosaveStatusText').textContent")
     check("Flip: a save with media still MISSING says so, and offers the way back",
-          stale == "Media missing — tap to re-add",
+          stale == "Media missing" and pg4.evaluate("() => { const b = document.getElementById('autosaveStatusReadd'); return !!b && !b.hidden; }"),
           f"{stale!r} with a pending record standing — a session that cannot "
           "produce the file it says it has is not 'Saved', and the wording has "
           "to carry the action or the amber is the dead end that got it removed")

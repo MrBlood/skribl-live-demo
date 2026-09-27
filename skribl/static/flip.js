@@ -9591,7 +9591,9 @@ function invalidateClearUndo(){
 // control's business logic coupled to another control's confirmation UI.
 function clearAllPages(){
   if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.forget();   // a new Skribl is a new draft
-  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv };
+  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv,
+                        // A new Skribl is a new title; Undo brings the old one back (v317).
+                        name: (window.SkriblName && window.SkriblName.reset) ? window.SkriblName.reset() : null };
   /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
      subdiv only ever grew: a cleared page kept the finer time grid of the pages
      that are gone, which spends the insert budget on nothing and leaves the
@@ -9624,6 +9626,7 @@ bindEl('clearUndo', 'click',()=>{
   // frames alone would play them at the rate of the empty document.
   if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
   if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
+  if(typeof clearFramesBackup.name === 'string' && window.SkriblName) window.SkriblName.set(clearFramesBackup.name);
   clearFramesBackup=null; redoStack.length=0;
   document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();
