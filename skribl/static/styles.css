@@ -596,10 +596,10 @@ body {
 .btn.play.playing,
 .player-cta,
 .reposition-btn.active,
-/* A dark text-shadow lifts LIGHT text off a busy background. .pending-btn is
-   dark #171a22 text on solid yellow, so the same shadow just smeared the glyph
-   edges and read as blurry — most visibly on "Re-add". Removed there; the other
-   three are white-on-colour and genuinely benefit. */
+/* A dark text-shadow lifts LIGHT text off a busy background. .pending-btn was
+   dark text on solid yellow, where the same shadow smeared the glyph edges and
+   read as blurry — most visibly on "Re-add". It is white on purple now (v317)
+   and stays out of the list; the other three are white-on-colour and benefit. */
 .restore-btn.confirm,
 .tool-btn.active,
 .photo-fit-btn.active {
@@ -2028,14 +2028,16 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .pending-btn {
   flex-shrink: 0;
-  /* Dark-on-yellow: keep the glyphs crisp. */
+  /* The app's action colour with white words, the same as the pill's Re-add
+     (v317: "maybe not so gold?", and never dark text on a coloured pill). The
+     amber stays where it is a warning -- the meta line above and the dot. */
   text-shadow: none;
   -webkit-font-smoothing: antialiased;
   padding: 8px 14px;
   border-radius: 999px;
   border: none;
-  background: var(--warn);
-  color: var(--surface-well-2);
+  background: var(--accent);
+  color: #fff;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -5649,7 +5651,9 @@ a.player-btn { text-decoration: none; }
 .name-input:focus-visible { border-color: rgba(124, 92, 255, 0.85); outline: none; }
 .name-done {
   height: 38px; padding: 0 16px; border: 0; border-radius: 10px; cursor: pointer;
-  font-weight: 700; font-size: 13px; color: var(--text-primary);
+  /* White, as Post is: --text-primary is near-black in the light theme, and
+     dark words on the purple read as a mistake (the owner, v317). */
+  font-weight: 700; font-size: 13px; color: #fff;
   background: linear-gradient(150deg, var(--accent-2), var(--accent));
 }
 .name-done:hover { filter: brightness(1.06); }
