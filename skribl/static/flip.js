@@ -9632,7 +9632,7 @@ bindEl('clearUndo', 'click',()=>{
   // frames alone would play them at the rate of the empty document.
   if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
   if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
-  if(typeof clearFramesBackup.name === 'string' && window.SkriblName) window.SkriblName.set(clearFramesBackup.name);
+  if(clearFramesBackup.name && window.SkriblName) window.SkriblName.restore(clearFramesBackup.name);
   clearFramesBackup=null; redoStack.length=0;
   document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();

@@ -1269,6 +1269,10 @@ with _sp204() as _p:
     back = (pg.evaluate("() => SkriblName.get()"), fp.evaluate("() => SkriblName.get()"))
     check("V317: Undo brings the old title back with the drawing, on both editors",
           back == ("Old title", "Old title"), str(back))
+    _exp = "() => { const e = document.getElementById('exportName'); return e ? [e.value, !!e._skriblDirty] : null; }"
+    back_exp = (pg.evaluate(_exp), fp.evaluate(_exp))
+    check("V317: ...and the typed export name with it (Undo used to lose it for good)",
+          back_exp == (["old-export", True], ["old-export", True]), str(back_exp))
     # .skribl file input accepts the types iOS tags an unknown-ext JSON file with
     for page_, nm in ((pg, "Pad"), (fp, "Flip")):
         acc = page_.evaluate("() => document.getElementById('draftInput').getAttribute('accept')")
