@@ -609,6 +609,23 @@ try:
         check("a draft its index lost is listed again, and written back into the index",
               "Found again" in back["listed"] and "Found again" in back["indexed"]
               and "Keep me one" in back["listed"], str(back))
+        # A DELETE THAT STOPS HALF-WAY (v317 review): the record goes first, the
+        # row second. With the row first, recover() re-listed the record when
+        # the second step failed and the deleted draft came back; with the
+        # record first, the stale row is dropped rather than left to answer
+        # "Draft not found".
+        halfway = pd.evaluate("""async () => {
+          const S = SkriblDraftStore, put = S.put;
+          S.put = (k, v) => k === 'saved:index' ? Promise.reject(new Error('refused')) : put(k, v);
+          let failed = false;
+          try { await SkriblSavedDrafts.remove('lost1'); } catch (e) { failed = true; }
+          S.put = put;
+          const items = await SkriblSavedDrafts.list();
+          return { failed, listed: items.map(i => i.title) };
+        }""")
+        check("a delete that stops half-way says so, and the draft neither comes back nor lingers as a dead row",
+              halfway["failed"] is True and "Found again" not in halfway["listed"]
+              and "Keep me one" in halfway["listed"], str(halfway))
 
         # ONE ROW ASKS AT A TIME (v317): the owner's sheet showed two rows both
         # saying "Tap again". pd's canvas has ink, so the first tap on a row asks.

@@ -82,16 +82,27 @@
   }
   /* THE WAY BACK for drafts an index already lost. Each draft's record
      ('saved:<id>') outlived the index that listed it, so the list gathers any
-     record the index does not name and writes it back in. */
+     record the index does not name and writes it back in. And the other way:
+     a row whose record is gone (a delete that stopped half-way) is dropped,
+     not shown as a draft that answers "not found". */
+  function byNewest(a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); }
   function recover(items) {
     if (!store().keys) return Promise.resolve(items);
     return store().keys().then(function (ks) {
-      var known = {};
+      var have = {}, known = {};
+      ks.forEach(function (k) { have[k] = true; });
+      var kept = items.filter(function (i) { return have['saved:' + i.id]; });
+      var pruned = kept.length !== items.length;
+      items = kept;
       items.forEach(function (i) { known['saved:' + i.id] = true; });
       var lost = ks.filter(function (k) {
         return typeof k === 'string' && k.indexOf('saved:') === 0 && k !== IDX && !known[k];
       });
-      if (!lost.length) return items;
+      if (!lost.length) {
+        if (!pruned) return items;
+        return store().put(IDX, { items: items }).then(function () { return items; },
+                                                      function () { return items; });
+      }
       return Promise.all(lost.map(function (k) {
         return store().get(k).catch(function () { return null; });
       })).then(function (recs) {
@@ -99,8 +110,8 @@
           return { id: r.id, kind: r.kind === 'flip' ? 'flip' : 'pad', title: r.title || 'Untitled Skribl',
                    thumbnail: r.thumbnail || null, createdAt: r.savedAt || null, updatedAt: r.savedAt || null };
         });
-        if (!back.length) return items;
-        var all = items.concat(back);
+        if (!back.length && !pruned) return items;
+        var all = items.concat(back).sort(byNewest);
         return store().put(IDX, { items: all }).then(function () { return all; },
                                                      function () { return all; });
       });
@@ -135,10 +146,16 @@
           .then(function () { return sum; });
       });
     },
+    // THE RECORD FIRST, THEN THE ROW (v317). The other order, with recover()
+    // re-adding any record the index does not name, brought a draft back
+    // whenever the second step failed. Now a failed first step changes nothing,
+    // and a failed second step leaves a row recover() drops on the next list.
     remove: function (id) {
       return readIndex().then(function (items) {
-        return store().put(IDX, { items: items.filter(function (i) { return i.id !== id; }) });
-      }).then(function () { return store().del('saved:' + id); });
+        return store().del('saved:' + id).then(function () {
+          return store().put(IDX, { items: items.filter(function (i) { return i.id !== id; }) });
+        });
+      });
     }
   };
 
