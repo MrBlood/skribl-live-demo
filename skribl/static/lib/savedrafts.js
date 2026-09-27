@@ -256,8 +256,14 @@
     listEl.textContent = '';
     listEl.appendChild(el('p', 'sdrafts-empty', 'Loading\u2026'));
     return backend.list().then(render, function (e) {
+      /* A list that cannot be read says so and offers the way back, rather
+         than "Loading…" for good (v317, the owner's iPhone). */
       listEl.textContent = '';
       listEl.appendChild(el('p', 'sdrafts-empty', e.message));
+      var again = el('button', 'sdrafts-retry', 'Try again');
+      again.type = 'button';
+      again.addEventListener('click', refresh);
+      listEl.appendChild(again);
     });
   }
 

@@ -29,68 +29,122 @@
   var DB_NAME = 'skribl-drafts', STORE = 'media', VERSION = 1;
   var dbPromise = null;
 
+  /* NOTHING HERE MAY WAIT FOREVER (v317). The owner's iPhone: the drafts sheet
+     said "Loading…" and nothing came, drafts "seem to go away", and a photo
+     the Pad had kept came back as "Media missing". All three read this store,
+     and every one of its promises settled only if IndexedDB fired an event.
+     WebKit does not always: a connection can die while the page is in the
+     background with no close event, and an open() can sit unanswered until
+     something nudges it. So: a deadline on the open and on every request, a
+     connection that has died or timed out is dropped and the next call opens
+     a fresh one, and a request that finds its connection closed gets exactly
+     one retry on a fresh one. A deadline turns a hang into the rejection
+     every caller already handles as "not durable". */
+  var OPEN_MS = 4000, OP_MS = 8000;
+
+  function deadline(p, ms) {
+    return new Promise(function (resolve, reject) {
+      var t = setTimeout(function () {
+        reject(new Error("This browser's storage did not answer."));
+      }, ms);
+      p.then(function (v) { clearTimeout(t); resolve(v); },
+             function (e) { clearTimeout(t); reject(e); });
+    });
+  }
+
   function open() {
     if (dbPromise) return dbPromise;
-    dbPromise = new Promise(function (resolve, reject) {
+    var timedOut = false, kick = null;
+    var raw = new Promise(function (resolve, reject) {
       if (typeof indexedDB === 'undefined') {
         reject(new Error('IndexedDB unavailable'));
         return;
       }
       var req = indexedDB.open(DB_NAME, VERSION);
+      /* THE NUDGE. WebKit has shipped builds where the first open() of a
+         session never answers until another IndexedDB call is made; asking
+         for the database list is the harmless call that wakes it. Stops the
+         moment the open settles. */
+      if (typeof indexedDB.databases === 'function') {
+        kick = setInterval(function () { try { indexedDB.databases(); } catch (e) {} }, 100);
+      }
       req.onupgradeneeded = function () {
         if (!req.result.objectStoreNames.contains(STORE)) {
           req.result.createObjectStore(STORE);
         }
       };
       req.onsuccess = function () {
-        // If another tab upgrades the schema later, drop our handle so the
-        // next call reopens rather than erroring forever on a closed DB.
-        req.result.onversionchange = function () {
-          try { req.result.close(); } catch (e) {}
+        var db = req.result;
+        if (timedOut) { try { db.close(); } catch (e) {} return; }
+        // Another tab upgrading the schema, or the browser closing the
+        // connection under us: drop the handle so the next call reopens.
+        db.onversionchange = function () {
+          try { db.close(); } catch (e) {}
           dbPromise = null;
         };
-        resolve(req.result);
+        db.onclose = function () { dbPromise = null; };
+        resolve(db);
       };
-      req.onerror = function () { dbPromise = null; reject(req.error || new Error('IndexedDB open failed')); };
-      req.onblocked = function () { dbPromise = null; reject(new Error('IndexedDB open blocked')); };
+      req.onerror = function () { reject(req.error || new Error('IndexedDB open failed')); };
+      req.onblocked = function () { reject(new Error('IndexedDB open blocked')); };
+    });
+    dbPromise = deadline(raw, OPEN_MS).then(function (db) {
+      clearInterval(kick);
+      return db;
+    }, function (e) {
+      timedOut = true;
+      clearInterval(kick);
+      dbPromise = null;
+      throw e;
     });
     return dbPromise;
   }
 
-  function put(key, value) {
-    return open().then(function (db) {
-      return new Promise(function (resolve, reject) {
-        var tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).put(value, key);
-        // Resolve on transaction COMPLETE, not request success — a request can
-        // succeed and the transaction still abort on quota at commit time,
-        // which is exactly the moment "durable" must not have been reported.
-        tx.oncomplete = function () { resolve(true); };
-        tx.onerror = function () { reject(tx.error || new Error('put failed')); };
-        tx.onabort = function () { reject(tx.error || new Error('put aborted')); };
+  /* One request in one transaction, with the deadline, and one retry when the
+     connection turns out to be dead (db.transaction throws InvalidStateError
+     on a closed connection -- the background case above). */
+  function op(mode, body) {
+    function once() {
+      return open().then(function (db) {
+        return deadline(new Promise(function (resolve, reject) {
+          var tx = db.transaction(STORE, mode);
+          body(tx.objectStore(STORE), tx, resolve, reject);
+        }), OP_MS);
       });
+    }
+    return once().catch(function (e) {
+      dbPromise = null;
+      if (e && e.name === 'InvalidStateError') return once();
+      throw e;
+    });
+  }
+
+  function put(key, value) {
+    return op('readwrite', function (store, tx, resolve, reject) {
+      store.put(value, key);
+      // Resolve on transaction COMPLETE, not request success — a request can
+      // succeed and the transaction still abort on quota at commit time,
+      // which is exactly the moment "durable" must not have been reported.
+      tx.oncomplete = function () { resolve(true); };
+      tx.onerror = function () { reject(tx.error || new Error('put failed')); };
+      tx.onabort = function () { reject(tx.error || new Error('put aborted')); };
     });
   }
 
   function get(key) {
-    return open().then(function (db) {
-      return new Promise(function (resolve, reject) {
-        var req = db.transaction(STORE, 'readonly').objectStore(STORE).get(key);
-        req.onsuccess = function () { resolve(req.result); };  // undefined = absent
-        req.onerror = function () { reject(req.error || new Error('get failed')); };
-      });
+    return op('readonly', function (store, tx, resolve, reject) {
+      var req = store.get(key);
+      req.onsuccess = function () { resolve(req.result); };  // undefined = absent
+      req.onerror = function () { reject(req.error || new Error('get failed')); };
     });
   }
 
   function del(key) {
-    return open().then(function (db) {
-      return new Promise(function (resolve, reject) {
-        var tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).delete(key);
-        tx.oncomplete = function () { resolve(true); };
-        tx.onerror = function () { reject(tx.error || new Error('delete failed')); };
-        tx.onabort = function () { reject(tx.error || new Error('delete aborted')); };
-      });
+    return op('readwrite', function (store, tx, resolve, reject) {
+      store.delete(key);
+      tx.oncomplete = function () { resolve(true); };
+      tx.onerror = function () { reject(tx.error || new Error('delete failed')); };
+      tx.onabort = function () { reject(tx.error || new Error('delete aborted')); };
     });
   }
 

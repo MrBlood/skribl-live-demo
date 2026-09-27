@@ -23,6 +23,8 @@ the cap can be reached in a few saves.
   6  The Library's Drafts tab (v317): the account's list or this browser's,
      Open to the right editor, Delete asks first, and an editor holding work
      asks before a draft replaces it.
+  7  Storage that never answers, or a connection that died in the background
+     (v317, the owner's iPhone): the sheet says so and retries; a read reconnects.
 """
 import json
 import os
@@ -502,6 +504,57 @@ try:
         check("signed out, #drafts lists THIS BROWSER's drafts, and says so",
               anon.locator("#draftsList .draft-row").count() == 1 and "browser" in aw,
               f"{anon.locator('#draftsList .draft-row').count()} rows; {aw!r}")
+
+        # ---------------------------------------------------------------- 7
+        print("\n7 — WHEN THIS BROWSER'S STORAGE STOPS ANSWERING (v317)")
+        # The owner's iPhone: "Loading… and nothing comes". IndexedDB that never
+        # fires an event is simulated at the source: open() hands back a
+        # request that never answers. The sheet must say so and offer a retry.
+        hung = b.new_context()
+        hung.add_init_script("""(() => {
+          const real = indexedDB.open.bind(indexedDB);
+          window.__hangIDB = true;
+          indexedDB.open = function (name, v) {
+            if (!window.__hangIDB) return real(name, v);
+            return {};                     // a request whose events never fire
+          };
+        })();""")
+        ph = hung.new_page()
+        browsing.goto(ph, BASE, "/skribl/skribl-pad", require_boot=False)
+        ph.wait_for_timeout(800)
+        menu_click(ph, "#openCloudDraftItem")
+        ph.wait_for_timeout(6000)
+        sheet = ph.evaluate("""() => { const l = document.querySelector('#savedDraftsSheet .sdrafts-list');
+            return { text: l ? l.textContent : null, retry: !!document.querySelector('#savedDraftsSheet .sdrafts-retry') }; }""")
+        check("storage that never answers: the sheet says so within seconds, not 'Loading…' for good",
+              sheet["text"] and "Loading" not in sheet["text"] and "did not answer" in sheet["text"],
+              repr(sheet["text"]))
+        check("and offers Try again", sheet["retry"] is True, str(sheet))
+        ph.evaluate("() => { window.__hangIDB = false; }")
+        ph.click("#savedDraftsSheet .sdrafts-retry")
+        ph.wait_for_timeout(1500)
+        again = ph.evaluate("() => document.querySelector('#savedDraftsSheet .sdrafts-list').textContent")
+        check("when the storage answers again, Try again reaches it (a fresh open, not the dead one)",
+              "did not answer" not in again and "Loading" not in again, repr(again))
+        hung.close()
+        # A connection closed under the page (what WebKit does while it is in
+        # the background): the next read gets one fresh connection, not an error.
+        pd = b.new_context().new_page()
+        browsing.goto(pd, BASE, "/skribl/skribl-pad", require_boot=False)
+        pd.wait_for_timeout(800)
+        dead = pd.evaluate("""async () => {
+          await SkriblDraftStore.put('probe:x', {v: 7});
+          const T = IDBDatabase.prototype.transaction; let thrown = 0;
+          IDBDatabase.prototype.transaction = function () {
+            if (!thrown++) throw new DOMException('The database connection is closing.', 'InvalidStateError');
+            return T.apply(this, arguments);
+          };
+          try { const r = await SkriblDraftStore.get('probe:x'); return { v: r && r.v, thrown }; }
+          catch (e) { return { err: String(e), thrown }; }
+          finally { IDBDatabase.prototype.transaction = T; }
+        }""")
+        check("a connection that died in the background: the read succeeds on a fresh one",
+              dead.get("v") == 7 and dead.get("thrown") == 2, str(dead))
 
         check("no page errors", not errs, "; ".join(errs[:3]))
         b.close()
