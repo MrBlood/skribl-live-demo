@@ -4514,6 +4514,9 @@ function loadDraftFile(file){
       // A backup file is not the saved draft that was open: Save makes a new one.
       if(window.SkriblSavedDrafts) SkriblSavedDrafts.forget();
       flipDocGen++;
+      // The two increments the note below describes. They had gone missing
+      // while the note stayed (fix review): restored, as described.
+      imageSelectionSeq++; musicSelectionSeq++;
       if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
       // Same reasoning as Pad's loadSkribl generation token: a draft load is a
       // NEW document, so an image or track selected moments earlier must not

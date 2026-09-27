@@ -12380,6 +12380,13 @@ reproduced, fixed, and pinned by a check shown to fail without its fix:
   The Library's armed Delete? was a literal pink, 2.27:1 on the light theme;
   it follows `--danger` now.
 
+A fifth reader then reviewed these fixes and found one they had caused. A
+restore overtaken by a newer photo never cleared its "restoring" flag. That
+was harmless until Save draft learned to wait for media, when it began
+refusing every save until the next document. A superseded restore now
+clears its own flag. The same reader found that Flip's backup-file load had
+lost the two increments its own comment describes, and they are back.
+
 Chosen, not missed, this round:
 
 * **The draft byte budget and count cap can be overrun by concurrent saves.**

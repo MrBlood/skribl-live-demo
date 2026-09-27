@@ -901,6 +901,25 @@ with sync_playwright() as p:
               bool(late and late["data"]), str(late and {"id": late["id"], "data": (late["data"] or "")[:30]}))
         pgS.close()
 
+    print("\nPAD — a restore overtaken by a newer photo stands down, so Save draft is not refused for good (fix review)")
+    # reAddMediaFromStore left _restoring set when a newer pick or a remove
+    # overtook it, and busy() read that as "media still being read" until the
+    # next document: every Save draft said "Preparing media". The store read is
+    # slowed so the newer photo lands first.
+    pgX = b.new_page(viewport={"width": 1280, "height": 900})
+    pgX.on("pageerror", lambda e: errs.append(f"restore-standdown: {e}"))
+    pgX.goto(BASE + "/skribl-pad", wait_until="load"); pgX.wait_for_timeout(1200)
+    pgX.evaluate("""() => { localStorage.clear(); const orig = SkriblDraftStore.get;
+        SkriblDraftStore.get = (k) => new Promise(r => setTimeout(() => r(orig.call(SkriblDraftStore, k)), 1500));
+        reAddMediaFromStore('photo', 'photoInput', { name: 'old.png' }); }""")
+    pgX.set_input_files("#photoInput", {"name": "new.png", "mimeType": "image/png", "buffer": _png1((30, 160, 90))})
+    pgX.wait_for_timeout(3500)
+    stood = pgX.evaluate("""async () => { const s = await SkriblSavedDrafts.save();
+        return { restoring: _restoring.photo, photo: photoBgImg._fileName, saved: !!s }; }""")
+    check("Pad: a restore overtaken by a newer photo stands down, and Save draft saves",
+          stood == {"restoring": False, "photo": "new.png", "saved": True}, str(stood))
+    pgX.close()
+
     print("\nFLIP — a draft opened from the Library asks over an autosaved photo, and the photo never lands on it (third review)")
     # Flip's content test ignored media on its way back from the store, so
     # /flip?draft=<id> replaced a photo-only autosave without asking; and the

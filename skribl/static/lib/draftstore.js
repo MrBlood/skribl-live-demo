@@ -185,8 +185,10 @@
      opens its transaction, so a del() issued after it opened first, and the
      put then wrote back what had just been removed: a photo taken off the
      page stayed in the store. Writes to the same key now run in the order
-     they were asked for. Each waits only on the one before it, and every op
-     has a deadline, so a queue cannot stall for longer than one write. */
+     they were asked for. Each waits only on the one before it, and every
+     IndexedDB op has a deadline. Reading a Blob's bytes (pack) has none: a
+     read that never settled would hold that key's queue, though not any
+     other key's. No engine has been seen to do that with a picked file. */
   var tail = {};
   function inOrder(key, run) {
     var next = (tail[key] || Promise.resolve()).then(run, run);

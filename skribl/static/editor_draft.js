@@ -294,6 +294,7 @@ function currentMusicMeta() {
 // a restore raises that amber, as its own comment says; until it has answered,
 // the file is on its way, not missing.
 const _restoring = { photo: false, music: false };
+const _restoreGen = { photo: -1, music: -1 };   // which restore set _restoring (reAddMediaFromStore)
 /* IN HAND IS NOT MISSING (v317). The owner's iPhone, on reload: "Media
    missing" for a second, then the photo loads and the draft saves. The store
    HAD answered; the restore handed the file to the attach pipeline and stood
@@ -818,8 +819,13 @@ function reAddMediaFromStore(kind, inputId, meta) {
   // A document opened (or New Skribl) while this read was out owns the slot
   // now: a late answer must not put the previous session's file on it.
   const gen = _mediaSeq[kind];
+  // ...and a superseded restore STANDS DOWN (fix review): left "restoring",
+  // Save draft read the slot as busy and refused until the next document.
+  // Only this restore's own flag: a newer one started since keeps its own.
+  _restoreGen[kind] = gen;
+  const standDown = () => { if (_restoreGen[kind] === gen) _restoring[kind] = false; };
   SkriblDraftStore.get('pad:' + kind).then((rec) => {
-    if (gen !== _mediaSeq[kind]) return;
+    if (gen !== _mediaSeq[kind]) { standDown(); return; }
     // The stored bytes must be THE file the metadata describes — a name
     // mismatch means the draft and the blob are from different sessions,
     // and re-attaching the wrong file is worse than the amber pill.
@@ -837,7 +843,7 @@ function reAddMediaFromStore(kind, inputId, meta) {
     input.dispatchEvent(new Event('change', { bubbles: true }));
     _fromStore[kind] = false;   // consumed by the capture listener above; never left armed
     _restoring[kind] = false;   // handed to the attach pipeline, which says so itself from here
-  }).catch((e) => { if (gen === _mediaSeq[kind]) missed(_errName(e)); });
+  }).catch((e) => { if (gen === _mediaSeq[kind]) missed(_errName(e)); else standDown(); });
 }
 
 // ---------- Re-add: settings back onto a file that comes back --------------
