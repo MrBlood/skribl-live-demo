@@ -72,6 +72,20 @@
       var el = inputEl();
       if (el && typeof t === 'string') { el.value = t; syncLabel(); }
     },
+    /* A NEW SKRIBL IS A NEW TITLE (v317). The owner: "When you start a new
+       skribl it should change title, not leave the last title." New Skribl
+       cleared the drawing and kept its name, so the next save and every export
+       carried the old one. reset() blanks the typed title -- get() then falls
+       back to the fresh auto-name -- and the export sheet's own field, which
+       remembers a typed name on purpose, and hands back what it cleared so the
+       editors' Undo can put it back with the drawing. */
+    reset: function () {
+      var el = inputEl(), prev = el ? el.value : '';
+      if (el) { el.value = ''; syncLabel(); }
+      var exp = document.getElementById('exportName');
+      if (exp) { exp.value = ''; exp._skriblDirty = false; }
+      return prev;
+    },
     filename: function (t, ext) {
       var base = String(t || API.get()).toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')   // spaces, ·, :, everything non-alnum -> -
