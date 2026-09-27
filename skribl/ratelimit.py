@@ -133,6 +133,26 @@ def _subject(addr):
     return str(ip)
 
 
+# THE PROXY SETTING SAYS WHEN IT DISAGREES WITH THE TRAFFIC (v317 outside
+# audit, AUD-004: "deployment correctness depends on accurately configuring
+# trusted proxy depth"). A wrong SKRIBL_TRUSTED_PROXIES was silent: at 0 behind
+# Render's proxy every visitor shares one rate-limit address; set higher than
+# the real chain, the forwarded list is too short and the peer is used. Each
+# mismatch is logged ONCE per process, worded so a direct client's own header
+# (which anyone can send) is not mistaken for a misconfiguration.
+_proxy_warned = set()
+
+
+def _proxy_warn_once(kind, message):
+    if kind in _proxy_warned:
+        return
+    _proxy_warned.add(kind)
+    try:
+        current_app.logger.warning(message)
+    except RuntimeError:
+        pass
+
+
 def _client_ip():
     # Trusting X-Forwarded-For unconditionally let any caller pick a fresh
     # rate-limit key per request AND stuff _rate_buckets with attacker-chosen
@@ -140,10 +160,31 @@ def _client_ip():
     # proxies sit in front of us, and we take the entry that many hops from the
     # RIGHT — everything further left is client-supplied and worthless. (Review #3)
     trusted = _trusted_proxies()
+    if trusted == 0 and request.headers.get("X-Forwarded-For"):
+        _proxy_warn_once(
+            "untrusted",
+            "skribl: a request carried X-Forwarded-For and SKRIBL_TRUSTED_PROXIES is 0, "
+            "so it was ignored. If this server runs behind a proxy (Render, a load "
+            "balancer), every visitor is rate-limited as the proxy's one address: set "
+            "SKRIBL_TRUSTED_PROXIES to the number of proxies (1 on Render). If it does "
+            "not, ignore this -- a client sent the header itself.")
     if trusted > 0:
         fwd = request.headers.get("X-Forwarded-For", "")
+        if not fwd:
+            _proxy_warn_once(
+                "absent",
+                "skribl: SKRIBL_TRUSTED_PROXIES is %d but a request arrived with no "
+                "X-Forwarded-For; it was rate-limited by its connecting address. Check "
+                "that the proxy in front of this server forwards it." % trusted)
         if fwd:
             parts = [p.strip() for p in fwd.split(",") if p.strip()]
+            if len(parts) < trusted:
+                _proxy_warn_once(
+                    "short",
+                    "skribl: SKRIBL_TRUSTED_PROXIES is %d but a request carried %d "
+                    "forwarded address(es); it was rate-limited by its connecting "
+                    "address. The setting is higher than the proxy chain."
+                    % (trusted, len(parts)))
             if len(parts) >= trusted:
                 candidate = parts[-trusted]
                 # A trusted but misconfigured edge can still forward junk, which
