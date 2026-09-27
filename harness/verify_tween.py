@@ -903,7 +903,7 @@ with sync_playwright() as p:
           out[f] = frames[1].strokes.length;
         }
         return out; }""")
-    # INVERTED IN v297, and this is the shape CLAUDE.md warns about: the old pin
+    # INVERTED IN v297, and this is the shape WORKING-AGREEMENTS.md warns about: the old pin
     # could only pass while a generated page was heavy enough to need rationing.
     # It asserted that a page gets LIGHTER at 24fps than at 12 -- true of an
     # exposure, whose sample count came out of the render budget, and the budget

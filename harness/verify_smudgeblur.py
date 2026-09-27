@@ -925,7 +925,7 @@ with sync_playwright() as p:
         #
         # PINNED AS MECHANISM, NOT AS A CLOCK. A timing assertion here would be
         # measuring this container's background load, which is the mistake
-        # CLAUDE.md records about verify_hold. The observable difference is that
+        # WORKING-AGREEMENTS.md records about verify_hold. The observable difference is that
         # a run painted mid-gesture COMPOUNDS and the same run painted after it
         # does not. Measured, real gesture, 40 moves: 43.13 ms per move before
         # this, 11.12 ms after, and the settle unchanged at ~41 ms.

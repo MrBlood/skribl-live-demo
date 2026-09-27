@@ -167,7 +167,7 @@ with sync_playwright() as p:
     # notice a dead page weakens all 45 of them at once — which is exactly what
     # shipped in v282: it swallowed the timeout with `except: pass`. An outside
     # audit found it, in the same release that added "a green check is not
-    # evidence until it has been shown to go red" to CLAUDE.md.
+    # evidence until it has been shown to go red" to WORKING-AGREEMENTS.md.
     #
     # So the fix is not asserted by reading the code; the helper is RUN against
     # pages that cannot boot. Against the pre-fix module these three cases all

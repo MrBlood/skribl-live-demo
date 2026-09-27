@@ -223,7 +223,7 @@ stale statements in **source comments**, where the v279 sweep never looked: 22
 lines above the delete routes still calling the v278 identity gate "the whole
 design", and the header of `harness.yml`, which used to say a heavy CI day had
 burned a monthly Actions allowance. This repository is public and every job
-runs on `ubuntu-latest`, so there is no allowance — see `CLAUDE.md`. The gate
+runs on `ubuntu-latest`, so there is no allowance — see `WORKING-AGREEMENTS.md`. The gate
 asserts the half that is checkable offline: while every runner is standard,
 nothing current may call this project's minutes finite or billed. Move to a
 larger runner and the claim becomes sayable again and the gate stands down by
@@ -348,7 +348,7 @@ evidence is about. The two lists must stay identical — that is the v221 defect
   configuration, not a weaker seal.** The `postgres` CI job runs it on the tree
   being sealed and writes `harness/POSTGRES-ATTESTATION.txt`, which the seal
   checks against the frozen hash. Do NOT start a cluster here during a seal:
-  `CLAUDE.md` carries the measurement of what it does to the timing suites. For
+  `WORKING-AGREEMENTS.md` carries the measurement of what it does to the timing suites. For
   debugging outside a seal the suite wants
   `postgresql://skribl:skribl@127.0.0.1:5432/skribl` (override with
   `SKRIBL_PG_DSN`), and PostgreSQL dies between tool invocations, so start it
@@ -357,7 +357,7 @@ evidence is about. The two lists must stay identical — that is the v221 defect
   and both halves had gone stale.
 * **Background processes do not survive between invocations**, and one
   foreground invocation is capped well below the length of a full aggregate
-  (`CLAUDE.md` gives the current figure). `setsid`, `nohup` and `disown` do not
+  (`WORKING-AGREEMENTS.md` gives the current figure). `setsid`, `nohup` and `disown` do not
   help: the v312 release run was reaped that way at batch 3/55 with no error.
   Run it through the agent's own tracked background runner, or in `--budget`
   slices. Either way `release_run.py` checkpoints, re-verifies the frozen tree
@@ -554,7 +554,7 @@ Check the version label in the app footer before diagnosing anything.
 
 ---
 
-## Decisions that are the user's, not the assistant's
+## Decisions that are the owner's, not Cal's
 
 **The migration chain collapse is CLOSED.** It required that no database had
 run v135-v141. The live Postgres has run at least through `f0a3d81b47e2`. Do not
@@ -812,11 +812,11 @@ argument rested on. The proposal may still be worth doing on design grounds;
 the emergency it was written up as is over. Anyone reviving it should re-measure
 first rather than trust a snapshot — which is the whole reason this replaced it.
 
-## Things that will bite an unwary assistant
+## Things that will bite an unwary helper
 
 * **NEVER edit a released Alembic migration.** `RELEASED.txt` freezes every
   digest and `verify_migrations.py` fails if one changes.
-* **A screenshot the assistant renders is one the assistant has seen, not the
+* **A screenshot Cal renders is one Cal has seen, not the
   owner.** Measure it; do not describe it as shown. The owner's phone
   screenshots run the other way and are the bug reports
   (`docs/SESSION-CONTEXT.md` §7).

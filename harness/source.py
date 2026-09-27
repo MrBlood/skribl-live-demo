@@ -1,6 +1,6 @@
 """Source text with the prose taken out, for the checks that read code as text.
 
-WHY THIS EXISTS. CLAUDE.md states the rule in capitals -- A CHECK FOR ABSENCE
+WHY THIS EXISTS. WORKING-AGREEMENTS.md states the rule in capitals -- A CHECK FOR ABSENCE
 MUST MATCH THE MECHANISM, NOT THE WORD -- and records three occasions when a
 check read the comment explaining a thing as the thing itself: verify_review's
 "the player does not load this module" matched the filename inside the comment

@@ -125,7 +125,7 @@ def await_player(page, timeout_ms=30000, what="the /s/ player"):
 # waits for something initPlayer only reaches on success, so a page that took
 # showPlayerError would sit there until the timeout -- the wait would be
 # correct about the player and useless to the assertion. Same defect, different
-# surface, different signal: CLAUDE.md's rule that two surfaces sharing a fix
+# surface, different signal: WORKING-AGREEMENTS.md's rule that two surfaces sharing a fix
 # may need DIFFERENT assertions, met in the one file that fixes both.
 PLAYER_ERROR_SHOWN = ("() => { const p = document.getElementById('playerError');"
                       " return !!p && !p.hidden && p.offsetParent !== null; }")
