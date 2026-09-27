@@ -276,6 +276,53 @@ with sync_playwright() as p:
               not serrs, "; ".join(serrs[:2]))
         sp.close()
 
+    # ---- ON A PHONE, THE SHEET READS DOWN ONE EDGE AND SHOWS ITS END ------
+    # The owner's iPhone, after v317: each tip set its label BESIDE its words,
+    # so the text ran down a ragged column; and an open section was capped at
+    # max-height 1600px, which "Save, export & sharing" outgrew on a phone --
+    # its last tip ran into the border, cut off. Measured on the rendered
+    # sheet with every section open, at iPhone width, on both editors.
+    OPEN_ALL = """() => { (window.openHelpDrawer || (() => { document.getElementById('helpDrawer').hidden = false; }))();
+        document.querySelectorAll('#helpDrawer .accordion-header').forEach(h => {
+          if (h.getAttribute('aria-expanded') !== 'true') h.click(); }); }"""
+    LAYOUT = """() => {
+      const out = { clipped: [], beside: [], sections: 0, tips: 0 };
+      document.querySelectorAll('#helpDrawer .accordion-body').forEach(b => {
+        if (!b.classList.contains('open')) return;
+        out.sections++;
+        const inner = b.querySelector('.accordion-inner');
+        const last = inner && inner.lastElementChild;
+        const bb = b.getBoundingClientRect();
+        if (inner && inner.scrollHeight - inner.clientHeight > 1) out.clipped.push(b.previousElementSibling.textContent.trim().slice(0, 30) + ' (inner overflows)');
+        if (last && bb.bottom - last.getBoundingClientRect().bottom < 8) out.clipped.push(b.previousElementSibling.textContent.trim().slice(0, 30) + ' (' + Math.round(bb.bottom - last.getBoundingClientRect().bottom) + 'px below the last tip)');
+      });
+      document.querySelectorAll('#helpDrawer .help-tip').forEach(t => {
+        const pill = t.querySelector('.help-pill'), desc = t.querySelector('.help-desc');
+        if (!pill || !desc || !t.getClientRects().length) return;
+        out.tips++;
+        const pr = pill.getBoundingClientRect(), dr = desc.getBoundingClientRect();
+        if (pr.bottom > dr.top + 1 || Math.abs(pr.left - dr.left) > 1) out.beside.push(pill.textContent.trim());
+      });
+      return out; }"""
+    for surface, path in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        print(f"\nHELP — {surface} on a phone: labels above their words, every section shown to its end")
+        ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+        ph.goto(BASE + path, wait_until="load"); ph.wait_for_timeout(1200)
+        ph.evaluate("() => { window.SkriblHints && SkriblHints.hide(); }")
+        ph.evaluate(OPEN_ALL); ph.wait_for_timeout(700)
+        lay = ph.evaluate(LAYOUT)
+        check(f"{surface}: every help section opens to its full height, with room below its last tip",
+              lay["sections"] >= 5 and not lay["clipped"], str(lay["clipped"]) + f" of {lay['sections']} sections")
+        check(f"{surface}: every tip's label sits above its words, on the same left edge",
+              lay["tips"] >= 30 and not lay["beside"], f"{len(lay['beside'])} of {lay['tips']} beside: {lay['beside'][:4]}")
+        pills = ph.evaluate("() => [...document.querySelectorAll('#helpDrawer .help-pill')].map(p => p.textContent.trim())")
+        words = ph.evaluate("() => document.getElementById('helpDrawer').textContent.toLowerCase()")
+        want = ["Saved drafts", "Name", "Menus & panels", "Undo & New Skribl"]
+        check(f"{surface}: the sheet covers what the app does now (drafts, naming, panels, New Skribl)",
+              all(w in pills for w in want) and "clear drawing" not in words and "clear all pages" not in words,
+              f"missing {[w for w in want if w not in pills]}")
+        ph.close()
+
     b.close()
 
 summarise_and_exit()

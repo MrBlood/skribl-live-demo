@@ -4112,19 +4112,26 @@ html.help-open, html.help-open body { overflow: hidden; }
   color: var(--ui-hi);
 }
 
+/* OPENS TO ITS OWN HEIGHT, however long (owner's iPhone, after v317). The
+   body animated max-height 0 -> 1600px, a guess: on a phone, "Save, export &
+   sharing" is taller than that, and its last tip ran into the border with its
+   end clipped. A grid row from 0fr to 1fr animates to the content's real
+   height -- the Tune and Name drawers already open this way. */
 .accordion-body {
-  max-height: 0;
+  display: grid;
+  grid-template-rows: 0fr;
   overflow: hidden;
   background: var(--surface-raised);
   border-radius: 0 0 14px 14px;
   border: 1px solid transparent;
   border-top: none;
   margin-top: -1px;
-  transition: max-height 0.34s var(--ease), border-color 0.18s ease;
+  transition: grid-template-rows 0.34s var(--ease), border-color 0.18s ease;
 }
+.accordion-body > .accordion-inner { min-height: 0; overflow: hidden; }
 
 .accordion-body.open {
-  max-height: 1600px;
+  grid-template-rows: 1fr;
   border-color: rgba(124, 92, 255, 0.24);
   border-top: none;
 }
@@ -4136,9 +4143,14 @@ html.help-open, html.help-open body { overflow: hidden; }
   padding: 16px 16px 18px;
 }
 
+/* THE LABEL ABOVE ITS WORDS (owner, after v317). Side by side, every pill's
+   width set where its sentence started, so on a phone the text ran down a
+   ragged column beside a long label ("If media goes missing"). Stacked, every
+   explanation starts at the same left edge and uses the full width. */
 .help-tip {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 6px;
   align-items: flex-start;
   margin-bottom: 12px;
 }
