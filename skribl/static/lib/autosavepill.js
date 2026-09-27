@@ -205,9 +205,13 @@
     cancelAnimationFrame(pill._showRaf);
     pill._showRaf = requestAnimationFrame(function () { pill.classList.add('show'); });
     if (state !== 'saving' && state !== 'failed' && state !== 'full' && state !== 'saved-no-media') {
+      // BOTH steps of the fade are the pill's one timer (v317). The second
+      // used to be a bare setTimeout nothing could cancel, so a warning that
+      // arrived in the 300ms after "Saved" began to fade was shown and then
+      // hidden by the fade it had interrupted -- an amber the user never saw.
       pill._hideTimer = setTimeout(function () {
         pill.classList.remove('show');
-        setTimeout(function () { pill.hidden = true; }, 300);
+        pill._hideTimer = setTimeout(function () { pill.hidden = true; }, 300);
       }, 1600);
     }
   }
