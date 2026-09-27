@@ -256,9 +256,18 @@
     + 'stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/>'
     + '<path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
 
+  /* When the store is not answering, drafts saved now are kept in a smaller
+     one and older ones may not show until it answers: say so, above the list,
+     rather than let an incomplete list pass for the whole one. */
+  function stalled() {
+    return backend === local && global.SkriblDraftStore && global.SkriblDraftStore.degraded
+      && global.SkriblDraftStore.degraded();
+  }
+  var STALLED = 'This browser\u2019s storage is slow to answer. Drafts you save now are kept, and older ones will show when it answers.';
   function render(items) {
     listEl.textContent = '';
     disarmers = [];
+    if (stalled()) listEl.appendChild(el('p', 'sdrafts-stalled', STALLED));
     if (!items.length) {
       listEl.appendChild(el('p', 'sdrafts-empty',
         'No saved drafts yet. Save one from \u22EF \u2192 Save draft.'));
@@ -486,6 +495,8 @@
     /* For a page that lists drafts without editing one (the Library's Drafts
        tab, v317): the same storage the sheet reads, so the two cannot differ. */
     list: function () { return backend.list(); },
+    // The Library shows the same note the sheet does (lib/draftstore.js's shelf).
+    stalled: function () { return stalled() ? STALLED : ''; },
     remove: function (id) { return backend.remove(id); },
     ago: ago
   };

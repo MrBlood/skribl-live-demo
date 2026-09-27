@@ -6062,6 +6062,8 @@ body.playing .flip-grid { display: none; }
 /* Hover only where a pointer hovers: on a phone a tap leaves :hover stuck, and
    it drew a box inside the card. */
 @media (hover: hover) { .sdrafts-open:hover { background: rgba(var(--wash-rgb), .05); } }
+.sdrafts-stalled { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.4;
+  color: var(--text-secondary); background: rgba(var(--wash-rgb), .06); }
 .sdrafts-thumb { flex: 0 0 auto; width: 72px; height: 54px; border-radius: 9px; overflow: hidden;
   background: var(--surface-control); }   /* a theme colour: black was a box in the light theme */
 .sdrafts-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }

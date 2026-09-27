@@ -63,8 +63,34 @@
     });
   }
 
+  // Another tab upgrading the schema, or the browser closing the connection
+  // under us: drop the handle so the next call reopens. Each handler forgets
+  // THIS connection only: a late event from an old, dead one must not drop
+  // the healthy one that replaced it (v317 review).
+  function watch(db) {
+    db.onversionchange = function () {
+      try { db.close(); } catch (e) {}
+      if (liveDb === db) { liveDb = null; dbPromise = null; }
+    };
+    db.onclose = function () { if (liveDb === db) { liveDb = null; dbPromise = null; } };
+    liveDb = db;
+  }
+
+  /* ONE PROBE AT A TIME WHILE IT IS NOT ANSWERING. Every call used to start
+     its own open and wait its own four seconds, so a list (the index, the
+     keys, each lost record) took the better part of a minute to fall back.
+     While an open started in the last PROBE_MS is still unanswered, the
+     next call is told at once; after that a fresh open is tried, because a
+     stuck request is not always the one that will answer. */
+  var PROBE_MS = 8000, probeAt = 0, probing = false;
   function open() {
     if (dbPromise) return dbPromise;
+    if (probing && Date.now() - probeAt < PROBE_MS) {
+      var fast = new Error("This browser's storage did not answer.");
+      fast.skriblTimeout = true; fast.skriblOpen = true;
+      return Promise.reject(fast);
+    }
+    probing = true; probeAt = Date.now();
     var timedOut = false, kick = null;
     var raw = new Promise(function (resolve, reject) {
       if (typeof indexedDB === 'undefined') {
@@ -78,6 +104,7 @@
          moment the open settles. */
       if (typeof indexedDB.databases === 'function') {
         kick = setInterval(function () { try { indexedDB.databases(); } catch (e) {} }, 100);
+        setTimeout(function () { clearInterval(kick); }, 30000);   // not for ever on one that never answers
       }
       req.onupgradeneeded = function () {
         if (!req.result.objectStoreNames.contains(STORE)) {
@@ -86,29 +113,39 @@
       };
       req.onsuccess = function () {
         var db = req.result;
-        if (timedOut) { try { db.close(); } catch (e) {} return; }
+        /* A LATE ANSWER IS STILL AN ANSWER (the owner's iPhone, after v317).
+           An open that missed its deadline used to be closed when it finally
+           came, so a phone whose storage was merely slow to wake threw away
+           every connection it was given. It is kept now, if nothing newer
+           has been kept first, and the next call uses it. */
+        if (timedOut) {
+          if (liveDb) { try { db.close(); } catch (e) {} return; }
+          watch(db);
+          dbPromise = Promise.resolve(db);
+          health.okAt = Date.now();
+          return;
+        }
         // Another tab upgrading the schema, or the browser closing the
         // connection under us: drop the handle so the next call reopens.
         // Each handler forgets THIS connection only: a late event from an old,
         // dead one must not drop the healthy one that replaced it (v317 review).
-        db.onversionchange = function () {
-          try { db.close(); } catch (e) {}
-          if (liveDb === db) { liveDb = null; dbPromise = null; }
-        };
-        db.onclose = function () { if (liveDb === db) { liveDb = null; dbPromise = null; } };
-        liveDb = db;
+        watch(db);
         resolve(db);
       };
-      req.onerror = function () { reject(req.error || new Error('IndexedDB open failed')); };
+      req.onerror = function () { clearInterval(kick); reject(req.error || new Error('IndexedDB open failed')); };
       req.onblocked = function () { reject(new Error('IndexedDB open blocked')); };
     });
-    dbPromise = deadline(raw, OPEN_MS).then(function (db) {
+    raw.then(function () { clearInterval(kick); probing = false; }, function () { probing = false; });
+    var mine = dbPromise = deadline(raw, OPEN_MS).then(function (db) {
       clearInterval(kick);
       return db;
     }, function (e) {
       timedOut = true;
-      clearInterval(kick);
-      dbPromise = null;
+      // The nudge keeps going while this open is outstanding: it is what
+      // wakes the builds that sit on a first open. It stops on the answer.
+      if (dbPromise === mine) dbPromise = null;
+      e.skriblOpen = true;
+      note('open', e);
       throw e;
     });
     return dbPromise;
@@ -198,10 +235,8 @@
     return next;
   }
 
-  function put(key, value) {
-    return inOrder(key, function () {
-      return pack(value).then(function (packed) { return putRaw(key, packed); });
-    });
+  function putIdb(key, value) {
+    return pack(value).then(function (packed) { return putRaw(key, packed); });
   }
   function putRaw(key, value) {
     return op('readwrite', function (store, tx, resolve, reject) {
@@ -215,7 +250,7 @@
     });
   }
 
-  function get(key) {
+  function getIdb(key) {
     return op('readonly', function (store, tx, resolve, reject) {
       var req = store.get(key);
       req.onsuccess = function () { resolve(req.result); };  // undefined = absent
@@ -223,21 +258,19 @@
     }).then(unpack);
   }
 
-  function del(key) {
-    return inOrder(key, function () {
-      return op('readwrite', function (store, tx, resolve, reject) {
-        store.delete(key);
-        tx.oncomplete = function () { resolve(true); };
-        tx.onerror = function () { reject(tx.error || new Error('delete failed')); };
-        tx.onabort = function () { reject(tx.error || new Error('delete aborted')); };
-      });
+  function delIdb(key) {
+    return op('readwrite', function (store, tx, resolve, reject) {
+      store.delete(key);
+      tx.oncomplete = function () { resolve(true); };
+      tx.onerror = function () { reject(tx.error || new Error('delete failed')); };
+      tx.onabort = function () { reject(tx.error || new Error('delete aborted')); };
     });
   }
 
   /* Every key in the store. For the saved-drafts list to find a draft its
      index lost (lib/savedrafts.js, v317). getAllKeys where it exists, a key
      cursor where it does not. */
-  function keys() {
+  function keysIdb() {
     return op('readonly', function (store, tx, resolve, reject) {
       if (typeof store.getAllKeys === 'function') {
         var r = store.getAllKeys();
@@ -254,7 +287,150 @@
     });
   }
 
-  var api = { put: put, get: get, del: del, keys: keys };
+  /* THE SHELF: SAVED DRAFTS WHEN INDEXEDDB WILL NOT ANSWER (the owner's
+     iPhone, after v317: "I saved a draft and nothing"). WebKit can leave
+     IndexedDB unanswered for a whole page's life while localStorage -- where
+     the autosave lives -- works. A saved draft is plain JSON, so when the
+     store is BROKEN (no answer, no IndexedDB, a lost connection -- not a
+     refusal from a store that works) its 'saved:*' records go to
+     localStorage instead, and move back into IndexedDB the next time it
+     answers. Media bytes are Blobs and stay IndexedDB's alone: they do not
+     fit, and the amber pill already says so honestly.
+
+     Rules that keep it correct: a key's shelf copy exists only while its
+     LATEST write missed IndexedDB (any write that lands clears it), so the
+     shelf copy is always the newer one; a delete that cannot reach IndexedDB
+     leaves a tombstone, so the old copy cannot come back when it answers;
+     and the draft index is MERGED back, never written over the real one. */
+  var SHELF = 'skribl-shelf:', GONE = 'skribl-shelf-gone:', IDX = 'saved:index';
+  var health = { fails: 0, oks: 0, last: '', failAt: 0, okAt: 0 };
+  function note(what, e) {
+    health.fails++; health.failAt = Date.now();
+    health.last = what + ': ' + ((e && e.name) || 'Error') + (e && e.skriblTimeout ? ' (no answer)' : '');
+  }
+  function fine() { health.oks++; health.okAt = Date.now(); if (hasShelf()) drain(); }
+  function broken(e) {
+    return !!(e && (e.skriblTimeout || e.skriblOpen || e.name === 'UnknownError' || e.name === 'InvalidStateError'));
+  }
+  function ls() { try { return window.localStorage; } catch (e) { return null; } }
+  function shelfKey(key) { return typeof key === 'string' && key.indexOf('saved:') === 0; }
+  function plain(v) {
+    return !(v && typeof v === 'object' && typeof Blob !== 'undefined'
+             && Object.keys(v).some(function (k) { return v[k] instanceof Blob; }));
+  }
+  function readLs(k) { var s = ls(); if (!s) return undefined;
+    try { var raw = s.getItem(k); return raw == null ? undefined : JSON.parse(raw); } catch (e) { return undefined; } }
+  function dropLs(k) { var s = ls(); if (s) try { s.removeItem(k); } catch (e) {} }
+  function listLs(prefix) { var s = ls(), out = []; if (!s) return out;
+    try { for (var i = 0; i < s.length; i++) { var k = s.key(i); if (k && k.indexOf(prefix) === 0) out.push(k.slice(prefix.length)); } }
+    catch (e) {} return out; }
+  function hasShelf() { return listLs(SHELF).length > 0 || listLs(GONE).length > 0; }
+  function shelve(key, value) {
+    var s = ls();
+    try { if (!s) throw 0; s.setItem(SHELF + key, JSON.stringify(value)); dropLs(GONE + key); }
+    catch (e) {
+      throw new Error("This browser's storage did not answer, and this draft is too big to keep another way. Try again in a moment.");
+    }
+  }
+
+  function put(key, value) {
+    return inOrder(key, function () {
+      return putIdb(key, value).then(function (r) {
+        dropLs(SHELF + key); dropLs(GONE + key); fine(); return r;
+      }, function (e) {
+        if (broken(e)) note('put', e);
+        if (!(broken(e) && shelfKey(key) && plain(value))) throw e;
+        shelve(key, value);
+        return true;
+      });
+    });
+  }
+  function get(key) {
+    var shelved = shelfKey(key) ? readLs(SHELF + key) : undefined;
+    var gone = shelfKey(key) && readLs(GONE + key) !== undefined;
+    return getIdb(key).then(function (v) {
+      fine();
+      if (shelved !== undefined) return shelved;
+      return gone ? undefined : v;
+    }, function (e) {
+      if (broken(e)) note('get', e);
+      if (!(broken(e) && shelfKey(key))) throw e;
+      return shelved;
+    });
+  }
+  function del(key) {
+    return inOrder(key, function () {
+      dropLs(SHELF + key);
+      return delIdb(key).then(function (r) { dropLs(GONE + key); fine(); return r; }, function (e) {
+        if (broken(e)) note('del', e);
+        if (!(broken(e) && shelfKey(key))) throw e;
+        var s = ls();
+        try { s.setItem(GONE + key, '1'); } catch (x) { throw e; }
+        return true;
+      });
+    });
+  }
+  function keys() {
+    var extra = listLs(SHELF), gone = listLs(GONE);
+    function merge(ks) {
+      var seen = {}, out = [];
+      ks.concat(extra).forEach(function (k) {
+        if (!seen[k] && gone.indexOf(k) < 0) { seen[k] = true; out.push(k); }
+      });
+      return out;
+    }
+    return keysIdb().then(function (ks) { fine(); return merge(ks); }, function (e) {
+      if (broken(e)) note('keys', e);
+      if (!broken(e)) throw e;
+      return merge([]);
+    });
+  }
+
+  /* Back into IndexedDB once it answers: records first, then deletes, then
+     the index -- merged with the one IndexedDB kept, never written over it. */
+  var draining = false;
+  function drain() {
+    if (draining) return;
+    draining = true;
+    var recs = listLs(SHELF).filter(function (k) { return k !== IDX; });
+    var gone = listLs(GONE);
+    var steps = Promise.resolve();
+    recs.forEach(function (k) {
+      steps = steps.then(function () {
+        var v = readLs(SHELF + k);
+        if (v === undefined) return;
+        // Inside the key's queue, so a newer save cannot land between the
+        // copy and the drop.
+        return inOrder(k, function () { return putIdb(k, v).then(function () { dropLs(SHELF + k); }); });
+      });
+    });
+    gone.forEach(function (k) {
+      steps = steps.then(function () {
+        return inOrder(k, function () { return delIdb(k).then(function () { dropLs(GONE + k); }); });
+      });
+    });
+    steps.then(function () {
+      var mine = readLs(SHELF + IDX);
+      if (mine === undefined) return;
+      return getIdb(IDX).then(function (theirs) {
+        var byId = {}, out = [];
+        ((mine && mine.items) || []).concat((theirs && theirs.items) || []).forEach(function (i) {
+          if (i && i.id && !byId[i.id] && gone.indexOf('saved:' + i.id) < 0) { byId[i.id] = true; out.push(i); }
+        });
+        return inOrder(IDX, function () { return putIdb(IDX, { items: out }).then(function () { dropLs(SHELF + IDX); }); });
+      });
+    }).catch(function () {}).then(function () { draining = false; });
+  }
+
+  /* For "Report a problem" and the drafts sheet: is the store answering? */
+  function degraded() { return health.failAt > health.okAt; }
+  function state() {
+    if (!health.fails) return 'store answering';
+    return 'store ' + (degraded() ? 'NOT answering' : 'answering again') + ', ' + health.fails
+      + ' failure(s), last ' + health.last + ', ' + listLs(SHELF).length + ' draft record(s) on the shelf';
+  }
+
+  var api = { put: put, get: get, del: del, keys: keys, degraded: degraded, state: state };
   if (typeof window !== 'undefined') window.SkriblDraftStore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

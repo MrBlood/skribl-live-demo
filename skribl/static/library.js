@@ -726,6 +726,7 @@
       : 'Saved on this browser only.';
     return SD.list().then(function (items) {
       if (mine !== draftsSeq) return;
+      if (SD.stalled && SD.stalled()) dWhere.textContent = SD.stalled();
       dList.textContent = '';
       draftDisarmers = [];
       dEmpty.hidden = items.length > 0;
