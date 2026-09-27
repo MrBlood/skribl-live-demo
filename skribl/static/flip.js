@@ -5411,8 +5411,8 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !moreMenu.hidden
 // tapping the dim area dismisses it, which the document handler above only
 // achieves incidentally.
 if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
-// The sheet grabber closes the menu on tap, same as Pad's handles do.
-{ const _h = moreMenu.querySelector('.menu-handle'); if (_h) _h.addEventListener('click', () => closeMenu()); }
+// Tap the grabber or swipe the sheet down (lib/sheetswipe.js), as on Pad.
+if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(moreMenu, { handle: moreMenu.querySelector('.menu-handle'), close: closeMenu });
 // Bound as early as the function exists, not near the end of the file. Even
 // with bindEl() guarding each lookup, a throw ANYWHERE above here would still
 // have prevented this line from running — and share doing nothing is the worst
@@ -5643,8 +5643,7 @@ exportOverlay.addEventListener('click', e=>{ if(!e.target.closest('.menu-sheet')
 KeyRegistry.register({surface:'flip', label:'close the export sheet',
   keys:['Escape'], scope:()=>!exportOverlay.hidden});
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !exportOverlay.hidden) closeExportSheet(); });
-const _exHandle = exportSheet ? exportSheet.querySelector('.menu-handle') : null;
-if(_exHandle) _exHandle.addEventListener('click', e=>{ e.stopPropagation(); closeExportSheet(); });
+if(exportSheet && window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(exportSheet, { handle: exportSheet.querySelector('.menu-handle'), close: closeExportSheet });
 bindEl('exportPng', 'click',()=>{ closeExportSheet(); exportPNG(); });
 bindEl('exportVideo', 'click',e=>{ if(e.currentTarget.disabled) return; closeExportSheet(); exportVideo(); });
 bindEl('exportGif', 'click',e=>{ if(e.currentTarget.disabled) return; closeExportSheet(); exportGIF(); });

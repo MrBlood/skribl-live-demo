@@ -590,9 +590,56 @@ try:
           const idx = await SkriblDraftStore.get('saved:index');
           return { listed: items.map(i => i.title), indexed: (idx.items || []).map(i => i.title) };
         }""")
+        # BYTES, NOT BLOBS (v317): what lands in IndexedDB is an ArrayBuffer,
+        # read straight from the database; what comes back is the same file.
+        stored = pd.evaluate("""async () => {
+          await SkriblDraftStore.put('probe:blob', { blob: new Blob(['hello bytes'], { type: 'text/plain' }), name: 'a.txt' });
+          const raw = await new Promise((res, rej) => { const q = indexedDB.open('skribl-drafts');
+            q.onsuccess = () => { const g = q.result.transaction('media').objectStore('media').get('probe:blob');
+              g.onsuccess = () => { res(g.result); q.result.close(); }; g.onerror = () => rej(g.error); }; q.onerror = () => rej(q.error); });
+          const back = await SkriblDraftStore.get('probe:blob');
+          return { rawIsBlob: raw.blob instanceof Blob, rawBytes: raw.blob && raw.blob.__skriblBytes instanceof ArrayBuffer,
+                   backIsBlob: back.blob instanceof Blob, text: await back.blob.text(), type: back.blob.type, name: back.name };
+        }""")
+        check("media goes into IndexedDB as bytes, not a Blob (WebKit's weak spot)",
+              stored["rawIsBlob"] is False and stored["rawBytes"] is True, str(stored))
+        check("...and comes back out as the same file, type and all",
+              stored["backIsBlob"] is True and stored["text"] == "hello bytes" and stored["type"] == "text/plain"
+              and stored["name"] == "a.txt", str(stored))
         check("a draft its index lost is listed again, and written back into the index",
               "Found again" in back["listed"] and "Found again" in back["indexed"]
               and "Keep me one" in back["listed"], str(back))
+
+        # ONE ROW ASKS AT A TIME (v317): the owner's sheet showed two rows both
+        # saying "Tap again". pd's canvas has ink, so the first tap on a row asks.
+        menu_click(pd, "#openCloudDraftItem")
+        pd.locator("#savedDraftsSheet .sdrafts-open").nth(1).wait_for(timeout=5000)
+        pd.locator("#savedDraftsSheet .sdrafts-open").nth(0).click()
+        pd.wait_for_timeout(200)
+        pd.locator("#savedDraftsSheet .sdrafts-open").nth(1).click()
+        pd.wait_for_timeout(200)
+        armed = pd.evaluate("() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')].map(r => r.classList.contains('armed'))")
+        check("the sheet: arming a second row puts the first one back", armed[:2] == [False, True], str(armed))
+        pd.locator("#savedDraftsSheet .sdrafts-del").nth(0).click()
+        pd.wait_for_timeout(200)
+        armed2 = pd.evaluate("""() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')].map(r =>
+            r.classList.contains('armed') || r.querySelector('.sdrafts-del').classList.contains('armed'))""")
+        check("...and asking to delete one row puts back the row that asked to open",
+              armed2[:2] == [True, False], str(armed2))
+        # The Library draws the same row: the card opens, the bin asks, one at a time.
+        browsing.goto(pd, BASE, "/skribl/library#drafts", require_boot=False)
+        pd.wait_for_timeout(1500)
+        lib = pd.evaluate("""() => { const rows = [...document.querySelectorAll('#draftsList .draft-row')];
+            return { n: rows.length, links: rows.every(r => r.querySelector('a.draft-open[href*="?draft="]')),
+                     pills: document.querySelectorAll('#draftsList .draft-acts').length }; }""")
+        check("the Library's rows are the card itself as the link, no pill buttons",
+              lib["n"] >= 2 and lib["links"] and lib["pills"] == 0, str(lib))
+        pd.locator("#draftsList .draft-del").nth(0).click()
+        pd.wait_for_timeout(150)
+        pd.locator("#draftsList .draft-del").nth(1).click()
+        pd.wait_for_timeout(150)
+        larmed = pd.evaluate("() => [...document.querySelectorAll('#draftsList .draft-del')].map(d => d.classList.contains('armed'))")
+        check("the Library: one bin asks at a time", larmed[:2] == [False, True], str(larmed))
 
         check("no page errors", not errs, "; ".join(errs[:3]))
         b.close()

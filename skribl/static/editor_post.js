@@ -691,11 +691,11 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !overlay.hidden && !posting) closePost();
   });
-  const postHandle = sheet ? sheet.querySelector('.menu-handle') : null;
-  if (postHandle) postHandle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (!posting) closePost();
-  });
+  // Tap the grabber or swipe the sheet down (lib/sheetswipe.js), not mid-send.
+  if (sheet && window.SkriblSheetSwipe) {
+    window.SkriblSheetSwipe.attach(sheet, { handle: sheet.querySelector('.menu-handle'),
+      close: closePost, canClose: () => !posting });
+  }
 
   // The Post button in the header opens the composer.
   postBtn.addEventListener('click', openPost);

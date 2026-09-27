@@ -58,7 +58,14 @@
   width: 40px; height: 4px; border-radius: 2px;
   background: var(--text-3); opacity: 0.55;
   margin: 4px auto 8px;
+  /* It closes the sheet now (lib/sheetswipe.js), so it gets a finger-sized
+     target around the thin pill. */
+  position: relative; cursor: pointer;
 }
+.pm-grab::after { content: ''; position: absolute; inset: -12px -30px; }
+/* A swipe on the open sheet never becomes the browser's pull-to-refresh. */
+.pm-sheet { overscroll-behavior: contain; }
+html:has(.pm-overlay:not([hidden])) { overscroll-behavior-y: none; }
 
 .pm-item {
   display: flex; align-items: center; gap: 12px;

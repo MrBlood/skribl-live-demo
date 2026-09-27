@@ -5,9 +5,12 @@
  * (owner picked this fix from the design audit, mocked before built). At
  * compact widths the drawer now OPENS at the half detent: the grabber, the
  * colour section, and an honest "Brush, smoothing & more" button — the
- * canvas stays visible above. Pulling or tapping the grabber (or the more
- * button) expands to the full drawer; pulling down returns to half; pulling
- * down again closes. Desktop is untouched: the sections were never in the
+ * canvas stays visible above. Pulling the grabber up (or the more button)
+ * expands to the full drawer; pulling down returns to half; pulling down
+ * again closes. TAPPING the grabber closes the drawer, at either detent (v317,
+ * the owner: "I hit the drawer grip and they stay" -- it toggled half and
+ * full, which on a phone reads as a menu that will not go away; every sheet's
+ * grabber closes it, and this one does too). Desktop is untouched: the sections were never in the
  * canvas's way there, and the CSS shows the handle only at sheet widths —
  * the same pattern .menu-handle uses.
  *
@@ -90,9 +93,10 @@
 
     if (more) more.addEventListener('click', function () { setFull(true); });
 
-    /* The grabber: a tap toggles half<->full; a deliberate drag reads the
-     * direction — up expands, down collapses, down again closes. Threshold
-     * 24px so a wobbly tap is still a tap. */
+    /* The grabber: a tap closes; a deliberate drag reads the direction — up
+     * expands, down collapses, down again closes. Threshold 24px so a wobbly
+     * tap is still a tap. With no `close` to hand off to, a tap still toggles. */
+    function tap() { if (close) close(); else setFull(!isFull()); }
     var sy = null, pid = null, acted = false;
     handle.addEventListener('pointerdown', function (e) {
       e.preventDefault();
@@ -111,14 +115,14 @@
     });
     handle.addEventListener('pointerup', function (e) {
       if (e.pointerId !== pid) return;
-      if (sy != null && !acted) setFull(!isFull());
+      if (sy != null && !acted) tap();
       sy = null; pid = null;
     });
     handle.addEventListener('pointercancel', function (e) {
       if (e.pointerId === pid) { sy = null; pid = null; }
     });
     handle.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFull(!isFull()); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(); }
     });
 
     // A drawer hidden by ANY route forgets its detent: every open is half.

@@ -246,6 +246,7 @@ A green check is not evidence until it has been shown to go red.
   version measuring the ELEMENT rather than the viewport, which excluded the
   scrollbar and shifted the boundary ~15px.
 - `verify_flipspeed.py` — Flip keeps up with a finger on a busy page (v317).
+- `verify_sheetswipe.py` — every bottom sheet closes on a swipe down or a tap on its grabber, the draw drawer's grip closes it, and a swipe on an open menu never reloads the page (v317).
   While a stroke is drawn, each move paints the live stroke only, counted in
   strokes painted rather than timed; mid-stroke the pad matches an independent
   full repaint for a pen, a see-through pen, the eraser, the onion skin and the
