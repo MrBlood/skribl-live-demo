@@ -219,9 +219,11 @@
 
   function hide() {
     if (!sheet || sheet.hidden) return;
-    sheet.hidden = true;
-    scrim.hidden = true;
     if (global.SkriblModal) global.SkriblModal.close(sheet);
+    // Eases down on a phone with its dim, then hides (lib/sheetswipe.js).
+    var gone = function () { sheet.hidden = true; scrim.hidden = true; };
+    if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.slideOut(sheet, { fade: [scrim], done: gone });
+    else gone();
   }
 
   /* ONE ROW ASKS AT A TIME (v317). The owner's phone showed two rows both
@@ -336,6 +338,7 @@
     if (!opts) return;   // the sheet is an editor's; the Library lists drafts itself
     if (!sheet) build();
     opener = from || null;
+    if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.cancelSlide(sheet);
     sheet.hidden = false;
     scrim.hidden = false;
     if (global.SkriblModal) global.SkriblModal.open(sheet, opener);

@@ -27,7 +27,17 @@
  * a sheet whose box meets the bottom of the screen is one.
  *
  * A CANCELLED touch resets, it never closes: a gesture the OS took away must
- * not finish a dismissal the person never finished (verify_tools V214c). */
+ * not finish a dismissal the person never finished (verify_tools V214c).
+ *
+ * AND IT EASES AWAY (v317, the owner: "when those menus close shouldn't they
+ * ease closed?"). The Pad's ⋯ menu, the export sheets and Post always slid
+ * down; Flip's ⋯ menu, the report sheet, the page menu and your drafts just
+ * vanished, and a sheet swiped past the line jumped out from under the finger.
+ * slideOut() carries a bottom sheet the rest of the way down -- from wherever
+ * the finger left it -- and fades its dim with it, then runs the surface's own
+ * hide. Those surfaces call it from their close, so a tap on the grabber, the
+ * dim, a row or Escape eases the same way a swipe does. Reduced motion, or a
+ * sheet that is not a bottom sheet right now, hides at once. */
 (function () {
   'use strict';
 
@@ -56,6 +66,57 @@
       if (el === sheet) break;
     }
     return null;
+  }
+
+  var SLIDE_MS = 220;
+
+  function unslide(sheet) {
+    clearTimeout(sheet._slideT);
+    sheet._slideT = null;
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+    sheet.style.animation = '';
+    (sheet._slideFades || []).forEach(function (f) {
+      f.el.style.transition = '';
+      f.el.style[f.prop] = '';
+    });
+    sheet._slideFades = null;
+  }
+
+  /* opts: { done: the surface's hide, fade: [dims to fade out],
+             fadeBg: [dims whose own background is the dim, the sheet inside] }
+     A second call while one is running lets the first finish. */
+  function slideOut(sheet, opts) {
+    opts = opts || {};
+    var done = opts.done || function () {};
+    if (!sheet) { done(); return; }
+    if (sheet._slideT) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || sheet.hidden || !isBottomSheet(sheet)) { unslide(sheet); done(); return; }
+    var from = sheet.style.transform || getComputedStyle(sheet).transform;
+    if (!from || from === 'none') from = '';
+    var rest = window.innerHeight - sheet.getBoundingClientRect().top + 12;
+    // An entrance keyframe would otherwise own the transform (Flip's menu, the
+    // page menu); pin the start, then ease to the bottom edge and past it.
+    sheet.style.animation = 'none';
+    sheet.style.transition = 'none';
+    sheet.style.transform = from || 'none';
+    void sheet.offsetHeight;
+    sheet.style.transition = 'transform ' + SLIDE_MS + 'ms cubic-bezier(.32, 0, .67, 0)';
+    sheet.style.transform = (from ? from + ' ' : '') + 'translateY(' + rest + 'px)';
+    var fades = [];
+    (opts.fade || []).forEach(function (el) { if (el) fades.push({ el: el, prop: 'opacity', to: '0' }); });
+    (opts.fadeBg || []).forEach(function (el) { if (el) fades.push({ el: el, prop: 'backgroundColor', to: 'transparent' }); });
+    fades.forEach(function (f) {
+      f.el.style.transition = (f.prop === 'opacity' ? 'opacity ' : 'background-color ') + SLIDE_MS + 'ms ease';
+      f.el.style[f.prop] = f.to;
+    });
+    sheet._slideFades = fades;
+    sheet._slideT = setTimeout(function () {
+      sheet._slideT = null;
+      done();
+      unslide(sheet);
+    }, SLIDE_MS);
   }
 
   function attach(sheet, opts) {
@@ -115,8 +176,11 @@
       tracking = false; dragging = false;
       if (!was) return;
       // Close FIRST, then hand the transform back: a sheet that animates out
-      // does so from where the finger left it, not from a snap back up.
+      // does so from where the finger left it, not from a snap back up. A
+      // surface whose close eases through slideOut() has already taken the
+      // transform over, and keeps it.
       if (pulled > CLOSE_AT || (pulled > 24 && fast > FLICK)) close();
+      if (sheet._slideT) return;
       sheet.style.transition = '';
       sheet.style.transform = '';
     }
@@ -139,5 +203,6 @@
     }
   }
 
-  window.SkriblSheetSwipe = { attach: attach, isBottomSheet: isBottomSheet };
+  window.SkriblSheetSwipe = { attach: attach, isBottomSheet: isBottomSheet,
+                              slideOut: slideOut, cancelSlide: unslide };
 }());
