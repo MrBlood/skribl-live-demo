@@ -639,10 +639,25 @@
   var draftsCfg = window.SKRIBL_DRAFTS || {};
   var SD = window.SkriblSavedDrafts;
 
+  /* THE SAME ROW AS THE EDITORS' SHEET (v317): picture, name, "Pad · 12m
+     ago", and a bin. The owner: too many bubble pills, and the sheet "looks
+     nothing like the others". The card itself opens the draft, in the editor
+     that made it; the bin asks once, and only one row asks at a time. */
+  var BIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+    + 'stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/>'
+    + '<path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+  var draftDisarmers = [];
   function draftRow(it) {
     var row = document.createElement('div');
     row.className = 'draft-row';
-    var pic = document.createElement('div');
+    var kind = it.kind === 'flip' ? 'Flip' : 'Pad';
+    var title = it.title || 'Untitled Skribl';
+    var base = it.kind === 'flip' ? draftsCfg.flip : draftsCfg.pad;
+    var open = document.createElement('a');
+    open.className = 'draft-open';
+    open.href = (base || '') + '?draft=' + encodeURIComponent(it.id);
+    open.setAttribute('aria-label', 'Open ' + title + ' in ' + kind);
+    var pic = document.createElement('span');
     pic.className = 'draft-pic';
     if (it.thumbnail) {
       var img = document.createElement('img');
@@ -650,31 +665,28 @@
       img.src = it.thumbnail;
       pic.appendChild(img);
     }
-    var words = document.createElement('div');
+    var words = document.createElement('span');
     words.className = 'draft-words';
-    var name = document.createElement('div');
+    var name = document.createElement('span');
     name.className = 'draft-name';
-    name.textContent = it.title || 'Untitled Skribl';
-    var meta = document.createElement('div');
+    name.textContent = title;
+    var meta = document.createElement('span');
     meta.className = 'draft-meta';
-    var kind = it.kind === 'flip' ? 'Flip' : 'Pad';
     meta.textContent = kind + ' \u00B7 ' + (SD ? SD.ago(it.updatedAt) : '');
     words.appendChild(name);
     words.appendChild(meta);
-    var acts = document.createElement('div');
-    acts.className = 'draft-acts';
-    var base = it.kind === 'flip' ? draftsCfg.flip : draftsCfg.pad;
-    var open = document.createElement('a');
-    open.className = 'draft-open';
-    open.href = (base || '') + '?draft=' + encodeURIComponent(it.id);
-    open.textContent = 'Open in ' + kind;
+    open.appendChild(pic);
+    open.appendChild(words);
     var del = document.createElement('button');
     del.type = 'button';
     del.className = 'draft-del';
-    del.textContent = 'Delete';
-    del.setAttribute('aria-label', 'Delete ' + (it.title || 'Untitled Skribl'));
+    del.innerHTML = BIN;
+    del.setAttribute('aria-label', 'Delete ' + title);
+    function disarm() { del.classList.remove('armed'); del.innerHTML = BIN; }
+    draftDisarmers.push(disarm);
     del.addEventListener('click', function () {
       if (!del.classList.contains('armed')) {
+        draftDisarmers.forEach(function (d) { if (d !== disarm) d(); });
         del.classList.add('armed');
         del.textContent = 'Delete?';
         return;
@@ -685,11 +697,8 @@
         meta.textContent = e.message;
       });
     });
-    acts.appendChild(open);
-    acts.appendChild(del);
-    row.appendChild(pic);
-    row.appendChild(words);
-    row.appendChild(acts);
+    row.appendChild(open);
+    row.appendChild(del);
     return row;
   }
 
@@ -700,6 +709,7 @@
       : 'Saved on this browser only.';
     SD.list().then(function (items) {
       dList.textContent = '';
+      draftDisarmers = [];
       dEmpty.hidden = items.length > 0;
       items.forEach(function (it) { dList.appendChild(draftRow(it)); });
     }, function (e) {

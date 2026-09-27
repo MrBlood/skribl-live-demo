@@ -218,8 +218,22 @@
     if (global.SkriblModal) global.SkriblModal.close(sheet);
   }
 
+  /* ONE ROW ASKS AT A TIME (v317). The owner's phone showed two rows both
+     saying "Tap again" -- arming a row never disarmed the one armed before it,
+     so an old question sat beside a new one. Every row registers how to put
+     itself back, and arming any row puts every other one back first. */
+  var disarmers = [];
+  function disarmOthers(keep) {
+    disarmers.forEach(function (d) { if (d !== keep) d(); });
+  }
+  // A bin, not a ×: a × reads as "close", and it was the smallest thing on the row.
+  var BIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+    + 'stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/>'
+    + '<path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+
   function render(items) {
     listEl.textContent = '';
+    disarmers = [];
     if (!items.length) {
       listEl.appendChild(el('p', 'sdrafts-empty',
         'No saved drafts yet. Save one from \u22EF \u2192 Save draft.'));
@@ -249,12 +263,22 @@
       var del = el('button', 'sdrafts-del');
       del.type = 'button';
       del.setAttribute('aria-label', 'Delete ' + (it.title || 'this draft'));
-      del.textContent = '\u2715';
-      var armedOpen = false, armedDel = false;
+      del.innerHTML = BIN;
+      var armedOpen = false, armedDel = false, metaText = meta.textContent;
+      function disarm() {
+        armedOpen = false; armedDel = false;
+        meta.textContent = metaText;
+        row.classList.remove('armed');
+        del.classList.remove('armed');
+        del.innerHTML = BIN;
+      }
+      disarmers.push(disarm);
       openBtn.addEventListener('click', function () {
         // Opening REPLACES the canvas. Work on it is asked about once, on the
         // row itself, the way New Skribl asks: a second tap confirms.
         if (!armedOpen && opts.hasContent && opts.hasContent()) {
+          disarmOthers(disarm);
+          if (armedDel) disarm();
           armedOpen = true;
           meta.textContent = 'Tap again \u2014 this replaces what is on your canvas';
           row.classList.add('armed');
@@ -264,6 +288,8 @@
       });
       del.addEventListener('click', function () {
         if (!armedDel) {
+          disarmOthers(disarm);
+          if (armedOpen) disarm();
           armedDel = true;
           del.textContent = 'Delete?';
           del.classList.add('armed');

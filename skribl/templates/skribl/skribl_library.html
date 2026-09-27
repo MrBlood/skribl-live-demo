@@ -185,7 +185,7 @@
     .who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .who .name { margin: 0; display: inline-flex; align-items: center; gap: 7px; font-weight: 800; font-size: 20px; letter-spacing: -.01em; }
     .verified { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%;
-      background: linear-gradient(150deg, var(--accent-bright), var(--accent)); color: #0b0616;
+      background: linear-gradient(150deg, var(--accent-bright), var(--accent)); color: #fff;
       font-size: 11px; font-weight: 900; box-shadow: 0 2px 8px var(--accent-glow); }
     .who .handle { font-family: var(--font-mono); color: var(--accent-tint); font-size: 13px; }
     .who .bio { color: var(--text-2); font-size: 13.5px; margin-top: 2px; }
@@ -247,7 +247,7 @@
     /* 38 visual -> a 44px box, centred; the 46px play button's box sits inside it. */
     .tbtn { position: relative; z-index: 1; }
     .tbtn::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
-    .tbtn.play { width: 46px; height: 46px; background: linear-gradient(150deg, var(--accent-bright), var(--accent)); border-color: transparent; color: #0b0616; box-shadow: 0 5px 18px var(--accent-glow); }
+    .tbtn.play { width: 46px; height: 46px; background: linear-gradient(150deg, var(--accent-bright), var(--accent)); border-color: transparent; color: #fff; box-shadow: 0 5px 18px var(--accent-glow); }
     .tbtn.on { color: var(--accent-tint); border-color: rgba(124,92,255,.45); background: rgba(124,92,255,.14); }
     .transport .telapsed { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
     /* Six buttons and a clock do not fit one row at phone width (the full-
@@ -270,24 +270,26 @@
     .libtab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
     .drafts-mode .chips, .drafts-mode .search { display: none; }
     .drafts-where { font-size: 13px; color: var(--text-3); margin: 0 0 12px; }
-    .drafts-list { display: flex; flex-direction: column; gap: 10px; }
-    .draft-row { display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--raised);
-      border: 1px solid var(--hairline); border-radius: var(--r); }
-    .draft-pic { flex: 0 0 auto; width: 84px; height: 63px; border-radius: 8px; overflow: hidden; background: #0b0d12; }
+    .drafts-list { display: flex; flex-direction: column; gap: 8px; }
+    /* One row, both places: the editors' sheet draws the same card (styles.css,
+       .sdrafts-*). The card opens the draft; the bin asks once. */
+    .draft-row { display: flex; align-items: center; gap: 4px; background: var(--raised);
+      border: 1px solid var(--hairline); border-radius: 14px; }
+    .draft-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px;
+      padding: 8px; border-radius: 14px; color: inherit; text-decoration: none; }
+    .draft-open:hover { background: rgba(124, 92, 255, .06); }
+    .draft-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .draft-pic { flex: 0 0 auto; width: 72px; height: 54px; border-radius: 9px; overflow: hidden; background: #0b0d12; }
     .draft-pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
-    .draft-words { flex: 1 1 auto; min-width: 0; }
-    .draft-name { font-size: 14px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .draft-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-3); margin-top: 4px; }
-    .draft-acts { flex: 0 0 auto; display: flex; gap: 6px; }
-    .draft-open, .draft-del { min-height: 44px; min-width: 44px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13px;
-      font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
-    .draft-open { background: var(--accent); color: #0b0616; border: 0; }
-    .draft-del { background: transparent; color: var(--text-2); border: 1px solid var(--hairline); padding: 0 12px; }
-    .draft-del.armed { color: #ff8a8a; border-color: #ff8a8a; }
-    @media (max-width: 420px) {
-      .draft-row { flex-wrap: wrap; }
-      .draft-acts { width: 100%; justify-content: flex-end; }
-    }
+    .draft-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .draft-name { font-size: 15px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .draft-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+    .draft-del { flex: 0 0 auto; min-width: 44px; height: 44px; padding: 0 10px; margin-right: 6px; border-radius: 22px;
+      border: 1px solid transparent; background: transparent; color: var(--text-3); font: inherit; font-size: 13px;
+      font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+    .draft-del svg { width: 19px; height: 19px; }
+    .draft-del:hover { color: var(--text); }
+    .draft-del.armed { color: #ff8a8a; border-color: rgba(255, 138, 138, .5); background: rgba(255, 138, 138, .1); }
     .libhead .cnt { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
     .chips { display: flex; gap: 7px; margin-left: auto; }
     /* min-height 34 is the VISIBLE floor (SK-AUD-005). These measured 28 —
@@ -298,7 +300,7 @@
     .chip { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .04em; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--hairline); background: transparent; color: var(--text-2); cursor: pointer; transition: .15s;
       min-height: 34px; display: inline-flex; align-items: center; }
     .chip:hover { border-color: var(--hover-edge); color: var(--text); }
-    .chip.active { background: var(--accent); border-color: transparent; color: #0b0616; font-weight: 600; }
+    .chip.active { background: var(--accent); border-color: transparent; color: #fff; font-weight: 600; }
     .search { position: relative; }
     /* min-height 44: an input has no ::before to grow a tap band with, so the box is the box. */
     /* 16px, NOT 12.5. Below 16 iOS Safari magnifies the whole page when the
@@ -336,7 +338,7 @@
     .card .badge svg { width: 11px; height: 11px; }
     .card .playing { position: absolute; inset: 0; display: none; place-items: center; background: rgba(6,7,10,.28); color: #fff; }
     .card.active .playing { display: grid; }
-    .card .playing span { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(124,92,255,.9); color: #0b0616; }
+    .card .playing span { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(124,92,255,.9); color: #fff; }
     .card .body { padding: 10px 11px 12px; }
     .card .ct { font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; margin-bottom: 5px; }
     .card .cm { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }

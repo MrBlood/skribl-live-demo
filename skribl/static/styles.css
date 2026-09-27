@@ -2813,7 +2813,10 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
    green (all safe) and from red (nothing saved): a standing amber warning, not
    the pulsing amber of an in-flight save. */
 .autosave-status.partial .autosave-dot { background: var(--warn); }
-.autosave-status.partial { color: var(--warn); }
+/* LESS GOLD (v317, the owner: "maybe not so gold?"). The amber is the dot,
+   which is the warning's colour everywhere else too (the toolbar's pending
+   dot); the words are the pill's ordinary text. */
+.autosave-status.partial { color: var(--text-primary); }
 /* ---- The pill when it has somewhere to go (lib/autosavepill.js) ----
    Both editors: a pending record with no bytes behind it makes the pill's TEXT
    a control that opens the drawer holding the re-add card, and shows a x that
@@ -2826,7 +2829,7 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
    affordance and the severity are the same signal. NOT a transform on :active
    -- lib/pillfit.js lifts the pill with translateY and a transform here would
    replace the lift, out from under the finger pressing it. */
-.autosave-status.actionable { pointer-events: auto; box-shadow: 0 0 0 1px var(--warn) inset; }
+.autosave-status.actionable { pointer-events: auto; box-shadow: 0 0 0 1px var(--hairline, #252a35) inset; }
 .autosave-status.actionable #autosaveStatusText { cursor: pointer; }
 .autosave-status.actionable:hover { background: rgba(var(--surface-control-rgb), 0.95); }
 .autosave-status.actionable #autosaveStatusText:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; border-radius: 6px; }
@@ -2897,9 +2900,11 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
    inherits the pill's pointer-events, so a panel that blocks the pill blocks
    it too. */
 .autosave-readd { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 0;
-  background: var(--warn); color: rgb(var(--surface-well-2-rgb)); font: inherit; font-size: 13px; font-weight: 700;
+  /* The app's action colour with white words, as Post is: never dark text on a
+     coloured pill (the owner, v317). */
+  background: var(--accent); color: #fff; font: inherit; font-size: 13px; font-weight: 700;
   cursor: pointer; white-space: nowrap; }
-.autosave-readd:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+.autosave-readd:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .autosave-readd:active { filter: brightness(1.1); }
 .autosave-readd[hidden] { display: none; }
 
@@ -6022,27 +6027,34 @@ body.playing .flip-grid { display: none; }
 .sdrafts-close { width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent;
   color: var(--text-tool-2); font-size: 16px; cursor: pointer; }
 .sdrafts-sub { margin: 4px 4px 12px; font-size: 13px; color: var(--text-muted); }
-.sdrafts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.sdrafts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .sdrafts-empty { margin: 18px 4px; font-size: 14px; color: var(--text-muted); text-align: center; }
 .sdrafts-retry { align-self: center; min-height: 44px; padding: 0 20px; border-radius: 999px;
   border: 1px solid var(--hairline, #252a35); background: transparent; color: var(--text-heading);
   font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
-.sdrafts-row { display: flex; align-items: center; gap: 6px; border-radius: 12px; }
-.sdrafts-row.armed { background: rgba(124, 92, 255, .12); }
+/* ONE ROW, BOTH PLACES (v317): the same card as the Library's Drafts tab --
+   picture, name, "Pad · 12m ago", and a bin. The whole card opens the draft;
+   there is no second button that says so. */
+.sdrafts-row { display: flex; align-items: center; gap: 4px; border-radius: 14px;
+  border: 1px solid var(--hairline, #252a35); background: rgba(var(--wash-rgb), .03); }
+.sdrafts-row.armed { background: rgba(124, 92, 255, .12); border-color: rgba(124, 92, 255, .45); }
 .sdrafts-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px;
-  padding: 8px; border: 0; border-radius: 12px; background: transparent; color: inherit;
+  padding: 8px; border: 0; border-radius: 14px; background: transparent; color: inherit;
   font: inherit; text-align: left; cursor: pointer; }
-.sdrafts-open:hover { background: rgba(var(--wash-rgb), .06); }
-.sdrafts-thumb { flex: 0 0 auto; width: 64px; height: 48px; border-radius: 8px; overflow: hidden;
-  background: #0d0f14; border: 1px solid var(--hairline, #252a35); }
-.sdrafts-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.sdrafts-open:hover { background: rgba(var(--wash-rgb), .05); }
+.sdrafts-thumb { flex: 0 0 auto; width: 72px; height: 54px; border-radius: 9px; overflow: hidden;
+  background: #0d0f14; }
+.sdrafts-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sdrafts-words { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .sdrafts-name { font-size: 15px; font-weight: 600; color: var(--text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sdrafts-meta { font-size: 12.5px; color: var(--text-muted); }
-.sdrafts-del { flex: 0 0 auto; min-width: 40px; height: 40px; padding: 0 10px; border-radius: 20px;
-  border: 1px solid transparent; background: transparent; color: var(--text-tool-2);
-  font: inherit; font-size: 13px; cursor: pointer; }
+.sdrafts-del { flex: 0 0 auto; min-width: 44px; height: 44px; padding: 0 10px; margin-right: 6px;
+  border-radius: 22px; border: 1px solid transparent; background: transparent; color: var(--text-muted);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex;
+  align-items: center; justify-content: center; }
+.sdrafts-del svg { width: 19px; height: 19px; }
+.sdrafts-del:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), .06); }
 .sdrafts-del.armed { color: var(--danger); border-color: rgba(244, 50, 111, .5); background: rgba(244, 50, 111, .12); }
 @media (max-width: 640px) {
   .sdrafts-sheet { top: auto; bottom: 0; transform: translateX(-50%); width: 100%;

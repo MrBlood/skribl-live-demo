@@ -119,7 +119,46 @@
     });
   }
 
+  /* BYTES, NOT BLOBS (v317). WebKit has a long record of failing to store
+     Blob and File values in IndexedDB -- in the in-app browsers above all,
+     and Chrome on iOS is one -- and the owner's iPhone kept restoring
+     drawings with "Media missing". An ArrayBuffer is plain data every engine
+     stores. A record's top-level Blobs go in as their bytes and their type and
+     come back out as Blobs, so no caller changes; a record written before
+     this still holds a real Blob, and still reads back as one. */
+  function toBytes(blob) {
+    if (typeof blob.arrayBuffer === 'function') return blob.arrayBuffer();
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(r.result); };
+      r.onerror = function () { reject(r.error || new Error('could not read the file')); };
+      r.readAsArrayBuffer(blob);
+    });
+  }
+  function pack(value) {
+    if (!value || typeof value !== 'object' || typeof Blob === 'undefined') return Promise.resolve(value);
+    var keys = Object.keys(value).filter(function (k) { return value[k] instanceof Blob; });
+    if (!keys.length) return Promise.resolve(value);
+    var out = Object.assign({}, value);
+    return Promise.all(keys.map(function (k) {
+      return toBytes(value[k]).then(function (buf) {
+        out[k] = { __skriblBytes: buf, type: value[k].type || '' };
+      });
+    })).then(function () { return out; });
+  }
+  function unpack(value) {
+    if (!value || typeof value !== 'object') return value;
+    Object.keys(value).forEach(function (k) {
+      var v = value[k];
+      if (v && typeof v === 'object' && v.__skriblBytes) value[k] = new Blob([v.__skriblBytes], { type: v.type || '' });
+    });
+    return value;
+  }
+
   function put(key, value) {
+    return pack(value).then(function (packed) { return putRaw(key, packed); });
+  }
+  function putRaw(key, value) {
     return op('readwrite', function (store, tx, resolve, reject) {
       store.put(value, key);
       // Resolve on transaction COMPLETE, not request success — a request can
@@ -136,7 +175,7 @@
       var req = store.get(key);
       req.onsuccess = function () { resolve(req.result); };  // undefined = absent
       req.onerror = function () { reject(req.error || new Error('get failed')); };
-    });
+    }).then(unpack);
   }
 
   function del(key) {
