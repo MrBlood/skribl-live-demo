@@ -677,6 +677,54 @@ with sync_playwright() as p:
           gap["stuck"] is True, str(gap))
     pg7.close()
 
+    print("\nPAD — a restored photo that is still decoding stays in the draft, and one that never lands is missing again (v317 review)")
+    # The re-apply listener took the draft's photo settings off the moment the
+    # restored file was handed over; an autosave before the image was on the
+    # canvas wrote no photo. Driven with a file that cannot decode, which is
+    # also the other half: it must come back as pending, not vanish.
+    pgR = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+    pgR.goto(BASE+"/skribl-pad", wait_until="load"); pgR.wait_for_timeout(1200)
+    pgR.evaluate("() => localStorage.clear()")
+    pbR = pgR.locator("canvas").first.bounding_box()
+    pgR.mouse.move(pbR["x"]+120, pbR["y"]+120); pgR.mouse.down()
+    for i in range(30): pgR.mouse.move(pbR["x"]+120+i*4, pbR["y"]+120+math.sin(i/4)*30)
+    pgR.mouse.up(); pgR.wait_for_timeout(1500)
+    flight = pgR.evaluate("""() => {
+        pendingPhotoMeta = { name: 'broken.png', fit: 'contain', opacity: 0.6 };
+        const input = document.getElementById('photoInput');
+        const dt = new DataTransfer();
+        dt.items.add(new File([new Uint8Array([1, 2, 3, 4])], 'broken.png', { type: 'image/png' }));
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        const meta = serializeAutosave().photoMeta;
+        return { name: meta && meta.name, fit: meta && meta.fit, pending: !!pendingPhotoMeta }; }""")
+    check("Pad: an autosave while a restored photo decodes still names the photo and its settings",
+          flight["name"] == "broken.png" and flight["fit"] == "contain", str(flight))
+    pgR.wait_for_timeout(15600)
+    after = pgR.evaluate("""() => ({ pending: pendingPhotoMeta && pendingPhotoMeta.name,
+        card: !document.getElementById('photoPending').hidden,
+        text: document.getElementById('autosaveStatusText').textContent,
+        shown: !document.getElementById('autosaveStatus').hidden,
+        saved: serializeAutosave().photoMeta && serializeAutosave().photoMeta.name })""")
+    check("Pad: ...and a photo that never lands is missing again once the window closes: pending, its card, the pill says so",
+          after["pending"] == "broken.png" and after["card"] and after["shown"] and "missing" in after["text"].lower()
+          and after["saved"] == "broken.png", str(after))
+    # The × on "Media missing" dismisses what is MISSING: a track still
+    # decoding beside a lost photo keeps its loop and crossfade (it lost them).
+    dism = pgR.evaluate("""() => {
+        pendingPhotoMeta = { name: 'gone.png' };
+        pendingMusicMeta = { name: 'loop.wav', trimStart: 1, trimEnd: 3, crossfadeMs: 40 };
+        _mediaFile.music = new File(['x'], 'loop.wav'); _mediaAt.music = Date.now();
+        showAutosaveStatus('saved-no-media');
+        return new Promise(r => requestAnimationFrame(() => {
+          document.getElementById('autosaveStatusDismiss').click();
+          r({ photo: pendingPhotoMeta, music: pendingMusicMeta && pendingMusicMeta.trimEnd });
+        }));
+    }""")
+    check("Pad: dismissing 'Media missing' clears the missing photo and keeps the track still on its way",
+          dism["photo"] is None and dism["music"] == 3, str(dism))
+    pgR.close()
+
     print("\nPAD — a restored photo keeps its adjustments however long the decode takes (v294 audit, PR 2)")
     # AUDIT, finding 4: the saved fit / opacity / blur / zoom were re-applied on
     # a 140 ms timer after the change event and DROPPED if the image was not yet

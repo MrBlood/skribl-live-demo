@@ -177,7 +177,7 @@ function serializeAutosave() {
     // (from a restore where the user hasn't re-added the file yet) so it persists.
     photoMeta: (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
       ? { name: photoBgImg._fileName, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
-      : (typeof pendingPhotoMeta !== 'undefined' ? pendingPhotoMeta : null),
+      : (typeof pendingPhotoMeta !== 'undefined' ? (pendingPhotoMeta || _inFlight.photo) : null),
     musicMeta: currentMusicMeta()
   };
 }
@@ -227,6 +227,20 @@ const _restoring = { photo: false, music: false };
    is missing, and the pill is asked again when the window closes. */
 const _DECODE_MS = 15000;
 const _mediaAt = { photo: 0, music: 0 };
+/* THE PHOTO'S SETTINGS WHILE ITS FILE DECODES (v317 review). A restore hands
+   the file to the photo input, and the re-apply listener below takes
+   pendingPhotoMeta off at once -- but the image is not on the canvas until the
+   decode finishes, so an autosave in that gap wrote no photo at all, and a tab
+   killed there came back without it. The settings wait here instead: autosave
+   keeps writing them, the load applies them, and a file that never lands puts
+   them back as pending when the window closes, card and amber and all. */
+const _inFlight = { photo: null };
+/* When the decode window closes, SAY so: a hidden pill has nothing to refine,
+   so a file that never landed has to raise the amber itself. */
+function _mediaAlarm() {
+  if (_pendingMediaLost()) showAutosaveStatus('saved-no-media');
+  else _refreshMediaPill();
+}
 function _inHand(kind, meta) {
   const f = _mediaFile[kind];
   return !!(f && meta && f.name === meta.name && Date.now() - _mediaAt[kind] < _DECODE_MS);
@@ -259,8 +273,11 @@ if (window.SkriblAutosavePill) window.SkriblAutosavePill.configure({
     if (typeof refreshPendingCards === 'function') refreshPendingCards();
     if (typeof _padDrawerCtl !== 'undefined' && _padDrawerCtl) _padDrawerCtl.open(_pendingMusicLost() ? 'music' : 'photo');
   },
+  // Only what is actually missing: a track still decoding keeps its loop and
+  // crossfade when the photo beside it is dismissed (v317 review).
   dismiss: () => {
-    pendingMusicMeta = null; pendingPhotoMeta = null;
+    if (_pendingMusicLost()) pendingMusicMeta = null;
+    if (_pendingPhotoLost()) pendingPhotoMeta = null;
     if (typeof refreshPendingCards === 'function') refreshPendingCards();
     scheduleAutosave();
   }
@@ -672,7 +689,7 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
     if (!file) return;
     _mediaFile[kind] = file;
     _mediaAt[kind] = Date.now();
-    setTimeout(_refreshMediaPill, _DECODE_MS + 50);   // the in-hand window closing is news
+    setTimeout(_mediaAlarm, _DECODE_MS + 50);   // the in-hand window closing is news
     if (_fromStore[kind]) { _fromStore[kind] = false; mediaDraft[kind] = 'durable'; _refreshMediaPill(); return; }
     mediaDraft[kind] = 'none';   // a fresh file is a fresh attempt, never a hung one's shadow
     storeMediaBytes(kind);
@@ -681,6 +698,7 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
   if (rm) rm.addEventListener('click', () => {
     mediaDraft[kind] = 'none';
     _mediaFile[kind] = null;
+    if (kind === 'photo') _inFlight.photo = null;   // removed, not waiting
     _mediaSeq[kind]++;   // a put still in flight is about a file that is gone
     // WRITE THE DRAFT FIRST, DELETE THE BYTES SECOND (v294 audit, finding 8).
     // The draft was rewritten by the 1.2 s debounce while the bytes went at
@@ -746,6 +764,15 @@ if (typeof pendingMusicMeta !== 'undefined') {
     if (!pendingPhotoMeta) return;
     const meta = pendingPhotoMeta;
     pendingPhotoMeta = null;
+    _inFlight.photo = meta;
+    setTimeout(() => {
+      if (_inFlight.photo !== meta) return;          // applied, removed or replaced
+      _inFlight.photo = null;
+      if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName === meta.name) return;
+      pendingPhotoMeta = meta;                       // it never landed: missing again
+      refreshPendingCards();
+      _mediaAlarm();
+    }, _DECODE_MS);
     const pCard = document.getElementById('photoPending');
     if (pCard) pCard.hidden = true;
     photoUploadBtn.hidden = false;
@@ -763,6 +790,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
     // different photo if this attach was refused.
     const apply = () => {
       if (!photoBgImg || photoBgImg.style.display === 'none') return;
+      if (_inFlight.photo === meta) _inFlight.photo = null;   // landed
       if (meta.fit) {
         photoFit = meta.fit;
         const fitMap = { cover: 'cover', contain: 'contain', stretch: 'fill' };
