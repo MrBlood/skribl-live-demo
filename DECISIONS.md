@@ -12359,3 +12359,38 @@ reproduced, fixed, and pinned by a check shown to fail without its fix:
   * `harness/package.py` could ship a stale file, because `zip -r` updates an
     archive and never removes from it. It now rebuilds each zip, checks it
     against its own SHA256SUMS, and refuses a tree with local edits.
+* **Draft store and dialogs.**
+  * `put()` reads a Blob's bytes before it opens its transaction, so a
+    `del()` issued after it went in first and the put wrote the removed photo
+    back. Writes to one key now run in the order they were asked for.
+  * Deleting a draft from the keyboard dropped focus to the page, outside the
+    drafts dialog, where Tab left it and Escape did nothing. Focus now goes to
+    the row that took its place (the Library does the same).
+  * A save after the open draft was deleted elsewhere said "Draft updated"
+    while it made a new one.
+  * A second tap on the Pad's menu button while the menu eased away was eaten
+    by the still-unhidden overlay. A closing overlay takes no taps now.
+* **Contrast.** White words on the action colour were 4.35:1, and on the
+  name field's Done 3.16:1, under AA's 4.5:1 for their size. This dated from
+  before v317 on Post and the gallery, and #260 added more such buttons. A new
+  token, `--accent-fill` (#6d4cf0, 5.33:1), is the fill under words; dots,
+  bars, outlines and icons keep `--accent`. `verify_a11y` A11Y 6c measures every
+  worded accent fill on four pages in both themes. A11Y 6 had measured text
+  tokens on surfaces only, so text on a coloured fill had never been measured.
+  The Library's armed Delete? was a literal pink, 2.27:1 on the light theme;
+  it follows `--danger` now.
+
+Chosen, not missed, this round:
+
+* **The draft byte budget and count cap can be overrun by concurrent saves.**
+  The check and the insert are separate statements. The attempts budget
+  bounds the overrun, and a per-author lock is more machinery than one
+  author racing their own saves is worth.
+* **`/demo-logout` is a GET.** Another site can sign the owner out, which
+  costs one visit to `/demo-login`. It is not worth a form and a token on a
+  demo switch.
+* **The key travels in a URL.** It lands in browser history and request logs.
+  `.env.example` says so, and rotating the key now signs every browser out.
+* **A copied session cookie still works after `/demo-logout`,** until the key
+  or `SECRET_KEY` changes. Flask keeps the session in the cookie, so there is
+  no server-side record to strike it from.
