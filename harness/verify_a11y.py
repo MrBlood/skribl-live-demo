@@ -1504,7 +1504,10 @@ with sync_playwright() as p:
     # translucent fill composited over white, the worst thing under it. An
     # element a page builds on demand is built here from its selector's chain.
     ON_FILL = r"""(specs) => {
-      const rgb = (s) => (s.match(/rgba?\([^)]*\)/g) || []).map(c => c.match(/[\d.]+/g).map(Number));
+      // rgb()/rgba(), and color(srgb r g b / a) -- what color-mix() computes to.
+      const rgb = (s) => (s.match(/rgba?\([^)]*\)|color\(srgb[^)]*\)/g) || []).map(c => {
+        const n = c.match(/[\d.]+/g).map(Number);
+        return c.startsWith('color(') ? [n[0] * 255, n[1] * 255, n[2] * 255, n.length > 3 ? n[3] : 1] : n; });
       const over = (c) => c.length > 3 && c[3] < 1 ? [0,1,2].map(i => c[i] * c[3] + 255 * (1 - c[3])) : c.slice(0, 3);
       const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
       const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
@@ -1533,7 +1536,10 @@ with sync_playwright() as p:
     # holding words whose nearest fill is an accent colour, measured the same
     # way. (The list above keeps the ones a page builds only on demand.)
     ACCENT_SWEEP = r"""() => {
-      const rgb = (s) => (s.match(/rgba?\([^)]*\)/g) || []).map(c => c.match(/[\d.]+/g).map(Number));
+      // rgb()/rgba(), and color(srgb r g b / a) -- what color-mix() computes to.
+      const rgb = (s) => (s.match(/rgba?\([^)]*\)|color\(srgb[^)]*\)/g) || []).map(c => {
+        const n = c.match(/[\d.]+/g).map(Number);
+        return c.startsWith('color(') ? [n[0] * 255, n[1] * 255, n[2] * 255, n.length > 3 ? n[3] : 1] : n; });
       const over = (c) => c.length > 3 && c[3] < 1 ? [0,1,2].map(i => c[i] * c[3] + 255 * (1 - c[3])) : c.slice(0, 3);
       const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
       const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
@@ -1586,6 +1592,13 @@ with sync_playwright() as p:
             for _r in _cpg.evaluate(ON_FILL, _specs):
                 check(f"{_route} {_theme}: {_r['sel']} white on its fill clears AA for its size",
                       _r["fills"] > 0 and _r["worst"] is not None and _r["worst"] >= _r["need"], str(_r))
+            if _route == "/library" and _theme == "light":
+                # The armed Delete? on a light row: its fill is a 10% tint,
+                # which ON_FILL composites over white -- the row IS white here.
+                # It was a literal pink, 2.27:1 (third review).
+                for _r in _cpg.evaluate(ON_FILL, [["button.draft-del.armed"]]):
+                    check("/library light: the armed Delete? reads on its row",
+                          _r["worst"] is not None and _r["worst"] >= _r["need"], str(_r))
             _sw = _cpg.evaluate(ACCENT_SWEEP)
             check(f"{_route} {_theme}: every word on an accent fill clears AA ({_sw['seen']} measured)",
                   not _sw["out"], "; ".join(_sw["out"][:6]))
