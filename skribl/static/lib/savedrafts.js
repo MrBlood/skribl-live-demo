@@ -1,4 +1,4 @@
-/* Saved drafts — ⋯ "Save draft" and "Open a draft…" on both editors (v316).
+/* Saved drafts — ⋯ "Save draft" and "Open a draft…" on both editors (v316), and the Library's Drafts tab (v317).
  *
  * WHAT IT IS FOR, in the owner's words: "a way to save skribl drafts (not on
  * my machine as a file), so I could just click the pen to add a skribl to the
@@ -17,7 +17,9 @@
  * delete (two taps). WHAT IT DOES NOT: serialising and loading a drawing,
  * which each editor passes in, because the Pad's and Flip's documents differ.
  *
- * Editors only; the player never saves anything (verify_player_isolation).
+ * The editors and the Library load it; the Library only lists and deletes
+ * (list/remove/ago) and never calls init(), so open() does nothing there.
+ * The player never saves anything (verify_player_isolation).
  */
 (function (global) {
   'use strict';
