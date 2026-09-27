@@ -221,10 +221,15 @@ const _restoring = { photo: false, music: false };
    HAD answered; the restore handed the file to the attach pipeline and stood
    down, and the pipeline was still decoding a large map image -- so for that
    moment nothing said "loading" and the pill said "lost". A file whose name is
-   the draft's is on its way in, whatever stage it is at. */
+   the draft's is on its way in, whatever stage it is at -- FOR A WHILE. A file
+   whose decode fails never lands and never clears _mediaFile, so "in hand" is
+   bounded by a decode window; past it, a file that is still not on the canvas
+   is missing, and the pill is asked again when the window closes. */
+const _DECODE_MS = 15000;
+const _mediaAt = { photo: 0, music: 0 };
 function _inHand(kind, meta) {
   const f = _mediaFile[kind];
-  return !!(f && meta && f.name === meta.name);
+  return !!(f && meta && f.name === meta.name && Date.now() - _mediaAt[kind] < _DECODE_MS);
 }
 function _pendingMusicLost() {
   if (_restoring.music) return false;
@@ -666,6 +671,8 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     _mediaFile[kind] = file;
+    _mediaAt[kind] = Date.now();
+    setTimeout(_refreshMediaPill, _DECODE_MS + 50);   // the in-hand window closing is news
     if (_fromStore[kind]) { _fromStore[kind] = false; mediaDraft[kind] = 'durable'; _refreshMediaPill(); return; }
     mediaDraft[kind] = 'none';   // a fresh file is a fresh attempt, never a hung one's shadow
     storeMediaBytes(kind);
