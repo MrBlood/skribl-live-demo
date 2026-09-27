@@ -247,6 +247,11 @@ let spanAnchor = null, _pdragArmTimer = null;
 // is easy. Bumped on selection AND removal. (Review round 9, #1)
 let musicSelectionSeq = 0;
 let imageSelectionSeq = 0;
+// The selection still being read, per kind (0 = none): Save draft waits for it,
+// because the name is set before the bytes land (third review).
+const flipReading = { image: 0, music: 0 };
+function flipMediaBusy(){ return (flipReading.image!==0 && flipReading.image===imageSelectionSeq)
+  || (flipReading.music!==0 && flipReading.music===musicSelectionSeq); }
 
 // Export options — session-only view state, like onion. NOT persisted or posted.
 // One pair of helpers feeds GIF, WebM and MP4 so the three can never disagree
@@ -914,6 +919,10 @@ let _mediaRecordInStore = false;
 // True while tryRestore() is fetching the payload: the record is not this
 // session's to delete until that read has landed (v294 bug check).
 let _mediaFetchPending = false;
+// Which document is on screen (third review). Opening a saved draft or a file,
+// or New Skribl, starts a new one; the boot restore's late IndexedDB answer
+// belongs to the document it was asked for and is dropped on any other.
+let flipDocGen = 0;
 function dropStoredMedia(){
   if(_mediaFetchPending) return;
   if(!_mediaRecordInStore || !window.SkriblDraftStore) return;
@@ -1090,8 +1099,11 @@ function tryRestore(){
         // applied yet) and would delete the very record being read — reload,
         // background the app, and the media is gone for good.
         _mediaFetchPending = true;
+        const _gen = flipDocGen, _imgSeq = imageSelectionSeq, _musSeq = musicSelectionSeq;
         SkriblDraftStore.get('flip:draft').then((rec) => {
           if (!rec || !rec.json) return;
+          // Another document since the read began: these bytes are not its.
+          if (_gen !== flipDocGen) return;
           // NOT a byte comparison of the record as it was when the read
           // started (`localStorage.getItem(KEY) !== raw`). Every save rewrites
           // `savedAt`, so any autosave landing in the gap makes the string
@@ -1121,13 +1133,15 @@ function tryRestore(){
           // file has a different name and is refused; same-name bytes from
           // one save earlier are the same file.
           let touched = false;
-          if (!musicData &&
+          // ...and a track or photo chosen or removed meanwhile is the user's
+          // newer word on that slot, even before its bytes have landed.
+          if (!musicData && _musSeq === musicSelectionSeq &&
               typeof full.music === 'string' && full.music.slice(0, 10) === 'data:audio' &&
               d.musicMeta && full.musicMeta && full.musicMeta.name === d.musicMeta.name) {
             musicData = full.music;
             pendingMusicMeta = null; touched = true;
           }
-          if (!bgImage &&
+          if (!bgImage && _imgSeq === imageSelectionSeq &&
               typeof full.bgImage === 'string' && full.bgImage.slice(0, 10) === 'data:image' &&
               d.photo && full.photo && full.photo.name === d.photo.name) {
             bgImage = full.bgImage;
@@ -4343,16 +4357,17 @@ function setBgImage(dataURL){ bgImage=dataURL; photoEnabled=true; photoFit='cove
 function removeBgImage(){ bgImage=null; bgImageObj=null; imageName=''; reposMode=false; pendingPhotoMeta=null; redrawAll(); syncMediaUI(); scheduleSave(); }
 imageInput.addEventListener('change',async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value='';
   const _seq=++imageSelectionSeq; if(!file) return;
+  flipReading.image=_seq;
   const _de=await skriblDecodeCheckImage(file);
   if(_seq!==imageSelectionSeq) return;            // superseded or removed mid-decode
-  if(_de){ chip(_de); return; }
+  if(_de){ flipReading.image=0; chip(_de); return; }
   imageName=file.name||'';
   // Round 10, #2: the token guard used to stop at the decode await, leaving
   // FileReader unguarded — a slower read could still overwrite a newer choice,
   // or restore an image after removal. Carried through every async stage now.
   const r=new FileReader();
-  r.onload=()=>{ if(_seq!==imageSelectionSeq) return; setBgImage(String(r.result)); };
-  r.onerror=()=>{ if(_seq!==imageSelectionSeq) return; chip('That image could not be read.'); };
+  r.onload=()=>{ if(_seq!==imageSelectionSeq) return; flipReading.image=0; setBgImage(String(r.result)); };
+  r.onerror=()=>{ if(_seq!==imageSelectionSeq) return; flipReading.image=0; chip('That image could not be read.'); };
   r.readAsDataURL(file); });
 
 /* ---- music loop (Pad's music component: waveform, trim, loop detail) ---- */
@@ -4436,13 +4451,14 @@ function stopMusic(){ stopWebAudioLoop(); if(audioEl){ try{ audioEl.pause(); }ca
   if(!previewingLoop && window.SkriblAudioSession) window.SkriblAudioSession.release(); }
 musicInput.addEventListener('change',async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value='';
   const _seq=++musicSelectionSeq; if(!file) return;
+  flipReading.music=_seq;
   const _de=await skriblDecodeCheckAudio(file);
   if(_seq!==musicSelectionSeq) return;            // superseded or removed mid-decode
-  if(_de){ chip(_de); return; }
+  if(_de){ flipReading.music=0; chip(_de); return; }
   musicName=file.name||'';
   const r=new FileReader();
-  r.onload=()=>{ if(_seq!==musicSelectionSeq) return; setMusic(String(r.result)); };
-  r.onerror=()=>{ if(_seq!==musicSelectionSeq) return; chip('That audio could not be read.'); };
+  r.onload=()=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; setMusic(String(r.result)); };
+  r.onerror=()=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; chip('That audio could not be read.'); };
   r.readAsDataURL(file); });
 
 /* ---- gapless + crossfaded loop engine (Web Audio, ported from the Pad) --------
@@ -4495,6 +4511,12 @@ function loadDraftFile(file){
       // is a single-canvas replay, not a flipbook; it loaded here as a lone
       // 1-page 'animation' with no error. Refuse it with directions instead.
       if(d.playbackMode==='replay'){ chip('That\u2019s a Pad Skribl \u2014 open it in Skribl Pad'); return; }
+      // A backup file is not the saved draft that was open: Save makes a new one.
+      if(window.SkriblSavedDrafts) SkriblSavedDrafts.forget();
+      flipDocGen++;
+      // The two increments the note below describes. They had gone missing
+      // while the note stayed (fix review): restored, as described.
+      imageSelectionSeq++; musicSelectionSeq++;
       if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
       // Same reasoning as Pad's loadSkribl generation token: a draft load is a
       // NEW document, so an image or track selected moments earlier must not
@@ -4536,6 +4558,7 @@ function loadDraftFile(file){
 // re-open and a saved draft (v316). The same applyPayload() a draft file uses.
 function applyFlipDraftObject(d){
   if(!d || !Array.isArray(d.frames) || !d.frames.length) return;
+  flipDocGen++;
   if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
   applyPayload(d);
   invalidateClearUndo();
@@ -4553,7 +4576,12 @@ document.addEventListener('DOMContentLoaded', () => {
     kind: 'flip',
     serialize: () => serializeFlip({ recipes: true }),
     load: applyFlipDraftObject,
-    hasContent: () => !nothingToShare(),
+    // Media counts, and so does media still on its way back from the store:
+    // a Library link opening a draft over the autosaved photo asks first, as
+    // the Pad does (third review).
+    hasContent: () => !nothingToShare() || !!musicData || _mediaFetchPending
+      || !!pendingPhotoMeta || !!pendingMusicMeta,
+    busy: flipMediaBusy,
     thumbnail: () => { const c=document.createElement('canvas'); c.width=CW; c.height=CH;
       drawFrameTo(c.getContext('2d'), frames.find(f => f && f.strokes && f.strokes.length) || frames[0]); return c; },
     otherUrl: () => { const a=document.getElementById('padBtn'); return a ? a.getAttribute('href') : null; },
@@ -5391,14 +5419,21 @@ const moreScrim=document.getElementById('moreScrim');
 window._skriblPostedUI = null;
 function openMenu(){ if(window._skriblSyncHintToggle) window._skriblSyncHintToggle();
   if(window._skriblSyncThemeToggle) window._skriblSyncThemeToggle();
+  if(window.SkriblSheetSwipe) window.SkriblSheetSwipe.cancelSlide(moreMenu);
   moreMenu.hidden=false; if(moreScrim) moreScrim.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true');
   // AFTER the unhide, or focus() lands on a hidden node. The menu declares
   // aria-modal="true" (v291) and lib/modalfocus.js is what makes that true:
   // focus moves in, Tab stays inside, and closeMenu() hands it back to #moreBtn.
   if(window.SkriblModal) window.SkriblModal.open(moreMenu, moreBtn); }
-function closeMenu(){ if(window.SkriblModal) window.SkriblModal.close(moreMenu);
-  moreMenu.hidden=true; if(moreScrim) moreScrim.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); document.dispatchEvent(new CustomEvent('skribl:menu-closed')); }
-moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
+function closeMenu(){ if(moreMenu._slideT) return;   // already easing away
+  if(window.SkriblModal) window.SkriblModal.close(moreMenu);
+  // On a phone it eases down with its dim, then hides (lib/sheetswipe.js).
+  const gone=()=>{ moreMenu.hidden=true; if(moreScrim) moreScrim.hidden=true; };
+  if(window.SkriblSheetSwipe && !moreMenu.hidden) window.SkriblSheetSwipe.slideOut(moreMenu,{fade:[moreScrim],done:gone}); else gone();
+  moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); document.dispatchEvent(new CustomEvent('skribl:menu-closed')); }
+// A menu easing away is closed as far as the button is concerned: a quick
+// second tap brings it back rather than being swallowed by the slide.
+moreBtn.addEventListener('click',e=>{ e.stopPropagation(); ((moreMenu.hidden||moreMenu._slideT)?openMenu:closeMenu)(); });
 document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')) closeMenu(); });
 // Escape closes it too. Every other dismissible surface here already does this
 // — the export sheet, the tune panel, the help drawer, and Pad's own menu — so
@@ -9589,8 +9624,9 @@ function invalidateClearUndo(){
 // synthetic clicks at the drawer's button, riding its armed state — one
 // control's business logic coupled to another control's confirmation UI.
 function clearAllPages(){
-  if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.forget();   // a new Skribl is a new draft
-  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv,
+  flipDocGen++;
+  const _draftId = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;   // a new Skribl is a new draft
+  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv, draftId: _draftId,
                         // A new Skribl is a new title; Undo brings the old one back (v317).
                         name: (window.SkriblName && window.SkriblName.reset) ? window.SkriblName.reset() : null };
   /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
@@ -9625,7 +9661,8 @@ bindEl('clearUndo', 'click',()=>{
   // frames alone would play them at the rate of the empty document.
   if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
   if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
-  if(typeof clearFramesBackup.name === 'string' && window.SkriblName) window.SkriblName.set(clearFramesBackup.name);
+  if(clearFramesBackup.name && window.SkriblName) window.SkriblName.restore(clearFramesBackup.name);
+  if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(clearFramesBackup.draftId);   // and the saved draft it was
   clearFramesBackup=null; redoStack.length=0;
   document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();

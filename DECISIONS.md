@@ -12129,3 +12129,275 @@ loop engine, loop view, music strip and MP4 pipeline for both editors
 
 The Pad dropping `?theme=` after load was real, and #231 fixed it on every
 page, including the compose Pad a host iframes.
+
+## v317 -- the owner's iPhone, menus that go away, and a name for the helper
+
+Everything from #257 to #262, plus the review that preceded this seal. It was
+driven by one evening of the owner using the editors on an iPhone and sending
+screenshots.
+
+### Drafts that stay (#257, #259, #260)
+
+The Library got a Drafts tab. On the owner's phone the drafts sheet sat on
+"Loading…" forever, drafts "seemed to go away", and restored drawings came back
+with "Media missing". Four causes, four fixes:
+
+* **Nothing in the draft store may wait forever.** Every open and request has a
+  deadline, a dead connection is dropped (and closed) and retried once, and the
+  first open is nudged, because WebKit can leave one unanswered.
+* **A failed read is not an empty list.** The list read swallowed its error and
+  answered [], and the next save wrote an index holding only itself over the
+  real one. Records outlive a lost index, so the list now rebuilds rows from
+  them. A delete removes the record before the row, so a half-finished delete
+  cannot bring a draft back or leave a row that answers "not found".
+* **Bytes, not Blobs.** Media goes into IndexedDB as an ArrayBuffer and comes
+  back as a Blob. WebKit, in-app browsers above all, has a long record of
+  failing to store Blob values.
+* **In hand is not missing, for a while.** A restored file still decoding
+  showed "Media missing" for a second. It now counts as loading, but only for a
+  decode window, so a file that never lands still turns amber.
+
+### Menus that go away (#260, and this seal)
+
+The owner: "menus should always go down or away easily... I hit the drawer grip
+and they stay, I swipe it down and accidentally reload the page", and then
+"when those menus close shouldn't they ease closed?"
+
+`lib/sheetswipe.js` gives every bottom sheet the same behaviour:
+
+* **The grip closes it.** The draw drawer's grip used to toggle half and full,
+  and the page menu's grip did nothing.
+* **A swipe down follows the finger.** The touch is the sheet's from the first
+  pixel, because a real phone commits to pull-to-refresh on the first move it
+  is not told otherwise about. A mostly sideways drag is left alone.
+* **It eases away.** Four sheets used to vanish. A quick second tap reopens a
+  sheet still easing away, and with reduced motion it closes at once.
+
+The slide is one matrix at each end. "matrix(...) translateY(a)" to
+"... translateY(b)" does not interpolate in Chrome: the report sheet sat still,
+then jumped at the half-way mark.
+
+### Also
+
+Flip keeps up on a busy page (#258): the live stroke paints over a cache made
+at pen-down. On phones the header is solid and has no blur layer, because
+WebKit left its slot empty after drawing (#259). New Skribl starts a new title,
+and Undo restores both the title and a typed export name. Buttons on colour have
+white words, never dark (#260).
+
+### Cal (#262)
+
+The working agreements moved from CLAUDE.md to WORKING-AGREEMENTS.md, and
+CLAUDE.md now includes them. Three things in them changed: an opening line
+naming Cal, "the assistant" became "Cal", and the SHA256SUMS line now says the
+file ships in a release archive. The owner's words: "no
+ads, and say I have a friend helping me named Cal". The .gitignore ad went, and
+the README credits him.
+
+### Main went red twice, and why
+
+#259 edited styles.css without re-emitting player.css, and #260 changed a colour
+that verify_dots pinned. Both passed their pull requests, because each ran the
+suites its author believed were affected. The first mistake is now caught on
+the PR gate (verify_seam regenerates player.css). The second is the working
+agreement's own rule, restated: a change to shared styles or shared modules
+runs everything before it merges, not a sample.
+
+### The pre-seal review
+
+A review of everything since v316 found ten issues, and eight were fixed with
+calibrated checks:
+
+* the decode window;
+* the delete order;
+* only a dead connection is dropped, and a write's deadline is 30 s;
+* the swipe's first pixel and sideways drags;
+* reopening mid-slide;
+* Undo losing the export name;
+* verify_seam matching script tags rather than text;
+* a README entry that had split another.
+
+The ninth was partly real: recovered drafts now sort by date. The tenth, the
+cost of recovery, stands: it reads a lost record's payload once, when it
+recovers it.
+
+### The second review, before the seal
+
+The owner asked for a once-over, a staleness sweep, a bug hunt, and then a
+comprehensive pass, and for no seal until all four were done. Four
+reviewers read the whole v316..HEAD diff in parallel. Every finding below was
+checked against the code before it was fixed, and each fix has a check that
+fails without it:
+
+* **Data.**
+  * A restored photo that was still decoding was written into the next
+    autosave as "no photo". Its settings now wait until the image lands, and a
+    photo that never lands is pending again when the decode window closes.
+  * Opening a saved draft, a backup or Undo's snapshot kept the old session's
+    media book-keeping, so a reload could re-attach the PREVIOUS photo. The
+    opened document's media is now the stored copy.
+  * The pill's × cleared a track that was still decoding along with the photo
+    that was missing. It now clears only what is missing.
+  * A Pad holding only a photo or a track was replaced without being asked.
+  * Undo after New Skribl forgot which saved draft it had been, so the next
+    Save made a copy.
+  * An old storage connection's late close event could drop the new one.
+  * A slow, earlier list could put back a row that had just been deleted.
+* **Touch.**
+  * A second finger mid-drag left a sheet stuck part-way down.
+  * In a menu scrolled down, a pull on its first rows closed it instead of
+    scrolling.
+  * A pause before letting go still counted as a flick.
+  * A sheet easing away still took taps.
+  * On a landscape phone, Flip's dropdown was taken for a bottom sheet.
+  * A drag or a close during an entrance animation jumped.
+* **Access.** Delete buttons now say when they are asking, the row's question
+  is spoken, and the Library's tabs sit inside their heading instead of taking
+  its role away.
+* **The player's ratchets held.** The reset for an opened document moved out
+  of app.js into editor_draft.js, and the drafts sheet's entrance moved from a
+  stylesheet keyframe into sheetswipe.js's slideIn, which the player does not
+  download.
+
+Chosen, not missed:
+
+* **Overlapping media writes.** A write the Pad gave up on at its deadline may
+  still be running when the next save starts another. Making the retry wait
+  would wait for ever on a write that is truly hung.
+* **Two focus moves.** A sheet opened from a link has nothing to return focus
+  to, and the pill's × has no next control. Any destination picked for either
+  would be arbitrary.
+* **Flip's stroke caches** are two full-size canvases kept for the page's
+  life. They are reused on every stroke and do not grow, so they are memory
+  held, not memory leaked.
+
+### Security, found by the same review
+
+One finding was HIGH. It applied wherever the demo identity was set:
+
+* **The demo identity was every visitor's identity.** With
+  `SKRIBL_DEMO_IDENTITY` set, `current_user_id()` answered the owner's id for
+  any request, so any stranger could list, read, overwrite and delete the
+  owner's saved drafts. It now signs in only a browser that has visited
+  `/demo-login?key=...` with `SKRIBL_DEMO_LOGIN_KEY` (at least 16 characters,
+  compared in constant time; a wrong key is a 404). That sets a signed session
+  cookie, `Secure` and `SameSite=Lax`, which `/demo-logout` clears. With the
+  identity set and no usable key, the server warns at boot and runs anonymous.
+  It fails closed, never open.
+
+The rest were hardening, each with a check:
+
+* Drafts have a per-author byte budget (`SKRIBL_MAX_DRAFT_BYTES`, 200 MB by
+  default), and saves beyond it are a 409. Draft writes share the
+  attempts rate limit. A thumbnail must be a JPEG, PNG or WebP data URL whose
+  bytes match its type, so an SVG (which can carry script) or a fake PNG is a
+  400.
+* The drafts list and the meta route no longer load drawings they do not return.
+* A JSON body nested deep enough to exhaust the parser's recursion is a 400,
+  not a 500.
+* Rate limits key an IPv6 client by its /64, the block one subscriber is given,
+  and an IPv4-mapped address by its IPv4 address.
+* The CSRF token is `nonce.signature`, an HMAC of the app's secret over the
+  nonce and the signed-in user. A token planted by a sibling subdomain, or
+  carried over from another account, is refused and replaced.
+
+### The third pass: tests that could not fail
+
+The owner asked for another pass after that. It found three places where the
+harness asked a question that could not come out red:
+
+* The Re-add button was asserted "visible" from its rectangle. It is now
+  asserted painted, by `elementFromPoint` and the pill's opacity. Hiding it,
+  or fading the pill, turns verify_amber and verify_drafts red.
+* verify_clouddrafts listened for page errors on one of its six pages. It now
+  listens on all six (an error thrown on the hung-storage page turns it red).
+  A server that fails to boot is reported as FAIL, not SKIP.
+* verify_flipspeed bounded the strokes painted per move from above only, so
+  painting nothing passed.
+
+Two failures seen during these runs were not this tree's. verify_sheetswipe
+failed twice while batches of suites ran concurrently. Both failures came from
+the earlier revision that sampled one wall-clock instant. The revision that
+samples inside the page passed three runs out of three on its own.
+
+### The fourth review: four readers, fresh
+
+The owner asked for one more pass before the handoff to an auditor. Four
+reviewers read the tree in parallel, each with one lens. Each finding was
+reproduced, fixed, and pinned by a check shown to fail without its fix:
+
+* **Server.**
+  * A demo sign-in outlived its key: the cookie held the handle, so rotating a
+    leaked `SKRIBL_DEMO_LOGIN_KEY` signed nobody out. The cookie now holds a MAC
+    of the handle and the key. Wrong keys spend the attempts budget.
+  * `PATCH /api/skribls/<id>` answered 500 to a `deleteToken` that was not a
+    string. It is a 404 now, as on DELETE.
+  * A forged cross-site write was charged to the rate budget before CSRF
+    refused it, so another page could lock an author out for the hour. CSRF is
+    checked first on every write that is charged.
+* **Drafts.**
+  * Flip's `?draft=` link replaced an autosaved photo without asking, and the
+    boot restore's late answer then put that photo on the OPENED draft. Flip
+    now counts media on its way as work, and a document generation drops a
+    late answer that belongs to another document.
+  * Save draft while a photo was still being read stored the new file's name
+    over the old file's bytes. It waits now, on both editors.
+  * Opening a backup file kept the open saved draft's id, so Save overwrote
+    that draft. Opening a file lets go of it.
+  * A photo-only document reloading was "empty" while its photo decoded, and
+    the autosave deleted it.
+* **The harness.**
+  * The CSRF user binding was tested only with a binder the test installed
+    itself. It is now tested through `init_skribl`'s own wiring, and removing
+    that wiring turns it red.
+  * `verify_review` still expected an IPv6 address in full after rate limits
+    moved to the /64. It had not been run since that change; the seal would
+    have caught it.
+  * `verify_sheetswipe` did not drive three of the sheets it claimed. It now
+    drives Pad's post sheet (and holds a send open to show it cannot be
+    swiped away mid-post), Flip's report sheet and the gallery's page menu.
+  * `harness/package.py` could ship a stale file, because `zip -r` updates an
+    archive and never removes from it. It now rebuilds each zip, checks it
+    against its own SHA256SUMS, and refuses a tree with local edits.
+* **Draft store and dialogs.**
+  * `put()` reads a Blob's bytes before it opens its transaction, so a
+    `del()` issued after it went in first and the put wrote the removed photo
+    back. Writes to one key now run in the order they were asked for.
+  * Deleting a draft from the keyboard dropped focus to the page, outside the
+    drafts dialog, where Tab left it and Escape did nothing. Focus now goes to
+    the row that took its place (the Library does the same).
+  * A save after the open draft was deleted elsewhere said "Draft updated"
+    while it made a new one.
+  * A second tap on the Pad's menu button while the menu eased away was eaten
+    by the still-unhidden overlay. A closing overlay takes no taps now.
+* **Contrast.** White words on the action colour were 4.35:1, and on the
+  name field's Done 3.16:1, under AA's 4.5:1 for their size. This dated from
+  before v317 on Post and the gallery, and #260 added more such buttons. A new
+  token, `--accent-fill` (#6d4cf0, 5.33:1), is the fill under words; dots,
+  bars, outlines and icons keep `--accent`. `verify_a11y` A11Y 6c measures every
+  worded accent fill on four pages in both themes. A11Y 6 had measured text
+  tokens on surfaces only, so text on a coloured fill had never been measured.
+  The Library's armed Delete? was a literal pink, 2.27:1 on the light theme;
+  it follows `--danger` now.
+
+A fifth reader then reviewed these fixes and found one they had caused. A
+restore overtaken by a newer photo never cleared its "restoring" flag. That
+was harmless until Save draft learned to wait for media, when it began
+refusing every save until the next document. A superseded restore now
+clears its own flag. The same reader found that Flip's backup-file load had
+lost the two increments its own comment describes, and they are back.
+
+Chosen, not missed, this round:
+
+* **The draft byte budget and count cap can be overrun by concurrent saves.**
+  The check and the insert are separate statements. The attempts budget
+  bounds the overrun, and a per-author lock is more machinery than one
+  author racing their own saves is worth.
+* **`/demo-logout` is a GET.** Another site can sign the owner out, which
+  costs one visit to `/demo-login`. It is not worth a form and a token on a
+  demo switch.
+* **The key travels in a URL.** It lands in browser history and request logs.
+  `.env.example` says so, and rotating the key now signs every browser out.
+* **A copied session cookie still works after `/demo-logout`,** until the key
+  or `SECRET_KEY` changes. Flask keeps the session in the cookie, so there is
+  no server-side record to strike it from.

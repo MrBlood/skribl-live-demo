@@ -173,14 +173,19 @@
 
     function open() {
       body.textContent = collect();
+      if (sheet && window.SkriblSheetSwipe) window.SkriblSheetSwipe.cancelSlide(sheet);
       overlay.hidden = false;
       overlay.classList.add('open');
       if (window.SkriblModal) window.SkriblModal.open(sheet);
     }
     function close() {
-      overlay.hidden = true;
+      // The dim fades as .open goes; the sheet eases down, then hides
+      // (lib/sheetswipe.js).
       overlay.classList.remove('open');
       if (window.SkriblModal) window.SkriblModal.close(sheet);
+      var gone = function () { overlay.hidden = true; };
+      if (sheet && window.SkriblSheetSwipe) window.SkriblSheetSwipe.slideOut(sheet, { done: gone });
+      else gone();
     }
 
     openers.forEach(function (b) {

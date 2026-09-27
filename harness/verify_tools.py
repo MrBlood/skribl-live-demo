@@ -1350,8 +1350,9 @@ _pat_can = _re2.compile(
 _unpaired_all = []
 for _jf in sorted((ROOT / "skribl" / "static").rglob("*.js")):
     _src = _jf.read_text(encoding="utf-8")
-    # Matched by RECEIVER, not by handler name. The menu sheet deliberately uses
-    # a DIFFERENT function for cancel — onTouchEnd dismisses the menu past 80px,
+    # Matched by RECEIVER, not by handler name. The menu sheet (its gesture
+    # lives in lib/sheetswipe.js since v317) deliberately uses a DIFFERENT
+    # function for cancel — onTouchEnd dismisses the menu past 80px,
     # and a gesture the OS took away must not commit the dismissal the user never
     # finished — so a name-based match flags the correct fix as a defect, which
     # it did on the first run of this assertion.
@@ -1383,7 +1384,7 @@ _stale = [f"{r}.{h}" for r, h in _TOUCH_ALLOW
           if f"{r}.addEventListener('touchend', {h})" not in _all_js]
 check("V214b ...and no allowlisted exemption is stale "
       "(an exemption for code that no longer exists hides the next one)",
-      _stale == [], "; ".join(_stale) if _stale else "all 3 exemptions still real")
+      _stale == [], "; ".join(_stale) if _stale else f"all {len(_TOUCH_ALLOW)} exemptions still real")
 
 
 # ---------------------------------------------------------------------------
@@ -1394,7 +1395,8 @@ check("V214b ...and no allowlisted exemption is stale "
 # window. Behavioural, per path, as with V214a.
 #
 # The menu sheet is the one that matters: onTouchEnd DISMISSES the menu past
-# 80px, so the fix is a separate onTouchCancel that resets and stops. Wiring
+# 80px, so the fix is a separate onTouchCancel that resets and stops (both in
+# lib/sheetswipe.js since v317, which every bottom sheet now shares). Wiring
 # cancel to onTouchEnd — the obvious one-line version, and what the report
 # suggested — would let a gesture the OS took away complete a dismissal the user
 # never finished. The pin therefore checks the menu is still OPEN afterwards,

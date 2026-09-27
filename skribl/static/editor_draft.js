@@ -91,6 +91,10 @@ function storeMediaBytes(kind) {
   if (!file || PAD_DRAFT_OFF) return;
   if (!window.SkriblDraftStore) { mediaDraft[kind] = 'failed'; return; }
   if (mediaDraft[kind] === 'saving') return;   // one write in flight at a time; a hung one is given up below
+  // A write given up at the deadline may still be running when the next save
+  // starts another, so two can overlap. That is chosen, not missed (v317
+  // review): a write that is truly hung may never settle, and a retry that
+  // waited for it would wait for ever.
   const seq = ++_mediaSeq[kind];
   const current = () => seq === _mediaSeq[kind];
   mediaDraft[kind] = 'saving';
@@ -114,6 +118,80 @@ function storeMediaBytes(kind) {
                     // carries this line: two screenshots from the owner's iPhone showed
                     // the failure and nothing about its cause (v294).
                     console.error('[skribl] ' + kind + ' bytes: store write failed: ' + _errName(e)); });
+}
+/* A DOCUMENT OPENED IS THE ONLY DOCUMENT (v317 review). Opening a saved draft,
+   a backup, or Undo's snapshot went through loadSkribl, which reset the canvas
+   and the media on screen but not this file's book-keeping: the old session's
+   pending metas, the file in hand, the slot states, the bytes in the store. So
+   a reload could re-attach the PREVIOUS photo (phones name picked photos alike),
+   or ask about a file the opened draft never had. Called by loadSkribl in the
+   editor; the opened document's own media becomes the stored copy. */
+function padAdoptLoadedMedia(data) {
+  // The player keeps no draft: a post viewed on the editor template must never
+  // touch the author's stored media (v317 review).
+  if (PAD_DRAFT_OFF || document.body.classList.contains('player-mode')) return;
+  pendingPhotoMeta = null; pendingMusicMeta = null;
+  _inFlight.photo = null;
+  _dropStaleReapply();
+  // A restore decode still running belongs to the document that was replaced.
+  if (typeof photoSelectionSeq !== 'undefined') photoSelectionSeq++;
+  if (typeof musicSelectionSeq !== 'undefined') musicSelectionSeq++;
+  const src = { photo: data && data.photo, music: data && data.music };
+  const fallback = { photo: 'Photo from draft', music: 'Music from draft' };
+  ['photo', 'music'].forEach((kind) => {
+    _mediaSeq[kind]++;
+    _restoring[kind] = false;
+    mediaDraft[kind] = 'none';
+    _mediaFile[kind] = null;
+    const m = src[kind];
+    if (!(m && m.data)) {
+      if (window.SkriblDraftStore) SkriblDraftStore.del('pad:' + kind).catch(() => {});
+      return;
+    }
+    const name = m.name || fallback[kind];
+    const mine = _mediaSeq[kind];
+    fetch(m.data).then((r) => r.blob()).then((blob) => {
+      if (mine !== _mediaSeq[kind]) return;   // replaced again before the bytes arrived
+      _mediaFile[kind] = new File([blob], name, { type: blob.type || '' });
+      _mediaAt[kind] = Date.now();
+      storeMediaBytes(kind);
+    }).catch((e) => { console.error('[skribl] ' + kind + ' bytes: could not read the opened draft\'s file: ' + _errName(e)); });
+  });
+  if (typeof refreshPendingCards === 'function') refreshPendingCards();
+}
+/* NEW SKRIBL IS A NEW DOCUMENT TOO (v317 review). resetAll clicks the media
+   removers only when they are showing, so a photo still decoding, a pending
+   record or an in-flight restore outlived it -- and 15 s later could raise a
+   "Media missing" about a Skribl that had been discarded, or land its photo on
+   the new one. The same reset an opened document gets: nothing is carried. */
+if (typeof resetAll === 'function') {
+  const _resetAll = resetAll;
+  resetAll = function () {   // eslint-disable-line no-global-assign
+    const r = _resetAll.apply(this, arguments);
+    try { padAdoptLoadedMedia({}); } catch (e) { console.error('[skribl] ' + _errName(e)); }
+    return r;
+  };
+}
+/* Hooked here rather than called from app.js: the player downloads app.js and
+   keeps no draft, and its JavaScript is a ratchet (verify_player_isolation).
+   loadSkribl is a global function binding, so every caller in app.js -- the
+   backup file, a saved draft, Undo's snapshot, the composer -- reaches this. */
+if (typeof loadSkribl === 'function') {
+  const _loadSkribl = loadSkribl;
+  loadSkribl = function (data) {   // eslint-disable-line no-global-assign
+    const before = skriblLoadSeq;
+    const r = _loadSkribl.apply(this, arguments);
+    // Only a document that actually opened: a refused file changes nothing.
+    if (skriblLoadSeq !== before) {
+      try { padAdoptLoadedMedia(normalizeSkribl(data)); } catch (e) { console.error('[skribl] ' + _errName(e)); }
+      // ...and it is not the saved draft that was open (third review): a
+      // backup file kept that id, so Save overwrote the draft with it. The
+      // callers that ARE a saved draft -- opening one, Undo -- name it again
+      // after this returns.
+      if (window.SkriblSavedDrafts) window.SkriblSavedDrafts.forget();
+    }
+    return r;
+  };
 }
 function _errName(e) { return e ? ((e.name || 'Error') + (e.message ? ': ' + e.message : '')) : 'unknown'; }
 // For lib/report.js: the media store as this session sees it.
@@ -177,7 +255,7 @@ function serializeAutosave() {
     // (from a restore where the user hasn't re-added the file yet) so it persists.
     photoMeta: (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
       ? { name: photoBgImg._fileName, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
-      : (typeof pendingPhotoMeta !== 'undefined' ? pendingPhotoMeta : null),
+      : (typeof pendingPhotoMeta !== 'undefined' ? (pendingPhotoMeta || _inFlight.photo) : null),
     musicMeta: currentMusicMeta()
   };
 }
@@ -216,15 +294,44 @@ function currentMusicMeta() {
 // a restore raises that amber, as its own comment says; until it has answered,
 // the file is on its way, not missing.
 const _restoring = { photo: false, music: false };
+const _restoreGen = { photo: -1, music: -1 };   // which restore set _restoring (reAddMediaFromStore)
 /* IN HAND IS NOT MISSING (v317). The owner's iPhone, on reload: "Media
    missing" for a second, then the photo loads and the draft saves. The store
    HAD answered; the restore handed the file to the attach pipeline and stood
    down, and the pipeline was still decoding a large map image -- so for that
    moment nothing said "loading" and the pill said "lost". A file whose name is
-   the draft's is on its way in, whatever stage it is at. */
+   the draft's is on its way in, whatever stage it is at -- FOR A WHILE. A file
+   whose decode fails never lands and never clears _mediaFile, so "in hand" is
+   bounded by a decode window; past it, a file that is still not on the canvas
+   is missing, and the pill is asked again when the window closes. */
+const _DECODE_MS = 15000;
+const _mediaAt = { photo: 0, music: 0 };
+/* THE PHOTO'S SETTINGS WHILE ITS FILE DECODES (v317 review). A restore hands
+   the file to the photo input, and the re-apply listener below takes
+   pendingPhotoMeta off at once -- but the image is not on the canvas until the
+   decode finishes, so an autosave in that gap wrote no photo at all, and a tab
+   killed there came back without it. The settings wait here instead: autosave
+   keeps writing them, the load applies them, and a file that never lands puts
+   them back as pending when the window closes, card and amber and all. */
+const _inFlight = { photo: null, onLoad: null };
+// The re-apply listener waits for the restored image's load; a decode that
+// fails never fires it, and a later photo with the SAME name (phones call
+// them all image.jpg) would then be dressed in the old one's settings.
+function _dropStaleReapply() {
+  if (_inFlight.onLoad && typeof photoBgImg !== 'undefined' && photoBgImg) {
+    photoBgImg.removeEventListener('load', _inFlight.onLoad);
+  }
+  _inFlight.onLoad = null;
+}
+/* When the decode window closes, SAY so: a hidden pill has nothing to refine,
+   so a file that never landed has to raise the amber itself. */
+function _mediaAlarm() {
+  if (_pendingMediaLost()) showAutosaveStatus('saved-no-media');
+  else _refreshMediaPill();
+}
 function _inHand(kind, meta) {
   const f = _mediaFile[kind];
-  return !!(f && meta && f.name === meta.name);
+  return !!(f && meta && f.name === meta.name && Date.now() - _mediaAt[kind] < _DECODE_MS);
 }
 function _pendingMusicLost() {
   if (_restoring.music) return false;
@@ -246,7 +353,11 @@ function _mediaPresent() {
   return !!((photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
             || (audioEl && audioEl._fileName)
             || (typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta)
-            || (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta));
+            || (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta)
+            // ...and media on its way back in (third review): a photo-only
+            // document reloading is "empty" for the length of the decode, and
+            // the empty branch of writeAutosave deleted it.
+            || _inFlight.photo || _restoring.photo || _restoring.music);
 }
 if (window.SkriblAutosavePill) window.SkriblAutosavePill.configure({
   pending: _pendingMediaLost,
@@ -254,8 +365,11 @@ if (window.SkriblAutosavePill) window.SkriblAutosavePill.configure({
     if (typeof refreshPendingCards === 'function') refreshPendingCards();
     if (typeof _padDrawerCtl !== 'undefined' && _padDrawerCtl) _padDrawerCtl.open(_pendingMusicLost() ? 'music' : 'photo');
   },
+  // Only what is actually missing: a track still decoding keeps its loop and
+  // crossfade when the photo beside it is dismissed (v317 review).
   dismiss: () => {
-    pendingMusicMeta = null; pendingPhotoMeta = null;
+    if (_pendingMusicLost()) pendingMusicMeta = null;
+    if (_pendingPhotoLost()) pendingPhotoMeta = null;
     if (typeof refreshPendingCards === 'function') refreshPendingCards();
     scheduleAutosave();
   }
@@ -327,7 +441,8 @@ function writeAutosave() {
     // carried from attach time.
     Object.keys(mediaDraft).forEach((kind) => { if (mediaDraft[kind] === 'failed' && _mediaFile[kind]) storeMediaBytes(kind); });
     const hasPhoto = !!((photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
-                        || (typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta));
+                        || (typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta)
+                        || _inFlight.photo);
     const hasMusic = !!((audioEl && audioEl._fileName)
                         || (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta));
     // The amber pill used to be a designed limitation ("bytes never fit in
@@ -666,6 +781,8 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     _mediaFile[kind] = file;
+    _mediaAt[kind] = Date.now();
+    setTimeout(_mediaAlarm, _DECODE_MS + 50);   // the in-hand window closing is news
     if (_fromStore[kind]) { _fromStore[kind] = false; mediaDraft[kind] = 'durable'; _refreshMediaPill(); return; }
     mediaDraft[kind] = 'none';   // a fresh file is a fresh attempt, never a hung one's shadow
     storeMediaBytes(kind);
@@ -674,6 +791,7 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
   if (rm) rm.addEventListener('click', () => {
     mediaDraft[kind] = 'none';
     _mediaFile[kind] = null;
+    if (kind === 'photo') _inFlight.photo = null;   // removed, not waiting
     _mediaSeq[kind]++;   // a put still in flight is about a file that is gone
     // WRITE THE DRAFT FIRST, DELETE THE BYTES SECOND (v294 audit, finding 8).
     // The draft was rewritten by the 1.2 s debounce while the bytes went at
@@ -698,7 +816,16 @@ function reAddMediaFromStore(kind, inputId, meta) {
   };
   if (!window.SkriblDraftStore) { missed('no store'); return; }
   _restoring[kind] = true;
+  // A document opened (or New Skribl) while this read was out owns the slot
+  // now: a late answer must not put the previous session's file on it.
+  const gen = _mediaSeq[kind];
+  // ...and a superseded restore STANDS DOWN (fix review): left "restoring",
+  // Save draft read the slot as busy and refused until the next document.
+  // Only this restore's own flag: a newer one started since keeps its own.
+  _restoreGen[kind] = gen;
+  const standDown = () => { if (_restoreGen[kind] === gen) _restoring[kind] = false; };
   SkriblDraftStore.get('pad:' + kind).then((rec) => {
+    if (gen !== _mediaSeq[kind]) { standDown(); return; }
     // The stored bytes must be THE file the metadata describes — a name
     // mismatch means the draft and the blob are from different sessions,
     // and re-attaching the wrong file is worse than the amber pill.
@@ -716,7 +843,7 @@ function reAddMediaFromStore(kind, inputId, meta) {
     input.dispatchEvent(new Event('change', { bubbles: true }));
     _fromStore[kind] = false;   // consumed by the capture listener above; never left armed
     _restoring[kind] = false;   // handed to the attach pipeline, which says so itself from here
-  }).catch((e) => { missed(_errName(e)); });
+  }).catch((e) => { if (gen === _mediaSeq[kind]) missed(_errName(e)); else standDown(); });
 }
 
 // ---------- Re-add: settings back onto a file that comes back --------------
@@ -736,9 +863,24 @@ if (typeof pendingMusicMeta !== 'undefined') {
   const photoInputEl = document.getElementById('photoInput');
   // Absent on the player, which has no photo picker.
   if (photoInputEl) photoInputEl.addEventListener('change', () => {
+    // Any new photo supersedes a restore still in flight, and its listener.
+    _dropStaleReapply();
+    if (_inFlight.photo) _inFlight.photo = null;
     if (!pendingPhotoMeta) return;
     const meta = pendingPhotoMeta;
     pendingPhotoMeta = null;
+    _inFlight.photo = meta;
+    setTimeout(() => {
+      if (_inFlight.photo !== meta) return;          // applied, removed, reset or replaced
+      _inFlight.photo = null;
+      _dropStaleReapply();
+      // Any photo on the canvas now -- this one, or another the person picked
+      // meanwhile -- means there is nothing missing to report.
+      if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName) return;
+      pendingPhotoMeta = meta;                       // it never landed: missing again
+      refreshPendingCards();
+      _mediaAlarm();
+    }, _DECODE_MS);
     const pCard = document.getElementById('photoPending');
     if (pCard) pCard.hidden = true;
     photoUploadBtn.hidden = false;
@@ -756,6 +898,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
     // different photo if this attach was refused.
     const apply = () => {
       if (!photoBgImg || photoBgImg.style.display === 'none') return;
+      if (_inFlight.photo === meta) _inFlight.photo = null;   // landed
       if (meta.fit) {
         photoFit = meta.fit;
         const fitMap = { cover: 'cover', contain: 'contain', stretch: 'fill' };
@@ -799,12 +942,13 @@ if (typeof pendingMusicMeta !== 'undefined') {
     };
     const onLoad = () => {
       photoBgImg.removeEventListener('load', onLoad);
+      if (_inFlight.onLoad === onLoad) _inFlight.onLoad = null;
       if (meta.name && photoBgImg._fileName !== meta.name) return;
       apply();
     };
     if (photoBgImg && photoBgImg.complete && photoBgImg.naturalWidth > 0
         && photoBgImg.style.display !== 'none' && (!meta.name || photoBgImg._fileName === meta.name)) apply();
-    else if (photoBgImg) photoBgImg.addEventListener('load', onLoad);
+    else if (photoBgImg) { photoBgImg.addEventListener('load', onLoad); _inFlight.onLoad = onLoad; }
   });
 
   // Pending card buttons: "Re-add" opens the file picker; "✕" dismisses.

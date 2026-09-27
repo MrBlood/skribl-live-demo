@@ -244,6 +244,12 @@ def create_blueprint(session=None, url_prefix=None,
     if _csrf_declined:
         csrf = None
     bp.skribl_csrf = csrf
+    # Skribl's own double-submit triple signs its token for the signed-in user
+    # (security.double_submit_csrf, v317), so a token planted or lifted from
+    # another session is refused. A host's own validator is left alone.
+    _binder = getattr(csrf[0], "_skribl_bind", None) if csrf else None
+    if _binder is not None and current_user_id is not None:
+        _binder(current_user_id)
     if current_user_id is not None and csrf is None and not _csrf_declined:
         # FAIL CLOSED (outside review #4). This used to be a warning, on the
         # reasoning that a bearer-token host does not need CSRF and should not

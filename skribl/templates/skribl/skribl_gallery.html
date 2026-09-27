@@ -43,6 +43,7 @@
       --text-3: #6b7688;
       --accent: #7c5cff;
       --accent-2: #5b8cff;
+      --accent-fill: #6d4cf0;   /* a fill carrying words: AA with white (styles.css) */
       --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
       /* tooltip.css's three names, on this palette — the same shape the
@@ -103,7 +104,7 @@
     .make {
       display: inline-flex; align-items: center; gap: 7px; min-height: 44px;
       padding: 0 18px; border-radius: 999px; text-decoration: none;
-      background: var(--accent); color: #fff; font-weight: 700; font-size: 14px;
+      background: var(--accent-fill); color: #fff; font-weight: 700; font-size: 14px;
       white-space: nowrap;
     }
     .make:hover { filter: brightness(1.08); }
@@ -120,7 +121,7 @@
     .tabs { display: flex; gap: 6px; }
     .tab { font: inherit; font-weight: 600; font-size: 14px; color: var(--text-2); background: transparent;
       border: 1px solid var(--hairline); border-radius: 999px; padding: 0 16px; min-height: 44px; cursor: pointer; }
-    .tab.active { background: var(--accent); border-color: transparent; color: #fff; }
+    .tab.active { background: var(--accent-fill); border-color: transparent; color: #fff; }
     .find { flex: 1 1 220px; }
     .find input { width: 100%; min-height: 44px; font: inherit; font-size: 16px; color: var(--text);
       background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 0 16px; }
@@ -623,7 +624,7 @@
     }
     .sheet-actions { display: flex; gap: 8px; }
     .sheet-actions .btn { flex: 1 1 0; }
-    .btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+    .btn.primary { background: var(--accent-fill); color: #fff; border-color: transparent; }
     .sheet-status { font-size: 13px; color: var(--text-2); min-height: 1.2em; }
     .sheet-status.error { color: #ff8fae; }
     .sheet-status[hidden] { display: none; }

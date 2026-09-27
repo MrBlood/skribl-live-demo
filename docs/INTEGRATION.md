@@ -559,7 +559,10 @@ rows keep drafts in that browser only, and the menu says which.
   your mount already supplies.
 * **The bounds a post meets**, plus `SKRIBL_MAX_DRAFTS` per author (409 at the
   cap, with words that say to delete one; overwriting an existing draft still
-  works there).
+  works there) and `SKRIBL_MAX_DRAFT_BYTES` for all of one author's drafts
+  together (default 200 MB, also a 409). Draft writes spend the same attempts
+  budget as posts, and a thumbnail must be a JPEG, PNG or WebP data URL whose
+  bytes are one.
 * **A Flip draft opened from the Pad** hands over to Flip in the same composer
   (`?draft=<id>` on Flip's own menu link, dropped from the address once read),
   so Add to post still lands in your form.
@@ -1032,6 +1035,17 @@ that combination rather than logging a warning nobody reads. Pass
 your authentication is not cookie-based (a bearer token cannot be ridden, and
 such a host is not wrong).
 
+**`double_submit_csrf()`'s token is signed, and bound to the signed-in user**
+(since v317). It is an HMAC under your `SECRET_KEY` over a nonce and the id
+`current_user_id` returns, so a value planted by a sibling subdomain fails the
+signature, and a genuine token minted for another user (or for a signed-out
+page) fails the binding. It is bound to the user, not to the session: the same
+user's token from another of their own sessions is accepted, which is harmless.
+`init_skribl` installs the binding for you. A page loaded before sign-in holds
+a token for "nobody", so its first write after signing in is refused until the
+page reloads and picks up the new one: sign-in normally reloads anyway. With
+no `SECRET_KEY` it falls back to plain double submit.
+
 **If your site already runs Flask-WTF's `CSRFProtect`, hand Skribl that
 instead.** Switched on site-wide, `CSRFProtect` checks every POST before
 Skribl's view runs, and it only reads its own headers: Skribl's pages send
@@ -1123,8 +1137,9 @@ Two notes worth having in advance:
 
 * `SKRIBL_MODE` is **not** a server switch. It is a client-side template flag
   distinguishing editor from player, and it gates nothing on the server.
-* Every ceiling is **process-wide**. The one per-author number is
-  `SKRIBL_MAX_DRAFTS` (default 25): how many saved drafts one author keeps.
+* Every ceiling is **process-wide**. The per-author numbers are
+  `SKRIBL_MAX_DRAFTS` (default 25), how many saved drafts one author keeps, and
+  `SKRIBL_MAX_DRAFT_BYTES` (default 200 MB), how much they may hold together.
 * The 20-second audio loop ceiling is enforced in the CLIENT only. Since v224
   the server also caps duration (`SKRIBL_MAX_AUDIO_SECONDS`, default 900) — but
   **for WAV only**, whose header states its byte rate outright. For every

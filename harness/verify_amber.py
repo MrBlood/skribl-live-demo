@@ -214,8 +214,8 @@ with sync_playwright() as p:
                  actionable: el.classList.contains('actionable'),
                  role: t.getAttribute('role'), tab: t.getAttribute('tabindex'),
                  pe: cs.pointerEvents,
-                 readd: (() => { const b = document.getElementById('autosaveStatusReadd');
-            return !!b && !b.hidden && b.textContent === 'Re-add' && b.getBoundingClientRect().width > 30; })() }; }""")
+                 // Painted and on top, not merely laid out (a rect is not a paint).
+                 readd: (() => { const b = document.getElementById('autosaveStatusReadd'); if (!b || b.hidden || b.textContent !== 'Re-add') return false; const r = b.getBoundingClientRect(); if (r.width < 30) return false; const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); let op = 1; for (let a = b; a; a = a.parentElement) op *= parseFloat(getComputedStyle(a).opacity); return !!hit && (hit === b || b.contains(hit)) && op > 0.5; })() }; }""")
     # v317: the way out is a button that SAYS Re-add, beside the ×. The words
     # alone were tappable and looked like a label; the owner tapped the ×.
     check("the amber pill NAMES the way out, on a button that says Re-add",
@@ -418,8 +418,7 @@ with sync_playwright() as p:
     pill3 = pg3.evaluate("""() => { const el = document.getElementById('autosaveStatus'), t = document.getElementById('autosaveStatusText');
         return { text: t.textContent, role: t.getAttribute('role'), tab: t.getAttribute('tabindex'),
                  pe: getComputedStyle(el).pointerEvents }; }""")
-    readd3 = pg3.evaluate("() => " + """(() => { const b = document.getElementById('autosaveStatusReadd');
-            return !!b && !b.hidden && b.textContent === 'Re-add' && b.getBoundingClientRect().width > 30; })()""")
+    readd3 = pg3.evaluate("() => " + """(() => { const b = document.getElementById('autosaveStatusReadd'); if (!b || b.hidden || b.textContent !== 'Re-add') return false; const r = b.getBoundingClientRect(); if (r.width < 30) return false; const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); let op = 1; for (let a = b; a; a = a.parentElement) op *= parseFloat(getComputedStyle(a).opacity); return !!hit && (hit === b || b.contains(hit)) && op > 0.5; })()""")
     check("Pad: the amber pill NAMES the way out, on a button that says Re-add",
           pill3["text"] == "Media missing" and readd3 is True, f"{pill3['text']!r} readd={readd3}")
     check("Pad: ...and is a real control that receives taps",
@@ -657,17 +656,143 @@ with sync_playwright() as p:
     gap = pg7.evaluate("""() => {
         const keep = { meta: pendingPhotoMeta, file: _mediaFile.photo, name: photoBgImg && photoBgImg._fileName, r: _restoring.photo };
         pendingPhotoMeta = { name: 'map.png' }; _restoring.photo = false;
+        const keepAt = _mediaAt.photo;
         _mediaFile.photo = new File(['x'], 'map.png', { type: 'image/png' });
+        _mediaAt.photo = Date.now();
         if (photoBgImg) photoBgImg._fileName = null;
         const loading = _pendingPhotoLost();
+        // A decode that failed: the File never left, and the window has closed.
+        _mediaAt.photo = Date.now() - 20000;
+        const stuck = _pendingPhotoLost();
         _mediaFile.photo = null;
         const gone = _pendingPhotoLost();
         pendingPhotoMeta = keep.meta; _mediaFile.photo = keep.file; _restoring.photo = keep.r;
+        _mediaAt.photo = keepAt;
         if (photoBgImg) photoBgImg._fileName = keep.name;
-        return { loading, gone }; }""")
+        return { loading, stuck, gone }; }""")
     check("Pad: a file in hand and still decoding is loading, not missing (and one truly absent still is)",
           gap["loading"] is False and gap["gone"] is True, str(gap))
+    check("Pad: ...but only for the decode window -- a file that never lands is missing after it",
+          gap["stuck"] is True, str(gap))
     pg7.close()
+
+    print("\nPAD — a restored photo that is still decoding stays in the draft, and one that never lands is missing again (v317 review)")
+    # The re-apply listener took the draft's photo settings off the moment the
+    # restored file was handed over; an autosave before the image was on the
+    # canvas wrote no photo. Driven with a file that cannot decode, which is
+    # also the other half: it must come back as pending, not vanish.
+    pgR = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+    pgR.goto(BASE+"/skribl-pad", wait_until="load"); pgR.wait_for_timeout(1200)
+    pgR.evaluate("() => localStorage.clear()")
+    pbR = pgR.locator("canvas").first.bounding_box()
+    pgR.mouse.move(pbR["x"]+120, pbR["y"]+120); pgR.mouse.down()
+    for i in range(30): pgR.mouse.move(pbR["x"]+120+i*4, pbR["y"]+120+math.sin(i/4)*30)
+    pgR.mouse.up(); pgR.wait_for_timeout(1500)
+    flight = pgR.evaluate("""() => {
+        pendingPhotoMeta = { name: 'broken.png', fit: 'contain', opacity: 0.6 };
+        const input = document.getElementById('photoInput');
+        const dt = new DataTransfer();
+        dt.items.add(new File([new Uint8Array([1, 2, 3, 4])], 'broken.png', { type: 'image/png' }));
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        const meta = serializeAutosave().photoMeta;
+        return { name: meta && meta.name, fit: meta && meta.fit, pending: !!pendingPhotoMeta }; }""")
+    check("Pad: an autosave while a restored photo decodes still names the photo and its settings",
+          flight["name"] == "broken.png" and flight["fit"] == "contain", str(flight))
+    pgR.wait_for_timeout(15600)
+    after = pgR.evaluate("""() => ({ pending: pendingPhotoMeta && pendingPhotoMeta.name,
+        card: !document.getElementById('photoPending').hidden,
+        text: document.getElementById('autosaveStatusText').textContent,
+        shown: !document.getElementById('autosaveStatus').hidden,
+        saved: serializeAutosave().photoMeta && serializeAutosave().photoMeta.name })""")
+    check("Pad: ...and a photo that never lands is missing again once the window closes: pending, its card, the pill says so",
+          after["pending"] == "broken.png" and after["card"] and after["shown"] and "missing" in after["text"].lower()
+          and after["saved"] == "broken.png", str(after))
+    # The × on "Media missing" dismisses what is MISSING: a track still
+    # decoding beside a lost photo keeps its loop and crossfade (it lost them).
+    dism = pgR.evaluate("""() => {
+        pendingPhotoMeta = { name: 'gone.png' };
+        pendingMusicMeta = { name: 'loop.wav', trimStart: 1, trimEnd: 3, crossfadeMs: 40 };
+        _mediaFile.music = new File(['x'], 'loop.wav'); _mediaAt.music = Date.now();
+        showAutosaveStatus('saved-no-media');
+        return new Promise(r => requestAnimationFrame(() => {
+          document.getElementById('autosaveStatusDismiss').click();
+          r({ photo: pendingPhotoMeta, music: pendingMusicMeta && pendingMusicMeta.trimEnd });
+        }));
+    }""")
+    check("Pad: dismissing 'Media missing' clears the missing photo and keeps the track still on its way",
+          dism["photo"] is None and dism["music"] == 3, str(dism))
+    pgR.close()
+
+    print("\nPAD — an opened draft is the only document: the old session's media book-keeping goes (v317 review)")
+    # loadSkribl reset the canvas and the media on screen, not the draft's
+    # book-keeping, so a reload could re-attach the PREVIOUS photo or ask about
+    # a file the opened draft never had.
+    pgO = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+    pgO.goto(BASE+"/skribl-pad", wait_until="load"); pgO.wait_for_timeout(1200)
+    pgO.evaluate("() => localStorage.clear()")
+    pbO = pgO.locator("canvas").first.bounding_box()
+    pgO.mouse.move(pbO["x"]+100, pbO["y"]+100); pgO.mouse.down()
+    for i in range(25): pgO.mouse.move(pbO["x"]+100+i*4, pbO["y"]+100+math.sin(i/4)*25)
+    pgO.mouse.up(); pgO.wait_for_timeout(800)
+    PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    opened = pgO.evaluate("""async (png) => {
+        // The session before: a remembered photo, its bytes in the store.
+        await SkriblDraftStore.put('pad:photo', { blob: new Blob(['old']), name: 'image.jpg', type: 'image/jpeg' });
+        pendingPhotoMeta = { name: 'image.jpg' }; mediaDraft.photo = 'durable';
+        const d = serializeSkribl(); d.photo = { data: png, name: 'new.png', fit: 'contain' }; (d.frames || []).forEach(f => { f.photo = d.photo; });
+        loadSkribl(d);
+        await new Promise(r => setTimeout(r, 1500));
+        const rec = await SkriblDraftStore.get('pad:photo');
+        const withPhoto = { pending: pendingPhotoMeta, stored: rec && rec.name, slot: mediaDraft.photo };
+        const d2 = serializeSkribl(); delete d2.photo; (d2.frames || []).forEach(f => { delete f.photo; });
+        pendingPhotoMeta = { name: 'image.jpg' };
+        loadSkribl(d2);
+        await new Promise(r => setTimeout(r, 800));
+        const rec2 = await SkriblDraftStore.get('pad:photo');
+        return { withPhoto, without: { pending: pendingPhotoMeta, stored: rec2 ? rec2.name : null } };
+    }""", PNG)
+    check("Pad: opening a draft with a photo makes ITS photo the stored copy, and forgets the old one",
+          opened["withPhoto"]["pending"] is None and opened["withPhoto"]["stored"] == "new.png"
+          and opened["withPhoto"]["slot"] == "durable", str(opened))
+    check("Pad: opening a draft with no photo drops the old stored photo and asks about nothing",
+          opened["without"]["pending"] is None and opened["without"]["stored"] is None, str(opened))
+    # A store read still out when a document opens must not land the previous
+    # session's file on it (the read is late; the slot has moved on).
+    late = pgO.evaluate("""async () => {
+        const S = SkriblDraftStore, get = S.get;
+        let release; const gate = new Promise(r => release = r);
+        S.get = (k) => k === 'pad:photo' ? gate.then(() => ({ blob: new Blob(['x']), name: 'late.png', type: 'image/png' })) : get(k);
+        let changed = 0; const inp = document.getElementById('photoInput');
+        const count = () => changed++; inp.addEventListener('change', count, true);
+        reAddMediaFromStore('photo', 'photoInput', { name: 'late.png' });
+        padAdoptLoadedMedia({});            // a document opened meanwhile
+        release(); await new Promise(r => setTimeout(r, 300));
+        S.get = get; inp.removeEventListener('change', count, true);
+        return { changed, file: _mediaFile.photo && _mediaFile.photo.name, restoring: _restoring.photo };
+    }""")
+    check("Pad: a store answer that arrives after a document opened is ignored, not attached",
+          late["changed"] == 0 and late["file"] is None and late["restoring"] is False, str(late))
+    # New Skribl carries nothing: a pending record, a photo in flight.
+    fresh_ = pgO.evaluate("""() => {
+        pendingPhotoMeta = { name: 'old.png' }; _inFlight.photo = { name: 'flying.png' };
+        resetAll();
+        return { pending: pendingPhotoMeta, flight: _inFlight.photo };
+    }""")
+    check("Pad: New Skribl drops a pending photo and one still in flight (no 'Media missing' later about a discarded Skribl)",
+          fresh_["pending"] is None and fresh_["flight"] is None, str(fresh_))
+    # The player keeps no draft: viewing a post must never touch stored media.
+    guard = pgO.evaluate("""async () => {
+        await SkriblDraftStore.put('pad:photo', { blob: new Blob(['keep']), name: 'keep.png', type: 'image/png' });
+        document.body.classList.add('player-mode');
+        padAdoptLoadedMedia({});
+        document.body.classList.remove('player-mode');
+        await new Promise(r => setTimeout(r, 300));
+        const rec = await SkriblDraftStore.get('pad:photo');
+        return rec && rec.name;
+    }""")
+    check("Pad: in player mode an opened document touches no stored media", guard == "keep.png", str(guard))
+    pgO.close()
 
     print("\nPAD — a restored photo keeps its adjustments however long the decode takes (v294 audit, PR 2)")
     # AUDIT, finding 4: the saved fit / opacity / blur / zoom were re-applied on
@@ -700,6 +825,135 @@ with sync_playwright() as p:
     check("Pad: ...with its saved fit and opacity, not the defaults",
           got8[0] == "contain" and abs(got8[1] - 0.4) < 0.01 and got8[3] == "0.4", str(got8))
     pg8.close()
+
+    print("\nPAD — a photo-only document survives its own reload while the photo decodes (third review)")
+    # _mediaPresent() did not count a photo on its way back in, so for the
+    # length of the decode a photo-only document was "empty" -- and the empty
+    # branch of writeAutosave, seeing this session had restored it, DELETED the
+    # autosave. The pill still said Saved; a tab killed then lost the document.
+    pgP = b.new_page(viewport={"width": 1280, "height": 900})
+    pgP.on("pageerror", lambda e: errs.append(f"photo-only: {e}"))
+    pgP.goto(BASE + "/skribl-pad", wait_until="load"); pgP.wait_for_timeout(1000)
+    pgP.evaluate("() => { localStorage.clear(); }")
+    pgP.reload(wait_until="load"); pgP.wait_for_timeout(1000)
+    pgP.set_input_files("#photoInput", str(_png))
+    pgP.wait_for_function("() => mediaDraft.photo === 'durable'", timeout=20000); pgP.wait_for_timeout(1800)
+    AUTO = "() => { const r = localStorage.getItem('skribl_autosave_v1'); if (!r) return null; const d = JSON.parse(r); return d.photoMeta ? d.photoMeta.name : 'no photo'; }"
+    before = pgP.evaluate(AUTO)
+    pgP.add_init_script("""(() => { let v; Object.defineProperty(window, 'skriblDecodeCheckImage', { configurable: true,
+        get: () => v, set: (f) => { v = function () { const a = arguments;
+          return new Promise(r => setTimeout(r, 2000)).then(() => f.apply(this, a)); }; } }); })();""")
+    pgP.reload(wait_until="load"); pgP.wait_for_timeout(1000)
+    during = pgP.evaluate("() => [(" + AUTO + ")(), !!_inFlight.photo]")
+    pgP.wait_for_timeout(4000)
+    landed = pgP.evaluate("() => [(" + AUTO + ")(), photoBgImg.style.display, photoBgImg._fileName]")
+    check("Pad: a photo-only draft is still stored while its photo decodes after a reload",
+          before == _png.name and during == [_png.name, True], f"before {before!r}, during {during}")
+    check("Pad: ...and still stored once the photo is back on the canvas",
+          landed == [_png.name, "block", _png.name], str(landed))
+    pgP.close()
+
+    print("\nSAVE DRAFT WAITS FOR A FILE STILL BEING READ (third review)")
+    # The name switches to the new file before its bytes land, so a Save draft
+    # in that gap stored the NEW name over the OLD photo's bytes (or, first
+    # time, no photo while the toast said Saved). Save now waits, on both
+    # editors. The decode check is slowed so the gap is certain, not lucky.
+    import struct, zlib
+
+    def _png1(rgb):
+        raw = b"\x00" + bytes(rgb)
+        chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+        return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0))
+                + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+    # Where each editor's gap is: Pad names the photo after its decode check
+    # and holds the old bytes until the read AND the downscale finish, so the
+    # downscale is slowed; Flip is busy from the moment a file is chosen, so
+    # its decode check is.
+    SLOW_DECODE = """(() => { let v; Object.defineProperty(window, 'skriblDecodeCheckImage', { configurable: true,
+        get: () => v, set: (f) => { v = function () { const a = arguments;
+          return new Promise(r => setTimeout(r, 1500)).then(() => f.apply(this, a)); }; } }); })();"""
+    SLOW_NORMALISE = """() => { const f = window.normalizePhotoDataURL;
+        window.normalizePhotoDataURL = function () { const a = arguments;
+          return new Promise(r => setTimeout(r, 1500)).then(() => f.apply(this, a)); }; }"""
+    SAVE = """async () => { const s = await SkriblSavedDrafts.save(); if (!s) return null;
+        const rec = await SkriblDraftStore.get('saved:' + s.id); const pl = rec.payload;
+        // Flip keeps the bytes in bgImage beside a photo settings object.
+        const ph = pl.bgImage || pl.photo || (pl.frames && pl.frames[0] && pl.frames[0].photo) || null;
+        return { id: s.id, data: typeof ph === 'string' ? ph : (ph && ph.data) || null }; }"""
+    for route, inp, nm in (("/skribl-pad", "#photoInput", "Pad"), ("/flip", "#imageInput", "Flip")):
+        pgS = b.new_page(viewport={"width": 1280, "height": 900})
+        pgS.on("pageerror", lambda e, nm=nm: errs.append(f"save-busy {nm}: {e}"))
+        if nm == "Flip":
+            pgS.add_init_script(SLOW_DECODE)
+        pgS.goto(BASE + route, wait_until="load"); pgS.wait_for_timeout(1200)
+        pgS.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
+        if nm == "Pad":
+            pgS.evaluate(SLOW_NORMALISE)
+        pgS.set_input_files(inp, {"name": "b.png", "mimeType": "image/png", "buffer": _png1((20, 90, 250))})
+        pgS.wait_for_timeout(200)                      # the read has started, the decode has not finished
+        early = pgS.evaluate(SAVE)
+        toast = pgS.evaluate("() => document.body.innerText.includes('Preparing media')")
+        pgS.wait_for_timeout(4000)
+        late = pgS.evaluate(SAVE)
+        check(f"{nm}: Save draft while a photo is still being read waits, and says so",
+              early is None and toast, f"saved={early}, toast={toast}")
+        check(f"{nm}: ...and once it has landed, the draft holds that photo",
+              bool(late and late["data"]), str(late and {"id": late["id"], "data": (late["data"] or "")[:30]}))
+        pgS.close()
+
+    print("\nPAD — a restore overtaken by a newer photo stands down, so Save draft is not refused for good (fix review)")
+    # reAddMediaFromStore left _restoring set when a newer pick or a remove
+    # overtook it, and busy() read that as "media still being read" until the
+    # next document: every Save draft said "Preparing media". The store read is
+    # slowed so the newer photo lands first.
+    pgX = b.new_page(viewport={"width": 1280, "height": 900})
+    pgX.on("pageerror", lambda e: errs.append(f"restore-standdown: {e}"))
+    pgX.goto(BASE + "/skribl-pad", wait_until="load"); pgX.wait_for_timeout(1200)
+    pgX.evaluate("""() => { localStorage.clear(); const orig = SkriblDraftStore.get;
+        SkriblDraftStore.get = (k) => new Promise(r => setTimeout(() => r(orig.call(SkriblDraftStore, k)), 1500));
+        reAddMediaFromStore('photo', 'photoInput', { name: 'old.png' }); }""")
+    pgX.set_input_files("#photoInput", {"name": "new.png", "mimeType": "image/png", "buffer": _png1((30, 160, 90))})
+    pgX.wait_for_timeout(3500)
+    stood = pgX.evaluate("""async () => { const s = await SkriblSavedDrafts.save();
+        return { restoring: _restoring.photo, photo: photoBgImg._fileName, saved: !!s }; }""")
+    check("Pad: a restore overtaken by a newer photo stands down, and Save draft saves",
+          stood == {"restoring": False, "photo": "new.png", "saved": True}, str(stood))
+    pgX.close()
+
+    print("\nFLIP — a draft opened from the Library asks over an autosaved photo, and the photo never lands on it (third review)")
+    # Flip's content test ignored media on its way back from the store, so
+    # /flip?draft=<id> replaced a photo-only autosave without asking; and the
+    # boot restore's late answer then put that photo onto the OPENED draft,
+    # whose next Save wrote it in. The store read is slowed to make the late
+    # answer certain.
+    ctxF = b.new_context(viewport={"width": 1280, "height": 900})
+    pgF = ctxF.new_page(); pgF.on("pageerror", lambda e: errs.append(f"flip-draft: {e}"))
+    pgF.goto(BASE + "/flip", wait_until="load"); pgF.wait_for_timeout(1200)
+    pgF.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
+    boxF = pgF.locator("#pad").bounding_box()
+    pgF.mouse.move(boxF["x"] + 50, boxF["y"] + 50); pgF.mouse.down()
+    pgF.mouse.move(boxF["x"] + 200, boxF["y"] + 150, steps=8); pgF.mouse.up(); pgF.wait_for_timeout(300)
+    sidF = pgF.evaluate("async () => (await SkriblSavedDrafts.save()).id")
+    pgF.evaluate("() => clearAllPages()")
+    pgF.set_input_files("#imageInput", {"name": "auto.png", "mimeType": "image/png", "buffer": _png1((200, 40, 40))})
+    pgF.wait_for_function("() => !!bgImage", timeout=20000)
+    pgF.evaluate("() => flushFlipDraft()"); pgF.wait_for_timeout(1500)
+    pgF2 = ctxF.new_page(); pgF2.on("pageerror", lambda e: errs.append(f"flip-draft: {e}"))
+    pgF2.add_init_script("""(() => { let v; Object.defineProperty(window, 'SkriblDraftStore', { configurable: true, get: () => v,
+        set: (x) => { const g = x.get; x.get = function (k) { const pr = g.apply(this, arguments);
+          return k === 'flip:draft' ? pr.then(r => new Promise(res => setTimeout(() => res(r), 3000))) : pr; }; v = x; } }); })();""")
+    pgF.close()
+    pgF2.goto(BASE + "/flip?draft=" + sidF, wait_until="load"); pgF2.wait_for_timeout(900)
+    asked = pgF2.evaluate("""() => { const s = document.getElementById('savedDraftsSheet');
+        const row = s && s.querySelector('.sdrafts-row.armed'); return { shown: !!(s && !s.hidden), armed: !!row,
+        strokes: frames[0].strokes.length }; }""")
+    check("Flip: a Library link over an autosaved photo still on its way asks first",
+          asked["shown"] and asked["armed"] and asked["strokes"] == 0, str(asked))
+    pgF2.click("#savedDraftsSheet .sdrafts-row.armed .sdrafts-open"); pgF2.wait_for_timeout(4000)
+    landed = pgF2.evaluate("() => ({ strokes: frames[0].strokes.length, photo: !!bgImage, name: imageName, current: SkriblSavedDrafts.current() })")
+    check("Flip: ...and opened anyway, the draft does not collect the autosave's late photo",
+          landed["strokes"] > 0 and not landed["photo"] and landed["current"] == sidF, str(landed))
+    ctxF.close()
 
     check("no uncaught page errors", not errs, "; ".join(errs[:3]))
     b.close()

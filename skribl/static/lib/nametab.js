@@ -78,13 +78,23 @@
        carried the old one. reset() blanks the typed title -- get() then falls
        back to the fresh auto-name -- and the export sheet's own field, which
        remembers a typed name on purpose, and hands back what it cleared so the
-       editors' Undo can put it back with the drawing. */
+       editors' Undo can put it back with the drawing -- BOTH of them, through
+       restore(): handing back only the title lost a typed export name for good
+       (v317 review). */
     reset: function () {
-      var el = inputEl(), prev = el ? el.value : '';
+      var el = inputEl(), exp = document.getElementById('exportName');
+      var prev = { title: el ? el.value : '',
+                   exportName: exp ? exp.value : '', dirty: !!(exp && exp._skriblDirty) };
       if (el) { el.value = ''; syncLabel(); }
-      var exp = document.getElementById('exportName');
       if (exp) { exp.value = ''; exp._skriblDirty = false; }
       return prev;
+    },
+    restore: function (prev) {
+      if (!prev) return;
+      if (typeof prev === 'string') { API.set(prev); return; }
+      API.set(prev.title || '');
+      var exp = document.getElementById('exportName');
+      if (exp) { exp.value = prev.exportName || ''; exp._skriblDirty = !!prev.dirty; }
     },
     filename: function (t, ext) {
       var base = String(t || API.get()).toLowerCase()

@@ -386,8 +386,11 @@ try:
     with A.create_app().test_request_context("/", headers={"X-Forwarded-For": "junk-not-an-ip"}):
         got = A._client_ip()
         check("a non-IP forwarded value cannot become a bucket key", got != "junk-not-an-ip", repr(got))
-    with A.create_app().test_request_context("/", headers={"X-Forwarded-For": "2001:db8::1"}):
-        check("IPv6 is parsed and normalised", A._client_ip() == "2001:db8::1", A._client_ip())
+    # Normalised to its /64 since v317: one subscriber holds a whole /64 and
+    # could otherwise take a fresh bucket per request (verify_hostseams pins
+    # the grouping itself).
+    with A.create_app().test_request_context("/", headers={"X-Forwarded-For": "2001:DB8:0:0::1"}):
+        check("IPv6 is parsed and normalised", A._client_ip() == "2001:db8::/64", A._client_ip())
     A._TRUSTED_PROXIES = 2
     with A.create_app().test_request_context("/", headers={"X-Forwarded-For": "1.1.1.1, 2.2.2.2, 3.3.3.3"}):
         check("with proxies=2 the entry two hops from the right is used",

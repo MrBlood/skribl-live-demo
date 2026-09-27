@@ -193,8 +193,26 @@ def create_app():
     # nothing retroactively.
     #
     # The optional companions are all display: _NAME, _AVATAR, _URL, _VERIFIED.
+    #
+    # ONLY THE BROWSER THAT HOLDS THE KEY IS SIGNED IN (v317, security review).
+    # This used to be `current_user_id = lambda: _demo_id` for EVERY request:
+    # any stranger was the owner, able to delete and hide the owner's posts,
+    # read and overwrite their drafts, and post under their name. CSRF never
+    # protected against that -- the attacker was not borrowing a cookie, they
+    # simply were the user. Now SKRIBL_DEMO_LOGIN_KEY must be set too, and a
+    # browser is signed in only after visiting /demo-login?key=<that key>, which
+    # puts the handle in Flask's signed session cookie; /demo-logout takes it
+    # out. The identity set without a key FAILS SAFE: the demo boots anonymous
+    # and says why in the log, rather than refusing to boot a live service.
     _demo_id = (os.environ.get("SKRIBL_DEMO_IDENTITY") or "").strip()
+    _demo_key = (os.environ.get("SKRIBL_DEMO_LOGIN_KEY") or "").strip()
     current_user_id = None
+    if _demo_id and len(_demo_key) < 16:
+        app.logger.warning(
+            "SKRIBL_DEMO_IDENTITY is set but SKRIBL_DEMO_LOGIN_KEY is %s: nobody "
+            "is signed in and the demo runs anonymous. Set a key of 16+ "
+            "characters and visit /demo-login?key=<key> to sign in as %s.",
+            "missing" if not _demo_key else "shorter than 16 characters", _demo_id)
     if _demo_id:
         if csrf is None:
             # init_skribl raises on this pairing and is right to (an id from a
@@ -206,7 +224,57 @@ def create_app():
                 "on as well: set SKRIBL_CSRF_PROTECT=1. (Skribl refuses the "
                 "pairing itself -- see init_skribl -- because a cookie identity "
                 "without CSRF lets any page post as the signed-in user.)")
-        current_user_id = lambda: _demo_id          # noqa: E731
+        if len(_demo_key) >= 16:
+            import hmac
+            from flask import abort, redirect, request, session
+            # The session cookie now carries a sign-in: never sent by another
+            # site's request, and HTTPS-only unless a local run opts out.
+            # (Assigned, not setdefault: Flask's own defaults are already in
+            # the config, so a setdefault silently did nothing -- the
+            # harness's cookie check caught it.)
+            app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+            app.config["SESSION_COOKIE_SECURE"] = (
+                (os.environ.get("SKRIBL_DEMO_INSECURE_COOKIE") or "").strip() != "1")
+
+            from skribl.ratelimit import _client_ip, _rate_limited
+            # What the cookie holds is a MAC of the handle AND the key, not the
+            # handle (third review). A bare handle outlived the key: rotating a
+            # leaked SKRIBL_DEMO_LOGIN_KEY signed nobody out, because every
+            # cookie it had ever issued still said the same name. Now a new key
+            # is a new value, and every sign-in made with the old one is void.
+            # (Replaying a cookie copied before /demo-logout still works until
+            # the key or SECRET_KEY changes: Flask's session lives in the
+            # cookie, so there is no server-side record to strike it from.)
+            _demo_mark = hmac.new(
+                app.config["SECRET_KEY"].encode(),
+                ("skribl-demo|" + _demo_id + "|" + _demo_key).encode(),
+                "sha256").hexdigest()
+
+            @app.route("/demo-login")
+            def demo_login():
+                # Guesses spend the attempts budget every write spends, so the
+                # key cannot be tried at request speed.
+                if _rate_limited(_client_ip(), "attempts"):
+                    abort(429)
+                given = request.args.get("key", "")
+                # Constant-time, and a wrong key is a plain 404: the route does
+                # not confirm to a stranger that there is anything to guess.
+                if not hmac.compare_digest(given.encode(), _demo_key.encode()):
+                    abort(404)
+                session["skribl_demo"] = _demo_mark
+                session.permanent = True
+                return redirect("/")
+
+            @app.route("/demo-logout")
+            def demo_logout():
+                session.pop("skribl_demo", None)
+                return redirect("/")
+
+            def current_user_id():
+                mark = session.get("skribl_demo")
+                if isinstance(mark, str) and hmac.compare_digest(mark, _demo_mark):
+                    return _demo_id
+                return None
 
         _demo_author = {"username": _demo_id}
         _name = (os.environ.get("SKRIBL_DEMO_IDENTITY_NAME") or "").strip()

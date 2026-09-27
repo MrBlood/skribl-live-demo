@@ -36,7 +36,7 @@ COLOURS = """(which) => {
              cardBorder: card ? cs(card).borderTopColor : null,
              btnBg: btn ? cs(btn).backgroundColor : null,
              btnColor: btn ? cs(btn).color : null,
-             accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+             accent: getComputedStyle(document.documentElement).getPropertyValue('--accent-fill').trim(),
              metaColor: meta ? cs(meta).color : null }; }"""
 
 # THE RE-ADD BUTTON IS THE ACTION COLOUR, NOT THE WARNING (v317, the owner:
@@ -44,7 +44,8 @@ COLOURS = """(which) => {
 # with dark words; it is the app's --accent with white words, the same as the
 # pill's Re-add. The amber stays where it is the warning: the dot, the card's
 # border and its meta line, all still asserted amber below. Compared against
-# the page's own --accent, so a retuned purple does not redden this.
+# the page's own --accent-fill (the accent one step deeper, so white words on
+# it clear AA -- third review), so a retuned purple does not redden this.
 WHITE = "rgb(255, 255, 255)"
 
 def scribble(pg, box, seed, n=200):

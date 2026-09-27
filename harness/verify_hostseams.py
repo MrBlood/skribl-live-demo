@@ -406,7 +406,7 @@ _appmod = importlib.import_module("app")
 _saved = {k: os.environ.get(k) for k in
           ("SKRIBL_DEMO_IDENTITY", "SKRIBL_DEMO_IDENTITY_NAME",
            "SKRIBL_DEMO_IDENTITY_AVATAR", "SKRIBL_DEMO_IDENTITY_URL",
-           "SKRIBL_DEMO_IDENTITY_VERIFIED", "SKRIBL_CSRF_PROTECT",
+           "SKRIBL_DEMO_IDENTITY_VERIFIED", "SKRIBL_CSRF_PROTECT", "SKRIBL_DEMO_LOGIN_KEY",
            "DATABASE_URL", "SECRET_KEY", "SKRIBL_ALLOW_EPHEMERAL_SECRET")}
 
 
@@ -446,16 +446,123 @@ try:
           "SKRIBL_CSRF_PROTECT" in _msg,
           f"raised {_msg[:140]!r} — an operator reads this in a deploy log")
 
-    # AND ON, IT DESCRIBES EXACTLY ONE PERSON.
+    # WITHOUT A LOGIN KEY, NOBODY IS SIGNED IN (v317, security review). The
+    # handle used to be EVERY visitor's identity: a stranger could delete the
+    # owner's posts and read their drafts. Unkeyed, the demo fails SAFE --
+    # boots, anonymous -- rather than refusing to boot a live service.
+    _env(SKRIBL_DEMO_IDENTITY="bigballbaron", SKRIBL_CSRF_PROTECT="1", SKRIBL_DEMO_LOGIN_KEY=None)
+    _nokey = _appmod.create_app()
+    with _nokey.test_request_context("/"):
+        _who = _nokey.blueprints["skribl"].skribl_current_user_id()
+    check("an identity with no login key signs NOBODY in (it boots, anonymous)", _who is None, repr(_who))
+
+    # AND ON, ONLY THE BROWSER THAT PRESENTED THE KEY IS THE USER.
+    _KEY = "harness-demo-login-key-0123456789"
     _env(SKRIBL_DEMO_IDENTITY="bigballbaron", SKRIBL_CSRF_PROTECT="1",
+         SKRIBL_DEMO_LOGIN_KEY=_KEY,
          SKRIBL_DEMO_IDENTITY_NAME="Mr. B",
          SKRIBL_DEMO_IDENTITY_AVATAR="https://media.example.test/skull.png",
          SKRIBL_DEMO_IDENTITY_URL="https://example.test/u/bigballbaron",
          SKRIBL_DEMO_IDENTITY_VERIFIED="1")
     _on = _appmod.create_app()
-    check("with it set, the demo signs one user in",
-          _on.blueprints["skribl"].skribl_current_user_id() == "bigballbaron",
-          "this id is what goes on a new post's user_id")
+    # Over https: the session cookie is Secure, and a test client over http
+    # would neither send it back nor show whether the flag is set.
+    class _Https:
+        def __init__(self, c): self.c = c
+        def get(self, url): return self.c.get(url, base_url="https://localhost")
+    _stranger = _Https(_on.test_client())
+    _owner = _Https(_on.test_client())
+    with _on.test_request_context("/"):
+        from flask import url_for as _u
+        _drafts_url = _u("skribl.list_saved_drafts")
+        _pad_url = _u("skribl.skribl_editor")
+    check("a stranger is not the owner: their drafts list is refused",
+          _stranger.get(_drafts_url).status_code == 401, _drafts_url)
+    check("a wrong key is a plain 404, and signs nobody in",
+          _stranger.get("/demo-login?key=wrong-key-wrong-key").status_code == 404
+          and _stranger.get(_drafts_url).status_code == 401, "")
+    _login = _owner.get("/demo-login?key=" + _KEY)
+    check("the right key signs THAT browser in (and only it)",
+          _login.status_code in (301, 302) and _owner.get(_drafts_url).status_code == 200
+          and _stranger.get(_drafts_url).status_code == 401, f"login {_login.status_code}")
+    _ck = _login.headers.get("Set-Cookie", "")
+    check("...with a cookie scripts cannot read, other sites cannot send, and plain http never carries",
+          "HttpOnly" in _ck and "SameSite=Lax" in _ck and "Secure" in _ck, _ck[-120:])
+    with _owner.c.session_transaction(base_url="https://localhost") as _st:
+        _mark = _st.get("skribl_demo")
+    from flask import session as _sess
+    with _on.test_request_context("/"):
+        _sess["skribl_demo"] = _mark
+        _signed = _on.blueprints["skribl"].skribl_current_user_id()
+    check("with it set, the signed-in browser is one user",
+          _signed == "bigballbaron", "this id is what goes on a new post's user_id")
+    # THE COOKIE CARRIES A MARK OF THE KEY, NOT THE NAME (third review). A
+    # cookie saying only the handle outlived the key: rotating a leaked key
+    # signed nobody out. Both halves are pinned -- a session holding the bare
+    # handle (what every pre-fix cookie held) is nobody, and the SAME cookie
+    # presented to an app with a rotated key and the same SECRET_KEY is nobody.
+    with _on.test_request_context("/"):
+        _sess["skribl_demo"] = "bigballbaron"
+        _bare = _on.blueprints["skribl"].skribl_current_user_id()
+    check("a session holding just the handle signs nobody in",
+          _bare is None and _mark and _mark != "bigballbaron", repr(_bare))
+    _env(SKRIBL_DEMO_LOGIN_KEY=_KEY + "-rotated")
+    _rot = _appmod.create_app()
+    _env(SKRIBL_DEMO_LOGIN_KEY=_KEY)
+    with _rot.test_request_context("/"):
+        _sess["skribl_demo"] = _mark
+        _after = _rot.blueprints["skribl"].skribl_current_user_id()
+    check("rotating SKRIBL_DEMO_LOGIN_KEY signs out every browser the old key signed in",
+          _after is None, repr(_after))
+    # THE BINDING, THROUGH THE WIRING THE DEMO ACTUALLY RUNS (third review).
+    # verify_csrf drives the signed triple with a binder it installs itself;
+    # this is init_skribl's own `_binder(current_user_id)`. Without it every
+    # token is bound to nobody, and one minted for a signed-out page passes
+    # for the signed-in owner.
+    def _csrf_of(client):
+        client.c.get(_pad_url, base_url="https://localhost")
+        ck = client.c.get_cookie("skribl_csrf", domain="localhost")
+        return ck.value if ck else ""
+
+    # Sent from a client with NO cookie jar, carrying exactly the owner's
+    # session and the token under test: a jar would add its own skribl_csrf
+    # beside the one in the header, and the check would measure the jar.
+    _bare_client = _on.test_client(use_cookies=False)
+
+    def _draft_with(client, tok, addr="198.51.100.20"):
+        sess = client.c.get_cookie("session", domain="localhost")
+        return _bare_client.post(_drafts_url, base_url="https://localhost", json={"kind": "pad", "payload": {}},
+                                 headers={"X-Skribl-CSRF": tok,
+                                          "Cookie": f"session={sess.value}; skribl_csrf={tok}"},
+                                 environ_base={"REMOTE_ADDR": addr}).status_code
+    _anon_tok = _csrf_of(_Https(_on.test_client()))
+    _own_tok = _csrf_of(_owner)
+    _borrowed = _draft_with(_owner, _anon_tok)
+    _own = _draft_with(_owner, _own_tok)
+    check("a CSRF token minted for a signed-out page is refused for the signed-in owner (init_skribl binds it)",
+          _anon_tok and _borrowed == 403 and _own not in (403, 401), f"borrowed {_borrowed}, own {_own}, anon token {bool(_anon_tok)}")
+    # FORGED REQUESTS SPEND NOTHING (third review). The attempts charge came
+    # before the CSRF check, so another site's auto-submitting forms could
+    # use up the owner's hourly budget and lock them out of saving.
+    _on.config["SKRIBL_RATE_MAX_ATTEMPTS"] = 3
+    _forged = [_draft_with(_owner, "forged", addr="198.51.100.21") for _ in range(4)]
+    _after_forged = _draft_with(_owner, _own_tok, addr="198.51.100.21")
+    _on.config.pop("SKRIBL_RATE_MAX_ATTEMPTS", None)
+    check("forged writes are refused before they are charged: the owner's budget is intact after them",
+          _forged == [403] * 4 and _after_forged not in (403, 429), f"forged {_forged}, then {_after_forged}")
+    _owner.get("/demo-logout")
+    check("/demo-logout signs it out again", _owner.get(_drafts_url).status_code == 401, "")
+    # Guesses at the key spend the attempts budget: at the cap, even the right
+    # key is turned away, so it cannot be tried at request speed.
+    _on.config["SKRIBL_RATE_MAX_ATTEMPTS"] = 3
+    _guesser = _on.test_client()
+    _from = {"REMOTE_ADDR": "203.0.113.77"}     # a fresh bucket, not this run's
+    _codes = [_guesser.get(f"/demo-login?key=guess-{i:02d}-guess-guess", base_url="https://localhost",
+                           environ_base=_from).status_code for i in range(3)]
+    _codes.append(_guesser.get("/demo-login?key=" + _KEY, base_url="https://localhost",
+                               environ_base=_from).status_code)
+    check("guessing the key is rate limited (429 once the attempts budget is spent)",
+          _codes == [404, 404, 404, 429], str(_codes))
     with _on.app_context():
         _me = skribl.models.author_dict("bigballbaron")
         _other = skribl.models.author_dict("somebody-else")
@@ -472,6 +579,81 @@ try:
           _other == {"id": "somebody-else"}, json.dumps(_other))
 finally:
     for _k, _v in _saved.items():
+        _env(**{_k: _v})
+
+# ---------------------------------------------------------------------------
+print("\nDRAFTS ON THE SERVER — a byte budget per author, and a list that reads no drawings (v317)")
+# The count cap alone let one account hold 25 full payloads (~625 MB); and the
+# list, which returns no payloads, loaded every one of them to discard it.
+import sqlalchemy as _sa                                          # noqa: E402
+_saved2 = {k: os.environ.get(k) for k in ("SKRIBL_MAX_DRAFT_BYTES", "DATABASE_URL", "SECRET_KEY",
+                                          "SKRIBL_ALLOW_EPHEMERAL_SECRET", "SKRIBL_DEMO_IDENTITY")}
+try:
+    _env(DATABASE_URL=DB_URL, SECRET_KEY="harness-drafts-budget", SKRIBL_ALLOW_EPHEMERAL_SECRET="1",
+         SKRIBL_DEMO_IDENTITY=None, SKRIBL_MAX_DRAFT_BYTES=str(64 * 1024))
+    _da = _appmod.create_app()
+    _pl = {"version": 1, "strokeGroups": [900],
+           "strokes": [{"x": i % 500, "y": i % 400, "t": i, "color": "#ffffff", "size": 4} for i in range(900)]}
+    with _da.app_context():
+        _appmod.db.create_all()
+        from skribl import drafts as _drafts
+        _one = _drafts.save_draft("budget-user", _pl, kind="pad", title="one")
+        _refused = None
+        try:
+            _drafts.save_draft("budget-user", _pl, kind="pad", title="two")
+        except _drafts.DraftRejected as e:
+            _refused = (e.status if hasattr(e, "status") else None, str(e))
+        check("a draft past the author's byte budget is refused (409, with words to act on)",
+              _refused is not None and _refused[0] == 409 and "Delete one" in _refused[1], repr(_refused))
+        _over = _drafts.save_draft("budget-user", _pl, kind="pad", title="one again", public_id=_one["id"])
+        check("...while overwriting a draft already inside it still works", _over["title"] == "one again", "")
+        _other = _drafts.save_draft("someone-else", _pl, kind="pad", title="theirs")
+        check("...and the budget is per author", bool(_other.get("id")), "")
+        _stmts = []
+        _eng = _appmod.db.engine
+        def _grab(conn, cursor, statement, *a):
+            _stmts.append(statement)
+        _sa.event.listen(_eng, "before_cursor_execute", _grab)
+        try:
+            _appmod.db.session.expire_all()
+            _items = _drafts.list_drafts("budget-user")
+        finally:
+            _sa.event.remove(_eng, "before_cursor_execute", _grab)
+        _read = [x for x in _stmts if "skribl_drafts" in x]
+        check("the drafts list reads no payloads from the database",
+              _items and _read and not any("payload_json" in x for x in _read), " | ".join(_read)[:200])
+        # The unauthenticated metadata route loaded up to 50 whole drawings.
+        _stmts.clear()
+        _sa.event.listen(_eng, "before_cursor_execute", _grab)
+        try:
+            with _da.test_request_context("/"):
+                from flask import url_for as _u2
+                _meta_url = _u2("skribl.get_skribl_meta", ids="abcdefghijk,bcdefghijkl")
+            _mr = _da.test_client().get(_meta_url)
+        finally:
+            _sa.event.remove(_eng, "before_cursor_execute", _grab)
+        _mread = [x for x in _stmts if "skribl_posts" in x]
+        check("the posts-by-id metadata route reads no drawings either",
+              _mr.status_code == 200 and _mread and not any("payload_json" in x for x in _mread),
+              f"{_mr.status_code} " + " | ".join(_mread)[:160])
+    # Draft writes spend the attempts budget posts do. Two allowed, the third
+    # refused -- before any sign-in or CSRF is even looked at.
+    _da.config["SKRIBL_RATE_MAX_ATTEMPTS"] = 2
+    _dc = _da.test_client()
+    with _da.test_request_context("/"):
+        from flask import url_for as _u3
+        _durl = _u3("skribl.create_saved_draft")
+    _codes = [_dc.post(_durl, json={}, environ_base={"REMOTE_ADDR": "192.0.2.77"}).status_code for _ in range(3)]
+    check("draft writes are rate limited like posts (the third inside the window is 429)",
+          _codes[2] == 429 and 429 not in _codes[:2], str(_codes))
+    # Rate limits key IPv6 by its /64: one subscriber holds the whole block.
+    from skribl.ratelimit import _subject as _subj
+    check("rate limits count an IPv6 /64 as one client, and an IPv4-mapped address as its IPv4",
+          _subj("2001:db8:1:2::1") == _subj("2001:db8:1:2:ffff::9") != _subj("2001:db8:1:3::1")
+          and _subj("::ffff:203.0.113.9") == "203.0.113.9" and _subj("198.51.100.7") == "198.51.100.7",
+          f"{_subj('2001:db8:1:2::1')} {_subj('::ffff:203.0.113.9')}")
+finally:
+    for _k, _v in _saved2.items():
         _env(**{_k: _v})
 
 bad = [r for r in results if not r[0]]

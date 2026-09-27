@@ -671,7 +671,54 @@ def double_submit_csrf(cookie_name=CSRF_COOKIE, header_name=CSRF_HEADER):
     Requires SameSite=Lax at minimum, which `issue` sets. Compared with
     hmac.compare_digest so a wrong token cannot be discovered a character at a
     time by timing the response.
+
+    SIGNED, AND BOUND TO WHO IS SIGNED IN (v317, security review). Plain double
+    submit accepts ANY cookie value its header matches, so a sibling subdomain
+    that can plant a cookie ("cookie tossing") plants a value it knows and
+    sends the same header. The token is now `nonce.sig`, where sig is an HMAC
+    under the app's SECRET_KEY over the nonce and the signed-in user's id.
+    A planted value fails the signature; a value lifted from the attacker's own
+    session fails the binding, because it was signed for a different user (or
+    for nobody). init_skribl binds it to current_user_id automatically; with no
+    SECRET_KEY it degrades to plain double submit, as before.
     """
+    _bind = [None]   # set by init_skribl to the host's current_user_id
+
+    def _key():
+        try:
+            k = current_app.config.get("SECRET_KEY")
+        except RuntimeError:
+            return None
+        if isinstance(k, str):
+            k = k.encode("utf-8")
+        return k if isinstance(k, (bytes, bytearray)) and k else None
+
+    def _who():
+        fn = _bind[0]
+        if fn is None:
+            return ""
+        try:
+            who = fn()
+        except Exception:
+            return ""
+        return "" if who is None else str(who)
+
+    def _sig(nonce, key):
+        msg = ("skribl-csrf|" + nonce + "|" + _who()).encode("utf-8")
+        return hmac.new(key, msg, hashlib.sha256).hexdigest()[:40]
+
+    def _mint():
+        nonce = secrets.token_urlsafe(24)
+        key = _key()
+        return nonce + "." + _sig(nonce, key) if key else nonce
+
+    def _sound(token):
+        key = _key()
+        if not key:
+            return bool(token)
+        nonce, dot, sig = (token or "").partition(".")
+        return bool(nonce and dot and sig) and hmac.compare_digest(sig, _sig(nonce, key))
+
     def prepare():
         """Resolve the token BEFORE the view runs.
 
@@ -683,7 +730,11 @@ def double_submit_csrf(cookie_name=CSRF_COOKIE, header_name=CSRF_HEADER):
         this seam exists to prevent.)
         """
         token = request.cookies.get(cookie_name)
-        g.skribl_csrf_token = token or secrets.token_urlsafe(32)
+        # A token that is not ours, or not for whoever is signed in NOW (they
+        # signed in or out since it was issued), is replaced, not trusted.
+        if not token or not _sound(token):
+            token = None
+        g.skribl_csrf_token = token or _mint()
         g.skribl_csrf_is_new = not token
 
     def issue(response):
@@ -709,6 +760,9 @@ def double_submit_csrf(cookie_name=CSRF_COOKIE, header_name=CSRF_HEADER):
         known = req.cookies.get(cookie_name, "")
         if not sent or not known:
             return False
-        return hmac.compare_digest(sent, known)
+        return hmac.compare_digest(sent, known) and _sound(known)
 
+    # How init_skribl binds the token to the host's user, without the triple
+    # growing a fourth element every host would have to unpack.
+    prepare._skribl_bind = lambda fn: _bind.__setitem__(0, fn)
     return prepare, issue, validate

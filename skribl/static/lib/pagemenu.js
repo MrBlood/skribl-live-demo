@@ -35,18 +35,23 @@
         b.setAttribute('aria-pressed', b.getAttribute('data-theme') === mode ? 'true' : 'false');
       });
     }
-    function isOpen() { return !overlay.hidden; }
+    // Easing away counts as closed, so a quick second tap reopens it.
+    function isOpen() { return !overlay.hidden && !sheet._slideT; }
     function open() {
       sync();
+      if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.cancelSlide(sheet);
       overlay.hidden = false;
       btn.setAttribute('aria-expanded', 'true');
       if (Modal) Modal.open(sheet, btn);
     }
     function close() {
       if (!isOpen()) return;
-      overlay.hidden = true;
       btn.setAttribute('aria-expanded', 'false');
       if (Modal) Modal.close(sheet);
+      // Eases down with its dim, then hides (lib/sheetswipe.js).
+      var gone = function () { overlay.hidden = true; };
+      if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.slideOut(sheet, { fadeBg: [overlay], done: gone });
+      else gone();
     }
 
     btn.addEventListener('click', function () { if (isOpen()) close(); else open(); });

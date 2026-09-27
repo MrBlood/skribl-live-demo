@@ -127,7 +127,9 @@ def _token_matches(token, stored_hash):
     post is authorised by ownership, and letting an empty token match an empty
     hash would make every pre-v279 anonymous post deletable by anybody.
     """
-    if not token or not stored_hash:
+    # A JSON body can carry any type here; only a string is a token (a number
+    # or a list reached .encode() and answered 500 -- third review).
+    if not isinstance(token, str) or not token or not stored_hash:
         return False
     return hmac.compare_digest(hash_delete_token(token), stored_hash)
 

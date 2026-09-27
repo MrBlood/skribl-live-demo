@@ -19,9 +19,14 @@ photo and music inline and would otherwise grow without anyone noticing.
 NO COMMIT HERE, as everywhere in this package: the host owns the transaction
 (docs/INTEGRATION.md, "Transaction ownership").
 """
+import base64
+import binascii
 import json
+import re
 import secrets
 from datetime import datetime, timezone
+
+import sqlalchemy as sa
 
 from .core import MAX_TITLE_CHARS, _env_int
 from .models import SkriblDraft, normalise_user_id, session
@@ -36,6 +41,35 @@ MAX_THUMBNAIL_CHARS = 200_000
 
 def max_drafts():
     return _env_int("SKRIBL_MAX_DRAFTS", 25, minimum=1)
+
+
+def max_draft_bytes():
+    """One author's drafts together (v317, security review). The count cap
+    alone let 25 drafts of the full payload size sit in the database -- about
+    625 MB for one account. 200 MB is ten drafts at the post-size ceiling and
+    hundreds of ordinary ones."""
+    return _env_int("SKRIBL_MAX_DRAFT_BYTES", 200 * 1024 * 1024, minimum=64 * 1024)
+
+
+# A thumbnail is shown in an <img>, so an SVG could not run there -- but it is
+# stored for the author and could be anything that starts "data:image/". Only
+# the three raster types the editors make, their bytes checked, as posts do.
+_THUMB = re.compile(r"^data:image/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$")
+_THUMB_MAGIC = {"jpeg": (b"\xff\xd8\xff",), "png": (b"\x89PNG\r\n\x1a\n",), "webp": (b"RIFF",)}
+
+
+def _thumbnail_ok(thumbnail):
+    m = _THUMB.match(thumbnail)
+    if not m:
+        return False
+    try:
+        head = base64.b64decode(m.group(2)[:64] + "=" * (-len(m.group(2)[:64]) % 4), validate=True)
+    except (binascii.Error, ValueError):
+        return False
+    kind = m.group(1)
+    if not head.startswith(_THUMB_MAGIC[kind]):
+        return False
+    return kind != "webp" or head[8:12] == b"WEBP"
 
 
 class DraftRejected(Exception):
@@ -66,8 +100,8 @@ def _validate(payload, kind, title, thumbnail):
     if len(title) > MAX_TITLE_CHARS:
         raise DraftRejected(f"That title is longer than {MAX_TITLE_CHARS} characters.")
     if thumbnail is not None:
-        if (not isinstance(thumbnail, str) or not thumbnail.startswith("data:image/")
-                or len(thumbnail) > MAX_THUMBNAIL_CHARS):
+        if (not isinstance(thumbnail, str) or len(thumbnail) > MAX_THUMBNAIL_CHARS
+                or not _thumbnail_ok(thumbnail)):
             raise DraftRejected("The draft's picture could not be used.")
     for check in (_validate_payload_complexity, _validate_payload_media,
                   _validate_payload_extra):
@@ -87,7 +121,11 @@ def _summary(d):
 def list_drafts(author_id):
     """The author's drafts, newest first, WITHOUT payloads."""
     owner = _owner(author_id)
-    rows = (session().query(SkriblDraft).filter(SkriblDraft.user_id == owner)
+    # The list carries no payloads, so none is read: a drafts sheet opened at
+    # the cap pulled every full drawing over the database connection to discard
+    # it (v317, security review).
+    rows = (session().query(SkriblDraft).options(sa.orm.defer(SkriblDraft.payload_json))
+            .filter(SkriblDraft.user_id == owner)
             .order_by(SkriblDraft.updated_at.desc(), SkriblDraft.id.desc()).all())
     return [_summary(d) for d in rows]
 
@@ -115,6 +153,13 @@ def save_draft(author_id, payload, *, kind, title=None, thumbnail=None, public_i
     size = len(json.dumps(payload, separators=(",", ":")))
     now = datetime.now(timezone.utc)
     s = session()
+    held = (s.query(sa.func.coalesce(sa.func.sum(SkriblDraft.size_bytes), 0))
+            .filter(SkriblDraft.user_id == owner)
+            .filter(SkriblDraft.public_id != (public_id or "")).scalar())
+    if held + size > max_draft_bytes():
+        raise DraftRejected(
+            "Your saved drafts are using all the space they have. Delete one to save another.",
+            status=409)
     if public_id is not None:
         d = _find(owner, public_id)
         d.kind, d.title, d.payload_json = kind, title, payload

@@ -4,14 +4,15 @@
  * media METADATA only and Flip's dropped media on QuotaExceededError. Both
  * were honest about it (the amber "Saved without media" pill) — but honest
  * data loss is still data loss, and DESIGN-DIRECTION.md names durable drafts
- * as a prerequisite. IndexedDB stores Blobs natively with an origin quota in
- * the hundreds of MB, so a photo and an audio track fit without ceremony.
+ * as a prerequisite. IndexedDB has an origin quota in the hundreds of MB, so a
+ * photo and an audio track fit without ceremony.
  *
- * DELIBERATELY TINY. Three verbs over one object store, promises throughout,
- * no schema beyond "value at key". Keys are namespaced by surface ('pad:photo',
- * 'pad:music', 'flip:draft') so the two editors cannot collide. Values are
- * plain objects carrying a Blob/File plus metadata — structured clone handles
- * both.
+ * DELIBERATELY TINY. Four verbs over one object store (put, get, del, keys),
+ * promises throughout, no schema beyond "value at key". Keys are namespaced by
+ * surface ('pad:photo', 'pad:music', 'flip:draft', 'saved:*') so nothing can
+ * collide. Values are plain objects with metadata; a top-level Blob or File in
+ * one is stored as its bytes and type and comes back a Blob (BYTES, NOT BLOBS
+ * below), so callers put and get Blobs as they always did.
  *
  * FAILURE IS A RESULT, NOT AN EXCEPTION PATH. Private-mode browsers, disabled
  * IndexedDB, and quota pressure all surface as a rejected promise; every
@@ -20,14 +21,16 @@
  * "returned null" identical to every caller for three builds) applies to
  * storage twice over.
  *
- * The editors load this; the player must not — it never writes a draft, and
- * the player budget is a ratchet. verify_player_isolation guards the payload.
+ * The editors and the Library load this; the player must not — it never
+ * writes a draft, and the player budget is a ratchet. verify_player_isolation
+ * guards the payload.
  */
 (function () {
   'use strict';
 
   var DB_NAME = 'skribl-drafts', STORE = 'media', VERSION = 1;
   var dbPromise = null;
+  var liveDb = null;   // the connection dbPromise currently stands for
 
   /* NOTHING HERE MAY WAIT FOREVER (v317). The owner's iPhone: the drafts sheet
      said "Loading…" and nothing came, drafts "seem to go away", and a photo
@@ -41,11 +44,19 @@
      one retry on a fresh one. A deadline turns a hang into the rejection
      every caller already handles as "not durable". */
   var OPEN_MS = 4000, OP_MS = 8000;
+  // A WRITE'S deadline is for a hang, not for a slow phone: a multi-MB photo
+  // on iOS can take longer than a read ever should, and the callers keep their
+  // own, shorter patience (the Pad's MEDIA_STORE_TIMEOUT_MS, 12 s) for what
+  // the person sees. An inner 8 s cut-off reported bytes as failed that went
+  // on to commit (v317 review).
+  var WRITE_MS = 30000;
 
   function deadline(p, ms) {
     return new Promise(function (resolve, reject) {
       var t = setTimeout(function () {
-        reject(new Error("This browser's storage did not answer."));
+        var e = new Error("This browser's storage did not answer.");
+        e.skriblTimeout = true;
+        reject(e);
       }, ms);
       p.then(function (v) { clearTimeout(t); resolve(v); },
              function (e) { clearTimeout(t); reject(e); });
@@ -78,11 +89,14 @@
         if (timedOut) { try { db.close(); } catch (e) {} return; }
         // Another tab upgrading the schema, or the browser closing the
         // connection under us: drop the handle so the next call reopens.
+        // Each handler forgets THIS connection only: a late event from an old,
+        // dead one must not drop the healthy one that replaced it (v317 review).
         db.onversionchange = function () {
           try { db.close(); } catch (e) {}
-          dbPromise = null;
+          if (liveDb === db) { liveDb = null; dbPromise = null; }
         };
-        db.onclose = function () { dbPromise = null; };
+        db.onclose = function () { if (liveDb === db) { liveDb = null; dbPromise = null; } };
+        liveDb = db;
         resolve(db);
       };
       req.onerror = function () { reject(req.error || new Error('IndexedDB open failed')); };
@@ -102,19 +116,31 @@
 
   /* One request in one transaction, with the deadline, and one retry when the
      connection turns out to be dead (db.transaction throws InvalidStateError
-     on a closed connection -- the background case above). */
+     on a closed connection -- the background case above).
+
+     ONLY A DEAD CONNECTION IS DROPPED (v317 review). A full disk, a value that
+     will not clone, a refused write: those are answers from a connection that
+     works, and dropping it for them opened a fresh one per failure and left
+     every old one open. A connection that is dropped is closed. */
+  function drop(db) {
+    if (!db) return;
+    if (liveDb === db) { liveDb = null; dbPromise = null; }
+    try { db.close(); } catch (e) {}
+  }
   function op(mode, body) {
+    var used = null;   // the connection this attempt ran on, the one to drop
     function once() {
       return open().then(function (db) {
+        used = db;
         return deadline(new Promise(function (resolve, reject) {
           var tx = db.transaction(STORE, mode);
           body(tx.objectStore(STORE), tx, resolve, reject);
-        }), OP_MS);
+        }), mode === 'readwrite' ? WRITE_MS : OP_MS);
       });
     }
     return once().catch(function (e) {
-      dbPromise = null;
-      if (e && e.name === 'InvalidStateError') return once();
+      if (e && e.name === 'InvalidStateError') { drop(used); return once(); }
+      if (e && e.skriblTimeout) drop(used);
       throw e;
     });
   }
@@ -155,8 +181,27 @@
     return value;
   }
 
+  /* ONE KEY, ONE QUEUE (third review). put() reads a Blob's bytes BEFORE it
+     opens its transaction, so a del() issued after it opened first, and the
+     put then wrote back what had just been removed: a photo taken off the
+     page stayed in the store. Writes to the same key now run in the order
+     they were asked for. Each waits only on the one before it, and every
+     IndexedDB op has a deadline. Reading a Blob's bytes (pack) has none: a
+     read that never settled would hold that key's queue, though not any
+     other key's. No engine has been seen to do that with a picked file. */
+  var tail = {};
+  function inOrder(key, run) {
+    var next = (tail[key] || Promise.resolve()).then(run, run);
+    var settled = next.then(function () {}, function () {});
+    tail[key] = settled;
+    settled.then(function () { if (tail[key] === settled) delete tail[key]; });
+    return next;
+  }
+
   function put(key, value) {
-    return pack(value).then(function (packed) { return putRaw(key, packed); });
+    return inOrder(key, function () {
+      return pack(value).then(function (packed) { return putRaw(key, packed); });
+    });
   }
   function putRaw(key, value) {
     return op('readwrite', function (store, tx, resolve, reject) {
@@ -179,11 +224,13 @@
   }
 
   function del(key) {
-    return op('readwrite', function (store, tx, resolve, reject) {
-      store.delete(key);
-      tx.oncomplete = function () { resolve(true); };
-      tx.onerror = function () { reject(tx.error || new Error('delete failed')); };
-      tx.onabort = function () { reject(tx.error || new Error('delete aborted')); };
+    return inOrder(key, function () {
+      return op('readwrite', function (store, tx, resolve, reject) {
+        store.delete(key);
+        tx.oncomplete = function () { resolve(true); };
+        tx.onerror = function () { reject(tx.error || new Error('delete failed')); };
+        tx.onabort = function () { reject(tx.error || new Error('delete aborted')); };
+      });
     });
   }
 

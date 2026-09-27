@@ -82,16 +82,27 @@
   }
   /* THE WAY BACK for drafts an index already lost. Each draft's record
      ('saved:<id>') outlived the index that listed it, so the list gathers any
-     record the index does not name and writes it back in. */
+     record the index does not name and writes it back in. And the other way:
+     a row whose record is gone (a delete that stopped half-way) is dropped,
+     not shown as a draft that answers "not found". */
+  function byNewest(a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); }
   function recover(items) {
     if (!store().keys) return Promise.resolve(items);
     return store().keys().then(function (ks) {
-      var known = {};
+      var have = {}, known = {};
+      ks.forEach(function (k) { have[k] = true; });
+      var kept = items.filter(function (i) { return have['saved:' + i.id]; });
+      var pruned = kept.length !== items.length;
+      items = kept;
       items.forEach(function (i) { known['saved:' + i.id] = true; });
       var lost = ks.filter(function (k) {
         return typeof k === 'string' && k.indexOf('saved:') === 0 && k !== IDX && !known[k];
       });
-      if (!lost.length) return items;
+      if (!lost.length) {
+        if (!pruned) return items;
+        return store().put(IDX, { items: items }).then(function () { return items; },
+                                                      function () { return items; });
+      }
       return Promise.all(lost.map(function (k) {
         return store().get(k).catch(function () { return null; });
       })).then(function (recs) {
@@ -99,8 +110,8 @@
           return { id: r.id, kind: r.kind === 'flip' ? 'flip' : 'pad', title: r.title || 'Untitled Skribl',
                    thumbnail: r.thumbnail || null, createdAt: r.savedAt || null, updatedAt: r.savedAt || null };
         });
-        if (!back.length) return items;
-        var all = items.concat(back);
+        if (!back.length && !pruned) return items;
+        var all = items.concat(back).sort(byNewest);
         return store().put(IDX, { items: all }).then(function () { return all; },
                                                      function () { return all; });
       });
@@ -135,10 +146,16 @@
           .then(function () { return sum; });
       });
     },
+    // THE RECORD FIRST, THEN THE ROW (v317). The other order, with recover()
+    // re-adding any record the index does not name, brought a draft back
+    // whenever the second step failed. Now a failed first step changes nothing,
+    // and a failed second step leaves a row recover() drops on the next list.
     remove: function (id) {
       return readIndex().then(function (items) {
-        return store().put(IDX, { items: items.filter(function (i) { return i.id !== id; }) });
-      }).then(function () { return store().del('saved:' + id); });
+        return store().del('saved:' + id).then(function () {
+          return store().put(IDX, { items: items.filter(function (i) { return i.id !== id; }) });
+        });
+      });
     }
   };
 
@@ -219,9 +236,11 @@
 
   function hide() {
     if (!sheet || sheet.hidden) return;
-    sheet.hidden = true;
-    scrim.hidden = true;
     if (global.SkriblModal) global.SkriblModal.close(sheet);
+    // Eases down on a phone with its dim, then hides (lib/sheetswipe.js).
+    var gone = function () { sheet.hidden = true; scrim.hidden = true; };
+    if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.slideOut(sheet, { fade: [scrim], done: gone });
+    else gone();
   }
 
   /* ONE ROW ASKS AT A TIME (v317). The owner's phone showed two rows both
@@ -268,14 +287,18 @@
       openBtn.appendChild(words);
       var del = el('button', 'sdrafts-del');
       del.type = 'button';
-      del.setAttribute('aria-label', 'Delete ' + (it.title || 'this draft'));
+      var delLabel = 'Delete ' + (it.title || 'this draft');
+      del.setAttribute('aria-label', delLabel);
       del.innerHTML = BIN;
+      // The row's question is spoken when it is asked, not only shown.
+      meta.setAttribute('aria-live', 'polite');
       var armedOpen = false, armedDel = false, metaText = meta.textContent;
       function disarm() {
         armedOpen = false; armedDel = false;
         meta.textContent = metaText;
         row.classList.remove('armed');
         del.classList.remove('armed');
+        del.setAttribute('aria-label', delLabel);
         del.innerHTML = BIN;
       }
       disarmers.push(disarm);
@@ -298,13 +321,27 @@
           if (armedOpen) disarm();
           armedDel = true;
           del.textContent = 'Delete?';
+          // Its name says what the next tap does; the old label hid the question.
+          del.setAttribute('aria-label', 'Tap again to delete ' + (it.title || 'this draft'));
           del.classList.add('armed');
           return;
         }
+        // The list is rebuilt, and the bin that had focus goes with it; a
+        // keyboard user left on <body> was outside the dialog, where Tab and
+        // Escape no longer reached it (third review). Focus lands on the row
+        // that took this one's place, or the sheet's close button.
+        var at = Array.prototype.indexOf.call(listEl.querySelectorAll('.sdrafts-row'), row);
+        var hadFocus = row.contains(document.activeElement);
         backend.remove(it.id).then(function () {
           if (opts._current === it.id) opts._current = null;
-          refresh();
-        }, function (e) { opts.toast(e.message); });
+          return refresh();
+        }, function (e) { opts.toast(e.message); return false; }).then(function (ok) {
+          if (ok === false || !hadFocus || sheet.hidden) return;   // a refused delete keeps its row, and focus
+          var rows = listEl.querySelectorAll('.sdrafts-row');
+          var next = rows[Math.min(at, rows.length - 1)];
+          var target = (next && next.querySelector('.sdrafts-open')) || sheet.querySelector('.sdrafts-close');
+          if (target) target.focus();
+        });
       });
       row.appendChild(openBtn);
       row.appendChild(del);
@@ -317,10 +354,17 @@
     });
   }
 
+  // Only the LATEST list draws: an earlier read that answers late would put a
+  // just-deleted row back, which then answers "not found" (v317 review).
+  var listSeq = 0;
   function refresh() {
+    var mine = ++listSeq;
     listEl.textContent = '';
     listEl.appendChild(el('p', 'sdrafts-empty', 'Loading\u2026'));
-    return backend.list().then(render, function (e) {
+    return backend.list().then(function (items) {
+      if (mine === listSeq) render(items);
+    }, function (e) {
+      if (mine !== listSeq) return;
       /* A list that cannot be read says so and offers the way back, rather
          than "Loading…" for good (v317, the owner's iPhone). */
       listEl.textContent = '';
@@ -336,8 +380,10 @@
     if (!opts) return;   // the sheet is an editor's; the Library lists drafts itself
     if (!sheet) build();
     opener = from || null;
+    if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.cancelSlide(sheet);
     sheet.hidden = false;
     scrim.hidden = false;
+    if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.slideIn(sheet);
     if (global.SkriblModal) global.SkriblModal.open(sheet, opener);
     refresh();
   }
@@ -362,6 +408,10 @@
   }
 
   function save() {
+    // A file still being read would be saved under its new name with the old
+    // bytes, or not at all while the toast said Saved (third review). First,
+    // because a photo on its way is work even before it counts as content.
+    if (opts.busy && opts.busy()) { opts.toast('Preparing media \u2014 try again in a moment'); return Promise.resolve(null); }
     if (opts.hasContent && !opts.hasContent()) { opts.toast('Draw something to save'); return Promise.resolve(null); }
     var payload;
     try { payload = opts.serialize(); } catch (e) { opts.toast('Could not read the drawing to save it.'); return Promise.resolve(null); }
@@ -370,7 +420,9 @@
     var was = opts._current;
     return backend.save(was, body).then(function (sum) {
       opts._current = sum.id;
-      opts.toast(was ? 'Draft updated' : (backend.where === 'account' ? 'Saved to your drafts' : 'Saved to drafts on this browser'));
+      // "Updated" only when it was: a local store answers a vanished id with a
+      // new draft rather than an error.
+      opts.toast(was && sum.id === was ? 'Draft updated' : (backend.where === 'account' ? 'Saved to your drafts' : 'Saved to drafts on this browser'));
       return sum;
     }, function (e) {
       // A draft deleted elsewhere since it was opened: save it as a new one.
@@ -408,8 +460,9 @@
   }
 
   global.SkriblSavedDrafts = {
-    /* opts: {kind, serialize(), load(obj), hasContent(), thumbnail() -> canvas,
-              otherUrl() -> the other editor's menu link, toast(msg)} */
+    /* opts: {kind, serialize(), load(obj), hasContent(), busy() -> media still
+              being read, thumbnail() -> canvas, otherUrl() -> the other
+              editor's menu link, toast(msg)} */
     init: function (o) {
       opts = o;
       opts._current = null;
@@ -424,7 +477,10 @@
     open: show,
     close: hide,
     /* New Skribl: whatever is drawn next is a new draft, not the old one. */
-    forget: function () { if (opts) opts._current = null; },
+    // forget() hands back the draft it let go of, so an Undo can resume() it
+    // and the next Save updates that draft instead of making a copy (v317).
+    forget: function () { var was = opts ? opts._current : null; if (opts) opts._current = null; return was; },
+    resume: function (id) { if (opts && id) opts._current = id; },
     current: function () { return opts ? opts._current : null; },
     where: function () { return backend.where; },
     /* For a page that lists drafts without editing one (the Library's Drafts

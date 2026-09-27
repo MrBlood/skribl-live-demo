@@ -1220,9 +1220,9 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
 function openDrawer(name) {                      // name = 'draw'|'photo'|'music' or null
   if (_padDrawerCtl) _padDrawerCtl.open(name);
 }
-// The draw drawer's half detent (phones): opens at colour-only, the grabber
-// moves it between half and full, and a pull past half hands the close to
-// the drawer machine. Shared with Flip via lib/drawerdetent.js.
+// The draw drawer's half detent (phones): opens at colour-only; dragging the
+// grabber up expands it, and a tap on the grabber or a pull down past half
+// hands the close to the drawer machine. Shared with Flip via lib/drawerdetent.js.
 if (window.SkriblDrawerDetent) {
   window.SkriblDrawerDetent.attach(document.getElementById('drawPanel'),
     { close: () => openDrawer(null) });

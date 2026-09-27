@@ -25,7 +25,13 @@ the cap can be reached in a few saves.
      asks before a draft replaces it.
   7  Storage that never answers, or a connection that died in the background
      (v317, the owner's iPhone): the sheet says so and retries; a read reconnects.
+  8  Drafts that stay (v317): a failed index read writes nothing over the list;
+     a draft its index lost is listed again; a delete that stops half-way
+     neither brings it back nor leaves a dead row; media is stored as bytes and
+     comes back a Blob; a refused write keeps the working connection; and one
+     row asks at a time, in the sheet and in the Library.
 """
+import base64
 import json
 import os
 import pathlib
@@ -176,14 +182,22 @@ def menu_click(fr, item, btn="#menuBtn"):
 try:
     if not wait_ready():
         err = proc.stderr.read().decode("utf-8", "replace")[-1500:] if proc.stderr else ""
-        sys.exit(f"SKIP: the example app did not start on port {PORT}.\n{err}")
+        sys.exit(f"FAIL: the example app did not start on port {PORT}.\n{err}")
 
     with sync_playwright() as p:
         b = p.chromium.launch()
 
         # ---------------------------------------------------------------- 1
         print("\n1 — THE API: OWNER ONLY, CSRF, VALIDATED, CAPPED")
-        anon = b.new_context().new_page()
+        errs = []
+
+        def watch(page, tag):
+            # Every page this suite drives, not only the first: an uncaught
+            # error on the hung-storage or second-user page is still a bug.
+            page.on("pageerror", lambda e: errs.append(f"{tag}: {e}"))
+            return page
+
+        anon = watch(b.new_context().new_page(), "anon")
         browsing.goto(anon, BASE, "/skribl/skribl-pad", require_boot=False)
         st, _ = api(anon, "GET", "")
         check("signed out, the list is 401", st == 401, str(st))
@@ -191,9 +205,7 @@ try:
         check("signed out, a save is 401", st in (401, 403), str(st))
 
         ctx_a = b.new_context(viewport={"width": 1180, "height": 900})
-        pa = ctx_a.new_page()
-        errs = []
-        pa.on("pageerror", lambda e: errs.append(str(e)))
+        pa = watch(ctx_a.new_page(), "owner")
         sign_in(pa, 0)
         browsing.goto(pa, BASE, "/skribl/skribl-pad", require_boot=False)
         pa.wait_for_timeout(1500)
@@ -233,6 +245,20 @@ try:
         st, bad = api(pa, "POST", "", {"kind": "pad", "payload": payload,
                                        "thumbnail": "javascript:alert(1)"})
         check("a thumbnail that is not an image data URL is 400", st == 400, f"{st} {bad}")
+        # Only the raster types the editors make, their bytes checked (v317,
+        # security review: anything that began "data:image/" was stored).
+        _svg = "data:image/svg+xml;base64," + base64.b64encode(b"<svg xmlns='http://www.w3.org/2000/svg'/>").decode()
+        st, _ = api(pa, "POST", "", {"kind": "pad", "payload": payload, "thumbnail": _svg})
+        check("an SVG thumbnail is 400", st == 400, str(st))
+        _fake = "data:image/png;base64," + base64.b64encode(b"not a png at all, just text").decode()
+        st, _ = api(pa, "POST", "", {"kind": "pad", "payload": payload, "thumbnail": _fake})
+        check("a 'PNG' thumbnail whose bytes are not a PNG is 400", st == 400, str(st))
+        # A body nested past the parser's recursion was a 500 on every JSON route.
+        _tok = pa.evaluate("() => window.SKRIBL_CSRF_TOKEN || ''")
+        _deep = pa.request.fetch(BASE + "/skribl/api/drafts", method="POST",
+                                 headers={"Content-Type": "application/json", "X-Skribl-CSRF": _tok},
+                                 data=("[" * 100000).encode())
+        check("a body nested too deeply to parse is a 400, not a server error", _deep.status == 400, str(_deep.status))
         # 201 frames: over SKRIBL_MAX_FRAMES, the bound a post meets.
         huge = dict(payload, frames=payload["frames"] * 201)
         st, bad = api(pa, "POST", "", {"kind": "pad", "payload": huge})
@@ -249,7 +275,7 @@ try:
 
         # Somebody else.
         ctx_b = b.new_context()
-        pb = ctx_b.new_page()
+        pb = watch(ctx_b.new_page(), "other")
         sign_in(pb, 1)
         browsing.goto(pb, BASE, "/skribl/skribl-pad", require_boot=False)
         st, lst = api(pb, "GET", "")
@@ -519,7 +545,7 @@ try:
             return {};                     // a request whose events never fire
           };
         })();""")
-        ph = hung.new_page()
+        ph = watch(hung.new_page(), "hung")
         browsing.goto(ph, BASE, "/skribl/skribl-pad", require_boot=False)
         ph.wait_for_timeout(800)
         menu_click(ph, "#openCloudDraftItem")
@@ -539,7 +565,7 @@ try:
         hung.close()
         # A connection closed under the page (what WebKit does while it is in
         # the background): the next read gets one fresh connection, not an error.
-        pd = b.new_context().new_page()
+        pd = watch(b.new_context().new_page(), "closed-db")
         browsing.goto(pd, BASE, "/skribl/skribl-pad", require_boot=False)
         pd.wait_for_timeout(800)
         dead = pd.evaluate("""async () => {
@@ -555,6 +581,21 @@ try:
         }""")
         check("a connection that died in the background: the read succeeds on a fresh one",
               dead.get("v") == 7 and dead.get("thrown") == 2, str(dead))
+        # ONE KEY, ONE QUEUE (third review): put() reads a Blob's bytes before
+        # it opens its transaction, so a del() issued after it went in first and
+        # the put wrote back what had just been removed. An 8 MB Blob makes the
+        # read long enough to overtake every run; a put issued after the del
+        # proves the queue does not simply drop writes.
+        order = pd.evaluate("""async () => {
+          const blob = new Blob([new Uint8Array(8e6)], { type: 'image/jpeg' });
+          await Promise.all([SkriblDraftStore.put('probe:o', { blob, name: 'removed.jpg' }), SkriblDraftStore.del('probe:o')]);
+          const afterDel = await SkriblDraftStore.get('probe:o');
+          await Promise.all([SkriblDraftStore.del('probe:o'), SkriblDraftStore.put('probe:o', { blob, name: 'kept.jpg' })]);
+          const afterPut = await SkriblDraftStore.get('probe:o');
+          await SkriblDraftStore.del('probe:o');
+          return { afterDel: afterDel ? afterDel.name : null, afterPut: afterPut ? afterPut.name : null }; }""")
+        check("the store keeps each key's writes in the order they were asked for (a delete after a put stays deleted)",
+              order == {"afterDel": None, "afterPut": "kept.jpg"}, str(order))
         # THE OWNER'S "they were there, then they disappeared". A read of the
         # index that failed used to answer [] and the next save wrote an index
         # holding only itself. Two drafts, then a save while the index read
@@ -606,9 +647,40 @@ try:
         check("...and comes back out as the same file, type and all",
               stored["backIsBlob"] is True and stored["text"] == "hello bytes" and stored["type"] == "text/plain"
               and stored["name"] == "a.txt", str(stored))
+        # A REFUSED WRITE IS AN ANSWER, NOT A DEAD CONNECTION (v317 review). Every
+        # failure used to drop the connection, unclosed, and open a fresh one.
+        kept = pd.evaluate("""async () => {
+          const real = indexedDB.open.bind(indexedDB); let opens = 0;
+          indexedDB.open = (...a) => { opens++; return real(...a); };
+          await SkriblDraftStore.get('saved:index');           // connection up
+          let refused = null;
+          try { await SkriblDraftStore.put('probe:fn', { f: () => 1 }); } catch (e) { refused = e.name; }
+          await SkriblDraftStore.get('saved:index');
+          indexedDB.open = real;
+          return { refused, opens };
+        }""")
+        check("a write the browser refuses keeps the working connection (no fresh open per failure)",
+              kept["refused"] == "DataCloneError" and kept["opens"] == 0, str(kept))
         check("a draft its index lost is listed again, and written back into the index",
               "Found again" in back["listed"] and "Found again" in back["indexed"]
               and "Keep me one" in back["listed"], str(back))
+        # A DELETE THAT STOPS HALF-WAY (v317 review): the record goes first, the
+        # row second. With the row first, recover() re-listed the record when
+        # the second step failed and the deleted draft came back; with the
+        # record first, the stale row is dropped rather than left to answer
+        # "Draft not found".
+        halfway = pd.evaluate("""async () => {
+          const S = SkriblDraftStore, put = S.put;
+          S.put = (k, v) => k === 'saved:index' ? Promise.reject(new Error('refused')) : put(k, v);
+          let failed = false;
+          try { await SkriblSavedDrafts.remove('lost1'); } catch (e) { failed = true; }
+          S.put = put;
+          const items = await SkriblSavedDrafts.list();
+          return { failed, listed: items.map(i => i.title) };
+        }""")
+        check("a delete that stops half-way says so, and the draft neither comes back nor lingers as a dead row",
+              halfway["failed"] is True and "Found again" not in halfway["listed"]
+              and "Keep me one" in halfway["listed"], str(halfway))
 
         # ONE ROW ASKS AT A TIME (v317): the owner's sheet showed two rows both
         # saying "Tap again". pd's canvas has ink, so the first tap on a row asks.
@@ -626,6 +698,40 @@ try:
             r.classList.contains('armed') || r.querySelector('.sdrafts-del').classList.contains('armed'))""")
         check("...and asking to delete one row puts back the row that asked to open",
               armed2[:2] == [True, False], str(armed2))
+        lab = pd.evaluate("""() => { const d = document.querySelectorAll('#savedDraftsSheet .sdrafts-del');
+            return [d[0].getAttribute('aria-label'), d[1].getAttribute('aria-label'),
+                    document.querySelector('#savedDraftsSheet .sdrafts-meta').getAttribute('aria-live')]; }""")
+        check("the asking bin's name says what the next tap does, the others' do not, and the row's question is spoken",
+              lab[0].startswith("Tap again to delete") and lab[1].startswith("Delete ") and lab[2] == "polite", str(lab))
+        # A KEYBOARD DELETE KEEPS FOCUS IN THE DIALOG (third review). The list
+        # is rebuilt and the focused bin goes with it: focus fell to <body>,
+        # outside the modal, where Tab left the sheet and Escape did nothing.
+        pd.evaluate("() => { SkriblSavedDrafts.close(); SkriblSavedDrafts.forget(); SkriblName.set('Delete me by keyboard'); }")
+        pd.evaluate("() => SkriblSavedDrafts.save()"); pd.wait_for_timeout(600)
+        pd.evaluate("() => SkriblSavedDrafts.open()"); pd.wait_for_timeout(900)
+        kb_row = pd.evaluate("""() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')]
+            .findIndex(r => r.textContent.includes('Delete me by keyboard'))""")
+        pd.locator("#savedDraftsSheet .sdrafts-del").nth(kb_row).focus()
+        pd.keyboard.press("Enter"); pd.wait_for_timeout(150); pd.keyboard.press("Enter"); pd.wait_for_timeout(900)
+        kb = pd.evaluate("""() => { const a = document.activeElement, s = document.getElementById('savedDraftsSheet');
+            return { inSheet: s.contains(a), what: a.className, gone: !s.textContent.includes('Delete me by keyboard') }; }""")
+        pd.keyboard.press("Escape"); pd.wait_for_timeout(500)
+        kb["escClosed"] = pd.evaluate("() => document.getElementById('savedDraftsSheet').hidden")
+        check("the sheet: a draft deleted from the keyboard leaves focus in the sheet, where Escape still closes it",
+              kb_row >= 0 and kb["gone"] and kb["inSheet"] and kb["what"] in ("sdrafts-open", "sdrafts-close") and kb["escClosed"],
+              f"row {kb_row}: {kb}")
+        # A draft deleted elsewhere (the Library) and saved again here is a NEW
+        # draft, and the toast says so instead of "Draft updated" (third review).
+        vanish = pd.evaluate("""async () => { SkriblSavedDrafts.forget(); SkriblName.set('Vanishing');
+            const a = await SkriblSavedDrafts.save(); await SkriblSavedDrafts.remove(a.id);
+            const b = await SkriblSavedDrafts.save(); await new Promise(r => setTimeout(r, 100));
+            const t = [...document.querySelectorAll('.toast, #toast, .skribl-toast')].map(e => e.textContent).join(' | ');
+            await SkriblSavedDrafts.remove(b.id); SkriblSavedDrafts.forget();
+            return { same: a.id === b.id, toast: t }; }""")
+        check("a save after its draft was deleted elsewhere says it saved a new draft, not 'Draft updated'",
+              not vanish["same"] and "updated" not in vanish["toast"] and "Saved" in vanish["toast"], str(vanish))
+        pd.evaluate("() => { SkriblSavedDrafts.forget(); SkriblName.set('Delete me in the library'); }")
+        pd.evaluate("() => SkriblSavedDrafts.save()"); pd.wait_for_timeout(600)
         # The Library draws the same row: the card opens, the bin asks, one at a time.
         browsing.goto(pd, BASE, "/skribl/library#drafts", require_boot=False)
         pd.wait_for_timeout(1500)
@@ -640,6 +746,53 @@ try:
         pd.wait_for_timeout(150)
         larmed = pd.evaluate("() => [...document.querySelectorAll('#draftsList .draft-del')].map(d => d.classList.contains('armed'))")
         check("the Library: one bin asks at a time", larmed[:2] == [False, True], str(larmed))
+        llab = pd.evaluate("""() => [...document.querySelectorAll('#draftsList .draft-del')].slice(0, 2).map(d => d.getAttribute('aria-label'))""")
+        check("the Library: the asking bin's name says so too", llab[0].startswith("Delete ") and llab[1].startswith("Tap again to delete"), str(llab))
+        lk_row = pd.evaluate("""() => [...document.querySelectorAll('#draftsList .draft-row')]
+            .findIndex(r => r.textContent.includes('Delete me in the library'))""")
+        pd.locator("#draftsList .draft-del").nth(lk_row).focus()
+        pd.keyboard.press("Enter"); pd.wait_for_timeout(150); pd.keyboard.press("Enter"); pd.wait_for_timeout(1000)
+        lk = pd.evaluate("""() => { const a = document.activeElement;
+            return { tag: a.tagName, cls: a.className, id: a.id,
+                     gone: !document.getElementById('draftsList').textContent.includes('Delete me in the library') }; }""")
+        check("the Library: a draft deleted from the keyboard hands focus to the next row, not the page",
+              lk_row >= 0 and lk["gone"] and (lk["cls"] == "draft-open" or lk["id"] == "tabDrafts"), f"row {lk_row}: {lk}")
+        head = pd.evaluate("""() => { const h = document.querySelector('h2.libtabs');
+            return { role: h.getAttribute('role'), tabs: h.querySelectorAll('[role=tablist] [role=tab]').length }; }""")
+        check("the Library's tab heading is still a heading, with its tabs inside it",
+              head["role"] is None and head["tabs"] == 2, str(head))
+        # A Pad holding only a photo is work: opening a draft over it asks first.
+        pp = watch(pd.context.new_page(), "photo")   # the same browser, so the same drafts
+        browsing.goto(pp, BASE, "/skribl/skribl-pad", require_boot=False); pp.wait_for_timeout(1200)
+        pp.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
+        # The same browser restores pd's drawing here; start from nothing but a photo.
+        pp.evaluate("() => { clearAllWithUndo(); }"); pp.wait_for_timeout(300)
+        _fd, _name = tempfile.mkstemp(suffix=".png", prefix="clouddrafts_")
+        os.close(_fd)
+        _png = pathlib.Path(_name)
+        _png.write_bytes(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
+        pp.set_input_files("#photoInput", str(_png)); pp.wait_for_timeout(1500)
+        _png.unlink(missing_ok=True)
+        menu_click(pp, "#openCloudDraftItem")
+        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
+        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).click(); pp.wait_for_timeout(200)
+        asked = pp.evaluate("""() => ({ armed: document.querySelector('#savedDraftsSheet .sdrafts-row').classList.contains('armed'),
+            strokes: strokes.length, ink: !!hasContent, photo: !!(photoBgImg && photoBgImg._fileName) })""")
+        check("a Pad holding only a photo asks before a draft replaces it",
+              asked["armed"] is True and asked["strokes"] == 0 and not asked["ink"] and asked["photo"], str(asked))
+        # ...and so does one whose photo is still on its way (pending, restoring):
+        # the draft must not replace the autosave mid-restore.
+        pp.evaluate("""() => { SkriblSavedDrafts.close && SkriblSavedDrafts.close(); resetAll();
+            pendingPhotoMeta = { name: 'coming.png' }; _restoring.photo = true; }""")
+        pp.wait_for_timeout(400)
+        menu_click(pp, "#openCloudDraftItem")
+        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
+        pp.wait_for_timeout(300)
+        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).click(); pp.wait_for_timeout(200)
+        asked2 = pp.evaluate("""() => ({ armed: document.querySelector('#savedDraftsSheet .sdrafts-row').classList.contains('armed'),
+            strokes: strokes.length })""")
+        check("a Pad whose photo is still being restored asks too", asked2["armed"] is True and asked2["strokes"] == 0, str(asked2))
+        pp.close()
 
         check("no page errors", not errs, "; ".join(errs[:3]))
         b.close()

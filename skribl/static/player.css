@@ -185,6 +185,7 @@
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
      .post-watch), Flip's share CTA (.flip-share-open), and the whole PLAYER
+     (those carrying words use --accent-fill, below, for AA)
      surface — a shared link travels off the branded
      host, so the player stays branded, and verify_ux pins its active fill
      to this exact colour. Everything else moved to the --ui-* roles below.
@@ -192,6 +193,13 @@
   --accent: #7c5cff;
   --accent-2: #5b8cff;
   --accent-bright: #9179ff;
+  /* The same colours one step deeper, for a fill that carries WORDS. White on
+     --accent is 4.35:1 and on --accent-2 3.16:1, under AA's 4.5 for text this
+     size; these are 5.33 and 4.83. Dots, bars, outlines and icons keep the
+     bright ones (3:1 is their floor). verify_a11y A11Y 6c measures every
+     worded accent fill on the page. */
+  --accent-fill: #6d4cf0;
+  --accent-2-fill: #3f6ae0;
   --accent-glow: rgba(0,0,0,0.32);
 
   /* Demoted-UI roles. The CLASSIFICATION is permanent -- every former accent
@@ -812,9 +820,9 @@ body.player-mode .canvas-area { display: contents; }
   transition: background 0.2s ease;
 }
 /* ON A FINGER, THE WHOLE PILL IS A CONTROL SURFACE. At 28px tall and 11px type
-   it was sized as a status, and it now carries two actions on the route amber
-   — the words re-add, the × dismisses. Two controls in a 28px bar is the
-   cramped feeling itself. On a coarse pointer the pill is 40px tall at 13px
+   it was sized as a status, and on the route amber it carries three controls
+   -- the words and the Re-add button re-add, the × dismisses. Controls
+   crowded into a 28px bar are the cramped feeling itself. On a coarse pointer the pill is 40px tall at 13px
    type: the words get a comfortable target, the × grows to 30px, and neither
    crowds the other. A mouse keeps the compact pill, where hover already says
    what is live. */
@@ -1386,7 +1394,7 @@ body.player-mode #canvas {
 }
 .player-error-btn:hover { background: rgba(var(--wash-rgb), 0.08); }
 .player-error-btn.primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: transparent;
   color: #fff;
 }
@@ -1486,7 +1494,7 @@ a.player-btn { text-decoration: none; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
   border: none;
   border-radius: var(--r-pill);

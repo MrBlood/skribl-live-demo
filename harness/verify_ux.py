@@ -1253,6 +1253,7 @@ with _sp204() as _p:
     # every export carried it. The typed title and the export sheet's own field
     # both clear; get() falls back to a fresh auto-name; Undo brings it back.
     for page_, nm, fn in ((pg, "Pad", "clearAllWithUndo()"), (fp, "Flip", "clearAllPages()")):
+        page_.evaluate("() => { if (window.SkriblSavedDrafts) SkriblSavedDrafts.resume('draft-before'); }")
         page_.evaluate("() => { SkriblName.set('Old title'); const e = document.getElementById('exportName');"
                        " if (e) { e.value = 'old-export'; e._skriblDirty = true; } }")
         page_.evaluate(f"() => {fn}")
@@ -1269,6 +1270,13 @@ with _sp204() as _p:
     back = (pg.evaluate("() => SkriblName.get()"), fp.evaluate("() => SkriblName.get()"))
     check("V317: Undo brings the old title back with the drawing, on both editors",
           back == ("Old title", "Old title"), str(back))
+    _exp = "() => { const e = document.getElementById('exportName'); return e ? [e.value, !!e._skriblDirty] : null; }"
+    back_exp = (pg.evaluate(_exp), fp.evaluate(_exp))
+    back_draft = (pg.evaluate("() => SkriblSavedDrafts.current()"), fp.evaluate("() => SkriblSavedDrafts.current()"))
+    check("V317: ...and the saved draft it was, so the next Save updates it rather than copying it",
+          back_draft == ("draft-before", "draft-before"), str(back_draft))
+    check("V317: ...and the typed export name with it (Undo used to lose it for good)",
+          back_exp == (["old-export", True], ["old-export", True]), str(back_exp))
     # .skribl file input accepts the types iOS tags an unknown-ext JSON file with
     for page_, nm in ((pg, "Pad"), (fp, "Flip")):
         acc = page_.evaluate("() => document.getElementById('draftInput').getAttribute('accept')")
@@ -1287,6 +1295,17 @@ with _sp204() as _p:
     ftoast = fp.evaluate("() => { const c = document.querySelector('.chip'); return c ? c.textContent : (document.body.textContent.includes('Pad Skribl') ? 'Pad Skribl' : ''); }")
     check("V206: loading a Pad .skribl into Flip is refused with 'open it in Skribl Pad'",
           "Pad Skribl" in ftoast or "Skribl Pad" in ftoast, repr(ftoast)[:80])
+    # V317 (third review): a backup file opened over a saved draft is a NEW
+    # document. It kept the draft's id, so the next Save draft overwrote that
+    # draft with the backup ("Draft updated") and the draft was gone.
+    _left = []
+    for page_, doc in ((pg, pad_doc), (fp, flip_doc)):
+        page_.evaluate("() => SkriblSavedDrafts.resume('draft-before')")
+        page_.set_input_files("#draftInput", {"name": "backup.skribl", "mimeType": "application/json", "buffer": doc.encode()})
+        page_.wait_for_timeout(600)
+        _left.append(page_.evaluate("() => SkriblSavedDrafts.current()"))
+    check("V317: opening a backup file lets go of the saved draft, so Save cannot overwrite it (Pad, Flip)",
+          _left == [None, None], str(_left))
     pg.close()
 
     # The Flip image/music drawer must SURVIVE picking a file. Flip's file

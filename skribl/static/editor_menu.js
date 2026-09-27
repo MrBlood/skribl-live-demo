@@ -29,6 +29,7 @@ let menuCloseTimer = null;
 
 function openMenu() {
   clearTimeout(menuCloseTimer);
+  if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.cancelSlide(menuSheet);   // reopened mid-close: from where it is
   updateClearVisibility();
   // Re-read the stored state on every open. It is shared with Flip and can be
   // changed in another tab, and a switch showing the opposite of what is
@@ -63,7 +64,9 @@ function closeMenu(instant) {
 
 menuBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (menuOverlay.hidden) openMenu(); else closeMenu();
+  // A menu easing away is closed, so a second tap brings it back (as Flip's
+  // and the page menus do, v317). The overlay stays unhidden for the slide.
+  if (!menuOverlay.classList.contains('open')) openMenu(); else closeMenu();
 });
 
 menuOverlay.addEventListener('click', (e) => {
@@ -97,20 +100,21 @@ function resetAll() {
 // that case, just without the undo offer.
 function clearAllWithUndo() {
   // A new Skribl is a new draft: the next Save must not overwrite the old one.
-  if (window.SkriblSavedDrafts) window.SkriblSavedDrafts.forget();
+  const prevDraft = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;
   let snap = null;
   if (mediaBusy === 0) {
     try { snap = serializeSkribl(); } catch (err) { snap = null; }
   }
   resetAll();
-  const prevName = window.SkriblName && window.SkriblName.reset ? window.SkriblName.reset() : '';
+  const prevName = window.SkriblName && window.SkriblName.reset ? window.SkriblName.reset() : null;
   if (!snap) return;
   showToast('New Skribl', null, {
     label: 'Undo',
     onClick: () => {
       try {
         loadSkribl(snap);
-        if (window.SkriblName) window.SkriblName.set(prevName);   // the drawing's name comes back with it
+        if (window.SkriblName) window.SkriblName.restore(prevName);   // its names come back with it
+        if (window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(prevDraft);   // and its saved draft
         showToast('Restored', null, { label: 'Redo', onClick: clearAllWithUndo });
       } catch (err) {
         showToast('Couldn\u2019t restore that', null);
@@ -293,7 +297,27 @@ document.addEventListener('DOMContentLoaded', function () {
     kind: 'pad',
     serialize: function () { return serializeSkribl(); },
     load: function (d) { loadSkribl(d); },
-    hasContent: function () { return !!(hasContent || (typeof strokes !== 'undefined' && strokes.length)); },
+    // A photo or a track on its own is work too: replacing it asks first, and
+    // it can be saved (v317 review).
+    // ...and so is media still on its way: a pending record, a restore still
+    // reading the store, a photo still decoding. Counting only what had landed
+    // let a draft opened from the Library replace the autosaved photo mid-
+    // restore without asking (v317 review).
+    hasContent: function () {
+      return !!(hasContent || (typeof strokes !== 'undefined' && strokes.length)
+                || (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
+                || (audioEl && audioEl._fileName)
+                || (typeof _mediaPresent === 'function' && _mediaPresent())
+                || (typeof _inFlight !== 'undefined' && _inFlight.photo)
+                || (typeof _restoring !== 'undefined' && (_restoring.photo || _restoring.music)));
+    },
+    // A photo or track still being read: its name is already the new file's
+    // and its bytes are still the old one's (third review).
+    busy: function () {
+      return !!((typeof mediaBusy !== 'undefined' && mediaBusy > 0)
+                || (typeof _inFlight !== 'undefined' && _inFlight.photo)
+                || (typeof _restoring !== 'undefined' && (_restoring.photo || _restoring.music)));
+    },
     thumbnail: function () { return window.skriblPreviewCanvas ? window.skriblPreviewCanvas() : document.getElementById('canvas'); },
     otherUrl: function () { var a = document.getElementById('flipBtn'); return a ? a.getAttribute('href') : null; },
     closeMenu: function () { if (typeof closeMenu === 'function') closeMenu(true); },
