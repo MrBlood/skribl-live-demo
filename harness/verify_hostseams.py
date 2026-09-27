@@ -406,7 +406,7 @@ _appmod = importlib.import_module("app")
 _saved = {k: os.environ.get(k) for k in
           ("SKRIBL_DEMO_IDENTITY", "SKRIBL_DEMO_IDENTITY_NAME",
            "SKRIBL_DEMO_IDENTITY_AVATAR", "SKRIBL_DEMO_IDENTITY_URL",
-           "SKRIBL_DEMO_IDENTITY_VERIFIED", "SKRIBL_CSRF_PROTECT",
+           "SKRIBL_DEMO_IDENTITY_VERIFIED", "SKRIBL_CSRF_PROTECT", "SKRIBL_DEMO_LOGIN_KEY",
            "DATABASE_URL", "SECRET_KEY", "SKRIBL_ALLOW_EPHEMERAL_SECRET")}
 
 
@@ -446,16 +446,55 @@ try:
           "SKRIBL_CSRF_PROTECT" in _msg,
           f"raised {_msg[:140]!r} — an operator reads this in a deploy log")
 
-    # AND ON, IT DESCRIBES EXACTLY ONE PERSON.
+    # WITHOUT A LOGIN KEY, NOBODY IS SIGNED IN (v317, security review). The
+    # handle used to be EVERY visitor's identity: a stranger could delete the
+    # owner's posts and read their drafts. Unkeyed, the demo fails SAFE --
+    # boots, anonymous -- rather than refusing to boot a live service.
+    _env(SKRIBL_DEMO_IDENTITY="bigballbaron", SKRIBL_CSRF_PROTECT="1", SKRIBL_DEMO_LOGIN_KEY=None)
+    _nokey = _appmod.create_app()
+    with _nokey.test_request_context("/"):
+        _who = _nokey.blueprints["skribl"].skribl_current_user_id()
+    check("an identity with no login key signs NOBODY in (it boots, anonymous)", _who is None, repr(_who))
+
+    # AND ON, ONLY THE BROWSER THAT PRESENTED THE KEY IS THE USER.
+    _KEY = "harness-demo-login-key-0123456789"
     _env(SKRIBL_DEMO_IDENTITY="bigballbaron", SKRIBL_CSRF_PROTECT="1",
+         SKRIBL_DEMO_LOGIN_KEY=_KEY,
          SKRIBL_DEMO_IDENTITY_NAME="Mr. B",
          SKRIBL_DEMO_IDENTITY_AVATAR="https://media.example.test/skull.png",
          SKRIBL_DEMO_IDENTITY_URL="https://example.test/u/bigballbaron",
          SKRIBL_DEMO_IDENTITY_VERIFIED="1")
     _on = _appmod.create_app()
-    check("with it set, the demo signs one user in",
-          _on.blueprints["skribl"].skribl_current_user_id() == "bigballbaron",
-          "this id is what goes on a new post's user_id")
+    # Over https: the session cookie is Secure, and a test client over http
+    # would neither send it back nor show whether the flag is set.
+    class _Https:
+        def __init__(self, c): self.c = c
+        def get(self, url): return self.c.get(url, base_url="https://localhost")
+    _stranger = _Https(_on.test_client())
+    _owner = _Https(_on.test_client())
+    with _on.test_request_context("/"):
+        from flask import url_for as _u
+        _drafts_url = _u("skribl.list_saved_drafts")
+    check("a stranger is not the owner: their drafts list is refused",
+          _stranger.get(_drafts_url).status_code == 401, _drafts_url)
+    check("a wrong key is a plain 404, and signs nobody in",
+          _stranger.get("/demo-login?key=wrong-key-wrong-key").status_code == 404
+          and _stranger.get(_drafts_url).status_code == 401, "")
+    _login = _owner.get("/demo-login?key=" + _KEY)
+    check("the right key signs THAT browser in (and only it)",
+          _login.status_code in (301, 302) and _owner.get(_drafts_url).status_code == 200
+          and _stranger.get(_drafts_url).status_code == 401, f"login {_login.status_code}")
+    _ck = _login.headers.get("Set-Cookie", "")
+    check("...with a cookie scripts cannot read, other sites cannot send, and plain http never carries",
+          "HttpOnly" in _ck and "SameSite=Lax" in _ck and "Secure" in _ck, _ck[-120:])
+    with _on.test_request_context("/"):
+        from flask import session as _sess
+        _sess["skribl_demo"] = "bigballbaron"
+        _signed = _on.blueprints["skribl"].skribl_current_user_id()
+    check("with it set, the signed-in browser is one user",
+          _signed == "bigballbaron", "this id is what goes on a new post's user_id")
+    _owner.get("/demo-logout")
+    check("/demo-logout signs it out again", _owner.get(_drafts_url).status_code == 401, "")
     with _on.app_context():
         _me = skribl.models.author_dict("bigballbaron")
         _other = skribl.models.author_dict("somebody-else")
