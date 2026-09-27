@@ -692,10 +692,22 @@
         del.setAttribute('aria-label', 'Tap again to delete ' + title);
         return;
       }
+      // The rebuilt list takes the focused bin with it: focus goes to the row
+      // that took this one's place, or the Drafts tab (third review). Read
+      // before the bin is disabled, which drops its focus by itself.
+      var at = Array.prototype.indexOf.call(dList.querySelectorAll('.draft-row'), row);
+      var hadFocus = row.contains(document.activeElement);
       del.disabled = true;
       SD.remove(it.id).then(renderDrafts, function (e) {
         del.disabled = false;
         meta.textContent = e.message;
+        return false;
+      }).then(function (ok) {
+        if (ok === false || !hadFocus) return;
+        var rows = dList.querySelectorAll('.draft-row');
+        var next = rows[Math.min(at, rows.length - 1)];
+        var target = (next && next.querySelector('.draft-open')) || document.getElementById('tabDrafts');
+        if (target) target.focus();
       });
     });
     row.appendChild(open);
@@ -712,7 +724,7 @@
     dWhere.textContent = SD.where() === 'account'
       ? 'Saved to your account, on every device you sign in on.'
       : 'Saved on this browser only.';
-    SD.list().then(function (items) {
+    return SD.list().then(function (items) {
       if (mine !== draftsSeq) return;
       dList.textContent = '';
       draftDisarmers = [];

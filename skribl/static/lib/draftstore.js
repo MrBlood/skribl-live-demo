@@ -181,8 +181,25 @@
     return value;
   }
 
+  /* ONE KEY, ONE QUEUE (third review). put() reads a Blob's bytes BEFORE it
+     opens its transaction, so a del() issued after it opened first, and the
+     put then wrote back what had just been removed: a photo taken off the
+     page stayed in the store. Writes to the same key now run in the order
+     they were asked for. Each waits only on the one before it, and every op
+     has a deadline, so a queue cannot stall for longer than one write. */
+  var tail = {};
+  function inOrder(key, run) {
+    var next = (tail[key] || Promise.resolve()).then(run, run);
+    var settled = next.then(function () {}, function () {});
+    tail[key] = settled;
+    settled.then(function () { if (tail[key] === settled) delete tail[key]; });
+    return next;
+  }
+
   function put(key, value) {
-    return pack(value).then(function (packed) { return putRaw(key, packed); });
+    return inOrder(key, function () {
+      return pack(value).then(function (packed) { return putRaw(key, packed); });
+    });
   }
   function putRaw(key, value) {
     return op('readwrite', function (store, tx, resolve, reject) {
@@ -205,11 +222,13 @@
   }
 
   function del(key) {
-    return op('readwrite', function (store, tx, resolve, reject) {
-      store.delete(key);
-      tx.oncomplete = function () { resolve(true); };
-      tx.onerror = function () { reject(tx.error || new Error('delete failed')); };
-      tx.onabort = function () { reject(tx.error || new Error('delete aborted')); };
+    return inOrder(key, function () {
+      return op('readwrite', function (store, tx, resolve, reject) {
+        store.delete(key);
+        tx.oncomplete = function () { resolve(true); };
+        tx.onerror = function () { reject(tx.error || new Error('delete failed')); };
+        tx.onabort = function () { reject(tx.error || new Error('delete aborted')); };
+      });
     });
   }
 

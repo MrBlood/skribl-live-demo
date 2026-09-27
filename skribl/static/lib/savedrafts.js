@@ -326,10 +326,22 @@
           del.classList.add('armed');
           return;
         }
+        // The list is rebuilt, and the bin that had focus goes with it; a
+        // keyboard user left on <body> was outside the dialog, where Tab and
+        // Escape no longer reached it (third review). Focus lands on the row
+        // that took this one's place, or the sheet's close button.
+        var at = Array.prototype.indexOf.call(listEl.querySelectorAll('.sdrafts-row'), row);
+        var hadFocus = row.contains(document.activeElement);
         backend.remove(it.id).then(function () {
           if (opts._current === it.id) opts._current = null;
-          refresh();
-        }, function (e) { opts.toast(e.message); });
+          return refresh();
+        }, function (e) { opts.toast(e.message); return false; }).then(function (ok) {
+          if (ok === false || !hadFocus || sheet.hidden) return;   // a refused delete keeps its row, and focus
+          var rows = listEl.querySelectorAll('.sdrafts-row');
+          var next = rows[Math.min(at, rows.length - 1)];
+          var target = (next && next.querySelector('.sdrafts-open')) || sheet.querySelector('.sdrafts-close');
+          if (target) target.focus();
+        });
       });
       row.appendChild(openBtn);
       row.appendChild(del);
@@ -408,7 +420,9 @@
     var was = opts._current;
     return backend.save(was, body).then(function (sum) {
       opts._current = sum.id;
-      opts.toast(was ? 'Draft updated' : (backend.where === 'account' ? 'Saved to your drafts' : 'Saved to drafts on this browser'));
+      // "Updated" only when it was: a local store answers a vanished id with a
+      // new draft rather than an error.
+      opts.toast(was && sum.id === was ? 'Draft updated' : (backend.where === 'account' ? 'Saved to your drafts' : 'Saved to drafts on this browser'));
       return sum;
     }, function (e) {
       // A draft deleted elsewhere since it was opened: save it as a new one.

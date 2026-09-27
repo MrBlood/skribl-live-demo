@@ -581,6 +581,21 @@ try:
         }""")
         check("a connection that died in the background: the read succeeds on a fresh one",
               dead.get("v") == 7 and dead.get("thrown") == 2, str(dead))
+        # ONE KEY, ONE QUEUE (third review): put() reads a Blob's bytes before
+        # it opens its transaction, so a del() issued after it went in first and
+        # the put wrote back what had just been removed. An 8 MB Blob makes the
+        # read long enough to overtake every run; a put issued after the del
+        # proves the queue does not simply drop writes.
+        order = pd.evaluate("""async () => {
+          const blob = new Blob([new Uint8Array(8e6)], { type: 'image/jpeg' });
+          await Promise.all([SkriblDraftStore.put('probe:o', { blob, name: 'removed.jpg' }), SkriblDraftStore.del('probe:o')]);
+          const afterDel = await SkriblDraftStore.get('probe:o');
+          await Promise.all([SkriblDraftStore.del('probe:o'), SkriblDraftStore.put('probe:o', { blob, name: 'kept.jpg' })]);
+          const afterPut = await SkriblDraftStore.get('probe:o');
+          await SkriblDraftStore.del('probe:o');
+          return { afterDel: afterDel ? afterDel.name : null, afterPut: afterPut ? afterPut.name : null }; }""")
+        check("the store keeps each key's writes in the order they were asked for (a delete after a put stays deleted)",
+              order == {"afterDel": None, "afterPut": "kept.jpg"}, str(order))
         # THE OWNER'S "they were there, then they disappeared". A read of the
         # index that failed used to answer [] and the next save wrote an index
         # holding only itself. Two drafts, then a save while the index read
@@ -688,6 +703,35 @@ try:
                     document.querySelector('#savedDraftsSheet .sdrafts-meta').getAttribute('aria-live')]; }""")
         check("the asking bin's name says what the next tap does, the others' do not, and the row's question is spoken",
               lab[0].startswith("Tap again to delete") and lab[1].startswith("Delete ") and lab[2] == "polite", str(lab))
+        # A KEYBOARD DELETE KEEPS FOCUS IN THE DIALOG (third review). The list
+        # is rebuilt and the focused bin goes with it: focus fell to <body>,
+        # outside the modal, where Tab left the sheet and Escape did nothing.
+        pd.evaluate("() => { SkriblSavedDrafts.close(); SkriblSavedDrafts.forget(); SkriblName.set('Delete me by keyboard'); }")
+        pd.evaluate("() => SkriblSavedDrafts.save()"); pd.wait_for_timeout(600)
+        pd.evaluate("() => SkriblSavedDrafts.open()"); pd.wait_for_timeout(900)
+        kb_row = pd.evaluate("""() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')]
+            .findIndex(r => r.textContent.includes('Delete me by keyboard'))""")
+        pd.locator("#savedDraftsSheet .sdrafts-del").nth(kb_row).focus()
+        pd.keyboard.press("Enter"); pd.wait_for_timeout(150); pd.keyboard.press("Enter"); pd.wait_for_timeout(900)
+        kb = pd.evaluate("""() => { const a = document.activeElement, s = document.getElementById('savedDraftsSheet');
+            return { inSheet: s.contains(a), what: a.className, gone: !s.textContent.includes('Delete me by keyboard') }; }""")
+        pd.keyboard.press("Escape"); pd.wait_for_timeout(500)
+        kb["escClosed"] = pd.evaluate("() => document.getElementById('savedDraftsSheet').hidden")
+        check("the sheet: a draft deleted from the keyboard leaves focus in the sheet, where Escape still closes it",
+              kb_row >= 0 and kb["gone"] and kb["inSheet"] and kb["what"] in ("sdrafts-open", "sdrafts-close") and kb["escClosed"],
+              f"row {kb_row}: {kb}")
+        # A draft deleted elsewhere (the Library) and saved again here is a NEW
+        # draft, and the toast says so instead of "Draft updated" (third review).
+        vanish = pd.evaluate("""async () => { SkriblSavedDrafts.forget(); SkriblName.set('Vanishing');
+            const a = await SkriblSavedDrafts.save(); await SkriblSavedDrafts.remove(a.id);
+            const b = await SkriblSavedDrafts.save(); await new Promise(r => setTimeout(r, 100));
+            const t = [...document.querySelectorAll('.toast, #toast, .skribl-toast')].map(e => e.textContent).join(' | ');
+            await SkriblSavedDrafts.remove(b.id); SkriblSavedDrafts.forget();
+            return { same: a.id === b.id, toast: t }; }""")
+        check("a save after its draft was deleted elsewhere says it saved a new draft, not 'Draft updated'",
+              not vanish["same"] and "updated" not in vanish["toast"] and "Saved" in vanish["toast"], str(vanish))
+        pd.evaluate("() => { SkriblSavedDrafts.forget(); SkriblName.set('Delete me in the library'); }")
+        pd.evaluate("() => SkriblSavedDrafts.save()"); pd.wait_for_timeout(600)
         # The Library draws the same row: the card opens, the bin asks, one at a time.
         browsing.goto(pd, BASE, "/skribl/library#drafts", require_boot=False)
         pd.wait_for_timeout(1500)
@@ -704,6 +748,15 @@ try:
         check("the Library: one bin asks at a time", larmed[:2] == [False, True], str(larmed))
         llab = pd.evaluate("""() => [...document.querySelectorAll('#draftsList .draft-del')].slice(0, 2).map(d => d.getAttribute('aria-label'))""")
         check("the Library: the asking bin's name says so too", llab[0].startswith("Delete ") and llab[1].startswith("Tap again to delete"), str(llab))
+        lk_row = pd.evaluate("""() => [...document.querySelectorAll('#draftsList .draft-row')]
+            .findIndex(r => r.textContent.includes('Delete me in the library'))""")
+        pd.locator("#draftsList .draft-del").nth(lk_row).focus()
+        pd.keyboard.press("Enter"); pd.wait_for_timeout(150); pd.keyboard.press("Enter"); pd.wait_for_timeout(1000)
+        lk = pd.evaluate("""() => { const a = document.activeElement;
+            return { tag: a.tagName, cls: a.className, id: a.id,
+                     gone: !document.getElementById('draftsList').textContent.includes('Delete me in the library') }; }""")
+        check("the Library: a draft deleted from the keyboard hands focus to the next row, not the page",
+              lk_row >= 0 and lk["gone"] and (lk["cls"] == "draft-open" or lk["id"] == "tabDrafts"), f"row {lk_row}: {lk}")
         head = pd.evaluate("""() => { const h = document.querySelector('h2.libtabs');
             return { role: h.getAttribute('role'), tabs: h.querySelectorAll('[role=tablist] [role=tab]').length }; }""")
         check("the Library's tab heading is still a heading, with its tabs inside it",
