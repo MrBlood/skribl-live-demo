@@ -1166,8 +1166,9 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
 .tab-dot[hidden] { display: none; }
 
 /* Amber = the file is remembered but missing, and the user has to re-add it.
-   Same yellow as the autosave pill, so the toolbar dot, the status light and
-   the re-add card all say the same thing. */
+   The same amber as the autosave pill's dot and the re-add card's border and
+   meta line, so every warning light says the same thing. The buttons that act
+   on it are the action purple (v317). */
 .tab-dot.pending {
   background: var(--warn);
   box-shadow: 0 0 3px rgba(255, 210, 63, 0.35);
@@ -2829,8 +2830,8 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
    pointer-events IS THE WHOLE FIX. The base pill sets `pointer-events: none` so
    a status that happens to sit over a control cannot eat the tap meant for it
    -- right while the pill is only a status, and exactly why making it tappable
-   is a CSS change and not just a listener. A ring in the warn colour, so the
-   affordance and the severity are the same signal. NOT a transform on :active
+   is a CSS change and not just a listener. The ring is a neutral hairline: the
+   amber is the dot's alone since v317 ("maybe not so gold?"). NOT a transform on :active
    -- lib/pillfit.js lifts the pill with translateY and a transform here would
    replace the lift, out from under the finger pressing it. */
 .autosave-status.actionable { pointer-events: auto; box-shadow: 0 0 0 1px var(--hairline, #252a35) inset; }
@@ -2882,9 +2883,9 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
 .autosave-dismiss:hover::before { background: rgba(var(--wash-rgb), 0.20); }
 .autosave-dismiss:active::before { background: rgba(var(--wash-rgb), 0.32); }
 /* ON A FINGER, THE WHOLE PILL IS A CONTROL SURFACE. At 28px tall and 11px type
-   it was sized as a status, and it now carries two actions on the route amber
-   — the words re-add, the × dismisses. Two controls in a 28px bar is the
-   cramped feeling itself. On a coarse pointer the pill is 40px tall at 13px
+   it was sized as a status, and on the route amber it carries three controls
+   -- the words and the Re-add button re-add, the × dismisses. Controls
+   crowded into a 28px bar are the cramped feeling itself. On a coarse pointer the pill is 40px tall at 13px
    type: the words get a comfortable target, the × grows to 30px, and neither
    crowds the other. A mouse keeps the compact pill, where hover already says
    what is live. */
@@ -2900,12 +2901,11 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
 .autosave-dismiss:focus-visible::before { outline: 2px solid var(--warn); outline-offset: 1px; }
 .autosave-dismiss[hidden] { display: none; }
 /* Re-add: the pill's action, looking like one (lib/autosavepill.js, v317).
-   Amber like the pill, filled so it reads as THE button beside a quiet ×. It
-   inherits the pill's pointer-events, so a panel that blocks the pill blocks
-   it too. */
+   The app's action colour with white words, as Post is -- never dark text on a
+   coloured pill (the owner) -- filled so it reads as THE button beside a quiet
+   ×. It inherits the pill's pointer-events, so a panel that blocks the pill
+   blocks it too. */
 .autosave-readd { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 0;
-  /* The app's action colour with white words, as Post is: never dark text on a
-     coloured pill (the owner, v317). */
   background: var(--accent); color: #fff; font: inherit; font-size: 13px; font-weight: 700;
   cursor: pointer; white-space: nowrap; }
 .autosave-readd:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

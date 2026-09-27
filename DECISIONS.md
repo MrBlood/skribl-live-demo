@@ -12187,8 +12187,9 @@ white words, never dark (#260).
 
 ### Cal (#262)
 
-The working agreements moved, unchanged, from CLAUDE.md to
-WORKING-AGREEMENTS.md, and CLAUDE.md now includes them. The owner's words: "no
+The working agreements moved from CLAUDE.md to WORKING-AGREEMENTS.md, and
+CLAUDE.md now includes them. Nothing in them changed except two words: an
+opening line naming Cal, and "the assistant" became "Cal". The owner's words: "no
 ads, and say I have a friend helping me named Cal". The .gitignore ad went, and
 the README credits him.
 

@@ -19,9 +19,10 @@
  * THE CONTROL IS THE PILL'S TEXT, NOT THE PILL. Beside it sits a × of its own
  * (created here, so the player's copy of the markup — which never has media
  * to lose — carries nothing extra), and a button inside a role=button is
- * invalid nesting. The status stays a status and holds two controls, each
- * announced only while it does something: role and tabindex are added exactly
- * while there is somewhere to go and removed the moment there is not.
+ * invalid nesting. The status stays a status and holds its controls -- the
+ * text, the Re-add button (v317) and the × -- each announced only while it
+ * does something: role and tabindex are added exactly while there is
+ * somewhere to go and removed the moment there is not.
  *
  * 'failed', 'full' and 'saved-no-media' STAY UP — each describes an ongoing
  * durability problem, and a warning that fades claims it was resolved. A

@@ -19,8 +19,8 @@
  * any route forgets its detent, so every fresh open starts at half,
  * predictable. WHAT IT DOES NOT: opening and closing. The exclusive-drawer
  * machine (lib/drawers.js on Pad, Flip's wrappers) keeps that; `close` is
- * injected so a pull-down-past-half can hand off to whichever machine owns
- * the panel.
+ * injected so a tap on the grabber, or a pull down past half, can hand off to
+ * whichever machine owns the panel.
  */
 (function () {
   'use strict';
@@ -95,7 +95,8 @@
 
     /* The grabber: a tap closes; a deliberate drag reads the direction — up
      * expands, down collapses, down again closes. Threshold 24px so a wobbly
-     * tap is still a tap. With no `close` to hand off to, a tap still toggles. */
+     * tap is still a tap. Both editors pass `close`; the toggle is the
+     * defensive fallback for a caller that does not, so a tap is never dead. */
     function tap() { if (close) close(); else setFull(!isFull()); }
     var sy = null, pid = null, acted = false;
     handle.addEventListener('pointerdown', function (e) {

@@ -25,6 +25,11 @@ the cap can be reached in a few saves.
      asks before a draft replaces it.
   7  Storage that never answers, or a connection that died in the background
      (v317, the owner's iPhone): the sheet says so and retries; a read reconnects.
+  8  Drafts that stay (v317): a failed index read writes nothing over the list;
+     a draft its index lost is listed again; a delete that stops half-way
+     neither brings it back nor leaves a dead row; media is stored as bytes and
+     comes back a Blob; a refused write keeps the working connection; and one
+     row asks at a time, in the sheet and in the Library.
 """
 import json
 import os

@@ -4,14 +4,15 @@
  * media METADATA only and Flip's dropped media on QuotaExceededError. Both
  * were honest about it (the amber "Saved without media" pill) — but honest
  * data loss is still data loss, and DESIGN-DIRECTION.md names durable drafts
- * as a prerequisite. IndexedDB stores Blobs natively with an origin quota in
- * the hundreds of MB, so a photo and an audio track fit without ceremony.
+ * as a prerequisite. IndexedDB has an origin quota in the hundreds of MB, so a
+ * photo and an audio track fit without ceremony.
  *
- * DELIBERATELY TINY. Three verbs over one object store, promises throughout,
- * no schema beyond "value at key". Keys are namespaced by surface ('pad:photo',
- * 'pad:music', 'flip:draft') so the two editors cannot collide. Values are
- * plain objects carrying a Blob/File plus metadata — structured clone handles
- * both.
+ * DELIBERATELY TINY. Four verbs over one object store (put, get, del, keys),
+ * promises throughout, no schema beyond "value at key". Keys are namespaced by
+ * surface ('pad:photo', 'pad:music', 'flip:draft', 'saved:*') so nothing can
+ * collide. Values are plain objects with metadata; a top-level Blob or File in
+ * one is stored as its bytes and type and comes back a Blob (BYTES, NOT BLOBS
+ * below), so callers put and get Blobs as they always did.
  *
  * FAILURE IS A RESULT, NOT AN EXCEPTION PATH. Private-mode browsers, disabled
  * IndexedDB, and quota pressure all surface as a rejected promise; every
@@ -20,8 +21,9 @@
  * "returned null" identical to every caller for three builds) applies to
  * storage twice over.
  *
- * The editors load this; the player must not — it never writes a draft, and
- * the player budget is a ratchet. verify_player_isolation guards the payload.
+ * The editors and the Library load this; the player must not — it never
+ * writes a draft, and the player budget is a ratchet. verify_player_isolation
+ * guards the payload.
  */
 (function () {
   'use strict';

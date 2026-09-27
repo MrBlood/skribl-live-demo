@@ -16,7 +16,14 @@ SECTION 2 — module-level names.
     IntegrityError). Only one was on a path a test walked. A name that no
     import provides is a crash waiting for the right request.
 
-Both sections read source only — no server, no browser.
+SPLIT BUDGET — what the player is forced to download: its reachable lines,
+    the editor-only lines kept off it (a ratchet), and the script tags of its
+    template and every partial it includes, which must name no editor bundle.
+
+SPLIT FRESHNESS — player.css is byte for byte what harness/tools/cssgraph.py
+    emits from styles.css (it runs the tool in a subprocess).
+
+All of it reads source only — no server, no browser.
 """
 import ast
 import builtins
@@ -238,9 +245,12 @@ if _marker in _appjs:
     # so the figures stay commensurable rather than mixing spans with raw line
     # counts.
     #
-    # lib/sheetswipe.js joins the list for the same reason (v317): the Pad
-    # menu's own swipe code moved out of editor_menu.js into it, the player
-    # never loads it, and without it here the move read as a leak.
+    # lib/sheetswipe.js joins the list (v317): the Pad menu's own swipe code
+    # moved out of editor_menu.js into it, the player never loads it, and
+    # without it here the move read as a leak. Said plainly, since it changes
+    # what the figure means: most of that file is NEW code (the slide, the
+    # other sheets), and the Library and gallery load it too. It counts because
+    # the question this ratchet asks is "is it off the player", and it is.
     _extracted = 0
     for _name in ("editor_export.js", "editor_post.js", "editor_menu.js",
                   "editor_music.js", "editor_photo.js", "lib/sheetswipe.js"):
