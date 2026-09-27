@@ -268,6 +268,13 @@ def register_routes(bp, *, index_route=False):
             "error": "This Skribl is too large to post. Try a smaller photo or a shorter audio loop."
         }), 413
 
+    # A body nested deeply enough overflows the JSON parser's recursion, and
+    # get_json(silent=True) swallows only ValueError -- so it was a 500 on
+    # every JSON route (v317, security review). It is a bad request.
+    @bp.errorhandler(RecursionError)
+    def _too_deep(_error):
+        return jsonify({"error": "That request is nested too deeply to read."}), 400
+
     # Registered ONLY when the host asks for it. Unconditionally claiming "/"
     # meant mounting Skribl silently replaced a host application's homepage —
     # Flask resolves duplicate rules by registration order and the blueprint
@@ -1164,7 +1171,10 @@ def register_routes(bp, *, index_route=False):
         ids = [i for i in ids if _valid_public_id(i)]
         if not ids:
             return jsonify({"items": []})
+        # feed_dict is metadata only, so the payload is not read (v317, security
+        # review: this unauthenticated route loaded up to 50 whole drawings).
         rows = (session().query(SkriblPost)
+                .options(sa.orm.defer(SkriblPost.payload_json))
                 .filter(SkriblPost.public_id.in_(ids))
                 .all())
         viewer = bp.skribl_current_user_id()
@@ -1385,6 +1395,10 @@ def register_routes(bp, *, index_route=False):
     @bp.post("/api/drafts")
     def create_saved_draft():
         """Save a draft to the signed-in author's account."""
+        # Draft writes spend the same attempts budget posts do (v317, security
+        # review): each is up to a full payload of validation and a row rewrite.
+        if _rate_limited(_client_ip(), "attempts"):
+            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         if not _csrf_ok():
             return _csrf_refusal()
         try:
@@ -1399,6 +1413,10 @@ def register_routes(bp, *, index_route=False):
     @bp.put("/api/drafts/<draft_id>")
     def update_saved_draft(draft_id):
         """Overwrite one of your saved drafts."""
+        # Draft writes spend the same attempts budget posts do (v317, security
+        # review): each is up to a full payload of validation and a row rewrite.
+        if _rate_limited(_client_ip(), "attempts"):
+            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         if not _csrf_ok():
             return _csrf_refusal()
         try:
@@ -1412,6 +1430,10 @@ def register_routes(bp, *, index_route=False):
     @bp.delete("/api/drafts/<draft_id>")
     def delete_saved_draft(draft_id):
         """Delete one of your saved drafts."""
+        # Draft writes spend the same attempts budget posts do (v317, security
+        # review): each is up to a full payload of validation and a row rewrite.
+        if _rate_limited(_client_ip(), "attempts"):
+            return jsonify({"error": "Too many requests. Try again in a little while."}), 429
         if not _csrf_ok():
             return _csrf_refusal()
         try:

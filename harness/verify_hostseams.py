@@ -513,6 +513,81 @@ finally:
     for _k, _v in _saved.items():
         _env(**{_k: _v})
 
+# ---------------------------------------------------------------------------
+print("\nDRAFTS ON THE SERVER — a byte budget per author, and a list that reads no drawings (v317)")
+# The count cap alone let one account hold 25 full payloads (~625 MB); and the
+# list, which returns no payloads, loaded every one of them to discard it.
+import sqlalchemy as _sa                                          # noqa: E402
+_saved2 = {k: os.environ.get(k) for k in ("SKRIBL_MAX_DRAFT_BYTES", "DATABASE_URL", "SECRET_KEY",
+                                          "SKRIBL_ALLOW_EPHEMERAL_SECRET", "SKRIBL_DEMO_IDENTITY")}
+try:
+    _env(DATABASE_URL=DB_URL, SECRET_KEY="harness-drafts-budget", SKRIBL_ALLOW_EPHEMERAL_SECRET="1",
+         SKRIBL_DEMO_IDENTITY=None, SKRIBL_MAX_DRAFT_BYTES=str(64 * 1024))
+    _da = _appmod.create_app()
+    _pl = {"version": 1, "strokeGroups": [900],
+           "strokes": [{"x": i % 500, "y": i % 400, "t": i, "color": "#ffffff", "size": 4} for i in range(900)]}
+    with _da.app_context():
+        _appmod.db.create_all()
+        from skribl import drafts as _drafts
+        _one = _drafts.save_draft("budget-user", _pl, kind="pad", title="one")
+        _refused = None
+        try:
+            _drafts.save_draft("budget-user", _pl, kind="pad", title="two")
+        except _drafts.DraftRejected as e:
+            _refused = (e.status if hasattr(e, "status") else None, str(e))
+        check("a draft past the author's byte budget is refused (409, with words to act on)",
+              _refused is not None and _refused[0] == 409 and "Delete one" in _refused[1], repr(_refused))
+        _over = _drafts.save_draft("budget-user", _pl, kind="pad", title="one again", public_id=_one["id"])
+        check("...while overwriting a draft already inside it still works", _over["title"] == "one again", "")
+        _other = _drafts.save_draft("someone-else", _pl, kind="pad", title="theirs")
+        check("...and the budget is per author", bool(_other.get("id")), "")
+        _stmts = []
+        _eng = _appmod.db.engine
+        def _grab(conn, cursor, statement, *a):
+            _stmts.append(statement)
+        _sa.event.listen(_eng, "before_cursor_execute", _grab)
+        try:
+            _appmod.db.session.expire_all()
+            _items = _drafts.list_drafts("budget-user")
+        finally:
+            _sa.event.remove(_eng, "before_cursor_execute", _grab)
+        _read = [x for x in _stmts if "skribl_drafts" in x]
+        check("the drafts list reads no payloads from the database",
+              _items and _read and not any("payload_json" in x for x in _read), " | ".join(_read)[:200])
+        # The unauthenticated metadata route loaded up to 50 whole drawings.
+        _stmts.clear()
+        _sa.event.listen(_eng, "before_cursor_execute", _grab)
+        try:
+            with _da.test_request_context("/"):
+                from flask import url_for as _u2
+                _meta_url = _u2("skribl.get_skribl_meta", ids="abcdefghijk,bcdefghijkl")
+            _mr = _da.test_client().get(_meta_url)
+        finally:
+            _sa.event.remove(_eng, "before_cursor_execute", _grab)
+        _mread = [x for x in _stmts if "skribl_posts" in x]
+        check("the posts-by-id metadata route reads no drawings either",
+              _mr.status_code == 200 and _mread and not any("payload_json" in x for x in _mread),
+              f"{_mr.status_code} " + " | ".join(_mread)[:160])
+    # Draft writes spend the attempts budget posts do. Two allowed, the third
+    # refused -- before any sign-in or CSRF is even looked at.
+    _da.config["SKRIBL_RATE_MAX_ATTEMPTS"] = 2
+    _dc = _da.test_client()
+    with _da.test_request_context("/"):
+        from flask import url_for as _u3
+        _durl = _u3("skribl.create_saved_draft")
+    _codes = [_dc.post(_durl, json={}, environ_base={"REMOTE_ADDR": "192.0.2.77"}).status_code for _ in range(3)]
+    check("draft writes are rate limited like posts (the third inside the window is 429)",
+          _codes[2] == 429 and 429 not in _codes[:2], str(_codes))
+    # Rate limits key IPv6 by its /64: one subscriber holds the whole block.
+    from skribl.ratelimit import _subject as _subj
+    check("rate limits count an IPv6 /64 as one client, and an IPv4-mapped address as its IPv4",
+          _subj("2001:db8:1:2::1") == _subj("2001:db8:1:2:ffff::9") != _subj("2001:db8:1:3::1")
+          and _subj("::ffff:203.0.113.9") == "203.0.113.9" and _subj("198.51.100.7") == "198.51.100.7",
+          f"{_subj('2001:db8:1:2::1')} {_subj('::ffff:203.0.113.9')}")
+finally:
+    for _k, _v in _saved2.items():
+        _env(**{_k: _v})
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

@@ -31,6 +31,7 @@ the cap can be reached in a few saves.
      comes back a Blob; a refused write keeps the working connection; and one
      row asks at a time, in the sheet and in the Library.
 """
+import base64
 import json
 import os
 import pathlib
@@ -238,6 +239,20 @@ try:
         st, bad = api(pa, "POST", "", {"kind": "pad", "payload": payload,
                                        "thumbnail": "javascript:alert(1)"})
         check("a thumbnail that is not an image data URL is 400", st == 400, f"{st} {bad}")
+        # Only the raster types the editors make, their bytes checked (v317,
+        # security review: anything that began "data:image/" was stored).
+        _svg = "data:image/svg+xml;base64," + base64.b64encode(b"<svg xmlns='http://www.w3.org/2000/svg'/>").decode()
+        st, _ = api(pa, "POST", "", {"kind": "pad", "payload": payload, "thumbnail": _svg})
+        check("an SVG thumbnail is 400", st == 400, str(st))
+        _fake = "data:image/png;base64," + base64.b64encode(b"not a png at all, just text").decode()
+        st, _ = api(pa, "POST", "", {"kind": "pad", "payload": payload, "thumbnail": _fake})
+        check("a 'PNG' thumbnail whose bytes are not a PNG is 400", st == 400, str(st))
+        # A body nested past the parser's recursion was a 500 on every JSON route.
+        _tok = pa.evaluate("() => window.SKRIBL_CSRF_TOKEN || ''")
+        _deep = pa.request.fetch(BASE + "/skribl/api/drafts", method="POST",
+                                 headers={"Content-Type": "application/json", "X-Skribl-CSRF": _tok},
+                                 data=("[" * 100000).encode())
+        check("a body nested too deeply to parse is a 400, not a server error", _deep.status == 400, str(_deep.status))
         # 201 frames: over SKRIBL_MAX_FRAMES, the bound a post meets.
         huge = dict(payload, frames=payload["frames"] * 201)
         st, bad = api(pa, "POST", "", {"kind": "pad", "payload": huge})

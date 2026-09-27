@@ -116,6 +116,23 @@ def _mem_state():
     return ext["rate_buckets"], ext["rate_lock"]
 
 
+def _subject(addr):
+    """The rate-limit subject for an address: IPv4 as it is, IPv6 by its /64.
+
+    One IPv6 subscriber is handed a whole /64 and can pick a fresh address for
+    every request, so keyed by the full address the limits did not limit
+    (v317, security review). An IPv4-mapped address is its IPv4 self."""
+    try:
+        ip = ipaddress.ip_address(addr)
+    except ValueError:
+        return addr
+    if ip.version == 6:
+        if ip.ipv4_mapped:
+            return str(ip.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{ip}/64", strict=False))
+    return str(ip)
+
+
 def _client_ip():
     # Trusting X-Forwarded-For unconditionally let any caller pick a fresh
     # rate-limit key per request AND stuff _rate_buckets with attacker-chosen
@@ -133,10 +150,10 @@ def _client_ip():
                 # would land straight in the bucket map as an attacker-chosen key.
                 # Handles IPv6 too. (Review round 2, #3)
                 try:
-                    return str(ipaddress.ip_address(candidate))
+                    return _subject(str(ipaddress.ip_address(candidate)))
                 except ValueError:
-                    return request.remote_addr or "unknown"
-    return request.remote_addr or "unknown"
+                    return _subject(request.remote_addr or "unknown")
+    return _subject(request.remote_addr or "unknown")
 
 
 def _rate_limited(ip, kind="posts"):
