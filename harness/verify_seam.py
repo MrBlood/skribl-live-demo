@@ -237,9 +237,13 @@ if _marker in _appjs:
     # solely to keep editor code off the player. Parsed with the same span logic,
     # so the figures stay commensurable rather than mixing spans with raw line
     # counts.
+    #
+    # lib/sheetswipe.js joins the list for the same reason (v317): the Pad
+    # menu's own swipe code moved out of editor_menu.js into it, the player
+    # never loads it, and without it here the move read as a leak.
     _extracted = 0
     for _name in ("editor_export.js", "editor_post.js", "editor_menu.js",
-                  "editor_music.js", "editor_photo.js"):
+                  "editor_music.js", "editor_photo.js", "lib/sheetswipe.js"):
         _p = _layout.STATIC_DIR / _name
         if not _p.exists():
             continue
@@ -262,6 +266,7 @@ if _marker in _appjs:
                   or "editor_menu.js" in _t or "editor_music.js" in _t
                   or "editor_photo.js" in _t or "editor_shapes.js" in _t
                   or "editor_draw.js" in _t or "editor_tune.js" in _t
+                  or "lib/sheetswipe.js" in _t
                   for _t in [_layout.template("skribl_player.html")
                              .read_text(encoding="utf-8")]),
           "the whole point of moving them is that the player never fetches them")

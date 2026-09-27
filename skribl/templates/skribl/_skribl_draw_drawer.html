@@ -20,10 +20,11 @@
 {%- endif %}
   {# Detent handle (lib/drawerdetent.js): on a phone the drawer opens at the
      HALF detent — colour only, the canvas visible above — and this pill
-     drags or taps between half and full. Hidden on desktop, where the
-     drawer was never in the canvas's way. Shared markup, both surfaces. #}
+     drags between half and full, and closes the drawer when tapped. Hidden
+     on desktop, where the drawer was never in the canvas's way. Shared
+     markup, both surfaces. #}
   <div class="drawer-detent-handle" role="button" tabindex="0"
-       aria-label="Expand or collapse the drawer"><div class="drawer-detent-pill"></div></div>
+       aria-label="Close the drawer (drag up for more)"><div class="drawer-detent-pill"></div></div>
   <div class="color-section">
     <span class="draw-section-label">Color</span>
     {# One switcher, two targets. The grids are SWAPPED rather than stacked: they

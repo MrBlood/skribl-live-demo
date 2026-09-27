@@ -188,6 +188,8 @@
     });
     if (closeBtn) closeBtn.addEventListener('click', close);
     overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    // A phone's bottom sheet swipes down like every other (lib/sheetswipe.js).
+    if (sheet && window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(sheet, { close: close });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !overlay.hidden) close();
     });

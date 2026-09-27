@@ -650,6 +650,23 @@ with sync_playwright() as p:
     texts = pg7.evaluate("() => window.__pillTexts")
     check("Pad: a healthy restore never says the media is missing",
           not any(t.startswith("Media missing") for t in texts), f"pill read {sorted(set(texts))} during the restore")
+    # v317, THE GAP AFTER THE STORE ANSWERS: the owner's iPhone flashed "Media
+    # missing" while a large photo that HAD come back was still decoding. The
+    # state that moment is reproduced exactly: the draft names a photo, the
+    # restore has stood down, the File is in hand, the image is not attached yet.
+    gap = pg7.evaluate("""() => {
+        const keep = { meta: pendingPhotoMeta, file: _mediaFile.photo, name: photoBgImg && photoBgImg._fileName, r: _restoring.photo };
+        pendingPhotoMeta = { name: 'map.png' }; _restoring.photo = false;
+        _mediaFile.photo = new File(['x'], 'map.png', { type: 'image/png' });
+        if (photoBgImg) photoBgImg._fileName = null;
+        const loading = _pendingPhotoLost();
+        _mediaFile.photo = null;
+        const gone = _pendingPhotoLost();
+        pendingPhotoMeta = keep.meta; _mediaFile.photo = keep.file; _restoring.photo = keep.r;
+        if (photoBgImg) photoBgImg._fileName = keep.name;
+        return { loading, gone }; }""")
+    check("Pad: a file in hand and still decoding is loading, not missing (and one truly absent still is)",
+          gap["loading"] is False and gap["gone"] is True, str(gap))
     pg7.close()
 
     print("\nPAD — a restored photo keeps its adjustments however long the decode takes (v294 audit, PR 2)")
