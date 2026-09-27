@@ -215,7 +215,7 @@ with sync_playwright() as p:
                  role: t.getAttribute('role'), tab: t.getAttribute('tabindex'),
                  pe: cs.pointerEvents,
                  // Painted and on top, not merely laid out (a rect is not a paint).
-                 readd: (() => { const b = document.getElementById('autosaveStatusReadd'); if (!b || b.hidden || b.textContent !== 'Re-add') return false; const r = b.getBoundingClientRect(); if (r.width < 30) return false; const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); const pill = document.getElementById('autosaveStatus'); return !!hit && (hit === b || b.contains(hit)) && parseFloat(getComputedStyle(pill).opacity) > 0.5; })() }; }""")
+                 readd: (() => { const b = document.getElementById('autosaveStatusReadd'); if (!b || b.hidden || b.textContent !== 'Re-add') return false; const r = b.getBoundingClientRect(); if (r.width < 30) return false; const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); let op = 1; for (let a = b; a; a = a.parentElement) op *= parseFloat(getComputedStyle(a).opacity); return !!hit && (hit === b || b.contains(hit)) && op > 0.5; })() }; }""")
     # v317: the way out is a button that SAYS Re-add, beside the ×. The words
     # alone were tappable and looked like a label; the owner tapped the ×.
     check("the amber pill NAMES the way out, on a button that says Re-add",
@@ -418,7 +418,7 @@ with sync_playwright() as p:
     pill3 = pg3.evaluate("""() => { const el = document.getElementById('autosaveStatus'), t = document.getElementById('autosaveStatusText');
         return { text: t.textContent, role: t.getAttribute('role'), tab: t.getAttribute('tabindex'),
                  pe: getComputedStyle(el).pointerEvents }; }""")
-    readd3 = pg3.evaluate("() => " + """(() => { const b = document.getElementById('autosaveStatusReadd'); if (!b || b.hidden || b.textContent !== 'Re-add') return false; const r = b.getBoundingClientRect(); if (r.width < 30) return false; const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); const pill = document.getElementById('autosaveStatus'); return !!hit && (hit === b || b.contains(hit)) && parseFloat(getComputedStyle(pill).opacity) > 0.5; })()""")
+    readd3 = pg3.evaluate("() => " + """(() => { const b = document.getElementById('autosaveStatusReadd'); if (!b || b.hidden || b.textContent !== 'Re-add') return false; const r = b.getBoundingClientRect(); if (r.width < 30) return false; const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); let op = 1; for (let a = b; a; a = a.parentElement) op *= parseFloat(getComputedStyle(a).opacity); return !!hit && (hit === b || b.contains(hit)) && op > 0.5; })()""")
     check("Pad: the amber pill NAMES the way out, on a button that says Re-add",
           pill3["text"] == "Media missing" and readd3 is True, f"{pill3['text']!r} readd={readd3}")
     check("Pad: ...and is a real control that receives taps",

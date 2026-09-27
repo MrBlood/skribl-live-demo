@@ -462,7 +462,7 @@ with sync_playwright() as p:
     pg4.wait_for_timeout(2500)
     stale = pg4.evaluate("() => document.getElementById('autosaveStatusText').textContent")
     check("Flip: a save with media still MISSING says so, and offers the way back",
-          stale == "Media missing" and pg4.evaluate("() => " + """(() => { const b = document.getElementById('autosaveStatusReadd'); if (!b || b.hidden || b.textContent !== 'Re-add') return false; const r = b.getBoundingClientRect(); if (r.width < 30) return false; const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); const pill = document.getElementById('autosaveStatus'); return !!hit && (hit === b || b.contains(hit)) && parseFloat(getComputedStyle(pill).opacity) > 0.5; })()"""),
+          stale == "Media missing" and pg4.evaluate("() => " + """(() => { const b = document.getElementById('autosaveStatusReadd'); if (!b || b.hidden || b.textContent !== 'Re-add') return false; const r = b.getBoundingClientRect(); if (r.width < 30) return false; const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); let op = 1; for (let a = b; a; a = a.parentElement) op *= parseFloat(getComputedStyle(a).opacity); return !!hit && (hit === b || b.contains(hit)) && op > 0.5; })()"""),
           f"{stale!r} with a pending record standing — a session that cannot "
           "produce the file it says it has is not 'Saved', and the wording has "
           "to carry the action or the amber is the dead end that got it removed")

@@ -3151,6 +3151,10 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 
 .menu-overlay[hidden] { display: none; }
+/* Closing, it is still unhidden while the sheet slides away -- and a full-
+   screen layer over the ⋯ that opened it, eating the tap that should bring
+   the menu straight back (third review). Only an open overlay takes taps. */
+.menu-overlay:not(.open) { pointer-events: none; }
 
 .menu-overlay::before {
   content: '';

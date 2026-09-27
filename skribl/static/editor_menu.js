@@ -29,6 +29,7 @@ let menuCloseTimer = null;
 
 function openMenu() {
   clearTimeout(menuCloseTimer);
+  if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.cancelSlide(menuSheet);   // reopened mid-close: from where it is
   updateClearVisibility();
   // Re-read the stored state on every open. It is shared with Flip and can be
   // changed in another tab, and a switch showing the opposite of what is
@@ -63,7 +64,9 @@ function closeMenu(instant) {
 
 menuBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (menuOverlay.hidden) openMenu(); else closeMenu();
+  // A menu easing away is closed, so a second tap brings it back (as Flip's
+  // and the page menus do, v317). The overlay stays unhidden for the slide.
+  if (!menuOverlay.classList.contains('open')) openMenu(); else closeMenu();
 });
 
 menuOverlay.addEventListener('click', (e) => {

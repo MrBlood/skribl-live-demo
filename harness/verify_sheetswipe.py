@@ -324,18 +324,35 @@ with sync_playwright() as p:
         ("Flip", "/flip", "moreBtn", "#moreMenu .menu-handle",
          "() => { const m = document.getElementById('moreMenu'); return !m.hidden && m.getBoundingClientRect().top < innerHeight - 80; }"),
         ("Library", "/library", "pageMenuBtn", "#pageMenu .pm-grab",
-         "() => { const m = document.getElementById('pageMenu'); return !document.getElementById('pageMenuOverlay').hidden && m.getBoundingClientRect().top < innerHeight - 80; }")):
+         "() => { const m = document.getElementById('pageMenu'); return !document.getElementById('pageMenuOverlay').hidden && m.getBoundingClientRect().top < innerHeight - 80; }"),
+        # The Pad's overlay stayed unhidden, full-screen, for the slide and ate
+        # the tap (third review) -- so its second tap is a real pointer at the
+        # button's spot, which a script's .click() would walk straight past.
+        ("Pad", "/skribl-pad", "menuBtn", "#menuSheet .menu-handle",
+         "() => { const o = document.getElementById('menuOverlay'); return !o.hidden && o.classList.contains('open') && document.getElementById('menuSheet').getBoundingClientRect().top < innerHeight - 80; }")):
         ctx, pg, errs = fresh(b, route)
         pg.evaluate(f"() => document.getElementById('{btn}').click()"); pg.wait_for_timeout(500)
         sheet_sel = handle.split(" ")[0]
-        top0 = pg.evaluate(f"() => document.querySelector('{sheet_sel}').getBoundingClientRect().top")
-        pg.evaluate(f"() => document.querySelector('{handle}').click()"); pg.wait_for_timeout(60)
         # The precondition, read from the page: it IS on its way out (lower
         # than it rests, still laid out). Without it a grabber that did nothing
-        # and a button that only opens would pass this check.
-        leaving = pg.evaluate(f"""() => {{ const m = document.querySelector('{sheet_sel}');
-            return m.getClientRects().length > 0 && m.getBoundingClientRect().top > {top0} + 2; }}""")
-        pg.evaluate(f"() => document.getElementById('{btn}').click()"); pg.wait_for_timeout(500)
+        # and a button that only opens would pass this check. Waited for frame
+        # by frame, up to 200 ms, because each sheet's curve starts at its own
+        # pace -- a fixed instant read the Pad's slow start as "not moving".
+        leaving = pg.evaluate(f"""async () => {{ const m = document.querySelector('{sheet_sel}');
+            const top0 = m.getBoundingClientRect().top;
+            document.querySelector('{handle}').click();
+            const t0 = performance.now();
+            while (performance.now() - t0 < 200) {{
+              await new Promise(r => requestAnimationFrame(r));
+              if (m.getClientRects().length > 0 && m.getBoundingClientRect().top > top0 + 2) return true;
+            }}
+            return false; }}""")
+        if page == "Pad":
+            bb = pg.locator(f"#{btn}").bounding_box()
+            pg.mouse.click(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
+        else:
+            pg.evaluate(f"() => document.getElementById('{btn}').click()")
+        pg.wait_for_timeout(500)
         check(f"{page}: tapping the menu button again while the menu eases away brings it back",
               leaving is True and pg.evaluate(is_open) is True, f"was leaving={leaving}")
         ctx.close()
