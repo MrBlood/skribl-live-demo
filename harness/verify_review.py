@@ -398,6 +398,46 @@ try:
 finally:
     A._TRUSTED_PROXIES = _saved
 
+# THE SETTING SAYS WHEN IT DISAGREES WITH THE TRAFFIC (v317 outside audit,
+# AUD-004). Each mismatch is logged once per process; a request that matches
+# the setting says nothing.
+import logging as _logging
+import skribl.ratelimit as _RL
+
+
+def _proxy_logs(trusted, headers):
+    _RL._proxy_warned.clear()
+    _saved_tp = A._TRUSTED_PROXIES
+    A._TRUSTED_PROXIES = trusted
+    _app = A.create_app()
+    _seen = []
+
+    class _H(_logging.Handler):
+        def emit(self, rec):
+            _seen.append(rec.getMessage())
+    _h = _H(_logging.WARNING)
+    _app.logger.addHandler(_h)
+    try:
+        for _ in range(2):
+            with _app.test_request_context("/", headers=headers):
+                A._client_ip()
+    finally:
+        _app.logger.removeHandler(_h)
+        A._TRUSTED_PROXIES = _saved_tp
+    return [m for m in _seen if "SKRIBL_TRUSTED_PROXIES" in m]
+
+
+_l = _proxy_logs(0, {"X-Forwarded-For": "9.9.9.9"})
+check("a forwarded header with SKRIBL_TRUSTED_PROXIES=0 is reported, once, naming the fix",
+      len(_l) == 1 and "set SKRIBL_TRUSTED_PROXIES" in _l[0] and "1 on Render" in _l[0], str(_l))
+_l = _proxy_logs(2, {"X-Forwarded-For": "9.9.9.9"})
+check("a setting deeper than the forwarded chain is reported", len(_l) == 1 and "higher than the proxy chain" in _l[0], str(_l))
+_l = _proxy_logs(1, {})
+check("a setting with no forwarded header at all is reported", len(_l) == 1 and "no X-Forwarded-For" in _l[0], str(_l))
+_l = _proxy_logs(1, {"X-Forwarded-For": "9.9.9.9"}) + _proxy_logs(0, {})
+check("a setting that matches the traffic says nothing", _l == [], str(_l))
+_RL._proxy_warned.clear()
+
 # IF YOU MUTATION-TEST THIS BLOCK, RESTART THE SERVER ON 5001. BASE is the
 # shared harness instance, and Flask runs it with --no-reload, so Python
 # imports skribl/security.py once at startup: editing the framing guard

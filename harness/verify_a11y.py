@@ -1152,7 +1152,7 @@ with sync_playwright() as p:
         const btns = [...seg.querySelectorAll('button')];
         if (!btns.length) continue;
         const key = seg.id ? '#' + seg.id : 'seg.' + [...seg.classList].join('.');
-        const by = (seg.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean)
+        const by = (seg.getAttribute('aria-labelledby') || '').split(/\\s+/).filter(Boolean)
           .map(id => (document.getElementById(id) || {}).textContent || '').join(' ');
         const named = (seg.getAttribute('aria-label') || '').trim() || by.trim();
         if (seg.getAttribute('role') !== 'group' || !named) out.unnamed.push(key);

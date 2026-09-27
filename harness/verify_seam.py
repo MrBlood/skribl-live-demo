@@ -477,6 +477,27 @@ check("player.css is byte for byte what cssgraph emits from styles.css "
       f"cssgraph exit {_rc}; committed {len(_committed):,} vs "
       f"regenerated {len(_fresh):,} chars" + (f"; stderr: {_err}" if _err else ""))
 
+# ---------------------------------------------------------------------------
+print("\nWARNING-CLEAN — every tracked Python file compiles without a SyntaxWarning")
+# The v317 outside audit: verify_a11y.py carried a JavaScript regex's \\s in an
+# ordinary Python string, an invalid escape that Python passes through with a
+# SyntaxWarning (and will make an error). Harmless today; but the harness is
+# part of the release evidence, and evidence should compile clean. Compiled
+# with warnings as errors, one file at a time, so every offender is named.
+import warnings as _w
+_git = _sp.run(["git", "-C", str(ROOT), "ls-files", "*.py"], capture_output=True, text=True)
+_noisy = []
+for _rel in _git.stdout.split():
+    with _w.catch_warnings():
+        _w.simplefilter("error", SyntaxWarning)
+        try:
+            compile((ROOT / _rel).read_text(encoding="utf-8"), _rel, "exec")
+        except SyntaxError as _e:
+            _noisy.append(f"{_rel}:{_e.lineno} {_e.msg}")
+check("no tracked Python file raises a SyntaxWarning (or fails to compile)",
+      _git.returncode == 0 and len(_git.stdout.split()) > 50 and not _noisy,
+      "; ".join(_noisy[:4]) or f"{len(_git.stdout.split())} files")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
