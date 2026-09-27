@@ -71,13 +71,44 @@
     if (!global.SkriblDraftStore) throw new Error('This browser cannot keep drafts.');
     return global.SkriblDraftStore;
   }
+  /* A READ THAT FAILED IS NOT AN EMPTY LIST (v317). This swallowed the error
+     and answered [] -- so a storage hiccup showed "no drafts", and a save that
+     followed wrote an index holding only the new draft over the real one,
+     which is how the owner's drafts "were there, then they disappeared". The
+     error now travels: the sheet says so, and save and delete refuse to write
+     an index they could not read. */
   function readIndex() {
-    return store().get(IDX).then(function (v) { return (v && v.items) || []; },
-                                 function () { return []; });
+    return store().get(IDX).then(function (v) { return (v && v.items) || []; });
+  }
+  /* THE WAY BACK for drafts an index already lost. Each draft's record
+     ('saved:<id>') outlived the index that listed it, so the list gathers any
+     record the index does not name and writes it back in. */
+  function recover(items) {
+    if (!store().keys) return Promise.resolve(items);
+    return store().keys().then(function (ks) {
+      var known = {};
+      items.forEach(function (i) { known['saved:' + i.id] = true; });
+      var lost = ks.filter(function (k) {
+        return typeof k === 'string' && k.indexOf('saved:') === 0 && k !== IDX && !known[k];
+      });
+      if (!lost.length) return items;
+      return Promise.all(lost.map(function (k) {
+        return store().get(k).catch(function () { return null; });
+      })).then(function (recs) {
+        var back = recs.filter(function (r) { return r && r.id && r.payload; }).map(function (r) {
+          return { id: r.id, kind: r.kind === 'flip' ? 'flip' : 'pad', title: r.title || 'Untitled Skribl',
+                   thumbnail: r.thumbnail || null, createdAt: r.savedAt || null, updatedAt: r.savedAt || null };
+        });
+        if (!back.length) return items;
+        var all = items.concat(back);
+        return store().put(IDX, { items: all }).then(function () { return all; },
+                                                     function () { return all; });
+      });
+    }, function () { return items; });
   }
   var local = {
     where: 'browser',
-    list: function () { return readIndex(); },
+    list: function () { return readIndex().then(recover); },
     load: function (id) {
       return store().get('saved:' + id).then(function (rec) {
         if (!rec) throw new Error('Draft not found.');
@@ -97,7 +128,9 @@
           createdAt: existing ? existing.createdAt : now, updatedAt: now
         };
         var rest = items.filter(function (i) { return i.id !== sum.id; });
-        return store().put('saved:' + sum.id, { id: sum.id, kind: sum.kind, title: sum.title, payload: body.payload })
+        // The record carries its own summary, so recover() can rebuild a row.
+        return store().put('saved:' + sum.id, { id: sum.id, kind: sum.kind, title: sum.title, payload: body.payload,
+                                                thumbnail: sum.thumbnail, savedAt: sum.updatedAt })
           .then(function () { return store().put(IDX, { items: [sum].concat(rest) }); })
           .then(function () { return sum; });
       });
@@ -256,8 +289,14 @@
     listEl.textContent = '';
     listEl.appendChild(el('p', 'sdrafts-empty', 'Loading\u2026'));
     return backend.list().then(render, function (e) {
+      /* A list that cannot be read says so and offers the way back, rather
+         than "Loading…" for good (v317, the owner's iPhone). */
       listEl.textContent = '';
       listEl.appendChild(el('p', 'sdrafts-empty', e.message));
+      var again = el('button', 'sdrafts-retry', 'Try again');
+      again.type = 'button';
+      again.addEventListener('click', refresh);
+      listEl.appendChild(again);
     });
   }
 

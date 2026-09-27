@@ -1099,6 +1099,29 @@ with sync_playwright() as p:
         check(f"/flip @{_w}: no tune segment's label is wider than its cell", not _over, str(_over))
         _ctx.close()
 
+    print("\nLAYOUT — on a phone the header is solid and carries no blur (v317)")
+    # The owner's iPhone: the pinned header let the canvas show through it, and
+    # after drawing its slot was empty until touched -- WebKit leaving a stale
+    # backdrop-filter layer. On a phone the header is opaque with no blur; on a
+    # desktop the glass is unchanged.
+    HDR = """() => { const cs = getComputedStyle(document.querySelector('.header'));
+        const m = cs.backgroundColor.match(/rgba?\\(([^)]+)\\)/); const parts = m ? m[1].split(',') : [];
+        return { alpha: parts.length === 4 ? +parts[3] : 1,
+                 blur: (cs.webkitBackdropFilter || cs.backdropFilter || 'none') }; }"""
+    for _path in ("/skribl-pad", "/flip"):
+        for _w, _phone in ((390, True), (1100, False)):
+            _ctx = browser.new_context(viewport={"width": _w, "height": 844}, is_mobile=_phone, has_touch=_phone)
+            _pg = _ctx.new_page()
+            browsing.goto(_pg, BASE, _path)
+            _h = _pg.evaluate(HDR)
+            if _phone:
+                check(f"{_path} @{_w}: the header is opaque and has no blur layer",
+                      _h["alpha"] == 1 and _h["blur"] == "none", str(_h))
+            else:
+                check(f"{_path} @{_w}: the desktop header keeps its glass",
+                      _h["alpha"] < 1 and "blur" in _h["blur"], str(_h))
+            _ctx.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

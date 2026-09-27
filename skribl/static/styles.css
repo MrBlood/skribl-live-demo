@@ -2892,6 +2892,16 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
 .autosave-dismiss:focus-visible { outline: none; }
 .autosave-dismiss:focus-visible::before { outline: 2px solid var(--warn); outline-offset: 1px; }
 .autosave-dismiss[hidden] { display: none; }
+/* Re-add: the pill's action, looking like one (lib/autosavepill.js, v317).
+   Amber like the pill, filled so it reads as THE button beside a quiet ×. It
+   inherits the pill's pointer-events, so a panel that blocks the pill blocks
+   it too. */
+.autosave-readd { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 0;
+  background: var(--warn); color: rgb(var(--surface-well-2-rgb)); font: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; }
+.autosave-readd:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+.autosave-readd:active { filter: brightness(1.1); }
+.autosave-readd[hidden] { display: none; }
 
 /* ---------- Autosave restore banner ---------- */
 .restore-banner {
@@ -5140,6 +5150,17 @@ a.player-btn { text-decoration: none; }
      toolbar's pops and every sheet), and body.stroking already fades it to
      nothing while a finger draws beneath it. Pad and Flip share the rule. */
   .header { position: sticky; top: 6px; }
+  /* SOLID ON A PHONE (v317). Pinned, the header sits over the canvas, and its
+     glass let the drawing and the photo show through it, blurred -- the owner:
+     "weird look where the canvas has top tool bar over it". At rest nothing is
+     behind it but the page, so the solid ground looks as it did.
+     AND NO BLUR, which a solid ground has no use for and which is the thing
+     WebKit fails to repaint: the owner's iPhone again showed the header's slot
+     empty after drawing ("no header -- touch header and it shows up"), the
+     v315 bug that fading only the contents did not fully cure. An element with
+     no backdrop-filter has no blurred layer to leave stale. */
+  .header { background: rgb(var(--surface-well-2-rgb));
+            -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
 /* 641-720px is "desktop" by breakpoint but has no room for the full
@@ -6003,6 +6024,9 @@ body.playing .flip-grid { display: none; }
 .sdrafts-sub { margin: 4px 4px 12px; font-size: 13px; color: var(--text-muted); }
 .sdrafts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 .sdrafts-empty { margin: 18px 4px; font-size: 14px; color: var(--text-muted); text-align: center; }
+.sdrafts-retry { align-self: center; min-height: 44px; padding: 0 20px; border-radius: 999px;
+  border: 1px solid var(--hairline, #252a35); background: transparent; color: var(--text-heading);
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
 .sdrafts-row { display: flex; align-items: center; gap: 6px; border-radius: 12px; }
 .sdrafts-row.armed { background: rgba(124, 92, 255, .12); }
 .sdrafts-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px;

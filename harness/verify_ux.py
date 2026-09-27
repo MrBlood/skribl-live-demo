@@ -1248,6 +1248,27 @@ with _sp204() as _p:
     check("V316: New Skribl is the FIRST row of both menus",
           _first(pg, "#menuSheet") == "clearMenuItem" and _first(fp, "#moreMenu") == "miClearAll",
           f"pad {_first(pg, '#menuSheet')}, flip {_first(fp, '#moreMenu')}")
+    # V317: A NEW SKRIBL IS A NEW TITLE (owner: "it should change title, not
+    # leave the last title"). New Skribl kept the old name, so the next save and
+    # every export carried it. The typed title and the export sheet's own field
+    # both clear; get() falls back to a fresh auto-name; Undo brings it back.
+    for page_, nm, fn in ((pg, "Pad", "clearAllWithUndo()"), (fp, "Flip", "clearAllPages()")):
+        page_.evaluate("() => { SkriblName.set('Old title'); const e = document.getElementById('exportName');"
+                       " if (e) { e.value = 'old-export'; e._skriblDirty = true; } }")
+        page_.evaluate(f"() => {fn}")
+        page_.wait_for_timeout(300)
+        st = page_.evaluate("() => ({ typed: document.getElementById('skriblName').value, got: SkriblName.get(),"
+                            " exp: (document.getElementById('exportName') || {}).value || '' })")
+        check(f"V317: {nm}: New Skribl starts a new title, not the last one",
+              st["typed"] == "" and st["got"] != "Old title" and st["got"].startswith("Skribl") and st["exp"] == "",
+              str(st))
+    pg.click(".toast-action")
+    pg.wait_for_timeout(500)
+    fp.evaluate("() => document.getElementById('clearUndo').click()")
+    fp.wait_for_timeout(300)
+    back = (pg.evaluate("() => SkriblName.get()"), fp.evaluate("() => SkriblName.get()"))
+    check("V317: Undo brings the old title back with the drawing, on both editors",
+          back == ("Old title", "Old title"), str(back))
     # .skribl file input accepts the types iOS tags an unknown-ext JSON file with
     for page_, nm in ((pg, "Pad"), (fp, "Flip")):
         acc = page_.evaluate("() => document.getElementById('draftInput').getAttribute('accept')")
