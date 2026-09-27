@@ -386,6 +386,27 @@ with sync_playwright() as p:
         r.abort()
     ctx.close()
 
+    # 8 a lane for the scroll bar. iOS paints its bar OVER the list, 8 px in
+    # from the right edge, so a card that runs to the edge has the thumb on its
+    # border (owner's iPhone, after v317). Headless Chromium gives its bar a
+    # gutter and cannot show the overlap, so what is pinned is the property
+    # the fix governs: every card stops short of the lane.
+    print("\nPad: your drafts leave the scroll bar a lane")
+    ctx, pg, errs = fresh(b, "/skribl-pad")
+    box = pg.locator("#canvas").bounding_box()
+    pg.mouse.move(box["x"] + 60, box["y"] + 60); pg.mouse.down()
+    pg.mouse.move(box["x"] + 160, box["y"] + 140, steps=6); pg.mouse.up(); pg.wait_for_timeout(300)
+    for _ in range(6):
+        pg.evaluate("async () => { SkriblSavedDrafts.forget(); await SkriblSavedDrafts.save(); }")
+    pg.evaluate("() => SkriblSavedDrafts.open()"); pg.wait_for_timeout(900)
+    lane = pg.evaluate("""() => { const l = document.querySelector('#savedDraftsSheet .sdrafts-list');
+        const edge = l.getBoundingClientRect().right;
+        const rows = [...l.querySelectorAll('.sdrafts-row')].map(r => Math.round(edge - r.getBoundingClientRect().right));
+        return { rows, scrolls: l.scrollHeight > l.clientHeight }; }""")
+    check("Pad: every draft card stops at least 10 px short of the list's right edge, where iOS draws its bar",
+          len(lane["rows"]) >= 6 and min(lane["rows"]) >= 10, str(lane))
+    ctx.close()
+
     # 5 the draw drawer's grip
     for page, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
         who = f"{page}: the draw drawer"

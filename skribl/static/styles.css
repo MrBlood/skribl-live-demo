@@ -6045,7 +6045,11 @@ body.playing .flip-grid { display: none; }
 .sdrafts-close { width: 36px; height: 36px; border-radius: 50%; border: 0; background: transparent;
   color: var(--text-tool-2); font-size: 16px; cursor: pointer; }
 .sdrafts-sub { margin: 4px 4px 12px; font-size: 13px; color: var(--text-muted); }
-.sdrafts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+/* A LANE FOR THE SCROLL BAR (owner's iPhone, after v317). iOS draws its bar
+   OVER the content, 8 px inside the list's right edge, so the thumb sat on the
+   cards' borders. The cards stop 12 px short; where a desktop bar takes a
+   gutter of its own, that is 12 px of breathing room. */
+.sdrafts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 12px; }
 .sdrafts-empty { margin: 18px 4px; font-size: 14px; color: var(--text-muted); text-align: center; }
 .sdrafts-retry { align-self: center; min-height: 44px; padding: 0 20px; border-radius: 999px;
   border: 1px solid var(--hairline, #252a35); background: transparent; color: var(--text-heading);
