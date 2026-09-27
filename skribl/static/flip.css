@@ -28,7 +28,7 @@
   .flip-share-count { font-size: 11px; color: var(--text-secondary); text-align: right; margin-top: -6px; }
   .flip-share-actions { display: flex; gap: 8px; }
   .flip-share-actions .panel-btn { flex: 1 1 0; text-align: center; text-decoration: none; }
-  .flip-share-open { background: var(--accent); border-color: transparent; color: #fff; display: flex; align-items: center; justify-content: center; }
+  .flip-share-open { background: var(--accent-fill); border-color: transparent; color: #fff; display: flex; align-items: center; justify-content: center; }
   /* Kill double-tap-to-zoom on taps (iOS ignores user-scalable=no). "manipulation"
      keeps tap/scroll/pinch but drops the double-tap zoom + 300ms tap delay. The
      canvas keeps touch-action:none so drawing never scrolls or gesture-zooms. */

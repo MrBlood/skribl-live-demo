@@ -3496,9 +3496,6 @@ bindEl('draftInput', 'change', (e) => {
       // still said "Draft loaded". Refuse with directions. Draft-file path
       // only — the shared player still opens Flip posts via loadSkribl.
       if (data && data.playbackMode === 'flip') return showToast('That\'s a Flip Skribl — open it in Flip Mode', menuBtn);
-      // A backup file is a different document from the saved draft that was
-      // open: the next Save draft must make a new one, not overwrite it.
-      if (window.SkriblSavedDrafts) SkriblSavedDrafts.forget();
       loadSkribl(data);
     } catch (err) {
       showToast('Couldn\'t read that draft file', menuBtn);

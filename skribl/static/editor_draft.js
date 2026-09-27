@@ -184,6 +184,11 @@ if (typeof loadSkribl === 'function') {
     // Only a document that actually opened: a refused file changes nothing.
     if (skriblLoadSeq !== before) {
       try { padAdoptLoadedMedia(normalizeSkribl(data)); } catch (e) { console.error('[skribl] ' + _errName(e)); }
+      // ...and it is not the saved draft that was open (third review): a
+      // backup file kept that id, so Save overwrote the draft with it. The
+      // callers that ARE a saved draft -- opening one, Undo -- name it again
+      // after this returns.
+      if (window.SkriblSavedDrafts) window.SkriblSavedDrafts.forget();
     }
     return r;
   };

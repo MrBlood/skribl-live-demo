@@ -58,6 +58,7 @@
       --text-3: #6b7688;
       --accent: #7c5cff;
       --accent-2: #5b8cff;
+      --accent-fill: #6d4cf0;   /* a fill carrying words: AA with white (styles.css) */
       --accent-bright: #9179ff;
       --accent-tint: #d6ccff;
       --accent-glow: rgba(124, 92, 255, 0.30);
@@ -158,7 +159,7 @@
       font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap;
     }
     .top .navlink:hover { color: var(--text); background: var(--control); }
-    .top .navlink.make { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .top .navlink.make { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
     .top .navlink.make:hover { filter: brightness(1.08); color: #fff; }
     /* 360 IS THE DESIGN TARGET AND 320 THE SAFETY NET (START-HERE). The mark,
        its word and two pills are wider than either; the word is the thing
@@ -279,7 +280,7 @@
       padding: 8px; border-radius: 14px; color: inherit; text-decoration: none; }
     @media (hover: hover) { .draft-open:hover { background: rgba(124, 92, 255, .06); } }
     .draft-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .draft-pic { flex: 0 0 auto; width: 72px; height: 54px; border-radius: 9px; overflow: hidden; background: #0b0d12; }
+    .draft-pic { flex: 0 0 auto; width: 72px; height: 54px; border-radius: 9px; overflow: hidden; background: var(--hairline-soft); }
     .draft-pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
     .draft-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .draft-name { font-size: 15px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -289,7 +290,9 @@
       font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
     .draft-del svg { width: 19px; height: 19px; }
     @media (hover: hover) { .draft-del:hover { color: var(--text); } }
-    .draft-del.armed { color: #ff8a8a; border-color: rgba(255, 138, 138, .5); background: rgba(255, 138, 138, .1); }
+    /* The theme's danger colour, as the editors' twin (.sdrafts-del.armed) has it: a literal
+       pink was 2.27:1 on the light theme's white row (third review). */
+    .draft-del.armed { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: color-mix(in srgb, var(--danger) 10%, transparent); }
     .libhead .cnt { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
     .chips { display: flex; gap: 7px; margin-left: auto; }
     /* min-height 34 is the VISIBLE floor (SK-AUD-005). These measured 28 —
@@ -300,7 +303,7 @@
     .chip { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .04em; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--hairline); background: transparent; color: var(--text-2); cursor: pointer; transition: .15s;
       min-height: 34px; display: inline-flex; align-items: center; }
     .chip:hover { border-color: var(--hover-edge); color: var(--text); }
-    .chip.active { background: var(--accent); border-color: transparent; color: #fff; font-weight: 600; }
+    .chip.active { background: var(--accent-fill); border-color: transparent; color: #fff; font-weight: 600; }
     .search { position: relative; }
     /* min-height 44: an input has no ::before to grow a tap band with, so the box is the box. */
     /* 16px, NOT 12.5. Below 16 iOS Safari magnifies the whole page when the
@@ -338,7 +341,7 @@
     .card .badge svg { width: 11px; height: 11px; }
     .card .playing { position: absolute; inset: 0; display: none; place-items: center; background: rgba(6,7,10,.28); color: #fff; }
     .card.active .playing { display: grid; }
-    .card .playing span { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(124,92,255,.9); color: #fff; }
+    .card .playing span { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: var(--accent-fill); color: #fff; }
     .card .body { padding: 10px 11px 12px; }
     .card .ct { font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; margin-bottom: 5px; }
     .card .cm { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }

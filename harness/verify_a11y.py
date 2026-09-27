@@ -1496,6 +1496,101 @@ with sync_playwright() as p:
           f"in the template and the player's copy was never given one")
     _pctx.close()
 
+    print("\nA11Y 6c — words on the action colour clear AA, on every stop and in both themes")
+    # A11Y 6 measures TEXT TOKENS on SURFACES and never saw text on a coloured
+    # fill: #260 made these buttons white on --accent, 4.35:1, and it passed.
+    # (Third review.) Measured on the rendered element: its computed colour
+    # against every colour in its background -- each gradient stop, and a
+    # translucent fill composited over white, the worst thing under it. An
+    # element a page builds on demand is built here from its selector's chain.
+    ON_FILL = r"""(specs) => {
+      const rgb = (s) => (s.match(/rgba?\([^)]*\)/g) || []).map(c => c.match(/[\d.]+/g).map(Number));
+      const over = (c) => c.length > 3 && c[3] < 1 ? [0,1,2].map(i => c[i] * c[3] + 255 * (1 - c[3])) : c.slice(0, 3);
+      const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+      const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+      return specs.map(chain => {
+        let el = document.querySelector(chain.join(' ')), built = null;
+        if (!el) {
+          let parent = document.body;
+          for (const part of chain) { const n = document.createElement(part.includes('span') ? 'span' : (part.includes('button') ? 'button' : 'div'));
+            n.className = part.replace(/^[a-z]+/, '').split('.').filter(Boolean).join(' ');
+            n.textContent = 'Aa'; parent.appendChild(n); parent = n; if (!built) built = n; }
+          el = parent;
+        }
+        const cs = getComputedStyle(el);
+        const fg = over(rgb(cs.color)[0]);
+        const fills = [...rgb(cs.backgroundColor).filter(c => !(c.length > 3 && c[3] === 0)), ...rgb(cs.backgroundImage)].map(over);
+        const worst = fills.length ? Math.min(...fills.map(f => ratio(fg, f))) : null;
+        // WCAG's large text (24px, or 18.66px bold) needs 3:1; the rest 4.5:1.
+        const px = parseFloat(cs.fontSize), bold = parseInt(cs.fontWeight, 10) >= 700;
+        const need = (px >= 24 || (px >= 18.66 && bold)) ? 3 : 4.5;
+        if (built) built.remove();
+        return { sel: chain.join(' '), worst: worst && Math.round(worst * 100) / 100, fills: fills.length, need, px };
+      });
+    }"""
+    # ...and the POPULATION, so a rule nobody listed cannot hide: every element
+    # holding words whose nearest fill is an accent colour, measured the same
+    # way. (The list above keeps the ones a page builds only on demand.)
+    ACCENT_SWEEP = r"""() => {
+      const rgb = (s) => (s.match(/rgba?\([^)]*\)/g) || []).map(c => c.match(/[\d.]+/g).map(Number));
+      const over = (c) => c.length > 3 && c[3] < 1 ? [0,1,2].map(i => c[i] * c[3] + 255 * (1 - c[3])) : c.slice(0, 3);
+      const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const lum = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+      const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+      const ACC = [[124, 92, 255], [91, 140, 255], [145, 121, 255]];
+      const isAcc = (c) => ACC.some(a => a.every((v, i) => Math.abs(v - c[i]) <= 2));
+      const out = []; let seen = 0;
+      for (const el of document.querySelectorAll('body *')) {
+        if (!Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+        // Only words that are showing: a hidden element's colours are not a
+        // state anybody reads (the list above builds the on-demand ones).
+        if (!el.getClientRects().length || getComputedStyle(el).visibility !== 'visible'
+            || el.closest('[hidden], [aria-hidden="true"]')) continue;
+        // The control the words are ON: the nearest element with a fill of its
+        // own. It is in scope when that fill is an accent colour laid on at
+        // half strength or more -- a button, a chip, a badge. Faint accent
+        // glows and tints in page backgrounds are surfaces, which A11Y 6
+        // measures by token; a <canvas> paints pixels no style can see.
+        let fills = [];
+        for (let a = el; a && a.nodeType === 1; a = a.parentElement) {
+          const cs = getComputedStyle(a);
+          fills = [...rgb(cs.backgroundColor).filter(c => !(c.length > 3 && c[3] === 0)), ...rgb(cs.backgroundImage)];
+          if (fills.length) break;
+        }
+        if (!fills.some(c => isAcc(c) && (c.length < 4 || c[3] >= 0.5))) continue;
+        seen++;
+        const bodyBg = rgb(getComputedStyle(document.body).backgroundColor)[0] || [255, 255, 255];
+        const under = fills.filter(c => c.length < 4 || c[3] > 0).map(c => {
+          const al = c.length > 3 ? c[3] : 1; return [0, 1, 2].map(k => c[k] * al + bodyBg[k] * (1 - al)); });
+        const cs = getComputedStyle(el);
+        const fg = rgb(cs.color)[0];
+        const worst = Math.min(...under.map(u => { const al = fg.length > 3 ? fg[3] : 1;
+          return ratio([0, 1, 2].map(k => fg[k] * al + u[k] * (1 - al)), u); }));
+        const px = parseFloat(cs.fontSize), bold = parseInt(cs.fontWeight, 10) >= 700;
+        const need = (px >= 24 || (px >= 18.66 && bold)) ? 3 : 4.5;
+        if (worst < need) out.push((el.id ? '#' + el.id : el.tagName.toLowerCase() + '.' + [...el.classList].join('.'))
+                                   + ' ' + worst.toFixed(2));
+      }
+      return { seen, out };
+    }"""
+    for _route, _specs in (("/", [[".pending-btn"], [".autosave-readd"], ["button.name-done"],
+                                  ["#postBtn"], ["#postSubmitBtn"]]),
+                           ("/flip", [[".flip-share-open"]]),
+                           ("/library", [["button.chip.active"], [".card", ".playing", "span"]]),
+                           ("/gallery", [])):
+        for _theme in ("dark", "light"):
+            _cpg = browser.new_page(viewport={"width": 1280, "height": 900})
+            _cpg.goto(BASE + _route, wait_until="load"); _cpg.wait_for_timeout(700)
+            _cpg.evaluate(f"() => document.documentElement.setAttribute('data-theme', '{_theme}')")
+            for _r in _cpg.evaluate(ON_FILL, _specs):
+                check(f"{_route} {_theme}: {_r['sel']} white on its fill clears AA for its size",
+                      _r["fills"] > 0 and _r["worst"] is not None and _r["worst"] >= _r["need"], str(_r))
+            _sw = _cpg.evaluate(ACCENT_SWEEP)
+            check(f"{_route} {_theme}: every word on an accent fill clears AA ({_sw['seen']} measured)",
+                  not _sw["out"], "; ".join(_sw["out"][:6]))
+            _cpg.close()
+
     browser.close()
 
 # ------------------------------------------------------------------ section 6

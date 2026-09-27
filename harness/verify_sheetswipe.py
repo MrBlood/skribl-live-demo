@@ -114,6 +114,16 @@ SHEETS = [
      "#savedDraftsSheet", "() => { const s = document.getElementById('savedDraftsSheet'); return !s || s.hidden; }", "#savedDraftsSheet .sdrafts-grab"),
     ("Library", "the page menu", "/library", "() => document.getElementById('pageMenuBtn').click()",
      "#pageMenu", "() => document.getElementById('pageMenuOverlay').hidden", "#pageMenu .pm-grab"),
+    # Every sheet attached, on every route it is attached on (third review:
+    # these three were attached and never driven).
+    ("Pad", "the post sheet", "/skribl-pad",
+     "() => { const b = document.getElementById('postBtn'); b.disabled = false; b.click(); }",
+     "#postSheet", "() => document.getElementById('postOverlay').hidden", "#postSheet .menu-handle"),
+    ("Flip", "the report sheet", "/flip",
+     "() => { document.getElementById('moreBtn').click(); document.getElementById('miReport').click(); }",
+     "#reportSheet", "() => document.getElementById('reportOverlay').hidden", None),
+    ("Gallery", "the page menu", "/gallery", "() => document.getElementById('pageMenuBtn').click()",
+     "#pageMenu", "() => document.getElementById('pageMenuOverlay').hidden", "#pageMenu .pm-grab"),
 ]
 
 def fresh(b, route):
@@ -317,11 +327,47 @@ with sync_playwright() as p:
          "() => { const m = document.getElementById('pageMenu'); return !document.getElementById('pageMenuOverlay').hidden && m.getBoundingClientRect().top < innerHeight - 80; }")):
         ctx, pg, errs = fresh(b, route)
         pg.evaluate(f"() => document.getElementById('{btn}').click()"); pg.wait_for_timeout(500)
+        sheet_sel = handle.split(" ")[0]
+        top0 = pg.evaluate(f"() => document.querySelector('{sheet_sel}').getBoundingClientRect().top")
         pg.evaluate(f"() => document.querySelector('{handle}').click()"); pg.wait_for_timeout(60)
+        # The precondition, read from the page: it IS on its way out (lower
+        # than it rests, still laid out). Without it a grabber that did nothing
+        # and a button that only opens would pass this check.
+        leaving = pg.evaluate(f"""() => {{ const m = document.querySelector('{sheet_sel}');
+            return m.getClientRects().length > 0 && m.getBoundingClientRect().top > {top0} + 2; }}""")
         pg.evaluate(f"() => document.getElementById('{btn}').click()"); pg.wait_for_timeout(500)
         check(f"{page}: tapping the menu button again while the menu eases away brings it back",
-              pg.evaluate(is_open) is True)
+              leaving is True and pg.evaluate(is_open) is True, f"was leaving={leaving}")
         ctx.close()
+
+    # 7 Post cannot be swiped away mid-send (canClose): the request is held
+    # open so "mid-send" lasts as long as the check needs.
+    print("\nPad: the post sheet while posting")
+    ctx, pg, errs = fresh(b, "/skribl-pad")
+    held = []
+    pg.route("**/api/skribls", lambda route: held.append(route) if route.request.method == "POST" else route.continue_())
+    box = pg.locator("#canvas").bounding_box()
+    pg.mouse.move(box["x"] + 60, box["y"] + 60); pg.mouse.down()
+    pg.mouse.move(box["x"] + 160, box["y"] + 120, steps=6); pg.mouse.up(); pg.wait_for_timeout(400)
+    open_sheet(pg, "() => { const b = document.getElementById('postBtn'); b.disabled = false; b.click(); }",
+               "() => document.getElementById('postOverlay').hidden")
+    pg.evaluate("() => document.getElementById('postSubmitBtn').click()")
+    pg.wait_for_timeout(400)
+    # Sending, by the state the sheet shows: the status row is up and the
+    # button is spent. (The "Posting…" words are in the markup all along.)
+    sending = pg.evaluate("() => !document.getElementById('postStatus').hidden && document.getElementById('postSubmitBtn').disabled")
+    x, y = top_point(pg, "#postSheet")
+    pg.evaluate(TOUCH, ["#postSheet", "touchstart", x, y]); pg.wait_for_timeout(30)
+    pg.evaluate(TOUCH, ["#postSheet", "touchmove", x, y + 40]); pg.wait_for_timeout(30)
+    pg.evaluate(TOUCH, ["#postSheet", "touchmove", x, y + 160])
+    pg.evaluate(TOUCH, ["#postSheet", "touchend", x, y + 160]); pg.wait_for_timeout(450)
+    pg.evaluate("() => document.querySelector('#postSheet .menu-handle').click()"); pg.wait_for_timeout(450)
+    check("Pad: mid-send, neither a swipe nor the grabber closes the post sheet",
+          sending and pg.evaluate("() => document.getElementById('postOverlay').hidden") is False,
+          f"sending={sending}")
+    for r in held:                             # the held send ends here, answered
+        r.abort()
+    ctx.close()
 
     # 5 the draw drawer's grip
     for page, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):

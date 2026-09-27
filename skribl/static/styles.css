@@ -162,6 +162,7 @@
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
      .post-watch), Flip's share CTA (.flip-share-open), and the whole PLAYER
+     (those carrying words use --accent-fill, below, for AA)
      surface — a shared link travels off the branded
      host, so the player stays branded, and verify_ux pins its active fill
      to this exact colour. Everything else moved to the --ui-* roles below.
@@ -169,6 +170,13 @@
   --accent: #7c5cff;
   --accent-2: #5b8cff;
   --accent-bright: #9179ff;
+  /* The same colours one step deeper, for a fill that carries WORDS. White on
+     --accent is 4.35:1 and on --accent-2 3.16:1, under AA's 4.5 for text this
+     size; these are 5.33 and 4.83. Dots, bars, outlines and icons keep the
+     bright ones (3:1 is their floor). verify_a11y A11Y 6c measures every
+     worded accent fill on the page. */
+  --accent-fill: #6d4cf0;
+  --accent-2-fill: #3f6ae0;
   --accent-glow: rgba(0,0,0,0.32);
 
   /* Demoted-UI roles. The CLASSIFICATION is permanent -- every former accent
@@ -580,7 +588,7 @@ body {
 
 /* Post: the one bold purple moment */
 .btn.post {
-  background: var(--accent);
+  background: var(--accent-fill);
   box-shadow: 0 3px 12px var(--accent-glow);
 }
 
@@ -2037,7 +2045,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   padding: 8px 14px;
   border-radius: 999px;
   border: none;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -2906,7 +2914,7 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
    ×. It inherits the pill's pointer-events, so a panel that blocks the pill
    blocks it too. */
 .autosave-readd { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 0;
-  background: var(--accent); color: #fff; font: inherit; font-size: 13px; font-weight: 700;
+  background: var(--accent-fill); color: #fff; font: inherit; font-size: 13px; font-weight: 700;
   cursor: pointer; white-space: nowrap; }
 .autosave-readd:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .autosave-readd:active { filter: brightness(1.1); }
@@ -3678,7 +3686,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   padding: 12px;
   border: none;
   border-radius: 12px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
@@ -4725,7 +4733,7 @@ body.player-mode #canvas {
 }
 .player-error-btn:hover { background: rgba(var(--wash-rgb), 0.08); }
 .player-error-btn.primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: transparent;
   color: #fff;
 }
@@ -4825,7 +4833,7 @@ a.player-btn { text-decoration: none; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
   border: none;
   border-radius: var(--r-pill);
@@ -5081,7 +5089,7 @@ a.player-btn { text-decoration: none; }
   transition: background .12s;
 }
 .slider-nudge-btn:hover { background: var(--surface-nudge-hover); }
-.slider-nudge-btn:active { background: var(--accent); color: #fff; }
+.slider-nudge-btn:active { background: var(--accent-fill); color: #fff; }
 .zoom-pan-row, .crossfade-row { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; }
 .zoom-pan-label, .crossfade-label { font-size: 12px; color: var(--text-soft); flex: none; min-width: 64px; }
 .crossfade-val { font-size: 12px; color: var(--text-bright); flex: none; min-width: 38px; text-align: right; }
@@ -5654,7 +5662,7 @@ a.player-btn { text-decoration: none; }
   /* White, as Post is: --text-primary is near-black in the light theme, and
      dark words on the purple read as a mistake (the owner, v317). */
   font-weight: 700; font-size: 13px; color: #fff;
-  background: linear-gradient(150deg, var(--accent-2), var(--accent));
+  background: linear-gradient(150deg, var(--accent-2-fill), var(--accent-fill));
 }
 .name-done:hover { filter: brightness(1.06); }
 @media (prefers-reduced-motion: reduce) { .name-shell, .name-panel { transition: none; } }
@@ -6051,7 +6059,7 @@ body.playing .flip-grid { display: none; }
    it drew a box inside the card. */
 @media (hover: hover) { .sdrafts-open:hover { background: rgba(var(--wash-rgb), .05); } }
 .sdrafts-thumb { flex: 0 0 auto; width: 72px; height: 54px; border-radius: 9px; overflow: hidden;
-  background: #0d0f14; }
+  background: var(--surface-control); }   /* a theme colour: black was a box in the light theme */
 .sdrafts-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sdrafts-words { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .sdrafts-name { font-size: 15px; font-weight: 600; color: var(--text-primary);
