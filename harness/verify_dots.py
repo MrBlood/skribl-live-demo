@@ -35,7 +35,17 @@ COLOURS = """(which) => {
              cardHidden: card ? card.hidden : null,
              cardBorder: card ? cs(card).borderTopColor : null,
              btnBg: btn ? cs(btn).backgroundColor : null,
+             btnColor: btn ? cs(btn).color : null,
+             accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
              metaColor: meta ? cs(meta).color : null }; }"""
+
+# THE RE-ADD BUTTON IS THE ACTION COLOUR, NOT THE WARNING (v317, the owner:
+# "maybe not so gold?", and never dark text on a coloured pill). It was amber
+# with dark words; it is the app's --accent with white words, the same as the
+# pill's Re-add. The amber stays where it is the warning: the dot, the card's
+# border and its meta line, all still asserted amber below. Compared against
+# the page's own --accent, so a retuned purple does not redden this.
+WHITE = "rgb(255, 255, 255)"
 
 def scribble(pg, box, seed, n=200):
     cx, cy = box["x"]+box["width"]/2, box["y"]+box["height"]/2
@@ -95,7 +105,9 @@ with sync_playwright() as p:
     check("music dot AMBER when re-add is needed", c["dotBg"] == AMBER and c["dotPending"], c["dotBg"])
     check("re-add card visible", c["cardHidden"] is False)
     check("card border amber", "255, 210, 63" in c["cardBorder"], c["cardBorder"])
-    check("Re-add button amber", c["btnBg"] == AMBER, c["btnBg"])
+    check("Re-add button is the action colour with white words, not amber",
+          c["btnBg"] == _rgb(c["accent"]) and c["btnColor"] == WHITE,
+          f"bg {c['btnBg']} (accent {c['accent']}), text {c['btnColor']}")
     check("card meta text amber", c["metaColor"] == AMBER, c["metaColor"])
     pgB.close()
 
@@ -120,7 +132,9 @@ with sync_playwright() as p:
     check("Pad music dot GREEN after restore — the track came back",
           got is True and c["dotPending"] is False and c["dotHidden"] is False,
           f"{c['dotBg']} pending={c['dotPending']} track={got}")
-    check("Pad card amber", c["btnBg"] == AMBER, c["btnBg"])
+    check("Pad Re-add button is the action colour with white words, not amber",
+          c["btnBg"] == _rgb(c["accent"]) and c["btnColor"] == WHITE,
+          f"bg {c['btnBg']} (accent {c['accent']}), text {c['btnColor']}")
 
     check("no uncaught page errors", not errs, "; ".join(errs[:2]))
     b.close()
