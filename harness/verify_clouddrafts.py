@@ -20,6 +20,9 @@ the cap can be reached in a few saves.
   4  The composer: draw, ⋯ Save draft, close, open the pen again (blank),
      ⋯ Open a draft, Add to post, Post. The post is the saved drawing.
   5  Signed out, drafts live in this browser and survive a reload.
+  6  The Library's Drafts tab (v317): the account's list or this browser's,
+     Open to the right editor, Delete asks first, and an editor holding work
+     asks before a draft replaces it.
 """
 import json
 import os
@@ -136,6 +139,25 @@ def api(pg, method, path, body=None, csrf=True):
 
 # Strokes on the Pad live under frames[] (payload version 2).
 STROKES = "(s => s.frames.reduce((n, f) => n + (f.strokes || []).length, 0))"
+
+
+# A drawing's identity, not its size: two spirals drawn by the same helper
+# have the same stroke COUNT (section 6 found that out), never the same points.
+PRINT = "(s => JSON.stringify(s.frames.map(f => f.strokes)))"
+
+
+def canon(printed):
+    """The drawing as a structure: the server hands JSON back with its keys
+    sorted, so the same strokes come back in a different key order."""
+    return json.dumps(json.loads(printed), sort_keys=True)
+
+
+def _diff_detail(got, want, name):
+    if got == want:
+        return f"same drawing, name {name!r}"
+    i = next((k for k in range(min(len(got), len(want))) if got[k] != want[k]), min(len(got), len(want)))
+    return (f"name {name!r}; drawing differs at char {i} of {len(got)}/{len(want)}: "
+            f"got ...{got[max(0, i - 40):i + 40]!r} want ...{want[max(0, i - 40):i + 40]!r}")
 
 
 def pad_strokes(pg):
@@ -290,6 +312,8 @@ try:
         n = durable("SELECT COUNT(*) FROM skribl_drafts")
         check("⋯ Save draft inside the composer stores it on the account", n == 2, str(n))
         saved_strokes = pad_strokes(pa)
+        saved_print = canon(pa.evaluate("() => " + PRINT
+                                        + "(document.getElementById('padFrame').contentWindow.serializeSkribl())"))
 
         # Abandon: close the overlay without adding.
         fr.locator("#composeCloseBtn").click()
@@ -411,6 +435,73 @@ try:
         anon.locator("#savedDraftsSheet .sdrafts-open").first.wait_for(timeout=5000)
         check("after a reload the browser draft is listed",
               anon.locator("#savedDraftsSheet .sdrafts-row").count() == 1)
+
+        # ---------------------------------------------------------------- 6
+        print("\n6 — THE LIBRARY'S DRAFTS TAB (v317)")
+        n_acct = durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'")
+        browsing.goto(pa, BASE, "/skribl/library", require_boot=False)
+        pa.wait_for_timeout(1200)
+        check("the Library opens on Skribls", pa.evaluate(
+            "() => document.getElementById('tabSkribls').getAttribute('aria-selected') === 'true'"
+            " && document.getElementById('libDrafts').hidden"))
+        pa.focus("#tabSkribls")
+        pa.keyboard.press("ArrowRight")
+        pa.wait_for_timeout(1200)
+        st6 = pa.evaluate("""() => ({ sel: document.getElementById('tabDrafts').getAttribute('aria-selected'),
+            focus: document.activeElement && document.activeElement.id, hash: location.hash,
+            chips: getComputedStyle(document.querySelector('.chips')).display,
+            where: document.getElementById('draftsWhere').textContent })""")
+        check("ArrowRight moves to Drafts, with focus, and #drafts in the address",
+              st6["sel"] == "true" and st6["focus"] == "tabDrafts" and st6["hash"] == "#drafts", str(st6))
+        check("the Skribls tab's filter steps aside", st6["chips"] == "none", st6["chips"])
+        rows = pa.locator("#draftsList .draft-row")
+        check("signed in, it lists the ACCOUNT's drafts, and says so",
+              rows.count() == n_acct and "account" in st6["where"], f"{rows.count()} rows vs {n_acct}; {st6['where']!r}")
+        hrefs = pa.locator("#draftsList .draft-open").evaluate_all("els => els.map(e => e.getAttribute('href'))")
+        names = pa.locator("#draftsList .draft-name").all_inner_texts()
+        check("each Open goes to the editor that made it, carrying the id",
+              any(h.startswith("/skribl/flip?draft=") for h in hrefs)
+              and any(h.startswith("/skribl/skribl-pad?draft=") for h in hrefs), str(hrefs))
+        # Delete asks first.
+        victim = names[-1]
+        pa.locator("#draftsList .draft-del").last.click()
+        pa.wait_for_timeout(600)
+        check("Delete asks on the button first, and deletes nothing yet",
+              pa.locator("#draftsList .draft-del").last.inner_text() == "Delete?"
+              and durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'") == n_acct)
+        pa.locator("#draftsList .draft-del").last.click()
+        pa.wait_for_timeout(1500)
+        check("the second tap deletes it from the account",
+              durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'") == n_acct - 1
+              and victim not in pa.locator("#draftsList .draft-name").all_inner_texts(),
+              f"{victim!r} {pa.locator('#draftsList .draft-name').all_inner_texts()}")
+        # Open a Pad draft over a Pad that already holds work (section 1 drew
+        # on it): the editor asks, it does not replace.
+        pad_link = pa.locator("#draftsList .draft-row", has_text="Composer wave").locator(".draft-open")
+        pad_link.click()
+        pa.wait_for_timeout(3500)
+        before = canon(pa.evaluate("() => " + PRINT + "(serializeSkribl())"))
+        ask = pa.evaluate("""() => { var s = document.getElementById('savedDraftsSheet');
+            var m = s && s.querySelector('.sdrafts-row.armed .sdrafts-meta');
+            return { open: !!s && !s.hidden, meta: m ? m.textContent : null, url: location.pathname + location.search }; }""")
+        check("opened over work on the canvas, the Pad ASKS instead of replacing it",
+              ask["open"] and ask["meta"] and "replaces" in ask["meta"] and before != saved_print,
+              f"{ask}; canvas {'is' if before == saved_print else 'is not'} the draft")
+        check("and the id is off the address", ask["url"] == "/skribl/skribl-pad", ask["url"])
+        pa.locator("#savedDraftsSheet .sdrafts-row.armed .sdrafts-open").click()
+        pa.wait_for_timeout(1500)
+        check("the second tap opens the draft, with its name",
+              canon(pa.evaluate("() => " + PRINT + "(serializeSkribl())")) == saved_print
+              and pa.evaluate("() => SkriblName.get()") == "Composer wave",
+              _diff_detail(canon(pa.evaluate("() => " + PRINT + "(serializeSkribl())")), saved_print,
+                           pa.evaluate("() => SkriblName.get()")))
+        # Signed out: this browser's list.
+        browsing.goto(anon, BASE, "/skribl/library#drafts", require_boot=False)
+        anon.wait_for_timeout(1500)
+        aw = anon.evaluate("() => document.getElementById('draftsWhere').textContent")
+        check("signed out, #drafts lists THIS BROWSER's drafts, and says so",
+              anon.locator("#draftsList .draft-row").count() == 1 and "browser" in aw,
+              f"{anon.locator('#draftsList .draft-row').count()} rows; {aw!r}")
 
         check("no page errors", not errs, "; ".join(errs[:3]))
         b.close()

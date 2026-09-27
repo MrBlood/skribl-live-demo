@@ -1,4 +1,4 @@
-/* Saved drafts — ⋯ "Save draft" and "Open a draft…" on both editors (v316).
+/* Saved drafts — ⋯ "Save draft" and "Open a draft…" on both editors (v316), and the Library's Drafts tab (v317).
  *
  * WHAT IT IS FOR, in the owner's words: "a way to save skribl drafts (not on
  * my machine as a file), so I could just click the pen to add a skribl to the
@@ -17,7 +17,9 @@
  * delete (two taps). WHAT IT DOES NOT: serialising and loading a drawing,
  * which each editor passes in, because the Pad's and Flip's documents differ.
  *
- * Editors only; the player never saves anything (verify_player_isolation).
+ * The editors and the Library load it; the Library only lists and deletes
+ * (list/remove/ago) and never calls init(), so open() does nothing there.
+ * The player never saves anything (verify_player_isolation).
  */
 (function (global) {
   'use strict';
@@ -143,6 +145,7 @@
 
   /* ---- the sheet ------------------------------------------------------- */
   var sheet = null, scrim = null, listEl = null, opts = null, opener = null;
+  var armOnRender = null;   // a ?draft=<id> that arrived over work on the canvas
 
   function build() {
     scrim = el('div', 'sdrafts-scrim');
@@ -241,6 +244,11 @@
       row.appendChild(openBtn);
       row.appendChild(del);
       listEl.appendChild(row);
+      if (armOnRender === it.id) {
+        armOnRender = null;
+        openBtn.click();   // arms, because the canvas has work on it
+        openBtn.focus();
+      }
     });
   }
 
@@ -254,6 +262,7 @@
   }
 
   function show(from) {
+    if (!opts) return;   // the sheet is an editor's; the Library lists drafts itself
     if (!sheet) build();
     opener = from || null;
     sheet.hidden = false;
@@ -311,6 +320,16 @@
       global.history.replaceState(null, '', u.pathname + u.search + u.hash);
     } catch (e) {}
     backend.load(id).then(function (rec) {
+      /* WORK ON THE CANVAS IS ASKED ABOUT, never replaced (v317). Opening a
+         draft from the Library lands on an editor that may be holding its own
+         autosaved drawing, and loading over it lost that drawing without a
+         word. So the sheet opens with this draft's row already asking "Tap
+         again -- this replaces...", the question the sheet always asks. */
+      if (opts.hasContent && opts.hasContent()) {
+        armOnRender = id;
+        show(null);
+        return;
+      }
       opts.load(rec.payload);
       opts._current = id;
       if (global.SkriblName && rec.title) global.SkriblName.set(rec.title);
@@ -336,6 +355,11 @@
     /* New Skribl: whatever is drawn next is a new draft, not the old one. */
     forget: function () { if (opts) opts._current = null; },
     current: function () { return opts ? opts._current : null; },
-    where: function () { return backend.where; }
+    where: function () { return backend.where; },
+    /* For a page that lists drafts without editing one (the Library's Drafts
+       tab, v317): the same storage the sheet reads, so the two cannot differ. */
+    list: function () { return backend.list(); },
+    remove: function (id) { return backend.remove(id); },
+    ago: ago
   };
 })(window);

@@ -563,6 +563,10 @@ rows keep drafts in that browser only, and the menu says which.
 * **A Flip draft opened from the Pad** hands over to Flip in the same composer
   (`?draft=<id>` on Flip's own menu link, dropped from the address once read),
   so Add to post still lands in your form.
+* **The Library lists them too** (v317): a Drafts tab beside Skribls, and
+  `/library#drafts` opens on it. Open goes to the editor that made the draft;
+  Delete asks first. An editor that already holds work when a draft arrives
+  by link asks before replacing it.
 * **No commit here either.** The routes flush; your `after_request` commits,
   as for everything else (Transaction ownership, below).
 
