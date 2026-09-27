@@ -93,19 +93,28 @@
     if (sheet._slideT) return;
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduce || sheet.hidden || !isBottomSheet(sheet)) { unslide(sheet); done(); return; }
-    var from = sheet.style.transform || getComputedStyle(sheet).transform;
-    if (!from || from === 'none') from = '';
     var rest = window.innerHeight - sheet.getBoundingClientRect().top + 12;
+    // ONE MATRIX EACH END. The start is whatever the sheet shows now -- its
+    // resting transform, a finger's drag on top of it -- read back as the
+    // computed matrix; the end is that matrix moved down. A list like
+    // "matrix(...) translateY(140px)" -> "... translateY(393px)" does not
+    // interpolate in Chrome (it jumped at the half-way mark on the report
+    // sheet), and a single matrix always does.
+    var cur = getComputedStyle(sheet).transform || 'none';
+    var m = /^matrix\(([^)]+)\)$/.exec(cur);
+    if (!m && cur !== 'none') { unslide(sheet); done(); return; }   // a 3-D sheet: no slide, no jump
+    var v = m ? m[1].split(',').map(parseFloat) : [1, 0, 0, 1, 0, 0];
+    var mat = function (ty) { return 'matrix(' + [v[0], v[1], v[2], v[3], v[4], ty].join(', ') + ')'; };
     // An entrance keyframe would otherwise own the transform (Flip's menu, the
     // page menu); pin the start, then ease to the bottom edge and past it.
     sheet.style.animation = 'none';
     sheet.style.transition = 'none';
-    sheet.style.transform = from || 'none';
+    sheet.style.transform = mat(v[5]);
     void sheet.offsetHeight;
     // Moving from the first frame: an ease-in sat still long enough on a
     // short sheet to read as a stall, and a flicked sheet should keep going.
     sheet.style.transition = 'transform ' + SLIDE_MS + 'ms cubic-bezier(.3, .1, .4, 1)';
-    sheet.style.transform = (from ? from + ' ' : '') + 'translateY(' + rest + 'px)';
+    sheet.style.transform = mat(v[5] + rest);
     var fades = [];
     (opts.fade || []).forEach(function (el) { if (el) fades.push({ el: el, prop: 'opacity', to: '0' }); });
     (opts.fadeBg || []).forEach(function (el) { if (el) fades.push({ el: el, prop: 'backgroundColor', to: 'transparent' }); });

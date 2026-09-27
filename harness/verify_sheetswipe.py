@@ -195,6 +195,21 @@ with sync_playwright() as p:
           rpg.evaluate("() => document.getElementById('moreMenu').hidden") is True)
     rctx.close()
 
+    # 6b a quick second tap reopens a menu that is still easing away
+    print("\nreopen mid-slide")
+    for page, route, btn, handle, is_open in (
+        ("Flip", "/flip", "moreBtn", "#moreMenu .menu-handle",
+         "() => !document.getElementById('moreMenu').hidden && !document.getElementById('moreMenu')._slideT"),
+        ("Library", "/library", "pageMenuBtn", "#pageMenu .pm-grab",
+         "() => !document.getElementById('pageMenuOverlay').hidden && !document.getElementById('pageMenu')._slideT")):
+        ctx, pg, errs = fresh(b, route)
+        pg.evaluate(f"() => document.getElementById('{btn}').click()"); pg.wait_for_timeout(500)
+        pg.evaluate(f"() => document.querySelector('{handle}').click()"); pg.wait_for_timeout(60)
+        pg.evaluate(f"() => document.getElementById('{btn}').click()"); pg.wait_for_timeout(500)
+        check(f"{page}: tapping the menu button again while the menu eases away brings it back",
+              pg.evaluate(is_open) is True)
+        ctx.close()
+
     # 5 the draw drawer's grip
     for page, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
         who = f"{page}: the draw drawer"

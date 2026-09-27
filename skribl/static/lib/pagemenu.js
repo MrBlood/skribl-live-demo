@@ -35,7 +35,8 @@
         b.setAttribute('aria-pressed', b.getAttribute('data-theme') === mode ? 'true' : 'false');
       });
     }
-    function isOpen() { return !overlay.hidden; }
+    // Easing away counts as closed, so a quick second tap reopens it.
+    function isOpen() { return !overlay.hidden && !sheet._slideT; }
     function open() {
       sync();
       if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.cancelSlide(sheet);

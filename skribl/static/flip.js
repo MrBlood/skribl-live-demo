@@ -5403,7 +5403,9 @@ function closeMenu(){ if(moreMenu._slideT) return;   // already easing away
   const gone=()=>{ moreMenu.hidden=true; if(moreScrim) moreScrim.hidden=true; };
   if(window.SkriblSheetSwipe && !moreMenu.hidden) window.SkriblSheetSwipe.slideOut(moreMenu,{fade:[moreScrim],done:gone}); else gone();
   moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); document.dispatchEvent(new CustomEvent('skribl:menu-closed')); }
-moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
+// A menu easing away is closed as far as the button is concerned: a quick
+// second tap brings it back rather than being swallowed by the slide.
+moreBtn.addEventListener('click',e=>{ e.stopPropagation(); ((moreMenu.hidden||moreMenu._slideT)?openMenu:closeMenu)(); });
 document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')) closeMenu(); });
 // Escape closes it too. Every other dismissible surface here already does this
 // — the export sheet, the tune panel, the help drawer, and Pad's own menu — so
