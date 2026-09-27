@@ -555,6 +555,44 @@ try:
         }""")
         check("a connection that died in the background: the read succeeds on a fresh one",
               dead.get("v") == 7 and dead.get("thrown") == 2, str(dead))
+        # THE OWNER'S "they were there, then they disappeared". A read of the
+        # index that failed used to answer [] and the next save wrote an index
+        # holding only itself. Two drafts, then a save while the index read
+        # fails: the save must refuse, and both drafts must still be listed.
+        draw(pd, pd.locator("#canvas").bounding_box())
+        pd.evaluate("() => SkriblName.set('Keep me one')")
+        pd.evaluate("() => SkriblSavedDrafts.save()")
+        pd.wait_for_timeout(600)
+        pd.evaluate("() => { SkriblSavedDrafts.forget(); SkriblName.set('Keep me two'); }")
+        pd.evaluate("() => SkriblSavedDrafts.save()")
+        pd.wait_for_timeout(600)
+        lost_try = pd.evaluate("""async () => {
+          const G = SkriblDraftStore.get; let failed = 0;
+          SkriblDraftStore.get = function (k) {
+            if (k === 'saved:index' && !failed++) return Promise.reject(new Error("This browser's storage did not answer."));
+            return G.apply(this, arguments);
+          };
+          SkriblSavedDrafts.forget(); SkriblName.set('Would overwrite');
+          await SkriblSavedDrafts.save();
+          SkriblDraftStore.get = G;
+          const idx = await SkriblDraftStore.get('saved:index');
+          return { failed, names: (idx && idx.items || []).map(i => i.title) };
+        }""")
+        check("a save whose index read FAILS writes nothing over the list",
+              lost_try["failed"] == 1 and sorted(lost_try["names"]) == ["Keep me one", "Keep me two"],
+              str(lost_try))
+        # And the way back for drafts an older build already dropped from the
+        # index: the record is still there, so the list finds it.
+        back = pd.evaluate("""async () => {
+          const pay = serializeSkribl();
+          await SkriblDraftStore.put('saved:lost1', { id: 'lost1', kind: 'pad', title: 'Found again', payload: pay });
+          const items = await SkriblSavedDrafts.list();
+          const idx = await SkriblDraftStore.get('saved:index');
+          return { listed: items.map(i => i.title), indexed: (idx.items || []).map(i => i.title) };
+        }""")
+        check("a draft its index lost is listed again, and written back into the index",
+              "Found again" in back["listed"] and "Found again" in back["indexed"]
+              and "Keep me one" in back["listed"], str(back))
 
         check("no page errors", not errs, "; ".join(errs[:3]))
         b.close()

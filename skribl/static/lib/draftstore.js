@@ -148,7 +148,27 @@
     });
   }
 
-  var api = { put: put, get: get, del: del };
+  /* Every key in the store. For the saved-drafts list to find a draft its
+     index lost (lib/savedrafts.js, v317). getAllKeys where it exists, a key
+     cursor where it does not. */
+  function keys() {
+    return op('readonly', function (store, tx, resolve, reject) {
+      if (typeof store.getAllKeys === 'function') {
+        var r = store.getAllKeys();
+        r.onsuccess = function () { resolve(r.result || []); };
+        r.onerror = function () { reject(r.error || new Error('keys failed')); };
+        return;
+      }
+      var out = [], c = (store.openKeyCursor || store.openCursor).call(store);
+      c.onsuccess = function () {
+        var cur = c.result;
+        if (cur) { out.push(cur.key); cur.continue(); } else resolve(out);
+      };
+      c.onerror = function () { reject(c.error || new Error('keys failed')); };
+    });
+  }
+
+  var api = { put: put, get: get, del: del, keys: keys };
   if (typeof window !== 'undefined') window.SkriblDraftStore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();
