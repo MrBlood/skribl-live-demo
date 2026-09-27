@@ -2774,6 +2774,7 @@ body:has(#moreMenu:not([hidden])) .autosave-status,
    already covers it -- naming #reportSheet matches always and hides the pill for
    good, which the pin that drives this rule caught on the clean tree. */
 body:has(#helpDrawer:not([hidden])) .autosave-status,
+body:has(#savedDraftsSheet:not([hidden])) .autosave-status,
 body:has(.flip-export:not([hidden])) .autosave-status {
   opacity: 0;
   pointer-events: none;
@@ -2790,6 +2791,7 @@ body:has(#drawPanel:not([hidden])) .autosave-dismiss,
 body:has(.menu-overlay:not([hidden])) .autosave-dismiss,
 body:has(#moreMenu:not([hidden])) .autosave-dismiss,
 body:has(#helpDrawer:not([hidden])) .autosave-dismiss,
+body:has(#savedDraftsSheet:not([hidden])) .autosave-dismiss,
 body:has(.flip-export:not([hidden])) .autosave-dismiss {
   pointer-events: none;
 }
@@ -6041,7 +6043,9 @@ body.playing .flip-grid { display: none; }
 .sdrafts-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px;
   padding: 8px; border: 0; border-radius: 14px; background: transparent; color: inherit;
   font: inherit; text-align: left; cursor: pointer; }
-.sdrafts-open:hover { background: rgba(var(--wash-rgb), .05); }
+/* Hover only where a pointer hovers: on a phone a tap leaves :hover stuck, and
+   it drew a box inside the card. */
+@media (hover: hover) { .sdrafts-open:hover { background: rgba(var(--wash-rgb), .05); } }
 .sdrafts-thumb { flex: 0 0 auto; width: 72px; height: 54px; border-radius: 9px; overflow: hidden;
   background: #0d0f14; }
 .sdrafts-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -6054,7 +6058,7 @@ body.playing .flip-grid { display: none; }
   font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex;
   align-items: center; justify-content: center; }
 .sdrafts-del svg { width: 19px; height: 19px; }
-.sdrafts-del:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), .06); }
+@media (hover: hover) { .sdrafts-del:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), .06); } }
 .sdrafts-del.armed { color: var(--danger); border-color: rgba(244, 50, 111, .5); background: rgba(244, 50, 111, .12); }
 @media (max-width: 640px) {
   .sdrafts-sheet { top: auto; bottom: 0; transform: translateX(-50%); width: 100%;
