@@ -145,6 +145,25 @@ with sync_playwright() as p:
               pg.evaluate(closed) is False and pg.evaluate(f"() => document.querySelector('{sel}').style.transform") == "",
               f"closed={pg.evaluate(closed)}")
 
+        # 2b the first pixels, and a sideways drag
+        # A real phone decides between page scroll / pull-to-refresh and the
+        # page's own handling on the FIRST move; a move left uncancelled there
+        # makes every later one uncancellable. Synthetic events are always
+        # cancellable, so what is asserted is that the first 3px is claimed.
+        pg.evaluate(TOUCH, [sel, "touchstart", x, y])
+        first = pg.evaluate(TOUCH, [sel, "touchmove", x, y + 3])
+        pg.evaluate(TOUCH, [sel, "touchend", x, y + 3]); pg.wait_for_timeout(60)
+        check(f"{who}: the first 3px of a pull down is the sheet's already (the page never starts a reload)",
+              first is True, f"defaultPrevented={first}")
+        pg.evaluate(TOUCH, [sel, "touchstart", x - 60, y])
+        side1 = pg.evaluate(TOUCH, [sel, "touchmove", x - 30, y + 8])
+        side2 = pg.evaluate(TOUCH, [sel, "touchmove", x + 60, y + 24])
+        moved = pg.evaluate(f"() => document.querySelector('{sel}').style.transform")
+        pg.evaluate(TOUCH, [sel, "touchend", x + 60, y + 24]); pg.wait_for_timeout(300)
+        check(f"{who}: a mostly sideways drag that drifts down is left alone (not dragged, not cancelled, not closed)",
+              not side2 and not moved and pg.evaluate(closed) is False,
+              f"cancelled={side1},{side2} transform={moved!r} closed={pg.evaluate(closed)}")
+
         # 2 the swipe
         pg.evaluate(TOUCH, [sel, "touchstart", x, y]); pg.wait_for_timeout(30)
         pg.evaluate(TOUCH, [sel, "touchmove", x, y + 40]); pg.wait_for_timeout(30)

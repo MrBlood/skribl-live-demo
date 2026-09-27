@@ -130,7 +130,7 @@
     var canClose = opts.canClose || function () { return true; };
 
     var tracking = false, dragging = false, fromTop = false, scroller = null;
-    var sy = 0, dy = 0, lastY = 0, lastT = 0, vel = 0, base = '';
+    var sx = 0, sy = 0, dy = 0, lastY = 0, lastT = 0, vel = 0, base = '';
 
     function reset() {
       tracking = false; dragging = false; dy = 0; vel = 0;
@@ -145,7 +145,7 @@
       if (e.target.closest && e.target.closest('input, textarea, select')) return;
       var p = point(e);
       tracking = true; dragging = false; dy = 0; vel = 0;
-      sy = lastY = p.clientY; lastT = e.timeStamp || Date.now();
+      sx = p.clientX; sy = lastY = p.clientY; lastT = e.timeStamp || Date.now();
       fromTop = (handle && handle.contains(e.target)) ||
                 (p.clientY - sheet.getBoundingClientRect().top <= GRAB_ZONE);
       scroller = scrollerFor(e.target, sheet);
@@ -153,12 +153,24 @@
 
     function onTouchMove(e) {
       if (!tracking) return;
-      var p = point(e), d = p.clientY - sy;
+      var p = point(e), d = p.clientY - sy, dx = p.clientX - sx;
       if (!dragging) {
-        if (Math.abs(d) < SLOP) return;
         // Up is a scroll of the sheet's list; so is down while that list has
-        // somewhere to go. Either way this touch is not a dismissal.
-        if (d < 0 || (!fromTop && scroller && scroller.scrollTop > 0)) { tracking = false; return; }
+        // somewhere to go; so is anything mostly SIDEWAYS (a row that scrolls
+        // across, a control dragged along) however it drifts. None of these
+        // is a dismissal, and none of them is the sheet's to take.
+        var mayDismiss = d > 0 && Math.abs(d) >= Math.abs(dx) &&
+                         (fromTop || !scroller || scroller.scrollTop <= 0);
+        if (Math.abs(d) < SLOP && Math.abs(dx) < SLOP) {
+          // CLAIM IT FROM THE FIRST PIXEL (v317 review). A real phone commits
+          // to a page scroll -- or at the top, a pull-to-refresh -- on the
+          // first move it is not told otherwise about, and every move after
+          // that arrives uncancellable. So a move that could still become the
+          // dismiss is cancelled even inside the slop.
+          if (mayDismiss && e.cancelable) e.preventDefault();
+          return;
+        }
+        if (!mayDismiss) { tracking = false; return; }
         dragging = true;
         base = getComputedStyle(sheet).transform;
         if (!base || base === 'none') base = '';
