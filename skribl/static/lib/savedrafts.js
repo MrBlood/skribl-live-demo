@@ -358,6 +358,7 @@
     if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.cancelSlide(sheet);
     sheet.hidden = false;
     scrim.hidden = false;
+    if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.slideIn(sheet);
     if (global.SkriblModal) global.SkriblModal.open(sheet, opener);
     refresh();
   }

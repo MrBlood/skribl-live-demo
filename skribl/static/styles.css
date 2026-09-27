@@ -6074,12 +6074,6 @@ body.playing .flip-grid { display: none; }
     margin: 0 auto 10px; border-radius: 999px; background: var(--text-secondary); opacity: .7; cursor: pointer; }
   .sdrafts-grab::after { content: ''; position: absolute; inset: -12px -30px; }
 }
-/* It rises the way the menus do, and eases back down on close (slideOut in
-   lib/sheetswipe.js). translateX(-50%) is its centring and has to ride along. */
-@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
-  .sdrafts-sheet:not([hidden]) { animation: sdrafts-up 0.3s var(--spring); }
-  @keyframes sdrafts-up { from { transform: translateX(-50%) translateY(100%); } to { transform: translateX(-50%); } }
-}
 
 /* ---------- A swipe on an open menu never reloads the page (v317) ----------
    The owner: "I swipe it down and accidentally reload the page." At the top

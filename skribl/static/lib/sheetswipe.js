@@ -51,9 +51,12 @@
     return (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
   }
 
+  // Its bottom edge ON the screen's bottom edge -- not merely past it: a
+  // dropdown taller than a landscape phone runs off the bottom and is still a
+  // dropdown (v317 review). A sheet being dragged sits lower by the drag.
   function isBottomSheet(sheet) {
     var r = sheet.getBoundingClientRect();
-    return r.width > 0 && r.bottom >= window.innerHeight - 2;
+    return r.width > 0 && Math.abs(r.bottom - (sheet._dragDy || 0) - window.innerHeight) <= 3;
   }
 
   // The nearest element between the touch and the sheet that scrolls.
@@ -70,12 +73,26 @@
 
   var SLIDE_MS = 220;
 
+  /* An entrance still running owns the transform -- a CSS keyframe (Flip's
+     menu, the page menu) or slideIn's animation -- so a drag or a close that
+     starts during it would be ignored and then jump. Land it first. */
+  function settle(sheet) {
+    if (typeof sheet.getAnimations !== 'function') return;
+    sheet.getAnimations().forEach(function (a) {
+      if (typeof CSSTransition === 'undefined' || !(a instanceof CSSTransition)) {
+        try { a.finish(); } catch (e) {}
+      }
+    });
+  }
+
   function unslide(sheet) {
     clearTimeout(sheet._slideT);
     sheet._slideT = null;
     sheet.style.transition = '';
     sheet.style.transform = '';
     sheet.style.animation = '';
+    sheet.style.pointerEvents = '';
+    sheet._dragDy = 0;
     (sheet._slideFades || []).forEach(function (f) {
       f.el.style.transition = '';
       f.el.style[f.prop] = '';
@@ -92,6 +109,7 @@
     if (!sheet) { done(); return; }
     if (sheet._slideT) return;
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    settle(sheet);   // an entrance still running is landed before it is measured
     if (reduce || sheet.hidden || !isBottomSheet(sheet)) { unslide(sheet); done(); return; }
     var rest = window.innerHeight - sheet.getBoundingClientRect().top + 12;
     // ONE MATRIX EACH END. The start is whatever the sheet shows now -- its
@@ -110,6 +128,7 @@
     sheet.style.animation = 'none';
     sheet.style.transition = 'none';
     sheet.style.transform = mat(v[5]);
+    sheet.style.pointerEvents = 'none';   // leaving: its rows take no more taps
     void sheet.offsetHeight;
     // Moving from the first frame: an ease-in sat still long enough on a
     // short sheet to read as a stall, and a flicked sheet should keep going.
@@ -130,6 +149,25 @@
     }, SLIDE_MS);
   }
 
+  /* The way in, mirroring slideOut: a bottom sheet rises from below its own
+     resting place. Driven here, not by a stylesheet keyframe, so a page that
+     has no such sheet -- the player -- carries none of it (v317; the drafts
+     sheet is the one that uses it). Reduced motion, or not a bottom sheet:
+     it is simply there. */
+  function slideIn(sheet) {
+    if (!sheet || sheet.hidden || typeof sheet.animate !== 'function') return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !isBottomSheet(sheet)) return;
+    var cur = getComputedStyle(sheet).transform || 'none';
+    var m = /^matrix\(([^)]+)\)$/.exec(cur);
+    if (!m && cur !== 'none') return;
+    var v = m ? m[1].split(',').map(parseFloat) : [1, 0, 0, 1, 0, 0];
+    var h = sheet.getBoundingClientRect().height;
+    var mat = function (ty) { return 'matrix(' + [v[0], v[1], v[2], v[3], v[4], ty].join(', ') + ')'; };
+    sheet.animate([{ transform: mat(v[5] + h) }, { transform: mat(v[5]) }],
+                  { duration: 300, easing: 'cubic-bezier(0.4, 0.0, 0.2, 1.1)' });
+  }
+
   function attach(sheet, opts) {
     if (!sheet || sheet._skriblSheetSwipe) return;
     sheet._skriblSheetSwipe = true;
@@ -143,11 +181,15 @@
 
     function reset() {
       tracking = false; dragging = false; dy = 0; vel = 0;
+      sheet._dragDy = 0;
       sheet.style.transition = '';
       sheet.style.transform = '';
     }
 
     function onTouchStart(e) {
+      // A second finger mid-drag ends the drag and puts the sheet back; it
+      // used to leave it stuck part-way down with nothing to clear it.
+      if (dragging) reset();
       tracking = false;
       if (!e.touches || e.touches.length !== 1 || !canClose() || !isBottomSheet(sheet)) return;
       // A slider or a text field owns its own drag.
@@ -155,9 +197,13 @@
       var p = point(e);
       tracking = true; dragging = false; dy = 0; vel = 0;
       sx = p.clientX; sy = lastY = p.clientY; lastT = e.timeStamp || Date.now();
-      fromTop = (handle && handle.contains(e.target)) ||
-                (p.clientY - sheet.getBoundingClientRect().top <= GRAB_ZONE);
       scroller = scrollerFor(e.target, sheet);
+      // The top strip drags only while the sheet's list is at its top: in a
+      // sheet scrolled down, a pull on the first rows scrolls back up. The
+      // grabber always drags.
+      fromTop = (handle && handle.contains(e.target)) ||
+                (p.clientY - sheet.getBoundingClientRect().top <= GRAB_ZONE &&
+                 !(scroller && scroller.scrollTop > 0));
     }
 
     function onTouchMove(e) {
@@ -181,6 +227,7 @@
         }
         if (!mayDismiss) { tracking = false; return; }
         dragging = true;
+        settle(sheet);
         base = getComputedStyle(sheet).transform;
         if (!base || base === 'none') base = '';
         sheet.style.transition = 'none';
@@ -190,12 +237,16 @@
       vel = (p.clientY - lastY) / Math.max(1, now - lastT);
       lastY = p.clientY; lastT = now;
       dy = Math.max(0, d);
+      sheet._dragDy = dy;
       sheet.style.transform = (base ? base + ' ' : '') + 'translateY(' + dy + 'px)';
     }
 
-    function onTouchEnd() {
+    function onTouchEnd(e) {
       if (!tracking) return;
-      var was = dragging, pulled = dy, fast = vel;
+      // A flick is a flick only if the finger was still moving when it left:
+      // drag, pause, let go means "put it back".
+      var still = ((e && e.timeStamp) || Date.now()) - lastT > 100;
+      var was = dragging, pulled = dy, fast = still ? 0 : vel;
       tracking = false; dragging = false;
       if (!was) return;
       // Close FIRST, then hand the transform back: a sheet that animates out
@@ -204,6 +255,7 @@
       // transform over, and keeps it.
       if (pulled > CLOSE_AT || (pulled > 24 && fast > FLICK)) close();
       if (sheet._slideT) return;
+      sheet._dragDy = 0;
       sheet.style.transition = '';
       sheet.style.transform = '';
     }
@@ -227,5 +279,5 @@
   }
 
   window.SkriblSheetSwipe = { attach: attach, isBottomSheet: isBottomSheet,
-                              slideOut: slideOut, cancelSlide: unslide };
+                              slideIn: slideIn, slideOut: slideOut, cancelSlide: unslide };
 }());

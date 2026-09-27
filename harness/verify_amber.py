@@ -725,6 +725,41 @@ with sync_playwright() as p:
           dism["photo"] is None and dism["music"] == 3, str(dism))
     pgR.close()
 
+    print("\nPAD — an opened draft is the only document: the old session's media book-keeping goes (v317 review)")
+    # loadSkribl reset the canvas and the media on screen, not the draft's
+    # book-keeping, so a reload could re-attach the PREVIOUS photo or ask about
+    # a file the opened draft never had.
+    pgO = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+    pgO.goto(BASE+"/skribl-pad", wait_until="load"); pgO.wait_for_timeout(1200)
+    pgO.evaluate("() => localStorage.clear()")
+    pbO = pgO.locator("canvas").first.bounding_box()
+    pgO.mouse.move(pbO["x"]+100, pbO["y"]+100); pgO.mouse.down()
+    for i in range(25): pgO.mouse.move(pbO["x"]+100+i*4, pbO["y"]+100+math.sin(i/4)*25)
+    pgO.mouse.up(); pgO.wait_for_timeout(800)
+    PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    opened = pgO.evaluate("""async (png) => {
+        // The session before: a remembered photo, its bytes in the store.
+        await SkriblDraftStore.put('pad:photo', { blob: new Blob(['old']), name: 'image.jpg', type: 'image/jpeg' });
+        pendingPhotoMeta = { name: 'image.jpg' }; mediaDraft.photo = 'durable';
+        const d = serializeSkribl(); d.photo = { data: png, name: 'new.png', fit: 'contain' }; (d.frames || []).forEach(f => { f.photo = d.photo; });
+        loadSkribl(d);
+        await new Promise(r => setTimeout(r, 1500));
+        const rec = await SkriblDraftStore.get('pad:photo');
+        const withPhoto = { pending: pendingPhotoMeta, stored: rec && rec.name, slot: mediaDraft.photo };
+        const d2 = serializeSkribl(); delete d2.photo; (d2.frames || []).forEach(f => { delete f.photo; });
+        pendingPhotoMeta = { name: 'image.jpg' };
+        loadSkribl(d2);
+        await new Promise(r => setTimeout(r, 800));
+        const rec2 = await SkriblDraftStore.get('pad:photo');
+        return { withPhoto, without: { pending: pendingPhotoMeta, stored: rec2 ? rec2.name : null } };
+    }""", PNG)
+    check("Pad: opening a draft with a photo makes ITS photo the stored copy, and forgets the old one",
+          opened["withPhoto"]["pending"] is None and opened["withPhoto"]["stored"] == "new.png"
+          and opened["withPhoto"]["slot"] == "durable", str(opened))
+    check("Pad: opening a draft with no photo drops the old stored photo and asks about nothing",
+          opened["without"]["pending"] is None and opened["without"]["stored"] is None, str(opened))
+    pgO.close()
+
     print("\nPAD — a restored photo keeps its adjustments however long the decode takes (v294 audit, PR 2)")
     # AUDIT, finding 4: the saved fit / opacity / blur / zoom were re-applied on
     # a 140 ms timer after the change event and DROPPED if the image was not yet

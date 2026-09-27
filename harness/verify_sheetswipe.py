@@ -195,6 +195,57 @@ with sync_playwright() as p:
           rpg.evaluate("() => document.getElementById('moreMenu').hidden") is True)
     rctx.close()
 
+    # 7 the edges a finger finds (v317 review)
+    print("\nedges")
+    TWO = """([sel, x, y]) => { const el = document.querySelector(sel);
+      const t1 = new Touch({identifier: 7, target: el, clientX: x, clientY: y});
+      const t2 = new Touch({identifier: 8, target: el, clientX: x + 40, clientY: y});
+      el.dispatchEvent(new TouchEvent('touchstart', {touches: [t1, t2], targetTouches: [t1, t2],
+        changedTouches: [t2], bubbles: true, cancelable: true, view: window})); }"""
+    ctx, pg, errs = fresh(b, "/skribl-pad")
+    open_sheet(pg, "() => document.getElementById('menuBtn').click()", "() => document.getElementById('menuOverlay').hidden")
+    x, y = top_point(pg, "#menuSheet")
+    pg.evaluate(TOUCH, ["#menuSheet", "touchstart", x, y]); pg.evaluate(TOUCH, ["#menuSheet", "touchmove", x, y + 60])
+    pg.evaluate(TWO, ["#menuSheet", x, y + 60]); pg.wait_for_timeout(60)
+    check("a second finger mid-drag puts the sheet back (it was left stuck part-way down)",
+          pg.evaluate("() => document.getElementById('menuSheet').style.transform") == "", "")
+    # A quick pull, a pause, a lift: put it back, not a flick.
+    pg.evaluate(TOUCH, ["#menuSheet", "touchstart", x, y])
+    for k in range(1, 5):
+        pg.evaluate(TOUCH, ["#menuSheet", "touchmove", x, y + k * 12])
+    pg.wait_for_timeout(250)
+    pg.evaluate(TOUCH, ["#menuSheet", "touchend", x, y + 48]); pg.wait_for_timeout(450)
+    check("pull, pause, let go is 'put it back', not a flick",
+          pg.evaluate("() => document.getElementById('menuOverlay').hidden") is False, "")
+    # Scrolled down, a pull on the first rows scrolls back up instead of closing.
+    can = pg.evaluate("() => { const s = document.getElementById('menuSheet'); s.scrollTop = 120; return s.scrollTop; }")
+    pg.evaluate(TOUCH, ["#menuSheet", "touchstart", x, y])
+    first = pg.evaluate(TOUCH, ["#menuSheet", "touchmove", x, y + 3])
+    pg.evaluate(TOUCH, ["#menuSheet", "touchmove", x, y + 120])
+    moved = pg.evaluate("() => document.getElementById('menuSheet').style.transform")
+    pg.evaluate(TOUCH, ["#menuSheet", "touchend", x, y + 120]); pg.wait_for_timeout(450)
+    check("in a menu scrolled down, a pull on its top rows is a scroll, not a dismiss",
+          can > 0 and first is False and not moved
+          and pg.evaluate("() => document.getElementById('menuOverlay').hidden") is False,
+          f"scrollTop={can} claimed={first} transform={moved!r}")
+    ctx.close()
+    # A leaving sheet takes no taps.
+    ctx, pg, errs = fresh(b, "/flip")
+    open_sheet(pg, "() => document.getElementById('moreBtn').click()", "() => document.getElementById('moreMenu').hidden")
+    pg.evaluate("() => document.querySelector('#moreMenu .menu-handle').click()"); pg.wait_for_timeout(60)
+    check("a sheet easing away takes no more taps",
+          pg.evaluate("() => getComputedStyle(document.getElementById('moreMenu')).pointerEvents") == "none", "")
+    ctx.close()
+    # Landscape phone: Flip's dropdown runs off the bottom and is not a sheet.
+    lctx = b.new_context(viewport={"width": 844, "height": 390}, has_touch=True, is_mobile=True)
+    lpg = lctx.new_page(); browsing.goto(lpg, BASE, "/flip"); lpg.wait_for_timeout(900)
+    lpg.evaluate("() => document.getElementById('moreBtn').click()"); lpg.wait_for_timeout(500)
+    geo = lpg.evaluate("""() => { const m = document.getElementById('moreMenu'), r = m.getBoundingClientRect();
+        return { bottom: Math.round(r.bottom), h: innerHeight, sheet: SkriblSheetSwipe.isBottomSheet(m) }; }""")
+    check("on a landscape phone Flip's dropdown is not taken for a bottom sheet",
+          geo["sheet"] is False, str(geo))
+    lctx.close()
+
     # 6b a quick second tap reopens a menu that is still easing away
     print("\nreopen mid-slide")
     for page, route, btn, handle, is_open in (

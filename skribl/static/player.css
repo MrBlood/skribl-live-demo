@@ -1675,12 +1675,6 @@ a.player-btn { text-decoration: none; }
   .onion-tint:active, .tool-btn:active, .pb:active, .loop-btn:active,
   .btn:active:not(:disabled) { transform: none; }
 }
-/* It rises the way the menus do, and eases back down on close (slideOut in
-   lib/sheetswipe.js). translateX(-50%) is its centring and has to ride along. */
-@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
-  .sdrafts-sheet:not([hidden]) { animation: sdrafts-up 0.3s var(--spring); }
-  @keyframes sdrafts-up { from { transform: translateX(-50%) translateY(100%); } to { transform: translateX(-50%); } }
-}
 
 
 /* Magnify is shown wherever the GESTURE is missing and the button FITS.

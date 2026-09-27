@@ -115,6 +115,59 @@ function storeMediaBytes(kind) {
                     // the failure and nothing about its cause (v294).
                     console.error('[skribl] ' + kind + ' bytes: store write failed: ' + _errName(e)); });
 }
+/* A DOCUMENT OPENED IS THE ONLY DOCUMENT (v317 review). Opening a saved draft,
+   a backup, or Undo's snapshot went through loadSkribl, which reset the canvas
+   and the media on screen but not this file's book-keeping: the old session's
+   pending metas, the file in hand, the slot states, the bytes in the store. So
+   a reload could re-attach the PREVIOUS photo (phones name picked photos alike),
+   or ask about a file the opened draft never had. Called by loadSkribl in the
+   editor; the opened document's own media becomes the stored copy. */
+function padAdoptLoadedMedia(data) {
+  if (PAD_DRAFT_OFF) return;
+  pendingPhotoMeta = null; pendingMusicMeta = null;
+  _inFlight.photo = null;
+  // A restore decode still running belongs to the document that was replaced.
+  if (typeof photoSelectionSeq !== 'undefined') photoSelectionSeq++;
+  if (typeof musicSelectionSeq !== 'undefined') musicSelectionSeq++;
+  const src = { photo: data && data.photo, music: data && data.music };
+  const fallback = { photo: 'Photo from draft', music: 'Music from draft' };
+  ['photo', 'music'].forEach((kind) => {
+    _mediaSeq[kind]++;
+    _restoring[kind] = false;
+    mediaDraft[kind] = 'none';
+    _mediaFile[kind] = null;
+    const m = src[kind];
+    if (!(m && m.data)) {
+      if (window.SkriblDraftStore) SkriblDraftStore.del('pad:' + kind).catch(() => {});
+      return;
+    }
+    const name = m.name || fallback[kind];
+    const mine = _mediaSeq[kind];
+    fetch(m.data).then((r) => r.blob()).then((blob) => {
+      if (mine !== _mediaSeq[kind]) return;   // replaced again before the bytes arrived
+      _mediaFile[kind] = new File([blob], name, { type: blob.type || '' });
+      _mediaAt[kind] = Date.now();
+      storeMediaBytes(kind);
+    }).catch((e) => { console.error('[skribl] ' + kind + ' bytes: could not read the opened draft\'s file: ' + _errName(e)); });
+  });
+  if (typeof refreshPendingCards === 'function') refreshPendingCards();
+}
+/* Hooked here rather than called from app.js: the player downloads app.js and
+   keeps no draft, and its JavaScript is a ratchet (verify_player_isolation).
+   loadSkribl is a global function binding, so every caller in app.js -- the
+   backup file, a saved draft, Undo's snapshot, the composer -- reaches this. */
+if (typeof loadSkribl === 'function') {
+  const _loadSkribl = loadSkribl;
+  loadSkribl = function (data) {   // eslint-disable-line no-global-assign
+    const before = skriblLoadSeq;
+    const r = _loadSkribl.apply(this, arguments);
+    // Only a document that actually opened: a refused file changes nothing.
+    if (skriblLoadSeq !== before) {
+      try { padAdoptLoadedMedia(normalizeSkribl(data)); } catch (e) { console.error('[skribl] ' + _errName(e)); }
+    }
+    return r;
+  };
+}
 function _errName(e) { return e ? ((e.name || 'Error') + (e.message ? ': ' + e.message : '')) : 'unknown'; }
 // For lib/report.js: the media store as this session sees it.
 window.skriblMediaStoreState = () => 'photo ' + mediaDraft.photo + ', music ' + mediaDraft.music;
