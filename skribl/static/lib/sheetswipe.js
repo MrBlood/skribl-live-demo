@@ -102,7 +102,9 @@
     sheet.style.transition = 'none';
     sheet.style.transform = from || 'none';
     void sheet.offsetHeight;
-    sheet.style.transition = 'transform ' + SLIDE_MS + 'ms cubic-bezier(.32, 0, .67, 0)';
+    // Moving from the first frame: an ease-in sat still long enough on a
+    // short sheet to read as a stall, and a flicked sheet should keep going.
+    sheet.style.transition = 'transform ' + SLIDE_MS + 'ms cubic-bezier(.3, .1, .4, 1)';
     sheet.style.transform = (from ? from + ' ' : '') + 'translateY(' + rest + 'px)';
     var fades = [];
     (opts.fade || []).forEach(function (el) { if (el) fades.push({ el: el, prop: 'opacity', to: '0' }); });

@@ -19,6 +19,11 @@ a population that spans routes carries the route in its identity):
      is none); CLOSED it is the page it always was (auto).
   5  THE DRAW DRAWER'S GRIP, tapped, closes the drawer (it toggled half and
      full, and on a phone that read as a drawer that would not go away).
+  6  IT EASES AWAY (the owner: "when those menus close shouldn't they ease
+     closed?"). Sampled part-way through, a closing sheet is still on screen
+     and lower than it was -- by the grabber, and from where a swipe left it --
+     and it is gone once the slide is over. Four of these vanished before.
+     With reduced motion it goes at once.
 """
 import os
 import sys
@@ -47,6 +52,11 @@ TOUCH = """([sel, type, x, y]) => {
 }"""
 
 OVERSCROLL = "() => getComputedStyle(document.documentElement).overscrollBehaviorY"
+
+# Where the sheet is, and whether it is laid out at all, part-way through a close.
+SAMPLE = """(sel) => { const s = document.querySelector(sel);
+  return { shown: s.getClientRects().length > 0, top: s.getBoundingClientRect().top }; }"""
+EASE_MS = 90
 
 # (page, name, route, how to open it, the sheet, is it closed?, its grabber)
 SHEETS = [
@@ -112,8 +122,14 @@ with sync_playwright() as p:
 
         # 1 the grabber
         if grab:
+            top0 = pg.evaluate(SAMPLE, sel)["top"]
             pg.evaluate(f"() => document.querySelector('{grab}').click()")
+            pg.wait_for_timeout(EASE_MS)
+            mid = pg.evaluate(SAMPLE, sel)
             pg.wait_for_timeout(450)
+            check(f"{who}: tapping the grabber eases it down rather than snapping it away",
+                  mid["shown"] and mid["top"] > top0 + 10,
+                  f"{EASE_MS}ms in: shown={mid['shown']}, top {round(top0)} -> {round(mid['top'])}")
             check(f"{who}: tapping the grabber closes it", pg.evaluate(closed) is True)
             check(f"{who}: closed, the page is the page it was (overscroll {before!r})",
                   pg.evaluate(OVERSCROLL) == before, f"now {pg.evaluate(OVERSCROLL)!r}")
@@ -134,13 +150,31 @@ with sync_playwright() as p:
         pg.evaluate(TOUCH, [sel, "touchmove", x, y + 40]); pg.wait_for_timeout(30)
         taken = pg.evaluate(TOUCH, [sel, "touchmove", x, y + 140])
         follows = pg.evaluate(f"() => document.querySelector('{sel}').style.transform")
-        pg.evaluate(TOUCH, [sel, "touchend", x, y + 140]); pg.wait_for_timeout(450)
+        dragged = pg.evaluate(SAMPLE, sel)["top"]
+        pg.evaluate(TOUCH, [sel, "touchend", x, y + 140]); pg.wait_for_timeout(EASE_MS)
+        mid = pg.evaluate(SAMPLE, sel)
+        pg.wait_for_timeout(450)
+        check(f"{who}: let go past the line, it carries on down from the finger (no jump back, no vanish)",
+              mid["shown"] and mid["top"] > dragged + 5,
+              f"{EASE_MS}ms after release: shown={mid['shown']}, top {round(dragged)} -> {round(mid['top'])}")
         check(f"{who}: a swipe down follows the finger", "translateY(140px)" in (follows or ""), repr(follows))
         check(f"{who}: ...and the touch is the sheet's, not the page's (the move is cancelled: no scroll, no reload)",
               taken is True, f"defaultPrevented={taken}")
         check(f"{who}: ...and it closes", pg.evaluate(closed) is True)
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
+
+    # 6 reduced motion: no slide, gone at once
+    print("\nreduced motion")
+    rctx = b.new_context(viewport={"width": 390, "height": 664}, has_touch=True, is_mobile=True,
+                         reduced_motion="reduce")
+    rpg = rctx.new_page()
+    browsing.goto(rpg, BASE, "/flip"); rpg.wait_for_timeout(900)
+    rpg.evaluate("() => document.getElementById('moreBtn').click()"); rpg.wait_for_timeout(500)
+    rpg.evaluate("() => document.querySelector('#moreMenu .menu-handle').click()"); rpg.wait_for_timeout(30)
+    check("with reduced motion, Flip's menu closes at once rather than sliding",
+          rpg.evaluate("() => document.getElementById('moreMenu').hidden") is True)
+    rctx.close()
 
     # 5 the draw drawer's grip
     for page, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
