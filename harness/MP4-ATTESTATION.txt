@@ -1,5 +1,5 @@
-tree: c26dc5e00978bad9c667e99cfd021fbcf5096dade4c183c4f740acfeab099361
+tree: 331c21df22f821a7e786c37940928787a22e4db4f24eaea0a2c3bbe5234adb17
 channel: chrome
 result: PASS
-assertions: 12
-generated: 2026-09-25T20:57:37Z
+assertions: 24
+generated: 2026-09-26T22:53:58Z
