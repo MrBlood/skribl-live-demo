@@ -262,7 +262,7 @@
     .libhead h2 { font-size: 15px; font-weight: 700; letter-spacing: .02em; margin: 0; color: var(--text); }
     /* The tabs are the heading: two words, the chosen one underlined in the
        accent. 44px tall to a finger, like every control on the page. */
-    .libtabs { display: flex; gap: 4px; }
+    .libtabs, .libtabs-list { display: flex; gap: 4px; }
     .libtab { font: inherit; font-size: 15px; font-weight: 700; letter-spacing: .02em; color: var(--text-3);
       background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 0 8px; min-height: 44px; cursor: pointer; }
     .libtab:hover { color: var(--text-2); }
@@ -590,12 +590,14 @@
            host says who is signed in, this browser's otherwise -- so this page
            and the editors' ⋯ Open a draft… can never disagree. The chips and
            the search are the Skribls tab's and step aside for Drafts. #}
-        <h2 class="libtabs" role="tablist" aria-label="Your Skribl Library">
+        {# The heading stays a heading: role="tablist" on the <h2> itself took
+           its heading role away (v317 review), so the list sits inside it. #}
+        <h2 class="libtabs"><span class="libtabs-list" role="tablist" aria-label="Your Skribl Library">
           <button type="button" class="libtab active" role="tab" id="tabSkribls"
                   aria-selected="true" aria-controls="libSkribls">Skribls</button>
           <button type="button" class="libtab" role="tab" id="tabDrafts"
                   aria-selected="false" aria-controls="libDrafts" tabindex="-1">Drafts</button>
-        </h2>
+        </span></h2>
         {# THE FILTER (v304): the two states a post of yours can be in, plus
            all. Not Pad/Flip — the listing does not say which a post is. #}
         {# The titles say what the one-word labels cannot; lib/tooltip.js

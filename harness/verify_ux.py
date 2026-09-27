@@ -1253,6 +1253,7 @@ with _sp204() as _p:
     # every export carried it. The typed title and the export sheet's own field
     # both clear; get() falls back to a fresh auto-name; Undo brings it back.
     for page_, nm, fn in ((pg, "Pad", "clearAllWithUndo()"), (fp, "Flip", "clearAllPages()")):
+        page_.evaluate("() => { if (window.SkriblSavedDrafts) SkriblSavedDrafts.resume('draft-before'); }")
         page_.evaluate("() => { SkriblName.set('Old title'); const e = document.getElementById('exportName');"
                        " if (e) { e.value = 'old-export'; e._skriblDirty = true; } }")
         page_.evaluate(f"() => {fn}")
@@ -1271,6 +1272,9 @@ with _sp204() as _p:
           back == ("Old title", "Old title"), str(back))
     _exp = "() => { const e = document.getElementById('exportName'); return e ? [e.value, !!e._skriblDirty] : null; }"
     back_exp = (pg.evaluate(_exp), fp.evaluate(_exp))
+    back_draft = (pg.evaluate("() => SkriblSavedDrafts.current()"), fp.evaluate("() => SkriblSavedDrafts.current()"))
+    check("V317: ...and the saved draft it was, so the next Save updates it rather than copying it",
+          back_draft == ("draft-before", "draft-before"), str(back_draft))
     check("V317: ...and the typed export name with it (Undo used to lose it for good)",
           back_exp == (["old-export", True], ["old-export", True]), str(back_exp))
     # .skribl file input accepts the types iOS tags an unknown-ext JSON file with

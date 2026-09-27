@@ -97,7 +97,7 @@ function resetAll() {
 // that case, just without the undo offer.
 function clearAllWithUndo() {
   // A new Skribl is a new draft: the next Save must not overwrite the old one.
-  if (window.SkriblSavedDrafts) window.SkriblSavedDrafts.forget();
+  const prevDraft = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;
   let snap = null;
   if (mediaBusy === 0) {
     try { snap = serializeSkribl(); } catch (err) { snap = null; }
@@ -111,6 +111,7 @@ function clearAllWithUndo() {
       try {
         loadSkribl(snap);
         if (window.SkriblName) window.SkriblName.restore(prevName);   // its names come back with it
+        if (window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(prevDraft);   // and its saved draft
         showToast('Restored', null, { label: 'Redo', onClick: clearAllWithUndo });
       } catch (err) {
         showToast('Couldn\u2019t restore that', null);
@@ -293,7 +294,13 @@ document.addEventListener('DOMContentLoaded', function () {
     kind: 'pad',
     serialize: function () { return serializeSkribl(); },
     load: function (d) { loadSkribl(d); },
-    hasContent: function () { return !!(hasContent || (typeof strokes !== 'undefined' && strokes.length)); },
+    // A photo or a track on its own is work too: replacing it asks first, and
+    // it can be saved (v317 review).
+    hasContent: function () {
+      return !!(hasContent || (typeof strokes !== 'undefined' && strokes.length)
+                || (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
+                || (audioEl && audioEl._fileName));
+    },
     thumbnail: function () { return window.skriblPreviewCanvas ? window.skriblPreviewCanvas() : document.getElementById('canvas'); },
     otherUrl: function () { var a = document.getElementById('flipBtn'); return a ? a.getAttribute('href') : null; },
     closeMenu: function () { if (typeof closeMenu === 'function') closeMenu(true); },

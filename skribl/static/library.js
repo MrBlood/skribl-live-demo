@@ -682,13 +682,14 @@
     del.className = 'draft-del';
     del.innerHTML = BIN;
     del.setAttribute('aria-label', 'Delete ' + title);
-    function disarm() { del.classList.remove('armed'); del.innerHTML = BIN; }
+    function disarm() { del.classList.remove('armed'); del.innerHTML = BIN; del.setAttribute('aria-label', 'Delete ' + title); }
     draftDisarmers.push(disarm);
     del.addEventListener('click', function () {
       if (!del.classList.contains('armed')) {
         draftDisarmers.forEach(function (d) { if (d !== disarm) d(); });
         del.classList.add('armed');
         del.textContent = 'Delete?';
+        del.setAttribute('aria-label', 'Tap again to delete ' + title);
         return;
       }
       del.disabled = true;
@@ -702,17 +703,23 @@
     return row;
   }
 
+  // Only the latest list draws (v317 review): a read that answers late must not
+  // put back a row deleted since.
+  var draftsSeq = 0;
   function renderDrafts() {
     if (!SD || !dList) return;
+    var mine = ++draftsSeq;
     dWhere.textContent = SD.where() === 'account'
       ? 'Saved to your account, on every device you sign in on.'
       : 'Saved on this browser only.';
     SD.list().then(function (items) {
+      if (mine !== draftsSeq) return;
       dList.textContent = '';
       draftDisarmers = [];
       dEmpty.hidden = items.length > 0;
       items.forEach(function (it) { dList.appendChild(draftRow(it)); });
     }, function (e) {
+      if (mine !== draftsSeq) return;
       dList.textContent = '';
       dEmpty.hidden = true;
       dWhere.textContent = e.message;

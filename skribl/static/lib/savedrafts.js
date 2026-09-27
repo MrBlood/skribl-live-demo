@@ -287,14 +287,18 @@
       openBtn.appendChild(words);
       var del = el('button', 'sdrafts-del');
       del.type = 'button';
-      del.setAttribute('aria-label', 'Delete ' + (it.title || 'this draft'));
+      var delLabel = 'Delete ' + (it.title || 'this draft');
+      del.setAttribute('aria-label', delLabel);
       del.innerHTML = BIN;
+      // The row's question is spoken when it is asked, not only shown.
+      meta.setAttribute('aria-live', 'polite');
       var armedOpen = false, armedDel = false, metaText = meta.textContent;
       function disarm() {
         armedOpen = false; armedDel = false;
         meta.textContent = metaText;
         row.classList.remove('armed');
         del.classList.remove('armed');
+        del.setAttribute('aria-label', delLabel);
         del.innerHTML = BIN;
       }
       disarmers.push(disarm);
@@ -317,6 +321,8 @@
           if (armedOpen) disarm();
           armedDel = true;
           del.textContent = 'Delete?';
+          // Its name says what the next tap does; the old label hid the question.
+          del.setAttribute('aria-label', 'Tap again to delete ' + (it.title || 'this draft'));
           del.classList.add('armed');
           return;
         }
@@ -336,10 +342,17 @@
     });
   }
 
+  // Only the LATEST list draws: an earlier read that answers late would put a
+  // just-deleted row back, which then answers "not found" (v317 review).
+  var listSeq = 0;
   function refresh() {
+    var mine = ++listSeq;
     listEl.textContent = '';
     listEl.appendChild(el('p', 'sdrafts-empty', 'Loading\u2026'));
-    return backend.list().then(render, function (e) {
+    return backend.list().then(function (items) {
+      if (mine === listSeq) render(items);
+    }, function (e) {
+      if (mine !== listSeq) return;
       /* A list that cannot be read says so and offers the way back, rather
          than "Loading…" for good (v317, the owner's iPhone). */
       listEl.textContent = '';
@@ -445,7 +458,10 @@
     open: show,
     close: hide,
     /* New Skribl: whatever is drawn next is a new draft, not the old one. */
-    forget: function () { if (opts) opts._current = null; },
+    // forget() hands back the draft it let go of, so an Undo can resume() it
+    // and the next Save updates that draft instead of making a copy (v317).
+    forget: function () { var was = opts ? opts._current : null; if (opts) opts._current = null; return was; },
+    resume: function (id) { if (opts && id) opts._current = id; },
     current: function () { return opts ? opts._current : null; },
     where: function () { return backend.where; },
     /* For a page that lists drafts without editing one (the Library's Drafts

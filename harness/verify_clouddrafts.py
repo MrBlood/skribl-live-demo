@@ -662,6 +662,11 @@ try:
             r.classList.contains('armed') || r.querySelector('.sdrafts-del').classList.contains('armed'))""")
         check("...and asking to delete one row puts back the row that asked to open",
               armed2[:2] == [True, False], str(armed2))
+        lab = pd.evaluate("""() => { const d = document.querySelectorAll('#savedDraftsSheet .sdrafts-del');
+            return [d[0].getAttribute('aria-label'), d[1].getAttribute('aria-label'),
+                    document.querySelector('#savedDraftsSheet .sdrafts-meta').getAttribute('aria-live')]; }""")
+        check("the asking bin's name says what the next tap does, the others' do not, and the row's question is spoken",
+              lab[0].startswith("Tap again to delete") and lab[1].startswith("Delete ") and lab[2] == "polite", str(lab))
         # The Library draws the same row: the card opens, the bin asks, one at a time.
         browsing.goto(pd, BASE, "/skribl/library#drafts", require_boot=False)
         pd.wait_for_timeout(1500)
@@ -676,6 +681,30 @@ try:
         pd.wait_for_timeout(150)
         larmed = pd.evaluate("() => [...document.querySelectorAll('#draftsList .draft-del')].map(d => d.classList.contains('armed'))")
         check("the Library: one bin asks at a time", larmed[:2] == [False, True], str(larmed))
+        llab = pd.evaluate("""() => [...document.querySelectorAll('#draftsList .draft-del')].slice(0, 2).map(d => d.getAttribute('aria-label'))""")
+        check("the Library: the asking bin's name says so too", llab[0].startswith("Delete ") and llab[1].startswith("Tap again to delete"), str(llab))
+        head = pd.evaluate("""() => { const h = document.querySelector('h2.libtabs');
+            return { role: h.getAttribute('role'), tabs: h.querySelectorAll('[role=tablist] [role=tab]').length }; }""")
+        check("the Library's tab heading is still a heading, with its tabs inside it",
+              head["role"] is None and head["tabs"] == 2, str(head))
+        # A Pad holding only a photo is work: opening a draft over it asks first.
+        pp = pd.context.new_page()   # the same browser, so the same drafts
+        browsing.goto(pp, BASE, "/skribl/skribl-pad", require_boot=False); pp.wait_for_timeout(1200)
+        pp.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
+        # The same browser restores pd's drawing here; start from nothing but a photo.
+        pp.evaluate("() => { clearAllWithUndo(); }"); pp.wait_for_timeout(300)
+        import base64 as _b64, tempfile as _tf
+        _png = pathlib.Path(_tf.gettempdir()) / "clouddrafts_probe.png"
+        _png.write_bytes(_b64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
+        pp.set_input_files("#photoInput", str(_png)); pp.wait_for_timeout(1500)
+        menu_click(pp, "#openCloudDraftItem")
+        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
+        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).click(); pp.wait_for_timeout(200)
+        asked = pp.evaluate("""() => ({ armed: document.querySelector('#savedDraftsSheet .sdrafts-row').classList.contains('armed'),
+            strokes: strokes.length, ink: !!hasContent, photo: !!(photoBgImg && photoBgImg._fileName) })""")
+        check("a Pad holding only a photo asks before a draft replaces it",
+              asked["armed"] is True and asked["strokes"] == 0 and not asked["ink"] and asked["photo"], str(asked))
+        pp.close()
 
         check("no page errors", not errs, "; ".join(errs[:3]))
         b.close()

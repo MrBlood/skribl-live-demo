@@ -9596,8 +9596,8 @@ function invalidateClearUndo(){
 // synthetic clicks at the drawer's button, riding its armed state — one
 // control's business logic coupled to another control's confirmation UI.
 function clearAllPages(){
-  if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.forget();   // a new Skribl is a new draft
-  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv,
+  const _draftId = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;   // a new Skribl is a new draft
+  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv, draftId: _draftId,
                         // A new Skribl is a new title; Undo brings the old one back (v317).
                         name: (window.SkriblName && window.SkriblName.reset) ? window.SkriblName.reset() : null };
   /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
@@ -9633,6 +9633,7 @@ bindEl('clearUndo', 'click',()=>{
   if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
   if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
   if(clearFramesBackup.name && window.SkriblName) window.SkriblName.restore(clearFramesBackup.name);
+  if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(clearFramesBackup.draftId);   // and the saved draft it was
   clearFramesBackup=null; redoStack.length=0;
   document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();

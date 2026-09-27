@@ -30,6 +30,7 @@
 
   var DB_NAME = 'skribl-drafts', STORE = 'media', VERSION = 1;
   var dbPromise = null;
+  var liveDb = null;   // the connection dbPromise currently stands for
 
   /* NOTHING HERE MAY WAIT FOREVER (v317). The owner's iPhone: the drafts sheet
      said "Loading…" and nothing came, drafts "seem to go away", and a photo
@@ -88,11 +89,14 @@
         if (timedOut) { try { db.close(); } catch (e) {} return; }
         // Another tab upgrading the schema, or the browser closing the
         // connection under us: drop the handle so the next call reopens.
+        // Each handler forgets THIS connection only: a late event from an old,
+        // dead one must not drop the healthy one that replaced it (v317 review).
         db.onversionchange = function () {
           try { db.close(); } catch (e) {}
-          dbPromise = null;
+          if (liveDb === db) { liveDb = null; dbPromise = null; }
         };
-        db.onclose = function () { dbPromise = null; };
+        db.onclose = function () { if (liveDb === db) { liveDb = null; dbPromise = null; } };
+        liveDb = db;
         resolve(db);
       };
       req.onerror = function () { reject(req.error || new Error('IndexedDB open failed')); };
@@ -118,14 +122,16 @@
      will not clone, a refused write: those are answers from a connection that
      works, and dropping it for them opened a fresh one per failure and left
      every old one open. A connection that is dropped is closed. */
-  function drop() {
-    var p = dbPromise;
-    dbPromise = null;
-    if (p) p.then(function (db) { try { db.close(); } catch (e) {} }, function () {});
+  function drop(db) {
+    if (!db) return;
+    if (liveDb === db) { liveDb = null; dbPromise = null; }
+    try { db.close(); } catch (e) {}
   }
   function op(mode, body) {
+    var used = null;   // the connection this attempt ran on, the one to drop
     function once() {
       return open().then(function (db) {
+        used = db;
         return deadline(new Promise(function (resolve, reject) {
           var tx = db.transaction(STORE, mode);
           body(tx.objectStore(STORE), tx, resolve, reject);
@@ -133,8 +139,8 @@
       });
     }
     return once().catch(function (e) {
-      if (e && e.name === 'InvalidStateError') { drop(); return once(); }
-      if (e && e.skriblTimeout) drop();
+      if (e && e.name === 'InvalidStateError') { drop(used); return once(); }
+      if (e && e.skriblTimeout) drop(used);
       throw e;
     });
   }

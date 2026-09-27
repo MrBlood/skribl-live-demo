@@ -91,6 +91,10 @@ function storeMediaBytes(kind) {
   if (!file || PAD_DRAFT_OFF) return;
   if (!window.SkriblDraftStore) { mediaDraft[kind] = 'failed'; return; }
   if (mediaDraft[kind] === 'saving') return;   // one write in flight at a time; a hung one is given up below
+  // A write given up at the deadline may still be running when the next save
+  // starts another, so two can overlap. That is chosen, not missed (v317
+  // review): a write that is truly hung may never settle, and a retry that
+  // waited for it would wait for ever.
   const seq = ++_mediaSeq[kind];
   const current = () => seq === _mediaSeq[kind];
   mediaDraft[kind] = 'saving';
