@@ -12129,3 +12129,92 @@ loop engine, loop view, music strip and MP4 pipeline for both editors
 
 The Pad dropping `?theme=` after load was real, and #231 fixed it on every
 page, including the compose Pad a host iframes.
+
+## v317 -- the owner's iPhone, menus that go away, and a name for the helper
+
+Everything from #257 to #262, plus the review that preceded this seal. It was
+driven by one evening of the owner using the editors on an iPhone and sending
+screenshots.
+
+### Drafts that stay (#257, #259, #260)
+
+The Library got a Drafts tab. On the owner's phone the drafts sheet sat on
+"Loading…" forever, drafts "seemed to go away", and restored drawings came back
+with "Media missing". Four causes, four fixes:
+
+* **Nothing in the draft store may wait forever.** Every open and request has a
+  deadline, a dead connection is dropped (and closed) and retried once, and the
+  first open is nudged, because WebKit can leave one unanswered.
+* **A failed read is not an empty list.** The list read swallowed its error and
+  answered [], and the next save wrote an index holding only itself over the
+  real one. Records outlive a lost index, so the list now rebuilds rows from
+  them. A delete removes the record before the row, so a half-finished delete
+  cannot bring a draft back or leave a row that answers "not found".
+* **Bytes, not Blobs.** Media goes into IndexedDB as an ArrayBuffer and comes
+  back as a Blob. WebKit, in-app browsers above all, has a long record of
+  failing to store Blob values.
+* **In hand is not missing, for a while.** A restored file still decoding
+  showed "Media missing" for a second. It now counts as loading, but only for a
+  decode window, so a file that never lands still turns amber.
+
+### Menus that go away (#260, and this seal)
+
+The owner: "menus should always go down or away easily... I hit the drawer grip
+and they stay, I swipe it down and accidentally reload the page", and then
+"when those menus close shouldn't they ease closed?"
+
+`lib/sheetswipe.js` gives every bottom sheet the same behaviour:
+
+* **The grip closes it.** The draw drawer's grip used to toggle half and full,
+  and the page menu's grip did nothing.
+* **A swipe down follows the finger.** The touch is the sheet's from the first
+  pixel, because a real phone commits to pull-to-refresh on the first move it
+  is not told otherwise about. A mostly sideways drag is left alone.
+* **It eases away.** Four sheets used to vanish. A quick second tap reopens a
+  sheet still easing away, and with reduced motion it closes at once.
+
+The slide is one matrix at each end. "matrix(...) translateY(a)" to
+"... translateY(b)" does not interpolate in Chrome: the report sheet sat still,
+then jumped at the half-way mark.
+
+### Also
+
+Flip keeps up on a busy page (#258): the live stroke paints over a cache made
+at pen-down. On phones the header is solid and has no blur layer, because
+WebKit left its slot empty after drawing (#259). New Skribl starts a new title,
+and Undo restores both the title and a typed export name. Buttons on colour have
+white words, never dark (#260).
+
+### Cal (#262)
+
+The working agreements moved, unchanged, from CLAUDE.md to
+WORKING-AGREEMENTS.md, and CLAUDE.md now includes them. The owner's words: "no
+ads, and say I have a friend helping me named Cal". The .gitignore ad went, and
+the README credits him.
+
+### Main went red twice, and why
+
+#259 edited styles.css without re-emitting player.css, and #260 changed a colour
+that verify_dots pinned. Both passed their pull requests, because each ran the
+suites its author believed were affected. The first mistake is now caught on
+the PR gate (verify_seam regenerates player.css). The second is the working
+agreement's own rule, restated: a change to shared styles or shared modules
+runs everything before it merges, not a sample.
+
+### The pre-seal review
+
+A review of everything since v316 found ten issues, and eight were fixed with
+calibrated checks:
+
+* the decode window;
+* the delete order;
+* only a dead connection is dropped, and a write's deadline is 30 s;
+* the swipe's first pixel and sideways drags;
+* reopening mid-slide;
+* Undo losing the export name;
+* verify_seam matching script tags rather than text;
+* a README entry that had split another.
+
+The ninth was partly real: recovered drafts now sort by date. The tenth, the
+cost of recovery, stands: it reads a lost record's payload once, when it
+recovers it.
