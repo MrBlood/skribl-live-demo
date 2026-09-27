@@ -202,12 +202,18 @@
       ? 'Saved to your account, on every device you sign in on.'
       : 'Saved on this browser only.');
     listEl = el('div', 'sdrafts-list');
+    // A phone's grabber, like every other sheet's: tap it or swipe the sheet
+    // down to close (lib/sheetswipe.js). Hidden above phone widths.
+    var grab = el('div', 'sdrafts-grab');
+    grab.setAttribute('aria-hidden', 'true');
+    sheet.appendChild(grab);
     sheet.appendChild(head);
     sheet.appendChild(sub);
     sheet.appendChild(listEl);
     doc.body.appendChild(scrim);
     doc.body.appendChild(sheet);
     scrim.addEventListener('click', hide);
+    if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(sheet, { handle: grab, close: hide });
     sheet.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); hide(); } });
   }
 

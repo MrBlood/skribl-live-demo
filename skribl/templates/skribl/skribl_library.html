@@ -707,6 +707,9 @@
   {% with here='library' %}{% include 'skribl/_skribl_page_menu.html' %}{% endwith %}
   <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
+  {# lib/sheetswipe.js: every bottom sheet closes on a swipe down or a tap on
+     its grabber. Before report.js and every other script that attaches it. #}
+  <script src="{{ skribl_asset('lib/sheetswipe.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/report.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pagemenu.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/recoverykey.js') }}" defer></script>

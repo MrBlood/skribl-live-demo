@@ -6060,10 +6060,34 @@ body.playing .flip-grid { display: none; }
 .sdrafts-del svg { width: 19px; height: 19px; }
 @media (hover: hover) { .sdrafts-del:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), .06); } }
 .sdrafts-del.armed { color: var(--danger); border-color: rgba(244, 50, 111, .5); background: rgba(244, 50, 111, .12); }
+/* The phone grabber (lib/sheetswipe.js): tap it, or swipe the sheet down. */
+.sdrafts-grab { display: none; }
 @media (max-width: 640px) {
   .sdrafts-sheet { top: auto; bottom: 0; transform: translateX(-50%); width: 100%;
-    max-height: 78vh; border-radius: 18px 18px 0 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+    max-height: 78vh; border-radius: 18px 18px 0 0; padding-top: 8px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .sdrafts-grab { display: block; flex: none; position: relative; width: 40px; height: 5px;
+    margin: 0 auto 10px; border-radius: 999px; background: var(--text-secondary); opacity: .7; cursor: pointer; }
+  .sdrafts-grab::after { content: ''; position: absolute; inset: -12px -30px; }
 }
+
+/* ---------- A swipe on an open menu never reloads the page (v317) ----------
+   The owner: "I swipe it down and accidentally reload the page." At the top
+   of the page a downward swipe is the browser's pull-to-refresh, and every
+   sheet and drawer here let the swipe through to it. lib/sheetswipe.js takes
+   the touch while it drags a sheet; these are the rest: a sheet's own list
+   stops at its ends instead of handing the swipe to the page, and while any
+   menu, sheet or drawer is open the page itself does not pull to refresh.
+   Closed, the page behaves as it always has. */
+.menu-sheet, .sdrafts-list, #moreMenu { overscroll-behavior: contain; }
+html:has(.menu-overlay:not([hidden])),
+html:has(#moreMenu:not([hidden])),
+html:has(#savedDraftsSheet:not([hidden])),
+html:has(#helpDrawer:not([hidden])),
+html:has(#drawPanel:not([hidden])),
+html:has(#photoPanel:not([hidden])),
+html:has(#musicPanel:not([hidden])),
+html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
 
 .leave-scrim {
   position: fixed; inset: 0; z-index: 90;

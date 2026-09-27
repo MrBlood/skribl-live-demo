@@ -183,72 +183,13 @@ bindEl('loadDraftItem', 'click', () => {
   closeMenu();
 });
 
-// Swipe-to-dismiss + tap-to-close on the mobile sheet handle
+// Swipe down or tap the grabber to close: lib/sheetswipe.js, the same gesture
+// every bottom sheet has (v317). This sheet had its own, passive, so the page
+// scrolled -- and at its top, reloaded -- under the finger doing the swipe.
 (function setupSheetGestures() {
   const sheet = document.getElementById('menuSheet');
-  const handle = sheet ? sheet.querySelector('.menu-handle') : null;
-  if (!sheet) return;
-
-  let dragStartY = 0;
-  let dragging = false;
-  let currentY = 0;
-
-  function onTouchStart(e) {
-    // Only engage drag from the top region of the sheet (handle + header area)
-    const touchY = SkriblEventPoint.at(e).clientY;
-    const rect = sheet.getBoundingClientRect();
-    if (touchY - rect.top > 60) return; // only near the top
-    dragging = true;
-    dragStartY = touchY;
-    currentY = 0;
-    sheet.style.transition = 'none';
-  }
-
-  function onTouchMove(e) {
-    if (!dragging) return;
-    currentY = Math.max(0, SkriblEventPoint.at(e).clientY - dragStartY);
-    sheet.style.transform = `translateY(${currentY}px)`;
-  }
-
-  function onTouchEnd() {
-    if (!dragging) return;
-    dragging = false;
-    sheet.style.transition = '';
-    sheet.style.transform = '';
-    if (currentY > 80) {
-      closeMenu();
-    }
-  }
-
-  // A CANCELLED swipe resets, it does not COMMIT. onTouchEnd closes the menu
-  // when the drag passed 80px, so wiring touchcancel straight to it would let a
-  // gesture the OS took away finish the dismissal the user never completed —
-  // the opposite of what cancellation means. This resets the same state and
-  // stops there.
-  //
-  // Without it the sheet kept `transition: none` and its translateY, and the
-  // next touch carried on dragging a swipe that was already over: reproduced at
-  // translateY(50px) -> translateY(90px) after the cancel.
-  function onTouchCancel() {
-    if (!dragging) return;
-    dragging = false;
-    currentY = 0;
-    sheet.style.transition = '';
-    sheet.style.transform = '';
-  }
-
-  sheet.addEventListener('touchstart', onTouchStart, { passive: true });
-  sheet.addEventListener('touchmove', onTouchMove, { passive: true });
-  sheet.addEventListener('touchend', onTouchEnd);
-  sheet.addEventListener('touchcancel', onTouchCancel);
-
-  // Tap the handle to close
-  if (handle) {
-    handle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeMenu();
-    });
-  }
+  if (!sheet || !window.SkriblSheetSwipe) return;
+  window.SkriblSheetSwipe.attach(sheet, { handle: sheet.querySelector('.menu-handle'), close: closeMenu });
 })();
 
 // Close menu on Escape
