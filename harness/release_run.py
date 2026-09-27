@@ -134,6 +134,8 @@ BATCHES = [
     ["verify_createpost.py", "verify_deletion.py"],
     ["verify_example.py"],                 # measures — records a real drawing
     ["verify_clouddrafts.py"],             # measures — real drawings in its own host app (v316)
+    ["verify_flipspeed.py"],               # measures — pixels mid-stroke on Flip (v317)
+    ["verify_sheetswipe.py"],              # touch — every sheet swipes away (v317)
     ["verify_audiosession.py"],            # measures — audio off an analyser tap
     ["verify_library.py"],                 # unrecorded
     # store: posts through both editors' sheets to the shared server (one

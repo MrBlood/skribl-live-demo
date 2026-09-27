@@ -213,9 +213,13 @@ with sync_playwright() as p:
         return { text: t.textContent,
                  actionable: el.classList.contains('actionable'),
                  role: t.getAttribute('role'), tab: t.getAttribute('tabindex'),
-                 pe: cs.pointerEvents }; }""")
-    check("the amber pill NAMES the way out",
-          "re-add" in pill["text"].lower(),
+                 pe: cs.pointerEvents,
+                 readd: (() => { const b = document.getElementById('autosaveStatusReadd');
+            return !!b && !b.hidden && b.textContent === 'Re-add' && b.getBoundingClientRect().width > 30; })() }; }""")
+    # v317: the way out is a button that SAYS Re-add, beside the ×. The words
+    # alone were tappable and looked like a label; the owner tapped the ×.
+    check("the amber pill NAMES the way out, on a button that says Re-add",
+          pill["text"] == "Media missing" and pill["readd"] is True,
           f"{pill['text']!r} — 'Saved without media' states a problem and offers "
           "nothing; the only control that resolves it is two taps away in a "
           "drawer with no sign it is there")
@@ -414,7 +418,10 @@ with sync_playwright() as p:
     pill3 = pg3.evaluate("""() => { const el = document.getElementById('autosaveStatus'), t = document.getElementById('autosaveStatusText');
         return { text: t.textContent, role: t.getAttribute('role'), tab: t.getAttribute('tabindex'),
                  pe: getComputedStyle(el).pointerEvents }; }""")
-    check("Pad: the amber pill NAMES the way out", "re-add" in pill3["text"].lower(), f"{pill3['text']!r}")
+    readd3 = pg3.evaluate("() => " + """(() => { const b = document.getElementById('autosaveStatusReadd');
+            return !!b && !b.hidden && b.textContent === 'Re-add' && b.getBoundingClientRect().width > 30; })()""")
+    check("Pad: the amber pill NAMES the way out, on a button that says Re-add",
+          pill3["text"] == "Media missing" and readd3 is True, f"{pill3['text']!r} readd={readd3}")
     check("Pad: ...and is a real control that receives taps",
           pill3["role"] == "button" and pill3["tab"] == "0" and pill3["pe"] == "auto", str(pill3))
     pc, pwhy = try_click(pg3, "#autosaveStatusText")
@@ -426,6 +433,11 @@ with sync_playwright() as p:
           f"{pwhy} {json.dumps(opened3)}")
     pg3.evaluate("() => _padDrawerCtl.open(null)"); pg3.wait_for_timeout(300)
     xc, xwhy3 = try_click(pg3, "#autosaveStatusDismiss")
+    # AT ONCE (v317): the owner saw a lag before the pill went -- it waited for
+    # the save Dismiss schedules (a 1.2 s debounce plus the storage round trip).
+    gone = pg3.evaluate("() => new Promise(r => setTimeout(() => r(!document.getElementById('autosaveStatus').classList.contains('show')), 150))")
+    check("Pad: the pill goes the moment Dismiss is tapped, not after the save it schedules",
+          gone is True, f"still showing 150 ms after the tap: {not gone}")
     pg3.wait_for_timeout(1600)
     s = pg3.evaluate(STATE)
     check("Pad: the pill's Dismiss ENDS the amber without a drawer",
@@ -637,7 +649,24 @@ with sync_playwright() as p:
           f"{pg7.evaluate('() => mediaDraft.music')} {pg7.evaluate(STATE)['text']!r}")
     texts = pg7.evaluate("() => window.__pillTexts")
     check("Pad: a healthy restore never says the media is missing",
-          not any("re-add" in t.lower() for t in texts), f"pill read {sorted(set(texts))} during the restore")
+          not any(t.startswith("Media missing") for t in texts), f"pill read {sorted(set(texts))} during the restore")
+    # v317, THE GAP AFTER THE STORE ANSWERS: the owner's iPhone flashed "Media
+    # missing" while a large photo that HAD come back was still decoding. The
+    # state that moment is reproduced exactly: the draft names a photo, the
+    # restore has stood down, the File is in hand, the image is not attached yet.
+    gap = pg7.evaluate("""() => {
+        const keep = { meta: pendingPhotoMeta, file: _mediaFile.photo, name: photoBgImg && photoBgImg._fileName, r: _restoring.photo };
+        pendingPhotoMeta = { name: 'map.png' }; _restoring.photo = false;
+        _mediaFile.photo = new File(['x'], 'map.png', { type: 'image/png' });
+        if (photoBgImg) photoBgImg._fileName = null;
+        const loading = _pendingPhotoLost();
+        _mediaFile.photo = null;
+        const gone = _pendingPhotoLost();
+        pendingPhotoMeta = keep.meta; _mediaFile.photo = keep.file; _restoring.photo = keep.r;
+        if (photoBgImg) photoBgImg._fileName = keep.name;
+        return { loading, gone }; }""")
+    check("Pad: a file in hand and still decoding is loading, not missing (and one truly absent still is)",
+          gap["loading"] is False and gap["gone"] is True, str(gap))
     pg7.close()
 
     print("\nPAD — a restored photo keeps its adjustments however long the decode takes (v294 audit, PR 2)")

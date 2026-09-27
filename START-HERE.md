@@ -762,6 +762,7 @@ rather than a shared rule.
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
 | `sharecard.js` | Pad+Flip+library | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
+| `sheetswipe.js` | Pad+Flip+library+gallery | Sheets that go away — one swipe, every bottom sheet. |
 | `sizeclass.js` | Flip | One size decision, made once, for the whole app. |
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |

@@ -23,6 +23,8 @@ the cap can be reached in a few saves.
   6  The Library's Drafts tab (v317): the account's list or this browser's,
      Open to the right editor, Delete asks first, and an editor holding work
      asks before a draft replaces it.
+  7  Storage that never answers, or a connection that died in the background
+     (v317, the owner's iPhone): the sheet says so and retries; a read reconnects.
 """
 import json
 import os
@@ -502,6 +504,142 @@ try:
         check("signed out, #drafts lists THIS BROWSER's drafts, and says so",
               anon.locator("#draftsList .draft-row").count() == 1 and "browser" in aw,
               f"{anon.locator('#draftsList .draft-row').count()} rows; {aw!r}")
+
+        # ---------------------------------------------------------------- 7
+        print("\n7 — WHEN THIS BROWSER'S STORAGE STOPS ANSWERING (v317)")
+        # The owner's iPhone: "Loading… and nothing comes". IndexedDB that never
+        # fires an event is simulated at the source: open() hands back a
+        # request that never answers. The sheet must say so and offer a retry.
+        hung = b.new_context()
+        hung.add_init_script("""(() => {
+          const real = indexedDB.open.bind(indexedDB);
+          window.__hangIDB = true;
+          indexedDB.open = function (name, v) {
+            if (!window.__hangIDB) return real(name, v);
+            return {};                     // a request whose events never fire
+          };
+        })();""")
+        ph = hung.new_page()
+        browsing.goto(ph, BASE, "/skribl/skribl-pad", require_boot=False)
+        ph.wait_for_timeout(800)
+        menu_click(ph, "#openCloudDraftItem")
+        ph.wait_for_timeout(6000)
+        sheet = ph.evaluate("""() => { const l = document.querySelector('#savedDraftsSheet .sdrafts-list');
+            return { text: l ? l.textContent : null, retry: !!document.querySelector('#savedDraftsSheet .sdrafts-retry') }; }""")
+        check("storage that never answers: the sheet says so within seconds, not 'Loading…' for good",
+              sheet["text"] and "Loading" not in sheet["text"] and "did not answer" in sheet["text"],
+              repr(sheet["text"]))
+        check("and offers Try again", sheet["retry"] is True, str(sheet))
+        ph.evaluate("() => { window.__hangIDB = false; }")
+        ph.click("#savedDraftsSheet .sdrafts-retry")
+        ph.wait_for_timeout(1500)
+        again = ph.evaluate("() => document.querySelector('#savedDraftsSheet .sdrafts-list').textContent")
+        check("when the storage answers again, Try again reaches it (a fresh open, not the dead one)",
+              "did not answer" not in again and "Loading" not in again, repr(again))
+        hung.close()
+        # A connection closed under the page (what WebKit does while it is in
+        # the background): the next read gets one fresh connection, not an error.
+        pd = b.new_context().new_page()
+        browsing.goto(pd, BASE, "/skribl/skribl-pad", require_boot=False)
+        pd.wait_for_timeout(800)
+        dead = pd.evaluate("""async () => {
+          await SkriblDraftStore.put('probe:x', {v: 7});
+          const T = IDBDatabase.prototype.transaction; let thrown = 0;
+          IDBDatabase.prototype.transaction = function () {
+            if (!thrown++) throw new DOMException('The database connection is closing.', 'InvalidStateError');
+            return T.apply(this, arguments);
+          };
+          try { const r = await SkriblDraftStore.get('probe:x'); return { v: r && r.v, thrown }; }
+          catch (e) { return { err: String(e), thrown }; }
+          finally { IDBDatabase.prototype.transaction = T; }
+        }""")
+        check("a connection that died in the background: the read succeeds on a fresh one",
+              dead.get("v") == 7 and dead.get("thrown") == 2, str(dead))
+        # THE OWNER'S "they were there, then they disappeared". A read of the
+        # index that failed used to answer [] and the next save wrote an index
+        # holding only itself. Two drafts, then a save while the index read
+        # fails: the save must refuse, and both drafts must still be listed.
+        draw(pd, pd.locator("#canvas").bounding_box())
+        pd.evaluate("() => SkriblName.set('Keep me one')")
+        pd.evaluate("() => SkriblSavedDrafts.save()")
+        pd.wait_for_timeout(600)
+        pd.evaluate("() => { SkriblSavedDrafts.forget(); SkriblName.set('Keep me two'); }")
+        pd.evaluate("() => SkriblSavedDrafts.save()")
+        pd.wait_for_timeout(600)
+        lost_try = pd.evaluate("""async () => {
+          const G = SkriblDraftStore.get; let failed = 0;
+          SkriblDraftStore.get = function (k) {
+            if (k === 'saved:index' && !failed++) return Promise.reject(new Error("This browser's storage did not answer."));
+            return G.apply(this, arguments);
+          };
+          SkriblSavedDrafts.forget(); SkriblName.set('Would overwrite');
+          await SkriblSavedDrafts.save();
+          SkriblDraftStore.get = G;
+          const idx = await SkriblDraftStore.get('saved:index');
+          return { failed, names: (idx && idx.items || []).map(i => i.title) };
+        }""")
+        check("a save whose index read FAILS writes nothing over the list",
+              lost_try["failed"] == 1 and sorted(lost_try["names"]) == ["Keep me one", "Keep me two"],
+              str(lost_try))
+        # And the way back for drafts an older build already dropped from the
+        # index: the record is still there, so the list finds it.
+        back = pd.evaluate("""async () => {
+          const pay = serializeSkribl();
+          await SkriblDraftStore.put('saved:lost1', { id: 'lost1', kind: 'pad', title: 'Found again', payload: pay });
+          const items = await SkriblSavedDrafts.list();
+          const idx = await SkriblDraftStore.get('saved:index');
+          return { listed: items.map(i => i.title), indexed: (idx.items || []).map(i => i.title) };
+        }""")
+        # BYTES, NOT BLOBS (v317): what lands in IndexedDB is an ArrayBuffer,
+        # read straight from the database; what comes back is the same file.
+        stored = pd.evaluate("""async () => {
+          await SkriblDraftStore.put('probe:blob', { blob: new Blob(['hello bytes'], { type: 'text/plain' }), name: 'a.txt' });
+          const raw = await new Promise((res, rej) => { const q = indexedDB.open('skribl-drafts');
+            q.onsuccess = () => { const g = q.result.transaction('media').objectStore('media').get('probe:blob');
+              g.onsuccess = () => { res(g.result); q.result.close(); }; g.onerror = () => rej(g.error); }; q.onerror = () => rej(q.error); });
+          const back = await SkriblDraftStore.get('probe:blob');
+          return { rawIsBlob: raw.blob instanceof Blob, rawBytes: raw.blob && raw.blob.__skriblBytes instanceof ArrayBuffer,
+                   backIsBlob: back.blob instanceof Blob, text: await back.blob.text(), type: back.blob.type, name: back.name };
+        }""")
+        check("media goes into IndexedDB as bytes, not a Blob (WebKit's weak spot)",
+              stored["rawIsBlob"] is False and stored["rawBytes"] is True, str(stored))
+        check("...and comes back out as the same file, type and all",
+              stored["backIsBlob"] is True and stored["text"] == "hello bytes" and stored["type"] == "text/plain"
+              and stored["name"] == "a.txt", str(stored))
+        check("a draft its index lost is listed again, and written back into the index",
+              "Found again" in back["listed"] and "Found again" in back["indexed"]
+              and "Keep me one" in back["listed"], str(back))
+
+        # ONE ROW ASKS AT A TIME (v317): the owner's sheet showed two rows both
+        # saying "Tap again". pd's canvas has ink, so the first tap on a row asks.
+        menu_click(pd, "#openCloudDraftItem")
+        pd.locator("#savedDraftsSheet .sdrafts-open").nth(1).wait_for(timeout=5000)
+        pd.locator("#savedDraftsSheet .sdrafts-open").nth(0).click()
+        pd.wait_for_timeout(200)
+        pd.locator("#savedDraftsSheet .sdrafts-open").nth(1).click()
+        pd.wait_for_timeout(200)
+        armed = pd.evaluate("() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')].map(r => r.classList.contains('armed'))")
+        check("the sheet: arming a second row puts the first one back", armed[:2] == [False, True], str(armed))
+        pd.locator("#savedDraftsSheet .sdrafts-del").nth(0).click()
+        pd.wait_for_timeout(200)
+        armed2 = pd.evaluate("""() => [...document.querySelectorAll('#savedDraftsSheet .sdrafts-row')].map(r =>
+            r.classList.contains('armed') || r.querySelector('.sdrafts-del').classList.contains('armed'))""")
+        check("...and asking to delete one row puts back the row that asked to open",
+              armed2[:2] == [True, False], str(armed2))
+        # The Library draws the same row: the card opens, the bin asks, one at a time.
+        browsing.goto(pd, BASE, "/skribl/library#drafts", require_boot=False)
+        pd.wait_for_timeout(1500)
+        lib = pd.evaluate("""() => { const rows = [...document.querySelectorAll('#draftsList .draft-row')];
+            return { n: rows.length, links: rows.every(r => r.querySelector('a.draft-open[href*="?draft="]')),
+                     pills: document.querySelectorAll('#draftsList .draft-acts').length }; }""")
+        check("the Library's rows are the card itself as the link, no pill buttons",
+              lib["n"] >= 2 and lib["links"] and lib["pills"] == 0, str(lib))
+        pd.locator("#draftsList .draft-del").nth(0).click()
+        pd.wait_for_timeout(150)
+        pd.locator("#draftsList .draft-del").nth(1).click()
+        pd.wait_for_timeout(150)
+        larmed = pd.evaluate("() => [...document.querySelectorAll('#draftsList .draft-del')].map(d => d.classList.contains('armed'))")
+        check("the Library: one bin asks at a time", larmed[:2] == [False, True], str(larmed))
 
         check("no page errors", not errs, "; ".join(errs[:3]))
         b.close()

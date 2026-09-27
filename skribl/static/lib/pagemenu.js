@@ -51,6 +51,9 @@
 
     btn.addEventListener('click', function () { if (isOpen()) close(); else open(); });
     overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    // The grabber closes on a tap, and the sheet swipes down (lib/sheetswipe.js).
+    // It used to be a picture of a handle that did nothing.
+    if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.attach(sheet, { handle: sheet.querySelector('.pm-grab'), close: close });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && isOpen()) { e.preventDefault(); close(); }
     });

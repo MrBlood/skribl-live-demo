@@ -1345,11 +1345,14 @@ function layerableCount(strokeArr, anyAlphaFn){
   return n;
 }
 
-function paintStatic(c, strokeArr){
+function paintStatic(c, strokeArr, overBudget){
   // The ceiling lives in lib/strokelayers.js, beside the setting it qualifies,
   // so the player applies the same one. Inline fallback as elsewhere.
-  const _overBudget = (typeof window !== 'undefined' && window.SkriblStrokeLayers
-                       && window.SkriblStrokeLayers.overBudget)
+  // `overBudget` is passed only by the live-stroke cache, which paints a page
+  // in two halves and must decide the page's budget once for both.
+  const _overBudget = (typeof overBudget === 'boolean') ? overBudget
+    : (typeof window !== 'undefined' && window.SkriblStrokeLayers
+       && window.SkriblStrokeLayers.overBudget)
     ? window.SkriblStrokeLayers.overBudget(strokeArr, alphaOf, strokeAlphaOf)
     : layerableCount(strokeArr, strokeAlphaOf) > LAYER_BUDGET;
   /* strokeAlphaOf as the second predicate: a run a field tool has made
@@ -1576,9 +1579,11 @@ function drawArcGuides(c){
   c.restore();
 }
 
-function render(){
-  ctx.clearRect(0,0,CW,CH);
-  drawBackdrop(ctx);
+/* WHAT LIES UNDER THE PAGE'S INK: the backdrop and the onion skin. Its own
+   function since v317 so the live-stroke cache below can paint it once per
+   stroke instead of once per pointer move. */
+function paintUnder(c){
+  drawBackdrop(c);
   if(onion && !playing && idx>0){
     // Furthest frame first so nearer ones layer on top. Uses onionCv/octx, which
     // were scaffolded for exactly this in v98 and had sat unused ever since —
@@ -1597,12 +1602,110 @@ function render(){
         octx.fillRect(0,0,CW,CH);
         octx.restore();
       }
-      ctx.globalAlpha = ONION_ALPHAS[k-1] || ONION_ALPHAS[ONION_ALPHAS.length-1];
-      ctx.drawImage(onionCv, 0, 0, CW, CH);
-      ctx.globalAlpha = 1;
+      c.globalAlpha = ONION_ALPHAS[k-1] || ONION_ALPHAS[ONION_ALPHAS.length-1];
+      c.drawImage(onionCv, 0, 0, CW, CH);
+      c.globalAlpha = 1;
     }
   }
-  paintFrame(ctx, frame().strokes);
+}
+
+/* THE LIVE-STROKE CACHE (v317). "It draws the stroke, but it takes 3 seconds,
+   then falls further behind on every stroke" -- the owner, on a phone. render()
+   repainted the backdrop, the onion skin and EVERY stroke on the page for every
+   pointer move, so a move cost grows with the ink already there: measured at a
+   4x CPU throttle on a 1062x1888 canvas, 7 ms a move on the first stroke and
+   37 ms by the twentieth, where 16 ms is all a frame has. v314 measured the
+   same; this is not a regression, only a page that finally got busy.
+
+   While a stroke is drawn nothing under it can change -- only the stroke grows.
+   So at pen-down the backdrop+onion and the page's finished ink are painted
+   once, into two bitmaps, and each move copies those and paints only the live
+   stroke. paintStatic() paints one stroke after another onto one canvas with no
+   state carried between them, so finished-ink-then-live-stroke is the same
+   sequence of operations as the full repaint, not an approximation of it.
+
+   The two inputs paintStatic DOES share across strokes are handled, not hoped
+   about: the page-wide layer budget is decided once for the stroke and handed
+   to both halves, and a stroke that would tip the page across that budget (the
+   one case where adding it changes how everything ELSE paints) skips the cache
+   and repaints in full, as before. Field tools, shapes and page changes never
+   start it. Pen-up clears it, and endStroke's render() is the full repaint.
+
+   ONE COPY A MOVE FOR A PEN, THREE FOR AN ERASER. Three full-canvas copies a
+   move measured 15 ms at the same throttle, flat but on the edge of a frame.
+   A pen stroke only ever paints OVER what is there, and painting over is
+   associative, so the backdrop, the onion and the finished ink can be one
+   bitmap with the live stroke painted straight onto the pad. The eraser cuts
+   ink and must not cut the backdrop, so it keeps the ink on its own layer. The
+   flattened path can differ from the full repaint by rounding alone --
+   measured at most 2 units of 255 in a channel, mid-stroke, with the onion
+   skin or the mirror on -- and pen-up repaints exactly. */
+const _liveUnderCv = document.createElement('canvas');
+const _liveDryCv = document.createElement('canvas');
+let _liveCache = null;
+function _overBudgetOf(arr){
+  return (typeof window !== 'undefined' && window.SkriblStrokeLayers
+          && window.SkriblStrokeLayers.overBudget)
+    ? window.SkriblStrokeLayers.overBudget(arr, alphaOf, strokeAlphaOf)
+    : layerableCount(arr, strokeAlphaOf) > LAYER_BUDGET;
+}
+function _liveReady(cv){
+  const w = CW*DPR, h = CH*DPR;
+  if(cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
+  const c = cv.getContext('2d');
+  c.setTransform(DPR,0,0,DPR,0,0);
+  c.clearRect(0,0,CW,CH);
+  return c;
+}
+function liveBegin(fr){
+  _liveCache = null;
+  if(!fr || fr !== frame() || playing || _fieldIdx >= 0) return;
+  const pre = fr.strokes;
+  const ob = _overBudgetOf(pre);
+  // One more see-through stroke could tip the page over the budget: then the
+  // whole page's painting changes mid-stroke, so this stroke repaints in full.
+  if(!ob && _overBudgetOf(pre.concat([{x:0, y:0, size:1, color:'rgba(0,0,0,0.5)', start:true}]))) return;
+  const flat = !erasing;
+  const u = _liveReady(_liveUnderCv);
+  paintUnder(u);
+  if(flat){
+    // The finished ink composited over the backdrop, exactly as render() does it.
+    fctx.clearRect(0,0,CW,CH); paintStatic(fctx, pre, ob); u.drawImage(frameCv, 0, 0, CW, CH);
+  } else {
+    paintStatic(_liveReady(_liveDryCv), pre, ob);
+  }
+  _liveCache = { fr: fr, start: pre.length, last: pre.length ? pre[pre.length - 1] : null, ob: ob, flat: flat };
+}
+function _liveUsable(){
+  const L = _liveCache;
+  if(!L || !drawing || playing || _fieldIdx >= 0) return false;
+  if(L.fr !== frame() || L.fr !== strokeFrame) return false;
+  const s = L.fr.strokes;
+  // The finished ink must be exactly what was cached: nothing removed, nothing
+  // replaced (undo, clear and a page swap all fail one of these).
+  if(s.length < L.start || (L.start && s[L.start - 1] !== L.last)) return false;
+  if(L.flat === erasing) return false;   // the eraser was toggled mid-stroke
+  return _liveUnderCv.width === CW*DPR && _liveUnderCv.height === CH*DPR;
+}
+
+function render(){
+  ctx.clearRect(0,0,CW,CH);
+  if(_liveUsable()){
+    const L = _liveCache, live = L.fr.strokes.length > L.start ? L.fr.strokes.slice(L.start) : null;
+    ctx.drawImage(_liveUnderCv, 0, 0, CW, CH);
+    if(L.flat){
+      if(live) paintStatic(ctx, live, L.ob);
+    } else {
+      fctx.save(); fctx.globalCompositeOperation = 'copy';
+      fctx.drawImage(_liveDryCv, 0, 0, CW, CH);
+      fctx.restore();
+      if(live) paintStatic(fctx, live, L.ob);
+      ctx.drawImage(frameCv, 0, 0, CW, CH);
+    }
+  } else {
+    paintUnder(ctx);
+    paintFrame(ctx, frame().strokes);
+  }
   // Last, so the guides read on top of the drawing rather than under it. Only
   // ever on the live pad: thumbnails, exports and the player all render through
   // their own contexts, so nothing here can be baked into what is published.
@@ -1810,6 +1913,7 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   _brushLastPt = null;
   const dsize = _brushWidth(sizeFor(e, _eraserSize(size, erasing)), p, erasing); const pcol = erasing ? color : penColorFor(color);
   _brushLastPt = {x:p.x, y:p.y};
+  liveBegin(strokeFrame);   // before the first point: the cache is the ink BEFORE this stroke
   strokeFrame.strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
   render(); });
 pad.addEventListener('pointermove', e=>{
@@ -1938,7 +2042,12 @@ function endStroke(){
     }
     _shapePrev=null; _shapeAnchor=null;
   }
-  drawing=false; smoothPt=null; lastRaw=null;
+  // Pen-up repaints in full whenever the live-stroke cache drew the last move:
+  // without smoothing nothing below renders again, and the pad kept the cached
+  // picture (verify_flipspeed found it: rounding left on the page).
+  const _hadLive = !!_liveCache;
+  drawing=false; smoothPt=null; lastRaw=null; _liveCache=null;
+  if(_hadLive) render();
   document.body.classList.remove('stroking');   // pen up: the chrome returns
   const _tgt = (strokeFrame || frame());
   _tgt.strokeGroups.push(curCount);
@@ -5302,8 +5411,8 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !moreMenu.hidden
 // tapping the dim area dismisses it, which the document handler above only
 // achieves incidentally.
 if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
-// The sheet grabber closes the menu on tap, same as Pad's handles do.
-{ const _h = moreMenu.querySelector('.menu-handle'); if (_h) _h.addEventListener('click', () => closeMenu()); }
+// Tap the grabber or swipe the sheet down (lib/sheetswipe.js), as on Pad.
+if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(moreMenu, { handle: moreMenu.querySelector('.menu-handle'), close: closeMenu });
 // Bound as early as the function exists, not near the end of the file. Even
 // with bindEl() guarding each lookup, a throw ANYWHERE above here would still
 // have prevented this line from running — and share doing nothing is the worst
@@ -5534,8 +5643,7 @@ exportOverlay.addEventListener('click', e=>{ if(!e.target.closest('.menu-sheet')
 KeyRegistry.register({surface:'flip', label:'close the export sheet',
   keys:['Escape'], scope:()=>!exportOverlay.hidden});
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !exportOverlay.hidden) closeExportSheet(); });
-const _exHandle = exportSheet ? exportSheet.querySelector('.menu-handle') : null;
-if(_exHandle) _exHandle.addEventListener('click', e=>{ e.stopPropagation(); closeExportSheet(); });
+if(exportSheet && window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(exportSheet, { handle: exportSheet.querySelector('.menu-handle'), close: closeExportSheet });
 bindEl('exportPng', 'click',()=>{ closeExportSheet(); exportPNG(); });
 bindEl('exportVideo', 'click',e=>{ if(e.currentTarget.disabled) return; closeExportSheet(); exportVideo(); });
 bindEl('exportGif', 'click',e=>{ if(e.currentTarget.disabled) return; closeExportSheet(); exportGIF(); });
@@ -9482,7 +9590,9 @@ function invalidateClearUndo(){
 // control's business logic coupled to another control's confirmation UI.
 function clearAllPages(){
   if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.forget();   // a new Skribl is a new draft
-  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv };
+  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv,
+                        // A new Skribl is a new title; Undo brings the old one back (v317).
+                        name: (window.SkriblName && window.SkriblName.reset) ? window.SkriblName.reset() : null };
   /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
      subdiv only ever grew: a cleared page kept the finer time grid of the pages
      that are gone, which spends the insert budget on nothing and leaves the
@@ -9515,6 +9625,7 @@ bindEl('clearUndo', 'click',()=>{
   // frames alone would play them at the rate of the empty document.
   if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
   if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
+  if(typeof clearFramesBackup.name === 'string' && window.SkriblName) window.SkriblName.set(clearFramesBackup.name);
   clearFramesBackup=null; redoStack.length=0;
   document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();

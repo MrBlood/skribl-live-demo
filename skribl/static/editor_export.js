@@ -117,9 +117,10 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !overlay.hidden) closeExport();
   });
-  // Mobile sheet handle closes too.
-  const exportHandle = sheet ? sheet.querySelector('.menu-handle') : null;
-  if (exportHandle) exportHandle.addEventListener('click', (e) => { e.stopPropagation(); closeExport(); });
+  // Mobile: tap the grabber or swipe the sheet down (lib/sheetswipe.js).
+  if (sheet && window.SkriblSheetSwipe) {
+    window.SkriblSheetSwipe.attach(sheet, { handle: sheet.querySelector('.menu-handle'), close: closeExport });
+  }
 
   // GIF background toggle (Background color | Transparent)
   if (gifToggle) {
