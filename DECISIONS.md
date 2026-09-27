@@ -12060,3 +12060,72 @@ made: the editor seems to re-resolve after load and drop the URL's choice,
 which the boot partial says it honours "for this document only". That was
 not measured, and this entry does not claim it as a defect. It is worth
 driving before a host relies on the parameter.
+
+## v316 -- saved drafts, the composer, phones, and the release v315 never had
+
+v314 was the last sealed tree. Twenty-six pull requests landed after it
+(#228-#255) and none was sealed. Comments written during the first half call
+their work "v315", and that number was never given an entry or a version bump.
+This entry and this seal cover all of it, and v315 stays a label in comments,
+not a release.
+
+### Saved drafts (#255)
+
+The owner: "a way to save skribl drafts (not on my machine as a file), so I
+could just click the pen to add a skribl to the post, load the saved skribl,
+then add it to post." The choices the owner accepted ("go with your picks"):
+
+* Saved by hand, from the Pad's and Flip's ⋯ Save draft, not autosaved. The
+  editor's own autosave slot stays what it was, and the compose editor still
+  keeps none.
+* **Kept after posting.** The author deletes a draft; posting one does not.
+* 25 per author (`SKRIBL_MAX_DRAFTS`), the same payload bounds as a post.
+* Opened from the ⋯ menu. A Drafts tab in the Library is later, not now.
+* Signed out, or a host with no `current_user_id`: the same rows keep drafts in
+  this browser only (IndexedDB), and the menu says which.
+
+A draft is not a post: no link, no player, no listing, no Library entry, no
+spent post quota. Anyone but its author gets the 404 a missing id gets, for
+read, overwrite and delete alike. The eighth table is `skribl_drafts`
+(migration `c3e8a1f5d706`).
+
+**The full battery found four things the drafts suite could not.** The
+migration was not registered in `RELEASED.txt`; a function-local import in
+`security.py` was invisible to `verify_seam`'s name resolver; the sheet's
+scrim was a grey literal that `verify_surfaces` refuses; and the sheet had no
+a11y recipe, so the modal census could not see a dialog built at runtime. The
+census now primes it on both editors, and removing its focus call turns both
+red. The sheet's title and list lost their ids rather than earning recipes
+they did not need: the census reads every `.id =` in a module that builds a
+modal, and those two were not dialogs.
+
+### The composer (#229, #251, #254)
+
+skribls.net will host the editors inside its post composer. The owner chose:
+
+* **One Skribl button** on the host. Flip is one ⋯ tap from the Pad, and the
+  compose protocol carries which editor is open, so a payload goes back only
+  to the editor that made it.
+* **× beside the wordmark** in the editor's own header, and the host floats no
+  close of its own. Full screen on a phone.
+* The post button says **Add** (Add to post on wider screens).
+* **Library and Gallery stay in the composer's ⋯ menu** ("not yet").
+
+"Add to post" publishes nothing: an abandoned post leaves no Skribl behind.
+`docs/SKRIBLS-NET.md` is what that site has to change, written from a saved copy
+of its real page.
+
+### Phones, iPhones, and one copy of each thing
+
+Pad draws on Pointer Events as Flip does (#233). Play is heard on a silenced
+iPhone in both editors and the Library (#245-#247). The toolbar is one
+scrolling row on the smallest phones (#236); the header stays on screen and
+toasts never cover it (#249, #250). SK312-003 ended with one magnifier, pinch,
+loop engine, loop view, music strip and MP4 pipeline for both editors
+(#237-#244), and the shared-link player's CSS went from 78,600 to 28,939 bytes
+(#235).
+
+### Closed from v314's "seen along the way"
+
+The Pad dropping `?theme=` after load was real, and #231 fixed it on every
+page, including the compose Pad a host iframes.
