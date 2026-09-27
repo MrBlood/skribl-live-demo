@@ -396,6 +396,10 @@
   }
 
   function save() {
+    // A file still being read would be saved under its new name with the old
+    // bytes, or not at all while the toast said Saved (third review). First,
+    // because a photo on its way is work even before it counts as content.
+    if (opts.busy && opts.busy()) { opts.toast('Preparing media \u2014 try again in a moment'); return Promise.resolve(null); }
     if (opts.hasContent && !opts.hasContent()) { opts.toast('Draw something to save'); return Promise.resolve(null); }
     var payload;
     try { payload = opts.serialize(); } catch (e) { opts.toast('Could not read the drawing to save it.'); return Promise.resolve(null); }
@@ -442,8 +446,9 @@
   }
 
   global.SkriblSavedDrafts = {
-    /* opts: {kind, serialize(), load(obj), hasContent(), thumbnail() -> canvas,
-              otherUrl() -> the other editor's menu link, toast(msg)} */
+    /* opts: {kind, serialize(), load(obj), hasContent(), busy() -> media still
+              being read, thumbnail() -> canvas, otherUrl() -> the other
+              editor's menu link, toast(msg)} */
     init: function (o) {
       opts = o;
       opts._current = null;

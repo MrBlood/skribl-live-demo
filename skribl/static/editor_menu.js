@@ -308,6 +308,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 || (typeof _inFlight !== 'undefined' && _inFlight.photo)
                 || (typeof _restoring !== 'undefined' && (_restoring.photo || _restoring.music)));
     },
+    // A photo or track still being read: its name is already the new file's
+    // and its bytes are still the old one's (third review).
+    busy: function () {
+      return !!((typeof mediaBusy !== 'undefined' && mediaBusy > 0)
+                || (typeof _inFlight !== 'undefined' && _inFlight.photo)
+                || (typeof _restoring !== 'undefined' && (_restoring.photo || _restoring.music)));
+    },
     thumbnail: function () { return window.skriblPreviewCanvas ? window.skriblPreviewCanvas() : document.getElementById('canvas'); },
     otherUrl: function () { var a = document.getElementById('flipBtn'); return a ? a.getAttribute('href') : null; },
     closeMenu: function () { if (typeof closeMenu === 'function') closeMenu(true); },

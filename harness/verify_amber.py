@@ -853,6 +853,54 @@ with sync_playwright() as p:
           landed == [_png.name, "block", _png.name], str(landed))
     pgP.close()
 
+    print("\nSAVE DRAFT WAITS FOR A FILE STILL BEING READ (third review)")
+    # The name switches to the new file before its bytes land, so a Save draft
+    # in that gap stored the NEW name over the OLD photo's bytes (or, first
+    # time, no photo while the toast said Saved). Save now waits, on both
+    # editors. The decode check is slowed so the gap is certain, not lucky.
+    import struct, zlib
+
+    def _png1(rgb):
+        raw = b"\x00" + bytes(rgb)
+        chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+        return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0))
+                + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+    # Where each editor's gap is: Pad names the photo after its decode check
+    # and holds the old bytes until the read AND the downscale finish, so the
+    # downscale is slowed; Flip is busy from the moment a file is chosen, so
+    # its decode check is.
+    SLOW_DECODE = """(() => { let v; Object.defineProperty(window, 'skriblDecodeCheckImage', { configurable: true,
+        get: () => v, set: (f) => { v = function () { const a = arguments;
+          return new Promise(r => setTimeout(r, 1500)).then(() => f.apply(this, a)); }; } }); })();"""
+    SLOW_NORMALISE = """() => { const f = window.normalizePhotoDataURL;
+        window.normalizePhotoDataURL = function () { const a = arguments;
+          return new Promise(r => setTimeout(r, 1500)).then(() => f.apply(this, a)); }; }"""
+    SAVE = """async () => { const s = await SkriblSavedDrafts.save(); if (!s) return null;
+        const rec = await SkriblDraftStore.get('saved:' + s.id); const pl = rec.payload;
+        // Flip keeps the bytes in bgImage beside a photo settings object.
+        const ph = pl.bgImage || pl.photo || (pl.frames && pl.frames[0] && pl.frames[0].photo) || null;
+        return { id: s.id, data: typeof ph === 'string' ? ph : (ph && ph.data) || null }; }"""
+    for route, inp, nm in (("/skribl-pad", "#photoInput", "Pad"), ("/flip", "#imageInput", "Flip")):
+        pgS = b.new_page(viewport={"width": 1280, "height": 900})
+        pgS.on("pageerror", lambda e, nm=nm: errs.append(f"save-busy {nm}: {e}"))
+        if nm == "Flip":
+            pgS.add_init_script(SLOW_DECODE)
+        pgS.goto(BASE + route, wait_until="load"); pgS.wait_for_timeout(1200)
+        pgS.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
+        if nm == "Pad":
+            pgS.evaluate(SLOW_NORMALISE)
+        pgS.set_input_files(inp, {"name": "b.png", "mimeType": "image/png", "buffer": _png1((20, 90, 250))})
+        pgS.wait_for_timeout(200)                      # the read has started, the decode has not finished
+        early = pgS.evaluate(SAVE)
+        toast = pgS.evaluate("() => document.body.innerText.includes('Preparing media')")
+        pgS.wait_for_timeout(4000)
+        late = pgS.evaluate(SAVE)
+        check(f"{nm}: Save draft while a photo is still being read waits, and says so",
+              early is None and toast, f"saved={early}, toast={toast}")
+        check(f"{nm}: ...and once it has landed, the draft holds that photo",
+              bool(late and late["data"]), str(late and {"id": late["id"], "data": (late["data"] or "")[:30]}))
+        pgS.close()
+
     check("no uncaught page errors", not errs, "; ".join(errs[:3]))
     b.close()
 

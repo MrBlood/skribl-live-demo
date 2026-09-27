@@ -247,6 +247,11 @@ let spanAnchor = null, _pdragArmTimer = null;
 // is easy. Bumped on selection AND removal. (Review round 9, #1)
 let musicSelectionSeq = 0;
 let imageSelectionSeq = 0;
+// The selection still being read, per kind (0 = none): Save draft waits for it,
+// because the name is set before the bytes land (third review).
+const flipReading = { image: 0, music: 0 };
+function flipMediaBusy(){ return (flipReading.image!==0 && flipReading.image===imageSelectionSeq)
+  || (flipReading.music!==0 && flipReading.music===musicSelectionSeq); }
 
 // Export options — session-only view state, like onion. NOT persisted or posted.
 // One pair of helpers feeds GIF, WebM and MP4 so the three can never disagree
@@ -4343,16 +4348,17 @@ function setBgImage(dataURL){ bgImage=dataURL; photoEnabled=true; photoFit='cove
 function removeBgImage(){ bgImage=null; bgImageObj=null; imageName=''; reposMode=false; pendingPhotoMeta=null; redrawAll(); syncMediaUI(); scheduleSave(); }
 imageInput.addEventListener('change',async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value='';
   const _seq=++imageSelectionSeq; if(!file) return;
+  flipReading.image=_seq;
   const _de=await skriblDecodeCheckImage(file);
   if(_seq!==imageSelectionSeq) return;            // superseded or removed mid-decode
-  if(_de){ chip(_de); return; }
+  if(_de){ flipReading.image=0; chip(_de); return; }
   imageName=file.name||'';
   // Round 10, #2: the token guard used to stop at the decode await, leaving
   // FileReader unguarded — a slower read could still overwrite a newer choice,
   // or restore an image after removal. Carried through every async stage now.
   const r=new FileReader();
-  r.onload=()=>{ if(_seq!==imageSelectionSeq) return; setBgImage(String(r.result)); };
-  r.onerror=()=>{ if(_seq!==imageSelectionSeq) return; chip('That image could not be read.'); };
+  r.onload=()=>{ if(_seq!==imageSelectionSeq) return; flipReading.image=0; setBgImage(String(r.result)); };
+  r.onerror=()=>{ if(_seq!==imageSelectionSeq) return; flipReading.image=0; chip('That image could not be read.'); };
   r.readAsDataURL(file); });
 
 /* ---- music loop (Pad's music component: waveform, trim, loop detail) ---- */
@@ -4436,13 +4442,14 @@ function stopMusic(){ stopWebAudioLoop(); if(audioEl){ try{ audioEl.pause(); }ca
   if(!previewingLoop && window.SkriblAudioSession) window.SkriblAudioSession.release(); }
 musicInput.addEventListener('change',async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value='';
   const _seq=++musicSelectionSeq; if(!file) return;
+  flipReading.music=_seq;
   const _de=await skriblDecodeCheckAudio(file);
   if(_seq!==musicSelectionSeq) return;            // superseded or removed mid-decode
-  if(_de){ chip(_de); return; }
+  if(_de){ flipReading.music=0; chip(_de); return; }
   musicName=file.name||'';
   const r=new FileReader();
-  r.onload=()=>{ if(_seq!==musicSelectionSeq) return; setMusic(String(r.result)); };
-  r.onerror=()=>{ if(_seq!==musicSelectionSeq) return; chip('That audio could not be read.'); };
+  r.onload=()=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; setMusic(String(r.result)); };
+  r.onerror=()=>{ if(_seq!==musicSelectionSeq) return; flipReading.music=0; chip('That audio could not be read.'); };
   r.readAsDataURL(file); });
 
 /* ---- gapless + crossfaded loop engine (Web Audio, ported from the Pad) --------
@@ -4556,6 +4563,7 @@ document.addEventListener('DOMContentLoaded', () => {
     serialize: () => serializeFlip({ recipes: true }),
     load: applyFlipDraftObject,
     hasContent: () => !nothingToShare(),
+    busy: flipMediaBusy,
     thumbnail: () => { const c=document.createElement('canvas'); c.width=CW; c.height=CH;
       drawFrameTo(c.getContext('2d'), frames.find(f => f && f.strokes && f.strokes.length) || frames[0]); return c; },
     otherUrl: () => { const a=document.getElementById('padBtn'); return a ? a.getAttribute('href') : null; },
