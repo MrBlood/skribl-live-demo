@@ -606,6 +606,20 @@ try:
         check("...and comes back out as the same file, type and all",
               stored["backIsBlob"] is True and stored["text"] == "hello bytes" and stored["type"] == "text/plain"
               and stored["name"] == "a.txt", str(stored))
+        # A REFUSED WRITE IS AN ANSWER, NOT A DEAD CONNECTION (v317 review). Every
+        # failure used to drop the connection, unclosed, and open a fresh one.
+        kept = pd.evaluate("""async () => {
+          const real = indexedDB.open.bind(indexedDB); let opens = 0;
+          indexedDB.open = (...a) => { opens++; return real(...a); };
+          await SkriblDraftStore.get('saved:index');           // connection up
+          let refused = null;
+          try { await SkriblDraftStore.put('probe:fn', { f: () => 1 }); } catch (e) { refused = e.name; }
+          await SkriblDraftStore.get('saved:index');
+          indexedDB.open = real;
+          return { refused, opens };
+        }""")
+        check("a write the browser refuses keeps the working connection (no fresh open per failure)",
+              kept["refused"] == "DataCloneError" and kept["opens"] == 0, str(kept))
         check("a draft its index lost is listed again, and written back into the index",
               "Found again" in back["listed"] and "Found again" in back["indexed"]
               and "Keep me one" in back["listed"], str(back))

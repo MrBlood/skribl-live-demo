@@ -41,11 +41,19 @@
      one retry on a fresh one. A deadline turns a hang into the rejection
      every caller already handles as "not durable". */
   var OPEN_MS = 4000, OP_MS = 8000;
+  // A WRITE'S deadline is for a hang, not for a slow phone: a multi-MB photo
+  // on iOS can take longer than a read ever should, and the callers keep their
+  // own, shorter patience (the Pad's MEDIA_STORE_TIMEOUT_MS, 12 s) for what
+  // the person sees. An inner 8 s cut-off reported bytes as failed that went
+  // on to commit (v317 review).
+  var WRITE_MS = 30000;
 
   function deadline(p, ms) {
     return new Promise(function (resolve, reject) {
       var t = setTimeout(function () {
-        reject(new Error("This browser's storage did not answer."));
+        var e = new Error("This browser's storage did not answer.");
+        e.skriblTimeout = true;
+        reject(e);
       }, ms);
       p.then(function (v) { clearTimeout(t); resolve(v); },
              function (e) { clearTimeout(t); reject(e); });
@@ -102,19 +110,29 @@
 
   /* One request in one transaction, with the deadline, and one retry when the
      connection turns out to be dead (db.transaction throws InvalidStateError
-     on a closed connection -- the background case above). */
+     on a closed connection -- the background case above).
+
+     ONLY A DEAD CONNECTION IS DROPPED (v317 review). A full disk, a value that
+     will not clone, a refused write: those are answers from a connection that
+     works, and dropping it for them opened a fresh one per failure and left
+     every old one open. A connection that is dropped is closed. */
+  function drop() {
+    var p = dbPromise;
+    dbPromise = null;
+    if (p) p.then(function (db) { try { db.close(); } catch (e) {} }, function () {});
+  }
   function op(mode, body) {
     function once() {
       return open().then(function (db) {
         return deadline(new Promise(function (resolve, reject) {
           var tx = db.transaction(STORE, mode);
           body(tx.objectStore(STORE), tx, resolve, reject);
-        }), OP_MS);
+        }), mode === 'readwrite' ? WRITE_MS : OP_MS);
       });
     }
     return once().catch(function (e) {
-      dbPromise = null;
-      if (e && e.name === 'InvalidStateError') return once();
+      if (e && e.name === 'InvalidStateError') { drop(); return once(); }
+      if (e && e.skriblTimeout) drop();
       throw e;
     });
   }
