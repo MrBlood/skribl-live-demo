@@ -12219,3 +12219,53 @@ calibrated checks:
 The ninth was partly real: recovered drafts now sort by date. The tenth, the
 cost of recovery, stands: it reads a lost record's payload once, when it
 recovers it.
+
+### The second review, before the seal
+
+The owner asked for a once-over, a staleness sweep, a bug hunt, and then a
+comprehensive pass, and for no seal until all four were done. Four
+reviewers read the whole v316..HEAD diff in parallel. Every finding below was
+checked against the code before it was fixed, and each fix has a check that
+fails without it:
+
+* **Data.**
+  * A restored photo that was still decoding was written into the next
+    autosave as "no photo". Its settings now wait until the image lands, and a
+    photo that never lands is pending again when the decode window closes.
+  * Opening a saved draft, a backup or Undo's snapshot kept the old session's
+    media book-keeping, so a reload could re-attach the PREVIOUS photo. The
+    opened document's media is now the stored copy.
+  * The pill's × cleared a track that was still decoding along with the photo
+    that was missing. It now clears only what is missing.
+  * A Pad holding only a photo or a track was replaced without being asked.
+  * Undo after New Skribl forgot which saved draft it had been, so the next
+    Save made a copy.
+  * An old storage connection's late close event could drop the new one.
+  * A slow, earlier list could put back a row that had just been deleted.
+* **Touch.**
+  * A second finger mid-drag left a sheet stuck part-way down.
+  * In a menu scrolled down, a pull on its first rows closed it instead of
+    scrolling.
+  * A pause before letting go still counted as a flick.
+  * A sheet easing away still took taps.
+  * On a landscape phone, Flip's dropdown was taken for a bottom sheet.
+  * A drag or a close during an entrance animation jumped.
+* **Access.** Delete buttons now say when they are asking, the row's question
+  is spoken, and the Library's tabs sit inside their heading instead of taking
+  its role away.
+* **The player's ratchets held.** The reset for an opened document moved out
+  of app.js into editor_draft.js, and the drafts sheet's entrance moved from a
+  stylesheet keyframe into sheetswipe.js's slideIn, which the player does not
+  download.
+
+Chosen, not missed:
+
+* **Overlapping media writes.** A write the Pad gave up on at its deadline may
+  still be running when the next save starts another. Making the retry wait
+  would wait for ever on a write that is truly hung.
+* **Two focus moves.** A sheet opened from a link has nothing to return focus
+  to, and the pill's × has no next control. Any destination picked for either
+  would be arbitrary.
+* **Flip's stroke caches** are two full-size canvases kept for the page's
+  life. They are reused on every stroke and do not grow, so they are memory
+  held, not memory leaked.
