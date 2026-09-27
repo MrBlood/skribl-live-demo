@@ -5153,8 +5153,14 @@ a.player-btn { text-decoration: none; }
   /* SOLID ON A PHONE (v317). Pinned, the header sits over the canvas, and its
      glass let the drawing and the photo show through it, blurred -- the owner:
      "weird look where the canvas has top tool bar over it". At rest nothing is
-     behind it but the page, so the solid ground looks as it did. */
-  .header { background: rgb(var(--surface-well-2-rgb)); }
+     behind it but the page, so the solid ground looks as it did.
+     AND NO BLUR, which a solid ground has no use for and which is the thing
+     WebKit fails to repaint: the owner's iPhone again showed the header's slot
+     empty after drawing ("no header -- touch header and it shows up"), the
+     v315 bug that fading only the contents did not fully cure. An element with
+     no backdrop-filter has no blurred layer to leave stale. */
+  .header { background: rgb(var(--surface-well-2-rgb));
+            -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
 /* 641-720px is "desktop" by breakpoint but has no room for the full
