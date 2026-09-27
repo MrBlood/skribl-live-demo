@@ -150,6 +150,11 @@ here is the rule you can break tomorrow.
 | A drawing keeps ITS OWN aspect inside the in-post player's 16:9 box. The canvas's CSS width and height stay `auto`: both definite has each axis clamped by its own maximum, independently, which stretched every non-16:9 drawing on the feed, the profile's stage and every host's embed. | `verify_inline.py` (three shapes, two widths), `verify_library.py` (the stage) |
 | The in-post compositor's offscreen layers use the scale `ctx.setTransform` was set to, never one derived from the canvas's CSS size. | `verify_inline.py` (the same drawing rendered with the compositor disabled at source) |
 | "Your Skribls" is the profile page, not a drawer: both editors' menu row links to `/library`, the list renders there through the same module with the same custody rules, and a row's gallery switch changes the post's visibility on the server and in the record. | `verify_posted.py`, `verify_library.py`, `verify_a11y.py` |
+| The demo signs in only a browser that presented `SKRIBL_DEMO_LOGIN_KEY` (16+ characters) at `/demo-login`; unkeyed it is anonymous, never everyone. The cookie holds a mark of the key, so rotating the key signs every browser out, and guesses spend the attempts budget. | `verify_hostseams.py` |
+| A CSRF token is signed and bound to the signed-in user through `init_skribl`'s own wiring; a forged write is refused before it is charged to anybody's rate budget. | `verify_csrf.py`, `verify_hostseams.py` |
+| Saved drafts on the server have a per-author byte budget (`SKRIBL_MAX_DRAFT_BYTES`), raster-only thumbnails, and a list that reads no payloads. | `verify_hostseams.py`, `verify_clouddrafts.py` |
+| Work on the canvas, including media still on its way back from the store, is asked about before a draft replaces it; a late store answer never lands on a different document; Save draft waits for a file still being read. | `verify_amber.py`, `verify_clouddrafts.py` |
+| Every bottom sheet closes on a tap of its grabber or a swipe down, owns the touch from its first pixel (no pull-to-refresh), and eases away. | `verify_sheetswipe.py` |
 
 **One from v179 did NOT survive, and is recorded here rather than quietly
 dropped.** "Segmented controls state a height" was true when written; `flip.css`

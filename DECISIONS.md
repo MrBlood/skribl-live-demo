@@ -12188,8 +12188,9 @@ white words, never dark (#260).
 ### Cal (#262)
 
 The working agreements moved from CLAUDE.md to WORKING-AGREEMENTS.md, and
-CLAUDE.md now includes them. Nothing in them changed except two words: an
-opening line naming Cal, and "the assistant" became "Cal". The owner's words: "no
+CLAUDE.md now includes them. Three things in them changed: an opening line
+naming Cal, "the assistant" became "Cal", and the SHA256SUMS line now says the
+file ships in a release archive. The owner's words: "no
 ads, and say I have a friend helping me named Cal". The .gitignore ad went, and
 the README credits him.
 
@@ -12318,3 +12319,43 @@ Two failures seen during these runs were not this tree's. verify_sheetswipe
 failed twice while batches of suites ran concurrently. Both failures came from
 the earlier revision that sampled one wall-clock instant. The revision that
 samples inside the page passed three runs out of three on its own.
+
+### The fourth review: four readers, fresh
+
+The owner asked for one more pass before the handoff to an auditor. Four
+reviewers read the tree in parallel, each with one lens. Each finding was
+reproduced, fixed, and pinned by a check shown to fail without its fix:
+
+* **Server.**
+  * A demo sign-in outlived its key: the cookie held the handle, so rotating a
+    leaked `SKRIBL_DEMO_LOGIN_KEY` signed nobody out. The cookie now holds a MAC
+    of the handle and the key. Wrong keys spend the attempts budget.
+  * `PATCH /api/skribls/<id>` answered 500 to a `deleteToken` that was not a
+    string. It is a 404 now, as on DELETE.
+  * A forged cross-site write was charged to the rate budget before CSRF
+    refused it, so another page could lock an author out for the hour. CSRF is
+    checked first on every write that is charged.
+* **Drafts.**
+  * Flip's `?draft=` link replaced an autosaved photo without asking, and the
+    boot restore's late answer then put that photo on the OPENED draft. Flip
+    now counts media on its way as work, and a document generation drops a
+    late answer that belongs to another document.
+  * Save draft while a photo was still being read stored the new file's name
+    over the old file's bytes. It waits now, on both editors.
+  * Opening a backup file kept the open saved draft's id, so Save overwrote
+    that draft. Opening a file lets go of it.
+  * A photo-only document reloading was "empty" while its photo decoded, and
+    the autosave deleted it.
+* **The harness.**
+  * The CSRF user binding was tested only with a binder the test installed
+    itself. It is now tested through `init_skribl`'s own wiring, and removing
+    that wiring turns it red.
+  * `verify_review` still expected an IPv6 address in full after rate limits
+    moved to the /64. It had not been run since that change; the seal would
+    have caught it.
+  * `verify_sheetswipe` did not drive three of the sheets it claimed. It now
+    drives Pad's post sheet (and holds a send open to show it cannot be
+    swiped away mid-post), Flip's report sheet and the gallery's page menu.
+  * `harness/package.py` could ship a stale file, because `zip -r` updates an
+    archive and never removes from it. It now rebuilds each zip, checks it
+    against its own SHA256SUMS, and refuses a tree with local edits.

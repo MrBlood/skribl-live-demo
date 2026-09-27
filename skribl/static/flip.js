@@ -919,6 +919,10 @@ let _mediaRecordInStore = false;
 // True while tryRestore() is fetching the payload: the record is not this
 // session's to delete until that read has landed (v294 bug check).
 let _mediaFetchPending = false;
+// Which document is on screen (third review). Opening a saved draft or a file,
+// or New Skribl, starts a new one; the boot restore's late IndexedDB answer
+// belongs to the document it was asked for and is dropped on any other.
+let flipDocGen = 0;
 function dropStoredMedia(){
   if(_mediaFetchPending) return;
   if(!_mediaRecordInStore || !window.SkriblDraftStore) return;
@@ -1095,8 +1099,11 @@ function tryRestore(){
         // applied yet) and would delete the very record being read — reload,
         // background the app, and the media is gone for good.
         _mediaFetchPending = true;
+        const _gen = flipDocGen, _imgSeq = imageSelectionSeq, _musSeq = musicSelectionSeq;
         SkriblDraftStore.get('flip:draft').then((rec) => {
           if (!rec || !rec.json) return;
+          // Another document since the read began: these bytes are not its.
+          if (_gen !== flipDocGen) return;
           // NOT a byte comparison of the record as it was when the read
           // started (`localStorage.getItem(KEY) !== raw`). Every save rewrites
           // `savedAt`, so any autosave landing in the gap makes the string
@@ -1126,13 +1133,15 @@ function tryRestore(){
           // file has a different name and is refused; same-name bytes from
           // one save earlier are the same file.
           let touched = false;
-          if (!musicData &&
+          // ...and a track or photo chosen or removed meanwhile is the user's
+          // newer word on that slot, even before its bytes have landed.
+          if (!musicData && _musSeq === musicSelectionSeq &&
               typeof full.music === 'string' && full.music.slice(0, 10) === 'data:audio' &&
               d.musicMeta && full.musicMeta && full.musicMeta.name === d.musicMeta.name) {
             musicData = full.music;
             pendingMusicMeta = null; touched = true;
           }
-          if (!bgImage &&
+          if (!bgImage && _imgSeq === imageSelectionSeq &&
               typeof full.bgImage === 'string' && full.bgImage.slice(0, 10) === 'data:image' &&
               d.photo && full.photo && full.photo.name === d.photo.name) {
             bgImage = full.bgImage;
@@ -4504,6 +4513,7 @@ function loadDraftFile(file){
       if(d.playbackMode==='replay'){ chip('That\u2019s a Pad Skribl \u2014 open it in Skribl Pad'); return; }
       // A backup file is not the saved draft that was open: Save makes a new one.
       if(window.SkriblSavedDrafts) SkriblSavedDrafts.forget();
+      flipDocGen++;
       if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
       // Same reasoning as Pad's loadSkribl generation token: a draft load is a
       // NEW document, so an image or track selected moments earlier must not
@@ -4545,6 +4555,7 @@ function loadDraftFile(file){
 // re-open and a saved draft (v316). The same applyPayload() a draft file uses.
 function applyFlipDraftObject(d){
   if(!d || !Array.isArray(d.frames) || !d.frames.length) return;
+  flipDocGen++;
   if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
   applyPayload(d);
   invalidateClearUndo();
@@ -4562,7 +4573,11 @@ document.addEventListener('DOMContentLoaded', () => {
     kind: 'flip',
     serialize: () => serializeFlip({ recipes: true }),
     load: applyFlipDraftObject,
-    hasContent: () => !nothingToShare(),
+    // Media counts, and so does media still on its way back from the store:
+    // a Library link opening a draft over the autosaved photo asks first, as
+    // the Pad does (third review).
+    hasContent: () => !nothingToShare() || !!musicData || _mediaFetchPending
+      || !!pendingPhotoMeta || !!pendingMusicMeta,
     busy: flipMediaBusy,
     thumbnail: () => { const c=document.createElement('canvas'); c.width=CW; c.height=CH;
       drawFrameTo(c.getContext('2d'), frames.find(f => f && f.strokes && f.strokes.length) || frames[0]); return c; },
@@ -9606,6 +9621,7 @@ function invalidateClearUndo(){
 // synthetic clicks at the drawer's button, riding its armed state — one
 // control's business logic coupled to another control's confirmation UI.
 function clearAllPages(){
+  flipDocGen++;
   const _draftId = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;   // a new Skribl is a new draft
   clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv, draftId: _draftId,
                         // A new Skribl is a new title; Undo brings the old one back (v317).

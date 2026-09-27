@@ -16,6 +16,10 @@ allowlist nobody boots is a guess.
     python3 harness/package.py <outdir>            # build all three
     python3 harness/package.py <outdir> --verify   # ...and boot the runtime one
 
+Each zip is unpacked and checked against its own SHA256SUMS before it is
+reported, and a tree whose tracked files differ from HEAD is refused
+(--allow-dirty overrides, and says so).
+
 THE RUNTIME SET IS DERIVED, not enumerated: everything git tracks under
 skribl/, plus the root files a process genuinely needs to start. That second
 list is short and hand-written because there is no way to derive "what a
@@ -99,11 +103,34 @@ def manifest(dirpath):
     lines = []
     for p in sorted(dirpath.rglob("*")):
         if p.is_file() and p.name != "SHA256SUMS":
+            # check=True: a digest that failed to compute is not a blank line.
             h = subprocess.run(["sha256sum", str(p.relative_to(dirpath))],
-                               capture_output=True, text=True, cwd=dirpath).stdout
+                               capture_output=True, text=True, cwd=dirpath, check=True).stdout
             lines.append(h.rstrip("\n"))
     (dirpath / "SHA256SUMS").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return len(lines)
+
+
+def check_zip(zpath, top):
+    """Unpack the archive as a recipient would and hold it to its own
+    SHA256SUMS: every listed file present and matching, nothing unlisted.
+    A package is only as good as the sums it ships, and nothing else reads
+    them before the recipient does."""
+    import tempfile
+    import zipfile
+    with tempfile.TemporaryDirectory() as tmp:
+        with zipfile.ZipFile(zpath) as z:
+            z.extractall(tmp)
+        root = Path(tmp) / top
+        subprocess.run(["sha256sum", "--quiet", "-c", "SHA256SUMS"], cwd=root, check=True)
+        listed = {ln.split("  ", 1)[1] for ln in
+                  (root / "SHA256SUMS").read_text(encoding="utf-8").splitlines() if ln}
+        present = {str(f.relative_to(root)) for f in root.rglob("*")
+                   if f.is_file() and f.name != "SHA256SUMS"}
+        if listed != present:
+            raise SystemExit(f"{zpath.name}: files and SHA256SUMS disagree: "
+                             f"unlisted {sorted(present - listed)[:5]}, "
+                             f"missing {sorted(listed - present)[:5]}")
 
 
 def build(out, version):
@@ -117,7 +144,11 @@ def build(out, version):
         copy_set(files, d)
         n = manifest(d)
         zipname = f"{d.name}.zip"
+        # zip -r UPDATES an existing archive and never removes from it, so a
+        # file deleted since the last build would ride along unlisted.
+        (out / zipname).unlink(missing_ok=True)
         subprocess.run(["zip", "-qr", zipname, d.name], cwd=out, check=True)
+        check_zip(out / zipname, d.name)
         size = (out / zipname).stat().st_size
         made.append((name, n, size, out / zipname))
     return made
@@ -251,10 +282,24 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("outdir")
     ap.add_argument("--verify", action="store_true")
+    ap.add_argument("--allow-dirty", action="store_true")
     args = ap.parse_args()
     import re
     version = re.search(r'SKRIBL_VERSION\s*=\s*"([^"]+)"',
                         (ROOT / "skribl" / "core.py").read_text(encoding="utf-8")).group(1)
+    # THE PACKAGES ARE COPIES OF THE WORKING TREE, so they are only a
+    # release's packages if the tree is the commit. Refuse local edits to
+    # tracked files unless told otherwise, and say which commit was packaged.
+    dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain",
+                            "--untracked-files=no"],
+                           capture_output=True, text=True, check=True).stdout.strip()
+    if dirty and not args.allow_dirty:
+        print("refusing: tracked files differ from the commit (--allow-dirty to "
+              "package them anyway):\n" + dirty)
+        return 2
+    head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+                          capture_output=True, text=True, check=True).stdout.strip()
+    print(f"  packaging {version} from {head}" + (" (with local edits)" if dirty else ""))
     out = Path(args.outdir).resolve()
     out.mkdir(parents=True, exist_ok=True)
     made = build(out, version)

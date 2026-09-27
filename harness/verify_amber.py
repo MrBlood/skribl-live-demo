@@ -901,6 +901,41 @@ with sync_playwright() as p:
               bool(late and late["data"]), str(late and {"id": late["id"], "data": (late["data"] or "")[:30]}))
         pgS.close()
 
+    print("\nFLIP — a draft opened from the Library asks over an autosaved photo, and the photo never lands on it (third review)")
+    # Flip's content test ignored media on its way back from the store, so
+    # /flip?draft=<id> replaced a photo-only autosave without asking; and the
+    # boot restore's late answer then put that photo onto the OPENED draft,
+    # whose next Save wrote it in. The store read is slowed to make the late
+    # answer certain.
+    ctxF = b.new_context(viewport={"width": 1280, "height": 900})
+    pgF = ctxF.new_page(); pgF.on("pageerror", lambda e: errs.append(f"flip-draft: {e}"))
+    pgF.goto(BASE + "/flip", wait_until="load"); pgF.wait_for_timeout(1200)
+    pgF.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
+    boxF = pgF.locator("#pad").bounding_box()
+    pgF.mouse.move(boxF["x"] + 50, boxF["y"] + 50); pgF.mouse.down()
+    pgF.mouse.move(boxF["x"] + 200, boxF["y"] + 150, steps=8); pgF.mouse.up(); pgF.wait_for_timeout(300)
+    sidF = pgF.evaluate("async () => (await SkriblSavedDrafts.save()).id")
+    pgF.evaluate("() => clearAllPages()")
+    pgF.set_input_files("#imageInput", {"name": "auto.png", "mimeType": "image/png", "buffer": _png1((200, 40, 40))})
+    pgF.wait_for_function("() => !!bgImage", timeout=20000)
+    pgF.evaluate("() => flushFlipDraft()"); pgF.wait_for_timeout(1500)
+    pgF2 = ctxF.new_page(); pgF2.on("pageerror", lambda e: errs.append(f"flip-draft: {e}"))
+    pgF2.add_init_script("""(() => { let v; Object.defineProperty(window, 'SkriblDraftStore', { configurable: true, get: () => v,
+        set: (x) => { const g = x.get; x.get = function (k) { const pr = g.apply(this, arguments);
+          return k === 'flip:draft' ? pr.then(r => new Promise(res => setTimeout(() => res(r), 3000))) : pr; }; v = x; } }); })();""")
+    pgF.close()
+    pgF2.goto(BASE + "/flip?draft=" + sidF, wait_until="load"); pgF2.wait_for_timeout(900)
+    asked = pgF2.evaluate("""() => { const s = document.getElementById('savedDraftsSheet');
+        const row = s && s.querySelector('.sdrafts-row.armed'); return { shown: !!(s && !s.hidden), armed: !!row,
+        strokes: frames[0].strokes.length }; }""")
+    check("Flip: a Library link over an autosaved photo still on its way asks first",
+          asked["shown"] and asked["armed"] and asked["strokes"] == 0, str(asked))
+    pgF2.click("#savedDraftsSheet .sdrafts-row.armed .sdrafts-open"); pgF2.wait_for_timeout(4000)
+    landed = pgF2.evaluate("() => ({ strokes: frames[0].strokes.length, photo: !!bgImage, name: imageName, current: SkriblSavedDrafts.current() })")
+    check("Flip: ...and opened anyway, the draft does not collect the autosave's late photo",
+          landed["strokes"] > 0 and not landed["photo"] and landed["current"] == sidF, str(landed))
+    ctxF.close()
+
     check("no uncaught page errors", not errs, "; ".join(errs[:3]))
     b.close()
 
