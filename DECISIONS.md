@@ -12269,3 +12269,52 @@ Chosen, not missed:
 * **Flip's stroke caches** are two full-size canvases kept for the page's
   life. They are reused on every stroke and do not grow, so they are memory
   held, not memory leaked.
+
+### Security, found by the same review
+
+One finding was HIGH. It applied wherever the demo identity was set:
+
+* **The demo identity was every visitor's identity.** With
+  `SKRIBL_DEMO_IDENTITY` set, `current_user_id()` answered the owner's id for
+  any request, so any stranger could list, read, overwrite and delete the
+  owner's saved drafts. It now signs in only a browser that has visited
+  `/demo-login?key=...` with `SKRIBL_DEMO_LOGIN_KEY` (at least 16 characters,
+  compared in constant time; a wrong key is a 404). That sets a signed session
+  cookie, `Secure` and `SameSite=Lax`, which `/demo-logout` clears. With the
+  identity set and no usable key, the server warns at boot and runs anonymous.
+  It fails closed, never open.
+
+The rest were hardening, each with a check:
+
+* Drafts have a per-author byte budget (`SKRIBL_MAX_DRAFT_BYTES`, 200 MB by
+  default), and saves beyond it are a 409. Draft writes share the
+  attempts rate limit. A thumbnail must be a JPEG, PNG or WebP data URL whose
+  bytes match its type, so an SVG (which can carry script) or a fake PNG is a
+  400.
+* The drafts list and the meta route no longer load drawings they do not return.
+* A JSON body nested deep enough to exhaust the parser's recursion is a 400,
+  not a 500.
+* Rate limits key an IPv6 client by its /64, the block one subscriber is given,
+  and an IPv4-mapped address by its IPv4 address.
+* The CSRF token is `nonce.signature`, an HMAC of the app's secret over the
+  nonce and the signed-in user. A token planted by a sibling subdomain, or
+  carried over from another account, is refused and replaced.
+
+### The third pass: tests that could not fail
+
+The owner asked for another pass after that. It found three places where the
+harness asked a question that could not come out red:
+
+* The Re-add button was asserted "visible" from its rectangle. It is now
+  asserted painted, by `elementFromPoint` and the pill's opacity. Hiding it,
+  or fading the pill, turns verify_amber and verify_drafts red.
+* verify_clouddrafts listened for page errors on one of its six pages. It now
+  listens on all six (an error thrown on the hung-storage page turns it red).
+  A server that fails to boot is reported as FAIL, not SKIP.
+* verify_flipspeed bounded the strokes painted per move from above only, so
+  painting nothing passed.
+
+Two failures seen during these runs were not this tree's. verify_sheetswipe
+failed twice while batches of suites ran concurrently. Both failures came from
+the earlier revision that sampled one wall-clock instant. The revision that
+samples inside the page passed three runs out of three on its own.
