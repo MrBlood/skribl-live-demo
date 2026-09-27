@@ -7,7 +7,8 @@ Every rule below was learned the hard way; read them as rules, not background.
 
 1. **`START-HERE.md`** — the session primer, and the current state of the
    tree. Its opening block deliberately contains no numbers: verify totals
-   against `harness/RELEASE.md` and `SHA256SUMS` rather than trusting prose.
+   against `harness/RELEASE.md` (and, in a release archive, its `SHA256SUMS`)
+   rather than trusting prose.
    Its "Closed in vNNN" sections carry the invariants a change can break.
 2. **`DECISIONS.md`** — why the tree is the way it is, newest at the bottom.
    Version headings REPEAT (the numbering restarted twice), so the LAST
