@@ -150,12 +150,16 @@ print(f"  held KEEP      {len(kept_blind)}  ({sum(p['bytes'] for p in kept_blind
       f"  — at-rules with no selectors, and media queries this run never enters")
 print(f"distinct selectors {len(all_sels)}")
 
-Path("/tmp/css_selectors.json").write_text(json.dumps({
-    "selectors": all_sels,
-    "blocks": [{"start": p["start"], "end": p["end"], "header": p["header"],
-                "sels": p["sels"], "bytes": p["bytes"]} for p in parsed],
-}))
-print("\nwrote /tmp/css_selectors.json")
+# The classification's scratch output, for the browser step. Not written when
+# the run is only an --emit: verify_seam runs --emit on the PR gate, and a
+# fixed shared /tmp path written on every run races under parallel runs.
+if not (len(sys.argv) > 1 and sys.argv[1] == "--emit"):
+    Path("/tmp/css_selectors.json").write_text(json.dumps({
+        "selectors": all_sels,
+        "blocks": [{"start": p["start"], "end": p["end"], "header": p["header"],
+                    "sels": p["sels"], "bytes": p["bytes"]} for p in parsed],
+    }))
+    print("\nwrote /tmp/css_selectors.json")
 
 
 # --- emit ---------------------------------------------------------------------

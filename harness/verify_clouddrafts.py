@@ -182,14 +182,22 @@ def menu_click(fr, item, btn="#menuBtn"):
 try:
     if not wait_ready():
         err = proc.stderr.read().decode("utf-8", "replace")[-1500:] if proc.stderr else ""
-        sys.exit(f"SKIP: the example app did not start on port {PORT}.\n{err}")
+        sys.exit(f"FAIL: the example app did not start on port {PORT}.\n{err}")
 
     with sync_playwright() as p:
         b = p.chromium.launch()
 
         # ---------------------------------------------------------------- 1
         print("\n1 — THE API: OWNER ONLY, CSRF, VALIDATED, CAPPED")
-        anon = b.new_context().new_page()
+        errs = []
+
+        def watch(page, tag):
+            # Every page this suite drives, not only the first: an uncaught
+            # error on the hung-storage or second-user page is still a bug.
+            page.on("pageerror", lambda e: errs.append(f"{tag}: {e}"))
+            return page
+
+        anon = watch(b.new_context().new_page(), "anon")
         browsing.goto(anon, BASE, "/skribl/skribl-pad", require_boot=False)
         st, _ = api(anon, "GET", "")
         check("signed out, the list is 401", st == 401, str(st))
@@ -197,9 +205,7 @@ try:
         check("signed out, a save is 401", st in (401, 403), str(st))
 
         ctx_a = b.new_context(viewport={"width": 1180, "height": 900})
-        pa = ctx_a.new_page()
-        errs = []
-        pa.on("pageerror", lambda e: errs.append(str(e)))
+        pa = watch(ctx_a.new_page(), "owner")
         sign_in(pa, 0)
         browsing.goto(pa, BASE, "/skribl/skribl-pad", require_boot=False)
         pa.wait_for_timeout(1500)
@@ -269,7 +275,7 @@ try:
 
         # Somebody else.
         ctx_b = b.new_context()
-        pb = ctx_b.new_page()
+        pb = watch(ctx_b.new_page(), "other")
         sign_in(pb, 1)
         browsing.goto(pb, BASE, "/skribl/skribl-pad", require_boot=False)
         st, lst = api(pb, "GET", "")
@@ -539,7 +545,7 @@ try:
             return {};                     // a request whose events never fire
           };
         })();""")
-        ph = hung.new_page()
+        ph = watch(hung.new_page(), "hung")
         browsing.goto(ph, BASE, "/skribl/skribl-pad", require_boot=False)
         ph.wait_for_timeout(800)
         menu_click(ph, "#openCloudDraftItem")
@@ -559,7 +565,7 @@ try:
         hung.close()
         # A connection closed under the page (what WebKit does while it is in
         # the background): the next read gets one fresh connection, not an error.
-        pd = b.new_context().new_page()
+        pd = watch(b.new_context().new_page(), "closed-db")
         browsing.goto(pd, BASE, "/skribl/skribl-pad", require_boot=False)
         pd.wait_for_timeout(800)
         dead = pd.evaluate("""async () => {
@@ -703,15 +709,17 @@ try:
         check("the Library's tab heading is still a heading, with its tabs inside it",
               head["role"] is None and head["tabs"] == 2, str(head))
         # A Pad holding only a photo is work: opening a draft over it asks first.
-        pp = pd.context.new_page()   # the same browser, so the same drafts
+        pp = watch(pd.context.new_page(), "photo")   # the same browser, so the same drafts
         browsing.goto(pp, BASE, "/skribl/skribl-pad", require_boot=False); pp.wait_for_timeout(1200)
         pp.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
         # The same browser restores pd's drawing here; start from nothing but a photo.
         pp.evaluate("() => { clearAllWithUndo(); }"); pp.wait_for_timeout(300)
-        import base64 as _b64, tempfile as _tf
-        _png = pathlib.Path(_tf.gettempdir()) / "clouddrafts_probe.png"
-        _png.write_bytes(_b64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
+        _fd, _name = tempfile.mkstemp(suffix=".png", prefix="clouddrafts_")
+        os.close(_fd)
+        _png = pathlib.Path(_name)
+        _png.write_bytes(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
         pp.set_input_files("#photoInput", str(_png)); pp.wait_for_timeout(1500)
+        _png.unlink(missing_ok=True)
         menu_click(pp, "#openCloudDraftItem")
         pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
         pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).click(); pp.wait_for_timeout(200)

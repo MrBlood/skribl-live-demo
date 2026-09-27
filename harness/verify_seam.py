@@ -245,15 +245,9 @@ if _marker in _appjs:
     # so the figures stay commensurable rather than mixing spans with raw line
     # counts.
     #
-    # lib/sheetswipe.js joins the list (v317): the Pad menu's own swipe code
-    # moved out of editor_menu.js into it, the player never loads it, and
-    # without it here the move read as a leak. Said plainly, since it changes
-    # what the figure means: most of that file is NEW code (the slide, the
-    # other sheets), and the Library and gallery load it too. It counts because
-    # the question this ratchet asks is "is it off the player", and it is.
     _extracted = 0
     for _name in ("editor_export.js", "editor_post.js", "editor_menu.js",
-                  "editor_music.js", "editor_photo.js", "lib/sheetswipe.js"):
+                  "editor_music.js", "editor_photo.js"):
         _p = _layout.STATIC_DIR / _name
         if not _p.exists():
             continue
@@ -301,11 +295,36 @@ if _marker in _appjs:
     check("the extracted editor bundles are not loaded by the player",
           not (_never & _pscripts),
           f"loaded: {sorted(_never & _pscripts)} — the whole point of moving them is that the player never fetches them")
+    # Nor fetched at RUN time: a createElement('script') or import() naming one
+    # of them from inside a player script would pass the tag check. A loader
+    # has to name the file, so every quoted string in the player's own scripts
+    # is read for the names (a comment explaining an absence is not a string).
+    _lits = re.compile(r"""(['"`])((?:\\.|(?!\1).)*?)\1""")
+    _dyn = []
+    for _src in sorted(_pscripts):
+        _f = _layout.STATIC_DIR / _src
+        if not _f.is_file():
+            continue
+        _code = re.sub(r"/\*.*?\*/", "", _f.read_text(encoding="utf-8"), flags=re.S)
+        _code = re.sub(r"(?m)^\s*//.*$", "", _code)
+        for _m in _lits.finditer(_code):
+            for _name in _never:
+                if _name.split("/")[-1] in _m.group(2):
+                    _dyn.append(f"{_src}: {_m.group(0)[:60]}")
+    check("...nor named in a string inside any script the player runs (no loader can fetch them)",
+          not _dyn, "; ".join(_dyn[:4]) or f"{len(_pscripts)} player scripts read")
 
     _editor_total = _editor_lines + _extracted
     print(f"    editor-only extracted to their own files: {_extracted} lines")
+    # 2200 -> 2190 at v317, and the reason is a move, not a leak. The Pad menu's
+    # own swipe (about 57 lines) left editor_menu.js for lib/sheetswipe.js,
+    # which the player never loads (the script-tag check above says so). The
+    # first cut counted all of sheetswipe.js here instead, and a review of
+    # this suite caught what that did: most of its ~210 lines are NEW code the
+    # Library and gallery load too, so counting it inflated the figure by ~150
+    # and let that much editor code leak unseen. Measured without it: 2193.
     check("editor-only code has not leaked into the player's reachable set",
-          _editor_total >= 2200,
+          _editor_total >= 2190,
           f"{_editor_total} lines editor-only ({_editor_lines} still in app.js, "
           f"{_extracted} extracted), was 2467 — something the player now calls "
           f"used to be editor-only")
@@ -437,19 +456,26 @@ print("\nSPLIT FRESHNESS — player.css is what the tool makes from styles.css")
 # styles.css without re-emitting, passed its pull request, and turned main red
 # on this one line (v317). The regeneration itself needs neither a server nor a
 # browser, so the question lives here too, on the PR gate.
-import subprocess as _sp, tempfile as _tf
+import shutil as _sh, subprocess as _sp, tempfile as _tf
 _live = ROOT / "harness" / "tools" / "css_live.json"
-_out = Path(_tf.mkdtemp()) / "player.css"
-_run = _sp.run([sys.executable, str(ROOT / "harness" / "tools" / "cssgraph.py"),
-                "--emit", str(_live), str(_out)], cwd=ROOT, capture_output=True, text=True)
+_dir = Path(_tf.mkdtemp())
+_out = _dir / "player.css"
+try:
+    _run = _sp.run([sys.executable, str(ROOT / "harness" / "tools" / "cssgraph.py"),
+                    "--emit", str(_live), str(_out)], cwd=ROOT, capture_output=True,
+                   text=True, timeout=120)
+    _rc, _err = _run.returncode, (_run.stderr or "")[-500:]
+except _sp.TimeoutExpired:
+    _rc, _err = "timeout", "cssgraph did not finish in 120 s"
 _committed = (ROOT / "skribl" / "static" / "player.css").read_text(encoding="utf-8")
 _fresh = _out.read_text(encoding="utf-8") if _out.exists() else ""
+_sh.rmtree(_dir, ignore_errors=True)
 check("player.css is byte for byte what cssgraph emits from styles.css "
       "(after editing styles.css: python3 harness/tools/cssgraph.py --emit "
       "harness/tools/css_live.json skribl/static/player.css)",
-      _run.returncode == 0 and _committed == _fresh,
-      f"cssgraph exit {_run.returncode}; committed {len(_committed):,} vs "
-      f"regenerated {len(_fresh):,} chars")
+      _rc == 0 and _committed == _fresh,
+      f"cssgraph exit {_rc}; committed {len(_committed):,} vs "
+      f"regenerated {len(_fresh):,} chars" + (f"; stderr: {_err}" if _err else ""))
 
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +

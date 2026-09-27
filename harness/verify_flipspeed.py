@@ -122,7 +122,7 @@ with sync_playwright() as p:
     check("on a page of twenty strokes, the stroke being drawn uses the cache",
           per["cached"] is True, str(per))
     check("and each move repaints ONE stroke, not twenty-one",
-          per["renders"] >= 15 and per["segs"] <= per["renders"],
+          per["renders"] >= 15 and 1 <= per["segs"] <= per["renders"],
           f"{per['segs']} strokes painted over {per['renders']} moves")
     after = pg.evaluate(COMPARE)
     check("pen-up leaves the page exactly as a full repaint draws it",
