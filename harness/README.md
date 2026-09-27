@@ -246,13 +246,18 @@ A green check is not evidence until it has been shown to go red.
   version measuring the ELEMENT rather than the viewport, which excluded the
   scrollbar and shifted the boundary ~15px.
 - `verify_flipspeed.py` — Flip keeps up with a finger on a busy page (v317).
-- `verify_sheetswipe.py` — every bottom sheet closes on a swipe down or a tap on its grabber, the draw drawer's grip closes it, and a swipe on an open menu never reloads the page (v317).
   While a stroke is drawn, each move paints the live stroke only, counted in
   strokes painted rather than timed; mid-stroke the pad matches an independent
   full repaint for a pen, a see-through pen, the eraser, the onion skin and the
   mirror (within 2/255 of rounding on the flattened pen path, exactly for the
   eraser), exactly after pen-up, and a stroke that would tip the page over the
   layer budget skips the cache.
+- `verify_sheetswipe.py` — every bottom sheet closes on a swipe down or a tap on
+  its grabber and eases away as it does, the draw drawer's grip closes it, and
+  a swipe on an open menu never reloads the page (v317). Driven per page with
+  touch events: the first pixels of a pull are claimed, a sideways drag is left
+  alone, a closing sheet is sampled part-way and must be moving, a quick second
+  tap reopens a menu still easing away, and reduced motion closes at once.
 - `verify_framecache.py` — a static page is rasterised at most once per
   playback, on BOTH surfaces. Pins the blit as pixel-identical to the paint it
   replaced (only after asserting 1:1 display, where that claim is honest), the
