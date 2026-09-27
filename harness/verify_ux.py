@@ -1295,6 +1295,17 @@ with _sp204() as _p:
     ftoast = fp.evaluate("() => { const c = document.querySelector('.chip'); return c ? c.textContent : (document.body.textContent.includes('Pad Skribl') ? 'Pad Skribl' : ''); }")
     check("V206: loading a Pad .skribl into Flip is refused with 'open it in Skribl Pad'",
           "Pad Skribl" in ftoast or "Skribl Pad" in ftoast, repr(ftoast)[:80])
+    # V317 (third review): a backup file opened over a saved draft is a NEW
+    # document. It kept the draft's id, so the next Save draft overwrote that
+    # draft with the backup ("Draft updated") and the draft was gone.
+    _left = []
+    for page_, doc in ((pg, pad_doc), (fp, flip_doc)):
+        page_.evaluate("() => SkriblSavedDrafts.resume('draft-before')")
+        page_.set_input_files("#draftInput", {"name": "backup.skribl", "mimeType": "application/json", "buffer": doc.encode()})
+        page_.wait_for_timeout(600)
+        _left.append(page_.evaluate("() => SkriblSavedDrafts.current()"))
+    check("V317: opening a backup file lets go of the saved draft, so Save cannot overwrite it (Pad, Flip)",
+          _left == [None, None], str(_left))
     pg.close()
 
     # The Flip image/music drawer must SURVIVE picking a file. Flip's file

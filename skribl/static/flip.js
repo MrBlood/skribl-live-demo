@@ -4495,6 +4495,8 @@ function loadDraftFile(file){
       // is a single-canvas replay, not a flipbook; it loaded here as a lone
       // 1-page 'animation' with no error. Refuse it with directions instead.
       if(d.playbackMode==='replay'){ chip('That\u2019s a Pad Skribl \u2014 open it in Skribl Pad'); return; }
+      // A backup file is not the saved draft that was open: Save makes a new one.
+      if(window.SkriblSavedDrafts) SkriblSavedDrafts.forget();
       if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
       // Same reasoning as Pad's loadSkribl generation token: a draft load is a
       // NEW document, so an image or track selected moments earlier must not

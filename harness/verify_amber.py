@@ -826,6 +826,33 @@ with sync_playwright() as p:
           got8[0] == "contain" and abs(got8[1] - 0.4) < 0.01 and got8[3] == "0.4", str(got8))
     pg8.close()
 
+    print("\nPAD — a photo-only document survives its own reload while the photo decodes (third review)")
+    # _mediaPresent() did not count a photo on its way back in, so for the
+    # length of the decode a photo-only document was "empty" -- and the empty
+    # branch of writeAutosave, seeing this session had restored it, DELETED the
+    # autosave. The pill still said Saved; a tab killed then lost the document.
+    pgP = b.new_page(viewport={"width": 1280, "height": 900})
+    pgP.on("pageerror", lambda e: errs.append(f"photo-only: {e}"))
+    pgP.goto(BASE + "/skribl-pad", wait_until="load"); pgP.wait_for_timeout(1000)
+    pgP.evaluate("() => { localStorage.clear(); }")
+    pgP.reload(wait_until="load"); pgP.wait_for_timeout(1000)
+    pgP.set_input_files("#photoInput", str(_png))
+    pgP.wait_for_function("() => mediaDraft.photo === 'durable'", timeout=20000); pgP.wait_for_timeout(1800)
+    AUTO = "() => { const r = localStorage.getItem('skribl_autosave_v1'); if (!r) return null; const d = JSON.parse(r); return d.photoMeta ? d.photoMeta.name : 'no photo'; }"
+    before = pgP.evaluate(AUTO)
+    pgP.add_init_script("""(() => { let v; Object.defineProperty(window, 'skriblDecodeCheckImage', { configurable: true,
+        get: () => v, set: (f) => { v = function () { const a = arguments;
+          return new Promise(r => setTimeout(r, 2000)).then(() => f.apply(this, a)); }; } }); })();""")
+    pgP.reload(wait_until="load"); pgP.wait_for_timeout(1000)
+    during = pgP.evaluate("() => [(" + AUTO + ")(), !!_inFlight.photo]")
+    pgP.wait_for_timeout(4000)
+    landed = pgP.evaluate("() => [(" + AUTO + ")(), photoBgImg.style.display, photoBgImg._fileName]")
+    check("Pad: a photo-only draft is still stored while its photo decodes after a reload",
+          before == _png.name and during == [_png.name, True], f"before {before!r}, during {during}")
+    check("Pad: ...and still stored once the photo is back on the canvas",
+          landed == [_png.name, "block", _png.name], str(landed))
+    pgP.close()
+
     check("no uncaught page errors", not errs, "; ".join(errs[:3]))
     b.close()
 

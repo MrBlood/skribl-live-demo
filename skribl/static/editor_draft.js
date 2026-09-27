@@ -347,7 +347,11 @@ function _mediaPresent() {
   return !!((photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
             || (audioEl && audioEl._fileName)
             || (typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta)
-            || (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta));
+            || (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta)
+            // ...and media on its way back in (third review): a photo-only
+            // document reloading is "empty" for the length of the decode, and
+            // the empty branch of writeAutosave deleted it.
+            || _inFlight.photo || _restoring.photo || _restoring.music);
 }
 if (window.SkriblAutosavePill) window.SkriblAutosavePill.configure({
   pending: _pendingMediaLost,
@@ -431,7 +435,8 @@ function writeAutosave() {
     // carried from attach time.
     Object.keys(mediaDraft).forEach((kind) => { if (mediaDraft[kind] === 'failed' && _mediaFile[kind]) storeMediaBytes(kind); });
     const hasPhoto = !!((photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
-                        || (typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta));
+                        || (typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta)
+                        || _inFlight.photo);
     const hasMusic = !!((audioEl && audioEl._fileName)
                         || (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta));
     // The amber pill used to be a designed limitation ("bytes never fit in
