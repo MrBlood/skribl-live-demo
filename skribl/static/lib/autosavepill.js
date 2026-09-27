@@ -126,7 +126,11 @@
     });
     x.addEventListener('click', function (e) {
       e.stopPropagation(); e.preventDefault();
-      if (pill.classList.contains('actionable')) { if (cfg.dismiss) cfg.dismiss(); return; }
+      /* AT ONCE (v317). Dismiss used to leave the pill up until the save it
+         schedules came back and replaced it -- a debounce plus a storage round
+         trip, which on the owner's iPhone was a visible lag before the pill
+         went. The decision is made on the tap; the save reports as saves do. */
+      if (pill.classList.contains('actionable')) { if (cfg.dismiss) cfg.dismiss(); hide(pill); return; }
       acknowledged = true;
       hide(pill);
     });
