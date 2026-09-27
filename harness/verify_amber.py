@@ -758,6 +758,41 @@ with sync_playwright() as p:
           and opened["withPhoto"]["slot"] == "durable", str(opened))
     check("Pad: opening a draft with no photo drops the old stored photo and asks about nothing",
           opened["without"]["pending"] is None and opened["without"]["stored"] is None, str(opened))
+    # A store read still out when a document opens must not land the previous
+    # session's file on it (the read is late; the slot has moved on).
+    late = pgO.evaluate("""async () => {
+        const S = SkriblDraftStore, get = S.get;
+        let release; const gate = new Promise(r => release = r);
+        S.get = (k) => k === 'pad:photo' ? gate.then(() => ({ blob: new Blob(['x']), name: 'late.png', type: 'image/png' })) : get(k);
+        let changed = 0; const inp = document.getElementById('photoInput');
+        const count = () => changed++; inp.addEventListener('change', count, true);
+        reAddMediaFromStore('photo', 'photoInput', { name: 'late.png' });
+        padAdoptLoadedMedia({});            // a document opened meanwhile
+        release(); await new Promise(r => setTimeout(r, 300));
+        S.get = get; inp.removeEventListener('change', count, true);
+        return { changed, file: _mediaFile.photo && _mediaFile.photo.name, restoring: _restoring.photo };
+    }""")
+    check("Pad: a store answer that arrives after a document opened is ignored, not attached",
+          late["changed"] == 0 and late["file"] is None and late["restoring"] is False, str(late))
+    # New Skribl carries nothing: a pending record, a photo in flight.
+    fresh_ = pgO.evaluate("""() => {
+        pendingPhotoMeta = { name: 'old.png' }; _inFlight.photo = { name: 'flying.png' };
+        resetAll();
+        return { pending: pendingPhotoMeta, flight: _inFlight.photo };
+    }""")
+    check("Pad: New Skribl drops a pending photo and one still in flight (no 'Media missing' later about a discarded Skribl)",
+          fresh_["pending"] is None and fresh_["flight"] is None, str(fresh_))
+    # The player keeps no draft: viewing a post must never touch stored media.
+    guard = pgO.evaluate("""async () => {
+        await SkriblDraftStore.put('pad:photo', { blob: new Blob(['keep']), name: 'keep.png', type: 'image/png' });
+        document.body.classList.add('player-mode');
+        padAdoptLoadedMedia({});
+        document.body.classList.remove('player-mode');
+        await new Promise(r => setTimeout(r, 300));
+        const rec = await SkriblDraftStore.get('pad:photo');
+        return rec && rec.name;
+    }""")
+    check("Pad: in player mode an opened document touches no stored media", guard == "keep.png", str(guard))
     pgO.close()
 
     print("\nPAD — a restored photo keeps its adjustments however long the decode takes (v294 audit, PR 2)")

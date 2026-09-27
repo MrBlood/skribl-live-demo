@@ -296,10 +296,17 @@ document.addEventListener('DOMContentLoaded', function () {
     load: function (d) { loadSkribl(d); },
     // A photo or a track on its own is work too: replacing it asks first, and
     // it can be saved (v317 review).
+    // ...and so is media still on its way: a pending record, a restore still
+    // reading the store, a photo still decoding. Counting only what had landed
+    // let a draft opened from the Library replace the autosaved photo mid-
+    // restore without asking (v317 review).
     hasContent: function () {
       return !!(hasContent || (typeof strokes !== 'undefined' && strokes.length)
                 || (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
-                || (audioEl && audioEl._fileName));
+                || (audioEl && audioEl._fileName)
+                || (typeof _mediaPresent === 'function' && _mediaPresent())
+                || (typeof _inFlight !== 'undefined' && _inFlight.photo)
+                || (typeof _restoring !== 'undefined' && (_restoring.photo || _restoring.music)));
     },
     thumbnail: function () { return window.skriblPreviewCanvas ? window.skriblPreviewCanvas() : document.getElementById('canvas'); },
     otherUrl: function () { var a = document.getElementById('flipBtn'); return a ? a.getAttribute('href') : null; },

@@ -719,6 +719,18 @@ try:
             strokes: strokes.length, ink: !!hasContent, photo: !!(photoBgImg && photoBgImg._fileName) })""")
         check("a Pad holding only a photo asks before a draft replaces it",
               asked["armed"] is True and asked["strokes"] == 0 and not asked["ink"] and asked["photo"], str(asked))
+        # ...and so does one whose photo is still on its way (pending, restoring):
+        # the draft must not replace the autosave mid-restore.
+        pp.evaluate("""() => { SkriblSavedDrafts.close && SkriblSavedDrafts.close(); resetAll();
+            pendingPhotoMeta = { name: 'coming.png' }; _restoring.photo = true; }""")
+        pp.wait_for_timeout(400)
+        menu_click(pp, "#openCloudDraftItem")
+        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).wait_for(timeout=5000)
+        pp.wait_for_timeout(300)
+        pp.locator("#savedDraftsSheet .sdrafts-open").nth(0).click(); pp.wait_for_timeout(200)
+        asked2 = pp.evaluate("""() => ({ armed: document.querySelector('#savedDraftsSheet .sdrafts-row').classList.contains('armed'),
+            strokes: strokes.length })""")
+        check("a Pad whose photo is still being restored asks too", asked2["armed"] is True and asked2["strokes"] == 0, str(asked2))
         pp.close()
 
         check("no page errors", not errs, "; ".join(errs[:3]))

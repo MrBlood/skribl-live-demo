@@ -127,9 +127,12 @@ function storeMediaBytes(kind) {
    or ask about a file the opened draft never had. Called by loadSkribl in the
    editor; the opened document's own media becomes the stored copy. */
 function padAdoptLoadedMedia(data) {
-  if (PAD_DRAFT_OFF) return;
+  // The player keeps no draft: a post viewed on the editor template must never
+  // touch the author's stored media (v317 review).
+  if (PAD_DRAFT_OFF || document.body.classList.contains('player-mode')) return;
   pendingPhotoMeta = null; pendingMusicMeta = null;
   _inFlight.photo = null;
+  _dropStaleReapply();
   // A restore decode still running belongs to the document that was replaced.
   if (typeof photoSelectionSeq !== 'undefined') photoSelectionSeq++;
   if (typeof musicSelectionSeq !== 'undefined') musicSelectionSeq++;
@@ -155,6 +158,19 @@ function padAdoptLoadedMedia(data) {
     }).catch((e) => { console.error('[skribl] ' + kind + ' bytes: could not read the opened draft\'s file: ' + _errName(e)); });
   });
   if (typeof refreshPendingCards === 'function') refreshPendingCards();
+}
+/* NEW SKRIBL IS A NEW DOCUMENT TOO (v317 review). resetAll clicks the media
+   removers only when they are showing, so a photo still decoding, a pending
+   record or an in-flight restore outlived it -- and 15 s later could raise a
+   "Media missing" about a Skribl that had been discarded, or land its photo on
+   the new one. The same reset an opened document gets: nothing is carried. */
+if (typeof resetAll === 'function') {
+  const _resetAll = resetAll;
+  resetAll = function () {   // eslint-disable-line no-global-assign
+    const r = _resetAll.apply(this, arguments);
+    try { padAdoptLoadedMedia({}); } catch (e) { console.error('[skribl] ' + _errName(e)); }
+    return r;
+  };
 }
 /* Hooked here rather than called from app.js: the player downloads app.js and
    keeps no draft, and its JavaScript is a ratchet (verify_player_isolation).
@@ -291,7 +307,16 @@ const _mediaAt = { photo: 0, music: 0 };
    killed there came back without it. The settings wait here instead: autosave
    keeps writing them, the load applies them, and a file that never lands puts
    them back as pending when the window closes, card and amber and all. */
-const _inFlight = { photo: null };
+const _inFlight = { photo: null, onLoad: null };
+// The re-apply listener waits for the restored image's load; a decode that
+// fails never fires it, and a later photo with the SAME name (phones call
+// them all image.jpg) would then be dressed in the old one's settings.
+function _dropStaleReapply() {
+  if (_inFlight.onLoad && typeof photoBgImg !== 'undefined' && photoBgImg) {
+    photoBgImg.removeEventListener('load', _inFlight.onLoad);
+  }
+  _inFlight.onLoad = null;
+}
 /* When the decode window closes, SAY so: a hidden pill has nothing to refine,
    so a file that never landed has to raise the amber itself. */
 function _mediaAlarm() {
@@ -780,7 +805,11 @@ function reAddMediaFromStore(kind, inputId, meta) {
   };
   if (!window.SkriblDraftStore) { missed('no store'); return; }
   _restoring[kind] = true;
+  // A document opened (or New Skribl) while this read was out owns the slot
+  // now: a late answer must not put the previous session's file on it.
+  const gen = _mediaSeq[kind];
   SkriblDraftStore.get('pad:' + kind).then((rec) => {
+    if (gen !== _mediaSeq[kind]) return;
     // The stored bytes must be THE file the metadata describes — a name
     // mismatch means the draft and the blob are from different sessions,
     // and re-attaching the wrong file is worse than the amber pill.
@@ -798,7 +827,7 @@ function reAddMediaFromStore(kind, inputId, meta) {
     input.dispatchEvent(new Event('change', { bubbles: true }));
     _fromStore[kind] = false;   // consumed by the capture listener above; never left armed
     _restoring[kind] = false;   // handed to the attach pipeline, which says so itself from here
-  }).catch((e) => { missed(_errName(e)); });
+  }).catch((e) => { if (gen === _mediaSeq[kind]) missed(_errName(e)); });
 }
 
 // ---------- Re-add: settings back onto a file that comes back --------------
@@ -818,14 +847,20 @@ if (typeof pendingMusicMeta !== 'undefined') {
   const photoInputEl = document.getElementById('photoInput');
   // Absent on the player, which has no photo picker.
   if (photoInputEl) photoInputEl.addEventListener('change', () => {
+    // Any new photo supersedes a restore still in flight, and its listener.
+    _dropStaleReapply();
+    if (_inFlight.photo) _inFlight.photo = null;
     if (!pendingPhotoMeta) return;
     const meta = pendingPhotoMeta;
     pendingPhotoMeta = null;
     _inFlight.photo = meta;
     setTimeout(() => {
-      if (_inFlight.photo !== meta) return;          // applied, removed or replaced
+      if (_inFlight.photo !== meta) return;          // applied, removed, reset or replaced
       _inFlight.photo = null;
-      if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName === meta.name) return;
+      _dropStaleReapply();
+      // Any photo on the canvas now -- this one, or another the person picked
+      // meanwhile -- means there is nothing missing to report.
+      if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName) return;
       pendingPhotoMeta = meta;                       // it never landed: missing again
       refreshPendingCards();
       _mediaAlarm();
@@ -891,12 +926,13 @@ if (typeof pendingMusicMeta !== 'undefined') {
     };
     const onLoad = () => {
       photoBgImg.removeEventListener('load', onLoad);
+      if (_inFlight.onLoad === onLoad) _inFlight.onLoad = null;
       if (meta.name && photoBgImg._fileName !== meta.name) return;
       apply();
     };
     if (photoBgImg && photoBgImg.complete && photoBgImg.naturalWidth > 0
         && photoBgImg.style.display !== 'none' && (!meta.name || photoBgImg._fileName === meta.name)) apply();
-    else if (photoBgImg) photoBgImg.addEventListener('load', onLoad);
+    else if (photoBgImg) { photoBgImg.addEventListener('load', onLoad); _inFlight.onLoad = onLoad; }
   });
 
   // Pending card buttons: "Re-add" opens the file picker; "✕" dismisses.

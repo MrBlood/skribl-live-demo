@@ -53,10 +53,43 @@ TOUCH = """([sel, type, x, y]) => {
 
 OVERSCROLL = "() => getComputedStyle(document.documentElement).overscrollBehaviorY"
 
-# Where the sheet is, and whether it is laid out at all, part-way through a close.
-SAMPLE = """(sel) => { const s = document.querySelector(sel);
-  return { shown: s.getClientRects().length > 0, top: s.getBoundingClientRect().top }; }"""
-EASE_MS = 90
+# Part-way through a close, sampled IN THE PAGE (no Python round trip between
+# the act and the look, so a loaded machine cannot sample after the hide), and
+# by PAINT: what elementFromPoint finds just inside the sheet's top edge. A
+# leaving sheet takes no taps (pointer-events: none), which elementFromPoint
+# honours, so the probe lends it pointer-events for the one call.
+MID = """async ([sel, act, grab, x, y, ms]) => {
+  const s = document.querySelector(sel);
+  const top0 = s.getBoundingClientRect().top;
+  if (act === 'grab') document.querySelector(grab).click();
+  else {
+    const t = new Touch({identifier: 7, target: s, clientX: x, clientY: y});
+    s.dispatchEvent(new TouchEvent('touchend', {touches: [], targetTouches: [], changedTouches: [t],
+      bubbles: true, cancelable: true, view: window}));
+  }
+  await new Promise(r => setTimeout(r, ms));
+  const r = s.getBoundingClientRect();
+  const pe = s.style.pointerEvents; s.style.pointerEvents = 'auto';
+  const hit = document.elementFromPoint(r.left + r.width / 2, Math.min(innerHeight - 2, r.top + 12));
+  s.style.pointerEvents = pe;
+  return { top0, top: r.top, painted: !!(hit && (hit === s || s.contains(hit))),
+           laidOut: s.getClientRects().length > 0, offBottom: r.top >= innerHeight };
+}"""
+# 130 ms: past the slow start of the spring curve the self-animating sheets
+# use (0.35 s), and well before a slideOut's 220 ms hide.
+EASE_MS = 130
+# A flick: 45px in three quick moves, then let go -- under the 80px line, so
+# only the speed can close it.
+FLICK = """async ([sel, x, y]) => {
+  const s = document.querySelector(sel);
+  const fire = (type, yy) => { const t = new Touch({identifier: 7, target: s, clientX: x, clientY: yy});
+    const empty = type === 'touchend';
+    s.dispatchEvent(new TouchEvent(type, {touches: empty ? [] : [t], targetTouches: empty ? [] : [t],
+      changedTouches: [t], bubbles: true, cancelable: true, view: window})); };
+  fire('touchstart', y);
+  for (const d of [15, 30, 45]) { await new Promise(r => setTimeout(r, 6)); fire('touchmove', y + d); }
+  fire('touchend', y + 45);
+}"""
 
 # (page, name, route, how to open it, the sheet, is it closed?, its grabber)
 SHEETS = [
@@ -122,14 +155,11 @@ with sync_playwright() as p:
 
         # 1 the grabber
         if grab:
-            top0 = pg.evaluate(SAMPLE, sel)["top"]
-            pg.evaluate(f"() => document.querySelector('{grab}').click()")
-            pg.wait_for_timeout(EASE_MS)
-            mid = pg.evaluate(SAMPLE, sel)
+            mid = pg.evaluate(MID, [sel, "grab", grab, 0, 0, EASE_MS])
             pg.wait_for_timeout(450)
             check(f"{who}: tapping the grabber eases it down rather than snapping it away",
-                  mid["shown"] and mid["top"] > top0 + 10,
-                  f"{EASE_MS}ms in: shown={mid['shown']}, top {round(top0)} -> {round(mid['top'])}")
+                  mid["painted"] and mid["top"] > mid["top0"] + 10,
+                  f"{EASE_MS}ms in: painted={mid['painted']}, top {round(mid['top0'])} -> {round(mid['top'])}")
             check(f"{who}: tapping the grabber closes it", pg.evaluate(closed) is True)
             check(f"{who}: closed, the page is the page it was (overscroll {before!r})",
                   pg.evaluate(OVERSCROLL) == before, f"now {pg.evaluate(OVERSCROLL)!r}")
@@ -169,17 +199,24 @@ with sync_playwright() as p:
         pg.evaluate(TOUCH, [sel, "touchmove", x, y + 40]); pg.wait_for_timeout(30)
         taken = pg.evaluate(TOUCH, [sel, "touchmove", x, y + 140])
         follows = pg.evaluate(f"() => document.querySelector('{sel}').style.transform")
-        dragged = pg.evaluate(SAMPLE, sel)["top"]
-        pg.evaluate(TOUCH, [sel, "touchend", x, y + 140]); pg.wait_for_timeout(EASE_MS)
-        mid = pg.evaluate(SAMPLE, sel)
+        mid = pg.evaluate(MID, [sel, "end", None, x, y + 140, EASE_MS])
         pg.wait_for_timeout(450)
+        # Still laid out and lower: on screen and painted, or a short sheet
+        # already carried off the bottom edge -- never snapped away in place.
         check(f"{who}: let go past the line, it carries on down from the finger (no jump back, no vanish)",
-              mid["shown"] and mid["top"] > dragged + 5,
-              f"{EASE_MS}ms after release: shown={mid['shown']}, top {round(dragged)} -> {round(mid['top'])}")
+              mid["laidOut"] and mid["top"] > mid["top0"] + 5 and (mid["painted"] or mid["offBottom"]),
+              f"{EASE_MS}ms after release: painted={mid['painted']}, top {round(mid['top0'])} -> {round(mid['top'])}")
         check(f"{who}: a swipe down follows the finger", "translateY(140px)" in (follows or ""), repr(follows))
         check(f"{who}: ...and the touch is the sheet's, not the page's (the move is cancelled: no scroll, no reload)",
               taken is True, f"defaultPrevented={taken}")
         check(f"{who}: ...and it closes", pg.evaluate(closed) is True)
+        # The flick: short of the line, closed by its speed alone.
+        if open_sheet(pg, how, closed):
+            fx, fy = top_point(pg, sel)
+            pg.evaluate(FLICK, [sel, fx, fy]); pg.wait_for_timeout(450)
+            check(f"{who}: a quick flick short of the line still closes it", pg.evaluate(closed) is True, "")
+        else:
+            check(f"{who}: reopens for the flick", False, "")
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
 
@@ -190,9 +227,11 @@ with sync_playwright() as p:
     rpg = rctx.new_page()
     browsing.goto(rpg, BASE, "/flip"); rpg.wait_for_timeout(900)
     rpg.evaluate("() => document.getElementById('moreBtn').click()"); rpg.wait_for_timeout(500)
+    ropen = rpg.evaluate("() => !document.getElementById('moreMenu').hidden")
     rpg.evaluate("() => document.querySelector('#moreMenu .menu-handle').click()"); rpg.wait_for_timeout(30)
     check("with reduced motion, Flip's menu closes at once rather than sliding",
-          rpg.evaluate("() => document.getElementById('moreMenu').hidden") is True)
+          ropen is True and rpg.evaluate("() => document.getElementById('moreMenu').hidden") is True,
+          f"opened first: {ropen}")
     rctx.close()
 
     # 7 the edges a finger finds (v317 review)
@@ -206,9 +245,11 @@ with sync_playwright() as p:
     open_sheet(pg, "() => document.getElementById('menuBtn').click()", "() => document.getElementById('menuOverlay').hidden")
     x, y = top_point(pg, "#menuSheet")
     pg.evaluate(TOUCH, ["#menuSheet", "touchstart", x, y]); pg.evaluate(TOUCH, ["#menuSheet", "touchmove", x, y + 60])
+    was = pg.evaluate("() => document.getElementById('menuSheet').style.transform")
     pg.evaluate(TWO, ["#menuSheet", x, y + 60]); pg.wait_for_timeout(60)
     check("a second finger mid-drag puts the sheet back (it was left stuck part-way down)",
-          pg.evaluate("() => document.getElementById('menuSheet').style.transform") == "", "")
+          "translateY(60px)" in (was or "")
+          and pg.evaluate("() => document.getElementById('menuSheet').style.transform") == "", f"dragging first: {was!r}")
     # A quick pull, a pause, a lift: put it back, not a flick.
     pg.evaluate(TOUCH, ["#menuSheet", "touchstart", x, y])
     for k in range(1, 5):
@@ -229,6 +270,18 @@ with sync_playwright() as p:
           and pg.evaluate("() => document.getElementById('menuOverlay').hidden") is False,
           f"scrollTop={can} claimed={first} transform={moved!r}")
     ctx.close()
+    # A pull during the entrance is the sheet's too (it used to scroll the page).
+    ctx, pg, errs = fresh(b, "/flip")
+    pg.evaluate("() => document.getElementById('moreBtn').click()"); pg.wait_for_timeout(40)
+    ent = pg.evaluate("""() => { const m = document.getElementById('moreMenu');
+        return { running: m.getAnimations().some(a => a.playState === 'running'), sheet: SkriblSheetSwipe.isBottomSheet(m) }; }""")
+    xe, ye = top_point(pg, "#moreMenu")
+    pg.evaluate(TOUCH, ["#moreMenu", "touchstart", xe, ye])
+    early = pg.evaluate(TOUCH, ["#moreMenu", "touchmove", xe, ye + 3])
+    pg.evaluate(TOUCH, ["#moreMenu", "touchend", xe, ye + 3])
+    check("a pull while the sheet is still rising is the sheet's (claimed), not the page's",
+          ent["running"] and ent["sheet"] and early is True, f"{ent} claimed={early}")
+    ctx.close()
     # A leaving sheet takes no taps.
     ctx, pg, errs = fresh(b, "/flip")
     open_sheet(pg, "() => document.getElementById('moreBtn').click()", "() => document.getElementById('moreMenu').hidden")
@@ -240,19 +293,28 @@ with sync_playwright() as p:
     lctx = b.new_context(viewport={"width": 844, "height": 390}, has_touch=True, is_mobile=True)
     lpg = lctx.new_page(); browsing.goto(lpg, BASE, "/flip"); lpg.wait_for_timeout(900)
     lpg.evaluate("() => document.getElementById('moreBtn').click()"); lpg.wait_for_timeout(500)
-    geo = lpg.evaluate("""() => { const m = document.getElementById('moreMenu'), r = m.getBoundingClientRect();
-        return { bottom: Math.round(r.bottom), h: innerHeight, sheet: SkriblSheetSwipe.isBottomSheet(m) }; }""")
-    check("on a landscape phone Flip's dropdown is not taken for a bottom sheet",
-          geo["sheet"] is False, str(geo))
+    lopen = lpg.evaluate("() => !document.getElementById('moreMenu').hidden")
+    lx, ly = top_point(lpg, "#moreMenu")
+    lpg.evaluate(TOUCH, ["#moreMenu", "touchstart", lx, ly])
+    ltake = lpg.evaluate(TOUCH, ["#moreMenu", "touchmove", lx, ly + 3])
+    lpg.evaluate(TOUCH, ["#moreMenu", "touchmove", lx, ly + 120])
+    lmoved = lpg.evaluate("() => document.getElementById('moreMenu').style.transform")
+    lpg.evaluate(TOUCH, ["#moreMenu", "touchend", lx, ly + 120]); lpg.wait_for_timeout(450)
+    check("on a landscape phone Flip's dropdown is not taken for a bottom sheet (a pull is not claimed, dragged or closed)",
+          lopen is True and ltake is False and not lmoved
+          and lpg.evaluate("() => !document.getElementById('moreMenu').hidden") is True,
+          f"open={lopen} claimed={ltake} transform={lmoved!r}")
     lctx.close()
 
     # 6b a quick second tap reopens a menu that is still easing away
     print("\nreopen mid-slide")
+    # Open = not hidden AND resting on screen, read from the page, not from
+    # the library's private timer.
     for page, route, btn, handle, is_open in (
         ("Flip", "/flip", "moreBtn", "#moreMenu .menu-handle",
-         "() => !document.getElementById('moreMenu').hidden && !document.getElementById('moreMenu')._slideT"),
+         "() => { const m = document.getElementById('moreMenu'); return !m.hidden && m.getBoundingClientRect().top < innerHeight - 80; }"),
         ("Library", "/library", "pageMenuBtn", "#pageMenu .pm-grab",
-         "() => !document.getElementById('pageMenuOverlay').hidden && !document.getElementById('pageMenu')._slideT")):
+         "() => { const m = document.getElementById('pageMenu'); return !document.getElementById('pageMenuOverlay').hidden && m.getBoundingClientRect().top < innerHeight - 80; }")):
         ctx, pg, errs = fresh(b, route)
         pg.evaluate(f"() => document.getElementById('{btn}').click()"); pg.wait_for_timeout(500)
         pg.evaluate(f"() => document.querySelector('{handle}').click()"); pg.wait_for_timeout(60)

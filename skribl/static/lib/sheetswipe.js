@@ -53,10 +53,15 @@
 
   // Its bottom edge ON the screen's bottom edge -- not merely past it: a
   // dropdown taller than a landscape phone runs off the bottom and is still a
-  // dropdown (v317 review). A sheet being dragged sits lower by the drag.
+  // dropdown (v317 review). Measured where the sheet RESTS, from its layout box
+  // (offsets ignore transforms): mid-entrance, or mid-drag, its painted box is
+  // lower, and a swipe during the entrance must still be the sheet's -- else
+  // it scrolled the page and, at the top, reloaded it.
   function isBottomSheet(sheet) {
-    var r = sheet.getBoundingClientRect();
-    return r.width > 0 && Math.abs(r.bottom - (sheet._dragDy || 0) - window.innerHeight) <= 3;
+    if (!sheet.offsetWidth) return false;
+    var p = sheet.offsetParent;
+    var top = (p ? p.getBoundingClientRect().top + p.clientTop : 0) + sheet.offsetTop;
+    return Math.abs(top + sheet.offsetHeight - window.innerHeight) <= 3;
   }
 
   // The nearest element between the touch and the sheet that scrolls.
@@ -195,6 +200,7 @@
       // A slider or a text field owns its own drag.
       if (e.target.closest && e.target.closest('input, textarea, select')) return;
       var p = point(e);
+      settle(sheet);   // an entrance still running lands under the finger
       tracking = true; dragging = false; dy = 0; vel = 0;
       sx = p.clientX; sy = lastY = p.clientY; lastT = e.timeStamp || Date.now();
       scroller = scrollerFor(e.target, sheet);
