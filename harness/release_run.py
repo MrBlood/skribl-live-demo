@@ -264,7 +264,7 @@ def postgres_attestation(frozen):
     Same argument as mp4_attestation() above, one lane later and three outside
     reviews after it. verify_postgres.py skips wherever no cluster is reachable
     — which is the DESIGNED local configuration, since running one during a
-    seal perturbs the browser timing suites (CLAUDE.md records the measurement:
+    seal perturbs the browser timing suites (WORKING-AGREEMENTS.md records the measurement:
     verify_hold's worst frame deviation goes 1ms -> 32ms with the cluster up).
     The `postgres` CI job runs it in an environment this one lacks.
 

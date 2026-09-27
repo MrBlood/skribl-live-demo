@@ -1248,7 +1248,7 @@ with sync_playwright() as p:
         # ...AND THE PROPERTY THE GUARD GOVERNS, because `inert` alone makes
         # the scenario pass: focus() on an inert node is a no-op, so a stale
         # timer that still fires is invisible to the check above (the Flip
-        # reveal() lesson in CLAUDE.md). So focus() is instrumented, and a
+        # reveal() lesson in WORKING-AGREEMENTS.md). So focus() is instrumented, and a
         # call whose target sits inside a hidden surface is the defect —
         # whether or not the browser then honoured it.
         _menu = "#menuBtn" if _path == "/" else "#moreBtn"

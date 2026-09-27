@@ -209,7 +209,7 @@ with sync_playwright() as p:
     #
     # SO THE ASSERTION INVERTS. "The first tap arms" could only ever pass
     # while the ✕ existed; what guards the ground now is its ABSENCE, which
-    # is the shape CLAUDE.md asks for — a check that goes red when the thing
+    # is the shape WORKING-AGREEMENTS.md asks for — a check that goes red when the thing
     # achieved is LOST, not one that goes red when the work succeeds.
     _shape = pg.evaluate("""() => {
         const rows = [...document.querySelectorAll('#postedList .posted-row')];

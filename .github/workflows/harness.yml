@@ -376,7 +376,7 @@ jobs:
         # carried into the sealing tree by hand, because release_run.py reads it
         # from the local working tree and this environment's egress proxy
         # refuses GitHub's artifact blob storage (403 on CONNECT - measured,
-        # productionresultssa15.blob.core.windows.net). CLAUDE.md's remedy is to
+        # productionresultssa15.blob.core.windows.net). WORKING-AGREEMENTS.md's remedy is to
         # transcribe from the job's own log, and that only works if the line is
         # REACHABLE.
         #

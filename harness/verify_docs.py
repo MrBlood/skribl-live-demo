@@ -416,7 +416,7 @@ for doc in _current:
     for m in re.finditer(r"\b(\d+)\s+suites\b", body):
         claims.append((doc.relative_to(ROOT), int(m.group(1))))
 
-# ...AND THE SAME FOR ASSERTION COUNTS, which CLAUDE.md forbids outside the
+# ...AND THE SAME FOR ASSERTION COUNTS, which WORKING-AGREEMENTS.md forbids outside the
 # generated stanza in exactly these words and which nothing enforced. Two were
 # typed into current documents while answering an audit — "the tree carried
 # 4,392 assertions" — and both would have been wrong the moment the next seal
@@ -1255,7 +1255,7 @@ _all_standard = _all_runners > 0 and _all_runners == _std_runners
 # A small closed list of phrasings that ASSERT metered minutes, in the same
 # spirit as EXEMPT below: each entry is a way a writer says "this costs us",
 # not a general notion of talking about money. A sentence may mention an
-# allowance while denying there is one — the corrections in CLAUDE.md do
+# allowance while denying there is one — the corrections in WORKING-AGREEMENTS.md do
 # exactly that — so the exemption window applies here too.
 _COST_CLAIM = re.compile(
     r"monthly Actions allowance|metered Actions minutes|"
@@ -1264,7 +1264,7 @@ _COST_CLAIM = re.compile(
 
 if _all_standard:
     _cost_hits = []
-    for rel in ["CLAUDE.md", ".github/workflows/harness.yml"] + \
+    for rel in ["WORKING-AGREEMENTS.md", ".github/workflows/harness.yml"] + \
                [str(d.relative_to(ROOT)) for d in _current]:
         f = ROOT / rel
         if not f.is_file():
@@ -1289,7 +1289,7 @@ else:
           f"{_all_runners - _std_runners} non-standard runner(s) — a cost "
           "claim is sayable again, so the check above stands down")
 
-# CLAUDE.md has always said "no doc may hand-type a tree hash or an
+# WORKING-AGREEMENTS.md has always said "no doc may hand-type a tree hash or an
 # assertion count outside the generated stanza". The tree-hash half was
 # enforced below; the assertion-count half never was, and the audit found
 # THIRTY-SIX typed per-suite counts across six files with TWENTY-EIGHT of them
@@ -1497,7 +1497,7 @@ check("...and an unrelated sentence is not a false positive",
 
 
 print("\nDOCS — every host seam is in the guide a host is sent to")
-# CLAUDE.md sends an integrator to docs/INTEGRATION.md to mount Skribl in
+# WORKING-AGREEMENTS.md sends an integrator to docs/INTEGRATION.md to mount Skribl in
 # another Flask app, and by v281 `player_target` had never appeared in it:
 # eight of nine create_blueprint() arguments documented, and the ninth — the
 # one that decides whether posting navigates THE HOST'S top-level document

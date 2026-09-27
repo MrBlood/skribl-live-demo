@@ -307,7 +307,7 @@ with app4.app_context():
 # comment pass stripped the `(owner)`. That pass was removing `(owner, vNNN)`
 # attribution parentheticals from PROSE; here the same three characters were an
 # argument list. Nothing about the host seam had broken; the instrument had.
-# It is the failure CLAUDE.md names -- do not edit mechanically where prose and
+# It is the failure WORKING-AGREEMENTS.md names -- do not edit mechanically where prose and
 # code interleave -- and the only thing that caught it was a full battery,
 # because this suite is not on the pull-request gate.
 check("current_user_id decides authorship", str(owner) == "42",
