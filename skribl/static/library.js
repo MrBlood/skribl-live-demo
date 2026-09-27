@@ -622,6 +622,127 @@
      on coarse pointers, so on a phone this call does nothing by design. */
   if (window.SkriblTooltip) window.SkriblTooltip.init();
 
+  /* ---- DRAFTS (v317) -------------------------------------------------
+     The second tab lists SkriblSavedDrafts: the account's drafts when the
+     host says who is signed in, this browser's otherwise, the same list the
+     editors' ⋯ Open a draft… shows. Open goes to the editor that made the
+     draft with ?draft=<id> (the editors' own hand-off); Delete asks on the
+     button first. #drafts in the address opens this tab. */
+  var tabS = document.getElementById('tabSkribls');
+  var tabD = document.getElementById('tabDrafts');
+  var panS = document.getElementById('libSkribls');
+  var panD = document.getElementById('libDrafts');
+  var dList = document.getElementById('draftsList');
+  var dEmpty = document.getElementById('draftsEmpty');
+  var dWhere = document.getElementById('draftsWhere');
+  var libSection = panS && panS.closest('section');
+  var draftsCfg = window.SKRIBL_DRAFTS || {};
+  var SD = window.SkriblSavedDrafts;
+
+  function draftRow(it) {
+    var row = document.createElement('div');
+    row.className = 'draft-row';
+    var pic = document.createElement('div');
+    pic.className = 'draft-pic';
+    if (it.thumbnail) {
+      var img = document.createElement('img');
+      img.alt = '';
+      img.src = it.thumbnail;
+      pic.appendChild(img);
+    }
+    var words = document.createElement('div');
+    words.className = 'draft-words';
+    var name = document.createElement('div');
+    name.className = 'draft-name';
+    name.textContent = it.title || 'Untitled Skribl';
+    var meta = document.createElement('div');
+    meta.className = 'draft-meta';
+    var kind = it.kind === 'flip' ? 'Flip' : 'Pad';
+    meta.textContent = kind + ' \u00B7 ' + (SD ? SD.ago(it.updatedAt) : '');
+    words.appendChild(name);
+    words.appendChild(meta);
+    var acts = document.createElement('div');
+    acts.className = 'draft-acts';
+    var base = it.kind === 'flip' ? draftsCfg.flip : draftsCfg.pad;
+    var open = document.createElement('a');
+    open.className = 'draft-open';
+    open.href = (base || '') + '?draft=' + encodeURIComponent(it.id);
+    open.textContent = 'Open in ' + kind;
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'draft-del';
+    del.textContent = 'Delete';
+    del.setAttribute('aria-label', 'Delete ' + (it.title || 'Untitled Skribl'));
+    del.addEventListener('click', function () {
+      if (!del.classList.contains('armed')) {
+        del.classList.add('armed');
+        del.textContent = 'Delete?';
+        return;
+      }
+      del.disabled = true;
+      SD.remove(it.id).then(renderDrafts, function (e) {
+        del.disabled = false;
+        meta.textContent = e.message;
+      });
+    });
+    acts.appendChild(open);
+    acts.appendChild(del);
+    row.appendChild(pic);
+    row.appendChild(words);
+    row.appendChild(acts);
+    return row;
+  }
+
+  function renderDrafts() {
+    if (!SD || !dList) return;
+    dWhere.textContent = SD.where() === 'account'
+      ? 'Saved to your account, on every device you sign in on.'
+      : 'Saved on this browser only.';
+    SD.list().then(function (items) {
+      dList.textContent = '';
+      dEmpty.hidden = items.length > 0;
+      items.forEach(function (it) { dList.appendChild(draftRow(it)); });
+    }, function (e) {
+      dList.textContent = '';
+      dEmpty.hidden = true;
+      dWhere.textContent = e.message;
+    });
+  }
+
+  function showTab(drafts, focus) {
+    if (!tabS || !tabD) return;
+    tabS.classList.toggle('active', !drafts);
+    tabD.classList.toggle('active', drafts);
+    tabS.setAttribute('aria-selected', String(!drafts));
+    tabD.setAttribute('aria-selected', String(drafts));
+    tabS.tabIndex = drafts ? -1 : 0;
+    tabD.tabIndex = drafts ? 0 : -1;
+    panS.hidden = drafts;
+    panD.hidden = !drafts;
+    if (libSection) libSection.classList.toggle('drafts-mode', drafts);
+    if (focus) (drafts ? tabD : tabS).focus();
+    try {
+      history.replaceState(null, '', location.pathname + location.search + (drafts ? '#drafts' : ''));
+    } catch (e) {}
+    if (drafts) renderDrafts();
+  }
+  if (tabS && tabD) {
+    tabS.addEventListener('click', function () { showTab(false); });
+    tabD.addEventListener('click', function () { showTab(true); });
+    /* The tabs pattern: arrows move between them, Home/End jump. */
+    [tabS, tabD].forEach(function (t) {
+      t.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End') {
+          e.preventDefault();
+          var toDrafts = e.key === 'End' || (e.key === 'ArrowRight' && t === tabS) || (e.key === 'ArrowLeft' && t === tabS);
+          if (e.key === 'Home') toDrafts = false;
+          showTab(toDrafts, true);
+        }
+      });
+    });
+    if (location.hash === '#drafts') showTab(true);
+  }
+
   boot();
   loadPage();
 })();

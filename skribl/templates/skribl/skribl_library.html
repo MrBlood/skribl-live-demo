@@ -260,6 +260,34 @@
     /* ---- library ---------------------------------------------------------- */
     .libhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
     .libhead h2 { font-size: 15px; font-weight: 700; letter-spacing: .02em; margin: 0; color: var(--text); }
+    /* The tabs are the heading: two words, the chosen one underlined in the
+       accent. 44px tall to a finger, like every control on the page. */
+    .libtabs { display: flex; gap: 4px; }
+    .libtab { font: inherit; font-size: 15px; font-weight: 700; letter-spacing: .02em; color: var(--text-3);
+      background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 0 8px; min-height: 44px; cursor: pointer; }
+    .libtab:hover { color: var(--text-2); }
+    .libtab.active { color: var(--text); border-bottom-color: var(--accent); }
+    .libtab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+    .drafts-mode .chips, .drafts-mode .search { display: none; }
+    .drafts-where { font-size: 13px; color: var(--text-3); margin: 0 0 12px; }
+    .drafts-list { display: flex; flex-direction: column; gap: 10px; }
+    .draft-row { display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--raised);
+      border: 1px solid var(--hairline); border-radius: var(--r); }
+    .draft-pic { flex: 0 0 auto; width: 84px; height: 63px; border-radius: 8px; overflow: hidden; background: #0b0d12; }
+    .draft-pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .draft-words { flex: 1 1 auto; min-width: 0; }
+    .draft-name { font-size: 14px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .draft-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-3); margin-top: 4px; }
+    .draft-acts { flex: 0 0 auto; display: flex; gap: 6px; }
+    .draft-open, .draft-del { min-height: 44px; min-width: 44px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13px;
+      font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+    .draft-open { background: var(--accent); color: #0b0616; border: 0; }
+    .draft-del { background: transparent; color: var(--text-2); border: 1px solid var(--hairline); padding: 0 12px; }
+    .draft-del.armed { color: #ff8a8a; border-color: #ff8a8a; }
+    @media (max-width: 420px) {
+      .draft-row { flex-wrap: wrap; }
+      .draft-acts { width: 100%; justify-content: flex-end; }
+    }
     .libhead .cnt { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
     .chips { display: flex; gap: 7px; margin-left: auto; }
     /* min-height 34 is the VISIBLE floor (SK-AUD-005). These measured 28 —
@@ -555,7 +583,17 @@
     <!-- LIBRARY -->
     <section aria-label="Library">
       <div class="libhead">
-        <h2>Skribls</h2>
+        {# TWO TABS (v317): what you posted, and what you saved to finish
+           later. Drafts are lib/savedrafts.js's list -- the account's when the
+           host says who is signed in, this browser's otherwise -- so this page
+           and the editors' ⋯ Open a draft… can never disagree. The chips and
+           the search are the Skribls tab's and step aside for Drafts. #}
+        <h2 class="libtabs" role="tablist" aria-label="Your Skribl Library">
+          <button type="button" class="libtab active" role="tab" id="tabSkribls"
+                  aria-selected="true" aria-controls="libSkribls">Skribls</button>
+          <button type="button" class="libtab" role="tab" id="tabDrafts"
+                  aria-selected="false" aria-controls="libDrafts" tabindex="-1">Drafts</button>
+        </h2>
         {# THE FILTER (v304): the two states a post of yours can be in, plus
            all. Not Pad/Flip — the listing does not say which a post is. #}
         {# The titles say what the one-word labels cannot; lib/tooltip.js
@@ -573,6 +611,7 @@
           <input id="postedSearch" type="search" placeholder="title…" aria-label="Search your Skribl Library" autocomplete="off">
         </label>
       </div>
+      <div id="libSkribls" role="tabpanel" aria-labelledby="tabSkribls">
       {# THE LIST IS YOUR SKRIBLS (v304): the same rows, the same actions, the
          same custody rules the editors' drawer had, rendered here by
          lib/postedui.js with the poster as each row's picture and the title
@@ -589,6 +628,20 @@
       </p>
       <div class="more-wrap" id="moreWrap"></div>
       <div class="foot" id="libFoot"></div>
+      </div>
+      {# DRAFTS (v317): rendered by library.js from SkriblSavedDrafts. Open
+         goes to the editor that made the draft with ?draft=<id>, the same
+         hand-off the editors use between themselves; Delete asks on the button
+         first, as the editors' sheet does. #}
+      <div id="libDrafts" role="tabpanel" aria-labelledby="tabDrafts" hidden>
+        <p class="drafts-where" id="draftsWhere"></p>
+        <div class="drafts-list" id="draftsList"></div>
+        <p class="state" id="draftsEmpty" hidden>
+          <b>No saved drafts.</b><br>
+          In the <a href="{{ url_for('.skribl_editor') }}">Pad</a> or Flip, open
+          &#8943; and choose <b>Save draft</b> to keep a drawing to finish later.
+        </p>
+      </div>
     </section>
   </div>
 </div>
@@ -646,6 +699,8 @@
     window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
     window.SKRIBL_PLAYER_TARGET = {{ skribl_player_target | tojson }};
     window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
+    window.SKRIBL_DRAFTS = { api: {{ skribl_drafts_api | tojson }}, signedIn: {{ skribl_signed_in | tojson }}, limit: {{ skribl_drafts_limit | tojson }},
+      pad: {{ url_for('.skribl_editor') | tojson }}, flip: {{ url_for('.skribl_flip') | tojson }} };
   </script>
   {% with here='library' %}{% include 'skribl/_skribl_page_menu.html' %}{% endwith %}
   <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
@@ -662,6 +717,8 @@
   <script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/draftstore.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/savedrafts.js') }}" defer></script>
   <script src="{{ skribl_asset('library.js') }}" defer></script>
 </body>
 </html>
