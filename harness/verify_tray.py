@@ -602,9 +602,13 @@ with sync_playwright() as p:
         bp.wait_for_timeout(160)
         got = bp.evaluate("""(t) => {
             const b = document.querySelector(".flip-tool-badge");
-            const shelf = document.getElementById(t + "ToolBtn");
+            // The registry's drawing of the tool (lib/toolshelf.js iconFor),
+            // not the shelf button's: since the dock redesign the pen's button
+            // is the swoosh canvas and carries no glyph to compare against.
+            const one = document.createElement("div");
+            one.innerHTML = SkriblFlipTools.iconFor(t);
             const bs = b && b.querySelector("svg");
-            const ss = shelf && shelf.querySelector("svg");
+            const ss = one.querySelector("svg");
             return { shown: b && b.style.display === "block",
                      mine: !!(bs && ss && bs.innerHTML === ss.innerHTML),
                      ink: bs ? bs.innerHTML.length : 0 };
@@ -617,9 +621,8 @@ with sync_playwright() as p:
           all(v["mine"] for v in seen.values()),
           str({k: v for k, v in seen.items() if not v["mine"]}))
     check("the glyphs are actually distinct from one another",
-          len({bp.evaluate("(t) => { const s = document.getElementById(t + 'ToolBtn')"
-                           ".querySelector('svg'); return s ? s.innerHTML : ''; }", t)
-               for t in roster}) == len(roster),
+          len({bp.evaluate("(t) => SkriblFlipTools.iconFor(t)", t) for t in roster}) == len(roster)
+          and all(bp.evaluate("(t) => SkriblFlipTools.iconFor(t)", t) for t in roster),
           "two tools drawing the same glyph would pass the check above and "
           "still leave the user unable to tell them apart")
     # It must get out of the way while you are actually drawing.
