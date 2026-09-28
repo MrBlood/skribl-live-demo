@@ -1,4 +1,5 @@
-/* The Pad toolbar on the smallest screens: one row that scrolls, and says so.
+/* The toolbar on the smallest screens -- Pad's, and Flip's since the dock
+ * redesign: one row that scrolls, and says so.
  *
  * WHY (SK312-005; owner's choice of the three mockups, v315). At 320px the
  * eight controls do not fit one row, so the toolbar wrapped: music dropped to a
@@ -23,7 +24,10 @@
 (function () {
   'use strict';
 
-  var bar = document.getElementById('toolBar');
+  // Both editors' bars since the dock redesign: Flip's row went the Pad's way
+  // (the colour ring and separate Image / Music gone), and at 320 it overflows
+  // the same way -- a scrolling row beats the second line it used to wrap to.
+  var bar = document.getElementById('toolBar') || document.querySelector('.flip-tools');
   if (!bar) return;
   var nudged = false;
   var timers = [];

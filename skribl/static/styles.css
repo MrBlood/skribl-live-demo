@@ -6370,9 +6370,8 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
      auto margins, so the three groups sit left, centre and right; wider, the
      dock hugs its content and the gaps are fixed.
    - NO BOX IN A BOX. The tool pill's own fill and edge are gone; the dock is
-     the container. The selected tool wears a soft tint, and the pen -- whose
-     swoosh chip is already a box -- wears a purple ring on the chip itself
-     instead of sitting in a second one.
+     the container. The selected tool -- any tool, the pen too -- wears a
+     soft tint behind the whole button (see ONE SELECTION RULE).
    - ONE ICON WEIGHT. Tool, undo and redo glyphs are 26px; Media is 40px (the
      owner's floor) drawn at the same rendered line weight, not scaled up.
 
@@ -6414,17 +6413,29 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .toolbar .undo-btn, .flip-tools .t-btn {
   width: 44px; height: 44px; background: none; border-color: transparent; box-shadow: none;
 }
-/* The pen: its chip IS its highlight. No tint behind it, a ring on it. */
-.toolbar #toolGroup:has(#penToolBtn.active) .tool-slider,
-.flip-tools #toolGroup:has(#penToolBtn.active) .tool-slider { opacity: 0; }
-.toolbar #penToolBtn, .flip-tools #penToolBtn { padding: 0; }
+/* ONE SELECTION RULE, THE PEN INCLUDED (owner, on desktop: "when the pill
+   hits pen it turns into a border around the swoosh and leaves pen hanging
+   out there"). The pen used to skip the tint and wear a ring on its chip;
+   with labels showing, the ring framed the swoosh and not the word. Now every
+   tool is selected the same way: the tint behind the whole button. The pen
+   keeps a few px of padding so the tint shows round its opaque chip on a
+   phone, where the chip is the whole button. */
+.toolbar #penToolBtn, .flip-tools #penToolBtn { padding: 0 5px; }
+@media (min-width: 641px) { .toolbar #penToolBtn { padding: 0 12px 0 5px; } }   /* the label's own margin inside the tint */
 .toolbar .pen-swoosh, .flip-tools .pen-swoosh {
   display: block; width: 50px; height: 36px; border-radius: 11px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   pointer-events: none;
 }
-.toolbar #penToolBtn.active .pen-swoosh,
-.flip-tools #penToolBtn.active .pen-swoosh { box-shadow: 0 0 0 2px var(--ui-hi); }
+/* ...and the controls that are ON rather than SELECTED -- Media while its
+   drawer is open, Magnify while its HUD shows -- light their glyph, with no
+   tile. Magnify is desktop-only, so the phone mocks never showed it still
+   wearing the old bordered tile beside a row of bare icons. */
+.toolbar #magnifyBtn, .toolbar #magnifyBtn:hover, .toolbar #magnifyBtn.active,
+.flip-tools #magnifyBtn, .flip-tools #magnifyBtn:hover, .flip-tools #magnifyBtn.active {
+  background: none; box-shadow: none;
+}
+.toolbar #magnifyBtn.active, .flip-tools #magnifyBtn.active { color: var(--ui-hi); }
 /* Pad's spacing. Flip's is in flip.css, keyed on its size class. */
 .toolbar #undoBtn, .toolbar #mediaOpenBtn { margin-left: 18px; }
 .toolbar #redoBtn { margin-left: 6px; }
@@ -6961,7 +6972,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
    wherever they left the bar's box. The popovers that hang from
    the bar are fixed to the viewport at --tb-top in this mode, because a
    scrolling element clips its children on both axes. */
-.toolbar.tb-scroll {
+.toolbar.tb-scroll, .flip-tools.tb-scroll {
   flex-wrap: nowrap;
   justify-content: flex-start;
   overflow-x: auto;
@@ -6969,10 +6980,13 @@ body.stroking .toolbar, body.stroking .flip-tools {
   overscroll-behavior-x: contain;
   scrollbar-width: none;
 }
-.toolbar.tb-scroll::-webkit-scrollbar { display: none; }
-.toolbar.tb-scroll > * { flex: none; }
+.toolbar.tb-scroll::-webkit-scrollbar, .flip-tools.tb-scroll::-webkit-scrollbar { display: none; }
+.toolbar.tb-scroll > *, .flip-tools.tb-scroll > * { flex: none; }
 .toolbar.tb-scroll .shape-pop,
-.toolbar.tb-scroll .tool-tray {
+.toolbar.tb-scroll .tool-tray,
+.flip-tools.tb-scroll .shape-pop,
+.flip-tools.tb-scroll .stamp-pop,
+.flip-tools.tb-scroll .tool-tray {
   position: fixed;
   bottom: auto;
   top: auto;
