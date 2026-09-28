@@ -4002,7 +4002,8 @@ function _initEyedropper(){
     // is making room for. It reappears the moment picking ends unpicked;
     // an actual pick still closes it for real (onPick → closePop).
     onChange: v => { picking = v;
-                     drawPanel.classList.toggle('eyedropper-veiled', v); },
+                     if (window.SkriblDrawerDetent) window.SkriblDrawerDetent.veil(drawPanel, v);
+                     else drawPanel.classList.toggle('eyedropper-veiled', v); },
     // Loupe wiring: magnifies and reads the same composited artwork
     // sampleColorAt reads — onion skin and guides stay invisible to it.
     getPoint: ev => pos(ev),

@@ -59,11 +59,43 @@
     });
     [300, 700, 1200].forEach(function (ms) {
       setTimeout(function () {
-        if (panel.hidden) return;
+        if (panel.hidden || panel.classList.contains('eyedropper-veiled')) return;
         if (panel.getBoundingClientRect().bottom > viewH() + 1) {
           (document.scrollingElement || document.documentElement).scrollTop = target();
         }
       }, ms);
+    });
+  }
+
+  /* STEP ASIDE FOR THE EYEDROPPER. On a phone an open colour panel scrolls the
+   * page to show itself, which carries the top of the canvas off the screen,
+   * and the eyedropper then has nothing up there to pick from. Found by a
+   * scripted drawing on both editors: a stroke near the top could not be
+   * sampled with the panel open, and closing the panel disarmed the pick.
+   *
+   * veil(panel, true) hides the panel without closing it (so no close hook
+   * disarms the pick it is making room for), remembers where the page was,
+   * and scrolls the whole canvas back into view. veil(panel, false) shows it
+   * again and, if it is still open, puts the page back -- that is the
+   * abandoned pick. A pick closes the panel for real, and a closed panel is
+   * left where the drawer machine puts it. One helper, so Pad and Flip cannot
+   * drift apart on it. */
+  var veiledAt = null;
+  function veil(panel, on) {
+    if (!panel) return;
+    var scroller = document.scrollingElement || document.documentElement;
+    if (on) {
+      if (!panel.classList.contains('eyedropper-veiled')) veiledAt = scroller.scrollTop;
+      panel.classList.add('eyedropper-veiled');
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      return;
+    }
+    if (!panel.classList.contains('eyedropper-veiled')) return;
+    panel.classList.remove('eyedropper-veiled');
+    var back = veiledAt; veiledAt = null;
+    requestAnimationFrame(function () {
+      if (panel.hidden || back == null) return;
+      window.scrollTo({ top: back, behavior: 'auto' });
     });
   }
 
@@ -132,5 +164,5 @@
     }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
   }
 
-  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd };
+  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, veil: veil };
 }());
