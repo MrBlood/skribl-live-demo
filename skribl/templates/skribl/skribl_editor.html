@@ -488,16 +488,30 @@
        two tabs' dots -- amber beats green, because amber is the only state that
        asks anything of the user -- so the bar and the drawer cannot disagree. #}
     <button type="button" class="tool-open" id="mediaOpenBtn" aria-label="Photo and music" title="Photo and music behind your drawing" aria-expanded="false">
-      {# The owner's own glyph: a framed photo with a two-note tune. viewBox
-         cropped to the art so it draws at the row's 24px like its neighbours,
-         and strokes at 3 units = 2px there, the row's line weight. #}
-      <svg viewBox="5 4 36 36" fill="none" aria-hidden="true">
-        <path d="M7.5 22.5V9.5C7.5 7.84 8.84 6.5 10.5 6.5H27.5C29.16 6.5 30.5 7.84 30.5 9.5V21.5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M7.5 26.5L13.4 20.6C14.1 19.9 15.1 19.9 15.8 20.6L19.2 24L23.5 18.8C24.2 17.95 25.45 17.95 26.15 18.8L30.5 24V27.5H10.5C8.84 27.5 7.5 26.16 7.5 24.5Z" fill="currentColor"/>
-        <circle cx="14" cy="13.5" r="2.5" fill="currentColor"/>
-        <path d="M31 20.5L38 18V29.5M31 20.5V32" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <ellipse cx="28.7" cy="32.3" rx="3.3" ry="2.8" transform="rotate(-18 28.7 32.3)" fill="currentColor"/>
-        <ellipse cx="35.7" cy="29.8" rx="3.3" ry="2.8" transform="rotate(-18 35.7 29.8)" fill="currentColor"/>
+      {# The owner's own glyph: a framed photo with a two-note tune, drawn on a
+         44-unit square and shown at 40px -- the owner's call: "it starts
+         looking bad below 40". The note sits IN FRONT of the photo: a mask
+         cuts a clear outline round it and removes the photo's corner behind
+         it, so nothing of the frame shows between the stems. Each stem ends
+         inside its head, flush with the head's widest point, so the back of
+         each note is one line. #}
+      <svg class="media-glyph" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+        <defs><mask id="mediaGlyphCut" maskUnits="userSpaceOnUse" x="0" y="0" width="44" height="44">
+          <rect width="44" height="44" fill="#fff"/>
+          <g stroke="#000" fill="#000" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M27.9 22.9L39.3 18.9V33.9M27.9 22.9V37.5" stroke-width="7.6"/>
+            <ellipse cx="25.3" cy="37.9" rx="4.4" ry="3.5" transform="rotate(-20 25.3 37.9)" stroke-width="4.4"/>
+            <ellipse cx="36.7" cy="34.3" rx="4.4" ry="3.5" transform="rotate(-20 36.7 34.3)" stroke-width="4.4"/>
+            <path d="M25.5 44L25.5 21.5L44 15L44 44Z" stroke-width="0"/>
+          </g></mask></defs>
+        <g mask="url(#mediaGlyphCut)">
+          <rect x="4.6" y="5.6" width="28.8" height="25.6" rx="5.2" stroke="currentColor" stroke-width="3.4"/>
+          <circle cx="13" cy="13.6" r="3.3" fill="currentColor"/>
+          <path d="M5.6 28.4L13.6 20.6C14.2 20 15.1 20 15.7 20.6L19.6 24.5L25.6 18.6C26.2 18 27.1 18 27.7 18.6L32.4 23.3V30.6H5.6Z" fill="currentColor"/>
+        </g>
+        <path d="M27.9 22.9L39.3 18.9V33.9M27.9 22.9V37.5" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <ellipse cx="25.3" cy="37.9" rx="4.4" ry="3.5" transform="rotate(-20 25.3 37.9)" fill="currentColor"/>
+        <ellipse cx="36.7" cy="34.3" rx="4.4" ry="3.5" transform="rotate(-20 36.7 34.3)" fill="currentColor"/>
       </svg>
       <span id="mediaTabDot" class="tab-dot" hidden></span>
     </button>

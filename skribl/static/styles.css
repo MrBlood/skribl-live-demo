@@ -6397,6 +6397,11 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
 @media (min-width: 393px) {
   .toolbar #undoBtn, .toolbar #mediaOpenBtn { margin-left: 18px; }
 }
+/* The Media glyph is drawn at 40px in its 44px button, not the row's 24px: the
+   owner's call ("it starts looking bad below 40"). --icon-size moves the
+   status dot to the glyph's corner with it (see .tool-open .tab-dot). */
+.toolbar #mediaOpenBtn { --icon-size: 40px; }
+.toolbar #mediaOpenBtn .media-glyph { width: 40px; height: 40px; }
 /* The size readout while the pen is dragged sideways (lib/penswoosh.js). */
 .swoosh-readout {
   position: fixed; z-index: 60; transform: translate(-50%, calc(-100% + 6px));
