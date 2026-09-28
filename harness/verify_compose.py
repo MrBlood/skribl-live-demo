@@ -349,10 +349,10 @@ with sync_playwright() as sp:
     # THE GLYPHS ARE THE SAME, as rendered. Compares the DOM the browser
     # actually built from both macro calls.
     same = pad.evaluate(
-        "() => { var a = document.querySelector('#musicOpenBtn svg');"
+        "() => { var a = document.querySelector('#mediaTabMusic svg');"
         "        var b = document.querySelector('#postSound svg');"
         "        return (a && b) ? (a.outerHTML === b.outerHTML) : null; }")
-    check("the sheet's glyph is byte-identical to the toolbar's, as rendered",
+    check("the sheet's glyph is byte-identical to the Media drawer's Music tab, as rendered",
           same is True, f"outerHTML comparison returned {same!r}")
 
     # GREEN: a loop is loaded. Driven by the toolbar's own dot, which is the

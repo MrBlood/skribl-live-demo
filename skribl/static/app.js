@@ -936,7 +936,14 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
     // the first. Harmless on Pad today -- both routes here merely derive -- and
     // kept identical so the two surfaces cannot drift into one having the bug.
     if (btn.dataset.shelfBound) return;
+    // TAP THE TOOL YOU ALREADY HOLD for its options. The pen's are the draw
+    // drawer (colour, brush, size, opacity, smoothing); the eraser's width lives
+    // in the same drawer. Shape keeps its own picker, below.
+    const again = tool === btn.dataset.tool;
     setTool(btn.dataset.tool);
+    if (again && (btn.dataset.tool === 'pen' || btn.dataset.tool === 'eraser') && _padDrawerCtl) {
+      _padDrawerCtl.toggle('draw');
+    }
     // Shape opens its picker; every other tool closes it. Tapping Shape while
     // it is already the active tool re-opens the picker to switch kind — which
     // is the whole point of moving it out of the drawer.
@@ -963,11 +970,29 @@ bindEl('colorGroup', 'click', (e) => {
   updateCurrentColorChip();
 });
 
-// Reflect the active pen colour on the tool shelf's chip.
-function updateCurrentColorChip() {
-  const toolChip = document.getElementById('toolColorChip');
-  if (toolChip) toolChip.style.background = color;
+// Reflect the pen on the pen button: the swoosh is the stroke it will make
+// (lib/penswoosh.js). Kept under its old name -- every colour path already
+// calls it -- and repainted on any other change below.
+function updateCurrentColorChip() { paintPenSwoosh(); }
+let _swooshFrame = 0;
+function paintPenSwoosh() {
+  if (_swooshFrame) return;
+  _swooshFrame = requestAnimationFrame(() => {
+    _swooshFrame = 0;
+    if (!window.SkriblPenSwoosh) return;
+    window.SkriblPenSwoosh.paint(document.getElementById('penSwoosh'), {
+      brush: window.SkriblBrush ? window.SkriblBrush.name() : 'pen',
+      size: size, color: color, opacity: strokeOpacity, bg: bgColor
+    });
+  });
 }
+// Size, brush, opacity and the canvas colour are each changed through a control
+// in the draw drawer; rather than hook every one of them, repaint after any
+// input or click in it. A repaint is one small canvas, at most once a frame.
+['input', 'click', 'change'].forEach(ev => document.addEventListener(ev, e => {
+  if (e.target && e.target.closest && e.target.closest('#drawPanel, #toolBar')) paintPenSwoosh();
+}));
+window.addEventListener('resize', paintPenSwoosh);
 updateCurrentColorChip();
 
 (function initBrushSize() {
@@ -984,6 +1009,14 @@ updateCurrentColorChip();
   };
   range.addEventListener('input', apply);
   apply();
+  // Drag the pen sideways for size: the same range, the same input event, so
+  // the size has one path whichever control moved it.
+  const penBtn = document.getElementById('penToolBtn');
+  if (penBtn && window.SkriblPenSwoosh) window.SkriblPenSwoosh.scrub(penBtn, {
+    get: () => size, min: +range.min || 1, max: +range.max || 30, pxPerStep: 6,
+    set: v => { range.value = v; range.dispatchEvent(new Event('input', { bubbles: true })); paintPenSwoosh(); },
+    label: v => 'Size ' + v
+  });
 })();
 
 bindEl('bgGroup', 'click', (e) => {
@@ -1174,9 +1207,12 @@ function stopPicking() {
 // without lib/drawers.js (editor furniture), so the reference must not throw.
 const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
   panels: {
-    draw:  { panel: 'drawPanel',  button: 'colorOpenBtn',  openClass: 'open' },
-    photo: { panel: 'photoPanel', button: 'imageOpenBtn', openClass: 'open' },
-    music: { panel: 'musicPanel', button: 'musicOpenBtn', openClass: 'open' },
+    // The pen opens the draw drawer now (tap it again), so the drawer lights the
+    // pen rather than a colour ring that no longer exists. Photo and Music share
+    // the one Media button; the tab strip says which of the two is showing.
+    draw:  { panel: 'drawPanel',  button: 'penToolBtn',   openClass: 'drawer-open' },
+    photo: { panel: 'photoPanel', button: 'mediaOpenBtn', openClass: 'open', aria: true, onOpen: () => syncMediaTabs('photo'), onClose: () => syncMediaTabs(null) },
+    music: { panel: 'musicPanel', button: 'mediaOpenBtn', openClass: 'open', aria: true, onOpen: () => syncMediaTabs('music'), onClose: () => syncMediaTabs(null) },
     // The tray joins the drawer set so it is mutually exclusive with draw,
     // photo and music — opening it closes them, and vice versa. Rebuilt on
     // every open; see lib/toolshelf.js.
@@ -1230,13 +1266,48 @@ if (window.SkriblDrawerDetent) {
 const toolBarEl = document.getElementById('toolBar');
 if (toolBarEl) toolBarEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.tool-open');
-  if (btn && _padDrawerCtl) _padDrawerCtl.toggle(btn.dataset.drawer);
+  // Media has its own binding above (it fronts two drawers); toggling its
+  // missing data-drawer here would close what that binding just opened.
+  if (btn && btn.id !== 'mediaOpenBtn' && _padDrawerCtl) _padDrawerCtl.toggle(btn.dataset.drawer);
 });                                              // pen/eraser use their own setTool binding
 // The chevron is not a .tool-open, so it needs its own binding; the tray is
 // dismissed by tapping away from it or by Escape, like every other overlay.
 if (toolMoreBtn && _padDrawerCtl) {
   toolMoreBtn.addEventListener('click', (e) => { e.stopPropagation(); _padDrawerCtl.toggle('tools'); });
 }
+// THE MEDIA BUTTON opens whichever of Photo and Music was used last, and the
+// tab strip switches between them. Tapping Media while either is open closes it.
+let _lastMediaTab = 'photo';
+function syncMediaTabs(name) {
+  const strip = document.getElementById('mediaTabs');
+  if (name) _lastMediaTab = name;
+  const cur = _padDrawerCtl ? _padDrawerCtl.current() : null;
+  const on = cur === 'photo' || cur === 'music' ? cur : null;
+  if (strip) strip.hidden = !on;
+  document.querySelectorAll('#mediaTabs [data-media-tab]').forEach(t =>
+    t.setAttribute('aria-selected', String(t.dataset.mediaTab === on)));
+}
+const mediaOpenBtn = document.getElementById('mediaOpenBtn');
+if (mediaOpenBtn && _padDrawerCtl) mediaOpenBtn.addEventListener('click', () => {
+  const cur = _padDrawerCtl.current();
+  _padDrawerCtl.open(cur === 'photo' || cur === 'music' ? null : _lastMediaTab);
+});
+document.querySelectorAll('#mediaTabs [data-media-tab]').forEach(t =>
+  t.addEventListener('click', () => { if (_padDrawerCtl) _padDrawerCtl.open(t.dataset.mediaTab); }));
+// The Media button's dot is DERIVED from the two tab dots, so it cannot
+// disagree with them: shown if either is, amber (pending) if either is.
+(function mirrorMediaDot() {
+  const out = document.getElementById('mediaTabDot');
+  const src = ['photoTabDot', 'musicTabDot'].map(id => document.getElementById(id)).filter(Boolean);
+  if (!out || !src.length) return;
+  const sync = () => {
+    const shown = src.filter(d => !d.hidden);
+    out.hidden = !shown.length;
+    out.classList.toggle('pending', shown.some(d => d.classList.contains('pending')));
+  };
+  src.forEach(d => new MutationObserver(sync).observe(d, { attributes: true, attributeFilter: ['hidden', 'class'] }));
+  sync();
+})();
 function hideToolTray() { if (_padDrawerCtl && _padDrawerCtl.isOpen('tools')) _padDrawerCtl.open(null); }
 document.addEventListener('click', (e) => {
   if (!toolTray || toolTray.hidden) return;

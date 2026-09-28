@@ -29,6 +29,7 @@ import struct
 import sys
 import zlib
 from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 results = []
@@ -58,7 +59,9 @@ CONTROLS = [
     ("undo",               "#undoBtn",         "#undo",           ""),
     ("redo",               "#redoBtn",         "#redo",           ""),
     # --- colour -----------------------------------------------------------
-    ("open draw drawer",   "#colorOpenBtn",    "#colorCurrent",   ""),
+    # The Pad opens its draw drawer from the PEN, tapped again; Photo and Music
+    # are the two tabs of its one Media button (owner's bottom-bar work).
+    ("open draw drawer",   "#penToolBtn",      "#colorCurrent",   ""),
     ("colour swatches",    "#colorGroup",      "#colorGroup",     ""),
     ("recent colours",     "#recentColors",    "#recentColors",   ""),
     ("recent colours row", "#recentRow",       "#recentRow",      ""),
@@ -73,11 +76,11 @@ CONTROLS = [
     ("brush size readout", "#brushSizeVal",    "#sizeVal",        ""),
     ("smoothing control",  "#smoothSeg",       "#smoothSeg",      ""),
     # --- media ------------------------------------------------------------
-    ("open photo drawer",  "#imageOpenBtn",    "#imageBtn",       ""),
+    ("open photo drawer",  "#mediaTabPhoto",   "#imageBtn",       ""),
     ("photo file input",   "#photoInput",      "#imageInput",     ""),
     ("photo fit control",  "#photoFitGroup",   "#photoFitGroup",  ""),
     ("reset photo",        "#resetPhotoBtn",   "#resetPhotoBtn",  ""),
-    ("open music drawer",  "#musicOpenBtn",    "#musicBtn",       ""),
+    ("open music drawer",  "#mediaTabMusic",   "#musicBtn",       ""),
     ("music waveform",     "#waveformCanvas",  "#waveformCanvas", ""),
     ("music trim start",   "#handleStart",     "#handleStart",    ""),
     ("music trim end",     "#handleEnd",       "#handleEnd",      ""),
@@ -108,6 +111,17 @@ CONTROLS = [
 # else may legitimately differ in content.
 SAME_OPTIONS = {"smoothing control", "canvas size control", "first-use hints",
                 "photo fit control"}
+
+
+def open_via(pg_, opener, settle=350):
+    """Click a Flip opener, or reach a Pad drawer the way the Pad's bar does now:
+    "@pad:draw" is the pen tapped again, "@pad:photo" / "@pad:music" are Media
+    and its tab (harness/browsing.py pad_drawer)."""
+    if opener.startswith("@pad:"):
+        browsing.pad_drawer(pg_, opener[5:], settle=settle)
+    else:
+        pg_.click(opener)
+        pg_.wait_for_timeout(settle)
 
 
 def _read_static(name):
@@ -221,7 +235,7 @@ with sync_playwright() as p:
     # actually diverge. Everything below drives the same user action on both
     # surfaces and compares the outcome, not the code.
     print("\nPARITY — the shared draw drawer behaves the same")
-    pad.click("#colorOpenBtn")
+    browsing.pad_drawer(pad, "draw")
     flip.click("#colorCurrent")
     pad.wait_for_timeout(400)
     flip.wait_for_timeout(400)
@@ -701,10 +715,9 @@ with sync_playwright() as p:
                 " return !!p && p.offsetParent !== null; }"
     pad_idle_cursor = pad.evaluate(cursor_of, "#canvas")
     flip_idle_cursor = flip.evaluate(cursor_of, "#pad")
-    for surf_pg, opener in ((pad, "#colorOpenBtn"), (flip, "#colorCurrent")):
+    for surf_pg, opener in ((pad, "@pad:draw"), (flip, "#colorCurrent")):
         if not surf_pg.evaluate(open_draw):
-            surf_pg.click(opener)
-            surf_pg.wait_for_timeout(350)
+            open_via(surf_pg, opener)
         surf_pg.click("#eyedropperBtn")
         surf_pg.wait_for_timeout(300)
     pa, fa = pad.evaluate(armed), flip.evaluate(armed)
@@ -749,10 +762,9 @@ with sync_playwright() as p:
     IMG, AUD = png_bytes(), wav_bytes()
     vis = "(id) => { const e = document.getElementById(id); return !!e && e.offsetParent !== null; }"
 
-    for pg_, opener, finput in ((pad, "#imageOpenBtn", "#photoInput"),
+    for pg_, opener, finput in ((pad, "@pad:photo", "#photoInput"),
                                 (flip, "#imageBtn", "#imageInput")):
-        pg_.click(opener)
-        pg_.wait_for_timeout(350)
+        open_via(pg_, opener)
         pg_.set_input_files(finput, {"name": "t.png", "mimeType": "image/png", "buffer": IMG})
         pg_.wait_for_timeout(1300)
 
@@ -785,9 +797,8 @@ with sync_playwright() as p:
           po is not None and po == fo, f"pad {po}, flip {fo}")
 
     print("\nPARITY — music behaves the same on both")
-    for pg_, opener in ((pad, "#musicOpenBtn"), (flip, "#musicBtn")):
-        pg_.click(opener)
-        pg_.wait_for_timeout(350)
+    for pg_, opener in ((pad, "@pad:music"), (flip, "#musicBtn")):
+        open_via(pg_, opener)
         pg_.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
         pg_.wait_for_timeout(2500)
 
@@ -886,13 +897,12 @@ with sync_playwright() as p:
     def ensure_open(pg_, opener, panel):
         if not pg_.evaluate("(id) => { const e = document.getElementById(id);"
                             " return !!e && e.offsetParent !== null; }", panel):
-            pg_.click(opener)
-            pg_.wait_for_timeout(500)
+            open_via(pg_, opener, settle=500)
 
     # smoothSeg lives in the draw drawer and the menu CLOSES that drawer, so it
     # has to be measured before the menu is opened. Measuring it after produced
     # a null that looked exactly like a positioning failure.
-    groups = [("#smoothSeg", [(pad, "#colorOpenBtn", "drawPanel"),
+    groups = [("#smoothSeg", [(pad, "@pad:draw", "drawPanel"),
                               (flip, "#colorCurrent", "drawPanel")]),
               ("#hintSeg",   [(pad, "#menuBtn", "menuSheet"), (flip, "#moreBtn", "moreMenu")]),
               ("#canvasSeg", [(pad, "#menuBtn", "menuSheet"), (flip, "#moreBtn", "moreMenu")])]
@@ -1065,7 +1075,7 @@ with sync_playwright() as p:
         const vis = (id) => { const e = document.getElementById(id); return !!e && !e.hidden; };
         return { pressed: btn.getAttribute('aria-pressed'), color: vis('colorGroup'),
                  bg: vis('bgGroup'), recent: vis('recentRow') }; }"""
-    for _route, _opener in (("/skribl-pad", "#colorOpenBtn"), ("/flip", "#colorCurrent")):
+    for _route, _opener in (("/skribl-pad", "@pad:draw"), ("/flip", "#colorCurrent")):
         _q = b.new_page(viewport={"width": 900, "height": 1100})
         _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
         _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
@@ -1237,7 +1247,7 @@ with sync_playwright() as p:
     # through the page's own controls, and "reachable" is asked of what is
     # PAINTED at the point, not of the canvas's rect.
     print("\nPARITY — on a phone, the eyedropper reaches the top of the drawing")
-    for _route, _cv, _opener in (("/skribl-pad", "#canvas", "#colorOpenBtn"), ("/flip", "#pad", "#colorCurrent")):
+    for _route, _cv, _opener in (("/skribl-pad", "#canvas", "@pad:draw"), ("/flip", "#pad", "#colorCurrent")):
         _q = b.new_page(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
         _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
         _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
@@ -1245,16 +1255,18 @@ with sync_playwright() as p:
         _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _drawer = lambda: _q.evaluate(open_draw)
         def _ink(hexc):
-            if not _drawer(): _q.click(_opener); _q.wait_for_timeout(400)
+            if not _drawer(): open_via(_q, _opener, settle=400)
             _q.click(f'#colorGroup .color-dot[data-color="{hexc}"]'); _q.wait_for_timeout(200)
         _ink("#ffe800")
-        if _drawer(): _q.click(_opener); _q.wait_for_timeout(400)
+        if _drawer():
+            if _opener.startswith("@pad:"): browsing.pad_drawer_close(_q, settle=400)
+            else: _q.click(_opener); _q.wait_for_timeout(400)
         _bx = _q.locator(_cv).bounding_box()
         _q.mouse.move(_bx["x"] + _bx["width"] * 0.2, _bx["y"] + _bx["height"] * 0.06); _q.mouse.down()
         _q.mouse.move(_bx["x"] + _bx["width"] * 0.8, _bx["y"] + _bx["height"] * 0.06, steps=12); _q.mouse.up()
         _q.wait_for_timeout(250)
         _ink("#0078bf")
-        if not _drawer(): _q.click(_opener); _q.wait_for_timeout(400)   # Flip closes its panel on a pick
+        if not _drawer(): open_via(_q, _opener, settle=400)   # Flip closes its panel on a pick
         if not _q.locator("#eyedropperBtn").is_visible():
             check(f"{_route}: the eyedropper is reachable in the open colour panel", False, "not visible")
             _q.close(); continue
@@ -1275,7 +1287,7 @@ with sync_playwright() as p:
         # Armed only after the drawer's own settle re-scrolls (300/700/1200 ms, lib/drawerdetent.js)
         # are spent: inside that window they would put the page back themselves and hide a
         # missing restore -- which is exactly how the first draft of this check went green.
-        if not _drawer(): _q.click(_opener)
+        if not _drawer(): open_via(_q, _opener, settle=0)
         _q.wait_for_timeout(1500)
         if _q.locator("#eyedropperBtn").is_visible():
             _q.click("#eyedropperBtn"); _q.wait_for_timeout(350)

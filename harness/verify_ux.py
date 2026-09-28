@@ -21,6 +21,18 @@ gets wrong, and therefore the useful one to pin.
 from playwright.sync_api import sync_playwright
 import browsing
 
+
+def ux_open(pg, op):
+    """Click a Flip opener, or reach a Pad drawer through the Pad's bar: "@pad:draw"
+    is the pen tapped again, "@pad:photo" / "@pad:music" Media and its tab."""
+    if op.startswith("@pad:"): browsing.pad_drawer(pg, op[5:], settle=0)
+    else: pg.click(op)
+
+
+def ux_close(pg, op):
+    if op.startswith("@pad:"): browsing.pad_drawer_close(pg, settle=0)
+    else: pg.click(op)
+
 BASE = "http://127.0.0.1:5001"
 import pathlib
 from assertions import make_check
@@ -1000,7 +1012,7 @@ with _sp204() as _p:
     for pw in (363, 390, 1280):
         mp = _b.new_page(viewport={"width": pw, "height": 844})
         mp.goto(BASE + "/", wait_until="load"); mp.wait_for_timeout(700)
-        mp.click("#musicOpenBtn"); mp.wait_for_timeout(300)
+        browsing.pad_drawer(mp, "music"); mp.wait_for_timeout(300)
         mp.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); mp.wait_for_timeout(1500)
         mp.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
         mp.wait_for_timeout(400)
@@ -1466,10 +1478,10 @@ with _sp204() as _p:
     # the one-line row and the ceiling above 8x came from. Both editors build
     # this bar, so every check below runs on both — Pad was still drawing the
     # old four-cell control when the stepper shipped on Flip.
-    for path, nm, opener in (("/", "Pad", "#musicOpenBtn"), ("/flip", "Flip", "#musicBtn")):
+    for path, nm, opener in (("/", "Pad", "@pad:music"), ("/flip", "Flip", "#musicBtn")):
         _z = _b.new_page(viewport={"width": 1280, "height": 900}); _z.goto(BASE + path, wait_until="load"); _z.wait_for_timeout(800)
         _z.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
-        _z.click(opener); _z.wait_for_timeout(300)
+        ux_open(_z, opener); _z.wait_for_timeout(300)
         _z.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _z.wait_for_timeout(1500)
         _z.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
         _z.wait_for_timeout(900)
@@ -1614,10 +1626,10 @@ with _sp204() as _p:
     # 44pt tap area (the dots beside it had theirs). Box stays 30px (dot-sized,
     # on purpose); icon 16->18 to match tier-2 toggles; tap area added. And the
     # help pill's glyph must be the button's OWN glyph, not a lookalike.
-    for path, nm, opener in (("/", "Pad", "#colorOpenBtn"), ("/flip", "Flip", "#colorCurrent")):
+    for path, nm, opener in (("/", "Pad", "@pad:draw"), ("/flip", "Flip", "#colorCurrent")):
         _e = _b.new_page(viewport={"width": 1280, "height": 900}); _e.goto(BASE + path, wait_until="load"); _e.wait_for_timeout(800)
         _e.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
-        _e.click(opener); _e.wait_for_timeout(400)
+        ux_open(_e, opener); _e.wait_for_timeout(400)
         _eg = _e.evaluate("""() => { const e = document.getElementById('eyedropperBtn'); if (!e) return null;
             const r = e.getBoundingClientRect(); const s = e.querySelector('svg').getBoundingClientRect();
             return { box: Math.round(r.width), icon: Math.round(s.width), tap: getComputedStyle(e, '::before').inset, x: r.left, y: r.top, h: r.height }; }""")
@@ -1742,18 +1754,18 @@ with _sp204() as _p:
                  overlaps: [...new Set(overlaps)].slice(0, 6), clipped: [...new Set(clipped)].slice(0, 6) }; }"""
     _AUDIT_OK = lambda r: not r["scrollX"] and not r["offRight"] and not r["offLeft"] and not r["overlaps"] and not r["clipped"]
     for pw in (375, 390):
-        for path, nm, openers in (("/", "Pad", ("#tuneBtn", "#colorOpenBtn", "#imageOpenBtn", "#musicOpenBtn")),
+        for path, nm, openers in (("/", "Pad", ("#tuneBtn", "@pad:draw", "@pad:photo", "@pad:music")),
                                   ("/flip", "Flip", ("#tuneBtn", "#colorCurrent", "#imageBtn", "#musicBtn"))):
             _f = _b.new_page(viewport={"width": pw, "height": 844}); _f.goto(BASE + path, wait_until="load"); _f.wait_for_timeout(700)
             _f.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
             _r = _f.evaluate(_AUDIT)
             check(f"PHONE {nm}@{pw}: every control on-screen, no scroll, no overlap, no clip (base)", _AUDIT_OK(_r), str(_r))
             for op in openers:
-                if _f.locator(op).count():
-                    _f.click(op); _f.wait_for_timeout(350); _r = _f.evaluate(_AUDIT)
+                if op.startswith("@pad:") or _f.locator(op).count():
+                    ux_open(_f, op); _f.wait_for_timeout(350); _r = _f.evaluate(_AUDIT)
                     check(f"PHONE {nm}@{pw}: ...with {op} drawer open", _AUDIT_OK(_r), str(_r))
-                    _f.click(op); _f.wait_for_timeout(200)
-            _f.click(openers[3]); _f.wait_for_timeout(300)
+                    ux_close(_f, op); _f.wait_for_timeout(200)
+            ux_open(_f, openers[3]); _f.wait_for_timeout(300)
             _f.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _f.wait_for_timeout(1400)
             _f.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
             _r = _f.evaluate(_AUDIT)
@@ -1986,12 +1998,12 @@ with _sp() as _p3:
     _f3 = _b.new_page(viewport={"width": 1280, "height": 900})
     _f3.add_init_script(_F3_INIT)
     browsing.goto(_f3, BASE, "/")
-    _f3.click("#musicOpenBtn")
+    browsing.pad_drawer(_f3, "music")
     _f3.wait_for_timeout(300)
     _f3.set_input_files("#musicInput",
                         {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD})
     _f3.wait_for_timeout(1500)
-    _f3.evaluate("() => { const c = document.getElementById('musicOpenBtn'); if (c) c.click(); }")
+    browsing.pad_drawer_close(_f3)
     _f3.wait_for_timeout(200)
 
 

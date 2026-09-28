@@ -1251,9 +1251,8 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
    Groups are made of air. The row reads: what the mark looks like (the tool
    pill and the colour ring), what happened to the drawing (undo, redo), and what
    is on the page or how you are looking at it (image, music, magnify). */
-.toolbar #colorOpenBtn { margin-left: 8px; }
 .toolbar #undoBtn      { margin-left: 14px; }
-.toolbar #imageOpenBtn { margin-left: 14px; }
+.toolbar #mediaOpenBtn { margin-left: 14px; }
 .tool-open {
   width: 44px; height: 44px; border-radius: 12px; padding: 0;
   display: flex; align-items: center; justify-content: center;
@@ -5947,9 +5946,8 @@ body.playing .flip-grid { display: none; }
      block above says in as many words that 360 must stay on one line, being a
      very common Android width. 5/6/6 lands at 326, which is the exact figure
      that comment records. Widen these and 360-class phones get a second row. */
-  .toolbar #colorOpenBtn { margin-left: 5px; }
-  .toolbar #undoBtn      { margin-left: 6px; }
-  .toolbar #imageOpenBtn { margin-left: 6px; }
+  .toolbar #undoBtn      { margin-left: 10px; }
+  .toolbar #mediaOpenBtn { margin-left: 10px; }
 }
 
 /* ---------- the tool row holds FOUR tools ----------
@@ -6315,9 +6313,8 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
   .toolbar { gap: 3px; padding: 6px; }
   .toolbar .undo-btn { height: 36px; --tap-grow: 4px; }   /* 36 visual -> 44 tap */
   /* Same 5/6/6 rhythm as the tier above; see the note there. */
-  .toolbar #colorOpenBtn { margin-left: 5px; }
-  .toolbar #undoBtn      { margin-left: 6px; }
-  .toolbar #imageOpenBtn { margin-left: 6px; }
+  .toolbar #undoBtn      { margin-left: 10px; }
+  .toolbar #mediaOpenBtn { margin-left: 10px; }
 }
 
 /* ---------- Hit regions, separated from glyph size ----------
@@ -6371,6 +6368,61 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
   top: 50%; height: 44px;
   transform: translateY(-50%);
 }
+
+/* ---------- THE PAD ROW IS 44x44 (owner's bottom-bar work) ----------
+   The note above records that a full 44x44 "needs one fewer control in the
+   phone row: a product decision". It has been made. The colour ring is gone
+   (the pen swoosh shows the colour, and tapping the pen again opens the
+   drawer), and Image and Music are one Media button: eight controls became
+   six, and six fit at 44px with room between the groups -- measured 357px of
+   row at 393 against 369 available, and 333 at 360 against 336 with the
+   narrower gaps set in the phone tiers.
+
+   The groups are 54px tall so the buttons inside them are 44px too, not a
+   34px pill with an invisible band. Scoped to .toolbar: Flip's row is its own
+   decision, still sized in flip.css. */
+.toolbar { --seg-row-h: 54px; }
+.toolbar .tool-open,
+.toolbar .undo-btn { width: 44px; height: 44px; }
+.toolbar #toolGroup .tool-btn { min-width: 44px; justify-content: center; }
+.toolbar #penToolBtn { padding-left: 6px; padding-right: 6px; }
+.toolbar .pen-swoosh {
+  display: block; width: 48px; height: 26px; border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+/* The pen lit while its drawer is open -- the job the colour ring's own lit
+   state used to do. */
+.toolbar #penToolBtn.drawer-open .pen-swoosh { box-shadow: 0 0 0 2px #fff; }
+@media (min-width: 393px) {
+  .toolbar #undoBtn, .toolbar #mediaOpenBtn { margin-left: 18px; }
+}
+/* The size readout while the pen is dragged sideways (lib/penswoosh.js). */
+.swoosh-readout {
+  position: fixed; z-index: 60; transform: translate(-50%, calc(-100% + 6px));
+  padding: 7px 12px; border-radius: 12px; pointer-events: none;
+  background: var(--surface-sheet); color: var(--text-strong);
+  box-shadow: 0 0 0 1px var(--hairline), 0 10px 26px rgba(0, 0, 0, 0.35);
+  font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums;
+  opacity: 0; transition: opacity .15s ease, transform .15s ease;
+}
+.swoosh-readout.on { opacity: 1; transform: translate(-50%, -100%); }
+
+/* The Media tabs: Photo | Music, above whichever of the two drawers is open. */
+.media-tabs {
+  display: flex; gap: 4px; padding: 3px; margin: 0 auto 8px;
+  width: min(100% - 24px, 520px); box-sizing: border-box;
+  background: var(--surface-control); border: 1px solid var(--hairline); border-radius: 14px;
+}
+.media-tabs[hidden] { display: none; }
+.media-tab {
+  flex: 1; min-height: 44px; border: 0; border-radius: 11px; background: transparent;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: inherit; font-size: 14px; font-weight: 650; color: var(--text-tool); cursor: pointer; position: relative;
+}
+.media-tab svg { width: 18px; height: 18px; }
+.media-tab[aria-selected="true"] { background: var(--ui-active); color: #fff; }
+.media-tab .tab-dot { position: static; margin-left: 2px; }
 
 /* Tool group row height — the shared mechanism for BOTH surfaces.
    ---------------------------------------------------------------------------
@@ -6526,11 +6578,12 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
   content: ""; position: absolute; inset: calc(-1 * var(--tap-grow, 0px));
   background: transparent; border-radius: inherit;
 }
-@media (min-width: 393px) and (max-width: 640px) {
-  .toolbar .tool-open { height: 36px; --tap-grow: 4px; }   /* 36 visual -> 44 tap */
-}
-@media (max-width: 392px) {
-  .toolbar .tool-open { height: 34px; --tap-grow: 5px; }   /* 34 visual -> 44 tap */
+/* The Pad's row used to paint 36x44 and 34x44 here, squared to 36 and 34 with
+   a tap band making up the rest. It is 44x44 at every tier now (see "THE PAD
+   ROW IS 44x44"), so a lit opener is already square at full size: nothing to
+   grow. Flip's openers keep their own pairs in flip.css. */
+@media (max-width: 640px) {
+  .toolbar .tool-open { height: 44px; --tap-grow: 0px; }
 }
 
 /* ---------- the merged Play pill is 36 tall like its neighbours ------------

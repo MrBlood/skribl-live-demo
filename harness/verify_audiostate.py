@@ -78,13 +78,13 @@ def wav_duration(raw):
 
 def post_with_music(pg, audio):
     browsing.goto(pg, BASE, "/")
-    pg.click("#musicOpenBtn")
+    browsing.pad_drawer(pg, "music")
     pg.wait_for_timeout(300)
     pg.set_input_files("#musicInput",
                        {"name": "t.wav", "mimeType": "audio/wav", "buffer": audio})
     pg.wait_for_timeout(3000)
     state = pg.evaluate("() => ({trimStart, trimEnd, dur: audioDuration})")
-    pg.evaluate("() => { const c = document.getElementById('musicOpenBtn'); if (c) c.click(); }")
+    browsing.pad_drawer_close(pg)
     pg.wait_for_timeout(400)
     box = pg.evaluate("() => { const r = document.getElementById('canvas')"
                       ".getBoundingClientRect(); return {x: r.x, y: r.y}; }")
@@ -286,7 +286,7 @@ with sync_playwright() as browser_ctx:
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     pg.add_init_script(HANG)
     pg.goto(BASE + "/", wait_until="load"); pg.wait_for_timeout(700)
-    pg.click("#musicOpenBtn"); pg.wait_for_timeout(300)
+    browsing.pad_drawer(pg, "music"); pg.wait_for_timeout(300)
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD}); pg.wait_for_timeout(2500)
     pg.evaluate("() => { window.__ev = []; document.getElementById('previewLoopBtn').click(); }")
     pg.wait_for_timeout(1200)
@@ -373,7 +373,7 @@ HOLD_DECODE = """
 
 def post_under_held_decode(pg, editor):
     if editor == "pad":
-        pg.click("#musicOpenBtn"); pg.wait_for_timeout(300)
+        browsing.pad_drawer(pg, "music"); pg.wait_for_timeout(300)
     else:
         pg.evaluate("() => { const b = document.getElementById('musicBtn'); if (b) b.click(); }"); pg.wait_for_timeout(300)
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
@@ -382,7 +382,7 @@ def post_under_held_decode(pg, editor):
     check(f"F2 {editor} setup: media read complete but decode still held (the race window)",
           held["busy"] == 0 and not held["buf"] and held["rel"], str(held))
     if editor == "pad":
-        pg.evaluate("() => { const c = document.getElementById('musicOpenBtn'); if (c) c.click(); }"); pg.wait_for_timeout(300)
+        browsing.pad_drawer_close(pg); pg.wait_for_timeout(300)
         box = pg.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return {x: r.x, y: r.y}; }")
         pg.mouse.move(box["x"] + 80, box["y"] + 80); pg.mouse.down(); pg.mouse.move(box["x"] + 300, box["y"] + 200, steps=10); pg.mouse.up()
         pg.wait_for_timeout(400); pg.click("#recordBtn"); pg.wait_for_timeout(800)
