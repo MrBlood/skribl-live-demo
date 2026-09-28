@@ -635,7 +635,14 @@ with sync_playwright() as sp:
     #           (positionScrub, app.js), plus the canvas-lock toast's wording
     #           now naming New Skribl.
     # 132,158 measured.
-    BYTES_RATCHET, BYTES_TARGET = 132_200, 153_800
+    # RAISED (the dock redesign, owner), for one named cost, after spending:
+    #   +333 B  the drawer controller the player shares now opens the draw
+    #           drawer from the pen tapped again, and Photo and Music from one
+    #           Media button (app.js). The swoosh painting and the Media tab
+    #           wiring -- the bulk of it -- went to editor_bar.js, which the
+    #           player never loads, rather than into this count.
+    # 132,533 measured.
+    BYTES_RATCHET, BYTES_TARGET = 132_600, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -740,7 +747,12 @@ with sync_playwright() as sp:
     # JavaScript, and the ratchet moves to the SERVED size, which is what this
     # has always measured (r.body()). Target met; the ratchet now stops growth
     # from here, with a few hundred bytes of room rather than 40 KB of slack.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 29_500, 119_844, 40_000
+    # RAISED (the dock redesign, owner), for one named cost: the header's
+    # frosted card became a shared material -- --glass-fill, --glass and the
+    # tint tokens in :root, both themes -- because the bar, the page strip and
+    # every drawer wear it too; the player's header is the same card. 29,697
+    # measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 29_750, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

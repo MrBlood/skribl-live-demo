@@ -2219,7 +2219,7 @@ function moveLiquifyCursor(e){
    seven tools wearing one cursor, so the only way to know what a drag would do
    was to remember what you last tapped.
    
-   The badge is the tool's OWN icon, lifted from its shelf button rather than
+   The badge is the tool's OWN icon, asked of the tool registry rather than
    copied, so it cannot drift from the tray: there is one drawing of each tool
    and this is it. It rides beside the ring rather than replacing it, because
    the ring still says how big the brush is and that is a different question.
@@ -2232,9 +2232,9 @@ let _badgeFor = null;
 function syncToolBadge(){
   if(_badgeFor === flipTool) return;
   _badgeFor = flipTool;
-  const btn = document.getElementById(flipTool + 'ToolBtn');
-  const svg = btn && btn.querySelector('svg');
-  toolBadge.innerHTML = svg ? svg.outerHTML : '';
+  // The registry's one drawing of the tool (lib/toolshelf.js iconFor): the
+  // pen's shelf button is the swoosh canvas, so lifting its svg found none.
+  toolBadge.innerHTML = toolShelf ? toolShelf.iconFor(flipTool) : '';
 }
 function moveToolBadge(e){
   syncToolBadge();

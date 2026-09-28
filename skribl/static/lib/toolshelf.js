@@ -52,6 +52,17 @@
       return t && t.btn ? document.getElementById(t.btn) : null;
     }
     function current() { return cfg.currentTool ? cfg.currentTool() : null; }
+    /* A tool's ONE drawing: its registered icon, else the glyph on its shelf
+       button. The tray and Flip's cursor badge both ask here, so they cannot
+       disagree -- and the pen, whose button is the swoosh canvas rather than a
+       glyph since the dock redesign, still has an icon to give. */
+    function iconFor(id) {
+      var t = byId(id);
+      if (!t) return '';
+      if (t.icon) return t.icon;
+      var el = btnEl(id), svg = el ? el.querySelector('svg') : null;
+      return svg ? svg.outerHTML : '';
+    }
 
     /* A tool registered at runtime has no cell in the template, so it gets one,
        built to match the static cells exactly — including the label span the
@@ -162,10 +173,7 @@
         b.className = 'tool-tray-btn' + (t.id === active ? ' active' : '');
         b.setAttribute('data-tool', t.id);
         b.setAttribute('aria-pressed', String(t.id === active));
-        var shelfBtn = btnEl(t.id);
-        var svg = shelfBtn ? shelfBtn.querySelector('svg') : null;
-        b.innerHTML = (t.icon || (svg ? svg.outerHTML : '')) +
-                      '<span>' + t.label + '</span>';
+        b.innerHTML = iconFor(t.id) + '<span>' + t.label + '</span>';
         b.addEventListener('click', function (e) {
           e.stopPropagation();
           cfg.setTool(t.id);
@@ -205,6 +213,7 @@
       has: function (id) { return !!byId(id); },
       btnFor: btnEl,
       list: function () { return tools.map(function (t) { return t.id; }); },
+      iconFor: iconFor,
       shelf: shelf,
       overflowing: overflowing,
       sync: sync,
