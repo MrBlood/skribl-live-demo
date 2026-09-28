@@ -41,6 +41,7 @@
     // which is what guarantees the active tool has a shelf cell — and therefore
     // that the sliding highlight always has a visible button to sit under.
     var mru = tools.map(function (t) { return t.id; });
+    var pinned = (cfg.pinned || []).filter(function (id) { return !!byId(id); });
 
     function byId(id) {
       for (var i = 0; i < tools.length; i++) if (tools[i].id === id) return tools[i];
@@ -92,7 +93,13 @@
        shelfMax - 1 do and the chevron takes the last slot. */
     function shelf() {
       if (!overflowing()) return tools.map(function (t) { return t.id; });
-      return mru.slice(0, shelfMax - 1);
+      // PINNED tools keep their cell whatever you used last. Flip pins the pen
+      // since the bar redesign: its swoosh is now the only way to colour and
+      // brush (the colour ring is gone), so it cannot rotate into the tray.
+      // The rest of the shelf is still most-recent-first, so the ACTIVE tool --
+      // the MRU head -- always has a cell, pinned or not.
+      var rest = mru.filter(function (id) { return pinned.indexOf(id) < 0; });
+      return pinned.concat(rest).slice(0, shelfMax - 1);
     }
 
     /* The sliding accent pill. Both editors computed this identically — the same

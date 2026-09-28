@@ -60,7 +60,13 @@
     var loopDuration = o.trimEnd - o.trimStart;
     var zw = o.zw;
 
-    ctx.fillStyle = '#161a22';
+    // THE GROUND IS THE CANVAS'S OWN CSS BACKGROUND, not a literal. This used
+    // to paint '#161a22' -- dark --surface-well -- in every theme, so in light
+    // mode Loop Detail was a black slab inside a light drawer while the strip
+    // above it (which clears to transparent) followed the theme. The stylesheet
+    // already gives .zoom-waveform-canvas var(--surface-well); painting that
+    // value keeps one owner for the colour. Owner's report, light theme.
+    ctx.fillStyle = global.getComputedStyle(canvas).backgroundColor || '#161a22';
     ctx.fillRect(0, 0, w, h);
 
     var data = buffer.getChannelData(0), sampleRate = buffer.sampleRate;
@@ -114,7 +120,9 @@
       }
     }
 
-    ctx.fillStyle = '#2e3340';
+    // Grey at partial alpha rather than dark '#2e3340', which drew a hard black
+    // rule across the light ground; this reads as a faint axis on either.
+    ctx.fillStyle = 'rgba(128, 136, 150, 0.35)';
     ctx.fillRect(0, mid, w, 1);
 
     if (o.label && o.formatTime) {

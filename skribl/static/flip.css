@@ -1404,10 +1404,84 @@
    opacity-only fade, same delayed exit so a quick dot never blinks the
    chrome, same immediate return on release. */
 .flip-tools, .strip, .pagebar, .addcol { transition: opacity 0.25s ease; }
-body.stroking .flip-tools,
 body.stroking .strip,
 body.stroking .pagebar,
 body.stroking .addcol {
   opacity: 0.1;
   transition: opacity 0.3s ease 0.12s;
 }
+/* .flip-tools left this list with the bar redesign: it is frosted glass now,
+   and glass recedes by its CONTENTS (styles.css, THE DOCK) -- WebKit can fail
+   to repaint a backdrop-filter element whose own opacity animated. */
+
+
+/* ---------- THE DOCK ON FLIP (owner's bar redesign) ----------
+   styles.css carries the dock for both editors (material, pen chip, tint,
+   Media, the spacing). What is here is what only Flip needs, placed LAST in
+   the file because flip.css's own size tiers above -- 40, 36, 34 and 32px
+   controls, per-tier margins -- are written at the same specificity and would
+   otherwise win. The colour ring and the separate Image and Music buttons are
+   gone from Flip's row exactly as from the Pad's, so the row fits 44x44 at
+   every width the Pad's does. */
+.flip-tools {
+  --seg-row-h: 54px;
+  width: auto; max-width: none;
+  margin: 10px 12px; padding: 6px 12px; gap: 0;
+  flex-wrap: nowrap; justify-content: flex-start;
+}
+@media (min-width: 641px) {
+  .flip-tools { width: fit-content; margin: 10px auto; }
+}
+.flip-tools .t-btn, .flip-tools .tool-open { width: 44px; height: 44px; --tap-grow: 0px; }
+.flip-tools #toolGroup .tool-btn { min-width: 44px; padding: 0 9px; justify-content: center; }
+.flip-tools #toolGroup .tool-btn svg { width: 26px; height: 26px; }
+.flip-tools #toolGroup #penToolBtn { padding: 0; }
+.flip-tools .tool-btn-label { display: none; }
+.flip-tools #undo, .flip-tools #mediaOpenBtn { margin-left: 18px; }
+.flip-tools #redo { margin-left: 6px; }
+@media (max-width: 640px) {
+  .flip-tools #undo, .flip-tools #mediaOpenBtn { margin-left: auto; }
+}
+
+/* THE PAGE STRIP IS A PANEL TOO. The header, the pages and the tools are three
+   cards of one material, so the screen reads header, drawing, pages, tools.
+   Like the dock, its glass steps away while the pen is down and its contents
+   fade (the rule above). */
+.strip-wrap {
+  margin: 10px 12px 0; border: 0; border-radius: 16px;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: var(--glass);
+}
+body.stroking .strip-wrap {
+  background: transparent; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+/* Flip's own menu popover wears the material like every other sheet. */
+.flip-menu {
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border: 0; box-shadow: var(--glass);
+}
+
+/* THE PAGE-ACTION ROW, REDONE (owner: "redo the page action row too"). Four
+   outlined buttons whose labels wrapped -- "In-" over "between", "Motion" over
+   "Smear" -- were the busiest thing left on the screen. Now four equal tiles,
+   the icon over a one-line label, no outline: a soft wash, like the dock's
+   own controls. 52px tall, so each is its own 44px target without a band. */
+.addcol {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  padding: 10px 10px 4px; flex-wrap: nowrap;
+}
+.addcol .addbtn, .addcol .addbtn.mini {
+  width: auto; max-width: none; min-height: 52px; padding: 6px 2px;
+  flex-direction: column; gap: 4px;
+  border: 0; border-radius: 12px;
+  background: rgba(var(--wash-rgb), .05);
+  color: var(--text-secondary);
+  font-size: 11px; font-weight: 600; line-height: 1.1; white-space: nowrap;
+}
+.addcol .addbtn .addbtn-ic { width: 20px; height: 20px; }
+.addcol .addbtn:hover { background: rgba(var(--wash-rgb), .09); color: var(--text-primary); }
+.addcol .addbtn::before { display: none; }
+

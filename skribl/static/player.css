@@ -173,6 +173,24 @@
      everything and reads as an edge. */
   --header-rim: rgba(0, 0, 0, 0.55);
 
+  /* ONE MATERIAL (owner, the bar redesign). The header's frosted card is now
+     the material for every floating panel -- the header, the bottom bar,
+     Flip's page strip, and each drawer, picker and sheet -- so the screen
+     reads as one family of panels around the drawing. The fill and blur are
+     the header's own values; the drop is softer than the header's old 0.42,
+     which read as a slab once three panels wore it. */
+  --glass-fill: rgba(var(--surface-well-2-rgb), 0.78);
+  --glass-drop: rgba(0, 0, 0, 0.30);
+  --glass: 0 0 0 1px var(--header-rim), 0 6px 20px var(--glass-drop);
+  /* A SELECTED OPTION IS A TINT, AN ACTION IS SOLID. The same purple used to
+     mean both, so a drawer carried five or six purple slabs and nothing said
+     which one did something. Segments (Pen / Background, Off / Low / High,
+     Fill / Fit, Line / Rect, ...) now wear the tint the bar's selected tool
+     wears; Preview Loop, Post, Done and the switches keep the fill. The ink is
+     lighter than --ui-hi in dark mode, where #7c5cff on the tint is too close. */
+  --seg-on-fill: rgba(124, 92, 255, 0.22);
+  --seg-on-ink: #b9a8ff;
+
   /* The letterpress relief on the signature (SINK, not pop,
      and asked for the old purple halo to go). A bright lower edge and a
      dark upper shade press the strokes INTO the card — light from above,
@@ -376,10 +394,10 @@ body {
      Shared by Pad and Flip (flip.css only adjusts padding and gap) and
      inherited by the player through the derived sheet, so the three surfaces
      stay one design. */
-  background: rgba(var(--surface-well-2-rgb), 0.78);
+  background: var(--glass-fill);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 0 0 1px var(--header-rim), 0 8px 26px rgba(0, 0, 0, 0.42);
+  box-shadow: var(--glass);
   flex-wrap: nowrap;
   gap: 10px;
   position: relative;
@@ -547,11 +565,12 @@ body {
    dark text on solid yellow, where the same shadow smeared the glyph edges and
    read as blurry — most visibly on "Re-add". It is white on purple now (v317)
    and stays out of the list; the other three are white-on-colour and benefit. */
-.restore-btn.confirm,
-.tool-btn.active,
-.photo-fit-btn.active {
+.restore-btn.confirm {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
+/* .tool-btn.active and .photo-fit-btn.active left this list with the bar
+   redesign: a selected tool or fit option is now tinted ink on a soft tint,
+   not white on purple, and the dark shadow smeared it (see --seg-on-fill). */
 
 .rec-indicator[hidden] { display: none; }
 
@@ -1829,6 +1848,8 @@ a.player-btn { text-decoration: none; }
   --brand-ink:               #4a33c2;
   /* Light flips the rim: a near-white edge, light catching the card. */
   --header-rim:              rgba(255, 255, 255, 0.9);
+  --glass-drop:              rgba(20, 24, 40, 0.10);
+  --seg-on-ink:              #5b3be6;
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))

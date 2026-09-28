@@ -739,6 +739,7 @@ rather than a shared rule.
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
 | `loopwave.js` | Pad+Flip | The music drawer's zoomed loop view: which stretch of the track it shows, where the two trim handles sit in it, and the waveform drawn into it. |
 | `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
+| `mediatabs.js` | Pad+Flip | The Media button and its Photo and Music tabs -- shared by Pad and Flip. |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
 | `modalfocus.js` | Pad+Flip+library+gallery | Focus for surfaces that declare aria-modal="true". |
 | `mp4export.js` | Pad+Flip | MP4 export through WebCodecs + the vendored mp4-muxer: one encoder pipeline for both editors (SK312-003, v315). |
@@ -748,7 +749,7 @@ rather than a shared rule.
 | `painttarget.js` | Pad+Flip | The draw drawer's paint-target seg (Pen or Background) and the pills on its segmented rows: wired once for both editors (SK312-003, v315). |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
 | `pendingcards.js` | Pad+Flip | The "re-add your file" cards in the Image and Music drawers, and the tab dots that hint media is waiting: one implementation for both editors (SK312-003, v315; refreshPendingCards was 0.76 alike in app.js and flip.js). |
-| `penswoosh.js` | Pad | The pen SWOOSH — the pen button drawn as the stroke it will make. |
+| `penswoosh.js` | Pad+Flip | The pen SWOOSH — the pen button drawn as the stroke it will make. |
 | `photofit.js` | Pad+Flip+library+in-post | Photo fit geometry — the part both editors and the player must agree on. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |

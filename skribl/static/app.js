@@ -971,29 +971,16 @@ bindEl('colorGroup', 'click', (e) => {
 });
 
 // Reflect the pen on the pen button: the swoosh is the stroke it will make
-// (lib/penswoosh.js). Kept under its old name -- every colour path already
-// calls it -- and repainted on any other change below.
+// (lib/penswoosh.js wire(), shared with Flip). Kept under its old name --
+// every colour path already calls it.
+const paintPenSwoosh = (window.SkriblPenSwoosh && window.SkriblPenSwoosh.wire)
+  ? window.SkriblPenSwoosh.wire({
+      canvas: 'penSwoosh', button: 'penToolBtn', range: 'brushSizeRange', scope: '#drawPanel, #toolBar',
+      state: () => ({ brush: window.SkriblBrush ? window.SkriblBrush.name() : 'pen',
+                      size: size, color: color, opacity: strokeOpacity, bg: bgColor })
+    })
+  : () => {};
 function updateCurrentColorChip() { paintPenSwoosh(); }
-let _swooshFrame = 0;
-function paintPenSwoosh() {
-  if (_swooshFrame) return;
-  _swooshFrame = requestAnimationFrame(() => {
-    _swooshFrame = 0;
-    if (!window.SkriblPenSwoosh) return;
-    window.SkriblPenSwoosh.paint(document.getElementById('penSwoosh'), {
-      brush: window.SkriblBrush ? window.SkriblBrush.name() : 'pen',
-      size: size, color: color, opacity: strokeOpacity, bg: bgColor
-    });
-  });
-}
-// Size, brush, opacity and the canvas colour are each changed through a control
-// in the draw drawer; rather than hook every one of them, repaint after any
-// input or click in it. A repaint is one small canvas, at most once a frame.
-['input', 'click', 'change'].forEach(ev => document.addEventListener(ev, e => {
-  if (e.target && e.target.closest && e.target.closest('#drawPanel, #toolBar')) paintPenSwoosh();
-}));
-window.addEventListener('resize', paintPenSwoosh);
-updateCurrentColorChip();
 
 (function initBrushSize() {
   const range = document.getElementById('brushSizeRange');
@@ -1009,14 +996,6 @@ updateCurrentColorChip();
   };
   range.addEventListener('input', apply);
   apply();
-  // Drag the pen sideways for size: the same range, the same input event, so
-  // the size has one path whichever control moved it.
-  const penBtn = document.getElementById('penToolBtn');
-  if (penBtn && window.SkriblPenSwoosh) window.SkriblPenSwoosh.scrub(penBtn, {
-    get: () => size, min: +range.min || 1, max: +range.max || 30, pxPerStep: 6,
-    set: v => { range.value = v; range.dispatchEvent(new Event('input', { bubbles: true })); paintPenSwoosh(); },
-    label: v => 'Size ' + v
-  });
 })();
 
 bindEl('bgGroup', 'click', (e) => {
@@ -1275,39 +1254,15 @@ if (toolBarEl) toolBarEl.addEventListener('click', (e) => {
 if (toolMoreBtn && _padDrawerCtl) {
   toolMoreBtn.addEventListener('click', (e) => { e.stopPropagation(); _padDrawerCtl.toggle('tools'); });
 }
-// THE MEDIA BUTTON opens whichever of Photo and Music was used last, and the
-// tab strip switches between them. Tapping Media while either is open closes it.
-let _lastMediaTab = 'photo';
-function syncMediaTabs(name) {
-  const strip = document.getElementById('mediaTabs');
-  if (name) _lastMediaTab = name;
-  const cur = _padDrawerCtl ? _padDrawerCtl.current() : null;
-  const on = cur === 'photo' || cur === 'music' ? cur : null;
-  if (strip) strip.hidden = !on;
-  document.querySelectorAll('#mediaTabs [data-media-tab]').forEach(t =>
-    t.setAttribute('aria-selected', String(t.dataset.mediaTab === on)));
-}
-const mediaOpenBtn = document.getElementById('mediaOpenBtn');
-if (mediaOpenBtn && _padDrawerCtl) mediaOpenBtn.addEventListener('click', () => {
-  const cur = _padDrawerCtl.current();
-  _padDrawerCtl.open(cur === 'photo' || cur === 'music' ? null : _lastMediaTab);
-});
-document.querySelectorAll('#mediaTabs [data-media-tab]').forEach(t =>
-  t.addEventListener('click', () => { if (_padDrawerCtl) _padDrawerCtl.open(t.dataset.mediaTab); }));
-// The Media button's dot is DERIVED from the two tab dots, so it cannot
-// disagree with them: shown if either is, amber (pending) if either is.
-(function mirrorMediaDot() {
-  const out = document.getElementById('mediaTabDot');
-  const src = ['photoTabDot', 'musicTabDot'].map(id => document.getElementById(id)).filter(Boolean);
-  if (!out || !src.length) return;
-  const sync = () => {
-    const shown = src.filter(d => !d.hidden);
-    out.hidden = !shown.length;
-    out.classList.toggle('pending', shown.some(d => d.classList.contains('pending')));
-  };
-  src.forEach(d => new MutationObserver(sync).observe(d, { attributes: true, attributeFilter: ['hidden', 'class'] }));
-  sync();
-})();
+// THE MEDIA BUTTON and its Photo | Music tabs: lib/mediatabs.js, shared with
+// Flip. syncMediaTabs is what the drawer hooks above call; it is a function
+// declaration so those hooks can name it before the lib has been attached.
+// `var`, not const: a hook firing before this line must read null, not throw.
+var _mediaTabs = (window.SkriblMediaTabs && _padDrawerCtl) ? window.SkriblMediaTabs.attach({
+  ctl: _padDrawerCtl, button: 'mediaOpenBtn', strip: 'mediaTabs',
+  dot: 'mediaTabDot', sources: ['photoTabDot', 'musicTabDot']
+}) : null;
+function syncMediaTabs(name) { if (_mediaTabs) _mediaTabs.sync(name); }
 function hideToolTray() { if (_padDrawerCtl && _padDrawerCtl.isOpen('tools')) _padDrawerCtl.open(null); }
 document.addEventListener('click', (e) => {
   if (!toolTray || toolTray.hidden) return;

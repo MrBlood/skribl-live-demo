@@ -19,6 +19,8 @@
  *   SkriblPenSwoosh.paint(canvas, s)   s = { brush, size, color, opacity (0..1), bg }
  *   SkriblPenSwoosh.scrub(button, o)   o = { get(), set(v), min, max, pxPerStep,
  *                                            label(v) -> readout text }
+ *   SkriblPenSwoosh.wire(o)            the two above for an editor's pen button;
+ *                                      returns repaint() (see wire, below)
  *       A sideways drag of at least SLOP px changes the value by one step per
  *       pxPerStep; the click that follows the drag is swallowed, so a drag is
  *       never also a tap. A readout rides above the button while it moves.
@@ -120,5 +122,38 @@
     }, true);
   }
 
-  window.SkriblPenSwoosh = { paint: paint, scrub: scrub };
+  /* wire(o): the whole pen button, for an editor.
+   *   o = { canvas, button, range,        -- ids or elements
+   *         state() -> the paint() settings, read fresh on every repaint,
+   *         scope   -- selector: an input/click/change inside it repaints }
+   * Returns repaint(), coalesced to one paint per frame. Size, brush, opacity
+   * and the canvas colour are each changed through some control in the draw
+   * drawer; rather than hook every one, any input or click in `scope` repaints.
+   * A drag on the button moves `range` through its own input event, so the
+   * size has one path whichever control moved it. Shared by Pad and Flip. */
+  function wire(o) {
+    var byId = function (x) { return typeof x === 'string' ? document.getElementById(x) : x; };
+    var canvas = byId(o.canvas), button = byId(o.button), range = byId(o.range);
+    var frame = 0;
+    function repaint() {
+      if (frame) return;
+      frame = requestAnimationFrame(function () { frame = 0; paint(canvas, o.state()); });
+    }
+    ['input', 'click', 'change'].forEach(function (ev) {
+      document.addEventListener(ev, function (e) {
+        if (e.target && e.target.closest && e.target.closest(o.scope)) repaint();
+      });
+    });
+    window.addEventListener('resize', repaint);
+    if (button && range) scrub(button, {
+      get: function () { return +range.value; },
+      min: +range.min || 1, max: +range.max || 30, pxPerStep: 6,
+      set: function (v) { range.value = v; range.dispatchEvent(new Event('input', { bubbles: true })); repaint(); },
+      label: function (v) { return 'Size ' + v; }
+    });
+    repaint();
+    return repaint;
+  }
+
+  window.SkriblPenSwoosh = { paint: paint, scrub: scrub, wire: wire };
 })();
