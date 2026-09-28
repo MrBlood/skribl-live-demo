@@ -6402,6 +6402,16 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
    status dot to the glyph's corner with it (see .tool-open .tab-dot). */
 .toolbar #mediaOpenBtn { --icon-size: 40px; }
 .toolbar #mediaOpenBtn .media-glyph { width: 40px; height: 40px; }
+/* And it is not drawn in a tile. The 40px glyph fills its 44px button, so the
+   lit square every other .tool-open wears read as a box crammed round it; the
+   owner's call was "don't put it in a button, just turn it purple when
+   pressed". The hit area is still the full 44x44 -- only the paint is gone.
+   Open or held, the glyph itself takes the accent. */
+.toolbar #mediaOpenBtn,
+.toolbar #mediaOpenBtn:hover,
+.toolbar #mediaOpenBtn.open { background: none; box-shadow: none; }
+.toolbar #mediaOpenBtn.open,
+.toolbar #mediaOpenBtn:active { color: var(--ui-hi); }
 /* The size readout while the pen is dragged sideways (lib/penswoosh.js). */
 .swoosh-readout {
   position: fixed; z-index: 60; transform: translate(-50%, calc(-100% + 6px));
