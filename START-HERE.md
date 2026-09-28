@@ -80,6 +80,7 @@ here is the rule you can break tomorrow.
 | Every id on a rendered page is unique — `getElementById` and `url(#…)` both take the first match. | `verify_a11y.py` |
 | No page loads a `lib/` module nothing on that page reads. | `verify_surfaces.py` |
 | No stylesheet keeps a rule-set whose every selector is unmatched. | `verify_surfaces.py` |
+| Every tip in How it works is claimed by a check that TRIES it — a named check in another suite, or a probe that drives the page's own controls — and every ⋯ menu row and tool is named in the sheet. A new feature ships with its tip and its proof, or the seal is red. | `verify_helpclaims.py` |
 | Every route the blueprint registers is named in at least one document. | `verify_docs.py` |
 | Every host seam `create_blueprint()` accepts is documented in `docs/INTEGRATION.md`. | `verify_docs.py` (reflection over the signature) |
 | Every `SKRIBL_*` the code reads is named in a doc or `.env.example`. | `verify_docs.py` |
