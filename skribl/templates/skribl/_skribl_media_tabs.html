@@ -4,13 +4,14 @@
    between the two, and lib/mediatabs.js drives it. The two tab dots keep the
    ids each editor's media code already writes (photoTabDot, musicTabDot), and
    the Media button's own dot mirrors them. #}
+{% from 'skribl/_skribl_music_glyph.html' import music_glyph %}
 <div class="media-tabs" id="mediaTabs" role="tablist" aria-label="Photo or music" hidden>
   <button type="button" role="tab" class="media-tab" id="mediaTabPhoto" data-media-tab="photo" aria-selected="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
     Photo<span id="photoTabDot" class="tab-dot" hidden></span>
   </button>
   <button type="button" role="tab" class="media-tab" id="mediaTabMusic" data-media-tab="music" aria-selected="false">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    {{ music_glyph() }}
     Music<span id="musicTabDot" class="tab-dot" hidden></span>
   </button>
 </div>

@@ -441,8 +441,7 @@ with sync_playwright() as _p:
     _pg = _ctx.new_page()
     _pg.goto(f"{BASE}/flip", wait_until="load")
     _pg.wait_for_timeout(1400)
-    _pg.tap("#colorCurrent")
-    _pg.wait_for_timeout(1100)
+    browsing.pad_drawer(_pg, "draw", settle=1100)   # the pen, tapped again
 
     _m = _pg.evaluate("""() => {
       const eye = document.getElementById('eyedropperBtn').getBoundingClientRect();
@@ -1326,19 +1325,19 @@ with _sp204() as _p:
     # read it as "outside" and closed the drawer the instant a file was chosen —
     # which is why it "never opened" for the owner. Headless can't open a real
     # dialog, so dispatch the same click on the input the browser would.
-    fp.click("#musicBtn"); fp.wait_for_timeout(400)
+    browsing.pad_drawer(fp, "music", settle=400)   # Media, then Music
     check("V206: Flip music drawer opens", not fp.evaluate("() => document.getElementById('musicPanel').hidden"))
     fp.evaluate("() => document.getElementById('musicInput').dispatchEvent(new MouseEvent('click', {bubbles: true}))")
     fp.wait_for_timeout(300)
     check("V206: ...and stays open when the file input is clicked (dialog round-trip)",
           not fp.evaluate("() => document.getElementById('musicPanel').hidden"))
-    fp.click("#musicBtn"); fp.wait_for_timeout(300)  # close
-    fp.click("#imageBtn"); fp.wait_for_timeout(400)
+    browsing.pad_drawer_close(fp)
+    browsing.pad_drawer(fp, "photo", settle=400)
     fp.evaluate("() => document.getElementById('imageInput').dispatchEvent(new MouseEvent('click', {bubbles: true}))")
     fp.wait_for_timeout(300)
     check("V206: Flip image drawer also survives its file-input click",
           not fp.evaluate("() => document.getElementById('photoPanel').hidden"))
-    fp.click("#imageBtn"); fp.wait_for_timeout(300)
+    browsing.pad_drawer_close(fp)
 
     # THE FORMAT'S load -> render -> play PATH, on documents built for the job.
     # This used to load two .skribl files the owner had asked for as DEMOS —
@@ -1478,7 +1477,7 @@ with _sp204() as _p:
     # the one-line row and the ceiling above 8x came from. Both editors build
     # this bar, so every check below runs on both — Pad was still drawing the
     # old four-cell control when the stepper shipped on Flip.
-    for path, nm, opener in (("/", "Pad", "@pad:music"), ("/flip", "Flip", "#musicBtn")):
+    for path, nm, opener in (("/", "Pad", "@pad:music"), ("/flip", "Flip", "@pad:music")):
         _z = _b.new_page(viewport={"width": 1280, "height": 900}); _z.goto(BASE + path, wait_until="load"); _z.wait_for_timeout(800)
         _z.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
         ux_open(_z, opener); _z.wait_for_timeout(300)
@@ -1626,7 +1625,7 @@ with _sp204() as _p:
     # 44pt tap area (the dots beside it had theirs). Box stays 30px (dot-sized,
     # on purpose); icon 16->18 to match tier-2 toggles; tap area added. And the
     # help pill's glyph must be the button's OWN glyph, not a lookalike.
-    for path, nm, opener in (("/", "Pad", "@pad:draw"), ("/flip", "Flip", "#colorCurrent")):
+    for path, nm, opener in (("/", "Pad", "@pad:draw"), ("/flip", "Flip", "@pad:draw")):
         _e = _b.new_page(viewport={"width": 1280, "height": 900}); _e.goto(BASE + path, wait_until="load"); _e.wait_for_timeout(800)
         _e.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
         ux_open(_e, opener); _e.wait_for_timeout(400)
@@ -1755,7 +1754,7 @@ with _sp204() as _p:
     _AUDIT_OK = lambda r: not r["scrollX"] and not r["offRight"] and not r["offLeft"] and not r["overlaps"] and not r["clipped"]
     for pw in (375, 390):
         for path, nm, openers in (("/", "Pad", ("#tuneBtn", "@pad:draw", "@pad:photo", "@pad:music")),
-                                  ("/flip", "Flip", ("#tuneBtn", "#colorCurrent", "#imageBtn", "#musicBtn"))):
+                                  ("/flip", "Flip", ("#tuneBtn", "@pad:draw", "@pad:photo", "@pad:music"))):
             _f = _b.new_page(viewport={"width": pw, "height": 844}); _f.goto(BASE + path, wait_until="load"); _f.wait_for_timeout(700)
             _f.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
             _r = _f.evaluate(_AUDIT)

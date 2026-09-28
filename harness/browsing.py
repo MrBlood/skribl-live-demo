@@ -225,16 +225,22 @@ def submit_post(page, *, timeout_ms=20000, step_ms=200):
 # this repository has already paid for once (verify_parity's "element is not
 # visible" on a button that plainly existed). open and close are separate calls.
 
-_PAD_CUR = "() => (typeof _padDrawerCtl !== 'undefined' && _padDrawerCtl) ? _padDrawerCtl.current() : null"
+# FLIP HAS THE SAME BAR NOW (the dock redesign): its colour ring and Image and
+# Music buttons went the same way, with the same ids -- #penToolBtn,
+# #mediaOpenBtn, #mediaTabPhoto, #mediaTabMusic -- so these two helpers drive
+# either editor. Only the controller's and the tool's variable names differ.
+_PAD_CUR = ("() => { const c = (typeof _padDrawerCtl !== 'undefined' && _padDrawerCtl)"
+            " || (typeof _flipDrawerCtl !== 'undefined' && _flipDrawerCtl); return c ? c.current() : null; }")
+_TOOL = "() => (typeof flipTool !== 'undefined') ? flipTool : tool"
 
 
 def pad_drawer(page, name, settle=350):
-    """Open Pad drawer `name` ('draw' | 'photo' | 'music') through the bar."""
+    """Open drawer `name` ('draw' | 'photo' | 'music') through the bar, on Pad or Flip."""
     cur = page.evaluate(_PAD_CUR)
     if cur == name:
         return
     if name == "draw":
-        if page.evaluate("() => tool") != "pen":
+        if page.evaluate(_TOOL) != "pen":
             page.click("#penToolBtn"); page.wait_for_timeout(120)
         if page.evaluate(_PAD_CUR) != "draw":
             page.click("#penToolBtn")
@@ -247,7 +253,7 @@ def pad_drawer(page, name, settle=350):
 
 
 def pad_drawer_close(page, settle=300):
-    """Close whichever Pad drawer is open, through the control that opened it."""
+    """Close whichever drawer is open, through the control that opened it (Pad or Flip)."""
     cur = page.evaluate(_PAD_CUR)
     if cur == "draw":
         page.click("#penToolBtn")

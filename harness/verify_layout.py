@@ -1016,16 +1016,12 @@ with sync_playwright() as p:
         // Post is disabled until a take exists, and disabled is pointer-events:
         // none, so the hit test looks through it; ask for the HEADER it sits in.
         return { scrollY: Math.round(scrollY), top: Math.round(r.top), hit: !!(el && p.closest('.header').contains(el)) }; }"""
-    for _route, _open in (("/", None), ("/flip", "musicBtn")):
+    for _route, _open in (("/", "draw"), ("/flip", "music")):
         _ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
         _pg = _ctx.new_page()
         browsing.goto(_pg, BASE, _route)
         _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
-        if _open is None:
-            browsing.pad_drawer(_pg, "draw", settle=1600)    # Pad: the pen, tapped again
-        else:
-            _pg.evaluate("(id) => document.getElementById(id).click()", _open)
-            _pg.wait_for_timeout(1600)
+        browsing.pad_drawer(_pg, _open, settle=1600)    # through the bar's own controls
         _h = _pg.evaluate(HIT)
         check(f"{_route} @390: with a drawer open and the page scrolled, Post is still on screen",
               _h["scrollY"] > 40 and _h["hit"], str(_h))
@@ -1046,8 +1042,7 @@ with sync_playwright() as p:
         browsing.goto(_pg, BASE, "/flip")
         _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _rest = _pg.evaluate(STAGE)
-        _pg.evaluate("() => document.getElementById('musicBtn').click()")
-        _pg.wait_for_timeout(1200)
+        browsing.pad_drawer(_pg, "music", settle=1200)
         _open = _pg.evaluate(STAGE)
         check(f"/flip @{_vp['width']}: the stage keeps its height and the canvas stays inside it",
               _open["stageH"] == _rest["stageH"] and _open["padBottom"] <= _open["stageBottom"] + 1,

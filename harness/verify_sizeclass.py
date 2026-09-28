@@ -287,12 +287,16 @@ with sync_playwright() as p:
             st = page.evaluate("""() => ({
               size: document.body.getAttribute('data-size'),
               bar:  getComputedStyle(document.querySelector('#pagebar')).display,
-              btn:  getComputedStyle(document.querySelector('.flip-tools .t-btn')).width,
+              row:  getComputedStyle(document.querySelector('.flip-tools')).paddingLeft,
             })""")
             compact = st["size"] == "compact"
+            # The tool row's class-driven property used to be the undo button's
+            # width (36px compact). The dock redesign made every bar control 44px
+            # at every size, so the row's own padding is what the class changes
+            # now: 6px compact, 12px regular (flip.css, THE DOCK ON FLIP).
             check(f"at {vw}px the bar and the tool row tell the same story",
-                  (st["bar"] == "none") == compact and (st["btn"] == "36px") == compact,
-                  f"data-size={st['size']}, #pagebar={st['bar']}, t-btn={st['btn']}")
+                  (st["bar"] == "none") == compact and (st["row"] == "6px") == compact,
+                  f"data-size={st['size']}, #pagebar={st['bar']}, .flip-tools padding={st['row']}")
 
         page.set_viewport_size({"width": 1280, "height": 900})
         check("no page error at any width", not errs, "; ".join(errs[:2]))

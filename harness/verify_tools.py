@@ -164,9 +164,9 @@ print("\nV213d — eraser width is one shared constant, wired on both editors")
 with sync_playwright() as _b2:
     _br2 = _b2.chromium.launch()
     for _nm, _path, _open in (
-        # The Pad opens its draw drawer from the pen, tapped again (a fresh page holds the pen).
+        # Both editors open the draw drawer from the pen, tapped again (a fresh page holds the pen).
         ("pad",  "/",     "() => { if (_padDrawerCtl.current() !== 'draw') document.getElementById('penToolBtn').click(); }"),
-        ("flip", "/flip", "() => document.getElementById('colorCurrent').click()"),
+        ("flip", "/flip", "() => { if (_flipDrawerCtl.current() !== 'draw') document.getElementById('penToolBtn').click(); }"),
     ):
         _c2 = _br2.new_context(viewport={"width": 1100, "height": 900})
         _p2 = _c2.new_page()
@@ -406,7 +406,7 @@ with sync_playwright() as _b5:
         ("pad",  "/",     "(r) => pressureSize({pointerType:'pen', pressure:r}, 10, false)",
          "() => { if (_padDrawerCtl.current() !== 'draw') document.getElementById('penToolBtn').click(); }"),
         ("flip", "/flip", "(r) => sizeFor({pointerType:'pen', pressure:r}, 10)",
-         "() => document.getElementById('colorCurrent').click()"),
+         "() => { if (_flipDrawerCtl.current() !== 'draw') document.getElementById('penToolBtn').click(); }"),
     ):
         _c5 = _br5.new_context(viewport={"width": 1100, "height": 900})
         _p5 = _c5.new_page()

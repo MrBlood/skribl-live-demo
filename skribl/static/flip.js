@@ -3716,7 +3716,12 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
       // and brush now that the colour ring is gone (see lib/toolshelf.js).
       pinned: ['pen'],
       tools: [
-        { id: 'pen',    label: 'Pen',    btn: 'penToolBtn' },
+        // The pen's bar cell is the swoosh canvas, not a glyph, so the tray cannot
+        // copy its icon from the button the way it does for the others; it
+        // carries its own (the pen glyph the button wore before the swoosh).
+        { id: 'pen',    label: 'Pen',    btn: 'penToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+              + 'stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>' },
         { id: 'eraser', label: 'Eraser', btn: 'eraserToolBtn' },
         { id: 'shape',  label: 'Shape',  btn: 'shapeToolBtn' },
         { id: 'select', label: 'Select', btn: 'selectToolBtn',

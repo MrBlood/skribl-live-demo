@@ -1378,7 +1378,9 @@ with sync_playwright() as p:
         return "(ignored)"
 
     # Icon-only, and every one of them was title-only before this.
-    _ICON_ONLY = ["#colorCurrent", "#undo", "#redo", ".strip .del"]
+    # #mediaOpenBtn took #colorCurrent's place when the dock redesign removed
+    # Flip's colour ring: it is Flip's icon-only bar control now.
+    _ICON_ONLY = ["#mediaOpenBtn", "#undo", "#redo", ".strip .del"]
     _by_pointer = {}
     for _label, _vp, _touch in (("fine", {"width": 1280, "height": 900}, False),
                                 ("coarse", {"width": 390, "height": 844}, True)):

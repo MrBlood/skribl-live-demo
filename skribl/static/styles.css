@@ -6359,8 +6359,7 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
 .toolbar .tool-open,
 .toolbar .undo-btn,
 .flip-tools .tool-open,
-.flip-tools .t-btn,
-.flip-tools .color-current { position: relative; }
+.flip-tools .t-btn { position: relative; }
 /* No z-index here, and that is deliberate — it was tried and reverted.
    A tap-target sweep appeared to show these bands never firing (#undo measuring
    40px effective against a 40px box at 640, 36/36 at 390), which looks exactly
@@ -6376,8 +6375,7 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
 .toolbar .tool-open::after,
 .toolbar .undo-btn::after,
 .flip-tools .tool-open::after,
-.flip-tools .t-btn::after,
-.flip-tools .color-current::after {
+.flip-tools .t-btn::after {
   content: '';
   position: absolute;
   left: 0; right: 0;
@@ -6467,12 +6465,11 @@ body.stroking .toolbar, body.stroking .flip-tools {
 }
 .toolbar #penToolBtn.active .pen-swoosh,
 .flip-tools #penToolBtn.active .pen-swoosh { box-shadow: 0 0 0 2px var(--ui-hi); }
-.toolbar #undoBtn, .toolbar #mediaOpenBtn,
-.flip-tools #undo, .flip-tools #mediaOpenBtn { margin-left: 18px; }
-.toolbar #redoBtn, .flip-tools #redo { margin-left: 6px; }
+/* Pad's spacing. Flip's is in flip.css, keyed on its size class. */
+.toolbar #undoBtn, .toolbar #mediaOpenBtn { margin-left: 18px; }
+.toolbar #redoBtn { margin-left: 6px; }
 @media (max-width: 640px) {
-  .toolbar #undoBtn, .toolbar #mediaOpenBtn,
-  .flip-tools #undo, .flip-tools #mediaOpenBtn { margin-left: auto; }
+  .toolbar #undoBtn, .toolbar #mediaOpenBtn { margin-left: auto; }
 }
 /* The Media glyph is drawn at 40px in its 44px button: the owner's call ("it
    starts looking bad below 40"). --icon-size moves the status dot with it. */

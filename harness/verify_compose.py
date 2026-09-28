@@ -320,16 +320,22 @@ with sync_playwright() as sp:
     # copy of the path data would satisfy any grep written against the template
     # and drift the first time one of the two is redrawn — which is exactly how
     # the in-post player's markup ended up written three times.
-    tmpl = (ROOT / "skribl" / "templates" / "skribl" / "skribl_editor.html").read_text(
-        encoding="utf-8")
-    _copies = tmpl.count('d="M9 18V5l12-2v13"')
-    check("the music glyph's path data is written ONCE in the template",
-          _copies == 1,
+    # The macro has its own file since the tab strip became a partial both
+    # editors include (the dock redesign): the sheet's caller is in the editor
+    # template, the Music tab's in _skribl_media_tabs.html.
+    _T = ROOT / "skribl" / "templates" / "skribl"
+    _glyph = (_T / "_skribl_music_glyph.html").read_text(encoding="utf-8")
+    tmpl = (_T / "skribl_editor.html").read_text(encoding="utf-8")
+    _tabs = (_T / "_skribl_media_tabs.html").read_text(encoding="utf-8")
+    _copies = sum(t.count('d="M9 18V5l12-2v13"') for t in (_glyph, tmpl, _tabs))
+    check("the music glyph's path data is written ONCE, in its macro",
+          _copies == 1 and _glyph.count('d="M9 18V5l12-2v13"') == 1,
           f"{_copies} copies — a second one is a redraw waiting to disagree "
           f"with the first")
+    _calls = tmpl.count("{{ music_glyph() }}") + _tabs.count("{{ music_glyph() }}")
     check("...and both callers reach it through the macro",
-          tmpl.count("{{ music_glyph() }}") == 2,
-          f"{tmpl.count(chr(123)*2 + ' music_glyph() ' + chr(125)*2)} call(s)")
+          _calls == 2 and tmpl.count("{{ music_glyph() }}") == 1,
+          f"{_calls} call(s)")
 
     pad = b.new_page(viewport={"width": 1180, "height": 900}, color_scheme="dark")
     perrs = []

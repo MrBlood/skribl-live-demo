@@ -412,9 +412,11 @@ with sync_playwright() as p:
         who = f"{page}: the draw drawer"
         print(f"\n{who}")
         ctx, pg, errs = fresh(b, route)
-        opened = pg.evaluate("""() => { const b = document.querySelector('.tool-open[data-drawer="draw"], #drawBtn, [aria-controls="drawPanel"]');
-            if (b) b.click(); return !!b; }""")
-        pg.wait_for_timeout(600)
+        # The pen, tapped again, on both editors since the dock redesign: the
+        # colour button this used to look for is gone from both bars.
+        opened = pg.locator("#penToolBtn").count() == 1
+        if opened:
+            browsing.pad_drawer(pg, "draw", settle=600)
         is_open = pg.evaluate("() => !document.getElementById('drawPanel').hidden")
         check(f"{who} opens from its tool", opened and is_open)
         check(f"{who}: open, the page does not pull to refresh",

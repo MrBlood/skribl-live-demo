@@ -970,17 +970,8 @@ bindEl('colorGroup', 'click', (e) => {
   updateCurrentColorChip();
 });
 
-// Reflect the pen on the pen button: the swoosh is the stroke it will make
-// (lib/penswoosh.js wire(), shared with Flip). Kept under its old name --
-// every colour path already calls it.
-const paintPenSwoosh = (window.SkriblPenSwoosh && window.SkriblPenSwoosh.wire)
-  ? window.SkriblPenSwoosh.wire({
-      canvas: 'penSwoosh', button: 'penToolBtn', range: 'brushSizeRange', scope: '#drawPanel, #toolBar',
-      state: () => ({ brush: window.SkriblBrush ? window.SkriblBrush.name() : 'pen',
-                      size: size, color: color, opacity: strokeOpacity, bg: bgColor })
-    })
-  : () => {};
-function updateCurrentColorChip() { paintPenSwoosh(); }
+// The pen button shows the stroke it will make: editor_bar.js (editor-only).
+function updateCurrentColorChip() { if (typeof paintPenSwoosh === 'function') paintPenSwoosh(); }
 
 (function initBrushSize() {
   const range = document.getElementById('brushSizeRange');
@@ -1190,8 +1181,8 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
     // pen rather than a colour ring that no longer exists. Photo and Music share
     // the one Media button; the tab strip says which of the two is showing.
     draw:  { panel: 'drawPanel',  button: 'penToolBtn',   openClass: 'drawer-open' },
-    photo: { panel: 'photoPanel', button: 'mediaOpenBtn', openClass: 'open', aria: true, onOpen: () => syncMediaTabs('photo'), onClose: () => syncMediaTabs(null) },
-    music: { panel: 'musicPanel', button: 'mediaOpenBtn', openClass: 'open', aria: true, onOpen: () => syncMediaTabs('music'), onClose: () => syncMediaTabs(null) },
+    photo: { panel: 'photoPanel', button: 'mediaOpenBtn', openClass: 'open', aria: true, onOpen: () => _mediaSync('photo'), onClose: () => _mediaSync(null) },
+    music: { panel: 'musicPanel', button: 'mediaOpenBtn', openClass: 'open', aria: true, onOpen: () => _mediaSync('music'), onClose: () => _mediaSync(null) },
     // The tray joins the drawer set so it is mutually exclusive with draw,
     // photo and music — opening it closes them, and vice versa. Rebuilt on
     // every open; see lib/toolshelf.js.
@@ -1232,6 +1223,8 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
     else window.scrollTo({ top: 0, behavior: b });
   }
 }) : null;
+// The Media tab strip is editor_bar.js's; the hooks above reach it by name.
+function _mediaSync(n) { if (typeof syncMediaTabs === 'function') syncMediaTabs(n); }
 function openDrawer(name) {                      // name = 'draw'|'photo'|'music' or null
   if (_padDrawerCtl) _padDrawerCtl.open(name);
 }
@@ -1254,15 +1247,6 @@ if (toolBarEl) toolBarEl.addEventListener('click', (e) => {
 if (toolMoreBtn && _padDrawerCtl) {
   toolMoreBtn.addEventListener('click', (e) => { e.stopPropagation(); _padDrawerCtl.toggle('tools'); });
 }
-// THE MEDIA BUTTON and its Photo | Music tabs: lib/mediatabs.js, shared with
-// Flip. syncMediaTabs is what the drawer hooks above call; it is a function
-// declaration so those hooks can name it before the lib has been attached.
-// `var`, not const: a hook firing before this line must read null, not throw.
-var _mediaTabs = (window.SkriblMediaTabs && _padDrawerCtl) ? window.SkriblMediaTabs.attach({
-  ctl: _padDrawerCtl, button: 'mediaOpenBtn', strip: 'mediaTabs',
-  dot: 'mediaTabDot', sources: ['photoTabDot', 'musicTabDot']
-}) : null;
-function syncMediaTabs(name) { if (_mediaTabs) _mediaTabs.sync(name); }
 function hideToolTray() { if (_padDrawerCtl && _padDrawerCtl.isOpen('tools')) _padDrawerCtl.open(null); }
 document.addEventListener('click', (e) => {
   if (!toolTray || toolTray.hidden) return;

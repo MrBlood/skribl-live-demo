@@ -109,7 +109,7 @@ with sync_playwright() as p:
               _re["title"] is False and _re["tip"] == "a label written after load",
               f"{_re} — a title on an adopted control is the native tooltip back, for good")
 
-        # '#imageBtn' on Flip, NOT '#magnifyBtn'. This suite hovered a control
+        # A Flip bar control, NOT '#magnifyBtn'. This suite hovered a control
         # that does not exist on that surface and hung for 30s waiting for it.
         # v219 restored Magnify to PAD's toolbar at 641px+ ("a phone has pinch,
         # a mouse has nothing") and Flip's toolbar was reordered without one, so
@@ -120,7 +120,8 @@ with sync_playwright() as p:
         # by v219's own argument, and it is flagged rather than answered here —
         # a tooltip suite is not the place to decide it. This assertion is about
         # tooltips, so it hovers any real tooltip-bearing control on the surface.
-        pg.hover("#imageBtn" if surface == "Flip" else "#menuBtn")
+        # (#imageBtn went with the dock redesign; Media is Flip's bar control now.)
+        pg.hover("#mediaOpenBtn" if surface == "Flip" else "#menuBtn")
         pg.wait_for_timeout(700)
         check(f"{surface}: hovering shows a tooltip", pg.is_visible(".skribl-tip"))
         radius = pg.evaluate("() => { const t = document.querySelector('.skribl-tip');"

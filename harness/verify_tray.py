@@ -253,10 +253,7 @@ with sync_playwright() as p:
 
         page.click("#toolMoreBtn")
         page.wait_for_timeout(200)
-        if surface == "Pad":
-            browsing.pad_drawer(page, "draw", settle=0)     # the pen, tapped again
-        else:
-            page.click("#colorCurrent")
+        browsing.pad_drawer(page, "draw", settle=0)     # the pen, tapped again (both editors)
         page.wait_for_timeout(300)
         check(f"{surface}: opening another drawer closes the tray",
               page.evaluate(STATE, bar)["trayHidden"],

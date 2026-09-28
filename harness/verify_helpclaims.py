@@ -535,9 +535,7 @@ def probe_loop_move(b, nm, path):
     """Dragging inside the loop slides the whole window without resizing it."""
     ctx, pg, errs = fresh(b, path)
     _with_music(pg, path)
-    pg.evaluate("(flip) => { const panel = document.getElementById('musicPanel');"
-                " if (panel && !panel.hidden) return;"
-                " if (flip) document.getElementById('musicBtn').click(); else openDrawer('music'); }", path == "/flip")
+    browsing.pad_drawer(pg, "music", settle=0)      # Media, then Music (both editors)
     pg.wait_for_timeout(800)
     pg.evaluate("() => { trimStart = 2; trimEnd = 5; updateTrimUI(); }")
     pg.wait_for_timeout(150)
@@ -557,9 +555,7 @@ def probe_loop_move(b, nm, path):
 
 
 def probe_pen_swoosh(b, nm, path):
-    """Pad: the Pen button shows your ink; tap it again for its options; drag it sideways for size."""
-    if path == "/flip":
-        return True, "Pad only"
+    """The Pen button shows your ink; tap it again for its options; drag it sideways for size."""
     ctx, pg, errs = fresh(b, path, viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
     ink = """(hexc) => { const c = document.getElementById('penSwoosh'); if (!c || !c.width) return -1;
         const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
@@ -567,13 +563,16 @@ def probe_pen_swoosh(b, nm, path):
         for (let i = 0; i < d.length; i += 4)
           if (Math.abs(d[i] - t[0]) < 40 && Math.abs(d[i + 1] - t[1]) < 40 && Math.abs(d[i + 2] - t[2]) < 40) n++;
         return n; }"""
-    cur = "() => _padDrawerCtl.current()"
+    cur = browsing._PAD_CUR                      # either editor's drawer controller
     pink0 = pg.evaluate(ink, "#ff48b0")
     pg.click("#penToolBtn"); pg.wait_for_timeout(350)
     opened = pg.evaluate(cur)
     pg.click('#colorGroup .color-dot[data-color="#ff48b0"]'); pg.wait_for_timeout(250)
     pink1 = pg.evaluate(ink, "#ff48b0")
-    pg.click("#penToolBtn"); pg.wait_for_timeout(350)
+    # Flip closes the drawer on a pick (its long-standing behaviour); the Pad
+    # keeps it open, and the pen tapped again closes it.
+    if pg.evaluate(cur) == "draw":
+        pg.click("#penToolBtn"); pg.wait_for_timeout(350)
     closed = pg.evaluate(cur)
     bb = pg.locator("#penToolBtn").bounding_box(); x, y = bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2
     s0 = pg.evaluate("() => size")
@@ -586,11 +585,9 @@ def probe_pen_swoosh(b, nm, path):
 
 
 def probe_media_tabs(b, nm, path):
-    """Pad: Media opens Photo or Music behind the drawing; the tabs switch; Media again closes."""
-    if path == "/flip":
-        return True, "Pad only"
+    """Media opens Photo or Music behind the drawing; the tabs switch; Media again closes."""
     ctx, pg, errs = fresh(b, path, viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
-    cur = "() => _padDrawerCtl.current()"
+    cur = browsing._PAD_CUR
     vis = "(id) => { const e = document.getElementById(id); return !!e && e.offsetParent !== null; }"
     pg.click("#mediaOpenBtn"); pg.wait_for_timeout(350)
     a = (pg.evaluate(cur), pg.evaluate(vis, "photoUploadBtn"))

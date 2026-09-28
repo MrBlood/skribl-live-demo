@@ -34,7 +34,7 @@
      canvas keeps touch-action:none so drawing never scrolls or gesture-zooms. */
   .flip-app { touch-action: manipulation; }
   .flip-app button, .flip-app label, .flip-app input, .flip-app .seg, .flip-app .tool-open,
-  .flip-app .layer-toggle, .flip-app .color-current, .flip-app .tab-panel, .flip-app .strip,
+  .flip-app .layer-toggle, .flip-app .tab-panel, .flip-app .strip,
   .flip-app .t-btn, .flip-app .tool-btn, .flip-app .nudge-btn, .flip-app .loop-btn,
   .flip-app .zoom-mag-btn, .flip-app .slider-nudge-btn { touch-action: manipulation; }
   .flip-app .app { min-height: 100dvh; height: auto; }
@@ -240,35 +240,15 @@
      than one design. Measured after: 615 -> 555 wide, 68 -> 58 tall at 1280.
      Groups are made of margins now (below), not of .tool-sep lines. */
   .flip-tools { position: relative; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 7px; flex-wrap: wrap; }
-  .flip-tools .color-tool { margin-left: 8px; }
   .flip-tools #undo       { margin-left: 14px; }
-  .flip-tools #imageBtn   { margin-left: 14px; }
   /* Colors & brush = the Pad editor's exact Draw menu (Color palette + custom
      picker + eyedropper + recent + Brush size). It reuses the shared design-system
      classes (.tab-panel, .color-group, .color-dot, .color-custom-wrap,
      .eyedropper-btn, .recent-row, .brush-slider-line, .slider …) so it is visually
      identical to the Pad. Here it opens as a popout anchored above its trigger,
      which keeps Flip's flex layout from reflowing. Moving Brush size in here frees
-     the bottom row of its old size pill. */
-  .color-tool { position: relative; display: inline-flex; }
-  /* The white border and inset highlight predate the spectrum ring. They gave
-     the swatch its edge back when it was a plain disc; with the ring inside,
-     they stack into three concentric circles — white border, rainbow, white
-     core — where Pad has one clean ring. The ring IS the edge now. */
-  .color-current { width: 34px; height: 34px; border-radius: 50%; padding: 0; cursor: pointer;
-    border: 0; background: none;
-    display: grid; place-items: center;
-    transition: transform .12s var(--spring); }
-  /* Fill the button: 30px ring, 3px band, so it matches Pad's proportions at
-     Flip's slightly larger control size. */
-  .color-current .color-ring { width: 30px; height: 30px; }
-  .color-current .color-core { width: 24px; height: 24px; }
-  .color-current:hover { transform: scale(1.06); }
-  /* 34 visual -> a 44px box, centred (the swatch keeps its size on purpose). */
-  .color-current { position: relative; z-index: 1; }
-  .color-current::before { content: ''; position: absolute; left: 50%; top: 50%;
-    width: 44px; height: 44px; transform: translate(-50%, -50%); border-radius: 10px; }
-  .color-current[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--ui-line); }
+     the bottom row of its old size pill. (It opens from the pen now, tapped
+     again: the colour ring that used to open it went with the dock redesign.) */
   /* Drawers are normal in-flow blocks living in .flip-drawers, directly below the
      toolbar. Opening one doesn't move or cover the canvas — the page just grows and
      scrolls to reveal it, exactly like the Pad's docked tab panels. */
@@ -458,7 +438,8 @@
   .strip::-webkit-scrollbar-track { background: rgba(var(--glass-deep-rgb), .7); border-radius: 999px; margin: 0 10px; }
   .strip::-webkit-scrollbar-thumb { background: var(--ui-line); border-radius: 999px; border: 1px solid rgba(var(--glass-deep-rgb), .6); }
   .strip::-webkit-scrollbar-thumb:hover { background: var(--ui-line); }
-  /* image/music share the magnify button's chrome; highlight the same way when open */
+  /* Magnify's lit state. (Image and Music wore this chrome too until the dock
+     redesign folded them into Media, which lights its glyph instead.) */
   .flip-tools .magnify-tool.open { color: var(--ui-hi); background: rgba(124,92,255,0.16); box-shadow: inset 0 0 0 1px rgba(124,92,255,0.45); }
   /* The bottom tool row WRAPS on phones. `flex-wrap: nowrap; overflow-x: auto`
      keeps the row on one line by letting Music slide off the right edge, with
@@ -484,7 +465,6 @@
   :where(body[data-size="compact"]) .flip-tools .tool-open { --icon-size: 21px; }
   :where(body[data-size="compact"]) .flip-tools .tool-btn-label { display: none; }
   :where(body[data-size="compact"]) .flip-tools .tool-btn { padding: 6px 10px; }
-  :where(body[data-size="compact"]) .color-current { width: 34px; height: 34px; }
   /* 392, not 380, and the numbers are Pad's: this is the tier where Pad drops to
      34px, and the two rows are meant to step together. The old block set gap and
      padding here too and they NEVER APPLIED — the max-640 block further down
@@ -1335,9 +1315,7 @@
 /* Even rhythm, not grouping — see the matching note on .toolbar in styles.css.
    Grouping margins cost Flip the same 8px they cost Pad, and Flip has less to
    give: it wrapped from 369 down with them. */
-:where(body[data-size="compact"]) .flip-tools .color-tool { margin-left: 5px; }
 :where(body[data-size="compact"]) .flip-tools #undo { margin-left: 6px; }
-:where(body[data-size="compact"]) .flip-tools #imageBtn { margin-left: 6px; }
 /* Horizontal only. Vertical padding here would fight the row-height variable
    above and push the pill back off its neighbours' height. */
 :where(body[data-size="compact"]) .flip-tools #toolGroup .tool-btn { padding: 0 8px; }
@@ -1426,12 +1404,19 @@ body.stroking .addcol {
 .flip-tools {
   --seg-row-h: 54px;
   width: auto; max-width: none;
-  margin: 10px 12px; padding: 6px 12px; gap: 0;
+  margin: 10px 12px; padding: 6px 12px;
   flex-wrap: nowrap; justify-content: flex-start;
 }
-@media (min-width: 641px) {
-  .flip-tools { width: fit-content; margin: 10px auto; }
-}
+/* By the SIZE CLASS, not a width query: Flip answers "phone or not" once, on
+   body[data-size], and verify_sizeclass fails any width query at or above that
+   boundary. The gap is left to flip.css's own phone ladder above. */
+:where(body[data-size="regular"]) .flip-tools { width: fit-content; margin: 10px auto; }
+/* A phone: the Pad's 6px padding and a 4px tool gap, measured to fit one row at
+   320 with room to spare (12px over with 12px padding). Wrapping stays allowed
+   as the fallback Flip always had -- verify_layout asserts every control stays
+   reachable at the narrowest width, and a second row beats a clipped one. */
+:where(body[data-size="compact"]) .flip-tools { padding: 6px; flex-wrap: wrap; }
+:where(body[data-size="compact"]) .flip-tools .tool-group { gap: 4px; }
 .flip-tools .t-btn, .flip-tools .tool-open { width: 44px; height: 44px; --tap-grow: 0px; }
 .flip-tools #toolGroup .tool-btn { min-width: 44px; padding: 0 9px; justify-content: center; }
 .flip-tools #toolGroup .tool-btn svg { width: 26px; height: 26px; }
@@ -1439,9 +1424,8 @@ body.stroking .addcol {
 .flip-tools .tool-btn-label { display: none; }
 .flip-tools #undo, .flip-tools #mediaOpenBtn { margin-left: 18px; }
 .flip-tools #redo { margin-left: 6px; }
-@media (max-width: 640px) {
-  .flip-tools #undo, .flip-tools #mediaOpenBtn { margin-left: auto; }
-}
+:where(body[data-size="compact"]) .flip-tools #undo,
+:where(body[data-size="compact"]) .flip-tools #mediaOpenBtn { margin-left: auto; }
 
 /* THE PAGE STRIP IS A PANEL TOO. The header, the pages and the tools are three
    cards of one material, so the screen reads header, drawing, pages, tools.
@@ -1457,6 +1441,11 @@ body.stroking .strip-wrap {
   background: transparent; box-shadow: none;
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
+/* The card's 12px margins cost the page bar 24px of row, and at 360 the MOVE
+   bar's widest label then overflowed it by 5px -- a bar that is overflow-x:auto
+   scrolls, and takes Done off screen (verify_move). Inside the card the bar
+   needs less inset of its own: 6px, not 10, on a phone. */
+:where(body[data-size="compact"]) .strip-wrap .pagebar { padding-left: 6px; padding-right: 6px; }
 /* Flip's own menu popover wears the material like every other sheet. */
 .flip-menu {
   background: var(--glass-fill);

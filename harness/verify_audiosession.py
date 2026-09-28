@@ -263,15 +263,12 @@ with sync_playwright() as p:
     # The gap that let this be reported by a person: verify_audiostate drives
     # preview under a hung unlock and asserts the plumbing; nothing asserted
     # that sound comes out on the ordinary path.
-    for path, opener, label in [("/", None, "Pad"), ("/flip", "#musicBtn", "Flip")]:
+    for path, label in [("/", "Pad"), ("/flip", "Flip")]:
         pg = b.new_page(viewport={"width": 1280, "height": 900})
         pg.add_init_script(TAP)
         pg.goto(BASE + path, wait_until="load")
         pg.wait_for_timeout(1200)
-        if opener is None:
-            browsing.pad_drawer(pg, "music")        # Pad: Media, then its Music tab
-        else:
-            pg.evaluate(f"() => {{ const x = document.querySelector('{opener}'); if (x) x.click(); }}")
+        browsing.pad_drawer(pg, "music")        # Media, then its Music tab (both editors)
         pg.wait_for_timeout(400)
         pg.set_input_files("#musicInput",
                            {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})

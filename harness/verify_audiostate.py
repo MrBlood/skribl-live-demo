@@ -270,7 +270,7 @@ with sync_playwright() as browser_ctx:
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     pg.add_init_script(HANG)
     pg.goto(BASE + "/flip", wait_until="load"); pg.wait_for_timeout(700)
-    pg.evaluate("() => { const b = document.getElementById('musicBtn'); if (b) b.click(); }"); pg.wait_for_timeout(300)
+    browsing.pad_drawer(pg, "music"); pg.wait_for_timeout(300)
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD}); pg.wait_for_timeout(2500)
     pg.evaluate("() => { window.__ev = []; document.getElementById('previewLoopBtn').click(); }")
     pg.wait_for_timeout(1200)
@@ -372,10 +372,7 @@ HOLD_DECODE = """
 """
 
 def post_under_held_decode(pg, editor):
-    if editor == "pad":
-        browsing.pad_drawer(pg, "music"); pg.wait_for_timeout(300)
-    else:
-        pg.evaluate("() => { const b = document.getElementById('musicBtn'); if (b) b.click(); }"); pg.wait_for_timeout(300)
+    browsing.pad_drawer(pg, "music"); pg.wait_for_timeout(300)   # Media, then Music (both editors)
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
     pg.wait_for_timeout(2500)          # FileReader done; decode HELD
     held = pg.evaluate("() => ({busy: (typeof mediaBusy!=='undefined')?mediaBusy:0, buf: !!(typeof currentAudioBuffer!=='undefined' && currentAudioBuffer), rel: !!window.__releaseDecode})")
@@ -390,7 +387,7 @@ def post_under_held_decode(pg, editor):
         pg.fill("#postTitleInput", "f2 race")
         pg.click("#postSubmitBtn")
     else:
-        pg.evaluate("() => { const b = document.getElementById('musicBtn'); if (b) b.click(); }"); pg.wait_for_timeout(200)
+        browsing.pad_drawer_close(pg, settle=200)
         box = pg.evaluate("() => { const r = document.getElementById('pad').getBoundingClientRect(); return {x: r.x, y: r.y}; }")
         pg.mouse.move(box["x"] + 80, box["y"] + 80); pg.mouse.down(); pg.mouse.move(box["x"] + 300, box["y"] + 200, steps=10); pg.mouse.up()
         pg.wait_for_timeout(400)
