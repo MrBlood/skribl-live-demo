@@ -211,3 +211,54 @@ def submit_post(page, *, timeout_ms=20000, step_ms=200):
         pass
     return {"url": url, "status": seen["status"], "label": (state or {}).get("label", ""),
             "console": console[:3]}
+
+
+# ---------------------------------------------------------------- Pad drawers
+# THE PAD'S BAR HAS NO ONE-BUTTON-PER-DRAWER ANY MORE (owner's bottom-bar work).
+# The colour ring and the Image and Music buttons became: the pen, tapped again,
+# for the draw drawer; and one Media button with Photo | Music tabs. Every suite
+# that opened a drawer by clicking its old button reaches it through here, with
+# REAL clicks on the new controls, so the path a person takes is the path tested.
+#
+# Idempotent on purpose. The old buttons TOGGLED, and a suite that clicked one to
+# "open" a drawer an earlier section had left open closed it instead -- a failure
+# this repository has already paid for once (verify_parity's "element is not
+# visible" on a button that plainly existed). open and close are separate calls.
+
+# FLIP HAS THE SAME BAR NOW (the dock redesign): its colour ring and Image and
+# Music buttons went the same way, with the same ids -- #penToolBtn,
+# #mediaOpenBtn, #mediaTabPhoto, #mediaTabMusic -- so these two helpers drive
+# either editor. Only the controller's and the tool's variable names differ.
+_PAD_CUR = ("() => { const c = (typeof _padDrawerCtl !== 'undefined' && _padDrawerCtl)"
+            " || (typeof _flipDrawerCtl !== 'undefined' && _flipDrawerCtl); return c ? c.current() : null; }")
+_TOOL = "() => (typeof flipTool !== 'undefined') ? flipTool : tool"
+
+
+def pad_drawer(page, name, settle=350):
+    """Open drawer `name` ('draw' | 'photo' | 'music') through the bar, on Pad or Flip."""
+    cur = page.evaluate(_PAD_CUR)
+    if cur == name:
+        return
+    if name == "draw":
+        if page.evaluate(_TOOL) != "pen":
+            page.click("#penToolBtn"); page.wait_for_timeout(120)
+        if page.evaluate(_PAD_CUR) != "draw":
+            page.click("#penToolBtn")
+    else:
+        if page.evaluate(_PAD_CUR) not in ("photo", "music"):
+            page.click("#mediaOpenBtn"); page.wait_for_timeout(120)
+        if page.evaluate(_PAD_CUR) != name:
+            page.click("#mediaTabPhoto" if name == "photo" else "#mediaTabMusic")
+    page.wait_for_timeout(settle)
+
+
+def pad_drawer_close(page, settle=300):
+    """Close whichever drawer is open, through the control that opened it (Pad or Flip)."""
+    cur = page.evaluate(_PAD_CUR)
+    if cur == "draw":
+        page.click("#penToolBtn")
+    elif cur in ("photo", "music"):
+        page.click("#mediaOpenBtn")
+    else:
+        return
+    page.wait_for_timeout(settle)

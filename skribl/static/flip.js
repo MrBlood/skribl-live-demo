@@ -2219,7 +2219,7 @@ function moveLiquifyCursor(e){
    seven tools wearing one cursor, so the only way to know what a drag would do
    was to remember what you last tapped.
    
-   The badge is the tool's OWN icon, lifted from its shelf button rather than
+   The badge is the tool's OWN icon, asked of the tool registry rather than
    copied, so it cannot drift from the tray: there is one drawing of each tool
    and this is it. It rides beside the ring rather than replacing it, because
    the ring still says how big the brush is and that is a different question.
@@ -2232,9 +2232,9 @@ let _badgeFor = null;
 function syncToolBadge(){
   if(_badgeFor === flipTool) return;
   _badgeFor = flipTool;
-  const btn = document.getElementById(flipTool + 'ToolBtn');
-  const svg = btn && btn.querySelector('svg');
-  toolBadge.innerHTML = svg ? svg.outerHTML : '';
+  // The registry's one drawing of the tool (lib/toolshelf.js iconFor): the
+  // pen's shelf button is the swoosh canvas, so lifting its svg found none.
+  toolBadge.innerHTML = toolShelf ? toolShelf.iconFor(flipTool) : '';
 }
 function moveToolBadge(e){
   syncToolBadge();
@@ -3646,8 +3646,6 @@ if(window.SkriblScrub){
 }
 
 /* ---- tools: the Pad editor's Draw menu (colors + brush), wired to Flip state ---- */
-const colorCurrent=document.getElementById('colorCurrent');
-const colorCurrentCore=document.getElementById('colorCurrentCore');
 const drawPanel=document.getElementById('drawPanel');   // the shared .tab-panel drawer
 const colorGroup=document.getElementById('colorGroup');
 const recentRow=document.getElementById('recentRow');
@@ -3669,9 +3667,7 @@ function setColor(hex){
   if(!sel) return;
   hex = sel.hex;
   color=hex;
-  // The ring lives on .color-ring; writing the colour to the BUTTON would sit
-  // on top of it as an inline style and paint the spectrum out entirely.
-  if (colorCurrentCore) colorCurrentCore.style.background=hex;
+  paintPenSwoosh();   // the pen button shows the colour now (the ring is gone)
   // !! is load-bearing. The custom swatch has no data-color, so this expression
   // was `undefined && ...` -> undefined, and classList.toggle(name, undefined)
   // is treated as NO second argument — which TOGGLES instead of forcing off. So
@@ -3716,8 +3712,16 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
       moreBtn: toolMoreBtn,
       tray: toolTray,
       shelfMax: SHELF_MAX,
+      // The pen never leaves the shelf: its swoosh is the only way into colour
+      // and brush now that the colour ring is gone (see lib/toolshelf.js).
+      pinned: ['pen'],
       tools: [
-        { id: 'pen',    label: 'Pen',    btn: 'penToolBtn' },
+        // The pen's bar cell is the swoosh canvas, not a glyph, so the tray cannot
+        // copy its icon from the button the way it does for the others; it
+        // carries its own (the pen glyph the button wore before the swoosh).
+        { id: 'pen',    label: 'Pen',    btn: 'penToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+              + 'stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>' },
         { id: 'eraser', label: 'Eraser', btn: 'eraserToolBtn' },
         { id: 'shape',  label: 'Shape',  btn: 'shapeToolBtn' },
         { id: 'select', label: 'Select', btn: 'selectToolBtn',
@@ -4031,7 +4035,7 @@ function sampleColorAt(e){
 _initEyedropper();   // the lib binds the button's own click handler
 
 const photoPanel=document.getElementById('photoPanel'), musicPanel=document.getElementById('musicPanel');
-const imageBtn=document.getElementById('imageBtn'), musicBtn=document.getElementById('musicBtn');
+const mediaOpenBtn=document.getElementById('mediaOpenBtn');
 // The exclusive-open machine is lib/drawers.js (shared with Pad); Flip keeps
 // its hooks — eyedropper cancel on draw close, syncMediaUI on media open, the
 // two slider re-positioners — and its reveal. The old openPop/closePop/
@@ -4039,13 +4043,17 @@ const imageBtn=document.getElementById('imageBtn'), musicBtn=document.getElement
 // wrappers so every existing call site reads unchanged.
 const _flipDrawerCtl = skriblDrawers({
   panels: {
-    draw:  { panel: drawPanel, button: colorCurrent, aria: true,
+    // The pen opens the draw drawer now (tap it again), as on the Pad: the
+    // colour ring is gone. Photo and Music share the one Media button, and
+    // lib/mediatabs.js keeps the Photo | Music strip in step (syncMediaTabs).
+    draw:  { panel: drawPanel, button: document.getElementById('penToolBtn'), openClass: 'drawer-open',
              onOpen(){ requestAnimationFrame(positionSmoothSeg); },
              onClose(){ if(picking) setPicking(false); } },
-    photo: { panel: photoPanel, button: imageBtn, openClass: 'open', aria: true,
-             onOpen(){ syncMediaUI(); requestAnimationFrame(positionFitSlider); } },
-    music: { panel: musicPanel, button: musicBtn, openClass: 'open', aria: true,
-             onOpen(){ syncMediaUI(); } },
+    photo: { panel: photoPanel, button: mediaOpenBtn, openClass: 'open', aria: true,
+             onOpen(){ syncMediaTabs('photo'); syncMediaUI(); requestAnimationFrame(positionFitSlider); },
+             onClose(){ syncMediaTabs(null); } },
+    music: { panel: musicPanel, button: mediaOpenBtn, openClass: 'open', aria: true,
+             onOpen(){ syncMediaTabs('music'); syncMediaUI(); }, onClose(){ syncMediaTabs(null); } },
     // The tray joins the drawer set so it is mutually exclusive with colour,
     // photo and music — opening it closes them, and vice versa. Rebuilt on
     // every open; see toolShelf.buildTray().
@@ -4080,13 +4088,13 @@ if (window.SkriblDrawerDetent) {
 }
 function hidePhoto(){ if(_flipDrawerCtl.isOpen('photo')) _flipDrawerCtl.open(null); }
 function hideMusic(){ if(_flipDrawerCtl.isOpen('music')) _flipDrawerCtl.open(null); }
-colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('draw'); });
-// Guarded deliberately. These were briefly unguarded while image/music were
-// merged into one control, and the resulting TypeError at load killed every
-// line of flip.js after them. The buttons are back, but the guard stays: a
-// null check costs nothing and a missing element should never take down a file.
-if (imageBtn) imageBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('photo'); });
-if (musicBtn) musicBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('music'); });
+// Media and its Photo | Music tabs: lib/mediatabs.js, shared with the Pad.
+// `var` so the drawer hooks above read null, not a TDZ throw, if they fire first.
+var _mediaTabs = window.SkriblMediaTabs ? window.SkriblMediaTabs.attach({
+  ctl: _flipDrawerCtl, button: mediaOpenBtn, strip: 'mediaTabs',
+  dot: 'mediaTabDot', sources: ['photoTabDot', 'musicTabDot']
+}) : null;
+function syncMediaTabs(name){ if(_mediaTabs) _mediaTabs.sync(name); }
 if (toolMoreBtn) toolMoreBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('tools'); });
 function hideToolTray(){ if(_flipDrawerCtl.isOpen('tools')) _flipDrawerCtl.open(null); }
 document.addEventListener('click',e=>{ const t=e.target;
@@ -4099,9 +4107,9 @@ document.addEventListener('click',e=>{ const t=e.target;
   // chosen. Pad never hit this: its inputs sit INSIDE the drawer partial.
   // (v206) Ignore the file inputs here.
   if(t.closest('input[type=file]')) return;
-  if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#colorCurrent')) closePop();
-  if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#imageBtn')) hidePhoto();
-  if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#musicBtn')) hideMusic();
+  if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#penToolBtn') && !t.closest('#eraserToolBtn')) closePop();
+  if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaTabs')) hidePhoto();
+  if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaTabs')) hideMusic();
   if(toolTray && !toolTray.hidden && !t.closest('#toolTray') && !t.closest('#toolMoreBtn')) hideToolTray();
 });
 // Escape closes the tray. The drawers below the row are dismissed by tapping
@@ -4114,6 +4122,15 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') hideToolTray(
 if (toolShelf) toolShelf.sync();
 renderRecent(); setColor(color);
 const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal'), brushDot=document.getElementById('brushSizeDot');
+// The pen button is the stroke it will make (lib/penswoosh.js wire(), shared
+// with the Pad): repainted on any change in the draw drawer or the bar, and
+// dragged sideways it moves the size range above.
+var _swooshRepaint = (window.SkriblPenSwoosh && window.SkriblPenSwoosh.wire)
+  ? window.SkriblPenSwoosh.wire({ canvas:'penSwoosh', button:'penToolBtn', range:sizeEl, scope:'#drawPanel, .flip-tools',
+      state:()=>({ brush: window.SkriblBrush ? window.SkriblBrush.name() : 'pen',
+                   size: size, color: color, opacity: strokeOpacity, bg: bgColor }) })
+  : null;
+function paintPenSwoosh(){ if(_swooshRepaint) _swooshRepaint(); }
 function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%');
   sizeVal.textContent=sizeEl.value+'px';
   const d=Math.min(+sizeEl.value,26); if(brushDot){ brushDot.style.width=d+'px'; brushDot.style.height=d+'px'; } }
@@ -4136,7 +4153,7 @@ opacityFill();
 /* ---- background: painted into the canvas backdrop; the eraser reveals it ---- */
 const bgGroup=document.getElementById('bgGroup');
 const customBgInput=document.getElementById('customBgInput'), customBgBtn=document.getElementById('customBgBtn');
-function applyBg(){ pad.style.backgroundColor = bgColor; pad.style.backgroundImage = 'none'; render(); refreshAllThumbs(); }
+function applyBg(){ pad.style.backgroundColor = bgColor; pad.style.backgroundImage = 'none'; render(); refreshAllThumbs(); paintPenSwoosh(); }
 function setBg(hex, fromCustom){
   if(!/^#[0-9a-f]{6}$/i.test(hex||'')) return;
   bgColor=hex; applyBg();
@@ -9300,7 +9317,11 @@ document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener(
   // surface's setTool for a shelf click, so doing it in both places toggled it
   // twice and left it shut. It lives in the toolShelf config, which the tray
   // reaches too.
+  // TAP THE TOOL YOU ALREADY HOLD for its options, as on the Pad: the pen's
+  // colour and brush, and the eraser's width, both live in the draw drawer.
+  const again = flipTool === b.dataset.tool;
   setTool(b.dataset.tool);
+  if(again && (b.dataset.tool==='pen' || b.dataset.tool==='eraser')) _flipDrawerCtl.toggle('draw');
 }));
 loadStampShelf();
 bindEl('sbStamp', 'click', ()=>{ if(!playing) stampSaveSelection(); });

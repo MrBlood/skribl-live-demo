@@ -608,6 +608,40 @@ with sync_playwright() as p:
           _attr(naked3) == "light", "the embed would flash dark before going light")
     naked3.close()
 
+    print("\nTHEME — Loop Detail's waveform follows the theme (owner, light theme)")
+    # lib/loopwave.js painted the zoomed waveform's ground as a literal
+    # '#161a22' -- dark --surface-well -- in every theme, so in light mode Loop
+    # Detail was a black slab inside a light drawer. The canvas's own CSS
+    # background is the one owner of that colour now. Pixel-read, both editors:
+    # the ground is sampled at the canvas's left edge with the loop placed in
+    # the middle of a 6s track, so the sample is context, never the loop tint.
+    import io as _io, math as _math, struct as _struct, wave as _wave
+    _b = _io.BytesIO()
+    with _wave.open(_b, "wb") as _w:
+        _w.setnchannels(1); _w.setsampwidth(2); _w.setframerate(8000)
+        _w.writeframes(b"".join(_struct.pack("<h", int(6000 * _math.sin(i / 9))) for i in range(8000 * 6)))
+    _WAV = _b.getvalue()
+    for _nm, _route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        _q = browser.new_page(viewport={"width": 1000, "height": 1100})
+        _q.goto(BASE + _route + "?theme=light", wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        browsing.pad_drawer(_q, "music")
+        _q.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _WAV})
+        _q.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
+        _q.evaluate("() => { const t = document.getElementById('fineTuneToggle');"
+                    " if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
+        _q.wait_for_timeout(500)
+        _q.evaluate("() => { trimStart = 2.5; trimEnd = 3.5; updateTrimUI(); }")
+        _q.wait_for_timeout(500)
+        _px = _q.evaluate("""() => { const c = document.getElementById('zoomWaveformCanvas');
+            if (!c || !c.width) return null;
+            const d = c.getContext('2d').getImageData(1, 1, 1, 1).data;
+            return [d[0], d[1], d[2]]; }""")
+        check(f"{_nm}: in light mode, Loop Detail's ground is light, not a dark slab",
+              _px is not None and lum(_px) > 150,
+              f"ground pixel {_px} — lum {lum(_px) if _px else None}; a dark literal in lib/loopwave.js ignores the theme")
+        _q.close()
+
     print("\nTHEME — a browser that refuses storage still renders, and follows the OS")
     page2 = browser.new_page(viewport={"width": 1000, "height": 900}, color_scheme="light")
     page2.add_init_script("""

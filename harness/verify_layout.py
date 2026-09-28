@@ -992,7 +992,7 @@ with sync_playwright() as p:
         check(f"@{_w}: 'Take saved' shows clear of the header and the toolbar",
               _take.get("shown") and not _take["header"] and not _take["toolbar"], str(_take))
         _pg.wait_for_timeout(3200)
-        _pg.evaluate("() => document.getElementById('musicOpenBtn').click()"); _pg.wait_for_timeout(500)
+        browsing.pad_drawer(_pg, "music"); _pg.wait_for_timeout(500)
         _pg.set_input_files("#musicInput", {"name": "m.wav", "mimeType": "audio/wav", "buffer": _wav()})
         _loop = {"shown": False}
         for _ in range(40):
@@ -1016,13 +1016,12 @@ with sync_playwright() as p:
         // Post is disabled until a take exists, and disabled is pointer-events:
         // none, so the hit test looks through it; ask for the HEADER it sits in.
         return { scrollY: Math.round(scrollY), top: Math.round(r.top), hit: !!(el && p.closest('.header').contains(el)) }; }"""
-    for _route, _open in (("/", "colorOpenBtn"), ("/flip", "musicBtn")):
+    for _route, _open in (("/", "draw"), ("/flip", "music")):
         _ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
         _pg = _ctx.new_page()
         browsing.goto(_pg, BASE, _route)
         _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
-        _pg.evaluate("(id) => document.getElementById(id).click()", _open)
-        _pg.wait_for_timeout(1600)
+        browsing.pad_drawer(_pg, _open, settle=1600)    # through the bar's own controls
         _h = _pg.evaluate(HIT)
         check(f"{_route} @390: with a drawer open and the page scrolled, Post is still on screen",
               _h["scrollY"] > 40 and _h["hit"], str(_h))
@@ -1043,8 +1042,7 @@ with sync_playwright() as p:
         browsing.goto(_pg, BASE, "/flip")
         _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _rest = _pg.evaluate(STAGE)
-        _pg.evaluate("() => document.getElementById('musicBtn').click()")
-        _pg.wait_for_timeout(1200)
+        browsing.pad_drawer(_pg, "music", settle=1200)
         _open = _pg.evaluate(STAGE)
         check(f"/flip @{_vp['width']}: the stage keeps its height and the canvas stays inside it",
               _open["stageH"] == _rest["stageH"] and _open["padBottom"] <= _open["stageBottom"] + 1,
@@ -1121,6 +1119,37 @@ with sync_playwright() as p:
                 check(f"{_path} @{_w}: the desktop header keeps its glass",
                       _h["alpha"] < 1 and "blur" in _h["blur"], str(_h))
             _ctx.close()
+
+    # THE PAD'S BAR IS 44x44 ON A PHONE (owner's bottom-bar work). Six controls
+    # -- the pen swoosh, Eraser, Shape, Undo, Redo, Media -- each a full 44px in
+    # both directions, on ONE row, at the narrowest common Android width and
+    # the two iPhone widths. Measured as painted boxes, and each asked what is
+    # painted at its centre: a rect is not a paint (WORKING-AGREEMENTS).
+    BAR = """() => { const ids = ['penToolBtn','eraserToolBtn','shapeToolBtn','undoBtn','redoBtn','mediaOpenBtn'];
+        return ids.map(id => { const e = document.getElementById(id); if (!e) return { id, missing: true };
+            const r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+            const hit = document.elementFromPoint(x, y);
+            return { id, w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top),
+                     painted: !!hit && (hit === e || e.contains(hit)) }; }); }"""
+    for _w in (360, 393, 402):
+        _ctx = browser.new_context(viewport={"width": _w, "height": 844}, is_mobile=True, has_touch=True)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, "/skribl-pad")
+        _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        # Undo and Redo are disabled on an empty canvas, and a disabled control
+        # takes no hit test (see the note at .toolbar .undo-btn in styles.css).
+        _cb = _pg.locator("#canvas").bounding_box()
+        for _yy in (120, 220):     # two strokes, one undone: Undo AND Redo both live
+            _pg.mouse.move(_cb["x"] + 60, _cb["y"] + _yy); _pg.mouse.down()
+            _pg.mouse.move(_cb["x"] + 220, _cb["y"] + _yy + 40, steps=8); _pg.mouse.up()
+        _pg.click("#undoBtn"); _pg.wait_for_timeout(300)
+        _bar = _pg.evaluate(BAR)
+        _small = [c for c in _bar if c.get("missing") or c["w"] < 44 or c["h"] < 44 or not c["painted"]]
+        check(f"/skribl-pad @{_w}: every bar control is a painted 44x44 or larger",
+              not _small, str(_small or [f"{c['id']} {c['w']}x{c['h']}" for c in _bar]))
+        check(f"/skribl-pad @{_w}: ...and the six sit on one row",
+              len({c["top"] for c in _bar if not c.get("missing")}) == 1, str([(c["id"], c.get("top")) for c in _bar]))
+        _ctx.close()
 
     browser.close()
 

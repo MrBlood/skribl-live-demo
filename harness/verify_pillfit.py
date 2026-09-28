@@ -132,8 +132,8 @@ with sync_playwright() as p:
         # rule in styles.css fades the pill — warning included — and a control
         # nobody can see must not keep taking taps. Driven through the real
         # opener, so it fails if that rule is narrowed.
-        opened = page.evaluate("""() => { const b = document.getElementById('musicOpenBtn')
-                || document.getElementById('musicBtn'); if (!b) return null; b.click(); return true; }""")
+        opened = page.evaluate("""() => { const b = document.getElementById('mediaOpenBtn');
+                if (!b) return null; b.click(); return true; }""")
         page.wait_for_timeout(350)
         under = page.evaluate("""() => { const el = document.getElementById('autosaveStatus');
             const x = document.getElementById('autosaveStatusDismiss');

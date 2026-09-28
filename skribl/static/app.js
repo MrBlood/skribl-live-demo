@@ -936,7 +936,14 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
     // the first. Harmless on Pad today -- both routes here merely derive -- and
     // kept identical so the two surfaces cannot drift into one having the bug.
     if (btn.dataset.shelfBound) return;
+    // TAP THE TOOL YOU ALREADY HOLD for its options. The pen's are the draw
+    // drawer (colour, brush, size, opacity, smoothing); the eraser's width lives
+    // in the same drawer. Shape keeps its own picker, below.
+    const again = tool === btn.dataset.tool;
     setTool(btn.dataset.tool);
+    if (again && (btn.dataset.tool === 'pen' || btn.dataset.tool === 'eraser') && _padDrawerCtl) {
+      _padDrawerCtl.toggle('draw');
+    }
     // Shape opens its picker; every other tool closes it. Tapping Shape while
     // it is already the active tool re-opens the picker to switch kind — which
     // is the whole point of moving it out of the drawer.
@@ -963,12 +970,8 @@ bindEl('colorGroup', 'click', (e) => {
   updateCurrentColorChip();
 });
 
-// Reflect the active pen colour on the tool shelf's chip.
-function updateCurrentColorChip() {
-  const toolChip = document.getElementById('toolColorChip');
-  if (toolChip) toolChip.style.background = color;
-}
-updateCurrentColorChip();
+// The pen button shows the stroke it will make: editor_bar.js (editor-only).
+function updateCurrentColorChip() { if (typeof paintPenSwoosh === 'function') paintPenSwoosh(); }
 
 (function initBrushSize() {
   const range = document.getElementById('brushSizeRange');
@@ -1174,9 +1177,12 @@ function stopPicking() {
 // without lib/drawers.js (editor furniture), so the reference must not throw.
 const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
   panels: {
-    draw:  { panel: 'drawPanel',  button: 'colorOpenBtn',  openClass: 'open' },
-    photo: { panel: 'photoPanel', button: 'imageOpenBtn', openClass: 'open' },
-    music: { panel: 'musicPanel', button: 'musicOpenBtn', openClass: 'open' },
+    // The pen opens the draw drawer now (tap it again), so the drawer lights the
+    // pen rather than a colour ring that no longer exists. Photo and Music share
+    // the one Media button; the tab strip says which of the two is showing.
+    draw:  { panel: 'drawPanel',  button: 'penToolBtn',   openClass: 'drawer-open' },
+    photo: { panel: 'photoPanel', button: 'mediaOpenBtn', openClass: 'open', aria: true, onOpen: () => _mediaSync('photo'), onClose: () => _mediaSync(null) },
+    music: { panel: 'musicPanel', button: 'mediaOpenBtn', openClass: 'open', aria: true, onOpen: () => _mediaSync('music'), onClose: () => _mediaSync(null) },
     // The tray joins the drawer set so it is mutually exclusive with draw,
     // photo and music — opening it closes them, and vice versa. Rebuilt on
     // every open; see lib/toolshelf.js.
@@ -1217,6 +1223,8 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
     else window.scrollTo({ top: 0, behavior: b });
   }
 }) : null;
+// The Media tab strip is editor_bar.js's; the hooks above reach it by name.
+function _mediaSync(n) { if (typeof syncMediaTabs === 'function') syncMediaTabs(n); }
 function openDrawer(name) {                      // name = 'draw'|'photo'|'music' or null
   if (_padDrawerCtl) _padDrawerCtl.open(name);
 }
@@ -1230,7 +1238,9 @@ if (window.SkriblDrawerDetent) {
 const toolBarEl = document.getElementById('toolBar');
 if (toolBarEl) toolBarEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.tool-open');
-  if (btn && _padDrawerCtl) _padDrawerCtl.toggle(btn.dataset.drawer);
+  // Media has its own binding above (it fronts two drawers); toggling its
+  // missing data-drawer here would close what that binding just opened.
+  if (btn && btn.id !== 'mediaOpenBtn' && _padDrawerCtl) _padDrawerCtl.toggle(btn.dataset.drawer);
 });                                              // pen/eraser use their own setTool binding
 // The chevron is not a .tool-open, so it needs its own binding; the tray is
 // dismissed by tapping away from it or by Escape, like every other overlay.

@@ -54,7 +54,7 @@ check = make_check(results)
 # the claims cover both.
 CLAIMS = {
     # Drawing tools
-    "Pen": ["probe:pen"],
+    "Pen": ["probe:pen", "probe:pen_swoosh"],
     "Eraser": ["verify_pointerpad.py::the eraser ring follows the mouse DURING an erase",
                "verify_input.py::with the stabilizer ON, an eraser point lands where the pointer is"],
     "Shape": ["probe:shape"],
@@ -110,7 +110,7 @@ CLAIMS = {
     "Draw-on": ["verify_hold.py::a Draw-on page reaches its last stroke before the page turns"],
     "Flip it & scrub": ["probe:flip_play"],
     # Music
-    "Add a track": ["verify_amber.py::Pad GREEN once a track is attached"],
+    "Add a track": ["verify_amber.py::Pad GREEN once a track is attached", "probe:media_tabs"],
     "Loop markers": ["verify_tools.py::the drag is live AND has already moved the trim"],
     "Move the loop": ["probe:loop_move"],
     "Loop Detail": ["verify_parity.py::the fine-tune disclosure opens the loop detail on both"],
@@ -120,7 +120,7 @@ CLAIMS = {
     "Test Seam": ["verify_audio.py::no click at the seam"],
     "Nudge": ["verify_parity.py::a nudge moves the trim edge by the same amount on both"],
     # Background image
-    "Add an image": ["verify_parity.py::loading a photo marks the tab on both"],
+    "Add an image": ["verify_parity.py::loading a photo marks the tab on both", "probe:media_tabs"],
     "Fill / Fit / Stretch (image framing)": ["verify_parity.py::both surfaces place a {} photo identically"],
     "Reposition": ["verify_pointerpad.py::a mouse drags the photo in reposition mode"],
     "Zoom": ["probe:photo_adjust"],
@@ -535,9 +535,7 @@ def probe_loop_move(b, nm, path):
     """Dragging inside the loop slides the whole window without resizing it."""
     ctx, pg, errs = fresh(b, path)
     _with_music(pg, path)
-    pg.evaluate("(flip) => { const panel = document.getElementById('musicPanel');"
-                " if (panel && !panel.hidden) return;"
-                " if (flip) document.getElementById('musicBtn').click(); else openDrawer('music'); }", path == "/flip")
+    browsing.pad_drawer(pg, "music", settle=0)      # Media, then Music (both editors)
     pg.wait_for_timeout(800)
     pg.evaluate("() => { trimStart = 2; trimEnd = 5; updateTrimUI(); }")
     pg.wait_for_timeout(150)
@@ -556,7 +554,54 @@ def probe_loop_move(b, nm, path):
     return slid and same and not errs, f"loop {before['s']:.2f}-{before['e']:.2f} -> {after['s']:.2f}-{after['e']:.2f}"
 
 
-PROBES = {"pen": probe_pen, "shape": probe_shape, "brush_style": probe_brush_style, "grid": probe_grid,
+def probe_pen_swoosh(b, nm, path):
+    """The Pen button shows your ink; tap it again for its options; drag it sideways for size."""
+    ctx, pg, errs = fresh(b, path, viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
+    ink = """(hexc) => { const c = document.getElementById('penSwoosh'); if (!c || !c.width) return -1;
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        const t = [1, 3, 5].map(i => parseInt(hexc.substr(i, 2), 16)); let n = 0;
+        for (let i = 0; i < d.length; i += 4)
+          if (Math.abs(d[i] - t[0]) < 40 && Math.abs(d[i + 1] - t[1]) < 40 && Math.abs(d[i + 2] - t[2]) < 40) n++;
+        return n; }"""
+    cur = browsing._PAD_CUR                      # either editor's drawer controller
+    pink0 = pg.evaluate(ink, "#ff48b0")
+    pg.click("#penToolBtn"); pg.wait_for_timeout(350)
+    opened = pg.evaluate(cur)
+    pg.click('#colorGroup .color-dot[data-color="#ff48b0"]'); pg.wait_for_timeout(250)
+    pink1 = pg.evaluate(ink, "#ff48b0")
+    # Flip closes the drawer on a pick (its long-standing behaviour); the Pad
+    # keeps it open, and the pen tapped again closes it.
+    if pg.evaluate(cur) == "draw":
+        pg.click("#penToolBtn"); pg.wait_for_timeout(350)
+    closed = pg.evaluate(cur)
+    bb = pg.locator("#penToolBtn").bounding_box(); x, y = bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2
+    s0 = pg.evaluate("() => size")
+    pg.mouse.move(x, y); pg.mouse.down(); pg.mouse.move(x + 60, y, steps=10); pg.mouse.up(); pg.wait_for_timeout(300)
+    s1, after = pg.evaluate("() => size"), pg.evaluate(cur)
+    ctx.close()
+    ok = pink0 == 0 and pink1 > 20 and opened == "draw" and closed is None and s1 == s0 + 10 and after is None and not errs
+    return ok, (f"pink in the swoosh {pink0} -> {pink1} px; pen again opened {opened!r}, again {closed!r}; "
+                f"drag +60px: size {s0} -> {s1}, drawer {after!r}")
+
+
+def probe_media_tabs(b, nm, path):
+    """Media opens Photo or Music behind the drawing; the tabs switch; Media again closes."""
+    ctx, pg, errs = fresh(b, path, viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
+    cur = browsing._PAD_CUR
+    vis = "(id) => { const e = document.getElementById(id); return !!e && e.offsetParent !== null; }"
+    pg.click("#mediaOpenBtn"); pg.wait_for_timeout(350)
+    a = (pg.evaluate(cur), pg.evaluate(vis, "photoUploadBtn"))
+    pg.click("#mediaTabMusic"); pg.wait_for_timeout(350)
+    m = (pg.evaluate(cur), pg.evaluate(vis, "musicUploadBtn"),
+         pg.evaluate("() => document.getElementById('mediaTabMusic').getAttribute('aria-selected')"))
+    pg.click("#mediaOpenBtn"); pg.wait_for_timeout(350)
+    c = (pg.evaluate(cur), pg.evaluate(vis, "mediaTabs"))
+    ctx.close()
+    ok = a == ("photo", True) and m == ("music", True, "true") and c == (None, False) and not errs
+    return ok, f"Media -> {a}; Music tab -> {m}; Media again -> {c}"
+
+
+PROBES = {"pen": probe_pen, "pen_swoosh": probe_pen_swoosh, "media_tabs": probe_media_tabs, "shape": probe_shape, "brush_style": probe_brush_style, "grid": probe_grid,
           "background": probe_background, "which_tool": probe_which_tool, "select": probe_select,
           "magnifier": probe_magnifier, "dock": probe_dock, "takes": probe_takes,
           "flip_play": probe_flip_play, "photo_adjust": probe_photo_adjust, "loop_window": probe_loop_window,

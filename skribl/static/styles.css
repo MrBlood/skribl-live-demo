@@ -150,6 +150,24 @@
      everything and reads as an edge. */
   --header-rim: rgba(0, 0, 0, 0.55);
 
+  /* ONE MATERIAL (owner, the bar redesign). The header's frosted card is now
+     the material for every floating panel -- the header, the bottom bar,
+     Flip's page strip, and each drawer, picker and sheet -- so the screen
+     reads as one family of panels around the drawing. The fill and blur are
+     the header's own values; the drop is softer than the header's old 0.42,
+     which read as a slab once three panels wore it. */
+  --glass-fill: rgba(var(--surface-well-2-rgb), 0.78);
+  --glass-drop: rgba(0, 0, 0, 0.30);
+  --glass: 0 0 0 1px var(--header-rim), 0 6px 20px var(--glass-drop);
+  /* A SELECTED OPTION IS A TINT, AN ACTION IS SOLID. The same purple used to
+     mean both, so a drawer carried five or six purple slabs and nothing said
+     which one did something. Segments (Pen / Background, Off / Low / High,
+     Fill / Fit, Line / Rect, ...) now wear the tint the bar's selected tool
+     wears; Preview Loop, Post, Done and the switches keep the fill. The ink is
+     lighter than --ui-hi in dark mode, where #7c5cff on the tint is too close. */
+  --seg-on-fill: rgba(124, 92, 255, 0.22);
+  --seg-on-ink: #b9a8ff;
+
   /* The letterpress relief on the signature (SINK, not pop,
      and asked for the old purple halo to go). A bright lower edge and a
      dark upper shade press the strokes INTO the card — light from above,
@@ -363,10 +381,10 @@ body {
      Shared by Pad and Flip (flip.css only adjusts padding and gap) and
      inherited by the player through the derived sheet, so the three surfaces
      stay one design. */
-  background: rgba(var(--surface-well-2-rgb), 0.78);
+  background: var(--glass-fill);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 0 0 1px var(--header-rim), 0 8px 26px rgba(0, 0, 0, 0.42);
+  box-shadow: var(--glass);
   flex-wrap: nowrap;
   gap: 10px;
   position: relative;
@@ -608,11 +626,12 @@ body {
    dark text on solid yellow, where the same shadow smeared the glyph edges and
    read as blurry — most visibly on "Re-add". It is white on purple now (v317)
    and stays out of the list; the other three are white-on-colour and benefit. */
-.restore-btn.confirm,
-.tool-btn.active,
-.photo-fit-btn.active {
+.restore-btn.confirm {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
+/* .tool-btn.active and .photo-fit-btn.active left this list with the bar
+   redesign: a selected tool or fit option is now tinted ink on a soft tint,
+   not white on purple, and the dark shadow smeared it (see --seg-on-fill). */
 
 .rec-indicator[hidden] { display: none; }
 
@@ -888,11 +907,8 @@ body.stroking .zoom-hud { pointer-events: none; }
    transition, so the delay applies only on the way out of view; the return
    uses the base transition and is immediate. prefers-reduced-motion zeroes
    the transitions globally, leaving an instant, honest swap. */
-.toolbar { transition: opacity 0.25s ease; }
-body.stroking .toolbar {
-  opacity: 0.1;
-  transition: opacity 0.3s ease 0.12s;
-}
+/* The bottom bar recedes like the header below -- by its contents, since it
+   became frosted glass too. See THE DOCK. */
 /* THE HEADER RECEDES BY ITS CONTENTS, NEVER BY ITS OWN OPACITY (v315). The
    header is frosted glass (backdrop-filter), and WebKit -- every browser on
    an iPhone -- can fail to repaint a backdrop-filter element after its
@@ -1251,9 +1267,8 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
    Groups are made of air. The row reads: what the mark looks like (the tool
    pill and the colour ring), what happened to the drawing (undo, redo), and what
    is on the page or how you are looking at it (image, music, magnify). */
-.toolbar #colorOpenBtn { margin-left: 8px; }
 .toolbar #undoBtn      { margin-left: 14px; }
-.toolbar #imageOpenBtn { margin-left: 14px; }
+.toolbar #mediaOpenBtn { margin-left: 14px; }
 .tool-open {
   width: 44px; height: 44px; border-radius: 12px; padding: 0;
   display: flex; align-items: center; justify-content: center;
@@ -1273,9 +1288,6 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
    toolbar and across Pad + Flip (Flip's image/music already use these exact values
    via .flip-tools .magnify-tool.open). */
 .tool-open.open { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
-/* Sizing now comes from .color-ring > .tool-chip below. The old outer white
-   ring is gone: it sat between the core and the spectrum and read as a halo. */
-.tool-chip { border-radius: 50%; }
 /* The status dot is anchored to the ICON, not to the button, and that is the
    whole point of the calc(). `top: 6px; right: 6px` measured from the button's
    edges -- and the button is 44px wide on desktop but 34px on a phone while the
@@ -5947,9 +5959,8 @@ body.playing .flip-grid { display: none; }
      block above says in as many words that 360 must stay on one line, being a
      very common Android width. 5/6/6 lands at 326, which is the exact figure
      that comment records. Widen these and 360-class phones get a second row. */
-  .toolbar #colorOpenBtn { margin-left: 5px; }
-  .toolbar #undoBtn      { margin-left: 6px; }
-  .toolbar #imageOpenBtn { margin-left: 6px; }
+  .toolbar #undoBtn      { margin-left: 10px; }
+  .toolbar #mediaOpenBtn { margin-left: 10px; }
 }
 
 /* ---------- the tool row holds FOUR tools ----------
@@ -5975,46 +5986,9 @@ body.playing .flip-grid { display: none; }
    already zooms on touch and beginPinch() reveals the zoom HUD, so Fit stays
    reachable without the button. */
 
-/* ===================================================================
-   Colour control -- spectrum ring, current-colour core
-   ===================================================================
-   A plain disc says WHAT colour you are on and nothing says it is tappable; a
-   bare wheel says the opposite. Ring is the affordance, core is the state, and
-   the core keeps most of the pixels because that is what the disc was doing
-   right.
-
-   THE RING IS ON THE WRAPPER, DELIBERATELY. app.js and flip.js both set the
-   colour as an INLINE background, and an inline style beats any rule here. Put
-   the gradient on the element the JS writes to and the FIRST colour change
-   erases it -- while initial render still looks correct, so an assertion that
-   checks load-time would never see it. Assert after a colour change. */
-.color-ring {
-  position: relative;
-  width: 26px; height: 26px;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  flex: none;
-  /* A PRE-RENDERED IMAGE, not a live gradient. Measured A/B on device: the full
-     v215 build with a live spectrum gradient here was laggy to draw on, and the
-     identical build with a flat colour was smooth. .toolbar carries
-     backdrop-filter: blur(14px), so that layer recomposites every frame the
-     canvas behind it changes; a live gradient made each recomposite dear enough
-     to drop stroke points. A static PNG cannot be re-rasterised.
-     26px at 3x, 2.7KB, transparent core so the chip shows through. */
-  background-image: url("data:image/png;base64,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");
-  background-size: 100% 100%;
-}
-/* 26 outer, 20 inner = a 3px band. At 4px it competes with the purple pen for
-   the eye, and the pen has to stay the loudest thing in the bar. */
-.color-ring > .tool-chip,
-.color-ring > .color-core {
-  display: block;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  /* Load-bearing: without it a white stroke colour bleeds into the ring and
-     the control reads as one pale blob. */
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .38);
-}
+/* The colour control -- a spectrum ring round the current colour -- is gone
+   from both editors: the pen swoosh shows the colour now (the dock redesign),
+   and its ring, core and pre-rendered spectrum image left with it. */
 
 
 /* An explicit display defeats [hidden] — hit three times in this codebase, so
@@ -6315,9 +6289,8 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
   .toolbar { gap: 3px; padding: 6px; }
   .toolbar .undo-btn { height: 36px; --tap-grow: 4px; }   /* 36 visual -> 44 tap */
   /* Same 5/6/6 rhythm as the tier above; see the note there. */
-  .toolbar #colorOpenBtn { margin-left: 5px; }
-  .toolbar #undoBtn      { margin-left: 6px; }
-  .toolbar #imageOpenBtn { margin-left: 6px; }
+  .toolbar #undoBtn      { margin-left: 10px; }
+  .toolbar #mediaOpenBtn { margin-left: 10px; }
 }
 
 /* ---------- Hit regions, separated from glyph size ----------
@@ -6346,8 +6319,7 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
 .toolbar .tool-open,
 .toolbar .undo-btn,
 .flip-tools .tool-open,
-.flip-tools .t-btn,
-.flip-tools .color-current { position: relative; }
+.flip-tools .t-btn { position: relative; }
 /* No z-index here, and that is deliberate — it was tried and reverted.
    A tap-target sweep appeared to show these bands never firing (#undo measuring
    40px effective against a 40px box at 640, 36/36 at 390), which looks exactly
@@ -6363,14 +6335,180 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
 .toolbar .tool-open::after,
 .toolbar .undo-btn::after,
 .flip-tools .tool-open::after,
-.flip-tools .t-btn::after,
-.flip-tools .color-current::after {
+.flip-tools .t-btn::after {
   content: '';
   position: absolute;
   left: 0; right: 0;
   top: 50%; height: 44px;
   transform: translateY(-50%);
 }
+
+/* ---------- THE PAD ROW IS 44x44 (owner's bottom-bar work) ----------
+   The note above records that a full 44x44 "needs one fewer control in the
+   phone row: a product decision". It has been made. The colour ring is gone
+   (the pen swoosh shows the colour, and tapping the pen again opens the
+   drawer), and Image and Music are one Media button: eight controls became
+   six, and six fit at 44px with room between the groups -- measured 357px of
+   row at 393 against 369 available, and 333 at 360 against 336 with the
+   narrower gaps set in the phone tiers.
+
+   The groups are 54px tall so the buttons inside them are 44px too, not a
+   34px pill with an invisible band. Scoped to .toolbar: Flip's row is its own
+   decision, still sized in flip.css. */
+.toolbar { --seg-row-h: 54px; }
+.toolbar .tool-open,
+.toolbar .undo-btn { width: 44px; height: 44px; }
+.toolbar #toolGroup .tool-btn { min-width: 44px; justify-content: center; }
+/* ---------- THE DOCK (owner's bar redesign, "option 3 refined") ----------
+   Both editors' bottom bars are one floating panel in the header's own
+   material (--glass-fill / --glass, see :root), so the drawing sits between
+   two cards of the same kind. Chosen over four other directions on mockups of
+   every tool, dark and light; the critique that shaped it, in order:
+
+   - SPACE, NOT LINES. Groups -- the tools, undo/redo, Media -- are made of
+     air. On a phone the row is as wide as the header and the gaps are
+     auto margins, so the three groups sit left, centre and right; wider, the
+     dock hugs its content and the gaps are fixed.
+   - NO BOX IN A BOX. The tool pill's own fill and edge are gone; the dock is
+     the container. The selected tool wears a soft tint, and the pen -- whose
+     swoosh chip is already a box -- wears a purple ring on the chip itself
+     instead of sitting in a second one.
+   - ONE ICON WEIGHT. Tool, undo and redo glyphs are 26px; Media is 40px (the
+     owner's floor) drawn at the same rendered line weight, not scaled up.
+
+   44x44 holds for every control (verify_layout). */
+.toolbar, .flip-tools {
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--glass);
+  border: 0;
+  border-radius: 16px;
+  --seg-row-h: 54px;
+}
+/* THE DOCK RECEDES BY ITS CONTENTS, NEVER BY ITS OWN OPACITY -- the header's
+   v315 rule, for the same reason: WebKit can fail to repaint a backdrop-filter
+   element after its opacity animates, and the bar used to fade whole. */
+.toolbar > *, .flip-tools > * { transition: opacity 0.25s ease; }
+body.stroking .toolbar > *, body.stroking .flip-tools > * {
+  opacity: 0.1;
+  transition: opacity 0.3s ease 0.12s;
+}
+body.stroking .toolbar, body.stroking .flip-tools {
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.toolbar .tool-group, .flip-tools .tool-group {
+  background: none; border-color: transparent; box-shadow: none; gap: 6px;
+}
+.toolbar .tool-slider, .flip-tools .tool-slider {
+  background: var(--seg-on-fill); box-shadow: none; border-radius: 12px;
+}
+.toolbar #toolGroup .tool-btn.active,
+.flip-tools #toolGroup .tool-btn.active { color: var(--ui-hi); }
+.toolbar #toolGroup .tool-btn svg,
+.flip-tools #toolGroup .tool-btn svg,
+.toolbar .undo-btn svg, .flip-tools .t-btn svg { width: 26px; height: 26px; }
+.toolbar .undo-btn, .flip-tools .t-btn {
+  width: 44px; height: 44px; background: none; border-color: transparent; box-shadow: none;
+}
+/* The pen: its chip IS its highlight. No tint behind it, a ring on it. */
+.toolbar #toolGroup:has(#penToolBtn.active) .tool-slider,
+.flip-tools #toolGroup:has(#penToolBtn.active) .tool-slider { opacity: 0; }
+.toolbar #penToolBtn, .flip-tools #penToolBtn { padding: 0; }
+.toolbar .pen-swoosh, .flip-tools .pen-swoosh {
+  display: block; width: 50px; height: 36px; border-radius: 11px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+.toolbar #penToolBtn.active .pen-swoosh,
+.flip-tools #penToolBtn.active .pen-swoosh { box-shadow: 0 0 0 2px var(--ui-hi); }
+/* Pad's spacing. Flip's is in flip.css, keyed on its size class. */
+.toolbar #undoBtn, .toolbar #mediaOpenBtn { margin-left: 18px; }
+.toolbar #redoBtn { margin-left: 6px; }
+@media (max-width: 640px) {
+  .toolbar #undoBtn, .toolbar #mediaOpenBtn { margin-left: auto; }
+}
+/* The Media glyph is drawn at 40px in its 44px button: the owner's call ("it
+   starts looking bad below 40"). --icon-size moves the status dot with it. */
+.toolbar #mediaOpenBtn, .flip-tools #mediaOpenBtn { --icon-size: 40px; width: 44px; height: 44px; }
+.toolbar #mediaOpenBtn .media-glyph,
+.flip-tools #mediaOpenBtn .media-glyph { width: 40px; height: 40px; }
+/* And it is not drawn in a tile: the 40px glyph fills its 44px button, so a
+   lit square read as a box crammed round it ("just turn it purple when
+   pressed"). The hit area is still the full 44x44 -- only the paint is gone. */
+.toolbar #mediaOpenBtn, .toolbar #mediaOpenBtn:hover, .toolbar #mediaOpenBtn.open,
+.flip-tools #mediaOpenBtn, .flip-tools #mediaOpenBtn:hover, .flip-tools #mediaOpenBtn.open {
+  background: none; box-shadow: none;
+}
+.toolbar #mediaOpenBtn.open, .toolbar #mediaOpenBtn:active,
+.flip-tools #mediaOpenBtn.open, .flip-tools #mediaOpenBtn:active { color: var(--ui-hi); }
+/* THE DOT SITS ON THE FRAME'S CORNER. The generic rule puts it at the icon
+   box's corner (0.4 of --icon-size out); the frame of this glyph stops short
+   of the box, so the dot floated off it. The owner asked for it "nestled a
+   little more down and in", then for half of the first try: centre 15.5px
+   right of and 14.25px above the glyph's centre, on the frame's rounded
+   corner. Its ring is the dock's colour, the ground behind both. */
+.toolbar #mediaOpenBtn .tab-dot, .flip-tools #mediaOpenBtn .tab-dot {
+  left: calc(50% + 15.5px - 3.5px);
+  top: calc(50% - 14.25px - 3.5px);
+  border-color: rgb(var(--surface-well-2-rgb));
+}
+/* ---------- EVERY DRAWER, PICKER AND SHEET IN THE DOCK'S MATERIAL ----------
+   The owner's second look at the dock: "make the drawers match the frosted
+   bar too". Pen, Photo and Music drawers, the Photo | Music tabs, the shape
+   picker, Tune and the menu sheets take --glass-fill and --glass, and lose the
+   hairline border each carried -- the canvas keeps the only outline on the
+   screen (the header's rule). Layout, padding and radii are untouched. */
+.tab-panel, .media-tabs, .shape-pop, .menu-sheet {
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 0;
+  box-shadow: var(--glass);
+}
+.tune-shell { background: var(--glass-fill); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.tune-shell.open { border: 0; box-shadow: var(--glass); }
+/* The picker's arrow is a solid triangle; the glass's colour over the page. */
+.shape-pop::after { border-top-color: rgb(var(--surface-well-2-rgb)); }
+
+/* A SELECTED OPTION IS A TINT (see --seg-on-fill in :root). Every segmented
+   control in both editors draws its selection with one of these two sliding
+   thumbs, so these two rules are the whole change; the labels riding on them
+   move from white to the tint's ink. Actions (Preview Loop, Done, Post) and
+   the on/off switches keep their solid fill: they DO something, or ARE on. */
+.seg-slider, .photo-fit-slider { background: var(--seg-on-fill); box-shadow: none; }
+.seg button.on, .smooth-btn.active, .photo-fit-btn.active,
+.gif-seg-btn.active, .gif-seg-btn[aria-pressed="true"] { color: var(--seg-on-ink); }
+
+/* The size readout while the pen is dragged sideways (lib/penswoosh.js). */
+.swoosh-readout {
+  position: fixed; z-index: 60; transform: translate(-50%, calc(-100% + 6px));
+  padding: 7px 12px; border-radius: 12px; pointer-events: none;
+  background: var(--surface-sheet); color: var(--text-strong);
+  box-shadow: 0 0 0 1px var(--hairline), 0 10px 26px rgba(0, 0, 0, 0.35);
+  font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums;
+  opacity: 0; transition: opacity .15s ease, transform .15s ease;
+}
+.swoosh-readout.on { opacity: 1; transform: translate(-50%, -100%); }
+
+/* The Media tabs: Photo | Music, above whichever of the two drawers is open. */
+.media-tabs {
+  display: flex; gap: 4px; padding: 4px; margin: 0 auto 8px;
+  width: min(100% - 24px, 520px); box-sizing: border-box;
+  border-radius: 16px;
+}
+.media-tabs[hidden] { display: none; }
+.media-tab {
+  flex: 1; min-height: 44px; border: 0; border-radius: 11px; background: transparent;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: inherit; font-size: 14px; font-weight: 650; color: var(--text-tool); cursor: pointer; position: relative;
+}
+.media-tab svg { width: 18px; height: 18px; }
+.media-tab[aria-selected="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); }
+.media-tab .tab-dot { position: static; margin-left: 2px; }
 
 /* Tool group row height — the shared mechanism for BOTH surfaces.
    ---------------------------------------------------------------------------
@@ -6526,11 +6664,12 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
   content: ""; position: absolute; inset: calc(-1 * var(--tap-grow, 0px));
   background: transparent; border-radius: inherit;
 }
-@media (min-width: 393px) and (max-width: 640px) {
-  .toolbar .tool-open { height: 36px; --tap-grow: 4px; }   /* 36 visual -> 44 tap */
-}
-@media (max-width: 392px) {
-  .toolbar .tool-open { height: 34px; --tap-grow: 5px; }   /* 34 visual -> 44 tap */
+/* The Pad's row used to paint 36x44 and 34x44 here, squared to 36 and 34 with
+   a tap band making up the rest. It is 44x44 at every tier now (see "THE PAD
+   ROW IS 44x44"), so a lit opener is already square at full size: nothing to
+   grow. Flip's openers keep their own pairs in flip.css. */
+@media (max-width: 640px) {
+  .toolbar .tool-open { height: 44px; --tap-grow: 0px; }
 }
 
 /* ---------- the merged Play pill is 36 tall like its neighbours ------------
@@ -6728,6 +6867,8 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
   --brand-ink:               #4a33c2;
   /* Light flips the rim: a near-white edge, light catching the card. */
   --header-rim:              rgba(255, 255, 255, 0.9);
+  --glass-drop:              rgba(20, 24, 40, 0.10);
+  --seg-on-ink:              #5b3be6;
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
