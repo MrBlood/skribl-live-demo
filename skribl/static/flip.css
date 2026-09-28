@@ -1411,16 +1411,17 @@ body.stroking .addcol {
    body[data-size], and verify_sizeclass fails any width query at or above that
    boundary. The gap is left to flip.css's own phone ladder above. */
 :where(body[data-size="regular"]) .flip-tools { width: fit-content; margin: 10px auto; }
-/* A phone: the Pad's 6px padding and a 4px tool gap, measured to fit one row at
-   320 with room to spare (12px over with 12px padding). Wrapping stays allowed
-   as the fallback Flip always had -- verify_layout asserts every control stays
-   reachable at the narrowest width, and a second row beats a clipped one. */
+/* A phone: the Pad's 6px padding and a 4px tool gap. At 320 the row is still
+   wider than the dock, and there lib/toolscroll.js makes it ONE SCROLLING ROW,
+   as it does the Pad's (.tb-scroll, styles.css). Wrapping is only the no-script
+   fallback: verify_layout asserts every control stays reachable at 320, and a
+   second row beats a clipped one. */
 :where(body[data-size="compact"]) .flip-tools { padding: 6px; flex-wrap: wrap; }
 :where(body[data-size="compact"]) .flip-tools .tool-group { gap: 4px; }
 .flip-tools .t-btn, .flip-tools .tool-open { width: 44px; height: 44px; --tap-grow: 0px; }
 .flip-tools #toolGroup .tool-btn { min-width: 44px; padding: 0 9px; justify-content: center; }
 .flip-tools #toolGroup .tool-btn svg { width: 26px; height: 26px; }
-.flip-tools #toolGroup #penToolBtn { padding: 0; }
+.flip-tools #toolGroup #penToolBtn { padding: 0 5px; }   /* the tint shows round the chip: styles.css, ONE SELECTION RULE */
 .flip-tools .tool-btn-label { display: none; }
 .flip-tools #undo, .flip-tools #mediaOpenBtn { margin-left: 18px; }
 .flip-tools #redo { margin-left: 6px; }
