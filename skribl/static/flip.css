@@ -1418,6 +1418,14 @@ body.stroking .addcol {
    second row beats a clipped one. */
 :where(body[data-size="compact"]) .flip-tools { padding: 6px; flex-wrap: wrap; }
 :where(body[data-size="compact"]) .flip-tools .tool-group { gap: 4px; }
+/* Below 560 Flip's header steps to 6px side margins (the block near the top of
+   this file), so the dock and the page strip follow it: three cards of one
+   width, and the 12px this gives back is what fits the dock at 360 with the
+   page scrollbar a desktop-sized window adds (verify_layout, "does not clip"). */
+@media (max-width: 560px) {
+  .flip-tools { margin-left: 6px; margin-right: 6px; }
+  .strip-wrap { margin-left: 6px; margin-right: 6px; }
+}
 .flip-tools .t-btn, .flip-tools .tool-open { width: 44px; height: 44px; --tap-grow: 0px; }
 .flip-tools #toolGroup .tool-btn { min-width: 44px; padding: 0 9px; justify-content: center; }
 .flip-tools #toolGroup .tool-btn svg { width: 26px; height: 26px; }
