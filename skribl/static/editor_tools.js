@@ -107,7 +107,14 @@
       idleCursor: '',
       onArm: () => showToast('Touch the canvas — drag to aim, release to pick', eyedropperBtn),
       // pickingColor is read by the pointer handler and by two teardown paths.
-      onChange: v => { pickingColor = v; },
+      // While armed, the open colour drawer steps aside (lib/drawerdetent.js
+      // veil) so the whole canvas is back on screen to pick from -- Flip's
+      // popout does the same through the same helper.
+      onChange: v => {
+        pickingColor = v;
+        const dp = document.getElementById('drawPanel');
+        if (window.SkriblDrawerDetent && dp) window.SkriblDrawerDetent.veil(dp, v && !dp.hidden);
+      },
       // Loupe wiring: the lib magnifies and reads the SAME composited stage
       // sampleColorAt reads, so the ring shows what release will pick.
       getPoint: ev => getPos(ev),
@@ -116,7 +123,9 @@
       bg: () => bgColor,
       // stopPicking, not just the lib's disarm: it also restores the
       // lock/eraser/normal cursor cue, same as the tap path.
-      onPick: hex => { setPenColor(hex); stopPicking(); },
+      // A pick closes the drawer, as Flip's does: the colour is chosen and the
+      // canvas it came from is what the artist wants to see next.
+      onPick: hex => { setPenColor(hex); stopPicking(); if (typeof openDrawer === 'function') openDrawer(null); },
     });
   }
 

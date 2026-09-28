@@ -1581,12 +1581,15 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    so the loupe itself answers "what am I about to pick"; the outer hairline
    shadow keeps a white or near-background ring visible on any drawer.
    Deliberately theme-free: it floats over the artwork, not the UI. */
-/* While the eyedropper is armed, Flip's draw popout steps aside — it covers
-   nearly the whole canvas on a phone, and an armed picker with nothing left
-   to pick from is a dead end. Visibility, not the drawer state machine: the
-   panel is still "open", so closing-disarms hooks stay untriggered and it
-   reappears if the pick is abandoned. flip.js toggles this. */
-.draw-popout.eyedropper-veiled { visibility: hidden; pointer-events: none; }
+/* While the eyedropper is armed, the colour panel steps aside on BOTH editors
+   — Flip's popout and the Pad's drawer. On a phone the panel covers or
+   scrolls away the canvas, and an armed picker with nothing left to pick from
+   is a dead end. Visibility, not the drawer state machine: the panel is still
+   "open", so closing-disarms hooks stay untriggered and it reappears if the
+   pick is abandoned. lib/drawerdetent.js veil() toggles this, and scrolls the
+   whole canvas back into view while it does. */
+.draw-popout.eyedropper-veiled,
+#drawPanel.eyedropper-veiled { visibility: hidden; pointer-events: none; }
 
 .eyedropper-loupe {
   position: fixed;

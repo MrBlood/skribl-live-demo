@@ -1229,6 +1229,70 @@ with sync_playwright() as p:
               bool(_t) and _t["painted"] and _t["first"] and _t["text"].lower() == (_t["label"] or "").lower(), str(_t))
         _q.close()
 
+    # Found by the bottom-bar drawing test: on a phone the Pad's colour drawer
+    # opens BELOW the bar and scrolls the page to show itself, which pushes the
+    # top of the canvas off the screen -- and closing the drawer disarmed the
+    # eyedropper. So nothing near the top of a drawing could be sampled. Flip
+    # veils its popout while armed and never had the problem. The pick is made
+    # through the page's own controls, and "reachable" is asked of what is
+    # PAINTED at the point, not of the canvas's rect.
+    print("\nPARITY — on a phone, the eyedropper reaches the top of the drawing")
+    for _route, _cv, _opener in (("/skribl-pad", "#canvas", "#colorOpenBtn"), ("/flip", "#pad", "#colorCurrent")):
+        _q = b.new_page(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _drawer = lambda: _q.evaluate(open_draw)
+        def _ink(hexc):
+            if not _drawer(): _q.click(_opener); _q.wait_for_timeout(400)
+            _q.click(f'#colorGroup .color-dot[data-color="{hexc}"]'); _q.wait_for_timeout(200)
+        _ink("#ffe800")
+        if _drawer(): _q.click(_opener); _q.wait_for_timeout(400)
+        _bx = _q.locator(_cv).bounding_box()
+        _q.mouse.move(_bx["x"] + _bx["width"] * 0.2, _bx["y"] + _bx["height"] * 0.06); _q.mouse.down()
+        _q.mouse.move(_bx["x"] + _bx["width"] * 0.8, _bx["y"] + _bx["height"] * 0.06, steps=12); _q.mouse.up()
+        _q.wait_for_timeout(250)
+        _ink("#0078bf")
+        if not _drawer(): _q.click(_opener); _q.wait_for_timeout(400)   # Flip closes its panel on a pick
+        if not _q.locator("#eyedropperBtn").is_visible():
+            check(f"{_route}: the eyedropper is reachable in the open colour panel", False, "not visible")
+            _q.close(); continue
+        _q.click("#eyedropperBtn"); _q.wait_for_timeout(450)
+        _pt = _q.evaluate("""(sel) => { const c = document.querySelector(sel), r = c.getBoundingClientRect();
+            const x = r.left + r.width * 0.5, y = r.top + r.height * 0.06;
+            const el = y >= 0 && y < innerHeight ? document.elementFromPoint(x, y) : null;
+            return { x, y, painted: !!el && el.tagName === 'CANVAS' && c.parentElement.contains(el) }; }""", _cv)
+        if _pt["painted"]:
+            _q.mouse.click(_pt["x"], _pt["y"]); _q.wait_for_timeout(400)
+        _got = _q.evaluate("() => color")
+        _rgb = [int(_got.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)]
+        check(f"{_route}: with the colour drawer open, the armed eyedropper can reach the top of the canvas and picks from it",
+              _pt["painted"] and _rgb[0] > 150 and _rgb[1] > 150 and _rgb[2] < 120,
+              f"point at y={_pt['y']:.0f} painted by the canvas: {_pt['painted']}; colour after the pick {_got} "
+              "(the stroke there is yellow)")
+        # An ABANDONED pick gives the panel back where it was: open, painted, its colours on screen.
+        # Armed only after the drawer's own settle re-scrolls (300/700/1200 ms, lib/drawerdetent.js)
+        # are spent: inside that window they would put the page back themselves and hide a
+        # missing restore -- which is exactly how the first draft of this check went green.
+        if not _drawer(): _q.click(_opener)
+        _q.wait_for_timeout(1500)
+        if _q.locator("#eyedropperBtn").is_visible():
+            _q.click("#eyedropperBtn"); _q.wait_for_timeout(350)
+            _q.keyboard.press("Escape"); _q.wait_for_timeout(500)
+            # Both ends of the panel: its colours, and its bottom edge -- the Pad's colour row
+            # survives a page left at the top, the rest of its drawer does not.
+            _back = _q.evaluate("""() => { const p = document.getElementById('drawPanel'), d = document.querySelector('#colorGroup .color-dot');
+                if (!p || !d) return null;
+                const at = (x, y) => y >= 0 && y < innerHeight ? document.elementFromPoint(x, y) : null;
+                const r = d.getBoundingClientRect(), pr = p.getBoundingClientRect();
+                const dot = at(r.left + r.width / 2, r.top + r.height / 2), end = at(pr.left + pr.width / 2, pr.bottom - 10);
+                return { dotY: Math.round(r.top), endY: Math.round(pr.bottom),
+                         colours: !!dot && (dot === d || d.contains(dot)), end: !!end && p.contains(end) }; }""")
+            check(f"{_route}: ...and an abandoned pick (Escape) puts the open colour panel back on screen, top to bottom",
+                  bool(_back) and _back["colours"] and _back["end"], str(_back))
+        _q.close()
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))
