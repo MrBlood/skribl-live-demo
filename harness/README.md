@@ -141,6 +141,14 @@ A green check is not evidence until it has been shown to go red.
 - `verify_help.py` — the help drawer describes what actually shipped. It
   still told Flip users that Post gives them "a link" after that stopped being
   the whole story.
+- `verify_helpclaims.py` — every tip in How it works is TRIED, not just
+  written. Each pill must be claimed in its `CLAIMS` map by an existing named
+  check in another suite (found with the AST, so the seal's run of that suite
+  is the demonstration) or by a probe here that does what the tip says through
+  the page's own controls. Every ⋯ menu row, tool and Flip page-bar button must
+  be named in the sheet. It found the Pad's "Which tool am I using?" naming
+  tools the Pad lacks, and Flip's Pages tip calling Duplicate "＋ Page" long
+  after the button was renamed.
 - `verify_keys.py` — the global keydown map. flip.js attaches eight listeners,
   five of them Escape, and ArrowLeft/Right were once bound twice and both
   fired on one press.
