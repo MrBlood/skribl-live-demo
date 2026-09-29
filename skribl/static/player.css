@@ -87,6 +87,7 @@
   --text-tool-3: #a8b0bf;
   --text-tool-2: #a9b1c1;
   --text-tool: #a8b2c1;           /* .tool-btn at rest */
+  --label-edge: 0 1px 0 rgba(0, 0, 0, 0.55);   /* the dock labels' hard 1px edge (owner's row 3) */
   --text-tool-lit: #aeb6c4;       /* .tool-open at rest */
   --text-bright-2: #c8cdd6;
   --text-bright: #c8cede;
@@ -1857,6 +1858,7 @@ a.player-btn { text-decoration: none; }
   --text-tool-3:             #4b535f;
   --text-tool-2:             #4b535f;
   --text-tool:               #48505d;   /* .tool-btn at rest */
+  --label-edge:              0 1px 0 rgba(255, 255, 255, 0.95);
   --text-tool-lit:           #434b58;   /* .tool-open at rest */
   --text-bright-2:           #343b47;
   --text-bright:             #343b47;

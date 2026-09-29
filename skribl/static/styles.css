@@ -64,6 +64,7 @@
   --text-tool-3: #a8b0bf;
   --text-tool-2: #a9b1c1;
   --text-tool: #a8b2c1;           /* .tool-btn at rest */
+  --label-edge: 0 1px 0 rgba(0, 0, 0, 0.55);   /* the dock labels' hard 1px edge (owner's row 3) */
   --text-tool-lit: #aeb6c4;       /* .tool-open at rest */
   --text-bright-2: #c8cdd6;
   --text-bright: #c8cede;
@@ -598,6 +599,16 @@ body {
   font-weight: 600;
 }
 .btn.record.active svg { color: var(--text-secondary); width: 14px; height: 14px; }
+/* Done beside the readout (app.js moves it there while a take records). It
+   takes the readout's own gap plus a little more, so the numbers and the
+   button read as one unit without touching. The padding restates the
+   phone's pill padding, which was keyed on .actions. */
+.rec-indicator > .btn.record { margin-left: 6px; }
+.header .rec-indicator > .btn.record.active { height: 36px; padding: 0 15px; gap: 7px; }
+.rec-indicator > .btn.record.active .btn-label { display: inline; }
+/* Settings and the menu are a pair at the end; the take's controls
+   (Record/Play/Post) sit before them with a wider gap (owner's layout B). */
+.header .actions > #tuneBtn { margin-left: 10px; }
 
 .btn.play {
   background: rgba(var(--wash-rgb), 0.045);
@@ -996,6 +1007,10 @@ body.stroking .header {
    bars and the clock stay; the "plays" caption recedes with everything else.
    Owner, on the mock: "doesn't it get hidden while you're drawing?" */
 body.stroking .header > .rec-indicator { opacity: 1; }
+body.stroking .rec-indicator > .btn.record {
+  opacity: 0.1;
+  transition: opacity 0.3s ease 0.12s;
+}
 body.stroking .rec-plays {
   opacity: 0.1;
   transition: opacity 0.3s ease 0.12s;
@@ -6506,6 +6521,13 @@ body.stroking .toolbar, body.stroking .flip-tools {
 /* The pen button's canvas: a nib with no chip behind it (lib/penswoosh.js,
    THE NIB). --pen-nib is the nib's own ink, read by the painter: strong when
    the pen is the tool, the dock's resting ink when it is not. */
+/* THE DOCK'S LABELS KEEP 600 AND GAIN A HARD EDGE (owner: "the lettering
+   looks fat at 600 weight, but 500 doesn't look right... it looks chubby
+   and a little blurry"). On Windows the UI face has no 500, so 500 lands on
+   Regular; a one-pixel, zero-blur shadow under each glyph -- dark on the dark
+   dock, white on the light one -- sharpens its lower edge instead. Picked
+   from six treatments rendered in the owner's own fonts. */
+.toolbar .tool-btn-label, .flip-tools .tool-btn-label { text-shadow: var(--label-edge); }
 .toolbar .pen-swoosh, .flip-tools .pen-swoosh {
   display: block; width: 50px; height: 36px;
   pointer-events: none;
@@ -6958,6 +6980,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
   --text-tool-3:             #4b535f;
   --text-tool-2:             #4b535f;
   --text-tool:               #48505d;   /* .tool-btn at rest */
+  --label-edge:              0 1px 0 rgba(255, 255, 255, 0.95);
   --text-tool-lit:           #434b58;   /* .tool-open at rest */
   --text-bright-2:           #343b47;
   --text-bright:             #343b47;

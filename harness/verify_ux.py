@@ -2371,6 +2371,45 @@ with _sp204() as _rr:
           _pen["run"] == "running" and _pen["plays"] < 0.5, str(_pen))
     _rrp.close(); _rrb.close()
 
+print("\nHEADER ORDER — the take's controls, then settings and the menu; Done beside the readout")
+# Owner's layout B. After a take the header reads Play, Post, then settings
+# and the menu as a pair; while a take records, Done moves to sit beside the
+# readout (the readout and the control that ends it are one unit) and goes
+# home when the take ends. Done must still RECEDE while the pen is down --
+# it now lives inside the readout, which is the one thing that stays lit.
+with _sp204() as _ho:
+    _hob = _ho.chromium.launch()
+    _hop = _hob.new_page(viewport={"width": 1280, "height": 860})
+    browsing.goto(_hop, BASE, "/")
+    _hop.evaluate("() => localStorage.clear()")
+    _hop.reload(wait_until="load"); _hop.wait_for_timeout(700)
+    draw(_hop, "#canvas", 120, 120, n=18); _hop.wait_for_timeout(400)
+    _HO = """() => { const d = document.getElementById('recordBtn'), t = document.getElementById('recTimer');
+        const eff = el => { let o = 1; for (; el; el = el.parentElement) o *= +getComputedStyle(el).opacity; return o; };
+        const dr = d.getBoundingClientRect(), tr = t.getBoundingClientRect();
+        return { inReadout: d.parentElement.id, doneRight: Math.round(dr.left - tr.right), done: eff(d),
+                 order: [...document.getElementById('actions').children].filter(e => !e.hidden && e.offsetWidth).map(e => e.id) }; }"""
+    _rec = _hop.evaluate(_HO)
+    _cb = _hop.locator("#canvas").bounding_box()
+    _hop.mouse.move(_cb["x"] + 60, _cb["y"] + 60); _hop.mouse.down()
+    _hop.mouse.move(_cb["x"] + 160, _cb["y"] + 140, steps=20); _hop.wait_for_timeout(700)
+    _pen = _hop.evaluate(_HO)
+    _hop.mouse.up(); _hop.wait_for_timeout(300)
+    _hop.click("#recordBtn"); _hop.wait_for_timeout(600)
+    _take = _hop.evaluate("""() => ({ home: document.getElementById('recordBtn').parentElement.id,
+        order: [...document.getElementById('actions').children].filter(e => !e.hidden && e.offsetWidth).map(e => e.id) })""")
+    _lab = _hop.evaluate("""() => [...document.querySelectorAll('.toolbar .tool-btn-label')].filter(e => e.offsetWidth)
+        .map(e => getComputedStyle(e).textShadow)""")
+    _hop.close(); _hob.close()
+check("HEADER: while recording, Done sits inside the readout, just right of the clock",
+      _rec["inReadout"] == "recIndicator" and 0 <= _rec["doneRight"] <= 140, str(_rec))
+check("HEADER: while the pen is down, Done recedes with the header (the readout around it stays lit)",
+      _pen["done"] < 0.5, str(_pen))
+check("HEADER: after the take, Record goes home and the header reads Play, Post, settings, menu",
+      _take["home"] == "actions" and _take["order"] == ["playWrap", "postBtn", "tuneBtn", "menuBtn"], str(_take))
+check("DOCK LABELS: each wears the hard 1px edge (owner's row 3)",
+      len(_lab) >= 3 and all(t and t != "none" and "0px 1px 0px" in t for t in _lab), str(_lab))
+
 print("\nSEG PILLS — every visible segmented control shows its selection, on both editors")
 # The tune drawer's Mirror, Pauses and Preview speed (and Flip's Mirror and
 # smear weight) showed their selection by label colour alone: lib/segslider.js
