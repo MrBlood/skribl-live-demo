@@ -3994,9 +3994,11 @@ html.help-open, html.help-open body { overflow: hidden; }
   font-size: 15px;
   position: sticky;
   top: 0;
-  background: rgba(var(--surface-panel-rgb), 0.72);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  /* SOLID, not 0.72 over a blur (owner's iPhone: the search field's placeholder
+     read clearly through the title once scrolled under it). The head sits
+     inside .help-drawer-inner, itself a backdrop-filter layer, and WebKit
+     drops a backdrop-filter nested in another -- leaving a see-through bar. */
+  background: rgb(var(--surface-panel-rgb));
   padding: 20px 32px 16px;
   border-bottom: 1px solid var(--hairline);
   z-index: 3;
@@ -4144,6 +4146,12 @@ html.help-open, html.help-open body { overflow: hidden; }
   transition: grid-template-rows 0.34s var(--ease), border-color 0.18s ease;
 }
 .accordion-body > .accordion-inner { min-height: 0; overflow: hidden; }
+/* A 0fr ROW IS NOT ZERO WHILE ITS ITEM HAS PADDING (owner's iPhone: "I closed
+   the first accordion and the first still displays under"). The row cannot
+   shrink below the inner's 34px of vertical padding, so every CLOSED section
+   showed a sliver of its first tip. The padding closes with the row. */
+.accordion-body:not(.open) > .accordion-inner { padding-top: 0; padding-bottom: 0; }
+.accordion-inner { transition: padding 0.34s var(--ease); }
 
 .accordion-body.open {
   grid-template-rows: 1fr;

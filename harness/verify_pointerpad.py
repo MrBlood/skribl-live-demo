@@ -202,6 +202,56 @@ with sync_playwright() as sp:
     check("no page errors from touch", not errs, "; ".join(errs[:2]))
     ctx.close()
 
+    # THE PANEL GOES AWAY ON A PHONE (owner's iPhone: "how to disappear the
+    # magnifier? why is it showing on the phone?"). A pinch turns magnify on,
+    # HUD and all; the only control that turned it off was #magnifyBtn, which a
+    # phone does not show -- so one pinch left the panel over the drawing for
+    # good. Where there is no button, being back at 100% ends it: Fit, or a
+    # pinch back out. Driven with real touches on a phone-sized page.
+    print("\nPOINTER PAD — on a phone, the magnifier panel leaves at 100%")
+    pctx = b.new_context(viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
+    pp = pctx.new_page()
+    perrs = []
+    pp.on("pageerror", lambda e: perrs.append(str(e)))
+    pp.goto(BASE + "/skribl-pad", wait_until="load")
+    pp.wait_for_function("() => typeof strokeGroups !== 'undefined' && !!ZoomView", timeout=15000)
+    pb = pp.locator("#canvas").bounding_box()
+    pcdp = pctx.new_cdp_session(pp)
+    PX, PY = pb["x"] + pb["width"] * 0.5, pb["y"] + pb["height"] * 0.5
+
+    def ptouch(kind, pts):
+        pcdp.send("Input.dispatchTouchEvent",
+                  {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i} for i, (x, y) in pts]})
+
+    def pinch(gap0, gap1):
+        """Two fingers on the centre, gap0 px apart, moving until gap1 apart."""
+        ptouch("touchStart", [(1, (PX - gap0 / 2, PY))])
+        ptouch("touchStart", [(1, (PX - gap0 / 2, PY)), (2, (PX + gap0 / 2, PY))])
+        for i in range(1, 8):
+            g = gap0 + (gap1 - gap0) * i / 7
+            ptouch("touchMove", [(1, (PX - g / 2, PY)), (2, (PX + g / 2, PY))])
+        ptouch("touchEnd", [])
+        pp.wait_for_timeout(250)
+
+    HUD = """() => { const h = document.getElementById('zoomHud'), m = document.getElementById('magnifyBtn');
+        return { shown: !!h && !h.hidden && h.getClientRects().length > 0,
+                 button: !!m && m.offsetParent !== null, zoom: ZoomView.get().zoom }; }"""
+    pinch(60, 180)
+    h1 = pp.evaluate(HUD)
+    check("on a phone a pinch zooms and shows the panel (there is no Magnify button to do it)",
+          h1["shown"] and not h1["button"] and h1["zoom"] > 1.1, str(h1))
+    pp.tap("#zoomFitBtn"); pp.wait_for_timeout(400)
+    h2 = pp.evaluate(HUD)
+    check("...and tapping Fit returns to 100% AND puts the panel away",
+          not h2["shown"] and abs(h2["zoom"] - 1) < 0.01, str(h2))
+    pinch(60, 180)
+    pinch(300, 40)
+    h3 = pp.evaluate(HUD)
+    check("...and pinching back out to 100% puts it away too",
+          not h3["shown"] and abs(h3["zoom"] - 1) < 0.01, str(h3))
+    check("no page errors from the phone pinch", not perrs, "; ".join(perrs[:2]))
+    pctx.close()
+
     print("\nPOINTER PAD — a pen's pressure reaches the line; a mouse's does not")
     ctx, pg, errs, box = fresh(b)
     cdp = ctx.new_cdp_session(pg)
