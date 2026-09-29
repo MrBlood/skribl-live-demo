@@ -648,7 +648,11 @@ with sync_playwright() as sp:
     #           tooltip follows Done / Record. startRecording lives in app.js,
     #           which the player loads whole.
     # 132,784 measured.
-    BYTES_RATCHET, BYTES_TARGET = 132_850, 153_800
+    # RAISED (owner's header layout B), for one named cost: +326 B, Done
+    #   moving beside the readout while a take records and back after
+    #   (_recordBtnHome, startRecording) -- app.js, which the player loads.
+    # 133,110 measured.
+    BYTES_RATCHET, BYTES_TARGET = 133_150, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -762,7 +766,11 @@ with sync_playwright() as sp:
     # bars' keyframes and their reduced-motion rule. The player template
     # carries a hidden #recIndicator, and cssgraph holds @keyframes and
     # media blocks it cannot prove dead. 29,850 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 29_900, 119_844, 40_000
+    # RAISED (the readout on one line in any font, and centred on a phone):
+    # +163 B -- the text-box trim on the clock, "plays" and Done, and the
+    # phone recording header's centring, which the hidden #recIndicator
+    # keeps live in the player's graph. 30,063 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 30_100, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

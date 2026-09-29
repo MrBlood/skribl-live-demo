@@ -607,8 +607,11 @@ body {
 .header .rec-indicator > .btn.record.active { height: 36px; padding: 0 15px; gap: 7px; }
 .rec-indicator > .btn.record.active .btn-label { display: inline; }
 /* Settings and the menu are a pair at the end; the take's controls
-   (Record/Play/Post) sit before them with a wider gap (owner's layout B). */
-.header .actions > #tuneBtn { margin-left: 10px; }
+   (Record/Play/Post) sit before them with a wider gap (owner's layout B).
+   Desktop only: a phone header has no 10px to spare -- at 360 in compose
+   mode it tipped the header-fit into shedding Post's word -- and there the
+   fit logic (initBrandFit) owns the spacing. Pad and Flip both. */
+@media (min-width: 641px) { .header .actions > #tuneBtn { margin-left: 10px; } }
 
 .btn.play {
   background: rgba(var(--wash-rgb), 0.045);
@@ -727,13 +730,16 @@ body.stroking .rec-bars i { animation-play-state: running; }
   font-variant-numeric: tabular-nums;
   font-weight: 500;
   letter-spacing: 0.02em;
-  /* OPTICAL, measured: digits have no descenders, so a centred line box
-     leaves them riding 1.5px above the dot and bars (ink centres, css px:
-     dot 14.75, bars 14.75, clock 13.25). 1px down puts every part within
-     half a pixel of the dot's line, both themes, phone and desktop. */
-  position: relative;
-  top: 1px;
 }
+/* ONE LINE IN ANY FONT. A centred line box centres the font's ascent and
+   descent, not the digits, and every font splits those differently: a 1px
+   nudge measured here in Liberation Sans put the clock LOW on the owner's
+   Windows machine (Segoe UI). text-box trims each text box to cap height
+   over the baseline, so centring lines up the digits themselves, whatever
+   the face. Measured across five fonts: every part within half a pixel of the
+   dot's line (a nudge ranged 1.75px on the clock, 2px on "plays"). Where
+   text-box is unsupported the text simply centres as before. */
+.rec-timer, .rec-plays, .rec-indicator > .btn.record .btn-label { text-box: trim-both cap alphabetic; }
 .rec-plays {
   color: var(--text-secondary);
   font-size: 13px;
@@ -5358,14 +5364,6 @@ a.player-btn { text-decoration: none; }
   .header .actions .btn.record.active { padding: 0 15px; }
   .btn.record.active .btn-label { display: inline; }
 
-  /* Symmetry for the recording bar. On the left, the collapsed brand is a
-     zero-width flex item that still earns the header's 10px gap, so the rec
-     pill sits 24px in (14 padding + 10 phantom). The Stop pill's right flank
-     had only the bare 14 (of the recording header: "padding on
-     right"). Mirror the phantom, and two rounded pills float evenly inside
-     the rounded card. */
-  body.recording .actions { margin-right: 10px; }
-
   /* While recording, collapse the mark so the timer + Stop have room and the
      header keeps clear space to its right. That case is static and stays here:
      recording always needs the room, at every mobile width.
@@ -5382,6 +5380,16 @@ a.player-btn { text-decoration: none; }
      To reverse: restore the `:has(#playWrap...)` selector below and the shed
      step becomes dead code for the take-saved state. */
   body.recording .brand > span { display: none; }
+
+  /* ...AND THE TAKE IS CENTRED (owner: "if you're removing the branding, then
+     center it"). With the mark, settings and the menu all put away, the
+     readout and Done -- which app.js moves in beside it -- are the whole
+     header, so they sit in the middle instead of hugging the left edge. The
+     emptied brand and control slots leave the row entirely: a zero-width flex
+     item still earns the header's gap, which would pull the centre off true. */
+  body.recording .header { justify-content: center; }
+  body.recording .header > .brand,
+  body.recording .header > .actions { display: none; }
 
   /* Uniform spacing between controls; cluster them to the right so there's a
      generous gap between the logo and the first control (instead of spreading
