@@ -619,11 +619,13 @@ body {
   50% { opacity: 0.5; }
 }
 
+/* A light clock, not a bold one: weight 500 at 16px reads as an instrument
+   readout; 650 at 17 read as a headline (owner: "the time is a little too fat"). */
 .rec-timer {
-  font-size: 17px;
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
-  font-weight: 650;
-  letter-spacing: 0.01em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .duration-badge {
