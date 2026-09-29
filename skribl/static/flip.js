@@ -3717,6 +3717,51 @@ const toolTray = document.getElementById('toolTray');
  *  the row it sits in, and consistency across the row beats fidelity to any one
  *  glyph's native scale.
  */
+/* THE SHAPE PICKER OPENS HERE, and it has to, because this is the one point
+   EVERY selection path passes through: the tray and the cells lib/toolshelf.js
+   builds (as the shelf config's setTool below) AND the static shelf cells in
+   the template (from the '#toolGroup .tool-btn' click handler). It used to live
+   only on that click handler, which was complete until v227 put a tray in front
+   of the shelf. After that, choosing Shape from the tray never ran that
+   handler, so the picker never opened and Shape silently stayed on whatever
+   kind it had: 'line', for everyone who had never had Shape on the shelf.
+   Reported from the live demo as "shape is not giving a choice, just gives you
+   line". The fix moved it into the shelf config -- and then the STATIC Shape
+   cell (skribl_flip.html, no data-shelf-bound) called plain setTool() and lost
+   it the other way: the dock's own Shape button never opened the picker, only
+   the tray did. One named function, called from both, ends the pendulum.
+
+   Toggling only when Shape was ALREADY current keeps the shelf's
+   press-again-to-close feel without making the first pick a no-op. */
+function shelfSetTool(id){
+  const was = flipTool;
+  // READ THE SHELF BEFORE setTool REDERIVES IT. setTool() sets
+  // stampPop.hidden from the active tool, so a toggle written after the
+  // call sees false every time and can only ever CLOSE -- the shelf would
+  // shut on the second tap and never come back on the third.
+  const _spWas = document.getElementById('stampPop');
+  const _spWasHidden = _spWas ? _spWas.hidden : true;
+  setTool(id);
+  const pop = document.getElementById('shapePop');
+  if (pop) pop.hidden = (id !== 'shape') ? true
+                      : (was === 'shape' ? !pop.hidden : false);
+  // THE STAMP SHELF IS NOT HANDLED HERE, and that is the point. setTool()
+  // itself derives the shelf's visibility from which tool is active, so
+  // EVERY route in opens it — shelf, tray, keyboard, a call from another
+  // feature. The shape picker above is the version that did not, and
+  // v237 is the bug report: the tray became a second route to Shape and
+  // the picker stopped appearing for anyone who reached it that way.
+  //
+  // All that is left here is the deliberate override: tapping the tool
+  // button while its own tool is already active TOGGLES the shelf, so it
+  // can be put away without leaving the tool -- reported from the live
+  // demo as "the stamp library doesn't go away until another tool is
+  // chosen". Applied after setTool, against the state read before it.
+  if (id === 'stamp' && was === 'stamp' && _spWas) {
+    _spWas.hidden = !_spWasHidden;
+    if (!_spWas.hidden) syncStampPop();
+  }
+}
 const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
   ? window.SkriblToolShelf.create({
       group: document.getElementById('toolGroup'),
@@ -3850,48 +3895,7 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
       ],
       currentTool: () => flipTool,
       slider: document.getElementById('toolSlider'),
-      // THE SHAPE PICKER OPENS HERE, and it has to, because this is the only
-      // point BOTH selection paths pass through. It used to live on a click
-      // handler bound to '#toolGroup .tool-btn' -- the SHELF -- which was
-      // complete until v227 put a tray in front of the shelf. After that,
-      // choosing Shape from the tray never ran that handler, so the picker
-      // never opened and Shape silently stayed on whatever kind it had:
-      // 'line', for everyone who had never had Shape on the shelf. Reported
-      // from the live demo as "shape is not giving a choice, just gives you
-      // line".
-      //
-      // Toggling only when Shape was ALREADY current keeps the shelf's
-      // press-again-to-close feel without making the first pick a no-op.
-      setTool: (id) => {
-        const was = flipTool;
-        // READ THE SHELF BEFORE setTool REDERIVES IT. setTool() sets
-        // stampPop.hidden from the active tool, so a toggle written after the
-        // call sees false every time and can only ever CLOSE -- the shelf would
-        // shut on the second tap and never come back on the third.
-        const _spWas = document.getElementById('stampPop');
-        const _spWasHidden = _spWas ? _spWas.hidden : true;
-        setTool(id);
-        const pop = document.getElementById('shapePop');
-        if (pop) pop.hidden = (id !== 'shape') ? true
-                            : (was === 'shape' ? !pop.hidden : false);
-        // THE STAMP SHELF IS NOT HANDLED HERE, and that is the point. setTool()
-        // itself derives the shelf's visibility from which tool is active, so
-        // EVERY route in opens it — shelf, tray, keyboard, a call from another
-        // feature — rather than the three that happen to pass through this
-        // config today. The shape picker above is the version that did not, and
-        // v237 is the bug report: the tray became a second route to Shape and
-        // the picker stopped appearing for anyone who reached it that way.
-        //
-        // All that is left here is the deliberate override: tapping the tool
-        // button while its own tool is already active TOGGLES the shelf, so it
-        // can be put away without leaving the tool -- reported from the live
-        // demo as "the stamp library doesn't go away until another tool is
-        // chosen". Applied after setTool, against the state read before it.
-        if (id === 'stamp' && was === 'stamp' && _spWas) {
-          _spWas.hidden = !_spWasHidden;
-          if (!_spWas.hidden) syncStampPop();
-        }
-      },
+      setTool: shelfSetTool,
       closeTray: () => { if (_flipDrawerCtl) _flipDrawerCtl.open(null); },
     })
   : null;
@@ -9286,14 +9290,15 @@ document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener(
   // setTool. Running this one too fired both, and the second call re-derived
   // what the first had toggled.
   if(b.dataset.shelfBound) return;
-  // The picker is NOT opened here any more — lib/toolshelf.js already calls the
-  // surface's setTool for a shelf click, so doing it in both places toggled it
-  // twice and left it shut. It lives in the toolShelf config, which the tray
-  // reaches too.
+  // The cells lib/toolshelf.js built returned above; what reaches here is a
+  // STATIC cell from the template (Pen, Eraser, Shape), which toolshelf never
+  // bound. It goes through shelfSetTool, the same path as the tray, so the
+  // dock's own Shape button opens the shape picker (it used to call plain
+  // setTool() and only the tray opened it).
   // TAP THE TOOL YOU ALREADY HOLD for its options, as on the Pad: the pen's
   // colour and brush, and the eraser's width, both live in the draw drawer.
   const again = flipTool === b.dataset.tool;
-  setTool(b.dataset.tool);
+  shelfSetTool(b.dataset.tool);
   if(again && (b.dataset.tool==='pen' || b.dataset.tool==='eraser')) _flipDrawerCtl.toggle('draw');
 }));
 loadStampShelf();
