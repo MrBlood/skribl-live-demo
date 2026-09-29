@@ -1326,11 +1326,12 @@ with sync_playwright() as p:
             browsing.goto(_q, BASE, f"{_route}?theme={_theme}")
             _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
             _q.click("#tuneBtn"); _q.wait_for_timeout(450)
-            _ids = ["gridBtn", "strokeLayersBtn"]
-            _q.click("#gridBtn")
-            if _route == "/flip":
-                _ids += ["arcGuideBtn", "onion"]
-                _q.click("#arcGuideBtn"); _q.click("#onion")
+            _ids = ["gridBtn", "strokeLayersBtn"] + (["arcGuideBtn", "onion"] if _route == "/flip" else [])
+            # Switch each ON, whatever it starts as: Stroke layers and Flip's
+            # onion skin start on, so a blind click would turn them off.
+            for _id in _ids:
+                if _q.get_attribute(f"#{_id}", "aria-checked") != "true":
+                    _q.click(f"#{_id}")
             _q.mouse.move(2, 2); _q.wait_for_timeout(350)
             _sw[_route] = _q.evaluate(_SW, _ids)
             if _route == "/flip":
