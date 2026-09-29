@@ -119,8 +119,12 @@ with sync_playwright() as p:
               page.evaluate("() => !!(window.SkriblBrush && "
                             "window.SkriblBrush.PRESETS.airbrush)"),
               "alpha 0.22, width 2.6x")
+        # White ink, set here rather than inherited: PROFILE counts only
+        # neutral pixels as ink (a coloured pixel is the ground), and a new
+        # drawing now starts in the signature purple, which it would read as
+        # an empty canvas.
         page.evaluate("() => { window.SkriblBrush.setBrush('airbrush'); "
-                      "setTool('pen'); }")
+                      "setTool('pen'); color = '#ffffff'; }")
         box = page.locator("#canvas").bounding_box()
         pts = draw_airbrush(page, box)
         ink = page.evaluate("() => strokes[5] && strokes[5].color")
