@@ -203,6 +203,14 @@
     if (global.__skriblSegPressed) return;
     global.__skriblSegPressed = true;
     syncAll();
+    // EVERY TEMPLATE SEG GETS ITS PILL, not only the ones a surface remembered
+    // to track. trackAll() was written for this and never called: each editor
+    // tracked its groups one by one, and the ones nobody listed -- Pad's
+    // Mirror, Pauses, Preview speed and grid density, Flip's Mirror and smear
+    // weight -- showed their selection by ink alone, a pale label with no pill
+    // (owner, on the phone: "not bright enough to tell what's selected").
+    // track() is idempotent, so the surfaces' own calls still stand.
+    trackAll();
     if (typeof MutationObserver === 'undefined') return;
     new MutationObserver(function (muts) {
       for (var i = 0; i < muts.length; i++) {
