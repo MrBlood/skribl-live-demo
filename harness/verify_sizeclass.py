@@ -287,16 +287,18 @@ with sync_playwright() as p:
             st = page.evaluate("""() => ({
               size: document.body.getAttribute('data-size'),
               bar:  getComputedStyle(document.querySelector('#pagebar')).display,
-              row:  getComputedStyle(document.querySelector('.flip-tools')).paddingLeft,
+              row:  getComputedStyle(document.querySelector('.flip-tools')).paddingRight,
             })""")
             compact = st["size"] == "compact"
             # The tool row's class-driven property used to be the undo button's
             # width (36px compact). The dock redesign made every bar control 44px
             # at every size, so the row's own padding is what the class changes
-            # now: 6px compact, 12px regular (flip.css, THE DOCK ON FLIP).
+            # now: 6px compact, 12px regular (flip.css, THE DOCK ON FLIP). The
+            # RIGHT side: on a phone the left grows with the width to bring the
+            # pen in from the edge, so it is not a class-only property.
             check(f"at {vw}px the bar and the tool row tell the same story",
                   (st["bar"] == "none") == compact and (st["row"] == "6px") == compact,
-                  f"data-size={st['size']}, #pagebar={st['bar']}, .flip-tools padding={st['row']}")
+                  f"data-size={st['size']}, #pagebar={st['bar']}, .flip-tools padding-right={st['row']}")
 
         page.set_viewport_size({"width": 1280, "height": 900})
         check("no page error at any width", not errs, "; ".join(errs[:2]))
