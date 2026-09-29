@@ -223,20 +223,20 @@ with sync_playwright() as sp:
         pcdp.send("Input.dispatchTouchEvent",
                   {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i} for i, (x, y) in pts]})
 
-    def pinch(spread):
-        """Two fingers 60px apart, each moving `spread` px outward (negative = inward)."""
-        ptouch("touchStart", [(1, (PX - 30, PY))])
-        ptouch("touchStart", [(1, (PX - 30, PY)), (2, (PX + 30, PY))])
+    def pinch(gap0, gap1):
+        """Two fingers on the centre, gap0 px apart, moving until gap1 apart."""
+        ptouch("touchStart", [(1, (PX - gap0 / 2, PY))])
+        ptouch("touchStart", [(1, (PX - gap0 / 2, PY)), (2, (PX + gap0 / 2, PY))])
         for i in range(1, 8):
-            d = spread * i / 7
-            ptouch("touchMove", [(1, (PX - 30 - d, PY)), (2, (PX + 30 + d, PY))])
+            g = gap0 + (gap1 - gap0) * i / 7
+            ptouch("touchMove", [(1, (PX - g / 2, PY)), (2, (PX + g / 2, PY))])
         ptouch("touchEnd", [])
         pp.wait_for_timeout(250)
 
     HUD = """() => { const h = document.getElementById('zoomHud'), m = document.getElementById('magnifyBtn');
         return { shown: !!h && !h.hidden && h.getClientRects().length > 0,
                  button: !!m && m.offsetParent !== null, zoom: ZoomView.get().zoom }; }"""
-    pinch(60)
+    pinch(60, 180)
     h1 = pp.evaluate(HUD)
     check("on a phone a pinch zooms and shows the panel (there is no Magnify button to do it)",
           h1["shown"] and not h1["button"] and h1["zoom"] > 1.1, str(h1))
@@ -244,8 +244,8 @@ with sync_playwright() as sp:
     h2 = pp.evaluate(HUD)
     check("...and tapping Fit returns to 100% AND puts the panel away",
           not h2["shown"] and abs(h2["zoom"] - 1) < 0.01, str(h2))
-    pinch(60)
-    pinch(-120)
+    pinch(60, 180)
+    pinch(300, 40)
     h3 = pp.evaluate(HUD)
     check("...and pinching back out to 100% puts it away too",
           not h3["shown"] and abs(h3["zoom"] - 1) < 0.01, str(h3))
