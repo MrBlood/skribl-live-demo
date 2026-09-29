@@ -167,6 +167,51 @@ delete. Read an old version with `git show <rev>:<path> > /tmp/copy`, which
 cannot touch the working tree. When an edit script goes wrong, FIX IT FORWARD —
 reverting looks faster and is the destructive choice. (Twice: v213, v283.)
 
+## Mistakes from the dock and readout round — do not repeat them
+
+Each of these happened in the session that built the frosted dock, the pen nib
+and the recording readout (from PR #271 onward). Each cost the owner a round trip.
+
+**A CHANGE TO THE HEADER OR THE DOCK RUNS `verify_pointerpad`.** PR #275 kept
+the recording readout lit while the pen is down and was merged on a list of
+"affected suites" that left pointerpad out; pointerpad asserts every header
+child fades while stroking, and main went red. For any change to the header,
+the dock, or what `body.stroking` does, the minimum is `verify_ux`,
+`verify_pointerpad`, `verify_layout`, `verify_sizeclass` and `verify_a11y`, and
+the honest default is the full battery.
+
+**DO NOT TUNE AN OPTICAL NUDGE TO THIS CONTAINER'S FONTS.** A 1px `top:` nudge
+measured here in Liberation Sans put the recording clock visibly LOW on the
+owner's Windows machine, which renders Segoe UI. The owner works on Windows
+and an iPhone; this box has neither font. Alignment has to be font-independent
+(`text-box: trim-both cap alphabetic` is what the readout uses) and asserted in
+more than one face — `verify_ux` READOUT ALIGNMENT forces each installed face
+and measures ink. The same goes for weights: Segoe UI has no 500, so a 500
+request renders Regular there.
+
+**"IT DOESN'T SHOW ON MY PHONE" IS A STALE PAGE UNTIL PROVEN OTHERWISE.** Twice
+the owner's phone was running the page from before a merge, and a WebKit
+investigation was started both times. First give the owner a one-glance tell
+for the new build (a label or control the merge changed) and ask them to
+reload; only then suspect the engine. There is no WebKit here, so an iPhone
+engine bug cannot be reproduced — say so rather than guessing.
+
+**NEVER CITE A RUN THAT DID NOT REPORT.** A PR description once called a local
+run "green" after that run had been killed before printing a result. A killed,
+interrupted or still-running battery is "not run"; say that in the PR, in those
+words.
+
+**RESTATE THE TARGET BEFORE MOCKING OPTIONS.** "The swoosh looks generic" was
+read as "the selection pill looks generic", and five selection styles were
+mocked before the owner pointed at the swoosh again. When feedback names a
+thing on screen, say in one line which element will change before drawing
+alternatives.
+
+**A MOCK MUST MEASURE WHAT THE OWNER SAW.** When the owner says something is
+off-centre or too heavy, measure it (ink centres, computed weights) on both
+themes and at phone and desktop widths, and show before/after — the owner
+catches half-pixel drift by eye.
+
 ## Decluttering has a stopping condition
 
 Continue only while a targeted semantic review identifies a specific duplicated

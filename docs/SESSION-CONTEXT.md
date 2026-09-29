@@ -361,6 +361,27 @@ generated numbers rather than restating them. Prefers a fresh session that has
 read the files to a long one carrying a compacted summary; this file exists
 because of that.
 
+**Standing preferences** — each stated by the owner and still in force:
+
+- **Show light AND dark** for any UI mock or screenshot, and phone and desktop
+  when both are affected. Mocks are rendered on the real page, not drawn.
+- **Times in Mountain time.**
+- **No AI branding in the repository or on GitHub.** No `Co-Authored-By` or
+  session trailers on commits; squash merges use an explicit, trailer-free
+  title and message; PR descriptions end with "🩸 Built with help from Cal."
+  and any tool-added footer is removed. The helper is called Cal.
+- **Branch `cal/work`**, restarted from `origin/main` after every merge.
+- **A merge waits for a green `main`**; "merge it when the tests pass" is the
+  usual instruction and covers the PR's own smoke check. After a merge, check
+  `main`'s full harness run and fix anything red.
+- **Ask before anything that could bill** (see WORKING-AGREEMENTS.md).
+- **The design bar:** premium and quiet, never chunky. Weight 600 only where a
+  label needs it, thin strokes, no extra boxes around things, parts of a row on
+  one centre line. The owner judges on a Windows desktop (Segoe UI) and an
+  iPhone, so verify there in spirit: font-independent layout, measured.
+- **Offer choices as mocks** — usually three to five, each named, with one
+  recommendation and why — and build only what was chosen.
+
 ---
 
 ## 8. What a fresh session actually needs

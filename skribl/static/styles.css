@@ -607,8 +607,11 @@ body {
 .header .rec-indicator > .btn.record.active { height: 36px; padding: 0 15px; gap: 7px; }
 .rec-indicator > .btn.record.active .btn-label { display: inline; }
 /* Settings and the menu are a pair at the end; the take's controls
-   (Record/Play/Post) sit before them with a wider gap (owner's layout B). */
-.header .actions > #tuneBtn { margin-left: 10px; }
+   (Record/Play/Post) sit before them with a wider gap (owner's layout B).
+   Desktop only: a phone header has no 10px to spare -- at 360 in compose
+   mode it tipped the header-fit into shedding Post's word -- and there the
+   fit logic (initBrandFit) owns the spacing. Pad and Flip both. */
+@media (min-width: 641px) { .header .actions > #tuneBtn { margin-left: 10px; } }
 
 .btn.play {
   background: rgba(var(--wash-rgb), 0.045);
