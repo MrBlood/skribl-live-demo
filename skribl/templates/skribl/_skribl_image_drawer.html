@@ -37,7 +37,10 @@
   </div>
 
   <div id="photoDetail" hidden>
-    <div class="photo-fit-group" id="photoFitGroup">
+    {# A pick-one group like every seg: it carries the one pill, and
+       lib/segslider.js writes its aria-pressed and gives it one Tab stop and
+       the arrow keys. It had no group role and, on Flip, no pressed state. #}
+    <div class="photo-fit-group" id="photoFitGroup" role="group" aria-label="How the image fits">
       <div class="photo-fit-slider" id="photoFitSlider"></div>
       <button type="button" class="photo-fit-btn active" data-fit="cover">Fill</button><button type="button" class="photo-fit-btn" data-fit="contain">Fit</button><button type="button" class="photo-fit-btn" data-fit="{{ 'fill' if kind == 'flip' else 'stretch' }}">Stretch</button>
     </div>

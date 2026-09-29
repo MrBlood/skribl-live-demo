@@ -3,7 +3,7 @@
 // Upload/drop handlers, the fit buttons, reposition, the opacity and blur
 // sliders and their nudgers, and the eraser cursor's canvas listeners. Same rule
 // as editor_music.js: only STATEMENTS move. The functions they call
-// (initPhotoFitSlider, updateSliderFill, drawPhotoFitted and the rest) stay in
+// (updateSliderFill, drawPhotoFitted and the rest) stay in
 // app.js, because the player reaches some of them through loadSkribl and a
 // binding declared here would not exist there at all.
 //
@@ -160,7 +160,6 @@ photoInput.addEventListener('change', async (e) => {
   resetPhotoToggle();
   document.getElementById('photoTabDot').hidden = false;
   document.getElementById('photoRemove').hidden = false;
-  setTimeout(initPhotoFitSlider, 50);
   updateRepositionUI();
 });
 
@@ -201,16 +200,13 @@ bindEl('photoRemove', 'click', (e) => {
     b.classList.toggle('active', sel);
     b.setAttribute('aria-pressed', String(sel));
   });
-  if (photoFitSlider) { photoFitSlider.style.width = '0'; photoFitSlider.style.transform = 'translateX(0)'; }
   photoOffsetX = 0.5; photoOffsetY = 0.5;
   photoZoom = 1; setZoomSliderUI();
   exitReposition();
   updateRepositionUI();
 });
 
-setTimeout(initPhotoFitSlider, 50);
-
-document.querySelectorAll('.photo-fit-btn').forEach((btn, idx) => {
+document.querySelectorAll('.photo-fit-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     photoFit = btn.dataset.fit;
     document.querySelectorAll('.photo-fit-btn').forEach(b => {
@@ -222,11 +218,7 @@ document.querySelectorAll('.photo-fit-btn').forEach((btn, idx) => {
     photoBgImg.style.objectFit = fitMap[photoFit];
     applyPhotoPosition();
     updateRepositionUI();
-    // Slide the slider
-    const allBtns = [...document.querySelectorAll('.photo-fit-btn')];
-    const offset = allBtns.slice(0, idx).reduce((sum, b) => sum + b.offsetWidth, 0);
-    photoFitSlider.style.width = btn.offsetWidth + 'px';
-    photoFitSlider.style.transform = `translateX(${offset}px)`;
+    // The pill follows the class (lib/segslider.js), like every pill.
   });
 });
 

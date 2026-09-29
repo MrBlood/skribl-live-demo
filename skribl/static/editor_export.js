@@ -86,15 +86,8 @@
       // Focus AFTER the reveal: modalfocus skips anything with no offsetParent,
       // and while the overlay is still hidden that is every control in it.
       if (window.SkriblModal) window.SkriblModal.open(sheet);
-      // Re-measure the GIF toggle's sliding pill now that the sheet has real
-      // layout — the observers can miss this on reopen, leaving the pill wrongly
-      // sized. A rAF after reveal guarantees correct button widths.
-      if (gifToggle && !gifToggle.hidden) {
-        const seg = gifToggle.querySelector('.gif-seg');
-        if (seg && typeof positionSegSlider === 'function') {
-          requestAnimationFrame(() => positionSegSlider(seg));
-        }
-      }
+      // The GIF toggle's pill is placed when the sheet gains layout: the
+      // ResizeObserver lib/segslider.js keeps on each option fires on reveal.
     });
   }
   function closeExport() {

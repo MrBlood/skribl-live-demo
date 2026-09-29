@@ -1,10 +1,11 @@
 // Editor-only: the music drawer's wiring.
 //
 // Upload/drop handlers, the trim-track drag installers, the zoom magnification
-// and fine-tune controls, and the remove button — plus the five helpers only
-// they call (dragHandle, dragZoomHandle, dragRangeWindow, positionSegSlider,
-// validateMusicFile). Every call site of those five is in this file; nothing
-// left in app.js names them.
+// and fine-tune controls, and the remove button — plus the four helpers only
+// they call (dragHandle, dragZoomHandle, dragRangeWindow, validateMusicFile).
+// Every call site of those four is in this file; nothing left in app.js names
+// them. (A fifth, positionSegSlider, went with the one pill: lib/segslider.js
+// places every pill and re-homes it when its drawer is revealed.)
 //
 // WHAT STAYED, and why. The drawer's STATE and the functions the PLAYER reaches
 // through loadSkribl (clampTrim, drawWaveform, updateTrimUI, showToast and the
@@ -45,8 +46,6 @@ function dragZoomHandle(handle, isStart) {
 dragZoomHandle(zoomHandleStart, true);
 
 dragZoomHandle(zoomHandleEnd, false);
-
-function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.placeAttached(group); }
 
 (function initZoomMagControl() {
   if (!zoomTrackWrap || !zoomTrackWrap.parentNode) return;
@@ -104,13 +103,11 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
     body.hidden = !open;
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (open) {
-      // First reveal: the zoom canvas and the two seg-pills were laid out at
-      // zero size while hidden. Redraw and re-home them now that they have a box.
+      // First reveal: the zoom canvas was laid out at zero size while hidden.
+      // Redraw it now that it has a box. (The focus pill re-homes itself:
+      // lib/segslider.js watches its track for gaining layout.)
       requestAnimationFrame(() => {
         if (typeof updateTrimUI === 'function') updateTrimUI();
-        if (typeof positionSegSlider === 'function') {
-          body.querySelectorAll('.zoom-seg').forEach(g => positionSegSlider(g));
-        }
       });
     }
   });

@@ -598,7 +598,7 @@ function restoreAutosave(data) {
   if (data.background && data.background.color) {
     bgColor = data.background.color;
     canvasWrap.style.backgroundColor = bgColor;
-    document.querySelectorAll('.bg-swatch').forEach(b => b.classList.toggle('active', b.dataset.bg === bgColor));
+    markBgSwatch(bgColor);
   }
   updateVignette();
   strokes = (data.strokes || []).slice();
@@ -900,20 +900,10 @@ if (typeof pendingMusicMeta !== 'undefined') {
       if (!photoBgImg || photoBgImg.style.display === 'none') return;
       if (_inFlight.photo === meta) _inFlight.photo = null;   // landed
       if (meta.fit) {
-        photoFit = meta.fit;
+        photoFit = normalPhotoFit(meta.fit);
         const fitMap = { cover: 'cover', contain: 'contain', stretch: 'fill' };
         photoBgImg.style.objectFit = fitMap[photoFit] || 'cover';
-        const fitBtns = [...document.querySelectorAll('.photo-fit-btn')];
-        fitBtns.forEach(b => b.classList.toggle('active', b.dataset.fit === photoFit));
-        const activeIdx = fitBtns.findIndex(b => b.dataset.fit === photoFit);
-        const moveSlider = () => {
-          if (activeIdx < 0 || !photoFitSlider) return;
-          const off = fitBtns.slice(0, activeIdx).reduce((s, b) => s + b.offsetWidth, 0);
-          photoFitSlider.style.width = fitBtns[activeIdx].offsetWidth + 'px';
-          photoFitSlider.style.transform = `translateX(${off}px)`;
-        };
-        moveSlider();
-        setTimeout(moveSlider, 80);
+        markPhotoFit(photoFit);   // the pill follows the class (lib/segslider.js)
       }
       if (meta.opacity != null) {
         photoOpacityVal_ = meta.opacity;

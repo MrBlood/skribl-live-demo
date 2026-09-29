@@ -1,6 +1,6 @@
-/* The draw drawer's paint-target seg (Pen or Background) and the pills on
- * its segmented rows: wired once for both editors (SK312-003, v315). Both
- * were word-for-word in app.js and flip.js (1.00 by harness/tools/editordup.py).
+/* The draw drawer's paint-target seg (Pen or Background): wired once for
+ * both editors (SK312-003, v315). It was word-for-word in app.js and flip.js
+ * (1.00 by harness/tools/editordup.py).
  *
  * Paint target swaps WHICH swatch grid is shown, not what the sheet shows:
  * size, opacity and brush stay put underneath and never move.
@@ -38,16 +38,11 @@
         var has = !!(swatches && swatches.children.length);
         recent.hidden = (target !== 'stroke') || !has;
       }
-      if (window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
     });
-    if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
   }
-
-  // track() rather than a one-shot place(): the drawer ships `hidden`, so at
-  // init the buttons have no layout and any single call bails, leaving the
-  // pill at opacity 0 -- the exact bug lib/segslider.js was written for.
-  ['smoothSeg', 'brushSeg', 'shapeSeg', 'pressureSeg', 'eraserSeg'].forEach(function (id) {
-    var s = document.getElementById(id);
-    if (s && window.SkriblSegSlider) window.SkriblSegSlider.track(s);
-  });
+  // No pill is placed here, this seg's or the rows below it: lib/segslider.js
+  // watches every track and follows the class this handler sets. This module
+  // used to be the ONLY thing placing Flip's Brush, Pressure, Eraser and Shape
+  // pills, so a fault in a file about Pen / Background blanked four unrelated
+  // controls (the pick-one census, before the one pill).
 })();

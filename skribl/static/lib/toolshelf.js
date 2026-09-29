@@ -122,17 +122,27 @@
        Two copies of one fix is what verify_surfaces.py exists to catch, and it
        caught this one: extracting it here is what the ratchet asked for.
 
-       offsetLeft is ALREADY relative to the group, which is position: relative
-       and therefore the button's offsetParent; the padding subtraction is what
-       matches .tool-slider's own `left`. */
+       IT IS THE ONE PILL NOW. lib/segslider.js places every pill in the
+       product -- the drawers', the menus', the pages' and this one -- from the
+       rendered boxes, and watches the group for the changes that move it, so
+       this hands the group over and asks for a placement. What is left below
+       is for a page without that module, and it never writes a 0-wide pill:
+       a button with no layout yet measures 0, and a pill sized from it stayed
+       0 until something unrelated re-placed it. Until a pill is placed the
+       selected tool paints its own tint (styles.css, the dock). */
     function placeSlider(activeBtn) {
       var sl = cfg.slider;
       if (!sl || !group) return;
+      var S = typeof window !== 'undefined' ? window.SkriblSegSlider : null;
+      if (S) { S.track(group); S.place(group); return; }
       var btn = activeBtn || btnEl(current()) || document.getElementById('penToolBtn');
-      if (!btn) return;
+      if (!btn || !btn.offsetWidth) { group.removeAttribute('data-pill'); return; }
+      // offsetLeft is ALREADY relative to the group (position: relative, the
+      // button's offsetParent); the padding is what .tool-slider's `left` is.
       var padL = parseFloat(getComputedStyle(group).paddingLeft) || 0;
       sl.style.width = btn.offsetWidth + 'px';
       sl.style.transform = 'translateX(' + (btn.offsetLeft - padL) + 'px)';
+      group.setAttribute('data-pill', '');
     }
 
     function sync() {
