@@ -2556,6 +2556,53 @@ with _sp204() as _sf:
           len(_js) >= 3 and all(g["pill"] and g["alpha"] == 0 for g in _js), str(_js))
     _sfp.close(); _sfb.close()
 
+print("\nPHOTO FIT PILL — Fill / Fit / Stretch shows its selection after a draft restore")
+# Owner, desktop: "Fit" selected in the photo drawer, no highlight under it.
+# The fit control's pill was sized once -- on a pick, a reset, a restore --
+# and a draft restored with the drawer shut sized it to 0px; opening the
+# drawer never corrected it. Driven down that exact path: pick a photo, choose
+# Fit, draw, reload (the draft restores the photo with the drawer shut), open
+# the drawer. Then the CSS fallback: with lib/segslider.js blocked the
+# selected option still paints its own tint.
+_fit_png = _io.BytesIO(); _Img.new("RGB", (400, 300), (40, 60, 90)).save(_fit_png, "PNG")
+_FITQ = """() => { const g = document.getElementById('photoFitGroup'), s = document.getElementById('photoFitSlider'), a = g.querySelector('button.active');
+    const sr = s.getBoundingClientRect(), ar = a.getBoundingClientRect();
+    return { active: a.textContent.trim(), pillW: Math.round(sr.width), btnW: Math.round(ar.width),
+             under: Math.abs((sr.left + sr.width / 2) - (ar.left + ar.width / 2)) < 3, bg: getComputedStyle(a).backgroundColor }; }"""
+with _sp204() as _ft:
+    _ftb = _ft.chromium.launch()
+    _ftp = _ftb.new_page(viewport={"width": 1400, "height": 900})
+    browsing.goto(_ftp, BASE, "/")
+    _ftp.evaluate("() => localStorage.clear()")
+    _ftp.reload(wait_until="load"); _ftp.wait_for_timeout(700)
+    browsing.pad_drawer(_ftp, "photo")
+    _ftp.set_input_files("#photoInput", files=[{"name": "fit.png", "mimeType": "image/png", "buffer": _fit_png.getvalue()}])
+    _ftp.wait_for_timeout(1000)
+    _ftp.click('.photo-fit-btn[data-fit="contain"]'); _ftp.wait_for_timeout(300)
+    browsing.pad_drawer_close(_ftp)
+    draw(_ftp, "#canvas", 120, 120, n=18); _ftp.wait_for_timeout(2500)
+    _ftp.reload(wait_until="load"); _ftp.wait_for_timeout(2500)
+    browsing.pad_drawer(_ftp, "photo"); _ftp.wait_for_timeout(600)
+    _fit_restored = _ftp.evaluate(_FITQ)
+    _ftp.close()
+    _ftp = _ftb.new_page(viewport={"width": 1400, "height": 900})
+    _ftp.route(_re.compile(r"/lib/segslider\.js(\?|$)"), lambda r: r.abort())
+    browsing.goto(_ftp, BASE, "/", require_boot=False)
+    _ftp.evaluate("() => localStorage.clear()")
+    _ftp.reload(wait_until="load"); _ftp.wait_for_timeout(700)
+    browsing.pad_drawer(_ftp, "photo")
+    _ftp.set_input_files("#photoInput", files=[{"name": "fit.png", "mimeType": "image/png", "buffer": _fit_png.getvalue()}])
+    _ftp.wait_for_timeout(1000)
+    _ftp.evaluate("() => { const s = document.getElementById('photoFitSlider'); s.style.width = '0'; }")   # the one-shot sizing lost, as on a restore
+    _ftp.wait_for_timeout(200)
+    _fit_nojs = _ftp.evaluate(_FITQ)
+    _ftp.close(); _ftb.close()
+check("PHOTO FIT PILL: after a draft restore the selected option's pill spans it and sits under it",
+      _fit_restored["active"] == "Fit" and abs(_fit_restored["pillW"] - _fit_restored["btnW"]) <= 1 and _fit_restored["under"],
+      str(_fit_restored))
+check("PHOTO FIT PILL: with the pill script blocked, the selected option paints its own tint",
+      _fit_nojs["bg"] not in ("rgba(0, 0, 0, 0)", "transparent"), str(_fit_nojs))
+
 print("\nCLEAR ALL — arming is announced, does not race a timer, and Flip's menu clears through the action")
 # Outside review of v291, SK-AUD-018/019. The two-tap arm relabelled the item
 # and disarmed on a 3-second timer: a screen reader heard nothing change, and

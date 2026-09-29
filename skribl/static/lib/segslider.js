@@ -72,6 +72,38 @@
     });
   }
 
+  /* THE PHOTO FIT CONTROL (Fill / Fit / Stretch) gets the same treatment. It
+   * is not a .seg -- its pill is .photo-fit-slider, measured from the first
+   * button rather than the 3px padding -- and five call sites in two editors
+   * sized it ONCE: on a pick, a reset, a draft restore. A draft restored with
+   * the drawer shut sized it to a 0-wide pill, and opening the drawer never
+   * corrected it (owner, desktop: "Fit" selected, no highlight). Tracked here
+   * like the segs: re-placed when the group gains layout, when the selected
+   * button changes, and on resize; data-pill tells the CSS fallback that the
+   * pill is in place. The old call sites still run and agree with this. */
+  function placeFit(group) {
+    var pill = group.querySelector('.photo-fit-slider');
+    if (!pill) return;
+    var btns = group.querySelectorAll('button');
+    var a = group.querySelector('button.active') || group.querySelector('button.on');
+    if (!a || !a.offsetWidth || !btns.length) { group.removeAttribute('data-pill'); return; }
+    pill.style.width = a.offsetWidth + 'px';
+    pill.style.transform = 'translateX(' + (a.offsetLeft - btns[0].offsetLeft) + 'px)';
+    group.setAttribute('data-pill', '');
+  }
+  function trackFit(group) {
+    if (!group || group.__fitTracked) return;
+    group.__fitTracked = true;
+    var reflow = function () { placeFit(group); };
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(reflow).observe(group);
+    if (typeof MutationObserver !== 'undefined') {
+      // style too: a call site zeroing the pill's width must not win
+      new MutationObserver(reflow).observe(group, { subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+    }
+    global.addEventListener('resize', reflow);
+    reflow();
+  }
+
   function trackAll(root) {
     var groups = (root || document).querySelectorAll('.seg');
     for (var i = 0; i < groups.length; i++) track(groups[i]);
@@ -219,6 +251,8 @@
     // (owner, on the phone: "not bright enough to tell what's selected").
     // track() is idempotent, so the surfaces' own calls still stand.
     trackAll();
+    var fits = document.querySelectorAll('.photo-fit-group');
+    for (var f = 0; f < fits.length; f++) trackFit(fits[f]);
     if (typeof MutationObserver === 'undefined') return;
     new MutationObserver(function (muts) {
       for (var i = 0; i < muts.length; i++) {
@@ -243,7 +277,7 @@
   else watchDocument();
   document.addEventListener('keydown', onSegKey);
 
-  global.SkriblSegSlider = { track: track, trackAll: trackAll, place: place,
+  global.SkriblSegSlider = { track: track, trackAll: trackAll, place: place, trackFit: trackFit,
                              attach: attach, placeAttached: placeAttached,
                              syncPressed: syncPressed, syncAll: syncAll };
 })(window);
