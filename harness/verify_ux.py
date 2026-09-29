@@ -2458,6 +2458,35 @@ check("HEADER: after the take, Record goes home and the header reads Play, Post,
 check("DOCK LABELS: each wears the hard 1px edge (owner's row 3)",
       len(_lab) >= 3 and all(t and t != "none" and "0px 1px 0px" in t for t in _lab), str(_lab))
 
+print("\nPHONE RECORDING HEADER — the take is centred, and the header comes back after Done")
+# On a phone, recording puts away the mark, settings and the menu, so the
+# readout and Done are the whole header. They sat against the left edge;
+# owner: "if you're removing the branding, then center it". Measured as the
+# space either side of the readout inside the header, at two phone widths.
+with _sp204() as _pc:
+    _pcb = _pc.chromium.launch()
+    _pcr = {}
+    for _w in (320, 390):
+        _pcx = _pcb.new_context(viewport={"width": _w, "height": 844}, has_touch=True, is_mobile=True)
+        _pcp = _pcx.new_page()
+        browsing.goto(_pcp, BASE, "/")
+        _pcp.evaluate("() => localStorage.clear()")
+        _pcp.reload(wait_until="load"); _pcp.wait_for_timeout(700)
+        draw(_pcp, "#canvas", 60, 80, n=18); _pcp.wait_for_timeout(500)
+        _m = _pcp.evaluate("""() => { const h = document.querySelector('.header').getBoundingClientRect(),
+              r = document.getElementById('recIndicator').getBoundingClientRect();
+              return { left: Math.round(r.left - h.left), right: Math.round(h.right - r.right), inside: r.left >= h.left && r.right <= h.right }; }""")
+        _pcp.click("#recordBtn"); _pcp.wait_for_timeout(600)
+        _m["after"] = _pcp.evaluate("""() => ({ brand: getComputedStyle(document.querySelector('.header > .brand')).display,
+              actions: getComputedStyle(document.getElementById('actions')).display })""")
+        _pcr[_w] = _m
+        _pcx.close()
+    _pcb.close()
+check("PHONE RECORDING HEADER: the readout and Done sit centred in the header (320 and 390)",
+      all(m["inside"] and abs(m["left"] - m["right"]) <= 2 for m in _pcr.values()), str(_pcr))
+check("PHONE RECORDING HEADER: after Done, the mark and the controls are back",
+      all(m["after"]["brand"] != "none" and m["after"]["actions"] != "none" for m in _pcr.values()), str(_pcr))
+
 print("\nSEG PILLS — every visible segmented control shows its selection, on both editors")
 # The tune drawer's Mirror, Pauses and Preview speed (and Flip's Mirror and
 # smear weight) showed their selection by label colour alone: lib/segslider.js

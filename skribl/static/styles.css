@@ -5361,14 +5361,6 @@ a.player-btn { text-decoration: none; }
   .header .actions .btn.record.active { padding: 0 15px; }
   .btn.record.active .btn-label { display: inline; }
 
-  /* Symmetry for the recording bar. On the left, the collapsed brand is a
-     zero-width flex item that still earns the header's 10px gap, so the rec
-     pill sits 24px in (14 padding + 10 phantom). The Stop pill's right flank
-     had only the bare 14 (of the recording header: "padding on
-     right"). Mirror the phantom, and two rounded pills float evenly inside
-     the rounded card. */
-  body.recording .actions { margin-right: 10px; }
-
   /* While recording, collapse the mark so the timer + Stop have room and the
      header keeps clear space to its right. That case is static and stays here:
      recording always needs the room, at every mobile width.
@@ -5385,6 +5377,16 @@ a.player-btn { text-decoration: none; }
      To reverse: restore the `:has(#playWrap...)` selector below and the shed
      step becomes dead code for the take-saved state. */
   body.recording .brand > span { display: none; }
+
+  /* ...AND THE TAKE IS CENTRED (owner: "if you're removing the branding, then
+     center it"). With the mark, settings and the menu all put away, the
+     readout and Done -- which app.js moves in beside it -- are the whole
+     header, so they sit in the middle instead of hugging the left edge. The
+     emptied brand and control slots leave the row entirely: a zero-width flex
+     item still earns the header's gap, which would pull the centre off true. */
+  body.recording .header { justify-content: center; }
+  body.recording .header > .brand,
+  body.recording .header > .actions { display: none; }
 
   /* Uniform spacing between controls; cluster them to the right so there's a
      generous gap between the logo and the first control (instead of spreading
