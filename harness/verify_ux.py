@@ -1502,7 +1502,18 @@ with _sp204() as _p:
             const btns = [...m.querySelectorAll('.mag-step-btn')];
             const bar = document.querySelector('.zoom-mag-bar');
             return { focusSeg: f.classList.contains('seg'), radius: cs.borderRadius, token: token,
-                     matchesToolGroup: other ? getComputedStyle(other).borderRadius === cs.borderRadius : null,
+                     // THE RULE THEY SHARE IS CONCENTRIC, NOT EQUAL (the one pill):
+                     // each track's corner is its pill's corner plus the inset the
+                     // pill sits at. The dock is the one pill at a larger scale
+                     // (16 round a 12px pill), the focus seg 12 round 9, so equal
+                     // corners would now be the defect, not the rule.
+                     matchesToolGroup: (() => {
+                       const conc = (g, p) => { if (!g || !p) return null;
+                         const gr = g.getBoundingClientRect(), pr = p.getBoundingClientRect();
+                         const inset = pr.top - gr.top - g.clientTop;
+                         return Math.abs(parseFloat(getComputedStyle(g).borderTopLeftRadius) - inset
+                                         - parseFloat(getComputedStyle(p).borderTopLeftRadius)) <= 0.5; };
+                       return other ? (conc(f, sl) === true && conc(other, other.querySelector('.tool-slider')) === true) : null; })(),
                      sliderVisible: sl && getComputedStyle(sl).opacity === '1' && sl.getBoundingClientRect().width > 20,
                      stepRadius: getComputedStyle(m).borderRadius,
                      edgeRadius: edge ? getComputedStyle(edge).borderRadius : null,
@@ -1521,7 +1532,7 @@ with _sp204() as _p:
                      })() }; }""")
         check(f"V207: {nm} loop-detail focus group is a .seg carrying --r-seg",
               _zi and _zi["focusSeg"] and _zi["radius"] == _zi["token"], str(_zi))
-        check(f"V207: {nm} loop-detail focus group shares the tool group's radius",
+        check(f"V207: {nm} loop-detail focus group and the tool group are each concentric with their pill",
               _zi and _zi["matchesToolGroup"] is True, str(_zi))
         check(f"V207: {nm} loop-detail slider highlight is visible on the selected cell", _zi and _zi["sliderVisible"], str(_zi))
         # The magnification half is a STEPPER, not a .seg, so it is pinned

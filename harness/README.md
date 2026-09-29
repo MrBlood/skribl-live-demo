@@ -82,6 +82,8 @@ stale the same way (the paragraph under the list says so too):
                          guard, IndexedDB media bytes, quota spill
     verify_flipdraft.py  Flip's media out of localStorage into IndexedDB
     verify_fuzz.py       random editing against the invariants the SERVER holds
+    verify_onepill.py    one sliding pill on every pick-one control, contrast
+                         read from pixels, forced colours, the no-script tint
 
 That list is a sample and always was — there are far more suites on disk than
 appear here, and `RELEASE.md` names every one of them.

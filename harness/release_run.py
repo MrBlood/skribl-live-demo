@@ -184,6 +184,7 @@ BATCHES = [
     ["verify_nametab.py"],                 # unrecorded
     ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
      "verify_flipdraft.py", "verify_fuzz.py"],
+    ["verify_onepill.py"],                 # measures — painted pixels and sub-pixel geometry
     # store: posts four rejected payloads and one accepted one to the shared
     # server, so it stays out of verify_deletion_foundation's batch.
     ["verify_medialimits.py"],
