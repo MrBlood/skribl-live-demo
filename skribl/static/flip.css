@@ -1417,6 +1417,10 @@ body.stroking .addcol {
    fallback: verify_layout asserts every control stays reachable at 320, and a
    second row beats a clipped one. */
 :where(body[data-size="compact"]) .flip-tools { padding: 6px; flex-wrap: wrap; }
+/* The ends come in, as on the Pad (styles.css, THE ENDS COME IN): the pen and
+   Media each 24px from the dock's edge at 393 and up, scaled to nothing at 360. */
+:where(body[data-size="compact"]) .flip-tools { padding-left: clamp(6px, calc(6px + (100vw - 360px) / 4), 14px); }
+:where(body[data-size="compact"]) .flip-tools #mediaOpenBtn { margin-right: clamp(0px, calc((100vw - 360px) / 2), 16px); }
 :where(body[data-size="compact"]) .flip-tools .tool-group { gap: 4px; }
 /* Below 560 Flip's header steps to 6px side margins (the block near the top of
    this file), so the dock and the page strip follow it: three cards of one

@@ -6449,6 +6449,14 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .toolbar #redoBtn { margin-left: 6px; }
 @media (max-width: 640px) {
   .toolbar #undoBtn, .toolbar #mediaOpenBtn { margin-left: auto; }
+  /* THE ENDS COME IN (owner, on an iPhone: "do the pen and media have to be
+     flush left and right? maybe not so much space for undo/redo"). Measured
+     at 402: the pen's chip sat 16px from the dock's edge and Media's glyph 8px,
+     with 34-39px of air either side of undo/redo. Both ends now land at 24px,
+     and the auto gaps give up the difference. Scaled with the width: at 360
+     the row has 13px to spare, so there it stays as it was. */
+  .toolbar { padding-left: clamp(6px, calc(6px + (100vw - 360px) / 4), 14px); }
+  .toolbar #mediaOpenBtn { margin-right: clamp(0px, calc((100vw - 360px) / 2), 16px); }
 }
 /* The Media glyph is drawn at 40px in its 44px button: the owner's call ("it
    starts looking bad below 40"). --icon-size moves the status dot with it. */
