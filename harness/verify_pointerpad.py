@@ -174,7 +174,12 @@ with sync_playwright() as sp:
     pg.evaluate("() => document.body.classList.add('stroking')")
     pg.wait_for_timeout(700)
     mid = pg.evaluate("""() => { const h = document.querySelector('.header'), cs = getComputedStyle(h);
-        return { self: +cs.opacity, kids: [...h.children].map(k => +getComputedStyle(k).opacity),
+        // The take's readout is the one child that does NOT recede: its level
+        // bars move only while the pen is down, so fading it would hide the
+        // one thing animating (verify_ux READOUT pins it lit). Excluded by id,
+        // so a new header child still has to fade to pass.
+        return { self: +cs.opacity, kids: [...h.children].filter(k => k.id !== 'recIndicator')
+                                            .map(k => +getComputedStyle(k).opacity),
                  glass: cs.webkitBackdropFilter || cs.backdropFilter }; }""")
     pg.evaluate("() => document.body.classList.remove('stroking')")
     pg.wait_for_timeout(500)
