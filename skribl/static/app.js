@@ -2184,7 +2184,6 @@ function drawWaveform(audioBuffer) {
 }
 
 const musicUploadBtn = _authoringCtl('musicUploadBtn');
-const musicBtnLabel = document.getElementById('musicBtnLabel');
 const musicDetail = document.getElementById('musicDetail');
 const musicTabDot = document.getElementById('musicTabDot');
 
@@ -3206,7 +3205,7 @@ function resetMediaForLoad() {
     if (musicDetail) musicDetail.hidden = true;
     if (musicInput) musicInput.value = '';
     if (musicUploadBtn) musicUploadBtn.classList.remove('loaded');
-    if (musicBtnLabel) musicBtnLabel.textContent = 'Add music';
+    if (typeof padMusicRow === 'function') padMusicRow();
     if (musicTabDot) musicTabDot.hidden = true;
     if (musicRemove) musicRemove.hidden = true;
     if (waveformCtx) waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
@@ -3229,8 +3228,7 @@ function resetMediaForLoad() {
   photoBlur_ = 0;
   if (!document.body.classList.contains('player-mode')) {
     photoUploadBtn.classList.remove('loaded');
-    const _pLabel = document.querySelector('#photoUploadBtn span');
-    if (_pLabel) _pLabel.textContent = 'Add a photo';
+    if (typeof padPhotoRow === 'function') padPhotoRow();
     for (const _id of ['photoDetail', 'photoTabDot', 'photoRemove']) {
       const _e = document.getElementById(_id);
       if (_e) _e.hidden = true;
@@ -3390,6 +3388,7 @@ function loadSkribl(data) {
       const _pd = document.getElementById('photoDetail');
       if (_pd) _pd.hidden = false;
       if (photoUploadBtn) photoUploadBtn.classList.add('loaded');
+      if (typeof padPhotoRow === 'function') padPhotoRow();
       const _ptd = document.getElementById('photoTabDot');
       if (_ptd) _ptd.hidden = false;
       const _prm = document.getElementById('photoRemove');
@@ -3454,7 +3453,7 @@ function loadSkribl(data) {
           if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
           if (musicDetail) musicDetail.hidden = false;
           if (musicUploadBtn) musicUploadBtn.classList.add('loaded');
-          if (musicBtnLabel) musicBtnLabel.textContent = 'Loaded from draft';
+          if (typeof padMusicRow === 'function') padMusicRow();
           if (musicTabDot) musicTabDot.hidden = false;
           const _mr = document.getElementById('musicRemove');
           if (_mr) _mr.hidden = false;

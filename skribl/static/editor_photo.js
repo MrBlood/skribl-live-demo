@@ -71,35 +71,30 @@ function hideEraserCursor() {
 canvasWrap.addEventListener('touchend', hideEraserCursor);
 canvasWrap.addEventListener('touchcancel', hideEraserCursor);
 
+// The file row: the drop area until a photo is added, then the photo itself
+// (lib/pendingcards.js renderRow writes its name, "Behind the drawing · Fill"
+// and the thumbnail). Called after every change this drawer makes to them,
+// and by app.js's loadSkribl through a typeof guard, because the player loads
+// app.js and has no drawer. Keyed on the row's .loaded, not on the picture's
+// display: switching the photo off hides it and keeps the file.
+function padPhotoRow() {
+  if (!window.SkriblPendingCards || !window.SkriblPendingCards.renderRow) return;
+  window.SkriblPendingCards.renderRow('photo', {
+    name: photoBgImg._fileName, src: photoBgImg.getAttribute('src'), fit: photoFit, on: photoEnabled
+  });
+}
+
+// A loaded row is not a way back to the picker: the photo is replaced by
+// removing it first, as the music row and both of Flip's rows always did.
+// Drops are taken by the whole media card (lib/pendingcards.js bindDrops,
+// wired in editor_bar.js), not by the row.
 photoUploadBtn.addEventListener('click', (e) => {
   if (e.target.closest('.dropzone-remove')) return;
-  photoInput.click();
+  if (!photoUploadBtn.classList.contains('loaded')) photoInput.click();
 });
-
-photoUploadBtn.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  photoUploadBtn.classList.add('drag-over');
-});
-
-photoUploadBtn.addEventListener('dragleave', () => {
-  photoUploadBtn.classList.remove('drag-over');
-});
-
-photoUploadBtn.addEventListener('drop', (e) => {
-  e.preventDefault();
-  photoUploadBtn.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (!file) return;
-  if (!isImageFile(file)) {
-    showToast('Please drop an image file — jpg, png, gif, or webp', photoUploadBtn);
-    return;
-  }
-  // Reuse the existing photo input handler
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  photoInput.files = dt.files;
-  photoInput.dispatchEvent(new Event('change'));
-});
+// The switch's own handler (app.js) runs first and flips photoEnabled; this
+// re-reads the row, which says "Hidden" while the photo is switched off.
+bindEl('photoToggle', 'click', padPhotoRow);
 
 photoInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
@@ -153,7 +148,6 @@ photoInput.addEventListener('change', async (e) => {
   photoBg = photoBgImg;
   // canvas is always transparent
   canvasWrap.style.backgroundColor = bgColor;
-  document.querySelector('#photoUploadBtn span').textContent = file.name;
   photoBgImg._fileName = file.name;
   document.getElementById('photoDetail').hidden = false;
   photoUploadBtn.classList.add('loaded');
@@ -162,6 +156,7 @@ photoInput.addEventListener('change', async (e) => {
   document.getElementById('photoRemove').hidden = false;
   setTimeout(initPhotoFitSlider, 50);
   updateRepositionUI();
+  padPhotoRow();
 });
 
 bindEl('photoRemove', 'click', (e) => {
@@ -181,7 +176,6 @@ bindEl('photoRemove', 'click', (e) => {
   document.getElementById('photoDetail').hidden = true;
   photoInput.value = '';
   photoUploadBtn.classList.remove('loaded');
-  document.querySelector('#photoUploadBtn span').textContent = 'Add a photo';
   document.getElementById('photoTabDot').hidden = true;
   document.getElementById('photoRemove').hidden = true;
   document.getElementById('photoOpacity').value = 100;
@@ -206,6 +200,7 @@ bindEl('photoRemove', 'click', (e) => {
   photoZoom = 1; setZoomSliderUI();
   exitReposition();
   updateRepositionUI();
+  padPhotoRow();
 });
 
 setTimeout(initPhotoFitSlider, 50);
@@ -227,6 +222,7 @@ document.querySelectorAll('.photo-fit-btn').forEach((btn, idx) => {
     const offset = allBtns.slice(0, idx).reduce((sum, b) => sum + b.offsetWidth, 0);
     photoFitSlider.style.width = btn.offsetWidth + 'px';
     photoFitSlider.style.transform = `translateX(${offset}px)`;
+    padPhotoRow();
   });
 });
 
@@ -466,6 +462,7 @@ function resetPhotoAdjustments() {
   });
   initPhotoFitSlider();
   updateRepositionUI();
+  padPhotoRow();
 }
 
 // Drag the background. Attaches window listeners for the duration of one drag

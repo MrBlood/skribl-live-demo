@@ -547,8 +547,9 @@ with sync_playwright() as p:
     pd6.mouse.up(); pd6.wait_for_timeout(1800)
     pd6.set_input_files("#musicInput", WAV); pd6.wait_for_timeout(4500)
     # Remove, then read the DRAFT immediately — inside the 1.2 s debounce, which
-    # is the window a dying tab falls into.
-    pd6.evaluate("() => document.getElementById('musicRemove').click()")
+    # is the window a dying tab falls into. Two clicks: the bin asks first (the
+    # first arms it, lib/pendingcards.js), and the second is the Remove.
+    pd6.evaluate("() => { const b = document.getElementById('musicRemove'); b.click(); b.click(); }")
     pd6.wait_for_timeout(150)
     draft6 = pd6.evaluate("() => { const r = localStorage.getItem('skribl_autosave_v1'); return r ? !!(JSON.parse(r).musicMeta && JSON.parse(r).musicMeta.name) : null; }")
     check("Pad: Remove writes the draft before it deletes the bytes",

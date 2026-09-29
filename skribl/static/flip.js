@@ -4108,8 +4108,10 @@ document.addEventListener('click',e=>{ const t=e.target;
   // (v206) Ignore the file inputs here.
   if(t.closest('input[type=file]')) return;
   if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#penToolBtn') && !t.closest('#eraserToolBtn')) closePop();
-  if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaTabs')) hidePhoto();
-  if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaTabs')) hideMusic();
+  // #mediaCard, not only the panel and the tabs: the card holds both, and the
+  // seam and padding between them are part of it, not a tap away from it.
+  if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaCard')) hidePhoto();
+  if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaCard')) hideMusic();
   if(toolTray && !toolTray.hidden && !t.closest('#toolTray') && !t.closest('#toolMoreBtn')) hideToolTray();
 });
 // Escape closes the tray. The drawers below the row are dismissed by tapping
@@ -5107,7 +5109,7 @@ if(canvasSeg) canvasSeg.addEventListener('click', e=>{
 });
 if(moreBtn) moreBtn.addEventListener('click', ()=>requestAnimationFrame(syncCanvasSeg));
 // --- media drawer controls ---
-const photoUploadBtn=document.getElementById('photoUploadBtn'), photoBtnLabel=document.getElementById('photoBtnLabel'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
+const photoUploadBtn=document.getElementById('photoUploadBtn'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
 const photoDetail=document.getElementById('photoDetail'), photoNote=document.getElementById('photoNote');
 const photoFitGroup=document.getElementById('photoFitGroup'), photoFitSlider=document.getElementById('photoFitSlider');
 const repositionBtn=document.getElementById('repositionBtn'), repositionHint=document.getElementById('repositionHint');
@@ -5125,11 +5127,6 @@ const photoTabDot=document.getElementById('photoTabDot'), musicTabDot=document.g
 function syncPhotoUI(){
   const hasImg=!!bgImage;
   photoUploadBtn.classList.toggle('loaded', hasImg);
-  // NOT 'Background image' as the fallback: the panel already carries that
-  // as its section heading, so an image with no stored name printed it twice
-  // in a row. Normally this shows the file name and there is no repetition;
-  // the fallback is for a restored draft that never saved one.
-  photoBtnLabel.textContent = hasImg ? (imageName || 'Image added') : 'Add an image';
   photoRemove.hidden=!hasImg; photoNote.hidden=hasImg; photoDetail.hidden=!hasImg;
   photoToggle.classList.toggle('on', photoEnabled); photoToggle.setAttribute('aria-checked', String(photoEnabled));
   photoTabDot.hidden = !hasImg;                                                       // green dot when an image is set
@@ -5148,17 +5145,24 @@ function syncPhotoUI(){
   photoOpacityEl.value=Math.round(photoOpacity*100); photoOpacityVal.textContent=Math.round(photoOpacity*100)+'%'; setFill(photoOpacityEl);
   photoBlurEl.value=photoBlur; photoBlurVal.textContent=photoBlur+'px'; setFill(photoBlurEl);
   positionFitSlider();
+  // The file row (lib/pendingcards.js, shared with the Pad): name, "Behind the
+  // drawing · Fill" and the thumbnail. bgImage is the data URL setBgImage has
+  // just assigned; bgImageObj loads later, so it is not the source.
+  if(window.SkriblPendingCards) window.SkriblPendingCards.renderRow('photo', { name: imageName, src: bgImage, fit: photoFit, on: photoEnabled });
 }
 function syncMusicUI(){
   const hasMus=!!musicData;
   musicUploadBtn.classList.toggle('loaded', hasMus);
-  musicBtnLabel.textContent = hasMus ? (musicName || 'Music loop') : 'Add music';
   musicRemove.hidden = !hasMus;
   musicToggle.classList.toggle('on', musicEnabled); musicToggle.setAttribute('aria-checked', String(musicEnabled));
   musicDetail.hidden = !hasMus;
   musicNote.hidden = hasMus;
   musicTabDot.hidden = !hasMus;
   if(hasMus) updateTrimUI();
+  // The file row: name and "Loops under the drawing · 0:08". The length only
+  // once THIS track has decoded: a payload applied over another one nulls the
+  // buffer but leaves the old track's audioDuration until its own decode lands.
+  if(window.SkriblPendingCards) window.SkriblPendingCards.renderRow('music', { name: musicName, dur: currentAudioBuffer ? audioDuration : 0, on: musicEnabled });
 }
 // updateToolState last: a background image alone is something to post, and every
 // path that adds or removes one ends here (setBgImage, removeBgImage, the
@@ -5189,7 +5193,7 @@ photoBlurEl.addEventListener('input',()=>{ photoBlur=+photoBlurEl.value; photoBl
 resetPhotoBtn.addEventListener('click',()=>{ photoFit='cover'; photoOpacity=1; photoBlur=0; photoZoom=1; photoOffX=0.5; photoOffY=0.5; reposMode=false; photoEnabled=true; redrawAll(); syncPhotoUI(); scheduleSave(); });
 
 // ===== music component (ported from the Pad: waveform + trim + Loop Detail) =====
-const musicUploadBtn=document.getElementById('musicUploadBtn'), musicBtnLabel=document.getElementById('musicBtnLabel');
+const musicUploadBtn=document.getElementById('musicUploadBtn');
 const musicDetail=document.getElementById('musicDetail'), musicToggle=document.getElementById('musicToggle'), musicRemove=document.getElementById('musicRemove');
 const musicNote=document.getElementById('musicNote');
 const musicTrack=document.getElementById('musicTrack'), musicRange=document.getElementById('musicRange');
@@ -5429,6 +5433,14 @@ function setCrossfadeUI(){ const s=document.getElementById('crossfadeSlider'), v
 musicUploadBtn.addEventListener('click',(e)=>{ if(e.target.closest('.dropzone-remove')||e.target.closest('.layer-toggle')) return; if(!musicUploadBtn.classList.contains('loaded')) musicInput.click(); });
 musicToggle.addEventListener('click',(e)=>{ e.stopPropagation(); musicEnabled=!musicEnabled; if(!musicEnabled) stopMusic(); else if(playing) startMusic(); syncMusicUI(); scheduleSave(); });
 musicRemove.addEventListener('click',(e)=>{ e.stopPropagation(); removeMusic(); });
+// Flip had no drag-and-drop at all; the empty rows now say "or drop one here".
+// A drop anywhere on the media card goes to the open drawer's input once it is
+// the right kind of file (lib/pendingcards.js bindDrops, shared with the Pad):
+// the change handlers above do the rest, as they do for the picker.
+if(window.SkriblPendingCards) window.SkriblPendingCards.bindDrops({
+  card: 'mediaCard', current: ()=>_flipDrawerCtl.current(),
+  inputs: { photo: 'imageInput', music: 'musicInput' }, say: (msg)=>chip(msg)
+});
 
 // overflow menu (save/load/export)
 const moreScrim=document.getElementById('moreScrim');

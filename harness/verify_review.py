@@ -1084,14 +1084,16 @@ with sync_playwright() as p9:
     pad9.reload(); pad9.wait_for_timeout(900); pad9.evaluate(_GATED, _PNG)
     # Round 10, #1: this used to do `photoSelectionSeq++` by hand — simulating the
     # implementation rather than exercising it, which hid the fact that the real
-    # Remove button never incremented the token. It now CLICKS the real control.
+    # Remove button never incremented the token. It now CLICKS the real control,
+    # twice: the bin asks first (lib/pendingcards.js), and the second is Remove.
     removal = pad9.evaluate("""async () => {
         const dt = new DataTransfer();
         dt.items.add(new File([window.__png], 'a.png', {type:'image/png'}));
         const i = document.getElementById('photoInput'); i.files = dt.files;
         i.dispatchEvent(new Event('change'));
         await new Promise(r => setTimeout(r, 80));
-        document.getElementById('photoRemove').click();      // the real control
+        const bin = document.getElementById('photoRemove');
+        bin.click(); bin.click();                            // the real control: arm, then remove
         window.__gate['a.png'](null);
         await new Promise(r => setTimeout(r, 700));
         const img = document.getElementById('photoBgImg');
@@ -1302,10 +1304,10 @@ for n, body in _tpls.items():
 # The assertion's PURPOSE survives, so it is inverted rather than deleted: the
 # module must still be loaded wherever code that calls it can run.
 # skriblHasUsableMime and skriblDecodeCheckImage are reached from the photo and
-# music DROP handlers, which are bound to #photoUploadBtn / #musicUploadBtn in
-# the tab panels — still present in the player's template. While those panels
-# remain, the module has to stay on all three templates. Drop the panels and
-# lib/media_validation.js (7,130 B) can leave the player with them.
+# music DROP handlers. That was written while the player's template still
+# carried the tab panels those handlers were bound to; the panels have left the
+# player since (see the inverted check below), and the drops are now taken by
+# the editors' media card (lib/pendingcards.js bindDrops).
 check("the player no longer renders authoring media inputs",
       'id="musicInput"' not in _tpls["skribl_player.html"]
       and 'id="photoInput"' not in _tpls["skribl_player.html"],

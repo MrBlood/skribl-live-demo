@@ -34,7 +34,7 @@
      canvas keeps touch-action:none so drawing never scrolls or gesture-zooms. */
   .flip-app { touch-action: manipulation; }
   .flip-app button, .flip-app label, .flip-app input, .flip-app .seg, .flip-app .tool-open,
-  .flip-app .layer-toggle, .flip-app .tab-panel, .flip-app .strip,
+  .flip-app .layer-toggle, .flip-app .tab-panel, .flip-app .media-card, .flip-app .strip,
   .flip-app .t-btn, .flip-app .tool-btn, .flip-app .nudge-btn, .flip-app .loop-btn,
   .flip-app .zoom-mag-btn, .flip-app .slider-nudge-btn { touch-action: manipulation; }
   .flip-app .app { min-height: 100dvh; height: auto; }
@@ -267,14 +267,15 @@
   .clear-undo-btn[hidden] { display: none; }
   .clear-undo-btn:disabled { opacity: .4; cursor: default; color: var(--text-dim); border-color: var(--hairline); }
   @media (hover:hover) { .clear-undo-btn:not(:disabled):hover { background: rgba(124,92,255,.14); border-color: var(--ui-line); } }
-  /* Image / music drop-up drawers. */
-  /* The shared .layer-toggle is display:none until it's inside a .music-dropzone.loaded
-     box (the Pad's markup). Flip puts it straight in the action row, so reveal it here. */
+  /* Image / music drawers: the shared partials, in the shared media card. */
+  /* The shared .layer-toggle is display:none until the photo or music file row
+     holds a file (.music-dropzone.loaded, both editors). The Draw drawer's Grid
+     switch sits in a prop row instead, so reveal it here. */
   .prop-row .layer-toggle { display: inline-block; flex: none; }   /* Grid toggle in the Draw drawer */
   .grid-hint { margin-left: 12px; color: var(--text-secondary); font-size: 12.5px; text-align: left; flex: 1; }
   .flip-drawer-note { margin: 10px 2px 2px; color: var(--text-dim); font-size: 12px; line-height: 1.4; }
   .t-btn.on { color: var(--text-primary); border-color: var(--ui-line); }
-  /* image/music use the Pad's .tool-open + green .tab-dot; keep them sized like the row */
+  /* the Media button uses the Pad's .tool-open + green .tab-dot; keep it sized like the row */
   .flip-tools .tool-open { width: 40px; height: 40px; border-radius: 12px; }
   /* Rounded-square, not a circle (v205-fix): undo/redo are TOOLS, and the shape
      language reserves tiles for tools/openers and circles for on/off toggles.

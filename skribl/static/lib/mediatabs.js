@@ -7,7 +7,10 @@
 
    - Media opens whichever of Photo and Music was used LAST, and closes it if
      either is already open.
-   - A tab strip above the open drawer says which one is showing and switches.
+   - A tab strip at the top of the media card -- the strip and the open drawer
+     are one card (#mediaCard) -- says which one is showing and switches. The
+     card itself is shown by CSS while either drawer is open, not from here,
+     so a drawer never depends on this file to be seen.
    - Media's status dot MIRRORS the two tab dots, so the bar and the drawer
      cannot disagree: shown if either is, amber (pending) if either is --
      amber beats green because it is the only state that asks something of you.

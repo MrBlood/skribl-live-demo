@@ -120,7 +120,7 @@ CLAIMS = {
     "Test Seam": ["verify_audio.py::no click at the seam"],
     "Nudge": ["verify_parity.py::a nudge moves the trim edge by the same amount on both"],
     # Background image
-    "Add an image": ["verify_parity.py::loading a photo marks the tab on both", "probe:media_tabs"],
+    "Add a photo": ["verify_parity.py::loading a photo marks the tab on both", "probe:media_tabs"],
     "Fill / Fit / Stretch (image framing)": ["verify_parity.py::both surfaces place a {} photo identically"],
     "Reposition": ["verify_pointerpad.py::a mouse drags the photo in reposition mode"],
     "Zoom": ["probe:photo_adjust"],

@@ -1,24 +1,38 @@
-{# Shared "Music" drawer — loop: dropzone, waveform trim, loop summary/actions,
+{# Shared "Music" drawer — loop: the file row, waveform trim, loop summary/actions,
    fine-tune loop (zoom waveform + nudge grid). Behavior-preserving: each surface
    renders its EXACT current markup + IDs; only divergent pieces are gated on `kind`.
    Pad-only: #musicInput (Flip's is a wider-accept input outside the panel) + the
-   #musicPending re-add card + the #matchDrawingLabel span + "Use finer/coarser step"
-   aria text. Flip-only: .draw-popout dialog root, a section-label header, and a
-   .flip-drawer-note footer. Include with:
+   #matchDrawingLabel span + "Use finer/coarser step" aria text. Both render the
+   #musicPending re-add card. Flip-only: .draw-popout dialog root and a
+   .flip-drawer-note footer. The Photo | Music tabs head the media card this panel
+   sits in (#mediaCard), so it has no heading of its own; the dialog keeps its
+   aria-label. Include with:
      {% with kind='pad'  %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
-     {% with kind='flip' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %} #}
+     {% with kind='flip' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
+
+   THE FILE ROW is one element with two faces, as in the photo drawer (see
+   _skribl_image_drawer.html): the drop area until a track is added, then the
+   track -- the note on the selected tab's tint, its name and "Loops under the
+   drawing · 0:08", the on/off switch and a bin that asks before it removes.
+   Every note drawn in this file is the music_glyph() macro, never a copy of
+   its path (verify_compose). #}
+{% from 'skribl/_skribl_music_glyph.html' import music_glyph %}
 {% set kind = kind|default('pad') -%}
 {% if kind == 'flip' -%}
 <div class="tab-panel draw-popout" id="musicPanel" role="dialog" aria-label="Music loop" hidden>
-  <span class="draw-section-label">Music loop</span>
 {%- else -%}
 <div class="tab-panel" id="musicPanel" hidden>
 {%- endif %}
   <div class="music-dropzone" id="musicUploadBtn">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-    <span id="musicBtnLabel">Add music</span>
+    <button type="button" class="dz-add" id="musicAddBtn">
+      {{ music_glyph() }}
+      <span class="dz-title">Add music</span>
+      <span class="dz-hint">MP3, WAV, M4A or OGG · it loops under your drawing</span>
+    </button>
+    <span class="dz-lead dz-tile" aria-hidden="true">{{ music_glyph() }}</span>
+    <div class="dz-file"><span class="dz-name" id="musicBtnLabel"></span><span class="dz-meta" id="musicBtnMeta"></span></div>
     <button type="button" id="musicToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Toggle music on or off"><span class="layer-toggle-knob"></span></button>
-    <button type="button" id="musicRemove" class="dropzone-remove" hidden title="Remove the track">Remove</button>
+    <button type="button" id="musicRemove" class="dropzone-remove" hidden title="Remove the track" aria-label="Remove the track"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span class="dz-arm">Remove?</span></button>
   </div>
   {% if kind != 'flip' -%}
   <input type="file" id="musicInput" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" style="display:none">
@@ -26,7 +40,7 @@
 
   <div id="musicPending" class="pending-card" hidden>
     <div class="pending-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      {{ music_glyph() }}
     </div>
     <div class="pending-text">
       <span class="pending-name" id="musicPendingName">song.mp3</span>
