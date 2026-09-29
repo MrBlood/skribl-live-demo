@@ -6503,11 +6503,15 @@ body.stroking .toolbar, body.stroking .flip-tools {
    phone, where the chip is the whole button. */
 .toolbar #penToolBtn, .flip-tools #penToolBtn { padding: 0 5px; }
 @media (min-width: 641px) { .toolbar #penToolBtn { padding: 0 12px 0 5px; } }   /* the label's own margin inside the tint */
+/* The pen button's canvas: a nib with no chip behind it (lib/penswoosh.js,
+   THE NIB). --pen-nib is the nib's own ink, read by the painter: strong when
+   the pen is the tool, the dock's resting ink when it is not. */
 .toolbar .pen-swoosh, .flip-tools .pen-swoosh {
-  display: block; width: 50px; height: 36px; border-radius: 11px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  display: block; width: 50px; height: 36px;
   pointer-events: none;
+  --pen-nib: var(--text-tool);
 }
+.toolbar .tool-btn.active .pen-swoosh, .flip-tools .tool-btn.active .pen-swoosh { --pen-nib: var(--text-strong); }
 /* ...and the controls that are ON rather than SELECTED -- Media while its
    drawer is open, Magnify while its HUD shows -- light their glyph, with no
    tile. Magnify is desktop-only, so the phone mocks never showed it still
