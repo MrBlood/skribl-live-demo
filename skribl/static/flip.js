@@ -207,7 +207,7 @@ window.addEventListener('resize', ()=>{ sizeStage(); positionSeg(); positionTool
 
 let frames = [ newFrame() ];
 let idx = 0;
-let color = (window.SkriblPalette && window.SkriblPalette.START) || "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
+let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
 /* HOW FINELY TIME IS CUT, as a multiple of the speed the artist picked.
 
    `fps` is the stored playback rate and, with `hold`, fully determines timing --
@@ -4127,9 +4127,6 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') hideToolTray(
 // rather than from the markup happening to agree with it.
 if (toolShelf) toolShelf.sync();
 renderRecent(); setColor(color);
-// The starting ink (lib/palette.js START) is not a preset, so setColor rang
-// no dot for it: show it on the custom swatch, as the Pad does.
-if(window.SkriblPalette && color === window.SkriblPalette.START) window.SkriblPalette.showStart(colorGroup);
 const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal'), brushDot=document.getElementById('brushSizeDot');
 // The pen button is the stroke it will make (lib/penswoosh.js wire(), shared
 // with the Pad): repainted on any change in the draw drawer or the bar, and

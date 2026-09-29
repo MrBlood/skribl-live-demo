@@ -12521,25 +12521,3 @@ fills its row in `loadedmetadata`, which iOS defers until playback is asked
 for, so a restored track's row may read "Add music" until then; the owner's
 phone is the only place to see it. The thumbnail reuses the photo's own URL;
 whether iOS shares the decoded bitmap cannot be measured here either.
-
-## v317, cont. -- a new drawing starts in the signature purple
-
-Asked for alongside the drawer work: the Pad and Flip both started every
-drawing in paper white, and the owner wants the first stroke to be the
-Pad's signature purple -- the ink the Skribl signature is written in,
-`--brand-ink`, which is `--accent-bright` (#9179ff) in the dark theme.
-
-It is a starting colour, not a new preset. `lib/palette.js` explains why the
-chrome's purple is not one of the seven Riso inks, and that argument is
-about what the palette offers, not where a drawing begins. So `START` lives
-beside the palette and both editors show it the way they show any colour
-that is not a preset: on the custom swatch, ringed, with the picker opening
-on it. Pick a preset and it goes, the way a custom pick always has. It is a
-literal and not a read of the token: the token follows the theme, and ink
-laid down in a drawing must not change when the viewer's theme does. On a
-light theme the signature itself is written darker (#4a33c2), but the
-canvas's default ground is the same near-black in both themes, which is the
-ground #9179ff was chosen against.
-
-`verify_parity` pins the start on both editors: the ink, the ringed custom
-swatch, its colour, and the picker's value.

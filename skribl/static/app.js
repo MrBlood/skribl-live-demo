@@ -222,7 +222,7 @@ let hasContent = false;
 // user starts a new recording or clears the canvas. This keeps a finished
 // Skribl = base snapshot + recorded strokes, with no ambiguous extra layer.
 let finishedRecording = false;
-let color = (window.SkriblPalette && window.SkriblPalette.START) || '#ffffff';   // lib/palette.js START
+let color = '#ffffff';
 let size = 5;
 let tool = 'pen';
 
@@ -958,10 +958,7 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
 // created at runtime needs no listener of its own.
 (function(){
   const g = document.getElementById('colorGroup');
-  if (g && window.SkriblPalette) {
-    window.SkriblPalette.mount(g);
-    window.SkriblPalette.showStart(g);   // the starting ink, on the custom swatch
-  }
+  if (g && window.SkriblPalette) window.SkriblPalette.mount(g, { selectFirst: true });
 })();
 
 bindEl('colorGroup', 'click', (e) => {
