@@ -6620,6 +6620,10 @@ body.stroking .toolbar, body.stroking .flip-tools {
    showed its selection by label colour alone -- the Pad's Mirror, Pauses and
    Preview speed did, on every device, for as long as they existed. */
 .seg:not([data-pill]) > button.on { background: var(--seg-on-fill); }
+/* !important because .photo-fit-btn clears its background with !important
+   (it defeats the generic button styles); this selector is more specific, so
+   among the important declarations it wins. */
+.photo-fit-group:not([data-pill]) > button.active { background: var(--seg-on-fill) !important; }
 .seg button.on, .smooth-btn.active, .photo-fit-btn.active,
 .gif-seg-btn.active, .gif-seg-btn[aria-pressed="true"] { color: var(--seg-on-ink); }
 
