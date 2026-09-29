@@ -574,36 +574,56 @@ body {
 
 .rec-indicator[hidden] { display: none; }
 
+/* THE TAKE'S READOUT. A still purple dot, six level bars, the clock, and in
+   secondary ink how long the replay will run. No pill, no red, no blink: the
+   same take used to sit in a crimson pill with a pulsing dot beside a crimson
+   Stop, and read as a warning on a screen where it is ALWAYS showing while
+   you draw.
+
+   The bars are the only motion, and they mean something: they run only while
+   the pen is down (body.stroking) and hold still in a pause, which is exactly
+   the difference between the clock and "plays". Each bar has its own period
+   and a negative delay, so a paused set freezes as an uneven little
+   waveform rather than a flat row. */
 .rec-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(244, 50, 111, 0.12);
-  border: 1px solid rgba(244, 50, 111, 0.25);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--danger);
+  gap: 10px;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .rec-indicator .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--danger);
-  display: inline-block;
-  animation: pulse 1s infinite;
+  background: var(--ui-hi);
+  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
+  flex: none;
+}
+@keyframes rec-level {
+  from { transform: scaleY(0.25); }
+  to   { transform: scaleY(1); }
+}
+/* Reduced motion: a still waveform, never a row of full-height bars (the
+   global rule would otherwise run each once to its last frame). */
+@media (prefers-reduced-motion: reduce) {
+  .rec-bars i { animation: none !important; }
+  .rec-bars i:nth-child(odd) { transform: scaleY(0.55); }
 }
 
+/* The autosave dot's blink (.autosave-status.saving). It used to live here
+   for the rec dot too, which no longer blinks. */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
 
 .rec-timer {
+  font-size: 17px;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 650;
+  letter-spacing: 0.01em;
 }
 
 .duration-badge {

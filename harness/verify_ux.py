@@ -2276,7 +2276,7 @@ _stale = sorted(k for k in _ZOOM_EXEMPT if k not in _seen)
 check("no exemption names a field that no longer exists",
       not _stale, "stale: " + ", ".join(_stale))
 
-print("\nAUTO-RECORD — the header button is a Stop button, and one honest exception")
+print("\nAUTO-RECORD — the header button is a Done button, and one honest exception")
 # v288 (the v287 audit, owner's call). The first stroke has armed a take since
 # the auto-arm in editor_draw.js; an idle "Record" beside "Recording starts
 # automatically" was two ways to say one thing. The button now shows for what
@@ -2318,6 +2318,58 @@ with _sp204() as _ar:
     check("AUTO-RECORD: unrecorded ink with no take brings Record back, not Stop",
           not _s3["hidden"] and not _s3["active"], str(_s3))
     _arp2.close(); _arp.close(); _arb.close()
+
+print("\nTHE TAKE'S READOUT — calm while you draw, and lit while the pen is down")
+# The recording header read as an alarm (crimson pill, blinking dot, crimson
+# Stop) on a screen where it is always showing while you draw. It is now a
+# still dot, level bars, the clock and "plays", with a quiet Done. The bars
+# move only while the pen is down -- and while the pen is down the header's
+# contents recede to 0.1, so the owner asked of the mock: "doesn't it get
+# hidden while you're drawing?" It did. What is asserted is what the eye
+# gets: the readout's EFFECTIVE opacity (itself times every ancestor) with
+# the pen down and moving, that the bars are running then and still at rest,
+# and that nothing in the recording header paints the danger colour.
+with _sp204() as _rr:
+    _rrb = _rr.chromium.launch()
+    _rrp = _rrb.new_page(viewport={"width": 402, "height": 874})
+    browsing.goto(_rrp, BASE, "/")
+    _rrp.evaluate("() => localStorage.clear()")
+    _rrp.reload(wait_until="load"); _rrp.wait_for_timeout(700)
+    draw(_rrp, "#canvas", 120, 120, n=18)
+    _rrp.wait_for_timeout(400)
+    _RR = """() => {
+        const eff = el => { let o = 1; for (; el; el = el.parentElement) o *= +getComputedStyle(el).opacity; return o; };
+        const t = document.getElementById('recTimer'), r = t.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        const danger = getComputedStyle(document.documentElement).getPropertyValue('--danger').trim();
+        const tmp = document.createElement('i'); tmp.style.color = danger; document.body.appendChild(tmp);
+        const dRGB = getComputedStyle(tmp).color; tmp.remove();
+        const hdr = [document.getElementById('recIndicator'), ...document.querySelectorAll('#recIndicator *'),
+                     document.getElementById('recordBtn'), ...document.querySelectorAll('#recordBtn *')];
+        const red = hdr.filter(e => { const cs = getComputedStyle(e);
+            return cs.color === dRGB || cs.backgroundColor === dRGB || cs.fill === dRGB; }).length;
+        return { stroking: document.body.classList.contains('stroking'),
+                 clock: eff(t), bars: eff(document.querySelector('.rec-bars')),
+                 plays: eff(document.getElementById('recPlays')),
+                 painted: !!hit && (hit === t || t.contains(hit)),
+                 run: getComputedStyle(document.querySelector('.rec-bars i')).animationPlayState,
+                 label: document.getElementById('recordBtn').textContent.trim(), red: red }; }"""
+    _rest = _rrp.evaluate(_RR)
+    _cb = _rrp.locator("#canvas").bounding_box()
+    _rrp.mouse.move(_cb["x"] + 60, _cb["y"] + 60); _rrp.mouse.down()
+    _rrp.mouse.move(_cb["x"] + 160, _cb["y"] + 140, steps=20)
+    _rrp.wait_for_timeout(700)                # past the recede's delay and fade
+    _pen = _rrp.evaluate(_RR)
+    _rrp.mouse.up(); _rrp.wait_for_timeout(300)
+    check("READOUT: at rest the bars hold still, and the take ends on Done, not Stop",
+          _rest["run"] == "paused" and _rest["label"] == "Done", str(_rest))
+    check("READOUT: nothing in the recording header paints the danger colour",
+          _rest["red"] == 0 and _pen["red"] == 0, f"rest {_rest['red']}, pen {_pen['red']}")
+    check("READOUT: with the pen down the clock and bars stay lit (not receded with the header)",
+          _pen["stroking"] and _pen["clock"] > 0.9 and _pen["bars"] > 0.9 and _pen["painted"], str(_pen))
+    check("READOUT: with the pen down the bars run, and the 'plays' caption recedes",
+          _pen["run"] == "running" and _pen["plays"] < 0.5, str(_pen))
+    _rrp.close(); _rrb.close()
 
 print("\nCLEAR ALL — arming is announced, does not race a timer, and Flip's menu clears through the action")
 # Outside review of v291, SK-AUD-018/019. The two-tap arm relabelled the item
