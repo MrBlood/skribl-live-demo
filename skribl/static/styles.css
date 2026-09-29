@@ -1271,13 +1271,21 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
 }
 
 
+/* THE RING IS AN INSET SHADOW, NOT A BORDER. Where a dot carries one (the
+   media button, the Photo | Music tabs, the post sheet's sound marker) it is
+   the colour of the ground behind the dot, so it reads as a gap. The owner
+   asked for it thinner than the 1.5px border it was, and a border cannot be:
+   Chrome floors border widths to whole CSS pixels, so 1.5px drew as 1px and
+   0.75px would draw as 1px too. A spread shadow keeps its fraction. A ringed
+   context sets --dot-ring and --dot-ring-w; an unringed dot draws a 0px ring. */
 .tab-dot {
   display: inline-block;
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--good);
-  box-shadow: 0 0 3px rgba(var(--good-rgb), 0.35);
+  box-shadow: inset 0 0 0 var(--dot-ring-w, 0px) var(--dot-ring, transparent),
+              0 0 3px rgba(var(--good-rgb), 0.35);
   flex-shrink: 0;
 }
 
@@ -1289,7 +1297,8 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
    on it are the action purple (v317). */
 .tab-dot.pending {
   background: var(--warn);
-  box-shadow: 0 0 3px rgba(255, 210, 63, 0.35);
+  box-shadow: inset 0 0 0 var(--dot-ring-w, 0px) var(--dot-ring, transparent),
+              0 0 3px rgba(255, 210, 63, 0.35);
 }
 
 /* .tab-dot-empty is RETIRED. Photo and Music carried a grey twin that a
@@ -1395,7 +1404,7 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
    inside the icon's top-right corner on each axis -- tucked INTO the corner,
    with its outer edge just reaching it, rather than hanging outside.
 
-   The 1.5px ring is the row's ground, not the old tray colour it inherited from
+   The ring (1.5px until the owner asked for it thinner; 0.75px now) is the row's ground, not the old tray colour it inherited from
    v205. The tray went in 31ed04f; a #171a22 ring against a #06070a row was a
    faint light halo around every dot. Its job is to separate the dot from the
    glyph stroke it now overlaps, so it has to be the colour BEHIND both. */
@@ -1443,8 +1452,10 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
   top: calc(50% - var(--icon-size, 24px) * 0.4 - 3.5px);
   right: auto;
   /* The ring stays: half the dot is over the icon's stroke now, and the ring is
-     what keeps the two from merging. Ground-coloured, so it reads as a gap. */
-  border: 1.5px solid var(--surface-deep);
+     what keeps the two from merging. Ground-coloured, so it reads as a gap.
+     0.75px, drawn by .tab-dot's inset shadow (see there for why not a border). */
+  --dot-ring-w: 0.75px;
+  --dot-ring: var(--surface-deep);
 }
 @media (max-width: 640px) {
   .toolbar { width: auto; margin: 12px; align-self: stretch; justify-content: space-between; }
@@ -3372,7 +3383,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 /* The dot's ring is the colour BEHIND it, so it reads as a gap rather than an
    outline. On the toolbar that is --surface-deep; here the ground is the sheet. */
-.post-sound .tab-dot { border-color: var(--surface-sheet); }
+.post-sound .tab-dot { --dot-ring: var(--surface-sheet); }
 
 /* Visually hidden, still read aloud: the marker is the only thing on this sheet
    saying the post carries sound, and it is otherwise pure glyph. */
@@ -6588,7 +6599,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .toolbar #mediaOpenBtn .tab-dot, .flip-tools #mediaOpenBtn .tab-dot {
   left: calc(50% + 15.5px - 3.5px);
   top: calc(50% - 14.25px - 3.5px);
-  border-color: rgb(var(--surface-well-2-rgb));
+  --dot-ring: rgb(var(--surface-well-2-rgb));
 }
 /* ---------- EVERY DRAWER, PICKER AND SHEET IN THE DOCK'S MATERIAL ----------
    The owner's second look at the dock: "make the drawers match the frosted
@@ -6652,7 +6663,14 @@ body.stroking .toolbar, body.stroking .flip-tools {
 }
 .media-tab svg { width: 18px; height: 18px; }
 .media-tab[aria-selected="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); }
-.media-tab .tab-dot { position: static; margin-left: 2px; }
+/* The owner: "for the dot next to the Music/Photo can it just be the same as
+   the dot on the icon?" -- the media button's dot, ring and all, including its
+   colour, which is the dock's ground rather than the tab's. */
+.media-tab .tab-dot {
+  position: static; margin-left: 2px;
+  --dot-ring-w: 0.75px;
+  --dot-ring: rgb(var(--surface-well-2-rgb));
+}
 
 /* Tool group row height — the shared mechanism for BOTH surfaces.
    ---------------------------------------------------------------------------
