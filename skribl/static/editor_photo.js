@@ -456,7 +456,6 @@ function resetPhotoAdjustments() {
   document.querySelectorAll('.photo-fit-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.fit === 'cover');
   });
-  initPhotoFitSlider();
   updateRepositionUI();
 }
 

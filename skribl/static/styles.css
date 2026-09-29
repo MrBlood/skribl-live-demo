@@ -6296,7 +6296,10 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
 /* Paired: an explicit display defeats [hidden], which this codebase has been
    bitten by three times. */
 .shape-pop[hidden] { display: none; }
-.shape-pop .smooth-seg { margin: 0; }
+/* fit-content: the track hugs its four options. It stretched to the pop, and
+   the pop widens when Rect or Poly reveal a knob row, so the track grew dead
+   space after Poly that the pill could never cover (the pick-one census). */
+.shape-pop .smooth-seg { margin: 0; width: fit-content; }
 
 /* The pop's drag grip — same pill language as the sheets' grabber, meaning
    "take hold of me here". A real inner element paints the pill (the flip
