@@ -81,6 +81,7 @@ here is the rule you can break tomorrow.
 | No page loads a `lib/` module nothing on that page reads. | `verify_surfaces.py` |
 | No stylesheet keeps a rule-set whose every selector is unmatched. | `verify_surfaces.py` |
 | Every tip in How it works is claimed by a check that TRIES it — a named check in another suite, or a probe that drives the page's own controls — and every ⋯ menu row and tool is named in the sheet. A new feature ships with its tip and its proof, or the seal is red. | `verify_helpclaims.py` |
+| The Photo \| Music tabs and the open media drawer are ONE card on both editors, shown by CSS whenever a media drawer is open. A drawer's file row is the drop area until a file is added, then the file; its bin asks before it removes, and a drop anywhere on the card reaches the open drawer's input only if it is the right kind of file. | `verify_parity.py`, `verify_a11y.py` (A11Y 2b, 10c) |
 | Every route the blueprint registers is named in at least one document. | `verify_docs.py` |
 | Every host seam `create_blueprint()` accepts is documented in `docs/INTEGRATION.md`. | `verify_docs.py` (reflection over the signature) |
 | Every `SKRIBL_*` the code reads is named in a doc or `.env.example`. | `verify_docs.py` |
