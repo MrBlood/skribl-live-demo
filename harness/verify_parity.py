@@ -1496,6 +1496,8 @@ with sync_playwright() as p:
         check(f"{_route}: a tap on the drawing moves the lens there without picking",
               bool(_s1) and abs(_s1["x"] - _tp[0]) <= 1 and abs(_s1["y"] - _tp[1]) <= 1
               and _q.evaluate("() => color") == "#00a95c" and _q.evaluate(ARMED), f"tap {_tp}, lens {_s1}")
+        if not _s1:            # nothing left armed to drive; report the other editor rather than crash
+            _pc.close(); continue
         # Drag the HANDLE until the lens reads the yellow stroke; lift picks.
         _t = _q.evaluate(YEL, [_cv, [255, 232, 0]])
         _h = _q.evaluate("""() => { const r = document.querySelector('.eyedropper-lens-handle').getBoundingClientRect();
@@ -1521,6 +1523,9 @@ with sync_playwright() as p:
         _eb = _q.locator("#eyedropperBtn").bounding_box()
         _q.touchscreen.tap(_eb["x"] + _eb["width"] / 2, _eb["y"] + _eb["height"] / 2); _q.wait_for_timeout(500)
         _a = _q.evaluate(LS)
+        check(f"{_route}: the eyedropper re-arms after a pick", bool(_a), str(_a))
+        if not _a:
+            _pc.close(); continue
         _f0 = (_bx["x"] + _bx["width"] * 0.3, _bx["y"] + _bx["height"] * 0.85)
         _touch("touchStart", [_f0])
         for _i in range(1, 9):
@@ -1528,7 +1533,8 @@ with sync_playwright() as p:
         _q.wait_for_timeout(200)
         _b2 = _q.evaluate(LS)
         _touch("touchCancel", []); _q.wait_for_timeout(250)
-        _c2 = _q.evaluate(LS)
+        _c2 = _q.evaluate(LS) or {"x": -1, "y": -1}
+        _b2 = _b2 or {"x": -1, "y": -1}
         check(f"{_route}: a drag anywhere moves the lens by the finger's travel; a cancelled touch puts it back and picks nothing",
               abs((_b2["x"] - _a["x"]) - 40) <= 1 and abs((_b2["y"] - _a["y"]) + 32) <= 1
               and abs(_c2["x"] - _a["x"]) <= 1 and abs(_c2["y"] - _a["y"]) <= 1
