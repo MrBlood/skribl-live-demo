@@ -306,6 +306,35 @@ with sync_playwright() as p:
     page.wait_for_timeout(300)
     page.click(".tool-tray-btn[data-tool='pen']")
     page.wait_for_timeout(400)
+
+    # AND THE DOCK'S OWN SHAPE BUTTON. "The shelf route never broke" above was
+    # true when it was written and stopped being true: the picker moved into the
+    # shelf config, which only the tray and toolshelf-built cells reach, and the
+    # STATIC Shape cell in the template kept calling plain setTool(). So on Flip
+    # the Shape button in the dock selected Shape and never opened the picker
+    # (found by the selection census). Both routes now call shelfSetTool; this
+    # drives the static cell with a real click, from Pen and from Shape itself.
+    page.click("#shapeToolBtn")
+    page.wait_for_timeout(400)
+    check("Flip: the dock's Shape button (from Pen) opens the kind picker",
+          page.evaluate("() => flipTool") == "shape" and hidden() is False,
+          f"tool={page.evaluate('() => flipTool')}, hidden={hidden()}")
+    # Choose a kind only if the picker is there to choose from: on a regressed
+    # tree it is not, and the click would time out and crash the suite instead
+    # of letting the next two checks report. evaluate() closes it the same way.
+    if hidden() is False:
+        page.click("#shapeSeg [data-shape='ellipse']")
+    else:
+        page.evaluate("() => { const b = document.querySelector(\"#shapeSeg [data-shape='ellipse']\"); if (b) b.click(); }")
+    page.wait_for_timeout(300)
+    page.click("#shapeToolBtn")
+    page.wait_for_timeout(400)
+    check("Flip: ...and tapping it again while holding Shape brings the picker back",
+          hidden() is False, f"hidden={hidden()} after a kind closed it")
+    page.click("#shapeToolBtn")
+    page.wait_for_timeout(400)
+    check("Flip: ...and a third tap puts it away, as on the Pad",
+          hidden() is True, f"hidden={hidden()}")
     # ---- the polygon and the corner knob, on the pure geometry -------------
     print("\nSHAPES [lib] — the fourth kind, and the knob that clamps itself")
     geo = page.evaluate("""() => {
