@@ -188,7 +188,9 @@
      which one did something. Segments (Pen / Background, Off / Low / High,
      Fill / Fit, Line / Rect, ...) now wear the tint the bar's selected tool
      wears; Preview Loop, Post, Done and the switches keep the fill. The ink is
-     lighter than --ui-hi in dark mode, where #7c5cff on the tint is too close. */
+     lighter than --ui-hi in dark mode, where #7c5cff on the tint is too close
+     (3.1:1; this is 6.5:1 on the drawers' track). --ui-hi is not the selected
+     ink anywhere: the dock wore it, at 3.1:1 dark and 2.9:1 light. */
   --seg-on-fill: rgba(124, 92, 255, 0.22);
   --seg-on-ink: #b9a8ff;
 
@@ -304,6 +306,12 @@
      container wants 9px to look concentric, and one inset 4px wants 8px.
      Setting this to 999px restores every pill in one line. */
   --r-seg: 12px;
+  /* THE ONE PILL (owner: "a on the pill", chosen from four mocked shapes).
+     Every pick-one track holds its pill --seg-inset in from all four sides,
+     and the pill's corner is the track's less that inset, so the two curves
+     are concentric: 12 / 3 / 9. */
+  --seg-inset: 3px;
+  --seg-pill-r: calc(var(--r-seg) - var(--seg-inset));
 
   /* Motion */
   --spring: cubic-bezier(0.4, 0.0, 0.2, 1.1);
@@ -769,10 +777,6 @@ body.player-mode .canvas-area { display: contents; }
   .addtake-pill.nudge { animation: none; }
 }
 
-/* Shared sliding-pill highlight for segmented controls (smoothing off/low/high,
-   the Loop/Start/End focus row, and the 1x-8x magnifier) — the same affordance
-   as the draw/eraser tool slider. Inserted as the group's first child and
-   positioned in JS by attachSegSlider(); its radius follows the parent group. */
 /* Segmented control. MOVED here from flip.css, where it lived while
    .seg-slider — the pill it positions — was already in this file. Pad does not
    load flip.css, so the moment Pad gained a .seg canvas picker the container
@@ -1882,7 +1886,11 @@ a.player-btn { text-decoration: none; }
   /* Light flips the rim: a near-white edge, light catching the card. */
   --header-rim:              rgba(255, 255, 255, 0.9);
   --glass-drop:              rgba(20, 24, 40, 0.10);
-  --seg-on-ink:              #5b3be6;
+  /* AA on what is actually painted behind it: #5b3be6 was 4.37:1 on the tint
+     over the drawers' track, under the unselected label's 4.99. One step
+     deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground
+     a pill sits on; the tint itself, the look the owner chose, does not move. */
+  --seg-on-ink:              #5434dc;
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
@@ -1954,13 +1962,12 @@ a.player-btn { text-decoration: none; }
   }
 }
 @media (forced-colors: active) {
-  .seg button, .smooth-btn, .gif-seg-btn {
+  .seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn {
     outline: 1px solid ButtonText; outline-offset: -1px;
   }
-  .seg button[aria-pressed="true"], .smooth-btn[aria-pressed="true"], .gif-seg-btn[aria-pressed="true"],
-  .tool-btn.active, .tool-btn[aria-pressed="true"],
+  :is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn, .tool-btn, .tool-tray-btn):is(.on, .active),
   .onion-tint.active, [role="switch"][aria-checked="true"] {
     outline: 3px solid Highlight; outline-offset: -3px;
   }
-  .seg-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
+  .seg-slider, .photo-fit-slider, .tool-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }
