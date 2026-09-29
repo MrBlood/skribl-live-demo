@@ -257,6 +257,19 @@ with sync_playwright() as p:
     check("exactly one colour reads as selected on both", ps == 1 and fs == 1,
           f"pad {ps} selected, flip {fs}")
 
+    # A new drawing starts in the Pad's signature purple (owner, after the
+    # drawer redesign): the ink the signature is written in, #9179ff. It is
+    # not a preset, so the ringed swatch is the custom one, wearing it.
+    START = """() => { const b = document.getElementById('customColorBtn');
+        return { ink: color, start: window.SkriblPalette && window.SkriblPalette.START,
+                 ringed: [...document.querySelectorAll('#colorGroup .color-dot.active')].map(e => e.id || e.dataset.color),
+                 swatch: getComputedStyle(b).getPropertyValue('--custom-color').trim(),
+                 picker: document.getElementById('customColorInput').value }; }"""
+    _ps, _fs = pad.evaluate(START), flip.evaluate(START)
+    check("a new drawing starts in the signature purple on both, shown on the custom swatch",
+          _ps == _fs == {"ink": "#9179ff", "start": "#9179ff", "ringed": ["customColorBtn"],
+                         "swatch": "#9179ff", "picker": "#9179ff"}, f"pad {_ps}, flip {_fs}")
+
     # Recent colours: same cap, same ordering, same de-duplication — three
     # things two independent implementations can each get right differently.
     feed = """(n) => { const hexes = ['#112233','#223344','#334455','#445566',

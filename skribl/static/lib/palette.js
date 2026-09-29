@@ -39,6 +39,34 @@
     { hex: '#141414', name: 'Toner black', dark: true }
   ];
 
+  /* THE STARTING INK is not a preset, and that is deliberate. The owner asked
+   * for a new drawing to start in the Pad's signature purple -- the ink the
+   * Skribl signature is written in (--brand-ink, which is --accent-bright in
+   * the dark theme). The header above explains why the chrome's purple is not
+   * one of the seven inks, and that still holds for the palette: this is where
+   * you START, not something the palette offers back. So it shows on the
+   * custom swatch, which is what a colour that is not a preset is, and the
+   * picker opens on it. A literal rather than a read of the token because the
+   * token changes with the theme and a drawing's ink must not.
+   */
+  var START = '#9179ff';
+
+  /* Puts START on the custom swatch and rings it, the way a picked custom
+   * colour is shown on both editors (--custom-color + has-color, never an
+   * inline background -- styles.css keeps the rainbow as a ring). */
+  function showStart(group) {
+    if (!group) return;
+    var btn = group.querySelector('.color-custom');
+    var input = group.querySelector('input[type="color"]');
+    var dots = group.querySelectorAll('.color-dot');
+    for (var i = 0; i < dots.length; i++) dots[i].classList.toggle('active', dots[i] === btn);
+    if (btn) {
+      btn.style.setProperty('--custom-color', START);
+      btn.classList.add('has-color');
+    }
+    if (input) input.value = START;
+  }
+
   /* Builds the preset dots and puts them where the template's static ones used
    * to sit — BEFORE the custom picker and the eyedropper, which stay in the
    * markup because they are controls rather than colours. Both surfaces call
@@ -55,7 +83,7 @@
     PEN.forEach(function (c, i) {
       var b = global.document.createElement('button');
       b.type = 'button';
-      b.className = 'color-dot' + (i === 0 && opts.selectFirst ? ' active' : '');
+      b.className = 'color-dot';
       b.style.background = c.hex;
       b.dataset.color = c.hex;
       if (c.dark) b.dataset.ink = 'dark';
@@ -70,5 +98,5 @@
   }
 
   global.SkriblPalette = { PEN: PEN, hexes: PEN.map(function (c) { return c.hex; }),
-                           mount: mount };
+                           START: START, mount: mount, showStart: showStart };
 })(window);
