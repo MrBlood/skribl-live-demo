@@ -642,7 +642,13 @@ with sync_playwright() as sp:
     #           wiring -- the bulk of it -- went to editor_bar.js, which the
     #           player never loads, rather than into this count.
     # 132,533 measured.
-    BYTES_RATCHET, BYTES_TARGET = 132_600, 153_800
+    # RAISED (the recording header, owner: "feels punitive"), for one named
+    #   cost: +184 B  the take's readout is two spans (clock, "plays") so the
+    #           clock stays lit while the pen is down, and the button's
+    #           tooltip follows Done / Record. startRecording lives in app.js,
+    #           which the player loads whole.
+    # 132,784 measured.
+    BYTES_RATCHET, BYTES_TARGET = 132_850, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -752,7 +758,11 @@ with sync_playwright() as sp:
     # tint tokens in :root, both themes -- because the bar, the page strip and
     # every drawer wear it too; the player's header is the same card. 29,697
     # measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 29_750, 119_844, 40_000
+    # RAISED (the recording header), for one named cost: +100 B, the level
+    # bars' keyframes and their reduced-motion rule. The player template
+    # carries a hidden #recIndicator, and cssgraph holds @keyframes and
+    # media blocks it cannot prove dead. 29,850 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 29_900, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

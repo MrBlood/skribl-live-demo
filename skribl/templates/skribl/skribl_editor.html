@@ -55,8 +55,14 @@
 
     {% if compose %}</div>{% endif %}
 
+    {# The take's readout: a still dot, level bars that move only while the pen
+       is down (styles.css, THE TAKE'S READOUT), the clock, and the replay's
+       length after pauses are tightened. #}
     <div id="recIndicator" class="rec-indicator" hidden>
-      <span class="dot"></span> <span id="recTimer" class="rec-timer">0:00</span>
+      <span class="dot"></span>
+      <span class="rec-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span id="recTimer" class="rec-timer">0:00</span>
+      <span id="recPlays" class="rec-plays">plays 0:00</span>
     </div>
     <div class="actions" id="actions">
       {# Canvas settings (tune drawer) — in the header, mirroring Flip exactly,

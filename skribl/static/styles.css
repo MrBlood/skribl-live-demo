@@ -583,17 +583,21 @@ body {
   filter: none;
 }
 
-.btn.record.active {
-  background: rgba(244, 50, 111, 0.14);
-  border-color: rgba(244, 50, 111, 0.5);
-  color: var(--danger);
+/* DONE, NOT STOP. Recording is simply what drawing does here, so the take's
+   end is a quiet glass pill in the header's own ink -- not the crimson alarm
+   it was ("feels punitive... warning, failure vibes", the owner, on the
+   phone). Red left the recording header entirely; the rounded square keeps
+   the finish-a-take meaning in secondary ink. The .header .actions weight
+   matches the phone's `.btn.record` density rules so neither beats it. */
+.btn.record.active,
+.header .actions .btn.record.active {
+  background: rgba(var(--wash-rgb), 0.07);
+  border-color: transparent;
+  box-shadow: 0 0 0 1px var(--header-rim);
+  color: var(--text-primary);
+  font-weight: 600;
 }
-/* The stop square follows the button's ink. The idle whisper-of-purple rule
-   above kept painting the glyph accent while text, border and wash had all
-   turned recording-crimson — one purple square inside an otherwise crimson
-   pill. The icon is drawn with
-   fill="currentColor", so this hands it back to the cascade. */
-.btn.record.active svg { color: currentColor; }
+.btn.record.active svg { color: var(--text-secondary); width: 14px; height: 14px; }
 
 .btn.play {
   background: rgba(var(--wash-rgb), 0.045);
@@ -635,36 +639,84 @@ body {
 
 .rec-indicator[hidden] { display: none; }
 
+/* THE TAKE'S READOUT. A still purple dot, six level bars, the clock, and in
+   secondary ink how long the replay will run. No pill, no red, no blink: the
+   same take used to sit in a crimson pill with a pulsing dot beside a crimson
+   Stop, and read as a warning on a screen where it is ALWAYS showing while
+   you draw.
+
+   The bars are the only motion, and they mean something: they run only while
+   the pen is down (body.stroking) and hold still in a pause, which is exactly
+   the difference between the clock and "plays". Each bar has its own period
+   and a negative delay, so a paused set freezes as an uneven little
+   waveform rather than a flat row. */
 .rec-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(244, 50, 111, 0.12);
-  border: 1px solid rgba(244, 50, 111, 0.25);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--danger);
+  gap: 10px;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .rec-indicator .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--danger);
-  display: inline-block;
-  animation: pulse 1s infinite;
+  background: var(--ui-hi);
+  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
+  flex: none;
 }
 
+.rec-bars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 18px;
+}
+.rec-bars i {
+  display: block;
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--ui-hi);
+  transform: scaleY(0.4);
+  animation: rec-level 0.9s ease-in-out -0.3s infinite alternate paused;
+}
+.rec-bars i:nth-child(2) { animation-duration: 0.7s;  animation-delay: -0.5s; }
+.rec-bars i:nth-child(3) { animation-duration: 1.1s;  animation-delay: -0.9s; }
+.rec-bars i:nth-child(4) { animation-duration: 0.8s;  animation-delay: -0.2s; }
+.rec-bars i:nth-child(5) { animation-duration: 1.0s;  animation-delay: -0.7s; }
+.rec-bars i:nth-child(6) { animation-duration: 0.75s; animation-delay: -0.4s; }
+body.stroking .rec-bars i { animation-play-state: running; }
+@keyframes rec-level {
+  from { transform: scaleY(0.25); }
+  to   { transform: scaleY(1); }
+}
+/* Reduced motion: a still waveform, never a row of full-height bars (the
+   global rule would otherwise run each once to its last frame). */
+@media (prefers-reduced-motion: reduce) {
+  .rec-bars i { animation: none !important; }
+  .rec-bars i:nth-child(odd) { transform: scaleY(0.55); }
+}
+
+/* The autosave dot's blink (.autosave-status.saving). It used to live here
+   for the rec dot too, which no longer blinks. */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
 
 .rec-timer {
+  font-size: 17px;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+.rec-plays {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .duration-badge {
@@ -928,6 +980,16 @@ body.stroking .header {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
+/* ...except the take's readout: its bars move ONLY while the pen is down, so
+   receding it with the rest would hide the one thing animating. The dot, the
+   bars and the clock stay; the "plays" caption recedes with everything else.
+   Owner, on the mock: "doesn't it get hidden while you're drawing?" */
+body.stroking .header > .rec-indicator { opacity: 1; }
+body.stroking .rec-plays {
+  opacity: 0.1;
+  transition: opacity 0.3s ease 0.12s;
+}
+.rec-plays { transition: opacity 0.25s ease; }
 /* The pill keeps its own base transition (it fades itself with .show); only
    the stroking override joins the recede. The coachmark toast
    (.skribl-hint, lib/hints.js, both surfaces) joins too — it floats over

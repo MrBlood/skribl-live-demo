@@ -1265,12 +1265,13 @@ const playWrap = document.getElementById('playWrap');
 const postBtn = _authoringCtl('postBtn');
 const recIndicator = document.getElementById('recIndicator');
 const recTimer = document.getElementById('recTimer');
+const recPlays = document.getElementById('recPlays');
 const durationBadge = document.getElementById('durationBadge');
 
-const ICON_STOP = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>';
+const ICON_STOP = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="3.5"/></svg>';
 const ICON_RECORD = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>';
 const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>';
-const LABEL_STOP = '<span class="btn-label"> Stop</span>';
+const LABEL_STOP = '<span class="btn-label"> Done</span>';
 const LABEL_RECORD = '<span class="btn-label"> Record</span>';
 const LABEL_PLAY = '<span class="btn-label"> Play</span>';
 
@@ -1380,6 +1381,7 @@ function beginRecording(continueTake) {
   if (typeof exitReposition === 'function') { exitReposition(); updateRepositionUI(); }
   if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
   recordBtn.innerHTML = ICON_STOP + LABEL_STOP;
+  recordBtn.title = 'Finish this take';
   recordBtn.classList.add('active');
   syncRecordBtn();
   canvasWrap.classList.add('recording');
@@ -1392,16 +1394,19 @@ function beginRecording(continueTake) {
   durationBadge.hidden = true;
 
   recTimer.textContent = '0:00';
+  if (recPlays) recPlays.textContent = 'plays 0:00';
   clearInterval(recTimerInterval);   // defensive: never stack intervals
   recTimerInterval = setInterval(() => {
     const wall = formatDuration(Date.now() - startTime);
     // getPlaybackDuration() sums across ALL strokes, so on a continue-take the
     // "play" readout keeps counting up from the previous takes' total.
     const play = formatDuration(getPlaybackDuration());
-    // Plain words, not a readout: "0:06 · plays 0:01" says the second number is
+    // Plain words, not a readout: "0:06  plays 0:01" says the second number is
     // the replay's length after pause-tightening; "0:06 · 0:01 play" said
-    // nothing a first-time user could parse.
-    recTimer.textContent = wall + ' · plays ' + play;
+    // nothing a first-time user could parse. Two spans, so the clock can stay
+    // lit while the pen is down and the caption recedes with the rest.
+    recTimer.textContent = wall;
+    if (recPlays) recPlays.textContent = 'plays ' + play;
   }, 200);
 }
 
@@ -1418,6 +1423,7 @@ function endRecordingTake() {
   if (typeof updateRepositionUI === 'function') updateRepositionUI();
   recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
   recordBtn.classList.remove('active');
+  recordBtn.title = 'Start recording';
   syncRecordBtn();
   canvasWrap.classList.remove('recording');
   document.body.classList.remove('recording');
@@ -4607,6 +4613,7 @@ function abortStrokeForPinch() {
     preRecordSnapshot = null;
     recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
     recordBtn.classList.remove('active');
+    recordBtn.title = 'Start recording';
     canvasWrap.classList.remove('recording');
   document.body.classList.remove('recording');
     recIndicator.hidden = true;
