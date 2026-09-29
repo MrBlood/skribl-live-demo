@@ -206,6 +206,16 @@ bindEl('photoRemove', 'click', (e) => {
   updateRepositionUI();
 });
 
+// Lights the option for a STORED fit, in any spelling (normalPhotoFit, app.js).
+// Called by both restore paths; lib/segslider.js moves the pill and writes
+// aria-pressed from the class.
+function markPhotoFit(fit) {
+  const want = normalPhotoFit(fit);
+  document.querySelectorAll('.photo-fit-btn').forEach(b => {
+    b.classList.toggle('active', normalPhotoFit(b.dataset.fit) === want);
+  });
+}
+
 document.querySelectorAll('.photo-fit-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     photoFit = btn.dataset.fit;

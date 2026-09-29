@@ -999,31 +999,6 @@ customBgInput.addEventListener('input', (e) => {
   updateVignette();
 });
 
-/* The swatch for a RESTORED background. Both restore paths (a Skribl file,
-   the autosave) compared data-bg to the stored colour exactly, so an
-   upper-case hex lit no swatch, and a custom colour lit none and left the
-   custom swatch without its colour (the pick-one census). Flip's setBg
-   already did both; this is the same rule. Null-safe: the player loads this
-   file and has no swatches. */
-function markBgSwatch(hex) {
-  const want = String(hex || '').toLowerCase();
-  let matched = false;
-  document.querySelectorAll('.bg-swatch').forEach(b => {
-    if (b.id === 'customBgBtn') return;
-    const on = !!b.dataset.bg && b.dataset.bg.toLowerCase() === want;
-    b.classList.toggle('active', on);
-    if (on) matched = true;
-  });
-  const custom = document.getElementById('customBgBtn');
-  if (!custom) return;
-  custom.classList.toggle('active', !matched);
-  if (!matched && /^#[0-9a-f]{6}$/.test(want)) {
-    custom.style.setProperty('--custom-color', want);
-    custom.classList.add('has-color');
-    const inp = document.getElementById('customBgInput');
-    if (inp) inp.value = want;
-  }
-}
 
 // The screen-only inset vignette is tuned for dark canvases; on a light/white
 // background the dark edges look muddy, so swap to a soft light vignette when
@@ -2668,14 +2643,6 @@ const photoInput = _authoringCtl('photoInput', 'input');
 function normalPhotoFit(f) {
   return window.SkriblPhotoFit ? window.SkriblPhotoFit.normalise(f) : (f || 'cover');
 }
-// Lights the option for `fit`; lib/segslider.js moves the pill and writes
-// aria-pressed from the class.
-function markPhotoFit(fit) {
-  const want = normalPhotoFit(fit);
-  document.querySelectorAll('.photo-fit-btn').forEach(b => {
-    b.classList.toggle('active', normalPhotoFit(b.dataset.fit) === want);
-  });
-}
 
 
 
@@ -3312,7 +3279,8 @@ function loadSkribl(data) {
   if (data.background && data.background.color) {
     bgColor = data.background.color;
     canvasWrap.style.backgroundColor = bgColor;
-    markBgSwatch(bgColor);
+    // editor_draft.js; the player loads neither it nor any swatch.
+    if (typeof markBgSwatch === 'function') markBgSwatch(bgColor);
   }
   updateVignette();
 
@@ -3388,7 +3356,7 @@ function loadSkribl(data) {
     if (!document.body.classList.contains('player-mode')) {
       // Sync the segmented Fit control to the restored fit (was showing stale
       // state). lib/segslider.js moves the pill when the class moves.
-      markPhotoFit(photoFit);
+      if (typeof markPhotoFit === 'function') markPhotoFit(photoFit);
       setZoomSliderUI();
       if (typeof updateRepositionUI === 'function') updateRepositionUI();
       const _pd = document.getElementById('photoDetail');

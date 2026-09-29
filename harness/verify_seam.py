@@ -323,8 +323,15 @@ if _marker in _appjs:
     # this suite caught what that did: most of its ~210 lines are NEW code the
     # Library and gallery load too, so counting it inflated the figure by ~150
     # and let that much editor code leak unseen. Measured without it: 2193.
+    # 2190 -> 2185 with the one pill, and the reason is a DELETION, not a leak:
+    # lib/segslider.js places every pill now, so app.js's initPhotoFitSlider
+    # (7 lines) and the canvas seg's positionSlider (9), and editor_music.js's
+    # positionSegSlider, are gone rather than moved. Diffed function by
+    # function against the tree before it: nothing editor-only became
+    # player-reachable; the restore helpers the change added live in the
+    # editor bundles (markPhotoFit in editor_photo.js). Measured: 2189.
     check("editor-only code has not leaked into the player's reachable set",
-          _editor_total >= 2190,
+          _editor_total >= 2185,
           f"{_editor_total} lines editor-only ({_editor_lines} still in app.js, "
           f"{_extracted} extracted), was 2467 — something the player now calls "
           f"used to be editor-only")

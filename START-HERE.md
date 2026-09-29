@@ -746,7 +746,7 @@ rather than a shared rule.
 | `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `pagemenu.js` | library+gallery | The page menu: the ••• on the gallery and the library, and what it opens. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
-| `painttarget.js` | Pad+Flip | The draw drawer's paint-target seg (Pen or Background) and the pills on its segmented rows: wired once for both editors (SK312-003, v315). |
+| `painttarget.js` | Pad+Flip | The draw drawer's paint-target seg (Pen or Background): wired once for both editors (SK312-003, v315). |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
 | `pendingcards.js` | Pad+Flip | The "re-add your file" cards in the Image and Music drawers, and the tab dots that hint media is waiting: one implementation for both editors (SK312-003, v315; refreshPendingCards was 0.76 alike in app.js and flip.js). |
 | `penswoosh.js` | Pad+Flip | The pen SWOOSH — the pen button drawn as the stroke it will make. |
@@ -766,7 +766,7 @@ rather than a shared rule.
 | `report.js` | Pad+Flip+library+gallery | "Report a problem" — the context, collected once, for both editors. |
 | `savedrafts.js` | Pad+Flip+library | Saved drafts — ⋯ "Save draft" and "Open a draft…" on both editors (v316), and the Library's Drafts tab (v317). |
 | `scrubkeys.js` | Pad+Flip+player | Keyboard operation and live value for the three playback scrubbers. |
-| `segslider.js` | Pad+Flip | Keeps a .seg-slider pill aligned to the selected button in a .seg group. |
+| `segslider.js` | Pad+Flip+library+gallery | THE PILL. Every pick-one control in the product slides one soft tint under its selected option, and this is the one thing that places it (the owner, choosing between four mocked shapes: "a on the pill"). |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
 | `sharecard.js` | Pad+Flip+library | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |

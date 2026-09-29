@@ -593,6 +593,31 @@ function rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, baseHasCo
   clearAndRestore(build);
 }
 
+/* The swatch for a RESTORED background. Both restore paths (a Skribl file,
+   the autosave) compared data-bg to the stored colour exactly, so an
+   upper-case hex lit no swatch, and a custom colour lit none and left the
+   custom swatch without its colour (the pick-one census). Flip's setBg
+   already did both; this is the same rule. */
+function markBgSwatch(hex) {
+  const want = String(hex || '').toLowerCase();
+  let matched = false;
+  document.querySelectorAll('.bg-swatch').forEach(b => {
+    if (b.id === 'customBgBtn') return;
+    const on = !!b.dataset.bg && b.dataset.bg.toLowerCase() === want;
+    b.classList.toggle('active', on);
+    if (on) matched = true;
+  });
+  const custom = document.getElementById('customBgBtn');
+  if (!custom) return;
+  custom.classList.toggle('active', !matched);
+  if (!matched && /^#[0-9a-f]{6}$/.test(want)) {
+    custom.style.setProperty('--custom-color', want);
+    custom.classList.add('has-color');
+    const inp = document.getElementById('customBgInput');
+    if (inp) inp.value = want;
+  }
+}
+
 function restoreAutosave(data) {
   clearCanvas();
   if (data.background && data.background.color) {
