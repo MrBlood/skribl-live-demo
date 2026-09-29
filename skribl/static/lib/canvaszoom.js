@@ -124,9 +124,20 @@
     function on(id, type, fn) { var el = doc.getElementById(id); if (el) el.addEventListener(type, fn); }
     on('zoomInBtn', 'click', function () { view.step(1); });
     on('zoomOutBtn', 'click', function () { view.step(-1); });
-    on('zoomFitBtn', 'click', function () { view.fit(); });
+    on('zoomFitBtn', 'click', function () {
+      // Where the Magnify button is not on screen (a phone), Fit is also how the
+      // panel goes away: back to 100%, and the controls with it.
+      if (magnifyOn && !buttonShown()) setMagnify(false); else view.fit();
+    });
 
     var magnifyBtn = doc.getElementById('magnifyBtn');
+    // THE PANEL BELONGS TO THE PINCH WHERE THERE IS NO BUTTON (owner's iPhone:
+    // "how to disappear the magnifier?"). A pinch turns magnify on, HUD and
+    // all, but the only control that turned it OFF was #magnifyBtn -- hidden on
+    // phones -- so one pinch, or a stray second finger while drawing, left the
+    // panel over the drawing for the rest of the session. Without the button,
+    // being back at 100% is what ends it: Fit, or a pinch back out.
+    function buttonShown() { return !!(magnifyBtn && magnifyBtn.offsetParent !== null); }
     function setMagnify(onState) {
       // The button zooms the CENTRE. Aiming needs scroll or Space-drag, so say
       // so once, the first time magnify is enabled.
@@ -368,6 +379,7 @@
         if (global.SkriblPinch.pair(e, pinch.ids)) return;
         pinch = null;
         if (P.set) P.set(false);
+        if (magnifyOn && zoom <= 1.001 && !buttonShown()) setMagnify(false);
       };
       global.addEventListener('touchend', endPinch);
       global.addEventListener('touchcancel', endPinch);

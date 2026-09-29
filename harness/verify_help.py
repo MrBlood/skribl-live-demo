@@ -321,6 +321,33 @@ with sync_playwright() as p:
         check(f"{surface}: the sheet covers what the app does now (drafts, naming, panels, New Skribl)",
               all(w in pills for w in want) and "clear drawing" not in words and "clear all pages" not in words,
               f"missing {[w for w in want if w not in pills]}")
+        # A CLOSED SECTION SHOWS NOTHING (owner's iPhone, after v317: "I closed
+        # the first accordion and the first still displays under"). The body
+        # collapses a grid row to 0fr, and a 0fr row cannot shrink below its
+        # item's padding, so every closed section kept a 34px sliver of its
+        # first tip. Asked of the PAINT where a sliver would be, not of a rect:
+        # the tip's own box is there either way, clipped or not.
+        ph.evaluate("""() => document.querySelectorAll('#helpDrawer .accordion-header.open')
+            .forEach(h => h.click())"""); ph.wait_for_timeout(700)
+        sliv = ph.evaluate("""() => [...document.querySelectorAll('#helpDrawer .accordion-body')]
+            .filter(bd => !bd.classList.contains('open') && bd.getClientRects().length)
+            .map(bd => { const r = bd.getBoundingClientRect();
+              const x = r.left + r.width / 2, y = r.top + Math.max(1, r.height / 2);
+              const inView = y > 0 && y < innerHeight;
+              const hit = inView ? document.elementFromPoint(x, y) : null;
+              return { h: Math.round(r.height), painted: !!(hit && hit.closest('.help-tip, .help-step')) }; })""")
+        bad = [x for x in sliv if x["h"] > 2 or x["painted"]]
+        check(f"{surface}: a closed help section shows nothing of its tips",
+              len(sliv) >= 5 and not bad, f"{len(bad)} of {len(sliv)} closed sections still show {bad[:3]}")
+        # THE TITLE BAR IS SOLID (same report: the search field's placeholder
+        # read through "How it works" once scrolled under it). It sits inside
+        # a backdrop-filter layer, and WebKit drops a backdrop-filter nested in
+        # another, so a translucent bar there is a see-through one on an iPhone.
+        alpha = ph.evaluate("""() => { const c = getComputedStyle(document.querySelector('#helpDrawer .help-drawer-head')).backgroundColor;
+            const m = c.match(/rgba?\\(([^)]*)\\)/); if (!m) return null; const v = m[1].split(',');
+            return v.length > 3 ? +v[3] : 1; }""")
+        check(f"{surface}: the help sheet's title bar is opaque, so what scrolls under it cannot show through",
+              alpha == 1, f"background alpha {alpha}")
         ph.close()
 
     b.close()
