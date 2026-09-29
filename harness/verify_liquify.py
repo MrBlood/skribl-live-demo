@@ -463,13 +463,16 @@ with sync_playwright() as p:
           if (!c || !c.width) return -1;
           const d = c.getContext('2d', { willReadFrequently: true })
                      .getImageData(0, 0, c.width, c.height).data;
+          // Ink is anything well off the #0d0f14 ground, in any colour: this
+          // counted WHITE pixels, and a new drawing now starts in the
+          // signature purple, whose red and green are under 200.
           let n = 0;
           for (let i = 0; i < d.length; i += 4)
-            if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200) n++;
+            if (Math.max(d[i], d[i + 1], d[i + 2]) > 120) n++;
           return n;
         }""")
         check("...and the PLAYER draws the bent lines",
-              ink > 500, f"{ink} white pixels — the player was never taught "
+              ink > 500, f"{ink} ink pixels — the player was never taught "
                          f"about liquify and does not need to be")
         check("...with no error in the player", not verrs, "; ".join(verrs[:2]))
         viewer.close()
