@@ -1674,6 +1674,58 @@ with sync_playwright() as p:
               f"{_ra} {_meta}")
         _q.close()
 
+    print("\nPARITY — a switched-on switch is the accent on both; amber only for the onion")
+    # The selection census found Flip lighting Grid, Stroke layers and Motion
+    # guides AMBER where the Pad lights the same switches purple: flip.css
+    # re-declared an amber `.onion-tint.active` after styles.css had already
+    # narrowed amber to the two onion controls. Computed colour against the
+    # page's own resolved --ui-hi / --warn-2, so a retuned accent stays green.
+    # Also Flip's page-bar Draw switch: `.pb:hover` outranked `.pb.on`, so a
+    # desktop click showed no change until the pointer left.
+    _SW = """(ids) => {
+        const probe = (v) => { const i = document.createElement('i'); i.style.color = 'var(' + v + ')';
+          document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; };
+        const out = { hi: probe('--ui-hi'), amber: probe('--warn-2') };
+        ids.forEach(id => { const e = document.getElementById(id);
+          out[id] = e ? { on: e.getAttribute('aria-checked') === 'true', color: getComputedStyle(e).color } : null; });
+        return out; }"""
+    for _theme in ("dark", "light"):
+        _sw = {}
+        for _route in ("/skribl-pad", "/flip"):
+            _q = b.new_page(viewport={"width": 1280, "height": 900})
+            browsing.goto(_q, BASE, f"{_route}?theme={_theme}")
+            _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            _q.click("#tuneBtn"); _q.wait_for_timeout(450)
+            _ids = ["gridBtn", "strokeLayersBtn"] + (["arcGuideBtn", "onion"] if _route == "/flip" else [])
+            # Switch each ON, whatever it starts as: Stroke layers and Flip's
+            # onion skin start on, so a blind click would turn them off.
+            for _id in _ids:
+                if _q.get_attribute(f"#{_id}", "aria-checked") != "true":
+                    _q.click(f"#{_id}")
+            _q.mouse.move(2, 2); _q.wait_for_timeout(350)
+            _sw[_route] = _q.evaluate(_SW, _ids)
+            if _route == "/flip":
+                _q.click("#tuneBtn"); _q.wait_for_timeout(300)
+                _q.click("#pbDraw"); _q.wait_for_timeout(300)
+                _hov = _q.evaluate("() => { const e = document.getElementById('pbDraw'), c = getComputedStyle(e); "
+                                   "return { on: e.getAttribute('aria-checked') === 'true', bg: c.backgroundColor, ink: c.color }; }")
+                _q.mouse.move(2, 2); _q.wait_for_timeout(300)
+                _away = _q.evaluate("() => { const c = getComputedStyle(document.getElementById('pbDraw')); "
+                                    "return { bg: c.backgroundColor, ink: c.color }; }")
+                check(f"Flip {_theme}: the page bar's Draw switch shows ON while the pointer is still on it",
+                      _hov["on"] and _hov["bg"] == _away["bg"] and _hov["ink"] == _away["ink"],
+                      f"hovered {_hov} vs away {_away}")
+            _q.close()
+        pad, flip = _sw["/skribl-pad"], _sw["/flip"]
+        check(f"Pad {_theme}: Grid, switched on, is the accent",
+              pad["gridBtn"]["on"] and pad["gridBtn"]["color"] == pad["hi"], str(pad))
+        for _id in ("gridBtn", "strokeLayersBtn", "arcGuideBtn"):
+            check(f"Flip {_theme}: {_id}, switched on, is the accent like the Pad's, not amber",
+                  flip[_id]["on"] and flip[_id]["color"] == flip["hi"] != flip["amber"],
+                  f"{flip[_id]} (accent {flip['hi']}, amber {flip['amber']})")
+        check(f"Flip {_theme}: the onion switch keeps its amber, the colour the onion pages tint",
+              flip["onion"]["on"] and flip["onion"]["color"] == flip["amber"], str(flip["onion"]))
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))

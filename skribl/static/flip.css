@@ -818,10 +818,12 @@
   cursor: pointer;
 }
 .onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
-/* Lighter active state: this is a small secondary toggle next to a segmented
-   control, and a strong border plus fill made it the loudest thing in the row.
-   The icon colour carries the state; the fill only supports it. */
-.onion-tint.active { color: var(--warn-2); border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
+/* The ON state lives in styles.css only: the accent for every switch, amber
+   kept for #onion and #onionTintBtn alone. An amber `.onion-tint.active` used
+   to sit here, and because flip.css loads after styles.css at the same
+   specificity it re-lit Grid, Stroke layers and Motion guides amber on Flip
+   while the Pad showed them purple -- the leak styles.css's own rule had
+   already fixed once. */
 
 /* --- v124: page toolbar (replaces the in-tile ops bar) ---------------------
    The old .frame-ops overlaid the thumbnail with 18px targets. Controls now act
@@ -882,7 +884,10 @@
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .pb .pb-ic { font-size: 13px; line-height: 1; }
-.pb:hover:not(:disabled) {
+/* Not on a switched-on button: .pb:hover is (0,3,0) and beat .pb.on and
+   .pb[aria-checked="true"] (0,2,0), so clicking Draw on a desktop showed no
+   change until the pointer left. Hover is only for buttons that are off. */
+.pb:hover:not(:disabled):not(.on):not([aria-checked="true"]) {
   background: rgba(var(--wash-rgb), 0.07);
   border-color: var(--hairline-strong);
   color: var(--text-primary);
