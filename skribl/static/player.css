@@ -626,6 +626,12 @@ body {
   font-variant-numeric: tabular-nums;
   font-weight: 500;
   letter-spacing: 0.02em;
+  /* OPTICAL, measured: digits have no descenders, so a centred line box
+     leaves them riding 1.5px above the dot and bars (ink centres, css px:
+     dot 14.75, bars 14.75, clock 13.25). 1px down puts every part within
+     half a pixel of the dot's line, both themes, phone and desktop. */
+  position: relative;
+  top: 1px;
 }
 
 .duration-badge {

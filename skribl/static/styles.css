@@ -668,17 +668,18 @@ body {
 }
 
 /* Hairline bars, not blocks (owner: "the wave is a little too fat... things
-   are starting to get chunky across the app"): 2px wide, 3px apart, 15px tall. */
+   are starting to get chunky across the app"): 2px wide, 3px apart, 14px tall
+   (an even height, so the bars centre on the dot's line, not half a px off). */
 .rec-bars {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  height: 15px;
+  height: 14px;
 }
 .rec-bars i {
   display: block;
   width: 2px;
-  height: 15px;
+  height: 14px;
   border-radius: 1px;
   background: var(--ui-hi);
   transform: scaleY(0.4);
@@ -715,6 +716,12 @@ body.stroking .rec-bars i { animation-play-state: running; }
   font-variant-numeric: tabular-nums;
   font-weight: 500;
   letter-spacing: 0.02em;
+  /* OPTICAL, measured: digits have no descenders, so a centred line box
+     leaves them riding 1.5px above the dot and bars (ink centres, css px:
+     dot 14.75, bars 14.75, clock 13.25). 1px down puts every part within
+     half a pixel of the dot's line, both themes, phone and desktop. */
+  position: relative;
+  top: 1px;
 }
 .rec-plays {
   color: var(--text-secondary);
