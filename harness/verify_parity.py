@@ -751,8 +751,19 @@ with sync_playwright() as p:
     pad.click("#eyedropperBtn"); flip.click("#eyedropperBtn")
     pad.wait_for_timeout(250); flip.wait_for_timeout(250)
     pc, fc = pad.evaluate(cursor_of, "#canvas"), flip.evaluate(cursor_of, "#pad")
-    check("and both say so with the cursor, not only a button class",
-          pc == fc == "crosshair", f"pad {pc!r}, flip {fc!r}")
+    # CHANGED DELIBERATELY with the lens: this asserted "crosshair". The lens now
+    # follows the pointer centred on it and IS the cursor, so the OS cursor
+    # hides over the canvas -- and the armed state is said by the lens being
+    # PAINTED on the drawing, which a hidden cursor alone could not claim.
+    lens_painted = """() => { const l = document.querySelector('.eyedropper-lens');
+        if (!l || l.hidden) return false; const r = l.getBoundingClientRect();
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        l.style.pointerEvents = 'auto'; const hit = document.elementFromPoint(x, y); l.style.pointerEvents = '';
+        return !!hit && l.contains(hit); }"""
+    check("and both say so with the lens on the drawing (the cursor hides under it), not only a button class",
+          pc == fc == "none" and pad.evaluate(lens_painted) and flip.evaluate(lens_painted),
+          f"pad cursor {pc!r} lens painted {pad.evaluate(lens_painted)}, "
+          f"flip cursor {fc!r} lens painted {flip.evaluate(lens_painted)}")
 
     # ---- media --------------------------------------------------------------
     # The photo and music controllers are the largest duplicated pair — 350 and
@@ -1303,6 +1314,239 @@ with sync_playwright() as p:
             check(f"{_route}: ...and an abandoned pick (Escape) puts the open colour panel back on screen, top to bottom",
                   bool(_back) and _back["colours"] and _back["end"], str(_back))
         _q.close()
+
+    # ---- the starting colour and the lens ---------------------------------
+    # Owner: "change the starting color on the pad and flip to the purple that
+    # is pad's signature color". A fresh editor starts on #7c5cff with that
+    # swatch ringed and the pen button inked in it -- on BOTH, because one
+    # editor starting white while the other starts purple is the drift this
+    # suite exists to catch.
+    print("\nPARITY — a fresh editor starts on Skribl purple, ringed, on both")
+    _lctx = b.new_context(viewport={"width": 1400, "height": 900})
+
+    def _fresh(ctx, route):
+        q = ctx.new_page()
+        q.goto(BASE + route, wait_until="load"); q.wait_for_timeout(600)
+        q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        q.goto(BASE + route, wait_until="load"); q.wait_for_timeout(800)
+        q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        return q
+
+    for _route in ("/skribl-pad", "/flip"):
+        _q = _fresh(_lctx, _route)
+        _st = _q.evaluate("""() => {
+            const dots = [...document.querySelectorAll('#colorGroup .color-dot[data-color]')];
+            const on = [...document.querySelectorAll('#colorGroup .color-dot.active')];
+            const sw = document.getElementById('penSwoosh'); let purple = 0;
+            if (sw && sw.width) { const d = sw.getContext('2d').getImageData(0, 0, sw.width, sw.height).data;
+              for (let i = 0; i < d.length; i += 4)
+                if (d[i + 3] > 200 && Math.abs(d[i] - 124) < 16 && Math.abs(d[i + 1] - 92) < 16 && d[i + 2] > 235) purple++; }
+            return { color, first: dots[0] && dots[0].dataset.color, name: dots[0] && dots[0].getAttribute('aria-label'),
+                     ringed: on.map(d => d.dataset.color || d.id), purple }; }""")
+        check(f"{_route}: a fresh editor starts on #7c5cff (Skribl purple), the first swatch, and only it is ringed",
+              _st["color"] == "#7c5cff" and _st["first"] == "#7c5cff" and _st["name"] == "Skribl purple"
+              and _st["ringed"] == ["#7c5cff"], str(_st))
+        check(f"{_route}: ...and the pen button's swoosh is inked in it",
+              _st["purple"] > 20, str(_st))
+        _q.close()
+
+    # THE LENS. Arming puts it on the drawing, it sits on the point it reads,
+    # the ring's top is what a pick takes and its bottom the pen now, and what
+    # it shows is what it picks. Mouse and keyboard on a desktop; touch, the
+    # handle, the tap and the cancel on a phone. Everything is asked of what
+    # is PAINTED (elementFromPoint, canvas pixels), never only of a rect.
+    LS = "() => (_eyedropper && _eyedropper.lensState) ? _eyedropper.lensState() : null"
+    SETC = "(h) => (typeof setPenColor === 'function' ? setPenColor(h) : setColor(h))"
+    ARMED = "() => document.getElementById('eyedropperBtn').classList.contains('picking')"
+    PAINTED = """(sel) => { const e = document.querySelector(sel); if (!e || e.hidden) return false;
+        const r = e.getBoundingClientRect(), pe = e.style.pointerEvents; e.style.pointerEvents = 'auto';
+        const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); e.style.pointerEvents = pe;
+        return !!h && e.contains(h); }"""
+    LENS_C = """() => { const l = document.querySelector('.eyedropper-lens'), r = l.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, left: r.left, right: r.right,
+                 top: r.top, bottom: r.bottom, vw: innerWidth, vh: innerHeight }; }"""
+    # The ring's two halves, read off the lens canvas at 12 and 6 o'clock.
+    RING = """() => { const cv = document.querySelector('.eyedropper-lens canvas'), k = cv.width / 116;
+        const g = cv.getContext('2d'), px = (x, y) => { const d = g.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data;
+          return '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join(''); };
+        return { top: px(58, 2.5), bottom: px(58, 113.5), chip: document.querySelector('.eyedropper-lens-chip').textContent }; }"""
+    # The middle of the run of one ink down the canvas's centre column, found
+    # the way the editor's own sampler reads (getPos/pos + the composited stage).
+    YEL = """([sel, want]) => { const c = document.querySelector(sel), r = c.getBoundingClientRect();
+        const art = (typeof padArtwork === 'function') ? padArtwork() : paintArtwork();
+        const P = (typeof getPos === 'function') ? getPos : pos, d = (typeof DPR !== 'undefined') ? DPR : (window.devicePixelRatio || 1);
+        const g = art.getContext('2d'), x = Math.floor(r.left + r.width * 0.5) + 0.5, run = [];
+        for (let y = Math.floor(r.top) + 0.5; y < r.bottom; y++) {
+          const p = P({ clientX: x, clientY: y }), q = g.getImageData(Math.floor(p.x * d), Math.floor(p.y * d), 1, 1).data;
+          if (Math.abs(q[0] - want[0]) < 16 && Math.abs(q[1] - want[1]) < 16 && Math.abs(q[2] - want[2]) < 16) run.push(y);
+          else if (run.length) break; }
+        return run.length ? { x, y: run[Math.floor(run.length / 2)] } : null; }"""
+
+    def _near(a, b, tol=8):
+        """Ring pixels are antialiased where the arc meets its hairline edge."""
+        return all(abs(int(a[i:i + 2], 16) - int(b[i:i + 2], 16)) <= tol for i in (1, 3, 5))
+
+    def _stroke(q, cv, touch, cdp, frac_y, hexc):
+        q.evaluate(SETC, hexc)
+        bx = q.locator(cv).bounding_box()
+        y = bx["y"] + bx["height"] * frac_y
+        pts = [(bx["x"] + bx["width"] * (0.2 + 0.6 * s / 20), y) for s in range(21)]
+        if touch:
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": pts[0][0], "y": pts[0][1]}]})
+            for x_, y_ in pts[1:]:
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": x_, "y": y_}]})
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        else:
+            q.mouse.move(*pts[0]); q.mouse.down()
+            for x_, y_ in pts[1:]:
+                q.mouse.move(x_, y_)
+            q.mouse.up()
+        q.wait_for_timeout(250)
+        return pts[-1]
+
+    print("\nPARITY — the lens, with a mouse and a keyboard")
+    for _route, _cv in (("/skribl-pad", "#canvas"), ("/flip", "#pad")):
+        _q = _fresh(_lctx, _route)
+        _stroke(_q, _cv, False, None, 0.5, "#ffe800")
+        _end = _stroke(_q, _cv, False, None, 0.7, "#ff48b0")
+        # In the DRAWING's coordinates: opening the drawer can move the canvas.
+        _endS = _q.evaluate("(p) => ((typeof getPos === 'function') ? getPos : pos)({ clientX: p[0], clientY: p[1] })", list(_end))
+        _q.evaluate(SETC, "#00a95c")
+        browsing.pad_drawer(_q, "draw", settle=400)
+        _q.click("#eyedropperBtn"); _q.wait_for_timeout(400)
+        _s0 = _q.evaluate(LS)
+        _pill = _q.evaluate("""() => { const p = document.querySelector('.eyedropper-pill'), c = p && p.querySelector('button');
+            if (!p || p.hidden || !c) return null; const r = c.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            const edge = document.elementFromPoint(r.left + r.width / 2, r.top - 4);
+            return { text: p.textContent, cancel: hit === c, grown: edge === c, h: r.height,
+                     live: (document.querySelector('.eyedropper-live') || {}).textContent || '' }; }""")
+        check(f"{_route}: arming shows the pill with its words and a painted Cancel, and says it once to a screen reader",
+              bool(_pill) and _pill["text"].startswith("Click your drawing to pick a colour") and _pill["cancel"]
+              and _pill["grown"] and "Enter picks" in _pill["live"], str(_pill))
+        check(f"{_route}: arming puts the lens ON the drawing, at the last point the pen touched",
+              bool(_s0) and _q.evaluate(PAINTED, ".eyedropper-lens")
+              and abs(_s0["stage"]["x"] - _endS["x"]) <= 2.5 and abs(_s0["stage"]["y"] - _endS["y"]) <= 2.5,
+              f"lens {_s0}, last pen point (stage) {_endS}")
+        _t = _q.evaluate(YEL, [_cv, [255, 232, 0]])
+        _q.mouse.move(_t["x"] - 30, _t["y"] - 40); _q.mouse.move(_t["x"], _t["y"], steps=6); _q.wait_for_timeout(250)
+        _s1, _lc, _ring = _q.evaluate(LS), _q.evaluate(LENS_C), _q.evaluate(RING)
+        check(f"{_route}: the lens follows the mouse and sits centred on the point it reads",
+              abs(_s1["x"] - _t["x"]) <= 1 and abs(_s1["y"] - _t["y"]) <= 1
+              and abs(_lc["x"] - _s1["x"]) <= 1 and abs(_lc["y"] - _s1["y"]) <= 1,
+              f"pointer {_t}, lens point {_s1}, lens centre {_lc}")
+        check(f"{_route}: the ring's top is the colour it will pick, its bottom the pen now, the chip names the pick",
+              _s1["hex"] == "#ffe800" and _near(_ring["top"], "#ffe800") and _near(_ring["bottom"], "#00a95c")
+              and _ring["chip"] == "#FFE800", f"{_s1} {_ring}")
+        _q.keyboard.press("ArrowRight"); _q.keyboard.press("Shift+ArrowDown"); _q.wait_for_timeout(150)
+        _s2 = _q.evaluate(LS)
+        check(f"{_route}: arrows nudge the lens one pixel, Shift+arrow ten",
+              _s2["x"] - _s1["x"] == 1 and _s2["y"] - _s1["y"] == 10, f"{_s1} -> {_s2}")
+        _q.keyboard.press("Shift+ArrowUp"); _q.wait_for_timeout(150)
+        _q.keyboard.press("Enter"); _q.wait_for_timeout(300)
+        _c = _q.evaluate("() => color")
+        check(f"{_route}: Enter picks what the lens shows, and the pick ends the armed state",
+              _c == "#ffe800" and not _q.evaluate(ARMED) and not _q.evaluate(PAINTED, ".eyedropper-lens")
+              and not _q.evaluate(PAINTED, ".eyedropper-pill"), f"colour {_c}, armed {_q.evaluate(ARMED)}")
+        # A click picks too -- the pink stroke, through the page.
+        _q.evaluate(SETC, "#00a95c")
+        browsing.pad_drawer(_q, "draw", settle=400)
+        _q.click("#eyedropperBtn"); _q.wait_for_timeout(400)
+        _pk = _q.evaluate(YEL, [_cv, [255, 72, 176]])
+        _q.mouse.click(_pk["x"], _pk["y"]); _q.wait_for_timeout(300)
+        check(f"{_route}: a click on the drawing picks the colour under the lens",
+              _q.evaluate("() => color") == "#ff48b0" and not _q.evaluate(ARMED), _q.evaluate("() => color"))
+        # Cancel abandons: the pen stays, the lens and pill go.
+        browsing.pad_drawer(_q, "draw", settle=400)
+        _q.click("#eyedropperBtn"); _q.wait_for_timeout(400)
+        _q.mouse.move(_t["x"], _t["y"], steps=4); _q.wait_for_timeout(150)
+        _q.click(".eyedropper-pill button"); _q.wait_for_timeout(300)
+        check(f"{_route}: Cancel abandons: the pen keeps its colour and the lens and pill go",
+              _q.evaluate("() => color") == "#ff48b0" and not _q.evaluate(ARMED)
+              and not _q.evaluate(PAINTED, ".eyedropper-lens") and not _q.evaluate(PAINTED, ".eyedropper-pill"),
+              f"colour {_q.evaluate('() => color')}, armed {_q.evaluate(ARMED)}")
+        _q.close()
+    _lctx.close()
+
+    print("\nPARITY — the lens on a phone: the finger holds the handle, never the point")
+    for _route, _cv in (("/skribl-pad", "#canvas"), ("/flip", "#pad")):
+        _pc = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=3, has_touch=True, is_mobile=True)
+        _q = _fresh(_pc, _route)
+        _cdp = _pc.new_cdp_session(_q)
+        _touch = lambda typ, pts: _cdp.send("Input.dispatchTouchEvent", {"type": typ, "touchPoints": [{"x": x_, "y": y_} for x_, y_ in pts]})
+        _stroke(_q, _cv, True, _cdp, 0.45, "#ffe800")
+        _q.evaluate(SETC, "#00a95c")
+        browsing.pad_drawer(_q, "draw", settle=500)
+        _eb = _q.locator("#eyedropperBtn").bounding_box()
+        _q.touchscreen.tap(_eb["x"] + _eb["width"] / 2, _eb["y"] + _eb["height"] / 2); _q.wait_for_timeout(500)
+        _s0 = _q.evaluate(LS)
+        _h = _q.evaluate("""() => { const h = document.querySelector('.eyedropper-lens-handle'); if (!h || h.hidden) return null;
+            const r = h.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+            const at = (dx, dy) => { const e = document.elementFromPoint(x + dx, y + dy); return !!e && h.contains(e); };
+            return { x, y, hit44: at(0, 0) && at(0, -21) && at(0, 21) && at(-21, 0) && at(21, 0),
+                     pill: document.querySelector('.eyedropper-pill').textContent }; }""")
+        check(f"{_route}: on touch the pill says to drag the lens, and the lens carries a handle with a 44px hit area",
+              bool(_h) and _h["pill"].startswith("Drag the lens to pick") and _h["hit44"]
+              and _q.evaluate(PAINTED, ".eyedropper-lens"), str(_h))
+        # A tap on the drawing moves the lens there and does not pick.
+        _bx = _q.locator(_cv).bounding_box()
+        _tp = (round(_bx["x"] + _bx["width"] * 0.5) + 0.5, round(_bx["y"] + _bx["height"] * 0.8) + 0.5)
+        _touch("touchStart", [_tp]); _touch("touchEnd", []); _q.wait_for_timeout(250)
+        _s1 = _q.evaluate(LS)
+        check(f"{_route}: a tap on the drawing moves the lens there without picking",
+              bool(_s1) and abs(_s1["x"] - _tp[0]) <= 1 and abs(_s1["y"] - _tp[1]) <= 1
+              and _q.evaluate("() => color") == "#00a95c" and _q.evaluate(ARMED), f"tap {_tp}, lens {_s1}")
+        # Drag the HANDLE until the lens reads the yellow stroke; lift picks.
+        _t = _q.evaluate(YEL, [_cv, [255, 232, 0]])
+        _h = _q.evaluate("""() => { const r = document.querySelector('.eyedropper-lens-handle').getBoundingClientRect();
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }""")
+        _dx, _dy = _t["x"] - _s1["x"], _t["y"] - _s1["y"]
+        _touch("touchStart", [(_h["x"], _h["y"])])
+        for _i in range(1, 13):
+            _touch("touchMove", [(_h["x"] + _dx * _i / 12, _h["y"] + _dy * _i / 12)])
+        _q.wait_for_timeout(250)
+        _s2, _lc = _q.evaluate(LS), _q.evaluate(LENS_C)
+        _fy = _h["y"] + _dy
+        check(f"{_route}: mid-drag the lens reads the point it sits on, and the finger is below the lens, not on the point",
+              abs(_s2["x"] - _t["x"]) <= 1 and abs(_s2["y"] - _t["y"]) <= 1 and _s2["hex"] == "#ffe800"
+              and abs(_lc["x"] - _s2["x"]) <= 1 and abs(_lc["y"] - _s2["y"]) <= 1 and _fy > _lc["bottom"],
+              f"target {_t}, lens {_s2}, lens box {_lc}, finger y {_fy:.0f}")
+        _touch("touchEnd", []); _q.wait_for_timeout(300)
+        check(f"{_route}: lifting the finger picks what the lens showed",
+              _q.evaluate("() => color") == "#ffe800" and not _q.evaluate(ARMED), _q.evaluate("() => color"))
+        # A drag anywhere moves the lens by the finger's travel; pointercancel
+        # abandons the drag, puts the lens back, and stays armed.
+        _q.evaluate(SETC, "#00a95c")
+        browsing.pad_drawer(_q, "draw", settle=500)
+        _eb = _q.locator("#eyedropperBtn").bounding_box()
+        _q.touchscreen.tap(_eb["x"] + _eb["width"] / 2, _eb["y"] + _eb["height"] / 2); _q.wait_for_timeout(500)
+        _a = _q.evaluate(LS)
+        _f0 = (_bx["x"] + _bx["width"] * 0.3, _bx["y"] + _bx["height"] * 0.85)
+        _touch("touchStart", [_f0])
+        for _i in range(1, 9):
+            _touch("touchMove", [(_f0[0] + 5 * _i, _f0[1] - 4 * _i)])
+        _q.wait_for_timeout(200)
+        _b2 = _q.evaluate(LS)
+        _touch("touchCancel", []); _q.wait_for_timeout(250)
+        _c2 = _q.evaluate(LS)
+        check(f"{_route}: a drag anywhere moves the lens by the finger's travel; a cancelled touch puts it back and picks nothing",
+              abs((_b2["x"] - _a["x"]) - 40) <= 1 and abs((_b2["y"] - _a["y"]) + 32) <= 1
+              and abs(_c2["x"] - _a["x"]) <= 1 and abs(_c2["y"] - _a["y"]) <= 1
+              and _q.evaluate("() => color") == "#00a95c" and _q.evaluate(ARMED), f"{_a} -> {_b2} -> {_c2}")
+        # At the edge the lens stays in the viewport.
+        _ep = (_bx["x"] + _bx["width"] - 2, _bx["y"] + _bx["height"] * 0.5)
+        _touch("touchStart", [_ep]); _touch("touchEnd", []); _q.wait_for_timeout(250)
+        _lc, _se = _q.evaluate(LENS_C), _q.evaluate(LS)
+        check(f"{_route}: at the canvas edge the lens slides inward and stays on screen, still reading the edge point",
+              _lc["left"] >= 0 and _lc["right"] <= _lc["vw"] and _q.evaluate(PAINTED, ".eyedropper-lens")
+              and abs(_se["x"] - _ep[0]) <= 1.5 and _lc["x"] < _se["x"] - 1,
+              f"lens box {_lc}, lens point {_se}, touched {_ep}")
+        _cb = _q.evaluate("""() => { const r = document.querySelector('.eyedropper-pill button').getBoundingClientRect();
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }""")
+        _q.touchscreen.tap(_cb["x"], _cb["y"]); _q.wait_for_timeout(300)
+        check(f"{_route}: Cancel on a phone abandons the pick",
+              not _q.evaluate(ARMED) and _q.evaluate("() => color") == "#00a95c", _q.evaluate("() => color"))
+        _pc.close()
 
     print("\nPARITY — a switched-on switch is the accent on both; amber only for the onion")
     # The selection census found Flip lighting Grid, Stroke layers and Motion

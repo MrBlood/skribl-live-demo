@@ -198,6 +198,12 @@ def scribble(pg, box, n=120):
     poll and the audio source had started and finished between the click and the
     measurement. The fixture has to last long enough to be observed mid-flight.
     """
+    # WHITE INK, SET ON PURPOSE. The nib-on-ink probe below scores ink by its
+    # darkest channel (white-ish ink reads high on the dark ground). It used to
+    # get white for free as the Pad's starting pen; a fresh editor now starts on
+    # Skribl purple (#7c5cff, darkest channel 92), which that probe cannot tell
+    # from the ground. The fixture says what it needs rather than inheriting it.
+    pg.evaluate("() => { if (typeof setPenColor === 'function') setPenColor('#ffffff'); }")
     cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
     pg.mouse.move(cx, cy)
     pg.mouse.down()
