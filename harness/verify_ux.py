@@ -2371,6 +2371,54 @@ with _sp204() as _rr:
           _pen["run"] == "running" and _pen["plays"] < 0.5, str(_pen))
     _rrp.close(); _rrb.close()
 
+print("\nREADOUT ALIGNMENT — the dot, bars, clock, plays and Done share one line, in any font")
+# A centred line box centres the font's ascent and descent, not the digits,
+# and fonts split those differently: a 1px nudge tuned here in Liberation
+# Sans put the clock visibly LOW on the owner's Windows machine (Segoe UI).
+# The cure (text-box: trim-both cap alphabetic) is font-independent, so it is
+# asserted in more than one font: each installed face is forced onto the
+# readout and the INK is measured (a box says where text could be, not where
+# its glyphs are). Every part's ink centre must sit within 1px of the dot's.
+import io as _io
+from PIL import Image as _Img
+with _sp204() as _al:
+    _alb = _al.chromium.launch()
+    _alp = _alb.new_page(viewport={"width": 1280, "height": 860}, device_scale_factor=2)
+    browsing.goto(_alp, BASE, "/")
+    _alp.evaluate("() => localStorage.clear()")
+    _alp.reload(wait_until="load"); _alp.wait_for_timeout(700)
+    draw(_alp, "#canvas", 120, 120, n=18); _alp.wait_for_timeout(600)
+    _alp.evaluate("""() => { clearInterval(recTimerInterval); document.getElementById('recTimer').textContent = '0:05';
+        document.getElementById('recPlays').textContent = 'plays 2:33'; }""")
+    _faces = _alp.evaluate("""() => ['DejaVu Sans', 'Liberation Sans', 'FreeSans'].filter(f => {
+        const c = document.createElement('canvas').getContext('2d'), t = 'plays 0:05 Done';
+        c.font = '40px monospace'; const a = c.measureText(t).width;
+        c.font = '40px "' + f + '", monospace'; return Math.abs(c.measureText(t).width - a) > 0.5; })""")
+    _align = {}
+    for _f in _faces:
+        _alp.evaluate("""f => { let s = document.getElementById('alignFace'); if (!s) { s = document.createElement('style');
+            s.id = 'alignFace'; document.head.appendChild(s); } s.textContent = '.rec-indicator, .rec-indicator * { font-family: "' + f + '", sans-serif !important; }'; }""", _f)
+        _alp.wait_for_timeout(250)
+        _r = _alp.evaluate("() => { const e = document.getElementById('recIndicator').getBoundingClientRect(); return [e.left, e.top, e.width, e.height]; }")
+        _im = _Img.open(_io.BytesIO(_alp.screenshot(clip={"x": _r[0], "y": _r[1] - 8, "width": _r[2], "height": _r[3] + 16}))).convert("RGB")
+        _parts = _alp.evaluate("""() => { const o = document.getElementById('recIndicator').getBoundingClientRect();
+            return ['.rec-indicator .dot', '.rec-bars', '#recTimer', '#recPlays', '#recordBtn .btn-label'].map(s => {
+              const q = document.querySelector(s).getBoundingClientRect();
+              // "plays" is measured on its digits: the p and y descend by design
+              return s === '#recPlays' ? [q.right - o.left - q.width * 0.38, q.right - o.left] : [q.left - o.left, q.right - o.left]; }); }""")
+        _bg = _im.getpixel((1, 1)); _c = []
+        for (_x0, _x1) in _parts:
+            _ys = [y for y in range(_im.height) if any(sum(abs(a - b) for a, b in zip(_im.getpixel((x, y)), _bg)) > 150
+                                                      for x in range(int(_x0 * 2) + 1, int(_x1 * 2) - 1))]
+            _c.append((min(_ys) + max(_ys)) / 4 if _ys else None)
+        _align[_f] = {k: (round(v - _c[0], 2) if v is not None else None) for k, v in zip(["dot", "bars", "clock", "plays", "done"], _c)}
+    _alp.close(); _alb.close()
+check("READOUT ALIGNMENT: at least one face beyond the default was available to force (fixture)",
+      len(_faces) >= 1, f"faces found: {_faces}")
+_off = {f: {k: v for k, v in d.items() if k != "dot" and (v is None or abs(v) > 1.0)} for f, d in _align.items()}
+check("READOUT ALIGNMENT: in every face, each part's ink centre is within 1px of the dot's",
+      _align and not any(_off.values()), str(_align))
+
 print("\nHEADER ORDER — the take's controls, then settings and the menu; Done beside the readout")
 # Owner's layout B. After a take the header reads Play, Post, then settings
 # and the menu as a pair; while a take records, Done moves to sit beside the

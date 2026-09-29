@@ -627,13 +627,16 @@ body {
   font-variant-numeric: tabular-nums;
   font-weight: 500;
   letter-spacing: 0.02em;
-  /* OPTICAL, measured: digits have no descenders, so a centred line box
-     leaves them riding 1.5px above the dot and bars (ink centres, css px:
-     dot 14.75, bars 14.75, clock 13.25). 1px down puts every part within
-     half a pixel of the dot's line, both themes, phone and desktop. */
-  position: relative;
-  top: 1px;
 }
+/* ONE LINE IN ANY FONT. A centred line box centres the font's ascent and
+   descent, not the digits, and every font splits those differently: a 1px
+   nudge measured here in Liberation Sans put the clock LOW on the owner's
+   Windows machine (Segoe UI). text-box trims each text box to cap height
+   over the baseline, so centring lines up the digits themselves, whatever
+   the face. Measured across five fonts: every part within half a pixel of the
+   dot's line (a nudge ranged 1.75px on the clock, 2px on "plays"). Where
+   text-box is unsupported the text simply centres as before. */
+.rec-timer, .rec-plays, .rec-indicator > .btn.record .btn-label { text-box: trim-both cap alphabetic; }
 
 .duration-badge {
   display: inline-flex;
