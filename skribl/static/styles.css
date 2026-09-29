@@ -2001,13 +2001,17 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .fine-tune-body[hidden] { display: none; }
 
 @media (max-width: 640px) {
-  /* Breathing room for the pen row's nine items (8 dots + eyedropper) on a
-     phone. At 28px the gaps closed to ~7px and the selected dot's white ring
-     nearly touched its neighbour ("the pen colors are crowded -- the
-     pink is too close to white"). 26px buys ~10px gaps; taps stay ≥44 via
+  /* Breathing room for the pen row on a phone. At 28px the gaps closed to
+     ~7px and the selected dot's white ring nearly touched its neighbour ("the
+     pen colors are crowded -- the pink is too close to white"). 26px bought
+     ~10px gaps for nine items (7 presets, the custom dot, the eyedropper).
+     Skribl purple made it ten, which closed them to 8.2px at 390 (0.4px at
+     320), so the pen row steps down to 24px and is back to ~10px at 390.
+     Background swatches have their own row and keep 26. Taps stay ≥44 via
      the bumped --tap-grow / input overhang below. */
   .color-dot, .bg-swatch { width: 26px; height: 26px; }
-  .eyedropper-btn { width: 26px; height: 26px; }
+  #colorGroup .color-dot { width: 24px; height: 24px; }
+  .eyedropper-btn { width: 24px; height: 24px; }
   .smooth-btn { padding: 5px 10px; }
   .prop-row .draw-section-label { width: 58px; }
 }
@@ -5991,15 +5995,17 @@ body.playing .flip-grid { display: none; }
 .nudge-btn  { --tap-grow: 7px; }   /* 32 visual -> 44+ tap (readout between - and + keeps them apart) */
 .pending-dismiss { --tap-grow: 7px; }  /* 32 -> 44+ */
 .eyedropper-btn  { --tap-grow: 8px; }  /* 30 visual (dot-sized, on purpose) -> 44+ tap; it sat beside dots that had it and lacked its own */
-/* Compact shrinks dots and eyedropper to 26 visual (the pen row breathes),
-   so their tap overhang grows to keep 44. Sits AFTER the base declarations
+/* Compact shrinks dots to 26 visual and the pen row (its dots and the
+   eyedropper) to 24, so their tap overhang grows to keep 44. Sits AFTER the base declarations
    above on purpose: a media query adds no specificity, and the same lines
    placed earlier in the file would silently lose the tie. The custom picker's
    overhang is its invisible <input>, so it gets the same bump. */
 @media (max-width: 640px) {
   .color-dot, .eyedropper-btn { --tap-grow: 9px; }   /* 26 visual -> 44 tap */
+  #colorGroup .color-dot, .eyedropper-btn { --tap-grow: 10px; }   /* the pen row: 24 visual -> 44 tap */
   .color-custom-wrap input[type="color"],
   .bg-custom-wrap input[type="color"] { inset: -9px; }
+  .color-custom-wrap input[type="color"] { inset: -10px; }
 }
 /* .toolbar .undo-btn sets its own --tap-grow per tier: 2px at 40 visual,
    4px at 36, 5px at 34. Declared next to each width so the pair cannot drift. */
