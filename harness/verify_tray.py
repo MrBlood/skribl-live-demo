@@ -319,7 +319,13 @@ with sync_playwright() as p:
     check("Flip: the dock's Shape button (from Pen) opens the kind picker",
           page.evaluate("() => flipTool") == "shape" and hidden() is False,
           f"tool={page.evaluate('() => flipTool')}, hidden={hidden()}")
-    page.click("#shapeSeg [data-shape='ellipse']")
+    # Choose a kind only if the picker is there to choose from: on a regressed
+    # tree it is not, and the click would time out and crash the suite instead
+    # of letting the next two checks report. evaluate() closes it the same way.
+    if hidden() is False:
+        page.click("#shapeSeg [data-shape='ellipse']")
+    else:
+        page.evaluate("() => { const b = document.querySelector(\"#shapeSeg [data-shape='ellipse']\"); if (b) b.click(); }")
     page.wait_for_timeout(300)
     page.click("#shapeToolBtn")
     page.wait_for_timeout(400)
