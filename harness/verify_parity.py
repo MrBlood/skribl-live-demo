@@ -772,6 +772,28 @@ with sync_playwright() as p:
     check("loading a photo marks the tab on both",
           pad.evaluate(vis, "photoTabDot") and flip.evaluate(vis, "photoTabDot"),
           f"pad={pad.evaluate(vis, 'photoTabDot')}, flip={flip.evaluate(vis, 'photoTabDot')}")
+
+    # THE FILE ROW (the drawer redesign): once a photo is in, the drop area
+    # gives way to the file -- its name, what it is doing, and a thumbnail of
+    # the picture itself -- and the green box it used to be is gone. Asked of
+    # what is PAINTED where it matters: the thumbnail is found at its own
+    # centre, after bringing it on screen.
+    PROW = """() => { const g = (id) => document.getElementById(id), t = g('photoThumb'), z = g('photoUploadBtn');
+        t.scrollIntoView({ block: 'center' });
+        const r = t.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const cs = getComputedStyle(z), vis = (id) => g(id).offsetParent !== null;
+        return { name: g('photoBtnLabel').textContent, meta: g('photoBtnMeta').textContent,
+                 thumb: t.complete && t.naturalWidth === 8 && at === t, add: vis('photoAddBtn'),
+                 box: cs.backgroundColor === 'rgba(0, 0, 0, 0)' && cs.borderTopStyle === 'none',
+                 controls: vis('photoToggle') && vis('photoRemove') }; }"""
+    _pr, _fr = pad.evaluate(PROW), flip.evaluate(PROW)
+    check("a loaded photo's row names the file and says 'Behind the drawing · Fill', on both",
+          all(r["name"] == "t.png" and r["meta"] == "Behind the drawing · Fill" for r in (_pr, _fr)),
+          f"pad {_pr}, flip {_fr}")
+    check("...shows the picture itself, painted, where the drop area was",
+          all(r["thumb"] and not r["add"] for r in (_pr, _fr)), f"pad {_pr}, flip {_fr}")
+    check("...as a quiet row, not the green box, with its switch and its bin",
+          all(r["box"] and r["controls"] for r in (_pr, _fr)), f"pad {_pr}, flip {_fr}")
     check("and reveals the same fit choices on both",
           pad.text_content("#photoFitGroup").strip()
           == flip.text_content("#photoFitGroup").strip(),
@@ -790,6 +812,33 @@ with sync_playwright() as p:
     check("choosing a different fit moves the choice, not adds to it",
           pad.evaluate(fit_sel) == 1 and flip.evaluate(fit_sel) == 1,
           f"pad {pad.evaluate(fit_sel)}, flip {flip.evaluate(fit_sel)}")
+    _pm = (pad.text_content("#photoBtnMeta"), flip.text_content("#photoBtnMeta"))
+    check("...and the file row says the new fit on both",
+          _pm == ("Behind the drawing · Stretch",) * 2, f"pad {_pm[0]!r}, flip {_pm[1]!r}")
+
+    # SWITCHED OFF, the file is still there: the row keeps its name and its
+    # picture, and says "Hidden" rather than "Behind the drawing", so the words
+    # never contradict the switch beside them. The Fit tap after the switch is
+    # a re-render the row has to survive (the Pad's used to key on whether the
+    # picture was displayed, which switching off turns off).
+    OFF = """() => { const g = (id) => document.getElementById(id), t = g('photoThumb');
+        t.scrollIntoView({ block: 'center' });
+        const r = t.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { sw: g('photoToggle').getAttribute('aria-checked'), name: g('photoBtnLabel').textContent,
+                 shown: g('photoBtnLabel').offsetParent !== null, meta: g('photoBtnMeta').textContent,
+                 thumb: at === t, add: g('photoAddBtn').offsetParent !== null }; }"""
+    for _pg in (pad, flip):
+        _pg.click("#photoToggle"); _pg.wait_for_timeout(150)
+        _pg.click('.photo-fit-btn[data-fit="contain"]'); _pg.wait_for_timeout(250)
+    _po, _fo = pad.evaluate(OFF), flip.evaluate(OFF)
+    check("a switched-off photo keeps its row, and the row says it is hidden, on both",
+          all(r["sw"] == "false" and r["name"] == "t.png" and r["shown"] and r["meta"] == "Hidden · Fit"
+              and r["thumb"] and not r["add"] for r in (_po, _fo)), f"pad {_po}, flip {_fo}")
+    for _pg in (pad, flip):
+        _pg.click("#photoToggle"); _pg.wait_for_timeout(150)
+    _pb = (pad.text_content("#photoBtnMeta"), flip.text_content("#photoBtnMeta"))
+    check("...and switched back on it is behind the drawing again",
+          _pb == ("Behind the drawing · Fit",) * 2, f"pad {_pb[0]!r}, flip {_pb[1]!r}")
 
     opacity = """() => { const r = document.querySelector('.photo-opacity-row input[type=range]');
         return r ? { min: r.min, max: r.max, step: r.step, value: r.value } : null; }"""
@@ -806,6 +855,26 @@ with sync_playwright() as p:
     check("loading music marks the tab on both",
           pad.evaluate(vis, "musicTabDot") and flip.evaluate(vis, "musicTabDot"),
           f"pad={pad.evaluate(vis, 'musicTabDot')}, flip={flip.evaluate(vis, 'musicTabDot')}")
+
+    # The music row: the name, and the track's length -- the same length both
+    # editors print under the waveform (#trimEndLabel) -- and a tile whose note
+    # sits on the selected tab's own tint, measured live from the tab so a
+    # retuned purple moves both together.
+    MROW = """() => { const g = (id) => document.getElementById(id), tile = document.querySelector('#musicUploadBtn .dz-tile');
+        const tab = document.querySelector('.media-tab[aria-selected="true"]');
+        tile.scrollIntoView({ block: 'center' });
+        const r = tile.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const a = getComputedStyle(tile), b = getComputedStyle(tab);
+        return { name: g('musicBtnLabel').textContent, meta: g('musicBtnMeta').textContent,
+                 end: g('trimEndLabel').textContent, painted: !!at && tile.contains(at),
+                 tint: a.backgroundColor === b.backgroundColor && a.color === b.color,
+                 tile: [a.backgroundColor, a.color], tab: [b.backgroundColor, b.color] }; }"""
+    _pmr, _fmr = pad.evaluate(MROW), flip.evaluate(MROW)
+    check("a loaded track's row names it and gives the length the waveform shows, on both",
+          all(r["name"] == "t.wav" and r["meta"] == "Loops under the drawing · " + r["end"] for r in (_pmr, _fmr))
+          and _pmr["meta"] == _fmr["meta"] == "Loops under the drawing · 0:01", f"pad {_pmr}, flip {_fmr}")
+    check("...and its note is painted on the selected tab's tint, on both",
+          all(r["painted"] and r["tint"] for r in (_pmr, _fmr)), f"pad {_pmr}, flip {_fmr}")
     check("the trim handles report the same start on both",
           pad.text_content("#handleStart").strip() == flip.text_content("#handleStart").strip(),
           f"pad {pad.text_content('#handleStart').strip()!r} against "
@@ -844,6 +913,15 @@ with sync_playwright() as p:
           pn is not None and fn is not None and pn == fn,
           f"pad {pn}, flip {fn} — a nudge step that differs by surface is drift "
           "a user meets as a loop that will not line up")
+
+    for _pg in (pad, flip):
+        _pg.evaluate("() => document.getElementById('musicUploadBtn').scrollIntoView({ block: 'center' })")
+        _pg.click("#musicToggle"); _pg.wait_for_timeout(150)
+    _mo = (pad.text_content("#musicBtnMeta"), flip.text_content("#musicBtnMeta"))
+    for _pg in (pad, flip):
+        _pg.click("#musicToggle"); _pg.wait_for_timeout(150)
+    check("a switched-off track keeps its row, and the row says it is muted, on both",
+          _mo == ("Muted · 0:01",) * 2, f"pad {_mo[0]!r}, flip {_mo[1]!r}")
 
     # ---- segmented pills land where they claim to --------------------------
     # Slider positioning exists three times (attachSegSlider in app.js, another
@@ -1302,6 +1380,277 @@ with sync_playwright() as p:
                          colours: !!dot && (dot === d || d.contains(dot)), end: !!end && p.contains(end) }; }""")
             check(f"{_route}: ...and an abandoned pick (Escape) puts the open colour panel back on screen, top to bottom",
                   bool(_back) and _back["colours"] and _back["end"], str(_back))
+        _q.close()
+
+    # ---- the media card -------------------------------------------------------
+    # THE DRAWER REDESIGN (option A, owner-approved). The Photo | Music tabs and
+    # the open drawer were two glass slabs, 8px apart and of different widths
+    # (520 against 694 at a desktop width), each with its own rim and shadow.
+    # They are ONE card now: #mediaCard wraps the strip and both panels and
+    # wears the glass; the panel inside goes clear, and the strip sits inset in
+    # the card as a track. Fresh, empty drawers, so a tall loaded panel cannot
+    # scroll the strip off the top of a phone (lib/drawerdetent.js reveals the
+    # panel's END); and every point is on screen before it is asked about.
+    print("\nPARITY — the Photo | Music tabs and the open drawer are one card, on both")
+    CARD = """(k) => { const g = (id) => document.getElementById(id), card = g('mediaCard'), tabs = g('mediaTabs'), p = g(k + 'Panel');
+        if (!card) return { card: false };
+        card.scrollIntoView({ block: 'start' });
+        const c = card.getBoundingClientRect(), t = tabs.getBoundingClientRect(), r = p.getBoundingClientRect();
+        const ps = getComputedStyle(p), ts = getComputedStyle(tabs), cs = getComputedStyle(card);
+        const inCard = (x, y) => { if (y < 0 || y >= innerHeight) return 'off-screen'; const e = document.elementFromPoint(x, y); return !!e && card.contains(e); };
+        const cx = c.left + c.width / 2, padL = parseFloat(ps.paddingLeft), padR = parseFloat(ps.paddingRight);
+        return { card: true,
+                 parents: [tabs, g('photoPanel'), g('musicPanel')].every(e => e.parentElement === card),
+                 inset: [t.left - c.left, c.right - t.right, t.top - c.top],
+                 content: Math.abs(t.left - (r.left + padL)) <= 0.5 && Math.abs(t.right - (r.right - padR)) <= 0.5,
+                 span: Math.abs(r.left - c.left) <= 0.5 && Math.abs(r.right - c.right) <= 0.5 && Math.abs(r.bottom - c.bottom) <= 0.5,
+                 seam: [inCard(cx, t.bottom + (r.top - t.bottom) / 2), inCard(cx, r.top + 1)],
+                 gap: Math.round(r.top - t.bottom),
+                 glass: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backdropFilter !== 'none',
+                 clear: ps.backgroundColor === 'rgba(0, 0, 0, 0)' && ps.boxShadow === 'none' && ps.backdropFilter === 'none'
+                        && ts.backdropFilter === 'none' };
+    }"""
+    for _route in ("/skribl-pad", "/flip"):
+        for _vw, _vp in (("390", {"width": 390, "height": 844}), ("1280", {"width": 1280, "height": 900})):
+            _q = b.new_page(viewport=_vp)
+            _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+            _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+            _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+            _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            for _k in ("photo", "music"):
+                browsing.pad_drawer(_q, _k)
+                _cur = _q.evaluate(browsing._PAD_CUR)
+                _c = _q.evaluate(CARD, _k)
+                check(f"{_route} at {_vw}, {_k}: the tabs and the open drawer share one parent card",
+                      _cur == _k and _c["card"] and _c["parents"], f"open={_cur!r} {_c}")
+                if not _c["card"]:
+                    continue
+                check(f"{_route} at {_vw}, {_k}: the strip sits inset in the card and lines up with the drawer's content",
+                      all(abs(v - 16) <= 0.5 for v in _c["inset"]) and _c["content"] and _c["span"], str(_c))
+                check(f"{_route} at {_vw}, {_k}: the seam between tabs and drawer is painted by the card, not the page",
+                      _c["seam"] == [True, True], str(_c))
+                check(f"{_route} at {_vw}, {_k}: the card wears the glass and the drawer inside it is clear",
+                      _c["glass"] and _c["clear"], str(_c))
+            if _route == "/flip":
+                _dlg = _q.evaluate("""() => { const p = document.getElementById('photoPanel');
+                    return { role: p.getAttribute('role'), label: p.getAttribute('aria-label'),
+                             tabsInDialog: !!document.getElementById('mediaTabs').closest('[role=dialog]') }; }""")
+                check(f"/flip at {_vw}: the drawers are still named dialogs, and the tablist is outside them",
+                      _dlg == {"role": "dialog", "label": "Background image", "tabsInDialog": False}, str(_dlg))
+            _q.click("#mediaOpenBtn"); _q.wait_for_timeout(400)
+            _gone = _q.evaluate("() => { const c = document.getElementById('mediaCard'); return { open: (" + browsing._PAD_CUR + ")(), display: c ? getComputedStyle(c).display : null }; }")
+            check(f"{_route} at {_vw}: closing the drawer takes the whole card with it",
+                  _gone["open"] is None and _gone["display"] == "none", str(_gone))
+            _q.close()
+
+    # ---- the empty drop area ---------------------------------------------------
+    # Until a file is added the row is one quiet drop area: a real button that
+    # fills it (a Tab stop the old row never had), a title and one line of
+    # hint. No switch, no bin, no adjustments until there is a file for them to
+    # act on. The words are read from the RENDERED DOM, so a comment or a
+    # DECISIONS entry that quotes the old title cannot pass or fail this.
+    print("\nPARITY — the empty drop area, on both")
+    EMPTY = """(k) => { const g = (id) => document.getElementById(id), add = g(k + 'AddBtn');
+        if (!add) return { add: false };
+        add.scrollIntoView({ block: 'center' });
+        const r = add.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const off = [k + 'Toggle', k + 'Remove', k + 'Detail', k + 'BtnLabel'].concat(k === 'photo' ? ['photoThumb'] : [])
+          .filter(id => g(id) && g(id).offsetParent !== null);
+        return { add: true, painted: !!at && add.contains(at), title: add.querySelector('.dz-title').textContent,
+                 hint: add.querySelector('.dz-hint').textContent, showing: off }; }"""
+    WORDS = {"photo": ("Add a photo", "JPG, PNG, GIF or WebP · or drop one here"),
+             "music": ("Add music", "MP3, WAV, M4A or OGG · it loops under your drawing")}
+    for _route, _in in (("/skribl-pad", {"photo": "#photoInput", "music": "#musicInput"}),
+                        ("/flip", {"photo": "#imageInput", "music": "#musicInput"})):
+        _q = b.new_page(viewport={"width": 1280, "height": 900})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        for _k in ("photo", "music"):
+            browsing.pad_drawer(_q, _k)
+            _e = _q.evaluate(EMPTY, _k)
+            check(f"{_route}, {_k}: the empty row is one painted add button with its title and hint",
+                  _q.evaluate(browsing._PAD_CUR) == _k and _e["add"] and _e["painted"]
+                  and (_e["title"], _e["hint"]) == WORDS[_k], str(_e))
+            check(f"{_route}, {_k}: ...and nothing that needs a file shows until there is one",
+                  _e["add"] and not _e["showing"], str(_e))
+            # Each picker is answered (with nothing) before the next is asked
+            # for: Chromium opens one file chooser at a time.
+            _chosen = []
+            try:
+                with _q.expect_file_chooser(timeout=3000) as _fc:
+                    _q.click(f"#{_k}AddBtn")
+                _fc.value.set_files([])
+                _chosen.append("click")
+            except Exception:
+                pass
+            try:
+                _q.focus(f"#{_k}AddBtn")
+                with _q.expect_file_chooser(timeout=3000) as _fc:
+                    _q.keyboard.press("Enter")
+                _fc.value.set_files([])
+                _chosen.append("Enter")
+            except Exception:
+                pass
+            check(f"{_route}, {_k}: a tap on it, or Enter on it, opens the file picker",
+                  _chosen == ["click", "Enter"], f"picker opened by {_chosen}")
+        _old = _q.evaluate("""() => [document.getElementById('photoPanel').innerText,
+            [...document.querySelectorAll('#helpDrawer .help-pill')].map(e => e.textContent).join('|')]
+            .some(t => t.includes('Add an image'))""")
+        check(f"{_route}: 'Add an image' is gone from the drawer and from How it works",
+              _old is False, "the empty title and the help pill say 'Add a photo'")
+        _q.close()
+
+    # ---- the bin ------------------------------------------------------------
+    # The red Remove pill is a quiet bin now, and it asks first, as the
+    # saved-drafts bin does: the first tap arms it ("Remove?", in the danger
+    # colour, its name saying what the next tap does, spoken through
+    # #confirmStatus), a tap anywhere else stands it down, and the second tap
+    # removes. REAL clicks throughout, because the defect this guards is a
+    # click that reaches the row behind the bin and opens the file picker.
+    # TWO GUARDS keep it from reaching the row on each editor -- the row's own
+    # handler ignores the bin, and the bin's handler stops the click -- so a
+    # mutation that removes one of them alone stays green here, correctly; the
+    # arming capture on the row (lib/pendingcards.js) is a third for the first
+    # tap. Removing the file hands focus to the add button, never to <body>.
+    print("\nPARITY — the bin asks once, then removes, on both")
+    BIN = """(k) => { const g = (id) => document.getElementById(id), bin = g(k + 'Remove'), t = g('photoThumb');
+        bin.scrollIntoView({ block: 'center' });
+        const r = bin.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const probe = document.createElement('span'); probe.style.color = 'var(--danger)'; document.body.appendChild(probe);
+        const danger = getComputedStyle(probe).color; probe.remove();
+        return { cur: (""" + browsing._PAD_CUR + """)(), loaded: g(k + 'UploadBtn').classList.contains('loaded'),
+                 armed: bin.classList.contains('armed'), label: bin.getAttribute('aria-label'),
+                 said: g('confirmStatus').textContent, text: bin.innerText.trim(),
+                 red: getComputedStyle(bin).color === danger, painted: !!at && bin.contains(at),
+                 add: g(k + 'AddBtn').offsetParent !== null, name: g(k + 'BtnLabel').textContent,
+                 src: k === 'photo' ? t.hasAttribute('src') : null, focus: document.activeElement && document.activeElement.id }; }"""
+    FILES = {"photo": {"name": "t.png", "mimeType": "image/png", "buffer": IMG},
+             "music": {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD}}
+    NOUN = {"photo": "the photo", "music": "the track"}
+    for _route, _in in (("/skribl-pad", {"photo": "#photoInput", "music": "#musicInput"}),
+                        ("/flip", {"photo": "#imageInput", "music": "#musicInput"})):
+        _q = b.new_page(viewport={"width": 1280, "height": 900})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _pickers = []
+        _q.on("filechooser", lambda fc, _p=_pickers: _p.append(1))
+        _ok, _why = True, []
+        for _k in ("photo", "music"):
+            _f = FILES[_k]
+            browsing.pad_drawer(_q, _k)
+            _q.set_input_files(_in[_k], _f)
+            _q.wait_for_function("(k) => document.getElementById(k + 'UploadBtn').classList.contains('loaded')", arg=_k, timeout=20000)
+            _q.wait_for_timeout(300)
+            _q.click(f"#{_k}Remove"); _q.wait_for_timeout(400)   # past the bin's colour transition
+            _a = _q.evaluate(BIN, _k)
+            _armed = (_a["loaded"] and _a["armed"] and _a["label"] == f"Tap again to remove {_f['name']}"
+                      and _a["said"] == _a["label"] and _a["text"] == "Remove?" and _a["red"] and _a["painted"])
+            _q.click(f"#{_k}BtnLabel"); _q.wait_for_timeout(150)
+            _d = _q.evaluate(BIN, _k)
+            _stood = _d["loaded"] and not _d["armed"] and _d["label"] == f"Remove {NOUN[_k]}"
+            _q.click(f"#{_k}Remove"); _q.wait_for_timeout(100)
+            _q.click(f"#{_k}Remove"); _q.wait_for_timeout(400)
+            _r = _q.evaluate(BIN, _k)
+            _gone = (_r["cur"] == _k and not _r["loaded"] and _r["add"] and _r["name"] == "" and _r["src"] in (False, None))
+            # And by keyboard: Enter arms, Enter removes, and focus lands on the add button.
+            _q.set_input_files(_in[_k], _f)
+            _q.wait_for_function("(k) => document.getElementById(k + 'UploadBtn').classList.contains('loaded')", arg=_k, timeout=20000)
+            _q.wait_for_timeout(300)
+            _q.focus(f"#{_k}Remove"); _q.keyboard.press("Enter"); _q.wait_for_timeout(100)
+            _ka = _q.evaluate(BIN, _k)
+            _q.keyboard.press("Enter"); _q.wait_for_timeout(400)
+            _kr = _q.evaluate(BIN, _k)
+            _keys = _ka["armed"] and _ka["loaded"] and not _kr["loaded"] and _kr["focus"] == f"{_k}AddBtn"
+            if not (_armed and _stood and _gone and _keys):
+                _ok = False
+                _why.append(f"{_k}: armed={_a} stood-down={_d} removed={_r} keys armed={_ka} removed={_kr}")
+        check(f"{_route}: the bin asks once, then removes -- by pointer and by keyboard",
+              _ok and not _pickers, "; ".join(_why) + (f"; the file picker opened {len(_pickers)} time(s)" if _pickers else ""))
+        _q.close()
+
+    # ---- drops --------------------------------------------------------------
+    # "or drop one here" is a promise on both editors, and Flip had no drop
+    # handling at all. The card takes the drop, anywhere on it (the tabs, the
+    # edge, the row), checks it is the right kind of file, and hands it to the
+    # drawer's own input. The highlight does not flicker as the pointer crosses
+    # the row's own children. The WRONG kind is refused with nothing attached:
+    # a video on the music drawer, a BMP on the photo drawer -- real PNG and WAV
+    # bytes under the wrong type, so a missing type check shows as an attach.
+    # On the Pad the input's change handler checks the type too (two guards),
+    # so dropping the card's check alone stays green there and goes red on Flip.
+    print("\nPARITY — a file dropped on the drawer is taken, on both")
+    DROP = """async ([k, onto, name, type, b64]) => {
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const dt = new DataTransfer(); dt.items.add(new File([bytes], name, { type }));
+        const el = document.querySelector(onto);
+        const over = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt });
+        el.dispatchEvent(over);
+        const z = document.getElementById(k + 'UploadBtn'), lit = z.classList.contains('drag-over');
+        z.dispatchEvent(new DragEvent('dragleave', { bubbles: true, relatedTarget: z.querySelector('.dz-title') }));
+        const steady = z.classList.contains('drag-over');
+        el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        const unlit = !z.classList.contains('drag-over');
+        for (let i = 0; i < 50 && !z.classList.contains('loaded'); i++) await new Promise(r => setTimeout(r, 100));
+        return { prevented: over.defaultPrevented, lit, steady, unlit, loaded: z.classList.contains('loaded'),
+                 name: document.getElementById(k + 'BtnLabel').textContent,
+                 dot: !document.getElementById(k + 'TabDot').hidden }; }"""
+    import base64 as _b64
+    _PNG64, _WAV64 = _b64.b64encode(IMG).decode(), _b64.b64encode(AUD).decode()
+    for _route in ("/skribl-pad", "/flip"):
+        _q = b.new_page(viewport={"width": 1280, "height": 900})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        browsing.pad_drawer(_q, "photo")
+        _bad_p = _q.evaluate(DROP, ["photo", "#photoUploadBtn", "x.bmp", "image/bmp", _PNG64])
+        _good_p = _q.evaluate(DROP, ["photo", "#photoUploadBtn", "d.png", "image/png", _PNG64])
+        browsing.pad_drawer(_q, "music")
+        _bad_m = _q.evaluate(DROP, ["music", "#mediaTabs", "x.mp4", "video/mp4", _WAV64])
+        _good_m = _q.evaluate(DROP, ["music", "#mediaTabs", "d.wav", "audio/wav", _WAV64])
+        check(f"{_route}: a file dropped anywhere on the card is taken, and the wrong kind is refused",
+              _bad_p["prevented"] and not _bad_p["loaded"] and not _bad_m["loaded"]
+              and _good_p["loaded"] and _good_p["name"] == "d.png" and _good_p["dot"]
+              and _good_m["loaded"] and _good_m["name"] == "d.wav" and _good_m["dot"],
+              f"photo: bmp {_bad_p}, png {_good_p}; music on the tabs: mp4 {_bad_m}, wav {_good_m}")
+        check(f"{_route}: the drop area lights while a file is over it, steadily, and goes out on the drop",
+              all(r["lit"] and r["steady"] and r["unlit"] for r in (_good_p, _good_m)),
+              f"photo {_good_p}; music {_good_m}")
+        _q.close()
+
+    # ---- the re-add card stands in for BOTH faces ------------------------------
+    # A draft that kept a file's settings but not its bytes shows the re-add
+    # card where the row was. It has to hide the whole row -- drop area and file
+    # face alike -- on both editors (verify_amber reads only the row's hidden
+    # property, on Flip's music). And the card takes a dropped file too: the
+    # saved fit comes back with it, and the row says so.
+    print("\nPARITY — the re-add card hides both faces of the row, and takes a drop, on both")
+    for _route in ("/skribl-pad", "/flip"):
+        _q = b.new_page(viewport={"width": 1280, "height": 900})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        browsing.pad_drawer(_q, "photo")
+        _q.evaluate("() => { pendingPhotoMeta = { name: 'd.png', fit: 'contain' }; refreshPendingCards(); }")
+        _q.wait_for_timeout(150)
+        _rc = _q.evaluate("""() => { const g = (id) => document.getElementById(id), c = g('photoPending');
+            c.scrollIntoView({ block: 'center' });
+            const r = c.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { cur: (""" + browsing._PAD_CUR + """)(), card: !!at && c.contains(at),
+                     hidden: ['photoAddBtn', 'photoBtnLabel', 'photoThumb'].filter(id => g(id).offsetParent !== null) }; }""")
+        check(f"{_route}: the re-add card shows, painted, and neither face of the row is behind it",
+              _rc["cur"] == "photo" and _rc["card"] and not _rc["hidden"], str(_rc))
+        _ra = _q.evaluate(DROP, ["photo", "#photoPending", "d.png", "image/png", _PNG64])
+        _q.wait_for_timeout(700)
+        _meta = _q.evaluate("() => ({ meta: document.getElementById('photoBtnMeta').textContent, card: !document.getElementById('photoPending').hidden })")
+        check(f"{_route}: a file dropped on the re-add card is taken, and the row says the fit it brought back",
+              _ra["loaded"] and _ra["name"] == "d.png" and _meta == {"meta": "Behind the drawing · Fit", "card": False},
+              f"{_ra} {_meta}")
         _q.close()
 
     print("\nPARITY — no surface is silently erroring on load")

@@ -110,7 +110,8 @@ CLAIMS = {
     "Draw-on": ["verify_hold.py::a Draw-on page reaches its last stroke before the page turns"],
     "Flip it & scrub": ["probe:flip_play"],
     # Music
-    "Add a track": ["verify_amber.py::Pad GREEN once a track is attached", "probe:media_tabs"],
+    "Add a track": ["verify_amber.py::Pad GREEN once a track is attached", "probe:media_tabs",
+                    "verify_parity.py::{}: a file dropped anywhere on the card is taken, and the wrong kind is refused"],
     "Loop markers": ["verify_tools.py::the drag is live AND has already moved the trim"],
     "Move the loop": ["probe:loop_move"],
     "Loop Detail": ["verify_parity.py::the fine-tune disclosure opens the loop detail on both"],
@@ -120,7 +121,9 @@ CLAIMS = {
     "Test Seam": ["verify_audio.py::no click at the seam"],
     "Nudge": ["verify_parity.py::a nudge moves the trim edge by the same amount on both"],
     # Background image
-    "Add a photo": ["verify_parity.py::loading a photo marks the tab on both", "probe:media_tabs"],
+    "Add a photo": ["verify_parity.py::loading a photo marks the tab on both", "probe:media_tabs",
+                    "verify_parity.py::{}: a file dropped anywhere on the card is taken, and the wrong kind is refused",
+                    "verify_parity.py::{}: the bin asks once, then removes -- by pointer and by keyboard"],
     "Fill / Fit / Stretch (image framing)": ["verify_parity.py::both surfaces place a {} photo identically"],
     "Reposition": ["verify_pointerpad.py::a mouse drags the photo in reposition mode"],
     "Zoom": ["probe:photo_adjust"],
