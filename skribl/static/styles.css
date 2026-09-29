@@ -6569,6 +6569,12 @@ body.stroking .toolbar, body.stroking .flip-tools {
    move from white to the tint's ink. Actions (Preview Loop, Done, Post) and
    the on/off switches keep their solid fill: they DO something, or ARE on. */
 .seg-slider, .photo-fit-slider { background: var(--seg-on-fill); box-shadow: none; }
+/* ...and the selected option wears the same tint ITSELF until lib/segslider.js
+   has placed the sliding pill under it (it then sets data-pill on the group).
+   The pill used to be the only mark, so any seg the script never reached
+   showed its selection by label colour alone -- the Pad's Mirror, Pauses and
+   Preview speed did, on every device, for as long as they existed. */
+.seg:not([data-pill]) > button.on { background: var(--seg-on-fill); }
 .seg button.on, .smooth-btn.active, .photo-fit-btn.active,
 .gif-seg-btn.active, .gif-seg-btn[aria-pressed="true"] { color: var(--seg-on-ink); }
 
