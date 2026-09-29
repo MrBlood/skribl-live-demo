@@ -222,7 +222,7 @@ let hasContent = false;
 // user starts a new recording or clears the canvas. This keeps a finished
 // Skribl = base snapshot + recorded strokes, with no ambiguous extra layer.
 let finishedRecording = false;
-let color = '#ffffff';
+let color = '#7c5cff';   // Skribl purple: the first preset in lib/palette.js, ringed by selectFirst
 let size = 5;
 let tool = 'pen';
 

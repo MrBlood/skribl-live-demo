@@ -17,7 +17,7 @@ function skriblPostHeaders(){
 // The palette lives in lib/palette.js and is shared with Pad. It was two
 // hand-synchronised lists; the fallback here is only so a missing lib
 // leaves you a pen rather than a blank row.
-const COLORS = (window.SkriblPalette && window.SkriblPalette.hexes) || ["#ffffff","#141414"];
+const COLORS = (window.SkriblPalette && window.SkriblPalette.hexes) || ["#7c5cff","#ffffff","#141414"];
 const DPR = Math.min(window.devicePixelRatio||1, 2);
 let CW = 0, CH = 0;              // mutable since v110 — set from FLIP_SIZES[0] below
 // Canvas presets. The payload has ALWAYS carried canvasSize and the player has
@@ -207,7 +207,8 @@ window.addEventListener('resize', ()=>{ sizeStage(); positionSeg(); positionTool
 
 let frames = [ newFrame() ];
 let idx = 0;
-let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
+// The starting pen is Skribl purple, the first preset in lib/palette.js (Pad matches).
+let color = "#7c5cff", size = 7, erasing = false, onion = true, fps = 12;
 /* HOW FINELY TIME IS CUT, as a multiple of the speed the artist picked.
 
    `fps` is the stored playback rate and, with `hold`, fully determines timing --
