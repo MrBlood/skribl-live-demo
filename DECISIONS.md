@@ -12402,7 +12402,7 @@ Chosen, not missed, this round:
   or `SECRET_KEY` changes. Flask keeps the session in the cookie, so there is
   no server-side record to strike it from.
 
-## After v317 -- one pill, everywhere, and a pen that starts in violet
+## After v317 -- one pill, everywhere
 
 Unreleased; for the next seal.
 
@@ -12452,12 +12452,3 @@ tree. Three older pins changed with the decision: V207 in `verify_ux`
 asserted the loop focus and the dock share a radius (it now asserts each is
 concentric with its pill), and `verify_a11y` no longer lists the library's
 selected chip as white words on a fill.
-
-### The pen starts in violet
-
-The owner: "change the starting color on the pad and flip to the purple that
-is pads signature color". The pen started in Paper white. It starts in
-`--accent` now, the violet the signature starts from, on both editors
-(`lib/palette.js`, START). The violet is not added to the palette, which
-stays the Riso set. It is a custom colour, so the custom swatch wears it and
-the ring.
