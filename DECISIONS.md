@@ -12401,3 +12401,63 @@ Chosen, not missed, this round:
 * **A copied session cookie still works after `/demo-logout`,** until the key
   or `SECRET_KEY` changes. Flask keeps the session in the cookie, so there is
   no server-side record to strike it from.
+
+## After v317 -- one pill, everywhere, and a pen that starts in violet
+
+Unreleased; for the next seal.
+
+### The pill (owner: "a on the pill")
+
+Every pick-one control grew its own shape: a 999px capsule round a 9px pill
+on the GIF background, a solid slab with white words on Flip's tool tray and
+the gallery's New / Hot, an underline under the library's tabs, monospace
+chips, and the dock's own. The owner chose one from four mocks: a 12px track
+with a 3px inset and a 9px pill that slides, the soft tint under the choice,
+one label weight. It is on every control in both editors, the dock (at the
+dock's scale, still concentric), Flip's tray (a tinted tile), the gallery,
+the library and the page menu. The Photo | Music tabs wait for the drawer
+rebuild.
+
+* **One placer.** `lib/segslider.js` places every pill, from the rendered
+  boxes. Integer offsets on fractional flex options overhung by a pixel at
+  phone widths. The per-surface placers went. The Pad's draw drawer had two
+  pills; a track now makes one only if its markup has none.
+* **The choice shows without the script.** Until a pill is placed
+  (`data-pill`), the selected option paints the tint itself.
+* **AA on what is painted.** The light theme's selected ink measured 4.37:1
+  on the tint over the drawers' track. `--seg-on-ink` moved one step deeper
+  in the same hue (#5b3be6 to #5434dc): 4.84:1. The tint did not move. The
+  dock's selected tool wore `--ui-hi` on the tint, 3.2:1 dark and 2.9:1
+  light; it takes `--seg-on-ink`.
+* **Forced colours.** A tint is a background, and forced colours replace
+  backgrounds. The selected option of every track, the tray tile and the
+  page tracks carry a Highlight edge. cssgraph copies that block whole into
+  player.css, so `CSS_RATCHET` rose with one ledger line.
+* **One label weight, 600.** Unselected labels were 500, so Flip's move bar
+  grew 3px at 360px and scrolled. Its scope options give 2px a side back
+  there.
+
+The census found nine selection defects on the way, each confirmed live and
+fixed small. A chosen custom background had no ring. On Flip a picked or
+sampled pen colour ringed nothing. Flip's loop focus lit `.active` where the
+seg reads `.on`, and a new track reset the focus without re-marking it. The
+open Tune button lost its tint to specificity. On Flip a canvas or an fps no
+button names lit nothing and said nothing; each now says its value. On the
+Pad a restored custom or upper-case background marked no swatch, and a
+restored fit in Flip's spelling lit no option.
+
+`verify_onepill.py` pins all of it per (route, control), with contrast read
+from pixels. Each part was shown red by its own mutation on a copy of the
+tree. Three older pins changed with the decision: V207 in `verify_ux`
+asserted the loop focus and the dock share a radius (it now asserts each is
+concentric with its pill), and `verify_a11y` no longer lists the library's
+selected chip as white words on a fill.
+
+### The pen starts in violet
+
+The owner: "change the starting color on the pad and flip to the purple that
+is pads signature color". The pen started in Paper white. It starts in
+`--accent` now, the violet the signature starts from, on both editors
+(`lib/palette.js`, START). The violet is not added to the palette, which
+stays the Riso set. It is a custom colour, so the custom swatch wears it and
+the ring.
