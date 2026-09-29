@@ -87,6 +87,7 @@
   --text-tool-3: #a8b0bf;
   --text-tool-2: #a9b1c1;
   --text-tool: #a8b2c1;           /* .tool-btn at rest */
+  --label-edge: 0 1px 0 rgba(0, 0, 0, 0.55);   /* the dock labels' hard 1px edge (owner's row 3) */
   --text-tool-lit: #aeb6c4;       /* .tool-open at rest */
   --text-bright-2: #c8cdd6;
   --text-bright: #c8cede;
@@ -619,11 +620,19 @@ body {
   50% { opacity: 0.5; }
 }
 
+/* A light clock, not a bold one: weight 500 at 16px reads as an instrument
+   readout; 650 at 17 read as a headline (owner: "the time is a little too fat"). */
 .rec-timer {
-  font-size: 17px;
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
-  font-weight: 650;
-  letter-spacing: 0.01em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  /* OPTICAL, measured: digits have no descenders, so a centred line box
+     leaves them riding 1.5px above the dot and bars (ink centres, css px:
+     dot 14.75, bars 14.75, clock 13.25). 1px down puts every part within
+     half a pixel of the dot's line, both themes, phone and desktop. */
+  position: relative;
+  top: 1px;
 }
 
 .duration-badge {
@@ -1849,6 +1858,7 @@ a.player-btn { text-decoration: none; }
   --text-tool-3:             #4b535f;
   --text-tool-2:             #4b535f;
   --text-tool:               #48505d;   /* .tool-btn at rest */
+  --label-edge:              0 1px 0 rgba(255, 255, 255, 0.95);
   --text-tool-lit:           #434b58;   /* .tool-open at rest */
   --text-bright-2:           #343b47;
   --text-bright:             #343b47;

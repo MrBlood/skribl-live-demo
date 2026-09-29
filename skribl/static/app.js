@@ -1347,6 +1347,12 @@ function updateDrawingTimeLabels() {
 }
 
 let recTimerInterval = null;
+// Record goes back to the head of the header's controls (before Play) when a
+// take ends -- it only sits beside the readout while recording.
+function _recordBtnHome() {
+  const actions = document.getElementById('actions');
+  if (recordBtn && actions && recordBtn.parentElement !== actions) actions.insertBefore(recordBtn, actions.firstElementChild);
+}
 
 // Recording is split into begin/end helpers so the Record button, the auto-arm
 // path (first stroke on a blank canvas), and a continue-take all share one code
@@ -1388,6 +1394,10 @@ function beginRecording(continueTake) {
   document.body.classList.add('recording');
   document.querySelector('.header').classList.add('compact');
   recIndicator.hidden = false;
+  // DONE SITS BESIDE THE READOUT while a take records (owner's choice): the
+  // readout and the one control that ends it read as one unit, and settings
+  // and the menu stay a pair on the right. Moved back when the take ends.
+  if (recordBtn.parentElement !== recIndicator) recIndicator.appendChild(recordBtn);
   playWrap.hidden = true;
   playBtn.innerHTML = ICON_PLAY + LABEL_PLAY;
   postBtn.hidden = true;          // the recording header is its own mode; Post returns on Stop
@@ -1424,6 +1434,7 @@ function endRecordingTake() {
   recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
   recordBtn.classList.remove('active');
   recordBtn.title = 'Start recording';
+  _recordBtnHome();
   syncRecordBtn();
   canvasWrap.classList.remove('recording');
   document.body.classList.remove('recording');
@@ -4614,6 +4625,7 @@ function abortStrokeForPinch() {
     recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
     recordBtn.classList.remove('active');
     recordBtn.title = 'Start recording';
+    _recordBtnHome();
     canvasWrap.classList.remove('recording');
   document.body.classList.remove('recording');
     recIndicator.hidden = true;

@@ -9,14 +9,14 @@
  * giving every control a full 44px: dropping it, and folding Image and Music
  * into one Media button, is what makes 44x44 fit at 360px.
  *
- * So the pen button carries a small canvas, painted here as a sample stroke in
- * the current colour, size, brush and opacity, on the current canvas colour --
- * what you see is what the next stroke will be. Tapping the pen again opens its
+ * So the pen button carries a small canvas, painted here as a pen nib dipped in
+ * the current colour, trailing a line in the current size, brush and opacity
+ * (see THE NIB, below; it replaced a sample stroke on a canvas-coloured chip). Tapping the pen again opens its
  * options (the editors wire that); dragging it SIDEWAYS changes the size.
  *
  * WHAT IT EXPOSES.
  *
- *   SkriblPenSwoosh.paint(canvas, s)   s = { brush, size, color, opacity (0..1), bg }
+ *   SkriblPenSwoosh.paint(canvas, s)   s = { brush, size, color, opacity (0..1) }
  *   SkriblPenSwoosh.scrub(button, o)   o = { get(), set(v), min, max, pxPerStep,
  *                                            label(v) -> readout text }
  *   SkriblPenSwoosh.wire(o)            the two above for an editor's pen button;
@@ -39,35 +39,66 @@
     return { width: 1, alpha: 1, taper: 0 };
   }
 
+  /* THE NIB (owner, on the old sample stroke in a canvas-coloured chip: "the
+   * swoosh looks generic... cheesy and cheap"). The button is now a solid
+   * fountain-pen nib -- slit and breather hole, a thin collar -- with its tip
+   * dipped in the current ink, the ink running up the slit into the hole, and
+   * the short line it has just drawn trailing off the tip. Colour, size (the
+   * line's width), brush and opacity still show; the chip behind it is gone,
+   * so it sits on the dock like every other tool.
+   *
+   * The nib itself is drawn in the button's --pen-nib (styles.css): text ink,
+   * dimmer when another tool is selected, and it follows the theme. Units
+   * below are px at the 50x36 button; the nib points down its own +y axis and
+   * is turned 45deg so the tip points down-left. */
+  var NIB = 'M -3.9 -7 L 3.9 -7 L 5.3 0.8 C 4.6 5.4 2.3 9.8 0 14.4 C -2.3 9.8 -4.6 5.4 -5.3 0.8 Z';
+  var COLLAR = 'M -4.4 -10.6 L 4.4 -10.6 L 4.4 -8.3 L -4.4 -8.3 Z';
+  var TIP = 14.4;
+
   function paint(c, s) {
     if (!c || !c.getContext) return;
     var dpr = window.devicePixelRatio || 1;
-    var w = c.clientWidth || 56, h = c.clientHeight || 28;
+    var w = c.clientWidth || 50, h = c.clientHeight || 36;
     if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
       c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
     }
     var x = c.getContext('2d');
     x.setTransform(dpr, 0, 0, dpr, 0, 0);
     x.clearRect(0, 0, w, h);
-    x.fillStyle = s.bg || '#0d0f14';
-    x.fillRect(0, 0, w, h);
+    var ink = s.color || '#ffffff';
+    var nibInk = '';
+    try { nibInk = getComputedStyle(c).getPropertyValue('--pen-nib').trim(); } catch (e) {}
     var p = preset(s.brush || 'pen');
     var op = typeof s.opacity === 'number' ? s.opacity : 1;
-    // The sample is a picture of the stroke, not the stroke at 1:1 -- a size-30
-    // marker would fill the button. Width follows size up to a cap, so small
-    // and large still read as small and large.
-    var width = Math.max(1.4, Math.min((s.size || 5) * p.width, h * 0.55) * 0.8);
+    var cx = w * 0.64, cy = h * 0.40;
+
+    // The line just drawn, off the tip: width follows size (capped, so a
+    // size-30 marker is still a line and not a slab), plus the brush's look.
+    var tx = cx - TIP / Math.SQRT2, ty = cy + TIP / Math.SQRT2;
+    var width = Math.max(1.2, Math.min((s.size || 5) * p.width * 0.4, 4));
     x.save();
-    x.globalAlpha = Math.max(0.12, op * p.alpha);
-    x.strokeStyle = s.color || '#ffffff';
-    x.lineCap = 'round'; x.lineJoin = 'round';
-    x.lineWidth = width;
-    if ((s.brush || '') === 'airbrush') { x.shadowColor = s.color || '#fff'; x.shadowBlur = Math.min(width * 1.6, 12); x.globalAlpha = Math.max(0.3, op * 0.6); }
+    x.globalAlpha = Math.max(0.15, op * p.alpha);
+    x.strokeStyle = ink; x.lineCap = 'round'; x.lineJoin = 'round'; x.lineWidth = width;
+    if ((s.brush || '') === 'airbrush') { x.shadowColor = ink; x.shadowBlur = Math.min(width * 1.6, 8); x.globalAlpha = Math.max(0.3, op * 0.6); }
     if ((s.brush || '') === 'pencil') x.setLineDash([2.2, 1.3]);
-    x.beginPath();
-    x.moveTo(w * 0.14, h * 0.66);
-    x.bezierCurveTo(w * 0.36, h * 0.04, w * 0.58, h * 0.98, w * 0.86, h * 0.34);
+    x.beginPath(); x.moveTo(tx, ty);
+    x.bezierCurveTo(tx - 6, ty + 3, tx - 10, ty - 3, tx - 17, ty);
     x.stroke();
+    x.restore();
+
+    // The nib, its dipped tip, and the ink up the slit into the hole.
+    var body = new Path2D(NIB), collar = new Path2D(COLLAR);
+    x.save();
+    x.translate(cx, cy); x.rotate(Math.PI / 4);
+    x.fillStyle = nibInk || '#f1f2f6';
+    x.fill(body); x.fill(collar);
+    x.save(); x.clip(body);
+    x.fillStyle = ink; x.fillRect(-7, 9.6, 14, 6);
+    x.strokeStyle = ink; x.lineWidth = 1.25; x.lineCap = 'butt';
+    x.beginPath(); x.moveTo(0, 2.6); x.lineTo(0, TIP + 1); x.stroke();
+    x.restore();
+    x.fillStyle = ink;
+    x.beginPath(); x.arc(0, 1.6, 1.75, 0, Math.PI * 2); x.fill();
     x.restore();
   }
 
@@ -145,6 +176,13 @@
       });
     });
     window.addEventListener('resize', repaint);
+    // The nib's colour comes from CSS: it changes with the theme and when
+    // another tool is selected (a keyboard shortcut is not a click in scope).
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(repaint).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+      if (button) new MutationObserver(repaint).observe(button, { attributes: true, attributeFilter: ['class'] });
+    }
+    try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', repaint); } catch (e) {}
     if (button && range) scrub(button, {
       get: function () { return +range.value; },
       min: +range.min || 1, max: +range.max || 30, pxPerStep: 6,
