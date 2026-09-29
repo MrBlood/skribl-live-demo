@@ -947,7 +947,9 @@ with sync_playwright() as p:
         const d = serializeSkribl();
         d.photo = { data: png, name: 'new.png', fit: 'contain' };
         d.music = { data: wav, name: 'y.wav' };
-        (d.frames || []).forEach(f => { f.photo = d.photo; });
+        // A document's media lives in its frames (serializeSkribl); the
+        // top-level copies are what normalizeSkribl would surface from them.
+        (d.frames || []).forEach(f => { f.photo = d.photo; f.music = d.music; });
         loadSkribl(d);
         for (let i = 0; i < 60 && !document.getElementById('musicUploadBtn').classList.contains('loaded'); i++)
           await new Promise(r => setTimeout(r, 100));
@@ -970,7 +972,7 @@ with sync_playwright() as p:
           and rm["nameShown"] and not rm["add"], str(rm))
     pgW.evaluate("""async () => {
         const d2 = serializeSkribl(); delete d2.photo; delete d2.music;
-        (d2.frames || []).forEach(f => { delete f.photo; });
+        (d2.frames || []).forEach(f => { delete f.photo; delete f.music; });
         loadSkribl(d2);
         await new Promise(r => setTimeout(r, 800)); }""")
     browsing.pad_drawer(pgW, "photo")
