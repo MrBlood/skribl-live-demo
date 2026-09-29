@@ -34,10 +34,17 @@
     if (!pill) return;
     // No layout yet: leave the pill hidden rather than parking it at a wrong
     // position that would then animate across the control when layout arrives.
-    if (!btn || !btn.offsetWidth) { pill.style.opacity = '0'; return; }
+    if (!btn || !btn.offsetWidth) { pill.style.opacity = '0'; group.removeAttribute('data-pill'); return; }
     pill.style.width = btn.offsetWidth + 'px';
     pill.style.transform = 'translateX(' + (btn.offsetLeft - 3) + 'px)';
     pill.style.opacity = '1';
+    // THE SELECTED OPTION PAINTS ITS OWN TINT UNTIL THIS LINE RUNS (styles.css,
+    // `.seg:not([data-pill]) button.on`). The pill is an enhancement that
+    // needs this script to measure a laid-out button; wherever that does not
+    // happen -- a group nobody tracked, a browser where the measuring never
+    // lands -- the selection is still painted, by CSS alone. Owner, on an
+    // iPhone: the tune drawer's options "never got that treatment".
+    group.setAttribute('data-pill', '');
   }
 
   function track(group) {
@@ -96,10 +103,11 @@
       if (btns[i].classList.contains('on') || btns[i].classList.contains('active')) idx = i;
     }
     var a = idx >= 0 ? btns[idx] : null;
-    if (!a || !a.offsetWidth) { pill.style.opacity = '0'; return; }
+    if (!a || !a.offsetWidth) { pill.style.opacity = '0'; group.removeAttribute('data-pill'); return; }
     pill.style.width = a.offsetWidth + 'px';
     pill.style.transform = 'translateX(' + (a.offsetLeft - btns[0].offsetLeft) + 'px)';
     pill.style.opacity = '1';
+    group.setAttribute('data-pill', '');   // the CSS fallback stands down (see place())
   }
 
   function attach(group) {

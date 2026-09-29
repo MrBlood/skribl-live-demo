@@ -2402,6 +2402,44 @@ with _sp204() as _sg:
         _sgp.close()
     _sgb.close()
 
+print("\nSEG PILLS — the selection is painted even where the pill script never lands")
+# The pill is placed by lib/segslider.js measuring a laid-out button. On the
+# owner's iPhone the tune drawer still showed the selection by label colour
+# alone after the pill fix merged, and no engine here reproduces it. So the
+# selected option paints the tint ITSELF until the script confirms the pill
+# (data-pill on the group). Driven by blocking the script outright -- the
+# failure it guards against -- and asserted on the computed fill of the
+# selected option. And the converse: where the pill IS placed the option is
+# transparent, or the tint would double.
+def _seg_fill(page):
+    return page.evaluate("""() => [...document.querySelectorAll('#tunePanel .seg')].filter(g => {
+          const r = g.getBoundingClientRect(); return r.width > 0 && r.height > 0 && g.querySelector('button.on');
+        }).map(g => { const bg = getComputedStyle(g.querySelector('button.on')).backgroundColor;
+          const m = bg.match(/rgba?\\(([^)]+)\\)/), a = m ? (m[1].split(',')[3] === undefined ? 1 : +m[1].split(',')[3]) : 0;
+          return { id: g.id, pill: g.hasAttribute('data-pill'), alpha: a }; })""")
+with _sp204() as _sf:
+    _sfb = _sf.chromium.launch()
+    _sfp = _sfb.new_page(viewport={"width": 402, "height": 874})
+    # Matched as a regex: the asset URL carries a content-hash query
+    # (segslider.js?v=...), which a glob ending in .js does not match -- the
+    # first draft "blocked" nothing and read the placed pill as the fallback.
+    _sfp.route(_re.compile(r"/lib/segslider\.js(\?|$)"), lambda r: r.abort())
+    browsing.goto(_sfp, BASE, "/", require_boot=False)
+    _sfp.evaluate("() => document.getElementById('tuneBtn').click()")
+    _sfp.wait_for_timeout(900)
+    _nojs = _seg_fill(_sfp)
+    check("SEG FALLBACK: with the pill script blocked, every visible tune seg still paints its selected option",
+          len(_nojs) >= 3 and all(g["alpha"] > 0.05 and not g["pill"] for g in _nojs), str(_nojs))
+    _sfp.close()
+    _sfp = _sfb.new_page(viewport={"width": 402, "height": 874})
+    browsing.goto(_sfp, BASE, "/")
+    _sfp.evaluate("() => document.getElementById('tuneBtn').click()")
+    _sfp.wait_for_timeout(900)
+    _js = _seg_fill(_sfp)
+    check("SEG FALLBACK: with the pill placed, the option itself is transparent (no doubled tint)",
+          len(_js) >= 3 and all(g["pill"] and g["alpha"] == 0 for g in _js), str(_js))
+    _sfp.close(); _sfb.close()
+
 print("\nCLEAR ALL — arming is announced, does not race a timer, and Flip's menu clears through the action")
 # Outside review of v291, SK-AUD-018/019. The two-tap arm relabelled the item
 # and disarmed on a 3-second timer: a screen reader heard nothing change, and
