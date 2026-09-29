@@ -2371,6 +2371,37 @@ with _sp204() as _rr:
           _pen["run"] == "running" and _pen["plays"] < 0.5, str(_pen))
     _rrp.close(); _rrb.close()
 
+print("\nSEG PILLS — every visible segmented control shows its selection, on both editors")
+# The tune drawer's Mirror, Pauses and Preview speed (and Flip's Mirror and
+# smear weight) showed their selection by label colour alone: lib/segslider.js
+# had trackAll() and nothing called it, so a group got its pill only if a
+# surface remembered to track it by name. Owner, on the phone: "not bright
+# enough to tell what's selected". For every seg on screen with a selected
+# option, the pill's computed opacity is 1 and it spans that option, centred
+# under it. (The pill sits BEHIND the label, so a hit-test would find the
+# button either way; opacity plus geometry is the property the bug removed --
+# the old pill was there, 0 wide and 0 opaque.) Red on the tree before
+# trackAll() was called: Pad mirror/pause/speed, Flip mirror/smear weight.
+with _sp204() as _sg:
+    _sgb = _sg.chromium.launch()
+    for _route in ("/", "/flip"):
+        _sgp = _sgb.new_page(viewport={"width": 402, "height": 874})
+        browsing.goto(_sgp, BASE, _route)
+        _sgp.evaluate("() => document.getElementById('tuneBtn').click()")
+        _sgp.wait_for_timeout(900)
+        _sgr = _sgp.evaluate("""() => [...document.querySelectorAll('#tunePanel .seg')].filter(g => {
+              const r = g.getBoundingClientRect(); return r.width > 0 && r.height > 0 && g.querySelector('button.on');
+            }).map(g => { const pill = g.querySelector('.seg-slider'), on = g.querySelector('button.on');
+              const pr = pill ? pill.getBoundingClientRect() : null, br = on.getBoundingClientRect();
+              return { id: g.id, opacity: pill ? +getComputedStyle(pill).opacity : 0,
+                       w: pr ? Math.round(pr.width) : 0, bw: Math.round(br.width),
+                       under: pr ? Math.abs((pr.left + pr.width / 2) - (br.left + br.width / 2)) < 3 : false }; })""")
+        _bad = [g for g in _sgr if not (g["opacity"] > 0.9 and g["w"] >= g["bw"] - 1 and g["under"])]
+        check(f"SEG PILLS {_route}: the tune drawer's segs each paint a pill under the selected option",
+              len(_sgr) >= 3 and not _bad, f"{len(_sgr)} segs; missing/misplaced: {_bad}")
+        _sgp.close()
+    _sgb.close()
+
 print("\nCLEAR ALL — arming is announced, does not race a timer, and Flip's menu clears through the action")
 # Outside review of v291, SK-AUD-018/019. The two-tap arm relabelled the item
 # and disarmed on a 3-second timer: a screen reader heard nothing change, and
