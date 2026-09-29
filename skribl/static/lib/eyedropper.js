@@ -115,16 +115,18 @@
     var at = null;          // the lens point, as an offset (CSS px) from the surface's top-left
     var session = null;     // the active drag, or null
     var raf = 0;
-    var last = null;        // where the pen last touched, as a fraction of the surface
+    var last = null;        // where the pen last touched, in STAGE coordinates
     var lastHex = null;
 
     /* ---- where the pen last was ----------------------------------------- */
     if (surface) {
       var tracking = false;
+      // Stage, not client, coordinates: opening the colour drawer to reach the
+      // eyedropper can move or resize the canvas, and the point the pen last
+      // touched is a point in the DRAWING.
       var note = function (e) {
-        var r = surface.getBoundingClientRect();
-        if (!r.width || !r.height) return;
-        last = { fx: (e.clientX - r.left) / r.width, fy: (e.clientY - r.top) / r.height };
+        if (!getPoint) return;
+        try { last = getPoint({ clientX: e.clientX, clientY: e.clientY }); } catch (err) {}
       };
       surface.addEventListener('pointerdown', function (e) {
         if (armed) return;
@@ -158,10 +160,17 @@
       cancel.type = 'button';
       cancel.textContent = 'Cancel';
       cancel.setAttribute('aria-label', 'Cancel colour pick');
+      // A fixed element is placed against its containing block, which is the
+      // viewport only when no ancestor makes itself one — and on both editors
+      // something does: on a 1400px desktop everything fixed here landed 10px
+      // right of where it was put. So positions are written relative to this
+      // probe's measured origin rather than assumed to be client coordinates.
+      var probe = el('div', 'eyedropper-origin');
+      probe.setAttribute('aria-hidden', 'true');
       var live = el('div', 'eyedropper-live');
       live.setAttribute('role', 'status');
       live.setAttribute('aria-live', 'polite');
-      [lens, handle, mark, chip, pill, live].forEach(function (n) { document.body.appendChild(n); });
+      [probe, lens, handle, mark, chip, pill, live].forEach(function (n) { document.body.appendChild(n); });
 
       // The pill's controls must not reach the page's outside-click handlers:
       // the drawer they would close is the one the abandoned pick gives back.
@@ -179,7 +188,7 @@
         handle.addEventListener(t, function (e) { e.stopPropagation(); }, { passive: true });
       });
 
-      ui = { lens: lens, cv: cv, ctx: cv.getContext('2d'), handle: handle, mark: mark,
+      ui = { probe: probe, lens: lens, cv: cv, ctx: cv.getContext('2d'), handle: handle, mark: mark,
              chip: chip, pill: pill, text: text, cancel: cancel, live: live };
       return ui;
     }
@@ -306,8 +315,10 @@
       var P = client();
       var L = place(P);
       var u = ui;
-      u.lens.style.left = (L.x - R) + 'px';
-      u.lens.style.top = (L.y - R) + 'px';
+      var o = u.probe.getBoundingClientRect();
+      var ox = o.left, oy = o.top;
+      u.lens.style.left = (L.x - R - ox) + 'px';
+      u.lens.style.top = (L.y - R - oy) + 'px';
       u.lens.dataset.hex = g.hex;
       u.lens.hidden = false;
       // The mark shows only when the true point is off the lens: under it, the
@@ -315,17 +326,17 @@
       // grid would be two answers to one question.
       var displaced = Math.hypot(L.x - P.x, L.y - P.y) > R - 2;
       u.mark.hidden = !displaced;
-      if (displaced) { u.mark.style.left = P.x + 'px'; u.mark.style.top = P.y + 'px'; }
+      if (displaced) { u.mark.style.left = (P.x - ox) + 'px'; u.mark.style.top = (P.y - oy) + 'px'; }
       u.handle.hidden = mode !== 'touch';
-      u.handle.style.left = L.x + 'px';
-      u.handle.style.top = (L.y + R + HANDLE_GAP + HANDLE_H / 2) + 'px';
+      u.handle.style.left = (L.x - ox) + 'px';
+      u.handle.style.top = (L.y + R + HANDLE_GAP + HANDLE_H / 2 - oy) + 'px';
       u.chip.textContent = g.hex.toUpperCase();
       u.chip.hidden = false;
       var ch = u.chip.offsetHeight || 22;
       var ct = L.y - R - 8 - ch;
       if (ct < MARGIN) ct = L.y + R + (mode === 'touch' ? HANDLE_GAP + HANDLE_H + 8 : 8);
-      u.chip.style.left = L.x + 'px';
-      u.chip.style.top = ct + 'px';
+      u.chip.style.left = (L.x - ox) + 'px';
+      u.chip.style.top = (ct - oy) + 'px';
       placePill(L);
     }
     function schedule() { if (!raf) raf = requestAnimationFrame(render); }
@@ -337,8 +348,9 @@
       var W = window.innerWidth;
       var cx = Math.min(Math.max(r.left + r.width / 2, pw / 2 + 8), W - pw / 2 - 8);
       var top = Math.max(r.top, 0) + 10;
-      u.pill.style.left = cx + 'px';
-      u.pill.style.top = top + 'px';
+      var o = u.probe.getBoundingClientRect();
+      u.pill.style.left = (cx - o.left) + 'px';
+      u.pill.style.top = (top - o.top) + 'px';
       // When the lens is up there too, the pill steps back rather than sit
       // over the thing being aimed at.
       if (L) {
@@ -479,6 +491,16 @@
       }
     }
     function reflow() { schedule(); }
+    // A tap on the drawing while armed moves the lens; the click that follows
+    // it must not reach the page's outside-click dismissers, which would close
+    // the (veiled) colour drawer and, through its close hook, disarm the pick
+    // the tap was aiming.
+    function swallow(e) {
+      if (!armed) return;
+      if (onsurface(e.target) || (ui && (ui.lens.contains(e.target) || ui.handle.contains(e.target)))) {
+        e.stopPropagation();
+      }
+    }
 
     function show() {
       build();
@@ -487,8 +509,13 @@
       // Where the pen last was, else the middle of the part of the canvas on screen.
       var vx0 = Math.max(r.left, 0), vx1 = Math.min(r.right, W);
       var vy0 = Math.max(r.top, 0), vy1 = Math.min(r.bottom, H);
-      var x = last ? r.left + last.fx * r.width : (vx0 + vx1) / 2;
-      var y = last ? r.top + last.fy * r.height : (vy0 + vy1) / 2;
+      var x = (vx0 + vx1) / 2, y = (vy0 + vy1) / 2;
+      if (last) {
+        var p0 = getPoint({ clientX: r.left, clientY: r.top });
+        var p1 = getPoint({ clientX: r.left + 100, clientY: r.top + 100 });
+        var kx = (p1.x - p0.x) / 100, ky = (p1.y - p0.y) / 100;
+        if (kx > 0 && ky > 0) { x = r.left + (last.x - p0.x) / kx; y = r.top + (last.y - p0.y) / ky; }
+      }
       x = Math.min(Math.max(x, vx0), Math.max(vx1 - 1, vx0));
       y = Math.min(Math.max(y, vy0), Math.max(vy1 - 1, vy0));
       if (window.matchMedia && window.matchMedia('(hover: none)').matches) mode = 'touch';
@@ -501,6 +528,7 @@
       setTimeout(function () { if (armed && ui) ui.live.textContent = say; }, 60);
       window.addEventListener('pointermove', hover, true);
       window.addEventListener('keydown', keys, true);
+      window.addEventListener('click', swallow, true);
       window.addEventListener('scroll', reflow, true);
       window.addEventListener('resize', reflow);
     }
@@ -508,6 +536,7 @@
       if (session) session.end();
       window.removeEventListener('pointermove', hover, true);
       window.removeEventListener('keydown', keys, true);
+      window.removeEventListener('click', swallow, true);
       window.removeEventListener('scroll', reflow, true);
       window.removeEventListener('resize', reflow);
       if (raf) { cancelAnimationFrame(raf); raf = 0; }
@@ -581,8 +610,9 @@
       // (client px) and what it would pick. Read-only.
       lensState: function () {
         if (!armed || !at || !ui) return null;
-        var c = client();
-        return { x: c.x, y: c.y, hex: lastHex, mode: mode };
+        var c = client(), p = getPoint({ clientX: c.x, clientY: c.y });
+        return { x: c.x, y: c.y, hex: lastHex, mode: mode, stage: { x: p.x, y: p.y },
+                 last: last ? { x: last.x, y: last.y } : null };
       }
     };
   }

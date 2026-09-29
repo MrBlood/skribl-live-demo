@@ -1725,7 +1725,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   transform: translateX(-50%);
   padding: 5px 9px;
   border-radius: 999px;
-  background: rgba(12, 13, 18, 0.82);
+  background: rgba(0, 0, 0, 0.78);
   color: #fff;
   font: 600 12px/1 ui-monospace, Menlo, Consolas, monospace;
   letter-spacing: 0.4px;
@@ -1741,7 +1741,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   height: 20px;
   margin: -10px 0 0 -17px;
   border-radius: 10px;
-  background: rgba(12, 13, 18, 0.78);
+  background: rgba(0, 0, 0, 0.72);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);   /* a rim, or it vanishes on a dark drawing */
   touch-action: none;
   cursor: grab;
@@ -1800,8 +1800,11 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   font-weight: 600;
   line-height: 1;
   pointer-events: none;
-  transition: opacity 0.15s ease;
 }
+/* No transition and no entrance animation, on purpose: the lens and pill are
+   the armed state, and they appear and step back instantly — which is also
+   the whole of what reduced motion asks, without a media query the player's
+   derived sheet would have to carry. */
 .eyedropper-pill.eyedropper-pill-under { opacity: 0.3; }
 .eyedropper-pill-cancel {
   position: relative;
@@ -1821,19 +1824,19 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   inset: -5px;
   border-radius: inherit;
 }
+.eyedropper-origin {           /* the fixed-position origin lib/eyedropper.js measures */
+  position: fixed;
+  left: 0; top: 0;
+  width: 0; height: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 .eyedropper-live {
   position: absolute;
   width: 1px; height: 1px;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .eyedropper-lens, .eyedropper-pill { animation: eyedropper-in 0.14s ease-out; }
-}
-@keyframes eyedropper-in { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) {
-  .eyedropper-pill { transition: none; }
 }
 .eyedropper-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); }
 .eyedropper-btn.picking { background: var(--ui-active); color: #fff; border-color: transparent; }
