@@ -12401,3 +12401,63 @@ Chosen, not missed, this round:
 * **A copied session cookie still works after `/demo-logout`,** until the key
   or `SECRET_KEY` changes. Flask keeps the session in the cookie, so there is
   no server-side record to strike it from.
+
+## After v317 -- the eyedropper becomes the lens, and a new drawing starts purple
+
+Two owner-approved changes, both editors.
+
+### A new drawing starts in Skribl purple
+
+The owner: "change the starting color on the pad and flip to the purple that
+is pad's signature color". That is `#7c5cff`, the accent. It is now the FIRST
+preset in `lib/palette.js` ("Skribl purple"), because the first preset is the
+starting colour: Pad marks it with `selectFirst` and Flip rings it through
+`setColor(color)` at start-up, so the swatch a new drawing starts on is ringed
+and the pen button's swoosh is inked in it. The palette's own header argues
+against colours lifted from the chrome; this one is the stated exception, and
+the header says so. Drafts do not store a pen colour, so no saved drawing
+changes. `verify_parity` pins the starting colour, the single ringed swatch
+and the swoosh ink on both editors.
+
+### The lens (option C of three mocks)
+
+What it replaced had three faults, all seen on a phone. Arming veiled the
+colour drawer and took the armed button with it, so nothing on screen said
+the next touch would pick (the Pad showed a 2.8s toast, Flip nothing). The
+loupe floated above the finger with nothing tying it to the point it read. And
+the finger sat on the pixel being sampled.
+
+* **Arming is visible.** The lens lands on the drawing at once, at the last
+  point the pen touched or else the middle of the canvas, and a glass pill at
+  the top of the canvas says what to do ("Drag the lens to pick" on touch,
+  "Click your drawing to pick a colour" otherwise) with a Cancel. It is
+  announced once through a polite live region. The pill's words let presses
+  through, so it never blocks a pick near the top; it dims when the lens is
+  under it.
+* **The lens sits on the point it reads.** An 11-cell grid at 10x, a two-tone
+  reticle on the centre cell, a split ring (top: the pick, bottom: the pen
+  now, so a no-op shows one colour) and a hex chip. The pick reads the centre
+  cell of the very grid the lens draws, from the composited stage, so what it
+  shows and what it picks cannot disagree.
+* **Touch** drags a handle below the lens, so the finger never covers what is
+  read. A drag anywhere moves the lens by the finger's travel, a tap moves it
+  without picking, and lifting after a drag picks. **Mouse and pen:** the lens
+  follows the pointer and a click picks. **Keyboard:** arrows nudge a pixel,
+  Shift+arrow ten, Enter picks, Escape cancels.
+* **Edges:** the lens stays in the viewport. It slides inward from a side and
+  sideways from the top, never down, because down is where the hand is.
+
+One implementation, in `lib/eyedropper.js`; each editor injects its sampler
+and now its current colour. The lens CSS is outside the player's live set, and
+`player.css` is unchanged. It has no entrance animation or transition, which
+is the whole of reduced motion's ask, and it keeps a media query out of the
+player's derived sheet. `verify_parity` drives it on both editors, with the
+mouse and keyboard on a desktop and CDP touch on a 3x phone. Its armed-cursor
+check was changed deliberately from `crosshair` to `none` plus the lens being
+painted.
+
+Fixtures that measured ink by whiteness (`verify_beading`, `verify_liquify`,
+`verify_flipmotion`, `verify_player_isolation`) got white for free from the
+old starting pen; each now sets white on purpose and says why. `verify_fill`
+asserted `red > 200`, which only ever meant "the white pen", and now asserts
+the fill matches the pen colour read from the page.
