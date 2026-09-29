@@ -875,6 +875,19 @@ with sync_playwright() as p:
           and _pmr["meta"] == _fmr["meta"] == "Loops under the drawing · 0:01", f"pad {_pmr}, flip {_fmr}")
     check("...and its note is painted on the selected tab's tint, on both",
           all(r["painted"] and r["tint"] for r in (_pmr, _fmr)), f"pad {_pmr}, flip {_fmr}")
+    # An element's duration can be Infinity or NaN (a stream, a file the
+    # browser cannot measure yet); m:ss of either is "Infinity:NaN". The row
+    # shows no length rather than a wrong one. Driven through the shared
+    # renderer with the row loaded, then put back by the editor's own render.
+    NOLEN = """() => { const R = window.SkriblPendingCards, out = [];
+        for (const d of [Infinity, NaN, 0, -1]) { R.renderRow('music', { name: 't.wav', dur: d }); out.push(document.getElementById('musicBtnMeta').textContent); }
+        return out; }"""
+    _pn, _fn = pad.evaluate(NOLEN), flip.evaluate(NOLEN)
+    pad.evaluate("() => padMusicRow()"); flip.evaluate("() => syncMusicUI()")
+    check("a track whose length is not a real number shows no length, on both",
+          _pn == _fn == ["Loops under the drawing"] * 4
+          and pad.text_content("#musicBtnMeta") == flip.text_content("#musicBtnMeta") == "Loops under the drawing · 0:01",
+          f"pad {_pn}, flip {_fn}")
     check("the trim handles report the same start on both",
           pad.text_content("#handleStart").strip() == flip.text_content("#handleStart").strip(),
           f"pad {pad.text_content('#handleStart').strip()!r} against "
@@ -1536,7 +1549,7 @@ with sync_playwright() as p:
         _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
         _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
         _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
-        _pickers = []
+        _pickers, _handed = [], []
         _q.on("filechooser", lambda fc, _p=_pickers: _p.append(1))
         _ok, _why = True, []
         for _k in ("photo", "music"):
@@ -1568,8 +1581,16 @@ with sync_playwright() as p:
             if not (_armed and _stood and _gone and _keys):
                 _ok = False
                 _why.append(f"{_k}: armed={_a} stood-down={_d} removed={_r} keys armed={_ka} removed={_kr}")
+            # ...and the other way: a file attached while the add button has
+            # focus hands focus to the switch, which is what took its place.
+            _q.set_input_files(_in[_k], _f)
+            _q.wait_for_function("(k) => document.getElementById(k + 'UploadBtn').classList.contains('loaded')", arg=_k, timeout=20000)
+            _q.wait_for_timeout(300)
+            _handed.append((_k, _q.evaluate("() => document.activeElement && document.activeElement.id")))
         check(f"{_route}: the bin asks once, then removes -- by pointer and by keyboard",
               _ok and not _pickers, "; ".join(_why) + (f"; the file picker opened {len(_pickers)} time(s)" if _pickers else ""))
+        check(f"{_route}: a file attached from the focused add button hands focus to the switch that replaced it",
+              _handed == [("photo", "photoToggle"), ("music", "musicToggle")], str(_handed))
         _q.close()
 
     # ---- drops --------------------------------------------------------------
