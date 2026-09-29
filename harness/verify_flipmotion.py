@@ -42,10 +42,8 @@ results = []
 check = make_check(results)
 
 
-# The guide is drawn in a blue-violet, so counting pixels where blue clearly
-# leads red AND green isolates it -- provided the ink does not share the hue.
-# A new drawing now starts in the signature purple (#9179ff), which does, so
-# the fixture below draws in white on purpose.
+# The guide is drawn in a blue-violet no default brush or backdrop uses, so
+# counting pixels where blue clearly leads red AND green isolates it.
 GUIDE_PX = """(sel) => {
   const c = sel ? document.querySelector(sel) : document.getElementById('pad');
   if (!c) return -1;
@@ -79,7 +77,6 @@ with sync_playwright() as p:
     # Eight pages, the drawing accelerating left to right so the spacing between
     # guide dots is visibly uneven — an even path would not prove much.
     box = pg.locator("#pad").bounding_box()
-    pg.evaluate("() => setColor('#ffffff')")   # see GUIDE_PX: ink the guide cannot be mistaken for
     PAGES = 8
     for k in range(PAGES):
         blob(pg, box, min(0.12 + 0.028 * k * k, 0.86), 0.55 - 0.03 * k)

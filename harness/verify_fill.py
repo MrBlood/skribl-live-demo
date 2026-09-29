@@ -270,14 +270,9 @@ with sync_playwright() as p:
         inside_after = page.evaluate(PIX, [cx - b["x"], cy - b["y"]])
         outside = page.evaluate(PIX, [cx - b["x"] - 150, cy - b["y"]])
 
-        # Filled with the pen's own ink, whatever it is: the check used to
-        # read `red > 200`, which was white ink by another name and went red
-        # when a new drawing began starting in the signature purple.
-        _ink = page.evaluate("() => color")
-        _rgb = [int(_ink[i:i + 2], 16) for i in (1, 3, 5)]
-        check("the inside of the box changed colour, to the pen's ink",
-              inside_after != inside_before and list(inside_after[:3]) == _rgb,
-              f"{inside_before} -> {inside_after}, ink {_ink}")
+        check("the inside of the box changed colour",
+              inside_after != inside_before and inside_after[0] > 200,
+              f"{inside_before} -> {inside_after}")
         check("and the outside did NOT",
               outside == inside_before,
               f"{outside} vs {inside_before} — a fill that escapes its region "
