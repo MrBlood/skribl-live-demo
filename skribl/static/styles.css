@@ -1692,12 +1692,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 .eyedropper-btn svg { width: 18px; height: 18px; }  /* tier-2 glyph size, matches drawer toggles */
 
-/* Eyedropper loupe — the magnified press-drag picker (lib/eyedropper.js
-   builds and drives it; geometry constants there match the 120/4 here).
-   The ring's border-color is set inline to the colour under the reticle,
-   so the loupe itself answers "what am I about to pick"; the outer hairline
-   shadow keeps a white or near-background ring visible on any drawer.
-   Deliberately theme-free: it floats over the artwork, not the UI. */
 /* While the eyedropper is armed, the colour panel steps aside on BOTH editors
    — Flip's popout and the Pad's drawer. On a phone the panel covers or
    scrolls away the canvas, and an armed picker with nothing left to pick from
@@ -1708,35 +1702,138 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .draw-popout.eyedropper-veiled,
 #drawPanel.eyedropper-veiled { visibility: hidden; pointer-events: none; }
 
-.eyedropper-loupe {
+/* THE LENS — the eyedropper's armed cue and its picker (lib/eyedropper.js
+   builds and drives it; the 116px here matches LENS there). The lens sits ON
+   the point it reads: the grid, reticle and split ring are drawn into its
+   canvas, because the ring's two halves are colours only the script knows.
+   The lens, its chip, handle and mark float over the ARTWORK, not the UI, so
+   they are deliberately theme-free — a dark chip reads on any drawing. The
+   armed pill is UI, and wears the app's glass and tokens in both themes. */
+.eyedropper-lens {
   position: fixed;
   z-index: 10000;
-  width: 120px;
-  height: 120px;
+  width: 116px;
+  height: 116px;
   border-radius: 50%;
-  border: 4px solid #fff;
-  overflow: hidden;
   pointer-events: none;
-  /* No background: the canvas child covers the whole window before the
-     element is ever shown, and a literal here would trip the no-stray-
-     neutrals ratchet for a surface nobody can see. */
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
-.eyedropper-loupe canvas { display: block; width: 100%; height: 100%; }
-.eyedropper-loupe-chip {
-  position: absolute;
-  left: 50%;
-  bottom: 8px;
+.eyedropper-lens canvas { display: block; width: 100%; height: 100%; }
+.eyedropper-lens-chip {
+  position: fixed;
+  z-index: 10000;
   transform: translateX(-50%);
-  padding: 3px 8px;
+  padding: 5px 9px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(12, 13, 18, 0.82);
   color: #fff;
-  font-size: 11px;
+  font: 600 12px/1 ui-monospace, Menlo, Consolas, monospace;
+  letter-spacing: 0.4px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+/* The handle the finger holds on a touch screen: below the lens, so the finger
+   is never over what is read. 34x20 visual, a 58x44 hit area. */
+.eyedropper-lens-handle {
+  position: fixed;
+  z-index: 10000;
+  width: 34px;
+  height: 20px;
+  margin: -10px 0 0 -17px;
+  border-radius: 10px;
+  background: rgba(12, 13, 18, 0.78);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);   /* a rim, or it vanishes on a dark drawing */
+  touch-action: none;
+  cursor: grab;
+}
+.eyedropper-lens-handle::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+}
+.eyedropper-lens-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 3.2px; height: 3.2px;
+  margin: -1.6px 0 0 -1.6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: -6px 0 0 rgba(255, 255, 255, 0.7), 6px 0 0 rgba(255, 255, 255, 0.7);
+}
+/* The true point, when the viewport has pushed the lens off it. */
+.eyedropper-lens-mark {
+  position: fixed;
+  z-index: 10000;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.8), inset 0 0 0 1.5px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+.eyedropper-lens[hidden],
+.eyedropper-lens-chip[hidden],
+.eyedropper-lens-handle[hidden],
+.eyedropper-lens-mark[hidden],
+.eyedropper-pill[hidden] { display: none; }
+/* The armed pill: what to do, and the way out. Its text lets presses through
+   to the drawing under it (only Cancel takes them), so it never blocks a pick
+   near the top of the canvas; when the lens is up there it steps back. */
+.eyedropper-pill {
+  position: fixed;
+  z-index: 10000;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 5px 5px 16px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--glass);
+  color: var(--text-primary);
+  font-size: 13.5px;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: 0.4px;
-  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.eyedropper-pill.eyedropper-pill-under { opacity: 0.3; }
+.eyedropper-pill-cancel {
+  position: relative;
+  pointer-events: auto;
+  border: 0;
+  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 14px;
+  background: var(--seg-on-fill);
+  color: var(--seg-on-ink);
+  font: inherit;
+  cursor: pointer;
+}
+.eyedropper-pill-cancel::before {       /* 34 visual -> 44 tap */
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+}
+.eyedropper-live {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .eyedropper-lens, .eyedropper-pill { animation: eyedropper-in 0.14s ease-out; }
+}
+@keyframes eyedropper-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .eyedropper-pill { transition: none; }
 }
 .eyedropper-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); }
 .eyedropper-btn.picking { background: var(--ui-active); color: #fff; border-color: transparent; }

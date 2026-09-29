@@ -1836,8 +1836,9 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   if(reposMode && bgImage && photoEnabled && photoFit==='cover'){       // pan the image, don't draw
     reposActive=true; reposStart={x:e.clientX,y:e.clientY,ox:photoOffX,oy:photoOffY};
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ } return; }
-  // eyedropper: this press opens the magnifying loupe — drag to aim, release
-  // picks (lib/eyedropper.js). One-shot tap sample stays as the fallback.
+  // eyedropper: this press drives the lens — a drag aims and lifting picks, a
+  // touch tap moves it, a click picks (lib/eyedropper.js). The one-shot tap
+  // sample stays as the fallback.
   if(picking){
     if(_eyedropper && _eyedropper.beginPick && _eyedropper.beginPick(e)) return;
     sampleColorAt(e); return;
@@ -3993,7 +3994,7 @@ customInput.addEventListener('input',e=>{
 });
 customInput.addEventListener('change',e=>{ addRecent(e.target.value); });
 
-// eyedropper — click to arm, then click the canvas to sample a pixel's colour
+// eyedropper — click to arm (the lens lands on the drawing), then pick with it
 // Shared with Pad via lib/eyedropper.js — the arming, the cursor, Escape and
 // the one-shot semantics. Reading the pixel stays here: the two surfaces
 // genuinely differ on context, DPR and what a transparent pixel means.
@@ -4013,12 +4014,13 @@ function _initEyedropper(){
     onChange: v => { picking = v;
                      if (window.SkriblDrawerDetent) window.SkriblDrawerDetent.veil(drawPanel, v);
                      else drawPanel.classList.toggle('eyedropper-veiled', v); },
-    // Loupe wiring: magnifies and reads the same composited artwork
+    // Lens wiring: magnifies and reads the same composited artwork
     // sampleColorAt reads — onion skin and guides stay invisible to it.
     getPoint: ev => pos(ev),
     artwork: () => paintArtwork(),
     dpr: () => DPR,
     bg: () => bgColor,
+    current: () => color,          // the lens ring's bottom half
     onPick: hex => { setColor(hex); addRecent(hex); closePop(); },
   });
 }
