@@ -25,6 +25,9 @@
   <link rel="stylesheet" href="{{ skribl_asset('tooltip.css') }}">
   {# pagemenu.css travels with lib/pagemenu.js -- the ••• and its sheet (v314). #}
   <link rel="stylesheet" href="{{ skribl_asset('pagemenu.css') }}">
+  {# segslider.css travels with lib/segslider.js -- the one pill, which New /
+     Hot and the menu's Theme are tracks of (see that sheet's header). #}
+  <link rel="stylesheet" href="{{ skribl_asset('segslider.css') }}">
   <style>
     /* The page's own chrome, in the app's tokens for both ramps. styles.css is
        the editor's stylesheet and is not loaded here — this page has no tool
@@ -118,10 +121,10 @@
     h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 4px; }
     .sub { margin: 0 0 20px; color: var(--text-2); font-size: 14px; }
     .bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 18px; }
-    .tabs { display: flex; gap: 6px; }
-    .tab { font: inherit; font-weight: 600; font-size: 14px; color: var(--text-2); background: transparent;
-      border: 1px solid var(--hairline); border-radius: 999px; padding: 0 16px; min-height: 44px; cursor: pointer; }
-    .tab.active { background: var(--accent-fill); border-color: transparent; color: #fff; }
+    /* New / Hot is a track of the one pill (segslider.css). It was two loose
+       solid pills, the selected one an action's purple slab, beside editors
+       where a choice is a tint that slides. */
+    .tabs { flex: none; }
     .find { flex: 1 1 220px; }
     .find input { width: 100%; min-height: 44px; font: inherit; font-size: 16px; color: var(--text);
       background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 0 16px; }
@@ -667,7 +670,8 @@
        q, title and caption. Both are the server's: this page adds no
        filtering or ranking of its own. #}
     <div class="bar">
-      <div class="tabs" role="group" aria-label="Order">
+      <div class="tabs seg-track" role="group" aria-label="Order">
+        <span class="seg-slider" aria-hidden="true"></span>
         {# The titles say what "New" and "Hot" cannot; lib/tooltip.js draws
            them, on a pointer that hovers. #}
         <button type="button" class="tab active" data-sort="new" aria-pressed="true"
@@ -765,6 +769,8 @@
 {% with here='gallery' %}{% include 'skribl/_skribl_page_menu.html' %}{% endwith %}
 <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
 <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
+{# lib/segslider.js: the pill under New / Hot and the menu's Theme. #}
+<script src="{{ skribl_asset('lib/segslider.js') }}" defer></script>
 {# lib/sheetswipe.js: every bottom sheet closes on a swipe down or a tap on
    its grabber. Before report.js and every other script that attaches it. #}
 <script src="{{ skribl_asset('lib/sheetswipe.js') }}" defer></script>

@@ -23,6 +23,9 @@
   <link rel="stylesheet" href="{{ skribl_asset('tooltip.css') }}">
   {# pagemenu.css travels with lib/pagemenu.js -- the ••• and its sheet (v314). #}
   <link rel="stylesheet" href="{{ skribl_asset('pagemenu.css') }}">
+  {# segslider.css travels with lib/segslider.js -- the one pill: the tabs,
+     the filter and the menu's Theme are tracks of it (that sheet's header). #}
+  <link rel="stylesheet" href="{{ skribl_asset('segslider.css') }}">
   {# The profile's Skribls tab: real posts from GET /api/skribls on the shared
      in-post player, since v275 (verify_library.py). This comment called it a
      concept preview of demo drawings until SK-AUD-011 read it as current.
@@ -261,14 +264,11 @@
     /* ---- library ---------------------------------------------------------- */
     .libhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
     .libhead h2 { font-size: 15px; font-weight: 700; letter-spacing: .02em; margin: 0; color: var(--text); }
-    /* The tabs are the heading: two words, the chosen one underlined in the
-       accent. 44px tall to a finger, like every control on the page. */
-    .libtabs, .libtabs-list { display: flex; gap: 4px; }
-    .libtab { font: inherit; font-size: 15px; font-weight: 700; letter-spacing: .02em; color: var(--text-3);
-      background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 0 8px; min-height: 44px; cursor: pointer; }
-    .libtab:hover { color: var(--text-2); }
-    .libtab.active { color: var(--text); border-bottom-color: var(--accent); }
-    .libtab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+    /* The tabs are the heading: two words in a track of the one pill
+       (segslider.css), 44px tall like every control on the page. They were
+       an underline -- a third look for a pick-one choice, beside the tint
+       pill and the solid chip. */
+    .libtabs { display: flex; }
     .drafts-mode .chips, .drafts-mode .search { display: none; }
     .drafts-where { font-size: 13px; color: var(--text-3); margin: 0 0 12px; }
     .drafts-list { display: flex; flex-direction: column; gap: 8px; }
@@ -294,16 +294,11 @@
        pink was 2.27:1 on the light theme's white row (third review). */
     .draft-del.armed { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: color-mix(in srgb, var(--danger) 10%, transparent); }
     .libhead .cnt { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
-    .chips { display: flex; gap: 7px; margin-left: auto; }
-    /* min-height 34 is the VISIBLE floor (SK-AUD-005). These measured 28 —
-       padding and a 11.5px line and nothing asking for more. The ::before
-       band below already gave them 44 to a finger, which is why nothing
-       noticed: a control can answer a tap and still be too small to aim
-       at, and an invisible band is no help to the eye. */
-    .chip { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .04em; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--hairline); background: transparent; color: var(--text-2); cursor: pointer; transition: .15s;
-      min-height: 34px; display: inline-flex; align-items: center; }
-    .chip:hover { border-color: var(--hover-edge); color: var(--text); }
-    .chip.active { background: var(--accent-fill); border-color: transparent; color: #fff; font-weight: 600; }
+    /* The filter is a track of the one pill too (segslider.css), in the
+       page's type rather than monospace. Its options are 36 you can SEE
+       (SK-AUD-005's floor is 34: these once measured 28 behind a 44px band,
+       and a band is no help to the eye) and 44 to a finger. */
+    .chips { margin-left: auto; }
     .search { position: relative; }
     /* min-height 44: an input has no ::before to grow a tap band with, so the box is the box. */
     /* 16px, NOT 12.5. Below 16 iOS Safari magnifies the whole page when the
@@ -415,11 +410,10 @@
     .posted-count { margin: 0 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
     /* Tap targets on this page (verify_a11y's census): the foot's two text
        buttons and the filter chips are small by design, so each carries a
-       44px band -- the chips through the ::before the editors' pills use,
-       the foot buttons by height, since an underlined word can grow. */
+       44px band -- the chips through the ::before the editors' pills use
+       (segslider.css draws it now, on every option of the one pill), the
+       foot buttons by height, since an underlined word can grow. */
     .posted-clearbtn { min-height: 44px; padding: 0 6px; }
-    .chip { position: relative; z-index: 1; }
-    .chip::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
     .posted-title { font-size: 14px; font-weight: 600; }
     .posted-sub { font-family: var(--font-mono); }
     /* 34 is the VISIBLE floor (SK-AUD-005); the 44 a finger gets comes from
@@ -595,7 +589,8 @@
            the search are the Skribls tab's and step aside for Drafts. #}
         {# The heading stays a heading: role="tablist" on the <h2> itself took
            its heading role away (v317 review), so the list sits inside it. #}
-        <h2 class="libtabs"><span class="libtabs-list" role="tablist" aria-label="Your Skribl Library">
+        <h2 class="libtabs"><span class="libtabs-list seg-track" role="tablist" aria-label="Your Skribl Library">
+          <span class="seg-slider" aria-hidden="true"></span>
           <button type="button" class="libtab active" role="tab" id="tabSkribls"
                   aria-selected="true" aria-controls="libSkribls">Skribls</button>
           <button type="button" class="libtab" role="tab" id="tabDrafts"
@@ -605,7 +600,8 @@
            all. Not Pad/Flip — the listing does not say which a post is. #}
         {# The titles say what the one-word labels cannot; lib/tooltip.js
            draws them, on a pointer that hovers. #}
-        <div class="chips" role="group" aria-label="Show">
+        <div class="chips seg-track" role="group" aria-label="Show">
+          <span class="seg-slider" aria-hidden="true"></span>
           <button type="button" class="chip active" data-filter="all" aria-pressed="true"
                   title="Every Skribl this browser knows about">All</button>
           <button type="button" class="chip" data-filter="public" aria-pressed="false"
@@ -712,6 +708,8 @@
   {% with here='library' %}{% include 'skribl/_skribl_page_menu.html' %}{% endwith %}
   <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
+  {# lib/segslider.js: the pill under the tabs, the filter and the menu's Theme. #}
+  <script src="{{ skribl_asset('lib/segslider.js') }}" defer></script>
   {# lib/sheetswipe.js: every bottom sheet closes on a swipe down or a tap on
      its grabber. Before report.js and every other script that attaches it. #}
   <script src="{{ skribl_asset('lib/sheetswipe.js') }}" defer></script>

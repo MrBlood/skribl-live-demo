@@ -5,7 +5,9 @@
 
    WRITTEN ONLY IN TOKENS BOTH PAGES DEFINE (--panel, --control, --hairline,
    --text, --text-2, --text-3, --accent, --font-ui), in both of their ramps, so
-   the sheet follows the theme with no light block of its own. Its shape is
+   the sheet follows the theme with no light block of its own. The Theme
+   switch is the exception that proves it: it is the one pill, whose look is
+   segslider.css's (both pages load it), and only its place is here. Its shape is
    the editors' menu sheet -- rounded top, a grab bar, 44px rows of icon and
    two lines of words, a Theme row at the bottom -- written against these
    pages' tokens rather than imported from styles.css, which neither page
@@ -96,23 +98,13 @@ button.pm-item {
   min-height: 44px; padding: 5px 14px;
 }
 .pm-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
+/* The Theme switch: a track of the one pill (segslider.css). It was a
+   capsule with the chosen option a solid accent slab, white on purple. */
 .pm-seg {
   margin-left: auto;
-  display: inline-flex; box-sizing: border-box;
-  width: 190px; height: 44px; padding: 4px;
-  border-radius: 999px;
-  background: var(--control);
-  border: 1px solid var(--hairline);
+  width: 204px;   /* three equal options, "System" at the pill's 13px / 600 with room */
 }
-.pm-seg button {
-  flex: 1 1 0; min-width: 0;
-  border: 0; border-radius: 999px;
-  background: transparent; color: var(--text-2);
-  font: inherit; font-size: 12px; font-weight: 500;
-  cursor: pointer;
-}
-.pm-seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
-.pm-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.seg-track.pm-seg > button { flex: 1 1 0; min-width: 0; padding: 0 6px; }
 
 @media (prefers-reduced-motion: no-preference) {
   .pm-sheet { animation: pm-rise 0.16s ease-out; }
