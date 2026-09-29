@@ -944,12 +944,7 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
 // created at runtime needs no listener of its own.
 (function(){
   const g = document.getElementById('colorGroup');
-  // The pen starts in the brand's violet (lib/palette.js, START), which the
-  // custom swatch wears until another colour is picked.
-  if (g && window.SkriblPalette) {
-    color = window.SkriblPalette.START;
-    window.SkriblPalette.mount(g, { start: color });
-  }
+  if (g && window.SkriblPalette) window.SkriblPalette.mount(g, { selectFirst: true });
 })();
 
 bindEl('colorGroup', 'click', (e) => {

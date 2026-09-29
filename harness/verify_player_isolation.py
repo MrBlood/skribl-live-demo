@@ -198,11 +198,6 @@ def scribble(pg, box, n=120):
     poll and the audio source had started and finished between the click and the
     measurement. The fixture has to last long enough to be observed mid-flight.
     """
-    # WHITE INK, CHOSEN HERE. The nib probe below reads ink as the darkest
-    # channel of the pixels under the nib, which only a light pen lights. The
-    # pen used to START white; it starts in the brand's violet now (min channel
-    # 92, under the probe's 120), and a fixture must not lean on a default.
-    pg.evaluate("() => { if (typeof setPenColor === 'function') setPenColor('#ffffff'); }")
     cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
     pg.mouse.move(cx, cy)
     pg.mouse.down()

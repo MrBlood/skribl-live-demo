@@ -209,7 +209,7 @@ window.addEventListener('resize', ()=>{ sizeStage(); });
 
 let frames = [ newFrame() ];
 let idx = 0;
-let color = (window.SkriblPalette && window.SkriblPalette.START) || "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
+let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
 /* HOW FINELY TIME IS CUT, as a multiple of the speed the artist picked.
 
    `fps` is the stored playback rate and, with `hold`, fully determines timing --
@@ -3984,7 +3984,7 @@ function _initRecent(){
 function addRecent(hex){ _initRecent(); if(_recent) _recent.add(hex); }
 function renderRecent(){ _initRecent(); if(_recent) _recent.render(); }
 // preset dots — inserted before the static custom picker + eyedropper (Pad order)
-if(window.SkriblPalette) window.SkriblPalette.mount(colorGroup, { before: customWrap, start: color,
+if(window.SkriblPalette) window.SkriblPalette.mount(colorGroup, { before: customWrap,
   onPick:(hex)=>{ setColor(hex); closePop(); } });
 // custom color picker (static markup)
 // --custom-color + has-color, never an inline background: the CSS keeps the

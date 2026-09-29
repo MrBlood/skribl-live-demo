@@ -39,16 +39,6 @@
     { hex: '#141414', name: 'Toner black', dark: true }
   ];
 
-  /* THE PEN STARTS IN THE BRAND'S VIOLET (owner: "change the starting color
-   * on the pad and flip to the purple that is pads signature color"). It is
-   * --accent, the violet the signature's ink starts from, and deliberately NOT
-   * one of the inks above: the palette stays the Riso set it was chosen as,
-   * and a first stroke in the house colour says whose pad this is. So it is a
-   * CUSTOM colour, and the custom swatch wears it and the ring (see START in
-   * mount) -- the same state a colour from the picker leaves, which is what
-   * it is. Both editors read it from here, so they cannot start apart. */
-  var START = '#7c5cff';
-
   /* Builds the preset dots and puts them where the template's static ones used
    * to sit — BEFORE the custom picker and the eyedropper, which stay in the
    * markup because they are controls rather than colours. Both surfaces call
@@ -58,7 +48,6 @@
   function mount(group, opts) {
     if (!group) return [];
     opts = opts || {};
-    var start = opts.start ? String(opts.start).toLowerCase() : null;
     var before = opts.before
       || group.querySelector('.color-custom-wrap')
       || group.firstChild;
@@ -66,7 +55,7 @@
     PEN.forEach(function (c, i) {
       var b = global.document.createElement('button');
       b.type = 'button';
-      b.className = 'color-dot' + (c.hex === start ? ' active' : '');
+      b.className = 'color-dot' + (i === 0 && opts.selectFirst ? ' active' : '');
       b.style.background = c.hex;
       b.dataset.color = c.hex;
       if (c.dark) b.dataset.ink = 'dark';
@@ -77,20 +66,9 @@
       group.insertBefore(b, before);
       made.push(b);
     });
-    // START: a colour no dot names is the custom swatch's, ringed and in its
-    // colour, with the picker opened on it.
-    if (start && !PEN.some(function (c) { return c.hex === start; })) {
-      var custom = group.querySelector('.color-custom');
-      if (custom) {
-        custom.style.setProperty('--custom-color', start);
-        custom.classList.add('has-color', 'active');
-      }
-      var input = group.querySelector('.color-custom-wrap input[type="color"]');
-      if (input) input.value = start;
-    }
     return made;
   }
 
-  global.SkriblPalette = { PEN: PEN, START: START, hexes: PEN.map(function (c) { return c.hex; }),
+  global.SkriblPalette = { PEN: PEN, hexes: PEN.map(function (c) { return c.hex; }),
                            mount: mount };
 })(window);

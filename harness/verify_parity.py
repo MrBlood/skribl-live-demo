@@ -257,20 +257,6 @@ with sync_playwright() as p:
     check("exactly one colour reads as selected on both", ps == 1 and fs == 1,
           f"pad {ps} selected, flip {fs}")
 
-    # THE PEN STARTS IN THE SIGNATURE'S VIOLET, on both (owner: "change the
-    # starting color on the pad and flip to the purple that is pads signature
-    # color"). Read against the page's own --accent, not a typed hex, and the
-    # selected swatch is the custom one wearing it: the violet is not one of
-    # the palette's inks, so nothing else may look chosen.
-    start = """() => { const acc = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().toLowerCase();
-        const c = document.getElementById('customColorBtn');
-        return { pen: color, acc, ringed: c.classList.contains('active'),
-                 wears: c.style.getPropertyValue('--custom-color').toLowerCase() }; }"""
-    for _nm, _pg in (("Pad", pad), ("Flip", flip)):
-        _s = _pg.evaluate(start)
-        check(f"{_nm}: the pen starts in the signature's violet, and the custom swatch wears it and the ring",
-              _s["pen"] == _s["acc"] == "#7c5cff" and _s["ringed"] and _s["wears"] == _s["acc"], str(_s))
-
     # Recent colours: same cap, same ordering, same de-duplication — three
     # things two independent implementations can each get right differently.
     feed = """(n) => { const hexes = ['#112233','#223344','#334455','#445566',
