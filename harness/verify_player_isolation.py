@@ -775,7 +775,13 @@ with sync_playwright() as sp:
     # keeps live, and the forced-colours block, which cssgraph copies whole and
     # which now marks the selection on Fill / Fit / Stretch, the tray tile and
     # the dock's pill as well. 30,137 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 30_150, 119_844, 40_000
+    # RAISED (the one pill's review), for one named cost: +85 B -- the
+    # forced-colours rule that moves a focused selected option's edge outside
+    # it (the group's one Tab stop is that option, and its selection outline
+    # painted focus over), copied whole with that block. Written as one short
+    # selector for the ratchet's sake; the first draft cost +154. 30,222
+    # measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 30_235, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
