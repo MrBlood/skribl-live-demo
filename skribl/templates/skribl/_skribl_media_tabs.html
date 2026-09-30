@@ -1,9 +1,11 @@
-{# PHOTO | MUSIC -- the tab strip above whichever of the two drawers is open,
-   shared by Pad and Flip. Both editors' bars fold Image and Music into one
-   Media button (_skribl_media_glyph.html); this strip is how you switch
-   between the two, and lib/mediatabs.js drives it. The two tab dots keep the
-   ids each editor's media code already writes (photoTabDot, musicTabDot), and
-   the Media button's own dot mirrors them. #}
+{# PHOTO | MUSIC -- the tab strip at the top of the media card (#mediaCard),
+   over whichever of the two drawers is open, shared by Pad and Flip. The strip
+   and the open drawer are one card: each editor wraps this partial and both
+   media drawers in it. Both editors' bars fold Image and Music into one Media
+   button (_skribl_media_glyph.html); this strip is how you switch between the
+   two, and lib/mediatabs.js drives it. The two tab dots keep the ids each
+   editor's media code already writes (photoTabDot, musicTabDot), and the Media
+   button's own dot mirrors them. #}
 {% from 'skribl/_skribl_music_glyph.html' import music_glyph %}
 <div class="media-tabs" id="mediaTabs" role="tablist" aria-label="Photo or music" hidden>
   <button type="button" role="tab" class="media-tab" id="mediaTabPhoto" data-media-tab="photo" aria-selected="false">

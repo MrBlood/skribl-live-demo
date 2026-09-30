@@ -1,6 +1,7 @@
 import math, struct, wave, json
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 WAV = "/tmp/boombap.wav"
@@ -547,8 +548,9 @@ with sync_playwright() as p:
     pd6.mouse.up(); pd6.wait_for_timeout(1800)
     pd6.set_input_files("#musicInput", WAV); pd6.wait_for_timeout(4500)
     # Remove, then read the DRAFT immediately — inside the 1.2 s debounce, which
-    # is the window a dying tab falls into.
-    pd6.evaluate("() => document.getElementById('musicRemove').click()")
+    # is the window a dying tab falls into. Two clicks: the bin asks first (the
+    # first arms it, lib/pendingcards.js), and the second is the Remove.
+    pd6.evaluate("() => { const b = document.getElementById('musicRemove'); b.click(); b.click(); }")
     pd6.wait_for_timeout(150)
     draft6 = pd6.evaluate("() => { const r = localStorage.getItem('skribl_autosave_v1'); return r ? !!(JSON.parse(r).musicMeta && JSON.parse(r).musicMeta.name) : null; }")
     check("Pad: Remove writes the draft before it deletes the bytes",
@@ -919,6 +921,69 @@ with sync_playwright() as p:
     check("Pad: a restore overtaken by a newer photo stands down, and Save draft saves",
           stood == {"restoring": False, "photo": "new.png", "saved": True}, str(stood))
     pgX.close()
+
+    print("\nPAD — every restore writer fills the drawers' file rows, and an empty document empties them")
+    # The Pad is the surface with separate restore writers: loadSkribl in
+    # app.js (which the player loads too) resets and fills the photo and music
+    # rows through typeof-guarded hooks, one per writer -- the reset of each,
+    # the photo restore, and the music restore's loadedmetadata. Flip's restore
+    # paths all end in syncMediaUI, which verify_parity pins. A restored photo
+    # used to show no name at all, and a restored track "Loaded from draft".
+    # Each drawer is opened for real before anything is asked about what shows
+    # in it: a closed panel is display:none, where every visibility answer is
+    # "no" on any tree.
+    pgW = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+    pgW.on("pageerror", lambda e: errs.append(f"pad-rows: {e}"))
+    pgW.goto(BASE + "/skribl-pad", wait_until="load"); pgW.wait_for_timeout(1200)
+    pgW.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
+    import base64 as _b64, io as _io
+    _wb = _io.BytesIO()
+    with wave.open(_wb, "wb") as _w2:
+        _w2.setnchannels(1); _w2.setsampwidth(2); _w2.setframerate(8000)
+        _w2.writeframes(b"".join(struct.pack("<h", int(9000 * math.sin(2 * math.pi * 330 * _i / 8000))) for _i in range(8000 * 3)))
+    WAVURL = "data:audio/wav;base64," + _b64.b64encode(_wb.getvalue()).decode()
+    PNGW = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    pgW.evaluate("""async ([png, wav]) => {
+        const d = serializeSkribl();
+        d.photo = { data: png, name: 'new.png', fit: 'contain' };
+        d.music = { data: wav, name: 'y.wav' };
+        // A document's media lives in its frames (serializeSkribl); the
+        // top-level copies are what normalizeSkribl would surface from them.
+        (d.frames || []).forEach(f => { f.photo = d.photo; f.music = d.music; });
+        loadSkribl(d);
+        for (let i = 0; i < 60 && !document.getElementById('musicUploadBtn').classList.contains('loaded'); i++)
+          await new Promise(r => setTimeout(r, 100));
+    }""", [PNGW, WAVURL])
+    ROW = """(k) => { const g = (id) => document.getElementById(id), t = g(k + 'Thumb');
+        const vis = (id) => { const e = g(id); return !!e && e.offsetParent !== null; };
+        return { cur: (typeof _padDrawerCtl !== 'undefined' && _padDrawerCtl) ? _padDrawerCtl.current() : null,
+                 name: g(k + 'BtnLabel').textContent, meta: g(k + 'BtnMeta').textContent,
+                 nameShown: vis(k + 'BtnLabel'), add: vis(k + 'AddBtn'),
+                 src: t ? (t.getAttribute('src') || '').slice(0, 15) : null, hasSrc: t ? t.hasAttribute('src') : null }; }"""
+    browsing.pad_drawer(pgW, "photo")
+    rp = pgW.evaluate(ROW, "photo")
+    check("Pad: a restored photo's row names it and says its fit, with its picture",
+          rp["cur"] == "photo" and rp["name"] == "new.png" and rp["meta"] == "Behind the drawing · Fit"
+          and rp["nameShown"] and not rp["add"] and rp["src"].startswith("data:image/png"), str(rp))
+    browsing.pad_drawer(pgW, "music")
+    rm = pgW.evaluate(ROW, "music")
+    check("Pad: a restored track's row names it and gives its length",
+          rm["cur"] == "music" and rm["name"] == "y.wav" and rm["meta"] == "Loops under the drawing · 0:03"
+          and rm["nameShown"] and not rm["add"], str(rm))
+    pgW.evaluate("""async () => {
+        const d2 = serializeSkribl(); delete d2.photo; delete d2.music;
+        (d2.frames || []).forEach(f => { delete f.photo; delete f.music; });
+        loadSkribl(d2);
+        await new Promise(r => setTimeout(r, 800)); }""")
+    browsing.pad_drawer(pgW, "photo")
+    ep = pgW.evaluate(ROW, "photo")
+    browsing.pad_drawer(pgW, "music")
+    em = pgW.evaluate(ROW, "music")
+    check("Pad: opening a document with no media empties both rows back to their drop areas",
+          ep["cur"] == "photo" and ep["add"] and not ep["nameShown"] and ep["name"] == "" and ep["hasSrc"] is False
+          and em["cur"] == "music" and em["add"] and not em["nameShown"] and em["name"] == "",
+          f"photo {ep}; music {em}")
+    pgW.close()
 
     print("\nFLIP — a draft opened from the Library asks over an autosaved photo, and the photo never lands on it (third review)")
     # Flip's content test ignored media on its way back from the store, so

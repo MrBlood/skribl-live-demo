@@ -1,8 +1,9 @@
 {#  THE MUSIC GLYPH, DEFINED ONCE.
 
-    It is drawn in two places -- the Media drawer's Music tab and the post
-    sheet's sound marker -- and "the same icon" has to mean one definition, not
-    two copies that agree today. This tree has already paid for that lesson
+    It is drawn by three templates -- the Media drawer's Music tab, the post
+    sheet's sound marker, and the music drawer itself (its empty drop area, the
+    loaded file row's tile and the re-add card) -- and "the same icon" has to
+    mean one definition, not copies that agree today. This tree has already paid for that lesson
     three times over in one release: the in-post player's markup was hand-copied
     into the feed's composer and the profile's stage before a macro was made for
     it, and verify_inline.py now gates against it happening again.
@@ -11,7 +12,11 @@
     includes too (the dock redesign); a macro in one template cannot be called
     from another, so it moved to its own file and both import it.
 
-    verify_compose.py asserts the path data appears exactly once, in this file.
+    verify_compose.py asserts the path data appears exactly once across this
+    file, skribl_editor.html and _skribl_media_tabs.html, and that
+    _skribl_music_drawer.html reaches it only through the macro. Those are the
+    files it scans: the help drawer's "Music & looping" heading icon
+    (_skribl_help.html) still carries its own copy of the path.
 #}
 {% macro music_glyph() -%}
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
