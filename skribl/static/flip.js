@@ -218,13 +218,27 @@ window.addEventListener('resize', ()=>{ sizeStage(); });
 // much past the bottom until the next resize. Only the chrome is observed,
 // never the stage, so re-fitting cannot feed back into itself.
 if(typeof ResizeObserver === 'function'){
-  let _fitQueued = false;
+  let _fitQueued = false, _lastPadBox = null;
   const _chromeRO = new ResizeObserver(()=>{
     if(_fitQueued) return; _fitQueued = true;
-    requestAnimationFrame(()=>{ _fitQueued = false; sizeStage(); });
+    requestAnimationFrame(()=>{
+      _fitQueued = false;
+      sizeStage();
+      // A chrome change that moved or resized the canvas is, to everything that
+      // tracks the canvas, a resize: the cached rect behind the brush rings and
+      // the eyedropper's lens both listen for one. Without it an armed lens
+      // stayed where the canvas USED to be (main's CI, after #289). Compared
+      // with the last box seen here, not with the box before sizeStage(): the
+      // header's growth has already moved the canvas by the time this runs.
+      const r = pad.getBoundingClientRect();
+      const box = r.left + ',' + r.top + ',' + r.width + ',' + r.height;
+      if(_lastPadBox !== null && box !== _lastPadBox) window.dispatchEvent(new Event('resize'));
+      _lastPadBox = box;
+    });
   });
   ['.header', '.strip-wrap', '.flip-tools'].forEach(sel => {
-    const el = document.querySelector(sel); if(el) _chromeRO.observe(el);
+    // border-box: padding and borders are height the stage has to give up too.
+    const el = document.querySelector(sel); if(el) _chromeRO.observe(el, { box: 'border-box' });
   });
 }
 

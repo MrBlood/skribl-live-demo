@@ -1184,6 +1184,34 @@ with sync_playwright() as p:
               and max(l["h"] for l in _f["labels"]) <= 36, str(_f["labels"]))
         _ctx.close()
 
+    # A re-fit the WINDOW did not cause must still reach what tracks the canvas.
+    # The chrome observer re-fits when the header or strip changes height; an
+    # armed eyedropper lens repositions on a resize, so without one it stayed
+    # over the spot the canvas had left (main's CI after #289). The header is
+    # grown 30px by hand, the thing a late font or a second page does for real;
+    # the PAINTED lens has to move with the canvas.
+    _ctx = browser.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=3,
+                               is_mobile=True, has_touch=True)
+    _pg = _ctx.new_page()
+    browsing.goto(_pg, BASE, "/flip")
+    browsing.pad_drawer(_pg, "draw", settle=500)
+    _eb = _pg.locator("#eyedropperBtn").bounding_box()
+    _pg.touchscreen.tap(_eb["x"] + _eb["width"] / 2, _eb["y"] + _eb["height"] / 2)
+    _pg.wait_for_timeout(500)
+    LENS_Q = """() => { const l = document.querySelector('.eyedropper-lens'), p = document.getElementById('pad');
+      if (!l || l.hidden) return null; const a = l.getBoundingClientRect(), b = p.getBoundingClientRect();
+      return { lt: a.top, ll: a.left, pt: b.top, pl: b.left }; }"""
+    _l0 = _pg.evaluate(LENS_Q)
+    _pg.evaluate("() => { document.querySelector('.header').style.paddingBottom = '30px'; }")
+    _pg.wait_for_timeout(500)
+    _l1 = _pg.evaluate(LENS_Q)
+    _ok = bool(_l0 and _l1) and abs(_l1["pt"] - _l0["pt"]) >= 10 \
+          and abs((_l1["lt"] - _l0["lt"]) - (_l1["pt"] - _l0["pt"])) <= 1 \
+          and abs((_l1["ll"] - _l0["ll"]) - (_l1["pl"] - _l0["pl"])) <= 1
+    check("/flip 390, eyedropper armed: a re-fit from the chrome moves the painted lens with the canvas",
+          _ok, f"before {_l0}, after {_l1}")
+    _ctx.close()
+
     # The floor is kept for what it was written for: the Tune panel open on a
     # phone still leaves the canvas at least 52vh, rather than a sliver.
     _ctx = browser.new_context(viewport={"width": 390, "height": 664}, is_mobile=True, has_touch=True)
