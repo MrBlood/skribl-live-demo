@@ -381,6 +381,24 @@ because of that.
   iPhone, so verify there in spirit: font-independent layout, measured.
 - **Offer choices as mocks** — usually three to five, each named, with one
   recommendation and why — and build only what was chosen.
+- **Restate the target in one line before mocking** ("the add row under the
+  page bar will change"), and measure what the owner saw before arguing
+  with it. When feedback names a thing on screen, name the element back.
+- **Work in the session, not through helpers.** Separate agents and
+  workflows each re-read the tree from nothing, often 170,000 to 390,000
+  tokens apiece, and that is the owner's weekly allowance. Delegate only
+  when the owner asks for it ("use a workflow"). One workload at a time:
+  this 4-CPU box restarted twice under three parallel builds.
+- **A PR runs its named affected suites** (WORKING-AGREEMENTS.md says how),
+  and each new check is calibrated with one mutation per component on the
+  working tree. A second server on a pre-change copy is for when a mutation
+  cannot say the same thing.
+- **Screenshots: the three or four that show the change**, in both themes
+  where the change is themed, not a gallery of sixteen. Crop so they read
+  on a phone.
+- **Estimates in Mountain time, and keep them.** When one slips, say so
+  before the owner has to ask. "Are you cooking?" means it has been too
+  quiet.
 
 ---
 
