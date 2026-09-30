@@ -224,6 +224,7 @@ document.addEventListener('keydown', (e) => {
 
 undoBtn.addEventListener('click', () => {
   if (undoStack.length === 0) return;
+  if (pickingColor) stopPicking();   // the drawing under the lens is about to change
   redoStack.push(makeHistoryState());
   redoBtn.disabled = false;
   const prev = undoStack.pop();
@@ -238,6 +239,7 @@ undoBtn.addEventListener('click', () => {
 
 redoBtn.addEventListener('click', () => {
   if (redoStack.length === 0) return;
+  if (pickingColor) stopPicking();   // the drawing under the lens is about to change
   undoStack.push(makeHistoryState());
   undoBtn.disabled = false;
   const next = redoStack.pop();

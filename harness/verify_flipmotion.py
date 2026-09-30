@@ -77,6 +77,11 @@ with sync_playwright() as p:
     # Eight pages, the drawing accelerating left to right so the spacing between
     # guide dots is visibly uneven — an even path would not prove much.
     box = pg.locator("#pad").bounding_box()
+    # WHITE INK, SET ON PURPOSE. GUIDE_PX counts violet pixels, because the
+    # guides are violet. The fixture used to get white for free as Flip's
+    # starting pen; a fresh editor now starts on Skribl purple (#7c5cff), which
+    # GUIDE_PX would count as guide on every page. Say what the fixture needs.
+    pg.evaluate("() => setColor('#ffffff')")
     PAGES = 8
     for k in range(PAGES):
         blob(pg, box, min(0.12 + 0.028 * k * k, 0.86), 0.55 - 0.03 * k)

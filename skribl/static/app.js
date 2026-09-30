@@ -222,7 +222,7 @@ let hasContent = false;
 // user starts a new recording or clears the canvas. This keeps a finished
 // Skribl = base snapshot + recorded strokes, with no ambiguous extra layer.
 let finishedRecording = false;
-let color = '#ffffff';
+let color = '#7c5cff';   // Skribl purple: the first preset in lib/palette.js, ringed by selectFirst
 let size = 5;
 let tool = 'pen';
 
@@ -879,6 +879,9 @@ if (typeof window !== 'undefined') window.SkriblPadTools = toolShelf;
 
 function setTool(nextTool) {
   tool = nextTool;
+  // Leaving for another tool ends a colour pick, as on Flip: the lens and
+  // its "Click your drawing" pill would otherwise sit over an eraser.
+  if (pickingColor) stopPicking();
   const penBtn = document.getElementById('penToolBtn');
   // 'select' is still accepted by name: SkriblSelectTool is loaded on Pad and
   // other code may still ask for the tool. It has no registry entry and no
@@ -1740,6 +1743,7 @@ function editorSeek(frac) {
 
 playBtn.addEventListener('click', () => {
   if (recording) return;   // can't preview mid-take (Play is hidden while recording; guard anyway)
+  if (pickingColor) stopPicking();   // no lens over the replay
   stopLoopPreview();
   if (playing) { stopPlayback(); return; }
   playTimeline = buildPlaybackTimeline();

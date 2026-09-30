@@ -79,12 +79,18 @@ def fresh(page):
     downstream then passed or failed for reasons that had nothing to do with the
     thing under test. One of them PASSED vacuously: "undo restores the exact
     coordinates" compared an untouched page against itself.
+
+    WHITE INK, set on purpose: INK scores the red channel and the player check
+    counts white pixels. Both used to get white for free as Flip's starting
+    pen; a fresh Flip now starts on Skribl purple (#7c5cff, red 124), which
+    neither probe reads as ink. The fixture says what it needs.
     """
     page.evaluate("""() => {
       frames.length = 0;
       frames.push({ strokes: [], strokeGroups: [], hold: 1 });
       idx = 0; actionLog.length = 0; redoStack.length = 0;
       setTool('pen');
+      setColor('#ffffff');
       if (typeof buildStrip === 'function') buildStrip();
       render();
     }""")
