@@ -620,7 +620,7 @@ with sync_playwright() as p:
     # they want is unsupported when it is the one that just started working.
     _help = page.evaluate("""() => {
       const tips = [...document.querySelectorAll('.help-tip')];
-      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'Motion Smear');
+      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'Smear');
       return t ? t.textContent.replace(/\\s+/g, ' ') : null; }""")
     check("the help describes the effect's ACTUAL requirement",
           _help and "number" in _help.lower() and "same strokes on both" not in _help,
@@ -2416,7 +2416,7 @@ with sync_playwright() as p:
       const ring = run(40);      // the 40th point sits 9 degrees from the first: closed
       const arc = run(30);       // three quarters of it: open
       const tips = [...document.querySelectorAll('.help-tip')];
-      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'Motion Smear');
+      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'Smear');
       return { ring, arc, help: t ? t.textContent.replace(/\\s+/g, ' ') : null }; }""")
     _ring, _arc = _closed["ring"], _closed["arc"]
     check("a ring smears (the limit is said, not enforced)", _ring["made"], json.dumps(_ring))

@@ -1497,5 +1497,11 @@ body.stroking .strip-wrap {
   font-size: 12px; font-weight: 600; line-height: 1.1; white-space: nowrap;
 }
 .addcol .addbtn .addbtn-ic { width: 15px; height: 15px; }
+/* 320px is Display Zoom: four one-line labels are wider than the row there,
+   and a grid of 1fr columns does not shrink below its words, so the page
+   spilled 12px sideways. Two by two instead. */
+@media (max-width: 359px) {
+  .addcol { grid-template-columns: repeat(2, 1fr); }
+}
 .addcol .addbtn:hover { background: rgba(var(--wash-rgb), .09); color: var(--text-primary); }
 
