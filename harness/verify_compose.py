@@ -336,6 +336,14 @@ with sync_playwright() as sp:
     check("...and both callers reach it through the macro",
           _calls == 2 and tmpl.count("{{ music_glyph() }}") == 1,
           f"{_calls} call(s)")
+    # The music drawer draws the note three times (the empty drop area, the
+    # loaded row's tile, the re-add card) and held two raw copies of its path
+    # before the drawer redesign. Every one goes through the macro now.
+    _drawer = (_T / "_skribl_music_drawer.html").read_text(encoding="utf-8")
+    _raw, _via = _drawer.count('d="M9 18V5l12-2v13"'), _drawer.count("{{ music_glyph() }}")
+    check("the music drawer reaches the glyph through the macro, never a copy",
+          _raw == 0 and _via >= 3 and "import music_glyph" in _drawer,
+          f"{_raw} raw copies, {_via} macro calls")
 
     pad = b.new_page(viewport={"width": 1180, "height": 900}, color_scheme="dark")
     perrs = []

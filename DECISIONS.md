@@ -94,9 +94,11 @@ where N is the container's padding — never typed):
 **What stays round, and why each is not an oversight:**
 
 * **Labelled actions** — Post, Record, `loop-btn` (Match Drawing Time / Test
-  Seam / Preview Loop), `dropzone-remove`. These are 4:1 to 8:1 boxes where a
-  round end reads as deliberate rather than as a circle. Post especially: the
-  design direction wants it to be the one loud thing on the surface.
+  Seam / Preview Loop). These are 4:1 to 8:1 boxes where a round end reads as
+  deliberate rather than as a circle. Post especially: the design direction
+  wants it to be the one loud thing on the surface. (`dropzone-remove` was one
+  until the drawer redesign made it a 36px bin with no word on it, a tile like
+  the saved-drafts bin; see the bottom of the version log.)
 * **`layer-toggle`** — an on/off switch. Round toggle = on/off is unchanged.
 * **`color-ring`** — a colour swatch. A squared colour dot reads as a chip.
 * **Surfaces** — `.toolbar` (16px), `.menu-sheet` (16px), `.flip-menu` (14px),
@@ -12474,3 +12476,259 @@ selected chip as white words on a fill.
 
 Every other pill's height was measured against the tree before the pill,
 and none moved.
+
+## v317, cont. -- the Photo and Music drawers: one card, and the file as a row
+
+The owner's look at the media drawers after the dock work (fe814ef, #271,
+which folded Image and Music into one Media button with Photo | Music tabs and
+has no entry of its own here). Three mocks were drawn; the owner chose A:
+the tabs and the open drawer as ONE card, the empty drawer as a quiet drop
+area, and a loaded file as a quiet row. This entry records what was built and
+what was decided on the way.
+
+### One card, by wrapping (`#mediaCard`)
+
+The tabs and the open drawer were two glass slabs, 8px apart, of different
+widths at a desktop size, each with its own rim and shadow. Both editors now
+wrap the one `_skribl_media_tabs.html` strip and both media panels in
+`div.media-card#mediaCard`, which wears the glass; the panel inside goes clear,
+and the strip keeps its fill and rim as a track inside the card (the approved
+mock showed it so) but drops its blur, so one frosted surface never blurs
+another.
+
+* **A wrapper, not a strip inside each panel.** A strip per panel duplicates
+  the tab and tab-dot ids (A11Y 0), and moving one strip into whichever panel
+  is open re-parents the focused tab, which drops keyboard focus to `<body>`.
+  Flip's panels keep `role=dialog`, and the tablist stays outside them.
+  `verify_a11y` A11Y 2b guards the focus: it is red on a mutation that
+  re-parents the strip.
+* **Shown by CSS, not by script.** The card has no `hidden`; a `:has()` rule
+  hides it unless one of its panels is open, so the drawers do not depend on
+  `lib/mediatabs.js` loading to be seen at all.
+* **The card recedes by its contents during replay,** never by its own
+  opacity: the header's and the dock's rule, for WebKit's sake.
+* **Flip's outside-tap dismisser** counts the whole card, so a tap on the
+  seam or the padding between tabs and drawer is not a tap away. Flip's
+  per-drawer headings ("Background image", "Music loop") are gone: the tabs
+  head the card, and the dialogs keep those words as their names.
+
+### The file row (one element, two faces)
+
+`#photoUploadBtn` / `#musicUploadBtn` stay the one element every editor,
+test and the re-add card already key on. Until a file is added it is the drop
+area: a real button (`.dz-add`, a Tab stop the old row never had), "Add a
+photo" / "Add music" and one line of hint. With a file it is a row: a 44px
+lead (a thumbnail of the picture, or the note on the selected tab's tint), the
+name, one line of what it is doing ("Behind the drawing · Fill", "Loops under
+the drawing · 0:08"), the on/off switch, and a bin. The `.loaded` class both
+editors already set is the only thing that says which face shows, and
+`lib/pendingcards.js` `renderRow` writes the words from it -- in the file that
+already owned these drawers' re-add cards, with that file's own m:ss and fit
+words, rather than a new module (an outside review of the plan asked for
+that, and it was right: a third copy of both is what `verify_surfaces`
+exists to stop).
+
+* **The green loaded box and the red Remove pill are retired.** Neither had a
+  recorded reason; the owner's mock replaced both.
+* **The row's words follow the switch.** Off, it reads "Hidden · Fit" or
+  "Muted · 0:08", so the subtitle never contradicts the switch beside it. The
+  length is shown only when it is a real number: an element's duration can be
+  Infinity.
+* **One set of fallback names.** A restored draft that saved no file name
+  shows "Photo from draft" / "Music from draft" on both editors, retiring
+  Flip's "Image added" and "Music loop" and the Pad's "Loaded from draft". A
+  restored photo used to show no name at all on the Pad.
+* **The words are 600, not 500:** Segoe UI has no 500, so the owner's Windows
+  machine would have drawn the name Regular, no heavier than its subtitle.
+* **The Pad's loaded photo row no longer reopens the picker** on a tap, as the
+  music row and both of Flip's rows never did. Removing the file first is the
+  way to replace it.
+* **Focus is handed on, not dropped.** Attaching a file hides the add button,
+  and removing it hides the bin; either used to leave a keyboard user on
+  `<body>`. Focus goes to the switch, or back to the add button.
+* **The Pad's app.js** (which the player loads) writes the rows only through
+  typeof-guarded hooks, one per restore writer; the switches re-render the
+  rows from editor files, which cost the player nothing.
+
+### The bin asks first
+
+The owner's mock showed a quiet bin in place of the worded pill. An unarmed,
+icon-only, destructive control is what v310 warned about ("an armed Delete
+showing only a trash icon has not warned anybody"), and on the Pad one Remove
+also deletes the file's stored bytes. So the bin arms exactly as the
+saved-drafts bin does: the first tap turns it into "Remove?" in the danger
+colour, names it "Tap again to remove <file>" and says so through
+`#confirmStatus`; the second tap is the editor's own Remove, unchanged. It
+disarms on a tap or focus anywhere else, when the row empties, and on a long
+safety net, never a short race (SK-AUD-018). It is a capture listener on the
+row, so neither editor's Remove had to change; the Pad's "New Skribl", which
+has already asked on its own arm, goes past the question through `removeNow`.
+It is 36px to the eye and 44px to the touch, and the switch beside it got a
+tap band too: the old census never ran with a loaded drawer open, where the
+switch was 42x25 with nothing around it.
+
+### Drops, on both editors
+
+Both empty rows say "or drop one here". Flip had no drag and drop at all, and
+the Pad's rows took drops only on themselves, so a drop that missed by a few
+pixels opened the file in the tab. The whole card takes the drop now,
+checks it against the same types the picker offers (Flip's change handlers
+never checked, so a video dropped on Flip's music drawer would have
+attached), and hands it to the open drawer's own input -- which is also how
+the re-add card takes a dropped file and gets its settings back. A row that
+holds a file ignores drops, as it ignores taps.
+
+### After review: the bin does not move, Space works, and a draft's switches
+
+Four findings from a review of the built drawer, each now pinned in
+`verify_parity` and each shown red on the tree before its fix:
+
+- The armed bin used to widen into a "Remove?" pill. It grew left over the
+  switch, so after one stray tap on the bin, a tap aimed at the switch
+  removed the file -- the confirmation caused the accident it was there to
+  stop. Armed, the bin now keeps its 36px box (the icon goes red on a red
+  tint) and the subtitle line asks "Tap the bin again to remove". The check
+  compares the switch's box before and after arming and asks what is painted
+  at its old centre.
+- Space did nothing on the new add button or on either switch: the Pad's
+  grab-pan and Flip's play/stop both took Space at the window. A control
+  reached by keyboard (`:focus-visible`) now keeps Space
+  (`SkriblCanvasZoom.ownsSpace`). A button that kept focus after a mouse
+  click does not, so clicking a tool and then holding Space still pans on the
+  Pad and still plays on Flip.
+- On the Pad, a switch left off survived opening a draft, so the row said
+  "Hidden · Fill" over a photo that was painted and would be posted. A Pad
+  draft stores no switch, so opening one turns both switches back on
+  (`resetMediaForLoad`). This bug is older than the redesign; the new row
+  text is what made it say something false.
+- A file dropped on a row that already holds one is still not taken, but the
+  page now says why ("Remove the photo first to add another"): it had
+  already shown the copy cursor.
+
+The owner's notes: Flip's drawer footers went. The music footer repeated the
+hint ("Loops while you Flip -- one track for the whole animation"), so
+Flip's music hint now says "it loops under every page", which is the only
+thing the footer added. The photo footer said where the picture sits, and
+the loaded row already says that. An empty drawer says its title and its hint
+and nothing else. The hint uses `text-wrap: balance`, so where it wraps (the
+Pad's music hint wraps at 360 and 375 in this box's font) it no longer
+leaves "drawing" alone on the second line.
+
+### Words
+
+"Add an image" is "Add a photo" everywhere, including How it works (the
+`verify_helpclaims` claim is renamed with the pill), which now also says a
+file can be dropped and that the bin asks once. Two help sentences that still
+sent people to an "Image" tab and "Image section" name the Photo tab and the
+Background image section. The hint lists the common formats, a friendly
+subset of what is accepted.
+
+### Not verifiable here
+
+There is no WebKit in this container. On an iPhone the Pad's restored track
+fills its row in `loadedmetadata`, which iOS defers until playback is asked
+for, so a restored track's row may read "Add music" until then; the owner's
+phone is the only place to see it. The thumbnail reuses the photo's own URL;
+whether iOS shares the decoded bitmap cannot be measured here either.
+
+## After v317 -- the eyedropper becomes the lens, and a new drawing starts purple
+
+Two owner-approved changes, both editors.
+
+### A new drawing starts in Skribl purple
+
+The owner: "change the starting color on the pad and flip to the purple that
+is pad's signature color". That is `#7c5cff`, the accent. It is now the FIRST
+preset in `lib/palette.js` ("Skribl purple"), because the first preset is the
+starting colour: Pad marks it with `selectFirst` and Flip rings it through
+`setColor(color)` at start-up, so the swatch a new drawing starts on is ringed
+and the pen button's swoosh is inked in it. The palette's own header argues
+against colours lifted from the chrome; this one is the stated exception, and
+the header says so. Drafts do not store a pen colour, so no saved drawing
+changes. `verify_parity` pins the starting colour, the single ringed swatch
+and the swoosh ink on both editors.
+
+### The lens (option C of three mocks)
+
+What it replaced had three faults, all seen on a phone. Arming veiled the
+colour drawer and took the armed button with it, so nothing on screen said
+the next touch would pick (the Pad showed a 2.8s toast, Flip nothing). The
+loupe floated above the finger with nothing tying it to the point it read. And
+the finger sat on the pixel being sampled.
+
+* **Arming is visible.** The lens lands on the drawing at once, at the last
+  point the pen touched or else the middle of the canvas, and a glass pill at
+  the top of the canvas says what to do ("Drag the lens to pick" on touch,
+  "Click your drawing to pick a colour" otherwise) with a Cancel. It is
+  announced once through a polite live region. The pill's words let presses
+  through, so it never blocks a pick near the top; when the lens or its chip
+  comes up to it, it moves to the bottom of the canvas (see the second pass).
+* **The lens sits on the point it reads.** An 11-cell grid at 10x, a two-tone
+  reticle on the centre cell, a split ring (top: the pick, bottom: the pen
+  now, so a no-op shows one colour) and a hex chip. The pick reads the centre
+  cell of the very grid the lens draws, from the composited stage, so what it
+  shows and what it picks cannot disagree.
+* **Touch** drags a handle below the lens, so the finger never covers what is
+  read. A drag anywhere moves the lens by the finger's travel, a tap moves it
+  without picking, and lifting after a drag picks. **Mouse and pen:** the lens
+  follows the pointer and a click picks. **Keyboard:** arrows nudge a pixel,
+  Shift+arrow ten, Enter picks, Escape cancels.
+* **Edges:** the lens stays in the viewport. It slides inward from a side and
+  sideways from the top, never down, because down is where the hand is.
+
+One implementation, in `lib/eyedropper.js`; each editor injects its sampler
+and now its current colour. The lens CSS is outside the player's live set, and
+`player.css` is unchanged. It has no entrance animation or transition, which
+is the whole of reduced motion's ask, and it keeps a media query out of the
+player's derived sheet. `verify_parity` drives it on both editors, with the
+mouse and keyboard on a desktop and CDP touch on a 3x phone. Its armed-cursor
+check was changed deliberately from `crosshair` to `none` plus the lens being
+painted.
+
+Fixtures that measured ink by whiteness (`verify_beading`, `verify_liquify`,
+`verify_flipmotion`, `verify_player_isolation`) got white for free from the
+old starting pen; each now sets white on purpose and says why. `verify_fill`
+asserted `red > 200`, which only ever meant "the white pen", and now asserts
+the fill matches the pen colour read from the page.
+
+### The lens, second pass (the owner's eye and review)
+
+* **The handle is a grabber bar**, not three dots: three dots is this app's
+  menu glyph and read as "more options".
+* **The light pill is near-opaque white.** The drawing under it is dark in
+  both themes, so the light glass went a muddy mid-grey there and Cancel's ink
+  fell to 2.85:1. It never fades either: the first version dimmed it to 0.3
+  when the lens came near, which made the only way out on a phone (the
+  eyedropper button is veiled with its drawer) weakest at the moment of
+  arming, and it painted over the hex chip. Now the pill moves to the bottom
+  of the canvas, and the chip goes beside the lens rather than under the hand.
+* **Nothing clips the lens.** It was already fixed to `<body>`; the Flip
+  screenshot read as clipped where the ring crossed the card's edge. The check
+  now probes inside the rim at the canvas edges with `elementFromPoint`.
+* **The reticle sits on the point even when the viewport nudges the lens**:
+  the grid is laid out around the point, off-centre, instead of a centred
+  reticle beside a mark (two answers to one question). The mark remains only
+  when the top edge carries the lens clear of the point. Grid and reticle are
+  drawn in device pixels, so they are crisp at 1x and 1.25x, which is the
+  owner's Windows desktop.
+* **A pinch is not a pick.** A second finger while a finger aims on the
+  drawing abandons the aim and keeps the lens on its drawing point through the
+  zoom. It used to pick the background wherever finger one lifted.
+* **The pick ends when the drawing changes:** undo, redo, a page change,
+  playback (Flip's Space too), and on the Pad a tool switch, as Flip already
+  did. Every disarm restores the Pad's locked-canvas cursor. A right-click is
+  swallowed on both editors; it used to pick on Flip.
+* **Focus:** arming moves it to the pill, a named group where arrows and
+  Enter work and Tab reaches Cancel. Ending the pick hands it back to the
+  control that armed it, or to the pen button if a pick closed that drawer.
+  The live region exists before it speaks, and a pick is announced.
+* **Forced colours:** edges are transparent outlines and the grip is a border,
+  which that mode repaints in system colours. A `forced-colors` block would
+  have been carried into `player.css` whole.
+* The stage is copied once per arm. Flip's `paintArtwork` re-rasterises the
+  page on each call, about 5ms on a busy page on a desktop, which was too much
+  per lens frame on a phone.
+
+`verify_parity` pins each one on both editors. Each check went red on the
+pre-fix tree or on its own mutation, except Pad's right-click and Flip's tool
+switch, which were already right. `player.css` is unchanged.

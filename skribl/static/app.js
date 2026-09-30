@@ -216,7 +216,7 @@ let hasContent = false;
 // user starts a new recording or clears the canvas. This keeps a finished
 // Skribl = base snapshot + recorded strokes, with no ambiguous extra layer.
 let finishedRecording = false;
-let color = '#ffffff';
+let color = '#7c5cff';   // Skribl purple: the first preset in lib/palette.js, ringed by selectFirst
 let size = 5;
 let tool = 'pen';
 
@@ -873,6 +873,9 @@ if (typeof window !== 'undefined') window.SkriblPadTools = toolShelf;
 
 function setTool(nextTool) {
   tool = nextTool;
+  // Leaving for another tool ends a colour pick, as on Flip: the lens and
+  // its "Click your drawing" pill would otherwise sit over an eraser.
+  if (pickingColor) stopPicking();
   const penBtn = document.getElementById('penToolBtn');
   // 'select' is still accepted by name: SkriblSelectTool is loaded on Pad and
   // other code may still ask for the tool. It has no registry entry and no
@@ -1727,6 +1730,7 @@ function editorSeek(frac) {
 
 playBtn.addEventListener('click', () => {
   if (recording) return;   // can't preview mid-take (Play is hidden while recording; guard anyway)
+  if (pickingColor) stopPicking();   // no lens over the replay
   stopLoopPreview();
   if (playing) { stopPlayback(); return; }
   playTimeline = buildPlaybackTimeline();
@@ -2165,7 +2169,6 @@ function drawWaveform(audioBuffer) {
 }
 
 const musicUploadBtn = _authoringCtl('musicUploadBtn');
-const musicBtnLabel = document.getElementById('musicBtnLabel');
 const musicDetail = document.getElementById('musicDetail');
 const musicTabDot = document.getElementById('musicTabDot');
 
@@ -3186,7 +3189,10 @@ function resetMediaForLoad() {
     if (musicDetail) musicDetail.hidden = true;
     if (musicInput) musicInput.value = '';
     if (musicUploadBtn) musicUploadBtn.classList.remove('loaded');
-    if (musicBtnLabel) musicBtnLabel.textContent = 'Add music';
+    // A draft stores no switch: what it saved plays. A switch left off by the
+    // last session would call the draft's track "Muted" and silence it.
+    if (typeof resetMusicToggle === 'function') resetMusicToggle();
+    if (typeof padMusicRow === 'function') padMusicRow();
     if (musicTabDot) musicTabDot.hidden = true;
     if (musicRemove) musicRemove.hidden = true;
     if (waveformCtx) waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
@@ -3209,8 +3215,10 @@ function resetMediaForLoad() {
   photoBlur_ = 0;
   if (!document.body.classList.contains('player-mode')) {
     photoUploadBtn.classList.remove('loaded');
-    const _pLabel = document.querySelector('#photoUploadBtn span');
-    if (_pLabel) _pLabel.textContent = 'Add a photo';
+    // ...and the draft's photo is shown (loadSkribl sets it visible), so a
+    // switch left off would have its row say "Hidden" over a painted photo.
+    if (typeof resetPhotoToggle === 'function') resetPhotoToggle();
+    if (typeof padPhotoRow === 'function') padPhotoRow();
     for (const _id of ['photoDetail', 'photoTabDot', 'photoRemove']) {
       const _e = document.getElementById(_id);
       if (_e) _e.hidden = true;
@@ -3362,6 +3370,7 @@ function loadSkribl(data) {
       const _pd = document.getElementById('photoDetail');
       if (_pd) _pd.hidden = false;
       if (photoUploadBtn) photoUploadBtn.classList.add('loaded');
+      if (typeof padPhotoRow === 'function') padPhotoRow();
       const _ptd = document.getElementById('photoTabDot');
       if (_ptd) _ptd.hidden = false;
       const _prm = document.getElementById('photoRemove');
@@ -3425,7 +3434,7 @@ function loadSkribl(data) {
           if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
           if (musicDetail) musicDetail.hidden = false;
           if (musicUploadBtn) musicUploadBtn.classList.add('loaded');
-          if (musicBtnLabel) musicBtnLabel.textContent = 'Loaded from draft';
+          if (typeof padMusicRow === 'function') padMusicRow();
           if (musicTabDot) musicTabDot.hidden = false;
           const _mr = document.getElementById('musicRemove');
           if (_mr) _mr.hidden = false;

@@ -10,7 +10,8 @@
 // Loaded right after app.js. It declares the two functions app.js reaches by
 // name -- paintPenSwoosh (updateCurrentColorChip) and syncMediaTabs (the photo
 // and music drawer hooks) -- and reads the globals app.js declares: size,
-// color, strokeOpacity, bgColor and _padDrawerCtl.
+// color, strokeOpacity, bgColor and _padDrawerCtl. It also hands the media
+// card's file drops to the open drawer.
 
 const paintPenSwoosh = (window.SkriblPenSwoosh && window.SkriblPenSwoosh.wire)
   ? window.SkriblPenSwoosh.wire({
@@ -25,3 +26,14 @@ const _mediaTabs = (window.SkriblMediaTabs && _padDrawerCtl) ? window.SkriblMedi
   dot: 'mediaTabDot', sources: ['photoTabDot', 'musicTabDot']
 }) : null;
 function syncMediaTabs(name) { if (_mediaTabs) _mediaTabs.sync(name); }
+// A file dropped anywhere on the media card goes to the open drawer's input,
+// once it is the right kind of file (lib/pendingcards.js bindDrops, which Flip
+// calls too). The rows used to take drops themselves, and a drop that missed
+// one opened the file in the tab.
+if (window.SkriblPendingCards && window.SkriblPendingCards.bindDrops && _padDrawerCtl) {
+  window.SkriblPendingCards.bindDrops({
+    card: 'mediaCard', current: () => _padDrawerCtl.current(),
+    inputs: { photo: 'photoInput', music: 'musicInput' },
+    say: (msg, anchor) => showToast(msg, anchor)
+  });
+}

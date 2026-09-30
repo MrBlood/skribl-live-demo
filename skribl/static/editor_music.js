@@ -113,36 +113,29 @@ dragZoomHandle(zoomHandleEnd, false);
   });
 })();
 
+// The file row: the drop area until a track is added, then the track itself
+// (lib/pendingcards.js renderRow writes its name and "Loops under the drawing
+// · 0:08"). Called after every change this drawer makes to them, and by
+// app.js's loadSkribl through a typeof guard, because the player loads app.js
+// and has no drawer.
+function padMusicRow() {
+  if (!window.SkriblPendingCards || !window.SkriblPendingCards.renderRow) return;
+  window.SkriblPendingCards.renderRow('music', {
+    name: audioEl && audioEl._fileName, dur: audioDuration, on: musicEnabled
+  });
+}
+
+// Drops are taken by the whole media card (lib/pendingcards.js bindDrops,
+// wired in editor_bar.js), not by the row.
 musicUploadBtn.addEventListener('click', (e) => {
   if (e.target.closest('.dropzone-remove')) return;
   if (!musicUploadBtn.classList.contains('loaded')) {
     musicInput.click();
   }
 });
-
-musicUploadBtn.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  if (!musicUploadBtn.classList.contains('loaded')) {
-    musicUploadBtn.classList.add('drag-over');
-  }
-});
-
-musicUploadBtn.addEventListener('dragleave', () => {
-  musicUploadBtn.classList.remove('drag-over');
-});
-
-musicUploadBtn.addEventListener('drop', (e) => {
-  e.preventDefault();
-  musicUploadBtn.classList.remove('drag-over');
-  if (musicUploadBtn.classList.contains('loaded')) return;
-  const file = e.dataTransfer.files[0];
-  const err = validateMusicFile(file);
-  if (err) { showToast(err, musicUploadBtn); return; }
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  musicInput.files = dt.files;
-  musicInput.dispatchEvent(new Event('change'));
-});
+// The switch's own handler (app.js) runs first and flips musicEnabled; this
+// re-reads the row, which says "Muted" while the track is switched off.
+bindEl('musicToggle', 'click', padMusicRow);
 
 musicInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
@@ -180,11 +173,11 @@ musicInput.addEventListener('change', async (e) => {
     trimEnd = Math.min(audioDuration, 20);
     musicDetail.hidden = false;
     musicUploadBtn.classList.add('loaded');
-    musicBtnLabel.textContent = file.name;
     resetMusicToggle();
     musicTabDot.hidden = false;
     document.getElementById('musicRemove').hidden = false;
     updateTrimUI();
+    padMusicRow();
     // "Just works" default: if a recording already exists, size the loop to the
     // drawing's length so the music and the replay finish together — no manual
     // trimming for the common case. Fine-tune stays one tap away. Reuses the
@@ -274,7 +267,7 @@ musicRemove.addEventListener('click', (e) => {
   musicDetail.hidden = true;
   musicInput.value = '';
   musicUploadBtn.classList.remove('loaded');
-  musicBtnLabel.textContent = 'Add music';
+  padMusicRow();
   musicTabDot.hidden = true;
   document.getElementById('musicRemove').hidden = true;
   waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);

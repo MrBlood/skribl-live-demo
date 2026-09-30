@@ -299,7 +299,7 @@
       <button class="t-btn" id="redo" title="Redo stroke" aria-label="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
       {# ONE MEDIA BUTTON, as on the Pad: Image and Music were two buttons here.
          lib/mediatabs.js opens whichever was used last; the Photo | Music tabs
-         sit above the open drawer; the dot mirrors the two tab dots. #}
+         head the open drawer's card; the dot mirrors the two tab dots. #}
       <button type="button" class="tool-open" id="mediaOpenBtn" aria-label="Photo and music" title="Photo and music behind your drawing" aria-expanded="false">
         {% include 'skribl/_skribl_media_glyph.html' %}
         <span id="mediaTabDot" class="tab-dot" hidden></span>
@@ -329,17 +329,19 @@
          untouched at full size, and the page scrolls to reveal the opened drawer
          (exactly like the Pad's docked tab panels). -->
     <div class="flip-drawers" id="flipDrawers">
-      {% include 'skribl/_skribl_media_tabs.html' %}
       <!-- Draw drawer (shared partial — Pad + Flip) -->
       {% with kind='flip' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
 
-      <!-- Image drawer (drop-up, like the Draw menu). One image per animation. -->
-      <!-- Image drawer (shared partial — Pad + Flip) -->
-      {% with kind='flip' %}{% include 'skribl/_skribl_image_drawer.html' %}{% endwith %}
-
-      <!-- Music drawer (drop-up) — the Pad's full music component. One loop per animation. -->
-      <!-- Music drawer (shared partial — Pad + Flip) -->
-      {% with kind='flip' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
+      {# THE MEDIA CARD, as on the Pad (see skribl_editor.html): the Photo |
+         Music tabs and the open media drawer are one card. The panels keep
+         their role=dialog, and the tablist stays outside them. #}
+      <div class="media-card" id="mediaCard">
+        {% include 'skribl/_skribl_media_tabs.html' %}
+        <!-- Image drawer (shared partial — Pad + Flip). One image per animation. -->
+        {% with kind='flip' %}{% include 'skribl/_skribl_image_drawer.html' %}{% endwith %}
+        <!-- Music drawer (shared partial — Pad + Flip). One loop per animation. -->
+        {% with kind='flip' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
+      </div>
 
     </div>
 

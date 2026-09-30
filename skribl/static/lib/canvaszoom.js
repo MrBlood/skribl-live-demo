@@ -40,6 +40,16 @@
   function typingTarget(el) {
     return !!(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable));
   }
+  /* A control reached BY KEYBOARD owns Space: a switch toggles, a button
+   * presses (WAI-ARIA). Only a keyboard focus -- :focus-visible -- so a button
+   * that kept focus after a mouse click still lets Space grab-pan (and, on
+   * Flip, play). Shared with flip.js's Space-to-play as SkriblCanvasZoom.ownsSpace. */
+  function ownsSpace(el) {
+    if (!el || !el.matches) return false;
+    try {
+      return el.matches('button, [role=switch], [role=tab], [role=button], summary, a[href]') && el.matches(':focus-visible');
+    } catch (e) { return false; }
+  }
 
   function create(opts) {
     opts = opts || {};
@@ -301,7 +311,7 @@
         keys: ['Space'], scope: function () { return view.isZoomed(); } });
     }
     global.addEventListener('keydown', function (e) {
-      if (e.code === 'Space' && !typingTarget(e.target)) {
+      if (e.code === 'Space' && !typingTarget(e.target) && !ownsSpace(e.target)) {
         spaceHeld = true;
         if (spacePans()) {
           wrap.style.cursor = spaceDragging ? 'grabbing' : 'grab';
@@ -389,5 +399,5 @@
     return view;
   }
 
-  global.SkriblCanvasZoom = { create: create };
+  global.SkriblCanvasZoom = { create: create, ownsSpace: ownsSpace };
 })(window);

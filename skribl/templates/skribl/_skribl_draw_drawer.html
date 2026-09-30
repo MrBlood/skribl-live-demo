@@ -4,7 +4,7 @@
    only the genuinely divergent pieces are gated on `kind` ('pad' | 'flip'). All classes
    already live in the shared styles.css both surfaces load. Divergences captured here:
      - root: Flip is a .draw-popout dialog; Pad is a plain .tab-panel
-     - color presets: Pad has 7 fixed dots; Flip has custom + eyedropper + recent only
+     - color presets: built at runtime by lib/palette.js on both (Pad once had fixed dots here)
      - brush input: Pad #brushSizeRange (1–30/5); Flip #size (2–34/7) + #sizeVal
      - (every seg below carries ONE .seg-slider pill, on both surfaces;
        lib/segslider.js places it. Pad used to inject a second one in JS.)

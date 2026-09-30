@@ -954,6 +954,8 @@ if (typeof pendingMusicMeta !== 'undefined') {
       setZoomSliderUI();
       applyPhotoPosition();
       updateRepositionUI();
+      // The file row says the fit this just brought back (editor_photo.js).
+      if (typeof padPhotoRow === 'function') padPhotoRow();
     };
     const onLoad = () => {
       photoBgImg.removeEventListener('load', onLoad);

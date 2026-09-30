@@ -23,6 +23,7 @@ and Flip should not converge on one interface — Pad is meant to be immediate,
 Flip is meant to be an animation tool — so the point is that differences are
 declared rather than accidental.
 """
+import base64
 import math
 import os
 import struct
@@ -751,8 +752,19 @@ with sync_playwright() as p:
     pad.click("#eyedropperBtn"); flip.click("#eyedropperBtn")
     pad.wait_for_timeout(250); flip.wait_for_timeout(250)
     pc, fc = pad.evaluate(cursor_of, "#canvas"), flip.evaluate(cursor_of, "#pad")
-    check("and both say so with the cursor, not only a button class",
-          pc == fc == "crosshair", f"pad {pc!r}, flip {fc!r}")
+    # CHANGED DELIBERATELY with the lens: this asserted "crosshair". The lens now
+    # follows the pointer centred on it and IS the cursor, so the OS cursor
+    # hides over the canvas -- and the armed state is said by the lens being
+    # PAINTED on the drawing, which a hidden cursor alone could not claim.
+    lens_painted = """() => { const l = document.querySelector('.eyedropper-lens');
+        if (!l || l.hidden) return false; const r = l.getBoundingClientRect();
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        l.style.pointerEvents = 'auto'; const hit = document.elementFromPoint(x, y); l.style.pointerEvents = '';
+        return !!hit && l.contains(hit); }"""
+    check("and both say so with the lens on the drawing (the cursor hides under it), not only a button class",
+          pc == fc == "none" and pad.evaluate(lens_painted) and flip.evaluate(lens_painted),
+          f"pad cursor {pc!r} lens painted {pad.evaluate(lens_painted)}, "
+          f"flip cursor {fc!r} lens painted {flip.evaluate(lens_painted)}")
 
     # ---- media --------------------------------------------------------------
     # The photo and music controllers are the largest duplicated pair — 350 and
@@ -772,6 +784,28 @@ with sync_playwright() as p:
     check("loading a photo marks the tab on both",
           pad.evaluate(vis, "photoTabDot") and flip.evaluate(vis, "photoTabDot"),
           f"pad={pad.evaluate(vis, 'photoTabDot')}, flip={flip.evaluate(vis, 'photoTabDot')}")
+
+    # THE FILE ROW (the drawer redesign): once a photo is in, the drop area
+    # gives way to the file -- its name, what it is doing, and a thumbnail of
+    # the picture itself -- and the green box it used to be is gone. Asked of
+    # what is PAINTED where it matters: the thumbnail is found at its own
+    # centre, after bringing it on screen.
+    PROW = """() => { const g = (id) => document.getElementById(id), t = g('photoThumb'), z = g('photoUploadBtn');
+        t.scrollIntoView({ block: 'center' });
+        const r = t.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const cs = getComputedStyle(z), vis = (id) => g(id).offsetParent !== null;
+        return { name: g('photoBtnLabel').textContent, meta: g('photoBtnMeta').textContent,
+                 thumb: t.complete && t.naturalWidth === 8 && at === t, add: vis('photoAddBtn'),
+                 box: cs.backgroundColor === 'rgba(0, 0, 0, 0)' && cs.borderTopStyle === 'none',
+                 controls: vis('photoToggle') && vis('photoRemove') }; }"""
+    _pr, _fr = pad.evaluate(PROW), flip.evaluate(PROW)
+    check("a loaded photo's row names the file and says 'Behind the drawing · Fill', on both",
+          all(r["name"] == "t.png" and r["meta"] == "Behind the drawing · Fill" for r in (_pr, _fr)),
+          f"pad {_pr}, flip {_fr}")
+    check("...shows the picture itself, painted, where the drop area was",
+          all(r["thumb"] and not r["add"] for r in (_pr, _fr)), f"pad {_pr}, flip {_fr}")
+    check("...as a quiet row, not the green box, with its switch and its bin",
+          all(r["box"] and r["controls"] for r in (_pr, _fr)), f"pad {_pr}, flip {_fr}")
     check("and reveals the same fit choices on both",
           pad.text_content("#photoFitGroup").strip()
           == flip.text_content("#photoFitGroup").strip(),
@@ -790,6 +824,33 @@ with sync_playwright() as p:
     check("choosing a different fit moves the choice, not adds to it",
           pad.evaluate(fit_sel) == 1 and flip.evaluate(fit_sel) == 1,
           f"pad {pad.evaluate(fit_sel)}, flip {flip.evaluate(fit_sel)}")
+    _pm = (pad.text_content("#photoBtnMeta"), flip.text_content("#photoBtnMeta"))
+    check("...and the file row says the new fit on both",
+          _pm == ("Behind the drawing · Stretch",) * 2, f"pad {_pm[0]!r}, flip {_pm[1]!r}")
+
+    # SWITCHED OFF, the file is still there: the row keeps its name and its
+    # picture, and says "Hidden" rather than "Behind the drawing", so the words
+    # never contradict the switch beside them. The Fit tap after the switch is
+    # a re-render the row has to survive (the Pad's used to key on whether the
+    # picture was displayed, which switching off turns off).
+    OFF = """() => { const g = (id) => document.getElementById(id), t = g('photoThumb');
+        t.scrollIntoView({ block: 'center' });
+        const r = t.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { sw: g('photoToggle').getAttribute('aria-checked'), name: g('photoBtnLabel').textContent,
+                 shown: g('photoBtnLabel').offsetParent !== null, meta: g('photoBtnMeta').textContent,
+                 thumb: at === t, add: g('photoAddBtn').offsetParent !== null }; }"""
+    for _pg in (pad, flip):
+        _pg.click("#photoToggle"); _pg.wait_for_timeout(150)
+        _pg.click('.photo-fit-btn[data-fit="contain"]'); _pg.wait_for_timeout(250)
+    _po, _fo = pad.evaluate(OFF), flip.evaluate(OFF)
+    check("a switched-off photo keeps its row, and the row says it is hidden, on both",
+          all(r["sw"] == "false" and r["name"] == "t.png" and r["shown"] and r["meta"] == "Hidden · Fit"
+              and r["thumb"] and not r["add"] for r in (_po, _fo)), f"pad {_po}, flip {_fo}")
+    for _pg in (pad, flip):
+        _pg.click("#photoToggle"); _pg.wait_for_timeout(150)
+    _pb = (pad.text_content("#photoBtnMeta"), flip.text_content("#photoBtnMeta"))
+    check("...and switched back on it is behind the drawing again",
+          _pb == ("Behind the drawing · Fit",) * 2, f"pad {_pb[0]!r}, flip {_pb[1]!r}")
 
     opacity = """() => { const r = document.querySelector('.photo-opacity-row input[type=range]');
         return r ? { min: r.min, max: r.max, step: r.step, value: r.value } : null; }"""
@@ -806,6 +867,39 @@ with sync_playwright() as p:
     check("loading music marks the tab on both",
           pad.evaluate(vis, "musicTabDot") and flip.evaluate(vis, "musicTabDot"),
           f"pad={pad.evaluate(vis, 'musicTabDot')}, flip={flip.evaluate(vis, 'musicTabDot')}")
+
+    # The music row: the name, and the track's length -- the same length both
+    # editors print under the waveform (#trimEndLabel) -- and a tile whose note
+    # sits on the selected tab's own tint, measured live from the tab so a
+    # retuned purple moves both together.
+    MROW = """() => { const g = (id) => document.getElementById(id), tile = document.querySelector('#musicUploadBtn .dz-tile');
+        const tab = document.querySelector('.media-tab[aria-selected="true"]');
+        tile.scrollIntoView({ block: 'center' });
+        const r = tile.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const a = getComputedStyle(tile), b = getComputedStyle(tab);
+        return { name: g('musicBtnLabel').textContent, meta: g('musicBtnMeta').textContent,
+                 end: g('trimEndLabel').textContent, painted: !!at && tile.contains(at),
+                 tint: a.backgroundColor === b.backgroundColor && a.color === b.color,
+                 tile: [a.backgroundColor, a.color], tab: [b.backgroundColor, b.color] }; }"""
+    _pmr, _fmr = pad.evaluate(MROW), flip.evaluate(MROW)
+    check("a loaded track's row names it and gives the length the waveform shows, on both",
+          all(r["name"] == "t.wav" and r["meta"] == "Loops under the drawing · " + r["end"] for r in (_pmr, _fmr))
+          and _pmr["meta"] == _fmr["meta"] == "Loops under the drawing · 0:01", f"pad {_pmr}, flip {_fmr}")
+    check("...and its note is painted on the selected tab's tint, on both",
+          all(r["painted"] and r["tint"] for r in (_pmr, _fmr)), f"pad {_pmr}, flip {_fmr}")
+    # An element's duration can be Infinity or NaN (a stream, a file the
+    # browser cannot measure yet); m:ss of either is "Infinity:NaN". The row
+    # shows no length rather than a wrong one. Driven through the shared
+    # renderer with the row loaded, then put back by the editor's own render.
+    NOLEN = """() => { const R = window.SkriblPendingCards, out = [];
+        for (const d of [Infinity, NaN, 0, -1]) { R.renderRow('music', { name: 't.wav', dur: d }); out.push(document.getElementById('musicBtnMeta').textContent); }
+        return out; }"""
+    _pn, _fn = pad.evaluate(NOLEN), flip.evaluate(NOLEN)
+    pad.evaluate("() => padMusicRow()"); flip.evaluate("() => syncMusicUI()")
+    check("a track whose length is not a real number shows no length, on both",
+          _pn == _fn == ["Loops under the drawing"] * 4
+          and pad.text_content("#musicBtnMeta") == flip.text_content("#musicBtnMeta") == "Loops under the drawing · 0:01",
+          f"pad {_pn}, flip {_fn}")
     check("the trim handles report the same start on both",
           pad.text_content("#handleStart").strip() == flip.text_content("#handleStart").strip(),
           f"pad {pad.text_content('#handleStart').strip()!r} against "
@@ -844,6 +938,15 @@ with sync_playwright() as p:
           pn is not None and fn is not None and pn == fn,
           f"pad {pn}, flip {fn} — a nudge step that differs by surface is drift "
           "a user meets as a loop that will not line up")
+
+    for _pg in (pad, flip):
+        _pg.evaluate("() => document.getElementById('musicUploadBtn').scrollIntoView({ block: 'center' })")
+        _pg.click("#musicToggle"); _pg.wait_for_timeout(150)
+    _mo = (pad.text_content("#musicBtnMeta"), flip.text_content("#musicBtnMeta"))
+    for _pg in (pad, flip):
+        _pg.click("#musicToggle"); _pg.wait_for_timeout(150)
+    check("a switched-off track keeps its row, and the row says it is muted, on both",
+          _mo == ("Muted · 0:01",) * 2, f"pad {_mo[0]!r}, flip {_mo[1]!r}")
 
     # ---- segmented pills land where they claim to --------------------------
     # Slider positioning exists three times (attachSegSlider in app.js, another
@@ -1303,6 +1406,879 @@ with sync_playwright() as p:
             check(f"{_route}: ...and an abandoned pick (Escape) puts the open colour panel back on screen, top to bottom",
                   bool(_back) and _back["colours"] and _back["end"], str(_back))
         _q.close()
+
+    # ---- the media card -------------------------------------------------------
+    # THE DRAWER REDESIGN (option A, owner-approved). The Photo | Music tabs and
+    # the open drawer were two glass slabs, 8px apart and of different widths
+    # (520 against 694 at a desktop width), each with its own rim and shadow.
+    # They are ONE card now: #mediaCard wraps the strip and both panels and
+    # wears the glass; the panel inside goes clear, and the strip sits inset in
+    # the card as a track. Fresh, empty drawers, so a tall loaded panel cannot
+    # scroll the strip off the top of a phone (lib/drawerdetent.js reveals the
+    # panel's END); and every point is on screen before it is asked about.
+    print("\nPARITY — the Photo | Music tabs and the open drawer are one card, on both")
+    CARD = """(k) => { const g = (id) => document.getElementById(id), card = g('mediaCard'), tabs = g('mediaTabs'), p = g(k + 'Panel');
+        if (!card) return { card: false };
+        card.scrollIntoView({ block: 'start' });
+        const c = card.getBoundingClientRect(), t = tabs.getBoundingClientRect(), r = p.getBoundingClientRect();
+        const ps = getComputedStyle(p), ts = getComputedStyle(tabs), cs = getComputedStyle(card);
+        const inCard = (x, y) => { if (y < 0 || y >= innerHeight) return 'off-screen'; const e = document.elementFromPoint(x, y); return !!e && card.contains(e); };
+        const cx = c.left + c.width / 2, padL = parseFloat(ps.paddingLeft), padR = parseFloat(ps.paddingRight);
+        return { card: true,
+                 parents: [tabs, g('photoPanel'), g('musicPanel')].every(e => e.parentElement === card),
+                 inset: [t.left - c.left, c.right - t.right, t.top - c.top],
+                 content: Math.abs(t.left - (r.left + padL)) <= 0.5 && Math.abs(t.right - (r.right - padR)) <= 0.5,
+                 span: Math.abs(r.left - c.left) <= 0.5 && Math.abs(r.right - c.right) <= 0.5 && Math.abs(r.bottom - c.bottom) <= 0.5,
+                 seam: [inCard(cx, t.bottom + (r.top - t.bottom) / 2), inCard(cx, r.top + 1)],
+                 gap: Math.round(r.top - t.bottom),
+                 glass: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backdropFilter !== 'none',
+                 clear: ps.backgroundColor === 'rgba(0, 0, 0, 0)' && ps.boxShadow === 'none' && ps.backdropFilter === 'none'
+                        && ts.backdropFilter === 'none' };
+    }"""
+    for _route in ("/skribl-pad", "/flip"):
+        for _vw, _vp in (("390", {"width": 390, "height": 844}), ("1280", {"width": 1280, "height": 900})):
+            _q = b.new_page(viewport=_vp)
+            _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+            _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+            _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+            _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            for _k in ("photo", "music"):
+                browsing.pad_drawer(_q, _k)
+                _cur = _q.evaluate(browsing._PAD_CUR)
+                _c = _q.evaluate(CARD, _k)
+                check(f"{_route} at {_vw}, {_k}: the tabs and the open drawer share one parent card",
+                      _cur == _k and _c["card"] and _c["parents"], f"open={_cur!r} {_c}")
+                if not _c["card"]:
+                    continue
+                check(f"{_route} at {_vw}, {_k}: the strip sits inset in the card and lines up with the drawer's content",
+                      all(abs(v - 16) <= 0.5 for v in _c["inset"]) and _c["content"] and _c["span"], str(_c))
+                check(f"{_route} at {_vw}, {_k}: the seam between tabs and drawer is painted by the card, not the page",
+                      _c["seam"] == [True, True], str(_c))
+                check(f"{_route} at {_vw}, {_k}: the card wears the glass and the drawer inside it is clear",
+                      _c["glass"] and _c["clear"], str(_c))
+            if _route == "/flip":
+                _dlg = _q.evaluate("""() => { const p = document.getElementById('photoPanel');
+                    return { role: p.getAttribute('role'), label: p.getAttribute('aria-label'),
+                             tabsInDialog: !!document.getElementById('mediaTabs').closest('[role=dialog]') }; }""")
+                check(f"/flip at {_vw}: the drawers are still named dialogs, and the tablist is outside them",
+                      _dlg == {"role": "dialog", "label": "Background image", "tabsInDialog": False}, str(_dlg))
+            _q.click("#mediaOpenBtn"); _q.wait_for_timeout(400)
+            _gone = _q.evaluate("() => { const c = document.getElementById('mediaCard'); return { open: (" + browsing._PAD_CUR + ")(), display: c ? getComputedStyle(c).display : null }; }")
+            check(f"{_route} at {_vw}: closing the drawer takes the whole card with it",
+                  _gone["open"] is None and _gone["display"] == "none", str(_gone))
+            _q.close()
+
+    # ---- the empty drop area ---------------------------------------------------
+    # Until a file is added the row is one quiet drop area: a real button that
+    # fills it (a Tab stop the old row never had), a title and one line of
+    # hint. No switch, no bin, no adjustments until there is a file for them to
+    # act on. The words are read from the RENDERED DOM, so a comment or a
+    # DECISIONS entry that quotes the old title cannot pass or fail this.
+    print("\nPARITY — the empty drop area, on both")
+    EMPTY = """(k) => { const g = (id) => document.getElementById(id), add = g(k + 'AddBtn');
+        if (!add) return { add: false };
+        add.scrollIntoView({ block: 'center' });
+        const r = add.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const off = [k + 'Toggle', k + 'Remove', k + 'Detail', k + 'BtnLabel'].concat(k === 'photo' ? ['photoThumb'] : [])
+          .filter(id => g(id) && g(id).offsetParent !== null);
+        return { add: true, painted: !!at && add.contains(at), title: add.querySelector('.dz-title').textContent,
+                 hint: add.querySelector('.dz-hint').textContent, showing: off,
+                 said: g(k + 'Panel').innerText.split('\\n').map(t => t.trim()).filter(Boolean) }; }"""
+    # Flip's music hint says "every page" where the Pad's says "your drawing":
+    # that was all Flip's old footer ("one track for the whole animation") added.
+    WORDS = {"/skribl-pad": {"photo": ("Add a photo", "JPG, PNG, GIF or WebP · or drop one here"),
+                             "music": ("Add music", "MP3, WAV, M4A or OGG · it loops under your drawing")},
+             "/flip": {"photo": ("Add a photo", "JPG, PNG, GIF or WebP · or drop one here"),
+                       "music": ("Add music", "MP3, WAV, M4A or OGG · it loops under every page")}}
+    for _route, _in in (("/skribl-pad", {"photo": "#photoInput", "music": "#musicInput"}),
+                        ("/flip", {"photo": "#imageInput", "music": "#musicInput"})):
+        _q = b.new_page(viewport={"width": 1280, "height": 900})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        for _k in ("photo", "music"):
+            browsing.pad_drawer(_q, _k)
+            _e = _q.evaluate(EMPTY, _k)
+            check(f"{_route}, {_k}: the empty row is one painted add button with its title and hint",
+                  _q.evaluate(browsing._PAD_CUR) == _k and _e["add"] and _e["painted"]
+                  and (_e["title"], _e["hint"]) == WORDS[_route][_k], str(_e))
+            check(f"{_route}, {_k}: ...and nothing that needs a file shows until there is one",
+                  _e["add"] and not _e["showing"], str(_e))
+            # ONE IDEA, SAID ONCE: the empty drawer says its title and its hint
+            # and nothing else. Flip's footers ("Loops while you Flip -- one
+            # track for the whole animation") said the hint a second time.
+            check(f"{_route}, {_k}: the empty drawer says its title and its hint, and nothing else",
+                  _e["add"] and _e["said"] == list(WORDS[_route][_k]), str(_e.get("said")))
+            # Each picker is answered (with nothing) before the next is asked
+            # for: Chromium opens one file chooser at a time.
+            _chosen = []
+            try:
+                with _q.expect_file_chooser(timeout=3000) as _fc:
+                    _q.click(f"#{_k}AddBtn")
+                _fc.value.set_files([])
+                _chosen.append("click")
+            except Exception:
+                pass
+            try:
+                _q.focus(f"#{_k}AddBtn")
+                with _q.expect_file_chooser(timeout=3000) as _fc:
+                    _q.keyboard.press("Enter")
+                _fc.value.set_files([])
+                _chosen.append("Enter")
+            except Exception:
+                pass
+            # Space too, by keyboard (the focus is keyboard focus: the Enter
+            # above was the last interaction). Both editors' window Space
+            # handlers -- the Pad's grab-pan, Flip's play -- used to swallow it.
+            _fv = None
+            try:
+                _q.focus(f"#{_k}AddBtn")
+                _fv = _q.evaluate("(k) => document.getElementById(k + 'AddBtn').matches(':focus-visible')", _k)
+                with _q.expect_file_chooser(timeout=3000) as _fc:
+                    _q.keyboard.press("Space")
+                _fc.value.set_files([])
+                _chosen.append("Space")
+            except Exception:
+                pass
+            check(f"{_route}, {_k}: a tap on it, or Enter or Space on it, opens the file picker",
+                  _chosen == ["click", "Enter", "Space"], f"picker opened by {_chosen} (keyboard focus: {_fv})")
+        _old = _q.evaluate("""() => [document.getElementById('photoPanel').innerText,
+            [...document.querySelectorAll('#helpDrawer .help-pill')].map(e => e.textContent).join('|')]
+            .some(t => t.includes('Add an image'))""")
+        check(f"{_route}: 'Add an image' is gone from the drawer and from How it works",
+              _old is False, "the empty title and the help pill say 'Add a photo'")
+        _q.close()
+
+    # ---- the hint never strands a word --------------------------------------
+    # Where the hint wraps (a phone, and the break point is the FONT's: this
+    # box renders Liberation Sans, the owner's phone SF), it splits evenly --
+    # text-wrap: balance -- instead of leaving one word on a line of its own
+    # ("drawing", at 360 and 375). Lines are read from where each WORD paints.
+    print("\nPARITY — a wrapping hint strands no word, on both")
+    LINES = """(k) => { const h = document.querySelector('#' + k + 'AddBtn .dz-hint'); if (!h) return null;
+        const r = document.createRange(), lines = []; let top = null;
+        const walk = document.createTreeWalker(h, NodeFilter.SHOW_TEXT);
+        for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+          const re = /\\S+/g; let m;
+          while ((m = re.exec(n.data))) {
+            r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length);
+            const t = Math.round(r.getClientRects()[0].top);
+            if (top === null || Math.abs(t - top) > 3) { lines.push([]); top = t; }
+            lines[lines.length - 1].push(m[0]);
+          } }
+        return lines; }"""
+    _strand = []
+    for _route in ("/skribl-pad", "/flip"):
+        for _vw in (360, 375):
+            _ctx = b.new_context(viewport={"width": _vw, "height": 800}, device_scale_factor=2, is_mobile=True, has_touch=True)
+            _q = _ctx.new_page()
+            _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+            _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            for _k in ("photo", "music"):
+                browsing.pad_drawer(_q, _k)
+                _ln = _q.evaluate(LINES, _k)
+                if not _ln or (len(_ln) > 1 and len(_ln[-1]) < 2):
+                    _strand.append(f"{_route} {_vw} {_k}: {_ln}")
+            _ctx.close()
+    check("the empty rows' hints, where they wrap at 360 and 375, never leave one word alone on a line",
+          not _strand, "; ".join(_strand))
+
+    # ---- the bin ------------------------------------------------------------
+    # The red Remove pill is a quiet bin now, and it asks first, as the
+    # saved-drafts bin does: the first tap arms it ("Remove?", in the danger
+    # colour, its name saying what the next tap does, spoken through
+    # #confirmStatus), a tap anywhere else stands it down, and the second tap
+    # removes. REAL clicks throughout, because the defect this guards is a
+    # click that reaches the row behind the bin and opens the file picker.
+    # TWO GUARDS keep it from reaching the row on each editor -- the row's own
+    # handler ignores the bin, and the bin's handler stops the click -- so a
+    # mutation that removes one of them alone stays green here, correctly; the
+    # arming capture on the row (lib/pendingcards.js) is a third for the first
+    # tap. Removing the file hands focus to the add button, never to <body>.
+    print("\nPARITY — the bin asks once, then removes, on both")
+    BIN = """(k) => { const g = (id) => document.getElementById(id), bin = g(k + 'Remove'), t = g('photoThumb');
+        bin.scrollIntoView({ block: 'center' });
+        const r = bin.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const probe = document.createElement('span'); probe.style.color = 'var(--danger)'; document.body.appendChild(probe);
+        const danger = getComputedStyle(probe).color; probe.remove();
+        return { cur: (""" + browsing._PAD_CUR + """)(), loaded: g(k + 'UploadBtn').classList.contains('loaded'),
+                 armed: bin.classList.contains('armed'), label: bin.getAttribute('aria-label'),
+                 said: g('confirmStatus').textContent, text: bin.innerText.trim(),
+                 red: getComputedStyle(bin).color === danger, painted: !!at && bin.contains(at),
+                 add: g(k + 'AddBtn').offsetParent !== null, name: g(k + 'BtnLabel').textContent,
+                 src: k === 'photo' ? t.hasAttribute('src') : null, focus: document.activeElement && document.activeElement.id,
+                 meta: g(k + 'BtnMeta').offsetParent !== null,
+                 ask: (a => a && a.offsetParent !== null ? a.textContent : null)(g(k + 'UploadBtn').querySelector('.dz-ask')),
+                 askRed: (a => !!a && getComputedStyle(a).color === danger)(g(k + 'UploadBtn').querySelector('.dz-ask')) }; }"""
+    # The switch's box, and what is PAINTED at a point (a rect is not a paint).
+    SWBOX = """(k) => { const r = document.getElementById(k + 'Toggle').getBoundingClientRect();
+        return [r.left, r.top, r.width, r.height]; }"""
+    AT = """([x, y]) => { const e = document.elementFromPoint(x, y); return e ? (e.closest('[id]') || e).id : null; }"""
+    FILES = {"photo": {"name": "t.png", "mimeType": "image/png", "buffer": IMG},
+             "music": {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD}}
+    NOUN = {"photo": "the photo", "music": "the track"}
+    for _route, _in in (("/skribl-pad", {"photo": "#photoInput", "music": "#musicInput"}),
+                        ("/flip", {"photo": "#imageInput", "music": "#musicInput"})):
+        _q = b.new_page(viewport={"width": 1280, "height": 900})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _pickers, _handed = [], []
+        _q.on("filechooser", lambda fc, _p=_pickers: _p.append(1))
+        _ok, _why, _moved, _spaced = True, [], [], []
+        for _k in ("photo", "music"):
+            _f = FILES[_k]
+            browsing.pad_drawer(_q, _k)
+            _q.set_input_files(_in[_k], _f)
+            _q.wait_for_function("(k) => document.getElementById(k + 'UploadBtn').classList.contains('loaded')", arg=_k, timeout=20000)
+            _q.wait_for_timeout(300)
+            _q.evaluate(f"() => document.getElementById('{_k}Remove').scrollIntoView({{ block: 'center' }})")
+            _sw0 = _q.evaluate(SWBOX, _k)
+            _q.click(f"#{_k}Remove"); _q.wait_for_timeout(400)   # past the bin's colour transition
+            _a = _q.evaluate(BIN, _k)
+            # Armed, the bin keeps its 36px box -- the icon goes red on a red
+            # tint -- and the QUESTION takes the subtitle's line. The old armed
+            # bin widened into a "Remove?" pill that grew left over the switch,
+            # so the next tap aimed at the switch removed the file.
+            _armed = (_a["loaded"] and _a["armed"] and _a["label"] == f"Tap again to remove {_f['name']}"
+                      and _a["said"] == _a["label"] and _a["text"] == "" and _a["red"] and _a["painted"]
+                      and _a["ask"] == "Tap the bin again to remove" and _a["askRed"] and not _a["meta"])
+            _sw1 = _q.evaluate(SWBOX, _k)
+            _at = _q.evaluate(AT, [_sw0[0] + _sw0[2] / 2, _sw0[1] + _sw0[3] / 2])
+            _still = (all(abs(u - v) < 0.5 for u, v in zip(_sw0, _sw1)) and _at == f"{_k}Toggle")
+            if not _still:
+                _moved.append(f"{_k}: switch {_sw0} -> {_sw1} once armed; its old centre now paints #{_at}")
+            _q.click(f"#{_k}BtnLabel"); _q.wait_for_timeout(150)
+            _d = _q.evaluate(BIN, _k)
+            _stood = _d["loaded"] and not _d["armed"] and _d["label"] == f"Remove {NOUN[_k]}"
+            _q.click(f"#{_k}Remove"); _q.wait_for_timeout(100)
+            _q.click(f"#{_k}Remove"); _q.wait_for_timeout(400)
+            _r = _q.evaluate(BIN, _k)
+            _gone = (_r["cur"] == _k and not _r["loaded"] and _r["add"] and _r["name"] == "" and _r["src"] in (False, None))
+            # And by keyboard: Enter arms, Enter removes, and focus lands on the add button.
+            _q.set_input_files(_in[_k], _f)
+            _q.wait_for_function("(k) => document.getElementById(k + 'UploadBtn').classList.contains('loaded')", arg=_k, timeout=20000)
+            _q.wait_for_timeout(300)
+            _q.focus(f"#{_k}Remove"); _q.keyboard.press("Enter"); _q.wait_for_timeout(100)
+            _ka = _q.evaluate(BIN, _k)
+            _q.keyboard.press("Enter"); _q.wait_for_timeout(400)
+            _kr = _q.evaluate(BIN, _k)
+            _keys = _ka["armed"] and _ka["loaded"] and not _kr["loaded"] and _kr["focus"] == f"{_k}AddBtn"
+            if not (_armed and _stood and _gone and _keys):
+                _ok = False
+                _why.append(f"{_k}: armed={_a} stood-down={_d} removed={_r} keys armed={_ka} removed={_kr}")
+            # ...and the other way: a file attached while the add button has
+            # focus hands focus to the switch, which is what took its place.
+            _q.set_input_files(_in[_k], _f)
+            _q.wait_for_function("(k) => document.getElementById(k + 'UploadBtn').classList.contains('loaded')", arg=_k, timeout=20000)
+            _q.wait_for_timeout(300)
+            _handed.append((_k, _q.evaluate("() => document.activeElement && document.activeElement.id")))
+            # Space flips the switch it was handed to (role=switch, WAI-ARIA),
+            # and flips it back. Both editors' window Space handlers ate it.
+            _s0 = _q.get_attribute(f"#{_k}Toggle", "aria-checked")
+            _q.keyboard.press("Space"); _q.wait_for_timeout(150)
+            _s1 = _q.get_attribute(f"#{_k}Toggle", "aria-checked")
+            _q.keyboard.press("Space"); _q.wait_for_timeout(150)
+            _s2 = _q.get_attribute(f"#{_k}Toggle", "aria-checked")
+            _spaced.append((_k, _s0, _s1, _s2))
+        check(f"{_route}: the bin asks once, then removes -- by pointer and by keyboard",
+              _ok and not _pickers, "; ".join(_why) + (f"; the file picker opened {len(_pickers)} time(s)" if _pickers else ""))
+        check(f"{_route}: a file attached from the focused add button hands focus to the switch that replaced it",
+              _handed == [("photo", "photoToggle"), ("music", "musicToggle")], str(_handed))
+        check(f"{_route}: arming the bin moves nothing -- the switch keeps its box, and its centre is still the switch",
+              len(_moved) == 0, "; ".join(_moved))
+        check(f"{_route}: Space on the keyboard-focused switch turns it off and on again",
+              _spaced == [("photo", "true", "false", "true"), ("music", "true", "false", "true")], str(_spaced))
+        _q.close()
+
+    # ---- drops --------------------------------------------------------------
+    # "or drop one here" is a promise on both editors, and Flip had no drop
+    # handling at all. The card takes the drop, anywhere on it (the tabs, the
+    # edge, the row), checks it is the right kind of file, and hands it to the
+    # drawer's own input. The highlight does not flicker as the pointer crosses
+    # the row's own children. The WRONG kind is refused with nothing attached:
+    # a video on the music drawer, a BMP on the photo drawer -- real PNG and WAV
+    # bytes under the wrong type, so a missing type check shows as an attach.
+    # On the Pad the input's change handler checks the type too (two guards),
+    # so dropping the card's check alone stays green there and goes red on Flip.
+    print("\nPARITY — a file dropped on the drawer is taken, on both")
+    DROP = """async ([k, onto, name, type, b64]) => {
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const dt = new DataTransfer(); dt.items.add(new File([bytes], name, { type }));
+        const el = document.querySelector(onto);
+        const over = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt });
+        el.dispatchEvent(over);
+        const z = document.getElementById(k + 'UploadBtn'), lit = z.classList.contains('drag-over');
+        z.dispatchEvent(new DragEvent('dragleave', { bubbles: true, relatedTarget: z.querySelector('.dz-title') }));
+        const steady = z.classList.contains('drag-over');
+        el.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt }));
+        const unlit = !z.classList.contains('drag-over');
+        for (let i = 0; i < 50 && !z.classList.contains('loaded'); i++) await new Promise(r => setTimeout(r, 100));
+        return { prevented: over.defaultPrevented, lit, steady, unlit, loaded: z.classList.contains('loaded'),
+                 name: document.getElementById(k + 'BtnLabel').textContent,
+                 dot: !document.getElementById(k + 'TabDot').hidden }; }"""
+    import base64 as _b64
+    _PNG64, _WAV64 = _b64.b64encode(IMG).decode(), _b64.b64encode(AUD).decode()
+    for _route in ("/skribl-pad", "/flip"):
+        _q = b.new_page(viewport={"width": 1280, "height": 900})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        browsing.pad_drawer(_q, "photo")
+        _bad_p = _q.evaluate(DROP, ["photo", "#photoUploadBtn", "x.bmp", "image/bmp", _PNG64])
+        _good_p = _q.evaluate(DROP, ["photo", "#photoUploadBtn", "d.png", "image/png", _PNG64])
+        # A row that holds a file takes no drop -- but the page has accepted
+        # the drag (the copy cursor), so it has to say why nothing happened.
+        _MSG = "#toast" if _route == "/skribl-pad" else "#flipChip"
+        _q.evaluate(f"() => {{ const m = document.querySelector('{_MSG}'); if (m) m.textContent = ''; }}")
+        _full_p = _q.evaluate(DROP, ["photo", "#photoUploadBtn", "e.png", "image/png", _PNG64])
+        _full_said = _q.evaluate(f"() => {{ const m = document.querySelector('{_MSG}'); return m ? m.textContent : null; }}")
+        browsing.pad_drawer(_q, "music")
+        _bad_m = _q.evaluate(DROP, ["music", "#mediaTabs", "x.mp4", "video/mp4", _WAV64])
+        _good_m = _q.evaluate(DROP, ["music", "#mediaTabs", "d.wav", "audio/wav", _WAV64])
+        check(f"{_route}: a file dropped anywhere on the card is taken, and the wrong kind is refused",
+              _bad_p["prevented"] and not _bad_p["loaded"] and not _bad_m["loaded"]
+              and _good_p["loaded"] and _good_p["name"] == "d.png" and _good_p["dot"]
+              and _good_m["loaded"] and _good_m["name"] == "d.wav" and _good_m["dot"],
+              f"photo: bmp {_bad_p}, png {_good_p}; music on the tabs: mp4 {_bad_m}, wav {_good_m}")
+        check(f"{_route}: a file dropped on a row that already holds one is not taken, and the page says why",
+              _full_p["name"] == "d.png" and _full_said == "Remove the photo first to add another",
+              f"row {_full_p}; said {_full_said!r}")
+        check(f"{_route}: the drop area lights while a file is over it, steadily, and goes out on the drop",
+              all(r["lit"] and r["steady"] and r["unlit"] for r in (_good_p, _good_m)),
+              f"photo {_good_p}; music {_good_m}")
+        _q.close()
+
+    # ---- the switch after a draft opens (Pad) --------------------------------
+    # A Pad draft stores no on/off switch: what it saved is what it shows. A
+    # switch left OFF by the session before used to survive the open, so the
+    # row said "Hidden · Fill" over a photo loadSkribl had painted -- and that
+    # captureCurrentFrame would post -- and "Muted" over the draft's own track.
+    # The words are compared with what the page DOES, not with a constant.
+    # (Flip is not asked: applyPayload sets both switches from the payload.)
+    print("\nPARITY — a draft opened over a switched-off row: the row says what the page does (Pad)")
+    _q = b.new_page(viewport={"width": 1280, "height": 900})
+    _q.goto(BASE + "/skribl-pad", wait_until="load"); _q.wait_for_timeout(700)
+    _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+    _q.goto(BASE + "/skribl-pad", wait_until="load"); _q.wait_for_timeout(700)
+    _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    browsing.pad_drawer(_q, "photo")
+    _q.set_input_files("#photoInput", FILES["photo"])
+    _q.wait_for_function("() => document.getElementById('photoUploadBtn').classList.contains('loaded')", timeout=20000)
+    _q.click("#photoToggle"); _q.wait_for_timeout(200)
+    _off = _q.evaluate("() => [document.getElementById('photoBtnMeta').textContent, photoBgImg.style.display]")
+    _q.evaluate("(b64) => loadSkribl({ version: 1, strokes: [], photo: { data: 'data:image/png;base64,' + b64, name: 'd.png', fit: 'cover' } })", _PNG64)
+    _q.wait_for_timeout(800)
+    _ld = _q.evaluate("""() => ({ meta: document.getElementById('photoBtnMeta').textContent, shown: photoBgImg.style.display !== 'none',
+        sw: document.getElementById('photoToggle').getAttribute('aria-checked') })""")
+    check("Pad: a draft's photo opened over a switched-off row is shown, and the row and switch say so",
+          _off[1] == "none" and _off[0].startswith("Hidden")
+          and _ld["shown"] and _ld["meta"].startswith("Behind the drawing") and _ld["sw"] == "true",
+          f"switched off: {_off}; after the draft opened: {_ld}")
+    browsing.pad_drawer(_q, "music")
+    _q.set_input_files("#musicInput", FILES["music"])
+    _q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=20000)
+    _q.wait_for_timeout(300)
+    _q.click("#musicToggle"); _q.wait_for_timeout(200)
+    _moff = _q.evaluate("() => [document.getElementById('musicBtnMeta').textContent, musicEnabled]")
+    _q.evaluate("(b64) => loadSkribl({ version: 1, strokes: [], music: { data: 'data:audio/wav;base64,' + b64, name: 'd.wav' } })", _WAV64)
+    _q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=20000)
+    _q.wait_for_timeout(800)
+    _ml = _q.evaluate("""() => ({ meta: document.getElementById('musicBtnMeta').textContent, on: musicEnabled,
+        sw: document.getElementById('musicToggle').getAttribute('aria-checked') })""")
+    check("Pad: a draft's track opened over a switched-off row plays, and the row and switch say so",
+          _moff[0].startswith("Muted") and _moff[1] is False
+          and _ml["on"] is True and _ml["meta"].startswith("Loops under the drawing") and _ml["sw"] == "true",
+          f"switched off: {_moff}; after the draft opened: {_ml}")
+    _q.close()
+
+    # ---- the re-add card stands in for BOTH faces ------------------------------
+    # A draft that kept a file's settings but not its bytes shows the re-add
+    # card where the row was. It has to hide the whole row -- drop area and file
+    # face alike -- on both editors (verify_amber reads only the row's hidden
+    # property, on Flip's music). And the card takes a dropped file too: the
+    # saved fit comes back with it, and the row says so.
+    print("\nPARITY — the re-add card hides both faces of the row, and takes a drop, on both")
+    for _route in ("/skribl-pad", "/flip"):
+        _q = b.new_page(viewport={"width": 1280, "height": 900})
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        browsing.pad_drawer(_q, "photo")
+        _q.evaluate("() => { pendingPhotoMeta = { name: 'd.png', fit: 'contain' }; refreshPendingCards(); }")
+        _q.wait_for_timeout(150)
+        _rc = _q.evaluate("""() => { const g = (id) => document.getElementById(id), c = g('photoPending');
+            c.scrollIntoView({ block: 'center' });
+            const r = c.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { cur: (""" + browsing._PAD_CUR + """)(), card: !!at && c.contains(at),
+                     hidden: ['photoAddBtn', 'photoBtnLabel', 'photoThumb'].filter(id => g(id).offsetParent !== null) }; }""")
+        check(f"{_route}: the re-add card shows, painted, and neither face of the row is behind it",
+              _rc["cur"] == "photo" and _rc["card"] and not _rc["hidden"], str(_rc))
+        _ra = _q.evaluate(DROP, ["photo", "#photoPending", "d.png", "image/png", _PNG64])
+        _q.wait_for_timeout(700)
+        _meta = _q.evaluate("() => ({ meta: document.getElementById('photoBtnMeta').textContent, card: !document.getElementById('photoPending').hidden })")
+        check(f"{_route}: a file dropped on the re-add card is taken, and the row says the fit it brought back",
+              _ra["loaded"] and _ra["name"] == "d.png" and _meta == {"meta": "Behind the drawing · Fit", "card": False},
+              f"{_ra} {_meta}")
+        _q.close()
+
+    # ---- the starting colour and the lens ---------------------------------
+    # Owner: "change the starting color on the pad and flip to the purple that
+    # is pad's signature color". A fresh editor starts on #7c5cff with that
+    # swatch ringed and the pen button inked in it -- on BOTH, because one
+    # editor starting white while the other starts purple is the drift this
+    # suite exists to catch.
+    print("\nPARITY — a fresh editor starts on Skribl purple, ringed, on both")
+    _lctx = b.new_context(viewport={"width": 1400, "height": 900})
+
+    def _fresh(ctx, route):
+        q = ctx.new_page()
+        q.goto(BASE + route, wait_until="load"); q.wait_for_timeout(600)
+        q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        q.goto(BASE + route, wait_until="load"); q.wait_for_timeout(800)
+        q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        return q
+
+    for _route in ("/skribl-pad", "/flip"):
+        _q = _fresh(_lctx, _route)
+        _st = _q.evaluate("""() => {
+            const dots = [...document.querySelectorAll('#colorGroup .color-dot[data-color]')];
+            const on = [...document.querySelectorAll('#colorGroup .color-dot.active')];
+            const sw = document.getElementById('penSwoosh'); let purple = 0;
+            if (sw && sw.width) { const d = sw.getContext('2d').getImageData(0, 0, sw.width, sw.height).data;
+              for (let i = 0; i < d.length; i += 4)
+                if (d[i + 3] > 200 && Math.abs(d[i] - 124) < 16 && Math.abs(d[i + 1] - 92) < 16 && d[i + 2] > 235) purple++; }
+            return { color, first: dots[0] && dots[0].dataset.color, name: dots[0] && dots[0].getAttribute('aria-label'),
+                     ringed: on.map(d => d.dataset.color || d.id), purple }; }""")
+        check(f"{_route}: a fresh editor starts on #7c5cff (Skribl purple), the first swatch, and only it is ringed",
+              _st["color"] == "#7c5cff" and _st["first"] == "#7c5cff" and _st["name"] == "Skribl purple"
+              and _st["ringed"] == ["#7c5cff"], str(_st))
+        check(f"{_route}: ...and the pen button's swoosh is inked in it",
+              _st["purple"] > 20, str(_st))
+        _q.close()
+
+    # THE LENS. Arming puts it on the drawing, it sits on the point it reads,
+    # the ring's top is what a pick takes and its bottom the pen now, and what
+    # it shows is what it picks. Mouse and keyboard on a desktop; touch, the
+    # handle, the tap and the cancel on a phone. Everything is asked of what
+    # is PAINTED (elementFromPoint, canvas pixels), never only of a rect.
+    LS = "() => (_eyedropper && _eyedropper.lensState) ? _eyedropper.lensState() : null"
+    SETC = "(h) => (typeof setPenColor === 'function' ? setPenColor(h) : setColor(h))"
+    ARMED = "() => document.getElementById('eyedropperBtn').classList.contains('picking')"
+    PAINTED = """(sel) => { const e = document.querySelector(sel); if (!e || e.hidden) return false;
+        const r = e.getBoundingClientRect(), pe = e.style.pointerEvents; e.style.pointerEvents = 'auto';
+        const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); e.style.pointerEvents = pe;
+        return !!h && e.contains(h); }"""
+    LENS_C = """() => { const l = document.querySelector('.eyedropper-lens'), r = l.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, left: r.left, right: r.right,
+                 top: r.top, bottom: r.bottom, vw: innerWidth, vh: innerHeight }; }"""
+    # The ring's two halves, read off the lens canvas at 12 and 6 o'clock.
+    RING = """() => { const cv = document.querySelector('.eyedropper-lens canvas'), k = cv.width / 116;
+        const g = cv.getContext('2d'), px = (x, y) => { const d = g.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data;
+          return '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join(''); };
+        return { top: px(58, 2.5), bottom: px(58, 113.5), chip: document.querySelector('.eyedropper-lens-chip').textContent }; }"""
+    # The middle of the run of one ink down the canvas's centre column, found
+    # the way the editor's own sampler reads (getPos/pos + the composited stage).
+    YEL = """([sel, want]) => { const c = document.querySelector(sel), r = c.getBoundingClientRect();
+        const art = (typeof padArtwork === 'function') ? padArtwork() : paintArtwork();
+        const P = (typeof getPos === 'function') ? getPos : pos, d = (typeof DPR !== 'undefined') ? DPR : (window.devicePixelRatio || 1);
+        const g = art.getContext('2d'), x = Math.floor(r.left + r.width * 0.5) + 0.5, run = [];
+        for (let y = Math.floor(r.top) + 0.5; y < r.bottom; y++) {
+          const p = P({ clientX: x, clientY: y }), q = g.getImageData(Math.floor(p.x * d), Math.floor(p.y * d), 1, 1).data;
+          if (Math.abs(q[0] - want[0]) < 16 && Math.abs(q[1] - want[1]) < 16 && Math.abs(q[2] - want[2]) < 16) run.push(y);
+          else if (run.length) break; }
+        return run.length ? { x, y: run[Math.floor(run.length / 2)] } : null; }"""
+
+    def _near(a, b, tol=8):
+        """Ring pixels are antialiased where the arc meets its hairline edge."""
+        return all(abs(int(a[i:i + 2], 16) - int(b[i:i + 2], 16)) <= tol for i in (1, 3, 5))
+
+    def _stroke(q, cv, touch, cdp, frac_y, hexc):
+        q.evaluate(SETC, hexc)
+        bx = q.locator(cv).bounding_box()
+        y = bx["y"] + bx["height"] * frac_y
+        pts = [(bx["x"] + bx["width"] * (0.2 + 0.6 * s / 20), y) for s in range(21)]
+        if touch:
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": pts[0][0], "y": pts[0][1]}]})
+            for x_, y_ in pts[1:]:
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": x_, "y": y_}]})
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        else:
+            q.mouse.move(*pts[0]); q.mouse.down()
+            for x_, y_ in pts[1:]:
+                q.mouse.move(x_, y_)
+            q.mouse.up()
+        q.wait_for_timeout(250)
+        return pts[-1]
+
+    print("\nPARITY — the lens, with a mouse and a keyboard")
+    for _route, _cv in (("/skribl-pad", "#canvas"), ("/flip", "#pad")):
+        _q = _fresh(_lctx, _route)
+        _stroke(_q, _cv, False, None, 0.5, "#ffe800")
+        _end = _stroke(_q, _cv, False, None, 0.7, "#ff48b0")
+        # In the DRAWING's coordinates: opening the drawer can move the canvas.
+        _endS = _q.evaluate("(p) => ((typeof getPos === 'function') ? getPos : pos)({ clientX: p[0], clientY: p[1] })", list(_end))
+        _q.evaluate(SETC, "#00a95c")
+        browsing.pad_drawer(_q, "draw", settle=400)
+        _q.click("#eyedropperBtn"); _q.wait_for_timeout(400)
+        _s0 = _q.evaluate(LS)
+        _pill = _q.evaluate("""() => { const p = document.querySelector('.eyedropper-pill'), c = p && p.querySelector('button');
+            if (!p || p.hidden || !c) return null; const r = c.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            const edge = document.elementFromPoint(r.left + r.width / 2, r.top - 4);
+            return { text: p.textContent, cancel: hit === c, grown: edge === c, h: r.height,
+                     live: (document.querySelector('.eyedropper-live') || {}).textContent || '' }; }""")
+        check(f"{_route}: arming shows the pill with its words and a painted Cancel, and says it once to a screen reader",
+              bool(_pill) and _pill["text"].startswith("Click your drawing to pick a colour") and _pill["cancel"]
+              and _pill["grown"] and "Enter picks" in _pill["live"], str(_pill))
+        check(f"{_route}: arming puts the lens ON the drawing, at the last point the pen touched",
+              bool(_s0) and _q.evaluate(PAINTED, ".eyedropper-lens")
+              and abs(_s0["stage"]["x"] - _endS["x"]) <= 2.5 and abs(_s0["stage"]["y"] - _endS["y"]) <= 2.5,
+              f"lens {_s0}, last pen point (stage) {_endS}")
+        _t = _q.evaluate(YEL, [_cv, [255, 232, 0]])
+        _q.mouse.move(_t["x"] - 30, _t["y"] - 40); _q.mouse.move(_t["x"], _t["y"], steps=6); _q.wait_for_timeout(250)
+        _s1, _lc, _ring = _q.evaluate(LS), _q.evaluate(LENS_C), _q.evaluate(RING)
+        check(f"{_route}: the lens follows the mouse and sits centred on the point it reads",
+              abs(_s1["x"] - _t["x"]) <= 1 and abs(_s1["y"] - _t["y"]) <= 1
+              and abs(_lc["x"] - _s1["x"]) <= 1 and abs(_lc["y"] - _s1["y"]) <= 1,
+              f"pointer {_t}, lens point {_s1}, lens centre {_lc}")
+        check(f"{_route}: the ring's top is the colour it will pick, its bottom the pen now, the chip names the pick",
+              _s1["hex"] == "#ffe800" and _near(_ring["top"], "#ffe800") and _near(_ring["bottom"], "#00a95c")
+              and _ring["chip"] == "#FFE800", f"{_s1} {_ring}")
+        _q.keyboard.press("ArrowRight"); _q.keyboard.press("Shift+ArrowDown"); _q.wait_for_timeout(150)
+        _s2 = _q.evaluate(LS)
+        check(f"{_route}: arrows nudge the lens one pixel, Shift+arrow ten",
+              _s2["x"] - _s1["x"] == 1 and _s2["y"] - _s1["y"] == 10, f"{_s1} -> {_s2}")
+        _q.keyboard.press("Shift+ArrowUp"); _q.wait_for_timeout(150)
+        _q.keyboard.press("Enter"); _q.wait_for_timeout(300)
+        _c = _q.evaluate("() => color")
+        check(f"{_route}: Enter picks what the lens shows, and the pick ends the armed state",
+              _c == "#ffe800" and not _q.evaluate(ARMED) and not _q.evaluate(PAINTED, ".eyedropper-lens")
+              and not _q.evaluate(PAINTED, ".eyedropper-pill"), f"colour {_c}, armed {_q.evaluate(ARMED)}")
+        # A click picks too -- the pink stroke, through the page.
+        _q.evaluate(SETC, "#00a95c")
+        browsing.pad_drawer(_q, "draw", settle=400)
+        _q.click("#eyedropperBtn"); _q.wait_for_timeout(400)
+        _pk = _q.evaluate(YEL, [_cv, [255, 72, 176]])
+        _q.mouse.click(_pk["x"], _pk["y"]); _q.wait_for_timeout(300)
+        check(f"{_route}: a click on the drawing picks the colour under the lens",
+              _q.evaluate("() => color") == "#ff48b0" and not _q.evaluate(ARMED), _q.evaluate("() => color"))
+        # Cancel abandons: the pen stays, the lens and pill go.
+        browsing.pad_drawer(_q, "draw", settle=400)
+        _q.click("#eyedropperBtn"); _q.wait_for_timeout(400)
+        _q.mouse.move(_t["x"], _t["y"], steps=4); _q.wait_for_timeout(150)
+        _q.click(".eyedropper-pill button"); _q.wait_for_timeout(300)
+        check(f"{_route}: Cancel abandons: the pen keeps its colour and the lens and pill go",
+              _q.evaluate("() => color") == "#ff48b0" and not _q.evaluate(ARMED)
+              and not _q.evaluate(PAINTED, ".eyedropper-lens") and not _q.evaluate(PAINTED, ".eyedropper-pill"),
+              f"colour {_q.evaluate('() => color')}, armed {_q.evaluate(ARMED)}")
+        _q.close()
+    _lctx.close()
+
+    print("\nPARITY — the lens on a phone: the finger holds the handle, never the point")
+    for _route, _cv in (("/skribl-pad", "#canvas"), ("/flip", "#pad")):
+        _pc = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=3, has_touch=True, is_mobile=True)
+        _q = _fresh(_pc, _route)
+        _cdp = _pc.new_cdp_session(_q)
+        _touch = lambda typ, pts: _cdp.send("Input.dispatchTouchEvent", {"type": typ, "touchPoints": [{"x": x_, "y": y_} for x_, y_ in pts]})
+        _stroke(_q, _cv, True, _cdp, 0.45, "#ffe800")
+        _q.evaluate(SETC, "#00a95c")
+        browsing.pad_drawer(_q, "draw", settle=500)
+        _eb = _q.locator("#eyedropperBtn").bounding_box()
+        _q.touchscreen.tap(_eb["x"] + _eb["width"] / 2, _eb["y"] + _eb["height"] / 2); _q.wait_for_timeout(500)
+        _s0 = _q.evaluate(LS)
+        _h = _q.evaluate("""() => { const h = document.querySelector('.eyedropper-lens-handle'); if (!h || h.hidden) return null;
+            const r = h.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+            const at = (dx, dy) => { const e = document.elementFromPoint(x + dx, y + dy); return !!e && h.contains(e); };
+            return { x, y, hit44: at(0, 0) && at(0, -21) && at(0, 21) && at(-21, 0) && at(21, 0),
+                     pill: document.querySelector('.eyedropper-pill').textContent }; }""")
+        check(f"{_route}: on touch the pill says to drag the lens, and the lens carries a handle with a 44px hit area",
+              bool(_h) and _h["pill"].startswith("Drag the lens to pick") and _h["hit44"]
+              and _q.evaluate(PAINTED, ".eyedropper-lens"), str(_h))
+        # A tap on the drawing moves the lens there and does not pick.
+        _bx = _q.locator(_cv).bounding_box()
+        _tp = (round(_bx["x"] + _bx["width"] * 0.5) + 0.5, round(_bx["y"] + _bx["height"] * 0.8) + 0.5)
+        _touch("touchStart", [_tp]); _touch("touchEnd", []); _q.wait_for_timeout(250)
+        _s1 = _q.evaluate(LS)
+        check(f"{_route}: a tap on the drawing moves the lens there without picking",
+              bool(_s1) and abs(_s1["x"] - _tp[0]) <= 1 and abs(_s1["y"] - _tp[1]) <= 1
+              and _q.evaluate("() => color") == "#00a95c" and _q.evaluate(ARMED), f"tap {_tp}, lens {_s1}")
+        if not _s1:            # nothing left armed to drive; report the other editor rather than crash
+            _pc.close(); continue
+        # Drag the HANDLE until the lens reads the yellow stroke; lift picks.
+        _t = _q.evaluate(YEL, [_cv, [255, 232, 0]])
+        _h = _q.evaluate("""() => { const r = document.querySelector('.eyedropper-lens-handle').getBoundingClientRect();
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }""")
+        _dx, _dy = _t["x"] - _s1["x"], _t["y"] - _s1["y"]
+        _touch("touchStart", [(_h["x"], _h["y"])])
+        for _i in range(1, 13):
+            _touch("touchMove", [(_h["x"] + _dx * _i / 12, _h["y"] + _dy * _i / 12)])
+        _q.wait_for_timeout(250)
+        _s2, _lc = _q.evaluate(LS), _q.evaluate(LENS_C)
+        _fy = _h["y"] + _dy
+        check(f"{_route}: mid-drag the lens reads the point it sits on, and the finger is below the lens, not on the point",
+              abs(_s2["x"] - _t["x"]) <= 1 and abs(_s2["y"] - _t["y"]) <= 1 and _s2["hex"] == "#ffe800"
+              and abs(_lc["x"] - _s2["x"]) <= 1 and abs(_lc["y"] - _s2["y"]) <= 1 and _fy > _lc["bottom"],
+              f"target {_t}, lens {_s2}, lens box {_lc}, finger y {_fy:.0f}")
+        _touch("touchEnd", []); _q.wait_for_timeout(300)
+        check(f"{_route}: lifting the finger picks what the lens showed",
+              _q.evaluate("() => color") == "#ffe800" and not _q.evaluate(ARMED), _q.evaluate("() => color"))
+        # A drag anywhere moves the lens by the finger's travel; pointercancel
+        # abandons the drag, puts the lens back, and stays armed.
+        _q.evaluate(SETC, "#00a95c")
+        browsing.pad_drawer(_q, "draw", settle=500)
+        _eb = _q.locator("#eyedropperBtn").bounding_box()
+        _q.touchscreen.tap(_eb["x"] + _eb["width"] / 2, _eb["y"] + _eb["height"] / 2); _q.wait_for_timeout(500)
+        _a = _q.evaluate(LS)
+        check(f"{_route}: the eyedropper re-arms after a pick", bool(_a), str(_a))
+        if not _a:
+            _pc.close(); continue
+        _f0 = (_bx["x"] + _bx["width"] * 0.3, _bx["y"] + _bx["height"] * 0.85)
+        _touch("touchStart", [_f0])
+        for _i in range(1, 9):
+            _touch("touchMove", [(_f0[0] + 5 * _i, _f0[1] - 4 * _i)])
+        _q.wait_for_timeout(200)
+        _b2 = _q.evaluate(LS)
+        _touch("touchCancel", []); _q.wait_for_timeout(250)
+        _c2 = _q.evaluate(LS) or {"x": -1, "y": -1}
+        _b2 = _b2 or {"x": -1, "y": -1}
+        check(f"{_route}: a drag anywhere moves the lens by the finger's travel; a cancelled touch puts it back and picks nothing",
+              abs((_b2["x"] - _a["x"]) - 40) <= 1 and abs((_b2["y"] - _a["y"]) + 32) <= 1
+              and abs(_c2["x"] - _a["x"]) <= 1 and abs(_c2["y"] - _a["y"]) <= 1
+              and _q.evaluate("() => color") == "#00a95c" and _q.evaluate(ARMED), f"{_a} -> {_b2} -> {_c2}")
+        # At the edge the lens stays in the viewport.
+        _ep = (_bx["x"] + _bx["width"] - 2, _bx["y"] + _bx["height"] * 0.5)
+        _touch("touchStart", [_ep]); _touch("touchEnd", []); _q.wait_for_timeout(250)
+        _lc, _se = _q.evaluate(LENS_C), _q.evaluate(LS)
+        check(f"{_route}: at the canvas edge the lens slides inward and stays on screen, still reading the edge point",
+              _lc["left"] >= 0 and _lc["right"] <= _lc["vw"] and _q.evaluate(PAINTED, ".eyedropper-lens")
+              and abs(_se["x"] - _ep[0]) <= 1.5 and _lc["x"] < _se["x"] - 1,
+              f"lens box {_lc}, lens point {_se}, touched {_ep}")
+        _cb = _q.evaluate("""() => { const r = document.querySelector('.eyedropper-pill button').getBoundingClientRect();
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }""")
+        _q.touchscreen.tap(_cb["x"], _cb["y"]); _q.wait_for_timeout(300)
+        check(f"{_route}: Cancel on a phone abandons the pick",
+              not _q.evaluate(ARMED) and _q.evaluate("() => color") == "#00a95c", _q.evaluate("() => color"))
+        _pc.close()
+
+    # THE LENS, SECOND PASS (owner's eye and review). Each of these was seen
+    # going wrong on this tree before it was fixed: undo, playback, a tool
+    # switch and a right-click each left the lens armed over a drawing it no
+    # longer showed (or picked); a keyboard arm dropped focus to <body>; the
+    # reticle smeared at 1x; the light pill went muddy grey, Cancel at 2.85:1;
+    # near the top of a drawing the pill faded to 0.3 and sat over the chip;
+    # a pinch picked a colour nobody aimed; forced colours erased the handle.
+    GONE = """() => { const e = document.querySelector('.eyedropper-lens'), p = document.querySelector('.eyedropper-pill');
+        return !document.getElementById('eyedropperBtn').classList.contains('picking') && (!e || e.hidden) && (!p || p.hidden); }"""
+    FOCUS = """() => { const a = document.activeElement; if (!a) return null;
+        const r = a.getBoundingClientRect(), v = a.checkVisibility ? a.checkVisibility({ visibilityProperty: true }) : true;
+        return { id: a.id || '', cls: String(a.className || ''), tag: a.tagName, pill: !!a.closest('.eyedropper-pill'),
+                 visible: v && r.width > 0 }; }"""
+
+    def _arm(q):
+        if q.evaluate(ARMED):                 # left armed by a check that went red: report, do not crash
+            return True
+        browsing.pad_drawer(q, "draw", settle=400)
+        q.click("#eyedropperBtn"); q.wait_for_timeout(350)
+        return q.evaluate(ARMED)
+
+    print("\nPARITY — the lens ends when the drawing under it changes, and hands focus back")
+    _lctx = b.new_context(viewport={"width": 1400, "height": 900})
+    for _route, _cv in (("/skribl-pad", "#canvas"), ("/flip", "#pad")):
+        _q = _fresh(_lctx, _route)
+        _stroke(_q, _cv, False, None, 0.5, "#ffe800")
+        _stroke(_q, _cv, False, None, 0.7, "#ff48b0")
+        _q.evaluate(SETC, "#00a95c")
+        # Keyboard only: arm with Enter, focus is on the pill; Escape gives it back.
+        browsing.pad_drawer(_q, "draw", settle=400)
+        _q.focus("#eyedropperBtn"); _q.keyboard.press("Enter"); _q.wait_for_timeout(350)
+        _f1 = _q.evaluate(FOCUS)
+        _q.keyboard.press("Escape"); _q.wait_for_timeout(250)
+        _f2 = _q.evaluate(FOCUS)
+        check(f"{_route}: a keyboard arm puts focus on the armed pill, and Escape hands it back to a visible control",
+              bool(_f1) and _f1["pill"] and bool(_f2) and _f2["id"] in ("eyedropperBtn", "penToolBtn") and _f2["visible"],
+              f"armed {_f1} -> after Escape {_f2}")
+        browsing.pad_drawer(_q, "draw", settle=400)
+        _q.focus("#eyedropperBtn"); _q.keyboard.press("Enter"); _q.wait_for_timeout(350)
+        _q.keyboard.press("Tab"); _t1 = _q.evaluate(FOCUS)
+        _q.keyboard.press("Enter"); _q.wait_for_timeout(250)
+        _f3 = _q.evaluate(FOCUS)
+        check(f"{_route}: ...Tab from there reaches Cancel, and Cancel by keyboard hands focus back as well",
+              bool(_t1) and "eyedropper-pill-cancel" in _t1["cls"] and _q.evaluate(GONE)
+              and bool(_f3) and _f3["id"] in ("eyedropperBtn", "penToolBtn") and _f3["visible"], f"{_t1} -> {_f3}")
+        # At 1x the reticle's white band is whole white pixels, not a grey smear.
+        _arm(_q)
+        _t = _q.evaluate(YEL, [_cv, [255, 232, 0]])
+        _q.mouse.move(_t["x"] - 20, _t["y"] - 20); _q.mouse.move(_t["x"], _t["y"], steps=4); _q.wait_for_timeout(250)
+        _w = _q.evaluate("""() => { const cv = document.querySelector('.eyedropper-lens canvas'), D = cv.width / 116;
+            const a0 = Math.round(53 * D), u = Math.max(1, Math.round(D)), g = cv.getContext('2d');
+            const px = (x, y) => Array.from(g.getImageData(x, y, 1, 1).data.slice(0, 3));
+            const my = Math.round(58 * D);
+            return { D, white: [px(a0 - u, my), px(a0 + Math.round(10 * D) + u - 1, my), px(Math.round(58 * D), a0 - u)],
+                     cell: px(Math.round(58 * D), my) }; }""")
+        check(f"{_route}: at 1x the reticle is crisp: its white band reads pure white on every side, the cell keeps its ink",
+              _w["D"] == 1 and all(min(p) >= 245 for p in _w["white"]) and _w["cell"] == [255, 232, 0], str(_w))
+        # A right-click is not a pick.
+        _q.mouse.click(_t["x"], _t["y"], button="right"); _q.wait_for_timeout(250)
+        check(f"{_route}: a right-click on the drawing while armed picks nothing and stays armed",
+              _q.evaluate(ARMED) and _q.evaluate("() => color") == "#00a95c", _q.evaluate("() => color"))
+        # Undo while armed: the drawing is about to change, so the pick ends.
+        _pk = _q.evaluate(YEL, [_cv, [255, 72, 176]])
+        _q.mouse.move(_pk["x"], _pk["y"], steps=4); _q.wait_for_timeout(200)
+        _q.keyboard.press("Control+z"); _q.wait_for_timeout(350)
+        check(f"{_route}: undo while armed ends the pick, so nothing can take a colour the lens no longer shows",
+              _q.evaluate(GONE) and _q.evaluate("() => color") == "#00a95c", _q.evaluate("() => color"))
+        # A tool switch ends it too (Flip always did; the Pad kept the lens over an eraser).
+        _arm(_q)
+        _q.click("#eraserToolBtn"); _q.wait_for_timeout(300)
+        check(f"{_route}: switching to the eraser ends the pick", _q.evaluate(GONE), str(_q.evaluate(LS)))
+        _q.evaluate("() => setTool('pen')")
+        # Playback ends it: by the Pad's Play button, and by Flip's Space.
+        if _route == "/skribl-pad":
+            _q.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }"); _q.wait_for_timeout(300)
+            _arm(_q)
+            # Cancel on a finished take puts the lock cue back, as a pick does.
+            _q.click(".eyedropper-pill button"); _q.wait_for_timeout(250)
+            _cur = _q.evaluate("() => document.getElementById('canvas').style.cursor")
+            check("/skribl-pad: Cancel on a finished take restores the locked-canvas cursor",
+                  _cur == "not-allowed" and _q.evaluate(GONE), repr(_cur))
+            _arm(_q)
+            _q.click("#playBtn"); _q.wait_for_timeout(300)
+            _pl = _q.evaluate("() => playing")
+        else:
+            _q.evaluate("() => addFrame()"); _q.wait_for_timeout(200)
+            _stroke(_q, _cv, False, None, 0.4, "#26b0ff")
+            _q.evaluate(SETC, "#00a95c")
+            _arm(_q)
+            _q.keyboard.press("Space"); _q.wait_for_timeout(300)
+            _pl = _q.evaluate("() => playing")
+        check(f"{_route}: starting playback ends the pick: no lens or pill over the moving frames",
+              _pl and _q.evaluate(GONE), f"playing {_pl}, lens {_q.evaluate(LS)}")
+        _q.close()
+    _lctx.close()
+
+    # Light theme: the pill is the light chrome, whatever the drawing under it.
+    # Contrast is read off the PAINTED pixels of Cancel (ink against the fill
+    # it sits on), from a screenshot decoded in the page.
+    CONTRAST = """async (b64) => { const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0); const d = g.getImageData(0, 0, c.width, c.height).data;
+        const L = (r, gg, bb) => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+          return 0.2126 * f(r) + 0.7152 * f(gg) + 0.0722 * f(bb); };
+        const n = {}; let best = null;
+        // The fill: the commonest colour in the middle band (the corners are the pill around it).
+        for (let y = Math.floor(c.height * 0.3); y < c.height * 0.7; y++) for (let x = 2; x < c.width - 2; x++) {
+          const i = (y * c.width + x) * 4, k = d[i] + ',' + d[i + 1] + ',' + d[i + 2]; n[k] = (n[k] || 0) + 1; }
+        const bg = Object.entries(n).sort((a, b) => b[1] - a[1])[0][0].split(',').map(Number), lb = L(...bg);
+        let ratio = 1;
+        for (let i = 0; i < d.length; i += 4) { const l = L(d[i], d[i + 1], d[i + 2]);
+          const r = (Math.max(l, lb) + 0.05) / (Math.min(l, lb) + 0.05); if (r > ratio) ratio = r; }
+        return { bg, ratio: Math.round(ratio * 100) / 100, lum: Math.round(lb * 1000) / 1000 }; }"""
+    print("\nPARITY — the armed pill in the light theme is crisp light chrome, and Cancel reads")
+    _lt = b.new_context(viewport={"width": 1400, "height": 900}, device_scale_factor=2)
+    for _route, _cv in (("/skribl-pad", "#canvas"), ("/flip", "#pad")):
+        _q = _lt.new_page()
+        _q.goto(BASE + _route + "?theme=light", wait_until="load"); _q.wait_for_timeout(600)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route + "?theme=light", wait_until="load"); _q.wait_for_timeout(800)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _stroke(_q, _cv, False, None, 0.6, "#ffe800")
+        _arm(_q)
+        _cc = _q.evaluate(CONTRAST, base64.b64encode(_q.locator(".eyedropper-pill-cancel").screenshot()).decode())
+        _pf = _q.evaluate(CONTRAST, base64.b64encode(_q.locator(".eyedropper-pill-text").screenshot()).decode())
+        check(f"{_route}: light theme: the pill's fill is light chrome (not a grey slab over the dark drawing), "
+              f"its words and Cancel at least 4.5:1",
+              _pf["lum"] >= 0.8 and _pf["ratio"] >= 4.5 and _cc["ratio"] >= 4.5, f"pill {_pf}, cancel {_cc}")
+        _q.close()
+    _lt.close()
+
+    print("\nPARITY — the lens on a phone, second pass: the pill makes way, nothing is clipped, a pinch is not a pick")
+    for _route, _cv in (("/skribl-pad", "#canvas"), ("/flip", "#pad")):
+        _pc = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=3, has_touch=True, is_mobile=True)
+        _q = _fresh(_pc, _route)
+        _cdp = _pc.new_cdp_session(_q)
+        _touch = lambda typ, pts: _cdp.send("Input.dispatchTouchEvent", {"type": typ, "touchPoints": [{"x": x_, "y": y_, "id": i_} for i_, (x_, y_) in enumerate(pts)]})
+        _layout = """() => { const q = s => document.querySelector(s), R = e => e.getBoundingClientRect();
+            const pill = q('.eyedropper-pill'), chip = q('.eyedropper-lens-chip'), lens = q('.eyedropper-lens'), cancel = pill.querySelector('button');
+            const hit = (e, x, y) => { const pe = e.style.pointerEvents; e.style.pointerEvents = 'auto';
+              const h = document.elementFromPoint(x, y); e.style.pointerEvents = pe; return !!h && e.contains(h); };
+            const mid = e => { const r = R(e); return [r.left + r.width / 2, r.top + r.height / 2]; };
+            const x = (a, b) => { const A = R(a), B = R(b); return Math.max(0, Math.min(A.right, B.right) - Math.max(A.left, B.left))
+                                   * Math.max(0, Math.min(A.bottom, B.bottom) - Math.max(A.top, B.top)); };
+            const L = R(lens), rr = L.width / 2, cx = L.left + rr, cy = L.top + rr;
+            return { opacity: getComputedStyle(pill).opacity, cancel: hit(cancel, ...mid(cancel)), chip: hit(chip, ...mid(chip)),
+                     chipPill: Math.round(x(chip, pill)), lensPill: Math.round(x(lens, pill)),
+                     // Inside the rim at 3, 9 and 12 o'clock and the two lower diagonals
+                     // (straight down is the handle's transparent 44px hit area).
+                     whole: [[rr - 3, 0], [-rr + 3, 0], [0, -rr + 3], [(rr - 3) * 0.7, (rr - 3) * 0.7], [-(rr - 3) * 0.7, (rr - 3) * 0.7]].every(([dx, dy]) => hit(lens, cx + dx, cy + dy)),
+                     inView: L.left >= 0 && L.right <= innerWidth && L.top >= 0 && L.bottom <= innerHeight,
+                     chipBox: [Math.round(R(chip).top), Math.round(R(chip).bottom)], pillBox: [Math.round(R(pill).top), Math.round(R(pill).bottom)] }; }"""
+        def _arm_t(q):
+            if q.evaluate(ARMED):
+                return
+            browsing.pad_drawer(q, "draw", settle=500)
+            eb = q.locator("#eyedropperBtn").bounding_box()
+            q.touchscreen.tap(eb["x"] + eb["width"] / 2, eb["y"] + eb["height"] / 2); q.wait_for_timeout(450)
+        for _fy in (0.04, 0.1, 0.25):
+            browsing.pad_drawer_close(_q)          # Escape leaves the drawer open; stroke the drawing, not it
+            _stroke(_q, _cv, True, _cdp, _fy, "#ff48b0")
+            _q.evaluate(SETC, "#00a95c")
+            _arm_t(_q)
+            _lo = _q.evaluate(_layout)
+            check(f"{_route}: last stroke at {int(_fy * 100)}% down: the pill stays at full strength with Cancel painted, "
+                  f"and neither the lens nor its chip is under it",
+                  _lo["opacity"] == "1" and _lo["cancel"] and _lo["chip"] and _lo["chipPill"] == 0 and _lo["lensPill"] == 0
+                  and _lo["whole"], str(_lo))
+            _q.keyboard.press("Escape"); _q.wait_for_timeout(250)
+        # The lens is never clipped: at the canvas's right edge it is painted
+        # whole (probed inside each extremity), above the canvas card.
+        browsing.pad_drawer_close(_q)
+        _bx = _q.locator(_cv).bounding_box()
+        _q.evaluate(SETC, "#00a95c")
+        _arm_t(_q)
+        for _ex in (_bx["x"] + _bx["width"] - 2, _bx["x"] + 2):
+            _touch("touchStart", [(_ex, _bx["y"] + _bx["height"] * 0.6)]); _touch("touchEnd", []); _q.wait_for_timeout(250)
+            _lo = _q.evaluate(_layout)
+            check(f"{_route}: with the lens at the canvas's {'right' if _ex > 200 else 'left'} edge it is painted whole and on screen",
+                  _lo["whole"] and _lo["inView"] and _q.evaluate(ARMED), str(_lo))
+        # Forced colours: the handle's grip and Cancel's edge survive.
+        _q.emulate_media(forced_colors="active"); _q.wait_for_timeout(200)
+        _fc = _q.evaluate("""() => { const h = document.querySelector('.eyedropper-lens-handle'), c = document.querySelector('.eyedropper-pill-cancel');
+            const a = getComputedStyle(h, '::after'), hs = getComputedStyle(h), cs = getComputedStyle(c);
+            const shown = (w, s, col) => parseFloat(w) > 0 && s !== 'none' && !/rgba\\(.*, 0\\)$/.test(col) && col !== 'transparent';
+            return { grip: shown(a.borderTopWidth, a.borderTopStyle, a.borderTopColor), gripColor: a.borderTopColor,
+                     handleEdge: shown(hs.outlineWidth, hs.outlineStyle, hs.outlineColor),
+                     cancelEdge: shown(cs.outlineWidth, cs.outlineStyle, cs.outlineColor) || shown(cs.borderTopWidth, cs.borderTopStyle, cs.borderTopColor) }; }""")
+        check(f"{_route}: under forced colours the handle keeps a visible grip and edge, and Cancel an edge",
+              _fc["grip"] and _fc["handleEdge"] and _fc["cancelEdge"], str(_fc))
+        _q.emulate_media(forced_colors="none")
+        # A pinch while armed is a zoom, not an aim: nothing picks on lift.
+        # The lens is tapped to the pinch's middle first, which a zoom about
+        # that middle keeps on screen.
+        _touch("touchStart", [(_bx["x"] + _bx["width"] * 0.5, _bx["y"] + _bx["height"] * 0.525)]); _touch("touchEnd", [])
+        _q.wait_for_timeout(250)
+        _s0 = _q.evaluate(LS)
+        _p1 = (_bx["x"] + _bx["width"] * 0.45, _bx["y"] + _bx["height"] * 0.5)
+        _p2 = (_bx["x"] + _bx["width"] * 0.55, _bx["y"] + _bx["height"] * 0.55)
+        _touch("touchStart", [_p1])
+        _touch("touchMove", [(_p1[0] - 12, _p1[1] - 6)])
+        _touch("touchStart", [(_p1[0] - 12, _p1[1] - 6), _p2])
+        for _i in range(1, 11):
+            _touch("touchMove", [(_p1[0] - 12 - 6 * _i, _p1[1] - 6 - 5 * _i), (_p2[0] + 6 * _i, _p2[1] + 5 * _i)])
+            _q.wait_for_timeout(16)
+        _touch("touchEnd", []); _q.wait_for_timeout(350)
+        _s1 = _q.evaluate(LS)
+        check(f"{_route}: a two-finger pinch while armed picks nothing: still armed, the pen unchanged, "
+              f"the lens still on the drawing point it was on",
+              _q.evaluate(ARMED) and _q.evaluate("() => color") == "#00a95c" and bool(_s0) and bool(_s1)
+              and abs(_s1["stage"]["x"] - _s0["stage"]["x"]) <= 3 and abs(_s1["stage"]["y"] - _s0["stage"]["y"]) <= 3
+              and _q.evaluate(PAINTED, ".eyedropper-lens"),
+              f"{_s0} -> {_s1}, colour {_q.evaluate('() => color')}")
+        _pc.close()
 
     print("\nPARITY — a switched-on switch is the accent on both; amber only for the onion")
     # The selection census found Flip lighting Grid, Stroke layers and Motion

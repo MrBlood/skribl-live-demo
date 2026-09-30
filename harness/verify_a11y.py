@@ -37,9 +37,12 @@ Requires a running server:
     ./harness/run_harness.sh verify_a11y.py
 """
 import json
+import math
 import pathlib
 import re
+import struct
 import sys
+import zlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -71,6 +74,26 @@ def ratio(fg, bg):
     a, b = _lum(fg), _lum(bg)
     hi, lo = max(a, b), min(a, b)
     return (hi + 0.05) / (lo + 0.05)
+
+
+# ---------------------------------------------------------------- media
+# Real bytes for the drawers' file rows (A11Y 10c): an 8x8 PNG and a one-second
+# WAV, generated so the suite carries no binary fixture. Same shapes as
+# verify_parity's.
+def _png8():
+    rows = b"".join(b"\x00" + bytes((x * 30) % 256 for x in range(24)) for _ in range(8))
+    def chunk(tag, data):
+        c = tag + data
+        return struct.pack(">I", len(data)) + c + struct.pack(">I", zlib.crc32(c) & 0xffffffff)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 8, 8, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b""))
+
+
+def _wav1(rate=8000):
+    frames = b"".join(struct.pack("<h", int(12000 * math.sin(2 * math.pi * 440 * i / rate))) for i in range(rate))
+    return (b"RIFF" + struct.pack("<I", 36 + len(frames)) + b"WAVEfmt "
+            + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
+            + b"data" + struct.pack("<I", len(frames)) + frames)
 
 
 with sync_playwright() as p:
@@ -547,6 +570,29 @@ with sync_playwright() as p:
           not _untested, ", ".join(_untested) +
           " — declared in markup, never opened by this suite; a dialog behind "
           "an unrendered branch is the case the live census cannot see")
+
+    # ----------------------------------------------------------- section 2b
+    print("\nA11Y 2b — switching Photo | Music keeps keyboard focus on the tab")
+    # The tabs and the open drawer became ONE card by WRAPPING both in
+    # #mediaCard, not by moving the strip into whichever panel is open: a
+    # focused element that is re-parented loses focus, and a keyboard user who
+    # switched tabs would be left on <body>, outside the drawer. Green on the
+    # tree before the card too -- it guards the achievement, so it is
+    # calibrated by that mutation (re-parent the strip in lib/mediatabs.js
+    # sync), which turns it red on both editors.
+    for _path in ("/", "/flip"):
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        browsing.goto(_pg, BASE, _path)
+        _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _pg.click("#mediaOpenBtn"); _pg.wait_for_timeout(300)
+        _seen = []
+        for _tab in ("#mediaTabMusic", "#mediaTabPhoto"):
+            _pg.focus(_tab); _pg.keyboard.press("Enter"); _pg.wait_for_timeout(300)
+            _seen.append((_pg.evaluate(browsing._PAD_CUR),
+                          _pg.evaluate("() => document.activeElement && document.activeElement.id")))
+        check(f"{_path}: Enter on a media tab switches the drawer, and focus stays on that tab",
+              _seen == [("music", "mediaTabMusic"), ("photo", "mediaTabPhoto")], str(_seen))
+        _pg.close()
 
     # ------------------------------------------------------------ section 3
     print("\nA11Y 3 — every form control has an accessible name")
@@ -1497,6 +1543,67 @@ with sync_playwright() as p:
           f"aria-label={_scrub_label!r} — Pad and Flip label their scrub tracks "
           f"in the template and the player's copy was never given one")
     _pctx.close()
+
+    # ---------------------------------------------------------- section 10c
+    print("\nA11Y 10c — the file row's bin is named, asks by name, and is 44px to the touch; so is its switch")
+    # The drawer redesign made Remove a quiet 36px bin with no word on it, so
+    # its NAME is the only thing that says what it does -- read from Chromium's
+    # accessibility tree, on both pointer types, keyed by (route, pointer, id):
+    # lib/tooltip.js takes `title` away on a fine pointer only (see NAMES
+    # above). Armed, the name has to say what the next tap does. And the row's
+    # two controls meet a finger at 44: the bin through its --tap-grow band,
+    # probed 3px outside each edge; the 42x25 switch beside it through its own
+    # band, which the A11Y 10 census below checks with the loaded drawers open
+    # -- its census otherwise runs only on pages at rest, where these rows hold
+    # no file and neither control exists on screen.
+    BAND = """(id) => { const b = document.getElementById(id); b.scrollIntoView({ block: 'center' });
+        const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const hit = ([x, y]) => { const e = document.elementFromPoint(x, y); return !!e && b.contains(e); };
+        return { w: Math.round(r.width), h: Math.round(r.height),
+                 out: [[r.left - 3, cy], [r.right + 3, cy], [cx, r.top - 3], [cx, r.bottom + 3]].map(hit) }; }"""
+    _ROW_IDS = ("#photoToggle", "#photoRemove", "#musicToggle", "#musicRemove")
+    _names, _bands, _armed, _census = {}, [], [], []
+    _files = {"photo": {"name": "t.png", "mimeType": "image/png", "buffer": _png8()},
+              "music": {"name": "t.wav", "mimeType": "audio/wav", "buffer": _wav1()}}
+    for _path, _ins in (("/", {"photo": "#photoInput", "music": "#musicInput"}),
+                        ("/flip", {"photo": "#imageInput", "music": "#musicInput"})):
+        for _ptr, _vp, _touch in (("fine", {"width": 1280, "height": 900}, False),
+                                  ("coarse", {"width": 390, "height": 844}, True)):
+            _ctx = browser.new_context(viewport=_vp, has_touch=_touch, is_mobile=_touch)
+            _pg = _ctx.new_page()
+            browsing.goto(_pg, BASE, _path)
+            _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            for _k in ("photo", "music"):
+                browsing.pad_drawer(_pg, _k)
+                _pg.set_input_files(_ins[_k], _files[_k])
+                _pg.wait_for_function("(k) => document.getElementById(k + 'UploadBtn').classList.contains('loaded')",
+                                      arg=_k, timeout=20000)
+                _pg.wait_for_timeout(400)
+                _names[(_path, _ptr, _k)] = _ax_name(_ctx, _pg, f"#{_k}Remove")
+                _bands.append((_path, _ptr, _k, _pg.evaluate(BAND, f"{_k}Remove")))
+                _hb = _pg.evaluate(HITBOX)
+                _census.extend(f"{_path} {_ptr} {_k}: {x}" for x in _hb["dead"] + _hb["floor"]
+                               if x.split(" ")[0] in _ROW_IDS)
+                _pg.evaluate(f"() => document.getElementById('{_k}Remove').click()")   # arms it
+                _pg.wait_for_timeout(100)
+                _armed.append((_path, _ptr, _k, _ax_name(_ctx, _pg, f"#{_k}Remove")))
+                _pg.keyboard.press("Escape")
+                _pg.evaluate("() => document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))")
+            _ctx.close()
+    _want = {"photo": "Remove the photo", "music": "Remove the track"}
+    _wrong = {k: v for k, v in _names.items() if v != _want[k[2]]}
+    check("the bin is named 'Remove the photo' / 'Remove the track' in the AX tree, on both editors and both pointers",
+          not _wrong and len(_names) == 8, f"{_wrong or _names}")
+    _split = [(p_, k) for (p_, ptr, k) in _names if ptr == "fine" and _names[(p_, "fine", k)] != _names.get((p_, "coarse", k))]
+    check("...and the desktop and phone names are the same name", not _split, f"differ on {_split}")
+    _bad_arm = [a for a in _armed if a[3] != f"Tap again to remove t.{'png' if a[2] == 'photo' else 'wav'}"]
+    check("armed, the bin's computed name says what the next tap does",
+          not _bad_arm and len(_armed) == 8, str(_bad_arm or _armed))
+    _bad_band = [x for x in _bands if not (x[3]["w"] == 36 and x[3]["h"] == 36 and all(x[3]["out"]))]
+    check("the bin is 36px to the eye and reaches past each edge to 44 to the touch",
+          not _bad_band, str(_bad_band))
+    check("with a file loaded and its drawer open, the row's switch and bin leave no dead space in their 44px boxes",
+          not _census, "; ".join(_census))
 
     print("\nA11Y 6c — words on the action colour clear AA, on every stop and in both themes")
     # A11Y 6 measures TEXT TOKENS on SURFACES and never saw text on a coloured

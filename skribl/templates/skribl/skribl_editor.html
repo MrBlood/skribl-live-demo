@@ -1,6 +1,7 @@
 {#  THE MUSIC GLYPH, DEFINED ONCE -- in _skribl_music_glyph.html, imported
-    here and by the Photo | Music tab strip (_skribl_media_tabs.html), which
-    both editors include. See that file. #}
+    here and by the Photo | Music tab strip (_skribl_media_tabs.html) and the
+    music drawer (_skribl_music_drawer.html), which both editors include. See
+    that file. #}
 {% from 'skribl/_skribl_music_glyph.html' import music_glyph %}
 <!doctype html>
 <html lang="en">
@@ -503,17 +504,20 @@
   {% with kind='pad' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
 
 
-  {# The Media tabs. ONE strip for both drawers, not one inside each: the tab
-     dots keep the ids the rest of the editor already drives (#photoTabDot,
-     #musicTabDot), and ids must be unique on the page. Shown while either
-     media drawer is open. #}
-  {% include 'skribl/_skribl_media_tabs.html' %}
-  <!-- Music drawer (shared partial — Pad + Flip) -->
-  {% with kind='pad' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
-
-
-  <!-- Image drawer (shared partial — Pad + Flip) -->
-  {% with kind='pad' %}{% include 'skribl/_skribl_image_drawer.html' %}{% endwith %}
+  {# THE MEDIA CARD: the Photo | Music tabs and the open media drawer are ONE
+     card (#mediaCard wears the glass; the strip and the panels inside it do
+     not). A wrapper, not a strip inside each panel: the tab dots keep the ids
+     the rest of the editor already drives (#photoTabDot, #musicTabDot) and ids
+     must be unique on the page, and a focused tab is never moved. CSS shows the
+     card while either panel is open (a :has() rule in styles.css), so the
+     drawers do not depend on lib/mediatabs.js to be seen. #}
+  <div class="media-card" id="mediaCard">
+    {% include 'skribl/_skribl_media_tabs.html' %}
+    <!-- Music drawer (shared partial — Pad + Flip) -->
+    {% with kind='pad' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
+    <!-- Image drawer (shared partial — Pad + Flip) -->
+    {% with kind='pad' %}{% include 'skribl/_skribl_image_drawer.html' %}{% endwith %}
+  </div>
 
 </div>
 

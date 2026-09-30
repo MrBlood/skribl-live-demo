@@ -106,7 +106,8 @@
       button: eyedropperBtn,
       surface: canvas,
       idleCursor: '',
-      onArm: () => showToast('Touch the canvas — drag to aim, release to pick', eyedropperBtn),
+      // No toast: the lens lands on the drawing and the armed pill stays until
+      // the pick ends (lib/eyedropper.js) — a 2.8s toast was the only cue.
       // pickingColor is read by the pointer handler and by two teardown paths.
       // While armed, the open colour drawer steps aside (lib/drawerdetent.js
       // veil) so the whole canvas is back on screen to pick from -- Flip's
@@ -115,13 +116,18 @@
         pickingColor = v;
         const dp = document.getElementById('drawPanel');
         if (window.SkriblDrawerDetent && dp) window.SkriblDrawerDetent.veil(dp, v && !dp.hidden);
+        // Every disarm (Cancel and Escape too, which bypass stopPicking) puts
+        // the lock/eraser/normal cursor cue back rather than the lib's blank.
+        if (!v) updateCanvasLockCue();
       },
-      // Loupe wiring: the lib magnifies and reads the SAME composited stage
-      // sampleColorAt reads, so the ring shows what release will pick.
+      focusHome: () => document.getElementById('penToolBtn'),
+      // Lens wiring: the lib magnifies and reads the SAME composited stage
+      // sampleColorAt reads, so the ring shows what a pick will take.
       getPoint: ev => getPos(ev),
       artwork: () => padArtwork(),
       dpr: () => window.devicePixelRatio || 1,
       bg: () => bgColor,
+      current: () => color,        // the lens ring's bottom half
       // stopPicking, not just the lib's disarm: it also restores the
       // lock/eraser/normal cursor cue, same as the tap path.
       // A pick closes the drawer, as Flip's does: the colour is chosen and the

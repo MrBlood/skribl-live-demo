@@ -17,7 +17,7 @@ function skriblPostHeaders(){
 // The palette lives in lib/palette.js and is shared with Pad. It was two
 // hand-synchronised lists; the fallback here is only so a missing lib
 // leaves you a pen rather than a blank row.
-const COLORS = (window.SkriblPalette && window.SkriblPalette.hexes) || ["#ffffff","#141414"];
+const COLORS = (window.SkriblPalette && window.SkriblPalette.hexes) || ["#7c5cff","#ffffff","#141414"];
 const DPR = Math.min(window.devicePixelRatio||1, 2);
 let CW = 0, CH = 0;              // mutable since v110 — set from FLIP_SIZES[0] below
 // Canvas presets. The payload has ALWAYS carried canvasSize and the player has
@@ -209,7 +209,8 @@ window.addEventListener('resize', ()=>{ sizeStage(); });
 
 let frames = [ newFrame() ];
 let idx = 0;
-let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
+// The starting pen is Skribl purple, the first preset in lib/palette.js (Pad matches).
+let color = "#7c5cff", size = 7, erasing = false, onion = true, fps = 12;
 /* HOW FINELY TIME IS CUT, as a multiple of the speed the artist picked.
 
    `fps` is the stored playback rate and, with `hold`, fully determines timing --
@@ -1837,8 +1838,9 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   if(reposMode && bgImage && photoEnabled && photoFit==='cover'){       // pan the image, don't draw
     reposActive=true; reposStart={x:e.clientX,y:e.clientY,ox:photoOffX,oy:photoOffY};
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ } return; }
-  // eyedropper: this press opens the magnifying loupe — drag to aim, release
-  // picks (lib/eyedropper.js). One-shot tap sample stays as the fallback.
+  // eyedropper: this press drives the lens — a drag aims and lifting picks, a
+  // touch tap moves it, a click picks (lib/eyedropper.js). The one-shot tap
+  // sample stays as the fallback.
   if(picking){
     if(_eyedropper && _eyedropper.beginPick && _eyedropper.beginPick(e)) return;
     sampleColorAt(e); return;
@@ -3246,6 +3248,7 @@ function go(i){ if(moveMode) return;
   // frame would move strokes the marquee never touched, and on a shorter page
   // the ranges would run off the end.
   if(typeof selClear === 'function') selClear(true);
+  if(picking) setPicking(false);     // the lens would show one page and pick another
   idx=i; redoStack.length=0; buildStrip(); render(); }
 
 /* ---- Instant flip scrub -------------------------------------------------
@@ -3574,6 +3577,7 @@ function play(){
   // A single page that draws itself IS worth playing — that is the whole of a
   // one-page Flip, which the help already calls "just a drawing".
   if(frames.length<2 && !frames.some(frameDraw)) return;
+  if(picking) setPicking(false);     // no lens over a moving frame (Space reaches here with the drawer open)
   disarmAll(); editIdx = idx;
   if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
   playing=true; document.body.classList.add('playing');
@@ -3996,7 +4000,7 @@ customInput.addEventListener('input',e=>{
 });
 customInput.addEventListener('change',e=>{ addRecent(e.target.value); });
 
-// eyedropper — click to arm, then click the canvas to sample a pixel's colour
+// eyedropper — click to arm (the lens lands on the drawing), then pick with it
 // Shared with Pad via lib/eyedropper.js — the arming, the cursor, Escape and
 // the one-shot semantics. Reading the pixel stays here: the two surfaces
 // genuinely differ on context, DPR and what a transparent pixel means.
@@ -4016,12 +4020,14 @@ function _initEyedropper(){
     onChange: v => { picking = v;
                      if (window.SkriblDrawerDetent) window.SkriblDrawerDetent.veil(drawPanel, v);
                      else drawPanel.classList.toggle('eyedropper-veiled', v); },
-    // Loupe wiring: magnifies and reads the same composited artwork
+    // Lens wiring: magnifies and reads the same composited artwork
     // sampleColorAt reads — onion skin and guides stay invisible to it.
     getPoint: ev => pos(ev),
     artwork: () => paintArtwork(),
     dpr: () => DPR,
     bg: () => bgColor,
+    current: () => color,          // the lens ring's bottom half
+    focusHome: () => document.getElementById('penToolBtn'),
     onPick: hex => { setColor(hex); addRecent(hex); closePop(); },
   });
 }
@@ -4116,8 +4122,10 @@ document.addEventListener('click',e=>{ const t=e.target;
   // (v206) Ignore the file inputs here.
   if(t.closest('input[type=file]')) return;
   if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#penToolBtn') && !t.closest('#eraserToolBtn')) closePop();
-  if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaTabs')) hidePhoto();
-  if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaTabs')) hideMusic();
+  // #mediaCard, not only the panel and the tabs: the card holds both, and the
+  // seam and padding between them are part of it, not a tap away from it.
+  if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaCard')) hidePhoto();
+  if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#mediaOpenBtn') && !t.closest('#mediaCard')) hideMusic();
   if(toolTray && !toolTray.hidden && !t.closest('#toolTray') && !t.closest('#toolMoreBtn')) hideToolTray();
 });
 // Escape closes the tray. The drawers below the row are dismissed by tapping
@@ -5108,8 +5116,8 @@ if(canvasSeg) canvasSeg.addEventListener('click', e=>{
 });
 if(moreBtn) moreBtn.addEventListener('click', ()=>requestAnimationFrame(syncCanvasSeg));
 // --- media drawer controls ---
-const photoUploadBtn=document.getElementById('photoUploadBtn'), photoBtnLabel=document.getElementById('photoBtnLabel'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
-const photoDetail=document.getElementById('photoDetail'), photoNote=document.getElementById('photoNote');
+const photoUploadBtn=document.getElementById('photoUploadBtn'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
+const photoDetail=document.getElementById('photoDetail');
 const photoFitGroup=document.getElementById('photoFitGroup');
 const repositionBtn=document.getElementById('repositionBtn'), repositionHint=document.getElementById('repositionHint');
 const photoZoomRow=document.getElementById('photoZoomRow'), photoZoomEl=document.getElementById('photoZoom'), photoZoomVal=document.getElementById('photoZoomVal');
@@ -5123,12 +5131,7 @@ const photoTabDot=document.getElementById('photoTabDot'), musicTabDot=document.g
 function syncPhotoUI(){
   const hasImg=!!bgImage;
   photoUploadBtn.classList.toggle('loaded', hasImg);
-  // NOT 'Background image' as the fallback: the panel already carries that
-  // as its section heading, so an image with no stored name printed it twice
-  // in a row. Normally this shows the file name and there is no repetition;
-  // the fallback is for a restored draft that never saved one.
-  photoBtnLabel.textContent = hasImg ? (imageName || 'Image added') : 'Add an image';
-  photoRemove.hidden=!hasImg; photoNote.hidden=hasImg; photoDetail.hidden=!hasImg;
+  photoRemove.hidden=!hasImg; photoDetail.hidden=!hasImg;
   photoToggle.classList.toggle('on', photoEnabled); photoToggle.setAttribute('aria-checked', String(photoEnabled));
   photoTabDot.hidden = !hasImg;                                                       // green dot when an image is set
   // Compared through the shared normaliser, not by string equality: this row's
@@ -5145,17 +5148,23 @@ function syncPhotoUI(){
   photoZoomEl.value=Math.round(photoZoom*100); photoZoomVal.textContent=Math.round(photoZoom*100)+'%'; setFill(photoZoomEl);
   photoOpacityEl.value=Math.round(photoOpacity*100); photoOpacityVal.textContent=Math.round(photoOpacity*100)+'%'; setFill(photoOpacityEl);
   photoBlurEl.value=photoBlur; photoBlurVal.textContent=photoBlur+'px'; setFill(photoBlurEl);
+  // The file row (lib/pendingcards.js, shared with the Pad): name, "Behind the
+  // drawing · Fill" and the thumbnail. bgImage is the data URL setBgImage has
+  // just assigned; bgImageObj loads later, so it is not the source.
+  if(window.SkriblPendingCards) window.SkriblPendingCards.renderRow('photo', { name: imageName, src: bgImage, fit: photoFit, on: photoEnabled });
 }
 function syncMusicUI(){
   const hasMus=!!musicData;
   musicUploadBtn.classList.toggle('loaded', hasMus);
-  musicBtnLabel.textContent = hasMus ? (musicName || 'Music loop') : 'Add music';
   musicRemove.hidden = !hasMus;
   musicToggle.classList.toggle('on', musicEnabled); musicToggle.setAttribute('aria-checked', String(musicEnabled));
   musicDetail.hidden = !hasMus;
-  musicNote.hidden = hasMus;
   musicTabDot.hidden = !hasMus;
   if(hasMus) updateTrimUI();
+  // The file row: name and "Loops under the drawing · 0:08". The length only
+  // once THIS track has decoded: a payload applied over another one nulls the
+  // buffer but leaves the old track's audioDuration until its own decode lands.
+  if(window.SkriblPendingCards) window.SkriblPendingCards.renderRow('music', { name: musicName, dur: currentAudioBuffer ? audioDuration : 0, on: musicEnabled });
 }
 // updateToolState last: a background image alone is something to post, and every
 // path that adds or removes one ends here (setBgImage, removeBgImage, the
@@ -5186,9 +5195,8 @@ photoBlurEl.addEventListener('input',()=>{ photoBlur=+photoBlurEl.value; photoBl
 resetPhotoBtn.addEventListener('click',()=>{ photoFit='cover'; photoOpacity=1; photoBlur=0; photoZoom=1; photoOffX=0.5; photoOffY=0.5; reposMode=false; photoEnabled=true; redrawAll(); syncPhotoUI(); scheduleSave(); });
 
 // ===== music component (ported from the Pad: waveform + trim + Loop Detail) =====
-const musicUploadBtn=document.getElementById('musicUploadBtn'), musicBtnLabel=document.getElementById('musicBtnLabel');
+const musicUploadBtn=document.getElementById('musicUploadBtn');
 const musicDetail=document.getElementById('musicDetail'), musicToggle=document.getElementById('musicToggle'), musicRemove=document.getElementById('musicRemove');
-const musicNote=document.getElementById('musicNote');
 const musicTrack=document.getElementById('musicTrack'), musicRange=document.getElementById('musicRange');
 const handleStart=document.getElementById('handleStart'), handleEnd=document.getElementById('handleEnd');
 const trimStartLabel=document.getElementById('trimStartLabel'), trimEndLabel=document.getElementById('trimEndLabel'), trimDurLabel=document.getElementById('trimDurLabel');
@@ -5428,6 +5436,14 @@ function setCrossfadeUI(){ const s=document.getElementById('crossfadeSlider'), v
 musicUploadBtn.addEventListener('click',(e)=>{ if(e.target.closest('.dropzone-remove')||e.target.closest('.layer-toggle')) return; if(!musicUploadBtn.classList.contains('loaded')) musicInput.click(); });
 musicToggle.addEventListener('click',(e)=>{ e.stopPropagation(); musicEnabled=!musicEnabled; if(!musicEnabled) stopMusic(); else if(playing) startMusic(); syncMusicUI(); scheduleSave(); });
 musicRemove.addEventListener('click',(e)=>{ e.stopPropagation(); removeMusic(); });
+// Flip had no drag-and-drop at all; the empty rows now say "or drop one here".
+// A drop anywhere on the media card goes to the open drawer's input once it is
+// the right kind of file (lib/pendingcards.js bindDrops, shared with the Pad):
+// the change handlers above do the rest, as they do for the picker.
+if(window.SkriblPendingCards) window.SkriblPendingCards.bindDrops({
+  card: 'mediaCard', current: ()=>_flipDrawerCtl.current(),
+  inputs: { photo: 'imageInput', music: 'musicInput' }, say: (msg)=>chip(msg)
+});
 
 // overflow menu (save/load/export)
 const moreScrim=document.getElementById('moreScrim');
@@ -9071,6 +9087,7 @@ function doStamp(p){
 function undoStroke(){
   invalidateClearUndo();
   if(playing) return;
+  if(picking) setPicking(false);     // the drawing under the lens is about to change
   // A FILL is one action, and this must be tested BEFORE the generic object
   // branch below — that branch pops any object entry and then assumes it is a
   // move, so a fill entry reached it, fell past every m.type check and died on
@@ -9188,6 +9205,7 @@ function undoStroke(){
 function redoStroke(){
   invalidateClearUndo();
   if(playing || !redoStack.length) return;
+  if(picking) setPicking(false);     // the drawing under the lens is about to change
   if(typeof redoStack[redoStack.length-1] === 'object'
      && redoStack[redoStack.length-1].type === 'selframe'){
     const m = redoStack.pop();
@@ -9779,8 +9797,11 @@ window.addEventListener('keydown', e=>{
   if(_typingEl(e.target)) return;
   if((e.ctrlKey||e.metaKey) && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){ e.preventDefault(); redoStroke(); return; }
   if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); undoStroke(); return; }
-  // Space = play / stop (when not magnified — Space pans the zoomed canvas instead).
-  if((e.code==='Space' || e.key===' ') && !(ZoomView && ZoomView.isZoomed())){ e.preventDefault(); playing?stop():play(); return; }
+  // Space = play / stop (when not magnified — Space pans the zoomed canvas instead),
+  // unless a control reached by keyboard owns it: then Space presses that button
+  // or flips that switch, as WAI-ARIA expects (SkriblCanvasZoom.ownsSpace).
+  if((e.code==='Space' || e.key===' ') && !(window.SkriblCanvasZoom && window.SkriblCanvasZoom.ownsSpace && window.SkriblCanvasZoom.ownsSpace(e.target))
+     && !(ZoomView && ZoomView.isZoomed())){ e.preventDefault(); playing?stop():play(); return; }
   if(playing || moveMode) return;   // page identity must not shift mid-move
   // ArrowLeft/ArrowRight are handled by the flip-scrub block above, which adds
   // hold-to-riffle. Leaving the single-step versions here as well meant BOTH

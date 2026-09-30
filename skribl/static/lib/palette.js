@@ -22,6 +22,15 @@
  * swatches default to — acid yellow on white is nearly nothing, which is true
  * of the ink as well.
  *
+ * THE ONE EXCEPTION, AND IT IS FIRST. Skribl purple (#7c5cff, the accent the
+ * whole UI is lit with) is the pen a fresh editor starts on, on both editors —
+ * the owner's call: "change the starting color on the pad and flip to the
+ * purple that is pad's signature color". That is a purple lifted from the
+ * chrome, which the paragraph above says a palette should not be; the
+ * difference is that this one WAS chosen, as the app's signature, and it is
+ * the only one. It is first because the first preset is the starting colour
+ * (`selectFirst`), so the swatch a new drawing starts on is ringed.
+ *
  * `dark` marks a swatch that needs a visible rim: a near-black dot on a
  * near-black drawer is an empty hole. The rim is a CSS concern (it has to
  * follow the theme), so this only says WHICH, never what colour.
@@ -30,6 +39,7 @@
   'use strict';
 
   var PEN = [
+    { hex: '#7c5cff', name: 'Skribl purple' },
     { hex: '#ffffff', name: 'Paper white' },
     { hex: '#ff48b0', name: 'Fluoro pink' },
     { hex: '#ff6c2f', name: 'Hot orange' },

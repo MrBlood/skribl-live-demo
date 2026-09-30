@@ -79,12 +79,20 @@ menuOverlay.addEventListener('click', (e) => {
 // removal (via its own control) so behavior can't drift from the single-item
 // remove buttons. clearCanvas() intentionally keeps media, so we clear those
 // explicitly here, then return the background to the default swatch.
+// The drawers' bins ask before they remove (lib/pendingcards.js): a plain
+// click() would only arm them. "New Skribl" has already asked, on its own
+// two-tap arm, so it goes through removeNow -- the same control and every
+// listener on it, past the question.
 function resetAll() {
   clearCanvas();
-  const mr = document.getElementById('musicRemove');
-  if (mr && !mr.hidden) mr.click();
-  const pr = document.getElementById('photoRemove');
-  if (pr && !pr.hidden) pr.click();
+  const _rm = (kind) => {
+    const b = document.getElementById(kind + 'Remove');
+    if (!b || b.hidden) return;
+    if (window.SkriblPendingCards && window.SkriblPendingCards.removeNow) window.SkriblPendingCards.removeNow(kind);
+    else b.click();
+  };
+  _rm('music');
+  _rm('photo');
   bgColor = '#0d0f14';
   document.querySelectorAll('.bg-swatch').forEach(b => b.classList.toggle('active', b.dataset.bg === '#0d0f14'));
   canvasWrap.style.backgroundColor = bgColor;
@@ -216,6 +224,7 @@ document.addEventListener('keydown', (e) => {
 
 undoBtn.addEventListener('click', () => {
   if (undoStack.length === 0) return;
+  if (pickingColor) stopPicking();   // the drawing under the lens is about to change
   redoStack.push(makeHistoryState());
   redoBtn.disabled = false;
   const prev = undoStack.pop();
@@ -230,6 +239,7 @@ undoBtn.addEventListener('click', () => {
 
 redoBtn.addEventListener('click', () => {
   if (redoStack.length === 0) return;
+  if (pickingColor) stopPicking();   // the drawing under the lens is about to change
   undoStack.push(makeHistoryState());
   undoBtn.disabled = false;
   const next = redoStack.pop();
