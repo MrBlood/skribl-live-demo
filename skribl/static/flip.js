@@ -143,8 +143,12 @@ function sizeStage(){
   // page's in-flow extent, minus whatever an open drawer adds, against the
   // viewport. Same size at rest as before; a drawer no longer changes it.
   // The floor is the CSS basis (52vh), read before flex is switched off: it is
-  // what kept the canvas usable while the Tune panel is open on a phone, and
-  // that behaviour is not what this change is about.
+  // what keeps the canvas usable while the Tune panel is open on a phone, so it
+  // applies THEN and only then. Applied always, it outranked the fit: on a short
+  // window (a 744px-tall Windows browser, an iPhone) 52vh plus the strip and the
+  // dock ran past the bottom and the dock was cut off, where the Pad's canvas
+  // simply shrinks (owner, v318).
+  const tuneOpen = !!document.querySelector('.tune-shell.open');
   stage.style.flex = '';
   const floor = parseFloat(getComputedStyle(stage).flexBasis) || 0;
   stage.style.flex = '0 0 auto';
@@ -163,10 +167,12 @@ function sizeStage(){
       const dcs = getComputedStyle(drawers);
       extent -= Math.max(0, drawers.offsetHeight - parseFloat(dcs.paddingTop || 0) - parseFloat(dcs.paddingBottom || 0));
     }
+    // Slack both ways: grow into room under the strip, and give back what the
+    // page runs past the window, so the dock ends inside it like the Pad's.
     const slack = Math.round(window.innerHeight - extent);
-    if(slack > 0) h += slack;
+    h = Math.max(220, h + slack);
   }
-  h = Math.max(h, Math.round(floor));
+  if(tuneOpen) h = Math.max(h, Math.round(floor));
   stage.style.height = h + 'px';
   fitPad();
 }
@@ -206,6 +212,21 @@ function syncGrid(){
 // The pills (fps, the tool shelf, Fill / Fit / Stretch, every seg) follow a
 // resize themselves: lib/segslider.js watches each track.
 window.addEventListener('resize', ()=>{ sizeStage(); });
+// The chrome around the stage changes height without the window changing: the
+// header's play control widens once there are two pages (2px taller on a
+// phone), and the strip's rows come and go. Each of those left the dock that
+// much past the bottom until the next resize. Only the chrome is observed,
+// never the stage, so re-fitting cannot feed back into itself.
+if(typeof ResizeObserver === 'function'){
+  let _fitQueued = false;
+  const _chromeRO = new ResizeObserver(()=>{
+    if(_fitQueued) return; _fitQueued = true;
+    requestAnimationFrame(()=>{ _fitQueued = false; sizeStage(); });
+  });
+  ['.header', '.strip-wrap', '.flip-tools'].forEach(sel => {
+    const el = document.querySelector(sel); if(el) _chromeRO.observe(el);
+  });
+}
 
 let frames = [ newFrame() ];
 let idx = 0;
@@ -2603,8 +2624,8 @@ function buildStrip(){
   // SVG icons in the page bar beside it.
   col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Duplicate</button>'
     +'<button class="addbtn mini" id="addblank" title="Add an empty page"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank</button>'
-    +'<button class="addbtn mini" id="addinbetween" title="Add one drawing halfway between this page and the next"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12"/><path d="M12 8.5v7"/></svg>In-between</button>'
-    +'<button class="addbtn mini" id="addtween" title="Show the movement between two drawings, the way a long exposure catches a moving puppet"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6v12"/><path d="M14 7.5v9" opacity=".5"/><path d="M10.5 9v6" opacity=".3"/><path d="M7.5 10v4" opacity=".18"/><path d="M5 11v2" opacity=".1"/></svg>Motion Smear</button>'
+    +'<button class="addbtn mini" id="addinbetween" title="Add one drawing halfway between this page and the next"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12"/><path d="M12 8.5v7"/></svg>Tween</button>'
+    +'<button class="addbtn mini" id="addtween" title="Show the movement between two drawings, the way a long exposure catches a moving puppet"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6v12"/><path d="M14 7.5v9" opacity=".5"/><path d="M10.5 9v6" opacity=".3"/><path d="M7.5 10v4" opacity=".18"/><path d="M5 11v2" opacity=".1"/></svg>Smear</button>'
     ;   // Paste is no longer here — see the ghost tile in buildStrip (v226).
   // The add controls live OUTSIDE the scrolling strip, as a row above the
   // thumbnails. Inside it they were its last child, so on a long flip they

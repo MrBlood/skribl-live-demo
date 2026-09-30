@@ -147,7 +147,7 @@ with sync_playwright() as p:
       if (!el) return null;
       return { label: (el.textContent || '').trim(), title: el.title || '' }; }""")
     check("the filmstrip carries an In-between control", bool(btn), "no #addinbetween")
-    check("...labelled In-between", bool(btn) and btn["label"] == "In-between", str(btn))
+    check("...labelled Tween", bool(btn) and btn["label"] == "Tween", str(btn))
     check("...and it is not the smear wearing the name",
           bool(btn) and "exposure" not in btn["title"].lower()
           and "smear" not in btn["title"].lower(), str(btn))
@@ -290,7 +290,7 @@ with sync_playwright() as p:
     print("\nTHE HELP SAYS WHAT IT CANNOT DO")
     help_txt = page.evaluate("""() => {
       const tips = [...document.querySelectorAll('.help-tip')];
-      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'In-between');
+      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'Tween');
       return t ? t.textContent.replace(/\\s+/g, ' ') : null; }""")
     check("the Help has an In-between entry of its own", bool(help_txt), "no tip found")
     check("...and it names drawing ORDER as the thing to keep",

@@ -32,6 +32,14 @@ in the PR: that local run is what justifies CI's PR-side trim (below).
 
 - Run suites with `./harness/run_harness.sh [verify_x.py ...]`; bare runs
   everything. A run reporting `skipped N` is not the run you think it is.
+- **A pull request runs its AFFECTED suites, named one by one, not the full
+  battery.** The full battery belongs to a seal and to a change that
+  genuinely rewires many suites (an import move, a shared-harness edit);
+  main's post-merge CI runs it for every merge. An "affected" list built by
+  grepping suites for common words ("menu", "report") is the full battery by
+  another name, and it cost the owner a morning that way. Name the suites
+  that exercise the files the diff touches, and say in the PR that the full
+  battery was not run.
 - After ANY change to `skribl/static/styles.css`, re-emit the player's CSS:
   `python3 harness/tools/cssgraph.py --emit harness/tools/css_live.json
   skribl/static/player.css`.
