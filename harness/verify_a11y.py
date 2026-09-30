@@ -1697,7 +1697,11 @@ with sync_playwright() as p:
                            # pill), not white words on a solid fill, and
                            # verify_onepill.py measures its label on what is
                            # painted behind it.
-                           ("/library", [[".card", ".playing", "span"]]),
+                           # The library's ".card .playing span" went with the
+                           # dead card grid (verify_galib; DECISIONS, "Gallery and
+                           # library join the family"): its worded fills are Make
+                           # one's, which ACCENT_SWEEP below measures.
+                           ("/library", []),
                            ("/gallery", [])):
         for _theme in ("dark", "light"):
             _cpg = browser.new_page(viewport={"width": 1280, "height": 900})

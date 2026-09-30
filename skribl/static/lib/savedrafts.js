@@ -266,6 +266,7 @@
   var STALLED = 'This browser\u2019s storage is slow to answer. Drafts you save now are kept, and older ones will show when it answers.';
   function render(items) {
     listEl.textContent = '';
+    disarmOthers(null);   // a stale question takes its listener with it
     disarmers = [];
     if (stalled()) listEl.appendChild(el('p', 'sdrafts-stalled', STALLED));
     if (!items.length) {
@@ -301,8 +302,13 @@
       del.innerHTML = BIN;
       // The row's question is spoken when it is asked, not only shown.
       meta.setAttribute('aria-live', 'polite');
-      var armedOpen = false, armedDel = false, metaText = meta.textContent;
+      var armedOpen = false, armedDel = false, metaText = meta.textContent, armT = null;
+      function outside(e) { if (!del.contains(e.target)) disarm(); }
       function disarm() {
+        if (armedDel) {
+          clearTimeout(armT);
+          doc.removeEventListener('pointerdown', outside, true);
+        }
         armedOpen = false; armedDel = false;
         meta.textContent = metaText;
         row.classList.remove('armed');
@@ -311,6 +317,7 @@
         del.innerHTML = BIN;
       }
       disarmers.push(disarm);
+      del.addEventListener('focusout', function () { if (armedDel) disarm(); });
       openBtn.addEventListener('click', function () {
         // Opening REPLACES the canvas. Work on it is asked about once, on the
         // row itself, the way New Skribl asks: a second tap confirms.
@@ -329,12 +336,20 @@
           disarmOthers(disarm);
           if (armedOpen) disarm();
           armedDel = true;
-          del.textContent = 'Delete?';
+          /* THE BIN ASKS WITHOUT MOVING (the v317 bin rule, which the media
+             drawer's bin follows): it keeps its 44px box and tints its icon,
+             and the meta line -- a live region -- asks. It used to grow into
+             a "Delete?" pill over the row. It disarms when focus leaves it, on
+             a tap anywhere else, and on a 20 s safety net. */
+          meta.textContent = 'Tap the bin again to delete';
           // Its name says what the next tap does; the old label hid the question.
           del.setAttribute('aria-label', 'Tap again to delete ' + (it.title || 'this draft'));
           del.classList.add('armed');
+          armT = setTimeout(disarm, 20000);
+          doc.addEventListener('pointerdown', outside, true);
           return;
         }
+        disarm();
         // The list is rebuilt, and the bin that had focus goes with it; a
         // keyboard user left on <body> was outside the dialog, where Tab and
         // Escape no longer reached it (third review). Focus lands on the row

@@ -3427,7 +3427,9 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   background: transparent;
   color: var(--text-primary);
   font-size: 14px;
-  font-weight: 500;
+  /* 600, not 500: Segoe UI has no 500, so the owner's Windows machine drew
+     these rows Regular. The gallery's and library's menus are 600 too. */
+  font-weight: 600;
   cursor: pointer;
   border-radius: 10px;
   transition: background 0.15s ease;
@@ -6283,13 +6285,18 @@ body.playing .flip-grid { display: none; }
 .sdrafts-name { font-size: 15px; font-weight: 600; color: var(--text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sdrafts-meta { font-size: 12.5px; color: var(--text-muted); }
-.sdrafts-del { flex: 0 0 auto; min-width: 44px; height: 44px; padding: 0 10px; margin-right: 6px;
-  border-radius: 22px; border: 1px solid transparent; background: transparent; color: var(--text-muted);
-  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex;
-  align-items: center; justify-content: center; }
+/* THE BIN KEEPS ITS BOX (the v317 bin rule; the Library's .draft-del is the
+   same row). Armed, the icon turns the danger colour on a danger tint in the
+   same 44px circle, and the meta line asks (lib/savedrafts.js) -- it used to
+   grow into a "Delete?" pill. No border: the armed edge is an inset shadow. */
+.sdrafts-del { flex: 0 0 auto; width: 44px; height: 44px; padding: 0; margin-right: 6px;
+  border-radius: 999px; border: 0; background: transparent; color: var(--text-muted);
+  font: inherit; cursor: pointer; display: inline-grid; place-items: center; }
 .sdrafts-del svg { width: 19px; height: 19px; }
 @media (hover: hover) { .sdrafts-del:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), .06); } }
-.sdrafts-del.armed { color: var(--danger); border-color: rgba(244, 50, 111, .5); background: rgba(244, 50, 111, .12); }
+.sdrafts-del.armed, .sdrafts-del.armed:hover { color: var(--danger);
+  box-shadow: inset 0 0 0 1px rgba(244, 50, 111, .5); background: rgba(244, 50, 111, .12); }
+.sdrafts-row:has(> .sdrafts-del.armed) .sdrafts-meta { color: var(--danger); }
 /* The phone grabber (lib/sheetswipe.js): tap it, or swipe the sheet down. */
 .sdrafts-grab { display: none; }
 @media (max-width: 640px) {
@@ -7279,7 +7286,22 @@ body.replaying .media-card {
   --good-rgb:      10, 115, 80;
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
+  /* ON-GLASS INK (below the ramp): the secondary words on a light glass
+     sheet, which lets some of the dim and the page through. */
+  --on-glass-2:    #3f4756;
 
+}
+
+/* ON-GLASS INK, LIGHT. The menu sheet is glass (.78 of a pale grey) over a .4
+   scrim, so what is behind its words is a mid grey, not the white the light
+   ramp was measured on: --text-secondary came out 3.53:1 on the Pad's light
+   desktop menu. Inside the sheet the secondary, soft and muted words take one
+   darker ink -- the same value the gallery's and library's glass sheets use
+   (pagemenu.css) -- and clear AA on the pixels actually behind them. */
+:root[data-theme="light"] .menu-sheet {
+  --text-secondary: var(--on-glass-2);
+  --text-soft-2: var(--on-glass-2);
+  --text-muted: var(--on-glass-2);
 }
 
 /* --- the recovery-key panel: moved to posted.css --------------------

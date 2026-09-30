@@ -494,8 +494,11 @@ try:
         victim = names[-1]
         pa.locator("#draftsList .draft-del").last.click()
         pa.wait_for_timeout(600)
-        check("Delete asks on the button first, and deletes nothing yet",
-              pa.locator("#draftsList .draft-del").last.inner_text() == "Delete?"
+        # The bin asks WITHOUT MOVING since the gallery/library pass: it keeps
+        # its box and the row's meta line asks (verify_galib pins the box).
+        check("Delete asks first, on the row, and deletes nothing yet",
+              pa.locator("#draftsList .draft-del").last.evaluate("d => d.classList.contains('armed')")
+              and "again" in pa.locator("#draftsList .draft-row").last.locator(".draft-meta").inner_text()
               and durable("SELECT COUNT(*) FROM skribl_drafts WHERE user_id='1'") == n_acct)
         pa.locator("#draftsList .draft-del").last.click()
         pa.wait_for_timeout(1500)

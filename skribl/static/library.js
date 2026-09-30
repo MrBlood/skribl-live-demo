@@ -79,9 +79,11 @@
      silently did nothing; Loop even toggled its own pressed state, which is a
      control reporting a change it did not make. They come alive when a
      payload has been adopted. Mute is not in this list: refresh() owns it,
-     because whether it means anything depends on the drawing having sound. */
+     because whether it means anything depends on the drawing having sound.
+     Full screen is in the list too (#10): an empty stage offered to go full
+     screen on nothing, and looked as live as the rest. */
   function transportLive(on) {
-    [btnPlay, btnRestart, btnLoop, btnShare].forEach(function (b) {
+    [btnPlay, btnRestart, btnLoop, btnShare, btnFull].forEach(function (b) {
       if (b) b.disabled = !on;
     });
     if (scrub) {
@@ -682,16 +684,40 @@
     del.className = 'draft-del';
     del.innerHTML = BIN;
     del.setAttribute('aria-label', 'Delete ' + title);
-    function disarm() { del.classList.remove('armed'); del.innerHTML = BIN; del.setAttribute('aria-label', 'Delete ' + title); }
+    /* THE BIN ASKS WITHOUT MOVING (#3; the v317 bin rule). Armed, it keeps
+       its 44px circle and tints its icon, and the META LINE asks -- spoken,
+       since the line is a live region. It disarms when focus leaves it, on a
+       tap anywhere else, and on a 20 s safety net: a question that never goes
+       away is a trap for the next stray tap, and one that goes away in four
+       seconds is a race. The editors' saved-drafts sheet is the same row. */
+    meta.setAttribute('aria-live', 'polite');
+    var metaText = meta.textContent, armed = false, armT = null;
+    function outside(e) { if (!del.contains(e.target)) disarm(); }
+    function disarm() {
+      if (!armed) return;
+      armed = false;
+      clearTimeout(armT);
+      document.removeEventListener('pointerdown', outside, true);
+      del.classList.remove('armed');
+      meta.classList.remove('asks');
+      meta.textContent = metaText;
+      del.setAttribute('aria-label', 'Delete ' + title);
+    }
     draftDisarmers.push(disarm);
+    del.addEventListener('focusout', disarm);
     del.addEventListener('click', function () {
-      if (!del.classList.contains('armed')) {
+      if (!armed) {
         draftDisarmers.forEach(function (d) { if (d !== disarm) d(); });
+        armed = true;
         del.classList.add('armed');
-        del.textContent = 'Delete?';
+        meta.classList.add('asks');
+        meta.textContent = 'Tap the bin again to delete';
         del.setAttribute('aria-label', 'Tap again to delete ' + title);
+        armT = setTimeout(disarm, 20000);
+        document.addEventListener('pointerdown', outside, true);
         return;
       }
+      disarm();
       // The rebuilt list takes the focused bin with it: focus goes to the row
       // that took this one's place, or the Drafts tab (third review). Read
       // before the bin is disabled, which drops its focus by itself.
@@ -700,7 +726,7 @@
       del.disabled = true;
       SD.remove(it.id).then(renderDrafts, function (e) {
         del.disabled = false;
-        meta.textContent = e.message;
+        meta.textContent = metaText = e.message;
         return false;
       }).then(function (ok) {
         if (ok === false || !hadFocus) return;
@@ -728,6 +754,7 @@
       if (mine !== draftsSeq) return;
       if (SD.stalled && SD.stalled()) dWhere.textContent = SD.stalled();
       dList.textContent = '';
+      draftDisarmers.forEach(function (d) { d(); });   // a stale question takes its listener with it
       draftDisarmers = [];
       dEmpty.hidden = items.length > 0;
       items.forEach(function (it) { dList.appendChild(draftRow(it)); });

@@ -84,6 +84,9 @@ stale the same way (the paragraph under the list says so too):
     verify_fuzz.py       random editing against the invariants the SERVER holds
     verify_onepill.py    one sliding pill on every pick-one control, contrast
                          read from pixels, forced colours, the no-script tint
+    verify_galib.py      the gallery and the library in the family's chrome:
+                         painted focus on every Tab stop, glass menu, header
+                         and report sheet, bins that ask without moving
 
 That list is a sample and always was — there are far more suites on disk than
 appear here, and `RELEASE.md` names every one of them.

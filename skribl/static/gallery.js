@@ -997,15 +997,29 @@
     var done = button.getAttribute('data-reported') === '1';
     say(done ? 'You already reported this one. Thanks.' : '');
     send.disabled = done;
+    if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.cancelSlide(form);
+    sheet.classList.remove('closing');
     sheet.hidden = false;
+    if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.slideIn(form);
     if (window.SkriblModal) window.SkriblModal.open(sheet, button);
   }
 
+  /* ON A PHONE IT IS A BOTTOM SHEET (#19): the grab bar closes it, a swipe
+     down closes it, and every close eases down with its dim -- the same
+     lib/sheetswipe.js every other bottom sheet uses. On a desktop it is a
+     centred card, which slideOut() recognises and simply hides. Focus is
+     handed back first, so a keyboard close is not left waiting on a slide. */
   function closeReport() {
-    if (sheet.hidden) return;
-    sheet.hidden = true;
+    if (sheet.hidden || sheet.classList.contains('closing')) return;
     if (window.SkriblModal) window.SkriblModal.close(sheet);
     reporting = null;
+    var gone = function () { sheet.hidden = true; sheet.classList.remove('closing'); };
+    sheet.classList.add('closing');
+    if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.slideOut(form, { done: gone });
+    else gone();
+  }
+  if (window.SkriblSheetSwipe) {
+    window.SkriblSheetSwipe.attach(form, { handle: form.querySelector('.pm-grab'), close: closeReport });
   }
 
   document.getElementById('reportCancel').addEventListener('click', closeReport);
