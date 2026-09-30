@@ -12757,3 +12757,34 @@ the fill matches the pen colour read from the page.
 `verify_parity` pins each one on both editors. Each check went red on the
 pre-fix tree or on its own mutation, except Pad's right-click and Flip's tool
 switch, which were already right. `player.css` is unchanged.
+
+## After v317 -- Flip fits the window again; Tween and Smear
+
+The owner, on Windows at an effective 965×744 and on an iPhone: with nine pages
+Flip's dock was cut off at the bottom, where the Pad's stays on. Two causes.
+
+* **The stage floor outranked the fit.** `sizeStage()` floored the stage at its
+  CSS basis, 52vh, at every size, and only ever added slack, never gave it
+  back. On a short window 52vh plus the strip and the dock ran past the
+  bottom. The floor was written for the Tune panel open on a phone, so it now
+  applies then and only then. Otherwise the stage gives back what the page
+  overruns, down to 220px, and the canvas shrinks like the Pad's.
+* **The chrome changed size and nothing re-fit.** The header grows 2px once a
+  second page exists (the play control), and the strip's rows come and go.
+  A ResizeObserver on the header, strip and dock re-runs `sizeStage()`. Only
+  the chrome is observed, never the stage, so it cannot feed back.
+* **The add row was 22px taller than it needed to be.** #271 made it four 52px
+  tiles with the icon over the label. It is now one 34px line with the icon
+  beside the label (the base rule's `::before` band keeps a 44px target). The
+  owner named the other half: In-between and Motion Smear read **Tween** and
+  **Smear** on the buttons, help pills and Tune hint. Those are the
+  animator's words. A smear frame is exactly what that button makes. At 12px
+  all four fit on one line down to 375px. Tooltips and chip messages keep
+  their full sentences.
+
+`verify_layout` pins the fit at five sizes (1544×1190, 965×744, 1280×640,
+390×664, 375×560) with nine pages: the dock ends inside the window and the page
+does not scroll. It also pins the one-line row and the Tune floor. Main failed
+13 of those 16. On the fixed tree each mutation went red on its own checks:
+the floor always on (5), no observer (2, the phones), the floor never on (the
+Tune check), and the tiles back (5).
