@@ -12902,7 +12902,19 @@ does not scroll. It also pins the one-line row and the Tune floor. Main failed
 the floor always on (5), no observer (2, the phones), the floor never on (the
 Tune check), and the tiles back (5).
 
-**Still open, at the end of this run (#281–#289, all unsealed since v317):**
+**Follow-up (#291): the re-fit has to reach what tracks the canvas.** main's CI
+failed two touch-lens checks in `verify_parity` after #289. The observer re-fit
+the stage without a window resize, so an armed eyedropper lens, which moves on
+a resize, stayed where the canvas had been. The cached rect behind the brush
+rings went stale the same way. The observer now watches border boxes (padding
+is height too). When the canvas box has moved since it last ran, it
+dispatches a resize. `verify_layout` grows the header 30px under an armed
+lens and requires the painted lens to move with the canvas. That check is
+red with the signal removed. The first cut of the fix compared the box before
+and after `sizeStage()` and never fired, because the header's growth had
+already moved the canvas. The check caught that too.
+
+**Still open, at the end of this run (#281–#291, all unsealed since v317):**
 
 * **The seal.** Nine merges since v317 carry no sealed record. Sealing is the
   owner's call, and it is where the full battery belongs.
