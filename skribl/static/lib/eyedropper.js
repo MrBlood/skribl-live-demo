@@ -506,7 +506,6 @@
       var o = u.probe.getBoundingClientRect();
       u.pill.style.left = (cx - o.left) + 'px';
       u.pill.style.top = (box.t - o.top) + 'px';
-      u.pill.classList.toggle('eyedropper-pill-low', box.t > v.t + 10);
       return box;
     }
 
