@@ -658,7 +658,14 @@ with sync_playwright() as sp:
     #   moving beside the readout while a take records and back after
     #   (_recordBtnHome, startRecording) -- app.js, which the player loads.
     # 133,110 measured.
-    BYTES_RATCHET, BYTES_TARGET = 133_150, 153_800
+    # RAISED (the lens's second pass, review), for one named cost: +26 B over
+    #   the old ceiling, two `if (pickingColor) stopPicking();` lines -- a tool
+    #   switch and the Pad's Play end a colour pick, as Flip's already did, so
+    #   the lens never sits over an eraser or a replay. setTool and the Play
+    #   handler live in app.js, which the player loads; setTool is also where
+    #   the keyboard's E arrives, so an editor-side click hook would miss it.
+    # 133,176 measured.
+    BYTES_RATCHET, BYTES_TARGET = 133_220, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
