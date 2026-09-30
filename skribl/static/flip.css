@@ -1477,21 +1477,25 @@ body.stroking .strip-wrap {
 /* THE PAGE-ACTION ROW, REDONE (owner: "redo the page action row too"). Four
    outlined buttons whose labels wrapped -- "In-" over "between", "Motion" over
    "Smear" -- were the busiest thing left on the screen. Now four equal tiles,
-   the icon over a one-line label, no outline: a soft wash, like the dock's
-   own controls. 52px tall, so each is its own 44px target without a band. */
+   the icon beside a one-line label, no outline: a soft wash, like the dock's
+   own controls. First built as 52px tiles with the icon stacked over the label;
+   that was 22px of height the strip could not spare, and with Flip's stage
+   floor it pushed the dock off a short window (owner, Windows and iPhone). The
+   labels are the animator's words, Tween and Smear, so all four fit on one line
+   down to a phone. 34px tall; the base rule's ::before band makes each a 44px
+   target. */
 .addcol {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
-  padding: 10px 10px 4px; flex-wrap: nowrap;
+  padding: 8px 10px 2px; flex-wrap: nowrap;
 }
 .addcol .addbtn, .addcol .addbtn.mini {
-  width: auto; max-width: none; min-height: 52px; padding: 6px 2px;
-  flex-direction: column; gap: 4px;
+  width: auto; max-width: none; min-height: 34px; padding: 0 6px;
+  flex-direction: row; gap: 6px;
   border: 0; border-radius: 12px;
   background: rgba(var(--wash-rgb), .05);
   color: var(--text-secondary);
-  font-size: 11px; font-weight: 600; line-height: 1.1; white-space: nowrap;
+  font-size: 12px; font-weight: 600; line-height: 1.1; white-space: nowrap;
 }
-.addcol .addbtn .addbtn-ic { width: 20px; height: 20px; }
+.addcol .addbtn .addbtn-ic { width: 15px; height: 15px; }
 .addcol .addbtn:hover { background: rgba(var(--wash-rgb), .09); color: var(--text-primary); }
-.addcol .addbtn::before { display: none; }
 

@@ -1151,6 +1151,51 @@ with sync_playwright() as p:
               len({c["top"] for c in _bar if not c.get("missing")}) == 1, str([(c["id"], c.get("top")) for c in _bar]))
         _ctx.close()
 
+    print("\nLAYOUT — Flip fits the window: the dock ends inside it, like the Pad's (v318)")
+    # Owner, Windows at an effective 965x744 and an iPhone: with nine pages the
+    # dock was cut off at the bottom. Two causes, pinned separately. Flip's
+    # stage floor (52vh) outranked the fit at every size, and the header grew
+    # 2px once a second page existed with nothing re-fitting the stage. Nine
+    # pages, because the second cause needs them; the page measured is the
+    # whole document, because a dock inside the window with the page still
+    # scrolling is the same complaint. Sizes: the owner's two, a short laptop,
+    # two phones.
+    FIT_Q = """() => { const d = document.querySelector('.flip-tools').getBoundingClientRect();
+      return { inner: innerHeight, doc: document.documentElement.scrollHeight,
+               dock: Math.round(d.bottom),
+               labels: [...document.querySelectorAll('.addcol .addbtn')].map(e =>
+                 ({ t: e.textContent.trim(), clip: e.scrollWidth > e.clientWidth,
+                    h: Math.round(e.getBoundingClientRect().height) })) }; }"""
+    for (_w, _h, _mob) in ((1544, 1190, False), (965, 744, False), (1280, 640, False),
+                           (390, 664, True), (375, 560, True)):
+        _ctx = browser.new_context(viewport={"width": _w, "height": _h}, is_mobile=_mob, has_touch=_mob)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, "/flip")
+        for _i in range(8):
+            _pg.click("#addblank"); _pg.wait_for_timeout(80)
+        _pg.wait_for_timeout(400)
+        _f = _pg.evaluate(FIT_Q)
+        check(f"/flip {_w}x{_h}, nine pages: the dock ends inside the window",
+              _f["dock"] <= _f["inner"], f"dock bottom {_f['dock']} in a {_f['inner']}px window")
+        check(f"/flip {_w}x{_h}: ...and the page does not scroll past it",
+              _f["doc"] <= _f["inner"], f"document {_f['doc']}px in a {_f['inner']}px window")
+        check(f"/flip {_w}x{_h}: the add row is one line of four, none clipped",
+              len(_f["labels"]) == 4 and not any(l["clip"] for l in _f["labels"])
+              and max(l["h"] for l in _f["labels"]) <= 36, str(_f["labels"]))
+        _ctx.close()
+
+    # The floor is kept for what it was written for: the Tune panel open on a
+    # phone still leaves the canvas at least 52vh, rather than a sliver.
+    _ctx = browser.new_context(viewport={"width": 390, "height": 664}, is_mobile=True, has_touch=True)
+    _pg = _ctx.new_page()
+    browsing.goto(_pg, BASE, "/flip")
+    _pg.click("#tuneBtn"); _pg.wait_for_timeout(700)
+    _st = _pg.evaluate("() => [document.querySelector('.tune-shell').classList.contains('open'),"
+                       " document.querySelector('.flip-stage').offsetHeight, innerHeight]")
+    check("/flip 390x664, Tune open: the stage keeps its 52vh floor",
+          _st[0] and _st[1] >= round(0.52 * _st[2]) - 1, f"open={_st[0]} stage {_st[1]}px of {_st[2]}")
+    _ctx.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

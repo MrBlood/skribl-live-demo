@@ -558,7 +558,7 @@ with sync_playwright() as p:
           not left["inStrip"],
           "they are a child of the box that scrolls, so they scroll with it")
     for _id, _label in (("addcopy", "Duplicate"), ("addblank", "Blank"),
-                        ("addtween", "Motion Smear")):
+                        ("addtween", "Smear")):
         check(f"{_label} is on screen while page 2 is being edited",
               left["seen"][_id], "the button is not visible")
         check(f"and it is the control that says {_label}",
