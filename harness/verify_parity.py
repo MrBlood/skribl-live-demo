@@ -871,16 +871,18 @@ with sync_playwright() as p:
     # The music row: the name, and the track's length -- the same length both
     # editors print under the waveform (#trimEndLabel) -- and a tile whose note
     # sits on the selected tab's own tint, measured live from the tab so a
-    # retuned purple moves both together.
+    # retuned purple moves both together. The tint is the strip's sliding pill
+    # (the one pill), so the fill is read from the pill and the ink from the tab.
     MROW = """() => { const g = (id) => document.getElementById(id), tile = document.querySelector('#musicUploadBtn .dz-tile');
         const tab = document.querySelector('.media-tab[aria-selected="true"]');
+        const pill = document.querySelector('#mediaTabs > .seg-slider');
         tile.scrollIntoView({ block: 'center' });
         const r = tile.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-        const a = getComputedStyle(tile), b = getComputedStyle(tab);
+        const a = getComputedStyle(tile), b = getComputedStyle(tab), f = pill ? getComputedStyle(pill).backgroundColor : null;
         return { name: g('musicBtnLabel').textContent, meta: g('musicBtnMeta').textContent,
                  end: g('trimEndLabel').textContent, painted: !!at && tile.contains(at),
-                 tint: a.backgroundColor === b.backgroundColor && a.color === b.color,
-                 tile: [a.backgroundColor, a.color], tab: [b.backgroundColor, b.color] }; }"""
+                 tint: a.backgroundColor === f && a.color === b.color,
+                 tile: [a.backgroundColor, a.color], tab: [f, b.color] }; }"""
     _pmr, _fmr = pad.evaluate(MROW), flip.evaluate(MROW)
     check("a loaded track's row names it and gives the length the waveform shows, on both",
           all(r["name"] == "t.wav" and r["meta"] == "Loops under the drawing · " + r["end"] for r in (_pmr, _fmr))

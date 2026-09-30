@@ -6710,13 +6710,14 @@ body.stroking .toolbar, body.stroking .flip-tools {
 }
 /* ---------- EVERY DRAWER, PICKER AND SHEET IN THE DOCK'S MATERIAL ----------
    The owner's second look at the dock: "make the drawers match the frosted
-   bar too". Pen, Photo and Music drawers, the Photo | Music tabs, the shape
-   picker, Tune and the menu sheets take --glass-fill and --glass, and lose the
-   hairline border each carried -- the canvas keeps the only outline on the
-   screen (the header's rule). Layout, padding and radii are untouched.
+   bar too". Pen, Photo and Music drawers, the shape picker, Tune and the
+   menu sheets take --glass-fill and --glass, and lose the hairline border
+   each carried -- the canvas keeps the only outline on the screen (the
+   header's rule). Layout, padding and radii are untouched.
    The Photo and Music drawers and their tabs are ONE card now (.media-card,
-   below): the card wears this glass, and the panel inside it drops its own. */
-.tab-panel, .media-tabs, .shape-pop, .menu-sheet, .media-card {
+   below): the card wears this glass, and the panel inside it drops its own.
+   The tabs are not glass at all: they are a track of the one pill. */
+.tab-panel, .shape-pop, .menu-sheet, .media-card {
   background: var(--glass-fill);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
@@ -6793,11 +6794,20 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .swoosh-readout.on { opacity: 1; transform: translate(-50%, -100%); }
 
 /* The Media tabs: Photo | Music, at the top of whichever of the two drawers
-   is open -- the strip and the open drawer are ONE card (.media-card, below). */
+   is open -- the strip and the open drawer are ONE card (.media-card, below).
+   THE LAST CONTROL TO TAKE THE ONE PILL (owner: "a on the pill"). The strip
+   was a glass slab of its own (a 16px corner, a 4px inset, a 650 label and a
+   selected tab that painted its own fill with nothing sliding); it is a track
+   now, the same 12 / 3 / 9 as every other pick-one control, and
+   lib/segslider.js slides the pill between the two tabs from aria-selected.
+   The tabs stay 44 tall -- the whole tab is the target, no band needed --
+   which is what makes this track 52 where the drawers' rows are shorter: the
+   card's header, not one of its rows. */
 .media-tabs {
-  display: flex; gap: 4px; padding: 4px; margin: 0 auto 8px;
-  width: min(100% - 24px, 520px); box-sizing: border-box;
-  border-radius: 16px;
+  position: relative;
+  display: flex; box-sizing: border-box;
+  background: var(--surface-control); border: 1px solid var(--hairline);
+  border-radius: var(--r-seg); padding: var(--seg-inset);
 }
 .media-tabs[hidden] { display: none; }
 /* THE MEDIA CARD (the drawer redesign, option A). The tabs and the open drawer
@@ -6815,7 +6825,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
    panels is, so a drawer never depends on lib/mediatabs.js to be seen. */
 .media-card { display: flow-root; margin: 0 12px calc(12px + env(safe-area-inset-bottom)); border-radius: 16px; z-index: 39; }
 .media-card:not(:has(> .tab-panel:not([hidden]))) { display: none; }
-.media-card > .media-tabs { width: auto; margin: 16px 16px 14px; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.media-card > .media-tabs { margin: 16px 16px 14px; }
 .media-card > .tab-panel {
   margin: 0; padding-top: 16px; border-radius: 0 0 16px 16px;
   background: none; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
@@ -6831,17 +6841,21 @@ body.replaying .media-card {
   -webkit-backdrop-filter: none; backdrop-filter: none; pointer-events: none;
 }
 .media-tab {
-  flex: 1; min-height: 44px; border: 0; border-radius: 11px; background: transparent;
+  flex: 1 1 0; min-width: 0; min-height: 44px; border: 0; border-radius: var(--seg-pill-r); background: transparent;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  font: inherit; font-size: 14px; font-weight: 650; color: var(--text-tool); cursor: pointer; position: relative;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--text-soft); cursor: pointer;
+  position: relative; z-index: 1; -webkit-tap-highlight-color: transparent;
 }
-.media-tab svg { width: 18px; height: 18px; }
-.media-tab[aria-selected="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); }
+.media-tab svg { width: 18px; height: 18px; flex: none; }
+.media-tab[aria-selected="true"] { color: var(--seg-on-ink); }
+/* The fallback every track has: the selected tab is the tint until the pill
+   is placed (the pill's own fill and fade are the one pill's, above). */
+.media-tabs:not([data-pill]) > .media-tab[aria-selected="true"] { background: var(--seg-on-fill); }
 /* The owner: "for the dot next to the Music/Photo can it just be the same as
    the dot on the icon?" -- the media button's dot, ring and all, including its
    colour, which is the dock's ground rather than the tab's. */
 .media-tab .tab-dot {
-  position: static; margin-left: 2px;
+  position: static; margin-left: -2px;   /* 6px from the label it belongs to, the icon's 8 on the other side */
   --dot-ring-w: 0.75px;
   --dot-ring: rgb(var(--surface-well-2-rgb));
 }
@@ -7292,18 +7306,18 @@ body.replaying .media-card {
   }
 }
 @media (forced-colors: active) {
-  .seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn {
+  .seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn, .media-tab {
     outline: 1px solid ButtonText; outline-offset: -1px;
   }
   :is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn, .tool-btn, .tool-tray-btn):is(.on, .active),
-  .onion-tint.active, [role="switch"][aria-checked="true"] {
+  .media-tab[aria-selected="true"], .onion-tint.active, [role="switch"][aria-checked="true"] {
     outline: 3px solid Highlight; outline-offset: -3px;
   }
   /* Focus moves the selected edge OUTSIDE, keeping its colour: a group's one
      Tab stop is its selected option, and the rule above painted focus over as
      nothing. Short on purpose: cssgraph copies this block whole into the
      player's sheet, and (0,3,1) outranks the rule above without naming it. */
-  button:is(.on, .active):focus-visible { outline-width: 2px; outline-offset: 1px; }
+  button:is(.on, .active, [aria-selected="true"]):focus-visible { outline-width: 2px; outline-offset: 1px; }
   .seg-slider, .photo-fit-slider, .tool-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }
 

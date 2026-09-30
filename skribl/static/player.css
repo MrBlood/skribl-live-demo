@@ -1962,17 +1962,17 @@ a.player-btn { text-decoration: none; }
   }
 }
 @media (forced-colors: active) {
-  .seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn {
+  .seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn, .media-tab {
     outline: 1px solid ButtonText; outline-offset: -1px;
   }
   :is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn, .tool-btn, .tool-tray-btn):is(.on, .active),
-  .onion-tint.active, [role="switch"][aria-checked="true"] {
+  .media-tab[aria-selected="true"], .onion-tint.active, [role="switch"][aria-checked="true"] {
     outline: 3px solid Highlight; outline-offset: -3px;
   }
   /* Focus moves the selected edge OUTSIDE, keeping its colour: a group's one
      Tab stop is its selected option, and the rule above painted focus over as
      nothing. Short on purpose: cssgraph copies this block whole into the
      player's sheet, and (0,3,1) outranks the rule above without naming it. */
-  button:is(.on, .active):focus-visible { outline-width: 2px; outline-offset: 1px; }
+  button:is(.on, .active, [aria-selected="true"]):focus-visible { outline-width: 2px; outline-offset: 1px; }
   .seg-slider, .photo-fit-slider, .tool-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }

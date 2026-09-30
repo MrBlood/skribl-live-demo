@@ -91,7 +91,7 @@ AUD = _buf.getvalue()
 # (elementFromPoint at the track's centre lands inside it), not of a rect:
 # a track in a closed drawer keeps its geometry.
 CENSUS = r"""() => {
-  const TR = '.seg, .smooth-seg, .gif-seg, .photo-fit-group, .seg-track, #toolGroup';
+  const TR = '.seg, .smooth-seg, .gif-seg, .photo-fit-group, .seg-track, .media-tabs, #toolGroup';
   const PILLS = ':scope > .seg-slider, :scope > .photo-fit-slider, :scope > .tool-slider';
   const probe = (host, prop) => { const d = document.createElement('span');
     d.style.cssText = 'position:absolute;visibility:hidden;' + prop; host.appendChild(d);
@@ -129,6 +129,7 @@ CENSUS = r"""() => {
       dock: g.id === 'toolGroup',
       selInk: sel ? getComputedStyle(sel).color : null,
       hasSel: !!sel,
+      selText: sel ? (sel.textContent || '').trim() : null,
       btns: btns.map(b => { const bb = b.getBoundingClientRect(); const cs = getComputedStyle(b);
         return { t: (b.textContent || '').trim().slice(0, 16), w: cs.fontWeight, ink: cs.color,
                  sel: b === sel, x: bb.left, y: bb.top, width: bb.width, height: bb.height,
@@ -171,6 +172,7 @@ def painted_bg(page, b):
 
 
 seen = set()
+chosen = set()   # (route, control, the selected option's label): Photo | Music is measured with each chosen
 
 
 def audit(page, route, theme, form, state):
@@ -180,6 +182,7 @@ def audit(page, route, theme, form, state):
         tag = f"{route} {g['key']} [{theme} {form}{', ' + state if state else ''}]"
         first = ident not in seen
         seen.add(ident)
+        chosen.add((route, g["key"], g["selText"]))
         check(f"ONE PILL: {tag} holds exactly one pill", g["pills"] == 1, f"{g['pills']} pill elements")
         if not g["hasSel"]:
             # a data-role="focus" group has a free state: nothing chosen, no pill.
@@ -295,6 +298,11 @@ with sync_playwright() as p:
         q.evaluate("() => { const b = document.querySelector('.zoom-mag-bar'); if (b) b.scrollIntoView({block: 'center'}); }")
         settle(q, 300)
         yield "music drawer"
+        # The phone's music drawer is taller than the screen and the reach
+        # above scrolls the tabs off it: bring them back to measure Music.
+        q.evaluate("() => document.getElementById('mediaTabs').scrollIntoView({block: 'center'})")
+        settle(q, 300)
+        yield "music tabs"
         browsing.pad_drawer_close(q)
         if ed == "flip":
             q.click("#toolMoreBtn"); q.wait_for_selector("#toolTray:not([hidden])", timeout=3000); settle(q)
@@ -350,11 +358,12 @@ with sync_playwright() as p:
                     c.close()
         must = {("/skribl-pad", k) for k in ("toolGroup", "paintTargetSeg", "smoothSeg", "brushSeg", "pressureSeg",
                                               "eraserSeg", "shapeSeg", "gridDensitySeg", "mirrorSeg", "pauseSeg",
-                                              "speedSeg", "photoFitGroup", "themeSeg", "hintSeg", "canvasSeg")}
+                                              "speedSeg", "photoFitGroup", "themeSeg", "hintSeg", "canvasSeg",
+                                              "mediaTabs")}
         must |= {("/flip", k) for k in ("toolGroup", "paintTargetSeg", "smoothSeg", "brushSeg", "pressureSeg",
                                          "eraserSeg", "shapeSeg", "fps", "gridDensitySeg", "mirrorSeg",
                                          "smearWeightSeg", "onionDepthSeg", "photoFitGroup", "themeSeg", "hintSeg",
-                                         "canvasSeg", "mbScope", "exportSizeSeg", "exportLoopsSeg")}
+                                         "canvasSeg", "mbScope", "exportSizeSeg", "exportLoopsSeg", "mediaTabs")}
         missing = sorted(m for m in must if m not in seen)
         check("ONE PILL: the census reached every control it names (a control not measured is not passing)",
               not missing, f"not reached: {missing}; reached {len(seen)}")
@@ -362,6 +371,10 @@ with sync_playwright() as p:
             check(f"ONE PILL: {route}'s script-built and sheet-borne tracks were measured: {', '.join(extra)}",
                   all(any(k[0] == route and e in k[1] for k in seen) for e in extra),
                   str(sorted(k[1] for k in seen if k[0] == route)))
+        for route in ("/skribl-pad", "/flip"):
+            got = sorted(t for (r, k, t) in chosen if r == route and k == "mediaTabs")
+            check(f"ONE PILL: {route}'s Photo | Music was measured with Photo chosen and with Music chosen",
+                  "Photo" in got and "Music" in got, str(got))
         check("ONE PILL: the gallery's New / Hot, the library's tabs and filter, and both page menus were measured",
               sum(1 for k in seen if k[0] in ("/gallery", "/library")) >= 5,
               str(sorted(k for k in seen if k[0] in ("/gallery", "/library"))))
@@ -398,7 +411,7 @@ with sync_playwright() as p:
             else:
                 q.goto(BASE + route, wait_until="load")
             settle(q)
-            fb = q.evaluate("""() => { const out = [];
+            FB = """() => { const out = [];
               const d = document.createElement('span'); d.style.cssText = 'background:var(--seg-on-fill)';
               document.body.appendChild(d); const tint = getComputedStyle(d).backgroundColor; d.remove();
               for (const g of document.querySelectorAll('[data-pill]')) {
@@ -414,7 +427,15 @@ with sync_playwright() as p:
                            pillOpacity: pill ? getComputedStyle(pill).opacity : null, tint });
                 if (pill) pill.style.transition = '';
                 if (window.SkriblSegSlider) window.SkriblSegSlider.place(g);
-              } return out; }""")
+              } return out; }"""
+            fb = q.evaluate(FB)
+            if route in ("/skribl-pad", "/flip"):
+                # Photo | Music lives in the media card, not in Tune.
+                q.click("#tuneBtn"); settle(q, 400)
+                browsing.pad_drawer(q, "photo"); settle(q)
+                fb += [f for f in q.evaluate(FB) if f["key"] == "mediaTabs"]
+                check(f"FALLBACK: {route} had Photo | Music's placed pill to take away",
+                      any(f["key"] == "mediaTabs" for f in fb), str([f["key"] for f in fb]))
             for f in fb:
                 check(f"FALLBACK: {route} {f['key']} — unplaced, the selected option is the tint and the pill is not painted",
                       f["after"] == f["tint"] and f["pillOpacity"] == "0", str(f))
@@ -426,7 +447,7 @@ with sync_playwright() as p:
     # ---------------------------------------------------------------- 5
     if want("forced"):
         print("\nFORCED COLOURS — the selected option carries an edge the others do not")
-        EDGE = r"""() => { const TR = '.seg, .smooth-seg, .gif-seg, .photo-fit-group, .seg-track, #toolGroup, #toolTray';
+        EDGE = r"""() => { const TR = '.seg, .smooth-seg, .gif-seg, .photo-fit-group, .seg-track, .media-tabs, #toolGroup, #toolTray';
           const e = b => { const c = getComputedStyle(b); return (c.outlineStyle !== 'none' ? parseFloat(c.outlineWidth) : 0); };
           const out = [];
           for (const g of document.querySelectorAll(TR)) {
@@ -446,6 +467,8 @@ with sync_playwright() as p:
                 q.click("#tuneBtn"); settle(q, 400)
                 browsing.pad_drawer(q, "draw"); settle(q, 400)
                 rows += q.evaluate(EDGE)
+                browsing.pad_drawer(q, "photo"); settle(q, 400)
+                rows += q.evaluate(EDGE)
                 browsing.pad_drawer_close(q)
                 if route == "/flip":
                     q.click("#toolMoreBtn"); q.wait_for_selector("#toolTray:not([hidden])", timeout=3000); settle(q, 400)
@@ -462,7 +485,7 @@ with sync_playwright() as p:
                 keys.add(r["key"])
                 check(f"FORCED: {route} {r['key']} — the selected option's edge is heavier than an unselected one's",
                       r["on"] >= 2 and r["on"] > r["off"], str(r))
-            need = {"toolGroup", "smoothSeg", "brushSeg", "mirrorSeg"} if route != "/gallery" and route != "/library" else set()
+            need = {"toolGroup", "smoothSeg", "brushSeg", "mirrorSeg", "mediaTabs"} if route != "/gallery" and route != "/library" else set()
             if route == "/flip":
                 need |= {"toolTray", "fps"}
             check(f"FORCED: {route} measured the controls it must (and at least two)",
@@ -693,7 +716,8 @@ with sync_playwright() as p:
                 # The dock first, drawer shut: with the pen's drawer open,
                 # focusing the pen repaints the dock whatever its outline does.
                 probe = [("the dock's tool", "#toolGroup .tool-btn.active"),
-                         ("Brush", "#brushSeg > button.on, #brushSeg > button.active")]
+                         ("Brush", "#brushSeg > button.on, #brushSeg > button.active"),
+                         ("Photo | Music", "#mediaTabs > [aria-selected='true']")]
             else:
                 q.goto(BASE + route, wait_until="load"); settle(q)
                 probe = ([("New / Hot", ".tabs > button.active, .tabs > [aria-selected='true']")] if route == "/gallery" else
@@ -702,6 +726,8 @@ with sync_playwright() as p:
             for name, sel in probe:
                 if name == "Brush":
                     browsing.pad_drawer(q, "draw"); settle(q, 400)
+                if name == "Photo | Music":
+                    browsing.pad_drawer(q, "photo"); settle(q, 400)
                 sel = q.evaluate("(s) => { const e = document.querySelector(s); if (!e) return null; e.setAttribute('data-fprobe', ''); return '[data-fprobe]'; }", sel)
                 if not sel:
                     check(f"FOCUS: {route} {name} — a selected option was found to focus", False, "none"); continue
@@ -728,6 +754,7 @@ with sync_playwright() as p:
             q.wait_for_function("() => document.getElementById('photoUploadBtn').classList.contains('loaded')", timeout=20000)
             settle(q, 500)
             results_rows.append(("Fill / Fit / Stretch", ring(q, ".photo-fit-group .photo-fit-btn:nth-of-type(2)")))
+            results_rows.append(("Photo | Music", ring(q, "#mediaTabs > [aria-selected='true']")))
             for name, d in results_rows:
                 check(f"FOCUS: {route} {name} — the focus ring shows on all four sides (no track clips it)",
                       d["fv"] and min(d["top"], d["bottom"]) >= d["w"] and min(d["left"], d["right"]) >= d["h"], str(d))

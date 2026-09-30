@@ -11,10 +11,11 @@
  *           below).
  *   TRACKS  SEGS plus .seg-track -- the gallery's New / Hot, the library's
  *           tabs and filter, the page menu's Theme -- and the dock's tool
- *           group, which lib/toolshelf.js hands over. These keep their own
- *           semantics (a tablist, aria-pressed buttons their pages write), so
- *           a .seg-track is read from its aria state as well as its class and
- *           is never written to.
+ *           group, which lib/toolshelf.js hands over -- and the editors'
+ *           Photo | Music tabs (.media-tabs, lib/mediatabs.js). These keep
+ *           their own semantics (a tablist, aria-pressed buttons their pages
+ *           write), so a .seg-track or the media tabs are read from their aria
+ *           state as well as their class and are never written to.
  *
  * THE BUG THIS EXISTS FOR. A pill is only right once its selected option has
  * been laid out, and inside a sheet or a drawer that ships `hidden` that is
@@ -56,7 +57,7 @@
   'use strict';
 
   var SEGS = '.seg, .smooth-seg, .gif-seg, .photo-fit-group';
-  var TRACKS = SEGS + ', .seg-track';
+  var TRACKS = SEGS + ', .seg-track, .media-tabs';
   var PILLS = ':scope > .seg-slider, :scope > .photo-fit-slider, :scope > .tool-slider';
 
   function selected(group) {
