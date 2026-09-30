@@ -1935,9 +1935,6 @@ a.player-btn { text-decoration: none; }
   --good-rgb:      10, 115, 80;
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
-  /* ON-GLASS INK (below the ramp): the secondary words on a light glass
-     sheet, which lets some of the dim and the page through. */
-  --on-glass-2:    #3f4756;
 
 }
 

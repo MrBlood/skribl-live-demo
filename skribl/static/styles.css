@@ -7286,9 +7286,6 @@ body.replaying .media-card {
   --good-rgb:      10, 115, 80;
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
-  /* ON-GLASS INK (below the ramp): the secondary words on a light glass
-     sheet, which lets some of the dim and the page through. */
-  --on-glass-2:    #3f4756;
 
 }
 
@@ -7299,6 +7296,9 @@ body.replaying .media-card {
    darker ink -- the same value the gallery's and library's glass sheets use
    (pagemenu.css) -- and clear AA on the pixels actually behind them. */
 :root[data-theme="light"] .menu-sheet {
+  /* Declared HERE and not in the ramp: the ramp is carried into player.css,
+     which has no menu sheet and a byte ratchet (verify_player_isolation). */
+  --on-glass-2: #3f4756;
   --text-secondary: var(--on-glass-2);
   --text-soft-2: var(--on-glass-2);
   --text-muted: var(--on-glass-2);

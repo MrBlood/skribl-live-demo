@@ -12798,7 +12798,10 @@ it. That was measured with the text made transparent and the frame
 photographed, in both themes at phone and desktop sizes. The same token fixes
 the Pad's own light menu: styles.css maps `--text-secondary`, `--text-soft-2`
 and `--text-muted` to it inside `.menu-sheet` in light. The audit's 3.53:1
-now measures at least 4.84 on the same method. `player.css` was re-emitted.
+now measures at least 4.84 on the same method. The token is declared on
+that rule, not in the ramp. The ramp is carried into `player.css`, and a first
+cut there tripped `verify_player_isolation`'s byte ratchet by 28 bytes, so
+`player.css` is byte-for-byte unchanged.
 
 **The defects, each minimal:**
 
@@ -12839,7 +12842,9 @@ now measures at least 4.84 on the same method. `player.css` was re-emitted.
 * **#22** `brand_sweep=101` is dropped.
 
 `verify_clouddrafts` now asserts the armed bin and the meta-line question in
-place of the "Delete?" text.
+place of the "Delete?" text. `verify_library`'s no-Fullscreen-API test pressed
+full screen on an empty stage, which #10 now disables. It now pins that
+state and puts a post on the stage before pressing.
 
 **Calibration.** On this tree I applied one orthogonal mutation per component
 and ran the suite once: 25 rows went red, each for its own mutation. The
