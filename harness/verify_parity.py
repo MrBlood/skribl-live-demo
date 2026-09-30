@@ -23,6 +23,7 @@ and Flip should not converge on one interface — Pad is meant to be immediate,
 Flip is meant to be an animation tool — so the point is that differences are
 declared rather than accidental.
 """
+import base64
 import math
 import os
 import struct
@@ -1552,6 +1553,221 @@ with sync_playwright() as p:
         _q.touchscreen.tap(_cb["x"], _cb["y"]); _q.wait_for_timeout(300)
         check(f"{_route}: Cancel on a phone abandons the pick",
               not _q.evaluate(ARMED) and _q.evaluate("() => color") == "#00a95c", _q.evaluate("() => color"))
+        _pc.close()
+
+    # THE LENS, SECOND PASS (owner's eye and review). Each of these was seen
+    # going wrong on this tree before it was fixed: undo, playback, a tool
+    # switch and a right-click each left the lens armed over a drawing it no
+    # longer showed (or picked); a keyboard arm dropped focus to <body>; the
+    # reticle smeared at 1x; the light pill went muddy grey, Cancel at 2.85:1;
+    # near the top of a drawing the pill faded to 0.3 and sat over the chip;
+    # a pinch picked a colour nobody aimed; forced colours erased the handle.
+    GONE = """() => { const e = document.querySelector('.eyedropper-lens'), p = document.querySelector('.eyedropper-pill');
+        return !document.getElementById('eyedropperBtn').classList.contains('picking') && (!e || e.hidden) && (!p || p.hidden); }"""
+    FOCUS = """() => { const a = document.activeElement; if (!a) return null;
+        const r = a.getBoundingClientRect(), v = a.checkVisibility ? a.checkVisibility({ visibilityProperty: true }) : true;
+        return { id: a.id || '', cls: String(a.className || ''), tag: a.tagName, pill: !!a.closest('.eyedropper-pill'),
+                 visible: v && r.width > 0 }; }"""
+
+    def _arm(q):
+        if q.evaluate(ARMED):                 # left armed by a check that went red: report, do not crash
+            return True
+        browsing.pad_drawer(q, "draw", settle=400)
+        q.click("#eyedropperBtn"); q.wait_for_timeout(350)
+        return q.evaluate(ARMED)
+
+    print("\nPARITY — the lens ends when the drawing under it changes, and hands focus back")
+    _lctx = b.new_context(viewport={"width": 1400, "height": 900})
+    for _route, _cv in (("/skribl-pad", "#canvas"), ("/flip", "#pad")):
+        _q = _fresh(_lctx, _route)
+        _stroke(_q, _cv, False, None, 0.5, "#ffe800")
+        _stroke(_q, _cv, False, None, 0.7, "#ff48b0")
+        _q.evaluate(SETC, "#00a95c")
+        # Keyboard only: arm with Enter, focus is on the pill; Escape gives it back.
+        browsing.pad_drawer(_q, "draw", settle=400)
+        _q.focus("#eyedropperBtn"); _q.keyboard.press("Enter"); _q.wait_for_timeout(350)
+        _f1 = _q.evaluate(FOCUS)
+        _q.keyboard.press("Escape"); _q.wait_for_timeout(250)
+        _f2 = _q.evaluate(FOCUS)
+        check(f"{_route}: a keyboard arm puts focus on the armed pill, and Escape hands it back to a visible control",
+              bool(_f1) and _f1["pill"] and bool(_f2) and _f2["id"] in ("eyedropperBtn", "penToolBtn") and _f2["visible"],
+              f"armed {_f1} -> after Escape {_f2}")
+        browsing.pad_drawer(_q, "draw", settle=400)
+        _q.focus("#eyedropperBtn"); _q.keyboard.press("Enter"); _q.wait_for_timeout(350)
+        _q.keyboard.press("Tab"); _t1 = _q.evaluate(FOCUS)
+        _q.keyboard.press("Enter"); _q.wait_for_timeout(250)
+        _f3 = _q.evaluate(FOCUS)
+        check(f"{_route}: ...Tab from there reaches Cancel, and Cancel by keyboard hands focus back as well",
+              bool(_t1) and "eyedropper-pill-cancel" in _t1["cls"] and _q.evaluate(GONE)
+              and bool(_f3) and _f3["id"] in ("eyedropperBtn", "penToolBtn") and _f3["visible"], f"{_t1} -> {_f3}")
+        # At 1x the reticle's white band is whole white pixels, not a grey smear.
+        _arm(_q)
+        _t = _q.evaluate(YEL, [_cv, [255, 232, 0]])
+        _q.mouse.move(_t["x"] - 20, _t["y"] - 20); _q.mouse.move(_t["x"], _t["y"], steps=4); _q.wait_for_timeout(250)
+        _w = _q.evaluate("""() => { const cv = document.querySelector('.eyedropper-lens canvas'), D = cv.width / 116;
+            const a0 = Math.round(53 * D), u = Math.max(1, Math.round(D)), g = cv.getContext('2d');
+            const px = (x, y) => Array.from(g.getImageData(x, y, 1, 1).data.slice(0, 3));
+            const my = Math.round(58 * D);
+            return { D, white: [px(a0 - u, my), px(a0 + Math.round(10 * D) + u - 1, my), px(Math.round(58 * D), a0 - u)],
+                     cell: px(Math.round(58 * D), my) }; }""")
+        check(f"{_route}: at 1x the reticle is crisp: its white band reads pure white on every side, the cell keeps its ink",
+              _w["D"] == 1 and all(min(p) >= 245 for p in _w["white"]) and _w["cell"] == [255, 232, 0], str(_w))
+        # A right-click is not a pick.
+        _q.mouse.click(_t["x"], _t["y"], button="right"); _q.wait_for_timeout(250)
+        check(f"{_route}: a right-click on the drawing while armed picks nothing and stays armed",
+              _q.evaluate(ARMED) and _q.evaluate("() => color") == "#00a95c", _q.evaluate("() => color"))
+        # Undo while armed: the drawing is about to change, so the pick ends.
+        _pk = _q.evaluate(YEL, [_cv, [255, 72, 176]])
+        _q.mouse.move(_pk["x"], _pk["y"], steps=4); _q.wait_for_timeout(200)
+        _q.keyboard.press("Control+z"); _q.wait_for_timeout(350)
+        check(f"{_route}: undo while armed ends the pick, so nothing can take a colour the lens no longer shows",
+              _q.evaluate(GONE) and _q.evaluate("() => color") == "#00a95c", _q.evaluate("() => color"))
+        # A tool switch ends it too (Flip always did; the Pad kept the lens over an eraser).
+        _arm(_q)
+        _q.click("#eraserToolBtn"); _q.wait_for_timeout(300)
+        check(f"{_route}: switching to the eraser ends the pick", _q.evaluate(GONE), str(_q.evaluate(LS)))
+        _q.evaluate("() => setTool('pen')")
+        # Playback ends it: by the Pad's Play button, and by Flip's Space.
+        if _route == "/skribl-pad":
+            _q.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }"); _q.wait_for_timeout(300)
+            _arm(_q)
+            # Cancel on a finished take puts the lock cue back, as a pick does.
+            _q.click(".eyedropper-pill button"); _q.wait_for_timeout(250)
+            _cur = _q.evaluate("() => document.getElementById('canvas').style.cursor")
+            check("/skribl-pad: Cancel on a finished take restores the locked-canvas cursor",
+                  _cur == "not-allowed" and _q.evaluate(GONE), repr(_cur))
+            _arm(_q)
+            _q.click("#playBtn"); _q.wait_for_timeout(300)
+            _pl = _q.evaluate("() => playing")
+        else:
+            _q.evaluate("() => addFrame()"); _q.wait_for_timeout(200)
+            _stroke(_q, _cv, False, None, 0.4, "#26b0ff")
+            _q.evaluate(SETC, "#00a95c")
+            _arm(_q)
+            _q.keyboard.press("Space"); _q.wait_for_timeout(300)
+            _pl = _q.evaluate("() => playing")
+        check(f"{_route}: starting playback ends the pick: no lens or pill over the moving frames",
+              _pl and _q.evaluate(GONE), f"playing {_pl}, lens {_q.evaluate(LS)}")
+        _q.close()
+    _lctx.close()
+
+    # Light theme: the pill is the light chrome, whatever the drawing under it.
+    # Contrast is read off the PAINTED pixels of Cancel (ink against the fill
+    # it sits on), from a screenshot decoded in the page.
+    CONTRAST = """async (b64) => { const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0); const d = g.getImageData(0, 0, c.width, c.height).data;
+        const L = (r, gg, bb) => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+          return 0.2126 * f(r) + 0.7152 * f(gg) + 0.0722 * f(bb); };
+        const n = {}; let best = null;
+        // The fill: the commonest colour in the middle band (the corners are the pill around it).
+        for (let y = Math.floor(c.height * 0.3); y < c.height * 0.7; y++) for (let x = 2; x < c.width - 2; x++) {
+          const i = (y * c.width + x) * 4, k = d[i] + ',' + d[i + 1] + ',' + d[i + 2]; n[k] = (n[k] || 0) + 1; }
+        const bg = Object.entries(n).sort((a, b) => b[1] - a[1])[0][0].split(',').map(Number), lb = L(...bg);
+        let ratio = 1;
+        for (let i = 0; i < d.length; i += 4) { const l = L(d[i], d[i + 1], d[i + 2]);
+          const r = (Math.max(l, lb) + 0.05) / (Math.min(l, lb) + 0.05); if (r > ratio) ratio = r; }
+        return { bg, ratio: Math.round(ratio * 100) / 100, lum: Math.round(lb * 1000) / 1000 }; }"""
+    print("\nPARITY — the armed pill in the light theme is crisp light chrome, and Cancel reads")
+    _lt = b.new_context(viewport={"width": 1400, "height": 900}, device_scale_factor=2)
+    for _route, _cv in (("/skribl-pad", "#canvas"), ("/flip", "#pad")):
+        _q = _lt.new_page()
+        _q.goto(BASE + _route + "?theme=light", wait_until="load"); _q.wait_for_timeout(600)
+        _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        _q.goto(BASE + _route + "?theme=light", wait_until="load"); _q.wait_for_timeout(800)
+        _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _stroke(_q, _cv, False, None, 0.6, "#ffe800")
+        _arm(_q)
+        _cc = _q.evaluate(CONTRAST, base64.b64encode(_q.locator(".eyedropper-pill-cancel").screenshot()).decode())
+        _pf = _q.evaluate(CONTRAST, base64.b64encode(_q.locator(".eyedropper-pill-text").screenshot()).decode())
+        check(f"{_route}: light theme: the pill's fill is light chrome (not a grey slab over the dark drawing), "
+              f"its words and Cancel at least 4.5:1",
+              _pf["lum"] >= 0.8 and _pf["ratio"] >= 4.5 and _cc["ratio"] >= 4.5, f"pill {_pf}, cancel {_cc}")
+        _q.close()
+    _lt.close()
+
+    print("\nPARITY — the lens on a phone, second pass: the pill makes way, nothing is clipped, a pinch is not a pick")
+    for _route, _cv in (("/skribl-pad", "#canvas"), ("/flip", "#pad")):
+        _pc = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=3, has_touch=True, is_mobile=True)
+        _q = _fresh(_pc, _route)
+        _cdp = _pc.new_cdp_session(_q)
+        _touch = lambda typ, pts: _cdp.send("Input.dispatchTouchEvent", {"type": typ, "touchPoints": [{"x": x_, "y": y_, "id": i_} for i_, (x_, y_) in enumerate(pts)]})
+        _layout = """() => { const q = s => document.querySelector(s), R = e => e.getBoundingClientRect();
+            const pill = q('.eyedropper-pill'), chip = q('.eyedropper-lens-chip'), lens = q('.eyedropper-lens'), cancel = pill.querySelector('button');
+            const hit = (e, x, y) => { const pe = e.style.pointerEvents; e.style.pointerEvents = 'auto';
+              const h = document.elementFromPoint(x, y); e.style.pointerEvents = pe; return !!h && e.contains(h); };
+            const mid = e => { const r = R(e); return [r.left + r.width / 2, r.top + r.height / 2]; };
+            const x = (a, b) => { const A = R(a), B = R(b); return Math.max(0, Math.min(A.right, B.right) - Math.max(A.left, B.left))
+                                   * Math.max(0, Math.min(A.bottom, B.bottom) - Math.max(A.top, B.top)); };
+            const L = R(lens), rr = L.width / 2, cx = L.left + rr, cy = L.top + rr;
+            return { opacity: getComputedStyle(pill).opacity, cancel: hit(cancel, ...mid(cancel)), chip: hit(chip, ...mid(chip)),
+                     chipPill: Math.round(x(chip, pill)), lensPill: Math.round(x(lens, pill)),
+                     // Inside the rim at 3, 9 and 12 o'clock and the two lower diagonals
+                     // (straight down is the handle's transparent 44px hit area).
+                     whole: [[rr - 3, 0], [-rr + 3, 0], [0, -rr + 3], [(rr - 3) * 0.7, (rr - 3) * 0.7], [-(rr - 3) * 0.7, (rr - 3) * 0.7]].every(([dx, dy]) => hit(lens, cx + dx, cy + dy)),
+                     inView: L.left >= 0 && L.right <= innerWidth && L.top >= 0 && L.bottom <= innerHeight,
+                     chipBox: [Math.round(R(chip).top), Math.round(R(chip).bottom)], pillBox: [Math.round(R(pill).top), Math.round(R(pill).bottom)] }; }"""
+        def _arm_t(q):
+            if q.evaluate(ARMED):
+                return
+            browsing.pad_drawer(q, "draw", settle=500)
+            eb = q.locator("#eyedropperBtn").bounding_box()
+            q.touchscreen.tap(eb["x"] + eb["width"] / 2, eb["y"] + eb["height"] / 2); q.wait_for_timeout(450)
+        for _fy in (0.04, 0.1, 0.25):
+            browsing.pad_drawer_close(_q)          # Escape leaves the drawer open; stroke the drawing, not it
+            _stroke(_q, _cv, True, _cdp, _fy, "#ff48b0")
+            _q.evaluate(SETC, "#00a95c")
+            _arm_t(_q)
+            _lo = _q.evaluate(_layout)
+            check(f"{_route}: last stroke at {int(_fy * 100)}% down: the pill stays at full strength with Cancel painted, "
+                  f"and neither the lens nor its chip is under it",
+                  _lo["opacity"] == "1" and _lo["cancel"] and _lo["chip"] and _lo["chipPill"] == 0 and _lo["lensPill"] == 0
+                  and _lo["whole"], str(_lo))
+            _q.keyboard.press("Escape"); _q.wait_for_timeout(250)
+        # The lens is never clipped: at the canvas's right edge it is painted
+        # whole (probed inside each extremity), above the canvas card.
+        browsing.pad_drawer_close(_q)
+        _bx = _q.locator(_cv).bounding_box()
+        _q.evaluate(SETC, "#00a95c")
+        _arm_t(_q)
+        for _ex in (_bx["x"] + _bx["width"] - 2, _bx["x"] + 2):
+            _touch("touchStart", [(_ex, _bx["y"] + _bx["height"] * 0.6)]); _touch("touchEnd", []); _q.wait_for_timeout(250)
+            _lo = _q.evaluate(_layout)
+            check(f"{_route}: with the lens at the canvas's {'right' if _ex > 200 else 'left'} edge it is painted whole and on screen",
+                  _lo["whole"] and _lo["inView"] and _q.evaluate(ARMED), str(_lo))
+        # Forced colours: the handle's grip and Cancel's edge survive.
+        _q.emulate_media(forced_colors="active"); _q.wait_for_timeout(200)
+        _fc = _q.evaluate("""() => { const h = document.querySelector('.eyedropper-lens-handle'), c = document.querySelector('.eyedropper-pill-cancel');
+            const a = getComputedStyle(h, '::after'), hs = getComputedStyle(h), cs = getComputedStyle(c);
+            const shown = (w, s, col) => parseFloat(w) > 0 && s !== 'none' && !/rgba\\(.*, 0\\)$/.test(col) && col !== 'transparent';
+            return { grip: shown(a.borderTopWidth, a.borderTopStyle, a.borderTopColor), gripColor: a.borderTopColor,
+                     handleEdge: shown(hs.outlineWidth, hs.outlineStyle, hs.outlineColor),
+                     cancelEdge: shown(cs.outlineWidth, cs.outlineStyle, cs.outlineColor) || shown(cs.borderTopWidth, cs.borderTopStyle, cs.borderTopColor) }; }""")
+        check(f"{_route}: under forced colours the handle keeps a visible grip and edge, and Cancel an edge",
+              _fc["grip"] and _fc["handleEdge"] and _fc["cancelEdge"], str(_fc))
+        _q.emulate_media(forced_colors="none")
+        # A pinch while armed is a zoom, not an aim: nothing picks on lift.
+        # The lens is tapped to the pinch's middle first, which a zoom about
+        # that middle keeps on screen.
+        _touch("touchStart", [(_bx["x"] + _bx["width"] * 0.5, _bx["y"] + _bx["height"] * 0.525)]); _touch("touchEnd", [])
+        _q.wait_for_timeout(250)
+        _s0 = _q.evaluate(LS)
+        _p1 = (_bx["x"] + _bx["width"] * 0.45, _bx["y"] + _bx["height"] * 0.5)
+        _p2 = (_bx["x"] + _bx["width"] * 0.55, _bx["y"] + _bx["height"] * 0.55)
+        _touch("touchStart", [_p1])
+        _touch("touchMove", [(_p1[0] - 12, _p1[1] - 6)])
+        _touch("touchStart", [(_p1[0] - 12, _p1[1] - 6), _p2])
+        for _i in range(1, 11):
+            _touch("touchMove", [(_p1[0] - 12 - 6 * _i, _p1[1] - 6 - 5 * _i), (_p2[0] + 6 * _i, _p2[1] + 5 * _i)])
+            _q.wait_for_timeout(16)
+        _touch("touchEnd", []); _q.wait_for_timeout(350)
+        _s1 = _q.evaluate(LS)
+        check(f"{_route}: a two-finger pinch while armed picks nothing: still armed, the pen unchanged, "
+              f"the lens still on the drawing point it was on",
+              _q.evaluate(ARMED) and _q.evaluate("() => color") == "#00a95c" and bool(_s0) and bool(_s1)
+              and abs(_s1["stage"]["x"] - _s0["stage"]["x"]) <= 3 and abs(_s1["stage"]["y"] - _s0["stage"]["y"]) <= 3
+              and _q.evaluate(PAINTED, ".eyedropper-lens"),
+              f"{_s0} -> {_s1}, colour {_q.evaluate('() => color')}")
         _pc.close()
 
     print("\nPARITY — a switched-on switch is the accent on both; amber only for the onion")

@@ -1790,7 +1790,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .eyedropper-pill[hidden] { display: none; }
 /* The armed pill: what to do, and the way out. Its text lets presses through
    to the drawing under it (only Cancel takes them), so it never blocks a pick
-   near the top of the canvas; when the lens is up there it steps back. */
+   near the top of the canvas; when the lens or its chip comes up there, the
+   pill moves to the canvas's bottom edge (see below). */
 .eyedropper-pill {
   position: fixed;
   z-index: 10000;

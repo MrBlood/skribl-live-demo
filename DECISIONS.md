@@ -12432,8 +12432,8 @@ the finger sat on the pixel being sampled.
   the top of the canvas says what to do ("Drag the lens to pick" on touch,
   "Click your drawing to pick a colour" otherwise) with a Cancel. It is
   announced once through a polite live region. The pill's words let presses
-  through, so it never blocks a pick near the top; it dims when the lens is
-  under it.
+  through, so it never blocks a pick near the top; when the lens or its chip
+  comes up to it, it moves to the bottom of the canvas (see the second pass).
 * **The lens sits on the point it reads.** An 11-cell grid at 10x, a two-tone
   reticle on the centre cell, a split ring (top: the pick, bottom: the pen
   now, so a no-op shows one colour) and a hex chip. The pick reads the centre
@@ -12461,3 +12461,45 @@ Fixtures that measured ink by whiteness (`verify_beading`, `verify_liquify`,
 old starting pen; each now sets white on purpose and says why. `verify_fill`
 asserted `red > 200`, which only ever meant "the white pen", and now asserts
 the fill matches the pen colour read from the page.
+
+### The lens, second pass (the owner's eye and review)
+
+* **The handle is a grabber bar**, not three dots: three dots is this app's
+  menu glyph and read as "more options".
+* **The light pill is near-opaque white.** The drawing under it is dark in
+  both themes, so the light glass went a muddy mid-grey there and Cancel's ink
+  fell to 2.85:1. It never fades either: the first version dimmed it to 0.3
+  when the lens came near, which made the only way out on a phone (the
+  eyedropper button is veiled with its drawer) weakest at the moment of
+  arming, and it painted over the hex chip. Now the pill moves to the bottom
+  of the canvas, and the chip goes beside the lens rather than under the hand.
+* **Nothing clips the lens.** It was already fixed to `<body>`; the Flip
+  screenshot read as clipped where the ring crossed the card's edge. The check
+  now probes inside the rim at the canvas edges with `elementFromPoint`.
+* **The reticle sits on the point even when the viewport nudges the lens**:
+  the grid is laid out around the point, off-centre, instead of a centred
+  reticle beside a mark (two answers to one question). The mark remains only
+  when the top edge carries the lens clear of the point. Grid and reticle are
+  drawn in device pixels, so they are crisp at 1x and 1.25x, which is the
+  owner's Windows desktop.
+* **A pinch is not a pick.** A second finger while a finger aims on the
+  drawing abandons the aim and keeps the lens on its drawing point through the
+  zoom. It used to pick the background wherever finger one lifted.
+* **The pick ends when the drawing changes:** undo, redo, a page change,
+  playback (Flip's Space too), and on the Pad a tool switch, as Flip already
+  did. Every disarm restores the Pad's locked-canvas cursor. A right-click is
+  swallowed on both editors; it used to pick on Flip.
+* **Focus:** arming moves it to the pill, a named group where arrows and
+  Enter work and Tab reaches Cancel. Ending the pick hands it back to the
+  control that armed it, or to the pen button if a pick closed that drawer.
+  The live region exists before it speaks, and a pick is announced.
+* **Forced colours:** edges are transparent outlines and the grip is a border,
+  which that mode repaints in system colours. A `forced-colors` block would
+  have been carried into `player.css` whole.
+* The stage is copied once per arm. Flip's `paintArtwork` re-rasterises the
+  page on each call, about 5ms on a busy page on a desktop, which was too much
+  per lens frame on a phone.
+
+`verify_parity` pins each one on both editors. Each check went red on the
+pre-fix tree or on its own mutation, except Pad's right-click and Flip's tool
+switch, which were already right. `player.css` is unchanged.
