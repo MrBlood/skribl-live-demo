@@ -12477,6 +12477,31 @@ selected chip as white words on a fill.
 Every other pill's height was measured against the tree before the pill,
 and none moved.
 
+### Photo | Music, the last control
+
+The tabs waited for the drawer rebuild (#286), which made them the header of
+the one media card. They take the pill now, on both editors. The strip was a
+glass slab of its own inside the card: a 16px corner, a 4px inset, 650
+labels, and a selected tab that painted its own fill with nothing sliding.
+It is a 12 / 3 / 9 track on the drawers' control ground, and
+`lib/segslider.js` slides the pill between the tabs from `aria-selected`,
+which it reads and never writes; the tablist stays a tablist. The fallback
+tint, the forced-colours edge and the one label weight are the other
+tracks'. The tabs keep their 44px height, so this track is 52, taller than
+the rows under it: it is the card's header. The tab dot moved from 10px to
+6px from its label, so it reads as the label's, and it sits on the label's
+centre line in both editors, both themes, at 1400 and at 390.
+
+`verify_onepill` takes the tabs into its census, fallback, forced-colours
+and focus sections, and asserts they were measured with Photo chosen and
+with Music chosen. The new rows were red on origin/main (no pill, a 16px
+corner, 650, no fallback to take away, no forced edge) and red per
+component on this tree: a 16px track corner failed only the shape rows; no
+fallback rule failed only FALLBACK; a static tint with no slider failed only
+PLACED and the fallback's reach. `verify_parity` read the music tile's tint
+from the selected tab's background, which is clear once a pill is placed;
+it reads the pill's fill now, and was red on origin/main for want of one.
+
 ## v317, cont. -- the Photo and Music drawers: one card, and the file as a row
 
 The owner's look at the media drawers after the dock work (fe814ef, #271,

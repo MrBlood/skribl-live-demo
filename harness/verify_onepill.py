@@ -14,7 +14,8 @@ controls, and each is measured where it lives:
      (data-pill), and it covers the selected option to half a pixel. The
      pills were placed from integer offsets on fractional flex options and
      overhung by a whole pixel at phone widths; the Pad's draw drawer carried
-     two pills, one stuck at opacity 0.
+     two pills, one stuck at opacity 0. Photo | Music, the media card's
+     tablist, is a track too, measured with each tab chosen.
   2. THE SHAPE. Concentric: the track's corner is the pill's plus the inset
      the pill sits at. Editor and page tracks are 12 / 3 / 9; the dock is the
      one pill at the dock's scale and keeps only the rule. The fill is the
