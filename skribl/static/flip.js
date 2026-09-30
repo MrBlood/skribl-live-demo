@@ -1689,9 +1689,10 @@ function paintUnder(c){
    associative, so the backdrop, the onion and the finished ink can be one
    bitmap with the live stroke painted straight onto the pad. The eraser cuts
    ink and must not cut the backdrop, so it keeps the ink on its own layer. The
-   flattened path can differ from the full repaint by rounding alone --
-   measured at most 2 units of 255 in a channel, mid-stroke, with the onion
-   skin or the mirror on -- and pen-up repaints exactly. */
+   flattened path can differ from the full repaint by rounding alone -- a few
+   units of 255 in a channel, mid-stroke, growing with the draws that land on
+   one pixel, so most with the mirror on (verify_flipspeed has the readings,
+   across canvas sizes) -- and pen-up repaints exactly. */
 const _liveUnderCv = document.createElement('canvas');
 const _liveDryCv = document.createElement('canvas');
 let _liveCache = null;

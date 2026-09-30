@@ -262,9 +262,10 @@ A green check is not evidence until it has been shown to go red.
   While a stroke is drawn, each move paints the live stroke only, counted in
   strokes painted rather than timed; mid-stroke the pad matches an independent
   full repaint for a pen, a see-through pen, the eraser, the onion skin and the
-  mirror (within 2/255 of rounding on the flattened pen path, exactly for the
-  eraser), exactly after pen-up, and a stroke that would tip the page over the
-  layer budget skips the cache.
+  mirror (within a rounding bound on the flattened pen path, set between the
+  worst rounding measured and the faintest defect the suite can produce;
+  exactly for the eraser), exactly after pen-up, and a stroke that would tip
+  the page over the layer budget skips the cache.
 - `verify_sheetswipe.py` — every bottom sheet closes on a swipe down or a tap on
   its grabber and eases away as it does, the draw drawer's grip closes it, and
   a swipe on an open menu never reloads the page (v317). Driven per page with

@@ -20,10 +20,22 @@ during a stroke once, at pen-down. This suite pins the two things that matter:
      the layer budget. After pen-up the pad matches EXACTLY, every case.
 
 A pen stroke is painted straight over a flattened bitmap, which is associative
-with painting it on its own layer but not bit-identical: rounding may move a
-channel by up to two units of 255 mid-stroke (measured with the onion skin and
-the mirror on). That is the only tolerance here, it is asserted as exactly
-that, and the eraser's path (its own layer, three copies) has none.
+with painting it on its own layer but not bit-identical: each draw rounds to
+8 bits in a different space, and the error grows with the number of draws that
+land on one pixel. That is the only tolerance here (ROUNDING, below), and the
+eraser's path (its own layer, three copies) has none.
+
+ROUNDING is set by what it has to separate, not by the last reading. It used
+to BE the last reading: 2/255, taken on one canvas size. #289 moved this
+suite's 1100x860 window from a 944x531 canvas to 816x612, where the unchanged
+cache reads 3 with the mirror on, and main went red on a cache that had not
+changed. Across eight windows (six canvas sizes in device pixels, pixel ratios
+1 to 3) the cache reads at most 3 (the mirror), 2 (the onion skin, a pen) and
+1 (a see-through pen). One mutation per part of
+the cache sets the other end: the onion missing reads 19 (this fixture's onion
+lies under the page's own ink, so only its edges show), a flipped layer budget
+45, the finished ink or the live stroke's reflections missing 242. Each of
+those is still red at ROUNDING.
 """
 import math
 import os
@@ -41,6 +53,10 @@ except Exception as exc:                                   # pragma: no cover
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 results = []
 check = make_check(results)
+
+# Clear of the worst rounding measured (3) and of the faintest defect this
+# suite can produce (19); the docstring has both readings.
+ROUNDING = 8
 
 # The pad against an independent full repaint of the same page, in device pixels.
 COMPARE = """() => {
@@ -162,8 +178,8 @@ with sync_playwright() as p:
         pg.wait_for_timeout(200)
         end = pg.evaluate(COMPARE)
         if flat:
-            check(f"{name}: mid-stroke, the cached pad matches a full repaint within rounding (2/255)",
-                  mid["cached"] and mid["flat"] and mid["most"] <= 2,
+            check(f"{name}: mid-stroke, the cached pad matches a full repaint within rounding ({ROUNDING}/255)",
+                  mid["cached"] and mid["flat"] and mid["most"] <= ROUNDING,
                   f"{mid['differ']} channels differ, most by {mid['most']}; cached={mid['cached']}")
         else:
             check(f"{name}: mid-stroke, the cached pad matches a full repaint EXACTLY",
