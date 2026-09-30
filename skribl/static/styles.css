@@ -1733,7 +1733,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   white-space: nowrap;
 }
 /* The handle the finger holds on a touch screen: below the lens, so the finger
-   is never over what is read. 34x20 visual, a 58x44 hit area. */
+   is never over what is read. 34x20 visual, a 58x44 hit area. Its mark is a
+   short bar, a sheet's grabber — NOT three dots, which is this app's menu
+   glyph and would read as "more options". */
 .eyedropper-lens-handle {
   position: fixed;
   z-index: 10000;
@@ -1751,16 +1753,24 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   position: absolute;
   inset: -12px;
 }
+/* The bar is a BORDER, and every edge here is a transparent outline, for
+   forced colours: that mode drops backgrounds and box-shadows (all the
+   handle, chip and Cancel were drawn with) but repaints border and outline
+   colours in the system's own, so these come back as real edges -- without a
+   forced-colors block, which player.css would have to carry. */
 .eyedropper-lens-handle::after {
   content: "";
   position: absolute;
   left: 50%; top: 50%;
-  width: 3.2px; height: 3.2px;
-  margin: -1.6px 0 0 -1.6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: -6px 0 0 rgba(255, 255, 255, 0.7), 6px 0 0 rgba(255, 255, 255, 0.7);
+  width: 16px; height: 0;
+  margin: -1.5px 0 0 -8px;
+  border-top: 3px solid rgba(255, 255, 255, 0.78);
+  border-radius: 1.5px;
 }
+.eyedropper-lens-handle,
+.eyedropper-lens-chip,
+.eyedropper-pill,
+.eyedropper-pill-cancel { outline: 1px solid transparent; outline-offset: -1px; }
 /* The true point, when the viewport has pushed the lens off it. */
 .eyedropper-lens-mark {
   position: fixed;
@@ -1802,10 +1812,19 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   pointer-events: none;
 }
 /* No transition and no entrance animation, on purpose: the lens and pill are
-   the armed state, and they appear and step back instantly — which is also
-   the whole of what reduced motion asks, without a media query the player's
-   derived sheet would have to carry. */
-.eyedropper-pill.eyedropper-pill-under { opacity: 0.3; }
+   the armed state, and they appear and move instantly — which is also the
+   whole of what reduced motion asks, without a media query the player's
+   derived sheet would have to carry. Never faded either: Cancel is the only
+   way out on a phone, so when the lens comes up to the pill the PILL moves
+   (to the canvas's bottom edge, lib/eyedropper.js placePill).
+
+   LIGHT: the pill sits over the drawing, which is dark in both themes, so the
+   light glass (78% of a pale grey) went a muddy mid-grey there and Cancel's
+   ink fell to 2.85:1. Near-opaque white, as the light chrome is, keeps it
+   crisp and independent of what is under it. */
+:root[data-theme="light"] .eyedropper-pill { background: rgba(var(--glass-deep-rgb), 0.96); }
+.eyedropper-pill:focus-visible,
+.eyedropper-pill-cancel:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .eyedropper-pill-cancel {
   position: relative;
   pointer-events: auto;

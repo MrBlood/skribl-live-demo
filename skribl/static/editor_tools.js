@@ -115,7 +115,11 @@
         pickingColor = v;
         const dp = document.getElementById('drawPanel');
         if (window.SkriblDrawerDetent && dp) window.SkriblDrawerDetent.veil(dp, v && !dp.hidden);
+        // Every disarm (Cancel and Escape too, which bypass stopPicking) puts
+        // the lock/eraser/normal cursor cue back rather than the lib's blank.
+        if (!v) updateCanvasLockCue();
       },
+      focusHome: () => document.getElementById('penToolBtn'),
       // Lens wiring: the lib magnifies and reads the SAME composited stage
       // sampleColorAt reads, so the ring shows what a pick will take.
       getPoint: ev => getPos(ev),

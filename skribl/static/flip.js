@@ -3246,6 +3246,7 @@ function go(i){ if(moveMode) return;
   // frame would move strokes the marquee never touched, and on a shorter page
   // the ranges would run off the end.
   if(typeof selClear === 'function') selClear(true);
+  if(picking) setPicking(false);     // the lens would show one page and pick another
   idx=i; redoStack.length=0; buildStrip(); render(); }
 
 /* ---- Instant flip scrub -------------------------------------------------
@@ -3574,6 +3575,7 @@ function play(){
   // A single page that draws itself IS worth playing — that is the whole of a
   // one-page Flip, which the help already calls "just a drawing".
   if(frames.length<2 && !frames.some(frameDraw)) return;
+  if(picking) setPicking(false);     // no lens over a moving frame (Space reaches here with the drawer open)
   disarmAll(); editIdx = idx;
   if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
   playing=true; document.body.classList.add('playing');
@@ -4021,6 +4023,7 @@ function _initEyedropper(){
     dpr: () => DPR,
     bg: () => bgColor,
     current: () => color,          // the lens ring's bottom half
+    focusHome: () => document.getElementById('penToolBtn'),
     onPick: hex => { setColor(hex); addRecent(hex); closePop(); },
   });
 }
@@ -9101,6 +9104,7 @@ function doStamp(p){
 function undoStroke(){
   invalidateClearUndo();
   if(playing) return;
+  if(picking) setPicking(false);     // the drawing under the lens is about to change
   // A FILL is one action, and this must be tested BEFORE the generic object
   // branch below — that branch pops any object entry and then assumes it is a
   // move, so a fill entry reached it, fell past every m.type check and died on
@@ -9218,6 +9222,7 @@ function undoStroke(){
 function redoStroke(){
   invalidateClearUndo();
   if(playing || !redoStack.length) return;
+  if(picking) setPicking(false);     // the drawing under the lens is about to change
   if(typeof redoStack[redoStack.length-1] === 'object'
      && redoStack[redoStack.length-1].type === 'selframe'){
     const m = redoStack.pop();
