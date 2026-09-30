@@ -12452,3 +12452,25 @@ tree. Three older pins changed with the decision: V207 in `verify_ux`
 asserted the loop focus and the dock share a radius (it now asserts each is
 concentric with its pill), and `verify_a11y` no longer lists the library's
 selected chip as white words on a fill.
+
+### What review of the one pill found
+
+* **The shape picker is solid.** It hangs inside the dock, and the dock's
+  own backdrop-filter makes the dock the picker's backdrop root, so the
+  picker's blur saw only the dock and its 0.78 glass showed Flip's page
+  strip straight through (owner, phone). It takes the glass colour at full
+  strength, as the tray already did. The drawers, Tune and the menus sit at
+  the top level, where the blur works; `verify_onepill` POPS moves a
+  checkerboard under each surface and counts what comes through.
+* **Focus shows on the selected option.** A group's one Tab stop is its
+  selected option. Under forced colours its selection outline painted focus
+  over; focus now moves that edge outside it. Unforced, the draw drawer's
+  rows, Fill / Fit / Stretch and the GIF background clipped the ring with an
+  `overflow: hidden` the pill no longer needs, so it is gone.
+* **The library filter keeps its height.** The track was 44 with 36px
+  options, 10px over the chips' 34. It is 42 now, with 34px options (the
+  chip's height, SK-AUD-005's floor, and the approved mock's). The tap band
+  is still 44.
+
+Every other pill's height was measured against the tree before the pill,
+and none moved.
