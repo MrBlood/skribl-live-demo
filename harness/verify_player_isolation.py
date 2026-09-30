@@ -798,7 +798,13 @@ with sync_playwright() as sp:
     # the media tabs' forced-colours edge, which joins that same block's three
     # rules (a forced-colours block of their own is copied whole too, and
     # costs more). 30,292 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 30_292, 119_844, 40_000
+    # RAISED (gallery and library join the family), for one named cost: +28 B
+    # -- --on-glass-2, the darker secondary ink inside a light glass sheet,
+    # declared in the light ramp. The ramp is copied whole; declaring the token
+    # on the sheet rule instead kept this number and broke verify_surfaces
+    # (every neutral lives in a :root block), and a :root block of its own
+    # carried its prose along and cost more. 30,320 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 30_320, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

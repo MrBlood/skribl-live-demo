@@ -16,6 +16,11 @@
  * and the switch still says System, exactly as the editors' does.
  *
  * Escape and a tap on the scrim close it; a tap on the sheet does not.
+ *
+ * WHERE IT OPENS. On a phone it is a bottom sheet; from 641px up it is a
+ * popover under the ••• (pagemenu.css), and the header it hangs from is
+ * sticky, so its place is read off the button each time it opens -- 8px below
+ * it, right edges flush -- and again if the window changes size while open.
  */
 (function (global) {
   'use strict';
@@ -37,9 +42,16 @@
     }
     // Easing away counts as closed, so a quick second tap reopens it.
     function isOpen() { return !overlay.hidden && !sheet._slideT; }
+    function place() {
+      var r = btn.getBoundingClientRect();
+      overlay.style.setProperty('--pm-top', Math.round(r.bottom + 8) + 'px');
+      overlay.style.setProperty('--pm-right', Math.max(0, document.documentElement.clientWidth - r.right) + 'px');
+    }
     function open() {
       sync();
       if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.cancelSlide(sheet);
+      overlay.classList.remove('closing');
+      place();
       overlay.hidden = false;
       btn.setAttribute('aria-expanded', 'true');
       if (Modal) Modal.open(sheet, btn);
@@ -49,12 +61,15 @@
       btn.setAttribute('aria-expanded', 'false');
       if (Modal) Modal.close(sheet);
       // Eases down with its dim, then hides (lib/sheetswipe.js).
-      var gone = function () { overlay.hidden = true; };
-      if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.slideOut(sheet, { fadeBg: [overlay], done: gone });
+      // The dim is the overlay's ::before, so it fades by class, not by fadeBg.
+      var gone = function () { overlay.hidden = true; overlay.classList.remove('closing'); };
+      overlay.classList.add('closing');
+      if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.slideOut(sheet, { done: gone });
       else gone();
     }
 
     btn.addEventListener('click', function () { if (isOpen()) close(); else open(); });
+    global.addEventListener('resize', function () { if (!overlay.hidden) place(); });
     overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
     // The grabber closes on a tap, and the sheet swipes down (lib/sheetswipe.js).
     // It used to be a picture of a handle that did nothing.

@@ -269,15 +269,13 @@
      v311 took the last one out rather than keep making it safe, so two arm
      through here now and the contract is unchanged: the first tap arms the
      button, says what the second will do in its accessible name and through
-     the panel's live region, and disarms itself after a few seconds; the
+     the panel's live region, and holds until the person leaves it (below); the
      second tap does it. The consequence wording is kept whole, because the
      presentation was the defect and the words were not. Returns true when
      the tap is the second. */
   function arm(btn, warning, restLabel, armedText) {
     if (btn.dataset.armed === '1') {
-      clearTimeout(btn._arm);
-      btn.dataset.armed = '';
-      btn.classList.remove('armed');
+      if (btn._disarm) btn._disarm(true);
       return true;
     }
     btn.dataset.armed = '1';
@@ -290,14 +288,32 @@
                      btn.classList.add('said'); }
     btn.setAttribute('aria-label', warning);
     announce(warning);
-    clearTimeout(btn._arm);
-    btn._arm = setTimeout(function () {
+    /* THE ARM HOLDS UNTIL THE PERSON LEAVES IT (#4; SK-AUD-018, the rule the
+       editors' New Skribl and the drawer's bin follow). It disarmed on a
+       four-second timer, so a slow second tap met a disarmed button and armed
+       it again -- the destructive act became a race. Now it disarms when
+       focus leaves the button, on a tap anywhere else, and on a 20 s safety
+       net. `consumed` is the second tap's own disarm: it leaves the label for
+       the caller, which is about to write "Deleting…" over it. */
+    function outside(e) { if (!btn.contains(e.target)) disarm(false); }
+    function disarm(consumed) {
+      clearTimeout(btn._arm);
+      document.removeEventListener('pointerdown', outside, true);
+      btn.removeEventListener('focusout', onLeave);
+      btn._disarm = null;
       btn.dataset.armed = '';
       btn.classList.remove('armed');
+      if (consumed) return;
       if (armedText && btn.dataset.label) slot.textContent = btn.dataset.label;
       btn.classList.remove('said');
       btn.setAttribute('aria-label', restLabel);
-    }, 4000);
+    }
+    function onLeave() { disarm(false); }
+    btn._disarm = disarm;
+    clearTimeout(btn._arm);
+    btn._arm = setTimeout(onLeave, 20000);
+    document.addEventListener('pointerdown', outside, true);
+    btn.addEventListener('focusout', onLeave);
     return false;
   }
 

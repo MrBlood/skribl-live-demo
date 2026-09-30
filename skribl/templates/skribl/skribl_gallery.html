@@ -58,6 +58,15 @@
          menu. Named here rather than hard-coded at the rule, so the light
          ramp below can answer it the way the editor's does. */
       --danger: #f4326f;
+      /* The colours this sheet used to type at its rules (#20). The no-photo
+         avatar's disc and the full-screen exit's plate sit on a drawing or a
+         dark disc in both themes, so neither has a light value. */
+      --avatar-a: #3a3f4b;
+      --avatar-b: #232730;
+      --plate: rgba(6,7,10,.72);
+      --plate-edge: rgba(255,255,255,.18);
+      --plate-ink: #eef1f6;
+      --scrim: rgba(0,0,0,.4);
     }
     :root[data-theme="light"] {
       color-scheme: light;
@@ -82,43 +91,18 @@
       -webkit-font-smoothing: antialiased;
     }
     a { color: var(--accent); }
-    a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px clamp(14px, 3vw, 28px) 60px; }
+    a:focus-visible, button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+    /* 12 above the header card, as the Pad's; 6 on a phone (pagemenu.css). */
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 12px clamp(14px, 3vw, 28px) 60px; }
+    @media (max-width: 640px) { .wrap { padding-top: 6px; } }
 
-    /* ---- top bar: the brand lockup, and the way to make one ------------- */
-    .top { display: flex; align-items: center; gap: 12px; padding-bottom: 18px; }
-    /* min-height 44: the lockup is a link, and a 24px mark is not a tap
-       target (verify_a11y's hit-box census; the header is 44 tall anyway). */
-    /* `text-decoration: none` because the lockup is an <a> and the library's
-       is a <div>: the browser was underlining the word GALLERY and nothing
-       underlines LIBRARY, so the two pages wore the same lockup differently
-       ("get rid of the underlined GALLERY"). It stays a link -- it is
-       the way back to the editor from here -- and simply stops being drawn
-       like body copy. */
-    .brand { display: flex; align-items: center; gap: 6px; min-height: 44px;
-      text-decoration: none; }
-    .brand .brand-mark { height: 24px; width: auto; display: block; overflow: visible; color: var(--text); }
-    /* The mark's ink: the gradient stops _skribl_brand_mark.html carries, as
-       the library colours them. Without these the signature paints black. */
-    .brand-grad-a { stop-color: var(--accent); }
-    .brand-grad-b { stop-color: var(--accent-2); }
-    .brand .tag { font-weight: 700; letter-spacing: .16em; font-size: 11px; text-transform: uppercase; color: var(--text-2); padding-top: 3px; }
-    .top .spacer { flex: 1; }
-    .make {
-      display: inline-flex; align-items: center; gap: 7px; min-height: 44px;
-      padding: 0 18px; border-radius: 999px; text-decoration: none;
-      background: var(--accent-fill); color: #fff; font-weight: 700; font-size: 14px;
-      white-space: nowrap;
-    }
-    .make:hover { filter: brightness(1.08); }
-    /* 360 IS THE DESIGN TARGET AND 320 THE SAFETY NET (START-HERE). The mark,
-       its word, Make one and the ••• are 11px wider than 320; the word is what
-       the page's own heading already says, so it goes first -- the library's
-       header has made the same trade since v304. */
-    @media (max-width: 380px) { .brand .tag { display: none; } }
+    /* ---- top bar ------------------------------------------------------- */
+    /* The header card, the lockup and Make one are pagemenu.css's now, ONE
+       set of rules for this page and the library (#7, #9): the two pages
+       drew the same lockup at two sizes and two weights. */
 
     /* ---- the heading, and the three states --------------------------- */
-    h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 4px; }
+    h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 4px; }
     .sub { margin: 0 0 20px; color: var(--text-2); font-size: 14px; }
     .bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 18px; }
     /* New / Hot is a track of the one pill (segslider.css). It was two loose
@@ -128,7 +112,7 @@
     .find { flex: 1 1 220px; }
     .find input { width: 100%; min-height: 44px; font: inherit; font-size: 16px; color: var(--text);
       background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 0 16px; }
-    .find input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .find input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
     .tile .plays { flex: none; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
     /* A ONE-UP CARD'S HEAD IS FULL, so something has to go, and the play count
        is the least of it: who made it and what it is called are why anybody
@@ -270,7 +254,7 @@
        be a CLAIM about a person is absent: no handle, no link, no tick, and a
        plain disc rather than an initial. The word is dimmer than a name
        because it is a state and not somebody. */
-    .tanon .tdn-anon { font-weight: 500; color: var(--text-3); font-style: normal; }
+    .tanon .tdn-anon { font-weight: 600; color: var(--text-3); font-style: normal; }
     /* THE SKRIBL STAR, on the accent blend at 135deg . It is drawn as
        SVG rather than typed as U+1F7CD: almost no system font carries that
        codepoint, so the character would be a tofu box on most phones -- the
@@ -285,10 +269,10 @@
     .tavatar.tavatar-anon svg { width: 19px; height: 19px; display: block; }
     .tavatar { flex: none; width: 34px; height: 34px; border-radius: 50%;
       overflow: hidden; display: grid; place-items: center;
-      background: linear-gradient(135deg, #3a3f4b, #232730);
+      background: linear-gradient(135deg, var(--avatar-a), var(--avatar-b));
       color: #fff; font-size: 14px; font-weight: 700; line-height: 1; }
     .tavatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .tdn { font-weight: 650; font-size: 14px; color: var(--text); overflow: hidden;
+    .tdn { font-weight: 600; font-size: 14px; color: var(--text); overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .tverified { flex: none; color: var(--accent); font-size: 11px; }
     /* The handle yields before the name does. `flex: none` made it rigid, so
@@ -369,15 +353,19 @@
     .sr-live { position: absolute; width: 1px; height: 1px; margin: -1px;
       padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
       border: 0; }
+    /* THE PAGE MENU'S MATERIAL (#14): the Pad's glass, rim and drop
+       (pagemenu.css), on the 16 corner every card here wears. It was a solid
+       panel with a 12 corner and a heavy shadow that read as a slab in light. */
     .cardMenu { position: absolute; z-index: 60; min-width: 176px; padding: 6px;
-      background: var(--panel); border: 1px solid var(--hairline);
-      border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.34);
+      background: var(--glass-sheet-fill);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      border: 0; border-radius: 16px; box-shadow: var(--glass);
       display: flex; flex-direction: column; }
     .cardMenu[hidden] { display: none; }
     /* THE SAME MENU THE REST OF THE PRODUCT HAS, measurement for measurement.
        The editor's sheet (styles.css `.menu-item`) is where this vocabulary
        lives: an 18px leading glyph, 12px between glyph and words, 12px/14px of
-       padding, a 10px corner, 14px text at weight 500, and one destructive row
+       padding, a 10px corner, 14px text at weight 600, and one destructive row
        in the danger colour. The first cut of this menu invented its own --
        no icons, 8px corners, flush text -- so a person who had seen the
        editor's menu met a different one here ("should have icons and
@@ -392,11 +380,11 @@
     .cmItem { display: flex; align-items: center; gap: 12px; width: 100%;
       text-align: left; min-height: 44px; padding: 12px 14px; background: none;
       border: 0; border-radius: 10px; color: var(--text); font: inherit;
-      font-size: 14px; font-weight: 500; cursor: pointer;
+      font-size: 14px; font-weight: 600; cursor: pointer;
       transition: background 0.15s ease; -webkit-tap-highlight-color: transparent; }
     .cmItem svg { width: 18px; height: 18px; flex: none; color: var(--text-3); }
     .cmItem:hover { background: var(--control); }
-    .cmItem:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .cmItem:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
     /* Report is the one row on this menu that does something to somebody
        else's post, and the owner asked for it to look like it ("although
        report could be a red flag"). `.menu-item.danger` is the editor's name
@@ -430,9 +418,9 @@
        gesture both work there) and is not fine at all in the fallback, where
        the page is still the page and nothing else leaves it. */
     .tileExit { display: none; position: absolute; top: 14px; right: 14px; z-index: 4;
-      width: 44px; height: 44px; place-items: center; border-radius: 10px;
-      background: rgba(6,7,10,.72); border: 1px solid rgba(255,255,255,.18);
-      color: #eef; cursor: pointer; }
+      width: 44px; height: 44px; place-items: center; border-radius: 12px;
+      background: var(--plate); border: 1px solid var(--plate-edge);
+      color: var(--plate-ink); cursor: pointer; }
     .tileStage:fullscreen .tileExit,
     .tileStage.is-immersive-page .tileExit { display: grid; }
     .tileExit svg { width: 20px; height: 20px; }
@@ -563,8 +551,19 @@
        as the card's margin and not as a second decision. Every card in the
        grid now frames its drawing the same way whatever shape the drawing is,
        which is the part a grid makes obvious and a single card never does. */
+    /* 16, THE PLAYER'S OWN CORNER (#16). At 12 the stage cut the component's
+       16px corner, so the drawing's frame was clipped into a tighter curve
+       than the one it draws. */
     .tileStage { display: block; position: relative;
-      margin: 0 13px 13px; border-radius: 12px; overflow: hidden; }
+      margin: 0 13px 13px; border-radius: 16px; overflow: hidden; }
+    /* THE PLAYER'S FOCUS RING IS PAINTED BY THE STAGE (#1). The component
+       draws its own ring 2px OUTSIDE its box, and this stage clips to its
+       corner, so a keyboard user on a tile saw nothing at all -- the ring was
+       computed, and clipped to zero pixels. An element's own outline is not
+       cut by its own overflow, so the stage wears it, in the 13px mat around
+       it, whenever anything inside it has keyboard focus. Nothing here reaches
+       into the component; this is the wrapper's rule. */
+    .tileStage:has(:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
     /* The component's progress hairline is turned off through the MACRO's own
        `progress` argument -- see the template call below -- and NOT by a rule
        in this sheet.
@@ -604,17 +603,39 @@
        `flex-start` written for the two-line head -- same specificity, later in
        the file. The head declares its own alignment now, once, where it is
        defined.) */
+    /* THE REPORT SHEET IS THE PAGE MENU'S MATERIAL (#19, owner B): on a
+       phone a glass bottom sheet with the grab bar that closes it on a tap or
+       a swipe down (lib/sheetswipe.js, as every bottom sheet does); on a
+       desktop the same glass as a centred card. It was a solid card in the
+       middle of a phone with a flat .5 dim, and nothing but Cancel closed it
+       from a thumb. The dim is the ::before, for the reason pagemenu.css
+       gives at .pm-overlay: a filter on the dialog itself would blind the
+       card's blur. */
     .sheet {
       position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.5); padding: 16px;
+      padding: 16px;
     }
+    .sheet::before { content: ''; position: absolute; inset: 0; background: var(--scrim);
+      -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); transition: opacity 0.22s ease; }
+    .sheet.closing::before { opacity: 0; }
     .sheet[hidden] { display: none; }
     .sheet-card {
-      width: min(360px, 100%); background: var(--panel); border: 1px solid var(--hairline);
-      border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      position: relative; width: min(400px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto;
+      overscroll-behavior: contain;
+      background: var(--glass-sheet-fill);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      border: 0; border-radius: 16px; box-shadow: var(--glass);
+      padding: 18px; display: flex; flex-direction: column; gap: 12px;
     }
-    .sheet-card h2 { margin: 0; font-size: 16px; }
+    .sheet-card .pm-grab { display: none; }
+    @media (max-width: 640px) {
+      .sheet { align-items: flex-end; padding: 0; }
+      .sheet-card { width: 100%; max-height: 88dvh; border-radius: 20px 20px 0 0;
+        padding: 8px 20px calc(18px + env(safe-area-inset-bottom, 0px)); }
+      .sheet-card .pm-grab { display: block; flex: none; margin: 4px auto 2px; }
+    }
+    html:has(.sheet:not([hidden])) { overscroll-behavior-y: none; }
+    .sheet-card h2 { margin: 0; font-size: 16px; font-weight: 600; }
     .sheet-card p { margin: 0; color: var(--text-2); font-size: 13.5px; }
     .reasons { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; border: 0; }
     .reasons legend { font-size: 12px; font-weight: 600; color: var(--text-2); padding: 0 0 4px; }
@@ -623,13 +644,16 @@
     .note {
       width: 100%; min-height: 64px; resize: vertical; font: inherit; font-size: 16px;
       color: var(--text); background: var(--control); border: 1px solid var(--hairline);
-      border-radius: 10px; padding: 9px 11px;
+      border-radius: 12px; padding: 9px 11px;
     }
+    .note:focus-visible, .reason input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
     .sheet-actions { display: flex; gap: 8px; }
     .sheet-actions .btn { flex: 1 1 0; }
     .btn.primary { background: var(--accent-fill); color: #fff; border-color: transparent; }
     .sheet-status { font-size: 13px; color: var(--text-2); min-height: 1.2em; }
-    .sheet-status.error { color: #ff8fae; }
+    /* The theme's danger, which the light ramp answers (#5). A literal pink
+       was ~2:1 on the light sheet. */
+    .sheet-status.error { color: var(--danger); }
     .sheet-status[hidden] { display: none; }
     .more-wrap { display: flex; justify-content: center; margin-top: 22px; }
     .foot { margin-top: 34px; text-align: center; color: var(--text-3); font-size: 12.5px; }
@@ -650,7 +674,7 @@
 <div class="wrap">
   <header class="top">
     <a class="brand" href="{{ url_for('.skribl_editor') }}" aria-label="Skribl">
-      {% with brand_sweep=101 %}{% include 'skribl/_skribl_brand_mark.html' %}{% endwith %}
+      {% include 'skribl/_skribl_brand_mark.html' %}
       <span class="tag">gallery</span>
     </a>
     <span class="spacer"></span>
@@ -719,6 +743,9 @@
    says so: nothing is promised that the product does not do. #}
 <div class="sheet" id="reportSheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle" hidden>
   <form class="sheet-card" id="reportForm">
+    {# The grab bar: a phone's bottom sheet closes on a tap here or a swipe
+       down (lib/sheetswipe.js). The page menu's pill, so it is drawn once. #}
+    <div class="pm-grab" aria-hidden="true"></div>
     <h2 id="reportTitle">Report this Skribl</h2>
     <p>Tell us what is wrong with it. Reports go to the people who run this site; nothing is taken down automatically.</p>
     <fieldset class="reasons">

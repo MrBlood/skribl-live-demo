@@ -64,15 +64,15 @@
       --accent-fill: #6d4cf0;   /* a fill carrying words: AA with white (styles.css) */
       --accent-bright: #9179ff;
       --accent-tint: #d6ccff;
-      --accent-glow: rgba(124, 92, 255, 0.30);
-      /* Riso inks — artwork only */
-      --ink-pink: #ff48b0;
-      --ink-orange: #ff6c2f;
-      --ink-yellow: #ffe800;
-      --ink-green: #00a95c;
-      --ink-blue: #0078bf;
-      --r: 12px;
-      --r-sm: 9px;
+      /* A SHADOW, AS styles.css HAS IT (#12). This was a purple glow; the
+         editors demoted theirs to a dark drop long ago, and the only thing
+         still glowing purple on any page was this one's. */
+      --accent-glow: rgba(0,0,0,0.32);
+      /* Radii on the editors' scale (#16): 16 for a card and the stage's
+         frame, 12 for a control, derived insets below that. */
+      --r: 16px;
+      --r-control: 12px;
+      --r-sm: 12px;
       --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
       /* posted.css's vocabulary (styles.css's names), on this palette. */
@@ -83,9 +83,18 @@
       --accent-tint-2: var(--accent-tint); --danger: #f4326f; --danger-soft: #ff8fae;
       /* The kind pills' inks, and the hover edge. Literals at their rules
          until v313, tuned for the dark ground and nothing else. */
-      --kind-pad-ink: #ffd7ea; --kind-pad-edge: #5a2a44;
-      --kind-flip-ink: #cfe0ff; --kind-flip-edge: #26406a;
       --hover-edge: #3a4658;
+      /* The colours this sheet used to type at its rules (#20). A poster's
+         plate and the full-screen exit's sit on a drawing in both themes, so
+         they have no light values. */
+      --plate: #0b0d12;
+      --plate-ring: rgba(6,7,10,.9);
+      --plate-glass: rgba(6,7,10,.72);
+      --plate-edge: rgba(255,255,255,.18);
+      --plate-ink: #eef1f6;
+      --wash-accent: rgba(124,92,255,.06);
+      --ground-glow-a: rgba(124,92,255,0.10);
+      --ground-glow-b: rgba(91,140,255,0.07);
     }
     /* The light ramp. Neutrals are the gallery's values where the gallery has
        the token, so the two pages read as one product side by side; the
@@ -105,11 +114,12 @@
       --text: #14171d;
       --text-2: #4b5563;
       --text-3: #6b7280;
-      --accent-tint: #5b3fd6;
+      /* styles.css's light --accent-tint (#11): #5b3fd6 was a third purple,
+         paler than the editors' text tint on the same white. */
+      --accent-tint: #4c31c4;
+      --accent-glow: rgba(0,0,0,0.16);   /* a glow on dark is a shadow on light */
       --hairline-strong: rgba(0,0,0,0.18); --line-strong: #b8c0cc;
       --danger: #c1104a; --danger-soft: #b0103f;
-      --kind-pad-ink: #a3185f; --kind-pad-edge: #f0bfd8;
-      --kind-flip-ink: #1f4f99; --kind-flip-edge: #b9cdea;
       --hover-edge: #b8c0cc;
     }
   
@@ -123,56 +133,30 @@
     body {
       margin: 0;
       background:
-        radial-gradient(1200px 620px at 78% -8%, rgba(124,92,255,0.10), transparent 60%),
-        radial-gradient(900px 500px at 8% 108%, rgba(91,140,255,0.07), transparent 55%),
+        radial-gradient(1200px 620px at 78% -8%, var(--ground-glow-a), transparent 60%),
+        radial-gradient(900px 500px at 8% 108%, var(--ground-glow-b), transparent 55%),
         var(--base);
       color: var(--text);
       font-family: var(--font-ui);
       -webkit-font-smoothing: antialiased;
       line-height: 1.5;
     }
-    .wrap { max-width: 1240px; margin: 0 auto; padding: 22px clamp(14px, 3vw, 30px) 60px; }
+    /* 12 above the header card, as the Pad's; 6 on a phone (pagemenu.css). */
+    .wrap { max-width: 1240px; margin: 0 auto; padding: 12px clamp(14px, 3vw, 30px) 60px; }
+    @media (max-width: 640px) { .wrap { padding-top: 6px; } }
+    /* THE EDITORS' FOCUS RING, on everything this page draws (#2): Make one,
+       the transport, the row actions, the posted titles, the recovery and
+       Clear buttons fell back to the browser's own ring, and the search showed
+       focus as a one-pixel border. */
+    a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-visible {
+      outline: 2px solid var(--focus-ring); outline-offset: 2px; }
   
     /* ---- top bar ---------------------------------------------------------- */
-    .top {
-      display: flex; align-items: center; gap: 16px;
-      padding-bottom: 20px;
-    }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .14em; font-size: 15px; }
-    .brand .mark { display: flex; align-items: center; }
-    .brand .mark .brand-mark { height: 21px; width: auto; display: block; overflow: visible; }
-    /* THE MARK'S INK. _skribl_brand_mark.html strokes with a gradient whose two
-       stops carry these classes, and styles.css colours them; this page does
-       not load styles.css (by design, above), so without these two lines the
-       stops fall to the SVG default and the signature paints BLACK on the dark
-       ground (v294, from a phone). Same tokens as styles.css's rules;
-       verify_library reads the computed stop colours on every page that carries
-       the mark. */
-    .brand-grad-a { stop-color: var(--accent); }
-    .brand-grad-b { stop-color: var(--accent-2); }
-    .brand .tag {
-      font-weight: 700; letter-spacing: .2em; font-size: 12px;
-      text-transform: uppercase; color: var(--text-2);
-    }
-    .top .spacer { flex: 1; }
+    /* The header card, the lockup and Make one are pagemenu.css's now: ONE set
+       of rules for this page and the gallery (#7, #9). The mark's ink went
+       with them. `.nav` is only the group the two controls sit in. */
     .top .nav { display: flex; align-items: center; gap: 8px; }
-    .top .navlink {
-      display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
-      border-radius: 999px; border: 1px solid var(--hairline); color: var(--text-2);
-      font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap;
-    }
-    .top .navlink:hover { color: var(--text); background: var(--control); }
-    .top .navlink.make { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
-    .top .navlink.make:hover { filter: brightness(1.08); color: #fff; }
-    /* 360 IS THE DESIGN TARGET AND 320 THE SAFETY NET (START-HERE). The mark,
-       its word and two pills are wider than either; the word is the thing
-       the two links already say, so it goes first, and the pills tighten. */
-    @media (max-width: 380px) {
-      .brand .tag { display: none; }
-      .top { gap: 10px; }
-      .top .navlink { padding: 0 11px; font-size: 12px; }
-    }
-  
+
     /* ---- profile header --------------------------------------------------- */
     .profile {
       display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
@@ -180,22 +164,13 @@
       background: linear-gradient(180deg, var(--raised), var(--panel));
       border: 1px solid var(--hairline); border-radius: var(--r);
     }
-    .avatar {
-      width: 62px; height: 62px; border-radius: 16px; flex: none;
-      background: #14122b; border: 1px solid #2a2550; overflow: hidden;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-    }
-    .avatar canvas { display: block; width: 100%; height: 100%; }
     .who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-    .who .name { margin: 0; display: inline-flex; align-items: center; gap: 7px; font-weight: 800; font-size: 20px; letter-spacing: -.01em; }
-    .verified { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%;
-      background: linear-gradient(150deg, var(--accent-bright), var(--accent)); color: #fff;
-      font-size: 11px; font-weight: 900; box-shadow: 0 2px 8px var(--accent-glow); }
+    .who .name { margin: 0; display: inline-flex; align-items: center; gap: 7px; font-weight: 700; font-size: 20px; letter-spacing: -.01em; }
     .who .handle { font-family: var(--font-mono); color: var(--accent-tint); font-size: 13px; }
     .who .bio { color: var(--text-2); font-size: 13.5px; margin-top: 2px; }
     .stats { display: flex; gap: 22px; margin-left: auto; }
     .stat { text-align: right; }
-    .stat b { display: block; font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .stat b { display: block; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .stat span { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
   
     /* ---- layout: player + library ---------------------------------------- */
@@ -208,10 +183,15 @@
     @media (max-width: 900px) { .stage { grid-template-columns: minmax(0, 1fr); } }
   
     /* ---- player ----------------------------------------------------------- */
-    .player { position: sticky; top: 18px; background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--r); overflow: hidden; }
+    /* Sticky BELOW the header card, which is sticky too: 12 + its 64 + 12. */
+    .player { position: sticky; top: 88px; background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--r); overflow: hidden; }
     @media (max-width: 900px) { .player { position: static; } }
     .now { display: flex; align-items: center; gap: 8px; padding: 12px 15px 0; }
-    .now .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-bright); box-shadow: 0 0 10px var(--accent-bright); }
+    /* THE SHARED DOT (#17): styles.css's .tab-dot recipe -- 7px, and a 3px
+       glow at .35 of its own colour -- in the accent. A 10px halo at full
+       strength made this the one dot in the product that glowed. */
+    .now .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-bright);
+      box-shadow: 0 0 3px color-mix(in srgb, var(--accent-bright) 35%, transparent); }
     .now .lbl { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); }
     .stageCanvasWrap { margin: 12px 15px 0; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--hairline-soft); position: relative; }
     /* NO SIZING RULE ON THE STAGE'S CANVAS. This said width:100%/height:auto,
@@ -219,14 +199,11 @@
        in-post player now, and that rule would pin the width definite and bring
        back the stretch inlineplayer.css exists to avoid. The player letterboxes
        itself. */
-    .replay-nib { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.25); transform: translate(-50%,-50%); opacity: 0; pointer-events: none; }
     .pmeta { padding: 13px 16px 4px; }
     .pmeta .ptitle { font-size: 18px; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
     .pmeta .prow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; color: var(--text-2); font-family: var(--font-mono); font-size: 12px; }
     .kind { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--hairline); color: var(--text-2); }
     .kind svg { width: 12px; height: 12px; }
-    .kind.pad { color: var(--kind-pad-ink); border-color: var(--kind-pad-edge); background: rgba(255,72,176,.08); }
-    .kind.flip { color: var(--kind-flip-ink); border-color: var(--kind-flip-edge); background: rgba(0,120,191,.10); }
     /* WHICH WAY IT WAS POSTED, on the meta line -- not on a line of its own.
        It was the only thing ever put inside `.pstats`, a block built for a
        social-count row this page does not render, so "in the gallery" sat
@@ -242,17 +219,26 @@
     .tbtn:disabled { opacity: 0.4; cursor: default; }
     .scrub[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
     .scrub { margin: 12px 16px 0; height: 6px; border-radius: 999px; background: var(--control); overflow: hidden; cursor: pointer; }
-    .scrub .fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-bright)); border-radius: 999px; }
+    /* SOLID, as the editors' scrub fills have been since the accent demotion
+       (styles.css, the --ui-* note): a two-stop gradient here was the last. */
+    .scrub .fill { height: 100%; width: 0%; background: var(--accent); border-radius: 999px; }
     .transport { display: flex; align-items: center; gap: 9px; padding: 13px 16px 16px; }
-    .tbtn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--hairline); background: var(--control); color: var(--text); display: grid; place-items: center; cursor: pointer; transition: background .15s, border-color .15s, transform .05s; }
+    .tbtn { width: 38px; height: 38px; border-radius: var(--r-control); border: 1px solid var(--hairline); background: var(--control); color: var(--text); display: grid; place-items: center; cursor: pointer; transition: background .15s, border-color .15s, transform .05s; }
     .tbtn:hover { background: var(--control-hi); }
     .tbtn:active { transform: translateY(1px); }
     .tbtn svg { width: 18px; height: 18px; }
     /* 38 visual -> a 44px box, centred; the 46px play button's box sits inside it. */
     .tbtn { position: relative; z-index: 1; }
     .tbtn::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
-    .tbtn.play { width: 46px; height: 46px; background: linear-gradient(150deg, var(--accent-bright), var(--accent)); border-color: transparent; color: #fff; box-shadow: 0 5px 18px var(--accent-glow); }
-    .tbtn.on { color: var(--accent-tint); border-color: rgba(124,92,255,.45); background: rgba(124,92,255,.14); }
+    /* PLAY IS QUIET, as the Pad's .btn.play is (#8): the transport's own
+       control ground, a little larger, and the ink carries it. It was a
+       glowing purple gradient -- the loudest thing on a page whose one
+       action colour is Make one. */
+    .tbtn.play { width: 46px; height: 46px; background: var(--control); color: var(--text);
+      border-color: var(--hairline-strong); }
+    /* A LIT TOGGLE IS THE ONE PILL'S SELECTED LOOK (#11): its tint and its
+       ink (segslider.css), not a third, paler outlined purple. */
+    .tbtn.on { color: var(--seg-on-ink); border-color: transparent; background: var(--seg-on-fill); }
     .transport .telapsed { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
     /* Six buttons and a clock do not fit one row at phone width (the full-
        screen button, v304, made it six): the clock takes its own row. */
@@ -275,25 +261,34 @@
     /* One row, both places: the editors' sheet draws the same card (styles.css,
        .sdrafts-*). The card opens the draft; the bin asks once. */
     .draft-row { display: flex; align-items: center; gap: 4px; background: var(--raised);
-      border: 1px solid var(--hairline); border-radius: 14px; }
+      border: 1px solid var(--hairline); border-radius: var(--r); }
     .draft-open { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px;
-      padding: 8px; border-radius: 14px; color: inherit; text-decoration: none; }
-    @media (hover: hover) { .draft-open:hover { background: rgba(124, 92, 255, .06); } }
-    .draft-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .draft-pic { flex: 0 0 auto; width: 72px; height: 54px; border-radius: 9px; overflow: hidden; background: var(--hairline-soft); }
+      padding: 8px; border-radius: var(--r); color: inherit; text-decoration: none; }
+    @media (hover: hover) { .draft-open:hover { background: var(--wash-accent); } }
+    /* 8 inside the row's 16 at an 8px inset: concentric, derived not typed. */
+    .draft-pic { flex: 0 0 auto; width: 72px; height: 54px; border-radius: 8px; overflow: hidden; background: var(--hairline-soft); }
     .draft-pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
     .draft-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .draft-name { font-size: 15px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .draft-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
-    .draft-del { flex: 0 0 auto; min-width: 44px; height: 44px; padding: 0 10px; margin-right: 6px; border-radius: 22px;
-      border: 1px solid transparent; background: transparent; color: var(--text-3); font: inherit; font-size: 13px;
-      font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+    /* THE BIN KEEPS ITS BOX (#3; the v317 bin rule the media drawer's bin
+       follows). It used to grow from 44 into a 77px "Delete?" pill, which is
+       the arm that moves -- the drawer's bin grew over its switch that way
+       and the next tap removed the file. Armed, the icon takes the danger
+       colour on a danger tint inside the same 44px circle, and the row's meta
+       line asks the question (library.js). NO BORDER, not even a transparent
+       one: the armed edge is an inset shadow, as the drawer's is. */
+    .draft-del { flex: 0 0 auto; width: 44px; height: 44px; padding: 0; margin-right: 6px; border-radius: 999px;
+      border: 0; background: transparent; color: var(--text-3); font: inherit;
+      cursor: pointer; display: inline-grid; place-items: center; }
     .draft-del svg { width: 19px; height: 19px; }
     @media (hover: hover) { .draft-del:hover { color: var(--text); } }
     /* The theme's danger colour, as the editors' twin (.sdrafts-del.armed) has it: a literal
        pink was 2.27:1 on the light theme's white row (third review). */
-    .draft-del.armed { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: color-mix(in srgb, var(--danger) 10%, transparent); }
-    .libhead .cnt { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+    .draft-del.armed, .draft-del.armed:hover { color: var(--danger);
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 50%, transparent);
+      background: color-mix(in srgb, var(--danger) 10%, transparent); }
+    .draft-meta.asks { color: var(--danger); font-family: var(--font-ui); }
     /* The filter is a track of the one pill too (segslider.css), in the
        page's type rather than monospace. Its options are 34 you can SEE --
        the chip's own height, and SK-AUD-005's floor (these once measured 28
@@ -315,48 +310,20 @@
        The field is a little wider to hold the same words at the larger size.
        NOT fixed with maximum-scale=1: that takes pinch-zoom away from
        everybody, and A11Y 11 fails any page that tries it. */
-    .search input { width: 200px; max-width: 48vw; min-height: 44px; box-sizing: border-box; font-family: var(--font-mono); font-size: 16px; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 12px 7px 30px; outline: none; }
-    .search input:focus { border-color: var(--accent); }
+    /* IN THE UI FACE (#18), as the gallery's search is: monospace made the
+       one field on the page look like a terminal. The focus is the page's
+       2px ring (above), not a one-pixel border. */
+    .search input { width: 200px; max-width: 48vw; min-height: 44px; box-sizing: border-box; font-family: var(--font-ui); font-size: 16px; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 12px 7px 30px; }
     .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-3); }
   
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 14px; }
-    .card { text-align: left; padding: 0; background: var(--raised); border: 1px solid var(--hairline); border-radius: var(--r); overflow: hidden; cursor: pointer; transition: transform .13s, border-color .13s, box-shadow .13s; }
-    .card:hover { transform: translateY(-3px); border-color: var(--hover-edge); box-shadow: 0 12px 26px rgba(0,0,0,.42); }
-    .card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 12px 30px var(--accent-glow); }
-    .card .art { position: relative; aspect-ratio: 4/3; }
-    .card .art canvas { display: block; width: 100%; height: 100%; }
-    /* The tile picture is /s/<id>/poster — the share card's drawing, or a
-       blank canvas for a post with no thumbnail — cropped to the drawing's
-       band by the same numbers inlineplayer.css uses — lib/sharecard.js
-       band(): scale 630/492, offset 27/492. Shown whole, every tile would be
-       the branded share card and the grid would read as a page of adverts. */
-    .card .art { overflow: hidden; }
-    .card .art img { position: absolute; left: 50%; transform: translateX(-50%);
-                     top: -5.4878%; height: 128.0488%; width: auto; max-width: none; }
     /* The stage IS the in-post player; the wrap already draws the frame. */
     .stageCanvasWrap .skribl-inline { border: 0; border-radius: 0; }
     .more-status { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-3); }
-    .card .badge { position: absolute; top: 8px; left: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 999px; font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; background: rgba(6,7,10,.66); backdrop-filter: blur(3px); color: #dfe6f2; }
-    .card .badge svg { width: 11px; height: 11px; }
-    .card .playing { position: absolute; inset: 0; display: none; place-items: center; background: rgba(6,7,10,.28); color: #fff; }
-    .card.active .playing { display: grid; }
-    .card .playing span { font-family: var(--font-mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: var(--accent-fill); color: #fff; }
-    .card .body { padding: 10px 11px 12px; }
-    .card .ct { font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; margin-bottom: 5px; }
-    .card .cm { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
-    .card .cm .dur { color: var(--text-2); }
-    /* Social counts — the skribls.net post model (like / repost / reply).
-       SCOPED TO .card, and the scope is the point rather than the style:
-       unscoped, `.st` also matched the one `<path class="st">` inside the
-       brand mark, which this page's header includes -- a page rule reaching
-       into a shared component's internals by accident, which is the shape of
-       bug verify_inline's gate caught on the gallery a release ago. Two
-       letters is too short a name to leave loose in a page stylesheet. */
-    .card .st { display: flex; align-items: center; gap: 12px; margin-top: 8px; font-family: var(--font-mono);
-      font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
-    .card .st span { display: inline-flex; align-items: center; gap: 4px; }
-    .card .st svg { width: 13px; height: 13px; }
-    .card .st .like { color: #ff7fb2; }
+    /* (#21) The concept mock's card grid -- .grid, .card and everything
+       scoped under it: art, badge, playing, counts -- went here. Nothing has
+       rendered a .card on this page since the list became Your Skribls'
+       rows in v304; the one lesson it carried, that a page rule must not
+       reach the brand mark's own `path.st`, is pinned in verify_library. */
     /* `.pstats` was here and is gone with the div it styled: see #pVis above. */
   
     /* The rows on this page: a list with a poster, not a tray in a drawer. */
@@ -372,7 +339,7 @@
        it, and a speaker tucked inside an 84px poster is the small one the
        owner could not read. One wrapper around the picture alone separates
        the two jobs; the drawer emits no poster, so it emits no wrapper. */
-    .posted-thumb { width: 84px; height: 63px; border-radius: 8px; overflow: visible; background: #0b0d12; position: relative; }
+    .posted-thumb { width: 84px; height: 63px; border-radius: 8px; overflow: visible; background: var(--plate); position: relative; }
     .posted-thumb .posted-shot { position: absolute; inset: 0; border-radius: 8px; overflow: hidden; }
     /* THESE NUMBERS ARE THE FALLBACK NOW, not the crop. They frame the share
        card so its wordmark band falls outside the box, which hides the
@@ -404,7 +371,7 @@
        both the poster and the page behind the overhang. */
     .posted-thumb svg.posted-sound { left: auto; right: -7px; top: -7px;
       width: 22px; height: 22px; padding: 4px; border-radius: 999px;
-      color: var(--accent); background: #0b0d12; box-shadow: 0 0 0 1.5px rgba(6,7,10,.9); }
+      color: var(--accent); background: var(--plate); box-shadow: 0 0 0 1.5px var(--plate-ring); }
     /* The kind mark is in the WORDS on this page now, not on the poster: an
        84x63 thumb is the drawing, and a badge in its corner was competing
        with it. The rule above is what is left of that pair -- sound is a
@@ -425,16 +392,25 @@
        visible floor — and /library was never in the gate that would have
        said so. */
     .posted-actions button { min-height: 34px; }
+    /* NO DEAD TAP BETWEEN THEM (#15). posted.css gives these a band above and
+       below only, so at 390 the 6px gaps between the icons answered nothing:
+       a thumb that landed between Copy link and Delete did nothing at all.
+       Half the gap each side and the bands MEET -- they touch, and never
+       overlap, so which control a tap lands on never depends on paint order.
+       Written against posted.css's gap; if that moves, this moves with it.
+       -4, NOT -3: the band is inset from the PADDING box, and these buttons
+       carry a 1px border, so -3 stopped a pixel short each side and left two
+       dead columns in every gap (measured, not reasoned). */
+    .posted-actions button::before { inset: calc(-1 * var(--tap-grow)) -4px; }
     .posted-gallery { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
       border: 1px solid var(--hairline-strong); color: var(--text-secondary); padding: 5px 9px; border-radius: 8px; cursor: pointer; }
-    .posted-gallery.on { color: var(--accent-tint); border-color: rgba(124,92,255,0.5); background: rgba(124,92,255,0.12); }
+    .posted-gallery.on { color: var(--seg-on-ink); border-color: transparent; background: var(--seg-on-fill); }
     .posted-share { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
       border: 1px solid var(--hairline-strong); color: var(--text-secondary); padding: 5px 9px; border-radius: 8px; cursor: pointer; }
     .posted-foot-top { border-bottom: 1px solid var(--hairline); margin-bottom: 12px; padding: 0 0 10px; }
     /* The 94px indent and its 399px give-back both went with posted.css's 52:
        the strip is left-aligned under the thumbnail now and the words are
        icons, so there is nothing to indent past and nothing to give back. */
-    .empty { grid-column: 1 / -1; text-align: center; color: var(--text-3); font-family: var(--font-mono); font-size: 13px; padding: 40px 0; }
     .state { text-align: center; color: var(--text-3); font-size: 14px; line-height: 1.7; padding: 36px 0; margin: 0; }
     .state b { color: var(--text-2); font-weight: 600; }
     .state a { color: var(--accent-tint); }
@@ -479,16 +455,15 @@
     .stageCanvasWrap:fullscreen .skribl-inline,
     .stageCanvasWrap.is-immersive-page .skribl-inline { width: min(100vw, calc(100vh * 16 / 9)); max-height: 100vh; }
     .full-exit { display: none; position: absolute; top: 14px; right: 14px; z-index: 3; width: 44px; height: 44px;
-      background: rgba(6,7,10,.72); border-color: rgba(255,255,255,.18); color: #eef; }
+      background: var(--plate-glass); border-color: var(--plate-edge); color: var(--plate-ink); }
     .stageCanvasWrap:fullscreen .full-exit,
     .stageCanvasWrap.is-immersive-page .full-exit { display: grid; }
     .more-wrap { display: flex; justify-content: center; margin-top: 16px; }
     .more { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .04em; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 10px 20px; cursor: pointer; transition: background .15s, border-color .15s; }
     .more:hover { background: var(--control-hi); border-color: var(--hover-edge); }
-    .more .rem { color: var(--text-3); }
     .more svg { width: 15px; height: 15px; }
     .foot { margin-top: 30px; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); text-align: center; }
-    .foot b { color: var(--text-2); font-weight: 500; }
+    .foot b { color: var(--text-2); font-weight: 600; }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
@@ -501,8 +476,9 @@
       data-skribl-pad="{{ url_for('.skribl_editor') }}">
 <div class="wrap">
   <div class="top">
+    {# The same lockup as the gallery's, markup and rules (pagemenu.css). #}
     <div class="brand" role="img" aria-label="Your Skribl Library">
-      <span class="mark">{% include 'skribl/_skribl_brand_mark.html' %}</span>
+      {% include 'skribl/_skribl_brand_mark.html' %}
       <span class="tag">library</span>
     </div>
     <div class="spacer"></div>
@@ -512,7 +488,7 @@
        surface and the theme, and a third control here overflowed 390px by
        28px when measured. Both answer a tap 44px tall. #}
     <nav class="nav" aria-label="Elsewhere">
-      <a href="{{ url_for('.skribl_editor') }}" class="navlink make" id="libMake">Make one</a>
+      <a href="{{ url_for('.skribl_editor') }}" class="make" id="libMake">Make one</a>
       <button type="button" class="pm-more" id="pageMenuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="pageMenu" title="Menu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
     </nav>
   </div>
@@ -562,7 +538,9 @@
       <div class="pmeta">
         <div class="ptitle" id="pTitle">—</div>
         <div class="prow">
-          <span class="kind" id="pKind"></span>
+          {# Hidden until something is on the stage (#10): empty, its border
+             and padding drew a capsule with nothing in it. #}
+          <span class="kind" id="pKind" hidden></span>
           <span id="pMeta"></span>
           <span id="pVis" hidden></span>
         </div>

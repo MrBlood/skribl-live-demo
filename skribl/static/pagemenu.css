@@ -1,17 +1,107 @@
-/* The page menu's sheet. Travels with lib/pagemenu.js and
-   _skribl_page_menu.html -- the partial's header says what it is for.
+/* The page menu's sheet -- and, since the gallery and the library joined the
+   family, the rest of the chrome those two pages share: the tokens of the
+   Pad's glass, the floating header card and the one brand lockup. Travels
+   with lib/pagemenu.js and _skribl_page_menu.html -- the partial's header
+   says what the menu is for.
 
    Loaded by the gallery and the library, and by nothing a host downloads.
 
-   WRITTEN ONLY IN TOKENS BOTH PAGES DEFINE (--panel, --control, --hairline,
-   --text, --text-2, --text-3, --accent, --font-ui), in both of their ramps, so
-   the sheet follows the theme with no light block of its own. The Theme
-   switch is the exception that proves it: it is the one pill, whose look is
-   segslider.css's (both pages load it), and only its place is here. Its shape is
-   the editors' menu sheet -- rounded top, a grab bar, 44px rows of icon and
-   two lines of words, a Theme row at the bottom -- written against these
-   pages' tokens rather than imported from styles.css, which neither page
-   loads. */
+   WRITTEN IN TOKENS BOTH PAGES DEFINE (--panel, --control, --hairline,
+   --text, --text-2, --text-3, --accent, --font-ui), in both of their ramps,
+   plus the glass tokens below, which are styles.css's own values restated for
+   two pages that do not load it. The Theme switch is the one pill, whose look
+   is segslider.css's (both pages load it), and only its place is here. */
+
+/* ---- THE PAD'S GLASS, restated -------------------------------------------
+   The same four values styles.css calls --glass-fill, --header-rim,
+   --glass-drop and --glass: the header card and every sheet on these pages
+   wear the material the editors' header, dock and menus wear. If they move
+   there, they move here.
+
+   ONE DIFFERENCE, AND IT IS THE LIGHT SHEET. The Pad's light glass is .78 of
+   a pale grey; over the .4 scrim and the gallery's dark poster plates that
+   comes out a muddy rgb(184,188,192) behind the menu's words. A sheet here is
+   near-white frost at .9 instead (--glass-sheet-fill), measured crisp over
+   the darkest thing the gallery can put behind it. The header keeps the
+   Pad's .78: nothing dark sits behind it at rest.
+
+   ON-GLASS INK. Glass passes some of what is behind it, so the secondary
+   words on a sheet are one step darker in light (--on-glass-2) and the
+   tertiary words take the secondary's value -- every word inside the glass
+   clears AA against the pixels actually behind it (verify_galib). */
+:root {
+  --glass-fill: rgba(23, 26, 34, 0.78);        /* styles.css --glass-fill */
+  --glass-solid: rgb(23, 26, 34);              /* the same, solid: a phone's header */
+  --glass-sheet-fill: var(--glass-fill);
+  --header-rim: rgba(0, 0, 0, 0.55);
+  --glass-drop: rgba(0, 0, 0, 0.30);
+  --glass: 0 0 0 1px var(--header-rim), 0 6px 20px var(--glass-drop);
+  --glass-scrim: rgba(0, 0, 0, 0.4);           /* styles.css .menu-overlay::before */
+  --on-glass-2: var(--text-2);
+  /* The editors' focus ring: 2px, 2px out, in this colour. */
+  --focus-ring: #7c5cff;
+}
+:root[data-theme="light"] {
+  --glass-fill: rgba(234, 238, 244, 0.78);
+  --glass-solid: rgb(234, 238, 244);
+  --glass-sheet-fill: rgba(246, 248, 251, 0.9);
+  --header-rim: rgba(255, 255, 255, 0.9);
+  --glass-drop: rgba(20, 24, 40, 0.10);
+  --on-glass-2: #3f4756;
+}
+.pm-sheet, .sheet-card, .cardMenu { --text-2: var(--on-glass-2); --text-3: var(--on-glass-2); }
+
+/* A sticky header covers what scrolls under it, and a Tab stop scrolled
+   into view behind the card is a focus nobody can see. */
+html { scroll-padding-top: 96px; }
+
+/* ---- THE HEADER CARD: the Pad's, on both pages ---------------------------
+   Floating, frosted, rimmed, 16 corner, and sticky so the way to make one and
+   the menu stay in reach. On a phone it is SOLID, as the Pad's is (v317):
+   pinned over moving content, a blur is the thing WebKit fails to repaint. */
+.top {
+  position: sticky; top: 12px; z-index: 40;
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 18px; padding: 10px 10px 10px 18px;
+  border-radius: 16px;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: var(--glass);
+}
+.top .spacer { flex: 1; }
+@media (max-width: 640px) {
+  .top { top: 6px; padding: 8px 8px 8px 14px; background: var(--glass-solid);
+    -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ---- THE ONE LOCKUP ------------------------------------------------------
+   Mark 24, the page's word 700 / 11 / .16em, Make one 600 / 13. The two pages
+   drew it two ways (a 21px mark and a 12px word at .2em beside a 24px mark
+   and an 11px word), so the brand changed size as you moved between them.
+   min-height 44: on the gallery the lockup is a link, and a 24px mark is not
+   a tap target. `text-decoration: none` for the same link: the browser was
+   underlining the word. */
+.brand { display: flex; align-items: center; gap: 6px; min-height: 44px;
+  text-decoration: none; }
+.brand .brand-mark { height: 24px; width: auto; display: block; overflow: visible; color: var(--text); }
+/* The mark's ink: the gradient stops _skribl_brand_mark.html carries, as
+   styles.css colours them. Without these the signature paints black
+   (v294, from a phone; verify_library reads the computed stops). */
+.brand-grad-a { stop-color: var(--accent); }
+.brand-grad-b { stop-color: var(--accent-2); }
+.brand .tag { font-weight: 700; letter-spacing: .16em; font-size: 11px;
+  text-transform: uppercase; color: var(--text-2); padding-top: 3px; }
+.make {
+  display: inline-flex; align-items: center; min-height: 44px;
+  padding: 0 16px; border-radius: 999px; text-decoration: none;
+  background: var(--accent-fill); color: #fff; font-weight: 600; font-size: 13px;
+  white-space: nowrap;
+}
+.make:hover { filter: brightness(1.08); }
+/* 360 IS THE DESIGN TARGET AND 320 THE SAFETY NET (START-HERE). The mark,
+   its word, Make one and the ••• are wider than 320 inside the card; the word
+   is what the page's own heading already says, so it goes first. */
+@media (max-width: 380px) { .brand .tag { display: none; } .top { gap: 8px; } }
 
 /* The ••• in each header. Round, 44px, in the header's own hairline -- the
    same weight as the gallery's "Yours" pill it replaced, so the header does
@@ -26,35 +116,62 @@
   cursor: pointer;
 }
 .pm-more:hover { color: var(--text); background: var(--control); }
-.pm-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pm-more:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .pm-more svg { width: 20px; height: 20px; }
 
+/* THE PAD'S MENU, NOT A SLAB (owner, B). The sheet is glass -- the Pad's fill,
+   blur(14px), rim and drop -- and the dim is the overlay's ::before at the
+   editors' .4 with a 2px blur, exactly as styles.css draws .menu-overlay.
+   The dim is a PSEUDO-ELEMENT ON PURPOSE: a backdrop-filter on the overlay
+   itself would make it the sheet's Backdrop Root, and the sheet's own blur
+   would then see nothing behind it. It fades with the sheet on the way out
+   (.closing, lib/pagemenu.js). */
 .pm-overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: flex-end;
   justify-content: center;
 }
-:root[data-theme="light"] .pm-overlay { background: rgba(20, 23, 29, 0.28); }
+.pm-overlay::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--glass-scrim);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  transition: opacity 0.22s ease;
+}
+.pm-overlay.closing::before { opacity: 0; }
 .pm-overlay[hidden] { display: none; }
 
+/* A PHONE GETS A FULL-BLEED BOTTOM SHEET: edge to edge, 20 corner on top,
+   the grab bar -- the Pad's phone menu. */
 .pm-sheet {
+  position: relative;
   box-sizing: border-box;
-  width: calc(100% - 20px);
-  max-width: 440px;
+  width: 100%;
   max-height: calc(100dvh - 40px);
   overflow-y: auto;
   border-radius: 20px 20px 0 0;
-  background: var(--panel);
-  border: 1px solid var(--hairline);
-  border-bottom: 0;
-  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
-  padding: 8px 6px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--glass-sheet-fill);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border: 0;
+  box-shadow: var(--glass);
+  padding: 8px 12px calc(16px + env(safe-area-inset-bottom, 0px));
   font-family: var(--font-ui);
   outline: none;
+}
+/* A DESKTOP GETS A POPOVER UNDER THE •••, at the Pad's breakpoint (641):
+   300 wide, 16 corner, its right edge flush with the •••'s and 8px below it.
+   lib/pagemenu.js writes --pm-top and --pm-right from the button's box when it
+   opens, because the header is sticky and the ••• is wherever the page left it. */
+@media (min-width: 641px) {
+  .pm-overlay { align-items: flex-start; justify-content: flex-end; }
+  .pm-sheet {
+    position: absolute; top: var(--pm-top, 72px); right: var(--pm-right, 24px);
+    width: 300px; max-height: calc(100dvh - var(--pm-top, 72px) - 24px);
+    border-radius: 16px; padding: 6px;
+  }
+  .pm-grab { display: none; }
 }
 .pm-grab {
   width: 40px; height: 4px; border-radius: 2px;
@@ -69,12 +186,14 @@
 .pm-sheet { overscroll-behavior: contain; }
 html:has(.pm-overlay:not([hidden])) { overscroll-behavior-y: none; }
 
+/* Row weights are 600: Segoe UI has no 500, so a 500 request rendered
+   Regular on the owner's Windows machine beside the editors' 600 rows. */
 .pm-item {
   display: flex; align-items: center; gap: 12px;
   min-height: 44px; box-sizing: border-box;
   padding: 12px 14px; border-radius: 10px;
   color: var(--text); text-decoration: none;
-  font-size: 14px; font-weight: 500;
+  font-size: 14px; font-weight: 600;
   -webkit-tap-highlight-color: transparent;
 }
 .pm-item:hover { background: var(--control); }
@@ -83,9 +202,9 @@ html:has(.pm-overlay:not([hidden])) { overscroll-behavior-y: none; }
 .pm-version { padding: 8px 14px 2px; font-size: 11px; color: var(--text-3); }
 button.pm-item {
   width: 100%; border: 0; background: transparent; cursor: pointer;
-  text-align: left; font: inherit; font-size: 14px; font-weight: 500;
+  text-align: left; font: inherit; font-size: 14px; font-weight: 600;
 }
-.pm-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pm-item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .pm-item svg { width: 18px; height: 18px; flex: none; color: var(--text-2); }
 .pm-item[aria-current="page"] svg { color: var(--accent); }
 .pm-text { display: flex; flex-direction: column; gap: 2px; }
@@ -97,7 +216,7 @@ button.pm-item {
   display: flex; align-items: center; gap: 10px;
   min-height: 44px; padding: 5px 14px;
 }
-.pm-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
+.pm-label { font-size: 12px; font-weight: 600; color: var(--text-2); }
 /* The Theme switch: a track of the one pill (segslider.css). It was a
    capsule with the chosen option a solid accent slab, white on purple. */
 .pm-seg {
@@ -105,8 +224,20 @@ button.pm-item {
   width: 204px;   /* three equal options, "System" at the pill's 13px / 600 with room */
 }
 .seg-track.pm-seg > button { flex: 1 1 0; min-width: 0; padding: 0 6px; }
+/* A pointer's popover reads better a third tighter than a finger's sheet --
+   the Pad's desktop menu makes the same trade. */
+@media (min-width: 641px) {
+  .pm-item { padding: 9px 12px; }
+  .pm-row { padding: 5px 12px; }
+  .pm-version { padding: 8px 12px 4px; }
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .pm-sheet { animation: pm-rise 0.16s ease-out; }
   @keyframes pm-rise { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+  /* The popover drops from the ••• instead, as the Pad's does. */
+  @media (min-width: 641px) {
+    .pm-sheet { animation: pm-drop 0.16s ease-out; transform-origin: top right; }
+    @keyframes pm-drop { from { transform: translateY(-8px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+  }
 }

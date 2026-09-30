@@ -1590,6 +1590,25 @@ with sync_playwright() as _spf:
           f"{_off} \u2014 this control was `hidden` on a phone, which is the "
           f"owner's 'i am not seeing full screen on gallery or library on iphone'")
 
+    # AN EMPTY STAGE DOES NOT OFFER TO GO FULL SCREEN ON NOTHING (#10 of the
+    # gallery/library audit): the control is there and disabled, like the rest
+    # of a dead transport. So put a Skribl on the stage before pressing it --
+    # this browser's list, as lib/posted.js keeps it, pointing at a real post.
+    check("...but on an empty stage it is disabled, with the rest of the transport",
+          _pf.evaluate("() => document.getElementById('btnFull').disabled"), "")
+    _fx_body = {"title": "full size probe", "version": 2, "schemaVersion": 2, "visibility": "unlisted",
+                "playbackMode": "replay", "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+                "frames": [{"strokes": [{"x": 100 + i * 30, "y": 200, "color": "#ff48b0", "size": 12,
+                                         "t": i * 100} for i in range(10)], "strokeGroups": [10]}]}
+    _fx_req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_fx_body).encode(),
+                                     headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(_fx_req, timeout=20) as _r:
+        _fx = json.loads(_r.read().decode())
+    _pf.evaluate("""(e) => localStorage.setItem('skribl_posted_v1', JSON.stringify([{ id: e.id, url: e.url,
+        title: 'full size probe', kind: 'pad', pages: 1, visibility: 'unlisted', tok: e.deleteToken,
+        local: false, has_audio: false, at: Date.now() }]))""", _fx)
+    browsing.goto(_pf, BASE, "/library")
+    _pf.wait_for_function("() => !document.getElementById('btnFull').disabled", timeout=8000)
     _pf.evaluate("() => document.getElementById('btnFull').click()")
     _pf.wait_for_timeout(700)
     _big = _pf.evaluate("""() => {

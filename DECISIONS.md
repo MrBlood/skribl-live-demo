@@ -12758,6 +12758,119 @@ the fill matches the pen colour read from the page.
 pre-fix tree or on its own mutation, except Pad's right-click and Flip's tool
 switch, which were already right. `player.css` is unchanged.
 
+## After v317 -- Gallery and library join the family
+
+An audit of /gallery and /library against the rules Pad and Flip keep found
+22 divergences. The owner picked option B on all three design calls. The rest
+were defects where a rule was already written down. `verify_galib.py` is new
+and pins what follows.
+
+**The owner's three calls:**
+
+* **The page menu is the Pad's glass.** It uses the Pad's fill, blur(14px),
+  `--glass` rim and drop, with the dim as the overlay's `::before` (.4 plus a
+  2px blur), as `.menu-overlay` has it. On a phone it is a full-bleed bottom
+  sheet with the grab bar and a 20px top corner. From 641px up (the Pad's
+  breakpoint) it is a 300px popover with a 16 corner. Its right edge is flush
+  with the •••, 8px below it; `lib/pagemenu.js` reads the button's box on open
+  because the header is sticky. Rows are 600.
+* **The header is the Pad's floating card** on both pages: 16 corner, 12 from
+  the top, glass and rim, sticky, and solid on a phone as the Pad's is.
+  `pagemenu.css` now carries the shared chrome: the glass tokens, the card and
+  one brand lockup (mark 24, word 700/11/.16em, Make one 600/13). The two
+  pages used to draw that lockup at two sizes. `html { scroll-padding-top }`
+  keeps a Tab stop from scrolling in under the card.
+* **The report sheet** is a glass bottom sheet on a phone, with a grab bar and
+  swipe (`lib/sheetswipe.js`, attached to the form). On a desktop it is a
+  centred card in the same glass. Closing eases, and focus management is
+  unchanged.
+
+**The light sheet is not the Pad's .78.** Over the .4 dim and the gallery's
+dark poster plates, the Pad's light glass comes out a muddy rgb(184,188,192)
+behind the words. A sheet here is near-white frost, rgba(246,248,251,.9),
+chosen by eye and by the contrast rows. The header keeps .78 because nothing
+dark sits behind it at rest.
+
+**On-glass ink.** Inside a light glass sheet, secondary text is `#3f4756`
+(`--on-glass-2`) and tertiary text takes the same value. Every word in the
+menu, the card menu and the report sheet clears AA against the pixels behind
+it. That was measured with the text made transparent and the frame
+photographed, in both themes at phone and desktop sizes. The same token fixes
+the Pad's own light menu: styles.css maps `--text-secondary`, `--text-soft-2`
+and `--text-muted` to it inside `.menu-sheet` in light. The audit's 3.53:1
+now measures at least 4.84 on the same method. The token is declared on
+that rule, not in the ramp. The ramp is carried into `player.css`, and a first
+cut there tripped `verify_player_isolation`'s byte ratchet by 28 bytes, so
+`player.css` is byte-for-byte unchanged.
+
+**The defects, each minimal:**
+
+* **#1** A focused tile player painted no ring, because the stage clipped it
+  to zero pixels. The stage now wears the ring
+  (`.tileStage:has(:focus-visible)`), since an element's own outline is not
+  cut by its own overflow.
+* **#2** The library has the editors' 2px `--focus-ring` at offset 2. The
+  search uses the same ring, not a 1px border.
+* **#3** The draft bin keeps its 44 box on both the library and the editors'
+  sheet. It tints its icon, and the question moves to the meta line (a live
+  region). It disarms on focusout, on a tap elsewhere and after 20 s.
+* **#4** A posted Delete holds its arm until focusout, a tap elsewhere or
+  20 s; it used to disarm after 4 s. This lives in shared `lib/postedui.js`,
+  so the editors' drawer gets it too.
+* **#5** The report error uses `--danger`.
+* **#8** Library Play is neutral like the Pad's, and the scrub fill is solid.
+* **#10** The empty `#pKind` starts hidden. Full screen is disabled with the
+  rest of a dead transport.
+* **#11** The lit Loop and In-gallery use the one pill's tint and ink. The
+  light `--accent-tint` is styles.css's `#4c31c4`.
+* **#12** `--accent-glow` is a shadow.
+* **#13** 500 becomes 600 and 800 becomes 700, including the editors'
+  `.menu-item`.
+* **#14** The card menu takes the menu's glass.
+* **#15** At 390 the row actions' tap bands meet in the 6px gap. The band is
+  -4, not -3, because it is inset from the padding box and these buttons
+  have a 1px border.
+* **#16** Radii are on the 16/12 scale, with derived insets. The tile stage
+  is 16, the player's own corner.
+* **#17** The now-playing dot uses the `.tab-dot` recipe.
+* **#18** The library search uses the UI face.
+* **#20** Colour literals became page tokens.
+* **#21** The concept mock's card grid (`.grid`, `.card` and everything under
+  it), the kind pill variants, `.replay-nib`, `.avatar`, `.verified`,
+  `.empty`, `.rem` and `.cnt` are deleted. `verify_a11y`'s ON_FILL list lost
+  the synthetic `.card .playing span`.
+* **#22** `brand_sweep=101` is dropped.
+
+`verify_clouddrafts` now asserts the armed bin and the meta-line question in
+place of the "Delete?" text. `verify_library`'s no-Fullscreen-API test pressed
+full screen on an empty stage, which #10 now disables. It now pins that
+state and puts a post on the stage before pressing.
+
+**Calibration.** On this tree I applied one orthogonal mutation per component
+and ran the suite once: 25 rows went red, each for its own mutation. The
+mutations were:
+
+* the stage's focus rule emptied (gallery painted focus);
+* the library ring at width 0 (library painted focus);
+* the posted arm back to 4 s;
+* the editors' bin focusout removed;
+* the popover at +2px;
+* the light sheet fill at .78 (glass);
+* the phone sheet at 100% - 20px (full bleed);
+* the library word at .2em (lockup);
+* the phone header back to glass (solid);
+* the report `.sheet` without flex-end (bottom sheet);
+* `--on-glass-2` at `#6b7280` (every light contrast row);
+* the row band at -3px (row actions);
+* a purple glow on Play.
+
+The bin-box row stayed green under its first mutation, which was JS writing
+"Delete?" into the bin. The CSS pins the width, so that was the wrong lever.
+Re-run with the CSS back to `min-width` plus padding, it went red. The suite
+was then green at 52/52. The library bin's focusout and outside-tap rows share
+their mechanism with the editors' row that went red, and were not mutated on
+their own.
+
 ## After v317 -- Flip fits the window again; Tween and Smear
 
 The owner, on Windows at an effective 965×744 and on an iPhone: with nine pages
