@@ -3205,6 +3205,9 @@ function resetMediaForLoad() {
     if (musicDetail) musicDetail.hidden = true;
     if (musicInput) musicInput.value = '';
     if (musicUploadBtn) musicUploadBtn.classList.remove('loaded');
+    // A draft stores no switch: what it saved plays. A switch left off by the
+    // last session would call the draft's track "Muted" and silence it.
+    if (typeof resetMusicToggle === 'function') resetMusicToggle();
     if (typeof padMusicRow === 'function') padMusicRow();
     if (musicTabDot) musicTabDot.hidden = true;
     if (musicRemove) musicRemove.hidden = true;
@@ -3228,6 +3231,9 @@ function resetMediaForLoad() {
   photoBlur_ = 0;
   if (!document.body.classList.contains('player-mode')) {
     photoUploadBtn.classList.remove('loaded');
+    // ...and the draft's photo is shown (loadSkribl sets it visible), so a
+    // switch left off would have its row say "Hidden" over a painted photo.
+    if (typeof resetPhotoToggle === 'function') resetPhotoToggle();
     if (typeof padPhotoRow === 'function') padPhotoRow();
     for (const _id of ['photoDetail', 'photoTabDot', 'photoRemove']) {
       const _e = document.getElementById(_id);

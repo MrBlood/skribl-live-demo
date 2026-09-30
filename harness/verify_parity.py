@@ -1470,9 +1470,14 @@ with sync_playwright() as p:
         const off = [k + 'Toggle', k + 'Remove', k + 'Detail', k + 'BtnLabel'].concat(k === 'photo' ? ['photoThumb'] : [])
           .filter(id => g(id) && g(id).offsetParent !== null);
         return { add: true, painted: !!at && add.contains(at), title: add.querySelector('.dz-title').textContent,
-                 hint: add.querySelector('.dz-hint').textContent, showing: off }; }"""
-    WORDS = {"photo": ("Add a photo", "JPG, PNG, GIF or WebP · or drop one here"),
-             "music": ("Add music", "MP3, WAV, M4A or OGG · it loops under your drawing")}
+                 hint: add.querySelector('.dz-hint').textContent, showing: off,
+                 said: g(k + 'Panel').innerText.split('\\n').map(t => t.trim()).filter(Boolean) }; }"""
+    # Flip's music hint says "every page" where the Pad's says "your drawing":
+    # that was all Flip's old footer ("one track for the whole animation") added.
+    WORDS = {"/skribl-pad": {"photo": ("Add a photo", "JPG, PNG, GIF or WebP · or drop one here"),
+                             "music": ("Add music", "MP3, WAV, M4A or OGG · it loops under your drawing")},
+             "/flip": {"photo": ("Add a photo", "JPG, PNG, GIF or WebP · or drop one here"),
+                       "music": ("Add music", "MP3, WAV, M4A or OGG · it loops under every page")}}
     for _route, _in in (("/skribl-pad", {"photo": "#photoInput", "music": "#musicInput"}),
                         ("/flip", {"photo": "#imageInput", "music": "#musicInput"})):
         _q = b.new_page(viewport={"width": 1280, "height": 900})
@@ -1485,9 +1490,14 @@ with sync_playwright() as p:
             _e = _q.evaluate(EMPTY, _k)
             check(f"{_route}, {_k}: the empty row is one painted add button with its title and hint",
                   _q.evaluate(browsing._PAD_CUR) == _k and _e["add"] and _e["painted"]
-                  and (_e["title"], _e["hint"]) == WORDS[_k], str(_e))
+                  and (_e["title"], _e["hint"]) == WORDS[_route][_k], str(_e))
             check(f"{_route}, {_k}: ...and nothing that needs a file shows until there is one",
                   _e["add"] and not _e["showing"], str(_e))
+            # ONE IDEA, SAID ONCE: the empty drawer says its title and its hint
+            # and nothing else. Flip's footers ("Loops while you Flip -- one
+            # track for the whole animation") said the hint a second time.
+            check(f"{_route}, {_k}: the empty drawer says its title and its hint, and nothing else",
+                  _e["add"] and _e["said"] == list(WORDS[_route][_k]), str(_e.get("said")))
             # Each picker is answered (with nothing) before the next is asked
             # for: Chromium opens one file chooser at a time.
             _chosen = []
@@ -1506,14 +1516,61 @@ with sync_playwright() as p:
                 _chosen.append("Enter")
             except Exception:
                 pass
-            check(f"{_route}, {_k}: a tap on it, or Enter on it, opens the file picker",
-                  _chosen == ["click", "Enter"], f"picker opened by {_chosen}")
+            # Space too, by keyboard (the focus is keyboard focus: the Enter
+            # above was the last interaction). Both editors' window Space
+            # handlers -- the Pad's grab-pan, Flip's play -- used to swallow it.
+            _fv = None
+            try:
+                _q.focus(f"#{_k}AddBtn")
+                _fv = _q.evaluate("(k) => document.getElementById(k + 'AddBtn').matches(':focus-visible')", _k)
+                with _q.expect_file_chooser(timeout=3000) as _fc:
+                    _q.keyboard.press("Space")
+                _fc.value.set_files([])
+                _chosen.append("Space")
+            except Exception:
+                pass
+            check(f"{_route}, {_k}: a tap on it, or Enter or Space on it, opens the file picker",
+                  _chosen == ["click", "Enter", "Space"], f"picker opened by {_chosen} (keyboard focus: {_fv})")
         _old = _q.evaluate("""() => [document.getElementById('photoPanel').innerText,
             [...document.querySelectorAll('#helpDrawer .help-pill')].map(e => e.textContent).join('|')]
             .some(t => t.includes('Add an image'))""")
         check(f"{_route}: 'Add an image' is gone from the drawer and from How it works",
               _old is False, "the empty title and the help pill say 'Add a photo'")
         _q.close()
+
+    # ---- the hint never strands a word --------------------------------------
+    # Where the hint wraps (a phone, and the break point is the FONT's: this
+    # box renders Liberation Sans, the owner's phone SF), it splits evenly --
+    # text-wrap: balance -- instead of leaving one word on a line of its own
+    # ("drawing", at 360 and 375). Lines are read from where each WORD paints.
+    print("\nPARITY — a wrapping hint strands no word, on both")
+    LINES = """(k) => { const h = document.querySelector('#' + k + 'AddBtn .dz-hint'); if (!h) return null;
+        const r = document.createRange(), lines = []; let top = null;
+        const walk = document.createTreeWalker(h, NodeFilter.SHOW_TEXT);
+        for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+          const re = /\\S+/g; let m;
+          while ((m = re.exec(n.data))) {
+            r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length);
+            const t = Math.round(r.getClientRects()[0].top);
+            if (top === null || Math.abs(t - top) > 3) { lines.push([]); top = t; }
+            lines[lines.length - 1].push(m[0]);
+          } }
+        return lines; }"""
+    _strand = []
+    for _route in ("/skribl-pad", "/flip"):
+        for _vw in (360, 375):
+            _ctx = b.new_context(viewport={"width": _vw, "height": 800}, device_scale_factor=2, is_mobile=True, has_touch=True)
+            _q = _ctx.new_page()
+            _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+            _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            for _k in ("photo", "music"):
+                browsing.pad_drawer(_q, _k)
+                _ln = _q.evaluate(LINES, _k)
+                if not _ln or (len(_ln) > 1 and len(_ln[-1]) < 2):
+                    _strand.append(f"{_route} {_vw} {_k}: {_ln}")
+            _ctx.close()
+    check("the empty rows' hints, where they wrap at 360 and 375, never leave one word alone on a line",
+          not _strand, "; ".join(_strand))
 
     # ---- the bin ------------------------------------------------------------
     # The red Remove pill is a quiet bin now, and it asks first, as the
@@ -1538,7 +1595,14 @@ with sync_playwright() as p:
                  said: g('confirmStatus').textContent, text: bin.innerText.trim(),
                  red: getComputedStyle(bin).color === danger, painted: !!at && bin.contains(at),
                  add: g(k + 'AddBtn').offsetParent !== null, name: g(k + 'BtnLabel').textContent,
-                 src: k === 'photo' ? t.hasAttribute('src') : null, focus: document.activeElement && document.activeElement.id }; }"""
+                 src: k === 'photo' ? t.hasAttribute('src') : null, focus: document.activeElement && document.activeElement.id,
+                 meta: g(k + 'BtnMeta').offsetParent !== null,
+                 ask: (a => a && a.offsetParent !== null ? a.textContent : null)(g(k + 'UploadBtn').querySelector('.dz-ask')),
+                 askRed: (a => !!a && getComputedStyle(a).color === danger)(g(k + 'UploadBtn').querySelector('.dz-ask')) }; }"""
+    # The switch's box, and what is PAINTED at a point (a rect is not a paint).
+    SWBOX = """(k) => { const r = document.getElementById(k + 'Toggle').getBoundingClientRect();
+        return [r.left, r.top, r.width, r.height]; }"""
+    AT = """([x, y]) => { const e = document.elementFromPoint(x, y); return e ? (e.closest('[id]') || e).id : null; }"""
     FILES = {"photo": {"name": "t.png", "mimeType": "image/png", "buffer": IMG},
              "music": {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD}}
     NOUN = {"photo": "the photo", "music": "the track"}
@@ -1551,17 +1615,29 @@ with sync_playwright() as p:
         _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _pickers, _handed = [], []
         _q.on("filechooser", lambda fc, _p=_pickers: _p.append(1))
-        _ok, _why = True, []
+        _ok, _why, _moved, _spaced = True, [], [], []
         for _k in ("photo", "music"):
             _f = FILES[_k]
             browsing.pad_drawer(_q, _k)
             _q.set_input_files(_in[_k], _f)
             _q.wait_for_function("(k) => document.getElementById(k + 'UploadBtn').classList.contains('loaded')", arg=_k, timeout=20000)
             _q.wait_for_timeout(300)
+            _q.evaluate(f"() => document.getElementById('{_k}Remove').scrollIntoView({{ block: 'center' }})")
+            _sw0 = _q.evaluate(SWBOX, _k)
             _q.click(f"#{_k}Remove"); _q.wait_for_timeout(400)   # past the bin's colour transition
             _a = _q.evaluate(BIN, _k)
+            # Armed, the bin keeps its 36px box -- the icon goes red on a red
+            # tint -- and the QUESTION takes the subtitle's line. The old armed
+            # bin widened into a "Remove?" pill that grew left over the switch,
+            # so the next tap aimed at the switch removed the file.
             _armed = (_a["loaded"] and _a["armed"] and _a["label"] == f"Tap again to remove {_f['name']}"
-                      and _a["said"] == _a["label"] and _a["text"] == "Remove?" and _a["red"] and _a["painted"])
+                      and _a["said"] == _a["label"] and _a["text"] == "" and _a["red"] and _a["painted"]
+                      and _a["ask"] == "Tap the bin again to remove" and _a["askRed"] and not _a["meta"])
+            _sw1 = _q.evaluate(SWBOX, _k)
+            _at = _q.evaluate(AT, [_sw0[0] + _sw0[2] / 2, _sw0[1] + _sw0[3] / 2])
+            _still = (all(abs(u - v) < 0.5 for u, v in zip(_sw0, _sw1)) and _at == f"{_k}Toggle")
+            if not _still:
+                _moved.append(f"{_k}: switch {_sw0} -> {_sw1} once armed; its old centre now paints #{_at}")
             _q.click(f"#{_k}BtnLabel"); _q.wait_for_timeout(150)
             _d = _q.evaluate(BIN, _k)
             _stood = _d["loaded"] and not _d["armed"] and _d["label"] == f"Remove {NOUN[_k]}"
@@ -1587,10 +1663,22 @@ with sync_playwright() as p:
             _q.wait_for_function("(k) => document.getElementById(k + 'UploadBtn').classList.contains('loaded')", arg=_k, timeout=20000)
             _q.wait_for_timeout(300)
             _handed.append((_k, _q.evaluate("() => document.activeElement && document.activeElement.id")))
+            # Space flips the switch it was handed to (role=switch, WAI-ARIA),
+            # and flips it back. Both editors' window Space handlers ate it.
+            _s0 = _q.get_attribute(f"#{_k}Toggle", "aria-checked")
+            _q.keyboard.press("Space"); _q.wait_for_timeout(150)
+            _s1 = _q.get_attribute(f"#{_k}Toggle", "aria-checked")
+            _q.keyboard.press("Space"); _q.wait_for_timeout(150)
+            _s2 = _q.get_attribute(f"#{_k}Toggle", "aria-checked")
+            _spaced.append((_k, _s0, _s1, _s2))
         check(f"{_route}: the bin asks once, then removes -- by pointer and by keyboard",
               _ok and not _pickers, "; ".join(_why) + (f"; the file picker opened {len(_pickers)} time(s)" if _pickers else ""))
         check(f"{_route}: a file attached from the focused add button hands focus to the switch that replaced it",
               _handed == [("photo", "photoToggle"), ("music", "musicToggle")], str(_handed))
+        check(f"{_route}: arming the bin moves nothing -- the switch keeps its box, and its centre is still the switch",
+              len(_moved) == 0, "; ".join(_moved))
+        check(f"{_route}: Space on the keyboard-focused switch turns it off and on again",
+              _spaced == [("photo", "true", "false", "true"), ("music", "true", "false", "true")], str(_spaced))
         _q.close()
 
     # ---- drops --------------------------------------------------------------
@@ -1630,6 +1718,12 @@ with sync_playwright() as p:
         browsing.pad_drawer(_q, "photo")
         _bad_p = _q.evaluate(DROP, ["photo", "#photoUploadBtn", "x.bmp", "image/bmp", _PNG64])
         _good_p = _q.evaluate(DROP, ["photo", "#photoUploadBtn", "d.png", "image/png", _PNG64])
+        # A row that holds a file takes no drop -- but the page has accepted
+        # the drag (the copy cursor), so it has to say why nothing happened.
+        _MSG = "#toast" if _route == "/skribl-pad" else "#flipChip"
+        _q.evaluate(f"() => {{ const m = document.querySelector('{_MSG}'); if (m) m.textContent = ''; }}")
+        _full_p = _q.evaluate(DROP, ["photo", "#photoUploadBtn", "e.png", "image/png", _PNG64])
+        _full_said = _q.evaluate(f"() => {{ const m = document.querySelector('{_MSG}'); return m ? m.textContent : null; }}")
         browsing.pad_drawer(_q, "music")
         _bad_m = _q.evaluate(DROP, ["music", "#mediaTabs", "x.mp4", "video/mp4", _WAV64])
         _good_m = _q.evaluate(DROP, ["music", "#mediaTabs", "d.wav", "audio/wav", _WAV64])
@@ -1638,10 +1732,56 @@ with sync_playwright() as p:
               and _good_p["loaded"] and _good_p["name"] == "d.png" and _good_p["dot"]
               and _good_m["loaded"] and _good_m["name"] == "d.wav" and _good_m["dot"],
               f"photo: bmp {_bad_p}, png {_good_p}; music on the tabs: mp4 {_bad_m}, wav {_good_m}")
+        check(f"{_route}: a file dropped on a row that already holds one is not taken, and the page says why",
+              _full_p["name"] == "d.png" and _full_said == "Remove the photo first to add another",
+              f"row {_full_p}; said {_full_said!r}")
         check(f"{_route}: the drop area lights while a file is over it, steadily, and goes out on the drop",
               all(r["lit"] and r["steady"] and r["unlit"] for r in (_good_p, _good_m)),
               f"photo {_good_p}; music {_good_m}")
         _q.close()
+
+    # ---- the switch after a draft opens (Pad) --------------------------------
+    # A Pad draft stores no on/off switch: what it saved is what it shows. A
+    # switch left OFF by the session before used to survive the open, so the
+    # row said "Hidden · Fill" over a photo loadSkribl had painted -- and that
+    # captureCurrentFrame would post -- and "Muted" over the draft's own track.
+    # The words are compared with what the page DOES, not with a constant.
+    # (Flip is not asked: applyPayload sets both switches from the payload.)
+    print("\nPARITY — a draft opened over a switched-off row: the row says what the page does (Pad)")
+    _q = b.new_page(viewport={"width": 1280, "height": 900})
+    _q.goto(BASE + "/skribl-pad", wait_until="load"); _q.wait_for_timeout(700)
+    _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+    _q.goto(BASE + "/skribl-pad", wait_until="load"); _q.wait_for_timeout(700)
+    _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    browsing.pad_drawer(_q, "photo")
+    _q.set_input_files("#photoInput", FILES["photo"])
+    _q.wait_for_function("() => document.getElementById('photoUploadBtn').classList.contains('loaded')", timeout=20000)
+    _q.click("#photoToggle"); _q.wait_for_timeout(200)
+    _off = _q.evaluate("() => [document.getElementById('photoBtnMeta').textContent, photoBgImg.style.display]")
+    _q.evaluate("(b64) => loadSkribl({ version: 1, strokes: [], photo: { data: 'data:image/png;base64,' + b64, name: 'd.png', fit: 'cover' } })", _PNG64)
+    _q.wait_for_timeout(800)
+    _ld = _q.evaluate("""() => ({ meta: document.getElementById('photoBtnMeta').textContent, shown: photoBgImg.style.display !== 'none',
+        sw: document.getElementById('photoToggle').getAttribute('aria-checked') })""")
+    check("Pad: a draft's photo opened over a switched-off row is shown, and the row and switch say so",
+          _off[1] == "none" and _off[0].startswith("Hidden")
+          and _ld["shown"] and _ld["meta"].startswith("Behind the drawing") and _ld["sw"] == "true",
+          f"switched off: {_off}; after the draft opened: {_ld}")
+    browsing.pad_drawer(_q, "music")
+    _q.set_input_files("#musicInput", FILES["music"])
+    _q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=20000)
+    _q.wait_for_timeout(300)
+    _q.click("#musicToggle"); _q.wait_for_timeout(200)
+    _moff = _q.evaluate("() => [document.getElementById('musicBtnMeta').textContent, musicEnabled]")
+    _q.evaluate("(b64) => loadSkribl({ version: 1, strokes: [], music: { data: 'data:audio/wav;base64,' + b64, name: 'd.wav' } })", _WAV64)
+    _q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=20000)
+    _q.wait_for_timeout(800)
+    _ml = _q.evaluate("""() => ({ meta: document.getElementById('musicBtnMeta').textContent, on: musicEnabled,
+        sw: document.getElementById('musicToggle').getAttribute('aria-checked') })""")
+    check("Pad: a draft's track opened over a switched-off row plays, and the row and switch say so",
+          _moff[0].startswith("Muted") and _moff[1] is False
+          and _ml["on"] is True and _ml["meta"].startswith("Loops under the drawing") and _ml["sw"] == "true",
+          f"switched off: {_moff}; after the draft opened: {_ml}")
+    _q.close()
 
     # ---- the re-add card stands in for BOTH faces ------------------------------
     # A draft that kept a file's settings but not its bytes shows the re-add

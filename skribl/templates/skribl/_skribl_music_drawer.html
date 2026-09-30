@@ -3,8 +3,10 @@
    renders its EXACT current markup + IDs; only divergent pieces are gated on `kind`.
    Pad-only: #musicInput (Flip's is a wider-accept input outside the panel) + the
    #matchDrawingLabel span + "Use finer/coarser step" aria text. Both render the
-   #musicPending re-add card. Flip-only: .draw-popout dialog root and a
-   .flip-drawer-note footer. The Photo | Music tabs head the media card this panel
+   #musicPending re-add card. Flip-only: .draw-popout dialog root, and the
+   empty row's hint says "under every page" where the Pad's says "under your
+   drawing" -- which is all its old footer ("Loops while you Flip -- one track for
+   the whole animation") added, so the footer went: one idea, said once. The Photo | Music tabs head the media card this panel
    sits in (#mediaCard), so it has no heading of its own; the dialog keeps its
    aria-label. Include with:
      {% with kind='pad'  %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
@@ -27,12 +29,12 @@
     <button type="button" class="dz-add" id="musicAddBtn">
       {{ music_glyph() }}
       <span class="dz-title">Add music</span>
-      <span class="dz-hint">MP3, WAV, M4A or OGG · it loops under your drawing</span>
+      <span class="dz-hint">MP3, WAV, M4A or OGG · {% if kind == 'flip' %}it loops under every page{% else %}it loops under your drawing{% endif %}</span>
     </button>
     <span class="dz-lead dz-tile" aria-hidden="true">{{ music_glyph() }}</span>
-    <div class="dz-file"><span class="dz-name" id="musicBtnLabel"></span><span class="dz-meta" id="musicBtnMeta"></span></div>
+    <div class="dz-file"><span class="dz-name" id="musicBtnLabel"></span><span class="dz-meta" id="musicBtnMeta"></span><span class="dz-ask">Tap the bin again to remove</span></div>
     <button type="button" id="musicToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Toggle music on or off"><span class="layer-toggle-knob"></span></button>
-    <button type="button" id="musicRemove" class="dropzone-remove" hidden title="Remove the track" aria-label="Remove the track"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span class="dz-arm">Remove?</span></button>
+    <button type="button" id="musicRemove" class="dropzone-remove" hidden title="Remove the track" aria-label="Remove the track"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
   </div>
   {% if kind != 'flip' -%}
   <input type="file" id="musicInput" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" style="display:none">
@@ -123,5 +125,4 @@
       </div>
     </div>
   </div>
-  {% if kind == 'flip' %}<p class="flip-drawer-note" id="musicNote">Loops while you Flip — one track for the whole animation.</p>{% endif %}
 </div>

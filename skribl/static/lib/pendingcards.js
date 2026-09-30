@@ -199,7 +199,9 @@
    * card takes the drop, checks it against the same types the picker offers,
    * and hands it to the editor's own file input, whose change handler does
    * the rest (decode check, a waiting re-add's settings, storage). A row that
-   * already holds a file ignores drops, as it ignores taps. The highlight is
+   * already holds a file does not take a drop, as it does not take a tap --
+   * but it SAYS so: the page has already accepted the drag (the copy cursor),
+   * and a drop that then does nothing reads as broken. The highlight is
    * the row's, and it does not flicker as the pointer crosses the row's own
    * children: a dragleave into something still inside the card is no leave.
    *
@@ -238,7 +240,10 @@
       var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (!k || !file) return;
       var zone = $(k + 'UploadBtn');
-      if (zone && zone.classList.contains('loaded')) return;
+      if (zone && zone.classList.contains('loaded')) {
+        if (o.say) o.say(k === 'photo' ? 'Remove the photo first to add another' : 'Remove the track first to add another', zone);
+        return;
+      }
       var why = refusal(k, file);
       if (why) { if (o.say) o.say(why, zone && !zone.hidden ? zone : card); return; }
       var input = $(o.inputs[k]);

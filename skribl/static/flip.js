@@ -5114,7 +5114,7 @@ if(canvasSeg) canvasSeg.addEventListener('click', e=>{
 if(moreBtn) moreBtn.addEventListener('click', ()=>requestAnimationFrame(syncCanvasSeg));
 // --- media drawer controls ---
 const photoUploadBtn=document.getElementById('photoUploadBtn'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
-const photoDetail=document.getElementById('photoDetail'), photoNote=document.getElementById('photoNote');
+const photoDetail=document.getElementById('photoDetail');
 const photoFitGroup=document.getElementById('photoFitGroup'), photoFitSlider=document.getElementById('photoFitSlider');
 const repositionBtn=document.getElementById('repositionBtn'), repositionHint=document.getElementById('repositionHint');
 const photoZoomRow=document.getElementById('photoZoomRow'), photoZoomEl=document.getElementById('photoZoom'), photoZoomVal=document.getElementById('photoZoomVal');
@@ -5131,7 +5131,7 @@ const photoTabDot=document.getElementById('photoTabDot'), musicTabDot=document.g
 function syncPhotoUI(){
   const hasImg=!!bgImage;
   photoUploadBtn.classList.toggle('loaded', hasImg);
-  photoRemove.hidden=!hasImg; photoNote.hidden=hasImg; photoDetail.hidden=!hasImg;
+  photoRemove.hidden=!hasImg; photoDetail.hidden=!hasImg;
   photoToggle.classList.toggle('on', photoEnabled); photoToggle.setAttribute('aria-checked', String(photoEnabled));
   photoTabDot.hidden = !hasImg;                                                       // green dot when an image is set
   // Compared through the shared normaliser, not by string equality: this row's
@@ -5160,7 +5160,6 @@ function syncMusicUI(){
   musicRemove.hidden = !hasMus;
   musicToggle.classList.toggle('on', musicEnabled); musicToggle.setAttribute('aria-checked', String(musicEnabled));
   musicDetail.hidden = !hasMus;
-  musicNote.hidden = hasMus;
   musicTabDot.hidden = !hasMus;
   if(hasMus) updateTrimUI();
   // The file row: name and "Loops under the drawing · 0:08". The length only
@@ -5199,7 +5198,6 @@ resetPhotoBtn.addEventListener('click',()=>{ photoFit='cover'; photoOpacity=1; p
 // ===== music component (ported from the Pad: waveform + trim + Loop Detail) =====
 const musicUploadBtn=document.getElementById('musicUploadBtn');
 const musicDetail=document.getElementById('musicDetail'), musicToggle=document.getElementById('musicToggle'), musicRemove=document.getElementById('musicRemove');
-const musicNote=document.getElementById('musicNote');
 const musicTrack=document.getElementById('musicTrack'), musicRange=document.getElementById('musicRange');
 const handleStart=document.getElementById('handleStart'), handleEnd=document.getElementById('handleEnd');
 const trimStartLabel=document.getElementById('trimStartLabel'), trimEndLabel=document.getElementById('trimEndLabel'), trimDurLabel=document.getElementById('trimDurLabel');
@@ -9830,8 +9828,11 @@ window.addEventListener('keydown', e=>{
   if(_typingEl(e.target)) return;
   if((e.ctrlKey||e.metaKey) && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){ e.preventDefault(); redoStroke(); return; }
   if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); undoStroke(); return; }
-  // Space = play / stop (when not magnified — Space pans the zoomed canvas instead).
-  if((e.code==='Space' || e.key===' ') && !(ZoomView && ZoomView.isZoomed())){ e.preventDefault(); playing?stop():play(); return; }
+  // Space = play / stop (when not magnified — Space pans the zoomed canvas instead),
+  // unless a control reached by keyboard owns it: then Space presses that button
+  // or flips that switch, as WAI-ARIA expects (SkriblCanvasZoom.ownsSpace).
+  if((e.code==='Space' || e.key===' ') && !(window.SkriblCanvasZoom && window.SkriblCanvasZoom.ownsSpace && window.SkriblCanvasZoom.ownsSpace(e.target))
+     && !(ZoomView && ZoomView.isZoomed())){ e.preventDefault(); playing?stop():play(); return; }
   if(playing || moveMode) return;   // page identity must not shift mid-move
   // ArrowLeft/ArrowRight are handled by the flip-scrub block above, which adds
   // hold-to-riffle. Leaving the single-step versions here as well meant BOTH

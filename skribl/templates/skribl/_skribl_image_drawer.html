@@ -3,8 +3,10 @@
    its EXACT current markup + IDs; only divergent pieces are gated on `kind`.
    Pad-only: #photoInput (Flip's file input lives outside as #imageInput). Both
    render the #photoPending re-add card. Flip-only: .draw-popout dialog root,
-   per-control aria-labels, an un-hidden reposition/zoom row, data-fit="fill" on
-   Stretch, and a .flip-drawer-note footer. The Photo | Music tabs head the media
+   per-control aria-labels, an un-hidden reposition/zoom row, and data-fit="fill"
+   on Stretch. (Its footer, "one image for the whole animation", went with the
+   drawer redesign: the row says where the picture sits, and a card that only
+   holds one picture needs no line saying so.) The Photo | Music tabs head the media
    card this panel sits in (#mediaCard), so it has no heading of its own; the
    dialog keeps its aria-label. Include with:
      {% with kind='pad'  %}{% include 'skribl/_skribl_image_drawer.html' %}{% endwith %}
@@ -30,9 +32,9 @@
       <span class="dz-hint">JPG, PNG, GIF or WebP · or drop one here</span>
     </button>
     <img class="dz-lead dz-thumb" id="photoThumb" alt="" decoding="async">
-    <div class="dz-file"><span class="dz-name" id="photoBtnLabel"></span><span class="dz-meta" id="photoBtnMeta"></span></div>
+    <div class="dz-file"><span class="dz-name" id="photoBtnLabel"></span><span class="dz-meta" id="photoBtnMeta"></span><span class="dz-ask">Tap the bin again to remove</span></div>
     <button type="button" id="photoToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Toggle image on or off"><span class="layer-toggle-knob"></span></button>
-    <button type="button" id="photoRemove" class="dropzone-remove" hidden title="Remove the photo" aria-label="Remove the photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span class="dz-arm">Remove?</span></button>
+    <button type="button" id="photoRemove" class="dropzone-remove" hidden title="Remove the photo" aria-label="Remove the photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
   </div>
   {% if kind != 'flip' -%}
   <input type="file" id="photoInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
@@ -80,5 +82,4 @@
     </div>
     <button type="button" id="resetPhotoBtn" class="panel-btn">Reset adjustments</button>
   </div>
-  {% if kind == 'flip' %}<p class="flip-drawer-note" id="photoNote">Fills the canvas behind your drawing — one image for the whole animation.</p>{% endif %}
 </div>
