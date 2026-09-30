@@ -12901,3 +12901,23 @@ does not scroll. It also pins the one-line row and the Tune floor. Main failed
 13 of those 16. On the fixed tree each mutation went red on its own checks:
 the floor always on (5), no observer (2, the phones), the floor never on (the
 Tune check), and the tiles back (5).
+
+**Still open, at the end of this run (#281–#289, all unsealed since v317):**
+
+* **The seal.** Nine merges since v317 carry no sealed record. Sealing is the
+  owner's call, and it is where the full battery belongs.
+* **The owner is checking the build** on Windows and an iPhone. What they
+  report is the next work.
+* **Segoe UI weights.** The 500 → 600 and 800 → 700 changes on the gallery,
+  library and menus were made for Windows and could not be rendered here.
+  The owner's eye is the check.
+* **The Pad's button font.** Measured in this container, the Pad's `<button>`
+  labels computed to Arial while the gallery's got `system-ui`. Whether that
+  holds on Windows is unverified. Read what the Pad's CSS asks for before
+  changing anything.
+* **`verify_backfill` fails locally** (its dry run counts 0 posts) on
+  unchanged main as well, and passes in CI and in the PR smoke job. It is
+  this container, not the tree, and it has not been investigated.
+* **The Pad's light menu contrast** (now at least 4.84:1 via `--on-glass-2`)
+  was measured once. `verify_galib` pins the gallery's and library's glass,
+  but no check pins the Pad's menu.
