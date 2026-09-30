@@ -1692,12 +1692,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 .eyedropper-btn svg { width: 18px; height: 18px; }  /* tier-2 glyph size, matches drawer toggles */
 
-/* Eyedropper loupe — the magnified press-drag picker (lib/eyedropper.js
-   builds and drives it; geometry constants there match the 120/4 here).
-   The ring's border-color is set inline to the colour under the reticle,
-   so the loupe itself answers "what am I about to pick"; the outer hairline
-   shadow keeps a white or near-background ring visible on any drawer.
-   Deliberately theme-free: it floats over the artwork, not the UI. */
 /* While the eyedropper is armed, the colour panel steps aside on BOTH editors
    — Flip's popout and the Pad's drawer. On a phone the panel covers or
    scrolls away the canvas, and an armed picker with nothing left to pick from
@@ -1708,35 +1702,161 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .draw-popout.eyedropper-veiled,
 #drawPanel.eyedropper-veiled { visibility: hidden; pointer-events: none; }
 
-.eyedropper-loupe {
+/* THE LENS — the eyedropper's armed cue and its picker (lib/eyedropper.js
+   builds and drives it; the 116px here matches LENS there). The lens sits ON
+   the point it reads: the grid, reticle and split ring are drawn into its
+   canvas, because the ring's two halves are colours only the script knows.
+   The lens, its chip, handle and mark float over the ARTWORK, not the UI, so
+   they are deliberately theme-free — a dark chip reads on any drawing. The
+   armed pill is UI, and wears the app's glass and tokens in both themes. */
+.eyedropper-lens {
   position: fixed;
   z-index: 10000;
-  width: 120px;
-  height: 120px;
+  width: 116px;
+  height: 116px;
   border-radius: 50%;
-  border: 4px solid #fff;
-  overflow: hidden;
   pointer-events: none;
-  /* No background: the canvas child covers the whole window before the
-     element is ever shown, and a literal here would trip the no-stray-
-     neutrals ratchet for a surface nobody can see. */
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
-.eyedropper-loupe canvas { display: block; width: 100%; height: 100%; }
-.eyedropper-loupe-chip {
-  position: absolute;
-  left: 50%;
-  bottom: 8px;
+.eyedropper-lens canvas { display: block; width: 100%; height: 100%; }
+.eyedropper-lens-chip {
+  position: fixed;
+  z-index: 10000;
   transform: translateX(-50%);
-  padding: 3px 8px;
+  padding: 5px 9px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.78);
   color: #fff;
-  font-size: 11px;
+  font: 600 12px/1 ui-monospace, Menlo, Consolas, monospace;
+  letter-spacing: 0.4px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+/* The handle the finger holds on a touch screen: below the lens, so the finger
+   is never over what is read. 34x20 visual, a 58x44 hit area. Its mark is a
+   short bar, a sheet's grabber — NOT three dots, which is this app's menu
+   glyph and would read as "more options". */
+.eyedropper-lens-handle {
+  position: fixed;
+  z-index: 10000;
+  width: 34px;
+  height: 20px;
+  margin: -10px 0 0 -17px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.72);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);   /* a rim, or it vanishes on a dark drawing */
+  touch-action: none;
+  cursor: grab;
+}
+.eyedropper-lens-handle::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+}
+/* The bar is a BORDER, and every edge here is a transparent outline, for
+   forced colours: that mode drops backgrounds and box-shadows (all the
+   handle, chip and Cancel were drawn with) but repaints border and outline
+   colours in the system's own, so these come back as real edges -- without a
+   forced-colors block, which player.css would have to carry. */
+.eyedropper-lens-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 16px; height: 0;
+  margin: -1.5px 0 0 -8px;
+  border-top: 3px solid rgba(255, 255, 255, 0.78);
+  border-radius: 1.5px;
+}
+.eyedropper-lens-handle,
+.eyedropper-lens-chip,
+.eyedropper-pill,
+.eyedropper-pill-cancel { outline: 1px solid transparent; outline-offset: -1px; }
+/* The true point, when the viewport has pushed the lens off it. */
+.eyedropper-lens-mark {
+  position: fixed;
+  z-index: 10000;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.8), inset 0 0 0 1.5px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+.eyedropper-lens[hidden],
+.eyedropper-lens-chip[hidden],
+.eyedropper-lens-handle[hidden],
+.eyedropper-lens-mark[hidden],
+.eyedropper-pill[hidden] { display: none; }
+/* The armed pill: what to do, and the way out. Its text lets presses through
+   to the drawing under it (only Cancel takes them), so it never blocks a pick
+   near the top of the canvas; when the lens or its chip comes up there, the
+   pill moves to the canvas's bottom edge (see below). */
+.eyedropper-pill {
+  position: fixed;
+  z-index: 10000;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 5px 5px 16px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--glass);
+  color: var(--text-primary);
+  font-size: 13.5px;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: 0.4px;
-  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+/* No transition and no entrance animation, on purpose: the lens and pill are
+   the armed state, and they appear and move instantly — which is also the
+   whole of what reduced motion asks, without a media query the player's
+   derived sheet would have to carry. Never faded either: Cancel is the only
+   way out on a phone, so when the lens comes up to the pill the PILL moves
+   (to the canvas's bottom edge, lib/eyedropper.js placePill).
+
+   LIGHT: the pill sits over the drawing, which is dark in both themes, so the
+   light glass (78% of a pale grey) went a muddy mid-grey there and Cancel's
+   ink fell to 2.85:1. Near-opaque white, as the light chrome is, keeps it
+   crisp and independent of what is under it. */
+:root[data-theme="light"] .eyedropper-pill { background: rgba(var(--glass-deep-rgb), 0.96); }
+.eyedropper-pill:focus-visible,
+.eyedropper-pill-cancel:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.eyedropper-pill-cancel {
+  position: relative;
+  pointer-events: auto;
+  border: 0;
+  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 14px;
+  background: var(--seg-on-fill);
+  color: var(--seg-on-ink);
+  font: inherit;
+  cursor: pointer;
+}
+.eyedropper-pill-cancel::before {       /* 34 visual -> 44 tap */
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+}
+.eyedropper-origin {           /* the fixed-position origin lib/eyedropper.js measures */
+  position: fixed;
+  left: 0; top: 0;
+  width: 0; height: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.eyedropper-live {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .eyedropper-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); }
 .eyedropper-btn.picking { background: var(--ui-active); color: #fff; border-color: transparent; }
@@ -1901,13 +2021,17 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .fine-tune-body[hidden] { display: none; }
 
 @media (max-width: 640px) {
-  /* Breathing room for the pen row's nine items (8 dots + eyedropper) on a
-     phone. At 28px the gaps closed to ~7px and the selected dot's white ring
-     nearly touched its neighbour ("the pen colors are crowded -- the
-     pink is too close to white"). 26px buys ~10px gaps; taps stay ≥44 via
+  /* Breathing room for the pen row on a phone. At 28px the gaps closed to
+     ~7px and the selected dot's white ring nearly touched its neighbour ("the
+     pen colors are crowded -- the pink is too close to white"). 26px bought
+     ~10px gaps for nine items (7 presets, the custom dot, the eyedropper).
+     Skribl purple made it ten, which closed them to 8.2px at 390 (0.4px at
+     320), so the pen row steps down to 24px and is back to ~10px at 390.
+     Background swatches have their own row and keep 26. Taps stay ≥44 via
      the bumped --tap-grow / input overhang below. */
   .color-dot, .bg-swatch { width: 26px; height: 26px; }
-  .eyedropper-btn { width: 26px; height: 26px; }
+  #colorGroup .color-dot { width: 24px; height: 24px; }
+  .eyedropper-btn { width: 24px; height: 24px; }
   .smooth-btn { padding: 5px 10px; }
   .prop-row .draw-section-label { width: 58px; }
 }
@@ -5891,15 +6015,17 @@ body.playing .flip-grid { display: none; }
 .nudge-btn  { --tap-grow: 7px; }   /* 32 visual -> 44+ tap (readout between - and + keeps them apart) */
 .pending-dismiss { --tap-grow: 7px; }  /* 32 -> 44+ */
 .eyedropper-btn  { --tap-grow: 8px; }  /* 30 visual (dot-sized, on purpose) -> 44+ tap; it sat beside dots that had it and lacked its own */
-/* Compact shrinks dots and eyedropper to 26 visual (the pen row breathes),
-   so their tap overhang grows to keep 44. Sits AFTER the base declarations
+/* Compact shrinks dots to 26 visual and the pen row (its dots and the
+   eyedropper) to 24, so their tap overhang grows to keep 44. Sits AFTER the base declarations
    above on purpose: a media query adds no specificity, and the same lines
    placed earlier in the file would silently lose the tie. The custom picker's
    overhang is its invisible <input>, so it gets the same bump. */
 @media (max-width: 640px) {
   .color-dot, .eyedropper-btn { --tap-grow: 9px; }   /* 26 visual -> 44 tap */
+  #colorGroup .color-dot, .eyedropper-btn { --tap-grow: 10px; }   /* the pen row: 24 visual -> 44 tap */
   .color-custom-wrap input[type="color"],
   .bg-custom-wrap input[type="color"] { inset: -9px; }
+  .color-custom-wrap input[type="color"] { inset: -10px; }
 }
 /* .toolbar .undo-btn sets its own --tap-grow per tier: 2px at 40 visual,
    4px at 36, 5px at 34. Declared next to each width so the pair cannot drift. */

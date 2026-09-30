@@ -270,9 +270,15 @@ with sync_playwright() as p:
         inside_after = page.evaluate(PIX, [cx - b["x"], cy - b["y"]])
         outside = page.evaluate(PIX, [cx - b["x"] - 150, cy - b["y"]])
 
+        # To the PEN's colour, read from the page: this asserted `red > 200`,
+        # which only ever meant "the white starting pen". A fresh Flip now
+        # starts on Skribl purple (#7c5cff), and the fill is right to be purple.
+        pen = page.evaluate("() => color")
+        pen_rgb = [int(pen[i:i + 2], 16) for i in (1, 3, 5)]
         check("the inside of the box changed colour",
-              inside_after != inside_before and inside_after[0] > 200,
-              f"{inside_before} -> {inside_after}")
+              inside_after != inside_before
+              and all(abs(a - b) <= 3 for a, b in zip(inside_after[:3], pen_rgb)),
+              f"{inside_before} -> {inside_after}, pen {pen}")
         check("and the outside did NOT",
               outside == inside_before,
               f"{outside} vs {inside_before} — a fill that escapes its region "

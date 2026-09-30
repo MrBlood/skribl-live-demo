@@ -119,6 +119,11 @@ with sync_playwright() as p:
               page.evaluate("() => !!(window.SkriblBrush && "
                             "window.SkriblBrush.PRESETS.airbrush)"),
               "alpha 0.22, width 2.6x")
+        # WHITE INK, SET ON PURPOSE. PROFILE reads GREY pixels only (see the
+        # module docstring). The Pad's starting pen used to be white, so this
+        # fixture got grey ink for free; a fresh Pad now starts on Skribl purple
+        # (#7c5cff), which PROFILE rightly does not count as ink at all.
+        page.evaluate("() => setPenColor('#ffffff')")
         page.evaluate("() => { window.SkriblBrush.setBrush('airbrush'); "
                       "setTool('pen'); }")
         box = page.locator("#canvas").bounding_box()

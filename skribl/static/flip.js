@@ -17,7 +17,7 @@ function skriblPostHeaders(){
 // The palette lives in lib/palette.js and is shared with Pad. It was two
 // hand-synchronised lists; the fallback here is only so a missing lib
 // leaves you a pen rather than a blank row.
-const COLORS = (window.SkriblPalette && window.SkriblPalette.hexes) || ["#ffffff","#141414"];
+const COLORS = (window.SkriblPalette && window.SkriblPalette.hexes) || ["#7c5cff","#ffffff","#141414"];
 const DPR = Math.min(window.devicePixelRatio||1, 2);
 let CW = 0, CH = 0;              // mutable since v110 — set from FLIP_SIZES[0] below
 // Canvas presets. The payload has ALWAYS carried canvasSize and the player has
@@ -207,7 +207,8 @@ window.addEventListener('resize', ()=>{ sizeStage(); positionSeg(); positionTool
 
 let frames = [ newFrame() ];
 let idx = 0;
-let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
+// The starting pen is Skribl purple, the first preset in lib/palette.js (Pad matches).
+let color = "#7c5cff", size = 7, erasing = false, onion = true, fps = 12;
 /* HOW FINELY TIME IS CUT, as a multiple of the speed the artist picked.
 
    `fps` is the stored playback rate and, with `hold`, fully determines timing --
@@ -1835,8 +1836,9 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   if(reposMode && bgImage && photoEnabled && photoFit==='cover'){       // pan the image, don't draw
     reposActive=true; reposStart={x:e.clientX,y:e.clientY,ox:photoOffX,oy:photoOffY};
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ } return; }
-  // eyedropper: this press opens the magnifying loupe — drag to aim, release
-  // picks (lib/eyedropper.js). One-shot tap sample stays as the fallback.
+  // eyedropper: this press drives the lens — a drag aims and lifting picks, a
+  // touch tap moves it, a click picks (lib/eyedropper.js). The one-shot tap
+  // sample stays as the fallback.
   if(picking){
     if(_eyedropper && _eyedropper.beginPick && _eyedropper.beginPick(e)) return;
     sampleColorAt(e); return;
@@ -3244,6 +3246,7 @@ function go(i){ if(moveMode) return;
   // frame would move strokes the marquee never touched, and on a shorter page
   // the ranges would run off the end.
   if(typeof selClear === 'function') selClear(true);
+  if(picking) setPicking(false);     // the lens would show one page and pick another
   idx=i; redoStack.length=0; buildStrip(); render(); }
 
 /* ---- Instant flip scrub -------------------------------------------------
@@ -3572,6 +3575,7 @@ function play(){
   // A single page that draws itself IS worth playing — that is the whole of a
   // one-page Flip, which the help already calls "just a drawing".
   if(frames.length<2 && !frames.some(frameDraw)) return;
+  if(picking) setPicking(false);     // no lens over a moving frame (Space reaches here with the drawer open)
   disarmAll(); editIdx = idx;
   if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
   playing=true; document.body.classList.add('playing');
@@ -3992,7 +3996,7 @@ customInput.addEventListener('input',e=>{
 });
 customInput.addEventListener('change',e=>{ addRecent(e.target.value); });
 
-// eyedropper — click to arm, then click the canvas to sample a pixel's colour
+// eyedropper — click to arm (the lens lands on the drawing), then pick with it
 // Shared with Pad via lib/eyedropper.js — the arming, the cursor, Escape and
 // the one-shot semantics. Reading the pixel stays here: the two surfaces
 // genuinely differ on context, DPR and what a transparent pixel means.
@@ -4012,12 +4016,14 @@ function _initEyedropper(){
     onChange: v => { picking = v;
                      if (window.SkriblDrawerDetent) window.SkriblDrawerDetent.veil(drawPanel, v);
                      else drawPanel.classList.toggle('eyedropper-veiled', v); },
-    // Loupe wiring: magnifies and reads the same composited artwork
+    // Lens wiring: magnifies and reads the same composited artwork
     // sampleColorAt reads — onion skin and guides stay invisible to it.
     getPoint: ev => pos(ev),
     artwork: () => paintArtwork(),
     dpr: () => DPR,
     bg: () => bgColor,
+    current: () => color,          // the lens ring's bottom half
+    focusHome: () => document.getElementById('penToolBtn'),
     onPick: hex => { setColor(hex); addRecent(hex); closePop(); },
   });
 }
@@ -9098,6 +9104,7 @@ function doStamp(p){
 function undoStroke(){
   invalidateClearUndo();
   if(playing) return;
+  if(picking) setPicking(false);     // the drawing under the lens is about to change
   // A FILL is one action, and this must be tested BEFORE the generic object
   // branch below — that branch pops any object entry and then assumes it is a
   // move, so a fill entry reached it, fell past every m.type check and died on
@@ -9215,6 +9222,7 @@ function undoStroke(){
 function redoStroke(){
   invalidateClearUndo();
   if(playing || !redoStack.length) return;
+  if(picking) setPicking(false);     // the drawing under the lens is about to change
   if(typeof redoStack[redoStack.length-1] === 'object'
      && redoStack[redoStack.length-1].type === 'selframe'){
     const m = redoStack.pop();
