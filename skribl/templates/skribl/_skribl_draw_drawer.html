@@ -6,7 +6,8 @@
      - root: Flip is a .draw-popout dialog; Pad is a plain .tab-panel
      - color presets: built at runtime by lib/palette.js on both (Pad once had fixed dots here)
      - brush input: Pad #brushSizeRange (1–30/5); Flip #size (2–34/7) + #sizeVal
-     - smoothing: Flip carries an inline .seg-slider pill; Pad injects one in JS
+     - (every seg below carries ONE .seg-slider pill, on both surfaces;
+       lib/segslider.js places it. Pad used to inject a second one in JS.)
      - more-drawer: Pad has id="moreDrawer"; Flip adds Grid + Draw-on rows
      - clear/undo: Pad #clearDrawerBtn/#clearUndoBtn; Flip #clear(+#clearLabel)/#clearUndo
    Include with:

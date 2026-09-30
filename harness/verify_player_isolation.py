@@ -783,7 +783,22 @@ with sync_playwright() as sp:
     # +163 B -- the text-box trim on the clock, "plays" and Done, and the
     # phone recording header's centring, which the hidden #recIndicator
     # keeps live in the player's graph. 30,063 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 30_100, 119_844, 40_000
+    # RAISED (the one pill, owner: "a on the pill"), for one named cost: +74 B
+    # -- --seg-inset and --seg-pill-r in :root, which the player's .seg-slider
+    # keeps live, and the forced-colours block, which cssgraph copies whole and
+    # which now marks the selection on Fill / Fit / Stretch, the tray tile and
+    # the dock's pill as well. 30,137 measured.
+    # RAISED (the one pill's review), for one named cost: +85 B -- the
+    # forced-colours rule that moves a focused selected option's edge outside
+    # it (the group's one Tab stop is that option, and its selection outline
+    # painted focus over), copied whole with that block. Written as one short
+    # selector for the ratchet's sake; the first draft cost +154. 30,222
+    # measured.
+    # RAISED (Photo | Music takes the one pill), for one named cost: +57 B --
+    # the media tabs' forced-colours edge, which joins that same block's three
+    # rules (a forced-colours block of their own is copied whole too, and
+    # costs more). 30,292 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 30_292, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

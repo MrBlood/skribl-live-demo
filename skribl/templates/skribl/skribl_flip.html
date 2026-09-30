@@ -428,6 +428,9 @@
         <span class="menu-row-label">Canvas</span>
         <span class="seg canvas-seg" id="canvasSeg" role="group" aria-label="Canvas shape"><span class="seg-slider"></span><button type="button" data-size="classic" class="on">4:3</button><button type="button" data-size="wide">16:9</button><button type="button" data-size="square">1:1</button><button type="button" data-size="tall">9:16</button></span>
       </div>
+      {# Says what a size no preset names is, instead of leaving the row above
+         with nothing lit (the Pad's #canvasSegNote does the same). #}
+      <div class="menu-row-note" id="canvasSegNote" hidden></div>
       <!-- Version footer, mirroring the Pad's. Driven by SKRIBL_VERSION in
            app.py — never hardcode it here (the Pad's literal drifted from v96
            to v105 unnoticed). .menu-version is shared styling from styles.css. -->

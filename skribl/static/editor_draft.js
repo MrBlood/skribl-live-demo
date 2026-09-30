@@ -593,12 +593,37 @@ function rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, baseHasCo
   clearAndRestore(build);
 }
 
+/* The swatch for a RESTORED background. Both restore paths (a Skribl file,
+   the autosave) compared data-bg to the stored colour exactly, so an
+   upper-case hex lit no swatch, and a custom colour lit none and left the
+   custom swatch without its colour (the pick-one census). Flip's setBg
+   already did both; this is the same rule. */
+function markBgSwatch(hex) {
+  const want = String(hex || '').toLowerCase();
+  let matched = false;
+  document.querySelectorAll('.bg-swatch').forEach(b => {
+    if (b.id === 'customBgBtn') return;
+    const on = !!b.dataset.bg && b.dataset.bg.toLowerCase() === want;
+    b.classList.toggle('active', on);
+    if (on) matched = true;
+  });
+  const custom = document.getElementById('customBgBtn');
+  if (!custom) return;
+  custom.classList.toggle('active', !matched);
+  if (!matched && /^#[0-9a-f]{6}$/.test(want)) {
+    custom.style.setProperty('--custom-color', want);
+    custom.classList.add('has-color');
+    const inp = document.getElementById('customBgInput');
+    if (inp) inp.value = want;
+  }
+}
+
 function restoreAutosave(data) {
   clearCanvas();
   if (data.background && data.background.color) {
     bgColor = data.background.color;
     canvasWrap.style.backgroundColor = bgColor;
-    document.querySelectorAll('.bg-swatch').forEach(b => b.classList.toggle('active', b.dataset.bg === bgColor));
+    markBgSwatch(bgColor);
   }
   updateVignette();
   strokes = (data.strokes || []).slice();
@@ -900,20 +925,10 @@ if (typeof pendingMusicMeta !== 'undefined') {
       if (!photoBgImg || photoBgImg.style.display === 'none') return;
       if (_inFlight.photo === meta) _inFlight.photo = null;   // landed
       if (meta.fit) {
-        photoFit = meta.fit;
+        photoFit = normalPhotoFit(meta.fit);
         const fitMap = { cover: 'cover', contain: 'contain', stretch: 'fill' };
         photoBgImg.style.objectFit = fitMap[photoFit] || 'cover';
-        const fitBtns = [...document.querySelectorAll('.photo-fit-btn')];
-        fitBtns.forEach(b => b.classList.toggle('active', b.dataset.fit === photoFit));
-        const activeIdx = fitBtns.findIndex(b => b.dataset.fit === photoFit);
-        const moveSlider = () => {
-          if (activeIdx < 0 || !photoFitSlider) return;
-          const off = fitBtns.slice(0, activeIdx).reduce((s, b) => s + b.offsetWidth, 0);
-          photoFitSlider.style.width = fitBtns[activeIdx].offsetWidth + 'px';
-          photoFitSlider.style.transform = `translateX(${off}px)`;
-        };
-        moveSlider();
-        setTimeout(moveSlider, 80);
+        markPhotoFit(photoFit);   // the pill follows the class (lib/segslider.js)
       }
       if (meta.opacity != null) {
         photoOpacityVal_ = meta.opacity;

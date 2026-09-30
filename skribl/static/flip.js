@@ -203,7 +203,9 @@ function syncGrid(){
   _gridCtl.sync();
 }
 
-window.addEventListener('resize', ()=>{ sizeStage(); positionSeg(); positionToolSlider(); if(!photoPanel.hidden) positionFitSlider(); });
+// The pills (fps, the tool shelf, Fill / Fit / Stretch, every seg) follow a
+// resize themselves: lib/segslider.js watches each track.
+window.addEventListener('resize', ()=>{ sizeStage(); });
 
 let frames = [ newFrame() ];
 let idx = 0;
@@ -1059,6 +1061,7 @@ function applyPayload(d){
   loopCrossfadeMs = typeof mm.crossfadeMs==='number' ? mm.crossfadeMs : 0;
   musicName = typeof mm.name==='string' ? mm.name : '';
   currentAudioBuffer = null; zoomMag = 1; zoomFocus = 'loop'; zoomCenter = null; if(typeof syncZoomMagStep==='function') syncZoomMagStep();
+  syncZoomFocusButtons();   // the reset focus, on the cells too: Start or End stayed lit on a new track
   /* A SUBDIVIDED DOCUMENT IS A VALID DOCUMENT. This took only 6, 12 and 24 and
      silently dropped anything else, so a 48fps file loaded at whatever fps the
      editor happened to be on while its holds -- written for 48 -- survived. That
@@ -1070,8 +1073,7 @@ function applyPayload(d){
   const _f = Number(d.fps);
   if (isFinite(_f) && _f > 0) {
     fps = _f;
-    // A rate no button names leaves the seg alone rather than lighting a wrong one.
-    [...document.querySelectorAll('#fps button')].forEach(b=>b.classList.toggle('on', +b.dataset.fps === poseRate()));
+    syncFpsSeg();   // lights the pose rate, or says what it is when no button names it
   }
   return frames.some(f => f.strokes.length);
 }
@@ -3671,6 +3673,15 @@ function setColor(hex){
   if(!sel) return;
   hex = sel.hex;
   color=hex;
+  // A colour no preset names -- the picker, the eyedropper, a Recent swatch --
+  // is the CUSTOM swatch's, as on the Pad: it wears the colour and the ring.
+  // colorselect clears .active from every dot (the custom one included) and
+  // nothing here gave it back, so on Flip those picks left no swatch ringed.
+  if(!sel.matched && customBtn){
+    customBtn.style.setProperty('--custom-color', hex);
+    customBtn.classList.add('has-color', 'active');
+    if(customInput) customInput.value = hex;
+  }
   paintPenSwoosh();   // the pen button shows the colour now (the ring is gone)
   // !! is load-bearing. The custom swatch has no data-color, so this expression
   // was `undefined && ...` -> undefined, and classList.toggle(name, undefined)
@@ -3907,17 +3918,10 @@ function activeToolBtn(){
 function positionToolSlider(){
   if (toolShelf) toolShelf.placeSlider();
 }
-// One call at init is not enough on a phone: the bar is often laid out later and
-// the pill ends up measured against zero widths. Same treatment Pad got.
-(function keepToolSliderPlaced(){
-  const grp=document.getElementById('toolGroup');
-  if(!grp) return;
-  const replace=()=>positionToolSlider();
-  if(typeof ResizeObserver!=='undefined') new ResizeObserver(replace).observe(grp);
-  window.addEventListener('resize',replace);
-  window.addEventListener('orientationchange',replace);
-  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(replace);
-})();
+// One call at init was not enough on a phone, where the bar is often laid out
+// later; a keeper here re-placed the pill on every resize. The first
+// placeSlider() hands the group to lib/segslider.js, which watches it (resize,
+// orientation, fonts, the selected class) like every other pill -- as on Pad.
 function setTool(t){
   // Was `(t === 'eraser' || t === 'shape') ? t : 'pen'`, which is a hard-coded
   // roster: a registered tool fell through to the pen and the tray looked
@@ -4057,10 +4061,10 @@ const _flipDrawerCtl = skriblDrawers({
     // colour ring is gone. Photo and Music share the one Media button, and
     // lib/mediatabs.js keeps the Photo | Music strip in step (syncMediaTabs).
     draw:  { panel: drawPanel, button: document.getElementById('penToolBtn'), openClass: 'drawer-open',
-             onOpen(){ requestAnimationFrame(positionSmoothSeg); },
+             onOpen(){},
              onClose(){ if(picking) setPicking(false); } },
     photo: { panel: photoPanel, button: mediaOpenBtn, openClass: 'open', aria: true,
-             onOpen(){ syncMediaTabs('photo'); syncMediaUI(); requestAnimationFrame(positionFitSlider); },
+             onOpen(){ syncMediaTabs('photo'); syncMediaUI(); },
              onClose(){ syncMediaTabs(null); } },
     music: { panel: musicPanel, button: mediaOpenBtn, openClass: 'open', aria: true,
              onOpen(){ syncMediaTabs('music'); syncMediaUI(); }, onClose(){ syncMediaTabs(null); } },
@@ -4187,17 +4191,12 @@ customBgInput.addEventListener('input',e=>{ setBg(e.target.value,true); });
 
 /* ---- smoothing: stabilizer strength baked into the captured points (Pad parity) ---- */
 const smoothSeg=document.getElementById('smoothSeg');
-// Was a private copy of what lib/segslider.js does. Two implementations of
-// one behaviour is how the two surfaces drift, and this was the easy one.
-function positionSmoothSeg(){ if (window.SkriblSegSlider) window.SkriblSegSlider.place(smoothSeg); }
-// Shared with Pad via lib/smoothing.js. positionSmoothSeg stays injected:
-// slider positioning exists three times in this codebase (here, app.js and
-// lib/segslider.js) and consolidating it is its own extraction.
+// Shared with Pad via lib/smoothing.js. Its pill is lib/segslider.js's, as
+// every pill is: this surface used to place it itself (positionSmoothSeg).
 if(window.SkriblSmoothing){
   window.SkriblSmoothing.create({
     seg: smoothSeg,
     onChange: a => { smoothingAlpha = a; },
-    onRender: () => positionSmoothSeg(),
   });
 }
 // Eraser width — same shared module, same one copy of the multiplier.
@@ -4463,6 +4462,7 @@ function ensureAudio(){
 function setMusic(dataURL){ musicData=dataURL; if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
   musicEnabled=true; musicMuted=false; trimStart=0; trimEnd=null; audioDuration=0; loopCrossfadeMs=0; currentAudioBuffer=null;
   zoomMag=1; zoomFocus='loop'; zoomCenter=null; if(typeof syncZoomMagStep==='function') syncZoomMagStep();
+  syncZoomFocusButtons();
   ensureAudio(); decodeForWaveform(); syncMediaUI(); scheduleSave(); }
 function removeMusic(){ musicSelectionSeq++; if(typeof stopLoopPreview==='function') stopLoopPreview(); if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
   musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0; pendingMusicMeta=null;
@@ -5096,20 +5096,17 @@ async function exportVideo(){
 const moreBtn=document.getElementById('moreBtn'), moreMenu=document.getElementById('moreMenu');
 // Canvas size picker. Lives in the ⋯ menu because it is a document property, not
 // a tool. Disabled during playback so the stage can't resize mid-animation.
-const canvasSeg=document.getElementById('canvasSeg');
-function positionCanvasSeg(){
-  if(!canvasSeg) return;
-  const a=canvasSeg.querySelector('button.on'), pill=canvasSeg.querySelector('.seg-slider');
-  if(!a||!pill||!a.offsetWidth) return;
-  pill.style.width=a.offsetWidth+'px';
-  pill.style.transform='translateX('+(a.offsetLeft-3)+'px)';
-  pill.style.opacity=1;
-}
+const canvasSeg=document.getElementById('canvasSeg'), canvasSegNote=document.getElementById('canvasSegNote');
 function syncCanvasSeg(){
   if(!canvasSeg) return;
   const id=currentSizeId();
   [...canvasSeg.querySelectorAll('button')].forEach(b=>b.classList.toggle('on', b.dataset.size===id));
-  requestAnimationFrame(positionCanvasSeg);
+  // A size no preset names lights no option, which read as broken. Say what it
+  // is instead, as the Pad's note does (the pick-one census).
+  if(canvasSegNote){
+    canvasSegNote.hidden = id!=='custom';
+    canvasSegNote.textContent = id==='custom' ? (Math.round(CW)+' \u00d7 '+Math.round(CH)+' \u00b7 custom size') : '';
+  }
 }
 if(canvasSeg) canvasSeg.addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b || playing) return;
@@ -5121,7 +5118,7 @@ if(moreBtn) moreBtn.addEventListener('click', ()=>requestAnimationFrame(syncCanv
 // --- media drawer controls ---
 const photoUploadBtn=document.getElementById('photoUploadBtn'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
 const photoDetail=document.getElementById('photoDetail');
-const photoFitGroup=document.getElementById('photoFitGroup'), photoFitSlider=document.getElementById('photoFitSlider');
+const photoFitGroup=document.getElementById('photoFitGroup');
 const repositionBtn=document.getElementById('repositionBtn'), repositionHint=document.getElementById('repositionHint');
 const photoZoomRow=document.getElementById('photoZoomRow'), photoZoomEl=document.getElementById('photoZoom'), photoZoomVal=document.getElementById('photoZoomVal');
 const photoOpacityEl=document.getElementById('photoOpacity'), photoOpacityVal=document.getElementById('photoOpacityVal');
@@ -5129,9 +5126,6 @@ const photoBlurEl=document.getElementById('photoBlur'), photoBlurVal=document.ge
 const resetPhotoBtn=document.getElementById('resetPhotoBtn');
 function fmtTime(s){ s=Math.max(0,s||0); const m=Math.floor(s/60), ss=Math.floor(s%60); return m+':'+String(ss).padStart(2,'0'); }
 function setFill(el){ const mn=+el.min,mx=+el.max; el.style.setProperty('--slider-fill', (mx>mn?((+el.value-mn)/(mx-mn)*100):0)+'%'); }
-function positionFitSlider(){ const btns=[...photoFitGroup.querySelectorAll('.photo-fit-btn')]; const a=photoFitGroup.querySelector('.photo-fit-btn.active');
-  if(!a||!btns.length||!photoFitSlider||!a.offsetWidth) return;
-  photoFitSlider.style.width=a.offsetWidth+'px'; photoFitSlider.style.transform='translateX('+(a.offsetLeft-btns[0].offsetLeft)+'px)'; }
 
 const photoTabDot=document.getElementById('photoTabDot'), musicTabDot=document.getElementById('musicTabDot');
 function syncPhotoUI(){
@@ -5154,7 +5148,6 @@ function syncPhotoUI(){
   photoZoomEl.value=Math.round(photoZoom*100); photoZoomVal.textContent=Math.round(photoZoom*100)+'%'; setFill(photoZoomEl);
   photoOpacityEl.value=Math.round(photoOpacity*100); photoOpacityVal.textContent=Math.round(photoOpacity*100)+'%'; setFill(photoOpacityEl);
   photoBlurEl.value=photoBlur; photoBlurVal.textContent=photoBlur+'px'; setFill(photoBlurEl);
-  positionFitSlider();
   // The file row (lib/pendingcards.js, shared with the Pad): name, "Behind the
   // drawing · Fill" and the thumbnail. bgImage is the data URL setBgImage has
   // just assigned; bgImageObj loads later, so it is not the source.
@@ -5248,7 +5241,10 @@ function updateTrimUI(){
 function getZoomWindow(){
   return SkriblLoopWave.zoomWindow({ start:trimStart, end:trimEnd, duration:audioDuration, mag:zoomMag, center:zoomCenter, focus:zoomFocus });
 }
-function syncZoomFocusButtons(){ document.querySelectorAll('.zoom-mag-btn[data-focus]').forEach(b=>{ b.classList.toggle('active', zoomFocus!=='free' && b.dataset.focus===zoomFocus); }); }
+// .on, the class the cells are marked with (the markup, the click handler and
+// the Pad's twin all say .on). This toggled .active, so after a free pan the
+// last-picked cell kept .on, its pill and aria-pressed while the view was free.
+function syncZoomFocusButtons(){ document.querySelectorAll('.zoom-mag-btn[data-focus]').forEach(b=>{ b.classList.toggle('on', zoomFocus!=='free' && b.dataset.focus===zoomFocus); }); }
 function updateZoomHandles(){
   if(!zoomTrackWrap||!zoomHandleStart||!zoomHandleEnd) return;
   if(!Number.isFinite(audioDuration)||audioDuration<=0) return;
@@ -5298,9 +5294,8 @@ function dragZoomHandle(handle, isStart){
 }
 dragZoomHandle(zoomHandleStart,true); dragZoomHandle(zoomHandleEnd,false);
 
-// seg-slider pill for the zoom mag/focus groups
-function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.placeAttached(group); }
-// Both editors carried an equivalent of this; it lives in lib/segslider.js now.
+// The focus group is built by script; this hands it to lib/segslider.js, which
+// gives it its one pill and keeps it placed (as on the Pad).
 function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.attach(group); }
 /* THE MAGNIFICATION IS A STEPPER, not a row of levels, and it climbs to 32x.
  *
@@ -5358,7 +5353,7 @@ function stepZoomMag(dir){
   });
   syncZoomMagStep();
 })();
-bindEl('fineTuneToggle', 'click',()=>{ const body=document.getElementById('fineTuneBody'); const t=document.getElementById('fineTuneToggle'); const open=body.hidden; body.hidden=!open; t.setAttribute('aria-expanded', open?'true':'false'); if(open){ requestAnimationFrame(()=>{ updateTrimUI(); document.querySelectorAll('.zoom-seg').forEach(g=>positionSegSlider(g)); }); } });
+bindEl('fineTuneToggle', 'click',()=>{ const body=document.getElementById('fineTuneBody'); const t=document.getElementById('fineTuneToggle'); const open=body.hidden; body.hidden=!open; t.setAttribute('aria-expanded', open?'true':'false'); if(open){ requestAnimationFrame(()=>{ updateTrimUI(); }); } });
 
 // nudge fine-tune
 const nudgeSteps=[0.01,0.02,0.05,0.1]; let nudgeStepIdx=3;
@@ -5498,7 +5493,6 @@ if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(moreMenu, { handle: 
   function sync(){
     const on=window.SkriblHints.isEnabled();
     seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', (b.dataset.hints==='on')===on));
-    if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
   }
   seg.addEventListener('click',e=>{
     const b=e.target.closest('button'); if(!b) return;
@@ -5506,7 +5500,6 @@ if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(moreMenu, { handle: 
     else window.SkriblHints.setEnabled(false);
     sync();
   });
-  if(window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
   // Re-read on every open, not once at load. The stored state can change from
   // anywhere — another tab, a reset — and a switch showing the opposite of
   // what is stored is worse than no switch.
@@ -5522,7 +5515,6 @@ if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(moreMenu, { handle: 
   function sync(){
     const mode=window.SkriblTheme.mode();   // the CHOICE (system|dark|light), not the effective mode
     seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.theme===mode));
-    if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
   }
   seg.addEventListener('click',e=>{
     const b=e.target.closest('button'); if(!b || !b.dataset.theme) return;
@@ -5531,7 +5523,6 @@ if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(moreMenu, { handle: 
   // Driven by the lib, not by the click, so a change made in another tab moves
   // this switch too — the setting is per browser, not per page.
   window.SkriblTheme.onChange(sync);
-  if(window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
   window._skriblSyncThemeToggle = sync;
   sync();
 })();
@@ -5593,7 +5584,6 @@ function openExportSheet(){
     // The sheet declares aria-modal; this is what makes it true on Flip — the
     // Pad's editor_export.js has done the same since v279 (v292, SK-AUD-002).
     if(window.SkriblModal) window.SkriblModal.open(exportSheet);
-    if(gifToggle && !gifToggle.hidden){ const seg=gifToggle.querySelector('.gif-seg'); if(seg) requestAnimationFrame(()=>positionSegSlider(seg)); }
   });
 }
 // Export options UI. Page numbers are 1-based and clamped on every edit, so the
@@ -5606,26 +5596,10 @@ const exNoteEl=document.getElementById('exportRangeNote');
 const exLoopsSeg=document.getElementById('exportLoopsSeg');
 const exLoopsNote=document.getElementById('exportLoopsNote');
 const exDimEl=document.getElementById('exportDimNote');
-function positionSeg(seg){
-  if(!seg) return;
-  const a=seg.querySelector('button.on'), pill=seg.querySelector('.seg-slider');
-  if(!a||!pill||!a.offsetWidth) return;
-  pill.style.width=a.offsetWidth+'px';
-  pill.style.transform='translateX('+(a.offsetLeft-3)+'px)';
-  pill.style.opacity=1;
-}
-// Was hardcoded to the Size segment; the Loops segment needs the identical
-// treatment, and a second copy of the same six lines is how they drift.
-// Delegates to the shared tracker: a one-shot call cannot work for a control
-// inside a sheet that ships `hidden`, because its buttons have no width until
-// the sheet is shown, and positionSeg() bails in that case leaving the pill at
-// opacity 0. Kept as a named function so every existing call site stands.
-const _segTrack = (window.SkriblSegSlider && window.SkriblSegSlider.track) || null;
-function positionExSeg(){
-  if(_segTrack){ _segTrack(exSizeSeg); _segTrack(exLoopsSeg); _segTrack(canvasSegEl); return; }
-  positionSeg(exSizeSeg); positionSeg(exLoopsSeg);
-}
-const canvasSegEl = document.getElementById('canvasSeg');
+// Size and Loops carry their pills like every seg: lib/segslider.js places them
+// when the sheet gains layout and follows the class set below. (A one-shot
+// placer here bailed inside the hidden sheet and left the pills at opacity 0;
+// its fallback was shadowed by the fps placer's name, so it moved the wrong pill.)
 function syncExportOptions(){
   const n=frames.length;
   if(!exToEl||!exFromEl) return;
@@ -5653,7 +5627,6 @@ function syncExportOptions(){
       ? ('All '+n+' page'+(n===1?'':'s'))
       : (r.count+' of '+n+' page'+(n===1?'':'s'));
   }
-  requestAnimationFrame(positionExSeg);
 }
 function onExRangeInput(){
   exFrom=parseInt(exFromEl.value,10)||1;
@@ -9505,7 +9478,6 @@ function setMoveMode(on){
   if(on){
     captureMoveOrigin();
     const off = document.getElementById('mbOffset'); if(off) off.textContent = '0, 0';
-    if(window.SkriblSegSlider) window.SkriblSegSlider.track(document.getElementById('mbScope'));
     // Onion is what makes a move judgeable — you are lining this page up
     // against the one beneath. Say so rather than silently forcing it on.
     if(window.SkriblHints){
@@ -9551,7 +9523,6 @@ bindEl('mbReset', 'click', ()=>{ moveDx = moveDy = 0; applyMoveOffset(); });
     const b = e.target.closest('button'); if(!b) return;
     moveScope = b.dataset.scope === 'after' ? 'after' : 'one';
     seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on', x === b));
-    if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
     // No re-capture. The snapshot already holds every page's original, so
     // changing scope only changes which of them receive the offset; pages
     // leaving the set are restored by applyMoveOffset itself.
@@ -9758,7 +9729,6 @@ function setTune(open){
   tuneShell.inert = !open;   // hidden means unreachable (v292): out of the tab order too
   tuneBtn.classList.toggle('open', open);
   tuneBtn.setAttribute('aria-expanded', String(open));
-  if(open) requestAnimationFrame(()=>{ positionSeg(); positionOnionSeg(); });
   // The stage must give back the drawer's height. Resize on every frame of the
   // transition so the canvas shrinks WITH the reveal instead of snapping at the
   // end — a mid-animation jump is what makes a drawer feel cheap.
@@ -9790,19 +9760,11 @@ bindEl('arcGuideBtn','click',function(){
 
 const onionSeg=document.getElementById('onionDepthSeg');
 const onionTintBtn=document.getElementById('onionTintBtn');
-function positionOnionSeg(){
-  if(!onionSeg) return;
-  const a=onionSeg.querySelector('button.on'), pill=onionSeg.querySelector('.seg-slider');
-  if(!a||!pill||!a.offsetWidth) return;
-  pill.style.width=a.offsetWidth+'px';
-  pill.style.transform='translateX('+(a.offsetLeft-3)+'px)';
-  pill.style.opacity=1;
-}
 if(onionSeg) onionSeg.addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   onionDepth=+b.dataset.depth;
   [...onionSeg.querySelectorAll('button')].forEach(x=>x.classList.remove('on'));
-  b.classList.add('on'); positionOnionSeg(); render();
+  b.classList.add('on'); render();
 });
 if(onionTintBtn) onionTintBtn.addEventListener('click',()=>{
   onionTint=!onionTint;
@@ -9816,7 +9778,6 @@ function setOnion(v){ onion=v; onionEl.classList.toggle('active',onion); onionEl
   if(onionGroup) onionGroup.hidden=false;
   const row=document.getElementById('tuneOnionRow');
   if(row) row.classList.toggle('muted', !onion);
-  if(onion) requestAnimationFrame(positionOnionSeg);
   render(); }
 onionEl.addEventListener('click',()=>setOnion(!onion));
 onionEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOnion(!onion); } });
@@ -9861,13 +9822,25 @@ bindEl('flipExportCancel', 'click',()=>{ _exportAbort=true; });
 
 /* ---- fps segmented control ---- */
 const fpsGroup=document.getElementById('fps');
-function positionSeg(){ const active=fpsGroup.querySelector('button.on'); const pill=fpsGroup.querySelector('.seg-slider');
-  if(!active||!pill) return; pill.style.width=active.offsetWidth+'px'; pill.style.transform='translateX('+(active.offsetLeft-3)+'px)'; pill.style.opacity=1; }
+/* The seg lights the POSE rate. A rate no button names -- a document saved at
+   8 or at 30 -- lights none, because lighting a neighbour would be a lie; the
+   row's hint says what the rate is instead. It used to load with nothing
+   marked and nothing said, which reads as a broken control (the pick-one
+   census). A declaration and a lookup by id, not the const above: a draft
+   restore calls this before that line has run. */
+function syncFpsSeg(){
+  const g=document.getElementById('fps'); if(!g) return;
+  const r=poseRate(), btns=[...g.querySelectorAll('button')];
+  btns.forEach(b=>b.classList.toggle('on', +b.dataset.fps===r));
+  const row=g.closest('.tune-row'), hint=row && row.querySelector('.tune-hint');
+  if(hint) hint.textContent = btns.some(b=>+b.dataset.fps===r) ? 'pages per second'
+    : ('pages per second \u00b7 this one plays at '+(Math.round(r*100)/100));
+}
 fpsGroup.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
   // The buttons mean POSES per second. In a subdivided document the stored rate
   // is a multiple of that, so picking 24 on a halved document stores 48.
-  fps=(+b.dataset.fps)*(subdiv||1); [...fpsGroup.querySelectorAll('button')].forEach(x=>x.classList.remove('on')); b.classList.add('on');
-  positionSeg(); scheduleSave(); syncFlipDuration(); if(playing){ stop(); play(); } });
+  fps=(+b.dataset.fps)*(subdiv||1); syncFpsSeg();
+  scheduleSave(); syncFlipDuration(); if(playing){ stop(); play(); } });
 
 
 /* ---- help drawer (How Flip works) — same component as the Pad ---- */
@@ -10054,8 +10027,7 @@ if (musicData) { decodeForWaveform(); if (typeof setCrossfadeUI==='function') se
 refreshPendingCards();
 
 if (restored) chip('Draft restored');
-requestAnimationFrame(positionSeg);
-window.addEventListener('load', ()=>{ sizeStage(); positionSeg(); positionToolSlider(); syncSelBar(); });
+window.addEventListener('load', ()=>{ sizeStage(); positionToolSlider(); syncSelBar(); });
 
 // Report sheet — shared via lib/report.js so the two editors collect the same
 // context. Null-safe: without the lib the menu item simply does nothing.

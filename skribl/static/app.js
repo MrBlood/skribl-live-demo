@@ -185,15 +185,9 @@ window.addEventListener('resize', () => {
      the rest of this handler, which is the part that mattered: the photo-fit
      slider and initToolSlider() below never ran again after any resize.
      Found by verify_player_isolation's "no page errors on the player", which
-     is why that row reads page errors rather than asserting a behaviour. */
-  const activeFitBtn = document.querySelector('.photo-fit-btn.active');
-  if (activeFitBtn && photoFitSlider) {
-    const allBtns = [...document.querySelectorAll('.photo-fit-btn')];
-    const idx = allBtns.indexOf(activeFitBtn);
-    const offset = allBtns.slice(0, idx).reduce((sum, b) => sum + b.offsetWidth, 0);
-    photoFitSlider.style.width = activeFitBtn.offsetWidth + 'px';
-    photoFitSlider.style.transform = `translateX(${offset}px)`;
-  }
+     is why that row reads page errors rather than asserting a behaviour.
+     (The photo-fit pill it re-placed is lib/segslider.js's now, like every
+     pill: that module watches its own resize.) */
   initToolSlider();
 });
 // Some mobile browsers fire orientationchange without a paired resize; re-fit the
@@ -913,18 +907,10 @@ function initToolSlider() {
   setTool(tool || 'pen');
 }
 setTimeout(initToolSlider, 50);
-// A single timed call is not enough: on a phone the bar is often laid out after
-// that 50ms, and the pill then sits at a position measured against zero widths.
-// Re-place it whenever the group actually changes size, and on orientation
-// change. Same failure lib/segslider.js was written for, different element.
-(function keepToolSliderPlaced() {
-  if (!toolGroupEl) return;
-  const replace = () => setTool(tool || 'pen');
-  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(replace).observe(toolGroupEl);
-  window.addEventListener('resize', replace);
-  window.addEventListener('orientationchange', replace);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(replace);
-})();
+// A single timed call was not enough on a phone, where the bar is often laid
+// out after that 50ms; a keeper here re-placed the pill on every resize. The
+// first placeSlider() hands the group to lib/segslider.js, which watches it
+// (resize, orientation, fonts, the selected class) like every other pill.
 
 document.querySelectorAll('.tool-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1015,6 +1001,7 @@ customBgInput.addEventListener('input', (e) => {
   canvasWrap.style.backgroundColor = bgColor;
   updateVignette();
 });
+
 
 // The screen-only inset vignette is tuned for dark canvases; on a light/white
 // background the dark edges look muddy, so swap to a soft light vignette when
@@ -2135,17 +2122,11 @@ function updateZoomHandles() {
 
 
 
-// Sliding-pill highlight for segmented button groups — the same affordance as
-// the draw/eraser tool slider, generalized so it can be attached to any group.
-// It injects an absolutely-positioned pill as the group's first child and slides
-// it under whichever button carries `.active`. A group with NO active button
-// (e.g. the Loop/Start/End focus row while free-panning) hides the pill. It
-// repositions on active-state changes (MutationObserver) and when the group
-// resizes or first becomes visible from a hidden tab/drawer (ResizeObserver);
-// both are feature-detected so the headless harness — which stubs neither — runs
-// this file top-level without throwing.
-
-// Both editors carried an equivalent of this; it lives in lib/segslider.js now.
+// Sliding-pill highlight for a segmented group built by script: hands it to
+// lib/segslider.js, which gives it a pill if it has none and slides it under
+// whichever button is selected. A group with NO selected button (the
+// Loop/Start/End focus row while free-panning) hides the pill. Guarded, so the
+// player, which loads app.js but not the lib, runs this file without throwing.
 function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.attach(group); }
 
 // Focus + magnification control for the Loop Detail view. Built in JS (styles
@@ -2656,7 +2637,15 @@ function updateEraserCursor(x, y) {
 const photoUploadBtn = _authoringCtl('photoUploadBtn');
 const photoBgImg = document.getElementById('photoBgImg');
 const photoInput = _authoringCtl('photoInput', 'input');
-const photoFitSlider = document.getElementById('photoFitSlider');
+
+// Fill / Fit / Stretch from a STORED value. lib/photofit.js is the one reader
+// of that vocabulary -- Flip spells Stretch 'fill', and a draft can carry any
+// casing -- and Pad's own spelling is its canonical one. Compared raw, a value
+// that was not Pad's exact spelling lit NO option on a restore (the pick-one
+// census). Without the lib (the player) the value is taken as it was.
+function normalPhotoFit(f) {
+  return window.SkriblPhotoFit ? window.SkriblPhotoFit.normalise(f) : (f || 'cover');
+}
 
 
 
@@ -2709,15 +2698,6 @@ function photoTargetDims(w, h, maxEdge) {
 
 
 
-const photoFitBtns = document.querySelectorAll('.photo-fit-btn');
-
-function initPhotoFitSlider() {
-  const active = document.querySelector('.photo-fit-btn.active');
-  if (active && photoFitSlider) {
-    photoFitSlider.style.width = active.offsetWidth + 'px';
-    photoFitSlider.style.transform = 'translateX(0)';
-  }
-}
 
 
 // ===== Photo reposition (Fill mode) ========================================
@@ -3307,7 +3287,8 @@ function loadSkribl(data) {
   if (data.background && data.background.color) {
     bgColor = data.background.color;
     canvasWrap.style.backgroundColor = bgColor;
-    document.querySelectorAll('.bg-swatch').forEach(b => b.classList.toggle('active', b.dataset.bg === bgColor));
+    // editor_draft.js; the player loads neither it nor any swatch.
+    if (typeof markBgSwatch === 'function') markBgSwatch(bgColor);
   }
   updateVignette();
 
@@ -3363,7 +3344,7 @@ function loadSkribl(data) {
     photoBgImg._draftData = data.photo.data;
     photoBgImg._fileName = data.photo.name || 'Photo from draft';
     photoBgImg.style.display = 'block';
-    photoFit = data.photo.fit || 'cover';
+    photoFit = normalPhotoFit(data.photo.fit);
     const fitMap = { cover: 'cover', contain: 'contain', stretch: 'fill' };
     photoBgImg.style.objectFit = fitMap[photoFit] || 'cover';
     photoOpacityVal_ = data.photo.opacity != null ? data.photo.opacity : 1;
@@ -3381,18 +3362,9 @@ function loadSkribl(data) {
     // the player, and the unguarded version threw inside loadSkribl, aborting
     // the whole restore. See harness/verify_player_photo.py.
     if (!document.body.classList.contains('player-mode')) {
-      // Sync the segmented Fit control to the restored fit (was showing stale state).
-      const _fitBtns = [...document.querySelectorAll('.photo-fit-btn')];
-      _fitBtns.forEach(b => b.classList.toggle('active', b.dataset.fit === photoFit));
-      const _ai = _fitBtns.findIndex(b => b.dataset.fit === photoFit);
-      if (_ai >= 0 && photoFitSlider) {
-        const _mv = () => {
-          const off = _fitBtns.slice(0, _ai).reduce((s, b) => s + b.offsetWidth, 0);
-          photoFitSlider.style.width = _fitBtns[_ai].offsetWidth + 'px';
-          photoFitSlider.style.transform = `translateX(${off}px)`;
-        };
-        _mv(); setTimeout(_mv, 80);
-      }
+      // Sync the segmented Fit control to the restored fit (was showing stale
+      // state). lib/segslider.js moves the pill when the class moves.
+      if (typeof markPhotoFit === 'function') markPhotoFit(photoFit);
       setZoomSliderUI();
       if (typeof updateRepositionUI === 'function') updateRepositionUI();
       const _pd = document.getElementById('photoDetail');
@@ -3417,7 +3389,6 @@ function loadSkribl(data) {
         if (_bv) _bv.textContent = photoBlur_ + 'px';
         updateSliderFill(blEl2);
       }
-      setTimeout(initPhotoFitSlider, 50);
     }
   }
 
@@ -4699,19 +4670,9 @@ function abortStrokeForPinch() {
   });
 
   // The menu ships `hidden`, so at init the buttons have no width and a
-  // one-shot position leaves the pill at opacity 0 — the canvas row showed no
-  // selection until you tapped one. The shared tracker watches for the group
-  // gaining layout and places the pill then.
-  if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
-  function positionSlider() {
-    if (window.SkriblSegSlider) { window.SkriblSegSlider.place(seg); return; }
-    const on = seg.querySelector('button.on');
-    const pill = seg.querySelector('.seg-slider');
-    if (!on || !pill || !on.offsetWidth) return;
-    pill.style.width = on.offsetWidth + 'px';
-    pill.style.transform = 'translateX(' + (on.offsetLeft - 3) + 'px)';
-    pill.style.opacity = 1;
-  }
+  // one-shot position left the pill at opacity 0 — the canvas row showed no
+  // selection until you tapped one. lib/segslider.js watches every seg for
+  // gaining layout and for its selection moving, so nothing here places it.
 
   function locked() {
     return hasContent || recording || finishedRecording;
@@ -4737,7 +4698,6 @@ function abortStrokeForPinch() {
         note.textContent = size;
       }
     }
-    requestAnimationFrame(positionSlider);
   }
 
   seg.addEventListener('click', e => {
@@ -4784,7 +4744,6 @@ if (window.SkriblReport) window.SkriblReport.init();
     const on = window.SkriblHints.isEnabled();
     seg.querySelectorAll('button').forEach(b =>
       b.classList.toggle('on', (b.dataset.hints === 'on') === on));
-    if (window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
   }
   seg.addEventListener('click', e => {
     const b = e.target.closest('button');
@@ -4795,7 +4754,6 @@ if (window.SkriblReport) window.SkriblReport.init();
     else window.SkriblHints.setEnabled(false);
     sync();
   });
-  if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
   window._skriblSyncHintToggle = sync;
   sync();
 })();
@@ -4809,7 +4767,6 @@ if (window.SkriblReport) window.SkriblReport.init();
     const mode = window.SkriblTheme.mode();   // the CHOICE (system|dark|light), not the effective mode
     seg.querySelectorAll('button').forEach(b =>
       b.classList.toggle('on', b.dataset.theme === mode));
-    if (window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
   }
   seg.addEventListener('click', e => {
     const b = e.target.closest('button');
@@ -4819,7 +4776,6 @@ if (window.SkriblReport) window.SkriblReport.init();
   // Driven by the lib rather than by the click, so a change made in another
   // tab moves this switch too — the setting is per browser, not per page.
   window.SkriblTheme.onChange(sync);
-  if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
   window._skriblSyncThemeToggle = sync;
   sync();
 })();

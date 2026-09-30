@@ -1283,8 +1283,11 @@
      widths: the flex row shrinks .mb-offset before anything overflows, so
      arithmetic reports room that is not there.
      360px was over by two pixels and needed nothing but the row's own gap,
-     which leaves the pill full-size on every phone in common use. */
-  @media (max-width: 400px) { .movebar { gap: 6px; } }
+     which leaves the pill full-size on every phone in common use.
+     The one pill then set every label at 600 (it was 500 until chosen), and
+     360px was over by three: the scope's options give 2px a side back here,
+     8px in all, so the margin is not one face's rounding. */
+  @media (max-width: 400px) { .movebar { gap: 6px; } .mb-scope button { padding: 0 7px; } }
   /* 320px is the 1st-gen SE and narrower than anything sold now — a true
      fallback, like the FLIPMODE wordmark's step-down, not a target. */
   @media (max-width: 359px) {

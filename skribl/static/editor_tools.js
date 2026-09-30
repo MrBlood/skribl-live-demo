@@ -60,8 +60,9 @@
   }
 
   // Shared with Flip via lib/smoothing.js — the level-to-alpha mapping was
-  // three magic numbers written out twice. Pill positioning stays here because
-  // Pad and Flip do it differently; see the note in that file.
+  // three magic numbers written out twice. The pills on these rows are
+  // lib/segslider.js's: attachSegSlider hands each over, and the template pill
+  // is the one it moves (it used to make a second one here).
   const smoothSeg = document.getElementById('smoothSeg');
   if (smoothSeg && window.SkriblSmoothing) {
     window.SkriblSmoothing.create({

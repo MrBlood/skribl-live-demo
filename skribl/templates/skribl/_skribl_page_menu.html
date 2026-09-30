@@ -21,8 +21,10 @@
    so the four destinations look the same wherever they are offered.
 
    The theme choices are plain buttons with aria-pressed, not the editors'
-   .seg: that control lives in styles.css, which neither page loads, and
-   bringing it here would be a second copy of an editor stylesheet rule. #}
+   .seg, whose rules live in styles.css, which neither page loads. They are a
+   track of the ONE PILL (segslider.css, loaded by both pages, and
+   lib/segslider.js), so the switch looks and moves as the editors' does:
+   that sheet restates the editors' pill rather than importing the sheet. #}
 <div class="pm-overlay" id="pageMenuOverlay" hidden>
   <div class="pm-sheet" id="pageMenu" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="pm-grab" aria-hidden="true"></div>
@@ -40,8 +42,8 @@
     <div class="pm-div"></div>
     <div class="pm-row">
       <span class="pm-label" id="pageMenuThemeLabel">Theme</span>
-      <span class="pm-seg" role="group" aria-labelledby="pageMenuThemeLabel">
-        <button type="button" data-theme="system" aria-pressed="false" title="Follow the device's appearance setting">System</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button><button type="button" data-theme="light" aria-pressed="false">Light</button>
+      <span class="pm-seg seg-track" role="group" aria-labelledby="pageMenuThemeLabel">
+        <span class="seg-slider" aria-hidden="true"></span><button type="button" data-theme="system" aria-pressed="false" title="Follow the device's appearance setting">System</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button><button type="button" data-theme="light" aria-pressed="false">Light</button>
       </span>
     </div>
     {# The version, as the editors' menus show it -- and what lib/report.js

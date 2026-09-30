@@ -165,7 +165,9 @@
      which one did something. Segments (Pen / Background, Off / Low / High,
      Fill / Fit, Line / Rect, ...) now wear the tint the bar's selected tool
      wears; Preview Loop, Post, Done and the switches keep the fill. The ink is
-     lighter than --ui-hi in dark mode, where #7c5cff on the tint is too close. */
+     lighter than --ui-hi in dark mode, where #7c5cff on the tint is too close
+     (3.1:1; this is 6.5:1 on the drawers' track). --ui-hi is not the selected
+     ink anywhere: the dock wore it, at 3.1:1 dark and 2.9:1 light. */
   --seg-on-fill: rgba(124, 92, 255, 0.22);
   --seg-on-ink: #b9a8ff;
 
@@ -281,6 +283,12 @@
      container wants 9px to look concentric, and one inset 4px wants 8px.
      Setting this to 999px restores every pill in one line. */
   --r-seg: 12px;
+  /* THE ONE PILL (owner: "a on the pill", chosen from four mocked shapes).
+     Every pick-one track holds its pill --seg-inset in from all four sides,
+     and the pill's corner is the track's less that inset, so the two curves
+     are concentric: 12 / 3 / 9. */
+  --seg-inset: 3px;
+  --seg-pill-r: calc(var(--r-seg) - var(--seg-inset));
 
   /* Motion */
   --spring: cubic-bezier(0.4, 0.0, 0.2, 1.1);
@@ -1489,7 +1497,15 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .tool-group {
   position: relative;
   background: var(--surface-control);
-  border-radius: var(--r-seg);
+  /* THE DOCK'S TRACK, and the one pill at the dock's scale: 44px tall with
+     12px corners (the owner's mock "A" drew the dock's pill so). The pill
+     sits 4px inside the group (its padding), so the group's corner is the
+     pill's plus 4 -- concentric, the rule every pill keeps (--seg-pill-r is
+     --r-seg less --seg-inset) -- and 16px is the dock's own corner. The dock
+     draws no group (THE DOCK, below); the rule holds for what IS drawn: the
+     pill, and each tool's own fallback tint and focus ring. */
+  --dock-pill-r: 12px;
+  border-radius: calc(var(--dock-pill-r) + 4px);
   padding: 4px;
   display: inline-flex;
   overflow: hidden;
@@ -1497,15 +1513,15 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border: 1px solid var(--hairline);
 }
 
+/* The pill's fill, its fade and its fallback are the one pill's (A SELECTED
+   OPTION IS A TINT, below); lib/segslider.js places it. */
 .tool-slider {
   position: absolute;
   top: 4px;
   left: 4px;
   height: calc(100% - 8px);
-  background: var(--ui-active);
-  border-radius: calc(var(--r-seg) - 4px);   /* concentric inside the 4px inset */
-  box-shadow: 0 2px 8px var(--accent-glow);
-  transition: transform 0.42s var(--spring), width 0.42s var(--spring);
+  border-radius: var(--dock-pill-r);
+  transition: transform 0.42s var(--spring), width 0.42s var(--spring), opacity 0.18s ease;
   z-index: 0;
   pointer-events: none;
 }
@@ -1514,7 +1530,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   position: relative;
   z-index: 1;
   border: 0 !important;
-  border-radius: calc(var(--r-seg) - 4px);
+  border-radius: var(--dock-pill-r);
   background: transparent !important;
   outline: none;
   box-shadow: none !important;
@@ -1539,7 +1555,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   height: 13px;
 }
 
-.tool-btn.active { color: #fff; }
 .tool-btn:hover { background: transparent !important; color: var(--text-tool); }
 
 .tool-btn:focus-visible {
@@ -1883,25 +1898,19 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   font-variant-numeric: tabular-nums;
 }
 
+/* The draw drawer's rows (and the shape picker's). Their track, options, pill
+   and label colours are the one pill's -- A SELECTED OPTION IS A TINT, below;
+   what is here is each row's own layout and type. No overflow: hidden here,
+   on .photo-fit-group or on .gif-seg: the pill sits inside the padding and
+   needs no clip, and the clip cut the focus ring off three sides. */
 .smooth-seg {
-  position: relative; overflow: hidden;
   display: flex; margin-left: auto;
-  background: var(--surface-control); border: 1px solid var(--hairline);
-  border-radius: var(--r-seg); padding: 3px;
 }
 .smooth-btn {
-  position: relative; z-index: 1;
-  border: 0; background: transparent; color: var(--text-soft);
-  font-size: 12px; font-weight: 500; padding: 5px 14px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center  /* v206: match .seg cells */; border-radius: calc(var(--r-seg) - 3px);
-  cursor: pointer; transition: color .15s ease;
-  -webkit-tap-highlight-color: transparent;
+  font-size: 12px; padding: 5px 14px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center  /* v206: match .seg cells */;
+  transition: color .15s ease;
 }
-.smooth-btn.active { color: #fff; }
 
-/* Shared sliding-pill highlight for segmented controls (smoothing off/low/high,
-   the Loop/Start/End focus row, and the 1x-8x magnifier) — the same affordance
-   as the draw/eraser tool slider. Inserted as the group's first child and
-   positioned in JS by attachSegSlider(); its radius follows the parent group. */
 /* Segmented control. MOVED here from flip.css, where it lived while
    .seg-slider — the pill it positions — was already in this file. Pad does not
    load flip.css, so the moment Pad gained a .seg canvas picker the container
@@ -1928,12 +1937,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .export-size-seg, .export-loops-seg { --seg-h: 32px; }
 
 .seg {
-  position: relative;
   display: inline-flex;
-  background: var(--surface-control);
-  border: 1px solid var(--hairline-strong);
-  border-radius: var(--r-seg);
-  padding: 3px;
   /* --seg-h must be declared AND read. Left unread, a seg's height comes from
      `font: inherit` -> `line-height: inherit`: as tall as whatever contains it,
      following the INSTALLED FONT's metrics. The same stylesheet renders #hintSeg
@@ -1948,21 +1952,19 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   align-items: stretch;
 }
 .seg button {
-  position: relative; z-index: 1;
-  border: 0; background: transparent;
-  color: var(--text-secondary);
-  font: inherit; font-weight: 500; font-size: 13px;
+  /* `font: inherit` resets the weight too; the one pill's rule, later, sets
+     it back to the one label weight. */
+  font: inherit; font-size: 13px;
   /* Standardized with the tune-drawer sliders — roomier horizontal
      padding, and the label centered in its cell. Not a fixed width (these
      carry text of varying length: "On"/"Off", "16:9"), so each cell sizes to
      its label; only the rhythm and centering are shared. Was 5px 11px. */
-  padding: 5px 14px; border-radius: calc(var(--r-seg) - 3px);
+  padding: 5px 14px;
   min-width: 34px;
   display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer; font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums;
   transition: color .2s var(--ease);
 }
-.seg button.on { color: #fff; }
 /* Only for segs that opt into --seg-h. Applying `line-height: 1` to every seg
    would resize the export sheet's Size/Loops groups, which have not been
    measured — a seg cannot be pinned to a number nobody has looked at. */
@@ -1971,18 +1973,18 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   display: inline-flex; align-items: center; justify-content: center;
 }
 
-.seg-slider {
+/* THE PILL, in every track but the dock's: --seg-inset in from all four
+   sides, corners concentric with the track's. lib/segslider.js places it;
+   its fill, its fade and the fallback that stands in for it are the one
+   pill's (A SELECTED OPTION IS A TINT, below). Fill / Fit / Stretch's is the
+   same pill under an older name. */
+.seg-slider, .photo-fit-slider {
   position: absolute;
-  top: 3px; left: 3px; bottom: 3px;
-  background: var(--ui-active);
-  /* was `inherit`, i.e. the container's radius. Harmless at 999px, visibly
-     wrong at 12px: the highlight has to be 3px tighter to sit concentric. */
-  border-radius: calc(var(--r-seg) - 3px);
-  box-shadow: 0 2px 8px var(--accent-glow);
+  top: var(--seg-inset); left: var(--seg-inset); bottom: var(--seg-inset);
+  border-radius: var(--seg-pill-r);
   transition: transform 0.42s var(--spring), width 0.42s var(--spring), opacity 0.18s ease;
   z-index: 0;
   pointer-events: none;
-  opacity: 0;
 }
 
 .drawer-actions { display: flex; gap: 8px; }
@@ -2149,6 +2151,15 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
     radial-gradient(closest-side, var(--custom-color) 58%, transparent calc(58% + 1.5px)),
     conic-gradient(from 0deg, #f43f5e, #f59e0b, #facc15, #22c55e,
       #06b6d4, #6366f1, #a855f7, #f43f5e);
+}
+/* THE CUSTOM BACKGROUND, CHOSEN, IS MARKED. The presets mark with a 2.5px
+   --ui-line border, and `border: 0` above took the width from under that
+   colour: a custom background got .active and painted nothing, so no swatch
+   in the row looked chosen (both editors; the pick-one census). The same
+   2.5px ring, drawn inside the box as the presets' border is, with a hair of
+   the drawer between it and the spectrum so it reads on the violet arc too. */
+.bg-custom.active {
+  box-shadow: inset 0 0 0 2.5px var(--ui-line), inset 0 0 0 4px var(--surface-raised);
 }
 
 /* ---------- The Photo and Music file row ----------
@@ -2702,53 +2713,31 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 /* ---------- Photo tab ---------- */
+/* Fill / Fit / Stretch: a track of the one pill (A SELECTED OPTION IS A
+   TINT, below); its pill is .seg-slider's rule. Layout and type are here. */
 .photo-fit-group {
-  position: relative;
-  background: var(--surface-control);
-  border-radius: var(--r-seg);
-  padding: 3px;
   display: inline-flex;
-  overflow: hidden;
-  border: 1px solid var(--hairline);
   width: 100%;
 }
 
-.photo-fit-slider {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  height: calc(100% - 6px);
-  background: var(--ui-active);
-  border-radius: calc(var(--r-seg) - 3px);
-  box-shadow: 0 2px 8px var(--accent-glow);
-  transition: transform 0.42s var(--spring), width 0.42s var(--spring);
-  z-index: 0;
-  pointer-events: none;
-}
-
 .photo-fit-btn {
-  position: relative;
-  z-index: 1;
   flex: 1;
   border: 0 !important;
-  border-radius: calc(var(--r-seg) - 3px);
   background: transparent !important;
-  outline: 0 !important;
+  /* NO `outline: 0 !important` any more. It was here with the two lines
+     around it to beat the generic button styles, and it also beat the
+     focus ring: Fill / Fit / Stretch was the one pick-one control a keyboard
+     could reach and not see. */
   box-shadow: none !important;
   -webkit-appearance: none;
   appearance: none;
   padding: 7px 0;
   font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  color: var(--text-soft);
   transition: color 0.2s;
-  -webkit-tap-highlight-color: transparent;
   user-select: none;
   text-align: center;
 }
 
-.photo-fit-btn.active { color: #fff; }
 .photo-fit-btn:hover { background: transparent !important; }
 
 .photo-opacity-row {
@@ -3651,9 +3640,10 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .export-opt-group .export-opt:hover:not(:disabled) { background: rgba(124,92,255,0.08); border-color: transparent; }
 .export-opt-group .export-gif-toggle { border-top: 1px solid var(--hairline); padding-top: 10px; }
 
-/* GIF background toggle (segmented) -- uses the shared sliding-pill highlight
-   (.seg-slider via attachSegSlider), same as the smoothing/focus/magnifier
-   controls.
+/* GIF background toggle (segmented) -- a track of the one pill, like every
+   pick-one control (A SELECTED OPTION IS A TINT, below). It was the one
+   capsule left: a 999px track and 999px options round a 9px pill, a shape no
+   other control had, and it had no fallback tint either.
 
    AN INLINE ROW, SIZED TO ITS CONTENT. `width: 100%` does not survive being
    measured: "Solid" and "Transparent" at 12px/600 need about 200px, and there
@@ -3674,40 +3664,23 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 .export-gif-toggle[hidden] { display: none; }
 .gif-seg {
-  position: relative;
-  overflow: hidden;
   display: flex;
   /* auto, not 100%: the buttons size to their labels and the row's margin-left
      pushes the control to the trailing edge. */
   width: auto;
   margin-left: auto;
-  gap: 2px;
-  padding: 3px;
-  background: var(--surface-control);
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
 }
 .gif-seg-btn {
-  position: relative;
-  z-index: 1;
   /* Was `flex: 1 1 0`, which split the full-width track evenly between two
      labels of very different lengths. Content width now; the sliding pill
-     measures offsetWidth/offsetLeft so it follows without any change. */
+     is measured from the rendered option, so it follows without any change. */
   flex: 0 0 auto;
   text-align: center;
   white-space: nowrap;
-  border: none;
-  background: none;
-  color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 600;
   padding: 6px 14px;
-  border-radius: 999px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
   transition: color 0.15s ease;
 }
-.gif-seg-btn.active { color: #fff; }
 
 .export-progress { padding: 8px 14px 4px; }
 .export-progress[hidden] { display: none; }
@@ -6453,7 +6426,10 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
 /* Paired: an explicit display defeats [hidden], which this codebase has been
    bitten by three times. */
 .shape-pop[hidden] { display: none; }
-.shape-pop .smooth-seg { margin: 0; }
+/* fit-content: the track hugs its four options. It stretched to the pop, and
+   the pop widens when Rect or Poly reveal a knob row, so the track grew dead
+   space after Poly that the pill could never cover (the pick-one census). */
+.shape-pop .smooth-seg { margin: 0; width: fit-content; }
 
 /* The pop's drag grip — same pill language as the sheets' grabber, meaning
    "take hold of me here". A real inner element paints the pill (the flip
@@ -6648,11 +6624,11 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .toolbar .tool-group, .flip-tools .tool-group {
   background: none; border-color: transparent; box-shadow: none; gap: 6px;
 }
-.toolbar .tool-slider, .flip-tools .tool-slider {
-  background: var(--seg-on-fill); box-shadow: none; border-radius: 12px;
-}
+/* The tool pill is the one pill at the dock's scale (.tool-group, above). Its
+   selected tool's label and glyph take the pills' selected ink: --ui-hi on
+   the tint measured 3.1:1 dark and 2.9:1 light, under AA for the 13px label. */
 .toolbar #toolGroup .tool-btn.active,
-.flip-tools #toolGroup .tool-btn.active { color: var(--ui-hi); }
+.flip-tools #toolGroup .tool-btn.active { color: var(--seg-on-ink); }
 .toolbar #toolGroup .tool-btn svg,
 .flip-tools #toolGroup .tool-btn svg,
 .toolbar .undo-btn svg, .flip-tools .t-btn svg { width: 26px; height: 26px; }
@@ -6734,13 +6710,14 @@ body.stroking .toolbar, body.stroking .flip-tools {
 }
 /* ---------- EVERY DRAWER, PICKER AND SHEET IN THE DOCK'S MATERIAL ----------
    The owner's second look at the dock: "make the drawers match the frosted
-   bar too". Pen, Photo and Music drawers, the Photo | Music tabs, the shape
-   picker, Tune and the menu sheets take --glass-fill and --glass, and lose the
-   hairline border each carried -- the canvas keeps the only outline on the
-   screen (the header's rule). Layout, padding and radii are untouched.
+   bar too". Pen, Photo and Music drawers, the shape picker, Tune and the
+   menu sheets take --glass-fill and --glass, and lose the hairline border
+   each carried -- the canvas keeps the only outline on the screen (the
+   header's rule). Layout, padding and radii are untouched.
    The Photo and Music drawers and their tabs are ONE card now (.media-card,
-   below): the card wears this glass, and the panel inside it drops its own. */
-.tab-panel, .media-tabs, .shape-pop, .menu-sheet, .media-card {
+   below): the card wears this glass, and the panel inside it drops its own.
+   The tabs are not glass at all: they are a track of the one pill. */
+.tab-panel, .shape-pop, .menu-sheet, .media-card {
   background: var(--glass-fill);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
@@ -6749,27 +6726,61 @@ body.stroking .toolbar, body.stroking .flip-tools {
 }
 .tune-shell { background: var(--glass-fill); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .tune-shell.open { border: 0; box-shadow: var(--glass); }
-/* The picker's arrow is a solid triangle; the glass's colour over the page. */
+/* EXCEPT THE SHAPE PICKER, WHICH IS SOLID. It hangs inside the dock, and the
+   dock's own backdrop-filter makes it the picker's backdrop root: the
+   picker's blur sees only the dock, never the page, so its 0.78 glass showed
+   Flip's page strip straight through the Corners and Sides rows (owner, phone).
+   The tray, the other pop in the dock, was already solid. Same colour as the
+   glass, at full strength -- and the arrow's. */
+.shape-pop {
+  background: rgb(var(--surface-well-2-rgb));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .shape-pop::after { border-top-color: rgb(var(--surface-well-2-rgb)); }
 
-/* A SELECTED OPTION IS A TINT (see --seg-on-fill in :root). Every segmented
-   control in both editors draws its selection with one of these two sliding
-   thumbs, so these two rules are the whole change; the labels riding on them
-   move from white to the tint's ink. Actions (Preview Loop, Done, Post) and
-   the on/off switches keep their solid fill: they DO something, or ARE on. */
-.seg-slider, .photo-fit-slider { background: var(--seg-on-fill); box-shadow: none; }
+/* A SELECTED OPTION IS A TINT (see --seg-on-fill in :root) -- AND ONE PILL
+   CARRIES IT, identical everywhere (owner: "a on the pill"). Every pick-one
+   control in both editors -- the tune drawer's and the menus' .seg, the draw
+   drawer's rows, Fill / Fit / Stretch, the GIF background, the dock's tools
+   -- is a track holding one sliding pill, and these rules are the whole of
+   what they share: the track, the option, the pill and its fallback. Each
+   control's size, height and type stay its own, in the rules above. Actions
+   (Preview Loop, Done, Post) and the on/off switches keep their solid fill:
+   they DO something, or ARE on. The gallery and the library, which do not
+   load this sheet, restate these rules in segslider.css with the same values.
+
+   Placed LAST among the controls' rules on purpose: at equal specificity it
+   wins, so no family can quietly keep an older corner, weight or colour. */
+.seg, .smooth-seg, .gif-seg, .photo-fit-group {
+  position: relative;
+  background: var(--surface-control); border: 1px solid var(--hairline);
+  border-radius: var(--r-seg); padding: var(--seg-inset);
+}
+/* ONE LABEL WEIGHT, selected or not: a label that gets bolder when chosen
+   changes width, and the pill measured under it slides to a box that moves. */
+.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn {
+  position: relative; z-index: 1;
+  border: 0; background: transparent; color: var(--text-soft);
+  font-weight: 600; border-radius: var(--seg-pill-r);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.seg-slider, .photo-fit-slider, .tool-slider {
+  background: var(--seg-on-fill); box-shadow: none; opacity: 0;
+}
+[data-pill] > :is(.seg-slider, .photo-fit-slider, .tool-slider) { opacity: 1; }
 /* ...and the selected option wears the same tint ITSELF until lib/segslider.js
-   has placed the sliding pill under it (it then sets data-pill on the group).
+   has placed the sliding pill under it (it then sets data-pill on the track).
    The pill used to be the only mark, so any seg the script never reached
    showed its selection by label colour alone -- the Pad's Mirror, Pauses and
-   Preview speed did, on every device, for as long as they existed. */
-.seg:not([data-pill]) > button.on { background: var(--seg-on-fill); }
-/* !important because .photo-fit-btn clears its background with !important
-   (it defeats the generic button styles); this selector is more specific, so
-   among the important declarations it wins. */
-.photo-fit-group:not([data-pill]) > button.active { background: var(--seg-on-fill) !important; }
-.seg button.on, .smooth-btn.active, .photo-fit-btn.active,
-.gif-seg-btn.active, .gif-seg-btn[aria-pressed="true"] { color: var(--seg-on-ink); }
+   Preview speed did, on every device, for as long as they existed, and the
+   draw drawer's rows, the GIF background and the dock had no fallback until
+   the one pill. !important because .photo-fit-btn and .tool-btn clear their
+   backgrounds with it (they defeat the generic button styles); these
+   selectors are more specific, so among the important declarations they win. */
+:is(.seg, .smooth-seg, .gif-seg, .photo-fit-group):not([data-pill]) > button:is(.on, .active),
+#toolGroup:not([data-pill]) > .tool-btn.active { background: var(--seg-on-fill) !important; }
+:is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn):is(.on, .active) { color: var(--seg-on-ink); }
 
 /* The size readout while the pen is dragged sideways (lib/penswoosh.js). */
 .swoosh-readout {
@@ -6783,11 +6794,20 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .swoosh-readout.on { opacity: 1; transform: translate(-50%, -100%); }
 
 /* The Media tabs: Photo | Music, at the top of whichever of the two drawers
-   is open -- the strip and the open drawer are ONE card (.media-card, below). */
+   is open -- the strip and the open drawer are ONE card (.media-card, below).
+   THE LAST CONTROL TO TAKE THE ONE PILL (owner: "a on the pill"). The strip
+   was a glass slab of its own (a 16px corner, a 4px inset, a 650 label and a
+   selected tab that painted its own fill with nothing sliding); it is a track
+   now, the same 12 / 3 / 9 as every other pick-one control, and
+   lib/segslider.js slides the pill between the two tabs from aria-selected.
+   The tabs stay 44 tall -- the whole tab is the target, no band needed --
+   which is what makes this track 52 where the drawers' rows are shorter: the
+   card's header, not one of its rows. */
 .media-tabs {
-  display: flex; gap: 4px; padding: 4px; margin: 0 auto 8px;
-  width: min(100% - 24px, 520px); box-sizing: border-box;
-  border-radius: 16px;
+  position: relative;
+  display: flex; box-sizing: border-box;
+  background: var(--surface-control); border: 1px solid var(--hairline);
+  border-radius: var(--r-seg); padding: var(--seg-inset);
 }
 .media-tabs[hidden] { display: none; }
 /* THE MEDIA CARD (the drawer redesign, option A). The tabs and the open drawer
@@ -6805,7 +6825,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
    panels is, so a drawer never depends on lib/mediatabs.js to be seen. */
 .media-card { display: flow-root; margin: 0 12px calc(12px + env(safe-area-inset-bottom)); border-radius: 16px; z-index: 39; }
 .media-card:not(:has(> .tab-panel:not([hidden]))) { display: none; }
-.media-card > .media-tabs { width: auto; margin: 16px 16px 14px; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.media-card > .media-tabs { margin: 16px 16px 14px; }
 .media-card > .tab-panel {
   margin: 0; padding-top: 16px; border-radius: 0 0 16px 16px;
   background: none; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
@@ -6821,17 +6841,21 @@ body.replaying .media-card {
   -webkit-backdrop-filter: none; backdrop-filter: none; pointer-events: none;
 }
 .media-tab {
-  flex: 1; min-height: 44px; border: 0; border-radius: 11px; background: transparent;
+  flex: 1 1 0; min-width: 0; min-height: 44px; border: 0; border-radius: var(--seg-pill-r); background: transparent;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  font: inherit; font-size: 14px; font-weight: 650; color: var(--text-tool); cursor: pointer; position: relative;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--text-soft); cursor: pointer;
+  position: relative; z-index: 1; -webkit-tap-highlight-color: transparent;
 }
-.media-tab svg { width: 18px; height: 18px; }
-.media-tab[aria-selected="true"] { background: var(--seg-on-fill); color: var(--seg-on-ink); }
+.media-tab svg { width: 18px; height: 18px; flex: none; }
+.media-tab[aria-selected="true"] { color: var(--seg-on-ink); }
+/* The fallback every track has: the selected tab is the tint until the pill
+   is placed (the pill's own fill and fade are the one pill's, above). */
+.media-tabs:not([data-pill]) > .media-tab[aria-selected="true"] { background: var(--seg-on-fill); }
 /* The owner: "for the dot next to the Music/Photo can it just be the same as
    the dot on the icon?" -- the media button's dot, ring and all, including its
    colour, which is the dock's ground rather than the tab's. */
 .media-tab .tab-dot {
-  position: static; margin-left: 2px;
+  position: static; margin-left: -2px;   /* 6px from the label it belongs to, the icon's 8 on the other side */
   --dot-ring-w: 0.75px;
   --dot-ring: rgb(var(--surface-well-2-rgb));
 }
@@ -6948,6 +6972,11 @@ body.replaying .media-card {
 @media (hover: hover) {
   .header #tuneBtn:hover, .header #menuBtn:hover { background: rgba(var(--wash-rgb), 0.05); }
 }
+/* ...and the OPEN Tune button keeps the tint .tune-tool.open gives it. The
+   `background: none` above carries an id, so it beat that class rule and the
+   open state lost its fill, keeping only the ring and the ink. After the
+   hover rule, so the open state holds under a pointer too. */
+.header #tuneBtn.open { background: rgba(124, 92, 255, 0.16); }
 /* Record, Play and Post come down to meet them. */
 .header .actions .btn { height: 36px; padding: 0 16px; }
 /* THE HEADER PILLS GET THE SAME 44px BAND AS THE TOOLBAR (SK-AUD-005;
@@ -7072,7 +7101,10 @@ body.replaying .media-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 4px;
   width: 100%; padding: 9px 2px 7px;
-  border: none; border-radius: 12px;
+  /* The one pill's corner: the tray is a grid of tiles, not a track, so the
+     selected tile wears the pill's tint and shape itself rather than a pill
+     sliding under it. */
+  border: none; border-radius: var(--seg-pill-r);
   background: transparent; color: var(--text-tool-lit);
   /* Longhand, not `font: 600 10px/1 inherit`. That shorthand is INVALID -- the
      family slot does not accept `inherit` -- so the whole declaration was
@@ -7088,7 +7120,10 @@ body.replaying .media-card {
 }
 .tool-tray-btn svg { width: 22px; height: 22px; }
 .tool-tray-btn:hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .05); }
-.tool-tray-btn.active { background: var(--ui-active, #7c5cff); color: #fff; }
+/* A SELECTED OPTION IS A TINT: this was a solid purple slab with white ink
+   (4.35:1), the one selection left drawn as an action, beside a shelf pill
+   that shows the same choice as a tint. */
+.tool-tray-btn.active { background: var(--seg-on-fill); color: var(--seg-on-ink); }
 .tool-tray-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* Three columns below 360: four 10px labels in a 300px-wide panel start
@@ -7195,7 +7230,11 @@ body.replaying .media-card {
   /* Light flips the rim: a near-white edge, light catching the card. */
   --header-rim:              rgba(255, 255, 255, 0.9);
   --glass-drop:              rgba(20, 24, 40, 0.10);
-  --seg-on-ink:              #5b3be6;
+  /* AA on what is actually painted behind it: #5b3be6 was 4.37:1 on the tint
+     over the drawers' track, under the unselected label's 4.99. One step
+     deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground
+     a pill sits on; the tint itself, the look the owner chose, does not move. */
+  --seg-on-ink:              #5434dc;
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
@@ -7267,15 +7306,19 @@ body.replaying .media-card {
   }
 }
 @media (forced-colors: active) {
-  .seg button, .smooth-btn, .gif-seg-btn {
+  .seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn, .media-tab {
     outline: 1px solid ButtonText; outline-offset: -1px;
   }
-  .seg button[aria-pressed="true"], .smooth-btn[aria-pressed="true"], .gif-seg-btn[aria-pressed="true"],
-  .tool-btn.active, .tool-btn[aria-pressed="true"],
-  .onion-tint.active, [role="switch"][aria-checked="true"] {
+  :is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn, .tool-btn, .tool-tray-btn):is(.on, .active),
+  .media-tab[aria-selected="true"], .onion-tint.active, [role="switch"][aria-checked="true"] {
     outline: 3px solid Highlight; outline-offset: -3px;
   }
-  .seg-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
+  /* Focus moves the selected edge OUTSIDE, keeping its colour: a group's one
+     Tab stop is its selected option, and the rule above painted focus over as
+     nothing. Short on purpose: cssgraph copies this block whole into the
+     player's sheet, and (0,3,1) outranks the rule above without naming it. */
+  button:is(.on, .active, [aria-selected="true"]):focus-visible { outline-width: 2px; outline-offset: 1px; }
+  .seg-slider, .photo-fit-slider, .tool-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }
 
 

@@ -10,12 +10,11 @@
  * "the two surfaces smooth differently" is exactly the kind of bug that gets
  * reported as "Flip feels wrong" and takes an afternoon to locate.
  *
- * The alpha is the ONLY thing shared. Repositioning the segmented pill after a
- * click is injected, because the two surfaces do it differently — Pad through
- * attachSegSlider's observers, Flip through its own positioner — and unifying
- * THAT is a separate job: slider positioning currently exists three times
- * (app.js, flip.js, and lib/segslider.js), which is the next extraction, not
- * this one.
+ * The alpha is the ONLY thing shared here. The segmented pill is not this
+ * module's: it was placed three ways (app.js, flip.js and lib/segslider.js)
+ * when this was written, and is placed ONE way now -- lib/segslider.js follows
+ * the class this toggles, on both surfaces. onRender stays for a caller that
+ * wants to know the level moved.
  */
 (function () {
   'use strict';

@@ -12404,6 +12404,104 @@ Chosen, not missed, this round:
   or `SECRET_KEY` changes. Flask keeps the session in the cookie, so there is
   no server-side record to strike it from.
 
+## After v317 -- one pill, everywhere
+
+Unreleased; for the next seal.
+
+### The pill (owner: "a on the pill")
+
+Every pick-one control grew its own shape: a 999px capsule round a 9px pill
+on the GIF background, a solid slab with white words on Flip's tool tray and
+the gallery's New / Hot, an underline under the library's tabs, monospace
+chips, and the dock's own. The owner chose one from four mocks: a 12px track
+with a 3px inset and a 9px pill that slides, the soft tint under the choice,
+one label weight. It is on every control in both editors, the dock (at the
+dock's scale, still concentric), Flip's tray (a tinted tile), the gallery,
+the library and the page menu. The Photo | Music tabs wait for the drawer
+rebuild.
+
+* **One placer.** `lib/segslider.js` places every pill, from the rendered
+  boxes. Integer offsets on fractional flex options overhung by a pixel at
+  phone widths. The per-surface placers went. The Pad's draw drawer had two
+  pills; a track now makes one only if its markup has none.
+* **The choice shows without the script.** Until a pill is placed
+  (`data-pill`), the selected option paints the tint itself.
+* **AA on what is painted.** The light theme's selected ink measured 4.37:1
+  on the tint over the drawers' track. `--seg-on-ink` moved one step deeper
+  in the same hue (#5b3be6 to #5434dc): 4.84:1. The tint did not move. The
+  dock's selected tool wore `--ui-hi` on the tint, 3.2:1 dark and 2.9:1
+  light; it takes `--seg-on-ink`.
+* **Forced colours.** A tint is a background, and forced colours replace
+  backgrounds. The selected option of every track, the tray tile and the
+  page tracks carry a Highlight edge. cssgraph copies that block whole into
+  player.css, so `CSS_RATCHET` rose with one ledger line.
+* **One label weight, 600.** Unselected labels were 500, so Flip's move bar
+  grew 3px at 360px and scrolled. Its scope options give 2px a side back
+  there.
+
+The census found nine selection defects on the way, each confirmed live and
+fixed small. A chosen custom background had no ring. On Flip a picked or
+sampled pen colour ringed nothing. Flip's loop focus lit `.active` where the
+seg reads `.on`, and a new track reset the focus without re-marking it. The
+open Tune button lost its tint to specificity. On Flip a canvas or an fps no
+button names lit nothing and said nothing; each now says its value. On the
+Pad a restored custom or upper-case background marked no swatch, and a
+restored fit in Flip's spelling lit no option.
+
+`verify_onepill.py` pins all of it per (route, control), with contrast read
+from pixels. Each part was shown red by its own mutation on a copy of the
+tree. Three older pins changed with the decision: V207 in `verify_ux`
+asserted the loop focus and the dock share a radius (it now asserts each is
+concentric with its pill), and `verify_a11y` no longer lists the library's
+selected chip as white words on a fill.
+
+### What review of the one pill found
+
+* **The shape picker is solid.** It hangs inside the dock, and the dock's
+  own backdrop-filter makes the dock the picker's backdrop root, so the
+  picker's blur saw only the dock and its 0.78 glass showed Flip's page
+  strip straight through (owner, phone). It takes the glass colour at full
+  strength, as the tray already did. The drawers, Tune and the menus sit at
+  the top level, where the blur works; `verify_onepill` POPS moves a
+  checkerboard under each surface and counts what comes through.
+* **Focus shows on the selected option.** A group's one Tab stop is its
+  selected option. Under forced colours its selection outline painted focus
+  over; focus now moves that edge outside it. Unforced, the draw drawer's
+  rows, Fill / Fit / Stretch and the GIF background clipped the ring with an
+  `overflow: hidden` the pill no longer needs, so it is gone.
+* **The library filter keeps its height.** The track was 44 with 36px
+  options, 10px over the chips' 34. It is 42 now, with 34px options (the
+  chip's height, SK-AUD-005's floor, and the approved mock's). The tap band
+  is still 44.
+
+Every other pill's height was measured against the tree before the pill,
+and none moved.
+
+### Photo | Music, the last control
+
+The tabs waited for the drawer rebuild (#286), which made them the header of
+the one media card. They take the pill now, on both editors. The strip was a
+glass slab of its own inside the card: a 16px corner, a 4px inset, 650
+labels, and a selected tab that painted its own fill with nothing sliding.
+It is a 12 / 3 / 9 track on the drawers' control ground, and
+`lib/segslider.js` slides the pill between the tabs from `aria-selected`,
+which it reads and never writes; the tablist stays a tablist. The fallback
+tint, the forced-colours edge and the one label weight are the other
+tracks'. The tabs keep their 44px height, so this track is 52, taller than
+the rows under it: it is the card's header. The tab dot moved from 10px to
+6px from its label, so it reads as the label's, and it sits on the label's
+centre line in both editors, both themes, at 1400 and at 390.
+
+`verify_onepill` takes the tabs into its census, fallback, forced-colours
+and focus sections, and asserts they were measured with Photo chosen and
+with Music chosen. The new rows were red on origin/main (no pill, a 16px
+corner, 650, no fallback to take away, no forced edge) and red per
+component on this tree: a 16px track corner failed only the shape rows; no
+fallback rule failed only FALLBACK; a static tint with no slider failed only
+PLACED and the fallback's reach. `verify_parity` read the music tile's tint
+from the selected tab's background, which is clear once a pill is placed;
+it reads the pill's fill now, and was red on origin/main for want of one.
+
 ## v317, cont. -- the Photo and Music drawers: one card, and the file as a row
 
 The owner's look at the media drawers after the dock work (fe814ef, #271,

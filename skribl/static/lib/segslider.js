@@ -1,67 +1,136 @@
-/* Keeps a .seg-slider pill aligned to the selected button in a .seg group.
+/* THE PILL. Every pick-one control in the product slides one soft tint under
+ * its selected option, and this is the one thing that places it (the owner,
+ * choosing between four mocked shapes: "a on the pill").
  *
- * THE BUG THIS EXISTS FOR. .seg-slider is `opacity: 0` until something
- * positions it, and positioning needs the button laid out — `offsetWidth > 0`.
- * Inside a sheet or menu that ships `hidden`, that is never true at init, so a
- * one-shot call bails and the pill stays invisible until an unrelated event
- * happens to re-run it. Symptom: Flip's export sheet opened with no pill on
- * Size or Loops, and Pad's canvas row showed no selection until you tapped
- * one — on a phone, where the sheet is laid out later than on desktop.
+ * WHICH CONTROLS. Two sets, because they differ in what they may say:
  *
- * `attachSegSlider` in app.js already solved this for the DYNAMICALLY built
- * zoom/magnify groups using MutationObserver + ResizeObserver. The groups
- * written directly into templates never got the same treatment. This is that
- * treatment, shared, for both.
+ *   SEGS    .seg, .smooth-seg, .gif-seg, .photo-fit-group -- the editors'
+ *           segmented controls. The selected option is lit by a CLASS (.on or
+ *           .active), and this module writes aria-pressed, the one Tab stop
+ *           and the arrow keys from that class (SELECTED MEANS SELECTED,
+ *           below).
+ *   TRACKS  SEGS plus .seg-track -- the gallery's New / Hot, the library's
+ *           tabs and filter, the page menu's Theme -- and the dock's tool
+ *           group, which lib/toolshelf.js hands over -- and the editors'
+ *           Photo | Music tabs (.media-tabs, lib/mediatabs.js). These keep
+ *           their own semantics (a tablist, aria-pressed buttons their pages
+ *           write), so a .seg-track or the media tabs are read from their aria
+ *           state as well as their class and are never written to.
  *
- * Reposition triggers, all three needed:
- *   ResizeObserver   - fires when the group gains layout, i.e. when the sheet
- *                      that contains it is finally shown. This is the one that
- *                      actually fixes the reported bug.
- *   MutationObserver - the selected button is marked by a class, and the app
- *                      changes it without telling us.
- *   window resize    - orientation change on a phone.
+ * THE BUG THIS EXISTS FOR. A pill is only right once its selected option has
+ * been laid out, and inside a sheet or a drawer that ships `hidden` that is
+ * never true at init: a one-shot call bails and the pill never appears
+ * (Flip's export sheet opened with no pill on Size or Loops; Pad's canvas row
+ * showed no selection until you tapped one). So a track is WATCHED rather than
+ * placed:
+ *   ResizeObserver   - the track or an option gains or changes size (the sheet
+ *                      that holds it is shown; a label's width changes).
+ *   MutationObserver - the selection changes (class, aria-pressed,
+ *                      aria-selected) or an option shows, hides or arrives.
+ *   window resize    - orientation change on a phone. fonts.ready: a face
+ *                      that lands late changes every width.
+ *
+ * WHERE, TO THE SUB-PIXEL. The pill used to be placed from offsetLeft and
+ * offsetWidth, which are INTEGERS, on flex options that are not: at 390px the
+ * Brush row's options are 81.5px wide and the pill overhung Marker by a whole
+ * pixel (three device pixels) and sat asymmetric in the track. It is placed
+ * from the rendered boxes now, measured against the pill's own origin, so it
+ * covers the selected option exactly whatever its width. An ancestor that
+ * SCALES (a sheet's entrance) scales both boxes alike; the ratio of the
+ * track's rendered width to its layout width takes it back out.
+ *
+ * ONE PILL, OWNED HERE. Every template track carries its pill; a track built
+ * by script gets one made the first time it is watched, and never a second --
+ * the Pad's draw drawer once carried two (a made one that moved and the
+ * template's, stuck at opacity 0). Surfaces no longer place pills themselves:
+ * they change the selection, and this follows it.
+ *
+ * WHAT THE PILL DOES NOT DO: paint the selection by itself. Until a pill is
+ * placed (data-pill on the track) the selected option wears the same tint
+ * ITSELF, in CSS -- so a track this script never reaches, on a device where the
+ * measuring never lands, still shows what is chosen (owner, on an iPhone: the
+ * tune drawer's options "never got that treatment"). The first placement is
+ * instant, not a slide from the left edge, so the hand-over from the option's
+ * own tint to the pill cannot be seen.
  */
 (function (global) {
   'use strict';
 
+  var SEGS = '.seg, .smooth-seg, .gif-seg, .photo-fit-group';
+  var TRACKS = SEGS + ', .seg-track, .media-tabs';
+  var PILLS = ':scope > .seg-slider, :scope > .photo-fit-slider, :scope > .tool-slider';
+
   function selected(group) {
-    return group.querySelector('button.on') || group.querySelector('button.active');
+    var b = group.querySelector(':scope > button.on, :scope > button.active');
+    // A seg's aria-pressed is WRITTEN from its class (below), so between a
+    // click and that write it can be one option stale: a seg answers from the
+    // class alone. A page track has no such writer, and its own script may
+    // mark the choice by aria alone (the page menu's Theme does).
+    if (b || group.matches(SEGS)) return b;
+    return group.querySelector(':scope > button[aria-pressed="true"], :scope > button[aria-selected="true"]');
+  }
+
+  function pillOf(group, make) {
+    var p = group.querySelector(PILLS);
+    if (!p && make) {
+      p = document.createElement('span');
+      p.className = 'seg-slider';
+      p.setAttribute('aria-hidden', 'true');
+      group.insertBefore(p, group.firstChild);
+    }
+    return p;
   }
 
   function place(group) {
-    var pill = group.querySelector('.seg-slider');
-    var btn = selected(group);
+    if (!group) return;
+    var pill = pillOf(group, false);
     if (!pill) return;
-    // No layout yet: leave the pill hidden rather than parking it at a wrong
-    // position that would then animate across the control when layout arrives.
-    if (!btn || !btn.offsetWidth) { pill.style.opacity = '0'; group.removeAttribute('data-pill'); return; }
-    pill.style.width = btn.offsetWidth + 'px';
-    pill.style.transform = 'translateX(' + (btn.offsetLeft - 3) + 'px)';
-    pill.style.opacity = '1';
-    // THE SELECTED OPTION PAINTS ITS OWN TINT UNTIL THIS LINE RUNS (styles.css,
-    // `.seg:not([data-pill]) button.on`). The pill is an enhancement that
-    // needs this script to measure a laid-out button; wherever that does not
-    // happen -- a group nobody tracked, a browser where the measuring never
-    // lands -- the selection is still painted, by CSS alone. Owner, on an
-    // iPhone: the tune drawer's options "never got that treatment".
-    group.setAttribute('data-pill', '');
+    var btn = selected(group);
+    var g = group.getBoundingClientRect();
+    var b = btn ? btn.getBoundingClientRect() : null;
+    // No layout yet, or nothing selected (the loop view's free state): the
+    // pill stands down rather than parking at a wrong position it would then
+    // slide across the control from, and the CSS fallback paints any choice.
+    if (!b || !b.width || !g.width) { group.removeAttribute('data-pill'); return; }
+    var s = (group.offsetWidth && Math.abs(g.width - group.offsetWidth) > 1) ? g.width / group.offsetWidth : 1;
+    var x = (b.left - g.left) / s - group.clientLeft - (parseFloat(getComputedStyle(pill).left) || 0);
+    var w = b.width / s;
+    x = Math.round(x * 100) / 100;
+    w = Math.round(w * 100) / 100;
+    var first = !group.hasAttribute('data-pill');
+    if (first) pill.style.transition = 'none';
+    if (pill.__x !== x) { pill.style.transform = 'translateX(' + x + 'px)'; pill.__x = x; }
+    if (pill.__w !== w) { pill.style.width = w + 'px'; pill.__w = w; }
+    if (first) {
+      group.setAttribute('data-pill', '');   // the CSS fallback stands down
+      void pill.offsetWidth;                 // ...at the position just written, not sliding to it
+      pill.style.transition = '';
+    }
   }
 
   function track(group) {
     if (!group || group.__segTracked) return;
     group.__segTracked = true;
+    pillOf(group, true);
 
     var reflow = function () { place(group); };
-
-    if (typeof ResizeObserver !== 'undefined') {
-      new ResizeObserver(reflow).observe(group);
+    var ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(reflow) : null;
+    var watch = function (el) { if (ro && el && el.tagName === 'BUTTON' && el.parentNode === group) ro.observe(el); };
+    if (ro) {
+      ro.observe(group);
+      [].forEach.call(group.children, watch);
     }
     if (typeof MutationObserver !== 'undefined') {
-      new MutationObserver(reflow).observe(group, {
-        subtree: true, attributes: true, attributeFilter: ['class']
+      new MutationObserver(function (muts) {
+        for (var i = 0; i < muts.length; i++) [].forEach.call(muts[i].addedNodes || [], watch);
+        reflow();
+      }).observe(group, {
+        subtree: true, childList: true, attributes: true,
+        attributeFilter: ['class', 'hidden', 'aria-pressed', 'aria-selected']
       });
     }
     global.addEventListener('resize', reflow);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(reflow);
 
     // Two frames, not one: the first lands before the browser has laid out a
     // sheet revealed in the same tick, which is exactly the case that failed.
@@ -72,98 +141,9 @@
     });
   }
 
-  /* THE PHOTO FIT CONTROL (Fill / Fit / Stretch) gets the same treatment. It
-   * is not a .seg -- its pill is .photo-fit-slider, measured from the first
-   * button rather than the 3px padding -- and five call sites in two editors
-   * sized it ONCE: on a pick, a reset, a draft restore. A draft restored with
-   * the drawer shut sized it to a 0-wide pill, and opening the drawer never
-   * corrected it (owner, desktop: "Fit" selected, no highlight). Tracked here
-   * like the segs: re-placed when the group gains layout, when the selected
-   * button changes, and on resize; data-pill tells the CSS fallback that the
-   * pill is in place. The old call sites still run and agree with this. */
-  function placeFit(group) {
-    var pill = group.querySelector('.photo-fit-slider');
-    if (!pill) return;
-    var btns = group.querySelectorAll('button');
-    var a = group.querySelector('button.active') || group.querySelector('button.on');
-    if (!a || !a.offsetWidth || !btns.length) { group.removeAttribute('data-pill'); return; }
-    pill.style.width = a.offsetWidth + 'px';
-    pill.style.transform = 'translateX(' + (a.offsetLeft - btns[0].offsetLeft) + 'px)';
-    group.setAttribute('data-pill', '');
-  }
-  function trackFit(group) {
-    if (!group || group.__fitTracked) return;
-    group.__fitTracked = true;
-    var reflow = function () { placeFit(group); };
-    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(reflow).observe(group);
-    if (typeof MutationObserver !== 'undefined') {
-      // style too: a call site zeroing the pill's width must not win
-      new MutationObserver(reflow).observe(group, { subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
-    }
-    global.addEventListener('resize', reflow);
-    reflow();
-  }
-
   function trackAll(root) {
-    var groups = (root || document).querySelectorAll('.seg');
+    var groups = (root || document).querySelectorAll(TRACKS);
     for (var i = 0; i < groups.length; i++) track(groups[i]);
-  }
-
-  /* The variant for groups built by JavaScript rather than by a template.
-   * They have no markup pill, so one is CREATED, and they are positioned
-   * relative to the first button rather than to a fixed 3px padding — the
-   * zoom magnifier and focus groups are not `.seg` and do not share its
-   * padding. This is not a duplicate of place(): different groups, different
-   * offset origin, and the two must not be collapsed into one.
-   *
-   * app.js and flip.js each carried a byte-for-byte equivalent of this (the
-   * only differences were `Array.prototype.slice` against `[].slice`, a
-   * variable named `activeBtn` against `a`, and a trailing comma). Both now
-   * delegate here.
-   */
-  function placeAttached(group) {
-    if (!group) return;
-    var pill = group.__segPill;
-    if (!pill) return;
-    var btns = [].slice.call(group.querySelectorAll('button'));
-    var idx = -1;
-    for (var i = 0; i < btns.length; i++) {
-      // .on OR .active: the tune-drawer segs mark selection with .on, the
-      // attach()-built ones (loop-detail focus/zoom) used .active. Accept both
-      // so a group can be built either way (v207 moved the loop-detail bars
-      // onto .on to match every other .seg in the app).
-      if (btns[i].classList.contains('on') || btns[i].classList.contains('active')) idx = i;
-    }
-    var a = idx >= 0 ? btns[idx] : null;
-    if (!a || !a.offsetWidth) { pill.style.opacity = '0'; group.removeAttribute('data-pill'); return; }
-    pill.style.width = a.offsetWidth + 'px';
-    pill.style.transform = 'translateX(' + (a.offsetLeft - btns[0].offsetLeft) + 'px)';
-    pill.style.opacity = '1';
-    group.setAttribute('data-pill', '');   // the CSS fallback stands down (see place())
-  }
-
-  function attach(group) {
-    if (!group || group.__segAttached) return;
-    group.__segAttached = true;
-    var pill = document.createElement('div');
-    pill.className = 'seg-slider';
-    group.insertBefore(pill, group.firstChild);
-    group.__segPill = pill;
-    var reflow = function () { placeAttached(group); };
-    // Active-state changes (clicks, programmatic syncing) all flip the
-    // `active` class, so observing it keeps the pill in step without threading
-    // a call through every code path that can change the selection.
-    if (typeof MutationObserver !== 'undefined') {
-      new MutationObserver(reflow).observe(group, {
-        subtree: true, attributes: true, attributeFilter: ['class']
-      });
-    }
-    if (typeof ResizeObserver !== 'undefined') {
-      new ResizeObserver(reflow).observe(group);
-    } else if (global.addEventListener) {
-      global.addEventListener('resize', reflow);
-    }
-    reflow();
   }
 
   /* SELECTED MEANS SELECTED (v292; outside review of v291, SK-AUD-006).
@@ -173,7 +153,8 @@
    * export Size and Loops, the GIF background, the loop-view focus, pause and
    * speed on the Pad, the move scope on Flip — lit a class and said nothing,
    * so a screen reader heard "Playback speed, group. 6. 12. 24." and no word
-   * on which. Eighteen groups, a dozen toggle sites, two editors.
+   * on which. Eighteen groups, a dozen toggle sites, two editors. Fill / Fit /
+   * Stretch joined them with the one pill: Flip never said which was chosen.
    *
    * ONE OWNER, BY THE SAME MECHANISM THE PILL ALREADY USES: the selected
    * option is the one lit by .on or .active, and this module already watches
@@ -189,7 +170,6 @@
    * free state and may have none), the state agrees with the class, and it
    * follows a click.
    */
-  var SEGS = '.seg, .smooth-seg, .gif-seg';
   function lit(b) { return b.classList.contains('on') || b.classList.contains('active'); }
   function syncPressed(group) {
     var btns = group.querySelectorAll('button');
@@ -243,16 +223,13 @@
     if (global.__skriblSegPressed) return;
     global.__skriblSegPressed = true;
     syncAll();
-    // EVERY TEMPLATE SEG GETS ITS PILL, not only the ones a surface remembered
-    // to track. trackAll() was written for this and never called: each editor
-    // tracked its groups one by one, and the ones nobody listed -- Pad's
-    // Mirror, Pauses, Preview speed and grid density, Flip's Mirror and smear
-    // weight -- showed their selection by ink alone, a pale label with no pill
+    // EVERY TRACK GETS ITS PILL, not only the ones a surface remembered to
+    // track: each editor used to track its groups one by one, and the ones
+    // nobody listed -- Pad's Mirror, Pauses, Preview speed and grid density,
+    // Flip's Mirror and smear weight -- showed their selection by ink alone
     // (owner, on the phone: "not bright enough to tell what's selected").
-    // track() is idempotent, so the surfaces' own calls still stand.
+    // Tracks built later by script are picked up as they arrive, below.
     trackAll();
-    var fits = document.querySelectorAll('.photo-fit-group');
-    for (var f = 0; f < fits.length; f++) trackFit(fits[f]);
     if (typeof MutationObserver === 'undefined') return;
     new MutationObserver(function (muts) {
       for (var i = 0; i < muts.length; i++) {
@@ -268,6 +245,8 @@
             if (n.matches && n.matches(SEGS)) syncPressed(n);
             else if (n.closest && n.closest(SEGS)) syncPressed(n.closest(SEGS));
             if (n.querySelectorAll) syncAll(n);
+            if (n.matches && n.matches(TRACKS)) track(n);
+            if (n.querySelectorAll) trackAll(n);
           }
         }
       }
@@ -277,7 +256,8 @@
   else watchDocument();
   document.addEventListener('keydown', onSegKey);
 
-  global.SkriblSegSlider = { track: track, trackAll: trackAll, place: place, trackFit: trackFit,
-                             attach: attach, placeAttached: placeAttached,
+  // attach() is track() under the name the script-built groups were given:
+  // the pill it used to make is made by track() now, once.
+  global.SkriblSegSlider = { track: track, trackAll: trackAll, place: place, attach: track,
                              syncPressed: syncPressed, syncAll: syncAll };
 })(window);

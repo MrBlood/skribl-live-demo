@@ -1692,7 +1692,12 @@ with sync_playwright() as p:
     for _route, _specs in (("/", [[".pending-btn"], [".autosave-readd"], ["button.name-done"],
                                   ["#postBtn"], ["#postSubmitBtn"]]),
                            ("/flip", [[".flip-share-open"]]),
-                           ("/library", [["button.chip.active"], [".card", ".playing", "span"]]),
+                           # The library's selected filter chip is not here any
+                           # more: a selected option is a tint now (the one
+                           # pill), not white words on a solid fill, and
+                           # verify_onepill.py measures its label on what is
+                           # painted behind it.
+                           ("/library", [[".card", ".playing", "span"]]),
                            ("/gallery", [])):
         for _theme in ("dark", "light"):
             _cpg = browser.new_page(viewport={"width": 1280, "height": 900})

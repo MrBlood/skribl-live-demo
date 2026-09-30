@@ -229,7 +229,11 @@ print("\nSURFACES — every module a page loads is a module that page can reach"
 # SELF-INSTALLERS NEED NO READER, and listing them is the honest way to say so:
 # lib/pillfit.js wires itself on DOMContentLoaded and exposes its API only for
 # tests. An entry here is a claim that the module runs itself.
-_SELF_INSTALLING = {"pillfit.js"}
+# lib/segslider.js too, since the one pill: it finds every track on the page
+# itself and places its pill, so the library (and the gallery, which this
+# census does not list) load it with nothing reading SkriblSegSlider -- the
+# editors do read it, which is why the entry below stays needed.
+_SELF_INSTALLING = {"pillfit.js", "segslider.js"}
 
 _TPL = ROOT / "skribl" / "templates" / "skribl"
 _ST = ROOT / "skribl" / "static"

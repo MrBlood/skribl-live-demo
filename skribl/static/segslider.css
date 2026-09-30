@@ -1,0 +1,115 @@
+/* THE ONE PILL, on the two pages that do not load styles.css: the gallery's
+   New / Hot, the library's Skribls / Drafts and its filter, and the page
+   menu's Theme on both. Travels with lib/segslider.js, which places the pill
+   in these tracks exactly as it does in the editors'.
+
+   THE SAME CONTROL, NOT A LOOKALIKE (owner: "a on the pill" -- one pill,
+   identical everywhere). These are styles.css's rules for the editors'
+   tracks (A SELECTED OPTION IS A TINT) restated for pages with sheets of their
+   own, and the tokens below carry the editors' values in both ramps. Each
+   page's own palette is left alone: the track does not borrow the page's
+   --control or --hairline, which are close to the editors' and not equal.
+
+   What a page keeps is layout -- where the track sits and how wide it is --
+   and its markup's meaning: a tablist stays a tablist, aria-pressed buttons
+   stay buttons, and nothing here or in lib/segslider.js writes either. */
+:root {
+  --r-seg: 12px;
+  --seg-inset: 3px;
+  --seg-pill-r: calc(var(--r-seg) - var(--seg-inset));
+  --seg-track: #171b23;                  /* styles.css --surface-control */
+  --seg-line: rgba(255, 255, 255, 0.055); /* --hairline */
+  --seg-off-ink: #8a93a6;                /* --text-soft */
+  --seg-on-fill: rgba(124, 92, 255, 0.22);
+  --seg-on-ink: #b9a8ff;
+}
+:root[data-theme="light"] {
+  --seg-track: #edf0f4;
+  --seg-line: rgba(0, 0, 0, 0.09);
+  --seg-off-ink: #5f6775;
+  --seg-on-ink: #5434dc;
+}
+
+/* 44 TALL, and every option 36 you can SEE: the page's other controls are
+   44 (the search fields beside two of these), and verify_layout's visible
+   floor is 34. */
+.seg-track {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  box-sizing: border-box;
+  height: 44px;
+  background: var(--seg-track);
+  border: 1px solid var(--seg-line);
+  border-radius: var(--r-seg);
+  padding: var(--seg-inset);
+}
+.seg-track > button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  margin: 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--seg-pill-r);
+  background: transparent;
+  color: var(--seg-off-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;   /* ONE LABEL WEIGHT, selected or not */
+  letter-spacing: 0;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* ...and 44 to a finger: the band the editors' pills and these pages' chips
+   already used, reaching the track's edge on the two open ends so a tap on
+   the track's own rim still lands on an option. */
+.seg-track > button::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%; height: 44px;
+  transform: translateY(-50%);
+}
+.seg-track > button:first-of-type::before { left: calc(-1px - var(--seg-inset)); }
+.seg-track > button:last-of-type::before { right: calc(-1px - var(--seg-inset)); }
+.seg-track > button:focus-visible { outline: 2px solid var(--accent, #7c5cff); outline-offset: 2px; }
+
+.seg-track > .seg-slider {
+  position: absolute;
+  top: var(--seg-inset); left: var(--seg-inset); bottom: var(--seg-inset);
+  border-radius: var(--seg-pill-r);
+  background: var(--seg-on-fill);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.42s cubic-bezier(0.4, 0.0, 0.2, 1.1),
+              width 0.42s cubic-bezier(0.4, 0.0, 0.2, 1.1), opacity 0.18s ease;
+}
+.seg-track[data-pill] > .seg-slider { opacity: 1; }
+/* The selected option paints its own tint until the pill is placed, so the
+   choice is shown with no script at all. */
+.seg-track:not([data-pill]) > button:is(.active, [aria-pressed="true"], [aria-selected="true"]) {
+  background: var(--seg-on-fill);
+}
+.seg-track > button:is(.active, [aria-pressed="true"], [aria-selected="true"]) { color: var(--seg-on-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .seg-track > .seg-slider { transition: none; }
+}
+/* Forced colours paint every background as the system's, so the tint says
+   nothing there: the edge does, as it does in the editors. */
+@media (forced-colors: active) {
+  .seg-track > button { outline: 1px solid ButtonText; outline-offset: -1px; }
+  .seg-track > button:is(.active, [aria-pressed="true"], [aria-selected="true"]) {
+    outline: 3px solid Highlight; outline-offset: -3px;
+  }
+  /* Focus moves the edge outside: the one Tab stop is the selected option. */
+  .seg-track > button:focus-visible { outline-width: 2px; outline-offset: 1px; }
+  .seg-track > .seg-slider { display: none; }
+}
