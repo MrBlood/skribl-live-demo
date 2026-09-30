@@ -295,10 +295,14 @@
     .draft-del.armed { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: color-mix(in srgb, var(--danger) 10%, transparent); }
     .libhead .cnt { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
     /* The filter is a track of the one pill too (segslider.css), in the
-       page's type rather than monospace. Its options are 36 you can SEE
-       (SK-AUD-005's floor is 34: these once measured 28 behind a 44px band,
-       and a band is no help to the eye) and 44 to a finger. */
+       page's type rather than monospace. Its options are 34 you can SEE --
+       the chip's own height, and SK-AUD-005's floor (these once measured 28
+       behind a 44px band, and a band is no help to the eye) -- so the track
+       is 42, not segslider's 44: heights stay per context, and the approved
+       mock drew the filter shorter than the tabs. 44 to a finger is the
+       ::before band every option carries. */
     .chips { margin-left: auto; }
+    .chips.seg-track { height: 42px; }
     .search { position: relative; }
     /* min-height 44: an input has no ::before to grow a tap band with, so the box is the box. */
     /* 16px, NOT 12.5. Below 16 iOS Safari magnifies the whole page when the

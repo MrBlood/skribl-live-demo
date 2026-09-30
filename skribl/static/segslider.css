@@ -109,5 +109,7 @@
   .seg-track > button:is(.active, [aria-pressed="true"], [aria-selected="true"]) {
     outline: 3px solid Highlight; outline-offset: -3px;
   }
+  /* Focus moves the edge outside: the one Tab stop is the selected option. */
+  .seg-track > button:focus-visible { outline-width: 2px; outline-offset: 1px; }
   .seg-track > .seg-slider { display: none; }
 }

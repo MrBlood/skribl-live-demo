@@ -1969,5 +1969,10 @@ a.player-btn { text-decoration: none; }
   .onion-tint.active, [role="switch"][aria-checked="true"] {
     outline: 3px solid Highlight; outline-offset: -3px;
   }
+  /* Focus moves the edge OUTSIDE, keeping its colour: a group's one Tab stop
+     is its selected option, and the rule above painted focus over as nothing. */
+  :is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn, .tool-btn, .tool-tray-btn):focus-visible {
+    outline-width: 2px; outline-offset: 1px;
+  }
   .seg-slider, .photo-fit-slider, .tool-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }

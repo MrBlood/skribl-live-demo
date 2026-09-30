@@ -1780,9 +1780,10 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 /* The draw drawer's rows (and the shape picker's). Their track, options, pill
    and label colours are the one pill's -- A SELECTED OPTION IS A TINT, below;
-   what is here is each row's own layout and type. */
+   what is here is each row's own layout and type. No overflow: hidden here,
+   on .photo-fit-group or on .gif-seg: the pill sits inside the padding and
+   needs no clip, and the clip cut the focus ring off three sides. */
 .smooth-seg {
-  overflow: hidden;
   display: flex; margin-left: auto;
 }
 .smooth-btn {
@@ -2591,7 +2592,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    TINT, below); its pill is .seg-slider's rule. Layout and type are here. */
 .photo-fit-group {
   display: inline-flex;
-  overflow: hidden;
   width: 100%;
 }
 
@@ -3539,7 +3539,6 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 .export-gif-toggle[hidden] { display: none; }
 .gif-seg {
-  overflow: hidden;
   display: flex;
   /* auto, not 100%: the buttons size to their labels and the row's margin-left
      pushes the control to the trailing edge. */
@@ -6593,7 +6592,17 @@ body.stroking .toolbar, body.stroking .flip-tools {
 }
 .tune-shell { background: var(--glass-fill); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .tune-shell.open { border: 0; box-shadow: var(--glass); }
-/* The picker's arrow is a solid triangle; the glass's colour over the page. */
+/* EXCEPT THE SHAPE PICKER, WHICH IS SOLID. It hangs inside the dock, and the
+   dock's own backdrop-filter makes it the picker's backdrop root: the
+   picker's blur sees only the dock, never the page, so its 0.78 glass showed
+   Flip's page strip straight through the Corners and Sides rows (owner, phone).
+   The tray, the other pop in the dock, was already solid. Same colour as the
+   glass, at full strength -- and the arrow's. */
+.shape-pop {
+  background: rgb(var(--surface-well-2-rgb));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .shape-pop::after { border-top-color: rgb(var(--surface-well-2-rgb)); }
 
 /* A SELECTED OPTION IS A TINT (see --seg-on-fill in :root) -- AND ONE PILL
@@ -7125,6 +7134,11 @@ body.stroking .toolbar, body.stroking .flip-tools {
   :is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn, .tool-btn, .tool-tray-btn):is(.on, .active),
   .onion-tint.active, [role="switch"][aria-checked="true"] {
     outline: 3px solid Highlight; outline-offset: -3px;
+  }
+  /* Focus moves the edge OUTSIDE, keeping its colour: a group's one Tab stop
+     is its selected option, and the rule above painted focus over as nothing. */
+  :is(.seg button, .smooth-btn, .gif-seg-btn, .photo-fit-btn, .tool-btn, .tool-tray-btn):focus-visible {
+    outline-width: 2px; outline-offset: 1px;
   }
   .seg-slider, .photo-fit-slider, .tool-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }

@@ -33,6 +33,16 @@ controls, and each is measured where it lives:
   6. The shape picker's track hugs its options when a knob widens the pop.
   7. The selection defects the pick-one census found, each driven through
      the path a person takes (or the restore a draft takes).
+  8. POPS. A surface floating over the page hides it: the page is swapped
+     for a checkerboard and then the board shifted a square, and nothing may
+     come through. The shape picker hangs inside the dock, whose own
+     backdrop-filter blinded the picker's blur, and let Flip's page strip
+     read straight through its 0.78 glass.
+  9. FOCUS. A group's one Tab stop is its selected option, so its ring must
+     show there: under forced colours (where selection's outline had painted
+     over focus) and unforced on the tracks whose overflow: hidden clipped the
+     ring to a sliver -- counted in pixels on each side of the option.
+ 10. HEIGHTS. The library's filter keeps the chip's 34 to the eye.
 
 Checked red on the tree before the one pill, and per component by mutation;
 DECISIONS.md records which mutation each section was shown red on.
@@ -574,6 +584,156 @@ with sync_playwright() as p:
                 settle(q, 500)
                 fit = q.evaluate("() => [...document.querySelectorAll('.photo-fit-btn.active')].map(b => b.dataset.fit)")
                 check("(i) /skribl-pad: a restored fit spelled 'fill' lights Stretch", fit == ["stretch"], str(fit))
+            c.close()
+
+    # ---------------------------------------------------------------- 8
+    if want("pops"):
+        print("\nPOPS — a surface floating over the page hides what is under it")
+        # The page behind each surface is swapped for a checkerboard, then for
+        # the same board shifted one square: whatever differs between the two
+        # shots came THROUGH the surface. A working blur averages the board to
+        # one grey and passes; a translucent fill whose blur never applies (a
+        # backdrop-filter inside another is blind to the page) shows it.
+        HIDE = r"""(sel) => { const el = document.querySelector(sel); if (!el) return false;
+          const st = document.createElement('style'); st.id = '__pops';
+          st.textContent = 'html{background:repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/16px 16px !important}'
+            + 'html.__pb{background-position:8px 0 !important}';
+          document.head.appendChild(st);
+          let n = el;
+          while (n.parentElement) { const par = n.parentElement;
+            for (const s of par.children) if (s !== n && s.tagName !== 'STYLE') s.style.setProperty('visibility', 'hidden', 'important');
+            par.style.setProperty('background', 'transparent', 'important'); n = par; }
+          return true; }"""
+
+        def see_through(q, sel):
+            if not q.evaluate(HIDE, sel):
+                return None
+            settle(q, 300)
+            r = q.evaluate("(s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }", sel)
+            box = {"x": r[0] + 16, "y": r[1] + 16, "width": min(r[2] - 32, 360), "height": min(r[3] - 32, 200)}
+            a = Image.open(io.BytesIO(q.screenshot(clip=box))).convert("L").tobytes()
+            q.evaluate("() => document.documentElement.classList.add('__pb')"); settle(q, 150)
+            b = Image.open(io.BytesIO(q.screenshot(clip=box))).convert("L").tobytes()
+            return round(sum(abs(a[i] - b[i]) for i in range(len(a))) / max(1, len(a)), 1)
+
+        for theme in THEMES:
+            for route, ed in (("/skribl-pad", "pad"), ("/flip", "flip")):
+                surfaces = [("the shape picker", "#shapePop"), ("the draw drawer", "#drawPanel"), ("Tune", "#tuneShell")]
+                if ed == "flip":
+                    surfaces.append(("the tool tray", "#toolTray"))
+                for name, sel in surfaces:
+                    c = ctx_for(theme, "phone"); q = c.new_page()
+                    browsing.goto(q, BASE, route); settle(q)
+                    if sel == "#shapePop":
+                        if ed == "pad":
+                            q.click("#shapeToolBtn")
+                        else:
+                            q.evaluate("() => shelfSetTool('shape')")
+                        q.wait_for_selector("#shapePop:not([hidden])", timeout=3000)
+                        q.click("#shapeSeg [data-shape='rect']"); settle(q, 300)
+                        q.evaluate("() => { document.getElementById('shapePop').hidden = false; }")
+                    elif sel == "#drawPanel":
+                        browsing.pad_drawer(q, "draw")
+                    elif sel == "#tuneShell":
+                        q.click("#tuneBtn"); q.wait_for_selector("#tuneShell.open", timeout=3000)
+                    else:
+                        q.click("#toolMoreBtn"); q.wait_for_selector("#toolTray:not([hidden])", timeout=3000)
+                    settle(q, 500)
+                    t = see_through(q, sel)
+                    check(f"POPS: {route} {name} [{theme} phone] lets no page through (mean shift <= 6 of 255 when the page moves)",
+                          t is not None and t <= 6, f"{t}")
+                    c.close()
+
+    # ---------------------------------------------------------------- 9
+    if want("focus"):
+        print("\nFOCUS — the one Tab stop is the selected option, and its ring shows")
+        FOCUS = r"""(sel) => { const b = document.querySelector(sel); if (!b) return null;
+          b.focus(); return b.matches(':focus-visible'); }"""
+
+        def ring(q, sel, pad=7):
+            """Pixels that change around an option when it takes keyboard focus,
+            per side of its box: {top, bottom, left, right, inside}."""
+            q.evaluate("() => document.activeElement && document.activeElement.blur()")
+            q.evaluate("(s) => document.querySelector(s).scrollIntoView({block: 'center'})", sel)
+            settle(q, 350)
+            r = q.evaluate("(s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }", sel)
+            box = {"x": r[0] - pad, "y": r[1] - pad, "width": r[2] + 2 * pad, "height": r[3] + 2 * pad}
+            a = Image.open(io.BytesIO(q.screenshot(clip=box))).convert("RGB")
+            # Keyboard modality first: after a click, Chromium does not make a
+            # script focus visible, whatever focus() is asked.
+            q.keyboard.press("Shift")
+            fv = q.evaluate(FOCUS, sel); settle(q, 350)
+            b = Image.open(io.BytesIO(q.screenshot(clip=box))).convert("RGB")
+            q.evaluate("() => document.activeElement && document.activeElement.blur()")
+            W, H = a.size; out = {"top": 0, "bottom": 0, "left": 0, "right": 0, "inside": 0, "fv": fv}
+            pa, pb = a.load(), b.load()
+            for y in range(H):
+                for x in range(W):
+                    if max(abs(pa[x, y][i] - pb[x, y][i]) for i in range(3)) <= 24:
+                        continue
+                    if y < pad: out["top"] += 1
+                    elif y >= H - pad: out["bottom"] += 1
+                    elif x < pad: out["left"] += 1
+                    elif x >= W - pad: out["right"] += 1
+                    else: out["inside"] += 1
+            return out
+
+        # Under forced colours: focus on the SELECTED option must change the screen.
+        for route in ("/skribl-pad", "/flip", "/gallery", "/library"):
+            c = ctx_for("dark", "desk", forced=True); q = c.new_page()
+            if route in ("/skribl-pad", "/flip"):
+                browsing.goto(q, BASE, route); settle(q)
+                targets = [("the dock's tool", "#toolGroup .tool-btn.active")]
+                browsing.pad_drawer(q, "draw"); settle(q, 400)
+                targets.append(("Brush", "#brushSeg > button.on, #brushSeg > button.active"))
+                probe = [(n, s) for n, s in targets]
+            else:
+                q.goto(BASE + route, wait_until="load"); settle(q)
+                probe = ([("New / Hot", ".tabs > button.active, .tabs > [aria-selected='true']")] if route == "/gallery" else
+                         [("the filter", ".chips > button[aria-pressed='true']"),
+                          ("Skribls / Drafts", ".libtabs-list > [aria-selected='true']")])
+            for name, sel in probe:
+                sel = q.evaluate("(s) => { const e = document.querySelector(s); if (!e) return null; e.setAttribute('data-fprobe', ''); return '[data-fprobe]'; }", sel)
+                if not sel:
+                    check(f"FOCUS: {route} {name} — a selected option was found to focus", False, "none"); continue
+                d = ring(q, sel)
+                total = d["top"] + d["bottom"] + d["left"] + d["right"] + d["inside"]
+                check(f"FOCUS: {route} {name} [forced colours] — keyboard focus on the selected option changes the screen",
+                      d["fv"] and total >= 40, str(d))
+                q.evaluate("() => document.querySelector('[data-fprobe]').removeAttribute('data-fprobe')")
+            c.close()
+
+        # Unforced: the ring reaches all four sides of a focused option in the
+        # tracks that clipped it (a middle option, so both ends are neighbours).
+        for route in ("/skribl-pad", "/flip"):
+            c = ctx_for("dark", "desk"); q = c.new_page()
+            browsing.goto(q, BASE, route); settle(q)
+            browsing.pad_drawer(q, "draw"); settle(q, 400)
+            rows = [("Brush", "#brushSeg > button:nth-of-type(2)")]
+            d = ring(q, rows[0][1])
+            results_rows = [(rows[0][0], d)]
+            browsing.pad_drawer(q, "photo")
+            q.set_input_files("#photoInput" if route == "/skribl-pad" else "#imageInput",
+                              {"name": "p.png", "mimeType": "image/png",
+                               "buffer": __import__("base64").b64decode(PNG.split(",", 1)[1])})
+            q.wait_for_function("() => document.getElementById('photoUploadBtn').classList.contains('loaded')", timeout=20000)
+            settle(q, 500)
+            results_rows.append(("Fill / Fit / Stretch", ring(q, ".photo-fit-group .photo-fit-btn:nth-of-type(2)")))
+            for name, d in results_rows:
+                check(f"FOCUS: {route} {name} — the focus ring shows on all four sides (no track clips it)",
+                      d["fv"] and min(d["top"], d["bottom"]) >= 20 and min(d["left"], d["right"]) >= 8, str(d))
+            c.close()
+
+    # ---------------------------------------------------------------- 10
+    if want("heights"):
+        print("\nHEIGHTS — the library's filter keeps the chip's height")
+        for form in FORMS:
+            c = ctx_for("dark", form); q = c.new_page()
+            q.goto(BASE + "/library", wait_until="load"); settle(q)
+            h = q.evaluate("""() => { const t = document.querySelector('.chips'); const b = t.querySelector(':scope > button');
+              return { track: t.getBoundingClientRect().height, option: b.getBoundingClientRect().height }; }""")
+            check(f"HEIGHTS: /library filter [{form}] — options 34 to the eye (the chip's height, SK-AUD-005's floor), track 42",
+                  abs(h["option"] - 34) <= 0.5 and abs(h["track"] - 42) <= 0.5, str(h))
             c.close()
 
     browser.close()
