@@ -602,7 +602,8 @@ with sync_playwright() as p:
           let n = el;
           while (n.parentElement) { const par = n.parentElement;
             for (const s of par.children) if (s !== n && s.tagName !== 'STYLE') s.style.setProperty('visibility', 'hidden', 'important');
-            par.style.setProperty('background', 'transparent', 'important'); n = par; }
+            if (par !== document.documentElement) par.style.setProperty('background', 'transparent', 'important');
+            n = par; }
           return true; }"""
 
         def see_through(q, sel):
@@ -648,12 +649,17 @@ with sync_playwright() as p:
     if want("focus"):
         print("\nFOCUS — the one Tab stop is the selected option, and its ring shows")
         FOCUS = r"""(sel) => { const b = document.querySelector(sel); if (!b) return null;
-          b.focus(); return b.matches(':focus-visible'); }"""
+          b.focus({ preventScroll: true }); return b.matches(':focus-visible'); }"""
 
         def ring(q, sel, pad=7):
             """Pixels that change around an option when it takes keyboard focus,
             per side of its box: {top, bottom, left, right, inside}."""
             q.evaluate("() => document.activeElement && document.activeElement.blur()")
+            # A focused option with a data-tip shows its tooltip, and those
+            # pixels changing would pass the count with no ring at all.
+            q.evaluate("""() => { if (document.getElementById('__notips')) return;
+              const st = document.createElement('style'); st.id = '__notips';
+              st.textContent = '.skribl-tip { display: none !important; }'; document.head.appendChild(st); }""")
             q.evaluate("(s) => document.querySelector(s).scrollIntoView({block: 'center'})", sel)
             settle(q, 350)
             r = q.evaluate("(s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; }", sel)
@@ -665,7 +671,8 @@ with sync_playwright() as p:
             fv = q.evaluate(FOCUS, sel); settle(q, 350)
             b = Image.open(io.BytesIO(q.screenshot(clip=box))).convert("RGB")
             q.evaluate("() => document.activeElement && document.activeElement.blur()")
-            W, H = a.size; out = {"top": 0, "bottom": 0, "left": 0, "right": 0, "inside": 0, "fv": fv}
+            W, H = a.size; out = {"top": 0, "bottom": 0, "left": 0, "right": 0, "inside": 0, "fv": fv,
+                                  "w": round(r[2]), "h": round(r[3])}
             pa, pb = a.load(), b.load()
             for y in range(H):
                 for x in range(W):
@@ -683,16 +690,18 @@ with sync_playwright() as p:
             c = ctx_for("dark", "desk", forced=True); q = c.new_page()
             if route in ("/skribl-pad", "/flip"):
                 browsing.goto(q, BASE, route); settle(q)
-                targets = [("the dock's tool", "#toolGroup .tool-btn.active")]
-                browsing.pad_drawer(q, "draw"); settle(q, 400)
-                targets.append(("Brush", "#brushSeg > button.on, #brushSeg > button.active"))
-                probe = [(n, s) for n, s in targets]
+                # The dock first, drawer shut: with the pen's drawer open,
+                # focusing the pen repaints the dock whatever its outline does.
+                probe = [("the dock's tool", "#toolGroup .tool-btn.active"),
+                         ("Brush", "#brushSeg > button.on, #brushSeg > button.active")]
             else:
                 q.goto(BASE + route, wait_until="load"); settle(q)
                 probe = ([("New / Hot", ".tabs > button.active, .tabs > [aria-selected='true']")] if route == "/gallery" else
                          [("the filter", ".chips > button[aria-pressed='true']"),
                           ("Skribls / Drafts", ".libtabs-list > [aria-selected='true']")])
             for name, sel in probe:
+                if name == "Brush":
+                    browsing.pad_drawer(q, "draw"); settle(q, 400)
                 sel = q.evaluate("(s) => { const e = document.querySelector(s); if (!e) return null; e.setAttribute('data-fprobe', ''); return '[data-fprobe]'; }", sel)
                 if not sel:
                     check(f"FOCUS: {route} {name} — a selected option was found to focus", False, "none"); continue
@@ -721,7 +730,7 @@ with sync_playwright() as p:
             results_rows.append(("Fill / Fit / Stretch", ring(q, ".photo-fit-group .photo-fit-btn:nth-of-type(2)")))
             for name, d in results_rows:
                 check(f"FOCUS: {route} {name} — the focus ring shows on all four sides (no track clips it)",
-                      d["fv"] and min(d["top"], d["bottom"]) >= 20 and min(d["left"], d["right"]) >= 8, str(d))
+                      d["fv"] and min(d["top"], d["bottom"]) >= d["w"] and min(d["left"], d["right"]) >= d["h"], str(d))
             c.close()
 
     # ---------------------------------------------------------------- 10
