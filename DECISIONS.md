@@ -12505,6 +12505,42 @@ attached), and hands it to the open drawer's own input -- which is also how
 the re-add card takes a dropped file and gets its settings back. A row that
 holds a file ignores drops, as it ignores taps.
 
+### After review: the bin does not move, Space works, and a draft's switches
+
+Four findings from a review of the built drawer, each now pinned in
+`verify_parity` and each shown red on the tree before its fix:
+
+- The armed bin used to widen into a "Remove?" pill. It grew left over the
+  switch, so after one stray tap on the bin, a tap aimed at the switch
+  removed the file -- the confirmation caused the accident it was there to
+  stop. Armed, the bin now keeps its 36px box (the icon goes red on a red
+  tint) and the subtitle line asks "Tap the bin again to remove". The check
+  compares the switch's box before and after arming and asks what is painted
+  at its old centre.
+- Space did nothing on the new add button or on either switch: the Pad's
+  grab-pan and Flip's play/stop both took Space at the window. A control
+  reached by keyboard (`:focus-visible`) now keeps Space
+  (`SkriblCanvasZoom.ownsSpace`). A button that kept focus after a mouse
+  click does not, so clicking a tool and then holding Space still pans on the
+  Pad and still plays on Flip.
+- On the Pad, a switch left off survived opening a draft, so the row said
+  "Hidden · Fill" over a photo that was painted and would be posted. A Pad
+  draft stores no switch, so opening one turns both switches back on
+  (`resetMediaForLoad`). This bug is older than the redesign; the new row
+  text is what made it say something false.
+- A file dropped on a row that already holds one is still not taken, but the
+  page now says why ("Remove the photo first to add another"): it had
+  already shown the copy cursor.
+
+The owner's notes: Flip's drawer footers went. The music footer repeated the
+hint ("Loops while you Flip -- one track for the whole animation"), so
+Flip's music hint now says "it loops under every page", which is the only
+thing the footer added. The photo footer said where the picture sits, and
+the loaded row already says that. An empty drawer says its title and its hint
+and nothing else. The hint uses `text-wrap: balance`, so where it wraps (the
+Pad's music hint wraps at 360 and 375 in this box's font) it no longer
+leaves "drawing" alone on the second line.
+
 ### Words
 
 "Add an image" is "Add a photo" everywhere, including How it works (the

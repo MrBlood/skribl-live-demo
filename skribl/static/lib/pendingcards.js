@@ -139,8 +139,11 @@
   /* THE BIN ASKS FIRST, as the saved-drafts bin does (lib/savedrafts.js): one
    * tap on an icon that removes a file -- and on the Pad deletes its stored
    * bytes -- is a warning nobody read (DECISIONS v310). The first tap arms it:
-   * it reads "Remove?" in the danger colour, its name becomes "Tap again to
-   * remove <file>", and #confirmStatus says so aloud. The second tap is the
+   * the icon turns the danger colour in its own 36px box, the row's subtitle
+   * asks "Tap the bin again to remove" (.dz-ask, drawn by CSS off .armed), its
+   * name becomes "Tap again to remove <file>", and #confirmStatus says so
+   * aloud. Nothing moves: a bin that widened into a "Remove?" pill grew over
+   * the switch, and the next tap aimed at the switch removed the file. The second tap is the
    * editor's own Remove, untouched. It disarms when focus or a tap goes
    * anywhere else, when the row empties, and on a long safety net -- never a
    * race against a short timer (SK-AUD-018).
