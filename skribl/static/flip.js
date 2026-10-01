@@ -1984,6 +1984,7 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   _brushLastPt = null;
   const dsize = _brushWidth(sizeFor(e, _eraserSize(size, erasing)), p, erasing); const pcol = erasing ? color : penColorFor(color);
   _brushLastPt = {x:p.x, y:p.y};
+  _liveHead = null;         // no stroke is live while the cache paints the finished ink
   liveBegin(strokeFrame);   // before the first point: the cache is the ink BEFORE this stroke
   _liveHead = { x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true };
   strokeFrame.strokes.push(_liveHead);
@@ -2118,7 +2119,7 @@ function endStroke(){
   // without smoothing nothing below renders again, and the pad kept the cached
   // picture (verify_flipspeed found it: rounding left on the page).
   const _hadLive = !!_liveCache;
-  drawing=false; smoothPt=null; lastRaw=null; _liveCache=null;
+  drawing=false; smoothPt=null; lastRaw=null; _liveCache=null; _liveHead=null;
   if(_hadLive) render();
   document.body.classList.remove('stroking');   // pen up: the chrome returns
   const _tgt = (strokeFrame || frame());
@@ -2335,7 +2336,7 @@ function abortStrokeForPinch(){
   if(!drawing) return;
   const s=(strokeFrame || frame()).strokes;
   if(curCount>0 && s.length>=curCount) s.splice(s.length-curCount, curCount);
-  drawing=false; curCount=0; smoothPt=null; lastRaw=null; strokeFrame=null; strokePointerId=null; render();
+  drawing=false; curCount=0; smoothPt=null; lastRaw=null; strokeFrame=null; strokePointerId=null; _liveHead=null; render();
   document.body.classList.remove('stroking');   // aborted stroke: the chrome returns too
 }
 // The pinch (begin, move, end, the two-finger touchstart on the pad) lives in
