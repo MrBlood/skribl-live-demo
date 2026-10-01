@@ -12914,9 +12914,39 @@ red with the signal removed. The first cut of the fix compared the box before
 and after `sizeStage()` and never fired, because the header's growth had
 already moved the canvas. The check caught that too.
 
-**Still open, at the end of this run (#281–#291, all unsealed since v317):**
+**Second follow-up: the red #291 left.** main's CI stayed red after #291 on
+one check, the mirror case in `verify_flipspeed`: mid-stroke, the cached pad
+read 3/255 from a full repaint, against a limit of 2. The cache had not
+changed. #289 moved the suite's 1100×860 window from a 944×531 canvas to
+816×612, and the tree from before #289, run on a second server, reads the same
+3 at 816×612 (a 1100×1000 window gets that canvas). The limit had been one
+reading on one canvas size. The flattened pen path rounds in a different space
+from the full repaint, and the error grows with the draws that land on one
+pixel, so no single reading is a bound. Across eight windows (six canvas
+sizes in device pixels, pixel ratios 1 to 3) the unchanged cache reads at most
+3 (the mirror), 2 (the onion skin, a pen) and 1 (a see-through pen). One mutation per part of the cache sets the other end:
+the onion missing reads 19 (this fixture's onion lies under the page's own
+ink, so only its edges show), a flipped layer budget 45, and the finished ink
+or the live stroke's reflections missing 242. The limit is now 8/255, and the
+suite writes both ends beside it. Each mutation is red at 8.
 
-* **The seal.** Nine merges since v317 carry no sealed record. Sealing is the
+**Still open, at the end of this run (#281 on, all unsealed since v317):**
+
+* **With the mirror on, Flip paints reflections of FINISHED strokes.** Found
+  while fixing the red above, and not fixed. `drawLine` reflects every segment
+  while the mirror is on. That is right for the stroke being drawn, whose
+  reflected points do not exist until pen-up, and wrong for every finished
+  stroke. Measured: on a page drawn with the mirror on, a repaint makes four
+  times the `drawLine` calls on both axes (1,152 against 288), and the pad
+  differs from the same page with the mirror off by up to 115/255;
+  see-through ink compounds, four layers at 0.5 where the post has one. On a
+  page drawn with the mirror OFF, a GIF or video frame rendered while the
+  mirror is on (`drawFrameTo`) carries whole reflected strokes that are not in
+  the drawing (242/255). The player never reflects, so the post is right and
+  the editor and its exports are not. It is also why the mirror case rounds
+  worst in `verify_flipspeed`. The Pad's `drawLine` has the same live
+  reflection and was not measured.
+* **The seal.** Ten merges since v317 carry no sealed record. Sealing is the
   owner's call, and it is where the full battery belongs.
 * **The owner is checking the build** on Windows and an iPhone. What they
   report is the next work.
