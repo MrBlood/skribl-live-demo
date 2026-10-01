@@ -1233,10 +1233,22 @@ function drawDot(c, x, y, col, s, erase){
   c.beginPath(); c.arc(x,y,s/2,0,Math.PI*2); c.fillStyle = erase ? '#000' : col; c.fill();
   c.globalCompositeOperation = 'source-over';
 }
+/* THE MIRROR IS LIVE FOR ONE STROKE: the one under the pen. Its reflected
+   points do not exist until endStroke pushes them, so drawLine paints its
+   reflections. Every FINISHED stroke already carries its reflected copies as
+   strokes of its own, and reflecting those again painted each segment four
+   times on both axes: see-through ink compounded to near-opaque, and a page
+   drawn with the mirror off grew strokes it does not contain in the editor and
+   in every GIF and video frame rendered while the mirror was on. The player
+   never reflects, so the post was right and the editor was not. paintStatic
+   raises this for the live stroke only; the shape preview raises it for the
+   outline it draws. */
+let _mirrorLiveSeg = false, _liveHead = null;
+function _mirrorLive(){ return _mirrorLiveSeg && !!(window.SkriblMirror && SkriblMirror.active()); }
 function drawLine(c, x1,y1,x2,y2, col, s, erase){
   // Live mirror feedback — see the note in endStroke about why the POINTS are
   // generated there and not here.
-  if(window.SkriblMirror && SkriblMirror.active() && !_mirrorPainting){
+  if(_mirrorLive() && !_mirrorPainting){
     _mirrorPainting = true;
     try {
       const _a = SkriblMirror.reflect({x:x1,y:y1}, CW, CH);
@@ -1341,7 +1353,7 @@ function paintSeg(c, seg, solid){
      colour it hands down is opaque; and skipped while the mirror is live,
      because drawLine paints the reflections and a path that goes around it
      would drop them. */
-  if(!solid && !(window.SkriblMirror && SkriblMirror.active())){
+  if(!solid && !_mirrorLive()){
     const _fn = (typeof window !== 'undefined' && window.SkriblStrokeLayers
                  && window.SkriblStrokeLayers.uniformRun)
       ? window.SkriblStrokeLayers.uniformRun : _uniformRun;
@@ -1416,6 +1428,7 @@ function paintStatic(c, strokeArr, overBudget){
   while (i < strokeArr.length) {
     let j = i + 1; while (j < strokeArr.length && !strokeArr[j].start) j++;   // one stroke = start .. next start
     const seg = strokeArr.slice(i, j);
+    _mirrorLiveSeg = drawing && seg[0] === _liveHead;   // see drawLine
     // Stroke layers, the same setting Pad's tune row drives. Off means paint
     // straight through, so a see-through stroke compounds at its own overlaps
     // — which is exactly what the layer exists to prevent, and now visible
@@ -1481,7 +1494,7 @@ function paintStatic(c, strokeArr, overBudget){
          composite dropped them (review of v302): direct-painted runs on the
          same page kept their reflections and layered ones lost theirs. The
          whole canvas, then, which is what the trip cost before the box. */
-      if (window.SkriblMirror && SkriblMirror.active()) { bx0 = 0; by0 = 0; bx1 = CW; by1 = CH; }
+      if (_mirrorLive()) { bx0 = 0; by0 = 0; bx1 = CW; by1 = CH; }
       const bw = bx1 - bx0, bh = by1 - by0;
       if (bw > 0 && bh > 0) {
         tctx.clearRect(bx0, by0, bw, bh);
@@ -1493,6 +1506,7 @@ function paintStatic(c, strokeArr, overBudget){
     }
     i = j;
   }
+  _mirrorLiveSeg = false;
 }
 
 // Offscreen layer for onion skin: the previous frame is drawn at FULL opacity here,
@@ -1770,7 +1784,10 @@ function render(){
     const pts = SkriblShapes.points(shapeKind, _shapePrev.a, _shapePrev.b,
       {square:_shapePrev.sq, sides:shapeSides, radius:shapeRadius});
     const pcol = penColorFor(color);
-    for(let i=1;i<pts.length;i++) drawLine(ctx, pts[i-1].x, pts[i-1].y, pts[i].x, pts[i].y, pcol, size, false);
+    _mirrorLiveSeg = true;      // the outline is live: its reflections exist only here until release
+    try {
+      for(let i=1;i<pts.length;i++) drawLine(ctx, pts[i-1].x, pts[i-1].y, pts[i].x, pts[i].y, pcol, size, false);
+    } finally { _mirrorLiveSeg = false; }
   }
 }
 
@@ -1968,7 +1985,8 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   const dsize = _brushWidth(sizeFor(e, _eraserSize(size, erasing)), p, erasing); const pcol = erasing ? color : penColorFor(color);
   _brushLastPt = {x:p.x, y:p.y};
   liveBegin(strokeFrame);   // before the first point: the cache is the ink BEFORE this stroke
-  strokeFrame.strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
+  _liveHead = { x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true };
+  strokeFrame.strokes.push(_liveHead);
   render(); });
 pad.addEventListener('pointermove', e=>{
   if(pinching){ return; }
