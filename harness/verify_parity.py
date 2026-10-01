@@ -1087,8 +1087,12 @@ with sync_playwright() as p:
       const cs = getComputedStyle(root);
       const pills = [...root.querySelectorAll('.seg button')].map(b => Math.round(b.getBoundingClientRect().height));
       return { items, surface: [cs.backgroundColor, num(cs.borderTopLeftRadius), cs.boxShadow !== 'none', num(cs.paddingLeft)].join('|'),
-               width: Math.round(root.getBoundingClientRect().width), pillMin: Math.min(...pills), pillMax: Math.max(...pills) }; }"""
-    for _w, _vp in (("1280", {"width": 1280, "height": 900}), ("390", {"width": 390, "height": 844})):
+               width: Math.round(root.getBoundingClientRect().width), pillMin: Math.min(...pills), pillMax: Math.max(...pills),
+               bottom: Math.round(root.getBoundingClientRect().bottom), vh: innerHeight,
+               scrolls: root.scrollHeight > root.clientHeight + 1 && /auto|scroll/.test(cs.overflowY),
+               taller: root.scrollHeight > root.clientHeight + 1 }; }"""
+    for _w, _vp in (("1280", {"width": 1280, "height": 900}), ("1280x720", {"width": 1280, "height": 720}),
+                    ("390", {"width": 390, "height": 844})):
         _pp = b.new_page(viewport=_vp); _pp.goto(f"{BASE}/skribl-pad", wait_until="load"); _pp.wait_for_timeout(700)
         _fp = b.new_page(viewport=_vp); _fp.goto(f"{BASE}/flip", wait_until="load"); _fp.wait_for_timeout(700)
         _fp.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
@@ -1114,6 +1118,14 @@ with sync_playwright() as p:
             check(f"at {_w}: the pills at the bottom are tap-sized on both, and the same size",
                   _pm["pillMin"] >= 26 and _fm["pillMin"] >= 26 and _pm["pillMin"] == _fm["pillMin"],
                   f"pad {_pm['pillMin']}-{_pm['pillMax']}px, flip {_fm['pillMin']}-{_fm['pillMax']}px")
+            # Owner, v318, two screenshots: Pad's menu scrolled inside a short
+            # window and Flip's ran off its bottom, its last rows unreachable.
+            # Flip's popover had no height cap at all. Both must end inside the
+            # window, and scroll whatever does not fit.
+            for _nm, _m in (("pad", _pm), ("flip", _fm)):
+                check(f"at {_w}: {_nm}'s menu ends inside the window and scrolls what does not fit",
+                      _m["bottom"] <= _m["vh"] and (_m["scrolls"] or not _m["taller"]),
+                      f"bottom {_m['bottom']}px in a {_m['vh']}px window; taller than its box: {_m['taller']}, scrolls: {_m['scrolls']}")
         _pp.close(); _fp.close()
 
     print("\nPARITY — the two headers are one design")
