@@ -452,8 +452,8 @@ with sync_playwright() as p:
             const lp = document.getElementById('playerLoopBtn');
             const pp = document.getElementById('playerPlayBtn');
             /* Read back what the handler writes, not what the markup ships:
-               the template already carries aria-pressed="false" and
-               aria-label="Play", so only a CHANGE proves a listener ran. */
+               the template carries aria-label="Play" (and, since loop ships
+               on, aria-pressed="true"), so only a CHANGE proves a listener ran. */
             const beat = () => {
                 const looped = lp.getAttribute('aria-pressed') === 'true';
                 const going = pp.getAttribute('aria-label') === 'Pause';

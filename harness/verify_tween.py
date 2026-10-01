@@ -813,7 +813,9 @@ with sync_playwright() as p:
             const g = c.getContext('2d'); const oc = g.clearRect.bind(g);
             g.clearRect = function () { window.__t.push(performance.now());
                                         return oc.apply(g, arguments); }; }""")
-        _lp.click("#playerLoopBtn")
+        # Loop ships on; make sure rather than toggle, so this never turns it OFF.
+        _lp.evaluate("() => { const l = document.getElementById('playerLoopBtn');"
+                     " if (l && !l.classList.contains('active')) l.click(); }")
         _lp.wait_for_timeout(150)
         _lp.click("#playerPlayBtn")
         _lp.wait_for_timeout(3000)

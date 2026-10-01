@@ -163,10 +163,10 @@
 /* Mute and loop only, one cluster, bottom left. Why: inlineplayer.js. */
 .skribl-inline-controls {
   position: absolute;
-  left: 9px;
-  bottom: 9px;
+  left: 10px;
+  bottom: 10px;
   display: flex;
-  gap: 6px;
+  gap: 8px;
   opacity: 0;
   transition: opacity 0.18s;
 }
@@ -175,31 +175,34 @@
 .skribl-inline:hover .skribl-inline-controls,
 .skribl-inline:focus-within .skribl-inline-controls { opacity: 1; }
 
+/* ROUND AND SOLID. Round like every other player's controls; solid because
+   on a host's light page these sit on the pale letterbox beside a drawing,
+   where a see-through chip went pale and lit Loop lost its icon entirely. */
 .skribl-inline-mute,
 .skribl-inline-loop {
   position: relative;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(6, 7, 10, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #15171e;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #eeeeff;
   cursor: pointer;
   padding: 0;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-/* 30 visible, 44 to a finger (SK-AUD-005); why is in DECISIONS. */
+/* 34 visible, 44 to a finger (SK-AUD-005); why is in DECISIONS. */
 .skribl-inline-mute::before,
-.skribl-inline-loop::before { content: ''; position: absolute; inset: -8px; }
+.skribl-inline-loop::before { content: ''; position: absolute; inset: -5px; }
 
 /* Silent: no mute button at all. Loop stays — a silent drawing repeats. */
 .skribl-inline.is-silent .skribl-inline-mute { display: none; }
 
 .skribl-inline-mute:hover,
-.skribl-inline-loop:hover { background: rgba(20, 16, 40, 0.78); }
+.skribl-inline-loop:hover { background: #20222b; }
 
 .skribl-inline-mute:focus-visible,
 .skribl-inline-loop:focus-visible {
@@ -207,21 +210,27 @@
   outline-offset: 1px;
 }
 
-/* Loop is ON by default, so LIT is the resting state (mute is the opposite). */
+/* Loop is ON by default, so LIT is the resting state (mute is the opposite).
+   The lit look is the players' one: a violet ground, a pale violet icon.
+   Fixed colours, not the host's --accent -- a host that names its own accent
+   turned this into a violet square with a violet icon on it. */
 .skribl-inline-loop {
-  color: var(--accent, #cfc4ff);
-  border-color: color-mix(in srgb, var(--accent, #7c5cff) 45%, transparent);
+  color: #e4dcff;
+  background: #3a2f78;
+  border-color: #8f78ff;
 }
+.skribl-inline-loop:hover { background: #45388c; }
 
 .skribl-inline.is-noloop .skribl-inline-loop {
-  color: #9aa3b4;
-  border-color: rgba(255, 255, 255, 0.16);
+  color: #e7e9ea;
+  background: #15171e;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .skribl-inline-mute svg,
 .skribl-inline-loop svg {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;

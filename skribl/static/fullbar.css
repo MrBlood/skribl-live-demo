@@ -156,13 +156,6 @@
 .skfull-play svg { width: 19px; height: 19px; }
 .skfull-play:hover { background: var(--accent, #7c5cff); filter: brightness(1.08); }
 
-/* Lit is the RESTING state for repeat, dim is off — the same reading the
-   component's own loop button uses, because they are the same fact. */
-.skfull-loop.on {
-  color: var(--accent, #cfc4ff);
-  border-color: color-mix(in srgb, var(--accent, #7c5cff) 45%, transparent);
-  background: color-mix(in srgb, var(--accent, #7c5cff) 14%, transparent);
-}
 .skfull-rate {
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 13.5px;
@@ -333,6 +326,20 @@
   color: #e7e9ea;
   position: relative;
   z-index: 1;
+}
+/* Lit is the RESTING state for repeat, dim is off — the same reading the
+   component's own loop button uses, because they are the same fact, and the
+   same violet ground and pale icon as that button.
+
+   AFTER the card's button rule, and naming the card, on purpose. It sat above
+   `.skfull-card .skfull-btn`, which ties it on specificity and comes later,
+   so on every gallery and profile card the card rule put back the plain
+   border, ground and ink: Loop was on and read as off. */
+.skfull-loop.on,
+.skfull-card .skfull-loop.on {
+  color: #e4dcff;
+  border-color: #8f78ff;
+  background: #3a2f78;
 }
 /* 40 drawn, 46 to a finger: comfortably over the 44 floor rather than exactly
    on it, and still short of the 8px gap, so two neighbours' bands cannot touch

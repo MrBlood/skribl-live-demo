@@ -691,7 +691,13 @@ with sync_playwright() as sp:
     # DOWN.
     #
     # (The template was 56,716 B before the editor shell came out.)
-    HTML_RATCHET = 13_050
+    #
+    # RAISED (the players' one-family pass, owner: "build everything like
+    # your specs"), for two named costs: +319 B -- the clock under the track
+    # (#playerAt / #playerDur) and the More button with its sheet, which
+    # Speed and Gallery moved into so seven controls fit one row at 390.
+    # 13,338 measured.
+    HTML_RATCHET = 13_340
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
@@ -804,7 +810,13 @@ with sync_playwright() as sp:
     # on the sheet rule instead kept this number and broke verify_surfaces
     # (every neutral lives in a :root block), and a :root block of its own
     # carried its prose along and cost more. 30,320 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 30_320, 119_844, 40_000
+    # RAISED (the players' one-family pass, owner: "build everything like
+    # your specs"), for named costs: +1,845 B -- the More sheet and its rows
+    # (the editor menu's own .menu-item rules, reused rather than drawn a
+    # second time), the clock under the track, the phone rule that keeps
+    # seven controls on one line at 390, and Loop's lit look moving from
+    # Play's solid violet to the one pill's tint. 32,156 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 32_160, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
@@ -1274,14 +1286,28 @@ with sync_playwright() as sp:
           const el = document.getElementById(id);
           return !!(el && row.contains(el));
         };
+        const menu = document.getElementById('playerMenu');
+        const inMenu = (id) => { const el = document.getElementById(id);
+                                 return !!(el && menu && menu.contains(el)); };
         return { drawing: Math.round(cr.height), chrome: Math.round(sr.height),
                  copyInRow: inRow('playerCopyBtn'),
                  galleryInRow: inRow('playerGalleryLink'),
                  rateInRow: inRow('playerRateBtn'),
+                 rateInMenu: inMenu('playerRateBtn'), galleryInMenu: inMenu('playerGalleryLink'),
+                 menuShut: !!(menu && menu.hidden),
+                 rowTops: new Set([...row.children].filter(e => e.getBoundingClientRect().width)
+                   .map(e => { const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2); })).size,
                  leftoverLinks: document.querySelectorAll('.player-link').length }; }""")
-    check("Copy link, Gallery and Speed are all IN the transport row",
-          not _room.get("missing") and _room["copyInRow"] and _room["galleryInRow"]
-          and _room["rateInRow"], str(_room))
+    # SPEED AND GALLERY MOVED BEHIND MORE (the players' one-family pass, owner:
+    # "build everything like your specs"): the row is what you press while
+    # watching. Copy link stays out -- sharing is how a Skribl travels.
+    check("Copy link is in the transport row; Speed and Gallery are behind More, shut at rest",
+          not _room.get("missing") and _room["copyInRow"] and _room["rateInMenu"]
+          and _room["galleryInMenu"] and _room["menuShut"], str(_room))
+    check("...and at 390 the whole row is ONE line",
+          not _room.get("missing") and _room["rowTops"] == 1,
+          f"{_room.get('rowTops')} distinct row centres — seven controls that wrap "
+          f"put More under the rest, a second line of chrome under the drawing")
     check("...and nothing is left of the two full-width rows they were",
           not _room.get("missing") and _room["leftoverLinks"] == 0,
           f"{_room} — a surviving .player-link is a row still taking the width")
@@ -1344,6 +1370,65 @@ with sync_playwright() as sp:
           f"1x reached {_at1:.1f}%, half reached {_athalf:.1f}%")
     # Restore, so nothing downstream inherits a rate through localStorage.
     for _ in range(4):
+        if pg.evaluate("() => document.getElementById('playerRateBtn').textContent.trim()") == "1\u00d7":
+            break
+        pg.evaluate("() => document.getElementById('playerRateBtn').click()")
+        pg.wait_for_timeout(80)
+
+    # ---- MORE, LOOP AND THE CLOCK (the players' one-family pass) ----------
+    # A fresh load, because everything above has pressed things. Loop ships
+    # ON, as on every other player of a Skribl; the clock under the track
+    # reads the drawing's length before anything plays.
+    pg.goto(link, wait_until="load")
+    pg.wait_for_timeout(1200)
+    _rest = pg.evaluate("""() => { const l = document.getElementById('playerLoopBtn');
+        return { pressed: l.getAttribute('aria-pressed'), lit: l.classList.contains('active'),
+                 at: document.getElementById('playerAt').textContent,
+                 dur: document.getElementById('playerDur').textContent }; }""")
+    # One press must turn it OFF. The markup ships lit; only the press proves
+    # the player's own state agrees with it -- a lit button over `loop = false`
+    # would read "on" here and stay "on" when pressed.
+    pg.click("#playerLoopBtn")
+    pg.wait_for_timeout(120)
+    _rest["afterPress"] = pg.evaluate("() => document.getElementById('playerLoopBtn').getAttribute('aria-pressed')")
+    pg.click("#playerLoopBtn")
+    check("Loop is ON when the link opens, the button says so, and one press turns it off",
+          _rest["pressed"] == "true" and _rest["lit"] and _rest["afterPress"] == "false", str(_rest))
+    check("the clock under the track shows 0:00 and the drawing's length at rest",
+          _rest["at"] == "0:00" and _rest["dur"] not in ("", "0:00"), str(_rest))
+    pg.click("#playerPlayBtn")
+    pg.wait_for_timeout(1300)
+    _ticked = pg.evaluate("() => document.getElementById('playerAt').textContent")
+    check("...and the clock moves while it plays", _ticked != "0:00", _ticked)
+    pg.click("#playerPlayBtn")
+
+    def _menu():
+        return pg.evaluate("""() => ({ open: !document.getElementById('playerMenu').hidden,
+            expanded: document.getElementById('playerMoreBtn').getAttribute('aria-expanded'),
+            focus: document.activeElement && document.activeElement.id })""")
+    pg.click("#playerMoreBtn")
+    pg.wait_for_timeout(150)
+    _m1 = _menu()
+    check("More opens its sheet, says so, and puts focus on its first row",
+          _m1["open"] and _m1["expanded"] == "true" and _m1["focus"] == "playerRateBtn", str(_m1))
+    pg.keyboard.press("Enter")          # Speed cycles in place; the sheet stays open
+    pg.wait_for_timeout(150)
+    _m2 = _menu()
+    _rate = pg.evaluate("() => document.getElementById('playerRateBtn').textContent.trim()")
+    check("...Speed changes inside it and the sheet stays open to show the new rate",
+          _m2["open"] and _rate == "2\u00d7", f"{_m2} rate {_rate}")
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(150)
+    _m3 = _menu()
+    check("...Escape shuts it and hands focus back to More",
+          not _m3["open"] and _m3["expanded"] == "false" and _m3["focus"] == "playerMoreBtn", str(_m3))
+    pg.click("#playerMoreBtn")
+    pg.wait_for_timeout(150)
+    pg.mouse.click(5, 5)
+    pg.wait_for_timeout(150)
+    _m4 = _menu()
+    check("...and a tap anywhere else shuts it", not _m4["open"] and _m4["expanded"] == "false", str(_m4))
+    for _ in range(4):                  # leave the rate at 1x for anything downstream
         if pg.evaluate("() => document.getElementById('playerRateBtn').textContent.trim()") == "1\u00d7":
             break
         pg.evaluate("() => document.getElementById('playerRateBtn').click()")

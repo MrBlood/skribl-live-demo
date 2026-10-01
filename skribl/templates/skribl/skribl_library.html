@@ -223,7 +223,10 @@
        (styles.css, the --ui-* note): a two-stop gradient here was the last. */
     .scrub .fill { height: 100%; width: 0%; background: var(--accent); border-radius: 999px; }
     .transport { display: flex; align-items: center; gap: 9px; padding: 13px 16px 16px; }
-    .tbtn { width: 38px; height: 38px; border-radius: var(--r-control); border: 1px solid var(--hairline); background: var(--control); color: var(--text); display: grid; place-items: center; cursor: pointer; transition: background .15s, border-color .15s, transform .05s; }
+    /* ROUND, like every other player's controls (the share page, the gallery
+       card, full screen): one shape for one family. Play keeps #8's quiet
+       ground -- Make one is this page's action colour. */
+    .tbtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--hairline); background: var(--control); color: var(--text); display: grid; place-items: center; cursor: pointer; transition: background .15s, border-color .15s, transform .05s; }
     .tbtn:hover { background: var(--control-hi); }
     .tbtn:active { transform: translateY(1px); }
     .tbtn svg { width: 18px; height: 18px; }
@@ -556,7 +559,7 @@
            Safari allows it for <video> alone), hidden otherwise rather than
            dead. Escape and the same button both leave. #}
         <button class="tbtn" id="btnFull" title="Full screen" aria-label="Full screen" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
-        <button class="tbtn" id="btnShare" title="Copy link" aria-label="Copy link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></button>
+        <button class="tbtn" id="btnShare" title="Copy link" aria-label="Copy link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
         <span class="telapsed" id="tElapsed">0:00 / 0:00</span>
       </div>
     </section>

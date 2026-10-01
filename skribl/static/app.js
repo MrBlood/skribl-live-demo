@@ -3927,18 +3927,24 @@ function showPlayerError(msg, canRetry) {
   const pRate = document.getElementById('playerRateBtn');
   const pFill = document.getElementById('playerProgressFill');
   const pTrack = document.getElementById('playerProgress');
+  const pAt = document.getElementById('playerAt');
+  const pDur = document.getElementById('playerDur');
+  const clock = ms => { const s = Math.round(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  if (pDur) pDur.textContent = clock(totalMs);   // rounded as the library's clock is
 
   const ICON_PLAY_P = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
   const ICON_PAUSE_P = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
-  const ICON_SOUND_P = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
-  const ICON_MUTED_P = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+  const ICON_SOUND_P = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>';
+  const ICON_MUTED_P = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/></svg>';
 
   let running = false;
   let rafId = null;
   let elapsedBase = 0;   // ms elapsed before the current run segment
   let segStart = 0;      // performance.now() at the current segment's start
   let idx = 0;           // next timeline index to draw
-  let loop = false;
+  // ON, like every other player of a Skribl: a few seconds of drawing that
+  // stops after one pass reads as broken. The button ships lit to match.
+  let loop = true;
   let strokeComp = null; // wet/dry stroke compositor for low-opacity replay (flag-gated)
   let muted = false;
 
@@ -3949,6 +3955,7 @@ function showPlayerError(msg, canRetry) {
   }
   function setProgress(frac) {
     if (pFill) pFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
+    if (pAt) pAt.textContent = clock(Math.max(0, Math.min(1, frac)) * totalMs);
     // A slider that only reports its value on keypress is wrong the moment
     // playback moves on its own, which is most of the time.
     if (pTrack && window.SkriblScrub) window.SkriblScrub.sync(pTrack, frac);
@@ -4445,7 +4452,6 @@ function showPlayerError(msg, canRetry) {
         // Muting is an edge that stops wanting sound, and unmuting mid-play is
         // a gesture that asks for it — both belong to the session.
         syncAudioSession();
-        pMute.classList.toggle('active', muted);
         pMute.innerHTML = muted ? ICON_MUTED_P : ICON_SOUND_P;
         pMute.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
         pMute.setAttribute('aria-pressed', muted ? 'true' : 'false');
@@ -4524,6 +4530,26 @@ function showPlayerError(msg, canRetry) {
         paStartAtElapsed(at);
       }
     });
+  }
+
+  // MORE: a disclosure. Open puts focus on its first row; Escape, a tap
+  // anywhere else, or following Gallery closes it, and Escape hands focus
+  // back to the button that opened it. Speed cycles in place and leaves it
+  // open, so the new rate is read where it was changed.
+  const pMore = document.getElementById('playerMoreBtn');
+  const pMenu = document.getElementById('playerMenu');
+  const setMenu = (open, refocus) => {
+    pMenu.hidden = !open;
+    pMore.setAttribute('aria-expanded', '' + open);
+    if (open) pMenu.querySelector('.menu-item').focus();
+    else if (refocus) pMore.focus();
+  };
+  if (pMore && pMenu) {
+    pMore.addEventListener('click', () => setMenu(pMenu.hidden));
+    document.addEventListener('pointerdown', e => {
+      if (!pMenu.hidden && !pMore.parentNode.contains(e.target)) setMenu(false);
+    });
+    pMenu.addEventListener('keydown', e => { if (e.key === 'Escape') setMenu(false, true); });
   }
 
   if (pCopy) pCopy.addEventListener('click', async () => {

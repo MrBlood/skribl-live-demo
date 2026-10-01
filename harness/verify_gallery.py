@@ -2041,10 +2041,14 @@ with sync_playwright() as _spa:
         if (!pl) return { noPlayer: true };
         const st = pl.state();
         const loopBefore = pl.looping();
-        f.querySelector('.skfull-loop').click();
+        const lb = f.querySelector('.skfull-loop');
+        const look = () => { const c = getComputedStyle(lb); return c.backgroundColor + ' ' + c.color; };
+        const lookBefore = look();
+        lb.click();
         return { state: st.state, loaded: st.loaded,
                  loopBefore: loopBefore, loopAfter: pl.looping(),
-                 lit: f.querySelector('.skfull-loop').classList.contains('on') }; }""")
+                 lookBefore: lookBefore, lookAfter: look(),
+                 lit: lb.classList.contains('on') }; }""")
     check("pressing play on a card plays THAT card's drawing",
           not _fdrive.get("noPlayer") and _fdrive["state"] == "playing"
           and _fdrive["loaded"],
@@ -2054,6 +2058,13 @@ with sync_playwright() as _spa:
           not _fdrive.get("noPlayer")
           and _fdrive["loopAfter"] != _fdrive["loopBefore"]
           and _fdrive["lit"] == _fdrive["loopAfter"], str(_fdrive))
+    # ...AND LOOKS IT. The class was right all along; the PAINT was not:
+    # `.skfull-loop.on` sat above `.skfull-card .skfull-btn`, tied it and lost,
+    # so on every card Loop was on and drew exactly like off. Asked of the
+    # computed ground and ink, which is what a person sees.
+    check("...and on a card, lit Repeat LOOKS different from unlit",
+          not _fdrive.get("noPlayer") and _fdrive["lookBefore"] != _fdrive["lookAfter"],
+          f"{_fdrive.get('lookBefore')} lit vs {_fdrive.get('lookAfter')} unlit")
 
     # A CAPTION A READER CANNOT GET TO IS WORSE THAN ONE THAT TAKES A HOVER,
     # and that was the whole argument for `opacity` over `display` when this

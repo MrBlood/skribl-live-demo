@@ -59,8 +59,8 @@
   var ICON_SOUND =
     '<svg class="posted-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
     ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-    '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>' +
-    '<path d="M19.5 5.5a9 9 0 0 1 0 13"/></svg>';
+    '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>' +
+    '<path d="M19 5a9 9 0 0 1 0 14"/></svg>';
 
   /* THE ROW'S ACTIONS, AS ICONS ON A PHONE ("use icons instead of
      words on phones... maybe left justify").
@@ -74,8 +74,8 @@
      button rather than deleted -- and why the ones whose label is only an icon
      carry an explicit aria-label below. */
   var ICONS = {
-    link: '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/>'
-        + '<path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>'
+        + '<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
     share: '<path d="M12 3v12"/><path d="m8 7 4-4 4 4"/>'
          + '<path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',
     /* ONE GLYPH PER ACTION IN A ROW, which the strip did not manage until
