@@ -13062,3 +13062,27 @@ violet bar and arrow buttons down its side, and Flip's had no bar at all.
   cost the player 73 bytes past its ratchet; `--text-dim` on the hover was
   refused by `verify_a11y`. `--wash-rgb` already flips with the theme, and the
   player's CSS came out 9 bytes smaller. Flip's frame strip keeps its own rule.
+
+## After v318 -- plays this week, one bin, and a header nothing shows through
+
+Three things the owner noticed from Windows screenshots, in one change.
+
+* **Two numbers, one word.** Under Hot a tile showed the seven-day count and
+  under New the total, both as "N plays", so one post read 28 under New and 13
+  under Hot and Hot's (correct) order looked wrong. Under Hot it now reads "N
+  plays this week". `verify_hot` asserts both labels.
+* **One bin.** Three trash cans were drawn: ribbed on the draft rows (the one
+  the owner likes), rounded without ribs on Clear and on the photo and music
+  rows, and a slimmer one on a posted Skribl's Delete. All draw the ribbed
+  paths. `verify_icons` ONE BIN parses path data in every template and script:
+  no retired bin shape anywhere, and every bin site ribbed. Flip's page tiles
+  keep their x: it removes a page from a strip, and reads as close by design.
+* **The pinned header.** On the library and gallery, scrolled, the page's title
+  read through the glass card and the card below showed in the gap above it.
+  Once scrolled the card sits on the page's ground (`lib/pagemenu.js` marks it,
+  `pagemenu.css` draws a clipped band and lays the glass over the ground); at
+  the top nothing changes, so the ground's glow is never covered. `verify_galib`
+  reads painted pixels in the gap and inside the card on both pages, both
+  themes, desktop and phone: 164/255 in the gap and 17 through the card before,
+  1 after. Its tolerance (8) sits between the card's own drop shadow fading up
+  into the gap (3-5) and the faintest real show-through (17).
