@@ -141,9 +141,6 @@
   /* Hairlines */
   --hairline: rgba(255,255,255,0.055);
   --hairline-strong: rgba(255,255,255,0.09);
-  /* The scrollbar thumb: a quiet grey, not the accent (owner, v318: the menu's
-     violet thumb with arrow buttons read heavy on Windows). */
-  --scroll-thumb: rgba(255,255,255,0.20);
 
   /* Text */
   --text-primary: #f6f7f9;
@@ -350,8 +347,9 @@ html:has(:fullscreen) { scrollbar-gutter: auto; }
    menus, the help drawer, panels, page scroll. It was the accent (--ui-line) on a
    carbon track, which on Windows drew a violet bar with arrow buttons down the
    side of every menu; a scrollbar is a utility, not a place to spend the accent
-   (owner, v318). Flip's frame strip keeps its own rule (flip.css). */
-* { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+   (owner, v318). The grey is --wash-rgb, which flips with the theme. Flip's
+   frame strip keeps its own rule (flip.css). */
+* { scrollbar-width: thin; scrollbar-color: rgba(var(--wash-rgb), .22) transparent; }
 
 body {
   margin: 0;
@@ -1906,7 +1904,6 @@ a.player-btn { text-decoration: none; }
   --wash-rgb:                0,0,0;   /* every hover fill and translucent rule flips with this line */
   --hairline:                rgba(0,0,0,0.09);
   --hairline-strong:         rgba(0,0,0,0.15);
-  --scroll-thumb:            rgba(0,0,0,0.24);
   --accent-glow:             rgba(0,0,0,0.16);   /* a glow on dark is a shadow on light */
   /* Translucent surfaces — near-white frosted panels rather than near-black.
      These were the last thing in the chrome still painting dark: the header,
