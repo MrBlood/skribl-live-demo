@@ -861,6 +861,109 @@ with sync_playwright() as _b9:
 
 
 # ---------------------------------------------------------------------------
+# V213k2 — on Flip the mirror is live for ONE stroke: the one under the pen.
+#
+# drawLine reflected every segment it painted while the mirror was on, so each
+# finished stroke -- which already carries its reflected copies as strokes of
+# its own -- was painted again, reflected: four times per segment on both axes.
+# See-through ink compounded to near-opaque in the editor, and a page drawn
+# with the mirror OFF grew strokes it does not contain, in the editor and in
+# every GIF and video frame rendered while the mirror was on. The player never
+# reflects, so the post was right and the editor was not. Asserted in pixels:
+# the page against itself with the mirror off, the export frame the same way,
+# and the live stroke's reflection painted mid-stroke so a fix that simply
+# stopped reflecting would not pass.
+print("\nV213k2 — Flip: the mirror reflects the live stroke, never finished ink")
+
+_PADDIFF = """() => { const pad = document.getElementById('pad');
+  const b = pad.getContext('2d').getImageData(0, 0, pad.width, pad.height).data, a = window.__k2;
+  let n = 0, m = 0; for (let i = 0; i < a.length; i++) { const d = Math.abs(a[i] - b[i]); if (d) { n++; if (d > m) m = d; } }
+  return [n, m]; }"""
+_EXPORT = """(mode) => { SkriblMirror.setMode(mode);
+  const cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
+  const c = cv.getContext('2d'); drawFrameTo(c, frame());
+  const d = Array.from(c.getImageData(0, 0, CW, CH).data); SkriblMirror.setMode('off');
+  let s = 0; for (let i = 0; i < d.length; i++) s = (s * 31 + d[i]) | 0; return s; }"""
+
+with sync_playwright() as _bk2:
+    _brk2 = _bk2.chromium.launch()
+    _ck2 = _brk2.new_context(viewport={"width": 1100, "height": 860})
+    _pk2 = _ck2.new_page()
+    _pk2.goto(BASE + "/flip", wait_until="load"); _pk2.wait_for_timeout(900)
+    _pk2.evaluate("() => { localStorage.clear(); window.SkriblHints && SkriblHints.hide(); }")
+    _bxk2 = _pk2.locator("#pad").bounding_box()
+
+    def _k2_stroke(lift=True):
+        _pk2.mouse.move(_bxk2["x"] + 90, _bxk2["y"] + 90); _pk2.mouse.down()
+        for _i in range(1, 16):
+            _pk2.mouse.move(_bxk2["x"] + 90 + _i * 9, _bxk2["y"] + 90 + (_i % 4) * 10)
+        if lift:
+            _pk2.mouse.up(); _pk2.wait_for_timeout(200)
+
+    # 1. A finished page drawn WITH the mirror, in see-through ink, repaints the
+    #    same with the mirror on as off.
+    _pk2.evaluate("() => { color = 'rgba(40,160,255,0.5)'; SkriblMirror.setMode('both'); }")
+    _k2_stroke(); _k2_stroke()
+    _pk2.evaluate("() => { render(); const pad = document.getElementById('pad');"
+                  " window.__k2 = pad.getContext('2d').getImageData(0, 0, pad.width, pad.height).data;"
+                  " SkriblMirror.setMode('off'); render(); }")
+    _k2a = _pk2.evaluate(_PADDIFF)
+    check("V213k2 flip: a page drawn with the mirror repaints the same with it on as off "
+          "(finished strokes already carry their reflections)",
+          _k2a[0] == 0, f"{_k2a[0]} channels differ, most by {_k2a[1]}")
+
+    # 2. A page drawn with the mirror OFF: an export frame rendered while the
+    #    mirror is on is the same frame.
+    _pk2.evaluate("() => { frames[idx].strokes = []; frames[idx].strokeGroups = []; "
+                  "color = '#ff3366'; SkriblMirror.setMode('off'); render(); }")
+    _k2_stroke()
+    _k2off, _k2on = _pk2.evaluate(_EXPORT, "off"), _pk2.evaluate(_EXPORT, "vertical")
+    check("V213k2 flip: an export frame gains no reflections the drawing does not contain",
+          _k2off == _k2on, f"frame hash off={_k2off} on={_k2on}")
+
+    # 3. Mid-stroke the live stroke IS reflected: ink at the mirror image of a
+    #    point the pen has drawn, where nothing else is on the page.
+    _pk2.evaluate("() => { frames[idx].strokes = []; frames[idx].strokeGroups = []; "
+                  "color = '#ff3366'; SkriblMirror.setMode('vertical'); render(); }")
+    _k2_stroke(lift=False)
+    _k2live = _pk2.evaluate("""() => { const s = frames[idx].strokes, p = s[Math.floor(s.length / 2)];
+      const pad = document.getElementById('pad'), c = pad.getContext('2d');
+      const px = (x, y) => Array.from(c.getImageData(Math.round(x * DPR), Math.round(y * DPR), 1, 1).data);
+      return { pen: px(p.x, p.y), mirror: px(CW - p.x, p.y),
+               left: s.every(q => q.x < CW / 2), points: s.length }; }""")
+    _pk2.mouse.up(); _pk2.wait_for_timeout(200)
+    _pk2.evaluate("() => SkriblMirror.setMode('off')")
+    check("V213k2 flip: mid-stroke the live stroke's reflection is painted, before its points exist",
+          _k2live["mirror"][:3] == _k2live["pen"][:3] and _k2live["left"] and _k2live["points"] > 1,
+          f"pen pixel {_k2live['pen']}, mirrored pixel {_k2live['mirror']}; "
+          f"{_k2live['points']} points stored, all left of centre: {_k2live['left']}")
+    _ck2.close()
+
+    # 4. The Pad paints its live stroke elsewhere (editor_draw.js); what
+    #    paintStrokesStatic repaints -- undo, restore, replay -- is finished.
+    #    With stroke layers off, a run of varying width reached drawLine and
+    #    was reflected again.
+    _ck2p = _brk2.new_context(viewport={"width": 1100, "height": 860})
+    _pk2p = _ck2p.new_page()
+    _pk2p.goto(BASE + "/", wait_until="load"); _pk2p.wait_for_timeout(900)
+    _k2pad = _pk2p.evaluate("""() => {
+      const run = []; for (let i = 0; i < 30; i++) run.push({x: 60 + i*5, y: 120 + (i%4)*6,
+        size: 6 + (i%3)*2, color: '#ff3366', erase: false, t: i*8, start: i === 0});
+      const paint = (m) => { SkriblMirror.setMode(m); ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+        ctx.clearRect(0,0,canvas.width,canvas.height); ctx.restore(); paintStrokesStatic(run);
+        const d = ctx.getImageData(0,0,canvas.width,canvas.height).data; SkriblMirror.setMode('off'); return d; };
+      window.SKRIBL_STROKE_LAYERS = false;
+      let off, on;
+      try { off = paint('off'); on = paint('vertical'); } finally { window.SKRIBL_STROKE_LAYERS = undefined; }
+      let n = 0; for (let i = 0; i < off.length; i++) if (off[i] !== on[i]) n++;
+      return n; }""")
+    check("V213k2 pad: a finished stroke of varying width repaints the same with the mirror on "
+          "as off (stroke layers off, the drawLine path)",
+          _k2pad == 0, f"{_k2pad} channels differ")
+    _ck2p.close(); _brk2.close()
+
+
+# ---------------------------------------------------------------------------
 # V213l — preview speed changes the replay CLOCK, and never the drawing.
 #
 # THE "NOT IN THE PAYLOAD" ASSERTION IS THE POINT, and it is the exact opposite

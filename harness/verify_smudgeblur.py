@@ -1063,7 +1063,14 @@ with sync_playwright() as p:
           if(M){
             const was = M.mode();
             M.setMode('vertical');
-            const d = paintOn(line(40, 200, 30, 'rgba(255,255,255,0.5)', 9));
+            // The LIVE stroke: only the stroke under the pen is reflected as it
+            // paints (a finished one already carries its reflected copies), so
+            // the run is made the live one for this paint.
+            const run = line(40, 200, 30, 'rgba(255,255,255,0.5)', 9);
+            const wasDrawing = drawing, wasHead = _liveHead;
+            drawing = true; _liveHead = run[0];
+            let d;
+            try { d = paintOn(run); } finally { drawing = wasDrawing; _liveHead = wasHead; }
             mirror = { left: litIn(d, 0, CW/2), right: litIn(d, CW/2, CW) };
             M.setMode(was);
           }

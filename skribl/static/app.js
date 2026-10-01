@@ -722,7 +722,17 @@ function paintStrokesStatic(strokeArr) {
         if (comp) comp.dotFn(p.x, p.y, p.color, p.size, p.erase);
         else drawDot(p.x, p.y, p.color, p.size, p.erase);
       } else if (comp) comp.lineFn(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
-      else drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
+      else {
+        /* FINISHED INK IS NEVER REFLECTED HERE. drawLine's live mirror is for
+           the stroke under the pen, which editor_draw.js paints; everything
+           this function paints is finished, and a mirrored stroke already
+           carries its copies. With stroke layers off, a run of varying width
+           reached drawLine and an undo with the mirror on painted reflections
+           the drawing does not contain (Flip had the same, measured there). */
+        const _pm = _mirrorPainting; _mirrorPainting = true;
+        try { drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
+        finally { _mirrorPainting = _pm; }
+      }
     }
     i = j;
   }

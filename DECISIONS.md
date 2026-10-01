@@ -12963,3 +12963,35 @@ suite writes both ends beside it. Each mutation is red at 8.
 * **The Pad's light menu contrast** (now at least 4.84:1 via `--on-glass-2`)
   was measured once. `verify_galib` pins the gallery's and library's glass,
   but no check pins the Pad's menu.
+
+## After v317 -- the mirror reflects the live stroke only
+
+The finding at the top of the list above, fixed. `drawLine` reflects a segment
+while the mirror is on, which is right for the stroke under the pen (its
+reflected points do not exist until pen-up) and was applied to every finished
+stroke too.
+
+* **Flip.** `paintStatic` raises the live flag only for the stroke that begins
+  with the pen-down point (`_liveHead`), and the shape preview raises it for the
+  outline it draws. The layer's whole-canvas box and the one-path skip follow
+  the same flag. A finished page now repaints identically with the mirror on and
+  off (it read 115/255 apart), and an export frame gains no strokes (it gained
+  whole ones, 242/255). The first cut left `_liveHead` set after pen-up, so the
+  next stroke's cache reflected the previous stroke again; `verify_flipspeed`'s
+  mirror case caught it at 61. The head is cleared at pen-down and pen-up, and
+  the case reads 3 again.
+* **The Pad.** Its live stroke is painted by `editor_draw.js`, so everything
+  `paintStrokesStatic` paints (undo, restore, replay) is finished.
+  With stroke layers off, a run of varying width reached `drawLine` and was
+  reflected (255/255). That loop now suppresses the live mirror.
+* **One check asserted the old behaviour.** `verify_smudgeblur`'s "a layered
+  stroke's reflection survives the composite" painted a made-up run with the
+  mirror on outside any stroke. It now makes that run the live stroke, which is
+  what the box widening exists for, and stays red with the widening removed.
+
+`verify_tools` V213k2 pins it in pixels on both editors. Each check went red on
+its own mutation: finished ink reflected again (the two Flip checks), the live
+stroke never reflected (the mid-stroke check), the Pad's suppression removed
+(the Pad check).
+
+**Still open:** the list above, less the mirror.
