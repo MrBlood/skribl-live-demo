@@ -253,6 +253,49 @@ for _rel, _n in _SITES.items():
         _short.append(f"{_rel}: {_have} of {_n}")
 check("every bin site draws the ribbed bin, body and ribs", not _short, "; ".join(_short))
 
+# ONE SET OF PLAYER ICONS (owner: "are all the icons consistent across all the
+# players?"). They were not: two restarts, two loops, three speakers, three
+# links, each player drawing its own. Same rule as the bin, same instrument --
+# path data, never a comment or a label. The Pad and Flip HEADER play keeps its
+# own wider triangle: it is drawn to match the Record dot and Stop square beside
+# it, so it belongs to the header's set, not the players'.
+print("\nONE SET OF PLAYER ICONS — every player draws the same restart, loop, sound, link and play")
+_RETIRED_P = ["M1 4v6h6", "M3.51 15a9 9 0 1 0 2.13-9.36L1 10",            # the second restart
+              "M3 11v-1a4 4 0 0 1 4-4h14", "M21 13v1a4 4 0 0 1-4 4H3",       # the flatter loop
+              "M11 5L6 9H2v6h4l5 4V5z", "M15.54 8.46a5 5 0 0 1 0 7.07",      # the second speaker
+              "M19.07 4.93a10 10 0 0 1 0 14.14",
+              "M11 5 6 9H3v6h3l5 4z", "M16.5 8.5a5 5 0 0 1 0 7",             # the third
+              "M19.5 5.5a9 9 0 0 1 0 13", "M22 9l-6 6", "M16 9l6 6",
+              "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1",                 # the rounded links
+              "M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1",
+              "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7",
+              "M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"]
+_left = sorted(f"{p.relative_to(_ROOT)}: {d}" for p, t in _SRC.items() for d in _drawn(t) if d in _RETIRED_P)
+_left += sorted(f"{p.relative_to(_ROOT)}: the line-drawn mute cross" for p, t in _SRC.items()
+                if 'x1="23" y1="9"' in t)
+check("no retired player icon is drawn anywhere (templates and scripts)", not _left, "; ".join(_left[:4]))
+_ICON = {"restart": ["M3 12a9 9 0 1 0 3-6.7L3 8", "M3 3v5h5"],
+         "loop": ["M17 2l4 4-4 4", "M3 11V9a4 4 0 0 1 4-4h14", "M7 22l-4-4 4-4", "M21 13v2a4 4 0 0 1-4 4H3"],
+         "sound": ["M11 5 6 9H2v6h4l5 4z", "M15.5 8.5a5 5 0 0 1 0 7", "M19 5a9 9 0 0 1 0 14"],
+         "muted": ["M11 5 6 9H2v6h4l5 4z", "m16 9 5 6", "m21 9-5 6"],
+         "link": ["M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71",
+                  "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"],
+         "play": ["M8 5v14l11-7z"]}
+_PSITES = {"templates/skribl/_skribl_player_controls.html": ["restart", "loop", "sound", "link", "play"],
+           "templates/skribl/skribl_library.html": ["restart", "loop", "sound", "link", "play"],
+           "templates/skribl/_skribl_inline_player.html": ["loop", "sound", "muted", "play"],
+           "static/lib/fullbar.js": ["restart", "loop", "sound", "muted", "play"],
+           "static/app.js": ["sound", "muted", "play"],
+           "static/lib/postedui.js": ["sound", "link"],
+           "static/gallery.js": ["link"],
+           "templates/skribl/skribl_editor.html": ["link"],
+           "templates/skribl/_skribl_export.html": ["loop"]}
+_short = []
+for _rel, _roles in _PSITES.items():
+    _have = _drawn(_SRC.get(_ROOT / _rel, ""))
+    _short += [f"{_rel}: {r}" for r in _roles if not set(_ICON[r]) <= _have]
+check("every player draws the one restart, loop, sound, muted, link and play", not _short, "; ".join(_short))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))

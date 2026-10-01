@@ -25,13 +25,13 @@
     <div class="player-progress" id="playerProgress" aria-label="Scrub"><div class="player-progress-fill" id="playerProgressFill"></div></div>
     <div class="player-controls">
       <button type="button" class="player-btn" id="playerRestartBtn" aria-label="Restart">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
       </button>
       <button type="button" class="player-btn primary" id="playerPlayBtn" aria-label="Play">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       </button>
       <button type="button" class="player-btn" id="playerLoopBtn" aria-label="Loop" aria-pressed="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
       </button>
       {#- Speed: the VIEWER's, not the author's. `replayRate` is the same
           number the Pad's preview row sets, and app.js's comment there is why
@@ -41,7 +41,7 @@
           row is what the drawing has to share the screen with. -#}
       <button type="button" class="player-btn player-rate" id="playerRateBtn" aria-label="Playback speed">1&times;</button>
       <button type="button" class="player-btn" id="playerMuteBtn" aria-label="Mute" aria-pressed="false" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>
       </button>
       {#- Full screen: the profile stage has had it since v304 and the link a
           person actually SHARES did not, which is the wrong way round. Hidden
