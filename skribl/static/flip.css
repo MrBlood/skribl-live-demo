@@ -617,7 +617,11 @@
     background: rgba(var(--surface-control-rgb), 0.9);
     -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4);
     border: 1px solid var(--hairline-strong); border-radius: 16px;
-    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5); padding: 6px; }
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5); padding: 6px;
+    /* Bounded like the Pad's sheet (styles.css: top, then 24px below). With no
+       cap it ran past the window's bottom -- 915px in a 900px window -- and
+       its last rows could not be reached (owner, v318; verify_parity). */
+    max-height: calc(100dvh - 58px - 24px); overflow-y: auto; }
   /* The Pad's desktop rows are a third tighter than its touch rows (a mouse
      reads 9/12 better than 12/14); the size class says which surface this is. */
   :where(body[data-size="regular"]) .flip-menu .menu-item { padding: 9px 12px; }

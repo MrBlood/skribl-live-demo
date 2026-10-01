@@ -343,9 +343,13 @@ html { scrollbar-gutter: stable both-edges; }
    not supported the behaviour is what it was, which is the 20px, not a break. */
 html:has(:fullscreen) { scrollbar-gutter: auto; }
 
-/* Skribl scrollbars — thin thumb on carbon, everywhere; colour follows --ui-line.
-   Matches the Flip frame strip; applies to the help drawer, panels, page scroll, etc. */
-* { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(var(--glass-deep-rgb), 0.5); }
+/* Skribl scrollbars — a thin, quiet grey thumb on a clear track, everywhere: the
+   menus, the help drawer, panels, page scroll. It was the accent (--ui-line) on a
+   carbon track, which on Windows drew a violet bar with arrow buttons down the
+   side of every menu; a scrollbar is a utility, not a place to spend the accent
+   (owner, v318). The grey is --wash-rgb, which flips with the theme. Flip's
+   frame strip keeps its own rule (flip.css). */
+* { scrollbar-width: thin; scrollbar-color: rgba(var(--wash-rgb), .22) transparent; }
 
 body {
   margin: 0;

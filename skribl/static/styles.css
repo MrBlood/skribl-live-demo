@@ -320,18 +320,22 @@ html { scrollbar-gutter: stable both-edges; }
    not supported the behaviour is what it was, which is the 20px, not a break. */
 html:has(:fullscreen) { scrollbar-gutter: auto; }
 
-/* Skribl scrollbars — thin thumb on carbon, everywhere; colour follows --ui-line.
-   Matches the Flip frame strip; applies to the help drawer, panels, page scroll, etc. */
-* { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(var(--glass-deep-rgb), 0.5); }
+/* Skribl scrollbars — a thin, quiet grey thumb on a clear track, everywhere: the
+   menus, the help drawer, panels, page scroll. It was the accent (--ui-line) on a
+   carbon track, which on Windows drew a violet bar with arrow buttons down the
+   side of every menu; a scrollbar is a utility, not a place to spend the accent
+   (owner, v318). The grey is --wash-rgb, which flips with the theme. Flip's
+   frame strip keeps its own rule (flip.css). */
+* { scrollbar-width: thin; scrollbar-color: rgba(var(--wash-rgb), .22) transparent; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: rgba(var(--glass-deep-rgb), 0.5); border-radius: 999px; }
+::-webkit-scrollbar-track { background: transparent; border-radius: 999px; }
 ::-webkit-scrollbar-thumb {
-  background: var(--ui-line);
+  background: rgba(var(--wash-rgb), .22);
   border-radius: 999px;
   border: 2px solid transparent;      /* inset → slim thumb with carbon breathing room */
   background-clip: padding-box;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--ui-line); background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(var(--wash-rgb), .22); background-clip: padding-box; }
 ::-webkit-scrollbar-corner { background: transparent; }
 
 body {
@@ -4174,17 +4178,17 @@ html.help-open, html.help-open body { overflow: hidden; }
 /* Sleek skinny scrollbar for the help drawer (desktop pointers only; mobile
    keeps its native auto-hiding overlay bar). */
 @media (min-width: 641px) {
-  .help-drawer-inner { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(var(--glass-deep-rgb), 0.5); }
+  .help-drawer-inner { scrollbar-width: thin; scrollbar-color: rgba(var(--wash-rgb), .22) transparent; }
   .help-drawer-inner::-webkit-scrollbar { width: 10px; }
   .help-drawer-inner::-webkit-scrollbar-track { background: transparent; }
   .help-drawer-inner::-webkit-scrollbar-thumb {
-    background: var(--ui-line);
+    background: rgba(var(--wash-rgb), .22);
     border-radius: 999px;
     border: 3px solid transparent;      /* inset → a slim thumb with breathing room */
     background-clip: padding-box;
   }
   .help-drawer-inner::-webkit-scrollbar-thumb:hover {
-    background: var(--ui-line);
+    background: rgba(var(--wash-rgb), .22);
     background-clip: padding-box;
   }
 }
