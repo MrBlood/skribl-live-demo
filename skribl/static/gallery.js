@@ -289,7 +289,9 @@
     if (n > 0) {
       var pl = document.createElement('span');
       pl.className = 'plays';
-      pl.textContent = n + (n === 1 ? ' play' : ' plays');
+      // Under Hot the number is the week's, and says so: the same post read
+      // 28 under New and 13 under Hot with one word for both (owner, v318).
+      pl.textContent = n + (n === 1 ? ' play' : ' plays') + (sort === 'hot' ? ' this week' : '');
       meta.appendChild(pl);
     }
     head.appendChild(meta);

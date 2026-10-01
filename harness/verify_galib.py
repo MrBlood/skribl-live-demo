@@ -474,6 +474,44 @@ with sync_playwright() as p:
 
     phone.close()
     ctx.close()
+
+    # SCROLLED, NOTHING SHOWS THROUGH THE HEADER (owner, v318, a screenshot of
+    # the library a little way down: the page's title read faintly through the
+    # pinned glass card, and the card below peeked through the gap above it).
+    # Asked of PAINTED pixels, two strips: the gap between the window's top and
+    # the card, and a strip inside the card's empty middle. With the page
+    # scrolled under them each must be one colour. A rect is not a paint.
+    from PIL import Image as _Img
+    import io as _io
+    def _flat(png, box):
+        im = _Img.open(_io.BytesIO(png)).convert("RGB").crop(box)
+        px = list(im.getdata())
+        return max(max(abs(c[i] - px[0][i]) for i in range(3)) for c in px)
+    for _path in ("/library", "/gallery"):
+        for _theme in ("dark", "light"):
+            for _vw, _vh in ((1280, 700), (390, 700)):
+                _c = b.new_context(viewport={"width": _vw, "height": _vh})
+                _p = _c.new_page()
+                _p.goto(f"{BASE}{_path}?theme={_theme}", wait_until="load"); _p.wait_for_timeout(700)
+                # Text and a card edge where the scroll leaves them under the header.
+                _p.evaluate("""() => { document.body.style.minHeight = '3000px';
+                  const top = document.querySelector('.top'), m = document.createElement('div');
+                  m.textContent = 'SCROLLED-UNDER '.repeat(40);
+                  m.style.cssText = 'font:700 26px sans-serif;color:#d0d4dc;border:2px solid #d0d4dc;border-radius:16px;padding:8px;margin:10px 0;overflow:hidden;height:160px';
+                  top.after(m); }""")
+                _p.evaluate("() => window.scrollTo(0, 120)"); _p.wait_for_timeout(500)
+                _r = _p.evaluate("""() => { const t = document.querySelector('.top').getBoundingClientRect();
+                  const brand = document.querySelector('.top .brand, .top a, .top img').getBoundingClientRect();
+                  const right = [...document.querySelectorAll('.top button, .top a')].map(e => e.getBoundingClientRect().left).filter(x => x > brand.right + 40);
+                  return { top: t.top, bottom: t.bottom, l: t.left, w: t.width, mid0: brand.right + 24, mid1: (right.length ? Math.min(...right) : t.right) - 24 }; }""")
+                _png = _p.screenshot()
+                _gap = _flat(_png, (int(_r["l"] + 20), 0, int(_r["l"] + _r["w"] - 20), max(1, int(_r["top"]) - 1)))
+                _mid = _flat(_png, (int(_r["mid0"]), int(_r["top"]) + 6, max(int(_r["mid0"]) + 2, int(_r["mid1"])), int(_r["bottom"]) - 6))
+                check(f"{_path} {_theme} {_vw}: scrolled, nothing shows above the pinned header",
+                      _gap <= 8, f"the gap above the card varies by {_gap}/255 (scrolled content shows through)")
+                check(f"{_path} {_theme} {_vw}: scrolled, nothing shows through the header card",
+                      _mid <= 8, f"a strip inside the card varies by {_mid}/255 (text reads through the glass)")
+                _c.close()
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

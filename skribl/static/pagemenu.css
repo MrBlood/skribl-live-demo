@@ -69,9 +69,25 @@ html { scroll-padding-top: 96px; }
   box-shadow: var(--glass);
 }
 .top .spacer { flex: 1; }
+/* SCROLLED, THE CARD SITS ON THE PAGE'S OWN GROUND (owner, v318: the page's
+   title read through the pinned glass, and the card under it showed in the gap
+   above). A shadow spread past the window and clipped to a band -- from the
+   window's top to just under the card -- in --base, the page's ground. Not a
+   ::before: inside the card's stacking context that paints OVER its glass.
+   Only once scrolled (lib/pagemenu.js), when the ground's glow has scrolled
+   away with the page, so the band never covers it. verify_galib. */
+.top.scrolled {
+  box-shadow: var(--glass), 0 0 0 100vmax var(--base);
+  clip-path: inset(-12px -100vmax -14px -100vmax);
+  /* A shadow never paints under its own box, so the card's middle still saw
+     the page: its glass is laid over the ground instead -- the same colour it
+     shows at rest over an empty page, now opaque to what scrolls below. */
+  background: linear-gradient(var(--glass-fill), var(--glass-fill)), var(--base);
+}
 @media (max-width: 640px) {
   .top { top: 6px; padding: 8px 8px 8px 14px; background: var(--glass-solid);
     -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .top.scrolled { clip-path: inset(-6px -100vmax -14px -100vmax); background: var(--glass-solid); }
 }
 
 /* ---- THE ONE LOCKUP ------------------------------------------------------

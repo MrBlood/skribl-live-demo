@@ -220,6 +220,39 @@ with sync_playwright() as p:
     finally:
         br.close()
 
+# ---------------------------------------------------------------------------
+# ONE BIN (owner, v318: "the trash cans are not the same ... I like the one
+# with the ribbing"). Three bins were drawn: the ribbed one on the draft rows,
+# a rounded one without ribs on Clear and on the photo and music file rows, and
+# a slimmer third on a posted Skribl's Delete. Matched on PATH DATA, the thing
+# that is drawn, never on a comment or a label: no retired bin shape may be
+# drawn anywhere, and every bin site draws the ribbed one, body and ribs.
+print("\nONE BIN — every trash can is the ribbed one")
+import pathlib as _pl, re as _re
+_ROOT = _pl.Path(__file__).resolve().parent.parent / "skribl"
+_SRC = {p: p.read_text(encoding="utf-8") for p in
+        list((_ROOT / "templates").rglob("*.html")) + list((_ROOT / "static").rglob("*.js"))
+        if "vendor" not in p.parts and not p.name.endswith(".min.js")}
+_RETIRED = ["3 6 5 6 21 6",                                         # the rounded bin's rim
+            "M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6",        # ...its body
+            "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",               # ...its lid
+            "M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13",          # the slim bin's body
+            "M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"]               # ...its lid
+_drawn = lambda txt: set(_re.findall(r'(?:\bd|points)="([^"]+)"', txt))
+_left = sorted(f"{p.relative_to(_ROOT)}: {d}" for p, t in _SRC.items() for d in _drawn(t) if d in _RETIRED)
+check("no retired bin shape is drawn anywhere (templates and scripts)", not _left, "; ".join(_left[:4]))
+_BIN = ['M3 6h18', 'M8 6V4h8v2', 'M19 6l-1 14H6L5 6', 'M10 11v6M14 11v6']
+_SITES = {"static/lib/savedrafts.js": 1, "static/library.js": 1, "static/lib/postedui.js": 1,
+          "templates/skribl/_skribl_draw_drawer.html": 2,
+          "templates/skribl/_skribl_image_drawer.html": 1, "templates/skribl/_skribl_music_drawer.html": 1}
+_short = []
+for _rel, _n in _SITES.items():
+    _t = _SRC.get(_ROOT / _rel, "")
+    _have = min(len(_re.findall(r'(?:\bd|points)="' + _re.escape(d) + '"', _t)) for d in _BIN)
+    if _have < _n:
+        _short.append(f"{_rel}: {_have} of {_n}")
+check("every bin site draws the ribbed bin, body and ribs", not _short, "; ".join(_short))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))

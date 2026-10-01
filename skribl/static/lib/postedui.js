@@ -118,8 +118,10 @@
     eyeShut: '<path d="M3 10q9 9 18 0"/><path d="m4.4 12.4-1.6 2.6"/>'
            + '<path d="m9 15.1-.7 2.9"/><path d="m15 15.1.7 2.9"/>'
            + '<path d="m19.6 12.4 1.6 2.6"/>',
-    trash: '<path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'
-         + '<path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>',
+    /* THE ONE BIN, ribbed: the same paths as every other bin in the app
+       (verify_icons ONE BIN; owner, v318). */
+    trash: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>'
+         + '<path d="M10 11v6M14 11v6"/>',
     key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/>'
        + '<path d="m17 6 2 2"/><path d="m14 9 2 2"/>'
   };

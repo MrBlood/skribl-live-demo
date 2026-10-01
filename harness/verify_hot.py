@@ -219,6 +219,9 @@ with sync_playwright() as sp:
     tabs = pg.evaluate("() => [...document.querySelectorAll('.tabs .tab')].map(t => [t.textContent.trim(), t.getAttribute('aria-pressed')])")
     check("New and Hot are the two tabs, New pressed", tabs == [["New", "true"], ["Hot", "false"]], str(tabs))
     check("the first request asked for sort=new and no q", any("sort=new" in u and "q=" not in u for u in reqs), str(reqs))
+    PLAYS = "() => [...document.querySelectorAll('#galleryList .tile')].map(t => (t.querySelector('.plays') || {}).textContent || '').filter(Boolean)"
+    until(lambda: bool(pg.evaluate(PLAYS)))
+    plays_new = pg.evaluate(PLAYS)
     pg.click('.tab[data-sort="hot"]')
     until(lambda: any("sort=hot" in u for u in reqs))
     _hot_first = titles(listing(sort="hot", limit=1)[1])[0]
@@ -228,7 +231,14 @@ with sync_playwright() as sp:
     st, srv = listing(sort="hot", limit=1)
     check("...and shows the server's order, not one of its own", first == titles(srv)[0], f"page {first!r} vs server {titles(srv)[:1]}")
     plays = pg.evaluate("() => [...document.querySelectorAll('#galleryList .tile')].slice(0, 3).map(t => (t.querySelector('.plays') || {}).textContent || '')")
-    check("a played tile says its plays; an unplayed one says nothing", any(re.match(r"\d+ plays?$", p) for p in plays), str(plays))
+    # TWO NUMBERS, ONE WORD (owner, v318). Hot shows the seven-day count and
+    # New the total, and both said "N plays": the same post read 28 under New
+    # and 13 under Hot, and Hot's order looked wrong when it was right. The
+    # label says which number it is.
+    check("under Hot a played tile says its plays this week; an unplayed one says nothing",
+          any(re.match(r"\d+ plays? this week$", p) for p in plays), str(plays))
+    check("...and under New it says its plays, with no 'this week' (the total)",
+          bool(plays_new) and all(re.match(r"\d+ plays?$", p) for p in plays_new), str(plays_new))
     pg.fill("#galleryQ", "beta fish")
     until(lambda: any("q=beta" in u for u in reqs) and (lambda sh: sh and all("beta fish" in t.lower() for t in sh))(pg.evaluate(TILES)))
     shown = pg.evaluate("() => [...document.querySelectorAll('#galleryList .tile .tt')].map(t => t.textContent)")
