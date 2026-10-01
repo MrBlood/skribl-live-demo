@@ -1385,8 +1385,15 @@ with sync_playwright() as sp:
         return { pressed: l.getAttribute('aria-pressed'), lit: l.classList.contains('active'),
                  at: document.getElementById('playerAt').textContent,
                  dur: document.getElementById('playerDur').textContent }; }""")
-    check("Loop is ON when the link opens, and the button says so",
-          _rest["pressed"] == "true" and _rest["lit"], str(_rest))
+    # One press must turn it OFF. The markup ships lit; only the press proves
+    # the player's own state agrees with it -- a lit button over `loop = false`
+    # would read "on" here and stay "on" when pressed.
+    pg.click("#playerLoopBtn")
+    pg.wait_for_timeout(120)
+    _rest["afterPress"] = pg.evaluate("() => document.getElementById('playerLoopBtn').getAttribute('aria-pressed')")
+    pg.click("#playerLoopBtn")
+    check("Loop is ON when the link opens, the button says so, and one press turns it off",
+          _rest["pressed"] == "true" and _rest["lit"] and _rest["afterPress"] == "false", str(_rest))
     check("the clock under the track shows 0:00 and the drawing's length at rest",
           _rest["at"] == "0:00" and _rest["dur"] not in ("", "0:00"), str(_rest))
     pg.click("#playerPlayBtn")

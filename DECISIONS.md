@@ -13086,3 +13086,47 @@ Three things the owner noticed from Windows screenshots, in one change.
   themes, desktop and phone: 164/255 in the gap and 17 through the card before,
   1 after. Its tolerance (8) sits between the card's own drop shadow fading up
   into the gap (3-5) and the faintest real show-through (17).
+
+## After v318 -- the players as one family
+
+The owner asked whether the players matched: "are all the icons consistent
+across all the players? highlighted? does everything look the same?" They did
+not. Mocked as now-against-proposed on the real pages, both themes, phone and
+desktop; the owner said "build everything like your specs, but make sure it
+all makes sense".
+
+* **One set of icons.** Two restarts, two loops, three speakers and three
+  links were drawn across the link player, the library, the full-screen bar,
+  the posted sheet, the gallery menu and the export sheet. All draw one set
+  now, and `verify_icons` ONE SET OF PLAYER ICONS parses path data as ONE BIN
+  does: no retired shape anywhere, every player site drawing the shared one.
+  The Pad and Flip header Play keeps its wider triangle on purpose: it is sized
+  to the Record dot and Stop square beside it, so it belongs to the header.
+* **The link player.** Seven controls wrapped to two lines on a phone. Speed
+  and Gallery moved behind a More sheet (a disclosure: focus goes in on open,
+  Escape hands it back, a tap elsewhere shuts it); Copy link stays in the row,
+  because sharing is how a Skribl travels and the owner had asked for it
+  there. At 390 the row is 330px, so the buttons are 40 drawn and 46 to a
+  finger and fit with 2px to spare. Loop ships on, like every other player
+  of a Skribl. A clock sits under the track, rounded as the library's is.
+* **One lit look.** Loop on the link player was Play's solid violet and read
+  as a second Play; it takes the one pill's tint and ink, as the library's
+  already did. Mute no longer lights when muted: its icon says so, as on the
+  other players.
+* **The card's Loop never lit.** `.skfull-loop.on` sat above
+  `.skfull-card .skfull-btn`, tied it on specificity and lost, so on every
+  gallery and profile card Loop was on and looked off. It now follows the card
+  rule and names it.
+* **The post player on a host.** Its chips were see-through and coloured from
+  the host's `--accent`; on a light host they sat on the pale letterbox and lit
+  Loop became a violet square with no icon. They are round, solid, and use
+  fixed colours.
+* **What was not built, and why.** The spec gave the library a violet Play and
+  the posters a violet Play. #8 had already made the library's Play neutral
+  (Make one is that page's one action colour), and the poster Play is the same
+  component on the library, the gallery and a host's feed, where a violet
+  button on every post is loud. Both stay as they were; the library's buttons
+  are round.
+* **What it cost.** The link player's HTML +319 B and CSS +1,845 B, both
+  ratchets raised with the costs named beside them; the More sheet reuses the
+  editor menu's `.menu-item` rather than drawing its rows a second time.
