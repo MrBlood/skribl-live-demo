@@ -103,6 +103,21 @@
     sync();
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  /* THE HEADER KNOWS WHEN THE PAGE IS UNDER IT (owner, v318). Pinned glass
+     over scrolling words let the words read through it, and the gap above
+     the card showed them too. Scrolled, pagemenu.css puts the page's own
+     ground behind the card; at the top nothing changes, so the ground's glow
+     is never covered. */
+  function pinned() {
+    var top = document.querySelector('.top');
+    if (!top) return;
+    var on = function () { top.classList.toggle('scrolled', (global.scrollY || 0) > 0); };
+    global.addEventListener('scroll', on, { passive: true });
+    on();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', pinned);
+  } else { init(); pinned(); }
 })(window);
