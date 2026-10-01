@@ -177,7 +177,7 @@
     <div class="drawer-actions">
       {% if kind == 'flip' -%}
       <button type="button" id="clear" class="clear-drawer-btn" title="Delete all pages (keeps music and background)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
         <span id="clearLabel">Clear all pages</span>
       </button>
       <button type="button" id="clearUndo" class="clear-drawer-btn clear-undo-btn" title="Undo clear — bring it back" aria-label="Undo clear" disabled>
@@ -186,7 +186,7 @@
       </button>
       {%- else -%}
       <button type="button" id="clearDrawerBtn" class="clear-drawer-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
         <span>Clear drawing</span>
       </button>
       <button type="button" id="clearUndoBtn" class="clear-drawer-btn clear-undo-btn" title="Undo clear — bring it back" aria-label="Undo clear" disabled>
