@@ -223,7 +223,10 @@
        (styles.css, the --ui-* note): a two-stop gradient here was the last. */
     .scrub .fill { height: 100%; width: 0%; background: var(--accent); border-radius: 999px; }
     .transport { display: flex; align-items: center; gap: 9px; padding: 13px 16px 16px; }
-    .tbtn { width: 38px; height: 38px; border-radius: var(--r-control); border: 1px solid var(--hairline); background: var(--control); color: var(--text); display: grid; place-items: center; cursor: pointer; transition: background .15s, border-color .15s, transform .05s; }
+    /* ROUND, like every other player's controls (the share page, the gallery
+       card, full screen): one shape for one family. Play keeps #8's quiet
+       ground -- Make one is this page's action colour. */
+    .tbtn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--hairline); background: var(--control); color: var(--text); display: grid; place-items: center; cursor: pointer; transition: background .15s, border-color .15s, transform .05s; }
     .tbtn:hover { background: var(--control-hi); }
     .tbtn:active { transform: translateY(1px); }
     .tbtn svg { width: 18px; height: 18px; }

@@ -1048,6 +1048,27 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   justify-content: center;
 }
 .btn.play.btn-icon .btn-label { display: none; }
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  /* 600, not 500: Segoe UI has no 500, so the owner's Windows machine drew
+     these rows Regular. The gallery's and library's menus are 600 too. */
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-item:hover { background: rgba(var(--wash-rgb), 0.06); }
 @media (forced-colors: active) {
   .post-check-box { border-color: ButtonText; forced-color-adjust: none; }
   .post-check-input:checked + .post-check-box { background: Highlight; border-color: Highlight; }
@@ -1069,6 +1090,10 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .post-watch { animation: none; }
 }
+
+/* Mobile: bottom sheet */
+@media (max-width: 640px) {
+  .menu-item { padding: 15px 14px; }}
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
@@ -1327,7 +1352,8 @@ body.player-mode .app {
    along a 1900px bar reads as a progress meter somebody forgot to finish. Full
    screen is also where a drawing is long enough that seeking to a moment
    matters, and a 340px track is a coarse instrument for it. */
-.canvas-wrap:fullscreen .player-progress { max-width: none; }
+.canvas-wrap:fullscreen .player-progress,
+.canvas-wrap:fullscreen .player-time { max-width: none; }
 
 body.player-mode .canvas-wrap {
   flex: none;
@@ -1543,11 +1569,34 @@ a.player-btn { text-decoration: none; }
 .player-btn.primary svg { width: 24px; height: 24px; }
 .player-btn.primary:hover { background: var(--accent-bright); }
 
+/* A LIT TOGGLE IS THE ONE PILL'S SELECTED LOOK -- its tint and its ink, as
+   on the library's transport -- and not solid violet, which is Play's: Loop
+   on read as a second Play button. */
 .player-btn.active {
-  background: var(--accent);
+  background: var(--seg-on-fill);
   border-color: transparent;
-  color: #fff;
+  color: var(--seg-on-ink);
 }
+
+/* The clock under the track. pointer-events: none because the track's 44px
+   band reaches down under it, and a tap there is a seek. */
+.player-time { display: flex; justify-content: space-between; width: 100%;
+  max-width: 340px; margin-top: -10px; pointer-events: none;
+  font: 12px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+
+/* MORE: Speed and Gallery, in a small sheet that opens UP from the button
+   (it is the last thing in the row, and in full screen the row is the
+   bottom of the display). The rows are the editor menu's .menu-item. */
+.player-more { position: relative; }
+.player-menu { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 20;
+  min-width: 200px; padding: 6px; border-radius: 14px;
+  background: rgba(var(--surface-control-rgb), 0.96);
+  border: 1px solid var(--hairline-strong); box-shadow: 0 16px 50px rgba(0, 0, 0, 0.35); }
+.player-menu[hidden] { display: none; }
+.player-menu .player-rate { justify-content: space-between; }
+.player-menu .player-rate::before { content: 'Speed'; font: 600 14px/1 -apple-system,
+  BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
 .player-cta {
   display: inline-flex;
@@ -1607,6 +1656,16 @@ a.player-btn { text-decoration: none; }
    the decorative "Made with" line) and shrink the app padding/gap. Because the
    player fit-scale MEASURES the shell live (playerReservedV), reducing its height
    here automatically frees vertical budget for the canvas — no JS change needed. */
+/* ONE ROW ON A PHONE. Seven controls at 46px wrapped onto two lines at
+   390, where the row is 330px wide; at 40 (52 for Play) with 6px between
+   they take 328. 40 drawn, 46 to a finger: over the 44 floor, and two
+   neighbours' bands meet in the gap without overlapping. */
+@media (max-width: 420px) {
+  .player-controls { gap: 6px; }
+  .player-controls .player-btn { position: relative; width: 40px; height: 40px; }
+  .player-controls .player-btn::before { content: ''; position: absolute; inset: -3px; }
+  .player-controls .player-btn.primary { width: 52px; height: 52px; }}
+
 @media (max-height: 480px) {
   body.player-mode .app { gap: 10px; padding: 10px 0; }
   .player-shell { gap: 8px; }
@@ -1721,6 +1780,18 @@ a.player-btn { text-decoration: none; }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .tune-shell, .tune-panel { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .name-shell, .name-panel { transition: none; } }
+/* .toolbar .undo-btn sets its own --tap-grow per tier: 2px at 40 visual,
+   4px at 36, 5px at 34. Declared next to each width so the pair cannot drift. */
+
+/* Menu rows: already ~44 from padding; pin the minimum so it can't shrink. */
+.menu-item { min-height: 44px; }
+/* AND NOT BY FLEX EITHER. The bottom sheet is a column flexbox capped at
+   88dvh, and when the menu's content passes the cap, flex shrinks every child
+   before the sheet scrolls — the grabber's own note above records the same
+   crush. On a Pad menu two items taller than Flip's, each row lost 2px at
+   390x844 and verify_parity read 62 against Flip's 64. The rows keep their
+   size; the sheet scrolls, which is what overflow-y: auto is for. */
+.menu-item, .menu-row, .menu-divider, .menu-row-note, .menu-version { flex-shrink: 0; }
 
 /* ---------- STATES: pressed / disabled / loading, defined once ---------- */
 /* Pressed: every interactive control gives the same tactile response — a
@@ -1742,6 +1813,7 @@ a.player-btn { text-decoration: none; }
   .onion-tint:active, .tool-btn:active, .pb:active, .loop-btn:active,
   .btn:active:not(:disabled) { transform: none; }
 }
+.menu-item { text-decoration: none; }
 
 
 /* Magnify is shown wherever the GESTURE is missing and the button FITS.

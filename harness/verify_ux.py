@@ -1425,10 +1425,17 @@ with _sp204() as _p:
     check("V207: posting the galaxy demo yields a player id", bool(_pid), str(_resp)[:100])
     if _pid:
         _pl = _b.new_page(viewport={"width": 1000, "height": 800}); _pl.goto(f"{BASE}/s/{_pid}", wait_until="load"); _pl.wait_for_timeout(1000)
+        # Loop ships ON (the players' one-family pass), so the lit look is
+        # read at rest and the press must put it OUT. Lit is the one pill's
+        # tint, not Play's solid violet.
+        _lp_state = "() => { const b = document.getElementById('playerLoopBtn'); return { active: b.classList.contains('active'), bg: getComputedStyle(b).backgroundColor }; }"
+        _lit = _pl.evaluate(_lp_state)
         _pl.click("#playerLoopBtn"); _pl.wait_for_timeout(250)
-        _lit = _pl.evaluate("() => { const b = document.getElementById('playerLoopBtn'); return { active: b.classList.contains('active'), bg: getComputedStyle(b).backgroundColor }; }")
-        check("V207: player Repeat button LIGHTS (accent fill) when pressed — .player-btn.active is in player.css",
-              _lit["active"] and _lit["bg"] == "rgb(124, 92, 255)", str(_lit))
+        _out = _pl.evaluate(_lp_state)
+        check("V207: player Repeat button is LIT (the one pill's tint) — .player-btn.active is in player.css",
+              _lit["active"] and _lit["bg"] == "rgba(124, 92, 255, 0.22)", str(_lit))
+        check("V207: ...and pressing it puts it out",
+              not _out["active"] and _out["bg"] != _lit["bg"], str(_out))
         _pl.close()
 
     # At 641px (the desktop breakpoint's first pixel) after recording,

@@ -205,6 +205,9 @@ try:
         # pressed render. It is LAST so its click/focus state cannot bleed into
         # a following editor scene (it did: a 4px focus strip on the Pad tune
         # button differed between passes when this scene preceded editor-pad).
+        # Loop now SHIPS lit, so every player scene above renders
+        # .player-btn.active and this one renders it pressed OUT (with Mute
+        # pressed in) -- the same two states, compared the other way round.
 
         ("editor-pad", "/", (1280, 900), []),
         ("editor-pad-phone", "/", (390, 844), []),
