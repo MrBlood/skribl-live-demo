@@ -533,14 +533,18 @@ with sync_playwright() as sp:
     # computed ink and ground: the ground is solid and the ink is not the
     # host's colour.
     host_look = pg.evaluate("""(id) => {
-        document.documentElement.style.setProperty('--accent', '#6d4cf0');
         const b = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-loop');
+        /* On the button itself: nothing between it and a host's :root can
+           then stand in for the host's value. */
+        b.style.setProperty('--accent', '#6d4cf0');
         const c = getComputedStyle(b);
-        const out = { ground: c.backgroundColor, ink: c.color };
-        document.documentElement.style.removeProperty('--accent');
+        const out = { ground: c.backgroundColor, ink: c.color,
+                      seen: c.getPropertyValue('--accent').trim() };
+        b.style.removeProperty('--accent');
         return out; }""", id_m)
     check("lit Loop is a solid ground with its own ink, whatever the host calls --accent",
-          host_look["ink"] != "rgb(109, 76, 240)" and "rgba" not in host_look["ground"]
+          host_look["seen"] == "#6d4cf0"
+          and host_look["ink"] != "rgb(109, 76, 240)" and "rgba" not in host_look["ground"]
           and host_look["ink"] != host_look["ground"], json.dumps(host_look))
 
     # The audio fixture, played and unmuted, so there is something to stop.
