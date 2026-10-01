@@ -937,7 +937,30 @@ with sync_playwright() as _bk2:
           _k2live["mirror"][:3] == _k2live["pen"][:3] and _k2live["left"] and _k2live["points"] > 1,
           f"pen pixel {_k2live['pen']}, mirrored pixel {_k2live['mirror']}; "
           f"{_k2live['points']} points stored, all left of centre: {_k2live['left']}")
-    _ck2.close(); _brk2.close()
+    _ck2.close()
+
+    # 4. The Pad paints its live stroke elsewhere (editor_draw.js); what
+    #    paintStrokesStatic repaints -- undo, restore, replay -- is finished.
+    #    With stroke layers off, a run of varying width reached drawLine and
+    #    was reflected again.
+    _ck2p = _brk2.new_context(viewport={"width": 1100, "height": 860})
+    _pk2p = _ck2p.new_page()
+    _pk2p.goto(BASE + "/", wait_until="load"); _pk2p.wait_for_timeout(900)
+    _k2pad = _pk2p.evaluate("""() => {
+      const run = []; for (let i = 0; i < 30; i++) run.push({x: 60 + i*5, y: 120 + (i%4)*6,
+        size: 6 + (i%3)*2, color: '#ff3366', erase: false, t: i*8, start: i === 0});
+      const paint = (m) => { SkriblMirror.setMode(m); ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+        ctx.clearRect(0,0,canvas.width,canvas.height); ctx.restore(); paintStrokesStatic(run);
+        const d = ctx.getImageData(0,0,canvas.width,canvas.height).data; SkriblMirror.setMode('off'); return d; };
+      window.SKRIBL_STROKE_LAYERS = false;
+      let off, on;
+      try { off = paint('off'); on = paint('vertical'); } finally { window.SKRIBL_STROKE_LAYERS = undefined; }
+      let n = 0; for (let i = 0; i < off.length; i++) if (off[i] !== on[i]) n++;
+      return n; }""")
+    check("V213k2 pad: a finished stroke of varying width repaints the same with the mirror on "
+          "as off (stroke layers off, the drawLine path)",
+          _k2pad == 0, f"{_k2pad} channels differ")
+    _ck2p.close(); _brk2.close()
 
 
 # ---------------------------------------------------------------------------
