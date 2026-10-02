@@ -303,10 +303,8 @@ function startDraw(e) {
   }
   // The shape picker is tool OPTIONS, not a dialog: the press that starts
   // your shape shoves it aside, and the SAME gesture draws — not close-on-
-  // release, not tap-to-close-tap-again-to-draw. Hide, don't return. A pop
-  // the user DRAGGED (data-moved, lib/popdrag.js) is a palette they want to
-  // keep — it is VEILED for just this gesture and the window pointerup
-  // listener below lifts the veil on release.
+  // release, not tap-to-close-tap-again-to-draw. Hide, don't return; tap
+  // Shape for it back.
   //
   // BELOW every guard that swallows the press, and that placement is the
   // bug it fixes: this used to run before the post-record lock, so on a
@@ -317,10 +315,7 @@ function startDraw(e) {
   // swallowed press leaves it standing while the toast explains.
   {
     const _shapePop = document.getElementById('shapePop');
-    if (_shapePop && !_shapePop.hidden) {
-      if (_shapePop.dataset.moved) _shapePop.classList.add('pop-veiled');
-      else _shapePop.hidden = true;
-    }
+    if (_shapePop && !_shapePop.hidden) _shapePop.hidden = true;
   }
   // Auto-arm: on a blank, unlocked canvas the first stroke starts recording on
   // its own, so a first-time user who "just draws" still gets a replay to post
@@ -614,17 +609,6 @@ window.addEventListener('pointercancel', _releaseChrome, true);
 window.addEventListener('touchend', (e) => { if (!e.touches || e.touches.length === 0) _releaseChrome(null); }, true);
 window.addEventListener('touchcancel', () => _releaseChrome(null), true);
 canvas.addEventListener('lostpointercapture', (e) => { if (drawing && e.pointerId === strokePointerId) _endStrokeFor(e); });
-// The other half of the pinned-pop veil in startDraw: ANY release lifts it.
-// Window-level and unconditional, so no draw path — commit, cancel, a press
-// the lock check swallowed — can leave the panel invisible.
-window.addEventListener('pointerup', () => {
-  const p = document.getElementById('shapePop');
-  if (p) p.classList.remove('pop-veiled');
-}, true);
-window.addEventListener('pointercancel', () => {
-  const p = document.getElementById('shapePop');
-  if (p) p.classList.remove('pop-veiled');
-}, true);
 /* NO pointerleave -> endDraw.
  *
  * It ended the stroke the moment the cursor crossed the canvas edge, so

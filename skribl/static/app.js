@@ -4865,21 +4865,15 @@ function currentPaintTarget() {
   if (!pop) return;
   document.addEventListener('click', (e) => {
     if (pop.hidden) return;
-    // A pop the user has DRAGGED is pinned — they said "keep this on screen",
-    // so an outside click no longer sweeps it away (lib/popdrag.js sets the
-    // flag; hiding by any route clears it). Escape and tool switches still
-    // close it.
-    if (pop.dataset.moved) return;
     if (e.target.closest('#shapePop') || e.target.closest('#shapeToolBtn')) return;
     pop.hidden = true;
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !pop.hidden) { pop.hidden = true; }
   });
-  // The grip that makes the pop movable at all. Shared with Flip.
-  if (window.SkriblPopDrag) {
-    window.SkriblPopDrag.attach(pop, pop.querySelector('.pop-grip'));
-  }
+  // The grip that closes it, and the live shape under the knobs. Shared with
+  // Flip (lib/shapecard.js).
+  if (window.SkriblShapeCard) window.SkriblShapeCard.attach(pop);
 })();
 
 /* ---------- boot marker: the last statement in this file --------------------

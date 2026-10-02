@@ -669,6 +669,70 @@ with sync_playwright() as p:
           "a glyph trailing your hand across your own drawing is in the way")
     bp.close()
 
+    # ---- the shape card: the grip closes it; the knobs show what they make --
+    # Owner, from an iPhone: "The menu is weird about how it goes away" and
+    # "what is corners vs sides?". The grip DRAGGED the card and a dragged card
+    # was pinned -- it ignored taps outside and came back after every stroke --
+    # so pulling it down to put it away pinned it over the drawing. The grip
+    # closes the card now (lib/shapecard.js), Corners is Rounding and reads
+    # Sharp at 0, and a live shape under the sliders redraws as they move.
+    # Both editors, at phone size with touch, where the report came from.
+    SHAPE_OPEN = """() => { const p = document.getElementById('shapePop');
+        if (!p.hidden) return; const b = document.getElementById('shapeToolBtn');
+        if (b && b.offsetParent) { b.click(); return; }
+        document.getElementById('toolMoreBtn').click();
+        document.querySelector(".tool-tray-btn[data-tool='shape']").click(); }"""
+    for name, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        print(f"\nSHAPE CARD [{name}] -- the grip closes it; the knobs show what they make")
+        cx = browser.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
+        sp = cx.new_page()
+        browsing.goto(sp, BASE, route)
+        sp.wait_for_timeout(700)
+        sp.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
+        shut = lambda: sp.evaluate("() => document.getElementById('shapePop').hidden")
+        sp.evaluate(SHAPE_OPEN); sp.wait_for_timeout(400)
+        sp.click("#shapeSeg [data-shape='poly']"); sp.wait_for_timeout(300)
+        g = sp.locator("#shapePop .pop-grip").bounding_box()
+        sp.touchscreen.tap(g["x"] + g["width"] / 2, g["y"] + g["height"] / 2)
+        sp.wait_for_timeout(300)
+        check(f"{name}: a tap on the card's grip closes it", shut() is True,
+              "the pill reads as every sheet's grabber; it used to do nothing on a tap")
+        # A pull down, as on a sheet. Pointer events, the way a finger sends them.
+        sp.evaluate(SHAPE_OPEN); sp.wait_for_timeout(400)
+        g = sp.locator("#shapePop .pop-grip").bounding_box()
+        gx, gy = g["x"] + g["width"] / 2, g["y"] + g["height"] / 2
+        sp.mouse.move(gx, gy); sp.mouse.down()
+        for k in range(1, 7):
+            sp.mouse.move(gx, gy + k * 10)
+        sp.mouse.up(); sp.wait_for_timeout(300)
+        check(f"{name}: pulling the grip down closes it -- it does not move and pin the card",
+              shut() is True,
+              "a pulled card used to stay, pinned, ignoring taps outside and returning after each stroke")
+        sp.evaluate(SHAPE_OPEN); sp.wait_for_timeout(400)
+        sp.click("#shapeSeg [data-shape='poly']"); sp.wait_for_timeout(300)
+        knob = """([id, v]) => { const s = document.getElementById(id); s.value = String(v);
+            s.dispatchEvent(new Event('input', { bubbles: true })); }"""
+        sp.evaluate(knob, ["shapeRadius", 0]); sp.wait_for_timeout(200)
+        read = sp.evaluate("""() => ({ label: document.querySelector('label[for=shapeRadius]').textContent.trim(),
+            out: document.getElementById('shapeRadiusOut').textContent.trim() })""")
+        check(f"{name}: the corner knob is Rounding and reads Sharp at 0",
+              read == {"label": "Rounding", "out": "Sharp"}, str(read))
+        # The preview is PAINTED in the card, and it is the shape the knobs say:
+        # three sides and eight draw different outlines, and rounding changes it.
+        PREVIEW = """() => { const b = document.querySelector('#shapePop .shape-preview');
+            if (!b || b.hidden) return null; const r = b.getBoundingClientRect();
+            const at = document.elementFromPoint(r.left + r.width / 2, r.top + 4);
+            return { painted: !!(at && b.parentElement.contains(at) && r.height > 40),
+                     pts: b.querySelector('polyline').getAttribute('points') }; }"""
+        sp.evaluate(knob, ["shapeSides", 3]); sp.wait_for_timeout(200); tri = sp.evaluate(PREVIEW)
+        sp.evaluate(knob, ["shapeSides", 8]); sp.wait_for_timeout(200); octa = sp.evaluate(PREVIEW)
+        sp.evaluate(knob, ["shapeRadius", 30]); sp.wait_for_timeout(200); soft = sp.evaluate(PREVIEW)
+        check(f"{name}: a live shape under the knobs follows Sides and Rounding",
+              bool(tri and octa and soft) and tri["painted"] and len({tri["pts"], octa["pts"], soft["pts"]}) == 3
+              and len(tri["pts"]) > 10,
+              f"triangle {bool(tri)}, octagon {bool(octa)}, rounded {bool(soft)}, painted {tri and tri['painted']}")
+        cx.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

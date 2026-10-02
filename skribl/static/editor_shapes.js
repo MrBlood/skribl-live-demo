@@ -159,10 +159,12 @@ function syncShapeKnobs() {
   }
   if (radius) {
     radius.value = String(shapeRadius);
-    if (radiusOut) radiusOut.textContent = String(shapeRadius);
+    // "Sharp" at 0: the readout is the card's (lib/shapecard.js).
+    const rt = v => window.SkriblShapeCard ? window.SkriblShapeCard.radiusText(v) : String(v);
+    if (radiusOut) radiusOut.textContent = rt(shapeRadius);
     radius.addEventListener('input', () => {
       shapeRadius = Math.max(0, parseInt(radius.value, 10) || 0);
-      if (radiusOut) radiusOut.textContent = String(shapeRadius);
+      if (radiusOut) radiusOut.textContent = rt(shapeRadius);
     });
   }
   syncShapeKnobs();
