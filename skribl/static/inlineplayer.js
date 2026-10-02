@@ -1255,7 +1255,11 @@
         return;
       }
       if (state === 'playing') return;
-      for (var i = 0; i < players.length; i++) if (players[i] !== me) players[i].settle();
+      /* One post plays at a time. An AMBIENT player (How it works' silent
+       * examples, attach(el, p, { ambient: true })) is outside that rule both
+       * ways: it stops nothing when it starts, and a post starting does not
+       * stop it, so a panel of examples can loop together. */
+      if (!me.ambient) for (var i = 0; i < players.length; i++) if (players[i] !== me && !players[i].ambient) players[i].settle();
       if (elapsed >= totalMs) elapsed = 0;
       /* Always a full repaint from zero when starting at zero — posterless, the
        * canvas is currently holding the FINISHED drawing (renderIdle), and the
@@ -1387,7 +1391,7 @@
      * takes the payload directly: no id, no poster, no fetch, everything else
      * identical because it is the same code path from adopt() down.
      */
-    attach: function (el, payload) {
+    attach: function (el, payload, opts) {
       el.setAttribute('data-skribl-inline', '');
       /* No id means load() can never run, which is the point: there is nothing
        * on the server to fetch. */
@@ -1398,7 +1402,7 @@
       var poster = el.querySelector('.skribl-inline-poster');
       if (poster) poster.parentNode.removeChild(poster);
       var p = attach(el);
-      if (p) { if (io) io.observe(el); p.adopt(payload); }
+      if (p) { p.ambient = !!(opts && opts.ambient); if (io) io.observe(el); p.adopt(payload); }
       return p;
     },
     stopAll: function () { for (var i = 0; i < players.length; i++) players[i].settle(); },

@@ -13300,3 +13300,94 @@ chose B.
   live shape is painted and differs for 3 sides, 8 sides and rounded. All
   eight are red on the old tree; each editor's old handler file alone turns
   its own pull and preview checks red and leaves the other editor green.
+
+## After #303 -- How it works, shown (first slice)
+
+The owner, on the help panel: "If you were designing the how it works part of
+the app, what would a premium app do with it?" A panel of cards that each
+PLAY what they explain was mocked, then prototyped on a page the owner could
+use on a phone; the owner chose it -- "Showing people will really improve how
+it works ... I want it to be really comprehensive, so for every tool there is
+an example to watch ... it has to be supreme quality ... this is the first
+thing users will do."
+
+* **Real Skribls, not animations.** `harness/tools/make_help_demos.py` draws
+  each example by driving the real Pad (hand-like paths: speed eases in and
+  out, the line wobbles a little) and saves what the editor serializes. The
+  in-post player (`inlineplayer.js`) plays them, so an example is exactly what
+  its tool does and there is no second renderer to drift. The player gains an
+  AMBIENT mode for this: an example neither stops nor is stopped by another
+  player, so a panel of them loops together; posts keep one-at-a-time.
+* **Screens as clips.** Adding a song and posting are shown by the screen, so
+  `harness/tools/make_help_clips.py` records them from the real app at phone
+  size: a true 2x surface (emulated scale alone screencasts at 1x), a finger
+  dot, stills capped at 0.7 s, a camera that glides with the finger where the
+  action outgrows a 4:3 frame, one recording per theme, H.264 with a VP9 copy
+  for browsers without it (the harness Chromium among them), and a poster.
+* **This slice:** the three-step start (Draw as a replay; Add music and Post as
+  clips) and a card with Try it for Pen, Eraser and Shape on both editors,
+  above the unchanged reference. Try it picks the tool by the editor's own
+  route (dock button on Pad, shelfSetTool on Flip) after the tap that pressed
+  it has finished, or the shape card's dismisser closes the card it opened.
+* **Costs nothing until opened:** `lib/helplearn.js` fetches the player, its
+  stylesheet and the examples the first time the panel opens. Reduced motion
+  shows finished drawings and posters and fetches no video.
+* `verify_helpdemos.py`: each example is POSTED and must be accepted; every
+  Pad tool (and each Flip tool shared with Pad) has a card and Try it; nothing
+  loads before opening; replays paint growing ink, several at once; clips
+  advance and follow the theme; closing stops everything; Try it works and
+  leaves Shape's card open; reduced motion holds. Each check was turned red by
+  its own mutation (ambient off, eager load, Try it in the same tap, theme
+  ignored, reduced motion ignored, a card dropped, search ignored, clips never
+  paused, a corrupted example).
+* `verify_library`'s module census learned partials: the help panel names the
+  player, and its script tags are its including pages', so the pair is asked
+  of every page that includes it.
+* Next: an example for every drawing feature and Flip's other seven tools, then
+  screen clips for music, background image, zoom, recording and sharing.
+
+## After #303 -- How it works, illustrated
+
+The owner looked at the first examples and said the drawings were "not
+actually drawing like they actually would" and not "high enough quality":
+motion robotic, drawings plain, too small. Their brief: draw through the real
+app with pressure and a hand's timing, in an artist's stroke order, with line
+weight that means something, two or three colours, one idea each; check every
+one in both themes at phone and desktop before showing it; then "simple short
+and elegant".
+
+* **A hand, then an illustrator.** `harness/tools/handmotion.py` times a
+  stroke as a hand does (speed follows curvature, minimum-jerk ends, tremor,
+  pressure). `harness/tools/artdraw.py` performs a drawing as Chrome's own pen
+  input (CDP, pointerType pen, with force), so the editor sees trusted stylus
+  events and records them on its own clock. A stroke has a ROLE (gesture,
+  contour, form, detail, accent, fill) that sets its weight, a taper at both
+  ends and an optional weight profile along it, and the dock TOOL it is made
+  with (pen, eraser, shape, with the shape card's settings).
+* **The drawings are code, in drawing order.** `artworks.py` (Pad: a cat, a
+  cottage scene, a one-line snail, and the Pen, Eraser and Shape examples) and
+  `flipworks.py` (Flip: a bouncing ball with squash and stretch, a waving
+  character whose body is drawn once and duplicated so it cannot drift, key
+  poses first). `make_art.py` and `make_flip.py` draw them in the editors and
+  save what the editors serialize -- Flip's from `buildSharePayload()`, the
+  body its Share posts, because the draft's frames carry the background as a
+  bare string the player does not read and every loop played on black.
+* **Short.** Each Pad example is a few strokes and replays in about ten
+  seconds; the hand is calmer than the gaps between strokes (`tempo` and
+  `pause_tempo`), at the owner's "still fast".
+* **Looked at before shown.** `review_art.py` posts to the LOCAL server and
+  screenshots each in the real player, light and dark, phone and desktop,
+  with a replay GIF; `make_flip.py` can also write every page (a sampled GIF
+  skips a one-page squash).
+* **In the panel:** the Draw card plays the cat on Pad and the wave on Flip;
+  a new Ideas to try row plays the scene, the snail and the ball, each editor
+  leading with its own kind; the tool cards play the new Pen, Eraser and
+  Shape. On a phone the tool and idea cards stack one to a row.
+* **Retired:** `make_help_demos.py` and `tracedrawing.py` (the even-path
+  examples and an image tracer that only it called), and the sun doodle.
+* `verify_helpdemos`' ink measure counted pixels brighter than a dark ground;
+  on paper it counted the paper, so a blank card would pass. It now counts
+  pixels unlike the canvas's own ground: blank paper and blank dark read 0, a
+  line on either reads 900.
+* The Post clip was recorded with the sun doodle and is unchanged; its
+  recorder now draws the cat, for the clip re-recording still to come.
