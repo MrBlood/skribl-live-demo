@@ -154,6 +154,15 @@ A green check is not evidence until it has been shown to go red.
   be named in the sheet. It found the Pad's "Which tool am I using?" naming
   tools the Pad lacks, and Flip's Pages tip calling Duplicate "＋ Page" long
   after the button was renamed.
+- `verify_helpdemos.py` — How it works, shown: the example cards above the
+  reference. Every example is posted to the server and must be accepted, as a
+  person's drawing is; every Pad tool (and every tool Flip shares with it) has
+  a card with Try it; nothing is fetched until the panel opens; opened, the
+  replays paint growing ink, several at once, and the clips advance and match
+  the theme; closed, nothing plays; Try it picks the tool and leaves Shape's
+  card open; reduced motion shows finished drawings and posters and fetches no
+  video. The examples are made by `tools/make_help_demos.py` (drawn by driving
+  the editor) and `tools/make_help_clips.py` (recorded from the app).
 - `verify_keys.py` — the global keydown map. flip.js attaches eight listeners,
   five of them Escape, and ArrowLeft/Right were once bound twice and both
   fired on one press.

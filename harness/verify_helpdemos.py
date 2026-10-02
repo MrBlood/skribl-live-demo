@@ -155,6 +155,9 @@ with sync_playwright() as p:
 
         # 5. Try it
         for t in sorted(tools):
+            if not pg.locator(f'#helpLearn .learn-try[data-try="{t}"]').count():
+                check(f"{name}: Try it on {t} picks it and closes How it works", False, "no Try it for this tool")
+                continue
             pg.evaluate(OPEN); pg.wait_for_timeout(600)
             pg.locator(f'#helpLearn .learn-try[data-try="{t}"]').scroll_into_view_if_needed()
             pg.click(f'#helpLearn .learn-try[data-try="{t}"]')
