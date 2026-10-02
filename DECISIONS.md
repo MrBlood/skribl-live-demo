@@ -13188,3 +13188,23 @@ cause is NOT confirmed; this is a safety net with a likely cause beside it.
 * **Still open:** whether this was the page or Safari's view, and whether the
   net catches it on the device. If it recurs, a tap on the clock (which
   scrolls the page, not the view) tells the two apart.
+
+## After #300 -- Flip's page menu opens at its page, as a card
+
+The owner, from an iPhone, on Flip's strip: "This menu … from slide looks
+weird?" The page ⋯ menu sat in the top-left corner, over the header, far from
+the page it came from. Two looks were mocked on the real page (a card on the
+tile, a bottom sheet); the owner chose the card.
+
+* **Why it was in the corner.** Opening the menu on a page you are not on
+  selects that page first, which rebuilds the strip. The menu then measured
+  the button in hand -- detached, its rect all zeros -- and the clamp put it
+  at the top-left. Chromium shows the same, so this was never the iPhone.
+  It now asks the strip for that page's live ⋯ and places itself again on the
+  next frame, since the selection can also scroll the strip.
+* **The card** is the link player's More card on Flip's strip: solid, a
+  pointer down at the ⋯ (up, if there is no room above), a line icon on
+  every row, and Delete below a rule with the ribbed bin.
+* `verify_compactops` opens it from a page that is not selected and requires
+  its bottom edge just above that page's ⋯, overlapping it sideways, and
+  painted; red on the old placement (12px from the top, 384px from its page).
