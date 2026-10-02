@@ -148,12 +148,14 @@ def clip_music(page, rec):
 
 
 def clip_post(page, rec):
-    # A drawing to post, drawn off camera by the same steps as the Draw example.
-    import make_help_demos as demos
+    # A drawing to post, drawn off camera: the Draw card's cat (artworks.py),
+    # quickly -- only the posting is filmed.
+    import artdraw
+    import artworks
     page.evaluate("""() => { const t = window.SkriblCanvasSizes, id = t.SIZES.find(s => s.label === '4:3').id;
         document.querySelector(`#canvasSeg button[data-size='${id}']`).click(); }""")
     page.wait_for_timeout(300)
-    demos.run(page, demos.demo_draw())
+    artdraw.draw(page, artworks.cat(), tempo=3.0)
     # End the take, as you would before posting: the header shows Done, not
     # Post, while a take is being recorded.
     page.evaluate("() => { if (recording) endRecordingTake(); }")
@@ -163,7 +165,7 @@ def clip_post(page, rec):
     tx, ty = center(page, "#postTitleInput")
     glide(page, (tx + 60, ty + 80), (tx, ty), 380)
     page.mouse.down(); page.wait_for_timeout(100); page.mouse.up()
-    page.keyboard.type("Sunny day", delay=90)
+    page.keyboard.type("Cat", delay=90)
     rec.mark("pan")
     page.wait_for_timeout(450)
     tap(page, "#postSubmitBtn", before=700, after=300)

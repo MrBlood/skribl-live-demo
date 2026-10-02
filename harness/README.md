@@ -161,13 +161,13 @@ A green check is not evidence until it has been shown to go red.
   replays paint growing ink, several at once, and the clips advance and match
   the theme; closed, nothing plays; Try it picks the tool and leaves Shape's
   card open; reduced motion shows finished drawings and posters and fetches no
-  video. The tool examples are made by `tools/make_help_demos.py` (drawn by
-  driving the editor), the illustrations (the quick start's first card and
-  Ideas to try) by `tools/make_art.py` and `tools/make_flip.py` (an
-  illustrator's strokes, `tools/artworks.py` and `tools/flipworks.py`, performed
-  as real pen input by `tools/artdraw.py`; `tools/review_art.py` shows each in
-  the player before it ships), and the clips by `tools/make_help_clips.py`
-  (recorded from the app).
+  video. Every example is drawn through the real editor by
+  `tools/make_art.py` (Pad: the tool cards, the quick start's Draw card and
+  Ideas to try) and `tools/make_flip.py` (Flip loops): an illustrator's
+  strokes, `tools/artworks.py` and `tools/flipworks.py`, performed as real pen
+  input by `tools/artdraw.py` on `tools/handmotion.py`'s hand;
+  `tools/review_art.py` shows each in the player before it ships. The clips
+  are recorded from the app by `tools/make_help_clips.py`.
 - `verify_keys.py` — the global keydown map. flip.js attaches eight listeners,
   five of them Escape, and ArrowLeft/Right were once bound twice and both
   fired on one press.

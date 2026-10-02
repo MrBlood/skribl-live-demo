@@ -19,10 +19,10 @@ well measured, so this follows them:
   it into a line that swells and tapers.
 * BETWEEN STROKES: a pause that grows with how far the pen has to travel.
 
-Points come out at 240 Hz, an Apple Pencil's rate, and DRIVER (below) delivers
-them as pen PointerEvents inside the page on a precise clock, so the editor
-timestamps each one as it would a real stylus. Nothing here edits a recording;
-the editor records what this does.
+Points come out at 240 Hz, an Apple Pencil's rate; artdraw.py delivers them as
+Chrome's own pen input on a precise clock, so the editor timestamps each one as
+it would a real stylus. Nothing here edits a recording; the editor records
+what this does.
 """
 import math
 import random
@@ -120,29 +120,3 @@ def pause(prev_end, next_start, seed=0):
     rnd = random.Random(seed)
     d = math.hypot(next_start[0] - prev_end[0], next_start[1] - prev_end[1])
     return 110 + d * 0.55 + rnd.uniform(0, 140)
-
-
-# Delivers [{k: 'd'|'m'|'u', x, y, t, p}] (client px, ms from now, pressure) as
-# pen PointerEvents on the canvas, each when its moment comes. Runs in the
-# page, so the editor's clock sees the hand's timing and not the automation's.
-DRIVER = """(events) => new Promise(done => {
-  const c = document.getElementById('canvas') || document.querySelector('canvas.flip-canvas, #pad');
-  const t0 = performance.now(); let i = 0;
-  const fire = (ev) => {
-    // A stroke can carry its own ink: colour and width are set as the pen
-    // lands, through the editor's hook (window.__demoSet), so a whole traced
-    // picture draws in one pass with the hand's own pauses between strokes.
-    if (ev.k === 'd' && (ev.c || ev.s) && window.__demoSet) window.__demoSet(ev);
-    const type = ev.k === 'd' ? 'pointerdown' : ev.k === 'u' ? 'pointerup' : 'pointermove';
-    c.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, composed: true,
-      pointerId: 7, pointerType: 'pen', isPrimary: true, clientX: ev.x, clientY: ev.y,
-      pressure: ev.k === 'u' ? 0 : ev.p, buttons: ev.k === 'u' ? 0 : 1, button: ev.k === 'm' ? -1 : 0,
-      width: 1, height: 1 }));
-  };
-  const tick = () => {
-    const now = performance.now() - t0;
-    while (i < events.length && events[i].t <= now) fire(events[i++]);
-    if (i < events.length) setTimeout(tick, 1); else done(events.length);
-  };
-  tick();
-})"""

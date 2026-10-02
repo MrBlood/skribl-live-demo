@@ -13345,3 +13345,49 @@ thing users will do."
   of every page that includes it.
 * Next: an example for every drawing feature and Flip's other seven tools, then
   screen clips for music, background image, zoom, recording and sharing.
+
+## After #303 -- How it works, illustrated
+
+The owner looked at the first examples and said the drawings were "not
+actually drawing like they actually would" and not "high enough quality":
+motion robotic, drawings plain, too small. Their brief: draw through the real
+app with pressure and a hand's timing, in an artist's stroke order, with line
+weight that means something, two or three colours, one idea each; check every
+one in both themes at phone and desktop before showing it; then "simple short
+and elegant".
+
+* **A hand, then an illustrator.** `harness/tools/handmotion.py` times a
+  stroke as a hand does (speed follows curvature, minimum-jerk ends, tremor,
+  pressure). `harness/tools/artdraw.py` performs a drawing as Chrome's own pen
+  input (CDP, pointerType pen, with force), so the editor sees trusted stylus
+  events and records them on its own clock. A stroke has a ROLE (gesture,
+  contour, form, detail, accent, fill) that sets its weight, a taper at both
+  ends and an optional weight profile along it, and the dock TOOL it is made
+  with (pen, eraser, shape, with the shape card's settings).
+* **The drawings are code, in drawing order.** `artworks.py` (Pad: a cat, a
+  cottage scene, a one-line snail, and the Pen, Eraser and Shape examples) and
+  `flipworks.py` (Flip: a bouncing ball with squash and stretch, a waving
+  character whose body is drawn once and duplicated so it cannot drift, key
+  poses first). `make_art.py` and `make_flip.py` draw them in the editors and
+  save what the editors serialize -- Flip's from `buildSharePayload()`, the
+  body its Share posts, because the draft's frames carry the background as a
+  bare string the player does not read and every loop played on black.
+* **Short.** Each Pad example is a few strokes and replays in about ten
+  seconds; the hand is calmer than the gaps between strokes (`tempo` and
+  `pause_tempo`), at the owner's "still fast".
+* **Looked at before shown.** `review_art.py` posts to the LOCAL server and
+  screenshots each in the real player, light and dark, phone and desktop,
+  with a replay GIF; `make_flip.py` can also write every page (a sampled GIF
+  skips a one-page squash).
+* **In the panel:** the Draw card plays the cat on Pad and the wave on Flip;
+  a new Ideas to try row plays the scene, the snail and the ball, each editor
+  leading with its own kind; the tool cards play the new Pen, Eraser and
+  Shape. On a phone the tool and idea cards stack one to a row.
+* **Retired:** `make_help_demos.py` and `tracedrawing.py` (the even-path
+  examples and an image tracer that only it called), and the sun doodle.
+* `verify_helpdemos`' ink measure counted pixels brighter than a dark ground;
+  on paper it counted the paper, so a blank card would pass. It now counts
+  pixels unlike the canvas's own ground: blank paper and blank dark read 0, a
+  line on either reads 900.
+* The Post clip was recorded with the sun doodle and is unchanged; its
+  recorder now draws the cat, for the clip re-recording still to come.

@@ -208,5 +208,5 @@ def tool_shape():
 
 
 ART = {"cat": cat, "scene": scene, "snail": snail,
-       # tool examples, on trial under these names until the owner picks
-       "try-pen": tool_pen, "try-eraser": tool_eraser, "try-shape": tool_shape}
+       # the tool cards' examples (Pen, Eraser, Shape)
+       "pen": tool_pen, "eraser": tool_eraser, "shape": tool_shape}
