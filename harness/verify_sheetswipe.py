@@ -479,6 +479,44 @@ with sync_playwright() as p:
               kept > 0, f"scrollY {kept}")
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
+
+    # 7 TRIM | FINE-TUNE (owner: "Clicking this moves the arrow but doesn't
+    # show you what's there"). Fine-tune was a row under Preview Loop that
+    # opened below the fold. It is a mode of the music drawer now, and picking
+    # it must put the loop detail ON SCREEN, in the trim strip's place.
+    import wave as _wave, struct as _struct, math as _math, io as _io
+    _buf = _io.BytesIO()
+    with _wave.open(_buf, "wb") as _w:
+        _w.setnchannels(1); _w.setsampwidth(2); _w.setframerate(22050)
+        _w.writeframes(b"".join(_struct.pack("<h", int(8000 * _math.sin(i / 8))) for i in range(22050 * 4)))
+    for page, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        who = f"{page}: the music drawer"
+        print(f"\n{who}")
+        ctx, pg, errs = fresh(b, route)
+        browsing.pad_drawer(pg, "music", settle=500)
+        pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _buf.getvalue()})
+        pg.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
+        pg.wait_for_timeout(600)
+        pg.click("#fineTuneToggle")
+        pg.wait_for_timeout(1600)
+        ft = pg.evaluate("""() => { const z = document.getElementById('zoomWaveformCanvas').getBoundingClientRect();
+            const vh = window.visualViewport ? visualViewport.height : innerHeight;
+            const hit = document.elementFromPoint(z.left + z.width / 2, z.top + z.height / 2);
+            return { pressed: document.getElementById('fineTuneToggle').getAttribute('aria-pressed'),
+                     strip: document.getElementById('musicTrack').getBoundingClientRect().height,
+                     top: Math.round(z.top), bottom: Math.round(z.bottom), vh: Math.round(vh),
+                     painted: !!(hit && hit.closest('#zoomTrackWrap')) }; }""")
+        check(f"{who}: Fine-tune is pressed and the trim strip gives way to the loop detail",
+              ft["pressed"] == "true" and ft["strip"] == 0, str(ft))
+        check(f"{who}: ...and the loop detail is ON SCREEN, painted, without a scroll by hand",
+              ft["top"] >= 0 and ft["bottom"] <= ft["vh"] and ft["painted"], str(ft))
+        pg.click("#fineTuneTrim")
+        pg.wait_for_timeout(500)
+        back = pg.evaluate("() => ({ strip: document.getElementById('musicTrack').getBoundingClientRect().height,"
+                           " hidden: document.getElementById('fineTuneBody').hidden })")
+        check(f"{who}: Trim brings the strip back", back["strip"] > 0 and back["hidden"] is True, str(back))
+        check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
+        ctx.close()
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

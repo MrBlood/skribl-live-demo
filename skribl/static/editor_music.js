@@ -94,22 +94,32 @@ dragZoomHandle(zoomHandleEnd, false);
   // arithmetic. Both surfaces now build this from the same function.
 })();
 
-(function initFineTuneToggle() {
-  const toggle = document.getElementById('fineTuneToggle');
+(function initFineTuneMode() {
+  // TRIM | FINE-TUNE, one pill (lib/segslider.js places it and writes
+  // aria-pressed from the .on class). Fine-tune swaps the trim strip for the
+  // loop detail IN PLACE -- it used to open below the fold behind a quiet row,
+  // and a tap seemed to do nothing. Flip runs the same switch (flip.js).
+  const seg = document.getElementById('fineTuneSeg');
   const body = document.getElementById('fineTuneBody');
-  if (!toggle || !body) return;
-  toggle.addEventListener('click', () => {
-    const open = body.hidden;
-    body.hidden = !open;
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) {
-      // First reveal: the zoom canvas was laid out at zero size while hidden.
-      // Redraw it now that it has a box. (The focus pill re-homes itself:
-      // lib/segslider.js watches its track for gaining layout.)
-      requestAnimationFrame(() => {
-        if (typeof updateTrimUI === 'function') updateTrimUI();
-      });
-    }
+  if (!seg || !body) return;
+  seg.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const fine = b.id === 'fineTuneToggle';
+    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    body.hidden = !fine;
+    seg.parentElement.classList.toggle('ft-on', fine);
+    // Whichever canvas is now showing was laid out at zero size while hidden;
+    // redraw it now that it has a box.
+    requestAnimationFrame(() => {
+      if (typeof updateTrimUI === 'function') updateTrimUI();
+      if (!fine && typeof drawWaveform === 'function' && typeof currentAudioBuffer !== 'undefined'
+          && currentAudioBuffer) drawWaveform(currentAudioBuffer);
+      // The loop detail is taller than the strip it replaces; bring the
+      // drawer's end on screen, as opening the drawer does.
+      const panel = document.getElementById('musicPanel');
+      if (panel && window.SkriblDrawerDetent) window.SkriblDrawerDetent.revealPanelEnd(panel, 'smooth');
+    });
   });
 })();
 

@@ -5443,7 +5443,8 @@ function stepZoomMag(dir){
   });
   syncZoomMagStep();
 })();
-bindEl('fineTuneToggle', 'click',()=>{ const body=document.getElementById('fineTuneBody'); const t=document.getElementById('fineTuneToggle'); const open=body.hidden; body.hidden=!open; t.setAttribute('aria-expanded', open?'true':'false'); if(open){ requestAnimationFrame(()=>{ updateTrimUI(); }); } });
+// Trim | Fine-tune, the one pill -- the Pad's switch (editor_music.js), here.
+bindEl('fineTuneSeg', 'click', e=>{ const b=e.target.closest('button'); if(!b) return; const seg=document.getElementById('fineTuneSeg'); const fine=b.id==='fineTuneToggle'; seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on', x===b)); document.getElementById('fineTuneBody').hidden=!fine; seg.parentElement.classList.toggle('ft-on', fine); requestAnimationFrame(()=>{ updateTrimUI(); if(!fine && typeof drawWaveform==='function' && currentAudioBuffer) drawWaveform(currentAudioBuffer); const mp=document.getElementById('musicPanel'); if(mp && window.SkriblDrawerDetent) window.SkriblDrawerDetent.revealPanelEnd(mp, 'smooth'); }); });
 
 // nudge fine-tune
 const nudgeSteps=[0.01,0.02,0.05,0.1]; let nudgeStepIdx=3;

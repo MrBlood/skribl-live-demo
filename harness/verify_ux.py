@@ -1013,7 +1013,7 @@ with _sp204() as _p:
         mp.goto(BASE + "/", wait_until="load"); mp.wait_for_timeout(700)
         browsing.pad_drawer(mp, "music"); mp.wait_for_timeout(300)
         mp.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); mp.wait_for_timeout(1500)
-        mp.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
+        mp.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-pressed') !== 'true') t.click(); }")
         mp.wait_for_timeout(400)
         fit = mp.evaluate("""() => { const vw = document.documentElement.clientWidth;
             const grid = document.querySelector('#fineTuneBody .finetune-grid'); if (!grid) return null;
@@ -1489,7 +1489,7 @@ with _sp204() as _p:
         _z.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
         ux_open(_z, opener); _z.wait_for_timeout(300)
         _z.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _z.wait_for_timeout(1500)
-        _z.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
+        _z.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-pressed') !== 'true') t.click(); }")
         _z.wait_for_timeout(900)
         # RADIUS IS READ FROM THE TOKEN, NOT TYPED. This asserted the literal
         # "999px" until v220 squared every segmented control (--r-seg, styles.css).
@@ -1784,7 +1784,7 @@ with _sp204() as _p:
                     ux_close(_f, op); _f.wait_for_timeout(200)
             ux_open(_f, openers[3]); _f.wait_for_timeout(300)
             _f.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _f.wait_for_timeout(1400)
-            _f.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
+            _f.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-pressed') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
             _r = _f.evaluate(_AUDIT)
             check(f"PHONE {nm}@{pw}: ...with music loaded + fine-tune open", _AUDIT_OK(_r), str(_r))
             _f.close()

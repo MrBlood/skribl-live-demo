@@ -54,6 +54,13 @@
 
   <div id="musicDetail" class="music-detail" hidden>
     <div class="music-trim">
+      {#- TRIM | FINE-TUNE, the one pill (owner's pick of three mocks). Fine-tune
+          was a quiet row under Preview Loop that opened BELOW the fold, so a tap
+          turned its arrow and seemed to do nothing. As a mode it swaps the trim
+          strip for the loop detail in the same place, and is named as half of
+          what this drawer does. The ids stay: #fineTuneToggle is the Fine-tune
+          option; the editors switch the mode (editor_music.js, flip.js). -#}
+      <span class="seg ft-seg" id="fineTuneSeg" role="group" aria-label="Loop editor"><span class="seg-slider"></span><button type="button" id="fineTuneTrim" class="on">Trim</button><button type="button" id="fineTuneToggle" aria-controls="fineTuneBody">Fine-tune</button></span>
       <div class="music-trim-track" id="musicTrack">
         <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
         <div class="music-trim-range" id="musicRange"></div>
@@ -72,18 +79,6 @@
         <span id="trimDurLabel">0:00 selected</span>
         <span id="trimEndLabel">0:00</span>
       </div>
-      <div class="loop-preview-row">
-        <span id="loopSummary" class="loop-summary">Loop: 0:00 &rarr; 0:00 &middot; 0.0s{% if kind != 'flip' %} <span id="matchDrawingLabel" class="match-drawing-label"></span>{% endif %}</span>
-        <div class="loop-actions">
-          <button type="button" id="matchDrawingBtn" class="loop-btn subtle">Match Drawing Time</button>
-          <button type="button" id="testSeamBtn" class="loop-btn subtle">Test Seam</button>
-          <button type="button" id="previewLoopBtn" class="loop-btn">Preview Loop</button>
-        </div>
-      </div>
-      <button type="button" id="fineTuneToggle" class="fine-tune-toggle panel-btn" aria-expanded="false" aria-controls="fineTuneBody">
-        <span>Fine-tune loop</span>
-        <svg class="fine-tune-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
       <div class="fine-tune-body" id="fineTuneBody" hidden>
         <div class="loop-zoom">
           <div class="loop-zoom-head"><span>Loop Detail</span><span id="loopZoomLabel">0:00.00 &rarr; 0:00.00 [0.00s]</span></div>
@@ -121,6 +116,14 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+      <div class="loop-preview-row">
+        <span id="loopSummary" class="loop-summary">Loop: 0:00 &rarr; 0:00 &middot; 0.0s{% if kind != 'flip' %} <span id="matchDrawingLabel" class="match-drawing-label"></span>{% endif %}</span>
+        <div class="loop-actions">
+          <button type="button" id="matchDrawingBtn" class="loop-btn subtle">Match Drawing Time</button>
+          <button type="button" id="testSeamBtn" class="loop-btn subtle">Test Seam</button>
+          <button type="button" id="previewLoopBtn" class="loop-btn">Preview Loop</button>
         </div>
       </div>
     </div>
