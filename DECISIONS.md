@@ -13208,3 +13208,25 @@ tile, a bottom sheet); the owner chose the card.
 * `verify_compactops` opens it from a page that is not selected and requires
   its bottom edge just above that page's ⋯, overlapping it sideways, and
   painted; red on the old placement (12px from the top, 384px from its page).
+
+## After #300 -- the music drawer's Trim | Fine-tune
+
+The owner: tapping "Fine-tune loop" "moves the arrow but doesn't show you
+what's there. You have to scroll ... it looks like nothing happened", and "the
+selection is a developed function that is hidden behind a pretty unobtrusive
+button". Three were mocked on the real Pad at iPhone size (a better row that
+scrolls into view, a Trim | Fine-tune pill, always shown); the owner chose the
+pill.
+
+* **A mode, not a disclosure.** The one pill (`.seg`, placed by
+  `lib/segslider.js`) heads the music section: Trim or Fine-tune. Fine-tune
+  hides the trim strip and its times and shows the loop detail IN THEIR PLACE
+  -- the detail moved above Match Drawing Time / Test Seam / Preview Loop,
+  which stay put -- and the drawer's end is brought on screen, as opening it
+  does. `#fineTuneToggle` is still the Fine-tune option, so it now reports
+  `aria-pressed`, not `aria-expanded`; the suites that opened it read that.
+* `verify_sheetswipe` taps Fine-tune at iPhone size on both editors and
+  requires the loop detail on screen and painted without a scroll by hand,
+  and Trim to bring the strip back. With the scroll-into-view removed, Flip
+  goes red (the detail at 647-719 in a 664 screen); the Pad stays green by
+  13px, because the move alone nearly fits it there.
