@@ -143,6 +143,13 @@
   // ---- the drawer ----------------------------------------------------------
   var panel = sheet.querySelector('.learn-sheet-panel');
   var hideTimer = 0;
+  // Reduced motion: the drawer appears and goes without gliding. Set here, not
+  // in styles.css, whose reduced-motion blocks the player's stylesheet carries.
+  if (reduce) {
+    if (panel) panel.style.transition = 'none';
+    var scrim = sheet.querySelector('.learn-scrim');
+    if (scrim) scrim.style.transition = 'none';
+  }
   function openSheet() {
     if (sheetOpen) return;
     clearTimeout(hideTimer);
