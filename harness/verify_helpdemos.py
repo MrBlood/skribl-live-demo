@@ -192,6 +192,8 @@ with sync_playwright() as p:
               not esc["sheet"] and esc["help"] and esc["focus"] == "learnPeek", str(esc))
         check(f"{name}: with the drawer closed, nothing keeps playing",
               "playing" not in s4["replays"] and all(c["paused"] for c in s4["clips"]), str(s4))
+        if not esc["help"]:                 # a failure above shut the panel; carry on
+            pg.evaluate(OPEN); pg.wait_for_timeout(500)
         pg.evaluate(SHEET); pg.wait_for_timeout(500)
         g = pg.locator("#learnGrip").bounding_box()
         pg.mouse.move(g["x"] + g["width"] / 2, g["y"] + g["height"] / 2); pg.mouse.down()
