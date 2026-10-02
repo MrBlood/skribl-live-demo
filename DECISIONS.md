@@ -13154,3 +13154,10 @@ owner chose "C1 everywhere".
   icons' worth of the same attributes was most of the card's HTML.
 * **What it cost.** The link player's HTML +521 B and CSS +1,799 B, both
   ratchets raised with the costs named beside them.
+* **Main went red after #297, in a suite the PR did not run.**
+  `verify_audiostate`'s control counts the audio sources one press of Play
+  builds and expects one. Its fixture's drawing lasts a fraction of a second,
+  so with Loop now on it went round 14 times in the 2.5s it waits, and each
+  lap rightly restarted its music. The control now plays one pass with Loop
+  off. Loop-on was a behaviour change for every suite that presses Play on
+  the link player, not only those that touch the Loop button.

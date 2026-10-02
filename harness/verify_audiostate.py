@@ -197,6 +197,13 @@ with sync_playwright() as browser_ctx:
     pg.add_init_script(COUNT_ONLY)
     pg.goto(f"{BASE}/s/{pid}", wait_until="load")
     pg.wait_for_timeout(2500)
+    # LOOP OFF FOR THE CONTROL. The link player ships with Loop on (#297), and
+    # this fixture's drawing is a fraction of a second, so in 2.5s it went
+    # round 14 times and each lap rightly started its music again: 14 sources,
+    # every one of them correct. The question here is ONE press of Play, so it
+    # is asked of one pass.
+    pg.evaluate("() => { const l = document.getElementById('playerLoopBtn');"
+                " if (l && l.getAttribute('aria-pressed') === 'true') l.click(); }")
     pg.click("#playerPlayBtn")
     pg.wait_for_timeout(2500)
     normal = pg.evaluate("() => window.__srcCreated || 0")
