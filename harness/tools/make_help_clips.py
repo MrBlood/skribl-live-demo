@@ -39,15 +39,28 @@ VW, VH, DPR = 390, 1300, 2
 # The finger: a soft disc that follows the pointer and presses in. It is part
 # of the page while recording, so it is in the frames, exactly where the
 # pointer went.
+# A press also sends out a purple ripple: the owner could not see the buttons
+# being pushed in the first Post clip, and a pale disc on a pale button is
+# nearly invisible in the light theme, so the disc carries a dark outer ring.
 FINGER = """() => {
   const f = document.createElement('div'); f.id = 'clipFinger';
   f.style.cssText = 'position:fixed;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;' +
-    'border-radius:50%;background:rgba(255,255,255,.34);box-shadow:0 0 0 2px rgba(255,255,255,.75),0 4px 14px rgba(0,0,0,.35);' +
+    'border-radius:50%;background:rgba(255,255,255,.34);' +
+    'box-shadow:0 0 0 2px rgba(255,255,255,.8),0 0 0 3.5px rgba(20,16,40,.45),0 4px 14px rgba(0,0,0,.35);' +
     'pointer-events:none;z-index:2147483647;opacity:0;transition:opacity .18s, transform .12s;';
   document.body.appendChild(f);
   const at = e => { f.style.left = e.clientX + 'px'; f.style.top = e.clientY + 'px'; f.style.opacity = 1; };
+  const ripple = e => {
+    const r = document.createElement('div');
+    r.style.cssText = 'position:fixed;left:' + e.clientX + 'px;top:' + e.clientY + 'px;width:44px;height:44px;' +
+      'margin:-22px 0 0 -22px;border-radius:50%;border:3px solid rgba(124,92,255,.85);pointer-events:none;' +
+      'z-index:2147483646;transform:scale(.5);opacity:1;transition:transform .5s ease-out, opacity .5s ease-out;';
+    document.body.appendChild(r);
+    requestAnimationFrame(() => requestAnimationFrame(() => { r.style.transform = 'scale(1.7)'; r.style.opacity = 0; }));
+    setTimeout(() => r.remove(), 600);
+  };
   addEventListener('pointermove', at, true);
-  addEventListener('pointerdown', e => { at(e); f.style.transform = 'scale(.82)'; }, true);
+  addEventListener('pointerdown', e => { at(e); f.style.transform = 'scale(.82)'; ripple(e); }, true);
   addEventListener('pointerup', () => { f.style.transform = ''; }, true);
   window.__fingerHide = () => { f.style.opacity = 0; };
 }"""
@@ -108,7 +121,7 @@ def tap(page, sel, before=380, after=520):
     box = page.locator(sel).bounding_box()
     x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
     glide(page, (x + 60, y + 90), (x, y), before)
-    page.mouse.down(); page.wait_for_timeout(110); page.mouse.up()
+    page.mouse.down(); page.wait_for_timeout(170); page.mouse.up()
     page.wait_for_timeout(after)
     return x, y
 
@@ -163,28 +176,34 @@ def clip_post(page, rec):
     # Post, while a take is being recorded.
     page.evaluate("() => { if (recording) endRecordingTake(); }")
     page.wait_for_timeout(600)
+    # THE CAMERA FOLLOWS THE FINGER, so every press is on screen: on the
+    # header while Post is tapped, down to the title as it is typed, then to
+    # the sheet's own Post button for the last tap and "Posted". The owner
+    # could not see the buttons being pushed when the clip opened on the title.
+    w = VW - 24; h = round(w * 3 / 4)
+    ya = 0
     rec.start(); page.wait_for_timeout(400)
     tap(page, "#postBtn", after=550)
+    rec.mark("sheet")
     tx, ty = center(page, "#postTitleInput")
-    glide(page, (tx + 60, ty + 80), (tx, ty), 380)
-    page.mouse.down(); page.wait_for_timeout(100); page.mouse.up()
+    glide(page, (tx + 60, ty + 80), (tx, ty), 600)
+    page.mouse.down(); page.wait_for_timeout(120); page.mouse.up()
     page.keyboard.type("Cat", delay=80)
-    # Where the title sits WHILE it is typed: posting reflows the sheet, so a
-    # measure taken at the end frames the typing too high.
+    # Where things sit WHILE they are used: posting reflows the sheet, so a
+    # measure taken at the end frames them wrong.
     lab = page.locator("#postTitleInput").bounding_box()
-    rec.mark("pan")
-    page.wait_for_timeout(300)
-    tap(page, "#postSubmitBtn", before=600, after=250)
+    sub = page.locator("#postSubmitBtn").bounding_box()
+    yb = max(0, lab["y"] - 24)
+    yc = max(yb, sub["y"] + sub["height"] + 20 - h)
+    page.wait_for_timeout(250)
+    rec.mark("submit")
+    page.wait_for_timeout(500)
+    tap(page, "#postSubmitBtn", before=500, after=250)
     page.wait_for_selector("#postResult:not([hidden])", timeout=15000)
     page.evaluate("window.__fingerHide()"); page.wait_for_timeout(1100)
     rec.stop()
-    # The camera follows the finger: on the title while it is typed, then a
-    # glide down to Post and "Posted!". Readable in a card on a phone, which a
-    # frame holding the whole sheet would not be.
-    res = page.locator("#postResult").bounding_box()
-    x0 = 12; w = VW - 2 * x0; h = round(w * 3 / 4)
-    y0 = max(0, lab["y"] - 24); y1 = max(y0, res["y"] + res["height"] + 14 - h)
-    return (x0, w, h, [(rec.marks["pan"], y0), (rec.marks["pan"] + 0.8, y1)])
+    m = rec.marks
+    return (12, w, h, [(m["sheet"], ya), (m["sheet"] + 0.8, yb), (m["submit"], yb), (m["submit"] + 0.8, yc)])
 
 
 CLIPS = {"music": clip_music, "post": clip_post}
@@ -219,13 +238,17 @@ def clock(frames, t):
 
 def encode(frames, crop, out):
     if len(crop) == 4 and isinstance(crop[3], list):
-        # (x, w, h, [(t_a, y_a), (t_b, y_b)]): an eased pan between two framings.
+        # (x, w, h, [(t, y), ...]): the camera holds at each framing and eases
+        # to the next, written as the first framing plus one eased move per
+        # pair of points -- a sum, so any number of moves needs no nesting.
         x, w, h = [round(v * DPR) for v in crop[:3]]
-        (ta, ya), (tb, yb) = crop[3]
-        ta, tb = clock(frames, ta), clock(frames, tb)
-        ya, yb = round(ya * DPR), round(yb * DPR)
-        u = f"clip((t-{ta:.3f})/{tb - ta:.3f}\\,0\\,1)"
-        y = f"{ya}+({yb - ya})*{u}*{u}*(3-2*{u})"
+        keys = [(clock(frames, kt), round(ky * DPR)) for kt, ky in crop[3]]
+        y = str(keys[0][1])
+        for (ta, ya), (tb, yb) in zip(keys, keys[1:]):
+            if yb == ya:
+                continue
+            u = f"clip((t-{ta:.3f})/{max(0.001, tb - ta):.3f}\\,0\\,1)"
+            y += f"+({yb - ya})*{u}*{u}*(3-2*{u})"
     else:
         x, y, w, h = [round(v * DPR) for v in crop]
     with tempfile.TemporaryDirectory() as d:
