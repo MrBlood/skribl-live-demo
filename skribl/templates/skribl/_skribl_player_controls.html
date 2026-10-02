@@ -49,29 +49,26 @@
       <button type="button" class="player-btn" id="playerFullBtn" aria-label="Full screen" aria-pressed="false" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
       </button>
-      {#- COPY LINK IS IN THE ROW ("put LINK as icon in the play row and an
-          icon for Gallery somewhere to free up space... it would be cool if
-          the drawing was the showcase instead of all the stuff on the bottom
-          taking up so much space"). It and Gallery were two full-width rows
-          under the transport; Gallery has since moved behind More, below. -#}
-      <button type="button" class="player-btn" id="playerCopyBtn" aria-label="Copy link" title="Copy this Skribl's link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-      </button>
-      {#- SPEED AND GALLERY ARE ONE TAP DEEPER, behind "More". The row is what
-          a person presses while WATCHING; these two are a setting and a way
-          off the page. Copy link stays out: sharing is how a Skribl travels.
-          A disclosure, not an ARIA menu -- two plain controls that keep their
-          own ids, names and behaviour (Speed still cycles in place; Gallery is
-          still a link that opens in a new tab). -#}
+      {#- MORE: Share, Copy link, Speed and Gallery (the owner picked the
+          solid card with a speed pill, "C1 everywhere"). The row is what a
+          person presses while WATCHING; these are ways to pass it on, a
+          setting, and a way off the page. Copy link was in the row once
+          ("put LINK as icon in the play row"); with Share beside it in here,
+          the row keeps only the transport. A disclosure, not an ARIA menu:
+          plain controls that keep their own names and behaviour. -#}
       <div class="player-more">
       <button type="button" class="player-btn" id="playerMoreBtn" aria-label="More" aria-expanded="false" aria-controls="playerMenu"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
       <div class="player-menu" id="playerMenu" hidden>
+        {#- Share opens the device's own sheet; where a browser has none it
+            copies the link and says so, so the row is never dead. -#}
+        <button type="button" class="menu-item" id="playerShareBtn"><svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>Share&hellip;</button>
+        <button type="button" class="menu-item" id="playerCopyBtn"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Copy link</button>
         {#- Speed: the VIEWER's, not the author's -- `replayRate` describes the
             act of looking, never the work, so it is not in the payload and
-            serializeSkribl() has a pin saying so. One control cycling
-            1x -> 2x -> 1/2x; the sheet labels it "Speed" (player.css). -#}
-        <button type="button" class="menu-item player-rate" id="playerRateBtn" aria-label="Playback speed">1&times;</button>
-        <a href="{{ url_for('.skribl_gallery') }}" class="menu-item" id="playerGalleryLink">Public gallery</a>
+            serializeSkribl() has a pin saying so. The Pad's own speed pill
+            (the tune sheet's #speedSeg), the same three options. -#}
+        <div class="player-speed"><span><svg viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>Speed</span><span class="seg" id="playerRate" role="group" aria-label="Playback speed"><button type="button" data-rate="0.5" aria-pressed="false">&frac12;&times;</button><button type="button" data-rate="1" class="on" aria-pressed="true">1&times;</button><button type="button" data-rate="2" aria-pressed="false">2&times;</button></span></div>
+        <a href="{{ url_for('.skribl_gallery') }}" class="menu-item" id="playerGalleryLink"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z"/></svg>Public gallery</a>
       </div>
       </div>
     </div>

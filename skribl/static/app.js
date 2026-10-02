@@ -3924,7 +3924,7 @@ function showPlayerError(msg, canRetry) {
   const pMute = document.getElementById('playerMuteBtn');
   const pFull = document.getElementById('playerFullBtn');
   const pCopy = document.getElementById('playerCopyBtn');
-  const pRate = document.getElementById('playerRateBtn');
+  const pRate = document.getElementById('playerRate');
   const pFill = document.getElementById('playerProgressFill');
   const pTrack = document.getElementById('playerProgress');
   const pAt = document.getElementById('playerAt');
@@ -4499,10 +4499,9 @@ function showPlayerError(msg, canRetry) {
     pTrack.addEventListener('touchstart', onScrubStart, { passive: false });
   }
 
-  /* SPEED, AS ONE BUTTON THAT SHOWS WHAT IT IS. A three-way segmented control
-     would be three more things beside a drawing the owner asked to give more
-     room to; a button labelled with the CURRENT rate answers "how fast is
-     this" and "how do I change it" with the same pixels.
+  /* SPEED, AS THE PAD'S OWN PILL, in the More card: half, real time and
+     double, the selected one lit. It used to be one button cycling in the
+     row; the card has room to show all three, so the choice is one tap.
 
      CHANGING SPEED MID-PLAY RE-ANCHORS THE CLOCK. `elapsedBase` is scaled
      time already banked and `segStart` is a wall-clock instant, so a new rate
@@ -4512,17 +4511,19 @@ function showPlayerError(msg, canRetry) {
      is also what picks up the new playbackRate. */
   function showRate() {
     if (!pRate) return;
-    var w = replayRate === 0.5 ? '\u00BD\u00D7' : replayRate + '\u00D7';
-    pRate.textContent = w;
-    pRate.title = 'Speed: ' + w + ' \u2014 tap to change';
-    pRate.setAttribute('aria-label', pRate.title);
+    pRate.querySelectorAll('button').forEach(b => {
+      const on = +b.dataset.rate === replayRate;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', '' + on);
+    });
   }
   if (pRate) {
     showRate();
-    pRate.addEventListener('click', () => {
+    pRate.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b || +b.dataset.rate === replayRate) return;
       const at = running ? elapsedBase + segElapsed() : elapsedBase;
-      const next = REPLAY_RATES[(REPLAY_RATES.indexOf(replayRate) + 1) % REPLAY_RATES.length];
-      setReplayRate(next);
+      setReplayRate(+b.dataset.rate);
       showRate();
       if (running) {
         elapsedBase = at;
@@ -4533,9 +4534,9 @@ function showPlayerError(msg, canRetry) {
   }
 
   // MORE: a disclosure. Open puts focus on its first row; Escape, a tap
-  // anywhere else, or following Gallery closes it, and Escape hands focus
-  // back to the button that opened it. Speed cycles in place and leaves it
-  // open, so the new rate is read where it was changed.
+  // anywhere else, Share, Copy link or following Gallery closes it, and
+  // Escape hands focus back to the button that opened it. Speed changes in
+  // place and leaves it open, so the new rate is read where it was chosen.
   const pMore = document.getElementById('playerMoreBtn');
   const pMenu = document.getElementById('playerMenu');
   const setMenu = (open, refocus) => {
@@ -4552,13 +4553,24 @@ function showPlayerError(msg, canRetry) {
     pMenu.addEventListener('keydown', e => { if (e.key === 'Escape') setMenu(false, true); });
   }
 
-  if (pCopy) pCopy.addEventListener('click', async () => {
+  async function copyLink() {
+    if (pMenu) setMenu(false, true);
     try {
       await navigator.clipboard.writeText(location.href);
       showToast('Link copied', null);
     } catch (e) {
       showToast('Couldn\u2019t copy — long-press the address bar', null);
     }
+  }
+  if (pCopy) pCopy.addEventListener('click', copyLink);
+  // SHARE opens the device's own sheet (Messages, AirDrop...). A browser with
+  // none -- Firefox on a desktop -- copies the link instead and says so, so
+  // the row is never a dead control. Cancelling the sheet is not an error.
+  const pShare = document.getElementById('playerShareBtn');
+  if (pShare) pShare.addEventListener('click', () => {
+    if (!navigator.share) return copyLink();
+    setMenu(false, true);
+    navigator.share({ title: document.title, url: location.href }).catch(() => {});
   });
 
   setPlayIcon();

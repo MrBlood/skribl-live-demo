@@ -697,7 +697,12 @@ with sync_playwright() as sp:
     # (#playerAt / #playerDur) and the More button with its sheet, which
     # Speed and Gallery moved into so seven controls fit one row at 390.
     # 13,338 measured.
-    HTML_RATCHET = 13_340
+    # RAISED (the More card, owner: "C1 everywhere"), for named costs: +521 B
+    # -- Share and Copy link as rows with their icons, and Speed as the Pad's
+    # three-option pill in place of one cycling button. The icons' stroke
+    # attributes moved to CSS to keep this down (the first cut was +815).
+    # 13,859 measured.
+    HTML_RATCHET = 13_860
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
@@ -816,7 +821,11 @@ with sync_playwright() as sp:
     # second time), the clock under the track, the phone rule that keeps
     # seven controls on one line at 390, and Loop's lit look moving from
     # Play's solid violet to the one pill's tint. 32,156 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 32_160, 119_844, 40_000
+    # RAISED (the More card, owner: "C1 everywhere"), for named costs:
+    # +1,799 B -- the card made solid with a pointer at its button, dividers,
+    # the speed row, and the Pad's .seg pill rules (its track, its options and
+    # the fallback tint), which the player had never needed. 33,955 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 33_960, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
@@ -1282,9 +1291,11 @@ with sync_playwright() as sp:
         const cv = document.querySelector('.player-stage canvas, .player-canvas, canvas');
         if (!shell || !row || !cv) return { missing: !shell ? 'shell' : (!row ? 'row' : 'canvas') };
         const sr = shell.getBoundingClientRect(), cr = cv.getBoundingClientRect();
+        // IN the row means a control of its own there -- not inside More's
+        // card, which is itself one control in the row.
         const inRow = (id) => {
           const el = document.getElementById(id);
-          return !!(el && row.contains(el));
+          return !!(el && row.contains(el) && !el.closest('#playerMenu'));
         };
         const menu = document.getElementById('playerMenu');
         const inMenu = (id) => { const el = document.getElementById(id);
@@ -1292,18 +1303,20 @@ with sync_playwright() as sp:
         return { drawing: Math.round(cr.height), chrome: Math.round(sr.height),
                  copyInRow: inRow('playerCopyBtn'),
                  galleryInRow: inRow('playerGalleryLink'),
-                 rateInRow: inRow('playerRateBtn'),
-                 rateInMenu: inMenu('playerRateBtn'), galleryInMenu: inMenu('playerGalleryLink'),
+                 rateInRow: inRow('playerRate'),
+                 rateInMenu: inMenu('playerRate'), galleryInMenu: inMenu('playerGalleryLink'),
+                 shareInMenu: inMenu('playerShareBtn'), copyInMenu: inMenu('playerCopyBtn'),
                  menuShut: !!(menu && menu.hidden),
                  rowTops: new Set([...row.children].filter(e => e.getBoundingClientRect().width)
                    .map(e => { const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2); })).size,
                  leftoverLinks: document.querySelectorAll('.player-link').length }; }""")
-    # SPEED AND GALLERY MOVED BEHIND MORE (the players' one-family pass, owner:
-    # "build everything like your specs"): the row is what you press while
-    # watching. Copy link stays out -- sharing is how a Skribl travels.
-    check("Copy link is in the transport row; Speed and Gallery are behind More, shut at rest",
-          not _room.get("missing") and _room["copyInRow"] and _room["rateInMenu"]
-          and _room["galleryInMenu"] and _room["menuShut"], str(_room))
+    # SHARE, COPY LINK, SPEED AND GALLERY ARE BEHIND MORE (the owner's pick of
+    # three mocked menus, "C1 everywhere"): the row is what you press while
+    # watching, and nothing else.
+    check("Share, Copy link, Speed and Gallery are behind More, shut at rest; none is in the row",
+          not _room.get("missing") and _room["shareInMenu"] and _room["copyInMenu"]
+          and _room["rateInMenu"] and _room["galleryInMenu"] and _room["menuShut"]
+          and not (_room["copyInRow"] or _room["rateInRow"] or _room["galleryInRow"]), str(_room))
     check("...and at 390 the whole row is ONE line",
           not _room.get("missing") and _room["rowTops"] == 1,
           f"{_room.get('rowTops')} distinct row centres — seven controls that wrap "
@@ -1321,15 +1334,23 @@ with sync_playwright() as sp:
     # ---- THE VIEWER'S SPEED (v308) ----------------------------------------
     # Reported: "on players (across surfaces) should there be a speed control for
     # PAD? it sometimes draws too fast or slow and I'd like to control that".
-    _cycle = []
-    for _ in range(4):
-        _cycle.append(pg.evaluate(
-            "() => document.getElementById('playerRateBtn').textContent.trim()"))
-        pg.evaluate("() => document.getElementById('playerRateBtn').click()")
-        pg.wait_for_timeout(120)
-    check("the speed button cycles 1x, 2x, half, and comes back",
+    # A PILL OF THREE, the Pad's own: one option lit, and pressing another
+    # moves the light. Read from aria-pressed AND the class, because the class
+    # is what paints and the attribute is what a screen reader hears.
+    _RATE_GET = """() => [...document.querySelectorAll('#playerRate button')]
+        .filter(b => b.classList.contains('on') && b.getAttribute('aria-pressed') === 'true')
+        .map(b => b.textContent.trim()).join(',')"""
+    def _pick(rate):
+        pg.evaluate("(r) => document.querySelector('#playerRate button[data-rate=\"' + r + '\"]').click()",
+                    {"1×": "1", "2×": "2", "½×": "0.5"}[rate])
+        pg.wait_for_timeout(100)
+    _cycle = [pg.evaluate(_RATE_GET)]
+    for r in ("2×", "½×", "1×"):
+        _pick(r)
+        _cycle.append(pg.evaluate(_RATE_GET))
+    check("the speed pill lights exactly the option chosen: 1x, then 2x, half, 1x",
           _cycle == ["1×", "2×", "½×", "1×"],
-          f"{_cycle} — a control whose label does not follow its own state "
+          f"{_cycle} — a control whose light does not follow its own state "
           f"is a control nobody can read")
 
     # IT SCALES THE CLOCK, AND THAT IS MEASURED BY PLAYING. A label that
@@ -1342,13 +1363,7 @@ with sync_playwright() as sp:
         pg.wait_for_timeout(200)
         pg.evaluate("() => { const p = document.getElementById('playerPlayBtn');"
                     " if (p && p.getAttribute('aria-label') === 'Pause') p.click(); }")
-        for _ in range(4):
-            now = pg.evaluate(
-                "() => document.getElementById('playerRateBtn').textContent.trim()")
-            if now == rate:
-                break
-            pg.evaluate("() => document.getElementById('playerRateBtn').click()")
-            pg.wait_for_timeout(80)
+        _pick(rate)
         pg.evaluate("() => document.getElementById('playerRestartBtn').click()")
         pg.wait_for_timeout(ms)
         out = pg.evaluate(
@@ -1369,11 +1384,7 @@ with sync_playwright() as sp:
           _at1 > 1 and _athalf < _at1 * 0.75,
           f"1x reached {_at1:.1f}%, half reached {_athalf:.1f}%")
     # Restore, so nothing downstream inherits a rate through localStorage.
-    for _ in range(4):
-        if pg.evaluate("() => document.getElementById('playerRateBtn').textContent.trim()") == "1\u00d7":
-            break
-        pg.evaluate("() => document.getElementById('playerRateBtn').click()")
-        pg.wait_for_timeout(80)
+    _pick("1×")
 
     # ---- MORE, LOOP AND THE CLOCK (the players' one-family pass) ----------
     # A fresh load, because everything above has pressed things. Loop ships
@@ -1409,14 +1420,18 @@ with sync_playwright() as sp:
     pg.click("#playerMoreBtn")
     pg.wait_for_timeout(150)
     _m1 = _menu()
-    check("More opens its sheet, says so, and puts focus on its first row",
-          _m1["open"] and _m1["expanded"] == "true" and _m1["focus"] == "playerRateBtn", str(_m1))
-    pg.keyboard.press("Enter")          # Speed cycles in place; the sheet stays open
+    check("More opens its card, says so, and puts focus on its first row (Share)",
+          _m1["open"] and _m1["expanded"] == "true" and _m1["focus"] == "playerShareBtn", str(_m1))
+    _bg = pg.evaluate("() => getComputedStyle(document.getElementById('playerMenu')).backgroundColor")
+    check("...and the card is SOLID, so nothing behind it reads through",
+          _bg.startswith("rgb(") , f"{_bg} — at 96% the title showed through it on an iPhone")
+    pg.click('#playerRate button[data-rate="2"]')
     pg.wait_for_timeout(150)
     _m2 = _menu()
-    _rate = pg.evaluate("() => document.getElementById('playerRateBtn').textContent.trim()")
-    check("...Speed changes inside it and the sheet stays open to show the new rate",
+    _rate = pg.evaluate(_RATE_GET)
+    check("...Speed changes inside it and the card stays open to show the new rate",
           _m2["open"] and _rate == "2\u00d7", f"{_m2} rate {_rate}")
+    pg.click('#playerRate button[data-rate="1"]')
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(150)
     _m3 = _menu()
@@ -1428,11 +1443,19 @@ with sync_playwright() as sp:
     pg.wait_for_timeout(150)
     _m4 = _menu()
     check("...and a tap anywhere else shuts it", not _m4["open"] and _m4["expanded"] == "false", str(_m4))
-    for _ in range(4):                  # leave the rate at 1x for anything downstream
-        if pg.evaluate("() => document.getElementById('playerRateBtn').textContent.trim()") == "1\u00d7":
-            break
-        pg.evaluate("() => document.getElementById('playerRateBtn').click()")
-        pg.wait_for_timeout(80)
+    # SHARE IS NEVER DEAD. This Chromium has no share sheet, which is the
+    # case it falls back on: the link is copied (or the toast says why not),
+    # the card closes, and focus goes back to More.
+    _has_share = pg.evaluate("() => typeof navigator.share === 'function'")
+    pg.click("#playerMoreBtn")
+    pg.wait_for_timeout(150)
+    pg.click("#playerShareBtn")
+    pg.wait_for_timeout(400)
+    _m5 = _menu()
+    _toast = pg.evaluate("() => { const t = document.querySelector('.toast'); return t && !t.hidden ? t.textContent.trim() : ''; }")
+    check("Share without a share sheet copies the link, says so, and closes the card",
+          not _has_share and not _m5["open"] and "cop" in _toast.lower(),
+          f"share sheet present: {_has_share}; {_m5}; toast {_toast!r}")
 
     pg.close()
     b.close()
