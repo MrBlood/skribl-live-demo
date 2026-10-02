@@ -124,27 +124,13 @@ def demo_shape():
             ("shape", "ellipse"), ("color", PINK), ("drag", (250, 370), (570, 560))]
 
 
-def demo_draw():
-    """The first quick-start card: a sun with a face, doodled."""
-    cx, cy, r = 408, 306, 150
-    s = [("tool", "pen"), ("size", 24), ("color", SUN),
-         ("stroke", arc(cx, cy, r, r, -math.pi / 2, 1.5 * math.pi, 46, 50))]
-    for i in range(10):
-        a = i * 2 * math.pi / 10 + 0.12
-        s.append(("stroke", seg(cx + (r + 38) * math.cos(a), cy + (r + 38) * math.sin(a),
-                                cx + (r + 100) * math.cos(a), cy + (r + 100) * math.sin(a), 10, 60 + i)))
-    s += [("color", PURPLE), ("size", 30),
-          ("stroke", arc(cx - 52, cy - 38, 8, 16, 0, 2 * math.pi, 14, 70)),
-          ("stroke", arc(cx + 52, cy - 38, 8, 16, 0, 2 * math.pi, 14, 71)),
-          ("size", 24), ("stroke", arc(cx, cy + 6, 74, 58, 0.18 * math.pi, 0.82 * math.pi, 26, 72))]
-    return s
-
-
 def demo_traced(path):
     return lambda: [("tool", "pen"), ("trace", path)]
 
 
-DEMOS = {"pen": demo_pen, "eraser": demo_eraser, "shape": demo_shape, "draw": demo_draw}
+# The quick start and Ideas cards are illustrations, drawn by make_art.py
+# and make_flip.py; this file makes the tool examples.
+DEMOS = {"pen": demo_pen, "eraser": demo_eraser, "shape": demo_shape}
 
 
 # ---- driving the editor -----------------------------------------------------

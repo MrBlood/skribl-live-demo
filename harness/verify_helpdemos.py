@@ -63,11 +63,15 @@ for f in files:
     st, why = post(json.loads(f.read_text()))
     check(f"{f.name}: the server accepts it as a post", st in (200, 201), f"HTTP {st} {why}")
 
-# Ink across the stage's canvas: pixels clearly brighter than the dark ground.
+# Ink across the stage's canvas: pixels clearly unlike the drawing's own
+# ground, read at its corner. (It counted pixels brighter than a DARK ground
+# until the illustrations brought a paper one, where it counted the paper.)
 INK = """card => { const c = card.querySelector('canvas.skribl-inline-canvas');
     if (!c || !c.width) return -1;
     const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0;
-    for (let i = 0; i < d.length; i += 16) if (d[i + 3] > 200 && d[i] + d[i + 1] + d[i + 2] > 180) n++;
+    const g = [d[0], d[1], d[2]];
+    for (let i = 0; i < d.length; i += 16)
+      if (d[i + 3] > 200 && Math.abs(d[i] - g[0]) + Math.abs(d[i + 1] - g[1]) + Math.abs(d[i + 2] - g[2]) > 90) n++;
     return n; }"""
 OPEN = "() => { window.SkriblHints && window.SkriblHints.hide(); openHelpDrawer(); }"
 STATE = """() => ({

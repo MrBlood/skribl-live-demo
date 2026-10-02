@@ -69,7 +69,11 @@
              data-player-js="{{ skribl_asset('inlineplayer.js') }}">
       <h3 class="learn-h">Your first {{ 'Flip' if is_flip else 'Skribl' }}</h3>
       <div class="learn-start">
-        {{ learn_card('draw', 'Draw', 'Every stroke is recorded as you make it.', n=1) }}
+        {% if is_flip %}
+        {{ learn_card('flip-wave', 'Draw', 'Draw a page, add the next, and it moves.', n=1) }}
+        {% else %}
+        {{ learn_card('cat', 'Draw', 'Every stroke is recorded as you make it.', n=1) }}
+        {% endif %}
         {{ learn_card(None, 'Add music', 'Pick a song and the part that loops.', n=2, clip='music') }}
         {{ learn_card(None, 'Post', 'Get a link that plays anywhere.', n=3, clip='post') }}
       </div>
@@ -78,6 +82,21 @@
         {{ learn_card('pen', 'Pen', 'Any colour, any size. With a stylus, press harder for a thicker line.', tool='pen') }}
         {{ learn_card('eraser', 'Eraser', 'Wipe back to the canvas. Tap it again to change its size.', tool='eraser') }}
         {{ learn_card('shape', 'Shape', 'Lines, boxes, ovals and polygons, with rounded corners if you like.', tool='shape') }}
+      </div>
+      {# Ideas: drawings made the same way, through the editors with a pen
+         (harness/tools/make_art.py, make_flip.py). Each editor leads with its
+         own kind and shows one of the other's. #}
+      <h3 class="learn-h">Ideas to try</h3>
+      <div class="learn-grid">
+        {% if is_flip %}
+        {{ learn_card('flip-bounce', 'Squash and stretch', 'The ball stretches as it falls and flattens as it lands.') }}
+        {{ learn_card('scene', 'A little world', 'In Pad: near lines heavy, far lines light.') }}
+        {{ learn_card('snail', 'One line', 'In Pad: draw it all without lifting the pen.') }}
+        {% else %}
+        {{ learn_card('scene', 'A little world', 'Near lines heavy, far lines light, and it has depth.') }}
+        {{ learn_card('snail', 'One line', 'Draw it all without lifting the pen.') }}
+        {{ learn_card('flip-bounce', 'Make it move', 'In Flip: a page at a time, a ball that bounces.') }}
+        {% endif %}
       </div>
       <h3 class="learn-h learn-ref-h">Every control, explained</h3>
     </section>

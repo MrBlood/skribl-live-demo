@@ -5725,14 +5725,16 @@ a.player-btn { text-decoration: none; }
 .learn-try:hover { background: var(--surface-tint); }
 .learn-try:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 /* A phone: the three steps scroll sideways (a peek of the next says there is
-   more) and the tools sit two across, where the 390px panel leaves ~165px. */
+   more) and the tool and idea cards stack one to a row. Two across left each
+   drawing ~165px wide and a third card alone in its row; these are drawings
+   to watch, so each gets the panel's width. */
 @media (max-width: 640px) {
   .help-learn { padding: 4px 18px 0; }
   .learn-start { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
     margin: 0 -18px; padding: 0 18px 2px; scroll-padding: 0 18px; }
   .learn-start::-webkit-scrollbar { display: none; }
-  .learn-start .learn-card { flex: 0 0 64%; scroll-snap-align: start; }
-  .learn-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .learn-start .learn-card { flex: 0 0 84%; scroll-snap-align: start; }
+  .learn-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 }
 .help-empty[hidden] { display: none; }
 .help-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 4px; }

@@ -22,7 +22,9 @@ import browsing  # noqa: E402
 
 OUT = ROOT / "skribl" / "static" / "help" / "demos"
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
-TEMPO = {"snail": 2.0, "cat": 1.9, "scene": 1.9}
+# (hand, pauses): the owner found the hand fast at 1.9, so it is calmer and
+# the gaps between strokes stay brisk.
+TEMPO = {"snail": (1.45, 1.9), "cat": (1.35, 1.9), "scene": (1.35, 1.9)}
 
 
 def make(browser, name):
@@ -41,7 +43,8 @@ def make(browser, name):
         if (typeof updateVignette === 'function') updateVignette(); setTool('pen');
         if (window.SkriblPressure) SkriblPressure.setEnabled(true); }}""")
     # Examples are short: a few seconds of a confident hand, not a study.
-    artdraw.draw(page, artworks.ART[name](), tempo=TEMPO.get(name, 1.6))
+    hand, gaps = TEMPO.get(name, (1.35, 1.9))
+    artdraw.draw(page, artworks.ART[name](), tempo=hand, pause_tempo=gaps)
     page.wait_for_timeout(300)
     payload = page.evaluate("""() => { if (recording) endRecordingTake(); const p = serializeSkribl();
         for (const k of ['draftId', 'createdAt', 'updatedAt', 'title', 'userId']) delete p[k];

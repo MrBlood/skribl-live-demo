@@ -108,14 +108,15 @@ def plan(strokes, seed=1, tempo=1.0):
     return out
 
 
-def draw(page, strokes, *, seed=1, set_ink=None, canvas="#canvas", logical=None, tempo=1.0):
+def draw(page, strokes, *, seed=1, set_ink=None, canvas="#canvas", logical=None, tempo=1.0, pause_tempo=None):
     """Perform `strokes` on the editor canvas with real pen input.
 
     `set_ink(page, color, size)` sets the brush between strokes (the editor's
     own state); the default is Pad's globals, which Flip shares by name.
     `canvas` / `logical` say which canvas and its authored size (Flip: "#pad",
-    (CW, CH)). `tempo` speeds the whole performance -- hand and pauses alike --
-    so a short example stays a confident hand rather than a rushed one."""
+    (CW, CH)). `tempo` speeds the hand along each stroke and `pause_tempo` (by
+    default the same) the gaps between strokes: a calm hand with brisk gaps
+    keeps an example short without the line itself looking rushed."""
     box = page.locator(canvas).bounding_box()
     lg = logical or page.evaluate("() => { const s = getCanvasLogicalSize(); return [s.width, s.height]; }")
     sx, sy = box["width"] / lg[0], box["height"] / lg[1]
@@ -126,7 +127,7 @@ def draw(page, strokes, *, seed=1, set_ink=None, canvas="#canvas", logical=None,
     for st, pts in zip(strokes, timed):
         set_ink(page, st.color, st.size)
         if prev_end is not None:
-            time.sleep(hm.pause(prev_end, st.pts[0], seed) / 1000 * 0.8 / tempo)
+            time.sleep(hm.pause(prev_end, st.pts[0], seed) / 1000 * 0.8 / (pause_tempo or tempo))
         t0 = time.perf_counter()
         for k, (x, y, ms, p) in enumerate(pts):
             while (time.perf_counter() - t0) * 1000 < ms:
