@@ -1822,6 +1822,64 @@ if _spw:
         _b.close()
 
 
+# AN ERASER STROKE REVEALS THE DRAWING'S BACKGROUND, NOT THE BOX. The player
+# paints the background into the same canvas as the ink, and an erase is
+# destination-out, so on the direct path it cut through the background too and
+# showed the box's own dark ground: a light drawing with an eraser stroke
+# replayed with black lines in every feed, library and embed (the owner saw it
+# on How it works' Eraser card). The fixture is that card's example -- a real
+# recording, drawn through Pad with the eraser -- posted and played in a feed
+# box, sampled along the eraser's own recorded path.
+print("\nIN-POST — an eraser stroke reveals the drawing's background, not the box behind it")
+with sync_playwright() as _ep:
+    _eb = _ep.chromium.launch()
+    _ex = json.loads((ROOT / "skribl" / "static" / "help" / "demos" / "eraser.json").read_text())
+    _ex["title"] = "Eraser probe"
+    _req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_ex).encode(),
+                                  headers={"Content-Type": "application/json"})
+    _esid = json.loads(urllib.request.urlopen(_req).read())["id"]
+    _path = [s for s in _ex["frames"][0]["strokes"] if s.get("erase")]
+    _ground = _ex["frames"][0]["background"]["color"]
+    _epg = _eb.new_page(viewport={"width": 1280, "height": 900})
+    browsing.goto(_epg, BASE, "/feed")
+    _epg.evaluate("""(id) => { const src = document.querySelector('.skribl-inline[data-skribl-id]');
+        const tmp = document.createElement('div'); tmp.innerHTML = src.outerHTML;
+        const box = tmp.firstElementChild; box.classList.remove('is-playing', 'is-paused', 'is-loading');
+        box.setAttribute('data-skribl-id', id); box.id = 'eraserProbe';
+        box.querySelectorAll('img').forEach(i => i.remove());
+        const host = document.createElement('article'); host.appendChild(box);
+        src.parentElement.parentElement.prepend(host); SkriblInline.mount(document); }""", _esid)
+    _epg.locator("#eraserProbe").scroll_into_view_if_needed()
+    # Once through and stop: a feed box loops, and a sample taken mid-loop can
+    # land before the eraser stroke and see nothing to find (it did).
+    _epg.evaluate("(id) => { const p = SkriblInline.find(id); p.setLoop(false); p.play(); }", _esid)
+    try:
+        _epg.wait_for_function("(id) => { const p = SkriblInline.find(id); return p && p.state().loaded"
+                               " && p.state().state !== 'playing' && p.state().state !== 'loading'; }",
+                               arg=_esid, timeout=20000)
+    except PWTimeout:
+        pass
+    _epg.wait_for_timeout(300)
+    _er = _epg.evaluate("""([pts, w]) => {
+        const c = document.querySelector('#eraserProbe .skribl-inline-canvas');
+        if (!c || !c.width) return null;
+        const x = c.getContext('2d'), k = c.width / w; let dark = 0, n = 0;
+        for (let i = 0; i < pts.length; i += 4) {
+          const d = x.getImageData(Math.round(pts[i].x * k), Math.round(pts[i].y * k), 1, 1).data;
+          n++; if (d[3] < 200 || d[0] + d[1] + d[2] < 150) dark++; }
+        return { n, dark, ground: (() => { const d = x.getImageData(4, 4, 1, 1).data; return [d[0], d[1], d[2], d[3]]; })() }; }""",
+        [_path, _ex["canvasSize"]["cssWidth"]])
+    _done = _epg.evaluate("(id) => { const s = SkriblInline.find(id).state(); return [s.state, s.loaded]; }", _esid)
+    check("the probe is real: the eraser example played through in a feed box, over its own paper",
+          _er is not None and _er["n"] > 10 and _er["ground"][0] > 200 and _done[0] != "playing",
+          f"{_er}, ground {_ground}, player {_done}")
+    check("along the eraser's path the drawing's paper shows, never the box's dark ground",
+          _er is not None and _er["dark"] == 0,
+          f"{_er} — dark or see-through samples on the eraser's path are the erase cutting through "
+          f"the background to the box behind it")
+    _eb.close()
+
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)

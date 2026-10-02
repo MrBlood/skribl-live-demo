@@ -188,11 +188,6 @@
      host, so the player stays branded, and verify_ux pins its active fill
      to this exact colour. Everything else moved to the --ui-* roles below.
      Recording stays #f4326f (red) and was never accent. */
-  /* The paper How it works' example drawings are drawn on (harness/tools/
-     artdraw.py PAPER). The drawing's colour, not the app's, so the same in
-     both themes (named for the canvas, which verify_theme reads as "follows
-     no theme"): a stage shows it while its drawing loads. */
-  --canvas-paper: #f6f2ea;
   --accent: #7c5cff;
   --accent-2: #5b8cff;
   --accent-bright: #9179ff;
@@ -5709,7 +5704,7 @@ a.player-btn { text-decoration: none; }
 /* Three previews fanned like cards in a hand; each is a still of a finished
    example (harness/tools/make_help_thumbs.py), fetched when help opens. */
 .learn-peek-stack img { width: 52px; height: 39px; border-radius: 8px; object-fit: cover; display: block;
-  background: var(--canvas-paper); border: 2px solid var(--surface-sheet-2); }
+  border: 2px solid var(--surface-sheet-2); }
 .learn-peek-stack img + img { margin-left: -20px; }
 .learn-peek-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .learn-peek-title { font-size: 15px; font-weight: 650; color: var(--text-primary); }
@@ -5752,9 +5747,10 @@ a.player-btn { text-decoration: none; }
   border: 1px solid var(--line-faint); border-radius: 14px; overflow: hidden;
   background: var(--surface-sheet-2); }
 .learn-card[hidden] { display: none; }
-/* The examples are drawn on paper, so the stage is paper before its drawing
-   paints, rather than flashing dark first. */
-.learn-stage { position: relative; aspect-ratio: 4 / 3; max-width: 100%; background: var(--canvas-paper); }
+/* No ground of its own: each drawing paints its own background (the player
+   keeps it under the ink, so an erase shows it, not this). A colour here is
+   one more token in :root, which the player's stylesheet carries by size. */
+.learn-stage { position: relative; aspect-ratio: 4 / 3; max-width: 100%; }
 /* The in-post player, as a silent example: no frame of its own (the card is
    the frame), no play veil or duration chip. The nib stays -- it is the pen
    moving, which is the point of watching. */
@@ -5788,9 +5784,6 @@ a.player-btn { text-decoration: none; }
   .learn-title { font-size: 13.5px; }
   .learn-line { font-size: 12px; }
   .learn-try { min-height: 34px; font-size: 13px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .learn-sheet-panel, .learn-scrim { transition: none; }
 }
 .help-empty[hidden] { display: none; }
 .help-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 4px; }

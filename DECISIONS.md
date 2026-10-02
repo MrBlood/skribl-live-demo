@@ -13428,3 +13428,35 @@ at the crop's own 2x pixels, 732 x 548, instead of scaled down to 640 x 480,
 which is what softened the interface text; at CRF 21 the files stay about the
 same size. Post types "Cat" over the cat, and its framing is measured while
 the title is typed, since posting reflows the sheet.
+
+## After #305 -- the eraser in the in-post player; the Post clip shows its taps
+
+The owner, on the live Eraser card: "Is the eraser supposed to be black? Also,
+you can't see the buttons being pushed on the post example."
+
+* **The eraser cut through the drawing.** `inlineplayer.js` paints a drawing's
+  background colour or photo into the same canvas as the ink, and an erase is
+  drawn destination-out, so it removed the background too and showed whatever
+  was behind the player -- the box's own dark ground in a feed, the library,
+  the gallery or an embed. Any light drawing with an eraser stroke replayed with
+  dark lines where the eraser went. The editor and /s/<id> were right because
+  their background sits behind the canvas. The player's compositor (built for
+  translucent strokes) now keeps the background as a base layer under the ink,
+  and is used whenever a drawing has an eraser stroke as well; replays and Flip
+  pages both paint through it, and a drawing with neither keeps the direct
+  path. `verify_inline` plays the Eraser example in a feed box and samples the
+  eraser's own recorded path: 16 of 16 samples were holes before, none after.
+* **The player's stylesheet was over its ceiling.** #305 carried two help-only
+  things into `player.css` through the emitter -- the --canvas-paper token (it
+  copies :root) and the drawer's reduced-motion rule (it copies reduced-motion
+  blocks) -- 123 bytes over `verify_player_isolation`'s 33,960. Neither is the
+  player's: with the background under the ink the stage needs no paper, and
+  the drawer's reduced motion is set in `lib/helplearn.js`. `player.css` is
+  back to its bytes before #305.
+* **The Post clip follows every tap.** It opened on the title, so neither press
+  of Post was on screen. The camera now starts on the header for the tap on
+  Post, glides to the title as it is typed, then to the sheet's Post button for
+  the last tap and "Posted!"; `encode()` takes any number of framings. A press
+  sends out a purple ripple and the fingertip has a dark outer ring, so taps
+  read in the light theme. The "Take saved" toast from finishing the drawing
+  off camera is put away before filming.
