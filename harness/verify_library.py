@@ -991,13 +991,32 @@ print("\nASSETS — a page that runs the in-post player has what it needs")
 _TPL = ROOT / "skribl" / "templates" / "skribl"
 _call = lambda name: re.compile(
     r"skribl_asset\(\s*['\"]" + re.escape(name) + r"['\"]\s*\)")
+# A PARTIAL has what it needs through the pages that include it. How it
+# works (_skribl_help.html) fetches the player when the panel opens; its
+# script tags are the editors', so the pair is asked of EVERY page that
+# includes it -- one includer losing a module still fails here, named.
+_srcs = {t.name: t.read_text(encoding="utf-8") for t in sorted(_TPL.glob("*.html"))}
+# Includes are read with {# comments #} stripped: the help partial's own header
+# SHOWS the include line it is used with, and read as prose it would count as
+# its own includer (the absence-check trap again).
+_code = {n: re.sub(r"\{#.*?#\}", "", s, flags=re.S) for n, s in _srcs.items()}
+_includers = lambda name: [n for n, s in _code.items() if n != name and
+                           re.search(r"\{%-?\s*include\s+['\"]skribl/" + re.escape(name) + r"['\"]", s)]
+
+
+def _has(name, asset):
+    if _call(asset).search(_srcs[name]):
+        return True
+    inc = _includers(name)
+    return bool(inc) and all(_call(asset).search(_srcs[i]) for i in inc)
+
+
 _needs, _missing = [], []
-for _t in sorted(_TPL.glob("*.html")):
-    _src = _t.read_text(encoding="utf-8")
+for _n, _src in _srcs.items():
     if _call("inlineplayer.js").search(_src):
-        _needs.append(_t.name)
-        if not _call("lib/photofit.js").search(_src):
-            _missing.append(_t.name)
+        _needs.append(_n)
+        if not _has(_n, "lib/photofit.js"):
+            _missing.append(_n)
 check("every template that loads inlineplayer.js also loads lib/photofit.js",
       _needs and not _missing,
       f"loads the player: {_needs}; missing the geometry: {_missing or 'none'} "
@@ -1010,8 +1029,7 @@ check("every template that loads inlineplayer.js also loads lib/photofit.js",
 # Skribl's music stayed muted by the ringer switch -- in the Library only,
 # while Pad, Flip, the Gallery and /s/<id> were heard. Same mechanism as
 # photofit: the player null-guards the module, so its absence is silent.
-_no_session = [t for t in _needs
-               if not _call("lib/audiosession.js").search((_TPL / t).read_text(encoding="utf-8"))]
+_no_session = [t for t in _needs if not _has(t, "lib/audiosession.js")]
 check("every template that loads inlineplayer.js also loads lib/audiosession.js",
       _needs and not _no_session,
       f"loads the player: {_needs}; missing the iOS session: {_no_session or 'none'} "
