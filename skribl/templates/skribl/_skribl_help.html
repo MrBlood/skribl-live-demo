@@ -42,6 +42,10 @@
        looping. So an example shows exactly what its tool does.
        verify_helpdemos.py holds every tool on this editor to a card. #}
     {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
+    {# A card names its tool as data-learn-tool, never the app's own
+       data-tool: the cards sit before the dock in the page, so anything
+       looking for "the [data-tool=eraser]" found a card (main went red on
+       verify_pointerpad after #304). #}
     {% macro learn_card(demo, title, line, group, n=None, tool=None, clip=None) -%}
     {% if clip %}
     {# A screen clip (harness/tools/make_help_clips.py), one per theme so it
@@ -55,7 +59,7 @@
             data-poster-light="{{ skribl_asset('help/clips/' ~ clip ~ '-light.jpg') }}">
       <div class="learn-stage"><video class="learn-video" muted playsinline loop preload="none" aria-hidden="true"></video></div>
     {% else %}
-    <figure class="learn-card" data-group="{{ group }}" data-demo="{{ skribl_asset('help/demos/' ~ demo ~ '.json') }}" data-demo-name="{{ demo }}"{% if tool %} data-tool="{{ tool }}"{% endif %}>
+    <figure class="learn-card" data-group="{{ group }}" data-demo="{{ skribl_asset('help/demos/' ~ demo ~ '.json') }}" data-demo-name="{{ demo }}"{% if tool %} data-learn-tool="{{ tool }}"{% endif %}>
       <div class="learn-stage">{{ skribl_inline_draft(controls=false, progress=false) }}</div>
     {% endif %}
       <figcaption class="learn-cap">

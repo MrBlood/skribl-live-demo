@@ -112,11 +112,17 @@ with sync_playwright() as p:
         dock = pg.evaluate("() => [...document.querySelectorAll('.tool-btn[data-tool]')].map(b => b.dataset.tool)")
         reg = pg.evaluate("() => window.SkriblFlipTools ? SkriblFlipTools.list().map(t => t.id || t) : null")
         tools = set(dock) if name == "Pad" else ({"pen", "eraser", "shape"} & set(reg or []))
-        cards = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-tool]')].map(c => c.dataset.tool)")
+        cards = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-learn-tool]')].map(c => c.dataset.learnTool)")
         tries = pg.evaluate("() => [...document.querySelectorAll('#learnSheet .learn-try')].map(b => b.dataset.try)")
         check(f"{name}: every tool ({', '.join(sorted(tools))}) has an example card with Try it",
               bool(tools) and tools <= set(cards) and tools <= set(tries),
               f"tools {sorted(tools)}, cards {cards}, Try it {tries}")
+        # The cards must not borrow the app's own attribute: they come first in
+        # the page, so "the [data-tool=eraser]" found a card (#304; main red on
+        # verify_pointerpad). Anything with data-tool is the app's.
+        borrowed = pg.evaluate("() => [...document.querySelectorAll('[data-tool]')].filter(e => e.closest('#helpDrawer')).length")
+        check(f"{name}: no example card carries the app's data-tool attribute", borrowed == 0,
+              f"{borrowed} element(s) in How it works with data-tool")
         check(f"{name}: the quick start is three steps, the second and third as screen clips",
               pg.evaluate(f"() => document.querySelectorAll('{CARDS}[data-group=start]').length") == 3
               and pg.evaluate(f"() => document.querySelectorAll('{CARDS}[data-group=start].learn-clip').length") == 2)
