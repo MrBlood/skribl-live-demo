@@ -209,7 +209,131 @@ def clip_post(page, rec):
     return (12, w, h, [(m["sheet"], ya), (m["sheet"] + 0.8, yb), (m["submit"], yb), (m["submit"] + 0.8, yc)])
 
 
-CLIPS = {"music": clip_music, "post": clip_post}
+# ---- Flip's own tools ---------------------------------------------------------
+# Select and Liquify change strokes already on the page, and a page stores only
+# where its points ended up, so a replay could not show the move or the warp.
+# These are filmed from the editor instead: the drawing is made off camera with
+# real pen input (artdraw.py), and only the tool's gesture is on screen.
+def flip_ready(page):
+    """Flip at 4:3 on paper with the pen, as the illustrations are drawn."""
+    import artdraw
+    page.evaluate("""() => { const t = window.SkriblCanvasSizes, id = t.SIZES.find(s => s.label === '4:3').id;
+        const b = document.querySelector(`[data-size='${id}']`); if (b) b.click(); }""")
+    page.wait_for_timeout(300)
+    page.evaluate(f"""() => {{ setBg('{artdraw.PAPER}'); onion = false;
+        if (window.SkriblPressure) SkriblPressure.setEnabled(true); shelfSetTool('pen'); }}""")
+    page.wait_for_timeout(200)
+    return page.evaluate("() => [CW, CH]")
+
+
+def flip_draw(page, strokes, logical):
+    import artdraw
+    artdraw.draw(page, strokes, canvas="#pad", logical=logical, tempo=3.0, pause_tempo=4.0,
+                 set_ink=lambda pg, c, s: pg.evaluate("([c, s]) => { color = c; size = s; }", [c, s]))
+    # While a pen is down the editor fades and tucks its chrome, and it eases
+    # back after the last stroke, moving the pad about 13px: a frame measured
+    # before it settles is off by that much for the rest of the clip.
+    page.wait_for_timeout(1500)
+
+
+PAD_WATCH = """() => { window.__padYs = []; const c = document.getElementById('pad'); let last = null;
+  (function tick() { const y = c.getBoundingClientRect().y;
+    if (y !== last) { __padYs.push([Date.now() / 1000, y]); last = y; }
+    requestAnimationFrame(tick); })(); }"""
+
+
+def follow_pad(page, crop):
+    """The crop as a camera that moves WITH the pad. Selecting on Flip grows
+    the tool-hint line above the canvas to two lines, which moves the pad up
+    26px mid-clip: the app doing its job, so the camera follows it on the same
+    frame instead, and the drawing holds still in the clip. Times are the
+    page's wall clock, which is the clock the screencast frames carry."""
+    x, y, w, h = crop
+    ys = page.evaluate("() => window.__padYs || []")
+    if not ys:
+        return crop
+    y0 = ys[0][1]
+    keys = [(ys[0][0], y)]
+    for (ta, ya), (tb, yb) in zip(ys, ys[1:]):
+        keys += [(tb - 0.001, y + (ya - y0)), (tb, y + (yb - y0))]
+    return (x, w, h, keys) if len(keys) > 1 else crop
+
+
+def on_pad(page, logical):
+    """Logical canvas units -> page coordinates, and the 4:3 crop round the pad."""
+    b = page.locator("#pad").bounding_box()
+    k = b["width"] / logical[0]
+    to = lambda x, y: (b["x"] + x * k, b["y"] + y * k)
+    # The largest 4:3 frame INSIDE the pad: on a phone the pad can be a little
+    # short of 4:3, and a frame sized from its width alone took in the page
+    # below it.
+    # Inset past the pad's rounded corners and edge, which are page, not paper.
+    w = min(b["width"] - 16, (b["height"] - 16) * 4 / 3)
+    w = int(w) // 4 * 4; h = w * 3 // 4
+    return to, (b["x"] + (b["width"] - w) / 2, b["y"] + (b["height"] - h) / 2, w, h)
+
+
+def clip_liquify(page, rec):
+    import math
+    from artdraw import INK, PURPLE, Stroke as S
+    logical = flip_ready(page)
+    lines = []
+    for i, (y, c) in enumerate(((236, PURPLE), (306, INK), (376, "#ff6f91"))):
+        pts = [(150 + 516 * k / 12, y + 10 * math.sin(k / 12 * 2 * math.pi + i * 0.8)) for k in range(13)]
+        lines.append(S(pts, "contour", c, size=11, weight=[(0, 0.6), (0.5, 1.0), (1, 0.6)]))
+    flip_draw(page, lines, logical)
+    page.evaluate("() => shelfSetTool('liquify')"); page.wait_for_timeout(300)
+    to, crop = on_pad(page, logical)
+    page.evaluate(PAD_WATCH)
+    rec.start(); page.wait_for_timeout(500)
+    # One unhurried pull down through all three lines, then a second, shorter
+    # one beside it: the lines bend with the finger and keep their order.
+    for (x0, y0, x1, y1, ms) in ((350, 170, 380, 450, 1300), (520, 440, 500, 250, 1000)):
+        a, b = to(x0, y0), to(x1, y1)
+        glide(page, (a[0] + 40, a[1] - 60), a, 350)
+        page.mouse.down()
+        glide(page, a, b, ms, steps=40)
+        page.mouse.up(); page.wait_for_timeout(300)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def clip_select(page, rec):
+    import math
+    from artdraw import PURPLE, Stroke as S
+    logical = flip_ready(page)
+
+    def heart(side, cx=250, cy=300, k=7.5):
+        pts = []
+        for i in range(19):
+            a = min(math.pi, math.pi * i / 16) * side
+            x = 16 * math.sin(a) ** 3
+            y = 13 * math.cos(a) - 5 * math.cos(2 * a) - 2 * math.cos(3 * a) - math.cos(4 * a)
+            pts.append((cx + k * x, cy - k * y))
+        return pts
+    flip_draw(page, [S(heart(-1), "contour", PURPLE, size=22), S(heart(+1), "contour", PURPLE, size=22)], logical)
+    page.evaluate("() => shelfSetTool('select')"); page.wait_for_timeout(300)
+    to, crop = on_pad(page, logical)
+    page.evaluate(PAD_WATCH)
+    rec.start(); page.wait_for_timeout(500)
+    # A box round the heart, then the heart carried across the page.
+    a, b = to(110, 165), to(395, 430)
+    glide(page, (a[0] + 50, a[1] - 40), a, 350)
+    page.mouse.down(); glide(page, a, b, 900, steps=30); page.mouse.up()
+    page.wait_for_timeout(450)
+    c, d = to(250, 300), to(560, 290)
+    glide(page, b, c, 450)
+    page.mouse.down(); glide(page, c, d, 1100, steps=40); page.mouse.up()
+    page.wait_for_timeout(350)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify": clip_liquify}
+# The editor a clip is filmed in, when not Pad.
+ROUTE = {"select": "/flip", "liquify": "/flip"}
 # Where a clip is recorded, when not the tall phone screen above.
 VIEWPORT = {}
 
@@ -285,7 +409,7 @@ def make(browser, name, dark):
     page = ctx.new_page()
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)))
-    browsing.goto(page, BASE, "/skribl-pad")
+    browsing.goto(page, BASE, ROUTE.get(name, "/skribl-pad"))
     page.wait_for_timeout(900)
     page.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
     page.evaluate(FINGER)

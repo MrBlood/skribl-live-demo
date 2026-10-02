@@ -87,7 +87,8 @@ STATE = """() => ({
     replays: [...document.querySelectorAll('#learnSheet .learn-card[data-demo]')].map(c =>
         c._learnPlayer ? c._learnPlayer.state().state : 'none'),
     clips: [...document.querySelectorAll('#learnSheet .learn-video')].map(v => ({
-        src: v.getAttribute('src') || '', poster: v.getAttribute('poster') || '', t: v.currentTime, paused: v.paused })) })"""
+        src: v.getAttribute('src') || '', poster: v.getAttribute('poster') || '', t: v.currentTime, paused: v.paused,
+        start: v.closest('.learn-card').dataset.group === 'start' })) })"""
 PLAYER = lambda u: u.endswith("inlineplayer.js") or "/help/demos/" in u or "/help/clips/" in u
 
 with sync_playwright() as p:
@@ -111,7 +112,9 @@ with sync_playwright() as p:
         # 2. census
         dock = pg.evaluate("() => [...document.querySelectorAll('.tool-btn[data-tool]')].map(b => b.dataset.tool)")
         reg = pg.evaluate("() => window.SkriblFlipTools ? SkriblFlipTools.list().map(t => t.id || t) : null")
-        tools = set(dock) if name == "Pad" else ({"pen", "eraser", "shape"} & set(reg or []))
+        # Flip's census grows as its own tools get examples: Select and Liquify
+        # have clips; Smudge, Blur, Fill and Stamps are next.
+        tools = set(dock) if name == "Pad" else ({"pen", "eraser", "shape", "select", "liquify"} & set(reg or []))
         cards = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-learn-tool]')].map(c => c.dataset.learnTool)")
         tries = pg.evaluate("() => [...document.querySelectorAll('#learnSheet .learn-try')].map(b => b.dataset.try)")
         check(f"{name}: every tool ({', '.join(sorted(tools))}) has an example card with Try it",
@@ -152,9 +155,15 @@ with sync_playwright() as p:
         pg.wait_for_timeout(1500)
         z = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-demo]')].map({INK})")
         s = pg.evaluate(STATE)
-        check(f"{name}: in the drawer, every replay paints ink, and the ink changes as it plays",
-              all(x > 50 for x in z) and sum(1 for x, y in zip(a, z) if x != y) >= len(z) - 1,
-              f"ink then {a}, later {z}")
+        # On screen in the drawer's scroll, or not: a card scrolled out of view
+        # is paused by design and is not asked to change.
+        seen = pg.evaluate(f"""() => {{ const sc = document.querySelector('#learnSheet .learn-sheet-scroll').getBoundingClientRect();
+            return [...document.querySelectorAll('{CARDS}[data-demo]')].map(c => {{ const r = c.querySelector('.learn-stage').getBoundingClientRect();
+              return r.bottom > sc.top + r.height * 0.4 && r.top < sc.bottom - r.height * 0.4; }}); }}""")
+        moving = [x != y for x, y, v in zip(a, z, seen) if v]
+        check(f"{name}: in the drawer, every replay paints ink, and the ones on screen change as they play",
+              all(x > 50 for x in z) and len(moving) >= 2 and sum(moving) >= len(moving) - 1,
+              f"ink then {a}, later {z}, on screen {seen}")
         check(f"{name}: several examples play at once (the player's ambient mode)",
               s["replays"].count("playing") >= 3, str(s["replays"]))
         painted = pg.evaluate("""() => [...document.querySelectorAll('#learnSheet .learn-stage')].every(st => {
@@ -168,9 +177,13 @@ with sync_playwright() as p:
         t0 = [c["t"] for c in s["clips"]]
         pg.wait_for_timeout(900)
         s2 = pg.evaluate(STATE)
-        check(f"{name}: the screen clips play (time advances) and match the dark theme",
-              all(t2 > t1 for t1, t2 in zip(t0, [c["t"] for c in s2["clips"]]))
-              and all("-dark." in c["src"] for c in s2["clips"]) and len(s2["clips"]) == 2, str(s2["clips"]))
+        nclips = pg.evaluate("() => document.querySelectorAll('#learnSheet .learn-clip').length")
+        # The quick start's clips are on screen when the drawer opens, so they
+        # play; a clip further down plays when scrolled to, and is not asked to.
+        check(f"{name}: the screen clips play (time advances) and every clip matches the dark theme",
+              all(t2 > t1 for t1, t2, c in zip(t0, [c["t"] for c in s2["clips"]], s2["clips"]) if c["start"])
+              and sum(1 for c in s2["clips"] if c["start"]) == 2
+              and all("-dark." in c["src"] for c in s2["clips"]) and len(s2["clips"]) == nclips, str(s2["clips"]))
         pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
         pg.wait_for_timeout(500)
         s3 = pg.evaluate(STATE)

@@ -13460,3 +13460,23 @@ you can't see the buttons being pushed on the post example."
   sends out a purple ripple and the fingertip has a dark outer ring, so taps
   read in the light theme. The "Take saved" toast from finishing the drawing
   off camera is put away before filming.
+
+## After #307 -- Flip's own tools, shown: Select and Liquify
+
+Select and Liquify change strokes already on a page, and a page stores only
+where its points ended up, so a replay could not show the move or the warp.
+They are screen clips of the Flip editor instead (`make_help_clips.py`): the
+drawing is made off camera with real pen input, and only the tool's gesture is
+filmed -- a box round a heart and the heart carried across; a finger pulled
+through three lines, which bend and keep their order. Each card has Try it.
+
+* **The camera follows the pad.** Starting a selection grows Flip's tool-hint
+  line to two lines and moves the canvas up 26px mid-clip. The recorder logs
+  the pad's position on the page's wall clock, the clock the screencast frames
+  carry, and moves the crop with it on the same frame, so the drawing holds
+  still. It also waits for the editor's chrome to ease back after the last
+  pen stroke before framing, and frames inside the pad's rounded edge.
+* `verify_helpdemos`: Flip's census now requires Select and Liquify (red with
+  the Liquify card removed); Smudge, Blur, Fill and Stamps are next. Its
+  playing checks ask only cards on screen in the drawer to move, since a card
+  scrolled out of view is paused by design (red with replays that never play).
