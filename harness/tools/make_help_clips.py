@@ -209,7 +209,7 @@ def clock(frames, t):
     return out
 
 
-def encode(frames, crop, out):
+def encode(frames, crop, out, size=(640, 480)):
     if len(crop) == 4 and isinstance(crop[3], list):
         # (x, w, h, [(t_a, y_a), (t_b, y_b)]): an eased pan between two framings.
         x, w, h = [round(v * DPR) for v in crop[:3]]
@@ -227,7 +227,7 @@ def encode(frames, crop, out):
             lst.append(f"file '{p}'\nduration {held(frames, i):.4f}")
         lst.append(f"file '{pathlib.Path(d) / f'f{len(frames) - 1:05d}.png'}'")
         (pathlib.Path(d) / "list.txt").write_text("\n".join(lst))
-        vf = f"crop={w}:{h}:{x}:{y},setpts=PTS/{SPEED},scale=640:480:flags=lanczos,fps=30,format=yuv420p"
+        vf = f"crop={w}:{h}:{x}:{y},setpts=PTS/{SPEED},scale={size[0]}:{size[1]}:flags=lanczos,fps=30,format=yuv420p"
         src = ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(pathlib.Path(d) / "list.txt"), "-vf", vf]
         subprocess.run(src + ["-c:v", "libx264", "-profile:v", "high", "-crf", "23", "-preset", "slow",
                               "-movflags", "+faststart", "-an", str(out)], check=True)

@@ -27,6 +27,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(HERE.parent))
 import browsing  # noqa: E402
+import handmotion as hm  # noqa: E402
 
 OUT = ROOT / "skribl" / "static" / "help" / "demos"
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
@@ -139,16 +140,71 @@ def demo_draw():
     return s
 
 
+def demo_traced(path):
+    return lambda: [("tool", "pen"), ("trace", path)]
+
+
 DEMOS = {"pen": demo_pen, "eraser": demo_eraser, "shape": demo_shape, "draw": demo_draw}
 
 
 # ---- driving the editor -----------------------------------------------------
 def run(page, steps):
+    """Play the steps on the editor. Strokes are drawn by the hand model
+    (handmotion.py) as stylus events inside the page; a run of strokes with no
+    tool change between them goes as one batch, so the pauses between them are
+    the hand's too, not the automation's."""
     box = page.locator("#canvas").bounding_box()
     sx, sy = box["width"] / W, box["height"] / H
-    to = lambda p: (box["x"] + p[0] * sx, box["y"] + p[1] * sy)
+    batch, seed = [], [0]
+
+    def flush():
+        if not batch:
+            return
+        events, t, prev = [], 0.0, None
+        for path, opts in batch:
+            seed[0] += 1
+            pts = hm.stroke(path, seed=seed[0], **{k: v for k, v in opts.items() if k not in ("c", "s")})
+            if prev is not None:
+                t += hm.pause(prev, path[0], seed[0])
+            ink = {k: opts[k] for k in ("c", "s") if k in opts}
+            for i, (x, y, ms, pr) in enumerate(pts):
+                ev = {"k": "d" if i == 0 else "m", "x": box["x"] + x * sx, "y": box["y"] + y * sy,
+                      "t": t + ms, "p": pr}
+                if i == 0:
+                    ev.update(ink)
+                events.append(ev)
+            last = pts[-1]
+            t += last[2] + 1000 / hm.HZ
+            events.append({"k": "u", "x": box["x"] + last[0] * sx, "y": box["y"] + last[1] * sy, "t": t, "p": 0})
+            prev = path[-1]
+        page.evaluate(hm.DRIVER, events)
+        page.wait_for_timeout(120)
+        batch.clear()
+
     for step in steps:
         kind = step[0]
+        if kind == "stroke":
+            batch.append((step[1], step[2] if len(step) > 2 else {}))
+            continue
+        if kind == "trace":
+            # A picture, as strokes (tracedrawing.py), each in its own colour
+            # and weight. Pressure runs about 0.3..0.95, so the base width is
+            # set a little above the line's so its average lands on it.
+            import tracedrawing as td
+            for st in td.trace(step[1], **(step[2] if len(step) > 2 else {})):
+                path = hm.catmull(st["path"], 1.5)
+                batch.append((path, {"c": st["color"], "s": round(st["width"] / 0.78, 1),
+                                     "pace": 1.0 if st["len"] > 120 else 1.25}))
+            continue
+        if kind == "drag":
+            # A shape is a press and a drag: a hand's drag bows a little and
+            # eases in and out, at a steadier pace than a sketched line.
+            a, b = step[1], step[2]
+            mid = ((a[0] + b[0]) / 2 + (b[1] - a[1]) * 0.06, (a[1] + b[1]) / 2 - (b[0] - a[0]) * 0.06)
+            batch.append((hm.catmull([a, mid, b], 2.0), {"pace": 0.75, "pmin": 0.6, "pmax": 0.7, "tremor": 0.3}))
+            flush()
+            continue
+        flush()
         if kind == "tool":
             page.evaluate("t => setTool(t)", step[1])
         elif kind == "color":
@@ -161,20 +217,10 @@ def run(page, steps):
             el = "shapeSides" if kind == "sides" else "shapeRadius"
             page.evaluate("([id, v]) => { const s = document.getElementById(id); s.value = String(v);"
                           " s.dispatchEvent(new Event('input', { bubbles: true })); }", [el, step[1]])
-        elif kind == "stroke":
-            pts = [to(p) for p in step[1]]
-            page.mouse.move(*pts[0]); page.mouse.down()
-            for p in pts[1:]:
-                page.mouse.move(*p)
-            page.mouse.up(); page.wait_for_timeout(90)
-        elif kind == "drag":
-            a, b = step[1], step[2]
-            page.mouse.move(*to(a)); page.mouse.down()
-            for t in ease(30)[1:]:
-                page.mouse.move(*to((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)))
-                page.wait_for_timeout(8)
-            page.mouse.up(); page.wait_for_timeout(220)
+        elif kind == "wait":
+            page.wait_for_timeout(step[1])
         page.evaluate("() => { const p = document.getElementById('shapePop'); if (p) p.hidden = true; }")
+    flush()
 
 
 def make(browser, name):
@@ -185,6 +231,8 @@ def make(browser, name):
     browsing.goto(page, BASE, "/skribl-pad")
     page.wait_for_timeout(800)
     page.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
+    # How a traced stroke sets its ink as the pen lands (handmotion.DRIVER).
+    page.evaluate("() => { window.__demoSet = ev => { if (ev.c) color = ev.c; if (ev.s) size = ev.s; }; }")
     # 4:3, the cards' shape, through the editor's own Canvas picker (free while
     # the canvas is empty). Pad otherwise picks a shape from the window.
     page.evaluate("""() => { const t = window.SkriblCanvasSizes, id = t.SIZES.find(s => s.label === '4:3').id;
