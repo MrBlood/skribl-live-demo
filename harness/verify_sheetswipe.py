@@ -428,6 +428,57 @@ with sync_playwright() as p:
               pg.evaluate("() => document.getElementById('drawPanel').hidden") is True)
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
+
+    # 6 THE PAGE GOES HOME (owner, from an iPhone: the page "bounced back too
+    # high ... stuck out of view about the header's size ... and header menu
+    # is gone"). On a phone an open drawer scrolls the PAGE to show itself;
+    # Flip never scrolled back on close, and nothing caught a page left
+    # scrolled with nothing open. Asked as what is PAINTED at the header's
+    # middle, because a header scrolled off the top keeps its rect.
+    HOME = """() => { const h = document.querySelector('.header'); const r = h.getBoundingClientRect();
+        const at = document.elementFromPoint(r.left + r.width / 2, Math.max(1, r.top + r.height / 2));
+        return { y: Math.round(window.scrollY), painted: !!(at && h.contains(at)) }; }"""
+    for page, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        who = f"{page}: the page"
+        print(f"\n{who}")
+        ctx, pg, errs = fresh(b, route)
+        browsing.pad_drawer(pg, "draw", settle=600)
+        pg.evaluate("() => { const m = document.querySelector('#drawPanel .drawer-detent-more'); if (m) m.click(); }")
+        pg.wait_for_timeout(1500)
+        opened_y = pg.evaluate("() => Math.round(window.scrollY)")
+        check(f"{who}: the full draw drawer scrolled the page to show itself (precondition)",
+              opened_y > 0, f"scrollY {opened_y} -- without this the next check asks nothing")
+        h = pg.locator("#drawPanel .drawer-detent-handle").bounding_box()
+        pg.touchscreen.tap(h["x"] + h["width"] / 2, h["y"] + h["height"] / 2)
+        pg.wait_for_timeout(1200)
+        home = pg.evaluate(HOME)
+        # Chromium also gets here by itself -- the page clamps as the drawer
+        # shrinks -- so this pins the outcome, not Flip's own scroll home (a
+        # mutation removing it stays green). The check below is the pin.
+        check(f"{who}: closing the drawer brings it home, the header painted on screen",
+              home["y"] == 0 and home["painted"], str(home))
+        # STUCK WITH NOTHING OPEN: the iPhone state, made by hand. The page is
+        # given room it should not have and left scrolled; a finger lifts.
+        pg.evaluate("() => { document.body.style.paddingBottom = '400px'; window.scrollTo(0, 90); }")
+        pg.wait_for_timeout(100)
+        stuck = pg.evaluate(HOME)
+        pg.evaluate("() => window.dispatchEvent(new TouchEvent('touchend', { touches: [] }))")
+        pg.wait_for_timeout(700)
+        back = pg.evaluate(HOME)
+        check(f"{who}: left scrolled with nothing open, it goes home once the touch ends",
+              stuck["y"] > 0 and back["y"] == 0 and back["painted"],
+              f"stuck {stuck} -> {back}")
+        # ...AND LEAVES AN OPEN DRAWER ALONE: the snap is for a page with no
+        # reason to be scrolled, never one showing a drawer.
+        browsing.pad_drawer(pg, "draw", settle=600)
+        pg.evaluate("() => window.scrollTo(0, 90)")
+        pg.evaluate("() => window.dispatchEvent(new TouchEvent('touchend', { touches: [] }))")
+        pg.wait_for_timeout(700)
+        kept = pg.evaluate("() => Math.round(window.scrollY)")
+        check(f"{who}: with a drawer open it does not pull the page away from it",
+              kept > 0, f"scrollY {kept}")
+        check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
+        ctx.close()
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)
