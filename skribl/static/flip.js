@@ -5346,7 +5346,7 @@ let zoomDrawPending=false;
 function requestZoomWaveformDraw(){ if(zoomDrawPending) return; zoomDrawPending=true; requestAnimationFrame(()=>{ zoomDrawPending=false; if(currentAudioBuffer) drawWaveform(currentAudioBuffer); drawZoomWaveform(); }); }
 function drawWaveform(audioBuffer){
   // lib/loopwave.js, shared with Pad; its blank-strip guard is documented there.
-  SkriblLoopWave.drawStrip({ canvas:waveformCanvas, ctx:waveformCtx, track:musicTrack, buffer:audioBuffer });
+  SkriblLoopWave.drawStrip({ canvas:waveformCanvas, ctx:waveformCtx, track:musicTrack, buffer:audioBuffer, trimStart:trimStart, trimEnd:trimEnd });
 }
 function drawZoomWaveform(){
   if(!currentAudioBuffer||!zoomWaveformCanvas) return;
@@ -5444,7 +5444,7 @@ function stepZoomMag(dir){
   syncZoomMagStep();
 })();
 // Trim | Fine-tune, the one pill -- the Pad's switch (editor_music.js), here.
-bindEl('fineTuneSeg', 'click', e=>{ const b=e.target.closest('button'); if(!b) return; const seg=document.getElementById('fineTuneSeg'); const fine=b.id==='fineTuneToggle'; seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on', x===b)); document.getElementById('fineTuneBody').hidden=!fine; seg.parentElement.classList.toggle('ft-on', fine); requestAnimationFrame(()=>{ updateTrimUI(); if(!fine && typeof drawWaveform==='function' && currentAudioBuffer) drawWaveform(currentAudioBuffer); const mp=document.getElementById('musicPanel'); if(mp && window.SkriblDrawerDetent) window.SkriblDrawerDetent.revealPanelEnd(mp, 'smooth'); }); });
+bindEl('fineTuneSeg', 'click', e=>{ const b=e.target.closest('button'); if(!b) return; const seg=document.getElementById('fineTuneSeg'); const fine=b.id==='fineTuneToggle'; seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on', x===b)); document.getElementById('fineTuneBody').hidden=!fine; seg.parentElement.classList.toggle('ft-on', fine); requestAnimationFrame(()=>{ updateTrimUI(); if(!fine && typeof drawWaveform==='function' && currentAudioBuffer) drawWaveform(currentAudioBuffer); if(fine){ const z=document.getElementById('zoomTrackWrap'); const vh=window.visualViewport?visualViewport.height:innerHeight; const over=z?z.getBoundingClientRect().bottom-vh+12:0; if(over>0) window.scrollBy({top:over, behavior:'smooth'}); } }); });   // just the waveform into view, as the Pad does (editor_music.js)
 
 // nudge fine-tune
 const nudgeSteps=[0.01,0.02,0.05,0.1]; let nudgeStepIdx=3;

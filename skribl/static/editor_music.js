@@ -115,10 +115,16 @@ dragZoomHandle(zoomHandleEnd, false);
       if (typeof updateTrimUI === 'function') updateTrimUI();
       if (!fine && typeof drawWaveform === 'function' && typeof currentAudioBuffer !== 'undefined'
           && currentAudioBuffer) drawWaveform(currentAudioBuffer);
-      // The loop detail is taller than the strip it replaces; bring the
-      // drawer's end on screen, as opening the drawer does.
-      const panel = document.getElementById('musicPanel');
-      if (panel && window.SkriblDrawerDetent) window.SkriblDrawerDetent.revealPanelEnd(panel, 'smooth');
+      // The loop detail is taller than the strip it replaces: nudge the page
+      // just far enough to show its waveform. NOT the drawer's whole end --
+      // that scrolled far enough to tuck the dock under the pinned header
+      // (verify_ux's phone audit), and the waveform is what says it worked.
+      if (fine) {
+        const z = document.getElementById('zoomTrackWrap');
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const over = z ? z.getBoundingClientRect().bottom - vh + 12 : 0;
+        if (over > 0) window.scrollBy({ top: over, behavior: 'smooth' });
+      }
     });
   });
 })();

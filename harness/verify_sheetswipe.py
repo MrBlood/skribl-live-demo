@@ -497,6 +497,23 @@ with sync_playwright() as p:
         pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _buf.getvalue()})
         pg.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
         pg.wait_for_timeout(600)
+        # ONE COLOUR RULE FOR THE SAME SOUND (owner: "the colors are
+        # different"): the strip's peaks inside the loop are the accent, the
+        # rest slate, as Loop Detail draws them. Read off the strip's own
+        # pixels, at the busiest column inside and outside a middle loop.
+        pg.evaluate("() => { trimStart = audioDuration * 0.25; trimEnd = audioDuration * 0.75; updateTrimUI(); }")
+        pg.wait_for_timeout(400)
+        ink = pg.evaluate("""() => { const c = document.getElementById('waveformCanvas'), x = c.getContext('2d');
+            const d = x.getImageData(0, 0, c.width, c.height).data, w = c.width, h = c.height;
+            const col = (x0, x1) => { let r = 0, g = 0, b = 0, n = 0;
+              for (let X = Math.floor(x0); X < Math.floor(x1); X++) for (let Y = 0; Y < h; Y++) {
+                const k = (Y * w + X) * 4; if (d[k + 3] > 200) { r += d[k]; g += d[k + 1]; b += d[k + 2]; n++; } }
+              return n ? [Math.round(r / n), Math.round(g / n), Math.round(b / n), n] : null; };
+            return { inside: col(w * 0.35, w * 0.65), outside: col(w * 0.02, w * 0.2) }; }""")
+        _in, _out = ink["inside"], ink["outside"]
+        check(f"{who}: the strip draws the loop's peaks in the accent and the rest in slate, as Loop Detail does",
+              bool(_in and _out) and _in[2] - _in[0] > 60 and abs(_out[2] - _out[0]) < 40,
+              f"inside rgb+count {_in}, outside {_out}")
         pg.click("#fineTuneToggle")
         pg.wait_for_timeout(1600)
         ft = pg.evaluate("""() => { const z = document.getElementById('zoomWaveformCanvas').getBoundingClientRect();
