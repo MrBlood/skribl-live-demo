@@ -18,62 +18,46 @@ def _tilt(strokes, deg, cx=408, cy=320):
     return strokes
 
 
+def _dot(cx, cy, r):
+    """A small solid round: one tight turn and a half, closing on the middle."""
+    import math
+    pts = [(cx + r * (1 - k / 14) * math.cos(-1.2 + k * 0.67), cy + r * (1 - k / 14) * math.sin(-1.2 + k * 0.67))
+           for k in range(15)]
+    return pts
+
+
 def cat():
-    """A cat, head and shoulders, head tipped, glancing to one side.
-    One idea: the face. Purple is the colour (eyes, collar, inside the ears);
-    pink is the accent (nose, tag)."""
+    """A cat, head and shoulders, head tipped: twelve strokes, one idea -- the
+    face. Silhouette, then the body, then the eyes (purple, then the lids), the
+    pink nose, the mouth, and one whisker flicked on each side last."""
     return _tilt([
-        # -- gesture: the silhouette ------------------------------------------
-        # ears and the top of the head in one sweep. The left ear stands, the
-        # right one tips out. Heavy at the ear roots, thin at the tips, light
-        # across the top of the head where it turns into the light.
+        # ears and the top of the head in one sweep: heavy at the ear roots,
+        # thin at the tips and across the top where it turns into the light
         S([(316, 250), (300, 180), (306, 112), (344, 158), (376, 190), (410, 184),
            (446, 190), (488, 162), (538, 132), (520, 196), (504, 252)], "gesture",
           weight=[(0, 0.85), (0.16, 0.45), (0.3, 1.0), (0.5, 0.7), (0.68, 1.0), (0.82, 0.4), (1, 0.95)]),
-        # cheeks and jaw: fullest at the bottom, the shadow side; a tuft of
-        # fur breaks the outline at each cheek
+        # cheeks and jaw, fullest at the bottom, a tuft at each cheek
         S([(314, 244), (300, 282), (290, 312), (282, 330), (296, 336), (306, 370), (340, 402), (384, 420),
            (432, 418), (478, 400), (510, 368), (520, 338), (532, 330), (520, 304), (506, 248)], "gesture",
           weight=[(0, 0.6), (0.45, 1.0), (0.7, 1.0), (1, 0.55)]),
-        # the body, sitting: two falling lines that taper away
+        # the body: two falling lines that taper away
         S([(336, 404), (300, 456), (282, 520), (280, 596)], "contour", size=10,
           taper=(0.08, 0.55), weight=[(0, 1.0), (1, 0.5)]),
         S([(482, 400), (526, 452), (548, 520), (554, 596)], "contour", size=10,
           taper=(0.08, 0.55), weight=[(0, 1.0), (1, 0.5)]),
-        # -- form --------------------------------------------------------------
-        S([(324, 228), (318, 168), (356, 204)], "form", size=6),
-        S([(498, 230), (520, 166), (480, 200)], "form", size=6),
-        S([(332, 214), (326, 186), (342, 204), (332, 196)], "fill", PURPLE, size=11, peak=0.55),
-        S([(494, 214), (508, 184), (488, 204), (500, 196)], "fill", PURPLE, size=11, peak=0.55),
-        # the collar: a purple band under the jaw
-        S([(344, 408), (376, 426), (414, 430), (452, 424), (478, 408)], "form", PURPLE, size=10, peak=0.9,
-          weight=[(0, 0.6), (0.5, 1.0), (1, 0.6)]),
-        # -- detail: eyes, glancing to the cat's left -------------------------
-        # each eye: the iris first, solid, then the lids drawn over it as one
-        # almond that closes at both corners, then the pupil
-        S([(370, 290), (384, 288), (390, 300), (380, 310), (368, 304), (372, 295), (382, 298), (378, 304)], "fill", PURPLE, size=13),
-        S([(456, 290), (470, 288), (476, 300), (466, 310), (454, 304), (458, 295), (468, 298), (464, 304)], "fill", PURPLE, size=13),
+        # eyes: the purple iris, glancing to her left, then the almond over it
+        S(_dot(381, 297, 7), "fill", PURPLE, size=11),
+        S(_dot(467, 297, 7), "fill", PURPLE, size=11),
         S([(340, 300), (356, 284), (380, 280), (400, 294), (384, 312), (360, 314), (342, 302)], "detail", size=6.5,
           weight=[(0, 0.7), (0.3, 1.0), (0.55, 0.9), (0.75, 0.45), (1, 0.55)]),
         S([(424, 296), (442, 280), (468, 282), (486, 298), (466, 312), (442, 312), (426, 298)], "detail", size=6.5,
           weight=[(0, 0.7), (0.3, 1.0), (0.55, 0.9), (0.75, 0.45), (1, 0.55)]),
-        S([(382, 289), (381, 305)], "detail", size=5.5, pace=0.55),
-        S([(468, 289), (467, 305)], "detail", size=5.5, pace=0.55),
-        # nose (the accent), filled in two strokes, then the mouth
-        S([(397, 342), (419, 342), (408, 356), (398, 344)], "detail", PINK, size=7, pace=0.65),
-        S([(402, 345), (414, 345), (408, 351), (404, 346)], "fill", PINK, size=10),
-        S([(408, 356), (407, 366), (396, 378), (383, 374)], "detail", weight=[(0, 1.0), (1, 0.6)]),
-        S([(407, 366), (419, 378), (432, 373)], "detail", weight=[(0, 1.0), (1, 0.6)]),
-        # chest fur under the collar: three small flicks
-        S([(392, 448), (398, 474)], "accent", size=5.5),
-        S([(410, 456), (412, 484)], "accent", size=5.5),
-        S([(428, 448), (430, 470)], "accent", size=5.5),
-        # -- accents: whiskers flicked fast, and the tag on the collar --------
-        S([(370, 362), (320, 352), (258, 350)], "accent", taper=(0.05, 0.6)),
-        S([(368, 372), (316, 374), (262, 386)], "accent", taper=(0.05, 0.6)),
-        S([(446, 362), (498, 350), (560, 346)], "accent", taper=(0.05, 0.6)),
-        S([(446, 372), (500, 372), (556, 384)], "accent", taper=(0.05, 0.6)),
-        S([(414, 432), (406, 446), (414, 458), (424, 448), (416, 434)], "detail", PINK, size=8),
+        # the nose, the accent, then the mouth in one stroke
+        S([(398, 342), (418, 342), (408, 355), (401, 345), (412, 346)], "fill", PINK, size=10),
+        S([(383, 374), (396, 378), (407, 364), (419, 378), (432, 373)], "detail", weight=[(0, 0.6), (0.5, 1.0), (1, 0.6)]),
+        # one whisker each side, flicked out fast
+        S([(368, 366), (318, 360), (258, 362)], "accent", taper=(0.05, 0.6)),
+        S([(448, 366), (500, 360), (560, 360)], "accent", taper=(0.05, 0.6)),
     ], -6)
 
 

@@ -76,14 +76,14 @@ def _wobble(path, amt, seed):
     return out
 
 
-def plan(strokes, seed=1):
+def plan(strokes, seed=1, tempo=1.0):
     """Each stroke as timed points with its pressure: [(x, y, ms, p)] per stroke."""
     out = []
     for i, st in enumerate(strokes):
         path = hm.catmull(st.pts, 1.2)
         L = sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(path, path[1:]))
         path = _wobble(path, min(2.2, L / 220) if st.role in ("gesture", "contour", "form") else 0.6, seed * 97 + i)
-        pts = hm.stroke(path, pace=st.pace, seed=seed * 31 + i, pmin=0.3, pmax=1.0, tremor=0.25)
+        pts = hm.stroke(path, pace=st.pace * tempo, seed=seed * 31 + i, pmin=0.3, pmax=1.0, tremor=0.25)
         T = pts[-1][2] or 1
         a, b = st.taper
         shaped = []
@@ -108,24 +108,25 @@ def plan(strokes, seed=1):
     return out
 
 
-def draw(page, strokes, *, seed=1, set_ink=None, canvas="#canvas", logical=None):
+def draw(page, strokes, *, seed=1, set_ink=None, canvas="#canvas", logical=None, tempo=1.0):
     """Perform `strokes` on the editor canvas with real pen input.
 
     `set_ink(page, color, size)` sets the brush between strokes (the editor's
     own state); the default is Pad's globals, which Flip shares by name.
     `canvas` / `logical` say which canvas and its authored size (Flip: "#pad",
-    (CW, CH))."""
+    (CW, CH)). `tempo` speeds the whole performance -- hand and pauses alike --
+    so a short example stays a confident hand rather than a rushed one."""
     box = page.locator(canvas).bounding_box()
     lg = logical or page.evaluate("() => { const s = getCanvasLogicalSize(); return [s.width, s.height]; }")
     sx, sy = box["width"] / lg[0], box["height"] / lg[1]
     cdp = page.context.new_cdp_session(page)
     set_ink = set_ink or (lambda pg, c, s: pg.evaluate("([c, s]) => { color = c; size = s; }", [c, s]))
-    timed = plan(strokes, seed)
+    timed = plan(strokes, seed, tempo)
     prev_end = None
     for st, pts in zip(strokes, timed):
         set_ink(page, st.color, st.size)
         if prev_end is not None:
-            time.sleep(hm.pause(prev_end, st.pts[0], seed) / 1000 * 0.8)
+            time.sleep(hm.pause(prev_end, st.pts[0], seed) / 1000 * 0.8 / tempo)
         t0 = time.perf_counter()
         for k, (x, y, ms, p) in enumerate(pts):
             while (time.perf_counter() - t0) * 1000 < ms:
