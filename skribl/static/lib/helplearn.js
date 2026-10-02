@@ -63,7 +63,8 @@
     return ready;
   }
 
-  function open() { return !drawer.hidden && sheetOpen; }
+  var viewerOpen = false;
+  function open() { return !drawer.hidden && sheetOpen && !viewerOpen; }
 
   function sync(card) {
     var v = card.querySelector('.learn-video');
@@ -115,12 +116,20 @@
     });
   }, { threshold: 0.35 }) : null;
 
+  // The player box as the template drew it, before attach() fills it: the
+  // full-screen viewer builds its own player from this.
+  cards.forEach(function (c) {
+    var st = c.querySelector('.learn-stage');
+    if (st) c._learnPristine = st.innerHTML;
+  });
+
   function start(card) {
-    if (card._learnStarted) return;
+    if (card._learnStarted) return card._learnLoad;
     card._learnStarted = true;
-    fetch(card.getAttribute('data-demo'))
+    card._learnLoad = fetch(card.getAttribute('data-demo'))
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (payload) {
+        card._learnPayload = payload;
         if (!payload || !window.SkriblInline) { card.classList.add('learn-failed'); return; }
         var p = window.SkriblInline.attach(card.querySelector('.skribl-inline'), payload, { ambient: true });
         if (!p) { card.classList.add('learn-failed'); return; }
@@ -131,6 +140,7 @@
         sync(card);
       })
       .catch(function () { card.classList.add('learn-failed'); });
+    return card._learnLoad;
   }
 
   function startAll() {
@@ -182,7 +192,9 @@
   // Escape closes the drawer and leaves How it works open: caught inside the
   // panel, before the editors' window-level Escape that closes the panel.
   drawer.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && sheetOpen) { e.stopPropagation(); e.preventDefault(); closeSheet(); }
+    if (e.key !== 'Escape') return;
+    if (viewerOpen) { e.stopPropagation(); e.preventDefault(); closeViewer(); return; }
+    if (sheetOpen) { e.stopPropagation(); e.preventDefault(); closeSheet(); }
   });
   // A pull down on the grip closes it, as every sheet's grabber does.
   var grip = document.getElementById('learnGrip');
@@ -219,6 +231,79 @@
     });
   });
 
+  // ---- full screen ------------------------------------------------------------
+  // A tap on an example opens it large (owner: "we should be allowed to click
+  // ... and have it full screen"). A replay gets a player of its own, built
+  // from the box the template drew; a clip, the same recording. The cards
+  // pause underneath. Caught at the stage, before the player's own tap-to-
+  // pause hears it.
+  var viewer = document.getElementById('learnViewer');
+  var vStage = document.getElementById('learnViewerStage');
+  var vTitle = document.getElementById('learnViewerTitle');
+  var vPlayer = null, vVideo = null, vFrom = null;
+  function closeViewer() {
+    if (!viewerOpen || !viewer) return;
+    viewerOpen = false;
+    if (vPlayer) { try { vPlayer.pause(); } catch (e) {} vPlayer = null; }
+    if (vVideo) { vVideo.pause(); vVideo = null; }
+    vStage.innerHTML = '';
+    viewer.hidden = true;
+    syncAll();
+    if (vFrom && !drawer.hidden) vFrom.focus({ preventScroll: true });
+  }
+  function openViewer(card) {
+    if (!viewer) return;
+    var t = card.querySelector('.learn-title');
+    var n = t && t.querySelector('.learn-n');
+    vTitle.textContent = t ? t.textContent.slice(n ? n.textContent.length : 0).trim() : '';
+    vStage.innerHTML = '';
+    vStage.removeAttribute('data-shape');
+    vFrom = card.querySelector('.learn-stage');
+    viewerOpen = true;
+    syncAll();
+    viewer.hidden = false;
+    var close = document.getElementById('learnViewerClose');
+    if (close) close.focus({ preventScroll: true });
+    if (card.hasAttribute('data-clip-dark')) {
+      var light = document.documentElement.getAttribute('data-theme') === 'light';
+      var v = document.createElement('video');
+      v.className = 'learn-viewer-video';
+      v.muted = true; v.loop = true; v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.setAttribute('poster', card.getAttribute(light ? 'data-poster-light' : 'data-poster-dark'));
+      if (card.getAttribute('data-shape')) vStage.setAttribute('data-shape', card.getAttribute('data-shape'));
+      vStage.appendChild(v);
+      vVideo = v;
+      if (reduce) { v.controls = true; v.preload = 'none'; v.setAttribute('src', clipSrc(card)); }
+      else { v.setAttribute('src', clipSrc(card)); var pr = v.play(); if (pr && pr.catch) pr.catch(function () {}); }
+      return;
+    }
+    vStage.innerHTML = card._learnPristine || '';
+    var box = vStage.querySelector('.skribl-inline');
+    loadPlayer().then(function () { return start(card); }).then(function () {
+      if (!viewerOpen || !box || !card._learnPayload || !window.SkriblInline) return;
+      var p = window.SkriblInline.attach(box, card._learnPayload, { ambient: true });
+      if (!p) return;
+      p.setLoop(true);
+      vPlayer = p;
+      if (!reduce) p.play();
+    });
+  }
+  all.forEach(function (card) {
+    var st = card.querySelector('.learn-stage');
+    if (!st) return;
+    st.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      openViewer(card);
+    }, true);
+    st.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openViewer(card); }
+    });
+  });
+  if (viewer) viewer.addEventListener('click', function (e) {
+    if (e.target.closest('[data-viewer-close]')) closeViewer();
+  });
+
   // ---- How it works opening and closing -------------------------------------
   function onOpenChange() {
     if (!drawer.hidden) {
@@ -226,6 +311,7 @@
         if (!im.getAttribute('src')) im.setAttribute('src', im.getAttribute('data-src'));
       });
     } else {
+      closeViewer();
       closeSheet(true);
     }
     syncAll();

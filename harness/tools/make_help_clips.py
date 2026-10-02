@@ -134,11 +134,11 @@ def center(page, sel):
 # ---- the clips ---------------------------------------------------------------
 # Each returns the crop, in CSS px of the viewport: (x, y, w, h), 4:3.
 def clip_music(page, rec):
-    # The drawer is opened off camera: the clip is about the song, so it opens
-    # on "Add music" and spends its seconds on the waveform.
-    page.locator("#mediaOpenBtn").click(); page.wait_for_timeout(500)
-    page.locator("#mediaTabMusic").click(); page.wait_for_timeout(500)
-    rec.start(); page.wait_for_timeout(350)
+    # THE WHOLE PHONE SCREEN, every tap on it (owner: the zoomed clips did not
+    # "reveal the screen"): open the drawer, Music, add a song, set the loop.
+    rec.start(); page.wait_for_timeout(400)
+    tap(page, "#mediaOpenBtn", after=450)
+    tap(page, "#mediaTabMusic", after=450)
     drop = page.locator("#musicInput").evaluate("i => { const z = i.closest('label, .drop, .media-drop, .pending-row') || i.parentElement; const r = z.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }")
     glide(page, (drop[0] + 50, drop[1] + 80), drop, 420)
     page.mouse.down(); page.wait_for_timeout(110); page.mouse.up()
@@ -157,10 +157,7 @@ def clip_music(page, rec):
     page.mouse.up(); page.wait_for_timeout(250)
     page.evaluate("window.__fingerHide()"); page.wait_for_timeout(800)
     rec.stop()
-    # Framed on the panel in use, edge to edge of its content.
-    tabs = page.locator("#mediaTabMusic").bounding_box()
-    x0 = 12; w = VW - 2 * x0; h = round(w * 3 / 4)
-    return (x0, max(0, tabs["y"] - 8), w, h)
+    return (0, 0, page.viewport_size["width"], page.viewport_size["height"])
 
 
 def clip_post(page, rec):
@@ -179,12 +176,9 @@ def clip_post(page, rec):
     # Ending the take says "Take saved" in a toast; it belongs to the drawing,
     # which was done off camera, so it is put away before filming starts.
     page.evaluate("() => { try { toast.hidden = true; } catch (e) {} }")
-    # THE CAMERA FOLLOWS THE FINGER, so every press is on screen: on the
-    # header while Post is tapped, down to the title as it is typed, then to
-    # the sheet's own Post button for the last tap and "Posted". The owner
-    # could not see the buttons being pushed when the clip opened on the title.
-    w = VW - 24; h = round(w * 3 / 4)
-    ya = 0
+    # THE WHOLE PHONE SCREEN: the tap on Post, the sheet, the title, the
+    # sheet's Post button and "Posted!" all in one frame. A zoomed camera
+    # panning after the finger lost it off the bottom (owner).
     rec.start(); page.wait_for_timeout(400)
     tap(page, "#postBtn", after=550)
     rec.mark("sheet")
@@ -192,12 +186,6 @@ def clip_post(page, rec):
     glide(page, (tx + 60, ty + 80), (tx, ty), 600)
     page.mouse.down(); page.wait_for_timeout(120); page.mouse.up()
     page.keyboard.type("Cat", delay=80)
-    # Where things sit WHILE they are used: posting reflows the sheet, so a
-    # measure taken at the end frames them wrong.
-    lab = page.locator("#postTitleInput").bounding_box()
-    sub = page.locator("#postSubmitBtn").bounding_box()
-    yb = max(0, lab["y"] - 24)
-    yc = max(yb, sub["y"] + sub["height"] + 20 - h)
     page.wait_for_timeout(250)
     rec.mark("submit")
     page.wait_for_timeout(500)
@@ -205,8 +193,7 @@ def clip_post(page, rec):
     page.wait_for_selector("#postResult:not([hidden])", timeout=15000)
     page.evaluate("window.__fingerHide()"); page.wait_for_timeout(1100)
     rec.stop()
-    m = rec.marks
-    return (12, w, h, [(m["sheet"], ya), (m["sheet"] + 0.8, yb), (m["submit"], yb), (m["submit"] + 0.8, yc)])
+    return (0, 0, page.viewport_size["width"], page.viewport_size["height"])
 
 
 # ---- Flip's own tools ---------------------------------------------------------
@@ -475,7 +462,7 @@ CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify
 # The editor a clip is filmed in, when not Pad.
 ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove")}
 # Where a clip is recorded, when not the tall phone screen above.
-VIEWPORT = {}
+VIEWPORT = {"music": (390, 844), "post": (390, 844)}   # a phone's own screen, all of it
 
 
 # Driving a 2x page makes every gesture take about half again as long as it
@@ -528,7 +515,10 @@ def encode(frames, crop, out):
         # At the crop's own 2x pixels, never scaled down: a downscale is what
         # softened the interface text in the first clips.
         w, h = w // 2 * 2, h // 2 * 2
-        vf = f"crop={w}:{h}:{x}:{y},setpts=PTS/{SPEED},fps=30,format=yuv420p"
+        # A whole phone screen is 780 px wide at 2x; 600 keeps its text crisp
+        # full screen at a fraction of the bytes. A canvas crop stays native.
+        fit = ",scale=600:-2:flags=lanczos" if w > 700 else ""
+        vf = f"crop={w}:{h}:{x}:{y},setpts=PTS/{SPEED}{fit},fps=30,format=yuv420p"
         src = ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(pathlib.Path(d) / "list.txt"), "-vf", vf]
         subprocess.run(src + ["-c:v", "libx264", "-profile:v", "high", "-crf", "21", "-preset", "slow",
                               "-movflags", "+faststart", "-an", str(out)], check=True)

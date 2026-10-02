@@ -13495,3 +13495,26 @@ a star across the page together. Each card has Try it.
   the one this list missed: Artwork (`artmove`), the whole-page move.
 * The fingertip followed the off-camera pen and opened each clip at the end of
   the last stroke; it is hidden before filming.
+
+## The whole screen, and full screen
+
+The owner: "the post screenplay doesn't reveal the screen. It goes below the
+viewport to click buttons. We should be allowed to click demonstration gif and
+have it full screen, same with demos." Asked how the screen clips should be
+framed, they chose the whole phone screen over a zoomed camera that leads the
+finger.
+
+* **Post and Add music film the whole phone screen** (390 x 844, encoded 600
+  wide): every tap, the sheet and its buttons in one frame, no zoom or pan. In
+  their cards they sit as a small phone (`data-shape="screen"`, contained, not
+  cropped); full screen they are a readable phone.
+* **A tap on any example opens it full screen** (`#learnViewer`, inside How it
+  works): a replay gets a player of its own, built from the box the template
+  drew; a clip, the same recording. The cards pause beneath it. The scrim, the
+  close button and Escape close it -- Escape closes only the viewer, caught
+  before the drawer's own -- and focus goes back to the card. Each stage is a
+  button ("Watch ... full screen") and opens on Enter or Space as well.
+* `verify_helpdemos` drives it on both editors: a replay opens at least twice
+  the card's size and plays, a clip opens and advances, the cards pause, Escape
+  and the close button put it away, closing How it works closes it. Each was
+  turned red by its own break.

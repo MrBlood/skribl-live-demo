@@ -201,6 +201,42 @@ with sync_playwright() as p:
         check(f"{name}: Tools shows the tool cards and nothing else; All brings every card back",
               only and set(only) == {"tools"} and len(back) == bar["n"], f"tools {only}, all {len(back)}")
 
+        # FULL SCREEN (owner: "we should be allowed to click ... and have it
+        # full screen"). A tap on a replay opens a player of its own, large; a
+        # tap on a clip, the clip large; the cards pause beneath; Escape closes
+        # only the viewer and hands focus back to the card that opened it.
+        VIEW = """() => { const v = document.getElementById('learnViewer'), st = document.getElementById('learnViewerStage');
+            const box = st.querySelector('.skribl-inline'), vid = st.querySelector('video');
+            const r = (box || vid) ? (box || vid).getBoundingClientRect() : null;
+            return { open: !v.hidden, w: r ? Math.round(r.width) : 0,
+                     player: box && box._skriblInline ? box._skriblInline.state().state : null,
+                     t: vid ? vid.currentTime : null, title: document.getElementById('learnViewerTitle').textContent,
+                     cards: [...document.querySelectorAll('#learnSheet .learn-card[data-demo]')].map(c =>
+                       c._learnPlayer ? c._learnPlayer.state().state : 'none') }; }"""
+        first = pg.locator(f"{CARDS}[data-demo]").first
+        cw = first.locator(".learn-stage").bounding_box()["width"]
+        first.locator(".learn-stage").click()
+        pg.wait_for_timeout(1800)
+        v1 = pg.evaluate(VIEW)
+        check(f"{name}: a tap on a replay opens it full screen, at least twice the card's size, playing",
+              v1["open"] and v1["w"] >= 2 * cw and v1["player"] == "playing", f"{v1}, card {cw:.0f}px")
+        check(f"{name}: ...and the cards pause beneath it", "playing" not in v1["cards"], str(v1["cards"]))
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(400)
+        back = pg.evaluate("() => ({ viewer: !document.getElementById('learnViewer').hidden,"
+                           " sheet: !document.getElementById('learnSheet').hidden,"
+                           " focus: !!(document.activeElement && document.activeElement.classList.contains('learn-stage')) })")
+        check(f"{name}: Escape closes full screen only, focus back on the card", 
+              not back["viewer"] and back["sheet"] and back["focus"], str(back))
+        clip = pg.locator(f"{CARDS}.learn-clip").first
+        clip.locator(".learn-stage").click()
+        pg.wait_for_timeout(700)
+        c1 = pg.evaluate(VIEW); pg.wait_for_timeout(900); c2 = pg.evaluate(VIEW)
+        check(f"{name}: a tap on a clip opens it full screen, and it plays",
+              c1["open"] and c1["w"] >= 2 * cw * 0.45 and (c2["t"] or 0) > (c1["t"] or 0), f"{c1} then t={c2['t']}")
+        pg.click("#learnViewerClose"); pg.wait_for_timeout(300)
+        check(f"{name}: the close button puts it away",
+              pg.evaluate("() => document.getElementById('learnViewer').hidden") is True)
+
         # THE DRAWER CLOSES, and stops what it was playing.
         pg.keyboard.press("Escape"); pg.wait_for_timeout(500)
         esc = pg.evaluate("() => ({ sheet: !document.getElementById('learnSheet').hidden,"
@@ -241,11 +277,14 @@ with sync_playwright() as p:
 
         # 4. closing How it works closes the drawer and stops everything
         pg.evaluate(SHEET); pg.wait_for_timeout(700)
+        pg.locator(f"{CARDS}[data-demo]").first.locator(".learn-stage").click(); pg.wait_for_timeout(600)
         pg.evaluate("() => document.getElementById('helpClose').click()")
         pg.wait_for_timeout(700)
         s5 = pg.evaluate(STATE)
         check(f"{name}: closing How it works closes the drawer; nothing keeps playing",
               not s5["sheet"] and "playing" not in s5["replays"] and all(c["paused"] for c in s5["clips"]), str(s5))
+        check(f"{name}: ...and closes full screen with it",
+              pg.evaluate("() => document.getElementById('learnViewer').hidden") is True)
 
         # 5. Try it
         for t in sorted(tools):
