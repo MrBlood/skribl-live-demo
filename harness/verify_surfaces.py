@@ -253,7 +253,10 @@ def _unread(asset, siblings):
     """True when nothing else the page loads names any global this module
     exports. EXPORTS ARE PLURAL — every `global.X =` counts."""
     body = (_ST / asset).read_text(encoding="utf-8")
-    names = set(re.findall(r"(?:global|window)\.([A-Za-z_][A-Za-z0-9_]*)\s*=", body))
+    # `= ` and not `==`/`===`: a module that only COMPARES a global it reads
+    # (lib/helplearn.js asks `typeof window.shelfSetTool === 'function'`)
+    # exports nothing by doing so.
+    names = set(re.findall(r"(?:global|window)\.([A-Za-z_][A-Za-z0-9_]*)\s*=(?!=)", body))
     if not names:
         return False          # exports nothing; it is a side-effect module
     return not any(n in src for a, src in siblings.items()

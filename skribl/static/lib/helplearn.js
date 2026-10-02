@@ -151,5 +151,4 @@
     }, 0);
   });
 
-  window.SkriblHelpLearn = { cards: function () { return cards; }, clips: function () { return clips; } };
 }());
