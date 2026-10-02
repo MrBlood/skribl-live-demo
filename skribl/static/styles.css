@@ -2019,10 +2019,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 .panel-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); }
 
-.fine-tune-toggle { width: 100%; justify-content: space-between; margin-top: 12px; background: rgba(124, 92, 255, 0.08); border-color: rgba(124, 92, 255, 0.32); color: var(--text-bright); }
-.fine-tune-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: var(--text-strong-2); }
-.fine-tune-chevron { width: 15px; height: 15px; color: var(--accent-bright); transition: transform .25s var(--spring); flex-shrink: 0; }
-.fine-tune-toggle[aria-expanded="true"] .fine-tune-chevron { transform: rotate(180deg); }
+/* Trim | Fine-tune: the one pill, full width at the head of the music
+   section. Fine-tune hides the trim strip and its times and shows the loop
+   detail in their place, so nothing opens below the fold. */
+.ft-seg { display: flex; width: 100%; box-sizing: border-box; margin-bottom: 12px; }
+.ft-seg button { flex: 1; min-height: 36px; font-size: 14px; }
+.music-trim.ft-on .music-trim-track,
+.music-trim.ft-on .music-trim-times { display: none; }
 .fine-tune-body { margin-top: 12px; }
 .fine-tune-body[hidden] { display: none; }
 

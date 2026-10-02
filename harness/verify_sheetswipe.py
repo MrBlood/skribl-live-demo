@@ -479,6 +479,61 @@ with sync_playwright() as p:
               kept > 0, f"scrollY {kept}")
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
+
+    # 7 TRIM | FINE-TUNE (owner: "Clicking this moves the arrow but doesn't
+    # show you what's there"). Fine-tune was a row under Preview Loop that
+    # opened below the fold. It is a mode of the music drawer now, and picking
+    # it must put the loop detail ON SCREEN, in the trim strip's place.
+    import wave as _wave, struct as _struct, math as _math, io as _io
+    _buf = _io.BytesIO()
+    with _wave.open(_buf, "wb") as _w:
+        _w.setnchannels(1); _w.setsampwidth(2); _w.setframerate(22050)
+        _w.writeframes(b"".join(_struct.pack("<h", int(8000 * _math.sin(i / 8))) for i in range(22050 * 4)))
+    for page, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        who = f"{page}: the music drawer"
+        print(f"\n{who}")
+        ctx, pg, errs = fresh(b, route)
+        browsing.pad_drawer(pg, "music", settle=500)
+        pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _buf.getvalue()})
+        pg.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
+        pg.wait_for_timeout(600)
+        # ONE COLOUR RULE FOR THE SAME SOUND (owner: "the colors are
+        # different"): the strip's peaks inside the loop are the accent, the
+        # rest slate, as Loop Detail draws them. Read off the strip's own
+        # pixels, at the busiest column inside and outside a middle loop.
+        pg.evaluate("() => { trimStart = audioDuration * 0.25; trimEnd = audioDuration * 0.75; updateTrimUI(); }")
+        pg.wait_for_timeout(400)
+        ink = pg.evaluate("""() => { const c = document.getElementById('waveformCanvas'), x = c.getContext('2d');
+            const d = x.getImageData(0, 0, c.width, c.height).data, w = c.width, h = c.height;
+            const col = (x0, x1) => { let r = 0, g = 0, b = 0, n = 0;
+              for (let X = Math.floor(x0); X < Math.floor(x1); X++) for (let Y = 0; Y < h; Y++) {
+                const k = (Y * w + X) * 4; if (d[k + 3] > 200) { r += d[k]; g += d[k + 1]; b += d[k + 2]; n++; } }
+              return n ? [Math.round(r / n), Math.round(g / n), Math.round(b / n), n] : null; };
+            return { inside: col(w * 0.35, w * 0.65), outside: col(w * 0.02, w * 0.2) }; }""")
+        _in, _out = ink["inside"], ink["outside"]
+        check(f"{who}: the strip draws the loop's peaks in the accent and the rest in slate, as Loop Detail does",
+              bool(_in and _out) and _in[2] - _in[0] > 60 and abs(_out[2] - _out[0]) < 40,
+              f"inside rgb+count {_in}, outside {_out}")
+        pg.click("#fineTuneToggle")
+        pg.wait_for_timeout(1600)
+        ft = pg.evaluate("""() => { const z = document.getElementById('zoomWaveformCanvas').getBoundingClientRect();
+            const vh = window.visualViewport ? visualViewport.height : innerHeight;
+            const hit = document.elementFromPoint(z.left + z.width / 2, z.top + z.height / 2);
+            return { pressed: document.getElementById('fineTuneToggle').getAttribute('aria-pressed'),
+                     strip: document.getElementById('musicTrack').getBoundingClientRect().height,
+                     top: Math.round(z.top), bottom: Math.round(z.bottom), vh: Math.round(vh),
+                     painted: !!(hit && hit.closest('#zoomTrackWrap')) }; }""")
+        check(f"{who}: Fine-tune is pressed and the trim strip gives way to the loop detail",
+              ft["pressed"] == "true" and ft["strip"] == 0, str(ft))
+        check(f"{who}: ...and the loop detail is ON SCREEN, painted, without a scroll by hand",
+              ft["top"] >= 0 and ft["bottom"] <= ft["vh"] and ft["painted"], str(ft))
+        pg.click("#fineTuneTrim")
+        pg.wait_for_timeout(500)
+        back = pg.evaluate("() => ({ strip: document.getElementById('musicTrack').getBoundingClientRect().height,"
+                           " hidden: document.getElementById('fineTuneBody').hidden })")
+        check(f"{who}: Trim brings the strip back", back["strip"] > 0 and back["hidden"] is True, str(back))
+        check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
+        ctx.close()
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

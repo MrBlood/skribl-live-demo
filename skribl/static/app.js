@@ -2160,6 +2160,9 @@ function requestZoomWaveformDraw() {
   zoomDrawPending = true;
   requestAnimationFrame(() => {
     zoomDrawPending = false;
+    // The strip colours the loop now, so it follows the trim too (Flip's
+    // requestZoomWaveformDraw has always redrawn both).
+    if (currentAudioBuffer) drawWaveform(currentAudioBuffer);
     drawZoomWaveform();
   });
 }
@@ -2175,7 +2178,8 @@ function drawZoomWaveform() {
 // music drawer and does not load it). Its blank-strip guard is documented there.
 function drawWaveform(audioBuffer) {
   if (!window.SkriblLoopWave) return;
-  window.SkriblLoopWave.drawStrip({ canvas: waveformCanvas, ctx: waveformCtx, track: musicTrack, buffer: audioBuffer });
+  window.SkriblLoopWave.drawStrip({ canvas: waveformCanvas, ctx: waveformCtx, track: musicTrack, buffer: audioBuffer,
+    trimStart: trimStart, trimEnd: trimEnd });
 }
 
 const musicUploadBtn = _authoringCtl('musicUploadBtn');

@@ -701,25 +701,37 @@
   /* The menu the ⋯ opens. Fixed rather than absolute so it escapes the strip's
      own overflow — a popover clipped by the scroller it belongs to is a popover
      you cannot read on the last tile. */
+  /* THE PAGE'S CARD (owner's pick of two mocks): solid, pointing at the ⋯ it
+     came from, a line icon on every row and Delete set apart below a rule --
+     the link player's More card, on Flip's strip. */
   .pageops-menu {
-    position: fixed; z-index: 80; min-width: 168px; padding: 5px;
-    display: flex; flex-direction: column; gap: 2px;
-    background: var(--surface-raised); border: 1px solid var(--hairline-strong);
-    border-radius: 11px; box-shadow: 0 10px 28px rgba(0, 0, 0, .42);
+    position: fixed; z-index: 80; min-width: 228px; padding: 4px;
+    display: flex; flex-direction: column;
+    background: rgb(var(--surface-control-rgb)); border: 1px solid var(--hairline-strong);
+    border-radius: 14px; box-shadow: 0 12px 36px rgba(0, 0, 0, .4);
   }
+  .pageops-menu::after {
+    content: ''; position: absolute; left: var(--caret, 24px); bottom: -7px;
+    width: 12px; height: 12px; transform: rotate(45deg); background: inherit;
+    border: solid var(--hairline-strong); border-width: 0 1px 1px 0;
+  }
+  .pageops-menu.below::after { bottom: auto; top: -7px; border-width: 1px 0 0 1px; }
   .pageops-item {
     appearance: none; -webkit-appearance: none;
-    border: 0; background: transparent; color: var(--text-secondary);
-    font: inherit; font-size: 13px; font-weight: 500; text-align: left;
-    padding: 9px 11px; border-radius: 7px; cursor: pointer;
-    /* 38px like .pb, so the compact surface is not a smaller target than the
-       one it replaces. */
-    min-height: 38px;
+    display: flex; align-items: center; gap: 12px;
+    border: 0; background: transparent; color: var(--text-primary);
+    font: inherit; font-size: 15px; font-weight: 600; text-align: left;
+    padding: 0 12px; border-radius: 9px; cursor: pointer;
+    min-height: 44px;
   }
-  .pageops-item:hover:not(:disabled) { background: rgba(var(--wash-rgb), .07); color: var(--text-primary); }
+  .pageops-item svg { width: 18px; height: 18px; flex: none; color: var(--text-secondary);
+    fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .pageops-item:hover:not(:disabled) { background: rgba(var(--wash-rgb), .07); }
   .pageops-item:focus-visible { outline: 2px solid var(--ui-line); outline-offset: -2px; }
-  .pageops-item:disabled { opacity: .35; cursor: default; }
-  .pageops-item.danger { color: var(--danger-soft); }
+  .pageops-item:disabled { opacity: .4; cursor: default; }
+  .pageops-item.danger { color: var(--danger-soft); margin-top: 4px; border-radius: 0 0 9px 9px;
+    box-shadow: 0 -1px 0 var(--hairline); }
+  .pageops-item.danger svg { color: var(--danger-soft); }
   .pageops-item.danger:hover:not(:disabled) { color: var(--danger-soft-2); background: rgba(244, 50, 111, .12); }
 
   /* Small transient chip for "Draft restored". */

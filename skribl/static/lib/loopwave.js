@@ -156,8 +156,16 @@
     var blockSize = Math.max(1, Math.floor(data.length / samples));
     var h = canvas.height, mid = h / 2;
     ctx.clearRect(0, 0, canvas.width, h);
-    ctx.fillStyle = '#3a4150';
+    // ONE RULE FOR BOTH VIEWS of the same sound (owner: "the colors are
+    // different"): peaks inside the loop in the accent, the rest in slate --
+    // what drawZoom above has always done. The strip drew every peak slate,
+    // which on the dark selection tint nearly vanished. o.trimStart/trimEnd
+    // are seconds; without them the whole strip is the loop.
+    var dur = buffer.duration || 1;
+    var a = o.trimStart != null ? (o.trimStart / dur) * samples : 0;
+    var e = o.trimEnd != null ? (o.trimEnd / dur) * samples : samples;
     for (var i = 0; i < samples; i++) {
+      ctx.fillStyle = (i >= a && i <= e) ? '#7c5cff' : '#3a4150';
       var s = i * blockSize, min = 1, max = -1;
       for (var j = 0; j < blockSize; j++) {
         var v = data[s + j] || 0;

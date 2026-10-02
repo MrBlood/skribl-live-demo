@@ -293,7 +293,7 @@ with sync_playwright() as p:
         q.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
         q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=20000)
         settle(q, 500)
-        if q.get_attribute("#fineTuneToggle", "aria-expanded") != "true":
+        if q.get_attribute("#fineTuneToggle", "aria-pressed") != "true":
             q.click("#fineTuneToggle")
         settle(q)
         q.evaluate("() => { const b = document.querySelector('.zoom-mag-bar'); if (b) b.scrollIntoView({block: 'center'}); }")
@@ -562,7 +562,7 @@ with sync_playwright() as p:
             q.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
             q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=20000)
             settle(q, 500)
-            if q.get_attribute("#fineTuneToggle", "aria-expanded") != "true":
+            if q.get_attribute("#fineTuneToggle", "aria-pressed") != "true":
                 q.click("#fineTuneToggle"); settle(q, 500)
             q.click(".zoom-seg [data-focus='start']"); settle(q, 300)
             lit = "() => [...document.querySelectorAll('.zoom-seg [data-focus]')].filter(b => b.classList.contains('on') || b.classList.contains('active')).map(b => b.dataset.focus)"

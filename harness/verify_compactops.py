@@ -245,6 +245,38 @@ with sync_playwright() as p:
               str(_diag))
         page.keyboard.press("Escape")
 
+        # THE MENU OPENS AT ITS PAGE, from a page you are NOT on (owner, from
+        # an iPhone: "This menu ... looks weird?" -- it sat in the top-left
+        # corner over the header). Opening it on another page selects that page
+        # first, which rebuilds the strip, and the menu used to measure the
+        # tapped -- now detached -- button: all zeros, so the clamp's corner.
+        # Asked of geometry and of paint: the card's bottom edge sits just above
+        # that page's ⋯, overlapping it sideways, and the card is what is
+        # painted at its own middle.
+        print("\nTHE MENU OPENS AT ITS PAGE, from a page you are not on")
+        page.evaluate("() => { const t = document.querySelectorAll('#strip .frame');"
+                      " t[0].click(); }")
+        page.wait_for_timeout(250)
+        page.evaluate("() => document.querySelectorAll('#strip .frame')[1]"
+                      ".querySelector('.pageops').click()")
+        page.wait_for_timeout(300)
+        _at = page.evaluate("""() => {
+            const m = document.querySelector('.pageops-menu');
+            const t = document.querySelectorAll('#strip .frame')[1].querySelector('.pageops');
+            if (!m || !t) return { missing: true };
+            const mr = m.getBoundingClientRect(), tr = t.getBoundingClientRect();
+            const hit = document.elementFromPoint(mr.left + mr.width / 2, mr.top + mr.height / 2);
+            return { gap: Math.round(tr.top - mr.bottom), overlapX: mr.left < tr.right && mr.right > tr.left,
+                     menuTop: Math.round(mr.top), trigTop: Math.round(tr.top),
+                     painted: !!(hit && m.contains(hit)) }; }""")
+        check("...its card sits just above that page's ⋯, over it sideways, and is what is painted there",
+              not _at.get("missing") and 0 <= _at["gap"] <= 24 and _at["overlapX"] and _at["painted"],
+              str(_at))
+        check("...and every row carries an icon",
+              page.evaluate("() => [...document.querySelectorAll('.pageops-item')]"
+                            ".every(b => b.querySelector('svg path, svg rect'))"))
+        page.keyboard.press("Escape")
+
         print("\nBACK TO REGULAR — the other surface was left alone")
         page.set_viewport_size({"width": 1100, "height": 900})
         page.wait_for_timeout(350)
