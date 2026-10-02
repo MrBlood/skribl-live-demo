@@ -176,6 +176,9 @@ def clip_post(page, rec):
     # Post, while a take is being recorded.
     page.evaluate("() => { if (recording) endRecordingTake(); }")
     page.wait_for_timeout(600)
+    # Ending the take says "Take saved" in a toast; it belongs to the drawing,
+    # which was done off camera, so it is put away before filming starts.
+    page.evaluate("() => { try { toast.hidden = true; } catch (e) {} }")
     # THE CAMERA FOLLOWS THE FINGER, so every press is on screen: on the
     # header while Post is tapped, down to the title as it is typed, then to
     # the sheet's own Post button for the last tap and "Posted". The owner
