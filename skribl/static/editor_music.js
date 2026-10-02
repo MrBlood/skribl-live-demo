@@ -106,9 +106,15 @@ dragZoomHandle(zoomHandleEnd, false);
     const b = e.target.closest('button');
     if (!b) return;
     const fine = b.id === 'fineTuneToggle';
-    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    body.hidden = !fine;
-    seg.parentElement.classList.toggle('ft-on', fine);
+    const apply = () => {
+      seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+      body.hidden = !fine;
+      seg.parentElement.classList.toggle('ft-on', fine);
+    };
+    // Back to Trim the drawer is ~290px shorter; scrolled near its end, the
+    // page would clamp and leap under the finger (lib/drawerdetent.js).
+    const D = window.SkriblDrawerDetent;
+    if (!fine && D && D.shrinkGently) D.shrinkGently(seg.parentElement, apply); else apply();
     // Whichever canvas is now showing was laid out at zero size while hidden;
     // redraw it now that it has a box.
     requestAnimationFrame(() => {

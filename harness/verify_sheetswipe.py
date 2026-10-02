@@ -532,6 +532,35 @@ with sync_playwright() as p:
         back = pg.evaluate("() => ({ strip: document.getElementById('musicTrack').getBoundingClientRect().height,"
                            " hidden: document.getElementById('fineTuneBody').hidden })")
         check(f"{who}: Trim brings the strip back", back["strip"] > 0 and back["hidden"] is True, str(back))
+        # ROOM BETWEEN THE LOOP PANEL'S ROWS (owner: "things just seem close
+        # together"). Measured before at 390: the handles' caps touched the zoom
+        # bar (0px) and sat 2px over Scroll. Every gap down the panel is >= 8px;
+        # the handle's box is what reaches past the waveform, caps included.
+        pg.click("#fineTuneToggle")
+        pg.wait_for_timeout(1200)
+        gaps = pg.evaluate("""() => { const q = s => document.querySelector('#fineTuneBody ' + s).getBoundingClientRect();
+            const rows = [['zoom bar', q('.zoom-mag-bar')], ['handles', q('#zoomHandleStart')], ['scroll', q('.zoom-pan-row')],
+                          ['start/end', q('.edge-group')], ['step size', q('.edge-group:nth-child(3)')], ['crossfade', q('.crossfade-row')]];
+            return rows.slice(1).map((r, i) => [rows[i][0] + ' -> ' + r[0], Math.round(r[1].top - rows[i][1].bottom)]); }""")
+        check(f"{who}: every row of the loop panel has at least 8px above it",
+              all(g >= 8 for _, g in gaps), str(gaps))
+        # NO LEAP BACK TO TRIM (owner: "when you're in fine tune and switch back
+        # to trim it snaps back"). Scrolled to the end of Fine-tune, Trim makes
+        # the page ~290px shorter and the browser clamped the scroll in ONE
+        # frame. lib/drawerdetent.js's shrinkGently glides it instead: no frame
+        # may move the pill more than 120px.
+        pg.evaluate("() => window.scrollTo(0, 1e6)")
+        pg.wait_for_timeout(800)
+        pg.evaluate("""() => { window._ftLog = []; const t0 = performance.now(), seg = document.getElementById('fineTuneSeg');
+            const f = () => { _ftLog.push(seg.getBoundingClientRect().top); if (performance.now() - t0 < 1500) requestAnimationFrame(f); };
+            requestAnimationFrame(f); }""")
+        pg.click("#fineTuneTrim")
+        pg.wait_for_timeout(1700)
+        log = pg.evaluate("_ftLog")
+        steps = [abs(b2 - a2) for a2, b2 in zip(log, log[1:])]
+        check(f"{who}: back to Trim from the end of Fine-tune, the pill glides rather than leaps",
+              len(log) > 10 and max(steps) <= 120 and abs(log[-1] - log[0]) > 50,
+              f"largest single-frame move {round(max(steps or [0]))}px, total {round(log[-1] - log[0]) if log else '?'}px over {len(log)} frames")
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
     b.close()
