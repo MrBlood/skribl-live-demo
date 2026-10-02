@@ -43,7 +43,12 @@ ROLES = {
 
 class Stroke:
     def __init__(self, pts, role="form", color=INK, *, size=None, pace=None, peak=None, taper=(0.12, 0.2), bend=0.0,
-                 weight=None):
+                 weight=None, tool="pen", shape=None):
+        # `tool`: the dock tool this stroke is made with ("pen", "eraser",
+        # "shape"), picked as a person taps it. `shape`: for the Shape tool,
+        # {"kind": "rect"|"ellipse"|"poly"|"line", "radius": 0..50, "sides": n},
+        # set on the shape card; the stroke's first and last points are the drag.
+        self.tool, self.shape = tool, shape
         # `weight`: [(u, w), ...] along the stroke (u 0..1), where an artist
         # leans in or lifts off -- a contour swells on its shadow side and
         # thins where it turns into the light. Multiplies the taper.
@@ -123,8 +128,16 @@ def draw(page, strokes, *, seed=1, set_ink=None, canvas="#canvas", logical=None,
     cdp = page.context.new_cdp_session(page)
     set_ink = set_ink or (lambda pg, c, s: pg.evaluate("([c, s]) => { color = c; size = s; }", [c, s]))
     timed = plan(strokes, seed, tempo)
-    prev_end = None
+    prev_end, tool = None, None
     for st, pts in zip(strokes, timed):
+        if st.tool != tool:
+            page.evaluate("t => setTool(t)", st.tool); tool = st.tool
+        if st.shape:
+            page.evaluate("""s => { document.querySelector(`#shapeSeg [data-shape='${s.kind}']`).click();
+                for (const [id, v] of [['shapeRadius', s.radius], ['shapeSides', s.sides]]) {
+                  const el = document.getElementById(id); if (el == null || v == null) continue;
+                  el.value = String(v); el.dispatchEvent(new Event('input', { bubbles: true })); }
+                const p = document.getElementById('shapePop'); if (p) p.hidden = true; }""", st.shape)
         set_ink(page, st.color, st.size)
         if prev_end is not None:
             time.sleep(hm.pause(prev_end, st.pts[0], seed) / 1000 * 0.8 / (pause_tempo or tempo))

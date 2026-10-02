@@ -157,4 +157,56 @@ def snail():
               weight=[(0, 0.35), (0.3, 0.8), (0.55, 1.0), (0.75, 0.75), (0.9, 1.0), (1, 0.5)], taper=(0.04, 0.08))]
 
 
-ART = {"cat": cat, "scene": scene, "snail": snail}
+def tool_pen():
+    """Pen: one flowing loop line that swells where the pen presses and thins
+    at the ends, then a quick pink swoosh under it."""
+    import math
+    loops = []
+    for k in range(110):
+        u = 3.6 * 2 * math.pi * k / 109 - 0.6
+        # a cursive run of tall loops: forward, round the top, back down
+        loops.append((150 + 22 * u + 38 * math.sin(u), 320 - 96 * (0.5 - 0.5 * math.cos(u)) - 12 * math.sin(u)))
+    return [
+        S(loops, "gesture", PURPLE, size=20, pace=0.85, taper=(0.08, 0.18),
+          weight=[(0, 0.3), (0.12, 1.0), (0.25, 0.3), (0.4, 1.0), (0.53, 0.3), (0.68, 1.0), (0.82, 0.3), (1, 0.6)]),
+        S([(160, 420), (360, 404), (560, 414), (660, 398)], "accent", PINK, size=11, pace=1.3, taper=(0.06, 0.6)),
+    ]
+
+
+def tool_eraser():
+    """Eraser: a purple heart, then one sweep of the eraser wipes a clean
+    channel back to the paper."""
+    import math
+
+    def heart(side):
+        pts = []
+        for k in range(19):
+            a = min(math.pi, math.pi * k / 16) * side
+            x = 16 * math.sin(a) ** 3
+            y = 13 * math.cos(a) - 5 * math.cos(2 * a) - 2 * math.cos(3 * a) - math.cos(4 * a)
+            pts.append((408 + 11.5 * x, 300 - 11.5 * y))
+        return pts
+    return [
+        S(heart(-1), "contour", PURPLE, size=30, weight=[(0, 0.7), (0.5, 1.0), (1, 0.8)]),
+        S(heart(+1), "contour", PURPLE, size=30, weight=[(0, 0.7), (0.5, 1.0), (1, 0.8)]),
+        S([(560, 150), (470, 262), (370, 392), (300, 470)], "form", INK, size=14, pace=0.8,
+          taper=(0.02, 0.02), tool="eraser"),
+    ]
+
+
+def tool_shape():
+    """Shape: three shapes dropped in, each a press and a drag -- a rounded
+    box, a circle, a five-sided shape."""
+    return [
+        S([(96, 236), (196, 330), (300, 440)], "form", PURPLE, size=14, pace=0.35, tool="shape",
+          shape={"kind": "rect", "radius": 34}),
+        S([(330, 168), (430, 262), (532, 372)], "form", INK, size=14, pace=0.35, tool="shape",
+          shape={"kind": "ellipse"}),
+        S([(560, 246), (650, 330), (742, 428)], "form", PINK, size=14, pace=0.35, tool="shape",
+          shape={"kind": "poly", "sides": 5, "radius": 20}),
+    ]
+
+
+ART = {"cat": cat, "scene": scene, "snail": snail,
+       # tool examples, on trial under these names until the owner picks
+       "try-pen": tool_pen, "try-eraser": tool_eraser, "try-shape": tool_shape}
