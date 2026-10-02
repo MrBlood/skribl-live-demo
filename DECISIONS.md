@@ -13222,11 +13222,23 @@ pill.
   `lib/segslider.js`) heads the music section: Trim or Fine-tune. Fine-tune
   hides the trim strip and its times and shows the loop detail IN THEIR PLACE
   -- the detail moved above Match Drawing Time / Test Seam / Preview Loop,
-  which stay put -- and the drawer's end is brought on screen, as opening it
-  does. `#fineTuneToggle` is still the Fine-tune option, so it now reports
+  which stay put -- and the page is nudged just far enough to show its
+  waveform. (The first cut brought the drawer's whole end on screen, as
+  opening it does; that scrolled far enough to tuck the dock under the pinned
+  header, and verify_ux's phone audit caught it.) `#fineTuneToggle` is still the Fine-tune option, so it now reports
   `aria-pressed`, not `aria-expanded`; the suites that opened it read that.
 * `verify_sheetswipe` taps Fine-tune at iPhone size on both editors and
   requires the loop detail on screen and painted without a scroll by hand,
-  and Trim to bring the strip back. With the scroll-into-view removed, Flip
-  goes red (the detail at 647-719 in a 664 screen); the Pad stays green by
-  13px, because the move alone nearly fits it there.
+  and Trim to bring the strip back. With no scroll at all, Flip goes red (the
+  detail at 647-719 in a 664 screen); the Pad stays green by 13px, because the
+  move alone nearly fits it there. `verify_tools` V214a now drives each music
+  gesture in its own mode, since the strip and the detail are not on screen
+  together.
+* **One colour for the same sound** (owner: "Look at the other one. It's
+  purple ... the colors are different"). The strip drew every peak slate;
+  Loop Detail drew the loop's peaks in the accent and the rest slate. The
+  strip (`lib/loopwave.js` drawStrip) now follows Loop Detail's rule, and on
+  the Pad redraws as the trim moves, as Flip's already did. On the dark
+  selection tint the slate peaks had nearly vanished. `verify_sheetswipe`
+  reads the strip's pixels inside and outside a middle loop on both editors;
+  red with the old single colour.
