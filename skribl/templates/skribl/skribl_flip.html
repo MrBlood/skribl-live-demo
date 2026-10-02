@@ -194,8 +194,8 @@
 
     <div class="flip-tools">
       <div class="shape-pop" id="shapePop" role="dialog" aria-label="Shape kind" hidden>
-      {# Drag grip (lib/popdrag.js): pull the pill to move the pop off the
-         patch of canvas you want to draw on; a moved pop pins open. #}
+      {# Grip (lib/shapecard.js): a tap on the pill, or a pull down, closes
+         the card, as every sheet's grabber does. #}
       <div class="pop-grip" aria-hidden="true"><div class="pop-grip-pill"></div></div>
       <div class="smooth-seg" id="shapeSeg" role="group" aria-label="Shape kind">
         <span class="seg-slider"></span>
@@ -214,11 +214,14 @@
         <output id="shapeSidesOut">5</output>
       </div>
       <div class="shape-knob" id="shapeRadiusRow" hidden>
-        <label for="shapeRadius">Corners</label>
+        <label for="shapeRadius">Rounding</label>
         <input type="range" class="slider" id="shapeRadius" min="0" max="60" step="2" value="0"
                aria-label="Corner rounding">
-        <output id="shapeRadiusOut">0</output>
+        <output id="shapeRadiusOut">Sharp</output>
       </div>
+      {# The shape the knobs make, live (lib/shapecard.js draws it with
+         lib/shapes.js). Shown for the kinds that have corners to round. #}
+      <div class="shape-preview" aria-hidden="true" hidden><svg viewBox="0 0 64 64"><polyline points=""/></svg></div>
     </div>
       {# Every registered tool, one cell each, filled by buildToolTray(). Empty
          in the served HTML on purpose: the registry is the single place a tool
@@ -583,7 +586,7 @@
      which reads window.SkriblRecentColors at first use. #}
   <script src="{{ skribl_asset('lib/recentcolors.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/eyedropper.js') }}" defer></script>
-  <script src="{{ skribl_asset('lib/popdrag.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/shapecard.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/drawerdetent.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/smoothing.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/erasersize.js') }}" defer></script>

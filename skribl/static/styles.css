@@ -6478,11 +6478,7 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
-  /* The second translate is the DRAG: lib/popdrag.js writes --pop-dx/-dy when
-     the grip is pulled, composed after the anchor centering so moving the pop
-     never fights how it is anchored. Both default to 0, so an untouched pop
-     sits exactly where it always did. */
-  transform: translateX(-50%) translate(var(--pop-dx, 0px), var(--pop-dy, 0px));
+  transform: translateX(-50%);
   z-index: 44;
   background: var(--surface-pop);
   border: 1px solid var(--hairline, #252a35);
@@ -6501,32 +6497,27 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
    space after Poly that the pill could never cover (the pick-one census). */
 .shape-pop .smooth-seg { margin: 0; width: fit-content; }
 
-/* The pop's drag grip — same pill language as the sheets' grabber, meaning
-   "take hold of me here". A real inner element paints the pill (the flip
-   grabber taught us not to trust pseudo-elements for this on iPhones) and
-   the outer strip is the touch target. touch-action: none or the drag
-   becomes a page scroll on the first phone that tries it. */
+/* The card's grip — the sheets' grabber, and it does what theirs does: a tap
+   or a pull down closes the card (lib/shapecard.js). It used to DRAG the card
+   and pin it open, which on a phone pinned it over the drawing for the person
+   pulling it to put it away. A real inner element paints the pill (the flip
+   grabber taught us not to trust pseudo-elements for this on iPhones) and the
+   outer strip is the touch target. touch-action: none or the pull becomes a
+   page scroll. */
 .pop-grip {
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 64px;
-  height: 18px;
+  width: 88px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: grab;
+  cursor: pointer;
   touch-action: none;
   z-index: 1;
 }
-.pop-grip:active { cursor: grabbing; }
-/* A PINNED pop (dragged, so it no longer auto-dismisses) still gets out of
-   the way while a shape is being drawn: the press handlers veil it for the
-   duration of the gesture and the release brings it back ("would it
-   be smart if the poly shape menu disappears when you start making a
-   shape?"). Visibility, not [hidden] — its state, position and pin survive. */
-.shape-pop.pop-veiled { visibility: hidden; pointer-events: none; }
 .pop-grip-pill {
   width: 36px;
   height: 4px;
@@ -6547,10 +6538,19 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
 .shape-knob { display: flex; align-items: center; gap: 8px; padding: 6px 4px 0;
   margin-block: 17px; }
 .shape-knob label { font-size: 10px; font-weight: 600; letter-spacing: .04em;
-  text-transform: uppercase; color: var(--text-muted); min-width: 46px; }
+  text-transform: uppercase; color: var(--text-muted); flex: 0 0 58px; white-space: nowrap; }
 .shape-knob input[type="range"] { flex: 1 1 auto; min-width: 90px; accent-color: var(--ui-hi); }
 .shape-knob output { font-size: 11px; font-weight: 600; color: var(--text-primary);
-  min-width: 20px; text-align: right; font-variant-numeric: tabular-nums; }
+  flex: 0 0 32px; text-align: right; font-variant-numeric: tabular-nums; }
+/* Both labels take one width, so Sides' and Rounding's sliders start and end
+   together (they were 46px-min labels, and ROUNDING is wider than SIDES).
+   The output holds "Sharp". */
+/* The shape the knobs make (lib/shapecard.js), under them, centred. */
+.shape-preview { display: flex; justify-content: center; padding-top: 2px; }
+.shape-preview[hidden] { display: none; }
+.shape-preview svg { width: 64px; height: 64px; overflow: visible; }
+.shape-preview polyline { fill: none; stroke: var(--ui-hi); stroke-width: 2.5;
+  stroke-linejoin: round; stroke-linecap: round; }
 /* The little arrow, so it reads as belonging to the button below it. */
 .shape-pop::after {
   content: '';
@@ -6562,10 +6562,8 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
 }
 @media (max-width: 640px) {
   /* Stay inside the viewport on a phone: the Shape button is near the left, so
-     a centred popover would hang off the edge. No centering translate here,
-     but the DRAG vars stay composed — a bare `transform: none` silently
-     disconnected the grip on exactly the screens that need it most. */
-  .shape-pop { left: 8px; transform: translate(var(--pop-dx, 0px), var(--pop-dy, 0px)); }
+     a centred popover would hang off the edge. */
+  .shape-pop { left: 8px; transform: none; }
   .shape-pop::after { left: 64px; }
 }
 

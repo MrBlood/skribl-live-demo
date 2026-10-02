@@ -1952,16 +1952,11 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   // The shape picker is tool OPTIONS, not a dialog: the press that starts
   // your shape shoves it aside and the SAME gesture draws. Twin of the Pad
   // rule in editor_draw.js — separate copies of the picker, separate copies
-  // of its manners (verify_tray says so twice on purpose). A DRAGGED pop
-  // (data-moved) is pinned: veiled for just this gesture, back on release
-  // (the window pointerup listener by shapePopDismiss lifts the veil).
-  // BELOW every press-swallowing guard, same as Pad and for the same reason:
-  // the picker steps aside only for a press that actually draws.
+  // of its manners (verify_tray says so twice on purpose). Tap Shape for it
+  // back. BELOW every press-swallowing guard, same as Pad and for the same
+  // reason: the picker steps aside only for a press that actually draws.
   { const _sp=document.getElementById('shapePop');
-    if(_sp && !_sp.hidden){
-      if(_sp.dataset.moved) _sp.classList.add('pop-veiled');
-      else _sp.hidden=true;
-    } }
+    if(_sp && !_sp.hidden) _sp.hidden=true; }
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; strokePointerId=e.pointerId; curCount=1; redoStack.length=0; noteAction('stroke');
   document.body.classList.add('stroking');   // the chrome recedes while the pen is down (flip.css)
@@ -4344,17 +4339,19 @@ function syncShapeKnobs(){
     sides.addEventListener('input', () => {
       shapeSides = Math.max(3, Math.min(12, parseInt(sides.value, 10) || 3));
       if(sidesOut) sidesOut.textContent = String(shapeSides);
-      // A live preview is mid-drag geometry, so redraw it: changing a knob
+      // A live rubber band is mid-drag geometry, so redraw it: changing a knob
       // while the rubber band is up should show the new shape, not the old one.
       render();
     });
   }
   if(radius){
     radius.value = String(shapeRadius);
-    if(radiusOut) radiusOut.textContent = String(shapeRadius);
+    // "Sharp" at 0: the readout is the card's (lib/shapecard.js).
+    const _rt = v => window.SkriblShapeCard ? SkriblShapeCard.radiusText(v) : String(v);
+    if(radiusOut) radiusOut.textContent = _rt(shapeRadius);
     radius.addEventListener('input', () => {
       shapeRadius = Math.max(0, parseInt(radius.value, 10) || 0);
-      if(radiusOut) radiusOut.textContent = String(shapeRadius);
+      if(radiusOut) radiusOut.textContent = _rt(shapeRadius);
       render();
     });
   }
@@ -9461,20 +9458,13 @@ function spotlightStamp(){
   if(!pop) return;
   document.addEventListener('click',e=>{
     if(pop.hidden) return;
-    // Dragged means pinned (lib/popdrag.js sets data-moved): a pop the user
-    // positioned stops auto-dismissing. Escape and tool switches still close.
-    if(pop.dataset.moved) return;
     if(e.target.closest('#shapePop')||e.target.closest('#shapeToolBtn')) return;
     pop.hidden=true;
   });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!pop.hidden) pop.hidden=true; });
-  // The grip that makes the pop movable at all. Shared with Pad.
-  if(window.SkriblPopDrag) window.SkriblPopDrag.attach(pop, pop.querySelector('.pop-grip'));
-  // The other half of the pinned-pop veil in the pointerdown handler: ANY
-  // release lifts it, so no draw path can leave the panel invisible.
-  const _unveil=()=>pop.classList.remove('pop-veiled');
-  window.addEventListener('pointerup', _unveil, true);
-  window.addEventListener('pointercancel', _unveil, true);
+  // The grip that closes it, and the live shape under the knobs. Shared with
+  // Pad (lib/shapecard.js).
+  if(window.SkriblShapeCard) window.SkriblShapeCard.attach(pop);
 })();
 /* ---- move-artwork mode ----------------------------------------------------
  * Enter from the page bar, drag on the canvas, Done commits.
