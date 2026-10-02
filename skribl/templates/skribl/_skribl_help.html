@@ -42,11 +42,15 @@
        looping. So an example shows exactly what its tool does.
        verify_helpdemos.py holds every tool on this editor to a card. #}
     {% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
-    {% macro learn_card(demo, title, line, n=None, tool=None, clip=None) -%}
+    {# A card names its tool as data-learn-tool, never the app's own
+       data-tool: the cards sit before the dock in the page, so anything
+       looking for "the [data-tool=eraser]" found a card (main went red on
+       verify_pointerpad after #304). #}
+    {% macro learn_card(demo, title, line, group, n=None, tool=None, clip=None) -%}
     {% if clip %}
     {# A screen clip (harness/tools/make_help_clips.py), one per theme so it
        matches the app around it; lib/helplearn.js picks and plays it. #}
-    <figure class="learn-card learn-clip" data-clip-name="{{ clip }}"
+    <figure class="learn-card learn-clip" data-group="{{ group }}" data-clip-name="{{ clip }}"
             data-clip-dark="{{ skribl_asset('help/clips/' ~ clip ~ '-dark.mp4') }}"
             data-clip-light="{{ skribl_asset('help/clips/' ~ clip ~ '-light.mp4') }}"
             data-clip-dark-webm="{{ skribl_asset('help/clips/' ~ clip ~ '-dark.webm') }}"
@@ -55,7 +59,7 @@
             data-poster-light="{{ skribl_asset('help/clips/' ~ clip ~ '-light.jpg') }}">
       <div class="learn-stage"><video class="learn-video" muted playsinline loop preload="none" aria-hidden="true"></video></div>
     {% else %}
-    <figure class="learn-card" data-demo="{{ skribl_asset('help/demos/' ~ demo ~ '.json') }}" data-demo-name="{{ demo }}"{% if tool %} data-tool="{{ tool }}"{% endif %}>
+    <figure class="learn-card" data-group="{{ group }}" data-demo="{{ skribl_asset('help/demos/' ~ demo ~ '.json') }}" data-demo-name="{{ demo }}"{% if tool %} data-learn-tool="{{ tool }}"{% endif %}>
       <div class="learn-stage">{{ skribl_inline_draft(controls=false, progress=false) }}</div>
     {% endif %}
       <figcaption class="learn-cap">
@@ -65,40 +69,25 @@
       </figcaption>
     </figure>
     {%- endmacro %}
+    {# The page shows one bar; the examples live in a drawer of their own
+       (#learnSheet, below), because there are many and more coming (owner:
+       "it fills the page and seems like a lot of stuff"). Its three previews
+       are still pictures (harness/tools/make_help_thumbs.py); nothing plays,
+       and the player is not fetched, until the drawer opens. #}
     <section class="help-learn" id="helpLearn" aria-label="Watch how it works"
              data-player-css="{{ skribl_asset('inlineplayer.css') }}"
              data-player-js="{{ skribl_asset('inlineplayer.js') }}">
-      <h3 class="learn-h">Your first {{ 'Flip' if is_flip else 'Skribl' }}</h3>
-      <div class="learn-start">
-        {% if is_flip %}
-        {{ learn_card('flip-wave', 'Draw', 'Draw a page, add the next, and it moves.', n=1) }}
-        {% else %}
-        {{ learn_card('cat', 'Draw', 'Every stroke is recorded as you make it.', n=1) }}
-        {% endif %}
-        {{ learn_card(None, 'Add music', 'Pick a song and the part that loops.', n=2, clip='music') }}
-        {{ learn_card(None, 'Post', 'Get a link that plays anywhere.', n=3, clip='post') }}
-      </div>
-      <h3 class="learn-h">Tools</h3>
-      <div class="learn-grid">
-        {{ learn_card('pen', 'Pen', 'Any colour, any size. With a stylus, press harder for a thicker line.', tool='pen') }}
-        {{ learn_card('eraser', 'Eraser', 'Wipe back to the canvas. Tap it again to change its size.', tool='eraser') }}
-        {{ learn_card('shape', 'Shape', 'Lines, boxes, ovals and polygons, with rounded corners if you like.', tool='shape') }}
-      </div>
-      {# Ideas: drawings made the same way, through the editors with a pen
-         (harness/tools/make_art.py, make_flip.py). Each editor leads with its
-         own kind and shows one of the other's. #}
-      <h3 class="learn-h">Ideas to try</h3>
-      <div class="learn-grid">
-        {% if is_flip %}
-        {{ learn_card('flip-bounce', 'Squash and stretch', 'The ball stretches as it falls and flattens as it lands.') }}
-        {{ learn_card('scene', 'A little world', 'In Pad: near lines heavy, far lines light.') }}
-        {{ learn_card('snail', 'One line', 'In Pad: draw it all without lifting the pen.') }}
-        {% else %}
-        {{ learn_card('scene', 'A little world', 'Near lines heavy, far lines light, and it has depth.') }}
-        {{ learn_card('snail', 'One line', 'Draw it all without lifting the pen.') }}
-        {{ learn_card('flip-bounce', 'Make it move', 'In Flip: a page at a time, a ball that bounces.') }}
-        {% endif %}
-      </div>
+      <button type="button" class="learn-peek" id="learnPeek" aria-controls="learnSheet" aria-expanded="false">
+        {% set peek_thumbs = ['flip-wave', 'pen', 'flip-bounce'] if is_flip else ['cat', 'pen', 'scene'] %}
+        <span class="learn-peek-stack" aria-hidden="true">
+          {%- for th in peek_thumbs %}<img alt="" width="52" height="39" data-src="{{ skribl_asset('help/thumbs/' ~ th ~ '.webp') }}">{% endfor -%}
+        </span>
+        <span class="learn-peek-text">
+          <span class="learn-peek-title">Watch it work</span>
+          <span class="learn-peek-sub" id="learnPeekCount">Short examples to watch</span>
+        </span>
+        <span class="learn-peek-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg></span>
+      </button>
       <h3 class="learn-h learn-ref-h">Every control, explained</h3>
     </section>
     <div class="help-steps">
@@ -283,6 +272,50 @@
           <div class="help-tip"><span class="help-pill">Menus &amp; panels</span><div class="help-desc">Anything that slides up &mdash; the <strong>&#8943;</strong> menu, Export, Post, your drafts &mdash; closes with a tap on the grey bar at its top or a swipe down, and eases away. A swipe on a panel never reloads the page. While a post is sending, its panel stays put until it finishes.</div></div>
         </div></div>
 
+      </div>
+    </div>
+  </div>
+  {# ---- THE EXAMPLES DRAWER (lib/helplearn.js) -------------------------
+     Over the panel, outside its scroll, so the reference stays where it was.
+     Closes like every sheet: a tap on the grip or a pull down, the scrim,
+     the close button, or Escape (which leaves How it works open). #}
+  <div class="learn-sheet" id="learnSheet" hidden>
+    <div class="learn-scrim" data-learn-close></div>
+    <div class="learn-sheet-panel" role="region" aria-labelledby="learnSheetTitle">
+      <button type="button" class="learn-grip" id="learnGrip" data-learn-close aria-label="Close the examples"></button>
+      <div class="learn-sheet-head">
+        <h3 class="learn-sheet-title" id="learnSheetTitle" tabindex="-1">Watch it work</h3>
+        <button type="button" class="help-close learn-close" data-learn-close aria-label="Close the examples">&#x2715;</button>
+      </div>
+      <div class="learn-chips" role="group" aria-label="Show">
+        <button type="button" class="learn-chip" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" class="learn-chip" data-filter="start" aria-pressed="false">Start</button>
+        <button type="button" class="learn-chip" data-filter="tools" aria-pressed="false">Tools</button>
+        <button type="button" class="learn-chip" data-filter="ideas" aria-pressed="false">Ideas</button>
+      </div>
+      <div class="learn-sheet-scroll">
+        <div class="learn-all">
+          {% if is_flip %}
+          {{ learn_card('flip-wave', 'Draw', 'Draw a page, add the next, and it moves.', 'start', n=1) }}
+          {% else %}
+          {{ learn_card('cat', 'Draw', 'Every stroke is recorded as you make it.', 'start', n=1) }}
+          {% endif %}
+          {{ learn_card(None, 'Add music', 'Pick a song and the part that loops.', 'start', n=2, clip='music') }}
+          {{ learn_card(None, 'Post', 'Get a link that plays anywhere.', 'start', n=3, clip='post') }}
+          {{ learn_card('pen', 'Pen', 'Any colour, any size. With a stylus, press harder for a thicker line.', 'tools', tool='pen') }}
+          {{ learn_card('eraser', 'Eraser', 'Wipe back to the canvas. Tap it again to change its size.', 'tools', tool='eraser') }}
+          {{ learn_card('shape', 'Shape', 'Lines, boxes, ovals and polygons, with rounded corners if you like.', 'tools', tool='shape') }}
+          {# Ideas: each editor leads with its own kind and shows one of the other's. #}
+          {% if is_flip %}
+          {{ learn_card('flip-bounce', 'Squash and stretch', 'The ball stretches as it falls and flattens as it lands.', 'ideas') }}
+          {{ learn_card('scene', 'A little world', 'In Pad: near lines heavy, far lines light.', 'ideas') }}
+          {{ learn_card('snail', 'One line', 'In Pad: draw it all without lifting the pen.', 'ideas') }}
+          {% else %}
+          {{ learn_card('scene', 'A little world', 'Near lines heavy, far lines light, and it has depth.', 'ideas') }}
+          {{ learn_card('snail', 'One line', 'Draw it all without lifting the pen.', 'ideas') }}
+          {{ learn_card('flip-bounce', 'Make it move', 'In Flip: a page at a time, a ball that bounces.', 'ideas') }}
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>

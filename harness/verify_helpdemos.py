@@ -11,17 +11,23 @@ this holds the cards to what they claim, on both editors:
   2. EVERY TOOL HAS ONE. Each tool in Pad's dock has a card with Try it; on
      Flip, each tool Flip shares with Pad does (Flip's own tools arrive with
      their examples in the next change, and this census grows to all of them).
-  3. NOTHING LOADS UNTIL HELP OPENS. An editor that never opens How it works
-     never fetches the player or an example.
-  4. THEY PLAY, TOGETHER, AND STOP. Opened, the replays paint ink that grows
-     over time -- read off the canvas pixels -- and more than one plays at once
-     (the player's ambient mode). The clips advance and match the theme.
-     Closed, everything stops.
+  3. NOTHING LOADS UNTIL IT IS ASKED FOR. The editor fetches nothing for it;
+     opening How it works fetches only the bar's three previews; the player,
+     examples and clips come with the drawer.
+  THE BAR AND THE DRAWER (owner: "it fills the page"): How it works shows one
+     "Watch it work" bar that counts the examples from the page; the drawer
+     opens over the panel, its chips show one group or all, and it closes on
+     Escape (leaving How it works open), a pull or tap on its grip, and with
+     How it works.
+  4. THEY PLAY, TOGETHER, AND STOP. In the open drawer the replays paint ink
+     that changes over time -- read off the canvas pixels -- and more than one
+     plays at once (the player's ambient mode). The clips advance and match
+     the theme. Drawer or panel closed, everything stops.
   5. TRY IT picks the tool by the editor's own route and closes the panel;
      Shape's card is left open, as a tap on Shape leaves it.
   6. REDUCED MOTION: nothing plays; each replay shows its finished drawing and
      each clip its poster, and the clips are not even fetched.
-  7. SEARCH: typing hands the panel to the reference.
+  7. SEARCH: typing hands the panel to the reference; the bar steps aside.
 """
 import json
 import pathlib
@@ -74,11 +80,15 @@ INK = """card => { const c = card.querySelector('canvas.skribl-inline-canvas');
       if (d[i + 3] > 200 && Math.abs(d[i] - g[0]) + Math.abs(d[i + 1] - g[1]) + Math.abs(d[i + 2] - g[2]) > 90) n++;
     return n; }"""
 OPEN = "() => { window.SkriblHints && window.SkriblHints.hide(); openHelpDrawer(); }"
+SHEET = "() => document.getElementById('learnPeek').click()"
+CARDS = "#learnSheet .learn-card"
 STATE = """() => ({
-    replays: [...document.querySelectorAll('#helpLearn .learn-card[data-demo]')].map(c =>
+    sheet: !document.getElementById('learnSheet').hidden,
+    replays: [...document.querySelectorAll('#learnSheet .learn-card[data-demo]')].map(c =>
         c._learnPlayer ? c._learnPlayer.state().state : 'none'),
-    clips: [...document.querySelectorAll('#helpLearn .learn-video')].map(v => ({
+    clips: [...document.querySelectorAll('#learnSheet .learn-video')].map(v => ({
         src: v.getAttribute('src') || '', poster: v.getAttribute('poster') || '', t: v.currentTime, paused: v.paused })) })"""
+PLAYER = lambda u: u.endswith("inlineplayer.js") or "/help/demos/" in u or "/help/clips/" in u
 
 with sync_playwright() as p:
     b = p.chromium.launch()
@@ -92,39 +102,67 @@ with sync_playwright() as p:
         browsing.goto(pg, BASE, route)
         pg.wait_for_timeout(900)
 
-        # 3. lazy
-        early = [u for u in fetched if u.endswith("inlineplayer.js") or "/help/demos/" in u or "/help/clips/" in u]
-        check(f"{name}: the editor fetches no player, example or clip until How it works opens",
+        # 3. lazy, in two steps: the editor fetches nothing; How it works
+        # fetches only the bar's previews; the drawer fetches the rest.
+        early = [u for u in fetched if PLAYER(u) or "/help/thumbs/" in u]
+        check(f"{name}: the editor fetches no player, example, clip or preview until How it works opens",
               not early, str(early[:3]))
 
         # 2. census
         dock = pg.evaluate("() => [...document.querySelectorAll('.tool-btn[data-tool]')].map(b => b.dataset.tool)")
         reg = pg.evaluate("() => window.SkriblFlipTools ? SkriblFlipTools.list().map(t => t.id || t) : null")
         tools = set(dock) if name == "Pad" else ({"pen", "eraser", "shape"} & set(reg or []))
-        cards = pg.evaluate("() => [...document.querySelectorAll('#helpLearn .learn-card[data-tool]')].map(c => c.dataset.tool)")
-        tries = pg.evaluate("() => [...document.querySelectorAll('#helpLearn .learn-try')].map(b => b.dataset.try)")
+        cards = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-learn-tool]')].map(c => c.dataset.learnTool)")
+        tries = pg.evaluate("() => [...document.querySelectorAll('#learnSheet .learn-try')].map(b => b.dataset.try)")
         check(f"{name}: every tool ({', '.join(sorted(tools))}) has an example card with Try it",
               bool(tools) and tools <= set(cards) and tools <= set(tries),
               f"tools {sorted(tools)}, cards {cards}, Try it {tries}")
+        # The cards must not borrow the app's own attribute: they come first in
+        # the page, so "the [data-tool=eraser]" found a card (#304; main red on
+        # verify_pointerpad). Anything with data-tool is the app's.
+        borrowed = pg.evaluate("() => [...document.querySelectorAll('[data-tool]')].filter(e => e.closest('#helpDrawer')).length")
+        check(f"{name}: no example card carries the app's data-tool attribute", borrowed == 0,
+              f"{borrowed} element(s) in How it works with data-tool")
         check(f"{name}: the quick start is three steps, the second and third as screen clips",
-              pg.evaluate("() => document.querySelectorAll('#helpLearn .learn-start .learn-card').length") == 3
-              and pg.evaluate("() => document.querySelectorAll('#helpLearn .learn-start .learn-clip').length") == 2)
+              pg.evaluate(f"() => document.querySelectorAll('{CARDS}[data-group=start]').length") == 3
+              and pg.evaluate(f"() => document.querySelectorAll('{CARDS}[data-group=start].learn-clip').length") == 2)
 
-        # 4. plays
+        # THE BAR: what the page shows instead of the cards.
+        fetched.clear()
         pg.evaluate(OPEN)
         pg.wait_for_timeout(900)
-        a = pg.evaluate(f"() => [...document.querySelectorAll('#helpLearn .learn-card[data-demo]')].map({INK})")
+        bar = pg.evaluate("""() => { const b = document.getElementById('learnPeek'), r = b.getBoundingClientRect();
+            return { n: document.querySelectorAll('#learnSheet .learn-card').length,
+                     said: document.getElementById('learnPeekCount').textContent,
+                     thumbs: [...b.querySelectorAll('img')].map(i => i.complete && i.naturalWidth > 0),
+                     h: r.height, sheet: !document.getElementById('learnSheet').hidden }; }""")
+        check(f"{name}: How it works shows one bar, not the cards: the drawer is shut and the bar is under 100px",
+              bar["h"] < 100 and not bar["sheet"], str(bar))
+        check(f"{name}: the bar counts the examples there are (counted, not typed)",
+              bar["said"].startswith(f"{bar['n']} "), str(bar))
+        check(f"{name}: the bar's three previews load when How it works opens",
+              len(bar["thumbs"]) == 3 and all(bar["thumbs"]), str(bar["thumbs"]))
+        check(f"{name}: opening How it works fetches no player, example or clip (only the drawer does)",
+              not [u for u in fetched if PLAYER(u)], str([u for u in fetched if PLAYER(u)][:3]))
+
+        # 4. plays, once the drawer is open
+        pg.evaluate(SHEET)
+        pg.wait_for_timeout(900)
+        a = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-demo]')].map({INK})")
         pg.wait_for_timeout(1500)
-        z = pg.evaluate(f"() => [...document.querySelectorAll('#helpLearn .learn-card[data-demo]')].map({INK})")
+        z = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-demo]')].map({INK})")
         s = pg.evaluate(STATE)
-        check(f"{name}: opened, every replay paints ink, and the ink changes as it plays",
+        check(f"{name}: in the drawer, every replay paints ink, and the ink changes as it plays",
               all(x > 50 for x in z) and sum(1 for x, y in zip(a, z) if x != y) >= len(z) - 1,
               f"ink then {a}, later {z}")
         check(f"{name}: several examples play at once (the player's ambient mode)",
               s["replays"].count("playing") >= 3, str(s["replays"]))
-        painted = pg.evaluate("""() => [...document.querySelectorAll('#helpLearn .learn-stage')].every(st => {
-            const r = st.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) return true;
-            const at = document.elementFromPoint(r.left + r.width / 2, Math.min(innerHeight - 2, r.top + r.height / 2));
+        painted = pg.evaluate("""() => [...document.querySelectorAll('#learnSheet .learn-stage')].every(st => {
+            const r = st.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight || !r.width) return true;
+            const sc = document.querySelector('#learnSheet .learn-sheet-scroll').getBoundingClientRect();
+            if (r.bottom < sc.top || r.top > sc.bottom) return true;
+            const y = Math.min(sc.bottom - 2, Math.max(sc.top + 2, r.top + r.height / 2));
+            const at = document.elementFromPoint(r.left + r.width / 2, y);
             return !!(at && st.contains(at)); })""")
         check(f"{name}: each example on screen is what is painted at its place", painted)
         t0 = [c["t"] for c in s["clips"]]
@@ -140,31 +178,71 @@ with sync_playwright() as p:
               all("-light." in c["src"] and "-light." in c["poster"] for c in s3["clips"]), str(s3["clips"]))
         pg.evaluate("() => document.documentElement.removeAttribute('data-theme')")
 
+        # THE CHIPS show one group, or all.
+        shown = lambda: pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}')].filter(c => c.offsetParent)"
+                                    ".map(c => c.dataset.group)")
+        pg.click('#learnSheet .learn-chip[data-filter="tools"]'); pg.wait_for_timeout(150)
+        only = shown()
+        pg.click('#learnSheet .learn-chip[data-filter="all"]'); pg.wait_for_timeout(150)
+        back = shown()
+        check(f"{name}: Tools shows the tool cards and nothing else; All brings every card back",
+              only and set(only) == {"tools"} and len(back) == bar["n"], f"tools {only}, all {len(back)}")
+
+        # THE DRAWER CLOSES, and stops what it was playing.
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(500)
+        esc = pg.evaluate("() => ({ sheet: !document.getElementById('learnSheet').hidden,"
+                          " help: !document.getElementById('helpDrawer').hidden,"
+                          " focus: document.activeElement && document.activeElement.id })")
+        s4 = pg.evaluate(STATE)
+        check(f"{name}: Escape closes the drawer and leaves How it works open, focus back on the bar",
+              not esc["sheet"] and esc["help"] and esc["focus"] == "learnPeek", str(esc))
+        check(f"{name}: with the drawer closed, nothing keeps playing",
+              "playing" not in s4["replays"] and all(c["paused"] for c in s4["clips"]), str(s4))
+        if not esc["help"]:                 # a failure above shut the panel; carry on
+            pg.evaluate(OPEN); pg.wait_for_timeout(500)
+        pg.evaluate(SHEET); pg.wait_for_timeout(500)
+        g = pg.locator("#learnGrip").bounding_box()
+        pg.mouse.move(g["x"] + g["width"] / 2, g["y"] + g["height"] / 2); pg.mouse.down()
+        for k in range(1, 9):
+            pg.mouse.move(g["x"] + g["width"] / 2, g["y"] + g["height"] / 2 + k * 18); pg.wait_for_timeout(16)
+        pg.mouse.up(); pg.wait_for_timeout(500)
+        check(f"{name}: a pull down on the grip closes the drawer",
+              pg.evaluate("() => document.getElementById('learnSheet').hidden") is True)
+        pg.evaluate(SHEET); pg.wait_for_timeout(500)
+        pg.click("#learnGrip"); pg.wait_for_timeout(500)
+        check(f"{name}: a tap on the grip closes it too",
+              pg.evaluate("() => document.getElementById('learnSheet').hidden") is True)
+
         # 7. search
+        pg.evaluate(SHEET); pg.wait_for_timeout(400)
+        pg.evaluate("() => document.getElementById('learnSheet').querySelector('[data-learn-close].learn-close').click()")
+        pg.wait_for_timeout(400)
         pg.fill("#helpSearch", "loop")
         pg.wait_for_timeout(300)
-        check(f"{name}: searching hands the panel to the reference (the examples step aside)",
+        check(f"{name}: searching hands the panel to the reference (the bar steps aside)",
               pg.evaluate("() => document.getElementById('helpLearn').hidden") is True)
         pg.fill("#helpSearch", "")
         pg.wait_for_timeout(300)
-        check(f"{name}: and clearing the search brings them back",
+        check(f"{name}: and clearing the search brings it back",
               pg.evaluate("() => document.getElementById('helpLearn').hidden") is False)
 
-        # 4. closed, everything stops
+        # 4. closing How it works closes the drawer and stops everything
+        pg.evaluate(SHEET); pg.wait_for_timeout(700)
         pg.evaluate("() => document.getElementById('helpClose').click()")
         pg.wait_for_timeout(700)
-        s4 = pg.evaluate(STATE)
-        check(f"{name}: closed, nothing keeps playing",
-              "playing" not in s4["replays"] and all(c["paused"] for c in s4["clips"]), str(s4))
+        s5 = pg.evaluate(STATE)
+        check(f"{name}: closing How it works closes the drawer; nothing keeps playing",
+              not s5["sheet"] and "playing" not in s5["replays"] and all(c["paused"] for c in s5["clips"]), str(s5))
 
         # 5. Try it
         for t in sorted(tools):
-            if not pg.locator(f'#helpLearn .learn-try[data-try="{t}"]').count():
+            if not pg.locator(f'#learnSheet .learn-try[data-try="{t}"]').count():
                 check(f"{name}: Try it on {t} picks it and closes How it works", False, "no Try it for this tool")
                 continue
-            pg.evaluate(OPEN); pg.wait_for_timeout(600)
-            pg.locator(f'#helpLearn .learn-try[data-try="{t}"]').scroll_into_view_if_needed()
-            pg.click(f'#helpLearn .learn-try[data-try="{t}"]')
+            pg.evaluate(OPEN); pg.wait_for_timeout(500)
+            pg.evaluate(SHEET); pg.wait_for_timeout(500)
+            pg.locator(f'#learnSheet .learn-try[data-try="{t}"]').scroll_into_view_if_needed()
+            pg.click(f'#learnSheet .learn-try[data-try="{t}"]')
             pg.wait_for_timeout(600)
             got = pg.evaluate(f"() => ({{ tool: {tool_expr}, help: document.getElementById('helpDrawer').hidden,"
                               " card: !document.getElementById('shapePop').hidden })")
@@ -181,13 +259,15 @@ with sync_playwright() as p:
         browsing.goto(pg, BASE, route)
         pg.wait_for_timeout(800)
         pg.evaluate(OPEN)
+        pg.wait_for_timeout(400)
+        pg.evaluate(SHEET)
         pg.wait_for_timeout(1500)
-        s5 = pg.evaluate(STATE)
-        ink = pg.evaluate(f"() => [...document.querySelectorAll('#helpLearn .learn-card[data-demo]')].map({INK})")
+        s6 = pg.evaluate(STATE)
+        ink = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-demo]')].map({INK})")
         check(f"{name}: with reduced motion nothing plays; each replay shows its finished drawing",
-              "playing" not in s5["replays"] and all(x > 50 for x in ink), f"{s5['replays']} ink {ink}")
+              "playing" not in s6["replays"] and all(x > 50 for x in ink), f"{s6['replays']} ink {ink}")
         check(f"{name}: and each clip shows its poster without fetching the video",
-              all(c["poster"] and not c["src"] for c in s5["clips"]), str(s5["clips"]))
+              all(c["poster"] and not c["src"] for c in s6["clips"]), str(s6["clips"]))
         ctx.close()
     b.close()
 

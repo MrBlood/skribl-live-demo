@@ -188,6 +188,11 @@
      host, so the player stays branded, and verify_ux pins its active fill
      to this exact colour. Everything else moved to the --ui-* roles below.
      Recording stays #f4326f (red) and was never accent. */
+  /* The paper How it works' example drawings are drawn on (harness/tools/
+     artdraw.py PAPER). The drawing's colour, not the app's, so the same in
+     both themes (named for the canvas, which verify_theme reads as "follows
+     no theme"): a stage shows it while its drawing loads. */
+  --canvas-paper: #f6f2ea;
   --accent: #7c5cff;
   --accent-2: #5b8cff;
   --accent-bright: #9179ff;
@@ -5686,23 +5691,70 @@ a.player-btn { text-decoration: none; }
 .help-empty { margin: 8px 18px 16px; padding: 26px 12px; text-align: center; }
 
 /* ---- How it works, shown (lib/helplearn.js) --------------------------------
-   Cards that each play a real Skribl, above the reference. The stage is the
-   drawing's own canvas colour in both themes -- the examples are drawn on
-   Skribl's dark canvas, and a light stage would wash out the yellow and mint
-   ink -- so in the light theme each card reads as a small screen. Gutter and
-   rhythm follow .help-steps (24px sides), so the reference below lines up. */
-.help-learn { padding: 6px 24px 0; }
+   One bar above the reference, "Watch it work", opens a drawer of every
+   example (#learnSheet) over the panel. The owner chose the drawer when the
+   cards filled the page, with many more examples coming. Gutter and rhythm
+   follow .help-steps (24px sides), so the reference below lines up. */
+.help-learn { padding: 14px 24px 0; }
 .help-learn[hidden] { display: none; }
 .learn-h { margin: 18px 2px 10px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--text-secondary); }
-.learn-h:first-child { margin-top: 8px; }
-.learn-ref-h { margin-top: 26px; margin-bottom: 0; }
-.learn-start { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.learn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.learn-ref-h { margin-top: 24px; margin-bottom: 0; }
+.learn-peek { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 12px;
+  border-radius: 16px; border: 1px solid var(--line-faint); background: var(--surface-sheet-2);
+  color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.learn-peek:hover { background: var(--surface-tint); }
+.learn-peek:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+.learn-peek-stack { display: flex; flex: none; }
+/* Three previews fanned like cards in a hand; each is a still of a finished
+   example (harness/tools/make_help_thumbs.py), fetched when help opens. */
+.learn-peek-stack img { width: 52px; height: 39px; border-radius: 8px; object-fit: cover; display: block;
+  background: var(--canvas-paper); border: 2px solid var(--surface-sheet-2); }
+.learn-peek-stack img + img { margin-left: -20px; }
+.learn-peek-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.learn-peek-title { font-size: 15px; font-weight: 650; color: var(--text-primary); }
+.learn-peek-sub { font-size: 12.5px; color: var(--text-secondary); }
+.learn-peek-go { margin-left: auto; flex: none; width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--accent-fill); color: #fff; }
+.learn-peek-go svg { width: 15px; height: 15px; margin-left: 2px; }
+
+/* The drawer: over the panel and outside its scroll, so the reference stays
+   put underneath. It glides up from the bottom like every sheet here. */
+.learn-sheet { position: absolute; inset: 0; z-index: 6; }
+.learn-sheet[hidden] { display: none; }
+.learn-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .38); opacity: 0;
+  transition: opacity .3s ease; }
+.learn-sheet.open .learn-scrim { opacity: 1; }
+.learn-sheet-panel { position: absolute; left: 0; right: 0; bottom: 0; margin: 0 auto; width: 100%;
+  max-width: 1040px; height: min(90%, 900px); display: flex; flex-direction: column;
+  background: rgb(var(--surface-panel-rgb)); border: 1px solid var(--hairline); border-bottom: 0;
+  border-radius: 22px 22px 0 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, .28);
+  transform: translateY(104%); transition: transform .34s cubic-bezier(0.22, 1, 0.36, 1); }
+.learn-sheet.open .learn-sheet-panel { transform: none; }
+.learn-grip { align-self: center; flex: none; width: 88px; height: 22px; padding: 0; border: 0;
+  background: transparent; cursor: pointer; display: grid; place-items: center; touch-action: none; }
+.learn-grip::before { content: ''; width: 40px; height: 5px; border-radius: 3px; background: var(--line-loud); }
+.learn-grip:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: -2px; border-radius: 8px; }
+.learn-sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 0 24px 10px; }
+.learn-sheet-title { margin: 0; font-size: 17px; font-weight: 700; color: var(--text-primary); outline: none; }
+.learn-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 0 24px 12px; flex: none; }
+.learn-chips::-webkit-scrollbar { display: none; }
+.learn-chip { flex: none; min-height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-faint);
+  background: transparent; color: var(--text-primary); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.learn-chip:hover { background: var(--surface-tint); }
+.learn-chip[aria-pressed="true"] { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
+.learn-chip:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+.learn-sheet-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 2px 24px calc(24px + env(safe-area-inset-bottom, 0px)); }
+.learn-all { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+
 .learn-card { margin: 0; display: flex; flex-direction: column; min-width: 0;
   border: 1px solid var(--line-faint); border-radius: 14px; overflow: hidden;
   background: var(--surface-sheet-2); }
-.learn-stage { position: relative; aspect-ratio: 4 / 3; max-width: 100%; background: #0d0f14; }
+.learn-card[hidden] { display: none; }
+/* The examples are drawn on paper, so the stage is paper before its drawing
+   paints, rather than flashing dark first. */
+.learn-stage { position: relative; aspect-ratio: 4 / 3; max-width: 100%; background: var(--canvas-paper); }
 /* The in-post player, as a silent example: no frame of its own (the card is
    the frame), no play veil or duration chip. The nib stays -- it is the pen
    moving, which is the point of watching. */
@@ -5710,7 +5762,7 @@ a.player-btn { text-decoration: none; }
   border: 0; border-radius: 0; background: transparent; cursor: default; }
 .learn-stage .skribl-inline-veil, .learn-stage .skribl-inline-dur { display: none !important; }
 /* A screen clip fills its stage; its own theme's ground shows, not the
-   canvas colour, because it is a picture of the app, not of a drawing. */
+   paper, because it is a picture of the app, not of a drawing. */
 .learn-clip .learn-stage { background: var(--surface-sheet-2); }
 .learn-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .learn-cap { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; flex: 1; }
@@ -5724,17 +5776,21 @@ a.player-btn { text-decoration: none; }
 .learn-cap .learn-try { margin-top: 10px; }
 .learn-try:hover { background: var(--surface-tint); }
 .learn-try:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-/* A phone: the three steps scroll sideways (a peek of the next says there is
-   more) and the tool and idea cards stack one to a row. Two across left each
-   drawing ~165px wide and a third card alone in its row; these are drawings
-   to watch, so each gets the panel's width. */
+/* A phone: two to a row in the drawer, as the owner saw it in the mock; the
+   caption tightens to suit the ~165px card. */
 @media (max-width: 640px) {
-  .help-learn { padding: 4px 18px 0; }
-  .learn-start { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
-    margin: 0 -18px; padding: 0 18px 2px; scroll-padding: 0 18px; }
-  .learn-start::-webkit-scrollbar { display: none; }
-  .learn-start .learn-card { flex: 0 0 84%; scroll-snap-align: start; }
-  .learn-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .help-learn { padding: 12px 18px 0; }
+  .learn-sheet-head { padding: 0 18px 10px; }
+  .learn-chips { padding: 0 18px 12px; }
+  .learn-sheet-scroll { padding-left: 14px; padding-right: 14px; }
+  .learn-all { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .learn-cap { padding: 8px 10px 10px; }
+  .learn-title { font-size: 13.5px; }
+  .learn-line { font-size: 12px; }
+  .learn-try { min-height: 34px; font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .learn-sheet-panel, .learn-scrim { transition: none; }
 }
 .help-empty[hidden] { display: none; }
 .help-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 4px; }

@@ -211,6 +211,11 @@
      host, so the player stays branded, and verify_ux pins its active fill
      to this exact colour. Everything else moved to the --ui-* roles below.
      Recording stays #f4326f (red) and was never accent. */
+  /* The paper How it works' example drawings are drawn on (harness/tools/
+     artdraw.py PAPER). The drawing's colour, not the app's, so the same in
+     both themes (named for the canvas, which verify_theme reads as "follows
+     no theme"): a stage shows it while its drawing loads. */
+  --canvas-paper: #f6f2ea;
   --accent: #7c5cff;
   --accent-2: #5b8cff;
   --accent-bright: #9179ff;
@@ -1819,6 +1824,9 @@ a.player-btn { text-decoration: none; }
      rather than shrinking to pill height. Was 32/17. */
   .icon-btn { width: 44px; height: 44px; border-color: var(--hairline); }
   .icon-btn svg { width: 24px; height: 24px; }}
+@media (prefers-reduced-motion: reduce) {
+  .learn-sheet-panel, .learn-scrim { transition: none; }
+}
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .tune-shell, .tune-panel { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .name-shell, .name-panel { transition: none; } }

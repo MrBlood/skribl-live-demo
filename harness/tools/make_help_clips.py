@@ -121,15 +121,17 @@ def center(page, sel):
 # ---- the clips ---------------------------------------------------------------
 # Each returns the crop, in CSS px of the viewport: (x, y, w, h), 4:3.
 def clip_music(page, rec):
-    rec.start(); page.wait_for_timeout(500)
-    tap(page, "#mediaOpenBtn")
-    tap(page, "#mediaTabMusic")
+    # The drawer is opened off camera: the clip is about the song, so it opens
+    # on "Add music" and spends its seconds on the waveform.
+    page.locator("#mediaOpenBtn").click(); page.wait_for_timeout(500)
+    page.locator("#mediaTabMusic").click(); page.wait_for_timeout(500)
+    rec.start(); page.wait_for_timeout(350)
     drop = page.locator("#musicInput").evaluate("i => { const z = i.closest('label, .drop, .media-drop, .pending-row') || i.parentElement; const r = z.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }")
     glide(page, (drop[0] + 50, drop[1] + 80), drop, 420)
     page.mouse.down(); page.wait_for_timeout(110); page.mouse.up()
     page.set_input_files("#musicInput", {"name": "Bassline.wav", "mimeType": "audio/wav", "buffer": song()})
     page.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
-    page.wait_for_timeout(900)
+    page.wait_for_timeout(500)
     hx, hy = center(page, "#handleEnd")
     glide(page, (hx + 40, hy + 70), (hx, hy), 420)
     page.mouse.down()
@@ -140,11 +142,12 @@ def clip_music(page, rec):
     page.mouse.down()
     glide(page, (sx, sy), (sx + 50, sy), 700)
     page.mouse.up(); page.wait_for_timeout(250)
-    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(1100)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(800)
     rec.stop()
+    # Framed on the panel in use, edge to edge of its content.
     tabs = page.locator("#mediaTabMusic").bounding_box()
-    w = VW; h = round(w * 3 / 4)
-    return (0, max(0, tabs["y"] - 10), w, h)
+    x0 = 12; w = VW - 2 * x0; h = round(w * 3 / 4)
+    return (x0, max(0, tabs["y"] - 8), w, h)
 
 
 def clip_post(page, rec):
@@ -161,25 +164,27 @@ def clip_post(page, rec):
     page.evaluate("() => { if (recording) endRecordingTake(); }")
     page.wait_for_timeout(600)
     rec.start(); page.wait_for_timeout(400)
-    tap(page, "#postBtn", after=700)
+    tap(page, "#postBtn", after=550)
     tx, ty = center(page, "#postTitleInput")
     glide(page, (tx + 60, ty + 80), (tx, ty), 380)
     page.mouse.down(); page.wait_for_timeout(100); page.mouse.up()
-    page.keyboard.type("Cat", delay=90)
+    page.keyboard.type("Cat", delay=80)
+    # Where the title sits WHILE it is typed: posting reflows the sheet, so a
+    # measure taken at the end frames the typing too high.
+    lab = page.locator("#postTitleInput").bounding_box()
     rec.mark("pan")
-    page.wait_for_timeout(450)
-    tap(page, "#postSubmitBtn", before=700, after=300)
+    page.wait_for_timeout(300)
+    tap(page, "#postSubmitBtn", before=600, after=250)
     page.wait_for_selector("#postResult:not([hidden])", timeout=15000)
-    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(1600)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(1100)
     rec.stop()
     # The camera follows the finger: on the title while it is typed, then a
     # glide down to Post and "Posted!". Readable in a card on a phone, which a
     # frame holding the whole sheet would not be.
-    lab = page.locator("#postTitleInput").bounding_box()
     res = page.locator("#postResult").bounding_box()
-    w = VW; h = round(w * 3 / 4)
-    y0 = max(0, lab["y"] - 30); y1 = max(y0, res["y"] + res["height"] + 14 - h)
-    return (0, w, h, [(rec.marks["pan"], y0), (rec.marks["pan"] + 0.9, y1)])
+    x0 = 12; w = VW - 2 * x0; h = round(w * 3 / 4)
+    y0 = max(0, lab["y"] - 24); y1 = max(y0, res["y"] + res["height"] + 14 - h)
+    return (x0, w, h, [(rec.marks["pan"], y0), (rec.marks["pan"] + 0.8, y1)])
 
 
 CLIPS = {"music": clip_music, "post": clip_post}
@@ -188,16 +193,17 @@ VIEWPORT = {}
 
 
 # Driving a 2x page makes every gesture take about half again as long as it
-# was scripted to, so clips play back at this rate to move at a hand's speed.
-SPEED = 1.5
+# was scripted to, so clips play back at this rate to move at a hand's speed
+# (a touch brisker since the owner asked for shorter clips).
+SPEED = 1.6
 
 
 def held(frames, i):
     """How long frame i is shown. A still moment (a decode, a settle) holds at
-    most 0.7 s: the clip shows the gesture, not the waiting. The last, 1.2 s."""
+    most 0.5 s: the clip shows the gesture, not the waiting. The last, 1 s."""
     ts = frames[i][0]
-    nxt = frames[i + 1][0] if i + 1 < len(frames) else ts + 1.2
-    return min(1.2 if i + 1 == len(frames) else 0.7, max(0.001, nxt - ts))
+    nxt = frames[i + 1][0] if i + 1 < len(frames) else ts + 1.0
+    return min(1.0 if i + 1 == len(frames) else 0.5, max(0.001, nxt - ts))
 
 
 def clock(frames, t):
@@ -211,7 +217,7 @@ def clock(frames, t):
     return out
 
 
-def encode(frames, crop, out, size=(640, 480)):
+def encode(frames, crop, out):
     if len(crop) == 4 and isinstance(crop[3], list):
         # (x, w, h, [(t_a, y_a), (t_b, y_b)]): an eased pan between two framings.
         x, w, h = [round(v * DPR) for v in crop[:3]]
@@ -229,9 +235,12 @@ def encode(frames, crop, out, size=(640, 480)):
             lst.append(f"file '{p}'\nduration {held(frames, i):.4f}")
         lst.append(f"file '{pathlib.Path(d) / f'f{len(frames) - 1:05d}.png'}'")
         (pathlib.Path(d) / "list.txt").write_text("\n".join(lst))
-        vf = f"crop={w}:{h}:{x}:{y},setpts=PTS/{SPEED},scale={size[0]}:{size[1]}:flags=lanczos,fps=30,format=yuv420p"
+        # At the crop's own 2x pixels, never scaled down: a downscale is what
+        # softened the interface text in the first clips.
+        w, h = w // 2 * 2, h // 2 * 2
+        vf = f"crop={w}:{h}:{x}:{y},setpts=PTS/{SPEED},fps=30,format=yuv420p"
         src = ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(pathlib.Path(d) / "list.txt"), "-vf", vf]
-        subprocess.run(src + ["-c:v", "libx264", "-profile:v", "high", "-crf", "23", "-preset", "slow",
+        subprocess.run(src + ["-c:v", "libx264", "-profile:v", "high", "-crf", "21", "-preset", "slow",
                               "-movflags", "+faststart", "-an", str(out)], check=True)
         # And VP9 for browsers without H.264 (Linux Chromium, some Firefox):
         # lib/helplearn.js asks canPlayType and fetches only the one it can play.
