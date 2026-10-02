@@ -768,7 +768,7 @@ rather than a shared rule.
 | `scrubkeys.js` | Pad+Flip+player | Keyboard operation and live value for the three playback scrubbers. |
 | `segslider.js` | Pad+Flip+library+gallery | THE PILL. Every pick-one control in the product slides one soft tint under its selected option, and this is the one thing that places it (the owner, choosing between four mocked shapes: "a on the pill"). |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
-| `shapecard.js` | Pad+Flip | The shape card above the Shape tool: its grip closes it, and a live shape shows what Sides and Rounding make. |
+| `shapecard.js` | Pad+Flip | The shape card -- the picker that opens above the Shape tool -- one implementation, both editors. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
 | `sharecard.js` | Pad+Flip+library | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
 | `sheetswipe.js` | Pad+Flip+library+gallery | Sheets that go away — one swipe, every bottom sheet. |

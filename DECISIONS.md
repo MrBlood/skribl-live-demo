@@ -13267,3 +13267,36 @@ spacing".
   both editors. Each goes red on its own old file: the old stylesheet (gaps 0
   and 2) and each editor's old handler (349px in one frame), the other
   editor staying green.
+
+## After #302 -- the shape card's grip closes it; Rounding, shown
+
+The owner, from an iPhone, with the card over the drawing: "The menu is weird
+about how it goes away ... Also what is corners vs sides?" Mocked on the real
+Pad (A: Rounding and aligned labels; B: the same plus a live shape); the owner
+chose B.
+
+* **What was weird.** An untouched card already closed on the press that
+  starts a shape. But the grip at its top DRAGGED the card (lib/popdrag.js,
+  built when the owner asked for a corner to grab so a shape could start
+  under the card), and a dragged card was PINNED: it ignored taps outside, hid
+  only while a finger was down and came back on lift. On a phone the pill
+  reads as every sheet's grabber, so pulling it down to put the card away
+  pinned it over the drawing, with only another tool left to close it. My
+  first mock said an untouched card stays while drawing; it does not, and
+  the mock script had reopened it.
+* **The grip closes the card** on a tap or a pull down past 24px, as the
+  sheets' grabbers do. The drag, the pin and the veil are gone from both
+  editors; what the drag was for is met by the card closing as a shape
+  starts, and Shape bringing it back with the same settings.
+  `lib/shapecard.js` replaces `lib/popdrag.js`.
+* **Rounding.** "Corners 8" said neither what it rounds nor by how much. It
+  is Rounding, reads Sharp at 0, and the two labels take one width so the
+  sliders start and end together. A 64px live shape under the sliders is
+  drawn by `lib/shapes.js` -- the canvas's own points -- standing for a shape
+  120px across, so it cannot disagree with the stroke it promises. The card
+  stays its width (258 -> 259px at 390).
+* `verify_tray` drives both editors at phone size with touch: a tap and a
+  pull on the grip each close the card; the knob reads Rounding / Sharp; the
+  live shape is painted and differs for 3 sides, 8 sides and rounded. All
+  eight are red on the old tree; each editor's old handler file alone turns
+  its own pull and preview checks red and leaves the other editor green.
