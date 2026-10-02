@@ -37,7 +37,9 @@
     return typeof ref === 'string' ? document.getElementById(ref) : ref;
   }
 
+  var machines = [];                    // every editor's drawer set, for anyOpen()
   function skriblDrawers(cfg) {
+    homeOnSettle();
     var panels = {};
     var order = [];
     Object.keys(cfg.panels || {}).forEach(function (name) {
@@ -80,13 +82,60 @@
       if (cfg.reveal) cfg.reveal(name != null ? panels[name].panel : null, name);
     }
 
-    return {
+    var api = {
       open: open,
       toggle: function (name) { open(currentName === name ? null : name); },
       current: function () { return currentName; },
       isOpen: function (name) { return currentName === name; }
     };
+    machines.push(api);
+    return api;
   }
+
+  /* THE PAGE GOES HOME WHEN NOTHING IS OPEN (owner, from an iPhone: the page
+   * "bounced back too high ... stuck out of view about the header's size ...
+   * and header menu is gone"). On a phone the editors scroll the PAGE to show
+   * an open drawer, and nothing promised to bring it back: Flip never scrolled
+   * on close at all, and the Pad's smooth scroll home can be cut short by the
+   * next touch. With nothing open there is no reason for an editor page to be
+   * scrolled -- it is built to fit one phone screen -- so once a scroll has
+   * settled and no finger is down, it returns to the top.
+   *
+   * Phones only (the size class's `compact`), because a short desktop window
+   * can legitimately scroll. "Nothing open" means no drawer in any machine,
+   * no visible modal or menu, and no text field being typed in, whose
+   * keyboard moves the page on purpose. Never during a touch: it waits for
+   * the scroll to stop, so it cannot fight a finger or a bounce. */
+  var touches = 0, settle = null;
+  function somethingOpen() {
+    for (var i = 0; i < machines.length; i++) if (machines[i].current() != null) return true;
+    var a = document.activeElement;
+    if (a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable)) return true;
+    var shown = document.querySelectorAll('[aria-modal="true"], .menu-overlay.open, .flip-menu');
+    for (var j = 0; j < shown.length; j++) {
+      var el = shown[j];
+      if (!el.hidden && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden') return true;
+    }
+    return false;
+  }
+  function goHome() {
+    settle = null;
+    if (touches || !document.querySelector('[data-size="compact"]') || somethingOpen()) return;
+    var vv = window.visualViewport;
+    if ((window.scrollY || 0) > 0 || (vv && vv.offsetTop > 0)) window.scrollTo(0, 0);
+  }
+  var homeWired = false;
+  function homeOnSettle() {
+    if (homeWired || typeof window === 'undefined') return;
+    homeWired = true;
+    var later = function () { clearTimeout(settle); settle = setTimeout(goHome, 250); };
+    window.addEventListener('scroll', later, { passive: true });
+    window.addEventListener('touchstart', function (e) { touches = e.touches.length; clearTimeout(settle); }, { passive: true });
+    var lift = function (e) { touches = e.touches.length; if (!touches) later(); };
+    window.addEventListener('touchend', lift, { passive: true });
+    window.addEventListener('touchcancel', lift, { passive: true });
+  }
+  skriblDrawers.anyOpen = function () { return machines.some(function (m) { return m.current() != null; }); };
 
   if (typeof window !== 'undefined') window.skriblDrawers = skriblDrawers;
   if (typeof module !== 'undefined' && module.exports) module.exports = { skriblDrawers: skriblDrawers };

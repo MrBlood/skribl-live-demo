@@ -4130,7 +4130,10 @@ const _flipDrawerCtl = skriblDrawers({
              onOpen(){ if(toolShelf){ toolShelf.buildTray(); toolShelf.sync(); } } }
   },
   reveal(open, name){
-    if(!open) return;
+    // Everything closed: back to the top, as the Pad has always done. Flip
+    // returned here without scrolling, so a page scrolled to show a drawer
+    // stayed scrolled after it closed -- the header off the top of a phone.
+    if(!open){ window.scrollTo({ top: 0, behavior: 'auto' }); return; }
     // The tray is anchored above the toolbar, not docked below it in flow, so
     // scrolling it into view would drag the canvas off screen to reveal a panel
     // that was already fully visible.
