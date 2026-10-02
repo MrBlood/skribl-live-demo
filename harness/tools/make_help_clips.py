@@ -234,6 +234,8 @@ def flip_draw(page, strokes, logical):
     # back after the last stroke, moving the pad about 13px: a frame measured
     # before it settles is off by that much for the rest of the clip.
     page.wait_for_timeout(1500)
+    # The fingertip followed the off-camera pen; it starts the clip hidden.
+    page.evaluate("() => window.__fingerHide && window.__fingerHide()")
 
 
 PAD_WATCH = """() => { window.__padYs = []; const c = document.getElementById('pad'); let last = null;
@@ -331,9 +333,147 @@ def clip_select(page, rec):
     return follow_pad(page, crop)
 
 
-CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify": clip_liquify}
+def tap_at(page, pt, before=380, after=500):
+    glide(page, (pt[0] + 50, pt[1] + 70), pt, before)
+    page.mouse.down(); page.wait_for_timeout(170); page.mouse.up()
+    page.wait_for_timeout(after)
+
+
+def sweep(page, pts, ms):
+    """A finger down, along a path, and up: a brush tool's gesture."""
+    glide(page, (pts[0][0] + 40, pts[0][1] - 50), pts[0], 350)
+    page.mouse.down()
+    per = ms // max(1, len(pts) - 1)
+    for a, b in zip(pts, pts[1:]):
+        glide(page, a, b, per, steps=max(6, per // 30))
+    page.mouse.up(); page.wait_for_timeout(300)
+
+
+def clip_fill(page, rec):
+    import math
+    from artdraw import INK, Stroke as S
+    logical = flip_ready(page)
+    cloud = []
+    for k in range(61):
+        a = 2 * math.pi * 1.06 * k / 60 - math.pi / 2
+        r = 105 + 18 * abs(math.sin(2.5 * a))
+        cloud.append((300 + 1.2 * r * math.cos(a), 300 + 0.85 * r * math.sin(a)))
+    circle = [(590 + 85 * math.cos(2 * math.pi * 1.08 * k / 40), 300 + 85 * math.sin(2 * math.pi * 1.08 * k / 40))
+              for k in range(41)]
+    # Closed and full weight end to end, so the outline holds the fill.
+    flip_draw(page, [S(cloud, "contour", INK, size=10, taper=(0, 0)),
+                     S(circle, "contour", INK, size=10, taper=(0, 0))], logical)
+    page.evaluate("() => { shelfSetTool('fill'); color = '#7c5cff'; }"); page.wait_for_timeout(300)
+    page.evaluate(PAD_WATCH)
+    to, crop = on_pad(page, logical)
+    rec.start(); page.wait_for_timeout(500)
+    tap_at(page, to(300, 300), after=700)
+    page.evaluate("() => { color = '#ff6f91'; }")
+    tap_at(page, to(590, 300), after=700)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def clip_smudge(page, rec):
+    from artdraw import INK, PURPLE, Stroke as S
+    logical = flip_ready(page)
+    stripes = [S([(160, y), (408, y + 4), (656, y)], "contour", c, size=26, taper=(0.04, 0.04))
+               for y, c in ((236, PURPLE), (300, "#ff6f91"), (364, INK))]
+    flip_draw(page, stripes, logical)
+    page.evaluate("() => shelfSetTool('smudge')"); page.wait_for_timeout(300)
+    page.evaluate(PAD_WATCH)
+    to, crop = on_pad(page, logical)
+    rec.start(); page.wait_for_timeout(500)
+    sweep(page, [to(300, 200), to(320, 300), to(340, 410)], 1300)
+    sweep(page, [to(520, 410), to(500, 300), to(480, 200)], 1100)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def clip_blur(page, rec):
+    from artdraw import INK, Stroke as S
+    logical = flip_ready(page)
+    zig = [(150 + 52 * k, 250 if k % 2 else 350) for k in range(11)]
+    flip_draw(page, [S(zig, "contour", INK, size=12, taper=(0.03, 0.06))], logical)
+    page.evaluate("() => shelfSetTool('blur')"); page.wait_for_timeout(300)
+    page.evaluate(PAD_WATCH)
+    to, crop = on_pad(page, logical)
+    rec.start(); page.wait_for_timeout(500)
+    # Back and forth over the right half; the left stays sharp beside it.
+    sweep(page, [to(430, 300), to(660, 290), to(440, 310), to(650, 300)], 2200)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def clip_stamp(page, rec):
+    import math
+    from artdraw import PURPLE, Stroke as S
+    logical = flip_ready(page)
+    star = []
+    for k in range(11):
+        r = 46 if k % 2 == 0 else 20
+        a = -math.pi / 2 + math.pi * k / 5
+        star.append((170 + r * math.cos(a), 170 + r * math.sin(a)))
+    flip_draw(page, [S(star, "contour", PURPLE, size=12, taper=(0, 0))], logical)
+    # Saved as a stamp off camera: select it, Stamp. The clip is the placing.
+    to, _ = on_pad(page, logical)
+    page.evaluate("() => shelfSetTool('select')"); page.wait_for_timeout(300)
+    a, b = to(100, 100), to(240, 240)
+    page.mouse.move(*a); page.mouse.down(); page.mouse.move(*b, steps=12); page.mouse.up()
+    page.wait_for_timeout(400)
+    page.locator("#sbStamp").click(); page.wait_for_timeout(400)
+    page.evaluate("() => { setTool('stamp'); const p = document.getElementById('stampPop'); if (p) p.hidden = true;"
+                  " try { SkriblHints && SkriblHints.hide(); } catch (e) {} }")
+    page.wait_for_timeout(1500)
+    page.evaluate(PAD_WATCH)
+    to, crop = on_pad(page, logical)
+    rec.start(); page.wait_for_timeout(500)
+    for pt in ((380, 260), (560, 380), (660, 200), (300, 430)):
+        tap_at(page, to(*pt), before=330, after=380)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def clip_artmove(page, rec):
+    import math
+    from artdraw import INK, PURPLE, Stroke as S
+    logical = flip_ready(page)
+
+    def heart(side, cx=230, cy=290, k=6.5):
+        pts = []
+        for i in range(19):
+            a = min(math.pi, math.pi * i / 16) * side
+            x = 16 * math.sin(a) ** 3
+            y = 13 * math.cos(a) - 5 * math.cos(2 * a) - 2 * math.cos(3 * a) - math.cos(4 * a)
+            pts.append((cx + k * x, cy - k * y))
+        return pts
+    star = []
+    for k in range(11):
+        r = 40 if k % 2 == 0 else 17
+        a = -math.pi / 2 + math.pi * k / 5
+        star.append((380 + r * math.cos(a), 220 + r * math.sin(a)))
+    flip_draw(page, [S(heart(-1), "contour", PURPLE, size=18), S(heart(+1), "contour", PURPLE, size=18),
+                     S(star, "contour", INK, size=10, taper=(0, 0))], logical)
+    page.evaluate("() => shelfSetTool('artmove')"); page.wait_for_timeout(300)
+    page.evaluate(PAD_WATCH)
+    to, crop = on_pad(page, logical)
+    rec.start(); page.wait_for_timeout(500)
+    # The whole page's drawing moves together, wherever the drag starts.
+    sweep(page, [to(300, 300), to(470, 330)], 1300)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify": clip_liquify,
+         "smudge": clip_smudge, "blur": clip_blur, "fill": clip_fill, "stamp": clip_stamp,
+         "artmove": clip_artmove}
 # The editor a clip is filmed in, when not Pad.
-ROUTE = {"select": "/flip", "liquify": "/flip"}
+ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove")}
 # Where a clip is recorded, when not the tall phone screen above.
 VIEWPORT = {}
 

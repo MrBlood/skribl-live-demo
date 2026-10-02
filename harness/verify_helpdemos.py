@@ -112,9 +112,9 @@ with sync_playwright() as p:
         # 2. census
         dock = pg.evaluate("() => [...document.querySelectorAll('.tool-btn[data-tool]')].map(b => b.dataset.tool)")
         reg = pg.evaluate("() => window.SkriblFlipTools ? SkriblFlipTools.list().map(t => t.id || t) : null")
-        # Flip's census grows as its own tools get examples: Select and Liquify
-        # have clips; Smudge, Blur, Fill and Stamps are next.
-        tools = set(dock) if name == "Pad" else ({"pen", "eraser", "shape", "select", "liquify"} & set(reg or []))
+        # Every tool on Flip's shelf, its own included: those that reshape a
+        # page (Select, Liquify, Smudge, Blur, Fill, Stamps, Artwork) are clips.
+        tools = set(dock) if name == "Pad" else set(reg or [])
         cards = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-learn-tool]')].map(c => c.dataset.learnTool)")
         tries = pg.evaluate("() => [...document.querySelectorAll('#learnSheet .learn-try')].map(b => b.dataset.try)")
         check(f"{name}: every tool ({', '.join(sorted(tools))}) has an example card with Try it",

@@ -13480,3 +13480,18 @@ through three lines, which bend and keep their order. Each card has Try it.
   the Liquify card removed); Smudge, Blur, Fill and Stamps are next. Its
   playing checks ask only cards on screen in the drawer to move, since a card
   scrolled out of view is paused by design (red with replays that never play).
+
+## Every Flip tool, shown: Smudge, Blur, Fill, Stamps and Artwork
+
+The same treatment as Select and Liquify, for the rest of Flip's own shelf:
+screen clips of the editor, the drawing made off camera, the gesture filmed.
+Smudge drags three stripes' colours into each other; Blur softens half of a
+zigzag beside a sharp half; Fill fills a cloud purple and a circle pink with a
+tap each; Stamps places four copies of a saved star; Artwork drags a heart and
+a star across the page together. Each card has Try it.
+
+* `verify_helpdemos`' Flip census is now every tool on Flip's shelf rather than
+  a hand-kept list, so a tool added later without an example fails it. It found
+  the one this list missed: Artwork (`artmove`), the whole-page move.
+* The fingertip followed the off-camera pen and opened each clip at the end of
+  the last stroke; it is hidden before filming.
