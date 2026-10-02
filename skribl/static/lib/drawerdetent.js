@@ -164,5 +164,32 @@
     }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
   }
 
-  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, veil: veil };
+  /* SHRINK WITHOUT A JUMP. `change()` makes `box` shorter (the music drawer
+   * going from Fine-tune back to Trim drops ~290px at a phone width). Scrolled
+   * near the end, the page is suddenly shorter than where it stands, the
+   * browser clamps the scroll in the same frame, and everything under the
+   * finger leaps -- the owner, from an iPhone: "when you're in fine tune and
+   * switch back to trim it snaps back". So hold the page at its old height
+   * across the change, glide to where it would have clamped to, and let go.
+   * Not scrolled that far, nothing moves and the hold is released at once. */
+  function shrinkGently(box, change) {
+    var scroller = document.scrollingElement || document.documentElement;
+    var root = document.documentElement;
+    var before = box.getBoundingClientRect().height;
+    var held = scroller.scrollHeight;
+    root.style.minHeight = held + 'px';
+    change();
+    var lost = before - box.getBoundingClientRect().height;
+    var from = scroller.scrollTop;
+    var to = Math.max(0, Math.min(from, held - lost - window.innerHeight));
+    if (lost <= 0 || to >= from - 1) { root.style.minHeight = ''; return; }
+    window.scrollTo({ top: to, behavior: 'smooth' });
+    var t0 = Date.now();
+    (function wait() {
+      if (Math.abs(scroller.scrollTop - to) < 2 || Date.now() - t0 > 900) { root.style.minHeight = ''; return; }
+      requestAnimationFrame(wait);
+    }());
+  }
+
+  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, veil: veil, shrinkGently: shrinkGently };
 }());

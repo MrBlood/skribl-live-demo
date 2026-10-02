@@ -2465,7 +2465,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .loop-zoom {
   margin-top: 12px;
-  padding: 10px;
+  padding: 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface-raised);
@@ -2586,8 +2586,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .loop-btn:disabled { opacity: 0.4; cursor: default; }
 
 .finetune-panel {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px solid var(--line);
 }
 
@@ -2656,9 +2656,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
      a 50% circle, which read as a circle inside a rounded-square the moment the
      container stopped being a pill.
      It also settles an inconsistency that predates the squaring: the Scroll and
-     Crossfade nudges in the SAME panel are .slider-nudge-btn at 7px on a 26px
-     box — rounded squares — so the loop panel was already showing two different
-     shapes for the same minus/plus gesture, four rows apart. */
+     Crossfade nudges in the SAME panel were .slider-nudge-btn at 7px on a 26px
+     box, two shapes for one minus/plus gesture four rows apart. They take this
+     size and corner now (.zoom-pan-row / .crossfade-row .slider-nudge-btn). */
   border-radius: calc(var(--r-seg) - 3px);
   border: 0;
   background: var(--line);
@@ -4669,7 +4669,7 @@ input:focus-visible {
        (220px) rather than spilling the pill -- the exact bug class, which
        verify_ux caught again at 363 while this was being built. */
     display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 10px 10px; align-items: stretch;
+    gap: 16px 10px; align-items: stretch;
   }
   .edge-group {
     flex-direction: column; align-items: stretch; justify-content: flex-start;
@@ -5334,7 +5334,12 @@ a.player-btn { text-decoration: none; }
    phone the bar justified differently on the two surfaces for no reason anyone
    chose. That is the whole argument against CSS-in-a-JS-string in one example.
    The shell and the cells come from .seg; this is bar layout only. */
-.zoom-mag-bar { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin: 8px 0 6px; flex-wrap: wrap; }
+/* The loop panel's rows are 14-16px apart (owner, from an iPhone: "things just
+   seem close together"). Measured before at 390: the handles' caps touched the
+   zoom bar (0px) and sat 2px above Scroll, and Crossfade's thumb overlapped the
+   Step size row. The caps reach 6px past the waveform on both sides, so 14px
+   here and 16px on Scroll leave 8-10px of air around them. */
+.zoom-mag-bar { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin: 0 0 14px; flex-wrap: wrap; }
 .zoom-mag-bar > .zoom-seg { flex: 0 0 auto; }
 /* THE ZOOM STEPPER. Same shell as .edge-controls below it -- well, hairline,
    --r-seg radius -- because this panel already says "step this value" three
@@ -5387,7 +5392,13 @@ a.player-btn { text-decoration: none; }
 }
 .slider-nudge-btn:hover { background: var(--surface-nudge-hover); }
 .slider-nudge-btn:active { background: var(--accent-fill); color: #fff; }
-.zoom-pan-row, .crossfade-row { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; }
+.zoom-pan-row, .crossfade-row { display: flex; align-items: center; gap: 10px; margin: 16px 0 4px; }
+.zoom-pan-row { margin-bottom: 0; }
+/* Same size as the Start / End / Step nudges four rows away (.nudge-btn: 32px,
+   30px on a phone), so one panel shows one
+   size of minus and plus. */
+.zoom-pan-row .slider-nudge-btn, .crossfade-row .slider-nudge-btn { width: 32px; height: 32px; border-radius: calc(var(--r-seg) - 3px); }
+@media (max-width: 640px) { .zoom-pan-row .slider-nudge-btn, .crossfade-row .slider-nudge-btn { width: 30px; height: 30px; } }
 .zoom-pan-label, .crossfade-label { font-size: 12px; color: var(--text-soft); flex: none; min-width: 64px; }
 .crossfade-val { font-size: 12px; color: var(--text-bright); flex: none; min-width: 38px; text-align: right; }
 #zoomTrackWrap { cursor: grab; }
