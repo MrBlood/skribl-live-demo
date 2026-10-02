@@ -154,20 +154,24 @@ A green check is not evidence until it has been shown to go red.
   be named in the sheet. It found the Pad's "Which tool am I using?" naming
   tools the Pad lacks, and Flip's Pages tip calling Duplicate "＋ Page" long
   after the button was renamed.
-- `verify_helpdemos.py` — How it works, shown: the example cards above the
-  reference. Every example is posted to the server and must be accepted, as a
-  person's drawing is; every Pad tool (and every tool Flip shares with it) has
-  a card with Try it; nothing is fetched until the panel opens; opened, the
-  replays paint growing ink, several at once, and the clips advance and match
-  the theme; closed, nothing plays; Try it picks the tool and leaves Shape's
-  card open; reduced motion shows finished drawings and posters and fetches no
-  video. Every example is drawn through the real editor by
+- `verify_helpdemos.py` — How it works, shown: a Watch it work bar above the
+  reference opens a drawer of example cards. Every example is posted to the
+  server and must be accepted, as a person's drawing is; every Pad tool (and
+  every tool Flip shares with it) has a card with Try it; the editor fetches
+  nothing for them, How it works only the bar's previews, the drawer the rest;
+  the bar counts the cards; in the drawer the replays paint changing ink,
+  several at once, and the clips advance and match the theme; the chips
+  filter; Escape, the grip and closing How it works close the drawer and stop
+  everything; Try it picks the tool and leaves Shape's card open; reduced
+  motion shows finished drawings and posters and fetches no video. Every example is drawn through the real editor by
   `tools/make_art.py` (Pad: the tool cards, the quick start's Draw card and
   Ideas to try) and `tools/make_flip.py` (Flip loops): an illustrator's
   strokes, `tools/artworks.py` and `tools/flipworks.py`, performed as real pen
   input by `tools/artdraw.py` on `tools/handmotion.py`'s hand;
   `tools/review_art.py` shows each in the player before it ships. The clips
-  are recorded from the app by `tools/make_help_clips.py`.
+  are recorded from the app by `tools/make_help_clips.py`, and the bar's
+  previews are stills of finished examples taken from the real panel by
+  `tools/make_help_thumbs.py`.
 - `verify_keys.py` — the global keydown map. flip.js attaches eight listeners,
   five of them Escape, and ArrowLeft/Right were once bound twice and both
   fired on one press.

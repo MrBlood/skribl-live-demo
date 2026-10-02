@@ -13391,3 +13391,28 @@ and elegant".
   line on either reads 900.
 * The Post clip was recorded with the sun doodle and is unchanged; its
   recorder now draws the cat, for the clip re-recording still to come.
+
+## After #304 -- the examples in a drawer
+
+The owner, looking at the merged panel: "Maybe the examples should be in a
+drawer? It fills the page and seems like a lot of stuff. We're making more
+stuff too right? A lot more." Nine cards today and some 25 to 30 planned
+(Flip's own tools, zoom, takes, music, photo, export) would bury the
+reference. Three layouts were mocked as tappable phones -- a drawer, examples
+inside each reference section, Watch | Read tabs -- and the owner chose the
+drawer.
+
+* **One bar on the page.** "Watch it work" with three still previews and a
+  count read from the page (never typed), above the unchanged reference.
+* **A drawer over the panel,** outside its scroll, with chips (All, Start,
+  Tools, Ideas) and every card two across on a phone, three on desktop. It
+  closes as every sheet does -- a tap or pull on its grip, the scrim, its
+  close button -- and on Escape, which it catches inside the panel so How it
+  works stays open; closing How it works closes it.
+* **Lazier than before.** How it works fetches only the previews (about 1 KB
+  each, `harness/tools/make_help_thumbs.py`, stills of finished examples from
+  the real panel under reduced motion); the player, examples and clips come
+  with the drawer.
+* `verify_helpdemos` drives the drawer: the bar, its count and previews, the
+  two-step lazy load, the chips, each way of closing, and that closing stops
+  playback. Each new check was turned red by its own mutation.
