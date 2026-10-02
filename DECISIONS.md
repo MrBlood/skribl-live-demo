@@ -13130,3 +13130,25 @@ all makes sense".
 * **What it cost.** The link player's HTML +319 B and CSS +1,845 B, both
   ratchets raised with the costs named beside them; the More sheet reuses the
   editor menu's `.menu-item` rather than drawing its rows a second time.
+
+## After #297 -- the More card: Share, Copy link, a speed pill
+
+The owner, from an iPhone: the ⋯ menu showed the title through it and sat
+over the title and the track. "Maybe put copy link in … menu. Also, does this
+menu look right?" Three menus were mocked on the real page (a bottom sheet, a
+solid popover, a popover with a speed pill), then a Share row two ways; the
+owner chose "C1 everywhere".
+
+* **The card is solid** and points at the ⋯ that opened it. It was 96%
+  opaque, which is enough for a title to read through.
+* **Four rows:** Share…, Copy link, Speed, Public gallery. Copy link left the
+  transport row, which is now only the transport. Share opens the device's
+  own sheet; a browser without one (Firefox on a desktop) copies the link and
+  says so, so the row is never a dead control. Share, Copy link and Gallery
+  stand down in full screen, as Copy and Gallery already did.
+* **Speed is the Pad's own pill** (`.seg`, the tune sheet's three options),
+  lit by its fallback tint: the player does not load `lib/segslider.js`, and
+  the sliding pill is not worth its bytes on a page that shows it once. The
+  speed now takes one tap instead of cycling.
+* **The card's icons carry their stroke in CSS**, not on each `<svg>`: four
+  icons' worth of the same attributes was most of the card's HTML.

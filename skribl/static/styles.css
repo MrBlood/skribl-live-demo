@@ -4832,10 +4832,11 @@ body.player-mode .app {
                                       rgba(var(--surface-deep-rgb), .82) 62%,
                                       rgba(var(--surface-deep-rgb), 0));
 }
-/* COPY LINK AND GALLERY STAND DOWN IN FULL SCREEN. Both take a person off
+/* SHARE, COPY LINK AND GALLERY STAND DOWN IN FULL SCREEN. All take a person off
    this drawing, which is the one thing full screen is for; the transport is
    what belongs over a picture filling the display. They are a tap away again
    the moment the drawing is not. */
+.canvas-wrap:fullscreen #playerShareBtn,
 .canvas-wrap:fullscreen #playerCopyBtn,
 .canvas-wrap:fullscreen #playerGalleryLink { display: none; }
 /* AND THE BAR DOES NOT STAND ON THE DRAWING. `--pbar` is the bar's measured
@@ -5004,10 +5005,6 @@ body.player-mode #canvas {
 /* Gallery is an anchor so it can still be opened in a new tab; it has to be
    told it is not a link-looking thing. */
 a.player-btn { text-decoration: none; }
-/* Speed is the one control in this row whose CONTENT is its label. Tabular
-   figures so 1x and 2x do not jiggle the row's width as it cycles. */
-.player-rate { font-family: var(--font-mono); font-size: 14px; font-weight: 600;
-  font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 
 .player-progress {
   width: 100%;
@@ -5088,18 +5085,31 @@ a.player-btn { text-decoration: none; }
   font: 12px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 
-/* MORE: Speed and Gallery, in a small sheet that opens UP from the button
-   (it is the last thing in the row, and in full screen the row is the
-   bottom of the display). The rows are the editor menu's .menu-item. */
+/* MORE: Share, Copy link, Speed and Gallery, on a SOLID card that opens up
+   from the button and points at it (the owner's pick of three mocks). It was
+   96% opaque and the title showed through it on an iPhone. The rows are the
+   editor menu's .menu-item; Speed is the Pad's own pill. */
 .player-more { position: relative; }
-.player-menu { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 20;
-  min-width: 200px; padding: 6px; border-radius: 14px;
-  background: rgba(var(--surface-control-rgb), 0.96);
-  border: 1px solid var(--hairline-strong); box-shadow: 0 16px 50px rgba(0, 0, 0, 0.35); }
+.player-menu { position: absolute; right: 0; bottom: calc(100% + 12px); z-index: 20;
+  min-width: 248px; padding: 4px; border-radius: 14px;
+  background: rgb(var(--surface-control-rgb));
+  border: 1px solid var(--hairline-strong); box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35); }
+.player-menu::after { content: ''; position: absolute; right: 15px; bottom: -7px;
+  width: 12px; height: 12px; transform: rotate(45deg); background: inherit;
+  border: solid var(--hairline-strong); border-width: 0 1px 1px 0; }
 .player-menu[hidden] { display: none; }
-.player-menu .player-rate { justify-content: space-between; }
-.player-menu .player-rate::before { content: 'Speed'; font: 600 14px/1 -apple-system,
-  BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+.player-menu > * + * { border-top: 1px solid var(--hairline); border-radius: 0; }
+.player-speed { display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 6px 6px 6px 14px; }
+.player-speed > span:first-child { display: flex; align-items: center; gap: 12px;
+  font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.player-speed svg { width: 18px; height: 18px; color: var(--text-secondary); }
+/* The card's line icons carry their stroke here rather than on every <svg>:
+   four icons' worth of the same five attributes was most of the card's HTML. */
+.player-menu svg { fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; }
+#playerGalleryLink svg { fill: currentColor; stroke: none; }
+.player-speed .seg button { min-height: 32px; padding: 0 11px; }
 
 .player-cta {
   display: inline-flex;
