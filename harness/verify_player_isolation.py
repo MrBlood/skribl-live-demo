@@ -697,7 +697,12 @@ with sync_playwright() as sp:
     # (#playerAt / #playerDur) and the More button with its sheet, which
     # Speed and Gallery moved into so seven controls fit one row at 390.
     # 13,338 measured.
-    HTML_RATCHET = 13_340
+    # RAISED (the More card, owner: "C1 everywhere"), for named costs: +521 B
+    # -- Share and Copy link as rows with their icons, and Speed as the Pad's
+    # three-option pill in place of one cycling button. The icons' stroke
+    # attributes moved to CSS to keep this down (the first cut was +815).
+    # 13,859 measured.
+    HTML_RATCHET = 13_860
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
@@ -816,7 +821,11 @@ with sync_playwright() as sp:
     # second time), the clock under the track, the phone rule that keeps
     # seven controls on one line at 390, and Loop's lit look moving from
     # Play's solid violet to the one pill's tint. 32,156 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 32_160, 119_844, 40_000
+    # RAISED (the More card, owner: "C1 everywhere"), for named costs:
+    # +1,799 B -- the card made solid with a pointer at its button, dividers,
+    # the speed row, and the Pad's .seg pill rules (its track, its options and
+    # the fallback tint), which the player had never needed. 33,955 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 33_960, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

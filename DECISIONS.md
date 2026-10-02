@@ -13152,3 +13152,5 @@ owner chose "C1 everywhere".
   speed now takes one tap instead of cycling.
 * **The card's icons carry their stroke in CSS**, not on each `<svg>`: four
   icons' worth of the same attributes was most of the card's HTML.
+* **What it cost.** The link player's HTML +521 B and CSS +1,799 B, both
+  ratchets raised with the costs named beside them.
