@@ -27,9 +27,9 @@ def _dot(cx, cy, r):
 
 
 def cat():
-    """A cat, head and shoulders, head tipped: twelve strokes, one idea -- the
+    """A cat, head and shoulders, head tipped: sixteen strokes, one idea -- the
     face. Silhouette, then the body, then the eyes (purple, then the lids), the
-    pink nose, the mouth, and one whisker flicked on each side last."""
+    pink nose, the mouth, and three whiskers flicked on each side last."""
     return _tilt([
         # ears and the top of the head in one sweep: heavy at the ear roots,
         # thin at the tips and across the top where it turns into the light
@@ -55,88 +55,84 @@ def cat():
         # the nose, the accent, then the mouth in one stroke
         S([(398, 342), (418, 342), (408, 355), (401, 345), (412, 346)], "fill", PINK, size=10),
         S([(383, 374), (396, 378), (407, 364), (419, 378), (432, 373)], "detail", weight=[(0, 0.6), (0.5, 1.0), (1, 0.6)]),
-        # one whisker each side, flicked out fast
-        S([(368, 366), (318, 360), (258, 362)], "accent", taper=(0.05, 0.6)),
-        S([(448, 366), (500, 360), (560, 360)], "accent", taper=(0.05, 0.6)),
+        # three whiskers each side, fanned, flicked out fast
+        S([(368, 358), (318, 348), (262, 340)], "accent", taper=(0.05, 0.6)),
+        S([(368, 366), (316, 364), (258, 366)], "accent", taper=(0.05, 0.6)),
+        S([(370, 374), (320, 382), (266, 394)], "accent", taper=(0.05, 0.6)),
+        S([(448, 358), (500, 346), (556, 338)], "accent", taper=(0.05, 0.6)),
+        S([(448, 366), (502, 362), (560, 364)], "accent", taper=(0.05, 0.6)),
+        S([(446, 374), (498, 380), (552, 392)], "accent", taper=(0.05, 0.6)),
     ], -6)
 
 
-def scene():
-    """A cottage on a hill, framed by a tree close by, mountains far off.
-    Depth by overlap (far lines stop where near things cover them), by size,
-    and by line: far is thin and purple, near is heavy and dark. Laid in as a
-    landscape painter would: the hill, the near frame, the middle, the far,
-    then the path towards us, and accents last."""
+def _blob(cx, cy, rx, ry, turns=2.2, n=26, start=1.0):
+    """Colour laid in with a loose spiral that closes on the middle."""
     import math
-    out = [
-        # -- gesture: the hill line, the ground of the whole picture ----------
-        S([(186, 428), (290, 408), (380, 402), (426, 401)], "gesture", size=9, weight=[(0, 1.0), (1, 0.75)],
-          taper=(0.08, 0.1)),
-        S([(580, 391), (660, 382), (740, 386), (812, 398)], "gesture", size=9, weight=[(0, 0.75), (1, 0.45)],
-          taper=(0.1, 0.25)),
-        # -- near: the tree that frames the corner, heavy ----------------------
-        S([(64, 610), (88, 500), (102, 380), (118, 280), (142, 196)], "contour", size=13,
-          weight=[(0, 1.0), (0.7, 0.8), (1, 0.45)], taper=(0.04, 0.3)),
-        S([(132, 610), (140, 500), (150, 390), (160, 300), (178, 214)], "contour", size=11,
-          weight=[(0, 1.0), (1, 0.4)], taper=(0.04, 0.3)),
-        S([(150, 236), (206, 182), (280, 140), (370, 112)], "contour", size=9,
-          weight=[(0, 1.0), (1, 0.3)], taper=(0.05, 0.45)),
-        S([(118, 300), (74, 262), (30, 248)], "contour", size=8, weight=[(0, 1.0), (1, 0.3)], taper=(0.05, 0.45)),
+    return [(cx + rx * start * (1 - k / n) ** 0.8 * math.cos(-0.9 + 2 * math.pi * turns * k / n),
+             cy + ry * start * (1 - k / n) ** 0.8 * math.sin(-0.9 + 2 * math.pi * turns * k / n)) for k in range(n + 1)]
+
+
+def _sharp(pts, d=4):
+    """Keep a polyline's corners: a point just either side of each one, so the
+    smoothed hand turns there instead of rounding the corner off."""
+    import math
+
+    def toward(p, q):
+        L = math.hypot(q[0] - p[0], q[1] - p[1]) or 1
+        return (p[0] + (q[0] - p[0]) * d / L, p[1] + (q[1] - p[1]) * d / L)
+    out = [pts[0]]
+    for a, b, c in zip(pts, pts[1:], pts[2:]):
+        out += [toward(b, a), b, toward(b, c)]
+    return out + [pts[-1]]
+
+
+def _arc(cx, cy, rx, ry, a0, a1, n=10):
+    import math
+    return [(cx + rx * math.cos(math.radians(a0 + (a1 - a0) * k / n)),
+             cy + ry * math.sin(math.radians(a0 + (a1 - a0) * k / n))) for k in range(n + 1)]
+
+
+def scene():
+    """A cottage on a hill, a tree beside it, mountains far off: depth in a
+    few lines. Near is heavy and dark, far is thin and purple; the tree's
+    canopy is painted over the mountains, so they pass behind it. The hill
+    first, then the cottage, the tree, the far range, the path towards us,
+    and a few accents last."""
+    return [
+        # the hill: the ground of the whole picture, heaviest nearest the middle
+        S([(30, 432), (220, 402), (400, 392), (600, 398), (790, 424)], "gesture", size=10,
+          weight=[(0, 0.5), (0.45, 1.0), (1, 0.45)], taper=(0.06, 0.12)),
+        # the cottage: walls in one stroke, the roof over them, the door, the
+        # chimney. Corners stay corners: a hand slows into a corner and turns.
+        S(_sharp([(300, 300), (300, 396), (460, 396), (460, 300)]), "contour", size=9,
+          weight=[(0, 0.7), (0.4, 1.0), (1, 0.75)]),
+        S(_sharp([(280, 318), (380, 222), (480, 318)]), "contour", size=10, weight=[(0, 0.8), (0.5, 1.0), (1, 0.85)]),
+        S(_sharp([(368, 396), (368, 352), (392, 352), (392, 396)]), "form", size=6.5),
+        S(_sharp([(440, 280), (440, 248), (458, 248), (458, 297)]), "form", size=6),
+        # the tree: trunk, then the canopy painted over it, then its shadow side
+        S([(586, 404), (590, 350), (596, 292)], "contour", size=11, weight=[(0, 1.0), (1, 0.6)], taper=(0.05, 0.2)),
+        S(_blob(600, 256, 60, 52, turns=2.8, n=40, start=0.9), "fill", PURPLE, size=28, peak=0.95, pace=2.0, taper=(0.03, 0.05)),
+        S(_arc(600, 256, 66, 58, -10, 120), "form", size=6, weight=[(0, 0.4), (0.5, 1.0), (1, 0.4)]),
+        # far: the mountains, thin and purple, broken where the cottage stands
+        S([(30, 352), (110, 262), (160, 304), (232, 220), (290, 290)], "form", PURPLE, size=6, peak=0.75,
+          weight=[(0, 0.5), (0.35, 1.0), (0.7, 0.8), (1, 0.4)]),
+        S([(474, 300), (512, 258), (548, 226)], "form", PURPLE, size=6, peak=0.75,
+          weight=[(0, 0.4), (1, 0.9)]),
+        S([(660, 236), (700, 200), (790, 300)], "form", PURPLE, size=6, peak=0.75,
+          weight=[(0, 0.9), (0.3, 1.0), (1, 0.5)]),
+        # the sun, high and small, the accent colour
+        S(_blob(712, 104, 20, 20, turns=3.0, n=30), "fill", PINK, size=16, pace=1.6),
+        # the path, widening as it comes to us
+        S([(372, 398), (356, 452), (316, 522), (282, 610)], "contour", size=8,
+          weight=[(0, 0.3), (1, 1.0)], taper=(0.04, 0.1)),
+        S([(388, 398), (410, 452), (416, 522), (468, 610)], "contour", size=8,
+          weight=[(0, 0.3), (1, 1.0)], taper=(0.04, 0.1)),
+        # accents: the lit window, the smoke, two birds
+        S(_sharp([(420, 326), (444, 326), (444, 352), (420, 352), (420, 327)]), "detail", size=5),
+        S(_blob(432, 339, 7, 7, turns=1.6, n=12), "fill", PURPLE, size=11),
+        S([(449, 240), (442, 222), (454, 206), (446, 188)], "accent", size=4.5),
+        S([(150, 140), (162, 150), (172, 140), (182, 150), (194, 140)], "accent", size=4.5),
     ]
-    # leaves along the branch: purple, each a quick loop, pointing along it
-    for (x, y, ang) in [(214, 164, -40), (252, 132, -70), (286, 152, 20), (326, 104, -60), (356, 128, 15),
-                        (186, 196, -110), (64, 236, -120), (40, 262, 160)]:
-        a = math.radians(ang); L = 28
-        tip = (x + L * math.cos(a), y + L * math.sin(a))
-        sideA = (x + 0.5 * L * math.cos(a) - 5 * math.sin(a), y + 0.5 * L * math.sin(a) + 5 * math.cos(a))
-        sideB = (x + 0.5 * L * math.cos(a) + 5 * math.sin(a), y + 0.5 * L * math.sin(a) - 5 * math.cos(a))
-        mid = (x + 0.45 * L * math.cos(a), y + 0.45 * L * math.sin(a))
-        out.append(S([(x, y), sideA, tip, sideB, (x + 1, y + 1), mid, (x + 0.75 * L * math.cos(a), y + 0.75 * L * math.sin(a))],
-                     "fill", PURPLE, size=11, peak=0.9, taper=(0.15, 0.2)))
-    out += [
-        # -- middle: the cottage, a block in perspective -----------------------
-        S([(416, 336), (466, 284), (518, 336)], "contour", size=8, weight=[(0, 0.8), (0.5, 1.0), (1, 0.8)]),
-        S([(466, 284), (536, 268), (590, 320)], "contour", size=7.5),
-        S([(518, 336), (590, 320)], "form", size=6.5),
-        S([(428, 334), (428, 402), (508, 402), (508, 334)], "form", size=6.5),
-        S([(508, 402), (578, 392), (578, 322)], "form", size=6),
-        S([(456, 402), (456, 364), (480, 364), (480, 402)], "detail", size=5),
-        S([(530, 344), (556, 340), (556, 364), (530, 368), (530, 345)], "detail", size=4.5),
-        S([(536, 350), (550, 348), (550, 360), (537, 362)], "fill", PURPLE, size=7),
-        S([(546, 282), (546, 260), (562, 258), (562, 292)], "detail", size=5.5),
-        # -- far: mountains, thin and purple, broken where nearer things stand
-        S([(196, 330), (250, 262), (296, 300), (360, 228), (414, 300), (428, 318)], "form", PURPLE, size=5,
-          peak=0.7, weight=[(0, 0.4), (0.4, 1.0), (1, 0.5)]),
-        S([(596, 304), (640, 248), (690, 286), (748, 214), (812, 284)], "form", PURPLE, size=5, peak=0.7,
-          weight=[(0, 0.5), (0.6, 1.0), (1, 0.4)]),
-        # the sun, peeking over the ridge in the gap between the peaks
-        S([(663, 268), (666, 248), (680, 236), (698, 235), (711, 247), (713, 262)], "form", PINK, size=7, peak=0.85,
-          taper=(0.1, 0.2)),
-        # shade: the side wall and under the eave, hatched once
-        S([(516, 396), (532, 378)], "accent", PURPLE, size=4), S([(536, 394), (556, 374)], "accent", PURPLE, size=4),
-        S([(556, 392), (574, 372)], "accent", PURPLE, size=4), S([(560, 336), (574, 324)], "accent", PURPLE, size=4),
-    ]
-    # -- near again: the path, an S that widens as it comes to us -----------
-    cen = [(468, 404), (452, 446), (482, 494), (500, 540), (452, 612)]
-    wid = [8, 30, 60, 86, 130]
-    left = [(x - w / 2, y) for (x, y), w in zip(cen, wid)]
-    right = [(x + w / 2, y) for (x, y), w in zip(cen, wid)]
-    out += [S(left, "contour", size=8.5, weight=[(0, 0.25), (1, 1.0)], taper=(0.04, 0.1)),
-            S(right, "contour", size=8.5, weight=[(0, 0.25), (1, 1.0)], taper=(0.04, 0.1))]
-    # grass, leaning: three tufts, each blade a curve from its root
-    for bx, sc in ((640, 1.0), (730, 0.85)):
-        for dx, h, lean in [(-14, 70, -40), (-4, 96, -14), (6, 104, 8), (16, 74, 34)]:
-            root = (bx + dx * sc, 610)
-            out.append(S([root, (root[0] + lean * 0.25 * sc, 610 - h * 0.45 * sc),
-                          (root[0] + lean * sc, 610 - h * sc)], "contour",
-                         size=9, pace=1.5, taper=(0.04, 0.75), weight=[(0, 1.0), (1, 0.5)]))
-    out += [
-        # -- accents: smoke from the chimney, two birds far off ---------------
-        S([(554, 252), (548, 236), (560, 222), (552, 206), (564, 192)], "accent", size=4),
-        S([(468, 168), (480, 177), (490, 168), (500, 177), (512, 168)], "accent", size=4.5),
-        S([(520, 140), (529, 146), (536, 139), (543, 146), (552, 140)], "accent", size=4),
-    ]
-    return out
 
 
 def snail():

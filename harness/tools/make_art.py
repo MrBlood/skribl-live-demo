@@ -22,7 +22,7 @@ import browsing  # noqa: E402
 
 OUT = ROOT / "skribl" / "static" / "help" / "demos"
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
-TEMPO = {"snail": 2.4, "cat": 2.3}
+TEMPO = {"snail": 2.0, "cat": 1.9, "scene": 1.9}
 
 
 def make(browser, name):
