@@ -13242,3 +13242,28 @@ pill.
   selection tint the slate peaks had nearly vanished. `verify_sheetswipe`
   reads the strip's pixels inside and outside a middle loop on both editors;
   red with the old single colour.
+
+## After #301 -- room in Loop Detail; back to Trim without a leap
+
+The owner, from an iPhone, on the Fine-tune panel: "Crowded? ... Mostly things
+just seem close together". Mocked on the real Pad (A: even spacing, every
+control kept; B: the same plus one frame fewer); the owner chose A, "just more
+spacing".
+
+* **Measured before, at 390:** the loop handles' caps touched the zoom bar
+  (0px) and sat 2px above Scroll; Step size to Crossfade was 8px and
+  Crossfade's thumb overlapped the Step size row. Every row is now 14-16px
+  apart, which leaves the caps 8-10px of air, and the Scroll and Crossfade
+  nudges take the Start / End / Step nudges' size and corner (32px, 30px on
+  a phone), so one panel shows one minus and plus.
+* **Back to Trim** (owner: "when you're in fine tune and switch back to trim
+  it snaps back"). Scrolled to the end of Fine-tune, Trim made the page about
+  290px shorter, the browser clamped the scroll in one frame, and everything
+  under the finger leapt. `lib/drawerdetent.js` shrinkGently holds the page's
+  height across the switch, glides to where it would have clamped, and lets
+  go; both editors call it. Not scrolled that far, nothing moves.
+* `verify_sheetswipe` requires 8px above every row of the loop panel and no
+  single frame moving the pill more than 120px on the way back to Trim, on
+  both editors. Each goes red on its own old file: the old stylesheet (gaps 0
+  and 2) and each editor's old handler (349px in one frame), the other
+  editor staying green.
