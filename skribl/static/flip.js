@@ -2743,8 +2743,29 @@ function closePageOps(refocus){
   }
   _opsTrigger = null;
 }
+// One line icon per row, in the same stroke as the dock's. Delete is the
+// ribbed bin every other delete in the product draws (verify_icons ONE BIN).
+const _OPS_ICON = {
+  'Move left': '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
+  'Move right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  'Copy': '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  'Select through here': '<path d="M4 7h3v10H4"/><path d="M20 7h-3v10h3"/><path d="M10 12h4"/>',
+  'Draw on': '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  'Delete': '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>'
+};
+_OPS_ICON['Stop drawing'] = _OPS_ICON['Draw on'];
 function openPageOps(trigger, i){
   closePageOps(false);
+  // THE TRIGGER YOU TAPPED MAY BE GONE. Opening the menu on a page you are not
+  // on selects that page first, which REBUILDS the strip -- so the button in
+  // hand is detached, its rect is all zeros, and the menu was placed at the
+  // clamp: the top-left corner, over the header, nowhere near its page (the
+  // owner, from an iPhone: "This menu ... looks weird?"). Ask the strip for
+  // the page's live ⋯ instead.
+  if(!trigger.isConnected){
+    const live = strip.children[i] && strip.children[i].querySelector('.pageops');
+    if(live) trigger = live;
+  }
   const sp = pageSpan();
   const many = sp && SkriblPageSpan.contains(sp, i);
   const what = many ? 'these ' + SkriblPageSpan.count(sp) + ' pages' : 'this page';
@@ -2784,7 +2805,8 @@ function openPageOps(trigger, i){
     b.type = 'button';
     b.className = 'pageops-item' + (label === 'Delete' ? ' danger' : '');
     b.setAttribute('role', 'menuitem');
-    b.textContent = label;
+    b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (_OPS_ICON[label] || '') + '</svg>';
+    b.appendChild(document.createTextNode(label));
     // The visible label stays short ("Move left"); the SCOPE goes in the
     // accessible name, so a screen reader hears "Move these 3 pages left" while
     // the menu stays scannable. title as well, for the pointer tooltip — note
@@ -2798,11 +2820,21 @@ function openPageOps(trigger, i){
   });
   document.body.appendChild(m);
   // Anchored to the trigger and clamped to the window, so a menu opened on the
-  // last tile of a scrolled strip does not hang off the edge.
-  const r = trigger.getBoundingClientRect(), mr = m.getBoundingClientRect();
-  let left = Math.min(r.left, window.innerWidth - mr.width - 8);
-  m.style.left = Math.max(8, left) + 'px';
-  m.style.top = Math.max(8, r.top - mr.height - 6) + 'px';
+  // last tile of a scrolled strip does not hang off the edge. It sits ABOVE
+  // its page and points down at the ⋯ (the owner's pick of two mocks); with
+  // no room above, below, pointing up. Placed again on the next frame,
+  // because the selection that may have rebuilt the strip can also scroll it.
+  const place = () => {
+    const r = trigger.getBoundingClientRect(), mr = m.getBoundingClientRect();
+    const left = Math.max(8, Math.min(r.left - 14, window.innerWidth - mr.width - 8));
+    const above = r.top - mr.height - 12 >= 8;
+    m.classList.toggle('below', !above);
+    m.style.left = left + 'px';
+    m.style.top = (above ? r.top - mr.height - 12 : r.bottom + 12) + 'px';
+    m.style.setProperty('--caret', Math.max(14, Math.min(mr.width - 26, r.left + r.width / 2 - left - 6)) + 'px');
+  };
+  place();
+  requestAnimationFrame(place);
   trigger.setAttribute('aria-expanded', 'true');
   _opsMenu = m; _opsTrigger = trigger;
   const first = m.querySelector('.pageops-item:not(:disabled)');
