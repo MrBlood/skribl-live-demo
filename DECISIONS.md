@@ -13161,3 +13161,30 @@ owner chose "C1 everywhere".
   lap rightly restarted its music. The control now plays one pass with Loop
   off. Loop-on was a behaviour change for every suite that presses Play on
   the link player, not only those that touch the Loop button.
+
+## After #299 -- the editor page goes home when nothing is open
+
+The owner, from an iPhone, on the Pad and Flip: after a pull or a push, the
+page "bounced back too high ... stuck out of view about the header's size
+... and header menu is gone". It could not be made to happen again, and
+seemed to follow having had a drawer open. There is no WebKit here, so the
+cause is NOT confirmed; this is a safety net with a likely cause beside it.
+
+* **Flip never scrolled back.** On a phone both editors scroll the PAGE to
+  show an open drawer. The Pad's drawer machine scrolls home when everything
+  closes; Flip's returned without scrolling. It now does what the Pad does.
+  In Chromium the page also clamps home by itself as the drawer shrinks, so
+  no check can tell this line from its absence; it is parity, not a pin.
+* **The page goes home when nothing is open** (`lib/drawers.js`, both
+  editors). At 640px and under, once a scroll has settled and no finger is
+  down, a page with no drawer in either machine, no visible modal or menu
+  and no text field focused returns to the top. It listens to Safari's
+  visual viewport as well as the page: in Chromium the editor header is
+  pinned and stays painted when the page scrolls, so a header gone off the
+  top is more likely Safari sliding its whole view, which reports there.
+  `verify_sheetswipe` leaves each editor scrolled with nothing open and
+  requires it home, header painted, after the touch ends (red with the net
+  off), and requires an open drawer to be left alone.
+* **Still open:** whether this was the page or Safari's view, and whether the
+  net catches it on the device. If it recurs, a tap on the clock (which
+  scrolls the page, not the view) tells the two apart.
