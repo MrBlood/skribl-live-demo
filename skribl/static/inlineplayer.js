@@ -364,12 +364,22 @@
   }
 
   /* Wraps a visible context. Returns null when the payload has no translucent
-   * stroke at all, so an opaque drawing — which is most of them — allocates
-   * nothing and takes the same path it always did. */
+   * stroke and no eraser stroke, so an opaque drawing — which is most of them —
+   * allocates nothing and takes the same path it always did.
+   *
+   * AN ERASER STROKE NEEDS A LAYER OF ITS OWN TOO. It is drawn
+   * destination-out, and the background colour or photo is painted into the
+   * same canvas, so on the direct path an erase cut through the background as
+   * well and showed whatever was behind the player: the box's own dark ground
+   * in a feed, the library, the gallery, an embed. A light drawing with an
+   * eraser stroke replayed with black lines where the eraser went (the owner
+   * saw it on How it works' Eraser card). The editor and /s/<id> keep the
+   * background BEHIND the canvas, so an erase reveals it; here the background
+   * is kept as a base layer under the ink, which is the same thing. */
   function makeCompositor(visCtx, visCanvas, strokes, ratio) {
     var any = false;
     for (var i = 0; i < strokes.length; i++) {
-      if (!strokes[i].erase && parseStrokeAlpha(strokes[i].color) < 1) {
+      if (strokes[i].erase || parseStrokeAlpha(strokes[i].color) < 1) {
         any = true;
         break;
       }
@@ -386,15 +396,18 @@
      * layers must match ctx.setTransform in adopt(), so they take the same
      * number rather than a second opinion about it. */
     var dpr = ratio || (visCanvas.width / (visCanvas.clientWidth || visCanvas.width)) || 1;
+    var base = document.createElement('canvas');
     var dry = document.createElement('canvas');
     var wet = document.createElement('canvas');
-    dry.width = wet.width = visCanvas.width;
-    dry.height = wet.height = visCanvas.height;
+    base.width = dry.width = wet.width = visCanvas.width;
+    base.height = dry.height = wet.height = visCanvas.height;
     var dctx = dry.getContext('2d');
     var wctx = wet.getContext('2d');
-    /* Seed dry with whatever is already painted — background, photo underlay. */
+    /* The base is whatever is already painted -- background, photo underlay --
+     * and the ink goes on a clear layer above it, so an erase reveals the
+     * base rather than cutting through it. */
+    base.getContext('2d').drawImage(visCanvas, 0, 0);
     dctx.setTransform(1, 0, 0, 1, 0, 0);
-    dctx.drawImage(visCanvas, 0, 0);
     dctx.scale(dpr, dpr);
     wctx.setTransform(1, 0, 0, 1, 0, 0);
     wctx.scale(dpr, dpr);
@@ -440,6 +453,7 @@
         visCtx.setTransform(1, 0, 0, 1, 0, 0);
         visCtx.globalAlpha = 1;
         visCtx.clearRect(0, 0, visCanvas.width, visCanvas.height);
+        visCtx.drawImage(base, 0, 0);
         visCtx.drawImage(dry, 0, 0);
         if (wetActive) {
           visCtx.globalAlpha = wetAlpha;
