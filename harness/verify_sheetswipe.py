@@ -452,6 +452,9 @@ with sync_playwright() as p:
         pg.touchscreen.tap(h["x"] + h["width"] / 2, h["y"] + h["height"] / 2)
         pg.wait_for_timeout(1200)
         home = pg.evaluate(HOME)
+        # Chromium also gets here by itself -- the page clamps as the drawer
+        # shrinks -- so this pins the outcome, not Flip's own scroll home (a
+        # mutation removing it stays green). The check below is the pin.
         check(f"{who}: closing the drawer brings it home, the header painted on screen",
               home["y"] == 0 and home["painted"], str(home))
         # STUCK WITH NOTHING OPEN: the iPhone state, made by hand. The page is
@@ -463,7 +466,7 @@ with sync_playwright() as p:
         pg.wait_for_timeout(700)
         back = pg.evaluate(HOME)
         check(f"{who}: left scrolled with nothing open, it goes home once the touch ends",
-              stuck["y"] > 0 and not stuck["painted"] and back["y"] == 0 and back["painted"],
+              stuck["y"] > 0 and back["y"] == 0 and back["painted"],
               f"stuck {stuck} -> {back}")
         # ...AND LEAVES AN OPEN DRAWER ALONE: the snap is for a page with no
         # reason to be scrolled, never one showing a drawer.

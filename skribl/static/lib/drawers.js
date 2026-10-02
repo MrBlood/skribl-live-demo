@@ -101,8 +101,9 @@
    * scrolled -- it is built to fit one phone screen -- so once a scroll has
    * settled and no finger is down, it returns to the top.
    *
-   * Phones only (the size class's `compact`), because a short desktop window
-   * can legitimately scroll. "Nothing open" means no drawer in any machine,
+   * Phones only -- 640px and under, lib/sizeclass.js's compact boundary,
+   * asked of the media query because the Pad does not load that lib -- since
+   * a short desktop window can legitimately scroll. "Nothing open" means no drawer in any machine,
    * no visible modal or menu, and no text field being typed in, whose
    * keyboard moves the page on purpose. Never during a touch: it waits for
    * the scroll to stop, so it cannot fight a finger or a bounce. */
@@ -120,7 +121,7 @@
   }
   function goHome() {
     settle = null;
-    if (touches || !document.querySelector('[data-size="compact"]') || somethingOpen()) return;
+    if (touches || !window.matchMedia('(max-width: 640px)').matches || somethingOpen()) return;
     var vv = window.visualViewport;
     if ((window.scrollY || 0) > 0 || (vv && vv.offsetTop > 0)) window.scrollTo(0, 0);
   }
@@ -130,6 +131,9 @@
     homeWired = true;
     var later = function () { clearTimeout(settle); settle = setTimeout(goHome, 250); };
     window.addEventListener('scroll', later, { passive: true });
+    // Safari can slide its VISUAL viewport over the page -- the whole layout,
+    // pinned header included, moves up -- and that reports here, not above.
+    if (window.visualViewport) window.visualViewport.addEventListener('scroll', later, { passive: true });
     window.addEventListener('touchstart', function (e) { touches = e.touches.length; clearTimeout(settle); }, { passive: true });
     var lift = function (e) { touches = e.touches.length; if (!touches) later(); };
     window.addEventListener('touchend', lift, { passive: true });
