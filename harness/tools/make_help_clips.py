@@ -131,7 +131,7 @@ def tap(page, sel, before=380, after=520, frm=(60, 90)):
     x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
     glide(page, (x + frm[0], y + frm[1]), (x, y), before)
     page.mouse.down(); page.wait_for_timeout(170); page.mouse.up()
-    page.wait_for_timeout(after)
+    page.wait_for_timeout(after + TAP_REST)
     return x, y
 
 
@@ -774,16 +774,27 @@ CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify
 ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove",
                                "inbetween", "smear", "onion", "hold", "guides")}
 # Where a clip is recorded, when not the tall phone screen above.
-# A phone's own screen, all of it.
-VIEWPORT = {k: (390, 844) for k in ("music", "post", "inbetween", "smear", "onion", "hold", "guides",
-                                     "takes", "speed", "photo", "export")}
+# A phone's own screen, all of it. The techniques and extras use a SHORTER
+# phone (390 x 640): still the whole screen, so every tap stays in frame, but
+# less empty page, so they are bigger in their cards (owner: "they're small").
+# Post and Add music keep the tall screen their sheets need.
+STEPS = ("inbetween", "smear", "onion", "hold", "guides", "takes", "speed", "photo", "export")
+VIEWPORT = {k: (390, 844) for k in ("music", "post")}
+VIEWPORT.update({k: (390, 640) for k in STEPS})
 VIEWPORT["zoom"] = (1024, 768)   # a desktop: the magnifier lives in its dock
+# The clips filmed as a whole screen, shown as a phone in a tall card.
+SCREEN = ("music", "post", "zoom") + STEPS
 
 
 # Driving a 2x page makes every gesture take about half again as long as it
 # was scripted to, so clips play back at this rate to move at a hand's speed
 # (a touch brisker since the owner asked for shorter clips).
 SPEED = 1.6
+# ...except the whole-screen clips, which teach a sequence of taps and play at
+# real speed with a beat after each tap (owner: "they go too fast, it's hard
+# to follow").
+SCREEN_SPEED = 1.0
+TAP_REST = 0
 
 
 def held(frames, i):
@@ -805,7 +816,8 @@ def clock(frames, t):
     return out
 
 
-def encode(frames, crop, out):
+def encode(frames, crop, out, speed=None):
+    speed = speed or SPEED
     if len(crop) == 4 and isinstance(crop[3], list):
         # (x, w, h, [(t, y), ...]): the camera holds at each framing and eases
         # to the next, written as the first framing plus one eased move per
@@ -833,7 +845,7 @@ def encode(frames, crop, out):
         # A whole phone screen is 780 px wide at 2x; 600 keeps its text crisp
         # full screen at a fraction of the bytes. A canvas crop stays native.
         fit = ",scale=600:-2:flags=lanczos" if w > 700 else ""
-        vf = f"crop={w}:{h}:{x}:{y},setpts=PTS/{SPEED}{fit},fps=30,format=yuv420p"
+        vf = f"crop={w}:{h}:{x}:{y},setpts=PTS/{speed}{fit},fps=30,format=yuv420p"
         src = ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(pathlib.Path(d) / "list.txt"), "-vf", vf]
         subprocess.run(src + ["-c:v", "libx264", "-profile:v", "high", "-crf", "21", "-preset", "slow",
                               "-movflags", "+faststart", "-an", str(out)], check=True)
@@ -848,6 +860,8 @@ def encode(frames, crop, out):
 
 
 def make(browser, name, dark):
+    global TAP_REST
+    TAP_REST = 350 if name in SCREEN else 0
     vw, vh = VIEWPORT.get(name, (VW, VH))
     ctx = browser.new_context(viewport={"width": vw, "height": vh}, device_scale_factor=DPR,
                               color_scheme="dark" if dark else "light")
@@ -864,7 +878,7 @@ def make(browser, name, dark):
     if errs:
         raise SystemExit(f"{name}: page errors {errs[:2]}")
     out = OUT / f"{name}-{'dark' if dark else 'light'}.mp4"
-    encode(rec.frames, crop, out)
+    encode(rec.frames, crop, out, SCREEN_SPEED if name in SCREEN else SPEED)
     print(f"{out.stem:14s} {len(rec.frames):4d} frames  mp4 {out.stat().st_size:8,d} B  webm {out.with_suffix('.webm').stat().st_size:8,d} B")
 
 

@@ -13547,3 +13547,21 @@ with a drawing. Each editor gets a chip of its own in the examples drawer.
   editor and must have an example under its chip, and neither editor shows the
   other's chip. A renamed or removed control fails it instead of leaving the
   list stale.
+
+## The step-by-step clips, bigger and slower
+
+The owner, on the Techniques: "The technical examples go to fast it's hard to
+follow and they're small." Measured on a phone, a whole-screen clip showed at
+57 x 122 px in its card. Mocked side by side, the owner chose the version
+below; asked whether tapping still shows it large, the measurement said yes
+(325 px wide full screen, as before).
+
+* **Real speed.** The whole-screen clips (Post, Add music, Techniques,
+  Extras, Zoom) play at 1x instead of 1.6x, with a beat after each tap.
+  The tool clips, which show one gesture, keep their pace.
+* **A shorter phone.** The techniques and extras are filmed on a 390 x 640
+  screen: still the whole screen, so no tap leaves the frame, with less empty
+  page. Post and Add music keep the tall screen their sheets need.
+* **A tall card.** A phone clip's stage is 3:4 instead of 4:3, so the phone
+  fills it: about 132 x 217 px in the card instead of 57 x 122. Zoom, filmed on
+  a desktop, keeps the wide stage (`data-shape="desk"`).
