@@ -84,7 +84,8 @@ INK = """card => { const c = card.querySelector('canvas.skribl-inline-canvas');
 TECHNIQUES = {"onion": "#onion", "inbetween": "#addinbetween", "smear": "#addtween",
               "hold": "#strip .frame .holdbadge", "guides": "#arcGuideBtn"}
 # Pad's extras -> the control each one is.
-EXTRAS = {"takes": "#addTakePill", "speed": "#speedSeg", "photo": "#photoUploadBtn", "export": "#exportItem"}
+EXTRAS = {"takes": "#addTakePill", "speed": "#speedSeg", "photo": "#photoUploadBtn", "export": "#exportItem",
+          "zoom": "#magnifyBtn"}
 OPEN = "() => { window.SkriblHints && window.SkriblHints.hide(); openHelpDrawer(); }"
 SHEET = "() => document.getElementById('learnPeek').click()"
 CARDS = "#learnSheet .learn-card"
