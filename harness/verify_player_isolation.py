@@ -1357,7 +1357,11 @@ with sync_playwright() as sp:
     # changes and a replay that does not is exactly the bug this is for, and
     # nothing about the button's own state can see the difference. Same wall
     # time, twice the rate, so materially more of the drawing should be done.
-    def _progress_after(rate, ms=1400):
+    # The window must leave 2x short of the END: Loop ships on, so a 2x run
+    # that finishes wraps to 0% and reads as slower than 1x. At 1400 ms the
+    # CI runner had 1x at 49.7%, so 2x finished and read 0.0% (main after
+    # #312). 700 ms puts 2x near half-way on that runner.
+    def _progress_after(rate, ms=700):
         pg.evaluate("() => { const b = document.getElementById('playerRestartBtn');"
                     " if (b) b.click(); }")
         pg.wait_for_timeout(200)
