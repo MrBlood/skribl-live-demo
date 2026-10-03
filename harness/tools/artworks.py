@@ -35,7 +35,7 @@ def cat():
     for st in d["strokes"]:
         role = st["role"]
         sz = 3.6 if st["name"].startswith("toe") else 11.0 if st["name"].startswith("iris") else size[role]
-        kw = {"taper": (0.05, 0.6)} if role == "accent" else {}
+        kw = {"taper": (0.05, 0.6)} if role == "accent" else {"taper": (0.02, 0.02)} if role == "fill" else {}
         if role in ("gesture", "contour"):
             kw["weight"] = [(0, 0.75), (0.5, 1.0), (1, 0.75)]
         out.append(S(m(st["pts"]), role, colour[st["color"]], size=sz, **kw))

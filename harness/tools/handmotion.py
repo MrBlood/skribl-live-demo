@@ -107,7 +107,9 @@ def stroke(path, *, pace=1.0, seed=0, pmin=0.30, pmax=0.95, tremor=0.45):
         x += tremor * (0.6 * math.sin(6.28 * 9.3 * sec + ph[1]) + 0.4 * math.sin(6.28 * 1.4 * sec + ph[2]))
         y += tremor * (0.6 * math.sin(6.28 * 10.1 * sec + ph[3]) + 0.4 * math.sin(6.28 * 1.7 * sec + ph[0]))
         vk = v[j] + (v[j + 1] - v[j]) * f
-        speed = 0 if vmax == vmin else (vk - vmin) / (vmax - vmin)
+        # Clamped: rounding can put vk a hair under vmin, and a negative to
+        # the 0.8th power is complex (the new cat at tempo 3 found it).
+        speed = 0 if vmax == vmin else max(0.0, min(1.0, (vk - vmin) / (vmax - vmin)))
         p = pmax - (pmax - pmin) * speed ** 0.8
         p *= min(1.0, 0.25 + tk / 45.0)          # pressure rises as the nib lands
         p *= min(1.0, 0.3 + (T - tk) / 70.0)     # and eases before the lift
