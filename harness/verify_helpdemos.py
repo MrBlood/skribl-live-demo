@@ -316,7 +316,14 @@ with sync_playwright() as p:
             pg.evaluate(SHEET); pg.wait_for_timeout(500)
             pg.locator(f'#learnSheet .learn-try[data-try="{t}"]').scroll_into_view_if_needed()
             pg.click(f'#learnSheet .learn-try[data-try="{t}"]')
-            pg.wait_for_timeout(600)
+            # How it works closes on a transition of about half a second; under
+            # a busy page it can run past a fixed 600ms. Wait for it, up to 3s,
+            # so a panel that never closes still fails.
+            try:
+                pg.wait_for_function("() => document.getElementById('helpDrawer').hidden", timeout=3000)
+            except Exception:
+                pass
+            pg.wait_for_timeout(150)
             got = pg.evaluate(f"() => ({{ tool: {tool_expr}, help: document.getElementById('helpDrawer').hidden,"
                               " card: !document.getElementById('shapePop').hidden })")
             check(f"{name}: Try it on {t} picks it and closes How it works"
