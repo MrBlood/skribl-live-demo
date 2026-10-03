@@ -112,7 +112,12 @@
        nothing focusable — better than leaving focus outside it. */
     if (!dialog.hasAttribute('tabindex')) dialog.setAttribute('tabindex', '-1');
     var items = usable(dialog);
-    (items.length ? items[0] : dialog).focus();
+    /* preventScroll: a dialog that slides in still has its first control off
+       screen when focus arrives, and a focus that may scroll made the browser
+       scroll the sliding panel's frame sideways to show it -- How it works
+       snapped in, then eased back as its slide ran (owner's iPhone: "the menu
+       hiccups before it slides in"). Focus moves; nothing scrolls. */
+    (items.length ? items[0] : dialog).focus({ preventScroll: true });
   }
 
   function close(dialog) {

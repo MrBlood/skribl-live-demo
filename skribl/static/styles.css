@@ -4130,7 +4130,12 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   z-index: 100;
   pointer-events: none;
   opacity: 0;
+  /* clip, not just hidden: a hidden box can still be scrolled by script or by
+     focus, and focus arriving inside the panel while it slid in scrolled this
+     frame sideways -- the panel snapped in, then eased back. clip makes it
+     unscrollable; hidden is the fallback for engines without clip. */
   overflow: hidden;
+  overflow: clip;
   transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 

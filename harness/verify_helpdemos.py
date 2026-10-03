@@ -274,7 +274,12 @@ with sync_playwright() as p:
         pg.evaluate(SHEET); pg.wait_for_timeout(500)
         # The sheet glides up for .34s and under load can still be moving at
         # 500ms: a pull that starts on a moving grip measured 2 failures in 5.
-        # Wait for the grip to hold still (up to 3s), then pull.
+        # Wait for it to be OPEN and its slide FINISHED -- "the grip held still
+        # for 100ms" alone was fooled by a sheet that had not started moving
+        # yet (Flip, 1 run in 3: the pull landed as it rose, -15px of 144).
+        pg.wait_for_function("""() => { const s = document.getElementById('learnSheet'),
+            p = s && s.querySelector('.learn-sheet-panel'); if (!s || !s.classList.contains('open')) return false;
+            const t = getComputedStyle(p).transform; return t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)'; }""", timeout=4000)
         g, prev = None, None
         for _ in range(30):
             g = pg.locator("#learnGrip").bounding_box()
@@ -364,6 +369,37 @@ with sync_playwright() as p:
               "playing" not in s6["replays"] and all(x > 50 for x in ink), f"{s6['replays']} ink {ink}")
         check(f"{name}: and each clip shows its poster without fetching the video",
               all(c["poster"] and not c["src"] for c in s6["clips"]), str(s6["clips"]))
+        ctx.close()
+
+        # 8. HOW IT WORKS SLIDES IN, it does not jump (owner's iPhone: "the menu
+        # hiccups before it slides in"). Opening moves focus to the close button
+        # while the panel is still off the right edge; a focus() that may
+        # scroll made the browser scroll the drawer sideways to reveal it, so
+        # the panel snapped fully in at once and then eased back as the slide
+        # ran. Measured frame by frame, opened from the menu as a person does.
+        ctx = b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
+        pg = ctx.new_page()
+        browsing.goto(pg, BASE, route)
+        pg.wait_for_timeout(800)
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        opener = ("#menuBtn", "#helpItem") if name == "Pad" else ("#moreBtn", "#miInfo")
+        pg.click(opener[0]); pg.wait_for_timeout(600)
+        frames = pg.evaluate("""(item) => new Promise(res => { const d = document.getElementById('helpDrawer'),
+            i = d.querySelector('.help-drawer-inner'), out = [], t0 = performance.now();
+            document.querySelector(item).click();
+            (function tick() { out.push([d.scrollLeft, i.getBoundingClientRect().left]);
+              if (performance.now() - t0 < 700) requestAnimationFrame(tick); else res(out); })(); })""", opener[1])
+        scrolled = max(f[0] for f in frames)
+        lefts = [f[1] for f in frames]
+        steps = [a_ - b_ for a_, b_ in zip(lefts, lefts[1:])]
+        # One way, and travelled: a snap from off-screen to home in a single
+        # frame is "one way" too, which is how the first draft of this passed
+        # on the broken tree.
+        steady = all(st_ >= -1 for st_ in steps) and max(steps) < 200
+        check(f"{name}: How it works slides in; its frame never scrolls sideways",
+              scrolled == 0, f"drawer scrollLeft peaked at {scrolled}px over {len(frames)} frames")
+        check(f"{name}: ...and the panel travels in, right to left, no frame jumping 200px",
+              steady and lefts[0] > lefts[-1], f"panel left edge by frame: {[round(x) for x in lefts[::4]]}")
         ctx.close()
 
         # 7. on a phone with a panel open, How it works is still the SCREEN.
