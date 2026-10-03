@@ -43,7 +43,7 @@ ROLES = {
 
 class Stroke:
     def __init__(self, pts, role="form", color=INK, *, size=None, pace=None, peak=None, taper=(0.12, 0.2), bend=0.0,
-                 weight=None, tool="pen", shape=None):
+                 weight=None, tool="pen", shape=None, flat=False):
         # `tool`: the dock tool this stroke is made with ("pen", "eraser",
         # "shape"), picked as a person taps it. `shape`: for the Shape tool,
         # {"kind": "rect"|"ellipse"|"poly"|"line", "radius": 0..50, "sides": n},
@@ -53,6 +53,10 @@ class Stroke:
         # leans in or lifts off -- a contour swells on its shadow side and
         # thins where it turns into the light. Multiplies the taper.
         self.weight = weight
+        # `flat`: an even marker line at `peak` the whole way, no landing or
+        # lift -- for a drawing whose lines are even (the owner's pug). A short
+        # quick stroke otherwise starts on a thin first segment, then jumps.
+        self.flat = flat
         self.pts, self.role, self.color = pts, role, color
         b, p, v = ROLES[role]
         self.size = size or b
@@ -107,7 +111,7 @@ def plan(strokes, seed=1, tempo=1.0):
                         f = 0.5 - 0.5 * math.cos(math.pi * f)
                         w = w0 + (w1 - w0) * f
                         break
-            p = st.peak * (0.12 + 0.88 * env) * w * (0.85 + 0.15 * p_speed)
+            p = st.peak if st.flat else st.peak * (0.12 + 0.88 * env) * w * (0.85 + 0.15 * p_speed)
             shaped.append((x, y, ms, max(0.04, min(1.0, p))))
         out.append(shaped)
     return out

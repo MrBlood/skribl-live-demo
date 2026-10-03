@@ -228,20 +228,32 @@ def pug():
     ox, oy = (816 - w * s) / 2, (612 - h * s) / 2
     m = lambda pts: [((x - x0) * s + ox, (y - y0) * s + oy) for x, y in pts]
     L = lambda p: sum(math.dist(a, b) for a, b in zip(p, p[1:]))
-    colour = {"tan": "#fbe1c0", "brown": "#6d503f", "purple": PURPLE}
-    out = []
-    for name in ("tan", "brown", "purple"):
-        for f in sorted((f for f in d["fills"] if f["color"] == name), key=lambda f: -f["area"]):
-            # Full pressure and a touch wider: the editor thins a line with
-            # pressure, and the fill role's light touch left the colour streaky.
-            out.append(S(m(f["pts"]), "fill", colour[name], size=f["size"] * s * 1.25, pace=2.2,
-                         peak=1.0, taper=(0.02, 0.02)))
+    colour = {"tan": "#fbe1c0", "brown": "#6d503f", "white": "#ffffff", "purple": PURPLE, "nose": INK, "pupil": INK}
+    fill = lambda f: S(m(f["pts"]), "fill", colour[f["color"]], size=f["size"] * s * 1.25, pace=2.2,
+                       peak=1.0, flat=True)
+    # Full pressure and a touch wider: the editor thins a line with pressure,
+    # and a light touch left the colour streaky. Each colour runs a little
+    # under the lines that border it, so the ink covers its edge.
+    by = lambda name: [fill(f) for f in sorted((f for f in d["fills"] if f["color"] == name), key=lambda f: -f["area"])]
+    def disc(cx, cy, r, colour_, size):
+        """A solid round: once round the rim, then a spiral to the middle."""
+        (cx, cy), = m([(cx, cy)]); r *= s
+        rim = [(cx + r * math.cos(k * 0.3), cy + r * math.sin(k * 0.3)) for k in range(22)]
+        sp = [(cx + r * (1 - k / 24) * math.cos(6.6 + k * 0.5), cy + r * (1 - k / 24) * math.sin(6.6 + k * 0.5)) for k in range(1, 25)]
+        # Slow: drawn fast, the editor joins too few points and a circle comes out a hexagon.
+        return S(rim + sp, "fill", colour_, size=size, pace=0.6, peak=1.0, flat=True)
+    # The eyes as the drawing has them, measured from it: a full purple iris,
+    # a round pupil at its right edge. The nose a rounded dark shape.
+    EYES = [((719, 376), (733, 372)), ((921, 309), (935, 305))]
+    out = by("tan") + by("brown") + by("white")
+    out += [disc(ic[0], ic[1], 20, PURPLE, 9.5) for ic, _ in EYES]
     head = lambda p: sum(y for _, y in p) / len(p) < 530
-    line = lambda p: S(m(p), "detail", size=6.5, pace=1.15, weight=[(0, 0.75), (0.5, 1.0), (1, 0.75)])
+    # Ink at an even weight, as the drawing has it.
+    line = lambda p: S(m(p), "detail", size=8.5, pace=1.15, peak=0.95, flat=True)
     out += [line(p) for p in sorted((p for p in d["lines"] if head(p)), key=L, reverse=True)]
-    for b in d["blobs"]:
-        (cx, cy), = m([(b["cx"], b["cy"])])
-        out.append(S(_blob(cx, cy, b["rx"] * s * 0.8, b["ry"] * s * 0.8, turns=2.0, n=22), "fill", size=8, pace=1.6))
+    nose = [S(_blob(*m([(809, 384)])[0], 25 * s, 16 * s, turns=2.4, n=30), "fill", INK, size=9, pace=0.6, peak=1.0,
+              flat=True)]
+    out += nose + [disc(pc[0], pc[1], 11, INK, 8) for _, pc in EYES]
     out += [line(p) for p in sorted((p for p in d["lines"] if not head(p)), key=L, reverse=True)]
     return out
 
