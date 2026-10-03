@@ -232,7 +232,10 @@ def pug():
     out = []
     for name in ("tan", "brown", "purple"):
         for f in sorted((f for f in d["fills"] if f["color"] == name), key=lambda f: -f["area"]):
-            out.append(S(m(f["pts"]), "fill", colour[name], size=f["size"] * s, pace=2.2, taper=(0.02, 0.02)))
+            # Full pressure and a touch wider: the editor thins a line with
+            # pressure, and the fill role's light touch left the colour streaky.
+            out.append(S(m(f["pts"]), "fill", colour[name], size=f["size"] * s * 1.25, pace=2.2,
+                         peak=1.0, taper=(0.02, 0.02)))
     head = lambda p: sum(y for _, y in p) / len(p) < 530
     line = lambda p: S(m(p), "detail", size=6.5, pace=1.15, weight=[(0, 0.75), (0.5, 1.0), (1, 0.75)])
     out += [line(p) for p in sorted((p for p in d["lines"] if head(p)), key=L, reverse=True)]
