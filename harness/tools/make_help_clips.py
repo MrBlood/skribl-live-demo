@@ -726,11 +726,50 @@ def clip_export(page, rec):
     return whole(page)
 
 
+
+def clip_zoom(page, rec):
+    """Zoom, on a desktop: the magnifier in the dock, + and -, and a scroll to
+    look around. On a phone it is a two-finger pinch, which one fingertip
+    cannot show honestly (owner: yes to filming it on desktop)."""
+    import artworks
+    pad_ready(page)
+    pad_draw(page, artworks.cat())
+    # Magnify's one-time tip and toast would stack over the top of the canvas, cut by
+    # the crop; the card says what they say.
+    page.evaluate("() => { if (window.SkriblHints) SkriblHints.show = () => {}; window.showToast = () => {}; }")
+    rec.start(); page.wait_for_timeout(500)
+    tap(page, "#magnifyBtn", after=600, frm=(-80, -60))
+    tap(page, "#zoomInBtn", after=500, frm=(-60, 40))
+    tap(page, "#zoomInBtn", after=700, frm=(0, 0))
+    # Zoom always centres; scrolling moves the view round the drawing.
+    box = page.locator(".canvas-wrap").first.bounding_box()
+    cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    glide(page, (cx + 80, cy + 60), (cx, cy), 400)
+    for dx, dy in ((0, -60), (0, -60), (90, 0), (90, 0), (-90, 60), (-90, 60)):
+        page.mouse.wheel(dx, dy); page.wait_for_timeout(260)
+    page.wait_for_timeout(300)
+    tap(page, "#zoomOutBtn", after=450, frm=(-60, 40))
+    tap(page, "#zoomOutBtn", after=700, frm=(0, 0))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    # The canvas and the dock under it, not the empty desktop either side, so
+    # the drawing and the magnifier's controls fill the frame.
+    r = page.evaluate("""() => { const a = document.querySelector('.canvas-wrap').getBoundingClientRect();
+        const d = document.getElementById('magnifyBtn').closest('[class*="dock"]') || document.getElementById('magnifyBtn');
+        const b = d.getBoundingClientRect();
+        return [Math.min(a.left, b.left), a.top, Math.max(a.right, b.right), Math.max(a.bottom, b.bottom)]; }""")
+    pad = 18
+    x0, y0 = max(0, r[0] - pad), max(0, r[1] - pad)
+    w = min(page.viewport_size["width"], r[2] + pad) - x0
+    h = min(page.viewport_size["height"], r[3] + pad) - y0
+    return (x0, y0, int(w) // 2 * 2, int(h) // 2 * 2)
+
+
 CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify": clip_liquify,
          "smudge": clip_smudge, "blur": clip_blur, "fill": clip_fill, "stamp": clip_stamp,
          "artmove": clip_artmove, "inbetween": clip_inbetween, "smear": clip_smear, "onion": clip_onion,
          "hold": clip_hold, "guides": clip_guides, "takes": clip_takes, "speed": clip_speed,
-         "photo": clip_photo, "export": clip_export}
+         "photo": clip_photo, "export": clip_export, "zoom": clip_zoom}
 # The editor a clip is filmed in, when not Pad.
 ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove",
                                "inbetween", "smear", "onion", "hold", "guides")}
@@ -738,6 +777,7 @@ ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "st
 # A phone's own screen, all of it.
 VIEWPORT = {k: (390, 844) for k in ("music", "post", "inbetween", "smear", "onion", "hold", "guides",
                                      "takes", "speed", "photo", "export")}
+VIEWPORT["zoom"] = (1024, 768)   # a desktop: the magnifier lives in its dock
 
 
 # Driving a 2x page makes every gesture take about half again as long as it

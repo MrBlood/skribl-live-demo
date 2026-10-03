@@ -13536,6 +13536,10 @@ with a drawing. Each editor gets a chip of its own in the examples drawer.
   is an evening sky the recorder paints itself, so no one's picture is in the
   clip. Zoom is not among them: on a phone it is a two-finger pinch, and one
   fingertip cannot show it honestly.
+* **Zoom, after all, on a desktop** (owner: "yes on zoom"): the magnifier in
+  the dock, + twice, a scroll round the drawing, - back out, cropped to the
+  canvas and the dock. Magnify's one-time tip and toast are silenced while
+  filming, since the crop cut them in half; the card says what they say.
 * A finger gliding across a control with a tooltip raises it, as a mouse
   would, so taps in the settings come in from the side clear of the Speed row.
 * `verify_helpdemos` holds each editor to its group the way it holds tools:
