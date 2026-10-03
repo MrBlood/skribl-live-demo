@@ -274,7 +274,12 @@ with sync_playwright() as p:
         pg.evaluate(SHEET); pg.wait_for_timeout(500)
         # The sheet glides up for .34s and under load can still be moving at
         # 500ms: a pull that starts on a moving grip measured 2 failures in 5.
-        # Wait for the grip to hold still (up to 3s), then pull.
+        # Wait for it to be OPEN and its slide FINISHED -- "the grip held still
+        # for 100ms" alone was fooled by a sheet that had not started moving
+        # yet (Flip, 1 run in 3: the pull landed as it rose, -15px of 144).
+        pg.wait_for_function("""() => { const s = document.getElementById('learnSheet'),
+            p = s && s.querySelector('.learn-sheet-panel'); if (!s || !s.classList.contains('open')) return false;
+            const t = getComputedStyle(p).transform; return t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)'; }""", timeout=4000)
         g, prev = None, None
         for _ in range(30):
             g = pg.locator("#learnGrip").bounding_box()
