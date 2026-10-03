@@ -44,10 +44,11 @@ VW, VH, DPR = 390, 1300, 2
 # the owner could not see the buttons being pushed in the first Post clip.
 # The tool picture Flip draws beside a mouse pointer stays (owner: "so you
 # know what it is"); the crosshair beneath it is hidden, since a finger has
-# none and it sat inside the fingertip.
+# none and it sat inside the fingertip. The app's hover tooltips are hidden
+# too: the recorder drives a mouse, and a finger never raises them.
 FINGER = """() => {
   const s = document.createElement('style');
-  s.textContent = '.flip-brush-cursor{display:none!important}';
+  s.textContent = '.flip-brush-cursor,.skribl-tip{display:none!important}';
   document.head.appendChild(s);
   const f = document.createElement('div'); f.id = 'clipFinger';
   f.style.cssText = 'position:fixed;left:0;top:0;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;' +
