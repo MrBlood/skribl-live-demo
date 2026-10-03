@@ -25,7 +25,7 @@ BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 # (hand, pauses): the owner found the hand fast at 1.9, so it is calmer and
 # the gaps between strokes stay brisk.
 TEMPO = {"snail": (1.45, 1.9), "cat": (2.4, 3.0), "scene": (1.35, 1.9),
-         "footballer": (2.6, 3.2), "skull": (2.6, 3.2)}   # 53 strokes: a brisk hand, or it runs a minute
+         "footballer": (2.6, 3.2), "skull": (2.6, 3.2), "pug": (2.6, 3.2)}   # 53 strokes: a brisk hand, or it runs a minute
 
 
 def make(browser, name):

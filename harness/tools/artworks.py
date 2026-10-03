@@ -210,6 +210,42 @@ def footballer():
     return out
 
 
+def pug():
+    """A pug sitting, head tipped, glancing up -- the owner's own line drawing
+    (art/pug.json), its ink followed end to end; the pupils and the nose,
+    solid in the drawing, laid in as fills, and purple added round each pupil
+    at the owner's word. The head first, long lines before short, then the
+    eyes and the nose, then the body, the legs, the paws and the curled tail."""
+    import json
+    import math
+    import pathlib
+    d = json.loads((pathlib.Path(__file__).parent / "art" / "pug.json").read_text())
+    xs = [x for p in d["lines"] for x, _ in p]
+    ys = [y for p in d["lines"] for _, y in p]
+    x0, y0, w, h = min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)
+    s = min((816 - 60) / w, (612 - 40) / h)
+    ox, oy = (816 - w * s) / 2, (612 - h * s) / 2
+    m = lambda pts: [((x - x0) * s + ox, (y - y0) * s + oy) for x, y in pts]
+    L = lambda p: sum(math.dist(a, b) for a, b in zip(p, p[1:]))
+    head = lambda p: sum(y for _, y in p) / len(p) < 530
+    line = lambda p: S(m(p), "detail", size=6.5, pace=1.15, weight=[(0, 0.75), (0.5, 1.0), (1, 0.75)])
+    out = [line(p) for p in sorted((p for p in d["lines"] if head(p)), key=L, reverse=True)]
+    # The eyes: purple round each pupil, kept inside the eye's ring (the pupils
+    # sit toward the right of it, so the purple sits a little left of them),
+    # then the black pupils, then the nose.
+    blobs = sorted(d["blobs"], key=lambda b: b["rx"])
+    eyes, nose = blobs[:2], blobs[2]
+    for b in eyes:
+        cx, cy = m([(b["cx"] - 11, b["cy"] + 1)])[0]
+        r = (b["rx"] + 6) * s
+        out.append(S(_blob(cx, cy, r, r, turns=2.4, n=30), "fill", PURPLE, size=9, pace=1.6))
+    for b in eyes + [nose]:
+        (cx, cy), = m([(b["cx"], b["cy"])])
+        out.append(S(_blob(cx, cy, b["rx"] * s * 0.8, b["ry"] * s * 0.8, turns=2.0, n=22), "fill", size=8, pace=1.6))
+    out += [line(p) for p in sorted((p for p in d["lines"] if not head(p)), key=L, reverse=True)]
+    return out
+
+
 def skull():
     """A skull in a fedora, sunglasses, a mustache and a long beard -- from a
     vector the owner supplied (art/skull.json). Its lines were filled outlines,
@@ -234,6 +270,6 @@ def skull():
     return [it[3] for it in sorted(items, key=lambda it: it[:3])]
 
 
-ART = {"cat": cat, "scene": scene, "snail": snail, "footballer": footballer, "skull": skull,
+ART = {"cat": cat, "scene": scene, "snail": snail, "footballer": footballer, "skull": skull, "pug": pug,
        # the tool cards' examples (Pen, Eraser, Shape)
        "pen": tool_pen, "eraser": tool_eraser, "shape": tool_shape}
