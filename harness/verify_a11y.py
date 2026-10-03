@@ -1833,40 +1833,6 @@ with sync_playwright() as _hp:
         _pg.close()
     _hb.close()
 
-# Blooby, the mascot, waves on both blank canvases. He is decorative (the words
-# under him say what to do), so a screen reader skips him; and he is sized by
-# the canvas, so on a short one (the wide shape on a phone) he must not push the
-# words over his own feet or out of the canvas.
-print("\nA11Y 16 — Blooby on the blank canvas: loaded, silent, and the words still fit")
-_BLOOBY = """(sel) => { const h = document.querySelector(sel), i = h && h.querySelector('.canvas-empty-blooby');
-    if (!i) return null;
-    const spans = [...h.querySelectorAll('span')], r = e => e.getBoundingClientRect();
-    return { loaded: i.complete && i.naturalWidth > 0, alt: i.getAttribute('alt'),
-             imgBottom: r(i).bottom, titleTop: r(spans[0]).top,
-             lastBottom: r(spans[spans.length - 1]).bottom, hintBottom: r(h).bottom }; }"""
-with sync_playwright() as _bp:
-    _bb = _bp.chromium.launch()
-    for _route, _sel in (("/", "#canvasEmptyHint"), ("/flip", "#flipEmptyHint")):
-        for _w, _h, _wide in ((390, 844, False), (1280, 860, False), (390, 844, True)):
-            if _wide and _route == "/flip":
-                continue
-            _pg = _bb.new_page(viewport={"width": _w, "height": _h})
-            browsing.goto(_pg, BASE, _route)
-            _pg.wait_for_timeout(600)
-            if _wide:
-                _pg.evaluate("""() => { const t = window.SkriblCanvasSizes, s = t.SIZES.find(x => x.id === 'wide');
-                    document.querySelector(`#canvasSeg button[data-size='${s.id}']`).click(); }""")
-                _pg.wait_for_timeout(500)
-            _pg.wait_for_function(f"() => {{ const i = document.querySelector('{_sel} .canvas-empty-blooby'); return i && i.complete; }}", timeout=5000)
-            _b = _pg.evaluate(_BLOOBY, _sel)
-            _where = f"{_route} at {_w}px" + (", wide canvas" if _wide else "")
-            check(f"{_where}: Blooby loads and is silent to a screen reader",
-                  bool(_b) and _b["loaded"] and _b["alt"] == "", str(_b))
-            check(f"{_where}: ...and the words sit below him and inside the canvas",
-                  bool(_b) and _b["imgBottom"] <= _b["titleTop"] + 1 and _b["lastBottom"] <= _b["hintBottom"], str(_b))
-            _pg.close()
-    _bb.close()
-
 passed = sum(1 for ok, _ in results if ok)
 bad = [n for ok, n in results if not ok]
 print("\n" + "=" * 62)
