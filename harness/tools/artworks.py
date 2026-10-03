@@ -8,61 +8,38 @@ Three colours at most: Skribl purple, one accent, a dark ink, on paper.
 from artdraw import INK, PURPLE, Stroke as S
 
 PINK = "#ff6f91"
-
-
-def _tilt(strokes, deg, cx=408, cy=320):
-    import math
-    a = math.radians(deg); c, s_ = math.cos(a), math.sin(a)
-    for st in strokes:
-        st.pts = [(cx + (x - cx) * c - (y - cy) * s_, cy + (x - cx) * s_ + (y - cy) * c) for x, y in st.pts]
-    return strokes
-
-
-def _dot(cx, cy, r):
-    """A small solid round: one tight turn and a half, closing on the middle."""
-    import math
-    pts = [(cx + r * (1 - k / 14) * math.cos(-1.2 + k * 0.67), cy + r * (1 - k / 14) * math.sin(-1.2 + k * 0.67))
-           for k in range(15)]
-    return pts
+EAR_PINK = "#f7a3b7"   # the softer pink inside a cat's ears
 
 
 def cat():
-    """A cat, head and shoulders, head tipped: sixteen strokes, one idea -- the
-    face. Silhouette, then the body, then the eyes (purple, then the lids), the
-    pink nose, the mouth, and three whiskers flicked on each side last."""
-    return _tilt([
-        # ears and the top of the head in one sweep: heavy at the ear roots,
-        # thin at the tips and across the top where it turns into the light
-        S([(316, 250), (300, 180), (306, 112), (344, 158), (376, 190), (410, 184),
-           (446, 190), (488, 162), (538, 132), (520, 196), (504, 252)], "gesture",
-          weight=[(0, 0.85), (0.16, 0.45), (0.3, 1.0), (0.5, 0.7), (0.68, 1.0), (0.82, 0.4), (1, 0.95)]),
-        # cheeks and jaw, fullest at the bottom, a tuft at each cheek
-        S([(314, 244), (300, 282), (290, 312), (282, 330), (296, 336), (306, 370), (340, 402), (384, 420),
-           (432, 418), (478, 400), (510, 368), (520, 338), (532, 330), (520, 304), (506, 248)], "gesture",
-          weight=[(0, 0.6), (0.45, 1.0), (0.7, 1.0), (1, 0.55)]),
-        # the body: two falling lines that taper away
-        S([(336, 404), (300, 456), (282, 520), (280, 596)], "contour", size=10,
-          taper=(0.08, 0.55), weight=[(0, 1.0), (1, 0.5)]),
-        S([(482, 400), (526, 452), (548, 520), (554, 596)], "contour", size=10,
-          taper=(0.08, 0.55), weight=[(0, 1.0), (1, 0.5)]),
-        # eyes: the purple iris, glancing to her left, then the almond over it
-        S(_dot(381, 297, 7), "fill", PURPLE, size=11),
-        S(_dot(467, 297, 7), "fill", PURPLE, size=11),
-        S([(340, 300), (356, 284), (380, 280), (400, 294), (384, 312), (360, 314), (342, 302)], "detail", size=6.5,
-          weight=[(0, 0.7), (0.3, 1.0), (0.55, 0.9), (0.75, 0.45), (1, 0.55)]),
-        S([(424, 296), (442, 280), (468, 282), (486, 298), (466, 312), (442, 312), (426, 298)], "detail", size=6.5,
-          weight=[(0, 0.7), (0.3, 1.0), (0.55, 0.9), (0.75, 0.45), (1, 0.55)]),
-        # the nose, the accent, then the mouth in one stroke
-        S([(398, 342), (418, 342), (408, 355), (401, 345), (412, 346)], "fill", PINK, size=10),
-        S([(383, 374), (396, 378), (407, 364), (419, 378), (432, 373)], "detail", weight=[(0, 0.6), (0.5, 1.0), (1, 0.6)]),
-        # three whiskers each side, fanned, flicked out fast
-        S([(368, 358), (318, 348), (262, 340)], "accent", taper=(0.05, 0.6)),
-        S([(368, 366), (316, 364), (258, 366)], "accent", taper=(0.05, 0.6)),
-        S([(370, 374), (320, 382), (266, 394)], "accent", taper=(0.05, 0.6)),
-        S([(448, 358), (500, 346), (556, 338)], "accent", taper=(0.05, 0.6)),
-        S([(448, 366), (502, 362), (560, 364)], "accent", taper=(0.05, 0.6)),
-        S([(446, 374), (498, 380), (552, 392)], "accent", taper=(0.05, 0.6)),
-    ], -6)
+    """A cat sitting up, glancing to her left -- the owner's own line drawing
+    (art/cat.json): each line hand-placed along its path, then snapped onto
+    the centre of the drawing's ink, whiskers fitted to their own thin lines.
+    The head in one sweep over both ears, the cheek and jaw, the body, the
+    tail, the legs and paws; then the pink in the ears, the purple eyes and
+    their lids, the nose and mouth, and the whiskers flicked on last."""
+    import json
+    import pathlib
+    d = json.loads((pathlib.Path(__file__).parent / "art" / "cat.json").read_text())
+    xs = [x for st in d["strokes"] for x, _ in st["pts"]]
+    ys = [y for st in d["strokes"] for _, y in st["pts"]]
+    x0, y0, w, h = min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)
+    s = min((816 - 60) / w, (612 - 48) / h)
+    ox, oy = (816 - w * s) / 2, (612 - h * s) / 2
+    m = lambda pts: [((x - x0) * s + ox, (y - y0) * s + oy) for x, y in pts]
+    colour = {"ink": INK, "pink": PINK, "earpink": EAR_PINK, "purple": PURPLE}
+    # Line weights from the drawing itself: outlines about 14px of its 1024,
+    # legs and lids a little lighter, toes and whiskers fine.
+    size = {"gesture": 9.5, "contour": 9.5, "form": 8.5, "detail": 6.0, "accent": 3.2, "fill": 9.0}
+    out = []
+    for st in d["strokes"]:
+        role = st["role"]
+        sz = 3.6 if st["name"].startswith("toe") else 11.0 if st["name"].startswith("iris") else size[role]
+        kw = {"taper": (0.05, 0.6)} if role == "accent" else {}
+        if role in ("gesture", "contour"):
+            kw["weight"] = [(0, 0.75), (0.5, 1.0), (1, 0.75)]
+        out.append(S(m(st["pts"]), role, colour[st["color"]], size=sz, **kw))
+    return out
 
 
 def _blob(cx, cy, rx, ry, turns=2.2, n=26, start=1.0):
