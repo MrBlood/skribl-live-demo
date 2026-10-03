@@ -366,6 +366,37 @@ with sync_playwright() as p:
               all(c["poster"] and not c["src"] for c in s6["clips"]), str(s6["clips"]))
         ctx.close()
 
+        # 8. HOW IT WORKS SLIDES IN, it does not jump (owner's iPhone: "the menu
+        # hiccups before it slides in"). Opening moves focus to the close button
+        # while the panel is still off the right edge; a focus() that may
+        # scroll made the browser scroll the drawer sideways to reveal it, so
+        # the panel snapped fully in at once and then eased back as the slide
+        # ran. Measured frame by frame, opened from the menu as a person does.
+        ctx = b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
+        pg = ctx.new_page()
+        browsing.goto(pg, BASE, route)
+        pg.wait_for_timeout(800)
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        opener = ("#menuBtn", "#helpItem") if name == "Pad" else ("#moreBtn", "#miInfo")
+        pg.click(opener[0]); pg.wait_for_timeout(600)
+        frames = pg.evaluate("""(item) => new Promise(res => { const d = document.getElementById('helpDrawer'),
+            i = d.querySelector('.help-drawer-inner'), out = [], t0 = performance.now();
+            document.querySelector(item).click();
+            (function tick() { out.push([d.scrollLeft, i.getBoundingClientRect().left]);
+              if (performance.now() - t0 < 700) requestAnimationFrame(tick); else res(out); })(); })""", opener[1])
+        scrolled = max(f[0] for f in frames)
+        lefts = [f[1] for f in frames]
+        steps = [a_ - b_ for a_, b_ in zip(lefts, lefts[1:])]
+        # One way, and travelled: a snap from off-screen to home in a single
+        # frame is "one way" too, which is how the first draft of this passed
+        # on the broken tree.
+        steady = all(st_ >= -1 for st_ in steps) and max(steps) < 200
+        check(f"{name}: How it works slides in; its frame never scrolls sideways",
+              scrolled == 0, f"drawer scrollLeft peaked at {scrolled}px over {len(frames)} frames")
+        check(f"{name}: ...and the panel travels in, right to left, no frame jumping 200px",
+              steady and lefts[0] > lefts[-1], f"panel left edge by frame: {[round(x) for x in lefts[::4]]}")
+        ctx.close()
+
         # 7. on a phone with a panel open, How it works is still the SCREEN.
         # Photo/Music makes the page taller than the phone; the drawer was
         # positioned in .app, grew with it, and the examples sheet and the
