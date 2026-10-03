@@ -44,10 +44,11 @@ VW, VH, DPR = 390, 1300, 2
 # the owner could not see the buttons being pushed in the first Post clip.
 # The tool picture Flip draws beside a mouse pointer stays (owner: "so you
 # know what it is"); the crosshair beneath it is hidden, since a finger has
-# none and it sat inside the fingertip.
+# none and it sat inside the fingertip. The app's hover tooltips are hidden
+# too: the recorder drives a mouse, and a finger never raises them.
 FINGER = """() => {
   const s = document.createElement('style');
-  s.textContent = '.flip-brush-cursor{display:none!important}';
+  s.textContent = '.flip-brush-cursor,.skribl-tip{display:none!important}';
   document.head.appendChild(s);
   const f = document.createElement('div'); f.id = 'clipFinger';
   f.style.cssText = 'position:fixed;left:0;top:0;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;' +
@@ -123,10 +124,12 @@ def glide(page, a, b, ms=500, steps=24):
         page.wait_for_timeout(ms // steps)
 
 
-def tap(page, sel, before=380, after=520):
+def tap(page, sel, before=380, after=520, frm=(60, 90)):
+    """`frm`: where the finger comes in from, as an offset. A finger gliding
+    across a control with a tooltip raises it, as a mouse would."""
     box = page.locator(sel).bounding_box()
     x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
-    glide(page, (x + 60, y + 90), (x, y), before)
+    glide(page, (x + frm[0], y + frm[1]), (x, y), before)
     page.mouse.down(); page.wait_for_timeout(170); page.mouse.up()
     page.wait_for_timeout(after)
     return x, y
@@ -462,13 +465,279 @@ def clip_artmove(page, rec):
     return follow_pad(page, crop)
 
 
+
+# ---- Flip's techniques -------------------------------------------------------
+# These are about the page strip and the playback settings as much as the
+# canvas, so like Post and Add music they are filmed as the whole phone
+# screen: every tap stays in frame. The poses are drawn off camera with real
+# pen input; Onion skin's second pose is drawn on camera, since drawing over
+# the ghost IS the technique.
+def ring(cx, cy, r, n=28, start=-90):
+    import math
+    return [(cx + r * math.cos(math.radians(start + 360 * k / n)), cy + r * math.sin(math.radians(start + 360 * k / n)))
+            for k in range(n + 1)]
+
+
+def ball(cx, cy, r=34):
+    from artdraw import PURPLE, Stroke as S
+    return S(ring(cx, cy, r), "contour", PURPLE, size=10, taper=(0.04, 0.04))
+
+
+def ground():
+    from artdraw import Stroke as S
+    return S([(110, 470), (706, 470)], "form", size=6, taper=(0.1, 0.1))
+
+
+def strip_frame(page, i):
+    return f"#strip .frame:nth-child({i + 1})"
+
+
+def flip_pages(page, poses):
+    """Each pose drawn on its own page, then back to page 1."""
+    logical = flip_ready(page)
+    for k, strokes in enumerate(poses):
+        if k:
+            page.click("#addblank"); page.wait_for_timeout(400)
+        flip_draw(page, strokes, logical)
+    page.evaluate("() => go(0)"); page.wait_for_timeout(500)
+    page.evaluate("() => window.__fingerHide && window.__fingerHide()")
+    return logical
+
+
+def flip_example(page):
+    """Flip's own bouncing ball (the Squash and stretch card), opened as a
+    draft and put on paper, onion skin off: a real multi-page animation."""
+    import artdraw
+    page.set_input_files("#draftInput", str(ROOT / "skribl" / "static" / "help" / "demos" / "flip-bounce.json"))
+    page.wait_for_timeout(1500)
+    page.evaluate(f"""() => {{ setBg('{artdraw.PAPER}'); if (onion) document.getElementById('onion').click();
+        go(0); try {{ toast.hidden = true; }} catch (e) {{}} }}""")
+    page.wait_for_timeout(900)
+    page.evaluate("() => window.__fingerHide && window.__fingerHide()")
+
+
+def whole(page):
+    return (0, 0, page.viewport_size["width"], page.viewport_size["height"])
+
+
+def clip_inbetween(page, rec):
+    flip_pages(page, [[ground(), ball(240, 190)], [ground(), ball(580, 420)]])
+    rec.start(); page.wait_for_timeout(500)
+    # One tap and Flip draws the page halfway; then the three pages in turn.
+    tap(page, "#addinbetween", after=900)
+    for i in (0, 1, 2):
+        tap(page, strip_frame(page, i), before=420, after=650)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(700)
+    rec.stop()
+    return whole(page)
+
+
+def figure(arm):
+    """A stick figure waving: the arm is the one stroke that moves."""
+    from artdraw import PURPLE, Stroke as S
+    return [S(ring(408, 150, 38), "contour", size=8, taper=(0.04, 0.04)),
+            S([(408, 190), (408, 330)], "contour", size=8),
+            S([(408, 330), (360, 450)], "contour", size=8),
+            S([(408, 330), (456, 450)], "contour", size=8),
+            S([(408, 230), (350, 300)], "contour", size=8),
+            S([(408, 230), arm], "contour", PURPLE, size=9)]
+
+
+def clip_smear(page, rec):
+    flip_pages(page, [figure((520, 120)), figure((540, 330))])
+    rec.start(); page.wait_for_timeout(500)
+    # The smear page goes between the two poses and Flip moves to it: the arm
+    # is a blur of its whole swing, the rest stays sharp.
+    tap(page, "#addtween", after=1200)
+    for i in (0, 1, 2):
+        tap(page, strip_frame(page, i), before=420, after=650)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(700)
+    rec.stop()
+    return whole(page)
+
+
+def clip_onion(page, rec):
+    import artdraw
+    logical = flip_ready(page)
+    flip_draw(page, [ground(), ball(260, 240)], logical)
+    page.click("#addblank"); page.wait_for_timeout(500)
+    page.evaluate("() => window.__fingerHide && window.__fingerHide()")
+    rec.start(); page.wait_for_timeout(500)
+    # Turn it on: the page before shows through, faintly.
+    tap(page, "#tuneBtn", after=500, frm=(-90, 30))
+    tap(page, "#onion", after=600, frm=(-120, 20))
+    tap(page, "#tuneBtn", after=700, frm=(-90, 30))
+    # Then the next pose, drawn over the ghost of the first.
+    artdraw.draw(page, [ground(), ball(400, 300)], canvas="#pad", logical=logical, tempo=1.5, pause_tempo=2.0,
+                 set_ink=lambda pg, c, s: pg.evaluate("([c, s]) => { color = c; size = s; }", [c, s]))
+    page.wait_for_timeout(500)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return whole(page)
+
+
+def clip_hold(page, rec):
+    flip_example(page)
+    rec.start(); page.wait_for_timeout(500)
+    # Page 1 is the top of the bounce: hold it for three beats, then play.
+    badge = strip_frame(page, 0) + " .holdbadge"
+    tap(page, badge, after=450)
+    tap(page, badge, after=600)
+    tap(page, "#play", after=2600, frm=(-60, 80))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(600)
+    rec.stop()
+    return whole(page)
+
+
+def clip_guides(page, rec):
+    flip_example(page)
+    rec.start(); page.wait_for_timeout(500)
+    tap(page, "#tuneBtn", after=500, frm=(-90, 30))
+    tap(page, "#arcGuideBtn", after=600, frm=(-120, 20))
+    tap(page, "#tuneBtn", after=900, frm=(-90, 30))
+    # The dotted path: close dots where the ball is slow, wide where it is fast.
+    for i in (2, 4):
+        tap(page, strip_frame(page, i), before=420, after=800)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(800)
+    rec.stop()
+    return whole(page)
+
+
+
+# ---- Pad's extras ---------------------------------------------------------------
+# The rest of what Pad does with a drawing: more takes, the preview speed, a
+# photo behind it, and exporting it. The whole phone screen again; the canvas
+# on Paper, as every example is drawn.
+def pad_ready(page):
+    import artdraw
+    page.evaluate("""() => { const t = window.SkriblCanvasSizes, id = t.SIZES.find(s => s.label === '4:3').id;
+        document.querySelector(`#canvasSeg button[data-size='${id}']`).click(); }""")
+    page.wait_for_timeout(300)
+    page.evaluate(f"""() => {{ bgColor = '{artdraw.PAPER}'; canvasWrap.style.backgroundColor = bgColor;
+        if (typeof updateVignette === 'function') updateVignette();
+        if (typeof markBgSwatch === 'function') markBgSwatch(bgColor); setTool('pen');
+        if (window.SkriblPressure) SkriblPressure.setEnabled(true); }}""")
+    page.wait_for_timeout(200)
+
+
+def pad_draw(page, strokes, tempo=3.0, end=True):
+    import artdraw
+    artdraw.draw(page, strokes, tempo=tempo, pause_tempo=max(2.0, tempo))
+    if end:
+        page.evaluate("() => { if (recording) endRecordingTake(); }")
+        page.wait_for_timeout(700)
+        page.evaluate("() => { try { toast.hidden = true; } catch (e) {} }")
+    page.evaluate("() => window.__fingerHide && window.__fingerHide()")
+
+
+def flower(k):
+    """A flower in two takes: the stem and leaves, then the bloom."""
+    from artdraw import PURPLE, Stroke as S
+    if k == 0:
+        return [S([(408, 520), (402, 420), (410, 320), (408, 250)], "contour", size=9),
+                S([(406, 420), (360, 380), (330, 392), (362, 418), (406, 420)], "form", size=7),
+                S([(410, 370), (456, 334), (486, 344), (456, 368), (410, 370)], "form", size=7)]
+    petals = [S(ring(408 + 46 * __import__("math").cos(a), 210 + 46 * __import__("math").sin(a), 30, n=20), "contour",
+                PURPLE, size=8, taper=(0.04, 0.04)) for a in [i * 2 * 3.14159 / 6 for i in range(6)]]
+    return petals + [S(ring(408, 210, 18, n=16), "fill", "#ff6f91", size=12, taper=(0.04, 0.04))]
+
+
+def clip_takes(page, rec):
+    pad_ready(page)
+    pad_draw(page, flower(0))
+    rec.start(); page.wait_for_timeout(500)
+    # A second take: Add take, draw, Done. The replay plays them back to back.
+    tap(page, "#addTakePill", after=600)
+    pad_draw(page, flower(1), tempo=3.2, end=False)
+    page.wait_for_timeout(300)
+    # While a take records, Record reads Done: tap it to end the take.
+    if page.locator("#recordBtn").is_visible():
+        tap(page, "#recordBtn", after=700, frm=(-60, 80))
+    page.evaluate("() => { if (recording) endRecordingTake(); try { toast.hidden = true; } catch (e) {} }")
+    page.wait_for_timeout(400)
+    tap(page, "#playBtn", after=3600, frm=(-60, 80))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
+def clip_speed(page, rec):
+    import artworks
+    pad_ready(page)
+    pad_draw(page, artworks.snail())
+    rec.start(); page.wait_for_timeout(500)
+    tap(page, "#tuneBtn", after=500, frm=(-90, 30))
+    tap(page, '#speedSeg [data-rate="2"]', after=500, frm=(-80, 40))
+    tap(page, "#tuneBtn", after=500, frm=(-90, 30))
+    # The replay at double speed: only Play here; what posts is real time.
+    tap(page, "#playBtn", after=4000, frm=(-60, 80))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
+    rec.stop()
+    return whole(page)
+
+
+def sky_photo():
+    """A photo to put behind the drawing: an evening sky over hills, made
+    here so the clip carries no one's picture."""
+    import io as _io
+    from PIL import Image, ImageDraw, ImageFilter
+    w, h = 1200, 900
+    im = Image.new("RGB", (w, h))
+    d = ImageDraw.Draw(im)
+    for y in range(h):
+        u = y / h
+        d.line([(0, y), (w, y)], fill=(int(255 - 70 * u), int(196 - 90 * u), int(160 + 40 * u)))
+    d.ellipse((760, 260, 940, 440), fill=(255, 236, 190))
+    d.polygon([(0, 640), (260, 520), (520, 610), (820, 500), (1200, 600), (1200, 900), (0, 900)], fill=(120, 96, 150))
+    d.polygon([(0, 760), (400, 660), (760, 740), (1200, 680), (1200, 900), (0, 900)], fill=(76, 64, 108))
+    im = im.filter(ImageFilter.GaussianBlur(1.2))
+    buf = _io.BytesIO(); im.save(buf, "JPEG", quality=88)
+    return buf.getvalue()
+
+
+def clip_photo(page, rec):
+    import artworks
+    pad_ready(page)
+    pad_draw(page, artworks.cat())
+    rec.start(); page.wait_for_timeout(500)
+    tap(page, "#mediaOpenBtn", after=600, frm=(-70, -60))
+    tap(page, "#mediaTabPhoto", after=500)
+    with page.expect_file_chooser() as fc:
+        tap(page, "#photoUploadBtn", after=200)
+    fc.value.set_files(files=[{"name": "evening.jpg", "mimeType": "image/jpeg", "buffer": sky_photo()}])
+    page.wait_for_timeout(1800)
+    tap(page, "#mediaOpenBtn", after=1200, frm=(-70, -60))
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(600)
+    rec.stop()
+    return whole(page)
+
+
+def clip_export(page, rec):
+    import artworks
+    pad_ready(page)
+    pad_draw(page, artworks.cat())
+    rec.start(); page.wait_for_timeout(500)
+    tap(page, "#menuBtn", after=600, frm=(-60, 80))
+    tap(page, "#exportItem", after=800)
+    # The choices: a still, a video with its music, a looping GIF.
+    tap(page, "#exportGif", after=2600)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(600)
+    rec.stop()
+    return whole(page)
+
+
 CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify": clip_liquify,
          "smudge": clip_smudge, "blur": clip_blur, "fill": clip_fill, "stamp": clip_stamp,
-         "artmove": clip_artmove}
+         "artmove": clip_artmove, "inbetween": clip_inbetween, "smear": clip_smear, "onion": clip_onion,
+         "hold": clip_hold, "guides": clip_guides, "takes": clip_takes, "speed": clip_speed,
+         "photo": clip_photo, "export": clip_export}
 # The editor a clip is filmed in, when not Pad.
-ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove")}
+ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove",
+                               "inbetween", "smear", "onion", "hold", "guides")}
 # Where a clip is recorded, when not the tall phone screen above.
-VIEWPORT = {"music": (390, 844), "post": (390, 844)}   # a phone's own screen, all of it
+# A phone's own screen, all of it.
+VIEWPORT = {k: (390, 844) for k in ("music", "post", "inbetween", "smear", "onion", "hold", "guides",
+                                     "takes", "speed", "photo", "export")}
 
 
 # Driving a 2x page makes every gesture take about half again as long as it

@@ -13518,3 +13518,28 @@ finger.
   the card's size and plays, a clip opens and advances, the cards pause, Escape
   and the close button put it away, closing How it works closes it. Each was
   turned red by its own break.
+
+## Techniques for Flip, Extras for Pad
+
+The owner, going to bed: "do all the remaining work." What was left on the How
+it works list was Flip's animating techniques and the rest of what Pad does
+with a drawing. Each editor gets a chip of its own in the examples drawer.
+
+* **Flip: Techniques** -- Onion skin, Tween (the strip's In-between), Smear,
+  Hold a page and Motion guides. They are about the page strip and the
+  playback settings as much as the canvas, so they are filmed as the whole
+  phone screen, as Post and Add music are. The poses are drawn off camera with
+  real pen input; Onion skin's second pose is drawn on camera, since drawing
+  over the ghost is the technique. Hold and Motion guides open Flip's own
+  bouncing ball (the Squash and stretch card) as a draft, on Paper.
+* **Pad: Extras** -- Add a take, Preview speed, Add a photo, Export. The photo
+  is an evening sky the recorder paints itself, so no one's picture is in the
+  clip. Zoom is not among them: on a phone it is a two-finger pinch, and one
+  fingertip cannot show it honestly.
+* A finger gliding across a control with a tooltip raises it, as a mouse
+  would, so taps in the settings come in from the side clear of the Speed row.
+* `verify_helpdemos` holds each editor to its group the way it holds tools:
+  every technique (Flip) and extra (Pad) is looked up as a control in the
+  editor and must have an example under its chip, and neither editor shows the
+  other's chip. A renamed or removed control fails it instead of leaving the
+  list stale.

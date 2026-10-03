@@ -292,6 +292,7 @@
         <button type="button" class="learn-chip" data-filter="start" aria-pressed="false">Start</button>
         <button type="button" class="learn-chip" data-filter="tools" aria-pressed="false">Tools</button>
         <button type="button" class="learn-chip" data-filter="ideas" aria-pressed="false">Ideas</button>
+        {% if is_flip %}<button type="button" class="learn-chip" data-filter="techniques" aria-pressed="false">Techniques</button>{% else %}<button type="button" class="learn-chip" data-filter="extras" aria-pressed="false">Extras</button>{% endif %}
       </div>
       <div class="learn-sheet-scroll">
         <div class="learn-all">
@@ -315,6 +316,21 @@
           {{ learn_card(None, 'Fill', 'Tap inside a closed shape to fill it with your color.', 'tools', tool='fill', clip='fill') }}
           {{ learn_card(None, 'Stamps', 'Save a selection as a stamp, then tap to place copies.', 'tools', tool='stamp', clip='stamp') }}
           {{ learn_card(None, 'Artwork', 'Drag to move everything on the page at once.', 'tools', tool='artmove', clip='artmove') }}
+          {# Techniques: the page strip and the playback settings, filmed as the
+             whole phone screen so every tap stays in frame. #}
+          {{ learn_card(None, 'Onion skin', 'See the page before, faintly, and line the next drawing up with it.', 'techniques', clip='onion', shape='screen') }}
+          {{ learn_card(None, 'Tween', 'Draw two poses and tap Tween: Flip adds the page halfway between.', 'techniques', clip='inbetween', shape='screen') }}
+          {{ learn_card(None, 'Smear', 'A page that shows the whole swing, so the move reads as speed.', 'techniques', clip='smear', shape='screen') }}
+          {{ learn_card(None, 'Hold a page', 'Tap a page’s ×1 to make it linger, up to four beats.', 'techniques', clip='hold', shape='screen') }}
+          {{ learn_card(None, 'Motion guides', 'See the path a drawing travels. Closer dots mean slower.', 'techniques', clip='guides', shape='screen') }}
+          {% endif %}
+          {% if not is_flip %}
+          {# Extras: the rest of what Pad does with a drawing, filmed as the whole
+             phone screen. #}
+          {{ learn_card(None, 'Add a take', 'Tap Add take to draw more. The replay plays every take in order.', 'extras', clip='takes', shape='screen') }}
+          {{ learn_card(None, 'Preview speed', 'Watch the replay at half or double speed. It still posts in real time.', 'extras', clip='speed', shape='screen') }}
+          {{ learn_card(None, 'Add a photo', 'Put a picture behind your drawing, then fill, fit or move it.', 'extras', clip='photo', shape='screen') }}
+          {{ learn_card(None, 'Export', 'Save a still, a video with its music, or a looping GIF.', 'extras', clip='export', shape='screen') }}
           {% endif %}
           {# Ideas: each editor leads with its own kind and shows one of the other's. #}
           {% if is_flip %}
