@@ -79,6 +79,12 @@ INK = """card => { const c = card.querySelector('canvas.skribl-inline-canvas');
     for (let i = 0; i < d.length; i += 16)
       if (d[i + 3] > 200 && Math.abs(d[i] - g[0]) + Math.abs(d[i + 1] - g[1]) + Math.abs(d[i + 2] - g[2]) > 90) n++;
     return n; }"""
+# Flip's animating techniques -> the control that does each one. Hold is the
+# badge on a page in the strip; the first page always has one.
+TECHNIQUES = {"onion": "#onion", "inbetween": "#addinbetween", "smear": "#addtween",
+              "hold": "#strip .frame .holdbadge", "guides": "#arcGuideBtn"}
+# Pad's extras -> the control each one is.
+EXTRAS = {"takes": "#addTakePill", "speed": "#speedSeg", "photo": "#photoUploadBtn", "export": "#exportItem"}
 OPEN = "() => { window.SkriblHints && window.SkriblHints.hide(); openHelpDrawer(); }"
 SHEET = "() => document.getElementById('learnPeek').click()"
 CARDS = "#learnSheet .learn-card"
@@ -126,6 +132,21 @@ with sync_playwright() as p:
         borrowed = pg.evaluate("() => [...document.querySelectorAll('[data-tool]')].filter(e => e.closest('#helpDrawer')).length")
         check(f"{name}: no example card carries the app's data-tool attribute", borrowed == 0,
               f"{borrowed} element(s) in How it works with data-tool")
+        # Flip's techniques: each control a person uses to animate has an
+        # example under Techniques. The control is looked up in the editor too,
+        # so a renamed or removed one fails here instead of leaving the list stale.
+        # Pad's extras likewise: takes, preview speed, a photo, export.
+        def group(g, controls):
+            return pg.evaluate(f"""() => ({{
+                controls: Object.fromEntries(Object.entries({json.dumps(controls)}).map(([k, s]) => [k, !!document.querySelector(s)])),
+                cards: [...document.querySelectorAll('{CARDS}[data-group={g}]')].map(c => c.dataset.clipName),
+                chip: !!document.querySelector('#learnSheet .learn-chip[data-filter={g}]') }})""")
+        mine, theirs = (("techniques", TECHNIQUES), ("extras", EXTRAS)) if name == "Flip" else (("extras", EXTRAS), ("techniques", TECHNIQUES))
+        got = group(*mine)
+        check(f"{name}: every one of its {mine[0]} (" + ", ".join(sorted(mine[1])) + ") is a control in the editor and has an example under its chip",
+              all(got["controls"].values()) and set(mine[1]) <= set(got["cards"]) and got["chip"], str(got))
+        other = group(theirs[0], {})
+        check(f"{name}: no {theirs[0]} chip or cards (they are the other editor's)", not other["cards"] and not other["chip"], str(other))
         check(f"{name}: the quick start is three steps, the second and third as screen clips",
               pg.evaluate(f"() => document.querySelectorAll('{CARDS}[data-group=start]').length") == 3
               and pg.evaluate(f"() => document.querySelectorAll('{CARDS}[data-group=start].learn-clip').length") == 2)
