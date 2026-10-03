@@ -3445,6 +3445,17 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 
 .menu-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-secondary); }
+
+/* How it works, first in both menus and tinted, so it is the first thing a
+   new person sees when they open ⋯ (owner chose B). */
+.menu-item.menu-feature {
+  margin-bottom: 6px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.menu-item.menu-feature svg { color: var(--accent); }
+.menu-item.menu-feature:hover { background: color-mix(in srgb, var(--accent) 19%, transparent); }
 .menu-item:hover { background: rgba(var(--wash-rgb), 0.06); }
 .menu-item.danger { color: var(--danger); }
 .menu-item.danger svg { color: var(--danger); }
