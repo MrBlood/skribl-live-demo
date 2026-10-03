@@ -13460,3 +13460,61 @@ you can't see the buttons being pushed on the post example."
   sends out a purple ripple and the fingertip has a dark outer ring, so taps
   read in the light theme. The "Take saved" toast from finishing the drawing
   off camera is put away before filming.
+
+## After #307 -- Flip's own tools, shown: Select and Liquify
+
+Select and Liquify change strokes already on a page, and a page stores only
+where its points ended up, so a replay could not show the move or the warp.
+They are screen clips of the Flip editor instead (`make_help_clips.py`): the
+drawing is made off camera with real pen input, and only the tool's gesture is
+filmed -- a box round a heart and the heart carried across; a finger pulled
+through three lines, which bend and keep their order. Each card has Try it.
+
+* **The camera follows the pad.** Starting a selection grows Flip's tool-hint
+  line to two lines and moves the canvas up 26px mid-clip. The recorder logs
+  the pad's position on the page's wall clock, the clock the screencast frames
+  carry, and moves the crop with it on the same frame, so the drawing holds
+  still. It also waits for the editor's chrome to ease back after the last
+  pen stroke before framing, and frames inside the pad's rounded edge.
+* `verify_helpdemos`: Flip's census now requires Select and Liquify (red with
+  the Liquify card removed); Smudge, Blur, Fill and Stamps are next. Its
+  playing checks ask only cards on screen in the drawer to move, since a card
+  scrolled out of view is paused by design (red with replays that never play).
+
+## Every Flip tool, shown: Smudge, Blur, Fill, Stamps and Artwork
+
+The same treatment as Select and Liquify, for the rest of Flip's own shelf:
+screen clips of the editor, the drawing made off camera, the gesture filmed.
+Smudge drags three stripes' colours into each other; Blur softens half of a
+zigzag beside a sharp half; Fill fills a cloud purple and a circle pink with a
+tap each; Stamps places four copies of a saved star; Artwork drags a heart and
+a star across the page together. Each card has Try it.
+
+* `verify_helpdemos`' Flip census is now every tool on Flip's shelf rather than
+  a hand-kept list, so a tool added later without an example fails it. It found
+  the one this list missed: Artwork (`artmove`), the whole-page move.
+* The fingertip followed the off-camera pen and opened each clip at the end of
+  the last stroke; it is hidden before filming.
+
+## The whole screen, and full screen
+
+The owner: "the post screenplay doesn't reveal the screen. It goes below the
+viewport to click buttons. We should be allowed to click demonstration gif and
+have it full screen, same with demos." Asked how the screen clips should be
+framed, they chose the whole phone screen over a zoomed camera that leads the
+finger.
+
+* **Post and Add music film the whole phone screen** (390 x 844, encoded 600
+  wide): every tap, the sheet and its buttons in one frame, no zoom or pan. In
+  their cards they sit as a small phone (`data-shape="screen"`, contained, not
+  cropped); full screen they are a readable phone.
+* **A tap on any example opens it full screen** (`#learnViewer`, inside How it
+  works): a replay gets a player of its own, built from the box the template
+  drew; a clip, the same recording. The cards pause beneath it. The scrim, the
+  close button and Escape close it -- Escape closes only the viewer, caught
+  before the drawer's own -- and focus goes back to the card. Each stage is a
+  button ("Watch ... full screen") and opens on Enter or Space as well.
+* `verify_helpdemos` drives it on both editors: a replay opens at least twice
+  the card's size and plays, a clip opens and advances, the cards pause, Escape
+  and the close button put it away, closing How it works closes it. Each was
+  turned red by its own break.

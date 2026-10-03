@@ -87,7 +87,8 @@ STATE = """() => ({
     replays: [...document.querySelectorAll('#learnSheet .learn-card[data-demo]')].map(c =>
         c._learnPlayer ? c._learnPlayer.state().state : 'none'),
     clips: [...document.querySelectorAll('#learnSheet .learn-video')].map(v => ({
-        src: v.getAttribute('src') || '', poster: v.getAttribute('poster') || '', t: v.currentTime, paused: v.paused })) })"""
+        src: v.getAttribute('src') || '', poster: v.getAttribute('poster') || '', t: v.currentTime, paused: v.paused,
+        start: v.closest('.learn-card').dataset.group === 'start' })) })"""
 PLAYER = lambda u: u.endswith("inlineplayer.js") or "/help/demos/" in u or "/help/clips/" in u
 
 with sync_playwright() as p:
@@ -111,7 +112,9 @@ with sync_playwright() as p:
         # 2. census
         dock = pg.evaluate("() => [...document.querySelectorAll('.tool-btn[data-tool]')].map(b => b.dataset.tool)")
         reg = pg.evaluate("() => window.SkriblFlipTools ? SkriblFlipTools.list().map(t => t.id || t) : null")
-        tools = set(dock) if name == "Pad" else ({"pen", "eraser", "shape"} & set(reg or []))
+        # Every tool on Flip's shelf, its own included: those that reshape a
+        # page (Select, Liquify, Smudge, Blur, Fill, Stamps, Artwork) are clips.
+        tools = set(dock) if name == "Pad" else set(reg or [])
         cards = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-learn-tool]')].map(c => c.dataset.learnTool)")
         tries = pg.evaluate("() => [...document.querySelectorAll('#learnSheet .learn-try')].map(b => b.dataset.try)")
         check(f"{name}: every tool ({', '.join(sorted(tools))}) has an example card with Try it",
@@ -152,9 +155,15 @@ with sync_playwright() as p:
         pg.wait_for_timeout(1500)
         z = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-demo]')].map({INK})")
         s = pg.evaluate(STATE)
-        check(f"{name}: in the drawer, every replay paints ink, and the ink changes as it plays",
-              all(x > 50 for x in z) and sum(1 for x, y in zip(a, z) if x != y) >= len(z) - 1,
-              f"ink then {a}, later {z}")
+        # On screen in the drawer's scroll, or not: a card scrolled out of view
+        # is paused by design and is not asked to change.
+        seen = pg.evaluate(f"""() => {{ const sc = document.querySelector('#learnSheet .learn-sheet-scroll').getBoundingClientRect();
+            return [...document.querySelectorAll('{CARDS}[data-demo]')].map(c => {{ const r = c.querySelector('.learn-stage').getBoundingClientRect();
+              return r.bottom > sc.top + r.height * 0.4 && r.top < sc.bottom - r.height * 0.4; }}); }}""")
+        moving = [x != y for x, y, v in zip(a, z, seen) if v]
+        check(f"{name}: in the drawer, every replay paints ink, and the ones on screen change as they play",
+              all(x > 50 for x in z) and len(moving) >= 2 and sum(moving) >= len(moving) - 1,
+              f"ink then {a}, later {z}, on screen {seen}")
         check(f"{name}: several examples play at once (the player's ambient mode)",
               s["replays"].count("playing") >= 3, str(s["replays"]))
         painted = pg.evaluate("""() => [...document.querySelectorAll('#learnSheet .learn-stage')].every(st => {
@@ -168,9 +177,13 @@ with sync_playwright() as p:
         t0 = [c["t"] for c in s["clips"]]
         pg.wait_for_timeout(900)
         s2 = pg.evaluate(STATE)
-        check(f"{name}: the screen clips play (time advances) and match the dark theme",
-              all(t2 > t1 for t1, t2 in zip(t0, [c["t"] for c in s2["clips"]]))
-              and all("-dark." in c["src"] for c in s2["clips"]) and len(s2["clips"]) == 2, str(s2["clips"]))
+        nclips = pg.evaluate("() => document.querySelectorAll('#learnSheet .learn-clip').length")
+        # The quick start's clips are on screen when the drawer opens, so they
+        # play; a clip further down plays when scrolled to, and is not asked to.
+        check(f"{name}: the screen clips play (time advances) and every clip matches the dark theme",
+              all(t2 > t1 for t1, t2, c in zip(t0, [c["t"] for c in s2["clips"]], s2["clips"]) if c["start"])
+              and sum(1 for c in s2["clips"] if c["start"]) == 2
+              and all("-dark." in c["src"] for c in s2["clips"]) and len(s2["clips"]) == nclips, str(s2["clips"]))
         pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
         pg.wait_for_timeout(500)
         s3 = pg.evaluate(STATE)
@@ -187,6 +200,42 @@ with sync_playwright() as p:
         back = shown()
         check(f"{name}: Tools shows the tool cards and nothing else; All brings every card back",
               only and set(only) == {"tools"} and len(back) == bar["n"], f"tools {only}, all {len(back)}")
+
+        # FULL SCREEN (owner: "we should be allowed to click ... and have it
+        # full screen"). A tap on a replay opens a player of its own, large; a
+        # tap on a clip, the clip large; the cards pause beneath; Escape closes
+        # only the viewer and hands focus back to the card that opened it.
+        VIEW = """() => { const v = document.getElementById('learnViewer'), st = document.getElementById('learnViewerStage');
+            const box = st.querySelector('.skribl-inline'), vid = st.querySelector('video');
+            const r = (box || vid) ? (box || vid).getBoundingClientRect() : null;
+            return { open: !v.hidden, w: r ? Math.round(r.width) : 0,
+                     player: box && box._skriblInline ? box._skriblInline.state().state : null,
+                     t: vid ? vid.currentTime : null, title: document.getElementById('learnViewerTitle').textContent,
+                     cards: [...document.querySelectorAll('#learnSheet .learn-card[data-demo]')].map(c =>
+                       c._learnPlayer ? c._learnPlayer.state().state : 'none') }; }"""
+        first = pg.locator(f"{CARDS}[data-demo]").first
+        cw = first.locator(".learn-stage").bounding_box()["width"]
+        first.locator(".learn-stage").click()
+        pg.wait_for_timeout(1800)
+        v1 = pg.evaluate(VIEW)
+        check(f"{name}: a tap on a replay opens it full screen, at least twice the card's size, playing",
+              v1["open"] and v1["w"] >= 2 * cw and v1["player"] == "playing", f"{v1}, card {cw:.0f}px")
+        check(f"{name}: ...and the cards pause beneath it", "playing" not in v1["cards"], str(v1["cards"]))
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(400)
+        back = pg.evaluate("() => ({ viewer: !document.getElementById('learnViewer').hidden,"
+                           " sheet: !document.getElementById('learnSheet').hidden,"
+                           " focus: !!(document.activeElement && document.activeElement.classList.contains('learn-stage')) })")
+        check(f"{name}: Escape closes full screen only, focus back on the card", 
+              not back["viewer"] and back["sheet"] and back["focus"], str(back))
+        clip = pg.locator(f"{CARDS}.learn-clip").first
+        clip.locator(".learn-stage").click()
+        pg.wait_for_timeout(700)
+        c1 = pg.evaluate(VIEW); pg.wait_for_timeout(900); c2 = pg.evaluate(VIEW)
+        check(f"{name}: a tap on a clip opens it full screen, and it plays",
+              c1["open"] and c1["w"] >= 2 * cw * 0.45 and (c2["t"] or 0) > (c1["t"] or 0), f"{c1} then t={c2['t']}")
+        pg.click("#learnViewerClose"); pg.wait_for_timeout(300)
+        check(f"{name}: the close button puts it away",
+              pg.evaluate("() => document.getElementById('learnViewer').hidden") is True)
 
         # THE DRAWER CLOSES, and stops what it was playing.
         pg.keyboard.press("Escape"); pg.wait_for_timeout(500)
@@ -228,11 +277,14 @@ with sync_playwright() as p:
 
         # 4. closing How it works closes the drawer and stops everything
         pg.evaluate(SHEET); pg.wait_for_timeout(700)
+        pg.locator(f"{CARDS}[data-demo]").first.locator(".learn-stage").click(); pg.wait_for_timeout(600)
         pg.evaluate("() => document.getElementById('helpClose').click()")
         pg.wait_for_timeout(700)
         s5 = pg.evaluate(STATE)
         check(f"{name}: closing How it works closes the drawer; nothing keeps playing",
               not s5["sheet"] and "playing" not in s5["replays"] and all(c["paused"] for c in s5["clips"]), str(s5))
+        check(f"{name}: ...and closes full screen with it",
+              pg.evaluate("() => document.getElementById('learnViewer').hidden") is True)
 
         # 5. Try it
         for t in sorted(tools):

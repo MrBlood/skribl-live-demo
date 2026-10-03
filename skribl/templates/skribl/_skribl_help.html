@@ -46,21 +46,21 @@
        data-tool: the cards sit before the dock in the page, so anything
        looking for "the [data-tool=eraser]" found a card (main went red on
        verify_pointerpad after #304). #}
-    {% macro learn_card(demo, title, line, group, n=None, tool=None, clip=None) -%}
+    {% macro learn_card(demo, title, line, group, n=None, tool=None, clip=None, shape=None) -%}
     {% if clip %}
     {# A screen clip (harness/tools/make_help_clips.py), one per theme so it
        matches the app around it; lib/helplearn.js picks and plays it. #}
-    <figure class="learn-card learn-clip" data-group="{{ group }}" data-clip-name="{{ clip }}"
+    <figure class="learn-card learn-clip" data-group="{{ group }}" data-clip-name="{{ clip }}"{% if tool %} data-learn-tool="{{ tool }}"{% endif %}{% if shape %} data-shape="{{ shape }}"{% endif %}
             data-clip-dark="{{ skribl_asset('help/clips/' ~ clip ~ '-dark.mp4') }}"
             data-clip-light="{{ skribl_asset('help/clips/' ~ clip ~ '-light.mp4') }}"
             data-clip-dark-webm="{{ skribl_asset('help/clips/' ~ clip ~ '-dark.webm') }}"
             data-clip-light-webm="{{ skribl_asset('help/clips/' ~ clip ~ '-light.webm') }}"
             data-poster-dark="{{ skribl_asset('help/clips/' ~ clip ~ '-dark.jpg') }}"
             data-poster-light="{{ skribl_asset('help/clips/' ~ clip ~ '-light.jpg') }}">
-      <div class="learn-stage"><video class="learn-video" muted playsinline loop preload="none" aria-hidden="true"></video></div>
+      <div class="learn-stage" role="button" tabindex="0" aria-label="Watch {{ title }} full screen"><video class="learn-video" muted playsinline loop preload="none" aria-hidden="true"></video></div>
     {% else %}
     <figure class="learn-card" data-group="{{ group }}" data-demo="{{ skribl_asset('help/demos/' ~ demo ~ '.json') }}" data-demo-name="{{ demo }}"{% if tool %} data-learn-tool="{{ tool }}"{% endif %}>
-      <div class="learn-stage">{{ skribl_inline_draft(controls=false, progress=false) }}</div>
+      <div class="learn-stage" role="button" tabindex="0" aria-label="Watch {{ title }} full screen">{{ skribl_inline_draft(controls=false, progress=false) }}</div>
     {% endif %}
       <figcaption class="learn-cap">
         <span class="learn-title">{% if n %}<span class="learn-n" aria-hidden="true">{{ n }}</span>{% endif %}{{ title }}</span>
@@ -300,11 +300,22 @@
           {% else %}
           {{ learn_card('cat', 'Draw', 'Every stroke is recorded as you make it.', 'start', n=1) }}
           {% endif %}
-          {{ learn_card(None, 'Add music', 'Pick a song and the part that loops.', 'start', n=2, clip='music') }}
-          {{ learn_card(None, 'Post', 'Get a link that plays anywhere.', 'start', n=3, clip='post') }}
+          {{ learn_card(None, 'Add music', 'Pick a song and the part that loops.', 'start', n=2, clip='music', shape='screen') }}
+          {{ learn_card(None, 'Post', 'Get a link that plays anywhere.', 'start', n=3, clip='post', shape='screen') }}
           {{ learn_card('pen', 'Pen', 'Any colour, any size. With a stylus, press harder for a thicker line.', 'tools', tool='pen') }}
           {{ learn_card('eraser', 'Eraser', 'Wipe back to the canvas. Tap it again to change its size.', 'tools', tool='eraser') }}
           {{ learn_card('shape', 'Shape', 'Lines, boxes, ovals and polygons, with rounded corners if you like.', 'tools', tool='shape') }}
+          {% if is_flip %}
+          {# Flip's own tools change strokes already on the page, which a page
+             does not record, so these are screen clips of the editor. #}
+          {{ learn_card(None, 'Select', 'Draw a box round part of a page, then move, scale or turn it.', 'tools', tool='select', clip='select') }}
+          {{ learn_card(None, 'Liquify', 'Push lines along with your finger and they bend.', 'tools', tool='liquify', clip='liquify') }}
+          {{ learn_card(None, 'Smudge', 'Drag through lines to pull their colours into each other.', 'tools', tool='smudge', clip='smudge') }}
+          {{ learn_card(None, 'Blur', 'Brush over a line to soften it.', 'tools', tool='blur', clip='blur') }}
+          {{ learn_card(None, 'Fill', 'Tap inside a closed shape to fill it with your colour.', 'tools', tool='fill', clip='fill') }}
+          {{ learn_card(None, 'Stamps', 'Save a selection as a stamp, then tap to place copies.', 'tools', tool='stamp', clip='stamp') }}
+          {{ learn_card(None, 'Artwork', 'Drag to move everything on the page at once.', 'tools', tool='artmove', clip='artmove') }}
+          {% endif %}
           {# Ideas: each editor leads with its own kind and shows one of the other's. #}
           {% if is_flip %}
           {{ learn_card('flip-bounce', 'Squash and stretch', 'The ball stretches as it falls and flattens as it lands.', 'ideas') }}
@@ -313,9 +324,25 @@
           {% else %}
           {{ learn_card('scene', 'A little world', 'Near lines heavy, far lines light, and it has depth.', 'ideas') }}
           {{ learn_card('snail', 'One line', 'Draw it all without lifting the pen.', 'ideas') }}
+          {{ learn_card('footballer', 'Outline first', 'Get the big shape down, then the folds, the face last.', 'ideas') }}
           {{ learn_card('flip-bounce', 'Make it move', 'In Flip: a page at a time, a ball that bounces.', 'ideas') }}
           {% endif %}
         </div>
+      </div>
+    </div>
+  </div>
+  {# ---- FULL SCREEN (lib/helplearn.js) ----------------------------------
+     A tap on any example opens it large over the panel (owner: "we should
+     be allowed to click ... and have it full screen"). A replay gets a player
+     of its own; a clip, the same recording. Closes on the scrim, the close
+     button or Escape, and back to the card that opened it. #}
+  <div class="learn-viewer" id="learnViewer" hidden>
+    <div class="learn-viewer-scrim" data-viewer-close></div>
+    <div class="learn-viewer-box" role="region" aria-labelledby="learnViewerTitle">
+      <div class="learn-viewer-stage" id="learnViewerStage"></div>
+      <div class="learn-viewer-cap">
+        <span class="learn-viewer-title" id="learnViewerTitle"></span>
+        <button type="button" class="help-close" id="learnViewerClose" data-viewer-close aria-label="Close full screen">&#x2715;</button>
       </div>
     </div>
   </div>

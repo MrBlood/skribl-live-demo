@@ -134,11 +134,11 @@ def center(page, sel):
 # ---- the clips ---------------------------------------------------------------
 # Each returns the crop, in CSS px of the viewport: (x, y, w, h), 4:3.
 def clip_music(page, rec):
-    # The drawer is opened off camera: the clip is about the song, so it opens
-    # on "Add music" and spends its seconds on the waveform.
-    page.locator("#mediaOpenBtn").click(); page.wait_for_timeout(500)
-    page.locator("#mediaTabMusic").click(); page.wait_for_timeout(500)
-    rec.start(); page.wait_for_timeout(350)
+    # THE WHOLE PHONE SCREEN, every tap on it (owner: the zoomed clips did not
+    # "reveal the screen"): open the drawer, Music, add a song, set the loop.
+    rec.start(); page.wait_for_timeout(400)
+    tap(page, "#mediaOpenBtn", after=450)
+    tap(page, "#mediaTabMusic", after=450)
     drop = page.locator("#musicInput").evaluate("i => { const z = i.closest('label, .drop, .media-drop, .pending-row') || i.parentElement; const r = z.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }")
     glide(page, (drop[0] + 50, drop[1] + 80), drop, 420)
     page.mouse.down(); page.wait_for_timeout(110); page.mouse.up()
@@ -157,10 +157,7 @@ def clip_music(page, rec):
     page.mouse.up(); page.wait_for_timeout(250)
     page.evaluate("window.__fingerHide()"); page.wait_for_timeout(800)
     rec.stop()
-    # Framed on the panel in use, edge to edge of its content.
-    tabs = page.locator("#mediaTabMusic").bounding_box()
-    x0 = 12; w = VW - 2 * x0; h = round(w * 3 / 4)
-    return (x0, max(0, tabs["y"] - 8), w, h)
+    return (0, 0, page.viewport_size["width"], page.viewport_size["height"])
 
 
 def clip_post(page, rec):
@@ -179,12 +176,9 @@ def clip_post(page, rec):
     # Ending the take says "Take saved" in a toast; it belongs to the drawing,
     # which was done off camera, so it is put away before filming starts.
     page.evaluate("() => { try { toast.hidden = true; } catch (e) {} }")
-    # THE CAMERA FOLLOWS THE FINGER, so every press is on screen: on the
-    # header while Post is tapped, down to the title as it is typed, then to
-    # the sheet's own Post button for the last tap and "Posted". The owner
-    # could not see the buttons being pushed when the clip opened on the title.
-    w = VW - 24; h = round(w * 3 / 4)
-    ya = 0
+    # THE WHOLE PHONE SCREEN: the tap on Post, the sheet, the title, the
+    # sheet's Post button and "Posted!" all in one frame. A zoomed camera
+    # panning after the finger lost it off the bottom (owner).
     rec.start(); page.wait_for_timeout(400)
     tap(page, "#postBtn", after=550)
     rec.mark("sheet")
@@ -192,12 +186,6 @@ def clip_post(page, rec):
     glide(page, (tx + 60, ty + 80), (tx, ty), 600)
     page.mouse.down(); page.wait_for_timeout(120); page.mouse.up()
     page.keyboard.type("Cat", delay=80)
-    # Where things sit WHILE they are used: posting reflows the sheet, so a
-    # measure taken at the end frames them wrong.
-    lab = page.locator("#postTitleInput").bounding_box()
-    sub = page.locator("#postSubmitBtn").bounding_box()
-    yb = max(0, lab["y"] - 24)
-    yc = max(yb, sub["y"] + sub["height"] + 20 - h)
     page.wait_for_timeout(250)
     rec.mark("submit")
     page.wait_for_timeout(500)
@@ -205,13 +193,276 @@ def clip_post(page, rec):
     page.wait_for_selector("#postResult:not([hidden])", timeout=15000)
     page.evaluate("window.__fingerHide()"); page.wait_for_timeout(1100)
     rec.stop()
-    m = rec.marks
-    return (12, w, h, [(m["sheet"], ya), (m["sheet"] + 0.8, yb), (m["submit"], yb), (m["submit"] + 0.8, yc)])
+    return (0, 0, page.viewport_size["width"], page.viewport_size["height"])
 
 
-CLIPS = {"music": clip_music, "post": clip_post}
+# ---- Flip's own tools ---------------------------------------------------------
+# Select and Liquify change strokes already on the page, and a page stores only
+# where its points ended up, so a replay could not show the move or the warp.
+# These are filmed from the editor instead: the drawing is made off camera with
+# real pen input (artdraw.py), and only the tool's gesture is on screen.
+def flip_ready(page):
+    """Flip at 4:3 on paper with the pen, as the illustrations are drawn."""
+    import artdraw
+    page.evaluate("""() => { const t = window.SkriblCanvasSizes, id = t.SIZES.find(s => s.label === '4:3').id;
+        const b = document.querySelector(`[data-size='${id}']`); if (b) b.click(); }""")
+    page.wait_for_timeout(300)
+    page.evaluate(f"""() => {{ setBg('{artdraw.PAPER}'); onion = false;
+        if (window.SkriblPressure) SkriblPressure.setEnabled(true); shelfSetTool('pen'); }}""")
+    page.wait_for_timeout(200)
+    return page.evaluate("() => [CW, CH]")
+
+
+def flip_draw(page, strokes, logical):
+    import artdraw
+    artdraw.draw(page, strokes, canvas="#pad", logical=logical, tempo=3.0, pause_tempo=4.0,
+                 set_ink=lambda pg, c, s: pg.evaluate("([c, s]) => { color = c; size = s; }", [c, s]))
+    # While a pen is down the editor fades and tucks its chrome, and it eases
+    # back after the last stroke, moving the pad about 13px: a frame measured
+    # before it settles is off by that much for the rest of the clip.
+    page.wait_for_timeout(1500)
+    # The fingertip followed the off-camera pen; it starts the clip hidden.
+    page.evaluate("() => window.__fingerHide && window.__fingerHide()")
+
+
+PAD_WATCH = """() => { window.__padYs = []; const c = document.getElementById('pad'); let last = null;
+  (function tick() { const y = c.getBoundingClientRect().y;
+    if (y !== last) { __padYs.push([Date.now() / 1000, y]); last = y; }
+    requestAnimationFrame(tick); })(); }"""
+
+
+def follow_pad(page, crop):
+    """The crop as a camera that moves WITH the pad. Selecting on Flip grows
+    the tool-hint line above the canvas to two lines, which moves the pad up
+    26px mid-clip: the app doing its job, so the camera follows it on the same
+    frame instead, and the drawing holds still in the clip. Times are the
+    page's wall clock, which is the clock the screencast frames carry."""
+    x, y, w, h = crop
+    ys = page.evaluate("() => window.__padYs || []")
+    if not ys:
+        return crop
+    y0 = ys[0][1]
+    keys = [(ys[0][0], y)]
+    for (ta, ya), (tb, yb) in zip(ys, ys[1:]):
+        keys += [(tb - 0.001, y + (ya - y0)), (tb, y + (yb - y0))]
+    return (x, w, h, keys) if len(keys) > 1 else crop
+
+
+def on_pad(page, logical):
+    """Logical canvas units -> page coordinates, and the 4:3 crop round the pad."""
+    b = page.locator("#pad").bounding_box()
+    k = b["width"] / logical[0]
+    to = lambda x, y: (b["x"] + x * k, b["y"] + y * k)
+    # The largest 4:3 frame INSIDE the pad: on a phone the pad can be a little
+    # short of 4:3, and a frame sized from its width alone took in the page
+    # below it.
+    # Inset past the pad's rounded corners and edge, which are page, not paper.
+    w = min(b["width"] - 16, (b["height"] - 16) * 4 / 3)
+    w = int(w) // 4 * 4; h = w * 3 // 4
+    return to, (b["x"] + (b["width"] - w) / 2, b["y"] + (b["height"] - h) / 2, w, h)
+
+
+def clip_liquify(page, rec):
+    import math
+    from artdraw import INK, PURPLE, Stroke as S
+    logical = flip_ready(page)
+    lines = []
+    for i, (y, c) in enumerate(((236, PURPLE), (306, INK), (376, "#ff6f91"))):
+        pts = [(150 + 516 * k / 12, y + 10 * math.sin(k / 12 * 2 * math.pi + i * 0.8)) for k in range(13)]
+        lines.append(S(pts, "contour", c, size=11, weight=[(0, 0.6), (0.5, 1.0), (1, 0.6)]))
+    flip_draw(page, lines, logical)
+    page.evaluate("() => shelfSetTool('liquify')"); page.wait_for_timeout(300)
+    to, crop = on_pad(page, logical)
+    page.evaluate(PAD_WATCH)
+    rec.start(); page.wait_for_timeout(500)
+    # One unhurried pull down through all three lines, then a second, shorter
+    # one beside it: the lines bend with the finger and keep their order.
+    for (x0, y0, x1, y1, ms) in ((350, 170, 380, 450, 1300), (520, 440, 500, 250, 1000)):
+        a, b = to(x0, y0), to(x1, y1)
+        glide(page, (a[0] + 40, a[1] - 60), a, 350)
+        page.mouse.down()
+        glide(page, a, b, ms, steps=40)
+        page.mouse.up(); page.wait_for_timeout(300)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def clip_select(page, rec):
+    import math
+    from artdraw import PURPLE, Stroke as S
+    logical = flip_ready(page)
+
+    def heart(side, cx=250, cy=300, k=7.5):
+        pts = []
+        for i in range(19):
+            a = min(math.pi, math.pi * i / 16) * side
+            x = 16 * math.sin(a) ** 3
+            y = 13 * math.cos(a) - 5 * math.cos(2 * a) - 2 * math.cos(3 * a) - math.cos(4 * a)
+            pts.append((cx + k * x, cy - k * y))
+        return pts
+    flip_draw(page, [S(heart(-1), "contour", PURPLE, size=22), S(heart(+1), "contour", PURPLE, size=22)], logical)
+    page.evaluate("() => shelfSetTool('select')"); page.wait_for_timeout(300)
+    to, crop = on_pad(page, logical)
+    page.evaluate(PAD_WATCH)
+    rec.start(); page.wait_for_timeout(500)
+    # A box round the heart, then the heart carried across the page.
+    a, b = to(110, 165), to(395, 430)
+    glide(page, (a[0] + 50, a[1] - 40), a, 350)
+    page.mouse.down(); glide(page, a, b, 900, steps=30); page.mouse.up()
+    page.wait_for_timeout(450)
+    c, d = to(250, 300), to(560, 290)
+    glide(page, b, c, 450)
+    page.mouse.down(); glide(page, c, d, 1100, steps=40); page.mouse.up()
+    page.wait_for_timeout(350)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def tap_at(page, pt, before=380, after=500):
+    glide(page, (pt[0] + 50, pt[1] + 70), pt, before)
+    page.mouse.down(); page.wait_for_timeout(170); page.mouse.up()
+    page.wait_for_timeout(after)
+
+
+def sweep(page, pts, ms):
+    """A finger down, along a path, and up: a brush tool's gesture."""
+    glide(page, (pts[0][0] + 40, pts[0][1] - 50), pts[0], 350)
+    page.mouse.down()
+    per = ms // max(1, len(pts) - 1)
+    for a, b in zip(pts, pts[1:]):
+        glide(page, a, b, per, steps=max(6, per // 30))
+    page.mouse.up(); page.wait_for_timeout(300)
+
+
+def clip_fill(page, rec):
+    import math
+    from artdraw import INK, Stroke as S
+    logical = flip_ready(page)
+    cloud = []
+    for k in range(61):
+        a = 2 * math.pi * 1.06 * k / 60 - math.pi / 2
+        r = 105 + 18 * abs(math.sin(2.5 * a))
+        cloud.append((300 + 1.2 * r * math.cos(a), 300 + 0.85 * r * math.sin(a)))
+    circle = [(590 + 85 * math.cos(2 * math.pi * 1.08 * k / 40), 300 + 85 * math.sin(2 * math.pi * 1.08 * k / 40))
+              for k in range(41)]
+    # Closed and full weight end to end, so the outline holds the fill.
+    flip_draw(page, [S(cloud, "contour", INK, size=10, taper=(0, 0)),
+                     S(circle, "contour", INK, size=10, taper=(0, 0))], logical)
+    page.evaluate("() => { shelfSetTool('fill'); color = '#7c5cff'; }"); page.wait_for_timeout(300)
+    page.evaluate(PAD_WATCH)
+    to, crop = on_pad(page, logical)
+    rec.start(); page.wait_for_timeout(500)
+    tap_at(page, to(300, 300), after=700)
+    page.evaluate("() => { color = '#ff6f91'; }")
+    tap_at(page, to(590, 300), after=700)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def clip_smudge(page, rec):
+    from artdraw import INK, PURPLE, Stroke as S
+    logical = flip_ready(page)
+    stripes = [S([(160, y), (408, y + 4), (656, y)], "contour", c, size=26, taper=(0.04, 0.04))
+               for y, c in ((236, PURPLE), (300, "#ff6f91"), (364, INK))]
+    flip_draw(page, stripes, logical)
+    page.evaluate("() => shelfSetTool('smudge')"); page.wait_for_timeout(300)
+    page.evaluate(PAD_WATCH)
+    to, crop = on_pad(page, logical)
+    rec.start(); page.wait_for_timeout(500)
+    sweep(page, [to(300, 200), to(320, 300), to(340, 410)], 1300)
+    sweep(page, [to(520, 410), to(500, 300), to(480, 200)], 1100)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def clip_blur(page, rec):
+    from artdraw import INK, Stroke as S
+    logical = flip_ready(page)
+    zig = [(150 + 52 * k, 250 if k % 2 else 350) for k in range(11)]
+    flip_draw(page, [S(zig, "contour", INK, size=12, taper=(0.03, 0.06))], logical)
+    page.evaluate("() => shelfSetTool('blur')"); page.wait_for_timeout(300)
+    page.evaluate(PAD_WATCH)
+    to, crop = on_pad(page, logical)
+    rec.start(); page.wait_for_timeout(500)
+    # Back and forth over the right half; the left stays sharp beside it.
+    sweep(page, [to(430, 300), to(660, 290), to(440, 310), to(650, 300)], 2200)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def clip_stamp(page, rec):
+    import math
+    from artdraw import PURPLE, Stroke as S
+    logical = flip_ready(page)
+    star = []
+    for k in range(11):
+        r = 46 if k % 2 == 0 else 20
+        a = -math.pi / 2 + math.pi * k / 5
+        star.append((170 + r * math.cos(a), 170 + r * math.sin(a)))
+    flip_draw(page, [S(star, "contour", PURPLE, size=12, taper=(0, 0))], logical)
+    # Saved as a stamp off camera: select it, Stamp. The clip is the placing.
+    to, _ = on_pad(page, logical)
+    page.evaluate("() => shelfSetTool('select')"); page.wait_for_timeout(300)
+    a, b = to(100, 100), to(240, 240)
+    page.mouse.move(*a); page.mouse.down(); page.mouse.move(*b, steps=12); page.mouse.up()
+    page.wait_for_timeout(400)
+    page.locator("#sbStamp").click(); page.wait_for_timeout(400)
+    page.evaluate("() => { setTool('stamp'); const p = document.getElementById('stampPop'); if (p) p.hidden = true;"
+                  " try { SkriblHints && SkriblHints.hide(); } catch (e) {} }")
+    page.wait_for_timeout(1500)
+    page.evaluate(PAD_WATCH)
+    to, crop = on_pad(page, logical)
+    rec.start(); page.wait_for_timeout(500)
+    for pt in ((380, 260), (560, 380), (660, 200), (300, 430)):
+        tap_at(page, to(*pt), before=330, after=380)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+def clip_artmove(page, rec):
+    import math
+    from artdraw import INK, PURPLE, Stroke as S
+    logical = flip_ready(page)
+
+    def heart(side, cx=230, cy=290, k=6.5):
+        pts = []
+        for i in range(19):
+            a = min(math.pi, math.pi * i / 16) * side
+            x = 16 * math.sin(a) ** 3
+            y = 13 * math.cos(a) - 5 * math.cos(2 * a) - 2 * math.cos(3 * a) - math.cos(4 * a)
+            pts.append((cx + k * x, cy - k * y))
+        return pts
+    star = []
+    for k in range(11):
+        r = 40 if k % 2 == 0 else 17
+        a = -math.pi / 2 + math.pi * k / 5
+        star.append((380 + r * math.cos(a), 220 + r * math.sin(a)))
+    flip_draw(page, [S(heart(-1), "contour", PURPLE, size=18), S(heart(+1), "contour", PURPLE, size=18),
+                     S(star, "contour", INK, size=10, taper=(0, 0))], logical)
+    page.evaluate("() => shelfSetTool('artmove')"); page.wait_for_timeout(300)
+    page.evaluate(PAD_WATCH)
+    to, crop = on_pad(page, logical)
+    rec.start(); page.wait_for_timeout(500)
+    # The whole page's drawing moves together, wherever the drag starts.
+    sweep(page, [to(300, 300), to(470, 330)], 1300)
+    page.evaluate("window.__fingerHide()"); page.wait_for_timeout(900)
+    rec.stop()
+    return follow_pad(page, crop)
+
+
+CLIPS = {"music": clip_music, "post": clip_post, "select": clip_select, "liquify": clip_liquify,
+         "smudge": clip_smudge, "blur": clip_blur, "fill": clip_fill, "stamp": clip_stamp,
+         "artmove": clip_artmove}
+# The editor a clip is filmed in, when not Pad.
+ROUTE = {k: "/flip" for k in ("select", "liquify", "smudge", "blur", "fill", "stamp", "artmove")}
 # Where a clip is recorded, when not the tall phone screen above.
-VIEWPORT = {}
+VIEWPORT = {"music": (390, 844), "post": (390, 844)}   # a phone's own screen, all of it
 
 
 # Driving a 2x page makes every gesture take about half again as long as it
@@ -264,7 +515,10 @@ def encode(frames, crop, out):
         # At the crop's own 2x pixels, never scaled down: a downscale is what
         # softened the interface text in the first clips.
         w, h = w // 2 * 2, h // 2 * 2
-        vf = f"crop={w}:{h}:{x}:{y},setpts=PTS/{SPEED},fps=30,format=yuv420p"
+        # A whole phone screen is 780 px wide at 2x; 600 keeps its text crisp
+        # full screen at a fraction of the bytes. A canvas crop stays native.
+        fit = ",scale=600:-2:flags=lanczos" if w > 700 else ""
+        vf = f"crop={w}:{h}:{x}:{y},setpts=PTS/{SPEED}{fit},fps=30,format=yuv420p"
         src = ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(pathlib.Path(d) / "list.txt"), "-vf", vf]
         subprocess.run(src + ["-c:v", "libx264", "-profile:v", "high", "-crf", "21", "-preset", "slow",
                               "-movflags", "+faststart", "-an", str(out)], check=True)
@@ -285,7 +539,7 @@ def make(browser, name, dark):
     page = ctx.new_page()
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)))
-    browsing.goto(page, BASE, "/skribl-pad")
+    browsing.goto(page, BASE, ROUTE.get(name, "/skribl-pad"))
     page.wait_for_timeout(900)
     page.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
     page.evaluate(FINGER)

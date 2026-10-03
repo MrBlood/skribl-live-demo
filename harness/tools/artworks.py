@@ -207,6 +207,32 @@ def tool_shape():
     ]
 
 
-ART = {"cat": cat, "scene": scene, "snail": snail,
+def footballer():
+    """A footballer kneeling in celebration -- from a traced line drawing the
+    owner supplied, cleaned up (art/footballer.json): 331 traced fragments
+    joined into a few dozen long lines and brand marks left off. (Its ball was
+    rebuilt once and taken out again at the owner's word.) The long outlines
+    go down first, then the inner lines, the face last."""
+    import json
+    import math
+    import pathlib
+    d = json.loads((pathlib.Path(__file__).parent / "art" / "footballer.json").read_text())
+    x0, y0, w, h = 38, 21, 868, 960
+    s = min((816 - 40) / w, (612 - 40) / h)
+    ox, oy = (816 - w * s) / 2, (612 - h * s) / 2
+    m = lambda pts: [((x - x0) * s + ox, (y - y0) * s + oy) for x, y in pts]
+    L = lambda p: sum(math.dist(a, b) for a, b in zip(p, p[1:]))
+    fig = sorted(d["figure"], key=L, reverse=True)
+    face = lambda p: all(395 <= x <= 565 and 60 <= y <= 220 for x, y in p)
+    outlines = [p for p in fig if L(p) > 200 and not face(p)]
+    inner = sorted((p for p in fig if L(p) <= 200 and not face(p)), key=lambda p: min(y for _, y in p))
+    faces = [p for p in fig if face(p)]
+    out = [S(m(p), "contour", size=6.5, pace=1.2, weight=[(0, 0.6), (0.5, 1.0), (1, 0.6)]) for p in outlines]
+    out += [S(m(p), "detail", size=4.5, pace=1.3) for p in inner]
+    out += [S(m(p), "detail", size=4, pace=1.0) for p in faces]
+    return out
+
+
+ART = {"cat": cat, "scene": scene, "snail": snail, "footballer": footballer,
        # the tool cards' examples (Pen, Eraser, Shape)
        "pen": tool_pen, "eraser": tool_eraser, "shape": tool_shape}
