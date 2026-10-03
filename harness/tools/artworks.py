@@ -211,11 +211,12 @@ def footballer():
 
 
 def pug():
-    """A pug sitting, head tipped, glancing up -- the owner's own line drawing
-    (art/pug.json), its ink followed end to end; the pupils and the nose,
-    solid in the drawing, laid in as fills, and purple added round each pupil
-    at the owner's word. The head first, long lines before short, then the
-    eyes and the nose, then the body, the legs, the paws and the curled tail."""
+    """A pug sitting, head tipped, glancing up -- the owner's own coloured
+    drawing (art/pug.json). Colour first, as a broad marker: the tan of him,
+    the brown of his ears and muzzle, the purple of his eyes, each patch once
+    round inside its edge and then back and forth across it. Then the ink on
+    top, the head long lines before short, the pupils and the nose, then the
+    body, legs, paws and the curled tail."""
     import json
     import math
     import pathlib
@@ -227,19 +228,15 @@ def pug():
     ox, oy = (816 - w * s) / 2, (612 - h * s) / 2
     m = lambda pts: [((x - x0) * s + ox, (y - y0) * s + oy) for x, y in pts]
     L = lambda p: sum(math.dist(a, b) for a, b in zip(p, p[1:]))
+    colour = {"tan": "#fbe1c0", "brown": "#6d503f", "purple": PURPLE}
+    out = []
+    for name in ("tan", "brown", "purple"):
+        for f in sorted((f for f in d["fills"] if f["color"] == name), key=lambda f: -f["area"]):
+            out.append(S(m(f["pts"]), "fill", colour[name], size=f["size"] * s, pace=2.2, taper=(0.02, 0.02)))
     head = lambda p: sum(y for _, y in p) / len(p) < 530
     line = lambda p: S(m(p), "detail", size=6.5, pace=1.15, weight=[(0, 0.75), (0.5, 1.0), (1, 0.75)])
-    out = [line(p) for p in sorted((p for p in d["lines"] if head(p)), key=L, reverse=True)]
-    # The eyes: purple round each pupil, kept inside the eye's ring (the pupils
-    # sit toward the right of it, so the purple sits a little left of them),
-    # then the black pupils, then the nose.
-    blobs = sorted(d["blobs"], key=lambda b: b["rx"])
-    eyes, nose = blobs[:2], blobs[2]
-    for b in eyes:
-        cx, cy = m([(b["cx"] - 11, b["cy"] + 1)])[0]
-        r = (b["rx"] + 6) * s
-        out.append(S(_blob(cx, cy, r, r, turns=2.4, n=30), "fill", PURPLE, size=9, pace=1.6))
-    for b in eyes + [nose]:
+    out += [line(p) for p in sorted((p for p in d["lines"] if head(p)), key=L, reverse=True)]
+    for b in d["blobs"]:
         (cx, cy), = m([(b["cx"], b["cy"])])
         out.append(S(_blob(cx, cy, b["rx"] * s * 0.8, b["ry"] * s * 0.8, turns=2.0, n=22), "fill", size=8, pace=1.6))
     out += [line(p) for p in sorted((p for p in d["lines"] if not head(p)), key=L, reverse=True)]
