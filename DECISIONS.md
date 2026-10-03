@@ -13565,3 +13565,22 @@ below; asked whether tapping still shows it large, the measurement said yes
 * **A tall card.** A phone clip's stage is 3:4 instead of 4:3, so the phone
   fills it: about 132 x 217 px in the card instead of 57 x 122. Zoom, filmed on
   a desktop, keeps the wide stage (`data-shape="desk"`).
+
+## Blooby, on the blank canvas
+
+The owner picked the waving character from Flip's Draw example to be the face
+of Skribl, and named him Blooby. What makes him Skribl is that he is drawn: the
+marker gaps in his purple, the outline in two strokes that don't quite meet.
+A clean vector mock lost that and was rejected, so every Blooby is drawn by
+Skribl's own pen from his Flip strokes.
+
+* **A die-cut sticker** (`static/brand/blooby-wave.webp`). The canvas is dark
+  until a background is chosen, and on it his black outline vanished and his
+  marker gaps showed black. A white outline, greys, a glow and a spotlight were
+  mocked and turned down; a paper border cut to his shape keeps him exactly as
+  drawn on any ground. The owner chose the thick border.
+* **On both blank canvases**, in place of the pencil, above the words that say
+  what to do. He is decorative (`alt=""`) and sized by the canvas, so a wide
+  canvas on a phone shrinks him rather than pushing the words out.
+  `verify_a11y` A11Y 16 holds both, red on a missing image and on a
+  fixed-height Blooby.

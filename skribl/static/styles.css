@@ -1202,6 +1202,16 @@ body.stroking .skribl-hint {
   opacity: 0.9;
 }
 
+/* Blooby on the blank canvas: sized by the canvas, so a short canvas (a wide
+   shape on a phone) still fits him and both lines of text. */
+.canvas-empty-blooby {
+  height: 30%;
+  min-height: 64px;
+  max-height: 170px;
+  width: auto;
+  margin-bottom: 8px;
+}
+
 .canvas-empty-sub {
   font-size: 12px;
   font-weight: 500;
