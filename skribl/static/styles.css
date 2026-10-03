@@ -5761,9 +5761,13 @@ a.player-btn { text-decoration: none; }
    paper, because it is a picture of the app, not of a drawing. */
 .learn-clip .learn-stage { background: var(--surface-sheet-2); }
 .learn-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-/* A whole phone screen (Post, Add music) is portrait: the card shows all of
-   it, small, and a tap shows it large. */
-.learn-clip[data-shape="screen"] .learn-video { object-fit: contain; }
+/* A whole phone screen (Post, Add music, Techniques, Extras) is portrait, so
+   its card is too: the phone fills a tall stage instead of a sliver of a wide
+   one (owner: "they're small"), and a tap still shows it large. A desktop
+   clip (Zoom) keeps the wide stage, shown whole. */
+.learn-clip[data-shape="screen"] .learn-stage { aspect-ratio: 3 / 4; }
+.learn-clip[data-shape="screen"] .learn-video,
+.learn-clip[data-shape="desk"] .learn-video { object-fit: contain; }
 .learn-stage[role="button"] { cursor: zoom-in; }
 .learn-stage[role="button"]:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: -2px; }
 
