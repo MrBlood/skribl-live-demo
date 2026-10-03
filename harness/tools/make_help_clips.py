@@ -36,31 +36,37 @@ BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 # scrolls the page and a fixed crop holds the whole gesture.
 VW, VH, DPR = 390, 1300, 2
 
-# The finger: a soft disc that follows the pointer and presses in. It is part
-# of the page while recording, so it is in the frames, exactly where the
-# pointer went.
-# A press also sends out a purple ripple: the owner could not see the buttons
-# being pushed in the first Post clip, and a pale disc on a pale button is
-# nearly invisible in the light theme, so the disc carries a dark outer ring.
+# The finger: a bright point in a soft purple glow, in the family of the
+# replay's own pen-tip nib (a dot of the ink's colour in a glow of it), so a
+# clip and a replay read as one thing. Owner's pick of three mocked (B). It is
+# part of the page while recording, so it is in the frames, exactly where the
+# pointer went; it presses in on a tap and sends out a purple bloom, because
+# the owner could not see the buttons being pushed in the first Post clip.
+# The tool picture Flip draws beside a mouse pointer stays (owner: "so you
+# know what it is"); the crosshair beneath it is hidden, since a finger has
+# none and it sat inside the fingertip.
 FINGER = """() => {
+  const s = document.createElement('style');
+  s.textContent = '.flip-brush-cursor{display:none!important}';
+  document.head.appendChild(s);
   const f = document.createElement('div'); f.id = 'clipFinger';
-  f.style.cssText = 'position:fixed;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;' +
-    'border-radius:50%;background:rgba(255,255,255,.34);' +
-    'box-shadow:0 0 0 2px rgba(255,255,255,.8),0 0 0 3.5px rgba(20,16,40,.45),0 4px 14px rgba(0,0,0,.35);' +
-    'pointer-events:none;z-index:2147483647;opacity:0;transition:opacity .18s, transform .12s;';
+  f.style.cssText = 'position:fixed;left:0;top:0;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;' +
+    'background:radial-gradient(circle,rgba(255,255,255,.95) 0 5px,rgba(124,92,255,.95) 5.5px 6.8px,' +
+    'rgba(124,92,255,.28) 7.5px,rgba(124,92,255,0) 70%);' +
+    'pointer-events:none;z-index:2147483647;opacity:0;transition:opacity .18s, transform .14s ease-out;';
   document.body.appendChild(f);
   const at = e => { f.style.left = e.clientX + 'px'; f.style.top = e.clientY + 'px'; f.style.opacity = 1; };
   const ripple = e => {
     const r = document.createElement('div');
-    r.style.cssText = 'position:fixed;left:' + e.clientX + 'px;top:' + e.clientY + 'px;width:44px;height:44px;' +
-      'margin:-22px 0 0 -22px;border-radius:50%;border:3px solid rgba(124,92,255,.85);pointer-events:none;' +
-      'z-index:2147483646;transform:scale(.5);opacity:1;transition:transform .5s ease-out, opacity .5s ease-out;';
+    r.style.cssText = 'position:fixed;left:' + e.clientX + 'px;top:' + e.clientY + 'px;width:30px;height:30px;' +
+      'margin:-15px 0 0 -15px;border-radius:50%;background:rgba(124,92,255,.28);pointer-events:none;' +
+      'z-index:2147483646;transform:scale(.6);opacity:1;transition:transform .55s cubic-bezier(.2,.7,.3,1), opacity .55s ease-out;';
     document.body.appendChild(r);
-    requestAnimationFrame(() => requestAnimationFrame(() => { r.style.transform = 'scale(1.7)'; r.style.opacity = 0; }));
-    setTimeout(() => r.remove(), 600);
+    requestAnimationFrame(() => requestAnimationFrame(() => { r.style.transform = 'scale(2)'; r.style.opacity = 0; }));
+    setTimeout(() => r.remove(), 650);
   };
   addEventListener('pointermove', at, true);
-  addEventListener('pointerdown', e => { at(e); f.style.transform = 'scale(.82)'; ripple(e); }, true);
+  addEventListener('pointerdown', e => { at(e); f.style.transform = 'scale(.86)'; ripple(e); }, true);
   addEventListener('pointerup', () => { f.style.transform = ''; }, true);
   window.__fingerHide = () => { f.style.opacity = 0; };
 }"""
