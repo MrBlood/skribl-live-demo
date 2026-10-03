@@ -272,13 +272,28 @@ with sync_playwright() as p:
         if not esc["help"]:                 # a failure above shut the panel; carry on
             pg.evaluate(OPEN); pg.wait_for_timeout(500)
         pg.evaluate(SHEET); pg.wait_for_timeout(500)
-        g = pg.locator("#learnGrip").bounding_box()
+        # The sheet glides up for .34s and under load can still be moving at
+        # 500ms: a pull that starts on a moving grip measured 2 failures in 5.
+        # Wait for the grip to hold still (up to 3s), then pull.
+        g, prev = None, None
+        for _ in range(30):
+            g = pg.locator("#learnGrip").bounding_box()
+            if prev and g and abs(g["y"] - prev["y"]) < 0.5:
+                break
+            prev = g; pg.wait_for_timeout(100)
+        PANEL_TOP = "() => document.querySelector('#learnSheet .learn-sheet-panel').getBoundingClientRect().top"
+        top0 = pg.evaluate(PANEL_TOP)
         pg.mouse.move(g["x"] + g["width"] / 2, g["y"] + g["height"] / 2); pg.mouse.down()
         for k in range(1, 9):
             pg.mouse.move(g["x"] + g["width"] / 2, g["y"] + g["height"] / 2 + k * 18); pg.wait_for_timeout(16)
+        # A press and release on the grip is a tap, and a tap closes it too, so
+        # "closed afterwards" alone passed with no pull at all. Only a pull
+        # carries the sheet down under the finger before it lets go.
+        followed = pg.evaluate(PANEL_TOP) - top0
         pg.mouse.up(); pg.wait_for_timeout(500)
-        check(f"{name}: a pull down on the grip closes the drawer",
-              pg.evaluate("() => document.getElementById('learnSheet').hidden") is True)
+        check(f"{name}: a pull down on the grip carries the drawer with it, and closes it",
+              followed > 60 and pg.evaluate("() => document.getElementById('learnSheet').hidden") is True,
+              f"followed the finger {followed:.0f}px of 144")
         pg.evaluate(SHEET); pg.wait_for_timeout(500)
         pg.click("#learnGrip"); pg.wait_for_timeout(500)
         check(f"{name}: a tap on the grip closes it too",
@@ -349,6 +364,48 @@ with sync_playwright() as p:
               "playing" not in s6["replays"] and all(x > 50 for x in ink), f"{s6['replays']} ink {ink}")
         check(f"{name}: and each clip shows its poster without fetching the video",
               all(c["poster"] and not c["src"] for c in s6["clips"]), str(s6["clips"]))
+        ctx.close()
+
+        # 7. on a phone with a panel open, How it works is still the SCREEN.
+        # Photo/Music makes the page taller than the phone; the drawer was
+        # positioned in .app, grew with it, and the examples sheet and the
+        # full-screen example hung off the bottom (owner's iPhone, Pad).
+        # Pad is opened the way a person does, from the menu with the panel
+        # still open. Flip's menu shuts the panel first and Flip's .app does
+        # not grow, so Flip cannot fail that scenario: it is opened directly,
+        # and pinned by the property the fix governs, the drawer's position.
+        # 600 tall: about what a small iPhone shows between Safari's bars.
+        ctx = b.new_context(viewport={"width": 390, "height": 600}, has_touch=True)
+        pg = ctx.new_page()
+        browsing.goto(pg, BASE, route)
+        pg.wait_for_timeout(800)
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        pg.click("#mediaOpenBtn"); pg.wait_for_timeout(900)
+        tall = pg.evaluate("() => document.documentElement.scrollHeight - innerHeight")
+        if name == "Pad":
+            pg.evaluate("() => document.getElementById('menuBtn').click()"); pg.wait_for_timeout(500)
+            pg.evaluate("() => document.getElementById('helpItem').click()"); pg.wait_for_timeout(800)
+        else:
+            pg.evaluate(OPEN); pg.wait_for_timeout(800)
+        pg.evaluate(SHEET); pg.wait_for_timeout(900)
+        pg.evaluate("() => document.querySelector('#learnSheet .learn-stage[role=button]').click()")
+        pg.wait_for_timeout(900)
+        seen = pg.evaluate("""() => { const r = e => { const b = e.getBoundingClientRect(); return [Math.round(b.top), Math.round(b.bottom)]; };
+            const d = document.getElementById('helpDrawer');
+            return { drawer: r(d), position: getComputedStyle(d).position,
+                     sheet: r(document.querySelector('#learnSheet .learn-sheet-panel')),
+                     example: r(document.getElementById('learnViewerStage')),
+                     caption: r(document.querySelector('#learnViewer .learn-viewer-cap')), vh: innerHeight }; }""")
+        check(f"{name}: (setup) with Photo/Music open the page is taller than a phone",
+              tall > 100, f"{tall}px taller — without it the checks below prove nothing")
+        check(f"{name}: How it works is pinned to the screen, not to the page",
+              seen["position"] == "fixed", str(seen))
+        check(f"{name}: on a phone with a panel open, How it works and its examples fill the screen, no more",
+              seen["drawer"] == [0, seen["vh"]] and seen["sheet"][1] == seen["vh"], str(seen))
+        # Not asserted: "the example and its close button are wholly on screen".
+        # In Chromium the old drawer still squeezed the caption on at 600 and
+        # 664 tall (it is the iPhone's bars that pushed it off), so that check
+        # stayed green on the broken tree and proved nothing. The two above went red.
         ctx.close()
     b.close()
 

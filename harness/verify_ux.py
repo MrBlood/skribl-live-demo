@@ -1255,9 +1255,11 @@ with _sp204() as _p:
     # same arm, same Undo.
     check("V316: Flip menu has 'New Skribl'", has(flip_items, "New Skribl"), str(flip_items))
     check("V316: Pad menu has 'New Skribl'", has(pad_items, "New Skribl"), str(pad_items))
-    _first = lambda page_, sel: page_.evaluate(f"() => {{ const m = document.querySelector('{sel}'); const b = m && m.querySelector('.menu-item'); return b ? b.id : null; }}")
-    check("V316: New Skribl is the FIRST row of both menus",
-          _first(pg, "#menuSheet") == "clearMenuItem" and _first(fp, "#moreMenu") == "miClearAll",
+    # How it works now leads both menus, tinted (owner chose it, "B"), and New
+    # Skribl is the first ACTION under it -- the v316 rule, one row down.
+    _first = lambda page_, sel: page_.evaluate(f"() => {{ const m = document.querySelector('{sel}'); return m ? [...m.querySelectorAll('.menu-item')].slice(0, 2).map(b => b.id) : null; }}")
+    check("V316: How it works leads both menus, and New Skribl is the first action under it",
+          _first(pg, "#menuSheet") == ["helpItem", "clearMenuItem"] and _first(fp, "#moreMenu") == ["miInfo", "miClearAll"],
           f"pad {_first(pg, '#menuSheet')}, flip {_first(fp, '#moreMenu')}")
     # V317: A NEW SKRIBL IS A NEW TITLE (owner: "it should change title, not
     # leave the last title"). New Skribl kept the old name, so the next save and
