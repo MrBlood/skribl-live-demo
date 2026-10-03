@@ -208,17 +208,16 @@ def tool_shape():
 
 
 def footballer():
-    """A footballer kneeling in celebration, and a ball -- from a traced line
-    drawing the owner supplied, cleaned up (art/footballer.json): 331 traced
-    fragments joined into a few dozen long lines, brand marks left off, and
-    the ball rebuilt whole as a truncated icosahedron on a sphere with its
-    pentagons filled. The figure's long outlines go down first, then its inner
-    lines, the face last; then the ball's outline, its panels, its seams."""
+    """A footballer kneeling in celebration -- from a traced line drawing the
+    owner supplied, cleaned up (art/footballer.json): 331 traced fragments
+    joined into a few dozen long lines and brand marks left off. (Its ball was
+    rebuilt once and taken out again at the owner's word.) The long outlines
+    go down first, then the inner lines, the face last."""
     import json
     import math
     import pathlib
     d = json.loads((pathlib.Path(__file__).parent / "art" / "footballer.json").read_text())
-    x0, y0, w, h = 38, 21, 1414, 960
+    x0, y0, w, h = 38, 21, 868, 960
     s = min((816 - 40) / w, (612 - 40) / h)
     ox, oy = (816 - w * s) / 2, (612 - h * s) / 2
     m = lambda pts: [((x - x0) * s + ox, (y - y0) * s + oy) for x, y in pts]
@@ -231,9 +230,6 @@ def footballer():
     out = [S(m(p), "contour", size=6.5, pace=1.2, weight=[(0, 0.6), (0.5, 1.0), (1, 0.6)]) for p in outlines]
     out += [S(m(p), "detail", size=4.5, pace=1.3) for p in inner]
     out += [S(m(p), "detail", size=4, pace=1.0) for p in faces]
-    out.append(S(m(d["outline"]), "contour", size=8, pace=1.1, taper=(0.05, 0.05)))
-    out += [S(m(p), "fill", PURPLE, size=13, pace=2.2, taper=(0.03, 0.04)) for p in d["fills"]]
-    out += [S(m(p), "form", size=4.5, pace=1.4) for p in d["seams"]]
     return out
 
 
