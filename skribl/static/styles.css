@@ -4109,8 +4109,12 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 /* ---------- Help button + drawer ---------- */
 
+/* Pinned to the SCREEN, not to .app: .app grows when a panel below the
+   canvas opens (Photo, Music, Flip's settings), and an absolute drawer grew
+   with it, so on a phone How it works, its examples sheet and the full-screen
+   example all hung off the bottom of the screen (owner's iPhone). */
 .help-drawer {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 100;
   pointer-events: none;
