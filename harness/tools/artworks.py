@@ -233,6 +233,30 @@ def footballer():
     return out
 
 
-ART = {"cat": cat, "scene": scene, "snail": snail, "footballer": footballer,
+def skull():
+    """A skull in a fedora, sunglasses, a mustache and a long beard -- from a
+    vector the owner supplied (art/skull.json). Its lines were filled outlines,
+    so each became the pen stroke down its middle; its solid parts (the hat
+    band, the lenses, the nose, the cheekbones) became scribbled fills. Drawn
+    top down the way the picture is read: the hat, the glasses, the face, the
+    mustache and teeth, then the beard, long lines before short in each."""
+    import json
+    import math
+    import pathlib
+    d = json.loads((pathlib.Path(__file__).parent / "art" / "skull.json").read_text())
+    x0, y0, w, h = 50, 25, 1045, 1327
+    s = min((816 - 40) / w, (612 - 40) / h)
+    ox, oy = (816 - w * s) / 2, (612 - h * s) / 2
+    m = lambda pts: [((x - x0) * s + ox, (y - y0) * s + oy) for x, y in pts]
+    L = lambda p: sum(math.dist(a, b) for a, b in zip(p, p[1:]))
+    band = lambda p: (0 if sum(y for _, y in p) / len(p) < 420 else
+                      1 if sum(y for _, y in p) / len(p) < 620 else
+                      2 if sum(y for _, y in p) / len(p) < 900 else 3)
+    items = [(band(p), 0, -L(p), S(m(p), "detail", size=5.6, pace=1.15)) for p in d["lines"]]
+    items += [(band(f), 1, -L(f), S(m(f), "fill", size=10.5, pace=2.2, taper=(0.03, 0.04))) for f in d["fills"]]
+    return [it[3] for it in sorted(items, key=lambda it: it[:3])]
+
+
+ART = {"cat": cat, "scene": scene, "snail": snail, "footballer": footballer, "skull": skull,
        # the tool cards' examples (Pen, Eraser, Shape)
        "pen": tool_pen, "eraser": tool_eraser, "shape": tool_shape}
