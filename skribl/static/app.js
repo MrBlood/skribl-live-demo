@@ -1962,22 +1962,9 @@ if (playScrub) {
   requestAnimationFrame(fit);
 })();
 
-// Help search — shared via lib/helpsearch.js so the two editors cannot
-// drift. Safe if the lib is absent: the accordions keep working.
+// How it works: its sections and its search, one implementation for both
+// editors in lib/helpsearch.js (the accordions moved there in v320).
 if (window.SkriblHelpSearch) window.SkriblHelpSearch.init();
-
-// Help drawer accordions — tap a section header to expand/collapse it.
-// Multiple sections can be open at once (it's a reference, not a wizard).
-document.querySelectorAll('.accordion-header').forEach(header => {
-  header.addEventListener('click', () => {
-    const body = header.nextElementSibling;
-    const isOpen = header.classList.toggle('open');
-    header.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    if (body && body.classList.contains('accordion-body')) {
-      body.classList.toggle('open', isOpen);
-    }
-  });
-});
 
 // --- Music upload + trim ---
 // The drawer WIRING moved to editor_music.js (editor-only). What remains here

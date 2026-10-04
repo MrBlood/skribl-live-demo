@@ -1,10 +1,10 @@
 /* Help drawer search + live section counts.
  *
- * SHARED, DELIBERATELY. The accordion open/close handler is written twice —
- * app.js ("Help drawer accordions") and flip.js (its `#helpDrawer
- * .accordion-header` loop) — driving the same partial. Named by what to search
- * for, not by line number: the numbers that stood here had drifted by hundreds
- * of lines. Adding search to both files would have made a third copy. This publishes window.SkriblHelpSearch instead; both
+ * SHARED, DELIBERATELY, AND NOW THE ACCORDIONS TOO. The sections' open/close
+ * handler was written twice, once in app.js and once in flip.js, driving the
+ * same partial -- the duplication this file was first written to avoid
+ * extending. It lives in init() below since v320 (outside audit V319-009):
+ * a fix to how a section opens now lands on both editors or on neither. This publishes window.SkriblHelpSearch instead; both
  * surfaces call init() and get identical behaviour from one implementation.
  *
  * IT ALSO RETIRES A DRIFT SOURCE. Every accordion carried a hand-typed
@@ -77,6 +77,16 @@
     var emptyEl = drawer.querySelector('#helpEmpty');
     var headers = [].slice.call(drawer.querySelectorAll('.accordion-header'));
     if (!headers.length) return null;
+    // Tap a header to open or close its section. Several can be open at once:
+    // this is a reference, not a wizard.
+    headers.forEach(function (header) {
+      header.addEventListener('click', function () {
+        var body = header.nextElementSibling;
+        var isOpen = header.classList.toggle('open');
+        header.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        if (body && body.classList.contains('accordion-body')) body.classList.toggle('open', isOpen);
+      });
+    });
 
     var sections = headers.map(function (h) {
       var body = h.nextElementSibling;

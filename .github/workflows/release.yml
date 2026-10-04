@@ -1,0 +1,80 @@
+name: release
+
+# PROVENANCE FOR A SEALED RELEASE (v320; outside audit V319-010).
+#
+# The release zips prove they are internally consistent: every file against
+# SHA256SUMS, the tree against the hash RELEASE.md records. What they could not
+# prove is where they came from, because whoever built a zip could replace the
+# files and the sums together. The audit asked for something a reviewer can
+# check without trusting the archive's own contents.
+#
+# This job is that something. On a commit of main it builds the three packages
+# with harness/package.py -- the same script a local seal runs, and since v320
+# byte-for-byte reproducible from the commit -- boots the runtime one, and has
+# GitHub sign a build-provenance attestation over each zip's digest. The
+# attestation names this repository, this workflow and the commit. Anyone can
+# then check a zip they were handed, however it reached them:
+#
+#     gh attestation verify skribl-vNNN-source.zip --repo MrBlood/skribl-live-demo
+#
+# It also publishes the zips and their outer SHA256 as a GitHub Release, which
+# is the independently published outer checksum the audit asked for.
+#
+# COST: none. The repository is public, the runner is the standard
+# ubuntu-latest, and attestations and release assets are free on a public
+# repository (WORKING-AGREEMENTS.md, "Spending").
+#
+# RUN BY HAND, once per seal, after the seal has merged: Actions -> release ->
+# Run workflow on main. It refuses a version that already has a release.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  attest:
+    name: build, attest and publish the release packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write      # create the release and its tag
+      id-token: write      # the signing certificate that names this workflow
+      attestations: write  # store the attestation against the repository
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r constraints.txt --require-hashes
+      - name: Which version
+        id: v
+        run: |
+          v=$(python3 -c "import re,pathlib; print(re.search(r'SKRIBL_VERSION\s*=\s*\"([^\"]+)\"', pathlib.Path('skribl/core.py').read_text()).group(1))")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if gh release view "$v" >/dev/null 2>&1; then
+            echo "::error::$v already has a release; a seal is published once"; exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Build the packages and boot the runtime one
+        run: python3 harness/package.py dist --verify
+      - name: Outer checksums
+        run: |
+          cd dist
+          sha256sum skribl-${{ steps.v.outputs.version }}-*.zip | tee SHA256SUMS-${{ steps.v.outputs.version }}.txt
+      - name: Attest
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/skribl-${{ steps.v.outputs.version }}-*.zip
+      - name: Publish
+        run: |
+          v=${{ steps.v.outputs.version }}
+          gh release create "$v" dist/skribl-$v-*.zip dist/SHA256SUMS-$v.txt \
+            --target "$GITHUB_SHA" --title "Skribl $v" \
+            --notes "Built from $GITHUB_SHA by this repository's release workflow, which also attested each zip. Check one with: gh attestation verify <zip> --repo $GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
