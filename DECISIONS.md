@@ -13565,3 +13565,115 @@ below; asked whether tapping still shows it large, the measurement said yes
 * **A tall card.** A phone clip's stage is 3:4 instead of 4:3, so the phone
   fills it: about 132 x 217 px in the card instead of 57 x 122. Zoom, filmed on
   a desktop, keeps the wide stage (`data-shape="desk"`).
+
+## After #314 -- How it works on a phone with a panel open; first in the menu; the owner's cat and pug
+
+The owner, from an iPhone: with Photo, Music or Flip's settings open, the
+examples sheet and the full-screen example hung off the bottom of the screen.
+The help drawer sat inside `.app`, which grows when a panel opens; it is
+pinned to the screen now (`position: fixed`). `verify_helpdemos` has a phone
+section with a panel open, calibrated red on the old CSS.
+
+* **How it works leads the ⋯ menu** on both editors, tinted, with "Videos and
+  a guide to every tool" under it; New Skribl is the first action after it.
+  The owner chose this from mocks, having asked that How it works stand out,
+  and checked that the full guide is still behind it, not only the videos.
+* **The owner's drawings.** The Draw card's cat is the owner's cat
+  (`harness/tools/art/cat.json`), and the Post, Add a photo, Export and Zoom
+  clips were re-filmed with it. A new Pad Ideas card, "Colour first", is the
+  owner's coloured pug (`art/pug.json`), corrected over several rounds until
+  the owner could see no difference: the line under his mouth, purple in his
+  eyes, the pink in the cat's ears, a smoother line by its tail.
+* `artdraw.Stroke(flat=True)` draws at an even weight; `handmotion` clamps
+  its speed term, because a negative raised to the 0.8th power was complex.
+
+## After #315 -- How it works slides in instead of snapping
+
+The owner: "the menu hiccups before it slides in." Opening moved focus to the
+drawer's close button while the panel was still off the right edge, and a
+`focus()` that may scroll made the browser scroll the drawer's frame sideways
+to show it: the panel snapped in, then eased back. `SkriblModal.open` focuses
+with `preventScroll`, and the drawer's frame is `overflow: clip`; either alone
+cures it. `verify_helpdemos` section 8 asserts the frame never scrolls and the
+panel travels in with no jump over 200px, red on the old tree on both editors.
+
+## After #316 -- Blooby, and his trading card
+
+The owner named the waving guy from Flip's Draw example **Blooby** and asked
+how to make him the face of the brand. A tidied vector version was turned
+down ("you made him perfect and changed the vibe"), so every Blooby since is
+drawn by Skribl's own pen from his Flip drawing (`harness/tools/blooby.py`).
+Of the mocked traits the owner chose the swoosh, a purple pen line for his
+ground. He was tried on the empty canvas and taken off ("I'm not feeling
+blooby on the start page").
+
+* **The trading card**, after the owner's own hand-drawn cards (Rod Carew,
+  MASH, Stevie Wonder, All Star): an ivory card with old, soft corners (a
+  crease across one, one curled up, one nicked, one only worn), a
+  black-yellow-black frame, an arched window, the "skribl" signature as the
+  title in accent purple outlined in ink, and BLOOBY on a rounded plate. Every
+  stroke is drawn by the real Pad; the title is the brand mark's own path,
+  read from its template. Refined over about ten rounds with the owner.
+* **In Pad's Ideas** as "Trading card". It runs 1:18 as drawn; drawn quicker,
+  the pen's events thin out until small curves go faceted and lines stop short
+  (the Y did), so it is drawn at its careful pace and `make_art.py` shortens
+  its recorded clock 2.6x (`SPEEDUP`), on a ground a shade darker than the
+  card (`GROUND`). The repo's `card()` matched the approved card stroke for
+  stroke, 70 of 70, by a comparison shown to catch a 1px change.
+
+## After #317 -- the once-over before the seal
+
+The owner asked for a once-over and a dig through the tree before sealing. Each
+change was checked against the code before it was made.
+
+* **Main went red after #317** on `verify_parity`'s check that a tap, Enter
+  and Space each open a drawer's file picker. Measured: 10 misses in 60
+  drawer passes, every one the second intercepted picker in a row, and a
+  400 ms pause changed nothing. On a miss the app had done everything right --
+  the key reached the button and `input.click()` ran under its user activation
+  -- and Chromium cancelled the picker 1 ms later. The tap still opens the real
+  picker end to end; Enter and Space now assert that the key makes the app ask
+  the input to open, which is what the editors' window key handlers once broke.
+  Calibrated per surface, then 344/344 three runs in a row.
+* **How it works said things that were no longer true.** Tween and Smear
+  asked for the same number of strokes in the order drawn; since v296 they
+  pair by shape. They named the buttons In-between and Motion Smear (Tween and
+  Smear since #289); New Skribl was "first in the menu"; Theme left out System.
+  `verify_inbetween` and `verify_tween` each had a check pinning the old words;
+  both pin the new ones, each calibrated red on the old text. A toast told
+  people to tap a Clear control that no longer exists.
+* **The player's console was never quiet.** Every public view logged
+  "missing element for binding" for three editor-only controls; `bindEl` stays
+  quiet in player mode. `verify_player_isolation` asserts a clean console.
+* **Pad's Ideas** shows Blooby waving as its one Flip example; the ball stays
+  in Flip's Ideas.
+* **Docs.** Thirteen stale claims, found by a read of the current docs and each
+  confirmed in the code first, are corrected in START-HERE, FUTURE, INTEGRATION,
+  README, DEVICE-CHECKLIST and `harness/tools/README.md`, which now documents
+  the art pipeline. `corpus/render.py` writes where `.gitignore` covers it.
+
+## v319 -- the seal of everything since v318
+
+Twenty-one merges, #295 to #318, carry no sealed record until this one. What
+they did is written where each landed ("After v318", "After #297" to
+"After #317" above) and is not repeated here. Most of them are How it works:
+from a panel that described the app (#304) to examples that play real Skribls,
+drawn by Skribl's own pen from the owner's drawings, with step clips filmed
+from the real app in both themes.
+
+The record below is generated by the release run; this entry types no counts.
+
+**Still open, at the v319 seal:**
+
+* **Blooby on dark backgrounds.** The owner likes him drawn on paper and light
+  grounds; on dark, the big "bubble" sticker was liked best, lavender lines a
+  fallback. Where he appears (the app icon, an empty library, after posting,
+  errors) is undecided and nothing is built.
+* **The light theme starting on Paper.** Agreed in principle, not mocked. The
+  empty canvas's hint text would have to change with it (A11Y 15 measures its
+  contrast on the dark canvas).
+* **An empty Library shows a blank "Now playing" player**, its title a dash
+  and its clock 0:00 / 0:00, above "Nothing here yet". Found in the once-over;
+  a mock is with the owner, to build after this seal.
+* **The owner's check of the build** on Windows and an iPhone, as at v318:
+  neither can be rendered here.

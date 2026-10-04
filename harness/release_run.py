@@ -116,6 +116,7 @@ BATCHES = [
     ["verify_hold.py"],                    # measures — frame pacing
     ["verify_review.py", "verify_help.py", "verify_tips.py"],
     ["verify_helpclaims.py"],              # measures — times a take, drags the zoom pill
+    ["verify_helpdemos.py"],               # measures — the drawer's slide-in and the sheet following a pull
     ["verify_exportui.py", "verify_exopts.py", "verify_dots.py", "verify_fix.py"],
     ["verify_amber.py", "verify_posted.py", "verify_report.py", "verify_canvas.py"],
     ["verify_padcanvas.py", "verify_pressure.py", "verify_lib.py", "verify_docs.py",
