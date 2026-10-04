@@ -98,6 +98,17 @@ STATE = """() => ({
         src: v.getAttribute('src') || '', poster: v.getAttribute('poster') || '', t: v.currentTime, paused: v.paused,
         start: v.closest('.learn-card').dataset.group === 'start' })) })"""
 PLAYER = lambda u: u.endswith("inlineplayer.js") or "/help/demos/" in u or "/help/clips/" in u
+EXAMPLE = lambda u: "/help/demos/" in u or ("/help/clips/" in u and (u.endswith(".mp4") or u.endswith(".webm")))
+# The sheet scrolled to its end in steps, so every example comes near the
+# screen once -- which is when it is fetched (V319-005).
+SCROLL_ALL = "() => { const s = document.querySelector('#learnSheet .learn-sheet-scroll'); s.scrollTop += s.clientHeight * 0.8; return s.scrollTop + s.clientHeight >= s.scrollHeight - 2; }"
+def scroll_all(pg):
+    for _ in range(40):
+        done = pg.evaluate(SCROLL_ALL)
+        pg.wait_for_timeout(250)
+        if done:
+            break
+    pg.wait_for_timeout(1200)
 
 with sync_playwright() as p:
     b = p.chromium.launch()
@@ -172,6 +183,7 @@ with sync_playwright() as p:
               not [u for u in fetched if PLAYER(u)], str([u for u in fetched if PLAYER(u)][:3]))
 
         # 4. plays, once the drawer is open
+        fetched.clear()
         pg.evaluate(SHEET)
         pg.wait_for_timeout(900)
         a = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-demo]')].map({INK})")
@@ -184,9 +196,15 @@ with sync_playwright() as p:
             return [...document.querySelectorAll('{CARDS}[data-demo]')].map(c => {{ const r = c.querySelector('.learn-stage').getBoundingClientRect();
               return r.bottom > sc.top + r.height * 0.4 && r.top < sc.bottom - r.height * 0.4; }}); }}""")
         moving = [x != y for x, y, v in zip(a, z, seen) if v]
-        check(f"{name}: in the drawer, every replay paints ink, and the ones on screen change as they play",
-              all(x > 50 for x in z) and len(moving) >= 2 and sum(moving) >= len(moving) - 1,
+        check(f"{name}: in the drawer, every replay on screen paints ink and changes as it plays",
+              all(x > 50 for x, v in zip(z, seen) if v) and len(moving) >= 2 and sum(moving) >= len(moving) - 1,
               f"ink then {a}, later {z}, on screen {seen}")
+        # LOADING FOLLOWS THE EYE (outside audit V319-005). Opening the drawer
+        # fetched every example in it, about 3 MB, for someone come to watch
+        # one. Now: what is on screen and the row after it, and no more.
+        asked = sorted({u for u in fetched if EXAMPLE(u)})
+        check(f"{name}: opening the drawer fetches the examples near the screen, not all {bar['n']}",
+              0 < len(asked) < bar["n"] - 3, f"{len(asked)} fetched of {bar['n']}: {[u.split('/')[-1] for u in asked]}")
         check(f"{name}: several examples play at once (the player's ambient mode)",
               s["replays"].count("playing") >= 3, str(s["replays"]))
         painted = pg.evaluate("""() => [...document.querySelectorAll('#learnSheet .learn-stage')].every(st => {
@@ -206,13 +224,25 @@ with sync_playwright() as p:
         check(f"{name}: the screen clips play (time advances) and every clip matches the dark theme",
               all(t2 > t1 for t1, t2, c in zip(t0, [c["t"] for c in s2["clips"]], s2["clips"]) if c["start"])
               and sum(1 for c in s2["clips"] if c["start"]) == 2
-              and all("-dark." in c["src"] for c in s2["clips"]) and len(s2["clips"]) == nclips, str(s2["clips"]))
+              and all("-dark." in c["src"] for c in s2["clips"] if c["src"]) and len(s2["clips"]) == nclips, str(s2["clips"]))
         pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
         pg.wait_for_timeout(500)
         s3 = pg.evaluate(STATE)
         check(f"{name}: in the light theme the clips switch to their light recording",
-              all("-light." in c["src"] and "-light." in c["poster"] for c in s3["clips"]), str(s3["clips"]))
+              any(c["src"] for c in s3["clips"])
+              and all("-light." in c["src"] and "-light." in c["poster"] for c in s3["clips"] if c["src"]), str(s3["clips"]))
         pg.evaluate("() => document.documentElement.removeAttribute('data-theme')")
+        pg.wait_for_timeout(300)
+        # ...AND THE REST WHEN SCROLLED TO: every example fetched by the end,
+        # each replay with its player, each clip with a recording in the theme
+        # showing. A loader that only ever fetched the first screen fails here.
+        scroll_all(pg)
+        s4 = pg.evaluate(STATE)
+        check(f"{name}: scrolled to the end, every example has been fetched and set up",
+              all(x != "none" for x in s4["replays"]) and all("-dark." in c["src"] for c in s4["clips"]),
+              f"replays {s4['replays']}, clips {[c['src'].split('/')[-1] for c in s4['clips']]}")
+        pg.evaluate("() => { document.querySelector('#learnSheet .learn-sheet-scroll').scrollTop = 0; }")
+        pg.wait_for_timeout(300)
 
         # THE CHIPS show one group, or all.
         shown = lambda: pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}')].filter(c => c.offsetParent)"
@@ -364,6 +394,8 @@ with sync_playwright() as p:
         pg.wait_for_timeout(400)
         pg.evaluate(SHEET)
         pg.wait_for_timeout(1500)
+        # Every card, not the first screen: they load as they come near it.
+        scroll_all(pg)
         s6 = pg.evaluate(STATE)
         ink = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-demo]')].map({INK})")
         check(f"{name}: with reduced motion nothing plays; each replay shows its finished drawing",
@@ -485,7 +517,11 @@ with sync_playwright() as p:
         browsing.goto(pg, BASE, route)
         pg.wait_for_timeout(800)
         pg.evaluate(OPEN); pg.wait_for_timeout(500)
-        pg.evaluate(SHEET); pg.wait_for_timeout(3000)
+        pg.evaluate(SHEET); pg.wait_for_timeout(1500)
+        scroll_all(pg)
+        # The banner heads the sheet; read it where it is, at the top.
+        pg.evaluate("() => { document.querySelector('#learnSheet .learn-sheet-scroll').scrollTop = 0; }")
+        pg.wait_for_timeout(300)
         f0 = pg.evaluate(FAILS)
         check(f"{name}: offline, every example is marked as not loaded -- the screen clips too",
               f0["cards"] > 10 and f0["failed"] == f0["cards"], str(f0))
@@ -516,7 +552,8 @@ with sync_playwright() as p:
         pg.wait_for_timeout(800)
         _one[0] = pg.evaluate("() => document.querySelector('#learnSheet .learn-card[data-demo]').getAttribute('data-demo').split('?')[0].split('/').pop()")
         pg.evaluate(OPEN); pg.wait_for_timeout(500)
-        pg.evaluate(SHEET); pg.wait_for_timeout(3000)
+        pg.evaluate(SHEET); pg.wait_for_timeout(1500)
+        scroll_all(pg)
         f2 = pg.evaluate(FAILS)
         check(f"{name}: one example missing among many: \"1 example couldn\u2019t load.\" and the rest play",
               f2["failed"] == 1 and f2["said"] == "1 example couldn\u2019t load." and f2["players"] == f2["demos"] - 1,

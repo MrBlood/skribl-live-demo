@@ -133,6 +133,34 @@ def check_zip(zpath, top):
                              f"missing {sorted(listed - present)[:5]}")
 
 
+def write_zip(zpath, top):
+    """THE SAME COMMIT MAKES THE SAME BYTES (v320; outside audit V319-010).
+
+    `zip -r` wrote each file's copy time, its owner and its umask into the
+    archive, so no two builds of one commit matched -- and a digest that a
+    CI attestation vouches for only means something if the recipient can
+    rebuild, or be handed, those exact bytes. So: entries in sorted order,
+    every timestamp the commit's own, permissions reduced to 644 or 755, no
+    owner fields, and STORED rather than deflated, because two zlib builds
+    may compress the same input to different bytes. The cost is size on the
+    text files; the media that make up most of the bulk are compressed
+    already."""
+    import os
+    import time
+    import zipfile
+    ct = int(subprocess.run(["git", "-C", str(ROOT), "log", "-1", "--format=%ct", "HEAD"],
+                            capture_output=True, text=True, check=True).stdout.strip())
+    dt = time.gmtime(max(ct, 315532800))[:6]          # zip cannot say before 1980
+    files = sorted(p for p in top.rglob("*") if p.is_file())
+    with zipfile.ZipFile(zpath, "w", compression=zipfile.ZIP_STORED) as z:
+        for p in files:
+            zi = zipfile.ZipInfo(p.relative_to(top.parent).as_posix(), date_time=dt)
+            zi.create_system = 3                         # unix, so the mode below is read
+            mode = 0o755 if p.stat().st_mode & 0o111 else 0o644
+            zi.external_attr = (0o100000 | mode) << 16
+            z.writestr(zi, p.read_bytes())
+
+
 def build(out, version):
     made = []
     for name, files in (("runtime", runtime_files()),
@@ -144,10 +172,8 @@ def build(out, version):
         copy_set(files, d)
         n = manifest(d)
         zipname = f"{d.name}.zip"
-        # zip -r UPDATES an existing archive and never removes from it, so a
-        # file deleted since the last build would ride along unlisted.
         (out / zipname).unlink(missing_ok=True)
-        subprocess.run(["zip", "-qr", zipname, d.name], cwd=out, check=True)
+        write_zip(out / zipname, d)
         check_zip(out / zipname, d.name)
         size = (out / zipname).stat().st_size
         made.append((name, n, size, out / zipname))

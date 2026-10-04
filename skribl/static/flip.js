@@ -9973,16 +9973,9 @@ helpBackdrop.addEventListener('click', closeHelpDrawer);
 KeyRegistry.register({surface:'flip', label:'close the help drawer',
   keys:['Escape'], scope:()=>!helpDrawer.hidden});
 window.addEventListener('keydown',e=>{ if(e.key==='Escape' && !helpDrawer.hidden) closeHelpDrawer(); });
-// Accordion sections — tap a header to expand/collapse (multiple can be open).
-// Help search — shared via lib/helpsearch.js so the two editors cannot
-// drift. Safe if the lib is absent: the accordions keep working.
+// How it works: its sections and its search, one implementation for both
+// editors in lib/helpsearch.js (the accordions moved there in v320).
 if (window.SkriblHelpSearch) window.SkriblHelpSearch.init();
-
-document.querySelectorAll('#helpDrawer .accordion-header').forEach(header=>{
-  header.addEventListener('click',()=>{ const body=header.nextElementSibling; const isOpen=header.classList.toggle('open');
-    header.setAttribute('aria-expanded', isOpen?'true':'false');
-    if(body && body.classList.contains('accordion-body')) body.classList.toggle('open', isOpen); });
-});
 
 /* ---- leaving for the Pad: the guard the Pad has, for the same reason ----
    v294 audit, finding 6. Flip had no guard "because it persists its media" —

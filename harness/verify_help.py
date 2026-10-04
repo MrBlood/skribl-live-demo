@@ -83,7 +83,31 @@ with sync_playwright() as p:
                   "the badge is derived from the DOM by lib/helpsearch.js — a "
                   "mismatch means the lib did not run, not that someone "
                   "mistyped a number")
+        # A SECTION OPENS AND CLOSES, by the one shared handler (v320; outside
+        # audit V319-009 -- it was written once per editor). Each click must
+        # toggle exactly once: a second handler left behind in an editor
+        # would toggle it back, and the section would not move.
+        tog = pg.evaluate("""() => { openHelpDrawer && openHelpDrawer();
+            const h = document.querySelector('#helpDrawer .accordion-header:not(.open)');
+            if (!h) return null;
+            const b = h.nextElementSibling, seen = [];
+            for (let i = 0; i < 2; i++) { h.click();
+              seen.push([h.classList.contains('open'), h.getAttribute('aria-expanded'), b.classList.contains('open')]); }
+            return seen; }""")
+        check(f"{surface}: a section header opens its section, and closes it again",
+              tog == [[True, "true", True], [False, "false", False]], str(tog))
         pg.close()
+
+    # ...AND THE EDITORS DO NOT BIND THEM. Read from the code, not the
+    # comments: the mechanism is a query for the header class in app.js or
+    # flip.js. lib/helpsearch.js is the one place it may live.
+    import re as _re
+    _here = os.path.dirname(os.path.abspath(__file__))
+    for _f in ("app.js", "flip.js"):
+        _src = open(os.path.join(_here, "..", "skribl", "static", _f), encoding="utf-8").read()
+        _code = _re.sub(r"/\*.*?\*/|//[^\n]*", "", _src, flags=_re.S)
+        check(f"{_f} binds no accordion header of its own (lib/helpsearch.js does, for both)",
+              not _re.search(r"querySelectorAll\(\s*['\"][^'\"]*accordion-header", _code))
 
     print("\nHELP — the shipped features are actually described")
     pg = b.new_page()

@@ -108,7 +108,11 @@
     card.classList.add('learn-ready');
     sync(card);
   }
-  new MutationObserver(function () { if (open()) clips.forEach(startClip); })
+  // Only the clips already asked for change recording; the rest are fetched
+  // in the right theme when they come near the screen.
+  new MutationObserver(function () {
+    if (open()) clips.forEach(function (c) { if (c._learnWanted) startClip(c); });
+  })
     .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   var io = window.IntersectionObserver ? new IntersectionObserver(function (entries) {
@@ -189,10 +193,29 @@
     });
   });
 
+  // ---- loading follows the eye (outside audit V319-005) ---------------------
+  // Opening the drawer used to fetch every example in it -- about 3 MB of
+  // replays and clips for someone who came to watch one. An example is asked
+  // for now when it comes within half a screen of the sheet's view, so what
+  // opening costs is what is on screen and the row after it. Playback was
+  // already tied to visibility (`io` above); this ties the fetch to it too.
+  var scroller = sheet.querySelector('.learn-sheet-scroll');
+  function want(card) {
+    if (card._learnWanted) return;
+    card._learnWanted = true;
+    if (near) near.unobserve(card);
+    if (card.hasAttribute('data-clip-dark')) { startClip(card); sync(card); }
+    else loadPlayer().then(function () { start(card); sync(card); });
+  }
+  var near = window.IntersectionObserver ? new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { if (e.isIntersecting && sheetOpen) want(e.target); });
+  }, { root: scroller, rootMargin: '0px 0px 50% 0px' }) : null;
   function startAll() {
-    clips.forEach(startClip);
-    clips.forEach(sync);
-    loadPlayer().then(function () { cards.forEach(start); cards.forEach(sync); });
+    // No observer (a very old browser): everything, as before.
+    if (!near) { all.forEach(want); return; }
+    // unobserve first: observing a target twice is a no-op, and a sheet shut
+    // before the first report would otherwise never report again.
+    all.forEach(function (c) { if (!c._learnWanted) { near.unobserve(c); near.observe(c); } });
   }
   function syncAll() { cards.forEach(sync); clips.forEach(sync); }
 
