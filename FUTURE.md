@@ -66,9 +66,8 @@ ready; the schema decision is the owner's.
 ### `app.js` serves both the editor and the player — MOSTLY CLOSED
 
 **This section used to say a viewer downloads "the entire authoring surface",
-and that stopped being true several releases ago.** NINE editor-only files —
-`editor_draft`, `editor_draw`, `editor_export`, `editor_menu`, `editor_music`,
-`editor_photo`, `editor_post`, `editor_shapes`, `editor_tune` — were carved out
+and that stopped being true several releases ago.** The editor-only files —
+every `skribl/static/editor_*.js` — were carved out
 and `verify_player_isolation.py` asserts the player loads none of them. The
 player links its own generated `player.css`, not the whole of `styles.css`. And
 the JS size target the split existed to reach is now MET, by the serve-time
@@ -326,7 +325,12 @@ a claim committed at the stat seam must spare the object — lives in
 verify_sweepjob and fails if the per-key re-check is removed. See DECISIONS.md
 (v266) for the design and the honest SQLite bound.
 
-## 6c. Motion Smear, aimed rather than applied (owner, v295)
+## 6c. Motion Smear, aimed rather than applied (owner, v295) — BUILT
+
+STATUS. Built: Smear aims itself at what moved and draws what held still once,
+and a Select narrows it to the parts you pick (`tweenAimFromSelection`). Pairing
+is by shape now (`tweenMatch`), not by stroke-group index as written below. The
+reasoning is kept as it was argued.
 
 THE FINDING THAT PRODUCED THIS. The smear looks good when ONE PART of a drawing
 moves and the rest holds still -- a swinging arm, a turning head. It reads as a

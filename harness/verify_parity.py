@@ -1524,8 +1524,23 @@ with sync_playwright() as p:
             # track for the whole animation") said the hint a second time.
             check(f"{_route}, {_k}: the empty drawer says its title and its hint, and nothing else",
                   _e["add"] and _e["said"] == list(WORDS[_route][_k]), str(_e.get("said")))
-            # Each picker is answered (with nothing) before the next is asked
-            # for: Chromium opens one file chooser at a time.
+            # A tap opens the real picker, end to end. Enter and Space are asked
+            # what the APP controls: that the key reaches the button and the
+            # button asks this drawer's file input to open, under the user
+            # activation the key gave it. Asking Chromium to open three
+            # intercepted pickers back to back is not that question -- it
+            # cancels about one in seven of the later ones itself, 1 ms after
+            # the app's input.click(), with the app having done everything
+            # right (measured: 10 misses in 60 drawer passes, every one the
+            # second picker, unaffected by a 400 ms pause; main went red on it
+            # after #317). The bug this guards is the editors' window Space
+            # handlers -- the Pad's grab-pan, Flip's play -- swallowing the key,
+            # and a swallowed key never reaches input.click().
+            _q.evaluate("""() => { if (window.__inputClicks) return; window.__inputClicks = [];
+                const orig = HTMLInputElement.prototype.click;
+                HTMLInputElement.prototype.click = function () {
+                  window.__inputClicks.push([this.id, navigator.userActivation.isActive]);
+                  return orig.call(this); }; }""")
             _chosen = []
             try:
                 with _q.expect_file_chooser(timeout=3000) as _fc:
@@ -1534,29 +1549,25 @@ with sync_playwright() as p:
                 _chosen.append("click")
             except Exception:
                 pass
-            try:
-                _q.focus(f"#{_k}AddBtn")
-                with _q.expect_file_chooser(timeout=3000) as _fc:
-                    _q.keyboard.press("Enter")
-                _fc.value.set_files([])
-                _chosen.append("Enter")
-            except Exception:
-                pass
-            # Space too, by keyboard (the focus is keyboard focus: the Enter
-            # above was the last interaction). Both editors' window Space
-            # handlers -- the Pad's grab-pan, Flip's play -- used to swallow it.
             _fv = None
-            try:
+            for _key in ("Enter", "Space"):
                 _q.focus(f"#{_k}AddBtn")
-                _fv = _q.evaluate("(k) => document.getElementById(k + 'AddBtn').matches(':focus-visible')", _k)
-                with _q.expect_file_chooser(timeout=3000) as _fc:
-                    _q.keyboard.press("Space")
-                _fc.value.set_files([])
-                _chosen.append("Space")
-            except Exception:
-                pass
+                if _key == "Space":
+                    # keyboard focus: the Enter before it was the last interaction
+                    _fv = _q.evaluate("(k) => document.getElementById(k + 'AddBtn').matches(':focus-visible')", _k)
+                _n = _q.evaluate("() => window.__inputClicks.length")
+                try:   # a picker that does open is answered, so none is left pending
+                    with _q.expect_file_chooser(timeout=1500) as _fc:
+                        _q.keyboard.press(_key)
+                    _fc.value.set_files([])
+                except Exception:
+                    pass
+                _asked = _q.evaluate("(n) => window.__inputClicks.slice(n)", _n)
+                if [_in[_k][1:], True] in _asked:
+                    _chosen.append(_key)
             check(f"{_route}, {_k}: a tap on it, or Enter or Space on it, opens the file picker",
-                  _chosen == ["click", "Enter", "Space"], f"picker opened by {_chosen} (keyboard focus: {_fv})")
+                  _chosen == ["click", "Enter", "Space"],
+                  f"tap opened the picker, keys asked the input: {_chosen} (keyboard focus: {_fv})")
         _old = _q.evaluate("""() => [document.getElementById('photoPanel').innerText,
             [...document.querySelectorAll('#helpDrawer .help-pill')].map(e => e.textContent).join('|')]
             .some(t => t.includes('Add an image'))""")
