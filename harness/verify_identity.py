@@ -271,6 +271,14 @@ with sync_playwright() as p:
         const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
         return !!(h && e.contains(h)); }"""
 
+    def _tap(page_, id_):
+        """Press a control only if it is really there to press, so a tree where
+        it is missing reports each later check red instead of hanging on a
+        click that can never land and printing nothing."""
+        if page_.evaluate(_PAINTED, id_):
+            page_.click("#" + id_)
+            page_.wait_for_timeout(500)
+
     def _phone(standalone=False):
         c = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True,
                           has_touch=True, user_agent=_IPHONE)
@@ -289,8 +297,7 @@ with sync_playwright() as p:
     _tb = hp.evaluate("""() => { const a = document.getElementById('homeScreenBanner').getBoundingClientRect(),
         t = document.getElementById('toolBar').getBoundingClientRect(); return [a.bottom, t.top]; }""")
     check("...sitting above the tools, not over them", _tb[0] <= _tb[1], str(_tb))
-    hp.click("#homeScreenBannerOpen")
-    hp.wait_for_timeout(300)
+    _tap(hp, "homeScreenBannerOpen")
     _steps = hp.evaluate("() => [...document.querySelectorAll('#homeScreenSteps .hs-list li')].map(l => l.textContent.replace(/\\s+/g, ' ').trim())")
     check("...and tapping it opens the steps: Share, Add to Home Screen, Add",
           hp.evaluate(_PAINTED, "homeScreenSteps") and len(_steps) == 3
@@ -306,12 +313,10 @@ with sync_playwright() as p:
     hp.wait_for_timeout(700)
     check("the ⋯ menu keeps an Add to Home Screen row for later",
           hp.evaluate(_PAINTED, "homeScreenItem"))
-    hp.click("#homeScreenItem")
-    hp.wait_for_timeout(600)
+    _tap(hp, "homeScreenItem")
     check("...which closes the menu and opens the same steps",
           hp.evaluate(_PAINTED, "homeScreenSteps"))
-    hp.click("#homeScreenDone")
-    hp.wait_for_timeout(300)
+    _tap(hp, "homeScreenDone")
     browsing.goto(hp, BASE, "/flip")
     hp.click("#moreBtn")
     hp.wait_for_timeout(700)

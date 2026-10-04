@@ -441,6 +441,50 @@ with sync_playwright() as sp:
     check("no page errors from the marker", not perrs, "; ".join(perrs[:2]))
     pad.close()
 
+    # ADD IS NEVER GREYED OUT IN COMPOSE MODE (owner, mock A2). It was dimmed
+    # until there was a take, looked broken to someone who had come to add a
+    # drawing, and could not say why. Both editors: before anything is drawn
+    # the button is painted at full strength, a REAL click at its centre lands
+    # on it, says what is missing in the editor's status region and opens
+    # nothing; once there is something to add, the same click opens the sheet.
+    print("\nCOMPOSE — Add is always ready, and says why when it cannot add")
+    _A2 = (("Pad", "/skribl-pad?compose=1", "#canvas", "#toast",
+            "() => { const o = document.getElementById('postOverlay'); return !!o && !o.hidden; }"),
+           ("Flip", "/flip?compose=1", "#pad", "#flipChip",
+            "() => { const m = document.getElementById('flipShare'); return !!m && !m.hidden; }"))
+    for _name, _path, _cv, _say, _opened in _A2:
+        _ac = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+        _ap = _ac.new_page()
+        _aerr = []
+        _ap.on("pageerror", lambda e: _aerr.append(str(e)))
+        browsing.goto(_ap, BASE, _path)
+        _ap.wait_for_timeout(600)
+        _ap.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _st = _ap.evaluate("""() => { const p = document.getElementById('postBtn'), r = p.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { attr: p.hasAttribute('disabled'), aria: p.getAttribute('aria-disabled'),
+                     op: getComputedStyle(p).opacity, onIt: !!(hit && p.contains(hit)) }; }""")
+        check(f"{_name}: before anything is drawn, Add is painted ready and takes the tap",
+              not _st["attr"] and _st["aria"] is None and _st["op"] == "1" and _st["onIt"], json.dumps(_st))
+        _bb = _ap.locator("#postBtn").bounding_box()
+        _ap.mouse.click(_bb["x"] + _bb["width"] / 2, _bb["y"] + _bb["height"] / 2)
+        _ap.wait_for_timeout(400)
+        _msg = _ap.evaluate(f"() => document.querySelector('{_say}').textContent")
+        check(f"{_name}: ...and a press says what is missing, in the status region",
+              "Draw something first, then Add" in (_msg or "")
+              and _ap.evaluate(f"() => document.querySelector('{_say}').getAttribute('role')") == "status",
+              repr(_msg))
+        check(f"{_name}: ...and opens nothing", _ap.evaluate(_opened) is False)
+        draw(_ap, _ap.locator(_cv).bounding_box(), turns=2, n=40)
+        _ap.evaluate("() => { if (typeof recording !== 'undefined' && recording) document.getElementById('recordBtn').click(); }")
+        _ap.wait_for_timeout(700)
+        _ap.mouse.click(_bb["x"] + _bb["width"] / 2, _bb["y"] + _bb["height"] / 2)
+        _ap.wait_for_timeout(900)
+        check(f"{_name}: once there is a drawing, the same press opens Add to post",
+              _ap.evaluate(_opened) is True)
+        check(f"{_name}: no page errors", not _aerr, "; ".join(_aerr[:2]))
+        _ac.close()
+
     # ---- the drawing goes after the words ------------------------------------
     # v315 put it where the cursor was, through a [skribl] marker typed into
     # the text; the owner chose mock M2 over it, so the composer types nothing
@@ -546,50 +590,6 @@ with sync_playwright() as sp:
           all("[skribl]" not in x for x in _texts), str(_texts))
     check("no page errors placing the drawing", not ierrs, "; ".join(ierrs[:2]))
     ictx.close()
-
-    # ADD IS NEVER GREYED OUT IN COMPOSE MODE (owner, mock A2). It was dimmed
-    # until there was a take, looked broken to someone who had come to add a
-    # drawing, and could not say why. Both editors: before anything is drawn
-    # the button is painted at full strength, a REAL click at its centre lands
-    # on it, says what is missing in the editor's status region and opens
-    # nothing; once there is something to add, the same click opens the sheet.
-    print("\nCOMPOSE — Add is always ready, and says why when it cannot add")
-    _A2 = (("Pad", "/skribl-pad?compose=1", "#canvas", "#toast",
-            "() => { const o = document.getElementById('postOverlay'); return !!o && !o.hidden; }"),
-           ("Flip", "/flip?compose=1", "#pad", "#flipChip",
-            "() => { const m = document.getElementById('flipShare'); return !!m && !m.hidden; }"))
-    for _name, _path, _cv, _say, _opened in _A2:
-        _ac = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
-        _ap = _ac.new_page()
-        _aerr = []
-        _ap.on("pageerror", lambda e: _aerr.append(str(e)))
-        browsing.goto(_ap, BASE, _path)
-        _ap.wait_for_timeout(600)
-        _ap.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
-        _st = _ap.evaluate("""() => { const p = document.getElementById('postBtn'), r = p.getBoundingClientRect();
-            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-            return { attr: p.hasAttribute('disabled'), aria: p.getAttribute('aria-disabled'),
-                     op: getComputedStyle(p).opacity, onIt: !!(hit && p.contains(hit)) }; }""")
-        check(f"{_name}: before anything is drawn, Add is painted ready and takes the tap",
-              not _st["attr"] and _st["aria"] is None and _st["op"] == "1" and _st["onIt"], json.dumps(_st))
-        _bb = _ap.locator("#postBtn").bounding_box()
-        _ap.mouse.click(_bb["x"] + _bb["width"] / 2, _bb["y"] + _bb["height"] / 2)
-        _ap.wait_for_timeout(400)
-        _msg = _ap.evaluate(f"() => document.querySelector('{_say}').textContent")
-        check(f"{_name}: ...and a press says what is missing, in the status region",
-              "Draw something first, then Add" in (_msg or "")
-              and _ap.evaluate(f"() => document.querySelector('{_say}').getAttribute('role')") == "status",
-              repr(_msg))
-        check(f"{_name}: ...and opens nothing", _ap.evaluate(_opened) is False)
-        draw(_ap, _ap.locator(_cv).bounding_box(), turns=2, n=40)
-        _ap.evaluate("() => { if (typeof recording !== 'undefined' && recording) document.getElementById('recordBtn').click(); }")
-        _ap.wait_for_timeout(700)
-        _ap.mouse.click(_bb["x"] + _bb["width"] / 2, _bb["y"] + _bb["height"] / 2)
-        _ap.wait_for_timeout(900)
-        check(f"{_name}: once there is a drawing, the same press opens Add to post",
-              _ap.evaluate(_opened) is True)
-        check(f"{_name}: no page errors", not _aerr, "; ".join(_aerr[:2]))
-        _ac.close()
 
     # THE HEADER IN COMPOSE MODE (owner, v316: option B of the mock). A host's
     # floating close sat on the Pad's ⋯ on a phone, and the header called the
