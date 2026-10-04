@@ -118,7 +118,7 @@ only the public ones.
 
 With no identity supplied (the standalone
 app), it shows the list the browser kept of what it posted — the same record
-the ••• menu's "Your Skribls" shows, unlisted posts included — and says on the
+the ••• menu's "Your Skribl Library" shows, unlisted posts included — and says on the
 page that this is a browser's list, not an account. The two modes now answer
 "what have I made" the same way, which they did not before. `/gallery` is the public
 page; `/library` never was, and until the gallery existed the difference was
@@ -162,9 +162,10 @@ in a payload and because upgrading the package must not silently change the
 shape of a host's posters; both or neither, since one edge alone frames
 nothing. A post written before v309 answers null for both and gets the band.
 
-**What it costs and when.** `skribl_inline_assets()` pulls five files —
+**What it costs and when.** `skribl_inline_assets()` pulls
 `inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
-`lib/canvassizes.js`, `lib/holdtiming.js` and `lib/audiosession.js` — under a
+`lib/canvassizes.js`, `lib/holdtiming.js`, `lib/audiosession.js` and
+`lib/photofit.js` — under a
 byte ratchet `harness/verify_inline.py` prints and holds (this sentence used to
 quote the number and name `lib/sharecard.js`, which v281 dropped from the
 macro; run the suite). Per post, idle, it costs ONE image: the poster at
@@ -274,10 +275,9 @@ card cropped to the drawing's band is a fragment of a wordmark. The
 vertical crop is exact; the horizontal one is a 16:9 window, which is the widest
 canvas a drawing can have, so it can only ever remove the card's ground and never
 the picture. A narrower drawing therefore still shows some of the card's frame
-either side. A tight per-post crop needs the canvas size where the listing can
-reach it — a real column on the post, not a field inside `payload_json`, which
-`GET /api/skribls` defers on purpose. That is a schema change and it has not been
-made.
+either side. A tight per-post crop is what `canvas_w` and `canvas_h` give the
+macro (above): real columns on the post since v309, so the listing carries them
+without opening `payload_json`. Without them the poster keeps this 16:9 window.
 
 ## Drawing one from your own composer
 
@@ -387,7 +387,7 @@ needs: `title` (what `/s/<id>` unfurls with), `caption`, and
 is exactly the caller that means otherwise. Store the returned `id` on your post
 row and render it with `{{ skribl_inline(post.skribl_id) }}`.
 
-`GET /feed` is all of the above, working, in about 150 lines of
+`GET /feed` is all of the above, working, in
 `skribl/static/feed.js` — that file is written to be read as the host-side
 recipe. `harness/verify_compose.py` drives it end to end and counts the POSTs.
 

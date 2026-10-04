@@ -198,7 +198,7 @@ with a full transport — play, restart, scrub, loop, mute, full screen, copy
 link — and beside it the list of what you posted, one row per Skribl with its
 poster, a title search, a filter (all / in the gallery / link only) and the
 actions: copy or share the link, switch the post in or out of the gallery,
-Delete, Copy key. "Your Skribls" in both editors' menus opens it. Whose it is
+Delete, Copy key. "Your Skribl Library" in both editors' menus opens it. Whose it is
 depends on the deployment: with no accounts it is the list this browser kept
 (`lib/posted.js`), unlisted posts included; with a host's signed-in user it is
 `GET /api/skribls?user_id=<me>`. The stage is the same in-post player, driven

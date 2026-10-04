@@ -59,10 +59,10 @@ as its own acceptance test. Read that section before acting on any output here.
 
 Twenty-seven pairs of pages — translation, rotation, scale, a blink, a limb, a
 tap, an erased hole, three identical circles, a page held x4 — rendered through
-both **Add in-between** and **Motion Smear**, at two sampling densities each.
+both **Tween** and **Smear**, at two sampling densities each.
 
     python3 -m flask --app app run --port 5001 --no-reload   # one shell
-    python3 harness/tools/corpus/render.py out/              # another
+    python3 harness/tools/corpus/render.py                   # another: writes corpus/corpus-out/
 
 One PNG per case, plus `results.json` with the geometry behind every verdict.
 Exits non-zero if any case FAILs.

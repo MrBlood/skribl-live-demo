@@ -93,10 +93,10 @@ here is the rule you can break tomorrow.
 | Every suite on disk appears in exactly one `release_run.py` batch. | `release_run.py` refuses to start otherwise |
 | The assertion output format is a contract `run_harness.sh` parses. | `harness/assertions.py` self-test, run by `verify_docs.py` |
 | Every tool emits ORDINARY STROKE POINTS — a point carries no field outside `{x, y, color, size, t, start, erase}`. A shape primitive or brush id would be a schema change every existing post has to survive. | `verify_tools.py`, `verify_inline.py`, `verify_tween.py`, `verify_inbetween.py` |
-| Motion Smear and In-between are two features on one pairing. The smear integrates the whole path between two poses as a span of pages; the in-between emits ONE pose partway and costs about a source page. Both pair strokes in drawing order, and neither claims otherwise. | `verify_tween.py` (the span, the falloff, the per-page cap), `verify_inbetween.py` (phase, the similarity fit, the Help's warning about drawing order) |
+| Smear and Tween (Motion Smear and the in-between) are two features on one pairing. The smear integrates the whole path between two poses as a span of pages; the in-between emits ONE pose partway and costs about a source page. Both pair strokes BY SHAPE (`tweenMatch`, since v296), so a pose can be redrawn in any order, and a stroke with no partner is drawn once. | `verify_tween.py` (the span, the falloff, the per-page cap, pairing by shape in another stroke order), `verify_inbetween.py` (phase, the similarity fit, the Help saying strokes pair by shape) |
 | Replay joins consecutive points, so any group holding two distant places draws a line across the canvas. Flip refuses the share outright when `strokeGroups` does not account for every point. | `verify_strokegroups.py` |
 | `pauseMode` is serialized and preview speed is not — a setting that changes what the drawing IS travels with it; one that changes how you review it does not. | `verify_tools.py` |
-| The document has TWO ceilings — points and pages — and every door that adds a page refuses at either one BEFORE the button: Duplicate, Blank, Paste, In-between, Motion Smear. Pages first, because a smear costs two and 200 arrives before the points do. The message names which. | `verify_sharedrules.py` (each client cap equals the server's), `verify_tween.py` (every door, at the cap and one under it) |
+| The document has TWO ceilings — points and pages — and every door that adds a page refuses at either one BEFORE the button: Duplicate, Blank, Paste, Tween, Smear. Pages first, because a smear costs two and 200 arrives before the points do. The message names which. | `verify_sharedrules.py` (each client cap equals the server's), `verify_tween.py` (every door, at the cap and one under it) |
 | A run of ONE alpha that is not one path is composited once, never walked, on both surfaces. `uniformRun` asks "one path?"; compositing asks "one alpha?" — different questions. | `verify_smudgeblur.py` (Flip: the vertex ripple), `verify_beading.py` (player: the ceiling) |
 | Field runs and rgba() strokes share ONE layer budget, counted by one predicate in the shared module, on both surfaces. Two counts of 24 is a frame of 48 composites. | `verify_smudgeblur.py`, `verify_beading.py` (both sides of the boundary) |
 | The layer is never paid for on a move of a live field drag; the page the artist is left with is the correct one. | `verify_smudgeblur.py` (mechanism, not a clock: mid-drag compounds, after does not) |
@@ -407,14 +407,12 @@ How it was won, and why the old plan was the wrong plan:
 * **Self-contained IIFEs** — `editor_export`, `editor_post`, `editor_menu`.
 * **Wiring extraction** (move STATEMENTS, leave functions and state) — both
   drawers: `editor_music`, `editor_photo`.
-* **The carves — there are NINE, not the four this file used to name.**
-  `editor_draft`, `editor_draw`, `editor_export`, `editor_menu`,
-  `editor_music`, `editor_photo`, `editor_post`, `editor_shapes` and
-  `editor_tune` are all absent from the player. Pad loads every one; Flip loads
-  only `editor_shapes`; the player loads none. `verify_player_isolation.py`
-  reads that list OFF DISK now rather than from a hardcoded tuple of four, so
-  five of them were unguarded until v273 and a tenth would be covered the day
-  it lands.
+* **The carves — every `skribl/static/editor_*.js`.** This list was once
+  four names, then nine, and was stale both times, so it is the glob now. Each
+  is absent from the player. Pad loads every one; Flip loads `editor_shapes`
+  and `editor_compose`; the player loads none. `verify_player_isolation.py`
+  reads that list OFF DISK rather than from a hardcoded tuple, which is how a
+  new carve is covered the day it lands.
 * **The serve-time comment strip** — `skribl/jsstrip.py` removes comments from
   the RESPONSE; the files on disk keep every word. This is what closed the gap,
   and it moved no source at all.
@@ -580,14 +578,15 @@ NOT change the deploy. `skribl/migrations/env.py` also runs a pre-flight that
 recreates a baseline table a stamped-over database is missing, so the chain can
 run at all on a database whose stamp lied.
 
-**THE PAD/FLIP GUARD ASYMMETRY IS DELIBERATE.** Pad confirms before leaving for
-Flip; Flip does NOT confirm on the way back. That is not an oversight and should
-not be "fixed". Pad's autosave keeps strokes but NOT media — photo and audio
-bytes never fit in localStorage, which is why the status pill reads *"Saved
-without media"* whenever either is attached — so leaving Pad loses the photo and
-the music. Flip persists pages, music and the background image, so a confirm
-there could only ever be a false alarm. Pad's guard fires on
-`photoBg || currentAudioBuffer`, not on "there is a drawing": a confirm that is
+**THE PAD/FLIP GUARD ASKS ONLY WHEN WORK IS ACTUALLY AT RISK.** Pad's guard
+flushes its draft and asks before leaving for Flip only if that flush did not
+leave the draft durable — photo and audio bytes live in IndexedDB
+(`lib/draftstore.js`) beside the strokes now, so with working storage it never
+fires. In a host's composer, where the Pad keeps no draft, it asks whenever
+there is a drawing. Flip does NOT confirm on the way back; it persists its
+pages, music and background image. The predicate's history — content, then
+media present, then durability — is written out above `atRisk` in
+`editor_draft.js`, and the reason for all three is one: a confirm that is
 usually wrong is one people learn to dismiss unread, and then it fails on the
 occasion that mattered.
 
@@ -613,7 +612,7 @@ branch on `strokeLayersOn()` — never neither.
 
 **THE CANVAS LOCK AFTER A TAKE IS DELIBERATE — do not "fix" it.** When a take
 ends, `updateCanvasLockCue()` sets `cursor: not-allowed` and the canvas is not
-drawable until you Record again or Clear. This looks like a dead end and is not:
+drawable until you tap + Add take or start a New Skribl. This looks like a dead end and is not:
 it is the multi-take model, and `endRecordingTake()` says so in a toast —
 *"Take saved — Play to preview, or Add take to draw more"* — and the way
 forward is an "+ Add take" pill floating on the locked canvas; since v288 the
@@ -633,25 +632,8 @@ explicitly or posts appear in no feed, silently. Leave the backfill alone.
 **v140's recall framing is confirmed correct** — no database ran the v140 copy
 of `f0a3d81b47e2` at `BATCH = 500`.
 
-**The CSS ratchet decision is STILL OPEN, and the restatement it was given last
-time has itself gone stale — read the numbers off the suite, not off this
-paragraph.** It was long carried as "set at exactly the current size, so it has
-no headroom by construction". That was true when `player.css` did not exist and
-the player linked the whole of `styles.css`. It does exist, so `CSS_RATCHET` sits
-well above what the player actually links and the mechanism has real headroom —
-the same inert state the JS ratchet was in when it was reading gzipped lengths,
-arrived at a different way.
-
-**The size of that headroom has changed twice since anyone wrote it down here,
-so this paragraph no longer quotes it.** `verify_player_isolation.py` prints the
-ratchet, the linked total and the target on one line; run it. Note also that the
-linked total has GROWN since the restatement, which is precisely what an inert
-ratchet permits and why the decision matters.
-
-The decision itself is unchanged and is the owner's: set the ratchet at today's
-value (the convention the JS ratchet and the comment beside `CSS_RATCHET` both
-follow) or at something with deliberate slack. Leaving it alone has now made it
-staler twice, which is worth knowing when deciding.
+**The CSS ratchet question is closed:** since v315 `CSS_RATCHET` is set at the
+player's served CSS size — see *THE PLAYER'S CSS IS UNDER ITS TARGET* above.
 
 ---
 

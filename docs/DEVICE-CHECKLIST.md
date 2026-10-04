@@ -51,7 +51,7 @@ details to send with it.
       top → headers, menus and the player controls still fit; no text is cut
       off or overlapping.
 - [ ] Turn on VoiceOver. On a shared link (`/s/<id>`), swipe through → every
-      control is read with a name (Play, Restart, Repeat, Mute, Full screen),
+      control is read with a name (Play, Restart, Loop, Mute, Full screen),
       not "button".
 - [ ] VoiceOver in the `•••` menu on the Library → it is announced as a menu or
       dialog, swiping stays inside it, and closing returns you to `•••`.

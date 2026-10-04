@@ -31,9 +31,11 @@ and the measure is perimeter rather than radius, because radius did not move
 either (2.2% against 2.3%) while perimeter moved 1.7% against 13.2%.
 
 THE CASE THIS DELIBERATELY DOES NOT PIN is a pose redrawn with its strokes in a
-different ORDER. Pairing is by drawing order, as Motion Smear's is, and no
-assertion here claims otherwise: a matcher is a separate job. What is pinned is
-that the Help says so.
+different ORDER. Since v296 both buttons pair strokes by SHAPE (tweenMatch), not
+by drawing order, and a stroke with no partner is drawn once rather than refused;
+verify_tween pins the matcher ("redrawn in ANOTHER STROKE ORDER, they still pair
+by shape"). What is pinned here is that the Help says so -- it said "in the
+order you drew them" for a long while after the matcher landed.
 """
 
 import os
@@ -293,11 +295,11 @@ with sync_playwright() as p:
       const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'Tween');
       return t ? t.textContent.replace(/\\s+/g, ' ') : null; }""")
     check("the Help has an In-between entry of its own", bool(help_txt), "no tip found")
-    check("...and it names drawing ORDER as the thing to keep",
-          bool(help_txt) and "order" in help_txt.lower(),
-          (help_txt or "")[-200:] + " — pairing is by drawing order and a "
-          "redrawn pose in another order pairs wrongly; the Help is the only "
-          "place that can say so")
+    check("...and it says strokes pair by shape, so a pose can be redrawn in any order",
+          bool(help_txt) and "by shape" in help_txt.lower()
+          and "in the order you drew them" not in help_txt.lower(),
+          (help_txt or "")[-220:] + " — tweenMatch pairs by shape since v296; "
+          "a tip that still asks for the same order sends people redrawing for nothing")
     # The buttons are Tween and Smear since #289; the tip names them as the
     # filmstrip shows them, so it points at Smear by that name.
     check("...and it points at Smear for the whole path",

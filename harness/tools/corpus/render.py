@@ -26,7 +26,7 @@ except ImportError:
 
 HERE = pathlib.Path(__file__).resolve().parent
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
-OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "corpus-out")
+OUT = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "corpus-out"   # beside this file, where .gitignore covers it
 OUT.mkdir(parents=True, exist_ok=True)
 
 with sync_playwright() as pw:

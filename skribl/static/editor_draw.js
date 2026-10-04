@@ -295,7 +295,7 @@ function startDraw(e) {
       pill.classList.add('nudge');
     }
     if (!lockToastShown) {
-      showToast('Take saved — tap Add take to draw more, or Clear to restart', recordBtn);
+      showToast('Take saved — tap Add take to draw more, or New Skribl to start over', recordBtn);
       lockToastShown = true;
       setTimeout(() => { lockToastShown = false; }, 3000);
     }
