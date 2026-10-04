@@ -394,6 +394,8 @@ with sync_playwright() as p:
         pg.wait_for_timeout(400)
         pg.evaluate(SHEET)
         pg.wait_for_timeout(1500)
+        # Every card, not the first screen: they load as they come near it.
+        scroll_all(pg)
         s6 = pg.evaluate(STATE)
         ink = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-demo]')].map({INK})")
         check(f"{name}: with reduced motion nothing plays; each replay shows its finished drawing",
@@ -517,6 +519,9 @@ with sync_playwright() as p:
         pg.evaluate(OPEN); pg.wait_for_timeout(500)
         pg.evaluate(SHEET); pg.wait_for_timeout(1500)
         scroll_all(pg)
+        # The banner heads the sheet; read it where it is, at the top.
+        pg.evaluate("() => { document.querySelector('#learnSheet .learn-sheet-scroll').scrollTop = 0; }")
+        pg.wait_for_timeout(300)
         f0 = pg.evaluate(FAILS)
         check(f"{name}: offline, every example is marked as not loaded -- the screen clips too",
               f0["cards"] > 10 and f0["failed"] == f0["cards"], str(f0))
