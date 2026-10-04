@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v319"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v320"` (skribl/core.py).**
 
 This is the sealed delivery of the Skribl source tree — the same files as the
 repository, packaged with the evidence of the run they were tested by.
@@ -59,9 +59,25 @@ build someone approved.
 If you need provenance, take the hash of the **zip** from a channel that did
 not travel with the zip. This project records it in the git commit that seals
 each release, on the branch the archive was built from — compare
-`sha256sum` of the zip against the value in that commit message. A signed tag
-or a CI attestation would be stronger and neither exists yet; the git-history
-channel is what is actually here, and saying so beats implying more.
+`sha256sum` of the zip against the value in that commit message.
+
+## Checking where a zip came from
+
+Since v320 there is a stronger channel than the commit message. The three zips
+are reproducible: `harness/package.py` writes them itself, entries in a fixed
+order with the commit's own timestamp, so the same commit makes the same bytes
+on any machine. And `.github/workflows/release.yml`, run once per seal after it
+merges, builds them on GitHub from that commit and has GitHub sign a
+build-provenance attestation over each one. With the GitHub CLI:
+
+    gh attestation verify skribl-<version>-source.zip --repo MrBlood/skribl-live-demo
+
+A pass names this repository, the release workflow and the commit the zip was
+built from, and it holds however the zip reached you. The same zips and their
+outer SHA256 are published on the repository's Releases page under the version's
+name. What the attestation does not say is that the code is good: it says where
+these exact bytes came from, and the release evidence inside says what was run
+against them.
 
 The filename is DERIVED from `SKRIBL_VERSION`, not typed alongside it: earlier
 deliveries were named for a version the code inside did not declare, and
