@@ -37,6 +37,8 @@
   var me = document.body.getAttribute('data-skribl-me') || '';
   var libEmpty = document.getElementById('libEmpty');
   var libEmptyLocal = document.getElementById('libEmptyLocal');
+  var stageEmpty = document.getElementById('stageEmpty');
+  var playerCard = document.querySelector('.player');
   var btnFull = document.getElementById('btnFull');
   var loaded = !me;        /* host mode: no empty state until the first page answers */
 
@@ -420,6 +422,10 @@
     var q = (search && search.value.trim()) || '';
     statCount.textContent = all.length;
     if (libEmpty) libEmpty.hidden = all.length > 0 || !loaded;
+    // Nothing posted: the player card becomes the empty card (Blooby, Make one).
+    var none = loaded && !all.length;
+    if (stageEmpty) stageEmpty.hidden = !none;
+    if (playerCard) playerCard.classList.toggle('is-empty', none);
     foot.textContent = !all.length ? ''
       : (q ? (me ? 'Filtering the ' + all.length + ' loaded so far. Load more to search further.'
                  : 'Filtering your ' + all.length + '.')

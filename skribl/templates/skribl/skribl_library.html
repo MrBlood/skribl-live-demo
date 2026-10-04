@@ -194,6 +194,18 @@
       box-shadow: 0 0 3px color-mix(in srgb, var(--accent-bright) 35%, transparent); }
     .now .lbl { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); }
     .stageCanvasWrap { margin: 12px 15px 0; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--hairline-soft); position: relative; }
+    /* The empty card: the frame the stage would fill, dashed, in the page's own
+       ground, and the player's parts out of the way until there is a post. */
+    .stage-empty { margin: 12px 15px 15px; aspect-ratio: 16 / 10; border: 1.5px dashed var(--hairline); border-radius: var(--r-sm);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 14px; text-align: center; }
+    .stage-empty[hidden] { display: none; }
+    .stage-empty img { height: 42%; width: auto; }
+    .stage-empty .se-title { color: var(--text); font-weight: 700; font-size: 16px; }
+    .stage-empty .bl-light { display: none; }
+    :root[data-theme="light"] .stage-empty .bl-light { display: block; }
+    :root[data-theme="light"] .stage-empty .bl-dark { display: none; }
+    .player.is-empty .now, .player.is-empty .stageCanvasWrap, .player.is-empty .pmeta,
+    .player.is-empty .scrub, .player.is-empty .transport { display: none; }
     /* NO SIZING RULE ON THE STAGE'S CANVAS. This said width:100%/height:auto,
        left over from the mock that drew its own canvas here; the stage is the
        in-post player now, and that rule would pin the width definite and bring
@@ -517,6 +529,18 @@
   <div class="stage" role="main">
     <!-- PLAYER -->
     <section class="player" aria-label="Player">
+      {# NOTHING POSTED YET: the card says so, with Blooby waving, instead of a
+         player with nothing in it -- a dead Play, a dash for a title and a
+         0:00 clock (found in the v319 once-over; the owner chose this from
+         three mocks). library.js shows it once the list has loaded empty; the
+         first post brings the player back. Drawn Blooby on light, his sticker
+         on dark, where the drawn outline would vanish. #}
+      <div class="stage-empty" id="stageEmpty" hidden>
+        <img class="bl-light" src="{{ skribl_asset('brand/blooby-wave.webp') }}" alt="" width="254" height="320">
+        <img class="bl-dark" src="{{ skribl_asset('brand/blooby-sticker.webp') }}" alt="" width="260" height="320">
+        <div class="se-title">Nothing posted yet</div>
+        <a href="{{ url_for('.skribl_editor') }}" class="make">Make one</a>
+      </div>
       <div class="now"><span class="dot"></span><span class="lbl">Now playing</span></div>
       {# THE SAME PLAYER THE FEED USES, with a transport bolted on from outside.
          A third replay implementation for the profile is how the three would
@@ -609,7 +633,6 @@
          in the words the menu's "Your Skribl Library" uses: kept in this browser,
          not an account. Hidden while there is anything to show. #}
       <p class="state" id="libEmpty" hidden>
-        <b>Nothing here yet.</b><br>
         Post a Skribl from the <a href="{{ url_for('.skribl_editor') }}">Pad</a> or Flip
         and it appears here.<span id="libEmptyLocal"> This list is kept
         <b>in this browser only</b> &mdash; it is not an account.</span>
