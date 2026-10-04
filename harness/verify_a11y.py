@@ -1059,7 +1059,9 @@ with sync_playwright() as p:
     # no horizontal overflow and keep its primary control on screen.
     for _path, _name, _primary in (("/", "Pad", "#postBtn"), ("/flip", "Flip", "#postBtn"),
                                    ("/s/" + _pid, "the player", "#playerPlayBtn"),
-                                   ("/library", "the library", "#btnRestart"),
+                                   # Empty here (a fresh browser), so its primary control is the
+                                   # empty card's Make one; with posts, the player's Restart.
+                                   ("/library", "the library", "#stageEmpty:not([hidden]) a.make, .player:not(.is-empty) #btnRestart"),
                                    ("/feed", "the host feed", "#postBtn"),
                                    ("/gallery", "the gallery", "#galleryMake")):
         _pg = browser.new_page(viewport={"width": 1280, "height": 900})
