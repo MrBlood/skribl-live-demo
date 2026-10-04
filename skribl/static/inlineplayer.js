@@ -147,8 +147,8 @@
  * and the box's max-width/max-height clamp each axis on its own, stretching
  * every drawing that is not 16:9 -- 216% on a 9:16 one. See adopt().
  *
- * TWO CLASSES A HOST PAGE MAY ADD
- * -------------------------------
+ * THREE CLASSES A HOST PAGE MAY ADD
+ * ---------------------------------
  * The page adds the class; the component owns what it means.
  *
  * `is-bare` -- THE HOST SUPPLIES THE TRANSPORT. The component's own cluster
@@ -168,6 +168,11 @@
  * object-fit, the share card goes (a crop that is right at tile size just cuts
  * the picture off at screen size) and the veil goes with it: at that size the
  * bar is unmissable and a wash over the whole picture is only dimmer art.
+ *
+ * `is-plain` -- THE PERSON LOOKING AT IT DREW IT. A draft in its author's
+ * composer: the wash and the big Play go, because they hid which drawing was
+ * attached, and the duration chip takes a play mark so "this moves" is still
+ * said. skribl_inline_draft(plain=true) adds it (owner, mock P1).
  */
 (function (global) {
   'use strict';

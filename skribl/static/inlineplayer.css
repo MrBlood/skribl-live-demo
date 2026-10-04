@@ -51,15 +51,27 @@
   transition: opacity 0.22s;
 }
 
-/* IMMERSIVE and BARE: the page adds the class, the component owns the rules.
-   BARE hides the transport and keeps the veil; IMMERSIVE hides both the share
-   card and the veil. Why, in inlineplayer.js. */
+/* IMMERSIVE, BARE and PLAIN: the page adds the class, the component owns the
+   rules. BARE hides the transport and keeps the veil; IMMERSIVE hides both the
+   share card and the veil; PLAIN is below. Why, in inlineplayer.js. */
 .skribl-inline.is-immersive { width: 100%; height: 100%; border: 0; border-radius: 0; }
 .skribl-inline.is-immersive :is(.skribl-inline-poster, .skribl-inline-veil),
 .skribl-inline.is-bare :is(.skribl-inline-controls, .skribl-inline-dur) {
   display: none; }
 .skribl-inline.is-immersive .skribl-inline-canvas {
   width: 100%; height: 100%; object-fit: contain; }
+
+/* PLAIN: the author's own drawing, in their composer, before it is posted.
+   They have seen it, so the wash and the big Play only hid WHICH drawing was
+   attached (owner, mock P1). It shows plain, and the length chip carries a
+   play mark to say it moves. The tap that plays it is the box's, unchanged. */
+.skribl-inline.is-plain .skribl-inline-veil { background: none; }
+.skribl-inline.is-plain .skribl-inline-play { display: none; }
+.skribl-inline.is-plain .skribl-inline-dur {
+  font-size: 13px; font-weight: 600; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px; }
+.skribl-inline.is-plain .skribl-inline-dur::before {
+  content: ""; border-left: 9px solid currentColor;
+  border-top: 5.5px solid transparent; border-bottom: 5.5px solid transparent; }
 
 /* The generic fallback card is cropped the same way — see inlineplayer.js. */
 
