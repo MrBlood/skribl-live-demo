@@ -1123,11 +1123,14 @@ with sync_playwright() as sp:
           "couldn" in _f0["live"].lower() and _f0["liveBox"] is not None
           and max(_f0["liveBox"]) <= 1, str(_f0))
     _lmode["m"] = "up"
-    hf.click("#libRetry")
-    hf.wait_for_timeout(1200)
+    _has_retry = bool(hf.query_selector("#libRetry:not([hidden])")) and _f0["error"]
+    if _has_retry:                      # absent is a failure to report, not a hang
+        hf.click("#libRetry")
+        hf.wait_for_timeout(1200)
     _f1 = hf.evaluate(_LF)
+    _f1["pressed"] = _has_retry
     check("Try again with the listing back: the rows, the count, and no error card",
-          _f1["rows"] == 2 and _f1["count"] == "2" and not _f1["error"] and not _f1["empty"], str(_f1))
+          _f1["pressed"] and _f1["rows"] == 2 and _f1["count"] == "2" and not _f1["error"] and not _f1["empty"], str(_f1))
     hf.close()
     hf = ctx.new_page()
     hf.set_viewport_size({"width": 1280, "height": 1000})

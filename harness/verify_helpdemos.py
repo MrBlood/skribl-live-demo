@@ -493,10 +493,14 @@ with sync_playwright() as p:
               f0["shown"] and f0["painted"] and f0["said"] == f"{f0['cards']} examples couldn\u2019t load.", str(f0))
         check(f"{name}: ...in a status a screen reader announces", f0["status"] == "status", str(f0))
         cut["on"] = False
-        pg.focus("#learnRetry")
-        pg.keyboard.press("Enter")
-        pg.wait_for_timeout(4000)
+        # No button to press is a FAILURE to report, not a 30-second hang.
+        if pg.query_selector("#learnRetry"):
+            pg.focus("#learnRetry")
+            pg.keyboard.press("Enter")
+            pg.wait_for_timeout(4000)
         f1 = pg.evaluate(FAILS)
+        if not pg.query_selector("#learnRetry"):
+            f1["shown"], f1["body"] = "no Retry button", True
         check(f"{name}: Retry with the network back loads them: no banner, no failures, every replay playing, every clip fetched",
               not f1["shown"] and f1["failed"] == 0 and f1["players"] == f1["demos"] and f1["clipsOk"], str(f1))
         check(f"{name}: ...and focus, which was on the banner's Retry, does not fall to <body>",
