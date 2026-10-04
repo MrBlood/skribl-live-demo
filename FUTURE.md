@@ -662,6 +662,28 @@ a GENERATED page and free 27 drawings' worth, over on pages any page will do.
 payload that pins a phone, and the comment above it in `validation.py` says so.
 The problem is that the client spends a budget it cannot see.
 
+## 6i. Blooby's card as a Flip: loop a stretch of pages, and a page that stays underneath (owner, after v319)
+
+THE IDEA. Blooby's trading card draws itself (a Draw-on page), then Blooby
+waves in its window for about six seconds, then the whole thing starts over. It
+shows off Draw-on and the wave in one piece, and it needs two things Flip does
+not have:
+
+  * LOOP A STRETCH OF PAGES. Mark pages 2 to 11 and say how long they repeat
+    (times or seconds); Flip plays them on repeat, then carries on. It is
+    Hold-a-page's big brother. Like hold, it must be serialised with the post so
+    every player (link, gallery, library, in-post) plays it the same.
+  * A PAGE THAT STAYS UNDERNEATH. Each Flip page carries its own strokes, so ten
+    waving pages would each have to hold the whole card -- about 4,500 points,
+    ten times, past the document's ceilings. A background page that the pages
+    after it are drawn over is the cel-animation model, and it is the concrete
+    case 6d (layers) did not have.
+
+THE OWNER'S READ: "I think the idea brings up layers." Three sizes, smallest
+first: one background page for a stretch (one small field in the format); two
+layers on every page (rough and clean, 4 idea 2); a full stack. The first plus
+the loop covers the card. Both are payload-schema decisions, so: mock first.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
