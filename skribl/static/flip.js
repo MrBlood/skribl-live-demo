@@ -1004,10 +1004,17 @@ function showAutosaveStatus(state){
 }
 // Export progress overlay + cancel.
 let _exportAbort=false;
+// THE PROGRESS OVERLAY IS A DIALOG (v320). It covers the whole editor with a
+// Cancel in it, and until verify_a11y's layer sweep found it, Tab walked
+// straight past Cancel into the toolbar underneath -- mid-export. The modal
+// owner keeps focus on it; Escape is Cancel, as it is for every other sheet.
 function exportShow(label){ _exportAbort=false; const o=document.getElementById('flipExport'); if(!o) return;
-  document.getElementById('flipExportLabel').textContent=label||'Exporting…'; document.getElementById('flipExportFill').style.width='0%'; o.hidden=false; }
+  document.getElementById('flipExportLabel').textContent=label||'Exporting…'; document.getElementById('flipExportFill').style.width='0%';
+  const was=o.hidden; o.hidden=false; if(was && window.SkriblModal) window.SkriblModal.open(o); }
 function exportSet(frac, label){ const f=document.getElementById('flipExportFill'); if(f) f.style.width=(Math.max(0,Math.min(1,frac))*100)+'%'; if(label){ const l=document.getElementById('flipExportLabel'); if(l) l.textContent=label; } }
-function exportHide(){ const o=document.getElementById('flipExport'); if(o) o.hidden=true; }
+function exportHide(){ const o=document.getElementById('flipExport'); if(!o || o.hidden) return;
+  const inside=o.contains(document.activeElement); o.hidden=true;
+  if(inside && window.SkriblModal) window.SkriblModal.close(o); }
 function applyPayload(d){
   // Adopt the loaded draft's name into the tab (blank keeps the auto-default).
   if(window.SkriblName && d && d.title && !/^Untitled Skribl$/.test(d.title)) window.SkriblName.set(d.title);
@@ -9900,6 +9907,7 @@ window.addEventListener('keydown', e=>{
   if(e.key==='g' || e.key==='G'){ if(gridBtn) gridBtn.click(); }
 });
 bindEl('flipExportCancel', 'click',()=>{ _exportAbort=true; });
+bindEl('flipExport', 'keydown',e=>{ if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); _exportAbort=true; } });
 
 /* ---- fps segmented control ---- */
 const fpsGroup=document.getElementById('fps');

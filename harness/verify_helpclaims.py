@@ -665,6 +665,20 @@ with sync_playwright() as p:
             ghosts = [w for w in (named or []) if w not in bar and w not in ("←", "→", "✕")]
             check("Flip: every page button the Pages tip names is a button on the page",
                   named and not ghosts, f"named {named}, the page bar has {bar}")
+        # THE QUICK START'S WAY INTO THE DRAW MENU IS THE ONE THAT WORKS. Flip's
+        # step 1 sent people to "the color dot" for a release after the toolbar
+        # redesign took that dot away (outside audit V319-007): the steps are
+        # not pills, so gate 1 never read them. Any step that sends someone to
+        # the Draw menu must send them through the Pen, which probe:pen_swoosh
+        # below proves on both editors opens it.
+        steps = pg.evaluate("""() => [...document.querySelectorAll('#helpDrawer .help-step .help-desc')]
+            .filter(d => /Draw\\s+menu/i.test(d.textContent))
+            .map(d => ({ text: d.textContent.replace(/\\s+/g, ' ').trim().slice(0, 80),
+                         pen: [...d.querySelectorAll('strong')].some(s => /^Tap Pen again$/i.test(s.textContent.trim())) }))""")
+        wrong = [x["text"] for x in steps if not x["pen"]]
+        if steps:
+            check(f"{nm}: a quick-start step that points at the Draw menu says to tap Pen again",
+                  not wrong, f"points elsewhere: {wrong}")
         ctx.close()
     stale = sorted(k for k in CLAIMS if k not in rendered)
     check("no claim describes a tip that is no longer there", not stale, str(stale))

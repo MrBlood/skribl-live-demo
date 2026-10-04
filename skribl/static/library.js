@@ -97,6 +97,7 @@
   var items = [];          /* every row loaded so far, newest first */
   var cursor = null;       /* the keyset cursor for the next page */
   var current = null;      /* the item on the stage */
+  var pending = null;      /* the item asked for and not on the stage yet */
   var player = null;       /* the inlineplayer handle */
   var looping = true;
   var tick = null;
@@ -157,15 +158,28 @@
     pVis.hidden = !vis;
   }
 
-  function select(item) {
-    current = item;
-    showMeta(item);
-    scrubFill.style.width = '0%';
-    tElapsed.textContent = '0:00 / 0:00';
-    setPlayIcon(false);
+  /* ONE IDENTITY ON SCREEN (outside audit V319-001). select() used to make
+     the clicked item `current` before its payload had arrived: during a slow
+     load the title, the highlighted row and Copy link all said B while A
+     went on playing under the transport, and a failed B left A on the stage
+     with Copy link pointing at B. Now the stage, its words, its row and every
+     control keep saying A until B has actually been adopted -- B is only
+     `pending` -- and a B that fails leaves A exactly as it was. */
+  function markRows() {
     Array.prototype.forEach.call(listEl.querySelectorAll('.posted-row'), function (c) {
-      c.classList.toggle('active', c.getAttribute('data-id') === item.id);
+      var id = c.getAttribute('data-id');
+      c.classList.toggle('active', !!current && id === current.id);
+      if (pending && id === pending.id) c.setAttribute('aria-busy', 'true');
+      else c.removeAttribute('aria-busy');
     });
+  }
+
+  function select(item) {
+    pending = item;
+    /* An empty stage has nothing to contradict (the transport is dead until
+       a payload lands), so it can say what is coming. */
+    if (!current) showMeta(item);
+    markRows();
 
     /* ONE FETCH, for the one drawing about to play. The listing already gave us
      * everything else on this page. */
@@ -175,16 +189,16 @@
         return r.json();
       })
       .then(function (body) {
-        /* IS THIS STILL THE SKRIBL ON THE STAGE — asked by id, not by object
-           identity. `current !== item` answers "a later selection won" for
-           anything that merely REPLACED the current item with an equal one --
-           which the reconcile does when it learns a row's kind or sound, so the
-           payload arrives, this returns, and the stage loads forever with no
-           error anywhere (the fetch is a 200; the throw is a silent return).
-           The id is what the question is about, and it is strictly more
-           correct: select A, B, then A again, and A's first response is usable
-           rather than discarded. */
-        if (!current || current.id !== item.id) return;
+        /* IS THIS STILL THE SKRIBL BEING ASKED FOR -- asked by id, not by
+           object identity. The reconcile REPLACES an item with an equal one
+           when it learns a row's kind or sound; an identity test would then
+           drop this payload and leave the stage loading forever with no error
+           anywhere. By id, select A, B, then A again, and A's first response
+           is usable rather than discarded. `pending`, not the item passed in,
+           is what lands: it is the freshest copy of the metadata. */
+        if (!pending || pending.id !== item.id) return;
+        current = pending;
+        pending = null;
         var payload = (body && (body.skribl || body.payload)) || body;
         if (!player) {
           player = window.SkriblInline.attach(stageBox, payload);
@@ -192,11 +206,33 @@
         } else {
           player.adopt(payload);
         }
+        showMeta(current);
+        scrubFill.style.width = '0%';
+        tElapsed.textContent = '0:00 / 0:00';
+        setPlayIcon(false);
+        markRows();
         transportLive(true);
         refresh();
       })
       .catch(function () {
-        pTitle.textContent = "Couldn't load this Skribl.";
+        /* A failure for a request nobody is waiting on any more says nothing:
+           it used to overwrite the title of whatever had loaded since. */
+        if (!pending || pending.id !== item.id) return;
+        pending = null;
+        markRows();
+        var live = document.getElementById('postedStatus');
+        if (!current) {
+          pTitle.textContent = "Couldn't load this Skribl.";
+          if (live) live.textContent = "Couldn't load this Skribl.";
+          return;
+        }
+        /* Something else is still on the stage and still what every control
+           acts on, so the title stays its title; the failure is said under
+           the list, where the row that was picked is. */
+        var msg = "Couldn\u2019t load \u201c" + (item.title || 'Untitled Skribl')
+                + "\u201d. Pick it again to retry.";
+        foot.textContent = msg;
+        if (live) live.textContent = msg;
       });
   }
 
@@ -430,11 +466,7 @@
       : (q ? (me ? 'Filtering the ' + all.length + ' loaded so far. Load more to search further.'
                  : 'Filtering your ' + all.length + '.')
            : 'Newest first. Pick one to play it.');
-    if (current) {
-      Array.prototype.forEach.call(listEl.querySelectorAll('.posted-row'), function (c) {
-        c.classList.toggle('active', c.getAttribute('data-id') === current.id);
-      });
-    }
+    markRows();
     fitShots();
   }
 
@@ -565,6 +597,11 @@
           var fresh = store.list().filter(function (e) { return e.id === current.id; })[0];
           if (fresh) { current = asItem(fresh); showMeta(current); }
         }
+        /* The item still loading learns it too, and is what select() commits. */
+        if (pending) {
+          var later = store.list().filter(function (e) { return e.id === pending.id; })[0];
+          if (later) { pending = asItem(later); if (!current) showMeta(pending); }
+        }
       }
     });
   }
@@ -613,7 +650,7 @@
           more.addEventListener('click', function () { loadPage(); });
           moreWrap.appendChild(more);
         }
-        if (!current && items.length) select(items[0]);
+        if (!current && !pending && items.length) select(items[0]);
         /* An empty profile is the empty state above the footer (renderGrid
            hides and shows it); the route-naming sentence that used to sit
            here is gone with the population it described. */

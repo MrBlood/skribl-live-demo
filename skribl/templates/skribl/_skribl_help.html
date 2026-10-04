@@ -107,7 +107,7 @@
         </button>
         <div class="accordion-body open"><div class="accordion-inner">
           {% if is_flip %}
-          <div class="help-step"><span class="help-num">1</span><div><div class="help-title">Draw a page</div><div class="help-desc">Pick a color and brush size and sketch. The color dot opens the full <strong>Draw</strong> menu (colors, custom picker, eyedropper, brush size, background, opacity, smoothing). Need a different shape? The <strong>&#8943;</strong> menu switches the canvas between <strong>4:3</strong>, <strong>16:9</strong>, <strong>1:1</strong> and <strong>9:16</strong> — your drawings keep their position.</div></div></div>
+          <div class="help-step"><span class="help-num">1</span><div><div class="help-title">Draw a page</div><div class="help-desc">Pick a color and brush size and sketch. <strong>Tap Pen again</strong> for the full <strong>Draw</strong> menu (colors, custom picker, eyedropper, brush size, background, opacity, smoothing). Need a different shape? The <strong>&#8943;</strong> menu switches the canvas between <strong>4:3</strong>, <strong>16:9</strong>, <strong>1:1</strong> and <strong>9:16</strong> — your drawings keep their position.</div></div></div>
           <div class="help-step"><span class="help-num">2</span><div><div class="help-title">Add pages to animate</div><div class="help-desc"><strong>Duplicate</strong> copies the current page so you can nudge, erase, and redraw the difference; <strong>Blank</strong> starts empty. Turn on <strong>Onion skin</strong> to trace over the pages beneath — set how many show through (<strong>1&#8211;3</strong>) and tint them by distance so you can tell them apart. Hover a page in the strip to <strong>move</strong>, <strong>copy</strong> or <strong>hold</strong> it. To drag a page somewhere else, press and hold it until it lifts &mdash; on a phone it buzzes &mdash; then drag; that way a flick along the strip scrolls it instead of shuffling your pages. To work on several pages at once, open a page&rsquo;s <strong>&#8943;</strong> menu and choose <strong>Select through here</strong>: every page from the one you are on through that one is selected, and <strong>Move</strong>, <strong>Copy</strong>, <strong>Draw on</strong> and <strong>Delete</strong> then act on the whole run. On a desktop, <strong>Shift</strong>-click a page does the same.</div></div></div>
           <div class="help-step"><span class="help-num">3</span><div><div class="help-title">Set the timing</div><div class="help-desc">Choose <strong>6 / 12 / 24</strong> pages per second under Tune — that is the speed for the whole animation, except any page set to <strong>Draw-on</strong>, which takes as long as it took you to draw rather than a fixed number of frames. To linger on one page, use its <strong>&#215;1</strong> button in the strip to hold it for up to four beats; held pages show a badge so you can read the timing at a glance. Turn on <strong>Motion guides</strong> to see the path your drawing travels between pages, with dots spaced to show its speed — closer dots mean slower movement. It is a preview aid; it never appears in the finished animation.</div></div></div>
           <div class="help-step"><span class="help-num">4</span><div><div class="help-title">Music &amp; image (optional)</div><div class="help-desc">Add a looping <strong>music</strong> track and a background <strong>image</strong> for the whole animation — see the Music &amp; looping and Background image sections below.</div></div></div>
@@ -279,9 +279,9 @@
      Over the panel, outside its scroll, so the reference stays where it was.
      Closes like every sheet: a tap on the grip or a pull down, the scrim,
      the close button, or Escape (which leaves How it works open). #}
-  <div class="learn-sheet" id="learnSheet" hidden>
+  <div class="learn-sheet" id="learnSheet" role="dialog" aria-modal="true" aria-labelledby="learnSheetTitle" hidden>
     <div class="learn-scrim" data-learn-close></div>
-    <div class="learn-sheet-panel" role="region" aria-labelledby="learnSheetTitle">
+    <div class="learn-sheet-panel">
       <button type="button" class="learn-grip" id="learnGrip" data-learn-close aria-label="Close the examples"></button>
       <div class="learn-sheet-head">
         <h3 class="learn-sheet-title" id="learnSheetTitle" tabindex="-1">Watch it work</h3>
@@ -356,9 +356,9 @@
      be allowed to click ... and have it full screen"). A replay gets a player
      of its own; a clip, the same recording. Closes on the scrim, the close
      button or Escape, and back to the card that opened it. #}
-  <div class="learn-viewer" id="learnViewer" hidden>
+  <div class="learn-viewer" id="learnViewer" role="dialog" aria-modal="true" aria-labelledby="learnViewerTitle" hidden>
     <div class="learn-viewer-scrim" data-viewer-close></div>
-    <div class="learn-viewer-box" role="region" aria-labelledby="learnViewerTitle">
+    <div class="learn-viewer-box">
       <div class="learn-viewer-stage" id="learnViewerStage"></div>
       <div class="learn-viewer-cap">
         <span class="learn-viewer-title" id="learnViewerTitle"></span>

@@ -168,6 +168,11 @@
     void sheet.offsetWidth;            // let it lay out closed, then glide up
     sheet.classList.add('open');
     peek.setAttribute('aria-expanded', 'true');
+    /* A LAYER OVER A DIALOG IS A DIALOG (outside audit V319-002). This was a
+       region, so nothing kept Tab in it and the third press reached How it
+       works' own Close underneath. The modal owner traps Tab and remembers
+       the way back; focus then goes to the heading, as it always has. */
+    if (window.SkriblModal) window.SkriblModal.open(sheet, peek);
     var title = document.getElementById('learnSheetTitle');
     if (title) title.focus({ preventScroll: true });
     startAll();
@@ -182,7 +187,10 @@
     var done = function () { if (!sheetOpen) sheet.hidden = true; };
     clearTimeout(hideTimer);
     if (instant || reduce) done(); else hideTimer = setTimeout(done, 300);
-    if (!drawer.hidden && sheet.contains(document.activeElement)) peek.focus({ preventScroll: true });
+    if (!drawer.hidden && sheet.contains(document.activeElement)) {
+      if (window.SkriblModal) window.SkriblModal.close(sheet);
+      else peek.focus({ preventScroll: true });
+    }
   }
   peek.addEventListener('click', openSheet);
   sheet.addEventListener('click', function (e) {
@@ -249,7 +257,9 @@
     vStage.innerHTML = '';
     viewer.hidden = true;
     syncAll();
-    if (vFrom && !drawer.hidden) vFrom.focus({ preventScroll: true });
+    if (drawer.hidden) return;
+    if (window.SkriblModal) window.SkriblModal.close(viewer);
+    else if (vFrom) vFrom.focus({ preventScroll: true });
   }
   function openViewer(card) {
     if (!viewer) return;
@@ -262,6 +272,9 @@
     viewerOpen = true;
     syncAll();
     viewer.hidden = false;
+    // A dialog, like the sheet under it: Tab stays in, and closing goes back
+    // to the card that opened it.
+    if (window.SkriblModal) window.SkriblModal.open(viewer, vFrom);
     var close = document.getElementById('learnViewerClose');
     if (close) close.focus({ preventScroll: true });
     if (card.hasAttribute('data-clip-dark')) {

@@ -69,6 +69,12 @@
 
   function onKeydown(e) {
     if (e.key !== 'Tab') return;
+    /* NESTED DIALOGS. How it works holds its examples sheet and their full-
+       screen viewer, each a dialog of its own. The keydown reaches the
+       innermost trap first and bubbles on; the drawer's trap must not then
+       wrap focus by ITS first and last, which are behind the layer on top. */
+    if (e._skriblTrapped) return;
+    e._skriblTrapped = true;
     var dialog = e.currentTarget;
     var items = usable(dialog);
     if (!items.length) { e.preventDefault(); return; }

@@ -813,6 +813,155 @@ with sync_playwright() as sp:
             check("...and the failure reaches the live region",
                   "couldn't copy" in _said["live"].lower(), str(_said))
 
+    # ---- ONE SKRIBL ON SCREEN AT A TIME (outside audit V319-001) ----------
+    #
+    # select() made the clicked row `current` before its payload had arrived.
+    # Held in flight, the title, the highlighted row and Copy link all said B
+    # while A went on playing under the transport; a B that then FAILED left
+    # A on the stage with its title replaced by an error and Copy link
+    # pointing at B. Driven here with B's payload request held open by the
+    # suite, then refused, then let through -- and with an abandoned request
+    # answering late, which must not move the stage.
+    print("\nLIBRARY — picking another keeps one Skribl on screen until it has loaded")
+    _held, _hold = [], {"on": True}
+    def _hold_b(route):
+        # Held, and answered by hand below -- or let through once `on` is off.
+        # (Unrouting is not "let through": Playwright answers held requests
+        # itself on unroute, which would land the late answer early.)
+        if _hold["on"]:
+            _held.append(route)
+        else:
+            route.continue_()
+    # Its own browser and two posts of its own (earlier sections delete from
+    # `ctx`). WHICH DRAWING IS ON THE STAGE is read from the payload itself:
+    # every Skribl fetch's body is tagged with the id it was fetched for, and
+    # the stage's attach/adopt record the tag they were handed. Duration was
+    # the first fingerprint tried, and two posts drawn by the same gesture
+    # loop come out within a few ms of each other -- it could not tell them
+    # apart, and said so by failing on a correct tree.
+    _actx = b.new_context()
+    _two = [post_one(_actx, tag + " one", 4), post_one(_actx, tag + " two", 1)]
+    _ap = _actx.new_page()
+    _ap.set_viewport_size({"width": 1280, "height": 1000})
+    _ap.add_init_script("""window.__copied = null;
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: function (t) { window.__copied = t; return Promise.resolve(); } },
+        configurable: true });
+      window.__onStage = null;
+      var _f = window.fetch;
+      window.fetch = function (u) {
+        return _f.apply(this, arguments).then(function (r) {
+          var m = String(u).match(/\\/api\\/skribls\\/([^\\/?]+)$/);
+          if (!m) return r;
+          var j = r.json.bind(r);
+          r.json = function () { return j().then(function (b) {
+            var t = b && (b.skribl || b.payload || b);
+            if (t && typeof t === 'object') Object.defineProperty(t, '__from', { value: m[1] });
+            return b; }); };
+          return r; });
+      };
+      var _si;
+      Object.defineProperty(window, 'SkriblInline', { configurable: true,
+        get: function () { return _si; },
+        set: function (v) {
+          _si = v;
+          var a = v && v.attach;
+          if (!a || a.__wrapped) return;
+          v.attach = function (el, p) {
+            var h = a.apply(this, arguments);
+            if (el && el.id === 'stageBox') {
+              window.__onStage = p && p.__from;
+              if (h && h.adopt) { var ad = h.adopt;
+                h.adopt = function (q) { window.__onStage = q && q.__from; return ad.apply(this, arguments); }; }
+            }
+            return h; };
+          v.attach.__wrapped = true; } });""")
+    browsing.goto(_ap, BASE, "/library")
+    _ap.wait_for_timeout(2500)
+    _SEEN = """() => {
+        const el = document.getElementById('stageBox');
+        const p = window.SkriblInline && window.SkriblInline.players().filter(x => x.el === el)[0];
+        const st = p ? p.state() : null;
+        const act = document.querySelector('#postedList .posted-row.active');
+        const busy = document.querySelector('#postedList .posted-row[aria-busy="true"]');
+        return { title: document.getElementById('pTitle').textContent.trim(),
+                 stage: window.__onStage, playing: !!st && st.state === 'playing',
+                 active: act && act.getAttribute('data-id'),
+                 busy: busy && busy.getAttribute('data-id'),
+                 share: !document.getElementById('btnShare').disabled,
+                 foot: document.getElementById('libFoot').textContent,
+                 live: (document.getElementById('postedStatus') || {}).textContent || '' }; }"""
+    def _share_url(pg):
+        pg.evaluate("() => { window.__copied = null; }")
+        pg.click("#btnShare")
+        pg.wait_for_timeout(500)
+        return pg.evaluate("() => window.__copied") or ""
+    def _pick(pg, rid):
+        pg.evaluate("(id) => document.querySelector('.posted-row[data-id=\"' + id + '\"] .posted-main').click()", rid)
+    # A is whatever the page put on the stage; B, the next row down. Earlier
+    # sections post and delete in this context, so neither is named up front.
+    _id_a = _ap.evaluate("() => (document.querySelector('#postedList .posted-row.active') || {}).getAttribute"
+                         " ? document.querySelector('#postedList .posted-row.active').getAttribute('data-id') : null")
+    _id_b = _ap.evaluate("""(a) => { const r = [...document.querySelectorAll('#postedList .posted-row')]
+        .map(x => x.getAttribute('data-id')).filter(x => x !== a); return r[0] || null; }""", _id_a)
+    _a0 = _ap.evaluate(_SEEN)
+    if not _a0["playing"]:
+        _ap.click("#btnPlay")
+        _ap.wait_for_timeout(300)
+    _a0 = _ap.evaluate(_SEEN)
+    check("the fixture: A is on the stage and playing, its row the active one",
+          all(_two) and bool(_id_a) and bool(_id_b) and _a0["playing"] and _a0["share"]
+          and _a0["stage"] == _id_a,
+          f"{_a0} A={_id_a} B={_id_b} posted={_two}")
+    _ap.route(re.compile(r"/api/skribls/" + re.escape(_id_b) + r"$"), _hold_b)
+    _pick(_ap, _id_b)
+    _ap.wait_for_timeout(700)
+    _a1 = _ap.evaluate(_SEEN)
+    _u1 = _share_url(_ap)
+    check("while B loads, the title, the active row and the drawing are all still A",
+          len(_held) == 1 and _a1["title"] == _a0["title"] and _a1["active"] == _id_a
+          and _a1["stage"] == _id_a, f"{_a1} (held {len(_held)})")
+    check("...Copy link still copies A, the Skribl on screen",
+          _u1.endswith("/" + _id_a), repr(_u1))
+    check("...and B's row says it is busy", _a1["busy"] == _id_b, str(_a1))
+    _held.pop().abort()
+    _ap.wait_for_timeout(700)
+    _a2 = _ap.evaluate(_SEEN)
+    _u2 = _share_url(_ap)
+    check("when B fails, A is untouched: its title, its row, its drawing",
+          _a2["title"] == _a0["title"] and _a2["active"] == _id_a
+          and _a2["stage"] == _id_a and _a2["busy"] is None, str(_a2))
+    check("...Copy link still copies A", _u2.endswith("/" + _id_a), repr(_u2))
+    check("...and the failure is said, visibly and to a screen reader",
+          "couldn" in _a2["foot"].lower() and "couldn" in _a2["live"].lower(), str(_a2))
+    # A LATE ANSWER FOR AN ABANDONED PICK. B asked for and held; A picked
+    # again (it lands at once); then B's answer arrives. B must not take over.
+    _pick(_ap, _id_b)
+    _ap.wait_for_timeout(400)
+    _pick(_ap, _id_a)
+    _ap.wait_for_timeout(1200)
+    _late = _held.pop() if _held else None
+    if _late:
+        _late.continue_()
+    _ap.wait_for_timeout(1200)
+    _a3 = _ap.evaluate(_SEEN)
+    check("a late answer for an abandoned pick does not take the stage",
+          _late is not None and _a3["title"] == _a0["title"] and _a3["active"] == _id_a
+          and _a3["stage"] == _id_a and _share_url(_ap).endswith("/" + _id_a),
+          f"{_a3} (late request held: {_late is not None})")
+    # ...AND B STILL LOADS WHEN IT CAN. Asserting only the refusals passes on
+    # a Library that never changes Skribl at all.
+    _hold["on"] = False
+    _pick(_ap, _id_b)
+    _ap.wait_for_timeout(1500)
+    _a4 = _ap.evaluate(_SEEN)
+    _u4 = _share_url(_ap)
+    check("picked again with the network back, B takes the stage: title, row, drawing, link",
+          _a4["title"] != _a0["title"] and _a4["active"] == _id_b and _a4["busy"] is None
+          and _a4["stage"] == _id_b and _u4.endswith("/" + _id_b), f"{_a4} {_u4!r}")
+    _ap.close()
+    _actx.close()
+
     # ---- A CONTROL THAT CANNOT ACT IS NOT OFFERED (PRESEAL-005) ------------
     #
     # Play, Restart, Loop and Copy link were enabled from the first paint,
@@ -1444,16 +1593,30 @@ with sync_playwright() as _sp4:
     # DRIVEN THROUGH THE SEARCH BOX rather than by calling render(): the point
     # is a re-render somebody causes without touching the list, and a hook
     # ordering is exactly the kind of defect a direct call can step around.
-    _p4.evaluate("""() => { localStorage.setItem('skribl_posted_v1', '[]');
-        window.SkriblPosted.add({ id: 'actB', url: '/s/actB', title: 'Beta', kind: 'pad', pages: 1 });
-        window.SkriblPosted.add({ id: 'actA', url: '/s/actA', title: 'Alpha', kind: 'pad', pages: 1 }); }""")
+    #
+    # REAL POSTS since v320: a row is marked when its Skribl is ON THE STAGE
+    # (V319-001), and ids the server has never heard of never get there.
+    def _realpost(title):
+        _rq = urllib.request.Request(BASE + "/api/skribls", data=json.dumps({
+            "title": title, "visibility": "unlisted",
+            "frames": [{"strokes": [{"x": 10, "y": 10, "color": "#fff", "size": 6, "t": 0},
+                                    {"x": 200, "y": 150, "color": "#fff", "size": 6, "t": 99}],
+                        "strokeGroups": [2]}]}).encode(),
+            headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(_rq, timeout=20) as _r:
+            return json.loads(_r.read().decode())["id"]
+    _actB, _actA = _realpost("Beta"), _realpost("Alpha")
+    _p4.evaluate("""([b, a]) => { localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({ id: b, url: '/s/' + b, title: 'Beta', kind: 'pad', pages: 1 });
+        window.SkriblPosted.add({ id: a, url: '/s/' + a, title: 'Alpha', kind: 'pad', pages: 1 }); }""",
+                 [_actB, _actA])
     _p4.reload(wait_until="load")
     _p4.wait_for_timeout(1400)
-    _p4.click('.posted-row[data-id="actB"] .posted-main')
-    _p4.wait_for_timeout(600)
+    _p4.click(f'.posted-row[data-id="{_actB}"] .posted-main')
+    _p4.wait_for_timeout(1200)
     _act = lambda: _p4.evaluate(
-        "() => { const r = document.querySelector('.posted-row[data-id=\"actB\"]');"
-        "  return r ? r.classList.contains('active') : null; }")
+        "(id) => { const r = document.querySelector('.posted-row[data-id=\"' + id + '\"]');"
+        "  return r ? r.classList.contains('active') : null; }", _actB)
     check("picking a Skribl marks its row",
           _act() is True,
           "nothing to lose if it was never marked — this row is the fixture "
