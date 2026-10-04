@@ -282,6 +282,13 @@ def skull():
     return [it[3] for it in sorted(items, key=lambda it: it[:3])]
 
 
+def blooby_card():
+    """Blooby's trading card (blooby.py): colour, frame, title, Blooby, his name."""
+    import blooby
+    return blooby.card()
+
+
 ART = {"cat": cat, "scene": scene, "snail": snail, "footballer": footballer, "skull": skull, "pug": pug,
+       "blooby-card": blooby_card,
        # the tool cards' examples (Pen, Eraser, Shape)
        "pen": tool_pen, "eraser": tool_eraser, "shape": tool_shape}
