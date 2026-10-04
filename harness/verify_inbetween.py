@@ -298,8 +298,10 @@ with sync_playwright() as p:
           (help_txt or "")[-200:] + " — pairing is by drawing order and a "
           "redrawn pose in another order pairs wrongly; the Help is the only "
           "place that can say so")
-    check("...and it points at Motion Smear for the whole path",
-          bool(help_txt) and "motion smear" in help_txt.lower(),
+    # The buttons are Tween and Smear since #289; the tip names them as the
+    # filmstrip shows them, so it points at Smear by that name.
+    check("...and it points at Smear for the whole path",
+          bool(help_txt) and "use smear" in help_txt.lower(),
           (help_txt or "")[-200:])
 
     # --------------------------------------------------------------------

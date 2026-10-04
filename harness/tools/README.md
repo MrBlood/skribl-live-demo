@@ -1,10 +1,40 @@
 # harness/tools
 
-Measurement utilities. **Not suites** — nothing here is named `verify_*.py`, so
-`run_harness.sh` does not pick them up and they contribute no assertions. They
-need dependencies the suites deliberately do not (`node`, `npm i acorn
-acorn-walk`), which is exactly why they are not in the aggregate: a suite that
-cannot run everywhere becomes a skip, and a skip is not coverage.
+**Not suites** — nothing here is named `verify_*.py`, so `run_harness.sh` does
+not pick it up and it contributes no assertions. Two kinds of thing live here:
+measurement utilities, and the pipeline that makes How it works' examples.
+
+The measurement utilities need dependencies the suites deliberately do not
+(`node`, `npm i acorn acorn-walk`), which is exactly why they are not in the
+aggregate: a suite that cannot run everywhere becomes a skip, and a skip is not
+coverage.
+
+## How it works' examples
+
+Every example in the panel is a real Skribl, made by driving the real editor
+with pen input rather than by writing a file: what the panel replays is what
+the editor recorded. All of these need the local server.
+
+| file | what it does |
+| ---- | ------------ |
+| `handmotion.py` | how a hand moves a pen: timing, pressure, a power-law speed along curves |
+| `artdraw.py` | `Stroke`s, and `draw()` performs them in the editor as CDP pen events |
+| `artworks.py` | Pad's drawings (`ART`), each as its stroke order; traced ones read `art/*.json` |
+| `flipworks.py` | Flip's loops, key poses first |
+| `blooby.py` | Blooby, the mascot (built from Flip's waving loop), and his trading card |
+| `make_art.py`, `make_flip.py` | draw them and save `skribl/static/help/demos/<name>.json` |
+| `make_help_clips.py` | the screen clips, filmed from the real app in both themes |
+| `make_help_thumbs.py` | the "Watch it work" bar's previews |
+| `review_art.py` | posts a drawing locally and renders it in the player, before anyone else sees it |
+
+`verify_helpdemos.py` is the suite that holds the panel to these files.
+
+## Measurement
+
+`cssgraph.py` emits `player.css` (run it after any `styles.css` change — the
+command is in WORKING-AGREEMENTS.md), `editordup.py` measures what Pad and Flip
+still duplicate, and `mainwatch.py` reads main's battery for the CI job that
+opens an issue on red. The rest are below.
 
 ## refgraph.js
 
