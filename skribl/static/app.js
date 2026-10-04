@@ -838,10 +838,15 @@ window.__skriblPressureSize = pressureSize;
 
 /* Bind an event without letting a missing element abort the rest of the file.
  * A null from getElementById throws at the top level and every binding written
- * after it never happens — see the same helper in flip.js. */
+ * after it never happens — see the same helper in flip.js. The read-only
+ * player runs this file too and has none of the editor's controls on purpose,
+ * so it stays quiet there: a viewer's console is no place for an editor note. */
 function bindEl(id, ev, fn, opts) {
   const el = document.getElementById(id);
-  if (!el) { console.warn('[skribl] missing element for binding:', id, ev); return null; }
+  if (!el) {
+    if (!document.body.classList.contains('player-mode')) console.warn('[skribl] missing element for binding:', id, ev);
+    return null;
+  }
   el.addEventListener(ev, fn, opts);
   return el;
 }

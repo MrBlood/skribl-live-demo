@@ -283,6 +283,13 @@ with sync_playwright() as sp:
     pg.add_init_script(TAP)      # must be in place before any page script runs
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
+    # Every warning and error the console gets while the post loads. The
+    # player runs the editor's app.js, and for a long while every public view
+    # logged "missing element for binding" for three editor-only controls the
+    # player never had (the colour and background pickers, the draft-file
+    # input): noise a viewer's devtools showed on every play.
+    console_msgs = []
+    pg.on("console", lambda m: console_msgs.append(f"{m.type}: {m.text}") if m.type in ("warning", "error") else None)
     js_bytes = {}
 
     html_bytes = {}
@@ -360,6 +367,9 @@ with sync_playwright() as sp:
 
     check("the player is in player mode",
           "player-mode" in pg.evaluate("() => document.body.className"))
+
+    check("the player loads a post with nothing in the console: no warnings, no errors",
+          not console_msgs, "; ".join(console_msgs[:4]))
 
     check("the player renders the drawing at its authored size",
           player is not None and player["bitmap"] == editor["bitmap"],
