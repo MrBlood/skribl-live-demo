@@ -98,12 +98,16 @@ with sync_playwright() as p:
     check("the list UI is published on the profile", pg.evaluate("() => !!window.SkriblPostedUI"))
     # THE PAGE OWNS THE EMPTY STATE on the profile (v304 proofread): the list
     # renders nothing into #postedList, and #libEmpty under it is the one
-    # invitation. verify_library pins that there is exactly one.
+    # invitation. verify_library pins that there is exactly one. Since v321
+    # the headline ("Nothing posted yet", with Blooby and Make one) sits on
+    # the player's stage card, and #libEmpty under the list is the how-to.
     empty = pg.inner_text("#libEmpty")
+    stage = pg.inner_text("#stageEmpty") if pg.is_visible("#stageEmpty") else ""
     check("the empty state invites rather than apologises",
-          "nothing here yet" in empty.lower() and "post a skribl" in empty.lower()
+          "nothing posted yet" in stage.lower() and "make one" in stage.lower()
+          and "post a skribl" in empty.lower()
           and pg.inner_text("#postedList").strip() == "",
-          repr(empty[:80]))
+          repr((stage[:60], empty[:80])))
     check("the footer says this is browser-only, not an account",
           "browser" in pg.inner_text("#postedPanel").lower(),
           "someone who reads this as an account will clear site data and lose it")
