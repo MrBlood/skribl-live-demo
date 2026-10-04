@@ -38,9 +38,12 @@
   var libEmpty = document.getElementById('libEmpty');
   var libEmptyLocal = document.getElementById('libEmptyLocal');
   var stageEmpty = document.getElementById('stageEmpty');
+  var stageError = document.getElementById('stageError');
+  var libRetry = document.getElementById('libRetry');
   var playerCard = document.querySelector('.player');
   var btnFull = document.getElementById('btnFull');
   var loaded = !me;        /* host mode: no empty state until the first page answers */
+  var listFailed = false;  /* host mode: the first page did not answer */
 
   var listEl = document.getElementById('postedList');
   var moreWrap = document.getElementById('moreWrap');
@@ -456,12 +459,17 @@
 
   function words(all, hits) {
     var q = (search && search.value.trim()) || '';
-    statCount.textContent = all.length;
-    if (libEmpty) libEmpty.hidden = all.length > 0 || !loaded;
+    /* NOT KNOWING IS NOT ZERO (V319-003). A listing that failed says so, and
+       says nothing about how many there are; the empty card and its "Post a
+       Skribl" line are for a listing that answered with none. */
+    var failed = listFailed && !all.length;
+    statCount.textContent = failed ? '\u2014' : all.length;
+    if (libEmpty) libEmpty.hidden = all.length > 0 || !loaded || failed;
     // Nothing posted: the player card becomes the empty card (Blooby, Make one).
-    var none = loaded && !all.length;
+    var none = loaded && !all.length && !failed;
     if (stageEmpty) stageEmpty.hidden = !none;
-    if (playerCard) playerCard.classList.toggle('is-empty', none);
+    if (stageError) stageError.hidden = !failed;
+    if (playerCard) playerCard.classList.toggle('is-empty', none || failed);
     foot.textContent = !all.length ? ''
       : (q ? (me ? 'Filtering the ' + all.length + ' loaded so far. Load more to search further.'
                  : 'Filtering your ' + all.length + '.')
@@ -606,6 +614,11 @@
     });
   }
 
+  if (libRetry) libRetry.addEventListener('click', function () {
+    libRetry.disabled = true;
+    loadPage();
+  });
+
   function loadPage() {
     if (!me) { renderGrid(); moreWrap.innerHTML = ''; return Promise.resolve(); }
     var url = api + '?limit=24&user_id=' + encodeURIComponent(me)
@@ -636,6 +649,7 @@
         items = hostRows.map(asItem);
         cursor = body.next_cursor || null;
         loaded = true;
+        listFailed = false;
         renderGrid();
         moreWrap.innerHTML = '';
         if (cursor) {
@@ -656,10 +670,25 @@
            here is gone with the population it described. */
       })
       .catch(function () {
-        moreWrap.innerHTML = '';
+        var live = document.getElementById('postedStatus');
         loaded = true;
+        if (libRetry) libRetry.disabled = false;
+        moreWrap.innerHTML = '';
+        if (hostRows.length) {
+          /* A LATER PAGE FAILED. What is on the page stays; the button that
+             asked for more asks again. */
+          var again = document.createElement('button');
+          again.type = 'button';
+          again.className = 'more';
+          again.textContent = 'Couldn\u2019t load more \u2014 try again';
+          again.addEventListener('click', function () { loadPage(); });
+          moreWrap.appendChild(again);
+          if (live) live.textContent = 'Couldn\u2019t load more of your Skribls.';
+          return;
+        }
+        listFailed = true;
         renderGrid();
-        foot.textContent = "Couldn't load the listing.";
+        if (live) live.textContent = 'Couldn\u2019t load your Skribls. They\u2019re still there.';
       });
   }
 

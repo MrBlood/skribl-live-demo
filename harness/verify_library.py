@@ -1078,6 +1078,71 @@ with sync_playwright() as sp:
           and "in the gallery" not in hr[1]["sub"],
           f"{hr[0]} / {hr[1]}")
     check("...and no empty state shows over rows", not host2.evaluate("() => { const e = document.getElementById('libEmpty'); return !e.hidden; }"))
+
+    # ---- A LISTING THAT DID NOT ANSWER IS NOT AN EMPTY ONE (V319-003) -----
+    #
+    # The failure path marked the page loaded and rendered it: Blooby saying
+    # "Nothing posted yet", the "Post a Skribl" line, a count of 0, and a
+    # small "Couldn't load the listing." -- an outage telling a host's user
+    # their Skribls were gone, with nothing to press. Driven with the listing
+    # refused, then answered, then refused for the SECOND page only.
+    print("\nLIBRARY — a listing that does not answer says so, and asks again")
+    _LIST = re.compile(r"/api/skribls\?.*user_id=host-user-42")
+    _lmode = {"m": "down"}
+    _page2 = dict(_fake, next_cursor="c2")
+    def _list_gate(route):
+        if _lmode["m"] == "down" or ("cursor=c2" in route.request.url and _lmode["m"] == "page2-down"):
+            route.abort()
+        else:
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(_page2))
+    _LF = """() => {
+        const vis = id => { const e = document.getElementById(id); if (!e || e.hidden) return false;
+            const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return false;
+            const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return !!at && e.contains(at); };
+        const st = document.getElementById('postedStatus');
+        const more = document.querySelector('#moreWrap button');
+        return { error: vis('stageError'), empty: vis('stageEmpty'), how: vis('libEmpty'),
+                 count: document.getElementById('statCount').textContent.trim(),
+                 rows: document.querySelectorAll('#postedList .posted-row').length,
+                 live: st ? st.textContent : '', liveBox: st ? [st.offsetWidth, st.offsetHeight] : null,
+                 more: more ? more.textContent : null,
+                 retry: !!document.getElementById('libRetry') && document.getElementById('libRetry').textContent.trim() }; }"""
+    hf = ctx.new_page()
+    hf.set_viewport_size({"width": 1280, "height": 1000})
+    hf.route(re.compile(r"/library$"), _as_host)
+    hf.route(_LIST, _list_gate)
+    browsing.goto(hf, BASE, "/library")
+    hf.wait_for_timeout(900)
+    _f0 = hf.evaluate(_LF)
+    check("refused: the card says it could not load, painted, with Try again -- not the empty card",
+          _f0["error"] and not _f0["empty"] and _f0["retry"] == "Try again", str(_f0))
+    check("...the count says nothing rather than 0, and no \"Post a Skribl\" line",
+          _f0["count"] == "\u2014" and not _f0["how"], str(_f0))
+    check("...and the live region says it -- to a screen reader, not as text on the page",
+          "couldn" in _f0["live"].lower() and _f0["liveBox"] is not None
+          and max(_f0["liveBox"]) <= 1, str(_f0))
+    _lmode["m"] = "up"
+    hf.click("#libRetry")
+    hf.wait_for_timeout(1200)
+    _f1 = hf.evaluate(_LF)
+    check("Try again with the listing back: the rows, the count, and no error card",
+          _f1["rows"] == 2 and _f1["count"] == "2" and not _f1["error"] and not _f1["empty"], str(_f1))
+    hf.close()
+    hf = ctx.new_page()
+    hf.set_viewport_size({"width": 1280, "height": 1000})
+    hf.route(re.compile(r"/library$"), _as_host)
+    _lmode["m"] = "page2-down"
+    hf.route(_LIST, _list_gate)
+    browsing.goto(hf, BASE, "/library")
+    hf.wait_for_timeout(900)
+    hf.click("#moreWrap button")
+    hf.wait_for_timeout(900)
+    _f2 = hf.evaluate(_LF)
+    check("a LATER page refused: the rows already shown stay, and Load more becomes try again",
+          _f2["rows"] == 2 and not _f2["error"] and _f2["more"] and "try again" in _f2["more"].lower(),
+          str(_f2))
+    hf.close()
     host2.close()
     ctx.close()
 

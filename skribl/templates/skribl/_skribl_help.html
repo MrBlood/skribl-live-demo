@@ -295,6 +295,15 @@
         {% if is_flip %}<button type="button" class="learn-chip" data-filter="techniques" aria-pressed="false">Techniques</button>{% else %}<button type="button" class="learn-chip" data-filter="extras" aria-pressed="false">Extras</button>{% endif %}
       </div>
       <div class="learn-sheet-scroll">
+        {# WHAT DID NOT LOAD, said once (outside audit V319-004). A failed
+           example was a blank tile and nothing else; they fail together when
+           the connection is gone, so one line counts them and one Retry asks
+           again for those alone. lib/helplearn.js fills and shows it. #}
+        <div class="learn-fail" id="learnFail" hidden>
+          <svg class="learn-fail-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M8.5 8.6A5 5 0 0 0 6.5 18H17a3.5 3.5 0 0 0 1.9-.6M20.7 14.6A3.5 3.5 0 0 0 17.5 10h-.3A6 6 0 0 0 10.4 5.6"/></svg>
+          <div class="learn-fail-words"><div id="learnFailCount" role="status"></div><div class="learn-fail-sub">Check your connection, then try again.</div></div>
+          <button type="button" class="learn-retry" id="learnRetry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Retry</button>
+        </div>
         <div class="learn-all">
           {% if is_flip %}
           {{ learn_card('flip-wave', 'Draw', 'Draw a page, add the next, and it moves.', 'start', n=1) }}

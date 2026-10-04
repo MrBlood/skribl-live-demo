@@ -31,6 +31,7 @@ this holds the cards to what they claim, on both editors:
 """
 import json
 import pathlib
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -442,6 +443,75 @@ with sync_playwright() as p:
         # In Chromium the old drawer still squeezed the caption on at 600 and
         # 664 tall (it is the iPhone's bars that pushed it off), so that check
         # stayed green on the broken tree and proved nothing. The two above went red.
+        ctx.close()
+
+    # 8. WHEN AN EXAMPLE CANNOT LOAD (outside audit V319-004). A failed
+    # example got a class nothing drew: an empty tile, and a screen clip whose
+    # video failed was not even marked. Cut the network to every example and
+    # the sheet must say how many, in one banner a screen reader hears, with a
+    # Retry that brings them back once the network does.
+    FAILS = """() => {
+        const box = document.getElementById('learnFail'), cards = [...document.querySelectorAll('#learnSheet .learn-card')];
+        let painted = false;
+        if (box && !box.hidden) { const r = box.getBoundingClientRect();
+            const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            painted = !!at && box.contains(at); }
+        const a = document.activeElement;
+        return { cards: cards.length, failed: cards.filter(c => c.classList.contains('learn-failed')).length,
+                 shown: !!box && !box.hidden, painted,
+                 said: (document.getElementById('learnFailCount') || {}).textContent || '',
+                 status: (document.getElementById('learnFailCount') || { getAttribute() { return null; } }).getAttribute('role'),
+                 players: cards.filter(c => c.hasAttribute('data-demo') && c._learnPlayer).length,
+                 demos: cards.filter(c => c.hasAttribute('data-demo')).length,
+                 clipsOk: [...document.querySelectorAll('#learnSheet .learn-video')]
+                     .every(v => !!v.getAttribute('src') && !v.error),
+                 body: a === document.body }; }"""
+    print("\nWHEN AN EXAMPLE CANNOT LOAD")
+    for name, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        ctx = b.new_context(viewport={"width": 1200, "height": 900}, color_scheme="dark")
+        pg = ctx.new_page()
+        cut = {"on": True}
+        def _gate(r, cut=cut):
+            if cut["on"]:
+                r.abort()
+            else:
+                r.continue_()
+        pg.route(re.compile(r"/help/(demos|clips)/[^?]*\.(json|mp4|webm)(\?.*)?$"), _gate)
+        browsing.goto(pg, BASE, route)
+        pg.wait_for_timeout(800)
+        pg.evaluate(OPEN); pg.wait_for_timeout(500)
+        pg.evaluate(SHEET); pg.wait_for_timeout(3000)
+        f0 = pg.evaluate(FAILS)
+        check(f"{name}: offline, every example is marked as not loaded -- the screen clips too",
+              f0["cards"] > 10 and f0["failed"] == f0["cards"], str(f0))
+        check(f"{name}: ...and one banner, painted on top, says how many",
+              f0["shown"] and f0["painted"] and f0["said"] == f"{f0['cards']} examples couldn\u2019t load.", str(f0))
+        check(f"{name}: ...in a status a screen reader announces", f0["status"] == "status", str(f0))
+        cut["on"] = False
+        pg.focus("#learnRetry")
+        pg.keyboard.press("Enter")
+        pg.wait_for_timeout(4000)
+        f1 = pg.evaluate(FAILS)
+        check(f"{name}: Retry with the network back loads them: no banner, no failures, every replay playing, every clip fetched",
+              not f1["shown"] and f1["failed"] == 0 and f1["players"] == f1["demos"] and f1["clipsOk"], str(f1))
+        check(f"{name}: ...and focus, which was on the banner's Retry, does not fall to <body>",
+              not f1["body"], str(f1))
+        ctx.close()
+        # ONE THAT FAILS AMONG MANY: the count is a count, not "offline".
+        ctx = b.new_context(viewport={"width": 1200, "height": 900}, color_scheme="dark")
+        pg = ctx.new_page()
+        pg.route(re.compile(r"/help/demos/[^?]*\.json(\?.*)?$"),
+                 lambda r: r.abort() if r.request.url.split("?")[0].endswith(_one[0]) else r.continue_())
+        _one = [""]
+        browsing.goto(pg, BASE, route)
+        pg.wait_for_timeout(800)
+        _one[0] = pg.evaluate("() => document.querySelector('#learnSheet .learn-card[data-demo]').getAttribute('data-demo').split('?')[0].split('/').pop()")
+        pg.evaluate(OPEN); pg.wait_for_timeout(500)
+        pg.evaluate(SHEET); pg.wait_for_timeout(3000)
+        f2 = pg.evaluate(FAILS)
+        check(f"{name}: one example missing among many: \"1 example couldn\u2019t load.\" and the rest play",
+              f2["failed"] == 1 and f2["said"] == "1 example couldn\u2019t load." and f2["players"] == f2["demos"] - 1,
+              f"{f2} (cut {_one[0]})")
         ctx.close()
     b.close()
 
