@@ -471,11 +471,16 @@ with sync_playwright() as p:
         ctx = b.new_context(viewport={"width": 1200, "height": 900}, color_scheme="dark")
         pg = ctx.new_page()
         cut = {"on": True}
-        def _gate(r, cut=cut):
-            if cut["on"]:
-                r.abort()
-            else:
-                r.continue_()
+        # ONE PARAMETER: Playwright passes the request as a second argument to
+        # a handler that takes two, so a `cut=cut` default would receive it.
+        def _mk_gate(cut):
+            def _gate(r):
+                if cut["on"]:
+                    r.abort()
+                else:
+                    r.continue_()
+            return _gate
+        _gate = _mk_gate(cut)
         pg.route(re.compile(r"/help/(demos|clips)/[^?]*\.(json|mp4|webm)(\?.*)?$"), _gate)
         browsing.goto(pg, BASE, route)
         pg.wait_for_timeout(800)
