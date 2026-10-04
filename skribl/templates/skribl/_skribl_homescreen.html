@@ -1,0 +1,56 @@
+{# GETTING SKRIBL ONTO THE HOME SCREEN (owner, mocks H1 + H2).
+
+   An iPhone never offers to install a web app; the only way is Safari's Share
+   sheet, and almost nobody finds "Add to Home Screen" there unprompted. Once
+   it is added, Skribl opens full screen with its own icon (the manifest in
+   _skribl_app_identity.html), which is the app look the owner asked for.
+
+   Two ways in, both driven by lib/homescreen.js and both HIDDEN until it
+   decides this device can use them:
+     * row()    -- a ⋯ menu row, always there for whoever wants it later;
+     * banner() -- a one-time card above the tools on the Pad, gone for good
+                   once closed, opened, or drawn under.
+   steps() is the sheet both open: three steps and the icon you will get.
+   None of it renders in compose mode, where the editor is a host's overlay. #}
+
+{% macro row() -%}
+<button type="button" class="menu-item" id="homeScreenItem" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>
+  <span class="menu-item-text">Add to Home Screen<span class="menu-item-sub">Open Skribl like an app</span></span>
+</button>
+{%- endmacro %}
+
+{% macro share_glyph() -%}
+<svg class="hs-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+{%- endmacro %}
+
+{% macro banner() -%}
+<aside class="hs-banner" id="homeScreenBanner" aria-label="Add Skribl to your Home Screen" hidden>
+  <button type="button" class="hs-banner-open" id="homeScreenBannerOpen">
+    <img src="{{ skribl_asset('icon-192.png') }}" alt="" width="40" height="40">
+    <span class="hs-banner-text"><b>Keep Skribl on your Home Screen</b>
+      <span class="hs-banner-sub">Tap {{ share_glyph() }} Share, then Add to Home Screen</span></span>
+  </button>
+  <button type="button" class="hs-banner-x" id="homeScreenBannerClose" aria-label="Not now" title="Not now">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+</aside>
+{%- endmacro %}
+
+{% macro steps() -%}
+<div class="hs-scrim" id="homeScreenScrim" hidden>
+  <div class="hs-steps" id="homeScreenSteps" role="dialog" aria-modal="true" aria-labelledby="homeScreenTitle">
+    <div class="hs-steps-head">
+      <img src="{{ skribl_asset('icon-192.png') }}" alt="" width="52" height="52">
+      <div><h2 id="homeScreenTitle">Add Skribl to your Home Screen</h2>
+        <p>It opens full screen, like an app.</p></div>
+    </div>
+    <ol class="hs-list">
+      <li>Tap {{ share_glyph() }} <b>Share</b> in Safari&rsquo;s toolbar</li>
+      <li>Scroll down and tap <b>Add to Home Screen</b></li>
+      <li>Tap <b>Add</b></li>
+    </ol>
+    <button type="button" class="btn hs-done" id="homeScreenDone">Got it</button>
+  </div>
+</div>
+{%- endmacro %}

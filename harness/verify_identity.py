@@ -256,6 +256,108 @@ with sync_playwright() as p:
     check("...and back to light re-stamps the light ground", now == THEME_GROUND["light"], repr(now))
     check("no page errors", not errs, "; ".join(errs[:2]))
     ctx.close()
+
+    # GETTING ONTO THE HOME SCREEN (owner, mocks H1 + H2). The icon above is
+    # what a person gets; this is how they find the way to it, since an iPhone
+    # never offers. lib/homescreen.js decides who sees what, so each case is a
+    # device: an iPhone tab sees the banner and the row, the same iPhone with
+    # Skribl already on its Home Screen sees neither, and a desktop sees
+    # neither. Visibility is asked of the paint (elementFromPoint), not a rect.
+    print("\nADD TO HOME SCREEN — who is told, and how")
+    _IPHONE = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 "
+               "(KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
+    _PAINTED = """(id) => { const e = document.getElementById(id); if (!e || e.hidden) return false;
+        const r = e.getBoundingClientRect(); if (!r.width) return false;
+        const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return !!(h && e.contains(h)); }"""
+
+    def _phone(standalone=False):
+        c = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True,
+                          has_touch=True, user_agent=_IPHONE)
+        if standalone:
+            c.add_init_script("Object.defineProperty(navigator, 'standalone', { get: () => true });")
+        return c
+
+    hc = _phone()
+    hp = hc.new_page()
+    herr = []
+    hp.on("pageerror", lambda e: herr.append(str(e)))
+    browsing.goto(hp, BASE, "/skribl-pad")
+    hp.wait_for_timeout(1700)
+    check("an iPhone tab on the Pad is shown the Home Screen card",
+          hp.evaluate(_PAINTED, "homeScreenBanner"))
+    _tb = hp.evaluate("""() => { const a = document.getElementById('homeScreenBanner').getBoundingClientRect(),
+        t = document.getElementById('toolBar').getBoundingClientRect(); return [a.bottom, t.top]; }""")
+    check("...sitting above the tools, not over them", _tb[0] <= _tb[1], str(_tb))
+    hp.click("#homeScreenBannerOpen")
+    hp.wait_for_timeout(300)
+    _steps = hp.evaluate("() => [...document.querySelectorAll('#homeScreenSteps .hs-list li')].map(l => l.textContent.replace(/\\s+/g, ' ').trim())")
+    check("...and tapping it opens the steps: Share, Add to Home Screen, Add",
+          hp.evaluate(_PAINTED, "homeScreenSteps") and len(_steps) == 3
+          and "Share" in _steps[0] and "Add to Home Screen" in _steps[1] and _steps[2] == "Tap Add",
+          str(_steps))
+    hp.keyboard.press("Escape")
+    hp.wait_for_timeout(300)
+    browsing.goto(hp, BASE, "/skribl-pad")
+    hp.wait_for_timeout(1700)
+    check("...and the card is once: put away, it does not come back on the next visit",
+          not hp.evaluate(_PAINTED, "homeScreenBanner"))
+    hp.click("#menuBtn")
+    hp.wait_for_timeout(700)
+    check("the ⋯ menu keeps an Add to Home Screen row for later",
+          hp.evaluate(_PAINTED, "homeScreenItem"))
+    hp.click("#homeScreenItem")
+    hp.wait_for_timeout(600)
+    check("...which closes the menu and opens the same steps",
+          hp.evaluate(_PAINTED, "homeScreenSteps"))
+    hp.click("#homeScreenDone")
+    hp.wait_for_timeout(300)
+    browsing.goto(hp, BASE, "/flip")
+    hp.click("#moreBtn")
+    hp.wait_for_timeout(700)
+    check("Flip's ⋯ menu has the row too", hp.evaluate(_PAINTED, "homeScreenItem"))
+    check("...and no card on Flip, which a person reaches from the Pad",
+          hp.locator("#homeScreenBanner").count() == 0)
+    check("no page errors on an iPhone", not herr, "; ".join(herr[:2]))
+    hc.close()
+
+    hc = _phone()
+    hp = hc.new_page()
+    browsing.goto(hp, BASE, "/skribl-pad")
+    hp.wait_for_timeout(1700)
+    _bb = hp.locator("#canvas").bounding_box()
+    hp.mouse.move(_bb["x"] + 60, _bb["y"] + 80)
+    hp.mouse.down()
+    hp.mouse.move(_bb["x"] + 160, _bb["y"] + 120)
+    hp.mouse.up()
+    hp.wait_for_timeout(300)
+    check("drawing under the card puts it away for good",
+          not hp.evaluate(_PAINTED, "homeScreenBanner")
+          and hp.evaluate("() => localStorage.getItem('skribl_homescreen_hint_v1')") == "1")
+    hc.close()
+
+    hc = _phone(standalone=True)
+    hp = hc.new_page()
+    browsing.goto(hp, BASE, "/skribl-pad")
+    hp.wait_for_timeout(1700)
+    hp.click("#menuBtn")
+    hp.wait_for_timeout(700)
+    check("already on the Home Screen: no card and no row",
+          not hp.evaluate(_PAINTED, "homeScreenBanner") and not hp.evaluate(_PAINTED, "homeScreenItem"))
+    hc.close()
+
+    hc = b.new_context(viewport={"width": 1280, "height": 900})
+    hp = hc.new_page()
+    browsing.goto(hp, BASE, "/skribl-pad")
+    hp.wait_for_timeout(1700)
+    hp.click("#menuBtn")
+    hp.wait_for_timeout(700)
+    check("a desktop is told nothing: no card and no row",
+          not hp.evaluate(_PAINTED, "homeScreenBanner") and not hp.evaluate(_PAINTED, "homeScreenItem"))
+    browsing.goto(hp, BASE, "/skribl-pad?compose=1")
+    check("...and an editor opened from a composer carries none of it",
+          hp.locator("#homeScreenItem, #homeScreenBanner, #homeScreenSteps").count() == 0)
+    hc.close()
     b.close()
 
 bad = [r for r in results if not r[0]]

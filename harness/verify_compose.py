@@ -441,13 +441,14 @@ with sync_playwright() as sp:
     check("no page errors from the marker", not perrs, "; ".join(perrs[:2]))
     pad.close()
 
-    # ---- the drawing goes where the cursor was (v315) ------------------------
-    # The owner's question: write a paragraph, attach a Skribl, write more --
-    # does it land where it was attached? It does, on this page, through a
-    # marker the composer writes at the caret; the feed splits the post there.
+    # ---- the drawing goes after the words ------------------------------------
+    # v315 put it where the cursor was, through a [skribl] marker typed into
+    # the text; the owner chose mock M2 over it, so the composer types nothing
+    # and the drawing follows the words like a photo. The caret is still put
+    # mid-text below, so a marker written "at the cursor" would be caught.
     # Driven through the real iframe, because the composer's half of this runs
     # in onDone, which only the editor's "Add to post" reaches.
-    print("\nCOMPOSE — the drawing lands where the cursor was")
+    print("\nCOMPOSE — the drawing goes after the words")
     ictx = b.new_context(viewport={"width": 1240, "height": 980}, color_scheme="dark")
     pi = ictx.new_page()
     ierrs = []
@@ -491,18 +492,40 @@ with sync_playwright() as sp:
     pi.evaluate(_caret, [TOP, BOTTOM])
     attach_one("the composer's Pad opens blank, not on the author's own Pad draft")
     _txt = pi.evaluate("() => document.getElementById('composerText').value")
-    check("attaching writes the marker at the cursor, on a line of its own",
-          _txt == TOP + "\n[skribl]\n" + BOTTOM, repr(_txt))
+    # THE DRAWING GOES AFTER THE WORDS, like a photo (owner, mock M2). The
+    # composer used to type a [skribl] marker at the caret; it was the most
+    # confusing thing on the page and one backspace from gone. Attaching now
+    # leaves the text exactly as typed.
+    check("attaching leaves the author's words exactly as typed (no marker)",
+          _txt == TOP + "\n" + BOTTOM, repr(_txt))
     pi.click("#removeSkriblBtn")
     pi.wait_for_timeout(300)
     _txt = pi.evaluate("() => document.getElementById('composerText').value")
-    check("...and removing the drawing takes the marker out with it",
-          "[skribl]" not in _txt and TOP in _txt and BOTTOM in _txt, repr(_txt))
+    check("...and removing the drawing leaves them alone too",
+          _txt == TOP + "\n" + BOTTOM, repr(_txt))
     pi.evaluate(_caret, [TOP, BOTTOM])
     attach_one("...and a drawing removed from the post does not come back on the next open")
     check("attaching to a post leaves the author's own Pad draft exactly as it was",
           bool(OWN_DRAFT) and pi.evaluate(_SLOT) == OWN_DRAFT,
           "the slot changed" if pi.evaluate(_SLOT) != OWN_DRAFT else "unchanged")
+    # YOUR OWN DRAWING, NOT A POSTER (owner, mock P1). The draft tile showed
+    # the feed's dim wash and big Play, which hid which drawing was attached.
+    # Idle on the finished drawing is the draft player's own rule
+    # (verify_inline); what the host page adds is that nothing covers it.
+    _tile = pi.evaluate("""() => {
+        const el = document.getElementById('composerSkribl');
+        const play = el.querySelector('.skribl-inline-play');
+        const veil = el.querySelector('.skribl-inline-veil');
+        const dur = el.querySelector('.skribl-inline-dur');
+        return { playShown: !!(play && play.offsetParent),
+                 wash: veil ? getComputedStyle(veil).backgroundImage : 'none',
+                 dur: dur && !dur.hidden ? dur.textContent.trim() : null,
+                 mark: dur ? getComputedStyle(dur, '::before').borderLeftWidth : null }; }""")
+    check("the attached drawing shows plain: no big Play over it, no wash",
+          not _tile["playShown"] and _tile["wash"] == "none", json.dumps(_tile))
+    check("...and its length chip carries the play mark and the length",
+          bool(_tile["dur"]) and ":" in _tile["dur"] and _tile["mark"] not in (None, "0px"),
+          json.dumps(_tile))
     pi.click("#postBtn")
     pi.wait_for_timeout(5000)
     _order = pi.evaluate("""() => {
@@ -512,16 +535,61 @@ with sync_playwright() as sp:
                : e.classList.contains('pbody') ? 'TEXT:' + e.textContent
                : e.classList.contains('skribl-inline-title') ? 'TITLE' : e.className); }""")
     _texts = [x for x in (_order or []) if isinstance(x, str) and x.startswith("TEXT:")]
-    check("the posted feed shows the words before, then the drawing, then the words after",
-          bool(_order) and "PLAYER" in _order
-          and _order.index("TEXT:" + TOP) < _order.index("PLAYER") < _order.index("TEXT:" + BOTTOM),
+    check("the posted feed shows the words, then the drawing",
+          bool(_order) and "PLAYER" in _order and len(_texts) == 1
+          and _texts[0] == "TEXT:" + TOP + "\n" + BOTTOM
+          and _order.index(_texts[0]) < _order.index("PLAYER"),
           str(_order))
     check("...and no title line, because the title the composer derived IS those words",
           bool(_order) and "TITLE" not in _order, str(_order))
-    check("...and the marker itself is never shown",
+    check("...and no marker is ever shown",
           all("[skribl]" not in x for x in _texts), str(_texts))
     check("no page errors placing the drawing", not ierrs, "; ".join(ierrs[:2]))
     ictx.close()
+
+    # ADD IS NEVER GREYED OUT IN COMPOSE MODE (owner, mock A2). It was dimmed
+    # until there was a take, looked broken to someone who had come to add a
+    # drawing, and could not say why. Both editors: before anything is drawn
+    # the button is painted at full strength, a REAL click at its centre lands
+    # on it, says what is missing in the editor's status region and opens
+    # nothing; once there is something to add, the same click opens the sheet.
+    print("\nCOMPOSE — Add is always ready, and says why when it cannot add")
+    _A2 = (("Pad", "/skribl-pad?compose=1", "#canvas", "#toast",
+            "() => { const o = document.getElementById('postOverlay'); return !!o && !o.hidden; }"),
+           ("Flip", "/flip?compose=1", "#pad", "#flipChip",
+            "() => { const m = document.getElementById('flipShare'); return !!m && !m.hidden; }"))
+    for _name, _path, _cv, _say, _opened in _A2:
+        _ac = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+        _ap = _ac.new_page()
+        _aerr = []
+        _ap.on("pageerror", lambda e: _aerr.append(str(e)))
+        browsing.goto(_ap, BASE, _path)
+        _ap.wait_for_timeout(600)
+        _ap.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _st = _ap.evaluate("""() => { const p = document.getElementById('postBtn'), r = p.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { attr: p.hasAttribute('disabled'), aria: p.getAttribute('aria-disabled'),
+                     op: getComputedStyle(p).opacity, onIt: !!(hit && p.contains(hit)) }; }""")
+        check(f"{_name}: before anything is drawn, Add is painted ready and takes the tap",
+              not _st["attr"] and _st["aria"] is None and _st["op"] == "1" and _st["onIt"], json.dumps(_st))
+        _bb = _ap.locator("#postBtn").bounding_box()
+        _ap.mouse.click(_bb["x"] + _bb["width"] / 2, _bb["y"] + _bb["height"] / 2)
+        _ap.wait_for_timeout(400)
+        _msg = _ap.evaluate(f"() => document.querySelector('{_say}').textContent")
+        check(f"{_name}: ...and a press says what is missing, in the status region",
+              "Draw something first, then Add" in (_msg or "")
+              and _ap.evaluate(f"() => document.querySelector('{_say}').getAttribute('role')") == "status",
+              repr(_msg))
+        check(f"{_name}: ...and opens nothing", _ap.evaluate(_opened) is False)
+        draw(_ap, _ap.locator(_cv).bounding_box(), turns=2, n=40)
+        _ap.evaluate("() => { if (typeof recording !== 'undefined' && recording) document.getElementById('recordBtn').click(); }")
+        _ap.wait_for_timeout(700)
+        _ap.mouse.click(_bb["x"] + _bb["width"] / 2, _bb["y"] + _bb["height"] / 2)
+        _ap.wait_for_timeout(900)
+        check(f"{_name}: once there is a drawing, the same press opens Add to post",
+              _ap.evaluate(_opened) is True)
+        check(f"{_name}: no page errors", not _aerr, "; ".join(_aerr[:2]))
+        _ac.close()
 
     # THE HEADER IN COMPOSE MODE (owner, v316: option B of the mock). A host's
     # floating close sat on the Pad's ⋯ on a phone, and the header called the
