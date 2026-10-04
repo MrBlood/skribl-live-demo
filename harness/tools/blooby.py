@@ -2,6 +2,7 @@
 """Blooby -- the purple guy the owner named, Skribl's mascot -- and his trading card.
 
     python3 harness/tools/blooby.py card OUTDIR
+    python3 harness/tools/blooby.py icon skribl/static
 
 Blooby is built from his own Flip drawing (flipworks.wave: the marker fill, the
 two-sided outline, the feet, the ground), so every pose keeps the hand he was
@@ -451,8 +452,61 @@ def draw_card(out, base="http://127.0.0.1:5001"):
     _photograph(out / "card.png", out)
 
 
+# ------------------------------------------------------------- the app icon
+
+# THE HOME SCREEN ICON (v320): Blooby waving, drawn straight onto a lilac tile
+# with no sticker edge -- option J of the owner's mocks, picked over the paper
+# and the full-purple tiles. His body IS the brand purple, so a tile in that
+# purple swallows him; lilac is the strongest purple that keeps his outline and
+# his body clear at 60 points. verify_identity reads this value from here.
+ICON_TILE = "#cdbfff"
+ICON_FILL = 0.78           # his height, as a share of the tile's
+ICON_SIZES = {"icon-512.png": 512, "icon-192.png": 192, "apple-touch-icon.png": 180}
+
+
+def draw_icons(out, base="http://127.0.0.1:5001"):
+    """Draw Blooby waving in the real Pad (transparent ground) and write the
+    three icons the manifest and the touch-icon tag name. Needs the local server.
+
+    Drawn at a calm tempo: a fast hand captures too few points along each
+    curve, and his eyes came out as hexagons the first time."""
+    import browsing
+    from PIL import Image
+    from playwright.sync_api import sync_playwright
+    out = pathlib.Path(out)
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        pg = b.new_page(viewport={"width": 1100, "height": 900}, device_scale_factor=2)
+        browsing.goto(pg, base, "/skribl-pad")
+        pg.wait_for_timeout(800)
+        pg.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
+        pg.evaluate("""() => { const t = window.SkriblCanvasSizes, id = t.SIZES.find(s => s.label === '4:3').id;
+            document.querySelector(`#canvasSeg button[data-size='${id}']`).click(); }""")
+        pg.wait_for_timeout(300)
+        pg.evaluate("() => { setTool('pen'); if (window.SkriblPressure) SkriblPressure.setEnabled(true); }")
+        artdraw.draw(pg, pose("wave"), tempo=1.2, pause_tempo=6.0)
+        pg.wait_for_timeout(500)
+        url = pg.evaluate("() => document.getElementById('canvas').toDataURL('image/png')")
+        b.close()
+    him = Image.open(__import__("io").BytesIO(base64.b64decode(url.split(",")[1]))).convert("RGBA")
+    him = him.crop(him.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox())
+    side = 1024
+    tile = Image.new("RGBA", (side, side), ICON_TILE)
+    h = round(side * ICON_FILL)
+    w = round(him.width * h / him.height)
+    him = him.resize((w, h), Image.LANCZOS)
+    tile.alpha_composite(him, ((side - w) // 2, (side - h) // 2))
+    tile = tile.convert("RGB")
+    for name, px in ICON_SIZES.items():
+        tile.resize((px, px), Image.LANCZOS).save(out / name, optimize=True)
+    return [out / n for n in ICON_SIZES]
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 3 or sys.argv[1] != "card":
+    if len(sys.argv) != 3 or sys.argv[1] not in ("card", "icon"):
         raise SystemExit(__doc__.split("\n\n")[1])
+    if sys.argv[1] == "icon":
+        print("wrote", ", ".join(str(x) for x in draw_icons(sys.argv[2])))
+        raise SystemExit(0)
     draw_card(sys.argv[2])
     print("wrote", ", ".join(f"{sys.argv[2]}/{n}" for n in ("card.png", "card-paper.png", "card-dark.png")))

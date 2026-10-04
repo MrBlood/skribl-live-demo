@@ -7,8 +7,10 @@
 
    The manifest is a ROUTE rather than a static file so its URLs follow the
    blueprint's mount point through url_for, like every other path Skribl emits.
-   The icons are the brand mark (_skribl_brand_mark.html) rendered on the dark
-   ground; regenerate them from the mark rather than editing the PNGs.
+   The icons are Blooby waving on a lilac tile (v320, the owner's pick of the
+   mocks), drawn from his own strokes by `harness/tools/blooby.py icon
+   skribl/static`; regenerate them that way rather than editing the PNGs.
+   verify_identity reads the tile's colour from blooby.py and checks the pixels.
 
    The theme colour is the dark ground here, and the two grounds ride on the
    tag as data- attributes so the theme boot (before first paint) and

@@ -7,8 +7,8 @@ theme-color anywhere on the principal pages. The share card had been an
 identity for a LINK since v102; the pages had none for themselves.
 
 What ships: one route, `/manifest.webmanifest` (a route, not a static file,
-so its URLs follow the blueprint's mount point), three PNG icons rendered from
-the brand mark, and one partial (`_skribl_app_identity.html`) that the Pad,
+so its URLs follow the blueprint's mount point), three PNG icons (since v320,
+Blooby waving on lilac, drawn by `harness/tools/blooby.py icon`), and one partial (`_skribl_app_identity.html`) that the Pad,
 Flip, the player and the library include and the feed -- a host's page that is
 not Skribl -- does not. The theme-color meta carries BOTH grounds as data-
 attributes, so the theme boot (before first paint) and lib/theme.js (on a
@@ -128,6 +128,44 @@ for ic in icons:
           st_i == 200 and "image/png" in hdr_i.get("Content-Type", "")
           and fmt == "PNG" and size == want,
           f"{ic.get('src')} -> {st_i} {hdr_i.get('Content-Type')} {fmt} {size}")
+
+# --------------------------------------------------------------------------
+print("\nIDENTITY — the icon is Blooby, waving on lilac")
+# THE OWNER'S PICK (v320): Blooby waving on a lilac tile, option J of the mocks,
+# drawn from his strokes by `harness/tools/blooby.py icon`. The checks above
+# hold an icon to its size and format and would pass on a blank square, or on
+# the wordmark it replaced. These read the PIXELS: the tile at all four corners
+# is the lilac blooby.py names, his body's purple covers a real share of it, and
+# his dark outline is there. The tile colour is read from blooby.py, the one
+# place it is written.
+_bsrc = (ROOT / "harness" / "tools" / "blooby.py").read_text(encoding="utf-8")
+_m_tile = re.search(r'^ICON_TILE = "(#[0-9a-fA-F]{6})"', _bsrc, re.M)
+TILE = tuple(int(_m_tile.group(1)[i:i + 2], 16) for i in (1, 3, 5)) if _m_tile else None
+check("blooby.py names the icon's tile colour", TILE is not None)
+_near = lambda a, b, tol: all(abs(x - y) <= tol for x, y in zip(a, b))
+_srcs = [ic.get("src") for ic in icons]
+_st_p, _, _pad = get("/skribl-pad")
+_m_t = re.search(r'<link[^>]+rel="apple-touch-icon"[^>]+href="([^"]+)"', _pad.decode("utf-8", "replace"))
+if _m_t:
+    _srcs.append(_m_t.group(1))
+for _src in _srcs:
+    _st, _, _data = get(_src or "/nowhere")
+    try:
+        _im = Image.open(io.BytesIO(_data)).convert("RGB")
+    except Exception:            # noqa: BLE001 -- not an image is the finding
+        check(f"{_src}: decodes", False)
+        continue
+    _w, _h = _im.size
+    _corners = [_im.getpixel(xy) for xy in ((1, 1), (_w - 2, 1), (1, _h - 2), (_w - 2, _h - 2))]
+    _raw = _im.tobytes()        # RGB triples; getdata() is deprecated in Pillow 12
+    _px = [tuple(_raw[i:i + 3]) for i in range(0, len(_raw), 3)]
+    _body = sum(1 for c in _px if _near(c, (124, 92, 255), 45)) / len(_px)
+    _ink = sum(1 for c in _px if sum(c) < 200) / len(_px)
+    _name = _src.split("/")[-1].split("?")[0]
+    check(f"{_name}: the tile is lilac to every corner",
+          TILE is not None and all(_near(c, TILE, 6) for c in _corners), f"corners {_corners}")
+    check(f"{_name}: Blooby is on it -- his purple body and his dark outline",
+          _body > 0.15 and _ink > 0.01, f"body {_body:.1%}, outline {_ink:.1%}")
 
 # --------------------------------------------------------------------------
 print("\nIDENTITY — every principal page carries it, and the host demo does not")
