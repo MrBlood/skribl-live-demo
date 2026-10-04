@@ -21,7 +21,7 @@ the editor recorded. All of these need the local server.
 | `artdraw.py` | `Stroke`s, and `draw()` performs them in the editor as CDP pen events |
 | `artworks.py` | Pad's drawings (`ART`), each as its stroke order; traced ones read `art/*.json` |
 | `flipworks.py` | Flip's loops, key poses first |
-| `blooby.py` | Blooby, the mascot (built from Flip's waving loop), and his trading card |
+| `blooby.py` | Blooby, the mascot (built from Flip's waving loop), his trading card, and the app's Home Screen icons (`blooby.py icon skribl/static`) |
 | `make_art.py`, `make_flip.py` | draw them and save `skribl/static/help/demos/<name>.json` |
 | `make_help_clips.py` | the screen clips, filmed from the real app in both themes |
 | `make_help_thumbs.py` | the "Watch it work" bar's previews |
