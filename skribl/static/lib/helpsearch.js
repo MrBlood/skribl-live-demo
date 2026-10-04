@@ -1,9 +1,10 @@
 /* Help drawer search + live section counts.
  *
  * SHARED, DELIBERATELY. The accordion open/close handler is written twice —
- * app.js:1779 and flip.js:2168 — driving the same partial. That duplication is
- * the project's largest known-open, and adding search to both files would have
- * made a third copy of it. This publishes window.SkriblHelpSearch instead; both
+ * app.js ("Help drawer accordions") and flip.js (its `#helpDrawer
+ * .accordion-header` loop) — driving the same partial. Named by what to search
+ * for, not by line number: the numbers that stood here had drifted by hundreds
+ * of lines. Adding search to both files would have made a third copy. This publishes window.SkriblHelpSearch instead; both
  * surfaces call init() and get identical behaviour from one implementation.
  *
  * IT ALSO RETIRES A DRIFT SOURCE. Every accordion carried a hand-typed

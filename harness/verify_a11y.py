@@ -380,6 +380,23 @@ with sync_playwright() as p:
         # row that opened it, which is inside the menu and closed by then.
         ("/", "savedDraftsSheet"):     ("click:#menuBtn|click:#openCloudDraftItem", None),
         ("/flip", "savedDraftsSheet"): ("click:#moreBtn|click:#openCloudDraftItem", None),
+        # HOW IT WORKS' OWN LAYERS (v320; outside audit V319-002). The
+        # examples sheet and the full-screen viewer cover the panel and were
+        # role="region", so this census never saw them and Tab went straight
+        # through to the panel's Close underneath. Dialogs now, one instance
+        # per editor. Escape closes only the top layer: the sheet hands focus
+        # back to the bar that opened it, the viewer to its card.
+        ("/", "learnSheet"):      ("click:#menuBtn|click:#helpItem|click:#learnPeek", "learnPeek"),
+        ("/flip", "learnSheet"):  ("click:#moreBtn|click:#miInfo|click:#learnPeek", "learnPeek"),
+        ("/", "learnViewer"):     ("click:#menuBtn|click:#helpItem|click:#learnPeek"
+                                   "|click:#learnSheet .learn-card .learn-stage", None),
+        ("/flip", "learnViewer"): ("click:#moreBtn|click:#miInfo|click:#learnPeek"
+                                   "|click:#learnSheet .learn-card .learn-stage", None),
+        # FLIP'S EXPORT PROGRESS (v320), found by A11Y 2a's layer sweep on its
+        # first run: a full-screen overlay with a Cancel in it that Tab walked
+        # straight out of. Opened the way an export opens it; Escape is Cancel,
+        # which with no export running leaves it up -- and focus with it.
+        ("/flip", "flipExport"):  ("js:exportShow('Exporting')", None),
     }
 
     def _draw_on_pad(pg):
@@ -485,15 +502,31 @@ with sync_playwright() as p:
         check(f"{_tag}: opening moves focus into it", inside,
               "focus stayed on whatever had it, behind the sheet")
 
-        # Tab all the way round: focus must still be inside.
-        for _ in range(25):
-            pg.keyboard.press("Tab")
-        still = pg.evaluate("""(id) => {
+        # Tab all the way round: focus must be inside AFTER EVERY PRESS, not
+        # merely at the end. Checked only at the end, a walk that left the
+        # examples sheet and was wrapped back into it by How it works' own
+        # trap read as contained (v320) -- the escape is the defect, wherever
+        # the walk happens to stop.
+        _INSIDE = """(id) => {
             const d = document.getElementById(id), a = document.activeElement;
-            return !!(d && a && d.contains(a)); }""", mid)
-        check(f"{_tag}: Tab stays inside it", still,
-              "25 tabs escaped the dialog — a keyboard user reaches the page "
+            return !!(d && a && d.contains(a)); }"""
+        _out = None
+        for _i in range(25):
+            pg.keyboard.press("Tab")
+            if _out is None and not pg.evaluate(_INSIDE, mid):
+                _out = _i + 1
+        check(f"{_tag}: Tab stays inside it", _out is None,
+              f"tab {_out} left the dialog — a keyboard user reaches the page "
               "underneath while a modal covers it")
+        # ...AND BACKWARDS (v320): a dialog has two edges, and the escape the
+        # audit found was one Shift+Tab from the examples sheet's heading.
+        _out = None
+        for _i in range(40):
+            pg.keyboard.press("Shift+Tab")
+            if _out is None and not pg.evaluate(_INSIDE, mid):
+                _out = _i + 1
+        check(f"{_tag}: Shift+Tab stays inside it", _out is None,
+              f"shift-tab {_out} left the dialog backwards")
 
         pg.keyboard.press("Escape")
         pg.wait_for_timeout(650)
@@ -570,6 +603,54 @@ with sync_playwright() as p:
           not _untested, ", ".join(_untested) +
           " — declared in markup, never opened by this suite; a dialog behind "
           "an unrendered branch is the case the live census cannot see")
+
+    # ----------------------------------------------------------- section 2a
+    print("\nA11Y 2a — a layer that covers the page declares itself a dialog")
+    # THE CENSUS ABOVE TRUSTS THE MARKUP: it walks what says aria-modal, so a
+    # layer whose defect is that it never said so is invisible to it. How it
+    # works' examples sheet and viewer were exactly that (outside audit
+    # V319-002): visually on top, role="region", Tab escaping underneath. This
+    # finds layers by what they ARE -- a [hidden] box that, shown, is
+    # positioned over at least half of what it sits in (the viewport, or the
+    # dialog it is inside) and holds a control -- and requires each to be, or
+    # hold, an aria-modal. Being INSIDE a dialog is not enough: that is the
+    # nested case the audit found.
+    _UNDECLARED = """() => {
+        const out = [], vw = innerWidth, vh = innerHeight;
+        const FOC = 'a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])';
+        for (const el of document.querySelectorAll('[hidden]')) {
+            const opened = [];
+            for (let a = el; a && a !== document.body; a = a.parentElement)
+                if (a.hidden) { a.hidden = false; opened.push(a); }
+            const cs = getComputedStyle(el);
+            const host = el.parentElement && el.parentElement.closest('[aria-modal="true"]');
+            const W = host ? host.offsetWidth : vw, H = host ? host.offsetHeight : vh;
+            const covers = (cs.position === 'fixed' || cs.position === 'absolute')
+                && W > 0 && H > 0 && el.offsetWidth * el.offsetHeight >= 0.5 * W * H;
+            const live = covers && !!el.querySelector(FOC);
+            const declared = el.matches('[aria-modal="true"]') || !!el.querySelector('[aria-modal="true"]');
+            opened.forEach(a => { a.hidden = true; });
+            if (live && !declared)
+                out.push((el.id ? '#' + el.id : el.tagName.toLowerCase() + '.' + [...el.classList].join('.'))
+                         + (host ? ' (over #' + host.id + ')' : ''));
+        }
+        return out; }"""
+    for _path in ("/", "/flip", "/library", "/gallery"):
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        browsing.goto(_pg, BASE, _path)
+        _found = _pg.evaluate(_UNDECLARED)
+        # ...and the sweep must be able to see a layer at all, or it is green
+        # by walking nothing: the help drawer is one on both editors.
+        _seen = _pg.evaluate("""() => { const d = document.getElementById('helpDrawer');
+            if (!d) return null; d.hidden = false;
+            const r = d.offsetWidth * d.offsetHeight >= 0.5 * innerWidth * innerHeight;
+            d.hidden = true; return r; }""")
+        if _seen is not None:
+            check(f"{_path}: the sweep measures a known layer as one (the help drawer)", _seen is True)
+        check(f"{_path}: every layer that covers what it sits in is a dialog",
+              not _found, ", ".join(_found) + " — shown, it sits over the page "
+              "with controls in it and nothing keeps Tab inside it")
+        _pg.close()
 
     # ----------------------------------------------------------- section 2b
     print("\nA11Y 2b — switching Photo | Music keeps keyboard focus on the tab")

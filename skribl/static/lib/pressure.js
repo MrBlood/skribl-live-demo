@@ -9,12 +9,12 @@
  * had gone wrong, but a change to one copy would have failed nothing, and
  * "the pen feels different on Flip" is a bug that costs an afternoon to find.
  *
- * WHAT IS DELIBERATELY *NOT* SHARED: reading the raw value off the event. The
- * two editors bind different event families — Pad uses mouse/touch and reads
- * `touch.touchType === 'stylus'` with `touch.force` (an iOS extension), Flip
- * uses Pointer Events and reads `e.pressure`. Code written for one is dead in
- * the other, silently, so each surface keeps its own extraction and passes the
- * number here. Only the curve and the setting are common.
+ * WHAT IS DELIBERATELY *NOT* SHARED: reading the raw value off the event. Both
+ * editors draw on Pointer Events since v315 and read `e.pressure`, but Pad
+ * reads it only for pointerType 'pen' and keeps a `touch.touchType ===
+ * 'stylus'` / `touch.force` branch from when it bound touch events (see
+ * pressureSize() in app.js). Each surface keeps its own extraction and passes
+ * the number here. Only the curve and the setting are common.
  *
  * The toggle matters beyond taste: the stylus path is unverified on real
  * hardware (no Touch constructor supports `touchType`, so an Apple Pencil

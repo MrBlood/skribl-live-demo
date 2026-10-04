@@ -807,7 +807,7 @@ function pressureSize(e, base, erase) {
   if (erase || !e) return base;
   let raw = 0;
   if (e.pointerType === 'pen' && typeof e.pressure === 'number') {
-    raw = e.pressure;                       // Pointer Events, if ever adopted here
+    raw = e.pressure;                       // Pointer Events: how Pad draws since v315
   } else if (e.targetTouches || e.touches) {
     // targetTouches first, for the reason given at the pinch guard in
     // editor_draw.js: `touches` counts contacts that never touched the canvas,
@@ -824,9 +824,10 @@ function pressureSize(e, base, erase) {
   // "no reading yet" rather than as a feather touch, or every line would start
   // at minimum width.
   // Curve, floor and on/off live in lib/pressure.js (shared with Flip). Reading
-  // `raw` stays here: Pad is on touch events and Flip on Pointer Events, so the
-  // extraction cannot be shared even though the response can. Fall back to the
-  // shipped curve if the lib is absent.
+  // `raw` stays here: both editors are on Pointer Events since v315, but Pad
+  // gates on pointerType 'pen' and keeps the Touch.force branch above, so the
+  // two extractions are not the same code. Fall back to the shipped curve if
+  // the lib is absent.
   return (typeof SkriblPressure !== 'undefined' && SkriblPressure)
     ? SkriblPressure.sizeFrom(base, raw)
     : (raw > 0 ? base * (PRESSURE_MIN + (1 - PRESSURE_MIN) * Math.min(1, raw)) : base);
