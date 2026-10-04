@@ -100,6 +100,8 @@
     // that shows: the video is not even fetched.
     v.setAttribute('poster', card.getAttribute(light ? 'data-poster-light' : 'data-poster-dark'));
     if (reduce) { card.classList.add('learn-ready'); return; }
+    // A clip that cannot be fetched or played says so, as a replay does.
+    if (!v._learnErr) { v._learnErr = true; v.addEventListener('error', function () { failed(card); }); }
     v.setAttribute('src', src);
     v.preload = 'auto';
     if (!card._learnSeen) { card._learnSeen = true; if (io) io.observe(card); else visible.add(card); }
@@ -130,18 +132,62 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (payload) {
         card._learnPayload = payload;
-        if (!payload || !window.SkriblInline) { card.classList.add('learn-failed'); return; }
+        if (!payload || !window.SkriblInline) { failed(card); return; }
         var p = window.SkriblInline.attach(card.querySelector('.skribl-inline'), payload, { ambient: true });
-        if (!p) { card.classList.add('learn-failed'); return; }
+        if (!p) { failed(card); return; }
         p.setLoop(true);
         card._learnPlayer = p;
         card.classList.add('learn-ready');
         if (io) io.observe(card); else visible.add(card);
         sync(card);
       })
-      .catch(function () { card.classList.add('learn-failed'); });
+      .catch(function () { failed(card); });
     return card._learnLoad;
   }
+
+  // ---- what did not load (outside audit V319-004) ---------------------------
+  // A failed example was marked with a class nothing drew, so it sat there as
+  // an empty tile. The sheet's banner counts them and Retry asks again for
+  // those alone -- the player script too, if that is what failed.
+  var failBox = document.getElementById('learnFail');
+  var failCount = document.getElementById('learnFailCount');
+  var retryBtn = document.getElementById('learnRetry');
+  function tellFails() {
+    if (!failBox) return;
+    var n = all.filter(function (c) { return c.classList.contains('learn-failed'); }).length;
+    var was = !failBox.hidden;
+    failBox.hidden = !n;
+    failCount.textContent = !n ? '' : (n === 1 ? '1 example couldn\u2019t load.'
+                                               : n + ' examples couldn\u2019t load.');
+    // Retry hides the banner it is in; focus goes to the sheet's heading
+    // rather than to <body>.
+    if (was && !n && failBox.contains(document.activeElement)) {
+      var title = document.getElementById('learnSheetTitle');
+      if (title) title.focus({ preventScroll: true });
+    }
+  }
+  function failed(card) {
+    card.classList.add('learn-failed');
+    tellFails();
+  }
+  if (retryBtn) retryBtn.addEventListener('click', function () {
+    var again = all.filter(function (c) { return c.classList.contains('learn-failed'); });
+    if (!window.SkriblInline) ready = null;
+    again.forEach(function (c) {
+      c.classList.remove('learn-failed');
+      if (c.hasAttribute('data-clip-dark')) {
+        c.querySelector('.learn-video').removeAttribute('src');
+        if (open()) startClip(c);
+      } else {
+        c._learnStarted = false;
+        c._learnLoad = null;
+      }
+    });
+    tellFails();
+    loadPlayer().then(function () {
+      again.forEach(function (c) { if (c.hasAttribute('data-demo')) { start(c); sync(c); } });
+    });
+  });
 
   function startAll() {
     clips.forEach(startClip);

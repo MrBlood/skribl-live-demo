@@ -18,6 +18,17 @@
  * loads it. Add a token here and the profile's map needs it too --
  * verify_library reads the computed styles of a row on the profile. */
 
+/* VISUALLY HIDDEN, STILL ANNOUNCED. #postedStatus, the list's live region,
+   carries this class, and the rule stayed in styles.css when the list moved
+   here in v304 -- a sheet the profile does not load. So every status meant for
+   a screen reader ("Link copied", a failed delete, a pick that did not load)
+   was also a line of text painted beside the list. Found when the Library's
+   load-failure work in v320 put a sentence there. */
+.vis-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
 /* ---- the undo shelf -------------------------------------------------------
    Reversible for twelve seconds, and saying so is the whole feature: an undo
    nobody can see is a keyboard shortcut for people who already know. Sits
