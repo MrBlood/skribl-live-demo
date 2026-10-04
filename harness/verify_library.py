@@ -126,6 +126,11 @@ with sync_playwright() as sp:
     check("the grid is built from real posts, not from demo motifs",
           tiles >= 2, f"{tiles} tiles")
     check("no page errors", not errs, "; ".join(errs[:2]))
+    _full = pg.evaluate("""() => { const shown = el => !!el && !el.hidden && getComputedStyle(el).display !== 'none' && el.getClientRects().length > 0;
+        return { card: shown(document.getElementById('stageEmpty')), transport: shown(document.querySelector('.player .transport')),
+                 stage: shown(document.querySelector('.player .stageCanvasWrap')) }; }""")
+    check("with posts, the player is the player: no empty card, the stage and its controls shown",
+          not _full["card"] and _full["transport"] and _full["stage"], str(_full))
 
     # ONE PAYLOAD, for the one drawing on the stage. Not one per tile.
     check("only the selected Skribl's payload is fetched",
@@ -590,6 +595,36 @@ with sync_playwright() as sp:
     o_empty = other.evaluate("""() => { const e = document.getElementById('libEmpty');
         return { shown: !e.hidden && getComputedStyle(e).display !== 'none', words: e.innerText }; }""")
     check("another browser sees none of them", o_tiles == 0, f"{o_tiles} tiles")
+    # NOTHING POSTED, NOTHING TO PLAY (v319 once-over; the owner chose the card
+    # from three mocks). The player had a dead Play, a dash for a title and a
+    # 0:00 clock. The card is asked what is PAINTED (elementFromPoint at its
+    # title), not where its box is, and the player's parts must be gone.
+    o_card = other.evaluate("""() => { const c = document.getElementById('stageEmpty'), t = c && c.querySelector('.se-title');
+        const shown = el => !!el && !el.hidden && getComputedStyle(el).display !== 'none' && el.getClientRects().length > 0;
+        let painted = false;
+        if (shown(t)) { t.scrollIntoView({ block: 'center' }); const r = t.getBoundingClientRect();
+          const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); painted = !!at && t.contains(at); }
+        const make = c && c.querySelector('a.make');
+        return { painted: painted, title: t ? t.textContent.trim() : null,
+                 make: make ? new URL(make.href).pathname : null,
+                 dead: ['.player .transport', '.player .pmeta', '.player .scrub', '.player .stageCanvasWrap', '.player .now']
+                   .filter(sel => shown(document.querySelector(sel))) }; }""")
+    check("an empty Library shows the empty card, painted, and none of the player's parts",
+          o_card["painted"] and o_card["title"] == "Nothing posted yet" and not o_card["dead"], str(o_card))
+    check("...and its Make one goes to the Pad", (o_card["make"] or "").endswith("/skribl-pad"), str(o_card["make"]))
+    # Drawn Blooby on light, his sticker on dark (the drawn outline vanishes on
+    # a dark ground), keyed on the data-theme the page's boot stamps; and both
+    # pictures actually arrive.
+    o_bl = other.evaluate("""async () => { const r = document.documentElement, was = r.getAttribute('data-theme');
+        const on = sel => getComputedStyle(document.querySelector('#stageEmpty ' + sel)).display !== 'none';
+        r.setAttribute('data-theme', 'light'); const L = [on('.bl-light'), on('.bl-dark')];
+        r.setAttribute('data-theme', 'dark'); const D = [on('.bl-light'), on('.bl-dark')];
+        if (was === null) r.removeAttribute('data-theme'); else r.setAttribute('data-theme', was);
+        const imgs = [...document.querySelectorAll('#stageEmpty img')];
+        await Promise.all(imgs.map(i => i.decode().catch(() => null)));
+        return { light: L, dark: D, loaded: imgs.map(i => i.naturalWidth > 0) }; }""")
+    check("...drawn Blooby on light, the sticker on dark, and both pictures load",
+          o_bl["light"] == [True, False] and o_bl["dark"] == [False, True] and o_bl["loaded"] == [True, True], str(o_bl))
     check("...and the empty state says what this list is",
           o_empty["shown"] and "in this browser only" in o_empty["words"] and "not an account" in o_empty["words"],
           str(o_empty))
@@ -600,7 +635,7 @@ with sync_playwright() as sp:
     # nothing. Counted as VISIBLE blocks whose text opens with "Nothing", so
     # a second message anywhere on the page fails this rather than only the
     # one that was there.
-    o_nothing = other.evaluate("""() => [...document.querySelectorAll('#postedList *, #libEmpty')]
+    o_nothing = other.evaluate("""() => [...document.querySelectorAll('#postedList *, #libEmpty, #stageEmpty *')]
         .filter(el => /^\\s*Nothing/.test(el.textContent) && el.getClientRects().length && getComputedStyle(el).display !== 'none'
                       && !el.querySelector('p, div'))
         .map(el => el.textContent.trim().slice(0, 30))""")
