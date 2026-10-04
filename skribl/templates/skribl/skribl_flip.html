@@ -379,8 +379,8 @@
       {# New Skribl, first in the menu — the Pad's row, same slot, same words
          (owner, v316). Same two-tap arm as before; the second tap runs
          clearAllPages(), the action the drawer's button calls, backup + Undo. #}
-      {% if not compose %}{{ hs.row() }}{% endif %}
       <button type="button" class="menu-item" id="miClearAll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="menu-item-text"><span class="new-label">New Skribl</span><span class="menu-item-sub">Start fresh &mdash; Undo brings this one back</span></span></button>
+      {% if not compose %}{{ hs.row() }}{% endif %}
       <div class="menu-divider"></div>
       {# Name this skribl — opens the title drawer that drops from the header.
          Naming lives here, not on a persistent tab over the canvas. Shared
