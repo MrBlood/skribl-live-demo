@@ -622,10 +622,16 @@ with sync_playwright() as p:
       const tips = [...document.querySelectorAll('.help-tip')];
       const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'Smear');
       return t ? t.textContent.replace(/\\s+/g, ' ') : null; }""")
+    # And it went stale a second time: from v255 the requirement was the same
+    # NUMBER of strokes, and this check asked for that word -- until v296 paired
+    # by shape and dropped the count, and the tip kept asking for it. The
+    # requirement now is resemblance: it pairs by shape and declines only when
+    # nothing on one page looks like anything on the other.
     check("the help describes the effect's ACTUAL requirement",
-          _help and "number" in _help.lower() and "same strokes on both" not in _help,
-          f"{(_help or '')[-190:]!r} — the old text told people to duplicate "
-          f"rather than redraw, which is exactly the workflow v255 unblocked")
+          _help and "by shape" in _help.lower() and "same number" not in _help.lower()
+          and "same strokes on both" not in _help,
+          f"{(_help or '')[-190:]!r} — v255 dropped 'the same strokes', v296 "
+          f"dropped 'the same number'; tweenMatch pairs by shape")
     check("...and it still says redrawing the pose is fine",
           _help and "redraw" in _help.lower(), (_help or "")[-190:])
 
