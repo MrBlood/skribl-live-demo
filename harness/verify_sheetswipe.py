@@ -438,7 +438,11 @@ with sync_playwright() as p:
     HOME = """() => { const h = document.querySelector('.header'); const r = h.getBoundingClientRect();
         const at = document.elementFromPoint(r.left + r.width / 2, Math.max(1, r.top + r.height / 2));
         return { y: Math.round(window.scrollY), painted: !!(at && h.contains(at)) }; }"""
-    for page, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+    # And again with Panels on Colour, whose drawer is laid out by its own
+    # rules: a 16px value style once wrapped Flip's grid hint and pushed the
+    # full drawer's grip off this 664px phone, so the close below missed.
+    for page, route in (("Pad", "/skribl-pad"), ("Flip", "/flip"),
+                        ("Pad (Colour)", "/skribl-pad?panels=colour"), ("Flip (Colour)", "/flip?panels=colour")):
         who = f"{page}: the page"
         print(f"\n{who}")
         ctx, pg, errs = fresh(b, route)

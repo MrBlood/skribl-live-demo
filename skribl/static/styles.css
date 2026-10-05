@@ -1625,11 +1625,15 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 2.5px solid transparent;
+  /* No border. A transparent 2.5px one sat between the edge and the inset rim
+     below, so every dot showed a second, smaller circle inside it -- a donut,
+     not an edge (owner, "is it dingy?"). The colour still reaches the edge;
+     only the rim moves out to meet it. */
+  border: 0;
   cursor: pointer;
   padding: 0;
   outline: none;
-  transition: transform 0.3s var(--spring), border-color 0.12s ease, box-shadow 0.2s ease;
+  transition: transform 0.3s var(--spring), box-shadow 0.2s ease;
   box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.08);
   flex-shrink: 0;
 }
@@ -1642,10 +1646,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    would be the thing that vanishes. lib/palette.js says which swatches are
    dark and deliberately does not say what colour the rim is. */
 .color-dot[data-ink="dark"] { box-shadow: inset 0 0 0 1px var(--line-loud); }
+/* ...and on the light drawer it does not: there --line-loud is a pale grey,
+   and a pale ring inside a black dot read as the SELECTED mark (owner's
+   screenshot, black beside the chosen pink). */
+:root[data-theme="light"] .color-dot[data-ink="dark"] { box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.08); }
 
 .color-dot.active {
   transform: scale(1.08);
-  border-color: transparent;
   /* The outer ring was a literal #fff, which is invisible on a white drawer —
      the selected swatch simply stopped looking selected in light mode. */
   box-shadow: 0 0 0 2px var(--surface-raised), 0 0 0 4px var(--text-primary);
@@ -5864,19 +5871,19 @@ a.player-btn { text-decoration: none; }
   font-weight: 500;
   color: var(--text-secondary);
 }
-.menu-row .canvas-seg, .menu-row .hint-seg, .menu-row .theme-seg { margin-left: auto; }
+.menu-row .canvas-seg, .menu-row .hint-seg, .menu-row .theme-seg, .menu-row .panels-seg { margin-left: auto; }
 /* Tips is two buttons and Canvas is four, so right-aligning both leaves a 99px
    hole between the word "Tips" and its switch while "Canvas" sits snug against
-   its own. Matching the widths closes it, and the three rows read as a set.
+   its own. Matching the widths closes it, and the rows (Panels too) read as a set.
    THE WIDTH IS SET BY THE FULLEST ROW, not the emptiest: at 140px the theme
    row's "System" has 2px beside it and "16:9" under 5px. 160px is the theme
    row's three labels at 8px a side with a little over; the pills share the seg
    from their own content (basis auto) rather than in equal quarters, so a long
    label is not cut to a short one's cell. The phone sheet is full-width and has
    the room for more. verify_tips reads the room beside every pill. */
-.menu-row .hint-seg, .menu-row .theme-seg, .menu-row .canvas-seg { width: var(--menu-seg-w, 160px); flex: none; }   /* one width, and NO flex-shrink: squeezed segs came out 146 and 151 */
-.menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .canvas-seg button { flex: 1 1 auto; }
-.menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .canvas-seg button { min-width: 0; padding: 0 8px; font-size: 12px; }
+.menu-row .hint-seg, .menu-row .theme-seg, .menu-row .panels-seg, .menu-row .canvas-seg { width: var(--menu-seg-w, 160px); flex: none; }   /* one width, and NO flex-shrink: squeezed segs came out 146 and 151 */
+.menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .panels-seg button, .menu-row .canvas-seg button { flex: 1 1 auto; }
+.menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .panels-seg button, .menu-row .canvas-seg button { min-width: 0; padding: 0 8px; font-size: 12px; }
 @media (max-width: 640px) { .menu-row { --menu-seg-w: 184px; } }
 .menu-row-note {
   padding: 0 14px 8px;
@@ -6055,7 +6062,7 @@ a.player-btn { text-decoration: none; }
 /* ON is the accent, like every other selected control. This class began life on
    the onion controls and its amber leaked to every switch that borrowed it —
    Grid and Stroke layers lit orange in an otherwise purple chrome. */
-.onion-tint.active { color: var(--ui-hi); border-color: rgba(124, 92, 255, 0.4); background: rgba(124, 92, 255, 0.12); }
+.onion-tint.active { color: var(--switch-on-ink, var(--ui-hi)); border-color: rgba(124, 92, 255, 0.4); background: rgba(124, 92, 255, 0.12); }
 /* Amber survives ONLY where it means the thing itself: the onion controls
    light in the exact colour the onion pages tint (#ff9f43). */
 #onion.active, #onionTintBtn.active { color: var(--warn-2); border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
@@ -6886,7 +6893,10 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .toolbar #magnifyBtn.active, .flip-tools #magnifyBtn.active,
 .toolbar #mediaOpenBtn.open, .flip-tools #mediaOpenBtn.open {
   color: var(--seg-on-ink); background: var(--seg-on-fill); box-shadow: none;
-  border-radius: var(--dock-pill-r);
+  /* With a fallback: --dock-pill-r is set on #toolGroup, and Media and Magnify
+     sit outside it, so without one the radius was invalid and the tile came
+     out SQUARE (owner's screenshot, "probably supposed to be rounded"). */
+  border-radius: var(--dock-pill-r, 12px);
 }
 /* Pad's spacing. Flip's is in flip.css, keyed on its size class. */
 .toolbar #undoBtn, .toolbar #mediaOpenBtn { margin-left: 18px; }
@@ -7761,3 +7771,100 @@ body.replaying .media-card {
   transition: opacity 0.2s ease;
   @starting-style { opacity: 0; }
 }
+
+/* COLOUR BLOCK (owner: "fun and premium", chosen from four directions and a
+   whole-app mock). ANYTHING YOU OPEN TO WORK WITH IS A BLOCK OF SKRIBL VIOLET,
+   and the frame stays calm: the canvas, header, dock and page keep their
+   theme, so the drawing comes first and the colour arrives when you reach for
+   a tool. The same block in light and dark -- it is the one surface that does
+   not follow the theme. The menus stay neutral (owner): ⋯ is navigation, not
+   a tool.
+
+   The block re-themes what it holds by TOKENS, set on the block itself, so
+   every pill, slider, label and button inside keeps its own rules and simply
+   reads white-on-violet values: a selected pill is white with violet ink,
+   tracks and buttons are white at low alpha, secondary text is white at 72%.
+   No backdrop-filter: the block is opaque, and a frosted element is what
+   WebKit fails to repaint (v315). The selected TOOL in the dock is the one
+   solid violet outside a block -- what you are holding.
+
+   OPT-IN: Panels, Calm | Colour, in every ⋯ menu (owner: "calm default").
+   Every rule below is keyed on :root[data-panels="colour"], stamped before
+   first paint by _skribl_theme_boot.html and kept by lib/theme.js, so Calm is
+   the frame exactly as it was -- light or dark -- and Colour is this. The
+   palette tokens on :root are unkeyed; nothing reads them under Calm. */
+:root {
+  /* The block's own palette, one set for both themes. */
+  --block-from: #4b2fd0; --block-to: #2c1a86; --block-base: #3c25ac;
+  --block-ink: #ffffff; --block-on-ink: #3b1fa8;
+  /* The tool you are holding: solid, white ink. Lighter on the light page. */
+  --tool-solid: #5b44c9;
+}
+:root[data-theme="light"] { --tool-solid: #6b46ff; }
+:root[data-panels="colour"] :is(#drawPanel, #mediaCard, #tunePanel, #shapePop, #toolTray, #stampPop, #postSheet, #flipShare .flip-share-card) {
+  --text-strong: #ffffff; --text-primary: #ffffff;
+  /* 85%, not 72: an unselected label at 72% measured 4.17:1 on the block's
+     light end, under 4.5 (verify_onepill CONTRAST); 85% is 5.15. */
+  --text-secondary: rgba(255, 255, 255, 0.85); --text-soft: rgba(255, 255, 255, 0.85);
+  --text-muted: rgba(255, 255, 255, 0.8); --text-tool: rgba(255, 255, 255, 0.86);
+  --ui-hi: #ffffff; --ui-line: rgba(255, 255, 255, 0.85);
+  --seg-on-fill: var(--block-ink); --seg-on-ink: var(--block-on-ink);
+  --surface-control: rgba(255, 255, 255, 0.13); --surface-control-hover: rgba(255, 255, 255, 0.2);
+  --surface-raised: var(--block-base); --surface-panel: rgba(255, 255, 255, 0.10); --surface-well: rgba(255, 255, 255, 0.10);
+  --hairline: rgba(255, 255, 255, 0.14); --hairline-strong: rgba(255, 255, 255, 0.22); --line: rgba(255, 255, 255, 0.16);
+  --glass-fill: transparent;
+  color: var(--block-ink);
+  /* A solid base under the gradient: what a reader of background-color sees,
+     and what paints wherever a gradient does not. */
+  background: linear-gradient(160deg, var(--block-from) 0%, var(--block-to) 100%) var(--block-base);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: 0 16px 40px rgba(40, 10, 140, 0.42), 0 2px 8px rgba(20, 0, 80, 0.28);
+}
+/* The Media card holds its panels; they wear none of their own. */
+:root[data-panels="colour"] #mediaCard > .tab-panel { background: none; box-shadow: none; }
+/* Replay clears the drawers. The glass card receded by dropping its fill
+   (body.replaying .media-card, above), which this rule's id outranks -- so a
+   replay left an empty violet slab on the canvas. The block has no
+   backdrop-filter, so it can do what the glass could not: fade by opacity. */
+:root[data-panels="colour"] #mediaCard { transition: opacity 0.3s ease; }
+:root[data-panels="colour"] body.replaying #mediaCard { opacity: 0; pointer-events: none; }
+/* A switch that is ON in a block is solid white with violet ink, like the
+   selected pill beside it. The frame's tinted ring read as white-on-violet
+   either way, so Grid on and Stroke layers off looked the same. The onion
+   keeps its amber (it means the onion pages' tint). */
+:root[data-panels="colour"] :is(#drawPanel, #mediaCard, #tunePanel, #shapePop, #toolTray, #stampPop, #postSheet, #flipShare .flip-share-card) {
+  --switch-on-ink: var(--seg-on-ink);
+}
+:root[data-panels="colour"] :is(#drawPanel, #mediaCard, #tunePanel, #shapePop, #toolTray, #stampPop, #postSheet, #flipShare .flip-share-card)
+  .onion-tint.active:not(#onion, #onionTintBtn) {
+  background: var(--seg-on-fill); border-color: var(--seg-on-fill);
+}
+/* Text that names a colour outright, rather than through a token. */
+:root[data-panels="colour"] :is(#drawPanel, #mediaCard, #tunePanel, #shapePop, #toolTray, #stampPop, #postSheet, #flipShare .flip-share-card)
+  :is(.prop-val, .menu-item-text, .draw-section-label, .tune-name, .export-head, .flip-export-label) { color: var(--block-ink); }
+:root[data-panels="colour"] :is(#drawPanel, #mediaCard, #tunePanel, #shapePop, #toolTray, #stampPop, #postSheet, #flipShare .flip-share-card)
+  :is(.tune-hint, .export-sub, .post-field-label, .post-field-optional, .post-char-count, .size-label) { color: var(--text-soft); }
+/* Buttons that are not pills: a white wash, white ink. */
+:root[data-panels="colour"] :is(#drawPanel, #mediaCard, #tunePanel, #shapePop, #toolTray, #stampPop, #postSheet, #flipShare .flip-share-card)
+  :is(.clear-drawer-btn, #drawerDetentMore, .eyedropper-btn, .slider-nudge-btn, .tray-cell, .shape-kind, .stamp-btn:not([aria-pressed="true"])) {
+  background: rgba(255, 255, 255, 0.14); color: var(--block-ink); border-color: rgba(255, 255, 255, 0.22);
+}
+:root[data-panels="colour"] :is(#drawPanel, #mediaCard, #tunePanel) .brush-slider-line { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.12); }
+/* Values read as the thing you are setting: bigger, bolder, steady width. */
+/* Values, not hints: Flip's .prop-val.grid-hint is a sentence, and at 16px it
+   wrapped and pushed the drawer's grip off a 664px phone. */
+:root[data-panels="colour"] :is(#drawPanel, #mediaCard, #tunePanel) .prop-val:not(.grid-hint) { font-size: 16px; font-weight: 750; font-variant-numeric: tabular-nums; }
+/* Every swatch keeps a thin light edge on the block: Skribl purple and ink
+   blue sit close to the block's own colour and would otherwise sink into it. */
+:root[data-panels="colour"] #drawPanel .color-dot { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.45); }
+:root[data-panels="colour"] #drawPanel .color-dot.active { box-shadow: 0 0 0 2px var(--block-base), 0 0 0 4px var(--block-ink); }
+/* The Post sheet's fields and its one action. Fields stay 16px (iOS). */
+:root[data-panels="colour"] #postSheet .post-input { background: rgba(255, 255, 255, 0.12); color: var(--block-ink); border-color: rgba(255, 255, 255, 0.2); }
+:root[data-panels="colour"] #postSheet .post-input::placeholder { color: rgba(255, 255, 255, 0.6); }
+:root[data-panels="colour"] #postSheet .post-submit:not(.post-watch) { background: var(--block-ink); color: var(--block-on-ink); box-shadow: 0 6px 16px rgba(20, 0, 80, 0.3); }
+/* The tool you are holding: the one solid violet outside a block. By the
+   pill's own tokens, scoped to the dock, so its fill and ink stay the one
+   pill's (verify_onepill SHAPE) and every label on it is white. */
+:root[data-panels="colour"] #toolGroup { --seg-on-fill: var(--tool-solid); --seg-on-ink: var(--block-ink); }
+:root[data-panels="colour"] #toolGroup .tool-btn.active .tool-btn-label { color: var(--block-ink); }

@@ -31,6 +31,15 @@
  * logic for everything that runs afterwards. Keep the two in agreement — the
  * KEY and the values are the contract between them.
  *
+ * PANELS, CALM OR COLOUR (owner: "calm default"). A second, separate choice:
+ * Colour makes the panels you open to work with -- the drawers, Tune, the
+ * pickers, the Post sheet, the Library's hero -- a block of Skribl violet
+ * (styles.css COLOUR BLOCK). It is not a third theme: it sits on Dark, Light
+ * or System alike and changes nothing else. Stored under its own key, stamped
+ * as data-panels="colour" on <html> by the same inline boot, and ?panels=
+ * on the URL wins for the document, as ?theme= does. Anything but "colour"
+ * is Calm, the app as it has always looked.
+ *
  * FAILS QUIET. localStorage throws on ACCESS in Safari's private mode, not
  * merely on write. Every read and write here is wrapped, and the fallback is
  * dark, which is the app as it has always looked.
@@ -40,12 +49,14 @@
 
   var KEY = 'skribl_theme_v1';
   var DARK = 'dark', LIGHT = 'light', SYSTEM = 'system';
+  var PANELS_KEY = 'skribl_panels_v1';
+  var CALM = 'calm', COLOUR = 'colour';
 
-  function read() {
-    try { return global.localStorage.getItem(KEY); } catch (e) { return null; }
+  function read(k) {
+    try { return global.localStorage.getItem(k || KEY); } catch (e) { return null; }
   }
-  function write(v) {
-    try { global.localStorage.setItem(KEY, v); return true; } catch (e) { return false; }
+  function write(v, k) {
+    try { global.localStorage.setItem(k || KEY, v); return true; } catch (e) { return false; }
   }
 
   /* The CHOICE: what is stored, with anything unrecognised — a stale value, a
@@ -70,6 +81,22 @@
     var q = /[?&]theme=(light|dark)(?:&|$)/.exec(global.location.search || '');
     urlTheme = q ? q[1] : null;
   } catch (e) { urlTheme = null; }
+  var urlPanels = null;
+  try {
+    var qp = /[?&]panels=(calm|colour)(?:&|$)/.exec(global.location.search || '');
+    urlPanels = qp ? qp[1] : null;
+  } catch (e) { urlPanels = null; }
+
+  function panels() {
+    if (urlPanels) return urlPanels;
+    return read(PANELS_KEY) === COLOUR ? COLOUR : CALM;
+  }
+  function applyPanels() {
+    var root = global.document && global.document.documentElement;
+    if (!root) return;
+    if (panels() === COLOUR) root.setAttribute('data-panels', COLOUR);
+    else root.removeAttribute('data-panels');
+  }
 
   /* The EFFECTIVE mode: what the chrome wears right now. */
   function get() {
@@ -115,6 +142,14 @@
     notify();
     return c;
   }
+  function setPanels(choice) {
+    var c = choice === COLOUR ? COLOUR : CALM;
+    urlPanels = null;
+    write(c, PANELS_KEY);
+    applyPanels();
+    notify();
+    return c;
+  }
 
   /* The OS changed its mind while a system-following page was open: follow
    * it. An explicit choice ignores this by construction (get() never reads
@@ -132,8 +167,9 @@
    * wrote, so this cannot loop. */
   if (global.addEventListener) {
     global.addEventListener('storage', function (e) {
-      if (!e || e.key !== KEY) return;
+      if (!e || (e.key !== KEY && e.key !== PANELS_KEY)) return;
       apply(get());
+      applyPanels();
       notify();
     });
   }
@@ -142,6 +178,7 @@
    * the same key, so running this after it changes nothing. It is here so the
    * theme is still correct on a page that forgot the boot script. */
   apply(get());
+  applyPanels();
 
   global.SkriblTheme = {
     KEY: KEY,
@@ -153,6 +190,9 @@
     set: set,
     apply: apply,
     isLight: function () { return get() === LIGHT; },
+    PANELS_KEY: PANELS_KEY,
+    panels: panels,         // calm | colour
+    setPanels: setPanels,
     onChange: onChange
   };
 })(window);

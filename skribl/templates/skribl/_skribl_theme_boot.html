@@ -28,7 +28,12 @@
 
    THE BROWSER'S OWN CHROME FOLLOWS (SK-AUD-013): a light page also re-stamps
    the theme-color meta _skribl_app_identity.html rendered just above, from
-   the light ground that tag carries -- no colour is held here. #}
+   the light ground that tag carries -- no colour is held here.
+
+   PANELS ride along: data-panels="colour" from ?panels= or the stored
+   skribl_panels_v1, for the same before-first-paint reason. Anything else is
+   Calm and leaves the attribute off. The player has no panels and a size
+   cap (verify_player_isolation), so it includes this with no_panels. #}
 <script nonce="{{ csp_nonce }}">
-(function(){try{var m=/[?&]theme=(light|dark)(?:&|$)/.exec(location.search);var t=m?m[1]:null;if(!t){try{t=localStorage.getItem('skribl_theme_v1');}catch(e){t=null;}}if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}if(t==='light'){document.documentElement.setAttribute('data-theme','light');var c=document.querySelector('meta[name=theme-color]');if(c&&c.dataset.light){c.content=c.dataset.light;}}}catch(e){}})();
+(function(){try{var m=/[?&]theme=(light|dark)(?:&|$)/.exec(location.search);var t=m?m[1]:null;if(!t){try{t=localStorage.getItem('skribl_theme_v1');}catch(e){t=null;}}if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}if(t==='light'){document.documentElement.setAttribute('data-theme','light');var c=document.querySelector('meta[name=theme-color]');if(c&&c.dataset.light){c.content=c.dataset.light;}}}catch(e){}{% if not no_panels %}try{var pm=/[?&]panels=(calm|colour)(?:&|$)/.exec(location.search);var p=pm?pm[1]:null;if(!p){try{p=localStorage.getItem('skribl_panels_v1');}catch(e){p=null;}}if(p==='colour'){document.documentElement.setAttribute('data-panels','colour');}}catch(e){}{% endif %}})();
 </script>

@@ -84,6 +84,8 @@ stale the same way (the paragraph under the list says so too):
     verify_fuzz.py       random editing against the invariants the SERVER holds
     verify_onepill.py    one sliding pill on every pick-one control, contrast
                          read from pixels, forced colours, the no-script tint
+    verify_onepill_colour.py  the same census with Panels on Colour, where
+                         every pill inside a violet block re-themes by tokens
     verify_galib.py      the gallery and the library in the family's chrome:
                          painted focus on every Tab stop, glass menu, header
                          and report sheet, bins that ask without moving
