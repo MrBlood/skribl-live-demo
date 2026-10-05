@@ -130,7 +130,7 @@ for ic in icons:
           f"{ic.get('src')} -> {st_i} {hdr_i.get('Content-Type')} {fmt} {size}")
 
 # --------------------------------------------------------------------------
-print("\nIDENTITY — the icon is Blooby, waving on lilac")
+print("\nIDENTITY — the icon is Blooby, waving on lilac that deepens to its edge")
 # THE OWNER'S PICK (v320): Blooby waving on a lilac tile, option J of the mocks,
 # drawn from his strokes by `harness/tools/blooby.py icon`. The checks above
 # hold an icon to its size and format and would pass on a blank square, or on
@@ -142,6 +142,12 @@ _bsrc = (ROOT / "harness" / "tools" / "blooby.py").read_text(encoding="utf-8")
 _m_tile = re.search(r'^ICON_TILE = "(#[0-9a-fA-F]{6})"', _bsrc, re.M)
 TILE = tuple(int(_m_tile.group(1)[i:i + 2], 16) for i in (1, 3, 5)) if _m_tile else None
 check("blooby.py names the icon's tile colour", TILE is not None)
+# ...AND ITS EDGE (owner, N4): the lilac deepens toward the tile's edge, so the
+# corners are ICON_EDGE, and the ground is lighter -- nearer the lilac -- the
+# further in it is read. Both colours are read from blooby.py.
+_m_edge = re.search(r'^ICON_EDGE = "(#[0-9a-fA-F]{6})"', _bsrc, re.M)
+EDGE = tuple(int(_m_edge.group(1)[i:i + 2], 16) for i in (1, 3, 5)) if _m_edge else None
+check("blooby.py names the colour the tile deepens to", EDGE is not None)
 _near = lambda a, b, tol: all(abs(x - y) <= tol for x, y in zip(a, b))
 _srcs = [ic.get("src") for ic in icons]
 _st_p, _, _pad = get("/skribl-pad")
@@ -162,8 +168,14 @@ for _src in _srcs:
     _body = sum(1 for c in _px if _near(c, (124, 92, 255), 45)) / len(_px)
     _ink = sum(1 for c in _px if sum(c) < 200) / len(_px)
     _name = _src.split("/")[-1].split("?")[0]
-    check(f"{_name}: the tile is lilac to every corner",
-          TILE is not None and all(_near(c, TILE, 6) for c in _corners), f"corners {_corners}")
+    # Above his head, at the top centre, the tile is ground all the way down.
+    _col = [_im.getpixel((_w // 2, round(_h * f))) for f in (0.01, 0.05, 0.10)]
+    _lum = [sum(c) for c in _col]
+    check(f"{_name}: the tile deepens to the edge colour at every corner",
+          EDGE is not None and all(_near(c, EDGE, 8) for c in _corners), f"corners {_corners}")
+    check(f"{_name}: ...and lightens toward the middle, staying lilac",
+          TILE is not None and _lum[0] < _lum[1] < _lum[2]
+          and all(c[2] > max(c[0], c[1]) for c in _col), f"top centre inward {_col}")
     check(f"{_name}: Blooby is on it -- his purple body and his dark outline",
           _body > 0.15 and _ink > 0.01, f"body {_body:.1%}, outline {_ink:.1%}")
 
