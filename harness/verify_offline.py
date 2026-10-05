@@ -29,7 +29,7 @@ Calibrated against: pages cache-first (fresh-online goes red), no page
 fallback (offline boot goes red), no offline note, the API cached, and the
 registration script removed.
 """
-import os, re, socket, subprocess, sys, tempfile, time, urllib.request
+import json, os, re, socket, subprocess, sys, tempfile, time, urllib.request
 from pathlib import Path
 from assertions import make_check
 
@@ -188,6 +188,77 @@ try:
         check("the next load is fresh again, not the copy that carried it through",
               pg.evaluate(NONCE) not in (last, None))
         check("no page errors", not errs, "; ".join(errs[:2]))
+
+        print("\nSTAYING CURRENT — the build, the menu's Reload, the pill, the pull")
+        with urllib.request.urlopen(BASE + "/build.json", timeout=10) as r:
+            bj = json.loads(r.read().decode("utf-8")); bcache = r.headers.get("Cache-Control", "")
+        page_build = pg.evaluate("() => document.querySelector('script[data-build]').dataset.build")
+        check("/build.json names the build the server is serving, never cached",
+              bool(bj.get("build")) and bcache == "no-store", f"{bj} {bcache!r}")
+        check("...and a page carries the build it was rendered from, the same one",
+              page_build == bj.get("build"), f"page {page_build!r} server {bj.get('build')!r}")
+        row = pg.evaluate("() => { const r = document.getElementById('reloadAppItem'); return r ? !r.hidden : null; }")
+        check("in the Home Screen app, the ⋯ menu has a Reload row", row is True, repr(row))
+        pg.evaluate("() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });"
+                    " document.dispatchEvent(new Event('visibilitychange')); }")
+        pg.wait_for_timeout(800)
+        check("...and coming back to it with the same build offers nothing",
+              pg.evaluate("() => !document.getElementById('skriblUpdate')"))
+        before = pg.evaluate(NONCE)
+        pg.click("#menuBtn"); pg.wait_for_timeout(500)
+        with pg.expect_navigation(timeout=10000):
+            pg.click("#reloadAppItem")
+        pg.wait_for_function(BOOTED, timeout=10000)
+        check("...and Reload loads the page fresh", pg.evaluate(NONCE) not in (before, None))
+
+        # A newer build, as the page sees it: the server's answer is changed in
+        # the page (the worker answers before page.route could), so this pins
+        # the comparison and the offer, not the fingerprint.
+        pg.evaluate("""() => { const real = window.fetch;
+            window.fetch = (u, o) => String(u).endsWith('/build.json')
+              ? Promise.resolve(new Response(JSON.stringify({ build: 'newer' }), { headers: { 'Content-Type': 'application/json' } }))
+              : real(u, o);
+            document.dispatchEvent(new Event('visibilitychange')); }""")
+        pg.wait_for_selector("#skriblUpdate.in", timeout=5000)
+        pill = pg.evaluate("""() => { const n = document.getElementById('skriblUpdate');
+            return { text: n.textContent, role: n.getAttribute('role'), btn: n.querySelector('button') && n.querySelector('button').textContent }; }""")
+        check("a newer build on the server: the Pad offers it, \"A new version of Skribl is ready · Reload\"",
+              "new version" in pill["text"] and pill["btn"] == "Reload" and pill["role"] == "status", str(pill))
+        before = pg.evaluate(NONCE)
+        pg.wait_for_timeout(1500)
+        check("...and never reloads by itself", pg.evaluate(NONCE) == before, "the page changed under the offer")
+        with pg.expect_navigation(timeout=10000):
+            pg.click("#skriblUpdate button")
+        pg.wait_for_function(BOOTED, timeout=10000)
+        check("...and its Reload loads the page fresh", pg.evaluate(NONCE) not in (before, None))
+
+        tab = b.new_context(viewport={"width": 390, "height": 844})
+        tp = tab.new_page(); tp.goto(BASE + "/skribl-pad", wait_until="load"); tp.wait_for_timeout(800)
+        check("an ordinary tab has no Reload row (its browser has one)",
+              tp.evaluate("() => document.getElementById('reloadAppItem').hidden") is True)
+        tab.close()
+
+        lib = b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
+        lib.add_init_script("Object.defineProperty(navigator, 'standalone', { get: () => true });")
+        lp = lib.new_page(); lp.goto(BASE + "/library", wait_until="load"); lp.wait_for_timeout(1200)
+        cdp = lib.new_cdp_session(lp)
+        def pull(dy):
+            pts = lambda y: [{"x": 195, "y": y}]
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": pts(150)})
+            for i in range(1, 11):
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": pts(150 + dy * i / 10)})
+            h = lp.evaluate("() => document.getElementById('pullRefresh').getBoundingClientRect().height")
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+            return h
+        before = lp.evaluate(NONCE)
+        h = pull(80); lp.wait_for_timeout(600)
+        check("the Library: a short pull shows the indicator and lets go without refreshing",
+              h > 20 and lp.evaluate(NONCE) == before
+              and lp.evaluate("() => document.getElementById('pullRefresh').getBoundingClientRect().height") < 2, f"{h}px")
+        with lp.expect_navigation(timeout=10000):
+            h = pull(260)
+        check("...a pull past the line refreshes the page", lp.evaluate(NONCE) not in (before, None), f"{h}px")
+        lib.close()
         b.close()
 finally:
     down()

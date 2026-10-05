@@ -16,9 +16,11 @@
    lives on the profile page since v304. #}
 <link rel="stylesheet" href="{{ skribl_asset('posted.css') }}">
   {% include 'skribl/_skribl_app_identity.html' %}
-{# Opening with no signal, from the Home Screen app only (lib/offline.js). #}
+{# The Home Screen app only (lib/offline.js): opening with no signal, and
+   offering a reload when the server has a newer build than this page. #}
 <script src="{{ skribl_asset('lib/offline.js') }}" data-sw="{{ url_for('.skribl_sw') }}"
-        data-scope="{{ url_for('.skribl_sw')[:-5] }}" defer></script>
+        data-scope="{{ url_for('.skribl_sw')[:-5] }}"
+        data-build="{{ skribl_build }}" data-build-url="{{ url_for('.skribl_build') }}" defer></script>
   {% include 'skribl/_skribl_theme_boot.html' %}
 </head>
 <body>
@@ -156,7 +158,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span class="menu-item-text"><span class="new-label">New Skribl</span><span class="menu-item-sub">Start fresh &mdash; Undo brings this one back</span></span>
       </button>
-      {% if not compose %}{{ hs.row() }}{% endif %}
+      {% if not compose %}{{ hs.row() }}{{ hs.reload_row() }}{% endif %}
       <div class="menu-divider"></div>
       {# Name this skribl — opens the title drawer that drops from the header.
          Naming lives here, not on a persistent tab over the canvas: the tab

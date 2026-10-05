@@ -427,6 +427,14 @@ def register_routes(bp, *, index_route=False):
         resp.headers["Cache-Control"] = "no-cache"
         return resp
 
+    @bp.get("/build.json")
+    def skribl_build():
+        """The build the server is serving now (skribl.build_id), for the Home
+        Screen app's "new version" check. Never cached: it is the question."""
+        resp = jsonify({"build": bp.skribl_build_id()})
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
+
     @bp.get("/s/<public_id>")
     def skribl_player(public_id):
         """The public player a shared link opens."""

@@ -20,6 +20,16 @@
 </button>
 {%- endmacro %}
 
+{# The installed app's counterpart to the row above, in the same slot: there is
+   no browser bar to pull or tap reload on, so the menu offers it. Shown only
+   from the Home Screen (lib/offline.js unhides it); the two never show together. #}
+{% macro reload_row() -%}
+<button type="button" class="menu-item" id="reloadAppItem" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+  <span class="menu-item-text">Reload<span class="menu-item-sub">Get the newest version</span></span>
+</button>
+{%- endmacro %}
+
 {% macro share_glyph() -%}
 <svg class="hs-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
 {%- endmacro %}

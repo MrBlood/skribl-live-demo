@@ -113,6 +113,48 @@ def asset_url(bp, filename):
     return url_for(bp.name + ".static", filename=filename, v=cached[1])
 
 
+_BUILD_CACHE = {}
+
+
+def build_id(bp):
+    """A fingerprint of everything a page is built from: the blueprint's static
+    files and templates, by CONTENT.
+
+    The Home Screen app is kept alive in the background by iOS, so coming back
+    to it shows the page it already had -- a new build reaches it only when the
+    app is killed and reopened, which nobody knows to do (WORKING-AGREEMENTS:
+    "it doesn't show on my phone" is a stale page until proven otherwise). The
+    page carries this id; lib/offline.js asks /build.json for the server's when
+    the app comes back to the front, and offers a reload when they differ.
+
+    Content, not process start or SKRIBL_VERSION: a free host restarts the
+    process after idling, which must not look like a new build, and the
+    version moves only at a seal while merges land between seals. Walking the
+    two folders' stats is cheap; files are re-read only when a stat changes."""
+    stats = []
+    for root in (bp.static_folder, os.path.join(bp.root_path, bp.template_folder)):
+        for dirpath, _dirs, files in os.walk(root):
+            for name in files:
+                path = os.path.join(dirpath, name)
+                try:
+                    st = os.stat(path)
+                except OSError:
+                    continue
+                stats.append((path, st.st_mtime_ns, st.st_size))
+    stats.sort()
+    key = tuple(stats)
+    cached = _BUILD_CACHE.get(bp.name)
+    if cached is None or cached[0] != key:
+        h = hashlib.sha256()
+        for path, _m, _s in stats:
+            h.update(os.path.relpath(path, bp.root_path).encode())
+            with open(path, "rb") as fh:
+                h.update(hashlib.sha256(fh.read()).digest())
+        _BUILD_CACHE[bp.name] = (key, h.hexdigest()[:12])
+        cached = _BUILD_CACHE[bp.name]
+    return cached[1]
+
+
 def create_blueprint(session=None, url_prefix=None,
                      static_url_path="/static/skribl", current_user_id=None,
                      csrf=None, media_store=None, index_route=False,
@@ -298,6 +340,7 @@ def create_blueprint(session=None, url_prefix=None,
     # The same helper, reachable from a ROUTE (the manifest's icon URLs): routes
     # cannot import this module, which imports them.
     bp.skribl_asset_url = lambda filename: asset_url(bp, filename)
+    bp.skribl_build_id = lambda: build_id(bp)
 
     @bp.context_processor
     def _expose_asset_helper():
@@ -307,6 +350,8 @@ def create_blueprint(session=None, url_prefix=None,
         # an 80/300 column — outside review, low severity).
         from .core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS, THEME_GROUND
         return {"skribl_asset": lambda filename: asset_url(bp, filename),
+                # The page's build, for lib/offline.js's "new version" check.
+                "skribl_build": build_id(bp),
                 "skribl_limits": {"title": MAX_TITLE_CHARS,
                                   "caption": MAX_CAPTION_CHARS},
                 # The two grounds _skribl_app_identity.html stamps on its

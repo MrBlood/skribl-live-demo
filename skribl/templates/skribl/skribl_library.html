@@ -8,9 +8,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Your Skribl Library</title>
   {% include 'skribl/_skribl_app_identity.html' %}
-{# Opening with no signal, from the Home Screen app only (lib/offline.js). #}
+{# The Home Screen app only (lib/offline.js): opening with no signal, and
+   offering a reload when the server has a newer build than this page. #}
 <script src="{{ skribl_asset('lib/offline.js') }}" data-sw="{{ url_for('.skribl_sw') }}"
-        data-scope="{{ url_for('.skribl_sw')[:-5] }}" defer></script>
+        data-scope="{{ url_for('.skribl_sw')[:-5] }}"
+        data-build="{{ skribl_build }}" data-build-url="{{ url_for('.skribl_build') }}" defer></script>
   {# The app's theme, stamped before first paint -- the same partial the
      editors and the gallery carry. Until v313 this page did not include it and
      stayed dark whatever the person had chosen (SK312-001). #}
@@ -349,6 +351,25 @@
        reach the brand mark's own `path.st`, is pinned in verify_library. */
     /* `.pstats` was here and is gone with the div it styled: see #pVis above. */
   
+    /* Pull to refresh (lib/offline.js, Home Screen app only): grown by the
+       finger, so no transition while it is held; it settles when let go. The
+       arrow turns over once letting go would refresh. html.has-pull stops the
+       page's own rubber band from moving the list as well. */
+    html.has-pull { overscroll-behavior-y: none; }
+    .pull-refresh { height: 0; overflow: hidden; display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end; gap: 4px; padding-bottom: 6px;
+      color: var(--text-2); font: 600 12.5px var(--font-ui); transition: height 0.2s ease; }
+    .pull-refresh.is-pulling { transition: none; }
+    .pull-refresh svg { width: 22px; height: 22px; color: var(--accent); flex: none;
+      transition: transform 0.2s ease; }
+    .pull-refresh.is-ready svg { transform: rotate(180deg); }
+    .pull-ring { display: none; width: 20px; height: 20px; border-radius: 50%; flex: none;
+      border: 2.5px solid var(--accent); border-right-color: transparent;
+      animation: pull-turn 0.8s linear infinite; }
+    .pull-refresh.is-busy svg { display: none; }
+    .pull-refresh.is-busy .pull-ring { display: block; }
+    @keyframes pull-turn { to { transform: rotate(360deg); } }
+
     /* The rows on this page: a list with a poster, not a tray in a drawer. */
     .posted-panel { display: flex; flex-direction: column; }
     .posted-list { padding: 0; overflow: visible; }
@@ -506,6 +527,13 @@
       data-skribl-me="{{ library_user_id if library_user_id is not none else '' }}"
       data-skribl-pad="{{ url_for('.skribl_editor') }}">
 <div class="wrap">
+  {# PULL TO REFRESH, in the Home Screen app only (lib/offline.js wires it and
+     grows it; a browser tab has its own and never sees this). #}
+  <div class="pull-refresh" id="pullRefresh" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>
+    <span class="pull-ring"></span>
+    <span class="pull-refresh-label">Pull to refresh</span>
+  </div>
   <div class="top">
     {# The same lockup as the gallery's, markup and rules (pagemenu.css). #}
     <div class="brand" role="img" aria-label="Your Skribl Library">

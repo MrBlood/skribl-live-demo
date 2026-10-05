@@ -729,7 +729,7 @@ rather than a shared rule.
 | `modalfocus.js` | Pad+Flip+library+gallery | Focus for surfaces that declare aria-modal="true". |
 | `mp4export.js` | Pad+Flip | MP4 export through WebCodecs + the vendored mp4-muxer: one encoder pipeline for both editors (SK312-003, v315). |
 | `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
-| `offline.js` | Pad+Flip+library | Opening with no signal: registers Skribl's service worker (the /sw.js route, skribl/templates/skribl/sw.js), which keeps the last copy of each editor page and the files it loaded, and answers from them only when the network fails. |
+| `offline.js` | Pad+Flip+library | The Home Screen app: opening with no signal, and staying current. |
 | `pagemenu.js` | library+gallery | The page menu: the ••• on the gallery and the library, and what it opens. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
 | `painttarget.js` | Pad+Flip | The draw drawer's paint-target seg (Pen or Background): wired once for both editors (SK312-003, v315). |
