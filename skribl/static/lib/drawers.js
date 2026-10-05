@@ -38,6 +38,30 @@
   }
 
   var machines = [];                    // every editor's drawer set, for anyOpen()
+
+  /* CLOSING THE LAST DRAWER SCROLLS HOME; IT DOES NOT JUMP (motion survey: the
+   * whole screen moved 250px in one frame on both editors). The page was
+   * scrolled to show the drawer, and hiding it shortens the page at once, so
+   * the browser clamped the scroll to the top before the editor's smooth scroll
+   * home could start. So the page keeps its height for as long as that scroll
+   * takes -- the drawer's space is empty while the page glides down past it --
+   * and gives it back when the top is reached, or after 800ms whatever happens.
+   * Reduced motion keeps the jump, which is what its scroll home does anyway. */
+  var heldBy = null;
+  function holdHeight() {
+    var root = document.documentElement;
+    if (!(window.scrollY > 0) || heldBy) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    root.style.minHeight = root.scrollHeight + 'px';
+    var release = function () {
+      clearTimeout(heldBy); heldBy = null;
+      window.removeEventListener('scroll', check);
+      root.style.minHeight = '';
+    };
+    var check = function () { if (window.scrollY <= 0) release(); };
+    window.addEventListener('scroll', check, { passive: true });
+    heldBy = setTimeout(release, 800);
+  }
   function skriblDrawers(cfg) {
     homeOnSettle();
     var panels = {};
@@ -77,6 +101,7 @@
         return;
       }
       currentName = name;               // set BEFORE hooks: a hook asking
+      if (name == null && prev != null) holdHeight();
       if (prev != null) _set(prev, false);   // current() must see the new state
       if (name != null) _set(name, true);
       if (cfg.reveal) cfg.reveal(name != null ? panels[name].panel : null, name);

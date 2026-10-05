@@ -650,6 +650,11 @@
     background: rgba(0, 0, 0, 0.4);
     -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
   .flip-menu-scrim[hidden] { display: none; }
+  /* It FADES IN as Pad's .menu-overlay::before does (0.25s), rather than
+     appearing at full dim in one frame (the motion survey, owner: "no
+     snaps"). It already faded out, through sheetswipe's slideOut. */
+  .flip-menu-scrim:not([hidden]) { animation: flip-scrim-in 0.25s ease both; }
+  @keyframes flip-scrim-in { from { opacity: 0; } }
   /* A row that is busy (saving) dims and takes no taps; styles.css's .busy
      only positions, so this half stays Flip's. */
   .flip-menu .menu-item.busy { opacity: .55; pointer-events: none; }

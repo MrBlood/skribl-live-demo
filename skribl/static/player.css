@@ -2136,3 +2136,63 @@ a.player-btn { text-decoration: none; }
   button:is(.on, .active, [aria-selected="true"]):focus-visible { outline-width: 2px; outline-offset: 1px; }
   .seg-slider, .photo-fit-slider, .tool-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }
+@starting-style {
+  .shape-pop:not([hidden]), .tool-tray:not([hidden]) { opacity: 0; translate: 0 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shape-pop, .tool-tray { transition: opacity 0.12s ease, display 0.12s allow-discrete; }
+  .shape-pop[hidden], .tool-tray[hidden] { translate: none; }
+  @starting-style { .shape-pop:not([hidden]), .tool-tray:not([hidden]) { translate: none; } }
+}
+
+/* WHAT THE HEADER GAINS FADES IN (motion survey). The first stroke unhides the
+   recording readout, and a finished take unhides Play, its duration and Post;
+   each appeared in a single frame. An element that goes from display:none to
+   shown starts its animation afresh, so each one fades in whenever it is
+   unhidden, with no script involved. `backwards`, not `both`: once the fade is
+   done the element's own opacity rules (the stroking recede) apply untouched.
+   What the header LOSES still goes at once -- fading it out would hold its
+   space while the newcomer arrives, and a phone's header has no room for both. */
+@keyframes hdr-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .header :is(#recIndicator, #playWrap, #flipPlayWrap, #durationBadge, #recordBtn, #postBtn) { animation-duration: 0.12s; }
+}
+
+/* THE FIRST STROKE ON A PHONE IS A FADE-THROUGH, NOT A CUT. There the header
+   trades the mark and its controls for the take's readout (body.recording,
+   above) and its solid card steps away (body.stroking); all of it happened in
+   one frame. Now the mark and controls fade out over 0.15s, still in place
+   (display waits for the fade, allow-discrete), the row re-centres while
+   nothing is visible, and the readout fades in after them. The card's fill
+   and shadow fade too -- on a phone the header has no backdrop-filter (v317),
+   so nothing WebKit can leave stale is being animated. Desktop keeps its
+   instant change: its header IS glass. */
+@media (max-width: 640px) {
+  .header { transition: background-color 0.25s ease, box-shadow 0.25s ease; }
+  body.recording .header > .brand,
+  body.recording .header > .actions {
+    opacity: 0;
+    transition: opacity 0.15s ease, display 0.15s allow-discrete;
+  }
+  .header > #recIndicator { animation-delay: 0.15s; }
+  /* ...and when the take is done they fade back in, from where @starting-style
+     puts them, on the header's own 0.25s opacity transition. */
+  @starting-style { .header > .brand, .header > .actions { opacity: 0; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .play-scrub, .media-card { transition: none; }
+}
+
+/* A DRAWER'S CONTENTS FADE IN WHEN IT OPENS OR CHANGES (motion survey: going
+   from the Pen drawer to Media swapped the whole panel in one frame). Whenever
+   a panel -- or the Media card around it -- goes from display:none to shown,
+   its children start this animation afresh. The CONTENTS fade, never the panel
+   or the card: both are frosted, and a backdrop-filter element is not what is
+   animated (the header's v315 rule). The card's own fill appears at once, on
+   purpose: it takes the place of the drawer it replaces, same glass, so what
+   reads is the contents changing, not a panel blinking out. :where() keeps the selector at zero specificity,
+   so any child with an animation of its own keeps it. */
+@keyframes panel-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  :where(.tab-panel) > *, :where(.media-card) > .media-tabs { animation-duration: 0.12s; }
+}

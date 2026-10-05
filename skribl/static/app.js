@@ -1689,7 +1689,8 @@ function hideScrub() {
   if (!playScrub) return;
   playScrub.classList.remove('show');
   playScrub.hidden = true;
-  setScrubProgress(0);
+  // No reset to 0 here: the bar fades out as it stands (styles.css), and
+  // showScrub() zeroes it before it is seen again.
 }
 
 function editorReplayFrame() {

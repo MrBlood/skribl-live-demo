@@ -4167,7 +4167,12 @@ const _flipDrawerCtl = skriblDrawers({
     // Everything closed: back to the top, as the Pad has always done. Flip
     // returned here without scrolling, so a page scrolled to show a drawer
     // stayed scrolled after it closed -- the header off the top of a phone.
-    if(!open){ window.scrollTo({ top: 0, behavior: 'auto' }); return; }
+    // Smooth, as the Pad's is: 'auto' jumped the whole screen in one frame
+    // (motion survey). Reduced motion keeps the jump, as the Pad does.
+    if(!open){
+      const rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: rm ? 'auto' : 'smooth' }); return;
+    }
     // The tray is anchored above the toolbar, not docked below it in flow, so
     // scrolling it into view would drag the canvas off screen to reveal a panel
     // that was already fully visible.

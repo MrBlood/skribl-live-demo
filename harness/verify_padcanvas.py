@@ -182,8 +182,8 @@ with sync_playwright() as p:
                aligned: Math.abs(pr.left - br.left) < 3,
                width: pr.width, btnWidth: br.width };
     }""")
-    # Wait for the pill to SETTLE before measuring its position. It has a 0.42s
-    # spring transition, so a single sample can land mid-flight and report a
+    # Wait for the pill to SETTLE before measuring its position. It has a 0.26s
+    # transition, so a single sample can land mid-flight and report a
     # misalignment that resolves a moment later — this flaked under batch load
     # while passing alone.
     pg.wait_for_function("""() => {

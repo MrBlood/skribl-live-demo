@@ -1525,7 +1525,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   left: 4px;
   height: calc(100% - 8px);
   border-radius: var(--dock-pill-r);
-  transition: transform 0.42s var(--spring), width 0.42s var(--spring), opacity 0.18s ease;
+  /* 0.26s with no overshoot (owner: calmer motion); was 0.42s on --spring. */
+  transition: transform 0.26s var(--ease), width 0.26s var(--ease), opacity 0.18s ease;
   z-index: 0;
   pointer-events: none;
 }
@@ -1986,7 +1987,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   position: absolute;
   top: var(--seg-inset); left: var(--seg-inset); bottom: var(--seg-inset);
   border-radius: var(--seg-pill-r);
-  transition: transform 0.42s var(--spring), width 0.42s var(--spring), opacity 0.18s ease;
+  /* 0.26s with no overshoot (owner: calmer motion); was 0.42s on --spring. */
+  transition: transform 0.26s var(--ease), width 0.26s var(--ease), opacity 0.18s ease;
   z-index: 0;
   pointer-events: none;
 }
@@ -7695,4 +7697,93 @@ body.replaying .media-card {
   #toolBar #toolGroup ~ #undoBtn, .flip-tools #toolGroup ~ #undo { margin-left: calc(var(--step) - 49px); flex-shrink: 0; }
   #toolBar #toolGroup ~ #redoBtn, .flip-tools #toolGroup ~ #redo,
   #toolBar #toolGroup ~ #mediaOpenBtn, .flip-tools #toolGroup ~ #mediaOpenBtn { margin-left: calc(var(--step) - 44px); margin-right: 0; flex-shrink: 0; }
+}
+
+/* THE DOCK'S POPOVERS EASE IN AND OUT (motion survey; owner: "no snaps, smooth
+   transitions"). The shape picker and the tool tray appeared and vanished in a
+   single frame. They still hide by [hidden], set at once by lib/drawers.js, so
+   every script and suite that reads .hidden sees the truth immediately; the
+   browser keeps painting the element for 0.18s while it fades (display with
+   allow-discrete), and @starting-style gives it somewhere to fade in from.
+   A hidden one takes no taps while it fades. Browsers without allow-discrete
+   show and hide it at once, as before. `translate`, not `transform`: the
+   shape picker's transform centres it on desktop. */
+.shape-pop, .tool-tray {
+  transition: opacity 0.18s ease, translate 0.18s var(--ease, ease),
+              display 0.18s allow-discrete;
+}
+.shape-pop[hidden], .tool-tray[hidden] { opacity: 0; translate: 0 6px; pointer-events: none; }
+@starting-style {
+  .shape-pop:not([hidden]), .tool-tray:not([hidden]) { opacity: 0; translate: 0 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shape-pop, .tool-tray { transition: opacity 0.12s ease, display 0.12s allow-discrete; }
+  .shape-pop[hidden], .tool-tray[hidden] { translate: none; }
+  @starting-style { .shape-pop:not([hidden]), .tool-tray:not([hidden]) { translate: none; } }
+}
+
+/* WHAT THE HEADER GAINS FADES IN (motion survey). The first stroke unhides the
+   recording readout, and a finished take unhides Play, its duration and Post;
+   each appeared in a single frame. An element that goes from display:none to
+   shown starts its animation afresh, so each one fades in whenever it is
+   unhidden, with no script involved. `backwards`, not `both`: once the fade is
+   done the element's own opacity rules (the stroking recede) apply untouched.
+   What the header LOSES still goes at once -- fading it out would hold its
+   space while the newcomer arrives, and a phone's header has no room for both. */
+@keyframes hdr-in { from { opacity: 0; } }
+.header :is(#recIndicator, #playWrap, #flipPlayWrap, #durationBadge, #recordBtn, #postBtn) {
+  animation: hdr-in 0.22s ease backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .header :is(#recIndicator, #playWrap, #flipPlayWrap, #durationBadge, #recordBtn, #postBtn) { animation-duration: 0.12s; }
+}
+
+/* THE FIRST STROKE ON A PHONE IS A FADE-THROUGH, NOT A CUT. There the header
+   trades the mark and its controls for the take's readout (body.recording,
+   above) and its solid card steps away (body.stroking); all of it happened in
+   one frame. Now the mark and controls fade out over 0.15s, still in place
+   (display waits for the fade, allow-discrete), the row re-centres while
+   nothing is visible, and the readout fades in after them. The card's fill
+   and shadow fade too -- on a phone the header has no backdrop-filter (v317),
+   so nothing WebKit can leave stale is being animated. Desktop keeps its
+   instant change: its header IS glass. */
+@media (max-width: 640px) {
+  .header { transition: background-color 0.25s ease, box-shadow 0.25s ease; }
+  body.recording .header > .brand,
+  body.recording .header > .actions {
+    opacity: 0;
+    transition: opacity 0.15s ease, display 0.15s allow-discrete;
+  }
+  .header > #recIndicator { animation-delay: 0.15s; }
+  /* ...and when the take is done they fade back in, from where @starting-style
+     puts them, on the header's own 0.25s opacity transition. */
+  @starting-style { .header > .brand, .header > .actions { opacity: 0; } }
+}
+
+/* THE END OF A REPLAY RETURNS CALMLY (motion survey). The dock already faded
+   back in; two things did not. The scrub bar left in one frame -- it hides by
+   [hidden], so display now waits out its own 0.25s fade (allow-discrete), and
+   app.js no longer empties it on the way out. And the Media card's fill and
+   shadow, dropped for the replay, came back at once; they fade now. Its blur
+   still switches instantly: a backdrop-filter is never what is animated here
+   (the header's v315 rule), and over the plain page it is not visible. */
+.play-scrub { transition: opacity 0.25s var(--ease), display 0.25s allow-discrete; }
+.media-card { transition: background-color 0.3s ease, box-shadow 0.3s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .play-scrub, .media-card { transition: none; }
+}
+
+/* A DRAWER'S CONTENTS FADE IN WHEN IT OPENS OR CHANGES (motion survey: going
+   from the Pen drawer to Media swapped the whole panel in one frame). Whenever
+   a panel -- or the Media card around it -- goes from display:none to shown,
+   its children start this animation afresh. The CONTENTS fade, never the panel
+   or the card: both are frosted, and a backdrop-filter element is not what is
+   animated (the header's v315 rule). The card's own fill appears at once, on
+   purpose: it takes the place of the drawer it replaces, same glass, so what
+   reads is the contents changing, not a panel blinking out. :where() keeps the selector at zero specificity,
+   so any child with an animation of its own keeps it. */
+@keyframes panel-in { from { opacity: 0; } }
+:where(.tab-panel) > *, :where(.media-card) > .media-tabs { animation: panel-in 0.2s ease backwards; }
+@media (prefers-reduced-motion: reduce) {
+  :where(.tab-panel) > *, :where(.media-card) > .media-tabs { animation-duration: 0.12s; }
 }
