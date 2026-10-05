@@ -711,10 +711,17 @@ if _Img:
                 px = im.load()
                 heights = []
                 for x in range(w):
-                    col = [y for y in range(h) if px[x, y] > 70]
+                    # Lit pixels only: the track and the thumb's ring are
+                    # near-white. The drawer is the colour block (~64 grey)
+                    # with a washed slider band (~86) and its rim (~106); a
+                    # cut at 70 counted the band as thumb.
+                    col = [y for y in range(h) if px[x, y] > 150]
                     heights.append((max(col) - min(col) + 1) if col else 0)
                 nz = sorted(v for v in heights if v > 0)
-                thumb = max(heights) if heights else 0
+                # The value is at max, so the thumb is at the right end. The
+                # Pad's strip also catches a neighbour's edge on its left
+                # (31px read for a 24px thumb), which let a 16px thumb pass.
+                thumb = max(heights[-48:]) if heights else 0
                 track = nz[len(nz) // 2] if nz else 0
                 check(f"{_name}: the thumb is large enough to see and aim at",
                       thumb >= 20,

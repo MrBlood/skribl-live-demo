@@ -7846,7 +7846,9 @@ body.replaying #mediaCard { opacity: 0; pointer-events: none; }
 }
 :is(#drawPanel, #mediaCard, #tunePanel) .brush-slider-line { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.12); }
 /* Values read as the thing you are setting: bigger, bolder, steady width. */
-:is(#drawPanel, #mediaCard, #tunePanel) .prop-val { font-size: 16px; font-weight: 750; font-variant-numeric: tabular-nums; }
+/* Values, not hints: Flip's .prop-val.grid-hint is a sentence, and at 16px it
+   wrapped and pushed the drawer's grip off a 664px phone. */
+:is(#drawPanel, #mediaCard, #tunePanel) .prop-val:not(.grid-hint) { font-size: 16px; font-weight: 750; font-variant-numeric: tabular-nums; }
 /* Every swatch keeps a thin light edge on the block: Skribl purple and ink
    blue sit close to the block's own colour and would otherwise sink into it. */
 #drawPanel .color-dot { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.45); }
