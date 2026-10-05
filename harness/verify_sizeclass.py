@@ -672,9 +672,13 @@ if _Img:
     with sync_playwright() as _ap:
         _ab = _ap.chromium.launch()
         try:
+            # Both Panels: Calm's glass and Colour's violet block are two
+            # grounds for the one slider (?panels= wins for the document).
             for _path, _name, _ctl, _sid in (("/flip", "Flip", "_flipDrawerCtl", "size"),
-                                             ("/", "Pad", "_padDrawerCtl", "brushSizeRange")):
-                # A pixel pin (> 70 = ink on a dark ground): since v292 a bare
+                                             ("/", "Pad", "_padDrawerCtl", "brushSizeRange"),
+                                             ("/flip?panels=colour", "Flip (Colour)", "_flipDrawerCtl", "size"),
+                                             ("/?panels=colour", "Pad (Colour)", "_padDrawerCtl", "brushSizeRange")):
+                # A pixel pin (ink on a dark ground): since v292 a bare
                 # page follows the OS, and headless Chromium says light, on
                 # which the whole strip is bright. Ask for the theme it measures.
                 ap = _ab.new_page(viewport={"width": 430, "height": 950}, color_scheme="dark")
@@ -702,7 +706,7 @@ if _Img:
                       bb is not None and bb["height"] > 0, str(bb))
                 if not bb:
                     ap.close(); continue
-                shot = f"/tmp/skribl-slider-{_name.lower()}.png"
+                shot = f"/tmp/skribl-slider-{_name.lower().replace(' ', '-').strip('()').replace('(', '').replace(')', '')}.png"
                 ap.screenshot(path=shot, clip={"x": bb["x"], "y": bb["y"] - 6,
                                                "width": bb["width"],
                                                "height": bb["height"] + 12})
@@ -711,11 +715,15 @@ if _Img:
                 px = im.load()
                 heights = []
                 for x in range(w):
-                    # Lit pixels only: the track and the thumb's ring are
-                    # near-white. The drawer is the colour block (~64 grey)
-                    # with a washed slider band (~86) and its rim (~106); a
-                    # cut at 70 counted the band as thumb.
-                    col = [y for y in range(h) if px[x, y] > 150]
+                    # What stands out from its own column: the track and the
+                    # thumb's ring, brighter than the column's median by more
+                    # than 50. Relative, because one strip is measured on two
+                    # grounds: Calm's dark glass (band 27, track 120, rim 39)
+                    # and Colour's violet block (band 86, track 255, rim 106).
+                    # A fixed cut at 70 read Colour's band as a 44px thumb; a
+                    # fixed 150 read nothing at all on Calm.
+                    ref = sorted(px[x, y] for y in range(h))[h // 2]
+                    col = [y for y in range(h) if px[x, y] - ref > 50]
                     heights.append((max(col) - min(col) + 1) if col else 0)
                 nz = sorted(v for v in heights if v > 0)
                 # The value is at max, so the thumb is at the right end. The

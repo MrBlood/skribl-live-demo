@@ -71,6 +71,13 @@ check = make_check(results)
 css = CSS.read_text(encoding="utf-8")
 
 
+# Every script file, matched by PATH. Script URLs carry a cache-buster
+# (lib/theme.js?v=3675407e), so the glob "**/*.js" matched none of them and
+# "every script blocked" blocked nothing: the no-flash checks passed with the
+# inline boot's theme and panels lines deleted.
+SCRIPT_FILE = re.compile(r"\.js(\?|$)")
+
+
 def token_block(pattern):
     m = re.search(pattern + r"\s*\{(.*?)\n\}", css, re.S | re.M)
     if not m:
@@ -289,7 +296,7 @@ with sync_playwright() as p:
         # frame in which to paint the wrong ground.
         naked = browser.new_page(viewport={"width": 1000, "height": 900},
                                  storage_state=page.context.storage_state())
-        naked.route("**/*.js", lambda route: route.abort())
+        naked.route(SCRIPT_FILE, lambda route: route.abort())
         naked.goto(BASE + path, wait_until="domcontentloaded")
         check(f"{label}: light is applied with EVERY script file blocked",
               naked.evaluate("() => document.documentElement.getAttribute('data-theme')") == "light",
@@ -522,6 +529,59 @@ with sync_playwright() as p:
           page.evaluate("() => document.documentElement.getAttribute('data-theme')") is None
           and page.evaluate(f"() => localStorage.getItem('{KEY}')") == "dark")
 
+    print("\nPANELS — Calm | Colour: one more setting, beside Theme and not a theme")
+    # Owner: "calm default ... you are not changing dark/light themes right,
+    # just adding color?" Colour is data-panels="colour" on <html>; it is
+    # read before first paint like the theme, shared by every page, and
+    # leaves data-theme alone.
+    PK = "skribl_panels_v1"
+    _menus = (("/skribl-pad", "#menuBtn", "#panelsSeg", "button.on"), ("/flip", "#moreBtn", "#panelsSeg", "button.on"),
+              ("/library", "#pageMenuBtn", "#pageMenu", "[data-panels][aria-pressed=true]"),
+              ("/gallery", "#pageMenuBtn", "#pageMenu", "[data-panels][aria-pressed=true]"))
+    page = browser.new_page(viewport={"width": 1000, "height": 900}, color_scheme="dark")
+    browsing.goto(page, BASE, "/")
+    page.evaluate("() => { for (const k of Object.keys(localStorage)) if (k.indexOf('skribl') === 0) localStorage.removeItem(k); }")
+    for _path, _btn, _host, _on in _menus:
+        browsing.goto(page, BASE, _path)
+        page.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+        page.click(_btn); page.wait_for_timeout(500)
+        _st = page.evaluate("""([h, on]) => { const host = document.querySelector(h);
+            const rows = host ? host.querySelectorAll('[data-panels]') : [];
+            const sel = host ? host.querySelector(on) : null;
+            return { rows: [...rows].map(b => b.dataset.panels), shown: sel ? sel.dataset.panels : null,
+                     attr: document.documentElement.getAttribute('data-panels') }; }""", [_host, _on])
+        check(f"{_path}: the menu offers Panels, Calm | Colour, showing Calm by default",
+              _st["rows"] == ["calm", "colour"] and _st["shown"] == "calm" and _st["attr"] is None, str(_st))
+        page.keyboard.press("Escape"); page.wait_for_timeout(300)
+    browsing.goto(page, BASE, "/")
+    page.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
+    page.click("#menuBtn"); page.wait_for_timeout(500)
+    page.click("#panelsSeg [data-panels=colour]"); page.wait_for_timeout(300)
+    check("choosing Colour on the Pad stamps data-panels=colour and stores it, and leaves the theme alone",
+          page.evaluate("() => document.documentElement.getAttribute('data-panels')") == "colour"
+          and page.evaluate(f"() => localStorage.getItem('{PK}')") == "colour"
+          and page.evaluate("() => document.documentElement.getAttribute('data-theme')") is None)
+    for _path in ("/flip", "/library", "/gallery"):
+        browsing.goto(page, BASE, _path)
+        check(f"...and {_path} opens in Colour", page.evaluate("() => document.documentElement.getAttribute('data-panels')") == "colour")
+    page.evaluate("() => window.SkriblTheme.setPanels('calm')")
+    check("choosing Calm takes the attribute off",
+          page.evaluate("() => document.documentElement.getAttribute('data-panels')") is None
+          and page.evaluate(f"() => localStorage.getItem('{PK}')") == "calm")
+    page.close()
+    # Before first paint: every script blocked, so only the inline boot can stamp it.
+    for _stored, _url, _want in (("colour", "/", "colour"), (None, "/?panels=colour", "colour"),
+                                 ("colour", "/?panels=calm", None), ("bogus", "/", None)):
+        naked = browser.new_page(viewport={"width": 1000, "height": 900})
+        naked.goto(BASE + "/", wait_until="load")
+        naked.evaluate(f"(v) => {{ if (v) localStorage.setItem('{PK}', v); else localStorage.removeItem('{PK}'); }}", _stored)
+        naked.route(SCRIPT_FILE, lambda route: route.abort())
+        naked.goto(BASE + _url, wait_until="load")
+        _a = naked.evaluate("() => document.documentElement.getAttribute('data-panels')")
+        check(f"with every script blocked, stored {_stored or 'nothing'} at {_url} -> {_want or 'Calm'} (the inline boot, no flash)",
+              _a == _want, f"data-panels={_a!r}")
+        naked.close()
+
     print("\nTHEME — the player follows the URL when it is embedded, and only then")
     # v288, the owner's call: an EMBEDDED player follows its host, and the URL
     # beats everything else; v292: bare, it follows the OS like every page. An in-post box reads the host's tokens (verify_
@@ -602,7 +662,7 @@ with sync_playwright() as p:
     # No flash: light lands with every script file blocked, so it was the
     # inline boot and not something deferred.
     naked3 = browser.new_page(viewport={"width": 1000, "height": 900})
-    naked3.route("**/*.js", lambda route: route.abort())
+    naked3.route(SCRIPT_FILE, lambda route: route.abort())
     naked3.goto(BASE + _player + "?theme=light", wait_until="domcontentloaded")
     check("player ?theme=light is applied with EVERY script file blocked",
           _attr(naked3) == "light", "the embed would flash dark before going light")

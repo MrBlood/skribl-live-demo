@@ -1427,7 +1427,7 @@ with sync_playwright() as p:
     # the open drawer were two glass slabs, 8px apart and of different widths
     # (520 against 694 at a desktop width), each with its own rim and shadow.
     # They are ONE card now: #mediaCard wraps the strip and both panels and
-    # paints the fill (the colour block now, glass before it); the panel inside goes clear, and the strip sits inset in
+    # wears the glass (or, with Panels set to Colour, is the block); the panel inside goes clear, and the strip sits inset in
     # the card as a track. Fresh, empty drawers, so a tall loaded panel cannot
     # scroll the strip off the top of a phone (lib/drawerdetent.js reveals the
     # panel's END); and every point is on screen before it is asked about.
@@ -1446,36 +1446,45 @@ with sync_playwright() as p:
                  span: Math.abs(r.left - c.left) <= 0.5 && Math.abs(r.right - c.right) <= 0.5 && Math.abs(r.bottom - c.bottom) <= 0.5,
                  seam: [inCard(cx, t.bottom + (r.top - t.bottom) / 2), inCard(cx, r.top + 1)],
                  gap: Math.round(r.top - t.bottom),
-                 fill: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' || cs.backgroundImage !== 'none',
+                 glass: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backdropFilter !== 'none',
+                 block: cs.backgroundImage.includes('gradient'),
                  clear: ps.backgroundColor === 'rgba(0, 0, 0, 0)' && ps.boxShadow === 'none' && ps.backdropFilter === 'none'
                         && ts.backdropFilter === 'none' };
     }"""
-    for _route in ("/skribl-pad", "/flip"):
+    # Twice: Calm, where the card wears the glass, and Panels set to Colour,
+    # where it is the violet block (opaque, no backdrop). Clear inside either way.
+    for _route, _colour in (("/skribl-pad", False), ("/flip", False), ("/skribl-pad", True), ("/flip", True)):
         for _vw, _vp in (("390", {"width": 390, "height": 844}), ("1280", {"width": 1280, "height": 900})):
             _q = b.new_page(viewport=_vp)
-            _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+            _lbl = _route + (" (Colour)" if _colour else "")
+            _url = BASE + _route + ("?panels=colour" if _colour else "")
+            _q.goto(_url, wait_until="load"); _q.wait_for_timeout(700)
             _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
-            _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
+            _q.goto(_url, wait_until="load"); _q.wait_for_timeout(700)
             _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
             for _k in ("photo", "music"):
                 browsing.pad_drawer(_q, _k)
                 _cur = _q.evaluate(browsing._PAD_CUR)
                 _c = _q.evaluate(CARD, _k)
-                check(f"{_route} at {_vw}, {_k}: the tabs and the open drawer share one parent card",
+                check(f"{_lbl} at {_vw}, {_k}: the tabs and the open drawer share one parent card",
                       _cur == _k and _c["card"] and _c["parents"], f"open={_cur!r} {_c}")
                 if not _c["card"]:
                     continue
-                check(f"{_route} at {_vw}, {_k}: the strip sits inset in the card and lines up with the drawer's content",
+                check(f"{_lbl} at {_vw}, {_k}: the strip sits inset in the card and lines up with the drawer's content",
                       all(abs(v - 16) <= 0.5 for v in _c["inset"]) and _c["content"] and _c["span"], str(_c))
-                check(f"{_route} at {_vw}, {_k}: the seam between tabs and drawer is painted by the card, not the page",
+                check(f"{_lbl} at {_vw}, {_k}: the seam between tabs and drawer is painted by the card, not the page",
                       _c["seam"] == [True, True], str(_c))
-                check(f"{_route} at {_vw}, {_k}: the card paints the fill and the drawer inside it is clear",
-                      _c["fill"] and _c["clear"], str(_c))
+                if _colour:
+                    check(f"{_lbl} at {_vw}, {_k}: the card is the block and the drawer inside it is clear",
+                          _c["block"] and _c["clear"], str(_c))
+                else:
+                    check(f"{_lbl} at {_vw}, {_k}: the card wears the glass and the drawer inside it is clear",
+                          _c["glass"] and not _c["block"] and _c["clear"], str(_c))
             if _route == "/flip":
                 _dlg = _q.evaluate("""() => { const p = document.getElementById('photoPanel');
                     return { role: p.getAttribute('role'), label: p.getAttribute('aria-label'),
                              tabsInDialog: !!document.getElementById('mediaTabs').closest('[role=dialog]') }; }""")
-                check(f"/flip at {_vw}: the drawers are still named dialogs, and the tablist is outside them",
+                check(f"{_lbl} at {_vw}: the drawers are still named dialogs, and the tablist is outside them",
                       _dlg == {"role": "dialog", "label": "Background image", "tabsInDialog": False}, str(_dlg))
             _q.click("#mediaOpenBtn"); _q.wait_for_timeout(400)
             _gone = _q.evaluate("() => { const c = document.getElementById('mediaCard'); return { open: (" + browsing._PAD_CUR + ")(), display: c ? getComputedStyle(c).display : null }; }")

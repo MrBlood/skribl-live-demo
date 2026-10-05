@@ -172,8 +172,11 @@
     /* COLOUR BLOCK (styles.css), with Panels set to Colour: the page's one
        block is its hero. The same violet in both themes, white on it; the
        list and player stay calm. Under Calm the hero is as it was. */
+    /* The block's palette, by the names styles.css gives it (this page does
+       not load that sheet). */
+    :root { --block-from: #4b2fd0; --block-to: #2c1a86; --block-base: #3c25ac; }
     :root[data-panels="colour"] .profile { --text: #ffffff; --text-2: rgba(255,255,255,.8); --text-3: rgba(255,255,255,.72); --accent-tint: #e6deff;
-      color: #fff; background: linear-gradient(160deg, #4b2fd0 0%, #2c1a86 100%) #3c25ac; border-color: transparent;
+      color: #fff; background: linear-gradient(160deg, var(--block-from) 0%, var(--block-to) 100%) var(--block-base); border-color: transparent;
       box-shadow: 0 16px 40px rgba(40,10,140,.32), 0 2px 8px rgba(20,0,80,.2); }
     .who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .who .name { margin: 0; display: inline-flex; align-items: center; gap: 7px; font-weight: 700; font-size: 20px; letter-spacing: -.01em; }

@@ -20,10 +20,11 @@ a value moves over time, never about whether something is visible.
 
 Calibrated red, per component, against: the header's fade-through removed (the
 mark and the readout each), the scrub bar's allow-discrete removed, the Media
-card's opacity transition removed, the drawer contents' fade removed, the page
+card's fill transition removed, the drawer contents' fade removed, the page
 height hold removed (Pad and Flip each), Flip's scroll home put back to
 'auto', the popovers' transition removed, the
-Flip menu dim's animation removed, and the pill put back on its spring.
+Flip menu dim's animation removed, and the pill put back on its spring; and,
+with Panels set to Colour, the block card's opacity transition removed.
 """
 import re, sys, math
 from assertions import make_check
@@ -128,7 +129,7 @@ with sync_playwright() as p:
 
     print("\nTHE END OF A REPLAY — the scrub bar and the card return calmly")
     pg.wait_for_timeout(600)
-    rows = record(pg, [[".play-scrub", "opacity"], ["#mediaCard", "opacity"], [None, "replaying"]],
+    rows = record(pg, [[".play-scrub", "opacity"], [".media-card", "fillAlpha"], [None, "replaying"]],
                   4500, lambda: pg.click("#playBtn"))
     ends = [i for i in range(1, len(rows)) if rows[i - 1][2] and not rows[i][2]]
     after = rows[ends[0]:] if ends else []
@@ -136,12 +137,10 @@ with sync_playwright() as p:
     scrub = [r[0] for r in after if r[0] is not None]
     check("the scrub bar fades out as it stands",
           between(scrub, 1, 0) >= 2, f"{between(scrub, 1, 0)} frames between")
-    # The card is the colour block: opaque, no backdrop-filter, so it recedes
-    # by its own opacity (the glass card dropped its fill instead).
-    card = [r[1] for r in after if r[1] is not None]
-    check("the Media card comes back over several frames",
-          bool(card) and card[0] < 0.5 and card[-1] > 0.95 and between(card, 0, 1) >= 2,
-          f"first {card[:1]}, last {card[-1:]}, {between(card, 0, 1)} frames between")
+    fill = [r[1] for r in after]
+    top = max(fill) if fill else 0
+    check("the Media card's fill comes back over several frames",
+          top > 0.3 and between(fill, 0, top, 0.02) >= 2, f"{between(fill, 0, top, 0.02)} frames between")
 
     print("\nPOPOVERS — the shape picker")
     pg.click("#mediaOpenBtn"); pg.wait_for_timeout(700)
@@ -188,6 +187,28 @@ with sync_playwright() as p:
     sc = [r[0] for r in rows if r[1] != "none"]
     check("the menu's dim comes up over several frames", bool(sc) and between(sc, 0, 1) >= 2,
           f"{between(sc, 0, 1) if sc else 0} frames between")
+    ctx.close()
+
+    print("\nCOLOUR PANELS — the block card fades by its own opacity at the end of a replay")
+    # Under Colour the Media card is the opaque violet block. Dropping a fill
+    # (the glass card's way, above) is outranked there, and there is no
+    # backdrop-filter to keep it from fading by opacity, so that is its way.
+    ctx, pg = phone(b)
+    open_editor(pg, "/skribl-pad?panels=colour")
+    stroke(pg); stroke(pg, 60); pg.wait_for_timeout(500)
+    pg.click("#recordBtn"); pg.wait_for_timeout(500)
+    pg.click("#mediaOpenBtn"); pg.wait_for_timeout(1000)
+    check("Colour: the page is in Colour and the card is the block",
+          pg.evaluate("() => document.documentElement.dataset.panels === 'colour' && "
+                      "getComputedStyle(document.getElementById('mediaCard')).backgroundImage.includes('gradient')"))
+    rows = record(pg, [["#mediaCard", "opacity"], [None, "replaying"]], 4500, lambda: pg.click("#playBtn"))
+    ends = [i for i in range(1, len(rows)) if rows[i - 1][1] and not rows[i][1]]
+    after = rows[ends[0]:] if ends else []
+    check("Colour: the replay ran and ended inside the window", bool(ends), f"{len(rows)} frames")
+    card = [r[0] for r in after if r[0] is not None]
+    check("Colour: the Media card comes back over several frames",
+          bool(card) and card[0] < 0.5 and card[-1] > 0.95 and between(card, 0, 1) >= 2,
+          f"first {card[:1]}, last {card[-1:]}, {between(card, 0, 1)} frames between")
     ctx.close()
 
     print("\nTHE PILL — calm, with no overshoot")

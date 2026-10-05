@@ -13946,7 +13946,19 @@ tonal violet were mocked and "everything looks the same": they moved hue and
 strength inside one structure. Three directions that change the visual
 language were mocked instead -- a violet colour block, paper and ink, aurora
 glass -- and the owner chose the block, saw it across the whole app, and said
-"build it, menu stays neutral".
+"build it, menu stays neutral". Then, before it shipped: "maybe we could do it
+as a third theme?" -- and, choosing between a fourth Theme option and a
+separate switch, "build it, calm default, violet, dock pill with colour".
+
+* IT IS A CHOICE, NOT THE LOOK: Panels, Calm | Colour, under Theme in every
+  ⋯ menu (Pad, Flip, and the Library and gallery page menu). Not a third
+  theme: it sits on System, Dark or Light alike and changes nothing else.
+  Calm is the default and is the app as it was -- a pixel comparison against
+  main on both editors (closed, Pen, Tune, Media) and the Library, both
+  themes, differs only by the two swatch fixes and the tile corner below.
+  Colour is data-panels="colour" on <html>, stamped by the inline theme boot
+  before first paint and kept by lib/theme.js under its own key, with a
+  ?panels= URL override like ?theme=. Every rule below is keyed on it.
 
 * ANYTHING YOU OPEN TO WORK WITH IS A BLOCK OF SKRIBL VIOLET: the Pen drawer,
   the Media card, Tune, the shape picker, the tool tray, the stamp picker, the
@@ -13959,6 +13971,12 @@ glass -- and the owner chose the block, saw it across the whole app, and said
   slider and button keeps its own rules: white pills with violet ink, white
   washes for tracks and buttons, white text, bolder values, a light edge on
   every swatch so the purples do not sink into it. Opaque, no backdrop-filter.
+* Media / Magnify tiles had come out SQUARE since #337 (owner's screenshot):
+  --dock-pill-r is set on #toolGroup and they sit outside it. A fallback.
+* verify_theme's "every script blocked" checks blocked nothing: script URLs
+  carry ?v=, and the glob "**/*.js" matched none of them, so the no-flash
+  checks passed with the boot's stamps deleted. Matched by path now; the
+  Theme and Panels stamps were each removed and seen red.
 * Two swatch defects found on the way: a transparent 2.5px border put each
   swatch's rim inside its edge (a donut), and in light mode black wore a pale
   ring that read as the selected mark.

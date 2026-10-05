@@ -74,6 +74,9 @@ check = make_check(results)
 _ONLY = set(filter(None, os.environ.get("ONEPILL_SECTIONS", "").split(",")))
 THEMES = tuple(filter(None, os.environ.get("ONEPILL_THEMES", "dark,light").split(",")))
 FORMS = tuple(filter(None, os.environ.get("ONEPILL_FORMS", "desk,phone").split(",")))
+# Panels: Calm (the default) and Colour, where the panels you open are the
+# violet block and every pill in one re-themes by its tokens.
+PANELS = tuple(filter(None, os.environ.get("ONEPILL_PANELS", "calm,colour").split(",")))
 
 
 def want(section):
@@ -224,12 +227,13 @@ def audit(page, route, theme, form, state):
 with sync_playwright() as p:
     browser = p.chromium.launch()
 
-    def ctx_for(theme, form, forced=False):
+    def ctx_for(theme, form, forced=False, panels="calm"):
         vp, dsf = ({"width": 1400, "height": 900}, 1) if form == "desk" else ({"width": 390, "height": 844}, 1)
         c = browser.new_context(viewport=vp, device_scale_factor=dsf, color_scheme=theme,
                                 has_touch=form == "phone", is_mobile=form == "phone",
                                 forced_colors="active" if forced else "none")
         c.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{theme}')}}catch(e){{}}")
+        c.add_init_script(f"try{{localStorage.setItem('skribl_panels_v1','{panels}')}}catch(e){{}}")
         return c
 
     def settle(q, ms=700):
@@ -245,7 +249,7 @@ with sync_playwright() as p:
     def menu_rows(q):
         # A phone's menu is a sheet taller than the screen: each row is
         # measured where a thumb would scroll it to.
-        for sid in ("themeSeg", "hintSeg", "canvasSeg"):
+        for sid in ("themeSeg", "panelsSeg", "hintSeg", "canvasSeg"):
             q.evaluate("(i) => document.getElementById(i).scrollIntoView({block: 'center'})", sid)
             settle(q, 450)
             yield "menu"
@@ -340,10 +344,12 @@ with sync_playwright() as p:
     # ---------------------------------------------------------------- 1-3
     if want("census"):
         print("\nONE PILL — one placed pill, the one shape, contrast painted (both themes, desk and phone)")
-        for theme in THEMES:
+        for panels in PANELS:
+          for theme in THEMES:
             for form in FORMS:
                 for route in ("/skribl-pad", "/flip", "/gallery", "/library"):
-                    c = ctx_for(theme, form)
+                    c = ctx_for(theme, form, panels=panels)
+                    look = theme if panels == "calm" else f"{theme} colour"
                     q = c.new_page()
                     if route in ("/skribl-pad", "/flip"):
                         browsing.goto(q, BASE, route)
@@ -355,17 +361,17 @@ with sync_playwright() as p:
                     settle(q)
                     try:
                         for st in states:
-                            audit(q, route, theme, form, st)
+                            audit(q, route, look, form, st)
                     except Exception as e:
-                        check(f"ONE PILL: {route} [{theme} {form}] could be driven through every state", False, repr(e)[:300])
+                        check(f"ONE PILL: {route} [{look} {form}] could be driven through every state", False, repr(e)[:300])
                     c.close()
         must = {("/skribl-pad", k) for k in ("toolGroup", "paintTargetSeg", "smoothSeg", "brushSeg", "pressureSeg",
                                               "eraserSeg", "shapeSeg", "gridDensitySeg", "mirrorSeg", "pauseSeg",
-                                              "speedSeg", "photoFitGroup", "themeSeg", "hintSeg", "canvasSeg",
+                                              "speedSeg", "photoFitGroup", "themeSeg", "panelsSeg", "hintSeg", "canvasSeg",
                                               "mediaTabs")}
         must |= {("/flip", k) for k in ("toolGroup", "paintTargetSeg", "smoothSeg", "brushSeg", "pressureSeg",
                                          "eraserSeg", "shapeSeg", "fps", "gridDensitySeg", "mirrorSeg",
-                                         "smearWeightSeg", "onionDepthSeg", "photoFitGroup", "themeSeg", "hintSeg",
+                                         "smearWeightSeg", "onionDepthSeg", "photoFitGroup", "themeSeg", "panelsSeg", "hintSeg",
                                          "canvasSeg", "mbScope", "exportSizeSeg", "exportLoopsSeg", "mediaTabs")}
         missing = sorted(m for m in must if m not in seen)
         check("ONE PILL: the census reached every control it names (a control not measured is not passing)",
@@ -385,8 +391,9 @@ with sync_playwright() as p:
     # ---------------------------------------------------------------- tray tile
     if want("tray"):
         print("\nTRAY — Flip's selected tool tile is the tint, not a slab")
-        for theme in THEMES:
-            c = ctx_for(theme, "desk"); q = c.new_page()
+        for theme, panels in [(t, pn) for pn in PANELS for t in THEMES]:
+            look = theme if panels == "calm" else f"{theme} colour"
+            c = ctx_for(theme, "desk", panels=panels); q = c.new_page()
             browsing.goto(q, BASE, "/flip"); settle(q)
             q.click("#toolMoreBtn"); q.wait_for_selector("#toolTray:not([hidden])", timeout=3000); settle(q)
             t = q.evaluate("""() => { const b = document.querySelector('#toolTray .tool-tray-btn.active');
@@ -394,19 +401,20 @@ with sync_playwright() as p:
               if (!b) return null; b.parentNode.appendChild(d); const tk = getComputedStyle(d); const v = { bg: tk.backgroundColor, ink: tk.color }; d.remove(); const cs = getComputedStyle(b); const r = b.getBoundingClientRect();
               return { bg: cs.backgroundColor, ink: cs.color, r: cs.borderTopLeftRadius, tok: v,
                        box: { x: r.left, y: r.top, width: r.width, height: r.height } }; }""")
-            check(f"TRAY [{theme}]: the selected tile wears the tint, the selected ink and a 9px corner",
+            check(f"TRAY [{look}]: the selected tile wears the tint, the selected ink and a 9px corner",
                   t and t["bg"] == t["tok"]["bg"] and t["ink"] == t["tok"]["ink"] and t["r"] == "9px", str(t))
             if t:
                 bg = painted_bg(q, t["box"]); fg = parse(t["ink"])
                 r = ratio(fg[:3], bg) if bg else 0
-                check(f"TRAY [{theme}]: the selected tile's label clears 4.5:1 on what is painted", r >= 4.5, f"{r:.2f} on {bg}")
+                check(f"TRAY [{look}]: the selected tile's label clears 4.5:1 on what is painted", r >= 4.5, f"{r:.2f} on {bg}")
             c.close()
 
     # ---------------------------------------------------------------- 4
     if want("fallback"):
         print("\nFALLBACK — with no pill placed, the selected option paints the tint itself")
-        for route in ("/skribl-pad", "/flip", "/gallery", "/library"):
-            c = ctx_for("dark", "desk"); q = c.new_page()
+        for route, panels in [(r, pn) for pn in PANELS for r in ("/skribl-pad", "/flip", "/gallery", "/library")]:
+            rt = route if panels == "calm" else f"{route} (Colour)"
+            c = ctx_for("dark", "desk", panels=panels); q = c.new_page()
             if route in ("/skribl-pad", "/flip"):
                 browsing.goto(q, BASE, route)
                 q.click("#tuneBtn"); q.wait_for_selector("#tuneShell.open", timeout=3000)
@@ -437,14 +445,14 @@ with sync_playwright() as p:
                 q.click("#tuneBtn"); settle(q, 400)
                 browsing.pad_drawer(q, "photo"); settle(q)
                 fb += [f for f in q.evaluate(FB) if f["key"] == "mediaTabs"]
-                check(f"FALLBACK: {route} had Photo | Music's placed pill to take away",
+                check(f"FALLBACK: {rt} had Photo | Music's placed pill to take away",
                       any(f["key"] == "mediaTabs" for f in fb), str([f["key"] for f in fb]))
             for f in fb:
-                check(f"FALLBACK: {route} {f['key']} — unplaced, the selected option is the tint and the pill is not painted",
+                check(f"FALLBACK: {rt} {f['key']} — unplaced, the selected option is the tint and the pill is not painted",
                       f["after"] == f["tint"] and f["pillOpacity"] == "0", str(f))
-                check(f"FALLBACK: {route} {f['key']} — placed, the option itself is clear (no doubled tint)",
+                check(f"FALLBACK: {rt} {f['key']} — placed, the option itself is clear (no doubled tint)",
                       f["before"] in ("rgba(0, 0, 0, 0)", "transparent"), f["before"])
-            check(f"FALLBACK: {route} had placed pills to take away", len(fb) >= (1 if route == "/gallery" else 2), str(len(fb)))
+            check(f"FALLBACK: {rt} had placed pills to take away", len(fb) >= (1 if route == "/gallery" else 2), str(len(fb)))
             c.close()
 
     # ---------------------------------------------------------------- 5
@@ -888,33 +896,60 @@ with sync_playwright() as p:
 
     # ---------------------------------------------------------------- 11
     if want("block"):
-        print("\nCOLOUR BLOCK — what you open to work with is violet; the frame and the menus are not")
+        print("\nCOLOUR BLOCK — with Panels on Colour, what you open is violet; the frame and the menus are not")
         # Read as the mechanism: a block paints the gradient and sets white ink;
         # a calm surface paints no gradient. Contrast inside a block is the
         # census's CONTRAST check above, which reads what is painted.
         BLOCKY = """(sel) => { const e = document.querySelector(sel); if (!e) return null; const c = getComputedStyle(e);
-            return { grad: c.backgroundImage.includes('gradient'), ink: c.color, vis: !!e.getClientRects().length }; }"""
+            const p = document.createElement('i'); p.style.color = 'var(--block-from)'; document.body.appendChild(p);
+            const from = getComputedStyle(p).color; p.remove();
+            return { grad: c.backgroundImage.includes('gradient'), violet: c.backgroundImage.includes(from),
+                     ink: c.color, vis: !!e.getClientRects().length }; }"""
         WHITE = "rgb(255, 255, 255)"
+        DOCKPILL = """() => { const s = document.querySelector('#toolGroup .tool-slider');
+            const d = document.createElement('span'); d.style.cssText = 'color:var(--tool-solid)'; document.body.appendChild(d);
+            const solid = getComputedStyle(d).color; d.remove(); return { pill: getComputedStyle(s).backgroundColor, solid }; }"""
         for theme in ("dark", "light"):
+            # CALM, the default: nothing is a block, and the dock's pill is the
+            # tint it always was (owner: "dock pill with colour").
             for route in ("/skribl-pad", "/flip"):
                 c = ctx_for(theme, "phone"); q = c.new_page()
                 browsing.goto(q, BASE, route); settle(q)
+                dp = q.evaluate(DOCKPILL)
+                check(f"BLOCK [{theme}] {route}, Calm: the dock's selected tool is the tint, not the solid violet",
+                      dp["pill"] != dp["solid"], str(dp))
+                browsing.pad_drawer(q, "draw", settle=500)
+                d = q.evaluate(BLOCKY, "#drawPanel")
+                check(f"BLOCK [{theme}] {route}, Calm: the open Pen drawer is not a block",
+                      d and d["vis"] and not d["violet"] and d["ink"] != WHITE, str(d))
+                c.close()
+            c = ctx_for(theme, "phone"); q = c.new_page()
+            q.goto(BASE + "/library", wait_until="load"); settle(q)
+            h = q.evaluate(BLOCKY, ".profile")
+            check(f"BLOCK [{theme}] /library, Calm: the hero is not a block", h and not h["violet"] and h["ink"] != WHITE, str(h))
+            c.close()
+            for route in ("/skribl-pad", "/flip"):
+                c = ctx_for(theme, "phone", panels="colour"); q = c.new_page()
+                browsing.goto(q, BASE, route); settle(q)
+                dp = q.evaluate(DOCKPILL)
+                check(f"BLOCK [{theme}] {route}: the dock's selected tool is the solid violet",
+                      dp["pill"] == dp["solid"], str(dp))
                 browsing.pad_drawer(q, "draw", settle=500)
                 d = q.evaluate(BLOCKY, "#drawPanel")
                 check(f"BLOCK [{theme}] {route}: the open Pen drawer is the violet block, inked white",
-                      d and d["vis"] and d["grad"] and d["ink"] == WHITE, str(d))
+                      d and d["vis"] and d["violet"] and d["ink"] == WHITE, str(d))
                 browsing.pad_drawer_close(q)
                 q.click("#mediaOpenBtn"); settle(q, 500)
                 m = q.evaluate(BLOCKY, "#mediaCard")
                 check(f"BLOCK [{theme}] {route}: the open Media card is the block",
-                      m and m["vis"] and m["grad"] and m["ink"] == WHITE, str(m))
+                      m and m["vis"] and m["violet"] and m["ink"] == WHITE, str(m))
                 q.click("#mediaOpenBtn"); browsing.wait_scroll_still(q); settle(q, 300)
                 q.click("#menuBtn" if route == "/skribl-pad" else "#moreBtn"); settle(q, 600)
                 mn = q.evaluate(BLOCKY, "#menuSheet" if route == "/skribl-pad" else "#moreMenu")
                 check(f"BLOCK [{theme}] {route}: the ⋯ menu stays neutral (owner)",
-                      mn and mn["vis"] and not mn["grad"], str(mn))
+                      mn and mn["vis"] and not mn["violet"], str(mn))
                 hdr = q.evaluate(BLOCKY, ".header")
-                check(f"BLOCK [{theme}] {route}: the header stays in its theme", hdr and not hdr["grad"], str(hdr))
+                check(f"BLOCK [{theme}] {route}: the header stays in its theme", hdr and not hdr["violet"], str(hdr))
                 q.keyboard.press("Escape"); settle(q, 400)
                 # A switch ON in a block is filled, not a tint ring: the ring
                 # read as white-on-violet whether it was on or off.
@@ -930,11 +965,11 @@ with sync_playwright() as p:
                       sw[0]["on"] and not sw[1]["on"] and sw[0]["bg"] == WHITE and sw[1]["bg"] != WHITE
                       and sw[0]["ink"] != WHITE, str(sw))
                 c.close()
-            c = ctx_for(theme, "phone"); q = c.new_page()
+            c = ctx_for(theme, "phone", panels="colour"); q = c.new_page()
             q.goto(BASE + "/library", wait_until="load"); settle(q)
             h = q.evaluate(BLOCKY, ".profile")
             check(f"BLOCK [{theme}] /library: the hero is the block, inked white",
-                  h and h["grad"] and h["ink"] == WHITE, str(h))
+                  h and h["violet"] and h["ink"] == WHITE, str(h))
             c.close()
 
     browser.close()
