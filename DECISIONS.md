@@ -13848,3 +13848,14 @@ keeps it off the player's byte budget.
   Events. V320-003 (screen-reader isolation of nested Help layers) waits for a
   VoiceOver pass on the owner's iPhone, as the audit itself advises; V320-004
   goes to the polish mock page.
+
+**The icon's edge (owner, after two mock rounds on an iPhone 17 with iOS 26's
+glass icons).** Beside the glass icons the flat lilac read as a sticker. The
+glass treatments were tried and set aside: a website's Home Screen icon is one
+picture, so iOS cannot relight it as glass or recolour it for Dark, Clear and
+Tinted, and a sheen painted in would be wrong in every mode but one. The
+owner's pick, N4, keeps today's icon and deepens the lilac gradually toward the
+tile's edge (ICON_EDGE, ICON_EDGE_FROM, ICON_EDGE_CURVE in blooby.py); the
+corners are the edge colour exactly, and verify_identity reads both colours
+from blooby.py and checks the corners and the ground lightening inward. Blooby
+is redrawn at full resolution, so the gaps in his marker fill show crisply.

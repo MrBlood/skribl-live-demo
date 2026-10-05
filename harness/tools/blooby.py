@@ -460,8 +460,38 @@ def draw_card(out, base="http://127.0.0.1:5001"):
 # purple swallows him; lilac is the strongest purple that keeps his outline and
 # his body clear at 60 points. verify_identity reads this value from here.
 ICON_TILE = "#cdbfff"
+# THE EDGE (owner, N4 of the second icon round). The lilac deepens toward the
+# tile's edge, so the icon has some depth beside iOS 26's glass icons without
+# drawing a fake glass sheen into a picture iOS cannot relight. It starts near
+# the middle and builds gradually (ICON_EDGE_FROM, ICON_EDGE_CURVE), so there is
+# no band where it begins; the corners are ICON_EDGE exactly.
+ICON_EDGE = "#a994f8"
+ICON_EDGE_FROM = 0.12
+ICON_EDGE_CURVE = 2.2
 ICON_FILL = 0.78           # his height, as a share of the tile's
 ICON_SIZES = {"icon-512.png": 512, "icon-192.png": 192, "apple-touch-icon.png": 180}
+
+
+def _hex(c):
+    return tuple(int(c[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def icon_ground(side):
+    """The icon's tile: ICON_TILE in the middle, deepening to ICON_EDGE at the
+    edge. The distance is half rounded-square, half circle, so the darkening
+    follows the tile's shape without drawing its outline."""
+    from PIL import Image
+    mid, edge = _hex(ICON_TILE), _hex(ICON_EDGE)
+    img = Image.new("RGB", (side, side))
+    px = img.load()
+    h = side / 2
+    for y in range(side):
+        for x in range(side):
+            dx, dy = abs(x - h + 0.5) / h, abs(y - h + 0.5) / h
+            r = 0.5 * (dx ** 4 + dy ** 4) ** 0.25 + 0.5 * (dx * dx + dy * dy) ** 0.5 / 2 ** 0.25
+            u = min(1.0, max(0.0, (r - ICON_EDGE_FROM) / (1.08 - ICON_EDGE_FROM))) ** ICON_EDGE_CURVE
+            px[x, y] = tuple(round(mid[i] + (edge[i] - mid[i]) * u) for i in range(3))
+    return img
 
 
 def draw_icons(out, base="http://127.0.0.1:5001"):
@@ -491,7 +521,7 @@ def draw_icons(out, base="http://127.0.0.1:5001"):
     him = Image.open(__import__("io").BytesIO(base64.b64decode(url.split(",")[1]))).convert("RGBA")
     him = him.crop(him.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox())
     side = 1024
-    tile = Image.new("RGBA", (side, side), ICON_TILE)
+    tile = icon_ground(side).convert("RGBA")
     h = round(side * ICON_FILL)
     w = round(him.width * h / him.height)
     him = him.resize((w, h), Image.LANCZOS)
