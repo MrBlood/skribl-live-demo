@@ -28,8 +28,9 @@
  *
  * SPEED IS MEASURED IN PIXELS PER POINT, not per millisecond. Point spacing is
  * what the eye reads as "drawn fast", and it is available on every surface
- * without a clock — Pad captures on mouse/touch move and Flip on pointermove,
- * at whatever rate the device reports, so a millisecond-based taper would draw
+ * without a clock — both editors capture on Pointer Events (pointermove, with
+ * the coalesced points the browser already gathered), at whatever rate the
+ * device reports, so a millisecond-based taper would draw
  * differently on a 60Hz and a 120Hz screen for the same gesture.
  */
 (function () {

@@ -884,7 +884,12 @@ with sync_playwright() as sp:
         const st = p ? p.state() : null;
         const act = document.querySelector('#postedList .posted-row.active');
         const busy = document.querySelector('#postedList .posted-row[aria-busy="true"]');
-        return { title: document.getElementById('pTitle').textContent.trim(),
+        const ring = (row) => { const t = row && row.querySelector('.posted-thumb');
+            if (!t) return null; const a = getComputedStyle(t, '::after');
+            return a.content !== 'none' && parseFloat(a.opacity) > 0.9 && parseFloat(a.width) > 0; };
+        const rings = [...document.querySelectorAll('#postedList .posted-row')].filter(ring)
+            .map(r => r.getAttribute('data-id'));
+        return { rings: rings, busyActive: !!(busy && busy.classList.contains('active')), title: document.getElementById('pTitle').textContent.trim(),
                  stage: window.__onStage, playing: !!st && st.state === 'playing',
                  active: act && act.getAttribute('data-id'),
                  busy: busy && busy.getAttribute('data-id'),
@@ -924,13 +929,18 @@ with sync_playwright() as sp:
     check("...Copy link still copies A, the Skribl on screen",
           _u1.endswith("/" + _id_a), repr(_u1))
     check("...and B's row says it is busy", _a1["busy"] == _id_b, str(_a1))
+    # SAID TO THE EYE AS WELL (outside audit V320-001): aria-busy alone left a
+    # sighted person no sign the tap had registered. B's tile turns a ring;
+    # the playing outline stays on A, so B never looks chosen before it is.
+    check("...and shows it: a ring on B's tile only, and the playing outline still A's",
+          _a1["rings"] == [_id_b] and not _a1["busyActive"], str(_a1))
     _held.pop().abort()
     _ap.wait_for_timeout(700)
     _a2 = _ap.evaluate(_SEEN)
     _u2 = _share_url(_ap)
     check("when B fails, A is untouched: its title, its row, its drawing",
           _a2["title"] == _a0["title"] and _a2["active"] == _id_a
-          and _a2["stage"] == _id_a and _a2["busy"] is None, str(_a2))
+          and _a2["stage"] == _id_a and _a2["busy"] is None and not _a2["rings"], str(_a2))
     check("...Copy link still copies A", _u2.endswith("/" + _id_a), repr(_u2))
     check("...and the failure is said, visibly and to a screen reader",
           "couldn" in _a2["foot"].lower() and "couldn" in _a2["live"].lower(), str(_a2))
@@ -1107,6 +1117,7 @@ with sync_playwright() as sp:
                  rows: document.querySelectorAll('#postedList .posted-row').length,
                  live: st ? st.textContent : '', liveBox: st ? [st.offsetWidth, st.offsetHeight] : null,
                  more: more ? more.textContent : null,
+                 says: (document.querySelector('#stageError') || {}).textContent || '',
                  retry: !!document.getElementById('libRetry') && document.getElementById('libRetry').textContent.trim() }; }"""
     hf = ctx.new_page()
     hf.set_viewport_size({"width": 1280, "height": 1000})
@@ -1117,6 +1128,12 @@ with sync_playwright() as sp:
     _f0 = hf.evaluate(_LF)
     check("refused: the card says it could not load, painted, with Try again -- not the empty card",
           _f0["error"] and not _f0["empty"] and _f0["retry"] == "Try again", str(_f0))
+    # IT SAYS WHAT IT KNOWS (outside audit V320-002). The same catch takes a
+    # dropped connection, a 500 and a body that is not JSON; "the connection
+    # dropped" was a diagnosis the page could not make.
+    check("...and names no cause it cannot know: no connection, network, offline or server",
+          not any(w in _f0["says"].lower() for w in ("connection", "network", "offline", "server"))
+          and "still there" in _f0["says"], " ".join(_f0["says"].split()))
     check("...the count says nothing rather than 0, and no \"Post a Skribl\" line",
           _f0["count"] == "\u2014" and not _f0["how"], str(_f0))
     check("...and the live region says it -- to a screen reader, not as text on the page",

@@ -13836,3 +13836,15 @@ expected, and where on an iPhone it has to be registered anyway: the Home
 Screen copy keeps its own storage, apart from Safari's. lib/offline.js is
 loaded by the three pages it keeps, not by the identity partial, which also
 keeps it off the player's byte budget.
+**The v320 audit's quick wins** (92 overall; no functional defects found).
+* V320-001: a Library row asked for and not yet loaded shows a small turning
+  ring in place of its tile's glyph, after 150ms so a quick load shows nothing;
+  the playing outline stays on the Skribl that is playing. Held still with
+  reduced motion.
+* V320-002: the Library's error card no longer says "the connection dropped".
+  The same catch takes a 500 and a body that is not JSON; it now says only what
+  it knows: couldn't load, they're still there, Try again.
+* V320-005: the stale input sentence in lib/brushes.js describes Pointer
+  Events. V320-003 (screen-reader isolation of nested Help layers) waits for a
+  VoiceOver pass on the owner's iPhone, as the audit itself advises; V320-004
+  goes to the polish mock page.

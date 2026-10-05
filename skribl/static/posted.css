@@ -94,6 +94,26 @@
 .posted-thumb svg.posted-sound { position: absolute; right: -2px; top: -2px;
   width: 12px; height: 12px; padding: 1px; border-radius: 5px;
   background: var(--surface-panel); color: var(--accent, #7c5cff); }
+/* ASKED FOR, NOT YET HERE (outside audit V320-001). The Library keeps the
+   playing Skribl's row active until the one tapped has actually loaded
+   (library.js, markRows), which was right and silent: the tapped row said
+   aria-busy and nothing a sighted person could see. Its tile now swaps its
+   glyph for a small turning ring -- a mark on the row that is coming, never
+   the active outline, which stays on the row that is playing. It waits
+   150ms, so a load that is quick shows nothing at all, and with reduced
+   motion the ring holds still. */
+.posted-row[aria-busy="true"] .posted-thumb svg:not(.posted-sound) { visibility: hidden; }
+.posted-row[aria-busy="true"] .posted-thumb::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 14px; height: 14px; margin: -9px 0 0 -9px; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: posted-pending-in 0.2s ease 0.15s both, posted-pending-turn 0.8s linear infinite; }
+@keyframes posted-pending-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes posted-pending-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .posted-row[aria-busy="true"] .posted-thumb::after {
+    animation: posted-pending-in 0.2s ease 0.15s both; }
+}
 .posted-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column;
   gap: 2px; text-decoration: none; color: inherit; }
 .posted-title { font-size: 13px; color: var(--text-primary);
