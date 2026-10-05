@@ -13940,3 +13940,25 @@ lib/offline.js:
 * RELOAD IN THE ⋯ MENU, in the slot Add to Home Screen takes in a tab.
 * PULL TO REFRESH ON THE LIBRARY ONLY. The editors are drawing surfaces, where
   a downward stroke from the top must never reload the page.
+
+**Colour block (owner: "fun and premium", not drab).** Tints, neutral greys and
+tonal violet were mocked and "everything looks the same": they moved hue and
+strength inside one structure. Three directions that change the visual
+language were mocked instead -- a violet colour block, paper and ink, aurora
+glass -- and the owner chose the block, saw it across the whole app, and said
+"build it, menu stays neutral".
+
+* ANYTHING YOU OPEN TO WORK WITH IS A BLOCK OF SKRIBL VIOLET: the Pen drawer,
+  the Media card, Tune, the shape picker, the tool tray, the stamp picker, the
+  Post sheet, and the Library's hero. One gradient (#4b2fd0 to #2c1a86) in both
+  themes; it is the one surface that does not follow the theme.
+* THE FRAME STAYS CALM: canvas, header, dock, pages, and both ⋯ menus (owner:
+  navigation is not a tool). The selected tool is the one solid violet outside
+  a block -- what you are holding.
+* A block re-themes its contents by TOKENS set on itself, so every pill,
+  slider and button keeps its own rules: white pills with violet ink, white
+  washes for tracks and buttons, white text, bolder values, a light edge on
+  every swatch so the purples do not sink into it. Opaque, no backdrop-filter.
+* Two swatch defects found on the way: a transparent 2.5px border put each
+  swatch's rim inside its edge (a donut), and in light mode black wore a pale
+  ring that read as the selected mark.
