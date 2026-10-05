@@ -112,7 +112,7 @@ CENSUS = r"""() => {
       || (g.matches('.seg-track') && b.getAttribute('aria-pressed') === 'true'));
     const p = pills[0];
     const pr = p ? p.getBoundingClientRect() : null, sr = sel ? sel.getBoundingClientRect() : null;
-    const tok = probe(g.parentNode, 'background:var(--seg-on-fill);color:var(--seg-on-ink)');
+    const tok = probe(g, 'background:var(--seg-on-fill);color:var(--seg-on-ink)');
     const key = g.id || ((g.parentNode.closest('[id]') || {}).id || '?') + ' .' + g.className.trim().split(/\s+/).join('.');
     out.push({
       key, pills: pills.length, placed: g.hasAttribute('data-pill'),
@@ -279,6 +279,8 @@ with sync_playwright() as p:
             q.click("#gridBtn")
         if ed == "flip" and q.get_attribute("#onion", "aria-checked") != "true":
             q.click("#onion")
+        # Off every control: a hovered option's tooltip lies over the row above.
+        q.mouse.move(2, 2)
         settle(q)
         yield "tune"
         q.click("#tuneBtn"); settle(q, 500)
@@ -389,8 +391,7 @@ with sync_playwright() as p:
             q.click("#toolMoreBtn"); q.wait_for_selector("#toolTray:not([hidden])", timeout=3000); settle(q)
             t = q.evaluate("""() => { const b = document.querySelector('#toolTray .tool-tray-btn.active');
               const d = document.createElement('span'); d.style.cssText = 'background:var(--seg-on-fill);color:var(--seg-on-ink)';
-              document.body.appendChild(d); const tk = getComputedStyle(d); const v = { bg: tk.backgroundColor, ink: tk.color }; d.remove();
-              if (!b) return null; const cs = getComputedStyle(b); const r = b.getBoundingClientRect();
+              if (!b) return null; b.parentNode.appendChild(d); const tk = getComputedStyle(d); const v = { bg: tk.backgroundColor, ink: tk.color }; d.remove(); const cs = getComputedStyle(b); const r = b.getBoundingClientRect();
               return { bg: cs.backgroundColor, ink: cs.color, r: cs.borderTopLeftRadius, tok: v,
                        box: { x: r.left, y: r.top, width: r.width, height: r.height } }; }""")
             check(f"TRAY [{theme}]: the selected tile wears the tint, the selected ink and a 9px corner",
@@ -413,10 +414,11 @@ with sync_playwright() as p:
                 q.goto(BASE + route, wait_until="load")
             settle(q)
             FB = """() => { const out = [];
-              const d = document.createElement('span'); d.style.cssText = 'background:var(--seg-on-fill)';
-              document.body.appendChild(d); const tint = getComputedStyle(d).backgroundColor; d.remove();
               for (const g of document.querySelectorAll('[data-pill]')) {
                 const r = g.getBoundingClientRect(); if (!r.width) continue;
+                // The tint where the group sits: a colour block re-themes it.
+                const d = document.createElement('span'); d.style.cssText = 'position:absolute;background:var(--seg-on-fill)';
+                g.appendChild(d); const tint = getComputedStyle(d).backgroundColor; d.remove();
                 const sel = g.querySelector(':scope > button.on, :scope > button.active, :scope > .tool-btn.active, :scope > button[aria-selected="true"], :scope > button[aria-pressed="true"]');
                 if (!sel) continue;
                 const before = getComputedStyle(sel).backgroundColor;
@@ -792,7 +794,7 @@ with sync_playwright() as p:
                 q.mouse.move(bb["x"] + 40 + i * 4, bb["y"] + 60 + (i % 10) * 6); q.wait_for_timeout(30)
             q.mouse.up(); settle(q, 300)
         LOOK = """(sel) => { const e = document.querySelector(sel); if (!e) return null; const c = getComputedStyle(e);
-            return { shadow: c.boxShadow, bg: c.backgroundColor, anim: c.animationName,
+            return { shadow: c.boxShadow, bg: c.backgroundColor, anim: c.animationName, r: parseFloat(c.borderTopLeftRadius) || 0,
                      left: c.borderLeftColor, top: c.borderTopColor, border: c.borderTopColor }; }"""
         for theme in ("dark", "light"):
             c = ctx_for(theme, "phone"); q = c.new_page()
@@ -805,8 +807,8 @@ with sync_playwright() as p:
             q.click("#tuneBtn"); settle(q, 400)
             q.click("#mediaOpenBtn"); settle(q, 500)
             md = q.evaluate(LOOK, "#mediaOpenBtn")
-            check(f"TINTS [{theme}]: the open Media button wears the selected tool's tile (owner, B)",
-                  md and md["bg"] == tint and md["shadow"] == "none", f"{md}, tint {tint}")
+            check(f"TINTS [{theme}]: the open Media button wears the selected tool's tile (owner, B), rounded like it",
+                  md and md["bg"] == tint and md["shadow"] == "none" and md["r"] >= 10, f"{md}, tint {tint}")
             q.click("#mediaOpenBtn"); browsing.wait_scroll_still(q); settle(q, 300)
             long_draw(q, "#canvas"); q.click("#recordBtn"); settle(q, 600)
             q.click("#playBtn"); settle(q, 600)
@@ -824,8 +826,8 @@ with sync_playwright() as p:
             tint = q.evaluate(TINT)
             q.click("#magnifyBtn"); q.mouse.move(5, 5); settle(q, 500)
             mg = q.evaluate(LOOK, "#magnifyBtn")
-            check(f"TINTS [{theme}]: Magnify while on wears the selected tool's tile (owner, B)",
-                  mg and mg["bg"] == tint and mg["shadow"] == "none", f"{mg}, tint {tint}")
+            check(f"TINTS [{theme}]: Magnify while on wears the selected tool's tile (owner, B), rounded like it",
+                  mg and mg["bg"] == tint and mg["shadow"] == "none" and mg["r"] >= 10, f"{mg}, tint {tint}")
             q.click("#magnifyBtn"); settle(q, 400)
             long_draw(q, "#canvas"); q.click("#recordBtn"); settle(q, 600)
             q.click("#playBtn"); q.mouse.move(5, 5); settle(q, 600)   # off the pill: hover films it
@@ -913,6 +915,20 @@ with sync_playwright() as p:
                       mn and mn["vis"] and not mn["grad"], str(mn))
                 hdr = q.evaluate(BLOCKY, ".header")
                 check(f"BLOCK [{theme}] {route}: the header stays in its theme", hdr and not hdr["grad"], str(hdr))
+                q.keyboard.press("Escape"); settle(q, 400)
+                # A switch ON in a block is filled, not a tint ring: the ring
+                # read as white-on-violet whether it was on or off.
+                q.click("#tuneBtn"); settle(q, 500)
+                for sid, want_on in (("gridBtn", True), ("strokeLayersBtn", False)):
+                    if (q.get_attribute(f"#{sid}", "aria-checked") == "true") != want_on:
+                        q.click(f"#{sid}")
+                q.mouse.move(2, 2); settle(q, 400)
+                sw = q.evaluate("""() => ['gridBtn', 'strokeLayersBtn'].map(id => {
+                    const e = document.getElementById(id), c = getComputedStyle(e);
+                    return { on: e.getAttribute('aria-checked') === 'true', bg: c.backgroundColor, ink: c.color }; })""")
+                check(f"BLOCK [{theme}] {route}: in Tune, a switch that is on is filled white and one that is off is not",
+                      sw[0]["on"] and not sw[1]["on"] and sw[0]["bg"] == WHITE and sw[1]["bg"] != WHITE
+                      and sw[0]["ink"] != WHITE, str(sw))
                 c.close()
             c = ctx_for(theme, "phone"); q = c.new_page()
             q.goto(BASE + "/library", wait_until="load"); settle(q)

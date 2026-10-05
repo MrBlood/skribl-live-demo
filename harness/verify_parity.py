@@ -1427,7 +1427,7 @@ with sync_playwright() as p:
     # the open drawer were two glass slabs, 8px apart and of different widths
     # (520 against 694 at a desktop width), each with its own rim and shadow.
     # They are ONE card now: #mediaCard wraps the strip and both panels and
-    # wears the glass; the panel inside goes clear, and the strip sits inset in
+    # paints the fill (the colour block now, glass before it); the panel inside goes clear, and the strip sits inset in
     # the card as a track. Fresh, empty drawers, so a tall loaded panel cannot
     # scroll the strip off the top of a phone (lib/drawerdetent.js reveals the
     # panel's END); and every point is on screen before it is asked about.
@@ -1446,7 +1446,7 @@ with sync_playwright() as p:
                  span: Math.abs(r.left - c.left) <= 0.5 && Math.abs(r.right - c.right) <= 0.5 && Math.abs(r.bottom - c.bottom) <= 0.5,
                  seam: [inCard(cx, t.bottom + (r.top - t.bottom) / 2), inCard(cx, r.top + 1)],
                  gap: Math.round(r.top - t.bottom),
-                 glass: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backdropFilter !== 'none',
+                 fill: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' || cs.backgroundImage !== 'none',
                  clear: ps.backgroundColor === 'rgba(0, 0, 0, 0)' && ps.boxShadow === 'none' && ps.backdropFilter === 'none'
                         && ts.backdropFilter === 'none' };
     }"""
@@ -1469,8 +1469,8 @@ with sync_playwright() as p:
                       all(abs(v - 16) <= 0.5 for v in _c["inset"]) and _c["content"] and _c["span"], str(_c))
                 check(f"{_route} at {_vw}, {_k}: the seam between tabs and drawer is painted by the card, not the page",
                       _c["seam"] == [True, True], str(_c))
-                check(f"{_route} at {_vw}, {_k}: the card wears the glass and the drawer inside it is clear",
-                      _c["glass"] and _c["clear"], str(_c))
+                check(f"{_route} at {_vw}, {_k}: the card paints the fill and the drawer inside it is clear",
+                      _c["fill"] and _c["clear"], str(_c))
             if _route == "/flip":
                 _dlg = _q.evaluate("""() => { const p = document.getElementById('photoPanel');
                     return { role: p.getAttribute('role'), label: p.getAttribute('aria-label'),
@@ -2311,15 +2311,21 @@ with sync_playwright() as p:
     # guides AMBER where the Pad lights the same switches purple: flip.css
     # re-declared an amber `.onion-tint.active` after styles.css had already
     # narrowed amber to the two onion controls. Computed colour against the
-    # page's own resolved --ui-hi / --warn-2, so a retuned accent stays green.
+    # page's own resolved --ui-hi / --warn-2, so a retuned accent stays green
+    # (resolved where the switch sits, which a colour block re-themes).
     # Also Flip's page-bar Draw switch: `.pb:hover` outranked `.pb.on`, so a
     # desktop click showed no change until the pointer left.
     _SW = """(ids) => {
         const probe = (v) => { const i = document.createElement('i'); i.style.color = 'var(' + v + ')';
           document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; };
         const out = { hi: probe('--ui-hi'), amber: probe('--warn-2') };
+        // The accent where the switch SITS: a colour block re-themes it, so
+        // the page's own --ui-hi is the wrong reference inside one.
+        const here = (e) => { const i = document.createElement('i');
+          i.style.color = 'var(--switch-on-ink, var(--ui-hi))'; e.parentElement.appendChild(i);
+          const c = getComputedStyle(i).color; i.remove(); return c; };
         ids.forEach(id => { const e = document.getElementById(id);
-          out[id] = e ? { on: e.getAttribute('aria-checked') === 'true', color: getComputedStyle(e).color } : null; });
+          out[id] = e ? { on: e.getAttribute('aria-checked') === 'true', color: getComputedStyle(e).color, hi: here(e) } : null; });
         return out; }"""
     for _theme in ("dark", "light"):
         _sw = {}
@@ -2350,11 +2356,11 @@ with sync_playwright() as p:
             _q.close()
         pad, flip = _sw["/skribl-pad"], _sw["/flip"]
         check(f"Pad {_theme}: Grid, switched on, is the accent",
-              pad["gridBtn"]["on"] and pad["gridBtn"]["color"] == pad["hi"], str(pad))
+              pad["gridBtn"]["on"] and pad["gridBtn"]["color"] == pad["gridBtn"]["hi"], str(pad))
         for _id in ("gridBtn", "strokeLayersBtn", "arcGuideBtn"):
             check(f"Flip {_theme}: {_id}, switched on, is the accent like the Pad's, not amber",
-                  flip[_id]["on"] and flip[_id]["color"] == flip["hi"] != flip["amber"],
-                  f"{flip[_id]} (accent {flip['hi']}, amber {flip['amber']})")
+                  flip[_id]["on"] and flip[_id]["color"] == flip[_id]["hi"] != flip["amber"],
+                  f"{flip[_id]} (amber {flip['amber']})")
         check(f"Flip {_theme}: the onion switch keeps its amber, the colour the onion pages tint",
               flip["onion"]["on"] and flip["onion"]["color"] == flip["amber"], str(flip["onion"]))
 
