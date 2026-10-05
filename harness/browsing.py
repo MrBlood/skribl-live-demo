@@ -252,6 +252,21 @@ def pad_drawer(page, name, settle=350):
     page.wait_for_timeout(settle)
 
 
+def wait_scroll_still(page, limit_ms=2000):
+    """Wait until the page has stopped scrolling (three still frames, or limit_ms).
+
+    Closing the last drawer GLIDES the page home (lib/drawers.js holds its
+    height while the smooth scroll runs), so a rect read right after is read
+    mid-glide. On a loaded CI runner it was: verify_parity drew its stroke for
+    "the top of the canvas" a few pixels low and the eyedropper missed it."""
+    page.evaluate("""(limit) => new Promise(done => {
+        let last = window.scrollY, still = 0; const t0 = performance.now();
+        (function tick() {
+          still = window.scrollY === last ? still + 1 : 0; last = window.scrollY;
+          if (still >= 3 || performance.now() - t0 > limit) done(); else requestAnimationFrame(tick);
+        })(); })""", limit_ms)
+
+
 def pad_drawer_close(page, settle=300):
     """Close whichever drawer is open, through the control that opened it (Pad or Flip)."""
     cur = page.evaluate(_PAD_CUR)
@@ -262,3 +277,4 @@ def pad_drawer_close(page, settle=300):
     else:
         return
     page.wait_for_timeout(settle)
+    wait_scroll_still(page)

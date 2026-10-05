@@ -1395,14 +1395,15 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
 .tool-open svg { width: 24px; height: 24px; }  /* standardized tier-1 icon 21->24 */
 .tool-open:hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); }
 
-/* Magnify tool — lit (accent) when its zoom pill is showing. */
-.magnify-tool.active { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+/* Magnify tool — lit when its zoom pill is showing. */
+.magnify-tool.active { color: var(--seg-on-ink); background: var(--seg-on-fill); }
 .magnify-tool.active svg { filter: none; }
-/* Drawer-open toggles (color / image / music) light up with the same translucent
-   accent as the magnify + onion toggles — one consistent "lit" state across the
-   toolbar and across Pad + Flip (Flip's image/music already use these exact values
-   via .flip-tools .magnify-tool.open). */
-.tool-open.open { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+/* Drawer-open toggles light up the way a selected tool does: the tint and its
+   ink, no outline (owner, Rings and Tints: a ring is for focus and for things
+   a tint cannot show on). One "lit" state across the toolbar, the header and
+   Pad + Flip -- Tune and Flip's ⋯ wear the same two tokens. Media and the dock's
+   Magnify light only their glyph (below), by the owner's earlier call. */
+.tool-open.open { color: var(--seg-on-ink); background: var(--seg-on-fill); }
 /* The status dot is anchored to the ICON, not to the button, and that is the
    whole point of the calc(). `top: 6px; right: 6px` measured from the button's
    edges -- and the button is 44px wide on desktop but 34px on a phone while the
@@ -3454,7 +3455,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   margin-bottom: 6px;
   border-radius: 14px;
   background: color-mix(in srgb, var(--accent) 13%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  /* No ring around the tint (owner, Rings and Tints): the tint is the signal. */
 }
 .menu-item.menu-feature svg { color: var(--accent); }
 .menu-item.menu-feature:hover { background: color-mix(in srgb, var(--accent) 19%, transparent); }
@@ -4501,53 +4502,27 @@ input:focus-visible {
   box-shadow: none;
 }
 
-@keyframes playGlow {
-  0%   { box-shadow: 0 0 0 1px rgba(124,92,255,0.32); }
-  50%  { box-shadow: 0 0 0 3px rgba(124,92,255,0.55); }
-  100% { box-shadow: 0 0 0 1px rgba(124,92,255,0.32); }
-}
-
-.btn.play.playing {
-  /* Stays dark — a pulsing purple border signals playback (ring lives on the
-     whole pill on desktop via the rule below). */
-  animation: playGlow 1.8s ease-in-out infinite;
-}
-/* Desktop: the ring wraps the whole "Play · 0:05" pill (rounded), not an oval on
-   just the button. The pill keeps its dark fill so the border/divider stay visible. */
+/* PLAYING IS A STEADY TINT (owner, Rings and Tints). Play pulsed a purple
+   ring -- on a phone a breathing disc -- for the whole replay. The button
+   already turns into Stop, so the pulse said nothing new and moved the whole
+   time; what stays is the tint every "on" control wears. On a phone it is a
+   disc behind the bare glyph, which takes the accent; from 641px it is the
+   whole "Stop · 0:05" pill, not an oval around half of it. Pad and Flip get
+   the SAME treatment (Flip's in flip.css). */
+.btn.play.playing { background: var(--seg-on-fill); }
 @media (min-width: 641px) {
-  .play-wrap:has(.btn.play.playing) {
-    animation: playGlow 1.8s ease-in-out infinite;
-  }
-  .play-wrap:has(.btn.play.playing) > #playBtn.btn.play {
-    animation: none;                 /* the wrap pulses, not the button */
-  }
-}
-/* Phones: a breathing FILL, not a ring. Play is a bare glyph at this width, so
-   the pulsing ring drew a hollow outline around nothing — it read as a focus
-   ring left stuck on the button (owner's iPhone, v315), and on Flip the wrap's
-   overflow:hidden clipped the box-shadow so there was no signal at all. A
-   tinted disc says "this is on" the way an active control does everywhere
-   else in the header, and the stop glyph takes the accent so the disc and the
-   glyph read as one thing. Pad and Flip get the SAME treatment. */
-@keyframes playBreathe {
-  0%, 100% { background-color: rgba(124,92,255,0.14); }
-  50%      { background-color: rgba(124,92,255,0.28); }
+  .play-wrap:has(.btn.play.playing) { background: var(--seg-on-fill); }
 }
 @media (max-width: 640px) {
   .play-wrap > #playBtn.btn.play.playing,
   .flip-play-wrap:has(.btn.flip-play.playing) {
-    background-color: rgba(124,92,255,0.18);
+    background-color: var(--seg-on-fill);
     border-color: transparent;
     box-shadow: none;
-    animation: playBreathe 2.4s ease-in-out infinite;
   }
   .play-wrap > #playBtn.btn.play.playing,
   .flip-play-wrap > .btn.flip-play.playing { color: var(--accent); text-shadow: none; }
-  .flip-play-wrap > .btn.flip-play.playing { animation: none; box-shadow: none; }
-}
-@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
-  .play-wrap > #playBtn.btn.play.playing,
-  .flip-play-wrap:has(.btn.flip-play.playing) { animation: none; }
+  .flip-play-wrap > .btn.flip-play.playing { box-shadow: none; }
 }
 
 /* ---------- Mobile ---------- */
@@ -6163,7 +6138,7 @@ a.player-btn { text-decoration: none; }
 .tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; margin-right: auto; }
 .tune-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .tune-hint { font-size: 11px; color: var(--text-muted); }
-.tune-tool.open { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+.tune-tool.open { color: var(--seg-on-ink); background: var(--seg-on-fill); }
 .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; z-index: 5; }
 .flip-grid.on { display: block; }
 body.playing .flip-grid { display: none; }
@@ -7220,7 +7195,7 @@ body.replaying .media-card {
    `background: none` above carries an id, so it beat that class rule and the
    open state lost its fill, keeping only the ring and the ink. After the
    hover rule, so the open state holds under a pointer too. */
-.header #tuneBtn.open { background: rgba(124, 92, 255, 0.16); }
+.header #tuneBtn.open { background: var(--seg-on-fill); }
 /* Record, Play and Post come down to meet them. */
 .header .actions .btn { height: 36px; padding: 0 16px; }
 /* THE HEADER PILLS GET THE SAME 44px BAND AS THE TOOLBAR (SK-AUD-005;

@@ -776,6 +776,99 @@ with sync_playwright() as p:
                   abs(h["option"] - 34) <= 0.5 and abs(h["track"] - 42) <= 0.5, str(h))
             c.close()
 
+    # ---------------------------------------------------------------- 10
+    if want("tints"):
+        print("\nTINTS — a ring only where a tint cannot show (owner, Rings and Tints)")
+        # Read as the mechanism, not as pixels: the ring was a box-shadow (or a
+        # pulsing one), the tint is --seg-on-fill. A probe element resolves the
+        # token on the page being measured, so a theme's own value is compared.
+        TINT = """() => { const d = document.createElement('div'); d.style.background = 'var(--seg-on-fill)';
+            document.body.appendChild(d); const v = getComputedStyle(d).backgroundColor; d.remove(); return v; }"""
+        def long_draw(q, canvas):
+            # A take long enough to still be playing when it is measured.
+            bb = q.query_selector(canvas).bounding_box()
+            q.mouse.move(bb["x"] + 40, bb["y"] + 60); q.mouse.down()
+            for i in range(50):
+                q.mouse.move(bb["x"] + 40 + i * 4, bb["y"] + 60 + (i % 10) * 6); q.wait_for_timeout(30)
+            q.mouse.up(); settle(q, 300)
+        LOOK = """(sel) => { const e = document.querySelector(sel); if (!e) return null; const c = getComputedStyle(e);
+            return { shadow: c.boxShadow, bg: c.backgroundColor, anim: c.animationName,
+                     left: c.borderLeftColor, top: c.borderTopColor, border: c.borderTopColor }; }"""
+        for theme in ("dark", "light"):
+            c = ctx_for(theme, "phone"); q = c.new_page()
+            browsing.goto(q, BASE, "/skribl-pad"); settle(q)
+            tint = q.evaluate(TINT)
+            q.click("#tuneBtn"); settle(q, 500)
+            t = q.evaluate(LOOK, "#tuneBtn")
+            check(f"TINTS [{theme}]: the open Tune button wears the tint and no ring",
+                  t and t["bg"] == tint and t["shadow"] == "none", f"{t}, tint {tint}")
+            q.click("#tuneBtn"); settle(q, 400)
+            long_draw(q, "#canvas"); q.click("#recordBtn"); settle(q, 600)
+            q.click("#playBtn"); settle(q, 600)
+            pb = q.evaluate(LOOK, "#playBtn"); pw = q.evaluate(LOOK, "#playWrap")
+            check(f"TINTS [{theme}]: Play while playing is a steady tint, no pulse (phone)",
+                  pb and pb["bg"] == tint and pb["anim"] == "none" and pw["anim"] == "none", f"{pb} / wrap {pw}")
+            q.click("#menuBtn"); settle(q, 500)
+            f = q.evaluate(LOOK, ".menu-item.menu-feature")
+            check(f"TINTS [{theme}]: the How it works row keeps its tint and drops its ring",
+                  f and f["shadow"] == "none" and f["bg"] not in ("rgba(0, 0, 0, 0)", "transparent"), str(f))
+            c.close()
+
+            c = ctx_for(theme, "desk"); q = c.new_page()
+            browsing.goto(q, BASE, "/skribl-pad"); settle(q)
+            tint = q.evaluate(TINT)
+            long_draw(q, "#canvas"); q.click("#recordBtn"); settle(q, 600)
+            q.click("#playBtn"); q.mouse.move(5, 5); settle(q, 600)   # off the pill: hover films it
+            pw = q.evaluate(LOOK, "#playWrap")
+            check(f"TINTS [{theme}]: from 641px the whole Stop pill takes the tint, no pulse",
+                  pw and pw["bg"] == tint and pw["anim"] == "none" and pw["shadow"] == "none", f"{pw}, tint {tint}")
+            c.close()
+
+            c = ctx_for(theme, "phone"); q = c.new_page()
+            browsing.goto(q, BASE, "/flip"); settle(q)
+            tint = q.evaluate(TINT)
+            q.click("#moreBtn"); settle(q, 500)
+            m = q.evaluate(LOOK, "#moreBtn")
+            check(f"TINTS [{theme}]: Flip's open ⋯ wears the tint and no ring",
+                  m and m["bg"] == tint and m["shadow"] == "none", f"{m}, tint {tint}")
+            q.keyboard.press("Escape"); settle(q, 400)
+            fr = q.evaluate(LOOK, "#strip .frame.on")
+            check(f"TINTS [{theme}]: Flip's current page keeps one 1px ring, without the second outside it",
+                  fr and fr["shadow"] == "none" and fr["border"] not in ("rgba(0, 0, 0, 0)",), str(fr))
+            draw(q, "#pad"); q.click("#addcopy"); settle(q, 500)   # Play shows from two pages
+            q.click("#play"); settle(q, 300)
+            fp = q.evaluate(LOOK, ".btn.flip-play.playing"); fw = q.evaluate(LOOK, "#flipPlayWrap")
+            check(f"TINTS [{theme}]: Flip's Play while playing is a steady tint, no pulse",
+                  fp and fp["anim"] == "none" and fw["anim"] == "none" and tint in (fp["bg"], fw["bg"]),
+                  f"{fp} / wrap {fw}, tint {tint}")
+            c.close()
+
+        # The Library's playing row: R1, the tint and no edge line (owner).
+        # Its page has its own palette and no --seg-on-fill, so the row is
+        # read for what it must NOT carry and for a fill that is not the rest's.
+        import json as _json, urllib.request as _ur
+        _ents = []
+        for _t in ("Tint probe A", "Tint probe B"):
+            _body = {"frames": [{"strokes": [], "strokeGroups": [], "background": {"color": "#101418"}}],
+                     "title": _t, "visibility": "unlisted"}
+            _r = _json.loads(_ur.urlopen(_ur.Request(BASE + "/api/skribls", data=_json.dumps(_body).encode(),
+                                         headers={"Content-Type": "application/json"}), timeout=15).read())
+            _ents.append({"id": _r["id"], "url": "/s/" + _r["id"], "title": _t, "kind": "pad", "pages": 1,
+                          "tok": _r["deleteToken"], "at": 1700000000000})
+        for theme in ("dark", "light"):
+            c = ctx_for(theme, "phone"); q = c.new_page()
+            q.goto(BASE + "/library", wait_until="load")
+            q.evaluate("(e) => localStorage.setItem('skribl_posted_v1', JSON.stringify(e))", _ents)
+            q.reload(wait_until="load"); settle(q, 1500)
+            rows = q.evaluate("""() => [...document.querySelectorAll('#postedList .posted-row')].map(r => {
+                const c = getComputedStyle(r); return { on: r.classList.contains('active'), shadow: c.boxShadow,
+                bg: c.backgroundColor, left: c.borderLeftColor, top: c.borderTopColor }; })""")
+            on = [r for r in rows if r["on"]]; off = [r for r in rows if not r["on"]]
+            check(f"TINTS [{theme}]: the Library's playing row is a tint with no ring and no edge line (R1)",
+                  len(on) == 1 and off and on[0]["shadow"] == "none" and on[0]["left"] == on[0]["top"]
+                  and on[0]["bg"] != off[0]["bg"], str(rows))
+            c.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

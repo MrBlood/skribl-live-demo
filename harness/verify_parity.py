@@ -1373,6 +1373,7 @@ with sync_playwright() as p:
         def _ink(hexc):
             if not _drawer(): open_via(_q, _opener, settle=400)
             _q.click(f'#colorGroup .color-dot[data-color="{hexc}"]'); _q.wait_for_timeout(200)
+            browsing.wait_scroll_still(_q)   # Flip closes its panel on a pick, and the page glides home
         _ink("#ffe800")
         if _drawer():
             if _opener.startswith("@pad:"): browsing.pad_drawer_close(_q, settle=400)

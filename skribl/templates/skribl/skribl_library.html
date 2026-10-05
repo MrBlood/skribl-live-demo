@@ -353,7 +353,15 @@
     .posted-panel { display: flex; flex-direction: column; }
     .posted-list { padding: 0; overflow: visible; }
     .posted-row { padding: 10px; }
-    .posted-row.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    /* THE PLAYING ROW IS A TINT (owner's R1, "no left line"). It wore an
+       accent border and a glow, the loudest thing on the page for a state
+       that is not a warning. A selected thing in Skribl is a tint, as the
+       selected tool and every pick-one pill are; keyboard focus keeps its own
+       ring. The tapped row's loading ring is softer for the same reason. */
+    .posted-row.active { background: rgba(124, 92, 255, 0.18); }
+    .posted-row[aria-busy="true"] .posted-thumb::after {
+      width: 12px; height: 12px; margin: -8px 0 0 -8px;
+      border-color: rgba(205, 191, 255, 0.55); border-right-color: transparent; }
     /* THE CLIP IS ON .posted-shot AND NOT ON THE THUMB, which is what lets a
        badge hang off the corner. The poster is a share card scaled 128.0488%
        and pulled up 5.4878% so the wordmark falls outside (lib/sharecard.js

@@ -13894,3 +13894,24 @@ snaps, smooth transitions are good."
   which drops frames while the page is busy and showed a 60fps fade as a cut.
   `verify_motion` samples computed style once per animation frame inside the
   page instead, and was calibrated red against each fix removed one at a time.
+
+**A ring only where a tint cannot show (owner, Rings and Tints).** The owner
+asked why anything besides a search box wears a bright ring. A selected thing
+in Skribl is a tint -- the selected tool, every pick-one pill -- so the "on"
+controls now wear the same tint and lose their outline: Tune and Flip's ⋯ when
+open, and the How it works row. Play while playing is a steady tint with no
+pulse; it already turns into Stop, so the pulse said nothing new and moved for
+the whole replay. The Library's playing row is a tint with no edge line (R1,
+"no left line"), and the loading ring on a tapped row is smaller and softer.
+
+Rings stay where a tint cannot show. Flip's current page keeps a single 1px
+accent border (the second ring outside it went): the drawing fills the
+thumbnail. The armed stamp keeps its outline for the same reason -- a stamp's
+thumbnail paints the page's ground over its whole button, which the mock's
+placeholder stamps hid. Focus rings, swatches, the armed delete and the
+checkbox and sliders keep theirs.
+
+Media and the dock's Magnify are unchanged: when open they light their glyph
+with no tile, the owner's earlier call ("just turn it purple when pressed").
+The mock described them as losing an outline they do not have, so they wait
+on the owner rather than reversing that call on a wrong caption.
