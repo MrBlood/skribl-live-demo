@@ -21,7 +21,8 @@ a value moves over time, never about whether something is visible.
 Calibrated red, per component, against: the header's fade-through removed (the
 mark and the readout each), the scrub bar's allow-discrete removed, the Media
 card's fill transition removed, the drawer contents' fade removed, the page
-height hold removed (Pad and Flip each), the popovers' transition removed, the
+height hold removed (Pad and Flip each), Flip's scroll home put back to
+'auto', the popovers' transition removed, the
 Flip menu dim's animation removed, and the pill put back on its spring.
 """
 import re, sys, math

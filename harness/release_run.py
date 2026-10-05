@@ -150,6 +150,7 @@ BATCHES = [
     ["verify_player_photo.py", "verify_sharecard.py"],
     ["verify_visual.py"],                  # measures
     ["verify_flipmotion.py"],              # measures
+    ["verify_motion.py"],                  # measures — frames per transition, rAF
     ["verify_framecache.py"],              # measures
     ["verify_parity.py"],                  # measures
     ["verify_audio.py", "verify_seam.py", "verify_loopcap.py", "verify_audiostate.py"],

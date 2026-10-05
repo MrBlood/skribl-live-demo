@@ -496,6 +496,12 @@ A green check is not evidence until it has been shown to go red.
   port 5019 and stops it, because Playwright's set_offline() does not reach a
   worker's own fetches.
 
+### After v320 — motion
+
+- `verify_motion.py` — no one-frame jumps: each motion fix pinned by sampling
+  computed style once per animation frame inside the page (a screen recording
+  drops frames and shows smooth fades as cuts).
+
 ## Where a suite's rationale lives
 
 **In the suite's own docstring, next to the assertions it explains.**
