@@ -357,7 +357,7 @@
        page's own rubber band from moving the list as well. */
     html.has-pull { overscroll-behavior-y: none; }
     .pull-refresh { height: 0; overflow: hidden; display: flex; flex-direction: column;
-      align-items: center; justify-content: flex-end; gap: 4px; padding-bottom: 6px;
+      align-items: center; justify-content: flex-end; gap: 4px;
       color: var(--text-2); font: 600 12.5px var(--font-ui); transition: height 0.2s ease; }
     .pull-refresh.is-pulling { transition: none; }
     .pull-refresh svg { width: 22px; height: 22px; color: var(--accent); flex: none;
@@ -368,6 +368,7 @@
       animation: pull-turn 0.8s linear infinite; }
     .pull-refresh.is-busy svg { display: none; }
     .pull-refresh.is-busy .pull-ring { display: block; }
+    .pull-refresh-label { margin-bottom: 6px; }
     @keyframes pull-turn { to { transform: rotate(360deg); } }
 
     /* The rows on this page: a list with a poster, not a tray in a drawer. */
