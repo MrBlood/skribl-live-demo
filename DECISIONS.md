@@ -13922,3 +13922,21 @@ earlier "just turn it purple when pressed". Shown beside the lit Pen in dark
 and light, phone and desktop -- today's glyph, the Pen's tile, the tile with
 the bright glyph, and a bar under the glyph -- the owner picked the Pen's tile:
 "on" now looks one way across the whole dock. At rest Media stays bare.
+
+**The Home Screen app stays current (owner: "shouldn't the app refresh on pull
+down now that it's full screen?").** A standalone web app has no browser bar,
+so Safari's pull-to-refresh and reload went with it, and iOS keeps the app
+alive in the background: a returning owner saw the page from before the last
+merge until the app was killed. Three things, Home Screen app only, all in
+lib/offline.js:
+
+* A NEW VERSION IS OFFERED, NEVER FORCED. The page carries the build it was
+  rendered from (skribl.build_id, a content hash of the static files and
+  templates, so an idle restart is not a new build and merges between seals
+  are); when the app comes back to the front it asks /build.json and, if the
+  server's differs, the Pad and Flip show "A new version of Skribl is ready ·
+  Reload". It never reloads by itself -- a reload mid-stroke is the one thing it
+  must not do -- and the draft is flushed on pagehide.
+* RELOAD IN THE ⋯ MENU, in the slot Add to Home Screen takes in a tab.
+* PULL TO REFRESH ON THE LIBRARY ONLY. The editors are drawing surfaces, where
+  a downward stroke from the top must never reload the page.
