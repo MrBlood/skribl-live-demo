@@ -74,9 +74,11 @@ check = make_check(results)
 _ONLY = set(filter(None, os.environ.get("ONEPILL_SECTIONS", "").split(",")))
 THEMES = tuple(filter(None, os.environ.get("ONEPILL_THEMES", "dark,light").split(",")))
 FORMS = tuple(filter(None, os.environ.get("ONEPILL_FORMS", "desk,phone").split(",")))
-# Panels: Calm (the default) and Colour, where the panels you open are the
-# violet block and every pill in one re-themes by its tokens.
-PANELS = tuple(filter(None, os.environ.get("ONEPILL_PANELS", "calm,colour").split(",")))
+# Panels: Calm (the default) or Colour, where the panels you open are the
+# violet block and every pill in one re-themes by its tokens. This file runs
+# Calm; verify_onepill_colour.py runs it again under Colour, as its own suite,
+# because both in one process ran 618s against the harness's 600s.
+PANELS = tuple(filter(None, os.environ.get("ONEPILL_PANELS", "calm").split(",")))
 
 
 def want(section):
@@ -347,7 +349,12 @@ with sync_playwright() as p:
         for panels in PANELS:
           for theme in THEMES:
             for form in FORMS:
-                for route in ("/skribl-pad", "/flip", "/gallery", "/library"):
+                # Colour re-themes only the panels you open, all on the two
+                # editors; the Library and gallery hold no pill inside a block,
+                # and their menus are measured under Calm. Kept off them so the
+                # suite stays inside the harness's 600s per suite.
+                for route in (("/skribl-pad", "/flip", "/gallery", "/library") if panels == "calm"
+                              else ("/skribl-pad", "/flip")):
                     c = ctx_for(theme, form, panels=panels)
                     look = theme if panels == "calm" else f"{theme} colour"
                     q = c.new_page()
@@ -384,7 +391,8 @@ with sync_playwright() as p:
             got = sorted(t for (r, k, t) in chosen if r == route and k == "mediaTabs")
             check(f"ONE PILL: {route}'s Photo | Music was measured with Photo chosen and with Music chosen",
                   "Photo" in got and "Music" in got, str(got))
-        check("ONE PILL: the gallery's New / Hot, the library's tabs and filter, and both page menus were measured",
+        if "calm" in PANELS:
+          check("ONE PILL: the gallery's New / Hot, the library's tabs and filter, and both page menus were measured",
               sum(1 for k in seen if k[0] in ("/gallery", "/library")) >= 5,
               str(sorted(k for k in seen if k[0] in ("/gallery", "/library"))))
 
