@@ -7064,6 +7064,11 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .media-card:not(:has(> .tab-panel:not([hidden]))) { display: none; }
 .media-card > .media-tabs { margin: 16px 16px 14px; }
 .media-card > .tab-panel {
+  /* As tall as what is in it (owner: "why so much empty space under Add a
+     photo?"). The phone tier gives every .tab-panel a 240px floor, from when
+     the drawers were separate panels; Photo and Music empty are both 158px, so
+     the floor was 82px of nothing under the drop zone. */
+  min-height: 0;
   margin: 0; padding-top: 16px; border-radius: 0 0 16px 16px;
   background: none; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
 }
@@ -7665,4 +7670,29 @@ body.replaying .media-card {
 @media (min-width: 641px) {
   .hs-scrim { align-items: center; }
   .hs-steps { border-radius: 22px; }
+}
+
+/* THE TOOL ROW, EVENLY SPACED ON A PHONE (owner, S1 of the spacing mock).
+   Measured from one icon's centre to the next, the row was 58, 50, 66, 52 and
+   61px: the Pen's wider button pushed Eraser along, Undo carried an extra
+   margin, and Media sat at its own distance. Now every centre is one --step
+   apart, and each gap is the step less the two half-widths either side of it:
+   the Pen's button is 60px, every other one 44px, and the group's 4px padding
+   and 1px border count on the way out of it. The step follows the screen between 46px and
+   58px (56px on a 390px phone). Pad (#toolBar) and Flip (.flip-tools) share it;
+   desktop keeps its labelled row. */
+@media (max-width: 640px) {
+  #toolBar, body .flip-tools {
+    --step: clamp(46px, calc((100vw - 110px) / 5), 58px);
+    justify-content: center; gap: 0; padding-left: 6px; padding-right: 6px;
+  }
+  #toolBar #toolGroup, .flip-tools #toolGroup { gap: 0; }
+  #toolBar #toolGroup > .tool-btn, .flip-tools #toolGroup > .tool-btn { margin-left: calc(var(--step) - 44px); }
+  #toolBar #toolGroup > #penToolBtn, .flip-tools #toolGroup > #penToolBtn { margin-left: 0; }
+  #toolBar #toolGroup > #eraserToolBtn, .flip-tools #toolGroup > #eraserToolBtn { margin-left: calc(var(--step) - 52px); }
+  /* "#toolGroup ~" outranks flip.css, which loads after this sheet and sets
+     its own margins on the same buttons. */
+  #toolBar #toolGroup ~ #undoBtn, .flip-tools #toolGroup ~ #undo { margin-left: calc(var(--step) - 49px); flex-shrink: 0; }
+  #toolBar #toolGroup ~ #redoBtn, .flip-tools #toolGroup ~ #redo,
+  #toolBar #toolGroup ~ #mediaOpenBtn, .flip-tools #toolGroup ~ #mediaOpenBtn { margin-left: calc(var(--step) - 44px); margin-right: 0; flex-shrink: 0; }
 }
