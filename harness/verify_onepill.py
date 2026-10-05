@@ -884,6 +884,43 @@ with sync_playwright() as p:
                   and on[0]["bg"] != off[0]["bg"], str(rows))
             c.close()
 
+    # ---------------------------------------------------------------- 11
+    if want("block"):
+        print("\nCOLOUR BLOCK — what you open to work with is violet; the frame and the menus are not")
+        # Read as the mechanism: a block paints the gradient and sets white ink;
+        # a calm surface paints no gradient. Contrast inside a block is the
+        # census's CONTRAST check above, which reads what is painted.
+        BLOCKY = """(sel) => { const e = document.querySelector(sel); if (!e) return null; const c = getComputedStyle(e);
+            return { grad: c.backgroundImage.includes('gradient'), ink: c.color, vis: !!e.getClientRects().length }; }"""
+        WHITE = "rgb(255, 255, 255)"
+        for theme in ("dark", "light"):
+            for route in ("/skribl-pad", "/flip"):
+                c = ctx_for(theme, "phone"); q = c.new_page()
+                browsing.goto(q, BASE, route); settle(q)
+                browsing.pad_drawer(q, "draw", settle=500)
+                d = q.evaluate(BLOCKY, "#drawPanel")
+                check(f"BLOCK [{theme}] {route}: the open Pen drawer is the violet block, inked white",
+                      d and d["vis"] and d["grad"] and d["ink"] == WHITE, str(d))
+                browsing.pad_drawer_close(q)
+                q.click("#mediaOpenBtn"); settle(q, 500)
+                m = q.evaluate(BLOCKY, "#mediaCard")
+                check(f"BLOCK [{theme}] {route}: the open Media card is the block",
+                      m and m["vis"] and m["grad"] and m["ink"] == WHITE, str(m))
+                q.click("#mediaOpenBtn"); browsing.wait_scroll_still(q); settle(q, 300)
+                q.click("#menuBtn" if route == "/skribl-pad" else "#moreBtn"); settle(q, 600)
+                mn = q.evaluate(BLOCKY, "#menuSheet" if route == "/skribl-pad" else "#moreMenu")
+                check(f"BLOCK [{theme}] {route}: the ⋯ menu stays neutral (owner)",
+                      mn and mn["vis"] and not mn["grad"], str(mn))
+                hdr = q.evaluate(BLOCKY, ".header")
+                check(f"BLOCK [{theme}] {route}: the header stays in its theme", hdr and not hdr["grad"], str(hdr))
+                c.close()
+            c = ctx_for(theme, "phone"); q = c.new_page()
+            q.goto(BASE + "/library", wait_until="load"); settle(q)
+            h = q.evaluate(BLOCKY, ".profile")
+            check(f"BLOCK [{theme}] /library: the hero is the block, inked white",
+                  h and h["grad"] and h["ink"] == WHITE, str(h))
+            c.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]
