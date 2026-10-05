@@ -485,6 +485,17 @@ A green check is not evidence until it has been shown to go red.
   ramp; and the theme-color follows the page's theme before first paint and
   on a switch.
 
+### After v320 — opening offline
+
+- `verify_offline.py` — the service worker (`/sw.js`, `lib/offline.js`)
+  registers only in the Home Screen app (an ordinary tab gets none; the suite
+  sets navigator.standalone to stand in for the app), answers only for the Pad, Flip and the library and for content-hashed
+  files; with the server up every page load is fresh (a new CSP nonce each
+  time); with the server stopped the Pad boots from the last page that loaded
+  and a page never opened online says it is offline. Boots its own server on
+  port 5019 and stops it, because Playwright's set_offline() does not reach a
+  worker's own fetches.
+
 ## Where a suite's rationale lives
 
 **In the suite's own docstring, next to the assertions it explains.**

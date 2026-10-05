@@ -13812,3 +13812,27 @@ picks M2, P1, A2 and H1+H2 on the mock page).
   v316 rule, and verify_ux holds it.
 * **Edge to edge was left out** on purpose: standalone already removes Safari's
   bars, and drawing under the home bar puts strokes where the thumb swipes.
+
+**Opening offline (the owner's "app on the phone", the part after the Home
+Screen).** A service worker (`/sw.js`, rendered with the page URLs from
+url_for; registered by `lib/offline.js` from `_skribl_app_identity.html`)
+answers a navigation to the Pad, Flip or the library NETWORK FIRST with no
+timeout, and from its last copy only when the fetch fails; content-hashed files
+are cache first, since the hash is the content. Nothing else is answered, so
+the API, posts, media and a host's pages reach the network as before. The
+design point is the failure WORKING-AGREEMENTS already records twice: a phone
+on an old page. With any signal, a page is fresh; a cache that served first and
+updated later would have made that failure routine. `verify_offline` boots its
+own server and stops it, because Playwright's set_offline() does not reach a
+worker's own fetches -- measured, it let a never-opened Flip load "offline".
+
+The first version registered in every tab, and the full battery said why it
+should not: four suites that block or fake a request (a Library host page, the
+GIF encoder, the photo-fit pill's script) went red, because a worker answers
+before Playwright's page.route sees anything. That is a property of service
+workers, not of the harness, and a host's own tests would meet it too. So the
+worker registers only from the Home Screen app, where offline opening is
+expected, and where on an iPhone it has to be registered anyway: the Home
+Screen copy keeps its own storage, apart from Safari's. lib/offline.js is
+loaded by the three pages it keeps, not by the identity partial, which also
+keeps it off the player's byte budget.

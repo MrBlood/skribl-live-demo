@@ -93,6 +93,18 @@ try:
         check(f"{label} carries no bare /api/skribls literal",
               'window.SKRIBL_API_BASE = "/api/skribls"' not in html)
 
+    print("\nOFFLINE — the service worker follows the prefix")
+    st, body = get(PREFIX + "/sw.js")
+    sw = body.decode("utf-8", "replace")
+    check(f"the worker is served at {PREFIX}/sw.js", st == 200, str(st))
+    check("...and answers for the prefixed pages, not the root's",
+          f'"{PREFIX}/skribl-pad"' in sw and '"/skribl-pad"' not in sw.replace(f'"{PREFIX}/skribl-pad"', ""),
+          "missing" if f'"{PREFIX}/skribl-pad"' not in sw else "a root page listed")
+    st, body = get(PREFIX + "/")
+    html = body.decode("utf-8", "replace")
+    check(f"the Pad registers it with the scope {PREFIX}/",
+          f'data-scope="{PREFIX}/"' in html and f'data-sw="{PREFIX}/sw.js"' in html)
+
     # ---------- a real post, end to end, through the browser ----------
     from playwright.sync_api import sync_playwright
 

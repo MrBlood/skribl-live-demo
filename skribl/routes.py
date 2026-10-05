@@ -13,8 +13,8 @@ import base64
 import binascii
 from datetime import datetime, timedelta, timezone
 
-from flask import (abort, current_app, g, jsonify, redirect, render_template,
-                   request, url_for)
+from flask import (abort, current_app, g, jsonify, make_response, redirect,
+                   render_template, request, url_for)
 import hashlib
 
 import sqlalchemy as sa
@@ -402,6 +402,29 @@ def register_routes(bp, *, index_route=False):
         }
         resp = jsonify(body)
         resp.mimetype = "application/manifest+json"
+        return resp
+
+    @bp.get("/sw.js")
+    def skribl_sw():
+        """The service worker that opens the editors with no signal (network first, always)."""
+        # At the mount point, not under /static: a worker controls only URLs
+        # under its own path, and the pages are siblings of this route. A route
+        # rather than a file for the manifest's reason: the page URLs and the
+        # static prefix it matches against are url_for's, wherever the
+        # blueprint is mounted. no-cache, so a phone checks for a new worker
+        # every time it opens a page; the browser enforces that anyway after a
+        # day, and a stale worker is the one thing here that must not linger.
+        pages = [url_for(".skribl_editor"), url_for(".skribl_flip"),
+                 url_for(".skribl_library")]
+        if index_route:
+            pages.append(url_for(".home"))
+        # The folder every asset_url points into: url_for of a one-character
+        # name, less the name.
+        static_prefix = url_for(".static", filename="_")[:-1]
+        resp = make_response(render_template("skribl/sw.js", pages=pages,
+                                             static_prefix=static_prefix))
+        resp.mimetype = "text/javascript"
+        resp.headers["Cache-Control"] = "no-cache"
         return resp
 
     @bp.get("/s/<public_id>")
