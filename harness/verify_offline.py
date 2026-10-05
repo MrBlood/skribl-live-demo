@@ -116,7 +116,8 @@ try:
         print("\nONLINE — always the newest page")
         pg.goto(BASE + "/skribl-pad", wait_until="load")
         pg.wait_for_function(BOOTED, timeout=10000)
-        scope = pg.evaluate("() => navigator.serviceWorker.ready.then(r => r.scope)")
+        scope = pg.evaluate("""() => Promise.race([navigator.serviceWorker.ready.then(r => r.scope),
+            new Promise(res => setTimeout(() => res(null), 8000))])""")
         check("the Pad registers the worker, scoped to the mount point",
               scope == BASE + "/", repr(scope))
         seen = []
@@ -129,6 +130,9 @@ try:
         check("...and every load with a signal is a fresh page from the server, never a kept copy",
               len(set(seen)) == 3 and None not in seen, str(seen))
         last = seen[-1]
+        # The API, asked once with a signal, so that a worker that kept it
+        # would have something to answer with when the signal goes.
+        pg.evaluate("() => fetch('/api/skribls?limit=1').then(r => r.status)")
         pg.wait_for_timeout(600)   # the kept copy is written after the page is handed over
         kept = pg.evaluate("""async () => { const out = [];
             for (const k of await caches.keys()) for (const r of await (await caches.open(k)).keys())
@@ -149,8 +153,11 @@ try:
         check("the Pad still opens, and boots, with no server at all", booted)
         check("...from the last page that loaded, not an older one",
               booted and pg.evaluate(NONCE) == last, f"{pg.evaluate(NONCE)!r} vs {last!r}")
-        pg.goto(BASE + "/flip", wait_until="load")
-        note = pg.evaluate("() => document.body.innerText")
+        try:
+            pg.goto(BASE + "/flip", wait_until="load")
+            note = pg.evaluate("() => document.body.innerText")
+        except Exception as e:   # the browser's own error page: what this guards against
+            note = f"navigation failed: {str(e).splitlines()[0]}"
         check("a page never opened online says it is offline, not the browser's error",
               "You’re offline" in note and "opened with one" in note, note[:120])
         api = pg.evaluate("""() => fetch('/api/skribls?limit=1').then(() => 'answered', () => 'failed')""")
