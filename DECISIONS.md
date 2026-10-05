@@ -13859,3 +13859,38 @@ tile's edge (ICON_EDGE, ICON_EDGE_FROM, ICON_EDGE_CURVE in blooby.py); the
 corners are the edge colour exactly, and verify_identity reads both colours
 from blooby.py and checks the corners and the ground lightening inward. Blooby
 is redrawn at full resolution, so the gaps in his marker fill show crisply.
+
+
+**Polish after the v320 audit: spacing, the Media card, and motion.** The
+owner's answers to the auditor's UI list: the tool row's spacing "reads off";
+pen extremes, the selector pill and contrast are fine; calmer motion, "No
+snaps, smooth transitions are good."
+
+* **Undo and Redo stay in the row, always.** The auditor suggested showing them
+  only when there is something to undo. The owner: "We need to have it and
+  show we have it." A control that comes and goes is one a person cannot find
+  when they need it, and the row would reflow every time it did.
+* **S1, even spacing on a phone.** Every tool sits one step apart, centre to
+  centre, the step clamped between 50 and 58px by the viewport, on the Pad and
+  Flip alike. Per-gap margins, because the pen is wider than the rest. From
+  360px: below it six controls cannot sit a step apart without their tap areas
+  overlapping, so the scrolling row with a tool cut off at its edge stays.
+* **The Media card is as tall as its contents.** It inherited the phone tier's
+  240px panel floor and showed 82px of nothing under the drop zone.
+* **Motion.** A recorded survey of both editors found a dozen one-frame jumps.
+  Each fixed one now changes over time: the first stroke on a phone is a
+  fade-through (the mark and controls out, the take's readout in); what the
+  header gains after a take fades in; a drawer's contents fade in on open or
+  swap; the scrub bar and the Media card's fill ease back at the end of a
+  replay; the shape picker, tool tray and Flip's menu dim ease. Closing the
+  last drawer had jumped the whole page 250px on both editors -- hiding the
+  drawer shortened the page and the browser clamped the scroll before the
+  smooth scroll home could start -- so `lib/drawers.js` holds the page height
+  until the scroll reaches the top. The selection pill is 0.26s with no
+  overshoot. What fades is never a frosted element itself (the v315 WebKit
+  rule): the header's and drawers' contents fade, and a card's fill does.
+  Left as it is: the canvas clearing when Play starts, which is the replay.
+* **The instrument.** The survey was shot on Playwright's screen recording,
+  which drops frames while the page is busy and showed a 60fps fade as a cut.
+  `verify_motion` samples computed style once per animation frame inside the
+  page instead, and was calibrated red against each fix removed one at a time.

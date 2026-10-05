@@ -265,16 +265,23 @@ with sync_playwright() as p:
         # with a bare `[data-size]` would have raised them to (0,2,0) and let
         # them win everywhere, silently flattening the ladder on phones. The
         # prefix is `:where(...)`, which contributes ZERO, so source order still
-        # decides. These widths are the ladder's rungs: if the specificity ever
-        # rises, the 640 block wins and every rung below reads 3px.
-        for vw, want in ((320, "2px"), (360, "3px"), (400, "3px"), (600, "3px")):
+        # decides. If the specificity ever rises, the 640 block wins and the
+        # 320 rung reads 3px instead of 2px -- the one rung that can show it,
+        # since every rung above it wanted the 640 value anyway.
+        # From 360px the row's spacing is no longer the ladder's: S1 (styles.css,
+        # THE TOOL ROW, EVENLY SPACED ON A PHONE) spaces it by margins one
+        # --step apart and sets the gap to 0 on purpose. Those widths are pinned
+        # as S1's, so a ladder that crept back over them would show here too.
+        for vw, want in ((320, "2px"), (360, "0px"), (400, "0px"), (600, "0px")):
             page.set_viewport_size({"width": vw, "height": 900})
             page.wait_for_timeout(90)
             got = page.evaluate(
                 "() => getComputedStyle(document.querySelector('.flip-tools')).gap")
-            check(f"the phone ladder still steps at {vw}px", got == want,
+            what = "the phone ladder still steps" if vw < 360 else "S1 owns the row's spacing"
+            check(f"{what} at {vw}px", got == want,
                   f"gap={got}, want {want} — a flattened ladder means the migrated "
-                  "rules outrank the tiers they used to lose to")
+                  "rules outrank the tiers they used to lose to" if vw < 360 else
+                  f"gap={got}, want {want} — S1's even steps assume no gap")
 
         print("\nTHE SURFACES AGREE — no width shows one and lays out the other")
         # The band walked directly. The page bar is the CLASS's surface and the
