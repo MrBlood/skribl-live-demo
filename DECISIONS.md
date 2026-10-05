@@ -13825,3 +13825,14 @@ on an old page. With any signal, a page is fresh; a cache that served first and
 updated later would have made that failure routine. `verify_offline` boots its
 own server and stops it, because Playwright's set_offline() does not reach a
 worker's own fetches -- measured, it let a never-opened Flip load "offline".
+
+The first version registered in every tab, and the full battery said why it
+should not: four suites that block or fake a request (a Library host page, the
+GIF encoder, the photo-fit pill's script) went red, because a worker answers
+before Playwright's page.route sees anything. That is a property of service
+workers, not of the harness, and a host's own tests would meet it too. So the
+worker registers only from the Home Screen app, where offline opening is
+expected, and where on an iPhone it has to be registered anyway: the Home
+Screen copy keeps its own storage, apart from Safari's. lib/offline.js is
+loaded by the three pages it keeps, not by the identity partial, which also
+keeps it off the player's byte budget.

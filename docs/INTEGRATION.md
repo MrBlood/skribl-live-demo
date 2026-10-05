@@ -1130,10 +1130,10 @@ page from your framing header.
 `verify_integration.py` pins the precedence with a host handler registered
 before and after Skribl is mounted.
 
-**Skribl registers a service worker, scoped to where you mount it.** Every
-Skribl page with a Home Screen identity (Pad, Flip, the player, the library)
-registers `/sw.js` at the blueprint's mount point, so the editors open without a
-signal. It answers only two kinds of request: a navigation to the Pad, Flip or
+**Skribl registers a service worker when it runs as a Home Screen app,
+scoped to where you mount it.** Opened from the Home Screen (standalone), the
+Pad, Flip and the library register `/sw.js` at the blueprint's mount point, so
+they open without a signal. In an ordinary browser tab nothing is registered. It answers only two kinds of request: a navigation to the Pad, Flip or
 the library, which goes to the network first, every time, and is answered from
 the last copy only when the network fails; and Skribl's content-hashed static
 files. Everything else, your pages included, passes through untouched, as if no

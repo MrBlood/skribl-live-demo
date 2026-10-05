@@ -19,6 +19,12 @@ would pass this suite on a worker that never answered anything. Stopping a
 server is a failure the worker cannot tell from a dead signal, so this suite
 starts one on its own port and stops it, without touching the runner's 5001.
 
+THE INSTALLED APP, SIMULATED. lib/offline.js registers the worker only when
+Skribl runs from the Home Screen (navigator.standalone, or the standalone
+display mode). Chromium has no Home Screen, so the suite's browser declares
+navigator.standalone before any script runs -- the same property Safari sets
+-- and a second, ordinary tab asserts that nothing registers there.
+
 Calibrated against: pages cache-first (fresh-online goes red), no page
 fallback (offline boot goes red), no offline note, the API cached, and the
 registration script removed.
@@ -108,7 +114,18 @@ try:
 
     with sync_playwright() as p:
         b = p.chromium.launch()
+        print("\nA BROWSER TAB — no worker")
+        tab = b.new_context(viewport={"width": 390, "height": 844})
+        tp = tab.new_page()
+        tp.goto(BASE + "/skribl-pad", wait_until="load")
+        tp.wait_for_function(BOOTED, timeout=10000)
+        tp.wait_for_timeout(1500)
+        regs = tp.evaluate("() => navigator.serviceWorker.getRegistrations().then(r => r.length)")
+        check("a page in an ordinary tab registers no worker, so nothing answers before the page's own requests",
+              regs == 0, f"{regs} registered")
+        tab.close()
         ctx = b.new_context(viewport={"width": 390, "height": 844})
+        ctx.add_init_script("Object.defineProperty(navigator, 'standalone', { get: () => true });")
         pg = ctx.new_page()
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -118,7 +135,7 @@ try:
         pg.wait_for_function(BOOTED, timeout=10000)
         scope = pg.evaluate("""() => Promise.race([navigator.serviceWorker.ready.then(r => r.scope),
             new Promise(res => setTimeout(() => res(null), 8000))])""")
-        check("the Pad registers the worker, scoped to the mount point",
+        check("opened as the Home Screen app, the Pad registers the worker, scoped to the mount point",
               scope == BASE + "/", repr(scope))
         seen = []
         for _ in range(3):

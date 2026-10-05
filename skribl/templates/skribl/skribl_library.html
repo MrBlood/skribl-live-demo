@@ -8,6 +8,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Your Skribl Library</title>
   {% include 'skribl/_skribl_app_identity.html' %}
+{# Opening with no signal, from the Home Screen app only (lib/offline.js). #}
+<script src="{{ skribl_asset('lib/offline.js') }}" data-sw="{{ url_for('.skribl_sw') }}"
+        data-scope="{{ url_for('.skribl_sw')[:-5] }}" defer></script>
   {# The app's theme, stamped before first paint -- the same partial the
      editors and the gallery carry. Until v313 this page did not include it and
      stayed dark whatever the person had chosen (SK312-001). #}

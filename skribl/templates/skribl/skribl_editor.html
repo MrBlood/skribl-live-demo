@@ -16,6 +16,9 @@
    lives on the profile page since v304. #}
 <link rel="stylesheet" href="{{ skribl_asset('posted.css') }}">
   {% include 'skribl/_skribl_app_identity.html' %}
+{# Opening with no signal, from the Home Screen app only (lib/offline.js). #}
+<script src="{{ skribl_asset('lib/offline.js') }}" data-sw="{{ url_for('.skribl_sw') }}"
+        data-scope="{{ url_for('.skribl_sw')[:-5] }}" defer></script>
   {% include 'skribl/_skribl_theme_boot.html' %}
 </head>
 <body>

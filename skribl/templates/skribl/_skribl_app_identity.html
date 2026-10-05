@@ -24,9 +24,3 @@
 <meta name="theme-color" content="{{ skribl_theme_ground.dark }}" data-dark="{{ skribl_theme_ground.dark }}" data-light="{{ skribl_theme_ground.light }}">
 <link rel="icon" type="image/png" sizes="192x192" href="{{ skribl_asset('icon-192.png') }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ skribl_asset('apple-touch-icon.png') }}">
-{# OPENING WITH NO SIGNAL (lib/offline.js, the /sw.js route): the same pages
-   that can be added to a Home Screen can be opened from it on a train. The
-   worker answers from its copy only when the network fails, so a phone with a
-   signal always gets the newest page. #}
-<script src="{{ skribl_asset('lib/offline.js') }}" data-sw="{{ url_for('.skribl_sw') }}"
-        data-scope="{{ url_for('.skribl_sw')[:-5] }}" defer></script>
