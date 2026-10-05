@@ -2130,7 +2130,13 @@ a.player-btn { text-decoration: none; }
    tracks and buttons are white at low alpha, secondary text is white at 72%.
    No backdrop-filter: the block is opaque, and a frosted element is what
    WebKit fails to repaint (v315). The selected TOOL in the dock is the one
-   solid violet outside a block -- what you are holding. */
+   solid violet outside a block -- what you are holding.
+
+   OPT-IN: Panels, Calm | Colour, in every ⋯ menu (owner: "calm default").
+   Every rule below is keyed on :root[data-panels="colour"], stamped before
+   first paint by _skribl_theme_boot.html and kept by lib/theme.js, so Calm is
+   the frame exactly as it was -- light or dark -- and Colour is this. The
+   palette tokens on :root are unkeyed; nothing reads them under Calm. */
 :root {
   /* The block's own palette, one set for both themes. */
   --block-from: #4b2fd0; --block-to: #2c1a86; --block-base: #3c25ac;
