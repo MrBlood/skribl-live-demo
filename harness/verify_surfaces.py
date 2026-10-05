@@ -233,7 +233,9 @@ print("\nSURFACES — every module a page loads is a module that page can reach"
 # itself and places its pill, so the library (and the gallery, which this
 # census does not list) load it with nothing reading SkriblSegSlider -- the
 # editors do read it, which is why the entry below stays needed.
-_SELF_INSTALLING = {"pillfit.js", "segslider.js"}
+# lib/homescreen.js as well: it finds its own row, card and steps sheet on
+# DOMContentLoaded; SkriblHomeScreen.open exists for verify_a11y's census.
+_SELF_INSTALLING = {"pillfit.js", "segslider.js", "homescreen.js"}
 
 _TPL = ROOT / "skribl" / "templates" / "skribl"
 _ST = ROOT / "skribl" / "static"

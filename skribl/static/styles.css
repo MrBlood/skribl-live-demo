@@ -7604,3 +7604,65 @@ body.replaying .media-card {
   bottom: calc(100vh - var(--tb-top, 100vh) + 8px);
   bottom: calc(100dvh - var(--tb-top, 100dvh) + 8px);
 }
+
+/* ADD TO HOME SCREEN (owner, mocks H1 + H2): the one-time card over the
+   Pad's canvas and the steps sheet it and the ⋯ row open. Markup and the why:
+   _skribl_homescreen.html; who sees it: lib/homescreen.js. The card sits just
+   above the tools (its `bottom` is set from #toolBar) and under the toast and
+   every menu; the steps sheet is above the menus, which it is opened from. */
+.hs-banner {
+  position: fixed; left: 12px; right: 12px; z-index: 90;
+  max-width: 520px; margin: 0 auto;
+  display: flex; align-items: center; gap: 4px;
+  padding: 6px 6px 6px 8px; border-radius: 16px;
+  background: var(--surface-panel); color: var(--text-primary);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+.hs-banner-open {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  padding: 6px; border: 0; border-radius: 12px; background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.hs-banner-open img { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+.hs-banner-text { min-width: 0; font-size: 14px; line-height: 1.35; }
+.hs-banner-text b { display: block; font-weight: 650; }
+.hs-banner-sub { color: var(--text-secondary); font-size: 13px; }
+.hs-share { width: 14px; height: 14px; vertical-align: -2px; }
+.hs-banner-x {
+  flex: none; width: 44px; height: 44px; border: 0; border-radius: 50%;
+  display: grid; place-items: center; background: none;
+  color: var(--text-secondary); cursor: pointer;
+}
+.hs-banner-x svg { width: 18px; height: 18px; }
+.hs-banner-open:focus-visible, .hs-banner-x:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.hs-scrim {
+  position: fixed; inset: 0; z-index: 400;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+.hs-steps {
+  width: 100%; max-width: 520px; box-sizing: border-box;
+  padding: 20px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  border-radius: 22px 22px 0 0;
+  background: var(--surface-panel); color: var(--text-primary);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.3);
+  font-size: 15px; line-height: 1.45;
+}
+.hs-steps:focus { outline: none; }
+.hs-steps-head { display: flex; gap: 14px; align-items: center; }
+.hs-steps-head img { width: 52px; height: 52px; border-radius: 12px; flex: none; }
+.hs-steps h2 { margin: 0 0 2px; font-size: 18px; line-height: 1.25; }
+.hs-steps p { margin: 0; color: var(--text-secondary); }
+.hs-list { margin: 16px 0 18px; padding-left: 1.4em; display: grid; gap: 10px; }
+.hs-list .hs-share { width: 16px; height: 16px; vertical-align: -3px; }
+.hs-done {
+  width: 100%; justify-content: center; min-height: 44px;
+  background: var(--accent); border-color: transparent; color: #fff; font-weight: 650;
+}
+@media (min-width: 641px) {
+  .hs-scrim { align-items: center; }
+  .hs-steps { border-radius: 22px; }
+}

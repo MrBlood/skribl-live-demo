@@ -181,7 +181,7 @@
 {%- endif %}
 {%- endmacro %}
 
-{% macro skribl_inline_draft(id='', controls=true, progress=true) -%}
+{% macro skribl_inline_draft(id='', controls=true, progress=true, plain=false) -%}
 {#  A DRAFT: the same player, on a payload that has not been posted.
 
     Three deliberate absences, each load-bearing:
@@ -207,7 +207,12 @@
     of its own — the profile tab's stage is the one in this tree. Both buttons
     are null-guarded in inlineplayer.js, so their absence is a supported state
     rather than a thing to work around with a hidden element.
+
+    plain=true adds `is-plain`, for a draft shown to the person who drew it:
+    no wash and no big Play over their own drawing, and the length chip says
+    "this moves" instead. The feed's composer is the one in this tree (owner,
+    mock P1); what the class means is inlineplayer.css's.
 #}
-<div class="skribl-inline is-muted is-silent"{% if id %} id="{{ id }}"{% endif %}>
+<div class="skribl-inline is-muted is-silent{% if plain %} is-plain{% endif %}"{% if id %} id="{{ id }}"{% endif %}>
 {{ _skribl_inline_insides(controls=controls, progress=progress) }}</div>
 {%- endmacro %}

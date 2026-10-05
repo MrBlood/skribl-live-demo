@@ -444,9 +444,15 @@ One Skribl per post is the shape this section describes.
 your composer the payload, record where the author's cursor was. How depends on
 your composer: a plain textarea can take a marker at the caret, a rich-text
 editor can insert a Skribl node, and a form can store a character offset beside
-the text. The `/skribl/feed` demo does the first. It writes `[skribl]` on a line
-of its own at the cursor, and because it has no post table, that marker travels
-in the Skribl's caption. Your post body is the right place for it on your side.
+the text. Your post body is the right place for it on your side.
+
+The `/skribl/feed` demo does the simplest thing instead: it records no position,
+and the drawing always follows the words, the way a photo does. It used to type
+a `[skribl]` marker at the cursor, and on a phone that was the most confusing
+thing in the composer: a bracketed word in your own sentence, one backspace from
+gone. Its feed still splits a post that carries one, so posts written then keep
+their layout. Choose a marker only if your authors really need words below the
+drawing, and if you do, show the drawing where it sits rather than the marker.
 
 **Render the text in two halves.** Split at the stored position: words before
 it, then the player, then words after it.

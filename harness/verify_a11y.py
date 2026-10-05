@@ -397,6 +397,12 @@ with sync_playwright() as p:
         # straight out of. Opened the way an export opens it; Escape is Cancel,
         # which with no export running leaves it up -- and focus with it.
         ("/flip", "flipExport"):  ("js:exportShow('Exporting')", None),
+        # ADD TO HOME SCREEN (owner, mocks H1+H2): the steps sheet, on both
+        # editors. Its row and banner show only in an iPhone or iPad tab, so the
+        # census opens it the way the module's own entry point does; Escape
+        # hands focus to the ⋯ the row lives under, never to <body>.
+        ("/", "homeScreenSteps"):     ("js:window.SkriblHomeScreen.open()", "menuBtn"),
+        ("/flip", "homeScreenSteps"): ("js:window.SkriblHomeScreen.open()", "moreBtn"),
     }
 
     def _draw_on_pad(pg):

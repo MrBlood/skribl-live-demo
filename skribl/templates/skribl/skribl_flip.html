@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% import 'skribl/_skribl_homescreen.html' as hs with context %}
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -379,6 +380,7 @@
          (owner, v316). Same two-tap arm as before; the second tap runs
          clearAllPages(), the action the drawer's button calls, backup + Undo. #}
       <button type="button" class="menu-item" id="miClearAll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span class="menu-item-text"><span class="new-label">New Skribl</span><span class="menu-item-sub">Start fresh &mdash; Undo brings this one back</span></span></button>
+      {% if not compose %}{{ hs.row() }}{% endif %}
       <div class="menu-divider"></div>
       {# Name this skribl — opens the title drawer that drops from the header.
          Naming lives here, not on a persistent tab over the canvas. Shared
@@ -644,6 +646,7 @@
   <link rel="stylesheet" href="{{ skribl_asset('tooltip.css') }}">
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/hints.js') }}" defer></script>
+  {% if not compose %}<script src="{{ skribl_asset('lib/homescreen.js') }}" defer></script>{% endif %}
   <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/palette.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pillfit.js') }}" defer></script>
@@ -662,6 +665,7 @@
   <script src="{{ skribl_asset('lib/savedrafts.js') }}" defer></script>
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
   {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}
+  {% if not compose %}{{ hs.steps() }}{% endif %}
 </body>
 </html>
 

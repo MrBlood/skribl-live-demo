@@ -143,8 +143,51 @@
     else if (typeof loadSkribl === 'function') loadSkribl(d.payload);
   });
 
+  /* ADD IS NEVER GREYED OUT HERE (owner, mock A2). Standalone, a dimmed Post
+   * from first paint says "this is where posting will happen". Opened from a
+   * composer, the author arrived to add a drawing, the dimmed Add looked broken,
+   * and a disabled button cannot say why. So in compose mode the editors keep
+   * deciding WHEN there is something to add -- app.js and flip.js still write
+   * postBtn.disabled exactly as before -- and this turns that into
+   * data-waiting: the button looks ready, stays focusable, and a press says
+   * what is missing, in the toast both editors already speak through (a
+   * role=status region). Not aria-disabled: styles.css dims and deafens
+   * anything carrying that, and a button that answers is not disabled.
+   *
+   * The property is shadowed ON THIS ONE ELEMENT, so every existing write and
+   * read keeps its meaning; only the attribute that greys and deafens the
+   * button is never set. The capture listener on the window runs before either
+   * editor's own click handler. */
+  var WAIT_MSG = 'Draw something first, then Add';
+  function addAlwaysReady() {
+    var btn = doc.getElementById('postBtn');
+    if (!btn) return;
+    var native = Object.getOwnPropertyDescriptor(HTMLButtonElement.prototype, 'disabled');
+    var waiting = native.get.call(btn);
+    function show(v) {
+      waiting = !!v;
+      native.set.call(btn, false);
+      if (waiting) btn.setAttribute('data-waiting', '');
+      else btn.removeAttribute('data-waiting');
+    }
+    Object.defineProperty(btn, 'disabled', {
+      configurable: true,
+      get: function () { return waiting; },
+      set: show
+    });
+    show(waiting);
+    global.addEventListener('click', function (e) {
+      if (!waiting || !e.target || !e.target.closest || e.target.closest('#postBtn') !== btn) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (typeof global.showToast === 'function') global.showToast(WAIT_MSG, btn);
+      else if (typeof global.chip === 'function') global.chip(WAIT_MSG);
+    }, true);
+  }
+
   function ready() {
     hideDuplicateFields();
+    addAlwaysReady();
     /* The header's × (compose mode only): back to the host's post. The host
      * closes its overlay on cancel and keeps the frame, so the drawing is
      * still there when the author presses the Skribl button again. */

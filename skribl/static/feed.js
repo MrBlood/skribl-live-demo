@@ -40,9 +40,11 @@
     return Math.round(mins / 1440) + 'd';
   }
 
-  /* Where the author put the drawing in their text. Typed into the composer
-     on attach and split on in row(); a host that stores the position its own
-     way (an attachment offset, a node in a rich-text document) needs neither. */
+  /* Where an author put the drawing in their text, on posts written from v315
+     until the marker was retired. The composer no longer writes it (the
+     drawing goes after the words, like a photo: the owner found a literal
+     [skribl] in the text box confusing and easy to delete), but posts that
+     carry one still render with the drawing where it was put. */
   var MARK = '[skribl]';
   function textBlock(words) {
     var el = document.createElement('div');
@@ -73,13 +75,9 @@
     head.appendChild(meta);
     post.appendChild(head);
 
-    /* THE SKRIBL SITS WHERE THE AUTHOR PUT IT (v315). The composer writes
-       MARK into the text at the cursor when a drawing is attached; here the
-       text is split at the first one, words before it above the player and
-       words after it below. No marker -- a post written before this, or one
-       whose author deleted it -- keeps the old order: text, then drawing.
-       A real host does the same with its OWN post body; the marker is this
-       page's stand-in for that, since it has no post table (see below). */
+    /* TEXT, THEN THE DRAWING -- the order every new post has. A post written
+       while the composer still typed MARK is split at it, words before above
+       the player and words after below, so old posts keep their layout. */
     var cap = item.caption || '';
     var at = cap.indexOf(MARK);
     var before = (at >= 0 ? cap.slice(0, at) : cap).trim();
@@ -172,20 +170,6 @@
     compose.status.classList.toggle('error', !!bad);
   }
 
-  /* PUT THE DRAWING WHERE THE CURSOR IS (v315): MARK goes into the text at
-     the caret, on a line of its own, the first time a drawing is attached.
-     Re-attaching after an edit leaves the marker where the author has since
-     moved it. One per post, so a second MARK is never written. */
-  function placeMark() {
-    var t = compose.text;
-    if (t.value.indexOf(MARK) >= 0) return;
-    var at = typeof t.selectionStart === 'number' ? t.selectionStart : t.value.length;
-    var head = t.value.slice(0, at), tail = t.value.slice(at);
-    var ins = (head && !/\n$/.test(head) ? '\n' : '') + MARK + (/^\n/.test(tail) ? '' : '\n');
-    t.value = head + ins + tail;
-    t.selectionStart = t.selectionEnd = (head + ins).length;
-  }
-
   function syncPostBtn() {
     /* A post needs something in it. Text alone is a post; a Skribl alone is a
        post; neither is not. */
@@ -218,7 +202,6 @@
     onClose: function () { compose.overlay.hidden = true; },
     onDone: function (payload) {
       compose.payload = payload;
-      placeMark();
       showAttached();
     }
   });
@@ -227,7 +210,6 @@
   document.getElementById('editSkriblBtn').addEventListener('click', pad.open);
   document.getElementById('removeSkriblBtn').addEventListener('click', function () {
     compose.payload = null;
-    compose.text.value = compose.text.value.replace(MARK + '\n', '').replace(MARK, '');
     compose.attachWrap.hidden = true;
     if (compose.player) compose.player.settle();
     pad.clear();
@@ -252,10 +234,10 @@
        feed's composer is exactly the caller that means otherwise. */
     var body = Object.assign({}, compose.payload, {
       /* The drawing's own name when it has one; otherwise the post's words,
-         which is what /s/<id> unfurls with. The marker is never a title. */
+         which is what /s/<id> unfurls with. */
       title: (compose.payload.title && compose.payload.title !== 'Untitled Skribl')
         ? compose.payload.title
-        : (words.replace(MARK, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Untitled Skribl'),
+        : (words.replace(/\s+/g, ' ').slice(0, 80) || 'Untitled Skribl'),
       caption: words,
       visibility: 'public'
     });
