@@ -1130,6 +1130,20 @@ page from your framing header.
 `verify_integration.py` pins the precedence with a host handler registered
 before and after Skribl is mounted.
 
+**Skribl registers a service worker, scoped to where you mount it.** Every
+Skribl page with a Home Screen identity (Pad, Flip, the player, the library)
+registers `/sw.js` at the blueprint's mount point, so the editors open without a
+signal. It answers only two kinds of request: a navigation to the Pad, Flip or
+the library, which goes to the network first, every time, and is answered from
+the last copy only when the network fails; and Skribl's content-hashed static
+files. Everything else, your pages included, passes through untouched, as if no
+worker were there. Mounted under a prefix, the worker's scope is the prefix and
+it never sees your pages. Mounted at your site's root (`index_route=True`), its
+scope is your whole origin, and it still answers nothing of yours. A site with
+a service worker of its own at the root should mount Skribl under a prefix:
+one scope holds one worker. `verify_offline.py` pins what it answers, and that
+a signal always means a fresh page.
+
 ## Configuration
 
 The `SKRIBL_*` environment variables cover ceilings (frames, points, canvas

@@ -164,7 +164,9 @@ BATCHES = [
      # instance stores media INLINE.
      "verify_deletion_foundation.py"],
     ["verify_csp.py", "verify_csrf.py", "verify_race.py", "verify_prefix.py",
-     "verify_delivery.py", "verify_surfaces.py"],
+     "verify_delivery.py", "verify_surfaces.py",
+     # own server on 5019, which it stops to go offline for real
+     "verify_offline.py"],
     ["verify_version.py", "verify_migrations.py", "verify_postgres.py"],
     # store: externalised and backfill each boot TWO instances and post through
     # them, so they are kept out of verify_deletion_foundation's batch.
