@@ -548,6 +548,9 @@ with sync_playwright() as p:
             check(f"(b) {route}: an unnamed pen colour rings the custom swatch, and only it",
                   st["custom"] and st["n"] == 1, str(st))
             browsing.pad_drawer_close(q)
+            # Closing the last drawer glides the page home (lib/drawers.js holds
+            # its height while it does); a rect read mid-glide is the wrong one.
+            q.wait_for_function("() => window.scrollY === 0", timeout=5000); settle(q, 100)
             # (d) the open Tune button keeps its tint.
             tb = q.query_selector("#tuneBtn").bounding_box()
             mid = {"x": tb["x"] + 4, "y": tb["y"] + tb["height"] / 2 - 2, "width": 4, "height": 4}
