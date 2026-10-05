@@ -13915,3 +13915,10 @@ Media and the dock's Magnify are unchanged: when open they light their glyph
 with no tile, the owner's earlier call ("just turn it purple when pressed").
 The mock described them as losing an outline they do not have, so they wait
 on the owner rather than reversing that call on a wrong caption.
+
+**Media and Magnify take the tile when on (owner, B of four mocks).** The
+Rings and Tints change left them lighting only their glyph, the owner's
+earlier "just turn it purple when pressed". Shown beside the lit Pen in dark
+and light, phone and desktop -- today's glyph, the Pen's tile, the tile with
+the bright glyph, and a bar under the glyph -- the owner picked the Pen's tile:
+"on" now looks one way across the whole dock. At rest Media stays bare.

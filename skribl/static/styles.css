@@ -1401,8 +1401,8 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
 /* Drawer-open toggles light up the way a selected tool does: the tint and its
    ink, no outline (owner, Rings and Tints: a ring is for focus and for things
    a tint cannot show on). One "lit" state across the toolbar, the header and
-   Pad + Flip -- Tune and Flip's ⋯ wear the same two tokens. Media and the dock's
-   Magnify light only their glyph (below), by the owner's earlier call. */
+   Pad + Flip -- Tune, Flip's ⋯, and the dock's Media and Magnify (THE DOCK,
+   below, which also rounds them to the dock's pill) wear the same two tokens. */
 .tool-open.open { color: var(--seg-on-ink); background: var(--seg-on-fill); }
 /* The status dot is anchored to the ICON, not to the button, and that is the
    whole point of the calc(). `top: 6px; right: 6px` measured from the button's
@@ -6875,14 +6875,19 @@ body.stroking .toolbar, body.stroking .flip-tools {
 }
 .toolbar .tool-btn.active .pen-swoosh, .flip-tools .tool-btn.active .pen-swoosh { --pen-nib: var(--text-strong); }
 /* ...and the controls that are ON rather than SELECTED -- Media while its
-   drawer is open, Magnify while its HUD shows -- light their glyph, with no
-   tile. Magnify is desktop-only, so the phone mocks never showed it still
-   wearing the old bordered tile beside a row of bare icons. */
-.toolbar #magnifyBtn, .toolbar #magnifyBtn:hover, .toolbar #magnifyBtn.active,
-.flip-tools #magnifyBtn, .flip-tools #magnifyBtn:hover, .flip-tools #magnifyBtn.active {
+   drawer is open, Magnify while its HUD shows -- wear the selected tool's
+   tile: the tint and its ink, on the dock's pill radius (owner, B of four
+   mocks: "on" looks one way across the whole dock). At rest and under a
+   pointer they stay bare. Magnify is desktop-only. */
+.toolbar #magnifyBtn, .toolbar #magnifyBtn:hover,
+.flip-tools #magnifyBtn, .flip-tools #magnifyBtn:hover {
   background: none; box-shadow: none;
 }
-.toolbar #magnifyBtn.active, .flip-tools #magnifyBtn.active { color: var(--ui-hi); }
+.toolbar #magnifyBtn.active, .flip-tools #magnifyBtn.active,
+.toolbar #mediaOpenBtn.open, .flip-tools #mediaOpenBtn.open {
+  color: var(--seg-on-ink); background: var(--seg-on-fill); box-shadow: none;
+  border-radius: var(--dock-pill-r);
+}
 /* Pad's spacing. Flip's is in flip.css, keyed on its size class. */
 .toolbar #undoBtn, .toolbar #mediaOpenBtn { margin-left: 18px; }
 .toolbar #redoBtn { margin-left: 6px; }
@@ -6902,15 +6907,16 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .toolbar #mediaOpenBtn, .flip-tools #mediaOpenBtn { --icon-size: 40px; width: 44px; height: 44px; }
 .toolbar #mediaOpenBtn .media-glyph,
 .flip-tools #mediaOpenBtn .media-glyph { width: 40px; height: 40px; }
-/* And it is not drawn in a tile: the 40px glyph fills its 44px button, so a
-   lit square read as a box crammed round it ("just turn it purple when
-   pressed"). The hit area is still the full 44x44 -- only the paint is gone. */
-.toolbar #mediaOpenBtn, .toolbar #mediaOpenBtn:hover, .toolbar #mediaOpenBtn.open,
-.flip-tools #mediaOpenBtn, .flip-tools #mediaOpenBtn:hover, .flip-tools #mediaOpenBtn.open {
+/* At rest it is not drawn in a tile: the 40px glyph fills its 44px button,
+   and a square there read as a box crammed round it ("just turn it purple
+   when pressed"). OPEN, it now takes the selected tool's tile like Magnify
+   (above) -- the owner's later pick, seeing it beside the lit Pen. */
+.toolbar #mediaOpenBtn:not(.open), .toolbar #mediaOpenBtn:hover:not(.open),
+.flip-tools #mediaOpenBtn:not(.open), .flip-tools #mediaOpenBtn:hover:not(.open) {
   background: none; box-shadow: none;
 }
-.toolbar #mediaOpenBtn.open, .toolbar #mediaOpenBtn:active,
-.flip-tools #mediaOpenBtn.open, .flip-tools #mediaOpenBtn:active { color: var(--ui-hi); }
+.toolbar #mediaOpenBtn:active:not(.open),
+.flip-tools #mediaOpenBtn:active:not(.open) { color: var(--ui-hi); }
 /* THE DOT SITS ON THE FRAME'S CORNER. The generic rule puts it at the icon
    box's corner (0.4 of --icon-size out); the frame of this glyph stops short
    of the box, so the dot floated off it. The owner asked for it "nestled a

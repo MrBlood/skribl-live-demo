@@ -803,6 +803,11 @@ with sync_playwright() as p:
             check(f"TINTS [{theme}]: the open Tune button wears the tint and no ring",
                   t and t["bg"] == tint and t["shadow"] == "none", f"{t}, tint {tint}")
             q.click("#tuneBtn"); settle(q, 400)
+            q.click("#mediaOpenBtn"); settle(q, 500)
+            md = q.evaluate(LOOK, "#mediaOpenBtn")
+            check(f"TINTS [{theme}]: the open Media button wears the selected tool's tile (owner, B)",
+                  md and md["bg"] == tint and md["shadow"] == "none", f"{md}, tint {tint}")
+            q.click("#mediaOpenBtn"); browsing.wait_scroll_still(q); settle(q, 300)
             long_draw(q, "#canvas"); q.click("#recordBtn"); settle(q, 600)
             q.click("#playBtn"); settle(q, 600)
             pb = q.evaluate(LOOK, "#playBtn"); pw = q.evaluate(LOOK, "#playWrap")
@@ -817,6 +822,11 @@ with sync_playwright() as p:
             c = ctx_for(theme, "desk"); q = c.new_page()
             browsing.goto(q, BASE, "/skribl-pad"); settle(q)
             tint = q.evaluate(TINT)
+            q.click("#magnifyBtn"); q.mouse.move(5, 5); settle(q, 500)
+            mg = q.evaluate(LOOK, "#magnifyBtn")
+            check(f"TINTS [{theme}]: Magnify while on wears the selected tool's tile (owner, B)",
+                  mg and mg["bg"] == tint and mg["shadow"] == "none", f"{mg}, tint {tint}")
+            q.click("#magnifyBtn"); settle(q, 400)
             long_draw(q, "#canvas"); q.click("#recordBtn"); settle(q, 600)
             q.click("#playBtn"); q.mouse.move(5, 5); settle(q, 600)   # off the pill: hover films it
             pw = q.evaluate(LOOK, "#playWrap")
@@ -832,6 +842,11 @@ with sync_playwright() as p:
             check(f"TINTS [{theme}]: Flip's open ⋯ wears the tint and no ring",
                   m and m["bg"] == tint and m["shadow"] == "none", f"{m}, tint {tint}")
             q.keyboard.press("Escape"); settle(q, 400)
+            q.click("#mediaOpenBtn"); settle(q, 500)
+            fm = q.evaluate(LOOK, "#mediaOpenBtn")
+            check(f"TINTS [{theme}]: Flip's open Media button wears the selected tool's tile (owner, B)",
+                  fm and fm["bg"] == tint and fm["shadow"] == "none", f"{fm}, tint {tint}")
+            q.click("#mediaOpenBtn"); browsing.wait_scroll_still(q); settle(q, 300)
             fr = q.evaluate(LOOK, "#strip .frame.on")
             check(f"TINTS [{theme}]: Flip's current page keeps one 1px ring, without the second outside it",
                   fr and fr["shadow"] == "none" and fr["border"] not in ("rgba(0, 0, 0, 0)",), str(fr))
