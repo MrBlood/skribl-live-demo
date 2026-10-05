@@ -1625,11 +1625,15 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 2.5px solid transparent;
+  /* No border. A transparent 2.5px one sat between the edge and the inset rim
+     below, so every dot showed a second, smaller circle inside it -- a donut,
+     not an edge (owner, "is it dingy?"). The colour still reaches the edge;
+     only the rim moves out to meet it. */
+  border: 0;
   cursor: pointer;
   padding: 0;
   outline: none;
-  transition: transform 0.3s var(--spring), border-color 0.12s ease, box-shadow 0.2s ease;
+  transition: transform 0.3s var(--spring), box-shadow 0.2s ease;
   box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.08);
   flex-shrink: 0;
 }
@@ -1642,10 +1646,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    would be the thing that vanishes. lib/palette.js says which swatches are
    dark and deliberately does not say what colour the rim is. */
 .color-dot[data-ink="dark"] { box-shadow: inset 0 0 0 1px var(--line-loud); }
+/* ...and on the light drawer it does not: there --line-loud is a pale grey,
+   and a pale ring inside a black dot read as the SELECTED mark (owner's
+   screenshot, black beside the chosen pink). */
+:root[data-theme="light"] .color-dot[data-ink="dark"] { box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.08); }
 
 .color-dot.active {
   transform: scale(1.08);
-  border-color: transparent;
   /* The outer ring was a literal #fff, which is invisible on a white drawer —
      the selected swatch simply stopped looking selected in light mode. */
   box-shadow: 0 0 0 2px var(--surface-raised), 0 0 0 4px var(--text-primary);
@@ -7761,3 +7768,63 @@ body.replaying .media-card {
   transition: opacity 0.2s ease;
   @starting-style { opacity: 0; }
 }
+
+/* COLOUR BLOCK (owner: "fun and premium", chosen from four directions and a
+   whole-app mock). ANYTHING YOU OPEN TO WORK WITH IS A BLOCK OF SKRIBL VIOLET,
+   and the frame stays calm: the canvas, header, dock and page keep their
+   theme, so the drawing comes first and the colour arrives when you reach for
+   a tool. The same block in light and dark -- it is the one surface that does
+   not follow the theme. The menus stay neutral (owner): ⋯ is navigation, not
+   a tool.
+
+   The block re-themes what it holds by TOKENS, set on the block itself, so
+   every pill, slider, label and button inside keeps its own rules and simply
+   reads white-on-violet values: a selected pill is white with violet ink,
+   tracks and buttons are white at low alpha, secondary text is white at 72%.
+   No backdrop-filter: the block is opaque, and a frosted element is what
+   WebKit fails to repaint (v315). The selected TOOL in the dock is the one
+   solid violet outside a block -- what you are holding. */
+:is(#drawPanel, #mediaCard, #tunePanel, #shapePop, #toolTray, #stampPop, #postSheet, #flipShare .flip-share-card) {
+  --block-ink: #ffffff;
+  --text-strong: #ffffff; --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.78); --text-soft: rgba(255, 255, 255, 0.72);
+  --text-muted: rgba(255, 255, 255, 0.66); --text-tool: rgba(255, 255, 255, 0.86);
+  --ui-hi: #ffffff; --ui-line: rgba(255, 255, 255, 0.85);
+  --seg-on-fill: #ffffff; --seg-on-ink: #3b1fa8;
+  --surface-control: rgba(255, 255, 255, 0.13); --surface-control-hover: rgba(255, 255, 255, 0.2);
+  --surface-raised: #3a24a8; --surface-panel: rgba(255, 255, 255, 0.10); --surface-well: rgba(255, 255, 255, 0.10);
+  --hairline: rgba(255, 255, 255, 0.14); --hairline-strong: rgba(255, 255, 255, 0.22); --line: rgba(255, 255, 255, 0.16);
+  --glass-fill: transparent;
+  color: var(--block-ink);
+  background: linear-gradient(160deg, #4b2fd0 0%, #2c1a86 100%);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: 0 16px 40px rgba(40, 10, 140, 0.42), 0 2px 8px rgba(20, 0, 80, 0.28);
+}
+/* The Media card holds its panels; they wear none of their own. */
+#mediaCard > .tab-panel { background: none; box-shadow: none; }
+/* Text that names a colour outright, rather than through a token. */
+:is(#drawPanel, #mediaCard, #tunePanel, #shapePop, #toolTray, #stampPop, #postSheet, #flipShare .flip-share-card)
+  :is(.prop-val, .menu-item-text, .draw-section-label, .tune-name, .export-head, .flip-export-label) { color: var(--block-ink); }
+:is(#drawPanel, #mediaCard, #tunePanel, #shapePop, #toolTray, #stampPop, #postSheet, #flipShare .flip-share-card)
+  :is(.tune-hint, .export-sub, .post-field-label, .post-field-optional, .post-char-count, .size-label) { color: var(--text-soft); }
+/* Buttons that are not pills: a white wash, white ink. */
+:is(#drawPanel, #mediaCard, #tunePanel, #shapePop, #toolTray, #stampPop, #postSheet, #flipShare .flip-share-card)
+  :is(.clear-drawer-btn, #drawerDetentMore, .eyedropper-btn, .slider-nudge-btn, .tray-cell, .shape-kind, .stamp-btn:not([aria-pressed="true"])) {
+  background: rgba(255, 255, 255, 0.14); color: var(--block-ink); border-color: rgba(255, 255, 255, 0.22);
+}
+:is(#drawPanel, #mediaCard, #tunePanel) .brush-slider-line { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.12); }
+/* Values read as the thing you are setting: bigger, bolder, steady width. */
+:is(#drawPanel, #mediaCard, #tunePanel) .prop-val { font-size: 16px; font-weight: 750; font-variant-numeric: tabular-nums; }
+/* Every swatch keeps a thin light edge on the block: Skribl purple and ink
+   blue sit close to the block's own colour and would otherwise sink into it. */
+#drawPanel .color-dot { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.45); }
+#drawPanel .color-dot.active { box-shadow: 0 0 0 2px #3a24a8, 0 0 0 4px #ffffff; }
+/* The Post sheet's fields and its one action. Fields stay 16px (iOS). */
+#postSheet .post-input { background: rgba(255, 255, 255, 0.12); color: #fff; border-color: rgba(255, 255, 255, 0.2); }
+#postSheet .post-input::placeholder { color: rgba(255, 255, 255, 0.6); }
+#postSheet .post-submit:not(.post-watch) { background: #ffffff; color: #3b1fa8; box-shadow: 0 6px 16px rgba(20, 0, 80, 0.3); }
+/* The tool you are holding: the one solid violet outside a block. */
+#toolGroup .tool-slider { background: #5b44c9; }
+:root[data-theme="light"] #toolGroup .tool-slider { background: #6b46ff; }
+#toolGroup .tool-btn.active, #toolGroup .tool-btn.active .tool-btn-label { color: #ffffff; }
