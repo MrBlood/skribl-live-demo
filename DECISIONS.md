@@ -13871,8 +13871,10 @@ snaps, smooth transitions are good."
   show we have it." A control that comes and goes is one a person cannot find
   when they need it, and the row would reflow every time it did.
 * **S1, even spacing on a phone.** Every tool sits one step apart, centre to
-  centre, the step clamped between 46 and 58px by the viewport, on the Pad and
-  Flip alike. Per-gap margins, because the pen is wider than the rest.
+  centre, the step clamped between 50 and 58px by the viewport, on the Pad and
+  Flip alike. Per-gap margins, because the pen is wider than the rest. From
+  360px: below it six controls cannot sit a step apart without their tap areas
+  overlapping, so the scrolling row with a tool cut off at its edge stays.
 * **The Media card is as tall as its contents.** It inherited the phone tier's
   240px panel floor and showed 82px of nothing under the drop zone.
 * **Motion.** A recorded survey of both editors found a dozen one-frame jumps.
