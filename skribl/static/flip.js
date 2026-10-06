@@ -4266,7 +4266,19 @@ opacityFill();
 /* ---- background: painted into the canvas backdrop; the eraser reveals it ---- */
 const bgGroup=document.getElementById('bgGroup');
 const customBgInput=document.getElementById('customBgInput'), customBgBtn=document.getElementById('customBgBtn');
-function applyBg(){ pad.style.backgroundColor = bgColor; pad.style.backgroundImage = 'none'; render(); refreshAllThumbs(); paintPenSwoosh(); }
+function applyBg(){ pad.style.backgroundColor = bgColor; pad.style.backgroundImage = 'none'; markLightGround(); render(); refreshAllThumbs(); paintPenSwoosh(); }
+// A light canvas takes dark on-canvas ink -- the empty-page hint and the grid
+// (styles.css .light-bg) -- by the Pad's own test (app.js updateVignette).
+function markLightGround(){
+  const zl = document.getElementById('zoomLayer'); if(!zl) return;
+  const hex = (bgColor || '#0d0f14').replace('#', '');
+  if(hex.length < 6) return;
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+  zl.classList.toggle('light-bg', (0.2126*r + 0.7152*g + 0.0722*b) / 255 > 0.6);
+  // The overlay's own class, not `grid`: that is declared further down, and
+  // applyBg runs while the page is still loading.
+  const ge = document.getElementById('flipGrid'); if(ge && ge.classList.contains('on')) syncGrid();
+}
 function setBg(hex, fromCustom){
   if(!/^#[0-9a-f]{6}$/i.test(hex||'')) return;
   bgColor=hex; applyBg();

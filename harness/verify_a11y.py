@@ -1900,7 +1900,7 @@ check("the token that replaced them clears 4.5:1 on EVERY surface",
 # daylight on the owner's iPhone. It is a hint, so it stays quieter than a
 # control, but it is READ, so it clears AA. Measured from the painted colours on
 # both editors, over the canvas default the document starts on.
-print("\nA11Y 15 — the empty-canvas hint is legible on both editors")
+print("\nA11Y 15 — the empty-canvas hint and the grid are legible on both editors, on any canvas")
 _CANVAS = "#0d0f14"
 _HINT = """() => [...document.querySelectorAll('.canvas-empty-hint, .canvas-empty-sub')]
     .filter(e => e.closest('.canvas-empty-hint') && getComputedStyle(e).display !== 'none')
@@ -1910,16 +1910,36 @@ def _blend(css, bg):
     a = v[3] if len(v) > 3 else 1.0
     b = [int(bg[i:i + 2], 16) for i in (1, 3, 5)]
     return "#" + "".join("%02x" % round(a * f + (1 - a) * g) for f, g in zip(v[:3], b))
+# ...AND ON A LIGHT CANVAS (owner: "the draw anything canvas starter msg
+# doesn't show on a light background", "the grid is white"). The canvas is the
+# drawing's colour, so on-canvas ink follows the CANVAS, not the theme: each
+# canvas swatch the drawer offers is chosen, then the hint is measured over
+# it and the grid's painted line is read from the overlay's own pixels.
+_GRIDPX = """(id) => { const g = document.getElementById(id); if (!g || !g.width) return null;
+    const d = g.getContext('2d').getImageData(0, Math.floor(g.height / 3), 1, 1).data;
+    return [d[0], d[1], d[2], d[3]]; }"""
 with sync_playwright() as _hp:
     _hb = _hp.chromium.launch()
-    for _route in ("/", "/flip"):
-        _pg = _hb.new_page(viewport={"width": 390, "height": 844})
-        browsing.goto(_pg, BASE, _route)
-        _found = _pg.evaluate(_HINT)
-        _ratios = {c: round(ratio(_blend(col, _CANVAS), _CANVAS), 2) for c, col in _found}
-        check(f"{_route}: the hint's title and its line both clear 4.5:1 on the canvas",
-              len(_ratios) == 2 and min(_ratios.values()) >= 4.5, str(_ratios))
-        _pg.close()
+    for _route, _grid in (("/", "padGrid"), ("/flip", "flipGrid")):
+        for _ground in (_CANVAS, "#ffffff", "#f6f2ea"):
+            _pg = _hb.new_page(viewport={"width": 390, "height": 844})
+            browsing.goto(_pg, BASE, _route)
+            # Grid FIRST, then the canvas colour: the grid already showing has
+            # to repaint when the ground under it changes.
+            _pg.evaluate("() => document.getElementById('gridBtn').click()")
+            if _ground != _CANVAS:
+                _pg.evaluate("(c) => document.querySelector('.bg-swatch[data-bg=\"' + c + '\"]').click()", _ground)
+            _pg.wait_for_timeout(300)
+            _found = _pg.evaluate(_HINT)
+            _ratios = {c: round(ratio(_blend(col, _ground), _ground), 2) for c, col in _found}
+            check(f"{_route} on {_ground}: the hint's title and its line both clear 4.5:1 on the canvas",
+                  len(_ratios) == 2 and min(_ratios.values()) >= 4.5, str(_ratios))
+            _px = _pg.evaluate(_GRIDPX, _grid)
+            _light = _ground != _CANVAS
+            _ok = bool(_px) and _px[3] > 0 and ((max(_px[:3]) < 80) if _light else (min(_px[:3]) > 200))
+            check(f"{_route} on {_ground}: the grid is drawn in {'dark' if _light else 'light'} ink",
+                  _ok, f"grid line pixel {_px}")
+            _pg.close()
     _hb.close()
 
 passed = sum(1 for ok, _ in results if ok)
