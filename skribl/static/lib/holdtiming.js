@@ -223,6 +223,132 @@
     return { index: i, progress: progressAt(ms, frames, elapsedMs) };
   }
 
+  /* A LOOPED STRETCH (owner: Blooby's card -- "keep it looping forever so he
+   * just keeps waving ... and it doesn't start over"). A document may carry
+   * one `loop`: pages from..to (0-based, inclusive) play on repeat, then the
+   * document carries on. Exactly one of:
+   *   times    -- the stretch plays this many times in all (2..MAX_LOOP_TIMES)
+   *   ms       -- it repeats for about this long: whole passes, the nearest
+   *               count to ms, never fewer than one (LOOP_MS_MIN..LOOP_MS_MAX)
+   *   forever  -- it never ends: the pages before it play once, then the
+   *               stretch repeats for as long as the Flip is on screen, and
+   *               any page after it never plays.
+   * Read defensively, as hold and draw are: a payload without `loop`, or with
+   * one that does not parse, plays exactly as it always did. The bounds are a
+   * shared rule with skribl/validation.py (verify_sharedrules). */
+  var MAX_LOOP_TIMES = 8, LOOP_MS_MIN = 500, LOOP_MS_MAX = 30000;
+  function loopOf(raw, n) {
+    if (!raw || typeof raw !== 'object' || !(n > 0)) return null;
+    var from = raw.from, to = raw.to;
+    if (!(from === Math.floor(from) && to === Math.floor(to))) return null;
+    if (from < 0 || to < from || to >= n) return null;
+    // The server's shape exactly: no key it would refuse, and one kind only.
+    // A loop it would not have posted is not one to honour from a draft either.
+    var kinds = 0;
+    for (var k in raw) {
+      if (!Object.prototype.hasOwnProperty.call(raw, k)) continue;
+      if (k === 'times' || k === 'ms' || k === 'forever') kinds++;
+      else if (k !== 'from' && k !== 'to') return null;
+    }
+    if (kinds !== 1) return null;
+    if (raw.forever === true) return { from: from, to: to, forever: true };
+    if (raw.times === Math.floor(raw.times) && raw.times >= 2 && raw.times <= MAX_LOOP_TIMES)
+      return { from: from, to: to, times: raw.times };
+    if (raw.ms === Math.floor(raw.ms) && raw.ms >= LOOP_MS_MIN && raw.ms <= LOOP_MS_MAX)
+      return { from: from, to: to, ms: raw.ms };
+    return null;
+  }
+
+  /* THE PLAY ORDER. Every surface that plays a Flip asks this, not the page
+   * list, so a loop cannot mean one thing in the editor and another in a
+   * player -- the reason this module exists. `slots` is the order pages play
+   * in for one finite pass (the pages before the loop, the stretch repeated,
+   * the pages after); a forever loop's pass is the pages before plus the
+   * stretch ONCE, and its clock wraps inside the stretch, never to page 1.
+   * Without a loop, slots are 0..n-1 and every answer is the old one. */
+  function plan(frames, fps, rawLoop) {
+    var ms = msTable(frames, fps), n = ms.length, lp = loopOf(rawLoop, n);
+    var slots = [], i, r;
+    if (!lp) { for (i = 0; i < n; i++) slots.push(i); }
+    else {
+      var stretch = 0;
+      for (i = lp.from; i <= lp.to; i++) stretch += ms[i];
+      var reps = lp.forever ? 1 : lp.times ? lp.times
+               : Math.max(1, Math.round(lp.ms / Math.max(1, stretch)));
+      for (i = 0; i < lp.from; i++) slots.push(i);
+      for (r = 0; r < reps; r++) for (i = lp.from; i <= lp.to; i++) slots.push(i);
+      if (!lp.forever) for (i = lp.to + 1; i < n; i++) slots.push(i);
+    }
+    var starts = [], acc = 0;
+    for (i = 0; i < slots.length; i++) { starts.push(acc); acc += ms[slots[i]]; }
+    var introMs = 0;
+    if (lp) for (i = 0; i < lp.from; i++) introMs += ms[i];
+    return { ms: ms, loop: lp, slots: slots, starts: starts, cycle: Math.max(1, acc),
+             forever: !!(lp && lp.forever), introMs: introMs,
+             loopStart: lp ? lp.from : 0, stretchMs: Math.max(1, acc - introMs) };
+  }
+
+  /* Elapsed time since play began -> time within the plan. A finite plan
+   * cycles whole, as every Flip always has; a forever plan never goes back
+   * before its loop. */
+  function wrapMs(p, elapsedMs) {
+    var e = Number(elapsedMs);
+    if (!(e >= 0)) e = 0;
+    if (p.forever && e >= p.introMs) return p.introMs + ((e - p.introMs) % p.stretchMs);
+    return e % p.cycle;
+  }
+
+  /* Which slot is on screen at plan time `t`, and the page it shows. */
+  function slotAt(p, t) {
+    var lo = 0, hi = p.slots.length - 1;
+    while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (p.starts[mid] <= t) lo = mid; else hi = mid - 1; }
+    return lo;
+  }
+
+  /* displayAt() over a plan: the same contract (a drawing page reaches its
+   * complete state before it yields), keyed by SLOT rather than page, since a
+   * one-page loop shows the same page in consecutive slots. Takes ELAPSED
+   * time since play began; wraps it itself. */
+  function planDisplayAt(p, frames, elapsedMs, last) {
+    var t = wrapMs(p, elapsedMs), s = slotAt(p, t), i = p.slots[s];
+    if (last && last.slot !== s && last.slot >= 0 && last.progress < 1
+        && drawOf(frames && frames[last.index])) {
+      return { slot: last.slot, index: last.index, progress: 1 };
+    }
+    var prog = 0;
+    if (drawOf(frames && frames[i])) {
+      var into = t - p.starts[s], span = p.ms[i] || 1;
+      prog = into > 0 ? Math.max(0, Math.min(1, into / span)) : 0;
+    }
+    return { slot: s, index: i, progress: prog };
+  }
+
+  /* The editor's timer steps slot to slot: what plays after slot `s`. */
+  function nextSlot(p, s) {
+    var n = p.slots.length;
+    if (p.forever && s + 1 >= n) {
+      var k = 0; while (k < n && p.slots[k] !== p.loopStart) k++;
+      return k < n ? k : 0;
+    }
+    return (s + 1) % n;
+  }
+
+  /* What an EXPORTED file holds. A file can only replay whole, so a forever
+   * loop exports the pages before it once and then the stretch repeated
+   * until the file runs about FOREVER_EXPORT_MS (at least once, at most
+   * MAX_LOOP_TIMES * 4 passes); the export sheet says so. A finite plan
+   * exports its own slots. Returns page indices in order. */
+  var FOREVER_EXPORT_MS = 10000;
+  function exportSlots(p) {
+    if (!p.forever) return p.slots.slice();
+    var out = [], i, k = 0, lp = p.loop;
+    for (i = 0; i < lp.from; i++) out.push(i);
+    var reps = Math.max(1, Math.min(MAX_LOOP_TIMES * 4,
+      Math.ceil((FOREVER_EXPORT_MS - p.introMs) / p.stretchMs)));
+    for (k = 0; k < reps; k++) for (i = lp.from; i <= lp.to; i++) out.push(i);
+    return out;
+  }
+
   function fpsOf(fps) {
     var f = Number(fps);
     return (isFinite(f) && f > 0) ? f : 12;
@@ -241,7 +367,17 @@
     indexAtMs: indexAtMs,
     progressAt: progressAt,
     dueCount: dueCount,
-    displayAt: displayAt
+    displayAt: displayAt,
+    MAX_LOOP_TIMES: MAX_LOOP_TIMES,
+    LOOP_MS_MIN: LOOP_MS_MIN,
+    LOOP_MS_MAX: LOOP_MS_MAX,
+    FOREVER_EXPORT_MS: FOREVER_EXPORT_MS,
+    loopOf: loopOf,
+    plan: plan,
+    wrapMs: wrapMs,
+    planDisplayAt: planDisplayAt,
+    nextSlot: nextSlot,
+    exportSlots: exportSlots
   };
 
   if (typeof window !== 'undefined') window.SkriblHold = api;

@@ -684,6 +684,9 @@ function serializeFlip(opts){
   return {
     schemaVersion: 2, version: 2,
     playbackMode: 'flip', fps: fps,
+    // The looped stretch, only when there is a valid one: a document without a
+    // loop writes the bytes it always wrote.
+    ...(_validLoop() ? { loop: docLoop } : {}),
     // Timing does not need this -- fps and hold decide it -- but the SPEED
     // CONTROL does, or a reopened draft lights the wrong button. Omitted at the
     // default so an unsubdivided document writes what it always wrote.
@@ -1117,6 +1120,9 @@ function applyPayload(d){
     fps = _f;
     syncFpsSeg();   // lights the pose rate, or says what it is when no button names it
   }
+  // The loop comes back as written, and only if the lib accepts it for these
+  // pages; anything else reads as no loop, as an unparseable hold reads as 1.
+  docLoop = (d.loop && window.SkriblHold && window.SkriblHold.loopOf(d.loop, frames.length)) ? d.loop : null;
   return frames.some(f => f.strokes.length);
 }
 // Media the autosave had to drop (too big for localStorage). Mirrors the Pad:
@@ -3468,6 +3474,33 @@ function updateToolState(){
 const flipPlayer=document.getElementById('flipPlayer'), flipProgress=document.getElementById('flipProgress'), flipProgressFill=document.getElementById('flipProgressFill');
 const drawOnBtn=document.getElementById('drawOnBtn');
 let scrubbingFrames=false, playI=0;
+/* A LOOPED STRETCH (lib/holdtiming.js): `docLoop` is the document's loop as
+   stored ({from, to} plus times | ms | forever), or null. It is read through
+   the lib's plan whenever anything plays, so the preview, the exports and
+   every player walk pages in the same order. `playPlan` is that plan, fixed
+   for the length of one playback. */
+let docLoop = null, playPlan = null;
+function _validLoop(){
+  const H = window.SkriblHold;
+  return (H && H.loopOf && docLoop) ? H.loopOf(docLoop, frames.length) : null;
+}
+function _loopPlan(){ return _validLoop() ? window.SkriblHold.plan(frames, fps, docLoop) : null; }
+/* The page shown for play count i: plain modulo without a loop; with one, the
+   plan's slot -- and past one pass of a FOREVER loop, round the stretch only. */
+function _playPage(i){
+  if(!playPlan) return ((i % frames.length) + frames.length) % frames.length;
+  const n = playPlan.slots.length;
+  if(playPlan.forever && i >= n){
+    const a = playPlan.loop.from, len = playPlan.loop.to - a + 1;
+    return playPlan.slots[a + ((i - a) % len)];
+  }
+  return playPlan.slots[((i % n) + n) % n];
+}
+function _playCountFor(page){
+  if(!playPlan) return page;
+  const k = playPlan.slots.indexOf(page);
+  return k >= 0 ? k : 0;
+}
 function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgressFill.style.width=(((idx+1)/frames.length)*100)+'%';
   if(window.SkriblScrub && frames.length>1) window.SkriblScrub.sync(flipProgress, idx/(frames.length-1)); }
 
@@ -3553,7 +3586,7 @@ function startReveal(f, durMs){
   revealRAF = requestAnimationFrame(tick);
 }
 function playStep(){ if(scrubbingFrames) return;
-  idx=playI%frames.length;
+  idx=_playPage(playI);
   const _t0 = performance.now();
   // A drawing page must never blit a cached bitmap: the cache exists because a
   // still page does not change, and this one does. It also must not FILL the
@@ -3630,7 +3663,7 @@ function runPlayTimer(){
     // all on any pass after it. The shared player builds a cumulative hold
     // table and gets this right, so the editor was disagreeing with what a
     // viewer actually sees.
-    const cur = (playI - 1 + frames.length) % frames.length;
+    const cur = _playPage(playI - 1);
     // slotMs takes the FRAME, not a hold read off it, so this cannot go back
     // to reading the hold off the wrong page — which is what it used to do.
     // pageMs, not slotMs: a drawing page is EXEMPT FROM fps and lasts as long
@@ -3640,7 +3673,7 @@ function runPlayTimer(){
       : frameDraw(frames[cur])
         ? Math.max(320, Math.min(8000, _spanOf(frames[cur])))
         : (1000 / fps) * frameHold(frames[cur]);
-    const ni = playI % frames.length;
+    const ni = _playPage(playI);
     // An unpainted frame is estimated from its point count at the going rate,
     // so the FIRST play-through is even too — that is the one you watch after
     // pressing the button.
@@ -3675,10 +3708,12 @@ function play(){
   startMusic();
   startFlipElapsed();
   playBitmaps = window.SkriblFrameBitmap ? window.SkriblFrameBitmap.store() : null;
-  playI=idx; runPlayTimer();
+  playPlan = _loopPlan();
+  playI=_playCountFor(idx); runPlayTimer();
 }
 function stop(){
   playBitmaps = null;                 // playback-scoped: freed the moment it ends
+  playPlan = null;
   playing=false; document.body.classList.remove('playing');
   playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
   clearInterval(playTimer); playTimer=null; if(revealRAF) cancelAnimationFrame(revealRAF); revealRAF=null;
@@ -3713,7 +3748,7 @@ function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(
   // Scrubbing shows a page WHOLE, drawing or not: a drag is for finding a page,
   // and revealing strokes under the finger would make the thumbnail you are
   // aiming at depend on how fast you moved.
-  playI=idx; render(); updatePlayProgress();
+  playI=_playCountFor(idx); render(); updatePlayProgress();
   liveBadge.textContent=(frameDraw(frames[idx])?'\u270E ':'\u25B6 ')+(idx+1)+' / '+n; }
 flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipProgress.setPointerCapture(e.pointerId);}catch(_){} const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
 flipProgress.addEventListener('pointermove',e=>{ if(!scrubbingFrames) return; const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
@@ -4446,9 +4481,18 @@ function drawFrameTo(c, f, prog){
  * drawing page runs at least its true duration and less than one frame period
  * over, at every fps. Rounding could fall short, and a page that ends early is
  * a page whose last strokes are missing from the file. */
+/* THE ORDER AN EXPORT WALKS PAGES IN. A whole-document export follows the
+   loop through lib/holdtiming.js's exportSlots(): the stretch repeated, and a
+   FOREVER loop run to about ten seconds, since a file can only replay whole. A
+   range export is a range, and ignores the loop. */
+function exportPageOrder(fromI, toI){
+  if(fromI === 0 && toI === frames.length - 1 && _validLoop())
+    return window.SkriblHold.exportSlots(_loopPlan());
+  const o = []; for(let i = fromI; i <= toI; i++) o.push(i); return o;
+}
 function exportUnits(fromI, toI){
   const out = [], slot = 1000 / fps;
-  for(let i = fromI; i <= toI; i++){
+  for(const i of exportPageOrder(fromI, toI)){
     const f = frames[i];
     if(frameDraw(f)){
       const ms = (typeof window !== 'undefined' && window.SkriblHold)
@@ -4785,7 +4829,7 @@ function buildSharePayload(){
   // substitutes 'Untitled Skribl' for an empty title, so sending '' is safe.
   const _t=document.getElementById('flipShareTitle');
   const _c=document.getElementById('flipShareCaption');
-  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), frames:writeFrames(outFrames), canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
+  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), ...(_validLoop() ? {loop:docLoop} : {}), frames:writeFrames(outFrames), canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
            title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
   // THE PUBLIC CHOICE (v304), the Pad's rule: the key travels only when the
   // author ticked it; unticked, it is omitted and the server's "unlisted"
@@ -5113,7 +5157,8 @@ async function exportGIF(){
     // for crisp 1-bit-alpha line art; 'color' bakes the pad background as before.
     const transparent=(gifBgMode==='transparent');
     const fmt=transparent?'rgba4444':'rgb565';
-    for(let i=r.from-1;i<=r.to-1;i++){
+    const _order=exportPageOrder(r.from-1, r.to-1);
+    for(let k=0;k<_order.length;k++){ const i=_order[k];
       if(_exportAbort){ exportHide(); chip('Export cancelled'); exporting=false; return; }
       if(transparent){ fc.clearRect(0,0,CW,CH); paintFrame(fc, frames[i].strokes); }  // strokes only, on transparent
       else { drawFrameTo(fc, frames[i]); }
@@ -5121,11 +5166,11 @@ async function exportGIF(){
       const img=octx.getImageData(0,0,outW,outH);
       const palette=G.quantize(img.data,256,{format:fmt, oneBitAlpha:transparent});
       const index=G.applyPalette(img.data,palette,fmt);
-      const opts={palette,delay:delay*frameHold(frames[i])}; if(i===r.from-1) opts.repeat=0;   // loop forever
+      const opts={palette,delay:delay*frameHold(frames[i])}; if(k===0) opts.repeat=0;   // loop forever
       if(transparent){ let tIdx=palette.findIndex(c=>c.length>3&&c[3]===0); if(tIdx<0) tIdx=0; opts.transparent=true; opts.transparentIndex=tIdx; opts.dispose=2; }
       enc.writeFrame(index,outW,outH,opts);
-      exportSet((i-(r.from-1)+1)/r.count);
-      if((i&1)===0) await new Promise(r=>setTimeout(r,0));               // yield so the UI stays responsive
+      exportSet((k+1)/_order.length);
+      if((k&1)===0) await new Promise(r=>setTimeout(r,0));               // yield so the UI stays responsive
     }
     enc.finish();
     download(new Blob([enc.bytes()],{type:'image/gif'}), window.SkriblName ? window.SkriblName.exportName('gif') : 'skribl-flip.gif');

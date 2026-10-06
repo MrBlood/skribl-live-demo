@@ -14060,3 +14060,36 @@ The stroke-width moves with the size (1.3 -> 1.47) so the line stays ~2.2px,
 the row's weight: a rendered line is stroke-width x size / 24. verify_layout
 pins both, against the Eraser beside it, both editors, phone and desktop; red
 at 40px, and red at 36px with the old 1.3 (a 1.95px line).
+
+**A looped stretch, including Forever (owner, on Blooby's card as a Flip: "is
+there a way to just keep it looping forever so he just keeps waving? and it
+doesn't start over?").** First of three: what a post stores and how every
+surface plays it. The Keep-under layer and the editor's Loop button follow.
+
+* A document may carry one `loop`: pages `from`..`to` (0-based, inclusive)
+  and exactly one of `times` (2..8 plays in all), `ms` (about that long, in
+  whole passes, 500..30,000) or `forever: true`. Forever plays the pages
+  before the stretch once, then wraps INSIDE the stretch for as long as the
+  Flip is on screen -- it never goes back to page 1, and pages after the
+  stretch never play.
+* lib/holdtiming.js plan() is the one answer, asked by the /s/ player, the
+  in-post player, the editor's preview and the export, the same reason the
+  module exists for `hold`. loopOf() accepts exactly the shape
+  validation.py posts (no unknown key, one kind), so a loop either posts and
+  plays everywhere or does neither; an absent or unreadable loop plays as
+  every Flip always has.
+* Exports are files, so Forever exports as the stretch repeated to about
+  10 s (FOREVER_EXPORT_MS); the GIF itself then repeats. A page-range
+  export ignores the loop and exports the range.
+* The draft and the post body carry it; nothing yet sets it but a payload.
+
+verify_loop reads which page is PAINTED (one column of ink per page) on both
+players and the preview's own index, and asserts the post body, the draft
+across a reload, the export order and the server's refusals. Red per
+component: the lib's plan ignoring the loop, the /s/ player, the in-post
+player (and wrapping to page 0), the preview, the draft's save and load, the
+post body, the export, and the server accepting a bad loop.
+verify_sharedrules: every edge loop the server accepts is one the players
+honour, and no other -- red from either side, and green only after loopOf
+stopped honouring two kinds at once and unknown keys, which the first run
+found.

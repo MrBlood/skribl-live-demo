@@ -285,6 +285,28 @@ with sync_playwright() as p:
           f"accepts x{_cmax}: {_accepts(_cmax)}, "
           f"accepts x{_V.MAX_HOLD + 1}: {_accepts(_V.MAX_HOLD + 1)}")
 
+    # THE LOOP'S BOUNDS (v-loop), stated as behaviour the same way: every
+    # surface asks lib/holdtiming.js's loopOf() whether a document's `loop` is
+    # one to honour, and validation.py decides whether it posts. A loop the
+    # server accepts and loopOf() refuses would post and then play straight
+    # through; one loopOf() takes and the server refuses is a post that fails
+    # with the editor showing it working. So they must agree on every edge.
+    _lt, _l0, _l1 = _V.MAX_LOOP_TIMES, _V.LOOP_MS_MIN, _V.LOOP_MS_MAX
+    _probes = [{"from": 1, "to": 8, "times": t} for t in (1, 2, 2.5, _lt, _lt + 1)]
+    _probes += [{"from": 1, "to": 8, "ms": m} for m in (_l0 - 1, _l0, _l1, _l1 + 1)]
+    _probes += [{"from": 1, "to": 8, "forever": True}, {"from": 1, "to": 8, "forever": 1},
+                {"from": 0, "to": 9, "times": 2}, {"from": 0, "to": 10, "times": 2},
+                {"from": -1, "to": 3, "times": 2}, {"from": 5, "to": 5, "times": 2},
+                {"from": 6, "to": 5, "times": 2}, {"from": 1, "to": 8},
+                {"from": 1, "to": 8, "times": 2, "ms": 900},
+                {"from": 1, "to": 8, "times": 2, "extra": 1}]
+    _lib = pg.evaluate("(ps) => ps.map(l => !!window.SkriblHold.loopOf(l, 10))", _probes)
+    _srv = [_V._validate_loop(l, 10) is None for l in _probes]
+    _split = [(l, a, b) for l, a, b in zip(_probes, _lib, _srv) if a != b]
+    check("every loop the server accepts is one the players honour, and no other",
+          not _split and any(_srv) and not all(_srv),
+          f"(loop, players honour, server accepts): {_split}")
+
     # ---- HOW A POINT IS WRITTEN -------------------------------------------
     print("\nHOW A POINT IS WRITTEN — the same spelling on both surfaces")
     pw = pg.evaluate("""() => {

@@ -653,7 +653,7 @@
      * meant to be. Posterless, idle is the FINISHED drawing. */
     var hasPoster = !!poster;
     var payload = null, loading = false, failed = false;
-    var timeline = null, flipFrames = null, flipMs = null, flipFps = 12;
+    var timeline = null, flipFrames = null, flipMs = null, flipFps = 12, flipPlan = null;
     var totalMs = 0, size = null, under = null;
     /* The scale ctx.setTransform is set to in adopt(), so the compositor's
        offscreen layers can match it instead of inferring it from CSS. */
@@ -895,6 +895,12 @@
                    : frames.map(function () { return 1000 / flipFps; });
         totalMs = H ? H.cycleMs(flipMs)
                     : Math.max(1, (frames.length / flipFps) * 1000);
+        /* A LOOPED STRETCH (lib/holdtiming.js plan), only when the post
+         * carries a loop the lib accepts; every other Flip keeps the path
+         * above. totalMs becomes one pass of the plan. */
+        flipPlan = (H && H.plan && H.loopOf(payload.loop, frames.length))
+          ? H.plan(frames, flipFps, payload.loop) : null;
+        if (flipPlan) totalMs = flipPlan.cycle;
       } else {
         timeline = buildTimeline(f0.strokes || [], payload.pauseMode);
         totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
@@ -986,7 +992,9 @@
          * not a jump -- it is the clock coming round, and the page it leaves
          * is owed its last frame as any page turn is, which is why this cannot
          * key off `full`: the loop repaints fully too. See lib/holdtiming.js. */
-        var shown = H
+        var shown = (H && flipPlan)
+          ? H.planDisplayAt(flipPlan, flipFrames, at, jump ? null : lastShown)
+          : H
           ? H.displayAt(flipMs, flipFrames, cyc, jump ? null : lastShown)
           : { index: Math.min(flipFrames.length - 1,
                               Math.floor(at / Math.max(1, totalMs) * flipFrames.length)),
@@ -1237,6 +1245,16 @@
 
     function frame() {
       var at = elapsed + segElapsed();
+      /* A FOREVER loop never ends and never starts over: past one pass the
+       * clock wraps inside the stretch, whatever this post's loop switch says
+       * (the stretch is meant to keep going for as long as it is on screen). */
+      if (flipPlan && flipPlan.forever && at >= totalMs) {
+        elapsed = flipPlan.introMs + ((at - flipPlan.introMs) % flipPlan.stretchMs);
+        t0 = now();
+        render(elapsed, false);
+        raf = global.requestAnimationFrame(frame);
+        return;
+      }
       if (at >= totalMs) {
         /* Both kinds loop by DEFAULT, for different reasons: a Flip document IS
          * a loop, and a Pad replay that stopped dead on the finished drawing

@@ -3827,8 +3827,14 @@ function showPlayerError(msg, canRetry) {
         return (1000 / flipFps) * ((isFinite(h) && h >= 1) ? Math.min(h, 8) : 1);
       }))
     : null;
+  /* A LOOPED STRETCH (lib/holdtiming.js plan): pages from..to on repeat, or
+     forever. Taken ONLY when the post carries a loop the lib accepts, so
+     every other Flip keeps exactly the path below. */
+  const flipPlan = (isFlip && _hold && _hold.plan && _hold.loopOf(data.loop, flipFrames.length))
+    ? _hold.plan(flipFrames, flipFps, data.loop) : null;
   const flipDurMs = isFlip
-    ? (_hold ? _hold.cycleMs(flipMs) : Math.max(1, flipMs.reduce((a, b) => a + b, 0)))
+    ? (flipPlan ? flipPlan.cycle
+       : _hold ? _hold.cycleMs(flipMs) : Math.max(1, flipMs.reduce((a, b) => a + b, 0)))
     : 0;
   // Map elapsed time -> page index through the cumulative hold table.
   function flipIndexAt(cycT) {
@@ -4168,7 +4174,10 @@ function showPlayerError(msg, canRetry) {
     if (isFlip) {
       const cycT = flipDurMs ? (targetMs % flipDurMs) : 0;
       // A SCRUB ASKED FOR THIS PAGE: no finish-first guard (lib/holdtiming.js).
-      drawFlipFrame(flipIndexAt(cycT), flipProgressAt(cycT));
+      if (flipPlan) {
+        const _s = _hold.planDisplayAt(flipPlan, flipFrames, targetMs, null);
+        drawFlipFrame(_s.index, _s.progress); lastShown.slot = _s.slot;
+      } else drawFlipFrame(flipIndexAt(cycT), flipProgressAt(cycT));
       elapsedBase = targetMs; setProgress(frac); hideNib();
       return;
     }
@@ -4230,12 +4239,19 @@ function showPlayerError(msg, canRetry) {
       /* THROUGH displayAt(): no instant of the live clock supplies progress 1
          while a drawing page is still current, so without it nothing ever
          paints that page's last stroke. See lib/holdtiming.js. */
-      const _d = _hold ? _hold.displayAt(flipMs, flipFrames, cycT, lastShown)
+      const _d = flipPlan ? _hold.planDisplayAt(flipPlan, flipFrames, elapsed, lastShown)
+               : _hold ? _hold.displayAt(flipMs, flipFrames, cycT, lastShown)
                        : { index: flipIndexAt(cycT), progress: flipProgressAt(cycT) };
       drawFlipFrame(_d.index, _d.progress);
-      setProgress(flipDurMs ? cycT / flipDurMs : 1);
+      if (flipPlan) lastShown.slot = _d.slot;
+      setProgress(flipDurMs ? (flipPlan ? _hold.wrapMs(flipPlan, elapsed) : cycT) / flipDurMs : 1);
       hideNib();
-      if (!loop && elapsed >= flipDurMs) { drawFlipFrame(flipFrames.length - 1, 1); onEnded(); return; }
+      // A FOREVER loop never ends, whatever the player's own loop says: the
+      // stretch is meant to keep going for as long as it is on screen.
+      if (!loop && !(flipPlan && flipPlan.forever) && elapsed >= flipDurMs) {
+        drawFlipFrame(flipPlan ? flipPlan.slots[flipPlan.slots.length - 1] : flipFrames.length - 1, 1);
+        onEnded(); return;
+      }
       rafId = requestAnimationFrame(frame);
       return;
     }
