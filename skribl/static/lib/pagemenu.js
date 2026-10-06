@@ -31,7 +31,6 @@
     var sheet = document.getElementById('pageMenu');
     if (!btn || !overlay || !sheet) return;
     var choices = [].slice.call(sheet.querySelectorAll('[data-theme]'));
-    var panelChoices = [].slice.call(sheet.querySelectorAll('[data-panels]'));
     var Theme = global.SkriblTheme;
     var Modal = global.SkriblModal;
 
@@ -39,10 +38,6 @@
       var mode = Theme ? Theme.mode() : 'system';
       choices.forEach(function (b) {
         b.setAttribute('aria-pressed', b.getAttribute('data-theme') === mode ? 'true' : 'false');
-      });
-      var panels = Theme && Theme.panels ? Theme.panels() : 'calm';
-      panelChoices.forEach(function (b) {
-        b.setAttribute('aria-pressed', b.getAttribute('data-panels') === panels ? 'true' : 'false');
       });
     }
     // Easing away counts as closed, so a quick second tap reopens it.
@@ -85,12 +80,6 @@
     choices.forEach(function (b) {
       b.addEventListener('click', function () {
         if (Theme) Theme.set(b.getAttribute('data-theme'));
-        sync();
-      });
-    });
-    panelChoices.forEach(function (b) {
-      b.addEventListener('click', function () {
-        if (Theme && Theme.setPanels) Theme.setPanels(b.getAttribute('data-panels'));
         sync();
       });
     });

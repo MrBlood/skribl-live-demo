@@ -2117,33 +2117,3 @@ a.player-btn { text-decoration: none; }
   button:is(.on, .active, [aria-selected="true"]):focus-visible { outline-width: 2px; outline-offset: 1px; }
   .seg-slider, .photo-fit-slider, .tool-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }
-
-/* COLOUR BLOCK (owner: "fun and premium", chosen from four directions and a
-   whole-app mock). ANYTHING YOU OPEN TO WORK WITH IS A BLOCK OF SKRIBL VIOLET,
-   and the frame stays calm: the canvas, header, dock and page keep their
-   theme, so the drawing comes first and the colour arrives when you reach for
-   a tool. The same block in light and dark -- it is the one surface that does
-   not follow the theme. The menus stay neutral (owner): ⋯ is navigation, not
-   a tool.
-
-   The block re-themes what it holds by TOKENS, set on the block itself, so
-   every pill, slider, label and button inside keeps its own rules and simply
-   reads white-on-violet values: a selected pill is white with violet ink,
-   tracks and buttons are white at low alpha, secondary text is white at 72%.
-   No backdrop-filter: the block is opaque, and a frosted element is what
-   WebKit fails to repaint (v315). The selected TOOL in the dock is the one
-   solid violet outside a block -- what you are holding.
-
-   OPT-IN: Panels, Calm | Colour, in every ⋯ menu (owner: "calm default").
-   Every rule below is keyed on :root[data-panels="colour"], stamped before
-   first paint by _skribl_theme_boot.html and kept by lib/theme.js, so Calm is
-   the frame exactly as it was -- light or dark -- and Colour is this. The
-   palette tokens on :root are unkeyed; nothing reads them under Calm. */
-:root {
-  /* The block's own palette, one set for both themes. */
-  --block-from: #4b2fd0; --block-to: #2c1a86; --block-base: #3c25ac;
-  --block-ink: #ffffff; --block-on-ink: #3b1fa8;
-  /* The tool you are holding: solid, white ink. Lighter on the light page. */
-  --tool-solid: #5b44c9;
-}
-:root[data-theme="light"] { --tool-solid: #6b46ff; }

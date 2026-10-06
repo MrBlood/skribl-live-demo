@@ -4828,25 +4828,6 @@ if (window.SkriblReport) window.SkriblReport.init();
   sync();
 })();
 
-// Panels switch -- Calm | Colour, the same stored setting as Flip's and the
-// page menu's. lib/theme.js owns the key and the <html> attribute.
-(function(){
-  const seg = document.getElementById('panelsSeg');
-  if (!seg || !window.SkriblTheme || !window.SkriblTheme.panels) return;
-  function sync() {
-    const p = window.SkriblTheme.panels();
-    seg.querySelectorAll('button').forEach(b =>
-      b.classList.toggle('on', b.dataset.panels === p));
-  }
-  seg.addEventListener('click', e => {
-    const b = e.target.closest('button');
-    if (!b || !b.dataset.panels) return;
-    window.SkriblTheme.setPanels(b.dataset.panels);
-  });
-  window.SkriblTheme.onChange(sync);
-  sync();
-})();
-
 // Styled tooltips. Native `title` cannot be rounded; this swaps them out.
 if (window.SkriblTooltip) window.SkriblTooltip.init();
 

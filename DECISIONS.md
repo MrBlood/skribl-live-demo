@@ -14002,3 +14002,24 @@ the default dark ground and the drawer's white and cream, both editors, the grid
 switched on before the ground changes. Red per component: the Pad's repaint,
 Flip's classification, the grid's token, the raised alphas. The selected
 pen's nib under Panels: Colour is the owner's to decide, and unchanged.
+
+**Colour block removed (owner: "Take it out").** Asked whether it was worth
+keeping, the answer was that an opt-in nobody finds is the weakest of three
+states: every new panel and control has to be right in two looks (four
+Colour-only defects in two days, the selected pen's nib the fifth), it cost a
+suite of its own and second passes in five more, and with Calm the default it
+served almost no one. The owner chose removal over making it the default.
+
+* Gone: the COLOUR BLOCK rules and their tokens, the Panels row in every menu
+  and its wiring, Panels in lib/theme.js and the inline boot (and the
+  player's opt-out of it), the Library hero's block, verify_onepill_colour.py
+  and every Colour pass in the suites. Calm is the app, unchanged.
+* Kept, because they were never Colour: the rounded Media / Magnify tiles, the
+  two swatch fixes, verify_theme matching script files by path (its
+  "every script blocked" blocked nothing), the onepill radius pin on those
+  tiles, and verify_sizeclass reading the slider relative to its column and
+  the thumb at its end.
+* A browser that chose Colour keeps a skribl_panels_v1 key nothing reads.
+* SHELVED, NOT DROPPED (owner: "I might want it back. I just don't want to
+  bloat the app now"): FUTURE.md 6j says what it was, that it is all in
+  7733dc3 (#339), and what to settle before it returns.

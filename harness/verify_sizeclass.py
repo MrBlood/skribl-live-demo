@@ -672,12 +672,8 @@ if _Img:
     with sync_playwright() as _ap:
         _ab = _ap.chromium.launch()
         try:
-            # Both Panels: Calm's glass and Colour's violet block are two
-            # grounds for the one slider (?panels= wins for the document).
             for _path, _name, _ctl, _sid in (("/flip", "Flip", "_flipDrawerCtl", "size"),
-                                             ("/", "Pad", "_padDrawerCtl", "brushSizeRange"),
-                                             ("/flip?panels=colour", "Flip (Colour)", "_flipDrawerCtl", "size"),
-                                             ("/?panels=colour", "Pad (Colour)", "_padDrawerCtl", "brushSizeRange")):
+                                             ("/", "Pad", "_padDrawerCtl", "brushSizeRange")):
                 # A pixel pin (ink on a dark ground): since v292 a bare
                 # page follows the OS, and headless Chromium says light, on
                 # which the whole strip is bright. Ask for the theme it measures.
@@ -706,7 +702,7 @@ if _Img:
                       bb is not None and bb["height"] > 0, str(bb))
                 if not bb:
                     ap.close(); continue
-                shot = f"/tmp/skribl-slider-{_name.lower().replace(' ', '-').strip('()').replace('(', '').replace(')', '')}.png"
+                shot = f"/tmp/skribl-slider-{_name.lower()}.png"
                 ap.screenshot(path=shot, clip={"x": bb["x"], "y": bb["y"] - 6,
                                                "width": bb["width"],
                                                "height": bb["height"] + 12})
@@ -717,11 +713,9 @@ if _Img:
                 for x in range(w):
                     # What stands out from its own column: the track and the
                     # thumb's ring, brighter than the column's median by more
-                    # than 50. Relative, because one strip is measured on two
-                    # grounds: Calm's dark glass (band 27, track 120, rim 39)
-                    # and Colour's violet block (band 86, track 255, rim 106).
-                    # A fixed cut at 70 read Colour's band as a 44px thumb; a
-                    # fixed 150 read nothing at all on Calm.
+                    # than 50 (on the dark drawer: band 27, track 120, rim 39).
+                    # Relative rather than a fixed cut, so a drawer whose
+                    # ground changes does not read its own band as a thumb.
                     ref = sorted(px[x, y] for y in range(h))[h // 2]
                     col = [y for y in range(h) if px[x, y] - ref > 50]
                     heights.append((max(col) - min(col) + 1) if col else 0)
