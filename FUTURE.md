@@ -684,6 +684,27 @@ first: one background page for a stretch (one small field in the format); two
 layers on every page (rough and clean, 4 idea 2); a full stack. The first plus
 the loop covers the card. Both are payload-schema decisions, so: mock first.
 
+## 6j. The Colour block, shelved, not dropped (owner, after #339)
+
+Panels: Colour made the panels you open to work with -- the Pen drawer, the
+Media card, Tune, the pickers, the Post sheet, the Library's hero -- a block of
+Skribl violet (#4b2fd0 to #2c1a86), with the selected dock tool solid violet,
+as an opt-in beside Theme. Built, tested and merged in #339 (7733dc3), then
+taken out (owner: "I might want it back. I just don't want to bloat the app
+now"): an option few would find, that every new panel had to be right in
+twice.
+
+To bring it back, revert the removal commit (the squash of the PR titled
+"Remove the Colour block"); everything returns at once -- the rules, the
+Panels row in every menu, the inline boot's stamp, and the suites' Colour
+passes, including its own census suite. Two things to settle first:
+
+* THE NIB on the solid violet Pen tile: dark ink in Light, and a violet pen's
+  line vanishes on the violet tile. Mocked: a white nib (C), or a white nib
+  with a white edge round the line (A). Undecided.
+* WHETHER IT IS AN OPTION OR THE LOOK. As a hidden option it cost the most for
+  the least; if it comes back, the case for it is as the default.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

@@ -14020,3 +14020,6 @@ served almost no one. The owner chose removal over making it the default.
   tiles, and verify_sizeclass reading the slider relative to its column and
   the thumb at its end.
 * A browser that chose Colour keeps a skribl_panels_v1 key nothing reads.
+* SHELVED, NOT DROPPED (owner: "I might want it back. I just don't want to
+  bloat the app now"): FUTURE.md 6j says what it was, that it is all in
+  7733dc3 (#339), and what to settle before it returns.
