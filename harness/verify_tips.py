@@ -429,16 +429,16 @@ with sync_playwright() as p:
     # measured, "System" had 2px beside it and "16:9" under 5px. The room is
     # the pill's box less its glyphs, halved — read from a Range around the
     # text, so a wider phone font shows up here as it does on the phone. Both
-    # editors, both widths, every pill in the rows (Panels too).
+    # editors, both widths, every pill in the three rows.
     ROOM = """() => {
       const root = document.getElementById('menuSheet') || document.getElementById('moreMenu');
       const out = [];
-      for (const b of root.querySelectorAll('#hintSeg button, #themeSeg button, #panelsSeg button, #canvasSeg button')) {
+      for (const b of root.querySelectorAll('#hintSeg button, #themeSeg button, #canvasSeg button')) {
         const rg = document.createRange(); rg.selectNodeContents(b);
         const room = (b.getBoundingClientRect().width - rg.getBoundingClientRect().width) / 2;
         out.push([b.closest('.seg').id, b.textContent.trim(), Math.round(room * 10) / 10]);
       }
-      const segs = ['hintSeg', 'themeSeg', 'panelsSeg', 'canvasSeg'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().right));
+      const segs = ['hintSeg', 'themeSeg', 'canvasSeg'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().right));
       return { pills: out, rights: segs }; }"""
     for _w, _path, _btn in ((1100, "/flip", "#moreBtn"), (1100, "/skribl-pad", "#menuBtn"),
                             (390, "/flip", "#moreBtn"), (390, "/skribl-pad", "#menuBtn")):
@@ -450,7 +450,7 @@ with sync_playwright() as p:
         _tight = [f"{seg} {lab!r} {room}px" for seg, lab, room in _room["pills"] if room < 8]
         check(f"at {_w} on {_path}: every menu pill keeps 8px beside its label",
               not _tight, "; ".join(_tight))
-        check(f"at {_w} on {_path}: the rows' switches (Tips, Theme, Panels, Canvas) share one right edge",
+        check(f"at {_w} on {_path}: the three rows' switches share one right edge",
               max(_room["rights"]) - min(_room["rights"]) <= 1, str(_room["rights"]))
         _rp.close()
 

@@ -1427,7 +1427,7 @@ with sync_playwright() as p:
     # the open drawer were two glass slabs, 8px apart and of different widths
     # (520 against 694 at a desktop width), each with its own rim and shadow.
     # They are ONE card now: #mediaCard wraps the strip and both panels and
-    # wears the glass (or, with Panels set to Colour, is the block); the panel inside goes clear, and the strip sits inset in
+    # wears the glass; the panel inside goes clear, and the strip sits inset in
     # the card as a track. Fresh, empty drawers, so a tall loaded panel cannot
     # scroll the strip off the top of a phone (lib/drawerdetent.js reveals the
     # panel's END); and every point is on screen before it is asked about.
@@ -1447,44 +1447,35 @@ with sync_playwright() as p:
                  seam: [inCard(cx, t.bottom + (r.top - t.bottom) / 2), inCard(cx, r.top + 1)],
                  gap: Math.round(r.top - t.bottom),
                  glass: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backdropFilter !== 'none',
-                 block: cs.backgroundImage.includes('gradient'),
                  clear: ps.backgroundColor === 'rgba(0, 0, 0, 0)' && ps.boxShadow === 'none' && ps.backdropFilter === 'none'
                         && ts.backdropFilter === 'none' };
     }"""
-    # Twice: Calm, where the card wears the glass, and Panels set to Colour,
-    # where it is the violet block (opaque, no backdrop). Clear inside either way.
-    for _route, _colour in (("/skribl-pad", False), ("/flip", False), ("/skribl-pad", True), ("/flip", True)):
+    for _route in ("/skribl-pad", "/flip"):
         for _vw, _vp in (("390", {"width": 390, "height": 844}), ("1280", {"width": 1280, "height": 900})):
             _q = b.new_page(viewport=_vp)
-            _lbl = _route + (" (Colour)" if _colour else "")
-            _url = BASE + _route + ("?panels=colour" if _colour else "")
-            _q.goto(_url, wait_until="load"); _q.wait_for_timeout(700)
+            _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
             _q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
-            _q.goto(_url, wait_until="load"); _q.wait_for_timeout(700)
+            _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
             _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
             for _k in ("photo", "music"):
                 browsing.pad_drawer(_q, _k)
                 _cur = _q.evaluate(browsing._PAD_CUR)
                 _c = _q.evaluate(CARD, _k)
-                check(f"{_lbl} at {_vw}, {_k}: the tabs and the open drawer share one parent card",
+                check(f"{_route} at {_vw}, {_k}: the tabs and the open drawer share one parent card",
                       _cur == _k and _c["card"] and _c["parents"], f"open={_cur!r} {_c}")
                 if not _c["card"]:
                     continue
-                check(f"{_lbl} at {_vw}, {_k}: the strip sits inset in the card and lines up with the drawer's content",
+                check(f"{_route} at {_vw}, {_k}: the strip sits inset in the card and lines up with the drawer's content",
                       all(abs(v - 16) <= 0.5 for v in _c["inset"]) and _c["content"] and _c["span"], str(_c))
-                check(f"{_lbl} at {_vw}, {_k}: the seam between tabs and drawer is painted by the card, not the page",
+                check(f"{_route} at {_vw}, {_k}: the seam between tabs and drawer is painted by the card, not the page",
                       _c["seam"] == [True, True], str(_c))
-                if _colour:
-                    check(f"{_lbl} at {_vw}, {_k}: the card is the block and the drawer inside it is clear",
-                          _c["block"] and _c["clear"], str(_c))
-                else:
-                    check(f"{_lbl} at {_vw}, {_k}: the card wears the glass and the drawer inside it is clear",
-                          _c["glass"] and not _c["block"] and _c["clear"], str(_c))
+                check(f"{_route} at {_vw}, {_k}: the card wears the glass and the drawer inside it is clear",
+                      _c["glass"] and _c["clear"], str(_c))
             if _route == "/flip":
                 _dlg = _q.evaluate("""() => { const p = document.getElementById('photoPanel');
                     return { role: p.getAttribute('role'), label: p.getAttribute('aria-label'),
                              tabsInDialog: !!document.getElementById('mediaTabs').closest('[role=dialog]') }; }""")
-                check(f"{_lbl} at {_vw}: the drawers are still named dialogs, and the tablist is outside them",
+                check(f"/flip at {_vw}: the drawers are still named dialogs, and the tablist is outside them",
                       _dlg == {"role": "dialog", "label": "Background image", "tabsInDialog": False}, str(_dlg))
             _q.click("#mediaOpenBtn"); _q.wait_for_timeout(400)
             _gone = _q.evaluate("() => { const c = document.getElementById('mediaCard'); return { open: (" + browsing._PAD_CUR + ")(), display: c ? getComputedStyle(c).display : null }; }")
@@ -2320,21 +2311,15 @@ with sync_playwright() as p:
     # guides AMBER where the Pad lights the same switches purple: flip.css
     # re-declared an amber `.onion-tint.active` after styles.css had already
     # narrowed amber to the two onion controls. Computed colour against the
-    # page's own resolved --ui-hi / --warn-2, so a retuned accent stays green
-    # (resolved where the switch sits, which a colour block re-themes).
+    # page's own resolved --ui-hi / --warn-2, so a retuned accent stays green.
     # Also Flip's page-bar Draw switch: `.pb:hover` outranked `.pb.on`, so a
     # desktop click showed no change until the pointer left.
     _SW = """(ids) => {
         const probe = (v) => { const i = document.createElement('i'); i.style.color = 'var(' + v + ')';
           document.body.appendChild(i); const c = getComputedStyle(i).color; i.remove(); return c; };
         const out = { hi: probe('--ui-hi'), amber: probe('--warn-2') };
-        // The accent where the switch SITS: a colour block re-themes it, so
-        // the page's own --ui-hi is the wrong reference inside one.
-        const here = (e) => { const i = document.createElement('i');
-          i.style.color = 'var(--switch-on-ink, var(--ui-hi))'; e.parentElement.appendChild(i);
-          const c = getComputedStyle(i).color; i.remove(); return c; };
         ids.forEach(id => { const e = document.getElementById(id);
-          out[id] = e ? { on: e.getAttribute('aria-checked') === 'true', color: getComputedStyle(e).color, hi: here(e) } : null; });
+          out[id] = e ? { on: e.getAttribute('aria-checked') === 'true', color: getComputedStyle(e).color } : null; });
         return out; }"""
     for _theme in ("dark", "light"):
         _sw = {}
@@ -2365,11 +2350,11 @@ with sync_playwright() as p:
             _q.close()
         pad, flip = _sw["/skribl-pad"], _sw["/flip"]
         check(f"Pad {_theme}: Grid, switched on, is the accent",
-              pad["gridBtn"]["on"] and pad["gridBtn"]["color"] == pad["gridBtn"]["hi"], str(pad))
+              pad["gridBtn"]["on"] and pad["gridBtn"]["color"] == pad["hi"], str(pad))
         for _id in ("gridBtn", "strokeLayersBtn", "arcGuideBtn"):
             check(f"Flip {_theme}: {_id}, switched on, is the accent like the Pad's, not amber",
-                  flip[_id]["on"] and flip[_id]["color"] == flip[_id]["hi"] != flip["amber"],
-                  f"{flip[_id]} (amber {flip['amber']})")
+                  flip[_id]["on"] and flip[_id]["color"] == flip["hi"] != flip["amber"],
+                  f"{flip[_id]} (accent {flip['hi']}, amber {flip['amber']})")
         check(f"Flip {_theme}: the onion switch keeps its amber, the colour the onion pages tint",
               flip["onion"]["on"] and flip["onion"]["color"] == flip["amber"], str(flip["onion"]))
 

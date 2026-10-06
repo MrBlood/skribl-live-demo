@@ -189,7 +189,6 @@ BATCHES = [
     ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
      "verify_flipdraft.py", "verify_fuzz.py"],
     ["verify_onepill.py"],                 # measures — painted pixels and sub-pixel geometry
-    ["verify_onepill_colour.py"],          # measures — the same, with Panels on Colour
     ["verify_galib.py"],                   # measures — painted focus rings, glass, text on real pixels
     # store: posts four rejected payloads and one accepted one to the shared
     # server, so it stays out of verify_deletion_foundation's batch.
