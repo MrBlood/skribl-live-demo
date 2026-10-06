@@ -4481,13 +4481,27 @@ function drawFrameTo(c, f, prog){
  * drawing page runs at least its true duration and less than one frame period
  * over, at every fps. Rounding could fall short, and a page that ends early is
  * a page whose last strokes are missing from the file. */
-/* THE ORDER AN EXPORT WALKS PAGES IN. A whole-document export follows the
-   loop through lib/holdtiming.js's exportSlots(): the stretch repeated, and a
-   FOREVER loop run to about ten seconds, since a file can only replay whole. A
-   range export is a range, and ignores the loop. */
+/* What an EXPORTED file holds. A file can only replay whole, so a forever
+   loop exports the pages before it once and then the stretch repeated until
+   the file runs about FOREVER_EXPORT_MS (at least once, at most
+   MAX_LOOP_TIMES * 4 passes). A finite plan exports its own slots. Here and
+   not in lib/holdtiming.js because only an editor exports: the players load
+   that lib, and its bytes are theirs (verify_inline, verify_player_isolation). */
+const FOREVER_EXPORT_MS = 10000;
+function _exportSlots(p){
+  if(!p.forever) return p.slots.slice();
+  const out = [], lp = p.loop;
+  for(let i = 0; i < lp.from; i++) out.push(i);
+  const reps = Math.max(1, Math.min(window.SkriblHold.MAX_LOOP_TIMES * 4,
+    Math.ceil((FOREVER_EXPORT_MS - p.introMs) / p.stretchMs)));
+  for(let k = 0; k < reps; k++) for(let i = lp.from; i <= lp.to; i++) out.push(i);
+  return out;
+}
+/* THE ORDER AN EXPORT WALKS PAGES IN: a whole-document export follows the
+   loop's plan (above); a range export is a range, and ignores the loop. */
 function exportPageOrder(fromI, toI){
   if(fromI === 0 && toI === frames.length - 1 && _validLoop())
-    return window.SkriblHold.exportSlots(_loopPlan());
+    return _exportSlots(_loopPlan());
   const o = []; for(let i = fromI; i <= toI; i++) o.push(i); return o;
 }
 function exportUnits(fromI, toI){

@@ -14082,6 +14082,21 @@ surface plays it. The Keep-under layer and the editor's Loop button follow.
   10 s (FOREVER_EXPORT_MS); the GIF itself then repeats. A page-range
   export ignores the loop and exports the range.
 * The draft and the post body carry it; nothing yet sets it but a payload.
+* ONE PATH, NOT TWO. Both players time EVERY Flip through the plan, loop or
+  not: a plan with no loop gives the old answers, so the whole Flip battery
+  exercises the code a loop runs. That retired the old clock --
+  indexAtMs(), progressAt(), cycleMs() and the ms-table displayAt() -- and
+  the finish-first guard's reasoning moved with displayAt() onto the plan.
+  verify_sharedrules' sweeps now ask the plan; "time past the end" became
+  "the last instant of a pass, and the next pass starts at page 1", because
+  a plan cycles.
+* PAID FOR, then spent against: the first full run put the in-post player
+  2,031 B over verify_inline's ratchet and the link player 2,924 B over
+  verify_player_isolation's. The one path (~1.1 KB of retired clock), the
+  export's slot order moving to flip.js (only an editor exports), an unused
+  helper deleted and a tighter loopOf() brought the in-post player under its
+  ratchet with no raise; the link player's ratchet rose 690 B for the plan
+  itself (133,950; the 153,800 target is unchanged).
 
 verify_loop reads which page is PAINTED (one column of ink per page) on both
 players and the preview's own index, and asserts the post body, the draft

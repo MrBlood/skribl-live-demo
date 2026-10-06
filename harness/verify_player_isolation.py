@@ -682,7 +682,17 @@ with sync_playwright() as sp:
     #   handler live in app.js, which the player loads; setTool is also where
     #   the keyboard's E arrives, so an editor-side click hook would miss it.
     # 133,176 measured.
-    BYTES_RATCHET, BYTES_TARGET = 133_220, 153_800
+    # RAISED (Blooby's loop, owner: "keep it looping forever so he just keeps
+    #   waving"), for one named cost, after spending: +690 B over the old
+    #   ceiling, lib/holdtiming.js's plan -- the play order with a looped
+    #   stretch, times / ms / forever, and the forever clock that wraps inside
+    #   it -- plus app.js asking it. Spent first: every Flip now takes the plan
+    #   (no second path beside it), so indexAtMs/progressAt/cycleMs and the old
+    #   displayAt left the lib (~1.1 KB); the export's slot order went to
+    #   flip.js, which the player never loads; and an unused nextSlot was
+    #   deleted. The in-post player's ratchet (verify_inline) needed no raise.
+    # 133,910 measured.
+    BYTES_RATCHET, BYTES_TARGET = 133_950, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

@@ -653,7 +653,7 @@
      * meant to be. Posterless, idle is the FINISHED drawing. */
     var hasPoster = !!poster;
     var payload = null, loading = false, failed = false;
-    var timeline = null, flipFrames = null, flipMs = null, flipFps = 12, flipPlan = null;
+    var timeline = null, flipFrames = null, flipFps = 12, flipPlan = null;
     var totalMs = 0, size = null, under = null;
     /* The scale ctx.setTransform is set to in adopt(), so the compositor's
        offscreen layers can match it instead of inferring it from CSS. */
@@ -890,17 +890,12 @@
          * degrades to one slot per page, which is what it did before per-page
          * holds existed — the fallback's job is to keep a page turning, not to
          * reproduce a feature. */
+        /* THE PLAY ORDER (lib/holdtiming.js plan), looped stretch or not:
+         * one path for every Flip, and totalMs is one pass of it. A loop the
+         * lib does not accept is ignored. */
         var H = global.SkriblHold;
-        flipMs = H ? H.msTable(frames, flipFps)
-                   : frames.map(function () { return 1000 / flipFps; });
-        totalMs = H ? H.cycleMs(flipMs)
-                    : Math.max(1, (frames.length / flipFps) * 1000);
-        /* A LOOPED STRETCH (lib/holdtiming.js plan), only when the post
-         * carries a loop the lib accepts; every other Flip keeps the path
-         * above. totalMs becomes one pass of the plan. */
-        flipPlan = (H && H.plan && H.loopOf(payload.loop, frames.length))
-          ? H.plan(frames, flipFps, payload.loop) : null;
-        if (flipPlan) totalMs = flipPlan.cycle;
+        flipPlan = (H && H.plan) ? H.plan(frames, flipFps, payload.loop) : null;
+        totalMs = flipPlan ? flipPlan.cycle : Math.max(1, (frames.length / flipFps) * 1000);
       } else {
         timeline = buildTimeline(f0.strokes || [], payload.pauseMode);
         totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
@@ -982,7 +977,6 @@
       if (!payload) return;
       if (flipFrames) {
         var H = global.SkriblHold;
-        var cyc = at % Math.max(1, totalMs);
         /* THROUGH displayAt() WHEN PLAYING, because no instant of the live
          * clock supplies progress 1 while a drawing page is still current, and
          * that page must reach its complete recorded state before the clock
@@ -992,10 +986,8 @@
          * not a jump -- it is the clock coming round, and the page it leaves
          * is owed its last frame as any page turn is, which is why this cannot
          * key off `full`: the loop repaints fully too. See lib/holdtiming.js. */
-        var shown = (H && flipPlan)
-          ? H.planDisplayAt(flipPlan, flipFrames, at, jump ? null : lastShown)
-          : H
-          ? H.displayAt(flipMs, flipFrames, cyc, jump ? null : lastShown)
+        var shown = flipPlan
+          ? H.displayAt(flipPlan, flipFrames, at, jump ? null : lastShown)
           : { index: Math.min(flipFrames.length - 1,
                               Math.floor(at / Math.max(1, totalMs) * flipFrames.length)),
               progress: 0 };
@@ -1008,7 +1000,7 @@
            * answer the editor and the /s/ player get, from the same module, so
            * all three agree about what a viewer sees.
            *
-           * BRANCH ON THE PAGE, NOT ON THE PROGRESS. progressAt() returns 0
+           * BRANCH ON THE PAGE, NOT ON THE PROGRESS. displayAt() returns 0
            * for two different pages: a still one, which has no progress, and a
            * drawing one at the instant it starts. Testing `progress > 0` read
            * the first frame of every reveal as still and painted the FINISHED
