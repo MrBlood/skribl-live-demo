@@ -131,6 +131,8 @@ with sync_playwright() as p:
         const frames = hs.map(h => typeof h === 'string'
           ? mkDraw(parseInt(h.slice(1), 10)) : ({ hold: h }));
         const ms = H.msTable(frames, fps);
+        // The clock every player reads: a plan with no loop (lib/holdtiming.js).
+        const P = H.plan(frames, fps), at = t => H.displayAt(P, frames, t, null).index;
         let acc = 0, worst = 0, order = true;
         for (let i = 0; i < ms.length; i++) {
           const start = acc, end = acc + ms[i];
@@ -139,12 +141,12 @@ with sync_playwright() as p:
           // point of this module.
           const diff = Math.abs(H.pageMs(frames[i], fps) - (end - start));
           if (diff > worst) worst = diff;
-          if (H.indexAtMs(ms, start + 0.001) !== i) order = false;
-          if (H.indexAtMs(ms, (start + end) / 2) !== i) order = false;
-          if (H.indexAtMs(ms, end - 0.001) !== i) order = false;
+          if (at(start + 0.001) !== i) order = false;
+          if (at((start + end) / 2) !== i) order = false;
+          if (at(end - 0.001) !== i) order = false;
           acc += ms[i];
         }
-        rows.push({ hs, fps, worst, order, dur: H.cycleMs(ms),
+        rows.push({ hs, fps, worst, order, dur: P.cycle,
                     sum: ms.reduce((a, b) => a + b, 0) });
       }
       return rows; }""")
@@ -285,6 +287,28 @@ with sync_playwright() as p:
           f"accepts x{_cmax}: {_accepts(_cmax)}, "
           f"accepts x{_V.MAX_HOLD + 1}: {_accepts(_V.MAX_HOLD + 1)}")
 
+    # THE LOOP'S BOUNDS (v-loop), stated as behaviour the same way: every
+    # surface asks lib/holdtiming.js's loopOf() whether a document's `loop` is
+    # one to honour, and validation.py decides whether it posts. A loop the
+    # server accepts and loopOf() refuses would post and then play straight
+    # through; one loopOf() takes and the server refuses is a post that fails
+    # with the editor showing it working. So they must agree on every edge.
+    _lt, _l0, _l1 = _V.MAX_LOOP_TIMES, _V.LOOP_MS_MIN, _V.LOOP_MS_MAX
+    _probes = [{"from": 1, "to": 8, "times": t} for t in (1, 2, 2.5, _lt, _lt + 1)]
+    _probes += [{"from": 1, "to": 8, "ms": m} for m in (_l0 - 1, _l0, _l1, _l1 + 1)]
+    _probes += [{"from": 1, "to": 8, "forever": True}, {"from": 1, "to": 8, "forever": 1},
+                {"from": 0, "to": 9, "times": 2}, {"from": 0, "to": 10, "times": 2},
+                {"from": -1, "to": 3, "times": 2}, {"from": 5, "to": 5, "times": 2},
+                {"from": 6, "to": 5, "times": 2}, {"from": 1, "to": 8},
+                {"from": 1, "to": 8, "times": 2, "ms": 900},
+                {"from": 1, "to": 8, "times": 2, "extra": 1}]
+    _lib = pg.evaluate("(ps) => ps.map(l => !!window.SkriblHold.loopOf(l, 10))", _probes)
+    _srv = [_V._validate_loop(l, 10) is None for l in _probes]
+    _split = [(l, a, b) for l, a, b in zip(_probes, _lib, _srv) if a != b]
+    check("every loop the server accepts is one the players honour, and no other",
+          not _split and any(_srv) and not all(_srv),
+          f"(loop, players honour, server accepts): {_split}")
+
     # ---- HOW A POINT IS WRITTEN -------------------------------------------
     print("\nHOW A POINT IS WRITTEN — the same spelling on both surfaces")
     pw = pg.evaluate("""() => {
@@ -376,10 +400,14 @@ with sync_playwright() as p:
     # unchanged: does time before the start land on page 0, does time past the
     # end land on the last page, does an empty document divide by zero, and
     # does an absurd frame rate fall back rather than returning Infinity.
+    # The clock is a plan now, and a plan CYCLES: time past one pass is the
+    # next pass, so "past the end" asks for the last instant of the pass and,
+    # separately, that the pass after it starts again at the first page.
     edge = pg.evaluate("""() => { const H = window.SkriblHold;
-      const ms = H.msTable([{hold:1},{hold:2},{hold:1}], 12); return {
-        before: H.indexAtMs(ms,-500), after: H.indexAtMs(ms,1e9),
-        empty: H.indexAtMs([],10), emptyDur: H.cycleMs([]),
+      const fr = [{hold:1},{hold:2},{hold:1}], P = H.plan(fr, 12),
+            at = t => H.displayAt(P, fr, t, null).index; return {
+        before: at(-500), after: at(P.cycle - 0.001), wrap: at(P.cycle * 3 + 1),
+        empty: H.displayAt(H.plan([], 10), [], 10, null).index, emptyDur: H.plan([], 10).cycle,
         zeroFps: H.pageMs({hold:2},0), negFps: H.pageMs({hold:2},-5),
         nanFps: H.pageMs({hold:2},NaN), twelve: H.pageMs({hold:2},12),
         // A drawing page ignores the frame rate entirely — that IS its edge.
@@ -387,7 +415,8 @@ with sync_playwright() as p:
         drawAt60: H.pageMs({draw:true,strokes:[{t:0},{t:900}]},60),
         drawEmpty: H.pageMs({draw:true,strokes:[]},12) }; }""")
     check("time before the start lands on the first page", edge["before"] == 0, str(edge["before"]))
-    check("time past the end lands on the last page", edge["after"] == 2, str(edge["after"]))
+    check("the last instant of a pass is the last page", edge["after"] == 2, str(edge["after"]))
+    check("...and the next pass starts again at the first page", edge["wrap"] == 0, str(edge["wrap"]))
     check("an empty document does not divide by zero",
           edge["empty"] == 0 and edge["emptyDur"] >= 1, str(edge))
     check("a missing or absurd frame rate falls back instead of returning Infinity",
@@ -431,8 +460,8 @@ with sync_playwright() as p:
 
     print("\n" + "THE COMPOSITION: A PAGE REACHES ITS END BEFORE IT YIELDS")
     # pageMs() and dueCount() were each right and together could never show a
-    # drawing page finished. indexAtMs() owns a page over [start, end), so the
-    # clock leaves at exactly the instant progress would reach 1, and dueCount
+    # drawing page finished. The clock owns a page over [start, end), so it
+    # leaves at exactly the instant progress would reach 1, and dueCount
     # releases the last point only AT 1. The 26th point of a 26-point page was
     # never due while that page was up. The invariant is about the composition,
     # not any one of the three, so it is asserted by stepping a clock.
@@ -441,16 +470,17 @@ with sync_playwright() as p:
       const pts = []; for (let i = 0; i < 26; i++) pts.push({ t: i * 46 });
       const draw = { draw: true, strokes: pts };
       const frames = [draw, { hold: 1 }];
-      const ms = H.msTable(frames, 6);
+      const P = H.plan(frames, 6);
       const step = 1000 / 60;
       const run = guarded => {
         let last = null, sawComplete = false, sawPrefix = false,
             completeBeforeTurn = false, turned = false, mono = true, prev = 0,
             turns = 0;
-        for (let e = 0; e <= 1600; e += step) {
-          const d = guarded ? H.displayAt(ms, frames, e, last)
-                            : { index: H.indexAtMs(ms, e),
-                                progress: H.progressAt(ms, frames, e) };
+        // ONE pass: the plan cycles, and its second pass is not this page
+        // going backwards. The turn is ~1,150ms in; the pass ends ~1,317.
+        for (let e = 0; e < P.cycle; e += step) {
+          // Unguarded is the same clock told nothing is owed (no `last`).
+          const d = H.displayAt(P, frames, e, guarded ? last : null);
           const n = H.dueCount(frames[d.index], d.progress);
           if (d.index === 0) {
             if (turned) turns++;            // came back round: a second visit
@@ -483,9 +513,9 @@ with sync_playwright() as p:
         check("...and the guard yields rather than holding the page forever",
               g["turned"], "the clock never reached the second page")
         # The known-bad case, in the same run, so the assertion above cannot
-        # quietly become vacuous: indexAtMs+progressAt alone must NOT get there.
-        check("stated as the defect it fixes: indexAtMs and progressAt alone "
-              "never reach the complete state",
+        # quietly become vacuous: the bare clock alone must NOT get there.
+        check("stated as the defect it fixes: the clock alone, with nothing "
+              "owed, never reaches the complete state",
               not bare["sawComplete"] and bare["sawPrefix"],
               f"unguarded sweep reported {bare} — if this ever shows complete, "
               f"the guard is no longer what is producing the terminal state and "

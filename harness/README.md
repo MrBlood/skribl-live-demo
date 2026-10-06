@@ -76,6 +76,8 @@ stale the same way (the paragraph under the list says so too):
     verify_pages.py      onion depth/tint, page ops, clear redo
     verify_exopts.py     export size + page range, byte-verified
     verify_hold.py       drag-reorder + per-page hold + compat
+    verify_loop.py       a looped stretch (times / ms / forever) on
+                         both players, the preview, draft, post, export
     verify_canvas.py     canvas sizes + round-trip + help text
     verify_review.py     external review regressions
     verify_drafts.py     draft durability: flush-on-leave, durability-keyed

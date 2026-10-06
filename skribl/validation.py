@@ -545,6 +545,13 @@ MAX_GROUPS_PER_FRAME = _env_int("SKRIBL_MAX_GROUPS_PER_FRAME", 5_000, minimum=1)
 # verify_sharedrules.py fails if they part company again.
 MAX_HOLD = _env_int("SKRIBL_MAX_HOLD", 8, minimum=1)
 MAX_CANVAS_EDGE = _env_int("SKRIBL_MAX_CANVAS_EDGE", 4096, minimum=16)
+# A LOOPED STRETCH of pages (lib/holdtiming.js loopOf): the same bounds the
+# clients obey, for the same reason MAX_HOLD is shared -- a loop accepted here
+# and dropped there would play differently than it was posted, silently.
+# verify_sharedrules.py fails if the two part company.
+MAX_LOOP_TIMES = 8
+LOOP_MS_MIN = 500
+LOOP_MS_MAX = 30_000
 COORD_LIMIT = 100_000
 MAX_BRUSH = 500
 
@@ -680,6 +687,9 @@ def _validate_payload_complexity(payload):
             return "'fps' must be a number between 1 and 60."
     if len(frames) > MAX_FRAMES:
         return f"At most {MAX_FRAMES} frames are allowed (got {len(frames)})."
+    err = _validate_loop(payload.get("loop"), len(frames))
+    if err:
+        return err
     for i, frame in enumerate(frames):
         # Non-dict entries used to be skipped in silence by the media walker.
         if not isinstance(frame, dict):
@@ -701,6 +711,38 @@ def _validate_payload_complexity(payload):
                 return f"'frames[{i}].hold' must be a whole number."
             if hold < 1 or hold > MAX_HOLD:
                 return f"'frames[{i}].hold' must be between 1 and {MAX_HOLD}."
+    return None
+
+
+def _is_int(n):
+    return isinstance(n, int) and not isinstance(n, bool)
+
+
+def _validate_loop(loop, n_frames):
+    # Absent is the default and every post before loops existed. Present, it
+    # names pages by 0-based index, inclusive, and carries exactly one of
+    # times / ms / forever -- the shape lib/holdtiming.js loopOf() accepts.
+    if loop is None:
+        return None
+    if not isinstance(loop, dict):
+        return "'loop' must be an object."
+    unknown = set(loop) - {"from", "to", "times", "ms", "forever"}
+    if unknown:
+        return f"'loop' has an unknown key: {sorted(unknown)[0]!r}."
+    a, b = loop.get("from"), loop.get("to")
+    if not (_is_int(a) and _is_int(b)) or a < 0 or b < a or b >= n_frames:
+        return "'loop.from' and 'loop.to' must be page indices with from <= to."
+    kinds = [k for k in ("times", "ms", "forever") if k in loop]
+    if len(kinds) != 1:
+        return "'loop' must carry exactly one of 'times', 'ms' or 'forever'."
+    k = kinds[0]
+    v = loop[k]
+    if k == "forever" and v is not True:
+        return "'loop.forever' must be true."
+    if k == "times" and not (_is_int(v) and 2 <= v <= MAX_LOOP_TIMES):
+        return f"'loop.times' must be a whole number from 2 to {MAX_LOOP_TIMES}."
+    if k == "ms" and not (_is_int(v) and LOOP_MS_MIN <= v <= LOOP_MS_MAX):
+        return f"'loop.ms' must be a whole number from {LOOP_MS_MIN} to {LOOP_MS_MAX}."
     return None
 
 

@@ -278,7 +278,7 @@ with sync_playwright() as p:
     # surface, because one does not prove the other — that assumption is what
     # let P1-M-01 ship on the feed while the editor and /s/ were correct.
     #
-    # indexAtMs() owns a page over [start, end) and dueCount() releases the
+    # The clock owns a page over [start, end) and dueCount() releases the
     # last point at progress 1, so the live clock could never show a drawing
     # page finished: it left the page first. displayAt() holds an unfinished
     # drawing page for one more frame. The last point here is a large isolated

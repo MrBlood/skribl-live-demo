@@ -853,8 +853,8 @@ with sync_playwright() as sp:
         # milliseconds because a drawing page is exempt from fps. Same answer
         # for a document with no `draw`, which this one is.
         expected = fp.evaluate("() => { const H = window.SkriblHold;"
-                               " return H.cycleMs(H.msTable("
-                               "[{hold:2},{hold:4},{hold:2}], 6)); }")
+                               " return H.plan("
+                               "[{hold:2},{hold:4},{hold:2}], 6).cycle; }")
         check("the flip's duration is the one lib/holdtiming.js computes",
               abs(fst["totalMs"] - expected) < 1,
               f"player {fst['totalMs']} vs module {expected}")
@@ -882,7 +882,7 @@ with sync_playwright() as sp:
     # One semantic timeline, four renderers. The editor, /s/ and the exporter
     # each turned progress into a stroke count themselves, and so did this
     # player — which tested `progress > 0` to decide whether a page draws.
-    # progressAt() returns 0 for a still page AND for a drawing page at the
+    # The clock's progress is 0 for a still page AND for a drawing page at the
     # instant it starts, so on the feed, and ONLY on the feed, a drawing page
     # appeared finished for its first frame and then wiped and redrew.
     #
@@ -905,7 +905,7 @@ with sync_playwright() as sp:
                  "strokeGroups": [4], "hold": 1}]
 
         # THE DRAWING PAGE IS FIRST, and that is the whole point of the
-        # fixture. progressAt() returns exactly 0 only when the clock is AT a
+        # fixture. The clock's progress is exactly 0 only when the clock is AT a
         # page's start, and the one moment a viewer reliably lands there is
         # elapsed 0 — every load of the post, and every time the loop comes
         # round. Put the drawing page second and probe a millisecond after the
@@ -987,7 +987,7 @@ with sync_playwright() as sp:
 
     # ---- AND IT MUST REACH THE END BEFORE THE PAGE TURNS -------------------
     #
-    # dueCount() releases the last point at progress 1, and indexAtMs() owns a
+    # dueCount() releases the last point at progress 1, and the clock owns a
     # page over [start, end) — so the live clock climbs toward 1 and the page
     # is taken away before it arrives. Both contracts were individually right
     # and together could never show a drawing page finished: on a 1,150ms page

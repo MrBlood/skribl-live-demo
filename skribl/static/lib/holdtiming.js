@@ -23,7 +23,7 @@
  * with nothing forcing the copies to agree. This module owns the clamp, the
  * cumulative table, and the two questions each surface actually asks:
  *
- *     indexAtMs()  which page is on screen at time t  (the player's clock)
+ *     displayAt()  which page is on screen at time t  (the player's clock)
  *     pageMs()     how long page i should stay up      (the editor's timer)
  *
  * A PAGE THAT DRAWS ITSELF IS EXEMPT FROM fps, which is why this module now
@@ -125,43 +125,6 @@
     return out;
   }
 
-  /* Total run time of one cycle, from the ms table. Floored at 1ms for the
-   * same reason durationMs() is. */
-  function cycleMs(ms) {
-    var s = 0, i, n = ms && ms.length ? ms.length : 0;
-    for (i = 0; i < n; i++) s += ms[i];
-    return Math.max(1, s);
-  }
-
-  /* Which page is on screen `elapsedMs` into a cycle, walking the ms table.
-   * The slot version floors elapsed into integer units first; this one cannot,
-   * because a drawing page's duration is not a whole number of units. */
-  function indexAtMs(ms, elapsedMs) {
-    if (!ms || !ms.length) return 0;
-    var e = Number(elapsedMs);
-    if (!(e >= 0)) e = 0;
-    var acc = 0, i;
-    for (i = 0; i < ms.length; i++) {
-      acc += ms[i];
-      if (e < acc) return i;
-    }
-    return ms.length - 1;
-  }
-
-  /* How far INTO page `i` the clock is, 0..1 — what a drawing page needs to
-   * know which strokes to have revealed. A still page returns 0: it has no
-   * progress, it is simply up. */
-  function progressAt(ms, frames, elapsedMs) {
-    var i = indexAtMs(ms, elapsedMs);
-    if (!drawOf(frames && frames[i])) return 0;
-    var acc = 0, k;
-    for (k = 0; k < i; k++) acc += ms[k];
-    var into = Number(elapsedMs) - acc, span = ms[i] || 1;
-    if (!(into > 0)) return 0;
-    return Math.max(0, Math.min(1, into / span));
-  }
-
-
   /* THE OTHER ONE ANSWER: how much of a drawing page is on screen at progress
    * `prog`. pageMs() owns how long a page lasts; this owns what that duration
    * has revealed, and it is here for the same reason — four surfaces were each
@@ -186,12 +149,92 @@
     return n;
   }
 
+  /* A LOOPED STRETCH (owner: Blooby's card -- "keep it looping forever so he
+   * just keeps waving ... and it doesn't start over"). A document may carry
+   * one `loop`: pages from..to (0-based, inclusive) play on repeat, then the
+   * document carries on. Exactly one of:
+   *   times    -- the stretch plays this many times in all (2..MAX_LOOP_TIMES)
+   *   ms       -- it repeats for about this long: whole passes, the nearest
+   *               count to ms, never fewer than one (LOOP_MS_MIN..LOOP_MS_MAX)
+   *   forever  -- it never ends: the pages before it play once, then the
+   *               stretch repeats for as long as the Flip is on screen, and
+   *               any page after it never plays.
+   * Read defensively, as hold and draw are: a payload without `loop`, or with
+   * one that does not parse, plays exactly as it always did. The bounds are a
+   * shared rule with skribl/validation.py (verify_sharedrules). */
+  var MAX_LOOP_TIMES = 8, LOOP_MS_MIN = 500, LOOP_MS_MAX = 30000;
+  var LOOP_KINDS = { times: [2, MAX_LOOP_TIMES], ms: [LOOP_MS_MIN, LOOP_MS_MAX], forever: 0 };
+  function isInt(v) { return typeof v === 'number' && v === Math.floor(v); }
+  function loopOf(raw, n) {
+    if (!raw || typeof raw !== 'object' || !(n > 0)) return null;
+    var from = raw.from, to = raw.to, kind = null, k, v, b;
+    if (!isInt(from) || !isInt(to) || from < 0 || to < from || to >= n) return null;
+    // The server's shape exactly: no key it would refuse, and one kind only.
+    // A loop it would not have posted is not one to honour from a draft either.
+    for (k in raw) {
+      if (!Object.prototype.hasOwnProperty.call(raw, k) || k === 'from' || k === 'to') continue;
+      if (kind || !Object.prototype.hasOwnProperty.call(LOOP_KINDS, k)) return null;
+      kind = k;
+    }
+    if (!kind) return null;
+    v = raw[kind]; b = LOOP_KINDS[kind];
+    if (b ? !(isInt(v) && v >= b[0] && v <= b[1]) : v !== true) return null;
+    var out = { from: from, to: to }; out[kind] = v;
+    return out;
+  }
+
+  /* THE PLAY ORDER. Every surface that plays a Flip asks this, not the page
+   * list, so a loop cannot mean one thing in the editor and another in a
+   * player -- the reason this module exists. `slots` is the order pages play
+   * in for one finite pass (the pages before the loop, the stretch repeated,
+   * the pages after); a forever loop's pass is the pages before plus the
+   * stretch ONCE, and its clock wraps inside the stretch, never to page 1.
+   * Without a loop, slots are 0..n-1 and every answer is the old one. */
+  function plan(frames, fps, rawLoop) {
+    var ms = msTable(frames, fps), n = ms.length, lp = loopOf(rawLoop, n);
+    var slots = [], i, r;
+    if (!lp) { for (i = 0; i < n; i++) slots.push(i); }
+    else {
+      var stretch = 0;
+      for (i = lp.from; i <= lp.to; i++) stretch += ms[i];
+      var reps = lp.forever ? 1 : lp.times ? lp.times
+               : Math.max(1, Math.round(lp.ms / Math.max(1, stretch)));
+      for (i = 0; i < lp.from; i++) slots.push(i);
+      for (r = 0; r < reps; r++) for (i = lp.from; i <= lp.to; i++) slots.push(i);
+      if (!lp.forever) for (i = lp.to + 1; i < n; i++) slots.push(i);
+    }
+    var starts = [], acc = 0;
+    for (i = 0; i < slots.length; i++) { starts.push(acc); acc += ms[slots[i]]; }
+    var introMs = 0;
+    if (lp) for (i = 0; i < lp.from; i++) introMs += ms[i];
+    return { ms: ms, loop: lp, slots: slots, starts: starts, cycle: Math.max(1, acc),
+             forever: !!(lp && lp.forever), introMs: introMs,
+             stretchMs: Math.max(1, acc - introMs) };
+  }
+
+  /* Elapsed time since play began -> time within the plan. A finite plan
+   * cycles whole, as every Flip always has; a forever plan never goes back
+   * before its loop. */
+  function wrapMs(p, elapsedMs) {
+    var e = Number(elapsedMs);
+    if (!(e >= 0)) e = 0;
+    if (p.forever && e >= p.introMs) return p.introMs + ((e - p.introMs) % p.stretchMs);
+    return e % p.cycle;
+  }
+
+  /* Which slot is on screen at plan time `t`, and the page it shows. */
+  function slotAt(p, t) {
+    var lo = 0, hi = p.slots.length - 1;
+    while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (p.starts[mid] <= t) lo = mid; else hi = mid - 1; }
+    return lo;
+  }
+
   /* WHICH PAGE TO PAINT, AND HOW MUCH OF IT — the composition, not a third
    * helper beside the other two.
    *
    * pageMs() and dueCount() were each correct and still could not, together,
-   * ever show a drawing page finished. indexAtMs() owns a page over the
-   * HALF-OPEN interval [start, end): at end the next page is current. So a
+   * ever show a drawing page finished. A slot owns its page over the
+   * HALF-OPEN interval [start, end): at end the next slot is current. So a
    * drawing page's progress climbs toward 1 and the clock takes the page away
    * before it arrives, and dueCount() releases the last point only at 1. On a
    * 1,150ms page of 26 points the 26th was never due while that page was up —
@@ -213,14 +256,23 @@
    *
    * NOT FOR SEEKING. A scrub asks for a page and must get that page; the guard
    * belongs to playback, where the pages go by on their own. (Outside review of
-   * v286, P1-M-03.) */
-  function displayAt(ms, frames, elapsedMs, last) {
-    var i = indexAtMs(ms, elapsedMs);
-    if (last && last.index !== i && last.index >= 0 && last.progress < 1
+   * v286, P1-M-03.)
+   *
+   * Over a PLAN, keyed by SLOT rather than page, since a one-page loop shows
+   * the same page in consecutive slots. Takes ELAPSED time since play began
+   * and wraps it itself. An empty document has no slots and reads as page 0. */
+  function displayAt(p, frames, elapsedMs, last) {
+    var t = wrapMs(p, elapsedMs), s = slotAt(p, t), i = p.slots[s] | 0;
+    if (last && last.slot !== s && last.slot >= 0 && last.progress < 1
         && drawOf(frames && frames[last.index])) {
-      return { index: last.index, progress: 1 };
+      return { slot: last.slot, index: last.index, progress: 1 };
     }
-    return { index: i, progress: progressAt(ms, frames, elapsedMs) };
+    var prog = 0;
+    if (drawOf(frames && frames[i])) {
+      var into = t - p.starts[s], span = p.ms[i] || 1;
+      prog = into > 0 ? Math.max(0, Math.min(1, into / span)) : 0;
+    }
+    return { slot: s, index: i, progress: prog };
   }
 
   function fpsOf(fps) {
@@ -237,10 +289,11 @@
     spanMs: spanMs,
     pageMs: pageMs,
     msTable: msTable,
-    cycleMs: cycleMs,
-    indexAtMs: indexAtMs,
-    progressAt: progressAt,
     dueCount: dueCount,
+    MAX_LOOP_TIMES: MAX_LOOP_TIMES,
+    loopOf: loopOf,
+    plan: plan,
+    wrapMs: wrapMs,
     displayAt: displayAt
   };
 
