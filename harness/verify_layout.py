@@ -1229,6 +1229,29 @@ with sync_playwright() as p:
           _st[0] and _st[1] >= round(0.52 * _st[2]) - 1, f"open={_st[0]} stage {_st[1]}px of {_st[2]}")
     _ctx.close()
 
+    # THE MEDIA ICON IS 36px, AT THE ROW'S LINE WEIGHT (owner: "change it to
+    # the current at 36", from 40). A rendered line is stroke-width x size /
+    # viewBox, so the size and the glyph's stroke-width must move together or
+    # the smaller icon goes lighter than its neighbours. Asked of the painted
+    # box and the computed width, against the Eraser beside it.
+    print("\nLAYOUT — the Media icon: 36px, drawn at the dock's line weight")
+    ICON = """() => { const line = (svg) => { const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+          const sw = parseFloat(getComputedStyle(svg).strokeWidth) || parseFloat(svg.getAttribute('stroke-width'));
+          return { size: Math.round(r.width * 10) / 10, line: Math.round(sw * r.width / vb.width * 100) / 100 }; };
+        return { media: line(document.querySelector('#mediaOpenBtn .media-glyph')),
+                 eraser: line(document.querySelector('#eraserToolBtn svg')) }; }"""
+    for _path in ("/skribl-pad", "/flip"):
+        for _w, _phone in ((390, True), (1280, False)):
+            _ctx = browser.new_context(viewport={"width": _w, "height": 844}, is_mobile=_phone, has_touch=_phone)
+            _pg = _ctx.new_page()
+            browsing.goto(_pg, BASE, _path)
+            _i = _pg.evaluate(ICON)
+            check(f"{_path} @{_w}: the Media icon is drawn at 36px",
+                  abs(_i["media"]["size"] - 36) <= 0.5, str(_i))
+            check(f"{_path} @{_w}: ...with the same line weight as the Eraser beside it",
+                  abs(_i["media"]["line"] - _i["eraser"]["line"]) <= 0.12, str(_i))
+            _ctx.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

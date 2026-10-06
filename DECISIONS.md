@@ -14047,3 +14047,16 @@ returning (the point under Tune belongs to the header), the dock bare
 throughout, and the ground leaving on close. verify_player_isolation: the
 player's header keeps its card. Red per component: the lib never marking,
 the at-rest rule, the dock rule, a rule reaching player.css.
+
+**The Media icon at 36px (owner: "is the media icon bigger than the
+others?").** It was 40px, the owner's floor ("it starts looking bad below
+40"), beside 26px tool glyphs; with the dock's card gone (#342) it read as the
+biggest thing in the row. Mocked on the real dock at 40, 34, 30, a simplified
+glyph at 30, then 36 and the simplified glyph at 36; the owner chose the same
+glyph at 36 ("change it to the current at 36"), where its waveform still
+holds -- the peaks only ran together at 30.
+
+The stroke-width moves with the size (1.3 -> 1.47) so the line stays ~2.2px,
+the row's weight: a rendered line is stroke-width x size / 24. verify_layout
+pins both, against the Eraser beside it, both editors, phone and desktop; red
+at 40px, and red at 36px with the old 1.3 (a 1.95px line).
