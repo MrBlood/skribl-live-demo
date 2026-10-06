@@ -1028,6 +1028,8 @@ function updateVignette() {
   const r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
   const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
   canvasWrap.classList.toggle('light-bg', lum > 0.6);
+  // The grid's ink follows the ground (styles.css .light-bg).
+  if (typeof window._skriblSyncPadGrid === 'function') window._skriblSyncPadGrid();
 }
 updateVignette();
 

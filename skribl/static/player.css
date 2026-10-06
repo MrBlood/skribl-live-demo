@@ -250,6 +250,8 @@
      not either. A token rather than a literal so the colour ratchets can see
      that it was a decision. */
   --on-canvas-rgb: 246,247,249;
+  /* The grid's ink, the same decision: white on the default dark ground. */
+  --on-canvas-grid-rgb: 255,255,255;
 
   /* Semantic colours. The danger red, the warn amber and the ok green were all
      picked to sit on a near-black ground, and on a white one they wash out:
@@ -754,7 +756,7 @@ body.player-mode .canvas-area { display: contents; }
   /* Legible, still quiet (v316 polish, owner's iPhone): at .28/.20 the hint
      measured ~2.3:1 and ~1.8:1 on the canvas and read as a smudge in daylight.
      Now ~5.8:1 and ~4.6:1 — a hint you can read, a step below real controls. */
-  color: rgba(var(--on-canvas-rgb), 0.55);
+  color: rgba(var(--on-canvas-rgb), var(--on-canvas-a1, 0.55));
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.2px;

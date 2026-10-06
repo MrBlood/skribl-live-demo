@@ -13980,3 +13980,25 @@ separate switch, "build it, calm default, violet, dock pill with colour".
 * Two swatch defects found on the way: a transparent 2.5px border put each
   swatch's rim inside its edge (a donut), and in light mode black wore a pale
   ring that read as the selected mark.
+
+**On-canvas ink follows the canvas (owner: "the grid is white so doesn't show
+on light background, the draw anything canvas starter msg doesn't show on a
+light background").** The grid (lib/gridoverlay.js) drew in a literal white and
+the empty-canvas hint in --on-canvas-rgb, which is deliberately not in the
+light ramp: the canvas is the drawing's colour, not the interface's. Right
+about the theme, wrong about the canvas -- a white or cream canvas took the
+same light ink. The decision moves to the canvas's own luminance:
+
+* The Pad already marked its wrap .light-bg for the vignette; Flip now marks
+  its zoom layer by the same test (applyBg). Under .light-bg the hint and the
+  grid read dark tokens (--on-canvas-rgb, --on-canvas-grid-rgb), and the grid repaints
+  when the ground changes under it.
+* Dark ink at the dark ground's alphas measured 3.99 and 3.12:1 on white, so a
+  light ground raises them (.67 / .62): ~6.0 and ~5.0 on white, 5.7 and 4.8
+  on cream, the dark ground's own ~5.8 and ~4.6.
+
+verify_a11y A11Y 15 measures the hint and reads the grid's painted pixels on
+the default dark ground and the drawer's white and cream, both editors, the grid
+switched on before the ground changes. Red per component: the Pad's repaint,
+Flip's classification, the grid's token, the raised alphas. The selected
+pen's nib under Panels: Colour is the owner's to decide, and unchanged.
