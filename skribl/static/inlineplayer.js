@@ -655,6 +655,9 @@
     var payload = null, loading = false, failed = false;
     var timeline = null, flipFrames = null, flipFps = 12, flipPlan = null;
     var totalMs = 0, size = null, under = null;
+    /* NOT `under`, which is the background colour and photo (adopt). This is
+       the PAGE underneath (lib/holdtiming.js underOf) and its one painting. */
+    var underPage = null, underPageCv = null;
     /* The scale ctx.setTransform is set to in adopt(), so the compositor's
        offscreen layers can match it instead of inferring it from CSS. */
     var pixelRatio = 1;
@@ -896,6 +899,8 @@
         var H = global.SkriblHold;
         flipPlan = (H && H.plan) ? H.plan(frames, flipFps, payload.loop) : null;
         totalMs = flipPlan ? flipPlan.cycle : Math.max(1, (frames.length / flipFps) * 1000);
+        underPage = (H && H.underOf) ? H.underOf(payload.under, frames.length) : null;
+        underPageCv = null;   // painted at this backing store's size, on first use
       } else {
         timeline = buildTimeline(f0.strokes || [], payload.pauseMode);
         totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
@@ -994,6 +999,25 @@
         lastShown = shown;
         var idx = shown.index;
         clear();
+        /* THE PAGE UNDERNEATH: painted ONCE, offscreen, through the same
+         * painter, then one drawImage a frame -- a card of thousands of points
+         * is not repainted sixty times a second on a phone. It goes between
+         * the photo and the page, so it is part of the base a page's eraser
+         * reveals (makeCompositor), never ink it cuts. */
+        if (underPage && idx >= underPage.from && idx <= underPage.to) {
+          if (!underPageCv) {
+            var fu = flipFrames[underPage.page];
+            underPageCv = global.document.createElement('canvas');
+            underPageCv.width = canvas.width; underPageCv.height = canvas.height;
+            var uctx = underPageCv.getContext('2d');
+            uctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+            if (fu && fu.strokes && fu.strokes.length) paintStatic(uctx, fu.strokes, underPageCv, pixelRatio);
+          }
+          ctx.save();
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.drawImage(underPageCv, 0, 0);
+          ctx.restore();
+        }
         var fr = flipFrames[idx];
         if (fr && fr.strokes && fr.strokes.length) {
           /* A DRAWING PAGE REVEALS, and dueCount() owns how much — the same

@@ -309,6 +309,21 @@ with sync_playwright() as p:
           not _split and any(_srv) and not all(_srv),
           f"(loop, players honour, server accepts): {_split}")
 
+    # THE PAGE UNDERNEATH, on the same terms: an `under` the server posts and
+    # underOf() refuses would post and then show no card; the reverse is a
+    # post that fails with the editor showing the card behind the page.
+    _up = [{"page": p, "from": a, "to": b} for p, a, b in
+           ((0, 1, 8), (9, 1, 8), (0, 1, 9), (0, 1, 10), (1, 1, 8), (8, 1, 8), (4, 1, 8),
+            (0, 0, 0), (1, 0, 0), (10, 1, 8), (-1, 1, 8), (0, -1, 3), (0, 5, 4), (0, 1.5, 3))]
+    _up += [{"page": 0, "from": 1}, {"page": True, "from": 1, "to": 3},
+            {"page": "0", "from": 1, "to": 3}, {"page": 0, "from": 1, "to": 3, "x": 1}]
+    _ulib = pg.evaluate("(ps) => ps.map(u => !!window.SkriblHold.underOf(u, 10))", _up)
+    _usrv = [_V._validate_under(u, 10) is None for u in _up]
+    _usplit = [(u, a, b) for u, a, b in zip(_up, _ulib, _usrv) if a != b]
+    check("every page-underneath the server accepts is one the players show, and no other",
+          not _usplit and any(_usrv) and not all(_usrv),
+          f"(under, players show, server accepts): {_usplit}")
+
     # ---- HOW A POINT IS WRITTEN -------------------------------------------
     print("\nHOW A POINT IS WRITTEN — the same spelling on both surfaces")
     pw = pg.evaluate("""() => {

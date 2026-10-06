@@ -692,7 +692,13 @@ with sync_playwright() as sp:
     #   flip.js, which the player never loads; and an unused nextSlot was
     #   deleted. The in-post player's ratchet (verify_inline) needed no raise.
     # 133,910 measured.
-    BYTES_RATCHET, BYTES_TARGET = 133_950, 153_800
+    # RAISED (Blooby's card), for one named cost: +1,494 B, the page
+    #   underneath -- lib/holdtiming.js underOf() (+457), and app.js painting
+    #   it once into an offscreen canvas and compositing it BEHIND each page's
+    #   ink (destination-over), so a page's eraser reveals it as in the editor
+    #   (+1,037). Spent first: nothing dead was left in these paths after the
+    #   loop's round retired the old clock. 135,404 measured.
+    BYTES_RATCHET, BYTES_TARGET = 135_450, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
