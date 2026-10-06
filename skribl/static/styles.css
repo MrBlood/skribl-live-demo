@@ -6850,8 +6850,8 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
    - NO BOX IN A BOX. The tool pill's own fill and edge are gone; the dock is
      the container. The selected tool -- any tool, the pen too -- wears a
      soft tint behind the whole button (see ONE SELECTION RULE).
-   - ONE ICON WEIGHT. Tool, undo and redo glyphs are 26px; Media is 40px (the
-     owner's floor) drawn at the same rendered line weight, not scaled up.
+   - ONE ICON WEIGHT. Tool, undo and redo glyphs are 26px; Media is 36px (the
+     owner's pick, from 40) drawn at the same rendered line weight, not scaled up.
 
    44x44 holds for every control (verify_layout). */
 .toolbar, .flip-tools {
@@ -6947,11 +6947,15 @@ body.stroking .toolbar, body.stroking .flip-tools {
   .toolbar { padding-left: clamp(6px, calc(6px + (100vw - 360px) / 4), 14px); }
   .toolbar #mediaOpenBtn { margin-right: clamp(0px, calc((100vw - 360px) / 2), 16px); }
 }
-/* The Media glyph is drawn at 40px in its 44px button: the owner's call ("it
-   starts looking bad below 40"). --icon-size moves the status dot with it. */
-.toolbar #mediaOpenBtn, .flip-tools #mediaOpenBtn { --icon-size: 40px; width: 44px; height: 44px; }
+/* The Media glyph is drawn at 36px in its 44px button. It was 40 (the
+   owner: "it starts looking bad below 40"); with the dock's card gone it read
+   as the biggest thing in the row, and of 40, 36, 34, 30 and a simplified
+   glyph mocked side by side the owner chose the same glyph at 36 -- its
+   waveform still holds there, and only ran together at 30. --icon-size moves
+   the status dot with it. */
+.toolbar #mediaOpenBtn, .flip-tools #mediaOpenBtn { --icon-size: 36px; width: 44px; height: 44px; }
 .toolbar #mediaOpenBtn .media-glyph,
-.flip-tools #mediaOpenBtn .media-glyph { width: 40px; height: 40px; }
+.flip-tools #mediaOpenBtn .media-glyph { width: 36px; height: 36px; }
 /* At rest it is not drawn in a tile: the 40px glyph fills its 44px button,
    and a square there read as a box crammed round it ("just turn it purple
    when pressed"). OPEN, it now takes the selected tool's tile like Magnify
