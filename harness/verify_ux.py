@@ -2891,6 +2891,52 @@ with sync_playwright() as _pp_:
         _hp.close()
     _pb.close()
 
+# NO CONTAINER AT REST (owner, from a mock: "It looks good"). On the Pad and
+# Flip the header and the dock paint no card; the header's ground comes back
+# only while the drawing is under it -- the pinned phone header once the Pen
+# drawer scrolls the page (lib/headerglass.js marks .over-canvas). Asked of
+# what is PAINTED where it matters: at rest the header's own fill and shadow
+# are gone; over the drawing, the point under the Tune button belongs to the
+# header and the header's fill is opaque, so the controls are not on the ink.
+print("\nNO CONTAINER — the header and dock at rest; the header's ground over the drawing")
+_GROUND = """(dock) => { const h = document.querySelector('.header'), t = document.querySelector(dock);
+    const hc = getComputedStyle(h), tc = getComputedStyle(t), b = document.getElementById('tuneBtn').getBoundingClientRect();
+    const at = document.elementFromPoint(b.left + 3, b.top + b.height / 2);
+    const a = (c) => { const m = c.match(/[\\d.]+/g); return !m ? 0 : (m.length > 3 ? +m[3] : 1); };
+    return { over: h.classList.contains('over-canvas'), hFill: a(hc.backgroundColor), hShadow: hc.boxShadow !== 'none',
+             dFill: a(tc.backgroundColor), dShadow: tc.boxShadow !== 'none', scrolled: Math.round(scrollY),
+             tuneOnHeader: !!at && h.contains(at) }; }"""
+with sync_playwright() as _gp:
+    _gb = _gp.chromium.launch()
+    for _route, _dock in (("/skribl-pad", ".toolbar"), ("/flip", ".flip-tools")):
+        for _theme in ("dark", "light"):
+            _gc = _gb.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True,
+                                  color_scheme=_theme)
+            _gc.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_theme}')}}catch(e){{}}")
+            _g = _gc.new_page()
+            browsing.goto(_g, BASE, _route); _g.wait_for_timeout(900)
+            _g.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            _r = _g.evaluate(_GROUND, _dock)
+            check(f"{_route} {_theme}: at rest the header and the dock paint no card",
+                  not _r["over"] and _r["hFill"] == 0 and not _r["hShadow"] and _r["dFill"] == 0 and not _r["dShadow"], str(_r))
+            browsing.pad_drawer(_g, "draw", settle=900)
+            _o = _g.evaluate(_GROUND, _dock)
+            check(f"{_route} {_theme}: the Pen drawer scrolls the drawing under the header, and the header's ground returns",
+                  _o["scrolled"] > 0 and _o["over"] and _o["hFill"] == 1 and _o["tuneOnHeader"], str(_o))
+            check(f"{_route} {_theme}: ...while the dock still paints none",
+                  _o["dFill"] == 0 and not _o["dShadow"], str(_o))
+            browsing.pad_drawer_close(_g); _g.wait_for_timeout(1200)
+            _c = _g.evaluate(_GROUND, _dock)
+            check(f"{_route} {_theme}: ...and closing it takes the ground away again",
+                  _c["scrolled"] == 0 and not _c["over"] and _c["hFill"] == 0, str(_c))
+            _gc.close()
+    _g = _gb.new_page(viewport={"width": 1366, "height": 900})
+    browsing.goto(_g, BASE, "/skribl-pad"); _g.wait_for_timeout(800)
+    _d = _g.evaluate(_GROUND, ".toolbar")
+    check("/skribl-pad desktop: the header and the dock paint no card",
+          not _d["over"] and _d["hFill"] == 0 and _d["dFill"] == 0, str(_d))
+    _gb.close()
+
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")
 for o, n in results:

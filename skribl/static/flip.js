@@ -4267,6 +4267,10 @@ opacityFill();
 const bgGroup=document.getElementById('bgGroup');
 const customBgInput=document.getElementById('customBgInput'), customBgBtn=document.getElementById('customBgBtn');
 function applyBg(){ pad.style.backgroundColor = bgColor; pad.style.backgroundImage = 'none'; markLightGround(); render(); refreshAllThumbs(); paintPenSwoosh(); }
+// The header has no card at rest; its ground returns while the drawing is
+// under it (lib/headerglass.js).
+if (window.SkriblHeaderGlass) window.SkriblHeaderGlass.wire(document.querySelector('.header'), pad);
+
 // A light canvas takes dark on-canvas ink -- the empty-page hint and the grid
 // (styles.css .light-bg) -- by the Pad's own test (app.js updateVignette).
 function markLightGround(){

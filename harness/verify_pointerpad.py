@@ -170,7 +170,14 @@ with sync_playwright() as sp:
     # glass, and WebKit can fail to repaint such an element after its opacity
     # animates -- the owner's iPhone showed the header's slot empty after a
     # take. So during a stroke the header ELEMENT stays at opacity 1 while its
-    # contents whisper, and afterwards the glass is back.
+    # contents whisper, and afterwards the header is exactly as it was before
+    # the stroke -- since "no container at rest" that is no card at all, so the
+    # check compares with the header's own state a moment earlier rather than
+    # naming a look.
+    HDRSTATE = """() => { const cs = getComputedStyle(document.querySelector('.header'));
+        return { self: +cs.opacity, bg: cs.backgroundColor, shadow: cs.boxShadow,
+                 glass: cs.webkitBackdropFilter || cs.backdropFilter }; }"""
+    before = pg.evaluate(HDRSTATE)
     pg.evaluate("() => document.body.classList.add('stroking')")
     pg.wait_for_timeout(700)
     mid = pg.evaluate("""() => { const h = document.querySelector('.header'), cs = getComputedStyle(h);
@@ -183,12 +190,11 @@ with sync_playwright() as sp:
                  glass: cs.webkitBackdropFilter || cs.backdropFilter }; }""")
     pg.evaluate("() => document.body.classList.remove('stroking')")
     pg.wait_for_timeout(500)
-    after = pg.evaluate("""() => { const cs = getComputedStyle(document.querySelector('.header'));
-        return { self: +cs.opacity, glass: cs.webkitBackdropFilter || cs.backdropFilter }; }""")
+    after = pg.evaluate(HDRSTATE)
     check("while drawing, the header's contents fade but the glass element itself is never faded",
           mid["self"] == 1 and mid["kids"] and max(mid["kids"]) <= 0.15, str(mid))
-    check("...and after the stroke the header's glass is back",
-          after["self"] == 1 and "blur" in (after["glass"] or ""), str(after))
+    check("...and after the stroke the header is exactly as it was before it",
+          after["self"] == 1 and after == before, f"{before} -> {after}")
     # A touch on the canvas is Pad's, never the browser's: the touchstart and
     # touchmove are prevented, which is what stops iOS zooming or scrolling
     # the page under a drawing finger (touch-action alone is not enough there).

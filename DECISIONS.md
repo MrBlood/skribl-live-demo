@@ -14023,3 +14023,27 @@ served almost no one. The owner chose removal over making it the default.
 * SHELVED, NOT DROPPED (owner: "I might want it back. I just don't want to
   bloat the app now"): FUTURE.md 6j says what it was, that it is all in
   7733dc3 (#339), and what to settle before it returns.
+
+**No container at rest (owner: "Does it look better without header/dock?"
+... "It looks good").** On the Pad and Flip the header and the dock lose
+their card: the controls sit on the page and the canvas is the one shape on
+screen. Mocked bare (A), bare with a chip per button (B), and bare with the
+header's ground returning only while the drawing is under it; the third,
+which is what iOS does with a navigation bar at the scroll edge, was chosen.
+
+* The header's ground comes back only while its box overlaps the canvas's --
+  the pinned phone header once the Pen drawer scrolls the page.
+  lib/headerglass.js marks .over-canvas from the two rects, one check a frame
+  on scroll, resize and a ResizeObserver; the ground is then exactly the
+  phone's solid one (v317), faded as a plain colour change, never a
+  backdrop-filter or an opacity (the v315 WebKit rule).
+* The dock never lies over the drawing, so it has no ground at all.
+* The player keeps its header card: the rules are scoped out by
+  body.player-mode, and cssgraph does not carry them into player.css.
+
+verify_ux NO CONTAINER, both editors, both themes, phone and desktop: no card
+at rest, the drawer scrolling the drawing under the header and the ground
+returning (the point under Tune belongs to the header), the dock bare
+throughout, and the ground leaving on close. verify_player_isolation: the
+player's header keeps its card. Red per component: the lib never marking,
+the at-rest rule, the dock rule, a rule reaching player.css.
