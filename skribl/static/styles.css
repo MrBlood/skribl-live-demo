@@ -6850,8 +6850,9 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
    - NO BOX IN A BOX. The tool pill's own fill and edge are gone; the dock is
      the container. The selected tool -- any tool, the pen too -- wears a
      soft tint behind the whole button (see ONE SELECTION RULE).
-   - ONE ICON WEIGHT. Tool, undo and redo glyphs are 26px; Media is 36px (the
-     owner's pick, from 40) drawn at the same rendered line weight, not scaled up.
+   - ICON WEIGHTS. Tool, undo and redo glyphs are 26px at a ~2.2px line. The
+     two on the right are a pair a little finer: Media 32px and Magnify 26px,
+     both drawn at a 1.8px line (the owner's pick, from true-1x mocks).
 
    44x44 holds for every control (verify_layout). */
 .toolbar, .flip-tools {
@@ -6925,6 +6926,12 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .flip-tools #magnifyBtn, .flip-tools #magnifyBtn:hover {
   background: none; box-shadow: none;
 }
+/* Magnify at the tools' 26px, at Media's 1.8px line (1.66 x 26 / 24), at
+   every width. It was 24px (22px on the phone tier) at a 2.0px line: never
+   brought onto the dock's sizes, and beside the tools it read small (owner:
+   "it looks like a runt"). Of the tools' 2.2, 2.0 and Media's 1.8, the 1.8
+   makes the two right-hand icons read as a pair. */
+.toolbar #magnifyBtn svg, .flip-tools #magnifyBtn svg { width: 26px; height: 26px; stroke-width: 1.66; }
 .toolbar #magnifyBtn.active, .flip-tools #magnifyBtn.active,
 .toolbar #mediaOpenBtn.open, .flip-tools #mediaOpenBtn.open {
   color: var(--seg-on-ink); background: var(--seg-on-fill); box-shadow: none;
@@ -6947,16 +6954,16 @@ body.stroking .toolbar, body.stroking .flip-tools {
   .toolbar { padding-left: clamp(6px, calc(6px + (100vw - 360px) / 4), 14px); }
   .toolbar #mediaOpenBtn { margin-right: clamp(0px, calc((100vw - 360px) / 2), 16px); }
 }
-/* The Media glyph is drawn at 36px in its 44px button. It was 40 (the
-   owner: "it starts looking bad below 40"); with the dock's card gone it read
-   as the biggest thing in the row, and of 40, 36, 34, 30 and a simplified
-   glyph mocked side by side the owner chose the same glyph at 36 -- its
-   waveform still holds there, and only ran together at 30. --icon-size moves
-   the status dot with it. */
-.toolbar #mediaOpenBtn, .flip-tools #mediaOpenBtn { --icon-size: 36px; width: 44px; height: 44px; }
+/* The Media glyph is drawn at 32px in its 44px button, at a 1.8px line (its
+   stroke-width is in _skribl_media_glyph.html). It was 40, then 36 at the
+   tools' 2.2px line. The owner: "the glyph still seems a little big ... if
+   the stroke size stays the same and we shrink it, it starts to get muddy"
+   -- so smaller AND finer: C of six mocks (32/34px x 1.6-2.0px) at true 1x.
+   --icon-size moves the status dot with it (below). */
+.toolbar #mediaOpenBtn, .flip-tools #mediaOpenBtn { --icon-size: 32px; width: 44px; height: 44px; }
 .toolbar #mediaOpenBtn .media-glyph,
-.flip-tools #mediaOpenBtn .media-glyph { width: 36px; height: 36px; }
-/* At rest it is not drawn in a tile: the 40px glyph fills its 44px button,
+.flip-tools #mediaOpenBtn .media-glyph { width: 32px; height: 32px; }
+/* At rest it is not drawn in a tile: the glyph nearly fills its 44px button,
    and a square there read as a box crammed round it ("just turn it purple
    when pressed"). OPEN, it now takes the selected tool's tile like Magnify
    (above) -- the owner's later pick, seeing it beside the lit Pen. */
@@ -6970,11 +6977,14 @@ body.stroking .toolbar, body.stroking .flip-tools {
    box's corner (0.4 of --icon-size out); the frame of this glyph stops short
    of the box, so the dot floated off it. The owner asked for it "nestled a
    little more down and in", then for half of the first try: centre 15.5px
-   right of and 14.25px above the glyph's centre, on the frame's rounded
-   corner. Its ring is the dock's colour, the ground behind both. */
+   right of and 14.25px above the centre of the 40px glyph, on the frame's
+   rounded corner. Kept as FRACTIONS of --icon-size (15.5/40, 14.25/40): in
+   pixels it stayed put when the glyph went to 36 and floated off the corner
+   (owner: "did you adjust the green dot on the icon?"). verify_layout pins
+   it to the glyph. Its ring is the dock's colour, the ground behind both. */
 .toolbar #mediaOpenBtn .tab-dot, .flip-tools #mediaOpenBtn .tab-dot {
-  left: calc(50% + 15.5px - 3.5px);
-  top: calc(50% - 14.25px - 3.5px);
+  left: calc(50% + var(--icon-size) * 0.3875 - 3.5px);
+  top: calc(50% - var(--icon-size) * 0.35625 - 3.5px);
   --dot-ring: rgb(var(--surface-well-2-rgb));
 }
 /* ---------- EVERY DRAWER, PICKER AND SHEET IN THE DOCK'S MATERIAL ----------

@@ -1229,27 +1229,56 @@ with sync_playwright() as p:
           _st[0] and _st[1] >= round(0.52 * _st[2]) - 1, f"open={_st[0]} stage {_st[1]}px of {_st[2]}")
     _ctx.close()
 
-    # THE MEDIA ICON IS 36px, AT THE ROW'S LINE WEIGHT (owner: "change it to
-    # the current at 36", from 40). A rendered line is stroke-width x size /
-    # viewBox, so the size and the glyph's stroke-width must move together or
-    # the smaller icon goes lighter than its neighbours. Asked of the painted
-    # box and the computed width, against the Eraser beside it.
-    print("\nLAYOUT — the Media icon: 36px, drawn at the dock's line weight")
-    ICON = """() => { const line = (svg) => { const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    # THE RIGHT-HAND PAIR: MEDIA 32px AND MAGNIFY 26px, BOTH AT A 1.8px LINE
+    # (owner, from true-1x mocks: "C and do whatever you think will look best
+    # with magnify"). A rendered line is stroke-width x size / viewBox, so the
+    # size and the glyph's stroke-width must move together -- smaller at the
+    # same width went muddy, which is how 36px at 2.2 came to be replaced.
+    # Asked of the painted box and the computed width. Magnify is desktop-only
+    # (hidden on a phone and a touch-sized window), so it is asked at desktop
+    # width, where it must show.
+    #
+    # AND THE DOT GOES WITH THE GLYPH. It was placed in fixed pixels tuned on
+    # the 40px glyph, stayed put when the glyph went to 36, and floated off the
+    # frame's corner (owner: "did you adjust the green dot on the icon?"). Its
+    # centre must sit at the owner's offset as a fraction of the glyph: 15.5/40
+    # right of and 14.25/40 above the glyph's centre. Forced visible to be
+    # measured -- the question is where it sits, which a rect can answer.
+    print("\nLAYOUT — Media 32px and Magnify 26px at one 1.8px line; the dot on the frame's corner")
+    ICON = """() => { const line = (svg) => { if (!svg) return null; const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
           const sw = parseFloat(getComputedStyle(svg).strokeWidth) || parseFloat(svg.getAttribute('stroke-width'));
-          return { size: Math.round(r.width * 10) / 10, line: Math.round(sw * r.width / vb.width * 100) / 100 }; };
-        return { media: line(document.querySelector('#mediaOpenBtn .media-glyph')),
-                 eraser: line(document.querySelector('#eraserToolBtn svg')) }; }"""
+          return { size: Math.round(r.width * 10) / 10, line: Math.round(sw * r.width / vb.width * 100) / 100,
+                   shown: r.width > 0, cx: r.left + r.width / 2, cy: r.top + r.height / 2 }; };
+        const dot = document.querySelector('#mediaOpenBtn .tab-dot');
+        dot.hidden = false; dot.style.display = 'block';
+        const d = dot.getBoundingClientRect(), m = line(document.querySelector('#mediaOpenBtn .media-glyph'));
+        return { media: m, magnify: line(document.querySelector('#magnifyBtn svg')),
+                 dot: { dx: Math.round((d.left + d.width / 2 - m.cx) * 100) / 100,
+                        dy: Math.round((m.cy - (d.top + d.height / 2)) * 100) / 100 } }; }"""
     for _path in ("/skribl-pad", "/flip"):
-        for _w, _phone in ((390, True), (1280, False)):
+        # 600 twice: a phone, and a narrow window with a mouse, where Magnify
+        # still shows and the phone tier's old 22px rule used to reach it.
+        for _w, _phone in ((390, True), (600, True), (600, False), (1280, False)):
             _ctx = browser.new_context(viewport={"width": _w, "height": 844}, is_mobile=_phone, has_touch=_phone)
             _pg = _ctx.new_page()
             browsing.goto(_pg, BASE, _path)
             _i = _pg.evaluate(ICON)
-            check(f"{_path} @{_w}: the Media icon is drawn at 36px",
-                  abs(_i["media"]["size"] - 36) <= 0.5, str(_i))
-            check(f"{_path} @{_w}: ...with the same line weight as the Eraser beside it",
-                  abs(_i["media"]["line"] - _i["eraser"]["line"]) <= 0.12, str(_i))
+            _m, _g, _d = _i["media"], _i["magnify"], _i["dot"]
+            _w = f"{_w}{'' if _phone else ' mouse'}"
+            check(f"{_path} @{_w}: the Media icon is drawn at 32px",
+                  abs(_m["size"] - 32) <= 0.5, str(_m))
+            check(f"{_path} @{_w}: ...at a 1.8px line",
+                  abs(_m["line"] - 1.8) <= 0.05, str(_m))
+            _want = (_m["size"] * 15.5 / 40, _m["size"] * 14.25 / 40)
+            check(f"{_path} @{_w}: the dot sits on the frame's corner, at the owner's offset scaled to the glyph",
+                  abs(_d["dx"] - _want[0]) <= 0.5 and abs(_d["dy"] - _want[1]) <= 0.5,
+                  f"dot centre {_d['dx']} right, {_d['dy']} up of the glyph's; wanted "
+                  f"{_want[0]:.2f}, {_want[1]:.2f}")
+            if not _phone:
+                check(f"{_path} @{_w}: Magnify is drawn at the tools' 26px",
+                      _g is not None and _g["shown"] and abs(_g["size"] - 26) <= 0.5, str(_g))
+                check(f"{_path} @{_w}: ...at the same line as Media beside it",
+                      _g is not None and abs(_g["line"] - _m["line"]) <= 0.05, f"{_g} vs {_m}")
             _ctx.close()
 
     browser.close()

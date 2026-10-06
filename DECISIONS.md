@@ -14108,3 +14108,27 @@ verify_sharedrules: every edge loop the server accepts is one the players
 honour, and no other -- red from either side, and green only after loopOf
 stopped honouring two kinds at once and unknown keys, which the first run
 found.
+
+**The dock's right-hand pair: Media 32px and Magnify 26px at one 1.8px line
+(owner: "the glyph still seems a little big ... if the stroke size stays the
+same and we shrink it, it starts to get muddy").** Mocked at true 1x, both
+themes, against the real dock: Media at 34 and 32px with lines of 1.6, 1.8 and
+2.0px. The owner chose C, 32px at 1.8 ("C and do whatever you think will look
+best with magnify").
+
+* Magnify had never been brought onto the dock's sizes: 24px at a 2.0px line
+  (22px on the phone tier, where a narrow window with a mouse still shows it)
+  beside 26px tools ("it looks like a runt"). Mocked at 24/2.0, 26/2.2, 26/2.0
+  and 26/1.8 beside C; 26px at C's 1.8 makes the two right-hand icons read as
+  a pair, a touch finer than the tools, so it is that, at every width.
+* THE DOT WENT WITH THE GLYPH ONLY ON PAPER. Its offsets were fixed pixels
+  tuned on the 40px glyph; #343 shrank the glyph to 36 and the dot floated off
+  the frame's corner while the comment said --icon-size moved it (owner: "did
+  you adjust the green dot on the icon?"). They are fractions of --icon-size
+  now (15.5/40, 14.25/40), the owner's placement at any size.
+
+verify_layout pins Media's size and line, Magnify's size and its line against
+Media's (desktop, and a narrow window with a mouse), and the dot's centre at the
+scaled offset, both editors. Red per component: Media at 36px, Media's old
+stroke-width, the dot in fixed pixels, Magnify's rule gone, Magnify at the
+tools' 2.2 line.
