@@ -13991,7 +13991,7 @@ same light ink. The decision moves to the canvas's own luminance:
 
 * The Pad already marked its wrap .light-bg for the vignette; Flip now marks
   its zoom layer by the same test (applyBg). Under .light-bg the hint and the
-  grid read dark tokens (--on-canvas-rgb, --grid-rgb), and the grid repaints
+  grid read dark tokens (--on-canvas-rgb, --on-canvas-grid-rgb), and the grid repaints
   when the ground changes under it.
 * Dark ink at the dark ground's alphas measured 3.99 and 3.12:1 on white, so a
   light ground raises them (.67 / .62): ~6.0 and ~5.0 on white, 5.7 and 4.8

@@ -228,7 +228,7 @@
      that it was a decision. */
   --on-canvas-rgb: 246,247,249;
   /* The grid's ink, the same decision: white on the default dark ground. */
-  --grid-rgb: 255,255,255;
+  --on-canvas-grid-rgb: 255,255,255;
 
   /* Semantic colours. The danger red, the warn amber and the ok green were all
      picked to sit on a near-black ground, and on a white one they wash out:
@@ -1224,7 +1224,7 @@ body.stroking .skribl-hint {
    never the theme: the Pad marks its wrap .light-bg (updateVignette), Flip its
    zoom layer (applyBg), and the hint and lib/gridoverlay.js read the tokens. */
 .light-bg {
-  --on-canvas-rgb: 20,23,29; --grid-rgb: 20,23,29;
+  --on-canvas-rgb: 20,23,29; --on-canvas-grid-rgb: 20,23,29;
   /* Dark ink at the dark ground's alphas measured 3.99 and 3.12:1 on white;
      these give ~6.0 and ~5.0 (5.7 and 4.8 on cream), the dark ground's own
      ~5.8 and ~4.6 (verify_a11y A11Y 15). */

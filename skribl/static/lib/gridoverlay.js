@@ -59,10 +59,10 @@
       var line = Math.max(1, Math.round(dpr));   // whole device pixels only
 
       // Sub-cells first so the majors sit on top of them. The ink is the
-      // overlay's --grid-rgb (styles.css): white on a dark canvas, dark on a
+      // overlay's --on-canvas-grid-rgb (styles.css): white on a dark canvas, dark on a
       // light one, decided by the canvas colour and never by the theme.
       var ink = '';
-      try { ink = getComputedStyle(overlayEl).getPropertyValue('--grid-rgb').trim(); } catch (e) {}
+      try { ink = getComputedStyle(overlayEl).getPropertyValue('--on-canvas-grid-rgb').trim(); } catch (e) {}
       if (!/^\d+\s*,\s*\d+\s*,\s*\d+$/.test(ink)) ink = '255,255,255';
       paint(cols * 2, rows * 2, 'rgba(' + ink + ',.10)');
       paint(cols, rows, 'rgba(' + ink + ',.26)');
