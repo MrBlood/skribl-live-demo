@@ -12,8 +12,9 @@
  * opening above the fold, the canvas re-fitting to a new aspect). Each check is
  * one pair of getBoundingClientRect calls, batched to one per frame.
  *
- * Loaded by the Pad and Flip. The player keeps its header card and does not
- * load this.
+ * Loaded by the Pad and Flip, which each call SkriblHeaderGlass.wire(header,
+ * canvas) with their own canvas (app.js, flip.js). The player keeps its header
+ * card and does not load this.
  */
 (function (global) {
   'use strict';
@@ -46,13 +47,6 @@
     }
     check();
   }
-
-  function start() {
-    if (doc.body.classList.contains('player-mode')) return;
-    wire(doc.querySelector('.header'), doc.getElementById('canvas') || doc.getElementById('pad'));
-  }
-  if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', start);
-  else start();
 
   global.SkriblHeaderGlass = { wire: wire };
 })(window);

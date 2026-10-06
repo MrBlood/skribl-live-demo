@@ -1022,6 +1022,10 @@ customBgInput.addEventListener('input', (e) => {
 // The screen-only inset vignette is tuned for dark canvases; on a light/white
 // background the dark edges look muddy, so swap to a soft light vignette when
 // the background is bright. Purely cosmetic — export stays clean either way.
+// The header has no card at rest; its ground returns while the drawing is
+// under it (lib/headerglass.js; the player does not load it).
+if (window.SkriblHeaderGlass) window.SkriblHeaderGlass.wire(document.querySelector('.header'), canvas);
+
 function updateVignette() {
   const hex = (bgColor || '#0d0f14').replace('#', '');
   if (hex.length < 6) return;

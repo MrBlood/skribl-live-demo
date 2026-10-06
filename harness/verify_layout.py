@@ -1100,8 +1100,11 @@ with sync_playwright() as p:
     print("\nLAYOUT — on a phone the header is solid and carries no blur (v317)")
     # The owner's iPhone: the pinned header let the canvas show through it, and
     # after drawing its slot was empty until touched -- WebKit leaving a stale
-    # backdrop-filter layer. On a phone the header is opaque with no blur; on a
-    # desktop the glass is unchanged.
+    # backdrop-filter layer. On a phone the header is opaque with no blur.
+    # Since the owner's "no container at rest", that ground shows only while
+    # the drawing is under the header (lib/headerglass.js): at rest there is no
+    # card on either size, and when the ground does show on a phone it is still
+    # the v317 one -- solid, with no blur layer.
     HDR = """() => { const cs = getComputedStyle(document.querySelector('.header'));
         const m = cs.backgroundColor.match(/rgba?\\(([^)]+)\\)/); const parts = m ? m[1].split(',') : [];
         return { alpha: parts.length === 4 ? +parts[3] : 1,
@@ -1112,12 +1115,14 @@ with sync_playwright() as p:
             _pg = _ctx.new_page()
             browsing.goto(_pg, BASE, _path)
             _h = _pg.evaluate(HDR)
+            check(f"{_path} @{_w}: at rest the header has no card and no blur layer",
+                  _h["alpha"] == 0 and _h["blur"] == "none", str(_h))
             if _phone:
-                check(f"{_path} @{_w}: the header is opaque and has no blur layer",
+                _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+                browsing.pad_drawer(_pg, "draw", settle=900)
+                _h = _pg.evaluate(HDR)
+                check(f"{_path} @{_w}: over the drawing the header is opaque and has no blur layer",
                       _h["alpha"] == 1 and _h["blur"] == "none", str(_h))
-            else:
-                check(f"{_path} @{_w}: the desktop header keeps its glass",
-                      _h["alpha"] < 1 and "blur" in _h["blur"], str(_h))
             _ctx.close()
 
     # THE PAD'S BAR IS 44x44 ON A PHONE (owner's bottom-bar work). Six controls
