@@ -713,6 +713,7 @@ rather than a shared rule.
 | `framebitmap.js` | Flip+player | Frame bitmaps — a painted page is rasterised once per playback, shared rule. |
 | `fullbar.js` | library+gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
+| `headerglass.js` | Pad+Flip | The header's ground, only while the drawing is under it: marks `.header.over-canvas` while the pinned phone header overlaps the canvas, so a header with no card at rest stays readable over ink. |
 | `helplearn.js` | Pad+Flip | How it works, shown: the examples drawer in the help panel. |
 | `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |

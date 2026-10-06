@@ -368,6 +368,13 @@ with sync_playwright() as sp:
     check("the player is in player mode",
           "player-mode" in pg.evaluate("() => document.body.className"))
 
+    # The editors' header lost its card at rest (lib/headerglass.js); the
+    # player's keeps it, scoped out by body.player-mode.
+    _hd = pg.evaluate("""() => { const c = getComputedStyle(document.querySelector('.header'));
+        return { bg: c.backgroundColor, shadow: c.boxShadow }; }""")
+    check("the player's header keeps its card (the editors' header has none at rest)",
+          _hd["bg"] not in ("rgba(0, 0, 0, 0)", "transparent") and _hd["shadow"] != "none", str(_hd))
+
     check("the player loads a post with nothing in the console: no warnings, no errors",
           not console_msgs, "; ".join(console_msgs[:4]))
 

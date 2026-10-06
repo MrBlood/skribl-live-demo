@@ -5507,6 +5507,26 @@ a.player-btn { text-decoration: none; }
             -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
+/* NO CONTAINER AT REST (owner, from a mock: "Does it look better without
+   header/dock?" ... "It looks good"). On the Pad and Flip the header and the
+   dock lose their card: the controls sit on the page and the canvas is the
+   one shape on screen. The header's ground comes back only while the drawing
+   is UNDER it -- the phone's sticky header once the page scrolls (Pen drawer
+   open) -- which lib/headerglass.js marks .over-canvas; it is then exactly
+   the ground above (solid on a phone, no blur), faded in as a plain colour
+   change, never a backdrop-filter or an opacity (the v315 WebKit rule). The
+   dock never lies over the drawing, so it has no ground at all. The player
+   keeps its header card (body.player-mode). */
+body:not(.player-mode) .header { transition: background-color 0.25s ease, box-shadow 0.25s ease; }
+body:not(.player-mode) .header:not(.over-canvas) {
+  background-color: transparent; background-image: none; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+body:not(.player-mode) :is(.toolbar, .flip-tools) {
+  background: transparent; box-shadow: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+
 /* 641-720px is "desktop" by breakpoint but has no room for the full
    "Post to Skribl" + "Record" + "Play" labels the desktop layout enables — at
    exactly 641px Post wrapped to THREE lines (59px tall) and the header
