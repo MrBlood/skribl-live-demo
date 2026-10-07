@@ -14185,3 +14185,40 @@ verify_layout holds the two ink gaps equal at desktop widths. DESKTOP ONLY: a
 narrow window with a mouse (431-640px) still shows Magnify in a row with no
 slack -- the extra 10px clipped it at 440 (verify_layout's clip check said so)
 -- and spaces Undo and Redo on that tier's own rhythm, so it keeps the 4px gap.
+
+**Loop and Keep under in the editor (Blooby, PR 3 of 3).** The controls for
+what PRs 1 and 2 taught every surface to play, as mocked and approved: the
+owner can now make the card -- draw it on page 1, Keep under, select the
+waving pages, Loop, step it to Forever.
+
+* LOOP, in the page bar on regular and each page's ⋯ menu on compact, acts on
+  the span or the page you are on. On a stretch that is not the loop it makes
+  it the loop at x2; on the loop each tap steps x2 -> x3 -> x4 -> 2 s -> 4 s ->
+  6 s -> Forever -> off -- one control, one direction, as the hold badge
+  cycles. The strip draws the loop as a bracket along the TOP of its pages
+  (the span's tape runs along the bottom; a tile can be in both), and its first
+  tile carries the loop as a chip that is the same control.
+* KEEP UNDER is a switch on the page you are on: that page, under every page
+  after it. Refused on the last page. Its tile gets a blue edge (--under-rgb,
+  new, both themes) and "Under".
+* Pages after a Forever loop dim and say why to a screen reader: a page that
+  never plays is one you would otherwise edit and then fail to find in the post.
+* THEY FOLLOW THEIR PAGES. A dozen paths add, delete, copy and reorder pages
+  and know nothing of either setting, so buildStrip -- which they all end in --
+  re-derives the indices from the page objects they were pinned to. A loop
+  keeps whichever of its pages survive; the page underneath goes with its page;
+  and since Keep under means "under the pages after it", a range that started
+  right after its page keeps starting there and one that ran to the last page
+  keeps running to it. The first draft followed only the pages first named, so
+  a page added between the card and the waving pages was not under the card;
+  verify_loopui said so.
+* THE EXPORT SHEET STATES THE FILE'S REAL LENGTH. It counted each page once at
+  its hold, so it ignored the loop (and a drawing page's own time); it now
+  walks the export's own page order at each page's length, and on a Forever
+  loop says it runs about 10 s a pass.
+
+verify_loopui is new, driven by real clicks on the page bar, the chip and the
+compact ⋯ menu. Red per component: the cycle, a new stretch starting over, the
+chip, the switch, the last-page refusal, the bracket, the page underneath's
+mark, the dimming, the menu items, the following (and its "pages after it"
+rule alone), the export's length and its Forever line.

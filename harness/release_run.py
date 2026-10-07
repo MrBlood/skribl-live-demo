@@ -116,6 +116,7 @@ BATCHES = [
     ["verify_hold.py"],                    # measures — frame pacing
     ["verify_loop.py"],                    # measures — which page is painted, frame by frame
     ["verify_under.py"],                   # measures — the page underneath, frame by frame
+    ["verify_loopui.py"],                  # unrecorded
     ["verify_review.py", "verify_help.py", "verify_tips.py"],
     ["verify_helpclaims.py"],              # measures — times a take, drags the zoom pill
     ["verify_helpdemos.py"],               # measures — the drawer's slide-in and the sheet following a pull
