@@ -1255,10 +1255,21 @@ with sync_playwright() as p:
         return { media: m, magnify: line(document.querySelector('#magnifyBtn svg')),
                  dot: { dx: Math.round((d.left + d.width / 2 - m.cx) * 100) / 100,
                         dy: Math.round((m.cy - (d.top + d.height / 2)) * 100) / 100 } }; }"""
+    INK_GAPS = """() => { const ink = (sel) => { const svg = document.querySelector(sel); if (!svg) return null;
+          const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, k = r.width / vb.width;
+          const half = (parseFloat(getComputedStyle(svg).strokeWidth) || 0) * k / 2; let L = 1e9, R = -1e9;
+          svg.querySelectorAll('path,rect,circle,line,polyline').forEach(el => { const b = el.getBBox();
+            const h = el.getAttribute('stroke') === 'none' ? 0 : half;
+            L = Math.min(L, r.left + (b.x - vb.x) * k - h); R = Math.max(R, r.left + (b.x + b.width - vb.x) * k + h); });
+          return { L, R }; };
+        const u = ink('#undoBtn svg') || ink('#undo svg'), d = ink('#redoBtn svg') || ink('#redo svg');
+        const m = ink('#mediaOpenBtn .media-glyph'), g = ink('#magnifyBtn svg');
+        if (!u || !d || !m || !g) return null;
+        return { undoRedo: Math.round((d.L - u.R) * 10) / 10, mediaMag: Math.round((g.L - m.R) * 10) / 10 }; }"""
     for _path in ("/skribl-pad", "/flip"):
         # 600 twice: a phone, and a narrow window with a mouse, where Magnify
         # still shows and the phone tier's old 22px rule used to reach it.
-        for _w, _phone in ((390, True), (600, True), (600, False), (1280, False)):
+        for _w, _phone in ((390, True), (600, True), (600, False), (800, False), (1280, False)):
             _ctx = browser.new_context(viewport={"width": _w, "height": 844}, is_mobile=_phone, has_touch=_phone)
             _pg = _ctx.new_page()
             browsing.goto(_pg, BASE, _path)
@@ -1279,6 +1290,22 @@ with sync_playwright() as p:
                       _g is not None and _g["shown"] and abs(_g["size"] - 26) <= 0.5, str(_g))
                 check(f"{_path} @{_w}: ...at the same line as Media beside it",
                       _g is not None and abs(_g["line"] - _m["line"]) <= 0.05, f"{_g} vs {_m}")
+                # ONE RHYTHM AT THE RIGHT END: the drawn icons of Media and
+                # Magnify sit as far apart as Undo's and Redo's beside them.
+                # Their buttons were 4px apart, set when Magnify was a 24px
+                # glyph beside a 36px Media; at 26 beside 32 the icons sat 24px
+                # apart against Undo and Redo's 34.5 (owner: "it looks kind of
+                # weird now that the magnifying glass is so big"). Asked of the
+                # INK -- each glyph's geometry plus half its stroke -- because
+                # the buttons are the same width whatever is drawn in them.
+                # DESKTOP: a narrow window with a mouse keeps the dock's gap
+                # (no slack in that row -- +10 clipped it at 440 -- and Undo and
+                # Redo are spaced on that tier's own rhythm). The row's clip
+                # checks above cover it there.
+                if _w.startswith(("1280", "800")):
+                    _gap = _pg.evaluate(INK_GAPS)
+                    check(f"{_path} @{_w}: Media and Magnify sit as far apart as Undo and Redo",
+                          _gap is not None and abs(_gap["mediaMag"] - _gap["undoRedo"]) <= 1.5, str(_gap))
             _ctx.close()
 
     browser.close()

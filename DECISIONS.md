@@ -14173,3 +14173,15 @@ player not painting it; the editor's still and drawing-page paths, each
 alone; the export, and the export faint; the editing view at full strength,
 and with no card (its first draft passed that); the draft's save and load;
 the post body; and the server accepting a bad one.
+
+**Magnify 10px further from Media (owner: "check the spacing on the icons on
+the bottom ... it looks kind of weird now that the magnifying glass is so
+big").** Measured on the drawn ink, desktop, both editors: Undo->Redo 34.5px,
+Redo->Media 42, Media->Magnify 24 -- their buttons sat on the dock's 4px gap,
+set when Magnify was 24px beside a 36px Media. The phone was even (centres 56px
+apart, no Magnify). Mocked +6 and +10 at true 1x; the owner took +10, which
+makes Media->Magnify equal Undo->Redo, so the right end has one rhythm.
+verify_layout holds the two ink gaps equal at desktop widths. DESKTOP ONLY: a
+narrow window with a mouse (431-640px) still shows Magnify in a row with no
+slack -- the extra 10px clipped it at 440 (verify_layout's clip check said so)
+-- and spaces Undo and Redo on that tier's own rhythm, so it keeps the 4px gap.
