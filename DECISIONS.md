@@ -14316,3 +14316,29 @@ the tag painted on each never-playing tile with the pages selected (probed with
 the tag made hit-testable, since it is pointer-events:none and elementFromPoint
 skips such elements); verify_ux: shut, the drawers reserve nothing. Red per
 component, the paint probe included.
+
+**The loop's ends are handles you drag (owner: "maybe an easier way of picking
+the loop is similar to building the music loop, with the dragging tool" ... "can
+the handle be longer on the bottom?" ... "How do we undo a loop?").** As mocked
+and approved: the loop is outlined on the strip with a grip at each outer edge,
+in the music trim handle's cap-and-line shape. The grab knob hangs BELOW the
+tiles, because along each tile's top sit the hold badge and the delete x, and a
+grip there would fight them; the strip makes room under its tiles while a loop
+exists. A drag snaps to page edges, says "Pages 2-6" on the inside of the loop
+while it moves, keeps the loop's count when it lands, and scrolls the strip when
+held at or past its edge. The arrow keys move a focused handle (it keeps the
+focus through the rebuild each press makes), and Delete removes the loop. The
+handles step away while the Flip plays.
+
+Removing a loop was a walk past Forever on the chip; it is now named: "Remove
+loop" in a looped page's ⋯ menu, and Delete on a handle. One loop per Flip is
+unchanged -- it is in the document format, the server's validation and every
+player, so several loops would be a project of their own.
+
+verify_loopui THE HANDLES, driven with the mouse: the knob below the tiles and
+painted, the tile's badge and delete still what a tap on them reaches, shrink,
+the start clamped at the end, grow, the range bubble painted mid-drag, the arrow
+keys with the focus kept, gone while playing, Delete; and the compact menu's
+Remove loop. Red per component (the knob's placement, the outline stealing taps,
+the snap, the clamp, the bubble, the arrows, the focus, the playing state,
+Delete, the menu item).
