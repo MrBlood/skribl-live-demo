@@ -256,10 +256,11 @@ def blooby(scale, dx, dy):
     return out
 
 
-def card():
+def card(with_blooby=True):
     """Blooby's trading card, in the order it is drawn: colour, the yellow bands,
     the card's worn edge and corners, the ink of the frames, the title and its
-    stars, Blooby, his name."""
+    stars, Blooby, his name. Without Blooby it is the card the waving Flip
+    keeps underneath (card_flip): the window empty, for him to wave in."""
     st = []
     # Colour first, as the owner's cards are: the card, the panel, the window, the plate.
     st.append(S(rows(X0, Y0, X1, Y1, 12, inset=17), "fill", CARD_W, size=26, pace=2.6, peak=1.0, flat=True))
@@ -343,7 +344,7 @@ def card():
     # left), then his name, centred on the plate by its ink.
     bl = blooby(0.66, 140, 112)
     xs = [x for b in bl for x, _ in b.pts]
-    bl = blooby(0.66, 140 + ACX - (min(xs) + max(xs)) / 2, 112)
+    bl = blooby(0.66, 140 + ACX - (min(xs) + max(xs)) / 2, 112) if with_blooby else []
     st += bl
     word = lettering("BLOOBY", 0, 0, 30)
     xs = [x for w in word for x, _ in w.pts]
@@ -359,6 +360,34 @@ def card():
         if x.role != "fill":
             x.pace *= 0.4
     return st
+
+
+def _in_window(strokes):
+    """Strokes in Blooby's own coordinates, placed in the card's window exactly
+    as card() places him: the same scale, centred by the same measured extent
+    of his waving pose, so the Flip's Blooby stands where the still card's does."""
+    xs = [x for b in blooby(0.66, 140, 112) for x, _ in b.pts]
+    dx, dy, k = 140 + ACX - (min(xs) + max(xs)) / 2, 112, 0.66
+    out = []
+    for s in strokes:
+        c = copy.copy(s)
+        c.pts = [(dx + px * k, dy + py * k) for px, py in s.pts]
+        c.size = s.size * k * 1.05
+        out.append(c)
+    return out
+
+
+def card_flip():
+    """The trading card as a Flip that waves (owner: "keep it looping forever
+    so he just keeps waving ... and it doesn't start over"). Page 1 is the card
+    without Blooby, kept UNDER every page after it and drawing itself once;
+    pages 2-11 are his wave (flipworks.wave: the body once, the arm and eyes per
+    page, one blink), placed in the window as the still card places him, with
+    his purple swoosh for the ground, and looped Forever."""
+    swoosh = [s for s in pose("wave", "swoosh") if s.role == "accent" and s.color == PURPLE and len(s.pts) > 40]
+    body = [s for s in W["base"] if s is not GROUND] + swoosh
+    return {"fps": W["fps"], "card": card(with_blooby=False), "body": _in_window(body),
+            "pages": [_in_window(pg) for pg in W["pages"]], "order": W["order"]}
 
 
 # The tempo the card is drawn at -- (hand, pauses), as make_art's TEMPO -- and how much faster its

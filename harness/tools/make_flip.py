@@ -2,6 +2,7 @@
 """Draw How it works' Flip loops through the real Flip and keep what it records.
 
     python3 harness/tools/make_flip.py bounce
+    python3 harness/tools/make_flip.py blooby-card
 
 The fixed layer (flipworks: "base") is drawn on page 1 with real pen input and
 the page duplicated for every page, so it is identical throughout; then each
@@ -18,6 +19,7 @@ ROOT = HERE.parent.parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import artdraw  # noqa: E402
 import browsing  # noqa: E402
+import blooby  # noqa: E402
 import flipworks  # noqa: E402
 
 OUT = ROOT / "skribl" / "static" / "help" / "demos"
@@ -75,10 +77,66 @@ def make(browser, name):
           f"{sum(len(f['strokes']) for f in payload['frames'])} points, {path.stat().st_size:,} B")
 
 
+def make_card(browser):
+    """Blooby's trading card that waves: the card on page 1, kept under every
+    page after it and drawing itself; Blooby's wave on pages 2-11, looped
+    Forever (blooby.card_flip). Drawn as the owner would make it in Flip -- the
+    card at its own careful pace, a blank page, his body, the page copied for
+    every pose, then each pose's arm and eyes, key poses first -- and set with
+    the editor's own Keep under and Loop state. Saved to
+    help/demos/flip-blooby-card.json."""
+    spec = blooby.card_flip()
+    ctx = browser.new_context(viewport={"width": 1280, "height": 960})
+    page = ctx.new_page()
+    errs = []
+    page.on("pageerror", lambda e: errs.append(str(e)))
+    browsing.goto(page, BASE, "/flip")
+    page.wait_for_timeout(900)
+    page.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
+    page.evaluate("""() => { const t = window.SkriblCanvasSizes, id = t.SIZES.find(s => s.label === '4:3').id;
+        const b = document.querySelector(`[data-size='${id}']`); if (b) b.click(); }""")
+    page.wait_for_timeout(300)
+    # The card's own ground, as its still example has: ivory would barely part from paper.
+    page.evaluate(f"""() => {{ setBg('{blooby.TABLE}'); onion = true; onionDepth = 1;
+        fps = {spec['fps']}; if (window.SkriblPressure) SkriblPressure.setEnabled(true);
+        if (typeof setTool === 'function') setTool('pen'); }}""")
+    logical = page.evaluate("() => [CW, CH]")
+    hand, gaps = blooby.CARD_TEMPO
+    artdraw.draw(page, spec["card"], seed=1, canvas="#pad", logical=logical, tempo=hand, pause_tempo=gaps)
+    page.evaluate("() => { idx = 0; addFrame(false); }")
+    page.wait_for_timeout(200)
+    artdraw.draw(page, spec["body"], seed=2, canvas="#pad", logical=logical)
+    n = len(spec["pages"])
+    for _ in range(n - 1):
+        page.evaluate("() => addFrame(true)")
+    page.wait_for_timeout(300)
+    for i in spec["order"]:
+        page.evaluate("i => go(i)", 1 + i)
+        page.wait_for_timeout(150)
+        artdraw.draw(page, spec["pages"][i], seed=10 + i, canvas="#pad", logical=logical)
+    page.wait_for_timeout(300)
+    # The card draws itself, then stays under the wave; the wave never ends.
+    page.evaluate(f"""() => {{ frames[0].draw = true;
+        docUnder = {{ page: 0, from: 1, to: {n} }}; docLoop = {{ from: 1, to: {n}, forever: true }};
+        idx = 1; buildStrip(); render(); }}""")
+    payload = page.evaluate("""async () => { const p = await buildSharePayload();
+        for (const k of ['thumbnail', 'title', 'caption', 'visibility']) delete p[k];
+        return p; }""")
+    ctx.close()
+    if errs:
+        raise SystemExit(f"blooby-card: page errors {errs[:2]}")
+    if payload.get("under") != {"page": 0, "from": 1, "to": n} or not (payload.get("loop") or {}).get("forever"):
+        raise SystemExit(f"blooby-card: the post lost its loop or page underneath: {payload.get('loop')} {payload.get('under')}")
+    path = OUT / "flip-blooby-card.json"
+    path.write_text(json.dumps(payload, separators=(",", ":")))
+    print(f"flip-blooby-card: {len(payload['frames'])} pages at {payload.get('fps')} fps, "
+          f"{sum(len(f['strokes']) for f in payload['frames'])} points, {path.stat().st_size:,} B")
+
+
 if __name__ == "__main__":
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         b = p.chromium.launch()
-        for n in sys.argv[1:] or list(flipworks.FLIPS):
-            make(b, n)
+        for n in sys.argv[1:] or list(flipworks.FLIPS) + ["blooby-card"]:
+            make_card(b) if n == "blooby-card" else make(b, n)
         b.close()
