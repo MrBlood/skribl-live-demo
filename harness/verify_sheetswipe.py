@@ -126,8 +126,8 @@ SHEETS = [
      "#pageMenu", "() => document.getElementById('pageMenuOverlay').hidden", "#pageMenu .pm-grab"),
 ]
 
-def fresh(b, route):
-    ctx = b.new_context(viewport={"width": 390, "height": 664}, has_touch=True, is_mobile=True,
+def fresh(b, route, height=664):
+    ctx = b.new_context(viewport={"width": 390, "height": height}, has_touch=True, is_mobile=True,
                         device_scale_factor=2)
     pg = ctx.new_page()
     errs = []
@@ -428,6 +428,63 @@ with sync_playwright() as p:
               pg.evaluate("() => document.getElementById('drawPanel').hidden") is True)
         check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
         ctx.close()
+
+    # 5b THE FULL DRAWER'S GRIP IS ON SCREEN, AND IT IS THE GRIP THAT CLOSES
+    # IT. Expanding scrolled the drawer's END into view, which on a short phone
+    # carried its top -- the grip -- under the sticky header: at 390x664 Flip's
+    # grip sat at y 3-27 behind a header at 6-66, and section 6's tap "worked"
+    # only because a tap on the header is an outside tap. So: what is PAINTED
+    # at the grip's centre (a rect is not a paint), at four heights; still
+    # painted after the drawer is scrolled to its last control; and the close
+    # counted on the grip itself, not merely observed.
+    # The WHOLE grip, top edge to bottom edge: Flip's own open-scroll once
+    # settled 9-15px past the end at 700-720px, leaving the centre painted and
+    # the top edge under the header -- a centre-only probe called that green.
+    GRIP = """() => { const h = document.querySelector('#drawPanel .drawer-detent-handle').getBoundingClientRect();
+        const hit = y => { const at = document.elementFromPoint(h.left + h.width / 2, y); return !!(at && at.closest('.drawer-detent-handle')); };
+        return { y: Math.round(h.top), hit: hit(h.top + 2) && hit(h.top + h.height / 2) && hit(h.bottom - 2) }; }"""
+    for page, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        for hgt in (600, 664, 720, 844):
+            who = f"{page}: the full draw drawer at 390x{hgt}"
+            print(f"\n{who}")
+            # Loaded at that height, not resized to it: Flip sizes its canvas
+            # at load, and a resized page never formed the 720px case.
+            ctx, pg, errs = fresh(b, route, hgt)
+            browsing.pad_drawer(pg, "draw", settle=600)
+            pg.evaluate("""() => { window.__gripUps = 0;
+                document.querySelector('#drawPanel .drawer-detent-handle').addEventListener('pointerup', () => window.__gripUps++);
+                document.querySelector('#drawPanel .drawer-detent-more').click(); }""")
+            pg.wait_for_timeout(1700)
+            g = pg.evaluate(GRIP)
+            check(f"{who}: expanded, the whole grip is painted, edge to edge", g["hit"], str(g))
+            # The dock above it is painted too, not pushed into the header's band
+            # (glass over glass: its icons showed through the logo and Post).
+            dock = pg.evaluate("""() => { const d = document.querySelector('#toolBar, .flip-tools'); const r = d.getBoundingClientRect();
+                const pen = document.getElementById('penToolBtn').getBoundingClientRect();
+                const at = document.elementFromPoint(pen.left + pen.width / 2, pen.top + 3);
+                const h = document.querySelector('.header').getBoundingClientRect();
+                return { top: Math.round(r.top), header: Math.round(h.bottom), pen: !!(at && at.closest('#penToolBtn')) }; }""")
+            check(f"{who}: ...and the dock above it is clear of the header, its pen tool painted",
+                  dock["pen"] and dock["top"] >= dock["header"], str(dock))
+            # Down to the drawer's last control, as a person reaching Clear all pages does.
+            last = pg.evaluate("""() => { const all = [...document.querySelectorAll('#drawPanel button')].filter(e => e.offsetParent);
+                const c = all[all.length - 1]; c.scrollIntoView({ block: 'end' }); return c.id || c.className; }""")
+            pg.wait_for_timeout(400)
+            hit = pg.evaluate("""() => { const all = [...document.querySelectorAll('#drawPanel button')].filter(e => e.offsetParent);
+                const c = all[all.length - 1], r = c.getBoundingClientRect();
+                const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return !!(at && c.contains(at)); }""")
+            g2 = pg.evaluate(GRIP)
+            check(f"{who}: scrolled to its last control, that control and the grip are both painted",
+                  hit and g2["hit"], f"last {last!r} painted {hit}, grip {g2}")
+            hb = pg.locator("#drawPanel .drawer-detent-handle").bounding_box()
+            pg.touchscreen.tap(hb["x"] + hb["width"] / 2, hb["y"] + hb["height"] / 2)
+            pg.wait_for_timeout(600)
+            shut = pg.evaluate("() => ({ hidden: document.getElementById('drawPanel').hidden, ups: window.__gripUps })")
+            check(f"{who}: a tap on the grip closes it -- the grip's own tap, not an outside one",
+                  shut["hidden"] is True and shut["ups"] == 1, str(shut))
+            check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
+            ctx.close()
 
     # 6 THE PAGE GOES HOME (owner, from an iPhone: the page "bounced back too
     # high ... stuck out of view about the header's size ... and header menu

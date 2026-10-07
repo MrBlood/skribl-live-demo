@@ -4447,7 +4447,7 @@ function closePop(){ if(_flipDrawerCtl.isOpen('draw')) _flipDrawerCtl.open(null)
 // The draw popout's half detent (phones) — twin of Pad's attach; the lib is
 // shared, the close hand-off is this surface's own machine.
 if (window.SkriblDrawerDetent) {
-  window.SkriblDrawerDetent.attach(drawPanel, { close: () => closePop() });
+  window.SkriblDrawerDetent.attach(drawPanel, { close: () => closePop(), dock: document.querySelector('.flip-tools') });
 }
 function hidePhoto(){ if(_flipDrawerCtl.isOpen('photo')) _flipDrawerCtl.open(null); }
 function hideMusic(){ if(_flipDrawerCtl.isOpen('music')) _flipDrawerCtl.open(null); }

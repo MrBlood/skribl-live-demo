@@ -14264,3 +14264,31 @@ Flip, canvas and reload included.)
 verify_ux NEW SKRIBL drives the owner's page through the real menu and measures
 the canvas's paint. Red per component: the menu's empty check, the media clear,
 Undo's restore, the drawer's message; on main, three of the four.
+
+**The full draw drawer's grip is on screen on a short phone (owner: "look into
+the draw drawer grip tap bug").** Expanding the drawer brings its END on screen,
+and a drawer taller than the room under the sticky header took its top -- the
+grip -- underneath the header to do it: at 390x664 Flip's grip sat at y 3-27
+behind a header at 6-66, and at 600 the Pad's was off the top. A tap there landed
+on the header, so "I hit the drawer grip and they stay" was back. verify_
+sheetswipe had passed throughout, because its tap on the grip's rect hit the
+header and a tap on the header is an outside tap, which also closes the drawer.
+
+* A FULL DRAWER TALLER THAN THE ROOM UNDER THE HEADER AND THE DOCK is capped to
+  that room and scrolls inside itself (lib/drawerdetent.js fit(), .detent-fit),
+  with the grip pinned at its top and the drawer solid while fitted -- glass
+  would show the content passing under the pinned grip. Under the dock, not
+  just the header: fitted under the header alone, the dock landed in the
+  header's band and its icons showed through the logo and Post. Both editors
+  pass their dock to attach().
+* AND ITS TOP STAYS THERE. Flip's own open-scroll settled 9-15px past the end at
+  700-720px, which on a fitted drawer is the dock under the header; the detent
+  scrolls back after the reveal has had its last word.
+
+verify_sheetswipe 5b, loaded at 600, 664, 720 and 844 on both editors: the WHOLE
+grip painted (top edge, centre, bottom edge -- a centre-only probe called 720
+green), the dock clear of the header, the grip and the drawer's last control both
+painted once scrolled to it, and the close counted on the grip's own pointerup.
+Red per component: the fit, the pinned grip, the dock in the room, the top
+clamp; on main, eight red. A header-level scroll clamp in revealPanelEnd was
+written first and removed: no check could tell it from its absence.
