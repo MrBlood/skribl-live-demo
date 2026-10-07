@@ -90,6 +90,14 @@ with sync_playwright() as p:
           st["loop"] == {"from": 5, "to": 5, "times": 2}, str(st["loop"]))
     label = pg.locator("#pbLoop .pb-tx").inner_text()
     check("...and the button names the loop it is on", label.strip() == "×2", repr(label))
+    # A SELECTION THAT IS NOT THE LOOP SAYS WHICH PAGES A TAP WILL LOOP (owner:
+    # a loop of page 2 alone read as "2-7 loops forever" with 2-7 selected).
+    pg.evaluate("() => { idx = 1; buildStrip(); }")
+    pg.locator(TILES).nth(6).click(modifiers=["Shift"])          # pages 2-7, the loop is on page 6
+    label = pg.locator("#pbLoop .pb-tx").inner_text()
+    check("with a selection that is not the loop, the button says which pages a tap loops",
+          label.strip() == "Loop 2–7", repr(label))
+    pg.evaluate("() => { clearSpan(true); buildStrip(); }")
 
     # The chip on the strip is the same control.
     pg.evaluate("() => { docLoop = { from: 1, to: 4, times: 4 }; idx = 0; buildStrip(); }")
@@ -120,7 +128,7 @@ with sync_playwright() as p:
     check("its ends are marked, so the stretch reads from its ends",
           "loop-first" in t[1]["cls"] and "loop-last" in t[4]["cls"], str([x["cls"] for x in t[1:5]]))
     check("the chip is on the loop's first page only, and says what the loop is",
-          [x["chip"] for x in t] == [None, "Loop forever", None, None, None, None, None], str([x["chip"] for x in t]))
+          [x["chip"] for x in t] == [None, "Forever · 2–5", None, None, None, None, None], str([x["chip"] for x in t]))
     check("...and its accessible name says which pages and that it changes",
           t[1]["chipName"] == "Loop forever on pages 2–5, tap to change", str(t[1]["chipName"]))
     check("the page underneath carries its edge and its name",
@@ -131,6 +139,29 @@ with sync_playwright() as p:
           str(["noplay" in x["cls"] for x in t]))
     check("...and each says why, to a screen reader",
           t[5]["noplayName"] == "Page 6 never plays: the loop before it is Forever", str(t[5]["noplayName"]))
+    # ...AND TO THE EYE, painted, under a selection's frame too: the dimming
+    # alone was invisible on thin strokes, and nothing at all once selected.
+    pg.evaluate("() => { idx = 1; buildStrip(); }")
+    pg.locator(TILES).nth(6).click(modifiers=["Shift"])
+    tag = pg.evaluate("""() => [...document.querySelectorAll('#strip .frame')].map(f => {
+        const g = f.querySelector('.noplaytag'); if (!g) return null;
+        f.scrollIntoView({ block: 'nearest', inline: 'nearest' }); const r = g.getBoundingClientRect();
+        // The tag is pointer-events:none (a tap belongs to the tile), and
+        // elementFromPoint skips such elements: hit-testable for the probe only.
+        g.style.pointerEvents = 'auto';
+        const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        g.style.pointerEvents = '';
+        return { text: g.textContent, painted: !!(at && g.contains(at)) }; })""")
+    check("each page that never plays says \"Won't play\" on its tile, painted, with the pages selected",
+          [x and x["text"] for x in tag] == [None, None, None, None, None, "Won’t play", "Won’t play"]
+          and all(x["painted"] for x in tag if x), str(tag))
+    # The chip names ONE page as a page: the owner's own document, a loop of page
+    # 2 alone, read as the 2-7 the selection's label put beside it.
+    pg.evaluate("() => { docLoop = { from: 1, to: 1, forever: true }; buildStrip(); }")
+    chip1 = pg.evaluate("() => document.querySelector('#strip .loopchip').textContent")
+    check("a loop of one page names it, so it cannot read as the selection's range",
+          chip1 == "Forever · page 2", repr(chip1))
+    pg.evaluate("() => { clearSpan(true); docLoop = { from: 1, to: 4, forever: true }; idx = 2; buildStrip(); }")
     pg.evaluate("() => { docLoop = { from: 1, to: 4, times: 2 }; buildStrip(); }")
     check("a loop that ends leaves every page playing",
           not any("noplay" in x["cls"] for x in tiles(pg)))

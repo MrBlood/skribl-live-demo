@@ -14292,3 +14292,27 @@ painted once scrolled to it, and the close counted on the grip's own pointerup.
 Red per component: the fit, the pinned grip, the dock in the room, the top
 clamp; on main, eight red. A header-level scroll clamp in revealPanelEnd was
 written first and removed: no check could tell it from its absence.
+
+**The loop says which pages it is, and pages that will not play say so (owner:
+"it shows background and only loops page 2").** Their Flip played page 1
+underneath and then page 2 forever, and never reached 3-7 -- correctly: the
+saved document's loop was page 2 ALONE (`loop {from: 1, to: 1, forever}`), made
+by tapping Loop on page 2 and then stepping the strip's chip, which steps the
+loop it sits on, not the selection. The screen made that invisible: the chip
+said "Loop forever" on tile 2, beside the "2-7" that labels a SELECTION, and
+the two read as "2-7 loops forever"; pages 3-7 were marked as never playing
+only by dimming thin strokes, which read as nothing under a selection's frame.
+
+* THE CHIP NAMES ITS OWN PAGES: "Forever · page 2", "×3 · 2-7".
+* A SELECTION THAT IS NOT THE LOOP SAYS WHICH PAGES A TAP LOOPS: the page bar's
+  button reads "Loop 2-7" (regular size class; phones have no page bar).
+* PAGES AFTER A FOREVER LOOP SAY "Won't play" on the tile, dashed and dimmer.
+* AND THE EMPTY DRAWER CONTAINER RESERVES NOTHING (owner: "why is there so much
+  blank space at the bottom?"): its 24px bottom room is for an open drawer's
+  last row under iOS Safari's toolbar, and it now applies only while one is open.
+
+verify_loopui: the chip's text (one page and a range), the button's "Loop 2-7",
+the tag painted on each never-playing tile with the pages selected (probed with
+the tag made hit-testable, since it is pointer-events:none and elementFromPoint
+skips such elements); verify_ux: shut, the drawers reserve nothing. Red per
+component, the paint probe included.

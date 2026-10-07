@@ -2509,7 +2509,11 @@ function syncPagebar(){
     const l = _validLoop(), here = !!(l && l.from === r.from && l.to === r.to);
     pbLoop.disabled = playing;
     pbLoop.classList.toggle('on', here);
-    pbLoop.querySelector('.pb-tx').textContent = here ? loopLabel(l).replace('Loop ', '') : 'Loop';
+    // A selection that is not the loop says which pages a tap will loop: tapping
+    // the loop's chip steps the LOOP, and with "Loop" alone here the two looked
+    // like one control acting on one stretch.
+    pbLoop.querySelector('.pb-tx').textContent = here ? loopLabel(l).replace('Loop ', '')
+      : sp ? 'Loop ' + (sp.from + 1) + '\u2013' + (sp.to + 1) : 'Loop';
     const say = here ? loopLabel(l) + ' \u2014 tap to change' : 'Loop ' + these;
     pbLoop.title = say; pbLoop.setAttribute('aria-label', say);
   }
@@ -2577,7 +2581,7 @@ function buildStrip(){
     const _tags = ((_lp && i === _lp.from)
         ? '<button class="loopchip" title="' + loopLabel(_lp) + ' \u2014 tap to change" '
           + 'aria-label="' + loopLabel(_lp) + ' on ' + _pagesSay(_lp) + ', tap to change">'
-          + loopLabel(_lp) + '</button>' : '')
+          + loopChipText(_lp) + '</button>' : '')
       + ((_un && i === _un.page)
         ? '<span class="underlabel" role="img" aria-label="Page ' + (i + 1) + ' stays under '
           + _pagesSay(_un) + '">Under</span>' : '');
@@ -2585,7 +2589,10 @@ function buildStrip(){
       + (_tags ? '<span class="tilemarks">' + _tags + '</span>' : '')
       + (_neverPlays(i)
         ? '<span class="noplaymark" role="img" aria-label="Page ' + (i + 1)
-          + ' never plays: the loop before it is Forever"></span>' : '');
+          + ' never plays: the loop before it is Forever"></span>'
+          // ...and SAYS it to the eye. Dimming the thumbnail alone was invisible
+          // on thin strokes, and under a selection's frame it was nothing at all.
+          + '<span class="noplaytag" aria-hidden="true">Won\u2019t play</span>' : '');
     // THE BADGE IS THE CONTROL (stage 2). It used to render only when the
     // hold was above 1, which made it a readout: there was no way to START a
     // hold from the strip, so a page-bar button existed to do it. Now it is
@@ -3635,6 +3642,15 @@ const LOOP_STEPS = [{ times: 2 }, { times: 3 }, { times: 4 },
                     { ms: 2000 }, { ms: 4000 }, { ms: 6000 }, { forever: true }];
 function loopLabel(l){
   return l.forever ? 'Loop forever' : l.times ? 'Loop \u00d7' + l.times : 'Loop ' + (l.ms / 1000) + ' s';
+}
+/* THE CHIP NAMES ITS OWN PAGES (owner: a loop of page 2 alone, set to Forever,
+   read as "2-7 loops forever" -- the chip said "Loop forever" beside the "2-7"
+   that labels a SELECTION, and the two read as one). It sits on the loop's
+   first page, where the selection's range label also lands, so it carries its
+   own range and cannot borrow the other one. */
+function loopChipText(l){
+  const mode = l.forever ? 'Forever' : l.times ? '\u00d7' + l.times : (l.ms / 1000) + ' s';
+  return mode + ' \u00b7 ' + (l.from === l.to ? 'page ' + (l.from + 1) : (l.from + 1) + '\u2013' + (l.to + 1));
 }
 function _loopStep(l){
   return LOOP_STEPS.findIndex(st => (st.times && st.times === l.times) || (st.ms && st.ms === l.ms)

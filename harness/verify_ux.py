@@ -461,6 +461,12 @@ with sync_playwright() as _p:
           _m["pad"] >= 20,
           f"padding-bottom {_m['pad']}px — on iOS the toolbar overlays the "
           "viewport and slices whatever is last")
+    # ...but only while one is open (owner: "why is there so much blank space at
+    # the bottom?" -- the empty container kept the 24px under the dock).
+    browsing.pad_drawer_close(_pg, settle=500)
+    _shut = _pg.evaluate("() => parseFloat(getComputedStyle(document.querySelector('.flip-drawers')).paddingBottom)")
+    check("with every drawer shut, the drawers reserve nothing under the dock", _shut < 1, f"padding-bottom {_shut}px")
+    browsing.pad_drawer(_pg, "draw", settle=900)
 
     # A transient pill must not cover a destructive control.
     _pg.evaluate("() => { const a = document.getElementById('autosaveStatus');"
