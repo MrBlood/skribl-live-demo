@@ -22,7 +22,7 @@ the editor recorded. All of these need the local server.
 | `artworks.py` | Pad's drawings (`ART`), each as its stroke order; traced ones read `art/*.json` |
 | `flipworks.py` | Flip's loops, key poses first |
 | `blooby.py` | Blooby, the mascot (built from Flip's waving loop), his trading card, and the app's Home Screen icons (`blooby.py icon skribl/static`) |
-| `make_art.py`, `make_flip.py` | draw them and save `skribl/static/help/demos/<name>.json` |
+| `make_art.py`, `make_flip.py` | draw them and save `skribl/static/help/demos/<name>.json` (`make_flip.py blooby-card`: the trading card that waves -- the card kept under, Blooby's wave looped Forever) |
 | `make_help_clips.py` | the screen clips, filmed from the real app in both themes |
 | `make_help_thumbs.py` | the "Watch it work" bar's previews |
 | `review_art.py` | posts a drawing locally and renders it in the player, before anyone else sees it |

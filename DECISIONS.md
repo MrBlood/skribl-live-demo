@@ -14222,3 +14222,21 @@ compact ⋯ menu. Red per component: the cycle, a new stretch starting over, the
 chip, the switch, the last-page refusal, the bracket, the page underneath's
 mark, the dimming, the menu items, the following (and its "pages after it"
 rule alone), the export's length and its Forever line.
+
+**Blooby's card, waving (owner: "where is the blooby card" ... "go ahead, and
+sit beside it for now").** The trading card as a Flip, made with the controls
+#344, #346 and #348 built for it: page 1 is the card without Blooby, drawing
+itself once and kept UNDER every page after it; pages 2-11 are his wave
+(flipworks.wave -- the body once, the arm and eyes per page, one blink), placed
+in the window exactly as the still card places him (blooby.card_flip, the same
+scale and the same measured centring), with his purple swoosh for the ground,
+looped Forever. Recorded through the real Flip with pen input by
+`make_flip.py blooby-card`, at the card's own careful pace, and saved as the
+post Flip's Share would send (loop and under included; the recorder refuses to
+save one that lost either). In Ideas beside the still card on the Pad, and in
+Flip's own Ideas; the still card stays.
+
+The card draws in 8 s rather than its drawn 1:18: a drawing page is capped at
+DRAW_MAX (lib/holdtiming.js), which is the speed-up the still example gets from
+CARD_REPLAY_SPEEDUP and a little more. 746 KB, beside flip-wave's 691; Ideas
+fetches it only when the drawer opens.
