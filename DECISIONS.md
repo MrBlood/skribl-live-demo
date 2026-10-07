@@ -14240,3 +14240,27 @@ The card draws in 8 s rather than its drawn 1:18: a drawing page is capped at
 DRAW_MAX (lib/holdtiming.js), which is the speed-up the still example gets from
 CARD_REPLAY_SPEEDUP and a little more. 746 KB, beside flip-wave's 691; Ideas
 fetches it only when the drawer opens.
+
+**New Skribl takes the photo and music too (owner: "it won't clear the canvas
+using start a new skribl, or clear everything in the draw/color drawer").** The
+owner's screen showed one page with a white drawing that neither control would
+clear, with Undo dim, Post lit and the media dot green: the page had no strokes,
+and the picture was the background PHOTO. Both Flip controls judged "empty" by
+strokes alone, so the drawer's Clear all pages did nothing at all and the ⋯
+menu's New Skribl said "Already a fresh one"; the photo lived in the draft store
+and came back on every reload, through many versions. (Old drafts were ruled out
+first: drafts written by every build from #300 on clear correctly in today's
+Flip, canvas and reload included.)
+
+* NEW SKRIBL STARTS OVER COMPLETELY, as the Pad's always has: pages, photo and
+  music (owner: "drop music too"). Undo brings the whole document back through
+  serializeFlip / applyFlipDraftObject, the pair the saved drafts use, rather
+  than a second hand-kept list of media fields. A photo or track still being
+  read when it fires lands on nothing.
+* CLEAR ALL PAGES STILL KEEPS MEDIA, as its tooltip says, and on a page where
+  media is all that is left it says so ("Only the photo is left — remove it in
+  Media, or start a New Skribl") instead of doing nothing.
+
+verify_ux NEW SKRIBL drives the owner's page through the real menu and measures
+the canvas's paint. Red per component: the menu's empty check, the media clear,
+Undo's restore, the drawer's message; on main, three of the four.
