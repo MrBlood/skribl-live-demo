@@ -687,6 +687,8 @@ function serializeFlip(opts){
     // The looped stretch, only when there is a valid one: a document without a
     // loop writes the bytes it always wrote.
     ...(_validLoop() ? { loop: docLoop } : {}),
+    // The page underneath, on the same terms.
+    ...(_validUnder() ? { under: docUnder } : {}),
     // Timing does not need this -- fps and hold decide it -- but the SPEED
     // CONTROL does, or a reopened draft lights the wrong button. Omitted at the
     // default so an unsubdivided document writes what it always wrote.
@@ -1123,6 +1125,7 @@ function applyPayload(d){
   // The loop comes back as written, and only if the lib accepts it for these
   // pages; anything else reads as no loop, as an unparseable hold reads as 1.
   docLoop = (d.loop && window.SkriblHold && window.SkriblHold.loopOf(d.loop, frames.length)) ? d.loop : null;
+  docUnder = (d.under && window.SkriblHold && window.SkriblHold.underOf && window.SkriblHold.underOf(d.under, frames.length)) ? d.under : null;
   return frames.some(f => f.strokes.length);
 }
 // Media the autosave had to drop (too big for localStorage). Mirrors the Pad:
@@ -1663,6 +1666,7 @@ function drawArcGuides(c){
    stroke instead of once per pointer move. */
 function paintUnder(c){
   drawBackdrop(c);
+  drawUnderPage(c, idx, !playing);
   if(onion && !playing && idx>0){
     // Furthest frame first so nearer ones layer on top. Uses onionCv/octx, which
     // were scaffolded for exactly this in v98 and had sat unused ever since —
@@ -3480,6 +3484,42 @@ let scrubbingFrames=false, playI=0;
    every player walk pages in the same order. `playPlan` is that plan, fixed
    for the length of one playback. */
 let docLoop = null, playPlan = null;
+/* THE PAGE UNDERNEATH (lib/holdtiming.js underOf): `docUnder` is the
+   document's, as written; _validUnder() is it checked against these pages.
+   drawUnderPage() is the one place this file puts it on a canvas -- after the
+   backdrop and before the page's ink, which paintFrame() keeps on its own
+   layer, so the page's eraser reveals it as it reveals the photo.
+   FAINT ONLY IN THE EDITING VIEW (paintUnder, not playing), where it is a
+   guide behind the page being drawn. Everything else that composes a page --
+   the preview, every export, the PNG, the share and library cards -- shows it
+   whole, as a viewer will; keying the faintness off `exporting` instead left a
+   ghost card in the PNG and the cards, which never set it.
+   PAINTED ONCE between edits: every edit repaints through the editing view,
+   which drops underCache, so a cached painting is never older than the page. */
+let docUnder = null, underCache = null;
+const UNDER_EDIT_ALPHA = 0.35;
+function _validUnder(){
+  const H = window.SkriblHold;
+  return (H && H.underOf && docUnder) ? H.underOf(docUnder, frames.length) : null;
+}
+function drawUnderPage(c, i, faint){
+  const u = _validUnder();
+  if(!u || i < u.from || i > u.to || !frames[u.page]) return;
+  const f = frames[u.page];
+  if(faint){
+    underCache = null;
+    c.save(); c.globalAlpha = UNDER_EDIT_ALPHA; paintFrame(c, f.strokes); c.restore();
+    return;
+  }
+  if(!underCache || underCache.f !== f){
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(CW * DPR); cv.height = Math.round(CH * DPR);
+    const cx = cv.getContext('2d'); cx.scale(DPR, DPR);
+    paintFrame(cx, f.strokes);
+    underCache = { f, cv };
+  }
+  c.drawImage(underCache.cv, 0, 0, CW, CH);
+}
 function _validLoop(){
   const H = window.SkriblHold;
   return (H && H.loopOf && docLoop) ? H.loopOf(docLoop, frames.length) : null;
@@ -3505,7 +3545,7 @@ function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgres
   if(window.SkriblScrub && frames.length>1) window.SkriblScrub.sync(flipProgress, idx/(frames.length-1)); }
 
 // --- draw-on replay: reveal each frame's strokes over their recorded timing ---
-function renderPartial(f, count){ ctx.clearRect(0,0,CW,CH); drawBackdrop(ctx); paintFrame(ctx, count>=f.strokes.length ? f.strokes : f.strokes.slice(0, Math.max(0,count))); }
+function renderPartial(f, count){ ctx.clearRect(0,0,CW,CH); drawBackdrop(ctx); drawUnderPage(ctx, idx); paintFrame(ctx, count>=f.strokes.length ? f.strokes : f.strokes.slice(0, Math.max(0,count))); }
 /* drawOnParams / startDrawOnFrame / drawOnTick / advanceDrawOn lived here: a
  * SECOND playback loop, driven by a document-wide toggle, that ignored `hold`
  * entirely and could not be posted. Its reveal arithmetic survives in
@@ -3709,6 +3749,7 @@ function play(){
   startFlipElapsed();
   playBitmaps = window.SkriblFrameBitmap ? window.SkriblFrameBitmap.store() : null;
   playPlan = _loopPlan();
+  underCache = null;                  // painted afresh for this playback, then reused
   playI=_playCountFor(idx); runPlayTimer();
 }
 function stop(){
@@ -4446,6 +4487,7 @@ if(window.SkriblStrokeLayers){
  * existing caller keeps its behaviour without saying anything. */
 function drawFrameTo(c, f, prog){
   drawBackdrop(c);
+  drawUnderPage(c, frames.indexOf(f));
   const pts = (f && f.strokes) || [];
   /* No prog means a still page and no module means the feature is not
    * available on this load, which by holdtiming.js's fallback rule plays a
@@ -4843,7 +4885,7 @@ function buildSharePayload(){
   // substitutes 'Untitled Skribl' for an empty title, so sending '' is safe.
   const _t=document.getElementById('flipShareTitle');
   const _c=document.getElementById('flipShareCaption');
-  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), ...(_validLoop() ? {loop:docLoop} : {}), frames:writeFrames(outFrames), canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
+  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), ...(_validLoop() ? {loop:docLoop} : {}), ...(_validUnder() ? {under:docUnder} : {}), frames:writeFrames(outFrames), canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
            title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
   // THE PUBLIC CHOICE (v304), the Pad's rule: the key travels only when the
   // author ticked it; unticked, it is omitted and the server's "unlisted"
@@ -5174,7 +5216,7 @@ async function exportGIF(){
     const _order=exportPageOrder(r.from-1, r.to-1);
     for(let k=0;k<_order.length;k++){ const i=_order[k];
       if(_exportAbort){ exportHide(); chip('Export cancelled'); exporting=false; return; }
-      if(transparent){ fc.clearRect(0,0,CW,CH); paintFrame(fc, frames[i].strokes); }  // strokes only, on transparent
+      if(transparent){ fc.clearRect(0,0,CW,CH); drawUnderPage(fc, i); paintFrame(fc, frames[i].strokes); }  // ink only (the page's and the one under it), on transparent
       else { drawFrameTo(fc, frames[i]); }
       octx.clearRect(0,0,outW,outH); octx.drawImage(full,0,0,outW,outH);
       const img=octx.getImageData(0,0,outW,outH);

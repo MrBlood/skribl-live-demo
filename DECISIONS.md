@@ -14132,3 +14132,44 @@ Media's (desktop, and a narrow window with a mouse), and the dot's centre at the
 scaled offset, both editors. Red per component: Media at 36px, Media's old
 stroke-width, the dot in fixed pixels, Magnify's rule gone, Magnify at the
 tools' 2.2 line.
+
+**The page underneath (Blooby, PR 2 of 3).** The owner, on the card: drawn
+once on page 1 and kept under the waving pages; asked "can't the background
+be rasterized?", the answer chosen was to keep it as strokes in the post and
+rasterize it as it plays (option A), not to store a picture.
+
+* A document may carry one `under`: page `page` painted, COMPLETE, beneath
+  pages `from`..`to` (0-based, inclusive). The page itself still plays where
+  it stands, so a card can draw itself and then stay. lib/holdtiming.js
+  underOf() accepts exactly what validation.py posts (no unknown key, whole
+  indices in range, from <= to, a page never under itself);
+  verify_sharedrules pins the two from either side.
+* Painted ONCE per surface into an offscreen image, then one drawImage a
+  frame: a card of thousands of points is not repainted sixty times a second
+  on a phone. Each surface keeps its own painter, so each paints it its own
+  way, and every way puts it UNDER the page's ink -- an eraser on the page
+  reveals the card, as in the editor, where page ink is its own layer.
+  The /s/ player paints straight onto its visible canvas, so it composites
+  the card in behind (destination-over); the in-post player's compositor
+  takes it as part of the base an eraser reveals; the editor puts it between
+  the backdrop and the page layer.
+* FAINT ONLY IN THE EDITING VIEW (0.35), as a guide behind the page being
+  drawn. The preview, every export, the PNG and the share and library cards
+  show it whole. A first draft keyed the faintness off `exporting`, which
+  the PNG and the cards never set; verify_under caught the ghost card.
+* Not shown on the strip's thumbnails (a tile is its page), nor sampled by
+  the eyedropper and fill, which read the page being drawn.
+* PAID FOR: verify_inline's ratchet rises 1,014 B (37,850) and
+  verify_player_isolation's 1,494 B (135,450) for underOf() and the painting;
+  the round before it had already taken what was dead in these paths. Targets
+  unchanged.
+
+verify_under is new: which page is up and how much of the card row has ink,
+read off the canvas frame by frame on both players and the preview, with a
+drawing page and a page whose eraser runs along the card. Red per component:
+the lib refusing every `under`; the /s/ player not painting it, and painting
+it under the page's ink layer the naive way (the eraser cuts it); the in-post
+player not painting it; the editor's still and drawing-page paths, each
+alone; the export, and the export faint; the editing view at full strength,
+and with no card (its first draft passed that); the draft's save and load;
+the post body; and the server accepting a bad one.

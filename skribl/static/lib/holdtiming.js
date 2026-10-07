@@ -183,6 +183,28 @@
     return out;
   }
 
+  /* THE PAGE UNDERNEATH (owner, on Blooby's card: the card drawn once on page
+   * 1 and kept under the waving pages, "rasterized" as it plays rather than
+   * copied onto every page). A document may carry one `under`: page `page`
+   * is painted, COMPLETE, beneath every page `from`..`to` (0-based,
+   * inclusive). The page itself still plays where it stands, so a card can
+   * draw itself on page 1 and then stay under pages 2-8. Only the stored
+   * shape is decided here -- each surface paints it once into an offscreen
+   * image and puts that image beneath the page's ink, so the page's own
+   * eraser reveals the card instead of cutting it, as in the editor.
+   * The shape is validation.py's exactly (verify_sharedrules), so an `under`
+   * either posts and shows everywhere or does neither. */
+  function underOf(raw, n) {
+    if (!raw || typeof raw !== 'object' || !(n > 0)) return null;
+    for (var k in raw) {
+      if (Object.prototype.hasOwnProperty.call(raw, k) && k !== 'page' && k !== 'from' && k !== 'to') return null;
+    }
+    var p = raw.page, a = raw.from, b = raw.to;
+    if (!isInt(p) || !isInt(a) || !isInt(b) || p < 0 || p >= n || a < 0 || b < a || b >= n) return null;
+    if (p >= a && p <= b) return null;    // a page cannot sit under itself
+    return { page: p, from: a, to: b };
+  }
+
   /* THE PLAY ORDER. Every surface that plays a Flip asks this, not the page
    * list, so a loop cannot mean one thing in the editor and another in a
    * player -- the reason this module exists. `slots` is the order pages play
@@ -292,6 +314,7 @@
     dueCount: dueCount,
     MAX_LOOP_TIMES: MAX_LOOP_TIMES,
     loopOf: loopOf,
+    underOf: underOf,
     plan: plan,
     wrapMs: wrapMs,
     displayAt: displayAt

@@ -1306,7 +1306,14 @@ with sync_playwright() as sp:
     # for by moving ~740 B of the stylesheet's header, which was reasoning
     # rather than values, into inlineplayer.js's (stripped) header. Measured
     # after both: 36,763 B.
-    EMBED_RATCHET = 36_800
+    # RAISED (Blooby's card, owner: the card drawn once and kept under the
+    #   waving pages), for one named cost: +1,014 B, the page underneath --
+    #   lib/holdtiming.js underOf() (+457) and this player painting it once,
+    #   offscreen, and drawing it under each page in its range (+684). Spent
+    #   first: the round before it (the looped stretch) had already retired the
+    #   old clock and moved the export's slot order out of the lib; nothing in
+    #   these paths was left to delete. 37,814 B measured.
+    EMBED_RATCHET = 37_850
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

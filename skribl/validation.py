@@ -687,7 +687,8 @@ def _validate_payload_complexity(payload):
             return "'fps' must be a number between 1 and 60."
     if len(frames) > MAX_FRAMES:
         return f"At most {MAX_FRAMES} frames are allowed (got {len(frames)})."
-    err = _validate_loop(payload.get("loop"), len(frames))
+    err = (_validate_loop(payload.get("loop"), len(frames))
+           or _validate_under(payload.get("under"), len(frames)))
     if err:
         return err
     for i, frame in enumerate(frames):
@@ -743,6 +744,26 @@ def _validate_loop(loop, n_frames):
         return f"'loop.times' must be a whole number from 2 to {MAX_LOOP_TIMES}."
     if k == "ms" and not (_is_int(v) and LOOP_MS_MIN <= v <= LOOP_MS_MAX):
         return f"'loop.ms' must be a whole number from {LOOP_MS_MIN} to {LOOP_MS_MAX}."
+    return None
+
+
+def _validate_under(under, n_frames):
+    # THE PAGE UNDERNEATH: page `page` painted beneath pages from..to (0-based,
+    # inclusive) -- the shape lib/holdtiming.js underOf() accepts, exactly.
+    # Absent is the default and every post before it existed.
+    if under is None:
+        return None
+    if not isinstance(under, dict):
+        return "'under' must be an object."
+    unknown = set(under) - {"page", "from", "to"}
+    if unknown:
+        return f"'under' has an unknown key: {sorted(unknown)[0]!r}."
+    p, a, b = under.get("page"), under.get("from"), under.get("to")
+    if not (_is_int(p) and _is_int(a) and _is_int(b)) or not 0 <= p < n_frames \
+            or a < 0 or b < a or b >= n_frames:
+        return "'under.page', 'under.from' and 'under.to' must be page indices with from <= to."
+    if a <= p <= b:
+        return "'under.page' cannot be one of the pages it sits under."
     return None
 
 

@@ -3741,6 +3741,10 @@ function showPlayerError(msg, canRetry) {
      page, so index keys are safe and the store never needs invalidating except
      by the backing-store reset below. */
   let flipBitmaps = null;
+  /* The page underneath, painted once (drawFlipFrame's flipUnderReady). Same
+     placement rule, same reason: sizePlayerCanvas drops it with the backing
+     store it was painted at. */
+  let flipUnderCv = null;
   function sizePlayerCanvas() {
     const dpr = window.devicePixelRatio || 1;
     layoutPlayerCanvas();
@@ -3763,6 +3767,7 @@ function showPlayerError(msg, canRetry) {
     lastFlipDrawn = -1;
     lastShown = null;     // nothing on the new backing store is owed a finish
     flipBitmaps = null;   // captures describe the old backing store
+    flipUnderCv = null;   // ...and so does the page underneath
   }
   sizePlayerCanvas();
   // Rotate/resize should refit the display size without clearing the frame the
@@ -3836,6 +3841,32 @@ function showPlayerError(msg, canRetry) {
   const flipDurMs = isFlip
     ? (flipPlan ? flipPlan.cycle : Math.max(1, flipMs.reduce((a, b) => a + b, 0)))
     : 0;
+  /* THE PAGE UNDERNEATH (lib/holdtiming.js underOf): one page painted,
+     complete, beneath pages from..to. Painted ONCE -- alone, on the cleared
+     canvas, through this file's one stroke painter -- and kept as an image;
+     after that it is one drawImage a frame. It goes in BEHIND the page's ink
+     (destination-over), so an eraser on the page reveals it rather than
+     cutting it, as in the editor, where page ink is its own layer. */
+  const flipUnder = (isFlip && _hold && _hold.underOf) ? _hold.underOf(data.under, flipFrames.length) : null;
+  const flipUnderAt = i => !!flipUnder && i >= flipUnder.from && i <= flipUnder.to;
+  function flipUnderReady() {
+    if (!flipUnder || flipUnderCv) return;
+    const s = getCanvasLogicalSize(), fu = flipFrames[flipUnder.page];
+    ctx.clearRect(0, 0, s.width, s.height);
+    if (fu && Array.isArray(fu.strokes) && fu.strokes.length) paintStrokesStatic(fu.strokes);
+    flipUnderCv = document.createElement('canvas');
+    flipUnderCv.width = canvas.width; flipUnderCv.height = canvas.height;
+    flipUnderCv.getContext('2d').drawImage(canvas, 0, 0);
+    lastFlipDrawn = -1;   // the canvas no longer holds what the memo believes
+  }
+  function flipUnderPaint(i) {
+    if (!flipUnderAt(i) || !flipUnderCv) return;
+    const s = getCanvasLogicalSize();
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.drawImage(flipUnderCv, 0, 0, s.width, s.height);
+    ctx.restore();
+  }
   /* WITHOUT THE LIB: elapsed time -> page index through the cumulative hold
      table, and no drawing-page progress (a page is simply up). The fallback
      keeps pages turning; it does not reproduce draw or loop. */
@@ -3878,6 +3909,7 @@ function showPlayerError(msg, canRetry) {
     const at = Math.max(0, Math.min(flipFrames.length - 1, fi));
     lastShown = { index: at, progress: prog };   // what is on screen, for displayAt (lib/holdtiming.js)
     const fr0 = flipFrames[at];
+    if (flipUnderAt(at)) flipUnderReady();
     /* A DRAWING PAGE IS EXEMPT FROM BOTH MEMOS, and for the same reason it is
        exempt from fps: it changes. `at === lastFlipDrawn` skips a repaint of
        the page already on screen, which is right for a still page and would
@@ -3897,6 +3929,7 @@ function showPlayerError(msg, canRetry) {
         const n = _hold.dueCount(fr0, prog);
         if (n) paintStrokesStatic(pts.slice(0, n));
       }
+      flipUnderPaint(at);
       lastFlipDrawn = -1;   // the next still page must repaint over this
       return;
     }
@@ -3910,6 +3943,7 @@ function showPlayerError(msg, canRetry) {
     const fr = flipFrames[at];
     if (fr && Array.isArray(fr.strokes) && fr.strokes.length) {
       paintStrokesStatic(fr.strokes);
+      flipUnderPaint(at);   // captured with the page: under is fixed for the document
       if (FB) {
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
@@ -3918,7 +3952,7 @@ function showPlayerError(msg, canRetry) {
         if (FB.wants(flipBitmaps, fr.strokes.length, sz.w, sz.h))
           FB.capture(flipBitmaps, at, canvas, sz.w, sz.h);
       }
-    }
+    } else flipUnderPaint(at);   // an empty page over the page underneath shows just that
     lastFlipDrawn = at;
   }
   const totalMs = isFlip ? flipDurMs : (timeline.length ? timeline[timeline.length - 1].playT : 0);
