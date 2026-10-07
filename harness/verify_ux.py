@@ -2678,6 +2678,81 @@ with _sp() as _cp:
         _pg.close()
     _cb.close()
 
+print("\nNEW SKRIBL TAKES THE PHOTO AND MUSIC TOO (Flip), and Clear all pages says what it keeps")
+# After v320, from the owner's screen: a page whose picture was the background PHOTO
+# could not be cleared at all. Both controls judged "empty" by strokes alone, so
+# the drawer's Clear did nothing and the menu said "Already a fresh one", and the
+# photo rode every reload. The Pad's New Skribl has always taken media; Flip's
+# now does too, Undo brings the whole document back, and the drawer's Clear --
+# which keeps media by design -- says so instead of doing nothing.
+# Measured as PAINT on the canvas, because the owner's complaint was the canvas.
+_PHOTO = """() => { const c = document.createElement('canvas'); c.width = 816; c.height = 612; const x = c.getContext('2d');
+  x.fillStyle = '#0d0f14'; x.fillRect(0, 0, 816, 612); x.strokeStyle = '#fff'; x.lineWidth = 12;
+  x.beginPath(); x.moveTo(100, 100); x.bezierCurveTo(300, 500, 500, 0, 700, 400); x.stroke();
+  setBgImage(c.toDataURL('image/png')); }"""
+# A real (silent) WAV, so the track decodes the way a picked one does.
+_TRACK = """() => { const n = 8000, b = new ArrayBuffer(44 + n * 2), v = new DataView(b);
+  const w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 16000, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  let s = ''; new Uint8Array(b).forEach(c => s += String.fromCharCode(c)); setMusic('data:audio/wav;base64,' + btoa(s)); }"""
+_WHITE = """() => { const cv = document.getElementById('pad'); const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+  let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200) n++; return n; }"""
+_DOC = "() => ({ pages: frames.length, strokes: frames[0].strokes.length, photo: bgImage ? bgImage.length : 0, music: musicData ? musicData.length : 0 })"
+with _sp() as _np:
+    _nb = _np.chromium.launch()
+    _pg = _nb.new_page(viewport={"width": 1100, "height": 900}, color_scheme="dark")
+    browsing.goto(_pg, BASE, "/flip")
+    _pg.wait_for_timeout(600)
+    _pg.evaluate("() => window.SkriblHints && SkriblHints.hide()")
+    _pg.evaluate(_PHOTO)
+    _pg.wait_for_timeout(600)
+    _ink0 = _pg.evaluate(_WHITE)
+    # The drawer's Clear all pages keeps the photo -- and now says so.
+    browsing.pad_drawer(_pg, "draw", settle=600)
+    _pg.click("#clear")
+    _pg.wait_for_timeout(200)
+    _said = _pg.evaluate("() => document.getElementById('flipChip').textContent")
+    check("NEW SKRIBL: Clear all pages on a photo-only page says the photo is what is left, instead of doing nothing",
+          "photo" in _said and "Media" in _said and _pg.evaluate("() => !!bgImage"), repr(_said))
+    _pg.keyboard.press("Escape")
+    _pg.wait_for_timeout(300)
+    # The owner's page: New Skribl, through the real menu and its two-tap arm.
+    _pg.click("#moreBtn")
+    _pg.wait_for_timeout(400)
+    _pg.click("#miClearAll")
+    _pg.wait_for_timeout(200)
+    _armed = _pg.evaluate("() => document.getElementById('miClearAll').classList.contains('armed')")
+    if _armed:   # unarmed, the menu has closed on "Already a fresh one" -- the bug itself
+        _pg.click("#miClearAll")
+    _pg.wait_for_timeout(600)
+    _ink1 = _pg.evaluate(_WHITE)
+    check("NEW SKRIBL: on a page whose picture is the photo, New Skribl arms and clears the canvas",
+          _ink0 > 2000 and _armed and _ink1 == 0 and _pg.evaluate("() => !bgImage"),
+          f"white px {_ink0} -> {_ink1}, armed {_armed}, photo left {_pg.evaluate('() => !!bgImage')}")
+    # Strokes, photo and music together; all three go, and Undo brings all three back.
+    draw(_pg, "#pad", 200, 200, n=16)
+    _pg.evaluate(_PHOTO)
+    _pg.evaluate(_TRACK)
+    _pg.wait_for_timeout(800)
+    _before = _pg.evaluate(_DOC)
+    _pg.click("#moreBtn")
+    _pg.wait_for_timeout(400)
+    _pg.click("#miClearAll")
+    _pg.wait_for_timeout(200)
+    _pg.click("#miClearAll")
+    _pg.wait_for_timeout(600)
+    _cleared = _pg.evaluate(_DOC)
+    check("NEW SKRIBL: pages, photo and music all go, as on the Pad",
+          _before["strokes"] > 0 and _before["photo"] > 0 and _before["music"] > 0
+          and _cleared == {"pages": 1, "strokes": 0, "photo": 0, "music": 0}, f"{_before} -> {_cleared}")
+    _pg.evaluate("() => document.getElementById('clearUndo').click()")
+    _pg.wait_for_timeout(800)
+    _back = _pg.evaluate(_DOC)
+    check("NEW SKRIBL: Undo brings the pages, the photo and the music back", _back == _before, f"{_before} -> {_back}")
+    _nb.close()
+
 print("\nSHARE — on a device with a share sheet, Send it is a Share button; Copy link stays")
 # Outside review of v291, SK-AUD-016. The product's thesis is "Make it. Send
 # it." and the post result ended at Copy link — a clipboard step and a manual

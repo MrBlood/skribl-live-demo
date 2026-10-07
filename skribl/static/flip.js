@@ -10024,10 +10024,24 @@ function invalidateClearUndo(){
 // own way and then call this; the menu used to reach it by dispatching two
 // synthetic clicks at the drawer's button, riding its armed state — one
 // control's business logic coupled to another control's confirmation UI.
-function clearAllPages(){
+//
+// {media:true} is the menu's New Skribl, which starts over COMPLETELY -- photo
+// and music too, as the Pad's always has. It took the pages only, and both
+// controls judged "empty" by strokes alone, so a page whose picture was the
+// background photo could not be cleared by either: the drawer's button did
+// nothing and the menu said "Already a fresh one" (after v320, from the owner's
+// screen). The drawer's Clear all pages still keeps media; it says so now.
+function flipHasMedia(){ return !!(bgImage || musicData || pendingPhotoMeta || pendingMusicMeta); }
+function clearAllPages(opts){
+  const withMedia = !!(opts && opts.media);
+  // Undo has to bring the media back, so a media clear snapshots the WHOLE
+  // document through serializeFlip / applyFlipDraftObject -- the pair the saved
+  // drafts use -- rather than a second list of photo and track fields to keep in
+  // step with the first.
+  const doc = (withMedia && flipHasMedia()) ? serializeFlip() : null;
   flipDocGen++;
   const _draftId = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;   // a new Skribl is a new draft
-  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv, draftId: _draftId,
+  clearFramesBackup = { doc: doc, frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv, draftId: _draftId,
                         // A new Skribl is a new title; Undo brings the old one back (v317).
                         name: (window.SkriblName && window.SkriblName.reset) ? window.SkriblName.reset() : null };
   /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
@@ -10037,6 +10051,9 @@ function clearAllPages(){
      above, because undoing the clear has to bring the timing back with them. */
   fps = poseRate(); subdiv = 1;
   frames=[newFrame()]; idx=0; redoStack.length=0;
+  // The selection counters move first, so a photo or track still being read --
+  // or still on its way back from the draft store -- lands on nothing.
+  if(withMedia){ imageSelectionSeq++; removeBgImage(); removeMusic(); }
   buildStrip(); render(); updateToolState();
   scheduleSave();   // persist the cleared state instead of deleting the draft
   const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=false;
@@ -10047,7 +10064,9 @@ function announceConfirm(text){ const st=document.getElementById('confirmStatus'
 bindEl('clear', 'click',e=>{
   if(playing) return;
   const empty = frames.length===1 && frames[0].strokes.length===0;
-  if(empty) return;                                  // nothing to delete
+  // Clear all pages keeps music and the photo, so a page whose only picture IS
+  // the photo has nothing for it to clear -- and doing nothing looked broken.
+  if(empty){ if(flipHasMedia()) chip(bgImage||pendingPhotoMeta ? 'Only the photo is left \u2014 remove it in Media, or start a New Skribl' : 'Only the music is left \u2014 remove it in Media, or start a New Skribl'); return; }
   const lbl=document.getElementById('clearLabel');
   if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); if(lbl) lbl.textContent='Tap again to clear pages'; e.currentTarget.title='Tap again to delete all pages'; announceConfirm('Tap again to clear pages'); return; }
   armedClear=false; e.currentTarget.classList.remove('armed'); if(lbl) lbl.textContent='Clear all pages'; e.currentTarget.title='Delete all pages (keeps music and background)';
@@ -10056,6 +10075,17 @@ bindEl('clear', 'click',e=>{
 bindEl('clearUndo', 'click',()=>{
   if(!clearFramesBackup) return;
   disarmAll();
+  if(clearFramesBackup.doc){
+    // New Skribl took the media too: the document comes back whole, through the
+    // load the saved drafts use (which retires the backup itself).
+    const b = clearFramesBackup;
+    applyFlipDraftObject(b.doc);
+    if(b.name && window.SkriblName) window.SkriblName.restore(b.name);
+    if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(b.draftId);
+    redoStack.length=0; updateToolState();
+    chip('Animation restored');
+    return;
+  }
   frames = clearFramesBackup.frames.map(deepCopy);
   idx = Math.min(clearFramesBackup.idx, frames.length-1);
   // The pages come back with the time grid they were written for; restoring the
@@ -10256,11 +10286,11 @@ bindEl('miInfo', 'click',()=>{ closeMenu(); openHelpDrawer(); });
   const disarm=()=>{ clearTimeout(t); armed=false; item.classList.remove('armed'); if(label) label.textContent='New Skribl'; };
   item.addEventListener('click',e=>{ e.stopPropagation();
     if(playing) return;
-    const empty = frames.length===1 && frames[0].strokes.length===0;
+    const empty = frames.length===1 && frames[0].strokes.length===0 && !flipHasMedia();
     if(empty){ chip('Already a fresh one'); closeMenu(); return; }
     if(!armed){ armed=true; item.classList.add('armed'); if(label) label.textContent='Tap again to start over'; announceConfirm('Tap again to start over'); clearTimeout(t); t=setTimeout(disarm,20000); return; }
     disarm(); closeMenu(); disarmAll();
-    clearAllPages();
+    clearAllPages({ media: true });
   });
   item.addEventListener('focusout', ()=>{ if(armed) disarm(); });
   document.addEventListener('skribl:menu-closed', disarm);
