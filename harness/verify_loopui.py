@@ -105,6 +105,25 @@ with sync_playwright() as p:
     st = pg.evaluate(STATE)
     check("the strip's chip steps the loop as the button does", st["loop"] == {"from": 1, "to": 4, "ms": 2000},
           str(st["loop"]))
+    # THE OWNER'S TRAP (three saved files in a row): page 2 looped alone, 2-22
+    # selected, and the chip tapped -- it stepped page 2's loop. With pages
+    # selected the chip loops the SELECTION, keeping the loop's setting.
+    pg.evaluate("() => { docLoop = { from: 1, to: 1, forever: true }; idx = 1; buildStrip(); }")
+    pg.locator(TILES).nth(5).click(modifiers=["Shift"])          # pages 2-6 selected
+    pg.locator("#strip .loopchip").click()
+    st = pg.evaluate(STATE)
+    check("with pages selected, the chip loops the selection, keeping Forever",
+          st["loop"] == {"from": 1, "to": 5, "forever": True}, str(st["loop"]))
+    if pg.locator("#strip .loopchip").count():                      # gone, the check above is the report
+        pg.locator("#strip .loopchip").click()
+    check("...and tapped again on that same stretch, it steps it", pg.evaluate(STATE)["loop"] is None,
+          str(pg.evaluate(STATE)["loop"]))
+    pg.evaluate("() => { clearSpan(true); docLoop = { from: 1, to: 1, times: 3 }; idx = 1; buildStrip(); }")
+    pg.locator(TILES).nth(4).click(modifiers=["Shift"])          # pages 2-5
+    pg.click("#pbLoop")
+    check("the page bar's Loop moves a loop to the selection with its setting, too",
+          pg.evaluate(STATE)["loop"] == {"from": 1, "to": 4, "times": 3}, str(pg.evaluate(STATE)["loop"]))
+    pg.evaluate("() => { clearSpan(true); buildStrip(); }")
 
     # Under: a switch on this page.
     pg.evaluate("() => { docLoop = null; idx = 0; buildStrip(); }")

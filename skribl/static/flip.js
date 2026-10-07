@@ -2693,8 +2693,12 @@ function buildStrip(){
       }
       if(ev.target.closest('.loopchip')){
         ev.stopPropagation();
-        const l = _validLoop();
-        if(l) loopCycle({ from: l.from, to: l.to });
+        // WITH PAGES SELECTED, THE CHIP LOOPS THE SELECTION, as the page bar's
+        // button does. It stepped the loop it sits on, whatever was selected,
+        // and the owner, selecting 2-22 and tapping it, made page 2 loop alone
+        // three times over -- the chip is the loop control people reach for.
+        const l = _validLoop(), sp = pageSpan();
+        if(l) loopCycle(sp && (sp.from !== l.from || sp.to !== l.to) ? { from: sp.from, to: sp.to } : { from: l.from, to: l.to });
         return;
       }
       const ops = ev.target.closest('.pageops');
@@ -3675,7 +3679,15 @@ function loopCycle(r){
   if(cur && cur.from === r.from && cur.to === r.to){
     const k = _loopStep(cur);
     next = (k >= 0 && k < LOOP_STEPS.length - 1) ? Object.assign({ from: r.from, to: r.to }, LOOP_STEPS[k + 1]) : null;
-  } else next = Object.assign({ from: r.from, to: r.to }, LOOP_STEPS[0]);
+  }
+  // A loop that already exists MOVES to the new stretch with its setting: the
+  // owner set page 2 to Forever, selected 2-22 and tapped again, and starting
+  // over at x2 meant six more taps to get back to the Forever they had chosen.
+  else if(cur){
+    const k = _loopStep(cur);
+    next = Object.assign({ from: r.from, to: r.to }, k >= 0 ? LOOP_STEPS[k] : LOOP_STEPS[0]);
+  }
+  else next = Object.assign({ from: r.from, to: r.to }, LOOP_STEPS[0]);
   docLoop = next;
   buildStrip(); render(); scheduleSave(); syncFlipDuration();
   chip(next ? loopLabel(next) + ' on ' + _pagesSay(next) : 'Loop off');
