@@ -80,6 +80,8 @@ stale the same way (the paragraph under the list says so too):
                          both players, the preview, draft, post, export
     verify_under.py      the page underneath: both players, the preview,
                          the editing view, export, draft, post, server
+    verify_loopui.py     the editor's Loop and Keep under controls: page
+                         bar, strip marks, ⋯ menu, following edits, export
     verify_canvas.py     canvas sizes + round-trip + help text
     verify_review.py     external review regressions
     verify_drafts.py     draft durability: flush-on-leave, durability-keyed

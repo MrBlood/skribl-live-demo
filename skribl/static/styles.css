@@ -261,6 +261,10 @@
      rgba(27, 207, 143, …) — three of them, which would have silently kept the
      old hue the moment the token above moved. */
   --good-rgb: 48, 232, 167;
+  /* The page underneath (Flip): its tile's edge and its "Under" label. Blue,
+     as the owner approved it in the mock, so it reads apart from the accent
+     (the selected page and the loop) and from --good (ready). */
+  --under-rgb: 96, 165, 250;
   --accent-tint: #d6ccff;
   --accent-tint-2: #d5cfff;
 
@@ -7573,6 +7577,7 @@ body.replaying .media-card {
      and does not exist here. */
   --good:          #0a7350;
   --good-rgb:      10, 115, 80;
+  --under-rgb:     29, 78, 216;
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
   /* ON-GLASS INK (below the ramp): the secondary words on a light glass
