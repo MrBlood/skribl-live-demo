@@ -2546,6 +2546,11 @@ if(pbDel) pbDel.addEventListener('click',()=>{ if(pbDel.disabled) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; } spanDelete(); });
 
 function buildStrip(){
+  // A focused loop handle keeps the focus through the rebuild (its arrow keys
+  // rebuild the strip on every press).
+  const _lhWas = document.activeElement && document.activeElement.classList
+    && document.activeElement.classList.contains('loophandle')
+    ? (document.activeElement.classList.contains('from') ? 'from' : 'to') : null;
   armedDel = -1;
   _followPages();
   strip.innerHTML='';
@@ -2688,8 +2693,12 @@ function buildStrip(){
       }
       if(ev.target.closest('.loopchip')){
         ev.stopPropagation();
-        const l = _validLoop();
-        if(l) loopCycle({ from: l.from, to: l.to });
+        // WITH PAGES SELECTED, THE CHIP LOOPS THE SELECTION, as the page bar's
+        // button does. It stepped the loop it sits on, whatever was selected,
+        // and the owner, selecting 2-22 and tapping it, made page 2 loop alone
+        // three times over -- the chip is the loop control people reach for.
+        const l = _validLoop(), sp = pageSpan();
+        if(l) loopCycle(sp && (sp.from !== l.from || sp.to !== l.to) ? { from: sp.from, to: sp.to } : { from: l.from, to: l.to });
         return;
       }
       const ops = ev.target.closest('.pageops');
@@ -2766,6 +2775,7 @@ function buildStrip(){
   col.querySelector('#addblank').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(false); });
   col.querySelector('#addinbetween').addEventListener('click', addInbetween);
   col.querySelector('#addtween').addEventListener('click', addTween);
+  _loopHandles(_lhWas);
   syncPagebar();
   syncFlipDuration();
   if(typeof syncMoveLabel === 'function') syncMoveLabel();
@@ -2898,6 +2908,9 @@ function openPageOps(trigger, i){
       return [here ? nx : 'Loop', here ? 'Change ' + loopLabel(l) + ' to ' + nx : 'Loop ' + what,
               () => loopCycle(r), false];
     })(),
+    // The way out, named: stepping past Forever was the only one.
+    ...((_validLoop() && i >= _validLoop().from && i <= _validLoop().to)
+      ? [['Remove loop', 'Remove the loop on ' + _pagesSay(_validLoop()), () => loopRemove(), false]] : []),
     (() => {
       const u = _validUnder(), on = !!(u && u.page === i);
       return [on ? 'Stop keeping under' : 'Keep under',
@@ -3666,10 +3679,138 @@ function loopCycle(r){
   if(cur && cur.from === r.from && cur.to === r.to){
     const k = _loopStep(cur);
     next = (k >= 0 && k < LOOP_STEPS.length - 1) ? Object.assign({ from: r.from, to: r.to }, LOOP_STEPS[k + 1]) : null;
-  } else next = Object.assign({ from: r.from, to: r.to }, LOOP_STEPS[0]);
+  }
+  // A loop that already exists MOVES to the new stretch with its setting: the
+  // owner set page 2 to Forever, selected 2-22 and tapped again, and starting
+  // over at x2 meant six more taps to get back to the Forever they had chosen.
+  else if(cur){
+    const k = _loopStep(cur);
+    next = Object.assign({ from: r.from, to: r.to }, k >= 0 ? LOOP_STEPS[k] : LOOP_STEPS[0]);
+  }
+  else next = Object.assign({ from: r.from, to: r.to }, LOOP_STEPS[0]);
   docLoop = next;
   buildStrip(); render(); scheduleSave(); syncFlipDuration();
   chip(next ? loopLabel(next) + ' on ' + _pagesSay(next) : 'Loop off');
+}
+function loopRemove(){
+  if(playing || moveMode || !_validLoop()) return;
+  docLoop = null;
+  buildStrip(); render(); scheduleSave(); syncFlipDuration();
+  chip('Loop off');
+}
+/* THE LOOP'S ENDS ARE HANDLES (owner: "maybe an easier way of picking the loop
+   is similar to building the music loop, with the dragging tool" ... "can the
+   handle be longer on the bottom?"). Two grips at the stretch's outer edges in
+   the music trim handle's shape, with the grab knob hanging BELOW the tiles --
+   along each tile's top sit the hold badge and the delete x, and a grip there
+   would fight them. A drag snaps to page edges and says the range; letting go
+   sets it, keeping the loop's count. The arrow keys move a focused handle.
+   Laid out in the strip's own coordinates (it is position:relative), so they
+   scroll with the pages; near the strip's edges a drag scrolls it along. */
+function _posLoopHandles(from, to){
+  const tiles = strip.querySelectorAll('.frame');
+  const hs = strip.querySelectorAll('.loophandle'), box = strip.querySelector('.loopframe');
+  const a = tiles[from], b = tiles[to];
+  if(hs.length !== 2 || !a || !b) return;
+  const half = 5;                                       // half the strip's 10px gap
+  const l = a.offsetLeft - half, r = b.offsetLeft + b.offsetWidth + half;
+  const top = a.offsetTop - 4, h = a.offsetHeight + 8;
+  hs[0].style.left = l + 'px'; hs[1].style.left = r + 'px';
+  hs.forEach(x => { x.style.top = top + 'px'; x.style.height = (h + 22) + 'px'; });
+  if(box) Object.assign(box.style, { left: l + 'px', width: (r - l) + 'px', top: top + 'px', height: h + 'px' });
+  hs[0].setAttribute('aria-valuenow', String(from + 1)); hs[0].setAttribute('aria-valuetext', 'page ' + (from + 1));
+  hs[1].setAttribute('aria-valuenow', String(to + 1)); hs[1].setAttribute('aria-valuetext', 'page ' + (to + 1));
+}
+function _loopHandles(focusSide){
+  strip.querySelectorAll('.loophandle, .loopframe').forEach(e => e.remove());
+  strip.classList.remove('has-loop');
+  const l = _validLoop();
+  if(!l || playing || moveMode) return;
+  strip.classList.add('has-loop');
+  const box = document.createElement('div'); box.className = 'loopframe'; box.setAttribute('aria-hidden', 'true');
+  strip.appendChild(box);
+  for(const side of ['from', 'to']){
+    const h = document.createElement('div');
+    h.className = 'loophandle ' + side; h.tabIndex = 0; h.setAttribute('role', 'slider');
+    h.setAttribute('aria-label', side === 'from' ? 'Loop start' : 'Loop end');
+    h.setAttribute('aria-valuemin', '1'); h.setAttribute('aria-valuemax', String(frames.length));
+    h.innerHTML = '<span class="lh-cap" aria-hidden="true"></span><span class="lh-line" aria-hidden="true"></span>'
+      + '<span class="lh-knob" aria-hidden="true"></span><span class="lh-bubble" aria-hidden="true"></span>';
+    strip.appendChild(h);
+    _wireLoopHandle(h, side);
+  }
+  _posLoopHandles(l.from, l.to);
+  if(focusSide){ const f = strip.querySelector('.loophandle.' + focusSide); if(f) f.focus({ preventScroll: true }); }
+}
+function _setLoopRange(from, to){
+  const l = _validLoop(); if(!l) return;
+  if(l.from === from && l.to === to) return;
+  docLoop = Object.assign({}, l, { from: from, to: to });
+  buildStrip(); render(); scheduleSave(); syncFlipDuration();
+  chip(loopLabel(docLoop) + ' on ' + _pagesSay(docLoop));
+}
+function _wireLoopHandle(h, side){
+  let pid = null, cur = null, lastX = 0, raf = 0;
+  const bubble = h.querySelector('.lh-bubble');
+  const say = () => { bubble.textContent = 'Pages ' + (cur.from + 1) + '\u2013' + (cur.to + 1); };
+  // The page edge nearest the finger: a start handle snaps to a page's left
+  // edge, an end handle to a right edge, and neither crosses the other.
+  const snap = () => {
+    const tiles = strip.querySelectorAll('.frame');
+    let best = cur[side], bd = Infinity;
+    tiles.forEach((t, i) => {
+      if(side === 'from' ? i > cur.to : i < cur.from) return;
+      const r = t.getBoundingClientRect(), d = Math.abs((side === 'from' ? r.left : r.right) - lastX);
+      if(d < bd){ bd = d; best = i; }
+    });
+    if(best !== cur[side]){
+      cur[side] = best; _posLoopHandles(cur.from, cur.to); say();
+      tiles.forEach((t, i) => t.classList.toggle('inloop', i >= cur.from && i <= cur.to));
+    }
+  };
+  const edgeScroll = () => {
+    raf = 0; if(pid == null) return;
+    // Only AT the strip's edge or past it (the pointer is captured): a wider
+    // zone caught the last visible page's edge and ran the drop past it.
+    const r = strip.getBoundingClientRect(), zone = 10;
+    const v = lastX < r.left + zone ? -10 : lastX > r.right - zone ? 10 : 0;
+    if(v){ strip.scrollLeft += v; snap(); raf = requestAnimationFrame(edgeScroll); }
+  };
+  h.addEventListener('pointerdown', e => {
+    if(playing || moveMode) return;
+    const l = _validLoop(); if(!l) return;
+    e.preventDefault(); e.stopPropagation();
+    pid = e.pointerId; cur = { from: l.from, to: l.to }; lastX = e.clientX;
+    try{ h.setPointerCapture(pid); }catch(_){}
+    h.classList.add('dragging'); say();
+  });
+  h.addEventListener('pointermove', e => {
+    if(e.pointerId !== pid) return;
+    lastX = e.clientX; snap();
+    if(!raf) raf = requestAnimationFrame(edgeScroll);
+  });
+  const end = e => {
+    if(e.pointerId !== pid) return;
+    pid = null; if(raf){ cancelAnimationFrame(raf); raf = 0; }
+    h.classList.remove('dragging');
+    const r = cur; cur = null;
+    const l = _validLoop();
+    if(l && (r.from !== l.from || r.to !== l.to)) _setLoopRange(r.from, r.to);
+    else if(l) _posLoopHandles(l.from, l.to);
+  };
+  h.addEventListener('pointerup', end);
+  h.addEventListener('pointercancel', end);
+  // Taps and drags on a handle are the handle's: not a page selection.
+  h.addEventListener('click', e => e.stopPropagation());
+  h.addEventListener('keydown', e => {
+    if((e.key === 'Delete' || e.key === 'Backspace') && !playing && !moveMode){ e.preventDefault(); loopRemove(); return; }
+    const d = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+    const l = _validLoop(); if(!d || !l || playing || moveMode) return;
+    e.preventDefault();
+    const r = { from: l.from, to: l.to };
+    r[side] = Math.max(side === 'from' ? 0 : r.from, Math.min(side === 'from' ? r.to : frames.length - 1, r[side] + d));
+    _setLoopRange(r.from, r.to);
+  });
 }
 function underToggle(i){
   if(playing || moveMode) return;
@@ -3941,6 +4082,7 @@ function play(){
   startFlipElapsed();
   playBitmaps = window.SkriblFrameBitmap ? window.SkriblFrameBitmap.store() : null;
   playPlan = _loopPlan();
+  _loopHandles();                     // playing: the handles step away (stop() rebuilds the strip)
   underCache = null;                  // painted afresh for this playback, then reused
   playI=_playCountFor(idx); runPlayTimer();
 }

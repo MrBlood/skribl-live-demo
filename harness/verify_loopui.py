@@ -105,6 +105,25 @@ with sync_playwright() as p:
     st = pg.evaluate(STATE)
     check("the strip's chip steps the loop as the button does", st["loop"] == {"from": 1, "to": 4, "ms": 2000},
           str(st["loop"]))
+    # THE OWNER'S TRAP (three saved files in a row): page 2 looped alone, 2-22
+    # selected, and the chip tapped -- it stepped page 2's loop. With pages
+    # selected the chip loops the SELECTION, keeping the loop's setting.
+    pg.evaluate("() => { docLoop = { from: 1, to: 1, forever: true }; idx = 1; buildStrip(); }")
+    pg.locator(TILES).nth(5).click(modifiers=["Shift"])          # pages 2-6 selected
+    pg.locator("#strip .loopchip").click()
+    st = pg.evaluate(STATE)
+    check("with pages selected, the chip loops the selection, keeping Forever",
+          st["loop"] == {"from": 1, "to": 5, "forever": True}, str(st["loop"]))
+    if pg.locator("#strip .loopchip").count():                      # gone, the check above is the report
+        pg.locator("#strip .loopchip").click()
+    check("...and tapped again on that same stretch, it steps it", pg.evaluate(STATE)["loop"] is None,
+          str(pg.evaluate(STATE)["loop"]))
+    pg.evaluate("() => { clearSpan(true); docLoop = { from: 1, to: 1, times: 3 }; idx = 1; buildStrip(); }")
+    pg.locator(TILES).nth(4).click(modifiers=["Shift"])          # pages 2-5
+    pg.click("#pbLoop")
+    check("the page bar's Loop moves a loop to the selection with its setting, too",
+          pg.evaluate(STATE)["loop"] == {"from": 1, "to": 4, "times": 3}, str(pg.evaluate(STATE)["loop"]))
+    pg.evaluate("() => { clearSpan(true); buildStrip(); }")
 
     # Under: a switch on this page.
     pg.evaluate("() => { docLoop = null; idx = 0; buildStrip(); }")
@@ -253,6 +272,81 @@ with sync_playwright() as p:
     pg.locator(".pageops-menu .pageops-item", has_text="Keep under").click()
     check("Keep under from the menu", pg.evaluate(STATE)["under"] == {"page": 0, "from": 1, "to": 4},
           str(pg.evaluate(STATE)))
+    pg.keyboard.press("Escape")
+    pg.evaluate("() => { docLoop = { from: 1, to: 3, times: 2 }; idx = 2; buildStrip(); }")
+    items = menu()
+    check("on a looped page the ⋯ menu offers Remove loop (owner: \"How do we undo a loop?\")",
+          "Remove loop" in items, str(items))
+    if "Remove loop" in items:                                      # absent, the check above is the report
+        pg.locator(".pageops-menu .pageops-item", has_text="Remove loop").click()
+    check("...and it removes the loop", pg.evaluate(STATE)["loop"] is None, str(pg.evaluate(STATE)["loop"]))
+    print("\nTHE HANDLES — drag the loop's ends (owner: \"an easier way of picking the loop ... with the dragging tool\")")
+    ctx = b.new_context(viewport={"width": 1400, "height": 1000})
+    pg = ctx.new_page()
+    browsing.goto(pg, BASE, "/flip")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    pg.evaluate(SETUP, 6)
+    HN = "() => document.querySelectorAll('#strip .loophandle').length"
+    check("no loop, no handles", pg.evaluate(HN) == 0, str(pg.evaluate(HN)))
+    pg.evaluate("() => { docLoop = { from: 1, to: 3, times: 3 }; idx = 1; buildStrip(); }")
+    check("a loop has two handles, named and valued as sliders",
+          pg.evaluate("""() => [...document.querySelectorAll('#strip .loophandle')].map(h => [h.getAttribute('role'), h.getAttribute('aria-label'), h.getAttribute('aria-valuenow')])""")
+          == [["slider", "Loop start", "2"], ["slider", "Loop end", "4"]])
+    # The knob hangs BELOW the tiles (owner: "it would be interfered with by other
+    # buttons ... can the handle be longer on the bottom?"), and the tile's own
+    # controls along its top are still what a tap there reaches.
+    geo = pg.evaluate("""() => { const t = document.querySelectorAll('#strip .frame')[1].getBoundingClientRect();
+        const k = document.querySelector('#strip .loophandle.from .lh-knob').getBoundingClientRect();
+        const at = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
+        const hit = sel => { const e = document.querySelectorAll('#strip .frame')[1].querySelector(sel); if (!e) return null;
+          const r = e.getBoundingClientRect(); const a = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(a && e.contains(a)); };
+        return { knobTop: Math.round(k.top), tileBottom: Math.round(t.bottom), knobPainted: !!(at && at.closest('.loophandle.from')),
+                 badge: hit('.holdbadge'), del: hit('.del') }; }""")
+    check("the grab knob hangs below the tiles, painted", geo["knobTop"] >= geo["tileBottom"] and geo["knobPainted"], str(geo))
+    check("...and the tile's hold badge and delete are still what a tap on them reaches",
+          geo["badge"] is True and geo["del"] is True, str(geo))
+    def drag(side, to_tile, edge):
+        k = pg.locator(f"#strip .loophandle.{side} .lh-knob").bounding_box()
+        t = pg.locator(TILES).nth(to_tile).bounding_box()
+        x0, y0 = k["x"] + k["width"] / 2, k["y"] + k["height"] / 2
+        x1 = t["x"] + (t["width"] if edge == "right" else 0)
+        pg.mouse.move(x0, y0); pg.mouse.down()
+        for s_ in range(1, 9): pg.mouse.move(x0 + (x1 - x0) * s_ / 8, y0)
+        pg.wait_for_timeout(120)
+        mid = pg.evaluate("""(side) => { const b = document.querySelector('#strip .loophandle.' + side + ' .lh-bubble');
+            const r = b.getBoundingClientRect(); b.style.pointerEvents = 'auto';
+            const a = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); b.style.pointerEvents = '';
+            return { text: b.textContent, painted: !!(a && b.contains(a)) }; }""", side)
+        pg.mouse.up(); pg.wait_for_timeout(250)
+        return mid
+    mid = drag("to", 2, "right")
+    check("dragging the end handle in shrinks the loop, keeping its count",
+          pg.evaluate(STATE)["loop"] == {"from": 1, "to": 2, "times": 3}, str(pg.evaluate(STATE)["loop"]))
+    check("...and while dragging it says the range, painted", mid == {"text": "Pages 2–3", "painted": True}, str(mid))
+    drag("from", 4, "left")                                         # past the end, at page 3
+    check("the start handle moves the start, and cannot pass the end",
+          pg.evaluate(STATE)["loop"] == {"from": 2, "to": 2, "times": 3}, str(pg.evaluate(STATE)["loop"]))
+    drag("to", 4, "right")
+    check("the end handle grows it again", pg.evaluate(STATE)["loop"] == {"from": 2, "to": 4, "times": 3},
+          str(pg.evaluate(STATE)["loop"]))
+    pg.locator("#strip .loophandle.from").focus()
+    pg.keyboard.press("ArrowLeft")
+    check("a focused handle moves with the arrow keys, and keeps the focus",
+          pg.evaluate(STATE)["loop"]["from"] == 1
+          and pg.evaluate("() => document.activeElement && document.activeElement.matches('.loophandle.from')"),
+          str(pg.evaluate(STATE)["loop"]))
+    pg.evaluate("() => { idx = 0; buildStrip(); }")
+    pg.click("#play"); pg.wait_for_timeout(300)
+    n_playing = pg.evaluate(HN)
+    pg.click("#play"); pg.wait_for_timeout(300)
+    check("while it plays the handles step away, and come back after", n_playing == 0 and pg.evaluate(HN) == 2,
+          f"playing {n_playing}, after {pg.evaluate(HN)}")
+    # The way out (owner: "How do we undo a loop?"): Delete on a focused handle
+    # here; the compact ⋯ menu's "Remove loop" is checked with the menu below.
+    pg.locator("#strip .loophandle.to").focus()
+    pg.keyboard.press("Delete")
+    check("Delete on a focused handle removes the loop, handles and all",
+          pg.evaluate(STATE)["loop"] is None and pg.evaluate(HN) == 0, str(pg.evaluate(STATE)["loop"]))
     ctx.close()
     b.close()
 
