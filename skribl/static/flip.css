@@ -1513,3 +1513,36 @@ body.stroking .strip-wrap {
 }
 .addcol .addbtn:hover { background: rgba(var(--wash-rgb), .09); color: var(--text-primary); }
 
+
+/* ---------- THE LOOP, THE PAGE UNDERNEATH, AND PAGES THAT NEVER PLAY ----------
+   Blooby's card, PR 3 (flip.js buildStrip). The loop is a bracket along the
+   TOP of its stretch -- the span's tape runs along the bottom, and a tile can
+   be in both -- rounded only at the stretch's outer ends, the way the span is.
+   Its first tile carries the loop as a chip that is also the control. The page
+   underneath gets a blue edge and its name. Pages after a Forever loop dim:
+   they never play, and their mark says so to a screen reader. */
+.frame .loopband {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px; z-index: 2;
+  background: var(--ui-line); pointer-events: none;
+}
+.frame.loop-first .loopband { left: 3px; border-top-left-radius: 2px; border-bottom-left-radius: 2px; }
+.frame.loop-last .loopband { right: 3px; border-top-right-radius: 2px; border-bottom-right-radius: 2px; }
+.frame.underpage { border-color: rgb(var(--under-rgb)); box-shadow: 0 0 0 1px rgb(var(--under-rgb)); }
+.frame .tilemarks {
+  position: absolute; right: 4px; bottom: 4px; z-index: 2;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+}
+.frame .loopchip, .frame .underlabel {
+  position: relative; display: block; border: 0; margin: 0; font-family: inherit;
+  font-size: 10px; font-weight: 600; line-height: 14px; padding: 1px 5px; border-radius: 6px;
+  background: rgba(var(--glass-deep-2-rgb), .88); white-space: nowrap;
+}
+.frame .loopchip { color: var(--ui-hi); cursor: pointer; -webkit-appearance: none; appearance: none; }
+/* The chip is small to look at and a 44px box to hit, as the hold badge is. */
+.frame .loopchip::before { content: ''; position: absolute; left: 50%; top: 50%;
+  width: 44px; height: 44px; transform: translate(-50%, -50%); }
+.frame .underlabel { color: rgb(var(--under-rgb)); pointer-events: none; }
+.frame.noplay canvas { opacity: .32; }
+.frame.noplay .num { opacity: .6; }
+.frame .noplaymark { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.pb#pbLoop.on { color: var(--ui-hi); }

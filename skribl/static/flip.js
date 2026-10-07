@@ -313,10 +313,22 @@ function exRange(){
 }
 // Seconds for ONE pass of the selected range, holds included. Shared so the
 // readout and the encoders can never disagree about the length of a file.
+/* One pass of the EXPORTED file, in seconds: the pages in the order the export
+   walks them (exportPageOrder -- the loop's stretch repeated, a Forever loop
+   run to about ten seconds) at each page's own length (pageMs -- a drawing
+   page is its strokes' time, not fps slots). It used to count each page once
+   at its hold, so a looped document's sheet stated a fraction of the file. */
 function exLoopSeconds(){
-  const r=exRange(); let units=0;
-  for(let i=r.from-1;i<=r.to-1;i++) units+=frameHold(frames[i]);
-  return units/(fps||12);
+  const r=exRange(), H=window.SkriblHold; let ms=0;
+  for(const i of exportPageOrder(r.from-1, r.to-1))
+    ms += H ? H.pageMs(frames[i], fps) : frameHold(frames[i]) * 1000 / (fps||12);
+  return ms/1000;
+}
+function exLoopsLine(tot){
+  const l=_validLoop(), r=exRange(), whole=(r.from===1 && r.to===frames.length);
+  return tot.toFixed(1)+'s of video \u00b7 '
+    + (l && l.forever && whole ? 'the Forever loop runs about '+Math.round(FOREVER_EXPORT_MS/1000)+' s a pass'
+                               : 'GIFs loop forever');
 }
 function exDims(){
   const cap = EX_SIZES[exSize] || 0;
@@ -2392,7 +2404,8 @@ const pagebar=document.getElementById('pagebar');
 const pbWho=document.getElementById('pbWho'), pbLeft=document.getElementById('pbLeft'),
       pbRight=document.getElementById('pbRight'), pbCopy=document.getElementById('pbCopy'),
       pbDel=document.getElementById('pbDel'),
-      pbDraw=document.getElementById('pbDraw');
+      pbDraw=document.getElementById('pbDraw'),
+      pbLoop=document.getElementById('pbLoop'), pbUnder=document.getElementById('pbUnder');
 // The Pad shows the recorded length beside Play; Flip can state its animation
 // length exactly — total hold units over fps. Same badge, same m:ss format.
 const flipDurationEl=document.getElementById('flipDuration');
@@ -2490,6 +2503,25 @@ function syncPagebar(){
     const say = (on ? 'Stop drawing ' : 'Draw ') + these + (on ? '' : ' on');
     pbDraw.title = say; pbDraw.setAttribute('aria-label', say);
   }
+  // Loop: names what a tap will do to this stretch -- start it, or step it.
+  if(pbLoop){
+    const r = sp ? { from: sp.from, to: sp.to } : { from: idx, to: idx };
+    const l = _validLoop(), here = !!(l && l.from === r.from && l.to === r.to);
+    pbLoop.disabled = playing;
+    pbLoop.classList.toggle('on', here);
+    pbLoop.querySelector('.pb-tx').textContent = here ? loopLabel(l).replace('Loop ', '') : 'Loop';
+    const say = here ? loopLabel(l) + ' \u2014 tap to change' : 'Loop ' + these;
+    pbLoop.title = say; pbLoop.setAttribute('aria-label', say);
+  }
+  if(pbUnder){
+    const u = _validUnder(), on = !!(u && u.page === idx);
+    pbUnder.disabled = playing || (!on && idx >= n - 1);
+    pbUnder.setAttribute('aria-checked', on ? 'true' : 'false');
+    pbUnder.classList.toggle('on', on);
+    const say = on ? 'Stop keeping page ' + (idx + 1) + ' under the pages after it'
+                   : 'Keep page ' + (idx + 1) + ' under the pages after it';
+    pbUnder.title = say; pbUnder.setAttribute('aria-label', say);
+  }
   // pbHold's sync block lived here until v226. It was inert the moment the
   // button left the template — every line behind an `if(pbHold)` that could
   // never be true — and dead code that cannot run is worse than dead code that
@@ -2504,11 +2536,14 @@ if(pbDraw) pbDraw.addEventListener('click',()=>{ if(pbDraw.disabled) return;
   spanSetDraw(pbDraw.getAttribute('aria-checked') !== 'true'); });
 // pbHold retired in v226: the hold badge on the tile is the control now, and it
 // was already drawn there showing the value the button was cycling.
+if(pbLoop) pbLoop.addEventListener('click',()=>{ if(!pbLoop.disabled) loopCycle(); });
+if(pbUnder) pbUnder.addEventListener('click',()=>{ if(!pbUnder.disabled) underToggle(idx); });
 if(pbDel) pbDel.addEventListener('click',()=>{ if(pbDel.disabled) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; } spanDelete(); });
 
 function buildStrip(){
   armedDel = -1;
+  _followPages();
   strip.innerHTML='';
   frames.forEach((f,i)=>{
     const el=document.createElement('div'); el.className='frame'+(i===idx?' on':'');
@@ -2523,6 +2558,34 @@ function buildStrip(){
       if(i === _sp.to) el.classList.add('span-last');
     }
     const _numTxt = (_sp && i === _sp.from) ? SkriblPageSpan.label(_sp) : String(i+1);
+    /* THE LOOP'S BRACKET, THE PAGE UNDERNEATH, AND THE PAGES THAT NEVER PLAY.
+       The bracket is drawn over the stretch like the span's outline, and its
+       first tile carries the loop as a chip that is also the control. The
+       page underneath gets the blue edge and its name. Pages after a Forever
+       loop dim, and say why: a page you cannot hear about is one you edit and
+       then cannot find in the post. Each mark names itself, as drawmark does. */
+    const _lp = _validLoop(), _un = _validUnder();
+    if(_lp && i >= _lp.from && i <= _lp.to){
+      el.classList.add('inloop');
+      if(i === _lp.from) el.classList.add('loop-first');
+      if(i === _lp.to) el.classList.add('loop-last');
+    }
+    if(_un && i === _un.page) el.classList.add('underpage');
+    if(_neverPlays(i)) el.classList.add('noplay');
+    // The bracket is an element, not a pseudo-element: .inspan already owns
+    // both of the tile's, and a tile can be in the span and the loop at once.
+    const _tags = ((_lp && i === _lp.from)
+        ? '<button class="loopchip" title="' + loopLabel(_lp) + ' \u2014 tap to change" '
+          + 'aria-label="' + loopLabel(_lp) + ' on ' + _pagesSay(_lp) + ', tap to change">'
+          + loopLabel(_lp) + '</button>' : '')
+      + ((_un && i === _un.page)
+        ? '<span class="underlabel" role="img" aria-label="Page ' + (i + 1) + ' stays under '
+          + _pagesSay(_un) + '">Under</span>' : '');
+    const _marks = (el.classList.contains('inloop') ? '<span class="loopband" aria-hidden="true"></span>' : '')
+      + (_tags ? '<span class="tilemarks">' + _tags + '</span>' : '')
+      + (_neverPlays(i)
+        ? '<span class="noplaymark" role="img" aria-label="Page ' + (i + 1)
+          + ' never plays: the loop before it is Forever"></span>' : '');
     // THE BADGE IS THE CONTROL (stage 2). It used to render only when the
     // hold was above 1, which made it a readout: there was no way to START a
     // hold from the strip, so a page-bar button existed to do it. Now it is
@@ -2553,6 +2616,7 @@ function buildStrip(){
           + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
           + 'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
           + '<path d="M4 20l4-1 9.5-9.5a2 2 0 0 0-3-3L5 16l-1 4z"/></svg></span>' : '')
+      + _marks
       + (_compactStrip() ? '<button class="pageops" aria-haspopup="menu" '
           + 'aria-expanded="false" title="Page actions" '
           + 'aria-label="Actions for page ' + (i+1) + '">'
@@ -2613,6 +2677,12 @@ function buildStrip(){
       if(ev.target.closest('.holdbadge')){
         ev.stopPropagation();
         holdCycle(i);
+        return;
+      }
+      if(ev.target.closest('.loopchip')){
+        ev.stopPropagation();
+        const l = _validLoop();
+        if(l) loopCycle({ from: l.from, to: l.to });
         return;
       }
       const ops = ev.target.closest('.pageops');
@@ -2766,6 +2836,11 @@ const _OPS_ICON = {
   'Delete': '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>'
 };
 _OPS_ICON['Stop drawing'] = _OPS_ICON['Draw on'];
+_OPS_ICON['Loop'] = '<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>';
+['Loop \u00d72', 'Loop \u00d73', 'Loop \u00d74', 'Loop 2 s', 'Loop 4 s', 'Loop 6 s', 'Loop forever', 'Loop off']
+  .forEach(k => { _OPS_ICON[k] = _OPS_ICON['Loop']; });
+_OPS_ICON['Keep under'] = '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 16l9 5 9-5"/>';
+_OPS_ICON['Stop keeping under'] = _OPS_ICON['Keep under'];
 function openPageOps(trigger, i){
   closePageOps(false);
   // THE TRIGGER YOU TAPPED MAY BE GONE. Opening the menu on a page you are not
@@ -2805,6 +2880,23 @@ function openPageOps(trigger, i){
     [_drawOnHere(sp, i) ? 'Stop drawing' : 'Draw on',
      (_drawOnHere(sp, i) ? 'Stop drawing ' : 'Draw ') + what + (_drawOnHere(sp, i) ? '' : ' on'),
      () => spanSetDraw(!_drawOnHere(sp, i)), false],
+    // Loop and Keep under: the ⋯ menu's halves of the page bar's two buttons.
+    // Loop speaks of the stretch the menu already speaks of; on the loop
+    // itself it names the step a tap makes, so the menu says what will happen.
+    (() => {
+      const r = many ? { from: sp.from, to: sp.to } : { from: i, to: i };
+      const l = _validLoop(), here = !!(l && l.from === r.from && l.to === r.to);
+      const k = here ? _loopStep(l) : -1;
+      const nx = here ? (k >= 0 && k < LOOP_STEPS.length - 1 ? loopLabel(LOOP_STEPS[k + 1]) : 'Loop off') : 'Loop';
+      return [here ? nx : 'Loop', here ? 'Change ' + loopLabel(l) + ' to ' + nx : 'Loop ' + what,
+              () => loopCycle(r), false];
+    })(),
+    (() => {
+      const u = _validUnder(), on = !!(u && u.page === i);
+      return [on ? 'Stop keeping under' : 'Keep under',
+              (on ? 'Stop keeping page ' : 'Keep page ') + (i + 1) + ' under the pages after it',
+              () => underToggle(i), !on && i >= n - 1];
+    })(),
     ['Delete',     'Delete ' + what,          () => spanDelete(),
      n <= 1 || (sp && SkriblPageSpan.count(sp) >= n)],
   ];
@@ -3525,6 +3617,90 @@ function _validLoop(){
   return (H && H.loopOf && docLoop) ? H.loopOf(docLoop, frames.length) : null;
 }
 function _loopPlan(){ return _validLoop() ? window.SkriblHold.plan(frames, fps, docLoop) : null; }
+
+/* THE LOOP AND THE PAGE UNDERNEATH, AS CONTROLS (Blooby, PR 3 of 3). The
+   owner's card: draw it on page 1, keep it under the pages after it, select
+   the waving pages, Loop, Forever. Both live in the page bar on regular and in
+   each page's ⋯ menu on compact -- the split every page control here follows.
+
+   LOOP acts on the span, or on the page you are on. On a stretch that is not
+   the loop it makes it the loop, x2; on the loop itself each tap steps
+   x2 -> x3 -> x4 -> 2 s -> 4 s -> 6 s -> Forever -> off. One control, one
+   direction, the way the hold badge cycles. The chip on the strip's bracket
+   is the same control.
+
+   KEEP UNDER makes the page you are on the page underneath every page after
+   it, or, on the page that already is, turns it off. */
+const LOOP_STEPS = [{ times: 2 }, { times: 3 }, { times: 4 },
+                    { ms: 2000 }, { ms: 4000 }, { ms: 6000 }, { forever: true }];
+function loopLabel(l){
+  return l.forever ? 'Loop forever' : l.times ? 'Loop \u00d7' + l.times : 'Loop ' + (l.ms / 1000) + ' s';
+}
+function _loopStep(l){
+  return LOOP_STEPS.findIndex(st => (st.times && st.times === l.times) || (st.ms && st.ms === l.ms)
+                                    || (st.forever && l.forever === true));
+}
+function _loopRange(){ const sp = pageSpan(); return sp ? { from: sp.from, to: sp.to } : { from: idx, to: idx }; }
+function _pagesSay(r){ return r.from === r.to ? 'page ' + (r.from + 1) : 'pages ' + (r.from + 1) + '\u2013' + (r.to + 1); }
+function loopCycle(r){
+  if(playing || moveMode) return;
+  r = r || _loopRange();
+  const cur = _validLoop();
+  let next;
+  if(cur && cur.from === r.from && cur.to === r.to){
+    const k = _loopStep(cur);
+    next = (k >= 0 && k < LOOP_STEPS.length - 1) ? Object.assign({ from: r.from, to: r.to }, LOOP_STEPS[k + 1]) : null;
+  } else next = Object.assign({ from: r.from, to: r.to }, LOOP_STEPS[0]);
+  docLoop = next;
+  buildStrip(); render(); scheduleSave(); syncFlipDuration();
+  chip(next ? loopLabel(next) + ' on ' + _pagesSay(next) : 'Loop off');
+}
+function underToggle(i){
+  if(playing || moveMode) return;
+  const u = _validUnder();
+  if(u && u.page === i){ docUnder = null; chip('No page underneath'); }
+  else if(i >= frames.length - 1){ chip('Keep under needs pages after this one'); return; }
+  else {
+    docUnder = { page: i, from: i + 1, to: frames.length - 1 };
+    chip('Page ' + (i + 1) + ' stays under ' + _pagesSay(docUnder));
+  }
+  buildStrip(); render(); scheduleSave();
+}
+/* Pages that will never play: everything after a FOREVER loop. */
+function _neverPlays(i){ const l = _validLoop(); return !!(l && l.forever && i > l.to); }
+
+/* THE LOOP AND THE PAGE UNDERNEATH FOLLOW THEIR PAGES. Both are stored as
+   page indices, and pages are added, deleted, copied and reordered by a dozen
+   paths (spanMove, delFrame, addTween, undo ...) that know nothing of either.
+   So instead of teaching every path, buildStrip -- which every one of them
+   ends in -- re-reads where the PAGES went: the indices are pinned to the page
+   objects they named, and re-derived from those objects after any change. A
+   stretch keeps whichever of its pages survive (first to last); the page
+   underneath goes when that page goes. Keep under means "under the pages after
+   it", so a range that STARTED right after its page keeps starting right after
+   it, wherever the page goes, and one that ran to the last page keeps running
+   to it: a page added between the card and the waving pages, or at the end, is
+   under the card too.
+   A loop or under set from outside (a draft, a test) is a new pin, not a move. */
+let _pinLoop = null, _pinUnder = null;
+function _followPages(){
+  const at = refs => refs.map(f => frames.indexOf(f)).filter(k => k >= 0);
+  if(_pinLoop && docLoop === _pinLoop.obj){
+    const ix = at(_pinLoop.refs);
+    docLoop = ix.length ? Object.assign({}, docLoop, { from: Math.min(...ix), to: Math.max(...ix) }) : null;
+  }
+  if(_pinUnder && docUnder === _pinUnder.obj){
+    const p = frames.indexOf(_pinUnder.page), ix = at(_pinUnder.refs);
+    docUnder = (p < 0 || !ix.length) ? null
+      : { page: p, from: _pinUnder.fromNext ? p + 1 : Math.min(...ix),
+          to: _pinUnder.toEnd ? frames.length - 1 : Math.max(...ix) };
+  }
+  _pinLoop = docLoop ? { obj: docLoop, refs: frames.slice(docLoop.from, docLoop.to + 1) } : null;
+  _pinUnder = docUnder ? { obj: docUnder, page: frames[docUnder.page],
+                           refs: frames.slice(docUnder.from, docUnder.to + 1),
+                           fromNext: docUnder.from === docUnder.page + 1,
+                           toEnd: docUnder.to === frames.length - 1 } : null;
+}
 /* The page shown for play count i: plain modulo without a loop; with one, the
    plan's slot -- and past one pass of a FOREVER loop, round the stretch only. */
 function _playPage(i){
@@ -5834,7 +6010,7 @@ function syncExportOptions(){
     // State the resulting length, because the header badge shows ONE pass and
     // the file has always contained more than that.
     exLoopsNote.textContent = (frames.length>1)
-      ? (tot.toFixed(1)+'s of video \u00b7 GIFs loop forever')
+      ? exLoopsLine(tot)
       : ('Single page \u2014 nothing to loop');
   }
   if(exLoopsSeg) exLoopsSeg.querySelectorAll('button').forEach(b=>{
@@ -5867,8 +6043,7 @@ function refreshExReadouts(){
       : (r.count+' of '+frames.length+' page'+(frames.length===1?'':'s'));
   }
   if(exLoopsNote && frames.length>1){
-    let units=0; for(let i=r.from-1;i<=r.to-1;i++) units+=frameHold(frames[i]);
-    exLoopsNote.textContent=((units/(fps||12))*exLoops).toFixed(1)+'s of video \u00b7 GIFs loop forever';
+    exLoopsNote.textContent=exLoopsLine(exLoopSeconds()*exLoops);
   }
 }
 function onExRangeLive(){
