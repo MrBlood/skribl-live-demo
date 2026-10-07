@@ -3722,10 +3722,10 @@ function loopRemove(){
 }
 /* THE LOOP'S ENDS ARE HANDLES (owner: "maybe an easier way of picking the loop
    is similar to building the music loop, with the dragging tool" ... "can the
-   handle be longer on the bottom?"). Two grips at the stretch's outer edges in
-   the music trim handle's shape, with the grab knob hanging BELOW the tiles --
-   along each tile's top sit the hold badge and the delete x, and a grip there
-   would fight them. A drag snaps to page edges and says the range; letting go
+   handle be longer on the bottom?" ... then, from mocks, "A": a TRIM FRAME).
+   The outline's two ends are the handles -- rounded bars with chevrons that
+   curve with the frame, in room the end tiles make, so nothing sits on a page
+   or hangs off it. A drag snaps to page edges and says the range; letting go
    sets it, keeping the loop's count. The arrow keys move a focused handle.
    Laid out in the strip's own coordinates (it is position:relative), so they
    scroll with the pages; near the strip's edges a drag scrolls it along. */
@@ -3734,11 +3734,12 @@ function _posLoopHandles(from, to){
   const hs = strip.querySelectorAll('.loophandle'), box = strip.querySelector('.loopframe');
   const a = tiles[from], b = tiles[to];
   if(hs.length !== 2 || !a || !b) return;
-  const half = 5;                                       // half the strip's 10px gap
-  const l = a.offsetLeft - half, r = b.offsetLeft + b.offsetWidth + half;
+  // The frame reaches 18px past the end tiles: the 16px bar plus a hairline,
+  // in the 22px those tiles' margins and the strip's gap leave (flip.css).
+  const l = a.offsetLeft - 18, r = b.offsetLeft + b.offsetWidth + 18;
   const top = a.offsetTop - 4, h = a.offsetHeight + 8;
-  hs[0].style.left = l + 'px'; hs[1].style.left = r + 'px';
-  hs.forEach(x => { x.style.top = top + 'px'; x.style.height = (h + 22) + 'px'; });
+  hs[0].style.left = l + 'px'; hs[1].style.left = (r - 16) + 'px';
+  hs.forEach(x => { x.style.top = top + 'px'; x.style.height = h + 'px'; });
   if(box) Object.assign(box.style, { left: l + 'px', width: (r - l) + 'px', top: top + 'px', height: h + 'px' });
   hs[0].setAttribute('aria-valuenow', String(from + 1)); hs[0].setAttribute('aria-valuetext', 'page ' + (from + 1));
   hs[1].setAttribute('aria-valuenow', String(to + 1)); hs[1].setAttribute('aria-valuetext', 'page ' + (to + 1));
@@ -3756,8 +3757,9 @@ function _loopHandles(focusSide){
     h.className = 'loophandle ' + side; h.tabIndex = 0; h.setAttribute('role', 'slider');
     h.setAttribute('aria-label', side === 'from' ? 'Loop start' : 'Loop end');
     h.setAttribute('aria-valuemin', '1'); h.setAttribute('aria-valuemax', String(frames.length));
-    h.innerHTML = '<span class="lh-cap" aria-hidden="true"></span><span class="lh-line" aria-hidden="true"></span>'
-      + '<span class="lh-knob" aria-hidden="true"></span><span class="lh-bubble" aria-hidden="true"></span>';
+    h.innerHTML = '<svg viewBox="0 0 10 16" aria-hidden="true"><path d="' + (side === 'from' ? 'M7 2 2 8l5 6' : 'M3 2l5 6-5 6')
+      + '" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      + '<span class="lh-bubble" aria-hidden="true"></span>';
     strip.appendChild(h);
     _wireLoopHandle(h, side);
   }

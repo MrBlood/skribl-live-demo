@@ -292,21 +292,21 @@ with sync_playwright() as p:
     check("a loop has two handles, named and valued as sliders",
           pg.evaluate("""() => [...document.querySelectorAll('#strip .loophandle')].map(h => [h.getAttribute('role'), h.getAttribute('aria-label'), h.getAttribute('aria-valuenow')])""")
           == [["slider", "Loop start", "2"], ["slider", "Loop end", "4"]])
-    # The knob hangs BELOW the tiles (owner: "it would be interfered with by other
-    # buttons ... can the handle be longer on the bottom?"), and the tile's own
-    # controls along its top are still what a tap there reaches.
+    # A TRIM FRAME (owner, from mocks: "A"): each end of the outline is a bar,
+    # painted, sitting in the room beside its end tile -- not over the tile --
+    # and the tile's own controls are still what a tap on them reaches.
     geo = pg.evaluate("""() => { const t = document.querySelectorAll('#strip .frame')[1].getBoundingClientRect();
-        const k = document.querySelector('#strip .loophandle.from .lh-knob').getBoundingClientRect();
+        const k = document.querySelector('#strip .loophandle.from').getBoundingClientRect();
         const at = document.elementFromPoint(k.left + k.width / 2, k.top + k.height / 2);
         const hit = sel => { const e = document.querySelectorAll('#strip .frame')[1].querySelector(sel); if (!e) return null;
           const r = e.getBoundingClientRect(); const a = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(a && e.contains(a)); };
-        return { knobTop: Math.round(k.top), tileBottom: Math.round(t.bottom), knobPainted: !!(at && at.closest('.loophandle.from')),
+        return { barRight: Math.round(k.right), tileLeft: Math.round(t.left), knobPainted: !!(at && at.closest('.loophandle.from')),
                  badge: hit('.holdbadge'), del: hit('.del') }; }""")
-    check("the grab knob hangs below the tiles, painted", geo["knobTop"] >= geo["tileBottom"] and geo["knobPainted"], str(geo))
+    check("the start bar is painted beside its tile, not over it", geo["barRight"] <= geo["tileLeft"] and geo["knobPainted"], str(geo))
     check("...and the tile's hold badge and delete are still what a tap on them reaches",
           geo["badge"] is True and geo["del"] is True, str(geo))
     def drag(side, to_tile, edge):
-        k = pg.locator(f"#strip .loophandle.{side} .lh-knob").bounding_box()
+        k = pg.locator(f"#strip .loophandle.{side}").bounding_box()
         t = pg.locator(TILES).nth(to_tile).bounding_box()
         x0, y0 = k["x"] + k["width"] / 2, k["y"] + k["height"] / 2
         x1 = t["x"] + (t["width"] if edge == "right" else 0)
@@ -347,6 +347,48 @@ with sync_playwright() as p:
     pg.keyboard.press("Delete")
     check("Delete on a focused handle removes the loop, handles and all",
           pg.evaluate(STATE)["loop"] is None and pg.evaluate(HN) == 0, str(pg.evaluate(STATE)["loop"]))
+    ctx.close()
+    b.close()
+
+# THE TRIM FRAME ON A PHONE (owner: "will that work well on a phone?"). A bar
+# looks 16px wide; a finger needs about 40, so each bar's touch zone is 40px
+# wide across the middle of its height, clear of the tile corners where the
+# number, hold, delete and chips live. Driven with REAL touch events (CDP), not
+# a mouse dressed up as one.
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    ctx = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
+    pg = ctx.new_page()
+    browsing.goto(pg, BASE, "/flip")
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    pg.evaluate(SETUP, 6)
+    # The loop starts on page 2, so its start bar sits right beside page 1's delete.
+    pg.evaluate("() => { docLoop = { from: 1, to: 2, times: 2 }; idx = 0; buildStrip(); document.getElementById('strip').scrollLeft = 0; }")
+    pg.wait_for_timeout(200)
+    reach = pg.evaluate("""() => { const h = document.querySelector('#strip .loophandle.from').getBoundingClientRect(), cy = h.top + h.height / 2, cx = h.left + h.width / 2;
+        const hit = x => { const a = document.elementFromPoint(x, cy); return !!(a && a.closest('.loophandle.from')); };
+        const t = document.querySelectorAll('#strip .frame')[0], d = t.querySelector('.del');
+        let del = null; if (d) { const r = d.getBoundingClientRect(); const a = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); del = !!(a && d.contains(a)); }
+        return { left: hit(cx - 18), right: hit(cx + 18), del }; }""")
+    check("phone: a bar takes a finger 18px either side of its centre", reach["left"] and reach["right"], str(reach))
+    check("phone: ...and the neighbouring page's delete is still what a tap on it reaches", reach["del"] is True, str(reach))
+    cdp = ctx.new_cdp_session(pg)
+    # As a person does: scroll the strip until the end bar is in view.
+    pg.evaluate("() => { const s = document.getElementById('strip'), h = s.querySelector('.loophandle.to'); s.scrollLeft = h.offsetLeft + 60 - s.clientWidth; }")
+    pg.wait_for_timeout(150)
+    h = pg.locator("#strip .loophandle.to").bounding_box()
+    t2 = pg.locator(TILES).nth(1).bounding_box()
+    x0, y0 = h["x"] + h["width"] / 2, h["y"] + h["height"] / 2
+    x1 = t2["x"] + t2["width"]
+    def touch(kind, x, y):
+        cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [] if kind == "touchEnd" else [{"x": x, "y": y}]})
+    touch("touchStart", x0, y0)
+    for k in range(1, 9):
+        touch("touchMove", x0 + (x1 - x0) * k / 8, y0); pg.wait_for_timeout(16)
+    touch("touchEnd", x1, y0)
+    pg.wait_for_timeout(300)
+    check("phone: a finger dragging the end bar shrinks the loop", pg.evaluate(STATE)["loop"] == {"from": 1, "to": 1, "times": 2},
+          str(pg.evaluate(STATE)["loop"]))
     ctx.close()
     b.close()
 

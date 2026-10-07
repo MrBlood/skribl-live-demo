@@ -1562,30 +1562,34 @@ body.stroking .strip-wrap {
 }
 .frame .noplaymark { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .pb#pbLoop.on { color: var(--ui-hi); }
-/* The loop's handles and its outline (flip.js _loopHandles). The knob hangs
-   below the tiles, so the strip makes room under them while a loop exists;
-   the top stays short, clear of each tile's hold badge and delete x. */
+/* THE LOOP IS A TRIM FRAME (owner chose "A", from mocks: the stick-and-knob
+   handles "look weird up against the rounded corners, plus we don't really
+   need a grabber on top"). The outline's left and right edges are the handles:
+   rounded bars with chevrons, curved with the frame, in the room the loop's
+   end tiles make for them (margins below), so a bar never sits on a page.
+   Each bar's touch zone is 40px wide (a finger, not the 16px it looks), which
+   reaches 12px into its neighbours -- short of their corner controls. */
 .strip { position: relative; }
-.strip.has-loop { padding-bottom: 34px; }
 .strip.has-loop .frame .loopband { display: none; }
-.loopframe { position: absolute; z-index: 3; pointer-events: none; border-radius: 12px;
-  box-shadow: inset 0 0 0 2px var(--ui-hi); background: rgba(124, 92, 255, .08); }
+.strip.has-loop .frame.loop-first { margin-left: 12px; }
+.strip.has-loop .frame.loop-last { margin-right: 12px; }
+.loopframe { position: absolute; z-index: 3; pointer-events: none; border-radius: 14px;
+  box-shadow: inset 0 0 0 3px var(--ui-hi); background: rgba(124, 92, 255, .08); }
 .loophandle {
-  position: absolute; z-index: 4; width: 28px; transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center;
+  position: absolute; z-index: 4; width: 16px; background: var(--ui-hi); color: #fff;
+  display: flex; align-items: center; justify-content: center;
   cursor: ew-resize; touch-action: none; -webkit-tap-highlight-color: transparent; outline: none;
 }
-.loophandle .lh-cap { flex: none; width: 12px; height: 6px; border-radius: 3px; background: var(--ui-hi); }
-.loophandle .lh-line { flex: 1; width: 3px; border-radius: 2px; background: var(--ui-hi); box-shadow: 0 0 4px rgba(124, 92, 255, .55); }
-.loophandle .lh-knob { flex: none; width: 14px; height: 22px; border-radius: 7px; background: var(--ui-hi);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .35); }
-.loophandle:hover .lh-cap, .loophandle:hover .lh-line, .loophandle:hover .lh-knob,
-.loophandle.dragging .lh-cap, .loophandle.dragging .lh-line, .loophandle.dragging .lh-knob { background: #9580ff; }
-.loophandle:focus-visible .lh-knob { box-shadow: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--ui-hi); }
-.loophandle .lh-bubble { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+.loophandle.from { border-radius: 14px 0 0 14px; }
+.loophandle.to { border-radius: 0 14px 14px 0; }
+.loophandle::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 40px; transform: translateX(-50%); }
+.loophandle svg { width: 8px; height: 13px; flex: none; pointer-events: none; }
+.loophandle:hover, .loophandle.dragging { background: #9580ff; }
+.loophandle:focus-visible { box-shadow: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--ui-hi); }
+.loophandle .lh-bubble { display: none; position: absolute; top: 50%;
   padding: 3px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; line-height: 16px;
   color: #fff; background: var(--ui-hi); white-space: nowrap; box-shadow: 0 4px 12px rgba(0, 0, 0, .35); pointer-events: none; }
 .loophandle.dragging .lh-bubble { display: block; }
-/* Inside the loop, never past the handle: at the strip's edge it was clipped. */
-.loophandle.from .lh-bubble { left: calc(50% + 10px); transform: translate(0, -50%); }
-.loophandle.to .lh-bubble { left: auto; right: calc(50% + 10px); transform: translate(0, -50%); }
+/* Inside the loop, never past the bar: at the strip's edge it was clipped. */
+.loophandle.from .lh-bubble { left: calc(100% + 6px); transform: translate(0, -50%); }
+.loophandle.to .lh-bubble { right: calc(100% + 6px); transform: translate(0, -50%); }

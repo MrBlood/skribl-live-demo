@@ -14431,3 +14431,26 @@ a pointer-events:none element and would answer Undo with the chip on top).
 Red on main at all three sizes, and on each half of the fix alone: without the
 measured top the chip lands on the header; with the old bottom rule kept, it
 stretches from the header to the dock.
+
+**The loop is a trim frame (owner: "we need to redesign the handle thing it
+looks weird up against the rounded corners, plus we don't really need a grabber
+on top" -- three mocks, "A").** The stick-and-knob handles are gone: the loop's
+outline is 3px with 14px corners, and its two ends ARE the handles -- rounded
+bars with ‹ › that curve with the frame, the iPhone video-trim idiom. They sit
+in room the loop's end tiles make (a 12px margin each), so a bar is never on a
+page and nothing hangs below the strip any more (its 34px of room under the
+tiles is gone too).
+
+On a phone (owner: "will that work well on a phone?"): a bar looks 16px wide
+and takes a finger 40px wide, which reaches 12px into its neighbours -- short of
+their corner controls. A first draft kept the zone to the middle 60% of the bar
+"clear of the corners"; no check could tell it from a full-height zone, because
+nothing is close enough to reach, so it is full height. A check that the
+looped page's ⋯ stayed reachable was written and removed for the same reason:
+that button stacks above the bar, so it could not fail.
+
+verify_loopui: the start bar painted beside its tile, not over it; and on a
+390px touch phone, driven by real touch events (CDP): the bar takes a finger
+18px either side of its centre, the neighbouring page's delete still takes its
+own tap, and dragging the end bar shrinks the loop. Red per component: the room
+at the ends, the touch zone's width, touch-action.
