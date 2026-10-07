@@ -426,8 +426,10 @@ with sync_playwright() as p:
         zeroFps: H.pageMs({hold:2},0), negFps: H.pageMs({hold:2},-5),
         nanFps: H.pageMs({hold:2},NaN), twelve: H.pageMs({hold:2},12),
         // A drawing page ignores the frame rate entirely — that IS its edge.
-        drawAt6: H.pageMs({draw:true,strokes:[{t:0},{t:900}]},6),
-        drawAt60: H.pageMs({draw:true,strokes:[{t:0},{t:900}]},60),
+        // 900 ms of continuous drawing: a gap over GAP_MAX is a pause, which
+        // plays as a beat (below), and this is about the frame rate.
+        drawAt6: H.pageMs({draw:true,strokes:Array.from({length:10},(_, k)=>({t:k*100}))},6),
+        drawAt60: H.pageMs({draw:true,strokes:Array.from({length:10},(_, k)=>({t:k*100}))},60),
         drawEmpty: H.pageMs({draw:true,strokes:[]},12) }; }""")
     check("time before the start lands on the first page", edge["before"] == 0, str(edge["before"]))
     check("the last instant of a pass is the last page", edge["after"] == 2, str(edge["after"]))
@@ -472,6 +474,49 @@ with sync_playwright() as p:
           f"{due['tiny']} / {due['half']} / {due['nearly']}")
     check("an empty or missing page reveals nothing rather than throwing",
           due["empty"] == 0 and due["nul"] == 0, str(due))
+
+    print("\n" + "A PAUSE PLAYS AS A BEAT (owner: \"squeeze the long pauses\")")
+    # The owner's page 1: a curl, a 47-second pause, an eraser, the mountains --
+    # replayed as the curl, five seconds of nothing, then the rest. Each gap
+    # between points now counts up to GAP_MAX, in the one clock every surface
+    # asks (spanMs for how long, dueCount for how much).
+    beat = pg.evaluate("""() => { const H = window.SkriblHold;
+      const run = (t0, n) => Array.from({length:n}, (_, k) => ({ t: t0 + k * 15 }));
+      const f = { draw:true, strokes: run(0, 21).concat(run(60000, 21)) };   // 300 ms, a minute, 300 ms
+      const cont = { draw:true, strokes: run(0, 42) };                        // the same drawing, no pause
+      const not = { draw:true, strokes: [{x:0},{x:1},{x:2},{x:3}] };          // no timing at all
+      return { gap: 250, span: H.spanMs(f), cont: H.spanMs(cont),
+               secondAt: [0.4, 0.5, 0.6, 0.7].map(q => H.dueCount(f, q)),
+               notHalf: H.dueCount(not, 0.5), notSpan: H.spanMs(not) }; }""")
+    check("a minute's pause between strokes plays as one beat, not as the minute",
+          beat["gap"] == 250 and beat["span"] == beat["cont"] + beat["gap"] - 15,
+          f"span {beat['span']} ms vs {beat['cont']} ms without the pause (GAP_MAX {beat['gap']})")
+    check("...and the second stroke arrives straight after it, not seconds later",
+          beat["secondAt"][0] <= 21 < beat["secondAt"][-1], str(beat["secondAt"]))
+    check("points with no timing reveal in order rather than all at the very end",
+          0 < beat["notHalf"] < 4 and beat["notSpan"] == 320, str(beat))
+    # And on a surface, measured: the Flip editor's Play, the screen the owner
+    # watched. Stroke B (a minute after A) must be on the canvas within a
+    # couple of seconds; before, the page ran its full 8 s and B came at the end.
+    pg.evaluate("""() => { const pt = (x, y, t, s) => ({ x, y, t, color: '#ffffff', size: 8, erase: false, start: s });
+      const A = Array.from({length: 21}, (_, k) => pt(100 + k * 10, 150, k * 15, k === 0));
+      const B = Array.from({length: 21}, (_, k) => pt(100 + k * 10, 420, 60000 + k * 15, k === 0));
+      frames = [{ strokes: A.concat(B), strokeGroups: [21, 21], hold: 1, draw: true }, newFrame()];
+      docLoop = null; docUnder = null; idx = 0; buildStrip(); render(); }""")
+    INK_B = """() => { const cv = document.getElementById('pad'), sy = cv.height / CH, sx = cv.width / CW;
+      const d = cv.getContext('2d').getImageData(Math.round(90 * sx), Math.round(400 * sy), Math.round(240 * sx), Math.round(40 * sy)).data;
+      let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200) n++; return n; }"""
+    pg.click("#play")
+    t0 = pg.evaluate("() => performance.now()")
+    seen = None
+    for _ in range(80):
+        pg.wait_for_timeout(50)
+        if pg.evaluate(INK_B) > 50:
+            seen = pg.evaluate("() => performance.now()") - t0
+            break
+    pg.click("#play")
+    check("the editor's Play draws the stroke after a minute's pause within a second or two",
+          seen is not None and seen < 2000, f"stroke B first painted at {seen} ms (None = not within 4 s)")
 
     print("\n" + "THE COMPOSITION: A PAGE REACHES ITS END BEFORE IT YIELDS")
     # pageMs() and dueCount() were each right and together could never show a

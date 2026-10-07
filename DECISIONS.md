@@ -14353,3 +14353,23 @@ already exists MOVES to the new stretch keeping its count: from Forever on
 page 2, starting 2-22 over at x2 meant six more taps back to the Forever already
 chosen. verify_loopui: the chip on a selection, stepping it after, the page
 bar moving a loop; each red on its own.
+
+**A pause plays as a beat on a page that draws itself on (owner: "yes, squeeze
+the long pauses").** The owner's page 1 replayed its own history -- a curl, a
+47-second pause, an eraser over the curl, the mountains -- and with the page
+capped at DRAW_MAX the pause still played as five seconds of nothing. In
+lib/holdtiming.js each gap between a drawing page's points now counts up to
+GAP_MAX (250 ms, the Pad's "Trim" pause cap): spanMs() and dueCount() both read
+that one squeezed clock, so every surface -- the editor's Play, the post page,
+the inline players, the exports -- plays the drawing without the thinking. A
+page whose points carry no usable `t` is drawn in point order, one point a
+frame, where it used to reveal nothing until its last instant.
+
+verify_sharedrules A PAUSE PLAYS AS A BEAT: a minute's pause plays as GAP_MAX,
+the next stroke comes straight after it, untimed points reveal in order, and the
+Flip editor's Play paints the stroke after the pause within two seconds
+(measured 552 ms; never, within 4 s, on main). The fps-exemption fixture was a
+single 900 ms gap -- now a pause -- and is 900 ms of continuous drawing instead.
+The squeezed clock costs the players 81-113 B after being compacted (and after
+spanMs and dueCount each lost a check it made dead); both byte ratchets were
+raised by that, the owner approving ("raise limits").

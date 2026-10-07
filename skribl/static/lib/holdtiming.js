@@ -101,12 +101,19 @@
    * make a loop unwatchable. A page with no strokes has no span and falls back
    * to DRAW_MIN rather than 0, for the same skip reason. */
   var DRAW_MIN = 320, DRAW_MAX = 8000;
+  /* A pause plays as a beat (owner, DECISIONS.md): each gap between a drawing
+   * page's points counts up to GAP_MAX, the Pad's "Trim" cap. A page with no
+   * usable `t` draws in point order, 16 ms a point. */
+  var GAP_MAX = 250;
+  function playTimes(p) {
+    for (var t = [0], a = 0, i = 1, g; i < p.length; i++) t.push(a += (g = p[i].t - p[i - 1].t) > 0 ? Math.min(g, GAP_MAX) : 0);
+    if (!a) for (i = 1; i < p.length; i++) t[i] = i * 16;
+    return t;
+  }
   function spanMs(frame) {
     var p = frame && frame.strokes;
     if (!p || p.length < 2) return DRAW_MIN;
-    var span = Number(p[p.length - 1].t) - Number(p[0].t);
-    if (!(span > 0)) return DRAW_MIN;
-    return Math.max(DRAW_MIN, Math.min(DRAW_MAX, span));
+    return Math.max(DRAW_MIN, Math.min(DRAW_MAX, playTimes(p)[p.length - 1]));
   }
 
   /* THE ONE ANSWER. How many milliseconds page `frame` occupies. Takes the
@@ -143,9 +150,8 @@
     var p = frame && frame.strokes, q = Number(prog), n = 0;
     if (!p || !p.length || !(q > 0)) return 0;
     if (q >= 1) return p.length;
-    var t0 = Number(p[0].t);
-    var due = q * Math.max(1, Number(p[p.length - 1].t) - t0);
-    while (n < p.length && Number(p[n].t) - t0 <= due) n++;
+    var t = playTimes(p), due = q * t[p.length - 1];
+    while (n < p.length && t[n] <= due) n++;
     return n;
   }
 
