@@ -25,6 +25,22 @@
 (function () {
   'use strict';
 
+  function viewH() {
+    return (window.visualViewport && window.visualViewport.height)
+      ? window.visualViewport.height : window.innerHeight;
+  }
+
+  /* Where the sticky header ends, measured where it STICKS -- its own top plus
+   * its height -- rather than where it happens to be before the page scrolls.
+   * 0 when the header is not sticky (desktop), so nothing below changes there. */
+  function stuckBottom() {
+    var h = document.querySelector('.header');
+    if (!h) return 0;
+    var cs = getComputedStyle(h);
+    if (cs.position !== 'sticky' && cs.position !== 'fixed') return 0;
+    return (parseFloat(cs.top) || 0) + h.getBoundingClientRect().height;
+  }
+
   /* Scroll so `panel`'s end sits at the bottom of the VISIBLE screen.
    *
    * Not scrollIntoView, on hard-won evidence: the owner's iPhone shipped the
@@ -43,10 +59,6 @@
    * feel nothing.
    */
   function revealPanelEnd(panel, behavior) {
-    function viewH() {
-      return (window.visualViewport && window.visualViewport.height)
-        ? window.visualViewport.height : window.innerHeight;
-    }
     function target() {
       var r = panel.getBoundingClientRect();
       var scroller = document.scrollingElement || document.documentElement;
@@ -106,6 +118,7 @@
     var more = panel.querySelector('.drawer-detent-more');
     if (!handle) return;
     var close = typeof opts.close === 'function' ? opts.close : null;
+    var dock = opts.dock || null;
 
     function reveal() {
       // The expand adds height below the fold; bring the drawer's end back
@@ -113,15 +126,64 @@
       var b = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'auto' : 'smooth';
       revealPanelEnd(panel, b);
+      // ...and the TOP stays under the dock. The editors' own open-scrolls
+      // can settle a little past the end (Flip's block:'end' scrollIntoView, by
+      // 9-15px at 700-720px tall), and a fitted drawer is exactly the room, so
+      // that little is the dock under the header. Fitted, the drawer
+      // fits, so scrolling it back never hides its end. After the reveal's own
+      // re-asserts, so it has the last word.
+      [750, 1300].forEach(function (ms) {
+        setTimeout(function () {
+          if (!isFull() || panel.hidden || panel.classList.contains('eyedropper-veiled')) return;
+          var under = ceiling() - panel.getBoundingClientRect().top;
+          if (under > 0) (document.scrollingElement || document.documentElement).scrollTop -= under;
+        }, ms);
+      });
     }
 
+    /* THE FULL DRAWER FITS UNDER THE HEADER. Expanding brings the drawer's END
+     * on screen (revealPanelEnd), and a drawer taller than the room under the
+     * sticky header took its top -- the grabber -- underneath the header to do
+     * it, where a tap lands on the header instead: on a 664px phone Flip's grip
+     * sat at y 3-27 behind a header at 6-66, and "I hit the drawer grip and
+     * they stay" came back. So a full drawer taller than the room under the
+     * header AND THE DOCK is capped to that room and
+     * scrolls inside itself, with the grabber pinned at its top (CSS,
+     * .detent-fit) -- so the grip is on screen and under the finger however
+     * far down the person scrolls for Clear all pages. Measured after the
+     * class lands, and again when the screen changes size (the iPhone's URL
+     * bar, a rotation). Sheet widths only: the handle is display:none above
+     * them, and the cap goes with it.
+     *
+     * Under the dock, not just the header: the dock sits right above the
+     * drawer, and fitted under the header alone it landed in the header's band
+     * -- glass over glass, its icons through the logo and Post. Measured as the
+     * dock's distance above the drawer, which scrolling does not change. */
+    function ceiling() {
+      var top = stuckBottom();
+      if (dock && dock.offsetParent !== null) {
+        top += panel.getBoundingClientRect().top - dock.getBoundingClientRect().top;
+      }
+      return top + 4;
+    }
+    function fit() {
+      panel.classList.remove('detent-fit');
+      panel.style.removeProperty('--detent-room');
+      if (!isFull() || panel.hidden || handle.offsetParent === null) return;
+      var room = Math.floor(viewH() - ceiling() - 10);
+      if (panel.getBoundingClientRect().height <= room) return;
+      panel.style.setProperty('--detent-room', room + 'px');
+      panel.classList.add('detent-fit');
+    }
     function isFull() { return panel.classList.contains('detent-full'); }
     function setFull(v) {
       v = !!v;
       if (v === isFull()) return;
       panel.classList.toggle('detent-full', v);
+      fit();
       if (v) reveal();
     }
+    (window.visualViewport || window).addEventListener('resize', function () { if (isFull()) fit(); });
 
     if (more) more.addEventListener('click', function () { setFull(true); });
 
@@ -160,7 +222,7 @@
 
     // A drawer hidden by ANY route forgets its detent: every open is half.
     new MutationObserver(function () {
-      if (panel.hidden) panel.classList.remove('detent-full');
+      if (panel.hidden) { panel.classList.remove('detent-full'); fit(); }
     }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
   }
 

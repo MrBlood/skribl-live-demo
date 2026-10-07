@@ -2129,6 +2129,32 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
     -webkit-tap-highlight-color: transparent;
   }
   .drawer-detent-more svg { width: 14px; height: 14px; flex: none; }
+  /* THE FULL DRAWER, FITTED UNDER THE HEADER (lib/drawerdetent.js fit()).
+     Taller than the room below the sticky header, it is capped to that room
+     and scrolls inside itself, the grabber pinned at its top -- so the grip
+     is on screen wherever the person has scrolled to, and a tap on it is a
+     tap on it, not on the header it used to hide behind. Solid while fitted:
+     content passes under the pinned grip, and on glass it would show through
+     it. The grip reaches the panel's edges over its 16px side padding and
+     sticks at the panel's top over its 14px top padding. */
+  #drawPanel.detent-fit {
+    max-height: var(--detent-room);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: rgb(var(--surface-well-2-rgb));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  #drawPanel.detent-fit > .drawer-detent-handle {
+    position: sticky;
+    top: -14px;
+    z-index: 2;
+    flex: none;
+    width: auto;
+    margin: -14px -16px 0;
+    padding-top: 6px;
+    background: rgb(var(--surface-well-2-rgb));
+  }
 }
 
 /* The wraps carry NO size of their own: inline-flex shrink-wraps the swatch

@@ -1245,7 +1245,7 @@ function openDrawer(name) {                      // name = 'draw'|'photo'|'music
 // hands the close to the drawer machine. Shared with Flip via lib/drawerdetent.js.
 if (window.SkriblDrawerDetent) {
   window.SkriblDrawerDetent.attach(document.getElementById('drawPanel'),
-    { close: () => openDrawer(null) });
+    { close: () => openDrawer(null), dock: document.getElementById('toolBar') });
 }
 const toolBarEl = document.getElementById('toolBar');
 if (toolBarEl) toolBarEl.addEventListener('click', (e) => {
