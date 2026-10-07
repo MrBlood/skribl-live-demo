@@ -247,6 +247,12 @@
      zero bottom padding, before the toolbar took its ~60-90px on top.
      env() is 0 on desktop, so this costs nothing there. */
   .flip-drawers { width: 100%; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  /* ...and only while a drawer is OPEN. The room is for a drawer's last row,
+     under iOS Safari's toolbar; with nothing open the container is empty and
+     the 24px was a blank band under the dock (owner: "why is there so much
+     blank space at the bottom?"). */
+  .flip-drawers:not(:has(> .tab-panel:not([hidden]), > .media-card > .tab-panel:not([hidden])))
+    { padding-bottom: env(safe-area-inset-bottom); }
   .draw-popout.tab-panel { position: static; box-sizing: border-box; }
   /* Delete-all lives in the drawer now; it arms red on first tap like the frame delete. */
   .clear-drawer-btn.armed { color: var(--danger); border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
@@ -1542,7 +1548,13 @@ body.stroking .strip-wrap {
 .frame .loopchip::before { content: ''; position: absolute; left: 50%; top: 50%;
   width: 44px; height: 44px; transform: translate(-50%, -50%); }
 .frame .underlabel { color: rgb(var(--under-rgb)); pointer-events: none; }
-.frame.noplay canvas { opacity: .32; }
+.frame.noplay { border-style: dashed; }
+.frame.noplay canvas { opacity: .18; }
 .frame.noplay .num { opacity: .6; }
+.frame .noplaytag {
+  position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%); z-index: 2;
+  font-size: 10px; font-weight: 600; line-height: 14px; padding: 1px 6px; border-radius: 6px;
+  background: rgba(var(--glass-deep-2-rgb), .88); color: var(--text-soft); white-space: nowrap; pointer-events: none;
+}
 .frame .noplaymark { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .pb#pbLoop.on { color: var(--ui-hi); }
