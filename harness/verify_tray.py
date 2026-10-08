@@ -385,6 +385,57 @@ with sync_playwright() as p:
           geo["low"] > 8 and geo["high"] > 8,
           f"sides=1 -> {geo['low']} pts, sides=99 -> {geo['high']} pts")
 
+    # A POLYGON FROM A NEARLY SQUARE DRAG COMES OUT EVEN. Reported from an
+    # iPhone: a pentagon "doesn't just rotate, it seems to rotate on another
+    # axis too". The turn was rigid; the pentagon had been drawn about 15% too
+    # tall, fitted to a drag box no finger makes square, and turning it laid the
+    # stretch on a slant. Asserted on what a person reads — whether the SIDES
+    # are equal — and either side of the lib's own POLY_SNAP, so the number
+    # lives in one place. The drawn version, on both editors, is in
+    # verify_tools V213j.
+    snap = page.evaluate("""() => {
+      const S = window.SkriblShapes, A = {x: 0, y: 0}, k = S.POLY_SNAP;
+      // A sharp-cornered outline turns only at its corners; every other point
+      // lies on an edge. The walk is closed, so its last point is its first.
+      const sides = (pts) => { const q = pts.slice(0, -1), v = [];
+        q.forEach((p, i) => { const a = q[(i - 1 + q.length) % q.length], c = q[(i + 1) % q.length];
+          const turn = Math.abs(Math.atan2((p.x-a.x)*(c.y-p.y) - (p.y-a.y)*(c.x-p.x),
+                                           (p.x-a.x)*(c.x-p.x) + (p.y-a.y)*(c.y-p.y)));
+          if (turn > 0.6) v.push(p); });
+        const L = v.map((p, i) => Math.hypot(v[(i+1) % v.length].x - p.x, v[(i+1) % v.length].y - p.y));
+        return { corners: v.length, spread: +(Math.max(...L) / Math.min(...L)).toFixed(4) }; };
+      const poly = (b, o) => sides(S.points('poly', A, b, Object.assign({sides: 5}, o || {})));
+      const reach = (kind, b) => { let x = -1e9, y = -1e9;
+        for (const p of S.points(kind, A, b, {})) { x = Math.max(x, p.x); y = Math.max(y, p.y); }
+        return [Math.round(x), Math.round(y)]; };
+      return { k: k,
+               yours: poly({x: 100, y: 115}), wide: poly({x: 115, y: 100}),
+               upLeft: poly({x: -100, y: -115}),
+               inside: poly({x: 100, y: 100 * k * 0.98}), outside: poly({x: 100, y: 100 * k * 1.02}),
+               tall: poly({x: 100, y: 160}), shift: poly({x: 100, y: 160}, {square: true}),
+               rect: reach('rect', {x: 100, y: 115}), ellipse: reach('ellipse', {x: 100, y: 115}) };
+    }""")
+    even = lambda g: g["corners"] == 5 and g["spread"] < 1.01
+    check("Flip: a pentagon from a drag 15% taller than wide comes out with its "
+          "sides EQUAL (the owner's tilted turn)",
+          even(snap["yours"]), f"{snap['yours']} — 1.0 is equal sides")
+    check("Flip: ...and so does one 15% wider, and one dragged up and to the left "
+          "(the snap has no favourite direction)",
+          even(snap["wide"]) and even(snap["upLeft"]),
+          f"wide {snap['wide']}, up-left {snap['upLeft']}")
+    check("Flip: just inside POLY_SNAP snaps and just outside stretches — the "
+          "threshold is the lib's, not a number restated here",
+          even(snap["inside"]) and snap["outside"]["spread"] > 1.1,
+          f"POLY_SNAP {snap['k']}: inside {snap['inside']}, outside {snap['outside']}")
+    check("Flip: a clearly tall drag still stretches (a tall shape is drawn on "
+          "purpose) and Shift still evens it",
+          snap["tall"]["spread"] > 1.4 and even(snap["shift"]),
+          f"tall {snap['tall']}, with Shift {snap['shift']}")
+    check("Flip: rectangles and ellipses never snap — they keep the drag's "
+          "proportions",
+          snap["rect"] == [100, 115] and snap["ellipse"] == [100, 115],
+          f"rect reaches {snap['rect']}, ellipse {snap['ellipse']} from a 100x115 drag")
+
     # WHICH KINDS OFFER WHICH KNOB is one rule with two consumers — the rows
     # syncShapeKnobs hides, and the picker deciding whether a pick left
     # anything worth staying open for — on two surfaces. It lives in the lib

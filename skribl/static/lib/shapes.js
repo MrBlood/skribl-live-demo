@@ -19,7 +19,8 @@
  * both axes, keeping the sign of each so the shape still follows the drag into
  * whichever quadrant it was headed. For a line, Shift is handled by
  * lib/constrain.js before the anchor ever reaches here — same modifier, two
- * different meanings, which is the convention everywhere else.
+ * different meanings, which is the convention everywhere else. A polygon takes
+ * the `square` path without Shift when its drag is nearly square (POLY_SNAP).
  */
 (function () {
   'use strict';
@@ -36,6 +37,29 @@
     var dx = bx - ax, dy = by - ay;
     var m = Math.max(Math.abs(dx), Math.abs(dy));
     return { x: ax + (dx < 0 ? -m : m), y: ay + (dy < 0 ? -m : m) };
+  }
+
+  /* A POLYGON FROM A NEARLY SQUARE DRAG COMES OUT EVEN.
+   *
+   * _poly fits the shape to the drag's box, so a box a little taller than it
+   * is wide makes a pentagon a little too tall. Upright, that is hard to see;
+   * turned, the stretch lies on a slant and the turn reads as the shape tipping
+   * on a second axis. That was the owner's report ("it doesn't just rotate"),
+   * about a rotation rigid to a tenth of a pixel: the pentagon had been about
+   * 15% too tall since it was drawn. A desk has Shift for even sides; a phone
+   * has no Shift, and a finger seldom drags a true square.
+   *
+   * So a polygon whose drag is within POLY_SNAP of square takes the Shift path.
+   * 1.3 covers a finger's miss and leaves anything 30% taller or wider than
+   * square to stretch, because a tall triangle is drawn on purpose. Rectangles
+   * and ellipses never snap: at any proportion they are still a rectangle and
+   * an ellipse, turned or not, and a pentagon only reads as one with its sides
+   * equal. */
+  var POLY_SNAP = 1.3;
+  function _nearSquare(ax, ay, bx, by) {
+    var w = Math.abs(bx - ax), h = Math.abs(by - ay);
+    var lo = Math.min(w, h), hi = Math.max(w, h);
+    return lo > 0 && hi <= lo * POLY_SNAP;
   }
 
   function _count(len) {
@@ -122,10 +146,11 @@
     return out.slice(0, MAX_POINTS);
   }
 
-  /* A regular polygon inscribed in the drag's box. The first vertex is at the
-     TOP, so a triangle points up — which is what everybody draws when they
-     mean "triangle", and an unrotated polygon starting at 0 radians gives a
-     triangle lying on its side. */
+  /* A polygon inscribed in the drag's box — regular when the box is square,
+     as Shift or POLY_SNAP make it, and stretched with the box when it is not.
+     The first vertex is at the TOP, so a triangle points up — which is what
+     everybody draws when they mean "triangle", and an unrotated polygon
+     starting at 0 radians gives a triangle lying on its side. */
   function _poly(ax, ay, bx, by, sides) {
     var n = Math.max(MIN_SIDES, Math.min(MAX_SIDES, Math.round(sides || 3)));
     var cx = (ax + bx) / 2, cy = (ay + by) / 2;
@@ -175,7 +200,9 @@
    *   kind     'line' | 'rect' | 'ellipse' | 'poly'
    *   anchor   where the drag started
    *   current  where the pointer is now
-   *   opts     { square: bool }   Shift, for everything but a line
+   *   opts     { square: bool }   Shift, for everything but a line (a
+   *                                 polygon from a nearly square drag gets it
+   *                                 without asking)
    *            { sides: 3..12 }   'poly' only
    *            { radius: px }     corner rounding, straight-edged kinds only
    */
@@ -183,7 +210,8 @@
     if (!anchor || !current) return [];
     opts = opts || {};
     var b = current;
-    if (opts.square && kind !== 'line') b = _squared(anchor.x, anchor.y, b.x, b.y);
+    var square = opts.square || (kind === 'poly' && _nearSquare(anchor.x, anchor.y, b.x, b.y));
+    if (square && kind !== 'line') b = _squared(anchor.x, anchor.y, b.x, b.y);
     var r = opts.radius || 0;
     if (kind === 'rect') {
       return _rounded(_rectVerts(anchor.x, anchor.y, b.x, b.y), r);
@@ -217,8 +245,8 @@
   }
 
   var api = { KINDS: KINDS.slice(), SPACING: SPACING, MAX_POINTS: MAX_POINTS,
-              MIN_SIDES: MIN_SIDES, MAX_SIDES: MAX_SIDES, points: points,
-              knobs: knobs, hasKnob: hasKnob };
+              MIN_SIDES: MIN_SIDES, MAX_SIDES: MAX_SIDES, POLY_SNAP: POLY_SNAP,
+              points: points, knobs: knobs, hasKnob: hasKnob };
   if (typeof window !== 'undefined') window.SkriblShapes = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

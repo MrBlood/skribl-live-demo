@@ -14581,3 +14581,34 @@ exception, the shelf's own exception. The first draft of the beside-the-canvas
 check tapped a few pixels above the canvas, and the browser snapped that tap
 onto it, so the check went green with the listener deleted. It taps in the
 margin beside the canvas now.
+
+**A polygon from a nearly square drag comes out even (owner, iPhone: "When I
+rotate it it doesn't just rotate it seems to rotate on another axis too").** The
+turn was rigid. Measured at 390 wide with real touch events, no point of a
+turned pentagon moved more than a tenth of a pixel nearer to or further from its
+centre. The pentagon had been stretched since it was drawn: the Shape tool
+fitted a polygon to the box the drag made, and the owner's was about 15% too
+tall. Upright, that is hard to see. Turned, the stretch lies on a slant and
+reads as the shape tipping on a second axis. A desk has Shift for equal sides. A
+phone has none, and a finger seldom drags a true square.
+
+Now a polygon whose drag is within 1.3 of square (`POLY_SNAP` in
+`lib/shapes.js`) takes the Shift path: equal sides, sized by the drag's longer
+side and growing from where the finger went down. A clearly tall or wide drag
+still stretches, because a tall triangle is drawn on purpose. Rectangles and
+ellipses never snap: at any proportion they are still a rectangle and an
+ellipse, and a pentagon only reads as one with its sides equal. The rule is in
+the shared lib, so Pad and Flip both have it.
+
+verify_tray, on the lib:
+- drags 15% taller, 15% wider, and up and to the left all give equal sides;
+- just inside `POLY_SNAP` snaps and just outside stretches, read from the lib's
+  own constant;
+- a clearly tall drag stretches, and Shift evens it;
+- rectangles and ellipses keep the drag.
+
+verify_tools draws the 15%-taller pentagon on each editor and measures its
+sides. Four breakages of the lib each turned only the checks that pin them red:
+no snap, a snap for every kind, a snap for every drag, and an unsigned box that
+missed drags going up and to the left. Once per editor, an editor that
+re-stretched the outline after the lib turned only its own drawn check red.

@@ -638,6 +638,18 @@ _FGEO = """() => {
           w:Math.round(Math.max(...xs)-Math.min(...xs)),
           h:Math.round(Math.max(...ys)-Math.min(...ys))};
 }"""
+# The side lengths of a drawn sharp-cornered outline: it turns only at its
+# corners, and its last point closes back onto its first. spread 1.0 is equal
+# sides. Called on the last shape's points, which each page keeps its own way.
+_SIDES = """(pts) => { let q = pts.slice();
+  const e = q[q.length-1]; if (Math.hypot(e.x-q[0].x, e.y-q[0].y) < 0.5) q = q.slice(0, -1);
+  const v = [];
+  q.forEach((p, i) => { const a = q[(i-1+q.length) % q.length], c = q[(i+1) % q.length];
+    const turn = Math.abs(Math.atan2((p.x-a.x)*(c.y-p.y) - (p.y-a.y)*(c.x-p.x),
+                                     (p.x-a.x)*(c.x-p.x) + (p.y-a.y)*(c.y-p.y)));
+    if (turn > 0.6) v.push(p); });
+  const L = v.map((p, i) => Math.hypot(v[(i+1) % v.length].x-p.x, v[(i+1) % v.length].y-p.y));
+  return {corners: v.length, spread: +(Math.max(...L)/Math.min(...L)).toFixed(4)}; }"""
 
 def _sdrag(_pg, _sel, _x0, _y0, _x1, _y1, _shift=False):
     _bx = _pg.locator(_sel).bounding_box()
@@ -696,6 +708,22 @@ with sync_playwright() as _b8:
           "even though the drag was not square",
           _sq and abs(_sq["w"] - _sq["h"]) <= 3,
           f"{_sq['w']}x{_sq['h']} from a 240x150 drag")
+
+    # WITHOUT Shift, a polygon from a nearly square drag comes out even too: a
+    # phone has no Shift, and a pentagon drawn 15% tall looked like it tipped
+    # on a second axis once it was turned (reported from an iPhone, on Flip).
+    # The rule is the lib's (verify_tray asserts it there); drawn here on each
+    # editor, because the lib can be right while an editor re-fits the drag on
+    # its own way in.
+    _p8.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"poly\"]').click()")
+    _p8.wait_for_timeout(150)
+    _sdrag(_p8, "#canvas", 400, 400, 600, 630)
+    _ev = _p8.evaluate("() => { const g = strokeGroups[strokeGroups.length-1]; "
+                       "return (" + _SIDES + ")(strokes.slice(strokes.length - g)); }")
+    check("V213j a pentagon drawn from a drag 15% taller than wide comes out "
+          "with its sides EQUAL, no Shift needed",
+          _ev["corners"] == 5 and _ev["spread"] < 1.01,
+          f"{_ev} from a 200x230 drag — spread 1.0 is equal sides")
 
     # The tool slider was `pen ? 0 : penWidth` — a two-button ASSUMPTION, not a
     # two-button special case. A third tool parked the pill under the second.
@@ -762,6 +790,15 @@ with sync_playwright() as _b8:
     check("V213j flip: Shift gives a circle, same shared geometry as Pad",
           _fsq and abs(_fsq["w"] - _fsq["h"]) <= 3,
           f"{_fsq['w']}x{_fsq['h']} from a 240x150 drag")
+    _p8f.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"poly\"]').click()")
+    _p8f.wait_for_timeout(150)
+    _sdrag(_p8f, "#pad", 400, 250, 600, 480)
+    _fev = _p8f.evaluate("() => { const f = frames[idx], g = f.strokeGroups[f.strokeGroups.length-1]; "
+                         "return (" + _SIDES + ")(f.strokes.slice(f.strokes.length - g)); }")
+    check("V213j flip: the same nearly square drag gives the same even pentagon "
+          "(the surface it was reported on)",
+          _fev["corners"] == 5 and _fev["spread"] < 1.01,
+          f"{_fev} from a 200x230 drag — spread 1.0 is equal sides")
     # Rendered rectangles, for the reason spelled out at the Pad assertion above.
     # Flip is where the double subtraction did visible damage — its tool group
     # sits after the colour and media controls, so the error was the whole width
