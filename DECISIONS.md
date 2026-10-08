@@ -14454,3 +14454,41 @@ verify_loopui: the start bar painted beside its tile, not over it; and on a
 18px either side of its centre, the neighbouring page's delete still takes its
 own tap, and dragging the end bar shrinks the loop. Red per component: the room
 at the ends, the touch zone's width, touch-action.
+
+**A whole stroke blurred no longer goes dim.** Chasing the owner's report of a
+blurred diagonal ("ran a blur full length of diagonal stroke"), the middle of a
+7px violet line measured 61 of 255 when the whole stroke was blurred, against
+201 when half of it was. blurDensify pays alpha back for dabs that compound
+where they overlap, and a run whose every point has ONE alpha is not walked dab
+by dab: paintStatic draws it as one path, or through its own layer, at that
+alpha once. Blurring a stroke end to end saturates every point to one colour and
+size, so the payment was taken for an overlap that never happened. Such a run
+now keeps its alpha as it is: 192 blurred whole, 201 half way, and a partial
+blur is pixel for pixel what it was. verify_smudgeblur: a whole stroke blurred
+stays within 15% of one blurred half way; red without the guard (61 against
+201).
+
+**A second drag no longer dims the whole line.** The other half of that report
+-- "touched diag line ... and whole line did that" -- did not reproduce from a
+tap, which changes no point at all. It did from the sequence the owner then
+gave: draw a line, sweep Blur along all of it, barely stroke it a second time.
+211 of 255 after the swipe; 60 at both ends after a 10px touch in the middle.
+blurDensify stores a walked run's alpha per DAB, 1-(1-T)^(1/n), so the n dabs
+over a spot add up to T. The next drag read those dab alphas back as T, faded
+from them, and paid the overlap back a second time, on every point of every run
+the brush grazed, soft edge included. blurSeen now reads a walked run through
+the same overlap, 1-(1-x)^n, so every fade starts from what the line looks like,
+and a dab the drag leaves alone goes back exactly as it was. The touch leaves
+the ends at 211 and takes the middle to 194; three full swipes go 211, 162, 125
+at a fifth of the way along, where they went 211, 49, 1.
+
+verify_smudgeblur, one check per part of the fix, each red without its part and
+all of them red on main and on the whole-stroke fix alone:
+- a light second touch leaves the rest of the line as the swipe did. Red without
+  blurSeen: 62.
+- a heavy scrub of one spot leaves the rest of the line as it was. Red when an
+  untouched dab is re-paid from what it looks like instead of put back: the
+  overlap a run is paid by follows its widest point, which the scrub grows, so
+  the far ends came out 16% dimmer (177).
+- the scrubbed spot gains a soft edge rather than only fading. Red when its halo
+  is built from the stored dab alphas: 2 of 255 at 8px off the line, against 43.
