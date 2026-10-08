@@ -1976,9 +1976,12 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
     doFill(pos(e));
     return;
   }
-  // Stamp is a tap for the same reason and lands in the same place.
+  // Stamp is a tap for the same reason and lands in the same place. The press
+  // also puts the shelf away and still places, the way the shape picker steps
+  // aside for the press that draws -- see stampPopDismiss.
   if(flipTool === 'stamp'){
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
+    { const _st = document.getElementById('stampPop'); if(_st) _st.hidden = true; }
     doStamp(pos(e));
     return;
   }
@@ -10048,16 +10051,29 @@ function spotlightStamp(){
   sl.addEventListener('input', apply);
   apply();
 })();
-/* Escape, and NOTHING ELSE — deliberately unlike shapePopDismiss. That function
-   also closes on a click outside itself, which is right for a picker you use
-   once per drawing and wrong here twice over: choosing a stamp does not finish
-   with the shelf (you then place it, and the shelf is the only thing saying
-   which one is armed), and the click that places it lands on the canvas, which
-   is "outside". A shelf that vanished on the first placement would have to be
-   reopened for the second. Leaving the tool closes it; setTool() owns that. */
-(function stampPopEscape(){
+/* Escape, or a tap anywhere outside it (owner, iPhone: "Can't get the stamp
+   menu to go away without selecting a diff tool. Should be able to click
+   outside box and have it go away without selecting"). This was Escape and
+   NOTHING ELSE, on the reasoning that the shelf is the only thing saying which
+   stamp is armed, and that the tap placing one lands outside it, so a shelf
+   that vanished on the first placement would have to be reopened for the
+   second. Only the first half holds: the armed stamp stays armed with the shelf
+   put away, every tap on the canvas keeps placing it, and Stamp brings the
+   shelf back to change it.
+   The canvas is handled where a press lands on it, in pointerdown: a press that
+   slides before it lifts is not a click, and a finger slides. This is
+   everything else. The routes INTO the tool are not outside -- the Stamp button
+   toggles the shelf itself (shelfSetTool) and the tray's cell opens it -- or
+   this would shut what they had just opened. Leaving the tool closes it too;
+   setTool() owns that. */
+(function stampPopDismiss(){
   const pop=document.getElementById('stampPop');
   if(!pop) return;
+  document.addEventListener('click',e=>{
+    if(pop.hidden) return;
+    if(e.target.closest('#stampPop, #stampToolBtn, [data-tool="stamp"]')) return;
+    pop.hidden=true;
+  });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!pop.hidden) pop.hidden=true; });
 })();
 /* Dismiss the shape picker on a tap outside it. Closing on a PICK is decided
