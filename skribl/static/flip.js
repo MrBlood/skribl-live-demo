@@ -8876,7 +8876,17 @@ function blurPasses(extraPts, extraRuns, basePts, baseRuns){
    x compositing over each other give 1 - (1-x)^n, so the per-dab alpha that
    accumulates to the intended weight is 1 - (1-T)^(1/n). Derived, not tuned,
    and n is the overlap the run ACTUALLY ended up with rather than the one it
-   asked for. */
+   asked for.
+
+   AND ONLY WHEN THE RUN WILL ACTUALLY COMPOUND. A run whose every point has
+   one alpha is not walked dab by dab: paintStatic draws it as ONE path (one
+   colour and size) or through its own layer (one alpha), and either way it
+   paints at that alpha once, with nothing to compound. Blur the WHOLE of a
+   stroke and every point saturates to the same colour and size -- so the
+   payment for an overlap that never happens was still taken, and the line
+   dropped to a quarter of its brightness. Measured on a 7px violet line:
+   the middle at 61 of 255 when all of it was blurred, 201 when half of it
+   was, which is the brightness the soft edge is meant to have. */
 function blurDensify(seg){
   if(seg.length < 2) return seg;
   let len = 0;
@@ -8888,6 +8898,8 @@ function blurDensify(seg){
   if(want > seg.length) seg = tweenResample(seg, Math.min(want, seg.length * 12));
   const spacing = len / Math.max(1, seg.length - 1);
   const n = Math.max(1, Math.min(BLUR_OVERLAP * 2, wide / Math.max(0.001, spacing)));
+  const a0 = strokeAlphaOf(seg[0].color);
+  if(seg.every(q => strokeAlphaOf(q.color) === a0)) return seg;   // painted once: nothing to pay back
   if(n > 1) for(const q of seg){
     const t = strokeAlphaOf(q.color);
     if(t > 0 && t < 1)

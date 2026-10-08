@@ -14454,3 +14454,20 @@ verify_loopui: the start bar painted beside its tile, not over it; and on a
 18px either side of its centre, the neighbouring page's delete still takes its
 own tap, and dragging the end bar shrinks the loop. Red per component: the room
 at the ends, the touch zone's width, touch-action.
+
+**A whole stroke blurred no longer goes dim.** Chasing the owner's report of a
+blurred diagonal ("ran a blur full length of diagonal stroke"), the middle of a
+7px violet line measured 61 of 255 when the whole stroke was blurred, against
+201 when half of it was. blurDensify pays alpha back for dabs that compound
+where they overlap, and a run whose every point has ONE alpha is not walked dab
+by dab: paintStatic draws it as one path, or through its own layer, at that
+alpha once. Blurring a stroke end to end saturates every point to one colour and
+size, so the payment was taken for an overlap that never happened. Such a run
+now keeps its alpha as it is: 192 blurred whole, 201 half way, and a partial
+blur is pixel for pixel what it was. verify_smudgeblur: a whole stroke blurred
+stays within 15% of one blurred half way; red without the guard (61 against
+201).
+
+The other half of that report -- one touch softening the whole line -- did not
+reproduce: a finger tap through the real touch path, on a fast and a slow swipe,
+changed no point at all. Asked the owner for the file.

@@ -643,6 +643,40 @@ with sync_playwright() as p:
               f"{_cut} — pixels that differ, in the eraser's stretch, between the "
               f"blurred line with and without an older eraser under it")
 
+        # A WHOLE STROKE BLURRED MUST NOT GO DIM. blurDensify pays alpha back for
+        # dabs that compound where they overlap -- but a run whose every point
+        # has one alpha is painted ONCE (one path, or its own layer), so there is
+        # no overlap to pay for. Blurring the whole of a stroke saturates every
+        # point to one colour and size, and the payment was still taken: found
+        # chasing the owner's report of a blurred diagonal, the middle of a 7px
+        # violet line measured 61 of 255 blurred end to end against 201 blurred
+        # half way. Same line, same sweep over the middle; only the extent moves.
+        _bright = page.evaluate("""() => {
+          const middle = (extent) => {
+            frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 }); idx = 0; size = 7;
+            const f = frames[0], A = [200, 120], B = [560, 460], n = 60;
+            for (let i = 0; i < n; i++) { const t = i / (n - 1);
+              f.strokes.push({ x: A[0] + (B[0] - A[0]) * t, y: A[1] + (B[1] - A[1]) * t, color: '#7c5cff', size: 7, t: i * 16, start: i === 0 }); }
+            f.strokeGroups.push(n);
+            const at = (t) => ({ x: A[0] + (B[0] - A[0]) * t, y: A[1] + (B[1] - A[1]) * t });
+            setTool('blur'); fieldBegin(at(0.5 - extent / 2), 'Blur');
+            for (let r = 0; r < 2; r++) {
+              for (let s = 0; s <= 100; s++) blurMove(at(0.5 - extent / 2 + extent * s / 100));
+              for (let s = 100; s >= 0; s--) blurMove(at(0.5 - extent / 2 + extent * s / 100));
+            }
+            fieldEnd(); setTool('pen');
+            const cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
+            const c = cv.getContext('2d'); c.fillStyle = '#000'; c.fillRect(0, 0, CW, CH);
+            paintFrame(c, f.strokes);
+            return c.getImageData(380, 290, 1, 1).data[2];
+          };
+          return { whole: middle(1.0), half: middle(0.5) };
+        }""")
+        check("a WHOLE stroke blurred stays as bright as one blurred half way",
+              _bright["half"] > 120 and _bright["whole"] >= 0.85 * _bright["half"],
+              f"{_bright} — the middle of the line, blue channel of 255: a run painted "
+              f"once must not pay alpha back for an overlap it never has")
+
         print("\nOVER A PHOTO — the limit, said out loud instead of silently")
         # These tools move and recolour STROKE POINTS. A photograph is not
         # strokes, so sweeping one does nothing -- which is correct and looks
