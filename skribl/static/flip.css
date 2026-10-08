@@ -734,8 +734,12 @@
   .pageops-item.danger svg { color: var(--danger-soft); }
   .pageops-item.danger:hover:not(:disabled) { color: var(--danger-soft-2); background: rgba(244, 50, 111, .12); }
 
-  /* Small transient chip for "Draft restored". */
-  .flip-chip { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 30;
+  /* The transient chip: "Draft restored", "Blur undone", a blocked action.
+     chip() sets `top` just under the header; this is its fallback when the
+     header is off screen. Not `bottom`: on a phone the bottom is the dock, and
+     the chip sat on Undo (flip.js chip()). */
+  .flip-chip { position: fixed; left: 50%; transform: translateX(-50%);
+    top: calc(16px + env(safe-area-inset-top)); z-index: 30;
     background: rgba(var(--glass-deep-2-rgb), .85); border: 1px solid var(--hairline-strong); color: var(--text-secondary);
     border-radius: var(--r-pill); padding: 7px 14px; font-size: 12.5px; font-weight: 600;
     opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }

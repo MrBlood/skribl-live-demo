@@ -14413,3 +14413,20 @@ loader). The suite's sample-rate check read `f.strokes[4].color` through `\d+`,
 which compared a stray decimal digit of a halo's hex ALPHA (1 against 2 on
 main) and went empty once the halo moved; it reads the core's alpha now, 52
 against 56 per pixel travelled and 134 against 68 accrued per event.
+
+**Flip's chip comes off the dock (owner, iPhone: "the blur undone toast is right
+on top of the undo button preventing rapid undos").** Flip's chip sat 18px off
+the bottom of the screen, which is the dock: "Blur undone" covered Undo, the
+control it answers, when the next press is likeliest -- at 390, 820 and 1280
+alike. The Pad took its toast off the controls in v315 and puts it just under
+the header; Flip's chip never learned that, and now does, measured the same
+way, with the same fallback when the header is off screen. The chip was already
+pointer-events:none, so a tap should reach Undo through it -- iPhone Safari is
+not here to say otherwise -- and a note drawn over the button being pressed is
+wrong whether or not the tap lands. verify_layout: blur, press Undo, and
+the chip clears the header and the dock while what is PAINTED at Undo's centre
+is Undo, probed with the chip made hit-testable (elementFromPoint looks through
+a pointer-events:none element and would answer Undo with the chip on top).
+Red on main at all three sizes, and on each half of the fix alone: without the
+measured top the chip lands on the header; with the old bottom rule kept, it
+stretches from the header to the dock.

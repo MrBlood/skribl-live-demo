@@ -1251,7 +1251,18 @@ function tryRestore(){
 }
 function chip(msg){
   const el = document.getElementById('flipChip');
-  el.textContent = msg; el.classList.add('show');
+  el.textContent = msg;
+  /* JUST UNDER THE HEADER, NEVER ON THE DOCK (owner, iPhone: "the blur undone
+     toast is right on top of the undo button preventing rapid undos"). It sat
+     18px off the bottom of the screen, which on a phone is the dock -- so
+     "Blur undone" covered Undo, the control it was answering, at the moment
+     the next press is most likely. The Pad took its toast off the controls in
+     v315 (app.js showToast: A TOAST NEVER COVERS A CONTROL) and puts it just
+     under the header; this is the same place, measured the same way, with the
+     same fallback when the header is off screen. */
+  const h = document.querySelector('.flip-app .header'), r = h && h.getBoundingClientRect();
+  el.style.top = (r && r.bottom > 0) ? Math.round(r.bottom + 8) + 'px' : '';
+  el.classList.add('show');
   clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 2200);
 }
 // The blank-page whisper (Pad's .canvas-empty-hint, same treatment): visible

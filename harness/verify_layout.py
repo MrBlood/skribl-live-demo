@@ -1004,6 +1004,56 @@ with sync_playwright() as p:
               str(_loop))
         _ctx.close()
 
+    # FLIP'S CHIP NEVER LEARNED IT. The Pad's toast came off the controls in
+    # v315; Flip's chip stayed 18px off the bottom of the screen, which on a
+    # phone is the dock. Owner, iPhone: "the blur undone toast is right on top
+    # of the undo button preventing rapid undos." Driven as reported: blur a
+    # line, press Undo, and ask about the chip that answers it.
+    #
+    # WHAT IS PAINTED AT UNDO, not where the chip's box is: elementFromPoint at
+    # Undo's centre, with the chip made hit-testable for the probe. The chip is
+    # pointer-events:none, and elementFromPoint looks straight through such an
+    # element -- it would answer "Undo" with the chip drawn right over it.
+    print("\nLAYOUT — Flip: the chip clears the header and the dock, and never covers Undo")
+    FLIP_OVER = """() => { const t = document.getElementById('flipChip');
+        if (!t || !t.classList.contains('show')) return { shown: false };
+        const a = t.getBoundingClientRect(), hit = (el) => { if (!el) return false;
+          const r = el.getBoundingClientRect(); if (!(r.width || r.height)) return false;
+          return a.top < r.bottom && a.bottom > r.top && a.left < r.right && a.right > r.left; };
+        const u = document.getElementById('undo').getBoundingClientRect();
+        t.style.pointerEvents = 'auto';
+        const at = document.elementFromPoint(u.left + u.width / 2, u.top + u.height / 2);
+        t.style.pointerEvents = '';
+        return { shown: true, text: t.textContent, top: Math.round(a.top), bottom: Math.round(a.bottom),
+                 header: hit(document.querySelector('.flip-app .header')),
+                 dock: hit(document.querySelector('.flip-tools')),
+                 undoPainted: !!(at && at.closest('#undo')) }; }"""
+    for _w, _vp in (("390", {"width": 390, "height": 844}), ("820", {"width": 820, "height": 1180}),
+                    ("1280", {"width": 1280, "height": 900})):
+        _ctx = browser.new_context(viewport=_vp, is_mobile=_vp["width"] < 700, has_touch=_vp["width"] < 700)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, "/flip")
+        _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _box = _pg.locator("#pad").bounding_box()
+        _cx, _cy = _box["x"] + _box["width"] / 2, _box["y"] + _box["height"] / 2
+        _pg.mouse.move(_cx - 80, _cy); _pg.mouse.down()
+        for _i in range(17):
+            _pg.mouse.move(_cx - 80 + _i * 10, _cy); _pg.wait_for_timeout(12)
+        _pg.mouse.up(); _pg.wait_for_timeout(200)
+        _pg.evaluate("() => setTool('blur')")
+        _pg.mouse.move(_cx - 60, _cy); _pg.mouse.down()
+        for _i in range(13):
+            _pg.mouse.move(_cx - 60 + _i * 10, _cy); _pg.wait_for_timeout(12)
+        _pg.mouse.up(); _pg.wait_for_timeout(200)
+        _pg.click("#undo"); _pg.wait_for_timeout(150)
+        _said = _pg.evaluate(FLIP_OVER)
+        check(f"@{_w}: Flip's 'Blur undone' shows clear of the header and the dock",
+              _said.get("shown") and _said.get("text") == "Blur undone" and _said["top"] >= 0
+              and not _said["header"] and not _said["dock"], str(_said))
+        check(f"@{_w}: ...and what is painted at Undo is Undo, for the next press",
+              _said.get("shown") and _said["undoPainted"], str(_said))
+        _ctx.close()
+
     # On a phone a drawer opens below the toolbar and the page scrolls to
     # reveal it; that took Post, Play and ⋯ off the top of the screen (owner,
     # iPhone). The header now pins. Asked of what is PAINTED, not of a rect:
