@@ -14612,3 +14612,55 @@ sides. Four breakages of the lib each turned only the checks that pin them red:
 no snap, a snap for every kind, a snap for every drag, and an unsigned box that
 missed drags going up and to the left. Once per editor, an editor that
 re-stretched the outline after the lib turned only its own drawn check red.
+
+**Blurring a line again softens it instead of turning it blue, and Blur shows
+how far it reaches (owner: "2nd screenshot is with blur over it 4 times. looks
+like a different color. also, shouldn't the blur have an adjustable target and
+be a circle the size of the blur diameter? also, how many strokes is it
+now?").** The owner's saved file held the one violet line as 32 runs and
+10,224 points. Each blur gave every pass three passes of its own, so one line
+was 4 runs after a blur, 16 after two and 64 after three, each pass fainter
+than the last, until their dabs were 0 to 3 of 255. At that strength 8-bit
+compositing keeps blue and rounds red and green away. Rebuilt from the line in
+the file and blurred end to end here, the second blur turned it pure blue and
+the fourth all but erased it; on the owner's PC the same file drew a dim
+indigo, because each engine rounds its own way.
+
+A blurred line's passes are now known for what they are. blurRebuild has always
+written the line's last `t` on every point of a pass, and nothing else writes
+one `t` along a whole run, so a run like that after its line is its soft edge
+-- in an old file as much as a new one. Going over the line again deepens that
+edge instead of blurring it:
+- the passes widen away from the line as drawn, keeping their strength;
+- the line softens with them, so it does not sit crisp inside a growing glow;
+- past three blurs' worth (BLUR_DEEP_MAX) another blur changes nothing.
+The line stays four runs however often it is blurred. No pass is drawn with
+dabs fainter than 6 of 255 (BLUR_DAB_MIN): a faint pass gets fewer dabs, and
+one too faint for even one is dropped, as is a faded line's excess density.
+Blurring the owner's file once more took it from 32 runs to 13 and brought the
+violet back. The rate and the cap were picked from renders of the owner's line
+blurred one to four times at six settings.
+
+Blur and Smudge reach liquifyRadius(), six times the brush size, and showed the
+pen's ring, a sixth of that; they wear Liquify's dashed ring now. Every ring
+took its ink from the page theme while the canvas keeps the drawing's ground,
+dark in either theme, so in the light theme they were dark on dark. They take
+it from the ground now.
+
+verify_smudgeblur, BLURRING AGAIN: the owner's 13px violet, blurred end to end
+six times, keeps its hue, keeps at least half its strength, stays four runs,
+draws no pass under the floor, gets softer at each of the first blurs with its
+middle softening too, and stops changing past the cap. A small copy of the
+owner's file's shape is repaired rather than added to. THE REACH, SHOWN, with
+real mouse moves: Blur's ring is as wide as its reach and follows the brush
+size, Smudge wears it, the pen does not, and it is light on the dark canvas and
+dark on a white one in both themes. Eleven of the fourteen are red on main.
+Each part of the fix removed on its own turned its own checks red: the
+families, the floor, the passes widening, the line softening with them, the
+cap, the ring on Blur and Smudge, the ground's ink and its class. Two drafts
+were caught that way. The line's own softening was first asked at a 4-step
+margin, which the passes alone cleared; it asks for 15. The light-ground case
+first ran on a page that did not name a theme, which is the light one, where
+the ring was dark anyway; each theme has its own page now. A rule that put
+every dab back exactly at the cap changed nothing measurable when removed, and
+is gone.

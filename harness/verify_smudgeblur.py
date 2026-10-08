@@ -34,6 +34,7 @@ often the OS sampled the finger. Measured across that change, the gap between a
 All of which is invisible in a screenshot, and is the thing most likely to be
 "simplified" back out by someone who reads the accumulator as ceremony.
 """
+import colorsys
 import os
 import re
 import sys
@@ -739,6 +740,172 @@ with sync_playwright() as p:
               _s["two"]["edge"] - _s["one"]["edge"] >= 20,
               f"{_s} — 'edge' is 8px off the line at the scrubbed spot: the soft "
               f"edge there must grow")
+
+        print("\nBLURRING AGAIN — softer each time, the same colour, the same strokes")
+        # The owner blurred a violet line four times, end to end: "looks like a
+        # different color" -- and the file held that one line as 32 runs and
+        # 10,224 points. Each blur gave every pass three passes of its own, so
+        # the runs went 1, 4, 16, 64, each fainter than the last, until their
+        # dabs were 0-3/255: at that strength 8-bit compositing keeps blue and
+        # rounds red and green away. Here the second blur turned the line pure
+        # blue and the fourth all but erased it. The owner's 13px violet, blurred
+        # end to end six times; the middle of the line, across it, after each.
+        _deep = page.evaluate("""() => {
+          frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 }); idx = 0; size = 13;
+          const f = frames[0], A = [200, 120], B = [560, 460], n = 60;
+          for (let i = 0; i < n; i++) { const t = i / (n - 1);
+            f.strokes.push({ x: A[0] + (B[0] - A[0]) * t, y: A[1] + (B[1] - A[1]) * t, color: '#7c5cff', size: 13, t: i * 16, start: i === 0 }); }
+          f.strokeGroups.push(n);
+          const at = (t) => ({ x: A[0] + (B[0] - A[0]) * t, y: A[1] + (B[1] - A[1]) * t });
+          const L = Math.hypot(B[0] - A[0], B[1] - A[1]), nx = -(B[1] - A[1]) / L, ny = (B[0] - A[0]) / L;
+          const look = () => {
+            const cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
+            const c = cv.getContext('2d'); c.fillStyle = '#000'; c.fillRect(0, 0, CW, CH);
+            paintFrame(c, f.strokes);
+            const m = at(0.5); let peak = [0, 0, 0], reach = 0;
+            for (let off = -60; off <= 60; off++) {
+              const d = c.getImageData(Math.round(m.x + nx * off), Math.round(m.y + ny * off), 1, 1).data;
+              if (d[2] > peak[2]) peak = [d[0], d[1], d[2]];
+              if (d[2] >= 26) reach++;          // a tenth of the drawn line's blue
+            }
+            // Per translucent run, its strongest dab; the weakest of those.
+            let weakest = 1, i = 0;
+            for (const g of f.strokeGroups) { let top = -1;
+              for (let k = i; k < i + g; k++) { const a = strokeAlphaOf(f.strokes[k].color); if (a < 1) top = Math.max(top, a); }
+              if (top >= 0) weakest = Math.min(weakest, top); i += g; }
+            return { runs: f.strokeGroups.length, points: f.strokes.length, peak, reach, weakest: Math.round(weakest * 2550) / 10 };
+          };
+          const out = [look()];
+          setTool('blur');
+          for (let k = 1; k <= 6; k++) {
+            fieldBegin(at(-0.05), 'Blur');
+            for (let s = 0; s <= 120; s++) blurMove(at(-0.05 + 1.1 * s / 120));
+            fieldEnd(); out.push(look());
+          }
+          setTool('pen');
+          return { out: out, floor: Math.round((typeof BLUR_DAB_MIN === 'number' ? BLUR_DAB_MIN : 6 / 255) * 2550) / 10 };
+        }""")
+        _d = _deep["out"]
+        _hue = lambda rgb: round(colorsys.rgb_to_hsv(*(c / 255 for c in rgb))[0] * 360, 1)
+        _row = lambda k: f"{_d[k]['runs']} runs, {_d[k]['points']} pts, peak {_d[k]['peak']} hue {_hue(_d[k]['peak'])}, reach {_d[k]['reach']}"
+        _seq = "; ".join(f"{k}: " + _row(k) for k in range(len(_d)))
+        check("blurring a line again keeps its colour",
+              all(abs(_hue(_d[k]["peak"]) - _hue(_d[0]["peak"])) <= 5 for k in range(1, 7)),
+              f"the hue of the line's middle, drawn and after each blur: {_seq}")
+        check("...and does not fade it away",
+              _d[6]["peak"][2] >= 0.5 * _d[0]["peak"][2],
+              f"blue at the middle, drawn {_d[0]['peak'][2]}, after six blurs {_d[6]['peak'][2]} of 255")
+        check("a line blurred six times is still one line and three soft passes",
+              all(r["runs"] <= 4 for r in _d) and _d[6]["points"] <= 8 * 60,
+              f"{_seq} — passes used to get passes of their own: 1, 4, 16, 64 runs")
+        check("no soft pass is drawn with dabs too faint for the screen to colour",
+              all(r["weakest"] >= _deep["floor"] - 0.5 for r in _d),
+              f"the weakest run's strongest dab, of 255, after each blur: "
+              f"{[r['weakest'] for r in _d]} against a floor of {_deep['floor']}")
+        check("each blur leaves the line softer",
+              _d[2]["reach"] >= _d[1]["reach"] + 2 and _d[3]["reach"] >= _d[2]["reach"] + 2,
+              f"rows across the middle at a tenth of the line's blue, after each blur: "
+              f"{[r['reach'] for r in _d]}")
+        check("...the line itself softening with its edge, not sitting crisp inside a glow",
+              _d[2]["peak"][2] <= _d[1]["peak"][2] - 15,
+              f"blue at the middle after one blur {_d[1]['peak'][2]}, after two {_d[2]['peak'][2]}")
+        check("...up to a limit, past which another blur changes nothing",
+              abs(_d[6]["reach"] - _d[5]["reach"]) <= 1 and _d[6]["peak"] == _d[5]["peak"],
+              f"after five blurs: {_row(5)}; after six: {_row(6)}")
+
+        # A LINE BLURRED BEFORE THIS FIX: its passes of passes are in people's
+        # saved files, the owner's among them, and they draw blue. Blurring it
+        # again has to repair it rather than add to it -- the passes that draw
+        # nothing go, the faint ones are redrawn at a strength the screen can
+        # colour. A small copy of the owner's file's shape: the line at 10-12 of
+        # 255 a dab, then passes carrying its last `t` at 2-3, 0-1 and 0 of 255,
+        # mixed point to point as the file's are -- a run of ONE alpha is
+        # painted once rather than walked, which is a different case.
+        _old = page.evaluate("""() => {
+          frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 }); idx = 0; size = 13;
+          const f = frames[0], A = [200, 120], B = [560, 460];
+          const run = (n, colors, sz, flatT) => { for (let i = 0; i < n; i++) { const t = i / (n - 1);
+              f.strokes.push({ x: A[0] + (B[0] - A[0]) * t, y: A[1] + (B[1] - A[1]) * t, color: colors[i % colors.length],
+                               size: sz, t: flatT === undefined ? i * 16 : flatT, start: i === 0 }); }
+            f.strokeGroups.push(n); };
+          run(120, ['#7c5cff0c', '#7c5cff0a'], 13);
+          const T = 119 * 16;
+          const kinds = [['#7c5cff03', '#7c5cff02'], ['#7c5cff01', '#7c5cff00'], ['#7c5cff00']];
+          for (let p = 0; p < 15; p++) run(90 + p, kinds[p % 3], 16 + p * 1.4, T);
+          const at = (t) => ({ x: A[0] + (B[0] - A[0]) * t, y: A[1] + (B[1] - A[1]) * t });
+          const before = { runs: f.strokeGroups.length, points: f.strokes.length };
+          setTool('blur'); fieldBegin(at(-0.05), 'Blur');
+          for (let s = 0; s <= 120; s++) blurMove(at(-0.05 + 1.1 * s / 120));
+          fieldEnd(); setTool('pen');
+          let zero = 0, weakest = 1, i = 0;
+          for (const g of f.strokeGroups) { let top = -1;
+            for (let k = i; k < i + g; k++) { const a = strokeAlphaOf(f.strokes[k].color); if (a < 1) top = Math.max(top, a); }
+            if (top === 0) zero++;
+            if (top >= 0) weakest = Math.min(weakest, top); i += g; }
+          return { before, runs: f.strokeGroups.length, points: f.strokes.length, zero,
+                   weakest: Math.round(weakest * 2550) / 10 };
+        }""")
+        check("blurring a line saved before this fix repairs it rather than adding to it",
+              _old["runs"] <= 1 + 10 and _old["zero"] == 0
+              and _old["weakest"] >= _deep["floor"] - 0.5,
+              f"{_old} — the 5 passes that drew nothing must go, no run may be added, "
+              f"and none may be left drawing in dabs under the floor")
+
+        print("\nTHE REACH, SHOWN — Blur and Smudge wear the ring Liquify does")
+        # The owner, of Blur: "shouldn't the blur have an adjustable target and
+        # be a circle the size of the blur diameter?" Blur and Smudge reach
+        # liquifyRadius(), six times the brush size, and showed the pen's ring,
+        # a sixth of that. Real mouse moves over the canvas; the ring's width
+        # against the reach it has to draw.
+        page.evaluate("() => { frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 }); idx = 0; render(); }")
+        _pb = page.locator("#pad").bounding_box()
+        def _ring_for(pg, box, tool, sz):
+            pg.evaluate("(a) => { size = a[1]; setTool(a[0]); }", [tool, sz])
+            pg.mouse.move(box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.5)
+            pg.mouse.move(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
+            pg.wait_for_timeout(80)
+            return pg.evaluate("""() => { const r = document.querySelector('.flip-liquify-cursor'), b = pad.getBoundingClientRect();
+              return { shown: r.style.display === 'block', width: Math.round(parseFloat(r.style.width) * 10) / 10,
+                       want: Math.round(liquifyRadius() * 2 * (b.width / CW) * 10) / 10,
+                       ink: getComputedStyle(r).borderTopColor }; }""")
+        _b7, _b13 = _ring_for(page, _pb, "blur", 7), _ring_for(page, _pb, "blur", 13)
+        _s13, _p13 = _ring_for(page, _pb, "smudge", 13), _ring_for(page, _pb, "pen", 13)
+        page.evaluate("() => { size = 7; setTool('pen'); }")
+        check("Blur shows how far it reaches: the dashed ring, as wide as its reach",
+              _b7["shown"] and abs(_b7["width"] - _b7["want"]) <= 1, str(_b7))
+        check("...and the ring follows the brush size",
+              _b13["shown"] and _b13["width"] >= 1.6 * _b7["width"], f"size 7 {_b7}; size 13 {_b13}")
+        check("Smudge wears the same ring",
+              _s13["shown"] and abs(_s13["width"] - _s13["want"]) <= 1, str(_s13))
+        check("...and the pen does not", not _p13["shown"], str(_p13))
+
+        # THE RING'S INK IS THE GROUND'S, NOT THE THEME'S. The canvas is dark in
+        # both themes unless the drawing picks a light ground, and the rings
+        # were drawn in the page theme's ink: in the light theme, dark on the
+        # dark canvas -- the photographs for the owner's mock showed the ring
+        # all but gone. Measured on the ring's own computed colour.
+        _rgb = lambda s: [int(float(v)) for v in re.findall(r"[\d.]+", s)[:3]]
+        # Each theme on a page of its own, said explicitly: a page that does not
+        # say is the LIGHT theme, which is how the first draft of the light-
+        # ground case passed on main -- its ink was dark everywhere anyway.
+        _ink = {}
+        for _theme in ("light", "dark"):
+            _tp = br.new_page(viewport={"width": 1280, "height": 900}, color_scheme=_theme)
+            try:
+                browsing.goto(_tp, BASE, "/flip")
+                _tb = _tp.locator("#pad").bounding_box()
+                _ink[_theme] = _ring_for(_tp, _tb, "blur", 7)["ink"]
+                _tp.evaluate("() => setBg('#ffffff')")
+                _ink[_theme + " on white"] = _ring_for(_tp, _tb, "blur", 7)["ink"]
+            finally:
+                _tp.close()
+        check("in the light theme the ring is light on the dark canvas",
+              min(_rgb(_ink["light"])) >= 200 and min(_rgb(_ink["dark"])) >= 200,
+              f"ring ink on the dark ground: {_ink['light']} in the light theme, {_ink['dark']} in the dark")
+        check("...and dark on a drawing with a light ground",
+              max(_rgb(_ink["dark on white"])) <= 60 and max(_rgb(_ink["light on white"])) <= 60,
+              f"ring ink on a white ground: {_ink['dark on white']} in the dark theme, "
+              f"{_ink['light on white']} in the light")
 
         print("\nOVER A PHOTO — the limit, said out loud instead of silently")
         # These tools move and recolour STROKE POINTS. A photograph is not

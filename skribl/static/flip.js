@@ -398,6 +398,9 @@ let moveOrigin = null, moveDragging = false, moveStart = null;
    functions 2500 lines below would be in its temporal dead zone at that moment
    and would take the whole file down with it. */
 let liquifying = false, liquifyPointerId = null;
+// The tools that reach liquifyRadius() around the pointer, and so wear its
+// ring. Up here for the reason above: setTool() reads it.
+const REACH_TOOLS = new Set(['liquify', 'smudge', 'blur']);
 let fieldActive = false, fieldPointerId = null;   // smudge / blur
 /* HOW MANY TIMES THE CHEAP PATH PAINTS ONE PIXEL (SK-AUD-007). While a field
    tool's finger is down a see-through run skips its layer (paintStatic says
@@ -2361,7 +2364,10 @@ pad.addEventListener('pointermove', e=>{
   }
   if(playing || picking){ hideCursors(); return; }
   if(ZoomView && ZoomView.isZoomed()){ hideCursors(); return; }   // use a normal cursor while magnified
-  if(flipTool === 'liquify'){
+  // Blur and Smudge reach exactly as far as Liquify (liquifyRadius), so they
+  // wear its ring: the owner asked where the blur's edge was, and the pen's
+  // ring said the brush was a sixth of the size it is.
+  if(REACH_TOOLS.has(flipTool)){
     moveLiquifyCursor(e); eraserCursor.style.display='none'; brushCursor.style.display='none';
   }
   else if(erasing){ moveEraserCursor(e); brushCursor.style.display='none'; liquifyCursor.style.display='none'; }
@@ -4495,7 +4501,7 @@ function setTool(t){
   if(typeof brushCursor!=='undefined' && erasing) brushCursor.style.display='none';
   // Each ring belongs to one tool; leaving a tool must take its ring with it,
   // or the last one drawn hangs around over the canvas until the next move.
-  if(typeof liquifyCursor!=='undefined' && flipTool !== 'liquify') liquifyCursor.style.display='none';
+  if(typeof liquifyCursor!=='undefined' && !REACH_TOOLS.has(flipTool)) liquifyCursor.style.display='none';
   if(picking) setPicking(false);
 }
 // Shared with Pad via lib/recentcolors.js. closePop() stays here: Flip's
@@ -4715,7 +4721,10 @@ function markLightGround(){
   const hex = (bgColor || '#0d0f14').replace('#', '');
   if(hex.length < 6) return;
   const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-  zl.classList.toggle('light-bg', (0.2126*r + 0.7152*g + 0.0722*b) / 255 > 0.6);
+  const light = (0.2126*r + 0.7152*g + 0.0722*b) / 255 > 0.6;
+  zl.classList.toggle('light-bg', light);
+  // The pointer rings take their ink from the ground too (flip.css, .light-ground).
+  const wrap = document.querySelector('.flip-wrap'); if(wrap) wrap.classList.toggle('light-ground', light);
   // The overlay's own class, not `grid`: that is declared further down, and
   // applyBg runs while the page is still loading.
   const ge = document.getElementById('flipGrid'); if(ge && ge.classList.contains('on')) syncGrid();
@@ -8650,6 +8659,9 @@ let _fieldIdx = -1, _fieldBefore = null, _fieldLast = null,
     _fieldTouched = false, _fieldLabel = '';
 let _blurAcc = null;            // point index -> accumulated weight, this drag
 let _blurSeen = null;           // run index -> blurSeen of that run in the snapshot, this drag
+let _blurFam = null;            // run index -> the line it is the soft edge of (itself for a line), in the snapshot
+let _blurAt = null;             // run index -> its first point in the snapshot
+let _blurSoft = null;           // line index -> blurSoftOf that line in the snapshot, this drag
 let _smear = null;              // point OBJECT -> smear state, this drag
 let _fieldOverUnder = false;    // the brush crossed the page underneath's ink, this drag
 
@@ -8659,7 +8671,7 @@ function fieldBegin(pt, label){
   // would land somewhere else.
   _fieldIdx = idx; _fieldLabel = label; _fieldTouched = false; _fieldOverUnder = false;
   _fieldLast = { x: pt.x, y: pt.y };
-  _blurAcc = new Map(); _blurSeen = new Map();
+  _blurAcc = new Map(); _blurSeen = new Map(); _blurFam = null; _blurAt = null; _blurSoft = new Map();
   _smear = new WeakMap();
   const f = frames[_fieldIdx];
   _fieldBefore = f ? { strokes: f.strokes.map(q => Object.assign({}, q)),
@@ -8707,7 +8719,7 @@ function fieldEnd(){
   const touched = _fieldTouched, label = _fieldLabel, overUnder = _fieldOverUnder;
   _fieldOverUnder = false;
   _fieldBefore = null; _fieldLast = null; _fieldIdx = -1; _fieldTouched = false;
-  _blurAcc = null; _blurSeen = null; _smear = null;
+  _blurAcc = null; _blurSeen = null; _blurFam = null; _blurAt = null; _blurSoft = null; _smear = null;
   // Nothing caught -> NO undo entry, the same rule liquifyEnd states: a tap on
   // empty canvas must not push a no-op the user then has to press through.
   if(!touched || !before || !f){
@@ -8865,6 +8877,62 @@ const BLUR_POINT_CAP = 15000, BLUR_GROUP_CAP = 4000;
    spending points nobody can see. It is also the n that the alpha compensation
    below divides by, so the two numbers are the same number on purpose. */
 const BLUR_OVERLAP = 5;
+/* NO DAB FAINTER THAN THE SCREEN CAN COLOUR. A canvas keeps 8 bits a channel,
+   and a dab of the owner's violet at 1/255 adds 0.49 of a step to red, 0.36 to
+   green and 0.92 to blue: red and green round away and blue does not. Hundreds
+   of those over one spot paint a BLUE line, and that is what blurring a violet
+   line a second time drew -- here pure blue, on the owner's PC a dim indigo,
+   because how an engine rounds is its own business. A soft pass is drawn with
+   as few dabs as keep its strongest at this or above, and a pass that cannot
+   reach it is not drawn at all. 6/255 moves every channel of a mid colour by at
+   least one step per dab. */
+const BLUR_DAB_MIN = 6 / 255;
+/* GOING OVER A BLURRED LINE AGAIN DEEPENS ITS SOFT EDGE. It used to blur the
+   soft edge as though it were three more lines: each pass got three passes of
+   its own, so one line was 4 runs after a blur, 16 after two, 64 after three
+   -- the owner's saved line was 32 runs and 10,224 points -- every one of them
+   fainter than the last, until the faint ones drew in blue (BLUR_DAB_MIN).
+
+   Softness is measured in BLUR_UNITs: how far one full blur takes the widest
+   pass past the core, in soft edges (that pass's 1, less the 0.18 the core
+   itself widens). Each drag adds up to a unit wherever it goes, so the line
+   gets softer at the same rate each time; BLUR_DEEP_MAX units is as soft as it
+   gets. Three, judged from renders of a 13px line blurred one to four times:
+   softer at every step up to there, and at the cap the three passes are far
+   enough apart that their edges begin to show as bands. */
+const BLUR_UNIT = 1 - 0.18;
+const BLUR_DEEP_MAX = 3;
+function blurDeeper(m0, acc){ return Math.max(m0, Math.min(BLUR_UNIT * BLUR_DEEP_MAX, m0 + BLUR_UNIT * acc)); }
+/* What the core keeps, and how much wider it is, at a softness. The first unit
+   is the one blur has always done -- BLUR_CORE_KEEP and 0.18 of a soft edge --
+   and each unit past it takes the core's strength down in proportion and
+   widens it twice as fast, so the line itself softens with its edge rather
+   than sitting crisp inside a growing glow. A deepen applies the DIFFERENCE
+   between two softnesses, so the core is never faded for a unit twice. */
+function blurCoreKeep(m){
+  return m <= BLUR_UNIT ? 1 - (1 - BLUR_CORE_KEEP) * m / BLUR_UNIT : BLUR_CORE_KEEP * BLUR_UNIT / m;
+}
+function blurCoreWide(m){
+  return m <= BLUR_UNIT ? 0.18 * m / BLUR_UNIT : 0.18 + 0.36 * (m - BLUR_UNIT) / BLUR_UNIT;
+}
+/* A softness READ BACK from the page. Every pass's width past the line as it
+   was drawn grows with the softness, the widest pass's by a soft edge per
+   unit, while the line widens by blurCoreWide -- so how far the widest pass
+   reaches past the line AS IT IS NOW, in soft edges, is m / BLUR_UNIT less
+   blurCoreWide(m). This turns that back into m. Measured against the line as it
+   is now, the reading came out short by however much the line had widened,
+   every drag deepened from too low a start, and BLUR_DEEP_MAX never arrived:
+   the soft edge grew on every blur. */
+function blurSoftFrom(past){
+  let lo = 0, hi = BLUR_UNIT * BLUR_DEEP_MAX;
+  if(!(past > 0)) return 0;
+  if(past >= hi / BLUR_UNIT - blurCoreWide(hi)) return hi;
+  for(let i = 0; i < 30; i++){
+    const m = (lo + hi) / 2;
+    if(m / BLUR_UNIT - blurCoreWide(m) < past) lo = m; else hi = m;
+  }
+  return (lo + hi) / 2;
+}
 function blurPasses(extraPts, extraRuns, basePts, baseRuns){
   for(let n = BLUR_PASSES.length; n > 1; n--){
     const halos = n - 1;
@@ -8905,14 +8973,28 @@ function blurPasses(extraPts, extraRuns, basePts, baseRuns){
    was, which is the brightness the soft edge is meant to have.
 
    `paid` maps a point to the dab an earlier drag already paid for, and that
-   dab goes back exactly as it was -- see blurSeen. */
-function blurDensify(seg, paid){
+   dab goes back exactly as it was -- see blurSeen.
+
+   AND NO CLOSER THAN KEEPS ITS STRONGEST DAB AT BLUR_DAB_MIN. A run spaced
+   denser than that is thinned to it -- a pass always arrives that dense,
+   being a copy of its line's points, and a line does once enough blurs have
+   faded its core -- and a soft pass (`halo`) that cannot reach the floor even
+   one dab deep is dropped: it returns no points. A line is never dropped. */
+function blurDensify(seg, paid, halo){
   if(seg.length < 2) return seg;
   const len = blurLength(seg);
   if(!(len > 0)) return seg;
   const wide = seg.reduce((m, q) => Math.max(m, q.size || 0), 0);
-  const want = Math.ceil(len / Math.max(1, wide / BLUR_OVERLAP)) + 1;
+  let top = 0;
+  for(const q of seg){ const t = strokeAlphaOf(q.color); if(t < 1 && t > top) top = t; }
+  if(halo && top < BLUR_DAB_MIN) return [];
+  const most = top > 0 ? Math.max(1, Math.log(1 - top) / Math.log(1 - BLUR_DAB_MIN)) : Infinity;
+  const over = Math.min(BLUR_OVERLAP, most), span = Math.max(1, wide / over);
+  // Rounded up for an even overlap -- but down when the floor is what sets it,
+  // or the one extra dab puts every dab just under the floor.
+  const want = (over < BLUR_OVERLAP ? Math.floor(len / span) : Math.ceil(len / span)) + 1;
   if(want > seg.length) seg = tweenResample(seg, Math.min(want, seg.length * 12));
+  else if(blurOverlap(wide, len, seg.length) > most) seg = tweenResample(seg, Math.max(2, want));
   const n = blurOverlap(wide, len, seg.length);
   const a0 = strokeAlphaOf(seg[0].color);
   if(seg.every(q => strokeAlphaOf(q.color) === a0)) return seg;   // painted once: nothing to pay back
@@ -8993,24 +9075,104 @@ function blurSeen(seg){
    both are the same colour, and source-over of one colour composes the same
    in either order.
    Its points take the run's LAST `t`, so the soft edge arrives the moment its
-   stroke is finished and adds no time to the page. */
+   stroke is finished and adds no time to the page -- and that one `t` is also
+   how a later drag knows the passes for what they are (blurFamilies). */
+/* WHICH RUNS ARE A LINE'S OWN SOFT EDGE. A blurred line is stored as its core
+   and, straight after it, the passes blurRebuild made for it, every point of a
+   pass carrying the core's LAST `t` (THE HALO TRAVELS WITH ITS OWN STROKE,
+   below). Nothing else writes one `t` along a whole run -- the pen, shapes,
+   stamps and the in-between's ghosts all step it -- so a run of that one `t`
+   after its line is that line's soft edge, and a file saved before this fix
+   reads the same way: its passes of passes all carry the line's last `t` too.
+   Returns, per run, the line it softens; a line maps to itself. */
+function blurFamilies(strokes, groups){
+  const fam = new Int32Array(groups.length);
+  let at = 0, line = -1, lineT = null;
+  for(let g = 0; g < groups.length; g++){
+    const n = groups[g], run = strokes.slice(at, at + n); at += n;
+    const t0 = run.length ? Number(run[0].t) : NaN;
+    const flat = run.length > 0 && isFinite(t0) && !run[0].erase && run.every(q => Number(q.t) === t0);
+    if(line >= 0 && flat && t0 === lineT){ fam[g] = line; continue; }
+    fam[g] = g; line = g; lineT = null;
+    for(const q of run){ const t = Number(q.t); if(isFinite(t) && (lineT === null || t > lineT)) lineT = t; }
+  }
+  return fam;
+}
+/* Where line g's soft edge already lies, read once a drag from the snapshot:
+   which of its points a pass already covers (those deepen rather than gain a
+   second edge), the nearest of its points to each pass point (a pass widens
+   away from the line under it), and how soft it is near each point -- the
+   widest pass there past the core, in soft edges. null for a line with no
+   soft edge yet. */
+function blurSoftOf(g){
+  if(_blurSoft.has(g)) return _blurSoft.get(g);
+  const orig = _fieldBefore.strokes, groups = _fieldBefore.groups;
+  const halos = [];
+  for(let h = g + 1; h < groups.length && _blurFam[h] === g; h++) halos.push(h);
+  let res = null;
+  if(halos.length){
+    const ca = _blurAt[g], cn = groups[g], core = orig.slice(ca, ca + cn);
+    const size = core.map(q => typeof q.size === 'number' ? q.size : 1);
+    const covered = new Uint8Array(cn), deep = new Float32Array(cn), near = new Map();
+    const pts = [];
+    for(const h of halos){
+      const ha = _blurAt[h], hn = groups[h], idx = new Int32Array(hn);
+      for(let j = 0; j < hn; j++){
+        const p = orig[ha + j]; let best = 0, bd = Infinity;
+        for(let k = 0; k < cn; k++){
+          const dx = core[k].x - p.x, dy = core[k].y - p.y, d = dx * dx + dy * dy;
+          if(d < bd){ bd = d; best = k; }
+        }
+        idx[j] = best; pts.push(p);
+        const extra = (typeof p.size === 'number' ? p.size : 0) - size[best];
+        if(extra > 0) deep[best] = Math.max(deep[best], extra / blurSoftEdge(size[best]));
+      }
+      near.set(h, idx);
+    }
+    for(let k = 0; k < cn; k++){
+      for(const p of pts){
+        const dx = core[k].x - p.x, dy = core[k].y - p.y, tol = Math.max(2, (p.size || 0) * 0.25);
+        if(dx * dx + dy * dy <= tol * tol){ covered[k] = 1; break; }
+      }
+    }
+    // Smoothed along the line, because a pass is spaced more sparsely than
+    // its line and leaves some of its points with no pass point nearest.
+    const m0 = new Float32Array(cn);
+    for(let k = 0; k < cn; k++){
+      let m = 0; for(let i = Math.max(0, k - 6); i <= Math.min(cn - 1, k + 6); i++) m = Math.max(m, deep[i]);
+      m0[k] = Math.max(0.02, blurSoftFrom(m));
+    }
+    res = { covered: covered, near: near, size: size, m0: m0 };
+  }
+  _blurSoft.set(g, res);
+  return res;
+}
 function blurRebuild(f){
   const snap = _fieldBefore;
   if(!snap) return;
   const orig = snap.strokes, groups = snap.groups;
+  if(!_blurFam){
+    _blurFam = blurFamilies(orig, groups);
+    _blurAt = []; for(let g = 0, a = 0; g < groups.length; g++){ _blurAt.push(a); a += groups[g]; }
+  }
+  const fam = _blurFam;
   // Contiguous stretches of brushed points, per run, and which runs the brush
   // reached at all. A run the brush crossed in two places gets two halos
   // rather than one spanning the gap between them.
   const runs = groups.map(() => []), touched = groups.map(() => false);
   let at = 0, extraPts = 0, extraRuns = 0;
   for(let g = 0; g < groups.length; g++){
-    const count = groups[g];
-    let s = -1;
+    const count = groups[g], line = fam[g] === g;
+    let s = -1, soft;
     for(let k = 0; k <= count; k++){
       const acc = k < count ? (_blurAcc.get(at + k) || 0) : 0;
       if(acc > 0 && !orig[at + k].erase) touched[g] = true;
-      if(acc > BLUR_EPS && s < 0) s = k;
-      else if((acc <= BLUR_EPS || k === count) && s >= 0){
+      // New passes only for a stretch of LINE the brush reached and no pass
+      // covers yet; over its own soft edge, a line deepens that edge instead.
+      if(line && acc > BLUR_EPS && soft === undefined) soft = blurSoftOf(g);
+      const fresh = line && k < count && acc > BLUR_EPS && !(soft && soft.covered[k]);
+      if(fresh && s < 0) s = k;
+      else if(!fresh && s >= 0){
         // One point either side, so the halo does not stop dead mid-line.
         const a0 = Math.max(0, s - 1), a1 = Math.min(count - 1, k);
         runs[g].push({ at: at, from: a0, to: a1 });
@@ -9037,7 +9199,7 @@ function blurRebuild(f){
       q.color = tweenFade(seen ? seen[k] : src.color, pass.a * acc);
       seg.push(q);
     }
-    seg = blurDensify(seg);
+    seg = blurDensify(seg, null, true);
     if(!seg.length) return;
     seg[0].start = true;
     for(let k = 1; k < seg.length; k++) delete seg[k].start;
@@ -9053,15 +9215,32 @@ function blurRebuild(f){
     // move -- 7.3 to 8.4 ms against 5.4, the same page and the same swipe.
     if(touched[g] && !_blurSeen.has(g)) _blurSeen.set(g, blurSeen(orig.slice(a, a + count)));
     const seen = touched[g] ? _blurSeen.get(g) : null, paid = seen ? new Map() : null;
+    const line = fam[g] === g, soft = touched[g] ? blurSoftOf(fam[g]) : null;
+    const near = soft && !line ? soft.near.get(g) : null;
     let core = [];
     for(let k = 0; k < count; k++){
       const src = orig[a + k];
       const acc = Math.min(1, _blurAcc.get(a + k) || 0);
       const q = Object.assign({}, src);
-      if(acc > 0 && !src.erase){
-        const base = typeof src.size === 'number' ? src.size : 1;
+      const base = typeof src.size === 'number' ? src.size : 1;
+      if(acc > 0 && !src.erase && line && !(soft && soft.covered[k])){
+        // The first blur here: the core gives up contrast and widens a little.
         q.size = base + blurSoftEdge(base) * 0.18 * acc;
         q.color = tweenFade(seen ? seen[k] : src.color, 1 - (1 - BLUR_CORE_KEEP) * acc);
+      } else if(acc > 0 && !src.erase && near){
+        // A pass the brush went over again widens away from its line, keeping
+        // its strength: the soft edge reaches further without growing fainter.
+        // Its width past the line AS DRAWN scales with the softness, so every
+        // pass keeps its place in the falloff.
+        const c = near[k], m0 = soft.m0[c];
+        const drawn = soft.size[c] - blurSoftEdge(soft.size[c]) * blurCoreWide(m0);
+        if(base > drawn) q.size = drawn + (base - drawn) * blurDeeper(m0, acc) / m0;
+        q.color = seen ? seen[k] : src.color;
+      } else if(acc > 0 && !src.erase && line && soft){
+        // The line under a soft edge it already has: it softens with that edge.
+        const m0 = soft.m0[k], m1 = blurDeeper(m0, acc);
+        q.color = tweenFade(seen ? seen[k] : src.color, blurCoreKeep(m1) / blurCoreKeep(m0));
+        q.size = base + blurSoftEdge(base) * (blurCoreWide(m1) - blurCoreWide(m0));
       } else if(seen){ q.color = seen[k]; paid.set(q, src.color); }
       core.push(q);
     }
@@ -9070,13 +9249,15 @@ function blurRebuild(f){
        string of bright circles before the same treatment was applied to it.
        Untouched runs are left ALONE: they are the user's strokes, still opaque,
        and resampling them would rewrite geometry the blur never reached. */
-    if(touched[g]) core = blurDensify(core, paid);
+    if(touched[g]) core = blurDensify(core, paid, !line);
+    if(!core.length){ a += count; continue; }   // a pass too faint to draw
     core[0].start = true;
     for(let k = 1; k < core.length; k++) delete core[k].start;
     out.push(...core); outG.push(core.length);
     let endT = null;
     for(const q of core){ const t = Number(q.t); if(isFinite(t) && (endT === null || t > endT)) endT = t; }
-    for(const pass of halo) for(const r of runs[g]) haloOf(r, pass, endT, seen);
+    // Passes get no passes of their own: that is how one line became 64 runs.
+    if(line) for(const pass of halo) for(const r of runs[g]) haloOf(r, pass, endT, seen);
     a += count;
   }
   f.strokes = out; f.strokeGroups = outG;
