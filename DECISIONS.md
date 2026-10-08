@@ -14492,3 +14492,38 @@ all of them red on main and on the whole-stroke fix alone:
   the far ends came out 16% dimmer (177).
 - the scrubbed spot gains a soft edge rather than only fading. Red when its halo
   is built from the stored dab alphas: 2 of 255 at 8px off the line, against 43.
+
+**The icon stands on the owner's star (owner, the third icon round: "Soft white.
+And premium").** The owner asked how to blend today's icon with their own star
+icon, the brand gradient with a white six-point star: "two accents from
+skribl". The mocks put Blooby, without his ground line, centred on that exact
+star (measured: point up, inner corners at 0.407 of the outer) at thirteen
+sizes. From the owner's shortlist of three on the brand gradient I recommended
+the middle one, as the balance between Blooby on white and a star that still
+reads as a star. Asked whether that was more loveable than today's icon, the
+honest answer was no: as loveable, and louder. So the star went onto today's
+lilac instead, in white and in pale lilac, and the owner chose the white: "I
+like what you like ... Soft white. And premium."
+
+What ships: today's lilac and its edge (N4), unchanged; the white star at 0.72
+of the side, its points running off the tile so the four corners stay lilac;
+Blooby at today's size, less the ground line. It is composed at 4096 from
+strokes the Pad drew at device scale 8, which is about his full height at that
+size, and every file is a reduction of that one picture. The premium touches
+are light in the picture, not a sheen iOS would have to relight: the star's
+light spills a little onto the lilac, and he casts a soft shadow on the star a
+touch below him, so he stands on it rather than being pasted over it. The gaps
+in his marker fill stay, showing the star white through them as the paper does
+in his original drawing: a draft filled them with his purple and the owner
+turned it down ("We want the sloppy underneath like real original with the
+unpainted spots"). His shadow is cut away inside his outline, so it never greys
+them. An icon already on a Home Screen does not change: iOS keeps the picture
+it took when the page was added, so it has to be added again to show the new
+one.
+
+verify_identity: the top centre is now the star's top point, so the ground's
+lightening is read at the middle of the left edge, in the lilac wedge beside
+him, and a new check finds the star's white above his head. Red on today's icons
+(no star), on a star too small to reach the edge (0.36 of the side), and, for
+the moved probe, on a fat star that covers the wedge (inner corners at 0.9);
+green through the same path with the real numbers.

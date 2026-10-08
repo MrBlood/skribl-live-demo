@@ -8,7 +8,8 @@ identity for a LINK since v102; the pages had none for themselves.
 
 What ships: one route, `/manifest.webmanifest` (a route, not a static file,
 so its URLs follow the blueprint's mount point), three PNG icons (since v320,
-Blooby waving on lilac, drawn by `harness/tools/blooby.py icon`), and one partial (`_skribl_app_identity.html`) that the Pad,
+Blooby waving on lilac, drawn by `harness/tools/blooby.py icon`; since the third
+icon round, standing on the owner's white star), and one partial (`_skribl_app_identity.html`) that the Pad,
 Flip, the player and the library include and the feed -- a host's page that is
 not Skribl -- does not. The theme-color meta carries BOTH grounds as data-
 attributes, so the theme boot (before first paint) and lib/theme.js (on a
@@ -130,7 +131,7 @@ for ic in icons:
           f"{ic.get('src')} -> {st_i} {hdr_i.get('Content-Type')} {fmt} {size}")
 
 # --------------------------------------------------------------------------
-print("\nIDENTITY — the icon is Blooby, waving on lilac that deepens to its edge")
+print("\nIDENTITY — the icon is Blooby, waving on a white star, on lilac that deepens to its edge")
 # THE OWNER'S PICK (v320): Blooby waving on a lilac tile, option J of the mocks,
 # drawn from his strokes by `harness/tools/blooby.py icon`. The checks above
 # hold an icon to its size and format and would pass on a blank square, or on
@@ -138,6 +139,12 @@ print("\nIDENTITY — the icon is Blooby, waving on lilac that deepens to its ed
 # is the lilac blooby.py names, his body's purple covers a real share of it, and
 # his dark outline is there. The tile colour is read from blooby.py, the one
 # place it is written.
+# THE STAR (owner, the third icon round: "Soft white. And premium"): he stands
+# on the six-point star of the owner's star icon, in white, its points running
+# off the tile. So the top centre, which used to be ground all the way down, is
+# now the star's top point, and the ground's deepening is read where the lilac
+# still runs in from the edge: the wedge between two points at the middle of
+# the left edge, clear of his arm.
 _bsrc = (ROOT / "harness" / "tools" / "blooby.py").read_text(encoding="utf-8")
 _m_tile = re.search(r'^ICON_TILE = "(#[0-9a-fA-F]{6})"', _bsrc, re.M)
 TILE = tuple(int(_m_tile.group(1)[i:i + 2], 16) for i in (1, 3, 5)) if _m_tile else None
@@ -168,14 +175,18 @@ for _src in _srcs:
     _body = sum(1 for c in _px if _near(c, (124, 92, 255), 45)) / len(_px)
     _ink = sum(1 for c in _px if sum(c) < 200) / len(_px)
     _name = _src.split("/")[-1].split("?")[0]
-    # Above his head, at the top centre, the tile is ground all the way down.
-    _col = [_im.getpixel((_w // 2, round(_h * f))) for f in (0.01, 0.05, 0.10)]
+    # Beside him, at the middle of the left edge, the tile is ground a fifth of the way in.
+    _col = [_im.getpixel((round(_w * f), _h // 2)) for f in (0.01, 0.05, 0.10)]
     _lum = [sum(c) for c in _col]
+    # Above his head, at the top centre, is the star's top point.
+    _top = [_im.getpixel((_w // 2, round(_h * f))) for f in (0.02, 0.08, 0.15)]
     check(f"{_name}: the tile deepens to the edge colour at every corner",
           EDGE is not None and all(_near(c, EDGE, 8) for c in _corners), f"corners {_corners}")
     check(f"{_name}: ...and lightens toward the middle, staying lilac",
           TILE is not None and _lum[0] < _lum[1] < _lum[2]
-          and all(c[2] > max(c[0], c[1]) for c in _col), f"top centre inward {_col}")
+          and all(c[2] > max(c[0], c[1]) for c in _col), f"left edge inward {_col}")
+    check(f"{_name}: he stands on the owner's white star -- its top point is above his head",
+          all(min(c) >= 245 for c in _top), f"top centre downward {_top}")
     check(f"{_name}: Blooby is on it -- his purple body and his dark outline",
           _body > 0.15 and _ink > 0.01, f"body {_body:.1%}, outline {_ink:.1%}")
 
