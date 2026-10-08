@@ -2,7 +2,7 @@
 """Blooby -- the purple guy the owner named, Skribl's mascot -- and his trading card.
 
     python3 harness/tools/blooby.py card OUTDIR
-    python3 harness/tools/blooby.py icon skribl/static
+    python3 harness/tools/blooby.py icon skribl/static [MASTER.png]
 
 Blooby is built from his own Flip drawing (flipworks.wave: the marker fill, the
 two-sided outline, the feet, the ground), so every pose keeps the hand he was
@@ -70,10 +70,11 @@ def base(rest=True, ground=True):
     return out
 
 
-def pose(name, trait="none"):
+def pose(name, trait="none", ground=True):
     """Blooby in one of the poses mocked for the brand: wave, pen, cheer, think,
     oops, sleep, or just his face. `trait` adds his mark: "swoosh" (the one
-    chosen: a purple pen line under his feet for the ground), "trail" or "nib"."""
+    chosen: a purple pen line under his feet for the ground), "trail" or "nib".
+    `ground=False` leaves out the line he stands on, for the app icon's star."""
     st = []
     if name == "wave":
         st = base() + wave_arm() + [SMILE, BLUSH] + EYES
@@ -125,6 +126,8 @@ def pose(name, trait="none"):
         st += [S([(360, 194), (372, 162), (384, 194)], "contour", size=8),
                S(_fill(372, 184, 5, 7, turns=1.4, n=10), "fill", PURPLE, size=8),
                S([(372, 168), (372, 182)], "detail", size=4)]
+    if not ground:
+        st = [s for s in st if s is not GROUND]
     return st
 
 
@@ -497,8 +500,30 @@ ICON_TILE = "#cdbfff"
 ICON_EDGE = "#a994f8"
 ICON_EDGE_FROM = 0.12
 ICON_EDGE_CURVE = 2.2
-ICON_FILL = 0.78           # his height, as a share of the tile's
+# THE STAR (owner, the third icon round): Blooby stands on the six-point star of
+# the owner's own star icon, in white, on the same lilac -- "soft white", picked
+# over the star on the brand gradient as the more loveable of the two. The star
+# is that icon's, measured: point up, inner corners at 0.407 of the outer. Its
+# points reach 0.72 of the side from the centre, past an edge at 0.5, so he
+# stands on white with a lilac wedge between each pair of points, and all four
+# corners stay lilac. verify_identity looks for the star's top point above his
+# head and for the lilac in the wedge beside him.
+ICON_STAR_R = 0.72
+ICON_STAR_INNER = 0.407
+ICON_FILL = 0.757          # his height, as a share of the tile's: today's size, less the ground line
 ICON_SIZES = {"icon-512.png": 512, "icon-192.png": 192, "apple-touch-icon.png": 180}
+# AS SHARP AS THE FILES ALLOW (owner: "as hi res ... as possible"). The icon is
+# composed at ICON_MASTER from strokes the Pad drew at device scale ICON_DPR --
+# about his full height at that size, so nothing in it is enlarged -- and each
+# file is a reduction of that one picture.
+ICON_MASTER = 4096
+ICON_DPR = 8
+# AND THE DEPTH THAT MAKES IT LOOK MADE ("and premium"). The star's light spills
+# a little onto the lilac, and Blooby casts a soft shadow onto the star, a touch
+# below him, so he stands on it instead of being pasted over it. Both are light
+# in the picture itself, not a glass sheen iOS would have to relight.
+ICON_GLOW = ((0.030, 0.275), (0.010, 0.30))           # (blur, as a share of the side; strength)
+ICON_SHADOW = (0.012, 0.014, 0.22, (92, 66, 196))      # blur, drop, strength, a deep lilac
 
 
 def _hex(c):
@@ -523,9 +548,71 @@ def icon_ground(side):
     return img
 
 
-def draw_icons(out, base="http://127.0.0.1:5001"):
-    """Draw Blooby waving in the real Pad (transparent ground) and write the
-    three icons the manifest and the touch-icon tag name. Needs the local server.
+def icon_star(side):
+    """The star he stands on, as a mask: point up, centred, ICON_STAR_R and
+    ICON_STAR_INNER."""
+    from PIL import Image, ImageDraw
+    c, pts = side / 2, []
+    for k in range(12):
+        r = ICON_STAR_R * (1 if k % 2 == 0 else ICON_STAR_INNER) * side
+        a = math.radians(-90 + 30 * k)
+        pts.append((c + r * math.cos(a), c + r * math.sin(a)))
+    m = Image.new("L", (side, side), 0)
+    ImageDraw.Draw(m).polygon(pts, fill=255)
+    return m
+
+
+def _enclosed(alpha):
+    """His ink and everything it closes in -- body, arms, hands -- as a mask.
+    Flooded from outside at a quarter of the size, because Pillow's flood fill
+    walks pixel by pixel in Python; his outline is thick enough to stay closed."""
+    from PIL import Image, ImageDraw
+    q = alpha.resize((max(1, alpha.width // 4), max(1, alpha.height // 4)), Image.BILINEAR)
+    pad = Image.new("L", (q.width + 2, q.height + 2), 0)
+    pad.paste(q.point(lambda v: 255 if v > 40 else 0), (1, 1))
+    ImageDraw.floodfill(pad, (0, 0), 128)
+    inside = pad.crop((1, 1, pad.width - 1, pad.height - 1)).point(lambda v: 0 if v == 128 else 255)
+    return inside.resize(alpha.size, Image.BILINEAR).point(lambda v: 255 if v > 127 else 0)
+
+
+def icon_compose(him, side=ICON_MASTER):
+    """The icon at `side`, from his drawing `him` (RGBA, cropped to his ink):
+    the lilac, the star's light on it, the star, his shadow on the star, and him.
+
+    HIS UNPAINTED SPOTS STAY (owner: "We want the sloppy underneath like real
+    original with the unpainted spots"). His marker fill does not quite reach
+    his outline -- the hand that drew him -- and the star shows through those
+    spots white, as the paper does in his original drawing. A draft filled them
+    with his purple and was turned down. So his shadow is cut away inside his
+    outline: it falls on the star around him, never into those spots."""
+    from PIL import Image, ImageChops, ImageFilter
+    tile = icon_ground(1024).resize((side, side), Image.BICUBIC).convert("RGBA")   # a smooth ramp: worked small, enlarged
+    star = icon_star(side)
+    white = Image.new("L", (side, side), 255)
+    for blur, strength in ICON_GLOW:
+        glow = star.filter(ImageFilter.GaussianBlur(side * blur)).point(lambda v, s=strength: round(v * s))
+        tile.alpha_composite(Image.merge("RGBA", (white, white, white, glow)))
+    tile.paste(Image.new("RGBA", (side, side), (255, 255, 255, 255)), (0, 0), star)
+    h = round(side * ICON_FILL)
+    w = round(him.width * h / him.height)
+    him = him.resize((w, h), Image.LANCZOS)
+    at = ((side - w) // 2, (side - h) // 2)
+    body = Image.new("L", (side, side), 0)
+    body.paste(_enclosed(him.getchannel("A")), at)
+    blur, drop, strength, col = ICON_SHADOW
+    shade = Image.new("L", (side, side), 0)
+    shade.paste(body.filter(ImageFilter.GaussianBlur(side * blur)), (0, round(side * drop)))
+    shade = ImageChops.multiply(shade.point(lambda v: round(v * strength)), ImageChops.invert(body))
+    tile.alpha_composite(Image.merge("RGBA", tuple(Image.new("L", (side, side), v) for v in col) + (shade,)))
+    tile.alpha_composite(him, at)
+    return tile.convert("RGB")
+
+
+def draw_icons(out, base="http://127.0.0.1:5001", master=None):
+    """Draw Blooby waving in the real Pad (transparent ground), compose the icon
+    and write the three files the manifest and the touch-icon tag name, each
+    reduced from that one picture; `master`, if given, is where the full-size
+    picture goes. Needs the local server.
 
     Drawn at a calm tempo: a fast hand captures too few points along each
     curve, and his eyes came out as hexagons the first time."""
@@ -535,7 +622,7 @@ def draw_icons(out, base="http://127.0.0.1:5001"):
     out = pathlib.Path(out)
     with sync_playwright() as p:
         b = p.chromium.launch()
-        pg = b.new_page(viewport={"width": 1100, "height": 900}, device_scale_factor=2)
+        pg = b.new_page(viewport={"width": 1100, "height": 900}, device_scale_factor=ICON_DPR)
         browsing.goto(pg, base, "/skribl-pad")
         pg.wait_for_timeout(800)
         pg.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
@@ -543,29 +630,26 @@ def draw_icons(out, base="http://127.0.0.1:5001"):
             document.querySelector(`#canvasSeg button[data-size='${id}']`).click(); }""")
         pg.wait_for_timeout(300)
         pg.evaluate("() => { setTool('pen'); if (window.SkriblPressure) SkriblPressure.setEnabled(true); }")
-        artdraw.draw(pg, pose("wave"), tempo=1.2, pause_tempo=6.0)
+        artdraw.draw(pg, pose("wave", ground=False), tempo=1.2, pause_tempo=6.0)
         pg.wait_for_timeout(500)
         url = pg.evaluate("() => document.getElementById('canvas').toDataURL('image/png')")
         b.close()
     him = Image.open(__import__("io").BytesIO(base64.b64decode(url.split(",")[1]))).convert("RGBA")
     him = him.crop(him.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox())
-    side = 1024
-    tile = icon_ground(side).convert("RGBA")
-    h = round(side * ICON_FILL)
-    w = round(him.width * h / him.height)
-    him = him.resize((w, h), Image.LANCZOS)
-    tile.alpha_composite(him, ((side - w) // 2, (side - h) // 2))
-    tile = tile.convert("RGB")
+    tile = icon_compose(him)
+    if master:
+        tile.save(master, optimize=True)
     for name, px in ICON_SIZES.items():
         tile.resize((px, px), Image.LANCZOS).save(out / name, optimize=True)
     return [out / n for n in ICON_SIZES]
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3 or sys.argv[1] not in ("card", "icon"):
+    if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("card", "icon") \
+            or (len(sys.argv) == 4 and sys.argv[1] != "icon"):
         raise SystemExit(__doc__.split("\n\n")[1])
     if sys.argv[1] == "icon":
-        print("wrote", ", ".join(str(x) for x in draw_icons(sys.argv[2])))
+        print("wrote", ", ".join(str(x) for x in draw_icons(sys.argv[2], master=(sys.argv[3:] or [None])[0])))
         raise SystemExit(0)
     draw_card(sys.argv[2])
     print("wrote", ", ".join(f"{sys.argv[2]}/{n}" for n in ("card.png", "card-paper.png", "card-dark.png")))
