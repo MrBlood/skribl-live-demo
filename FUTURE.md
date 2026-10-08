@@ -705,6 +705,30 @@ passes, including its own census suite. Two things to settle first:
 * WHETHER IT IS AN OPTION OR THE LOOK. As a hidden option it cost the most for
   the least; if it comes back, the case for it is as the default.
 
+## 6k. Several loops in one Flip (owner, after #353: "can we do multiple loops?")
+
+Today a Flip has ONE loop -- `loop {from, to, times | ms | forever}` -- and that
+is deliberate rather than an oversight: the single object is in the document
+format, in the server's validation (`skribl/validation.py`), in the shared plan
+every player walks (`lib/holdtiming.js`), and in every player that walks it.
+#353 kept it at one for that reason. Several loops is a format change, so it is
+a project of its own, not a control.
+
+What it would take, in the order it would have to land:
+
+* THE FORMAT: `loops`, a list of stretches that do not overlap, read alongside
+  the old single `loop` so every document already saved plays as it did.
+* THE RULES, on the server and in the lib alike: no overlaps, no nesting, and a
+  Forever loop only as the LAST one -- pages after a Forever never play, so a
+  Forever anywhere earlier would silently cut off every loop after it.
+* THE PLAN: `plan()` walks the stretches in page order, each with its own count,
+  so the editor's Play, the post page, the inline players and the exports stay
+  one answer.
+* THE STRIP: one trim frame per loop, each chip naming its own pages, and the
+  handles of two loops that meet must stay separately grabbable.
+* THE PLAYERS' BYTES: the lib ships in them, so the byte ratchets will move,
+  and that is the owner's call each time.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
