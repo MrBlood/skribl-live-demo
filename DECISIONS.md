@@ -14549,3 +14549,35 @@ main, the stem case losing the selection outright. A finger just inside the box
 still moves the selection rather than turning it. Each part was removed on its
 own and turned only its own check red: the stem, the finger's radius, the
 pointer type reaching the hit test, and the stem's stop at the box.
+
+**A tap outside puts the stamp shelf away (owner, iPhone: "Can't get the stamp
+menu to go away without selecting a diff tool. Should be able to click outside
+box and have it go away without selecting").** The shelf closed on Escape and
+on nothing else. That was deliberate: the shelf is the only thing saying which
+stamp is armed, and the tap that places one lands outside it, so a shelf that
+vanished on the first placement would have to be reopened for the second. Only
+the first half of that holds. The armed stamp stays armed with the shelf put
+away, so every tap on the canvas keeps placing it, and tapping Stamp brings the
+shelf back to change it. Re-tapping Stamp already put it away, but nothing said
+so, and the owner never found it.
+
+Now a tap anywhere outside the shelf puts it away, and the tool stays Stamp. A
+press on the canvas also places the stamp, the way the shape picker steps aside
+for the press that draws. That case is decided in pointerdown, because a press
+that slides before it lifts is not a click, and a finger slides. The routes into
+the tool (the Stamp button's toggle, the tray's cell) are not "outside", or the
+listener would shut what they had just opened.
+
+verify_stamps, at 390 wide with real touch events, each case from its own
+starting state:
+- a tap beside the canvas puts the shelf away;
+- a press on the canvas that slides places the stamp and puts it away;
+- with the shelf away, the next tap keeps placing the armed stamp;
+- Stamp brings the shelf back;
+- a tap inside the shelf leaves it open.
+The first three are red on main. Each part of the fix, removed on its own,
+turns only its own check red: the listener, the canvas's own close, the routes'
+exception, the shelf's own exception. The first draft of the beside-the-canvas
+check tapped a few pixels above the canvas, and the browser snapped that tap
+onto it, so the check went green with the listener deleted. It taps in the
+margin beside the canvas now.

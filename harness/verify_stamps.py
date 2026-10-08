@@ -785,6 +785,104 @@ with sync_playwright() as _sp2:
     finally:
         _sb.close()
 
+# ============================================================================
+# A TAP OUTSIDE PUTS THE SHELF AWAY (owner, iPhone: "Can't get the stamp menu
+# to go away without selecting a diff tool. Should be able to click outside box
+# and have it go away without selecting"). The shelf used to close on Escape
+# and nothing else. Driven with real touch events (CDP) at 390 wide, each case
+# from its own starting state so one failure cannot pose as another: a tap
+# above the canvas puts it away; a press on the canvas that slides before it
+# lifts -- no click, and a finger slides -- places the stamp and puts it away;
+# the armed stamp keeps placing with the shelf away; Stamp still brings it
+# back; a tap inside it leaves it open.
+# ============================================================================
+print("\nA TAP OUTSIDE PUTS THE SHELF AWAY — on a phone, keeping the tool")
+with sync_playwright() as _sp3:
+    _pb = _sp3.chromium.launch()
+    try:
+        phone = _pb.new_context(viewport={"width": 390, "height": 844}, is_mobile=True,
+                                has_touch=True, device_scale_factor=3)
+        ph = phone.new_page()
+        browsing.goto(ph, BASE, "/flip")
+        ph.evaluate("() => localStorage.clear()")
+        ph.reload(wait_until="load")
+        ph.wait_for_timeout(1200)
+        cdp = phone.new_cdp_session(ph)
+
+        def finger(path):
+            cdp.send("Input.dispatchTouchEvent",
+                     {"type": "touchStart", "touchPoints": [{"x": path[0][0], "y": path[0][1]}]})
+            for x, y in path[1:]:
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": x, "y": y}]})
+                ph.wait_for_timeout(16)
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+            ph.wait_for_timeout(300)
+
+        def centre(sel):
+            b = ph.locator(sel).first.bounding_box()
+            return (b["x"] + b["width"] / 2, b["y"] + b["height"] / 2)
+
+        # A stamp on the shelf, armed: a short stroke, selected and saved.
+        ph.evaluate("""() => { frames = [newFrame()]; idx = 0; const f = frames[0];
+          for (let i = 0; i < 12; i++) f.strokes.push({ x: 100 + i * 8, y: 120 + (i % 3) * 6,
+            color: '#7c5cff', size: 7, t: i * 16, start: i === 0 });
+          f.strokeGroups.push(12); setTool('select'); selSpans = [[0, 12]];
+          stampSaveSelection(); setTool('pen'); render(); }""")
+        shelf = lambda: ph.evaluate("() => document.getElementById('stampPop').hidden")
+        state = lambda: ph.evaluate("() => ({ tool: flipTool, groups: frames[idx].strokeGroups.length,"
+                                    " armed: stampArmed })")
+
+        def open_shelf():
+            ph.evaluate("() => { setTool('pen'); setTool('stamp'); }")
+            ph.wait_for_timeout(250)
+
+        open_shelf()
+        # In the margin beside the canvas, not just above it: a tap a few pixels
+        # off the canvas's edge is snapped onto the canvas by the browser, and
+        # then it is the canvas's own case below that closes the shelf -- the
+        # first draft of this check went green with this listener deleted.
+        was = state()
+        bx, by = ph.evaluate("() => { const p = pad.getBoundingClientRect();"
+                             " return [p.left / 2, (p.top + p.bottom) / 2]; }")
+        finger([(bx, by)])
+        check("phone: a tap beside the canvas puts the shelf away",
+              shelf() is True and state()["tool"] == "stamp"
+              and state()["groups"] == was["groups"],
+              f"hidden={shelf()}, {state()} — it closed on Escape and nothing "
+              f"else; a stamp placed here would mean the tap reached the canvas")
+
+        open_shelf()
+        was = state()
+        cx, cy = centre("#pad")
+        finger([(cx, cy)] + [(cx + 3 * k, cy) for k in range(1, 11)])
+        now = state()
+        check("phone: a press on the canvas that slides places the stamp and puts the shelf away",
+              now["groups"] > was["groups"] and shelf() is True and now["tool"] == "stamp",
+              f"groups {was['groups']} -> {now['groups']}, hidden={shelf()} — a "
+              f"press that slides is no click, so this is decided where it lands")
+
+        was = state()
+        finger([(cx - 40, cy + 30)])
+        now = state()
+        check("phone: ...and with the shelf away, the next tap keeps placing the armed stamp",
+              now["groups"] > was["groups"] and shelf() is True and now["armed"] == 0,
+              f"groups {was['groups']} -> {now['groups']}, hidden={shelf()}, armed={now['armed']}")
+
+        ph.evaluate("() => { setTool('stamp'); document.getElementById('stampPop').hidden = true; }")
+        ph.wait_for_timeout(200)
+        finger([centre("#stampToolBtn")])
+        check("phone: Stamp brings the shelf back",
+              shelf() is False and state()["tool"] == "stamp",
+              f"hidden={shelf()} — a route into the tool is not outside it")
+
+        open_shelf()
+        finger([centre("#stampSizeRow label")])
+        check("phone: a tap inside the shelf leaves it open",
+              shelf() is False, f"hidden={shelf()}")
+        phone.close()
+    finally:
+        _pb.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))
