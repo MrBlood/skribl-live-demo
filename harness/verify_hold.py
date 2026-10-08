@@ -196,6 +196,28 @@ with sync_playwright() as p:
     check("...and the unheld pages come back at the default",
           restored[0] == 1 and restored[2] == 1, str(restored))
 
+    # DRAW IS THE SAME KIND OF FIELD ON THE SAME PATH, and it had the same bug
+    # from v285 on: healFrame learned `hold` in v241 and never learned `draw`,
+    # so a page set to draw itself came back still after an Open or an ordinary
+    # reload. The owner's background page was saved as a drawing page and
+    # reopened as a still one.
+    payload = pg.evaluate("""() => { frames[2].draw = true;
+      return JSON.parse(JSON.stringify(serializeFlip({media:false}))); }""")
+    drawn = pg.evaluate("""(d) => {
+      frames.length = 0;
+      frames.push({ strokes: [], strokeGroups: [], hold: 1 });
+      applyPayload(d);
+      const out = frames.map(f => frameDraw(f));
+      frames.forEach(f => { delete f.draw; });
+      return out;
+    }""", payload)
+    check("a page that DRAWS ITSELF survives a save and load",
+          payload["frames"][2].get("draw") is True and drawn[2] is True,
+          f"written {payload['frames'][2].get('draw')}, restored {drawn} — "
+          f"the draft carried it and the reload dropped it, as hold's did")
+    check("...and the still pages come back still",
+          drawn[0] is False and drawn[1] is False, str(drawn))
+
     # THE THIRD LAYER, and it was empty too. This suite learned once that
     # proving a hold is WRITTEN says nothing about whether it comes BACK. The
     # same gap sat one step further out: nothing asked whether it reaches a
