@@ -14664,3 +14664,56 @@ first ran on a page that did not name a theme, which is the light one, where
 the ring was dark anyway; each theme has its own page now. A rule that put
 every dab back exactly at the cap changed nothing measurable when removed, and
 is gone.
+
+**Liquify, Smudge and Blur each have a size of their own, in a row under the
+tools in the tray (owner: "is there a blur radius adjuster?", then, of the two
+places mocked for it, "it would make sense to have it in that menu if we are
+going to have a size slider for other choices too, like liquify, smudge,
+etc").** All three reached six times the brush size (LIQUIFY_REACH), so the
+only way to resize Blur was to resize the pen. The mock put the slider on a
+card on Blur's own button, as Shape and Stamps have, or in a row under the
+tools in the More tools tray. Three tools wanting a size decided it for the
+tray. Of the other seven tools, the pen and Stamps already have a size, the
+eraser and Shape follow the pen, and Select, Fill and Artwork have nothing to
+size. The eraser stays a multiple of the pen, by the owner's choice.
+
+The row shows only while one of the three is the tool, and is named for it
+("Blur size"). Each keeps its own size (reachOwn, read through reachFor). A
+tool never sized reaches what it always did, six times the brush, so nothing
+changes until its own slider moves; like the brush size, it is not kept across
+a reload. The number is the ring's width on the canvas. [ and ] size the tool
+in hand, as the row does; with the pen they still size the brush. A finger is
+its own cursor, so a phone never showed the ring at all. While the slider is
+held, and 0.7s after, the ring stands at its true size in the middle of the
+canvas still in view above the tray, which covers the canvas's foot on a
+phone. buildTray() empties the tray on every open, so Flip holds the row and
+puts it back under the cells each time. lib/toolshelf.js gained labelFor, so
+the row's name is the tray's word for the tool.
+
+verify_tray, SIZE ROW, by touch at 390: the row shows under the tools for each
+of the three, named as the tray names it, and for no other tool; a tool never
+sized follows the brush; moving Blur's size moves Blur alone, and once set the
+brush no longer moves it; [ and ] size the tool in hand; at 320 and 390 every
+name and 408px end before the slider starts and after it ends.
+verify_smudgeblur, EACH ITS OWN SIZE: a sweep 60 beside a line reaches it or
+not by each tool's own size, whatever the brush; Blur's ring is its own size;
+a mouse moved onto the canvas after the slider keeps its own ring; and by real
+touches, while the slider is held the ring is painted at its true size in the
+middle of the canvas in view above the tray, and goes once it is let go. All
+fifteen are red on main.
+
+Each part removed or broken on its own turned its own checks red: each tool's
+own size, Liquify's, Smudge's and Blur's reach, the ring, the row hidden or
+shown for every tool, its name, putting it back after buildTray, the keys, the
+ring while held, its hold, its going, its place above the tray, the row across
+the grid, the tray's word for the tool, and the hand-off to the pointer's ring.
+Three drafts were caught that way. Forcing the row on for every tool took the
+page down on load: setTool reached LIQUIFY_REACH before its line had run, so
+the constants live with the early state now. The fit check read the label's
+scrollWidth, which says nothing about words running past a box; it measures
+where the words end, and then showed that the two width rules written for the
+label and the number did nothing, because a flex item's box grows to its words.
+They are gone, and a label or a number squeezed past its words turns the check
+red. The ring's place was first asked only to be on the canvas above the tray,
+which a ring centred on the whole canvas also met; it asks for the middle of the
+canvas in view above the tray now.

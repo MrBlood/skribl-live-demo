@@ -784,6 +784,120 @@ with sync_playwright() as p:
               f"triangle {bool(tri)}, octagon {bool(octa)}, rounded {bool(soft)}, painted {tri and tri['painted']}")
         cx.close()
 
+    # ---- the size row: Liquify, Smudge and Blur each their own size --------
+    # The owner, of Blur: "is there a blur radius adjuster?" All three reached
+    # six times the brush size, so the only way to resize one was to resize the
+    # pen. A card on each tool's button was mocked beside a row in the tray, and
+    # the owner took the tray: "it would make sense to have it in that menu if
+    # we are going to have a size slider for other choices too, like liquify,
+    # smudge, etc". What each size MOVES is asked of the tools themselves in
+    # verify_smudgeblur; this is the row. On a phone, by touch.
+    print("\nSIZE ROW [Flip] -- Liquify, Smudge and Blur each have their own size")
+    REACH = ("liquify", "smudge", "blur")
+    ROW = r"""() => { const row = document.getElementById('reachRow'), tray = document.getElementById('toolTray');
+      if (!row) return null;
+      const lab = row.querySelector('label'), inp = row.querySelector('input'), out = row.querySelector('output');
+      const R = e => e.getBoundingClientRect(), ir = R(inp), cs = getComputedStyle(tray);
+      const T = e => { const g = document.createRange(); g.selectNodeContents(e); return g.getBoundingClientRect(); };
+      const cells = [...tray.querySelectorAll('.tool-tray-btn')].map(R);
+      const at = document.elementFromPoint(ir.left + ir.width / 2, ir.top + ir.height / 2);
+      const cell = tray.querySelector('.tool-tray-btn.active span');
+      return { shown: getComputedStyle(row).display !== 'none' && row.parentNode === tray, painted: at === inp,
+               label: lab.textContent, aria: inp.getAttribute('aria-label'), cell: cell ? cell.textContent : null,
+               value: +inp.value, out: out.textContent,
+               underCells: cells.length > 0 && R(row).top >= Math.max(...cells.map(c => c.bottom)) - 0.5,
+               spans: R(row).width >= 0.9 * (R(tray).width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)),
+               // Where the WORDS end, not the box: a fixed-width flex label keeps
+               // its box and lets the text run on under the slider, and its
+               // scrollWidth did not say so (a 58px label passed).
+               labelFits: T(lab).right <= ir.left + 0.5,
+               outFits: T(out).left >= ir.right - 0.5 && T(out).right <= R(row).right + 0.5 }; }"""
+    rc = browser.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
+    rp = rc.new_page()
+    browsing.goto(rp, BASE, "/flip")
+    rp.wait_for_timeout(700)
+    rp.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
+
+    def tray_with(tool, brush=None):
+        # The brush through its own slider's input event; the tray shut first,
+        # so every reading is of a tray opened with this tool in hand.
+        rp.evaluate("""(a) => { if (a[1] != null) { const r = document.getElementById('size');
+            r.value = String(a[1]); r.dispatchEvent(new Event('input', { bubbles: true })); }
+          setTool(a[0]); }""", [tool, brush])
+        if rp.evaluate("() => !document.getElementById('toolTray').hidden"):
+            rp.keyboard.press("Escape")
+            rp.wait_for_timeout(250)
+        rp.tap("#toolMoreBtn")
+        rp.wait_for_timeout(350)
+        return rp.evaluate(ROW)
+
+    def slide(v):
+        # The row's own input event, the one a drag of the slider sends.
+        rp.evaluate("""(v) => { const r = document.getElementById('reachSize'); if (!r) return;
+            r.value = String(v); r.dispatchEvent(new Event('input', { bubbles: true })); }""", v)
+        rp.wait_for_timeout(100)
+        return rp.evaluate(ROW)
+
+    # Absent pieces read as None rather than raising, so a tree without the row
+    # reports each check red instead of stopping at the first.
+    reach = lambda t: rp.evaluate("(t) => typeof reachFor === 'function' ? reachFor(t) : null", t)
+    got = lambda s, k: (s or {}).get(k)
+    seen = {t: tray_with(t, brush=13) for t in REACH}
+    check("the size row shows under the tools for Liquify, Smudge and Blur, named for each",
+          all(s and s["shown"] and s["painted"] and s["underCells"] and s["spans"]
+              and s["label"] == f"{s['cell']} size" and s["aria"] == s["label"] for s in seen.values()),
+          str({t: s and {k: s[k] for k in ("shown", "painted", "underCells", "spans", "label", "cell")}
+               for t, s in seen.items()}))
+    others = {t: tray_with(t) for t in ("pen", "eraser", "shape", "select", "fill", "stamp", "artmove")}
+    check("...and for no other tool",
+          all(s is not None and not s["shown"] for s in others.values()),
+          str({t: s and s["shown"] for t, s in others.items()}))
+    check("a tool never sized follows the brush, as all three always have",
+          got(seen["blur"], "value") == 13 * 12 and got(seen["blur"], "out") == "156px"
+          and [reach(t) for t in REACH] == [78, 78, 78],
+          f"brush 13: Blur's row reads {got(seen['blur'], 'out')}; they reach {[reach(t) for t in REACH]}, "
+          "and six times 13 is 78, a 156px ring")
+    tray_with("blur")
+    moved = slide(300)
+    sm = tray_with("smudge")
+    check("moving Blur's size moves Blur alone",
+          got(moved, "out") == "300px" and reach("blur") == 150 and reach("smudge") == 78
+          and reach("liquify") == 78 and got(sm, "out") == "156px",
+          f"Blur's row {got(moved, 'out')}, reach {reach('blur')}; Smudge {reach('smudge')} "
+          f"(its row {got(sm, 'out')}), Liquify {reach('liquify')}")
+    bl = tray_with("blur", brush=20)
+    check("...and once set, the brush no longer moves it",
+          reach("blur") == 150 and got(bl, "out") == "300px" and reach("smudge") == 120,
+          f"brush 20: Blur reaches {reach('blur')} (its row {got(bl, 'out')}); Smudge, never set, "
+          f"reaches {reach('smudge')}")
+    rp.keyboard.press("Escape")
+    rp.wait_for_timeout(200)
+    rp.evaluate("() => setTool('blur')")
+    b0, s0 = reach("blur"), rp.evaluate("() => size")
+    rp.keyboard.press("]")
+    rp.keyboard.press("]")
+    b1, s1 = reach("blur"), rp.evaluate("() => size")
+    rp.evaluate("() => setTool('pen')")
+    rp.keyboard.press("]")
+    s2 = rp.evaluate("() => size")
+    check("[ and ] size the tool in hand: Blur's own with Blur, the brush with the pen",
+          b0 is not None and b1 == b0 + 12 and s1 == s0 and s2 == s0 + 1,
+          f"two ] with Blur: Blur {b0} -> {b1}, brush {s0} -> {s1}; one with the pen: brush -> {s2}")
+    # The longest name and the widest number, at the narrowest width (three
+    # columns below 360) and at an iPhone's. The knobs share a 58px label
+    # column, which holds SIDES and does not hold LIQUIFY SIZE.
+    for w in (320, 390):
+        rp.set_viewport_size({"width": w, "height": 760})
+        rp.wait_for_timeout(200)
+        fit = {}
+        for t in REACH:
+            tray_with(t)
+            fit[t] = slide(408)
+        check(f"at {w} wide each name fits beside its slider, and so does 408px",
+              all(f and f["labelFits"] and f["outFits"] and f["spans"] and f["out"] == "408px" for f in fit.values()),
+              str({t: f and {k: f[k] for k in ("labelFits", "outFits", "spans", "out")} for t, f in fit.items()}))
+    rc.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

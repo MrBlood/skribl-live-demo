@@ -277,7 +277,19 @@
           <output id="stampScaleOut">100%</output>
         </div>
       </div>
-      <div class="tool-tray" id="toolTray" role="dialog" aria-label="All tools" hidden></div>
+      {# THE SIZE ROW for the tools that reach around the pointer -- Liquify,
+         Smudge and Blur, each its own size (flip.js syncReachRow). Shown under
+         the tools only while one of the three is the tool, and named for it.
+         buildTray() empties the tray on every open, so flip.js holds this row
+         and puts it back under the cells each time. #}
+      <div class="tool-tray" id="toolTray" role="dialog" aria-label="All tools" hidden>
+        <div class="shape-knob reach-knob" id="reachRow" hidden>
+          <label for="reachSize">Size</label>
+          <input type="range" class="slider" id="reachSize" min="24" max="408" step="2" value="84"
+                 aria-label="Size">
+          <output id="reachSizeOut" for="reachSize">84px</output>
+        </div>
+      </div>
       {# ORDER MATCHES PAD: tools, then undo/redo, then colour and media. Flip
          had colour and media first, so the two editors read left-to-right
          differently for the same controls and muscle memory built on one

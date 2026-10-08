@@ -419,6 +419,14 @@
   .vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
     overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
 
+  /* ---------- The size row in the tool tray ----------
+     Liquify, Smudge and Blur each have a size of their own (flip.js
+     syncReachRow), set under the tools rather than on a card per button. A
+     .shape-knob like the stamp shelf's Size, laid across the tray's whole grid.
+     LIQUIFY SIZE is wider than the knobs' 58px label and 408px than their 32px
+     output; both boxes grow to their words, as a flex item does by default. */
+  .tool-tray .reach-knob { grid-column: 1 / -1; margin: 6px 4px 2px; }
+
   /* THE SPOTLIGHT. Points at the control instead of naming it — below the
      "regular" size class the selection bar carries no labels at all, so a
      sentence has nothing to refer to. Reduced-motion gets the ring without the
