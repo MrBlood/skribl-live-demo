@@ -677,6 +677,69 @@ with sync_playwright() as p:
               f"{_bright} — the middle of the line, blue channel of 255: a run painted "
               f"once must not pay alpha back for an overlap it never has")
 
+        # A SECOND DRAG SOFTENS WHERE IT GOES AND NOWHERE ELSE. The owner drew a
+        # line, swept Blur along all of it, barely touched it again -- and the
+        # whole line dimmed. blurDensify stores a walked run's alpha per DAB; the
+        # next drag read those back as the weight and paid the overlap back a
+        # second time, on every point of the run. Measured on a 7px violet line,
+        # blue channel of 255: 211 after the swipe, 60 at BOTH ENDS after a 10px
+        # touch in the middle. Two second drags, because each pins a different
+        # part of the fix: the owner's light touch, and a heavy scrub of one spot.
+        # The scrub is what shows that a dab the drag leaves alone has to go back
+        # EXACTLY as it was -- re-paid from what it looks like, the far ends came
+        # out 16% dimmer -- and that the spot itself gains a soft edge rather
+        # than only fading, which needs its halo built from what the run looks
+        # like too (2 of 255 at 8px off the line, against 43).
+        _again = page.evaluate("""() => {
+          const run = (second) => {
+            frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 }); idx = 0; size = 7;
+            const f = frames[0], A = [200, 120], B = [560, 460], n = 60;
+            for (let i = 0; i < n; i++) { const t = i / (n - 1);
+              f.strokes.push({ x: A[0] + (B[0] - A[0]) * t, y: A[1] + (B[1] - A[1]) * t, color: '#7c5cff', size: 7, t: i * 16, start: i === 0 }); }
+            f.strokeGroups.push(n);
+            const at = (t) => ({ x: A[0] + (B[0] - A[0]) * t, y: A[1] + (B[1] - A[1]) * t });
+            const L = Math.hypot(B[0] - A[0], B[1] - A[1]), nx = -(B[1] - A[1]) / L, ny = (B[0] - A[0]) / L;
+            const look = () => {
+              const cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
+              const c = cv.getContext('2d'); c.fillStyle = '#000'; c.fillRect(0, 0, CW, CH);
+              paintFrame(c, f.strokes);
+              const px = (t, off) => { const p = at(t);
+                return c.getImageData(Math.round(p.x + nx * off), Math.round(p.y + ny * off), 1, 1).data[2]; };
+              return { ends: [px(0.2, 0), px(0.8, 0)], mid: px(0.5, 0), edge: px(0.5, 8) };
+            };
+            setTool('blur');
+            fieldBegin(at(-0.05), 'Blur');
+            for (let s = 0; s <= 120; s++) blurMove(at(-0.05 + 1.1 * s / 120));
+            fieldEnd();
+            const one = look(), m = at(0.5);
+            if (second === 'touch') {
+              fieldBegin(m, 'Blur');
+              for (let k = 1; k <= 5; k++) blurMove({ x: m.x + k * 2, y: m.y + k * 2 });
+            } else {
+              fieldBegin(at(0.44), 'Blur');
+              for (let r = 0; r < 10; r++) for (let s = 0; s <= 30; s++)
+                blurMove(at(r % 2 ? 0.56 - 0.12 * s / 30 : 0.44 + 0.12 * s / 30));
+            }
+            fieldEnd(); setTool('pen');
+            return { one: one, two: look() };
+          };
+          return { touch: run('touch'), scrub: run('scrub') };
+        }""")
+        _t, _s = _again["touch"], _again["scrub"]
+        _kept = lambda r: all(b >= 0.95 * a for a, b in zip(r["one"]["ends"], r["two"]["ends"]))
+        check("a light second touch on a blurred line leaves the rest of it as the swipe did",
+              all(a < 240 for a in _t["one"]["ends"]) and _kept(_t)
+              and _t["two"]["mid"] <= _t["one"]["mid"] - 5,
+              f"{_t} — blue channel of 255 at 20% and 80% of the line ('ends'), and "
+              f"under the touch ('mid'), after the swipe ('one') and the touch ('two')")
+        check("a heavy second scrub on one spot leaves the rest of the line as it was",
+              _kept(_s),
+              f"{_s} — 'ends' at 20% and 80% of the line, after the swipe and the scrub")
+        check("...and softens that spot rather than only fading it",
+              _s["two"]["edge"] - _s["one"]["edge"] >= 20,
+              f"{_s} — 'edge' is 8px off the line at the scrubbed spot: the soft "
+              f"edge there must grow")
+
         print("\nOVER A PHOTO — the limit, said out loud instead of silently")
         # These tools move and recolour STROKE POINTS. A photograph is not
         # strokes, so sweeping one does nothing -- which is correct and looks

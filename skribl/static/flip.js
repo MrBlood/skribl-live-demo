@@ -8634,6 +8634,7 @@ const BLUR_RATE = 0.012;        // per PIXEL TRAVELLED, not per event -- see bel
 let _fieldIdx = -1, _fieldBefore = null, _fieldLast = null,
     _fieldTouched = false, _fieldLabel = '';
 let _blurAcc = null;            // point index -> accumulated weight, this drag
+let _blurSeen = null;           // run index -> blurSeen of that run in the snapshot, this drag
 let _smear = null;              // point OBJECT -> smear state, this drag
 let _fieldOverUnder = false;    // the brush crossed the page underneath's ink, this drag
 
@@ -8643,7 +8644,7 @@ function fieldBegin(pt, label){
   // would land somewhere else.
   _fieldIdx = idx; _fieldLabel = label; _fieldTouched = false; _fieldOverUnder = false;
   _fieldLast = { x: pt.x, y: pt.y };
-  _blurAcc = new Map();
+  _blurAcc = new Map(); _blurSeen = new Map();
   _smear = new WeakMap();
   const f = frames[_fieldIdx];
   _fieldBefore = f ? { strokes: f.strokes.map(q => Object.assign({}, q)),
@@ -8691,7 +8692,7 @@ function fieldEnd(){
   const touched = _fieldTouched, label = _fieldLabel, overUnder = _fieldOverUnder;
   _fieldOverUnder = false;
   _fieldBefore = null; _fieldLast = null; _fieldIdx = -1; _fieldTouched = false;
-  _blurAcc = null; _smear = null;
+  _blurAcc = null; _blurSeen = null; _smear = null;
   // Nothing caught -> NO undo entry, the same rule liquifyEnd states: a tap on
   // empty canvas must not push a no-op the user then has to press through.
   if(!touched || !before || !f){
@@ -8886,26 +8887,72 @@ function blurPasses(extraPts, extraRuns, basePts, baseRuns){
    payment for an overlap that never happens was still taken, and the line
    dropped to a quarter of its brightness. Measured on a 7px violet line:
    the middle at 61 of 255 when all of it was blurred, 201 when half of it
-   was, which is the brightness the soft edge is meant to have. */
-function blurDensify(seg){
+   was, which is the brightness the soft edge is meant to have.
+
+   `paid` maps a point to the dab an earlier drag already paid for, and that
+   dab goes back exactly as it was -- see blurSeen. */
+function blurDensify(seg, paid){
   if(seg.length < 2) return seg;
-  let len = 0;
-  for(let k = 1; k < seg.length; k++)
-    len += Math.hypot(seg[k].x - seg[k-1].x, seg[k].y - seg[k-1].y);
+  const len = blurLength(seg);
   if(!(len > 0)) return seg;
   const wide = seg.reduce((m, q) => Math.max(m, q.size || 0), 0);
   const want = Math.ceil(len / Math.max(1, wide / BLUR_OVERLAP)) + 1;
   if(want > seg.length) seg = tweenResample(seg, Math.min(want, seg.length * 12));
-  const spacing = len / Math.max(1, seg.length - 1);
-  const n = Math.max(1, Math.min(BLUR_OVERLAP * 2, wide / Math.max(0.001, spacing)));
+  const n = blurOverlap(wide, len, seg.length);
   const a0 = strokeAlphaOf(seg[0].color);
   if(seg.every(q => strokeAlphaOf(q.color) === a0)) return seg;   // painted once: nothing to pay back
-  if(n > 1) for(const q of seg){
+  for(const q of seg){
+    const was = paid ? paid.get(q) : undefined;
+    if(was !== undefined){ q.color = was; continue; }
     const t = strokeAlphaOf(q.color);
-    if(t > 0 && t < 1)
+    if(n > 1 && t > 0 && t < 1)
       q.color = tweenFade(q.color, (1 - Math.pow(1 - t, 1 / n)) / t);
   }
   return seg;
+}
+function blurLength(seg){
+  let len = 0;
+  for(let k = 1; k < seg.length; k++)
+    len += Math.hypot(seg[k].x - seg[k-1].x, seg[k].y - seg[k-1].y);
+  return len;
+}
+/* Dabs over any one spot of a run: its widest point over its mean spacing. One
+   function, because blurDensify pays by it and blurSeen reads the payment back
+   by it, and the two must not drift apart. */
+function blurOverlap(wide, len, count){
+  const spacing = len / Math.max(1, count - 1);
+  return Math.max(1, Math.min(BLUR_OVERLAP * 2, wide / Math.max(0.001, spacing)));
+}
+
+/* WHAT A RUN LOOKS LIKE, which after a blur is not what it stores.
+
+   blurDensify writes a walked run's alpha PER DAB -- 1-(1-T)^(1/n), so the n
+   dabs over a spot add up to T -- and the next drag read those dab alphas back
+   as if each one were T. It faded from them, then paid the overlap back a
+   second time, on every point of every run the brush so much as grazed. The
+   owner drew a line, swept Blur along all of it, barely touched it again, and
+   the whole line dimmed. Measured on a 7px violet line: 211 of 255 after the
+   swipe, 60 after a 10px touch in the middle -- at both ends as well as under
+   the brush, and the soft edge with it.
+
+   So a run the painter walks -- more than one alpha in it -- is read through
+   the same overlap blurDensify paid, n dabs of x giving 1-(1-x)^n, and every
+   fade starts from that. Returns those colours, or null for a run that is seen
+   exactly as stored: one alpha throughout is painted once, and blurDensify
+   pays nothing on a run with no overlap to pay for. */
+function blurSeen(seg){
+  if(seg.length < 2) return null;
+  const a0 = strokeAlphaOf(seg[0].color);
+  if(seg.every(q => strokeAlphaOf(q.color) === a0)) return null;
+  const len = blurLength(seg);
+  if(!(len > 0)) return null;
+  const wide = seg.reduce((m, q) => Math.max(m, q.size || 0), 0);
+  const n = blurOverlap(wide, len, seg.length);
+  if(!(n > 1)) return null;
+  return seg.map(q => {
+    const t = strokeAlphaOf(q.color);
+    return (t > 0 && t < 1) ? tweenFade(q.color, (1 - Math.pow(1 - t, n)) / t) : q.color;
+  });
 }
 
 /* Rebuilds the frame from the snapshot plus the accumulated per-point weights:
@@ -8936,15 +8983,17 @@ function blurRebuild(f){
   const snap = _fieldBefore;
   if(!snap) return;
   const orig = snap.strokes, groups = snap.groups;
-  // Contiguous stretches of brushed points, per run. A run the brush crossed in
-  // two places gets two halos rather than one spanning the gap between them.
-  const runs = groups.map(() => []);
+  // Contiguous stretches of brushed points, per run, and which runs the brush
+  // reached at all. A run the brush crossed in two places gets two halos
+  // rather than one spanning the gap between them.
+  const runs = groups.map(() => []), touched = groups.map(() => false);
   let at = 0, extraPts = 0, extraRuns = 0;
   for(let g = 0; g < groups.length; g++){
     const count = groups[g];
     let s = -1;
     for(let k = 0; k <= count; k++){
       const acc = k < count ? (_blurAcc.get(at + k) || 0) : 0;
+      if(acc > 0 && !orig[at + k].erase) touched[g] = true;
       if(acc > BLUR_EPS && s < 0) s = k;
       else if((acc <= BLUR_EPS || k === count) && s >= 0){
         // One point either side, so the halo does not stop dead mid-line.
@@ -8959,7 +9008,7 @@ function blurRebuild(f){
   const passes = blurPasses(extraPts, extraRuns, orig.length, groups.length);
   const halo = passes.slice(0, passes.length - 1);
   const out = [], outG = [];
-  const haloOf = (r, pass, endT) => {
+  const haloOf = (r, pass, endT, seen) => {
     let seg = [];
     for(let k = r.from; k <= r.to; k++){
       const src = orig[r.at + k];
@@ -8970,7 +9019,7 @@ function blurRebuild(f){
       const q = Object.assign({}, src);
       const base = typeof src.size === 'number' ? src.size : 1;
       q.size = base + blurSoftEdge(base) * pass.d * acc;
-      q.color = tweenFade(src.color, pass.a * acc);
+      q.color = tweenFade(seen ? seen[k] : src.color, pass.a * acc);
       seg.push(q);
     }
     seg = blurDensify(seg);
@@ -8982,7 +9031,14 @@ function blurRebuild(f){
   };
   for(let g = 0, a = 0; g < groups.length; g++){
     const count = groups[g];
-    let core = [], touched = false;
+    // Fades start from what the run LOOKS like -- see blurSeen. A dab this drag
+    // leaves alone is already paid for, and goes back exactly as it was. Read
+    // once a drag: the snapshot it reads does not change under the drag, and
+    // reading it on every move made a heavy page a third to a half slower per
+    // move -- 7.3 to 8.4 ms against 5.4, the same page and the same swipe.
+    if(touched[g] && !_blurSeen.has(g)) _blurSeen.set(g, blurSeen(orig.slice(a, a + count)));
+    const seen = touched[g] ? _blurSeen.get(g) : null, paid = seen ? new Map() : null;
+    let core = [];
     for(let k = 0; k < count; k++){
       const src = orig[a + k];
       const acc = Math.min(1, _blurAcc.get(a + k) || 0);
@@ -8990,9 +9046,8 @@ function blurRebuild(f){
       if(acc > 0 && !src.erase){
         const base = typeof src.size === 'number' ? src.size : 1;
         q.size = base + blurSoftEdge(base) * 0.18 * acc;
-        q.color = tweenFade(src.color, 1 - (1 - BLUR_CORE_KEEP) * acc);
-        touched = true;
-      }
+        q.color = tweenFade(seen ? seen[k] : src.color, 1 - (1 - BLUR_CORE_KEEP) * acc);
+      } else if(seen){ q.color = seen[k]; paid.set(q, src.color); }
       core.push(q);
     }
     /* The core is translucent where the brush went, and a translucent run beads
@@ -9000,13 +9055,13 @@ function blurRebuild(f){
        string of bright circles before the same treatment was applied to it.
        Untouched runs are left ALONE: they are the user's strokes, still opaque,
        and resampling them would rewrite geometry the blur never reached. */
-    if(touched) core = blurDensify(core);
+    if(touched[g]) core = blurDensify(core, paid);
     core[0].start = true;
     for(let k = 1; k < core.length; k++) delete core[k].start;
     out.push(...core); outG.push(core.length);
     let endT = null;
     for(const q of core){ const t = Number(q.t); if(isFinite(t) && (endT === null || t > endT)) endT = t; }
-    for(const pass of halo) for(const r of runs[g]) haloOf(r, pass, endT);
+    for(const pass of halo) for(const r of runs[g]) haloOf(r, pass, endT, seen);
     a += count;
   }
   f.strokes = out; f.strokeGroups = outG;

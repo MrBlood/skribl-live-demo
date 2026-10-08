@@ -14468,6 +14468,27 @@ blur is pixel for pixel what it was. verify_smudgeblur: a whole stroke blurred
 stays within 15% of one blurred half way; red without the guard (61 against
 201).
 
-The other half of that report -- one touch softening the whole line -- did not
-reproduce: a finger tap through the real touch path, on a fast and a slow swipe,
-changed no point at all. Asked the owner for the file.
+**A second drag no longer dims the whole line.** The other half of that report
+-- "touched diag line ... and whole line did that" -- did not reproduce from a
+tap, which changes no point at all. It did from the sequence the owner then
+gave: draw a line, sweep Blur along all of it, barely stroke it a second time.
+211 of 255 after the swipe; 60 at both ends after a 10px touch in the middle.
+blurDensify stores a walked run's alpha per DAB, 1-(1-T)^(1/n), so the n dabs
+over a spot add up to T. The next drag read those dab alphas back as T, faded
+from them, and paid the overlap back a second time, on every point of every run
+the brush grazed, soft edge included. blurSeen now reads a walked run through
+the same overlap, 1-(1-x)^n, so every fade starts from what the line looks like,
+and a dab the drag leaves alone goes back exactly as it was. The touch leaves
+the ends at 211 and takes the middle to 194; three full swipes go 211, 162, 125
+at a fifth of the way along, where they went 211, 49, 1.
+
+verify_smudgeblur, one check per part of the fix, each red without its part and
+all of them red on main and on the whole-stroke fix alone:
+- a light second touch leaves the rest of the line as the swipe did. Red without
+  blurSeen: 62.
+- a heavy scrub of one spot leaves the rest of the line as it was. Red when an
+  untouched dab is re-paid from what it looks like instead of put back: the
+  overlap a run is paid by follows its widest point, which the scrub grows, so
+  the far ends came out 16% dimmer (177).
+- the scrubbed spot gains a soft edge rather than only fading. Red when its halo
+  is built from the stored dab alphas: 2 of 255 at 8px off the line, against 43.
