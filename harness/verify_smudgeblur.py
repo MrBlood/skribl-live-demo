@@ -853,21 +853,24 @@ with sync_playwright() as p:
 
         print("\nTHE REACH, SHOWN — Blur and Smudge wear the ring Liquify does")
         # The owner, of Blur: "shouldn't the blur have an adjustable target and
-        # be a circle the size of the blur diameter?" Blur and Smudge reach
-        # liquifyRadius(), six times the brush size, and showed the pen's ring,
+        # be a circle the size of the blur diameter?" Blur and Smudge reach as
+        # far as Liquify, six times the brush size, and showed the pen's ring,
         # a sixth of that. Real mouse moves over the canvas; the ring's width
         # against the reach it has to draw.
         page.evaluate("() => { frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 }); idx = 0; render(); }")
         _pb = page.locator("#pad").bounding_box()
-        def _ring_for(pg, box, tool, sz):
+        def _ring_for(pg, box, tool, sz, reach=None):
+            # The reach the ring has to draw, said here rather than asked of the
+            # page: six times the brush, unless the tool has a size of its own.
+            reach = max(8, sz * 6) if reach is None else reach
             pg.evaluate("(a) => { size = a[1]; setTool(a[0]); }", [tool, sz])
             pg.mouse.move(box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.5)
             pg.mouse.move(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5)
             pg.wait_for_timeout(80)
-            return pg.evaluate("""() => { const r = document.querySelector('.flip-liquify-cursor'), b = pad.getBoundingClientRect();
+            return pg.evaluate("""(reach) => { const r = document.querySelector('.flip-liquify-cursor'), b = pad.getBoundingClientRect();
               return { shown: r.style.display === 'block', width: Math.round(parseFloat(r.style.width) * 10) / 10,
-                       want: Math.round(liquifyRadius() * 2 * (b.width / CW) * 10) / 10,
-                       ink: getComputedStyle(r).borderTopColor }; }""")
+                       want: Math.round(reach * 2 * (b.width / CW) * 10) / 10,
+                       ink: getComputedStyle(r).borderTopColor }; }""", reach)
         _b7, _b13 = _ring_for(page, _pb, "blur", 7), _ring_for(page, _pb, "blur", 13)
         _s13, _p13 = _ring_for(page, _pb, "smudge", 13), _ring_for(page, _pb, "pen", 13)
         page.evaluate("() => { size = 7; setTool('pen'); }")
@@ -906,6 +909,143 @@ with sync_playwright() as p:
               max(_rgb(_ink["dark on white"])) <= 60 and max(_rgb(_ink["light on white"])) <= 60,
               f"ring ink on a white ground: {_ink['dark on white']} in the dark theme, "
               f"{_ink['light on white']} in the light")
+
+        print("\nEACH ITS OWN SIZE — the size in the tray is what the tool reaches")
+        # The owner, of Blur: "is there a blur radius adjuster?" Liquify, Smudge
+        # and Blur all reached six times the brush size. Each has a size of its
+        # own now, in the row under the tools in the tray (verify_tray drives
+        # the row). Asked here of the tools themselves, set through that row's
+        # own input event: a sweep 60 canvas units beside a line reaches it or
+        # not by the tool's own size, whatever the brush is.
+        def _own(tool, across):
+            page.evaluate("""(a) => { setTool(a[0]); const r = document.getElementById('reachSize');
+                if (!r) return; r.value = String(a[1]); r.dispatchEvent(new Event('input', { bubbles: true })); }""",
+                          [tool, across])
+
+        def _sweep_reaches(tool, across, brush):
+            page.evaluate("""() => { frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 });
+                idx = 0; render(); size = 7; setTool('pen'); }""")
+            bx = page.locator("#pad").bounding_box()
+            cx, cy = bx["x"] + bx["width"] / 2, bx["y"] + bx["height"] / 2
+            line(page, cx, cy)
+            _own(tool, across)
+            page.evaluate("(s) => { size = s; }", brush)
+            before = page.evaluate(SNAP)
+            y = cy - 60 * bx["width"] / page.evaluate("() => CW")
+            page.mouse.move(cx - 100, y)
+            page.mouse.down()
+            for i in range(1, 11):
+                page.mouse.move(cx - 100 + i * 20, y)
+            page.mouse.up()
+            page.wait_for_timeout(300)
+            return page.evaluate(SNAP) != before
+
+        # (far, near): its own 12 with the brush at 34, which would reach 204; its
+        # own 150 with the brush at 2, which would reach 12. Named one by one, so
+        # verify_helpclaims can hold each tool's tip to its own check.
+        _reached = {t: (_sweep_reaches(t, 24, 34), _sweep_reaches(t, 300, 2))
+                    for t in ("liquify", "smudge", "blur")}
+        _swept = lambda t: (f"a sweep 60 beside a line -- its own 12 with the brush at 34 touched it: "
+                            f"{_reached[t][0]}; its own 150 with the brush at 2 touched it: {_reached[t][1]}")
+        check("Liquify reaches its own size, whatever the brush",
+              not _reached["liquify"][0] and _reached["liquify"][1], _swept("liquify"))
+        check("Smudge reaches its own size, whatever the brush",
+              not _reached["smudge"][0] and _reached["smudge"][1], _swept("smudge"))
+        check("Blur reaches its own size, whatever the brush",
+              not _reached["blur"][0] and _reached["blur"][1], _swept("blur"))
+
+        # The ring says the same size, and the brush no longer moves it.
+        page.evaluate("() => { frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 }); idx = 0; render(); }")
+        _own("blur", 200)
+        _r7, _r30 = _ring_for(page, _pb, "blur", 7, reach=100), _ring_for(page, _pb, "blur", 30, reach=100)
+        check("Blur's ring is its own size once set, and the brush no longer moves it",
+              _r7["shown"] and _r30["shown"] and abs(_r7["width"] - _r7["want"]) <= 1
+              and abs(_r30["width"] - _r30["want"]) <= 1,
+              f"its own 100, 200 across: with the brush at 7 {_r7}; at 30 {_r30}")
+        # Let go of the slider and move onto the canvas: the pointer's own ring
+        # takes over, and the row's timer must not take it away a moment later.
+        page.click("#toolMoreBtn")
+        page.wait_for_timeout(350)
+        _ts = page.locator("#reachSize").bounding_box() if page.locator("#reachSize").count() else None
+        _kept = None
+        if _ts:
+            page.mouse.move(_ts["x"] + _ts["width"] * 0.3, _ts["y"] + _ts["height"] / 2)
+            page.mouse.down()
+            page.mouse.move(_ts["x"] + _ts["width"] * 0.4, _ts["y"] + _ts["height"] / 2)
+            page.mouse.up()
+            _hx, _hy = _pb["x"] + _pb["width"] * 0.3, _pb["y"] + _pb["height"] * 0.3
+            for i in range(4):
+                page.mouse.move(_hx - 12 + i * 4, _hy)
+            page.wait_for_timeout(1200)
+            _kept = page.evaluate("""() => { const r = document.querySelector('.flip-liquify-cursor'), b = r.getBoundingClientRect();
+              return { shown: getComputedStyle(r).display !== 'none', cx: Math.round(b.left + b.width / 2), cy: Math.round(b.top + b.height / 2) }; }""")
+        check("...and a mouse moved onto the canvas after the slider keeps its own ring there",
+              bool(_kept) and _kept["shown"] and abs(_kept["cx"] - _hx) <= 2 and abs(_kept["cy"] - _hy) <= 2,
+              f"{_kept}, the mouse at ({_ts and round(_hx)}, {_ts and round(_hy)}), 1.2s after the slider let go")
+        page.keyboard.press("Escape")
+        page.evaluate("() => { if (typeof reachOwn === 'object') reachOwn.liquify = reachOwn.smudge = reachOwn.blur = 0;"
+                      " size = 7; setTool('pen'); }")
+
+        # A finger is its own cursor, so a phone never shows a ring under it;
+        # the row shows one while its slider is held. Real touches, at 390,
+        # and the ring asked whether it is PAINTED, not only where its box is.
+        import io
+        from PIL import Image, ImageChops
+        _ph = br.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2,
+                             is_mobile=True, has_touch=True)
+        try:
+            _pp = _ph.new_page()
+            browsing.goto(_pp, BASE, "/flip")
+            _pp.wait_for_timeout(800)
+            _pp.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); setTool('blur'); }")
+            _pp.tap("#toolMoreBtn")
+            _pp.wait_for_timeout(400)
+            # Where it should stand: the middle of the canvas still in view above
+            # the tray, which covers the canvas's foot on a phone.
+            PREVIEW = """() => { const r = document.querySelector('.flip-liquify-cursor'), b = r.getBoundingClientRect(),
+                p = pad.getBoundingClientRect(), w = document.querySelector('.flip-wrap').getBoundingClientRect(),
+                t = document.getElementById('toolTray'), s = document.getElementById('reachSize');
+              const floor = Math.min(w.bottom, innerHeight, t.getBoundingClientRect().top);
+              return { shown: getComputedStyle(r).display !== 'none', width: Math.round(b.width * 10) / 10,
+                       want: s ? Math.round(+s.value * (p.width / CW) * 10) / 10 : null,
+                       cx: Math.round(b.left + b.width / 2), cy: Math.round(b.top + b.height / 2),
+                       wantX: Math.round((Math.max(w.left, 0) + Math.min(w.right, innerWidth)) / 2),
+                       wantY: Math.round((Math.max(w.top, 0) + floor) / 2), trayTop: Math.round(t.getBoundingClientRect().top),
+                       wrapFoot: Math.round(w.bottom), trayOpen: !t.hidden }; }"""
+            _held, _gone, _ink_px = None, None, 0
+            _s = _pp.locator("#reachSize").bounding_box() if _pp.locator("#reachSize").count() else None
+            if _s:
+                _cdp = _ph.new_cdp_session(_pp)
+                _v = float(_pp.evaluate("() => document.getElementById('reachSize').value"))
+                _x = _s["x"] + 12 + (_v - 24) / (408 - 24) * (_s["width"] - 24)
+                _y = _s["y"] + _s["height"] / 2
+                _cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": _x, "y": _y}]})
+                for i in range(1, 9):
+                    _cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": _x + i * 12, "y": _y}]})
+                    _pp.wait_for_timeout(30)
+                _pp.wait_for_timeout(1200)    # held past the 900ms a key press gets
+                _held = _pp.evaluate(PREVIEW)
+                if _held["shown"]:
+                    _w = _held["width"]
+                    _clip = {"x": _held["cx"] - _w / 2 - 3, "y": _held["cy"] - _w / 2 - 3, "width": _w + 6, "height": _w + 6}
+                    _on = Image.open(io.BytesIO(_pp.screenshot(clip=_clip))).convert("RGB")
+                    _pp.evaluate("() => { document.querySelector('.flip-liquify-cursor').style.visibility = 'hidden'; }")
+                    _off = Image.open(io.BytesIO(_pp.screenshot(clip=_clip))).convert("RGB")
+                    _pp.evaluate("() => { document.querySelector('.flip-liquify-cursor').style.visibility = ''; }")
+                    _ink_px = ImageChops.difference(_on, _off).convert("L").point(lambda v: 255 if v > 24 else 0).histogram()[255]
+                _cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+                _pp.wait_for_timeout(1300)
+                _gone = _pp.evaluate(PREVIEW)
+            check("while its size is dragged, the ring stands at its true size mid-canvas, in view above the tray",
+                  bool(_held) and _held["shown"] and _held["want"] is not None
+                  and abs(_held["width"] - _held["want"]) <= 1
+                  and abs(_held["cx"] - _held["wantX"]) <= 2 and abs(_held["cy"] - _held["wantY"]) <= 2
+                  and _ink_px >= 3.14 * _held["width"] * 2 * 0.25,
+                  f"{_held}; {_ink_px} device pixels painted by the ring")
+            check("...and it goes once the slider is let go, with the tray still open",
+                  bool(_gone) and not _gone["shown"] and _gone["trayOpen"], str(_gone))
+        finally:
+            _ph.close()
 
         print("\nOVER A PHOTO — the limit, said out loud instead of silently")
         # These tools move and recolour STROKE POINTS. A photograph is not

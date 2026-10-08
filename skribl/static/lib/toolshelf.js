@@ -223,6 +223,9 @@
       has: function (id) { return !!byId(id); },
       btnFor: btnEl,
       list: function () { return tools.map(function (t) { return t.id; }); },
+      // The tray's word for a tool, for anything else that has to name it
+      // (Flip's size row) -- asked here so the two cannot disagree.
+      labelFor: function (id) { var t = byId(id); return t ? t.label : ''; },
       iconFor: iconFor,
       shelf: shelf,
       overflowing: overflowing,

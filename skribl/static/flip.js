@@ -398,9 +398,19 @@ let moveOrigin = null, moveDragging = false, moveStart = null;
    functions 2500 lines below would be in its temporal dead zone at that moment
    and would take the whole file down with it. */
 let liquifying = false, liquifyPointerId = null;
-// The tools that reach liquifyRadius() around the pointer, and so wear its
-// ring. Up here for the reason above: setTool() reads it.
+// The tools that reach reachFor() around the pointer, and so wear its ring
+// and get the size row in the tray. Up here for the reason above: setTool()
+// reads it.
 const REACH_TOOLS = new Set(['liquify', 'smudge', 'blur']);
+// Each one's own reach, set in that row; 0 is "never set" (see reachFor). The
+// row is kept here because buildTray() empties the tray on every open, and
+// setTool() repaints it.
+const reachOwn = { liquify: 0, smudge: 0, blur: 0 };
+const reachRow = document.getElementById('reachRow');
+// What a tool never sized reaches (reachFor), and the row's range; up here
+// with the rest, since setTool() repaints the row and the row reads them.
+const LIQUIFY_REACH = 6;
+const REACH_MIN = 12, REACH_MAX = 204;    // the brush slider's 2..34, times six
 let fieldActive = false, fieldPointerId = null;   // smudge / blur
 /* HOW MANY TIMES THE CHEAP PATH PAINTS ONE PIXEL (SK-AUD-007). While a field
    tool's finger is down a see-through run skips its layer (paintStatic says
@@ -2317,8 +2327,9 @@ function moveBrushCursor(e){
   brushCursor.style.display = 'block';
 }
 function moveLiquifyCursor(e){
+  clearTimeout(_reachTimer);   // the pointer's ring takes over from the size row's
   const r = _padRectCached();
-  const sz = liquifyRadius() * 2 * (r.width / CW);
+  const sz = reachFor(flipTool) * 2 * (r.width / CW);
   liquifyCursor.style.width = sz + 'px'; liquifyCursor.style.height = sz + 'px';
   liquifyCursor.style.transform =
     'translate3d(' + (e.clientX - r.left) + 'px,' + (e.clientY - r.top) + 'px,0) translate(-50%,-50%)';
@@ -2364,9 +2375,9 @@ pad.addEventListener('pointermove', e=>{
   }
   if(playing || picking){ hideCursors(); return; }
   if(ZoomView && ZoomView.isZoomed()){ hideCursors(); return; }   // use a normal cursor while magnified
-  // Blur and Smudge reach exactly as far as Liquify (liquifyRadius), so they
-  // wear its ring: the owner asked where the blur's edge was, and the pen's
-  // ring said the brush was a sixth of the size it is.
+  // Blur and Smudge reach the way Liquify does (reachFor), so they wear its
+  // ring: the owner asked where the blur's edge was, and the pen's ring said
+  // the brush was a sixth of the size it is.
   if(REACH_TOOLS.has(flipTool)){
     moveLiquifyCursor(e); eraserCursor.style.display='none'; brushCursor.style.display='none';
   }
@@ -4502,6 +4513,7 @@ function setTool(t){
   // Each ring belongs to one tool; leaving a tool must take its ring with it,
   // or the last one drawn hangs around over the canvas until the next move.
   if(typeof liquifyCursor!=='undefined' && !REACH_TOOLS.has(flipTool)) liquifyCursor.style.display='none';
+  syncReachRow();
   if(picking) setPicking(false);
 }
 // Shared with Pad via lib/recentcolors.js. closePop() stays here: Flip's
@@ -4604,7 +4616,9 @@ const _flipDrawerCtl = skriblDrawers({
     // photo and music — opening it closes them, and vice versa. Rebuilt on
     // every open; see toolShelf.buildTray().
     tools: { panel: toolTray, button: toolMoreBtn, openClass: 'open', aria: true,
-             onOpen(){ if(toolShelf){ toolShelf.buildTray(); toolShelf.sync(); } } }
+             onOpen(){ if(toolShelf){ toolShelf.buildTray(); toolShelf.sync(); }
+                       // buildTray() empties the tray: the size row goes back under the cells.
+                       if(reachRow){ toolTray.appendChild(reachRow); syncReachRow(); } } }
   },
   reveal(open, name){
     // Everything closed: back to the top, as the Pad has always done. Flip
@@ -4672,6 +4686,74 @@ document.addEventListener('click',e=>{ const t=e.target;
 // away from them, which is natural for a docked panel; the tray floats over the
 // canvas, so the key that closes every other overlay should close it too.
 document.addEventListener('keydown', e => { if(e.key === 'Escape') hideToolTray(); });
+
+/* THE SIZE ROW, under the tools in the tray: how far Liquify, Smudge and Blur
+   reach, each its own (reachFor). A card on each tool's button was mocked
+   beside it; the owner took the tray, because three tools want a size: "it
+   would make sense to have it in that menu if we are going to have a size
+   slider for other choices too, like liquify, smudge, etc". It shows only
+   while one of the three is the tool, and is named for it, so it always says
+   whose size it is. The number is the ring's width on the canvas. Children
+   are read off the row here, not held in consts: setTool() calls this during
+   init, before a const below this line would exist. */
+function syncReachRow(){
+  if(!reachRow) return;
+  const on = REACH_TOOLS.has(flipTool);
+  reachRow.hidden = !on;
+  if(!on) return;
+  const name = (toolShelf && toolShelf.labelFor(flipTool)) || flipTool;
+  const inp = reachRow.querySelector('input');
+  reachRow.querySelector('label').textContent = name + ' size';
+  inp.setAttribute('aria-label', name + ' size');
+  inp.value = String(reachFor(flipTool) * 2);
+  paintReachRow();
+}
+function paintReachRow(){
+  const inp = reachRow.querySelector('input'), v = +inp.value;
+  inp.style.setProperty('--slider-fill', ((v - +inp.min) / (+inp.max - +inp.min) * 100) + '%');
+  reachRow.querySelector('output').textContent = v + 'px';
+}
+/* THE RING, WHILE THE SIZE MOVES. A finger is its own cursor, so a phone never
+   shows the ring and the slider alone would ask for a size it cannot show.
+   While the slider is held, and a moment after, the ring stands at its true
+   size in the middle of the canvas still in view above the tray. `var`: the
+   pointer's own ring (moveLiquifyCursor, far above) clears the timer. */
+var _reachHeld = false, _reachTimer = 0;
+function reachPreview(){
+  if(!REACH_TOOLS.has(flipTool)) return;
+  const w = liquifyCursor.parentNode.getBoundingClientRect(), p = pad.getBoundingClientRect();
+  const floor = Math.min(w.bottom, innerHeight, (toolTray && !toolTray.hidden) ? toolTray.getBoundingClientRect().top : Infinity);
+  const top = Math.max(w.top, 0);
+  const cx = (Math.max(w.left, 0) + Math.min(w.right, innerWidth)) / 2;
+  const cy = floor > top ? (top + floor) / 2 : (w.top + w.bottom) / 2;
+  const sz = reachFor(flipTool) * 2 * (p.width / CW);
+  liquifyCursor.style.width = sz + 'px'; liquifyCursor.style.height = sz + 'px';
+  liquifyCursor.style.transform =
+    'translate3d(' + (cx - w.left) + 'px,' + (cy - w.top) + 'px,0) translate(-50%,-50%)';
+  liquifyCursor.style.display = 'block';
+  clearTimeout(_reachTimer);
+  if(!_reachHeld) _reachTimer = setTimeout(reachPreviewEnd, 900);
+}
+function reachPreviewEnd(){
+  clearTimeout(_reachTimer); _reachHeld = false;
+  liquifyCursor.style.display = 'none';
+}
+function reachPreviewLet(){
+  if(!_reachHeld) return;
+  _reachHeld = false;
+  clearTimeout(_reachTimer); _reachTimer = setTimeout(reachPreviewEnd, 700);
+}
+if(reachRow){
+  const inp = reachRow.querySelector('input');
+  inp.addEventListener('input', ()=>{
+    if(!REACH_TOOLS.has(flipTool)) return;
+    reachOwn[flipTool] = (+inp.value) / 2;
+    paintReachRow(); reachPreview();
+  });
+  inp.addEventListener('pointerdown', ()=>{ _reachHeld = true; reachPreview(); });
+  window.addEventListener('pointerup', reachPreviewLet);
+  window.addEventListener('pointercancel', reachPreviewLet);
+}
 // First paint: with three tools this only hides the chevron, which the template
 // already ships hidden. It is here so the shelf is correct from the registry
 // rather than from the markup happening to agree with it.
@@ -8365,13 +8447,19 @@ function addInbetween(){
    and their `t`, so the animation still draws in sequence, just along a bent
    path), export, the player, the draft, and an undo that is exact. */
 
-/* Reach, in canvas units. Tied to the brush slider so liquify needs no control
-   of its own -- the row is already full, and "the size you draw with is the
-   size you push with" is one less thing to explain. The multiplier makes the
-   brush reach wider than it paints, because a warp that only caught the line
-   directly under the cursor would feel like nothing at all. */
-const LIQUIFY_REACH = 6;
-function liquifyRadius(){ return Math.max(8, size * LIQUIFY_REACH); }
+/* Reach, in canvas units: how far Liquify, Smudge and Blur reach from the
+   pointer. The multiplier makes the brush reach wider than it paints, because
+   a warp that only caught the line directly under the cursor would feel like
+   nothing at all.
+
+   EACH TOOL ITS OWN. All three were tied to the brush slider, so the only way
+   to resize Blur was to resize the pen -- the owner: "is there a blur radius
+   adjuster?" Each now keeps a size of its own, set in the size row under the
+   tools in the More tools tray (syncReachRow). A tool never set reaches what
+   it always did, LIQUIFY_REACH times the brush size, so nothing changes until
+   its own slider moves. Not kept across a reload, as the brush size is not.
+   LIQUIFY_REACH and the row's range live with the early state, at the top. */
+function reachFor(tool){ return reachOwn[tool] || Math.max(8, size * LIQUIFY_REACH); }
 
 /* THE INK HAS TO SLIP, and this is the number that makes it.
 
@@ -8532,7 +8620,7 @@ function liquifyMove(pt){
   const dx = pt.x - liquifyLast.x, dy = pt.y - liquifyLast.y;
   liquifyLast = { x: pt.x, y: pt.y };
   if(!dx && !dy) return false;
-  const r = liquifyRadius(), r2 = r * r;
+  const r = reachFor('liquify'), r2 = r * r;
   // Resolution BEFORE displacement, every move: a segment only needs splitting
   // once, and after that this is a cheap no-op on it. Splitting after the warp
   // would bend the coarse line first and interpolate the kink.
@@ -8707,7 +8795,7 @@ function fieldUnderProbe(pt){
   if(_fieldOverUnder) return;
   const u = _validUnder(), f = u && frames[u.page];
   if(!f || _fieldIdx < u.from || _fieldIdx > u.to) return;
-  const r = liquifyRadius(), r2 = r * r;
+  const r = reachFor(flipTool), r2 = r * r;
   for(const q of f.strokes){
     if(q.erase) continue;
     const dx = q.x - pt.x, dy = q.y - pt.y;
@@ -8760,7 +8848,7 @@ function smudgeMove(pt){
   _fieldLast = { x: pt.x, y: pt.y };
   if(!dx && !dy) return false;
   const travel = Math.sqrt(dx * dx + dy * dy);
-  const r = liquifyRadius();
+  const r = reachFor('smudge');
   // Resolution BEFORE displacement, exactly as liquifyMove does it: a segment
   // with two vertices in the brush can only bend into a corner, and splitting
   // after the warp interpolates the kink instead of preventing it.
@@ -9273,7 +9361,7 @@ function blurMove(pt){
   const dym = _fieldLast ? (pt.y - _fieldLast.y) : 0;
   const travel = _fieldLast ? Math.sqrt(dxm * dxm + dym * dym) : 4;
   _fieldLast = { x: pt.x, y: pt.y };
-  const r = liquifyRadius();
+  const r = reachFor('blur');
   // No subdivision: blur does not move anything, so a coarse segment blurs just
   // as well as a fine one and splitting it would only cost points.
   //
@@ -10730,7 +10818,17 @@ window.addEventListener('keydown', e=>{
   // Brush size and grid, matching Pad. Dispatched as an 'input' event rather
   // than set-and-call: the value label, the fill and the autosave all hang off
   // this input's own event, and reaching past them would move the number alone.
-  if(e.key==='[' || e.key===']'){
+  // With Liquify, Smudge or Blur in hand they size THAT tool, as its row does:
+  // it has its own size now, and moving the pen's would leave its ring alone.
+  if((e.key==='[' || e.key===']') && REACH_TOOLS.has(flipTool)){
+    reachOwn[flipTool] = Math.max(REACH_MIN, Math.min(REACH_MAX, reachFor(flipTool) + (e.key===']' ? 6 : -6)));
+    syncReachRow();
+    if(liquifyCursor.style.display === 'block'){
+      const r = _padRectCached(), sz = reachFor(flipTool) * 2 * (r.width / CW);
+      liquifyCursor.style.width = sz + 'px'; liquifyCursor.style.height = sz + 'px';
+    }
+  }
+  else if(e.key==='[' || e.key===']'){
     const r=document.getElementById('size');
     if(r){ const next=Math.max(+r.min, Math.min(+r.max, (+r.value||0) + (e.key===']'?1:-1)));
       if(next!==+r.value){ r.value=String(next); r.dispatchEvent(new Event('input',{bubbles:true})); } }
