@@ -1313,7 +1313,12 @@ with sync_playwright() as sp:
     #   first: the round before it (the looped stretch) had already retired the
     #   old clock and moved the export's slot order out of the lib; nothing in
     #   these paths was left to delete. 37,814 B measured.
-    EMBED_RATCHET = 37_850
+    # RAISED (owner: "squeeze the long pauses" ... "raise limits"), for one
+    #   named cost: +81 B, lib/holdtiming.js's squeezed clock (playTimes), which
+    #   spanMs and dueCount now read so a drawing page's pauses play as a beat.
+    #   Spent first: the clock was compacted, spanMs lost a check the fallback
+    #   made dead, dueCount a Math.max the clock made dead. 37,931 B measured.
+    EMBED_RATCHET = 37_950
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

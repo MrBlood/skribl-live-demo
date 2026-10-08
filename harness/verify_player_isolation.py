@@ -698,7 +698,11 @@ with sync_playwright() as sp:
     #   ink (destination-over), so a page's eraser reveals it as in the editor
     #   (+1,037). Spent first: nothing dead was left in these paths after the
     #   loop's round retired the old clock. 135,404 measured.
-    BYTES_RATCHET, BYTES_TARGET = 135_450, 153_800
+    # RAISED (owner: "squeeze the long pauses" ... "raise limits"), for one
+    #   named cost: +113 B, lib/holdtiming.js's squeezed clock -- see
+    #   verify_inline's note; the same bytes, spent the same way first.
+    #   135,563 measured.
+    BYTES_RATCHET, BYTES_TARGET = 135_600, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
