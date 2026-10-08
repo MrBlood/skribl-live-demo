@@ -577,12 +577,23 @@ function healFrame(f){
   const groups = (Array.isArray(f.strokeGroups) ? f.strokeGroups : [])
     .map(c => Math.round(Number(c)))
     .filter(c => isFinite(c) && c > 0);
+  /* AND SO DOES DRAW, which v285 added and this function never learned -- the
+     hold's bug again, one field later. serializeFlip wrote `draw: true`, every
+     return below rebuilt the page without it, and a page set to draw itself
+     came back still after a reload or an Open. Reported by the owner as blur
+     misbehaving on a background page, whose saved file said draw and whose
+     editor no longer did. */
+  const page = (s, g) => {
+    const o = { strokes: s, strokeGroups: g, hold: hold };
+    if(f.draw === true) o.draw = true;   // absent at the default, as serializeFlip writes it
+    return o;
+  };
   let n = 0;
   for(const c of groups) n += c;
-  if(n === strokes.length) return { strokes: strokes, strokeGroups: groups, hold: hold };
-  if(n < strokes.length){ groups.push(strokes.length - n); return { strokes: strokes, strokeGroups: groups, hold: hold }; }
+  if(n === strokes.length) return page(strokes, groups);
+  if(n < strokes.length){ groups.push(strokes.length - n); return page(strokes, groups); }
   while(groups.length && n > strokes.length) n -= groups.pop();
-  return { strokes: strokes.slice(0, n), strokeGroups: groups, hold: hold };
+  return page(strokes.slice(0, n), groups);
 }
 
 function balancedPair(f){
@@ -1240,7 +1251,18 @@ function tryRestore(){
 }
 function chip(msg){
   const el = document.getElementById('flipChip');
-  el.textContent = msg; el.classList.add('show');
+  el.textContent = msg;
+  /* JUST UNDER THE HEADER, NEVER ON THE DOCK (owner, iPhone: "the blur undone
+     toast is right on top of the undo button preventing rapid undos"). It sat
+     18px off the bottom of the screen, which on a phone is the dock -- so
+     "Blur undone" covered Undo, the control it was answering, at the moment
+     the next press is most likely. The Pad took its toast off the controls in
+     v315 (app.js showToast: A TOAST NEVER COVERS A CONTROL) and puts it just
+     under the header; this is the same place, measured the same way, with the
+     same fallback when the header is off screen. */
+  const h = document.querySelector('.flip-app .header'), r = h && h.getBoundingClientRect();
+  el.style.top = (r && r.bottom > 0) ? Math.round(r.bottom + 8) + 'px' : '';
+  el.classList.add('show');
   clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 2200);
 }
 // The blank-page whisper (Pad's .canvas-empty-hint, same treatment): visible
@@ -8611,12 +8633,13 @@ let _fieldIdx = -1, _fieldBefore = null, _fieldLast = null,
     _fieldTouched = false, _fieldLabel = '';
 let _blurAcc = null;            // point index -> accumulated weight, this drag
 let _smear = null;              // point OBJECT -> smear state, this drag
+let _fieldOverUnder = false;    // the brush crossed the page underneath's ink, this drag
 
 function fieldBegin(pt, label){
   // Pinned to the page the gesture STARTED on, for the reason liquifyBegin
   // spells out: the page can change mid-drag and the back half of the gesture
   // would land somewhere else.
-  _fieldIdx = idx; _fieldLabel = label; _fieldTouched = false;
+  _fieldIdx = idx; _fieldLabel = label; _fieldTouched = false; _fieldOverUnder = false;
   _fieldLast = { x: pt.x, y: pt.y };
   _blurAcc = new Map();
   _smear = new WeakMap();
@@ -8644,9 +8667,27 @@ function fieldMissNote(label){
        ? k + ' needs to be dragged over your lines'
        : k + ' works on lines you have drawn \u2014 draw something first');
 }
+/* THE LINE UNDER THE BRUSH CAN BELONG TO ANOTHER PAGE. Over a page kept under
+   the pages after it, the line you can see is page 1's, faint, and these tools
+   only ever touch the page you are on -- so the owner swept Blur along their
+   background line from a later page, nothing happened, and the chip said "Blur
+   needs to be dragged over your lines" with the brush exactly on one. Asked
+   only of a move that caught nothing on this page; read once per drag. */
+function fieldUnderProbe(pt){
+  if(_fieldOverUnder) return;
+  const u = _validUnder(), f = u && frames[u.page];
+  if(!f || _fieldIdx < u.from || _fieldIdx > u.to) return;
+  const r = liquifyRadius(), r2 = r * r;
+  for(const q of f.strokes){
+    if(q.erase) continue;
+    const dx = q.x - pt.x, dy = q.y - pt.y;
+    if(dx * dx + dy * dy < r2){ _fieldOverUnder = true; return; }
+  }
+}
 function fieldEnd(){
   const at = _fieldIdx, before = _fieldBefore, f = frames[at];
-  const touched = _fieldTouched, label = _fieldLabel;
+  const touched = _fieldTouched, label = _fieldLabel, overUnder = _fieldOverUnder;
+  _fieldOverUnder = false;
   _fieldBefore = null; _fieldLast = null; _fieldIdx = -1; _fieldTouched = false;
   _blurAcc = null; _smear = null;
   // Nothing caught -> NO undo entry, the same rule liquifyEnd states: a tap on
@@ -8666,8 +8707,13 @@ function fieldEnd(){
     // would need a raster layer the frame format does not have (the long
     // version is in lib/brushfield.js). Said once per tool per session --
     // enough to explain, not enough to nag.
+    // Said every time, unlike the two notes below it: it is not a hint about
+    // aim but the answer to "why did nothing happen to the line I am on".
+    const u = overUnder && _validUnder();
     if(!touched){
-      if(photoShowing()) fieldPhotoNote(label);
+      if(u) chip('That line is on page ' + (u.page + 1) + ', under this one — '
+                 + (label || 'change').toLowerCase() + ' it there');
+      else if(photoShowing()) fieldPhotoNote(label);
       else fieldMissNote(label);
     }
     return false;
@@ -8714,6 +8760,7 @@ function smudgeMove(pt){
       p.size = st.size * (1 + st.acc * SMUDGE_SPREAD_MAX);
     });
   if(hit) _fieldTouched = true;
+  else fieldUnderProbe(pt);
   return hit;
 }
 
@@ -8847,17 +8894,37 @@ function blurDensify(seg){
   return seg;
 }
 
-/* Rebuilds the frame from the snapshot plus the accumulated per-point weights.
-   Halo passes for every blurred sub-run first, then the original runs with the
-   core faded where the brush went -- array order is paint order, so the core
-   lands on top of its own halo. */
+/* Rebuilds the frame from the snapshot plus the accumulated per-point weights:
+   each original run with its core faded where the brush went, and that run's
+   halo passes straight after it.
+
+   THE HALO TRAVELS WITH ITS OWN STROKE. Until the owner blurred a background
+   page, every halo went to the FRONT of the page, under everything, and array
+   order is three things at once here, all of which that broke:
+     - PAINT order. An eraser drawn before the line was cut the line's soft
+       edge where the two crossed, because the halo now came before the
+       eraser. Measured on the owner's file: a hard horizontal edge across the
+       halo at the bottom of a V, exactly where an old eraser stroke stopped.
+     - PLAY order, on a page that draws itself. dueCount reveals points in
+       array order, so the soft edge drew on an empty page BEFORE the line it
+       softens -- a faint ghost of the middle of the drawing, then the line.
+     - PLAY TIME. A halo copied its points' `t`, so the page's clock read the
+       passes as part of the drawing: each one replayed the stretch it softens.
+       The owner's page went from 5.5 s to 8 s, the cap, most of it the ghost.
+   After its own run, the halo is under everything drawn LATER and over
+   everything drawn before, which is what a soft line drawn at that moment
+   would be. Under or over its OWN core makes no difference to the picture:
+   both are the same colour, and source-over of one colour composes the same
+   in either order.
+   Its points take the run's LAST `t`, so the soft edge arrives the moment its
+   stroke is finished and adds no time to the page. */
 function blurRebuild(f){
   const snap = _fieldBefore;
   if(!snap) return;
   const orig = snap.strokes, groups = snap.groups;
   // Contiguous stretches of brushed points, per run. A run the brush crossed in
   // two places gets two halos rather than one spanning the gap between them.
-  const runs = [];
+  const runs = groups.map(() => []);
   let at = 0, extraPts = 0, extraRuns = 0;
   for(let g = 0; g < groups.length; g++){
     const count = groups[g];
@@ -8868,7 +8935,7 @@ function blurRebuild(f){
       else if((acc <= BLUR_EPS || k === count) && s >= 0){
         // One point either side, so the halo does not stop dead mid-line.
         const a0 = Math.max(0, s - 1), a1 = Math.min(count - 1, k);
-        runs.push({ at: at, from: a0, to: a1 });
+        runs[g].push({ at: at, from: a0, to: a1 });
         extraPts += (a1 - a0 + 1); extraRuns++;
         s = -1;
       }
@@ -8878,30 +8945,27 @@ function blurRebuild(f){
   const passes = blurPasses(extraPts, extraRuns, orig.length, groups.length);
   const halo = passes.slice(0, passes.length - 1);
   const out = [], outG = [];
-  for(let p = 0; p < halo.length; p++){
-    const pass = halo[p];
-    for(const r of runs){
-      let seg = [];
-      for(let k = r.from; k <= r.to; k++){
-        const src = orig[r.at + k];
-        // An eraser stroke has no colour to fade and punches a hole; haloing it
-        // would smear the hole outward, which is not what softening a line means.
-        if(src.erase){ seg.length = 0; break; }
-        const acc = Math.min(1, _blurAcc.get(r.at + k) || 0);
-        const q = Object.assign({}, src);
-        const base = typeof src.size === 'number' ? src.size : 1;
-        q.size = base + blurSoftEdge(base) * pass.d * acc;
-        q.color = tweenFade(src.color, pass.a * acc);
-        seg.push(q);
-      }
-      seg = blurDensify(seg);
-      if(seg.length){
-        seg[0].start = true;
-        for(let k = 1; k < seg.length; k++) delete seg[k].start;
-        out.push(...seg); outG.push(seg.length);
-      }
+  const haloOf = (r, pass, endT) => {
+    let seg = [];
+    for(let k = r.from; k <= r.to; k++){
+      const src = orig[r.at + k];
+      // An eraser stroke has no colour to fade and punches a hole; haloing it
+      // would smear the hole outward, which is not what softening a line means.
+      if(src.erase) return;
+      const acc = Math.min(1, _blurAcc.get(r.at + k) || 0);
+      const q = Object.assign({}, src);
+      const base = typeof src.size === 'number' ? src.size : 1;
+      q.size = base + blurSoftEdge(base) * pass.d * acc;
+      q.color = tweenFade(src.color, pass.a * acc);
+      seg.push(q);
     }
-  }
+    seg = blurDensify(seg);
+    if(!seg.length) return;
+    seg[0].start = true;
+    for(let k = 1; k < seg.length; k++) delete seg[k].start;
+    if(endT !== null) for(const q of seg) q.t = endT;
+    out.push(...seg); outG.push(seg.length);
+  };
   for(let g = 0, a = 0; g < groups.length; g++){
     const count = groups[g];
     let core = [], touched = false;
@@ -8926,6 +8990,9 @@ function blurRebuild(f){
     core[0].start = true;
     for(let k = 1; k < core.length; k++) delete core[k].start;
     out.push(...core); outG.push(core.length);
+    let endT = null;
+    for(const q of core){ const t = Number(q.t); if(isFinite(t) && (endT === null || t > endT)) endT = t; }
+    for(const pass of halo) for(const r of runs[g]) haloOf(r, pass, endT);
     a += count;
   }
   f.strokes = out; f.strokeGroups = outG;
@@ -8946,8 +9013,8 @@ function blurMove(pt){
   // as well as a fine one and splitting it would only cost points.
   //
   // THE HIT TEST RUNS AGAINST THE SNAPSHOT, not against f.strokes. blurRebuild
-  // replaces the frame's arrays on every move -- it inserts halo passes ahead
-  // of the original runs -- so an index taken from the live frame would refer
+  // replaces the frame's arrays on every move -- it inserts halo passes between
+  // the original runs -- so an index taken from the live frame would refer
   // to a different point on the next event, and the accumulator is keyed by
   // index. The snapshot is the one array that does not move under it.
   if(!_fieldBefore) return false;
@@ -8958,6 +9025,7 @@ function blurMove(pt){
     _blurAcc.set(i, Math.min(1, (_blurAcc.get(i) || 0) + w * BLUR_RATE * travel));
   });
   if(hit){ _fieldTouched = true; blurRebuild(f); }
+  else fieldUnderProbe(pt);
   return hit;
 }
 

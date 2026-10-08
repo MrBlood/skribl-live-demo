@@ -14373,3 +14373,61 @@ single 900 ms gap -- now a pause -- and is 900 ms of continuous drawing instead.
 The squeezed clock costs the players 81-113 B after being compacted (and after
 spanMs and dueCount each lost a check it made dead); both byte ratchets were
 raised by that, the owner approving ("raise limits").
+
+**Blur on a background page: the soft edge travels with its own stroke, and a
+page that draws itself stays one after a reload (owner: "blur does not work" ...
+"I was trying the blur drawing tool on flip, on the background drawing. It was
+wonky").** Reproduced on the owner's own saved files; four things were wrong,
+three of them in the order of one array.
+
+* EVERY HALO WENT TO THE FRONT OF THE PAGE, and array order is paint order,
+  play order and play time at once. On a page that draws itself the soft edge
+  drew first, a faint ghost of the middle of the drawing on an empty page, and
+  the page's clock read the passes' copied `t` as drawing, each pass replaying
+  the stretch it softens: the owner's page went from 5.5 s to 8 s, the cap, most
+  of it the ghost (measured on the pause-squeezed clock of #354). And an
+  eraser drawn BEFORE the blurred line came after its halo, so it cut a hard
+  edge across the soft one (the bottom of a V on the owner's first file). Each
+  run's halo passes now follow that run, carrying its last `t`: the soft edge
+  arrives the moment its stroke is finished, adds no time, sits over what was
+  drawn before it and under what was drawn after. Under or over its own core
+  makes no difference: one colour composes the same either way.
+* NOT CHOSEN: splitting a blurred stroke so its soft edge follows the pen. It
+  would cut the core into many runs, and the in-between matcher and Select both
+  read a run as a stroke; the soft edge landing as its stroke ends keeps the
+  line one stroke.
+* FROM A LATER PAGE, BLUR SAID THE WRONG THING. The background line shows faint
+  under every page after it and belongs to page 1; these tools only touch the
+  page you are on, which stays. But the drag over it said "Blur needs to be
+  dragged over your lines", with the brush on one. It now says "That line is on
+  page 1, under this one -- blur it there" (and the same for Smudge).
+* DRAW DID NOT SURVIVE A RELOAD OR AN OPEN, since v285 added it: healFrame
+  learned `hold` in v241 and never learned `draw`, so every restored page came
+  back still. The owner's background page was saved as a drawing page and
+  reopened as a still one.
+
+verify_smudgeblur: the soft edge not drawn before its line, arriving when its
+stroke ends, no time added, an older eraser not cutting it, and the later-page
+message for both tools; verify_hold: Draw survives a save and load. Each red on
+main and red on its own mutation (halo order, the `t` pin, the message, the
+loader). The suite's sample-rate check read `f.strokes[4].color` through `\d+`,
+which compared a stray decimal digit of a halo's hex ALPHA (1 against 2 on
+main) and went empty once the halo moved; it reads the core's alpha now, 52
+against 56 per pixel travelled and 134 against 68 accrued per event.
+
+**Flip's chip comes off the dock (owner, iPhone: "the blur undone toast is right
+on top of the undo button preventing rapid undos").** Flip's chip sat 18px off
+the bottom of the screen, which is the dock: "Blur undone" covered Undo, the
+control it answers, when the next press is likeliest -- at 390, 820 and 1280
+alike. The Pad took its toast off the controls in v315 and puts it just under
+the header; Flip's chip never learned that, and now does, measured the same
+way, with the same fallback when the header is off screen. The chip was already
+pointer-events:none, so a tap should reach Undo through it -- iPhone Safari is
+not here to say otherwise -- and a note drawn over the button being pressed is
+wrong whether or not the tap lands. verify_layout: blur, press Undo, and
+the chip clears the header and the dock while what is PAINTED at Undo's centre
+is Undo, probed with the chip made hit-testable (elementFromPoint looks through
+a pointer-events:none element and would answer Undo with the chip on top).
+Red on main at all three sizes, and on each half of the fix alone: without the
+measured top the chip lands on the header; with the old bottom rule kept, it
+stretches from the header to the dock.

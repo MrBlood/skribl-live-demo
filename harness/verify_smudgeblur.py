@@ -490,28 +490,158 @@ with sync_playwright() as p:
             for (let k = 1; k <= steps; k++)
               blurMove({ x: 100 + (220 * k / steps), y: 200 });
             fieldEnd();
-            return f.strokes[4].color;
+            // THE CORE'S OWN ALPHA, where the line's fifth point was. This read
+            // f.strokes[4].color and pulled "channels" out of it with \\d+ --
+            // which, on a '#ffffff1d' halo point, is a stray decimal digit of
+            // the ALPHA's hex, and on main measured 1 against 2. It went empty
+            // when the halo moved behind its stroke and strokes[4] became an
+            // untouched '#ffffff'. The core is the run that spans the line with
+            // the narrowest dab; the halos are wider by construction.
+            let core = null, a = 0, w = Infinity;
+            for (const n of f.strokeGroups) {
+              const seg = f.strokes.slice(a, a + n); a += n;
+              const wide = Math.max(...seg.map(q => q.size || 0));
+              if (seg.some(q => q.x <= 101) && seg.some(q => q.x >= 207) && wide < w) { core = seg; w = wide; }
+            }
+            let at = core[0];
+            for (const q of core) if (Math.abs(q.x - 148) < Math.abs(at.x - 148)) at = q;
+            return Math.round(strokeAlphaOf(at.color) * 255);
           };
           return { few: run(4), many: run(40) };
         }""")
-        import re as _re
-        def _chan(c):
-            return [int(v) for v in _re.findall(r"\d+", c)[:3]]
-        gap = max(abs(a - b) for a, b in zip(_chan(rates["few"]), _chan(rates["many"])))
+        gap = abs(rates["few"] - rates["many"])
         # NOT exact equality, and the tolerance is doing real work rather than
         # papering over a miss. Weight varies across the brush, so integrating
         # it from 4 samples cannot equal integrating it from 40 — that residual
-        # is arithmetic, not a bug. Measured: 117/255 apart when the accrual was
-        # per EVENT, 6/255 apart once it was per pixel travelled. A threshold of
-        # 16 accepts the sampling residual and still fails the real defect by a
-        # factor of seven.
+        # is arithmetic, not a bug. Measured on the core's alpha: 52 against 56
+        # accrued per pixel travelled, and 134 against 68 with the accrual made
+        # per EVENT (every move a nominal step). A threshold of 16 accepts the
+        # sampling residual and fails the real defect by a factor of four.
         check("a fast sweep and a slow one converge on the same blur",
               gap <= 16,
-              f"4 events -> {rates['few']}, 40 events -> {rates['many']}, "
-              f"largest channel gap {gap} — a per-EVENT delta makes a 240Hz "
+              f"core alpha after 4 events {rates['few']}/255, after 40 events "
+              f"{rates['many']}/255, gap {gap} — a per-EVENT delta makes a 240Hz "
               "phone blur several times harder than a 60Hz laptop for the same "
               "gesture, and v230's coalesced sampling raised that rate on "
               "purpose. Accrue per pixel travelled instead.")
+
+        print("\nTHE SOFT EDGE TRAVELS WITH ITS STROKE — on a page that draws itself")
+        # Reported by the owner as "blur does not work ... on the background
+        # drawing. It was wonky." The background was a page that draws itself,
+        # and every halo went to the FRONT of the page, so on playback the soft
+        # edge drew on an empty page before its own line, and the page's clock
+        # read the passes' copied `t` as drawing time. Three runs, timed so each
+        # starts after the last ends with no pause long enough to squeeze:
+        #   A  y=100   t    0..780
+        #   B  y=250   t 1000..1780   blurred
+        #   C  y=400   t 2000..2780   blurred, and LAST, so a halo that kept a
+        #                             copied `t` decides where the page ends
+        # In playback time A ends at 780 of 2780 and B at 1780, on either clock
+        # lib/holdtiming.js has had: every gap is 20 or 220 ms.
+        _draw = page.evaluate("""() => {
+          frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1, draw: true });
+          idx = 0; docUnder = null; docLoop = null; size = 7;
+          const f = frames[0];
+          for (const [y, t0] of [[100, 0], [250, 1000], [400, 2000]]) {
+            for (let i = 0; i < 40; i++)
+              f.strokes.push({ x: 120 + i * 12, y, color: '#ffffff', size: 7, t: t0 + i * 20, start: i === 0 });
+            f.strokeGroups.push(40);
+          }
+          const H = window.SkriblHold, spanBefore = H.spanMs(f);
+          setTool('blur');
+          fieldBegin({ x: 200, y: 250 }, 'Blur');
+          for (let r = 0; r < 2; r++) {
+            for (let x = 200; x <= 520; x += 6) blurMove({ x, y: 250 });
+            for (let x = 520; x >= 200; x -= 6) blurMove({ x, y: 250 });
+          }
+          for (let x = 200; x <= 520; x += 30) blurMove({ x, y: 330 });
+          for (let r = 0; r < 2; r++) {
+            for (let x = 200; x <= 520; x += 6) blurMove({ x, y: 400 });
+            for (let x = 520; x >= 200; x -= 6) blurMove({ x, y: 400 });
+          }
+          fieldEnd(); setTool('pen');
+          // Painted by the export's own path, which is the editor preview's and
+          // the player's: drawFrameTo -> paintFrame(dueCount prefix).
+          const band = (prog) => {
+            const cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
+            const c = cv.getContext('2d'); drawFrameTo(c, f, prog);
+            const bg = c.getImageData(5, 5, 1, 1).data, out = {};
+            for (const [k, y] of [['A', 100], ['B', 250], ['C', 400]]) {
+              const d = c.getImageData(100, y - 24, 520, 48).data; let ink = 0, soft = 0;
+              for (let i = 0; i < d.length; i += 4) {
+                const v = (d[i] + d[i+1] + d[i+2]) - (bg[0] + bg[1] + bg[2]);
+                if (v > 60) ink++;
+                if (v > 60 && v < 500) soft++;
+              }
+              out[k] = { ink, soft };
+            }
+            return out;
+          };
+          return { spanBefore, spanAfter: H.spanMs(f), groups: f.strokeGroups.length,
+                   aDone: band(890 / 2780), bDone: band(1890 / 2780), all: band(1) };
+        }""")
+        check("the blur took on all three runs' worth of fixture",
+              _draw["groups"] > 3 and _draw["all"]["B"]["soft"] > 0 and _draw["all"]["C"]["soft"] > 0,
+              f"{_draw['groups']} groups, finished page {_draw['all']}")
+        check("the soft edge does NOT draw before its line",
+              _draw["aDone"]["A"]["ink"] > 0
+              and _draw["aDone"]["B"]["ink"] == 0 and _draw["aDone"]["C"]["ink"] == 0,
+              f"A done, B not begun: {_draw['aDone']} — a halo at the front of "
+              f"the page plays first, a faint ghost of the middle of the drawing "
+              f"on an empty page")
+        check("...and arrives the moment its own stroke is finished",
+              _draw["bDone"]["B"]["soft"] >= 0.8 * _draw["all"]["B"]["soft"]
+              and _draw["bDone"]["C"]["ink"] == 0,
+              f"B done, C not begun: {_draw['bDone']} against the finished page "
+              f"{_draw['all']}")
+        check("blur adds NO time to a page that draws itself",
+              abs(_draw["spanAfter"] - _draw["spanBefore"]) < 1,
+              f"{_draw['spanBefore']} ms -> {_draw['spanAfter']} ms — a halo "
+              f"that copies its points' t is read by the page's clock as drawing")
+
+        # PAINT ORDER, the same array read a third way. The owner's background
+        # page had an eraser stroke drawn BEFORE the line they blurred, and with
+        # every halo at the front of the page the eraser came after the halo and
+        # cut it: a hard edge across the soft one, where the old eraser had
+        # stopped. The line itself was never touched by that eraser, so its soft
+        # edge must not be either. Same blur, with and without the old eraser
+        # and the line it rubbed out, measured in the ERASER'S stretch only.
+        _cut = page.evaluate("""() => {
+          const shot = (withEraser) => {
+            frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 });
+            idx = 0; docUnder = null; size = 7;
+            const f = frames[0];
+            const run = (pts) => { pts.forEach((q, i) => f.strokes.push(Object.assign({ start: i === 0 }, q)));
+                                   f.strokeGroups.push(pts.length); };
+            const along = (y, extra) => Array.from({ length: 40 }, (_, i) =>
+              Object.assign({ x: 120 + i * 12, y, t: i * 20 }, extra));
+            if (withEraser) {
+              run(along(250, { color: '#ffffff', size: 7 }));
+              run(along(250, { color: '#ffffff', size: 40, erase: true }).slice(10, 30));
+            }
+            run(along(250, { color: '#ffffff', size: 7 }));
+            setTool('blur'); fieldBegin({ x: 120, y: 250 }, 'Blur');
+            for (let r = 0; r < 2; r++) {
+              for (let x = 120; x <= 588; x += 6) blurMove({ x, y: 250 });
+              for (let x = 588; x >= 120; x -= 6) blurMove({ x, y: 250 });
+            }
+            fieldEnd(); setTool('pen');
+            const cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
+            const c = cv.getContext('2d'); c.fillStyle = '#000'; c.fillRect(0, 0, CW, CH);
+            paintFrame(c, f.strokes);
+            return Array.from(c.getImageData(250, 214, 220, 72).data.filter((_, i) => i % 4 === 0));
+          };
+          const a = shot(true), b = shot(false);
+          let differ = 0, soft = 0;
+          for (let i = 0; i < a.length; i++) { if (Math.abs(a[i] - b[i]) > 24) differ++; if (b[i] > 20 && b[i] < 200) soft++; }
+          return { differ, soft, of: a.length };
+        }""")
+        check("the eraser fixture has a soft edge to protect",
+              _cut["soft"] > 500, str(_cut))
+        check("an eraser drawn BEFORE a line does not cut that line's soft edge",
+              _cut["differ"] <= 40,
+              f"{_cut} — pixels that differ, in the eraser's stretch, between the "
+              f"blurred line with and without an older eraser under it")
 
         print("\nOVER A PHOTO — the limit, said out loud instead of silently")
         # These tools move and recolour STROKE POINTS. A photograph is not
@@ -634,6 +764,33 @@ with sync_playwright() as p:
             check(f"{_tool}: and does not claim the canvas is empty when it "
                   "is not", not (msg and "draw something first" in msg),
                   f"{msg!r} — there is a drawing on screen")
+
+        # THE LINE YOU ARE ON CAN BE ANOTHER PAGE'S. The owner swept Blur along
+        # their background line from a page after it: that line is page 1's,
+        # shown faint under the page being edited, and these tools only touch
+        # the page you are on. Nothing happened, and the chip said "Blur needs
+        # to be dragged over your lines" with the brush exactly on one. Page 2
+        # here has its own ink elsewhere, as the owner's pages did, so the old
+        # message is the one that fires on the old build.
+        for _tool in ("smudge", "blur"):
+            page.evaluate("""() => { frames.length = 1; frames[0].strokes = [];
+                frames[0].strokeGroups = []; idx = 0; docUnder = null; render(); setTool("pen");
+                for (const k in _fieldMissNoted) delete _fieldMissNoted[k]; }""")
+            line(page, pad_box["x"] + pad_box["w"] / 2, pad_box["y"] + pad_box["h"] / 2)
+            page.evaluate("""() => { frames.push({ strokes: [], strokeGroups: [], hold: 1 });
+                idx = 1; docUnder = { page: 0, from: 1, to: 1 }; buildStrip(); render(); }""")
+            line(page, pad_box["x"] + pad_box["w"] * 0.35, pad_box["y"] + pad_box["h"] * 0.15)
+            _pts = page.evaluate("() => frames.map(f => f.strokes.length)")
+            page.evaluate("(t) => setTool(t)", _tool)
+            line(page, pad_box["x"] + pad_box["w"] / 2, pad_box["y"] + pad_box["h"] / 2)
+            msg = chip_now()
+            check(f"{_tool}: over the page UNDERNEATH, it says whose line that is",
+                  bool(msg) and "page 1" in msg and "over your lines" not in msg,
+                  f"{msg!r} — the brush was on page 1's line, from page 2")
+            check(f"{_tool}: ...and touches neither page",
+                  page.evaluate("() => frames.map(f => f.strokes.length)") == _pts,
+                  f"{_pts} before")
+        page.evaluate("() => { docUnder = null; frames.length = 1; idx = 0; buildStrip(); render(); }")
 
         # --------------------------------------------------------------
         # A SMUDGE MUST NOT TURN A MOTION SMEAR SOLID.
