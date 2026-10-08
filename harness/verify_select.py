@@ -434,6 +434,89 @@ with sync_playwright() as p:
           "spans are index ranges into ONE page's strokes; carried over they "
           "would point at different artwork, or run off a shorter page")
 
+    print("\nSELECT — on a phone, the rotate grip takes a finger")
+    # The owner, on an iPhone: "Isn't this handle supposed to rotate? I can't
+    # seem to get it to rotate." The grip answered only within 15px of the
+    # middle of its circle -- drawn 11px across -- and its stem answered nothing:
+    # a finger there started a new marquee and dropped the selection. Driven with
+    # real touch events (CDP) at 390 wide, as verify_loopui drives the loop's
+    # bars. One case per part of the fix, and one for the line it must not
+    # cross: the stem stops at the box, so a finger just inside still moves.
+    phone = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True,
+                                has_touch=True, device_scale_factor=3)
+    ph = phone.new_page()
+    ph.on("pageerror", lambda e: errors.append(str(e)))
+    browsing.goto(ph, BASE, "/flip")
+    ph.wait_for_timeout(600)
+    cdp = phone.new_cdp_session(ph)
+
+    def finger(path):
+        cdp.send("Input.dispatchTouchEvent",
+                 {"type": "touchStart", "touchPoints": [{"x": path[0][0], "y": path[0][1]}]})
+        for x, y in path[1:]:
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": x, "y": y}]})
+            ph.wait_for_timeout(16)
+        cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        ph.wait_for_timeout(250)
+
+    def line_selected():
+        """A diagonal line, as in the owner's screenshot, taken with a finger's
+        marquee from corner to corner of the pad. Returns the grip, the
+        selection's centre and the box's top edge in screen pixels."""
+        ph.evaluate("""() => { frames = [newFrame()]; idx = 0; const f = frames[0];
+          for (let i = 0; i < 60; i++) { const t = i / 59;
+            f.strokes.push({ x: 190 + 450 * t, y: 560 - 330 * t, color: '#7c5cff', size: 7,
+                             t: i * 16, start: i === 0 }); }
+          f.strokeGroups.push(60); setTool('select'); render(); }""")
+        r = ph.evaluate("() => { const r = pad.getBoundingClientRect();"
+                        " return [r.left, r.top, r.width, r.height]; }")
+        finger([(r[0] + 8 + (r[2] - 16) * k / 10, r[1] + 8 + (r[3] - 16) * k / 10)
+                for k in range(11)])
+        return ph.evaluate("""() => { const h = selHandles(); if (!h) return null;
+          const r = pad.getBoundingClientRect();
+          const s = (p) => [r.left + p.x * r.width / CW, r.top + p.y * r.height / CH];
+          return { rot: s(h.rotate), c: s(h.centre), top: s(h.box)[1] }; }""")
+
+    LOOK = ("() => { const s = frames[idx].strokes, r = pad.getBoundingClientRect();"
+            " return { angle: Math.atan2(s[59].y - s[0].y, s[59].x - s[0].x) * 180 / Math.PI,"
+            " y: s[0].y * r.height / CH, selected: selSpans.length }; }")
+
+    def swing_from(start):
+        """A finger down at `start`, swung 45 degrees about the selection's centre."""
+        g = line_selected()
+        if not g:
+            return None
+        sx, sy = start(g)
+        cx, cy = g["c"]
+        rad, a = math.hypot(sx - cx, sy - cy), math.atan2(sy - cy, sx - cx)
+        was = ph.evaluate(LOOK)
+        finger([(sx, sy)] + [(cx + rad * math.cos(a + math.radians(45) * k / 12),
+                              cy + rad * math.sin(a + math.radians(45) * k / 12))
+                             for k in range(1, 13)])
+        now = ph.evaluate(LOOK)
+        return {"turned": round(now["angle"] - was["angle"], 1), "kept": now["selected"]}
+
+    on_stem = swing_from(lambda g: (g["rot"][0], g["top"] - 4))
+    check("phone: a finger on the stem, just above the box, turns the selection",
+          on_stem is not None and abs(on_stem["turned"] - 45) < 3 and on_stem["kept"] == 1,
+          f"{on_stem} -- degrees turned by a 45-degree swing, and whether the "
+          f"selection survived it")
+    beside = swing_from(lambda g: (g["rot"][0] + 20, g["rot"][1]))
+    check("phone: so does a finger 20px beside the grip's circle",
+          beside is not None and abs(beside["turned"] - 45) < 3 and beside["kept"] == 1,
+          f"{beside} -- a fingertip is wider than the 11px circle it is aimed at")
+    g = line_selected()
+    was = ph.evaluate(LOOK)
+    sx, sy = g["rot"][0], g["top"] + 10
+    finger([(sx, sy + 3 * k) for k in range(11)])
+    now = ph.evaluate(LOOK)
+    check("phone: ...and a finger just inside the box still moves it, rather than turning it",
+          abs(now["angle"] - was["angle"]) < 0.5 and abs(now["y"] - was["y"] - 30) < 3
+          and now["selected"] == 1,
+          f"turned {now['angle'] - was['angle']:.1f} degrees, moved {now['y'] - was['y']:.1f}px "
+          f"of a 30px drag -- the stem's reach stops at the box")
+    phone.close()
+
     print("\nSELECT — Pad still does not have it")
     pad = browser.new_page(viewport={"width": 900, "height": 800})
     browsing.goto(pad, BASE, "/")
