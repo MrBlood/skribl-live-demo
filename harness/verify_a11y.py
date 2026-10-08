@@ -324,9 +324,13 @@ with sync_playwright() as p:
                                   "[{id:'x',tok:'k'}], function () {})", None),
         # FLIP'S POST SHEET, the one dialog this census could not see (v290).
         # It carried no role and no aria-modal, so it escaped the DOM sweep
-        # below — which only ever walked the Pad — and trapped no focus. The
+        # below — which only ever walked the Pad — and trapped no focus. It is
+        # the Pad's own sheet now (one partial), driven on Flip's route here,
+        # handing focus back to Post. Opened from script, not by a click: a
+        # click focuses the button in Chromium and not in iPhone Safari, and
+        # only the opener Flip names gets focus back to Post on both. The
         # opener refuses an empty flip, so the recipe draws first, on #pad.
-        ("/flip", "flipShare"):    ("flipdraw|click:#postBtn", "postBtn"),
+        ("/flip", "postSheet"):    ("flipdraw|js:openShareCompose()", "postBtn"),
         # FLIP'S MORE MENU (v291). It was role="menu" over rows of switches and
         # segs a menu does not admit, and trapped no focus; Pad's #menuSheet,
         # the same design since v290, is a dialog. Now it declares itself and
@@ -1780,7 +1784,7 @@ with sync_playwright() as p:
     }"""
     for _route, _specs in (("/", [[".pending-btn"], [".autosave-readd"], ["button.name-done"],
                                   ["#postBtn"], ["#postSubmitBtn"]]),
-                           ("/flip", [[".flip-share-open"]]),
+                           ("/flip", [["#postSubmitBtn"]]),
                            # The library's selected filter chip is not here any
                            # more: a selected option is a tint now (the one
                            # pill), not white words on a solid fill, and

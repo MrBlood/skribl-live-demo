@@ -5335,14 +5335,14 @@ function buildSharePayload(){
   // 'Flip animation' with no caption, so every Flip post arrived at the platform
   // with an identical, meaningless title. The server truncates at 80/300 and
   // substitutes 'Untitled Skribl' for an empty title, so sending '' is safe.
-  const _t=document.getElementById('flipShareTitle');
-  const _c=document.getElementById('flipShareCaption');
+  const _t=document.getElementById('postTitleInput');
+  const _c=document.getElementById('postCaptionInput');
   const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), ...(_validLoop() ? {loop:docLoop} : {}), ...(_validUnder() ? {under:docUnder} : {}), frames:writeFrames(outFrames), canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
            title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
   // THE PUBLIC CHOICE (v304), the Pad's rule: the key travels only when the
   // author ticked it; unticked, it is omitted and the server's "unlisted"
   // default is the one statement of what an unmarked post is.
-  const _pub=document.getElementById('flipSharePublic');
+  const _pub=document.getElementById('postPublicInput');
   if(_pub && _pub.checked) _payload.visibility='public';
   // THE SHARE CARD. Flip never built one: this payload had no `thumbnail`, so
   // /s/<id>/card.png fell through to the static branded og-card for every Flip
@@ -5429,7 +5429,7 @@ async function shareSkribl(){
   // holds, the share card), so what the host attaches is what Flip would
   // have posted. The host closes its overlay on receipt.
   if(FLIP_COMPOSE && window.SkriblCompose){
-    sharing=true; chip('Adding…');
+    sharing=true; if(postUI) postUI.setState('sending');
     try{
       if(window._skriblDecodePending){ try{ await window._skriblDecodePending; }catch(_){} }
       const _payload=buildSharePayload();
@@ -5438,14 +5438,15 @@ async function shareSkribl(){
       const _pick=frames.find(f => f && f.strokes && f.strokes.length) || frames[0];
       drawFrameTo(_flat.getContext('2d'), _pick);
       window.SkriblCompose.deliver(_payload, _flat.toDataURL('image/png'));
+      if(postUI) postUI.setState('idle');
       closeShare();
     }catch(err){
       console.error('[skribl] Add to post failed:', err);
-      showShareError('Could not add it to your post. Your animation is still here.');
+      showShareFailure('Could not add it to your post. Your animation is still here.');
     }
     sharing=false; return;
   }
-  sharing=true; chip('Posting…');
+  sharing=true; if(postUI) postUI.setState('sending');
   try{
     // Feature-detected: compression must never be able to break posting.
     // See the note at the matching call site in editor_post.js.
@@ -5489,14 +5490,14 @@ async function shareSkribl(){
       const why = data.error || (res.status >= 500
         ? 'The server could not save it (error ' + res.status + '). Your Skribl is safe here — try again in a moment.'
         : 'The server refused it (error ' + res.status + '). Your Skribl is safe here — nothing was lost.');
-      showShareError(why); chip('Post failed'); sharing=false; return;
+      showShareFailure(why); chip('Post failed'); sharing=false; return;
     }
     const url=location.origin + (data.url || (window.SKRIBL_PLAYER_BASE+'/'+data.id));
     // Record it locally. Without accounts the link is the only handle on a
     // post, and closing the tab used to lose it permanently.
     if(window.SkriblPosted){
-      const _t=document.getElementById('flipShareTitle');
-      const _pubBox=document.getElementById('flipSharePublic');
+      const _t=document.getElementById('postTitleInput');
+      const _pubBox=document.getElementById('postPublicInput');
       const kept=window.SkriblPosted.add({ id:data.id, url:data.url, kind:'flip',
         pages:frames.length, title:(_t?_t.value:'').trim(),
         visibility:(_pubBox && _pubBox.checked) ? 'public' : 'unlisted',
@@ -5517,38 +5518,55 @@ async function shareSkribl(){
     showShareResult(url);
   }catch(err){
     console.error('[skribl] Share failed:', err);
-    showShareError('Could not reach the server. Check your connection — your Skribl is still here.');
+    showShareFailure('Could not reach the server. Check your connection — your Skribl is still here.');
     chip('Post failed');
   }
   sharing=false;
 }
-function showShareError(msg){
-  const el=document.getElementById('flipShareError');
-  if(el){ el.textContent=msg; el.hidden=false; }
-}
-function clearShareError(){
-  const el=document.getElementById('flipShareError');
-  if(el){ el.textContent=''; el.hidden=true; }
+/* ---- the post sheet: the Pad's own (lib/postsheet.js, _skribl_post.html) ----
+   Flip had a centred card of its own beside the Pad's sheet, and it drifted:
+   no gap between its two fields, its title, link and buttons in the browser's
+   Arial, a link field that cut the address off, and a button row that wrapped.
+   The owner, looking at both: "shouldn't flip and pad look the same? flip is
+   not as clean as pad". One sheet now; what stays here is what is Flip's own --
+   the payload, the budgets, the network call and the posted list, in
+   shareSkribl above. `var`, so shareSkribl reads null rather than throwing if
+   it is ever reached before this line has run. */
+var postUI = window.SkriblPostSheet ? window.SkriblPostSheet.attach({
+  compose: FLIP_COMPOSE,
+  opener: document.getElementById('postBtn'),
+  toast: (msg) => chip(msg),
+  submit: () => shareSkribl(),
+  // The poster page, the one the share card shows (see _shareCardDataURL):
+  // the first page with ink, on the drawing's own ground.
+  preview: () => {
+    try{
+      const pick = frames.find(f => f && f.strokes && f.strokes.length) || frames[0];
+      if(!pick) return null;
+      const flat = document.createElement('canvas'); flat.width = CW; flat.height = CH;
+      drawFrameTo(flat.getContext('2d'), pick);
+      return { src: flat.toDataURL('image/png'), ratio: CW / CH, bg: bgColor };
+    }catch(_){ return null; }
+  }
+}) : null;
+/* A refusal before anything is sent (the page and point budgets): the remedy
+   is to change the drawing, so the button keeps its word. */
+function showShareError(msg){ if(postUI) postUI.refuse(msg); }
+/* A failure in the sending: the Pad's error state, which offers Try again. */
+function showShareFailure(msg){
+  if(!postUI) return;
+  postUI.setState('error');
+  postUI.el.statusLabel.textContent = msg;
 }
 function showShareResult(url){
-  const m=document.getElementById('flipShare'), inp=document.getElementById('flipShareUrl'), open=document.getElementById('flipShareOpen');
-  const compose=document.getElementById('flipShareCompose'), result=document.getElementById('flipShareResult');
-  if(compose) compose.hidden=true;
-  if(result) result.hidden=false;
-  if(inp) inp.value=url; if(open) open.href=url; if(m) m.hidden=false;
-  // Share, where the device has a share sheet (v292, SK-AUD-016). Feature-
-  // detected at show time, not at load: the button exists for everyone and
-  // is revealed only when navigator.share does.
-  const nat=document.getElementById('flipShareNative'); if(nat) nat.hidden=!(navigator.share);
+  if(!postUI) return;
+  const t = document.getElementById('postTitleInput');
+  postUI.setState('success');
+  postUI.result(url, (t && t.value.trim()) || '');
+  chip('Posted! 🎨');
 }
-bindEl('flipShareNative', 'click', async()=>{
-  const url=document.getElementById('flipShareUrl').value;
-  const t=document.getElementById('flipShareTitle'); const title=(t && t.value.trim()) || 'My Skribl';
-  try{ await navigator.share({ title: title, url: url }); }
-  catch(e){ if(!e || e.name!=='AbortError') chip('Sharing didn\u2019t work \u2014 copy the link instead'); }
-});
 
-/* ---- compose step ---------------------------------------------------------
+/* ---- opening it ------------------------------------------------------------
    The emptiness check lives HERE, before the sheet opens, so a user is not
    asked for a title and then told there is nothing to share. shareSkribl()
    keeps its own check because it is still reachable directly. ---------------*/
@@ -5559,59 +5577,21 @@ function openShareCompose(){
   if(sharing){ chip('Still posting…'); return; }
   if(nothingToShare()){ chip('Draw something to post'); return; }
   if(playing) stop();
-  const m=document.getElementById('flipShare');
-  const compose=document.getElementById('flipShareCompose'), result=document.getElementById('flipShareResult');
-  if(!m){
+  if(!postUI){
     // The sheet is missing entirely. Say so rather than appear dead, and name
     // it in the console so lib/report.js carries it off the device.
-    console.error('[skribl] #flipShare is missing — cannot open the share sheet');
+    console.error('[skribl] #postOverlay is missing — cannot open the post sheet');
     chip('Posting is unavailable — please reload');
     return;
   }
-  if(compose) compose.hidden=false;
-  if(result) result.hidden=true;
-  clearShareError();
-  // Ask before creating server state, not after — see lib/recoverykey.js.
-  if(window.SkriblRecoveryKey && compose) window.SkriblRecoveryKey.warnIfVolatile(compose);
-  m.hidden=false;
-  // A modal: focus moves in, Tab stays in, and close() hands focus back to
-  // the Post button that opened it (lib/modalfocus.js, same as Pad's sheet).
-  if(window.SkriblModal) window.SkriblModal.open(m, document.getElementById('postBtn'));
-  const t=document.getElementById('flipShareTitle');
-  if(t) setTimeout(()=>{ try{ t.focus(); }catch(_){ } }, 30);
+  postUI.open();
 }
-/* ONE way out, for all four doors — Cancel, ×, the backdrop and Escape — so
-   the focus hand-back cannot be skipped by one of them. */
-function closeShare(){
-  const m=document.getElementById('flipShare');
-  if(!m || m.hidden) return;
-  m.hidden=true;
-  if(window.SkriblModal) window.SkriblModal.close(m);
-}
+function closeShare(){ if(postUI && postUI.isOpen()) postUI.close(); }
 KeyRegistry.register({surface:'flip', label:'close the post sheet',
-  keys:['Escape'], scope:()=>{ const m=document.getElementById('flipShare'); return !!m && !m.hidden; }});
-document.addEventListener('keydown',e=>{ const m=document.getElementById('flipShare'); if(e.key==='Escape' && m && !m.hidden){ e.preventDefault(); closeShare(); } });
-const _shareCap=document.getElementById('flipShareCaption');
-const _shareCount=document.getElementById('flipShareCount');
-if(_shareCap && _shareCount){
-  const _sync=()=>{ _shareCount.textContent=_shareCap.value.length+' / '+_shareCap.maxLength; };
-  _shareCap.addEventListener('input', _sync); _sync();
-}
-const _shareSubmit=document.getElementById('flipShareSubmit');
-if(_shareSubmit) _shareSubmit.addEventListener('click', shareSkribl);
-const _shareCancel=document.getElementById('flipShareCancel');
-if(_shareCancel) _shareCancel.addEventListener('click', closeShare);
-// Enter in the title field submits; the caption is a textarea and keeps newlines.
-const _shareTitle=document.getElementById('flipShareTitle');
+  keys:['Escape'], scope:()=>!!postUI && postUI.isOpen()});
+// Enter in the title field posts; the caption is a textarea and keeps newlines.
+const _shareTitle=document.getElementById('postTitleInput');
 if(_shareTitle) _shareTitle.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); shareSkribl(); } });
-
-bindEl('flipShareClose', 'click', closeShare);
-bindEl('flipShare', 'click',e=>{ if(e.target.id==='flipShare') closeShare(); });
-bindEl('flipShareCopy', 'click',async()=>{
-  const url=document.getElementById('flipShareUrl').value;
-  try{ await navigator.clipboard.writeText(url); chip('Link copied'); }
-  catch(_){ const inp=document.getElementById('flipShareUrl'); inp.focus(); inp.select(); try{ document.execCommand('copy'); chip('Link copied'); }catch(e){ chip('Select the link and copy'); } }
-});
 function exportPNG(){
   const cv=document.createElement('canvas'); cv.width=CW; cv.height=CH; const c=cv.getContext('2d');
   drawFrameTo(c, frame());

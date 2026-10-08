@@ -15,23 +15,11 @@
 // already produces the self-contained payload; sendSkribl() is the ONE seam
 // where a real network call drops in later — nothing else here changes.
 (function initPostComposer() {
-  const overlay = document.getElementById('postOverlay');
-  const sheet = document.getElementById('postSheet');
   const titleInput = document.getElementById('postTitleInput');
   const captionInput = document.getElementById('postCaptionInput');
-  const charCount = document.getElementById('postCharCount');
-  const previewImg = document.getElementById('postPreviewImg');
-  const previewFrame = document.getElementById('postPreview');
   const submitBtn = document.getElementById('postSubmitBtn');
   const publicInput = document.getElementById('postPublicInput');   // absent in compose mode
   const submitLabel = document.getElementById('postSubmitLabel');
-  const soundMark = document.getElementById('postSound');
-  const soundDot = document.getElementById('postSoundDot');
-  const soundText = document.getElementById('postSoundText');
-  const watchBtn = document.getElementById('postWatchBtn');
-  const shareBtn = document.getElementById('postShareBtn');
-  const copyBtn = document.getElementById('postCopyBtn');
-  const resultRow = document.getElementById('postResult');
   let lastPostUrl = null, lastPostTitle = '';
   // The device-only save this open sheet made when the server did not answer
   // (v315). If Try again then posts for real, this is the copy it replaces,
@@ -39,10 +27,23 @@
   let pendingLocalId = null;
   const status = document.getElementById('postStatus');
   const statusLabel = document.getElementById('postStatusLabel');
-  const progressFill = document.getElementById('postProgressFill');
-  const body = document.getElementById('postBody');
-  let closeTimer = null;
-  let posting = false;
+  // THE SHEET ITSELF IS SHARED WITH FLIP (lib/postsheet.js): opening and
+  // closing it, the keyboard lift, its states, the sound mark, and the Watch /
+  // Share / Copy link row. This file keeps what is the Pad's own: the payload,
+  // the network call, the device-only save and the posted list.
+  const ui = window.SkriblPostSheet.attach({
+    compose: window.SKRIBL_MODE === 'compose',
+    toast: showToast,
+    submit: () => submit(),
+    onOpen: () => { pendingLocalId = null; },
+    // Mirror the pad's shape so the snapshot shows whole (no crop), and match
+    // the frame background to the canvas color so there are never odd bars.
+    preview: () => {
+      const src = buildPreviewDataURL();
+      return src ? { src, bg: bgColor || '#0d0f14',
+                     ratio: (canvas.width && canvas.height) ? (canvas.width / canvas.height) : 1.6 } : null;
+    }
+  });
 
   // ---- THE NETWORK SEAM ----
   // The ONE place a post leaves the app. When Flask serves the page the editor
@@ -274,173 +275,6 @@
     return PC.build(buildPreviewCanvas());
   }
 
-  function updateCharCount() {
-    // The limit is whatever the field enforces (rendered from
-    // skribl_limits.caption); a literal here drifted to 280 against 300.
-    charCount.textContent = captionInput.value.length + ' / ' + captionInput.maxLength;
-  }
-
-  // states: 'idle' | 'sending' | 'success' | 'error'
-  /* The button's resting label comes from the DOM, not from a literal here.
-   * The template renders it ("Post to Skribl", or "Add to post" in compose
-   * mode) and setState('idle') used to overwrite it with a hardcoded copy —
-   * which was already a duplicate of the template's string and would have
-   * silently relabelled the compose button back to publishing the first time
-   * anything reset the sheet. Same reason the busy verb is chosen by mode:
-   * compose is not posting, and must not say it is. */
-  const IDLE_LABEL = (submitLabel.textContent || '').trim() || 'Post to Skribl';
-  const BUSY_LABEL = (window.SKRIBL_MODE === 'compose') ? 'Adding…' : 'Posting…';
-
-  function setState(state) {
-    if (state === 'idle') {
-      posting = false;
-      status.hidden = true;
-      status.classList.remove('error');
-      progressFill.style.width = '0%';
-      if (resultRow) resultRow.hidden = true;
-      if (watchBtn) watchBtn.hidden = true;
-      if (shareBtn) shareBtn.hidden = true;
-      if (copyBtn) copyBtn.hidden = true;
-      body.style.opacity = '';
-      titleInput.disabled = false;
-      captionInput.disabled = false;
-      if (publicInput) publicInput.disabled = false;
-      submitBtn.disabled = false;
-      submitBtn.hidden = false;
-      submitLabel.textContent = IDLE_LABEL;
-    } else if (state === 'sending') {
-      posting = true;
-      status.hidden = false;
-      status.classList.remove('error');
-      statusLabel.textContent = BUSY_LABEL;
-      progressFill.style.width = '35%';
-      body.style.opacity = '0.5';
-      titleInput.disabled = true;
-      captionInput.disabled = true;
-      if (publicInput) publicInput.disabled = true;
-      submitBtn.disabled = true;
-    } else if (state === 'success') {
-      posting = false;
-      progressFill.style.width = '100%';
-      statusLabel.textContent = 'Posted!';
-      submitBtn.hidden = true;
-      // The form stays on screen at full strength as the record of what was
-      // posted; its fields stay disabled (set by 'sending') until the sheet
-      // is opened again. It used to sit at the sending state's half opacity
-      // with the title wiped (v293, from a phone).
-      body.style.opacity = '';
-    } else if (state === 'error') {
-      posting = false;
-      status.classList.add('error');
-      statusLabel.textContent = 'Couldn\u2019t post — try again';
-      progressFill.style.width = '100%';
-      body.style.opacity = '';
-      titleInput.disabled = false;
-      captionInput.disabled = false;
-      if (publicInput) publicInput.disabled = false;
-      submitBtn.disabled = false;
-      submitBtn.hidden = false;
-      submitLabel.textContent = 'Try again';
-    }
-  }
-
-  /* THE SOUND MARKER MIRRORS THE TOOLBAR, IT DOES NOT RE-DECIDE.
-   *
-   * #musicTabDot is already the app's statement about the music track: hidden
-   * when there is none, green when a loop is loaded, amber (.pending) when one
-   * is REMEMBERED and its file is gone — the case where the author is about to
-   * post silence believing otherwise, and the reason this marker exists at all.
-   *
-   * Reading that dot rather than inspecting the payload is deliberate. A second
-   * opinion computed here could disagree with the toolbar, and then the same
-   * mark would say two things on one screen. It is also the cheap answer:
-   * serializing the drawing on every sheet open, to learn one boolean, would
-   * copy the audio bytes for nothing.
-   *
-   * What it therefore does NOT claim: that the post-time mono bake succeeded.
-   * The bake runs later, inside buildPostPayload(). This says what the editor
-   * is holding, which is the question the author can still do something about.
-   */
-  function syncSoundMark() {
-    if (!soundMark) return;
-    const dot = document.getElementById('musicTabDot');
-    const has = !!(dot && !dot.hidden);
-    soundMark.hidden = !has;
-    if (!has) return;
-    const pending = dot.classList.contains('pending');
-    if (soundDot) soundDot.classList.toggle('pending', pending);
-    const msg = pending
-      ? 'Your music file is missing — this will post without sound.'
-      : 'This Skribl has sound.';
-    soundMark.setAttribute('title', msg);
-    if (soundText) soundText.textContent = msg;
-  }
-
-  function openPost() {
-    setState('idle');
-    pendingLocalId = null;
-    syncSoundMark();
-    // Ask before creating server state, not after — see lib/recoverykey.js.
-    if (window.SkriblRecoveryKey) window.SkriblRecoveryKey.warnIfVolatile(sheet);
-    // Field values persist across an accidental close within the session; they
-    // reset only after a successful post. So don't clear them here.
-    updateCharCount();
-    const preview = buildPreviewDataURL();
-    if (preview) {
-      previewImg.src = preview;
-      // Mirror the pad's shape so the snapshot shows whole (no crop), and match
-      // the frame background to the canvas color so there are never odd bars.
-      if (previewFrame) {
-        const ratio = (canvas.width && canvas.height) ? (canvas.width / canvas.height) : 1.6;
-        previewFrame.style.aspectRatio = ratio.toFixed(4);
-        previewFrame.style.background = bgColor || '#0d0f14';
-        previewFrame.style.display = '';
-      }
-    } else if (previewFrame) {
-      previewFrame.style.display = 'none';
-    }
-    clearTimeout(closeTimer);
-    overlay.hidden = false;
-    requestAnimationFrame(() => {
-      overlay.classList.add('open');
-      applyKeyboardInset();
-      if (window.SkriblModal) window.SkriblModal.open(sheet || overlay);
-    });
-  }
-
-  function closePost() {
-    // WAS a conditional blur() on the two text fields, which exists to dismiss
-    // the soft keyboard on a phone. Returning focus to the opener does that
-    // too — focus leaves the input either way — and it also puts the user back
-    // where they were instead of on <body>.
-    if (window.SkriblModal) window.SkriblModal.close(sheet || overlay);
-    overlay.classList.remove('open');
-    if (sheet) sheet.style.maxHeight = '';
-    overlay.style.top = ''; overlay.style.bottom = ''; overlay.style.height = '';
-    closeTimer = setTimeout(() => { overlay.hidden = true; }, 350);
-  }
-
-  // iOS doesn't shrink CSS viewport units for the on-screen keyboard, so the
-  // bottom-anchored sheet ends up behind it. Fix: resize the fixed overlay to
-  // the *visible* region (above the keyboard) using visualViewport. The sheet,
-  // anchored to the overlay's bottom, then sits right on the keyboard — and iOS
-  // has no reason to scroll the page and push the header off the top.
-  // Mobile only; desktop / unsupported clears any inline styles.
-  function applyKeyboardInset() {
-    const vv = window.visualViewport;
-    if (overlay.hidden || window.innerWidth > 640 || !vv) {
-      overlay.style.top = '';
-      overlay.style.bottom = '';
-      overlay.style.height = '';
-      if (sheet) sheet.style.maxHeight = '';
-      return;
-    }
-    overlay.style.top = vv.offsetTop + 'px';
-    overlay.style.bottom = 'auto';
-    overlay.style.height = vv.height + 'px';
-    if (sheet) sheet.style.maxHeight = Math.max(200, vv.height - 12) + 'px';
-  }
-
   /* EVERYTHING A PAYLOAD NEEDS BEFORE IT LEAVES THE BROWSER, in one place.
    *
    * Split out of submit() so COMPOSE MODE can reuse it exactly. A skribl the
@@ -521,9 +355,9 @@
   }
 
   async function submit() {
-    setState('sending');
+    ui.setState('sending');
     const payload = await buildPostPayload();
-    if (!payload) { setState('idle'); return; }
+    if (!payload) { ui.setState('idle'); return; }
     // COMPOSE MODE HANDS THE PAYLOAD BACK AND PUBLISHES NOTHING. The host holds
     // it on their draft; the single POST happens when they post. Everything
     // above this line has already run, so what they attach is byte-for-byte
@@ -538,8 +372,8 @@
       // they press the pad icon again, which reopens the SAME iframe, and a
       // sheet left open is then sitting over the canvas they came back to
       // draw on. (Found exactly that way: the second edit could not draw.)
-      setState('idle');
-      closePost();
+      ui.setState('idle');
+      ui.close();
       return;
     }
     try {
@@ -594,7 +428,7 @@
       // The title and caption are NOT cleared: they stay in their fields as
       // the record of what was just posted, and are still there for the next
       // post of the same drawing. Wiping them read as losing them.
-      setState('success');
+      ui.setState('success');
       // A posted (or locally-saved) Skribl is finished, so drop the crash-recovery
       // autosave — otherwise returning to the editor (e.g. via "Make your own
       // Skribl") offers to restore the drawing you just posted. Recovery turns
@@ -627,77 +461,14 @@
       } else {
         showToast('Posted! 🎨', null);
       }
-      if (resultRow && lastPostUrl) resultRow.hidden = false;
-      if (watchBtn && lastPostUrl) watchBtn.hidden = false;
-      // Copy link, for a real link only: a local fallback (#skribl=…) opens
-      // nowhere but here, so there is nothing to hand anyone.
-      if (copyBtn && lastPostUrl && !localOnly && lastPostUrl.charAt(0) !== '#') copyBtn.hidden = false;
-      // Share, where the device has a share sheet (v292, SK-AUD-016); a local
-      // fallback (#skribl=…) is not a link anyone else can open, so not then.
-      if (shareBtn && lastPostUrl && !localOnly && lastPostUrl.charAt(0) !== '#' && navigator.share) shareBtn.hidden = false;
+      ui.result(lastPostUrl, lastPostTitle, { localOnly });
     } catch (e) {
-      setState('error');
+      ui.setState('error');
       if (e && e.message) statusLabel.textContent = e.message;
     }
   }
 
-  captionInput.addEventListener('input', updateCharCount);
-  submitBtn.addEventListener('click', submit);
-  if (shareBtn) shareBtn.addEventListener('click', async () => {
-    if (!lastPostUrl || !navigator.share) return;
-    const abs = new URL(lastPostUrl, location.href).href;
-    const title = lastPostTitle || 'My Skribl';
-    try { await navigator.share({ title, url: abs }); }
-    catch (e) { if (!e || e.name !== 'AbortError') showToast('Sharing didn\u2019t work \u2014 open it and copy the link', shareBtn); }
-  });
-  if (copyBtn) copyBtn.addEventListener('click', async () => {
-    if (!lastPostUrl) return;
-    const abs = new URL(lastPostUrl, location.href).href;
-    try { await navigator.clipboard.writeText(abs); showToast('Link copied', null); }
-    catch (e) { showToast('Couldn\u2019t copy \u2014 open it and copy the address', copyBtn); }
-  });
-  if (watchBtn) watchBtn.addEventListener('click', () => {
-    if (!lastPostUrl) return;
-    if (lastPostUrl.charAt(0) === '#') {
-      // Local fallback: #skribl=<id> — boot the in-page player via the hash.
-      // Always in place: there is no server URL to open in a tab.
-      location.hash = lastPostUrl;
-      location.reload();
-    } else if ((window.SKRIBL_PLAYER_TARGET || '_blank') === '_self') {
-      // The host routes the player itself; navigate in place as it asked.
-      location.href = lastPostUrl;
-    } else {
-      // Default. This used to be location.href unconditionally, which inside a
-      // host application navigates the HOST'S page away — and left Pad the odd
-      // one out, since Flip's Open player and the posted list are both anchors
-      // with target="_blank". Configured by create_blueprint(player_target=...).
-      window.open(lastPostUrl, '_blank', 'noopener');
-    }
-  });
-
-  // Recompute the keyboard lift when the viewport changes or a field is focused.
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', applyKeyboardInset);
-    window.visualViewport.addEventListener('scroll', applyKeyboardInset);
-  }
-  titleInput.addEventListener('focus', () => setTimeout(applyKeyboardInset, 100));
-  captionInput.addEventListener('focus', () => setTimeout(applyKeyboardInset, 100));
-
-  // Backdrop tap / Escape / handle tap all close — but never mid-send.
-  overlay.addEventListener('click', (e) => {
-    if (posting) return;
-    if (!e.target.closest('.menu-sheet')) closePost();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !overlay.hidden && !posting) closePost();
-  });
-  // Tap the grabber or swipe the sheet down (lib/sheetswipe.js), not mid-send.
-  if (sheet && window.SkriblSheetSwipe) {
-    window.SkriblSheetSwipe.attach(sheet, { handle: sheet.querySelector('.menu-handle'),
-      close: closePost, canClose: () => !posting });
-  }
-
   // The Post button in the header opens the composer.
-  postBtn.addEventListener('click', openPost);
+  postBtn.addEventListener('click', ui.open);
 })();
 

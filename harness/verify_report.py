@@ -142,8 +142,8 @@ with sync_playwright() as p:
     pg.wait_for_timeout(300)
     pg.click("#postBtn")
     pg.wait_for_timeout(350)
-    pg.fill("#flipShareTitle", SECRET_TITLE)
-    pg.fill("#flipShareCaption", "a caption nobody should see in a bug report")
+    pg.fill("#postTitleInput", SECRET_TITLE)
+    pg.fill("#postCaptionInput", "a caption nobody should see in a bug report")
     pg.wait_for_timeout(150)
 
     text = pg.evaluate("() => window.SkriblReport.collect()")

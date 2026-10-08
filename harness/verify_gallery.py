@@ -229,13 +229,13 @@ def flip_post(b, title, tick):
     draw(pg, "#pad")
     pg.click("#postBtn")
     pg.wait_for_timeout(500)
-    pg.fill("#flipShareTitle", title)
-    present = pg.evaluate("() => !!document.getElementById('flipSharePublic')")
+    pg.fill("#postTitleInput", title)
+    present = pg.evaluate("() => !!document.getElementById('postPublicInput')")
     if tick:
-        pg.click(".flip-share-check")
-    checked = pg.evaluate("() => { const e = document.getElementById('flipSharePublic'); return e ? e.checked : null; }")
+        pg.click("#postSheet .post-check")
+    checked = pg.evaluate("() => { const e = document.getElementById('postPublicInput'); return e ? e.checked : null; }")
     seen = capture_post(pg)
-    pg.click("#flipShareSubmit")
+    pg.click("#postSubmitBtn")
     wait_post(pg, seen)
     pg.wait_for_timeout(300)
     pg.close()
@@ -451,7 +451,7 @@ with sync_playwright() as sp:
     check("the Pad's Your Skribls row is a link to the profile",
           pad_mine[0] == "A" and (pad_mine[1] or "").endswith("/library"), str(pad_mine))
     browsing.goto(pg, BASE, "/flip")
-    flip_label = pg.evaluate("() => document.querySelector('.flip-share-check .post-check-text').firstChild.textContent.trim()")
+    flip_label = pg.evaluate("() => document.querySelector('#postSheet .post-check .post-check-text').firstChild.textContent.trim()")
     flip_href = pg.evaluate("() => document.getElementById('miGallery').getAttribute('href')")
     flip_mine = pg.evaluate("() => { const a = document.getElementById('miPosted'); return [a.tagName, a.getAttribute('href')]; }")
     check("Flip's Your Skribls row is a link to the profile",

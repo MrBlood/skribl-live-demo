@@ -137,17 +137,17 @@ check("the editor is told where the player opens",
       "editor_post.js reads this; without it Pad falls back to _blank anyway, "
       "but a host asking for _self would be ignored")
 flip_html = c.get("/flip").data.decode("utf-8", "replace")
-check("Flip's Open player anchor uses the configured target, not a literal",
-      'id="flipShareOpen"' in flip_html and 'target="_blank"' in flip_html,
-      "it was hardcoded target=_blank, which is right by luck and wrong to keep")
-check("Pad's watch button no longer navigates unconditionally",
-      "location.href = lastPostUrl" not in
-      (pathlib.Path(__file__).resolve().parent.parent /
-       "skribl" / "static" / "editor_post.js").read_text(encoding="utf-8")
-      .split("watchBtn.addEventListener")[1].split("});")[0]
-      or "SKRIBL_PLAYER_TARGET" in
-      (pathlib.Path(__file__).resolve().parent.parent /
-       "skribl" / "static" / "editor_post.js").read_text(encoding="utf-8"),
+check("Flip is told where the player opens too",
+      'SKRIBL_PLAYER_TARGET = "_blank"' in flip_html,
+      "Flip posts through the Pad's sheet now, whose Watch reads this; its old "
+      "Open player anchor was a hardcoded target=_blank, right by luck")
+# Watch lives in the sheet both editors share (lib/postsheet.js) since Flip
+# took the Pad's; the rule is the same one, in its new home.
+_sheet_js = (pathlib.Path(__file__).resolve().parent.parent / "skribl" / "static" / "lib" / "postsheet.js")
+_watch = ((_sheet_js.read_text(encoding="utf-8") if _sheet_js.is_file() else "")
+          .split("watchBtn.addEventListener")[1:2] or [""])[0].split("});")[0]
+check("the post sheet's Watch no longer navigates unconditionally",
+      "SKRIBL_PLAYER_TARGET" in _watch and "window.open(lastPostUrl, '_blank'" in _watch,
       "inside a host that navigates the HOST'S document away from the page "
       "Skribl was embedded in")
 

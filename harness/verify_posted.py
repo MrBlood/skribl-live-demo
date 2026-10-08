@@ -131,9 +131,9 @@ with sync_playwright() as p:
     TITLE = "Walk cycle, take 2"
     pg.click("#postBtn")
     pg.wait_for_timeout(400)
-    pg.fill("#flipShareTitle", TITLE)
-    pg.click("#flipShareSubmit")
-    pg.wait_for_selector("#flipShareUrl", state="visible", timeout=20000)
+    pg.fill("#postTitleInput", TITLE)
+    pg.click("#postSubmitBtn")
+    pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
     pg.wait_for_timeout(700)
 
     saved = pg.evaluate(READ)
@@ -467,19 +467,19 @@ with sync_playwright() as p:
     lf.wait_for_timeout(250)
     lf.click("#postBtn")
     lf.wait_for_timeout(400)
-    lf.fill("#flipShareTitle", "Lost in transit, Flip")
-    lf.click("#flipShareSubmit")
+    lf.fill("#postTitleInput", "Lost in transit, Flip")
+    lf.click("#postSubmitBtn")
     lf.wait_for_timeout(2500)
     lf.unroute(f"{API}**")
     check("Flip: the server created the post the browser never heard about",
           lost2.get("_status") == 201 and bool(lost2.get("id")), str(lost2)[:120])
     check("Flip: the sheet says the server could not be reached, and stays for the retry",
-          lf.is_visible("#flipShareError") and lf.is_visible("#flipShareSubmit"),
-          lf.inner_text("#flipShareError") if lf.is_visible("#flipShareError") else "no error shown")
+          lf.is_visible("#postStatusLabel") and lf.is_visible("#postSubmitBtn"),
+          lf.inner_text("#postStatusLabel") if lf.is_visible("#postStatusLabel") else "no error shown")
     freplays = []
     lf.on("response", lambda r: freplays.append(r) if r.request.method == "POST"
           and r.url.startswith(API) else None)
-    lf.click("#flipShareSubmit")
+    lf.click("#postSubmitBtn")
     lf.wait_for_timeout(2500)
     frep = None
     for r in freplays:
@@ -582,8 +582,8 @@ with sync_playwright() as p:
     nf.wait_for_timeout(250)
     nf.click("#postBtn")
     nf.wait_for_timeout(400)
-    nf.fill("#flipShareTitle", "No Web Crypto, Flip")
-    nf.click("#flipShareSubmit")
+    nf.fill("#postTitleInput", "No Web Crypto, Flip")
+    nf.click("#postSubmitBtn")
     nf.wait_for_timeout(2500)
     fentries = nf.evaluate(READ)
     cap_pins("Flip", nf, sent2, fentries[0] if fentries else None)

@@ -359,7 +359,7 @@ with sync_playwright() as p:
         print("\nKEYBOARD — and the text fields it must not steal from")
         fresh(page)
         stolen = page.evaluate("""() => {
-          const inp = document.getElementById('flipShareTitle');
+          const inp = document.getElementById('postTitleInput');
           if (!inp) return 'no input';
           inp.hidden = false; inp.focus();
           const before = pageClip;

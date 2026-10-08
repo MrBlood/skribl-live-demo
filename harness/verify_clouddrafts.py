@@ -438,7 +438,7 @@ try:
         pa.evaluate("() => document.getElementById('padFrame').contentDocument.getElementById('postBtn').click()")
         pa.wait_for_timeout(600)
         pa.evaluate("() => document.getElementById('padFrame').contentDocument"
-                    ".getElementById('flipShareSubmit').click()")
+                    ".getElementById('postSubmitBtn').click()")
         pa.wait_for_timeout(2500)
         att = pa.evaluate("""() => { var v = document.getElementById('skriblPayload').value;
             return { shown: !document.getElementById('attach').hidden,

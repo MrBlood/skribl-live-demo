@@ -324,7 +324,7 @@ with sync_playwright() as p:
     # opener refuses an empty flip and a refused sheet would leave nothing on
     # top of the toast, which read as a pass in this section's first draft.
     _open = ip.evaluate("() => { addFrame(true); openShareCompose();"
-                        " return !document.getElementById('flipShare').hidden; }")
+                        " return !document.getElementById('postOverlay').hidden; }")
     ip.wait_for_timeout(400)
     check("the post sheet is open over it", _open is True)
     _over = ip.evaluate("""() => {
@@ -337,7 +337,7 @@ with sync_playwright() as p:
     check("with the post sheet open, the toast is not what is on top at its own centre",
           _over != 'hint', f"elementFromPoint at the toast's centre: {_over!r} — "
           "a hint above a modal breaks the modal")
-    ip.evaluate("() => { document.getElementById('flipShare').hidden = true; }")
+    ip.evaluate("() => closeShare()")
     ip.evaluate("() => window.SkriblHints.reset()")
     ip.reload(wait_until="load")
     ip.wait_for_timeout(1300)

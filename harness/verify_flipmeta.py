@@ -66,9 +66,9 @@ check("the hardcoded 'Flip animation' title is gone from flip.js",
       "the literal is back — every Flip share would carry the same title again")
 
 check("buildSharePayload reads the title input",
-      "flipShareTitle" in src, "flip.js never reads #flipShareTitle")
+      "postTitleInput" in src, "flip.js never reads #postTitleInput")
 check("buildSharePayload reads the caption input",
-      "flipShareCaption" in src, "flip.js never reads #flipShareCaption")
+      "postCaptionInput" in src, "flip.js never reads #postCaptionInput")
 
 # A caption key that is never sent is the half of the bug that is easy to miss:
 # the title is visible, an absent caption just looks like the user wrote none.
@@ -76,17 +76,23 @@ check("the share payload carries a caption key",
       re.search(r"caption\s*:", src) is not None,
       "no caption is sent, so the field can never be populated from Flip")
 
+# Flip posts through the Pad's own sheet (owner: "shouldn't flip and pad look
+# the same?"): one partial, included by both editors.
 with open(template("skribl_flip.html"), encoding="utf-8") as fh:
+    flip_markup = fh.read()
+check("the Flip template includes the shared post sheet",
+      "{% include 'skribl/_skribl_post.html' %}" in flip_markup)
+with open(template("_skribl_post.html"), encoding="utf-8") as fh:
     markup = fh.read()
-for _id in ("flipShareTitle", "flipShareCaption", "flipShareSubmit",
-            "flipShareCompose", "flipShareResult"):
-    check(f"the Flip template carries #{_id}", f'id="{_id}"' in markup)
+for _id in ("postTitleInput", "postCaptionInput", "postSubmitBtn",
+            "postBody", "postResult"):
+    check(f"the post sheet carries #{_id}", f'id="{_id}"' in markup)
 
 # The compose step must not be able to appear as a fait accompli: the result
-# pane starts hidden, or a user would see a stale link above the fields.
-check("the result pane starts hidden",
-      re.search(r'id="flipShareResult"[^>]*\shidden', markup) is not None,
-      "the previous share's link would show above the compose fields")
+# row starts hidden, or a user would see a stale Watch under the fields.
+check("the result row starts hidden",
+      re.search(r'id="postResult"[^>]*\shidden', markup) is not None,
+      "the previous post's row would show under the compose fields")
 
 
 # ---------------------------------------------------------------------------
@@ -151,29 +157,29 @@ with sync_playwright() as p:
     pg.click("#postBtn")
     pg.wait_for_timeout(400)
     check("the Share button opens the compose step, not an immediate post",
-          pg.is_visible("#flipShareTitle") and not posted_bodies,
+          pg.is_visible("#postTitleInput") and not posted_bodies,
           f"{len(posted_bodies)} post(s) fired before the user typed anything")
 
-    pg.fill("#flipShareTitle", TITLE)
-    pg.fill("#flipShareCaption", CAPTION)
+    pg.fill("#postTitleInput", TITLE)
+    pg.fill("#postCaptionInput", CAPTION)
     pg.wait_for_timeout(100)
     check("the caption counter tracks what was typed",
-          pg.inner_text("#flipShareCount").startswith(str(len(CAPTION))),
-          pg.inner_text("#flipShareCount"))
+          pg.inner_text("#postCharCount").startswith(str(len(CAPTION))),
+          pg.inner_text("#postCharCount"))
     # THE OTHER HALF OF THE COUNTER. maxlength is rendered from
     # skribl_limits.caption (300); the "/ N" beside it was a literal 280 in two
     # scripts and two templates, so a user could read "300 / 280". The limit
     # the counter names must be the limit the field enforces, and that must be
     # the column width. Red on v287.
-    _maxlen = pg.get_attribute("#flipShareCaption", "maxlength")
+    _maxlen = pg.get_attribute("#postCaptionInput", "maxlength")
     check("Flip's caption field enforces the configured limit",
           _maxlen == str(MAX_CAPTION_CHARS), repr(_maxlen))
     check("and Flip's counter names that same limit",
-          pg.inner_text("#flipShareCount") == f"{len(CAPTION)} / {_maxlen}",
-          pg.inner_text("#flipShareCount"))
+          pg.inner_text("#postCharCount") == f"{len(CAPTION)} / {_maxlen}",
+          pg.inner_text("#postCharCount"))
 
-    pg.click("#flipShareSubmit")
-    pg.wait_for_selector("#flipShareUrl", state="visible", timeout=20000)
+    pg.click("#postSubmitBtn")
+    pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
     pg.wait_for_timeout(600)
 
     check("exactly one post was made", len(posted_bodies) == 1, str(len(posted_bodies)))
@@ -183,10 +189,13 @@ with sync_playwright() as p:
     check("the request body carries the typed caption",
           body.get("caption") == CAPTION, repr(body.get("caption")))
 
-    url = pg.input_value("#flipShareUrl")
-    check("the result pane shows a player link", "/s/" in url, url)
-    check("the compose pane is hidden once the link exists",
-          not pg.is_visible("#flipShareTitle"))
+    # The link the post left in Your Skribls, which Watch, Share and Copy
+    # link all hand on.
+    url = pg.evaluate("() => (SkriblPosted.list()[0] || {}).url || ''")
+    check("the post leaves a player link", "/s/" in url, url)
+    check("the posted title stays in its field, as on the Pad",
+          pg.is_visible("#postTitleInput") and pg.input_value("#postTitleInput") == TITLE,
+          pg.input_value("#postTitleInput"))
 
     pid = url.rstrip("/").rsplit("/", 1)[-1]
     stored = fetch(pid)
@@ -213,14 +222,14 @@ with sync_playwright() as p:
     pg2.wait_for_timeout(200)
     pg2.click("#postBtn")
     pg2.wait_for_timeout(300)
-    pg2.click("#flipShareSubmit")
-    pg2.wait_for_selector("#flipShareUrl", state="visible", timeout=20000)
+    pg2.click("#postSubmitBtn")
+    pg2.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
     pg2.wait_for_timeout(600)
 
     body2 = posted_bodies[0] if posted_bodies else {}
     check("an untouched title is sent as empty, not as a placeholder",
           body2.get("title") == "", repr(body2.get("title")))
-    url2 = pg2.input_value("#flipShareUrl")
+    url2 = pg2.evaluate("() => (SkriblPosted.list()[0] || {}).url || ''")
     stored2 = fetch(url2.rstrip("/").rsplit("/", 1)[-1])
     check("the server substitutes 'Untitled Skribl' for an empty title",
           stored2.get("title") == "Untitled Skribl", repr(stored2.get("title")))
@@ -293,20 +302,22 @@ with sync_playwright() as _p:
         _pg.wait_for_timeout(250)
         _pg.click("#postBtn")
         _pg.wait_for_timeout(300)
-        _pg.click("#flipShareSubmit")
+        _pg.click("#postSubmitBtn")
         _pg.wait_for_timeout(900)
 
         check(f"a {_status} shows a visible error in the sheet",
-              _pg.is_visible("#flipShareError"),
+              _pg.is_visible("#postStatusLabel")
+              and _pg.evaluate("() => document.getElementById('postStatus').classList.contains('error')"),
               "the only signal was a chip that disappears")
-        _msg = _pg.inner_text("#flipShareError")
+        _msg = _pg.inner_text("#postStatusLabel")
         check(f"a {_status} says the drawing is safe",
               "safe" in _msg.lower() or "still here" in _msg.lower(), _msg)
         if _expect == "server":
             check(f"a {_status} blames the server, not the user",
                   "server" in _msg.lower(), _msg)
         check(f"after a {_status} the sheet is still usable",
-              _pg.is_visible("#flipShareTitle"),
+              _pg.is_visible("#postTitleInput") and _pg.is_enabled("#postTitleInput")
+              and _pg.is_visible("#postSubmitBtn"),
               "a failed post must not strand the user on a dead sheet")
         check(f"and a {_status} does not leave sharing stuck",
               _pg.evaluate("() => sharing") is False,
@@ -332,17 +343,51 @@ with sync_playwright() as _p:
     _pg.mouse.up()
     _pg.wait_for_timeout(250)
     _pg.click("#postBtn"); _pg.wait_for_timeout(250)
-    _pg.click("#flipShareSubmit"); _pg.wait_for_timeout(800)
-    check("the first attempt failed visibly", _pg.is_visible("#flipShareError"))
-    _pg.click("#flipShareClose"); _pg.wait_for_timeout(200)
+    _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(800)
+    check("the first attempt failed visibly", _pg.is_visible("#postStatusLabel"))
+    _pg.keyboard.press("Escape"); _pg.wait_for_timeout(450)
     _pg.click("#postBtn"); _pg.wait_for_timeout(300)
     check("reopening clears the stale failure",
-          not _pg.is_visible("#flipShareError"),
+          not _pg.is_visible("#postStatusLabel"),
           "a previous error sat above a fresh attempt")
-    _pg.click("#flipShareSubmit")
-    _pg.wait_for_selector("#flipShareUrl", state="visible", timeout=20000)
-    check("and the retry succeeds", "/s/" in _pg.input_value("#flipShareUrl"))
+    _pg.click("#postSubmitBtn")
+    _pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
+    check("and the retry succeeds", "/s/" in _pg.evaluate("() => (SkriblPosted.list()[0] || {}).url || ''"))
     _pg.close()
+    _b.close()
+
+print("\nSHARE — a refusal before sending is said in the sheet")
+# Flip's page and point budgets answer before the network does. Its own card
+# showed them in a box of its own; the Pad's sheet says them on its status line,
+# drawn as an error, and Post keeps its word -- the remedy is to change the
+# drawing, not to press again, so the button must not turn into Try again.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _pg = _b.new_page(viewport={"width": 390, "height": 844})
+    _sent = []
+    _pg.on("request", lambda r: _sent.append(r.url) if r.method == "POST" and "/api/skribls" in r.url else None)
+    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.wait_for_timeout(1300)
+    # A real stroke first, which is what lets Post open at all; then pages
+    # past the ceiling, which no hand would add one at a time.
+    _box = _pg.locator("#pad").bounding_box()
+    _pg.mouse.move(_box["x"] + 60, _box["y"] + 60)
+    _pg.mouse.down()
+    _pg.mouse.move(_box["x"] + 150, _box["y"] + 130, steps=8)
+    _pg.mouse.up()
+    _pg.wait_for_timeout(250)
+    _pg.evaluate("""() => { const B = window.SkriblPointBudget;
+      while (frames.length <= B.MAX_FRAMES) frames.push({ strokes: [], strokeGroups: [], hold: 1 });
+      render(); }""")
+    _pg.click("#postBtn"); _pg.wait_for_timeout(500)
+    _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(700)
+    _ref = _pg.evaluate("""() => { const s = document.getElementById('postStatus'), l = document.getElementById('postStatusLabel');
+      return { shown: !!s && !s.hidden && s.classList.contains('error'), says: l ? l.textContent : '',
+               button: (document.getElementById('postSubmitLabel') || {}).textContent || '' }; }""")
+    check("too many pages is said on the sheet's status line, as an error",
+          _ref["shown"] and "pages and the limit is" in _ref["says"], str(_ref))
+    check("...nothing is sent, and Post keeps its word rather than offering Try again",
+          not _sent and _ref["button"].strip() == "Post to Skribl", f"{_ref}; {len(_sent)} POST(s)")
     _b.close()
 
 print("\nSHARE — it can never fail silently")
@@ -394,7 +439,7 @@ with sync_playwright() as _p:
     _pg2.click("#postBtn")
     _pg2.wait_for_timeout(400)
     check("tapping share opens the compose sheet even after a missing element",
-          _pg2.is_visible("#flipShareTitle"),
+          _pg2.is_visible("#postTitleInput"),
           "share did nothing — the failure this whole section exists for")
     _b.close()
 

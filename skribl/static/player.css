@@ -205,7 +205,7 @@
   /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
-     .post-watch), Flip's share CTA (.flip-share-open), and the whole PLAYER
+     .post-watch, one sheet for both editors), and the whole PLAYER
      (those carrying words use --accent-fill, below, for AA)
      surface — a shared link travels off the branded
      host, so the player stays branded, and verify_ux pins its active fill
