@@ -14383,8 +14383,9 @@ three of them in the order of one array.
 * EVERY HALO WENT TO THE FRONT OF THE PAGE, and array order is paint order,
   play order and play time at once. On a page that draws itself the soft edge
   drew first, a faint ghost of the middle of the drawing on an empty page, and
-  the page's clock read the passes' copied `t` as drawing: the owner's page
-  went from 7.4 s to 6.2 s with the line revealed out of order inside it. And an
+  the page's clock read the passes' copied `t` as drawing, each pass replaying
+  the stretch it softens: the owner's page went from 5.5 s to 8 s, the cap, most
+  of it the ghost (measured on the pause-squeezed clock of #354). And an
   eraser drawn BEFORE the blurred line came after its halo, so it cut a hard
   edge across the soft one (the bottom of a V on the owner's first file). Each
   run's halo passes now follow that run, carrying its last `t`: the soft edge

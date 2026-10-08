@@ -8909,8 +8909,8 @@ function blurDensify(seg){
        array order, so the soft edge drew on an empty page BEFORE the line it
        softens -- a faint ghost of the middle of the drawing, then the line.
      - PLAY TIME. A halo copied its points' `t`, so the page's clock read the
-       passes as part of the drawing. The owner's page went from 7.4 s to
-       6.2 s, and drew the line out of order inside that.
+       passes as part of the drawing: each one replayed the stretch it softens.
+       The owner's page went from 5.5 s to 8 s, the cap, most of it the ghost.
    After its own run, the halo is under everything drawn LATER and over
    everything drawn before, which is what a soft line drawn at that moment
    would be. Under or over its OWN core makes no difference to the picture:
