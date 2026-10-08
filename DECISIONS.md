@@ -14527,3 +14527,25 @@ him, and a new check finds the star's white above his head. Red on today's icons
 (no star), on a star too small to reach the edge (0.36 of the side), and, for
 the moved probe, on a fat star that covers the wedge (inner corners at 0.9);
 green through the same path with the real numbers.
+
+**Flip's rotate grip takes a finger (owner, iPhone: "Isn't this handle supposed
+to rotate? I can't seem to get it to rotate").** The grip, a circle on a stem
+above the selection, answered only within 15px of the middle of its circle,
+which is drawn 11px across. Its stem answered nothing at all: a finger there
+started a new marquee and dropped the selection. Measured at 390 wide with real
+touch events: on the circle it turned; 18px down the stem nothing turned and the
+selection was gone. A finger now takes the grip within 22px of the circle (44,
+the smallest target Apple draws for a finger) and anywhere on its stem down to
+the box. The stem stops AT the box, so a finger just inside still moves the
+selection. A mouse or a pen keeps 15px, plus the stem.
+
+There is no WebKit here, so this is the hit area measured in Chromium. If the
+grip still will not turn on the owner's iPhone, the cause is in the engine, and
+a screen recording is the next step.
+
+verify_select, at 390 wide with a finger: a touch on the stem just above the
+box turns the selection, and so does one 20px beside the circle. Both are red on
+main, the stem case losing the selection outright. A finger just inside the box
+still moves the selection rather than turning it. Each part was removed on its
+own and turned only its own check red: the stem, the finger's radius, the
+pointer type reaching the hit test, and the stem's stop at the box.

@@ -1997,7 +1997,7 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   if(flipTool === 'select'){
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
     selecting = true; selPointerId = e.pointerId;
-    selDown(pos(e));
+    selDown(pos(e), e.pointerType === 'touch');
     return;
   }
   // The shape picker is tool OPTIONS, not a dialog: the press that starts
@@ -6348,13 +6348,25 @@ function selHandles(){
     centre: { x:(x0 + x1) / 2, y:(y0 + y1) / 2 }
   };
 }
-function selHandleAt(pt){
+/* THE ROTATE GRIP TAKES A FINGER (owner, iPhone: "Isn't this handle supposed to
+   rotate? I can't seem to get it to rotate"). It answered only within 15px of
+   the middle of its circle, which is drawn 11px across, and the stem under it,
+   which reads as part of it, answered nothing at all: a finger there started a
+   new marquee and dropped the selection. Measured at 390 wide with real touch
+   events: on the circle it turns; 18px down the stem nothing turns and the
+   selection is gone. A finger now takes it within 22px of the circle -- 44, the
+   smallest target Apple draws for a finger -- and anywhere on the stem down to
+   the box. The stem stops AT the box, so a finger just inside still moves the
+   selection. A mouse or a pen keeps 15px: they land where they are aimed. */
+function selHandleAt(pt, finger){
   const h = selHandles(); if(!h) return null;
   const r = selCanvasPx(15);           // generous: a corner square is 5px drawn
   for(const c of h.corners){
     if(Math.abs(pt.x - c.x) <= r && Math.abs(pt.y - c.y) <= r) return { kind:'scale', corner:c, h };
   }
-  if(Math.hypot(pt.x - h.rotate.x, pt.y - h.rotate.y) <= r) return { kind:'rotate', h };
+  const g = finger ? selCanvasPx(22) : r;
+  if(Math.hypot(pt.x - h.rotate.x, pt.y - h.rotate.y) <= g
+     || (Math.abs(pt.x - h.rotate.x) <= g && pt.y > h.rotate.y && pt.y < h.box.y)) return { kind:'rotate', h };
   return null;
 }
 
@@ -9335,10 +9347,10 @@ function selClear(quiet){
   if(had && !quiet) render();
 }
 
-function selDown(pt){
+function selDown(pt, finger){
   // Handles are tested FIRST and they sit outside the bounds box, so an
   // inside-the-box test run first would never reach them.
-  const hit = selSpans.length ? selHandleAt(pt) : null;
+  const hit = selSpans.length ? selHandleAt(pt, finger) : null;
   if(hit){
     selCapture();
     if(hit.kind === 'scale'){
