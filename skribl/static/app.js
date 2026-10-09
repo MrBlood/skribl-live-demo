@@ -208,6 +208,10 @@ let _autoArmedThisStroke = false;
 let recording = false;
 let playing = false;
 let scrubbing = false, lastTargetMs = 0;   // v84 scrub state (used by stopPlayback)
+// Paused by a tap on the canvas (editor_draw.js, lib/tappause.js). Still
+// `playing`, so every guard that keeps the canvas a playback surface holds
+// while it is paused.
+let playPaused = false;
 let frameIndex = 0;   // Phase 1: current frame. Always 0 until Flip Mode adds frames.
 let recorded = false;
 let hasContent = false;
@@ -1539,6 +1543,8 @@ function restoreClear() {
 function stopPlayback() {
   playing = false;
   scrubbing = false;
+  playPaused = false;
+  document.body.classList.remove('playback-paused');
   playBtn.innerHTML = ICON_PLAY + LABEL_PLAY;
   playBtn.disabled = false;
   playBtn.classList.remove('playing');
@@ -1700,7 +1706,7 @@ function hideScrub() {
 }
 
 function editorReplayFrame() {
-  if (!playing) return;
+  if (!playing || playPaused) return;   // paused: resumePlayback() starts the loop again
   if (scrubbing) { requestAnimationFrame(editorReplayFrame); return; }  // frozen at the scrub position
   // Scaled CLOCK, not scaled data: elapsed wall time is converted into position
   // along the drawing's own timeline. The badge and the scrub bar therefore keep
@@ -2579,6 +2585,7 @@ function playMusicLooped(totalDurationMs, onStarted) {
     let elapsedWA = 0;
     const loopCheckWA = setInterval(() => {
       if (!playing) { stopWebAudioLoop(); if (playhead) playhead.hidden = true; clearInterval(loopCheckWA); return; }
+      if (playPaused) return;   // a pause is not music played
       elapsedWA += 100;
       const songTime = webAudioLoopSongTime();
       if (playhead) playhead.style.left = (songTime / audioDuration * 100) + '%';
@@ -2614,6 +2621,7 @@ function playNativeLooped(totalDurationMs, onStarted) {
       clearInterval(loopCheck);
       return;
     }
+    if (playPaused) return;
     elapsed += 100;
     if (audioEl.currentTime >= trimEnd - 0.05) {
       audioEl.currentTime = trimStart;
@@ -3135,9 +3143,9 @@ function stopWebAudioLoop() { _waLoop.stop(); }
 // Called from the Play handler INSIDE the gesture (F3): Play reaches start()
 // only after clearAndRestore's Image decode, when iOS no longer counts it.
 function unlockWebAudio() { return _waLoop.unlock(); }
-function startWebAudioLoop(onFail) {
+function startWebAudioLoop(onFail, offset) {
   if (!audioCtx || !currentAudioBuffer) return false;
-  return _waLoop.start(onFail);
+  return _waLoop.start(onFail, offset);
 }
 // Current position within the looping clip, mapped onto the song timeline.
 function webAudioLoopSongTime() { return (trimStart || 0) + _waLoop.elapsed(); }

@@ -296,6 +296,14 @@ A green check is not evidence until it has been shown to go red.
   touch events: the first pixels of a pull are claimed, a sideways drag is left
   alone, a closing sheet is sampled part-way and must be moving, a quick second
   tap reopens a menu still easing away, and reduced motion closes at once.
+- `verify_tappause.py` — a tap on either editor's canvas pauses its preview
+  where it is and another carries it on, by real touches at 390 and by mouse:
+  the Pad's bar and canvas and Flip's page stop, the in-post player's round
+  Play is painted in the middle of the canvas, the Pad's place, Flip's page
+  timer, a drawing page's reveal and the time readout carry on from where they
+  stood, the music's loop is stopped and started again at the offset it had
+  reached, and a drag, two fingers or Stop are not taps. Each drag times its
+  own press, so it can only pass by its distance.
 - `verify_framecache.py` — a static page is rasterised at most once per
   playback, on BOTH surfaces. Pins the blit as pixel-identical to the paint it
   replaced (only after asserting 1:1 display, where that claim is honest), the

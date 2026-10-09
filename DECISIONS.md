@@ -14796,3 +14796,51 @@ the loop taking it in, a wave page drawing itself, the card not under the last
 page, the loop not forever, page 2 without his body, page 2 without his arm,
 page 2 in the wave's first pose, and page 2 left blank. How it works says so on
 the card in both editors' Ideas.
+
+**A tap on the canvas pauses the preview, and another carries it on (owner:
+"tapping the screen while a flip/pad playing on creation canvas will pause.
+With ability to resume with a tap.. but show icons right").** Both editors
+refused the canvas while their preview ran, so a stray tap could not draw, and
+Stop was the only control: a tap did nothing at all. The in-post player has
+always paused on a tap and shown its round Play while paused; the editors do
+the same now, with the same glass and arrow, mocked on both editors, both
+themes, phone and desk, before it was built.
+
+lib/tappause.js is the shared part: what counts as a tap (one pointer, lifted
+within 500ms and 10px of where it went down, so a drag or a pinch is not one)
+and the round Play, shown by body.playback-paused, which each editor's pause,
+resume and stop set and clear. Each editor keeps its own clock. The Pad's
+replay holds its place in the drawing's time, as a scrub does, and a paused
+replay still scrubs. Flip keeps what was left of the page on screen and gives
+exactly that back, a drawing page keeps how far its reveal had got, the time
+readout stands still, and its badge reads two bars where the play arrow was; a
+paused Flip scrubbed to another page stays paused there and that page gets its
+whole time on resume. The music stops with a pause and starts again where it
+stopped: lib/audioloop.js's engine takes an offset into the loop clip for
+that, which no other caller passes. Stop still ends the preview, paused or
+not. The player never loads the lib (verify_seam). How it works says so in
+the Pad's Play and Flip's Flip it tips, claimed by the new checks.
+
+verify_tappause, by real touches at 390 and by mouse on a desk, on both
+editors: a tap pauses (the Pad's bar and canvas stop changing, Flip stays on
+its page well past its time), the round Play is painted in the middle of the
+canvas (its arrow's white counted in a screenshot) and was not before, a drag
+on the paused canvas draws nothing, a second tap carries on from where it
+paused (the Pad's bar, Flip's page timer, a drawing page's ink, the time
+readout) and the Play goes, a drag or two fingers are not taps, Stop while
+paused clears it all, a paused Flip scrubbed to a page stays paused there,
+shows a drawing page whole, and gives the page its whole time on resume, and
+the music's source is stopped by the pause and started again at the offset it
+had reached, measured from the engine's own calls. On main 18 of the 29 are
+red; the rest hold there too. Twenty-two single-part breaks each turned their
+own checks red: the tap, its slop, the pinch, the glyph; the Pad's loop, its
+place, its stop and its music held and placed; Flip's page timer, what was
+left of the page, its reveal held and placed, the badge, the readout held and
+placed, a scrub while paused, a scrub release while paused, its badge, its stop
+and its music; and the engine's offset. A drag proves the distance rule only
+if it was quick enough to be a tap on time alone, so each drag check times its
+own press: a replay keeps the Pad so busy that a touch sent from outside took
+up to 504ms to cross 60px, so the Pad's drags are pointer events fired at the
+canvas, and Flip's stay real touches. The first run caught one bug: a paused
+Flip scrubbed to a page showed that page for two page-times on resume, because
+the page counter already named it; the resume's first step is due at once now.

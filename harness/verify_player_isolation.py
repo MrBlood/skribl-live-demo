@@ -702,7 +702,16 @@ with sync_playwright() as sp:
     #   named cost: +113 B, lib/holdtiming.js's squeezed clock -- see
     #   verify_inline's note; the same bytes, spent the same way first.
     #   135,563 measured.
-    BYTES_RATCHET, BYTES_TARGET = 135_600, 153_800
+    # RAISED (owner: "tapping the screen while a flip/pad playing on creation
+    #   canvas will pause"), for one named cost, after spending: +233 B, what a
+    #   pause has to reach in the replay the player shares -- app.js's replay
+    #   loop, its stop and the music's two clocks stand still while playPaused,
+    #   and lib/audioloop.js's engine starts the loop part way in, so the music
+    #   carries on from where it stopped. Spent first: the pause and the resume,
+    #   the tap and the glyph went to editor_draw.js and lib/tappause.js, which
+    #   the player never loads (1,041 B less than building them in app.js), and
+    #   the music's paused state went with them. 135,796 measured.
+    BYTES_RATCHET, BYTES_TARGET = 135_800, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

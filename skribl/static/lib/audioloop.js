@@ -206,7 +206,12 @@
    * taken and will either play or call onFail" -- never "sound".
    *
    * o: { ctx: () => AudioContext|null, build: () => AudioBuffer|null,
-   *      rate: () => number (optional; 1 when absent) } */
+   *      rate: () => number (optional; 1 when absent) }
+   *
+   * start(onFail, offset): `offset` is seconds into the loop clip to begin
+   * at, so an editor's paused preview carries its music on from where it
+   * stopped (lib/tappause.js) instead of from the top. Absent or 0 is the top,
+   * as every other caller has it. elapsed() counts from there. */
   function engine(o) {
     var source = null, startCtx = 0, duration = 0, gen = 0, pendingUnlock = null;
 
@@ -230,7 +235,7 @@
       }
     }
 
-    function start(onFail) {
+    function start(onFail, offset) {
       var ctx = o.ctx();
       if (!ctx) return false;
       var buf = o.build();
@@ -249,8 +254,9 @@
         // clip and the export are untouched.
         try { src.playbackRate.value = o.rate ? o.rate() : 1; } catch (e) {}
         src.connect(c.destination);
-        try { src.start(); } catch (e) { return false; }
-        source = src; startCtx = c.currentTime; duration = buf.duration;
+        var off = (offset || 0) % buf.duration;
+        try { src.start(0, off); } catch (e) { return false; }
+        source = src; startCtx = c.currentTime - off; duration = buf.duration;
         return true;
       }
       function fail(why) {
