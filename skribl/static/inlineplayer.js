@@ -653,11 +653,11 @@
      * meant to be. Posterless, idle is the FINISHED drawing. */
     var hasPoster = !!poster;
     var payload = null, loading = false, failed = false;
-    var timeline = null, flipFrames = null, flipFps = 12, flipPlan = null;
+    var timeline, flipFrames, flipFps = 12, flipPlan;
     var totalMs = 0, size = null, under = null;
     /* NOT `under`, which is the background colour and photo (adopt). This is
        the PAGE underneath (lib/holdtiming.js underOf) and its one painting. */
-    var underPage = null, underPageCv = null;
+    var underPage, underPageCv;
     /* The scale ctx.setTransform is set to in adopt(), so the compositor's
        offscreen layers can match it instead of inferring it from CSS. */
     var pixelRatio = 1;
@@ -666,8 +666,9 @@
     var elapsed = 0, t0 = 0, raf = null, drawn = 0;
     /* The page and progress this player last PAINTED, which is how
      * lib/holdtiming.js's displayAt() knows a drawing page has not yet been
-     * shown whole. Null means nothing is owed a finish. */
-    var lastShown = null;
+     * shown whole. Unset, or null after adopt(), means nothing is owed a
+     * finish. */
+    var lastShown;
     /* Rebuilt on every full repaint; null for an all-opaque payload. */
     var comp = null;
     var buffer = null, srcNode = null, gainNode = null, decoding = false;
