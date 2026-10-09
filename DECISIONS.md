@@ -15080,11 +15080,14 @@ control characters while its queue neutralised the same text (PF-016). The
 payload GET sent no Cache-Control although INTEGRATION.md says every response
 behind an authorisation check is `private, no-store` (PF-017); it sends that
 now. Werkzeug 3.1.9 replaces 3.1.8, for an advisory that reaches Windows hosts
-only (PF-001).
+only (PF-001). And with CSRF on, a token cookie holding anything but ASCII made
+every request from that browser a 500, because hmac.compare_digest raises on
+such a str and a sibling subdomain can set the cookie (CSRF-6); the comparisons
+are on bytes now, and a cookie nobody minted is replaced.
 
 verify_mediameta drives all of it in-process, and joins the PR gate with
 verify_takedown. Each part broken alone turned its own checks red: the write-time
 strip (8), the read-time strip (2), each format's stripper (1 to 10), the kept
 orientation (6), the dropped names (5), the point remainder (3), the withheld
-guard (5, across both suites), the cursor bound (4), the no-store header (2) and
-the one-post view (1).
+guard (5, across both suites), the cursor bound (4), the no-store header (2),
+the one-post view (1) and the byte comparison (3).
