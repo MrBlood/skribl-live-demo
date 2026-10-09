@@ -61,6 +61,12 @@ with sync_playwright() as p:
     flip.evaluate("() => { try { localStorage.setItem('skribl_hints_seen_v1',"
                   " JSON.stringify({'flip-intro':1})); } catch(e){} "
                   "const h=document.querySelector('.skribl-hint'); if(h){h.classList.remove('in');h.hidden=true;} }")
+    # On the dark canvas, picked: a new Flip starts on the theme's ground, which
+    # is Paper in this browser's light scheme (lib/canvasground.js), and INK's
+    # threshold was set against a dark one. A tinted ghost has less contrast on
+    # Paper than its untinted self, so its faint edges fall under the threshold
+    # and the coverage check reads a recolour as lost ink.
+    flip.evaluate("() => document.querySelector('.bg-swatch[data-bg=\"#0d0f14\"]').click()")
 
     # Four pages, each with a different amount of ink so reordering is visible.
     for i in range(4):
