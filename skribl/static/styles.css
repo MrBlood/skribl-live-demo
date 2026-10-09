@@ -5739,7 +5739,10 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
    Counts come from lib/helpsearch.js — no number is written by hand here. */
 .help-search {
   display: flex; align-items: center; gap: 8px;
-  margin: 0 18px 6px;
+  /* 18px above, the same as each side, so the field sits evenly in its corner
+     under the title band. It was 0 and touched the band's bottom edge (owner's
+     iPhone, both editors); verify_help measures the gap. */
+  margin: 18px 18px 6px;
   padding: 0 10px;
   /* An accent wash rather than another neutral surface. On --surface-raised
      the field sat about 4% from the drawer behind it and read as a hairline,
