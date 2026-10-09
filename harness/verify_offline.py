@@ -292,7 +292,7 @@ try:
             check("the newer build starts", False)
         sp.goto(BASE + "/skribl-pad", wait_until="load"); sp.wait_for_function(BOOTED, timeout=10000)
         sp.wait_for_timeout(2500)
-        names = sp.evaluate("""async () => { const out = [];
+        names = sp.evaluate(r"""async () => { const out = [];
             for (const r of await (await caches.open('skribl-files-v1')).keys()) {
               const u = new URL(r.url); if (/styles\.css$|theme\.js$/.test(u.pathname)) out.push(u.pathname + u.search); }
             return out.sort(); }""")
