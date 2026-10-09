@@ -15113,3 +15113,26 @@ request in the owner's network panel, the whole payload again, megabytes with a
 photo or a song. The play count never moved (a viewer is counted once a day).
 It restarts the drawing, as Restart does, and asks the network for nothing.
 verify_library counts the payload requests: one more on main, none now.
+
+**Production refuses to boot without a database, and a '%' in its URL no longer
+leaks it (PF-022, PF-021).** With DATABASE_URL unset the app fell back to a
+SQLite file, on a host whose disk most platforms rebuild on every deploy: every
+post gone at the next push, nothing in any log. Where it looks like a real
+deployment it now refuses, naming the setting, unless SKRIBL_ALLOW_SQLITE=1
+says a local file is the plan; a laptop still boots on SQLite. Alembic's Config
+is a ConfigParser, so a '%' in the URL (a percent-encoded password) raised an
+interpolation error carrying the whole URL, password and all, into the deploy
+log, and failed the deploy; it is escaped now. verify_hostseams and
+verify_migrations each went red on main's code (it booted; ValueError with the
+URL in it) and green on this.
+
+**mp4-muxer carries its licence (PF-026), and README deploys the way production
+does (PF-024).** The vendored muxer shipped with jsDelivr's provenance banner
+and no MIT notice, which MIT asks for in every copy; the upstream LICENSE is
+now in its `/*!` banner (jsstrip keeps legal banners), checked word for word
+against the npm tarball's, with the tarball's integrity hash beside it. Its
+trailing sourceMappingURL pointed at jsDelivr's /sm/ path, a 404 on our own
+origin, and is gone; no code changed. README's local setup built the schema
+with `flask init-db` (create_all, no migration stamp, so the next upgrade head
+fails) and its Deploy said `gunicorn app:app` with no migration, the v269
+outage; both now say what START-HERE says.
