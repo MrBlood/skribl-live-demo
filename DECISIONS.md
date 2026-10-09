@@ -14908,3 +14908,18 @@ canvas, its edge band at 18% of its height against its own middle. Paper read
 211 against 242 and White 223 against 255 on main; with the rule, 237 against
 242 and 250 against 255. The check allows 18 levels, and the rule removed
 turns both red.
+
+**The mouse pointer stays on screen over a playing or paused Flip (the owner:
+"when it is playing and I use my mouse to click on the screen to pause. it
+works, but when the mouse is over the canvas, it disappears").** Flip hides the
+system pointer over its canvas for the tools that draw their own ring, the pen
+among them, and does it inline, from setTool(). While a preview plays the ring
+steps aside, and the stylesheet's `body.playing #pad { cursor: default; }`
+could not beat an inline style, so nothing was left over the canvas, and a
+click to pause (#367) kept it that way. The playing rule is `!important` now,
+which an inline style cannot beat. The Pad shows its crosshair through a replay
+and never had the gap.
+
+verify_tappause asks it with a real mouse on a desk, on both editors: the
+element a click at the canvas's middle would land on must not compute `cursor:
+none`, while the preview plays and while it is paused.
