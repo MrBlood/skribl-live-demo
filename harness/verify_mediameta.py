@@ -13,7 +13,8 @@ AND FOUR SERVER FINDINGS FROM THE SAME PREFLIGHT, each driven here:
   * PF-013 an operator's takedown (`--visibility private`) was undone by the
     post's own author with their key -- `withheld` is the operator's state now;
   * PF-015 an out-of-range listing cursor was a 500;
-  * PF-017 the payload GET sent no Cache-Control at all.
+  * PF-017 the payload GET sent no Cache-Control at all;
+  * CSRF-6 with CSRF on, a non-ASCII token cookie made every request a 500.
 
 In-process: the standalone app on a temp SQLite file, driven with Flask's test
 client. No server, no browser -- so it can sit in the PR gate.
@@ -386,6 +387,28 @@ for label, q in (("hot, huge score", "sort=hot&cursor=" + b64("hot|9999999999999
     check(f"{label}: 400", r.status_code == 400, f"HTTP {r.status_code}")
 r = client.get("/api/skribls?cursor=" + b64("2026-10-09T00:00:00+00:00|5"))
 check("a real cursor still pages", r.status_code == 200, f"HTTP {r.status_code}")
+
+# ---------------------------------------------------------------- 7. CSRF cookie
+print("\nCSRF — a token cookie nobody minted is replaced, never a 500")
+# hmac.compare_digest raises TypeError on a str holding anything but ASCII, and
+# a cookie is whatever the browser sends: a sibling subdomain can set one. With
+# CSRF on, a single 'é' in it turned every request from that browser into a
+# 500 (v321 preflight, CSRF-6). A second app, CSRF on, its own database.
+os.environ.update(SKRIBL_CSRF_PROTECT="1", DATABASE_URL=f"sqlite:///{_tmp}/mediameta-csrf.db")
+csrf_app = create_app()
+with csrf_app.app_context():
+    _app_module.db.create_all()
+cc = csrf_app.test_client()
+cc.set_cookie("skribl_csrf", "a.\u00e9", domain="localhost")
+r = cc.get("/skribl-pad")
+check("a page with a non-ASCII token cookie loads", r.status_code == 200, f"HTTP {r.status_code}")
+check("...and the cookie is replaced with a sound one", "skribl_csrf=" in (r.headers.get("Set-Cookie") or ""),
+      r.headers.get("Set-Cookie", "")[:60])
+cc2 = csrf_app.test_client()
+cc2.set_cookie("skribl_csrf", "\u00e9.\u00e9", domain="localhost")
+r = cc2.post("/api/skribls", data=json.dumps({"strokes": []}),
+             headers={"Content-Type": "application/json", "X-Skribl-CSRF": "\u00e9.\u00e9"})
+check("a post echoing a non-ASCII token is refused, 403, not a 500", r.status_code == 403, f"HTTP {r.status_code}")
 
 print(f"\n{'=' * 62}")
 bad = [r for r in results if not r[0]]
