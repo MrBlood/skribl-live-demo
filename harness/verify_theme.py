@@ -696,10 +696,10 @@ with sync_playwright() as p:
         st_new = ground(pg, label)
         check(f"{label}: New Skribl in the light theme starts on Paper",
               on(st_new, PAPER), str(st_new))
-        if label == "Pad":
-            pg.click(".toast-action")
-        else:
-            pg.evaluate("() => document.getElementById('clearUndo').click()")
+        # Pressed in the page, and only if it is there: a missing Undo is the
+        # red check below, not a timeout that takes the rest of the suite.
+        pg.evaluate("(sel) => { const b = document.querySelector(sel); if (b && !b.disabled) b.click(); }",
+                    ".toast-action" if label == "Pad" else "#clearUndo")
         pg.wait_for_timeout(700)
         st = ground(pg, label)
         # Only after New Skribl really moved it: a New Skribl that never ran
