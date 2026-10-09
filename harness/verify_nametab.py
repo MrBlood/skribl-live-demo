@@ -120,6 +120,21 @@ def run(page, label, path):
     btn = page.evaluate("() => document.getElementById('nameDone').textContent")
     check(f"[{label}] the drawer's button reads 'Save a backup' on that path", btn == "Save a backup", repr(btn))
 
+    # And the backup it saves: a .skribl, labelled a plain download. iPhone
+    # Safari names a download after its type, so a backup labelled JSON came out
+    # as "blooby-card.skribl.json" in its preview instead of being saved (the
+    # owner's screenshot). The label is read where the file is made: the blob
+    # the editor hands to URL.createObjectURL.
+    page.evaluate("""() => { window.__blobTypes = []; const make = URL.createObjectURL;
+        URL.createObjectURL = function (b) { if (b && typeof b.type === 'string') window.__blobTypes.push(b.type);
+          return make.apply(this, arguments); }; }""")
+    with page.expect_download() as dl:
+        page.click("#nameDone")
+    name = dl.value.suggested_filename
+    types = page.evaluate("() => window.__blobTypes")
+    check(f"[{label}] Save a backup downloads a .skribl labelled a plain file, not JSON",
+          name.endswith(".skribl") and types[-1:] == ["application/octet-stream"], f"{name!r}, labelled {types[-1:]}")
+
 
 with sync_playwright() as p:
     b = p.chromium.launch()

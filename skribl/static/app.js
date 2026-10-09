@@ -3171,12 +3171,18 @@ function saveDraft() {
     return;
   }
   const draft = serializeSkribl();
-  const blob = new Blob([JSON.stringify(draft)], { type: 'application/json' });
+  // A PLAIN DOWNLOAD, NOT JSON (owner, iPhone: Save a backup came out as
+  // "blooby-card.skribl.json" in Safari's preview, "Open in...", instead of a
+  // saved .skribl). Safari names a download after its type, so a JSON blob
+  // gained ".json" and was shown rather than saved. The file is the same JSON
+  // inside; Open a backup reads it whatever it is labelled. Flip's saveDraft too.
+  const blob = new Blob([JSON.stringify(draft)], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (window.SkriblName ? window.SkriblName.filename(draft.title)
-    : (draft.title || 'skribl').replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '.skribl');
+  // lib/nametab.js names it; without the lib, a fixed name, as the exports do.
+  // The player loads this file, and a copy of the lib's slug here was its bytes.
+  a.download = window.SkriblName ? window.SkriblName.filename(draft.title) : 'skribl.skribl';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

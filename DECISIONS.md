@@ -14844,3 +14844,21 @@ up to 504ms to cross 60px, so the Pad's drags are pointer events fired at the
 canvas, and Flip's stay real touches. The first run caught one bug: a paused
 Flip scrubbed to a page showed that page for two page-times on resume, because
 the page counter already named it; the resume's first step is due at once now.
+
+**Save a backup saves a .skribl on an iPhone (the owner's screenshot: Safari's
+preview of "blooby-card.skribl.json", with "Open in..." and "More...").** Both
+editors handed the backup to the browser labelled JSON (application/json).
+Safari names a download after its type, so it added ".json", and since JSON is
+a kind of file it can show, it showed it instead of saving it. The backup is a
+plain download now (application/octet-stream): the same JSON inside, under the
+name it was given. Open a backup reads the file whatever it is labelled, and
+its picker already offered octet-stream, so a backup saved either way still
+opens. The longer label costs the player 8 bytes, because it loads app.js
+too; the Pad's backup name paid for them by dropping its copy of
+lib/nametab.js's slug, which ran only without the lib, for a fixed name as the
+exports already use, and the player's script is 59 bytes lighter than before.
+There is no WebKit here, so the iPhone is the owner's to confirm.
+verify_nametab saves a real backup from each editor in Chromium and asks that it
+is <name>.skribl labelled a plain file. It is red on main on both editors; each
+editor's label broken alone turned only its own check red, and so did the Pad
+naming its backup .skribl.json.
