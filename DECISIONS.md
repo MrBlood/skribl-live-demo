@@ -14894,3 +14894,17 @@ a song in, Fine-tune's own nudge brings its waveform on screen and the page
 does not chase the card's end. That break turns it red at 390x844 and 402x874
 on both editors; at 390x640 the cap stops the chase first, so that size cannot
 tell them apart.
+
+**A light canvas keeps its light vignette while a take records (found mocking
+Paper for the light theme).** The Pad swaps its canvas's dark inset vignette
+for a soft one on a light background (.light-bg), so White and Paper do not
+get muddy edges. The recording state replaces box-shadow wholesale, and its
+rule came later, so the first stroke of a take brought the dark edge back on
+both. `.canvas-wrap.light-bg.recording` keeps the light one. The player never
+records, so its stylesheet is unchanged.
+
+verify_visual reads the paint, not the style: one screenshot of the recording
+canvas, its edge band at 18% of its height against its own middle. Paper read
+211 against 242 and White 223 against 255 on main; with the rule, 237 against
+242 and 250 against 255. The check allows 18 levels, and the rule removed
+turns both red.
