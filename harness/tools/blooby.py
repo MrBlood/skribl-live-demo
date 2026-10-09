@@ -382,15 +382,21 @@ def _in_window(strokes):
 
 def card_flip():
     """The trading card as a Flip that waves (owner: "keep it looping forever
-    so he just keeps waving ... and it doesn't start over"). Page 1 is the card
-    without Blooby, kept UNDER every page after it and drawing itself once;
-    pages 2-11 are his wave (flipworks.wave: the body once, the arm and eyes per
-    page, one blink), placed in the window as the still card places him, with
-    his purple swoosh for the ground, and looped Forever."""
+    so he just keeps waving ... and it doesn't start over", then "the blooby
+    card was supposed to draw blooby on slide 1 too, then make him wave in a
+    loop"). Page 1 is the card without Blooby, kept UNDER every page after it
+    and drawing itself once. Page 2 draws Blooby himself, once, in the pose
+    the wave comes round to before its first page ("intro", the last pose), so
+    he steps straight into it. Pages 3-12 are his wave (flipworks.wave: the
+    body once, the arm and eyes per page, one blink), placed in the window as
+    the still card places him, with his purple swoosh for the ground, and
+    looped Forever. He is not drawn on page 1 itself: the page kept under
+    shows beneath every page of the wave, and his resting arm would stand
+    beside the waving one throughout."""
     swoosh = [s for s in pose("wave", "swoosh") if s.role == "accent" and s.color == PURPLE and len(s.pts) > 40]
     body = [s for s in W["base"] if s is not GROUND] + swoosh
     return {"fps": W["fps"], "card": card(with_blooby=False), "body": _in_window(body),
-            "pages": [_in_window(pg) for pg in W["pages"]], "order": W["order"]}
+            "pages": [_in_window(pg) for pg in W["pages"]], "order": W["order"], "intro": len(W["pages"]) - 1}
 
 
 # The tempo the card is drawn at -- (hand, pauses), as make_art's TEMPO -- and how much faster its
