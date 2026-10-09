@@ -115,6 +115,16 @@ def box(pg, sel):
     return pg.locator(sel).first.bounding_box()
 
 
+# What the mouse would show at a point: the cursor of the element a click there
+# would land on. 'none' with no ring of the app's own drawn there is nothing.
+CURSOR = """(pt) => { const el = document.elementFromPoint(pt[0], pt[1]);
+    return el ? { on: el.id || String(el.className).slice(0, 30), cursor: getComputedStyle(el).cursor } : null; }"""
+
+
+def shown(c):
+    return bool(c) and c["cursor"] != "none"
+
+
 def centre(pg, sel):
     r = box(pg, sel)
     return r["x"] + r["width"] / 2, r["y"] + r["height"] / 2
@@ -326,9 +336,13 @@ def pad_suite(b):
     cx, cy = centre(pg, "#canvas")
     pad_play(pg, None)
     pg.wait_for_timeout(500)
+    pg.mouse.move(cx + 40, cy + 30)
+    pg.mouse.move(cx, cy)
+    c_play = pg.evaluate(CURSOR, [cx, cy])
     tap(pg, None, cx, cy)
     pg.wait_for_timeout(150)
     a = pg.evaluate(PAD)
+    c_paused = pg.evaluate(CURSOR, [cx, cy])
     pg.wait_for_timeout(500)
     a2 = pg.evaluate(PAD)
     tap(pg, None, cx, cy)
@@ -337,6 +351,8 @@ def pad_suite(b):
     check("Pad (desk): a click on the canvas pauses the replay, and another carries it on",
           a["paused"] and a["fill"] == a2["fill"] and not a3["paused"] and (a3["fill"] > a2["fill"] or not a3["replaying"]),
           f"{a} -> {a2} -> {a3}")
+    check("Pad (desk): the mouse pointer shows over the canvas while it plays and while it is paused",
+          shown(c_play) and shown(c_paused), f"playing {c_play}, paused {c_paused}")
     ctx.close()
 
 
@@ -539,15 +555,24 @@ def flip_suite(b):
     cx, cy = centre(pg, "#pad")
     flip_play(pg, None)
     pg.wait_for_timeout(300)
+    pg.mouse.move(cx + 40, cy + 30)
+    pg.mouse.move(cx, cy)
+    c_play = pg.evaluate(CURSOR, [cx, cy])
     tap(pg, None, cx, cy)
     pg.wait_for_timeout(100)
     d1 = pg.evaluate(FLIP)
+    c_paused = pg.evaluate(CURSOR, [cx, cy])
     moved = page_change(pg, timeout=1500)
     tap(pg, None, cx, cy)
     gone = page_change(pg)
     d2 = pg.evaluate(FLIP)
     check("Flip (desk): a click on the canvas pauses the flip, and another carries it on",
           d1["paused"] and moved is None and gone is not None and not d2["paused"], f"{d1}, moved {moved}, then {gone}ms, {d2}")
+    # THE POINTER STAYS (the owner: "when the mouse is over the canvas, it
+    # disappears"). Flip hides the system pointer under the pen to draw its own
+    # ring, and the ring steps aside while it plays, so nothing was left.
+    check("Flip (desk): the mouse pointer shows over the canvas while it plays and while it is paused",
+          shown(c_play) and shown(c_paused), f"playing {c_play}, paused {c_paused}")
     ctx.close()
 
 
