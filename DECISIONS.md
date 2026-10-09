@@ -14996,4 +14996,14 @@ asked on a new drawing's own ground in verify_smudgeblur.
 
 How it works' Post clip drew its cat on whatever the canvas started as: dark ink
 on the dark canvas, in both themes' clips. It draws on Paper now, like every
-other example. CLIPS
+other example. Every clip was recorded again in both themes and compared at
+five points of its length. The light ones, last recorded on October 2 and 3,
+changed by 2.2 to 64.7% at their most-changed frame in fourteen clips: Paper in
+Add music, the header and dock as they are now, and the Media card #369 brought
+on screen. The five that film only the canvas (Blur, Fill, Liquify, Smudge,
+Stamp) came in at 0.5 to 1.5%, which is encoding noise, and are kept. Of the
+dark ones, recorded for #370, Post changed (its cat on Paper) and so did Takes,
+where a take records on camera: #371's light edge on Paper shows there, about
+26 levels at the canvas's edge, under the comparison's threshold and plain side
+by side. The rest came in at 0.1 to 1.9%; Select's 8.2% was the heart caught
+a few pixels further along its drag, and it is kept.
