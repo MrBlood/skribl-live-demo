@@ -784,31 +784,29 @@ and the player did not). Both are covered by `verify_sharedrules.py`.
 
 ## Known-open, in the order worth doing
 
-### Deferred: the bottom-toolbar redesign (owner-approved, still open)
+The owner's open decisions are the "Still open" list at the end of the latest
+seal's entry in DECISIONS.md; ideas for later are in FUTURE.md.
 
-The proposal: replace the bottom bar with Pen / Eraser / Shape / Select / Colour
-/ **Tools** on Pad (Flip drops Shape), moving Image, Music and Magnify into a
-labelled "Tools" action sheet — NOT another `•••`, because the top menu already
-owns that glyph and two identical symbols meaning different collections is
-avoidable ambiguity. Two things were never resolved: where Undo/Redo go once
-they leave the bar, and whether Image/Music belong in "Tools" at all when they
-are content rather than tools.
+### First after the seal and its outside audit: the owner's device check
 
-**Its measured premise no longer holds, and that is why the 208 lines of
-measurement that used to sit here are gone.** The section argued from a v213
-bug report: Pad WRAPPED at 320px with Image and Music orphaned on a second row
-and the bar 113px tall, and Flip OVERFLOWED horizontally by 16px, which it
-called the worse of the two because content was clipped with no cue. Re-measured
-at 320px on the v282 tree:
+The owner checking the build on an iPhone (Safari, the Home Screen app,
+VoiceOver) and on Windows, from a checklist of what to screenshot and what to
+look for. It has been carried as still open at every seal since v318, because
+neither device's fonts nor its engine exist in this container. Skipped for the
+seal after v320 at the owner's word, with this instruction: raise it as one of
+the first things once that seal and its audit are done. Refresh the checklist
+for the build as sealed before offering it.
 
-    Pad    toolbar 92px          horizontal overflow 0
-    Flip   toolbar 56px          horizontal overflow 0
-    both   document overflow 0 — content is narrower than the viewport
+### Closed: the bottom-toolbar redesign
 
-Flip's clipping is gone and Pad's bar is 21px shorter than the number the
-argument rested on. The proposal may still be worth doing on design grounds;
-the emergency it was written up as is over. Anyone reviving it should re-measure
-first rather than trust a snapshot — which is the whole reason this replaced it.
+The proposal was a labelled "Tools" sheet holding Image, Music and Magnify, and
+it left two questions it never settled: where Undo and Redo go once they leave
+the bar, and whether Image and Music belong in "Tools" at all, being content
+rather than tools. The dock the owner chose instead answered both (#271 on):
+Undo and Redo stayed in it, and Image and Music became one Media button. The
+pen, eraser and shape sit on it with More tools beside them, and Magnify shows
+on a desk, where there is room. The measurements the proposal argued from are
+in git history, and were already out of date when this section closed.
 
 ## Things that will bite an unwary helper
 

@@ -662,7 +662,15 @@ a GENERATED page and free 27 drawings' worth, over on pages any page will do.
 payload that pins a phone, and the comment above it in `validation.py` says so.
 The problem is that the client spends a budget it cannot see.
 
-## 6i. Blooby's card as a Flip: loop a stretch of pages, and a page that stays underneath (owner, after v319)
+## 6i. Blooby's card as a Flip: loop a stretch of pages, and a page that stays underneath (owner, after v319) — BUILT
+
+**BUILT — kept for the reasoning.** The smallest size below: a looped
+stretch, Forever included, on every surface that plays a Flip (#344); one page
+painted, complete, beneath a range of pages, kept as strokes and painted as it
+plays (#346); Loop and Keep under in the editor (#348); and the card itself,
+drawn and then waving, in both editors' Ideas (#349, #365). The loop's
+controls were redesigned after, as a trim frame on the strip (#352, #353,
+#356). The other two sizes, two layers or a stack, are still 4 idea 2 and 6d.
 
 THE IDEA. Blooby's trading card draws itself (a Draw-on page), then Blooby
 waves in its window for about six seconds, then the whole thing starts over. It
@@ -728,6 +736,27 @@ What it would take, in the order it would have to land:
   handles of two loops that meet must stay separately grabbable.
 * THE PLAYERS' BYTES: the lib ships in them, so the byte ratchets will move,
   and that is the owner's call each time.
+
+## 6l. Blooby around the app, and on dark grounds (owner, at the v319 seal; parked before the next)
+
+Carried as "still open" through two seals and put here by the owner, asked
+before the seal after v320, so it is a plan rather than an open question.
+
+WHERE HE IS: the Home Screen icon, on the owner's white star (#358), and the
+empty Library, waving (#321).
+
+WHERE HE COULD GO: waving above "Draw anything" on an empty canvas, cheering
+after a post, and an oops on an error page. Each pose is already drawn from
+his own strokes: `harness/tools/blooby.py pose()` has wave, pen, cheer, think,
+oops and sleep.
+
+THE DARK GROUND: he is drawn for paper and light grounds, and on the dark
+canvas or the dark theme he needs a treatment. The owner liked the big
+"bubble" sticker best, with lavender lines as the fallback; on paper and
+light grounds he is drawn as he is.
+
+Build it as one pass: mock each place, phone and desktop, both themes, before
+any of it.
 
 ## 7. The honest state
 
