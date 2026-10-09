@@ -268,6 +268,13 @@ const ARC_WINDOW = 12;         // pages either side; bounds both cost and clutte
 
 const ONION_ALPHAS = [0.30, 0.17, 0.10];          // nearer frame = more visible
 const ONION_TINTS  = ['#ff5f6d', '#ff9f43', '#ffd76a'];   // warmer = further back
+// ...and on a LIGHT ground those all but vanish past the nearest page: Paper
+// and White read 1.35, 1.11 and 1.03:1 against 1.58, 1.34 and 1.22 on the dark
+// canvas, and Paper is where the light theme starts a drawing. Deeper inks of
+// the same three, a little stronger, give a light ground the dark canvas's
+// contrast back (owner, of the mock: "Yes, use the proposed tints").
+const ONION_TINTS_LIGHT  = ['#d62839', '#d9621c', '#b07d0a'];
+const ONION_ALPHAS_LIGHT = [0.30, 0.26, 0.20];
 /* Copied pages, for paste. An ARRAY since v226 — a single-page copy is just a
    span of one, which is why nothing downstream needed a second code path. */
 let pageClip = null;
@@ -1719,6 +1726,11 @@ function paintUnder(c){
     // were scaffolded for exactly this in v98 and had sat unused ever since —
     // keeping frameCv free for the current frame below.
     const depth = Math.min(onionDepth, idx);
+    // Tinted on a light ground, the ghosts take that ground's inks. Untinted,
+    // a ghost is its own ink, as legible as the ink is on that ground.
+    const lightTint = onionTint && groundIsLight() === true;
+    const tints = lightTint ? ONION_TINTS_LIGHT : ONION_TINTS;
+    const alphas = lightTint ? ONION_ALPHAS_LIGHT : ONION_ALPHAS;
     for(let k=depth; k>=1; k--){
       const prev = frames[idx-k]; if(!prev) continue;
       octx.clearRect(0,0,CW,CH);
@@ -1728,11 +1740,11 @@ function paintUnder(c){
         // untouched — a silhouette tint, which is what onion skinning wants.
         octx.save();
         octx.globalCompositeOperation='source-in';
-        octx.fillStyle = ONION_TINTS[k-1] || ONION_TINTS[ONION_TINTS.length-1];
+        octx.fillStyle = tints[k-1] || tints[tints.length-1];
         octx.fillRect(0,0,CW,CH);
         octx.restore();
       }
-      c.globalAlpha = ONION_ALPHAS[k-1] || ONION_ALPHAS[ONION_ALPHAS.length-1];
+      c.globalAlpha = alphas[k-1] || alphas[alphas.length-1];
       c.drawImage(onionCv, 0, 0, CW, CH);
       c.globalAlpha = 1;
     }
@@ -4855,13 +4867,18 @@ function applyBg(){ pad.style.backgroundColor = bgColor; pad.style.backgroundIma
 if (window.SkriblHeaderGlass) window.SkriblHeaderGlass.wire(document.querySelector('.header'), pad);
 
 // A light canvas takes dark on-canvas ink -- the empty-page hint and the grid
-// (styles.css .light-bg) -- by the Pad's own test (app.js updateVignette).
+// (styles.css .light-bg), and the onion's tints (ONION_TINTS_LIGHT) -- by the
+// Pad's own test (app.js updateVignette).
+function groundIsLight(){
+  const hex = (bgColor || '#0d0f14').replace('#', '');
+  if(hex.length < 6) return null;
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+  return (0.2126*r + 0.7152*g + 0.0722*b) / 255 > 0.6;
+}
 function markLightGround(){
   const zl = document.getElementById('zoomLayer'); if(!zl) return;
-  const hex = (bgColor || '#0d0f14').replace('#', '');
-  if(hex.length < 6) return;
-  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-  const light = (0.2126*r + 0.7152*g + 0.0722*b) / 255 > 0.6;
+  const light = groundIsLight();
+  if(light === null) return;
   zl.classList.toggle('light-bg', light);
   // The pointer rings take their ink from the ground too (flip.css, .light-ground).
   const wrap = document.querySelector('.flip-wrap'); if(wrap) wrap.classList.toggle('light-ground', light);

@@ -740,6 +740,47 @@ with sync_playwright() as p:
           "; ".join(ac_errs[:2]))
     ac.close()
 
+    print("\nONION — tinted, a light ground keeps the dark canvas's contrast")
+    # The owner, of the mock: "Yes, use the proposed tints". Tinted ghosts are
+    # flat inks at a fixed strength, so on Paper and White the pages two and
+    # three back all but vanished (1.11 and 1.03:1). Each ghost's contrast with
+    # its ground is read off the pad's own pixels -- Flip paints its ground
+    # into the pad -- at the core of a thick line, on each ground in turn.
+    def _lum(c):
+        f = lambda v: (v / 255) / 12.92 if v / 255 <= 0.03928 else ((v / 255 + 0.055) / 1.055) ** 2.4
+        return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2])
+    def _ratio(a, b):
+        la, lb = sorted((_lum(a), _lum(b)), reverse=True)
+        return (la + 0.05) / (lb + 0.05)
+    GHOSTS = """(ground) => {
+      setBg(ground);
+      const line = (y) => { const pts = [];
+        for (let j = 0; j <= 30; j++) pts.push({ x: CW * 0.2 + j * CW * 0.02, y, color: '#7c5cff', size: 14, t: j * 16, start: j === 0 });
+        return pts; };
+      frames.length = 0;
+      for (let k = 0; k < 4; k++) { const f = newFrame(); const l = line(CH * (0.2 + 0.18 * k));
+        f.strokes.push(...l); f.strokeGroups.push(l.length); frames.push(f); }
+      idx = 3; setOnion(true); onionDepth = 3; onionTint = true; render();
+      const c = document.getElementById('pad'), s = c.width / CW, g = c.getContext('2d');
+      const at = (x, y) => Array.from(g.getImageData(Math.round(x * s), Math.round(y * s), 1, 1).data).slice(0, 3);
+      return { ground: at(CW * 0.05, CH * 0.05),
+               ghosts: [1, 2, 3].map(k => at(CW * 0.5, CH * (0.2 + 0.18 * (3 - k)))) }; }"""
+    oc = br.new_context(viewport={"width": 1280, "height": 900})
+    op = oc.new_page()
+    browsing.goto(op, BASE, "/flip")
+    seen = {}
+    for name, hexc in (("dark", "#0d0f14"), ("Paper", "#f6f2ea"), ("White", "#ffffff")):
+        r = op.evaluate(GHOSTS, hexc)
+        seen[name] = [round(_ratio(gh, r["ground"]), 2) for gh in r["ghosts"]]
+    oc.close()
+    check("on the dark canvas the tinted ghosts keep the contrast they had",
+          all(a >= b for a, b in zip(seen["dark"], (1.50, 1.28, 1.17))),
+          f"1, 2 and 3 pages back: {seen['dark']}")
+    for name in ("Paper", "White"):
+        check(f"on {name} each tinted ghost reads at least four-fifths as clearly as on the dark canvas",
+              all(l - 1 >= 0.8 * (d - 1) for l, d in zip(seen[name], seen["dark"])),
+              f"1, 2 and 3 pages back: {seen[name]} on {name}, {seen['dark']} on the dark canvas")
+
     br.close()
 
 ok = sum(1 for o, _ in results if o)
