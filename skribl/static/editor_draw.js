@@ -636,5 +636,46 @@ canvas.addEventListener('contextmenu', (e) => {
 window.addEventListener('pointerup', _endStrokeFor);
 window.addEventListener('blur', () => { if (drawing) commitActiveStroke(); });
 
+// TAP TO PAUSE (lib/tappause.js): the other side of startDraw's `if (playing)
+// return`. While a replay runs the canvas is a playback surface, and its one
+// gesture is a tap that pauses it. A pause holds the replay where it is, its
+// place kept in the drawing's own time as a scrub keeps it (lastTargetMs), and
+// holds the music with it; resume carries both on from there. A paused replay
+// still scrubs, and Play (now Stop) still ends it.
+//
+// HERE, NOT IN app.js, for verify_player_isolation's reason: the player loads
+// app.js whole and never pauses an editor's replay. What has to stay there is
+// playPaused and the few guards that read it, beside the replay loop, its stop
+// and the music's own clocks.
+// How the music was playing when paused, so the resume restarts the same one.
+// Set by every pause before a resume can read it, so a stop need not clear it.
+let pausedMusic = null;
+function pausePlayback() {
+  if (!playing || playPaused) return;
+  playPaused = true;
+  if (!scrubbing) lastTargetMs = Math.min(playTotal, (performance.now() - playStart) * replayRate);
+  if (_waLoop.playing()) { stopWebAudioLoop(); pausedMusic = 'wa'; }
+  else if (audioEl && !audioEl.paused) { audioEl.pause(); pausedMusic = 'native'; }
+  document.body.classList.add('playback-paused');
+}
+function resumePlayback() {
+  if (!playing || !playPaused) return;
+  playPaused = false;
+  document.body.classList.remove('playback-paused');
+  playStart = performance.now() - lastTargetMs / replayRate;
+  // The loop began with the drawing and runs at its rate, so the drawing's
+  // time says where in the clip it had got to.
+  const clip = _waLoop.duration();
+  if (pausedMusic === 'wa') startWebAudioLoop(null, clip > 0 ? (lastTargetMs / 1000) % clip : 0);
+  else if (pausedMusic === 'native' && audioEl) audioEl.play().catch(() => {});
+  pausedMusic = null;
+  requestAnimationFrame(editorReplayFrame);
+}
+if (window.SkriblTapPause) {
+  window.SkriblTapPause.attach({ surface: canvas, host: canvasWrap,
+    playing: () => playing, paused: () => playPaused, pause: pausePlayback, resume: resumePlayback });
+}
+
+
 // Published for app.js's record-stop path — the only caller outside this file.
 window.SkriblCapture = { commitActiveStroke: commitActiveStroke };

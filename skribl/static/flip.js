@@ -461,7 +461,7 @@ let editIdx = 0, armedDel = -1, armedClear = false;
 // be posted: it was a preview mode rather than a property of the drawing. A
 // page now carries `draw` itself and ONE loop plays both kinds, so what you
 // preview is what a viewer gets.
-let revealRAF = null, revealStart = 0;
+let revealRAF = null, revealStart = 0, revealFrame = null;
 
 function newFrame(){ return { strokes: [], strokeGroups: [], hold: 1 }; }
 /* Every payload leaves through here. Read defensively for the same reason
@@ -2464,9 +2464,9 @@ function fmtFlipSecs(secs){
   return mm+':'+String(ss).padStart(2,'0');
 }
 function flipTotalSecs(){ return totalHoldUnits(0, frames.length-1)/(fps||12); }
-function startFlipElapsed(){
+function startFlipElapsed(resume){
   if(!flipDurationEl) return;
-  flipPlayStart=performance.now();
+  if(!resume) flipPlayStart=performance.now();   // a resume keeps the start, moved on by the pause
   const total=flipTotalSecs();
   const tick=()=>{
     if(!playing){ flipElapsedRAF=null; return; }
@@ -3632,6 +3632,12 @@ function updateToolState(){
 const flipPlayer=document.getElementById('flipPlayer'), flipProgress=document.getElementById('flipProgress'), flipProgressFill=document.getElementById('flipProgressFill');
 const drawOnBtn=document.getElementById('drawOnBtn');
 let scrubbingFrames=false, playI=0;
+/* Paused by a tap on the canvas (lib/tappause.js). Still `playing`, so every
+   guard that keeps the canvas a playback surface holds while it is paused.
+   playDueAt is when the page on screen gives way, so a pause keeps what is left
+   of it and a resume gives exactly that back; a drawing page keeps how far its
+   reveal had got, and the music where it had got to. */
+let playPaused=false, playDueAt=0, playStepFn=null, pausedRemain=0, pausedRevealAt=null, pausedMusicAt=null, flipPausedAt=0;
 /* A LOOPED STRETCH (lib/holdtiming.js): `docLoop` is the document's loop as
    stored ({from, to} plus times | ms | forever), or null. It is read through
    the lib's plan whenever anything plays, so the preview, the exports and
@@ -3981,10 +3987,11 @@ function _spanOf(f){
  * scoped to ONE page instead of driving the whole document: the outer timer
  * still owns when to advance, so a drawing page and a still page are scheduled
  * by the same clock and cannot drift apart. */
-function startReveal(f, durMs){
+function startReveal(f, durMs, fromMs){
   const p = f.strokes;
+  revealFrame = f;
   if(!p.length){ renderPartial(f, 0); return; }
-  revealStart = performance.now();
+  revealStart = performance.now() - (fromMs || 0);
   /* How many points a given progress has revealed is lib/holdtiming.js's
    * answer. This loop owned a copy of it, and so did the /s/ player and the
    * inline player; the three disagreed at progress 0, which is how a page that
@@ -3993,13 +4000,13 @@ function startReveal(f, durMs){
   const due = prog => H ? H.dueCount(f, prog)
                         : (prog >= 1 ? p.length : 0);
   const tick = () => {
-    if(!playing || scrubbingFrames) return;
+    if(!playing || scrubbingFrames || playPaused) return;
     const e = performance.now() - revealStart;
     renderPartial(f, due(e / Math.max(1, durMs)));
     if(e < durMs) revealRAF = requestAnimationFrame(tick);
     else renderPartial(f, p.length);
   };
-  renderPartial(f, 0);
+  renderPartial(f, fromMs ? due(fromMs / Math.max(1, durMs)) : 0);
   revealRAF = requestAnimationFrame(tick);
 }
 function playStep(){ if(scrubbingFrames) return;
@@ -4108,8 +4115,10 @@ function runPlayTimer(){
     return Math.max(0, d - est);
   };
   playStep();
-  const step = () => { playStep(); playTimer = setTimeout(step, wait()); };
-  playTimer = setTimeout(step, wait());
+  const step = () => { playStep(); const w = wait(); playDueAt = performance.now() + w; playTimer = setTimeout(step, w); };
+  playStepFn = step;
+  const w0 = wait(); playDueAt = performance.now() + w0;
+  playTimer = setTimeout(step, w0);
 }
 function play(){
   if(playing) return;
@@ -4131,6 +4140,7 @@ function play(){
   playI=_playCountFor(idx); runPlayTimer();
 }
 function stop(){
+  playPaused = false; pausedMusicAt = null; document.body.classList.remove('playback-paused');
   playBitmaps = null;                 // playback-scoped: freed the moment it ends
   playPlan = null;
   playing=false; document.body.classList.remove('playing');
@@ -4143,6 +4153,50 @@ function stop(){
   buildStrip(); render();
 }
 playBtn.addEventListener('click',()=> playing?stop():play());
+/* TAP TO PAUSE (lib/tappause.js): the page on screen stays, its badge reads
+   paused, and the clocks stop -- the page timer, a drawing page's reveal, the
+   elapsed readout and the music. Resume gives each back what it had left. A
+   paused Flip still scrubs, and Stop still ends it. */
+function _pageMsAt(i){
+  return (typeof window !== 'undefined' && window.SkriblHold)
+    ? window.SkriblHold.pageMs(frames[i], fps)
+    : (frameDraw(frames[i]) ? Math.max(320, Math.min(8000, _spanOf(frames[i]))) : (1000 / fps) * frameHold(frames[i]));
+}
+function pausePlay(){
+  if(!playing || playPaused) return;
+  playPaused = true;
+  const now = performance.now();
+  clearTimeout(playTimer); playTimer = null;
+  pausedRemain = Math.max(0, playDueAt - now);
+  pausedRevealAt = null;
+  if(revealRAF){ cancelAnimationFrame(revealRAF); revealRAF = null;
+    if(revealFrame === frames[idx] && frameDraw(frames[idx])) pausedRevealAt = now - revealStart; }
+  if(flipElapsedRAF){ cancelAnimationFrame(flipElapsedRAF); flipElapsedRAF = null; }
+  flipPausedAt = now;
+  pausedMusicAt = null;
+  if(_waLoop.playing()){ pausedMusicAt = { wa: _waLoop.elapsed() }; stopWebAudioLoop(); }
+  else if(audioEl && !audioEl.paused){ try{ audioEl.pause(); }catch(_){} pausedMusicAt = { native: true }; }
+  liveBadge.textContent='\u275A\u275A '+(idx+1)+' / '+frames.length;
+  document.body.classList.add('playback-paused');
+}
+function resumePlay(){
+  if(!playing || !playPaused) return;
+  playPaused = false;
+  document.body.classList.remove('playback-paused');
+  const now = performance.now();
+  liveBadge.textContent=(frameDraw(frames[idx])?'\u270E ':'\u25B6 ')+(idx+1)+' / '+frames.length;
+  flipPlayStart += now - flipPausedAt; startFlipElapsed(true);
+  if(pausedRevealAt != null && frameDraw(frames[idx])) startReveal(frames[idx], _pageMsAt(idx), pausedRevealAt);
+  const m = pausedMusicAt; pausedMusicAt = null;
+  if(m && m.wa != null) startWebAudioLoop(null, m.wa);
+  else if(m && m.native && audioEl) audioEl.play().catch(()=>{});
+  playDueAt = now + pausedRemain;
+  playTimer = setTimeout(playStepFn, pausedRemain);
+}
+if(window.SkriblTapPause){
+  window.SkriblTapPause.attach({ surface: pad, host: document.querySelector('.flip-wrap'),
+    playing: () => playing, paused: () => playPaused, pause: pausePlay, resume: resumePlay });
+}
 // The Draw drawer's switch now sets EVERY page, because per-page draw is the
 // real control and a document-wide preview mode beside it would be the same
 // divergence again — one state that plays and another that posts. It reads as
@@ -4168,14 +4222,18 @@ function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(
   // and revealing strokes under the finger would make the thumbnail you are
   // aiming at depend on how fast you moved.
   playI=_playCountFor(idx); render(); updatePlayProgress();
-  liveBadge.textContent=(frameDraw(frames[idx])?'\u270E ':'\u25B6 ')+(idx+1)+' / '+n; }
+  // Paused, it stays paused: the badge says so. playI now names the page it
+  // landed on, so the resume's first step is due at once and shows that page
+  // afresh -- its whole time, and a drawing page its whole reveal.
+  if(playPaused){ pausedRemain=0; pausedRevealAt=null; }
+  liveBadge.textContent=(playPaused?'\u275A\u275A ':frameDraw(frames[idx])?'\u270E ':'\u25B6 ')+(idx+1)+' / '+n; }
 flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipProgress.setPointerCapture(e.pointerId);}catch(_){} const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
 flipProgress.addEventListener('pointermove',e=>{ if(!scrubbingFrames) return; const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
 function endFrameScrub(){ if(!scrubbingFrames) return; scrubbingFrames=false;
   // Releasing mid-play resumes the page under the finger, revealing it from the
   // start if it draws; the outer timer is still running, so this only restarts
   // the reveal.
-  if(playing && frameDraw(frames[idx])){
+  if(playing && !playPaused && frameDraw(frames[idx])){
     const _d = (typeof window !== 'undefined' && window.SkriblHold)
       ? window.SkriblHold.pageMs(frames[idx], fps)
       : Math.max(320, Math.min(8000, _spanOf(frames[idx])));
@@ -5174,9 +5232,9 @@ function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopW
 // lacked Flip's stand-down after Stop. The header there has the history.
 const _waLoop=window.SkriblAudioLoop.engine({ ctx:()=>audioCtx, build:buildLoopAudioBuffer });
 function stopWebAudioLoop(){ _waLoop.stop(); }
-function startWebAudioLoop(onFail){
+function startWebAudioLoop(onFail, offset){
   if(!audioCtx || !currentAudioBuffer) return false;
-  return _waLoop.start(onFail);
+  return _waLoop.start(onFail, offset);
 }
 // Current playback position inside [trimStart,trimEnd], whichever engine is live.
 function loopPosition(){

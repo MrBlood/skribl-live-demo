@@ -1182,6 +1182,35 @@ body.stroking .skribl-hint {
   pointer-events: none;
 }
 
+/* TAP TO PAUSE (lib/tappause.js, both editors). Paused, the in-post player's
+   paused Play stands in the middle of the canvas: inlineplayer.css's
+   .skribl-inline-play, the same dark glass and white arrow, a little larger
+   for a whole canvas. Its glass is black rather than that sheet's near-black,
+   which the eye cannot tell apart and which no theme should flip: it sits on
+   the drawing's own ground, not the page's. Shown by body.playback-paused
+   alone, which each editor's stop clears, and it takes no taps -- the tap
+   that lands on it is the canvas's, and resumes. */
+.tap-paused {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  place-items: center;
+  pointer-events: none;
+}
+body.playback-paused .tap-paused { display: grid; }
+.tap-paused-disc {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+}
+.tap-paused-disc svg { width: 26px; height: 26px; fill: #ffffff; margin-left: 3px; }
+
 .canvas-empty-hint {
   position: absolute;
   inset: 0;

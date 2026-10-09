@@ -763,6 +763,7 @@ rather than a shared rule.
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
+| `tappause.js` | Pad+Flip | Tap to pause: a tap on an editor's canvas while its preview plays pauses it where it is, and another tap carries on from there. |
 | `theme.js` | Pad+Flip+library+gallery | Light/dark chrome — the stored setting, and the one place that applies it. |
 | `toolscroll.js` | Pad+Flip | The toolbar on the smallest screens -- Pad's, and Flip's since the dock redesign: one row that scrolls, and says so. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |

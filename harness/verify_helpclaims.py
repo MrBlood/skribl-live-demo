@@ -115,7 +115,9 @@ CLAIMS = {
     "Two timers": ["probe:takes"],
     "Canvas locks between takes": ["probe:takes"],
     "Add more takes": ["verify_ux.py::F4 setup: Add take started a take", "probe:takes"],
-    "Play & scrub": ["verify_scrub.py::a real replay shows the bar"],
+    "Play & scrub": ["verify_scrub.py::a real replay shows the bar",
+                     "verify_tappause.py::Pad: a tap on the canvas pauses the replay where it is",
+                     "verify_tappause.py::Pad: a second tap carries the replay on from where it paused"],
     # Frames (Flip)
     "Move artwork": ["verify_move.py::every point moved by the SAME offset"],
     "Pages": ["verify_pagespan.py::Undo restores every page of the deleted run"],
@@ -123,7 +125,9 @@ CLAIMS = {
                    "verify_pages.py::onion depth/tint live there and are reachable"],
     "fps": ["verify_gifenc.py::frame delay matches the chosen fps"],
     "Draw-on": ["verify_hold.py::a Draw-on page reaches its last stroke before the page turns"],
-    "Flip it & scrub": ["probe:flip_play"],
+    "Flip it & scrub": ["probe:flip_play",
+                        "verify_tappause.py::Flip: a tap on the canvas pauses the flip on the page it is on",
+                        "verify_tappause.py::Flip: a second tap carries the flip on from where it paused"],
     # Music
     "Add a track": ["verify_amber.py::Pad GREEN once a track is attached", "probe:media_tabs",
                     "verify_parity.py::{}: a file dropped anywhere on the card is taken, and the wrong kind is refused"],
