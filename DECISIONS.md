@@ -15007,3 +15007,25 @@ where a take records on camera: #371's light edge on Paper shows there, about
 26 levels at the canvas's edge, under the comparison's threshold and plain side
 by side. The rest came in at 0.1 to 1.9%; Select's 8.2% was the heart caught
 a few pixels further along its drag, and it is kept.
+
+**The Library's stage plays a replay picked after a Flip as itself (the owner,
+with a screenshot: Skater Girl picked and her clock running, under the Blooby
+card, cut off at her canvas's edge -- "play plays at the speed the skater girl
+would play, but it doesnt show").** The stage is one in-post player that adopts
+one Skribl after another. adopt() set a Flip's frames, its timing plan and its
+page underneath only when the new Skribl was a Flip, and never cleared them,
+and render() picks its painter by those frames: a replay adopted after a Flip
+played the Flip's pages, in the replay's box, on the replay's clock. Every
+adopt now starts from nothing. Only the Library's stage was exposed; the feed
+gives every post a player of its own.
+
+The in-post player's embed ratchet had 19 B left and the reset cost 48 B
+served. adopt() now sets everything six of the closure's declarations
+initialised, so they lost their `= null` (42 B): 37,937 B served, under 37,950,
+and no raise.
+
+verify_library reads the stage's own canvas at the end of each drawing, in
+colours neither drawing shares: a red Flip with a page underneath at 4:3, then
+a green replay at 9:16, picked from its row as a person picks it. With main's
+player the replay reported itself a Flip and painted 24,214 red pixels and no
+green; with this one it is a replay, 20,915 green and no red.

@@ -653,11 +653,11 @@
      * meant to be. Posterless, idle is the FINISHED drawing. */
     var hasPoster = !!poster;
     var payload = null, loading = false, failed = false;
-    var timeline = null, flipFrames = null, flipFps = 12, flipPlan = null;
+    var timeline, flipFrames, flipFps = 12, flipPlan;
     var totalMs = 0, size = null, under = null;
     /* NOT `under`, which is the background colour and photo (adopt). This is
        the PAGE underneath (lib/holdtiming.js underOf) and its one painting. */
-    var underPage = null, underPageCv = null;
+    var underPage, underPageCv;
     /* The scale ctx.setTransform is set to in adopt(), so the compositor's
        offscreen layers can match it instead of inferring it from CSS. */
     var pixelRatio = 1;
@@ -666,8 +666,9 @@
     var elapsed = 0, t0 = 0, raf = null, drawn = 0;
     /* The page and progress this player last PAINTED, which is how
      * lib/holdtiming.js's displayAt() knows a drawing page has not yet been
-     * shown whole. Null means nothing is owed a finish. */
-    var lastShown = null;
+     * shown whole. Unset, or null after adopt(), means nothing is owed a
+     * finish. */
+    var lastShown;
     /* Rebuilt on every full repaint; null for an all-opaque payload. */
     var comp = null;
     var buffer = null, srcNode = null, gainNode = null, decoding = false;
@@ -884,6 +885,15 @@
         img.src = src;
       }
 
+      /* EVERY DOCUMENT STARTS FROM NOTHING. The library's stage adopts one
+       * Skribl after another into this same player, and render() picks its
+       * painter by flipFrames: a Flip's frames, plan and page underneath, left
+       * over from the last one, made a replay adopted after it play the
+       * Flip's pages in the replay's box on the replay's clock (the owner:
+       * Skater Girl's clock running under the Blooby card, cut off at her
+       * canvas's edge). underPageCv is painted again at this backing store's
+       * size, on first use. */
+      flipFrames = flipPlan = underPage = underPageCv = lastShown = null;
       if (isFlip(payload, frames)) {
         flipFrames = frames;
         flipFps = payload.fps || 12;
@@ -900,7 +910,6 @@
         flipPlan = (H && H.plan) ? H.plan(frames, flipFps, payload.loop) : null;
         totalMs = flipPlan ? flipPlan.cycle : Math.max(1, (frames.length / flipFps) * 1000);
         underPage = (H && H.underOf) ? H.underOf(payload.under, frames.length) : null;
-        underPageCv = null;   // painted at this backing store's size, on first use
       } else {
         timeline = buildTimeline(f0.strokes || [], payload.pauseMode);
         totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;

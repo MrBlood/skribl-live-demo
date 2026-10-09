@@ -2259,6 +2259,84 @@ with sync_playwright() as _spm:
         _pp.close()
     _bm.close()
 
+print("\nLIBRARY — a replay picked after a Flip plays as itself, not as the Flip")
+# The owner, with a screenshot of the stage: Skater Girl picked and her clock
+# running, under the Blooby card, cut off at her canvas's edge. The stage is
+# one player adopting one Skribl after another, and adopt() set a Flip's
+# frames, plan and page underneath only on a Flip and never cleared them;
+# render() picks its painter by those frames, so a replay adopted after a Flip
+# played the Flip's pages in the replay's box, on the replay's clock.
+# Read off the stage's own canvas at the end of the replay, in colours neither
+# drawing shares: the Flip is RED (its card a bar on a page underneath, at
+# 4:3), the replay GREEN (a diagonal, at 9:16), each on the dark canvas.
+def _adopt_post(body):
+    _rq = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(_rq, timeout=20) as _r:
+        return json.loads(_r.read().decode())
+
+
+def _pts(xy, color, size):
+    return [{"x": x, "y": y, "color": color, "size": size, "t": i * 40, "start": i == 0}
+            for i, (x, y) in enumerate(xy)]
+
+
+_card = _pts([(x, 306) for x in range(80, 741, 20)], "#ff1030", 60)
+_pg = lambda x: _pts([(x, 80), (x + 40, 120)], "#ff1030", 10)
+_flip = _adopt_post({"title": "adopt: a Flip with a page underneath", "version": 2, "schemaVersion": 2,
+                     "playbackMode": "flip", "fps": 4, "visibility": "unlisted",
+                     "canvasSize": {"cssWidth": 816, "cssHeight": 612, "dpr": 1},
+                     "under": {"page": 0, "from": 1, "to": 2},
+                     "frames": [{"strokes": _card, "strokeGroups": [len(_card)], "background": {"color": "#0d0f14"}},
+                                {"strokes": _pg(100), "strokeGroups": [2], "background": {"color": "#0d0f14"}},
+                                {"strokes": _pg(300), "strokeGroups": [2], "background": {"color": "#0d0f14"}}]})
+_diag = _pts([(60 + i * 11, 100 + i * 20) for i in range(31)], "#10e060", 30)
+_rep = _adopt_post({"title": "adopt: a replay", "version": 2, "schemaVersion": 2,
+                    "playbackMode": "replay", "visibility": "unlisted",
+                    "canvasSize": {"cssWidth": 450, "cssHeight": 800, "dpr": 1},
+                    "frames": [{"strokes": _diag, "strokeGroups": [len(_diag)],
+                                "background": {"color": "#0d0f14"}}]})
+_INKS = """() => { const el = document.getElementById('stageBox'), h = el && el._skriblInline;
+    if (!h) return null;
+    const st = h.state(); h.seek(st.totalMs);
+    const c = el.querySelector('.skribl-inline-canvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let red = 0, green = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] > 180 && d[i + 1] < 90) red++;
+      if (d[i + 1] > 180 && d[i] < 90) green++;
+    }
+    return { id: st.id, kind: st.kind, totalMs: st.totalMs, red: red, green: green }; }"""
+with sync_playwright() as _spa:
+    _ba = _spa.chromium.launch()
+    _pa = _ba.new_context(viewport={"width": 1280, "height": 1000}).new_page()
+    browsing.goto(_pa, BASE, "/library")
+    # Newest first, so the Flip is what the stage opens on, and the replay is
+    # then picked from its row as a person picks it.
+    _pa.evaluate("""(p) => localStorage.setItem('skribl_posted_v1', JSON.stringify([
+        { id: p.f.id, url: '/s/' + p.f.id, title: 'A Flip', kind: 'flip', pages: 3,
+          visibility: 'unlisted', tok: p.f.deleteToken || null, at: Date.now() },
+        { id: p.r.id, url: '/s/' + p.r.id, title: 'A replay', kind: 'pad', pages: 1,
+          visibility: 'unlisted', tok: p.r.deleteToken || null, at: Date.now() - 1000 }]))""",
+                 {"f": _flip, "r": _rep})
+    _pa.reload(wait_until="load")
+    _pa.wait_for_function("(id) => { const el = document.getElementById('stageBox');"
+                          " return !!(el && el._skriblInline && el._skriblInline.state().loaded"
+                          " && document.querySelector('.posted-row.active[data-id=\"' + id + '\"]')); }",
+                          arg=_flip["id"], timeout=15000)
+    _on_flip = _pa.evaluate(_INKS)
+    _pa.click(f'.posted-main[data-select="{_rep["id"]}"]')
+    _pa.wait_for_function("(id) => !!document.querySelector('.posted-row.active[data-id=\"' + id + '\"]')",
+                          arg=_rep["id"], timeout=15000)
+    _pa.wait_for_timeout(300)
+    _on_rep = _pa.evaluate(_INKS)
+    _ba.close()
+check("the fixture: the stage opens on the Flip, and it paints red",
+      bool(_on_flip) and _on_flip["kind"] == "flip" and _on_flip["red"] > 2000 and _on_flip["green"] == 0,
+      str(_on_flip))
+check("a replay picked after a Flip plays as a replay, painted in its own ink with none of the Flip's",
+      bool(_on_rep) and _on_rep["kind"] == "replay" and _on_rep["green"] > 2000 and _on_rep["red"] == 0,
+      str(_on_rep))
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)
