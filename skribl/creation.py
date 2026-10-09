@@ -67,6 +67,7 @@ from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
                      SkriblPendingMedia, normalise_user_id, session,
                      visibility_values)
 from .deletion import hash_delete_token
+from .mediameta import STRIPPED, strip_payload
 from .storage import claim_media, externalise_payload, pending_media_ready
 from .validation import (_iter_media_items, _payload_has_audio,
                          _payload_canvas, _payload_kind, _payload_pages,
@@ -310,6 +311,13 @@ def create_post(payload, *, author_id=None, media_store=None,
     has_audio = _payload_has_audio(payload)
 
     idem_hash, idem_fp = idempotency if idempotency else (None, None)
+
+    # ---- what a post must not carry ----------------------------------------
+    # Where a photo was taken and what a file was called (skribl/mediameta.py).
+    # After validation, so only proven media is walked; before storage, so no
+    # stored post ever holds either. The flag tells the reader it was done.
+    payload = dict(strip_payload(payload))
+    payload[STRIPPED] = True
 
     # ---- externalise, then insert -----------------------------------------
     # Externalise media AFTER validation: validation decodes, signature-checks

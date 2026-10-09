@@ -3,7 +3,7 @@
     python -m skribl.takedown --list-orphans
     python -m skribl.takedown --reports
     python -m skribl.takedown <public-id> --delete
-    python -m skribl.takedown <public-id> --visibility private
+    python -m skribl.takedown <public-id> --visibility withheld
     python -m skribl.takedown <public-id> --resolve
 
 WHY THIS EXISTS. v279 gave anonymous posts a revocation capability, and an
@@ -45,6 +45,12 @@ asked and every one of those would make it easier.
 
 DRY RUN BY DEFAULT, like skribl.sweep. --delete and --visibility are the wet
 flags, and neither does anything without one.
+
+WITHHELD, NOT PRIVATE (v321 preflight, PF-013). This tool used to answer a
+report with --visibility private, and private is a state the AUTHOR owns: an
+anonymous author's key set the post straight back to public. `withheld` is the
+operator's own state (SkriblPost.WITHHELD): hidden from everyone but a
+signed-in author, and only this tool can set it or lift it.
 
 TRANSACTIONS: this owns its own, unlike everything in deletion.py. It is a
 command, not a request inside a host's unit of work, so there is no outer
@@ -131,8 +137,10 @@ def build_parser():
                    help="actually delete the post. Bytes are left to "
                         "skribl.sweep, which is the only thing that can tell "
                         "whether another post shares them.")
-    p.add_argument("--visibility", choices=sorted(visibility_values()),
-                   help="change who may read it instead of deleting it")
+    p.add_argument("--visibility",
+                   choices=sorted(visibility_values() + (SkriblPost.WITHHELD,)),
+                   help="change who may read it instead of deleting it; "
+                        "withheld hides it and its author cannot undo that")
     return p
 
 
@@ -200,7 +208,7 @@ def main(argv=None, out=sys.stdout):
                         print(f"    note  : {_plain(r.note)}", file=out)
             if groups:
                 print("\nAct on one with:\n"
-                      "  python -m skribl.takedown <public-id> --visibility private\n"
+                      "  python -m skribl.takedown <public-id> --visibility withheld\n"
                       "  python -m skribl.takedown <public-id> --delete\n"
                       "  python -m skribl.takedown <public-id> --resolve   (it was nothing)",
                       file=out)
@@ -218,9 +226,11 @@ def main(argv=None, out=sys.stdout):
         # mail has a public id and no other way to confirm they have the right
         # post; printing the title and date is the confirmation step, and it
         # is the only one a dry run can offer.
+        # _plain() here too (v321 preflight, PF-016): the queue above was
+        # neutralised and this view, which prints the same title, was not.
         print(f"{post.public_id}  {post.visibility}  {post.created_at}\n"
-              f"  title  : {post.title or '(untitled)'}\n"
-              f"  author : {post.user_id if post.user_id is not None else '(anonymous)'}\n"
+              f"  title  : {_plain(post.title) or '(untitled)'}\n"
+              f"  author : {_plain(str(post.user_id)) if post.user_id is not None else '(anonymous)'}\n"
               f"  key    : {'held by its author' if post.delete_token_hash else 'none — this post is why this tool exists'}",
               file=out)
 
@@ -231,7 +241,7 @@ def main(argv=None, out=sys.stdout):
 
         if not args.delete and not args.visibility and not args.resolve:
             print("\nDRY RUN — nothing changed. Add --delete, "
-                  "--visibility private, or --resolve, to act.", file=out)
+                  "--visibility withheld, or --resolve, to act.", file=out)
             return EXIT_OK
 
         if args.resolve:

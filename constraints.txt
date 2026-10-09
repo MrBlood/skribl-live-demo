@@ -15,6 +15,10 @@
 # regenerated file — that is why requirements.txt tells you to generate the lock
 # on the real deployment target rather than trusting this one blindly.
 #
+# Werkzeug 3.1.8 -> 3.1.9 on 2026-10-09 (v321 preflight, PF-001): pip-audit
+# reported GHSA-g6x2-hccm-hh4m against 3.1.8 (safe_join accepted Windows device
+# names; Windows hosts only). The hash is the wheel's, checked against PyPI's.
+#
 # Regenerated 2026-08-07 — the previous copy predated
 # alembic being added and pinned only 16 packages, so a strict hashed install
 # produced an environment where 'alembic upgrade head' could not run at all.
@@ -53,5 +57,5 @@ SQLAlchemy==2.0.51 \
     --hash=sha256:1d21ce524ab86c23046e992a5b81cb54c21079c6df6e78b8fc77d77cac70a6b9
 typing_extensions==4.16.0 \
     --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8
-Werkzeug==3.1.8 \
-    --hash=sha256:63a77fb8892bf28ebc3178683445222aa500e48ebad5ec77b0ad80f8726b1f50
+Werkzeug==3.1.9 \
+    --hash=sha256:6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab

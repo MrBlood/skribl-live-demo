@@ -539,6 +539,14 @@ class SkriblPost(SkriblBase):
     #: CHECK constraint, so a host can add its own states without a migration.
     VISIBILITIES = ("public", "unlisted", "private")
 
+    #: The OPERATOR's state: hidden from everyone but a signed-in author
+    #: (visible_to's "anything else" rule), and set only by an operator
+    #: (set_post_visibility with require_author=False). Not in VISIBILITIES,
+    #: so no post is created withheld and no author can choose it or leave it.
+    #: (v321 preflight, PF-013: the takedown CLI answered a report with
+    #: "private", and the author's own key set it back to public.)
+    WITHHELD = "withheld"
+
     def visible_to(self, viewer_id):
         """Can `viewer_id` (may be None) read this post at all?
 

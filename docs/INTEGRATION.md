@@ -252,7 +252,11 @@ The gallery has Report on every tile: `POST /api/skribls/<id>/report` takes a re
 `skribl.core.REPORT_REASONS` and an optional note, writes one row per
 (post, reporter) into `skribl_reports`, and takes nothing down. The queue is
 read with `python -m skribl.takedown --reports`; the same tool's `--visibility
-private`, `--delete` and `--resolve` are the operator's three answers.
+withheld`, `--delete` and `--resolve` are the operator's three answers.
+`withheld` is the operator's own state: hidden from everyone but a signed-in
+author, and nobody but the tool can set or lift it. (Until v321 the answer was
+`--visibility private`, which is a state the author owns, and an anonymous
+author's key set it straight back to public.)
 
 *The macros need one name in your Jinja environment.* `init_skribl()` adds
 `skribl_asset` as an app-wide template global — the only name Skribl puts in your
@@ -719,7 +723,7 @@ So the answer is operational, and v280 ships it:
     python -m skribl.takedown --list-orphans          # how many, and which
     python -m skribl.takedown <public-id>             # dry run: what is it?
     python -m skribl.takedown <public-id> --delete
-    python -m skribl.takedown <public-id> --visibility private
+    python -m skribl.takedown <public-id> --visibility withheld
 
 Dry by default, like `python -m skribl.sweep`. It refuses to guess: one public
 id, no search, no wildcard, no `--all`. Exit 1 means no such post, exit 2 means

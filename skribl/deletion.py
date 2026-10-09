@@ -276,16 +276,28 @@ def set_post_visibility(public_id, visibility, *, author_id=None,
     the media route — so revocation takes effect everywhere at once rather than
     needing a new check per surface.
 
+    WITHHELD IS THE OPERATOR'S (v321 preflight, PF-013). Only an operator
+    (require_author=False) may set it or lift it. An author's key still
+    deletes the post, which takes it down further; it cannot put it back up.
+
     Flushes; does not commit.
     """
     # Validated BEFORE the lookup, so a bad argument cannot be used to probe
     # which ids exist: it fails the same way whether or not the post is there.
     allowed = visibility_values()
+    if not require_author:
+        allowed = allowed + (SkriblPost.WITHHELD,)
     if visibility not in allowed:
         raise SkriblRefused(
             f"visibility must be one of {', '.join(sorted(allowed))}")
 
     post = _authorised_post(public_id, author_id, require_author, delete_token)
+    # After authorisation, so only the author learns why: anyone else gets the
+    # same 404 as for a post that is not there.
+    if require_author and post.visibility == SkriblPost.WITHHELD:
+        raise SkriblRefused(
+            "This Skribl was withdrawn by the site, so who can see it "
+            "can't be changed.")
     post.visibility = visibility
     session().flush()
     return visibility

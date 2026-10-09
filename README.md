@@ -76,6 +76,7 @@ skribl/                    The blueprint package — everything Skribl owns
   routes.py                HTTP routes (API + pages)
   models.py                SQLAlchemy models; attach_to_metadata for a host
   validation.py            Payload + media validation and resource caps
+  mediameta.py             What a post must not carry: photo location, tags, file names
   security.py              CSP, CSRF double-submit, security headers
   storage.py               Media stores: inline, local disk, S3
   mediareport.py           `python -m skribl.mediareport`: media bytes held, read-only

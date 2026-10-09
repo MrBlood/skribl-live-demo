@@ -106,6 +106,9 @@ jobs:
       # examples (the smallest host, a vendored skribl/ copy, the Flask-WTF
       # recipe) in-process with Flask's test client — no browser, no server —
       # and the guide's opening example had been losing every post unseen.
+      # verify_mediameta and verify_takedown joined in v321: a photo's
+      # location and an operator's takedown are both decided in-process, on
+      # a temp SQLite file with the test client and the CLI -- no server.
       - name: Run the boot and source suites
         run: |
           ./harness/run_harness.sh \
@@ -113,7 +116,8 @@ jobs:
             verify_txcontract.py verify_privacy.py verify_migrations.py \
             verify_createpost.py verify_sweepjob.py verify_deletion.py \
             verify_backfill.py verify_hostseams.py verify_mediareport.py \
-            verify_surfaces.py verify_integration.py
+            verify_surfaces.py verify_integration.py verify_mediameta.py \
+            verify_takedown.py
       # run_harness.sh exits 0 on a skip, so a suite that quietly declined to
       # run would leave this job green having proved nothing. None of these is
       # designed to skip, so ANY skip is a failure -- the guard is generalised
