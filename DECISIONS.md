@@ -14769,3 +14769,30 @@ loading lib/postsheet.js. The player loading it, or 18 lines of editor code
 going missing, each turn it red. verify_sheetswipe's opener for Flip's sheet
 drew its stroke by script, which never woke Post, so the first full run never
 opened the sheet there; it calls updateToolState() now, as a drawn stroke does.
+
+**Blooby's waving card draws Blooby before he waves (owner: "the blooby card
+was supposed to draw blooby on slide 1 too, then make him wave in a loop").**
+The card drew itself on page 1 and Blooby simply appeared, already waving, on
+the loop that followed. Page 1 cannot hold him: it is the page kept UNDER every
+page after it, so his resting arm would stand beside the waving one throughout
+the wave. He is drawn on a page of his own instead. Page 2 draws itself once,
+right after the card, with the card still under it; it is his body and the
+pose the wave comes round to before its first page (the last), so he steps
+straight into it. Pages 3 on are the wave, looped Forever as before. Made as
+the owner would make it in Flip: his body drawn on page 2, the page copied for
+every pose, then page 2's arm and eyes and each pose's (blooby.card_flip
+"intro", make_flip.make_card, which refuses to save a card that lost any of
+it). He draws in 8 s, as the card does: his page took 17 s to draw, and a
+drawing page is capped at DRAW_MAX (lib/holdtiming.js). 795 KB, up from 746.
+
+verify_helpdemos, THE CARD THAT WAVES, read off the example itself: the card
+draws itself and stays under every page after it; Blooby draws himself on page
+2, once, before the loop; page 2 is Blooby, since every page of the wave begins
+with its body point for point, and it has his arm and eyes too; his arm there
+is nearest the wave's last page's; and the wave is every page after, looped
+Forever, none of it drawing itself. Three of the five are red on main. Each
+part broken on its own turned its own check red: page 2 not drawing itself,
+the loop taking it in, a wave page drawing itself, the card not under the last
+page, the loop not forever, page 2 without his body, page 2 without his arm,
+page 2 in the wave's first pose, and page 2 left blank. How it works says so on
+the card in both editors' Ideas.

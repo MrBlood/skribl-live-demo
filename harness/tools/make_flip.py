@@ -79,12 +79,12 @@ def make(browser, name):
 
 def make_card(browser):
     """Blooby's trading card that waves: the card on page 1, kept under every
-    page after it and drawing itself; Blooby's wave on pages 2-11, looped
-    Forever (blooby.card_flip). Drawn as the owner would make it in Flip -- the
-    card at its own careful pace, a blank page, his body, the page copied for
-    every pose, then each pose's arm and eyes, key poses first -- and set with
-    the editor's own Keep under and Loop state. Saved to
-    help/demos/flip-blooby-card.json."""
+    page after it and drawing itself; Blooby drawing himself on page 2; his
+    wave on pages 3-12, looped Forever (blooby.card_flip). Drawn as the owner
+    would make it in Flip -- the card at its own careful pace, a blank page,
+    his body, the page copied for every pose, then page 2's arm and eyes and
+    each pose's, key poses first -- and set with the editor's own Draw, Keep
+    under and Loop state. Saved to help/demos/flip-blooby-card.json."""
     spec = blooby.card_flip()
     ctx = browser.new_context(viewport={"width": 1280, "height": 960})
     page = ctx.new_page()
@@ -107,17 +107,19 @@ def make_card(browser):
     page.wait_for_timeout(200)
     artdraw.draw(page, spec["body"], seed=2, canvas="#pad", logical=logical)
     n = len(spec["pages"])
-    for _ in range(n - 1):
+    for _ in range(n):
         page.evaluate("() => addFrame(true)")
     page.wait_for_timeout(300)
-    for i in spec["order"]:
-        page.evaluate("i => go(i)", 1 + i)
+    # Page 2 gets the pose the wave comes round to, then each page of the wave its own.
+    for at, i in [(1, spec["intro"])] + [(2 + i, i) for i in spec["order"]]:
+        page.evaluate("i => go(i)", at)
         page.wait_for_timeout(150)
         artdraw.draw(page, spec["pages"][i], seed=10 + i, canvas="#pad", logical=logical)
     page.wait_for_timeout(300)
-    # The card draws itself, then stays under the wave; the wave never ends.
-    page.evaluate(f"""() => {{ frames[0].draw = true;
-        docUnder = {{ page: 0, from: 1, to: {n} }}; docLoop = {{ from: 1, to: {n}, forever: true }};
+    # The card draws itself and stays under all that follows; Blooby draws himself
+    # once; the wave never ends.
+    page.evaluate(f"""() => {{ frames[0].draw = true; frames[1].draw = true;
+        docUnder = {{ page: 0, from: 1, to: {n + 1} }}; docLoop = {{ from: 2, to: {n + 1}, forever: true }};
         idx = 1; buildStrip(); render(); }}""")
     payload = page.evaluate("""async () => { const p = await buildSharePayload();
         for (const k of ['thumbnail', 'title', 'caption', 'visibility']) delete p[k];
@@ -125,8 +127,10 @@ def make_card(browser):
     ctx.close()
     if errs:
         raise SystemExit(f"blooby-card: page errors {errs[:2]}")
-    if payload.get("under") != {"page": 0, "from": 1, "to": n} or not (payload.get("loop") or {}).get("forever"):
+    if payload.get("under") != {"page": 0, "from": 1, "to": n + 1} or payload.get("loop") != {"from": 2, "to": n + 1, "forever": True}:
         raise SystemExit(f"blooby-card: the post lost its loop or page underneath: {payload.get('loop')} {payload.get('under')}")
+    if [f.get("draw") is True for f in payload["frames"][:3]] != [True, True, False]:
+        raise SystemExit("blooby-card: the card and Blooby must each draw themselves, and the wave must not")
     path = OUT / "flip-blooby-card.json"
     path.write_text(json.dumps(payload, separators=(",", ":")))
     print(f"flip-blooby-card: {len(payload['frames'])} pages at {payload.get('fps')} fps, "

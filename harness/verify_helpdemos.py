@@ -8,6 +8,9 @@ this holds the cards to what they claim, on both editors:
   1. EVERY EXAMPLE IS A REAL SKRIBL. Each example file is posted to the server
      exactly as the editor posts, and must be accepted -- the same validation a
      person's drawing meets. A hand-edited or stale file fails here.
+     THE CARD THAT WAVES draws the card, then Blooby, then loops his wave
+     Forever (owner: "draw blooby on slide 1 too, then make him wave in a
+     loop"), read off the example itself.
   2. EVERY TOOL HAS ONE. Each tool in Pad's dock has a card with Try it; on
      Flip, each tool Flip shares with Pad does (Flip's own tools arrive with
      their examples in the next change, and this census grows to all of them).
@@ -30,6 +33,7 @@ this holds the cards to what they claim, on both editors:
   7. SEARCH: typing hands the panel to the reference; the bar steps aside.
 """
 import json
+import math
 import pathlib
 import re
 import sys
@@ -69,6 +73,51 @@ check("there are examples to check", len(files) >= 4, f"{len(files)} files in {D
 for f in files:
     st, why = post(json.loads(f.read_text()))
     check(f"{f.name}: the server accepts it as a post", st in (200, 201), f"HTTP {st} {why}")
+
+# ---- 1b. the card that waves --------------------------------------------------
+# The owner, on the Flip of Blooby's card: "the blooby card was supposed to draw
+# blooby on slide 1 too, then make him wave in a loop". The players keeping draw,
+# under and loop are verify_loop's and verify_under's; asked here is that the
+# example says it. Each page of the wave was copied from page 2 once his body was
+# drawn there, so each begins with that body point for point: that is what says
+# page 2 holds Blooby, not merely some ink. What follows the body is his arm and
+# eyes, and page 2's is the pose the wave comes round to, so he steps into it.
+print("\nTHE CARD THAT WAVES -- the card, then Blooby, then his wave forever")
+wc = json.loads((DEMOS / "flip-blooby-card.json").read_text())
+fr, loop = wc["frames"], wc.get("loop") or {}
+last = len(fr) - 1
+draws = [f.get("draw") is True for f in fr]
+check("the card draws itself on page 1 and stays under every page after it",
+      draws[0] and wc.get("under") == {"page": 0, "from": 1, "to": last}, f"draws {draws[:3]}, under {wc.get('under')}")
+check("then Blooby draws himself on page 2, once, before the loop",
+      len(fr) > 2 and draws[1] and loop.get("from") == 2, f"draws {draws[:3]}, loop {loop}")
+
+
+def shared(a, b):
+    n = 0
+    for p, q in zip(a["strokes"], b["strokes"]):
+        if p != q:
+            break
+        n += 1
+    return n
+
+
+body = min((shared(fr[1], f) for f in fr[2:]), default=0)
+check("...page 2 is Blooby: every page of the wave begins with its body, point for point, and it has his arm and eyes too",
+      len(fr[1]["strokes"]) // 2 <= body < len(fr[1]["strokes"]), f"{body} of page 2's {len(fr[1]['strokes'])} points shared")
+
+
+def arm(f):
+    pts = f["strokes"][body:] or [{"x": 0, "y": 0}]
+    return sum(p["x"] for p in pts) / len(pts), sum(p["y"] for p in pts) / len(pts)
+
+
+lo, hi = loop.get("from", 1), loop.get("to", last)
+near = min(range(lo, hi + 1), key=lambda k: math.dist(arm(fr[1]), arm(fr[k])))
+check("...and he steps straight into the wave: of all its pages, page 2's arm is nearest the last one's",
+      near == hi, f"nearest page {near + 1}; the loop is pages {lo + 1}-{hi + 1}")
+check("his wave is every page after, looped Forever, and none of them draws itself",
+      loop == {"from": 2, "to": last, "forever": True} and not any(draws[2:]), f"loop {loop}, draws {draws}")
 
 # Ink across the stage's canvas: pixels clearly unlike the drawing's own
 # ground, read at its corner. (It counted pixels brighter than a DARK ground
