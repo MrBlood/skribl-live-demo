@@ -25,12 +25,17 @@ liability.
    EVERY external script blocked: if the theme is still right, nothing deferred
    was needed to get it.
 
-3. THE CANVAS DOES NOT FOLLOW IT. This is the load-bearing rule and the reason
+3. A DRAWING DOES NOT FOLLOW IT. This is the load-bearing rule and the reason
    the whole job was scoped to "chrome only". A drawing's ground is part of the
    drawing — it is what gets exported, posted, and seen by other people — so a
-   UI preference must never repaint it. The check is a pixel one, taken from the
-   middle of the canvas in both themes: a token that leaks into the canvas would
-   change it, and no amount of reading CSS would tell you that as plainly.
+   UI preference must never repaint it. What the theme DOES pick is where a new
+   drawing starts (owner, of the mock: "Do Paper."): Paper in light, the dark
+   canvas in dark, and a canvas with nothing on it yet follows a switch,
+   because nothing on it was chosen. A stroke, a ground picked by hand or a
+   restored draft ends that. The checks are pixel ones, read off a screenshot:
+   the ground is a CSS background under a transparent bitmap, so the bitmap
+   cannot say what the theme did to it, and no amount of reading CSS would
+   tell you that as plainly as the screen does.
 
 4. THE RAMP CANNOT ROT. The failure mode for a two-theme palette is silent: add
    a token to `:root` next month, forget the light value, and that one control
@@ -44,6 +49,7 @@ surfaces in light mode and fails on any element still painting a dark ground.
 That is how the nine translucent `rgba()` surfaces were caught, which the first
 pass missed entirely because Phase 1 had only converted `rgba(255,255,255,a)`.
 """
+import base64
 import pathlib
 import re
 import sys
@@ -118,9 +124,10 @@ check("styles.css defines a light ramp",
 # is chromatic and stays put by design; radii and easings are not colours.
 # One exemption, and it is a rule rather than a list: a token named for the
 # CANVAS is not chrome. The empty-state hint is painted on the drawing surface,
-# which follows no theme, so its ink must not follow one either — and having it
-# in :root as a named token is what makes that a visible decision rather than a
-# literal somebody missed.
+# whose colour is the drawing's rather than the theme's, so its ink follows the
+# ground (.light-bg) and never the theme — and having it in :root as a named
+# token is what makes that a visible decision rather than a literal somebody
+# missed.
 unflipped = []
 for name, value in dark_tokens.items():
     if "canvas" in name:
@@ -142,8 +149,8 @@ check("every neutral token in :root is overridden for light",
 # measures 3.32:1 on the light menu sheet, and it is what "Clear all" is
 # written in. So the rule for ink is stricter than the rule for greys: no
 # literal at all. #fff is excluded (it is text on a coloured fill, and stays
-# white in both themes) and so is #0d0f14 (the canvas, which is the document's
-# colour and follows no theme).
+# white in both themes) and so is #0d0f14 (the dark canvas, which is the
+# document's colour, not the chrome's).
 INK = re.compile(r"(?<![-\w])(?:color|fill|stroke)\s*:\s*([^;{}]+)")
 stray_ink = {}
 for sheet in ("styles.css", "flip.css"):
@@ -221,6 +228,91 @@ def ratio(a, b):
     if la < lb:
         la, lb = lb, la
     return (la + 0.05) / (lb + 0.05)
+
+
+# The grounds a drawing can start on (lib/canvasground.js), and the one other
+# swatch the checks pick by hand.
+PAPER, DARK_GROUND, WHITE = "#f6f2ea", "#0d0f14", "#ffffff"
+GROUND_NAME = {PAPER: "Paper", DARK_GROUND: "the dark canvas", WHITE: "White"}
+# Where each editor's ground is painted (a CSS background, under the drawing's
+# transparent bitmap), and where it is drawn on.
+GROUND_EL = {"Pad": ".canvas-wrap", "Flip": "#pad"}
+INK_EL = {"Pad": "#canvas", "Flip": "#pad"}
+
+_PIXEL = """async (b64) => {
+  const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+  const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+  const d = x.getImageData(img.width >> 1, img.height >> 1, 1, 1).data;
+  return [d[0], d[1], d[2]];
+}"""
+
+
+def painted(pg, label, fy=0.22):
+    """The colour on SCREEN at the middle of the canvas, fy of the way down —
+    above the line the checks draw through the middle, and clear of the
+    vignette at the edges. A screenshot, because what covers the ground is the
+    screen's business: its rect or its style would say what it should be."""
+    b = pg.locator(GROUND_EL[label]).bounding_box()
+    x, y = b["x"] + b["width"] / 2, b["y"] + b["height"] * fy
+    png = pg.screenshot(clip={"x": x - 2, "y": y - 2, "width": 4, "height": 4})
+    return tuple(pg.evaluate(_PIXEL, base64.b64encode(png).decode()))
+
+
+def near(rgb, hexc, tol=3):
+    want = tuple(int(hexc[i:i + 2], 16) for i in (1, 3, 5))
+    return rgb is not None and all(abs(a - b) <= tol for a, b in zip(rgb, want))
+
+
+def draw_line(pg, label):
+    """One real stroke across the middle of the editor's canvas."""
+    b = pg.locator(INK_EL[label]).bounding_box()
+    cx, cy = b["x"] + b["width"] / 2, b["y"] + b["height"] / 2
+    pg.mouse.move(cx - 80, cy)
+    pg.mouse.down()
+    for i in range(1, 9):
+        pg.mouse.move(cx - 80 + i * 20, cy + (i % 2) * 4)
+    pg.mouse.up()
+    pg.wait_for_timeout(300)
+
+
+# The ground as the app holds it, the swatch it lights, what it would save and
+# post, and (Flip) the page's thumbnail in the strip, which paints its ground
+# into its own bitmap.
+_GROUND_STATE = """() => {
+  const f = typeof serializeFlip === 'function' ? serializeFlip({}).frames[0]
+                                                : serializeSkribl().frames[0];
+  const b = f && f.background;
+  const tile = typeof _tiles === 'function' && _tiles()[0] ? _tiles()[0].querySelector('canvas') : null;
+  let thumb = null;
+  if (tile && tile.width) {
+    const d = tile.getContext('2d').getImageData(2, 2, 1, 1).data;
+    thumb = [d[0], d[1], d[2]];
+  }
+  return {
+    bg: String(bgColor).toLowerCase(),
+    lit: [...document.querySelectorAll('.bg-swatch.active')].map(e => (e.dataset.bg || 'custom').toLowerCase()),
+    saved: String((b && b.color) || b).toLowerCase(),
+    thumb: thumb
+  };
+}"""
+
+
+def ground(pg, label):
+    st = pg.evaluate(_GROUND_STATE)
+    st["px"] = painted(pg, label)
+    return st
+
+
+def on(st, hexc):
+    """Painted, held, lit and saved: the whole of what a ground is."""
+    return (near(st["px"], hexc) and st["bg"] == hexc and st["lit"] == [hexc]
+            and st["saved"] == hexc)
+
+
+def theme(pg, mode):
+    pg.evaluate("(m) => window.SkriblTheme.set(m)", mode)
+    pg.wait_for_timeout(350)
 
 
 with sync_playwright() as p:
@@ -327,8 +419,10 @@ with sync_playwright() as p:
               f"{mark} — a shadow that is invisible on a dark ground is a "
               f"sticker on a light one, and Flip never had one")
 
-        print(f"THEME [{label}] — the chrome flips and the canvas does not")
-        dark_px = None
+        print(f"THEME [{label}] — the chrome flips and a drawing does not")
+        # Something on the canvas first: a BLANK canvas follows the theme on
+        # purpose (lib/canvasground.js), and what must never move is a drawing.
+        draw_line(page, label)
         shots = {}
         for mode in ("dark", "light"):
             page.evaluate("(m) => window.SkriblTheme.set(m)", mode)
@@ -344,18 +438,11 @@ with sync_playwright() as p:
               out.canvasBg = c ? getComputedStyle(c).backgroundColor : null;
               return out;
             }""")
-            # A real pixel from the middle of the drawing surface, not the CSS
-            # value: the canvas is painted by the app, so only its bitmap can
-            # say whether the theme reached it.
-            px = page.evaluate("""() => {
-              const c = document.querySelector('canvas');
-              if (!c || !c.width) return null;
-              const g = c.getContext('2d', { willReadFrequently: true });
-              const d = g.getImageData(Math.floor(c.width / 2),
-                                       Math.floor(c.height / 2), 1, 1).data;
-              return [d[0], d[1], d[2], d[3]];
-            }""")
-            shots[mode]["px"] = px
+            # The ground as it is PAINTED. This used to read the middle of the
+            # canvas's bitmap, which is transparent: the ground is the CSS
+            # background behind it, so the read was the same in both themes
+            # whatever the theme did to the ground.
+            shots[mode]["px"] = painted(page, label)
         for part in ("header", "toolbar", "body"):
             d, l = parse(shots["dark"][part]), parse(shots["light"][part])
             if d is None or l is None:
@@ -369,7 +456,7 @@ with sync_playwright() as p:
             check(f"{label}: the {part} is dark in dark and light in light",
                   lum(d) < 70 < lum(l),
                   f"{lum(d):.0f} -> {lum(l):.0f}")
-        check(f"{label}: the CANVAS pixel is IDENTICAL in both themes",
+        check(f"{label}: a drawing's ground is IDENTICAL in both themes",
               shots["dark"]["px"] is not None
               and shots["dark"]["px"] == shots["light"]["px"],
               f"{shots['dark']['px']} vs {shots['light']['px']} — a drawing's "
@@ -513,6 +600,117 @@ with sync_playwright() as p:
             r, what = min(neutral)
             print(f"    dimmest light-mode text on a neutral ground: {r:.2f}:1 ({what})")
         page.close()
+
+    print("\nTHEME — a new drawing starts on the theme's ground, and a drawing keeps its own")
+    # The owner, of the mock (both editors, phone and desk): "Do Paper." The
+    # theme picks only where a NEW drawing starts (rule 3); every check below is
+    # on both editors, because each wires lib/canvasground.js on its own.
+    _VP = {"width": 1000, "height": 900}
+    _STORED = """() => { const r = localStorage.getItem(AUTOSAVE_KEY); if (!r) return false;
+        const d = JSON.parse(r);
+        return !!((d.strokes && d.strokes.length)
+                  || (d.frames && d.frames.some(f => f.strokes && f.strokes.length))); }"""
+    for label, path in SURFACES:
+        # A NEW DRAWING, nothing stored, in each theme the OS can ask for.
+        for scheme, want in (("light", PAPER), ("dark", DARK_GROUND)):
+            pg = browser.new_page(viewport=_VP, color_scheme=scheme)
+            browsing.goto(pg, BASE, path, settle=400)
+            st = ground(pg, label)
+            check(f"{label}: a new drawing in the {scheme} theme starts on {GROUND_NAME[want]}: painted, lit, saved",
+                  on(st, want), str(st))
+            if label == "Flip":
+                check(f"Flip: ...and its page in the strip is on {GROUND_NAME[want]} too",
+                      near(st["thumb"], want), f"thumbnail {st['thumb']}")
+            if scheme == "light":
+                # STILL BLANK, so it follows a switch, there and back.
+                theme(pg, "dark")
+                st = ground(pg, label)
+                check(f"{label}: a blank canvas follows the theme to the dark canvas",
+                      on(st, DARK_GROUND), str(st))
+                theme(pg, "light")
+                st = ground(pg, label)
+                check(f"{label}: ...and back to Paper", on(st, PAPER), str(st))
+                # A STROKE ends that: it is a drawing now, and stays on Paper.
+                draw_line(pg, label)
+                theme(pg, "dark")
+                st = ground(pg, label)
+                check(f"{label}: once there is a stroke, the theme never moves the ground",
+                      on(st, PAPER), str(st))
+            pg.close()
+
+        # A GROUND PICKED BY HAND stays, whatever it is. Paper picked in the
+        # dark theme is the case that matters: it is the ground the light
+        # theme starts on, so a follow that compared colours instead of
+        # remembering what it gave would take it for its own after light and
+        # back, and paint it dark.
+        for scheme, there, pick in (("light", "dark", WHITE), ("dark", "light", PAPER)):
+            pg = browser.new_page(viewport=_VP, color_scheme=scheme)
+            browsing.goto(pg, BASE, path, settle=400)
+            pg.evaluate("(c) => document.querySelector(`.bg-swatch[data-bg=\"${c}\"]`).click()", pick)
+            pg.wait_for_timeout(200)
+            theme(pg, there)
+            theme(pg, scheme)
+            st = ground(pg, label)
+            check(f"{label}: {GROUND_NAME[pick]} picked by hand in the {scheme} theme is kept through {there} and back",
+                  on(st, pick), str(st))
+            pg.close()
+
+        # A RESTORED DRAFT keeps its own: drawn on the dark canvas, reopened
+        # with the light theme chosen.
+        pg = browser.new_page(viewport=_VP, color_scheme="dark")
+        browsing.goto(pg, BASE, path, settle=400)
+        draw_line(pg, label)
+        pg.wait_for_function(_STORED, timeout=10000)
+        pg.evaluate("() => window.SkriblTheme.set('light')")
+        browsing.goto(pg, BASE, path, settle=400)
+        st = ground(pg, label)
+        check(f"{label}: a draft drawn on the dark canvas reopens on it in the light theme",
+              pg.evaluate("() => document.documentElement.getAttribute('data-theme')") == "light"
+              and on(st, DARK_GROUND), str(st))
+        pg.close()
+
+        # NEW SKRIBL is a new drawing: it starts on the theme's ground, and
+        # its Undo brings back the ground the drawing had.
+        pg = browser.new_page(viewport=_VP, color_scheme="light")
+        browsing.goto(pg, BASE, path, settle=400)
+        pg.evaluate("(c) => document.querySelector(`.bg-swatch[data-bg=\"${c}\"]`).click()", DARK_GROUND)
+        draw_line(pg, label)
+        if label == "Pad":
+            pg.evaluate("() => document.getElementById('menuBtn').click()")
+            pg.wait_for_timeout(400)
+            pg.evaluate("() => document.getElementById('clearMenuItem').click()")    # arms
+            pg.evaluate("() => document.getElementById('clearMenuItem').click()")    # confirms
+        else:
+            pg.evaluate("() => document.getElementById('miClearAll').click()")
+            pg.evaluate("() => document.getElementById('miClearAll').click()")
+        pg.wait_for_timeout(600)
+        st = ground(pg, label)
+        check(f"{label}: New Skribl in the light theme starts on Paper",
+              on(st, PAPER), str(st))
+        if label == "Pad":
+            pg.click(".toast-action")
+        else:
+            pg.evaluate("() => document.getElementById('clearUndo').click()")
+        pg.wait_for_timeout(700)
+        st = ground(pg, label)
+        check(f"{label}: ...and its Undo brings back the dark canvas the drawing was on",
+              on(st, DARK_GROUND), str(st))
+        pg.close()
+
+    # NO FLASH OF THE WRONG GROUND. The Pad's canvas is dark in the sheet, and
+    # Paper reaches it from a deferred script; with every script blocked, the
+    # light theme's own rule has to have put Paper there already. Flip's #pad
+    # wears the light chrome's raised surface until its script runs, which is
+    # light in this theme and so no flash.
+    naked = browser.new_page(viewport=_VP, color_scheme="light")
+    naked.route(SCRIPT_FILE, lambda route: route.abort())
+    naked.goto(BASE + "/", wait_until="domcontentloaded")
+    naked.wait_for_timeout(300)
+    _px = painted(naked, "Pad")
+    check("Pad: in the light theme the canvas is Paper before any script has run",
+          near(_px, PAPER), f"painted {_px} with every script file blocked — a dark "
+          f"frame first is a flash on every load of a new drawing")
+    naked.close()
 
     print("\nTHEME — one setting, shared by the two surfaces")
     page = browser.new_page(viewport={"width": 1000, "height": 900})

@@ -14,9 +14,11 @@
  * A BLANK CANVAS FOLLOWS THE THEME. Switch the theme before drawing anything
  * and the empty canvas moves with it, because nothing on it was ever chosen.
  * Not once there is a stroke or a photo on it, and not once the person has
- * picked a ground: follow() moves only a canvas still on the ground the
- * theme it is leaving gave it, so a ground picked by hand is never the one it
- * looks for. */
+ * picked a ground: follow() moves only a canvas still on the ground start()
+ * last GAVE it. Comparing with the ground the old theme starts on instead
+ * would move a hand-picked one that happens to match: Paper picked in the
+ * dark theme went dark again after a trip to light and back. A restored
+ * draft was given nothing, so it never follows. */
 (function (global) {
   'use strict';
 
@@ -25,10 +27,15 @@
 
   function groundFor(theme) { return theme === 'light' ? PAPER : DARK; }
 
+  /* The ground this file last gave the page's canvas, or null if it has
+   * given none. One editor to a page, so one value. */
+  var given = null;
+
   /* The ground for a drawing started now, in the theme the chrome is wearing. */
   function start() {
     var T = global.SkriblTheme;
-    return groundFor(T ? T.get() : 'dark');
+    given = groundFor(T ? T.get() : 'dark');
+    return given;
   }
 
   /* follow({ ground, blank, set }): ground() is the canvas's colour now,
@@ -36,12 +43,13 @@
   function follow(o) {
     var T = global.SkriblTheme;
     if (!T || !T.onChange || !o) return;
-    var was = T.get();
     T.onChange(function (now) {
-      var left = groundFor(was);
-      was = now;
-      if (now === undefined || groundFor(now) === left) return;
-      if (String(o.ground() || '').toLowerCase() === left && o.blank()) o.set(groundFor(now));
+      var want = groundFor(now);
+      if (!given || want === given) return;
+      if (String(o.ground() || '').toLowerCase() === given && o.blank()) {
+        given = want;
+        o.set(want);
+      }
     });
   }
 

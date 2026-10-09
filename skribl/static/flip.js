@@ -336,10 +336,7 @@ function exDims(){
   return { w: Math.max(2, Math.round(CW * scale)),
            h: Math.max(2, Math.round(CH * scale)), scale: scale };
 }
-// A new Flip starts on the theme's ground, Paper in the light theme (lib/canvasground.js);
-// a restored draft puts its own back (applyFlipDraftObject).
-let bgColor = window.SkriblCanvasGround ? window.SkriblCanvasGround.start() : '#0d0f14';
-let strokeOpacity = 1, smoothingAlpha = 1;   // Pad-parity draw settings
+let bgColor = '#0d0f14', strokeOpacity = 1, smoothingAlpha = 1;   // Pad-parity draw settings
 let smoothPt = null, lastRaw = null;                              // smoothing stabilizer runtime
 let bgImage = null, bgImageObj = null, imageName = '';            // one background image per animation
 let photoFit = 'cover', photoOpacity = 1, photoBlur = 0, photoZoom = 1;   // image adjustments
@@ -11036,6 +11033,10 @@ function mediaBytesAtRisk(){
 
 /* ---- boot ---- */
 const restored = tryRestore();
+// No draft to come back to is a new Flip: it starts on the theme's ground,
+// Paper in the light theme (lib/canvasground.js), as the Pad's does. A
+// restored draft brought its own, and is never moved by the theme.
+if(!restored && window.SkriblCanvasGround) bgColor = window.SkriblCanvasGround.start();
 onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));
 if(onionGroup){ onionGroup.hidden=false; const _r=document.getElementById('tuneOnionRow'); if(_r) _r.classList.toggle('muted', !onion); }
 syncCanvasSeg();
