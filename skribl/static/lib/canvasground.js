@@ -15,10 +15,11 @@
  * and the empty canvas moves with it, because nothing on it was ever chosen.
  * Not once there is a stroke or a photo on it, and not once the person has
  * picked a ground: follow() moves only a canvas still on the ground start()
- * last GAVE it. Comparing with the ground the old theme starts on instead
- * would move a hand-picked one that happens to match: Paper picked in the
- * dark theme went dark again after a trip to light and back. A restored
- * draft was given nothing, so it never follows. */
+ * last GAVE it, and a pick, even of the swatch already lit, takes that back.
+ * Comparing with the ground the old theme starts on instead would move a
+ * hand-picked one that happens to match: Paper picked in the dark theme went
+ * dark again after a trip to light and back. A restored draft was given
+ * nothing, so it never follows. */
 (function (global) {
   'use strict';
 
@@ -36,6 +37,18 @@
     var T = global.SkriblTheme;
     given = groundFor(T ? T.get() : 'dark');
     return given;
+  }
+
+  /* A ground the person picks is theirs: a swatch or the custom colour. Both
+   * editors build their swatches from the draw drawer's one template
+   * (_skribl_draw_drawer.html), so one pair of listeners hears both. */
+  if (global.document) {
+    global.document.addEventListener('click', function (e) {
+      if (e.target && e.target.closest && e.target.closest('.bg-swatch[data-bg]')) given = null;
+    }, true);
+    global.document.addEventListener('input', function (e) {
+      if (e.target && e.target.id === 'customBgInput') given = null;
+    }, true);
   }
 
   /* follow({ ground, blank, set }): ground() is the canvas's colour now,

@@ -638,12 +638,14 @@ with sync_playwright() as p:
                       on(st, PAPER), str(st))
             pg.close()
 
-        # A GROUND PICKED BY HAND stays, whatever it is. Paper picked in the
-        # dark theme is the case that matters: it is the ground the light
+        # A GROUND PICKED BY HAND stays, whatever it is. Two picks are the
+        # cases that matter. Paper in the dark theme is the ground the light
         # theme starts on, so a follow that compared colours instead of
         # remembering what it gave would take it for its own after light and
-        # back, and paint it dark.
-        for scheme, there, pick in (("light", "dark", WHITE), ("dark", "light", PAPER)):
+        # back, and paint it dark. Paper in the light theme is the swatch
+        # already lit, so only the pick itself says the person chose it.
+        for scheme, there, pick in (("light", "dark", WHITE), ("dark", "light", PAPER),
+                                    ("light", "dark", PAPER)):
             pg = browser.new_page(viewport=_VP, color_scheme=scheme)
             browsing.goto(pg, BASE, path, settle=400)
             pg.evaluate("(c) => document.querySelector(`.bg-swatch[data-bg=\"${c}\"]`).click()", pick)
