@@ -323,10 +323,12 @@ with sync_playwright() as p:
         const c = document.getElementById('pad'), b = c.getBoundingClientRect();
         const ev = { clientX: b.left + pt[0] * (b.width / c.width),
                      clientY: b.top + pt[1] * (b.height / c.height) };
-        const before = color; sampleColorAt(ev); return { before, after: color }; }""", spot)
+        const before = color; sampleColorAt(ev); return { before, after: color, ground: bgColor }; }""", spot)
+    # The ground is whatever this page is on: Paper in the light theme
+    # (lib/canvasground.js), and the dropper reads it for a pixel with no ink.
     check("sampling an ONION pixel does not pick the onion's colour",
-          picked["after"].lower() in ("#0d0f14", "#ffffff", "#ff2020"),
-          f"picked {picked['after']} — a ghost of the previous page is not artwork")
+          picked["after"].lower() in (picked["ground"].lower(), "#ffffff", "#ff2020"),
+          f"picked {picked['after']} on {picked['ground']} — a ghost of the previous page is not artwork")
 
     print("\nARTWORK vs OVERLAYS — and the guides get the same rule for free")
     # It reads the live pad, the one surface guides are drawn on.
