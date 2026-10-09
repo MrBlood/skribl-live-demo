@@ -116,13 +116,15 @@ def box(pg, sel):
 
 
 # What the mouse would show at a point: the cursor of the element a click there
-# would land on. 'none' with no ring of the app's own drawn there is nothing.
+# would land on. While a preview plays a click on the canvas pauses it, so the
+# pointer must be there ('none', with the app's own rings stepped aside, is
+# nothing at all) and must not be the sign that says the canvas cannot be used.
 CURSOR = """(pt) => { const el = document.elementFromPoint(pt[0], pt[1]);
     return el ? { on: el.id || String(el.className).slice(0, 30), cursor: getComputedStyle(el).cursor } : null; }"""
 
 
 def shown(c):
-    return bool(c) and c["cursor"] != "none"
+    return bool(c) and c["cursor"] not in ("none", "not-allowed")
 
 
 def centre(pg, sel):
@@ -351,7 +353,7 @@ def pad_suite(b):
     check("Pad (desk): a click on the canvas pauses the replay, and another carries it on",
           a["paused"] and a["fill"] == a2["fill"] and not a3["paused"] and (a3["fill"] > a2["fill"] or not a3["replaying"]),
           f"{a} -> {a2} -> {a3}")
-    check("Pad (desk): the mouse pointer shows over the canvas while it plays and while it is paused",
+    check("Pad (desk): over the canvas while it plays and while it is paused, the mouse pointer shows, and not as 'not allowed'",
           shown(c_play) and shown(c_paused), f"playing {c_play}, paused {c_paused}")
     ctx.close()
 
@@ -570,8 +572,9 @@ def flip_suite(b):
           d1["paused"] and moved is None and gone is not None and not d2["paused"], f"{d1}, moved {moved}, then {gone}ms, {d2}")
     # THE POINTER STAYS (the owner: "when the mouse is over the canvas, it
     # disappears"). Flip hides the system pointer under the pen to draw its own
-    # ring, and the ring steps aside while it plays, so nothing was left.
-    check("Flip (desk): the mouse pointer shows over the canvas while it plays and while it is paused",
+    # ring, and the ring steps aside while it plays, so nothing was left. The
+    # Pad's lock cue showed 'not allowed' there instead; same check, above.
+    check("Flip (desk): over the canvas while it plays and while it is paused, the mouse pointer shows, and not as 'not allowed'",
           shown(c_play) and shown(c_paused), f"playing {c_play}, paused {c_paused}")
     ctx.close()
 

@@ -14917,9 +14917,17 @@ among them, and does it inline, from setTool(). While a preview plays the ring
 steps aside, and the stylesheet's `body.playing #pad { cursor: default; }`
 could not beat an inline style, so nothing was left over the canvas, and a
 click to pause (#367) kept it that way. The playing rule is `!important` now,
-which an inline style cannot beat. The Pad shows its crosshair through a replay
-and never had the gap.
+which an inline style cannot beat.
+
+Looking for the same gap on the Pad found the other half. After a take the
+Pad's canvas is locked until Add take, and its lock cue writes `not-allowed`
+inline -- the sign that says the canvas cannot be used. Since #367 a click on
+it during a replay pauses and resumes, so the sign said the opposite of what a
+click does, exactly then. While a replay plays or is paused the Pad's canvas
+shows the same arrow as Flip's now, by the same means. The player has no lock
+and no tap to pause, and its stylesheet is unchanged.
 
 verify_tappause asks it with a real mouse on a desk, on both editors: the
-element a click at the canvas's middle would land on must not compute `cursor:
-none`, while the preview plays and while it is paused.
+element a click at the canvas's middle would land on must compute neither
+`cursor: none` nor `not-allowed`, while the preview plays and while it is
+paused.

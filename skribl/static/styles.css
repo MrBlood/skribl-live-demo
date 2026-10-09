@@ -926,6 +926,12 @@ body:not(.player-mode) .canvas-wrap #canvas {
 .canvas-wrap.locked {
   cursor: not-allowed;
 }
+/* ...but not while a preview plays or is paused: a click there pauses and
+   resumes it (lib/tappause.js), so the sign that says the canvas cannot be
+   used was wrong exactly then. !important beats the cursor the lock cue writes
+   inline (app.js updateCanvasLockCue). Flip's playing rule is the same arrow
+   (flip.css). The player has no lock and no tap to pause. */
+body:not(.player-mode).replaying #canvas { cursor: default !important; }
 
 /* Editor scrubbable play bar: a thin track that hangs flush from the bottom edge
    of the canvas (square top, rounded bottom) so it reads as dropping down from
