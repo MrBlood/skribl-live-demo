@@ -354,6 +354,60 @@ with sync_playwright() as _p:
     _pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
     check("and the retry succeeds", "/s/" in _pg.evaluate("() => (SkriblPosted.list()[0] || {}).url || ''"))
     _pg.close()
+
+    # A 2xx THAT IS NOT A POST (preflight PF-028). Flip read any 2xx as
+    # posted: a captive portal's sign-in page answers a POST with a 200 in
+    # HTML, and the sheet said "Posted!" with a link to /s/undefined -- then
+    # dropped the Idempotency-Key, so the retry was a second post whenever the
+    # server had made the first. The first answer is the odd one; the retry
+    # reaches the real server.
+    for _label, _ctype, _odd_body in (
+            ("a body that is not JSON", "application/json", "{not json"),
+            ("a sign-in page", "text/html", "<html><body>Sign in to the Wi-Fi</body></html>"),
+            ("JSON with no post in it", "application/json", "{}"),
+            ("a JSON null", "application/json", "null")):
+        _pg = _b.new_page(viewport={"width": 390, "height": 844})
+        _keys = []
+        _odd = {"on": True}
+        def _answer(route, request=None, ct=_ctype, body=_odd_body):
+            if route.request.method != "POST":
+                return route.continue_()
+            _keys.append(route.request.headers.get("idempotency-key"))
+            if _odd["on"]:
+                _odd["on"] = False
+                route.fulfill(status=200, content_type=ct, body=body)
+            else:
+                route.continue_()
+        _pg.route("**/api/skribls", _answer)
+        _pg.goto(f"{BASE}/flip", wait_until="load")
+        _pg.wait_for_timeout(1300)
+        _box = _pg.locator("#pad").bounding_box()
+        _pg.mouse.move(_box["x"] + 60, _box["y"] + 60)
+        _pg.mouse.down()
+        _pg.mouse.move(_box["x"] + 150, _box["y"] + 130, steps=8)
+        _pg.mouse.up()
+        _pg.wait_for_timeout(250)
+        _pg.click("#postBtn"); _pg.wait_for_timeout(250)
+        _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(900)
+        _said = _pg.inner_text("#postStatusLabel") if _pg.is_visible("#postStatusLabel") else ""
+        check(f"{_label} in a 200 is a failure, not a post",
+              _pg.evaluate("() => document.getElementById('postStatus').classList.contains('error')")
+              and not _pg.is_visible("#postWatchBtn"),
+              f"the sheet says {_said!r}")
+        check(f"...and says so, without guessing the cause",
+              "unexpected response" in _said and "safe" in _said, repr(_said))
+        # THE RETRY: the same button, now Try again.
+        _again = _pg.is_visible("#postSubmitBtn") and _pg.is_enabled("#postSubmitBtn")
+        if _again:
+            _pg.click("#postSubmitBtn")
+            try:
+                _pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
+            except Exception:                        # noqa: BLE001
+                pass
+        check(f"...and the retry carries the same Idempotency-Key, so a post the server did make is found, not made twice",
+              _again and len(_keys) == 2 and bool(_keys[0]) and _keys[0] == _keys[1],
+              f"Try again offered: {_again}; keys sent: {_keys}")
+        _pg.close()
     _b.close()
 
 print("\nSHARE — a refusal before sending is said in the sheet")
