@@ -37,3 +37,12 @@ if (window.SkriblPendingCards && window.SkriblPendingCards.bindDrops && _padDraw
     say: (msg, anchor) => showToast(msg, anchor)
   });
 }
+// ...and when a song or a photo lands, the card grows below what opening it
+// revealed: bring its end on screen again, short of the dock passing under the
+// header (lib/drawerdetent.js followGrowth, which Flip calls too).
+if (window.SkriblDrawerDetent && window.SkriblDrawerDetent.followGrowth && _padDrawerCtl) {
+  window.SkriblDrawerDetent.followGrowth(document.getElementById('mediaCard'), {
+    current: () => { const c = _padDrawerCtl.current(); return c === 'photo' || c === 'music' ? c : null; },
+    dock: document.getElementById('toolBar')
+  });
+}

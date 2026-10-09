@@ -6153,6 +6153,13 @@ if(window.SkriblPendingCards) window.SkriblPendingCards.bindDrops({
   card: 'mediaCard', current: ()=>_flipDrawerCtl.current(),
   inputs: { photo: 'imageInput', music: 'musicInput' }, say: (msg)=>chip(msg)
 });
+// A song or a photo landing grows the card past what opening it revealed; the
+// shared lib brings its end back on screen (lib/drawerdetent.js followGrowth).
+if(window.SkriblDrawerDetent && window.SkriblDrawerDetent.followGrowth) window.SkriblDrawerDetent.followGrowth(
+  document.getElementById('mediaCard'), {
+    current: ()=>{ const c=_flipDrawerCtl.current(); return c==='photo'||c==='music' ? c : null; },
+    dock: document.querySelector('.flip-tools')
+  });
 
 // overflow menu (save/load/export)
 const moreScrim=document.getElementById('moreScrim');
