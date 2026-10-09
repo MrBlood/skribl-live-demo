@@ -884,6 +884,15 @@
         img.src = src;
       }
 
+      /* EVERY DOCUMENT STARTS FROM NOTHING. The library's stage adopts one
+       * Skribl after another into this same player, and render() picks its
+       * painter by flipFrames: a Flip's frames, plan and page underneath, left
+       * over from the last one, made a replay adopted after it play the
+       * Flip's pages in the replay's box on the replay's clock (the owner:
+       * Skater Girl's clock running under the Blooby card, cut off at her
+       * canvas's edge). underPageCv is painted again at this backing store's
+       * size, on first use. */
+      flipFrames = flipPlan = underPage = underPageCv = lastShown = null;
       if (isFlip(payload, frames)) {
         flipFrames = frames;
         flipFps = payload.fps || 12;
@@ -900,7 +909,6 @@
         flipPlan = (H && H.plan) ? H.plan(frames, flipFps, payload.loop) : null;
         totalMs = flipPlan ? flipPlan.cycle : Math.max(1, (frames.length / flipFps) * 1000);
         underPage = (H && H.underOf) ? H.underOf(payload.under, frames.length) : null;
-        underPageCv = null;   // painted at this backing store's size, on first use
       } else {
         timeline = buildTimeline(f0.strokes || [], payload.pauseMode);
         totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
