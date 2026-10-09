@@ -693,17 +693,19 @@ with sync_playwright() as p:
             pg.wait_for_timeout(200)
             pg.evaluate("() => document.getElementById('miClearAll').click()")       # confirms
         pg.wait_for_timeout(600)
-        st = ground(pg, label)
+        st_new = ground(pg, label)
         check(f"{label}: New Skribl in the light theme starts on Paper",
-              on(st, PAPER), str(st))
+              on(st_new, PAPER), str(st_new))
         if label == "Pad":
             pg.click(".toast-action")
         else:
             pg.evaluate("() => document.getElementById('clearUndo').click()")
         pg.wait_for_timeout(700)
         st = ground(pg, label)
+        # Only after New Skribl really moved it: a New Skribl that never ran
+        # leaves the dark canvas where it was, and that is not an Undo.
         check(f"{label}: ...and its Undo brings back the dark canvas the drawing was on",
-              on(st, DARK_GROUND), str(st))
+              on(st_new, PAPER) and on(st, DARK_GROUND), f"after New Skribl {st_new}, after Undo {st}")
         pg.close()
 
     # NO FLASH OF THE WRONG GROUND. The Pad's canvas is dark in the sheet, and
