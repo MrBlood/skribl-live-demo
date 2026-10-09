@@ -148,8 +148,9 @@ seal and CI, suites that discard their servers' stderr, and PostgreSQL are in
 **Run the affected suites directly, not through the runner, between seals.**
 `./harness/run_harness.sh verify_pages.py` starts its own server on a fresh
 database, which is what you want for a suite that needs one — and it rewrites
-`harness/LAST-RUN.txt` and re-stamps the four documents from it, so the
-whole-run record of the last seal becomes a one-suite record. Driven directly
+`harness/LAST-RUN.txt`, so the whole-run record of the last seal becomes a
+one-suite record (the four documents are left alone: `stamp_docs.py` refuses
+to stamp a run that did not cover every suite on disk). Driven directly
 against the bootstrap server a suite touches no record. If the runner was used
 anyway, restore the run record and the stamped documents from the last commit
 before committing; they hold no uncommitted work of yours, which is the one
@@ -227,6 +228,12 @@ satisfied it, with the mechanics the rule leaves out.
    after this.**
 7. Pull request, wait for the smoke job (boot + the source suites), squash-merge pinned to the head, and
    the push to `main` runs the full battery and deploys.
+8. Once it has merged, run `release.yml` by hand on `main` (Actions → release →
+   Run workflow). It builds the zips on GitHub from that commit, signs the
+   build-provenance attestation ARCHIVE-README.md tells a reader to verify, and
+   publishes the zips with their SHA256SUMS as the version's Release. Skip it
+   and `gh attestation verify` has nothing to find. It refuses a version that
+   already has a release.
 
 Getting step 5 wrong costs either a re-run or a sealed record that contradicts
 evidence already in hand; the second is an evidence gap, so it is a re-run.
@@ -427,8 +434,8 @@ In the order that would have saved the most time:
 ## 9. Where the open list lives
 
 Not here, and not copied here, because two copies of an open list disagree
-within a release. `FUTURE.md` §6c onward carries the measured, unbuilt items
-with their reasoning; the latest entry in `DECISIONS.md` ends with a "still
+within a release. `FUTURE.md` §6 onward carries the measured items with their
+reasoning, each heading marked BUILT or CLOSED once it is; the latest entry in `DECISIONS.md` ends with a "still
 open" paragraph for what its release left; START-HERE's invariants table marks
 the rules that have no enforcer. Read those three, in that order, and let the
 owner choose.

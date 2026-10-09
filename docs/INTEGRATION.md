@@ -180,15 +180,16 @@ under whatever stamps your theme (skribls.net uses `data-theme` on `<html>`)
 and the player re-colours with the page; define nothing and it is dark. The
 drawing itself never follows a theme — its ground is part of the drawing. If
 you iframe `/s/<id>` instead, the frame cannot see your page's attribute, so
-pass it: `/s/<id>?theme=light` (or `dark`); anything else leaves the player at
-its own default, which is dark whatever the OS says.
+pass it: `/s/<id>?theme=light` (or `dark`); anything else leaves the player on
+the viewer's own choice if one is stored, else their device's light or dark
+setting.
 
 **What a viewer gets.** Tap to play, tap to pause. The drawing redraws itself
 with a progress hairline along the bottom edge and a nib at the pen. Two
 controls, and only two — no scrub, no speed, no frame-step; those live on
 `/s/<id>`:
 
-- **Mute**, off by default and **page-wide**: sound is environmental, so
+- **Mute**, **page-wide**, and sound starts off (muted): sound is environmental, so
   unmuting one post unmutes the feed for that session (`sessionStorage`).
 - **Loop**, on by default and **per post**: repeating is a property of the
   drawing in front of you, not a statement about the next one. Turning it off
@@ -300,7 +301,7 @@ an image attachment, and post once.
 
 **The editor.** `GET /skribl-pad?compose=1`, in an iframe. An iframe even
 though it is your own origin: the Pad is a whole application with its own
-stylesheet and thirty-odd scripts, and putting that inline in your feed has the
+stylesheet and some seventy scripts, and putting that inline in your feed has the
 two fight over every generic class name. Set the `src` when the button is
 pressed, not in your markup — otherwise every visitor downloads a drawing tool
 they never opened.

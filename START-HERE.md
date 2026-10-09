@@ -317,7 +317,9 @@ evidence is about. The two lists must stay identical — that is the v221 defect
 * `apt-get update` fails outright until the blocked nodesource repo is moved
   aside: `mv /etc/apt/sources.list.d/nodesource.list /tmp/`. Then install
   postgresql, start it, create the `skribl` role and database.
-* `pip install -r constraints.txt --require-hashes --break-system-packages`, and
+* `pip install -r constraints.txt --require-hashes --break-system-packages`,
+  then the harness's own (`pip install -r harness/requirements.txt`: playwright,
+  Pillow, Flask-WTF — none of them in the app's runtime), and
   `python3 -m playwright install chromium`.
 * **PILLOW IS NOT IN requirements.txt AND THREE SUITES NEED IT.** `verify_cssplit`
   and `verify_smudgeblur` CRASH without it; `verify_sizeclass` is worse — it
@@ -413,8 +415,8 @@ How it was won, and why the old plan was the wrong plan:
   drawers: `editor_music`, `editor_photo`.
 * **The carves — every `skribl/static/editor_*.js`.** This list was once
   four names, then nine, and was stale both times, so it is the glob now. Each
-  is absent from the player. Pad loads every one; Flip loads `editor_shapes`
-  and `editor_compose`; the player loads none. `verify_player_isolation.py`
+  is absent from the player. Pad loads every one; Flip loads `editor_compose`,
+  and only in a host's composer; the player loads none. `verify_player_isolation.py`
   reads that list OFF DISK rather than from a hardcoded tuple, which is how a
   new carve is covered the day it lands.
 * **The serve-time comment strip** — `skribl/jsstrip.py` removes comments from
@@ -457,8 +459,8 @@ player that cannot play music — with the suite calling it green.
 ---
 
 **Read this file, `DECISIONS.md` and `ARCHIVE-README.md` before changing
-anything.** The per-version narrative lives in `docs/HANDOFF.md` and in git
-history. Everything below was verified by running it, not by reading the code.
+anything.** The per-version narrative lives in `DECISIONS.md` and in git history
+(`docs/HANDOFF.md` is the v100–v131 archive). Everything below was verified by running it, not by reading the code.
 (Historical sections below narrate older work; the numbers in prose are that
 era's, not this build's.)
 
@@ -478,7 +480,7 @@ platform.
                      silently. Read the constant.
     client assets    app.js / flip.js / styles.css / flip.css and lib/ — one
                      continuous line of work; the per-version story is in
-                     docs/HANDOFF.md and git history
+                     DECISIONS.md and git history
     harness          see harness/RELEASE.md — the count is generated, and a
                      hand-typed one is exactly what drifts
     migrations       skribl/migrations/versions — count the files; this line
@@ -538,7 +540,8 @@ Postgres Basic instance ($6/mo), running the `inline` media backend.
 
 **The deployed code can lag this tree** — Render deploys from `main`, so
 anything merged is live after its build finishes and anything unmerged is not.
-Check the version label in the app footer before diagnosing anything.
+Check the version label, the last line of the editors' ⋯ menu, before
+diagnosing anything.
 
 **Two operational facts learned the hard way:**
 
@@ -587,8 +590,10 @@ flushes its draft and asks before leaving for Flip only if that flush did not
 leave the draft durable — photo and audio bytes live in IndexedDB
 (`lib/draftstore.js`) beside the strokes now, so with working storage it never
 fires. In a host's composer, where the Pad keeps no draft, it asks whenever
-there is a drawing. Flip does NOT confirm on the way back; it persists its
-pages, music and background image. The predicate's history — content, then
+there is a drawing. Flip, on the way back, applies the same rule to its own
+draft: it persists its pages, music and background image, and asks only when
+the media did not land durably, or, composing, whenever there is work not yet
+added to the post. The predicate's history — content, then
 media present, then durability — is written out above `atRisk` in
 `editor_draft.js`, and the reason for all three is one: a confirm that is
 usually wrong is one people learn to dismiss unread, and then it fails on the
@@ -598,8 +603,9 @@ occasion that mattered.
 on one row — it is a very common Android width, so a two-row bar there is not a
 rare fallback. 320 is Display Zoom on a modern iPhone, an accessibility setting
 rather than a legacy device, so it must degrade rather than break. The two
-surfaces degrade DIFFERENTLY and both are correct: Pad wraps, Flip scrolls
-(`flip.css` sets `flex-wrap: nowrap; overflow-x: auto` below 560px on purpose).
+surfaces degrade the SAME way since v315: when the row does not fit, both
+toolbars become one scrolling row whose far edge fades (`lib/toolscroll.js`,
+`.tb-scroll` in styles.css), the owner's pick over a second row.
 `verify_layout.py` asserts that every control stays REACHABLE, not that a
 particular mechanism is used — an earlier version asserted no-overflow and would
 have failed Flip's scroll row as though a deliberate decision were a defect.

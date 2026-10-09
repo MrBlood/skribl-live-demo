@@ -199,7 +199,7 @@ feature you ship once.
 
 *(v304: the first step toward C was taken, deliberately small. `/gallery`
 lists every Skribl whose author ticked "Show in the public gallery" on the
-post sheet — opt-in, default unlisted, nothing recommended, nothing ranked. It
+post sheet — opt-in, default unlisted, nothing recommended; its Hot tab sorts by recent plays. It
 is the listing a host feed already reads, rendered by Skribl itself. What it
 is not: an account, a follow, a like. Those are still C, and still backed into.)*
 
@@ -231,7 +231,7 @@ and puts the tool in front of people who already exist.
 3. ~~**A real timeline.**~~ **SHIPPED (v226).** Drag to reorder and holds
    already existed — the hard half. Range selection and page-span copy/paste
    landed on the strip rather than in a management cluster, per the direction:
-   shift-click or hold-and-sweep to select a run, and Copy / Delete / ×hold /
+   shift-click, or a page's ⋯ → Select through here, to select a run, and Copy / Delete / ×hold /
    the arrows re-scope to it instead of multiplying. `lib/pagespan.js`,
    `verify_pagespan.py`. What is still absent is a scrubbable time RULER —
    this bought range editing, not a timeline view.
@@ -609,7 +609,7 @@ surfaces. If a stitch-like pattern is ever reported again, the first question
 is whether a field tool touched the page: one of these is a design limit and
 the other was a renderer bug.
 
-## 6h. Nothing tells you the document budget until you post (v301)
+## 6h. Nothing tells you the document budget until you post (v301) — BUILT
 
 Found while measuring 6g, and it is the more actionable of the two.
 

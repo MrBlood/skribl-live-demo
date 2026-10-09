@@ -15154,3 +15154,29 @@ margin and sat on the band's bottom edge on both editors (owner's iPhone). It
 has 18px now, the same as each side; the owner chose 18 over 14 from a mock.
 verify_help measures it against the side inset at a desk and a phone width; the
 old 0 turned 4 red.
+
+**The documents say what the tree does (preflight, documentation truth).** A
+read of every document against the code it describes, item by item, each checked
+before it was changed. How it works offered a Record button a blank canvas does
+not have (twice per editor), put Artwork in a page bar it left at v226, named a
+"Tune" panel the UI calls Playback settings, listed Copy link and Gallery as the
+shared player's own controls (they are in its ⋯ menu, with Share and Speed) and
+hard-coded the 25-draft limit that SKRIBL_MAX_DRAFTS sets. DEVICE-CHECKLIST.md
+asked a tester for that Record button and for a Feed post order the composer
+stopped producing at #329, so it would have filed two false bugs. INTEGRATION.md
+said an iframed player is dark whatever the OS says (it follows the viewer's
+setting) and, with README.md, called mute "off by default" (sound is). README.md
+installed the harness without its requirements file and sent reviewers to
+docs/HANDOFF.md as the per-version record, which stops at v131; START-HERE.md
+said the same, and that Flip never confirms leaving, that the two toolbars
+degrade differently (one scrolling row for both since v315), that Flip loads
+editor_shapes, and that the version label is in a footer (it ends the ⋯ menu).
+ARCHIVE-README.md pointed to a hash in the seal commit, which no seal since
+v305 carries (the Release's SHA256SUMS does); SESSION-CONTEXT.md's seal sequence
+stopped before release.yml, which is what makes `gh attestation verify` find
+anything, and said a one-suite run re-stamps the documents (stamp_docs refuses).
+FUTURE.md 6h is marked BUILT, the strip's sweep selection is gone from FUTURE and
+harness/README.md, and harness/README.md lost a sentence fragment and an entry
+spliced into another. Left as found, because they could not be checked here: the
+shared player's Full screen on an iPhone (the button is offered only where the
+Fullscreen API is, which iPhone Safari may not report; the device pass decides).
