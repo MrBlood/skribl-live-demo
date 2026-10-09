@@ -34,6 +34,7 @@ Each is checked across viewports, because two of the three bugs above only
 appeared at particular widths — the crop needed a viewport WIDER than the app
 column, which no fixture had.
 """
+import base64
 import math
 import struct
 import sys
@@ -265,6 +266,38 @@ with sync_playwright() as p:
               _got and _got.lower() not in ((_bg or "").lower(), "#010203"),
               f"returned {_got} against a backdrop of {_bg} — the photo IS artwork, "
               "and a sampler that reads only the stroke canvas cannot see it")
+        _pg.close()
+
+    # A LIGHT CANVAS KEEPS LIGHT EDGES WHILE A TAKE RECORDS. The Pad's recording
+    # state swapped box-shadow wholesale and came after .light-bg, so White and
+    # Paper got the dark canvas's grey vignette back with the first stroke --
+    # found mocking Paper for the light theme. Asked of the PAINT, not the
+    # style: one screenshot of the canvas, its edge band read against its own
+    # middle at the same height, above the scribble. No baseline enters it, so
+    # no font or GPU difference can either.
+    print("\nVISUAL — a light canvas keeps light edges while a take records (Pad)")
+    for _name, _hex in (("Paper", "#f6f2ea"), ("White", "#ffffff")):
+        _pg = b.new_page(viewport={"width": 402, "height": 874})
+        _pg.goto(BASE + "/skribl-pad", wait_until="load"); _pg.wait_for_timeout(700)
+        _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _pg.evaluate("(hex) => document.querySelector(`.bg-swatch[data-bg=\"${hex}\"]`).click()", _hex)
+        _pg.wait_for_timeout(200)
+        scribble(_pg)                  # the first stroke starts a take
+        _pg.wait_for_timeout(600)      # past the box-shadow's 0.3s transition
+        _w = _pg.evaluate("""() => { const w = document.querySelector('.canvas-wrap'), r = w.getBoundingClientRect();
+            return { recording: w.classList.contains('recording'), light: w.classList.contains('light-bg'),
+                     x: r.left, y: r.top, w: r.width, h: r.height }; }""")
+        _shot = base64.b64encode(_pg.screenshot(clip={"x": _w["x"], "y": _w["y"], "width": _w["w"], "height": _w["h"]})).decode()
+        _lum = _pg.evaluate("""async (b64) => {
+            const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+            const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+            const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+            const L = (px, py) => { const d = x.getImageData(px, py, 1, 1).data; return 0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2]; };
+            const y = Math.round(img.height * 0.18);
+            return { edge: Math.round((L(10, y) + L(img.width - 11, y)) / 2), middle: Math.round(L(Math.round(img.width / 2), y)) }; }""", _shot)
+        check(f"Pad on {_name}: while a take records, the canvas's edge stays within 18 levels of its middle",
+              _w["recording"] and _w["light"] and _lum["middle"] - _lum["edge"] <= 18,
+              f"{_w['recording']=} {_w['light']=} {_lum}")
         _pg.close()
 
 
