@@ -650,11 +650,15 @@ with sync_playwright() as p:
             browsing.goto(pg, BASE, path, settle=400)
             pg.evaluate("(c) => document.querySelector(`.bg-swatch[data-bg=\"${c}\"]`).click()", pick)
             pg.wait_for_timeout(200)
+            # Read at EACH switch, not only at the end: a canvas that wrongly
+            # follows one way follows straight back the other, and the round
+            # trip alone ends where it began.
             theme(pg, there)
+            st_there = ground(pg, label)
             theme(pg, scheme)
             st = ground(pg, label)
             check(f"{label}: {GROUND_NAME[pick]} picked by hand in the {scheme} theme is kept through {there} and back",
-                  on(st, pick), str(st))
+                  on(st_there, pick) and on(st, pick), f"in {there}: {st_there}; back in {scheme}: {st}")
             pg.close()
 
         # A RESTORED DRAFT keeps its own: drawn on the dark canvas, reopened
