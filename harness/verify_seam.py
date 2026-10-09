@@ -289,7 +289,7 @@ if _marker in _appjs:
     _pscripts = _player_scripts()
     _never = {"editor_export.js", "editor_post.js", "editor_menu.js", "editor_music.js",
               "editor_photo.js", "editor_shapes.js", "editor_draw.js", "editor_tune.js",
-              "lib/sheetswipe.js"}
+              "lib/sheetswipe.js", "lib/postsheet.js"}
     check("the player's own scripts are found at all (else the next check proves nothing)",
           "app.js" in _pscripts and "lib/eventpoint.js" in _pscripts, str(sorted(_pscripts)))
     check("the extracted editor bundles are not loaded by the player",
@@ -330,8 +330,20 @@ if _marker in _appjs:
     # function against the tree before it: nothing editor-only became
     # player-reachable; the restore helpers the change added live in the
     # editor bundles (markPhotoFit in editor_photo.js). Measured: 2189.
+    # 2185 -> 2070 with the shared Post sheet, and the reason is a move, not a
+    # leak, exactly as at v317. Flip posts through the Pad's sheet now, so its
+    # behaviour left editor_post.js for lib/postsheet.js, which both editors
+    # load and the player never does (_never above names it). Measured function
+    # by function against the tree before it: the six that moved (updateCharCount,
+    # setState, syncSoundMark, openPost, closePost, applyKeyboardInset) and the 7
+    # lines submit lost to them are the 134 lines the figure fell by, 2210 to
+    # 2076, while app.js's player-reachable and editor-only sets did not move.
+    # Not counted here wholesale, for v317's reason: its one span (attach) also
+    # wraps the listeners editor_post.js wired outside any function, which were
+    # never counted, so counting it would add about 160 lines and let that much
+    # editor code leak unseen.
     check("editor-only code has not leaked into the player's reachable set",
-          _editor_total >= 2185,
+          _editor_total >= 2070,
           f"{_editor_total} lines editor-only ({_editor_lines} still in app.js, "
           f"{_extracted} extracted), was 2467 — something the player now calls "
           f"used to be editor-only")

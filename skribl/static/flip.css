@@ -9,26 +9,6 @@
   .flip-export-bar { height: 8px; border-radius: 999px; background: rgba(var(--wash-rgb), .08); overflow: hidden; }
   .flip-export-fill { height: 100%; width: 0%; background: var(--ui-hi); border-radius: 999px; transition: width .12s linear; }
   #flipExportCancel { align-self: center; min-width: 96px; }
-  .flip-share-card { position: relative; gap: 12px; text-align: center; }
-  .flip-share-close { position: absolute; top: 10px; right: 12px; background: none; border: 0; color: var(--text-secondary); cursor: pointer; font-size: 15px; }
-  .flip-share-sub { margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
-  .flip-share-url { width: 100%; box-sizing: border-box; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--hairline-strong);
-    background: var(--surface-panel); color: var(--text-primary);
-    /* 16px: below it iOS Safari zooms the whole page on focus. See .zoom-hud .zoom-val-input. */
-    font-size: 16px; text-align: center; }
-  /* Compose step. Inherits .flip-share-url's box so the title, caption and the
-     result URL all read as one family; the caption relaxes text-align and
-     resize, which a single-line readonly URL does not want. */
-  /* [hidden] must win. An explicit `display` on the element overrides the UA's
-     `[hidden]{display:none}`, so setting .hidden=true in JS silently did
-     nothing and both panes rendered at once. Scope the display to :not([hidden])
-     rather than adding a second rule to undo the first. */
-  #flipShareCompose:not([hidden]), #flipShareResult:not([hidden]) { display: flex; flex-direction: column; gap: 12px; }
-  .flip-share-caption { text-align: left; resize: vertical; min-height: 62px; font-family: inherit; line-height: 1.45; }
-  .flip-share-count { font-size: 11px; color: var(--text-secondary); text-align: right; margin-top: -6px; }
-  .flip-share-actions { display: flex; gap: 8px; }
-  .flip-share-actions .panel-btn { flex: 1 1 0; text-align: center; text-decoration: none; }
-  .flip-share-open { background: var(--accent-fill); border-color: transparent; color: #fff; display: flex; align-items: center; justify-content: center; }
   /* Kill double-tap-to-zoom on taps (iOS ignores user-scalable=no). "manipulation"
      keeps tap/scroll/pinch but drops the double-tap zoom + 300ms tap delay. The
      canvas keeps touch-action:none so drawing never scrolls or gesture-zooms. */
@@ -1196,16 +1176,6 @@
   .export-gif-toggle { display: flex; flex-direction: column; gap: 6px; }
   .export-loops-seg { display: flex; width: 100%; }
   .export-loops-seg button { flex: 1 1 0; min-width: 0; }
-  /* Persistent share failure, in the sheet the user is looking at. A chip
-     alone vanishes and, on a phone, is easily missed — which is how a 500 from
-     an unreachable database read as "share does nothing". */
-  .flip-share-error {
-    text-align: left; font-size: 12px; line-height: 1.5;
-    color: var(--danger-soft); background: rgba(244, 50, 111, 0.12);
-    border: 1px solid rgba(244, 50, 111, 0.35); border-radius: 10px;
-    padding: 9px 11px;
-  }
-  .flip-share-error[hidden] { display: none; }
 
 /* FM only below 360px — narrower than any phone in use (an iPhone SE is 375).
    It used to appear below 440px, tuned for a header that also held fps, onion,

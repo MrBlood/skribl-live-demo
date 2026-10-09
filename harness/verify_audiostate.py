@@ -399,15 +399,15 @@ def post_under_held_decode(pg, editor):
         pg.mouse.move(box["x"] + 80, box["y"] + 80); pg.mouse.down(); pg.mouse.move(box["x"] + 300, box["y"] + 200, steps=10); pg.mouse.up()
         pg.wait_for_timeout(400)
         pg.click("#postBtn"); pg.wait_for_timeout(500)
-        # Flip's share sheet has its own ids
-        pg.fill("#flipShareTitle", "f2 race")
-        pg.click("#flipShareSubmit")
+        # Flip posts through the Pad's sheet, so the ids are the same
+        pg.fill("#postTitleInput", "f2 race")
+        pg.click("#postSubmitBtn")
     pg.wait_for_timeout(600)           # submit is now waiting on the decode
     pg.evaluate("() => { if (window.__releaseDecode) window.__releaseDecode(); }")
     pg.wait_for_timeout(5000)
     if editor == "pad":
         return pg.evaluate("() => (window.SkriblPosted && SkriblPosted.list && SkriblPosted.list()[0] || {}).id || null")
-    url = pg.evaluate("() => { const u = document.getElementById('flipShareUrl'); return u ? (u.value || u.textContent || u.href || '') : ''; }")
+    url = pg.evaluate("() => (SkriblPosted.list()[0] || {}).url || ''")
     return url.rstrip('/').split('/')[-1] if url else None
 
 

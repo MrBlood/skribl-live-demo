@@ -122,6 +122,15 @@ SHEETS = [
     ("Flip", "the report sheet", "/flip",
      "() => { document.getElementById('moreBtn').click(); document.getElementById('miReport').click(); }",
      "#reportSheet", "() => document.getElementById('reportOverlay').hidden", None),
+    # The Pad's post sheet, on Flip since Flip posts through it (owner:
+    # "shouldn't flip and pad look the same?"). Flip will not open it on an
+    # empty page, so the opener gives the page a stroke first, and lets the
+    # editor wake Post for it as a drawn stroke does.
+    ("Flip", "the post sheet", "/flip",
+     "() => { frames[0].strokes.push({x:40,y:40,color:'#ffffff',size:6,t:1,start:true},"
+     "{x:120,y:90,color:'#ffffff',size:6,t:2}); frames[0].strokeGroups.push(2); render(); updateToolState();"
+     " document.getElementById('postBtn').click(); }",
+     "#postSheet", "() => document.getElementById('postOverlay').hidden", "#postSheet .menu-handle"),
     ("Gallery", "the page menu", "/gallery", "() => document.getElementById('pageMenuBtn').click()",
      "#pageMenu", "() => document.getElementById('pageMenuOverlay').hidden", "#pageMenu .pm-grab"),
 ]

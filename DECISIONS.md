@@ -14717,3 +14717,55 @@ They are gone, and a label or a number squeezed past its words turns the check
 red. The ring's place was first asked only to be on the canvas above the tray,
 which a ring centred on the whole canvas also met; it asks for the middle of the
 canvas in view above the tray now.
+
+**Flip posts through the Pad's own sheet (owner, two screenshots of Flip's post
+dialog: "when you're done, fix this", then "shouldn't flip and pad look the
+same? flip is not as clean as pad", and "yes, make flip post like pad").** Flip
+had a centred card of its own beside the Pad's sheet, and it had drifted. A
+wrapper added for compose mode in #254 took the fields out of the card's flex
+column, so the title box ran into the caption box and the "0 / 300" counter
+lost its place under the caption's right edge. The title field, the link and
+the buttons fell back to the browser's Arial beside the app's face. The link
+field cut the address off at "onrender.cor", and Open player wrapped onto two
+lines beside one-line buttons. The Pad's sheet had been through all of that
+in v293: the drawing as its preview, labelled fields, one Post button, a status
+line that says what happened, and Watch / Share / Copy link on one row.
+
+One sheet now, as the export chooser and the tool shelf already are: the
+Pad's markup moved into `_skribl_post.html`, included by both editors, and its
+behaviour (opening and closing, the lift above a phone's keyboard, the swipe,
+its states, the sound mark and the result row) moved out of editor_post.js into
+`lib/postsheet.js`, unchanged. What stays with each editor is what genuinely
+differs: the payload, the network call and what a post leaves behind (the
+Pad's editor_post.js, Flip's shareSkribl). Flip's page and point budgets now
+answer on the sheet's status line, drawn as an error, with Post keeping its
+word; a failed send is the Pad's error state, with Try again. Flip's preview is
+its poster page, the one its share card shows. The posted title stays in its
+field as the record of what was posted, as on the Pad, where Flip's card used
+to swap the form for the link.
+
+verify_ux, POST RESULT, now on both editors at 390 and 1100: the posted title
+stays in its field, the form is back at full strength, Watch, Share and Copy
+link are on one row inside the sheet with no label wrapping, and Copy link
+gives the absolute link. POST SHEET holds the two editors' open sheets to each
+other, field by field, as painted. verify_flipmeta reads the shared fields,
+reads the posted link from Your Skribls, and asks that too many pages is said
+on the status line with nothing sent and Post keeping its word. verify_compose
+asks that Flip's Add puts the sheet away. verify_sheetswipe drives the sheet on
+Flip, and verify_a11y counts it there, opened from script because a tap
+focuses Post in Chromium and not in iPhone Safari. On main, every suite that
+drives Flip's post stops at the first missing field, and verify_a11y reports
+four failures. Each part broken on its own turned its own checks red: the
+refusal, the failure's words, Add putting the sheet away, a Flip-only font
+rule, Copy link, Flip's result row and the opener Flip names. That last one
+went unnoticed at first: a click focuses Post in Chromium, so focus came back
+without the opener. The census opens the sheet from script now, as Safari
+leaves focus, and turned red.
+
+verify_seam's floor for editor-only code moves from 2185 to 2070, by the 134
+lines that left editor_post.js for lib/postsheet.js; the player's reachable set
+and app.js's editor-only set did not move, and the player is now barred from
+loading lib/postsheet.js. The player loading it, or 18 lines of editor code
+going missing, each turn it red. verify_sheetswipe's opener for Flip's sheet
+drew its stroke by script, which never woke Post, so the first full run never
+opened the sheet there; it calls updateToolState() now, as a drawn stroke does.

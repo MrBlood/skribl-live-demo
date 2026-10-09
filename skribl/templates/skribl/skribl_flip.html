@@ -501,67 +501,10 @@
       <button type="button" class="panel-btn" id="flipExportCancel">Cancel</button>
     </div>
   </div>
-  <!-- Two states in one sheet: COMPOSE (title + caption, before posting) and
-       RESULT (the link, after). Flip previously had only the result state and
-       hardcoded title:'Flip animation' with no caption at all, so every Flip
-       share landed in the platform indistinguishable from every other one.
-       Limits match the Pad's inputs (60/280); the server truncates at 80/300. -->
-  {# A DIALOG, and it says so: role + aria-modal are what the a11y census
-     counts and what a screen reader announces, and lib/modalfocus.js is what
-     keeps Tab inside and hands focus back to Post on close (v290; it had
-     neither, and escaped verify_a11y's census by not declaring itself). #}
-  <div class="flip-export" id="flipShare" role="dialog" aria-modal="true" aria-label="Post your Skribl" hidden>
-    <div class="flip-export-card flip-share-card">
-      <button type="button" class="flip-share-close" id="flipShareClose" aria-label="Close">&#x2715;</button>
-
-      <div id="flipShareCompose">
-        <span class="flip-export-label">{{ "Add to your post" if compose else "Post your Skribl" }}</span>
-        <p class="flip-share-sub">{{ "It goes inline in the post, and plays there" if compose else "Add a title and share it to Skribl" }}</p>
-        {# Composing, the host's own composer owns the words and the visibility:
-           these stay in the page (flip.js reads them, null-safe or not) but hidden. #}
-        <div class="flip-share-fields"{% if compose %} hidden{% endif %}>
-        <input type="text" id="flipShareTitle" aria-label="Title" class="flip-share-url" maxlength="{{ skribl_limits.title }}"
-               placeholder="Untitled Skribl" autocomplete="off">
-        <textarea id="flipShareCaption" aria-label="Caption" class="flip-share-url flip-share-caption" maxlength="{{ skribl_limits.caption }}"
-                  rows="3" placeholder="Say something about it…"></textarea>
-        <span class="flip-share-count" id="flipShareCount">0 / {{ skribl_limits.caption }}</span>
-        {# THE PUBLIC CHOICE, OPT-IN (v304) — the Pad's row, same class, same
-           rule: ticked sends visibility "public" and the post appears in
-           /gallery; unticked omits the key and the post is shared by its link
-           only. verify_gallery.py pins both on this surface. #}
-        <label class="post-check flip-share-check">
-          <input type="checkbox" id="flipSharePublic" class="post-check-input">
-          <span class="post-check-box" aria-hidden="true"></span>
-          <span class="post-check-text">Show in the public gallery<span class="post-check-sub">Off, it is shared by its link only</span></span>
-        </label>
-        </div>
-        {# A failed post used to report itself only as a transient chip. On a
-           phone that is easy to miss entirely, so a 500 read as "the button
-           does nothing" rather than "it failed" — which is what happened when
-           the database went unreachable. This stays on screen until the next
-           attempt. #}
-        <div class="flip-share-error" id="flipShareError" role="alert" hidden></div>
-        <div class="flip-share-actions">
-          <button type="button" class="panel-btn" id="flipShareCancel">Cancel</button>
-          <button type="button" class="panel-btn flip-share-open" id="flipShareSubmit">{{ "Add to post" if compose else "Post to Skribl" }}</button>
-        </div>
-      </div>
-
-      <div id="flipShareResult" hidden>
-        <span class="flip-export-label">Your Skribl is live &#127881;</span>
-        <p class="flip-share-sub">Anyone with the link can watch it play — with your loop, image, and controls.</p>
-        <input type="text" id="flipShareUrl" aria-label="Share link" class="flip-share-url" readonly>
-        <div class="flip-share-actions">
-          {# Shown only where navigator.share exists (v292; outside review of
-             v291, SK-AUD-016): the system share sheet is how a phone sends a
-             link. Copy link stays for everyone, beside it. #}
-          <button type="button" class="panel-btn flip-share-open" id="flipShareNative" hidden>Share</button>
-          <button type="button" class="panel-btn" id="flipShareCopy">Copy link</button>
-          <a id="flipShareOpen" class="panel-btn flip-share-open" target="{{ skribl_player_target }}" rel="noopener">Open player</a>
-        </div>
-      </div>
-    </div>
-  </div>
+  {# THE POST SHEET IS THE PAD'S (owner: "shouldn't flip and pad look the same?
+     flip is not as clean as pad"). One partial for both editors, as the export
+     chooser is; lib/postsheet.js is its behaviour and shareSkribl drives it. #}
+  {% include 'skribl/_skribl_post.html' %}
 
 <!-- Route config. Flip had NO config block: flip.js hardcoded fetch('/api/skribls')
      and a '/s/' fallback, so it was the one surface a url_prefix would have
@@ -595,6 +538,8 @@
   {# lib/sheetswipe.js: every bottom sheet closes on a swipe down or a tap on
      its grabber. Before report.js and every other script that attaches it. #}
   <script src="{{ skribl_asset('lib/sheetswipe.js') }}" defer></script>
+  {# lib/postsheet.js: the Post sheet both editors share (_skribl_post.html). #}
+  <script src="{{ skribl_asset('lib/postsheet.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/report.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/segslider.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/painttarget.js') }}" defer></script>

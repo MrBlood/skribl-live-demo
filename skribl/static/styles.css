@@ -182,7 +182,7 @@
   /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
-     .post-watch), Flip's share CTA (.flip-share-open), and the whole PLAYER
+     .post-watch, one sheet for both editors), and the whole PLAYER
      (those carrying words use --accent-fill, below, for AA)
      surface — a shared link travels off the branded
      host, so the player stays branded, and verify_ux pins its active fill
@@ -4054,8 +4054,8 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 .post-watch .play-badge svg { width: 12px; height: 12px; }
 
-/* THE RESULT IS ONE ROW: Watch / Share / Copy link, the shape of
-   Flip's .flip-share-actions. The row takes the CTA's margins so the buttons
+/* THE RESULT IS ONE ROW: Watch / Share / Copy link, on both editors since
+   Flip posts through this sheet too. The row takes the CTA's margins so the buttons
    in it carry none, and share the width evenly (Share is absent where
    navigator.share is). Only Watch keeps the border pulse: three chips
    pulsing at once is a fairground. */

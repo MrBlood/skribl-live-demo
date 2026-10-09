@@ -321,11 +321,12 @@ with sync_playwright() as sp:
     # and drift the first time one of the two is redrawn — which is exactly how
     # the in-post player's markup ended up written three times.
     # The macro has its own file since the tab strip became a partial both
-    # editors include (the dock redesign): the sheet's caller is in the editor
-    # template, the Music tab's in _skribl_media_tabs.html.
+    # editors include (the dock redesign): the sheet's caller is the post
+    # sheet's own partial (_skribl_post.html, on both editors since Flip posts
+    # through it), the Music tab's in _skribl_media_tabs.html.
     _T = ROOT / "skribl" / "templates" / "skribl"
     _glyph = (_T / "_skribl_music_glyph.html").read_text(encoding="utf-8")
-    tmpl = (_T / "skribl_editor.html").read_text(encoding="utf-8")
+    tmpl = (_T / "_skribl_post.html").read_text(encoding="utf-8")
     _tabs = (_T / "_skribl_media_tabs.html").read_text(encoding="utf-8")
     _copies = sum(t.count('d="M9 18V5l12-2v13"') for t in (_glyph, tmpl, _tabs))
     check("the music glyph's path data is written ONCE, in its macro",
@@ -451,7 +452,7 @@ with sync_playwright() as sp:
     _A2 = (("Pad", "/skribl-pad?compose=1", "#canvas", "#toast",
             "() => { const o = document.getElementById('postOverlay'); return !!o && !o.hidden; }"),
            ("Flip", "/flip?compose=1", "#pad", "#flipChip",
-            "() => { const m = document.getElementById('flipShare'); return !!m && !m.hidden; }"))
+            "() => { const o = document.getElementById('postOverlay'); return !!o && !o.hidden; }"))
     for _name, _path, _cv, _say, _opened in _A2:
         _ac = b.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
         _ap = _ac.new_page()
@@ -666,7 +667,7 @@ with sync_playwright() as sp:
     _ff.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
     _hdr = _ff.evaluate("""() => ({ path: location.pathname + location.search, x: !!document.getElementById('composeCloseBtn'),
         label: document.querySelector('#postBtn .btn-label').innerText.trim(),
-        submit: document.getElementById('flipShareSubmit').textContent.trim() })""")
+        submit: document.getElementById('postSubmitBtn').textContent.trim() })""")
     check("the Pad's Flip Mode row opens Flip in the composer, with × and Add",
           _hdr["path"].endswith("/flip?compose=1") and _hdr["x"] and _hdr["label"] == "Add"
           and _hdr["submit"] == "Add to post", str(_hdr))
@@ -685,7 +686,7 @@ with sync_playwright() as sp:
           _ff.evaluate("() => localStorage.getItem('skribl_flip_autosave_v1') === null"))
     _ff.evaluate("() => document.getElementById('postBtn').click()")
     _fp.wait_for_timeout(600)
-    _ff.evaluate("() => document.getElementById('flipShareSubmit').click()")
+    _ff.evaluate("() => document.getElementById('postSubmitBtn').click()")
     _fp.wait_for_timeout(2500)
     check("Add to post closes the overlay and attaches the animation, publishing nothing",
           _fp.evaluate("() => document.getElementById('padOverlay').hidden") is True and not _fposts,
@@ -696,6 +697,11 @@ with sync_playwright() as sp:
     _re = _ff.evaluate("() => ({ path: location.pathname + location.search, pages: frames.length })")
     check("reopening brings back Flip, holding both pages",
           _re["path"].endswith("/flip?compose=1") and _re["pages"] == 2, str(_re))
+    # The Pad's lesson, now Flip's too since it posts through the same sheet: a
+    # sheet left open after Add sits over the canvas the author came back to
+    # draw on ("the second edit could not draw").
+    check("...with the post sheet put away, not left over the canvas",
+          _ff.evaluate("() => { const o = document.getElementById('postOverlay'); return !o || o.hidden; }") is True)
     _ff.evaluate("() => document.getElementById('moreBtn').click()")
     _fp.wait_for_timeout(400)
     _ff.evaluate("() => document.getElementById('padBtn').click()")

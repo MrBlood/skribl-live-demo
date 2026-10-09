@@ -77,7 +77,7 @@ with sync_playwright() as p:
           f"{pg.evaluate('() => loopCrossfadeMs')}ms")
 
     pg.evaluate("shareSkribl()"); pg.wait_for_timeout(9000)
-    url = pg.evaluate("() => { const i=document.getElementById('flipShareUrl'); return i && i.value; }")
+    url = pg.evaluate("() => { const u = (SkriblPosted.list()[0] || {}).url || ''; return u ? new URL(u, location.href).href : ''; }")
     check("posted and got a share url", bool(url), url or "none")
 
     # ---------- the unverified path: does it flip WITH SOUND at /s/<id> ----------

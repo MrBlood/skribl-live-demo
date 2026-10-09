@@ -2770,7 +2770,7 @@ print("\nSHARE — on a device with a share sheet, Send it is a Share button; Co
 # the page shows.
 with _sp() as _sh:
     _shb = _sh.chromium.launch()
-    for _path, _name, _btn in (("/flip", "Flip", "#flipShareNative"), ("/", "Pad", "#postShareBtn")):
+    for _path, _name, _btn in (("/flip", "Flip", "#postShareBtn"), ("/", "Pad", "#postShareBtn")):
         for _has in (True, False):
             _ctx = _shb.new_context(viewport={"width": 1100, "height": 900})
             if _has:
@@ -2786,11 +2786,18 @@ with _sp() as _sh:
                 _pg.wait_for_timeout(300)
                 _pg.click("#postBtn")
                 _pg.wait_for_timeout(400)
-                _pg.fill("#flipShareTitle", "Share probe")
-                _pg.click("#flipShareSubmit")
-                _pg.wait_for_selector("#flipShareUrl", state="visible", timeout=20000)
+                _pg.fill("#postTitleInput", "Share probe")
+                _pg.click("#postSubmitBtn")
+                try:
+                    _pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
+                except Exception:                                    # noqa: BLE001
+                    check(f"SHARE ({_name}): with navigator.share the result offers Share" if _has else
+                          f"SHARE ({_name}): without navigator.share there is no Share button",
+                          False, "no result row after posting")
+                    _ctx.close()
+                    continue
                 _pg.wait_for_timeout(500)
-                _url = _pg.evaluate("() => document.getElementById('flipShareUrl').value")
+                _url = _pg.evaluate("() => { const u = (SkriblPosted.list()[0] || {}).url || ''; return u ? new URL(u, location.href).href : ''; }")
             else:
                 draw(_pg, "#canvas", 200, 200, n=16)
                 _pg.wait_for_timeout(300)
@@ -2804,7 +2811,7 @@ with _sp() as _sh:
                 _pg.wait_for_timeout(400)
                 _url = None
             _vis = _pg.evaluate(f"() => {{ const b = document.querySelector('{_btn}'); return b ? (!b.hidden && getComputedStyle(b).display !== 'none') : null; }}")
-            _copy = _pg.evaluate("() => { const c = document.getElementById('flipShareCopy'); return c ? !c.hidden : null; }") if _path == "/flip" else True
+            _copy = _pg.evaluate("() => { const c = document.getElementById('postCopyBtn'); return c ? !c.hidden : null; }") if _path == "/flip" else True
             if _has:
                 check(f"SHARE ({_name}): with navigator.share the result offers Share", _vis is True, f"visible={_vis}")
                 if _vis:
@@ -2822,31 +2829,51 @@ with _sp() as _sh:
             _ctx.close()
     _shb.close()
 
-print("\nPOST RESULT (Pad) — one row of what to do next, and the title stays on screen")
+print("\nPOST RESULT — one row of what to do next, and the title stays on screen")
 # Owner, v293, from a phone ("after post on pad"): the sheet kept the compose
 # form on screen at half opacity with its title and caption wiped, and under
-# it two full-width chips stacked. Flip's result is one row (Share / Copy
-# link / Open player). The Pad's is now the same shape — Watch / Share / Copy
-# link on one row, Share only where navigator.share is — the form returns to
-# full opacity, and the posted title stays in its field as the record of what
-# was just posted. Copy link is the mechanism, read from a clipboard stub.
+# it two full-width chips stacked. The Pad's became Watch / Share / Copy link
+# on one row, Share only where navigator.share is; the form returns to full
+# opacity, and the posted title stays in its field as the record of what was
+# just posted. Copy link is the mechanism, read from a clipboard stub.
+# FLIP POSTS THROUGH THE SAME SHEET NOW (owner: "shouldn't flip and pad look
+# the same? flip is not as clean as pad"). Its own card had wrapped Open player
+# onto two lines beside one-line buttons, which this would have said, had it
+# ever been asked of Flip. So it is asked of both editors.
 with _sp() as _pr:
     _prb = _pr.chromium.launch()
-    for _w in (390, 1100):
+    for _name, _path in (("Pad", "/"), ("Flip", "/flip")):
+      for _w in (390, 1100):
         _ctx = _prb.new_context(viewport={"width": _w, "height": 844 if _w == 390 else 900})
         _ctx.add_init_script("""Object.defineProperty(navigator, 'share', { configurable: true, value: async (d) => { window.__shared = d; } });
             Object.defineProperty(navigator, 'clipboard', { configurable: true,
                 value: { writeText: async (t) => { window.__copied = t; } } });""")
         _pg = _ctx.new_page()
-        browsing.goto(_pg, BASE, "/")
+        browsing.goto(_pg, BASE, _path)
         _pg.wait_for_timeout(600)
-        draw(_pg, "#canvas", 200, 200, n=16)
-        _pg.wait_for_timeout(300)
-        _pg.click("#recordBtn"); _pg.wait_for_timeout(500)
+        if _path == "/":
+            draw(_pg, "#canvas", 200, 200, n=16)
+            _pg.wait_for_timeout(300)
+            _pg.click("#recordBtn"); _pg.wait_for_timeout(500)
+        else:
+            _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            draw(_pg, "#pad", 200, 200, n=16)
+            _pg.wait_for_timeout(300)
         _pg.click("#postBtn"); _pg.wait_for_timeout(800)
+        if not _pg.locator("#postSheet").count():
+            check(f"POST RESULT ({_name}) at {_w}: Watch, Share and Copy link are all offered",
+                  False, f"{_name} has no post sheet of the Pad's")
+            _ctx.close()
+            continue
         _pg.fill("#postTitleInput", "Result probe")
         _pg.click("#postSubmitBtn")
-        _pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
+        try:
+            _pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
+        except Exception:                                        # noqa: BLE001
+            check(f"POST RESULT ({_name}) at {_w}: Watch, Share and Copy link are all offered",
+                  False, "no Watch after posting")
+            _ctx.close()
+            continue
         _pg.wait_for_timeout(600)
         _st = _pg.evaluate("""() => {
             const sheet = document.getElementById('postSheet').getBoundingClientRect();
@@ -2858,27 +2885,67 @@ with _sp() as _pr:
             return { title: document.getElementById('postTitleInput').value,
                      bodyOpacity: getComputedStyle(document.getElementById('postBody')).opacity,
                      sheetRight: Math.round(sheet.right), btns }; }""")
-        check(f"POST RESULT at {_w}: the posted title is still in its field",
+        check(f"POST RESULT ({_name}) at {_w}: the posted title is still in its field",
               _st["title"] == "Result probe", f"field reads {_st['title']!r}")
-        check(f"POST RESULT at {_w}: the form is back at full opacity, not dimmed under the result",
+        check(f"POST RESULT ({_name}) at {_w}: the form is back at full opacity, not dimmed under the result",
               _st["bodyOpacity"] == "1", f"opacity {_st['bodyOpacity']}")
         _b = [x for x in _st["btns"] if x]
-        check(f"POST RESULT at {_w}: Watch, Share and Copy link are all offered",
+        check(f"POST RESULT ({_name}) at {_w}: Watch, Share and Copy link are all offered",
               [x["id"] for x in _b] == ["postWatchBtn", "postShareBtn", "postCopyBtn"], str(_st["btns"]))
         if len(_b) == 3:
-            check(f"POST RESULT at {_w}: ...on one row, each a tap target, inside the sheet",
+            check(f"POST RESULT ({_name}) at {_w}: ...on one row, each a tap target, inside the sheet",
                   max(x["top"] for x in _b) - min(x["top"] for x in _b) <= 1 and min(x["h"] for x in _b) >= 44
                   and max(x["right"] for x in _b) <= _st["sheetRight"], str(_b))
             # "Copy link" wrapped to two lines in a 103px cell on the first cut:
             # the label's box was 2.3x its font size; one line is under 1.3x.
-            check(f"POST RESULT at {_w}: no label in the row wraps",
+            check(f"POST RESULT ({_name}) at {_w}: no label in the row wraps",
                   all(x["lines"] < 1.6 for x in _b), str([(x["id"], x["lines"]) for x in _b]))
             _pg.click("#postCopyBtn"); _pg.wait_for_timeout(300)
             _c = _pg.evaluate("() => window.__copied || null")
-            check(f"POST RESULT at {_w}: Copy link puts the player's absolute link on the clipboard",
+            check(f"POST RESULT ({_name}) at {_w}: Copy link puts the player's absolute link on the clipboard",
                   isinstance(_c, str) and _c.startswith(BASE) and "/s/" in _c, str(_c))
         _ctx.close()
     _prb.close()
+
+print("\nPOST SHEET — Flip posts through the Pad's own sheet, so the two look the same")
+# The owner, looking at Flip's post dialog beside the Pad's: "shouldn't flip and
+# pad look the same? flip is not as clean as pad". Flip's was a card of its own:
+# its title, link and buttons fell back to the browser's Arial beside the app's
+# face, its two fields touched, and its counter sat off to one side. One
+# partial now (_skribl_post.html) and one module (lib/postsheet.js); this holds
+# the two editors' sheets to each other, open, field by field, as painted.
+_SIG = r"""() => { const o = {};
+  for (const sel of ['#postSheet', '#postTitleInput', '#postCaptionInput', '#postSheet .post-field-label',
+                     '#postSubmitBtn', '#postCharCount', '#postSheet .post-check-text']) {
+    const e = document.querySelector(sel);
+    if (!e || !e.getClientRects().length) { o[sel] = null; continue; }
+    const c = getComputedStyle(e), r = e.getBoundingClientRect();
+    o[sel] = [c.fontFamily, c.fontSize, c.fontWeight, c.color, c.backgroundColor, c.padding,
+              c.borderRadius, c.textAlign, Math.round(r.width), Math.round(r.left)].join(' | ');
+  }
+  return o; }"""
+with _sp() as _ps:
+    _psb = _ps.chromium.launch()
+    for _w in (390, 1100):
+        _sigs = {}
+        for _name, _path in (("Pad", "/"), ("Flip", "/flip")):
+            _ctx = _psb.new_context(viewport={"width": _w, "height": 844 if _w == 390 else 900})
+            _pg = _ctx.new_page()
+            browsing.goto(_pg, BASE, _path)
+            _pg.wait_for_timeout(600)
+            _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            draw(_pg, "#canvas" if _path == "/" else "#pad", 200, 200, n=16)
+            _pg.wait_for_timeout(300)
+            if _path == "/":
+                _pg.click("#recordBtn"); _pg.wait_for_timeout(500)
+            _pg.click("#postBtn"); _pg.wait_for_timeout(900)
+            _sigs[_name] = _pg.evaluate(_SIG)
+            _ctx.close()
+        _diff = {k: (_sigs["Pad"].get(k), _sigs["Flip"].get(k)) for k in _sigs["Pad"]
+                 if _sigs["Pad"].get(k) != _sigs["Flip"].get(k)}
+        check(f"POST SHEET at {_w}: Flip's sheet is the Pad's, field for field",
+              not _diff and all(_sigs["Pad"].values()), str(_diff)[:600] or "identical")
+    _psb.close()
 
 print("\nCOPY — one noun for the unit, a backup is a backup, and the two editors say how they relate")
 # Outside review of v291, SK-AUD-009/010/017/020. Flip said "page" on the

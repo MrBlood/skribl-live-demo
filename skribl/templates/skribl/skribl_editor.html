@@ -260,90 +260,8 @@
   <!-- Export sheet (shared partial — canonical chooser for Pad + Flip) -->
   {% with kind='pad' %}{% include 'skribl/_skribl_export.html' %}{% endwith %}
 
-  <!-- Post composer sheet -->
-  <div id="postOverlay" class="menu-overlay" hidden>
-    <div class="menu-sheet post-sheet" id="postSheet" role="dialog" aria-modal="true" aria-label="Post your Skribl">
-      <div class="menu-handle"></div>
-      {# Compose mode is not publishing, and the sheet must not say it is: the
-         drawing goes back to the host's draft and nothing is posted until they
-         post. Rendered server-side rather than swapped by script, so the sheet
-         never shows the wrong verb for a frame. #}
-      {# THE SOUND MARKER. The toolbar's own mark, repeated at the moment of
-         posting — same glyph (one macro), same .tab-dot, same green/amber
-         meanings. It MIRRORS the toolbar rather than recomputing anything: the
-         dot up there is already the app's statement about the music track, and
-         a second opinion could disagree with it. A <span>, not a button: on the
-         toolbar this opens the music drawer, here there is nothing to open, so
-         it carries no hover or active state and nothing invites a tap. #}
-      <div class="export-head">{{ "Add to your post" if compose else "Post your Skribl" }}<span
-           class="post-sound" id="postSound" hidden>{{ music_glyph() }}<span
-           class="tab-dot" id="postSoundDot"></span><span class="post-sound-sr"
-           id="postSoundText"></span></span></div>
-      <div class="export-sub">{{ "It goes inline in the post, and plays there"
-                                 if compose else "Add a title and share it to Skribl" }}</div>
-      <div class="post-body" id="postBody">
-        <div class="post-preview" id="postPreview">
-          <img id="postPreviewImg" class="post-preview-img" alt="Preview of your Skribl">
-        </div>
-        <div class="post-fields">
-          <label class="post-field">
-            <span class="post-field-label">Title</span>
-            <input type="text" id="postTitleInput" class="post-input" maxlength="{{ skribl_limits.title }}" placeholder="Untitled Skribl" autocomplete="off">
-          </label>
-          <label class="post-field">
-            <span class="post-field-label">Caption <span class="post-field-optional">optional</span></span>
-            <textarea id="postCaptionInput" class="post-input post-textarea" maxlength="{{ skribl_limits.caption }}" rows="3" placeholder="Say something about it…"></textarea>
-            <span class="post-char-count" id="postCharCount">0 / {{ skribl_limits.caption }}</span>
-          </label>
-          {# THE PUBLIC CHOICE, OPT-IN (v304). A post is unlisted unless the
-             author ticks this: reachable by its link, listed nowhere. Ticked,
-             the payload carries visibility "public" and the post appears in
-             /gallery for everyone. Unticked, the key is OMITTED rather than
-             sent as "unlisted", so the server's default stays the one
-             authority on what an unmarked post is. Not rendered in compose
-             mode: there the HOST's composer decides visibility, and a control
-             here would be a second answer. verify_gallery.py pins all three. #}
-          {% if not compose %}
-          <label class="post-check">
-            <input type="checkbox" id="postPublicInput" class="post-check-input">
-            <span class="post-check-box" aria-hidden="true"></span>
-            <span class="post-check-text">Show in the public gallery<span class="post-check-sub">Off, it is shared by its link only</span></span>
-          </label>
-          {% endif %}
-        </div>
-      </div>
-      <button type="button" class="post-submit" id="postSubmitBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        <span id="postSubmitLabel">{{ "Add to post" if compose else "Post to Skribl" }}</span>
-      </button>
-      {# THE RESULT IS ONE ROW, the shape of Flip's (Share / Copy link / Open
-         player): Watch, Share, Copy link. Two full-width chips stacked under a
-         dimmed, emptied form read as a broken page on a phone .
-         Share is shown only where navigator.share exists (v292; outside review
-         of v291, SK-AUD-016); Copy link is for everyone. #}
-      <div class="post-result" id="postResult" hidden>
-        <button type="button" class="post-submit post-watch" id="postWatchBtn" hidden>
-          <span class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
-          <span>Watch</span>
-        </button>
-        <button type="button" class="post-submit post-watch post-result-soft" id="postShareBtn" hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-          <span>Share</span>
-        </button>
-        <button type="button" class="post-submit post-watch post-result-soft" id="postCopyBtn" hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          <span>Copy link</span>
-        </button>
-      </div>
-      {# Posting is the one flow where "did that work?" has a real cost, and
-         it announced nothing: started, succeeded and failed were all silent. #}
-      <div class="post-status" id="postStatus" role="status"
-           aria-live="polite" aria-atomic="true" hidden>
-        <div class="export-progress-bar"><div class="export-progress-fill" id="postProgressFill"></div></div>
-        <span class="export-progress-label" id="postStatusLabel">Posting…</span>
-      </div>
-    </div>
-  </div>
+  <!-- Post composer sheet (shared partial — the one sheet for Pad + Flip) -->
+  {% include 'skribl/_skribl_post.html' %}
 
   <div class="canvas-area" role="main">
   <div class="canvas-wrap">
@@ -563,6 +481,8 @@
   {# lib/sheetswipe.js: every bottom sheet closes on a swipe down or a tap on
      its grabber. Before report.js and every other script that attaches it. #}
   <script src="{{ skribl_asset('lib/sheetswipe.js') }}" defer></script>
+  {# lib/postsheet.js: the Post sheet both editors share (_skribl_post.html). #}
+  <script src="{{ skribl_asset('lib/postsheet.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/report.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/segslider.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/painttarget.js') }}" defer></script>

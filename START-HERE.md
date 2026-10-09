@@ -746,6 +746,7 @@ rather than a shared rule.
 | `postedaudio.js` | Pad+Flip | What a POST stores, which is deliberately not what an EXPORT downloads. |
 | `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
 | `postedui.js` | library+gallery | Your Skribls — rendering. |
+| `postsheet.js` | Pad+Flip | The Post sheet — shared by Pad and Flip (skribl/_skribl_post.html). |
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
 | `recoverykey.js` | Pad+Flip+library | Both ends of an anonymous author's revocation key: showing one, taking one back, and standing between a bulk clear and the keys it would discard. |
