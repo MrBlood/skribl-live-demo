@@ -164,6 +164,33 @@ code, out, err = cli("owned-1", "--visibility", "private")
 check("so can a post belonging to a host's user", code == 0, f"exit {code}")
 check("it is private now", visibility_of("owned-1") == "private")
 
+# ── withheld (v321 preflight, PF-013) ────────────────────────────────────────
+# The queue used to suggest `--visibility private`, and private is the AUTHOR's
+# state: an anonymous author's key put the post straight back up. Driven end to
+# end: the CLI as a subprocess, then the author's PATCH through the app.
+print("\nWITHHELD — a takedown its author cannot undo")
+plant("moderated-1", token="the-authors-own-key", visibility="public")
+code, out, err = cli("moderated-1", "--visibility", "withheld")
+check("--visibility withheld exits 0", code == 0, f"exit {code} — {err.strip()[:160]}")
+check("the post is withheld", visibility_of("moderated-1") == "withheld", repr(visibility_of("moderated-1")))
+_tc = app.test_client()
+r = _tc.patch("/api/skribls/moderated-1", json={"visibility": "public", "deleteToken": "the-authors-own-key"})
+check("the author's key cannot set it public again", r.status_code == 400,
+      f"HTTP {r.status_code} {r.get_data(as_text=True)[:120]}")
+check("...it is still withheld", visibility_of("moderated-1") == "withheld", repr(visibility_of("moderated-1")))
+check("a visitor gets the 404 a missing post gets", _tc.get("/api/skribls/moderated-1").status_code == 404)
+code, out, err = cli("moderated-1", "--visibility", "public")
+check("the operator can lift it", code == 0 and visibility_of("moderated-1") == "public",
+      f"exit {code}, {visibility_of('moderated-1')!r}")
+
+# The single-post view printed the title raw while the queue below neutralised
+# the same text (PF-016). Asserted on the bytes, as the queue's check is.
+plant("ansi-title", title="\x1b[2J\x1b[31mFAKE notice\x07")
+code, out, err = cli("ansi-title")
+check("the dry-run view of one post carries no control characters either",
+      code == 0 and not any(c < " " or c == "\x7f" for c in out.replace("\n", "")) and "FAKE notice" in out,
+      repr(out[:120]))
+
 # ── the report queue (v304) ─────────────────────────────────────────────────
 print("\nREPORTS — the gallery's queue lands at the operator's door")
 from skribl.models import SkriblReport                             # noqa: E402
@@ -242,7 +269,7 @@ check("...and a newline inside a note cannot forge a second queue line",
 cli("flagged-3", "--resolve")
 check("a post whose reports were resolved is not in the queue", "quiet-1" not in out,
       "a closed report is a closed report")
-check("it tells the operator the three answers", "--resolve" in out and "--delete" in out and "--visibility private" in out)
+check("it tells the operator the three answers", "--resolve" in out and "--delete" in out and "--visibility withheld" in out)
 
 # --resolve closes the rows and touches nothing else; it is a wet flag.
 code, out, err = cli("flagged-2")

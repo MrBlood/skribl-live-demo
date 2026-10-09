@@ -802,19 +802,53 @@ MAX_PAYLOAD_EXTRA_BYTES = _env_int("SKRIBL_MAX_PAYLOAD_EXTRA_BYTES",
                                    256_000, minimum=1024)
 
 
+def _point_remainder(p):
+    """What a stroke point carries that no validator bounds, or None.
+
+    x, y and size are bounded by _validate_points. The rest of a point the
+    editors write (lib/pointwrite.js) is a short colour, a time and two flags,
+    and those are bounded here by their type; anything else, or any of those
+    holding something other than its type, is the remainder and is measured.
+
+    POINTS WERE THE KEY ONE LEVEL DOWN (v321 preflight, PF-014). The skeleton
+    used to blank strokes entirely, on the reasoning that points are bounded;
+    their COUNT and coordinates are, their other keys never were. One point
+    carrying a 3 MB string, gzipped to 3 KB on the wire, was stored and served
+    whole -- the attack the section above describes, one level down."""
+    rest = None
+    for k, v in p.items():
+        if k in ("x", "y", "size"):
+            continue
+        if k == "t" and isinstance(v, (int, float)) and not isinstance(v, bool):
+            continue
+        if k in ("start", "erase") and isinstance(v, bool):
+            continue
+        if k == "color" and isinstance(v, str) and len(v) <= 32:
+            continue
+        if rest is None:
+            rest = {}
+        rest[k] = v
+    return rest
+
+
 def _payload_skeleton(payload):
     """The payload with every already-bounded container emptied.
 
-    Shallow copies only: the containers are replaced, never walked, so this
-    costs a handful of dict copies rather than a deep copy of a 25 MB body.
+    Shallow copies of the containers, except strokes: each point is visited
+    once for what it carries beyond the bounded keys (_point_remainder), and a
+    real drawing's points contribute nothing.
     """
     def strip(node):
         if not isinstance(node, dict):
             return node
         out = dict(node)
-        # Bounded by _validate_points / _validate_stroke_groups.
+        # Bounded by _validate_points / _validate_stroke_groups, except what a
+        # point carries beyond them.
         if "strokes" in out:
-            out["strokes"] = []
+            pts = out["strokes"]
+            out["strokes"] = ([r for r in (_point_remainder(p) for p in pts
+                                           if isinstance(p, dict)) if r]
+                              if isinstance(pts, list) else [])
         if "strokeGroups" in out:
             out["strokeGroups"] = []
         # Bounded by _validate_payload_media, per item and by type.

@@ -26,6 +26,7 @@ from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblRepor
                      _visibility_policy, as_utc, normalise_user_id,
                      session, feed_filter, author_dict)
 from .views import purge_views
+from .mediameta import STRIPPED, strip_payload
 from .storage import KEY_RE
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_key, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
@@ -73,13 +74,26 @@ def _encode_cursor(post):
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
+# A cursor's numbers are bound before they reach a query: an id or a score
+# past a 64-bit integer made SQLite raise OverflowError, a 500 for a cursor
+# anyone can type (v321 preflight, PF-015). Out of range is unusable, a 400.
+_CURSOR_INT_MAX = 2 ** 63 - 1
+
+
+def _cursor_int(text):
+    n = int(text)
+    if not 0 <= n <= _CURSOR_INT_MAX:
+        raise ValueError("cursor number out of range")
+    return n
+
+
 def _decode_cursor(cursor):
     """-> (datetime, int), or None if the cursor is unusable."""
     try:
         pad = "=" * (-len(cursor) % 4)
         raw = base64.urlsafe_b64decode(cursor + pad).decode("utf-8")
         created, _, ident = raw.rpartition("|")
-        return datetime.fromisoformat(created), int(ident)
+        return datetime.fromisoformat(created), _cursor_int(ident)
     except (ValueError, TypeError, binascii.Error, UnicodeDecodeError):
         return None
 
@@ -112,7 +126,7 @@ def _decode_hot_cursor(cursor):
         tag, score, ident = raw.split("|")
         if tag != "hot":
             return None
-        return int(score), int(ident)
+        return _cursor_int(score), _cursor_int(ident)
     except (ValueError, TypeError, binascii.Error, UnicodeDecodeError):
         return None
 
@@ -1245,13 +1259,19 @@ def register_routes(bp, *, index_route=False):
         # Shallow-copy so we don't mutate the SQLAlchemy-tracked JSON column
         # (which could otherwise be flushed back to the DB on this GET).
         payload = dict(post.payload_json or {})
+        # A POST STORED BEFORE v321 still holds what strip_payload removes --
+        # a photo's location, a file's name -- so it is removed on the way
+        # out instead, with no migration to run and nothing for an operator to
+        # remember. A post stored since carries STRIPPED and costs nothing here.
+        if not payload.get(STRIPPED):
+            payload = strip_payload(payload)
         payload["title"] = post.title
         payload["caption"] = post.caption
         # The share-card thumbnail is served by /s/<id>/card.png, so the player
         # doesn't need it in the envelope — drop it to keep the GET lean.
         payload.pop("thumbnail", None)
 
-        return jsonify({
+        resp = jsonify({
             "id": post.public_id,
             "title": post.title,
             "caption": post.caption,
@@ -1264,6 +1284,12 @@ def register_routes(bp, *, index_route=False):
             "author": author_dict(post.user_id),
             "skribl": payload
         })
+        # Read through visible_to(), so never kept by a cache another viewer
+        # shares -- what docs/INTEGRATION.md has always said of every response
+        # behind an authorisation check, and what this one did not send
+        # (v321 preflight, PF-017).
+        resp.headers["Cache-Control"] = "private, no-store"
+        return resp
 
     @bp.post("/api/skribls/<public_id>/report")
     def report_skribl(public_id):

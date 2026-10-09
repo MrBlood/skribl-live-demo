@@ -717,7 +717,12 @@ def double_submit_csrf(cookie_name=CSRF_COOKIE, header_name=CSRF_HEADER):
         if not key:
             return bool(token)
         nonce, dot, sig = (token or "").partition(".")
-        return bool(nonce and dot and sig) and hmac.compare_digest(sig, _sig(nonce, key))
+        # As BYTES: compare_digest raises TypeError on a str holding anything
+        # but ASCII, and a cookie is whatever the browser sends -- a sibling
+        # subdomain can set one -- so a single 'é' turned every request from
+        # that browser into a 500 (v321 preflight, CSRF-6). Now it is unsound.
+        return bool(nonce and dot and sig) and hmac.compare_digest(
+            sig.encode("utf-8"), _sig(nonce, key).encode("utf-8"))
 
     def prepare():
         """Resolve the token BEFORE the view runs.
@@ -760,7 +765,8 @@ def double_submit_csrf(cookie_name=CSRF_COOKIE, header_name=CSRF_HEADER):
         known = req.cookies.get(cookie_name, "")
         if not sent or not known:
             return False
-        return hmac.compare_digest(sent, known) and _sound(known)
+        return (hmac.compare_digest(sent.encode("utf-8"), known.encode("utf-8"))
+                and _sound(known))
 
     # How init_skribl binds the token to the host's user, without the triple
     # growing a fourth element every host would have to unpack.

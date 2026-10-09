@@ -15029,3 +15029,65 @@ colours neither drawing shares: a red Flip with a page underneath at 4:3, then
 a green replay at 9:16, picked from its row as a person picks it. With main's
 player the replay reported itself a Flip and painted 24,214 red pixels and no
 green; with this one it is a replay, 20,915 green and no red.
+
+**A posted Skribl no longer carries where a photo was taken (preflight before
+v321, PF-012).** The owner's preflight prompt asked what a post leaks, and the
+answer was measured, not guessed: a GPS-tagged JPEG used as a Flip background
+was posted through the real Post sheet and read back as any viewer of the link
+reads it. Flip had posted the photo byte for byte, so the coordinates and the
+phone's make and model came back intact. Both editors had also published the
+photo's and the song's original file names, which on an iPhone can be the street
+a voice memo was recorded on. The Pad re-encodes photos, which drops the tags,
+but keeps the original bytes whenever re-encoding would not be smaller.
+
+skribl/mediameta.py removes it on the server, which is the one place every
+client's post passes through. Image metadata goes by structure, never by
+re-encoding, so no pixel changes: JPEG keeps JFIF, an ICC profile and Adobe's
+colour transform and loses every other APPn segment, comments and anything after
+the end of the image (a motion photo's video); PNG keeps the chunks that draw
+and colour the picture; WebP loses XMP; GIF loses comments and XMP. EXIF goes
+with one exception, ORIENTATION, which is written back on its own: a portrait
+phone photo stores landscape pixels and a tag saying "turn me", and stripping
+the tag would show it on its side. Audio loses ID3 and APE tags, an M4A's udta
+and meta boxes (renamed `free` and zeroed in place, so no sample offset moves),
+a WAV's chunks other than its format, data and loop chunks, and a FLAC's
+comments and pictures (padding of the same length). Ogg and WebM pass through:
+rewriting either means re-paging or rewriting element sizes, neither editor
+records into them, and the gap is written down rather than papered over. Media
+file names are dropped. Anything that does not parse is returned as it came,
+because validation already proved its container and losing someone's media is
+the one outcome worse than this.
+
+create_post() strips after validation and before storage, and marks the payload
+`metadataStripped`. A post stored before that is stripped on the way out of
+GET /api/skribls/<id> instead, without writing it back: no migration to run,
+nothing for an operator to remember, and a read stays a read. Externalised
+media (the local and S3 stores) is stripped before it is written for new posts;
+objects written before stay as they were, and production uses the inline store.
+
+**Four server limits from the same preflight, each refused before and after.**
+A junk string inside a stroke POINT rode past the extra-content cap, because the
+skeleton blanked strokes whole: their count and coordinates are bounded, their
+other keys never were (PF-014; 3 MB stored from 3 KB gzipped). Each point's keys
+beyond x, y and size now count against the cap unless they are the short colour,
+the time and the two flags the editors write. The takedown CLI answered a report
+with `--visibility private`, which is the author's state: the anonymous author's
+key set the post straight back to public (PF-013). `withheld` is the operator's
+state now, set and lifted only by the CLI, never created, chosen or changed by an
+author, whose key can still delete it. A listing cursor past 64 bits was a 500
+on SQLite and is a 400 (PF-015). The CLI's one-post view printed a title's
+control characters while its queue neutralised the same text (PF-016). The
+payload GET sent no Cache-Control although INTEGRATION.md says every response
+behind an authorisation check is `private, no-store` (PF-017); it sends that
+now. Werkzeug 3.1.9 replaces 3.1.8, for an advisory that reaches Windows hosts
+only (PF-001). And with CSRF on, a token cookie holding anything but ASCII made
+every request from that browser a 500, because hmac.compare_digest raises on
+such a str and a sibling subdomain can set the cookie (CSRF-6); the comparisons
+are on bytes now, and a cookie nobody minted is replaced.
+
+verify_mediameta drives all of it in-process, and joins the PR gate with
+verify_takedown. Each part broken alone turned its own checks red: the write-time
+strip (8), the read-time strip (2), each format's stripper (1 to 10), the kept
+orientation (6), the dropped names (5), the point remainder (3), the withheld
+guard (5, across both suites), the cursor bound (4), the no-store header (2),
+the one-post view (1) and the byte comparison (3).
