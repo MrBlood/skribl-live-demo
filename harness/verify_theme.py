@@ -678,13 +678,20 @@ with sync_playwright() as p:
         pg.evaluate("(c) => document.querySelector(`.bg-swatch[data-bg=\"${c}\"]`).click()", DARK_GROUND)
         draw_line(pg, label)
         if label == "Pad":
+            # The stroke started a take, and New Skribl waits while one records
+            # (verify_ux CLEAR ALL): it is ended first, as Done ends it.
+            pg.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }")
+            pg.wait_for_function("() => !recording", timeout=5000)
+            pg.wait_for_timeout(300)
             pg.evaluate("() => document.getElementById('menuBtn').click()")
             pg.wait_for_timeout(400)
             pg.evaluate("() => document.getElementById('clearMenuItem').click()")    # arms
+            pg.wait_for_timeout(200)
             pg.evaluate("() => document.getElementById('clearMenuItem').click()")    # confirms
         else:
-            pg.evaluate("() => document.getElementById('miClearAll').click()")
-            pg.evaluate("() => document.getElementById('miClearAll').click()")
+            pg.evaluate("() => document.getElementById('miClearAll').click()")       # arms
+            pg.wait_for_timeout(200)
+            pg.evaluate("() => document.getElementById('miClearAll').click()")       # confirms
         pg.wait_for_timeout(600)
         st = ground(pg, label)
         check(f"{label}: New Skribl in the light theme starts on Paper",
