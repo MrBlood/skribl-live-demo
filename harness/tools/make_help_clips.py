@@ -174,9 +174,10 @@ def clip_post(page, rec):
     # quickly -- only the posting is filmed.
     import artdraw
     import artworks
-    page.evaluate("""() => { const t = window.SkriblCanvasSizes, id = t.SIZES.find(s => s.label === '4:3').id;
-        document.querySelector(`#canvasSeg button[data-size='${id}']`).click(); }""")
-    page.wait_for_timeout(300)
+    # On Paper at 4:3, as every example is drawn (pad_ready below). This clip
+    # predates that and drew on whatever the canvas started as: the cat's dark
+    # ink all but vanished on the dark canvas, in both themes' clips.
+    pad_ready(page)
     artdraw.draw(page, artworks.cat(), tempo=3.0)
     # End the take, as you would before posting: the header shows Done, not
     # Post, while a take is being recorded.
