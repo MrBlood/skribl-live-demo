@@ -799,6 +799,9 @@ seal after v320 at the owner's word, with this instruction: raise it as one of
 the first things once that seal and its audit are done. Refresh the checklist
 for the build as sealed before offering it.
 
+Raise with it Blooby cheering after a post (FUTURE 6l), which the owner asked
+about in that cleanup and said to keep parked until after the audit.
+
 ### Closed: the bottom-toolbar redesign
 
 The proposal was a labelled "Tools" sheet holding Image, Music and Magnify, and
