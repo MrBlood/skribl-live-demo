@@ -1,11 +1,13 @@
 /* Light/dark chrome — the stored setting, and the one place that applies it.
  *
  * WHAT IS THEMED. The CHROME only: header, toolbars, drawers, sheets, menus.
- * The canvas is not, ever. A drawing's ground is part of the drawing — it is
+ * A drawing is never repainted. Its ground is part of the drawing — it is
  * exported, it is posted, it is what other people see — so a UI preference
- * must not repaint it. That is why styles.css excludes #0d0f14 (the canvas
- * default) from the palette entirely, and why verify_surfaces' colour ratchet
- * excludes it too: it is the document's colour, not the app's.
+ * must not change it. The theme only picks where a NEW drawing starts: Paper
+ * in the light theme, the dark canvas in the dark one (lib/canvasground.js,
+ * owner: "Do Paper"). That is why styles.css keeps both of those grounds out
+ * of the palette, and why verify_surfaces' colour ratchet excludes them too:
+ * they are the document's colours, not the app's.
  *
  * THREE CHOICES, ONE EFFECTIVE MODE (v292; outside review of v291,
  * SK-AUD-014, reversing v232). The stored CHOICE is system, dark or light,

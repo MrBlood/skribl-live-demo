@@ -268,6 +268,13 @@ const ARC_WINDOW = 12;         // pages either side; bounds both cost and clutte
 
 const ONION_ALPHAS = [0.30, 0.17, 0.10];          // nearer frame = more visible
 const ONION_TINTS  = ['#ff5f6d', '#ff9f43', '#ffd76a'];   // warmer = further back
+// ...and on a LIGHT ground those all but vanish past the nearest page: Paper
+// read 1.37, 1.12 and 1.03:1 against 1.58, 1.34 and 1.23 on the dark canvas
+// (verify_pages), and Paper is where the light theme starts a drawing. Deeper inks of
+// the same three, a little stronger, give a light ground the dark canvas's
+// contrast back (owner, of the mock: "Yes, use the proposed tints").
+const ONION_TINTS_LIGHT  = ['#d62839', '#d9621c', '#b07d0a'];
+const ONION_ALPHAS_LIGHT = [0.30, 0.26, 0.20];
 /* Copied pages, for paste. An ARRAY since v226 — a single-page copy is just a
    span of one, which is why nothing downstream needed a second code path. */
 let pageClip = null;
@@ -1719,6 +1726,11 @@ function paintUnder(c){
     // were scaffolded for exactly this in v98 and had sat unused ever since —
     // keeping frameCv free for the current frame below.
     const depth = Math.min(onionDepth, idx);
+    // Tinted on a light ground, the ghosts take that ground's inks. Untinted,
+    // a ghost is its own ink, as legible as the ink is on that ground.
+    const lightTint = onionTint && groundIsLight() === true;
+    const tints = lightTint ? ONION_TINTS_LIGHT : ONION_TINTS;
+    const alphas = lightTint ? ONION_ALPHAS_LIGHT : ONION_ALPHAS;
     for(let k=depth; k>=1; k--){
       const prev = frames[idx-k]; if(!prev) continue;
       octx.clearRect(0,0,CW,CH);
@@ -1728,11 +1740,11 @@ function paintUnder(c){
         // untouched — a silhouette tint, which is what onion skinning wants.
         octx.save();
         octx.globalCompositeOperation='source-in';
-        octx.fillStyle = ONION_TINTS[k-1] || ONION_TINTS[ONION_TINTS.length-1];
+        octx.fillStyle = tints[k-1] || tints[tints.length-1];
         octx.fillRect(0,0,CW,CH);
         octx.restore();
       }
-      c.globalAlpha = ONION_ALPHAS[k-1] || ONION_ALPHAS[ONION_ALPHAS.length-1];
+      c.globalAlpha = alphas[k-1] || alphas[alphas.length-1];
       c.drawImage(onionCv, 0, 0, CW, CH);
       c.globalAlpha = 1;
     }
@@ -4855,13 +4867,18 @@ function applyBg(){ pad.style.backgroundColor = bgColor; pad.style.backgroundIma
 if (window.SkriblHeaderGlass) window.SkriblHeaderGlass.wire(document.querySelector('.header'), pad);
 
 // A light canvas takes dark on-canvas ink -- the empty-page hint and the grid
-// (styles.css .light-bg) -- by the Pad's own test (app.js updateVignette).
+// (styles.css .light-bg), and the onion's tints (ONION_TINTS_LIGHT) -- by the
+// Pad's own test (app.js updateVignette).
+function groundIsLight(){
+  const hex = (bgColor || '#0d0f14').replace('#', '');
+  if(hex.length < 6) return null;
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+  return (0.2126*r + 0.7152*g + 0.0722*b) / 255 > 0.6;
+}
 function markLightGround(){
   const zl = document.getElementById('zoomLayer'); if(!zl) return;
-  const hex = (bgColor || '#0d0f14').replace('#', '');
-  if(hex.length < 6) return;
-  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-  const light = (0.2126*r + 0.7152*g + 0.0722*b) / 255 > 0.6;
+  const light = groundIsLight();
+  if(light === null) return;
   zl.classList.toggle('light-bg', light);
   // The pointer rings take their ink from the ground too (flip.css, .light-ground).
   const wrap = document.querySelector('.flip-wrap'); if(wrap) wrap.classList.toggle('light-ground', light);
@@ -4887,6 +4904,13 @@ function setBg(hex, fromCustom){
 }
 bgGroup.addEventListener('click',e=>{ const b=e.target.closest('.bg-swatch'); if(!b||b.classList.contains('bg-custom')) return; setBg(b.dataset.bg,false); });
 customBgInput.addEventListener('input',e=>{ setBg(e.target.value,true); });
+// A Flip with nothing on any page follows the theme while it is still blank
+// (lib/canvasground.js), as the Pad's canvas does.
+if(window.SkriblCanvasGround) window.SkriblCanvasGround.follow({
+  ground: ()=>bgColor,
+  blank: ()=>!bgImage && !pendingPhotoMeta && frames.every(f=>!f.strokes || !f.strokes.length),
+  set: (hex)=>setBg(hex,false)
+});
 
 /* ---- smoothing: stabilizer strength baked into the captured points (Pad parity) ---- */
 const smoothSeg=document.getElementById('smoothSeg');
@@ -10681,6 +10705,7 @@ function clearAllPages(opts){
   flipDocGen++;
   const _draftId = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;   // a new Skribl is a new draft
   clearFramesBackup = { doc: doc, frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv, draftId: _draftId,
+                        bg: bgColor,
                         // A new Skribl is a new title; Undo brings the old one back (v317).
                         name: (window.SkriblName && window.SkriblName.reset) ? window.SkriblName.reset() : null };
   /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
@@ -10692,7 +10717,11 @@ function clearAllPages(opts){
   frames=[newFrame()]; idx=0; redoStack.length=0;
   // The selection counters move first, so a photo or track still being read --
   // or still on its way back from the draft store -- lands on nothing.
-  if(withMedia){ imageSelectionSeq++; removeBgImage(); removeMusic(); }
+  if(withMedia){ imageSelectionSeq++; removeBgImage(); removeMusic();
+    // ...and New Skribl is a new drawing, so it starts on the theme's ground as
+    // the Pad's does (lib/canvasground.js). Clear all pages keeps the ground,
+    // as it keeps the media.
+    if(window.SkriblCanvasGround) setBg(window.SkriblCanvasGround.start()); }
   buildStrip(); render(); updateToolState();
   scheduleSave();   // persist the cleared state instead of deleting the draft
   const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=false;
@@ -10731,6 +10760,7 @@ bindEl('clearUndo', 'click',()=>{
   // frames alone would play them at the rate of the empty document.
   if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
   if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
+  if(clearFramesBackup.bg && clearFramesBackup.bg !== bgColor) setBg(clearFramesBackup.bg);   // New Skribl moved it
   if(clearFramesBackup.name && window.SkriblName) window.SkriblName.restore(clearFramesBackup.name);
   if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(clearFramesBackup.draftId);   // and the saved draft it was
   clearFramesBackup=null; redoStack.length=0;
@@ -11020,6 +11050,10 @@ function mediaBytesAtRisk(){
 
 /* ---- boot ---- */
 const restored = tryRestore();
+// No draft to come back to is a new Flip: it starts on the theme's ground,
+// Paper in the light theme (lib/canvasground.js), as the Pad's does. A
+// restored draft brought its own, and is never moved by the theme.
+if(!restored && window.SkriblCanvasGround) bgColor = window.SkriblCanvasGround.start();
 onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));
 if(onionGroup){ onionGroup.hidden=false; const _r=document.getElementById('tuneOnionRow'); if(_r) _r.classList.toggle('muted', !onion); }
 syncCanvasSeg();

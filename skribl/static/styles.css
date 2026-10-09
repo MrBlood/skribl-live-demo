@@ -24,9 +24,11 @@
      so a light palette is a second block rather than an archaeology exercise.
 
      Two things stay literal:
-       * #0d0f14 -- the CANVAS default background. That is the document's own
-         colour: saved, shared, exported. A Skribl must not change because the
-         person looking at it prefers a light UI.
+       * #0d0f14 and #f6f2ea -- the CANVAS defaults, dark and Paper. Those are
+         the document's own colours: saved, shared, exported. A Skribl must not
+         change because the person looking at it prefers a light UI; the theme
+         only picks which of the two a NEW drawing starts on
+         (lib/canvasground.js).
        * #fff -- almost every use is text sitting on a coloured fill, and white
          on violet stays white in either theme. */
   /* Surfaces */
@@ -900,13 +902,17 @@ body:not(.player-mode) .canvas-wrap #canvas {
               inset 0 1px 0 rgba(var(--wash-rgb), 0.6), inset 0 0 70px rgba(0,0,0,0.06);
 }
 
-/* Light theme: the (usually dark) canvas slab gets a seat — a 1px mat line so
-   it reads as an object placed on the light page rather than a hole cut in it.
-   An OUTLINE, not another box-shadow layer: every state rule above swaps
-   box-shadow wholesale, and an outline survives all of them. Editor only; the
-   player already frames its canvas. */
+/* Light theme: the canvas slab gets a seat — a 1px mat line so it reads as an
+   object placed on the light page rather than a hole cut in it, whatever its
+   ground. An OUTLINE, not another box-shadow layer: every state rule above
+   swaps box-shadow wholesale, and an outline survives all of them. Editor
+   only; the player already frames its canvas.
+   And a new drawing starts on Paper here (lib/canvasground.js), so the canvas
+   wears it before the script that sets it inline runs, rather than showing
+   the dark default for a frame. A restored draft's own ground replaces it. */
 :root[data-theme="light"] body:not(.player-mode) .canvas-wrap {
   outline: 1px solid rgba(0, 0, 0, 0.14);
+  background-color: #f6f2ea;
 }
 
 .canvas-wrap.recording {
@@ -926,6 +932,12 @@ body:not(.player-mode) .canvas-wrap #canvas {
 .canvas-wrap.locked {
   cursor: not-allowed;
 }
+/* ...but not while a preview plays or is paused: a click there pauses and
+   resumes it (lib/tappause.js), so the sign that says the canvas cannot be
+   used was wrong exactly then. !important beats the cursor the lock cue writes
+   inline (app.js updateCanvasLockCue). Flip's playing rule is the same arrow
+   (flip.css). The player has no lock and no tap to pause. */
+body:not(.player-mode).replaying #canvas { cursor: default !important; }
 
 /* Editor scrubbable play bar: a thin track that hangs flush from the bottom edge
    of the canvas (square top, rounded bottom) so it reads as dropping down from

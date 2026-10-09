@@ -158,6 +158,11 @@ def post_one(b, title, music=False):
     pg.on("pageerror", lambda e: errs.append(str(e)))
     browsing.goto(pg, BASE, "/skribl-pad")
     pg.evaluate("() => localStorage.clear()")
+    # On the dark canvas, picked: a new drawing starts on the theme's ground,
+    # which is Paper in this browser's light scheme (lib/canvasground.js), and
+    # the comparisons below were measured with ink standing ABOVE its ground's
+    # brightness (grid_diff, ink_mass). A light ground turns that over.
+    pg.evaluate("() => document.querySelector('.bg-swatch[data-bg=\"#0d0f14\"]').click()")
     scribble(pg, pg.locator("#canvas").bounding_box())
     pg.wait_for_timeout(600)
     pg.click("#recordBtn")

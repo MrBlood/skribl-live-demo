@@ -1903,7 +1903,7 @@ check("the token that replaced them clears 4.5:1 on EVERY surface",
 # ~2.4:1 (title) and ~1.8:1 (the line under it) on the canvas — a smudge in
 # daylight on the owner's iPhone. It is a hint, so it stays quieter than a
 # control, but it is READ, so it clears AA. Measured from the painted colours on
-# both editors, over the canvas default the document starts on.
+# both editors, over the dark canvas the first Skribl started on.
 print("\nA11Y 15 — the empty-canvas hint and the grid are legible on both editors, on any canvas")
 _CANVAS = "#0d0f14"
 _HINT = """() => [...document.querySelectorAll('.canvas-empty-hint, .canvas-empty-sub')]
@@ -1929,10 +1929,12 @@ with sync_playwright() as _hp:
             _pg = _hb.new_page(viewport={"width": 390, "height": 844})
             browsing.goto(_pg, BASE, _route)
             # Grid FIRST, then the canvas colour: the grid already showing has
-            # to repaint when the ground under it changes.
+            # to repaint when the ground under it changes. Every ground is
+            # CHOSEN, the dark one too: a new drawing starts on the theme's
+            # ground (lib/canvasground.js), and this browser's light scheme
+            # makes that Paper.
             _pg.evaluate("() => document.getElementById('gridBtn').click()")
-            if _ground != _CANVAS:
-                _pg.evaluate("(c) => document.querySelector('.bg-swatch[data-bg=\"' + c + '\"]').click()", _ground)
+            _pg.evaluate("(c) => document.querySelector('.bg-swatch[data-bg=\"' + c + '\"]').click()", _ground)
             _pg.wait_for_timeout(300)
             _found = _pg.evaluate(_HINT)
             _ratios = {c: round(ratio(_blend(col, _ground), _ground), 2) for c, col in _found}

@@ -618,6 +618,15 @@ function markBgSwatch(hex) {
   }
 }
 
+/* A ground nobody picked: the theme's, for a new drawing (lib/canvasground.js).
+   Its swatch is marked as a restored one is. */
+function setCanvasGround(hex) {
+  bgColor = hex;
+  canvasWrap.style.backgroundColor = hex;
+  markBgSwatch(hex);
+  updateVignette();
+}
+
 function restoreAutosave(data) {
   clearCanvas();
   if (data.background && data.background.color) {
@@ -737,6 +746,19 @@ function restoreAutosave(data) {
     reAddMediaFromStore('music', 'musicInput', saved.musicMeta);
     // Write a fresh autosave reflecting the restored state.
     setTimeout(writeAutosave, 200);
+  }
+
+  // No draft to come back to is a new drawing: it starts on the theme's
+  // ground, Paper in the light theme (lib/canvasground.js). A restored draft
+  // kept its own above, and a backup or a post opened later brings its own.
+  // While it is still blank, it follows the theme if that changes.
+  if (window.SkriblCanvasGround) {
+    if (!saved) setCanvasGround(window.SkriblCanvasGround.start());
+    window.SkriblCanvasGround.follow({
+      ground: () => bgColor,
+      blank: () => !hasContent && !strokes.length && !photoBg && !pendingPhotoMeta,
+      set: setCanvasGround
+    });
   }
 
   // Triggers: schedule an autosave whenever the drawing meaningfully changes.

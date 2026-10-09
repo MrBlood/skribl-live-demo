@@ -204,7 +204,12 @@
     border: 2px solid rgba(var(--wash-rgb), .20);
     box-shadow: 0 0 0 1px rgba(var(--wash-rgb), .05), 0 20px 50px rgba(0,0,0,.45);
     touch-action: none; cursor: none; }
-  body.playing #pad { cursor: default; }
+  /* !important: setTool() writes the cursor INLINE, 'none' under a tool that
+     draws its own ring, and the ring steps aside while a preview plays. An
+     inline style beats any rule that is not !important, so a mouse over a
+     playing or paused Flip showed nothing at all (the owner, clicking it to
+     pause). */
+  body.playing #pad { cursor: default !important; }
   .flip-live { position: absolute; top: 12px; left: 12px; z-index: 4; display: none; align-items: center; gap: 6px;
     background: rgba(var(--glass-deep-2-rgb), .72); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 5px 18px;
     font-size: 12px; font-weight: 700; letter-spacing: .03em; color: var(--ui-hi); }

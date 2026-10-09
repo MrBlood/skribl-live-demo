@@ -179,6 +179,10 @@ with sync_playwright() as p:
     ep = ctx.new_page()
     browsing.goto(ep, BASE, "/flip")
     ep.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    # On the dark canvas, picked: a new Flip starts on the theme's ground, Paper
+    # in this browser's light scheme (lib/canvasground.js), and SAMPLER reads
+    # the fixture's white ink as brightness standing above a dark ground.
+    ep.evaluate("() => setBg('#0d0f14')")
     ep.evaluate("""(d) => { frames = d.frames.map(f => ({ strokes: f.strokes.map(p => Object.assign({}, p)),
                      strokeGroups: f.strokeGroups.slice(), hold: 1, ...(f.draw ? { draw: true } : {}) }));
                    idx = 0; docUnder = d.under; buildStrip(); render(); }""", doc(UNDER))

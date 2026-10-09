@@ -79,6 +79,11 @@ with sync_playwright() as p:
         errs = []
         page.on("pageerror", lambda e: errs.append(str(e)))
         browsing.goto(page, BASE, "/flip")
+        # On the dark canvas, picked: a new Flip starts on the theme's ground,
+        # which is Paper in this browser's light scheme (lib/canvasground.js),
+        # and the pixel measures below read white ink as what stands ABOVE its
+        # ground.
+        page.evaluate("() => setBg('#0d0f14')")
 
         print("\nTHE LIB — arithmetic three tools share")
         check("lib/brushfield.js is loaded on Flip",
@@ -882,11 +887,12 @@ with sync_playwright() as p:
               _s13["shown"] and abs(_s13["width"] - _s13["want"]) <= 1, str(_s13))
         check("...and the pen does not", not _p13["shown"], str(_p13))
 
-        # THE RING'S INK IS THE GROUND'S, NOT THE THEME'S. The canvas is dark in
-        # both themes unless the drawing picks a light ground, and the rings
-        # were drawn in the page theme's ink: in the light theme, dark on the
-        # dark canvas -- the photographs for the owner's mock showed the ring
-        # all but gone. Measured on the ring's own computed colour.
+        # THE RING'S INK IS THE GROUND'S, NOT THE THEME'S. The rings were drawn
+        # in the page theme's ink: in the light theme, dark on the dark canvas
+        # -- the photographs for the owner's mock showed the ring all but gone.
+        # Measured on the ring's own computed colour, on the dark canvas picked
+        # in both themes, and on the ground a new Flip starts on in each (Paper
+        # in the light theme, lib/canvasground.js).
         _rgb = lambda s: [int(float(v)) for v in re.findall(r"[\d.]+", s)[:3]]
         # Each theme on a page of its own, said explicitly: a page that does not
         # say is the LIGHT theme, which is how the first draft of the light-
@@ -897,6 +903,8 @@ with sync_playwright() as p:
             try:
                 browsing.goto(_tp, BASE, "/flip")
                 _tb = _tp.locator("#pad").bounding_box()
+                _ink[_theme + " new"] = _ring_for(_tp, _tb, "blur", 7)["ink"]
+                _tp.evaluate("() => setBg('#0d0f14')")
                 _ink[_theme] = _ring_for(_tp, _tb, "blur", 7)["ink"]
                 _tp.evaluate("() => setBg('#ffffff')")
                 _ink[_theme + " on white"] = _ring_for(_tp, _tb, "blur", 7)["ink"]
@@ -909,6 +917,9 @@ with sync_playwright() as p:
               max(_rgb(_ink["dark on white"])) <= 60 and max(_rgb(_ink["light on white"])) <= 60,
               f"ring ink on a white ground: {_ink['dark on white']} in the dark theme, "
               f"{_ink['light on white']} in the light")
+        check("...and a new drawing's ring suits the ground it starts on: dark on Paper, light on the dark canvas",
+              max(_rgb(_ink["light new"])) <= 60 and min(_rgb(_ink["dark new"])) >= 200,
+              f"ring ink on a new Flip: {_ink['light new']} in the light theme, {_ink['dark new']} in the dark")
 
         print("\nEACH ITS OWN SIZE — the size in the tray is what the tool reaches")
         # The owner, of Blur: "is there a blur radius adjuster?" Liquify, Smudge

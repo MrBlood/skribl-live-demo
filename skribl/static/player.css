@@ -47,9 +47,11 @@
      so a light palette is a second block rather than an archaeology exercise.
 
      Two things stay literal:
-       * #0d0f14 -- the CANVAS default background. That is the document's own
-         colour: saved, shared, exported. A Skribl must not change because the
-         person looking at it prefers a light UI.
+       * #0d0f14 and #f6f2ea -- the CANVAS defaults, dark and Paper. Those are
+         the document's own colours: saved, shared, exported. A Skribl must not
+         change because the person looking at it prefers a light UI; the theme
+         only picks which of the two a NEW drawing starts on
+         (lib/canvasground.js).
        * #fff -- almost every use is text sitting on a coloured fill, and white
          on violet stays white in either theme. */
   /* Surfaces */

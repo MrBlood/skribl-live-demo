@@ -758,6 +758,11 @@ light grounds he is drawn as he is.
 Build it as one pass: mock each place, phone and desktop, both themes, before
 any of it.
 
+Asked again in the cleanup before the seal after v320, "does blooby celebrate
+when you post?" -- he does not; a post says "Posted!" and nothing more -- and
+the owner's answer was "keep it parked until after the audit". START-HERE
+carries it with the device check.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

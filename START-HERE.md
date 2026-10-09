@@ -126,6 +126,7 @@ here is the rule you can break tomorrow.
 | Both editors build the pen palette from `lib/palette.js` — same list, same order, from the lib and not from a copy. | `verify_parity.py` |
 | Every grey the chrome paints is a token, not a literal — including the `rgb()` function form, which the first version of the ratchet could not see. | `verify_surfaces.py` |
 | `color`, `fill` and `stroke` hold no colour literal except `#fff` and `#0d0f14`. A red is not a neutral, so a grey audit walks straight past it. | `verify_theme.py` |
+| A drawing's ground never follows the theme. Only a NEW drawing starts on the theme's ground, Paper in light and the dark canvas in dark, and a blank one follows a switch until a stroke, a hand pick or a restored draft makes it the person's. | `verify_theme.py` (painted, held, lit and saved, on both editors) |
 | A token named for the CANVAS is not chrome and is exempt — naming it in `:root` is what makes that a decision rather than a literal somebody missed. | `verify_surfaces.py` |
 | A run whose suite names begin with `_` is a scratch probe and must never be published as the project's result. | `stamp_docs.py` refuses it |
 | Hiding a control is only safe when nothing reachable ONLY through it becomes unreachable. | **no enforcer** — found by looking; `beginPinch` revealing the zoom HUD is what made hiding Magnify safe |
@@ -697,6 +698,7 @@ rather than a shared rule.
 | `autosavepill.js` | Pad+Flip | lib/autosavepill.js — the autosave pill: one owner for its five states and, when media is missing, the way out. |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
 | `brushfield.js` | Flip | The arithmetic behind tools that act on ink already on the page. |
+| `canvasground.js` | Pad+Flip | The ground a new drawing starts on: Paper in the light theme, the dark canvas in the dark one. |
 | `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `canvaszoom.js` | Pad+Flip | The canvas magnifier: zoom, pan, the HUD, its grip, wheel and Space-drag. |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
@@ -796,6 +798,9 @@ neither device's fonts nor its engine exist in this container. Skipped for the
 seal after v320 at the owner's word, with this instruction: raise it as one of
 the first things once that seal and its audit are done. Refresh the checklist
 for the build as sealed before offering it.
+
+Raise with it Blooby cheering after a post (FUTURE 6l), which the owner asked
+about in that cleanup and said to keep parked until after the audit.
 
 ### Closed: the bottom-toolbar redesign
 

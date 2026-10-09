@@ -14908,3 +14908,102 @@ canvas, its edge band at 18% of its height against its own middle. Paper read
 211 against 242 and White 223 against 255 on main; with the rule, 237 against
 242 and 250 against 255. The check allows 18 levels, and the rule removed
 turns both red.
+
+**The mouse pointer stays on screen over a playing or paused Flip (the owner:
+"when it is playing and I use my mouse to click on the screen to pause. it
+works, but when the mouse is over the canvas, it disappears").** Flip hides the
+system pointer over its canvas for the tools that draw their own ring, the pen
+among them, and does it inline, from setTool(). While a preview plays the ring
+steps aside, and the stylesheet's `body.playing #pad { cursor: default; }`
+could not beat an inline style, so nothing was left over the canvas, and a
+click to pause (#367) kept it that way. The playing rule is `!important` now,
+which an inline style cannot beat.
+
+Looking for the same gap on the Pad found the other half. After a take the
+Pad's canvas is locked until Add take, and its lock cue writes `not-allowed`
+inline -- the sign that says the canvas cannot be used. Since #367 a click on
+it during a replay pauses and resumes, so the sign said the opposite of what a
+click does, exactly then. While a replay plays or is paused the Pad's canvas
+shows the same arrow as Flip's now, by the same means. The player has no lock
+and no tap to pause, and its stylesheet is unchanged.
+
+verify_tappause asks it with a real mouse on a desk, on both editors: the
+element a click at the canvas's middle would land on must compute neither
+`cursor: none` nor `not-allowed`, while the preview plays and while it is
+paused.
+
+**A new drawing starts on Paper in the light theme (owner, of the mock on both
+editors at phone and desk sizes: "Do Paper.").** Every canvas used to start dark
+whatever the theme, so the light theme put a dark slab in the middle of a light
+app. The theme now picks where a NEW drawing starts: Paper (#f6f2ea, the draw
+drawer's own Paper swatch) in light, the dark canvas in dark, on both editors,
+when the page opens with no draft to restore and on New Skribl. It still never
+repaints a drawing. A restored draft, an opened backup and a loaded post keep
+their ground, and every swatch is offered in both themes. A canvas with nothing
+on it yet follows a theme switch, because nothing on it was chosen; a stroke, a
+photo or a ground picked by hand ends that.
+
+lib/canvasground.js holds the rule for both editors and remembers the ground it
+gave, so any pick takes the canvas out of its hands, even of the swatch already
+lit. The first draft compared the canvas with the ground the old theme starts
+on, and so took Paper picked by hand in the dark theme for its own after a trip
+to light and back, and painted it dark. Flip took its ground before it knew
+whether a draft would be restored; it now asks after, as the Pad always did.
+The player never loads the file: a posted Skribl carries its own ground. The
+Pad's canvas wears Paper from the light theme's own rule in styles.css before
+any script runs, so a new drawing does not show the dark canvas for a frame; a
+restored draft's own ground replaces it. Flip's canvas wears the light chrome's
+raised surface until its script runs, which is light already.
+
+Flip's tinted onion all but vanished on a light ground past the nearest page:
+Paper read 1.37, 1.12 and 1.03:1, one, two and three pages back, and White
+1.40, 1.13 and 1.04, against 1.58, 1.34 and 1.23 on the dark canvas. Mocked for the owner, who said
+"Yes, use the proposed tints in the Paper PR": on a light ground the tints are
+deeper inks of the same red, orange and amber, a little stronger (30, 26 and
+20%), and read 1.60, 1.35 and 1.24 on Paper and 1.64, 1.38 and 1.26 on
+White. The dark canvas is unchanged, and
+an untinted ghost is its own ink, as legible as that ink is on its ground.
+
+How it works said the theme changes "never the drawing itself", which is still
+true, and now also says where a new one starts. Flip's Undo & New Skribl tip
+said New Skribl "clears pages only -- your music and background image stay":
+untrue since #350, which made it take the photo and music too. Both editors'
+tips now say it clears everything, and where the new one starts.
+
+verify_theme's rule 3 is rewritten: a drawing does not follow the theme, a new
+one starts on the theme's ground. Its old check read the middle of the first
+canvas's BITMAP in both themes, on a blank canvas: on Flip, which paints its
+ground into its bitmap, that went red with Paper as it should; on the Pad, whose
+bitmap is transparent over a CSS ground, it read [0, 0, 0, 0] whatever the theme
+did. It now reads the screen, on a canvas with a stroke on it. Twenty-five new
+checks, on both editors, read the ground as painted, held, lit and saved: a new
+drawing in each theme, the blank canvas following, a stroke ending that, three
+hand picks read at each switch, a restored draft, New Skribl and its Undo, and
+the Pad before any script runs. Fourteen single breaks each turned only their
+own checks red, the one that first passed included: an unheard pick of the
+swatch already lit went dark and came back with the theme, and the checks read
+only the end of the round trip. verify_pages reads each tinted ghost's contrast
+on the dark canvas, Paper and White; four breaks of the light tints each turned
+it red. verify_tappause asks for the round Play on Paper too, with a measure
+blind to the ground, since its white-count is the ground there.
+
+The full battery on the first build found eight suites that took a new drawing
+to start dark, every one in its fixture: verify_a11y, verify_flipmotion,
+verify_inline, verify_pages, verify_smudgeblur, verify_tappause, verify_theme
+and verify_under. Each fixture now picks the ground its measures were calibrated
+on, and the two that ask about grounds ask about Paper as well. Flip's ring is
+asked on a new drawing's own ground in verify_smudgeblur.
+
+How it works' Post clip drew its cat on whatever the canvas started as: dark ink
+on the dark canvas, in both themes' clips. It draws on Paper now, like every
+other example. Every clip was recorded again in both themes and compared at
+five points of its length. The light ones, last recorded on October 2 and 3,
+changed by 2.2 to 64.7% at their most-changed frame in fourteen clips: Paper in
+Add music, the header and dock as they are now, and the Media card #369 brought
+on screen. The five that film only the canvas (Blur, Fill, Liquify, Smudge,
+Stamp) came in at 0.5 to 1.5%, which is encoding noise, and are kept. Of the
+dark ones, recorded for #370, Post changed (its cat on Paper) and so did Takes,
+where a take records on camera: #371's light edge on Paper shows there, about
+26 levels at the canvas's edge, under the comparison's threshold and plain side
+by side. The rest came in at 0.1 to 1.9%; Select's 8.2% was the heart caught
+a few pixels further along its drag, and it is kept.
