@@ -1483,6 +1483,65 @@ with sync_playwright() as p:
                   _gone["open"] is None and _gone["display"] == "none", str(_gone))
             _q.close()
 
+    # ---- the card follows its own growth ----------------------------------------
+    # Opening the drawer brings the card's end on screen; then a song or a photo
+    # lands in it, and the file row, the trim strip or the fit controls grow the
+    # card below what was revealed. Found re-recording How it works' clips: on
+    # both editors, a song left 134-142px of the card below a phone's screen and
+    # a photo 201-245px, at 390x640, 390x844 and the owner's 402x874 alike. The
+    # file goes in after the drawer has settled, as a picker's does seconds
+    # later, and the switch to Music comes first, because Photo and Music empty
+    # are the same height (the first fix missed exactly that). The end must be
+    # PAINTED, not merely inside the viewport, and the dock must stay below the
+    # pinned header: a short phone may stop at that cap with the last row to
+    # scroll to, which is the cap working, not the card failing.
+    print("\nPARITY — a song or a photo added to the open card brings its end on screen, on both")
+    GROWN = """() => { const card = document.getElementById('mediaCard'), h = document.querySelector('.header');
+        const dock = document.querySelector('#toolBar, .flip-tools');
+        const vh = window.visualViewport ? window.visualViewport.height : innerHeight;
+        const r = card.getBoundingClientRect(), x = r.left + r.width / 2, y = r.bottom - 12;
+        const at = y >= 0 && y < vh ? document.elementFromPoint(x, y) : null;
+        return { below: Math.round(r.bottom - vh), endPainted: !!at && card.contains(at),
+                 dockClear: Math.round(dock.getBoundingClientRect().top - h.getBoundingClientRect().bottom),
+                 scrolled: Math.round(scrollY) }; }"""
+    for _route, _in in (("/skribl-pad", {"photo": "#photoInput", "music": "#musicInput"}),
+                        ("/flip", {"photo": "#imageInput", "music": "#musicInput"})):
+        for _w, _h in ((390, 844), (402, 874), (390, 640)):
+            for _k in ("music", "photo"):
+                _gc = b.new_context(viewport={"width": _w, "height": _h}, is_mobile=True, has_touch=True)
+                _q = _gc.new_page()
+                browsing.goto(_q, BASE, _route); _q.wait_for_timeout(700)
+                _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+                _q.click("#mediaOpenBtn"); _q.wait_for_timeout(400)
+                if _k == "music":
+                    _q.click("#mediaTabMusic")
+                _q.wait_for_timeout(2500)
+                _before = _q.evaluate(GROWN)
+                if _k == "music":
+                    _q.set_input_files(_in[_k], {"name": "t.wav", "mimeType": "audio/wav", "buffer": wav_bytes(4.0)})
+                else:
+                    _q.set_input_files(_in[_k], {"name": "t.png", "mimeType": "image/png", "buffer": png_bytes(64, 48)})
+                _q.wait_for_timeout(2400)
+                _g = _q.evaluate(GROWN)
+                check(f"{_route} at {_w}x{_h}: a {'song' if _k == 'music' else 'photo'} added to the open card "
+                      "brings its end on screen, painted, and the dock stays below the header",
+                      _before["below"] <= 1 and _g["dockClear"] >= 0
+                      and ((_g["below"] <= 1 and _g["endPainted"]) or _g["dockClear"] <= 8),
+                      f"before {_before}, after {_g}")
+                if _k == "music":
+                    # Fine-tune is not this growth. Its own nudge brings just its waveform on
+                    # screen, and the follower must not chase the card's end past it: showing
+                    # the Fine-tune body moves the follower's baseline. A break of that turned
+                    # nothing above red, so this is what pins it.
+                    _q.click("#fineTuneToggle"); _q.wait_for_timeout(1800)
+                    _ft = _q.evaluate("""() => { const z = document.getElementById('zoomTrackWrap'), c = document.getElementById('mediaCard');
+                        const vh = window.visualViewport ? window.visualViewport.height : innerHeight;
+                        return { wave: Math.round(z.getBoundingClientRect().bottom - vh),
+                                 end: Math.round(c.getBoundingClientRect().bottom - vh) }; }""")
+                    check(f"{_route} at {_w}x{_h}: ...and Fine-tune keeps its own nudge: its waveform comes on "
+                          "screen and the page does not chase the card's end", _ft["wave"] <= 0 and _ft["end"] > 40, str(_ft))
+                _gc.close()
+
     # ---- the empty drop area ---------------------------------------------------
     # Until a file is added the row is one quiet drop area: a real button that
     # fills it (a Tab stop the old row never had), a title and one line of

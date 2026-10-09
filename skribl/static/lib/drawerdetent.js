@@ -253,5 +253,65 @@
     }());
   }
 
-  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, veil: veil, shrinkGently: shrinkGently };
+  /* FOLLOW A CARD THAT GROWS WHILE OPEN. The media card is revealed as it
+   * opens, and then a song or a photo lands in it: the file row, the trim
+   * strip or the fit controls appear below what was revealed. Measured on
+   * both editors once the drawer had settled (a picker takes seconds): a
+   * song left 134-142px of the card below the screen, a photo 201-245px, at
+   * 390x640, 390x844 and the owner's 402x874 alike. So growth while the card
+   * is open brings its end on screen again, the way opening did, and with the
+   * same re-asserts. `current()` is the open panel, or null while it is shut.
+   *
+   * NOT an open, a tab switch or Fine-tune: each has its own reveal already.
+   * Each shows or hides one of the panels or the Fine-tune body, so that moves
+   * the baseline instead of being followed -- watched on those elements, not
+   * read off the card's size, because Photo and Music empty are the same
+   * height and a switch between them resizes nothing (the first draft of this
+   * kept the panel's name per resize, missed that switch, and so never followed
+   * a song added after it).
+   *
+   * Never so far that the dock slides under the pinned header: that is
+   * controls on top of controls (verify_ux's phone audit), and the reason
+   * Fine-tune's own nudge stops at its waveform. Capped there, a short phone
+   * may still leave the last row to scroll to; growth only ever scrolls
+   * down. */
+  function followGrowth(card, o) {
+    if (!card || typeof ResizeObserver === 'undefined') return;
+    var dock = o.dock || null, lastH = 0;
+    function height() { return card.getBoundingClientRect().height; }
+    function target() {
+      var scroller = document.scrollingElement || document.documentElement;
+      var top = scroller.scrollTop;
+      var want = top + card.getBoundingClientRect().bottom - viewH() + 8;
+      if (dock && dock.offsetParent !== null) {
+        want = Math.min(want, top + dock.getBoundingClientRect().top - stuckBottom() - 4);
+      }
+      return Math.max(top, Math.min(want, scroller.scrollHeight - window.innerHeight));
+    }
+    function reveal() {
+      var b = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto' : 'smooth';
+      requestAnimationFrame(function () { window.scrollTo({ top: target(), behavior: b }); });
+      [300, 700, 1200].forEach(function (ms) {
+        setTimeout(function () {
+          if (card.offsetParent === null) return;
+          var scroller = document.scrollingElement || document.documentElement;
+          var t = target();
+          if (t > scroller.scrollTop + 1) scroller.scrollTop = t;
+        }, ms);
+      });
+    }
+    var moves = new MutationObserver(function () { lastH = height(); });
+    [].forEach.call(card.querySelectorAll('#photoPanel, #musicPanel, #fineTuneBody'), function (m) {
+      moves.observe(m, { attributes: true, attributeFilter: ['hidden'] });
+    });
+    new ResizeObserver(function () {
+      var h = height(), grew = !!o.current() && lastH > 0 && h > lastH + 1;
+      lastH = h;
+      if (grew) reveal();
+    }).observe(card);
+  }
+
+  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, veil: veil, shrinkGently: shrinkGently,
+                                followGrowth: followGrowth };
 }());

@@ -14862,3 +14862,35 @@ verify_nametab saves a real backup from each editor in Chromium and asks that it
 is <name>.skribl labelled a plain file. It is red on main on both editors; each
 editor's label broken alone turned only its own check red, and so did the Pad
 naming its backup .skribl.json.
+
+**A song or a photo added to the open Media card brings its end on screen
+(found re-recording How it works' clips).** Opening the drawer reveals the
+card, and then a file lands in it: the song's row and trim strip, or the
+photo's fit controls, grow the card below what was revealed. On both editors,
+once the drawer had settled (a picker takes seconds), a song left 134-142px of
+the card below a phone's screen and a photo 201-245px, at 390x640, 390x844 and
+the owner's 402x874 alike: the trim strip and Preview Loop, or Fill, Fit and
+Stretch, until the person scrolled for them. The clips' recorder showed it as
+a card cut off at the bottom.
+
+lib/drawerdetent.js followGrowth, which both editors attach to #mediaCard:
+growth while the card is open brings its end on screen the way opening does,
+with the same re-asserts, and never so far that the dock passes under the
+pinned header (controls on top of controls, verify_ux's phone audit); a short
+phone can stop at that cap with its last row to scroll to. An open, a tab
+switch and Fine-tune each have their own reveal, so they move the baseline
+instead of being followed: watched on the two panels and the Fine-tune body,
+not read off the card's size, because Photo and Music empty are the same
+height. The first draft kept the open panel's name per resize, missed a
+switch that resized nothing, and so never followed a song added after it.
+
+verify_parity checks it on both editors, song and photo, at all three sizes,
+on a phone: the end must be painted, not merely inside the viewport, and the
+dock must stay below the header. All 12 are red on main. Each editor's
+attachment removed alone turned only its own six red, and the cap removed
+turned red the one case where it binds, a photo on the Pad at 390x640.
+Removing the baseline move turned nothing red, so a second check pins it: with
+a song in, Fine-tune's own nudge brings its waveform on screen and the page
+does not chase the card's end. That break turns it red at 390x844 and 402x874
+on both editors; at 390x640 the cap stops the chase first, so that size cannot
+tell them apart.
