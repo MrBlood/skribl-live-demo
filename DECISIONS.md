@@ -14978,7 +14978,7 @@ did. It now reads the screen, on a canvas with a stroke on it. Twenty-five new
 checks, on both editors, read the ground as painted, held, lit and saved: a new
 drawing in each theme, the blank canvas following, a stroke ending that, three
 hand picks read at each switch, a restored draft, New Skribl and its Undo, and
-the Pad before any script runs. Thirteen single breaks each turned only their
+the Pad before any script runs. Fourteen single breaks each turned only their
 own checks red, the one that first passed included: an unheard pick of the
 swatch already lit went dark and came back with the theme, and the checks read
 only the end of the round trip. verify_pages reads each tinted ghost's contrast
