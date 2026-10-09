@@ -5249,7 +5249,9 @@ function saveDraft(){
   // person keeps on disk; a recipe in it would be a schema change for every
   // other reader of the format.
   const data=serializeFlip();
-  const blob=new Blob([JSON.stringify(data)], { type:'application/json' });
+  // A plain download, not JSON: iPhone Safari renamed a JSON backup to
+  // "name.skribl.json" and showed it instead of saving it (the Pad's saveDraft says more).
+  const blob=new Blob([JSON.stringify(data)], { type:'application/octet-stream' });
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=(window.SkriblName ? window.SkriblName.filename(data.title)
     : 'skribl-flip-'+new Date().toISOString().slice(0,10)+'.skribl');
