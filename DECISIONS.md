@@ -14956,11 +14956,12 @@ restored draft's own ground replaces it. Flip's canvas wears the light chrome's
 raised surface until its script runs, which is light already.
 
 Flip's tinted onion all but vanished on a light ground past the nearest page:
-Paper and White read 1.35, 1.11 and 1.03:1, one, two and three pages back,
-against 1.58, 1.34 and 1.22 on the dark canvas. Mocked for the owner, who said
+Paper read 1.37, 1.12 and 1.03:1, one, two and three pages back, and White
+1.40, 1.13 and 1.04, against 1.58, 1.34 and 1.23 on the dark canvas. Mocked for the owner, who said
 "Yes, use the proposed tints in the Paper PR": on a light ground the tints are
 deeper inks of the same red, orange and amber, a little stronger (30, 26 and
-20%), and read 1.60, 1.35 and 1.24 on Paper. The dark canvas is unchanged, and
+20%), and read 1.60, 1.35 and 1.24 on Paper and 1.64, 1.38 and 1.26 on
+White. The dark canvas is unchanged, and
 an untinted ghost is its own ink, as legible as that ink is on its ground.
 
 How it works said the theme changes "never the drawing itself", which is still

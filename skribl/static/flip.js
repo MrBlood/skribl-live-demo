@@ -269,8 +269,8 @@ const ARC_WINDOW = 12;         // pages either side; bounds both cost and clutte
 const ONION_ALPHAS = [0.30, 0.17, 0.10];          // nearer frame = more visible
 const ONION_TINTS  = ['#ff5f6d', '#ff9f43', '#ffd76a'];   // warmer = further back
 // ...and on a LIGHT ground those all but vanish past the nearest page: Paper
-// and White read 1.35, 1.11 and 1.03:1 against 1.58, 1.34 and 1.22 on the dark
-// canvas, and Paper is where the light theme starts a drawing. Deeper inks of
+// read 1.37, 1.12 and 1.03:1 against 1.58, 1.34 and 1.23 on the dark canvas
+// (verify_pages), and Paper is where the light theme starts a drawing. Deeper inks of
 // the same three, a little stronger, give a light ground the dark canvas's
 // contrast back (owner, of the mock: "Yes, use the proposed tints").
 const ONION_TINTS_LIGHT  = ['#d62839', '#d9621c', '#b07d0a'];
