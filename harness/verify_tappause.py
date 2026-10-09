@@ -81,7 +81,7 @@ def wav_bytes(seconds, rate=22050):
 AUD = wav_bytes(3.0)
 
 
-def fresh(b, route, kind=PHONE, spy=False):
+def fresh(b, route, kind=PHONE, spy=False, ground="#0d0f14"):
     ctx = b.new_context(**kind)
     if spy:
         ctx.add_init_script(AUDIO_SPY)
@@ -91,6 +91,14 @@ def fresh(b, route, kind=PHONE, spy=False):
     browsing.goto(pg, BASE, route)
     pg.wait_for_timeout(900)
     pg.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
+    # The dark canvas, picked: a new drawing starts on the theme's ground, which
+    # is Paper in this browser's light scheme (lib/canvasground.js), and arrow()
+    # counts the white of the round Play -- on Paper the ground is that white.
+    # The fixtures' white ink is read against a dark ground too. ON PAPER, at
+    # the end, asks the Paper question with a measure that is blind to ground.
+    if ground:
+        pg.evaluate("(c) => document.querySelector('.bg-swatch[data-bg=\"' + c + '\"]').click()", ground)
+        pg.wait_for_timeout(100)
     # How long the last press on the canvas lasted, by the events' own clock: a
     # drag can only prove the tap's distance rule if it was quick enough to be a
     # tap on time alone.
@@ -204,6 +212,27 @@ def arrow(pg, sel):
 def painted_mid(a):
     n, dx, dy = a
     return n > 40 and abs(dx) <= 8 and abs(dy) <= 8
+
+
+def middle(pg, sel):
+    cx, cy = centre(pg, sel)
+    return Image.open(io.BytesIO(pg.screenshot(clip={"x": cx - 42, "y": cy - 42,
+                                                     "width": 84, "height": 84}))).convert("RGB")
+
+
+def laid_over(a, b):
+    """What landed on the middle between two shots: (count, centroid dx, dy)
+    of the pixels that moved by more than 40 in any channel. Blind to the
+    ground, so it can ask on Paper, where arrow()'s white is the ground."""
+    w, h = a.size
+    pa, pb = a.load(), b.load()
+    pts = [(x, y) for y in range(h) for x in range(w)
+           if max(abs(pa[x, y][i] - pb[x, y][i]) for i in range(3)) > 40]
+    if not pts:
+        return 0, None, None
+    s = w / 84.0
+    return (len(pts), round(sum(p[0] for p in pts) / len(pts) / s - 42, 1),
+            round(sum(p[1] for p in pts) / len(pts) / s - 42, 1))
 
 
 def glyph_display(pg):
@@ -579,10 +608,40 @@ def flip_suite(b):
     ctx.close()
 
 
+def paper_suite(b):
+    # A new drawing in the light theme starts on Paper, so for everyone in the
+    # light theme the round Play stands on Paper: black glass at 0.55 over a
+    # near-white ground. Asked of what a pause lays over the middle, by mouse
+    # on a desk, on the ground the editor started on.
+    print("\nON PAPER -- the round Play shows on the light theme's ground")
+    for who, route, sel in (("Pad", "/skribl-pad", "#canvas"), ("Flip", "/flip", ".flip-wrap")):
+        ctx, pg, cdp, errs = fresh(b, route, kind=DESK, ground=None)
+        if who == "Pad":
+            pad_take(pg, None)
+            go = lambda: pad_play(pg, None)
+            cx, cy = centre(pg, "#canvas")
+        else:
+            flip_setup(pg)
+            go = lambda: flip_play(pg, None)
+            cx, cy = centre(pg, "#pad")
+        ground = pg.evaluate("() => String(bgColor).toLowerCase()")
+        go()
+        pg.wait_for_timeout(400)
+        a = middle(pg, sel)
+        tap(pg, None, cx, cy)
+        pg.wait_for_timeout(300)
+        lay = laid_over(a, middle(pg, sel))
+        check(f"{who}: on Paper, a pause lays the round Play over the middle of the canvas",
+              ground == "#f6f2ea" and lay[0] > 1500 and abs(lay[1]) <= 8 and abs(lay[2]) <= 8,
+              f"on {ground}: {lay}")
+        ctx.close()
+
+
 with sync_playwright() as p:
     b = p.chromium.launch()
     pad_suite(b)
     flip_suite(b)
+    paper_suite(b)
     b.close()
 
 print("\n" + "=" * 62)

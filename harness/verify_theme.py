@@ -33,9 +33,9 @@ liability.
    canvas in dark, and a canvas with nothing on it yet follows a switch,
    because nothing on it was chosen. A stroke, a ground picked by hand or a
    restored draft ends that. The checks are pixel ones, read off a screenshot:
-   the ground is a CSS background under a transparent bitmap, so the bitmap
-   cannot say what the theme did to it, and no amount of reading CSS would
-   tell you that as plainly as the screen does.
+   the Pad's ground is a CSS background under a transparent bitmap, so its
+   bitmap cannot say what the theme did to it, and no amount of reading CSS
+   would tell you that as plainly as the screen does.
 
 4. THE RAMP CANNOT ROT. The failure mode for a two-theme palette is silent: add
    a token to `:root` next month, forget the light value, and that one control
@@ -439,9 +439,9 @@ with sync_playwright() as p:
               return out;
             }""")
             # The ground as it is PAINTED. This used to read the middle of the
-            # canvas's bitmap, which is transparent: the ground is the CSS
-            # background behind it, so the read was the same in both themes
-            # whatever the theme did to the ground.
+            # first canvas's bitmap. Flip paints its ground into its bitmap, so
+            # there that saw it; the Pad's bitmap is transparent over a CSS
+            # ground, so on the Pad it read the same whatever the theme did.
             shots[mode]["px"] = painted(page, label)
         for part in ("header", "toolbar", "body"):
             d, l = parse(shots["dark"][part]), parse(shots["light"][part])
