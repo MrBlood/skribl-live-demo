@@ -126,6 +126,7 @@ here is the rule you can break tomorrow.
 | Both editors build the pen palette from `lib/palette.js` — same list, same order, from the lib and not from a copy. | `verify_parity.py` |
 | Every grey the chrome paints is a token, not a literal — including the `rgb()` function form, which the first version of the ratchet could not see. | `verify_surfaces.py` |
 | `color`, `fill` and `stroke` hold no colour literal except `#fff` and `#0d0f14`. A red is not a neutral, so a grey audit walks straight past it. | `verify_theme.py` |
+| A drawing's ground never follows the theme. Only a NEW drawing starts on the theme's ground, Paper in light and the dark canvas in dark, and a blank one follows a switch until a stroke, a hand pick or a restored draft makes it the person's. | `verify_theme.py` (painted, held, lit and saved, on both editors) |
 | A token named for the CANVAS is not chrome and is exempt — naming it in `:root` is what makes that a decision rather than a literal somebody missed. | `verify_surfaces.py` |
 | A run whose suite names begin with `_` is a scratch probe and must never be published as the project's result. | `stamp_docs.py` refuses it |
 | Hiding a control is only safe when nothing reachable ONLY through it becomes unreachable. | **no enforcer** — found by looking; `beginPinch` revealing the zoom HUD is what made hiding Magnify safe |
