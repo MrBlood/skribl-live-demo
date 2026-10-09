@@ -15091,3 +15091,25 @@ strip (8), the read-time strip (2), each format's stripper (1 to 10), the kept
 orientation (6), the dropped names (5), the point remainder (3), the withheld
 guard (5, across both suites), the cursor bound (4), the no-store header (2),
 the one-post view (1) and the byte comparison (3).
+
+**The Home Screen app opens a page kept from an older build offline, styled
+(preflight before v321, PF-007).** The worker kept one copy of each hashed file,
+dropping an older copy the moment a newer one was stored, and a newer one
+arrives when ANY page is opened on a new build. So: open the Pad and Flip,
+deploy, open only the Pad. Flip's kept page still named the old styles.css and
+lib/theme.js, the worker had dropped them, and offline Flip opened as bare HTML
+once the browser's own cache no longer held them. In Chromium that cache answers
+and hides it; with the cache cleared, standing in for a phone evicting it, it
+showed every time. An older copy now goes only when no kept page names it any
+more, read from the kept pages themselves. verify_offline drives it with a
+second build made from a copy of the tree (a suite must never edit tracked
+files): main's worker kept two of the four shared files and Flip's header came
+back unstyled; this one keeps all four and Flip opens as built.
+
+**Picking the row already on the Library's stage restarts it without a second
+download (PF-002).** select() fetched whatever row was picked, the one already
+playing included, to hand the player the drawing it already had: the second
+request in the owner's network panel, the whole payload again, megabytes with a
+photo or a song. The play count never moved (a viewer is counted once a day).
+It restarts the drawing, as Restart does, and asks the network for nothing.
+verify_library counts the payload requests: one more on main, none now.

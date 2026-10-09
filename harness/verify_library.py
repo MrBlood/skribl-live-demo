@@ -2337,6 +2337,49 @@ check("a replay picked after a Flip plays as a replay, painted in its own ink wi
       bool(_on_rep) and _on_rep["kind"] == "replay" and _on_rep["green"] > 2000 and _on_rep["red"] == 0,
       str(_on_rep))
 
+print("\nLIBRARY — picking the row already on the stage restarts it, with no second download")
+# The owner's network panel showed a second fetch of one Skribl's payload:
+# select() fetched whatever row was picked, the one already playing included,
+# to hand the player the drawing it already had (v321 preflight, PF-002).
+_again = _adopt_post({"title": "again: a replay", "version": 2, "schemaVersion": 2,
+                      "playbackMode": "replay", "visibility": "unlisted",
+                      "canvasSize": {"cssWidth": 450, "cssHeight": 800, "dpr": 1},
+                      "frames": [{"strokes": _diag, "strokeGroups": [len(_diag)],
+                                  "background": {"color": "#0d0f14"}}]})
+with sync_playwright() as _spg:
+    _bg = _spg.chromium.launch()
+    _pg2 = _bg.new_context(viewport={"width": 1280, "height": 1000}).new_page()
+    browsing.goto(_pg2, BASE, "/library")
+    _pg2.evaluate("""(p) => localStorage.setItem('skribl_posted_v1', JSON.stringify([
+        { id: p.id, url: '/s/' + p.id, title: 'Again', kind: 'pad', pages: 1,
+          visibility: 'unlisted', tok: p.deleteToken || null, at: Date.now() }]))""", _again)
+    _fetches = []
+    _pg2.on("request", lambda r: r.url.split("?")[0].endswith("/api/skribls/" + _again["id"])
+            and _fetches.append(r.url))
+    _pg2.reload(wait_until="load")
+    _pg2.wait_for_function("(id) => { const el = document.getElementById('stageBox');"
+                           " return !!(el && el._skriblInline && el._skriblInline.state().loaded"
+                           " && document.querySelector('.posted-row.active[data-id=\"' + id + '\"]')); }",
+                           arg=_again["id"], timeout=15000)
+    _pg2.evaluate("() => { const h = document.getElementById('stageBox')._skriblInline; h.seek(0); h.play(); }")
+    _pg2.wait_for_timeout(900)
+    _before = _pg2.evaluate("() => document.getElementById('stageBox')._skriblInline.state()")
+    _n_before = len(_fetches)
+    _pg2.click(f'.posted-main[data-select="{_again["id"]}"]')
+    _pg2.wait_for_timeout(250)
+    _after = _pg2.evaluate("() => document.getElementById('stageBox')._skriblInline.state()")
+    _pg2.wait_for_timeout(700)
+    _n_after = len(_fetches)
+    _bg.close()
+check("the fixture: the stage loaded the row with one fetch and was playing",
+      _n_before == 1 and _before.get("state") == "playing" and _before.get("elapsedMs", 0) > 500,
+      f"{_n_before} fetch(es), {_before.get('state')} at {_before.get('elapsedMs')} ms")
+check("picking it again downloads nothing", _n_after == _n_before,
+      f"{_n_after - _n_before} more payload request(s)")
+check("...and restarts it from the beginning, playing",
+      _after.get("state") == "playing" and _after.get("elapsedMs", 1e9) < _before.get("elapsedMs", 0),
+      f"{_after.get('state')} at {_after.get('elapsedMs')} ms (was {_before.get('elapsedMs')} ms)")
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)
