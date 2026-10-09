@@ -6154,6 +6154,12 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
   cursor: pointer; text-decoration: none;
 }
 .skribl-hint-action:hover { background: rgba(124, 92, 255, 0.14); }
+/* THE ACTION'S INK, PER THEME (v321 preflight, PF-011). --ui-hi is #7c5cff in
+   both themes, and on the hint's own ground that read 3.5:1 in light (#e2e7ee)
+   and 3.7:1 in dark (#1c212c): small bold text needs 4.5. The same violet,
+   deeper on light and lighter on dark: 5.6:1 and 5.9:1. */
+.skribl-hint-action { color: #a08cff; }
+:root[data-theme="light"] .skribl-hint-action { color: #5a3ad8; }
 /* 27px tall in a toast that takes no pointer: the button is the only thing
    here a finger can hit, so it gets the 44px box (--tap-grow, as above). */
 .skribl-hint-action { position: relative; --tap-grow: 9px; }
