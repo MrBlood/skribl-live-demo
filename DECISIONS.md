@@ -14931,3 +14931,68 @@ verify_tappause asks it with a real mouse on a desk, on both editors: the
 element a click at the canvas's middle would land on must compute neither
 `cursor: none` nor `not-allowed`, while the preview plays and while it is
 paused.
+
+**A new drawing starts on Paper in the light theme (owner, of the mock on both
+editors at phone and desk sizes: "Do Paper.").** Every canvas used to start dark
+whatever the theme, so the light theme put a dark slab in the middle of a light
+app. The theme now picks where a NEW drawing starts: Paper (#f6f2ea, the draw
+drawer's own Paper swatch) in light, the dark canvas in dark, on both editors,
+when the page opens with no draft to restore and on New Skribl. It still never
+repaints a drawing. A restored draft, an opened backup and a loaded post keep
+their ground, and every swatch is offered in both themes. A canvas with nothing
+on it yet follows a theme switch, because nothing on it was chosen; a stroke, a
+photo or a ground picked by hand ends that.
+
+lib/canvasground.js holds the rule for both editors and remembers the ground it
+gave, so any pick takes the canvas out of its hands, even of the swatch already
+lit. The first draft compared the canvas with the ground the old theme starts
+on, and so took Paper picked by hand in the dark theme for its own after a trip
+to light and back, and painted it dark. Flip took its ground before it knew
+whether a draft would be restored; it now asks after, as the Pad always did.
+The player never loads the file: a posted Skribl carries its own ground. The
+Pad's canvas wears Paper from the light theme's own rule in styles.css before
+any script runs, so a new drawing does not show the dark canvas for a frame; a
+restored draft's own ground replaces it. Flip's canvas wears the light chrome's
+raised surface until its script runs, which is light already.
+
+Flip's tinted onion all but vanished on a light ground past the nearest page:
+Paper and White read 1.35, 1.11 and 1.03:1, one, two and three pages back,
+against 1.58, 1.34 and 1.22 on the dark canvas. Mocked for the owner, who said
+"Yes, use the proposed tints in the Paper PR": on a light ground the tints are
+deeper inks of the same red, orange and amber, a little stronger (30, 26 and
+20%), and read 1.60, 1.35 and 1.24 on Paper. The dark canvas is unchanged, and
+an untinted ghost is its own ink, as legible as that ink is on its ground.
+
+How it works said the theme changes "never the drawing itself", which is still
+true, and now also says where a new one starts. Flip's Undo & New Skribl tip
+said New Skribl "clears pages only -- your music and background image stay":
+untrue since #350, which made it take the photo and music too. Both editors'
+tips now say it clears everything, and where the new one starts.
+
+verify_theme's rule 3 is rewritten: a drawing does not follow the theme, a new
+one starts on the theme's ground. Its old check read the middle of the first
+canvas's BITMAP in both themes, on a blank canvas: on Flip, which paints its
+ground into its bitmap, that went red with Paper as it should; on the Pad, whose
+bitmap is transparent over a CSS ground, it read [0, 0, 0, 0] whatever the theme
+did. It now reads the screen, on a canvas with a stroke on it. Twenty-five new
+checks, on both editors, read the ground as painted, held, lit and saved: a new
+drawing in each theme, the blank canvas following, a stroke ending that, three
+hand picks read at each switch, a restored draft, New Skribl and its Undo, and
+the Pad before any script runs. Thirteen single breaks each turned only their
+own checks red, the one that first passed included: an unheard pick of the
+swatch already lit went dark and came back with the theme, and the checks read
+only the end of the round trip. verify_pages reads each tinted ghost's contrast
+on the dark canvas, Paper and White; four breaks of the light tints each turned
+it red. verify_tappause asks for the round Play on Paper too, with a measure
+blind to the ground, since its white-count is the ground there.
+
+The full battery on the first build found eight suites that took a new drawing
+to start dark, every one in its fixture: verify_a11y, verify_flipmotion,
+verify_inline, verify_pages, verify_smudgeblur, verify_tappause, verify_theme
+and verify_under. Each fixture now picks the ground its measures were calibrated
+on, and the two that ask about grounds ask about Paper as well. Flip's ring is
+asked on a new drawing's own ground in verify_smudgeblur.
+
+How it works' Post clip drew its cat on whatever the canvas started as: dark ink
+on the dark canvas, in both themes' clips. It draws on Paper now, like every
+other example. CLIPS
