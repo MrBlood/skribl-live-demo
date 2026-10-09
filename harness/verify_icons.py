@@ -288,7 +288,9 @@ _PSITES = {"templates/skribl/_skribl_player_controls.html": ["restart", "loop", 
            "static/app.js": ["sound", "muted", "play"],
            "static/lib/postedui.js": ["sound", "link"],
            "static/gallery.js": ["link"],
-           "templates/skribl/skribl_editor.html": ["link"],
+           # The Post sheet's Copy link: in the Pad's own template until #364,
+           # in the sheet both editors include since.
+           "templates/skribl/_skribl_post.html": ["link"],
            "templates/skribl/_skribl_export.html": ["loop"]}
 _short = []
 for _rel, _roles in _PSITES.items():
