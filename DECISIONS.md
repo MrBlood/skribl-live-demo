@@ -15136,3 +15136,21 @@ origin, and is gone; no code changed. README's local setup built the schema
 with `flask init-db` (create_all, no migration stamp, so the next upgrade head
 fails) and its Deploy said `gunicorn app:app` with no migration, the v269
 outage; both now say what START-HERE says.
+
+**Flip no longer calls a 2xx that is not a post a success (preflight PF-028).**
+The preflight's network pass answered each editor's POST with junk on a 200,
+which is what a captive portal's sign-in page does. The Pad said "The server
+returned an unexpected response."; Flip said "Posted!" with a link to
+/s/undefined, and dropped its Idempotency-Key, so the retry a careful person
+makes was a second post whenever the server had made the first. Flip now asks
+for an id and a url, as the Pad always has, says the same words with "Your
+Skribl is safe here", and keeps the key, so Try again finds the post the server
+may already have made. verify_flipmeta drives four such answers (not JSON, a
+sign-in page, `{}`, `null`); the shape check broken turned 12 red, the key
+dropped on that failure 4, a JSON null not tolerated 1.
+
+**How it works: the search field has room under the title band.** It had no top
+margin and sat on the band's bottom edge on both editors (owner's iPhone). It
+has 18px now, the same as each side; the owner chose 18 over 14 from a mock.
+verify_help measures it against the side inset at a desk and a phone width; the
+old 0 turned 4 red.
