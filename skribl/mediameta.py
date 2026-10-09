@@ -48,6 +48,7 @@ what it says it removes, and to the media still decoding afterwards.
 import base64
 import re
 import struct
+import zlib
 
 _DATA_URL_RE = re.compile(r"^\s*data:([^;,]+)((?:;[^;,]*)*);base64,(.*)$", re.S | re.I)
 
@@ -177,7 +178,6 @@ _PNG_KEEP = {b"IHDR", b"PLTE", b"IDAT", b"IEND", b"tRNS", b"cHRM", b"gAMA",
 
 
 def _png_chunk(kind, data):
-    import zlib
     return (struct.pack(">I", len(data)) + kind + data
             + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF))
 
