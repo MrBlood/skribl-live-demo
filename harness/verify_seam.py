@@ -289,7 +289,7 @@ if _marker in _appjs:
     _pscripts = _player_scripts()
     _never = {"editor_export.js", "editor_post.js", "editor_menu.js", "editor_music.js",
               "editor_photo.js", "editor_shapes.js", "editor_draw.js", "editor_tune.js",
-              "lib/sheetswipe.js", "lib/postsheet.js", "lib/tappause.js"}
+              "lib/sheetswipe.js", "lib/postsheet.js", "lib/tappause.js", "lib/canvasground.js"}
     check("the player's own scripts are found at all (else the next check proves nothing)",
           "app.js" in _pscripts and "lib/eventpoint.js" in _pscripts, str(sorted(_pscripts)))
     check("the extracted editor bundles are not loaded by the player",

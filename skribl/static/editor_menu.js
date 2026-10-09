@@ -93,8 +93,10 @@ function resetAll() {
   };
   _rm('music');
   _rm('photo');
-  bgColor = '#0d0f14';
-  document.querySelectorAll('.bg-swatch').forEach(b => b.classList.toggle('active', b.dataset.bg === '#0d0f14'));
+  // A new drawing starts on the theme's ground: Paper in the light theme
+  // (lib/canvasground.js). Undo brings the old one back with the rest.
+  bgColor = window.SkriblCanvasGround ? window.SkriblCanvasGround.start() : '#0d0f14';
+  document.querySelectorAll('.bg-swatch').forEach(b => b.classList.toggle('active', b.dataset.bg === bgColor));
   canvasWrap.style.backgroundColor = bgColor;
   if (typeof updateVignette === 'function') updateVignette();
   if (typeof clearAutosave === 'function') clearAutosave();

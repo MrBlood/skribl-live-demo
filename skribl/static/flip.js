@@ -336,7 +336,10 @@ function exDims(){
   return { w: Math.max(2, Math.round(CW * scale)),
            h: Math.max(2, Math.round(CH * scale)), scale: scale };
 }
-let bgColor = '#0d0f14', strokeOpacity = 1, smoothingAlpha = 1;   // Pad-parity draw settings
+// A new Flip starts on the theme's ground, Paper in the light theme (lib/canvasground.js);
+// a restored draft puts its own back (applyFlipDraftObject).
+let bgColor = window.SkriblCanvasGround ? window.SkriblCanvasGround.start() : '#0d0f14';
+let strokeOpacity = 1, smoothingAlpha = 1;   // Pad-parity draw settings
 let smoothPt = null, lastRaw = null;                              // smoothing stabilizer runtime
 let bgImage = null, bgImageObj = null, imageName = '';            // one background image per animation
 let photoFit = 'cover', photoOpacity = 1, photoBlur = 0, photoZoom = 1;   // image adjustments
@@ -4887,6 +4890,13 @@ function setBg(hex, fromCustom){
 }
 bgGroup.addEventListener('click',e=>{ const b=e.target.closest('.bg-swatch'); if(!b||b.classList.contains('bg-custom')) return; setBg(b.dataset.bg,false); });
 customBgInput.addEventListener('input',e=>{ setBg(e.target.value,true); });
+// A Flip with nothing on any page follows the theme while it is still blank
+// (lib/canvasground.js), as the Pad's canvas does.
+if(window.SkriblCanvasGround) window.SkriblCanvasGround.follow({
+  ground: ()=>bgColor,
+  blank: ()=>!bgImage && !pendingPhotoMeta && frames.every(f=>!f.strokes || !f.strokes.length),
+  set: (hex)=>setBg(hex,false)
+});
 
 /* ---- smoothing: stabilizer strength baked into the captured points (Pad parity) ---- */
 const smoothSeg=document.getElementById('smoothSeg');
@@ -10681,6 +10691,7 @@ function clearAllPages(opts){
   flipDocGen++;
   const _draftId = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;   // a new Skribl is a new draft
   clearFramesBackup = { doc: doc, frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv, draftId: _draftId,
+                        bg: bgColor,
                         // A new Skribl is a new title; Undo brings the old one back (v317).
                         name: (window.SkriblName && window.SkriblName.reset) ? window.SkriblName.reset() : null };
   /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
@@ -10692,7 +10703,11 @@ function clearAllPages(opts){
   frames=[newFrame()]; idx=0; redoStack.length=0;
   // The selection counters move first, so a photo or track still being read --
   // or still on its way back from the draft store -- lands on nothing.
-  if(withMedia){ imageSelectionSeq++; removeBgImage(); removeMusic(); }
+  if(withMedia){ imageSelectionSeq++; removeBgImage(); removeMusic();
+    // ...and New Skribl is a new drawing, so it starts on the theme's ground as
+    // the Pad's does (lib/canvasground.js). Clear all pages keeps the ground,
+    // as it keeps the media.
+    if(window.SkriblCanvasGround) setBg(window.SkriblCanvasGround.start()); }
   buildStrip(); render(); updateToolState();
   scheduleSave();   // persist the cleared state instead of deleting the draft
   const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=false;
@@ -10731,6 +10746,7 @@ bindEl('clearUndo', 'click',()=>{
   // frames alone would play them at the rate of the empty document.
   if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
   if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
+  if(clearFramesBackup.bg && clearFramesBackup.bg !== bgColor) setBg(clearFramesBackup.bg);   // New Skribl moved it
   if(clearFramesBackup.name && window.SkriblName) window.SkriblName.restore(clearFramesBackup.name);
   if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(clearFramesBackup.draftId);   // and the saved draft it was
   clearFramesBackup=null; redoStack.length=0;

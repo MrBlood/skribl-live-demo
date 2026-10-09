@@ -136,9 +136,11 @@ print("\nSURFACES — the chrome's colours live in one place")
 # next month is one control that stays dark when the theme flips, and nothing
 # else would catch it.
 #
-# `#fff` and `#0d0f14` are excluded deliberately. White is almost always text on
-# a coloured fill, which stays white either way; #0d0f14 is the CANVAS default,
-# which is the document's own colour and must not follow the UI theme at all.
+# `#fff`, `#0d0f14` and `#f6f2ea` are excluded deliberately. White is almost
+# always text on a coloured fill, which stays white either way; #0d0f14 and
+# #f6f2ea are the CANVAS defaults, dark and Paper, the document's own colours:
+# the theme picks which one a new drawing starts on (lib/canvasground.js) and
+# never repaints either, so neither belongs in a ramp that flips.
 def neutral_literals(name):
     css = (STATIC / name).read_text(encoding="utf-8")
     css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)      # prose quotes colours
@@ -161,7 +163,7 @@ def neutral_literals(name):
         out.append(f"rgb({r},{g},{b})")
     for m in re.finditer(r"#[0-9a-fA-F]{3,6}\b", css):
         h = m.group(0).lower()
-        if h in ("#fff", "#ffffff", "#0d0f14"):
+        if h in ("#fff", "#ffffff", "#0d0f14", "#f6f2ea"):
             continue
         v = h.lstrip("#")
         if len(v) == 3:
