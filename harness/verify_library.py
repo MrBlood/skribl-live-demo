@@ -2320,11 +2320,11 @@ with sync_playwright() as _spa:
                  {"f": _flip, "r": _rep})
     _pa.reload(wait_until="load")
     _pa.wait_for_function("(id) => { const el = document.getElementById('stageBox');"
-                          " return el && el._skriblInline && el._skriblInline.state().id !== undefined"
-                          " && document.querySelector('.posted-row.active[data-id=\"' + id + '\"]'); }",
+                          " return !!(el && el._skriblInline && el._skriblInline.state().loaded"
+                          " && document.querySelector('.posted-row.active[data-id=\"' + id + '\"]')); }",
                           arg=_flip["id"], timeout=15000)
     _on_flip = _pa.evaluate(_INKS)
-    _pa.click(f'.posted-row[data-id="{_rep["id"]}"]')
+    _pa.click(f'.posted-main[data-select="{_rep["id"]}"]')
     _pa.wait_for_function("(id) => !!document.querySelector('.posted-row.active[data-id=\"' + id + '\"]')",
                           arg=_rep["id"], timeout=15000)
     _pa.wait_for_timeout(300)
