@@ -658,9 +658,11 @@ with sync_playwright() as p:
         retry: !document.getElementById('postSubmitBtn').hidden
                && !document.getElementById('postSubmitBtn').disabled,
         label: document.getElementById('postSubmitLabel').textContent })""")
-    check("the status says NOT POSTED, then where it is, drawn as a warning",
-          _st["text"].lower().startswith("not posted") and "this device" in _st["text"].lower()
-          and _st["warn"], str(_st))
+    # The shared first line since the failure words were unified (SK-AUD-010):
+    # what did not happen, then that the drawing is safe, then where it is.
+    check("the status says it did NOT post, that the drawing is still here, and where, drawn as a warning",
+          _st["text"].lower().replace("\u2019", "'").startswith("couldn't post") and "still here" in _st["text"].lower()
+          and "this device" in _st["text"].lower() and _st["warn"], str(_st))
     check("...and the sheet offers Try again, live",
           _st["retry"] and _st["label"] == "Try again", str(_st))
 
@@ -1384,7 +1386,7 @@ with sync_playwright() as _ps:
             _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(800)
         _lab2 = _pg.inner_text("#postStatusLabel")
         check(f"{_ed}: Cancel stops it and says nothing was posted",
-              "not posted" in _lab2.lower() and "safe" in _lab2.lower()
+              "not posted" in _lab2.lower() and "still here" in _lab2.lower()
               and _pg.evaluate("() => document.getElementById('postStatus').classList.contains('error')"), _lab2)
         _pg.click("#postSubmitBtn")
         try:
