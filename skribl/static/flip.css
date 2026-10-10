@@ -1160,6 +1160,12 @@
 .tune-row .onion-group { display: inline-flex; align-items: center; gap: 8px; }
 .tune-row .onion-group[hidden] { display: none; }
 .tune-row .seg button { min-width: 36px; }
+/* Preview (F1): a one-word label, so no 150px column; its five speeds share
+   the line, at the row's end like Speed's 6 / 12 / 24 (owner: "I want the
+   choices on the same line"). */
+#tuneWatchRow { flex-wrap: nowrap; }
+#tuneWatchRow .tune-label { width: auto; }
+#tuneWatchRow .seg { margin-left: auto; margin-right: 0; flex: 0 1 auto; min-width: 0; }   /* right edge with Speed's, at every width */
 
 /* Onion row dims when onion skin is off — the controls stay put so the panel
    never changes height mid-toggle. */

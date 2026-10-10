@@ -15588,9 +15588,11 @@ screen is outlined there and a 3px line along the strip's top edge fills as it
 plays (a 44px band to grab; a place on it lands on the page holding that beat,
 so a page held three beats takes three beats of the line) -- and the Duplicate /
 Blank / Tween / Smear row, idle during playback, becomes the speeds. Stop puts
-the row back. The same speeds sit in Playback settings as "Watching speed" (the
-owner: "does stop remove the 16x? So you're going to adjust and it's gone?"),
-so the speed is visible and changeable at rest. FIVE speeds, ¼× to 4×, not the
+the row back. The same speeds sit in Playback settings in a row called
+"Preview", on one line with its label and no small print (the owner: "does stop
+remove the 16x? So you're going to adjust and it's gone?" and then "Do we need
+the words? I want the choices on the same line"), so the speed is visible and
+changeable at rest. FIVE speeds, ¼× to 4×, not the
 Pad's seven: at 12 pages a second 8× asks for 96 pictures a second from a
 screen that shows about 60, so it would skip pages, not show them faster; slow
 is what a Flip is checked at. A speed scales only the preview's clock (each
