@@ -3050,6 +3050,11 @@ with sync_playwright() as _pp_:
 # are gone; over the drawing, the point under the Tune button belongs to the
 # header and the header's fill is opaque, so the controls are not on the ink.
 print("\nNO CONTAINER — the header and dock at rest; the header's ground over the drawing")
+import math as _m, struct as _st
+_n = 22050 * 3
+_body = b"".join(_st.pack("<h", int(9000 * _m.sin(2 * _m.pi * 440 * i / 22050))) for i in range(_n))
+_WAV = (b"RIFF" + _st.pack("<I", 36 + len(_body)) + b"WAVEfmt " + _st.pack("<IHHIIHH", 16, 1, 1, 22050, 44100, 2, 16)
+        + b"data" + _st.pack("<I", len(_body)) + _body)
 _GROUND = """(dock) => { const h = document.querySelector('.header'), t = document.querySelector(dock);
     const hc = getComputedStyle(h), tc = getComputedStyle(t), b = document.getElementById('tuneBtn').getBoundingClientRect();
     const at = document.elementFromPoint(b.left + 3, b.top + b.height / 2);
@@ -3059,7 +3064,7 @@ _GROUND = """(dock) => { const h = document.querySelector('.header'), t = docume
              tuneOnHeader: !!at && h.contains(at) }; }"""
 with sync_playwright() as _gp:
     _gb = _gp.chromium.launch()
-    for _route, _dock in (("/skribl-pad", ".toolbar"), ("/flip", ".flip-tools")):
+    for _route, _dock, _canvas in (("/skribl-pad", ".toolbar", "#canvas"), ("/flip", ".flip-tools", "#pad")):
         for _theme in ("dark", "light"):
             _gc = _gb.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True,
                                   color_scheme=_theme)
@@ -3076,11 +3081,61 @@ with sync_playwright() as _gp:
                   _o["scrolled"] > 0 and _o["over"] and _o["hFill"] == 1 and _o["tuneOnHeader"], str(_o))
             check(f"{_route} {_theme}: ...while the dock still paints none",
                   _o["dFill"] == 0 and not _o["dShadow"], str(_o))
+            # SCROLLED PAST THE DRAWING (owner's iPhone, after v321): at the
+            # end of a long drawer the drawing has gone above the header and
+            # the dock and the drawer are what is under it. The ground stayed
+            # only while the DRAWING overlapped, so it went, and the dock's
+            # icons showed through, stacked on the header's. A song in Music,
+            # Fine-tune open, scrolled to the end, with the drawing confirmed
+            # above the header first so the check cannot pass on a short page.
+            browsing.pad_drawer(_g, "music", settle=400)
+            _g.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _WAV})
+            _g.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=15000)
+            _g.click("#fineTuneToggle"); _g.wait_for_timeout(400)
+            _g.evaluate("() => window.scrollTo(0, document.documentElement.scrollHeight)")
+            browsing.wait_scroll_still(_g); _g.wait_for_timeout(300)
+            _e = _g.evaluate(_GROUND, _dock)
+            _past = _g.evaluate("""(cv) => document.querySelector(cv).getBoundingClientRect().bottom
+                <= document.querySelector('.header').getBoundingClientRect().top + 1""", _canvas)
+            check(f"{_route} {_theme}: scrolled to the end of Music, the drawing has gone above the header",
+                  _past, str(_e))
+            check(f"{_route} {_theme}: ...and the header keeps its ground over the dock and the drawer",
+                  _e["over"] and _e["hFill"] == 1 and _e["tuneOnHeader"], str(_e))
             browsing.pad_drawer_close(_g); _g.wait_for_timeout(1200)
             _c = _g.evaluate(_GROUND, _dock)
             check(f"{_route} {_theme}: ...and closing it takes the ground away again",
                   _c["scrolled"] == 0 and not _c["over"] and _c["hFill"] == 0, str(_c))
             _gc.close()
+    # FLIP'S PLAYBACK SETTINGS open ABOVE the drawing (owner's iPhone, after
+    # v321): scrolled a little, the panel slides under the header while the
+    # drawing is still below it, so a ground keyed to the drawing never came.
+    # A short phone, so the page can scroll; both preconditions are asserted
+    # so the check cannot pass on a page that did not get there.
+    for _theme in ("dark", "light"):
+        _fc = _gb.new_context(viewport={"width": 390, "height": 664}, is_mobile=True, has_touch=True, color_scheme=_theme)
+        _fc.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_theme}')}}catch(e){{}}")
+        _f = _fc.new_page()
+        browsing.goto(_f, BASE, "/flip"); _f.wait_for_timeout(900)
+        _f.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _f.click("#tuneBtn"); _f.wait_for_timeout(500)
+        browsing.wait_scroll_still(_f, 3000)
+        # With no drawer open, lib/drawers.js brings the page home once a scroll
+        # settles, and in Chromium that wins at once; on the owner's iPhone the
+        # page stayed scrolled. So the header is read while the scroll stands:
+        # a few frames after it, before the page settles home. The colour fades
+        # in over 0.25s, so the class is what is asked here, and the point under
+        # Tune; the fill itself is pinned by the drawer checks above.
+        _s, _below = _f.evaluate("""(dock) => new Promise(done => { window.scrollTo(0, 80);
+            requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+              const h = document.querySelector('.header'), b = document.getElementById('tuneBtn').getBoundingClientRect();
+              const at = document.elementFromPoint(b.left + 3, b.top + b.height / 2);
+              done([{ over: h.classList.contains('over-canvas'), scrolled: Math.round(scrollY), tuneOnHeader: !!at && h.contains(at) },
+                    document.getElementById('pad').getBoundingClientRect().top > h.getBoundingClientRect().bottom]); }))); })""", ".flip-tools")
+        check(f"/flip {_theme}: Playback settings open and scrolled, with the drawing still below the header",
+              _s["scrolled"] > 0 and _below, str(_s))
+        check(f"/flip {_theme}: ...and the header takes its ground over the panel",
+              _s["over"] and _s["tuneOnHeader"], str(_s))
+        _fc.close()
     _g = _gb.new_page(viewport={"width": 1366, "height": 900})
     browsing.goto(_g, BASE, "/skribl-pad"); _g.wait_for_timeout(800)
     _d = _g.evaluate(_GROUND, ".toolbar")
