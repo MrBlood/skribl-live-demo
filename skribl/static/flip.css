@@ -1160,12 +1160,19 @@
 .tune-row .onion-group { display: inline-flex; align-items: center; gap: 8px; }
 .tune-row .onion-group[hidden] { display: none; }
 .tune-row .seg button { min-width: 36px; }
-/* Preview (F1): a one-word label, so no 150px column; its five speeds share
-   the line, at the row's end like Speed's 6 / 12 / 24 (owner: "I want the
-   choices on the same line"). */
-#tuneWatchRow { flex-wrap: nowrap; }
-#tuneWatchRow .tune-label { width: auto; }
-#tuneWatchRow .seg { margin-left: auto; margin-right: 0; flex: 0 1 auto; min-width: 0; }   /* right edge with Speed's, at every width */
+/* Watching speed (F1): the label and its five speeds share one 44px line,
+   the speeds at the row's end like Speed's 6 / 12 / 24, and the small print
+   runs under both, the row's full width (the owner's layout). Where the line
+   is too narrow for both (a 320px phone), the speeds drop under the label. */
+#tuneWatchRow { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; row-gap: 2px; }
+#tuneWatchRow .tune-label { display: contents; }
+#tuneWatchRow .tune-name { grid-column: 1; grid-row: 1; min-height: 44px; display: flex; align-items: center; }
+#tuneWatchRow .seg { grid-column: 2; grid-row: 1; justify-self: end; margin: 0; }
+#tuneWatchRow .tune-hint { grid-column: 1 / -1; grid-row: 2; }
+@media (max-width: 359px) {
+  #tuneWatchRow .seg { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+  #tuneWatchRow .tune-hint { grid-row: 3; }
+}
 
 /* Onion row dims when onion skin is off — the controls stay put so the panel
    never changes height mid-toggle. */
