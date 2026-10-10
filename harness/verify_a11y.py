@@ -498,6 +498,9 @@ with sync_playwright() as p:
           ", ".join(stale) + " — a recipe for a deleted dialog passes forever "
           "by testing nothing")
 
+    # Escape is Cancel on Flip's export progress, and with no export running
+    # there is nothing to cancel, so it stays up (see its recipe above).
+    ESCAPE_STAYS = {("/flip", "flipExport")}
     for path, mid in sorted(set(found) & set(MODALS)):
         recipe, back_to = MODALS[(path, mid)]
         _tag = f"{mid} on {path}"
@@ -540,6 +543,19 @@ with sync_playwright() as p:
 
         pg.keyboard.press("Escape")
         pg.wait_for_timeout(650)
+        # ESCAPE CLOSES IT (centring drivers, after v321). The focus check below
+        # passed on a dialog Escape did nothing to: focus stayed inside it, so it
+        # was not on <body>. The three recovery-key overlays shipped that way.
+        # Asked of what is PAINTED, not of [hidden]: a dialog that slides off
+        # on a timer is gone when its middle shows something else.
+        if (path, mid) not in ESCAPE_STAYS:
+            still = pg.evaluate("""(id) => { const d = document.getElementById(id);
+                if (!d || d.hidden || d.closest('[hidden]')) return false;
+                const cs = getComputedStyle(d), r = d.getBoundingClientRect();
+                if (cs.display === 'none' || cs.visibility === 'hidden' || r.width < 1 || r.height < 1) return false;
+                const at = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, innerHeight / 2));
+                return !!at && d.contains(at); }""", mid)
+            check(f"{_tag}: Escape closes it", not still, "still painted after Escape")
         landed = pg.evaluate("""() => {
             const a = document.activeElement;
             return a === document.body ? '(body)' : (a && a.id) || '(unnamed)'; }""")
