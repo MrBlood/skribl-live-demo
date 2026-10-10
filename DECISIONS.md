@@ -15468,3 +15468,19 @@ with the advice to leave it off when "deleted" must mean gone at once; a line in
 app when the opt-in is on goes to the next mock round with the audit's design
 findings (SK-AUD-005 to 010: the delete key at post time, keeping both tabs' work,
 the empty Library, one post-failure wording).
+
+**Escape closes the recovery-key dialogs (found by the centring suite's
+drivers).** The three dialogs lib/recoverykey.js builds -- your key, use a
+recovery key, and the Clear-list guard -- moved focus in and kept Tab inside,
+but never bound Escape (lib/modalfocus.js leaves Escape to each surface), so a
+keyboard user could only leave by Tabbing to the button. Escape now does what
+the quiet button does: Done, Close, Cancel, never "Clear anyway". The modal
+census in verify_a11y had walked all three and stayed green, because it asked
+only that focus did not land on <body> after Escape, and focus never left the
+still-open dialog. It now also asks that Escape closes every dialog (what is
+painted, not [hidden]), with Flip's export progress the one named exception
+(Escape is Cancel there, and with nothing exporting it stays). Red on the old
+code for all three, on each of the three pages that build them. The recipes for
+these dialogs now put focus on a real control before opening them from script,
+and the Library's "Use a recovery key" is clicked, so a close is checked for
+handing focus back.
