@@ -15483,3 +15483,30 @@ Pad and composes it with the icon's own code, so the two cannot drift; the old
 sticker files are gone. `verify_library` asks that the one picture is painted
 in both themes and that it is a tile, opaque to its edges with its corners
 rounded away. Flip shows no Blooby on a page, so nothing changes there.
+
+**The header's ground over anything scrolled under it, and over the dock; Flip's
+Grid density words fit (owner's iPhone, after v321).** Two screenshots. In the
+first, the Pad's Music card was open and scrolled to its end: the header had no
+ground, and the dock's icons sat on the header's own (undo on Post). In the
+second, Flip's Playback settings had slid under a header with no ground, and the
+Grid density row read "CoarsMediumFine".
+
+* lib/headerglass.js gave the header its ground only while the DRAWING's box
+  overlapped it. Scrolled past the drawing, or with a panel above the drawing
+  sliding under, nothing counted. It now counts the page being scrolled at all,
+  as well as the overlap, so anything passing under the header gets the ground.
+  At rest the page is not scrolled, so "no container at rest" holds.
+* The Pad's dock sits at layer 41 and the header at 30, so even a grounded
+  header was drawn under the dock's icons. A grounded header is layer 42.
+* Flip's Grid density borrowed the 34px digit cell for words, as Smear weight
+  had (fixed alone, so this one kept the bug). Its cells size to their words and
+  the row wraps under the switch, as Onion skin's does. verify_onepill's census
+  now asks FIT of every labelled option on both editors (the words' width
+  against the button's; the first draft read scrollWidth and counted the
+  invisible 44px tap area as a spill on every button).
+
+verify_ux pins both header cases on the Pad and Flip, red on the old code: the
+end of a long Music card (the drawing confirmed above the header first), and
+Flip's settings scrolled, read before lib/drawers.js brings the page home --
+which Chromium does at once and the owner's iPhone did not. Not tested here:
+WebKit.
