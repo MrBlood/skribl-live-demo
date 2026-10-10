@@ -1948,6 +1948,57 @@ with sync_playwright() as _hp:
             _pg.close()
     _hb.close()
 
+print("\nA11Y 6d — the pages with their own sheets: every small text clears 4.5:1 on what is behind it")
+# v321 preflight (PF-009, PF-011): Gallery, Library and Feed carry their own
+# stylesheets, which A11Y 6 never read, and a grey there sat at 3.9:1 on its
+# tile; Flip's first-run hint put its "How it works" link at 3.5:1 in light.
+# Computed, element by element: the text's colour against the first opaque
+# ground behind it, alpha composited, in both themes. Disabled controls are
+# exempt, as WCAG exempts them (the Feed's demo of a host's own buttons).
+_CONTRAST = r"""() => {
+  const lin = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const L = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const rgba = s => { const m = s.match(/[\d.]+/g); if (!m) return null; return [+m[0], +m[1], +m[2], m.length > 3 ? +m[3] : 1]; };
+  const over = (top, under) => [0, 1, 2].map(i => top[i] * top[3] + under[i] * (1 - top[3]));
+  const ground = el => { const stack = []; for (let e = el; e; e = e.parentElement) {
+      const c = rgba(getComputedStyle(e).backgroundColor); if (c && c[3] > 0) { stack.push(c); if (c[3] >= 1) break; } }
+    let g = [255, 255, 255]; for (let i = stack.length - 1; i >= 0; i--) g = stack[i][3] >= 1 ? stack[i].slice(0, 3) : over(stack[i], g);
+    return g; };
+  const bad = [];
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.closest('[disabled], [aria-disabled=true], [hidden], canvas, svg')) continue;
+    if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true })) continue;
+    const own = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    if (!own) continue;
+    const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || +cs.opacity === 0) continue;
+    const size = parseFloat(cs.fontSize), bold = +cs.fontWeight >= 700;
+    if (size >= 24 || (bold && size >= 18.66)) continue;
+    const fg = rgba(cs.color); if (!fg) continue;
+    const bg = ground(el); const f = fg[3] < 1 ? over(fg, bg) : fg.slice(0, 3);
+    const a = L(f), b = L(bg), ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    if (ratio < 4.5) bad.push((el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : el.tagName.toLowerCase())
+                              + ' "' + el.textContent.trim().slice(0, 18) + '" ' + ratio.toFixed(2));
+  }
+  return [...new Set(bad)].slice(0, 8); }"""
+with sync_playwright() as _px:
+    _bx = _px.chromium.launch()
+    for _scheme in ("dark", "light"):
+        _cx = _bx.new_context(viewport={"width": 402, "height": 874}, color_scheme=_scheme, is_mobile=True, has_touch=True)
+        for _path in ("/gallery", "/library", "/feed"):
+            _pg = _cx.new_page(); browsing.goto(_pg, BASE, _path); _pg.wait_for_timeout(1500)
+            _low = _pg.evaluate(_CONTRAST)
+            check(f"{_scheme} {_path}: no small text under 4.5:1", not _low, "; ".join(_low))
+            _pg.close()
+        # The first-run hint's action, on Flip, where a new visitor meets it.
+        _cy = _bx.new_context(viewport={"width": 402, "height": 874}, color_scheme=_scheme, is_mobile=True, has_touch=True)
+        _pg = _cy.new_page(); browsing.goto(_pg, BASE, "/flip"); _pg.wait_for_timeout(2500)
+        _ha = _pg.evaluate(_CONTRAST.replace("document.querySelectorAll('body *')", "document.querySelectorAll('.skribl-hint *')"))
+        _shown = _pg.evaluate("() => !!document.querySelector('.skribl-hint-action') && !!document.querySelector('.skribl-hint-action').offsetParent")
+        check(f"{_scheme}: the first-run hint was there to read (the fixture)", _shown)
+        check(f"{_scheme}: ...and its How it works link clears 4.5:1 on the hint", not _ha, "; ".join(_ha))
+        _cy.close(); _cx.close()
+    _bx.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [n for ok, n in results if not ok]
 print("\n" + "=" * 62)

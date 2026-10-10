@@ -306,7 +306,7 @@
           <canvas class="pen-swoosh" id="penSwoosh" aria-hidden="true"></canvas>
           <span class="tool-btn-label">Pen</span>
         </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser" title="Erase &mdash; scales with your brush size (2&times;, 3&times; or 5&times;, set in the Draw menu); shortcut E">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 21"/><path d="M22 21H7"/><path d="m5.3 11.3 8.7 8.7"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-0.4 -1.5)"><path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 21"/><path d="M22 21H7"/><path d="m5.3 11.3 8.7 8.7"/></g></svg>
           <span class="tool-btn-label">Eraser</span>
         </button><button type="button" class="tool-btn" id="shapeToolBtn" data-tool="shape" title="Draw a line, rectangle, oval or polygon &mdash; the kind picker opens above the tool; hold Shift for square/circle">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg>
@@ -635,6 +635,7 @@
      the in-post player and the examples only when the panel first opens. #}
   <script src="{{ skribl_asset('lib/helplearn.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/draftstore.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/othertab.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/savedrafts.js') }}" defer></script>
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
   {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}

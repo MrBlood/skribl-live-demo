@@ -298,6 +298,59 @@ for _rel, _roles in _PSITES.items():
     _short += [f"{_rel}: {r}" for r in _roles if not set(_ICON[r]) <= _have]
 check("every player draws the one restart, loop, sound, muted, link and play", not _short, "; ".join(_short))
 
+print("\nCENTRING — the marks that read off-centre sit in the middle by their ink")
+# The owner: "Some buttons with regular ascii or Unicode doesn't get centered".
+# The centring machine (ink = the control photographed with its mark minus
+# without; optical centre = midpoint of the ink box's centre and its centre of
+# mass) found two clear misses: Flip's "×1" hold badge, 1.5px high in two of
+# this box's three faces, and the eraser, 1.4px low, its ground line pulling
+# its weight down. Measured in each installed face for the typed one, since
+# that is the whole problem with typed marks.
+_HIDE = (".__ctr_hide, .__ctr_hide * { color: transparent !important; -webkit-text-fill-color: transparent !important; }"
+         " .__ctr_hide svg { visibility: hidden !important; }"
+         " *, *::before, *::after { transition: none !important; animation: none !important; }")
+def _optical(pg, sel, face=None):
+    if face:
+        pg.evaluate("([s, f]) => { document.querySelector(s).style.fontFamily = '\"' + f + '\"'; }", [sel, face])
+    r = pg.evaluate("(s) => { const b = document.querySelector(s).getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; }", sel)
+    clip = {"x": r[0], "y": r[1], "width": r[2], "height": r[3]}
+    on = Image.open(io.BytesIO(pg.screenshot(clip=clip))).convert("RGB")
+    pg.evaluate("(s) => document.querySelector(s).classList.add('__ctr_hide')", sel)
+    off = Image.open(io.BytesIO(pg.screenshot(clip=clip))).convert("RGB")
+    pg.evaluate("(s) => document.querySelector(s).classList.remove('__ctr_hide')", sel)
+    W, H = on.size; po, pf = on.load(), off.load()
+    xs = ys = tot = 0; x0, y0, x1, y1 = W, H, -1, -1
+    for y in range(H):
+        for x in range(W):
+            v = sum(abs(a - b) for a, b in zip(po[x, y], pf[x, y])) / 3
+            if v > 24:
+                tot += v; xs += x * v; ys += y * v
+                x0, y0, x1, y1 = min(x0, x), min(y0, y), max(x1, x), max(y1, y)
+    if not tot:
+        return None
+    S = W / r[2]
+    ox = ((x0 + x1 + 1) / 2 + xs / tot) / 2; oy = ((y0 + y1 + 1) / 2 + ys / tot) / 2
+    return round((ox - W / 2) / S, 2), round((oy - H / 2) / S, 2)
+with sync_playwright() as _pc:
+    _bc = _pc.chromium.launch()
+    _cc = _bc.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=3, is_mobile=True, has_touch=True)
+    for _path, _boot in (("/skribl-pad", "pad"), ("/flip", "flip")):
+        _pg = _cc.new_page(); browsing.goto(_pg, BASE, _path)
+        _pg.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
+        _pg.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+        _pg.add_style_tag(content=_HIDE)
+        _e = _optical(_pg, "#eraserToolBtn")
+        check(f"{_path}: the eraser sits in the middle of its button by its ink",
+              _e is not None and abs(_e[0]) <= 0.6 and abs(_e[1]) <= 0.6, f"optical offset {_e} px")
+        if _boot == "flip":
+            for _face in ("Liberation Sans", "DejaVu Sans", "FreeSans"):
+                _pg.evaluate("() => { const b = document.querySelector('#strip .frame.on .holdbadge'); b && b.classList.add('__keep'); }")
+                _h = _optical(_pg, "#strip .frame.on .holdbadge", _face)
+                check(f"the ×1 badge sits in the middle of its pill in {_face}",
+                      _h is not None and abs(_h[1]) <= 0.6, f"optical offset {_h} px")
+        _pg.close()
+    _bc.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))

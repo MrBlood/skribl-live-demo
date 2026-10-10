@@ -518,6 +518,61 @@ with sync_playwright() as p:
 
     b.close()
 
+# ---------------------------------------------------------------------------
+print("\nTWO TABS — the tab whose autosave another tab overwrote is told, and can take it back")
+# v321 preflight PF-008 (the owner chose the notice): two tabs of one editor
+# share one slot and the last writer wins, silently both ways. Tab A draws,
+# tab B draws over the slot; A must say so and offer Keep this one, which puts
+# A's drawing back in the slot. B, which then lost it, says so in turn.
+def _ink(pg, sel, dx):
+    bx = pg.locator(sel).bounding_box()
+    x, y = bx["x"] + bx["width"] / 2 + dx, bx["y"] + bx["height"] / 2
+    pg.mouse.move(x, y); pg.mouse.down()
+    for k in range(14):
+        pg.mouse.move(x + k * 6, y + (k % 5) * 5)
+    pg.mouse.up(); pg.wait_for_timeout(250)
+with sync_playwright() as _p2:
+    _b2 = _p2.chromium.launch()
+    for _ed, _path, _sel, _key, _boot in (
+            ("Pad", "/skribl-pad", "#canvas", "skribl_autosave_v1", "pad"),
+            ("Flip", "/flip", "#pad", "skribl_flip_autosave_v1", "flip")):
+        _ctx = _b2.new_context(viewport={"width": 1100, "height": 860})
+        _a = _ctx.new_page(); _a.goto(BASE + _path, wait_until="load")
+        _a.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
+        _a.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+        _ink(_a, _sel, -60)
+        _a.wait_for_timeout(1800)                       # A's autosave lands
+        _mine = _a.evaluate(f"() => localStorage.getItem('{_key}')")
+        _b = _ctx.new_page(); _b.goto(BASE + _path, wait_until="load")
+        _b.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
+        _b.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+        _ink(_b, _sel, 60)
+        _b.wait_for_timeout(1800)                       # B's autosave takes the slot
+        _theirs = _a.evaluate(f"() => localStorage.getItem('{_key}')")
+        check(f"{_ed}: the fixture: tab B's save replaced tab A's in the one slot",
+              bool(_mine) and bool(_theirs) and _theirs != _mine)
+        # Painted, not just present: a fixed bar has no offsetParent, so ask
+        # what is drawn at its middle (WORKING-AGREEMENTS: a rect is not a paint).
+        _seen = _a.evaluate("() => { const b = document.querySelector('.othertab');"
+                            " if (!b || b.hidden) return false; const r = b.getBoundingClientRect();"
+                            " const at = document.elementFromPoint(r.left + 20, r.top + r.height / 2);"
+                            " return !!(at && b.contains(at)); }")
+        check(f"{_ed}: tab A is told another tab saved over its drawing", _seen,
+              "A was told nothing, and a new tab would open B's drawing")
+        check(f"{_ed}: ...and tab B, which wrote, is not",
+              not _b.evaluate("() => { const b = document.querySelector('.othertab'); return !!(b && !b.hidden); }"))
+        if _seen:
+            _a.click(".othertab-keep"); _a.wait_for_timeout(400)
+        _back = _a.evaluate(f"() => localStorage.getItem('{_key}')")
+        check(f"{_ed}: Keep this one puts tab A's drawing back in the slot",
+              _seen and _back != _theirs and _back is not None,
+              "the slot still holds B's drawing")
+        _b.wait_for_timeout(300)
+        check(f"{_ed}: ...and now tab B is the one told",
+              _b.evaluate("() => { const b = document.querySelector('.othertab'); return !!(b && !b.hidden); }"))
+        _ctx.close()
+    _b2.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

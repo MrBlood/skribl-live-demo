@@ -883,6 +883,34 @@ with sync_playwright() as p:
     page.close()
     browser.close()
 
+print("\nTHEME — Flip's canvas edge is the page's, not the drawing's ground")
+# The owner, switching a Paper drawing to the dark theme: a near-white rim
+# round Flip's canvas. The ground is painted on the element (applyBg) and, by
+# default, under its see-through border too, so the edge showed Paper. Read
+# off the screen: the border's middle pixel against the page and the ground.
+import io as _io
+from PIL import Image as _Image
+with sync_playwright() as _pr:
+    _br = _pr.chromium.launch()
+    for _scheme, _maxlum in (("dark", 120),):
+        _cx = _br.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=2,
+                              color_scheme=_scheme, is_mobile=True, has_touch=True)
+        _pg = _cx.new_page()
+        browsing.goto(_pg, BASE, "/flip")
+        _pg.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.flip")
+        _pg.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); setBg('#f4efe6'); }")
+        _pg.wait_for_timeout(300)
+        _r = _pg.evaluate("() => { const b = document.getElementById('pad').getBoundingClientRect();"
+                          " return [b.left, b.top, b.width, b.height]; }")
+        _shot = _Image.open(_io.BytesIO(_pg.screenshot(
+            clip={"x": _r[0], "y": _r[1] + _r[3] / 2, "width": 6, "height": 2}))).convert("RGB")
+        _edge = _shot.getpixel((2, 1))            # 1 CSS px in: the middle of the 2px edge
+        _lum = 0.2126 * _edge[0] + 0.7152 * _edge[1] + 0.0722 * _edge[2]
+        check(f"{_scheme}: a Paper drawing's canvas edge stays the page's faint line, not a bright rim",
+              _lum < _maxlum, f"edge pixel {_edge} (luminance {_lum:.0f}); the ground is 244,239,230")
+        _cx.close()
+    _br.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))

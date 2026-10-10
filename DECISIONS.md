@@ -15180,3 +15180,73 @@ harness/README.md, and harness/README.md lost a sentence fragment and an entry
 spliced into another. Left as found, because they could not be checked here: the
 shared player's Full screen on an iPhone (the button is offered only where the
 Fullscreen API is, which iPhone Safari may not report; the device pass decides).
+
+**The Library's stage takes the drawing's shape; on a phone its controls line
+up; Drafts can be searched and counts against its limit (owner, from mocks).**
+The owner, with a phone screenshot: a tall drawing in the middle of a wide black
+box ("why all the black space on either side?"), and the tabs, the filter and
+the search "offset and wrap weird". The stage is the in-post player, whose box
+is 16:9 for a feed, where posts of every shape must not make the page jump as
+they scroll past; the Library shows one drawing at a time, so its stage now
+takes that drawing's ratio from its canvasSize, capped at 60% of the screen's
+height (520px at most) so a tall one cannot push the list away, on the card's
+own ground rather than black. Full screen keeps its rules. On a phone (640px
+and under) the tabs and the search share a row and the filter takes the next,
+edge to edge; a desk keeps its one row. The search is both tabs' now, so
+nothing beside the tabs moves when you switch (the owner picked that over
+stretching the tabs on Drafts, which moved the button just tapped); on Drafts it
+narrows the list by title and says so when nothing matches, and the drafts line
+reads "3 of 25 drafts", the 25 being SKRIBL_MAX_DRAFTS. The field's clear button
+is the page's own, 44px, in both themes' colours; WebKit's was a blue x.
+verify_library pins it at 402px and 1280px; each part broken alone turned its
+own checks red (the ratio, the cap, the two rows, the search on Drafts, the
+count, the filter, the no-match line, the clear button twice, the desk's row).
+
+**Three calls the owner made from the preflight, built (PF-008, PF-029, PF-005).**
+TWO TABS of one editor share one autosave slot and the last to write wins,
+silently both ways. lib/othertab.js listens for the browser's `storage` event,
+which fires in every other tab of the origin and never in the one that wrote,
+and the tab whose drawing was just saved over says so, with Keep this one, which
+writes its drawing back; the other tab is then told in turn. A removal (posted,
+New Skribl) and a tab with no work say nothing. Who wins is unchanged; that it
+happened is no longer silent.
+A POST THAT NEVER ANSWERS left "Posting…" on a sheet that cannot be closed while
+it posts. After twenty seconds the shared sheet says "Still posting — a slow
+connection can take a minute." and the busy button becomes Cancel in its own
+place; both editors abort their request and keep the Idempotency-Key, so Try
+again finds a post the server may already have made. Not a timeout: 24 MB on a
+slow line can honestly take a minute.
+ONE WAY TO SAY WHEN on the Library: the stage, the rows and the drafts all use
+lib/posted.js's words ("5 min ago", "3 hours ago"), and past eight weeks it says
+months or years ("52 weeks ago" read as a count). The gallery and the feed keep
+their compact "5m", where room is tighter.
+verify_drafts drives two tabs on both editors (painted, by elementFromPoint: the
+bar is fixed, so it has no offsetParent and the first draft of the check could
+never see it); verify_posted holds a POST for twenty seconds on both editors and
+checks the retry's key; verify_library reads the words.
+Each part broken alone turned its own checks red: the listener (6), each editor's wiring (3 each), Keep this one (4), the slow state (3), each editor's abort (1 each), the key kept on cancel (1), the months (1), the drafts' words (1).
+
+**Four things the owner looked at tonight, built.** FLIP'S LOOP CHIP ran under
+the selected page's ⋯ ("Forever · 2–6" on the owner's iPhone; a one-page
+"Forever · page 2" covered eight times as much). The owner chose the short form
+from a mock, "B for sure, but make sure infinity is visible, not blurry and big
+enough to recognize instantly": Forever is a stroked ∞, 18×9, then the pages,
+the same on every device where a typed ∞ at 10px is a speck in a different font
+each time; the accessible name still says "Loop forever". The ×N and seconds
+chips keep their words and fit. FLIP'S CANVAS EDGE: the ground is painted on the
+element and was painted under its see-through border too, so a Paper drawing on
+the dark page wore a near-white rim (246,242,235 where the edge is 63,65,70);
+`background-clip: padding-box`. The Pad's canvas has no border and never did
+this. CONTRAST (PF-009, PF-011): the greys of the pages with their own sheets,
+and the first-run hint's How it works link, clear 4.5:1 now; A11Y 6d reads every
+small text on Gallery, Library and Feed against the ground behind it in both
+themes. CENTRING: the owner asked for "a centering machine" for marks that read
+off-centre. It photographs each control with and without its mark, takes the
+difference as ink, and compares the midpoint of the ink box and the ink's centre
+of mass with the control's centre, in each installed face for typed marks.
+Two clear misses, fixed: Flip's ×1 badge (1.5px high in two faces; trimmed to
+its caps with text-box, so equal padding centres it in any font) and the eraser
+(1.4px low, its ground line pulling its weight; its drawing moves up 1.5 units).
+Everything else it found is under a pixel and stays.
+Each check went red on the old code: verify_loopui 6, verify_theme 1,
+verify_a11y 6, verify_icons 4.

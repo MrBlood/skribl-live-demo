@@ -35,6 +35,7 @@
     compose: window.SKRIBL_MODE === 'compose',
     toast: showToast,
     submit: () => submit(),
+    cancel: () => { if (sendSkribl._abort) sendSkribl._abort.abort(); },
     onOpen: () => { pendingLocalId = null; },
     // Mirror the pad's shape so the snapshot shows whole (no crop), and match
     // the frame background to the canvas color so there are never odd bars.
@@ -140,13 +141,20 @@
       const packed = (typeof skriblPackBody === 'function')
         ? await skriblPackBody(body, baseHeaders)
         : { body: body, headers: baseHeaders };
+      // Cancel (lib/postsheet.js, after a slow wait) aborts this request. The
+      // key is kept: if the server did make the post, Try again finds it.
+      sendSkribl._abort = (typeof AbortController === 'function') ? new AbortController() : null;
       try {
         res = await fetch(apiBase, {
           method: 'POST',
           headers: packed.headers,
-          body: packed.body
+          body: packed.body,
+          signal: sendSkribl._abort ? sendSkribl._abort.signal : undefined
         });
       } catch (netErr) {
+        if (netErr && netErr.name === 'AbortError') {
+          throw new Error('Cancelled \u2014 not posted. Your Skribl is safe here; Try again sends it.');
+        }
         // Network failure (offline / DNS / CORS) — temporary. Save locally so
         // the user's work isn't lost, but flag it so the UI won't claim "Posted".
         console.warn('sendSkribl: network error, saving locally —', netErr);

@@ -200,7 +200,13 @@
      monitor, leaving no way to tell where you can draw. A 2px edge plus a
      faint outer ring keeps it legible without turning the canvas into a
      framed picture; the ring is what survives when a display crushes blacks. */
+  /* background-clip: padding-box -- the ground is painted on the element
+     (applyBg sets it inline), and by default under the border too, so the
+     see-through edge showed the GROUND: a Paper drawing on the dark page wore
+     a near-white rim (the owner, switching themes; 246,242,235 where the edge
+     should read about 63,65,70). The edge is the page's, not the drawing's. */
   #pad { display: block; border-radius: var(--r-frame); background: var(--surface-raised);
+    background-clip: padding-box;
     border: 2px solid rgba(var(--wash-rgb), .20);
     box-shadow: 0 0 0 1px rgba(var(--wash-rgb), .05), 0 20px 50px rgba(0,0,0,.45);
     touch-action: none; cursor: none; }
@@ -1026,10 +1032,15 @@
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
-  padding: 1px 5px;
+  /* CENTRED BY THE CAPS, NOT THE FONT'S BOX (the owner's centring check: "×1"
+     sat 1.5px high in Liberation and DejaVu, and differently again in each
+     face). text-box trims the line to cap height and baseline, so equal padding
+     centres the ink in any font; where it is unsupported it centres as before. */
+  padding: 4px 5px;
   font-size: 10px;
   font-weight: 700;
   line-height: 1.4;
+  text-box: trim-both cap alphabetic;
   border-radius: 5px;
   color: #0d0f14;
   background: var(--ui-active);
@@ -1539,6 +1550,9 @@ body.stroking .strip-wrap {
   background: rgba(var(--glass-deep-2-rgb), .88); white-space: nowrap;
 }
 .frame .loopchip { color: var(--ui-hi); cursor: pointer; -webkit-appearance: none; appearance: none; }
+/* Forever's \u221e (flip.js, loopChipText): 18x9, wider than the digits are
+   tall, so it reads at a glance; stroked, so it stays sharp at any scale. */
+.frame .loopchip .loopinf { display: inline-block; width: 18px; height: 9px; vertical-align: -1px; margin-right: 4px; }
 /* The chip is small to look at and a 44px box to hit, as the hold badge is. */
 .frame .loopchip::before { content: ''; position: absolute; left: 50%; top: 50%;
   width: 44px; height: 44px; transform: translate(-50%, -50%); }

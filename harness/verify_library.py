@@ -2380,6 +2380,135 @@ check("...and restarts it from the beginning, playing",
       _after.get("state") == "playing" and _after.get("elapsedMs", 1e9) < _before.get("elapsedMs", 0),
       f"{_after.get('state')} at {_after.get('elapsedMs')} ms (was {_before.get('elapsedMs')} ms)")
 
+# ---------------------------------------------------------------------------
+print("\nLIBRARY — the stage takes the drawing's shape; the controls line up; Drafts can be searched")
+# The owner, with a phone screenshot: a tall drawing in the middle of a wide
+# black box ("why all the black space on either side?"), and the tabs, the
+# filter and the search "offset and wrap weird". Chosen from mocks: the stage
+# takes the drawing's own ratio, capped in height; on a phone the tabs and the
+# search share a row and the filter takes the next, edge to edge; the search
+# is both tabs' (so nothing beside the tabs moves when you switch), it narrows
+# the drafts by title, and the drafts line says "N of LIMIT drafts".
+_tall = _adopt_post({"title": "shape: tall", "version": 2, "schemaVersion": 2,
+                     "playbackMode": "replay", "visibility": "unlisted",
+                     "canvasSize": {"cssWidth": 450, "cssHeight": 800, "dpr": 1},
+                     "frames": [{"strokes": _diag, "strokeGroups": [len(_diag)],
+                                 "background": {"color": "#0d0f14"}}]})
+_wide = _adopt_post({"title": "shape: wide", "version": 2, "schemaVersion": 2,
+                     "playbackMode": "replay", "visibility": "unlisted",
+                     "canvasSize": {"cssWidth": 960, "cssHeight": 540, "dpr": 1},
+                     "frames": [{"strokes": _diag, "strokeGroups": [len(_diag)],
+                                 "background": {"color": "#0d0f14"}}]})
+_BOX = """() => { const b = document.querySelector('.stageCanvasWrap .skribl-inline').getBoundingClientRect();
+    return { w: b.width, h: b.height, cap: Math.min(innerHeight * 0.6, 520) }; }"""
+# On the page, not the viewport: tapping a tab may scroll it into view.
+_RECTS = """() => { const r = s => { const e = document.querySelector(s);
+      if (!e || !e.offsetParent) return null; const b = e.getBoundingClientRect();
+      return { l: Math.round(b.left), r: Math.round(b.right), t: Math.round(b.top + scrollY), b: Math.round(b.bottom + scrollY) }; };
+    return { tabs: r('.libtabs-list'), chips: r('.libhead .chips'), search: r('.libhead .search input') }; }"""
+with sync_playwright() as _spl:
+    _bl = _spl.chromium.launch()
+    _ctx = _bl.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+    _pl = _ctx.new_page()
+    browsing.goto(_pl, BASE, "/skribl-pad")
+    _pl.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.pad")
+    _pl.evaluate("""(ps) => { localStorage.setItem('skribl_posted_v1', JSON.stringify(ps.map((p, i) => (
+        { id: p.id, url: '/s/' + p.id, title: i ? 'Wide' : 'Tall', kind: 'pad', pages: 1,
+          visibility: 'unlisted', tok: p.deleteToken || null, at: Date.now() - i * 1000 })))); }""",
+                 [_tall, _wide])
+    # Three drafts, saved the way the editors save them.
+    _pl.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+    for _i, _nm in enumerate(("Birthday card", "Lighthouse at dusk", "Untitled sketch")):
+        _cb = _pl.locator("#canvas").bounding_box()
+        _cx, _cy = _cb["x"] + _cb["width"] / 2 + _i * 20, _cb["y"] + _cb["height"] / 2
+        _pl.mouse.move(_cx, _cy); _pl.mouse.down()
+        for _k in range(12):
+            _pl.mouse.move(_cx + _k * 6, _cy + math.sin(_k) * 20)
+        _pl.mouse.up(); _pl.wait_for_timeout(250)
+        _pl.evaluate("(n) => { SkriblName.set(n); SkriblSavedDrafts.forget(); return SkriblSavedDrafts.save(); }", _nm)
+        _pl.wait_for_timeout(400)
+    browsing.goto(_pl, BASE, "/library")
+    _pl.wait_for_function("() => { const el = document.getElementById('stageBox');"
+                          " return !!(el && el._skriblInline && el._skriblInline.state().loaded); }", timeout=15000)
+    _pl.wait_for_timeout(300)
+    _b1 = _pl.evaluate(_BOX)
+    check("a tall drawing's stage is the drawing's shape, not a wide box around it",
+          abs(_b1["w"] / _b1["h"] - 450 / 800) < 0.02,
+          f"box {_b1['w']:.0f}x{_b1['h']:.0f} = {_b1['w'] / _b1['h']:.3f}, drawing 0.5625 — "
+          "a 16:9 box (1.778) is the black either side the owner asked about")
+    check("...and no taller than the cap, so it cannot push the list off a phone",
+          _b1["h"] <= _b1["cap"] + 1, f"{_b1['h']:.0f}px against {_b1['cap']:.0f}px")
+    _pl.click(f'.posted-main[data-select="{_wide["id"]}"]')
+    _pl.wait_for_function("(id) => !!document.querySelector('.posted-row.active[data-id=\"' + id + '\"]')",
+                          arg=_wide["id"], timeout=15000)
+    _pl.wait_for_timeout(400)
+    _b2 = _pl.evaluate(_BOX)
+    check("picking a wide drawing gives the stage that drawing's shape in turn",
+          abs(_b2["w"] / _b2["h"] - 960 / 540) < 0.03,
+          f"box {_b2['w']:.0f}x{_b2['h']:.0f} = {_b2['w'] / _b2['h']:.3f}, drawing 1.778")
+    # THE CONTROLS, on a phone.
+    _s = _pl.evaluate(_RECTS)
+    check("on a phone the search shares the tabs' row",
+          bool(_s["tabs"] and _s["search"]) and abs(_s["tabs"]["t"] - _s["search"]["t"]) <= 2
+          and _s["search"]["l"] > _s["tabs"]["r"], str(_s))
+    check("...and the filter takes the next row, edge to edge under both",
+          bool(_s["chips"] and _s["tabs"] and _s["search"]) and abs(_s["chips"]["l"] - _s["tabs"]["l"]) <= 1
+          and abs(_s["chips"]["r"] - _s["search"]["r"]) <= 1 and _s["chips"]["t"] >= _s["tabs"]["b"],
+          str(_s) + " — the filter pushed right on a line of its own, the search half a row under it")
+    # DRAFTS: nothing beside the tabs moves.
+    _pl.click("#tabDrafts")
+    _pl.wait_for_function("() => document.querySelectorAll('#draftsList .draft-row').length === 3", timeout=10000)
+    _d = _pl.evaluate(_RECTS)
+    check("on Drafts the tabs and the search stay exactly where they were",
+          _d["tabs"] == _s["tabs"] and _d["search"] == _s["search"],
+          f"Skribls {_s['tabs']} / {_s['search']}; Drafts {_d['tabs']} / {_d['search']}")
+    check("...and only the filter goes, a draft being in no gallery", _d["chips"] is None, str(_d["chips"]))
+    _lim = _pl.evaluate("() => (window.SKRIBL_DRAFTS || {}).limit")
+    _line = _pl.inner_text("#draftsWhere")
+    check("the drafts line counts against the limit the server sets",
+          bool(_lim) and _line.startswith(f"3 of {_lim} drafts"), f"{_line!r}, limit {_lim}")
+    check("the field offers no clear button while it is empty",
+          _pl.is_hidden("#searchClear"))
+    _pl.fill("#postedSearch", "light")
+    _pl.wait_for_timeout(200)
+    _names = _pl.eval_on_selector_all("#draftsList .draft-name", "els => els.map(e => e.textContent)")
+    check("typing narrows the drafts by title", _names == ["Lighthouse at dusk"], str(_names))
+    check("...and the field offers its own clear button", _pl.is_visible("#searchClear"))
+    _pl.fill("#postedSearch", "zzz")
+    _pl.wait_for_timeout(200)
+    check("a search that matches no draft says so rather than showing an empty page",
+          _pl.eval_on_selector_all("#draftsList .draft-row", "els => els.length") == 0
+          and "No draft is called that" in _pl.inner_text("#draftsList"), _pl.inner_text("#draftsList")[:80])
+    _pl.click("#searchClear")
+    _pl.wait_for_timeout(200)
+    check("the clear button empties the field and every draft comes back",
+          _pl.input_value("#postedSearch") == ""
+          and _pl.eval_on_selector_all("#draftsList .draft-row", "els => els.length") == 3
+          and _pl.is_hidden("#searchClear"),
+          f"value {_pl.input_value('#postedSearch')!r}")
+    # ONE WAY TO SAY WHEN (v321 preflight PF-005, the owner's call): the
+    # Library's rows and its drafts say "5 min ago", not "5m ago" beside them.
+    _when = _pl.evaluate("""() => { const H = 3600e3, D = 24 * H, now = Date.now();
+        const iso = ms => new Date(now - ms).toISOString();
+        return { posted5m: SkriblPosted.ago(now - 5 * 60e3), draft3h: SkriblSavedDrafts.ago(iso(3 * H)),
+                 draft5m: SkriblSavedDrafts.ago(iso(5 * 60e3)), months: SkriblPosted.ago(now - 100 * D),
+                 year: SkriblPosted.ago(now - 400 * D) }; }""")
+    check("the drafts say when in the rows' words, not a second vocabulary",
+          _when["draft3h"] == "3 hours ago" and _when["draft5m"] == _when["posted5m"] == "5 min ago", str(_when))
+    check("...and an old one in months or years, never \"52 weeks ago\"",
+          _when["months"] == "3 months ago" and _when["year"] == "a year ago", str(_when))
+    _ctx.close()
+    # A DESK KEEPS ITS ONE ROW.
+    _pd = _bl.new_context(viewport={"width": 1280, "height": 900}).new_page()
+    browsing.goto(_pd, BASE, "/library")
+    _pd.wait_for_timeout(800)
+    _w = _pd.evaluate(_RECTS)
+    check("on a desk the tabs, the filter and the search stay one row",
+          bool(_w["tabs"] and _w["chips"] and _w["search"])
+          and max(_w["tabs"]["t"], _w["chips"]["t"], _w["search"]["t"])
+          - min(_w["tabs"]["t"], _w["chips"]["t"], _w["search"]["t"]) <= 6, str(_w))
+    _bl.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)

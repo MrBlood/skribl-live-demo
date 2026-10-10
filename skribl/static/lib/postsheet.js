@@ -47,6 +47,16 @@
     var lastPostUrl = null, lastPostTitle = '';
     var closeTimer = null;
     var posting = false;
+    /* A POST THAT NEVER ANSWERS (v321 preflight, PF-029). The sheet cannot be
+       closed while it posts, so a request that hung left "Posting…" on screen
+       with nothing to press for as long as it hung. After SLOW_MS the busy
+       button becomes Cancel, in its own place, so nothing moves under the
+       finger; the editor aborts its request and keeps its Idempotency-Key, so
+       Try again finds a post the server may already have made. Not a timeout:
+       24 MB on a slow line can honestly take a minute. */
+    var SLOW_MS = cfg.slowMs || 20000;
+    var slowTimer = null, slow = false;
+    function clearSlow() { clearTimeout(slowTimer); slowTimer = null; slow = false; }
 
     function updateCharCount() {
       // The limit is whatever the field enforces (rendered from
@@ -66,6 +76,7 @@
     var BUSY_LABEL = cfg.compose ? 'Adding…' : 'Posting…';
 
     function setState(state) {
+      clearSlow();
       if (state === 'idle') {
         posting = false;
         status.hidden = true;
@@ -88,6 +99,13 @@
         status.classList.remove('error');
         statusLabel.textContent = BUSY_LABEL;
         progressFill.style.width = '35%';
+        if (cfg.cancel) slowTimer = setTimeout(function () {
+          if (!posting) return;
+          slow = true;
+          statusLabel.textContent = 'Still posting \u2014 a slow connection can take a minute.';
+          submitLabel.textContent = 'Cancel';
+          submitBtn.disabled = false;
+        }, SLOW_MS);
         body.style.opacity = '0.5';
         titleInput.disabled = true;
         captionInput.disabled = true;
@@ -244,7 +262,10 @@
     }
 
     captionInput.addEventListener('input', updateCharCount);
-    if (cfg.submit) submitBtn.addEventListener('click', function () { cfg.submit(); });
+    if (cfg.submit) submitBtn.addEventListener('click', function () {
+      if (posting) { if (slow && cfg.cancel) { submitBtn.disabled = true; cfg.cancel(); } return; }
+      cfg.submit();
+    });
     if (shareBtn) shareBtn.addEventListener('click', async function () {
       if (!lastPostUrl || !navigator.share) return;
       var abs = new URL(lastPostUrl, location.href).href;

@@ -269,6 +269,7 @@
   --under-rgb: 96, 165, 250;
   --accent-tint: #d6ccff;
   --accent-tint-2: #d5cfff;
+  --accent-ink: #a08cff;   /* small violet words on a dark ground, 4.5:1 and up (PF-011) */
 
   /* Radii */
   --r-control: 12px;
@@ -6154,6 +6155,11 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
   cursor: pointer; text-decoration: none;
 }
 .skribl-hint-action:hover { background: rgba(124, 92, 255, 0.14); }
+/* THE ACTION'S INK, PER THEME (v321 preflight, PF-011). --ui-hi is #7c5cff in
+   both themes, and on the hint's own ground that read 3.5:1 in light (#e2e7ee)
+   and 3.7:1 in dark (#1c212c): small bold text needs 4.5. The same violet,
+   deeper on light and lighter on dark (--accent-ink): 5.6:1 and 5.9:1. */
+.skribl-hint-action { color: var(--accent-ink); }
 /* 27px tall in a toast that takes no pointer: the button is the only thing
    here a finger can hit, so it gets the 44px box (--tap-grow, as above). */
 .skribl-hint-action { position: relative; --tap-grow: 9px; }
@@ -7659,6 +7665,7 @@ body.replaying .media-card {
   --under-rgb:     29, 78, 216;
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
+  --accent-ink:    #5a3ad8;
   /* ON-GLASS INK (below the ramp): the secondary words on a light glass
      sheet, which lets some of the dim and the page through. */
   --on-glass-2:    #3f4756;
@@ -7916,3 +7923,20 @@ body.replaying .media-card {
   transition: opacity 0.2s ease;
   @starting-style { opacity: 0; }
 }
+
+/* ANOTHER TAB SAVED OVER THIS ONE (lib/othertab.js, v321 preflight PF-008).
+   The toast's glass, under the header, with the one action that answers it. Its buttons keep the 44px floor. */
+.othertab { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%);
+  top: calc(env(safe-area-inset-top, 0px) + 70px); width: min(92vw, 520px); box-sizing: border-box;
+  display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px;
+  background: rgba(var(--line-rgb), 0.9); color: var(--text-primary); border: 1px solid var(--hairline-strong);
+  border-radius: 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, .28);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
+  font-size: 14px; line-height: 1.35; }
+.othertab[hidden] { display: none; }
+.othertab-words { flex: 1 1 auto; min-width: 0; }
+.othertab-keep { flex: 0 0 auto; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 0;
+  background: var(--ui-hi); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.othertab-x { flex: 0 0 auto; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; color: inherit; display: grid; place-items: center; cursor: pointer; }
+.othertab-x svg { width: 14px; height: 14px; }

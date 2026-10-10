@@ -1335,4 +1335,69 @@ with sync_playwright() as _p:
           f"{_sizes} \u2014 collapsed, or not there at all")
     _b.close()
 
+# ---------------------------------------------------------------------------
+print("\nA POST THAT NEVER ANSWERS — after a wait it says so and offers Cancel; the retry is the same post")
+# v321 preflight PF-029 (the owner chose "Still posting…" + Cancel). The sheet
+# cannot close while it posts, so a hung request trapped the author behind
+# "Posting…" with nothing to press. The wait is shortened for the suite
+# (SkriblPostSheet reads cfg.slowMs; the editors pass none, so 20 s in life):
+# here the route simply holds the request, and the clock is the real one.
+with sync_playwright() as _ps:
+    _bs = _ps.chromium.launch()
+    for _ed, _path, _sel, _boot in (("Pad", "/skribl-pad", "#canvas", "pad"),
+                                    ("Flip", "/flip", "#pad", "flip")):
+        _pg = _bs.new_context(viewport={"width": 1100, "height": 860}).new_page()
+        _held, _keys = [], []
+        def _hold(route, request=None):
+            if route.request.method != "POST":
+                return route.continue_()
+            _keys.append(route.request.headers.get("idempotency-key"))
+            if len(_keys) == 1:
+                _held.append(route)                  # never answered
+            else:
+                route.continue_()
+        _pg.route("**/api/skribls", _hold)
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
+        _pg.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+        _bx = _pg.locator(_sel).bounding_box()
+        _pg.mouse.move(_bx["x"] + 80, _bx["y"] + 80); _pg.mouse.down()
+        _pg.mouse.move(_bx["x"] + 200, _bx["y"] + 160, steps=10); _pg.mouse.up()
+        _pg.wait_for_timeout(300)
+        if _ed == "Pad" and _pg.is_visible("#recordBtn"):
+            _pg.click("#recordBtn"); _pg.wait_for_timeout(400)
+        _pg.click("#postBtn"); _pg.wait_for_timeout(400)
+        _pg.click("#postSubmitBtn")
+        _pg.wait_for_timeout(4000)
+        check(f"{_ed}: at first it says Posting…, and the button waits",
+              "Posting" in _pg.inner_text("#postStatusLabel") and _pg.is_disabled("#postSubmitBtn"),
+              _pg.inner_text("#postStatusLabel"))
+        _pg.wait_for_timeout(17500)                   # 21.5 s in
+        _lab = _pg.inner_text("#postStatusLabel")
+        _btn = _pg.inner_text("#postSubmitLabel")
+        check(f"{_ed}: after twenty seconds it says it is still posting",
+              "Still posting" in _lab, _lab)
+        check(f"{_ed}: ...and the same button, in the same place, is Cancel",
+              _btn.strip() == "Cancel" and _pg.is_enabled("#postSubmitBtn"),
+              f"button says {_btn!r}")
+        if _btn.strip() == "Cancel":
+            _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(800)
+        _lab2 = _pg.inner_text("#postStatusLabel")
+        check(f"{_ed}: Cancel stops it and says nothing was posted",
+              "not posted" in _lab2.lower() and "safe" in _lab2.lower()
+              and _pg.evaluate("() => document.getElementById('postStatus').classList.contains('error')"), _lab2)
+        _pg.click("#postSubmitBtn")
+        try:
+            _pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
+        except Exception:                                # noqa: BLE001
+            pass
+        check(f"{_ed}: Try again posts it, under the same Idempotency-Key",
+              _pg.is_visible("#postWatchBtn") and len(_keys) == 2 and bool(_keys[0]) and _keys[0] == _keys[1],
+              f"keys {_keys}")
+        for _r in _held:
+            try: _r.abort()
+            except Exception: pass                      # noqa: BLE001,E701
+        _pg.context.close()
+    _bs.close()
+
 summarise_and_exit()
