@@ -114,6 +114,14 @@ html { scroll-padding-top: 96px; }
   white-space: nowrap;
 }
 .make:hover { filter: brightness(1.08); }
+/* THE WORDS SIT IN THE MIDDLE BY THEIR CAPITALS, in any font (owner, from the
+   phone: "Make your first Skribl doesn't look centered vertically in the
+   button"). Centred by its line box, the label sat 1.3-1.5px high in every
+   face measured here; trimmed to cap height and baseline, as the recording
+   clock is (styles.css .rec-timer), the box IS the capitals, and centring it
+   centres them. The label is its own span: trim applies to a text box, not to
+   a flex container. Where text-box is unsupported it centres as before. */
+.make > span { text-box: trim-both cap alphabetic; }
 /* 360 IS THE DESIGN TARGET AND 320 THE SAFETY NET (START-HERE). The mark,
    its word, Make one and the ••• are wider than 320 inside the card; the word
    is what the page's own heading already says, so it goes first. */

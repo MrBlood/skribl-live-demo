@@ -2571,6 +2571,44 @@ with sync_playwright() as _spl:
         _ec.close()
     _bl.close()
 
+# THE MAKE BUTTONS' WORDS SIT IN THE MIDDLE BY THEIR CAPITALS (owner, from the
+# phone: "Make your first Skribl doesn't look centered vertically in the
+# button"). Centred by the line box, the label sat 1.3-1.7px high in every face
+# installed here. Measured on PIXELS at 3x: the first capital's ink rows,
+# their middle against the button's, in each face, both themes. A third of a
+# pixel is one device pixel; half allows Liberation Sans, whose cap metric
+# rounds the other way.
+import io as _io
+from PIL import Image as _Img
+with sync_playwright() as _spk:
+    _bk = _spk.chromium.launch()
+    for _th in ("dark", "light"):
+        _pk = _bk.new_page(viewport={"width": 402, "height": 874}, device_scale_factor=3, color_scheme=_th)
+        _pk.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_th}')}}catch(e){{}}")
+        for _path, _sel in (("/library", "#libMake"), ("/library", "#stageEmpty .make"), ("/gallery", "#galleryMake")):
+            _pk.goto(BASE + _path, wait_until="load"); _pk.wait_for_timeout(900)
+            _pk.evaluate("() => { const s = document.getElementById('stageEmpty'); if (s) s.hidden = false; }")
+            _offs = []
+            for _f in ("", "Liberation Sans", "DejaVu Sans", "FreeSans"):
+                _r = _pk.evaluate("""([sel, f]) => { const b = document.querySelector(sel); if (!b) return null;
+                    b.style.fontFamily = f ? '"' + f + '"' : ''; b.scrollIntoView({ block: 'center' });
+                    const q = b.getBoundingClientRect(), rg = document.createRange();
+                    rg.selectNodeContents(b.querySelector('span') || b);
+                    return [q.left, q.top, q.width, q.height, rg.getBoundingClientRect().left]; }""", [_sel, _f])
+                if not _r:
+                    _offs.append(None); continue
+                _pk.wait_for_timeout(60)
+                _im = _Img.open(_io.BytesIO(_pk.screenshot(clip={"x": _r[0], "y": _r[1], "width": _r[2], "height": _r[3]}))).convert("RGB")
+                _W, _H = _im.size; _x0 = int((_r[4] - _r[0]) * 3) + 1
+                _fill = sum(_im.getpixel((_W // 2, 2)))
+                _rows = [y for y in range(3, _H - 3) if any(min(_im.getpixel((x, y))) > 215 and sum(_im.getpixel((x, y))) > _fill + 150
+                                                        for x in range(_x0, _x0 + 18))]
+                _offs.append(round(((_rows[0] + _rows[-1]) / 2 - (_H - 1) / 2) / 3, 2) if _rows else None)
+            check(f"{_path} {_sel} [{_th}]: the label's capitals sit in the button's middle in every face (within half a pixel)",
+                  all(o is not None and abs(o) <= 0.5 for o in _offs), f"offsets (css px, minus is high): {_offs}")
+        _pk.close()
+    _bk.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)
