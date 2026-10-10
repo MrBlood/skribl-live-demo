@@ -194,6 +194,20 @@ with sync_playwright() as p:
           and pg.evaluate("() => document.querySelector('#playerLine .rl-chips').hidden"), pg.evaluate(LINE))
     pg.click("#playerPlayBtn")   # pause
 
+    # EVERY SPEED FITS ITS OWN PILL (centring census): an even split gave each
+    # chip 28px and "16×" ran 5px out of its pill, at every width.
+    for vw in (320, 402, 1100):
+        pg.set_viewport_size({"width": vw, "height": 874 if vw < 1000 else 900})
+        open_player(keep["url"])
+        pg.evaluate("() => document.querySelector('#playerLine .rl-speed').click()"); pg.wait_for_timeout(350)
+        fit = pg.evaluate("""() => { const c = document.querySelector('#playerLine .rl-chips'), cr = c.getBoundingClientRect();
+            return { row: [Math.round(cr.left), Math.round(cr.right)], chips: [...c.querySelectorAll('button')].map(b =>
+              [b.textContent, b.scrollWidth - b.clientWidth, Math.round(b.getBoundingClientRect().right) <= Math.round(cr.right)]) }; }""")
+        check(f"at {vw}px every speed's label fits inside its own chip, and every chip inside the row and the screen",
+              len(fit["chips"]) == 8 and all(o <= 0 and inside for _, o, inside in fit["chips"])
+              and fit["row"][0] >= 0 and fit["row"][1] <= vw, str(fit))
+    pg.set_viewport_size({"width": 1100, "height": 900})
+
     open_player(eight["url"])
     check("a post whose author picked 8x starts at 8x", pg.evaluate(LINE).endswith("watching at 8×"),
           pg.evaluate(LINE))
