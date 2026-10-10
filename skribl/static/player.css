@@ -1679,10 +1679,10 @@ a.player-btn { text-decoration: none; }
   transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
 @starting-style { .rl-chips { opacity: 0; transform: translateY(-4px); } }
 .rl-chips[hidden] { display: none; opacity: 0; transform: translateY(-4px); }
-/* Each speed shrinks only to its own label: an even split (flex: 1 1 0,
+/* Each speed shrinks only to its own label (a flex item's own minimum): an even split (flex: 1 1 0,
    min-width: 0) gave every chip 28px and pushed "16×" 5px out of its pill at
    every width, 320 to 768. Eight across fit the 260px a 320px phone gives. */
-.rl-chips button { position: relative; flex: 1 1 30px; min-width: min-content; max-width: 48px; height: 34px;
+.rl-chips button { position: relative; flex: 1 1 30px; max-width: 48px; height: 34px;
   padding: 0 4px; border: 0; border-radius: var(--r-pill); background: none;
   font: inherit; font-weight: 550; font-variant-numeric: tabular-nums;
   color: var(--text-primary); cursor: pointer; }
