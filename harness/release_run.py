@@ -131,18 +131,20 @@ BATCHES = [
     # Python entry points. Each builds its own Flask apps over its own temporary
     # SQLite file, so neither counts somebody else's posts and neither can be
     # counted. They keep this batch to themselves for that reason, not for
-    # isolation from each other.
+    # isolation from each other. verify_mediameta (v321) is the same kind:
+    # its own apps on its own temporary SQLite, driven with the test client.
     #
     # verify_deletion sits here rather than beside verify_deletion_foundation
     # despite the name: that suite sweeps orphans FOR REAL against a live media
     # root. This one never touches a store.
-    ["verify_createpost.py", "verify_deletion.py"],
+    ["verify_createpost.py", "verify_deletion.py", "verify_mediameta.py"],
     ["verify_example.py"],                 # measures — records a real drawing
     ["verify_clouddrafts.py"],             # measures — real drawings in its own host app (v316)
     ["verify_flipspeed.py"],               # measures — pixels mid-stroke on Flip (v317)
     ["verify_sheetswipe.py"],              # touch — every sheet swipes away (v317)
     ["verify_audiosession.py"],            # measures — audio off an analyser tap
     ["verify_library.py"],                 # unrecorded
+    ["verify_tappause.py"],                # measures — whether a preview stays still once tapped
     # store: posts through both editors' sheets to the shared server (one
     # unticked, one ticked, per surface) and reads the listing back, so it
     # stays out of verify_deletion_foundation's batch.
