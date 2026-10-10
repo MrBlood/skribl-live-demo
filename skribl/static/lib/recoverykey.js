@@ -78,6 +78,18 @@
   'use strict';
 
   var doc = global.document;
+
+  /* ESCAPE CLOSES EACH OF THESE, as it does every other dialog here.
+     SkriblModal moves focus in and keeps Tab inside, and leaves Escape to the
+     surface (lib/modalfocus.js); these three never bound it, so a keyboard
+     user who opened one could only Tab to its button (found by
+     verify_centring's drivers). Escape is the same as the quiet way out:
+     Done, Close, Cancel -- never "Clear anyway". */
+  function escapes(d, close) {
+    d.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !d.hidden) { e.stopPropagation(); close(); }
+    });
+  }
   var node = null;
 
   function build() {
@@ -110,6 +122,7 @@
       '</div>';
     doc.body.appendChild(d);
     node = d;
+    escapes(d, function () { close(); });
     return d;
   }
 
@@ -260,6 +273,7 @@
       '</div>';
     doc.body.appendChild(d);
     rnode = d;
+    escapes(d, function () { closeRecover(); });
     return d;
   }
 
@@ -407,6 +421,7 @@
         '</div>';
       doc.body.appendChild(d);
       cnode = d;
+      escapes(d, function () { closeClear(); });
     }
     var d2 = cnode;
     var go = d2.querySelector('#clearKeysGo');
