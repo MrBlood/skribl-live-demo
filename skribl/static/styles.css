@@ -5665,9 +5665,10 @@ body.replaying .autosave-status { opacity: 0; pointer-events: none; }
 /* NO CONTAINER AT REST (owner, from a mock: "Does it look better without
    header/dock?" ... "It looks good"). On the Pad and Flip the header and the
    dock lose their card: the controls sit on the page and the canvas is the
-   one shape on screen. The header's ground comes back only while the drawing
-   is UNDER it -- the phone's sticky header once the page scrolls (Pen drawer
-   open) -- which lib/headerglass.js marks .over-canvas; it is then exactly
+   one shape on screen. The header's ground comes back once the drawing has
+   gone UNDER it -- the phone's sticky header once the page scrolls (Pen drawer
+   open) -- and stays while anything scrolled past it is under it (the dock,
+   a long drawer); lib/headerglass.js marks .over-canvas; it is then exactly
    the ground above (solid on a phone, no blur), faded in as a plain colour
    change, never a backdrop-filter or an opacity (the v315 WebKit rule). The
    dock never lies over the drawing, so it has no ground at all. The player
