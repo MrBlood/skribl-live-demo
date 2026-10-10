@@ -318,6 +318,27 @@
     return mediaRecorderFormat() === 'mp4' ? 'MP4' : 'WebM';
   }
 
+  // THE MUSIC BOTH VIDEO PATHS CARRY: whether there is any, and the loop
+  // itself -- the same window and fold the post uses (buildTrimmedLoopWav
+  // slices [trimStart,trimEnd] and folds the crossfade), decoded at full rate
+  // rather than the post's mono 22.05 kHz, because a download is not a
+  // payload. One builder, so the MP4 and the WebM cannot carry different music.
+  function wantsMusic() {
+    return !!(audioEl && (audioEl._objectUrl || audioEl.src)) &&
+           (typeof musicEnabled === 'undefined' ? true : musicEnabled);
+  }
+  async function exportLoop() {
+    try {
+      const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
+      if (!built || !built.dataUrl) return null;
+      const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const ab = await fetch(built.dataUrl).then(r => r.arrayBuffer());
+      const buf = await tmpCtx.decodeAudioData(ab);
+      try { tmpCtx.close(); } catch (e) {}
+      return buf;
+    } catch (e) { return null; }
+  }
+
   async function exportViaWebCodecsMp4() {
     // ---- capability pre-check (NO UI side effects; false ⇒ clean fallback) ----
     const ready = await window.SkriblMp4.prepare(canvas.width, canvas.height);
@@ -329,20 +350,12 @@
     // Audio: only if the Skribl has enabled music. If it does but we can't
     // AAC-encode, decline so the MediaRecorder fallback keeps the audio rather
     // than us shipping a silent MP4.
-    const hasAudio = !!(audioEl && (audioEl._objectUrl || audioEl.src)) &&
-                     (typeof musicEnabled === 'undefined' ? true : musicEnabled);
+    const hasAudio = wantsMusic();
     let audioBuf = null, useAudio = false;
     if (hasAudio) {
-      try {
-        const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
-        if (built && built.dataUrl) {
-          const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const ab = await fetch(built.dataUrl).then(r => r.arrayBuffer());
-          audioBuf = await tmpCtx.decodeAudioData(ab);
-          try { tmpCtx.close(); } catch (e) {}
-          useAudio = await aacSupported(audioBuf.sampleRate, audioBuf.numberOfChannels);
-        }
-      } catch (e) { audioBuf = null; useAudio = false; }
+      audioBuf = await exportLoop();
+      try { useAudio = !!audioBuf && await aacSupported(audioBuf.sampleRate, audioBuf.numberOfChannels); }
+      catch (e) { useAudio = false; }
       if (!useAudio) return false;
     }
 
@@ -431,254 +444,98 @@
       if (okMp4) return;
     } catch (e) { /* fall through to MediaRecorder */ }
 
-    // Pick a supported mime type
-    const types = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
-    let mimeType = '';
-    for (const t of types) { if (MediaRecorder.isTypeSupported(t)) { mimeType = t; break; } }
-    if (!mimeType) { showToast('Video export not supported here', null); return; }
-
+    // THE WEBM (or Safari's MediaRecorder MP4) is lib/videorecord.js's
+    // recordVideo(), the one exporter Flip uses too (the v321 audit's
+    // SK-AUD-001/002/003: the two copies had drifted, and neither refused an
+    // empty recording). The Pad says only what is its own: how many frames,
+    // how to paint one -- the replay's timeline up to that frame's moment,
+    // then the finished drawing held for 0.7s -- and which loop plays under.
     videoBtn.disabled = true; pngBtn.disabled = true;
     progress.hidden = false;
     progressFill.style.width = '0%';
     progressLabel.textContent = 'Preparing…';
-
+    const release = () => { videoBtn.disabled = false; pngBtn.disabled = false; };
     try {
-    // Clear any export-audio globals from a prior run so a stale loop buffer
-    // can't be picked up by an export that has no audio this time.
-    window._exportAudioSrc = null; window._exportAudioNode = null;
-    window._exportAudioBuf = null; window._exportAudioCtx = null; window._exportAudioDest = null;
-    const w = canvas.width, h = canvas.height;
-    const rec = document.createElement('canvas');
-    rec.width = w; rec.height = h;
-    const rctx = rec.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const rec = document.createElement('canvas');
+      rec.width = w; rec.height = h;
+      const rctx = rec.getContext('2d');
+      const fps = 30, HOLD_MS = 700;
+      // Compressed timeline so export matches preview (capped idle gaps).
+      const timeline = buildPlaybackTimeline();
+      const totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
+      const want = wantsMusic();
+      const loop = want ? await exportLoop() : null;
 
-    const fps = 30;
-    // Manual capture (0) so requestFrame() explicitly pushes each composited
-    // frame — more reliable start and end than auto-capture. Fall back to
-    // auto-capture if the browser lacks requestFrame support.
-    let stream = rec.captureStream(0);
-    let manualCapture = true;
-    if (!stream.getVideoTracks()[0] || typeof stream.getVideoTracks()[0].requestFrame !== 'function') {
-      stream = rec.captureStream(fps);
-      manualCapture = false;
-    }
-    let videoTrack = null;
-
-    // Mix audio in if present
-    let audioContextForExport = null;
-    let mixDest = null;
-    if (audioEl) {
-      try {
-        audioContextForExport = new (window.AudioContext || window.webkitAudioContext)();
-        // Browsers often start an AudioContext suspended; resume it so samples
-        // actually flow from the very first frame (fixes silent/glitchy intro).
-        if (audioContextForExport.state === 'suspended') {
-          await audioContextForExport.resume().catch(()=>{});
+      // Offscreen canvas that accumulates strokes during export (so we don't disturb the live one)
+      const strokeCanvas = document.createElement('canvas');
+      strokeCanvas.width = w; strokeCanvas.height = h;
+      const sctx = strokeCanvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      sctx.scale(dpr, dpr);
+      function sDot(x,y,c,s,erase){ sctx.globalCompositeOperation = erase?'destination-out':'source-over'; sctx.beginPath(); sctx.arc(x,y,s/2,0,Math.PI*2); sctx.fillStyle = erase?'rgba(0,0,0,1)':c; sctx.fill(); sctx.globalCompositeOperation='source-over'; }
+      function sLine(x1,y1,x2,y2,c,s,erase){ sctx.globalCompositeOperation = erase?'destination-out':'source-over'; sctx.beginPath(); sctx.moveTo(x1,y1); sctx.lineTo(x2,y2); sctx.strokeStyle = erase?'rgba(0,0,0,1)':c; sctx.lineWidth=s; sctx.lineCap='round'; sctx.lineJoin='round'; sctx.stroke(); sctx.globalCompositeOperation='source-over'; }
+      function renderFrame() {
+        // Composite: bg + photo + the strokes drawn so far
+        rctx.fillStyle = bgColor || '#0d0f14';
+        rctx.fillRect(0, 0, w, h);
+        if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src) {
+          rctx.save();
+          rctx.globalAlpha = photoOpacityVal_ != null ? photoOpacityVal_ : 1;
+          if (photoBlur_ > 0 && 'filter' in rctx) rctx.filter = `blur(${photoBlur_}px)`;
+          drawPhotoFitted(rctx, photoBgImg, w, h, photoFit, photoOffsetX, photoOffsetY, photoZoom);
+          rctx.restore();
         }
-        mixDest = audioContextForExport.createMediaStreamDestination();
-
-        // The same WINDOW and the same FOLD the post uses — buildTrimmedLoopWav()
-        // slices [trimStart,trimEnd] and folds the crossfade into one clip, so
-        // the exported audio loops seamlessly (no hard-cut seam click). It is
-        // NOT the same FILE as the post any more: a post bakes mono at 22.05 kHz
-        // to keep payload_json small (buildPostedLoopWav), and an export is a
-        // download where that trade would just be audible damage. Timing and
-        // seam are identical; rate and channel count are not. Decode it into the
-        // export context and play
-        // it as a gapless looping AudioBufferSourceNode (started in runTimeline).
-        let loopBuf = null;
-        try {
-          const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
-          if (built && built.dataUrl) {
-            const ab = await fetch(built.dataUrl).then(r => r.arrayBuffer());
-            loopBuf = await audioContextForExport.decodeAudioData(ab);
-          }
-        } catch (e) { loopBuf = null; }
-
-        if (loopBuf) {
-          stream.getAudioTracks().forEach(t => t.stop());
-          mixDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-          window._exportAudioBuf = loopBuf;
-          window._exportAudioCtx = audioContextForExport;
-          window._exportAudioDest = mixDest;
-          window._exportAudioSrc = null;
-        } else {
-          // Fallback (baked loop unavailable, e.g. source not decoded): raw
-          // <audio> region loop — the previous hard-cut behavior, wrap in frame().
-          const srcEl = new Audio();
-          srcEl.src = audioEl._draftData || audioEl.src;
-          srcEl.crossOrigin = 'anonymous';
-          srcEl.loop = false;
-          srcEl.preload = 'auto';
-          // Wait until the audio is actually ready to play through.
-          await new Promise((resolve) => {
-            let done = false;
-            const finish = () => { if (!done) { done = true; resolve(); } };
-            if (srcEl.readyState >= 3) finish();
-            srcEl.addEventListener('canplaythrough', finish, { once: true });
-            srcEl.addEventListener('loadeddata', finish, { once: true });
-            setTimeout(finish, 1500); // safety timeout
-            srcEl.load();
-          });
-          srcEl.currentTime = trimStart;
-          const track = audioContextForExport.createMediaElementSource(srcEl);
-          track.connect(mixDest);
-          stream.getAudioTracks().forEach(t => t.stop());
-          mixDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-          window._exportAudioSrc = srcEl;
-        }
-      } catch (e) { audioContextForExport = null; }
-    }
-
-    const chunks = [];
-    videoTrack = stream.getVideoTracks()[0];
-    const recorder = new MediaRecorder(stream, { mimeType });
-    recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
-      const ext = mimeType.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
-      downloadBlob(blob, window.SkriblName
-        ? window.SkriblName.exportName(ext) : 'skribl.' + ext);
-      progressLabel.textContent = 'Done!';
-      progressFill.style.width = '100%';
-      showToast('Video exported', null);
-      videoBtn.disabled = false; pngBtn.disabled = false;
-      if (audioContextForExport) { try { audioContextForExport.close(); } catch(e){} }
-      if (window._exportAudioNode) { try { window._exportAudioNode.stop(); } catch(e){} try { window._exportAudioNode.disconnect(); } catch(e){} window._exportAudioNode = null; }
-      window._exportAudioBuf = null; window._exportAudioCtx = null; window._exportAudioDest = null;
-      if (window._exportAudioSrc) { try { window._exportAudioSrc.pause(); } catch(e){} window._exportAudioSrc = null; }
-      setTimeout(closeExport, 800);
-    };
-
-    // Prepare the base frame (bg + photo + pre-record snapshot)
-    const baseImg = new Image();
-    // Compressed timeline so export matches preview (capped idle gaps).
-    const timeline = buildPlaybackTimeline();
-    const totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
-
-    function renderFrameUpTo(strokeIndex) {
-      // Composite: bg + photo + a temp canvas holding strokes drawn so far
-      rctx.fillStyle = bgColor || '#0d0f14';
-      rctx.fillRect(0, 0, w, h);
-      if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src) {
-        rctx.save();
-        rctx.globalAlpha = photoOpacityVal_ != null ? photoOpacityVal_ : 1;
-        if (photoBlur_ > 0 && 'filter' in rctx) rctx.filter = `blur(${photoBlur_}px)`;
-        drawPhotoFitted(rctx, photoBgImg, w, h, photoFit, photoOffsetX, photoOffsetY, photoZoom);
-        rctx.restore();
+        rctx.drawImage(strokeCanvas, 0, 0, w, h);
       }
-      rctx.drawImage(strokeCanvas, 0, 0, w, h);
-    }
-
-    // Offscreen canvas that accumulates strokes during export (so we don't disturb the live one)
-    const strokeCanvas = document.createElement('canvas');
-    strokeCanvas.width = w; strokeCanvas.height = h;
-    const sctx = strokeCanvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    sctx.scale(dpr, dpr);
-
-    function sDot(x,y,c,s,erase){ sctx.globalCompositeOperation = erase?'destination-out':'source-over'; sctx.beginPath(); sctx.arc(x,y,s/2,0,Math.PI*2); sctx.fillStyle = erase?'rgba(0,0,0,1)':c; sctx.fill(); sctx.globalCompositeOperation='source-over'; }
-    function sLine(x1,y1,x2,y2,c,s,erase){ sctx.globalCompositeOperation = erase?'destination-out':'source-over'; sctx.beginPath(); sctx.moveTo(x1,y1); sctx.lineTo(x2,y2); sctx.strokeStyle = erase?'rgba(0,0,0,1)':c; sctx.lineWidth=s; sctx.lineCap='round'; sctx.lineJoin='round'; sctx.stroke(); sctx.globalCompositeOperation='source-over'; }
-
-    function startRecording() {
-      progressLabel.textContent = 'Recording…';
-      renderFrameUpTo(0);
+      // The pre-record base drawing, if any, goes under the strokes first.
+      if (preRecordSnapshot) {
+        await new Promise((res) => { const im = new Image(); im.onload = () => { sctx.drawImage(im, 0, 0, w / dpr, h / dpr); res(); }; im.onerror = res; im.src = preRecordSnapshot; });
+      }
       // Wet/dry compositor for low-opacity strokes, targeting the export stroke
       // layer. Seeds dry from strokeCanvas (base already painted). Flag-gated.
       const comp = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
-
-      const pushFrame = () => { if (manualCapture && videoTrack && videoTrack.requestFrame) { try { videoTrack.requestFrame(); } catch(e){} } };
-
-      // 1. Start the recorder first and push a few opening frames so it has a
-      //    stable stream before anything happens.
-      recorder.start();
-      renderFrameUpTo(0);
-      pushFrame();
-
-      // 2. After a short warm-up, start audio and the drawing timeline TOGETHER
-      //    on the same tick — so they're in sync and the recorder is already
-      //    running when audio begins (no early clipped blip).
-      function runTimeline() {
-        // Start audio in sync with the timeline: the gapless crossfaded loop
-        // buffer (preferred) or the raw <audio> region-loop fallback.
-        if (window._exportAudioBuf && window._exportAudioCtx && window._exportAudioDest) {
-          try {
-            const node = window._exportAudioCtx.createBufferSource();
-            node.buffer = window._exportAudioBuf;
-            node.loop = true;
-            node.loopStart = 0;
-            node.loopEnd = window._exportAudioBuf.duration;
-            node.connect(window._exportAudioDest);
-            node.start();
-            window._exportAudioNode = node;
-          } catch (e) {}
-        } else if (window._exportAudioSrc) {
-          const a = window._exportAudioSrc;
-          try { a.currentTime = trimStart; a.play().catch(()=>{}); } catch(e){}
-        }
-        const startTime = performance.now();
-        let i = 0;
-        let finished = false;
-        function frame() {
-          const elapsed = performance.now() - startTime;
-          if (comp) {
-            i = replayTimelineToCanvas(timeline, i, elapsed, comp.dotFn, comp.lineFn);
-            comp.present();
-          } else {
-            i = replayTimelineToCanvas(timeline, i, elapsed, sDot, sLine);
-          }
-          renderFrameUpTo(i);
-          pushFrame();
-          if (window._exportAudioSrc) {
-            const a = window._exportAudioSrc;
-            if (a.currentTime >= trimEnd - 0.05) { a.currentTime = trimStart; }
-          }
-          progressFill.style.width = Math.min(100, (elapsed / Math.max(1, totalMs)) * 100) + '%';
-          if (i < timeline.length || elapsed < totalMs) {
-            requestAnimationFrame(frame);
+      let idx = 0, finished = false;
+      const drawn = Math.ceil(totalMs * fps / 1000) + 1;
+      progressLabel.textContent = 'Recording…';
+      _exportAbort = false;
+      window.SkriblVideoRecord.recordVideo({
+        canvas: rec, fps, frames: drawn + Math.round(HOLD_MS * fps / 1000), music: loop,
+        draw: (k) => {
+          if (k < drawn) {
+            const at = Math.min(totalMs, k * 1000 / fps);
+            if (comp) { idx = replayTimelineToCanvas(timeline, idx, at, comp.dotFn, comp.lineFn); comp.present(); }
+            else idx = replayTimelineToCanvas(timeline, idx, at, sDot, sLine);
           } else if (!finished) {
             finished = true;
             if (comp) { comp.finish(); comp.present(); }
-            const holdStart = performance.now();
-            function holdFrame() {
-              renderFrameUpTo(timeline.length);
-              pushFrame();
-              if (performance.now() - holdStart < 700) {
-                requestAnimationFrame(holdFrame);
-              } else {
-                if (window._exportAudioNode) { try { window._exportAudioNode.stop(); } catch(e){} }
-                if (window._exportAudioSrc) { try { window._exportAudioSrc.pause(); } catch(e){} }
-                try { recorder.stop(); } catch(e){}
-              }
-            }
-            requestAnimationFrame(holdFrame);
           }
-        }
-        requestAnimationFrame(frame);
-      }
-
-      // Brief warm-up so the recorder/stream are established, then go.
-      setTimeout(runTimeline, 250);
-    }
-
-    // If there's a pre-record base drawing, paint it into strokeCanvas first
-    progressLabel.textContent = 'Preparing…';
-    if (preRecordSnapshot) {
-      baseImg.onload = () => { sctx.drawImage(baseImg, 0, 0, w/dpr, h/dpr); startRecording(); };
-      baseImg.onerror = () => startRecording();
-      baseImg.src = preRecordSnapshot;
-    } else {
-      startRecording();
-    }
+          renderFrame();
+        },
+        progress: (f) => { progressFill.style.width = Math.min(100, f * 100) + '%'; },
+        cancelled: () => _exportAbort,
+        cancel: () => { release(); progress.hidden = true; },
+        done: (blob, ext, info) => {
+          downloadBlob(blob, window.SkriblName ? window.SkriblName.exportName(ext) : 'skribl.' + ext);
+          progressLabel.textContent = 'Done!';
+          progressFill.style.width = '100%';
+          showToast(want && (!loop || info.withoutMusic) ? 'Video exported, without its music: this browser could not add it' : 'Video exported', null);
+          release();
+          setTimeout(closeExport, 800);
+        },
+        fail: (why) => {
+          release();
+          progress.hidden = true;
+          showToast(why === 'start' ? 'Video export not supported here'
+            : 'The video came out empty, so nothing was saved. Try again.', null);
+        },
+      });
     } catch (err) {
-      // Any failure in setup (MediaRecorder, audio context, stream) must not
-      // leave the export sheet stuck with disabled buttons.
+      // Any failure in setup must not leave the export sheet stuck with
+      // disabled buttons.
       showToast('Video export failed', null);
-      videoBtn.disabled = false; pngBtn.disabled = false;
+      release();
       progress.hidden = true;
-      if (window._exportAudioNode) { try { window._exportAudioNode.stop(); } catch(e){} window._exportAudioNode = null; }
-      window._exportAudioBuf = null; window._exportAudioCtx = null; window._exportAudioDest = null;
-      if (window._exportAudioSrc) { try { window._exportAudioSrc.pause(); } catch(e){} window._exportAudioSrc = null; }
     }
   });
 

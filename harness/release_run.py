@@ -146,6 +146,7 @@ BATCHES = [
     ["verify_library.py"],                 # unrecorded
     ["verify_tappause.py"],                # measures — whether a preview stays still once tapped
     ["verify_replayspeed.py"],             # measures — progress over wall time at each speed; posts to the shared server
+    ["verify_videoexport.py"],             # measures — records real WebM in Chromium and reads its tracks
     # store: posts through both editors' sheets to the shared server (one
     # unticked, one ticked, per surface) and reads the listing back, so it
     # stays out of verify_deletion_foundation's batch.

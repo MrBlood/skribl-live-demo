@@ -314,14 +314,23 @@ with sync_playwright() as p:
         # Flip's copy (v294 audit, finding 6): same stub, its own predicate.
         ("/flip", "leaveSheet"): ("js:window.mediaBytesAtRisk = () => true"
                                   "|click:#moreBtn|click:#padBtn", None),
-        ("/", "reckeyOverlay"): ("js:window.SkriblRecoveryKey.present("
-                                  "{key:'test-recovery-key-abc123'})", None),
+        # THE RECOVERY-KEY DIALOGS open from script after something a person
+        # did (a post, a Clear list), so each recipe first puts focus where
+        # that action leaves it and asks for it back on close. Before Escape
+        # closed them (after v321) this census never saw a close at all; with
+        # no opener in focus, a close lands on <body> and says nothing about
+        # the product. The Library's recovery has a real button, so it clicks.
+        ("/", "reckeyOverlay"): ("js:document.getElementById('menuBtn').focus()"
+                              "|js:window.SkriblRecoveryKey.present("
+                                  "{key:'test-recovery-key-abc123'})", "menuBtn"),
         # The import half of the recovery key, and the guard that stands
         # between "Clear list" and every key it would take with it. Both are
         # built by lib/recoverykey.js the first time they are shown.
-        ("/", "recoverOverlay"): ("js:window.SkriblRecoveryKey.openRecover()", None),
-        ("/", "clearKeysOverlay"): ("js:window.SkriblRecoveryKey.confirmClear("
-                                  "[{id:'x',tok:'k'}], function () {})", None),
+        ("/", "recoverOverlay"): ("js:document.getElementById('menuBtn').focus()"
+                              "|js:window.SkriblRecoveryKey.openRecover()", "menuBtn"),
+        ("/", "clearKeysOverlay"): ("js:document.getElementById('menuBtn').focus()"
+                              "|js:window.SkriblRecoveryKey.confirmClear("
+                                  "[{id:'x',tok:'k'}], function () {})", "menuBtn"),
         # FLIP'S POST SHEET, the one dialog this census could not see (v290).
         # It carried no role and no aria-modal, so it escaped the DOM sweep
         # below — which only ever walked the Pad — and trapped no focus. It is
@@ -350,17 +359,22 @@ with sync_playwright() as p:
         # kept the route: the posted list, the report sheet, and the three
         # recovery-key dialogs, all shared modules, all counted once before.
         ("/flip", "reportSheet"):  ("click:#moreBtn|click:#miReport", None),
-        ("/flip", "reckeyOverlay"): ("js:window.SkriblRecoveryKey.present("
-                                    "{key:'test-recovery-key-abc123'})", None),
-        ("/flip", "recoverOverlay"): ("js:window.SkriblRecoveryKey.openRecover()", None),
+        ("/flip", "reckeyOverlay"): ("js:document.getElementById('moreBtn').focus()"
+                              "|js:window.SkriblRecoveryKey.present("
+                                    "{key:'test-recovery-key-abc123'})", "moreBtn"),
+        ("/flip", "recoverOverlay"): ("js:document.getElementById('moreBtn').focus()"
+                              "|js:window.SkriblRecoveryKey.openRecover()", "moreBtn"),
         # THE PROFILE PAGE (v304): Your Skribls moved from a drawer in the
         # editors to /library, and the recovery-key dialogs it opens (a key
         # shown, a key entered, the Clear-list guard) are built there too.
-        ("/library", "reckeyOverlay"): ("js:window.SkriblRecoveryKey.present({key:'test-recovery-key-abc123'})", None),
-        ("/library", "recoverOverlay"): ("js:window.SkriblRecoveryKey.openRecover()", None),
-        ("/library", "clearKeysOverlay"): ("js:window.SkriblRecoveryKey.confirmClear([{id:'x',tok:'k'}], function () {})", None),
-        ("/flip", "clearKeysOverlay"): ("js:window.SkriblRecoveryKey.confirmClear("
-                                       "[{id:'x',tok:'k'}], function () {})", None),
+        ("/library", "reckeyOverlay"): ("js:document.getElementById('postedRecover').focus()"
+                              "|js:window.SkriblRecoveryKey.present({key:'test-recovery-key-abc123'})", "postedRecover"),
+        ("/library", "recoverOverlay"): ("click:#postedRecover", "postedRecover"),
+        ("/library", "clearKeysOverlay"): ("js:document.getElementById('postedRecover').focus()"
+                              "|js:window.SkriblRecoveryKey.confirmClear([{id:'x',tok:'k'}], function () {})", "postedRecover"),
+        ("/flip", "clearKeysOverlay"): ("js:document.getElementById('moreBtn').focus()"
+                              "|js:window.SkriblRecoveryKey.confirmClear("
+                                       "[{id:'x',tok:'k'}], function () {})", "moreBtn"),
         # THE GALLERY'S REPORT SHEET (v304): one dialog for the page, opened
         # from any tile's Report button. The census posts a public fixture
         # first so there is a tile to open it from; Escape closes it and
@@ -498,6 +512,9 @@ with sync_playwright() as p:
           ", ".join(stale) + " — a recipe for a deleted dialog passes forever "
           "by testing nothing")
 
+    # Escape is Cancel on Flip's export progress, and with no export running
+    # there is nothing to cancel, so it stays up (see its recipe above).
+    ESCAPE_STAYS = {("/flip", "flipExport")}
     for path, mid in sorted(set(found) & set(MODALS)):
         recipe, back_to = MODALS[(path, mid)]
         _tag = f"{mid} on {path}"
@@ -540,6 +557,19 @@ with sync_playwright() as p:
 
         pg.keyboard.press("Escape")
         pg.wait_for_timeout(650)
+        # ESCAPE CLOSES IT (centring drivers, after v321). The focus check below
+        # passed on a dialog Escape did nothing to: focus stayed inside it, so it
+        # was not on <body>. The three recovery-key overlays shipped that way.
+        # Asked of what is PAINTED, not of [hidden]: a dialog that slides off
+        # on a timer is gone when its middle shows something else.
+        if (path, mid) not in ESCAPE_STAYS:
+            still = pg.evaluate("""(id) => { const d = document.getElementById(id);
+                if (!d || d.hidden || d.closest('[hidden]')) return false;
+                const cs = getComputedStyle(d), r = d.getBoundingClientRect();
+                if (cs.display === 'none' || cs.visibility === 'hidden' || r.width < 1 || r.height < 1) return false;
+                const at = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, innerHeight / 2));
+                return !!at && d.contains(at); }""", mid)
+            check(f"{_tag}: Escape closes it", not still, "still painted after Escape")
         landed = pg.evaluate("""() => {
             const a = document.activeElement;
             return a === document.body ? '(body)' : (a && a.id) || '(unnamed)'; }""")

@@ -5571,9 +5571,10 @@ body.replaying .autosave-status { opacity: 0; pointer-events: none; }
 /* NO CONTAINER AT REST (owner, from a mock: "Does it look better without
    header/dock?" ... "It looks good"). On the Pad and Flip the header and the
    dock lose their card: the controls sit on the page and the canvas is the
-   one shape on screen. The header's ground comes back only while the drawing
-   is UNDER it -- the phone's sticky header once the page scrolls (Pen drawer
-   open) -- which lib/headerglass.js marks .over-canvas; it is then exactly
+   one shape on screen. The header's ground comes back whenever anything is
+   UNDER it -- the phone's sticky header once the page scrolls (a drawer or a
+   settings panel open), whatever scrolls beneath: the drawing, the dock, the
+   drawer -- which lib/headerglass.js marks .over-canvas; it is then exactly
    the ground above (solid on a phone, no blur), faded in as a plain colour
    change, never a backdrop-filter or an opacity (the v315 WebKit rule). The
    dock never lies over the drawing, so it has no ground at all. The player
@@ -5583,6 +5584,12 @@ body:not(.player-mode) .header:not(.over-canvas) {
   background-color: transparent; background-image: none; box-shadow: none;
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
+/* ...AND ON TOP of what passes under it. The Pad's dock sits at layer 41 (its
+   trays and the shape card stack inside it), above the header's 30, so once
+   the page scrolled the dock up under a grounded header its icons were drawn
+   over the header's -- undo on Post (owner's iPhone, after v321). While the
+   header has its ground it is the top layer of the two. */
+body:not(.player-mode) .header.over-canvas { z-index: 42; }
 body:not(.player-mode) :is(.toolbar, .flip-tools) {
   background: transparent; box-shadow: none;
   -webkit-backdrop-filter: none; backdrop-filter: none;

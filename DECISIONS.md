@@ -15373,3 +15373,179 @@ flaky (an up-and-down drag that never left the tap's 10px, and a jump read
 across a 60ms wait instead of one frame).
 
 Not tested here: Safari on the owner's iPhone and Segoe UI on Windows.
+
+## After v321 -- the outside audit's confirmed defects, fixed
+
+The independent forensic audit of v321 could not run the app (no Flask in its
+environment), so most of its low scores are "could not check", which it says
+itself. What it CONFIRMED, by running Flip's real export function in an isolated
+Chromium, were three defects in one place -- the MediaRecorder video both editors
+fall back to where WebCodecs cannot make an MP4 -- and it SUSPECTED a fourth, in
+account drafts. All four are fixed here, each reproduced on the old code first.
+
+**SK-AUD-001, Flip's WebM had no music.** The export sheet says "Your animation,
+with music"; the Pad mixed its loop into the recorded stream and Flip recorded the
+canvas alone. **SK-AUD-002, its first page played twice:** painted once before
+recording started and again on the first tick (three pages decoded as four).
+**SK-AUD-003, an empty recording was a success:** a recorder that produced nothing
+downloaded a 0-byte file and said "Animation exported" (Flip) or "Video exported"
+(the Pad). The parts the two editors must agree on are now one module,
+`lib/videorecord.js`: manual capture (captureStream(0) and requestFrame, so a frame
+goes in exactly when one is pushed, falling back to captureStream(fps)); the music
+loop -- the trimmed, crossfaded buffer the MP4 and the post use -- as a track on the
+stream, started with the recorder and stopped with it; and a finish that calls a
+recording a success only if it has chunks, bytes, the container's own signature at
+its start (EBML for WebM, ftyp for MP4) and no recorder error. Anything else
+downloads nothing and says "The video came out empty, so nothing was saved. Try
+again." Flip ticks one unit and pushes one frame per beat, from unit 0 once the
+recorder runs, and stops one beat after the last so it keeps its time. If music is
+on and the browser cannot add it, the chip says the video was made without it. The
+Pad's own music graph went too (see "One exporter" below).
+The audit's SK-AUD-002 note that a LAST page can go missing (PF-031) was not
+reproduced, by the audit or here; the new stop holds one beat after the last push.
+
+`verify_videoexport` (new) reads the downloaded file itself: a small EBML walk
+finds each track's type and counts the video track's blocks. Against the v321 Flip
+code it went red where the audit did -- 4 frames for 3 pages, no audio track, and a
+0-byte "Animation exported" under three stand-in recorders (no data, an error,
+bytes that are not a video) -- and green on this. Per component: the music removed,
+the signature check removed and the error ignored each turned their own checks red;
+the empty check alone stayed green because the signature check also catches an
+empty file, and both removed together went red, so each guard is shown to bite.
+
+**SK-AUD-004, a draft open on two devices: the second save replaced the first.**
+Reproduced first against the example host with two signed-in browsers: both saves
+answered 200 and the first device's edit was gone. A PUT now carries
+`baseUpdatedAt`, the updatedAt of the copy the editor opened or last saved, and the
+server overwrites only if the stored draft is still that copy (the row locked for
+the comparison); otherwise it answers 409 with `conflict: true`. The editor then
+KEEPS BOTH: it saves its copy as a new draft, titled "(copy)", and says "This draft
+changed on another device, so yours was saved as a copy." A save without the field
+overwrites as before, so an older client or a host's own code is not broken.
+The comparison is of INSTANTS, not text: SQLite hands back the naive UTC it stored
+while a fresh row carries the aware value (the audit's PF-006), so the first
+version, comparing strings, made a device conflict with its own last save -- the
+new section of verify_clouddrafts caught it on its first run.
+
+That section (two devices, real Save draft clicks, a third test account so no
+other section's counts move) also found a latent defect in the suite itself: it
+started the example server with its log piped back and never read the pipe, so
+once about 64 KB of request lines had been written the server blocked mid-write
+and every later page stalled on its scripts. The suite had sat just under that
+limit. The log goes to a file now. `harness/package.py` pipes its server the same
+way but makes a handful of requests, far from the limit, and was left alone.
+
+**One exporter, after the owner's review of the plan.** The first pass shared
+the recorder and the finish but left the Pad its own music graph; the owner
+asked for the audit's top recommendation instead -- one video exporter, since
+two copies are how this drifted -- and pointed out what makes SK-AUD-001 bite in
+real life: Flip's MP4 carries the music, and exportViaWebCodecsMp4 declines
+when the browser cannot encode AAC ("let WebM keep the audio"), so turning the
+music ON was what sent the export down the silent path. `lib/videorecord.js`
+recordVideo() is now the whole MediaRecorder exporter for both editors: each
+says how many frames, how to paint frame k, and which loop plays under them
+(the Pad: its replay timeline at k/30 s, then the finished drawing held 0.7 s;
+Flip: its export units, times the loops). The Pad's two music paths share one
+loop builder too, so the MP4 and the WebM cannot carry different music. One
+honest loss: the Pad's last resort of looping the raw <audio> file when the
+crossfaded loop could not be built is gone; in that rare case it says the video
+was made without its music, as Flip does. verify_videoexport drives the owner's
+route on both editors -- the Video button, music on, the MP4 path told it can
+encode video and not AAC -- and checks the WebM that comes out has an audio
+track; with each editor's music argument removed it went red, and with frame 0
+painted at the start AND on the first tick (the original timing) it read 4
+frames for 3 pages. Its "no page errors" check also caught the music bed being
+closed twice (a rejected close()); the stop is idempotent now.
+
+**SK-AUD-012, CI.** Every third-party action is pinned to the commit its version
+tag pointed at when this was written (what CI already ran), with the release named
+beside it, and the harness workflow reads the repository and nothing else unless a
+job asks (main-watch keeps issues: write). release.yml already defaulted to none.
+
+**Not code, and why.** SK-AUD-011 (a host's opt-in shared cache can keep a deleted
+post's media up to five minutes) is already stated for hosts in docs/INTEGRATION.md,
+with the advice to leave it off when "deleted" must mean gone at once; a line in the
+app when the opt-in is on goes to the next mock round with the audit's design
+findings (SK-AUD-005 to 010: the delete key at post time, keeping both tabs' work,
+the empty Library, one post-failure wording).
+
+**Blooby on the empty Library is the Home Screen icon, with the whole star
+(owner: "the sticker doesn't cut it and looks bad in both themes" ... "I mean
+using the Home Screen icon with full star instead of sticker not changing home
+screen").** The empty Library showed Blooby as a white-edged sticker, a
+different picture per theme. It shows one picture now: the icon's lilac tile
+and Blooby, with the star made small enough that all six points sit inside the
+tile, corners rounded to match iOS. It brings its own lilac, so his drawn
+outline never meets the page, and it is a little bigger than the sticker (52%
+of the card's height, not 42%; the card keeps its size). The Home Screen icon
+itself is unchanged. `harness/tools/blooby.py badge` draws it through the real
+Pad and composes it with the icon's own code, so the two cannot drift; the old
+sticker files are gone. `verify_library` asks that the one picture is painted
+in both themes and that it is a tile, opaque to its edges with its corners
+rounded away. Flip shows no Blooby on a page, so nothing changes there.
+
+**Escape closes the recovery-key dialogs (found by the centring suite's
+drivers).** The three dialogs lib/recoverykey.js builds -- your key, use a
+recovery key, and the Clear-list guard -- moved focus in and kept Tab inside,
+but never bound Escape (lib/modalfocus.js leaves Escape to each surface), so a
+keyboard user could only leave by Tabbing to the button. Escape now does what
+the quiet button does: Done, Close, Cancel, never "Clear anyway". The modal
+census in verify_a11y had walked all three and stayed green, because it asked
+only that focus did not land on <body> after Escape, and focus never left the
+still-open dialog. It now also asks that Escape closes every dialog (what is
+painted, not [hidden]), with Flip's export progress the one named exception
+(Escape is Cancel there, and with nothing exporting it stays). Red on the old
+code for all three, on each of the three pages that build them. The recipes for
+these dialogs now put focus on a real control before opening them from script,
+and the Library's "Use a recovery key" is clicked, so a close is checked for
+handing focus back.
+
+**The header's ground over anything scrolled under it, and over the dock; Flip's
+Grid density words fit (owner's iPhone, after v321).** Two screenshots. In the
+first, the Pad's Music card was open and scrolled to its end: the header had no
+ground, and the dock's icons sat on the header's own (undo on Post). In the
+second, Flip's Playback settings had slid under a header with no ground, and the
+Grid density row read "CoarsMediumFine".
+
+* lib/headerglass.js gave the header its ground only while the DRAWING's box
+  overlapped it. Scrolled past the drawing, or with a panel above the drawing
+  sliding under, nothing counted. It now counts the page being scrolled at all,
+  as well as the overlap, so anything passing under the header gets the ground.
+  At rest the page is not scrolled, so "no container at rest" holds.
+* The Pad's dock sits at layer 41 and the header at 30, so even a grounded
+  header was drawn under the dock's icons. A grounded header is layer 42.
+* Flip's Grid density borrowed the 34px digit cell for words, as Smear weight
+  had (fixed alone, so this one kept the bug). Its cells size to their words and
+  the row wraps under the switch, as Onion skin's does. verify_onepill's census
+  now asks FIT of every labelled option on both editors (the words' width
+  against the button's; the first draft read scrollWidth and counted the
+  invisible 44px tap area as a spill on every button).
+
+verify_ux pins both header cases on the Pad and Flip, red on the old code: the
+end of a long Music card (the drawing confirmed above the header first), and
+Flip's settings scrolled, read before lib/drawers.js brings the page home --
+which Chromium does at once and the owner's iPhone did not. Not tested here:
+WebKit.
+
+**The Pad's speed line stays after a replay on a phone (owner's iPhone, after
+v321: "The speed only stays up for the length of the play time. You can't
+adjust it if you accidentally put it on 16x or if it's a short drawing").** The
+line followed the scrubber, and the scrubber goes when a replay ends, so a short
+drawing gave no time to reach the speed. On a phone the line has a place of its
+own, between the drawing and the tools, and now stays there after the replay,
+still able to change the speed for the next Play; the next stroke or a Clear
+takes it away, and undo or redo updates its "drawn in". A desk has no such gap
+(the tools sit 12-20px under the drawing, the line is 27px), so there it still
+goes with the scrubber until the owner picks its place. verify_replayspeed pins
+it, red on the old code. Flip's editor has no speed line yet (Flip next, F1).
+
+**No search or filter row while there is nothing to filter (owner: "If there's
+nothing there we don't need the filter sliders do we?").** With nothing posted,
+the Library's search and its All / In the gallery / Link only row step aside
+and come back with the first post. On Drafts, which the search already narrows
+by title (owner: "should you be able to search drafts on library?" -- it does),
+the search steps aside while there are no drafts. Skribls | Drafts and "Use a
+recovery key" always stay: drafts can exist before any post, and on a new phone
+the recovery key is how a list comes back. verify_library pins each state on a
+phone and a desk, red on the old code; the desk row check now posts one Skribl
+first, since an empty Library no longer has a row to measure.

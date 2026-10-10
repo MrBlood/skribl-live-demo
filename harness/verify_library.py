@@ -612,19 +612,32 @@ with sync_playwright() as sp:
     check("an empty Library shows the empty card, painted, and none of the player's parts",
           o_card["painted"] and o_card["title"] == "Nothing posted yet" and not o_card["dead"], str(o_card))
     check("...and its Make one goes to the Pad", (o_card["make"] or "").endswith("/skribl-pad"), str(o_card["make"]))
-    # Drawn Blooby on light, his sticker on dark (the drawn outline vanishes on
-    # a dark ground), keyed on the data-theme the page's boot stamps; and both
-    # pictures actually arrive.
+    # Blooby is the Home Screen icon in small, with the whole star (owner:
+    # "using the Home Screen icon with full star instead of sticker"). One
+    # picture, PAINTED in both themes (elementFromPoint at its centre), and it
+    # is a tile: opaque from edge to edge along its middle, so his drawn
+    # outline sits on its lilac and never on the page, with its corners
+    # rounded away. The sticker it replaced had a white edge that looked bad
+    # on both grounds.
     o_bl = other.evaluate("""async () => { const r = document.documentElement, was = r.getAttribute('data-theme');
-        const on = sel => getComputedStyle(document.querySelector('#stageEmpty ' + sel)).display !== 'none';
-        r.setAttribute('data-theme', 'light'); const L = [on('.bl-light'), on('.bl-dark')];
-        r.setAttribute('data-theme', 'dark'); const D = [on('.bl-light'), on('.bl-dark')];
-        if (was === null) r.removeAttribute('data-theme'); else r.setAttribute('data-theme', was);
         const imgs = [...document.querySelectorAll('#stageEmpty img')];
         await Promise.all(imgs.map(i => i.decode().catch(() => null)));
-        return { light: L, dark: D, loaded: imgs.map(i => i.naturalWidth > 0) }; }""")
-    check("...drawn Blooby on light, the sticker on dark, and both pictures load",
-          o_bl["light"] == [True, False] and o_bl["dark"] == [False, True] and o_bl["loaded"] == [True, True], str(o_bl))
+        const painted = () => imgs.filter(i => { i.scrollIntoView({ block: 'center' }); const b = i.getBoundingClientRect();
+          return b.width > 0 && document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2) === i; })
+          .map(i => i.getAttribute('src').split('?')[0].split('/').pop());
+        r.setAttribute('data-theme', 'light'); const L = painted();
+        r.setAttribute('data-theme', 'dark'); const D = painted();
+        if (was === null) r.removeAttribute('data-theme'); else r.setAttribute('data-theme', was);
+        const i = imgs[0], c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight;
+        const g = c.getContext('2d'); g.drawImage(i, 0, 0);
+        const a = (x, y) => g.getImageData(x, y, 1, 1).data[3], w = c.width, h = c.height, m = Math.floor(w / 2);
+        return { n: imgs.length, light: L, dark: D, size: [w, h],
+                 edges: [a(m, 0), a(m, h - 1), a(0, Math.floor(h / 2)), a(w - 1, Math.floor(h / 2))],
+                 corners: [a(0, 0), a(w - 1, 0), a(0, h - 1), a(w - 1, h - 1)] }; }""")
+    check("...one Blooby picture, the star badge, painted in light and in dark alike",
+          o_bl["n"] == 1 and o_bl["light"] == ["blooby-star.webp"] and o_bl["dark"] == ["blooby-star.webp"], str(o_bl))
+    check("...and it is a tile: opaque to its edges, corners rounded away, square",
+          o_bl["size"][0] == o_bl["size"][1] > 0 and min(o_bl["edges"]) == 255 and max(o_bl["corners"]) == 0, str(o_bl))
     check("...and the empty state says what this list is",
           o_empty["shown"] and "in this browser only" in o_empty["words"] and "not an account" in o_empty["words"],
           str(o_empty))
@@ -2499,7 +2512,12 @@ with sync_playwright() as _spl:
           _when["months"] == "3 months ago" and _when["year"] == "a year ago", str(_when))
     _ctx.close()
     # A DESK KEEPS ITS ONE ROW.
-    _pd = _bl.new_context(viewport={"width": 1280, "height": 900}).new_page()
+    _pdc = _bl.new_context(viewport={"width": 1280, "height": 900})
+    # One Skribl posted: an empty Library shows no filter at all (below).
+    _pdc.add_init_script("try { localStorage.setItem('skribl_posted_v1', JSON.stringify([{ id: %s, url: '/s/' + %s,"
+                         " title: 'Tall', kind: 'pad', pages: 1, visibility: 'unlisted', tok: null, at: Date.now() }])); } catch (e) {}"
+                         % (json.dumps(_tall["id"]), json.dumps(_tall["id"])))
+    _pd = _pdc.new_page()
     browsing.goto(_pd, BASE, "/library")
     _pd.wait_for_timeout(800)
     _w = _pd.evaluate(_RECTS)
@@ -2507,6 +2525,50 @@ with sync_playwright() as _spl:
           bool(_w["tabs"] and _w["chips"] and _w["search"])
           and max(_w["tabs"]["t"], _w["chips"]["t"], _w["search"]["t"])
           - min(_w["tabs"]["t"], _w["chips"]["t"], _w["search"]["t"]) <= 6, str(_w))
+
+    # NOTHING TO FILTER (owner: "If there's nothing there we don't need the
+    # filter sliders do we?"). A browser with nothing posted and no drafts:
+    # the search and the gallery/link row are not shown, the tabs and the
+    # recovery link are. A draft brings the search back on Drafts (where it
+    # narrows drafts by title); a post brings both back on Skribls. Asked on
+    # a phone and a desk.
+    for _vw, _vh, _mob in ((402, 874, True), (1280, 900, False)):
+        _ec = _bl.new_context(viewport={"width": _vw, "height": _vh}, is_mobile=_mob, has_touch=_mob)
+        _e = _ec.new_page()
+        browsing.goto(_e, BASE, "/library"); _e.wait_for_timeout(900)
+        _r0 = _e.evaluate(_RECTS)
+        _rk = _e.evaluate("() => { const a = document.getElementById('postedRecover'); return !!(a && a.offsetParent); }")
+        check(f"[{_vw}] nothing posted: no search and no gallery/link row; the tabs and 'Use a recovery key' stay",
+              _r0["tabs"] and not _r0["chips"] and not _r0["search"] and _rk, str(_r0))
+        _e.click("#tabDrafts"); _e.wait_for_timeout(600)
+        _r1 = _e.evaluate(_RECTS)
+        check(f"[{_vw}] ...and on Drafts, with no drafts, no search either", _r1["tabs"] and not _r1["search"], str(_r1))
+        # A draft, saved the way the editors save one.
+        browsing.goto(_e, BASE, "/skribl-pad")
+        _e.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.pad")
+        _e.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+        _cb = _e.locator("#canvas").bounding_box()
+        _e.mouse.move(_cb["x"] + 80, _cb["y"] + 120); _e.mouse.down()
+        for _k in range(12):
+            _e.mouse.move(_cb["x"] + 80 + _k * 6, _cb["y"] + 120 + math.sin(_k) * 20)
+        _e.mouse.up(); _e.wait_for_timeout(250)
+        _e.evaluate("() => { SkriblName.set('Cat'); SkriblSavedDrafts.forget(); return SkriblSavedDrafts.save(); }")
+        _e.wait_for_timeout(400)
+        browsing.goto(_e, BASE, "/library#drafts")
+        _e.wait_for_function("() => document.querySelectorAll('#draftsList .draft-row').length === 1", timeout=10000)
+        _r2 = _e.evaluate(_RECTS)
+        check(f"[{_vw}] a draft brings the search back on Drafts, still without the gallery/link row",
+              _r2["search"] and not _r2["chips"], str(_r2))
+        _e.click("#tabSkribls"); _e.wait_for_timeout(400)
+        _r3 = _e.evaluate(_RECTS)
+        check(f"[{_vw}] ...and Skribls, still with nothing posted, still shows neither",
+              not _r3["search"] and not _r3["chips"], str(_r3))
+        _e.evaluate("(id) => localStorage.setItem('skribl_posted_v1', JSON.stringify([{ id: id, url: '/s/' + id,"
+                    " title: 'Tall', kind: 'pad', pages: 1, visibility: 'unlisted', tok: null, at: Date.now() }]))", _tall["id"])
+        browsing.goto(_e, BASE, "/library"); _e.wait_for_timeout(900)
+        _r4 = _e.evaluate(_RECTS)
+        check(f"[{_vw}] ...and the first post brings both back", _r4["search"] and _r4["chips"], str(_r4))
+        _ec.close()
     _bl.close()
 
 passed = sum(1 for ok, _ in results if ok)

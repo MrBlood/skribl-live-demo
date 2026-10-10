@@ -3,6 +3,7 @@
 
     python3 harness/tools/blooby.py card OUTDIR
     python3 harness/tools/blooby.py icon skribl/static [MASTER.png]
+    python3 harness/tools/blooby.py badge skribl/static/brand
 
 Blooby is built from his own Flip drawing (flipworks.wave: the marker fill, the
 two-sided outline, the feet, the ground), so every pose keeps the hand he was
@@ -530,6 +531,18 @@ ICON_DPR = 8
 # in the picture itself, not a glass sheen iOS would have to relight.
 ICON_GLOW = ((0.030, 0.275), (0.010, 0.30))           # (blur, as a share of the side; strength)
 ICON_SHADOW = (0.012, 0.014, 0.22, (92, 66, 196))      # blur, drop, strength, a deep lilac
+# THE BADGE: the icon again, small, where the app shows Blooby on a page (the
+# empty Library). Owner: "using the Home Screen icon with full star instead of
+# sticker" -- the white-edged sticker "doesn't cut it and looks bad in both
+# themes". The same tile, lilac and Blooby, with the star made small enough
+# that all six points sit inside it, and the tile's corners rounded so it
+# stands on any page. It brings its own lilac, so his drawn outline never
+# meets the page and one picture serves light and dark. The Home Screen icon
+# itself keeps its cropped star; only the badge shows the whole one.
+BADGE_STAR_R = 0.49
+BADGE_FILL = 0.70
+BADGE_SIDE = 384           # about 3x the ~110 CSS px it shows at on a desk
+BADGE_RADIUS = 0.2237      # iOS's icon corner, as a share of the side
 
 
 def _hex(c):
@@ -554,13 +567,13 @@ def icon_ground(side):
     return img
 
 
-def icon_star(side):
-    """The star he stands on, as a mask: point up, centred, ICON_STAR_R and
-    ICON_STAR_INNER."""
+def icon_star(side, star_r=None):
+    """The star he stands on, as a mask: point up, centred, ICON_STAR_R (or
+    `star_r`) and ICON_STAR_INNER."""
     from PIL import Image, ImageDraw
     c, pts = side / 2, []
     for k in range(12):
-        r = ICON_STAR_R * (1 if k % 2 == 0 else ICON_STAR_INNER) * side
+        r = (star_r or ICON_STAR_R) * (1 if k % 2 == 0 else ICON_STAR_INNER) * side
         a = math.radians(-90 + 30 * k)
         pts.append((c + r * math.cos(a), c + r * math.sin(a)))
     m = Image.new("L", (side, side), 0)
@@ -581,7 +594,7 @@ def _enclosed(alpha):
     return inside.resize(alpha.size, Image.BILINEAR).point(lambda v: 255 if v > 127 else 0)
 
 
-def icon_compose(him, side=ICON_MASTER):
+def icon_compose(him, side=ICON_MASTER, star_r=None, fill=None):
     """The icon at `side`, from his drawing `him` (RGBA, cropped to his ink):
     the lilac, the star's light on it, the star, his shadow on the star, and him.
 
@@ -593,13 +606,13 @@ def icon_compose(him, side=ICON_MASTER):
     outline: it falls on the star around him, never into those spots."""
     from PIL import Image, ImageChops, ImageFilter
     tile = icon_ground(1024).resize((side, side), Image.BICUBIC).convert("RGBA")   # a smooth ramp: worked small, enlarged
-    star = icon_star(side)
+    star = icon_star(side, star_r)
     white = Image.new("L", (side, side), 255)
     for blur, strength in ICON_GLOW:
         glow = star.filter(ImageFilter.GaussianBlur(side * blur)).point(lambda v, s=strength: round(v * s))
         tile.alpha_composite(Image.merge("RGBA", (white, white, white, glow)))
     tile.paste(Image.new("RGBA", (side, side), (255, 255, 255, 255)), (0, 0), star)
-    h = round(side * ICON_FILL)
+    h = round(side * (fill or ICON_FILL))
     w = round(him.width * h / him.height)
     him = him.resize((w, h), Image.LANCZOS)
     at = ((side - w) // 2, (side - h) // 2)
@@ -614,21 +627,18 @@ def icon_compose(him, side=ICON_MASTER):
     return tile.convert("RGB")
 
 
-def draw_icons(out, base="http://127.0.0.1:5001", master=None):
-    """Draw Blooby waving in the real Pad (transparent ground), compose the icon
-    and write the three files the manifest and the touch-icon tag name, each
-    reduced from that one picture; `master`, if given, is where the full-size
-    picture goes. Needs the local server.
+def draw_him(base="http://127.0.0.1:5001", dpr=ICON_DPR):
+    """Blooby waving, drawn in the real Pad on a transparent ground, returned
+    as RGBA cropped to his ink. Needs the local server.
 
     Drawn at a calm tempo: a fast hand captures too few points along each
     curve, and his eyes came out as hexagons the first time."""
     import browsing
     from PIL import Image
     from playwright.sync_api import sync_playwright
-    out = pathlib.Path(out)
     with sync_playwright() as p:
         b = p.chromium.launch()
-        pg = b.new_page(viewport={"width": 1100, "height": 900}, device_scale_factor=ICON_DPR)
+        pg = b.new_page(viewport={"width": 1100, "height": 900}, device_scale_factor=dpr)
         browsing.goto(pg, base, "/skribl-pad")
         pg.wait_for_timeout(800)
         pg.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
@@ -641,8 +651,16 @@ def draw_icons(out, base="http://127.0.0.1:5001", master=None):
         url = pg.evaluate("() => document.getElementById('canvas').toDataURL('image/png')")
         b.close()
     him = Image.open(__import__("io").BytesIO(base64.b64decode(url.split(",")[1]))).convert("RGBA")
-    him = him.crop(him.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox())
-    tile = icon_compose(him)
+    return him.crop(him.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox())
+
+
+def draw_icons(out, base="http://127.0.0.1:5001", master=None):
+    """Draw Blooby, compose the icon and write the three files the manifest and
+    the touch-icon tag name, each reduced from that one picture; `master`, if
+    given, is where the full-size picture goes. Needs the local server."""
+    from PIL import Image
+    out = pathlib.Path(out)
+    tile = icon_compose(draw_him(base))
     if master:
         tile.save(master, optimize=True)
     for name, px in ICON_SIZES.items():
@@ -650,12 +668,35 @@ def draw_icons(out, base="http://127.0.0.1:5001", master=None):
     return [out / n for n in ICON_SIZES]
 
 
+def badge_compose(him, side=BADGE_SIDE):
+    """The badge at `side`: the icon with the whole star (BADGE_STAR_R,
+    BADGE_FILL), composed four times larger and reduced, its corners rounded
+    to transparent."""
+    from PIL import Image, ImageDraw
+    big = side * 4
+    tile = icon_compose(him, 2048, BADGE_STAR_R, BADGE_FILL).resize((big, big), Image.LANCZOS).convert("RGBA")
+    m = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(m).rounded_rectangle((0, 0, big - 1, big - 1), radius=round(big * BADGE_RADIUS), fill=255)
+    tile.putalpha(m)
+    return tile.resize((side, side), Image.LANCZOS)
+
+
+def draw_badge(out, base="http://127.0.0.1:5001"):
+    """Draw Blooby and write OUT/blooby-star.webp. Needs the local server."""
+    path = pathlib.Path(out) / "blooby-star.webp"
+    badge_compose(draw_him(base, dpr=4)).save(path, "WEBP", quality=92, method=6)
+    return path
+
+
 if __name__ == "__main__":
-    if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("card", "icon") \
+    if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("card", "icon", "badge") \
             or (len(sys.argv) == 4 and sys.argv[1] != "icon"):
         raise SystemExit(__doc__.split("\n\n")[1])
     if sys.argv[1] == "icon":
         print("wrote", ", ".join(str(x) for x in draw_icons(sys.argv[2], master=(sys.argv[3:] or [None])[0])))
+        raise SystemExit(0)
+    if sys.argv[1] == "badge":
+        print("wrote", draw_badge(sys.argv[2]))
         raise SystemExit(0)
     draw_card(sys.argv[2])
     print("wrote", ", ".join(f"{sys.argv[2]}/{n}" for n in ("card.png", "card-paper.png", "card-dark.png")))

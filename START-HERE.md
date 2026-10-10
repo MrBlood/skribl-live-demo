@@ -110,6 +110,8 @@ here is the rule you can break tomorrow.
 | The compose handshake targets a specific origin, never `'*'`. | `verify_compose.py` |
 | A host must limit its own compose view — Skribl's limiter cannot follow the payload into somebody else's composer. | `verify_compose.py` |
 | When the drawing stops, the music stops. | `verify_audiosession.py`, `verify_inline.py` |
+| ONE MediaRecorder video exporter for both editors (`lib/videorecord.js` recordVideo(): each editor gives frames, a painter and the loop). It carries the music when music is on -- including on the route that reaches it BECAUSE of the music (the MP4 declines without AAC) -- one frame per beat with the first not doubled, and is a success only if something came out: an empty, errored or unreadable recording downloads nothing and says so. | `verify_videoexport.py` (the file's own tracks and frames, read from the download; the no-AAC route driven through the Video button on both editors) |
+| An account draft is overwritten only from the copy the save was made from (`baseUpdatedAt`, compared as an instant); a save from an older copy is a 409, and the editor keeps both by saving it as a copy. A save without the field (an older client, a host's own code) overwrites as before. | `verify_clouddrafts.py` (section 9, two signed-in devices) |
 | How long a page lasts and how much of a drawing page is revealed are `lib/holdtiming.js`'s answers, not each surface's. Four surfaces render a reveal and they agreed in the middle of the range and disagreed at both ends. | `verify_sharedrules.py`, `verify_inline.py` |
 | A drawing page is EXEMPT FROM fps everywhere, the exported file included — a file has frames, so it samples the page's millisecond timeline rather than re-denominating the page in slots. | `verify_sharedrules.py` |
 | Every Draw-on page begins empty, reveals monotonically, reaches its COMPLETE recorded state, and only then yields to the next page. This is about the COMPOSITION of the clock's page, its progress and dueCount — all three were individually correct while the terminal state could never occur; lib/holdtiming.js displayAt() is that composition — so it is asserted through the actual surface clock, on both players. | `verify_sharedrules.py`, `verify_inline.py`, `verify_hold.py` |
@@ -784,6 +786,7 @@ rather than a shared rule.
 | `toolscroll.js` | Pad+Flip | The toolbar on the smallest screens -- Pad's, and Flip's since the dock redesign: one row that scrolls, and says so. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |
 | `tooltip.js` | Pad+Flip+library+gallery | Styled tooltips, replacing the browser's. |
+| `videorecord.js` | Pad+Flip | The video both editors make where WebCodecs cannot make an MP4: ONE exporter. |
 | `zoomstep.js` | Pad+Flip | The loop-detail magnification stepper — the ladder, the chrome, and the rule for stepping it, in one place because Pad and Flip both draw this control. |
 <!-- /GEN:MODULE-INDEX -->
 

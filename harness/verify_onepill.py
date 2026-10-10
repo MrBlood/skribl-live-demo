@@ -134,7 +134,18 @@ CENSUS = r"""() => {
       btns: btns.map(b => { const bb = b.getBoundingClientRect(); const cs = getComputedStyle(b);
         return { t: (b.textContent || '').trim().slice(0, 16), w: cs.fontWeight, ink: cs.color,
                  sel: b === sel, x: bb.left, y: bb.top, width: bb.width, height: bb.height,
-                 text: !!(b.textContent || '').trim() }; }),
+                 text: !!(b.textContent || '').trim(), spill: (() => {
+                   // The WORDS against the room inside the button. Not scrollWidth:
+                   // the invisible ::before that grows the tap area to 44px
+                   // overflows every button by the same amount and read as a spill.
+                   const r = document.createRange(); r.selectNodeContents(b);
+                   const tw = r.getBoundingClientRect().width;
+                   // Against the whole button, padding included: words that eat into
+                   // their own padding still sit inside their option (the canvas
+                   // ratios do, by 0.8px); words wider than the button run into
+                   // the next one.
+                   const room = b.clientWidth;
+                   return (b.textContent || '').trim() ? Math.round((tw - room) * 10) / 10 : 0; })() }; }),
     });
   }
   return out;
@@ -205,6 +216,12 @@ def audit(page, route, theme, form, state):
               g["pillBg"] == g["tokBg"] and g["pillShadow"] == "none", f"{g['pillBg']} vs {g['tokBg']}; {g['pillShadow']}")
         check(f"SHAPE: {tag} inks the selected option with the selected-ink token",
               g["selInk"] == g["tokInk"], f"{g['selInk']} vs {g['tokInk']}")
+        # FIT (owner's iPhone, after v321: "CoarsMediumFine"). A word in a cell
+        # sized for a digit spills into its neighbours; Smear weight did it
+        # first and was fixed alone, so Grid density kept the same bug. Every
+        # labelled option's text must fit inside its own button.
+        spills = [(b["t"], b["spill"]) for b in g["btns"] if b["text"] and b["spill"] > 0.5]
+        check(f"FIT: {tag} every label fits inside its own option", not spills, str(spills))
         worst = None
         for b in g["btns"]:
             bg = painted_bg(page, b)

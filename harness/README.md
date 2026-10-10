@@ -74,6 +74,8 @@ stale the same way (the paragraph under the list says so too):
     verify_ux.py         export format labels + undoable clear
     verify_pages.py      onion depth/tint, page ops, clear redo
     verify_exopts.py     export size + page range, byte-verified
+    verify_videoexport.py  the MediaRecorder video both editors make:
+                         music, one frame a beat, no empty success
     verify_hold.py       drag-reorder + per-page hold + compat
     verify_loop.py       a looped stretch (times / ms / forever) on
                          both players, the preview, draft, post, export

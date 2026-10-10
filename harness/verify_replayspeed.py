@@ -336,8 +336,27 @@ with sync_playwright() as p:
         was = pg.evaluate("() => playing")
         pg.click("#playBtn")   # Stop (at 1/4x the replay is still running)
         pg.wait_for_timeout(400)
-        check(f"[{label}] Stop takes the line away",
-              was and pg.evaluate("() => !playing && document.getElementById('padLine').hidden"))
+        if label == "desk":
+            check(f"[{label}] Stop takes the line away (a desk has no place for it at rest)",
+                  was and pg.evaluate("() => !playing && document.getElementById('padLine').hidden"))
+        else:
+            # STAYS AT REST (owner's iPhone, after v321: "The speed only stays up
+            # for the length of the play time. You can't adjust it if you
+            # accidentally put it on 16x or if it's a short drawing").
+            rest = pg.evaluate("""() => ({ playing, line: !document.getElementById('padLine').hidden,
+                scrub: !document.getElementById('playScrub').hidden,
+                hit: (() => { const b = document.querySelector('#padLine .rl-speed').getBoundingClientRect();
+                  const e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return !!e && !!e.closest('#padLine'); })() })""")
+            check(f"[{label}] after the replay the line stays, its speed button on top, while the scrubber goes",
+                  was and not rest["playing"] and rest["line"] and rest["hit"] and not rest["scrub"], str(rest))
+            pick(pg, "#padLine", "16")
+            check(f"[{label}] ...and a speed can still be picked there, for the next Play",
+                  pg.evaluate("() => [localStorage.getItem('skribl_replay_rate'), document.querySelector('#padLine .rl-text').innerText.replace(/\\s+/g, ' ').trim().endsWith('watching at 16×')]")
+                  == ["16", True], pg.evaluate("() => document.querySelector('#padLine .rl-text').innerText"))
+            pg.mouse.move(box["x"] + 80, box["y"] + 400); pg.mouse.down()
+            pg.mouse.move(box["x"] + 140, box["y"] + 420); pg.mouse.up(); pg.wait_for_timeout(300)
+            check(f"[{label}] ...and the next stroke takes it away",
+                  pg.evaluate("() => document.getElementById('padLine').hidden"))
         check(f"[{label}] the music keeps up between half and double speed and is a bed outside them",
               pg.evaluate("() => [0.25, 0.5, 2, 4].map(r => { setReplayRate(r); return musicRate(); })") == [1, 0.5, 2, 1])
         check(f"[{label}] no page errors", not errs, "; ".join(errs[:2]))

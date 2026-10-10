@@ -824,8 +824,10 @@
 /* ...except Smear weight, which borrowed the digit cell for WORDS: "Normal"
    and "Strong" are 36-39px of text in a 34px box, so the three ran into one
    another ("LightNormaStrong") at every phone width. Its cells size to their
-   words. */
-#smearWeightSeg button { width: auto; flex: 0 0 auto; padding: 5px 9px; }
+   words. Grid density has the same three words-not-digits and the same bug
+   ("CoarsMediumFine", owner's iPhone, after v321); verify_onepill's FIT now
+   asks it of every option on both editors. */
+#smearWeightSeg button, #gridDensitySeg button { width: auto; flex: 0 0 auto; padding: 5px 9px; }
 
 .onion-tint {
   display: inline-flex;

@@ -25,6 +25,7 @@ the cap can be reached in a few saves.
      asks before a draft replaces it.
   7  Storage that never answers, or a connection that died in the background
      (v317, the owner's iPhone): the sheet says so and retries; a read reconnects.
+  9  The same draft on two devices (SK-AUD-004): the second save keeps both.
   8  Drafts that stay (v317): a failed index read writes nothing over the list;
      a draft its index lost is listed again; a delete that stops half-way
      neither brings it back nor leaves a dead row; media is stored as bytes and
@@ -77,12 +78,19 @@ subprocess.run(
     [sys.executable, "-c",
      "import app as ex; a = ex.create_app();"
      " ctx = a.app_context(); ctx.push(); ex.db.create_all();"
-     " ex.db.session.add_all([ex.User(handle='ada'), ex.User(handle='grace')]);"
+     " ex.db.session.add_all([ex.User(handle='ada'), ex.User(handle='grace'), ex.User(handle='lin')]);"
      " ex.db.session.commit()"],
     cwd=str(EXAMPLE), env=env, check=True, capture_output=True)
+# THE SERVER'S LOG GOES TO A FILE, NOT A PIPE. It was stderr=PIPE and read
+# only if the server failed to start, so every request's log line filled a
+# 64 KB pipe nobody drained -- and once it was full the server blocked writing
+# its next line, and every page load after that stalled on its scripts. The
+# suite sat just under the limit until section 9 added a few dozen requests;
+# then section 7's first page never loaded.
+_log = open(os.path.join(_tmp, "server.log"), "w+b")
 proc = subprocess.Popen(
     [sys.executable, "-m", "flask", "--app", "app", "run", "--port", str(PORT), "--no-reload"],
-    cwd=str(EXAMPLE), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    cwd=str(EXAMPLE), env=env, stdout=subprocess.DEVNULL, stderr=_log)
 
 
 def wait_ready(timeout=30):
@@ -181,7 +189,8 @@ def menu_click(fr, item, btn="#menuBtn"):
 
 try:
     if not wait_ready():
-        err = proc.stderr.read().decode("utf-8", "replace")[-1500:] if proc.stderr else ""
+        _log.seek(0)
+        err = _log.read().decode("utf-8", "replace")[-1500:]
         sys.exit(f"FAIL: the example app did not start on port {PORT}.\n{err}")
 
     with sync_playwright() as p:
@@ -290,6 +299,68 @@ try:
               f"PUT {st_w}, DELETE {st_d}")
         check("the owner's draft is untouched by those attempts",
               durable(f"SELECT title FROM skribl_drafts WHERE public_id='{did}'") == "Spiral 3")
+
+        # ---------------------------------------------------------------- 9
+        # The v321 outside audit's SK-AUD-004, reproduced here first: one
+        # account, the same draft open on two devices, and the second Save
+        # replaced the first without a word (both answered 200, the first
+        # device's work was gone). Now the server overwrites only the copy a
+        # save was made from, and the editor keeps both.
+        print("\n9 — THE SAME DRAFT ON TWO DEVICES (SK-AUD-004)")
+        s9_devs = []
+        # Early: later sections leave requests that never answer on purpose.
+        for _ in range(2):
+            pg_ = b.new_context(viewport={"width": 1100, "height": 800}).new_page()
+            watch(pg_, "device")
+            sign_in(pg_, 2)   # lin: an account of its own, so no other section's counts move
+            browsing.goto(pg_, BASE, "/skribl/skribl-pad", require_boot=False)
+            pg_.wait_for_timeout(500)
+            s9_devs.append(pg_)
+        s9_da, s9_db = s9_devs
+        draw(s9_da, s9_da.locator("#canvas").bounding_box(), turns=2)
+        s9_da.evaluate("() => { if (recording) endRecordingTake(); }")
+        menu_click(s9_da, "#saveCloudDraftItem")
+        s9_da.wait_for_timeout(1200)
+        _, s9_have = api(s9_da, "GET", "")
+        s9_did = s9_have["items"][0]["id"] if s9_have and s9_have.get("items") else None
+        browsing.goto(s9_db, BASE, "/skribl/skribl-pad?draft=" + str(s9_did), require_boot=False)
+        s9_db.wait_for_timeout(1500)
+        s9_opened = s9_db.evaluate("() => [SkriblSavedDrafts.current(), strokes.length]")
+        check("a second device opens the same account draft", s9_did and s9_opened[0] == s9_did and s9_opened[1] > 0, str(s9_opened))
+        s9_da.evaluate("() => { const t = document.getElementById('addTakePill'); if (t && !t.hidden) t.click(); }")   # the canvas locks between takes
+        s9_da.wait_for_timeout(200)
+        draw(s9_da, s9_da.locator("#canvas").bounding_box(), turns=1)
+        s9_da.evaluate("() => { if (recording) endRecordingTake(); }")
+        s9_a_points = s9_da.evaluate("() => strokes.length")
+        menu_click(s9_da, "#saveCloudDraftItem")
+        s9_da.wait_for_timeout(1200)
+        s9_a_toast = s9_da.evaluate("() => document.getElementById('toast').textContent")
+        s9_db.evaluate("() => { const t = document.getElementById('addTakePill'); if (t && !t.hidden) t.click(); }")   # the canvas locks between takes
+        s9_db.wait_for_timeout(200)
+        draw(s9_db, s9_db.locator("#canvas").bounding_box(), turns=3)
+        s9_db.evaluate("() => { if (recording) endRecordingTake(); }")
+        menu_click(s9_db, "#saveCloudDraftItem")
+        s9_db.wait_for_timeout(1500)
+        s9_b_toast = s9_db.evaluate("() => document.getElementById('toast').textContent")
+        _, s9_after = api(s9_da, "GET", "")
+        s9_titles = sorted(i["title"] for i in (s9_after or {}).get("items", []))
+        _, s9_kept = api(s9_da, "GET", "/" + str(s9_did))
+        s9_kept_points = sum(len(f.get("strokes") or []) for f in ((s9_kept or {}).get("payload") or {}).get("frames", []))
+        check("the first device's save updates the draft", s9_a_toast == "Draft updated", s9_a_toast)
+        check("the second device, saving from the older copy, keeps both and says so",
+              s9_b_toast == "This draft changed on another device, so yours was saved as a copy."
+              and len(s9_titles) == 2 and any(t.endswith(" (copy)") for t in s9_titles), f"toast '{s9_b_toast}', drafts {s9_titles}")
+        check("...and the first device's work is still in the draft, untouched",
+              s9_kept_points == s9_a_points, f"{s9_kept_points} points stored, {s9_a_points} drawn on the first device")
+        s9_db.evaluate("() => SkriblSavedDrafts.save()")
+        s9_db.wait_for_timeout(1200)
+        check("...and the copy is the second device's draft from then on: its next save updates it",
+              s9_db.evaluate("() => document.getElementById('toast').textContent") == "Draft updated")
+        # Leave the table as it was found: later sections count every row.
+        for _it in (api(s9_da, "GET", "")[1] or {}).get("items", []):
+            api(s9_da, "DELETE", "/" + _it["id"])
+        for _pg in s9_devs:
+            _pg.context.close()
 
         # ---------------------------------------------------------------- 2
         print("\n2 — A DRAFT PUBLISHES NOTHING")
@@ -533,6 +604,7 @@ try:
         check("signed out, #drafts lists THIS BROWSER's drafts, and says so",
               anon.locator("#draftsList .draft-row").count() == 1 and "browser" in aw,
               f"{anon.locator('#draftsList .draft-row').count()} rows; {aw!r}")
+
 
         # ---------------------------------------------------------------- 7
         print("\n7 — WHEN THIS BROWSER'S STORAGE STOPS ANSWERING (v317)")
@@ -828,6 +900,7 @@ try:
             strokes: strokes.length })""")
         check("a Pad whose photo is still being restored asks too", asked2["armed"] is True and asked2["strokes"] == 0, str(asked2))
         pp.close()
+
 
         check("no page errors", not errs, "; ".join(errs[:3]))
         b.close()
