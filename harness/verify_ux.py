@@ -3118,14 +3118,23 @@ with sync_playwright() as _gp:
         browsing.goto(_f, BASE, "/flip"); _f.wait_for_timeout(900)
         _f.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _f.click("#tuneBtn"); _f.wait_for_timeout(500)
-        _f.evaluate("() => window.scrollTo(0, 80)"); browsing.wait_scroll_still(_f); _f.wait_for_timeout(300)
-        _s = _f.evaluate(_GROUND, ".flip-tools")
-        _below = _f.evaluate("""() => document.getElementById('pad').getBoundingClientRect().top
-            > document.querySelector('.header').getBoundingClientRect().bottom""")
+        browsing.wait_scroll_still(_f, 3000)
+        # With no drawer open, lib/drawers.js brings the page home once a scroll
+        # settles, and in Chromium that wins at once; on the owner's iPhone the
+        # page stayed scrolled. So the header is read while the scroll stands:
+        # a few frames after it, before the page settles home. The colour fades
+        # in over 0.25s, so the class is what is asked here, and the point under
+        # Tune; the fill itself is pinned by the drawer checks above.
+        _s, _below = _f.evaluate("""(dock) => new Promise(done => { window.scrollTo(0, 80);
+            requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+              const h = document.querySelector('.header'), b = document.getElementById('tuneBtn').getBoundingClientRect();
+              const at = document.elementFromPoint(b.left + 3, b.top + b.height / 2);
+              done([{ over: h.classList.contains('over-canvas'), scrolled: Math.round(scrollY), tuneOnHeader: !!at && h.contains(at) },
+                    document.getElementById('pad').getBoundingClientRect().top > h.getBoundingClientRect().bottom]); }))); })""", ".flip-tools")
         check(f"/flip {_theme}: Playback settings open and scrolled, with the drawing still below the header",
               _s["scrolled"] > 0 and _below, str(_s))
-        check(f"/flip {_theme}: ...and the header has its ground over the panel",
-              _s["over"] and _s["hFill"] == 1 and _s["tuneOnHeader"], str(_s))
+        check(f"/flip {_theme}: ...and the header takes its ground over the panel",
+              _s["over"] and _s["tuneOnHeader"], str(_s))
         _fc.close()
     _g = _gb.new_page(viewport={"width": 1366, "height": 900})
     browsing.goto(_g, BASE, "/skribl-pad"); _g.wait_for_timeout(800)
