@@ -280,7 +280,12 @@
        an underline -- a third look for a pick-one choice, beside the tint
        pill and the solid chip. */
     .libtabs { display: flex; }
-    .drafts-mode .chips, .drafts-mode .search { display: none; }
+    /* The filter is the Skribls tab's alone (a draft is in no gallery); the
+       search is both tabs', so nothing beside the tabs moves when you switch
+       (owner, from a mock). On a desk the field keeps its place at the row's
+       end with the filter gone. */
+    .drafts-mode .chips { display: none; }
+    @media (min-width: 641px) { .drafts-mode .search { margin-left: auto; } }
     .drafts-where { font-size: 13px; color: var(--text-3); margin: 0 0 12px; }
     .drafts-list { display: flex; flex-direction: column; gap: 8px; }
     /* One row, both places: the editors' sheet draws the same card (styles.css,
@@ -340,9 +345,44 @@
        2px ring (above), not a one-pixel border. */
     .search input { width: 200px; max-width: 48vw; min-height: 44px; box-sizing: border-box; font-family: var(--font-ui); font-size: 16px; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 12px 7px 30px; }
     .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-3); }
+    /* OUR CLEAR, NOT THE BROWSER'S: WebKit's own is a blue x in neither
+       theme's colours. 44px, the page's tap floor; shown only with words in
+       the field. */
+    .search input { padding-right: 44px; }
+    .search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+    .search .search-clear { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 44px; height: 44px;
+      padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--text-3); cursor: pointer;
+      display: grid; place-items: center; }
+    .search .search-clear svg { position: static; transform: none; width: 14px; height: 14px; color: currentColor; }
+    .search .search-clear[hidden] { display: none; }
+    @media (hover: hover) { .search .search-clear:hover { color: var(--text); } }
+    /* ON A PHONE, TWO ROWS THAT LINE UP (owner: the tabs, the filter and the
+       search "offset and wrap weird"). They wrapped wherever they ran out of
+       room: the filter pushed right on a line of its own, the search half a
+       row under it. Now the tabs and the search share the first row, and the
+       filter takes the second, edge to edge. A desk keeps its one row. */
+    @media (max-width: 640px) {
+      .libhead { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; }
+      .libhead .chips { grid-column: 1 / -1; grid-row: 2; margin-left: 0; width: 100%; }
+      .libhead .chips .chip { flex: 1 1 0; }
+      .libhead .search { grid-column: 2; grid-row: 1; }
+      .libhead .search input { width: 100%; max-width: none; }
+    }
   
     /* The stage IS the in-post player; the wrap already draws the frame. */
     .stageCanvasWrap .skribl-inline { border: 0; border-radius: 0; }
+    /* THE STAGE TAKES THE DRAWING'S SHAPE (owner: "why all the black space on
+       either side?"). The in-post player's box is 16:9 for a FEED, where posts
+       of every shape must not make the page jump as they scroll past; here one
+       drawing is shown at a time, so the box takes that drawing's ratio
+       (library.js sets --draw-ratio from its canvasSize) and a tall one is
+       capped so it cannot push the list off the screen. What is left of the
+       card around a capped drawing is the card's own ground, not black. Full
+       screen keeps its own rules below. */
+    .stageCanvasWrap { background: var(--raised); border-color: transparent; }
+    .stageCanvasWrap:not(:fullscreen):not(.is-immersive-page) .skribl-inline {
+      aspect-ratio: var(--draw-ratio, 16 / 9); width: auto; max-width: 100%;
+      max-height: min(60vh, 520px); margin: 0 auto; background: transparent; }
     .more-status { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-3); }
     /* (#21) The concept mock's card grid -- .grid, .card and everything
        scoped under it: art, badge, playing, counts -- went here. Nothing has
@@ -676,6 +716,7 @@
         <label class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
           <input id="postedSearch" type="search" placeholder="title…" aria-label="Search your Skribl Library" autocomplete="off">
+          <button type="button" class="search-clear" id="searchClear" aria-label="Clear the search" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         </label>
       </div>
       <div id="libSkribls" role="tabpanel" aria-labelledby="tabSkribls">

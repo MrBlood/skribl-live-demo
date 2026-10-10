@@ -55,6 +55,14 @@
 
   var stageBox = document.getElementById('stageBox');
   var stageWrap = stageBox.closest('.stageCanvasWrap');
+  /* The drawing's own shape, for the stage's box (the template says why). The
+     in-post player reads the same canvasSize, and falls back the same way. */
+  function drawRatio(payload) {
+    var cs = payload && payload.canvasSize;
+    if (cs && cs.cssWidth > 0 && cs.cssHeight > 0) return cs.cssWidth + ' / ' + cs.cssHeight;
+    var d = window.SkriblCanvasSizes && window.SkriblCanvasSizes.DEFAULT;
+    return d ? d.w + ' / ' + d.h : '816 / 612';
+  }
   /* BARE FROM THE FIRST PAINT, NOT ONLY IN FULL SCREEN. This page owns the
      transport under the stage at every size, so the component's own duration
      chip is a second answer to "how long is this" whenever it is visible --
@@ -217,6 +225,7 @@
         current = pending;
         pending = null;
         var payload = (body && (body.skribl || body.payload)) || body;
+        if (stageWrap) stageWrap.style.setProperty('--draw-ratio', drawRatio(payload));
         if (!player) {
           player = window.SkriblInline.attach(stageBox, payload);
           player.setLoop(looping);
@@ -830,20 +839,47 @@
   // Only the latest list draws (v317 review): a read that answers late must not
   // put back a row deleted since.
   var draftsSeq = 0;
+  /* THE SEARCH IS BOTH TABS' (owner, from a mock): one field beside the tabs,
+     so nothing moves when you switch, and on Drafts it narrows the drafts by
+     title as it narrows the Skribls on theirs. The list is read once per
+     render and filtered here, so typing does not re-read storage. */
+  var draftsItems = null;
+  function draftsQuery() { return (search && search.value.trim().toLowerCase()) || ''; }
+  /* "3 of 25 drafts" (owner): how close you are to the limit, said where the
+     list says where it is kept. The limit is SKRIBL_MAX_DRAFTS, never typed. */
+  function draftsLine(n) {
+    var lim = draftsCfg.limit;
+    var count = (lim ? n + ' of ' + lim : String(n)) + (n === 1 && !lim ? ' draft' : ' drafts');
+    return count + ' \u00B7 ' + (SD.where() === 'account'
+      ? 'saved to your account, on every device you sign in on.'
+      : 'saved on this browser only.');
+  }
+  function drawDrafts() {
+    if (!draftsItems) return;
+    var q = draftsQuery();
+    var shown = q ? draftsItems.filter(function (it) {
+      return (it.title || 'Untitled Skribl').toLowerCase().indexOf(q) !== -1;
+    }) : draftsItems;
+    dList.textContent = '';
+    draftDisarmers.forEach(function (d) { d(); });   // a stale question takes its listener with it
+    draftDisarmers = [];
+    dEmpty.hidden = draftsItems.length > 0;
+    shown.forEach(function (it) { dList.appendChild(draftRow(it)); });
+    if (q && !shown.length && draftsItems.length) {
+      var none = document.createElement('p');
+      none.className = 'state drafts-nomatch';
+      none.textContent = 'No draft is called that.';
+      dList.appendChild(none);
+    }
+  }
   function renderDrafts() {
     if (!SD || !dList) return;
     var mine = ++draftsSeq;
-    dWhere.textContent = SD.where() === 'account'
-      ? 'Saved to your account, on every device you sign in on.'
-      : 'Saved on this browser only.';
     return SD.list().then(function (items) {
       if (mine !== draftsSeq) return;
-      if (SD.stalled && SD.stalled()) dWhere.textContent = SD.stalled();
-      dList.textContent = '';
-      draftDisarmers.forEach(function (d) { d(); });   // a stale question takes its listener with it
-      draftDisarmers = [];
-      dEmpty.hidden = items.length > 0;
-      items.forEach(function (it) { dList.appendChild(draftRow(it)); });
+      draftsItems = items;
+      dWhere.textContent = (SD.stalled && SD.stalled()) || draftsLine(items.length);
+      drawDrafts();
     }, function (e) {
       if (mine !== draftsSeq) return;
       dList.textContent = '';
@@ -869,6 +905,23 @@
     } catch (e) {}
     if (drafts) renderDrafts();
   }
+  var searchClear = document.getElementById('searchClear');
+  function searchChanged() {
+    if (searchClear) searchClear.hidden = !(search && search.value);
+    if (libSection && libSection.classList.contains('drafts-mode')) drawDrafts();
+  }
+  if (search) {
+    search.addEventListener('input', searchChanged);
+    // Esc empties the field in lib/postedui.js without an input event.
+    search.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') setTimeout(searchChanged, 0);
+    });
+  }
+  if (searchClear) searchClear.addEventListener('click', function () {
+    search.value = '';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    search.focus();
+  });
   if (tabS && tabD) {
     tabS.addEventListener('click', function () { showTab(false); });
     tabD.addEventListener('click', function () { showTab(true); });
