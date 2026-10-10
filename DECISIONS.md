@@ -15180,3 +15180,24 @@ harness/README.md, and harness/README.md lost a sentence fragment and an entry
 spliced into another. Left as found, because they could not be checked here: the
 shared player's Full screen on an iPhone (the button is offered only where the
 Fullscreen API is, which iPhone Safari may not report; the device pass decides).
+
+**The Library's stage takes the drawing's shape; on a phone its controls line
+up; Drafts can be searched and counts against its limit (owner, from mocks).**
+The owner, with a phone screenshot: a tall drawing in the middle of a wide black
+box ("why all the black space on either side?"), and the tabs, the filter and
+the search "offset and wrap weird". The stage is the in-post player, whose box
+is 16:9 for a feed, where posts of every shape must not make the page jump as
+they scroll past; the Library shows one drawing at a time, so its stage now
+takes that drawing's ratio from its canvasSize, capped at 60% of the screen's
+height (520px at most) so a tall one cannot push the list away, on the card's
+own ground rather than black. Full screen keeps its rules. On a phone (640px
+and under) the tabs and the search share a row and the filter takes the next,
+edge to edge; a desk keeps its one row. The search is both tabs' now, so
+nothing beside the tabs moves when you switch (the owner picked that over
+stretching the tabs on Drafts, which moved the button just tapped); on Drafts it
+narrows the list by title and says so when nothing matches, and the drafts line
+reads "3 of 25 drafts", the 25 being SKRIBL_MAX_DRAFTS. The field's clear button
+is the page's own, 44px, in both themes' colours; WebKit's was a blue x.
+verify_library pins it at 402px and 1280px; each part broken alone turned its
+own checks red (the ratio, the cap, the two rows, the search on Drafts, the
+count, the filter, the no-match line, the clear button twice, the desk's row).
