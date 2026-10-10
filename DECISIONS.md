@@ -15225,3 +15225,28 @@ bar is fixed, so it has no offsetParent and the first draft of the check could
 never see it); verify_posted holds a POST for twenty seconds on both editors and
 checks the retry's key; verify_library reads the words.
 Each part broken alone turned its own checks red: the listener (6), each editor's wiring (3 each), Keep this one (4), the slow state (3), each editor's abort (1 each), the key kept on cancel (1), the months (1), the drafts' words (1).
+
+**Four things the owner looked at tonight, built.** FLIP'S LOOP CHIP ran under
+the selected page's ⋯ ("Forever · 2–6" on the owner's iPhone; a one-page
+"Forever · page 2" covered eight times as much). The owner chose the short form
+from a mock, "B for sure, but make sure infinity is visible, not blurry and big
+enough to recognize instantly": Forever is a stroked ∞, 18×9, then the pages,
+the same on every device where a typed ∞ at 10px is a speck in a different font
+each time; the accessible name still says "Loop forever". The ×N and seconds
+chips keep their words and fit. FLIP'S CANVAS EDGE: the ground is painted on the
+element and was painted under its see-through border too, so a Paper drawing on
+the dark page wore a near-white rim (246,242,235 where the edge is 63,65,70);
+`background-clip: padding-box`. The Pad's canvas has no border and never did
+this. CONTRAST (PF-009, PF-011): the greys of the pages with their own sheets,
+and the first-run hint's How it works link, clear 4.5:1 now; A11Y 6d reads every
+small text on Gallery, Library and Feed against the ground behind it in both
+themes. CENTRING: the owner asked for "a centering machine" for marks that read
+off-centre. It photographs each control with and without its mark, takes the
+difference as ink, and compares the midpoint of the ink box and the ink's centre
+of mass with the control's centre, in each installed face for typed marks.
+Two clear misses, fixed: Flip's ×1 badge (1.5px high in two faces; trimmed to
+its caps with text-box, so equal padding centres it in any font) and the eraser
+(1.4px low, its ground line pulling its weight; its drawing moves up 1.5 units).
+Everything else it found is under a pixel and stays.
+Each check went red on the old code: verify_loopui 6, verify_theme 1,
+verify_a11y 6, verify_icons 4.
