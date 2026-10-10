@@ -33,7 +33,7 @@ from .ratelimit import (_client_ip, _rate_commit_post, _rate_key, _rate_limited,
 from .validation import _decode_data_url_image
 from .creation import (CLIENT_TOKEN_RE, SkriblIdempotencyRace, SkriblRejected,
                        SkriblUnavailable, create_post)
-from .drafts import (DraftNotFound, DraftRejected, delete_draft, get_draft,
+from .drafts import (DraftConflict, DraftNotFound, DraftRejected, delete_draft, get_draft,
                      list_drafts, save_draft)
 from .drafts import max_drafts as _max_drafts
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
@@ -1434,7 +1434,10 @@ def register_routes(bp, *, index_route=False):
         return data
 
     def _draft_error(exc):
-        return jsonify({"error": exc.message}), getattr(exc, "status", 404)
+        body = {"error": exc.message}
+        if isinstance(exc, DraftConflict):
+            body.update(conflict=True, current=exc.current)
+        return jsonify(body), getattr(exc, "status", 404)
 
     @bp.get("/api/drafts")
     def list_saved_drafts():
@@ -1473,7 +1476,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.put("/api/drafts/<draft_id>")
     def update_saved_draft(draft_id):
-        """Overwrite one of your saved drafts."""
+        """Overwrite one of your saved drafts; 409 with conflict:true if it changed since `baseUpdatedAt`."""
         # Draft writes spend the same attempts budget posts do (v317, security
         # review): each is up to a full payload of validation and a row rewrite.
         if not _csrf_ok():
@@ -1484,7 +1487,8 @@ def register_routes(bp, *, index_route=False):
             data = _draft_body()
             return jsonify(save_draft(bp.skribl_current_user_id(), data.get("payload"),
                                       kind=data.get("kind"), title=data.get("title"),
-                                      thumbnail=data.get("thumbnail"), public_id=draft_id))
+                                      thumbnail=data.get("thumbnail"), public_id=draft_id,
+                                      base_updated_at=data.get("baseUpdatedAt")))
         except (DraftRejected, DraftNotFound) as exc:
             return _draft_error(exc)
 

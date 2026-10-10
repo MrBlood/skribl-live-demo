@@ -36,7 +36,9 @@
   }
   function failWith(r) {
     return r.json().catch(function () { return {}; }).then(function (d) {
-      throw new Error(d.error || ('The drafts service answered ' + r.status + '.'));
+      var e = new Error(d.error || ('The drafts service answered ' + r.status + '.'));
+      e.conflict = !!d.conflict;   // a 409 from a save made over an older copy (below)
+      throw e;
     });
   }
 
@@ -429,6 +431,7 @@
       hide();
       opts.load(rec.payload);
       opts._current = it.id;
+      opts._base = rec.updatedAt || null;
       if (global.SkriblName && rec.title) global.SkriblName.set(rec.title);
       opts.toast('Opened \u201C' + (rec.title || 'Untitled Skribl') + '\u201D');
     }, function (e) { opts.toast(e.message); });
@@ -445,15 +448,35 @@
     var title = (global.SkriblName && global.SkriblName.get()) || 'Untitled Skribl';
     var body = { kind: opts.kind, title: title, payload: payload, thumbnail: thumbFrom(opts.thumbnail && opts.thumbnail()) };
     var was = opts._current;
+    /* THE COPY THIS SAVE IS MADE FROM (the v321 audit's SK-AUD-004). An
+       account draft can be open on two devices; without this the second save
+       replaced the first, silently. The server overwrites only if the stored
+       draft is still the one this editor opened or last saved, and answers 409
+       otherwise -- and then BOTH are kept: this one is saved as a new copy and
+       the toast says why. This browser's own store has one writer per draft
+       and ignores it. */
+    if (was && opts._base) body.baseUpdatedAt = opts._base;
     return backend.save(was, body).then(function (sum) {
       opts._current = sum.id;
+      opts._base = sum.updatedAt || null;
       // "Updated" only when it was: a local store answers a vanished id with a
       // new draft rather than an error.
       opts.toast(was && sum.id === was ? 'Draft updated' : (backend.where === 'account' ? 'Saved to your drafts' : 'Saved to drafts on this browser'));
       return sum;
     }, function (e) {
       // A draft deleted elsewhere since it was opened: save it as a new one.
-      if (was && /not found/i.test(e.message)) { opts._current = null; return save(); }
+      if (was && /not found/i.test(e.message)) { opts._current = null; opts._base = null; return save(); }
+      // Changed on another device since it was opened: keep both.
+      if (was && e.conflict) {
+        delete body.baseUpdatedAt;
+        body.title = title + ' (copy)';
+        return backend.save(null, body).then(function (sum) {
+          opts._current = sum.id;
+          opts._base = sum.updatedAt || null;
+          opts.toast('This draft changed on another device, so yours was saved as a copy.');
+          return sum;
+        }, function (e2) { opts.toast(e2.message); return null; });
+      }
       opts.toast(e.message);
       return null;
     });
@@ -482,6 +505,7 @@
       }
       opts.load(rec.payload);
       opts._current = id;
+      opts._base = rec.updatedAt || null;
       if (global.SkriblName && rec.title) global.SkriblName.set(rec.title);
     }, function (e) { opts.toast(e.message); });
   }
@@ -506,8 +530,12 @@
     /* New Skribl: whatever is drawn next is a new draft, not the old one. */
     // forget() hands back the draft it let go of, so an Undo can resume() it
     // and the next Save updates that draft instead of making a copy (v317).
-    forget: function () { var was = opts ? opts._current : null; if (opts) opts._current = null; return was; },
-    resume: function (id) { if (opts && id) opts._current = id; },
+    forget: function () {
+      var was = opts ? opts._current : null;
+      if (opts) { opts._forgotBase = opts._base; opts._current = null; opts._base = null; }
+      return was;
+    },
+    resume: function (id) { if (opts && id) { opts._current = id; opts._base = opts._forgotBase || null; } },
     current: function () { return opts ? opts._current : null; },
     where: function () { return backend.where; },
     /* For a page that lists drafts without editing one (the Library's Drafts

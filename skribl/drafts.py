@@ -79,6 +79,16 @@ class DraftRejected(Exception):
         self.status = status
 
 
+class DraftConflict(DraftRejected):
+    """A save made from an older copy than the one stored (the v321 audit's
+    SK-AUD-004): the same draft open on two devices, and the second save
+    would have replaced the first without a word. `current` is the stored
+    draft's summary, so the client can say what happened."""
+    def __init__(self, current):
+        super().__init__("This draft was changed somewhere else since you opened it.", status=409)
+        self.current = current
+
+
 class DraftNotFound(Exception):
     message = "Draft not found."
 
@@ -146,10 +156,41 @@ def get_draft(author_id, public_id):
     return out
 
 
-def save_draft(author_id, payload, *, kind, title=None, thumbnail=None, public_id=None):
-    """Create a draft, or overwrite the author's own when `public_id` is given."""
+def _instant(v):
+    """A timestamp as one instant, whatever its spelling. SQLite hands back the
+    naive UTC it stored and a fresh row carries the aware value (PF-006), so a
+    draft's own updatedAt read twice can differ as TEXT while naming the same
+    moment; compared as text, a device conflicted with its own last save."""
+    if isinstance(v, str):
+        try:
+            v = datetime.fromisoformat(v.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if v is None:
+        return None
+    return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+
+
+def save_draft(author_id, payload, *, kind, title=None, thumbnail=None, public_id=None,
+               base_updated_at=None):
+    """Create a draft, or overwrite the author's own when `public_id` is given.
+
+    `base_updated_at` is the updatedAt of the copy the client opened. Given,
+    the overwrite happens only if the stored draft is still that copy, and
+    raises DraftConflict otherwise; the row is locked for the comparison, so
+    two saves arriving together cannot both pass it. Absent (an older client,
+    a host's own code), the overwrite is unconditional, as it always was."""
     owner = _owner(author_id)
     title = _validate(payload, kind, title, thumbnail)
+    if public_id is not None and base_updated_at is not None:
+        if not isinstance(base_updated_at, str):
+            raise DraftRejected("'baseUpdatedAt' must be the draft's updatedAt.")
+        locked = (session().query(SkriblDraft).filter(SkriblDraft.public_id == public_id)
+                  .with_for_update().populate_existing().first())
+        if locked is None or locked.user_id != owner:
+            raise DraftNotFound()
+        if _instant(locked.updated_at) != _instant(base_updated_at):
+            raise DraftConflict(_summary(locked))
     size = len(json.dumps(payload, separators=(",", ":")))
     now = datetime.now(timezone.utc)
     s = session()
