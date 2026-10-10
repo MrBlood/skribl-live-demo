@@ -1,3 +1,4 @@
+{% from 'skribl/_skribl_marks.html' import mark %}
 {# =====================================================================
    Shared "How it works" help drawer — one source of truth for Skribl Pad
    and Flip. Included by both templates:
@@ -16,7 +17,7 @@
   <div class="help-drawer-inner">
     <div class="help-drawer-head">
       <span>How it works</span>
-      <button type="button" id="helpClose" class="help-close" aria-label="Close help drawer">&#x2715;</button>
+      <button type="button" id="helpClose" class="help-close" aria-label="Close help drawer">{{ mark('close') }}</button>
     </div>
     {# Search sits above everything: forty-odd entries across 7 sections is past the
        point where browsing beats searching. Counts are filled in by
@@ -286,7 +287,7 @@
       <button type="button" class="learn-grip" id="learnGrip" data-learn-close aria-label="Close the examples"></button>
       <div class="learn-sheet-head">
         <h3 class="learn-sheet-title" id="learnSheetTitle" tabindex="-1">Watch it work</h3>
-        <button type="button" class="help-close learn-close" data-learn-close aria-label="Close the examples">&#x2715;</button>
+        <button type="button" class="help-close learn-close" data-learn-close aria-label="Close the examples">{{ mark('close') }}</button>
       </div>
       <div class="learn-chips" role="group" aria-label="Show">
         <button type="button" class="learn-chip" data-filter="all" aria-pressed="true">All</button>
@@ -377,7 +378,7 @@
       <div class="learn-viewer-stage" id="learnViewerStage"></div>
       <div class="learn-viewer-cap">
         <span class="learn-viewer-title" id="learnViewerTitle"></span>
-        <button type="button" class="help-close" id="learnViewerClose" data-viewer-close aria-label="Close full screen">&#x2715;</button>
+        <button type="button" class="help-close" id="learnViewerClose" data-viewer-close aria-label="Close full screen">{{ mark('close') }}</button>
       </div>
     </div>
   </div>

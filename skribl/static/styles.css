@@ -4599,6 +4599,15 @@ input:focus-visible {
   }
 }
 
+/* THE APP'S MARKS (_skribl_marks.html): a control whose face is one drawn
+   mark centres it by the box, not by a line of text -- a typed "+" sat where
+   its font put it, 1.3-1.8px high. The mark is 1em, so the control's own
+   font-size still sizes it. Not on a [hidden] control: an author display
+   would override the hiding. */
+.mk { display: block; flex: none; }
+button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-items: center; justify-content: center; }
+.pb-ic .mk, .ghost-plus .mk { display: inline-block; vertical-align: -0.125em; }
+
 /* ---------- Play progress glow ---------- */
 .play-wrap {
   position: relative;
