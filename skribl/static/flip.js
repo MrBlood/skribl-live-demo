@@ -2490,7 +2490,7 @@ function startFlipElapsed(resume){
   const total=flipTotalSecs();
   const tick=()=>{
     if(!playing){ flipElapsedRAF=null; return; }
-    const el=(performance.now()-flipPlayStart)/1000;
+    const el=(performance.now()-flipPlayStart)/1000*flipRate;   // the animation's own time
     // The animation loops, so wrap rather than pinning at the total — the badge
     // tracks position within the loop, which is what a viewer is watching.
     flipDurationEl.textContent=fmtFlipSecs(total>0 ? (el % total) : el);
@@ -3650,6 +3650,15 @@ function updateToolState(){
   if(postB) postB.disabled = nothingToShare();
 }
 const flipPlayer=document.getElementById('flipPlayer'), flipProgress=document.getElementById('flipProgress'), flipProgressFill=document.getElementById('flipProgressFill');
+/* WATCHING SPEED (F1, the owner's pick: Pad's line, speeds and scrubber).
+   ¼× to 16×, no Fit (a Flip loops; it has no "whole" to fit). Only the
+   preview's clock is scaled: pages per second is the animation itself and
+   stays in Playback settings, and the music keeps its own pace. Kept in this
+   browser, as the Pad keeps its own. */
+const FLIP_SPEED_KEY = 'skribl_flip_rate';
+let flipRate = 1;
+try{ const _v = parseFloat(localStorage.getItem(FLIP_SPEED_KEY));
+  if(window.SkriblReplayLine && SkriblReplayLine.RATES.indexOf(_v) >= 0) flipRate = _v; }catch(_){ }
 const drawOnBtn=document.getElementById('drawOnBtn');
 let scrubbingFrames=false, playI=0;
 /* Paused by a tap on the canvas (lib/tappause.js). Still `playing`, so every
@@ -3957,6 +3966,7 @@ function _playCountFor(page){
   return k >= 0 ? k : 0;
 }
 function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgressFill.style.width=(((idx+1)/frames.length)*100)+'%';
+  if(typeof flipStrip !== 'undefined' && flipStrip) flipStrip.paint(_flipFrac(idx));
   if(window.SkriblScrub && frames.length>1) window.SkriblScrub.sync(flipProgress, idx/(frames.length-1)); }
 
 // --- draw-on replay: reveal each frame's strokes over their recorded timing ---
@@ -4049,10 +4059,7 @@ function playStep(){ if(scrubbingFrames) return;
   // cache from a half-drawn canvas, so it goes nowhere near playPaint().
   if(frameDraw(frames[idx])){
     if(revealRAF){ cancelAnimationFrame(revealRAF); revealRAF = null; }
-    const _d = (typeof window !== 'undefined' && window.SkriblHold)
-      ? window.SkriblHold.pageMs(frames[idx], fps)
-      : Math.max(320, Math.min(8000, _spanOf(frames[idx])));
-    startReveal(frames[idx], _d);
+    startReveal(frames[idx], _pageMsAt(idx));
     updatePlayProgress();
     liveBadge.textContent='\u270E '+(idx+1)+' / '+frames.length; playI++;
     return;
@@ -4124,11 +4131,7 @@ function runPlayTimer(){
     // to reading the hold off the wrong page — which is what it used to do.
     // pageMs, not slotMs: a drawing page is EXEMPT FROM fps and lasts as long
     // as its own strokes took, so its duration is not a whole number of slots.
-    const d = (typeof window !== 'undefined' && window.SkriblHold)
-      ? window.SkriblHold.pageMs(frames[cur], fps)
-      : frameDraw(frames[cur])
-        ? Math.max(320, Math.min(8000, _spanOf(frames[cur])))
-        : (1000 / fps) * frameHold(frames[cur]);
+    const d = _pageMsAt(cur);   // at the watching speed
     const ni = _playPage(playI);
     // An unpainted frame is estimated from its point count at the going rate,
     // so the FIRST play-through is even too — that is the one you watch after
@@ -4163,6 +4166,8 @@ function play(){
   playing=true; document.body.classList.add('playing');
   playBtn.classList.add('playing'); playBtn.querySelector('span').textContent='Stop';
   if(flipPlayer){ flipPlayer.hidden=false; requestAnimationFrame(()=>flipPlayer.classList.add('show')); }
+  if(flipStrip) flipStrip.reset();          // this document's beats, built afresh for each play
+  if(flipLineCtl){ flipLineCtl.update(); flipLineCtl.close(); }
   startMusic();
   startFlipElapsed();
   playBitmaps = window.SkriblFrameBitmap ? window.SkriblFrameBitmap.store() : null;
@@ -4189,10 +4194,33 @@ playBtn.addEventListener('click',()=> playing?stop():play());
    paused, and the clocks stop -- the page timer, a drawing page's reveal, the
    elapsed readout and the music. Resume gives each back what it had left. A
    paused Flip still scrubs, and Stop still ends it. */
-function _pageMsAt(i){
+function _pageMsBase(i){
   return (typeof window !== 'undefined' && window.SkriblHold)
     ? window.SkriblHold.pageMs(frames[i], fps)
     : (frameDraw(frames[i]) ? Math.max(320, Math.min(8000, _spanOf(frames[i]))) : (1000 / fps) * frameHold(frames[i]));
+}
+// How long page i stays up in this preview: its time at 1×, at the watching speed.
+function _pageMsAt(i){ return _pageMsBase(i) / flipRate; }
+/* A new speed mid-play carries on from the same place: the elapsed readout,
+   the page timer and a drawing page's reveal are each re-anchored, as the
+   Pad's preview re-anchors its clock (editor_draw.js setPreviewSpeed). */
+function setFlipRate(c){
+  const old = flipRate, now = performance.now();
+  if(!(c > 0) || c === old) return;
+  flipRate = c;
+  try{ localStorage.setItem(FLIP_SPEED_KEY, String(c)); }catch(_){ }
+  if(!playing) return;
+  const t0 = playPaused ? flipPausedAt : now;
+  flipPlayStart = t0 - (t0 - flipPlayStart) * old / c;
+  if(playPaused){ pausedRemain = pausedRemain * old / c; if(pausedRevealAt != null) pausedRevealAt = pausedRevealAt * old / c; return; }
+  const remain = Math.max(0, playDueAt - now) * old / c;
+  clearTimeout(playTimer);
+  playDueAt = now + remain;
+  playTimer = setTimeout(playStepFn, remain);
+  if(revealRAF && revealFrame === frames[idx] && frameDraw(frames[idx])){
+    cancelAnimationFrame(revealRAF); revealRAF = null;
+    startReveal(frames[idx], _pageMsAt(idx), (now - revealStart) * old / c);
+  }
 }
 function pausePlay(){
   if(!playing || playPaused) return;
@@ -4249,7 +4277,8 @@ drawOnBtn.addEventListener('click',()=>{
   chip(on ? 'Every page draws itself' : 'Every page snaps in');
 });
 // scrub through frames (drag to preview any frame)
-function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(0,Math.min(1,frac)); idx=Math.min(n-1, Math.round(frac*(n-1)));
+function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(0,Math.min(1,frac)); scrubToPage(Math.min(n-1, Math.round(frac*(n-1)))); }
+function scrubToPage(i){ const n=frames.length; if(!n) return; idx=Math.max(0, Math.min(n-1, i));
   // Scrubbing shows a page WHOLE, drawing or not: a drag is for finding a page,
   // and revealing strokes under the finger would make the thumbnail you are
   // aiming at depend on how fast you moved.
@@ -4259,20 +4288,57 @@ function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(
   // afresh -- its whole time, and a drawing page its whole reveal.
   if(playPaused){ pausedRemain=0; pausedRevealAt=null; }
   liveBadge.textContent=(playPaused?'\u275A\u275A ':frameDraw(frames[idx])?'\u270E ':'\u25B6 ')+(idx+1)+' / '+n; }
-flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipProgress.setPointerCapture(e.pointerId);}catch(_){} const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
-flipProgress.addEventListener('pointermove',e=>{ if(!scrubbingFrames) return; const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
 function endFrameScrub(){ if(!scrubbingFrames) return; scrubbingFrames=false;
   // Releasing mid-play resumes the page under the finger, revealing it from the
   // start if it draws; the outer timer is still running, so this only restarts
   // the reveal.
-  if(playing && !playPaused && frameDraw(frames[idx])){
-    const _d = (typeof window !== 'undefined' && window.SkriblHold)
-      ? window.SkriblHold.pageMs(frames[idx], fps)
-      : Math.max(320, Math.min(8000, _spanOf(frames[idx])));
-    startReveal(frames[idx], _d);
-  } }
-flipProgress.addEventListener('pointerup',endFrameScrub);
-flipProgress.addEventListener('pointercancel',endFrameScrub);
+  if(playing && !playPaused && frameDraw(frames[idx])) startReveal(frames[idx], _pageMsAt(idx));
+}
+/* THE SCRUBBER AND THE LINE, the Pad's own (lib/replayline.js; F1). The bar
+   has ONE COLUMN PER BEAT -- a page held three beats is three columns -- as
+   tall as the ink on its page, so where the busy pages and the holds are is
+   something to aim at. Dragging the bar, sliding up off it for fine steps,
+   or dragging sideways on the drawing while it plays all land on a page; the
+   bubble says the animation's time there. Under it, "watching at 1×" and the
+   speeds, as under the Pad's drawing. */
+function _flipEdges(){ const e=[0]; for(let i=0;i<frames.length;i++) e.push(e[i] + _pageMsBase(i)); return e; }
+function _flipFrac(i){ const e=_flipEdges(), T=e[e.length-1]; return T ? e[Math.max(0, Math.min(frames.length-1, i))] / T : 0; }
+function _flipPageAt(f){ const e=_flipEdges(), t=f*e[e.length-1];
+  for(let i=0;i<frames.length;i++) if(t < e[i+1]) return i;
+  return frames.length-1; }
+function _flipCols(){
+  const slot = 1000 / (fps || 12), beats = [];
+  let mx = 0;
+  frames.forEach(f => { mx = Math.max(mx, f.strokes.length); });
+  frames.forEach((f, i) => {
+    const v = mx ? (f.strokes.length ? Math.sqrt(f.strokes.length / mx) : 0) : 0.2;
+    for(let k = Math.max(1, Math.round(_pageMsBase(i) / slot)); k > 0; k--) beats.push(v);
+  });
+  // A short Flip has few beats: each is drawn as a few thin columns, so four
+  // pages read as the Pad's bar does rather than as four slabs.
+  const per = Math.max(1, Math.floor(60 / beats.length)), out = [];
+  beats.forEach(v => { for(let k = 0; k < per; k++) out.push(v); });
+  return out;
+}
+var flipStrip = (flipProgress && window.SkriblReplayLine && SkriblReplayLine.scrub) ? SkriblReplayLine.scrub(flipProgress, {
+  points: () => [], cols: _flipCols, total: () => _flipEdges()[frames.length], map: () => null,
+  frac: () => _flipFrac(idx),
+  seek: f => scrubToPage(_flipPageAt(f)),
+  start: () => { scrubbingFrames = true; },
+  end: endFrameScrub
+}) : null;
+if(flipStrip) flipStrip.drag(pad, () => playing);
+else {
+  flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipProgress.setPointerCapture(e.pointerId);}catch(_){} const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
+  flipProgress.addEventListener('pointermove',e=>{ if(!scrubbingFrames) return; const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
+  flipProgress.addEventListener('pointerup',endFrameScrub);
+  flipProgress.addEventListener('pointercancel',endFrameScrub);
+}
+const flipLine = document.getElementById('flipLine');
+var flipLineCtl = (flipLine && window.SkriblReplayLine) ? SkriblReplayLine.attach(flipLine, {
+  choice: () => flipRate, playMs: () => _flipEdges()[frames.length], drawnMs: () => null, fit: false,
+  pick: setFlipRate
+}) : null;
 /* The keyboard half. This div declared role="slider" with valuemin/valuemax
    and supplied no tabindex, no valuenow and no key handler, so it announced a
    control nobody could focus or move. Same scrubToFrac() the drag uses, so the

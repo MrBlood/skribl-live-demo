@@ -184,6 +184,8 @@
    *   points()  the timeline (each with x, y, playT, start)
    *   total()   the replay's length at 1x
    *   map()     clockMap() for it, or null (a Flip: no artist's clock)
+ *   cols()    optional: the columns themselves, 0..1 each (Flip's editor:
+ *             one per beat, as tall as the ink on its page)
    *   frac()    where the replay is, 0..1
    *   seek(f)   show the drawing at f
    *   start()   a drag began (hold the replay); end() it ended
@@ -199,6 +201,7 @@
     var cols = null, drawnCol = -2, drag = null;
 
     function bin() {
+      if (o.cols) { cols = o.cols(); drawnCol = -2; return; }   // the caller's own columns (a Flip: one per beat)
       var tl = o.points() || [], T = o.total() || 1, w = bar.clientWidth;
       var n = Math.max(12, Math.round(w / 5)), c = new Array(n).fill(0), mx = 0, k;
       for (k = 1; k < tl.length; k++) {

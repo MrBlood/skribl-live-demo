@@ -116,6 +116,7 @@
       </div>
       <div class="flip-player" id="flipPlayer" hidden>
         <div class="player-progress" id="flipProgress" role="slider" aria-label="Scrub pages" aria-valuemin="0" aria-valuemax="100"><div class="player-progress-fill" id="flipProgressFill"></div></div>
+        <div id="flipLine"></div>
       </div>
     </div>
 
@@ -577,6 +578,7 @@
      read the screen-wide touch list. See the file for the rule. #}
   <script src="{{ skribl_asset('lib/eventpoint.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/scrubkeys.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/replayline.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/recoverykey.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pinchgesture.js') }}" defer></script>

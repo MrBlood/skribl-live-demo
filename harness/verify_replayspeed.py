@@ -448,6 +448,50 @@ with sync_playwright() as p:
     check("Flip's Post sheet has no such row: a Flip loops, it has no speed to start at",
           pg.evaluate("() => !document.getElementById('postSpeedSeg')"))
     pg.close()
+
+    # FLIP'S PREVIEW GETS THE PAD'S LINE, SPEEDS AND SCRUBBER (F1). Speeds
+    # without Fit (a Flip loops), the bar one column per beat, and a speed
+    # that changes how fast the pages turn -- the preview's clock only.
+    for vw, vh in ((402, 874), (1280, 800)):
+        pg = b.new_page(viewport={"width": vw, "height": vh})
+        browsing.goto(pg, BASE, "/flip")
+        pg.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); localStorage.removeItem('skribl_flip_rate'); }")
+        # Four pages with ink, the second held three beats: six beats in all.
+        pg.evaluate("""() => { const pt = (x, i) => ({ x: x + i * 6, y: 200 + (i % 5) * 5, size: 6, color: '#7c5cff', t: i * 20, start: i === 0 });
+            frames.length = 0;
+            for (let k = 0; k < 4; k++) frames.push({ strokes: Array.from({ length: 14 }, (_, i) => pt(100 + k * 40, i)), strokeGroups: [14] });
+            frames[1].hold = 3; fps = 12; idx = 0; buildStrip(); render(); }""")
+        label = f"Flip {vw}"
+        pg.click("#play"); pg.wait_for_timeout(500)
+        ln = pg.evaluate("""() => { const l = document.getElementById('flipLine'), b = l.querySelector('.rl-speed'), r = b.getBoundingClientRect();
+            const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { text: l.querySelector('.rl-text').innerText.replace(/\\s+/g, ' ').trim(), painted: !!at && b.contains(at),
+                     chips: [...l.querySelectorAll('.rl-chips button')].map(x => x.dataset.r),
+                     scrub: document.getElementById('flipProgress').classList.contains('rl-scrub') }; }""")
+        check(f"[{label}] playing, the preview says what you are watching under the Pad's own scrubber, painted",
+              ln["text"].startswith("watching at 1×") and ln["painted"] and ln["scrub"], str(ln))
+        check(f"[{label}] ...its speeds are the Pad's, ¼× to 16×, and no Fit (a Flip loops)",
+              ln["chips"] == ["0.25", "0.5", "1", "2", "4", "8", "16"], str(ln["chips"]))
+        beats = pg.evaluate("() => [_flipCols().length, [0.1, 0.3, 0.6, 0.7, 0.95].map(_flipPageAt)]")
+        check(f"[{label}] the bar is one column per beat (six beats here), and a place on it lands on the page holding that beat",
+              beats[0] % 6 == 0 and beats[0] >= 6 and beats[1] == [0, 1, 1, 2, 3], str(beats))
+        # How fast the pages turn: page changes in 1.2 s, at 1x and at 4x.
+        count = """() => new Promise(res => { let n = 0, last = idx; const t0 = performance.now();
+            const tick = () => { if (idx !== last) { n++; last = idx; } if (performance.now() - t0 < 1200) requestAnimationFrame(tick); else res(n); };
+            requestAnimationFrame(tick); })"""
+        n1 = pg.evaluate(count)
+        pick(pg, "#flipLine", 4)
+        n4 = pg.evaluate(count)
+        check(f"[{label}] 4× turns the pages about four times as fast, and the line says 4×",
+              n1 >= 4 and n4 >= 2.5 * n1 and pg.evaluate("() => document.querySelector('#flipLine .rl-speed').textContent") == "4×",
+              f"{n1} page turns at 1×, {n4} at 4×")
+        check(f"[{label}] ...the Saved pill steps aside while it plays, so it is never on the line",
+              pg.evaluate("() => { const a = document.getElementById('autosaveStatus'); return !a || a.hidden || getComputedStyle(a).opacity === '0'; }"))
+        pg.click("#play"); pg.wait_for_timeout(200)
+        pg.reload(); pg.wait_for_timeout(700)
+        check(f"[{label}] the speed is remembered in this browser", pg.evaluate("() => flipRate") == 4)
+        pg.evaluate("() => localStorage.removeItem('skribl_flip_rate')")
+        pg.close()
     b.close()
 
 print("\n" + "=" * 62)

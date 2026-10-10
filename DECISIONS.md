@@ -15577,3 +15577,20 @@ comes with F1. The speeds' own chips also stopped squeezing: an even split
 gave each 28px and "16×" ran 5px out of its pill at every width (the centring
 census); each now shrinks only to its label, and eight still fit a 320px phone.
 verify_replayspeed checks it at 320, 402 and 1100, red on the old rule.
+
+**Flip's preview watches like the Pad's (F1, the owner's pick).** Pressing Flip
+it now shows the Pad's scrubber and, under it, "watching at 1×" with the same
+speeds, ¼× to 16× (no Fit: a Flip loops, it has no whole to fit). The bar is
+one column per beat -- a page held three beats is three columns -- as tall as
+the ink on its page, and a place on it lands on the page holding that beat;
+a short Flip draws each beat as a few thin columns so four pages read as a bar,
+not four slabs. Dragging the bar, sliding up off it for fine steps, and a
+sideways drag on the drawing while it plays all scrub, as on the Pad. A speed
+scales only the preview's clock (each page's time, a drawing page's reveal, the
+elapsed readout), re-anchored mid-play; pages per second stays the animation
+itself in Playback settings, and the music keeps its own pace. Remembered in
+this browser. The Saved pill steps aside while it plays, as the Pad's does.
+Shared: lib/replayline.js (scrub() takes the caller's own columns now);
+Flip-only: the beat columns and the speed's clock. verify_replayspeed drives it
+at 402 and 1280; each part was shown red on its own. The player's JavaScript
+measures 8 bytes under its ratchet with it.
