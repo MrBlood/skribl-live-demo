@@ -15590,7 +15590,6 @@ scales only the preview's clock (each page's time, a drawing page's reveal, the
 elapsed readout), re-anchored mid-play; pages per second stays the animation
 itself in Playback settings, and the music keeps its own pace. Remembered in
 this browser. The Saved pill steps aside while it plays, as the Pad's does.
-Shared: lib/replayline.js (scrub() takes the caller's own columns now);
+Shared: lib/replayline.js, unchanged (Flip hands its scrubber the beats as points);
 Flip-only: the beat columns and the speed's clock. verify_replayspeed drives it
-at 402 and 1280; each part was shown red on its own. The player's JavaScript
-measures 8 bytes under its ratchet with it.
+at 402 and 1280; each part was shown red on its own.
