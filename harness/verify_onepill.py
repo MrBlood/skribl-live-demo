@@ -238,6 +238,19 @@ def audit(page, route, theme, form, state):
                   worst[0] >= 4.5, f"worst {worst}")
 
 
+# THE LIBRARY'S FILTER ROW NEEDS SOMETHING TO FILTER (#387): an empty Library
+# hides it. One real post, listed in every context's Library, so the row is
+# there to measure.
+import json as _json, urllib.request as _ur
+_pts = [{"x": 100 + i * 14, "y": 200, "color": "#1f1b2e", "size": 6, "t": i * 40, "start": i == 0} for i in range(20)]
+_req = _ur.Request(BASE + "/api/skribls", headers={"Content-Type": "application/json"}, data=_json.dumps(
+    {"version": 2, "schemaVersion": 2, "playbackMode": "replay", "fps": None,
+     "canvasSize": {"cssWidth": 816, "cssHeight": 612}, "title": "one pill",
+     "frames": [{"strokes": _pts, "strokeGroups": [20], "background": {"color": "#f6f2ea"}}]}).encode())
+_seed = _json.loads(_ur.urlopen(_req, timeout=20).read())
+_POSTED = _json.dumps([{"id": _seed["id"], "url": _seed["url"], "title": "one pill", "kind": "pad", "pages": 1,
+                        "visibility": "unlisted", "savedAt": "2026-01-01T00:00:00Z"}])
+
 with sync_playwright() as p:
     browser = p.chromium.launch()
 
@@ -247,6 +260,7 @@ with sync_playwright() as p:
                                 has_touch=form == "phone", is_mobile=form == "phone",
                                 forced_colors="active" if forced else "none")
         c.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{theme}')}}catch(e){{}}")
+        c.add_init_script("try{if(!localStorage.getItem('skribl_posted_v1'))localStorage.setItem('skribl_posted_v1'," + _json.dumps(_POSTED) + ")}catch(e){}")
         return c
 
     def settle(q, ms=700):

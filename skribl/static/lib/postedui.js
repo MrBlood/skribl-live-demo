@@ -543,7 +543,7 @@
             '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" data-local="1" ' +
               'aria-label="Delete this save from this device"' +
               ' title="Delete the only copy of this drawing \u2014 undoable for a few seconds">' +
-              '✕</button>' +
+              (window.SkriblMarks ? window.SkriblMarks.html('close', '\u2715') : '\u2715') + '</button>' +
           '</div>';
         }
         /* MAY ACT: this browser holds the key, or the page says the viewer
