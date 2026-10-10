@@ -1,3 +1,4 @@
+{% from 'skribl/_skribl_marks.html' import mark %}
 {# Your Skribls -- the list this browser kept of what it posted.
 
    A SECTION OF THE PROFILE PAGE since v304, not a drawer in the editors: the
@@ -61,7 +62,7 @@
        for the window, and somebody who has decided should not have to wait
        out a timer to get the space back. #}
     <button type="button" class="posted-undo-x" id="postedUndoX"
-            aria-label="Dismiss — keep the removal">&#10005;</button>
+            aria-label="Dismiss — keep the removal">{{ mark('close') }}</button>
   </div>
 
   <div class="posted-list" id="postedList"></div>

@@ -1,3 +1,4 @@
+{% from 'skribl/_skribl_marks.html' import mark_templates %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -811,7 +812,9 @@
      init() is called, which this page never does), so it costs a deferred,
      cross-page-cached fetch and changes nothing else. Re-spelling copyText
      inside gallery.js would be cheaper in bytes and is the mistake. #}
+  <script src="{{ skribl_asset('lib/marks.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
 <script src="{{ skribl_asset('gallery.js') }}" defer></script>
+{{ mark_templates() }}
 </body>
 </html>

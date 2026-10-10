@@ -1,3 +1,4 @@
+{% from 'skribl/_skribl_marks.html' import mark_templates %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -837,9 +838,11 @@
   <script src="{{ skribl_asset('lib/fullbar.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/marks.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/draftstore.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/savedrafts.js') }}" defer></script>
   <script src="{{ skribl_asset('library.js') }}" defer></script>
+{{ mark_templates() }}
 </body>
 </html>
