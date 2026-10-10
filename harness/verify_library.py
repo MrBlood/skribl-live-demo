@@ -2486,6 +2486,17 @@ with sync_playwright() as _spl:
           and _pl.eval_on_selector_all("#draftsList .draft-row", "els => els.length") == 3
           and _pl.is_hidden("#searchClear"),
           f"value {_pl.input_value('#postedSearch')!r}")
+    # ONE WAY TO SAY WHEN (v321 preflight PF-005, the owner's call): the
+    # Library's rows and its drafts say "5 min ago", not "5m ago" beside them.
+    _when = _pl.evaluate("""() => { const H = 3600e3, D = 24 * H, now = Date.now();
+        const iso = ms => new Date(now - ms).toISOString();
+        return { posted5m: SkriblPosted.ago(now - 5 * 60e3), draft3h: SkriblSavedDrafts.ago(iso(3 * H)),
+                 draft5m: SkriblSavedDrafts.ago(iso(5 * 60e3)), months: SkriblPosted.ago(now - 100 * D),
+                 year: SkriblPosted.ago(now - 400 * D) }; }""")
+    check("the drafts say when in the rows' words, not a second vocabulary",
+          _when["draft3h"] == "3 hours ago" and _when["draft5m"] == _when["posted5m"] == "5 min ago", str(_when))
+    check("...and an old one in months or years, never \"52 weeks ago\"",
+          _when["months"] == "3 months ago" and _when["year"] == "a year ago", str(_when))
     _ctx.close()
     # A DESK KEEPS ITS ONE ROW.
     _pd = _bl.new_context(viewport={"width": 1280, "height": 900}).new_page()
