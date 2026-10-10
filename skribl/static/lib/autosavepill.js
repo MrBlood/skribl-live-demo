@@ -48,7 +48,7 @@
     x.type = 'button';
     x.id = 'autosaveStatusDismiss';
     x.className = 'autosave-dismiss';
-    x.textContent = '✕';
+    if (window.SkriblMarks) window.SkriblMarks.into(x, 'close', '\u2715'); else x.textContent = '\u2715';
     x.hidden = true;
     pill.appendChild(x);
     return x;

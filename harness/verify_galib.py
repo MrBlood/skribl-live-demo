@@ -285,9 +285,21 @@ with sync_playwright() as p:
     held = pg.evaluate("() => { const d = document.querySelector('.posted-delete'); return { armed: d.dataset.armed, cls: d.className, label: d.getAttribute('aria-label') }; }")
     check("library: a posted Delete is still armed 4.6 s after the first tap (it was a 4 s race)",
           held["armed"] == "1" and "armed" in held["cls"], str(held))
+    check("library: ...and its warning says the link stops working at once (no shared caching here)",
+          "stops working at once" in (held["label"] or "") and "5 minutes" not in (held["label"] or ""), str(held))
     pg.mouse.click(5, 400); pg.wait_for_timeout(200)
     check("library: ...and a tap elsewhere disarms it",
           pg.evaluate("() => document.querySelector('.posted-delete').dataset.armed") == "", "")
+    # A HOST THAT LETS NETWORKS CACHE PUBLIC MEDIA (the page carries
+    # data-skribl-shared-cache; verify_mediaauthz pins that the server sets it
+    # only then): the confirmation no longer promises "at once" everywhere
+    # (owner's pick; SK-AUD-011).
+    pg.evaluate("() => document.body.setAttribute('data-skribl-shared-cache', '1')")
+    pg.click(".posted-delete >> nth=0"); pg.wait_for_timeout(300)
+    cl = pg.evaluate("() => document.querySelector('.posted-delete').getAttribute('aria-label')") or ""
+    check("library: on a host that caches public media, the warning says cached copies can take up to 5 minutes",
+          "gone from here at once" in cl and "up to 5 minutes" in cl and "cannot be undone" in cl, cl)
+    pg.mouse.click(5, 400); pg.wait_for_timeout(200)
     pg.close()
 
     # The editors' saved-drafts sheet is the same row.

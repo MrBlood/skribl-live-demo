@@ -35,6 +35,9 @@
   }
 
   function init() {
+    // Running from the Home Screen: styles.css reserves the home bar for the
+    // sheets that rise from the bottom (iOS reports its inset as 0 here).
+    if (standalone()) doc.documentElement.setAttribute('data-skribl-app', '');
     var row = doc.getElementById('homeScreenItem');
     var banner = doc.getElementById('homeScreenBanner');
     var scrim = doc.getElementById('homeScreenScrim');

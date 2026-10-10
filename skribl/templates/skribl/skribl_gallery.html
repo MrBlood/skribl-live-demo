@@ -1,3 +1,4 @@
+{% from 'skribl/_skribl_marks.html' import mark_templates %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -661,7 +662,7 @@
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
-<body data-skribl-api="{{ url_for('.list_skribls') }}"
+<body data-skribl-api="{{ url_for('.list_skribls') }}"{% if skribl_shared_cache %} data-skribl-shared-cache="1"{% endif %}
       {# THE WHOLE TEMPLATED URL, PLACEHOLDER AND ALL, which is the shape this
          page already uses for the poster: "the real one is that same
          server-built path with the id substituted -- no path is assembled
@@ -811,7 +812,9 @@
      init() is called, which this page never does), so it costs a deferred,
      cross-page-cached fetch and changes nothing else. Re-spelling copyText
      inside gallery.js would be cheaper in bytes and is the mistake. #}
+  <script src="{{ skribl_asset('lib/marks.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
 <script src="{{ skribl_asset('gallery.js') }}" defer></script>
+{{ mark_templates() }}
 </body>
 </html>

@@ -2823,60 +2823,8 @@ const photoBlurValEl = document.getElementById('photoBlurVal');
 //       anchors. Adds a pan center to getZoomWindow (already wired above).
 //   (3) A loop crossfade length control (bake-only — see buildTrimmedLoopWav).
 
-// Wrap an existing <input type=range> with - / + buttons. Each press steps the
-// value (press-and-hold repeats) and dispatches a native 'input' event so every
-// existing listener (value label, track fill, autosave) fires unchanged. Pass
-// opts.step for a fixed step, or opts.nudgeFn(dir) for custom behavior (pan).
-function addSliderNudgers(input, opts) {
-  opts = opts || {};
-  if (!input || input.dataset.nudged) return;
-  input.dataset.nudged = '1';
-  const parent = input.parentNode;
-  const wrap = document.createElement('div');
-  wrap.className = 'slider-nudge-wrap';
-  parent.insertBefore(wrap, input);
-  const minus = document.createElement('button');
-  const plus = document.createElement('button');
-  minus.type = plus.type = 'button';
-  minus.className = 'slider-nudge-btn';
-  plus.className = 'slider-nudge-btn';
-  minus.textContent = '\u2212';
-  plus.textContent = '+';
-  minus.setAttribute('aria-label', 'Decrease');
-  plus.setAttribute('aria-label', 'Increase');
-  wrap.appendChild(minus);
-  wrap.appendChild(input);   // move the slider between the buttons
-  wrap.appendChild(plus);
-  const step = opts.step != null ? opts.step : (parseFloat(input.step) || 1);
-  function apply(dir) {
-    if (opts.nudgeFn) { opts.nudgeFn(dir); return; }
-    const min = parseFloat(input.min) || 0;
-    const maxRaw = parseFloat(input.max);
-    const max = Number.isFinite(maxRaw) ? maxRaw : Infinity;
-    let next = (parseFloat(input.value) || 0) + dir * step;
-    next = Math.max(min, Math.min(next, max));
-    next = Math.round(next / step) * step;
-    input.value = next;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-  function bind(btn, dir) {
-    let holdTimer = null, repeat = null;
-    const start = (e) => {
-      e.preventDefault();
-      apply(dir);
-      holdTimer = setTimeout(() => { repeat = setInterval(() => apply(dir), 90); }, 350);
-    };
-    const end = () => { clearTimeout(holdTimer); if (repeat) clearInterval(repeat); repeat = null; };
-    btn.addEventListener('mousedown', start);
-    btn.addEventListener('touchstart', start, { passive: false });
-    btn.addEventListener('mouseup', end);
-    btn.addEventListener('mouseleave', end);
-    btn.addEventListener('touchend', end);
-    btn.addEventListener('touchcancel', end);
-  }
-  bind(minus, -1);
-  bind(plus, 1);
-}
+// The - / + beside each range slider: lib/slidernudge.js, one copy for both
+// editors (Flip's had drifted). Not loaded by the player, which has no sliders.
 
 // Sync the crossfade slider + label from loopCrossfadeMs (load / re-add / reset).
 function setCrossfadeUI() {
