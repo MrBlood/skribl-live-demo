@@ -15585,3 +15585,15 @@ comes back with the first post (library.js marks <body> .lib-empty). A host's
 signed-in profile shows the card alone, no browser sentence. verify_library
 pins one Make button, the line and its action, and nothing repeated, red on
 the old page; verify_posted's empty-state check follows the new words.
+
+**Delete says how long a cached copy can last, only where one can (SK-AUD-011,
+owner's pick).** "The link stops working at once" is true on a host that leaves
+public media uncached, which is the default. A host that opts in to letting
+networks cache public media (`SKRIBL_PUBLIC_MEDIA_CACHE`) gets the honest
+version on the Library's and the gallery's Delete: "it is gone from here at
+once; copies a network has cached can take up to 5 minutes to disappear". The
+page learns which from a `data-skribl-shared-cache` attribute on its body, set
+only with the opt-in. verify_mediaauthz pins the attribute both ways;
+verify_galib drives the delete with it set, red on the old words. The editors
+have no Delete of their own (the posted list lives in the Library), so Flip is
+not affected.
