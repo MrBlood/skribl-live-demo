@@ -591,6 +591,12 @@ with sync_playwright() as p:
                     except Exception as e:
                         errs.append(f"driver {path}: {e}"[:160])
                 for state in guarded(states(pg)):
+                    # A drawer glides the page as it opens; a photograph taken
+                    # mid-glide is of where the control was.
+                    try:
+                        browsing.wait_scroll_still(pg)
+                    except Exception:
+                        pass
                     for c in pg.evaluate(SCAN, EXTRA):
                         reached.update(c["keys"])
                         if c["typed"]:
