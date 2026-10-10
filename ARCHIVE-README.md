@@ -57,9 +57,10 @@ accidental substitution; it does not prove who built this or that it is the
 build someone approved.
 
 If you need provenance, take the hash of the **zip** from a channel that did
-not travel with the zip. This project records it in the git commit that seals
-each release, on the branch the archive was built from — compare
-`sha256sum` of the zip against the value in that commit message.
+not travel with the zip. Seals up to v305 recorded it in the commit message
+that sealed them; since v320 it is published on the repository's Releases page
+(`SHA256SUMS-<version>.txt`), next to the attestation described below —
+compare `sha256sum` of the zip against that file.
 
 ## Checking where a zip came from
 

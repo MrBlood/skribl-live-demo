@@ -20,14 +20,14 @@ details to send with it.
       left behind from the fingers landing.
 - [ ] With an Apple Pencil (iPad): press lightly, then hard → the line gets
       wider. With a finger → the width does not change.
-- [ ] Record, stop, press Play → the drawing replays as drawn, the scrub bar
-      moves, and it stops at the end.
+- [ ] Draw (recording starts by itself), tap Done, press Play → the drawing
+      replays as drawn, the scrub bar moves, and it stops at the end.
 - [ ] Tap the zoom % and type a number → the page does NOT zoom in (a text
       field under 16px makes iOS magnify the whole page).
 
 ## Sound
 
-- [ ] Add music, record, play back with the ring/silent switch ON (silent) →
+- [ ] Add music, draw, tap Done, play back with the ring/silent switch ON (silent) →
       the drawing plays; note whether sound plays. Then switch silent OFF and
       play → sound plays.
 - [ ] Play a post with sound in the feed, then tap a second one → the first
@@ -43,7 +43,8 @@ details to send with it.
 - [ ] In a **Private** tab, draw and post → it works; nothing throws, even
       though storage is refused there.
 - [ ] Feed demo: write a line, attach a Skribl, write another line, Post →
-      the words, then the drawing, then the words, in that order.
+      all the words, then the drawing (the drawing goes after the words, as a
+      photo does).
 
 ## Reading and hearing it (accessibility)
 

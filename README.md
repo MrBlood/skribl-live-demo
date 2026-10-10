@@ -49,10 +49,9 @@ with the build it belongs to — none of them is an archive hash.
 
 1. **`START-HERE.md`** — the working brief: architecture, invariants, and the
    known-open list.
-2. **`docs/HANDOFF.md`** — reverse-chronological, one section per version,
-   covering what changed, why, and what was *deliberately not* done. It also
-   records retracted claims, so read a section fully before trusting an older
-   one.
+2. **`DECISIONS.md`** — why the tree is the way it is, one entry per change,
+   newest at the bottom (its version log explains the repeated numbers).
+   `docs/HANDOFF.md` is the v100–v131 archive and stops there by design.
 3. **`docs/INTEGRATION.md`** — how this gets embedded into a larger Flask app.
    Rewritten and verified; see the section at the top of this file.
 4. **`harness/README.md`** — the test suites and how to run them.
@@ -84,7 +83,7 @@ skribl/                    The blueprint package — everything Skribl owns
   core.py                  SKRIBL_VERSION and shared constants
   templates/skribl/        Jinja templates + shared _skribl_*.html partials
   static/
-    app.js                 Pad + player (largest file)
+    app.js                 Pad + player
     flip.js                Flip
     inlineplayer.js/.css   The in-post player — a Skribl inside a host's feed
     gallery.js             The public gallery page over the listing
@@ -158,7 +157,7 @@ Idle, a post is one cached image — the poster at `/s/<id>/poster`, the share
 card's drawing without its brand strip — and a play button; nothing is fetched
 until somebody taps. Playing, it redraws the drawing with a progress
 hairline and a nib at the pen. There are two viewer controls and only two —
-**mute** (page-wide, session-remembered, off by default) and **loop** (per post,
+**mute** (page-wide, session-remembered; sound starts off, muted) and **loop** (per post,
 on by default; turning it off stops the drawing at its last frame and stops the
 music with it). One Skribl plays at a time, and scrolling one out of view
 settles it.
@@ -248,7 +247,7 @@ Chromium against a real server — several verify exported files at the byte lev
 (GIF dimensions, frame counts, per-frame delays) rather than checking UI state.
 
 ```bash
-pip install playwright flask_sqlalchemy
+pip install -r requirements.txt -r harness/requirements.txt   # the app, then the harness's own
 python -m playwright install chromium
 ./harness/run_harness.sh verify_gifenc.py verify_canvas.py    # or any subset
 ```

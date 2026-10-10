@@ -26,7 +26,8 @@ name: harness
 # THE TRIM IS STILL RIGHT, FOR THE OTHER REASON. Three jobs at 40-90 minutes
 # is a long time to sit on a pull request whether or not anyone is invoiced
 # for it. So: pull requests get ONE fast smoke job (the boot suite — does the
-# app start and serve at all), and the full three-job battery runs only on
+# app start and serve at all — plus, since EXT-P1-9, every suite that needs
+# neither a browser nor a server), and the full three-job battery runs only on
 # pushes to main and on manual dispatch. The working rhythm this repo actually
 # has — the full affected suites run locally before every push, and their
 # counts are quoted in each PR — is what makes that safe: CI's job on a PR is
