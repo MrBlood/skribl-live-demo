@@ -612,19 +612,32 @@ with sync_playwright() as sp:
     check("an empty Library shows the empty card, painted, and none of the player's parts",
           o_card["painted"] and o_card["title"] == "Nothing posted yet" and not o_card["dead"], str(o_card))
     check("...and its Make one goes to the Pad", (o_card["make"] or "").endswith("/skribl-pad"), str(o_card["make"]))
-    # Drawn Blooby on light, his sticker on dark (the drawn outline vanishes on
-    # a dark ground), keyed on the data-theme the page's boot stamps; and both
-    # pictures actually arrive.
+    # Blooby is the Home Screen icon in small, with the whole star (owner:
+    # "using the Home Screen icon with full star instead of sticker"). One
+    # picture, PAINTED in both themes (elementFromPoint at its centre), and it
+    # is a tile: opaque from edge to edge along its middle, so his drawn
+    # outline sits on its lilac and never on the page, with its corners
+    # rounded away. The sticker it replaced had a white edge that looked bad
+    # on both grounds.
     o_bl = other.evaluate("""async () => { const r = document.documentElement, was = r.getAttribute('data-theme');
-        const on = sel => getComputedStyle(document.querySelector('#stageEmpty ' + sel)).display !== 'none';
-        r.setAttribute('data-theme', 'light'); const L = [on('.bl-light'), on('.bl-dark')];
-        r.setAttribute('data-theme', 'dark'); const D = [on('.bl-light'), on('.bl-dark')];
-        if (was === null) r.removeAttribute('data-theme'); else r.setAttribute('data-theme', was);
         const imgs = [...document.querySelectorAll('#stageEmpty img')];
         await Promise.all(imgs.map(i => i.decode().catch(() => null)));
-        return { light: L, dark: D, loaded: imgs.map(i => i.naturalWidth > 0) }; }""")
-    check("...drawn Blooby on light, the sticker on dark, and both pictures load",
-          o_bl["light"] == [True, False] and o_bl["dark"] == [False, True] and o_bl["loaded"] == [True, True], str(o_bl))
+        const painted = () => imgs.filter(i => { i.scrollIntoView({ block: 'center' }); const b = i.getBoundingClientRect();
+          return b.width > 0 && document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2) === i; })
+          .map(i => i.getAttribute('src').split('?')[0].split('/').pop());
+        r.setAttribute('data-theme', 'light'); const L = painted();
+        r.setAttribute('data-theme', 'dark'); const D = painted();
+        if (was === null) r.removeAttribute('data-theme'); else r.setAttribute('data-theme', was);
+        const i = imgs[0], c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight;
+        const g = c.getContext('2d'); g.drawImage(i, 0, 0);
+        const a = (x, y) => g.getImageData(x, y, 1, 1).data[3], w = c.width, h = c.height, m = Math.floor(w / 2);
+        return { n: imgs.length, light: L, dark: D, size: [w, h],
+                 edges: [a(m, 0), a(m, h - 1), a(0, Math.floor(h / 2)), a(w - 1, Math.floor(h / 2))],
+                 corners: [a(0, 0), a(w - 1, 0), a(0, h - 1), a(w - 1, h - 1)] }; }""")
+    check("...one Blooby picture, the star badge, painted in light and in dark alike",
+          o_bl["n"] == 1 and o_bl["light"] == ["blooby-star.webp"] and o_bl["dark"] == ["blooby-star.webp"], str(o_bl))
+    check("...and it is a tile: opaque to its edges, corners rounded away, square",
+          o_bl["size"][0] == o_bl["size"][1] > 0 and min(o_bl["edges"]) == 255 and max(o_bl["corners"]) == 0, str(o_bl))
     check("...and the empty state says what this list is",
           o_empty["shown"] and "in this browser only" in o_empty["words"] and "not an account" in o_empty["words"],
           str(o_empty))

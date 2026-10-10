@@ -15468,3 +15468,18 @@ with the advice to leave it off when "deleted" must mean gone at once; a line in
 app when the opt-in is on goes to the next mock round with the audit's design
 findings (SK-AUD-005 to 010: the delete key at post time, keeping both tabs' work,
 the empty Library, one post-failure wording).
+
+**Blooby on the empty Library is the Home Screen icon, with the whole star
+(owner: "the sticker doesn't cut it and looks bad in both themes" ... "I mean
+using the Home Screen icon with full star instead of sticker not changing home
+screen").** The empty Library showed Blooby as a white-edged sticker, a
+different picture per theme. It shows one picture now: the icon's lilac tile
+and Blooby, with the star made small enough that all six points sit inside the
+tile, corners rounded to match iOS. It brings its own lilac, so his drawn
+outline never meets the page, and it is a little bigger than the sticker (52%
+of the card's height, not 42%; the card keeps its size). The Home Screen icon
+itself is unchanged. `harness/tools/blooby.py badge` draws it through the real
+Pad and composes it with the icon's own code, so the two cannot drift; the old
+sticker files are gone. `verify_library` asks that the one picture is painted
+in both themes and that it is a tile, opaque to its edges with its corners
+rounded away. Flip shows no Blooby on a page, so nothing changes there.
