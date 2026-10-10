@@ -153,6 +153,14 @@ def _centroid(w):
 def measure(pg, ctr, rect, keep=False):
     """(dx, dy) of the mark's optical centre from the painted shape's centre, in CSS px, or None."""
     pad = 3
+    # Where it is NOW: a drawer still settling or a list that scrolled since
+    # the scan would put the photograph beside the control.
+    sel0 = f'[data-ctr="{ctr}"]'
+    fresh = pg.evaluate("(s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect();"
+                        " return [r.left, r.top, r.width, r.height]; }", sel0)
+    if not fresh or fresh[2] < 4 or fresh[3] < 4:
+        return None
+    rect = fresh
     x, y, w, h = rect
     clip = {"x": max(0, x - pad), "y": max(0, y - pad), "width": w + 2 * pad, "height": h + 2 * pad}
     sel = f'[data-ctr="{ctr}"]'
@@ -511,7 +519,10 @@ SIGNED_IN = """new MutationObserver((m, o) => { if (document.body) { document.bo
   .observe(document, { childList: true, subtree: true });"""
 # Browser storage refused (a private window, blocked site data): the drafts
 # sheet cannot read its list and offers Try again.
-IDB_BLOCKED = "window.indexedDB.open = function () { throw new Error('blocked'); };"
+# (The store falls back past a refused indexedDB.open on its own, so the
+# refusal is made where the sheet meets it: the store's read rejects.)
+IDB_BLOCKED = ("addEventListener('DOMContentLoaded', () => { if (window.SkriblDraftStore) "
+               "SkriblDraftStore.get = () => Promise.reject(new Error('This browser is not keeping data right now.')); });")
 
 
 def with_cursor(url=None):
@@ -589,8 +600,11 @@ with sync_playwright() as p:
                         # line of text, aligned by the row, and not in scope.
                         # A drawn mark AND words (the Pen pill: nib, then "Pen") is
                         # a row of two things, not one face to centre.
-                        in_scope = c["whole"] and (c["extra"] or (c["svg"] and not c["text"])
-                                                   or (0 < len(c["text"]) <= 3 and not c["svg"]))
+                        # And a control the size of a mark, not a surface: a whole
+                        # drawing that plays when pressed (a Gallery tile, an
+                        # example card) has no single face to centre.
+                        in_scope = c["whole"] and max(c["rect"][2], c["rect"][3]) <= 96 and (
+                            c["extra"] or (c["svg"] and not c["text"]) or (0 < len(c["text"]) <= 3 and not c["svg"]))
                         sig = (tuple(sorted(c["keys"])), c["text"])
                         if not in_scope or sig in seen:
                             continue
