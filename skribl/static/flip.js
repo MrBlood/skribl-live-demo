@@ -4306,22 +4306,26 @@ function _flipFrac(i){ const e=_flipEdges(), T=e[e.length-1]; return T ? e[Math.
 function _flipPageAt(f){ const e=_flipEdges(), t=f*e[e.length-1];
   for(let i=0;i<frames.length;i++) if(t < e[i+1]) return i;
   return frames.length-1; }
-function _flipCols(){
+/* The beats, handed to the scrubber as the Pad hands it strokes: a pair of
+   points per sliver of each beat, as far apart as that page has ink, so its
+   columns rise with the ink and stand flat on an empty page. lib/replayline.js
+   is the player's too, on a byte budget, so Flip shapes its input rather than
+   adding a mode there. A Flip with no ink at all gets the even track. */
+function _flipBeatPoints(){
   const slot = 1000 / (fps || 12), beats = [];
-  let mx = 0;
-  frames.forEach(f => { mx = Math.max(mx, f.strokes.length); });
-  frames.forEach((f, i) => {
-    const v = mx ? (f.strokes.length ? Math.sqrt(f.strokes.length / mx) : 0) : 0.2;
-    for(let k = Math.max(1, Math.round(_pageMsBase(i) / slot)); k > 0; k--) beats.push(v);
+  frames.forEach((f, i) => { for(let k = Math.max(1, Math.round(_pageMsBase(i) / slot)); k > 0; k--) beats.push(f.strokes.length); });
+  const T = _flipEdges()[frames.length], per = Math.max(2, Math.ceil(120 / beats.length)), out = [];
+  beats.forEach((ink, j) => {
+    if(!ink) return;
+    for(let k = 0; k < per; k++){
+      const t = (j + (k + 0.5) / per) / beats.length * T;
+      out.push({ x: 0, y: 0, playT: t, start: true }, { x: ink, y: 0, playT: t, start: false });
+    }
   });
-  // A short Flip has few beats: each is drawn as a few thin columns, so four
-  // pages read as the Pad's bar does rather than as four slabs.
-  const per = Math.max(1, Math.floor(60 / beats.length)), out = [];
-  beats.forEach(v => { for(let k = 0; k < per; k++) out.push(v); });
   return out;
 }
 var flipStrip = (flipProgress && window.SkriblReplayLine && SkriblReplayLine.scrub) ? SkriblReplayLine.scrub(flipProgress, {
-  points: () => [], cols: _flipCols, total: () => _flipEdges()[frames.length], map: () => null,
+  points: _flipBeatPoints, total: () => _flipEdges()[frames.length], map: () => null,
   frac: () => _flipFrac(idx),
   seek: f => scrubToPage(_flipPageAt(f)),
   start: () => { scrubbingFrames = true; },

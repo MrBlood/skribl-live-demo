@@ -472,9 +472,13 @@ with sync_playwright() as p:
               ln["text"].startswith("watching at 1×") and ln["painted"] and ln["scrub"], str(ln))
         check(f"[{label}] ...its speeds are the Pad's, ¼× to 16×, and no Fit (a Flip loops)",
               ln["chips"] == ["0.25", "0.5", "1", "2", "4", "8", "16"], str(ln["chips"]))
-        beats = pg.evaluate("() => [_flipCols().length, [0.1, 0.3, 0.6, 0.7, 0.95].map(_flipPageAt)]")
+        # The page held three beats takes three times the bar: its slivers span
+        # beats 1 to 4 of 6. And a place on the bar lands on that beat's page.
+        beats = pg.evaluate("""() => { const p = _flipBeatPoints(), T = _flipEdges()[frames.length];
+            const on = p.filter(q => !q.start).map(q => Math.floor(q.playT / T * 6));
+            return [[0, 1, 2, 3, 4, 5].map(b => on.filter(x => x === b).length), [0.1, 0.3, 0.6, 0.7, 0.95].map(_flipPageAt)]; }""")
         check(f"[{label}] the bar is one column per beat (six beats here), and a place on it lands on the page holding that beat",
-              beats[0] % 6 == 0 and beats[0] >= 6 and beats[1] == [0, 1, 1, 2, 3], str(beats))
+              len(set(beats[0])) == 1 and beats[0][0] > 0 and beats[1] == [0, 1, 1, 2, 3], str(beats))
         # How fast the pages turn: page changes in 1.2 s, at 1x and at 4x.
         count = """() => new Promise(res => { let n = 0, last = idx; const t0 = performance.now();
             const tick = () => { if (idx !== last) { n++; last = idx; } if (performance.now() - t0 < 1200) requestAnimationFrame(tick); else res(n); };
