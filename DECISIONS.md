@@ -15550,6 +15550,42 @@ the recovery key is how a list comes back. verify_library pins each state on a
 phone and a desk, red on the old code; the desk row check now posts one Skribl
 first, since an empty Library no longer has a row to measure.
 
+**Drawn marks, not typed ones: + − ✕ ✓ (the centring round; owner: "make all
+your recommended fixes").** The centring suite measured every control whose face
+is a typed symbol and found them where their font puts them, not where the
+control's middle is: the Music Fine-tune − and + 1.33px high, the ✕ that closes
+How it works 1.83px high, in every installed font. They are drawn now, from one
+source: _skribl_marks.html defines plus, minus, close, check and arrow (24-unit
+box, centred, currentColor, the app's 2px stroke, 1em square, aria-hidden), as
+a Jinja macro for templates and as <template> elements that lib/marks.js clones
+for controls a script builds -- the slider steppers, the autosave pill's
+dismiss, the Library's delete and undo, the drafts sheet's close, Flip's stamp
+delete and paste ghost. A button whose face is one mark centres it by its box
+(styles.css). Measured afterwards, on Pad and Flip, phone and desk: within one
+screen pixel where the button's shape is painted; the 0.4-0.5px left on a few
+dark-theme buttons is against a box with no visible plate.
+
+**One slider stepper for both editors.** app.js and flip.js each built the -/+
+beside a range slider, and Flip's had drifted: no names for a screen reader, no
+press-and-hold, and steps past the slider's ends. lib/slidernudge.js is the
+Pad's, shared, with the marks, and one step per keyboard press (a press with no
+mouse down was a no-op on both). The × on speeds and badges is a separate change
+(the letter x), with the squeezed speed chips.
+
+**The empty Library, one step (owner's L1; SK-AUD-008, 009).** With nothing
+posted, the page offered "Make one" twice (the header's and the card's), said
+what the list would hold twice (the card and the paragraph under the list), and
+put its custody sentence below the filters. Now: the card says "Your posted
+Skribls will show up here" with one button, "Make your first Skribl"; the
+header's Make one steps aside while the list is empty; the paragraph under the
+list does not repeat the card; and the custody line takes its short wording --
+"Kept in this browser. Clearing site data forgets this list and the keys that
+delete your posts." -- with "Have a key? Use it" right after it. Everything
+comes back with the first post (library.js marks <body> .lib-empty). A host's
+signed-in profile shows the card alone, no browser sentence. verify_library
+pins one Make button, the line and its action, and nothing repeated, red on
+the old page; verify_posted's empty-state check follows the new words.
+
 **Where the replay speed lives when nothing is playing (owner: "This looks like
 dogshit"; then picks D1 and 2).** #386 kept the speed line under the drawing after
 a replay, on a phone; on the owner's iPhone it sat over the frame's edge,

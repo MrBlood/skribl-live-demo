@@ -103,9 +103,11 @@ with sync_playwright() as p:
     # the player's stage card, and #libEmpty under the list is the how-to.
     empty = pg.inner_text("#libEmpty")
     stage = pg.inner_text("#stageEmpty") if pg.is_visible("#stageEmpty") else ""
+    # Since the owner's L1 the card says it all ("Your posted Skribls will show
+    # up here", one Make button) and #libEmpty under the list steps aside.
     check("the empty state invites rather than apologises",
-          "nothing posted yet" in stage.lower() and "make one" in stage.lower()
-          and "post a skribl" in empty.lower()
+          "will show up here" in stage.lower() and "make your first skribl" in stage.lower()
+          and not pg.is_visible("#libEmpty")
           and pg.inner_text("#postedList").strip() == "",
           repr((stage[:60], empty[:80])))
     check("the footer says this is browser-only, not an account",
