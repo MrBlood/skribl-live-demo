@@ -449,9 +449,11 @@ with sync_playwright() as p:
           pg.evaluate("() => !document.getElementById('postSpeedSeg')"))
     pg.close()
 
-    # FLIP'S PREVIEW GETS THE PAD'S LINE, SPEEDS AND SCRUBBER (F1). Speeds
-    # without Fit (a Flip loops), the bar one column per beat, and a speed
-    # that changes how fast the pages turn -- the preview's clock only.
+    # FLIP'S PREVIEW, KIND TO THE CANVAS (F1, the owner's pick C). While it
+    # plays nothing sits on the drawing: the scrubber is a 3px line along the
+    # page strip, the page on screen is outlined in the strip, and the speeds
+    # (five, ¼x to 4x) take the idle Duplicate / Blank row. The same speeds sit
+    # in Playback settings for when nothing plays.
     for vw, vh in ((402, 874), (1280, 800)):
         pg = b.new_page(viewport={"width": vw, "height": vh})
         browsing.goto(pg, BASE, "/flip")
@@ -463,37 +465,52 @@ with sync_playwright() as p:
             frames[1].hold = 3; fps = 12; idx = 0; buildStrip(); render(); }""")
         label = f"Flip {vw}"
         pg.click("#play"); pg.wait_for_timeout(500)
-        ln = pg.evaluate("""() => { const l = document.getElementById('flipLine'), b = l.querySelector('.rl-speed'), r = b.getBoundingClientRect();
-            const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-            return { text: l.querySelector('.rl-text').innerText.replace(/\\s+/g, ' ').trim(), painted: !!at && b.contains(at),
-                     chips: [...l.querySelectorAll('.rl-chips button')].map(x => x.dataset.r),
-                     scrub: document.getElementById('flipProgress').classList.contains('rl-scrub') }; }""")
-        check(f"[{label}] playing, the preview says what you are watching under the Pad's own scrubber, painted",
-              ln["text"].startswith("watching at 1×") and ln["painted"] and ln["scrub"], str(ln))
-        check(f"[{label}] ...its speeds are the Pad's, ¼× to 16×, and no Fit (a Flip loops)",
-              ln["chips"] == ["0.25", "0.5", "1", "2", "4", "8", "16"], str(ln["chips"]))
-        # The page held three beats takes three times the bar: its slivers span
-        # beats 1 to 4 of 6. And a place on the bar lands on that beat's page.
-        beats = pg.evaluate("""() => { const p = _flipBeatPoints(), T = _flipEdges()[frames.length];
-            const on = p.filter(q => !q.start).map(q => Math.floor(q.playT / T * 6));
-            return [[0, 1, 2, 3, 4, 5].map(b => on.filter(x => x === b).length), [0.1, 0.3, 0.6, 0.7, 0.95].map(_flipPageAt)]; }""")
-        check(f"[{label}] the bar is one column per beat (six beats here), and a place on it lands on the page holding that beat",
-              len(set(beats[0])) == 1 and beats[0][0] > 0 and beats[1] == [0, 1, 1, 2, 3], str(beats))
-        # How fast the pages turn: page changes in 1.2 s, at 1x and at 4x.
+        st = pg.evaluate("""() => { const pad = document.getElementById('pad'), r = pad.getBoundingClientRect();
+            // what is painted along the drawing's foot, where the old controls sat
+            const foot = [0.2, 0.4, 0.5, 0.6, 0.8].map(f => document.elementFromPoint(r.left + r.width * f, r.bottom - 30));
+            const line = document.getElementById('flipProgress'), lr = line.getBoundingClientRect(), band = getComputedStyle(line, '::before');
+            const sp = document.getElementById('flipSpeeds'), sr = sp.getBoundingClientRect();
+            const hit = document.elementFromPoint(sr.left + sr.width / 2, sr.top + sr.height / 2);
+            const add = document.querySelector('.addcol');
+            return { clear: foot.every(e => e === pad || (e && e.closest && e.closest('.zoom-layer'))),
+                     inStrip: !!line.closest('.strip-wrap'), lineH: Math.round(lr.height), band: parseFloat(band.height),
+                     linePainted: !!document.elementFromPoint(lr.left + lr.width / 2, lr.top + 1) && line.contains(document.elementFromPoint(lr.left + lr.width / 2, lr.top + 1)),
+                     speeds: [...sp.querySelectorAll('button')].map(x => x.textContent), speedsPainted: !!hit && sp.contains(hit),
+                     addHidden: !add || getComputedStyle(add).display === 'none' }; }""")
+        check(f"[{label}] playing, nothing sits on the drawing: its foot shows the drawing itself",
+              st["clear"], str(st))
+        check(f"[{label}] ...the scrubber is a 3px line along the page strip, painted, with a 44px band to grab",
+              st["inStrip"] and st["lineH"] <= 4 and st["band"] >= 44 and st["linePainted"], str(st))
+        check(f"[{label}] ...and the speeds, ¼x to 4x, take the Duplicate / Blank row while it plays",
+              st["speeds"] == ["¼×", "½×", "1×", "2×", "4×"] and st["speedsPainted"] and st["addHidden"], str(st))
+        beats = pg.evaluate("() => [0.1, 0.3, 0.6, 0.7, 0.95].map(_flipPageAt)")
+        check(f"[{label}] a place on the line lands on the page holding that beat (page 2 holds beats 2 to 4 of 6)",
+              beats == [0, 1, 1, 2, 3], str(beats))
+        now = pg.evaluate("() => { const n = [...document.querySelectorAll('#strip .frame')].findIndex(f => f.classList.contains('now')); return [n, idx]; }")
+        check(f"[{label}] the strip outlines the page on screen", now[0] == now[1] and now[0] >= 0, str(now))
         count = """() => new Promise(res => { let n = 0, last = idx; const t0 = performance.now();
             const tick = () => { if (idx !== last) { n++; last = idx; } if (performance.now() - t0 < 1200) requestAnimationFrame(tick); else res(n); };
             requestAnimationFrame(tick); })"""
         n1 = pg.evaluate(count)
-        pick(pg, "#flipLine", 4)
+        pg.click("#flipSpeedSeg button[data-rate='4']"); pg.wait_for_timeout(60)
         n4 = pg.evaluate(count)
-        check(f"[{label}] 4× turns the pages about four times as fast, and the line says 4×",
-              n1 >= 4 and n4 >= 2.5 * n1 and pg.evaluate("() => document.querySelector('#flipLine .rl-speed').textContent") == "4×",
-              f"{n1} page turns at 1×, {n4} at 4×")
-        check(f"[{label}] ...the Saved pill steps aside while it plays, so it is never on the line",
-              pg.evaluate("() => { const a = document.getElementById('autosaveStatus'); return !a || a.hidden || getComputedStyle(a).opacity === '0'; }"))
-        pg.click("#play"); pg.wait_for_timeout(200)
+        check(f"[{label}] 4x turns the pages about four times as fast",
+              n1 >= 4 and n4 >= 2.5 * n1, f"{n1} page turns at 1x, {n4} at 4x")
+        pg.click("#play"); pg.wait_for_timeout(300)
+        rest = pg.evaluate("""() => { const add = document.querySelector('.addcol'), sp = document.getElementById('flipSpeeds');
+            return { add: !!add && getComputedStyle(add).display !== 'none', speeds: getComputedStyle(sp).display === 'none' }; }""")
+        check(f"[{label}] Stop puts the Duplicate / Blank row back", rest["add"] and rest["speeds"], str(rest))
+        pg.click("#tuneBtn"); pg.wait_for_timeout(600)
+        row = pg.evaluate("""() => { const g = document.getElementById('watchSeg'); if (!g) return null; g.scrollIntoView({ block: 'center' });
+            const on = g.querySelector('button.on'); const r = g.getBoundingClientRect(); const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { on: on && on.textContent, painted: !!h && g.contains(h) }; }""")
+        check(f"[{label}] Playback settings has Watching speed at rest, showing the speed picked while it played",
+              bool(row) and row["on"] == "4×" and row["painted"], str(row))
+        pg.click("#watchSeg button[data-rate='0.5']"); pg.wait_for_timeout(100)
+        check(f"[{label}] ...and a speed picked there is the one Play uses",
+              pg.evaluate("() => flipRate") == 0.5)
         pg.reload(); pg.wait_for_timeout(700)
-        check(f"[{label}] the speed is remembered in this browser", pg.evaluate("() => flipRate") == 4)
+        check(f"[{label}] the speed is remembered in this browser", pg.evaluate("() => flipRate") == 0.5)
         pg.evaluate("() => localStorage.removeItem('skribl_flip_rate')")
         pg.close()
     b.close()

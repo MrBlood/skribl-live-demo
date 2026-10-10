@@ -194,17 +194,23 @@
   .flip-player[hidden] { display: none; }
   .flip-player .player-progress { width: 100%; max-width: none; height: 6px;
     box-shadow: 0 2px 10px rgba(0,0,0,.4); }
-  /* F1: the Pad's scrubber (one column per beat) and its line, "watching at
-     1×" with the speeds, which open upward over the bar. The line wears the
-     chips' own solid ground so it reads over any drawing, and the player is
-     wide enough for eight speeds on a phone. */
-  .flip-player { width: min(72%, 400px); display: flex; flex-direction: column; gap: 8px; bottom: 22px; }
-  /* Nothing is saved while it plays (as on the Pad): the pill steps aside from the line. */
-  body.playing .autosave-status { opacity: 0; pointer-events: none; }
-  .flip-player .player-progress.rl-scrub { height: 30px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
-  #flipLine { flex-direction: column-reverse; font-size: 14px; }
-  #flipLine .rl-text { padding: 3px 4px 3px 12px; border-radius: var(--r-pill);
-    background: rgb(var(--surface-control-rgb)); border: 1px solid var(--hairline-strong); }
+  /* F1, the owner's pick C ("be kind to the canvas"): nothing over the
+     drawing while it plays. The scrubber is a 3px line along the page strip's
+     top edge (.player-progress's own 44px band to grab), the page on screen is
+     outlined in the strip, and the speeds take the idle Duplicate / Blank row.
+     The empty overlay stays hidden. */
+  .flip-player { display: none !important; }
+  .strip-wrap { position: relative; }
+  .flip-timeline { display: none; }
+  body.playing .flip-timeline { display: block; position: absolute; left: 14px; right: 14px; top: 0; width: auto; max-width: none;
+    height: 3px; border-radius: 2px; background: rgba(var(--wash-rgb), .14); z-index: 3; }
+  body.playing .flip-timeline .player-progress-fill { border-radius: 2px; transition: width .12s linear; }
+  .flip-speeds { display: none; }
+  body.playing .flip-speeds { display: flex; position: relative; z-index: 4; margin-top: 12px; padding: 0 14px 4px; }   /* margin, not padding: padding laid the row over the line on a phone */
+  body.playing .flip-speeds .seg { flex: 1 1 auto; }
+  body.playing .flip-speeds .seg button { flex: 1 1 0; min-height: 40px; font-variant-numeric: tabular-nums; }
+  body.playing .addcol { display: none !important; }
+  body.playing #strip .frame.now { outline: 2px solid var(--accent); outline-offset: 1px; }
   /* The drawing surface must have a findable edge. --hairline-strong is
      rgba(255,255,255,.09) — about 4% from the page behind it — which reads
      fine on a good panel and disappears entirely on a dim or low-contrast
