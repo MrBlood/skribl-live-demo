@@ -15538,3 +15538,16 @@ takes it away, and undo or redo updates its "drawn in". A desk has no such gap
 (the tools sit 12-20px under the drawing, the line is 27px), so there it still
 goes with the scrubber until the owner picks its place. verify_replayspeed pins
 it, red on the old code. Flip's editor has no speed line yet (Flip next, F1).
+
+**The replay speed sits in the Play pill on a desk (owner's D1, "make all your
+recommended fixes").** A desk has no room for the speed line under the drawing,
+so after a replay the speed is "Play · 0:02 · 1×": lib/replayline.js gained a
+compact mode -- its own speed button and chips, without the sentence -- and the
+Pad attaches it at the end of the pill. Its chips open downward, over the top
+of the drawing; opening them sends away any toast there. The line and the pill
+are one choice: a pick in either is the Pad's speed, and both say so. A phone
+keeps the line (it stays after a replay, #386) and hides the pill's speed.
+Every new control is a 44px tap (owner: "make sure target areas follow the
+rules too"): the chips are 44px wide and the ::before grows them and the button
+to 44 tall; verify_replayspeed measures the tap boxes, red at 40px. Flip's
+header can take the same compact speed when its replay reaches Pad's (F1).
