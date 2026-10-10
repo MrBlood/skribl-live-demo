@@ -191,12 +191,12 @@
         });
       } catch (netErr) {
         if (netErr && netErr.name === 'AbortError') {
-          throw new Error('Cancelled \u2014 not posted. Your Skribl is safe here; Try again sends it.');
+          throw new Error(SkriblPostSheet.failure('cancelled'));
         }
         // Network failure (offline / DNS / CORS) — temporary. Save locally so
         // the user's work isn't lost, but flag it so the UI won't claim "Posted".
         console.warn('sendSkribl: network error, saving locally —', netErr);
-        return saveLocalFallback(payload, true);
+        return saveLocalFallback(payload, true, 'offline');
       }
       if (res.ok) {
         const data = await res.json().catch(() => null);
@@ -217,18 +217,18 @@
           sendSkribl._idemTok = null;
           return { id: data.id, url: data.url, local: false, deleteToken: tok };
         }
-        throw new Error('The server returned an unexpected response.');
+        throw new Error(SkriblPostSheet.failure('odd'));
       }
       // Server errors ≥500 are temporary → local fallback (flagged). But a 4xx
       // means the post was REJECTED (bad/oversized payload, auth, etc.) — never
       // fake success; surface the real error so the user knows it wasn't shared.
       if (res.status >= 500) {
         console.warn('sendSkribl: server ' + res.status + ', saving locally');
-        return saveLocalFallback(payload, true);
+        return saveLocalFallback(payload, true, 'server');
       }
-      let msg = 'Post rejected by the server (' + res.status + ').';
-      try { const e = await res.json(); if (e && e.error) msg = e.error; } catch (e) {}
-      throw new Error(msg);
+      let reason = null;
+      try { const e = await res.json(); if (e && e.error) reason = e.error; } catch (e) {}
+      throw new Error(SkriblPostSheet.failure('refused', reason));
     }
 
     // No API base at all (pure standalone build) — local-only by design.
@@ -241,7 +241,7 @@
   // server exists and did not answer (offline, a 5xx) -- the composer then
   // offers Try again -- and false for a build with no server at all, where a
   // retry would only make a second copy on this device.
-  async function saveLocalFallback(payload, retryable) {
+  async function saveLocalFallback(payload, retryable, why) {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const id = 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const post = {
@@ -257,7 +257,7 @@
     } catch (e) {
       throw new Error('Local storage full — could not save Skribl');
     }
-    return { id, url: '#skribl=' + id, local: true, retryable: !!retryable };
+    return { id, url: '#skribl=' + id, local: true, retryable: !!retryable, why: why || null };
   }
 
   // Flatten bg + photo + drawing into a single opaque canvas at native size.
@@ -488,9 +488,13 @@
         // read them. It now leads with what did NOT happen, is drawn as a
         // warning, and -- where a server exists -- keeps a way to finish the
         // job in the sheet: Try again posts the same drawing.
-        statusLabel.textContent = 'Not posted \u2014 saved on this device';
+        // The shared words (lib/postsheet.js), with the Pad's own recovery in
+        // them: a copy kept on this device. A build with no server says only
+        // that, since there is nothing to try again.
+        statusLabel.textContent = (res && res.why) ? SkriblPostSheet.failure(res.why, true)
+          : 'Saved on this device. This page has no server to post to.';
         status.classList.add('error');
-        showToast('Not posted \u2014 saved on this device', null);
+        showToast('Couldn\u2019t post \u2014 your drawing is still here', null);
         // A retry that still could not reach the server makes a new save; the
         // one it retried is dropped, so there is only ever one copy to find.
         if (pendingLocalId && res && pendingLocalId !== res.id && window.SkriblPosted) {

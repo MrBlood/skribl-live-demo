@@ -15549,3 +15549,17 @@ recovery key" always stay: drafts can exist before any post, and on a new phone
 the recovery key is how a list comes back. verify_library pins each state on a
 phone and a desk, red on the old code; the desk row check now posts one Skribl
 first, since an empty Library no longer has a row to measure.
+
+**When a post fails, one set of words for both editors (owner's pick; SK-AUD-010).**
+The Pad said "Post rejected by the server (503)" or "Not posted -- saved on this
+device"; Flip said "The server could not save it (error 503). Your Skribl is
+safe here". The same failure now opens with the same line on both --
+"Couldn't post. Your drawing is still here" -- then what happened, then what to
+do. The words live once, in the shared Post sheet (lib/postsheet.js,
+SkriblPostSheet.failure); each editor says only what happened (server, refused
+with the server's own reason, an odd answer such as a Wi-Fi sign-in page,
+offline, cancelled). The recoveries still differ where they really do: the Pad
+keeps a copy on this device when the server cannot be reached, and says so in
+the same sentence ("..., saved on this device."); Flip does not claim one.
+verify_flipmeta fails each case at the network on both editors and asks for the
+same first line, the reason, and the honest difference; red on the old code.
