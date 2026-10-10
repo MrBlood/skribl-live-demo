@@ -662,7 +662,7 @@
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
-<body data-skribl-api="{{ url_for('.list_skribls') }}"
+<body data-skribl-api="{{ url_for('.list_skribls') }}"{% if skribl_shared_cache %} data-skribl-shared-cache="1"{% endif %}
       {# THE WHOLE TEMPLATED URL, PLACEHOLDER AND ALL, which is the shape this
          page already uses for the poster: "the real one is that same
          server-built path with the id substituted -- no path is assembled

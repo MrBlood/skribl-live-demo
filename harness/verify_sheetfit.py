@@ -190,6 +190,31 @@ try:
               m and m["scrollH"] <= m["clientH"],
               f"content {m and m['scrollH']} in {m and m['clientH']}")
         pg.close()
+
+        # FROM THE HOME SCREEN, THE SHEET CLEARS THE HOME BAR (owner's iPhone:
+        # the Post sheet's last row sat under the home bar and nothing scrolled
+        # to it). iOS reports the inset as 0 there (no viewport-fit=cover), so
+        # lib/homescreen.js marks the page data-skribl-app and the sheet reserves
+        # 34px itself. The class is set here as the app would set it: this
+        # browser cannot be a Home Screen app.
+        print("\nSHEET FIT — from the Home Screen, the Post sheet clears the home bar")
+        for _app in (True, False):
+            pg = b.new_page(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+            if _app:
+                pg.add_init_script("document.addEventListener('DOMContentLoaded', () => document.documentElement.setAttribute('data-skribl-app', ''))")
+            browsing.goto(pg, BASE, "/")
+            author(pg)
+            pg.click("#postBtn"); pg.wait_for_timeout(700)
+            m = pg.evaluate("""() => { const s = document.getElementById('postSheet'), b = document.getElementById('postSubmitBtn');
+                return { pad: parseFloat(getComputedStyle(s).paddingBottom), gap: innerHeight - b.getBoundingClientRect().bottom,
+                         fits: s.getBoundingClientRect().bottom <= innerHeight + 0.5 }; }""")
+            if _app:
+                check("402x874 from the Home Screen: the sheet reserves the home bar (34px) under its last row, and Post sits above it",
+                      m["pad"] >= 16 + 34 and m["gap"] >= 34 + 16 - 1 and m["fits"], str(m))
+            else:
+                check("...and in a browser tab it reserves only its own 16px (Safari's bar is the home bar's room there)",
+                      m["pad"] < 34 and m["fits"], str(m))
+            pg.close()
         b.close()
 finally:
     proc.terminate()
