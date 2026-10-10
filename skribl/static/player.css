@@ -292,6 +292,7 @@
   --under-rgb: 96, 165, 250;
   --accent-tint: #d6ccff;
   --accent-tint-2: #d5cfff;
+  --accent-ink: #a08cff;   /* small violet words on a dark ground, 4.5:1 and up (PF-011) */
 
   /* Radii */
   --r-control: 12px;
@@ -2080,6 +2081,7 @@ a.player-btn { text-decoration: none; }
   --under-rgb:     29, 78, 216;
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
+  --accent-ink:    #5a3ad8;
   /* ON-GLASS INK (below the ramp): the secondary words on a light glass
      sheet, which lets some of the dim and the page through. */
   --on-glass-2:    #3f4756;

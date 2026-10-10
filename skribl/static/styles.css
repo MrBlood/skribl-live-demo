@@ -269,6 +269,7 @@
   --under-rgb: 96, 165, 250;
   --accent-tint: #d6ccff;
   --accent-tint-2: #d5cfff;
+  --accent-ink: #a08cff;   /* small violet words on a dark ground, 4.5:1 and up (PF-011) */
 
   /* Radii */
   --r-control: 12px;
@@ -6157,9 +6158,8 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 /* THE ACTION'S INK, PER THEME (v321 preflight, PF-011). --ui-hi is #7c5cff in
    both themes, and on the hint's own ground that read 3.5:1 in light (#e2e7ee)
    and 3.7:1 in dark (#1c212c): small bold text needs 4.5. The same violet,
-   deeper on light and lighter on dark: 5.6:1 and 5.9:1. */
-.skribl-hint-action { color: #a08cff; }
-:root[data-theme="light"] .skribl-hint-action { color: #5a3ad8; }
+   deeper on light and lighter on dark (--accent-ink): 5.6:1 and 5.9:1. */
+.skribl-hint-action { color: var(--accent-ink); }
 /* 27px tall in a toast that takes no pointer: the button is the only thing
    here a finger can hit, so it gets the 44px box (--tap-grow, as above). */
 .skribl-hint-action { position: relative; --tap-grow: 9px; }
@@ -7665,6 +7665,7 @@ body.replaying .media-card {
   --under-rgb:     29, 78, 216;
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
+  --accent-ink:    #5a3ad8;
   /* ON-GLASS INK (below the ramp): the secondary words on a light glass
      sheet, which lets some of the dim and the page through. */
   --on-glass-2:    #3f4756;
