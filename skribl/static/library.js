@@ -122,6 +122,8 @@
     if (!iso) return '';
     var d = new Date(iso);
     if (isNaN(d)) return '';
+    // One vocabulary on this page: the rows' (lib/posted.js), not a second one.
+    if (window.SkriblPosted && window.SkriblPosted.ago) return window.SkriblPosted.ago(d.getTime());
     var mins = Math.round((Date.now() - d.getTime()) / 60000);
     if (mins < 1) return 'just now';
     if (mins < 60) return mins + 'm ago';

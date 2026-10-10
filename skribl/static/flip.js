@@ -794,6 +794,14 @@ function isQuotaError(e){
                  e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 1014);
 }
 let _sessionOwnedDraft = false;   // set on the first non-empty save this session
+// ANOTHER TAB SAVED OVER THIS ONE (lib/othertab.js): said here, with a way to
+// take the slot back. A host's composer keeps no Flip draft.
+if(window.SkriblOtherTab && !FLIP_COMPOSE){
+  window.SkriblOtherTab.watch(AUTOSAVE_KEY, {
+    hasWork: () => frames.some(f => f && f.strokes && f.strokes.length),
+    keep: () => saveNow()
+  });
+}
 function saveNow(){
   if (FLIP_COMPOSE) return;   // compose keeps no draft (see FLIP_COMPOSE)
   const empty = frames.length === 1 && frames[0].strokes.length === 0 && !bgImage && !musicData;
@@ -5471,6 +5479,7 @@ function _shareCardDataURL(){
 /* One posting attempt's key and client-minted delete token, keyed by the body
    they were minted for; cleared on a confirmed success. See shareSkribl. */
 let _shareIdem = null;
+let _shareAbort = null;   // the request in flight, for the sheet's Cancel (lib/postsheet.js)
 async function shareSkribl(){
   if(sharing) return;
   if(nothingToShare()){ chip('Draw something to post'); return; }
@@ -5564,7 +5573,11 @@ async function shareSkribl(){
     const _p=(typeof skriblPackBody==='function')
       ? await skriblPackBody(_body, _h)
       : { body:_body, headers:_h };
-    const res=await fetch(window.SKRIBL_API_BASE,{ method:'POST', headers:_p.headers, body:_p.body });
+    // Cancel (lib/postsheet.js, after a slow wait) aborts this request; the
+    // key is kept, so Try again finds a post the server may already have made.
+    _shareAbort=(typeof AbortController==='function') ? new AbortController() : null;
+    const res=await fetch(window.SKRIBL_API_BASE,{ method:'POST', headers:_p.headers, body:_p.body,
+      signal:_shareAbort ? _shareAbort.signal : undefined });
     let data={}; try{ data=(await res.json()) || {}; }catch(_){}
     if(!res.ok){
       // 5xx is the server's fault and 4xx is usually the user's; saying which
@@ -5612,6 +5625,10 @@ async function shareSkribl(){
     }
     showShareResult(url);
   }catch(err){
+    if(err && err.name==='AbortError'){
+      showShareFailure('Cancelled \u2014 not posted. Your Skribl is safe here; Try again sends it.');
+      chip('Not posted'); sharing=false; return;
+    }
     console.error('[skribl] Share failed:', err);
     showShareFailure('Could not reach the server. Check your connection — your Skribl is still here.');
     chip('Post failed');
@@ -5632,6 +5649,7 @@ var postUI = window.SkriblPostSheet ? window.SkriblPostSheet.attach({
   opener: document.getElementById('postBtn'),
   toast: (msg) => chip(msg),
   submit: () => shareSkribl(),
+  cancel: () => { if(_shareAbort) _shareAbort.abort(); },
   // The poster page, the one the share card shows (see _shareCardDataURL):
   // the first page with ink, on the drawing's own ground.
   preview: () => {

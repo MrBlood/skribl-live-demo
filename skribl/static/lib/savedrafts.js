@@ -179,6 +179,9 @@
     if (!iso) return '';
     var t = Date.parse(/Z|[+-]\d\d:\d\d$/.test(iso) ? iso : iso + 'Z');
     if (isNaN(t)) return '';
+    // The Library's vocabulary (lib/posted.js), which every page that shows
+    // drafts loads first; the compact form only if it somehow did not.
+    if (global.SkriblPosted && global.SkriblPosted.ago) return global.SkriblPosted.ago(t);
     var s = Math.max(0, (Date.now() - t) / 1000);
     if (s < 60) return 'just now';
     if (s < 3600) return Math.floor(s / 60) + 'm ago';

@@ -330,6 +330,10 @@
 
   // Relative time, coarse on purpose. "3 days ago" is what someone needs to
   // find a thing again; a timestamp to the minute is noise in a list.
+  // THE LIBRARY'S ONE VOCABULARY (v321 preflight, PF-005; the owner's call):
+  // the stage, the posted rows and the drafts all say it this way. The
+  // gallery and the feed keep their compact "5m", where room is tighter.
+  // Weeks stop at eight; "52 weeks ago" read as a count, not a time.
   function ago(ms) {
     var s = Math.max(0, (Date.now() - ms) / 1000);
     if (s < 90) return 'just now';
@@ -340,7 +344,9 @@
     var d = h / 24;
     if (d < 7) return Math.round(d) + (Math.round(d) === 1 ? ' day ago' : ' days ago');
     if (d < 14) return 'last week';
-    return Math.round(d / 7) + ' weeks ago';
+    if (d < 56) return Math.round(d / 7) + ' weeks ago';
+    if (d < 365) return Math.max(2, Math.round(d / 30.44)) + ' months ago';
+    return Math.round(d / 365.25) === 1 ? 'a year ago' : Math.round(d / 365.25) + ' years ago';
   }
 
   function absolute(url) {

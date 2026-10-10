@@ -493,6 +493,15 @@ function flushPadDraft() {
   return draftIsDurable();
 }
 
+// ANOTHER TAB SAVED OVER THIS ONE (lib/othertab.js): said here, with a way to
+// take the slot back. The Pad in a host's composer keeps no draft.
+if (window.SkriblOtherTab && !PAD_DRAFT_OFF) {
+  window.SkriblOtherTab.watch(AUTOSAVE_KEY, {
+    hasWork: () => hasContent || strokes.length > 0,
+    keep: () => { clearTimeout(autosaveTimer); writeAutosave(); }
+  });
+}
+
 // Debounced: batch a flurry of edits into one write ~1.2s after activity stops.
 function scheduleAutosave() {
   // Same triggers as ever, one new fact: something changed, so the draft on

@@ -742,6 +742,7 @@ rather than a shared rule.
 | `mp4export.js` | Pad+Flip | MP4 export through WebCodecs + the vendored mp4-muxer: one encoder pipeline for both editors (SK312-003, v315). |
 | `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `offline.js` | Pad+Flip+library | The Home Screen app: opening with no signal, and staying current. |
+| `othertab.js` | Pad+Flip | ANOTHER TAB SAVED OVER THIS ONE (v321 preflight, PF-008; the owner's call). |
 | `pagemenu.js` | library+gallery | The page menu: the ••• on the gallery and the library, and what it opens. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
 | `painttarget.js` | Pad+Flip | The draw drawer's paint-target seg (Pen or Background): wired once for both editors (SK312-003, v315). |
