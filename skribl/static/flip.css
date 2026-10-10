@@ -1032,10 +1032,15 @@
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
-  padding: 1px 5px;
+  /* CENTRED BY THE CAPS, NOT THE FONT'S BOX (the owner's centring check: "×1"
+     sat 1.5px high in Liberation and DejaVu, and differently again in each
+     face). text-box trims the line to cap height and baseline, so equal padding
+     centres the ink in any font; where it is unsupported it centres as before. */
+  padding: 4px 5px;
   font-size: 10px;
   font-weight: 700;
   line-height: 1.4;
+  text-box: trim-both cap alphabetic;
   border-radius: 5px;
   color: #0d0f14;
   background: var(--ui-active);
