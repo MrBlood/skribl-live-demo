@@ -1,4 +1,4 @@
-"""The controls verify_centring.py must reach: read from the SOURCE, not the page.
+"""The controls check_centring.py must reach: read from the SOURCE, not the page.
 
 A census taken from the live DOM only knows the controls it happened to open.
 This lists every control the templates and scripts can produce -- each

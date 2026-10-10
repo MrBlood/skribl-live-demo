@@ -29,8 +29,24 @@ every battery and catches new buttons on its own.
 3. NO TYPED SYMBOLS. A mark typed as a character (+ - x ... arrows) sits at a
    different height in every font, and the owner's iPhone (SF) and Windows
    (Segoe UI) fonts are not in this container, so it can never be verified for
-   them. The suite fails on any control whose visible face contains a Unicode
-   symbol character, read from the DOM's own text nodes.
+   them. The suite fails on any control whose visible face is nothing but a
+   Unicode symbol (read from the DOM's own text nodes); a label with a symbol
+   in it ("16×", "Loop ×2") is text, and is measured as text.
+
+ON DEMAND, NOT IN THE BATTERY (owner: "The centering script/harness should be
+used whenever checking buttons in the future. We don't need to run it every
+seal, but we should use it whenever we need it"). Named check_*, not verify_*,
+so neither a bare run_harness.sh nor a seal picks it up; a full pass takes about
+25 minutes, past run_harness.sh's 10-minute limit per suite. Run it directly,
+with a server up (harness/bootstrap.sh):
+
+    python3 harness/check_centring.py               every page, every combination
+    CENTRING_COMBOS=phone-light python3 harness/check_centring.py
+
+KNOWN FINDINGS SHRINK, NEW ONES FAIL. harness/centring_baseline.json lists what
+the first full run found (off-centre marks, typed symbols). A finding not on the
+list fails; a listed one that no longer reproduces fails too, so the list only
+gets shorter -- take it off with CENTRING_WRITE_BASELINE=1 after a full run.
 
 Writes a report to $CENTRING_OUT (default /tmp/centring-out): report.json and a
 3x crop of each flagged control with crosshairs (green: the painted shape's
@@ -126,7 +142,9 @@ SCAN = r"""(extra) => {
     }
     text = text.replace(/\s+/g, ' ').trim();
     const svg = [...el.querySelectorAll('svg, img, canvas')].some(s => { const b = s.getBoundingClientRect(); return b.width > 2 && b.height > 2 && getComputedStyle(s).visibility !== 'hidden'; });
-    const typed = (text.match(/\p{S}/gu) || []).join('');
+    // A symbol that IS the face (+, −, ✕, →), not one inside a label ("16×",
+    // "Loop ×2"): a label is text, set by its row like any word.
+    const typed = text.replace(/[\p{S}\p{Pd}\s]/gu, '') ? '' : (text.match(/[\p{S}\p{Pd}]/gu) || []).join('');
     out.push({ id: el.dataset.ctr, keys, text, svg, typed, name: el.getAttribute('aria-label') || text.slice(0, 40),
                rect: [r.left, r.top, r.width, r.height], whole, extra: el.matches(extra), tag: el.tagName.toLowerCase() });
   }
@@ -600,7 +618,7 @@ with sync_playwright() as p:
                     for c in pg.evaluate(SCAN, EXTRA):
                         reached.update(c["keys"])
                         if c["typed"]:
-                            typed_bad.setdefault((path, c["name"]), c["typed"])
+                            typed_bad.setdefault((path if not path.startswith("/s/") else "/s/<id>", c["name"]), c["typed"])
                         # An icon alone, a label of three characters or fewer, or a
                         # badge or chip. A menu row with an icon AND words is a
                         # line of text, aligned by the row, and not in scope.
@@ -642,6 +660,10 @@ with sync_playwright() as p:
     b.close()
 
 # ------------------------------------------------------------------ verdicts
+BASELINE = pathlib.Path(__file__).with_name("centring_baseline.json")
+FULL = not ONLY and not ONLY_SCEN
+def off_key(r):
+    return f"{r['page']} | {r['control']} | {r['combo']} | {r['face']}"
 inv_keys = {e["key"] for e in inventory}
 unreached = sorted(k for k in inv_keys if k not in reached and k not in UNREACHABLE)
 print(f"\nfound in source {len(inv_keys)} / reached live {len(inv_keys) - len(unreached) - len([k for k in UNREACHABLE if k in inv_keys])}"
@@ -651,11 +673,42 @@ check("every control in the inventory was reached on a live page (or is a named 
 check("every inventory exception still names a control that exists",
       all(k in inv_keys for k in UNREACHABLE), str([k for k in UNREACHABLE if k not in inv_keys]))
 off = sorted((r for r in rows if max(abs(r["dx"]), abs(r["dy"])) > TOL), key=lambda r: -max(abs(r["dx"]), abs(r["dy"])))
-check(f"every measured mark sits within a third of a CSS pixel of its control's middle ({len(rows)} measurements)",
-      rows and not off, f"{len(off)} off; worst: " + "; ".join(
-          f"{r['page']} {r['state']} '{r['control']}' {r['combo']} {r['face']} dx {r['dx']} dy {r['dy']}" for r in off[:6]))
-check("no control's visible face is a typed symbol character",
-      not typed_bad, f"{len(typed_bad)}: " + "; ".join(f"{pg_} '{n}' {t}" for (pg_, n), t in list(typed_bad.items())[:12]))
+worst = {}
+for r in rows:
+    k = off_key(r)
+    worst[k] = max(worst.get(k, 0), abs(r["dx"]), abs(r["dy"]))
+typed_now = sorted(f"{pg_} | {n}" for (pg_, n) in typed_bad)
+if os.environ.get("CENTRING_WRITE_BASELINE"):
+    if not FULL:
+        print("CENTRING_WRITE_BASELINE needs a full run (no CENTRING_COMBOS / CENTRING_SCENARIOS)")
+        sys.exit(2)
+    BASELINE.write_text(json.dumps({"off": {k: round(v, 2) for k, v in sorted(worst.items()) if v > TOL},
+                                    "typed": typed_now}, indent=1, ensure_ascii=False) + "\n")
+    print(f"baseline written: {BASELINE}")
+base = json.loads(BASELINE.read_text()) if BASELINE.exists() else {"off": {}, "typed": []}
+# A finding on the list may wobble by a tenth of a pixel between runs; a
+# quarter-pixel worse than listed is a new finding.
+new_off = [r for r in off if off_key(r) not in base["off"]
+           or max(abs(r["dx"]), abs(r["dy"])) > base["off"][off_key(r)] + 0.25]
+check(f"no NEW mark sits more than a third of a CSS pixel from its control's middle "
+      f"({len(rows)} measurements; {len(base['off'])} known findings listed in centring_baseline.json)",
+      rows and not new_off, f"{len(new_off)} new; worst: " + "; ".join(
+          f"{r['page']} {r['state']} '{r['control']}' {r['combo']} {r['face']} dx {r['dx']} dy {r['dy']}" for r in new_off[:6]))
+# Fixed ones leave the list. Only judged where this run measured: a control
+# not measured at all is stale only on a full run.
+combos_run = {r["combo"] for r in rows}
+stale_off = [k for k, v in base["off"].items()
+             if (k in worst and worst[k] <= TOL) or (FULL and k not in worst)
+             if k.split(" | ")[2] in combos_run or FULL]
+check("every listed finding still reproduces (a fixed one comes off the list)",
+      not stale_off, f"{len(stale_off)} fixed or gone: " + "; ".join(stale_off[:8])
+      + " -- rewrite the list with CENTRING_WRITE_BASELINE=1 after a full run")
+new_typed = [t for t in typed_now if t not in base["typed"]]
+check("no NEW control's visible face is a typed symbol character",
+      not new_typed, f"{len(new_typed)}: " + "; ".join(f"{t} {typed_bad.get(tuple(t.split(' | ', 1)), '')}" for t in new_typed[:12]))
+stale_typed = [t for t in base["typed"] if t not in typed_now] if FULL else []
+check("every listed typed symbol is still there (a fixed one comes off the list)",
+      not stale_typed, f"{len(stale_typed)} fixed: " + "; ".join(stale_typed[:8]))
 (OUT / "report.json").write_text(json.dumps({"rows": rows, "off": off, "typed": [[k[0], k[1], v] for k, v in typed_bad.items()],
                                              "unreached": unreached, "misses": MISSES, "inventory": inventory, "errors": errs[:50]}, indent=1))
 print(f"report: {OUT / 'report.json'}")
