@@ -1,3 +1,5 @@
+{% from 'skribl/_skribl_marks.html' import mark_templates %}
+{% from 'skribl/_skribl_marks.html' import mark %}
 <!DOCTYPE html>
 {% import 'skribl/_skribl_homescreen.html' as hs with context %}
 <html lang="en">
@@ -174,7 +176,7 @@
            and nowhere else. #}
         <button type="button" class="pb" id="sbStamp" title="Save the selection as a stamp" aria-label="Save selection as a stamp"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5h6a2 2 0 0 1 2 2v3.2c0 1-.6 1.9-1.5 2.3l-.6.3c-.6.3-.9.9-.9 1.5V15H10v-1.2c0-.6-.3-1.2-.9-1.5l-.6-.3A2.6 2.6 0 0 1 7 9.7V6.5a2 2 0 0 1 2-2Z"/><rect x="4.5" y="17" width="15" height="3" rx="1"/></svg></span><span class="pb-tx">Stamp</span></button>
         <button type="button" class="pb" id="sbPaste" title="Paste onto this page" aria-label="Paste" hidden><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="4" width="10" height="16" rx="2"/><path d="M10 4V3h4v1"/><path d="M10 11h4M10 15h4"/></svg></span><span class="pb-tx">Paste</span></button>
-        <button type="button" class="pb mb-done" id="sbDone" title="Finish" aria-label="Finish with the selection"><span class="pb-tx">Done</span><span class="pb-ic" aria-hidden="true">&#10003;</span></button>
+        <button type="button" class="pb mb-done" id="sbDone" title="Finish" aria-label="Finish with the selection"><span class="pb-tx">Done</span><span class="pb-ic" aria-hidden="true">{{ mark('check') }}</span></button>
       </div>
       <div class="pagebar" id="pagebar" role="toolbar" aria-label="Page actions">
         <span class="pb-who" id="pbWho" aria-label="Page 1" title="Page 1">1</span>
@@ -532,6 +534,8 @@
      a friendly message, so a missing file never breaks anything else.
      Classic script: it must execute before flip.js below. -->
   {% include 'skribl/_skribl_vendor.html' %}
+  <script src="{{ skribl_asset('lib/marks.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/slidernudge.js') }}" defer></script>
 <script src="{{ skribl_asset('lib/media_validation.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/audioloop.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/mp4export.js') }}" defer></script>
@@ -642,6 +646,7 @@
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
   {% if compose %}<script src="{{ skribl_asset('editor_compose.js') }}" defer></script>{% endif %}
   {% if not compose %}{{ hs.steps() }}{% endif %}
+{{ mark_templates() }}
 </body>
 </html>
 

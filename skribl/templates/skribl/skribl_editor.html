@@ -1,3 +1,4 @@
+{% from 'skribl/_skribl_marks.html' import mark_templates %}
 {#  THE MUSIC GLYPH, DEFINED ONCE -- in _skribl_music_glyph.html, imported
     here and by the Photo | Music tab strip (_skribl_media_tabs.html) and the
     music drawer (_skribl_music_drawer.html), which both editors include. See
@@ -477,6 +478,8 @@
        Flip loads, so both surfaces run one version. Until this file is present the
        GIF option simply disables itself with a hint — nothing else breaks. -->
   {% include 'skribl/_skribl_vendor.html' %}
+  <script src="{{ skribl_asset('lib/marks.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/slidernudge.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/media_validation.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/audioloop.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/mp4export.js') }}" defer></script>
@@ -594,6 +597,7 @@
   <script src="{{ skribl_asset('editor_compose.js') }}" defer></script>
   {% endif %}
   <script src="{{ skribl_asset('editor_draft.js') }}" defer></script>
+{{ mark_templates() }}
 </body>
 </html>
 
