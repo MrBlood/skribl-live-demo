@@ -103,6 +103,13 @@ and the bar for anything that shows Pad off):
 same? Flip is not as clean as Pad." When the two editors differ, Pad's version is
 usually the target, unless Flip needs something that only Flip has.
 
+**Nothing changes on Pad without weighing Flip.** The owner: "don't do anything
+to pad without considering the effect on flip. I don't want them to drift. They
+should share as much as they can." Every Pad change says, in its mock and its
+PR, what it does to Flip: shared (one module, both editors), Flip next (named,
+and on the list), or not for Flip (and why: only where Flip's nature differs,
+like pages per second being the animation itself).
+
 **The canvas is the hero.** The owner asked to see Pad "without the bar on the
 top and bottom — just the controls, no big container". The grid, the starter
 message and the pen nib have to show on light and dark backgrounds and on every
