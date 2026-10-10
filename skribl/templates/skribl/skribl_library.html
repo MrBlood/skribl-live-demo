@@ -588,7 +588,7 @@
        surface and the theme, and a third control here overflowed 390px by
        28px when measured. Both answer a tap 44px tall. #}
     <nav class="nav" aria-label="Elsewhere">
-      <a href="{{ url_for('.skribl_editor') }}" class="make" id="libMake">Make one</a>
+      <a href="{{ url_for('.skribl_editor') }}" class="make" id="libMake"><span>Make one</span></a>
       <button type="button" class="pm-more" id="pageMenuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="pageMenu" title="Menu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
     </nav>
   </div>
@@ -626,7 +626,7 @@
       <div class="stage-empty" id="stageEmpty" hidden>
         <img class="bl-star" src="{{ skribl_asset('brand/blooby-star.webp') }}" alt="" width="384" height="384">
         <div class="se-title">Nothing posted yet</div>
-        <a href="{{ url_for('.skribl_editor') }}" class="make">Make one</a>
+        <a href="{{ url_for('.skribl_editor') }}" class="make"><span>Make one</span></a>
       </div>
       {# THE LISTING DID NOT ANSWER (outside audit V319-003). It used to fall
          through to the empty card above, so an outage told a host's user they
@@ -636,7 +636,7 @@
         <svg class="se-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M8.5 8.6A5 5 0 0 0 6.5 18H17a3.5 3.5 0 0 0 1.9-.6M20.7 14.6A3.5 3.5 0 0 0 17.5 10h-.3A6 6 0 0 0 10.4 5.6"/></svg>
         <div class="se-title">Couldn’t load your Skribls</div>
         <div class="se-sub">They’re still there.</div>
-        <button type="button" class="make" id="libRetry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Try again</button>
+        <button type="button" class="make" id="libRetry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span>Try again</span></button>
       </div>
       <div class="now"><span class="dot"></span><span class="lbl">Now playing</span></div>
       {# THE SAME PLAYER THE FEED USES, with a transport bolted on from outside.
