@@ -15201,3 +15201,27 @@ is the page's own, 44px, in both themes' colours; WebKit's was a blue x.
 verify_library pins it at 402px and 1280px; each part broken alone turned its
 own checks red (the ratio, the cap, the two rows, the search on Drafts, the
 count, the filter, the no-match line, the clear button twice, the desk's row).
+
+**Three calls the owner made from the preflight, built (PF-008, PF-029, PF-005).**
+TWO TABS of one editor share one autosave slot and the last to write wins,
+silently both ways. lib/othertab.js listens for the browser's `storage` event,
+which fires in every other tab of the origin and never in the one that wrote,
+and the tab whose drawing was just saved over says so, with Keep this one, which
+writes its drawing back; the other tab is then told in turn. A removal (posted,
+New Skribl) and a tab with no work say nothing. Who wins is unchanged; that it
+happened is no longer silent.
+A POST THAT NEVER ANSWERS left "Posting…" on a sheet that cannot be closed while
+it posts. After twenty seconds the shared sheet says "Still posting — a slow
+connection can take a minute." and the busy button becomes Cancel in its own
+place; both editors abort their request and keep the Idempotency-Key, so Try
+again finds a post the server may already have made. Not a timeout: 24 MB on a
+slow line can honestly take a minute.
+ONE WAY TO SAY WHEN on the Library: the stage, the rows and the drafts all use
+lib/posted.js's words ("5 min ago", "3 hours ago"), and past eight weeks it says
+months or years ("52 weeks ago" read as a count). The gallery and the feed keep
+their compact "5m", where room is tighter.
+verify_drafts drives two tabs on both editors (painted, by elementFromPoint: the
+bar is fixed, so it has no offsetParent and the first draft of the check could
+never see it); verify_posted holds a POST for twenty seconds on both editors and
+checks the retry's key; verify_library reads the words.
+Each part broken alone turned its own checks red: the listener (6), each editor's wiring (3 each), Keep this one (4), the slow state (3), each editor's abort (1 each), the key kept on cancel (1), the months (1), the drafts' words (1).
