@@ -95,7 +95,10 @@ here is the rule you can break tomorrow.
 | Every tool emits ORDINARY STROKE POINTS — a point carries no field outside `{x, y, color, size, t, start, erase}`. A shape primitive or brush id would be a schema change every existing post has to survive. | `verify_tools.py`, `verify_inline.py`, `verify_tween.py`, `verify_inbetween.py` |
 | Smear and Tween (Motion Smear and the in-between) are two features on one pairing. The smear integrates the whole path between two poses as a span of pages; the in-between emits ONE pose partway and costs about a source page. Both pair strokes BY SHAPE (`tweenMatch`, since v296), so a pose can be redrawn in any order, and a stroke with no partner is drawn once. | `verify_tween.py` (the span, the falloff, the per-page cap, pairing by shape in another stroke order), `verify_inbetween.py` (phase, the similarity fit, the Help saying strokes pair by shape) |
 | Replay joins consecutive points, so any group holding two distant places draws a line across the canvas. Flip refuses the share outright when `strokeGroups` does not account for every point. | `verify_strokegroups.py` |
-| `pauseMode` is serialized and preview speed is not — a setting that changes what the drawing IS travels with it; one that changes how you review it does not. | `verify_tools.py` |
+| `pauseMode` is serialized and the preview's speed is not — a setting that changes what the drawing IS travels with it; one that changes how you review it does not. The one speed a post carries is `playSpeed`, the author's pick of where a VIEWER STARTS ('auto', 'drawn', 'fit' or ¼× to 16×); the server refuses anything else, and a post without it plays as drawn. | `verify_tools.py`, `verify_replayspeed.py` |
+| The Pad's preview and the shared player offer one set of speeds, say them in one line ("Drawn in 47 min · watching at 8×") and work out Fit one way, from one module (`lib/replayline.js`); the in-post player writes out the same start rule to stay off a host's budget. A speed picked mid-play re-anchors the clock: the drawing carries on from where it was. | `verify_replayspeed.py` |
+| "Drawn in" and the clock under the track are the ARTIST's time (every positive gap, uncapped); when the replay skips a tenth or more of it, the line says "long pauses skipped". | `verify_replayspeed.py` |
+| The music follows the drawing's speed between ½× and 2× and is a bed at its own rate outside them (a 16× clip is noise). | `verify_replayspeed.py` |
 | The document has TWO ceilings — points and pages — and every door that adds a page refuses at either one BEFORE the button: Duplicate, Blank, Paste, Tween, Smear. Pages first, because a smear costs two and 200 arrives before the points do. The message names which. | `verify_sharedrules.py` (each client cap equals the server's), `verify_tween.py` (every door, at the cap and one under it) |
 | A run of ONE alpha that is not one path is composited once, never walked, on both surfaces. `uniformRun` asks "one path?"; compositing asks "one alpha?" — different questions. | `verify_smudgeblur.py` (Flip: the vertex ripple), `verify_beading.py` (player: the ceiling) |
 | Field runs and rgba() strokes share ONE layer budget, counted by one predicate in the shared module, on both surfaces. Two counts of 24 is a frame of 48 composites. | `verify_smudgeblur.py`, `verify_beading.py` (both sides of the boundary) |
@@ -762,6 +765,7 @@ rather than a shared rule.
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
 | `recoverykey.js` | Pad+Flip+library | Both ends of an anonymous author's revocation key: showing one, taking one back, and standing between a bulk clear and the keys it would discard. |
+| `replayline.js` | Pad+player | How fast a replay runs, and the line that says what you are watching. |
 | `report.js` | Pad+Flip+library+gallery | "Report a problem" — the context, collected once, for both editors. |
 | `savedrafts.js` | Pad+Flip+library | Saved drafts — ⋯ "Save draft" and "Open a draft…" on both editors (v316), and the Library's Drafts tab (v317). |
 | `scrubkeys.js` | Pad+Flip+player | Keyboard operation and live value for the three playback scrubbers. |
@@ -775,7 +779,7 @@ rather than a shared rule.
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
-| `tappause.js` | Pad+Flip | Tap to pause: a tap on an editor's canvas while its preview plays pauses it where it is, and another tap carries on from there. |
+| `tappause.js` | Pad+Flip+player | Tap to pause: a tap on a drawing while it plays -- an editor's preview, or the shared player -- pauses it where it is, and another tap carries on from there. |
 | `theme.js` | Pad+Flip+library+gallery | Light/dark chrome — the stored setting, and the one place that applies it. |
 | `toolscroll.js` | Pad+Flip | The toolbar on the smallest screens -- Pad's, and Flip's since the dock redesign: one row that scrolls, and says so. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |

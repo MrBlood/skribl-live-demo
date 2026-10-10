@@ -181,19 +181,5 @@ if (mirrorSeg && window.SkriblMirror) {
 }
 
 
-// Preview speed (Pad only — Flip is fps-driven and already has a Speed row).
-// Editor-only by nature: the player has no use for a control that exists so an
-// author can review their own take faster.
-const speedSeg = document.getElementById('speedSeg');
-if (speedSeg && typeof setReplayRate === 'function') {
-  const renderSpeed = () => speedSeg.querySelectorAll('[data-rate]').forEach(b => {
-    b.classList.toggle('on', parseFloat(b.getAttribute('data-rate')) === replayRate);
-  });
-  renderSpeed();
-  speedSeg.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-rate]');
-    if (!b || !speedSeg.contains(b)) return;
-    setReplayRate(b.getAttribute('data-rate'));
-    renderSpeed();
-  });
-}
+// Preview speed left Canvas settings for the line under the replay
+// (lib/replayline.js, wired in editor_draw.js).

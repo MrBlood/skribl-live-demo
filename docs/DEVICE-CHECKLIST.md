@@ -22,6 +22,15 @@ details to send with it.
       wider. With a finger → the width does not change.
 - [ ] Draw (recording starts by itself), tap Done, press Play → the drawing
       replays as drawn, the scrub bar moves, and it stops at the end.
+- [ ] While it replays, tap the speed in "watching at 1×" under the drawing →
+      a row of speeds opens above it; tap 4× → the row closes and the drawing
+      carries on from where it was, four times as fast.
+- [ ] Drag the bar under the drawing → a bubble shows the time; keep the finger
+      down and slide it up → the same movement moves the drawing more slowly.
+      Drag sideways across the drawing itself → it scrubs too; a tap still
+      pauses.
+- [ ] On a shared link (`/s/<id>`), tap the drawing while it plays → it pauses
+      with a play mark in the middle; tap again → it carries on.
 - [ ] Tap the zoom % and type a number → the page does NOT zoom in (a text
       field under 16px makes iOS magnify the whole page).
 

@@ -663,10 +663,11 @@ function resumePlayback() {
   playPaused = false;
   document.body.classList.remove('playback-paused');
   playStart = performance.now() - lastTargetMs / replayRate;
-  // The loop began with the drawing and runs at its rate, so the drawing's
-  // time says where in the clip it had got to.
+  // The loop began with the drawing and runs at musicRate(), so the drawing's
+  // time, over the drawing's rate and times the music's, says where in the
+  // clip it had got to (the same number, between half and double speed).
   const clip = _waLoop.duration();
-  if (pausedMusic === 'wa') startWebAudioLoop(null, clip > 0 ? (lastTargetMs / 1000) % clip : 0);
+  if (pausedMusic === 'wa') startWebAudioLoop(null, clip > 0 ? (lastTargetMs / replayRate * musicRate() / 1000) % clip : 0);
   else if (pausedMusic === 'native' && audioEl) audioEl.play().catch(() => {});
   pausedMusic = null;
   requestAnimationFrame(editorReplayFrame);
@@ -674,6 +675,94 @@ function resumePlayback() {
 if (window.SkriblTapPause) {
   window.SkriblTapPause.attach({ surface: canvas, host: canvasWrap,
     playing: () => playing, paused: () => playPaused, pause: pausePlayback, resume: resumePlayback });
+}
+
+// THE LINE UNDER THE PREVIEW (lib/replayline.js): "Drawn in 47 min · watching
+// at 8×", and the speed in it is the button that opens the speeds. It took the
+// place of Canvas settings' "Preview speed" row (the owner's pick B): a speed
+// is chosen while watching, where it is said, not before, in a sheet.
+//
+// THE PAD REMEMBERS ITS OWN LAST PICK, in this browser only, and it is also
+// what the Post sheet offers as the speed viewers start at. The player never
+// reads it: a viewer starts where the author chose.
+//
+// A PICK MID-PLAY RE-ANCHORS THE CLOCK, as the player's does: the position is
+// banked in the drawing's time at the OLD rate (or taken from a pause or a
+// scrub, which already hold it), then playStart is moved so the new rate
+// carries on from exactly there. The music restarts where its loop is, which
+// picks up the new playbackRate (musicRate()).
+//
+// HERE, NOT IN app.js, for the player's byte budget: the player loads app.js
+// whole and has its own line (app.js, the orchestrator).
+const SPEED_KEY = 'skribl_replay_rate';
+function setPreviewSpeed(c) {
+  const now = performance.now();
+  const at = (playPaused || scrubbing) ? lastTargetMs : Math.min(playTotal, (now - playStart) * replayRate);
+  setReplayRate(c, playTotal || getPlaybackDuration());
+  try { localStorage.setItem(SPEED_KEY, String(c)); } catch (e) {}
+  if (!playing) return;
+  lastTargetMs = at;
+  playStart = now - at / replayRate;
+  if (!playPaused && _waLoop.playing()) startWebAudioLoop(null, _waLoop.elapsed());
+}
+const padLine = document.getElementById('padLine');
+if (window.SkriblReplayLine) {
+  try {
+    const v = localStorage.getItem(SPEED_KEY), c = v === 'fit' ? v : parseFloat(v);
+    if (c === 'fit' || SkriblReplayLine.RATES.indexOf(c) >= 0) setReplayRate(c, getPlaybackDuration());
+  } catch (e) {}
+}
+if (padLine && playScrub && window.SkriblReplayLine) {
+  const line = SkriblReplayLine.attach(padLine, {
+    choice: () => replayChoice,
+    playMs: () => playTotal || getPlaybackDuration(),
+    drawnMs: () => SkriblReplayLine.drawnMs(strokes),
+    pick: setPreviewSpeed,
+  });
+  /* WHERE IT SITS follows the scrubber, which positionScrub (app.js) places:
+     under it at a desk, where the canvas has room below; ABOVE it on a phone,
+     where the scrubber is in the faded toolbar's band and the screen ends
+     below it. Its speeds open upward at both (styles.css #padLine) and close
+     again on a pick. Observed rather than called, so app.js (the
+     player's budget) carries none of this. */
+  const place = () => {
+    const hide = playScrub.hidden;
+    if (padLine.hidden !== hide) { padLine.hidden = hide; if (!hide) line.update(); else line.close(); }
+    if (hide) return;
+    const up = playScrub.classList.contains('in-bar');
+    padLine.style.left = playScrub.style.left;
+    padLine.style.width = playScrub.style.width;
+    const top = parseFloat(playScrub.style.top) || 0;
+    if (up) { padLine.style.top = ''; padLine.style.bottom = (padLine.parentNode.clientHeight - top + 6) + 'px'; }
+    else { padLine.style.bottom = ''; padLine.style.top = (top + playScrub.offsetHeight + 10) + 'px'; }
+  };
+  new MutationObserver(place).observe(playScrub, { attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
+}
+
+// THE SCRUBBER (lib/replayline.js scrub(), the owner's pick S3): the
+// drawing's shape in the bar, the artist's clock in a bubble while dragging,
+// fine scrub by sliding up off it, and a sideways drag on the drawing while
+// the preview runs. A drag holds the clock (scrubbing) and the release carries
+// on from where it was left, in the drawing's time; a paused preview stays
+// paused. Each Play builds a new timeline, so the shape and the clock are
+// rebuilt when the bar appears.
+let padMap = null;
+if (playScrub && window.SkriblReplayLine) {
+  padStrip = SkriblReplayLine.scrub(playScrub, {
+    points: () => playTimeline || [], total: () => playTotal, map: () => padMap,
+    frac: () => (playTotal ? (playPaused || scrubbing ? lastTargetMs
+      : Math.min(playTotal, (performance.now() - playStart) * replayRate)) / playTotal : 0),
+    seek: editorSeek,
+    start: () => { scrubbing = true; },
+    end: () => { scrubbing = false; playStart = performance.now() - lastTargetMs / replayRate; },
+  });
+  padStrip.drag(canvas, () => playing);
+  new MutationObserver(() => {
+    if (playScrub.hidden || !playTimeline) return;
+    padMap = SkriblReplayLine.clockMap(playTimeline, strokes);
+    padStrip.reset();
+    padStrip.paint(0);
+  }).observe(playScrub, { attributes: true, attributeFilter: ['hidden'] });
 }
 
 

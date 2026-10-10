@@ -638,8 +638,25 @@ def _validate_stroke_groups(groups, label, stroke_count):
     return None
 
 
+# WHERE A VIEWER STARTS: the author's pick (lib/replayline.js fromPost()).
+# Absent is every post from before it existed, and plays as drawn.
+PLAY_SPEEDS = ("auto", "drawn", "fit")
+PLAY_RATES = (0.25, 0.5, 1, 2, 4, 8, 16)
+
+
+def _validate_play_speed(v):
+    if v is None or v in PLAY_SPEEDS:
+        return None
+    if isinstance(v, (int, float)) and not isinstance(v, bool) and v in PLAY_RATES:
+        return None
+    return "'playSpeed' must be 'auto', 'drawn', 'fit' or one of 0.25, 0.5, 1, 2, 4, 8, 16."
+
+
 def _validate_payload_complexity(payload):
     """Bytes are capped elsewhere; this caps STRUCTURE. Returns an error or None."""
+    speed_error = _validate_play_speed(payload.get("playSpeed"))
+    if speed_error:
+        return speed_error
     cs = payload.get("canvasSize")
     if cs is not None:
         # "huge", [], {}, and half-specified objects used to pass. The client

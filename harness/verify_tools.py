@@ -1073,19 +1073,28 @@ with sync_playwright() as _b10:
           "(the recorded timing is the artifact)",
           _p10.evaluate("() => strokes.map(s => s.t)") == _tsBefore,
           f"{len(_tsBefore)} timestamps compared")
-    check("V213l the rate is NOT written into the payload — preview speed "
-          "describes reviewing, not the work (contrast V213f's pauseMode)",
-          _p10.evaluate("() => Object.keys(serializeSkribl())"
-                        ".filter(k => /rate|speed/i.test(k))") == [],
-          "no rate/speed key in serializeSkribl()")
+    # The payload carries ONE speed key, `playSpeed`: where the AUTHOR wants a
+    # viewer to start (the Post sheet's "Viewers start at"). The preview's own
+    # rate is still nowhere in it -- set to 2x above, and the key still says
+    # what the author chose (Auto, as nothing here chose otherwise).
+    check("V213l the preview rate is NOT written into the payload — preview speed "
+          "describes reviewing, not the work (contrast V213f's pauseMode); the one "
+          "speed key is the author's start, untouched by it",
+          _p10.evaluate("() => { setReplayRate(2); const p = serializeSkribl();"
+                        " return [Object.keys(p).filter(k => /rate|speed/i.test(k)), p.playSpeed]; }")
+          == [["playSpeed"], "auto"],
+          "serializeSkribl() rate/speed keys and playSpeed after a 2x preview")
 
-    _p10.click("#tuneBtn"); _p10.wait_for_timeout(300)
-    _p10.evaluate("() => { const b = document.querySelector("
-                  "'#speedSeg [data-rate=\"2\"]'); if (b) b.click(); }")
-    _p10.wait_for_timeout(200)
-    check("V213l the Preview speed seg writes through to the replay rate",
-          _p10.evaluate("() => replayRate") == 2,
-          f"replayRate={_p10.evaluate('() => replayRate')}")
+    # The preview's speed is chosen in the line under the replay now (it left
+    # Canvas settings): Play, open the speed, pick 2x.
+    _p10.evaluate("(r) => setReplayRate(r)", 1)
+    _p10.click("#playBtn"); _p10.wait_for_timeout(300)
+    _p10.click("#padLine .rl-speed"); _p10.wait_for_timeout(150)
+    _p10.click('#padLine .rl-chips [data-r="2"]'); _p10.wait_for_timeout(200)
+    check("V213l the speed in the Pad's line writes through to the replay rate, and is remembered here",
+          _p10.evaluate("() => [replayRate, localStorage.getItem('skribl_replay_rate')]") == [2, "2"],
+          f"{_p10.evaluate('() => [replayRate, localStorage.getItem(`skribl_replay_rate`)]')}")
+    _p10.evaluate("() => { localStorage.removeItem('skribl_replay_rate'); if (playing) stopPlayback(); }")
     _p10.close(); _c10.close()
     _br10.close()
 
