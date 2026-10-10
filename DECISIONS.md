@@ -15538,3 +15538,25 @@ takes it away, and undo or redo updates its "drawn in". A desk has no such gap
 (the tools sit 12-20px under the drawing, the line is 27px), so there it still
 goes with the scrubber until the owner picks its place. verify_replayspeed pins
 it, red on the old code. Flip's editor has no speed line yet (Flip next, F1).
+
+**Drawn marks, not typed ones: + − ✕ ✓ (the centring round; owner: "make all
+your recommended fixes").** The centring suite measured every control whose face
+is a typed symbol and found them where their font puts them, not where the
+control's middle is: the Music Fine-tune − and + 1.33px high, the ✕ that closes
+How it works 1.83px high, in every installed font. They are drawn now, from one
+source: _skribl_marks.html defines plus, minus, close, check and arrow (24-unit
+box, centred, currentColor, the app's 2px stroke, 1em square, aria-hidden), as
+a Jinja macro for templates and as <template> elements that lib/marks.js clones
+for controls a script builds -- the slider steppers, the autosave pill's
+dismiss, the Library's delete and undo, the drafts sheet's close, Flip's stamp
+delete and paste ghost. A button whose face is one mark centres it by its box
+(styles.css). Measured afterwards, on Pad and Flip, phone and desk: within one
+screen pixel where the button's shape is painted; the 0.4-0.5px left on a few
+dark-theme buttons is against a box with no visible plate.
+
+**One slider stepper for both editors.** app.js and flip.js each built the -/+
+beside a range slider, and Flip's had drifted: no names for a screen reader, no
+press-and-hold, and steps past the slider's ends. lib/slidernudge.js is the
+Pad's, shared, with the marks, and one step per keyboard press (a press with no
+mouse down was a no-op on both). The × on speeds and badges is a separate change
+(the letter x), with the squeezed speed chips.
