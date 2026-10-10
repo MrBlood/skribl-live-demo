@@ -15483,3 +15483,15 @@ Pad and composes it with the icon's own code, so the two cannot drift; the old
 sticker files are gone. `verify_library` asks that the one picture is painted
 in both themes and that it is a tile, opaque to its edges with its corners
 rounded away. Flip shows no Blooby on a page, so nothing changes there.
+
+**The Pad's speed line stays after a replay on a phone (owner's iPhone, after
+v321: "The speed only stays up for the length of the play time. You can't
+adjust it if you accidentally put it on 16x or if it's a short drawing").** The
+line followed the scrubber, and the scrubber goes when a replay ends, so a short
+drawing gave no time to reach the speed. On a phone the line has a place of its
+own, between the drawing and the tools, and now stays there after the replay,
+still able to change the speed for the next Play; the next stroke or a Clear
+takes it away, and undo or redo updates its "drawn in". A desk has no such gap
+(the tools sit 12-20px under the drawing, the line is 27px), so there it still
+goes with the scrubber until the owner picks its place. verify_replayspeed pins
+it, red on the old code. Flip's editor has no speed line yet (Flip next, F1).
