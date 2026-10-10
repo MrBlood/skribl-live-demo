@@ -339,7 +339,9 @@
       attr(bMute, 'aria-pressed', String(!on));
 
       var r = pl ? pl.rate() : 1;
-      setText(bRate, r === 0.5 ? '½×' : r + '×');
+      /* An author's start can be any of ¼× to 16×, or a Fit's own number
+         (3.4×), so the label rounds rather than printing 3.4333×. */
+      setText(bRate, r === 0.5 ? '½×' : r === 0.25 ? '¼×' : Math.round(r * 10) / 10 + '×');
       label(bRate, 'Speed: ' + bRate.textContent + ' — tap to change');
 
       var total = (st && st.totalMs) || 0;

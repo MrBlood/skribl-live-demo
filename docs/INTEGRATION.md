@@ -185,9 +185,10 @@ the viewer's own choice if one is stored, else their device's light or dark
 setting.
 
 **What a viewer gets.** Tap to play, tap to pause. The drawing redraws itself
-with a progress hairline along the bottom edge and a nib at the pen. Two
-controls, and only two — no scrub, no speed, no frame-step; those live on
-`/s/<id>`:
+with a progress hairline along the bottom edge and a nib at the pen. It plays
+at the speed its author chose for viewers (the post's `playSpeed`: Auto, as
+drawn, Fit or a rate), as `/s/<id>` starts. Two controls, and only two — no
+scrub, no speed control, no frame-step; those live on `/s/<id>`:
 
 - **Mute**, **page-wide**, and sound starts off (muted): sound is environmental, so
   unmuting one post unmutes the feed for that session (`sessionStorage`).

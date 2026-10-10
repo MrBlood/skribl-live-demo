@@ -134,7 +134,7 @@ INK = """card => { const c = card.querySelector('canvas.skribl-inline-canvas');
 TECHNIQUES = {"onion": "#onion", "inbetween": "#addinbetween", "smear": "#addtween",
               "hold": "#strip .frame .holdbadge", "guides": "#arcGuideBtn"}
 # Pad's extras -> the control each one is.
-EXTRAS = {"takes": "#addTakePill", "speed": "#speedSeg", "photo": "#photoUploadBtn", "export": "#exportItem",
+EXTRAS = {"takes": "#addTakePill", "speed": "#padLine .rl-speed", "photo": "#photoUploadBtn", "export": "#exportItem",
           "zoom": "#magnifyBtn"}
 OPEN = "() => { window.SkriblHints && window.SkriblHints.hide(); openHelpDrawer(); }"
 SHEET = "() => document.getElementById('learnPeek').click()"
@@ -197,7 +197,7 @@ with sync_playwright() as p:
         # Flip's techniques: each control a person uses to animate has an
         # example under Techniques. The control is looked up in the editor too,
         # so a renamed or removed one fails here instead of leaving the list stale.
-        # Pad's extras likewise: takes, preview speed, a photo, export.
+        # Pad's extras likewise: takes, the replay's speed, a photo, export.
         def group(g, controls):
             return pg.evaluate(f"""() => ({{
                 controls: Object.fromEntries(Object.entries({json.dumps(controls)}).map(([k, s]) => [k, !!document.querySelector(s)])),

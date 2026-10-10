@@ -606,7 +606,7 @@ def clip_guides(page, rec):
 
 
 # ---- Pad's extras ---------------------------------------------------------------
-# The rest of what Pad does with a drawing: more takes, the preview speed, a
+# The rest of what Pad does with a drawing: more takes, the replay's speed, a
 # photo behind it, and exporting it. The whole phone screen again; the canvas
 # on Paper, as every example is drawn.
 def pad_ready(page):
@@ -667,11 +667,11 @@ def clip_speed(page, rec):
     pad_ready(page)
     pad_draw(page, artworks.snail())
     rec.start(); page.wait_for_timeout(500)
-    tap(page, "#tuneBtn", after=500, frm=(-90, 30))
-    tap(page, '#speedSeg [data-rate="2"]', after=500, frm=(-80, 40))
-    tap(page, "#tuneBtn", after=500, frm=(-90, 30))
-    # The replay at double speed: only Play here; what posts is real time.
-    tap(page, "#playBtn", after=4000, frm=(-60, 80))
+    # Play, then the speed in the line under the replay: tap it, pick 4x, and
+    # the drawing carries on from where it was, four times as fast.
+    tap(page, "#playBtn", after=1400, frm=(-60, 80))
+    tap(page, "#padLine .rl-speed", after=600, frm=(-60, 60))
+    tap(page, '#padLine .rl-chips [data-r="4"]', after=2600, frm=(-40, 50))
     page.evaluate("window.__fingerHide()"); page.wait_for_timeout(500)
     rec.stop()
     return whole(page)

@@ -1628,36 +1628,43 @@ function clearAndRestore(callback) {
 // ---- Editor replay + scrubbable play bar ----
 // Hoisted state so the seek + scrub handlers (outside the click closure) share it.
 // ---- Replay speed -----------------------------------------------------
-// PREVIEW ONLY, and deliberately NOT in the payload — unlike pauseMode, which
-// IS. The distinction is whether the setting describes the WORK or the act of
-// reviewing it: pause handling changes what the drawing is, so a viewer must
-// get the author's choice; speed is a way of looking at your own take, like
-// zoom, and posting it would impose your review habits on everyone who opens
-// the link. serializeSkribl() must never learn about this, and there is a pin
-// on exactly that.
+// A CHOICE AND A RATE. `replayChoice` is what was picked: one of
+// lib/replayline.js's RATES (¼× to 16×) or 'fit'. `replayRate` is the number
+// the clock multiplies by, which for Fit depends on how long the replay is, so
+// it is worked out again whenever that length is known (the Pad's Play, the
+// player's load). Everything downstream reads the number and never the choice.
+//
+// Not in the payload. What the AUTHOR picks for viewers travels as `playSpeed`
+// (authorSpeed below) and only says where a viewer starts; this is the act of
+// looking, and serializeSkribl() must never learn about it -- there is a pin on
+// exactly that. The Pad remembers its own last pick (editor_draw.js); the
+// player starts where the author chose.
 //
 // The stored `t` values are never touched. Only the replay CLOCK is scaled, so
 // a fast preview cannot rewrite the timing that is the artifact.
-const REPLAY_RATES = [0.5, 1, 2];
-let replayRate = 1;
-try {
-  const _rr = parseFloat(localStorage.getItem('skribl_replay_rate'));
-  if (REPLAY_RATES.indexOf(_rr) !== -1) replayRate = _rr;
-} catch (e) {}
-function setReplayRate(r) {
-  r = parseFloat(r);
-  if (REPLAY_RATES.indexOf(r) === -1) return replayRate;
-  replayRate = r;
-  try { localStorage.setItem('skribl_replay_rate', String(r)); } catch (e) {}
-  return replayRate;
+let replayChoice = 1, replayRate = 1;
+function setReplayRate(c, playMs) {
+  replayChoice = c;
+  return (replayRate = window.SkriblReplayLine ? SkriblReplayLine.rate(c, playMs) : 1);
 }
+// THE MUSIC KEEPS UP BETWEEN HALF AND DOUBLE, and is a bed outside them. At 2x
+// a clip pitch-shifting to stay with the drawing is the better trade (see the
+// player's loop bed); at 16x, or a Fit at 94x, it is a noise, so past those
+// two the clip plays at its own rate and loops under the drawing. The drawing
+// still ends the music (WALL-CLOCK durations everywhere).
+function musicRate() { return replayRate >= 0.5 && replayRate <= 2 ? replayRate : 1; }
+// The author's pick for viewers, as loadSkribl() found it ('auto', 'drawn',
+// 'fit' or a rate; undefined on a post from before it existed).
+let authorSpeed;
 
 let playTimeline = null, playTotal = 0, playStart = 0, playIndex = 0, playComp = null;
 const playScrub = document.getElementById('playScrub');
 const playScrubFill = document.getElementById('playScrubFill');
 
+let padStrip = null;   // editor_draw.js: the Pad's scrubber (lib/replayline.js)
 function setScrubProgress(frac) {
   if (playScrubFill) playScrubFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
+  if (padStrip) padStrip.paint(frac);
   if (playScrub && window.SkriblScrub) window.SkriblScrub.sync(playScrub, frac);
 }
 function positionScrub() {
@@ -1676,7 +1683,7 @@ function positionScrub() {
   if (inBar) {
     playScrub.style.left = (t.left - a.left + 16) + 'px';
     playScrub.style.width = (t.width - 32) + 'px';
-    playScrub.style.top = (t.top + t.height / 2 - a.top - 3) + 'px';
+    playScrub.style.top = (t.top + t.height / 2 - a.top - playScrub.offsetHeight / 2) + 'px';
     return;
   }
   // Inset by the frame's corner radius at BOTH ends so the bar spans only the
@@ -1784,6 +1791,7 @@ playBtn.addEventListener('click', () => {
   playBtn.classList.add('playing');
   document.body.classList.add('replaying');
   playTotal = playTimeline[playTimeline.length - 1].playT;
+  setReplayRate(replayChoice, playTotal);   // a Fit depends on the length just built
   showScrub();
 
   clearAndRestore(() => {
@@ -1794,44 +1802,23 @@ playBtn.addEventListener('click', () => {
       requestAnimationFrame(editorReplayFrame);
     };
     if (audioEl && musicEnabled) {
-      // WALL-CLOCK duration, so a 2x preview stops the music when the
-      // drawing ends rather than half a take later. The source's own
-      // playbackRate is scaled to match in startWebAudioLoop().
-      playMusicLooped(playTotal / replayRate, beginFrames);
+      // The DRAWING's length, counted against the drawing's own clock
+      // (each 100ms tick adds 100 x replayRate), so a 2x preview stops the
+      // music when the drawing ends rather than half a take later -- and a
+      // speed changed mid-play, from the line, moves that end with it. The
+      // source's own playbackRate follows musicRate() in startWebAudioLoop().
+      playMusicLooped(playTotal, beginFrames);
     } else {
       beginFrames();
     }
   });
 });
 
-// Scrub interactions (pointer events cover mouse + touch). Freeze the loop while
-// dragging; resume from the released position.
+// The scrubber's pointer side -- the drawing's shape in the bar, fine scrub
+// and dragging the drawing -- is lib/replayline.js's, wired by editor_draw.js
+// (editor-only); it sets padStrip, which setScrubProgress paints. What stays
+// here is what the player's copy of this file already pays for.
 if (playScrub) {
-  const scrubFrac = (e) => {
-    const r = playScrub.getBoundingClientRect();
-    const x = SkriblEventPoint.at(e).clientX;
-    return (x - r.left) / r.width;
-  };
-  playScrub.addEventListener('pointerdown', (e) => {
-    if (!playing) return;
-    scrubbing = true;
-    try { playScrub.setPointerCapture(e.pointerId); } catch (_) {}
-    editorSeek(scrubFrac(e));
-    e.preventDefault();
-  });
-  playScrub.addEventListener('pointermove', (e) => {
-    if (!scrubbing) return;
-    editorSeek(scrubFrac(e));
-  });
-  const endScrub = () => {
-    if (!scrubbing) return;
-    scrubbing = false;
-    // Divided by the rate for the same reason the multiply above exists:
-    // lastTargetMs is in the drawing's time, playStart is wall time.
-    playStart = performance.now() - lastTargetMs / replayRate;   // resume from the released position
-  };
-  playScrub.addEventListener('pointerup', endScrub);
-  playScrub.addEventListener('pointercancel', endScrub);
   window.addEventListener('resize', () => { if (playing) positionScrub(); });
   // The keyboard half. This div DECLARED role="slider" with valuemin/valuemax
   // and had no tabindex, no valuenow and no key handler — a control announced
@@ -2561,7 +2548,7 @@ testSeamBtn.addEventListener('click', () => {
   }, 30);
 });
 
-function playMusicLooped(totalDurationMs, onStarted) {
+function playMusicLooped(drawingMs, onStarted) {
   if (!audioEl) {
     if (onStarted) onStarted();
     return;
@@ -2578,7 +2565,7 @@ function playMusicLooped(totalDurationMs, onStarted) {
   const nativeFallback = () => {
     if (handedOff) return;
     handedOff = true;
-    playNativeLooped(totalDurationMs, onStarted);
+    playNativeLooped(drawingMs, onStarted);
   };
   if (startWebAudioLoop(nativeFallback)) {
     if (onStarted) onStarted();
@@ -2586,17 +2573,17 @@ function playMusicLooped(totalDurationMs, onStarted) {
     const loopCheckWA = setInterval(() => {
       if (!playing) { stopWebAudioLoop(); if (playhead) playhead.hidden = true; clearInterval(loopCheckWA); return; }
       if (playPaused) return;   // a pause is not music played
-      elapsedWA += 100;
+      elapsedWA += 100 * replayRate;
       const songTime = webAudioLoopSongTime();
       if (playhead) playhead.style.left = (songTime / audioDuration * 100) + '%';
-      if (elapsedWA >= totalDurationMs) { stopWebAudioLoop(); if (playhead) playhead.hidden = true; clearInterval(loopCheckWA); }
+      if (elapsedWA >= drawingMs) { stopWebAudioLoop(); if (playhead) playhead.hidden = true; clearInterval(loopCheckWA); }
     }, 100);
     return;
   }
   nativeFallback();
 }
 
-function playNativeLooped(totalDurationMs, onStarted) {
+function playNativeLooped(drawingMs, onStarted) {
   // Timer-wrapped <audio> loop. On iOS this is the path that actually plays:
   // the element's own gesture-driven play() has none of Web Audio's unlock
   // conditions, which is why Test Seam works on the owner's phone while the
@@ -2622,7 +2609,7 @@ function playNativeLooped(totalDurationMs, onStarted) {
       return;
     }
     if (playPaused) return;
-    elapsed += 100;
+    elapsed += 100 * replayRate;
     if (audioEl.currentTime >= trimEnd - 0.05) {
       audioEl.currentTime = trimStart;
       audioEl.play();
@@ -2631,7 +2618,7 @@ function playNativeLooped(totalDurationMs, onStarted) {
     if (playhead) {
       playhead.style.left = pct + '%';
     }
-    if (elapsed >= totalDurationMs) {
+    if (elapsed >= drawingMs) {
       audioEl.pause();
       if (playhead) playhead.hidden = true;
       clearInterval(loopCheck);
@@ -3070,6 +3057,7 @@ function serializeSkribl() {
     schemaVersion: 2,
     playbackMode: 'replay', // 1 frame ⇒ timed replay
     pauseMode: pauseMode,   // how idle gaps replay; see PAUSE_CAPS
+    playSpeed: authorSpeed || 'auto',   // where a viewer starts; see lib/replayline.js fromPost
     fps: null,              // replay Skribls don't use fps
     // The same rule Flip writes through — lib/pointwrite.js, so the two
     // surfaces cannot drift on how a point is spelled.
@@ -3137,7 +3125,7 @@ function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBu
 const _waLoop = window.SkriblAudioLoop.engine({
   ctx: () => audioCtx,
   build: buildLoopAudioBuffer,
-  rate: () => (typeof replayRate === 'number' ? replayRate : 1),
+  rate: musicRate,
 });
 function stopWebAudioLoop() { _waLoop.stop(); }
 // Called from the Play handler INSIDE the gesture (F3): Play reaches start()
@@ -3296,6 +3284,7 @@ function loadSkribl(data) {
   // so the player replays it the way it was posted rather than the way
   // this browser happens to be set.
   if (data.pauseMode) setPauseMode(data.pauseMode);
+  authorSpeed = data.playSpeed;   // and where its author wants a viewer to start
   // Adopt the loaded draft's name into the tab (blank leaves the auto-default).
   if (window.SkriblName && data.title && !/^Untitled Skribl$/.test(data.title)) window.SkriblName.set(data.title);
   clearCanvas();
@@ -3977,13 +3966,19 @@ function showPlayerError(msg, canRetry) {
   const pMute = document.getElementById('playerMuteBtn');
   const pFull = document.getElementById('playerFullBtn');
   const pCopy = document.getElementById('playerCopyBtn');
-  const pRate = document.getElementById('playerRate');
   const pFill = document.getElementById('playerProgressFill');
   const pTrack = document.getElementById('playerProgress');
   const pAt = document.getElementById('playerAt');
   const pDur = document.getElementById('playerDur');
-  const clock = ms => { const s = Math.round(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
-  if (pDur) pDur.textContent = clock(totalMs);   // rounded as the library's clock is
+  // THE ARTIST'S CLOCK under the track, for a Pad: where the drawing is, in
+  // the time it took to draw, and how long that was -- the numbers the line
+  // beneath them talks in (lib/replayline.js clockMap). A Flip has no such
+  // clock and keeps the replay's.
+  const clock = SkriblReplayLine.clock;
+  const _map = isFlip ? null : SkriblReplayLine.clockMap(timeline, strokes);
+  const atMs = ms => _map ? _map(ms) : ms;
+  if (pDur) pDur.textContent = clock(atMs(totalMs));
+  let strip = null;   // the scrubber (below), painted with the progress
 
   const ICON_PLAY_P = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
   const ICON_PAUSE_P = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
@@ -4008,7 +4003,8 @@ function showPlayerError(msg, canRetry) {
   }
   function setProgress(frac) {
     if (pFill) pFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
-    if (pAt) pAt.textContent = clock(Math.max(0, Math.min(1, frac)) * totalMs);
+    if (pAt) pAt.textContent = clock(atMs(Math.max(0, Math.min(1, frac)) * totalMs));
+    if (strip) strip.paint(frac);
     // A slider that only reports its value on keypress is wrong the moment
     // playback moves on its own, which is most of the time.
     if (pTrack && window.SkriblScrub) window.SkriblScrub.sync(pTrack, frac);
@@ -4133,6 +4129,7 @@ function showPlayerError(msg, canRetry) {
   // context gets a source. paSource now means "started on a running context".
   function paStartAtElapsed(elapsedMs) {
     if (!audioCtx) return false;
+    elapsedMs = elapsedMs / replayRate * musicRate();   // where the CLIP is: see musicRate()
     const buf = paLoopBuffer();
     if (!buf) return false;
     paStop();
@@ -4152,7 +4149,7 @@ function showPlayerError(msg, canRetry) {
          sync, and a drawing that finishes while its music is halfway through
          is worse to watch than a chipmunk. The stored clip is untouched; this
          is one playback's rate. */
-      try { src.playbackRate.value = (typeof replayRate === 'number' ? replayRate : 1); } catch (e) {}
+      try { src.playbackRate.value = musicRate(); } catch (e) {}
       src.connect(paGain);
       try { src.start(0, offset); } catch (e) { return false; }
       paSource = src;
@@ -4252,12 +4249,6 @@ function showPlayerError(msg, canRetry) {
     });
   }
 
-  function fracFromEvent(e) {
-    const rect = pTrack.getBoundingClientRect();
-    const clientX = SkriblEventPoint.at(e).clientX;
-    return (clientX - rect.left) / rect.width;
-  }
-
   /* THE VIEWER'S SPEED ("it sometimes draws too fast or slow and I'd
      like to control that"). One number, `replayRate`, already defined above
      for the Pad's preview -- and the comment there says why it is safe to
@@ -4315,6 +4306,7 @@ function showPlayerError(msg, canRetry) {
 
   function play() {
     if (running || (!timeline.length && !isFlip)) return;
+    document.body.classList.remove('playback-paused');
     // Unlock the AudioContext inside the click gesture — and AWAIT it (v202
     // review amendment, A1): resume() is promise-returning, and iOS Safari can
     // report 'suspended' until that promise resolves. The old fire-and-forget
@@ -4402,6 +4394,7 @@ function showPlayerError(msg, canRetry) {
 
   function onEnded() {
     running = false;
+    document.body.classList.remove('playback-paused');
     audioPause();
     setProgress(1);
     hideNib();   // finished poster shows without the nib
@@ -4522,48 +4515,31 @@ function showPlayerError(msg, canRetry) {
       pMute.hidden = true;
     }
   }
-  // Drag-to-seek on the progress track. Pause playback while dragging, seek to
-  // the release point, and resume if it had been playing.
-  if (pTrack) {
-    let scrubbing = false;
-    const onScrubStart = (e) => {
-      e.preventDefault();
-      scrubbing = true;
-      wasRunning = running;
-      if (running) pause();
-      seekTo(fracFromEvent(e));
-      window.addEventListener('mousemove', onScrubMove);
-      window.addEventListener('mouseup', onScrubEnd);
-      window.addEventListener('touchmove', onScrubMove, { passive: false });
-      // touchcancel too: a cancelled scrub otherwise leaves playback
-      // frozen at the scrub position with the listener still live.
-      window.addEventListener('touchend', onScrubEnd);
-      window.addEventListener('touchcancel', onScrubEnd);
-    };
-    const onScrubMove = (e) => {
-      if (!scrubbing) return;
-      if (e.cancelable) e.preventDefault();
-      seekTo(fracFromEvent(e));
-    };
-    const onScrubEnd = () => {
-      if (!scrubbing) return;
-      scrubbing = false;
-      window.removeEventListener('mousemove', onScrubMove);
-      window.removeEventListener('mouseup', onScrubEnd);
-      window.removeEventListener('touchmove', onScrubMove);
-      window.removeEventListener('touchend', onScrubEnd);
-      window.removeEventListener('touchcancel', onScrubEnd);
-      // Resume only if not already at the very end.
-      if (wasRunning && idx < timeline.length) play();
-    };
-    pTrack.style.cursor = 'pointer';
-    pTrack.addEventListener('mousedown', onScrubStart);
-    pTrack.addEventListener('touchstart', onScrubStart, { passive: false });
-  }
+  // THE SCRUBBER (lib/replayline.js scrub(), the owner's pick S3): the
+  // drawing's shape in the bar, the artist's clock in a bubble while
+  // dragging, fine scrub by sliding up off it, and a sideways drag on the
+  // drawing itself. Playback holds while dragging and carries on after if it
+  // was playing and is not at the very end.
+  strip = pTrack && SkriblReplayLine.scrub(pTrack, {
+    points: () => isFlip ? [] : timeline, total: () => totalMs, map: () => _map,
+    frac: () => (totalMs ? Math.min(1, elapsedBase / totalMs) : 0),
+    seek: seekTo,
+    start: () => { wasRunning = running; if (running) pause(); },
+    end: () => { if (wasRunning && idx < timeline.length) play(); },
+  });
+  if (strip) strip.drag(canvas, () => true);
+  // TAP TO PAUSE, as on the Pad (lib/tappause.js; the owner's pick 6): once
+  // the drawing has started, a tap on it pauses and the next carries on, with
+  // the glass play mark standing in the middle while it is paused. play(),
+  // restart() and the end clear the mark, so nothing else can leave it behind.
+  if (window.SkriblTapPause) SkriblTapPause.attach({ surface: canvas, host: canvasWrap,
+    playing: () => running || elapsedBase > 0, paused: () => !running,
+    pause: () => { pause(); document.body.classList.add('playback-paused'); }, resume: play });
 
-  /* SPEED, AS THE PAD'S OWN PILL, in the More card: half, real time and
-     double, the selected one lit. It used to be one button cycling in the
-     row; the card has room to show all three, so the choice is one tap.
+  /* SPEED, IN THE LINE THAT SAYS WHAT YOU ARE WATCHING (lib/replayline.js;
+     the owner's pick B from the mocks). A viewer STARTS where the author
+     chose (`playSpeed`, Auto when posted after it existed: as drawn under a
+     minute of drawing, Fit over it), and can change it from the line.
 
      CHANGING SPEED MID-PLAY RE-ANCHORS THE CLOCK. `elapsedBase` is scaled
      time already banked and `segStart` is a wall-clock instant, so a new rate
@@ -4571,34 +4547,25 @@ function showPlayerError(msg, canRetry) {
      the whole segment so far is retroactively re-timed and the drawing jumps.
      The audio is restarted at the position the drawing is actually at, which
      is also what picks up the new playbackRate. */
-  function showRate() {
-    if (!pRate) return;
-    pRate.querySelectorAll('button').forEach(b => {
-      const on = +b.dataset.rate === replayRate;
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-pressed', '' + on);
-    });
-  }
-  if (pRate) {
-    showRate();
-    pRate.addEventListener('click', e => {
-      const b = e.target.closest('button');
-      if (!b || +b.dataset.rate === replayRate) return;
+  const _drawn = isFlip ? 0 : SkriblReplayLine.drawnMs(strokes);
+  setReplayRate(isFlip ? 1 : SkriblReplayLine.fromPost(authorSpeed, _drawn), totalMs);
+  SkriblReplayLine.attach(document.getElementById('playerLine'), {
+    choice: () => replayChoice, playMs: () => totalMs, drawnMs: () => _drawn, fit: !isFlip,
+    pick: (c) => {
       const at = running ? elapsedBase + segElapsed() : elapsedBase;
-      setReplayRate(+b.dataset.rate);
-      showRate();
+      setReplayRate(c, totalMs);
       if (running) {
         elapsedBase = at;
         segStart = performance.now();
         paStartAtElapsed(at);
       }
-    });
-  }
+    },
+  });
 
   // MORE: a disclosure. Open puts focus on its first row; Escape, a tap
   // anywhere else, Share, Copy link or following Gallery closes it, and
-  // Escape hands focus back to the button that opened it. Speed changes in
-  // place and leaves it open, so the new rate is read where it was chosen.
+  // Escape hands focus back to the button that opened it. (Speed left it for
+  // the line under the track, where the speed is said.)
   const pMore = document.getElementById('playerMoreBtn');
   const pMenu = document.getElementById('playerMenu');
   const setMenu = (open, refocus) => {

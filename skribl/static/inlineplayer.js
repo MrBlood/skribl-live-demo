@@ -909,10 +909,23 @@
         var H = global.SkriblHold;
         flipPlan = (H && H.plan) ? H.plan(frames, flipFps, payload.loop) : null;
         totalMs = flipPlan ? flipPlan.cycle : Math.max(1, (frames.length / flipFps) * 1000);
+        rate = 1;   // a Flip has no author's speed; a post swapped in before it may have set one
         underPage = (H && H.underOf) ? H.underOf(payload.under, frames.length) : null;
       } else {
         timeline = buildTimeline(f0.strokes || [], payload.pauseMode);
         totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
+        /* WHERE A VIEWER STARTS: the author's pick, `playSpeed`. The same
+         * rule as lib/replayline.js fromPost() -- 'fit' or 'auto' over a
+         * minute of drawing lands the whole replay in about 30 seconds and
+         * never slower than as drawn; a listed rate is that rate; anything
+         * else, and every post from before it existed, plays as drawn --
+         * written out here rather than loaded, to stay off a host's byte
+         * budget. "A minute of drawing" is the artist's time: every positive
+         * gap between points, uncapped. */
+        var ps = payload.playSpeed, st = f0.strokes || [], dm = 0;
+        for (var k = 1; k < st.length; k++) if (st[k].t > st[k - 1].t) dm += st[k].t - st[k - 1].t;
+        rate = ps === 'fit' || (ps === 'auto' && dm > 60000) ? Math.max(1, totalMs / 30000)
+          : [0.25, 0.5, 1, 2, 4, 8, 16].indexOf(ps) >= 0 ? ps : 1;
       }
 
       if (durText) durText.textContent = fmt(totalMs);

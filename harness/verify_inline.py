@@ -1323,7 +1323,13 @@ with sync_playwright() as sp:
     #   spanMs and dueCount now read so a drawing page's pauses play as a beat.
     #   Spent first: the clock was compacted, spanMs lost a check the fallback
     #   made dead, dueCount a Math.max the clock made dead. 37,931 B measured.
-    EMBED_RATCHET = 37_950
+    # RAISED (the owner's replay picks: "the author picks the default speed"),
+    #   for one named cost: +289 B, the author's start -- a post's `playSpeed`
+    #   read in adopt() by lib/replayline.js fromPost()'s rule, written out
+    #   here rather than loading that module (7.8 KB a host would pay), and a
+    #   Flip resetting it. Spent first: nothing in adopt() was dead; the rule
+    #   is one loop and one expression. 38,239 B measured.
+    EMBED_RATCHET = 38_250
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
