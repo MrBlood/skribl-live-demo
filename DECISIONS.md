@@ -15539,6 +15539,17 @@ takes it away, and undo or redo updates its "drawn in". A desk has no such gap
 goes with the scrubber until the owner picks its place. verify_replayspeed pins
 it, red on the old code. Flip's editor has no speed line yet (Flip next, F1).
 
+**No search or filter row while there is nothing to filter (owner: "If there's
+nothing there we don't need the filter sliders do we?").** With nothing posted,
+the Library's search and its All / In the gallery / Link only row step aside
+and come back with the first post. On Drafts, which the search already narrows
+by title (owner: "should you be able to search drafts on library?" -- it does),
+the search steps aside while there are no drafts. Skribls | Drafts and "Use a
+recovery key" always stay: drafts can exist before any post, and on a new phone
+the recovery key is how a list comes back. verify_library pins each state on a
+phone and a desk, red on the old code; the desk row check now posts one Skribl
+first, since an empty Library no longer has a row to measure.
+
 **Drawn marks, not typed ones: + − ✕ ✓ (the centring round; owner: "make all
 your recommended fixes").** The centring suite measured every control whose face
 is a typed symbol and found them where their font puts them, not where the

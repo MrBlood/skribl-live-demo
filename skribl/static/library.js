@@ -495,6 +495,14 @@
     if (stageEmpty) stageEmpty.hidden = !none;
     if (stageError) stageError.hidden = !failed;
     if (playerCard) playerCard.classList.toggle('is-empty', none || failed);
+    // NOTHING TO FILTER (owner: "If there's nothing there we don't need the
+    // filter sliders do we?"): with nothing posted, the search and the
+    // All / In the gallery / Link only row step aside, and come back with the
+    // first post. Skribls | Drafts stays -- drafts can exist before any post.
+    // (Looked up here: this runs before the drafts block below defines libSection.)
+    var sec = document.getElementById('libSkribls');
+    sec = sec && sec.closest('section');
+    if (sec) sec.classList.toggle('no-skribls', none);
     foot.textContent = !all.length ? ''
       : (q ? (me ? 'Filtering the ' + all.length + ' loaded so far. Load more to search further.'
                  : 'Filtering your ' + all.length + '.')
@@ -866,6 +874,7 @@
     draftDisarmers.forEach(function (d) { d(); });   // a stale question takes its listener with it
     draftDisarmers = [];
     dEmpty.hidden = draftsItems.length > 0;
+    if (libSection) libSection.classList.toggle('no-drafts', !draftsItems.length);   // nothing to search
     shown.forEach(function (it) { dList.appendChild(draftRow(it)); });
     if (q && !shown.length && draftsItems.length) {
       var none = document.createElement('p');

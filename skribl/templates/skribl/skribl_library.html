@@ -283,6 +283,9 @@
        (owner, from a mock). On a desk the field keeps its place at the row's
        end with the filter gone. */
     .drafts-mode .chips { display: none; }
+    /* Nothing on this tab, nothing to filter: library.js marks the section
+       .no-skribls / .no-drafts once each list has answered empty. */
+    .no-skribls:not(.drafts-mode) :is(.chips, .search), .drafts-mode.no-drafts .search { display: none; }
     @media (min-width: 641px) { .drafts-mode .search { margin-left: auto; } }
     .drafts-where { font-size: 13px; color: var(--text-3); margin: 0 0 12px; }
     .drafts-list { display: flex; flex-direction: column; gap: 8px; }

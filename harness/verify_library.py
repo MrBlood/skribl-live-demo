@@ -2512,7 +2512,12 @@ with sync_playwright() as _spl:
           _when["months"] == "3 months ago" and _when["year"] == "a year ago", str(_when))
     _ctx.close()
     # A DESK KEEPS ITS ONE ROW.
-    _pd = _bl.new_context(viewport={"width": 1280, "height": 900}).new_page()
+    _pdc = _bl.new_context(viewport={"width": 1280, "height": 900})
+    # One Skribl posted: an empty Library shows no filter at all (below).
+    _pdc.add_init_script("try { localStorage.setItem('skribl_posted_v1', JSON.stringify([{ id: %s, url: '/s/' + %s,"
+                         " title: 'Tall', kind: 'pad', pages: 1, visibility: 'unlisted', tok: null, at: Date.now() }])); } catch (e) {}"
+                         % (json.dumps(_tall["id"]), json.dumps(_tall["id"])))
+    _pd = _pdc.new_page()
     browsing.goto(_pd, BASE, "/library")
     _pd.wait_for_timeout(800)
     _w = _pd.evaluate(_RECTS)
@@ -2520,6 +2525,50 @@ with sync_playwright() as _spl:
           bool(_w["tabs"] and _w["chips"] and _w["search"])
           and max(_w["tabs"]["t"], _w["chips"]["t"], _w["search"]["t"])
           - min(_w["tabs"]["t"], _w["chips"]["t"], _w["search"]["t"]) <= 6, str(_w))
+
+    # NOTHING TO FILTER (owner: "If there's nothing there we don't need the
+    # filter sliders do we?"). A browser with nothing posted and no drafts:
+    # the search and the gallery/link row are not shown, the tabs and the
+    # recovery link are. A draft brings the search back on Drafts (where it
+    # narrows drafts by title); a post brings both back on Skribls. Asked on
+    # a phone and a desk.
+    for _vw, _vh, _mob in ((402, 874, True), (1280, 900, False)):
+        _ec = _bl.new_context(viewport={"width": _vw, "height": _vh}, is_mobile=_mob, has_touch=_mob)
+        _e = _ec.new_page()
+        browsing.goto(_e, BASE, "/library"); _e.wait_for_timeout(900)
+        _r0 = _e.evaluate(_RECTS)
+        _rk = _e.evaluate("() => { const a = document.getElementById('postedRecover'); return !!(a && a.offsetParent); }")
+        check(f"[{_vw}] nothing posted: no search and no gallery/link row; the tabs and 'Use a recovery key' stay",
+              _r0["tabs"] and not _r0["chips"] and not _r0["search"] and _rk, str(_r0))
+        _e.click("#tabDrafts"); _e.wait_for_timeout(600)
+        _r1 = _e.evaluate(_RECTS)
+        check(f"[{_vw}] ...and on Drafts, with no drafts, no search either", _r1["tabs"] and not _r1["search"], str(_r1))
+        # A draft, saved the way the editors save one.
+        browsing.goto(_e, BASE, "/skribl-pad")
+        _e.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.pad")
+        _e.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+        _cb = _e.locator("#canvas").bounding_box()
+        _e.mouse.move(_cb["x"] + 80, _cb["y"] + 120); _e.mouse.down()
+        for _k in range(12):
+            _e.mouse.move(_cb["x"] + 80 + _k * 6, _cb["y"] + 120 + math.sin(_k) * 20)
+        _e.mouse.up(); _e.wait_for_timeout(250)
+        _e.evaluate("() => { SkriblName.set('Cat'); SkriblSavedDrafts.forget(); return SkriblSavedDrafts.save(); }")
+        _e.wait_for_timeout(400)
+        browsing.goto(_e, BASE, "/library#drafts")
+        _e.wait_for_function("() => document.querySelectorAll('#draftsList .draft-row').length === 1", timeout=10000)
+        _r2 = _e.evaluate(_RECTS)
+        check(f"[{_vw}] a draft brings the search back on Drafts, still without the gallery/link row",
+              _r2["search"] and not _r2["chips"], str(_r2))
+        _e.click("#tabSkribls"); _e.wait_for_timeout(400)
+        _r3 = _e.evaluate(_RECTS)
+        check(f"[{_vw}] ...and Skribls, still with nothing posted, still shows neither",
+              not _r3["search"] and not _r3["chips"], str(_r3))
+        _e.evaluate("(id) => localStorage.setItem('skribl_posted_v1', JSON.stringify([{ id: id, url: '/s/' + id,"
+                    " title: 'Tall', kind: 'pad', pages: 1, visibility: 'unlisted', tok: null, at: Date.now() }]))", _tall["id"])
+        browsing.goto(_e, BASE, "/library"); _e.wait_for_timeout(900)
+        _r4 = _e.evaluate(_RECTS)
+        check(f"[{_vw}] ...and the first post brings both back", _r4["search"] and _r4["chips"], str(_r4))
+        _ec.close()
     _bl.close()
 
 passed = sum(1 for ok, _ in results if ok)
