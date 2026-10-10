@@ -711,7 +711,25 @@ with sync_playwright() as sp:
     #   the tap and the glyph went to editor_draw.js and lib/tappause.js, which
     #   the player never loads (1,041 B less than building them in app.js), and
     #   the music's paused state went with them. 135,796 measured.
-    BYTES_RATCHET, BYTES_TARGET = 135_800, 153_800
+    # RAISED (the owner's replay picks, "Skribl Pad first": ¼x to 16x and Fit,
+    #   "drawn in 47 min · watching at 8x", scrubbing that feels good at any
+    #   speed, the author's start, tap to pause on the link too), for named
+    #   costs, after spending: +7,932 B net --
+    #     lib/replayline.js 7,837: the line and its speeds (B), Fit and the
+    #       author's start (D1), the artist's clock, and the scrubber -- the
+    #       drawing's shape in the bar, fine scrub, a drag on the drawing (S3).
+    #       One module for the Pad's preview and this player, so the two
+    #       cannot offer different speeds or say them differently.
+    #     lib/tappause.js 1,428: the editors' own tap to pause, loaded here
+    #       rather than written a second time in app.js.
+    #   Spent first (-1,270 in app.js): the player's mouse-and-touch scrub
+    #   handlers and fracFromEvent, the Pad's pointer scrub handlers and the
+    #   More card's speed pill all went, replaced by the lib's one drag path
+    #   and the line. The editor-only halves (the Pad's line, its scrubber and
+    #   its remembered speed) live in editor_draw.js and the Post sheet's row
+    #   in editor_post.js, which the player never loads. 143,732 measured.
+    #   A RAISE ADMITTING CONTROLS THE SURFACE WAS MISSING: the target stays.
+    BYTES_RATCHET, BYTES_TARGET = 143_740, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -871,7 +889,13 @@ with sync_playwright() as sp:
     # +1,799 B -- the card made solid with a pointer at its button, dividers,
     # the speed row, and the Pad's .seg pill rules (its track, its options and
     # the fallback tint), which the player had never needed. 33,955 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 33_960, 119_844, 40_000
+    # RAISED (the owner's replay picks), for named costs: +3,279 B -- the line
+    #   under the track and its row of speeds (.replay-line, .rl-*), the
+    #   scrubber's bar, playhead and bubble (.rl-scrub, .rl-strip, .rl-head,
+    #   .rl-bubble), and the tap-to-pause mark (.tap-paused), which the player
+    #   shows now as the editors do. The More card's speed-row rules went
+    #   (-4 selectors). 37,239 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 37_250, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
@@ -1044,7 +1068,12 @@ with sync_playwright() as sp:
         except PWTimeout:
             return _fp.evaluate(_NIB_AT)
     _small = _nib_at(390, 844)
-    _big = _nib_at(1180, 900)
+    # 980 tall, not 900: the precondition below wants the drawing to grow by
+    # half again, and on a desk the drawing gets the height the chrome leaves.
+    # The replay picks added the line under the track and a taller scrubber,
+    # and at 900 the drawing grew 1.47x -- the law held (the bead 1.46x) and
+    # the precondition did not. The law is the assertion; the height is room.
+    _big = _nib_at(1180, 980)
     _fp.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
                  " if (b) b.click(); }")
     _fp.wait_for_timeout(200)
@@ -1349,20 +1378,25 @@ with sync_playwright() as sp:
         return { drawing: Math.round(cr.height), chrome: Math.round(sr.height),
                  copyInRow: inRow('playerCopyBtn'),
                  galleryInRow: inRow('playerGalleryLink'),
-                 rateInRow: inRow('playerRate'),
-                 rateInMenu: inMenu('playerRate'), galleryInMenu: inMenu('playerGalleryLink'),
+                 rateInRow: !!row.querySelector('.rl-speed'),
+                 rateInMenu: !!(menu && menu.querySelector('.rl-speed, .rl-chips')),
+                 rateInLine: !!document.querySelector('#playerLine .rl-speed'),
+                 galleryInMenu: inMenu('playerGalleryLink'),
                  shareInMenu: inMenu('playerShareBtn'), copyInMenu: inMenu('playerCopyBtn'),
                  menuShut: !!(menu && menu.hidden),
                  rowTops: new Set([...row.children].filter(e => e.getBoundingClientRect().width)
                    .map(e => { const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2); })).size,
                  leftoverLinks: document.querySelectorAll('.player-link').length }; }""")
-    # SHARE, COPY LINK, SPEED AND GALLERY ARE BEHIND MORE (the owner's pick of
-    # three mocked menus, "C1 everywhere"): the row is what you press while
-    # watching, and nothing else.
-    check("Share, Copy link, Speed and Gallery are behind More, shut at rest; none is in the row",
+    # SHARE, COPY LINK AND GALLERY ARE BEHIND MORE (the owner's pick of three
+    # mocked menus, "C1 everywhere"): the row is what you press while
+    # watching, and nothing else. SPEED LEFT THE CARD for the line under the
+    # track (the owner's replay pick B), where the speed is said.
+    check("Share, Copy link and Gallery are behind More, shut at rest; none is in the row",
           not _room.get("missing") and _room["shareInMenu"] and _room["copyInMenu"]
-          and _room["rateInMenu"] and _room["galleryInMenu"] and _room["menuShut"]
+          and _room["galleryInMenu"] and _room["menuShut"]
           and not (_room["copyInRow"] or _room["rateInRow"] or _room["galleryInRow"]), str(_room))
+    check("...and Speed is in the line under the track, not in the card",
+          not _room.get("missing") and _room["rateInLine"] and not _room["rateInMenu"], str(_room))
     check("...and at 390 the whole row is ONE line",
           not _room.get("missing") and _room["rowTops"] == 1,
           f"{_room.get('rowTops')} distinct row centres — seven controls that wrap "
@@ -1380,24 +1414,28 @@ with sync_playwright() as sp:
     # ---- THE VIEWER'S SPEED (v308) ----------------------------------------
     # Reported: "on players (across surfaces) should there be a speed control for
     # PAD? it sometimes draws too fast or slow and I'd like to control that".
-    # A PILL OF THREE, the Pad's own: one option lit, and pressing another
-    # moves the light. Read from aria-pressed AND the class, because the class
-    # is what paints and the attribute is what a screen reader hears.
-    _RATE_GET = """() => [...document.querySelectorAll('#playerRate button')]
-        .filter(b => b.classList.contains('on') && b.getAttribute('aria-pressed') === 'true')
-        .map(b => b.textContent.trim()).join(',')"""
+    # Since the owner's replay picks: THE SPEED IN THE LINE (lib/replayline.js),
+    # which opens one row of speeds and closes on a pick. The pressed chip and
+    # the button's own words must both follow the choice -- aria-pressed is
+    # what a screen reader hears, the button's label is what everyone reads.
+    _RATE_GET = """() => [...document.querySelectorAll('#playerLine .rl-chips button')]
+        .filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent.trim()).join(',')
+        + '|' + document.querySelector('#playerLine .rl-speed').textContent.trim()"""
     def _pick(rate):
-        pg.evaluate("(r) => document.querySelector('#playerRate button[data-rate=\"' + r + '\"]').click()",
+        pg.evaluate("""(r) => { document.querySelector('#playerLine .rl-speed').click();
+            document.querySelector('#playerLine .rl-chips button[data-r="' + r + '"]').click(); }""",
                     {"1×": "1", "2×": "2", "½×": "0.5"}[rate])
         pg.wait_for_timeout(100)
     _cycle = [pg.evaluate(_RATE_GET)]
     for r in ("2×", "½×", "1×"):
         _pick(r)
         _cycle.append(pg.evaluate(_RATE_GET))
-    check("the speed pill lights exactly the option chosen: 1x, then 2x, half, 1x",
-          _cycle == ["1×", "2×", "½×", "1×"],
+    check("the line's speed follows the choice, chip and words: 1x, then 2x, half, 1x",
+          _cycle == ["1×|1×", "2×|2×", "½×|½×", "1×|1×"],
           f"{_cycle} — a control whose light does not follow its own state "
           f"is a control nobody can read")
+    _shut = pg.evaluate("() => document.querySelector('#playerLine .rl-chips').hidden")
+    check("...and the speeds close again on a pick", _shut, str(_shut))
 
     # IT SCALES THE CLOCK, AND THAT IS MEASURED BY PLAYING. A label that
     # changes and a replay that does not is exactly the bug this is for, and
@@ -1475,13 +1513,6 @@ with sync_playwright() as sp:
     _bg = pg.evaluate("() => getComputedStyle(document.getElementById('playerMenu')).backgroundColor")
     check("...and the card is SOLID, so nothing behind it reads through",
           _bg.startswith("rgb(") , f"{_bg} — at 96% the title showed through it on an iPhone")
-    pg.click('#playerRate button[data-rate="2"]')
-    pg.wait_for_timeout(150)
-    _m2 = _menu()
-    _rate = pg.evaluate(_RATE_GET)
-    check("...Speed changes inside it and the card stays open to show the new rate",
-          _m2["open"] and _rate == "2\u00d7", f"{_m2} rate {_rate}")
-    pg.click('#playerRate button[data-rate="1"]')
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(150)
     _m3 = _menu()

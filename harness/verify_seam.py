@@ -289,7 +289,10 @@ if _marker in _appjs:
     _pscripts = _player_scripts()
     _never = {"editor_export.js", "editor_post.js", "editor_menu.js", "editor_music.js",
               "editor_photo.js", "editor_shapes.js", "editor_draw.js", "editor_tune.js",
-              "lib/sheetswipe.js", "lib/postsheet.js", "lib/tappause.js", "lib/canvasground.js"}
+              "lib/sheetswipe.js", "lib/postsheet.js", "lib/canvasground.js"}
+    # lib/tappause.js LEFT this list on purpose: since the owner's replay picks
+    # the shared player pauses on a tap too, through the same module rather than
+    # a second copy of it (verify_replayspeed drives it there).
     check("the player's own scripts are found at all (else the next check proves nothing)",
           "app.js" in _pscripts and "lib/eventpoint.js" in _pscripts, str(sorted(_pscripts)))
     check("the extracted editor bundles are not loaded by the player",

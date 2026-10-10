@@ -38,6 +38,20 @@
             <textarea id="postCaptionInput" class="post-input post-textarea" maxlength="{{ skribl_limits.caption }}" rows="3" placeholder="Say something about it…"></textarea>
             <span class="post-char-count" id="postCharCount">0 / {{ skribl_limits.caption }}</span>
           </label>
+          {# WHERE A VIEWER STARTS (the Pad only; the owner's pick D1, set to Auto).
+             Rides in the payload as `playSpeed`, read by lib/replayline.js
+             fromPost(); anyone watching can still change it from the line under
+             the drawing. The fourth button is the speed the Pad's preview last
+             watched at, when that is not 1x or Fit (editor_post.js), so a
+             picked speed is one tap. Shown in compose mode too: it is part of
+             the drawing, and the host's feed player honours it. #}
+          {% if speed_row %}
+          <div class="post-field post-speed">
+            <span class="post-field-label" id="postSpeedLabel">Viewers start at</span>
+            <span class="seg" id="postSpeedSeg" role="group" aria-labelledby="postSpeedLabel"><span class="seg-slider"></span><button type="button" data-speed="auto" class="on">Auto</button><button type="button" data-speed="drawn">As drawn</button><button type="button" data-speed="fit">Fit</button><button type="button" data-speed="" hidden></button></span>
+            <span class="post-speed-hint" id="postSpeedHint"></span>
+          </div>
+          {% endif %}
           {# THE PUBLIC CHOICE, OPT-IN (v304). A post is unlisted unless the
              author ticks this: reachable by its link, listed nowhere. Ticked,
              the payload carries visibility "public" and the post appears in

@@ -1443,7 +1443,7 @@ with sync_playwright() as p:
       const t = hex(cs.getPropertyValue('--text-muted')), p = hex(cs.getPropertyValue('--surface-panel'));
       if (!t || !p) return null;
       const a = rel(t), b = rel(p); return { muted: cs.getPropertyValue('--text-muted').trim(), ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) }; }"""
-    for _path, _name, _seg in (("/", "Pad", "#speedSeg"), ("/flip", "Flip", "#fps")):
+    for _path, _name, _seg in (("/", "Pad", "#pauseSeg"), ("/flip", "Flip", "#fps")):
         _pg = browser.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
         _pg.emulate_media(forced_colors="active")
         _pg.goto(BASE + _path, wait_until="load")

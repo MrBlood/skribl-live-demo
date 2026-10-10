@@ -36,7 +36,7 @@
     toast: showToast,
     submit: () => submit(),
     cancel: () => { if (sendSkribl._abort) sendSkribl._abort.abort(); },
-    onOpen: () => { pendingLocalId = null; },
+    onOpen: () => { pendingLocalId = null; renderSpeed(); },
     // Mirror the pad's shape so the snapshot shows whole (no crop), and match
     // the frame background to the canvas color so there are never odd bars.
     preview: () => {
@@ -44,6 +44,44 @@
       return src ? { src, bg: bgColor || '#0d0f14',
                      ratio: (canvas.width && canvas.height) ? (canvas.width / canvas.height) : 1.6 } : null;
     }
+  });
+
+  // ---- WHERE A VIEWER STARTS (the owner's pick D1) ----
+  // Writes app.js's authorSpeed, which serializeSkribl() posts as `playSpeed`
+  // and lib/replayline.js fromPost() turns into a start: Auto (as drawn under
+  // a minute of drawing, Fit over it), As drawn, Fit, or a rate. The fourth
+  // button is a rate the author already chose, or else the speed the Pad's
+  // preview last watched at when that is neither 1x nor Fit -- "the speed you
+  // last watched it at", which is what a picked speed usually is.
+  const speedSeg = document.getElementById('postSpeedSeg');
+  const speedHint = document.getElementById('postSpeedHint');
+  const SPEED_HINTS = {
+    auto: 'As drawn if it took under a minute, fit to about 30 seconds if longer.',
+    drawn: 'In real time, with your pause setting.',
+    fit: 'The whole drawing in about 30 seconds.',
+  };
+  function renderSpeed() {
+    if (!speedSeg) return;
+    const cur = authorSpeed || 'auto';
+    const rate = typeof cur === 'number' ? cur
+      : (typeof replayChoice === 'number' && replayChoice !== 1 ? replayChoice : null);
+    const fourth = speedSeg.querySelector('[data-speed=""], [data-rate-pick]');
+    fourth.hidden = rate == null;
+    if (rate != null) {
+      fourth.dataset.speed = String(rate);
+      fourth.setAttribute('data-rate-pick', '');
+      fourth.textContent = SkriblReplayLine.label(rate);
+    }
+    speedSeg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.speed === String(cur)));
+    speedHint.textContent = (SPEED_HINTS[cur] || 'At ' + SkriblReplayLine.label(rate) +
+      ', the speed you watched it at.') + ' Anyone watching can change it.';
+  }
+  if (speedSeg) speedSeg.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || b.hidden) return;
+    const v = b.dataset.speed;
+    authorSpeed = +v ? +v : v;
+    renderSpeed();
   });
 
   // ---- THE NETWORK SEAM ----
