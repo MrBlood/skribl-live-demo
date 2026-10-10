@@ -3864,6 +3864,11 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   #postSheet .export-sub { padding: 0 16px 12px; }
   #postSheet .post-body { padding: 4px 16px 12px; }
   #postSheet .post-preview { max-height: 300px; }
+  /* The Pad's sheet carries "Viewers start at" (about 96px), and the preview
+     gives that height back on a short desk window, so the sheet still fits a
+     1280x800 screen without scrolling (verify_sheetfit). 552 is everything
+     else in the sheet; 160 is as small as a preview stays readable. */
+  #postSheet:has(.post-speed) .post-preview { max-height: max(160px, min(300px, calc(100dvh - 552px))); }
   #postSheet .post-submit { padding: 14px; font-size: 15px; margin: 4px 12px 8px; }
 }
 

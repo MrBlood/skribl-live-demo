@@ -186,6 +186,7 @@
     "#postSheet .post-body",
     "#postSheet .post-preview",
     "#postSheet .post-submit",
+    "#postSheet:has(.post-speed) .post-preview",
     "#previewLoopBtn",
     "#reportOverlay",
     "#reportSheet",
