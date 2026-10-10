@@ -15573,4 +15573,7 @@ player loads replayline.js on a byte budget (a compact mode in the library ran
 areas follow the rules too"); verify_replayspeed measures the tap boxes, and
 caught the row's button at 41px before it shipped. Flip: its speed is pages per
 second, already in its Playback settings, so it gets no row; its replay line
-comes with F1.
+comes with F1. The speeds' own chips also stopped squeezing: an even split
+gave each 28px and "16×" ran 5px out of its pill at every width (the centring
+census); each now shrinks only to its label, and eight still fit a 320px phone.
+verify_replayspeed checks it at 320, 402 and 1100, red on the old rule.
