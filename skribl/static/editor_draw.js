@@ -725,10 +725,26 @@ if (padLine && playScrub && window.SkriblReplayLine) {
      below it. Its speeds open upward at both (styles.css #padLine) and close
      again on a pick. Observed rather than called, so app.js (the
      player's budget) carries none of this. */
+  /* AND IT STAYS AFTER THE REPLAY (owner's iPhone: "The speed only stays up
+     for the length of the play time. You can't adjust it if you accidentally
+     put it on 16x or if it's a short drawing"). The scrubber goes when the
+     replay ends; the line does not, so its speed can be changed for the next
+     Play. It goes when the drawing changes: a stroke starts, or the canvas is
+     cleared. */
+  let rest = false, wasShown = false;
   const place = () => {
-    const hide = playScrub.hidden;
+    const shown = !playScrub.hidden;
+    // A replay just ended. Where the line has a place of its own -- a phone,
+    // between the drawing and the tools -- it stays. A desk has no such gap
+    // (the tools sit 12-20px under the drawing), so there it goes with the
+    // scrubber until its own place is chosen.
+    if (wasShown && !shown && playScrub.classList.contains('in-bar')) rest = true;
+    if (shown) rest = false;
+    wasShown = shown;
+    const hide = !shown && !rest;
     if (padLine.hidden !== hide) { padLine.hidden = hide; if (!hide) line.update(); else line.close(); }
     if (hide) return;
+    if (!shown) return;   // at rest it keeps the place the replay left it in
     const up = playScrub.classList.contains('in-bar');
     padLine.style.left = playScrub.style.left;
     padLine.style.width = playScrub.style.width;
@@ -737,6 +753,13 @@ if (padLine && playScrub && window.SkriblReplayLine) {
     else { padLine.style.bottom = ''; padLine.style.top = (top + playScrub.offsetHeight + 10) + 'px'; }
   };
   new MutationObserver(place).observe(playScrub, { attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
+  const away = () => { if (!rest) return; rest = false; place(); };
+  canvas.addEventListener('pointerdown', () => { if (!playing) away(); });
+  const clr = document.getElementById('clearMenuItem');
+  if (clr) clr.addEventListener('click', away);
+  // Undo and redo change how long it took to draw; the line says so.
+  ['undoBtn', 'redoBtn'].forEach(id => { const b = document.getElementById(id);
+    if (b) b.addEventListener('click', () => { if (rest) setTimeout(() => line.update(), 0); }); });
 }
 
 // THE SCRUBBER (lib/replayline.js scrub(), the owner's pick S3): the
