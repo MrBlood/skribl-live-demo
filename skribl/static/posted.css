@@ -437,4 +437,4 @@
 
 /* Its face is the app's drawn close mark (_skribl_marks.html), centred by
    the box above rather than by a typed character's line (the centring round). */
-.posted-del .mk { display: block; flex: none; }
+.posted-del .mk, .posted-undo-x .mk { display: block; flex: none; }

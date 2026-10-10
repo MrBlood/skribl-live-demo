@@ -10143,7 +10143,7 @@ function syncStampPop(){
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'stamp-del';
-    del.textContent = '×';
+    if (window.SkriblMarks) SkriblMarks.into(del, 'close', '\u00d7'); else del.textContent = '\u00d7';
     del.title = 'Delete this stamp';
     del.setAttribute('aria-label', 'Delete stamp ' + (i + 1));
     del.addEventListener('click', (e) => { e.stopPropagation(); stampDelete(i); });
