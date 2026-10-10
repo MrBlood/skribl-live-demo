@@ -15304,7 +15304,7 @@ downloads nothing and says "The video came out empty, so nothing was saved. Try
 again." Flip ticks one unit and pushes one frame per beat, from unit 0 once the
 recorder runs, and stops one beat after the last so it keeps its time. If music is
 on and the browser cannot add it, the chip says the video was made without it. The
-Pad keeps its own music graph, which already worked, and takes the shared finish.
+Pad's own music graph went too (see "One exporter" below).
 The audit's SK-AUD-002 note that a LAST page can go missing (PF-031) was not
 reproduced, by the audit or here; the new stop holds one beat after the last push.
 
@@ -15338,6 +15338,28 @@ once about 64 KB of request lines had been written the server blocked mid-write
 and every later page stalled on its scripts. The suite had sat just under that
 limit. The log goes to a file now. `harness/package.py` pipes its server the same
 way but makes a handful of requests, far from the limit, and was left alone.
+
+**One exporter, after the owner's review of the plan.** The first pass shared
+the recorder and the finish but left the Pad its own music graph; the owner
+asked for the audit's top recommendation instead -- one video exporter, since
+two copies are how this drifted -- and pointed out what makes SK-AUD-001 bite in
+real life: Flip's MP4 carries the music, and exportViaWebCodecsMp4 declines
+when the browser cannot encode AAC ("let WebM keep the audio"), so turning the
+music ON was what sent the export down the silent path. `lib/videorecord.js`
+recordVideo() is now the whole MediaRecorder exporter for both editors: each
+says how many frames, how to paint frame k, and which loop plays under them
+(the Pad: its replay timeline at k/30 s, then the finished drawing held 0.7 s;
+Flip: its export units, times the loops). The Pad's two music paths share one
+loop builder too, so the MP4 and the WebM cannot carry different music. One
+honest loss: the Pad's last resort of looping the raw <audio> file when the
+crossfaded loop could not be built is gone; in that rare case it says the video
+was made without its music, as Flip does. verify_videoexport drives the owner's
+route on both editors -- the Video button, music on, the MP4 path told it can
+encode video and not AAC -- and checks the WebM that comes out has an audio
+track; with each editor's music argument removed it went red, and with frame 0
+painted at the start AND on the first tick (the original timing) it read 4
+frames for 3 pages. Its "no page errors" check also caught the music bed being
+closed twice (a rejected close()); the stop is idempotent now.
 
 **SK-AUD-012, CI.** Every third-party action is pinned to the commit its version
 tag pointed at when this was written (what CI already ran), with the release named

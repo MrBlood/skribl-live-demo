@@ -124,6 +124,12 @@ FAKE = """(mode) => { window.__RealMR = window.__RealMR || window.MediaRecorder;
       if (this.onstop) this.onstop(); }, 30); } }
   window.MediaRecorder = Fake; }"""
 REAL = "() => { if (window.__RealMR) window.MediaRecorder = window.__RealMR; }"
+# The MP4 path, told it can encode video and cannot encode AAC.
+NO_AAC = """() => { const M = window.SkriblMp4; window.__realMp4 = window.__realMp4 || { prepare: M.prepare, aac: M.aacSupported };
+  window.__aacAsked = false;
+  M.prepare = async (w, h) => ({ w: w, h: h, codec: 'avc1.42001f' });
+  M.aacSupported = async () => { window.__aacAsked = true; return false; }; }"""
+REAL_MP4 = """() => { const M = window.SkriblMp4, r = window.__realMp4; if (r) { M.prepare = r.prepare; M.aacSupported = r.aac; } }"""
 
 
 def flip_page(b):
@@ -180,6 +186,24 @@ with sync_playwright() as p:
           str(minfo["blocks"]))
     check("...and the chip says simply that it was exported", withm_chip == "Animation exported", withm_chip)
 
+    # THE ROUTE THE AUDIT'S FINDING TAKES IN REAL LIFE (the owner's note on
+    # SK-AUD-001): music on is what sends Flip to the WebM, because the MP4
+    # declines when the browser cannot encode AAC rather than ship a silent
+    # MP4. Driven through exportVideo() -- the Video button's own route -- with
+    # the MP4 path told it CAN encode video and CANNOT encode AAC, so the
+    # decline happens at that exact line and nowhere earlier.
+    pg.evaluate(NO_AAC)
+    with pg.expect_download(timeout=20000) as dl:
+        pg.evaluate("() => exportVideo()")
+    route = webm(open(dl.value.path(), "rb").read())
+    asked = pg.evaluate("() => window.__aacAsked")
+    check("music on and no AAC: the Video button's own route asks about AAC, declines the MP4, "
+          "and the WebM it falls back to carries the music",
+          asked and kinds(route) == ["audio", "video"] and dl.value.suggested_filename.endswith(".webm"),
+          f"AAC asked {asked}, tracks {route['tracks']}, file {dl.value.suggested_filename}")
+    pg.evaluate(REAL_MP4)
+    pg.wait_for_timeout(600)
+
     print("\nFLIP -- an empty or broken recording is not a success")
     for mode, why in (("empty", "records nothing"), ("error", "raises an error"), ("garbage", "returns bytes that are not a video")):
         pg.evaluate(FAKE, mode)
@@ -216,8 +240,21 @@ with sync_playwright() as p:
     with pg.expect_download(timeout=30000) as dl:
         pg.evaluate(pad_export_trigger())
     good = webm(open(dl.value.path(), "rb").read())
-    check("the Pad's video still exports, with its frames", "video" in kinds(good) and video_frames(good) > 3,
-          f"{good['tracks']} {good['blocks']}")
+    check("the Pad's video still exports, with its frames, and no music track when it has no music",
+          kinds(good) == ["video"] and video_frames(good) > 3, f"{good['tracks']} {good['blocks']}")
+    pg.wait_for_timeout(1200)
+    # The same route as Flip's: a song on, the MP4 told there is no AAC.
+    pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
+    pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=15000)
+    pg.evaluate("() => { const o = document.getElementById('exportOverlay'); if (o && !o.hidden) document.getElementById('exportCancel').click(); }")
+    pg.wait_for_timeout(400)
+    pg.evaluate(NO_AAC)
+    with pg.expect_download(timeout=30000) as dl:
+        pg.evaluate(pad_export_trigger())
+    padm = webm(open(dl.value.path(), "rb").read())
+    check("the Pad, music on and no AAC: the WebM carries the music (the same exporter as Flip's)",
+          pg.evaluate("() => window.__aacAsked") and kinds(padm) == ["audio", "video"], f"{padm['tracks']} {padm['blocks']}")
+    pg.evaluate(REAL_MP4)
     pg.wait_for_timeout(1200)
     for mode, why in (("empty", "records nothing"), ("garbage", "returns bytes that are not a video")):
         pg.evaluate(FAKE, mode)

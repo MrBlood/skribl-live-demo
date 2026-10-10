@@ -5725,10 +5725,15 @@ function exportPNG(){
 let exporting=false;
 /* THE WEBM FALLBACK (MediaRecorder), where WebCodecs cannot make an MP4. The
    v321 outside audit found three faults here (SK-AUD-001/002/003), and the
-   recording itself is now lib/videorecord.js's, shared with the Pad:
+   recording itself is now lib/videorecord.js's recordVideo(), the one exporter
+   the Pad uses too; this says only how many frames, how to paint one, and
+   which loop plays under them:
    * THE MUSIC. This recorded the canvas alone, under a sheet that says "with
-     music"; the loop the MP4 and the post use now joins the stream when music
-     is on, and if it cannot, the chip says the video was made without it.
+     music" -- and exportVideo() comes here exactly when the music is on and
+     the browser cannot encode AAC for the MP4 (exportViaWebCodecsMp4 declines
+     rather than ship a silent MP4), so turning the music on was what lost it.
+     The loop the MP4 and the post use now joins the stream, and if it cannot,
+     the chip says the video was made without it.
    * ONE FRAME PER TICK. The first page was painted before recording started
      and again on the first tick, so it played twice. Now each tick paints one
      unit and pushes exactly one frame (manual capture), starting at unit 0
@@ -5747,33 +5752,21 @@ function exportWebM(){
   // drawFrameTo paints in CW/CH coordinates, so scale the context once rather
   // than touching every draw call.
   c.setTransform(_d.w/CW, 0, 0, _d.h/CH, 0, 0);
-  const cap=R.capture(cv, fps);
   // The same loop the MP4 path tiles under the clip, when music is on.
   const wantMusic = !!musicData && musicEnabled && !musicMuted && !!currentAudioBuffer;
   let loopBuf=null; if(wantMusic){ try{ loopBuf=buildLoopAudioBuffer(); }catch(_){ loopBuf=null; } }
-  const music=R.music(loopBuf, cap.stream);
-  const types=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
-  const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
-  const end=()=>{ exporting=false; if(music) music.stop(); };
-  const rec=R.record(cap.stream, mime, {
-    cancelled:()=>_exportAbort,
-    cancel:()=>{ end(); exportHide(); chip('Export cancelled'); },
-    fail:(why)=>{ end(); exportHide(); chip(why==='start' ? 'Video export failed' : 'The video came out empty, so nothing was saved. Try again.'); },
-    done:(blob)=>{ end(); download(blob, window.SkriblName ? window.SkriblName.exportName('webm') : 'skribl-animation.webm'); exportSet(1,'Done!'); setTimeout(exportHide,500);
-      chip(wantMusic && !music ? 'Animation exported, without its music: this browser could not add it' : 'Animation exported'); },
-  });
-  if(!rec){ return; }
   // Tick in base-fps units, not pages, so a held page simply occupies more ticks.
   const _units=exportUnits(_r.from-1, _r.to-1);
-  const loops=exLoops, total=_units.length*loops; let n=0;   // from the export sheet; see exLoops
-  const stop=()=>{ try{ rec.stop(); }catch(_){ end(); exportHide(); } };
-  const tick=()=>{ const _u=_units[n%_units.length]; drawFrameTo(c, frames[_u.i], _u.prog); cap.push(); n++; exportSet(n/total); };
-  if(!cap.manual) drawFrameTo(c, frames[_units[0].i], _units[0].prog);   // auto capture samples whatever is there from the start
-  rec.start(); if(music) music.start();
-  tick();
-  const iv=setInterval(()=>{ if(_exportAbort){ clearInterval(iv); stop(); return; }
-    if(n>=total){ clearInterval(iv); stop(); return; }   // one tick after the last frame: it keeps its time
-    tick(); }, 1000/fps);
+  const total=_units.length*exLoops;   // from the export sheet; see exLoops
+  R.recordVideo({ canvas:cv, fps, frames:total, music:loopBuf,
+    draw:(k)=>{ const _u=_units[k%_units.length]; drawFrameTo(c, frames[_u.i], _u.prog); },
+    progress:(f)=>exportSet(f),
+    cancelled:()=>_exportAbort,
+    cancel:()=>{ exporting=false; exportHide(); chip('Export cancelled'); },
+    fail:(why)=>{ exporting=false; exportHide(); chip(why==='start' ? 'Video export failed' : 'The video came out empty, so nothing was saved. Try again.'); },
+    done:(blob, ext, info)=>{ exporting=false; download(blob, window.SkriblName ? window.SkriblName.exportName(ext) : 'skribl-animation.'+ext); exportSet(1,'Done!'); setTimeout(exportHide,500);
+      chip(wantMusic && (!loopBuf || info.withoutMusic) ? 'Animation exported, without its music: this browser could not add it' : 'Animation exported'); },
+  });
 }
 async function exportGIF(){
   try{ await skriblLoadVendor('gifenc'); }

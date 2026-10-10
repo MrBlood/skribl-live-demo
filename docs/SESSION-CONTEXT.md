@@ -247,6 +247,15 @@ satisfied it, with the mechanics the rule leaves out.
    publishes the zips with their SHA256SUMS as the version's Release. Skip it
    and `gh attestation verify` has nothing to find. It refuses a version that
    already has a release.
+9. **For an outside audit, add the Python packages** so the auditor can run
+   the app with no package network: `python3 harness/tools/wheelhouse.py OUT`
+   fetches every wheel `constraints.txt` pins (hash-checked) plus the harness's
+   Flask-WTF and Pillow, proves an offline install in a fresh virtual
+   environment, and writes `skribl-wheels-cp312-linux-x86_64.zip` with its
+   README-OFFLINE.txt and SHA256SUMS. Put it in the audit packet beside the
+   release zips and name it in README-FIRST. The v321 auditor could not install
+   Flask, never opened a page, and scored most of the product "not tested" for
+   that reason alone.
 
 Getting step 5 wrong costs either a re-run or a sealed record that contradicts
 evidence already in hand; the second is an evidence gap, so it is a re-run.
