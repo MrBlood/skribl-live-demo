@@ -3096,7 +3096,7 @@ with sync_playwright() as _gp:
             browsing.wait_scroll_still(_g); _g.wait_for_timeout(300)
             _e = _g.evaluate(_GROUND, _dock)
             _past = _g.evaluate("""(cv) => document.querySelector(cv).getBoundingClientRect().bottom
-                <= document.querySelector('.header').getBoundingClientRect().top""", _canvas)
+                <= document.querySelector('.header').getBoundingClientRect().top + 1""", _canvas)
             check(f"{_route} {_theme}: scrolled to the end of Music, the drawing has gone above the header",
                   _past, str(_e))
             check(f"{_route} {_theme}: ...and the header keeps its ground over the dock and the drawer",
@@ -3106,6 +3106,27 @@ with sync_playwright() as _gp:
             check(f"{_route} {_theme}: ...and closing it takes the ground away again",
                   _c["scrolled"] == 0 and not _c["over"] and _c["hFill"] == 0, str(_c))
             _gc.close()
+    # FLIP'S PLAYBACK SETTINGS open ABOVE the drawing (owner's iPhone, after
+    # v321): scrolled a little, the panel slides under the header while the
+    # drawing is still below it, so a ground keyed to the drawing never came.
+    # A short phone, so the page can scroll; both preconditions are asserted
+    # so the check cannot pass on a page that did not get there.
+    for _theme in ("dark", "light"):
+        _fc = _gb.new_context(viewport={"width": 390, "height": 664}, is_mobile=True, has_touch=True, color_scheme=_theme)
+        _fc.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_theme}')}}catch(e){{}}")
+        _f = _fc.new_page()
+        browsing.goto(_f, BASE, "/flip"); _f.wait_for_timeout(900)
+        _f.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _f.click("#tuneBtn"); _f.wait_for_timeout(500)
+        _f.evaluate("() => window.scrollTo(0, 80)"); browsing.wait_scroll_still(_f); _f.wait_for_timeout(300)
+        _s = _f.evaluate(_GROUND, ".flip-tools")
+        _below = _f.evaluate("""() => document.getElementById('pad').getBoundingClientRect().top
+            > document.querySelector('.header').getBoundingClientRect().bottom""")
+        check(f"/flip {_theme}: Playback settings open and scrolled, with the drawing still below the header",
+              _s["scrolled"] > 0 and _below, str(_s))
+        check(f"/flip {_theme}: ...and the header has its ground over the panel",
+              _s["over"] and _s["hFill"] == 1 and _s["tuneOnHeader"], str(_s))
+        _fc.close()
     _g = _gb.new_page(viewport={"width": 1366, "height": 900})
     browsing.goto(_g, BASE, "/skribl-pad"); _g.wait_for_timeout(800)
     _d = _g.evaluate(_GROUND, ".toolbar")
