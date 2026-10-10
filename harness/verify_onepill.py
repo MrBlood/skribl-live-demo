@@ -329,6 +329,11 @@ with sync_playwright() as p:
             q.evaluate("() => { document.getElementById('menuBtn').click(); }"); settle(q)
             q.click("#exportItem"); settle(q, 900)
             yield "export"
+            # The Post sheet's "Viewers start at" (the owner's replay pick D1).
+            q.keyboard.press("Escape"); settle(q, 500)
+            q.evaluate("() => { if (recording) endRecordingTake(); document.getElementById('postBtn').click(); }")
+            settle(q, 900)
+            yield "post sheet"
 
     def page_states(q, name):
         yield "page"
@@ -359,7 +364,7 @@ with sync_playwright() as p:
                     c.close()
         must = {("/skribl-pad", k) for k in ("toolGroup", "paintTargetSeg", "smoothSeg", "brushSeg", "pressureSeg",
                                               "eraserSeg", "shapeSeg", "gridDensitySeg", "mirrorSeg", "pauseSeg",
-                                              "speedSeg", "photoFitGroup", "themeSeg", "hintSeg", "canvasSeg",
+                                              "postSpeedSeg", "photoFitGroup", "themeSeg", "hintSeg", "canvasSeg",
                                               "mediaTabs")}
         must |= {("/flip", k) for k in ("toolGroup", "paintTargetSeg", "smoothSeg", "brushSeg", "pressureSeg",
                                          "eraserSeg", "shapeSeg", "fps", "gridDensitySeg", "mirrorSeg",

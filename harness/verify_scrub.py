@@ -161,10 +161,19 @@ with sync_playwright() as b_ctx:
                   abs(m["gapBelow"]) <= 1,
                   f"gap={round(m['gapBelow'], 2)}px")
 
-        check(f"[{label}] it renders as a pill, not a rectangle",
-              m["radius"] >= m["h"] / 2 and m["overflow"] == "hidden",
-              f"radius={m['radius']}, height={m['h']} — the radius must reach "
-              "half the height or the ends read square")
+        # THE DRAWING'S SHAPE IN THE BAR (the owner's replay pick S3): a
+        # rounded bar 30px tall that the strip fills edge to edge, painted --
+        # not a 5px hairline. Painted is read off the strip's own pixels: a
+        # canvas sized right and left blank is the failure this is for.
+        strip = pg.evaluate("""() => { const s = document.getElementById('playScrub'), c = s.querySelector('canvas.rl-strip');
+            if (!c) return null; const r = c.getBoundingClientRect(), b = s.getBoundingClientRect();
+            const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let ink = 0;
+            for (let i = 3; i < d.length; i += 4) if (d[i] > 0) ink++;
+            return { w: r.width, bw: b.width, ink }; }""")
+        check(f"[{label}] it is a rounded bar of the drawing's shape: 30px tall, the strip filling it, and painted",
+              abs(m["h"] - 30) <= 0.5 and m["radius"] >= 6 and strip is not None
+              and abs(strip["w"] - strip["bw"]) <= 1 and strip["ink"] > 100,
+              f"height={m['h']}, radius={m['radius']}, strip={strip}")
 
         check(f"[{label}] no page errors during replay", not errs, str(errs[:3]))
         pg.close()

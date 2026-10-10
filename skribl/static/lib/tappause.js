@@ -1,5 +1,6 @@
-/* Tap to pause: a tap on an editor's canvas while its preview plays pauses it
- * where it is, and another tap carries on from there. The owner: "tapping the
+/* Tap to pause: a tap on a drawing while it plays -- an editor's preview, or the
+ * shared player -- pauses it where it is, and another tap carries on from there.
+ * The shared player joined at the owner's replay picks. The owner: "tapping the
  * screen while a flip/pad playing on creation canvas will pause. With ability
  * to resume with a tap.. but show icons right". Shared by the Pad (app.js) and
  * Flip (flip.js). Each editor owns its own clock, so this owns only what the
