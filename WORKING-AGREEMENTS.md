@@ -121,8 +121,10 @@ because only one of them makes a `.skribl` file. Label buttons by what they make
 
 **Blooby is the face of the brand, and he is hand-drawn.** "You talked a lot
 about not losing the sloppiness of him, then you made him perfect and changed the
-vibe completely." Keep his drawn line. He looks best on paper or light
-backgrounds; on dark backgrounds the big bubble sticker is the chosen form. The
+vibe completely." Keep his drawn line. He looks best on paper, light backgrounds
+or the icon's lilac. Where the app shows him on a page, he is the Home Screen
+icon in small with the whole star, which brings its own lilac and works in both
+themes; the white-edged sticker "doesn't cut it and looks bad in both themes". The
 Blooby card is a Flip: it draws the card (with Blooby on the first page too),
 then loops him waving. That is where "a page that stays underneath plus a loop"
 came from (FUTURE.md 6i). Several loops in one Flip (6k) and Skribl as a reply
