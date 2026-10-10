@@ -255,6 +255,16 @@ check("WITH the opt-in, all-public media is shared-cacheable",
       "public" in cc and "immutable" not in cc,
       f"{cc} — `immutable` here would mean a revoked object cannot even be "
       "shaken loose by a reload")
+# THE PAGE SAYS SO (owner's pick; SK-AUD-011): under the opt-in, the Library
+# and the Gallery carry data-skribl-shared-cache, and lib/postedui.js's delete
+# confirmation adds that cached copies can take up to 5 minutes to go
+# (verify_galib drives the words). Off by default: no attribute at all.
+for _pth in ("/library", "/gallery"):
+    _on = opted.test_client().get(_pth).get_data(as_text=True)
+    _off = build_app(None).test_client().get(_pth).get_data(as_text=True)
+    check(f"{_pth}: the opt-in marks the page for the delete confirmation's cache line, and only the opt-in",
+          'data-skribl-shared-cache="1"' in _on and "data-skribl-shared-cache" not in _off,
+          f"on: {'data-skribl-shared-cache' in _on}, off: {'data-skribl-shared-cache' in _off}")
 r = opted.test_client().get(private_media)
 check("...but the opt-in never publicises a blob a private post references",
       r.status_code == 404, str(r.status_code))

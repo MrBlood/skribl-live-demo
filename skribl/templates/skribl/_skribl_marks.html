@@ -1,0 +1,24 @@
+{# THE APP'S MARKS: the small symbols a control shows on its own -- plus, minus,
+   close, check, arrow -- drawn, never typed. A typed "+" or "✕" sits where its
+   FONT puts it, and the centring suite measured them 1.3-1.8px high, in every
+   installed font (owner, the centring round: "typed symbols -> SVG in app icon
+   set"). These are centred in their own 24-unit box, stroked in currentColor
+   at the app's 2px, and 1em square, so they take the size and colour of the
+   text they replace. A control keeps its aria-label; the mark is aria-hidden.
+
+   mark(name)        an inline <svg>, for a template
+   mark_templates()  one <template id="skriblMark-NAME"> each, so a script can
+                     clone the same mark (lib/marks.js) -- one source for both #}
+{% set _MARKS = {
+  'plus':  'M12 5v14M5 12h14',
+  'minus': 'M5 12h14',
+  'close': 'M6 6l12 12M18 6L6 18',
+  'check': 'M5 12.5l4.5 4.5L19 7',
+  'arrow': 'M5 12h14M13 6l6 6-6 6',
+} %}
+{% macro mark(name) -%}
+<svg class="mk mk-{{ name }}" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="{{ _MARKS[name] }}"/></svg>
+{%- endmacro %}
+{% macro mark_templates() -%}
+{% for n in _MARKS %}<template id="skriblMark-{{ n }}">{{ mark(n) }}</template>{% endfor %}
+{%- endmacro %}

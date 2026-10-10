@@ -1162,7 +1162,6 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .post-watch { animation: none; }
 }
-
 /* Mobile: bottom sheet */
 @media (max-width: 640px) {
   .menu-item { padding: 15px 14px; }}
