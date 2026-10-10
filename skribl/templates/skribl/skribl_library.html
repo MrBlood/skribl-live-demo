@@ -563,7 +563,7 @@
 {# WHOSE PROFILE. data-skribl-me is the host's signed-in user when there is
    one (create_blueprint(current_user_id=...)); empty, and library.js reads
    the list this browser kept instead (lib/posted.js). See the route. #}
-<body data-skribl-api="{{ url_for('.list_skribls') }}"
+<body data-skribl-api="{{ url_for('.list_skribls') }}"{% if skribl_shared_cache %} data-skribl-shared-cache="1"{% endif %}
       data-skribl-player="{{ skribl_player_base }}"
       data-skribl-me="{{ library_user_id if library_user_id is not none else '' }}"
       data-skribl-pad="{{ url_for('.skribl_editor') }}">
