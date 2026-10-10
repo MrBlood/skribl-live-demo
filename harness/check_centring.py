@@ -141,11 +141,30 @@ SCAN = r"""(extra) => {
       text += t.nodeValue;
     }
     text = text.replace(/\s+/g, ' ').trim();
+    // A WORD LABEL is measured by its first capital (a lowercase start has no
+    // cap band to read), and only when the words sit on one line: a menu row's
+    // title over its note is a block of text, aligned by the row.
+    let cap = null, lines = 0;
+    { const w2 = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); const tops = new Set();
+      for (let t; (t = w2.nextNode());) {
+        const p = t.parentElement; if (!p || p.closest('[hidden]') || getComputedStyle(p).display === 'none') continue;
+        const rg = document.createRange(); rg.selectNodeContents(t);
+        for (const q of rg.getClientRects()) if (q.width > 1 && q.height > 1) tops.add(Math.round(q.top / 4));
+        if (!cap) { const i = t.nodeValue.search(/\S/);
+          if (i >= 0 && /[A-Z]/.test(t.nodeValue[i])) { const r1 = document.createRange(); r1.setStart(t, i); r1.setEnd(t, i + 1);
+            const q = r1.getBoundingClientRect(); if (q.width > 1) cap = [q.left, q.width]; } } }
+      lines = tops.size; }
+    // An icon ABOVE the words (a tool tile) is a stack, not a one-line label.
+    let stack = false;
+    { const ic = [...el.querySelectorAll('svg, img')].map(e => e.getBoundingClientRect()).find(b => b.width > 2 && b.height > 2);
+      const rg = document.createRange(); rg.selectNodeContents(el); const tb = [...rg.getClientRects()].filter(q => q.width > 1 && q.height > 1);
+      if (ic && tb.length) { const top = Math.min(...tb.map(q => q.top)), bot = Math.max(...tb.map(q => q.bottom));
+        stack = ic.bottom <= top + 1 || ic.top >= bot - 1; } }
     const svg = [...el.querySelectorAll('svg, img, canvas')].some(s => { const b = s.getBoundingClientRect(); return b.width > 2 && b.height > 2 && getComputedStyle(s).visibility !== 'hidden'; });
     // A symbol that IS the face (+, −, ✕, →), not one inside a label ("16×",
     // "Loop ×2"): a label is text, set by its row like any word.
     const typed = text.replace(/[\p{S}\p{Pd}\s]/gu, '') ? '' : (text.match(/[\p{S}\p{Pd}]/gu) || []).join('');
-    out.push({ id: el.dataset.ctr, keys, text, svg, typed, name: el.getAttribute('aria-label') || text.slice(0, 40),
+    out.push({ id: el.dataset.ctr, keys, text, svg, typed, cap, lines, stack, name: el.getAttribute('aria-label') || text.slice(0, 40),
                rect: [r.left, r.top, r.width, r.height], whole, extra: el.matches(extra), tag: el.tagName.toLowerCase() });
   }
   window.__ctrN = n;
@@ -211,6 +230,54 @@ def measure(pg, ctr, rect, keep=False):
             dr.line([(0, py), (im.size[0], py)], fill=col, width=1)
         crop = im
     return round(dx, 2), round(dy, 2), painted, crop
+
+
+def measure_words(pg, ctr, cap, keep=False):
+    """dy of a word label's first capital from the painted shape's middle, in CSS px, or None.
+    The capital's own ink -- top of the letter to the baseline -- is what the
+    eye centres in a pill; a label's whole ink box would let a descender (the y
+    of "your") pull the reading down."""
+    pad = 3
+    sel = f'[data-ctr="{ctr}"]'
+    fresh = pg.evaluate("(s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect();"
+                        " return [r.left, r.top, r.width, r.height]; }", sel)
+    if not fresh or fresh[2] < 4 or fresh[3] < 4:
+        return None
+    x, y, w, h = fresh
+    # The capital where it is NOW, in the face this pass forced.
+    cap = pg.evaluate("""(s) => { const e = document.querySelector(s), w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+        for (let t; (t = w.nextNode());) { const i = t.nodeValue.search(/\\S/); if (i < 0) continue;
+          const r = document.createRange(); r.setStart(t, i); r.setEnd(t, i + 1); const q = r.getBoundingClientRect();
+          if (q.width > 1) return [q.left, q.width]; } return null; }""", sel) or cap
+    clip = {"x": max(0, x - pad), "y": max(0, y - pad), "width": w + 2 * pad, "height": h + 2 * pad}
+    shot = lambda: Image.open(io.BytesIO(pg.screenshot(clip=clip, animations="disabled"))).convert("RGB")
+    pg.evaluate("(s) => document.querySelector(s).classList.add('__ctr_meas')", sel)
+    full = shot()
+    pg.evaluate("(s) => document.querySelector(s).classList.add('__ctr_ink')", sel)
+    plate = shot()
+    pg.evaluate("(s) => document.querySelector(s).classList.add('__ctr_gone')", sel)
+    behind = shot()
+    pg.evaluate("(s) => { const e = document.querySelector(s); e.classList.remove('__ctr_ink'); e.classList.remove('__ctr_gone'); e.classList.remove('__ctr_meas'); }", sel)
+    ink, shape = _diff(full, plate), _diff(plate, behind)
+    S = full.size[0] / clip["width"]
+    x0 = int((cap[0] - clip["x"]) * S); x1 = int((cap[0] + cap[1] - clip["x"]) * S)
+    letter = ink.crop((max(0, x0), 0, min(ink.size[0], x1), ink.size[1]))
+    lb = letter.getbbox()
+    if not lb:
+        return None
+    sb = shape.getbbox()
+    if sb and (sb[2] - sb[0]) > 4 * S and (sb[3] - sb[1]) > 4 * S:
+        sy, painted = (sb[1] + sb[3]) / 2, True
+    else:
+        sy, painted = (y - clip["y"] + h / 2) * S, False
+    dy = ((lb[1] + lb[3]) / 2 - sy) / S
+    crop = None
+    if keep:
+        im = full.copy(); dr = ImageDraw.Draw(im)
+        dr.line([(0, sy), (im.size[0], sy)], fill=(20, 200, 90), width=1)
+        dr.line([(0, (lb[1] + lb[3]) / 2), (im.size[0], (lb[1] + lb[3]) / 2)], fill=(230, 40, 200), width=1)
+        crop = im
+    return 0.0, round(dy, 2), painted, crop
 
 
 # ------------------------------------------------------------------ states
@@ -629,17 +696,27 @@ with sync_playwright() as p:
                         # example card) has no single face to centre.
                         in_scope = c["whole"] and max(c["rect"][2], c["rect"][3]) <= 96 and (
                             c["extra"] or (c["svg"] and not c["text"]) or (0 < len(c["text"]) <= 3 and not c["svg"]))
+                        # WORD LABELS TOO (the owner: "How did a button sneak in that
+                        # is that far off"). The Make buttons sat 1.3-1.7px high and
+                        # this census never looked: it measured marks and labels of
+                        # three characters. A one-line label starting with a capital,
+                        # on a control no taller than a row, is measured by that
+                        # capital's ink (measure_words), with or without an icon.
+                        words = (c["whole"] and not in_scope and len(c["text"]) > 3 and c.get("cap")
+                                 and c.get("lines") == 1 and not c.get("stack") and c["rect"][3] <= 60 and c["rect"][2] <= 420)
+                        in_scope = in_scope or bool(words)
                         sig = (tuple(sorted(c["keys"])), c["text"])
                         if not in_scope or sig in seen:
                             continue
                         seen.add(sig)
-                        textual = bool(c["text"]) and not c["svg"]
+                        textual = bool(c["text"]) and (not c["svg"] or bool(words))
                         for face in (FACES if textual else (None,)):
                             if face:
                                 js(pg, "([s, f]) => { document.querySelector(s).style.fontFamily = '\"' + f + '\"'; }",
                                    [f'[data-ctr="{c["id"]}"]', face])
                             try:
-                                m = measure(pg, c["id"], c["rect"], keep=True)
+                                m = (measure_words(pg, c["id"], c["cap"], keep=True) if words
+                                     else measure(pg, c["id"], c["rect"], keep=True))
                             except Exception as e:
                                 m = None
                             if face:
