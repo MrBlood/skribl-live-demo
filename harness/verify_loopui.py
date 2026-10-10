@@ -147,7 +147,9 @@ with sync_playwright() as p:
     check("its ends are marked, so the stretch reads from its ends",
           "loop-first" in t[1]["cls"] and "loop-last" in t[4]["cls"], str([x["cls"] for x in t[1:5]]))
     check("the chip is on the loop's first page only, and says what the loop is",
-          [x["chip"] for x in t] == [None, "Forever · 2–5", None, None, None, None, None], str([x["chip"] for x in t]))
+          [x["chip"] for x in t] == [None, "2–5", None, None, None, None, None]
+          and pg.evaluate("() => !!document.querySelector('#strip .loopchip svg.loopinf')"),
+          str([x["chip"] for x in t]) + " — Forever is the drawn \u221e, then the pages")
     check("...and its accessible name says which pages and that it changes",
           t[1]["chipName"] == "Loop forever on pages 2–5, tap to change", str(t[1]["chipName"]))
     check("the page underneath carries its edge and its name",
@@ -179,8 +181,31 @@ with sync_playwright() as p:
     pg.evaluate("() => { docLoop = { from: 1, to: 1, forever: true }; buildStrip(); }")
     chip1 = pg.evaluate("() => document.querySelector('#strip .loopchip').textContent")
     check("a loop of one page names it, so it cannot read as the selection's range",
-          chip1 == "Forever · page 2", repr(chip1))
-    pg.evaluate("() => { clearSpan(true); docLoop = { from: 1, to: 4, forever: true }; idx = 2; buildStrip(); }")
+          chip1 == "page 2", repr(chip1))
+    # THE CHIP CLEARS THE SELECTED PAGE'S ⋯ (owner's iPhone: "Forever · 2–6"
+    # ran under it), in every form a loop takes, and Forever's ∞ is drawn big
+    # enough to know at a glance: at least 16x8, painted, not a 10px glyph.
+    pg.evaluate("() => { clearSpan(true); while (frames.length < 17) frames.push(newFrame()); }")
+    for _l, _i in (({"from": 1, "to": 5, "forever": True}, 1), ({"from": 1, "to": 1, "forever": True}, 1),
+                   ({"from": 1, "to": 5, "times": 4}, 1), ({"from": 11, "to": 15, "ms": 6000}, 11)):
+        _m = pg.evaluate("""([l, i]) => { docLoop = l; idx = i; buildStrip();
+            const t = document.querySelector('#strip .frame.on'); t.scrollIntoView({ inline: 'center' });
+            const c = t.querySelector('.loopchip'), o = t.querySelector('.pageops');
+            o.style.display = 'flex';                       // as on a phone, where it shows on the page you are on
+            const a = c.getBoundingClientRect(), b = o.getBoundingClientRect();
+            const ox = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+            const oy = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+            const s = c.querySelector('.loopinf'); let inf = null;
+            if (s) { const r = s.getBoundingClientRect(); const at = document.elementFromPoint(r.left + 2, r.top + r.height / 2);
+                     inf = { w: r.width, h: r.height, painted: !!(at && c.contains(at)) }; }
+            o.style.display = '';
+            return { overlap: ox * oy, text: c.textContent, inf }; }""", [_l, _i])
+        check(f"the {_m['text'] or 'loop'} chip stays clear of the page's ⋯ ({'forever' if _l.get('forever') else 'ends'})",
+              _m["overlap"] == 0, str(_m))
+        if _l.get("forever"):
+            check(f"...and its ∞ is drawn, painted and big enough to know at a glance",
+                  bool(_m["inf"]) and _m["inf"]["w"] >= 16 and _m["inf"]["h"] >= 8 and _m["inf"]["painted"], str(_m["inf"]))
+    pg.evaluate("() => { while (frames.length > 7) frames.pop(); docLoop = { from: 1, to: 4, forever: true }; idx = 2; buildStrip(); }")
     pg.evaluate("() => { docLoop = { from: 1, to: 4, times: 2 }; buildStrip(); }")
     check("a loop that ends leaves every page playing",
           not any("noplay" in x["cls"] for x in tiles(pg)))

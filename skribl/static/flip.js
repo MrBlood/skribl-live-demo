@@ -3730,9 +3730,21 @@ function loopLabel(l){
    first page, where the selection's range label also lands, so it carries its
    own range and cannot borrow the other one. */
 function loopChipText(l){
-  const mode = l.forever ? 'Forever' : l.times ? '\u00d7' + l.times : (l.ms / 1000) + ' s';
-  return mode + ' \u00b7 ' + (l.from === l.to ? 'page ' + (l.from + 1) : (l.from + 1) + '\u2013' + (l.to + 1));
+  const pages = l.from === l.to ? 'page ' + (l.from + 1) : (l.from + 1) + '\u2013' + (l.to + 1);
+  /* FOREVER IS A DRAWN \u221e (owner, from a mock: the word ran under the
+     selected page's \u22ef button; "B for sure, but make sure infinity is
+     visible, not blurry and big enough to recognize instantly"). A typed \u221e
+     at the chip's 10px is a speck, and a different one in every font; this is
+     a stroked path the size of a capital pair, the same on every device. The
+     chip's accessible name still says "Loop forever". */
+  if(l.forever) return '<svg class="loopinf" viewBox="1 6.5 22 11" aria-hidden="true" fill="none" '
+    + 'stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z"/></svg>'
+    + '<span class="looppages">' + pages + '</span>';
+  const mode = l.times ? '\u00d7' + l.times : (l.ms / 1000) + ' s';
+  return mode + ' \u00b7 ' + pages;
 }
+
 function _loopStep(l){
   return LOOP_STEPS.findIndex(st => (st.times && st.times === l.times) || (st.ms && st.ms === l.ms)
                                     || (st.forever && l.forever === true));

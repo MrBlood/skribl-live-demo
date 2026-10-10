@@ -1545,6 +1545,9 @@ body.stroking .strip-wrap {
   background: rgba(var(--glass-deep-2-rgb), .88); white-space: nowrap;
 }
 .frame .loopchip { color: var(--ui-hi); cursor: pointer; -webkit-appearance: none; appearance: none; }
+/* Forever's \u221e (flip.js, loopChipText): 18x9, wider than the digits are
+   tall, so it reads at a glance; stroked, so it stays sharp at any scale. */
+.frame .loopchip .loopinf { display: inline-block; width: 18px; height: 9px; vertical-align: -1px; margin-right: 4px; }
 /* The chip is small to look at and a 44px box to hit, as the hold badge is. */
 .frame .loopchip::before { content: ''; position: absolute; left: 50%; top: 50%;
   width: 44px; height: 44px; transform: translate(-50%, -50%); }
