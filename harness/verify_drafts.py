@@ -551,8 +551,12 @@ with sync_playwright() as _p2:
         _theirs = _a.evaluate(f"() => localStorage.getItem('{_key}')")
         check(f"{_ed}: the fixture: tab B's save replaced tab A's in the one slot",
               bool(_mine) and bool(_theirs) and _theirs != _mine)
+        # Painted, not just present: a fixed bar has no offsetParent, so ask
+        # what is drawn at its middle (WORKING-AGREEMENTS: a rect is not a paint).
         _seen = _a.evaluate("() => { const b = document.querySelector('.othertab');"
-                            " return !!(b && !b.hidden && b.offsetParent); }")
+                            " if (!b || b.hidden) return false; const r = b.getBoundingClientRect();"
+                            " const at = document.elementFromPoint(r.left + 20, r.top + r.height / 2);"
+                            " return !!(at && b.contains(at)); }")
         check(f"{_ed}: tab A is told another tab saved over its drawing", _seen,
               "A was told nothing, and a new tab would open B's drawing")
         check(f"{_ed}: ...and tab B, which wrote, is not",
