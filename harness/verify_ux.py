@@ -2523,7 +2523,8 @@ print("\nSEG PILLS — every visible segmented control shows its selection, on b
 # under it. (The pill sits BEHIND the label, so a hit-test would find the
 # button either way; opacity plus geometry is the property the bug removed --
 # the old pill was there, 0 wide and 0 opaque.) Red on the tree before
-# trackAll() was called: Pad mirror/pause/speed, Flip mirror/smear weight.
+# trackAll() was called: Pad mirror/pause/speed (speed has since moved to
+# the replay's line), Flip mirror/smear weight.
 with _sp204() as _sg:
     _sgb = _sg.chromium.launch()
     for _route in ("/", "/flip"):
@@ -2539,8 +2540,10 @@ with _sp204() as _sg:
                        w: pr ? Math.round(pr.width) : 0, bw: Math.round(br.width),
                        under: pr ? Math.abs((pr.left + pr.width / 2) - (br.left + br.width / 2)) < 3 : false }; })""")
         _bad = [g for g in _sgr if not (g["opacity"] > 0.9 and g["w"] >= g["bw"] - 1 and g["under"])]
+        # A floor of 2, not 3: Pad's tune drawer lost its third seg (Preview
+        # speed) to the line under the replay at the owner's replay picks.
         check(f"SEG PILLS {_route}: the tune drawer's segs each paint a pill under the selected option",
-              len(_sgr) >= 3 and not _bad, f"{len(_sgr)} segs; missing/misplaced: {_bad}")
+              len(_sgr) >= 2 and not _bad, f"{len(_sgr)} segs; missing/misplaced: {_bad}")
         _sgp.close()
     _sgb.close()
 
@@ -2571,7 +2574,7 @@ with _sp204() as _sf:
     _sfp.wait_for_timeout(900)
     _nojs = _seg_fill(_sfp)
     check("SEG FALLBACK: with the pill script blocked, every visible tune seg still paints its selected option",
-          len(_nojs) >= 3 and all(g["alpha"] > 0.05 and not g["pill"] for g in _nojs), str(_nojs))
+          len(_nojs) >= 2 and all(g["alpha"] > 0.05 and not g["pill"] for g in _nojs), str(_nojs))
     _sfp.close()
     _sfp = _sfb.new_page(viewport={"width": 402, "height": 874})
     browsing.goto(_sfp, BASE, "/")
@@ -2579,7 +2582,7 @@ with _sp204() as _sf:
     _sfp.wait_for_timeout(900)
     _js = _seg_fill(_sfp)
     check("SEG FALLBACK: with the pill placed, the option itself is transparent (no doubled tint)",
-          len(_js) >= 3 and all(g["pill"] and g["alpha"] == 0 for g in _js), str(_js))
+          len(_js) >= 2 and all(g["pill"] and g["alpha"] == 0 for g in _js), str(_js))
     _sfp.close(); _sfb.close()
 
 print("\nPHOTO FIT PILL — Fill / Fit / Stretch shows its selection after a draft restore")
