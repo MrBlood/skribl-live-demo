@@ -15484,6 +15484,22 @@ sticker files are gone. `verify_library` asks that the one picture is painted
 in both themes and that it is a tile, opaque to its edges with its corners
 rounded away. Flip shows no Blooby on a page, so nothing changes there.
 
+**Escape closes the recovery-key dialogs (found by the centring suite's
+drivers).** The three dialogs lib/recoverykey.js builds -- your key, use a
+recovery key, and the Clear-list guard -- moved focus in and kept Tab inside,
+but never bound Escape (lib/modalfocus.js leaves Escape to each surface), so a
+keyboard user could only leave by Tabbing to the button. Escape now does what
+the quiet button does: Done, Close, Cancel, never "Clear anyway". The modal
+census in verify_a11y had walked all three and stayed green, because it asked
+only that focus did not land on <body> after Escape, and focus never left the
+still-open dialog. It now also asks that Escape closes every dialog (what is
+painted, not [hidden]), with Flip's export progress the one named exception
+(Escape is Cancel there, and with nothing exporting it stays). Red on the old
+code for all three, on each of the three pages that build them. The recipes for
+these dialogs now put focus on a real control before opening them from script,
+and the Library's "Use a recovery key" is clicked, so a close is checked for
+handing focus back.
+
 **The Pad's speed line stays after a replay on a phone (owner's iPhone, after
 v321: "The speed only stays up for the length of the play time. You can't
 adjust it if you accidentally put it on 16x or if it's a short drawing").** The
