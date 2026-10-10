@@ -204,16 +204,13 @@
     .stage-empty { margin: 12px 15px 15px; aspect-ratio: 16 / 10; border: 1.5px dashed var(--hairline); border-radius: var(--r-sm);
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 14px; text-align: center; }
     .stage-empty[hidden] { display: none; }
-    .stage-empty img { height: 42%; width: auto; }
+    .stage-empty img { height: 52%; width: auto; }
     .stage-empty .se-title { color: var(--text); font-weight: 700; font-size: 16px; }
     .stage-error .se-icon { height: 30%; width: auto; color: var(--text-2); }
     .stage-error .se-sub { color: var(--text-2); font-size: 14px; line-height: 1.4; max-width: 30ch; }
     .stage-error .make { border: 0; font: inherit; font-weight: 600; font-size: 13px; gap: 8px; cursor: pointer; }
     .stage-error .make svg { width: 16px; height: 16px; }
     .stage-error .make:disabled { opacity: .6; cursor: progress; }
-    .stage-empty .bl-light { display: none; }
-    :root[data-theme="light"] .stage-empty .bl-light { display: block; }
-    :root[data-theme="light"] .stage-empty .bl-dark { display: none; }
     .player.is-empty .now, .player.is-empty .stageCanvasWrap, .player.is-empty .pmeta,
     .player.is-empty .scrub, .player.is-empty .transport { display: none; }
     /* NO SIZING RULE ON THE STAGE'S CANVAS. This said width:100%/height:auto,
@@ -618,11 +615,13 @@
          player with nothing in it -- a dead Play, a dash for a title and a
          0:00 clock (found in the v319 once-over; the owner chose this from
          three mocks). library.js shows it once the list has loaded empty; the
-         first post brings the player back. Drawn Blooby on light, his sticker
-         on dark, where the drawn outline would vanish. #}
+         first post brings the player back. Blooby is the Home Screen icon in
+         small, with the whole star (owner: "using the Home Screen icon with
+         full star instead of sticker"): it brings its own lilac, so his drawn
+         outline never meets the page and one picture serves both themes.
+         harness/tools/blooby.py badge draws it. #}
       <div class="stage-empty" id="stageEmpty" hidden>
-        <img class="bl-light" src="{{ skribl_asset('brand/blooby-wave.webp') }}" alt="" width="254" height="320">
-        <img class="bl-dark" src="{{ skribl_asset('brand/blooby-sticker.webp') }}" alt="" width="260" height="320">
+        <img class="bl-star" src="{{ skribl_asset('brand/blooby-star.webp') }}" alt="" width="384" height="384">
         <div class="se-title">Nothing posted yet</div>
         <a href="{{ url_for('.skribl_editor') }}" class="make">Make one</a>
       </div>
