@@ -713,11 +713,29 @@ if (window.SkriblReplayLine) {
   } catch (e) {}
 }
 if (padLine && playScrub && window.SkriblReplayLine) {
-  const line = SkriblReplayLine.attach(padLine, {
+  // One choice, two places to make it: the line (a phone, after a replay)
+  // and the pill beside Play (a desk). Whichever is used, both say so.
+  let line = null, desk = null;
+  const both = (c) => { setPreviewSpeed(c); if (line) line.update(); if (desk) desk.update(); };
+  line = SkriblReplayLine.attach(padLine, {
     choice: () => replayChoice,
     playMs: () => playTotal || getPlaybackDuration(),
     drawnMs: () => SkriblReplayLine.drawnMs(strokes),
-    pick: setPreviewSpeed,
+    pick: both,
+  });
+  const padSpeed = document.getElementById('padSpeed');
+  desk = padSpeed && SkriblReplayLine.attach(padSpeed, {
+    choice: () => replayChoice,
+    playMs: () => playTotal || getPlaybackDuration(),
+    pick: both, compact: true,
+  });
+  // "Fit" reads in the drawing's own length, which changes as it is drawn.
+  if (desk) document.getElementById('playWrap').addEventListener('pointerenter', () => desk.update());
+  // The chips open down over the top of the drawing, where a toast sits
+  // ("Take saved -- ..."); a toast never covers a control being used, so
+  // opening the speed sends it away.
+  if (desk) padSpeed.querySelector('.rl-speed').addEventListener('click', () => {
+    if (typeof toast !== 'undefined' && toast) toast.classList.remove('show');
   });
   /* WHERE IT SITS follows the scrubber, which positionScrub (app.js) places:
      under it at a desk, where the canvas has room below; ABOVE it on a phone,

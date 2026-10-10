@@ -77,21 +77,24 @@
   var CARET = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg>';
   var n = 0;
 
-  /* attach(host, { choice, pick, playMs, drawnMs, fit })
+  /* attach(host, { choice, pick, playMs, drawnMs, fit, compact })
    *   choice()   the current choice ('fit' or a rate)
    *   pick(c)    the caller applies a new choice (re-anchoring its own clock)
    *   playMs()   the replay's length at 1×, for Fit and its number
    *   drawnMs()  the artist's time, or null where it means nothing (a Flip)
    *   fit        false to leave Fit out (a Flip loops; it has no "whole")
+   *   compact    true for the speed button and its chips alone, no sentence
+   *              (a desk header, beside Play: the owner's D1)
    * Returns { update, close }. The caller calls update() whenever the
    * drawing or the choice changes under it. */
   function attach(host, o) {
     if (!host || !o) return null;
     var id = 'rl' + (++n);
     host.classList.add('replay-line');
-    host.innerHTML = '<span class="rl-text"><span class="rl-drawn"></span>' +
-      'watching at <button type="button" class="rl-speed" aria-expanded="false" aria-controls="' + id +
-      '"><span></span>' + CARET + '</button><span class="rl-skip">long pauses skipped</span></span>' +
+    var sp = '<button type="button" class="rl-speed" aria-expanded="false" aria-controls="' + id +
+      '"><span></span>' + CARET + '</button>';
+    host.innerHTML = (o.compact ? sp : '<span class="rl-text"><span class="rl-drawn"></span>watching at ' + sp +
+      '<span class="rl-skip">long pauses skipped</span></span>') +
       '<span class="rl-chips" id="' + id + '" role="group" aria-label="Speed" hidden>' +
       RATES.map(function (r) { return '<button type="button" data-r="' + r + '">' + label(r) + '</button>'; }).join('') +
       (o.fit === false ? '' : '<button type="button" data-r="fit" title="The whole replay in about 30 seconds">Fit</button>') +
@@ -107,8 +110,10 @@
     function update() {
       var c = o.choice(), p = o.playMs(), d = o.drawnMs ? o.drawnMs() : null;
       btn.firstChild.textContent = (c === 'fit' ? 'Fit · ' : '') + label(rate(c, p));
-      drawn.innerHTML = d ? 'Drawn in <b>' + words(d) + '</b> · ' : '';
-      skip.hidden = !(d && d - p >= d / 10 && d - p >= 1000);
+      // Alone, the button says what it is as well as what it is at.
+      if (o.compact) btn.setAttribute('aria-label', 'Replay speed, ' + btn.firstChild.textContent);
+      if (drawn) drawn.innerHTML = d ? 'Drawn in <b>' + words(d) + '</b> · ' : '';
+      if (skip) skip.hidden = !(d && d - p >= d / 10 && d - p >= 1000);
       chips.querySelectorAll('button').forEach(function (b) {
         b.setAttribute('aria-pressed', '' + (b.dataset.r === String(c)));
       });

@@ -339,6 +339,34 @@ with sync_playwright() as p:
         if label == "desk":
             check(f"[{label}] Stop takes the line away (a desk has no place for it at rest)",
                   was and pg.evaluate("() => !playing && document.getElementById('padLine').hidden"))
+            # THE SPEED BESIDE PLAY (owner's D1): at rest, in the Play pill.
+            # Tap boxes are the rect grown by the ::before that makes the tap
+            # (owner: "make sure target areas follow the rules too").
+            TAP = """(el) => { const r = el.getBoundingClientRect(), b = getComputedStyle(el, '::before');
+                const n = v => parseFloat(v) || 0, has = b.content !== 'none' && b.position === 'absolute';
+                return [Math.round(r.width - (has ? Math.min(0, n(b.left)) + Math.min(0, n(b.right)) : 0)),
+                        Math.round(r.height - (has ? Math.min(0, n(b.top)) + Math.min(0, n(b.bottom)) : 0))]; }"""
+            sp = pg.locator("#padSpeed .rl-speed")
+            st = pg.evaluate("""() => { const b = document.querySelector('#padSpeed .rl-speed'), r = b.getBoundingClientRect();
+                const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return { painted: !!e && b.contains(e), text: b.textContent, label: b.getAttribute('aria-label'),
+                         inPill: !!b.closest('#playWrap') }; }""")
+            check(f"[{label}] at rest the speed sits in the Play pill, painted, saying its speed and what it is",
+                  st["painted"] and st["inPill"] and st["text"] == "¼×" and st["label"] == "Replay speed, ¼×", str(st))
+            sp.click(); pg.wait_for_timeout(350)
+            chips = pg.evaluate("""() => [...document.querySelectorAll('#padSpeed .rl-chips button')].map(b => {
+                const r = b.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                return { t: b.textContent, hit: e === b, inside: r.left >= 0 && r.right <= innerWidth }; })""")
+            check(f"[{label}] ...tapping it opens every speed, each one on top and on screen",
+                  len(chips) == 8 and all(c["hit"] and c["inside"] for c in chips), str(chips))
+            taps = [pg.evaluate(TAP, sp.element_handle())] + [pg.evaluate(TAP, h) for h in pg.locator("#padSpeed .rl-chips button").element_handles()]
+            check(f"[{label}] ...and the button and every speed are at least a 44px tap",
+                  all(w >= 44 and h >= 44 for w, h in taps), str(taps))
+            pg.click("#padSpeed .rl-chips button[data-r='2']"); pg.wait_for_timeout(250)
+            check(f"[{label}] ...a pick is the Pad's speed, and the line under the drawing says the same",
+                  pg.evaluate("""() => [localStorage.getItem('skribl_replay_rate'), document.querySelector('#padSpeed .rl-speed').textContent,
+                      document.querySelector('#padLine .rl-speed').textContent, document.querySelector('#padSpeed .rl-chips').hidden]""")
+                  == ["2", "2×", "2×", True])
         else:
             # STAYS AT REST (owner's iPhone, after v321: "The speed only stays up
             # for the length of the play time. You can't adjust it if you
@@ -353,6 +381,8 @@ with sync_playwright() as p:
             check(f"[{label}] ...and a speed can still be picked there, for the next Play",
                   pg.evaluate("() => [localStorage.getItem('skribl_replay_rate'), document.querySelector('#padLine .rl-text').innerText.replace(/\\s+/g, ' ').trim().endsWith('watching at 16×')]")
                   == ["16", True], pg.evaluate("() => document.querySelector('#padLine .rl-text').innerText"))
+            check(f"[{label}] the Play pill has no speed of its own on a phone (the line is the speed here)",
+                  pg.evaluate("() => getComputedStyle(document.getElementById('padSpeed')).display === 'none'"))
             pg.mouse.move(box["x"] + 80, box["y"] + 400); pg.mouse.down()
             pg.mouse.move(box["x"] + 140, box["y"] + 420); pg.mouse.up(); pg.wait_for_timeout(300)
             check(f"[{label}] ...and the next stroke takes it away",

@@ -85,6 +85,11 @@
           <span class="btn-label">Play</span>
         </button>
         <span id="durationBadge" class="duration-badge" hidden>0:00</span>
+        {# THE SPEED, BESIDE PLAY ON A DESK (owner, D1). On a phone the speed
+           line stays under the drawing after a replay; a desk has no gap
+           there, so the speed lives in this pill instead. Filled by
+           editor_draw.js (lib/replayline.js, compact). #}
+        <span id="padSpeed" class="pad-speed"></span>
       </div>
       {# In its slot from first paint, disabled until a take exists — a primary
          action that pops in and out makes the header feel unstable. #}
