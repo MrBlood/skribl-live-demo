@@ -247,7 +247,7 @@ if _marker in _appjs:
     #
     _extracted = 0
     for _name in ("editor_export.js", "editor_post.js", "editor_menu.js",
-                  "editor_music.js", "editor_photo.js"):
+                  "editor_music.js", "editor_photo.js", "lib/slidernudge.js"):
         _p = _layout.STATIC_DIR / _name
         if not _p.exists():
             continue
@@ -289,7 +289,8 @@ if _marker in _appjs:
     _pscripts = _player_scripts()
     _never = {"editor_export.js", "editor_post.js", "editor_menu.js", "editor_music.js",
               "editor_photo.js", "editor_shapes.js", "editor_draw.js", "editor_tune.js",
-              "lib/sheetswipe.js", "lib/postsheet.js", "lib/canvasground.js"}
+              "lib/sheetswipe.js", "lib/postsheet.js", "lib/canvasground.js",
+              "lib/slidernudge.js"}
     # lib/tappause.js LEFT this list on purpose: since the owner's replay picks
     # the shared player pauses on a tap too, through the same module rather than
     # a second copy of it (verify_replayspeed drives it there).
@@ -345,6 +346,12 @@ if _marker in _appjs:
     # wraps the listeners editor_post.js wired outside any function, which were
     # never counted, so counting it would add about 160 lines and let that much
     # editor code leak unseen.
+    # lib/slidernudge.js is counted above for the same reason editor_menu.js is:
+    # the Pad's addSliderNudgers (an editor-only span of app.js) MOVED there so
+    # Flip could share it, and the file holds that one function and nothing
+    # new. Uncounted, the move read as 2110 -> 2067, a "leak" while the
+    # player-reachable set stood still at 98 functions / 1680 lines. Counted:
+    # 2119 (the rest is the marks the editor bundles now draw).
     check("editor-only code has not leaked into the player's reachable set",
           _editor_total >= 2070,
           f"{_editor_total} lines editor-only ({_editor_lines} still in app.js, "

@@ -740,6 +740,7 @@ rather than a shared rule.
 | `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things answer at once. |
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
 | `loopwave.js` | Pad+Flip | The music drawer's zoomed loop view: which stretch of the track it shows, where the two trim handles sit in it, and the waveform drawn into it. |
+| `marks.js` | Pad+Flip+library+gallery | The app's marks for controls a script builds: plus, minus, close, check, arrow, cloned from the <template id="skriblMark-NAME"> that _skribl_marks.html puts on the page, so a script and a template draw the same mark from one source. |
 | `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
 | `mediatabs.js` | Pad+Flip | The Media button and its Photo and Music tabs -- shared by Pad and Flip. |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
@@ -778,6 +779,7 @@ rather than a shared rule.
 | `sharecard.js` | Pad+Flip+library | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
 | `sheetswipe.js` | Pad+Flip+library+gallery | Sheets that go away — one swipe, every bottom sheet. |
 | `sizeclass.js` | Flip | One size decision, made once, for the whole app. |
+| `slidernudge.js` | Pad+Flip | - and + beside a range slider, for exact steps a slider alone cannot land on with a finger. |
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |

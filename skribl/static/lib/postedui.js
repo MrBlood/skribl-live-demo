@@ -543,7 +543,7 @@
             '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" data-local="1" ' +
               'aria-label="Delete this save from this device"' +
               ' title="Delete the only copy of this drawing \u2014 undoable for a few seconds">' +
-              '✕</button>' +
+              (window.SkriblMarks ? window.SkriblMarks.html('close', '\u2715') : '\u2715') + '</button>' +
           '</div>';
         }
         /* MAY ACT: this browser holds the key, or the page says the viewer
@@ -789,9 +789,16 @@
       if (del) {
         var entry = byId(del.dataset.delete) || (source ? source().filter(function (e) { return e.id === del.dataset.delete; })[0] : null);
         if (!entry || !(entry.tok || entry.owned)) return;
+        /* WHERE A HOST LETS NETWORKS CACHE PUBLIC MEDIA (opt-in, off by
+           default), "at once" is true here and not for a copy a network
+           already holds; the confirmation says how long that can take
+           (owner's pick; SK-AUD-011). */
+        var cached = global.document.body && global.document.body.getAttribute('data-skribl-shared-cache') === '1';
         if (!arm(del,
-              'Tap again to delete this Skribl for everyone — the link ' +
-              'stops working at once and this cannot be undone',
+              'Tap again to delete this Skribl for everyone — ' + (cached
+                ? 'it is gone from here at once; copies a network has cached can take up to 5 minutes to disappear, ' +
+                  'and this cannot be undone'
+                : 'the link stops working at once and this cannot be undone'),
               'Delete this Skribl for everyone', 'Tap again to delete')) return;
         del.disabled = true;
         var was = del.textContent;

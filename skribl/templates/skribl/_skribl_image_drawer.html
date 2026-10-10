@@ -1,3 +1,4 @@
+{% from 'skribl/_skribl_marks.html' import mark %}
 {# Shared "Image" drawer — background photo: the file row, fit (Fill/Fit/Stretch),
    reposition, zoom/opacity/blur, reset. Behavior-preserving: each surface renders
    its EXACT current markup + IDs; only divergent pieces are gated on `kind`.
@@ -49,7 +50,7 @@
       <span class="pending-meta" id="photoPendingMeta">Adjustments saved · tap to re-add</span>
     </div>
     <button type="button" class="pending-btn" id="photoPendingBtn">Re-add</button>
-    <button type="button" class="pending-dismiss" id="photoPendingDismiss" aria-label="Dismiss">&#x2715;</button>
+    <button type="button" class="pending-dismiss" id="photoPendingDismiss" aria-label="Dismiss">{{ mark('close') }}</button>
   </div>
 
   <div id="photoDetail" hidden>

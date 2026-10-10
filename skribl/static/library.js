@@ -503,6 +503,7 @@
     var sec = document.getElementById('libSkribls');
     sec = sec && sec.closest('section');
     if (sec) sec.classList.toggle('no-skribls', none);
+    document.body.classList.toggle('lib-empty', none);
     foot.textContent = !all.length ? ''
       : (q ? (me ? 'Filtering the ' + all.length + ' loaded so far. Load more to search further.'
                  : 'Filtering your ' + all.length + '.')
