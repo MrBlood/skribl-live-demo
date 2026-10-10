@@ -110,7 +110,7 @@ harness/                   Browser test suites (Playwright) + release tooling
 | `POST /api/drafts` | Save a draft to the signed-in author's account. |
 | `DELETE /api/drafts/<draft_id>` | Delete one of your saved drafts. |
 | `GET /api/drafts/<draft_id>` | Open one of your saved drafts, with its payload. |
-| `PUT /api/drafts/<draft_id>` | Overwrite one of your saved drafts. |
+| `PUT /api/drafts/<draft_id>` | Overwrite one of your saved drafts; 409 with conflict:true if it changed since `baseUpdatedAt`. |
 | `GET /api/skribls` | Feed-shaped listing: metadata only, cursor-paginated. |
 | `POST /api/skribls` | Create a post. |
 | `DELETE /api/skribls/<id>` | Take a post down — by its author, or with the revocation key issued at post time. |

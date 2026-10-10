@@ -532,23 +532,36 @@
 
     const chunks = [];
     videoTrack = stream.getVideoTracks()[0];
-    const recorder = new MediaRecorder(stream, { mimeType });
-    recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
-      const ext = mimeType.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
-      downloadBlob(blob, window.SkriblName
-        ? window.SkriblName.exportName(ext) : 'skribl.' + ext);
-      progressLabel.textContent = 'Done!';
-      progressFill.style.width = '100%';
-      showToast('Video exported', null);
+    // THE RECORDING ITSELF is lib/videorecord.js's, shared with Flip: a result
+    // with nothing in it, or a recorder error, says so and saves nothing (the
+    // v321 audit's SK-AUD-003 -- a 0-byte file used to download as "exported").
+    // The music graph above stays the Pad's own: it already carried the loop.
+    const releaseAudio = () => {
       videoBtn.disabled = false; pngBtn.disabled = false;
       if (audioContextForExport) { try { audioContextForExport.close(); } catch(e){} }
       if (window._exportAudioNode) { try { window._exportAudioNode.stop(); } catch(e){} try { window._exportAudioNode.disconnect(); } catch(e){} window._exportAudioNode = null; }
       window._exportAudioBuf = null; window._exportAudioCtx = null; window._exportAudioDest = null;
       if (window._exportAudioSrc) { try { window._exportAudioSrc.pause(); } catch(e){} window._exportAudioSrc = null; }
-      setTimeout(closeExport, 800);
     };
+    const recorder = window.SkriblVideoRecord.record(stream, mimeType, {
+      done: (blob) => {
+        const ext = mimeType.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+        downloadBlob(blob, window.SkriblName
+          ? window.SkriblName.exportName(ext) : 'skribl.' + ext);
+        progressLabel.textContent = 'Done!';
+        progressFill.style.width = '100%';
+        showToast('Video exported', null);
+        releaseAudio();
+        setTimeout(closeExport, 800);
+      },
+      fail: (why) => {
+        releaseAudio();
+        progress.hidden = true;
+        showToast(why === 'start' ? 'Video export failed'
+          : 'The video came out empty, so nothing was saved. Try again.', null);
+      },
+    });
+    if (!recorder) return;   // fail() has already said so and released the buttons
 
     // Prepare the base frame (bg + photo + pre-record snapshot)
     const baseImg = new Image();
