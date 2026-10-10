@@ -336,57 +336,63 @@ with sync_playwright() as p:
         was = pg.evaluate("() => playing")
         pg.click("#playBtn")   # Stop (at 1/4x the replay is still running)
         pg.wait_for_timeout(400)
+        check(f"[{label}] Stop takes the line away: it shows only while a replay plays",
+              was and pg.evaluate("() => !playing && document.getElementById('padLine').hidden"))
+        TAP = """(el) => { const r = el.getBoundingClientRect(), b = getComputedStyle(el, '::before');
+            const n = v => parseFloat(v) || 0, has = b.content !== 'none' && b.position === 'absolute';
+            return [Math.round(r.width - (has ? Math.min(0, n(b.left)) + Math.min(0, n(b.right)) : 0)),
+                    Math.round(r.height - (has ? Math.min(0, n(b.top)) + Math.min(0, n(b.bottom)) : 0))]; }"""
+        CHIPS = """(s) => [...document.querySelectorAll(s + ' .rl-chips button')].map(b => {
+            const r = b.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { t: b.textContent, hit: e === b, inside: r.left >= 0 && r.right <= innerWidth }; })"""
+        # REPLAY SPEED IN CANVAS SETTINGS (owner's pick 2): the speed at rest,
+        # on a phone and a desk alike, under Pauses. (Kept after the replay,
+        # #386, the line sat over the frame's edge on the owner's iPhone.)
+        pg.click("#tuneBtn"); pg.wait_for_timeout(600)
+        pg.evaluate("() => document.getElementById('tuneSpeedRow').scrollIntoView({ block: 'center' })"); pg.wait_for_timeout(200)
+        rw = pg.evaluate("""() => { const b = document.querySelector('#tuneSpeed .rl-speed'), r = b.getBoundingClientRect();
+            const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            const prev = document.getElementById('tuneSpeedRow').previousElementSibling;
+            return { painted: !!e && b.contains(e), text: b.textContent, label: b.getAttribute('aria-label'), afterPauses: !!prev && prev.id === 'tunePauseRow' }; }""")
+        check(f"[{label}] Canvas settings has a Replay speed row under Pauses, painted, saying the speed and what it is",
+              rw["painted"] and rw["afterPauses"] and rw["text"] == "¼×" and rw["label"] == "Replay speed, ¼×", str(rw))
+        pg.click("#tuneSpeed .rl-speed"); pg.wait_for_timeout(350)
+        ch = pg.evaluate(CHIPS, "#tuneSpeed")
+        check(f"[{label}] ...its speeds open inside the panel, each one on top and on screen",
+              len(ch) == 8 and all(c["hit"] and c["inside"] for c in ch), str(ch))
+        taps = [pg.evaluate(TAP, pg.locator("#tuneSpeed .rl-speed").element_handle())] + \
+               [pg.evaluate(TAP, h) for h in pg.locator("#tuneSpeed .rl-chips button").element_handles()]
+        check(f"[{label}] ...the button and every speed are at least a 44px tap", all(w >= 44 and h >= 44 for w, h in taps), str(taps))
+        pg.click("#tuneSpeed .rl-chips button[data-r='16']"); pg.wait_for_timeout(250)
+        check(f"[{label}] ...a pick there is the Pad's speed, and the line (and a desk's pill) say the same",
+              pg.evaluate("""() => [localStorage.getItem('skribl_replay_rate'), document.querySelector('#tuneSpeed .rl-speed').textContent,
+                  document.querySelector('#padLine .rl-speed').textContent, document.querySelector('#padSpeed .rl-speed').textContent,
+                  document.querySelector('#tuneSpeed .rl-chips').hidden]""") == ["16", "16×", "16×", "16×", True])
+        pg.click("#tuneBtn"); pg.wait_for_timeout(400)
         if label == "desk":
-            check(f"[{label}] Stop takes the line away (a desk has no place for it at rest)",
-                  was and pg.evaluate("() => !playing && document.getElementById('padLine').hidden"))
-            # THE SPEED BESIDE PLAY (owner's D1): at rest, in the Play pill.
-            # Tap boxes are the rect grown by the ::before that makes the tap
-            # (owner: "make sure target areas follow the rules too").
-            TAP = """(el) => { const r = el.getBoundingClientRect(), b = getComputedStyle(el, '::before');
-                const n = v => parseFloat(v) || 0, has = b.content !== 'none' && b.position === 'absolute';
-                return [Math.round(r.width - (has ? Math.min(0, n(b.left)) + Math.min(0, n(b.right)) : 0)),
-                        Math.round(r.height - (has ? Math.min(0, n(b.top)) + Math.min(0, n(b.bottom)) : 0))]; }"""
+            # THE SPEED BESIDE PLAY (owner's D1): on a desk, also in the Play pill.
             sp = pg.locator("#padSpeed .rl-speed")
             st = pg.evaluate("""() => { const b = document.querySelector('#padSpeed .rl-speed'), r = b.getBoundingClientRect();
                 const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
                 return { painted: !!e && b.contains(e), text: b.textContent, label: b.getAttribute('aria-label'),
                          inPill: !!b.closest('#playWrap') }; }""")
-            check(f"[{label}] at rest the speed sits in the Play pill, painted, saying its speed and what it is",
-                  st["painted"] and st["inPill"] and st["text"] == "¼×" and st["label"] == "Replay speed, ¼×", str(st))
+            check(f"[{label}] on a desk the speed also sits in the Play pill, painted, saying its speed and what it is",
+                  st["painted"] and st["inPill"] and st["text"] == "16×" and st["label"] == "Replay speed, 16×", str(st))
             sp.click(); pg.wait_for_timeout(350)
-            chips = pg.evaluate("""() => [...document.querySelectorAll('#padSpeed .rl-chips button')].map(b => {
-                const r = b.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-                return { t: b.textContent, hit: e === b, inside: r.left >= 0 && r.right <= innerWidth }; })""")
+            chips = pg.evaluate(CHIPS, "#padSpeed")
             check(f"[{label}] ...tapping it opens every speed, each one on top and on screen",
                   len(chips) == 8 and all(c["hit"] and c["inside"] for c in chips), str(chips))
             taps = [pg.evaluate(TAP, sp.element_handle())] + [pg.evaluate(TAP, h) for h in pg.locator("#padSpeed .rl-chips button").element_handles()]
             check(f"[{label}] ...and the button and every speed are at least a 44px tap",
                   all(w >= 44 and h >= 44 for w, h in taps), str(taps))
             pg.click("#padSpeed .rl-chips button[data-r='2']"); pg.wait_for_timeout(250)
-            check(f"[{label}] ...a pick is the Pad's speed, and the line under the drawing says the same",
+            check(f"[{label}] ...a pick is the Pad's speed, and the line and the settings row say the same",
                   pg.evaluate("""() => [localStorage.getItem('skribl_replay_rate'), document.querySelector('#padSpeed .rl-speed').textContent,
-                      document.querySelector('#padLine .rl-speed').textContent, document.querySelector('#padSpeed .rl-chips').hidden]""")
-                  == ["2", "2×", "2×", True])
+                      document.querySelector('#padLine .rl-speed').textContent, document.querySelector('#tuneSpeed .rl-speed').textContent,
+                      document.querySelector('#padSpeed .rl-chips').hidden]""") == ["2", "2×", "2×", "2×", True])
         else:
-            # STAYS AT REST (owner's iPhone, after v321: "The speed only stays up
-            # for the length of the play time. You can't adjust it if you
-            # accidentally put it on 16x or if it's a short drawing").
-            rest = pg.evaluate("""() => ({ playing, line: !document.getElementById('padLine').hidden,
-                scrub: !document.getElementById('playScrub').hidden,
-                hit: (() => { const b = document.querySelector('#padLine .rl-speed').getBoundingClientRect();
-                  const e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return !!e && !!e.closest('#padLine'); })() })""")
-            check(f"[{label}] after the replay the line stays, its speed button on top, while the scrubber goes",
-                  was and not rest["playing"] and rest["line"] and rest["hit"] and not rest["scrub"], str(rest))
-            pick(pg, "#padLine", "16")
-            check(f"[{label}] ...and a speed can still be picked there, for the next Play",
-                  pg.evaluate("() => [localStorage.getItem('skribl_replay_rate'), document.querySelector('#padLine .rl-text').innerText.replace(/\\s+/g, ' ').trim().endsWith('watching at 16×')]")
-                  == ["16", True], pg.evaluate("() => document.querySelector('#padLine .rl-text').innerText"))
-            check(f"[{label}] the Play pill has no speed of its own on a phone (the line is the speed here)",
+            check(f"[{label}] the Play pill has no speed of its own on a phone (the settings row is the speed here)",
                   pg.evaluate("() => getComputedStyle(document.getElementById('padSpeed')).display === 'none'"))
-            pg.mouse.move(box["x"] + 80, box["y"] + 400); pg.mouse.down()
-            pg.mouse.move(box["x"] + 140, box["y"] + 420); pg.mouse.up(); pg.wait_for_timeout(300)
-            check(f"[{label}] ...and the next stroke takes it away",
-                  pg.evaluate("() => document.getElementById('padLine').hidden"))
         check(f"[{label}] the music keeps up between half and double speed and is a bed outside them",
               pg.evaluate("() => [0.25, 0.5, 2, 4].map(r => { setReplayRate(r); return musicRate(); })") == [1, 0.5, 2, 1])
         check(f"[{label}] no page errors", not errs, "; ".join(errs[:2]))

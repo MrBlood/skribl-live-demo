@@ -15539,15 +15539,27 @@ takes it away, and undo or redo updates its "drawn in". A desk has no such gap
 goes with the scrubber until the owner picks its place. verify_replayspeed pins
 it, red on the old code. Flip's editor has no speed line yet (Flip next, F1).
 
-**The replay speed sits in the Play pill on a desk (owner's D1, "make all your
-recommended fixes").** A desk has no room for the speed line under the drawing,
-so after a replay the speed is "Play · 0:02 · 1×": lib/replayline.js gained a
-compact mode -- its own speed button and chips, without the sentence -- and the
-Pad attaches it at the end of the pill. Its chips open downward, over the top
-of the drawing; opening them sends away any toast there. The line and the pill
-are one choice: a pick in either is the Pad's speed, and both say so. A phone
-keeps the line (it stays after a replay, #386) and hides the pill's speed.
-Every new control is a 44px tap (owner: "make sure target areas follow the
-rules too"): the chips are 44px wide and the ::before grows them and the button
-to 44 tall; verify_replayspeed measures the tap boxes, red at 40px. Flip's
-header can take the same compact speed when its replay reaches Pad's (F1).
+**Where the replay speed lives when nothing is playing (owner: "This looks like
+dogshit"; then picks D1 and 2).** #386 kept the speed line under the drawing after
+a replay, on a phone; on the owner's iPhone it sat over the frame's edge,
+crowded under Add take, with "long pauses skipped" falling onto the tools. The
+line now shows only while a replay plays, as before #386, and the speed at rest
+has two homes, neither on the drawing:
+
+* **Canvas settings, "Replay speed", under Pauses** (the other replay setting),
+  on every screen. A beside-Play chip was measured first: at 402px the bar has
+  43px spare and the chip takes 39 (4px left, in this box's fonts), at 390 and
+  375 the bar sheds the wordmark's "pad" -- so the owner chose the settings row.
+* **The Play pill, on a desk** ("Play · 0:02 · 1×", D1), where there is room.
+  Its chips open downward over the top of the drawing; opening them sends away
+  any toast there.
+
+The line, the row and the pill are one choice: each is lib/replayline.js's own
+line attached again, its sentence hidden by CSS (.speed-only) and its button
+named "Replay speed, 2×" by the editor -- built in editor_draw.js, because the
+player loads replayline.js on a byte budget (a compact mode in the library ran
+144 bytes over it). Every new control is a 44px tap (owner: "make sure target
+areas follow the rules too"); verify_replayspeed measures the tap boxes, and
+caught the row's button at 41px before it shipped. Flip: its speed is pages per
+second, already in its Playback settings, so it gets no row; its replay line
+comes with F1.
