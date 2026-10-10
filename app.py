@@ -137,7 +137,23 @@ def create_app():
     if _looks_like_production() and not os.environ.get("SKRIBL_RATE_BACKEND"):
         app.config["SKRIBL_RATE_BACKEND"] = "db"
 
-    database_url = os.environ.get("DATABASE_URL", "sqlite:///skribl_demo.db")
+    # NO DATABASE IN PRODUCTION IS A REFUSAL, NOT A SQLITE FILE (v321
+    # preflight, PF-022). Unset, this fell back to a SQLite file -- on a host
+    # whose disk is rebuilt on every deploy, so every post vanished at the next
+    # push, with nothing in any log to say why. Where this looks like a real
+    # deployment, an unset DATABASE_URL stops the boot; a deployment that
+    # really means a local file says so with SKRIBL_ALLOW_SQLITE=1.
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        if _looks_like_production() and os.environ.get("SKRIBL_ALLOW_SQLITE") != "1":
+            raise RuntimeError(
+                "DATABASE_URL is not set, and this process looks like a real "
+                "deployment (see _looks_like_production). Without it every "
+                "post would be written to a SQLite file on this host's disk, "
+                "which most hosts rebuild on every deploy. Point DATABASE_URL at "
+                "the database, or set SKRIBL_ALLOW_SQLITE=1 if a local file on a "
+                "disk that survives deploys is really what you want.")
+        database_url = "sqlite:///skribl_demo.db"
 
     if database_url.startswith("postgresql://"):
         database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)

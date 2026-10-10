@@ -15091,3 +15091,66 @@ strip (8), the read-time strip (2), each format's stripper (1 to 10), the kept
 orientation (6), the dropped names (5), the point remainder (3), the withheld
 guard (5, across both suites), the cursor bound (4), the no-store header (2),
 the one-post view (1) and the byte comparison (3).
+
+**The Home Screen app opens a page kept from an older build offline, styled
+(preflight before v321, PF-007).** The worker kept one copy of each hashed file,
+dropping an older copy the moment a newer one was stored, and a newer one
+arrives when ANY page is opened on a new build. So: open the Pad and Flip,
+deploy, open only the Pad. Flip's kept page still named the old styles.css and
+lib/theme.js, the worker had dropped them, and offline Flip opened as bare HTML
+once the browser's own cache no longer held them. In Chromium that cache answers
+and hides it; with the cache cleared, standing in for a phone evicting it, it
+showed every time. An older copy now goes only when no kept page names it any
+more, read from the kept pages themselves. verify_offline drives it with a
+second build made from a copy of the tree (a suite must never edit tracked
+files): main's worker kept two of the four shared files and Flip's header came
+back unstyled; this one keeps all four and Flip opens as built.
+
+**Picking the row already on the Library's stage restarts it without a second
+download (PF-002).** select() fetched whatever row was picked, the one already
+playing included, to hand the player the drawing it already had: the second
+request in the owner's network panel, the whole payload again, megabytes with a
+photo or a song. The play count never moved (a viewer is counted once a day).
+It restarts the drawing, as Restart does, and asks the network for nothing.
+verify_library counts the payload requests: one more on main, none now.
+
+**Production refuses to boot without a database, and a '%' in its URL no longer
+leaks it (PF-022, PF-021).** With DATABASE_URL unset the app fell back to a
+SQLite file, on a host whose disk most platforms rebuild on every deploy: every
+post gone at the next push, nothing in any log. Where it looks like a real
+deployment it now refuses, naming the setting, unless SKRIBL_ALLOW_SQLITE=1
+says a local file is the plan; a laptop still boots on SQLite. Alembic's Config
+is a ConfigParser, so a '%' in the URL (a percent-encoded password) raised an
+interpolation error carrying the whole URL, password and all, into the deploy
+log, and failed the deploy; it is escaped now. verify_hostseams and
+verify_migrations each went red on main's code (it booted; ValueError with the
+URL in it) and green on this.
+
+**mp4-muxer carries its licence (PF-026), and README deploys the way production
+does (PF-024).** The vendored muxer shipped with jsDelivr's provenance banner
+and no MIT notice, which MIT asks for in every copy; the upstream LICENSE is
+now in its `/*!` banner (jsstrip keeps legal banners), checked word for word
+against the npm tarball's, with the tarball's integrity hash beside it. Its
+trailing sourceMappingURL pointed at jsDelivr's /sm/ path, a 404 on our own
+origin, and is gone; no code changed. README's local setup built the schema
+with `flask init-db` (create_all, no migration stamp, so the next upgrade head
+fails) and its Deploy said `gunicorn app:app` with no migration, the v269
+outage; both now say what START-HERE says.
+
+**Flip no longer calls a 2xx that is not a post a success (preflight PF-028).**
+The preflight's network pass answered each editor's POST with junk on a 200,
+which is what a captive portal's sign-in page does. The Pad said "The server
+returned an unexpected response."; Flip said "Posted!" with a link to
+/s/undefined, and dropped its Idempotency-Key, so the retry a careful person
+makes was a second post whenever the server had made the first. Flip now asks
+for an id and a url, as the Pad always has, says the same words with "Your
+Skribl is safe here", and keeps the key, so Try again finds the post the server
+may already have made. verify_flipmeta drives four such answers (not JSON, a
+sign-in page, `{}`, `null`); the shape check broken turned 12 red, the key
+dropped on that failure 4, a JSON null not tolerated 1.
+
+**How it works: the search field has room under the title band.** It had no top
+margin and sat on the band's bottom edge on both editors (owner's iPhone). It
+has 18px now, the same as each side; the owner chose 18 over 14 from a mock.
+verify_help measures it against the side inset at a desk and a phone width; the
+old 0 turned 4 red.

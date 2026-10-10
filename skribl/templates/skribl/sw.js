@@ -17,7 +17,8 @@
  *   * A STATIC FILE CARRYING ITS CONTENT HASH (?v=..., asset_url): cache
  *     first. The hash is the content, so a cached copy cannot be out of date;
  *     a new build has new URLs. When a new copy of a file is stored, older
- *     hashes of the same file are dropped, so the cache holds one build.
+ *     hashes of the same file are dropped once no kept page names them, so
+ *     the cache holds what the kept pages need and nothing older.
  *
  * Everything else -- the API, posts, media, the shared player, any page of a
  * host that mounted Skribl at its root -- is not answered here at all, so it
@@ -74,6 +75,38 @@ function page(req) {
   });
 }
 
+/* EVERY FILE A KEPT PAGE STILL NAMES (v321 preflight, PF-007). An older copy
+ * of a file used to be dropped the moment a newer one was stored -- and the
+ * newer one arrives when ANY page is opened on a new build. Open Pad and Flip,
+ * deploy, open only the Pad: Flip's kept page still named the old styles.css
+ * and lib/theme.js, the worker had dropped them, and offline Flip opened as
+ * bare HTML once the browser's own cache no longer held them. So an older
+ * copy goes only when no kept page names it any more. Read from the kept
+ * pages themselves, once per burst of stores rather than once per file. */
+var wantedOnce = null;
+function wanted() {
+  if (wantedOnce) return wantedOnce;
+  var named = new RegExp(STATIC.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    + '[^"\'\\s)<>]+\\?v=[0-9a-f]+', 'g');
+  wantedOnce = caches.open(PAGE_CACHE).then(function (pc) {
+    return pc.keys().then(function (reqs) {
+      return Promise.all(reqs.map(function (r) {
+        return pc.match(r).then(function (res) { return res ? res.text() : ''; });
+      }));
+    });
+  }).then(function (texts) {
+    var keep = {};
+    texts.forEach(function (t) {
+      (t.match(named) || []).forEach(function (u) {
+        keep[new URL(u, self.location.origin).href] = true;
+      });
+    });
+    return keep;
+  }, function () { return {}; });
+  setTimeout(function () { wantedOnce = null; }, 2000);
+  return wantedOnce;
+}
+
 function file(req) {
   return caches.open(FILE_CACHE).then(function (c) {
     return c.match(req.url).then(function (hit) {
@@ -82,9 +115,10 @@ function file(req) {
         if (res && res.ok) {
           var path = new URL(req.url).pathname;
           var copy = res.clone();
-          c.keys().then(function (keys) {
+          Promise.all([c.keys(), wanted()]).then(function (got) {
+            var keys = got[0], keep = got[1];
             keys.forEach(function (k) {
-              if (new URL(k.url).pathname === path && k.url !== req.url) c.delete(k);
+              if (new URL(k.url).pathname === path && k.url !== req.url && !keep[k.url]) c.delete(k);
             });
             return c.put(req.url, copy);
           });

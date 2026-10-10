@@ -178,6 +178,20 @@
   }
 
   function select(item) {
+    /* THE ROW ALREADY ON THE STAGE (v321 preflight, PF-002). Picking it again
+       fetched the whole payload again -- megabytes with a photo or a song --
+       to hand the player the drawing it was already playing; the owner's
+       network panel showed the second request. It restarts the drawing, as
+       Restart does, and asks the network for nothing. A row still loading is
+       let go: the person picked this one. */
+    if (current && player && current.id === item.id) {
+      pending = null;
+      markRows();
+      player.seek(0);
+      player.play();
+      refresh();
+      return;
+    }
     pending = item;
     /* An empty stage has nothing to contradict (the transport is dead until
        a payload lands), so it can say what is coming. */

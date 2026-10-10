@@ -163,10 +163,13 @@ with sync_playwright() as sp:
     unchanged = [p.name for p in files
                  if strip_bytes(p.read_bytes(), p.name) == p.read_bytes()
                  and b"//" in p.read_bytes()]
+    # The two vendored files are expected: each one's only comment is its
+    # licence banner, which the stripper keeps (`/*!`). mp4-muxer joined gifenc
+    # when its notice went in and its sourceMappingURL line came out.
     check("no file silently fell back to its unstripped form",
-          unchanged == ["gifenc.min.js"],
-          f"fell back: {unchanged or 'none'} — gifenc is expected (its only "
-          f"comment is the licence banner)")
+          unchanged == ["gifenc.min.js", "mp4-muxer.min.js"],
+          f"fell back: {unchanged or 'none'} — gifenc and mp4-muxer are expected "
+          f"(their only comment is the licence banner)")
 
     # ---- 3: the surfaces load against the stripped assets -------------------
     print("\nSTRIP — the surfaces the strip is served to")

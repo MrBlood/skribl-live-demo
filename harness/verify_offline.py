@@ -57,11 +57,11 @@ subprocess.run([sys.executable, "-c",
 proc = None
 
 
-def up():
+def up(cwd=ROOT):
     global proc
     proc = subprocess.Popen([sys.executable, "-m", "flask", "--app", "app", "run",
                              "--port", str(PORT), "--no-reload"],
-                            cwd=ROOT, env=env,
+                            cwd=cwd, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     end = time.time() + 25
     while time.time() < end:
@@ -259,6 +259,61 @@ try:
             h = pull(260)
         check("...a pull past the line refreshes the page", lp.evaluate(NONCE) not in (before, None), f"{h}px")
         lib.close()
+
+        # ── A NEW BUILD, AND A PAGE KEPT FROM THE OLD ONE (v321 preflight, PF-007)
+        # The worker dropped an older copy of a file the moment a newer one was
+        # stored. Open Pad and Flip, deploy, open only the Pad: Flip's kept page
+        # still named the old shared files, and offline it opened as bare HTML
+        # once the browser's own cache no longer held them. The browser's cache
+        # is cleared here to stand in for that (a phone evicts it; this one
+        # would otherwise answer from it and hide the bug). The new build is a
+        # COPY of the tree with two shared files changed: a suite must never
+        # edit tracked files, which the seal hashes.
+        print("\nA NEW BUILD — a page kept from the old one still opens offline")
+        import shutil
+        newer = Path(tempfile.mkdtemp()) / "build-n1"
+        shutil.copytree(ROOT / "skribl", newer / "skribl")
+        shutil.copy(ROOT / "app.py", newer / "app.py")
+        for rel, tail in (("skribl/static/styles.css", "\n.pf-skew-probe { color: red; }\n"),
+                          ("skribl/static/lib/theme.js", "\n;void 0;\n")):
+            f = newer / rel
+            f.write_text(f.read_text(encoding="utf-8") + tail, encoding="utf-8")
+        sk = b.new_context(viewport={"width": 390, "height": 844})
+        sk.add_init_script("Object.defineProperty(navigator, 'standalone', { get: () => true });")
+        sp = sk.new_page()
+        sp.goto(BASE + "/skribl-pad", wait_until="load"); sp.wait_for_function(BOOTED, timeout=10000)
+        sp.evaluate("() => navigator.serviceWorker.ready")
+        sp.goto(BASE + "/skribl-pad", wait_until="load"); sp.wait_for_function(BOOTED, timeout=10000)
+        sp.goto(BASE + "/flip", wait_until="load")
+        sp.wait_for_function("() => !!(window.__skriblBoot && window.__skriblBoot.flip)", timeout=10000)
+        sp.wait_for_timeout(1500)
+        down()
+        if not up(cwd=newer):
+            check("the newer build starts", False)
+        sp.goto(BASE + "/skribl-pad", wait_until="load"); sp.wait_for_function(BOOTED, timeout=10000)
+        sp.wait_for_timeout(2500)
+        names = sp.evaluate(r"""async () => { const out = [];
+            for (const r of await (await caches.open('skribl-files-v1')).keys()) {
+              const u = new URL(r.url); if (/styles\.css$|theme\.js$/.test(u.pathname)) out.push(u.pathname + u.search); }
+            return out.sort(); }""")
+        check("both builds' shared files are kept while the old Flip page names its own",
+              len(names) == 4, str(names))
+        sk.new_cdp_session(sp).send("Network.clearBrowserCache")
+        down()
+        failed = []
+        sp.on("requestfailed", lambda r: "?v=" in r.url and failed.append(r.url.rsplit("/", 1)[-1]))
+        sp.goto(BASE + "/flip", wait_until="load")
+        try:
+            sp.wait_for_function("() => !!(window.__skriblBoot && window.__skriblBoot.flip)", timeout=8000)
+            flip_ok = True
+        except Exception:
+            flip_ok = False
+        styled = sp.evaluate("() => getComputedStyle(document.querySelector('.header')).position")
+        check("offline, Flip from the old build opens styled, every file it names answered",
+              flip_ok and styled == "sticky" and not failed,
+              f"booted {flip_ok}, header {styled!r}, failed {failed[:4]}")
+        sk.close()
+        up()
         b.close()
 finally:
     down()

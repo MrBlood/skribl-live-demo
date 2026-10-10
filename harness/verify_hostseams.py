@@ -656,6 +656,41 @@ finally:
     for _k, _v in _saved2.items():
         _env(**{_k: _v})
 
+# ---------------------------------------------------------------------------
+print("\nNO DATABASE IN PRODUCTION — a refusal, not a SQLite file (v321 preflight, PF-022)")
+# Unset, DATABASE_URL fell back to a SQLite file on a host whose disk most
+# platforms rebuild on every deploy: every post gone at the next push, nothing
+# in any log. Render is the marker used, because Render is where this runs.
+_saved3 = {k: os.environ.get(k) for k in ("DATABASE_URL", "SECRET_KEY", "RENDER",
+                                          "SKRIBL_ALLOW_SQLITE", "SKRIBL_ALLOW_EPHEMERAL_SECRET")}
+try:
+    _env(DATABASE_URL=None, SECRET_KEY="harness-no-database-" + "x" * 24, RENDER="1",
+         SKRIBL_ALLOW_SQLITE=None, SKRIBL_ALLOW_EPHEMERAL_SECRET=None)
+    try:
+        _appmod.create_app()
+        _refused = ""
+    except RuntimeError as _e:
+        _refused = str(_e)
+    check("in production with no DATABASE_URL the app refuses to boot, and says which setting",
+          "DATABASE_URL" in _refused and "SKRIBL_ALLOW_SQLITE" in _refused, _refused[:120] or "it booted")
+    _env(SKRIBL_ALLOW_SQLITE="1")
+    try:
+        _appmod.create_app()
+        _booted = True
+    except RuntimeError:
+        _booted = False
+    check("...unless the deployment says a local file is what it means", _booted)
+    _env(RENDER=None, SKRIBL_ALLOW_SQLITE=None)
+    try:
+        _appmod.create_app()
+        _dev = True
+    except RuntimeError:
+        _dev = False
+    check("...and a laptop with no DATABASE_URL still boots on SQLite", _dev)
+finally:
+    for _k, _v in _saved3.items():
+        _env(**{_k: _v})
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

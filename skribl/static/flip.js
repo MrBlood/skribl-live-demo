@@ -5565,7 +5565,7 @@ async function shareSkribl(){
       ? await skriblPackBody(_body, _h)
       : { body:_body, headers:_h };
     const res=await fetch(window.SKRIBL_API_BASE,{ method:'POST', headers:_p.headers, body:_p.body });
-    let data={}; try{ data=await res.json(); }catch(_){}
+    let data={}; try{ data=(await res.json()) || {}; }catch(_){}
     if(!res.ok){
       // 5xx is the server's fault and 4xx is usually the user's; saying which
       // is the difference between "try again" and "change something". A 500
@@ -5576,7 +5576,18 @@ async function shareSkribl(){
         : 'The server refused it (error ' + res.status + '). Your Skribl is safe here — nothing was lost.');
       showShareFailure(why); chip('Post failed'); sharing=false; return;
     }
-    const url=location.origin + (data.url || (window.SKRIBL_PLAYER_BASE+'/'+data.id));
+    // AN ANSWER THAT IS NOT A POST IS NOT A SUCCESS (preflight PF-028). Any
+    // 2xx used to read as posted: a captive portal's sign-in page (a 200 in
+    // HTML) or a body cut short said "Posted!" with a link to /s/undefined, and
+    // cleared the key below, so the retry a careful person makes was a second
+    // post whenever the server had made the first. The Pad has always asked
+    // for both fields (editor_post.js); so does Flip now, and the key is kept,
+    // so Try again finds the post the server may already have made.
+    if(!data.id || !data.url){
+      showShareFailure('The server returned an unexpected response. Your Skribl is safe here — try again in a moment.');
+      chip('Post failed'); sharing=false; return;
+    }
+    const url=location.origin + data.url;
     // Record it locally. Without accounts the link is the only handle on a
     // post, and closing the tab used to lose it permanently.
     if(window.SkriblPosted){

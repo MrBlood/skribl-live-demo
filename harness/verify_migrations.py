@@ -793,6 +793,19 @@ check("...and a second run fills nothing and skips every row it already did",
       f"second run looked at {_seen10} and filled {_filled10} \u2014 the work queue "
       f"is `canvas_w IS NULL`, so what is done stays done")
 
+print("\nA '%' IN DATABASE_URL — migrations run, and the URL is not printed (v321 preflight, PF-021)")
+# alembic's Config is a ConfigParser: a '%' in the URL (a percent-encoded
+# password) raised an interpolation error carrying the WHOLE URL, password and
+# all, into the deploy log -- and the deploy failed.
+_pct_dir = tempfile.mkdtemp()
+_pct_db = os.path.join(_pct_dir, "pass%41word.db")
+_pr = alembic(_pct_db, "upgrade", "head")
+check("upgrade head succeeds on a URL holding '%'", _pr.returncode == 0,
+      (_pr.stderr or _pr.stdout).strip().splitlines()[-1][:160] if (_pr.stderr or _pr.stdout).strip() else "")
+check("...and nothing it printed repeats the URL", "pass%41word" not in (_pr.stderr + _pr.stdout),
+      "the URL is in the output" if "pass%41word" in (_pr.stderr + _pr.stdout) else "")
+check("...against the file the URL names, '%' and all", os.path.exists(_pct_db), _pct_db)
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

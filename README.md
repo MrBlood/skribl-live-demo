@@ -224,9 +224,13 @@ source .venv/bin/activate
 pip install -r requirements.txt          # dev
 # reproducible/hash-checked install:
 # pip install -r constraints.txt --require-hashes
-flask --app app.py init-db
+python -m alembic upgrade head           # the schema, by migration
 flask --app app.py run
 ```
+
+Build the schema with `alembic upgrade head`, not `flask init-db`: `init-db` is
+`create_all()`, which stamps no migration, so the first `upgrade head` after it
+fails on tables that already exist.
 
 Then open <http://127.0.0.1:5000/> or <http://127.0.0.1:5000/flip>.
 
@@ -281,8 +285,14 @@ All optional in development, where safe defaults apply. **`SECRET_KEY` is requir
 ## Deploy
 
 ```bash
-gunicorn app:app
+pip install -r constraints.txt --require-hashes
+python -m alembic upgrade head && gunicorn app:app
 ```
+
+Migrate, then serve, on every deploy: a schema change that never ran is how the
+v269 outage happened. On Render both run from the dashboard's **Start
+Command** (Render does not read the `Procfile`); START-HERE.md's "Running it"
+has the details.
 
 Templates and `app.py` must deploy together — the CSP nonce lives in both, and a
 header without the matching `nonce` attribute blocks the inline config script.

@@ -29,7 +29,10 @@ if _url:
         _url = _url.replace("postgresql://", "postgresql+psycopg://", 1)
     elif _url.startswith("postgres://"):
         _url = _url.replace("postgres://", "postgresql+psycopg://", 1)
-    config.set_main_option("sqlalchemy.url", _url)
+    # %% because alembic's Config is a ConfigParser: a '%' in the URL (a
+    # percent-encoded password) raised an interpolation error carrying the
+    # whole URL, password and all, into the deploy log (v321 preflight, PF-021).
+    config.set_main_option("sqlalchemy.url", _url.replace("%", "%%"))
 
 def _ensure_sqlite_dir(url):
     """Create the directory a SQLite file lives in.
