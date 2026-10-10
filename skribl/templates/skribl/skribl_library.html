@@ -283,6 +283,13 @@
        (owner, from a mock). On a desk the field keeps its place at the row's
        end with the filter gone. */
     .drafts-mode .chips { display: none; }
+    /* NOTHING POSTED YET (owner's L1; SK-AUD-008): one Make button -- the
+       empty card's -- so the header's steps aside; the empty card already
+       says what will appear here, so the paragraph under the list does not
+       repeat it; and the custody line takes its short wording. */
+    .lib-empty #libMake, .lib-empty #libEmpty { display: none !important; }
+    .posted-foot .pf-none, .lib-empty .posted-foot .pf-some { display: none; }
+    .lib-empty .posted-foot .pf-none { display: inline; }
     /* Nothing on this tab, nothing to filter: library.js marks the section
        .no-skribls / .no-drafts once each list has answered empty. */
     .no-skribls:not(.drafts-mode) :is(.chips, .search), .drafts-mode.no-drafts .search { display: none; }
@@ -626,8 +633,8 @@
          harness/tools/blooby.py badge draws it. #}
       <div class="stage-empty" id="stageEmpty" hidden>
         <img class="bl-star" src="{{ skribl_asset('brand/blooby-star.webp') }}" alt="" width="384" height="384">
-        <div class="se-title">Nothing posted yet</div>
-        <a href="{{ url_for('.skribl_editor') }}" class="make">Make one</a>
+        <div class="se-title">Your posted Skribls will show up here</div>
+        <a href="{{ url_for('.skribl_editor') }}" class="make"><span>Make your first Skribl</span></a>
       </div>
       {# THE LISTING DID NOT ANSWER (outside audit V319-003). It used to fall
          through to the empty card above, so an outage told a host's user they

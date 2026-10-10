@@ -592,8 +592,15 @@ with sync_playwright() as sp:
     other = b.new_page(viewport={"width": 1280, "height": 1000})
     browsing.goto(other, BASE, "/library")
     o_tiles = other.evaluate("() => document.querySelectorAll('#postedList .posted-row').length")
-    o_empty = other.evaluate("""() => { const e = document.getElementById('libEmpty');
-        return { shown: !e.hidden && getComputedStyle(e).display !== 'none', words: e.innerText }; }""")
+    # NOTHING POSTED YET (owner's L1; SK-AUD-008, 009): ONE Make button on the
+    # page (the card's; the header's steps aside), the paragraph under the list
+    # no longer repeats the card, and the custody line is the short one with
+    # its action right after it. Asked of what is painted.
+    o_empty = other.evaluate("""() => { const vis = el => !!el && el.getClientRects().length > 0 && getComputedStyle(el).display !== 'none';
+        const pad = [...document.querySelectorAll('a.make, a#libMake')].filter(vis).map(a => a.textContent.trim());
+        const note = document.querySelector('.posted-foot-note'), rec = document.getElementById('postedRecover');
+        return { makes: pad, words: note ? note.innerText : '', rec: vis(rec) ? rec.innerText.trim() : null,
+                 para: vis(document.getElementById('libEmpty')) }; }""")
     check("another browser sees none of them", o_tiles == 0, f"{o_tiles} tiles")
     # NOTHING POSTED, NOTHING TO PLAY (v319 once-over; the owner chose the card
     # from three mocks). The player had a dead Play, a dash for a title and a
@@ -610,7 +617,7 @@ with sync_playwright() as sp:
                  dead: ['.player .transport', '.player .pmeta', '.player .scrub', '.player .stageCanvasWrap', '.player .now']
                    .filter(sel => shown(document.querySelector(sel))) }; }""")
     check("an empty Library shows the empty card, painted, and none of the player's parts",
-          o_card["painted"] and o_card["title"] == "Nothing posted yet" and not o_card["dead"], str(o_card))
+          o_card["painted"] and o_card["title"] == "Your posted Skribls will show up here" and not o_card["dead"], str(o_card))
     check("...and its Make one goes to the Pad", (o_card["make"] or "").endswith("/skribl-pad"), str(o_card["make"]))
     # Blooby is the Home Screen icon in small, with the whole star (owner:
     # "using the Home Screen icon with full star instead of sticker"). One
@@ -638,9 +645,11 @@ with sync_playwright() as sp:
           o_bl["n"] == 1 and o_bl["light"] == ["blooby-star.webp"] and o_bl["dark"] == ["blooby-star.webp"], str(o_bl))
     check("...and it is a tile: opaque to its edges, corners rounded away, square",
           o_bl["size"][0] == o_bl["size"][1] > 0 and min(o_bl["edges"]) == 255 and max(o_bl["corners"]) == 0, str(o_bl))
-    check("...and the empty state says what this list is",
-          o_empty["shown"] and "in this browser only" in o_empty["words"] and "not an account" in o_empty["words"],
-          str(o_empty))
+    check("...one Make button on the page, the card's, saying what it makes",
+          o_empty["makes"] == ["Make your first Skribl"], str(o_empty))
+    check("...and one honest line about where the list lives, its key action right after it, nothing repeated under the list",
+          o_empty["words"].startswith("Kept in this browser.") and "keys that delete your posts" in o_empty["words"]
+          and o_empty["rec"] == "Have a key? Use it" and not o_empty["para"], str(o_empty))
     # ONE EMPTY STATE, NOT TWO. lib/postedui.js renders its own "Nothing
     # posted yet" into the list, and the page renders "Nothing here yet"
     # under it; on the profile both showed, stacked, until the v304
@@ -649,7 +658,7 @@ with sync_playwright() as sp:
     # a second message anywhere on the page fails this rather than only the
     # one that was there.
     o_nothing = other.evaluate("""() => [...document.querySelectorAll('#postedList *, #libEmpty, #stageEmpty *')]
-        .filter(el => /^\\s*Nothing/.test(el.textContent) && el.getClientRects().length && getComputedStyle(el).display !== 'none'
+        .filter(el => /^\\s*(Nothing|Your posted Skribls)/.test(el.textContent) && el.getClientRects().length && getComputedStyle(el).display !== 'none'
                       && !el.querySelector('p, div'))
         .map(el => el.textContent.trim().slice(0, 30))""")
     check("an empty profile says so ONCE", len(o_nothing) == 1 and not other.query_selector("#postedList .posted-empty"),
@@ -1050,12 +1059,15 @@ with sync_playwright() as sp:
     # "kept in this browser only" and the panel's footer about site data and
     # local saves. Both are gone under a host identity; the empty state itself
     # stays, because this author has nothing yet.
+    # (Since L1 the empty card is the one empty state: the paragraph under the
+    # list no longer repeats it, for a host's profile or a browser's.)
     hw = host.evaluate("""() => { const vis = el => !!el && !el.hidden && el.getClientRects().length > 0;
-        return { empty: vis(document.getElementById('libEmpty')), local: vis(document.getElementById('libEmptyLocal')),
+        return { card: vis(document.getElementById('stageEmpty')), para: vis(document.getElementById('libEmpty')),
                  foot: vis(document.querySelector('#postedPanel .posted-foot-top')),
-                 words: document.getElementById('libEmpty').innerText }; }""")
-    check("an empty host profile shows the empty state without the browser-only sentence",
-          hw["empty"] and not hw["local"] and "in this browser only" not in hw["words"], str(hw))
+                 words: document.body.innerText }; }""")
+    check("an empty host profile shows the empty card without the browser-only sentence",
+          hw["card"] and not hw["para"] and "in this browser only" not in hw["words"].lower()
+          and "kept in this browser" not in hw["words"].lower(), str({k: v for k, v in hw.items() if k != "words"}))
     check("...and the panel's footer about site data and local saves is not shown", not hw["foot"], str(hw))
     host.close()
 

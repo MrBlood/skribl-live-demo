@@ -15571,3 +15571,17 @@ press-and-hold, and steps past the slider's ends. lib/slidernudge.js is the
 Pad's, shared, with the marks, and one step per keyboard press (a press with no
 mouse down was a no-op on both). The × on speeds and badges is a separate change
 (the letter x), with the squeezed speed chips.
+
+**The empty Library, one step (owner's L1; SK-AUD-008, 009).** With nothing
+posted, the page offered "Make one" twice (the header's and the card's), said
+what the list would hold twice (the card and the paragraph under the list), and
+put its custody sentence below the filters. Now: the card says "Your posted
+Skribls will show up here" with one button, "Make your first Skribl"; the
+header's Make one steps aside while the list is empty; the paragraph under the
+list does not repeat the card; and the custody line takes its short wording --
+"Kept in this browser. Clearing site data forgets this list and the keys that
+delete your posts." -- with "Have a key? Use it" right after it. Everything
+comes back with the first post (library.js marks <body> .lib-empty). A host's
+signed-in profile shows the card alone, no browser sentence. verify_library
+pins one Make button, the line and its action, and nothing repeated, red on
+the old page; verify_posted's empty-state check follows the new words.

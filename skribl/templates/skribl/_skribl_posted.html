@@ -24,8 +24,13 @@
      (_skribl_help.html), where the rest of the browser-storage model already
      lives and where a person goes when they want the whole answer. #}
   <div class="posted-foot posted-foot-top">
-    <span class="posted-foot-note">Saved in this browser only &middot; clearing
-      site data removes them, and the keys that delete them</span>
+    {# Two wordings, one shown (library.js marks <body> .lib-empty while the
+       list is empty): with nothing posted yet, ONE honest line about where the
+       list lives and what clearing site data takes with it, and its action
+       right after it (the owner's L1; SK-AUD-008, 009). #}
+    <span class="posted-foot-note"><span class="pf-some">Saved in this browser only &middot; clearing
+      site data removes them, and the keys that delete them</span><span class="pf-none">Kept in this
+      browser. Clearing site data forgets this list and the keys that delete your posts.</span></span>
     {# THEIR OWN ROW. They were floated to the right of the paragraph above,
        so the text wrapped around a gap that had two links in it and the
        links themselves landed wherever the last line finished. One short
@@ -37,7 +42,7 @@
          way to spend it. Sits beside Clear list because this is where
          somebody goes when the list is not what they expected. #}
       <button type="button" id="postedRecover" class="posted-clearbtn"
-              title="Put a Skribl back in this list using the key you saved for it">Use a recovery key</button>
+              title="Put a Skribl back in this list using the key you saved for it"><span class="pf-some">Use a recovery key</span><span class="pf-none">Have a key? Use it</span></button>
       <button type="button" id="postedClear" class="posted-clearbtn"
               title="Empty this browser's list. The Skribls stay online, and their keys go">Clear list</button>
     </span>
