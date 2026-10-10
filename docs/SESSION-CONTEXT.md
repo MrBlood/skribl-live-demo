@@ -197,7 +197,9 @@ satisfied it, with the mechanics the rule leaves out.
    `python3 harness/verify_docs.py` directly — it is source-only and touches no
    record — and fix what it names.
 2. Delete the corpus renderer's output directory. Commit everything. Confirm
-   `release_run.source_state()` says `clean`.
+   `release_run.source_state()` says `clean`. Seal from a clone, not a
+   `git worktree`: a worktree's `.git` is a file, `tree_files()` counts it,
+   and the state reads `dirty` with `.git` as the reason (v321).
 3. Dispatch `harness.yml` on the branch carrying the exact tree being sealed.
    Actions is free here (public repository, standard runners; WORKING-AGREEMENTS.md says
    why and how to check).
@@ -210,6 +212,17 @@ satisfied it, with the mechanics the rule leaves out.
    it and the last batch rendered two minutes after the PostgreSQL attestation
    landed — a valid record on a lucky margin. Pausing with `--budget` slicing
    or `kill -STOP` is the fallback, and the slice boundary is not the render.)
+
+   **"In the background" means the session's own tracked background command,
+   never `nohup … &`.** A cloud container whose session looks idle is
+   reclaimed, and a process the session does not know about dies with it. The
+   v321 run was started with `nohup … &`, the session went quiet, and the run
+   was killed partway through batch 2 with nothing to say so. It resumed from
+   its checkpoint on the same frozen tree, which is what checkpoints are for,
+   but the hour it lost was avoidable. Start it as a tracked background
+   command, in `--budget` slices that end well inside that command's time
+   limit (90 minutes, `--budget 5400`, against a 2-hour limit), and re-invoke
+   it when a slice ends. Every slice re-verifies the frozen hash.
 5. **While it holds, carry both attestations into the tree.** The `mp4` and
    `postgres` jobs each write a file naming the tree they tested; artifact
    download is blocked, so transcribe each from the job's own `cat` step (the
