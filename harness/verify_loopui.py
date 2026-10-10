@@ -182,30 +182,6 @@ with sync_playwright() as p:
     chip1 = pg.evaluate("() => document.querySelector('#strip .loopchip').textContent")
     check("a loop of one page names it, so it cannot read as the selection's range",
           chip1 == "page 2", repr(chip1))
-    # THE CHIP CLEARS THE SELECTED PAGE'S ⋯ (owner's iPhone: "Forever · 2–6"
-    # ran under it), in every form a loop takes, and Forever's ∞ is drawn big
-    # enough to know at a glance: at least 16x8, painted, not a 10px glyph.
-    pg.evaluate("() => { clearSpan(true); while (frames.length < 17) frames.push(newFrame()); }")
-    for _l, _i in (({"from": 1, "to": 5, "forever": True}, 1), ({"from": 1, "to": 1, "forever": True}, 1),
-                   ({"from": 1, "to": 5, "times": 4}, 1), ({"from": 11, "to": 15, "ms": 6000}, 11)):
-        _m = pg.evaluate("""([l, i]) => { docLoop = l; idx = i; buildStrip();
-            const t = document.querySelector('#strip .frame.on'); t.scrollIntoView({ inline: 'center' });
-            const c = t.querySelector('.loopchip'), o = t.querySelector('.pageops');
-            o.style.display = 'flex';                       // as on a phone, where it shows on the page you are on
-            const a = c.getBoundingClientRect(), b = o.getBoundingClientRect();
-            const ox = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
-            const oy = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
-            const s = c.querySelector('.loopinf'); let inf = null;
-            if (s) { const r = s.getBoundingClientRect(); const at = document.elementFromPoint(r.left + 2, r.top + r.height / 2);
-                     inf = { w: r.width, h: r.height, painted: !!(at && c.contains(at)) }; }
-            o.style.display = '';
-            return { overlap: ox * oy, text: c.textContent, inf }; }""", [_l, _i])
-        check(f"the {_m['text'] or 'loop'} chip stays clear of the page's ⋯ ({'forever' if _l.get('forever') else 'ends'})",
-              _m["overlap"] == 0, str(_m))
-        if _l.get("forever"):
-            check(f"...and its ∞ is drawn, painted and big enough to know at a glance",
-                  bool(_m["inf"]) and _m["inf"]["w"] >= 16 and _m["inf"]["h"] >= 8 and _m["inf"]["painted"], str(_m["inf"]))
-    pg.evaluate("() => { while (frames.length > 7) frames.pop(); docLoop = { from: 1, to: 4, forever: true }; idx = 2; buildStrip(); }")
     pg.evaluate("() => { docLoop = { from: 1, to: 4, times: 2 }; buildStrip(); }")
     check("a loop that ends leaves every page playing",
           not any("noplay" in x["cls"] for x in tiles(pg)))
@@ -416,6 +392,38 @@ with sync_playwright() as p:
           str(pg.evaluate(STATE)["loop"]))
     ctx.close()
     b.close()
+
+print("\nTHE LOOP CHIP ON A PHONE — clear of the selected page's ⋯, and Forever's ∞ legible")
+with sync_playwright() as _p5:
+    _b5 = _p5.chromium.launch()
+    _pp = _b5.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True).new_page()
+    _pp.goto(BASE + "/flip", wait_until="load")
+    _pp.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.flip")
+    _pp.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); while (frames.length < 17) frames.push(newFrame());"
+                 " docUnder = { page: 0, from: 1, to: 6 }; }")
+    # THE CHIP CLEARS THE SELECTED PAGE'S ⋯ (owner's iPhone: "Forever · 2–6"
+    # ran under it), in every form a loop takes, and Forever's ∞ is drawn big
+    # enough to know at a glance: at least 16x8, painted, not a 10px glyph.
+    for _l, _i in (({"from": 1, "to": 5, "forever": True}, 1), ({"from": 1, "to": 1, "forever": True}, 1),
+                   ({"from": 1, "to": 5, "times": 4}, 1), ({"from": 11, "to": 15, "ms": 6000}, 11)):
+        _m = _pp.evaluate("""([l, i]) => { docLoop = l; idx = i; buildStrip();
+            const t = document.querySelector('#strip .frame.on'); t.scrollIntoView({ inline: 'center' });
+            const c = t.querySelector('.loopchip'), o = t.querySelector('.pageops');
+            o.style.display = 'flex';                       // as on a phone, where it shows on the page you are on
+            const a = c.getBoundingClientRect(), b = o.getBoundingClientRect();
+            const ox = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+            const oy = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+            const s = c.querySelector('.loopinf'); let inf = null;
+            if (s) { const r = s.getBoundingClientRect(); const at = document.elementFromPoint(r.left + 2, r.top + r.height / 2);
+                     inf = { w: r.width, h: r.height, painted: !!(at && c.contains(at)) }; }
+            o.style.display = '';
+            return { overlap: ox * oy, text: c.textContent, inf }; }""", [_l, _i])
+        check(f"the {_m['text'] or 'loop'} chip stays clear of the page's ⋯ ({'forever' if _l.get('forever') else 'ends'})",
+              _m["overlap"] == 0, str(_m))
+        if _l.get("forever"):
+            check(f"...and its ∞ is drawn, painted and big enough to know at a glance",
+                  bool(_m["inf"]) and _m["inf"]["w"] >= 16 and _m["inf"]["h"] >= 8 and _m["inf"]["painted"], str(_m["inf"]))
+    _b5.close()
 
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
