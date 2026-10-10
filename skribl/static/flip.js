@@ -655,7 +655,8 @@ let _saveT = null;
 // save LANDS ("Saved", 1.6s then gone) and for anything long or wrong: the
 // media-spill paths still show "Saving…" while a multi-megabyte write is
 // genuinely pending, and 'failed'/'saved-no-media' still persist.
-function scheduleSave(){ clearTimeout(_saveT); _saveT = setTimeout(saveNow, 800);
+var _flipDirty = false;   // an edit since the last save (scheduleSave sets it, saveNow clears it)
+function scheduleSave(){ _flipDirty = true; clearTimeout(_saveT); _saveT = setTimeout(saveNow, 800);
   if (typeof updateFlipEmptyHint === 'function') updateFlipEmptyHint(); }
 // media:false drops the base64 bytes but keeps photo/musicMeta, so a restore can
 // rebuild everything except the files themselves and prompt the user to re-add
@@ -794,16 +795,17 @@ function isQuotaError(e){
                  e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 1014);
 }
 let _sessionOwnedDraft = false;   // set on the first non-empty save this session
-// ANOTHER TAB SAVED OVER THIS ONE (lib/othertab.js): said here, with a way to
-// take the slot back. A host's composer keeps no Flip draft.
-if(window.SkriblOtherTab && !FLIP_COMPOSE){
-  window.SkriblOtherTab.watch(AUTOSAVE_KEY, {
-    hasWork: () => frames.some(f => f && f.strokes && f.strokes.length),
-    keep: () => saveNow()
-  });
-}
+// THE SLOT IS SHARED WITH OTHER TABS, SO IT IS WRITTEN THROUGH lib/othertab.js
+// (SK-AUD-006, T1), as the Pad's is: a save never replaces another tab's
+// drawing, it moves it aside, and the next visit offers it. A host's composer
+// keeps no Flip draft, so no slot.
+const flipSlot = (window.SkriblOtherTab && !FLIP_COMPOSE) ? window.SkriblOtherTab.slot(AUTOSAVE_KEY) : null;
+function slotWrite(text){ if(flipSlot) flipSlot.write(text); else localStorage.setItem(AUTOSAVE_KEY, text); }
+function slotRemove(){ if(flipSlot) flipSlot.remove(); else localStorage.removeItem(AUTOSAVE_KEY); }
 function saveNow(){
   if (FLIP_COMPOSE) return;   // compose keeps no draft (see FLIP_COMPOSE)
+  if (flipSlot && flipSlot.frozen()) return;   // "Open it" is reloading this page (lib/othertab.js)
+  _flipDirty = false;
   const empty = frames.length === 1 && frames[0].strokes.length === 0 && !bgImage && !musicData;
   if (empty) {
     // Only clear the slot if THIS session put real work in it — then an empty
@@ -814,7 +816,7 @@ function saveNow(){
     // Pad's sessionOwnedDraft in editor_draft.js; found by the v222 release
     // aggregate when the flush ate verify_strokegroups' planted draft.)
     if (!_sessionOwnedDraft) return;
-    try { localStorage.removeItem(AUTOSAVE_KEY); } catch (_) {}
+    try { slotRemove(); } catch (_) {}
     dropStoredMedia();   // the draft is gone; its bytes go with it
     return;
   }
@@ -846,7 +848,7 @@ function saveNow(){
     // Nothing to spill: the lite payload IS the full payload, so this is one
     // synchronous write and no IndexedDB round trip.
     try {
-      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip({ recipes: true })));
+      slotWrite(JSON.stringify(serializeFlip({ recipes: true })));
       // 'saved' when this write omitted nothing AND nothing is waiting; amber
       // when a media record IS waiting to be re-added.
       //
@@ -884,7 +886,7 @@ function saveNow(){
     // bytes. Try the old way — the whole payload into localStorage — and let
     // the quota decide. This is the ONLY route that still attempts it.
     try {
-      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip({ recipes: true })));
+      slotWrite(JSON.stringify(serializeFlip({ recipes: true })));
       showAutosaveStatus('saved');
       return;
     } catch (e) {
@@ -956,7 +958,7 @@ function saveNow(){
   try {
     const lite = serializeFlip({ media: false, recipes: true });
     lite.mediaInIdb = true; lite.idbSavedAt = stamp;
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(lite));
+    slotWrite(JSON.stringify(lite));
     // THE DRAWING IS SAFE; THE MEDIA BYTES ARE STILL IN FLIGHT. Until v229 this
     // painted the amber 'saved-no-media' unconditionally, and that is a warning
     // about a failure that has not happened and usually never will — reaching
@@ -985,7 +987,7 @@ function saveNow(){
       try {
         const body = JSON.stringify(lite);
         if (window.SkriblPosted.reclaim(body.length)) {
-          localStorage.setItem(AUTOSAVE_KEY, body);
+          slotWrite(body);
           // Same reasoning as the write above: reclaiming space says nothing
           // about whether the media reached IndexedDB.
           showAutosaveStatus(_mediaSpillState === 'saving' ? 'saving' : 'saved-no-media');
@@ -1028,7 +1030,13 @@ window.skriblMediaStoreState = () => 'spill ' + _mediaSpillState;
 // Flush NOW — the 800ms debounce must never be a loss window (review P0-2).
 // saveNow() is synchronous for the localStorage half; the IndexedDB half was
 // written at the last quota save and only re-runs if this flush hits quota too.
-function flushFlipDraft(){ clearTimeout(_saveT); try { saveNow(); } catch(_) {} }
+function flushFlipDraft(){
+  clearTimeout(_saveT);
+  // Nothing new, and the slot holds another tab's newer drawing: leave it the
+  // newest (lib/othertab.js, T1), as the Pad's flush does.
+  if (!_flipDirty && flipSlot && flipSlot.wouldMove()) return;
+  try { saveNow(); } catch(_) {}
+}
 window.addEventListener('pagehide', flushFlipDraft);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flushFlipDraft();
@@ -1273,7 +1281,7 @@ function tryRestore(){
     // debounce window (verify_fix TEST 5 hits exactly that window). A record
     // this function REJECTS confers nothing: the tab is still empty, still
     // doesn't own the slot, and the idle-flush fence keeps protecting it.
-    if (ok) _sessionOwnedDraft = true;
+    if (ok) { _sessionOwnedDraft = true; if (flipSlot) flipSlot.adopt(); }
     return ok;
   } catch (e) { return false; }
 }
@@ -5349,7 +5357,7 @@ function loadDraftFile(file){
       // claiming the same 5s loop.
       if (musicData) decodeForWaveform();
       fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
-      if(!FLIP_COMPOSE){ try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip({ recipes: true }))); }catch(_){ } }  // best-effort
+      if(!FLIP_COMPOSE){ try{ slotWrite(JSON.stringify(serializeFlip({ recipes: true }))); }catch(_){ } }  // best-effort
       chip(ok?'Draft loaded':'Loaded');
     }catch(err){ chip('Could not read file'); }
   };
@@ -11113,6 +11121,20 @@ function mediaBytesAtRisk(){
 
 /* ---- boot ---- */
 const restored = tryRestore();
+// ANOTHER TAB'S DRAWING IS WAITING (lib/othertab.js, T1), offered as the
+// Pad's is. A Flip autosave is already a Flip draft, so "Keep for later"
+// files it as it is (a photo or track its tab spilled stays with that tab).
+if(flipSlot) flipSlot.offer({
+  current: () => nothingToShare() && !musicData && !bgImage ? null : JSON.stringify(serializeFlip({ media: false, recipes: true })),
+  later: (text, at) => {
+    if(!window.SkriblSavedDrafts || !window.SkriblSavedDrafts.keep) return false;
+    let d; try{ d = JSON.parse(text); }catch(_){ return false; }
+    const when = at ? new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+    return window.SkriblSavedDrafts.keep('flip', 'From another tab' + (when ? ', ' + when : ''), d)
+      .then(() => { chip(window.SkriblSavedDrafts.where() === 'account' ? 'Kept in your drafts' : 'Kept in Drafts on this browser'); return true; },
+            (e) => { chip((e && e.message) || 'Couldn\u2019t keep it \u2014 it stays waiting'); return false; });
+  }
+});
 // No draft to come back to is a new Flip: it starts on the theme's ground,
 // Paper in the light theme (lib/canvasground.js), as the Pad's does. A
 // restored draft brought its own, and is never moved by the theme.

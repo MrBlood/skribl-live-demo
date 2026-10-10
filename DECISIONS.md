@@ -15549,3 +15549,23 @@ recovery key" always stay: drafts can exist before any post, and on a new phone
 the recovery key is how a list comes back. verify_library pins each state on a
 phone and a desk, red on the old code; the desk row check now posts one Skribl
 first, since an empty Library no longer has a row to measure.
+
+**Two tabs, two drawings, nothing lost (SK-AUD-006, the owner's pick T1).** Two
+tabs of one editor shared one autosave slot and the last writer won: tab A
+drew, tab B drew, and A's drawing was gone once A closed. v321's notice said so
+in the losing tab, which still needed a press before the tab closed. Now
+lib/othertab.js writes the slot for both editors and remembers who wrote it: a
+tab about to write over a drawing it neither wrote nor opened moves that drawing
+aside (`<key>:waiting:<writer>`), and a tab writing again takes its own back.
+The next visit opens the newest drawing, as before, and offers a waiting one in
+one line: "Open it" (this tab's drawing waits in its place, and the page reloads
+into the other, so the editor's own tested restore does the work) or "Keep for
+later" (it becomes a draft, titled "From another tab, 9:41 PM"). A drawing a tab
+still holds is not offered: open tabs answer a roll call on a BroadcastChannel.
+A tab closing with nothing new no longer re-saves, or its older drawing would
+become the newest. A kept drawing keeps its strokes and ground; an autosave
+holds a photo's or a track's name and never its bytes, so those stay with the
+tab that had them. Shared: one module, both editors; Flip's autosave is already
+a draft, the Pad's becomes one. verify_drafts drives both editors through two
+tabs, the roll call, the next visit, Keep for later (and opening that draft) and
+Open it; each part was shown red on its own.
