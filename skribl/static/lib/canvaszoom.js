@@ -14,9 +14,6 @@
  *   onPaint(zoom)       called on every repaint (Flip: crosshair while zoomed)
  *   panToast            a one-time "Scroll or Space-drag" toast the first time
  *                       a fine pointer zooms in (Pad)
- *   spaceOnlyWhenZoomed Space pans only while zoomed, because at 100% Space
- *                       belongs to someone else (Flip: play/stop). Pad owns
- *                       Space at any zoom.
  *   keyRegistry         {surface, label}: register the Space pan with the
  *                       shared KeyRegistry, scoped to "zoomed" (Flip)
  *   pinch               the two-finger gesture (v315, the second merge):
@@ -304,8 +301,11 @@
     }, { passive: false });
 
     // ---- hold Space and drag to grab-pan (desktop) ---------------------------
+    // ONLY WHILE ZOOMED, on both editors: at 100% Space plays and stops (Flip
+    // always, the Pad since the one Play/Stop round, owner: "all yes"), and
+    // there is nothing to pan. This was an option Flip set and the Pad did not.
     var spaceHeld = false, spaceDragging = false, lastX = 0, lastY = 0;
-    function spacePans() { return !opts.spaceOnlyWhenZoomed || zoom > 1.001; }
+    function spacePans() { return zoom > 1.001; }
     if (opts.keyRegistry && global.KeyRegistry) {
       global.KeyRegistry.register({ surface: opts.keyRegistry.surface, label: opts.keyRegistry.label,
         keys: ['Space'], scope: function () { return view.isZoomed(); } });

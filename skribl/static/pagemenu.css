@@ -113,7 +113,7 @@ html { scroll-padding-top: 96px; }
   background: var(--accent-fill); color: #fff; font-weight: 600; font-size: 13px;
   white-space: nowrap;
 }
-.make:hover { filter: brightness(1.08); }
+@media (hover: hover) { .make:hover { filter: brightness(1.08); } }
 /* THE WORDS SIT IN THE MIDDLE BY THEIR CAPITALS, in any font (owner, from the
    phone: "Make your first Skribl doesn't look centered vertically in the
    button"). Centred by its line box, the label sat 1.3-1.5px high in every
@@ -139,7 +139,7 @@ html { scroll-padding-top: 96px; }
   background: transparent; color: var(--text-2);
   cursor: pointer;
 }
-.pm-more:hover { color: var(--text); background: var(--control); }
+@media (hover: hover) { .pm-more:hover { color: var(--text); background: var(--control); } }
 .pm-more:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .pm-more svg { width: 20px; height: 20px; }
 
@@ -220,7 +220,7 @@ html:has(.pm-overlay:not([hidden])) { overscroll-behavior-y: none; }
   font-size: 14px; font-weight: 600;
   -webkit-tap-highlight-color: transparent;
 }
-.pm-item:hover { background: var(--control); }
+@media (hover: hover) { .pm-item:hover { background: var(--control); } }
 /* The Report row is a BUTTON among links: undo the button's own chrome so it
    is the same row as the four above it. */
 .pm-version { padding: 8px 14px 2px; font-size: 11px; color: var(--text-3); }

@@ -2386,6 +2386,119 @@ with sync_playwright() as _pt:
     _bt.close()
 
 
+# ------------------------------------------------------------------ section 18
+print("\nA11Y 18 — every control you can see has a name, on a desk as on a phone")
+# THREE BUTTONS SAID NOTHING ON A DESK: the Pad's Undo and Redo and Flip's
+# Eraser. Each carries its word in a hidden span (.undo-label, .tool-btn-label)
+# and its name in `title`; lib/tooltip.js, which runs only on a fine pointer,
+# moves the title into data-tip and copies it to aria-label only when the
+# control has no name otherwise -- and it counted the HIDDEN word as one. So
+# the title went and nothing replaced it: on a phone (no tooltip lib) the three
+# were "Undo last stroke", "Redo last stroke" and "Erase...", and on a laptop
+# a screen reader heard a bare "button". Found comparing the two editors' names
+# for the one Play/Stop round; Flip's Undo and Redo had always carried an
+# aria-label and were fine.
+#
+# READ FROM THE ACCESSIBILITY TREE, every visible control in three states of
+# both editors at both sizes: whatever the markup does, a name is what the
+# tree computes, and an empty one is the defect.
+_NAMED = r"""() => { const out = []; let i = 0;
+  for (const e of document.querySelectorAll('button, [role="button"], a[href], [role="tab"], [role="switch"], input, select, textarea')) {
+    const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue;
+    let shown = true;
+    for (let p = e; p; p = p.parentElement) { const c = getComputedStyle(p); if (c.display === 'none' || c.visibility === 'hidden') { shown = false; break; } }
+    if (!shown) continue;
+    e.setAttribute('data-a11y18', String(i)); out.push(e.id ? '#' + e.id : e.tagName.toLowerCase() + '.' + String(e.className || '').trim().split(/\s+/).join('.'));
+    i++; }
+  return out; }"""
+
+
+def _nameless(cx, pg):
+    labels = pg.evaluate(_NAMED)
+    cdp = cx.new_cdp_session(pg)
+    cdp.send("Accessibility.enable")
+    root = cdp.send("DOM.getDocument", {"depth": -1})["root"]["nodeId"]
+    bad = []
+    for i, lab in enumerate(labels):
+        q = cdp.send("DOM.querySelector", {"nodeId": root, "selector": f'[data-a11y18="{i}"]'})
+        if not q.get("nodeId"):
+            continue
+        ax = cdp.send("Accessibility.getPartialAXTree", {"nodeId": q["nodeId"], "fetchRelatives": False})
+        for n in ax.get("nodes", []):
+            if n.get("ignored"):
+                continue
+            if not ((n.get("name") or {}).get("value") or "").strip():
+                bad.append(lab)
+            break
+    cdp.detach()
+    return len(labels), bad
+
+
+with sync_playwright() as _pn:
+    _bn = _pn.chromium.launch()
+    for _form, _vp, _mob in (("desk", {"width": 1280, "height": 860}, False),
+                             ("phone", {"width": 402, "height": 874}, True)):
+        for _ed, _path, _more in (("Pad", "/", "#menuBtn"), ("Flip", "/flip", "#moreBtn")):
+            _cx = _bn.new_context(viewport=_vp, is_mobile=_mob, has_touch=_mob)
+            _pg = _cx.new_page()
+            browsing.goto(_pg, BASE, _path)
+            _pg.wait_for_timeout(700)
+            _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            for _st in ("rest", "pen drawer", "menu"):
+                if _st == "pen drawer":
+                    browsing.pad_drawer(_pg, "draw", settle=500)
+                elif _st == "menu":
+                    browsing.pad_drawer_close(_pg, settle=300)
+                    _pg.evaluate("(s) => document.querySelector(s).click()", _more)
+                    _pg.wait_for_timeout(500)
+                _n, _bad = _nameless(_cx, _pg)
+                check(f"{_form} {_ed} {_st}: every control you can see has a name ({_n} read)",
+                      _n >= 10 and not _bad, ", ".join(_bad) or f"only {_n} controls found")
+            _cx.close()
+    _bn.close()
+
+
+# ------------------------------------------------------------------ section 17b
+print("\nA11Y 17b — every hover rule sits behind the guard, whatever state would show it")
+# A11Y 17 walks seven states and forces :hover on what it finds there. A hover
+# rule on a control in a sheet that walk never opens -- the export sheet, How it
+# works, the photo tab, the music trim, the name drawer's Done -- sticks on an
+# iPhone all the same, and seventy-three did after the walk went green. So the
+# RULE is asked as well as the paint: every style rule whose selector carries
+# :hover, in every stylesheet the page loaded, has to sit inside
+# @media (hover: hover).
+#
+# FROM THE CSSOM, WHAT THE BROWSER PARSED: a grep of the files would count a
+# selector quoted in a comment, and would not see a rule nested in @supports or
+# under CSS nesting. Sheets another origin serves (fonts) cannot be read and
+# are not ours. Each page also says how many hover rules it read, so a walk
+# that found none cannot pass for one that found them all guarded.
+_HOVER_RULES = r"""() => { const bad = []; let seen = 0, sheets = 0;
+  const guardOf = (r) => /\(\s*hover\s*:\s*hover\s*\)/.test(r.conditionText || (r.media && r.media.mediaText) || '');
+  const walk = (rules, guarded, at) => { for (const r of rules) {
+    if (r.type === CSSRule.MEDIA_RULE) { walk(r.cssRules, guarded || guardOf(r), at); continue; }
+    if (r.type === CSSRule.STYLE_RULE) {
+      if (/:hover/.test(r.selectorText)) { seen++; if (!guarded) bad.push(at + ' ' + r.selectorText); }
+      if (r.cssRules && r.cssRules.length) walk(r.cssRules, guarded, at);
+      continue; }
+    if (r.cssRules) walk(r.cssRules, guarded, at); } };
+  for (const s of document.styleSheets) { let rules; try { rules = s.cssRules; } catch (e) { continue; }
+    sheets++; walk(rules, false, (s.href || 'inline').split('/').pop().split('?')[0]); }
+  return { bad, seen, sheets }; }"""
+with sync_playwright() as _ph:
+    _bh = _ph.chromium.launch()
+    for _name, _path in (("Pad", "/"), ("Flip", "/flip"), ("the player", "/s/" + _pid)):
+        _pg = _bh.new_page(viewport={"width": 402, "height": 874})
+        browsing.goto(_pg, BASE, _path)
+        _pg.wait_for_timeout(500)
+        _r = _pg.evaluate(_HOVER_RULES)
+        check(f"{_name}: every :hover rule sits inside @media (hover: hover) ({_r['seen']} read in {_r['sheets']} sheets)",
+              _r["seen"] >= 10 and not _r["bad"],
+              (", ".join(_r["bad"][:6]) + (f" (+{len(_r['bad']) - 6} more)" if len(_r["bad"]) > 6 else ""))
+              if _r["bad"] else (f"only {_r['seen']} hover rules read" if _r["seen"] < 10 else "none outside it"))
+        _pg.close()
+    _bh.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [n for ok, n in results if not ok]
 print("\n" + "=" * 62)

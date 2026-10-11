@@ -70,8 +70,15 @@
   /* 36, matching the ⋯ beside it and Pad's header (v225). It was 34 -- two
      pixels short of everything else in the row, for no reason anyone recorded. */
   .tune-tool { width: 36px; height: 36px; flex: none; }
-  #moreBtn { width: 36px; height: 36px; border-radius: 50%; }   /* the Pad's ⋯ is 36 at every tier; so is this (v293) */
-  #moreBtn svg { width: 19px; height: 19px; }
+  /* THE PAD'S ⋯, glyph and all: 36 at every tier (v293), a rounded square
+     with a 22px mark, not a circle with a 19px one (one Play/Stop round,
+     owner: "all yes"). */
+  #moreBtn { width: 36px; height: 36px; border-radius: 12px; }
+  #moreBtn svg { width: 22px; height: 22px; }
+  /* The Pad's greys too: its header openers are .icon-btn (text-secondary),
+     Flip's are .tool-open (text-tool-lit), so the same two icons sat a shade
+     apart. :where() keeps this under every lit state (.open, .on). */
+  :where(.flip-actions) .tool-open { color: var(--text-secondary); }
   /* The 44px tap box. .tool-open::before in styles.css is the band; it
      grows by --tap-grow, which this button never set (v287 audit
      SK-A11Y-005). The glyph is 36 at every tier since v293 (the Pad's ⋯
@@ -88,7 +95,10 @@
   #moreBtn::before { left: -4px; right: -4px; border-radius: 10px; }
   /* Level the three action controls to one height so the row lines up. */
   .flip-actions .seg, .flip-actions .grid-tool, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 36px; box-sizing: border-box; } /* the Pad's 36 at every tier (v293) */
-  .flip-actions .btn.flip-play { padding-top: 0; padding-bottom: 0; }
+  /* 14px a side, the Pad's Play pill (.header.compact .btn.play.btn-icon):
+     Flip's header is never .compact, so the row's 16px reached this one and
+     its Play stood 4px wider than the Pad's. */
+  .flip-actions .btn.flip-play { padding: 0 14px; }
   /* Grid overlay — a non-destructive alignment guide over the whole canvas (not
      saved, hidden while flipping). Three nested levels fill the canvas: big (8x6,
      as before), a medium split (16x12), and a fine small split (32x24), each
@@ -137,10 +147,13 @@
      buttons and the eye had nowhere to land. styles.css calls Post "the one bold
      purple moment"; this is a preview control, so it now matches the Pad's Play:
      subtle fill, hairline border, no glow. */
-  .btn.flip-play { background: rgba(var(--wash-rgb), 0.045); border: 1px solid var(--hairline-strong); color: var(--text-primary); box-shadow: none; min-width: 92px; justify-content: center; }
+  /* No min-width since the word became the Pad's "Play": it was there so "Flip
+     it" and "Stop" did not change the pill's width, and Play and Stop are the
+     same pill on both editors now (2px apart, as the Pad's always were). */
+  .btn.flip-play { background: rgba(var(--wash-rgb), 0.045); border: 1px solid var(--hairline-strong); color: var(--text-primary); box-shadow: none; justify-content: center; }
   /* Hover only where there is one (styles.css, HOVER ONLY WHERE THERE IS A
-     HOVER): iOS keeps :hover on the last thing tapped. The page strip's hovers
-     below are guarded the same way. */
+     HOVER): iOS keeps :hover on the last thing tapped. Every hover below is
+     guarded the same way. */
   @media (hover: hover) { .btn.flip-play:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; } }
   /* Playing = stop, and a steady tint, as on the Pad (styles.css, PLAYING IS
      A STEADY TINT): no pulse. From 641px the WRAP takes it, so the tint covers
@@ -150,12 +163,14 @@
   :where(body[data-size="regular"]) .flip-play-wrap:has(.btn.flip-play.playing) > .btn.flip-play { background: transparent; }
 
   /* The wrap keeps button + badge as one pill, exactly like the Pad's. */
-  .flip-play-wrap { display: inline-flex; align-items: center; border-radius: var(--r-pill); background: rgba(var(--wash-rgb), 0.045); border: 1px solid var(--hairline-strong); overflow: hidden; }
+  /* The Pad's hairline, not the strong one: the Pad's pill went lighter on a
+     desk (styles.css, "Sleeker desktop header") and this one never followed. */
+  .flip-play-wrap { display: inline-flex; align-items: center; border-radius: var(--r-pill); background: rgba(var(--wash-rgb), 0.045); border: 1px solid var(--hairline); overflow: hidden; }
   .flip-play-wrap .btn.flip-play { background: transparent; border: 0; }
   /* display:inline-flex beats the hidden attribute — without this the wrap
      stays visible no matter what the JS sets. */
   .flip-play-wrap[hidden] { display: none; }
-  .flip-play-wrap .duration-badge { padding: 0 13px 0 11px; border-left: 1px solid var(--hairline-strong); }
+  .flip-play-wrap .duration-badge { padding: 0 13px 0 11px; border-left: 1px solid var(--hairline); }
   .flip-play .ico-stop { display: none; }
   .flip-play.playing .ico-play { display: none; }
   .flip-play.playing .ico-stop { display: inline-block; }
@@ -236,10 +251,15 @@
      playing or paused Flip showed nothing at all (the owner, clicking it to
      pause). */
   body.playing #pad { cursor: default !important; }
-  .flip-live { position: absolute; top: 12px; left: 12px; z-index: 4; display: none; align-items: center; gap: 6px;
-    background: rgba(var(--glass-deep-2-rgb), .72); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 5px 18px;
-    font-size: 12px; font-weight: 700; letter-spacing: .03em; color: var(--ui-hi); }
-  body.playing .flip-live { display: inline-flex; }
+  /* THE DOCK STEPS ASIDE WHILE A FLIP PLAYS, as the Pad's does (styles.css,
+     "Replay auto-hide"; the owner's pick, "all yes"): the drawing is the show.
+     It stayed lit and tappable, and its Undo did nothing mid-play. Opacity
+     only, so the canvas never resizes; an open drawer goes with it, and the
+     "Saved" note hides as the Pad's does (body.replaying .autosave-status). */
+  .flip-tools, .flip-app .tab-panel { transition: opacity 0.3s ease; }
+  body.playing .flip-tools,
+  body.playing .tab-panel,
+  body.playing .autosave-status { opacity: 0; pointer-events: none; }
 
   /* gap 4 / padding 7 are PAD'S numbers, adopted wholesale in v224. Flip used
      8 and 12 and was 52px wider and 10px taller than Pad for the same nine
@@ -303,6 +323,9 @@
   .t-btn.on { color: var(--text-primary); border-color: var(--ui-line); }
   .t-btn.armed { color: var(--danger); border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   .t-btn svg { width: 19px; height: 19px; }
+  /* Undo and Redo in the Pad's grey (its .toolbar .undo-btn, text-tool-lit);
+     their disabled opacity is the Pad's .32, written by updateToolState(). */
+  #undo, #redo { color: var(--text-tool-lit); }
   @media (hover:hover) { .t-btn:hover { filter: brightness(1.12); } }
   /* Flip's tool row shrinks at each breakpoint; Pad's does not. The MECHANISM
      (group height, derived cell height, invisible 44px tap band) is shared and
@@ -376,7 +399,7 @@
     border: 1px solid var(--hairline); border-radius: 10px; cursor: pointer;
     overflow: hidden; transition: outline-color .12s ease; }
   .stamp-btn canvas { display: block; width: 100%; height: 100%; }
-  .stamp-btn:hover { border-color: var(--ui-line); }
+  @media (hover: hover) { .stamp-btn:hover { border-color: var(--ui-line); } }
   /* The ARMED stamp, and it has to be unmistakable: the shelf stays open while
      you place, so between two taps the only thing telling you which stamp is
      loaded is this ring.
@@ -400,7 +423,8 @@
      `@media (hover: none)` escape hatch would cover the phone and still leave
      the control invisible on anything that reports both, so the control is
      simply always there and quiet until you reach for it. */
-  .stamp-cell:hover .stamp-del, .stamp-del:hover, .stamp-del:focus-visible { opacity: 1; }
+  .stamp-del:focus-visible { opacity: 1; }
+  @media (hover: hover) { .stamp-cell:hover .stamp-del, .stamp-del:hover { opacity: 1; } }
   .stamp-empty { margin: 4px 2px 2px; font-size: 11.5px; line-height: 1.45;
     color: var(--text-muted); }
   .stamp-empty[hidden] { display: none; }
@@ -415,8 +439,10 @@
     border: 1px solid var(--hairline-strong);
     font: inherit; font-size: 11.5px; font-weight: 650; text-align: center;
     transition: background .14s ease, border-color .14s ease; }
-  .stamp-empty-go:hover { background: var(--surface-control-hover);
-    border-color: var(--accent); }
+  @media (hover: hover) {
+    .stamp-empty-go:hover { background: var(--surface-control-hover);
+      border-color: var(--accent); }
+  }
   .stamp-empty-go:active { filter: brightness(1.2); }
   .stamp-empty-go:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
   .stamp-empty-then { display: block; color: var(--text-dim); }
@@ -458,7 +484,7 @@
   .strip::-webkit-scrollbar { height: 7px; }
   .strip::-webkit-scrollbar-track { background: rgba(var(--glass-deep-rgb), .7); border-radius: 999px; margin: 0 10px; }
   .strip::-webkit-scrollbar-thumb { background: var(--ui-line); border-radius: 999px; border: 1px solid rgba(var(--glass-deep-rgb), .6); }
-  .strip::-webkit-scrollbar-thumb:hover { background: var(--ui-line); }
+  @media (hover: hover) { .strip::-webkit-scrollbar-thumb:hover { background: var(--ui-line); } }
   /* Magnify's lit state. (Image and Music wore this chrome too until the dock
      redesign folded them into Media, which lights its glyph instead.) */
   .flip-tools .magnify-tool.open { color: var(--seg-on-ink); background: var(--seg-on-fill); }
@@ -566,7 +592,7 @@
     display: grid; place-items: center; gap: 0; padding: 0; cursor: pointer;
     color: var(--ui-line); font-family: inherit;
   }
-  .frame.ghost-paste:hover { background: rgba(var(--glass-deep-2-rgb), .35); }
+  @media (hover: hover) { .frame.ghost-paste:hover { background: rgba(var(--glass-deep-2-rgb), .35); } }
   .frame.ghost-paste:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 2px; }
   .frame.ghost-paste .ghost-plus { font-size: 20px; font-weight: 600; line-height: 1; }
   .frame.ghost-paste .ghost-n {
@@ -759,13 +785,13 @@
   }
   .pageops-item svg { width: 18px; height: 18px; flex: none; color: var(--text-secondary);
     fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .pageops-item:hover:not(:disabled) { background: rgba(var(--wash-rgb), .07); }
+  @media (hover: hover) { .pageops-item:hover:not(:disabled) { background: rgba(var(--wash-rgb), .07); } }
   .pageops-item:focus-visible { outline: 2px solid var(--ui-line); outline-offset: -2px; }
   .pageops-item:disabled { opacity: .4; cursor: default; }
   .pageops-item.danger { color: var(--danger-soft); margin-top: 4px; border-radius: 0 0 9px 9px;
     box-shadow: 0 -1px 0 var(--hairline); }
   .pageops-item.danger svg { color: var(--danger-soft); }
-  .pageops-item.danger:hover:not(:disabled) { color: var(--danger-soft-2); background: rgba(244, 50, 111, .12); }
+  @media (hover: hover) { .pageops-item.danger:hover:not(:disabled) { color: var(--danger-soft-2); background: rgba(244, 50, 111, .12); } }
 
   /* The transient chip: "Draft restored", "Blur undone", a blocked action.
      chip() sets `top` just under the header; this is its fallback when the
@@ -791,9 +817,18 @@
      shared header's — nothing here shrinks a control the Pad does not shrink,
      because the two headers are one design (verify_parity). The header's
      vertical margin stays Flip's 7px: the stage is sized from it. */
+  /* PLAY IS THE PAD'S PLAY ON A PHONE (one Play/Stop round, owner: "all
+     yes"): a bare 22px triangle in a 40px button, no ring around it, and while
+     it plays the purple disc behind a square (styles.css, PLAYING IS A STEADY
+     TINT, which holds the disc for both). On the compact size class, which
+     is the Pad's below 641; the word went at 560 here, so 561-640 showed
+     "Flip it" beside the Pad's bare glyph. (The size class, not a width
+     query: lib/sizeclass.js answers where compact begins, once.) */
+  :where(body[data-size="compact"]) .flip-play span { display: none; }
+  :where(body[data-size="compact"]) .flip-actions .btn.flip-play { min-width: 0; width: 40px; padding: 0; }
+  :where(body[data-size="compact"]) .btn.flip-play svg { width: 22px; height: 22px; }
+  :where(body[data-size="compact"]) .flip-play-wrap { background: transparent; border: none; }
   @media (max-width: 560px) {
-    .flip-play span { display: none; }
-    .btn.flip-play { min-width: 0; padding: 9px 12px; }
     .flip-app .header { margin: 7px 6px; }
     .fps-group { gap: 5px; }
     .flip-actions .seg button { padding: 5px 5px; }
@@ -838,30 +873,31 @@
    padding or flex centering, let the digit sit slightly high in the cell. Now
    wider padding and inline-flex centering so each number is centered in its
    segment horizontally and vertically. */
-.onion-seg button, .fps-group .seg button {
-  /* Fixed width, not min: Speed's two-digit 12/24 would otherwise render wider
-     than Onion's single-digit 1/2/3, so the two stacked segments came out
-     different widths and no longer aligned as a column. A fixed 34px cell makes
-     all six buttons identical, so both segments are exactly equal width, and
-     the roomier cell centres the digit. */
-  width: 34px; padding: 5px 0; font-size: 12px;
-  display: inline-flex; align-items: center; justify-content: center;
-}
-/* ...except Smear weight, which borrowed the digit cell for WORDS: "Normal"
-   and "Strong" are 36-39px of text in a 34px box, so the three ran into one
-   another ("LightNormaStrong") at every phone width. Its cells size to their
-   words. Grid density has the same three words-not-digits and the same bug
-   ("CoarsMediumFine", owner's iPhone, after v321); verify_onepill's FIT now
-   asks it of every option on both editors. */
-#smearWeightSeg button, #gridDensitySeg button { width: auto; flex: 0 0 auto; padding: 5px 9px; }
+/* DIGITS GET EQUAL CELLS. Every other settings cell is the shared .seg
+   button, the Pad's 13px word in a roomy cell (the owner's pick, "all yes"),
+   so words size to themselves -- "LightNormaStrong" was a 34px digit cell
+   borrowed for words, and that cell is gone. Speed's 6 / 12 / 24 sits right
+   above Onion's 1 / 2 / 3, though, and at that padding a one-digit cell is
+   8px narrower than a two-digit one, so the two would stop lining up as a
+   column. 44 is the Pad's tap, and with 4px sides it holds every digit, so
+   "12" and "24" are 44 too (at the shared sides they came out 44.8 and the
+   two rows 2px apart: verify_ux). */
+#fps button, #onionDepthSeg button { min-width: 44px; padding-left: 4px; padding-right: 4px; }
+/* SMEAR WEIGHT, Flip's own row, keeps 9px sides rather than the shared 14:
+   its three words are the widest seg in either editor's settings, and at 14
+   they push the row onto two lines on a phone, where the approved shot had it
+   on one (from 390px up; below that the controls drop under the label, as
+   any Pad row would). */
+#smearWeightSeg button { padding-left: 9px; padding-right: 9px; }
 
 .onion-tint {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 32px = the segment height it shares the Onion row with, so the toggle and
-     the 1/2/3 depth segment align instead of the toggle sitting proud. Was 22
-     (chosen for an earlier, shorter segment); the segments render at 32 now. */
+  /* 32px, the switch every settings row shares on both editors (Grid and
+     Stroke layers wear this class too, so it is not Flip's to change). Was 22,
+     chosen for an earlier, shorter segment. The Onion row's own tint toggle
+     is sized to its neighbour below. */
   width: 32px;
   height: 32px;
   padding: 0;
@@ -872,6 +908,11 @@
   cursor: pointer;
 }
 .onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
+/* THE ONION ROW'S TINT TOGGLE matches the 1/2/3 segment beside it, so it does
+   not sit proud: 34px, which is what the shared rows render a segment at
+   (26px cells in a 3px-padded, 1px-bordered group). verify_ux holds the two
+   to one height. */
+#onionTintBtn { width: 34px; height: 34px; }
 /* The ON state lives in styles.css only: the accent for every switch, amber
    kept for #onion and #onionTintBtn alone. An amber `.onion-tint.active` used
    to sit here, and because flip.css loads after styles.css at the same
@@ -941,10 +982,12 @@
 /* Not on a switched-on button: .pb:hover is (0,3,0) and beat .pb.on and
    .pb[aria-checked="true"] (0,2,0), so clicking Draw on a desktop showed no
    change until the pointer left. Hover is only for buttons that are off. */
-.pb:hover:not(:disabled):not(.on):not([aria-checked="true"]) {
-  background: rgba(var(--wash-rgb), 0.07);
-  border-color: var(--hairline-strong);
-  color: var(--text-primary);
+@media (hover: hover) {
+  .pb:hover:not(:disabled):not(.on):not([aria-checked="true"]) {
+    background: rgba(var(--wash-rgb), 0.07);
+    border-color: var(--hairline-strong);
+    color: var(--text-primary);
+  }
 }
 .pb:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
 .pb:active:not(:disabled) { transform: translateY(1px); }
@@ -954,10 +997,12 @@
 /* Destructive action lives at the far end, so a mis-tap on Hold or Move cannot
    land on Delete — which is exactly what the old 18px overlay allowed. */
 .pb.danger { margin-left: auto; color: var(--danger-soft); }
-.pb.danger:hover:not(:disabled) {
-  color: var(--danger-soft-2);
-  background: rgba(244, 50, 111, 0.12);
-  border-color: rgba(244, 50, 111, 0.4);
+@media (hover: hover) {
+  .pb.danger:hover:not(:disabled) {
+    color: var(--danger-soft-2);
+    background: rgba(244, 50, 111, 0.12);
+    border-color: rgba(244, 50, 111, 0.4);
+  }
 }
 
 /* A glyph that carries the meaning the LABEL used to. Below 560px every
@@ -1085,32 +1130,14 @@
    both editors: one rule for the label, one for the pills, one height. */
 
 /* --- v130: playback settings drawer ---------------------------------------
-   Slides down from the header that opens it. The animation is on
-   grid-template-rows (0fr -> 1fr), which transitions to the content's OWN height
-   — no hardcoded max-height to guess at or drift. The clip element hides the
-   overflow while it moves, so the panel wipes down rather than popping. */
-.tune-shell {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
-  /* The header is a floating card (margin: 7px), so a full-bleed drawer would
-     read as a different surface. Match its inset and tuck the panel up under the
-     card's rounded bottom so the two look like one object opening. */
-  margin: -10px 7px 0;
-  background: var(--surface-raised);
-  /* No border at all while closed: a transparent 1px border still occupies a
-     pixel row under the header. The border appears with .open. */
-  border: 0;
-  border-radius: 0 0 14px 14px;
-}
-.tune-shell.open {
-  grid-template-rows: 1fr;
-  border: 1px solid var(--hairline-strong);
-  border-top: 0;
-}
-/* overflow:hidden alone still reserves a hairline of height; clipping the
-   collapsed state outright keeps it at exactly 0. */
-.tune-clip { overflow: hidden; min-height: 0; }
+   Slides down from the header that opens it, on grid-template-rows (0fr ->
+   1fr) so it transitions to the content's own height. THE SHELL IS THE PAD'S,
+   from styles.css (.tune-shell, its open state, .tune-clip): this file kept
+   its own copy of those rules after styles.css lifted them, and, loading
+   later, its solid fill and 1px border quietly undid the glass the dock
+   redesign gave both drawers -- the Pad's settings were glass and Flip's were
+   a solid card, two pixels narrower inside (found by verify_parity's settings
+   rows, the one Play/Stop round). Only the panel's own rules stay here. */
 
 .tune-panel {
   display: grid;
@@ -1121,7 +1148,7 @@
   max-width: 520px;
   margin: 0 auto;
   width: 100%;
-  padding: 14px 14px 12px;
+  padding: 12px 16px;   /* the Pad's (styles.css .tune-panel), so a row is as wide on both */
   /* Content eases in slightly behind the height, so the reveal reads as one
      motion instead of text appearing in an empty box. */
   opacity: 0;
@@ -1135,40 +1162,22 @@
   .tune-panel { transition: none; }
 }
 
-.tune-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 7px 0;
-}
-.tune-row + .tune-row { border-top: 1px solid var(--hairline); }
-
-/* Two lines: what it is, then what the numbers mean. "6 / 12 / 24" and
-   "1 / 2 / 3" are meaningless on their own — the caption is the control's
-   unit, not decoration. */
-.tune-label { display: flex; flex-direction: column; gap: 1px; }
-.tune-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.2;
-}
-.tune-hint {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  line-height: 1.25;
-}
-
-/* Control sits immediately after its label, not flung to the far edge by
-   margin-left:auto — that left 284px of dead space between "Speed" and the very
-   numbers it names. A fixed label column keeps the two rows aligned with each
-   other while staying visually paired. */
-.tune-label { flex: 0 0 auto; width: 150px; }
+/* THE PAD'S ROWS (the owner's pick, "all yes"). Flip's settings take the
+   Pad's row whole, from styles.css: its gap and padding, its label column
+   (150px on a desk with the controls at the row's right edge; on a phone the
+   label takes the slack and the controls drop under it before anything is
+   squeezed), its 13px names, quiet hints and roomy 13px cells. Flip's rows
+   were a shade apart in every one of those -- 12px words in 34px cells, a
+   bolder name, a label pinned at 150px even on a phone -- so nothing about a
+   row is restated here any more. What stays is what only Flip has: the digit
+   cells (below, at .onion-seg) and the Watching speed row's own layout.
+   Every label is two lines: what it is, then what the numbers mean. "6 / 12 /
+   24" and "1 / 2 / 3" are meaningless on their own -- the caption is the
+   control's unit, not decoration. (The panel is capped at 520px above, so a
+   control at the row's right edge is still a glance from its label.) */
 .tune-row .fps-group { display: inline-flex; align-items: center; gap: 8px; }
 .tune-row .onion-group { display: inline-flex; align-items: center; gap: 8px; }
 .tune-row .onion-group[hidden] { display: none; }
-.tune-row .seg button { min-width: 36px; }
 /* Watching speed (F1): the label and its five speeds share one 44px line,
    the speeds at the row's end like Speed's 6 / 12 / 24, and the small print
    runs under both, the row's full width (the owner's layout). Where the line
@@ -1186,12 +1195,6 @@
 /* Onion row dims when onion skin is off — the controls stay put so the panel
    never changes height mid-toggle. */
 #tuneOnionRow.muted { opacity: 0.4; }
-
-@media (max-width: 400px) {
-  .tune-label { width: 130px; }
-  .tune-row { gap: 10px; }
-  .tune-row .seg button { min-width: 32px; }
-}
 
 .tune-tool.open { color: var(--seg-on-ink); background: var(--seg-on-fill); }
 
@@ -1503,7 +1506,12 @@ body.stroking .addcol {
 .flip-tools #toolGroup .tool-btn { min-width: 44px; padding: 0 9px; justify-content: center; }
 .flip-tools #toolGroup .tool-btn svg { width: 26px; height: 26px; }
 .flip-tools #toolGroup #penToolBtn { padding: 0 5px; }   /* the tint shows round the chip: styles.css, ONE SELECTION RULE */
-.flip-tools .tool-btn-label { display: none; }
+/* FLIP'S DESK DOCK HAS WORDS, as the Pad's does (the owner's pick, "all
+   yes"): Pen · Eraser · Tools, at the Pad's 12px a side (its pen 5px on the
+   chip's side). A phone keeps the bare 44px icons on both editors -- the
+   compact rule hides the words there. */
+:where(body[data-size="regular"]) .flip-tools #toolGroup .tool-btn { padding: 0 12px; }
+:where(body[data-size="regular"]) .flip-tools #toolGroup #penToolBtn { padding: 0 12px 0 5px; }
 .flip-tools #undo, .flip-tools #mediaOpenBtn { margin-left: 18px; }
 .flip-tools #redo { margin-left: 6px; }
 :where(body[data-size="compact"]) .flip-tools #undo,
@@ -1630,7 +1638,8 @@ body.stroking .strip-wrap {
 .loophandle.to { border-radius: 0 14px 14px 0; }
 .loophandle::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 40px; transform: translateX(-50%); }
 .loophandle svg { width: 8px; height: 13px; flex: none; pointer-events: none; }
-.loophandle:hover, .loophandle.dragging { background: #9580ff; }
+.loophandle.dragging { background: #9580ff; }
+@media (hover: hover) { .loophandle:hover { background: #9580ff; } }
 .loophandle:focus-visible { box-shadow: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--ui-hi); }
 .loophandle .lh-bubble { display: none; position: absolute; top: 50%;
   padding: 3px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; line-height: 16px;

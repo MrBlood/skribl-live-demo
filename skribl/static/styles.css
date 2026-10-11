@@ -344,7 +344,7 @@ html:has(:fullscreen) { scrollbar-gutter: auto; }
   border: 2px solid transparent;      /* inset → slim thumb with carbon breathing room */
   background-clip: padding-box;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(var(--wash-rgb), .22); background-clip: padding-box; }
+@media (hover: hover) { ::-webkit-scrollbar-thumb:hover { background: rgba(var(--wash-rgb), .22); background-clip: padding-box; } }
 ::-webkit-scrollbar-corner { background: transparent; }
 
 body {
@@ -593,10 +593,10 @@ body {
    anything, and iOS keeps :hover on whatever was tapped last, so an unguarded
    hover rule leaves the control lit after the tap -- Post brightened, a menu
    row tinted, a swatch blown up -- until the next tap somewhere else. Every
-   hover a tap reaches on the editors' main surfaces sits behind (hover: hover):
-   verify_a11y A11Y 17 forces :hover on a phone, without a tap, across seven
-   states of both editors. (Hover rules on controls inside the sheets and
-   drawers it does not open follow, with a check over every rule.) */
+   hover rule here sits behind (hover: hover), and so does every one in the
+   other sheets the editors and the player load: verify_a11y A11Y 17 forces
+   :hover on a phone across seven states of both editors, and A11Y 17b asks the
+   parsed stylesheets for any :hover rule outside the guard, wherever it is. */
 @media (hover: hover) { .btn:hover:not(:disabled) { filter: brightness(1.1); } }
 .btn:active:not(:disabled) { transform: scale(0.94); }
 .btn:disabled { opacity: 0.4; cursor: default; }
@@ -649,7 +649,7 @@ body {
 }
 @media (hover: hover) { .btn.play:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; } }
 .btn.clear { background: var(--surface-control); color: var(--text-secondary); border: 1px solid var(--hairline); }
-.btn.clear:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; }
+@media (hover: hover) { .btn.clear:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; } }
 
 /* Post: the one bold purple moment */
 .btn.post {
@@ -666,7 +666,6 @@ body {
 .btn.post,
 .name-done,
 .post-submit:not(.post-watch),
-.btn.play.playing,
 .player-cta,
 /* A dark text-shadow lifts LIGHT text off a busy background. .pending-btn was
    dark text on solid yellow, where the same shadow smeared the glyph edges and
@@ -1157,7 +1156,7 @@ body.stroking .skribl-hint {
   border-bottom: 1px solid var(--hairline);
   cursor: text;
 }
-.zoom-hud .zoom-val:hover { background: var(--surface-control-hover); color: var(--text-primary); }
+@media (hover: hover) { .zoom-hud .zoom-val:hover { background: var(--surface-control-hover); color: var(--text-primary); } }
 .zoom-hud .zoom-val-input {
   width: 42px;
   text-align: center;
@@ -1643,7 +1642,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   height: 13px;
 }
 
-.tool-btn:hover { background: transparent !important; color: var(--text-tool); }
+@media (hover: hover) { .tool-btn:hover { background: transparent !important; color: var(--text-tool); } }
 
 .tool-btn:focus-visible {
   outline: 2px solid var(--focus-ring);
@@ -1759,7 +1758,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   flex-shrink: 0;
 }
 
-.bg-swatch:hover { transform: scale(1.08); }
+@media (hover: hover) { .bg-swatch:hover { transform: scale(1.08); } }
 .bg-swatch:active { transform: scale(0.94); }
 .bg-swatch.active { border-color: var(--ui-line); }
 
@@ -1774,7 +1773,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .reposition-btn svg { width: 15px; height: 15px; }
-.reposition-btn:hover { background: var(--surface-control-hover); color: var(--text-strong); }
+@media (hover: hover) { .reposition-btn:hover { background: var(--surface-control-hover); color: var(--text-strong); } }
 .reposition-btn.active { background: var(--ui-active); color: #fff; border-color: transparent; }
 .reposition-btn[hidden] { display: none; }
 #photoZoomRow[hidden] { display: none; }
@@ -1980,7 +1979,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.08);
   transition: transform .2s var(--spring);
 }
-.recent-swatch:hover { transform: scale(1.12); }
+@media (hover: hover) { .recent-swatch:hover { transform: scale(1.12); } }
 .recent-swatch:active { transform: scale(0.92); }
 
 .drawer-divider { height: 1px; background: var(--hairline); }
@@ -2086,7 +2085,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .drawer-actions { display: flex; gap: 8px; }
 .clear-undo-btn { color: var(--ui-hi); border-color: rgba(124, 92, 255, 0.4); }
 .clear-undo-btn:disabled { opacity: 0.4; cursor: default; color: var(--text-dim); border-color: var(--hairline); }
-.clear-undo-btn:not(:disabled):hover { background: rgba(124, 92, 255, 0.14); border-color: var(--ui-line); }
+@media (hover: hover) { .clear-undo-btn:not(:disabled):hover { background: rgba(124, 92, 255, 0.14); border-color: var(--ui-line); } }
 .clear-drawer-btn {
   display: inline-flex; align-items: center; gap: 7px;
   border: 1px solid var(--hairline); background: var(--surface-panel); color: var(--text-soft);
@@ -2096,7 +2095,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .clear-drawer-btn svg { width: 15px; height: 15px; }
-.clear-drawer-btn:hover { background: rgba(244,50,111,.08); color: var(--danger); border-color: rgba(244,50,111,.3); }
+@media (hover: hover) { .clear-drawer-btn:hover { background: rgba(244,50,111,.08); color: var(--danger); border-color: rgba(244,50,111,.3); } }
 .clear-drawer-btn.armed { background: rgba(244,50,111,.14); color: var(--danger); border-color: rgba(244,50,111,.5); }
 
 /* Shared secondary button for panel actions (reset, and any future ones) so
@@ -2109,7 +2108,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   transition: background .15s ease, color .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.panel-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); }
+@media (hover: hover) { .panel-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); } }
 
 /* Trim | Fine-tune: the one pill, full width at the head of the music
    section. Fine-tune hides the trim strip and its times and shows the loop
@@ -2358,8 +2357,12 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 .dropzone-remove svg { width: 18px; height: 18px; }
 @media (hover: hover) { .dropzone-remove:hover { background: rgba(var(--wash-rgb), 0.06); color: var(--text-primary); } }
-.dropzone-remove.armed, .dropzone-remove.armed:hover { color: var(--danger);
+.dropzone-remove.armed { color: var(--danger);
   box-shadow: inset 0 0 0 1px rgba(244, 50, 111, 0.5); background: rgba(244, 50, 111, 0.12); }
+@media (hover: hover) {
+  .dropzone-remove.armed:hover { color: var(--danger);
+    box-shadow: inset 0 0 0 1px rgba(244, 50, 111, 0.5); background: rgba(244, 50, 111, 0.12); }
+}
 
 .dropzone-remove[hidden] { display: none; }
 
@@ -2435,7 +2438,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   -webkit-tap-highlight-color: transparent;
 }
 
-.pending-btn:hover { filter: brightness(1.1); }
+@media (hover: hover) { .pending-btn:hover { filter: brightness(1.1); } }
 
 .pending-dismiss {
   flex-shrink: 0;
@@ -2454,7 +2457,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   -webkit-tap-highlight-color: transparent;
 }
 
-.pending-dismiss:hover { background: rgba(var(--wash-rgb), 0.06); color: var(--text-secondary); }
+@media (hover: hover) { .pending-dismiss:hover { background: rgba(var(--wash-rgb), 0.06); color: var(--text-secondary); } }
 
 .music-trim-track {
   position: relative;
@@ -2548,11 +2551,11 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   flex-shrink: 0;
 }
 
-.music-trim-handle:hover .zoom-handle-line,
 .music-trim-handle.dragging .zoom-handle-line { background: #9580ff; }
+@media (hover: hover) { .music-trim-handle:hover .zoom-handle-line { background: #9580ff; } }
 
-.music-trim-handle:hover .zoom-handle-cap,
 .music-trim-handle.dragging .zoom-handle-cap { background: #9580ff; }
+@media (hover: hover) { .music-trim-handle:hover .zoom-handle-cap { background: #9580ff; } }
 
 .music-playhead {
   position: absolute;
@@ -2641,9 +2644,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   transform: translateX(50%);
 }
 
-.music-trim-handle:hover .trim-bubble,
 .music-trim-handle.dragging .trim-bubble {
   opacity: 1;
+}
+@media (hover: hover) {
+  .music-trim-handle:hover .trim-bubble {
+    opacity: 1;
+  }
 }
 
 .loop-preview-row {
@@ -2700,7 +2707,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   color: var(--text-tool);
 }
 
-.loop-btn:hover { filter: brightness(1.08); }
+@media (hover: hover) { .loop-btn:hover { filter: brightness(1.08); } }
 .loop-btn:disabled { opacity: 0.4; cursor: default; }
 
 .finetune-panel {
@@ -2793,7 +2800,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   flex-shrink: 0;
 }
 
-.nudge-btn:hover { background: var(--line); color: var(--text-strong); }
+@media (hover: hover) { .nudge-btn:hover { background: var(--line); color: var(--text-strong); } }
 .nudge-btn:active { background: var(--ui-active); color: #fff; }
 
 .zoom-handle[hidden] { display: none; }
@@ -2827,14 +2834,22 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   flex-shrink: 0;
 }
 
-.zoom-handle:hover .zoom-handle-line,
 .zoom-handle.dragging .zoom-handle-line {
   background: #9580ff;
 }
+@media (hover: hover) {
+  .zoom-handle:hover .zoom-handle-line {
+    background: #9580ff;
+  }
+}
 
-.zoom-handle:hover .zoom-handle-cap,
 .zoom-handle.dragging .zoom-handle-cap {
   background: #9580ff;
+}
+@media (hover: hover) {
+  .zoom-handle:hover .zoom-handle-cap {
+    background: #9580ff;
+  }
 }
 
 /* ---------- Photo tab ---------- */
@@ -2863,7 +2878,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   text-align: center;
 }
 
-.photo-fit-btn:hover { background: transparent !important; }
+@media (hover: hover) { .photo-fit-btn:hover { background: transparent !important; } }
 
 .photo-opacity-row {
   display: flex;
@@ -3086,7 +3101,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   vertical-align: baseline;
 }
 
-.toast-action:hover { background: rgba(var(--wash-rgb), 0.16); }
+@media (hover: hover) { .toast-action:hover { background: rgba(var(--wash-rgb), 0.16); } }
 .toast-action:active { transform: translateY(1px); }
 
 /* ---------- Autosave status (quiet) ---------- */
@@ -3203,7 +3218,7 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
    replace the lift, out from under the finger pressing it. */
 .autosave-status.actionable { pointer-events: auto; box-shadow: 0 0 0 1px var(--hairline, #252a35) inset; }
 .autosave-status.actionable #autosaveStatusText { cursor: pointer; }
-.autosave-status.actionable:hover { background: rgba(var(--surface-control-rgb), 0.95); }
+@media (hover: hover) { .autosave-status.actionable:hover { background: rgba(var(--surface-control-rgb), 0.95); } }
 .autosave-status.actionable #autosaveStatusText:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; border-radius: 6px; }
 .autosave-status.actionable:active { filter: brightness(1.25); }
 /* pillfit fades the pill to nothing when it cannot lift it clear of a bar; an
@@ -3247,7 +3262,7 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
    — and gives them up with the pill when pillfit has faded it (.blocked). */
 .autosave-dismiss { pointer-events: auto; }
 .autosave-status.blocked .autosave-dismiss { pointer-events: none; }
-.autosave-dismiss:hover::before { background: rgba(var(--wash-rgb), 0.20); }
+@media (hover: hover) { .autosave-dismiss:hover::before { background: rgba(var(--wash-rgb), 0.20); } }
 .autosave-dismiss:active::before { background: rgba(var(--wash-rgb), 0.32); }
 /* ON A FINGER, THE WHOLE PILL IS A CONTROL SURFACE. At 28px tall and 11px type
    it was sized as a status, and on the route amber it carries three controls
@@ -3642,9 +3657,11 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   -webkit-tap-highlight-color: transparent;
 }
 
-.export-opt:hover:not(:disabled) {
-  background: rgba(124,92,255,0.08);
-  border-color: rgba(124,92,255,0.4);
+@media (hover: hover) {
+  .export-opt:hover:not(:disabled) {
+    background: rgba(124,92,255,0.08);
+    border-color: rgba(124,92,255,0.4);
+  }
 }
 
 .export-opt:disabled { opacity: 0.5; cursor: default; }
@@ -3680,8 +3697,8 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   overflow: hidden;
 }
 .export-opt-group .export-opt { border: 0; background: none; border-radius: 0; margin-bottom: 0; }
-.export-opt-group:has(.export-opt:hover:not(:disabled)) { border-color: rgba(124,92,255,0.4); }
-.export-opt-group .export-opt:hover:not(:disabled) { background: rgba(124,92,255,0.08); border-color: transparent; }
+@media (hover: hover) { .export-opt-group:has(.export-opt:hover:not(:disabled)) { border-color: rgba(124,92,255,0.4); } }
+@media (hover: hover) { .export-opt-group .export-opt:hover:not(:disabled) { background: rgba(124,92,255,0.08); border-color: transparent; } }
 .export-opt-group .export-gif-toggle { border-top: 1px solid var(--hairline); padding-top: 10px; }
 
 /* GIF background toggle (segmented) -- a track of the one pill, like every
@@ -4282,9 +4299,11 @@ html.help-open, html.help-open body { overflow: hidden; }
     border: 3px solid transparent;      /* inset → a slim thumb with breathing room */
     background-clip: padding-box;
   }
-  .help-drawer-inner::-webkit-scrollbar-thumb:hover {
-    background: rgba(var(--wash-rgb), .22);
-    background-clip: padding-box;
+  @media (hover: hover) {
+    .help-drawer-inner::-webkit-scrollbar-thumb:hover {
+      background: rgba(var(--wash-rgb), .22);
+      background-clip: padding-box;
+    }
   }
 }
 
@@ -4327,7 +4346,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.help-close:hover { background: var(--line-strong); color: var(--text-strong); }
+@media (hover: hover) { .help-close:hover { background: var(--line-strong); color: var(--text-strong); } }
 
 .help-steps {
   display: flex;
@@ -4364,9 +4383,11 @@ html.help-open, html.help-open body { overflow: hidden; }
   -webkit-tap-highlight-color: transparent;
 }
 
-.accordion-header:hover {
-  background: var(--surface-control);
-  border-color: var(--line-mid-2);
+@media (hover: hover) {
+  .accordion-header:hover {
+    background: var(--surface-control);
+    border-color: var(--line-mid-2);
+  }
 }
 
 .accordion-header.open {
@@ -4586,14 +4607,18 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
    time; what stays is the tint every "on" control wears. On a phone it is a
    disc behind the bare glyph, which takes the accent; from 641px it is the
    whole "Stop · 0:05" pill, not an oval around half of it. Pad and Flip get
-   the SAME treatment (Flip's in flip.css). */
-.btn.play.playing { background: var(--seg-on-fill); }
+   the SAME treatment (Flip's in flip.css).
+   ITS WORDS ARE THE "ON" INK, Flip's purple, on both editors (owner: "all
+   yes"): the Pad's Stop was white on the tint, and dark in light mode. That
+   is also why it left the text-shadow list above -- the shadow was for white
+   on solid purple, and this is purple on a soft tint. */
+.btn.play.playing { background: var(--seg-on-fill); color: var(--seg-on-ink); }
 @media (min-width: 641px) {
   .play-wrap:has(.btn.play.playing) { background: var(--seg-on-fill); }
 }
 @media (max-width: 640px) {
   .play-wrap > #playBtn.btn.play.playing,
-  .flip-play-wrap:has(.btn.flip-play.playing) {
+  .play-wrap > #play.btn.flip-play.playing {
     background-color: var(--seg-on-fill);
     border-color: transparent;
     box-shadow: none;
@@ -5059,13 +5084,13 @@ body.player-mode #canvas {
   color: var(--text-primary);
   transition: background .15s ease, border-color .15s ease;
 }
-.player-error-btn:hover { background: rgba(var(--wash-rgb), 0.08); }
+@media (hover: hover) { .player-error-btn:hover { background: rgba(var(--wash-rgb), 0.08); } }
 .player-error-btn.primary {
   background: var(--accent-fill);
   border-color: transparent;
   color: #fff;
 }
-.player-error-btn.primary:hover { background: var(--accent-bright); }
+@media (hover: hover) { .player-error-btn.primary:hover { background: var(--accent-bright); } }
 
 .player-meta { text-align: center; max-width: 460px; }
 .player-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin: 0; /* it is an h1 on the player page */ }
@@ -5134,7 +5159,7 @@ a.player-btn { text-decoration: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .player-btn svg { width: 20px; height: 20px; }
-.player-btn:hover { background: var(--surface-control-hover); }
+@media (hover: hover) { .player-btn:hover { background: var(--surface-control-hover); } }
 .player-btn:active { transform: scale(0.94); }
 
 .player-btn.primary {
@@ -5145,7 +5170,7 @@ a.player-btn { text-decoration: none; }
   color: #fff;
 }
 .player-btn.primary svg { width: 24px; height: 24px; }
-.player-btn.primary:hover { background: var(--accent-bright); }
+@media (hover: hover) { .player-btn.primary:hover { background: var(--accent-bright); } }
 
 /* A LIT TOGGLE IS THE ONE PILL'S SELECTED LOOK -- its tint and its ink, as
    on the library's transport -- and not solid violet, which is Play's: Loop
@@ -5303,10 +5328,12 @@ body.replaying .autosave-status { opacity: 0; pointer-events: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .player-cta .cta-star { font-size: 17px; line-height: 1; }
-.player-cta:hover {
-  background: var(--accent-bright);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px var(--accent-glow);
+@media (hover: hover) {
+  .player-cta:hover {
+    background: var(--accent-bright);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px var(--accent-glow);
+  }
 }
 .player-cta:active { transform: translateY(0); }
 .player-cta { position: relative; --tap-grow: 3px; }   /* 39 tall -> 45 tap */
@@ -5531,7 +5558,7 @@ body.replaying .autosave-status { opacity: 0; pointer-events: none; }
   display: grid; place-items: center; padding: 0;
   transition: background .14s ease, opacity .14s ease; }
 .mag-step-btn svg { width: 17px; height: 17px; display: block; }
-.mag-step-btn:hover:not(:disabled) { background: var(--surface-control-hover); }
+@media (hover: hover) { .mag-step-btn:hover:not(:disabled) { background: var(--surface-control-hover); } }
 .mag-step-btn:disabled { opacity: .32; cursor: default; }
 .mag-step-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 .mag-step-val { min-width: 26px; text-align: center; font-size: 12px;
@@ -5559,7 +5586,7 @@ body.replaying .autosave-status { opacity: 0; pointer-events: none; }
   -webkit-user-select: none; user-select: none; touch-action: manipulation;
   transition: background .12s;
 }
-.slider-nudge-btn:hover { background: var(--surface-nudge-hover); }
+@media (hover: hover) { .slider-nudge-btn:hover { background: var(--surface-nudge-hover); } }
 .slider-nudge-btn:active { background: var(--accent-fill); color: #fff; }
 .zoom-pan-row, .crossfade-row { display: flex; align-items: center; gap: 10px; margin: 16px 0 4px; }
 .zoom-pan-row { margin-bottom: 0; }
@@ -5897,7 +5924,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .learn-peek { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 12px;
   border-radius: 16px; border: 1px solid var(--line-faint); background: var(--surface-sheet-2);
   color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.learn-peek:hover { background: var(--surface-tint); }
+@media (hover: hover) { .learn-peek:hover { background: var(--surface-tint); } }
 .learn-peek:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 .learn-peek-stack { display: flex; flex: none; }
 /* Three previews fanned like cards in a hand; each is a still of a finished
@@ -5935,7 +5962,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .learn-chips::-webkit-scrollbar { display: none; }
 .learn-chip { flex: none; min-height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-faint);
   background: transparent; color: var(--text-primary); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
-.learn-chip:hover { background: var(--surface-tint); }
+@media (hover: hover) { .learn-chip:hover { background: var(--surface-tint); } }
 .learn-chip[aria-pressed="true"] { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
 .learn-chip:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 .learn-sheet-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
@@ -6012,9 +6039,9 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
   min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line-faint);
   background: transparent; color: var(--text-primary); font: inherit; font-size: 13.5px; font-weight: 650; cursor: pointer; }
 .learn-retry svg { width: 14px; height: 14px; }
-.learn-retry:hover { background: var(--surface-tint); }
+@media (hover: hover) { .learn-retry:hover { background: var(--surface-tint); } }
 .learn-retry:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-.learn-try:hover { background: var(--surface-tint); }
+@media (hover: hover) { .learn-try:hover { background: var(--surface-tint); } }
 .learn-try:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 /* A phone: two to a row in the drawer, as the owner saw it in the mock; the
    caption tightens to suit the ~165px card. */
@@ -6232,7 +6259,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
   color: var(--ui-hi); font: inherit; font-size: 12.5px; font-weight: 600;
   cursor: pointer; text-decoration: none;
 }
-.skribl-hint-action:hover { background: rgba(124, 92, 255, 0.14); }
+@media (hover: hover) { .skribl-hint-action:hover { background: rgba(124, 92, 255, 0.14); } }
 /* THE ACTION'S INK, PER THEME (v321 preflight, PF-011). --ui-hi is #7c5cff in
    both themes, and on the hint's own ground that read 3.5:1 in light (#e2e7ee)
    and 3.7:1 in dark (#1c212c): small bold text needs 4.5. The same violet,
@@ -6329,7 +6356,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
   font-weight: 700; font-size: 13px; color: #fff;
   background: linear-gradient(150deg, var(--accent-2-fill), var(--accent-fill));
 }
-.name-done:hover { filter: brightness(1.06); }
+@media (hover: hover) { .name-done:hover { filter: brightness(1.06); } }
 @media (prefers-reduced-motion: reduce) { .name-shell, .name-panel { transition: none; } }
 /* Compose mode's leading close + wordmark (skribl_editor.html). One flex
    group, so the header's space-between still puts the actions on the right. */
@@ -6712,8 +6739,12 @@ body.playing .flip-grid { display: none; }
   font: inherit; cursor: pointer; display: inline-grid; place-items: center; }
 .sdrafts-del svg { width: 19px; height: 19px; }
 @media (hover: hover) { .sdrafts-del:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), .06); } }
-.sdrafts-del.armed, .sdrafts-del.armed:hover { color: var(--danger);
+.sdrafts-del.armed { color: var(--danger);
   box-shadow: inset 0 0 0 1px rgba(244, 50, 111, .5); background: rgba(244, 50, 111, .12); }
+@media (hover: hover) {
+  .sdrafts-del.armed:hover { color: var(--danger);
+    box-shadow: inset 0 0 0 1px rgba(244, 50, 111, .5); background: rgba(244, 50, 111, .12); }
+}
 .sdrafts-row:has(> .sdrafts-del.armed) .sdrafts-meta { color: var(--danger); }
 /* The phone grabber (lib/sheetswipe.js): tap it, or swipe the sheet down. */
 .sdrafts-grab { display: none; }
@@ -6779,12 +6810,12 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
   font: inherit; font-size: 14px; font-weight: 560; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.leave-btn:hover { background: rgba(var(--wash-rgb), .1); }
+@media (hover: hover) { .leave-btn:hover { background: rgba(var(--wash-rgb), .1); } }
 /* The safe choice is the visually quieter one, but it takes focus — a mis-tap
    or a stray Enter should keep the work, not discard it. */
 .leave-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .leave-btn.danger { background: var(--danger-fill); border-color: var(--danger-fill); color: #fff; }
-.leave-btn.danger:hover { background: #c62d46; }
+@media (hover: hover) { .leave-btn.danger:hover { background: #c62d46; } }
 
 /* A menu row can explain what a thing is; a 40px icon in the header could not,
    which is the whole reason Flip Mode went unrecognised. */
@@ -7089,9 +7120,13 @@ body.stroking .toolbar, body.stroking .flip-tools {
    tile: the tint and its ink, on the dock's pill radius (owner, B of four
    mocks: "on" looks one way across the whole dock). At rest and under a
    pointer they stay bare. Magnify is desktop-only. */
-.toolbar #magnifyBtn, .toolbar #magnifyBtn:hover,
-.flip-tools #magnifyBtn, .flip-tools #magnifyBtn:hover {
+.toolbar #magnifyBtn, .flip-tools #magnifyBtn {
   background: none; box-shadow: none;
+}
+@media (hover: hover) {
+  .toolbar #magnifyBtn:hover, .flip-tools #magnifyBtn:hover {
+    background: none; box-shadow: none;
+  }
 }
 /* Magnify at the tools' 26px, at Media's 1.8px line (1.66 x 26 / 24), at
    every width. It was 24px (22px on the phone tier) at a 2.0px line: never
@@ -7146,9 +7181,13 @@ body.stroking .toolbar, body.stroking .flip-tools {
    and a square there read as a box crammed round it ("just turn it purple
    when pressed"). OPEN, it now takes the selected tool's tile like Magnify
    (above) -- the owner's later pick, seeing it beside the lit Pen. */
-.toolbar #mediaOpenBtn:not(.open), .toolbar #mediaOpenBtn:hover:not(.open),
-.flip-tools #mediaOpenBtn:not(.open), .flip-tools #mediaOpenBtn:hover:not(.open) {
+.toolbar #mediaOpenBtn:not(.open), .flip-tools #mediaOpenBtn:not(.open) {
   background: none; box-shadow: none;
+}
+@media (hover: hover) {
+  .toolbar #mediaOpenBtn:hover:not(.open), .flip-tools #mediaOpenBtn:hover:not(.open) {
+    background: none; box-shadow: none;
+  }
 }
 .toolbar #mediaOpenBtn:active:not(.open),
 .flip-tools #mediaOpenBtn:active:not(.open) { color: var(--ui-hi); }
@@ -7440,6 +7479,11 @@ body.replaying .media-card {
    open state lost its fill, keeping only the ring and the ink. After the
    hover rule, so the open state holds under a pointer too. */
 .header #tuneBtn.open { background: var(--seg-on-fill); }
+/* ...and the Pad's ⋯ lights while its menu is open, as Flip's always has
+   (#moreBtn.on, flip.css) and as the settings button beside it does (the
+   owner's pick, "all yes"). Here, after `background: none`, for the same
+   reason as the line above. */
+.header #menuBtn[aria-expanded="true"] { color: var(--seg-on-ink); background: var(--seg-on-fill); }
 /* Record, Play and Post come down to meet them. */
 .header .actions .btn { height: 36px; padding: 0 16px; }
 /* THE HEADER PILLS GET THE SAME 44px BAND AS THE TOOLBAR (SK-AUD-005;
@@ -7509,7 +7553,8 @@ body.replaying .media-card {
    forcing 34 on the button would shrink the one Play the compact header has. */
 @media (min-width: 641px) {
   .play-wrap { height: 36px; }
-  .play-wrap > #playBtn.btn.play { height: 34px; }
+  .play-wrap > #playBtn.btn.play,
+  .play-wrap > #play.btn.flip-play { height: 34px; }   /* Flip's: one Play pill (owner: "all yes") */
 }
 
 /* ---------- the tool tray ------------------------------------------------
@@ -7582,7 +7627,7 @@ body.replaying .media-card {
   transition: background .15s ease, color .15s ease;
 }
 .tool-tray-btn svg { width: 22px; height: 22px; }
-.tool-tray-btn:hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .05); }
+@media (hover: hover) { .tool-tray-btn:hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .05); } }
 /* A SELECTED OPTION IS A TINT: this was a solid purple slab with white ink
    (4.35:1), the one selection left drawn as an action, beside a shelf pill
    that shows the same choice as a tint. */

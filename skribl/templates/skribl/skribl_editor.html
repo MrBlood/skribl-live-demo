@@ -141,7 +141,7 @@
         {# REPLAY SPEED, at any time (owner's pick 2): under Pauses, the other
            replay setting. The replay line's own button and chips
            (editor_draw.js); the line itself shows only while a replay plays. #}
-        <div class="tune-row" id="tuneSpeedRow"><span class="tune-label"><span class="tune-name">Replay speed</span><span class="tune-hint">how fast Play shows your drawing</span></span><span class="speed-only tune-speed" id="tuneSpeed"></span></div>
+        <div class="tune-row" id="tuneSpeedRow"><span class="tune-label"><span class="tune-name">Watching speed</span><span class="tune-hint">how fast Play shows your drawing</span></span><span class="speed-only tune-speed" id="tuneSpeed"></span></div>
       </div>
     </div>
   </div>
@@ -393,7 +393,7 @@
                   aria-label="Pen — tap again for colour and brush, drag sideways for size" title="Draw — tap again for colour and brush, drag sideways for size; shortcut P">
             <canvas class="pen-swoosh" id="penSwoosh" aria-hidden="true"></canvas>
             <span class="tool-btn-label">Pen</span>
-          </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser" title="Erase &mdash; scales with your brush size (2&times;, 3&times; or 5&times;, set in the Draw menu); shortcut E">
+          </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser" aria-label="Eraser" title="Erase &mdash; scales with your brush size (2&times;, 3&times; or 5&times;, set in the Draw menu); shortcut E">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><g transform="translate(-0.4 -1.5)"><path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 21"/><path d="M22 21H7"/><path d="m5.3 11.3 8.7 8.7"/></g></svg>
             <span class="tool-btn-label">Eraser</span>
           </button><button type="button" class="tool-btn" id="shapeToolBtn" data-tool="shape" title="Draw a line, rectangle, oval or polygon &mdash; the kind picker opens above the tool; hold Shift for square/circle">
@@ -404,7 +404,7 @@
             can see until a fourth tool is registered. lib/toolshelf.js owns the
             hidden attribute; nothing else may set it. #}<button type="button" class="tool-btn tool-more" id="toolMoreBtn" aria-haspopup="dialog" aria-controls="toolTray" aria-expanded="false" aria-label="More tools" title="More tools" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"/></svg>
-            <span class="tool-btn-label">More</span>
+            <span class="tool-btn-label">Tools</span>
           </button>        </div>
     {# Every registered tool, one cell each, filled by lib/toolshelf.js. Empty in
        the served HTML on purpose: the registry is the single place a tool is
@@ -417,11 +417,11 @@
        colour -- and the size, brush and opacity it never could -- and tapping the
        pen again opens the same drawer. Dropping it is what lets every control in
        the phone row be a full 44px. #}
-    <button type="button" id="undoBtn" class="undo-btn bar-undo" title="Undo last stroke">
+    <button type="button" id="undoBtn" class="undo-btn bar-undo" title="Undo last stroke" aria-label="Undo last stroke">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
           <span class="undo-label">Undo</span>
         </button>
-    <button type="button" id="redoBtn" class="undo-btn bar-undo" title="Redo last stroke">
+    <button type="button" id="redoBtn" class="undo-btn bar-undo" title="Redo last stroke" aria-label="Redo last stroke">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
           <span class="undo-label">Redo</span>
         </button>

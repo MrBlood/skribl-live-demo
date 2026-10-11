@@ -15839,6 +15839,84 @@ swipe built in pixels from a one-beat page -- a quarter of the width across,
 first moved too little to tell a guard from none, the second was sized for a
 4:3 box and was sideways in the desk's.)
 
+**One Play and Stop: Flip's takes the Pad's look, and Space plays on both (the
+owner's picks from the parity audit, "all yes").** Flip's Play wore a ring and
+a 16px triangle on a phone where the Pad's is a bare 22px one, tinted its wrap
+while playing where the Pad puts a purple disc behind the square, said "Flip it"
+on a desk and stood 4px wider (its header is never `.compact`, so the row's
+16px padding reached it, not the Pad's 14), and outlined the pill a shade
+stronger. It is the Pad's now at both sizes, and the word is "Play" (Flip keeps
+tenths of a second beside it, because its loops are short). Stop's words on a
+desk are the "on" ink on both editors, Flip's purple: the Pad's were white on
+the tint, and dark in light mode, and left the white-on-purple text-shadow list
+with it. The "▶ 2 / 4" chip came off Flip's drawing; the round Play is a
+pause's one sign on both editors, and verify_tappause now asks that nothing is
+painted where the chip sat. Flip's ⋯ is the Pad's rounded square with a 22px
+mark, its header greys and its Undo and Redo greys are the Pad's, its disabled
+Undo and Redo dim to the Pad's .32, and its words are the Pad's: "Undo last
+stroke", "Redo last stroke", "More options", "Post it and get a link anyone can
+open" (and "Play" in How it works). Space plays and stops the Pad at 100%, as it
+always has Flip; zoomed in it is the grab-pan on both, which lib/canvaszoom.js
+now does for both (it was an option Flip set), and a held Space presses once on
+both, where Flip's repeats used to flip it again and again. Shared: one look,
+one key, one zoom rule; the Pad changes only its Stop ink and its Space. *Also
+fixed, found comparing the two editors' names:* the Pad's Undo and Redo and
+Flip's Eraser had no name at all on a desk, because lib/tooltip.js counted their
+hidden word as a name and removed the title that was the real one; each carries
+an aria-label now, and verify_a11y A11Y 18 reads every visible control's name
+from the accessibility tree, both editors, desk and phone. verify_parity "one
+Play and Stop" compares Flip with the Pad property by property (size, fill,
+ink, outline, glyph, word, name) in both themes, phone and desk, resting and
+playing, so the two cannot drift apart again without going red; the pill's
+width, its speed and the settings panel's name differ by design and are left
+out.
+
+**The Flip matches: its dock steps aside while it plays, the Pad's ⋯ lights,
+the settings rows are one design, and Flip's desk dock has words (the rest of
+the owner's "all yes" from the parity audit).** While a Flip plays its dock now
+fades and takes no taps, as the Pad's does, and its "Saved" note hides; it had
+stayed lit and tappable, and its Undo did nothing mid-play. An open drawer
+fades with it. The Pad's ⋯ lights while its menu is open, as Flip's always has
+and as the settings button beside it does -- after `.header #menuBtn`'s
+`background: none`, which carries an id and had already cost the open settings
+button its fill once. Flip's settings rows are the Pad's: the shared rows from
+styles.css, with Flip's own copies of them gone (12px words in 34px cells, a
+bolder name, a label pinned at 150px even on a phone, a solid card where the
+Pad's drawer is glass -- Flip's older copy of the drawer rules loaded later and
+undid the glass the dock redesign gave both). What stays Flip's: equal 44px
+cells for its digit rows (Speed above Onion), Smear weight's three words a
+little tighter so the row stays on one line from 390px up, and the Watching
+speed row's own layout. On a phone a row too wide for its label drops its
+controls under it, as a Pad row does, so the Onion row with its extras on reads
+as two clean lines instead of a squeezed label. Both speed rows are "Watching
+speed" now (the Pad's said Replay speed). Flip's desk dock carries its words,
+Pen · Eraser · Tools, at the Pad's sizes; phones keep the bare icons on both
+(the tray button's word is "Tools" on both editors). Shared: everything here is
+one rule set now, except the Pad's ⋯, which is the Pad catching up with Flip.
+verify_parity "the Flip matches" compares, on both editors at a phone and a
+desk: the dock and the Saved note while playing, the lit ⋯, the Grid, Stroke
+layers and Mirror rows (height without the divider above, label, name, every
+cell), and the dock's words. Red on the old code, green here.
+
+**Every hover waits for a real hover (the rest of #406's bug fix).** #406 put
+twenty hover rules behind `@media (hover: hover)`, the ones its walk of seven
+states on both editors could reach, and said so. The other seventy-three sat
+on controls inside sheets and drawers that walk never opens -- the export
+sheet, How it works, the photo tab, the music trim, the name drawer, saved
+drafts, the leave sheet, the posted list, the page menu, the stamp shelf,
+Flip's page actions, the full-screen bar -- and each still stuck on an iPhone
+after a tap. All of them are behind the guard now (styles.css 49, flip.css 10,
+posted.css 8, fullbar.css 3, pagemenu.css 3; player.css re-emitted); where a
+rule lit a control on hover and in another state too (armed, dragging), the
+other state keeps its look and only the hover copy moved. A mouse lights them
+as before. The edits were made by a script and read by hand. Not here: the
+in-post player's sheet (the post player change guards it) and the demo pages'
+inline styles. verify_a11y A11Y 17b asks the parsed stylesheets on the Pad,
+Flip and the player for any :hover rule outside the guard, and says how many it
+read, so a page that loaded none cannot pass: before this change it found 57
+unguarded on the Pad, 67 on Flip and 5 on the player (67, 87 and 8 before
+#406), and none after it.
+
 **The post: shaped to its drawing, the Pad's line under it, a quiet play
 button, and Blooby on the card (the owner's picks for the in-post player:
 "bring Pad's watching experience into the post ... it's critical"; "all

@@ -49,18 +49,18 @@
              with a duration badge, so "Post to Skribl" stays the only bold purple
              moment on the surface. -->
         <div class="play-wrap flip-play-wrap" id="flipPlayWrap" hidden>
-          <button type="button" class="btn flip-play btn-icon" id="play" title="Flip it — preview the animation" aria-label="Flip it">
+          <button type="button" class="btn flip-play btn-icon" id="play" title="Play" aria-label="Play">
             <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
             <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
-            <span class="btn-label">Flip it</span>
+            <span class="btn-label">Play</span>
           </button>
           <span id="flipDuration" class="duration-badge">0:00</span>
         </div>
-        <button type="button" class="btn post" id="postBtn" disabled title="Post — get a shareable link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">{% if compose %}Add<span class="post-long"> to post</span>{% else %}Post<span class="post-long"> to Skribl</span>{% endif %}</span></button>
+        <button type="button" class="btn post" id="postBtn" disabled title="Post it and get a link anyone can open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">{% if compose %}Add<span class="post-long"> to post</span>{% else %}Post<span class="post-long"> to Skribl</span>{% endif %}</span></button>
         {# Settings sit AFTER Post, beside ⋯ -- the Pad's layout B, kept identical
            (verify_parity compares the two headers item by item). #}
         <button type="button" id="tuneBtn" class="tool-open tune-tool" aria-expanded="false" aria-controls="tunePanel" title="Playback speed and onion skin" aria-label="Playback settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"/><circle cx="15" cy="8" r="2.4" fill="var(--surface-raised)"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="16" r="2.4" fill="var(--surface-raised)"/></svg></button>
-        <button type="button" id="moreBtn" class="tool-open" aria-controls="moreMenu" title="More — save, export, help" aria-label="More" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        <button type="button" id="moreBtn" class="tool-open" aria-controls="moreMenu" title="More" aria-label="More options" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
       </div>
     </div>
 
@@ -101,7 +101,6 @@
 
     <div class="flip-stage" role="main">
       <div class="flip-wrap">
-        <span class="flip-live">▶ FLIPPING</span>
         {# THE CANVAS HAS A NAME (SK-AUD-004), and flip.js keeps the page in it
            ("Drawing canvas, page 3 of 12") where it writes the page counter. #}
         <div class="zoom-layer" id="zoomLayer"><canvas id="pad" role="img" aria-roledescription="drawing canvas" aria-label="Drawing canvas, page 1" aria-describedby="flipCanvasDesc"></canvas><p id="flipCanvasDesc" class="vis-hidden">Draw this page with a finger, mouse or stylus; the pages play back in order. Drawing itself is not available from the keyboard; every tool, page action and setting is.</p><canvas class="flip-grid" id="flipGrid" aria-hidden="true"></canvas>
@@ -311,7 +310,7 @@
                 aria-label="Pen — tap again for colour and brush, drag sideways for size" title="Draw — tap again for colour and brush, drag sideways for size; shortcut P">
           <canvas class="pen-swoosh" id="penSwoosh" aria-hidden="true"></canvas>
           <span class="tool-btn-label">Pen</span>
-        </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser" title="Erase &mdash; scales with your brush size (2&times;, 3&times; or 5&times;, set in the Draw menu); shortcut E">
+        </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser" aria-label="Eraser" title="Erase &mdash; scales with your brush size (2&times;, 3&times; or 5&times;, set in the Draw menu); shortcut E">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-0.4 -1.5)"><path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 21"/><path d="M22 21H7"/><path d="m5.3 11.3 8.7 8.7"/></g></svg>
           <span class="tool-btn-label">Eraser</span>
         </button><button type="button" class="tool-btn" id="shapeToolBtn" data-tool="shape" title="Draw a line, rectangle, oval or polygon &mdash; the kind picker opens above the tool; hold Shift for square/circle">
@@ -322,14 +321,14 @@
           can see until a fourth tool is registered. syncToolShelf() owns the
           hidden attribute; nothing else may set it. #}<button type="button" class="tool-btn tool-more" id="toolMoreBtn" aria-haspopup="dialog" aria-controls="toolTray" aria-expanded="false" aria-label="More tools" title="More tools" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"/></svg>
-          <span class="tool-btn-label">More</span>
+          <span class="tool-btn-label">Tools</span>
         </button>
       </div>
       {# The colour ring that sat here is gone, as on the Pad: the pen swoosh shows
          the colour -- and the size, brush and opacity the ring never could --
          and tapping the pen again opens the same drawer. #}
-      <button class="t-btn" id="undo" title="Undo stroke" aria-label="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
-      <button class="t-btn" id="redo" title="Redo stroke" aria-label="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
+      <button class="t-btn" id="undo" title="Undo last stroke" aria-label="Undo last stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
+      <button class="t-btn" id="redo" title="Redo last stroke" aria-label="Redo last stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
       {# ONE MEDIA BUTTON, as on the Pad: Image and Music were two buttons here.
          lib/mediatabs.js opens whichever was used last; the Photo | Music tabs
          head the open drawer's card; the dot mirrors the two tab dots. #}

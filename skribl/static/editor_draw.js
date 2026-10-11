@@ -714,7 +714,7 @@ if (window.SkriblReplayLine) {
 }
 if (padLine && playScrub && window.SkriblReplayLine) {
   /* ONE CHOICE, THREE PLACES TO MAKE IT: the line under the drawing while a
-     replay plays; the "Replay speed" row in Canvas settings, under Pauses,
+     replay plays; the "Watching speed" row in Canvas settings, under Pauses,
      at any time (owner's pick 2: nothing on the drawing, the top bar
      untouched on every phone); and the pill beside Play on a desk (D1).
      Whichever is used, all three say so. */
@@ -738,7 +738,8 @@ if (padLine && playScrub && window.SkriblReplayLine) {
       choice: () => replayChoice, playMs: () => playTotal || getPlaybackDuration(), pick: all,
     });
     const b = host.querySelector('.rl-speed');
-    const name = () => b.setAttribute('aria-label', 'Replay speed, ' + b.textContent);
+    // "Watching speed", Flip's word for its own row (the owner's, "all yes").
+    const name = () => b.setAttribute('aria-label', 'Watching speed, ' + b.textContent);
     name();
     const h = { update() { l.update(); name(); }, close: l.close, button: b };
     hosts.push(h);

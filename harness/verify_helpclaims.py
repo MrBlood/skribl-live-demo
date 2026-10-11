@@ -140,7 +140,7 @@ CLAIMS = {
                    "verify_pages.py::onion depth/tint live there and are reachable"],
     "fps": ["verify_gifenc.py::frame delay matches the chosen fps"],
     "Draw-on": ["verify_hold.py::a Draw-on page reaches its last stroke before the page turns"],
-    "Flip it & scrub": ["probe:flip_play",
+    "Play & scrub": ["probe:flip_play",
                         "verify_tappause.py::Flip: a tap on the canvas pauses the flip on the page it is on",
                         "verify_tappause.py::Flip: a second tap carries the flip on from where it paused"],
     # Music
@@ -467,7 +467,7 @@ def probe_takes(b, nm, path):
 
 
 def probe_flip_play(b, nm, path):
-    """Flip it plays the pages in a loop; the scrub bar reaches any page."""
+    """Play plays the pages in a loop; the scrub bar reaches any page."""
     if path != "/flip":
         return True, "Flip only"
     ctx, pg, errs = fresh(b, path)
