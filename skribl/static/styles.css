@@ -1216,12 +1216,16 @@ body.stroking .skribl-hint {
 /* TAP TO PAUSE (lib/tappause.js: both editors, and the shared player since
    the owner's replay picks). Paused, the in-post player's
    paused Play stands in the middle of the canvas: inlineplayer.css's
-   .skribl-inline-play, the same dark glass and white arrow, a little larger
-   for a whole canvas. Its glass is black rather than that sheet's near-black,
-   which the eye cannot tell apart and which no theme should flip: it sits on
-   the drawing's own ground, not the page's. Shown by body.playback-paused
-   alone, which each editor's stop clears (the player's Play, end and
-   restart), and it takes no taps -- the tap
+   .skribl-inline-play, a little larger for a whole canvas. It is the owner's
+   v4 (the play button over a drawing, "all yes"): white, a thin purple edge,
+   a purple arrow, no shadow. The dark glass it wore laid a haze over the
+   drawing round it (21.5 of 255 darker just outside it, on Paper,
+   verify_tappause) and all but vanished on a dark canvas; white with an
+   edge reads on paper, on a dark
+   canvas and on purple ink, and darkens nothing. Fixed colours, not the
+   theme's: it sits on the drawing's own ground, not the page's. Shown by
+   body.playback-paused alone, which each editor's stop clears (the player's
+   Play, end and restart), and it takes no taps -- the tap
    that lands on it is the canvas's, and resumes. */
 .tap-paused {
   position: absolute;
@@ -1233,16 +1237,16 @@ body.stroking .skribl-hint {
 }
 body.playback-paused .tap-paused { display: grid; }
 .tap-paused-disc {
+  box-sizing: border-box;
   width: 60px;
   height: 60px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  background: #ffffff;
+  border: 2px solid rgba(124, 92, 255, 0.65);
 }
-.tap-paused-disc svg { width: 26px; height: 26px; fill: #ffffff; margin-left: 3px; }
+.tap-paused-disc svg { width: 26px; height: 26px; fill: #7c5cff; margin-left: 3px; }
 
 .canvas-empty-hint {
   position: absolute;

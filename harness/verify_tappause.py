@@ -36,10 +36,12 @@ The drawings keep their ink clear of the canvas's middle, so the only white
 there is the arrow.
 """
 import io
+import json
 import math
 import os
 import struct
 import sys
+import urllib.request
 
 from assertions import make_check
 import browsing
@@ -614,9 +616,12 @@ def flip_suite(b):
 
 def paper_suite(b):
     # A new drawing in the light theme starts on Paper, so for everyone in the
-    # light theme the round Play stands on Paper: black glass at 0.55 over a
-    # near-white ground. Asked of what a pause lays over the middle, by mouse
-    # on a desk, on the ground the editor started on.
+    # light theme the round Play stands on Paper. It is the owner's v4 now, a
+    # white disc that Paper all but matches, so what a pause lays over the
+    # middle is its purple edge and arrow: about 480 pixels here, where the
+    # black glass it replaced moved 3,330. More than 300 is a Play there;
+    # nothing laid over moves none. By mouse on a desk, on the ground the
+    # editor started on.
     print("\nON PAPER -- the round Play shows on the light theme's ground")
     for who, route, sel in (("Pad", "/skribl-pad", "#canvas"), ("Flip", "/flip", ".flip-wrap")):
         ctx, pg, cdp, errs = fresh(b, route, kind=DESK, ground=None)
@@ -636,9 +641,93 @@ def paper_suite(b):
         pg.wait_for_timeout(300)
         lay = laid_over(a, middle(pg, sel))
         check(f"{who}: on Paper, a pause lays the round Play over the middle of the canvas",
-              ground == "#f6f2ea" and lay[0] > 1500 and abs(lay[1]) <= 8 and abs(lay[2]) <= 8,
+              ground == "#f6f2ea" and lay[0] > 300 and abs(lay[1]) <= 8 and abs(lay[2]) <= 8,
               f"on {ground}: {lay}")
         ctx.close()
+
+
+# ------------------------------------------------------------------ v4
+# THE PAUSED PLAY IS THE OWNER'S V4 (the play button over a drawing, "all
+# yes"): white, a thin purple edge, a purple arrow, no shadow -- the same
+# button a post wears. The dark glass it had laid a haze over the drawing
+# round it and nearly vanished on a dark canvas, and it stayed dark on the
+# shared link page after the post's button had changed (owner, from a shared
+# link: "Why is play still the same?"). Asked on all three surfaces that show
+# it, each on a light ground, where a haze can show: by its rules, and by what
+# it paints just outside itself.
+V4 = """() => { const d = document.querySelector('.tap-paused-disc'); if (!d) return null;
+  const cs = getComputedStyle(d), svg = d.querySelector('svg'), r = d.getBoundingClientRect();
+  return { bg: cs.backgroundColor, bw: cs.borderTopWidth, bc: cs.borderTopColor, shadow: cs.boxShadow,
+           ink: svg ? getComputedStyle(svg).fill : null, x: r.left + r.width / 2, y: r.top + r.height / 2, rad: r.width / 2 }; }"""
+
+
+def haze(pg):
+    """How much darker the drawing just outside the paused Play is with the
+    Play shown than with it hidden: the mean drop in brightness, of 255, over
+    a ring 2 to 14px past its edge. Paused, the drawing does not move, so the
+    Play is the only thing that differs between the two shots."""
+    d = pg.evaluate(V4)
+    R = d["rad"] + 16
+    clip = {"x": d["x"] - R, "y": d["y"] - R, "width": 2 * R, "height": 2 * R}
+    on = Image.open(io.BytesIO(pg.screenshot(clip=clip))).convert("L")
+    pg.evaluate("() => { document.querySelector('.tap-paused').style.visibility = 'hidden'; }")
+    off = Image.open(io.BytesIO(pg.screenshot(clip=clip))).convert("L")
+    pg.evaluate("() => { document.querySelector('.tap-paused').style.visibility = ''; }")
+    s = on.width / (2 * R)
+    pa, pb = on.load(), off.load()
+    drops = [pb[x, y] - pa[x, y] for y in range(on.height) for x in range(on.width)
+             if d["rad"] + 2 <= math.hypot(x / s - R, y / s - R) <= d["rad"] + 14]
+    return round(sum(drops) / len(drops), 1) if drops else None
+
+
+def v4_checks(pg, who):
+    d = pg.evaluate(V4)
+    check(f"{who}: the paused Play is white with a thin purple edge and a purple arrow, and casts no shadow",
+          d is not None and d["bg"] == "rgb(255, 255, 255)" and d["bw"] == "2px" and "124, 92, 255" in d["bc"]
+          and d["shadow"] == "none" and d["ink"] == "rgb(124, 92, 255)", str(d and {k: d[k] for k in ("bg", "bw", "bc", "shadow", "ink")}))
+    h = haze(pg)
+    check(f"{who}: ...and darkens nothing round it (the drawing beside it is as bright with it as without)",
+          h is not None and h <= 2, f"{h} of 255 darker")
+
+
+def v4_suite(b):
+    print("\nTHE PAUSED PLAY IS V4 -- the Pad, Flip and the shared link page")
+    for who, route in (("Pad", "/skribl-pad"), ("Flip", "/flip")):
+        ctx, pg, cdp, errs = fresh(b, route, kind=DESK, ground=None)
+        if who == "Pad":
+            pad_take(pg, None)
+            pad_play(pg, None)
+            cx, cy = centre(pg, "#canvas")
+        else:
+            flip_setup(pg)
+            flip_play(pg, None)
+            cx, cy = centre(pg, "#pad")
+        pg.wait_for_timeout(400)
+        tap(pg, None, cx, cy)
+        pg.wait_for_timeout(300)
+        v4_checks(pg, who)
+        ctx.close()
+    # The shared link page: a drawing on Paper, posted as a person would.
+    pts = [{"x": 120 + i * 18, "y": 150 + (i % 4) * 30, "color": "#1d1a2b", "size": 8, "t": i * 120, "start": i == 0} for i in range(30)]
+    req = urllib.request.Request(BASE + "/api/skribls", headers={"Content-Type": "application/json"}, data=json.dumps(
+        {"version": 2, "schemaVersion": 2, "playbackMode": "replay", "fps": None, "title": "v4",
+         "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+         "frames": [{"strokes": pts, "strokeGroups": [30], "background": {"color": "#f6f2ea"}}]}).encode())
+    url = json.loads(urllib.request.urlopen(req, timeout=20).read())["url"]
+    ctx = b.new_context(**DESK)
+    pg = ctx.new_page()
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.goto(BASE + url, wait_until="load")
+    pg.wait_for_timeout(800)
+    pg.click("#playerPlayBtn")
+    pg.wait_for_timeout(500)
+    cv = box(pg, "#canvas")
+    pg.mouse.click(cv["x"] + cv["width"] / 2, cv["y"] + cv["height"] / 2)
+    pg.wait_for_timeout(300)
+    v4_checks(pg, "The shared link page")
+    check("The shared link page: no page errors", not errs, "; ".join(errs[:2]))
+    ctx.close()
 
 
 with sync_playwright() as p:
@@ -646,6 +735,7 @@ with sync_playwright() as p:
     pad_suite(b)
     flip_suite(b)
     paper_suite(b)
+    v4_suite(b)
     b.close()
 
 print("\n" + "=" * 62)
