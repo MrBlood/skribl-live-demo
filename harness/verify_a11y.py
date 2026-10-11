@@ -2494,8 +2494,8 @@ with sync_playwright() as _ph:
         _r = _pg.evaluate(_HOVER_RULES)
         check(f"{_name}: every :hover rule sits inside @media (hover: hover) ({_r['seen']} read in {_r['sheets']} sheets)",
               _r["seen"] >= 10 and not _r["bad"],
-              ", ".join(_r["bad"][:6]) + (f" (+{len(_r['bad']) - 6} more)" if len(_r["bad"]) > 6 else "")
-              or f"only {_r['seen']} hover rules read")
+              (", ".join(_r["bad"][:6]) + (f" (+{len(_r['bad']) - 6} more)" if len(_r["bad"]) > 6 else ""))
+              if _r["bad"] else (f"only {_r['seen']} hover rules read" if _r["seen"] < 10 else "none outside it"))
         _pg.close()
     _bh.close()
 
