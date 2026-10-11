@@ -93,6 +93,11 @@ ONLY_SCEN = set(filter(None, os.environ.get("CENTRING_SCENARIOS", "").split(",")
 # Controls the suite does not reach, each with its reason. Kept short: an
 # entry here is a control nobody checks.
 UNREACHABLE = {
+    # The music trim nudges appear only once a track has decoded and a range
+    # is set; this headless pass loads no audio. verify_ux and verify_parity drive them.
+    "#nudgeStepCoarser": "music trim, needs a decoded track",
+    "#nudgeStepFiner": "music trim, needs a decoded track",
+    ".nudge-btn": "music trim, needs a decoded track",
 }
 
 # Badges and chips that are not buttons but carry a mark the eye centres.
