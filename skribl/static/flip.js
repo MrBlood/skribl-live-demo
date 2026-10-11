@@ -4344,6 +4344,37 @@ flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipP
 flipProgress.addEventListener('pointermove',e=>{ if(scrubbingFrames) _seekAt(e); });
 flipProgress.addEventListener('pointerup',endFrameScrub);
 flipProgress.addEventListener('pointercancel',endFrameScrub);
+/* DRAG ACROSS THE DRAWING TO SCRUB IT (the owner's pick, "all yes"), as the
+   Pad's preview does (lib/replayline.js drag()): while a Flip plays, a
+   sideways drag anywhere on the page moves through the pages -- the drawing's
+   width for the whole Flip, from the page on screen -- and letting go carries
+   on from the page under the finger (endFrameScrub). More than 10px sideways is
+   a drag; less is a tap, which pauses, and lib/tappause.js draws the same line
+   (its TAP_SLOP). A paused Flip scrubbed this way stays paused, as on the strip.
+   Mostly up and down is neither, so a stray swipe leaves the page alone. */
+(function(){
+  const slop = (window.SkriblTapPause && window.SkriblTapPause.TAP_SLOP) || 10;
+  let down = null, drag = null;
+  const seek = (e) => { const w = pad.getBoundingClientRect().width || 1;
+    scrubToPage(_flipPageAt(Math.max(0, Math.min(1, drag.f + (e.clientX - drag.x) / w)))); };
+  pad.addEventListener('pointerdown', e => {
+    down = playing && !e.button ? { x: e.clientX, y: e.clientY, id: e.pointerId } : null;
+  });
+  pad.addEventListener('pointermove', e => {
+    if(drag){ if(e.pointerId === drag.id) seek(e); return; }
+    if(!down || e.pointerId !== down.id) return;
+    const dx = e.clientX - down.x, dy = e.clientY - down.y;
+    if(Math.abs(dx) <= slop || Math.abs(dx) < Math.abs(dy)) return;
+    try{ pad.setPointerCapture(e.pointerId); }catch(_){}
+    drag = { id: down.id, x: down.x, f: _flipFrac(idx) }; down = null;
+    scrubbingFrames = true;
+    seek(e);
+  });
+  ['pointerup','pointercancel'].forEach(t => pad.addEventListener(t, e => {
+    down = null;
+    if(drag && e.pointerId === drag.id){ drag = null; endFrameScrub(); }
+  }));
+})();
 function syncWatchSegs(){
   ['flipSpeedSeg','watchSeg'].forEach(id => { const g=document.getElementById(id); if(!g) return;
     g.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.rate === flipRate)); });
