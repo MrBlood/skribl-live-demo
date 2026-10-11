@@ -589,7 +589,15 @@ body {
   flex-shrink: 0;
 }
 
-.btn:hover:not(:disabled) { filter: brightness(1.1); }
+/* HOVER ONLY WHERE THERE IS A HOVER. A phone has no pointer resting on
+   anything, and iOS keeps :hover on whatever was tapped last, so an unguarded
+   hover rule leaves the control lit after the tap -- Post brightened, a menu
+   row tinted, a swatch blown up -- until the next tap somewhere else. Every
+   hover a tap reaches on the editors' main surfaces sits behind (hover: hover):
+   verify_a11y A11Y 17 forces :hover on a phone, without a tap, across seven
+   states of both editors. (Hover rules on controls inside the sheets and
+   drawers it does not open follow, with a check over every rule.) */
+@media (hover: hover) { .btn:hover:not(:disabled) { filter: brightness(1.1); } }
 .btn:active:not(:disabled) { transform: scale(0.94); }
 .btn:disabled { opacity: 0.4; cursor: default; }
 
@@ -639,7 +647,7 @@ body {
   color: var(--text-primary);
   border: 1px solid var(--hairline-strong);
 }
-.btn.play:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; }
+@media (hover: hover) { .btn.play:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; } }
 .btn.clear { background: var(--surface-control); color: var(--text-secondary); border: 1px solid var(--hairline); }
 .btn.clear:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; }
 
@@ -1467,7 +1475,7 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
 }
 .tool-open { --icon-size: 24px; }   /* what .tool-open .tab-dot measures from */
 .tool-open svg { width: 24px; height: 24px; }  /* standardized tier-1 icon 21->24 */
-.tool-open:hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); }
+@media (hover: hover) { .tool-open:hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); } }
 
 /* Magnify tool — lit when its zoom pill is showing. */
 .magnify-tool.active { color: var(--seg-on-ink); background: var(--seg-on-fill); }
@@ -1666,7 +1674,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    stroke, so they no longer carry a text label competing in the tool row. */
 .undo-label { display: none; }
 
-.undo-btn:hover { background: var(--surface-control-hover); color: var(--text-strong); }
+@media (hover: hover) { .undo-btn:hover { background: var(--surface-control-hover); color: var(--text-strong); } }
 .undo-btn:disabled { opacity: 0.3; cursor: default; }
 
 .color-section, .bg-section {
@@ -1712,7 +1720,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   flex-shrink: 0;
 }
 
-.color-dot:hover { transform: scale(1.12); }
+@media (hover: hover) { .color-dot:hover { transform: scale(1.12); } }
 .color-dot:active { transform: scale(0.92); }
 /* A near-black swatch on a near-black drawer is an empty hole, so the palette
    marks its dark inks and they get a rim. It has to be a token: the drawer is
@@ -1960,7 +1968,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.eyedropper-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); }
+@media (hover: hover) { .eyedropper-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); } }
 .eyedropper-btn.picking { background: var(--ui-active); color: #fff; border-color: transparent; }
 
 .recent-row { display: flex; align-items: center; gap: 10px; }
@@ -3469,8 +3477,10 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   /* No ring around the tint (owner, Rings and Tints): the tint is the signal. */
 }
 .menu-item.menu-feature svg { color: var(--accent); }
-.menu-item.menu-feature:hover { background: color-mix(in srgb, var(--accent) 19%, transparent); }
-.menu-item:hover { background: rgba(var(--wash-rgb), 0.06); }
+@media (hover: hover) {
+  .menu-item.menu-feature:hover { background: color-mix(in srgb, var(--accent) 19%, transparent); }
+  .menu-item:hover { background: rgba(var(--wash-rgb), 0.06); }
+}
 .menu-item.danger { color: var(--danger); }
 .menu-item.danger svg { color: var(--danger); }
 .menu-item.armed { background: rgba(244,50,111,.14); color: var(--danger); font-weight: 600; }
@@ -3975,7 +3985,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 
 .post-submit svg { width: 17px; height: 17px; }
-.post-submit:hover:not(:disabled) { filter: brightness(1.1); }
+@media (hover: hover) { .post-submit:hover:not(:disabled) { filter: brightness(1.1); } }
 .post-submit:active:not(:disabled) { transform: scale(0.98); }
 .post-submit:disabled { opacity: 0.5; cursor: default; }
 .post-submit[hidden] { display: none; }
@@ -5380,7 +5390,7 @@ body.replaying .autosave-status { opacity: 0; pointer-events: none; }
 .toolbar .undo-btn .undo-label { display: none; }
 .toolbar .undo-btn svg { width: 20px; height: 20px; }
 .toolbar .undo-btn:disabled { opacity: .32; cursor: default; }
-.toolbar .undo-btn:not(:disabled):hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); }
+@media (hover: hover) { .toolbar .undo-btn:not(:disabled):hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); } }
 
 /* ---------- Pass 2: brush sizes read as one labeled control ---------- */
 #drawPanel .tool-row { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }

@@ -1291,6 +1291,18 @@ const LABEL_STOP = '<span class="btn-label"> Done</span>';
 const LABEL_RECORD = '<span class="btn-label"> Record</span>';
 const LABEL_PLAY = '<span class="btn-label"> Play</span>';
 
+// PLAY AND STOP ARE ONE BUTTON, SO ITS NAME FOLLOWS ITS FACE. The face swapped
+// to a square and the word "Stop" while the aria-label stayed "Play", so a
+// screen reader announced Play over a button that stops (parity audit, owner:
+// "all yes"). One place sets the face, the class, the name and the title the
+// desk tooltip reads (lib/tooltip.js adopts a re-set title), so the four can
+// never disagree again.
+const setPlayBtn = (on) => {
+  playBtn.innerHTML = on ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>' : ICON_PLAY + LABEL_PLAY;
+  playBtn.classList.toggle('playing', on);
+  playBtn.setAttribute('aria-label', playBtn.title = on ? 'Stop' : 'Play');
+};
+
 function formatDuration(ms) {
   const totalSec = Math.floor(ms / 1000);
   const m = Math.floor(totalSec / 60);
@@ -1415,7 +1427,6 @@ function beginRecording(continueTake) {
   // and the menu stay a pair on the right. Moved back when the take ends.
   if (recordBtn.parentElement !== recIndicator) recIndicator.appendChild(recordBtn);
   playWrap.hidden = true;
-  playBtn.innerHTML = ICON_PLAY + LABEL_PLAY;
   postBtn.hidden = true;          // the recording header is its own mode; Post returns on Stop
   durationBadge.hidden = true;
 
@@ -1545,9 +1556,7 @@ function stopPlayback() {
   scrubbing = false;
   playPaused = false;
   document.body.classList.remove('playback-paused');
-  playBtn.innerHTML = ICON_PLAY + LABEL_PLAY;
-  playBtn.disabled = false;
-  playBtn.classList.remove('playing');
+  setPlayBtn(false);
   if (audioEl) audioEl.pause();
   if (typeof stopWebAudioLoop === 'function') stopWebAudioLoop();
   // Play's hold on the iOS playback session ends here -- unless Preview Loop
@@ -1720,7 +1729,10 @@ function editorReplayFrame() {
   // reading in the drawing's time, which is what the author is judging.
   const elapsed = (performance.now() - playStart) * replayRate;
   if (durationBadge && !durationBadge.hidden) {
-    durationBadge.textContent = formatDuration(Math.min(elapsed, playTotal));
+    // Written when its second changes, not every frame: each write is a
+    // mutation the header's fit (initBrandFit) answers with a layout.
+    const t = formatDuration(Math.min(elapsed, playTotal));
+    if (durationBadge.textContent !== t) durationBadge.textContent = t;
   }
   setScrubProgress(playTotal ? elapsed / playTotal : 1);
   if (playComp) {
@@ -1787,8 +1799,7 @@ playBtn.addEventListener('click', () => {
                       // call back until an Image decode has resolved, long
                       // after iOS stops treating this as a user activation.
   playing = true;
-  playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>';
-  playBtn.classList.add('playing');
+  setPlayBtn(true);
   document.body.classList.add('replaying');
   playTotal = playTimeline[playTimeline.length - 1].playT;
   setReplayRate(replayChoice, playTotal);   // a Fit depends on the length just built
@@ -1943,7 +1954,17 @@ if (playScrub) {
       brand.classList.add('brand-collapsed');
       for (const s of steps) if (collides()) header.classList.add(s);
     }
+    // FIT HEARS ITSELF. The padding snap above writes actions' style, which
+    // the observer below watches, so every fit queued the next -- forever,
+    // from page load -- and each outside change (a class, the replay's badge
+    // ticking) started one more such chain beside it. Measured on the Pad at
+    // rest: 3 fits a frame; after one replay, about 58, every one of them a
+    // forced layout, on a page that looked idle. Taking the records drops
+    // only this fit's own writes: anything else was delivered before the
+    // frame this runs in.
+    if (mo) mo.takeRecords();
   }
+  let mo = null;
   const refit = () => requestAnimationFrame(fit);   // measure after layout settles
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(refit);
@@ -1954,7 +1975,8 @@ if (playScrub) {
   }
   // Buttons appear/disappear by toggling `hidden` — catch those too.
   if (typeof MutationObserver !== 'undefined') {
-    new MutationObserver(refit).observe(actions, {
+    mo = new MutationObserver(refit);
+    mo.observe(actions, {
       subtree: true, childList: true, attributes: true,
       attributeFilter: ['hidden', 'class', 'style', 'disabled'],
     });
