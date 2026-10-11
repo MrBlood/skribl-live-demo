@@ -493,6 +493,12 @@ class SkriblPost(SkriblBase):
     # and a post from before this column has none until skribl/backfill_line.py
     # reaches it. The line then says what it can without it.
     line_json = Column(Text, nullable=True)
+
+    @property
+    def line(self):
+        """line_json as a dict, or None: what a host passes the macro as `line_info`."""
+        return _line_of(self.line_json)
+
     # PLAYS, COUNTED (v304). One per client per post per day -- the rows in
     # skribl_views are the record and this is their running total, kept on
     # the post so a listing can show it without a join. server_default so

@@ -154,13 +154,31 @@ the two keys of the same name off the listing JSON:
 {{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h) }}
 ```
 
-With them, the idle poster is framed exactly where the drawing will be when it
-plays. Without them it is cropped to the share card's full band, which for a
+With them, the post takes the drawing's own shape -- a 4:3 drawing has no bars
+beside it, and a tall one is narrowed to fit a screen rather than barred -- and
+the idle poster fills it. Without them it is cropped to the share card's full band, which for a
 drawing that is not 16:9 leaves the card's own ground and its plate border
 either side of the picture. They are optional because `canvasSize` is optional
 in a payload and because upgrading the package must not silently change the
 shape of a host's posters; both or neither, since one edge alone frames
 nothing. A post written before v309 answers null for both and gets the band.
+
+**And the line under it.** Every post shows the Pad's own line under the
+drawing: a scrubber in the drawing's shape and "Drawn in 15 sec · watching at
+1×" (a Flip: "12 pages · watching at 1×"), the speed in it a button, with mute
+and loop beside the scrubber. It is always there, so a post is the same height
+before and after the first tap. Two more optional arguments let it say its
+numbers before anybody presses play -- `line_info` and `pages`, which are
+`post.line` and `post.pages`, or the `line` and `pages` keys of the listing:
+
+```jinja
+{{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h,
+                 line_info=post.line, pages=post.pages) }}
+```
+
+Without them the line says what it can until the drawing arrives. A surface
+with a transport of its own passes `line=False` and keeps the 16:9 box with
+mute and loop on it.
 
 **What it costs and when.** `skribl_inline_assets()` pulls
 `inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
@@ -1218,6 +1236,19 @@ reclaims nothing tells you which. Call `storage.sweep_orphans_report()` directly
 if you would rather schedule it in-process.
 
 This is not a daemon and does not schedule itself; cadence is your cron's job.
+
+**Filling in the line on posts written before v322.** The line under a post
+reads one small column, `line_json`, which posts carry from v322. Older Pad posts
+have NULL, and their line says what it can until somebody plays them. This
+fills it in, on exactly the terms of the canvas command below -- dry run by
+default, small batches committed as it goes, "rows where `line_json IS NULL`"
+as the queue, the same exit codes -- with a smaller default batch (25), because
+what it reads is the first page's strokes:
+
+```bash
+python -m skribl.backfill_line --app yourapp:create_app           # rehearse
+python -m skribl.backfill_line --app yourapp:create_app --write   # fill them in
+```
 
 **Filling in canvas sizes on posts written before v309.** A tile shows the
 post's share card, and the card is 1200x630 with the drawing centred inside it.
