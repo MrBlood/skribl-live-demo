@@ -4043,6 +4043,20 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   #postSheet .post-result .post-submit { margin: 0; padding: 14px 8px; }
   #postSheet .post-result .post-result-soft { font-size: 14px; }
 }
+/* THE DELETE KEY ROW (K1): under the result, quiet, said once. Its words take
+   the room and the button keeps its label on one line; a 44px tap like every
+   control in the sheet. */
+.post-key { display: flex; align-items: center; gap: 10px; margin: 0 10px 8px; padding: 6px 6px 6px 12px;
+  border-radius: 14px; background: color-mix(in srgb, var(--text-primary) 5%, transparent); }
+.post-key[hidden] { display: none; }
+.post-key-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0;
+  font-size: 13px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+.post-key-sub { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.post-key-btn { flex: none; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--hairline-strong);
+  background: var(--surface-control); color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 600;
+  white-space: nowrap; cursor: pointer; }
+.post-key-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (min-width: 641px) { .post-key { margin: 0 12px 10px; } }
 .post-status { padding: 4px 14px 8px; }
 .post-status[hidden] { display: none; }
 .post-status.error .export-progress-fill { background: var(--danger); }
@@ -4088,6 +4102,18 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   .menu-sheet:not(.export-sheet) .menu-item { padding: 9px 12px; }
 }
 
+/* THE HOME BAR, FROM THE HOME SCREEN (owner's iPhone: the Post sheet's last
+   row under the home bar, "post is on the bottom, but won't scroll"). Edge to
+   edge was left out on purpose (DECISIONS, after v320), and without
+   viewport-fit=cover iOS reports every safe-area inset as 0 -- so each sheet's
+   "+ env(safe-area-inset-bottom)" reserved nothing, while the installed app
+   still draws under the home bar. lib/homescreen.js marks the page data-skribl-app
+   when it runs from the Home Screen; there, on a phone, the sheets that rise
+   from the bottom reserve the bar's 34px themselves. Not tested on an iPhone
+   here (no WebKit in this box). */
+@media (max-width: 640px) {
+  html[data-skribl-app] { --home-bar: max(env(safe-area-inset-bottom, 0px), 34px); }
+}
 /* Mobile: bottom sheet */
 @media (max-width: 640px) {
   .menu-overlay { align-items: flex-end; }
@@ -4097,7 +4123,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
     bottom: 0;
     width: 100%;
     border-radius: 20px 20px 0 0;
-    padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
+    padding: 8px 12px calc(16px + var(--home-bar, env(safe-area-inset-bottom, 0px)));
     transform: translateY(100%);
     transition: transform 0.35s var(--spring);
     max-height: 88dvh;
@@ -5162,7 +5188,10 @@ a.player-btn { text-decoration: none; }
   transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
 @starting-style { .rl-chips { opacity: 0; transform: translateY(-4px); } }
 .rl-chips[hidden] { display: none; opacity: 0; transform: translateY(-4px); }
-.rl-chips button { position: relative; flex: 1 1 0; min-width: 0; max-width: 48px; height: 34px;
+/* Each speed shrinks only to its own label (a flex item's own minimum): an even split (flex: 1 1 0,
+   min-width: 0) gave every chip 28px and pushed "16×" 5px out of its pill at
+   every width, 320 to 768. Eight across fit the 260px a 320px phone gives. */
+.rl-chips button { position: relative; flex: 1 1 30px; max-width: 48px; height: 34px;
   padding: 0 4px; border: 0; border-radius: var(--r-pill); background: none;
   font: inherit; font-weight: 550; font-variant-numeric: tabular-nums;
   color: var(--text-primary); cursor: pointer; }
@@ -5196,6 +5225,31 @@ a.player-btn { text-decoration: none; }
    line a desk screen can end (a 800px laptop cut them in half) and a phone's
    does. They close on a pick. The autosave pill steps aside meanwhile: it
    sat on the ¼× chip on a phone, and nothing is saved during a replay. */
+/* THE SPEED BESIDE PLAY (desk, owner's D1): the replay line's own button and
+   chips, compact, at the end of the Play pill. Its chips open downward, under
+   the pill, over the top of the drawing. A phone keeps the line under the
+   drawing instead, so the pill has no speed there. */
+.pad-speed { position: relative; display: inline-flex; align-items: center; padding-right: 4px; }
+.speed-only .rl-text { font-size: 0; column-gap: 0; }   /* the sentence's words go; the button stays */
+.speed-only .rl-drawn, .speed-only .rl-skip { display: none; }
+/* THE ROW IN CANVAS SETTINGS (owner's pick 2): the button sits at the row's
+   end like its neighbours' controls; its chips wrap onto their own line
+   under the row, inside the panel, right-aligned, each a 44px tap. */
+#tuneSpeedRow { flex-wrap: wrap; }
+.tune-speed { display: contents; }
+.tune-speed .rl-speed { font-size: 15px; padding: 6px 10px 6px 12px; }
+.tune-speed .rl-speed::before { inset: -6px -2px; }   /* a 44px tap at its 33px */
+.tune-speed .rl-chips { flex-basis: auto; width: max-content; max-width: 100%; margin: 6px 0 2px auto; gap: 0; font-size: 15px; order: 3; }
+.tune-speed .rl-chips button { flex: 0 0 auto; min-width: 44px; max-width: none; padding: 0 6px; }
+.tune-speed .rl-text { order: 1; margin-left: auto; }
+/* While they are open, a zero-height break puts the chips on a line of their own. */
+#tuneSpeedRow:has(.tune-speed.open)::after { content: ''; flex-basis: 100%; height: 0; order: 2; }
+.pad-speed .rl-speed { margin-left: 0; font-size: 13px; line-height: 1.4; padding: 4px 8px 4px 10px; }
+.pad-speed .rl-speed::before { inset: -9px -2px; }   /* a 44px tap at its 26px */
+.pad-speed .rl-chips { position: absolute; top: calc(100% + 10px); right: -4px; z-index: 60; width: max-content; max-width: none; font-size: 14px; }
+.pad-speed .rl-chips button { flex: 0 0 auto; min-width: 44px; max-width: none; padding: 0 8px; }   /* 44 wide; ::before makes it 44 tall */
+.pad-speed.open .rl-speed svg { transform: rotate(180deg); }
+@media (max-width: 640px) { .pad-speed { display: none; } }
 #padLine { position: absolute; z-index: 7; flex-direction: column-reverse; }
 .play-scrub.rl-scrub { height: 30px; overflow: visible; }
 .play-scrub.rl-scrub::after { top: -7px; bottom: -7px; }   /* 44px */
@@ -5859,7 +5913,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .learn-chip[aria-pressed="true"] { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
 .learn-chip:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 .learn-sheet-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-  padding: 2px 24px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  padding: 2px 24px calc(24px + var(--home-bar, env(safe-area-inset-bottom, 0px))); }
 .learn-all { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
 
 .learn-card { margin: 0; display: flex; flex-direction: column; min-width: 0;
@@ -6640,7 +6694,7 @@ body.playing .flip-grid { display: none; }
 @media (max-width: 640px) {
   .sdrafts-sheet { top: auto; bottom: 0; transform: translateX(-50%); width: 100%;
     max-height: 78vh; border-radius: 18px 18px 0 0; padding-top: 8px;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+    padding-bottom: calc(12px + var(--home-bar, env(safe-area-inset-bottom, 0px))); }
   .sdrafts-grab { display: block; flex: none; position: relative; width: 40px; height: 5px;
     margin: 0 auto 10px; border-radius: 999px; background: var(--text-secondary); opacity: .7; cursor: pointer; }
   .sdrafts-grab::after { content: ''; position: absolute; inset: -12px -30px; }
@@ -7793,7 +7847,7 @@ body.replaying .media-card {
 }
 .hs-steps {
   width: 100%; max-width: 520px; box-sizing: border-box;
-  padding: 20px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  padding: 20px 20px calc(24px + var(--home-bar, env(safe-area-inset-bottom, 0px)));
   border-radius: 22px 22px 0 0;
   background: var(--surface-panel); color: var(--text-primary);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.3);

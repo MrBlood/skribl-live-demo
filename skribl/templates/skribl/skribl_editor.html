@@ -86,6 +86,11 @@
           <span class="btn-label">Play</span>
         </button>
         <span id="durationBadge" class="duration-badge" hidden>0:00</span>
+        {# THE SPEED, BESIDE PLAY ON A DESK (owner, D1). On a phone the speed
+           line stays under the drawing after a replay; a desk has no gap
+           there, so the speed lives in this pill instead. Filled by
+           editor_draw.js (lib/replayline.js, compact). #}
+        <span id="padSpeed" class="speed-only pad-speed"></span>
       </div>
       {# In its slot from first paint, disabled until a take exists — a primary
          action that pops in and out makes the header feel unstable. #}
@@ -133,6 +138,10 @@
         <div class="tune-row" id="tuneLayersRow"><span class="tune-label"><span class="tune-name">Stroke layers</span><span class="tune-hint">keeps see-through strokes from beading</span></span><button type="button" id="strokeLayersBtn" class="onion-tint" role="switch" aria-checked="true" title="Draw each see-through stroke on its own layer, so overlaps inside one stroke do not stack into dark beads" aria-label="Stroke layers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 7.5l9 4.5 9-4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/></svg></button></div>
         <div class="tune-row" id="tuneMirrorRow"><span class="tune-label"><span class="tune-name">Mirror</span><span class="tune-hint">reflects across the canvas centre</span></span><span class="seg onion-seg" id="mirrorSeg" role="group" aria-label="Mirror drawing"><span class="seg-slider"></span><button type="button" data-mirror="off" class="on" title="No mirroring">Off</button><button type="button" data-mirror="vertical" title="Mirror left to right" aria-label="Mirror left to right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M12 3v18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M9.5 8 5 12l4.5 4"/><path d="M14.5 8 19 12l-4.5 4"/></svg></button><button type="button" data-mirror="horizontal" title="Mirror top to bottom" aria-label="Mirror top to bottom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M3 12h18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M8 9.5 12 5l4 4.5"/><path d="M8 14.5 12 19l4-4.5"/></svg></button><button type="button" data-mirror="both" title="Four-way mirror" aria-label="Four-way mirror"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M12 3v18M3 12h18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M9 5.5H5.5V9M15 5.5h3.5V9M9 18.5H5.5V15M15 18.5h3.5V15"/></svg></button></span></div>
         <div class="tune-row" id="tunePauseRow"><span class="tune-label"><span class="tune-name">Pauses</span><span class="tune-hint">idle gaps between strokes</span></span><span class="seg onion-seg" id="pauseSeg" role="group" aria-label="Pause handling"><span class="seg-slider"></span><button type="button" data-pause="keep" title="Replay every pause exactly as you drew it">Keep</button><button type="button" data-pause="trim" title="Shorten long pauses to a quarter second">Trim</button><button type="button" data-pause="tight" class="on" title="Squeeze pauses right down (the default)">Tight</button></span></div>
+        {# REPLAY SPEED, at any time (owner's pick 2): under Pauses, the other
+           replay setting. The replay line's own button and chips
+           (editor_draw.js); the line itself shows only while a replay plays. #}
+        <div class="tune-row" id="tuneSpeedRow"><span class="tune-label"><span class="tune-name">Replay speed</span><span class="tune-hint">how fast Play shows your drawing</span></span><span class="speed-only tune-speed" id="tuneSpeed"></span></div>
       </div>
     </div>
   </div>
