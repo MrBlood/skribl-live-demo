@@ -100,10 +100,9 @@
        15 sec · watching at 1×" over the drawing's shape, or "12 pages ·
        watching at 1×" -- from the listing, on the same terms as the shape
        above: written only when the listing answered, so a null is the line
-       saying what it can without it, never a guessed number. These are the
-       macro's `line_info` and `pages`, for a host that renders server-side. */
+       saying what it can without it, never a guessed number. It is the
+       macro's `line_info`, for a host that renders server-side. */
     if (item.line) box.setAttribute('data-skribl-line', JSON.stringify(item.line));
-    if (item.kind === 'flip' && item.pages) box.setAttribute('data-skribl-pages', item.pages);
     var poster = box.querySelector('.skribl-inline-poster');
     if (poster) {
       /* The macro rendered the card URL with the placeholder in it, so the real

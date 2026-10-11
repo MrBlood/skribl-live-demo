@@ -148,7 +148,7 @@
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None, pages=None) -%}
+{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None) -%}
 {# is-muted and is-silent are the pre-script truth: sound is off by default, and
    nothing yet knows whether this Skribl has any. inlineplayer.js clears
    is-silent when the payload turns out to carry a loop.
@@ -168,10 +168,11 @@
    the Pad's scrubber and its words, "Drawn in 15 sec · watching at 1×" or
    "12 pages · watching at 1×", always there, so a post is the same height at
    rest and playing and the feed never jumps. `line_info` is the listing's
-   `line` and `pages` its `pages`: pass them and the line says its numbers and
-   shows the drawing's shape before anybody presses play; leave them out and
-   it says what it can until the drawing arrives. line=false leaves the line
-   out, for a surface with a transport of its own (the gallery's cards). #}
+   `line` (`post.line` server-side): pass it and the line says its numbers,
+   shows the drawing's shape and keeps mute's place before anybody presses
+   play; leave it out and it says what it can until the drawing arrives.
+   line=false leaves the line out, for a surface with a transport of its own
+   (the gallery's cards). #}
 {%- set shaped = line and canvas_w and canvas_h %}
 <div class="skribl-inline is-muted is-silent{% if line %} has-line{% endif %}{% if shaped %} is-shaped{% endif %}"
      data-skribl-inline
@@ -185,9 +186,6 @@
 {%- endif %}
 {%- if line and line_info %}
      data-skribl-line='{{ line_info|tojson }}'
-{%- endif %}
-{%- if line and pages and pages > 1 %}
-     data-skribl-pages="{{ pages }}"
 {%- endif %}
      data-skribl-api="{{ url_for(bp ~ '.create_skribl') }}"
      role="button"
@@ -212,7 +210,7 @@
     It stays invisible until the script does (is-on) -- a scrubber that cannot
     scrub is not something to show. #}
 {%- if line %}
-<div class="skribl-inline-line">
+<div class="skribl-inline-line is-muted is-silent">
   <div class="skribl-inline-row">
     <div class="skribl-inline-scrub" aria-label="Scrub"></div>
 {{ _skribl_inline_controls() }}

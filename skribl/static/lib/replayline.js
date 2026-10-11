@@ -238,15 +238,16 @@
       cols = c.map(function (v) { return mx ? (v ? Math.sqrt(v / mx) : 0) : 0.2; });
     }
     function paint(f) {
-      if (!cols) bin();
       var dpr = Math.min(2, window.devicePixelRatio || 1), w = bar.clientWidth, h = bar.clientHeight;
       if (!w || !h) return;
+      // A new width is a new number of columns, so it bins again.
+      if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cols = null;
+      }
+      if (!cols) bin();
       f = Math.max(0, Math.min(1, f));
       head.style.left = f * 100 + '%';   // the playhead moves smoothly; the columns step
       var n = cols.length, at = Math.round(f * n);
-      if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
-        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); drawnCol = -2;
-      }
       // A page fills as it plays, so its key is the playhead's device pixel.
       if (pg) at = Math.round(f * cv.width);
       if (at === drawnCol) return;   // only when the playhead crosses a column

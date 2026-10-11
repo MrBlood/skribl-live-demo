@@ -167,16 +167,16 @@ nothing. A post written before v309 answers null for both and gets the band.
 drawing: a scrubber in the drawing's shape and "Drawn in 15 sec · watching at
 1×" (a Flip: "12 pages · watching at 1×"), the speed in it a button, with mute
 and loop beside the scrubber. It is always there, so a post is the same height
-before and after the first tap. Two more optional arguments let it say its
-numbers before anybody presses play -- `line_info` and `pages`, which are
-`post.line` and `post.pages`, or the `line` and `pages` keys of the listing:
+before and after the first tap. One more optional argument lets it say its
+numbers before anybody presses play -- `line_info`, which is `post.line`, or
+the `line` key of the listing:
 
 ```jinja
 {{ skribl_inline(post.skribl_id, canvas_w=post.canvas_w, canvas_h=post.canvas_h,
-                 line_info=post.line, pages=post.pages) }}
+                 line_info=post.line) }}
 ```
 
-Without them the line says what it can until the drawing arrives. A surface
+Without it the line says what it can until the drawing arrives. A surface
 with a transport of its own passes `line=False` and keeps the 16:9 box with
 mute and loop on it.
 

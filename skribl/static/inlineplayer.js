@@ -75,9 +75,24 @@
  *   pauses and carries on, with the play button showing while it is paused.
  *
  * The box takes the drawing's shape there too (the macro's canvas size), so a
- * 4:3 drawing has no bars beside it. A surface with its own transport leaves
- * the line out (line=false: the gallery's cards) and keeps the old 16:9 box
- * with its mute and loop on it, as a draft does.
+ * 4:3 drawing has no bars beside it, and a tall drawing is narrowed to fit a
+ * screen (70vh, at most 640px tall) rather than given bars. A surface with its
+ * own transport leaves the line out (line=false: the gallery's cards) and
+ * keeps the old 16:9 box with its mute and loop on it, as a draft does.
+ *
+ * THE STYLESHEET'S SIDE OF IT, said here with the rest of the reasoning, so
+ * the sheet stays values a host can read before overriding one. The play
+ * button is white with a 2px purple edge and no shadow -- the owner's v4,
+ * the one that read on paper, on a dark canvas and on purple ink without
+ * darkening anything -- in fixed colours, because it sits on the drawing,
+ * not on the host's page. The line takes the host's text colour; its quiet
+ * words are quiet by OPACITY, never by a colour mixed from currentColor,
+ * because Chrome left such a mix stale when a host switched theme after load
+ * (the light page showed the dark page's words, white on white). The speed
+ * and lit loop are an accent tint with ink mixed toward the text, so they
+ * lighten on a dark page and deepen on a light one. Every control in the
+ * line is 44px to a finger by an invisible ::before/::after, and its speeds
+ * open upward over the scrubber, closing on a pick.
  *
  * LOOP IS ON BY DEFAULT, so the lit state is the RESTING state and the button
  * dims when switched OFF -- the opposite of mute, whose resting state is muted.
@@ -1560,8 +1575,11 @@
     if (line && RL) {
       try { info = JSON.parse(el.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
       if (!info || typeof info !== 'object') info = null;
-      pagesN = +el.getAttribute('data-skribl-pages') || 0;
+      pagesN = info && info.pages > 1 ? info.pages | 0 : 0;
       shapeCols = info && RL.shapeOf(info.shape);
+      /* The listing knows whether there is sound, so mute holds its place
+       * from the first paint and the row does not change at the first tap. */
+      if (info && typeof info.sound === 'boolean') mark('is-silent', !info.sound);
       if (info) { choice = RL.fromPost(info.speed, info.drawn); rate = RL.rate(choice, info.play); }
       bar = line.querySelector('.skribl-inline-scrub');
       var say = line.querySelector('.skribl-inline-say');
@@ -1595,6 +1613,9 @@
       line.addEventListener('click', function (e) { e.stopPropagation(); });
       line.classList.add('is-on');
       paintLine();
+      /* At rest nothing else paints it, so a line laid out late (a host
+       * revealing the post, a font arriving) paints when its size lands. */
+      if (bar && global.ResizeObserver) new global.ResizeObserver(function () { paintLine(); }).observe(bar);
     }
 
     applySound();

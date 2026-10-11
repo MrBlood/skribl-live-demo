@@ -496,8 +496,15 @@ class SkriblPost(SkriblBase):
 
     @property
     def line(self):
-        """line_json as a dict, or None: what a host passes the macro as `line_info`."""
-        return _line_of(self.line_json)
+        """Everything the line under the post needs before its payload: line_json,
+        whether it has sound, and a Flip's page count. The listing's `line`, and
+        what a host passes the macro as `line_info`. Never None: a post with no
+        line_json still knows whether it is silent and how many pages it has."""
+        v = _line_of(self.line_json) or {}
+        v["sound"] = bool(self.has_audio)
+        if self.kind == "flip" and self.pages and int(self.pages) > 1:
+            v["pages"] = int(self.pages)
+        return v
 
     # PLAYS, COUNTED (v304). One per client per post per day -- the rows in
     # skribl_views are the record and this is their running total, kept on
@@ -652,9 +659,9 @@ class SkriblPost(SkriblBase):
             # client that received a width alone would have to invent a height.
             "canvas_w": int(self.canvas_w) if (self.canvas_w and self.canvas_h) else None,
             "canvas_h": int(self.canvas_h) if (self.canvas_w and self.canvas_h) else None,
-            # The in-post line's summary, or null; null renders as the line
-            # saying what it can without it, never as a guessed "0 sec".
-            "line": _line_of(self.line_json),
+            # The in-post line's summary (the `line` property): what it lacks
+            # renders as the line saying what it can, never a guessed "0 sec".
+            "line": self.line,
             "views": int(self.views_total or 0),
             "user_id": self.user_id,
             "visibility": self.visibility,
