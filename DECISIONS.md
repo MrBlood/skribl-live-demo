@@ -15626,6 +15626,36 @@ gave each 28px and "16×" ran 5px out of its pill at every width (the centring
 census); each now shrinks only to its label, and eight still fit a 320px phone.
 verify_replayspeed checks it at 320, 402 and 1100, red on the old rule.
 
+**The delete key, where you post (SK-AUD-009, the owner's pick K1).** Without an
+account only this browser can delete a post. The key that lets any browser do it
+existed, but you met it in the Library, never when you posted. The posted card
+now carries one quiet row under Watch / Share / Copy link: "Only this browser
+can delete it. Keep the key somewhere safe, and you can delete it from any
+browser." with a Copy delete key button (a 44px tap), which copies the same key
+the Library's Copy key does. The gallery tick's line says, once ticked, "Public.
+You'll get a key to delete it from anywhere", since public is when the key
+matters most. Neither is said when the host signs people in: the row is not
+rendered and the tick reads "On, anyone can find it in the gallery" (their
+account is the key). Shared: the sheet is lib/postsheet.js and
+_skribl_post.html, so Pad and Flip both get it; each editor hands its post's key
+to result(). verify_ux drives both editors at 390 and 1100 (painted, inside the
+sheet, the copied key equals the stored one) and renders both pages for a
+signed-in host; each part was shown red on its own.
+
+**When a post fails, one set of words for both editors (owner's pick; SK-AUD-010).**
+The Pad said "Post rejected by the server (503)" or "Not posted -- saved on this
+device"; Flip said "The server could not save it (error 503). Your Skribl is
+safe here". The same failure now opens with the same line on both --
+"Couldn't post. Your drawing is still here" -- then what happened, then what to
+do. The words live once, in the shared Post sheet (lib/postsheet.js,
+SkriblPostSheet.failure); each editor says only what happened (server, refused
+with the server's own reason, an odd answer such as a Wi-Fi sign-in page,
+offline, cancelled). The recoveries still differ where they really do: the Pad
+keeps a copy on this device when the server cannot be reached, and says so in
+the same sentence ("..., saved on this device."); Flip does not claim one.
+verify_flipmeta fails each case at the network on both editors and asks for the
+same first line, the reason, and the honest difference; red on the old code.
+
 **The Post sheet: "Speed" opens the speeds, and "Posted!" is the title (the
 owner's picks, from the iPhone).** The fourth button under "Viewers start at"
 was the speed the preview last watched at; out of context it read as a random

@@ -66,7 +66,7 @@
           <label class="post-check">
             <input type="checkbox" id="postPublicInput" class="post-check-input">
             <span class="post-check-box" aria-hidden="true"></span>
-            <span class="post-check-text">Show in the public gallery<span class="post-check-sub">Off, it is shared by its link only</span></span>
+            <span class="post-check-text">Show in the public gallery<span class="post-check-sub" id="postPublicSub" data-off="Off, it is shared by its link only" data-on="{{ 'On, anyone can find it in the gallery' if skribl_signed_in else 'Public. You’ll get a key to delete it from anywhere' }}">Off, it is shared by its link only</span></span>
           </label>
           {% endif %}
         </div>
@@ -93,6 +93,18 @@
           <span>Copy link</span>
         </button>
       </div>
+      {# THE DELETE KEY, WHERE YOU POST (SK-AUD-009, the owner's pick K1).
+         Without an account only this browser can delete a post; the key that
+         lets any browser do it was met in the Library, never here. One quiet
+         row, shown only when the post came back with a key (lib/postsheet.js
+         result()), and not rendered at all when the host signs people in:
+         their account is the key then. #}
+      {% if not compose and not skribl_signed_in %}
+      <div class="post-key" id="postKeyRow" hidden>
+        <span class="post-key-text">Only this browser can delete it.<span class="post-key-sub">Keep the key somewhere safe, and you can delete it from any browser.</span></span>
+        <button type="button" class="post-key-btn" id="postKeyBtn">Copy delete key</button>
+      </div>
+      {% endif %}
       {# Posting is the one flow where "did that work?" has a real cost, and
          it announced nothing: started, succeeded and failed were all silent. #}
       <div class="post-status" id="postStatus" role="status"
