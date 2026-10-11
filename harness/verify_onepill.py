@@ -185,6 +185,7 @@ def painted_bg(page, b):
 
 seen = set()
 chosen = set()   # (route, control, the selected option's label): Photo | Music is measured with each chosen
+tune_seen = set()   # (route, control, form) measured with the settings drawer open
 
 
 def audit(page, route, theme, form, state):
@@ -194,6 +195,8 @@ def audit(page, route, theme, form, state):
         tag = f"{route} {g['key']} [{theme} {form}{', ' + state if state else ''}]"
         first = ident not in seen
         seen.add(ident)
+        if state == "tune":
+            tune_seen.add((route, g["key"], form))
         chosen.add((route, g["key"], g["selText"]))
         check(f"ONE PILL: {tag} holds exactly one pill", g["pills"] == 1, f"{g['pills']} pill elements")
         if not g["hasSel"]:
@@ -306,6 +309,15 @@ with sync_playwright() as p:
         else:
             q.evaluate("() => setTool('pen')")
         q.click("#tuneBtn"); q.wait_for_selector("#tuneShell.open", timeout=3000)
+        # LET THE DRAWER FINISH OPENING before a switch inside it is clicked.
+        # Playwright's click waits for a target that is still sliding open and,
+        # finding it clipped by the opening drawer, scrolls the page to look for
+        # it. Once Flip's drawer took the Pad's rules (#411), that scroll left
+        # Speed and Watching speed above the top of a desk's screen, so the
+        # census below silently stopped measuring them (36 checks; nothing went
+        # red, because "must" counts a control measured anywhere). A tap does not
+        # scroll; this was the instrument, and the count it lost is checked below.
+        settle(q, 400)
         if q.get_attribute("#gridBtn", "aria-checked") != "true":
             q.click("#gridBtn")
         if ed == "flip" and q.get_attribute("#onion", "aria-checked") != "true":
@@ -404,6 +416,14 @@ with sync_playwright() as p:
         missing = sorted(m for m in must if m not in seen)
         check("ONE PILL: the census reached every control it names (a control not measured is not passing)",
               not missing, f"not reached: {missing}; reached {len(seen)}")
+        # "must" is satisfied by a control measured in any form, so a settings
+        # row that slid off a desk's screen went unmeasured there with nothing
+        # red (#411's drawer, 36 checks). Every settings row, on every form run.
+        rows = {("/skribl-pad", k) for k in ("gridDensitySeg", "mirrorSeg", "pauseSeg")}
+        rows |= {("/flip", k) for k in ("fps", "watchSeg", "gridDensitySeg", "mirrorSeg", "smearWeightSeg", "onionDepthSeg")}
+        lost = sorted(f"{r} {k} [{f}]" for (r, k) in rows for f in FORMS if (r, k, f) not in tune_seen)
+        check("ONE PILL: every settings row's control was measured with the drawer open, on a desk and on a phone",
+              not lost, f"not reached: {lost}")
         for route, extra in (("/skribl-pad", ("zoom-seg", "gif-seg")), ("/flip", ("zoom-seg", "gif-seg"))):
             check(f"ONE PILL: {route}'s script-built and sheet-borne tracks were measured: {', '.join(extra)}",
                   all(any(k[0] == route and e in k[1] for k in seen) for e in extra),
