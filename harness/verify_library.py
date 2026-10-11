@@ -2590,6 +2590,19 @@ with sync_playwright() as _spl:
 # their middle against the button's, in each face, both themes. A third of a
 # pixel is one device pixel; half allows Liberation Sans, whose cap metric
 # rounds the other way.
+#
+# EACH BUTTON IS MEASURED WITH ITS TOP ON A WHOLE PIXEL. Where a button lands
+# on the device-pixel grid moves this reading by a pixel on its own: nudged
+# down in sixths of a pixel, the same empty-stage button with the same CSS
+# read from -0.33 to +0.67, and the header's Make button the same. The header
+# buttons sit at y=14, a whole pixel; the empty stage's lands wherever the
+# text above it puts it -- 458.641 here, and somewhere else on CI's fonts,
+# where it read [0.67, -0.17, 0.67, 0.67] and turned main red
+# while it passed here (the reading this box gives at a 1/6px nudge). So the
+# page is padded down by the fraction that puts the button's top on a whole
+# pixel, which measures the CSS rather than the grid. The 1.3-1.7px of a label
+# centred by its line box still shows at that phase, and the check was shown
+# red on it with the trim taken out.
 import io as _io
 from PIL import Image as _Img
 with sync_playwright() as _spk:
@@ -2606,7 +2619,10 @@ with sync_playwright() as _spk:
             _offs = []
             for _f in ("", "Liberation Sans", "DejaVu Sans", "FreeSans"):
                 _r = _pk.evaluate("""([sel, f]) => { const b = document.querySelector(sel); if (!b) return null;
+                    const html = document.documentElement; html.style.paddingTop = '';
                     b.style.fontFamily = f ? '"' + f + '"' : ''; b.scrollIntoView({ block: 'center' });
+                    const t = b.getBoundingClientRect().top, d = Math.ceil(t) - t;
+                    if (d > 0.001) html.style.paddingTop = d + 'px';
                     const q = b.getBoundingClientRect(), rg = document.createRange();
                     rg.selectNodeContents(b.querySelector('span') || b);
                     return [q.left, q.top, q.width, q.height, rg.getBoundingClientRect().left]; }""", [_sel, _f])
