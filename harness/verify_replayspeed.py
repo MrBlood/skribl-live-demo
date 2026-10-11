@@ -566,14 +566,20 @@ with sync_playwright() as p:
         pg.mouse.up()
         pg.wait_for_timeout(150)
         after_drag = pg.evaluate("() => [idx, document.body.classList.contains('playback-paused'), playing]")
-        # Wide enough to change the page if it were taken for a drag (0.55 of
-        # the width from page 2's start, beat 1 of 6, is beat 4.3: page 3),
-        # and still mostly up and down (0.8 of a 4:3 drawing's height is 0.6
-        # of its width). A gentler swipe -- the first one here moved 5% of the
-        # width -- passed with the guard deleted: it could not tell.
-        pg.mouse.move(pcv["x"] + pcv["width"] * 0.2, pcv["y"] + pcv["height"] * 0.1)
+        # THE SWIPE, FROM PAGE 3 (one beat of six) and built in pixels: a
+        # quarter of the width sideways would cross into page 4 if it were
+        # taken for a drag, and it moves 1.4 times as far down, so it is
+        # mostly up and down on any shape of box. The first swipe here moved
+        # 5% of the width and passed with the guard deleted; the second was
+        # sized for a 4:3 box and was sideways on the desk's.
+        pg.evaluate("() => { scrubToPage(2); endFrameScrub(); }")
+        before_swipe = pg.evaluate("() => idx")
+        _dx = pcv["width"] * 0.25
+        _dy = min(_dx * 1.4, pcv["height"] * 0.9)
+        _cx, _cy = pcv["x"] + pcv["width"] / 2, pcv["y"] + pcv["height"] / 2
+        pg.mouse.move(_cx - _dx / 2, _cy - _dy / 2)
         pg.mouse.down()
-        pg.mouse.move(pcv["x"] + pcv["width"] * 0.75, pcv["y"] + pcv["height"] * 0.9, steps=10)
+        pg.mouse.move(_cx + _dx / 2, _cy + _dy / 2, steps=10)
         pg.mouse.up()
         pg.wait_for_timeout(150)
         after_swipe = pg.evaluate("() => idx")
@@ -581,8 +587,9 @@ with sync_playwright() as p:
               held == [0, True] and mid == 1 and after_drag[0] == 1, f"paused on {held}, mid-drag {mid}, released {after_drag}")
         check(f"[{label}] ...a paused Flip stays paused after it, still playing underneath",
               after_drag[1] and after_drag[2], str(after_drag))
-        check(f"[{label}] ...and a mostly up-and-down drag leaves the page alone", after_swipe == after_drag[0],
-              f"{after_drag[0]} -> {after_swipe}")
+        check(f"[{label}] ...and a mostly up-and-down drag leaves the page alone",
+              before_swipe == 2 and after_swipe == before_swipe and _dy > _dx,
+              f"{before_swipe} -> {after_swipe} ({_dx:.0f}px across, {_dy:.0f}px down)")
         pg.mouse.click(pcv["x"] + pcv["width"] / 2, pcv["y"] + pcv["height"] / 2)   # carry on, as before
         pg.wait_for_timeout(150)
         count = """() => new Promise(res => { let n = 0, last = idx; const t0 = performance.now();
