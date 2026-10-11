@@ -96,6 +96,15 @@
       box.setAttribute('data-skribl-w', item.canvas_w);
       box.setAttribute('data-skribl-h', item.canvas_h);
     }
+    /* WHAT THE LINE UNDER IT SAYS BEFORE ANYBODY PRESSES PLAY -- "Drawn in
+       15 sec · watching at 1×", or "12 pages · watching at 1×" -- from the
+       listing, on the same terms as the shape above: written only when the
+       listing answered, so a null is the line saying what it can without it,
+       never a guessed number. */
+    if (item.kind) box.setAttribute('data-skribl-kind', item.kind);
+    if (item.pages) box.setAttribute('data-skribl-pages', item.pages);
+    if (item.drawn_ms != null) box.setAttribute('data-skribl-drawn', item.drawn_ms);
+    if (item.play_speed) box.setAttribute('data-skribl-speed', item.play_speed);
     var poster = box.querySelector('.skribl-inline-poster');
     if (poster) {
       /* The macro rendered the card URL with the placeholder in it, so the real

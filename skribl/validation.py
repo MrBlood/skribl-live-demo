@@ -79,6 +79,59 @@ def _payload_kind(payload):
     return "flip" if _payload_pages(payload) > 1 else "pad"
 
 
+def _payload_drawn_ms(payload):
+    """How long a Pad Skribl took to draw, in whole ms, or None.
+
+    THE ARTIST'S TIME, lib/replayline.js drawnMs() ported rather than
+    invented: every positive gap between consecutive points, uncapped. A take
+    restarts its clock, so the gap across a take boundary is not positive and
+    adds nothing -- time spent away between takes is not time spent drawing.
+    A second definition here would let the line under a post say a different
+    number from the line under the same drawing in the player.
+
+    None for a Flip (its line counts pages, not time) and for a drawing with no
+    points; the frames come out the way the players find them (inlineplayer.js
+    framesOf): `frames[0]` when there are frames, the top level otherwise.
+
+    Pure + import-light so it can be unit-tested headless.
+    """
+    if not isinstance(payload, dict) or _payload_kind(payload) == "flip":
+        return None
+    frames = payload.get("frames")
+    if isinstance(frames, list) and frames:
+        first = frames[0]
+        pts = first.get("strokes") if isinstance(first, dict) else None
+    else:
+        pts = payload.get("strokes")
+    if not isinstance(pts, list) or len(pts) < 2:
+        return None
+    def _t(p):
+        t = p.get("t") if isinstance(p, dict) else None
+        return t if isinstance(t, (int, float)) and not isinstance(t, bool) else None
+    ms = 0.0
+    for i in range(1, len(pts)):
+        a, b = _t(pts[i - 1]), _t(pts[i])
+        if a is not None and b is not None and b - a > 0:
+            ms += b - a
+    return int(round(ms))
+
+
+def _payload_play_speed(payload):
+    """The author's `playSpeed` as text ('auto', 'drawn', 'fit', '0.25' ... '16'), or None.
+
+    WHERE A VIEWER STARTS (lib/replayline.js fromPost). Text because the
+    column holds both kinds; the client reads a number back with parseFloat.
+    Anything _validate_play_speed would refuse -- and every post from before it
+    existed -- answers None, which plays as drawn.
+    """
+    v = payload.get("playSpeed") if isinstance(payload, dict) else None
+    if v is None or _validate_play_speed(v):
+        return None
+    if isinstance(v, str):
+        return v
+    return ("%g" % v)
+
+
 def _payload_canvas(payload):
     """The drawing's own size, as (w, h), or (None, None) when it has none.
 

@@ -71,6 +71,7 @@ from .mediameta import STRIPPED, strip_payload
 from .storage import claim_media, externalise_payload, pending_media_ready
 from .validation import (_iter_media_items, _payload_has_audio,
                          _payload_canvas, _payload_kind, _payload_pages,
+                         _payload_drawn_ms, _payload_play_speed,
                          _validate_payload_complexity, _validate_payload_extra,
                          _validate_payload_media)
 
@@ -402,6 +403,7 @@ def create_post(payload, *, author_id=None, media_store=None,
     # Read once, outside the retry loop: five public_id attempts should not
     # re-walk the payload five times to reach the same two numbers.
     _canvas = _payload_canvas(payload)
+    _drawn_ms = _payload_drawn_ms(payload)
 
     for _attempt in range(5):
         candidate = secrets.token_urlsafe(8)
@@ -426,6 +428,8 @@ def create_post(payload, *, author_id=None, media_store=None,
                     pages=_payload_pages(payload),
                     canvas_w=_canvas[0],
                     canvas_h=_canvas[1],
+                    drawn_ms=_drawn_ms,
+                    play_speed=_payload_play_speed(payload),
                     visibility=visibility,
                     delete_token_hash=delete_token_hash,
                 )

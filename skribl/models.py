@@ -466,6 +466,20 @@ class SkriblPost(SkriblBase):
     # it widely.
     canvas_w = Column(Integer, nullable=True)
     canvas_h = Column(Integer, nullable=True)
+    # HOW LONG IT TOOK TO DRAW, AND WHERE A VIEWER STARTS, for the same reason
+    # and on the same terms (the in-post line; owner: "all yes"). A post in a
+    # feed says "Drawn in 15 sec · watching at 1x" under the drawing before
+    # anybody presses play, and the listing defers the payload. drawn_ms is
+    # the artist's time, lib/replayline.js drawnMs() -- every positive gap
+    # between consecutive points, uncapped -- and null for a Flip, whose line
+    # counts pages. play_speed is the author's `playSpeed` as posted ('auto',
+    # 'drawn', 'fit' or a rate, written as text); null before it existed,
+    # which plays as drawn.
+    #
+    # NULLABLE, and null is honest: the line says what it can without them
+    # (validation._payload_drawn_ms; skribl/backfill_line.py fills old rows).
+    drawn_ms = Column(Integer, nullable=True)
+    play_speed = Column(String(8), nullable=True)
     # PLAYS, COUNTED (v304). One per client per post per day -- the rows in
     # skribl_views are the record and this is their running total, kept on
     # the post so a listing can show it without a join. server_default so
@@ -619,6 +633,10 @@ class SkriblPost(SkriblBase):
             # client that received a width alone would have to invent a height.
             "canvas_w": int(self.canvas_w) if (self.canvas_w and self.canvas_h) else None,
             "canvas_h": int(self.canvas_h) if (self.canvas_w and self.canvas_h) else None,
+            # The in-post line's two numbers; null renders as the line saying
+            # what it can without them, never as a guessed "0 sec".
+            "drawn_ms": int(self.drawn_ms) if self.drawn_ms is not None else None,
+            "play_speed": self.play_speed or None,
             "views": int(self.views_total or 0),
             "user_id": self.user_id,
             "visibility": self.visibility,
