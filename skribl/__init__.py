@@ -357,6 +357,11 @@ def create_blueprint(session=None, url_prefix=None,
                 # The two grounds _skribl_app_identity.html stamps on its
                 # theme-color meta (SK-AUD-013).
                 "skribl_theme_ground": THEME_GROUND,
+                # WHETHER A HOST LETS SHARED CACHES KEEP PUBLIC MEDIA (opt-in,
+                # off by default; routes.py's 300-second window). A delete is
+                # then not instant everywhere, and the confirmation says so
+                # (owner's pick; SK-AUD-011).
+                "skribl_shared_cache": bool(bp.skribl_public_media_cache),
                 # WHETHER ANYBODY IS SIGNED IN, so copy can stop describing the
                 # wrong ownership model (EXT-P1-13). The help drawer explained
                 # that Your Skribls is what this browser posted and that Delete

@@ -216,7 +216,7 @@
     var close = el('button', 'sdrafts-close');
     close.type = 'button';
     close.setAttribute('aria-label', 'Close');
-    close.textContent = '\u2715';
+    if (global.SkriblMarks) global.SkriblMarks.into(close, 'close', '\u2715'); else close.textContent = '\u2715';
     close.addEventListener('click', hide);
     head.appendChild(h);
     head.appendChild(close);

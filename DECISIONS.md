@@ -15550,6 +15550,98 @@ the recovery key is how a list comes back. verify_library pins each state on a
 phone and a desk, red on the old code; the desk row check now posts one Skribl
 first, since an empty Library no longer has a row to measure.
 
+**Drawn marks, not typed ones: + − ✕ ✓ (the centring round; owner: "make all
+your recommended fixes").** The centring suite measured every control whose face
+is a typed symbol and found them where their font puts them, not where the
+control's middle is: the Music Fine-tune − and + 1.33px high, the ✕ that closes
+How it works 1.83px high, in every installed font. They are drawn now, from one
+source: _skribl_marks.html defines plus, minus, close, check and arrow (24-unit
+box, centred, currentColor, the app's 2px stroke, 1em square, aria-hidden), as
+a Jinja macro for templates and as <template> elements that lib/marks.js clones
+for controls a script builds -- the slider steppers, the autosave pill's
+dismiss, the Library's delete and undo, the drafts sheet's close, Flip's stamp
+delete and paste ghost. A button whose face is one mark centres it by its box
+(styles.css). Measured afterwards, on Pad and Flip, phone and desk: within one
+screen pixel where the button's shape is painted; the 0.4-0.5px left on a few
+dark-theme buttons is against a box with no visible plate.
+
+**One slider stepper for both editors.** app.js and flip.js each built the -/+
+beside a range slider, and Flip's had drifted: no names for a screen reader, no
+press-and-hold, and steps past the slider's ends. lib/slidernudge.js is the
+Pad's, shared, with the marks, and one step per keyboard press (a press with no
+mouse down was a no-op on both). The × on speeds and badges is a separate change
+(the letter x), with the squeezed speed chips.
+
+**The empty Library, one step (owner's L1; SK-AUD-008, 009).** With nothing
+posted, the page offered "Make one" twice (the header's and the card's), said
+what the list would hold twice (the card and the paragraph under the list), and
+put its custody sentence below the filters. Now: the card says "Your posted
+Skribls will show up here" with one button, "Make your first Skribl"; the
+header's Make one steps aside while the list is empty; the paragraph under the
+list does not repeat the card; and the custody line takes its short wording --
+"Kept in this browser. Clearing site data forgets this list and the keys that
+delete your posts." -- with "Have a key? Use it" right after it. Everything
+comes back with the first post (library.js marks <body> .lib-empty). A host's
+signed-in profile shows the card alone, no browser sentence. verify_library
+pins one Make button, the line and its action, and nothing repeated, red on
+the old page; verify_posted's empty-state check follows the new words.
+
+**Delete says how long a cached copy can last, only where one can (SK-AUD-011,
+owner's pick).** "The link stops working at once" is true on a host that leaves
+public media uncached, which is the default. A host that opts in to letting
+networks cache public media (`SKRIBL_PUBLIC_MEDIA_CACHE`) gets the honest
+version on the Library's and the gallery's Delete: "it is gone from here at
+once; copies a network has cached can take up to 5 minutes to disappear". The
+page learns which from a `data-skribl-shared-cache` attribute on its body, set
+only with the opt-in. verify_mediaauthz pins the attribute both ways;
+verify_galib drives the delete with it set, red on the old words. The editors
+have no Delete of their own (the posted list lives in the Library), so Flip is
+not affected.
+
+**Where the replay speed lives when nothing is playing (owner: "This looks like
+dogshit"; then picks D1 and 2).** #386 kept the speed line under the drawing after
+a replay, on a phone; on the owner's iPhone it sat over the frame's edge,
+crowded under Add take, with "long pauses skipped" falling onto the tools. The
+line now shows only while a replay plays, as before #386, and the speed at rest
+has two homes, neither on the drawing:
+
+* **Canvas settings, "Replay speed", under Pauses** (the other replay setting),
+  on every screen. A beside-Play chip was measured first: at 402px the bar has
+  43px spare and the chip takes 39 (4px left, in this box's fonts), at 390 and
+  375 the bar sheds the wordmark's "pad" -- so the owner chose the settings row.
+* **The Play pill, on a desk** ("Play · 0:02 · 1×", D1), where there is room.
+  Its chips open downward over the top of the drawing; opening them sends away
+  any toast there.
+
+The line, the row and the pill are one choice: each is lib/replayline.js's own
+line attached again, its sentence hidden by CSS (.speed-only) and its button
+named "Replay speed, 2×" by the editor -- built in editor_draw.js, because the
+player loads replayline.js on a byte budget (a compact mode in the library ran
+144 bytes over it). Every new control is a 44px tap (owner: "make sure target
+areas follow the rules too"); verify_replayspeed measures the tap boxes, and
+caught the row's button at 41px before it shipped. Flip: its speed is pages per
+second, already in its Playback settings, so it gets no row; its replay line
+comes with F1. The speeds' own chips also stopped squeezing: an even split
+gave each 28px and "16×" ran 5px out of its pill at every width (the centring
+census); each now shrinks only to its label, and eight still fit a 320px phone.
+verify_replayspeed checks it at 320, 402 and 1100, red on the old rule.
+
+**The delete key, where you post (SK-AUD-009, the owner's pick K1).** Without an
+account only this browser can delete a post. The key that lets any browser do it
+existed, but you met it in the Library, never when you posted. The posted card
+now carries one quiet row under Watch / Share / Copy link: "Only this browser
+can delete it. Keep the key somewhere safe, and you can delete it from any
+browser." with a Copy delete key button (a 44px tap), which copies the same key
+the Library's Copy key does. The gallery tick's line says, once ticked, "Public.
+You'll get a key to delete it from anywhere", since public is when the key
+matters most. Neither is said when the host signs people in: the row is not
+rendered and the tick reads "On, anyone can find it in the gallery" (their
+account is the key). Shared: the sheet is lib/postsheet.js and
+_skribl_post.html, so Pad and Flip both get it; each editor hands its post's key
+to result(). verify_ux drives both editors at 390 and 1100 (painted, inside the
+sheet, the copied key equals the stored one) and renders both pages for a
+signed-in host; each part was shown red on its own.
+
 **Two tabs, two drawings, nothing lost (SK-AUD-006, the owner's pick T1).** Two
 tabs of one editor shared one autosave slot and the last writer won: tab A
 drew, tab B drew, and A's drawing was gone once A closed. v321's notice said so

@@ -434,3 +434,7 @@
 .reckey-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .reckey-done[disabled] { opacity: 0.45; cursor: not-allowed; }
 
+
+/* Its face is the app's drawn close mark (_skribl_marks.html), centred by
+   the box above rather than by a typed character's line (the centring round). */
+.posted-del .mk, .posted-undo-x .mk { display: block; flex: none; }

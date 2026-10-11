@@ -2869,6 +2869,18 @@ with _sp() as _pr:
             _ctx.close()
             continue
         _pg.fill("#postTitleInput", "Result probe")
+        # K1: the gallery tick's line says what ticking means, and for an
+        # anonymous author that a public post comes with a key. Ticked and
+        # unticked again, so this probe posts unlisted as before.
+        _subs = []
+        if _pg.locator("#postPublicInput").count():
+            _pg.locator("#postSheet .post-check").click(); _pg.wait_for_timeout(100)
+            _subs.append(_pg.text_content("#postPublicSub"))
+            _pg.locator("#postSheet .post-check").click(); _pg.wait_for_timeout(100)
+            _subs.append(_pg.text_content("#postPublicSub"))
+        check(f"DELETE KEY ({_name}) at {_w}: ticking the gallery box says a key comes with a public post, unticking says link only",
+              len(_subs) == 2 and "key to delete it from anywhere" in (_subs[0] or "")
+              and "link only" in (_subs[1] or ""), str(_subs))
         _pg.click("#postSubmitBtn")
         try:
             _pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
@@ -2907,8 +2919,46 @@ with _sp() as _pr:
             _c = _pg.evaluate("() => window.__copied || null")
             check(f"POST RESULT ({_name}) at {_w}: Copy link puts the player's absolute link on the clipboard",
                   isinstance(_c, str) and _c.startswith(BASE) and "/s/" in _c, str(_c))
+        # K1 (SK-AUD-009): the delete key, where you post. Painted (asked of
+        # elementFromPoint, not a rect), inside the sheet, a 44px tap, one line,
+        # and it copies the very key the posted list holds for this post.
+        _k = _pg.evaluate("""() => {
+            const row = document.getElementById('postKeyRow'), b = document.getElementById('postKeyBtn');
+            if (!row || row.hidden || !b) return null;
+            const r = b.getBoundingClientRect(), s = document.getElementById('postSheet').getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { painted: !!hit && b.contains(hit), h: Math.round(r.height), inside: r.right <= s.right + 0.5 && r.left >= s.left - 0.5,
+                     words: row.textContent.replace(/\\s+/g, ' ').trim() }; }""")
+        check(f"DELETE KEY ({_name}) at {_w}: the posted card offers Copy delete key, painted, a 44px tap, inside the sheet",
+              bool(_k) and _k["painted"] and _k["h"] >= 44 and _k["inside"]
+              and "Only this browser can delete it" in _k["words"], str(_k))
+        if _k:
+            _pg.evaluate("() => { window.__copied = null; }")
+            _pg.click("#postKeyBtn"); _pg.wait_for_timeout(300)
+            _kc = _pg.evaluate("""() => { const l = (window.SkriblPosted && window.SkriblPosted.list()) || [];
+                const e = l.find(x => x.title === 'Result probe' && x.tok); return { copied: window.__copied || null, tok: e ? e.tok : null }; }""")
+            check(f"DELETE KEY ({_name}) at {_w}: ...and copies the key the posted list holds for this post",
+                  bool(_kc["tok"]) and _kc["copied"] == _kc["tok"], str(_kc)[:160])
         _ctx.close()
     _prb.close()
+
+# K1's other half: a host that signs people in renders no key row at all (the
+# account is the key), on either editor. The server side, as verify_library
+# pins /library's: the blueprint's current_user_id decides.
+import sys as _ksys
+_ksys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+from flask import Flask as _KFlask
+import skribl as _kskribl
+for _uid, _want in ((lambda: "u-1", False), (None, True)):
+    _ka = _KFlask(__name__)
+    _ka.config["SECRET_KEY"] = "harness-ux-k1"
+    _ka.register_blueprint(_kskribl.create_blueprint(session=False, current_user_id=_uid, csrf=False))
+    for _kp in ("/skribl-pad", "/flip"):
+        _kr = _ka.test_client().get(_kp)
+        _kh = _kr.get_data(as_text=True)
+        check(f"DELETE KEY: {_kp} {'renders' if _want else 'does not render'} the key row "
+              f"when the host {'has no' if _want else 'signs people in, so has a'} current user",
+              _kr.status_code == 200 and ('id="postKeyRow"' in _kh) == _want, f"HTTP {_kr.status_code}")
 
 print("\nPOST SHEET — Flip posts through the Pad's own sheet, so the two look the same")
 # The owner, looking at Flip's post dialog beside the Pad's: "shouldn't flip and

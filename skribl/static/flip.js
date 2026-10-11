@@ -2811,7 +2811,7 @@ function buildStrip(){
       g.className = 'frame ghost-paste';
       g.title = 'Paste ' + (n>1 ? n + ' copied pages' : 'the copied page') + ' here';
       g.setAttribute('aria-label', g.title);
-      g.innerHTML = '<span class="ghost-plus" aria-hidden="true">+</span>'
+      g.innerHTML = '<span class="ghost-plus" aria-hidden="true">' + (window.SkriblMarks ? SkriblMarks.html('plus', '+') : '+') + '</span>'
                   + (n>1 ? '<span class="ghost-n">'+n+'</span>' : '');
       g.addEventListener('click', ev => { ev.stopPropagation(); spanPaste(); });
       strip.appendChild(g);
@@ -5621,6 +5621,9 @@ async function shareSkribl(){
       chip('Post failed'); sharing=false; return;
     }
     const url=location.origin + data.url;
+    // The delete key the posted card offers (K1): the server's, or the one this
+    // client minted for a replay. Read before _shareIdem is cleared below.
+    const delKey=data.deleteToken || (_shareIdem && _shareIdem.tok) || null;
     // Record it locally. Without accounts the link is the only handle on a
     // post, and closing the tab used to lose it permanently.
     if(window.SkriblPosted){
@@ -5643,7 +5646,7 @@ async function shareSkribl(){
         window.SkriblRecoveryKey.present({ key: kept.key, url: data.url });
       }
     }
-    showShareResult(url);
+    showShareResult(url, delKey);
   }catch(err){
     if(err && err.name==='AbortError'){
       showShareFailure('Cancelled \u2014 not posted. Your Skribl is safe here; Try again sends it.');
@@ -5691,11 +5694,11 @@ function showShareFailure(msg){
   postUI.setState('error');
   postUI.el.statusLabel.textContent = msg;
 }
-function showShareResult(url){
+function showShareResult(url, key){
   if(!postUI) return;
   const t = document.getElementById('postTitleInput');
   postUI.setState('success');
-  postUI.result(url, (t && t.value.trim()) || '');
+  postUI.result(url, (t && t.value.trim()) || '', { key: key || null });
   chip('Posted! 🎨');
 }
 
@@ -6218,9 +6221,8 @@ function dragZoomPan(wrap){
     return { move(clientX){ const dt=-((clientX-sx)/rect.width)*winDur; const half=winDur/2; const lo=half, hi=Math.max(half,audioDuration-half); zoomCenter=Math.max(lo,Math.min(sc+dt,hi)); zoomFocus='free'; syncZoomFocusButtons(); updateTrimUI(); },
       end(){ wrap.classList.remove('panning'); } }; });
 }
-function addSliderNudgers(el, opts){ opts=opts||{}; const wrap=document.createElement('span'); wrap.className='slider-nudge-wrap'; el.parentNode.insertBefore(wrap, el); wrap.appendChild(el);
-  const mk=(txt,dir)=>{ const b=document.createElement('button'); b.type='button'; b.className='slider-nudge-btn'; b.textContent=txt; b.addEventListener('click',()=>{ if(opts.nudgeFn){ opts.nudgeFn(dir); } else { const step=opts.step||1; el.value=(+el.value)+dir*step; el.dispatchEvent(new Event('input',{bubbles:true})); } }); return b; };
-  wrap.insertBefore(mk('\u2212',-1), el); wrap.appendChild(mk('+',1)); }
+// addSliderNudgers: lib/slidernudge.js, the Pad's copy, shared (this one had
+// no button names, no press-and-hold, and stepped past the slider's ends).
 function setCrossfadeUI(){ const s=document.getElementById('crossfadeSlider'), v=document.getElementById('crossfadeVal'); if(s){ s.value=loopCrossfadeMs; updateSliderFill(s); } if(v) v.textContent=loopCrossfadeMs>0?(loopCrossfadeMs+' ms'):'Off'; }
 (function initSliderExtras(){
   // The stylesheet built here at runtime moved to styles.css: it was the same
@@ -10152,7 +10154,7 @@ function syncStampPop(){
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'stamp-del';
-    del.textContent = '×';
+    if (window.SkriblMarks) SkriblMarks.into(del, 'close', '\u00d7'); else del.textContent = '\u00d7';
     del.title = 'Delete this stamp';
     del.setAttribute('aria-label', 'Delete stamp ' + (i + 1));
     del.addEventListener('click', (e) => { e.stopPropagation(); stampDelete(i); });
@@ -11188,7 +11190,7 @@ if (window.SkriblHints) {
   window.SkriblHints.show('flip-intro',
     'New here?',
     { anchor: 'top-right',
-      action: { label: 'How it works \u2192', onClick: function () { if (typeof openHelpDrawer === 'function') openHelpDrawer(); } } });
+      action: { label: 'How it works', onClick: function () { if (typeof openHelpDrawer === 'function') openHelpDrawer(); } } });
 }
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image
 ensureAudio(); syncMediaUI();
