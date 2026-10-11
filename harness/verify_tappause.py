@@ -16,8 +16,10 @@ WHAT IS ASKED, AND HOW IT IS READ
     is PAINTED in the middle of the canvas: the white of its arrow is counted
     in a screenshot, centred on the canvas, and absent before the tap and
     after the resume. (It takes no pointer events, so elementFromPoint could
-    never see it -- and a rect is not a paint.) Flip's corner badge reads the
-    pause too: two bars where the play arrow was.
+    never see it -- and a rect is not a paint.) It is the pause's ONE sign on
+    both editors: Flip's corner chip ("▶ 2 / 4", two bars when paused) came
+    off the drawing in the one Play/Stop round (owner: "all yes"), and what is
+    asked of it now is that nothing is painted where it sat.
   * Carrying on is read as WHERE it carries on from: the Pad's bar picks up
     from its paused place, not from zero; Flip's page gives way after what was
     left of its time, not a whole page's; a drawing page's reveal goes on from
@@ -55,7 +57,6 @@ check = make_check(results, with_detail=True)
 
 PHONE = dict(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True, device_scale_factor=2)
 DESK = dict(viewport={"width": 1100, "height": 760}, device_scale_factor=1)
-BARS = "❚❚"
 
 # The loop's source, as the engine drives it: every start (with its offset) and
 # stop, with the page's own clock.
@@ -412,7 +413,7 @@ def music_checks(pg, cdp, who, sel, play):
 
 # ------------------------------------------------------------------ Flip
 FLIP = """() => ({ idx, playing, paused: document.body.classList.contains('playback-paused'),
-  badge: document.querySelector('.flip-live').textContent, points: frames[idx] ? frames[idx].strokes.length : 0,
+  points: frames[idx] ? frames[idx].strokes.length : 0,
   clock: parseFloat(document.getElementById('flipDuration').textContent) })"""
 PAGES = """(o) => { const line = (x0, y0, t0) => { const pts = []; for (let j = 0; j < 14; j++)
     pts.push({ x: x0 + j * 2, y: y0 + j * 14, color: '#ffffff', size: 6, t: t0 + j * (o.span / 14), start: j === 0 }); return pts; };
@@ -469,8 +470,13 @@ def flip_suite(b):
     check("Flip: a tap on the canvas pauses the flip on the page it is on",
           f1["paused"] and f2["playing"] and moved is None and f1["idx"] == f2["idx"],
           f"{f1} -> {f2}, page moved after {moved}")
-    check("...and its badge says so: two bars where the play arrow was",
-          f2["badge"].startswith(BARS), repr(f2["badge"]))
+    # Where the chip sat (12px in from the drawing's top-left corner), the
+    # drawing itself is what a finger or an eye finds now -- asked of the
+    # PAINT (elementFromPoint), so a chip renamed or restyled is still found.
+    _corner = pg.evaluate("""() => { const r = document.querySelector('.flip-wrap').getBoundingClientRect();
+      const e = document.elementFromPoint(r.left + 30, r.top + 22); return e ? (e.id || e.className || e.tagName) : null; }""")
+    check("...and nothing sits on the drawing's corner: the chip that counted pages is gone",
+          _corner == "pad", f"top-left of the drawing is {_corner!r}")
     check("...and the time readout stands still", f1["clock"] == f2["clock"], f"{f1['clock']} -> {f2['clock']}")
     during = arrow(pg, ".flip-wrap")
     check("Flip: paused, the round Play is painted in the middle of the canvas, and was not before",
@@ -489,8 +495,7 @@ def flip_suite(b):
     check("Flip: a second tap carries the flip on from where it paused",
           gone is not None and 250 < gone < 800 and not f3["paused"],
           f"the page gave way {gone}ms after the resume, with about 550ms of its 1000 left")
-    check("...the badge plays again and the round Play is gone",
-          not f3["badge"].startswith(BARS) and after[0] < 10, f"{f3['badge']!r}, {after}")
+    check("...and the round Play is gone", after[0] < 10, str(after))
     check("...and the time readout counts on from where it stood, not from nought",
           f3["clock"] >= f2["clock"] + 0.2, f"{f2['clock']}s paused, {f3['clock']}s once the page gave way")
 
@@ -504,7 +509,7 @@ def flip_suite(b):
     moved = page_change(pg, timeout=1500)
     f5 = pg.evaluate(FLIP)
     check("Flip: a paused flip scrubbed to another page stays paused on that page",
-          f4["idx"] == 3 and moved is None and f5["paused"] and f5["badge"].startswith(BARS),
+          f4["idx"] == 3 and moved is None and f5["paused"],
           f"{f4} -> {f5}, moved after {moved}")
     tap(pg, cdp, cx, cy)
     gone = page_change(pg)
@@ -533,10 +538,9 @@ def flip_suite(b):
     tap(pg, cdp, *centre(pg, "#play"))
     pg.wait_for_timeout(300)
     f7 = pg.evaluate(FLIP)
-    badge_shown = pg.evaluate("() => getComputedStyle(document.querySelector('.flip-live')).display !== 'none'")
     check("Flip: Stop while paused ends the flip, and the round Play goes with it",
-          was["paused"] and not f7["playing"] and not f7["paused"] and glyph_display(pg) == "none" and not badge_shown,
-          f"{was} -> {f7}, glyph {glyph_display(pg)}, badge shown {badge_shown}")
+          was["paused"] and not f7["playing"] and not f7["paused"] and glyph_display(pg) == "none",
+          f"{was} -> {f7}, glyph {glyph_display(pg)}")
     check("Flip: no page errors", not errs, "; ".join(errs[:2]))
     ctx.close()
 

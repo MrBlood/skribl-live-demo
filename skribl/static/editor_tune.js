@@ -138,6 +138,20 @@
     if (k === '[') { _nudgeBrush(-1); return; }
     if (k === ']') { _nudgeBrush(1); return; }
     if (k === 'g' || k === 'G') { if (gridBtn) gridBtn.click(); return; }
+    // SPACE PLAYS AND STOPS, as Flip's always has (one Play/Stop round, owner:
+    // "all yes"), at 100%: zoomed in, Space is the grab-pan on both editors
+    // (lib/canvaszoom.js). A control reached by keyboard keeps Space for itself
+    // (WAI-ARIA, SkriblCanvasZoom.ownsSpace), nothing happens with nothing to
+    // play (no take yet, or one recording: Play is hidden), and a held Space
+    // presses once, not on every repeat.
+    if (k === ' ' || e.code === 'Space') {
+      if (window.SkriblCanvasZoom && window.SkriblCanvasZoom.ownsSpace(e.target)) return;
+      if (typeof ZoomView !== 'undefined' && ZoomView && ZoomView.isZoomed()) return;
+      var pw = document.getElementById('playWrap'), pb = document.getElementById('playBtn');
+      if (!pw || pw.hidden || !pb || pb.disabled) return;
+      e.preventDefault();
+      if (!e.repeat) pb.click();
+    }
   });
 
   var tuneBtnEl = document.getElementById('tuneBtn');
