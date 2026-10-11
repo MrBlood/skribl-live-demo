@@ -15868,7 +15868,9 @@ underneath, the first inked page drawn on it, painted over it -- Blooby on the
 card, where "the first page with ink" was the empty card. The gallery's tiles
 keep their own transport (line=False) and their 16:9 box. Found while
 building: Chrome left a colour mixed from currentColor stale when a host
-switched theme after load, so the line's quiet words are quiet by opacity. Host
+switched theme after load (white words on a light page; the lit loop at 2.43
+contrast), so the line's quiet words are quiet by opacity, and the speed and
+lit loop take the page's own text on a purple tint. Host
 bytes: 38,239 -> 58,199 (the line's module, the scrubber's keys, its styles
 and wiring, each named at the ratchet). Shared: one player, Pad and Flip posts
 alike; the poster rule is Flip's alone (only Flip has pages). verify_inline

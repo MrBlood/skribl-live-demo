@@ -86,13 +86,16 @@
  * the one that read on paper, on a dark canvas and on purple ink without
  * darkening anything -- in fixed colours, because it sits on the drawing,
  * not on the host's page. The line takes the host's text colour; its quiet
- * words are quiet by OPACITY, never by a colour mixed from currentColor,
- * because Chrome left such a mix stale when a host switched theme after load
- * (the light page showed the dark page's words, white on white). The speed
- * and lit loop are an accent tint with ink mixed toward the text, so they
- * lighten on a dark page and deepen on a light one. Every control in the
- * line is 44px to a finger by an invisible ::before/::after, and its speeds
- * open upward over the scrubber, closing on a pick.
+ * words are quiet by OPACITY (and take no taps: an opacity layer sits over
+ * the speed's finger area otherwise), never by a colour mixed from
+ * currentColor, because Chrome left such a mix stale when a host switched
+ * theme after load (the light page showed the dark page's words, white on
+ * white). For the same reason the speed and lit loop take the page's text on
+ * an accent tint rather than an accent mixed toward it: the tint carries the
+ * colour, and the words read on any page, whichever theme it has switched
+ * to. Every control in the line is 44px to a finger by an invisible
+ * ::before/::after, and its speeds open upward over the scrubber, closing on
+ * a pick.
  *
  * LOOP IS ON BY DEFAULT, so the lit state is the RESTING state and the button
  * dims when switched OFF -- the opposite of mute, whose resting state is muted.
