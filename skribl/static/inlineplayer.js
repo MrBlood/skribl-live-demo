@@ -87,7 +87,9 @@
  * darkening anything -- in fixed colours, because it sits on the drawing,
  * not on the host's page. The line takes the host's text colour; its quiet
  * words are quiet by OPACITY (and take no taps: an opacity layer sits over
- * the speed's finger area otherwise), never by a colour mixed from
+ * the speed's finger area otherwise; the whole words row takes none, so the
+ * scrubber's and loop's reach is theirs where it meets the row, and only the
+ * speed and its chips opt back in), never by a colour mixed from
  * currentColor, because Chrome left such a mix stale when a host switched
  * theme after load (the light page showed the dark page's words, white on
  * white). For the same reason the speed and lit loop take the page's text on

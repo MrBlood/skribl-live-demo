@@ -325,10 +325,11 @@
 .skribl-inline-line .rl-head{position:absolute;top:1px;bottom:1px;width:2px;margin-left:-1px;border-radius:1px;background:var(--accent,#7c5cff);pointer-events:none}
 .skribl-inline-line .rl-bubble{position:absolute;bottom:calc(100% + 10px);transform:translateX(-50%);z-index:2;white-space:pre;padding:4px 10px;border-radius:10px;font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;color:#fff;background:#1d1a2b;opacity:0;transition:opacity .15s;pointer-events:none}
 .skribl-inline-scrub.dragging .rl-bubble{opacity:1}
-.skribl-inline-say{position:relative;min-height:30px;display:flex;justify-content:center;text-align:center}
+.skribl-inline-say{position:relative;min-height:30px;display:flex;justify-content:center;text-align:center;pointer-events:none}
 .skribl-inline-say .rl-text{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;column-gap:5px}
 .skribl-inline-say b{font-weight:600}
-.skribl-inline-say :is(.rl-m,.rl-skip){opacity:.62;pointer-events:none}
+.skribl-inline-say :is(.rl-speed,.rl-chips){pointer-events:auto}
+.skribl-inline-say :is(.rl-m,.rl-skip){opacity:.62}
 .skribl-inline-say .rl-skip{flex-basis:100%;font-size:13px}
 .skribl-inline-say .rl-speed,.skribl-inline-line .skribl-inline-loop{color:inherit;background:color-mix(in srgb,var(--accent,#7c5cff) 18%,transparent)}
 .skribl-inline-say .rl-speed{position:relative;display:inline-flex;align-items:center;gap:3px;margin-left:2px;padding:3px 9px 3px 11px;border:0;border-radius:999px;font:inherit;font-weight:650;font-variant-numeric:tabular-nums;cursor:pointer}

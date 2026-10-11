@@ -15871,7 +15871,7 @@ building: Chrome left a colour mixed from currentColor stale when a host
 switched theme after load (white words on a light page; the lit loop at 2.43
 contrast), so the line's quiet words are quiet by opacity, and the speed and
 lit loop take the page's own text on a purple tint. Host
-bytes: 38,239 -> 58,227 (the line's module, the scrubber's keys, its styles
+bytes: 38,239 -> 58,292 (the line's module, the scrubber's keys, its styles
 and wiring, each named at the ratchet); the page segments are painted by the
 post's own script through a hook in the module, so the shared player carries
 only the hooks. Shared: one player, Pad and Flip posts
@@ -15880,4 +15880,7 @@ THE POST measures the shape, the line and its words before any payload, the
 height at rest, playing and paused, the bars unchanged by play, the line's
 numbers against the player's, a drag on an unplayed post, the speed, a Flip's
 page segments, the button, 44px targets, a theme switch, every hover guarded
-and Blooby's poster page; each part shown red on its own.
+and Blooby's poster page; each part shown red on its own. verify_a11y's A11Y 10
+then found the words row lying over the bottom edge of the scrubber's and the
+loop's 44px reach on the host feed (four widths red), so the row takes no taps
+and only the speed and its chips opt back in.

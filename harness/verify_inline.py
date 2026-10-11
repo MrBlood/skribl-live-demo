@@ -1382,7 +1382,7 @@ with sync_playwright() as sp:
     #                                to keep it out; the line is the reason to
     #                                pay for it now)
     #     lib/scrubkeys.js   +1,604  the keyboard half every scrubber here has
-    #     inlineplayer.css   +4,391  the line, the shaped box, the v4 button
+    #     inlineplayer.css   +4,433  the line, the shaped box, the v4 button
     #     inlineplayer.js    +5,646  the line at rest from the listing, a
     #                                Flip's pages painted in the scrubber (here,
     #                                through the module's `draw` hook, so the
@@ -1390,8 +1390,10 @@ with sync_playwright() as sp:
     #                                stored shape read, scrub, speed
     #   Spent first: the sheet's new rules carry no prose (their reasoning is
     #   in the script's header) and are one line each; the old wash behind the
-    #   play button and its shadow are gone. 58,227 B measured.
-    EMBED_RATCHET = 58_250
+    #   play button and its shadow are gone. 58,227 B measured; then +42 B
+    #   when the words row stopped taking taps (A11Y 10 found the scrubber's
+    #   and loop's 44px reach covered where they meet it): 58,292 B measured.
+    EMBED_RATCHET = 58_300
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
