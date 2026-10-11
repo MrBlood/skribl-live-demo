@@ -15897,3 +15897,22 @@ verify_parity "the Flip matches" compares, on both editors at a phone and a
 desk: the dock and the Saved note while playing, the lit ⋯, the Grid, Stroke
 layers and Mirror rows (height without the divider above, label, name, every
 cell), and the dock's words. Red on the old code, green here.
+
+**Every hover waits for a real hover (the rest of #406's bug fix).** #406 put
+twenty hover rules behind `@media (hover: hover)`, the ones its walk of seven
+states on both editors could reach, and said so. The other seventy-three sat
+on controls inside sheets and drawers that walk never opens -- the export
+sheet, How it works, the photo tab, the music trim, the name drawer, saved
+drafts, the leave sheet, the posted list, the page menu, the stamp shelf,
+Flip's page actions, the full-screen bar -- and each still stuck on an iPhone
+after a tap. All of them are behind the guard now (styles.css 49, flip.css 10,
+posted.css 8, fullbar.css 3, pagemenu.css 3; player.css re-emitted); where a
+rule lit a control on hover and in another state too (armed, dragging), the
+other state keeps its look and only the hover copy moved. A mouse lights them
+as before. The edits were made by a script and read by hand. Not here: the
+in-post player's sheet (the post player change guards it) and the demo pages'
+inline styles. verify_a11y A11Y 17b asks the parsed stylesheets on the Pad,
+Flip and the player for any :hover rule outside the guard, and says how many it
+read, so a page that loaded none cannot pass: before this change it found 57
+unguarded on the Pad, 67 on Flip and 5 on the player (67, 87 and 8 before
+#406), and none after it.

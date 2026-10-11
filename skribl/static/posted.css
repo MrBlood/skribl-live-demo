@@ -50,7 +50,7 @@
   position: relative; z-index: 1; --tap-grow: 5px; }
 .posted-undo-btn::before { content: ''; position: absolute;
   inset: calc(-1 * var(--tap-grow)) 0; }
-.posted-undo-btn:hover { border-color: var(--ui-line); }
+@media (hover: hover) { .posted-undo-btn:hover { border-color: var(--ui-line); } }
 /* Dismiss: commits the removal now rather than in twelve seconds. Same 34/44
    floors as every other control on this page. */
 .posted-undo-x { flex: 0 0 auto; font: inherit; font-size: 12px;
@@ -60,7 +60,7 @@
   cursor: pointer; position: relative; z-index: 1; --tap-grow: 5px; }
 .posted-undo-x::before { content: ''; position: absolute;
   inset: calc(-1 * var(--tap-grow)); }
-.posted-undo-x:hover { color: var(--text-primary); }
+@media (hover: hover) { .posted-undo-x:hover { color: var(--text-primary); } }
 
 /* ---- Your Skribls tray ----------------------------------------------------
    Reuses .help-search / .help-search-count so the two drawers share one field
@@ -69,7 +69,7 @@
 .posted-row { display: flex; align-items: center; gap: 10px; padding: 9px;
   border-radius: 12px; background: var(--surface-control);
   border: 1px solid var(--hairline); margin-bottom: 7px; }
-.posted-row:hover { background: var(--surface-control-hover); }
+@media (hover: hover) { .posted-row:hover { background: var(--surface-control-hover); } }
 .posted-thumb { width: 42px; height: 34px; border-radius: 8px; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; color: var(--accent-tint-2); background: rgba(124,92,255,0.18); }
@@ -239,7 +239,7 @@
   color: var(--danger-soft); font-size: 12px; font-weight: 600;
   font-family: inherit; cursor: pointer;
 }
-.posted-delete:hover:not(:disabled) { background: rgba(244, 50, 111, 0.2); }
+@media (hover: hover) { .posted-delete:hover:not(:disabled) { background: rgba(244, 50, 111, 0.2); } }
 .posted-delete:disabled { opacity: .6; cursor: default; }
 /* Armed by a first tap (SK-AUD-014): the second tap deletes for everyone, so
    the button turns solid danger for the seconds it is live. */
@@ -248,7 +248,7 @@
 .posted-copy { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
   border: 1px solid var(--hairline-strong); color: var(--text-secondary);
   padding: 5px 9px; border-radius: 8px; cursor: pointer; }
-.posted-copy:hover { color: var(--text-primary); }
+@media (hover: hover) { .posted-copy:hover { color: var(--text-primary); } }
 .posted-copy.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
 /* Copy key — the same chrome as Copy link because it is the same kind of act,
    and deliberately NOT danger-toned like .posted-delete beside it: copying a
@@ -257,7 +257,7 @@
 .posted-key { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
   border: 1px solid var(--hairline-strong); color: var(--text-secondary);
   padding: 5px 9px; border-radius: 8px; cursor: pointer; }
-.posted-key:hover { color: var(--text-primary); }
+@media (hover: hover) { .posted-key:hover { color: var(--text-primary); } }
 .posted-key.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
 /* 34 VISIBLE, 44 TO A FINGER — the two floors SK-AUD-005 decided, which this
    row had never been measured against: /library and /gallery were outside
@@ -275,7 +275,7 @@
   position: relative; z-index: 1; --tap-grow: 5px; }
 .posted-del::before { content: ''; position: absolute;
   inset: calc(-1 * var(--tap-grow)); }
-.posted-del:hover { color: var(--danger, var(--danger)); }
+@media (hover: hover) { .posted-del:hover { color: var(--danger, var(--danger)); } }
 /* It arms before it deletes (SK-AUD-010): the armed tap reads as the danger
    it is, like every other armed control here. */
 .posted-del.armed { color: var(--danger); }
@@ -385,7 +385,7 @@
   background: var(--surface-control);
   color: var(--text-strong);
 }
-.reckey-copy:hover { background: var(--surface-control-hover); }
+@media (hover: hover) { .reckey-copy:hover { background: var(--surface-control-hover); } }
 .reckey-done {
   border: 1px solid transparent;
   background: var(--accent);

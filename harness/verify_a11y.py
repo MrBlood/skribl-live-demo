@@ -2458,6 +2458,47 @@ with sync_playwright() as _pn:
     _bn.close()
 
 
+# ------------------------------------------------------------------ section 17b
+print("\nA11Y 17b — every hover rule sits behind the guard, whatever state would show it")
+# A11Y 17 walks seven states and forces :hover on what it finds there. A hover
+# rule on a control in a sheet that walk never opens -- the export sheet, How it
+# works, the photo tab, the music trim, the name drawer's Done -- sticks on an
+# iPhone all the same, and seventy-three did after the walk went green. So the
+# RULE is asked as well as the paint: every style rule whose selector carries
+# :hover, in every stylesheet the page loaded, has to sit inside
+# @media (hover: hover).
+#
+# FROM THE CSSOM, WHAT THE BROWSER PARSED: a grep of the files would count a
+# selector quoted in a comment, and would not see a rule nested in @supports or
+# under CSS nesting. Sheets another origin serves (fonts) cannot be read and
+# are not ours. Each page also says how many hover rules it read, so a walk
+# that found none cannot pass for one that found them all guarded.
+_HOVER_RULES = r"""() => { const bad = []; let seen = 0, sheets = 0;
+  const guardOf = (r) => /\(\s*hover\s*:\s*hover\s*\)/.test(r.conditionText || (r.media && r.media.mediaText) || '');
+  const walk = (rules, guarded, at) => { for (const r of rules) {
+    if (r.type === CSSRule.MEDIA_RULE) { walk(r.cssRules, guarded || guardOf(r), at); continue; }
+    if (r.type === CSSRule.STYLE_RULE) {
+      if (/:hover/.test(r.selectorText)) { seen++; if (!guarded) bad.push(at + ' ' + r.selectorText); }
+      if (r.cssRules && r.cssRules.length) walk(r.cssRules, guarded, at);
+      continue; }
+    if (r.cssRules) walk(r.cssRules, guarded, at); } };
+  for (const s of document.styleSheets) { let rules; try { rules = s.cssRules; } catch (e) { continue; }
+    sheets++; walk(rules, false, (s.href || 'inline').split('/').pop().split('?')[0]); }
+  return { bad, seen, sheets }; }"""
+with sync_playwright() as _ph:
+    _bh = _ph.chromium.launch()
+    for _name, _path in (("Pad", "/"), ("Flip", "/flip"), ("the player", "/s/" + _pid)):
+        _pg = _bh.new_page(viewport={"width": 402, "height": 874})
+        browsing.goto(_pg, BASE, _path)
+        _pg.wait_for_timeout(500)
+        _r = _pg.evaluate(_HOVER_RULES)
+        check(f"{_name}: every :hover rule sits inside @media (hover: hover) ({_r['seen']} read in {_r['sheets']} sheets)",
+              _r["seen"] >= 10 and not _r["bad"],
+              (", ".join(_r["bad"][:6]) + (f" (+{len(_r['bad']) - 6} more)" if len(_r["bad"]) > 6 else ""))
+              if _r["bad"] else (f"only {_r['seen']} hover rules read" if _r["seen"] < 10 else "none outside it"))
+        _pg.close()
+    _bh.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [n for ok, n in results if not ok]
 print("\n" + "=" * 62)
