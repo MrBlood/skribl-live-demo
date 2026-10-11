@@ -5596,9 +5596,8 @@ async function shareSkribl(){
       // is the difference between "try again" and "change something". A 500
       // here was an unreachable database, and the old transient chip made that
       // look like the button doing nothing.
-      const why = data.error || (res.status >= 500
-        ? 'The server could not save it (error ' + res.status + '). Your Skribl is safe here — try again in a moment.'
-        : 'The server refused it (error ' + res.status + '). Your Skribl is safe here — nothing was lost.');
+      const why = res.status >= 500 && !data.error ? SkriblPostSheet.failure('server')
+        : SkriblPostSheet.failure('refused', data.error || null);
       showShareFailure(why); chip('Post failed'); sharing=false; return;
     }
     // AN ANSWER THAT IS NOT A POST IS NOT A SUCCESS (preflight PF-028). Any
@@ -5609,7 +5608,7 @@ async function shareSkribl(){
     // for both fields (editor_post.js); so does Flip now, and the key is kept,
     // so Try again finds the post the server may already have made.
     if(!data.id || !data.url){
-      showShareFailure('The server returned an unexpected response. Your Skribl is safe here — try again in a moment.');
+      showShareFailure(SkriblPostSheet.failure('odd'));
       chip('Post failed'); sharing=false; return;
     }
     const url=location.origin + data.url;
@@ -5641,11 +5640,11 @@ async function shareSkribl(){
     showShareResult(url, delKey);
   }catch(err){
     if(err && err.name==='AbortError'){
-      showShareFailure('Cancelled \u2014 not posted. Your Skribl is safe here; Try again sends it.');
+      showShareFailure(SkriblPostSheet.failure('cancelled'));
       chip('Not posted'); sharing=false; return;
     }
     console.error('[skribl] Share failed:', err);
-    showShareFailure('Could not reach the server. Check your connection — your Skribl is still here.');
+    showShareFailure(SkriblPostSheet.failure('offline'));
     chip('Post failed');
   }
   sharing=false;

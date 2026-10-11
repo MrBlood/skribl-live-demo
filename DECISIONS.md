@@ -15641,3 +15641,17 @@ _skribl_post.html, so Pad and Flip both get it; each editor hands its post's key
 to result(). verify_ux drives both editors at 390 and 1100 (painted, inside the
 sheet, the copied key equals the stored one) and renders both pages for a
 signed-in host; each part was shown red on its own.
+
+**When a post fails, one set of words for both editors (owner's pick; SK-AUD-010).**
+The Pad said "Post rejected by the server (503)" or "Not posted -- saved on this
+device"; Flip said "The server could not save it (error 503). Your Skribl is
+safe here". The same failure now opens with the same line on both --
+"Couldn't post. Your drawing is still here" -- then what happened, then what to
+do. The words live once, in the shared Post sheet (lib/postsheet.js,
+SkriblPostSheet.failure); each editor says only what happened (server, refused
+with the server's own reason, an odd answer such as a Wi-Fi sign-in page,
+offline, cancelled). The recoveries still differ where they really do: the Pad
+keeps a copy on this device when the server cannot be reached, and says so in
+the same sentence ("..., saved on this device."); Flip does not claim one.
+verify_flipmeta fails each case at the network on both editors and asks for the
+same first line, the reason, and the honest difference; red on the old code.
