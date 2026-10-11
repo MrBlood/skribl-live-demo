@@ -544,6 +544,13 @@
     // The Library shows the same note the sheet does (lib/draftstore.js's shelf).
     stalled: function () { return stalled() ? STALLED : ''; },
     remove: function (id) { return backend.remove(id); },
+    /* A drawing this tab is NOT holding becomes a new draft as it is: another
+       tab's autosave, kept for later (lib/othertab.js). No thumbnail: there is
+       no canvas showing it to take one from. Resolves true once it is kept. */
+    keep: function (kind, title, payload) {
+      return backend.save(null, { kind: kind, title: title || 'Untitled Skribl', payload: payload, thumbnail: null })
+        .then(function () { return true; });
+    },
     ago: ago
   };
 })(window);
