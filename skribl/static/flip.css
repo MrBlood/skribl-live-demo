@@ -152,8 +152,8 @@
      same pill on both editors now (2px apart, as the Pad's always were). */
   .btn.flip-play { background: rgba(var(--wash-rgb), 0.045); border: 1px solid var(--hairline-strong); color: var(--text-primary); box-shadow: none; justify-content: center; }
   /* Hover only where there is one (styles.css, HOVER ONLY WHERE THERE IS A
-     HOVER): iOS keeps :hover on the last thing tapped. The page strip's hovers
-     below are guarded the same way. */
+     HOVER): iOS keeps :hover on the last thing tapped. Every hover below is
+     guarded the same way. */
   @media (hover: hover) { .btn.flip-play:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; } }
   /* Playing = stop, and a steady tint, as on the Pad (styles.css, PLAYING IS
      A STEADY TINT): no pulse. From 641px the WRAP takes it, so the tint covers
@@ -399,7 +399,7 @@
     border: 1px solid var(--hairline); border-radius: 10px; cursor: pointer;
     overflow: hidden; transition: outline-color .12s ease; }
   .stamp-btn canvas { display: block; width: 100%; height: 100%; }
-  .stamp-btn:hover { border-color: var(--ui-line); }
+  @media (hover: hover) { .stamp-btn:hover { border-color: var(--ui-line); } }
   /* The ARMED stamp, and it has to be unmistakable: the shelf stays open while
      you place, so between two taps the only thing telling you which stamp is
      loaded is this ring.
@@ -423,7 +423,8 @@
      `@media (hover: none)` escape hatch would cover the phone and still leave
      the control invisible on anything that reports both, so the control is
      simply always there and quiet until you reach for it. */
-  .stamp-cell:hover .stamp-del, .stamp-del:hover, .stamp-del:focus-visible { opacity: 1; }
+  .stamp-del:focus-visible { opacity: 1; }
+  @media (hover: hover) { .stamp-cell:hover .stamp-del, .stamp-del:hover { opacity: 1; } }
   .stamp-empty { margin: 4px 2px 2px; font-size: 11.5px; line-height: 1.45;
     color: var(--text-muted); }
   .stamp-empty[hidden] { display: none; }
@@ -438,8 +439,10 @@
     border: 1px solid var(--hairline-strong);
     font: inherit; font-size: 11.5px; font-weight: 650; text-align: center;
     transition: background .14s ease, border-color .14s ease; }
-  .stamp-empty-go:hover { background: var(--surface-control-hover);
-    border-color: var(--accent); }
+  @media (hover: hover) {
+    .stamp-empty-go:hover { background: var(--surface-control-hover);
+      border-color: var(--accent); }
+  }
   .stamp-empty-go:active { filter: brightness(1.2); }
   .stamp-empty-go:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
   .stamp-empty-then { display: block; color: var(--text-dim); }
@@ -481,7 +484,7 @@
   .strip::-webkit-scrollbar { height: 7px; }
   .strip::-webkit-scrollbar-track { background: rgba(var(--glass-deep-rgb), .7); border-radius: 999px; margin: 0 10px; }
   .strip::-webkit-scrollbar-thumb { background: var(--ui-line); border-radius: 999px; border: 1px solid rgba(var(--glass-deep-rgb), .6); }
-  .strip::-webkit-scrollbar-thumb:hover { background: var(--ui-line); }
+  @media (hover: hover) { .strip::-webkit-scrollbar-thumb:hover { background: var(--ui-line); } }
   /* Magnify's lit state. (Image and Music wore this chrome too until the dock
      redesign folded them into Media, which lights its glyph instead.) */
   .flip-tools .magnify-tool.open { color: var(--seg-on-ink); background: var(--seg-on-fill); }
@@ -589,7 +592,7 @@
     display: grid; place-items: center; gap: 0; padding: 0; cursor: pointer;
     color: var(--ui-line); font-family: inherit;
   }
-  .frame.ghost-paste:hover { background: rgba(var(--glass-deep-2-rgb), .35); }
+  @media (hover: hover) { .frame.ghost-paste:hover { background: rgba(var(--glass-deep-2-rgb), .35); } }
   .frame.ghost-paste:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 2px; }
   .frame.ghost-paste .ghost-plus { font-size: 20px; font-weight: 600; line-height: 1; }
   .frame.ghost-paste .ghost-n {
@@ -782,13 +785,13 @@
   }
   .pageops-item svg { width: 18px; height: 18px; flex: none; color: var(--text-secondary);
     fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .pageops-item:hover:not(:disabled) { background: rgba(var(--wash-rgb), .07); }
+  @media (hover: hover) { .pageops-item:hover:not(:disabled) { background: rgba(var(--wash-rgb), .07); } }
   .pageops-item:focus-visible { outline: 2px solid var(--ui-line); outline-offset: -2px; }
   .pageops-item:disabled { opacity: .4; cursor: default; }
   .pageops-item.danger { color: var(--danger-soft); margin-top: 4px; border-radius: 0 0 9px 9px;
     box-shadow: 0 -1px 0 var(--hairline); }
   .pageops-item.danger svg { color: var(--danger-soft); }
-  .pageops-item.danger:hover:not(:disabled) { color: var(--danger-soft-2); background: rgba(244, 50, 111, .12); }
+  @media (hover: hover) { .pageops-item.danger:hover:not(:disabled) { color: var(--danger-soft-2); background: rgba(244, 50, 111, .12); } }
 
   /* The transient chip: "Draft restored", "Blur undone", a blocked action.
      chip() sets `top` just under the header; this is its fallback when the
@@ -979,10 +982,12 @@
 /* Not on a switched-on button: .pb:hover is (0,3,0) and beat .pb.on and
    .pb[aria-checked="true"] (0,2,0), so clicking Draw on a desktop showed no
    change until the pointer left. Hover is only for buttons that are off. */
-.pb:hover:not(:disabled):not(.on):not([aria-checked="true"]) {
-  background: rgba(var(--wash-rgb), 0.07);
-  border-color: var(--hairline-strong);
-  color: var(--text-primary);
+@media (hover: hover) {
+  .pb:hover:not(:disabled):not(.on):not([aria-checked="true"]) {
+    background: rgba(var(--wash-rgb), 0.07);
+    border-color: var(--hairline-strong);
+    color: var(--text-primary);
+  }
 }
 .pb:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
 .pb:active:not(:disabled) { transform: translateY(1px); }
@@ -992,10 +997,12 @@
 /* Destructive action lives at the far end, so a mis-tap on Hold or Move cannot
    land on Delete — which is exactly what the old 18px overlay allowed. */
 .pb.danger { margin-left: auto; color: var(--danger-soft); }
-.pb.danger:hover:not(:disabled) {
-  color: var(--danger-soft-2);
-  background: rgba(244, 50, 111, 0.12);
-  border-color: rgba(244, 50, 111, 0.4);
+@media (hover: hover) {
+  .pb.danger:hover:not(:disabled) {
+    color: var(--danger-soft-2);
+    background: rgba(244, 50, 111, 0.12);
+    border-color: rgba(244, 50, 111, 0.4);
+  }
 }
 
 /* A glyph that carries the meaning the LABEL used to. Below 560px every
@@ -1631,7 +1638,8 @@ body.stroking .strip-wrap {
 .loophandle.to { border-radius: 0 14px 14px 0; }
 .loophandle::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 40px; transform: translateX(-50%); }
 .loophandle svg { width: 8px; height: 13px; flex: none; pointer-events: none; }
-.loophandle:hover, .loophandle.dragging { background: #9580ff; }
+.loophandle.dragging { background: #9580ff; }
+@media (hover: hover) { .loophandle:hover { background: #9580ff; } }
 .loophandle:focus-visible { box-shadow: 0 0 0 2px var(--surface-panel), 0 0 0 4px var(--ui-hi); }
 .loophandle .lh-bubble { display: none; position: absolute; top: 50%;
   padding: 3px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; line-height: 16px;

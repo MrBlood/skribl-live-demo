@@ -565,10 +565,10 @@ body {
    anything, and iOS keeps :hover on whatever was tapped last, so an unguarded
    hover rule leaves the control lit after the tap -- Post brightened, a menu
    row tinted, a swatch blown up -- until the next tap somewhere else. Every
-   hover a tap reaches on the editors' main surfaces sits behind (hover: hover):
-   verify_a11y A11Y 17 forces :hover on a phone, without a tap, across seven
-   states of both editors. (Hover rules on controls inside the sheets and
-   drawers it does not open follow, with a check over every rule.) */
+   hover rule here sits behind (hover: hover), and so does every one in the
+   other sheets the editors and the player load: verify_a11y A11Y 17 forces
+   :hover on a phone across seven states of both editors, and A11Y 17b asks the
+   parsed stylesheets for any :hover rule outside the guard, wherever it is. */
 @media (hover: hover) { .btn:hover:not(:disabled) { filter: brightness(1.1); }}
 .btn:active:not(:disabled) { transform: scale(0.94); }
 
@@ -1448,13 +1448,13 @@ body.player-mode #canvas {
   color: var(--text-primary);
   transition: background .15s ease, border-color .15s ease;
 }
-.player-error-btn:hover { background: rgba(var(--wash-rgb), 0.08); }
+@media (hover: hover) { .player-error-btn:hover { background: rgba(var(--wash-rgb), 0.08); }}
 .player-error-btn.primary {
   background: var(--accent-fill);
   border-color: transparent;
   color: #fff;
 }
-.player-error-btn.primary:hover { background: var(--accent-bright); }
+@media (hover: hover) { .player-error-btn.primary:hover { background: var(--accent-bright); }}
 
 .player-meta { text-align: center; max-width: 460px; }
 .player-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin: 0; /* it is an h1 on the player page */ }
@@ -1523,7 +1523,7 @@ a.player-btn { text-decoration: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .player-btn svg { width: 20px; height: 20px; }
-.player-btn:hover { background: var(--surface-control-hover); }
+@media (hover: hover) { .player-btn:hover { background: var(--surface-control-hover); }}
 .player-btn:active { transform: scale(0.94); }
 
 .player-btn.primary {
@@ -1534,7 +1534,7 @@ a.player-btn { text-decoration: none; }
   color: #fff;
 }
 .player-btn.primary svg { width: 24px; height: 24px; }
-.player-btn.primary:hover { background: var(--accent-bright); }
+@media (hover: hover) { .player-btn.primary:hover { background: var(--accent-bright); }}
 
 /* A LIT TOGGLE IS THE ONE PILL'S SELECTED LOOK -- its tint and its ink, as
    on the library's transport -- and not solid violet, which is Play's: Loop
@@ -1651,11 +1651,12 @@ a.player-btn { text-decoration: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .player-cta .cta-star { font-size: 17px; line-height: 1; }
-.player-cta:hover {
-  background: var(--accent-bright);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px var(--accent-glow);
-}
+@media (hover: hover) {
+  .player-cta:hover {
+    background: var(--accent-bright);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px var(--accent-glow);
+  }}
 .player-cta:active { transform: translateY(0); }
 .player-cta { position: relative; --tap-grow: 3px; }   /* 39 tall -> 45 tap */
 .player-cta::before {
