@@ -54,6 +54,13 @@ const AUTOSAVE_KEY = 'skribl_autosave_v1';
 // store — the ordinary Pad's draft is untouched by anything done in a post.
 const PAD_DRAFT_OFF = (typeof window !== 'undefined' && window.SKRIBL_MODE === 'compose');
 
+// THE SLOT IS SHARED WITH OTHER TABS, SO IT IS WRITTEN THROUGH lib/othertab.js
+// (SK-AUD-006, T1): a save never replaces another tab's drawing, it moves it
+// aside, and the next visit offers it. Compose keeps no draft, so no slot.
+const padSlot = (window.SkriblOtherTab && !PAD_DRAFT_OFF) ? window.SkriblOtherTab.slot(AUTOSAVE_KEY) : null;
+function slotWrite(text) { if (padSlot) padSlot.write(text); else localStorage.setItem(AUTOSAVE_KEY, text); }
+function slotRemove() { if (padSlot) padSlot.remove(); else localStorage.removeItem(AUTOSAVE_KEY); }
+
 // ---- The durability model (external review P0-2 / #19) ----------------------
 // Every mutating edit bumps draftRev (in scheduleAutosave — the same triggers
 // that always meant "something changed"). A write that SUCCEEDS records the
@@ -381,6 +388,8 @@ function showAutosaveStatus(state) {
 function writeAutosave() {
   // Player mode is read-only — never mutate the editor's autosave.
   if (document.body.classList.contains('player-mode') || PAD_DRAFT_OFF) return;
+  // "Open it" on a waiting drawing (lib/othertab.js) is reloading this page.
+  if (padSlot && padSlot.frozen()) { durableRev = draftRev; return; }
   // Nothing meaningful on the canvas AND nothing undone to preserve → clear any
   // stale save. (Keep it when redo is pending, so undoing to blank then reloading
   // can still redo the undone strokes.)
@@ -405,7 +414,7 @@ function writeAutosave() {
           return;
         }
       }
-      localStorage.removeItem(AUTOSAVE_KEY); durableRev = draftRev;
+      slotRemove(); durableRev = draftRev;
     } catch (e) {}
     return;
   }
@@ -425,14 +434,14 @@ function writeAutosave() {
     // worth less than the work on screen.
     const payload = JSON.stringify(serializeAutosave());
     try {
-      localStorage.setItem(AUTOSAVE_KEY, payload);
+      slotWrite(payload);
     } catch (quotaErr) {
       if (!window.SkriblPosted || !window.SkriblPosted.reclaim) throw quotaErr;
       const freed = window.SkriblPosted.reclaim(payload.length);
       if (!freed) throw quotaErr;
       console.warn('[skribl] storage was full — reclaimed',
                    Math.round(freed / 1024) + 'KB from saved Skribls to autosave this drawing');
-      localStorage.setItem(AUTOSAVE_KEY, payload);   // still throws if it is not enough
+      slotWrite(payload);   // still throws if it is not enough
     }
     durableRev = rev;
     sessionOwnedDraft = true;   // real work written: later empty = deliberate clear
@@ -489,17 +498,11 @@ function writeAutosave() {
 // (review P0-2: draw a stroke, tap Flip inside 1.2s, work gone).
 function flushPadDraft() {
   clearTimeout(autosaveTimer);
+  // Nothing new since the last save, and the slot now holds another tab's
+  // newer drawing: leave it the newest (lib/othertab.js, T1).
+  if (draftRev === durableRev && padSlot && padSlot.wouldMove()) return draftIsDurable();
   try { writeAutosave(); } catch (e) {}
   return draftIsDurable();
-}
-
-// ANOTHER TAB SAVED OVER THIS ONE (lib/othertab.js): said here, with a way to
-// take the slot back. The Pad in a host's composer keeps no draft.
-if (window.SkriblOtherTab && !PAD_DRAFT_OFF) {
-  window.SkriblOtherTab.watch(AUTOSAVE_KEY, {
-    hasWork: () => hasContent || strokes.length > 0,
-    keep: () => { clearTimeout(autosaveTimer); writeAutosave(); }
-  });
 }
 
 // Debounced: batch a flurry of edits into one write ~1.2s after activity stops.
@@ -514,7 +517,7 @@ function scheduleAutosave() {
 function clearAutosave() {
   clearTimeout(autosaveTimer);
   if (PAD_DRAFT_OFF) durableRev = draftRev;
-  else try { localStorage.removeItem(AUTOSAVE_KEY); durableRev = draftRev; } catch (e) {}
+  else try { slotRemove(); durableRev = draftRev; } catch (e) {}
   // The draft is being deliberately discarded (posted, or cleared) — the
   // media bytes belong to it and go with it.
   if (window.SkriblDraftStore && !PAD_DRAFT_OFF) {
@@ -745,6 +748,7 @@ function restoreAutosave(data) {
   if (saved) {
     restoreAutosave(saved);
     sessionOwnedDraft = true;
+    if (padSlot) padSlot.adopt();   // this drawing is ours to write over now
     // Media bytes come back from IndexedDB by driving the SAME pipeline a
     // manual re-add uses: put the stored File on the real <input> and dispatch
     // a real change event. Validation, the drawer handlers, and the
@@ -756,6 +760,26 @@ function restoreAutosave(data) {
     // Write a fresh autosave reflecting the restored state.
     setTimeout(writeAutosave, 200);
   }
+
+  // ANOTHER TAB'S DRAWING IS WAITING (lib/othertab.js, T1): offered once the
+  // newest has opened. "Keep for later" files it under Drafts as it is: its
+  // strokes and ground (an autosave holds a photo's or a track's name, never
+  // its bytes, so those stay with the tab that had them).
+  if (padSlot) padSlot.offer({
+    current: () => (hasContent || strokes.length || redoStack.length) ? JSON.stringify(serializeAutosave()) : null,
+    later: (text, at) => {
+      if (!window.SkriblSavedDrafts || !window.SkriblSavedDrafts.keep) return false;
+      let d;
+      try { d = JSON.parse(text); } catch (e) { return false; }
+      const when = at ? new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+      const payload = { version: 2, schemaVersion: 2, playbackMode: 'replay', fps: null,
+        frames: [{ strokes: d.strokes || [], strokeGroups: d.strokeGroups || [], baseSnapshot: d.baseSnapshot || null,
+                   background: d.background || null, photo: null, music: null }] };
+      return window.SkriblSavedDrafts.keep('pad', 'From another tab' + (when ? ', ' + when : ''), payload)
+        .then(() => { showToast(window.SkriblSavedDrafts.where() === 'account' ? 'Kept in your drafts' : 'Kept in Drafts on this browser', null); return true; },
+              (e) => { showToast((e && e.message) || 'Couldn’t keep it — it stays waiting', null); return false; });
+    }
+  });
 
   // No draft to come back to is a new drawing: it starts on the theme's
   // ground, Paper in the light theme (lib/canvasground.js). A restored draft

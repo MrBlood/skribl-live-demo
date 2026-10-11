@@ -20,7 +20,7 @@ prerequisite. Every scenario here was a REAL loss path before this work:
 
 Uses the runner's server on :5001 like the other browser suites.
 """
-import sys, time
+import json, sys, time
 from pathlib import Path
 from assertions import make_check
 
@@ -519,11 +519,14 @@ with sync_playwright() as p:
     b.close()
 
 # ---------------------------------------------------------------------------
-print("\nTWO TABS — the tab whose autosave another tab overwrote is told, and can take it back")
-# v321 preflight PF-008 (the owner chose the notice): two tabs of one editor
-# share one slot and the last writer wins, silently both ways. Tab A draws,
-# tab B draws over the slot; A must say so and offer Keep this one, which puts
-# A's drawing back in the slot. B, which then lost it, says so in turn.
+print("\nTWO TABS — no save replaces another tab's drawing; the next visit offers it")
+# SK-AUD-006, the owner's pick T1. Two tabs of one editor shared one slot and
+# the last writer won: A's drawing was gone once A closed. Now a save moves
+# another tab's drawing aside (<key>:waiting:<writer>) instead of writing over
+# it, a tab writing again takes its own back, and the next visit opens the
+# newest and offers the other: Open it (this tab's waits in its place, the
+# page reloads into the other) or Keep for later (it becomes a draft). A tab
+# still open answers a roll call, so its drawing is not offered elsewhere.
 def _ink(pg, sel, dx):
     bx = pg.locator(sel).bounding_box()
     x, y = bx["x"] + bx["width"] / 2 + dx, bx["y"] + bx["height"] / 2
@@ -531,45 +534,110 @@ def _ink(pg, sel, dx):
     for k in range(14):
         pg.mouse.move(x + k * 6, y + (k % 5) * 5)
     pg.mouse.up(); pg.wait_for_timeout(250)
+_BAR = """() => { const b = document.querySelector('.othertab');
+    if (!b || b.hidden) return null; const r = b.getBoundingClientRect();
+    const at = document.elementFromPoint(r.left + 20, r.top + 16);
+    const btns = [...b.querySelectorAll('button')].map(x => { const q = x.getBoundingClientRect();
+      return [x.textContent || x.getAttribute('aria-label'), Math.round(q.width), Math.round(q.height), q.left >= 0 && q.right <= innerWidth]; });
+    return { painted: !!(at && b.contains(at)), words: b.querySelector('.othertab-words').textContent, btns }; }"""
+def _n(text):
+    """Which drawing an autosave's text holds: its point count and where its
+    first point is, never the save's timestamp (a flush rewrites that)."""
+    try:
+        d = json.loads(text or "null")
+    except ValueError:
+        return None
+    if not d:
+        return None
+    pts = [p for f in d["frames"] for p in (f.get("strokes") or [])] if "frames" in d else (d.get("strokes") or [])
+    return (len(pts), round(pts[0]["x"]) if pts else None)
+_WAIT = "(k) => Object.keys(localStorage).filter(x => x.startsWith(k + ':waiting:')).sort().map(x => [x.split(':waiting:')[1], JSON.parse(localStorage.getItem(x)).data])"
 with sync_playwright() as _p2:
     _b2 = _p2.chromium.launch()
-    for _ed, _path, _sel, _key, _boot in (
-            ("Pad", "/skribl-pad", "#canvas", "skribl_autosave_v1", "pad"),
-            ("Flip", "/flip", "#pad", "skribl_flip_autosave_v1", "flip")):
-        _ctx = _b2.new_context(viewport={"width": 1100, "height": 860})
-        _a = _ctx.new_page(); _a.goto(BASE + _path, wait_until="load")
-        _a.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
-        _a.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
-        _ink(_a, _sel, -60)
-        _a.wait_for_timeout(1800)                       # A's autosave lands
+    for _ed, _path, _sel, _key, _boot, _ink_js in (
+            ("Pad", "/skribl-pad", "#canvas", "skribl_autosave_v1", "pad", "() => strokes.length"),
+            ("Flip", "/flip", "#pad", "skribl_flip_autosave_v1", "flip", "() => frames.reduce((n, f) => n + f.strokes.length, 0)")):
+        def _open(ctx, url=None, w=1100):
+            pg = ctx.new_page()
+            pg.set_viewport_size({"width": w, "height": 860})
+            pg.goto(BASE + (url or _path), wait_until="load")
+            pg.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
+            pg.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+            return pg
+        _ctx = _b2.new_context()
+        _a = _open(_ctx); _b = _open(_ctx)                 # both empty at load
+        _ink(_a, _sel, -60); _a.wait_for_timeout(1800)     # A's autosave lands
         _mine = _a.evaluate(f"() => localStorage.getItem('{_key}')")
-        _b = _ctx.new_page(); _b.goto(BASE + _path, wait_until="load")
-        _b.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
-        _b.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
-        _ink(_b, _sel, 60)
-        _b.wait_for_timeout(1800)                       # B's autosave takes the slot
+        _ink(_b, _sel, 60); _b.wait_for_timeout(1800)      # B writes: A's moves aside
         _theirs = _a.evaluate(f"() => localStorage.getItem('{_key}')")
-        check(f"{_ed}: the fixture: tab B's save replaced tab A's in the one slot",
-              bool(_mine) and bool(_theirs) and _theirs != _mine)
-        # Painted, not just present: a fixed bar has no offsetParent, so ask
-        # what is drawn at its middle (WORKING-AGREEMENTS: a rect is not a paint).
-        _seen = _a.evaluate("() => { const b = document.querySelector('.othertab');"
-                            " if (!b || b.hidden) return false; const r = b.getBoundingClientRect();"
-                            " const at = document.elementFromPoint(r.left + 20, r.top + r.height / 2);"
-                            " return !!(at && b.contains(at)); }")
-        check(f"{_ed}: tab A is told another tab saved over its drawing", _seen,
-              "A was told nothing, and a new tab would open B's drawing")
-        check(f"{_ed}: ...and tab B, which wrote, is not",
-              not _b.evaluate("() => { const b = document.querySelector('.othertab'); return !!(b && !b.hidden); }"))
-        if _seen:
-            _a.click(".othertab-keep"); _a.wait_for_timeout(400)
-        _back = _a.evaluate(f"() => localStorage.getItem('{_key}')")
-        check(f"{_ed}: Keep this one puts tab A's drawing back in the slot",
-              _seen and _back != _theirs and _back is not None,
-              "the slot still holds B's drawing")
-        _b.wait_for_timeout(300)
-        check(f"{_ed}: ...and now tab B is the one told",
-              _b.evaluate("() => { const b = document.querySelector('.othertab'); return !!(b && !b.hidden); }"))
+        _w1 = _a.evaluate(_WAIT, _key)
+        check(f"{_ed}: tab B's save did not replace tab A's drawing: A's waits beside the slot, whole",
+              bool(_mine) and bool(_theirs) and _n(_theirs) != _n(_mine) and [_n(v) for _, v in _w1] == [_n(_mine)],
+              f"waiting {[(k, len(v or '')) for k, v in _w1]}")
+        _c0 = _open(_ctx); _c0.wait_for_timeout(700)
+        check(f"{_ed}: a third tab does not offer the drawing a tab still open is holding (the roll call)",
+              _c0.evaluate(_BAR) is None, str(_c0.evaluate(_BAR)))
+        _c0.close()
+        _ink(_a, _sel, -20); _a.wait_for_timeout(1800)     # A writes again
+        _w2 = _a.evaluate(_WAIT, _key)
+        _slot2 = _a.evaluate(f"() => localStorage.getItem('{_key}')")
+        check(f"{_ed}: when A saves again it takes the slot back, B's drawing waits instead, and A's old copy goes",
+              len(_w2) == 1 and _n(_w2[0][1]) == _n(_theirs) and _n(_slot2) not in (_n(_mine), _n(_theirs)),
+              f"waiting {[(k, _n(v)) for k, v in _w2]}, slot {_n(_slot2)}")
+        _bstrokes = _b.evaluate(_ink_js)
+        _a.close(); _b.close()
+        # The next visit: the newest opens, the other is offered.
+        _c = _open(_ctx, w=402); _c.wait_for_timeout(700)
+        _bar = _c.evaluate(_BAR)
+        check(f"{_ed}: the next visit opens the newest drawing and offers the waiting one, painted, at 402px",
+              bool(_bar) and _bar["painted"] and "waiting" in _bar["words"]
+              and _n(_c.evaluate(f"() => localStorage.getItem('{_key}')")) == _n(_slot2), str(_bar))
+        check(f"{_ed}: ...its buttons say Open it, Keep for later and Not now, each a 44px tap on screen",
+              bool(_bar) and [b[0] for b in _bar["btns"]] == ["Open it", "Keep for later", "Not now"]
+              and all(b[1] >= 44 and b[2] >= 44 and b[3] for b in _bar["btns"]), str(_bar and _bar["btns"]))
+        if _bar:
+            _c.click(".othertab-later"); _c.wait_for_timeout(900)
+        _kept = _c.evaluate("() => window.SkriblSavedDrafts.list()")
+        _k = [d for d in (_kept or []) if (d.get("title") or "").startswith("From another tab")]
+        check(f"{_ed}: Keep for later files it under Drafts and it stops waiting",
+              len(_k) == 1 and not _c.evaluate(_WAIT, _key) and _c.evaluate(_BAR) is None,
+              f"drafts {[d.get('title') for d in (_kept or [])]}, waiting {len(_c.evaluate(_WAIT, _key))}")
+        if _k:
+            # The kept draft opens on a blank editor with B's strokes.
+            # (Closed first: its pagehide flush would put its own drawing back.)
+            _c.close()
+            _e = _ctx.new_page(); _e.goto(BASE + "/api/skribls")
+            _e.evaluate(f"() => {{ localStorage.removeItem('{_key}'); localStorage.removeItem('{_key}:owner'); }}")
+            _e.close()
+            _d = _open(_ctx, f"{_path}?draft={_k[0]['id']}"); _d.wait_for_timeout(900)
+            check(f"{_ed}: ...and that draft opens with the other tab's drawing",
+                  _d.evaluate(_ink_js) == _bstrokes and _bstrokes > 0, f"{_d.evaluate(_ink_js)} vs {_bstrokes}")
+            _d.close()
+        else:
+            _c.close()
+        _ctx.close()
+
+        # OPEN IT: this tab's drawing waits in the other's place, and the page
+        # reloads into the other one.
+        _ctx = _b2.new_context()
+        _a = _open(_ctx); _b = _open(_ctx)
+        _ink(_a, _sel, -60); _a.wait_for_timeout(1800)
+        _ink(_b, _sel, 60); _ink(_b, _sel, 20); _b.wait_for_timeout(1800)
+        _astrokes, _bstrokes = _a.evaluate(_ink_js), _b.evaluate(_ink_js)
+        _a.close(); _b.close()
+        _c = _open(_ctx); _c.wait_for_timeout(700)
+        _before = _c.evaluate(_ink_js)
+        if _c.evaluate(_BAR):
+            with _c.expect_navigation():
+                _c.click(".othertab-open")
+            _c.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
+            _c.wait_for_timeout(800)
+        _after, _bar2 = _c.evaluate(_ink_js), _c.evaluate(_BAR)
+        _w3 = _c.evaluate(_WAIT, _key)
+        check(f"{_ed}: Open it reloads into the waiting drawing, and the one it replaced waits in its place",
+              _before == _bstrokes and _after == _astrokes and _astrokes != _bstrokes
+              and len(_w3) == 1 and _w3[0][0].startswith("kept-") and bool(_bar2),
+              f"before {_before} after {_after} (A {_astrokes}, B {_bstrokes}); waiting {[k for k, _ in _w3]}")
         _ctx.close()
     _b2.close()
 

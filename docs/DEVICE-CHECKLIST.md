@@ -49,6 +49,10 @@ details to send with it.
 - [ ] Turn on Airplane Mode, post → "Couldn't post. Your drawing is still here,
       saved on this device. Try again when you're back online." with a Try again. Airplane Mode off, Try again → it posts and the device copy
       is gone.
+- [ ] Two Safari tabs of the Pad: draw in one, then in the other, close both,
+      open the Pad again → the newest drawing opens and "Another drawing from
+      a different tab is waiting" offers the other. Open it → the page reloads
+      into it; Keep for later → it shows under Drafts in the Library.
 - [ ] In a **Private** tab, draw and post → it works; nothing throws, even
       though storage is refused there.
 - [ ] Feed demo: write a line, attach a Skribl, write another line, Post →

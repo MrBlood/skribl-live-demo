@@ -15673,6 +15673,83 @@ does that is next, measured before and after by this tool. It is named check_*
 so it is not in the battery or a seal (about 25 minutes). The player's restore
 banner went with it: the census found a control nothing could ever show.
 
+**Flip's preview: speeds, a timeline, and nothing on the drawing (F1, the
+owner's pick C).** The first build put the Pad's scrubber and "watching at 1×"
+over the foot of the drawing; the owner: "All that info on the canvas? ... It's
+gotta be unobtrusive (not on the canvas) ... Be kind to the canvas." A second
+round (everything in the top bar, or a slim bar on the drawing) was passed over
+too. Built: while a Flip plays, the page strip is its timeline -- the page on
+screen is outlined there and a 3px line along the strip's top edge fills as it
+plays (a 44px band to grab; a place on it lands on the page holding that beat,
+so a page held three beats takes three beats of the line) -- and the Duplicate /
+Blank / Tween / Smear row, idle during playback, becomes the speeds. Stop puts
+the row back. The same speeds sit in Playback settings as "Watching speed" (the
+owner: "does stop remove the 16x? So you're going to adjust and it's gone?"):
+the label and its speeds share one 44px line and the small print runs under
+both, the row's full width -- the owner's layout ("Make watching speed a 44px
+tall line then the slider fits and the text runs under it"), after a first try
+here dropped the words and renamed the row, which was not what was asked. FIVE speeds, ¼× to 4×, not the
+Pad's seven: at 12 pages a second 8× asks for 96 pictures a second from a
+screen that shows about 60, so it would skip pages, not show them faster; slow
+is what a Flip is checked at. A speed scales only the preview's clock (each
+page's time, a drawing page's reveal, the elapsed readout), re-anchored
+mid-play; pages per second stays the animation, and the music keeps its own
+pace. Remembered in this browser. lib/replayline.js is unchanged. Pad: its own
+version is to be mocked before it is built. verify_replayspeed drives it at 402
+and 1280 (nothing painted on the drawing's foot, the line in the strip and
+grabbable, the row swap, beats, 4×, the settings row), shown red with the line
+moved over the drawing and with the row left unswapped.
+
+**Room to breathe under a Pad replay on a phone (the owner's pick B).** While a
+replay played, "Drawn in 8 sec · watching at ¼×" and "long pauses skipped" sat
+in two rows above a 30px scrubber, and the gap they had was 30px on every phone
+height but the tallest, so they rode 21px onto the drawing (owner's iPhone, a
+Home Screen app at 402x813). The checks measured only 874, where the gap
+happened to be 61. Now, on a phone, the bar is slim (18px; it still grabs at
+44) and sits low in the toolbar's band, 24px clear of the screen's foot (the
+swipe-home strip); the words are one row in the middle of what is left, about
+11px of air each side at 813; "long pauses skipped" shows with the speeds when
+the speed is tapped, where it explains them. The drawing does not move or
+shrink: the toolbar's band was already reserved. All of it is in
+editor_draw.js and the stylesheet, so app.js (the player's budget) is
+untouched. Not for Flip: its preview has no line on the drawing (pick C) and
+its timeline is the 3px line on the page strip. verify_replayspeed ROOM TO
+BREATHE measures 874, 813, 750 and 664; red on the old code at every height,
+and the bar's height check red on its own with the 18px rule removed.
+
+**Two tabs, two drawings, nothing lost (SK-AUD-006, the owner's pick T1).** Two
+tabs of one editor shared one autosave slot and the last writer won: tab A
+drew, tab B drew, and A's drawing was gone once A closed. v321's notice said so
+in the losing tab, which still needed a press before the tab closed. Now
+lib/othertab.js writes the slot for both editors and remembers who wrote it: a
+tab about to write over a drawing it neither wrote nor opened moves that drawing
+aside (`<key>:waiting:<writer>`), and a tab writing again takes its own back.
+The next visit opens the newest drawing, as before, and offers a waiting one in
+one line: "Open it" (this tab's drawing waits in its place, and the page reloads
+into the other, so the editor's own tested restore does the work) or "Keep for
+later" (it becomes a draft, titled "From another tab, 9:41 PM"). A drawing a tab
+still holds is not offered: open tabs answer a roll call on a BroadcastChannel.
+A tab closing with nothing new no longer re-saves, or its older drawing would
+become the newest. A kept drawing keeps its strokes and ground; an autosave
+holds a photo's or a track's name and never its bytes, so those stay with the
+tab that had them. Shared: one module, both editors; Flip's autosave is already
+a draft, the Pad's becomes one. verify_drafts drives both editors through two
+tabs, the roll call, the next visit, Keep for later (and opening that draft) and
+Open it; each part was shown red on its own.
+
+**The Post sheet: "Speed" opens the speeds, and "Posted!" is the title (the
+owner's picks, from the iPhone).** The fourth button under "Viewers start at"
+was the speed the preview last watched at; out of context it read as a random
+number ("1/4th?"). It is "Speed" now, opening the seven rates on a row of their
+own (each a 44px tap); a pick closes the row and the button shows the rate, and
+Auto, As drawn or Fit puts "Speed" back. Nothing is pulled in from the preview
+without asking. After a real post the sheet's title says "Posted!" and the
+status line, with its spent progress bar, goes; it had sat under Watch / Share /
+Copy link and run off the bottom of the phone. A save on this device only keeps
+its warning in the status line. Shared: Flip posts through the same sheet, so it
+gets the title (its sheet has no speed row). verify_replayspeed drives the speed
+row; verify_ux checks the title on both editors at 390 and 1100.
+
 **Words in a button sit in the middle by their capitals, in any font (the
 owner: "if this happened here, it happened all over?").** It had:
 check_centring found word labels 1-2.5px high across Pad, Flip, the Library and

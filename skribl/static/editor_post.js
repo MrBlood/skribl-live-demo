@@ -36,7 +36,7 @@
     toast: showToast,
     submit: () => submit(),
     cancel: () => { if (sendSkribl._abort) sendSkribl._abort.abort(); },
-    onOpen: () => { pendingLocalId = null; renderSpeed(); },
+    onOpen: () => { pendingLocalId = null; openChips(false); renderSpeed(); },
     // Mirror the pad's shape so the snapshot shows whole (no crop), and match
     // the frame background to the canvas color so there are never odd bars.
     preview: () => {
@@ -50,38 +50,51 @@
   // Writes app.js's authorSpeed, which serializeSkribl() posts as `playSpeed`
   // and lib/replayline.js fromPost() turns into a start: Auto (as drawn under
   // a minute of drawing, Fit over it), As drawn, Fit, or a rate. The fourth
-  // button is a rate the author already chose, or else the speed the Pad's
-  // preview last watched at when that is neither 1x nor Fit -- "the speed you
-  // last watched it at", which is what a picked speed usually is.
+  // button is "Speed": it opens the seven rates, and once one is picked it
+  // shows that rate (owner: the old fourth button, the speed the preview last
+  // watched at, read as "1/4th?").
   const speedSeg = document.getElementById('postSpeedSeg');
   const speedHint = document.getElementById('postSpeedHint');
+  const speedPick = document.getElementById('postSpeedPick');
+  const speedChips = document.getElementById('postSpeedChips');
   const SPEED_HINTS = {
     auto: 'As drawn if it took under a minute, fit to about 30 seconds if longer.',
     drawn: 'In real time, with your pause setting.',
     fit: 'The whole drawing in about 30 seconds.',
   };
+  function openChips(on) {
+    if (!speedChips) return;
+    speedChips.hidden = !on;
+    speedPick.setAttribute('aria-expanded', String(on));
+  }
   function renderSpeed() {
     if (!speedSeg) return;
     const cur = authorSpeed || 'auto';
-    const rate = typeof cur === 'number' ? cur
-      : (typeof replayChoice === 'number' && replayChoice !== 1 ? replayChoice : null);
-    const fourth = speedSeg.querySelector('[data-speed=""], [data-rate-pick]');
-    fourth.hidden = rate == null;
-    if (rate != null) {
-      fourth.dataset.speed = String(rate);
-      fourth.setAttribute('data-rate-pick', '');
-      fourth.textContent = SkriblReplayLine.label(rate);
+    const rate = typeof cur === 'number' ? cur : null;
+    if (speedPick) {
+      speedPick.firstChild.textContent = rate == null ? 'Speed' : SkriblReplayLine.label(rate);
+      speedPick.setAttribute('aria-label', rate == null ? 'Pick a speed' : 'Speed, ' + SkriblReplayLine.label(rate) + ', pick another');
     }
-    speedSeg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.speed === String(cur)));
-    speedHint.textContent = (SPEED_HINTS[cur] || 'At ' + SkriblReplayLine.label(rate) +
-      ', the speed you watched it at.') + ' Anyone watching can change it.';
+    speedSeg.querySelectorAll('button').forEach(b => b.classList.toggle('on',
+      b === speedPick ? rate != null : b.dataset.speed === String(cur)));
+    if (speedChips) speedChips.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.rate === rate)));
+    speedHint.textContent = (SPEED_HINTS[cur] || 'At ' + SkriblReplayLine.label(rate) + '.') + ' Anyone watching can change it.';
   }
   if (speedSeg) speedSeg.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b || b.hidden) return;
-    const v = b.dataset.speed;
-    authorSpeed = +v ? +v : v;
+    if (b === speedPick) { openChips(speedChips.hidden); return; }
+    openChips(false);
+    authorSpeed = b.dataset.speed;
     renderSpeed();
+  });
+  if (speedChips) speedChips.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    authorSpeed = +b.dataset.rate;
+    openChips(false);
+    renderSpeed();
+    speedPick.focus();
   });
 
   // ---- THE NETWORK SEAM ----
