@@ -15672,3 +15672,26 @@ flex-centred line box puts a word's capitals 1-2.5px high, which a
 does that is next, measured before and after by this tool. It is named check_*
 so it is not in the battery or a seal (about 25 minutes). The player's restore
 banner went with it: the census found a control nothing could ever show.
+
+**Words in a button sit in the middle by their capitals, in any font (the
+owner: "if this happened here, it happened all over?").** It had:
+check_centring found word labels 1-2.5px high across Pad, Flip, the Library and
+the Gallery. A centred button centres its label's line box, and where the
+capitals sit in that box is the font's ascent and descent, so each face put
+them somewhere else. The cure the recording clock and the Make buttons already
+used -- `text-box: trim-both cap alphabetic`, which makes the box the capitals
+-- now reaches every control through one shared module: lib/labels.js gives a
+word written straight into a button its own span (the same text node, so code
+holding it still updates it, and a label set later is wrapped as it lands), and
+labels.css trims it and pads back exactly the line it took, so no control
+changes size (measured: every visible control on all four pages, phone and
+desk, the same width and height before and after). A label that already had a
+span keeps its own display (.lbl-own: a tool's word is hidden on a phone). Left
+alone: two pieces of text in one control, a tile with its mark above its word,
+and a control already trimmed by its own rule (Flip's hold badge). The player
+loads neither half and is unchanged (its byte budget). verify_ux WORDS IN THE
+MIDDLE measures the first capital's ink in each installed face: Duplicate,
+Blank and Post sat -1.17 to -2.33px off and are within half a pixel now, and
+every label span is exactly one line tall. The baseline in
+centring_baseline.json is rewritten from a full pass and shrinks with it.
+Folds in #391 (the Make buttons).
