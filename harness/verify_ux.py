@@ -3170,7 +3170,10 @@ with sync_playwright() as _gp:
     _gb = _gp.chromium.launch()
     for _route, _dock, _canvas in (("/skribl-pad", ".toolbar", "#canvas"), ("/flip", ".flip-tools", "#pad")):
         for _theme in ("dark", "light"):
-            _gc = _gb.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True,
+            # 664 tall, a short phone: at 844 the end of Music left the drawing
+            # 1-3px past the header, so the precondition below passed in one
+            # font and failed in another (CI's), and main was red for it.
+            _gc = _gb.new_context(viewport={"width": 390, "height": 664}, is_mobile=True, has_touch=True,
                                   color_scheme=_theme)
             _gc.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_theme}')}}catch(e){{}}")
             _g = _gc.new_page()
