@@ -7443,6 +7443,11 @@ body.replaying .media-card {
    open state lost its fill, keeping only the ring and the ink. After the
    hover rule, so the open state holds under a pointer too. */
 .header #tuneBtn.open { background: var(--seg-on-fill); }
+/* ...and the Pad's ⋯ lights while its menu is open, as Flip's always has
+   (#moreBtn.on, flip.css) and as the settings button beside it does (the
+   owner's pick, "all yes"). Here, after `background: none`, for the same
+   reason as the line above. */
+.header #menuBtn[aria-expanded="true"] { color: var(--seg-on-ink); background: var(--seg-on-fill); }
 /* Record, Play and Post come down to meet them. */
 .header .actions .btn { height: 36px; padding: 0 16px; }
 /* THE HEADER PILLS GET THE SAME 44px BAND AS THE TOOLBAR (SK-AUD-005;

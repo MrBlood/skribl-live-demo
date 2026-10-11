@@ -2513,6 +2513,92 @@ with sync_playwright() as p:
                 check(f"{_form} {_theme} {_st}: Flip's Play, ⋯, settings, Undo, Redo and Post read as the Pad's",
                       not _diffs, "; ".join(_diffs[:6]) + (f" (+{len(_diffs) - 6} more)" if len(_diffs) > 6 else ""))
 
+    print("\nPARITY — the Flip matches: the dock while playing, a lit ⋯, the settings rows, the desk dock's words")
+    # THE REST OF THE OWNER'S "ALL YES" from the parity audit, each one Flip
+    # coming to the Pad's behaviour (and one the Pad's coming to Flip's: its ⋯
+    # lit while its menu is open, as Flip's always was). Compared across the
+    # two editors rather than pinned, like the section above, so the Pad stays
+    # the model and the pair cannot drift apart unnoticed.
+    _DOCK = r"""(o) => { const d = document.querySelector(o.dock), c = getComputedStyle(d), r = d.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      const pill = document.getElementById('autosaveStatus');
+      return { opacity: c.opacity, events: c.pointerEvents, reachable: !!hit && d.contains(hit),
+               pill: pill ? getComputedStyle(pill).opacity : null }; }"""
+    _ROWS = r"""(ids) => ids.map(id => { const r = document.getElementById(id); if (!r) return null;
+      const lab = r.querySelector('.tune-label'), name = r.querySelector('.tune-name');
+      const cells = [...r.querySelectorAll('.seg button')].filter(b => b.offsetParent).map(b => {
+        const q = b.getBoundingClientRect(); return Math.round(q.width) + 'x' + Math.round(q.height) + ' ' + getComputedStyle(b).fontSize; });
+      // Without the divider above it: Grid is the Pad's first row and Flip's
+      // third, so only one of them has a hairline over it.
+      const h = r.getBoundingClientRect().height - parseFloat(getComputedStyle(r).borderTopWidth);
+      return { id, h: Math.round(h), label: Math.round(lab.getBoundingClientRect().width),
+               name: getComputedStyle(name).fontSize + ' ' + getComputedStyle(name).fontWeight, cells }; })"""
+    _TOOLS = r"""(ids) => ids.map(id => { const b = document.getElementById(id), l = b && b.querySelector('.tool-btn-label');
+      if (!b) return null; const q = b.getBoundingClientRect();
+      return { id, w: Math.round(q.width), word: l ? l.textContent : null,
+               shown: !!l && getComputedStyle(l).display !== 'none' && l.getBoundingClientRect().width > 0 }; })"""
+    for _form, _vp, _mob in (("phone", {"width": 402, "height": 874}, True),
+                             ("desk", {"width": 1280, "height": 860}, False)):
+        _got = {}
+        for _ed, _path, _canvas, _play, _more, _dock in (
+                ("pad", "/skribl-pad", "#canvas", "#playBtn", "#menuBtn", "#toolBar"),
+                ("flip", "/flip", "#pad", "#play", "#moreBtn", ".flip-tools")):
+            _c = b.new_context(viewport=_vp, is_mobile=_mob, has_touch=_mob)
+            # The Pad's replay watched at 1/4x, so it is still playing when read.
+            _c.add_init_script("try{localStorage.setItem('skribl_replay_rate','0.25')}catch(e){}")
+            _q = _c.new_page()
+            browsing.goto(_q, BASE, _path)
+            _q.wait_for_timeout(700)
+            _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            _got[(_ed, "tools")] = _q.evaluate(_TOOLS, ["penToolBtn", "eraserToolBtn"])
+            _q.evaluate("(s) => document.querySelector(s).click()", "#tuneBtn")
+            _q.wait_for_timeout(600)
+            _got[(_ed, "rows")] = _q.evaluate(_ROWS, ["tuneGridRow", "tuneLayersRow", "tuneMirrorRow"])
+            _q.evaluate("(s) => document.querySelector(s).click()", "#tuneBtn")
+            _q.wait_for_timeout(400)
+            _q.evaluate("(s) => document.querySelector(s).click()", _more)
+            _q.wait_for_timeout(500)
+            _got[(_ed, "more")] = _q.evaluate("""(s) => { const e = document.querySelector(s), c = getComputedStyle(e);
+                return { open: e.getAttribute('aria-expanded'), bg: c.backgroundColor, ink: c.color }; }""", _more)
+            _q.keyboard.press("Escape")
+            _q.wait_for_timeout(400)
+            _bx = _q.locator(_canvas).bounding_box()
+            for _k in range(2 if _ed == "flip" else 1):
+                _q.mouse.move(_bx["x"] + 60, _bx["y"] + 80 + 40 * _k)
+                _q.mouse.down()
+                for _i in range(30):
+                    _q.mouse.move(_bx["x"] + 60 + _i * 5, _bx["y"] + 80 + 40 * _k + _i * 2)
+                    _q.wait_for_timeout(12)
+                _q.mouse.up()
+                _q.wait_for_timeout(250)
+                if _ed == "flip" and _k == 0:
+                    _q.evaluate("() => document.getElementById('addcopy').click()")
+                    _q.wait_for_timeout(250)
+            if _ed == "pad":
+                _q.evaluate("() => document.getElementById('recordBtn').click()")
+                _q.wait_for_timeout(400)
+            _q.evaluate("(s) => document.querySelector(s).click()", _play)
+            _q.wait_for_timeout(700)                  # past the 0.3s fade
+            _got[(_ed, "dock")] = _q.evaluate(_DOCK, {"dock": _dock})
+            _c.close()
+        for _ed in ("pad", "flip"):
+            _d = _got[(_ed, "dock")]
+            check(f"{_form} {_ed.capitalize()}: while it plays, the dock is faded out and takes no taps",
+                  float(_d["opacity"]) == 0 and _d["events"] == "none" and not _d["reachable"], str(_d))
+            check(f"{_form} {_ed.capitalize()}: ...and the Saved note is hidden too",
+                  _d["pill"] is None or float(_d["pill"]) == 0, str(_d))
+        _pm, _fm = _got[("pad", "more")], _got[("flip", "more")]
+        check(f"{_form}: the Pad's ⋯ lights while its menu is open, as Flip's does",
+              _pm["open"] == "true" and _fm["open"] == "true" and _pm["bg"] == _fm["bg"] and _pm["ink"] == _fm["ink"]
+              and _pm["bg"] not in ("rgba(0, 0, 0, 0)", "transparent"), f"Pad {_pm}, Flip {_fm}")
+        _pr, _fr = _got[("pad", "rows")], _got[("flip", "rows")]
+        check(f"{_form}: Grid, Stroke layers and Mirror are the same rows on both editors (height, label, name, cells)",
+              all(_pr) and _pr == _fr, f"Pad {_pr} | Flip {_fr}")
+        _pt, _ft = _got[("pad", "tools")], _got[("flip", "tools")]
+        _words = _form == "desk"
+        check(f"{_form}: the dock's Pen and Eraser {'carry their words' if _words else 'are bare icons'}, the same width on both editors",
+              all(_pt) and _pt == _ft and all(t["shown"] == _words for t in _pt), f"Pad {_pt} | Flip {_ft}")
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))

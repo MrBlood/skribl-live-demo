@@ -141,7 +141,7 @@
         {# REPLAY SPEED, at any time (owner's pick 2): under Pauses, the other
            replay setting. The replay line's own button and chips
            (editor_draw.js); the line itself shows only while a replay plays. #}
-        <div class="tune-row" id="tuneSpeedRow"><span class="tune-label"><span class="tune-name">Replay speed</span><span class="tune-hint">how fast Play shows your drawing</span></span><span class="speed-only tune-speed" id="tuneSpeed"></span></div>
+        <div class="tune-row" id="tuneSpeedRow"><span class="tune-label"><span class="tune-name">Watching speed</span><span class="tune-hint">how fast Play shows your drawing</span></span><span class="speed-only tune-speed" id="tuneSpeed"></span></div>
       </div>
     </div>
   </div>
@@ -404,7 +404,7 @@
             can see until a fourth tool is registered. lib/toolshelf.js owns the
             hidden attribute; nothing else may set it. #}<button type="button" class="tool-btn tool-more" id="toolMoreBtn" aria-haspopup="dialog" aria-controls="toolTray" aria-expanded="false" aria-label="More tools" title="More tools" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"/></svg>
-            <span class="tool-btn-label">More</span>
+            <span class="tool-btn-label">Tools</span>
           </button>        </div>
     {# Every registered tool, one cell each, filled by lib/toolshelf.js. Empty in
        the served HTML on purpose: the registry is the single place a tool is

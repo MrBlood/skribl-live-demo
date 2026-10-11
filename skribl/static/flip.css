@@ -251,6 +251,15 @@
      playing or paused Flip showed nothing at all (the owner, clicking it to
      pause). */
   body.playing #pad { cursor: default !important; }
+  /* THE DOCK STEPS ASIDE WHILE A FLIP PLAYS, as the Pad's does (styles.css,
+     "Replay auto-hide"; the owner's pick, "all yes"): the drawing is the show.
+     It stayed lit and tappable, and its Undo did nothing mid-play. Opacity
+     only, so the canvas never resizes; an open drawer goes with it, and the
+     "Saved" note hides as the Pad's does (body.replaying .autosave-status). */
+  .flip-tools, .flip-app .tab-panel { transition: opacity 0.3s ease; }
+  body.playing .flip-tools,
+  body.playing .tab-panel,
+  body.playing .autosave-status { opacity: 0; pointer-events: none; }
 
   /* gap 4 / padding 7 are PAD'S numbers, adopted wholesale in v224. Flip used
      8 and 12 and was 52px wider and 10px taller than Pad for the same nine
@@ -861,30 +870,31 @@
    padding or flex centering, let the digit sit slightly high in the cell. Now
    wider padding and inline-flex centering so each number is centered in its
    segment horizontally and vertically. */
-.onion-seg button, .fps-group .seg button {
-  /* Fixed width, not min: Speed's two-digit 12/24 would otherwise render wider
-     than Onion's single-digit 1/2/3, so the two stacked segments came out
-     different widths and no longer aligned as a column. A fixed 34px cell makes
-     all six buttons identical, so both segments are exactly equal width, and
-     the roomier cell centres the digit. */
-  width: 34px; padding: 5px 0; font-size: 12px;
-  display: inline-flex; align-items: center; justify-content: center;
-}
-/* ...except Smear weight, which borrowed the digit cell for WORDS: "Normal"
-   and "Strong" are 36-39px of text in a 34px box, so the three ran into one
-   another ("LightNormaStrong") at every phone width. Its cells size to their
-   words. Grid density has the same three words-not-digits and the same bug
-   ("CoarsMediumFine", owner's iPhone, after v321); verify_onepill's FIT now
-   asks it of every option on both editors. */
-#smearWeightSeg button, #gridDensitySeg button { width: auto; flex: 0 0 auto; padding: 5px 9px; }
+/* DIGITS GET EQUAL CELLS. Every other settings cell is the shared .seg
+   button, the Pad's 13px word in a roomy cell (the owner's pick, "all yes"),
+   so words size to themselves -- "LightNormaStrong" was a 34px digit cell
+   borrowed for words, and that cell is gone. Speed's 6 / 12 / 24 sits right
+   above Onion's 1 / 2 / 3, though, and at that padding a one-digit cell is
+   8px narrower than a two-digit one, so the two would stop lining up as a
+   column. 44 is the Pad's tap, and with 4px sides it holds every digit, so
+   "12" and "24" are 44 too (at the shared sides they came out 44.8 and the
+   two rows 2px apart: verify_ux). */
+#fps button, #onionDepthSeg button { min-width: 44px; padding-left: 4px; padding-right: 4px; }
+/* SMEAR WEIGHT, Flip's own row, keeps 9px sides rather than the shared 14:
+   its three words are the widest seg in either editor's settings, and at 14
+   they push the row onto two lines on a phone, where the approved shot had it
+   on one (from 390px up; below that the controls drop under the label, as
+   any Pad row would). */
+#smearWeightSeg button { padding-left: 9px; padding-right: 9px; }
 
 .onion-tint {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 32px = the segment height it shares the Onion row with, so the toggle and
-     the 1/2/3 depth segment align instead of the toggle sitting proud. Was 22
-     (chosen for an earlier, shorter segment); the segments render at 32 now. */
+  /* 32px, the switch every settings row shares on both editors (Grid and
+     Stroke layers wear this class too, so it is not Flip's to change). Was 22,
+     chosen for an earlier, shorter segment. The Onion row's own tint toggle
+     is sized to its neighbour below. */
   width: 32px;
   height: 32px;
   padding: 0;
@@ -895,6 +905,11 @@
   cursor: pointer;
 }
 .onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
+/* THE ONION ROW'S TINT TOGGLE matches the 1/2/3 segment beside it, so it does
+   not sit proud: 34px, which is what the shared rows render a segment at
+   (26px cells in a 3px-padded, 1px-bordered group). verify_ux holds the two
+   to one height. */
+#onionTintBtn { width: 34px; height: 34px; }
 /* The ON state lives in styles.css only: the accent for every switch, amber
    kept for #onion and #onionTintBtn alone. An amber `.onion-tint.active` used
    to sit here, and because flip.css loads after styles.css at the same
@@ -1108,32 +1123,14 @@
    both editors: one rule for the label, one for the pills, one height. */
 
 /* --- v130: playback settings drawer ---------------------------------------
-   Slides down from the header that opens it. The animation is on
-   grid-template-rows (0fr -> 1fr), which transitions to the content's OWN height
-   — no hardcoded max-height to guess at or drift. The clip element hides the
-   overflow while it moves, so the panel wipes down rather than popping. */
-.tune-shell {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
-  /* The header is a floating card (margin: 7px), so a full-bleed drawer would
-     read as a different surface. Match its inset and tuck the panel up under the
-     card's rounded bottom so the two look like one object opening. */
-  margin: -10px 7px 0;
-  background: var(--surface-raised);
-  /* No border at all while closed: a transparent 1px border still occupies a
-     pixel row under the header. The border appears with .open. */
-  border: 0;
-  border-radius: 0 0 14px 14px;
-}
-.tune-shell.open {
-  grid-template-rows: 1fr;
-  border: 1px solid var(--hairline-strong);
-  border-top: 0;
-}
-/* overflow:hidden alone still reserves a hairline of height; clipping the
-   collapsed state outright keeps it at exactly 0. */
-.tune-clip { overflow: hidden; min-height: 0; }
+   Slides down from the header that opens it, on grid-template-rows (0fr ->
+   1fr) so it transitions to the content's own height. THE SHELL IS THE PAD'S,
+   from styles.css (.tune-shell, its open state, .tune-clip): this file kept
+   its own copy of those rules after styles.css lifted them, and, loading
+   later, its solid fill and 1px border quietly undid the glass the dock
+   redesign gave both drawers -- the Pad's settings were glass and Flip's were
+   a solid card, two pixels narrower inside (found by verify_parity's settings
+   rows, the one Play/Stop round). Only the panel's own rules stay here. */
 
 .tune-panel {
   display: grid;
@@ -1144,7 +1141,7 @@
   max-width: 520px;
   margin: 0 auto;
   width: 100%;
-  padding: 14px 14px 12px;
+  padding: 12px 16px;   /* the Pad's (styles.css .tune-panel), so a row is as wide on both */
   /* Content eases in slightly behind the height, so the reveal reads as one
      motion instead of text appearing in an empty box. */
   opacity: 0;
@@ -1158,40 +1155,22 @@
   .tune-panel { transition: none; }
 }
 
-.tune-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 7px 0;
-}
-.tune-row + .tune-row { border-top: 1px solid var(--hairline); }
-
-/* Two lines: what it is, then what the numbers mean. "6 / 12 / 24" and
-   "1 / 2 / 3" are meaningless on their own — the caption is the control's
-   unit, not decoration. */
-.tune-label { display: flex; flex-direction: column; gap: 1px; }
-.tune-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.2;
-}
-.tune-hint {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  line-height: 1.25;
-}
-
-/* Control sits immediately after its label, not flung to the far edge by
-   margin-left:auto — that left 284px of dead space between "Speed" and the very
-   numbers it names. A fixed label column keeps the two rows aligned with each
-   other while staying visually paired. */
-.tune-label { flex: 0 0 auto; width: 150px; }
+/* THE PAD'S ROWS (the owner's pick, "all yes"). Flip's settings take the
+   Pad's row whole, from styles.css: its gap and padding, its label column
+   (150px on a desk with the controls at the row's right edge; on a phone the
+   label takes the slack and the controls drop under it before anything is
+   squeezed), its 13px names, quiet hints and roomy 13px cells. Flip's rows
+   were a shade apart in every one of those -- 12px words in 34px cells, a
+   bolder name, a label pinned at 150px even on a phone -- so nothing about a
+   row is restated here any more. What stays is what only Flip has: the digit
+   cells (below, at .onion-seg) and the Watching speed row's own layout.
+   Every label is two lines: what it is, then what the numbers mean. "6 / 12 /
+   24" and "1 / 2 / 3" are meaningless on their own -- the caption is the
+   control's unit, not decoration. (The panel is capped at 520px above, so a
+   control at the row's right edge is still a glance from its label.) */
 .tune-row .fps-group { display: inline-flex; align-items: center; gap: 8px; }
 .tune-row .onion-group { display: inline-flex; align-items: center; gap: 8px; }
 .tune-row .onion-group[hidden] { display: none; }
-.tune-row .seg button { min-width: 36px; }
 /* Watching speed (F1): the label and its five speeds share one 44px line,
    the speeds at the row's end like Speed's 6 / 12 / 24, and the small print
    runs under both, the row's full width (the owner's layout). Where the line
@@ -1209,12 +1188,6 @@
 /* Onion row dims when onion skin is off — the controls stay put so the panel
    never changes height mid-toggle. */
 #tuneOnionRow.muted { opacity: 0.4; }
-
-@media (max-width: 400px) {
-  .tune-label { width: 130px; }
-  .tune-row { gap: 10px; }
-  .tune-row .seg button { min-width: 32px; }
-}
 
 .tune-tool.open { color: var(--seg-on-ink); background: var(--seg-on-fill); }
 
@@ -1526,7 +1499,12 @@ body.stroking .addcol {
 .flip-tools #toolGroup .tool-btn { min-width: 44px; padding: 0 9px; justify-content: center; }
 .flip-tools #toolGroup .tool-btn svg { width: 26px; height: 26px; }
 .flip-tools #toolGroup #penToolBtn { padding: 0 5px; }   /* the tint shows round the chip: styles.css, ONE SELECTION RULE */
-.flip-tools .tool-btn-label { display: none; }
+/* FLIP'S DESK DOCK HAS WORDS, as the Pad's does (the owner's pick, "all
+   yes"): Pen · Eraser · Tools, at the Pad's 12px a side (its pen 5px on the
+   chip's side). A phone keeps the bare 44px icons on both editors -- the
+   compact rule hides the words there. */
+:where(body[data-size="regular"]) .flip-tools #toolGroup .tool-btn { padding: 0 12px; }
+:where(body[data-size="regular"]) .flip-tools #toolGroup #penToolBtn { padding: 0 12px 0 5px; }
 .flip-tools #undo, .flip-tools #mediaOpenBtn { margin-left: 18px; }
 .flip-tools #redo { margin-left: 6px; }
 :where(body[data-size="compact"]) .flip-tools #undo,

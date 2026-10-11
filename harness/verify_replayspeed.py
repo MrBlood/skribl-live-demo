@@ -368,8 +368,8 @@ with sync_playwright() as p:
             const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
             const prev = document.getElementById('tuneSpeedRow').previousElementSibling;
             return { painted: !!e && b.contains(e), text: b.textContent, label: b.getAttribute('aria-label'), afterPauses: !!prev && prev.id === 'tunePauseRow' }; }""")
-        check(f"[{label}] Canvas settings has a Replay speed row under Pauses, painted, saying the speed and what it is",
-              rw["painted"] and rw["afterPauses"] and rw["text"] == "¼×" and rw["label"] == "Replay speed, ¼×", str(rw))
+        check(f"[{label}] Canvas settings has a Watching speed row under Pauses, painted, saying the speed and what it is",
+              rw["painted"] and rw["afterPauses"] and rw["text"] == "¼×" and rw["label"] == "Watching speed, ¼×", str(rw))
         pg.click("#tuneSpeed .rl-speed"); pg.wait_for_timeout(350)
         ch = pg.evaluate(CHIPS, "#tuneSpeed")
         check(f"[{label}] ...its speeds open inside the panel, each one on top and on screen",
@@ -391,7 +391,7 @@ with sync_playwright() as p:
                 return { painted: !!e && b.contains(e), text: b.textContent, label: b.getAttribute('aria-label'),
                          inPill: !!b.closest('#playWrap') }; }""")
             check(f"[{label}] on a desk the speed also sits in the Play pill, painted, saying its speed and what it is",
-                  st["painted"] and st["inPill"] and st["text"] == "16×" and st["label"] == "Replay speed, 16×", str(st))
+                  st["painted"] and st["inPill"] and st["text"] == "16×" and st["label"] == "Watching speed, 16×", str(st))
             sp.click(); pg.wait_for_timeout(350)
             chips = pg.evaluate(CHIPS, "#padSpeed")
             check(f"[{label}] ...tapping it opens every speed, each one on top and on screen",

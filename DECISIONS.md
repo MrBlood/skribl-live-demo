@@ -15870,3 +15870,30 @@ ink, outline, glyph, word, name) in both themes, phone and desk, resting and
 playing, so the two cannot drift apart again without going red; the pill's
 width, its speed and the settings panel's name differ by design and are left
 out.
+
+**The Flip matches: its dock steps aside while it plays, the Pad's ⋯ lights,
+the settings rows are one design, and Flip's desk dock has words (the rest of
+the owner's "all yes" from the parity audit).** While a Flip plays its dock now
+fades and takes no taps, as the Pad's does, and its "Saved" note hides; it had
+stayed lit and tappable, and its Undo did nothing mid-play. An open drawer
+fades with it. The Pad's ⋯ lights while its menu is open, as Flip's always has
+and as the settings button beside it does -- after `.header #menuBtn`'s
+`background: none`, which carries an id and had already cost the open settings
+button its fill once. Flip's settings rows are the Pad's: the shared rows from
+styles.css, with Flip's own copies of them gone (12px words in 34px cells, a
+bolder name, a label pinned at 150px even on a phone, a solid card where the
+Pad's drawer is glass -- Flip's older copy of the drawer rules loaded later and
+undid the glass the dock redesign gave both). What stays Flip's: equal 44px
+cells for its digit rows (Speed above Onion), Smear weight's three words a
+little tighter so the row stays on one line from 390px up, and the Watching
+speed row's own layout. On a phone a row too wide for its label drops its
+controls under it, as a Pad row does, so the Onion row with its extras on reads
+as two clean lines instead of a squeezed label. Both speed rows are "Watching
+speed" now (the Pad's said Replay speed). Flip's desk dock carries its words,
+Pen · Eraser · Tools, at the Pad's sizes; phones keep the bare icons on both
+(the tray button's word is "Tools" on both editors). Shared: everything here is
+one rule set now, except the Pad's ⋯, which is the Pad catching up with Flip.
+verify_parity "the Flip matches" compares, on both editors at a phone and a
+desk: the dock and the Saved note while playing, the lit ⋯, the Grid, Stroke
+layers and Mirror rows (height without the divider above, label, name, every
+cell), and the dock's words. Red on the old code, green here.
