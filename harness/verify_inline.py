@@ -1884,13 +1884,15 @@ with sync_playwright() as sp:
     check("the speed in the line opens the speeds, and a pick plays at it and closes them",
           _open and _sp["rate"] == 2 and _sp["closed"] and "watching at 2×" in _sp["text"], json.dumps(_sp))
 
-    # A FLIP'S SCRUBBER IS ITS PAGES: halfway along lands in the middle page
-    # (pages of 333, 667 and 333 ms, so its middle is 667 ms in), and near the
-    # end in the last.
+    # A FLIP'S SCRUBBER IS ITS PAGES, one equal segment each, not its clock.
+    # Pages of 333, 667 and 333 ms: a quarter of the way along is three
+    # quarters into page 1 (250 ms) where the clock would say page 2 (333),
+    # and 70% is just into page 3 (1,033 ms) where the clock says page 2
+    # (933). Halfway would not tell them apart -- both read 667.
     if flip_id:
         _fb = _pg2.evaluate(_SCRUB_AT, flip_id)
         _ftimes = []
-        for _f in ((0.5, 0.9) if _fb else ()):
+        for _f in ((0.25, 0.7) if _fb else ()):
             _pg2.mouse.click(_fb[0] + _fb[2] * _f, _fb[1])
             try:
                 _pg2.wait_for_function("(id) => window.SkriblInline.find(id).state().loaded", arg=flip_id, timeout=15000)
@@ -1898,8 +1900,8 @@ with sync_playwright() as sp:
                 pass
             _pg2.wait_for_timeout(250)
             _ftimes.append(_pg2.evaluate("(id) => window.SkriblInline.find(id).state().elapsedMs", flip_id))
-        check("a Flip's scrubber is one segment a page: halfway is the middle page, near the end the last",
-              len(_ftimes) == 2 and abs(_ftimes[0] - 667) < 40 and 1000 <= _ftimes[1] < 1334, f"{_ftimes} ms")
+        check("a Flip's scrubber is one segment a page, not its clock: a quarter lands in page 1, 70% in page 3",
+              len(_ftimes) == 2 and abs(_ftimes[0] - 250) < 40 and 1000 <= _ftimes[1] < 1334, f"{_ftimes} ms")
 
     # THE PLAY BUTTON (the owner's v4): white, a thin purple edge, no shadow,
     # and no wash behind it.
