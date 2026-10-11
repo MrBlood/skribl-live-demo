@@ -771,10 +771,27 @@ if (padLine && playScrub && window.SkriblReplayLine) {
     if (padLine.hidden !== hide) { padLine.hidden = hide; if (!hide) line.update(); else line.close(); }
     if (hide) return;
     const up = playScrub.classList.contains('in-bar');
+    padLine.classList.toggle('in-bar', up);
     padLine.style.left = playScrub.style.left;
     padLine.style.width = playScrub.style.width;
-    const top = parseFloat(playScrub.style.top) || 0;
-    if (up) { padLine.style.top = ''; padLine.style.bottom = (padLine.parentNode.clientHeight - top + 6) + 'px'; }
+    let top = parseFloat(playScrub.style.top) || 0;
+    if (up) {
+      /* ROOM TO BREATHE (owner, iPhone, pick B): the bar sits low in the
+         toolbar's band, 24px clear of the screen's foot (the swipe-home strip),
+         and slim (styles.css, 18px; it still grabs at 44). The line goes in the
+         middle of what that leaves between the drawing and the bar, on ONE row:
+         two rows sat 21px onto the drawing on every phone but the tallest.
+         "long pauses skipped" shows with the speeds, where it explains them.
+         The canvas does not move; only the bar and the line do. */
+      const a = playScrub.offsetParent.getBoundingClientRect();
+      const band = document.getElementById('toolBar').getBoundingClientRect();
+      const want = Math.min(band.bottom, innerHeight - 24) - playScrub.offsetHeight - a.top;
+      if (Math.abs(want - top) > 0.5) { playScrub.style.top = want + 'px'; return; }   // observed: places again
+      const rim = canvasWrap.getBoundingClientRect().bottom - a.top;
+      const h = padLine.querySelector('.rl-text').offsetHeight;
+      padLine.style.top = '';
+      padLine.style.bottom = (padLine.parentNode.clientHeight - top + Math.max(4, (top - rim - h) / 2)) + 'px';
+    }
     else { padLine.style.bottom = ''; padLine.style.top = (top + playScrub.offsetHeight + 10) + 'px'; }
   };
   new MutationObserver(place).observe(playScrub, { attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
