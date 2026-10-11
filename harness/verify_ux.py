@@ -2888,6 +2888,13 @@ with _sp() as _pr:
             return { title: document.getElementById('postTitleInput').value,
                      bodyOpacity: getComputedStyle(document.getElementById('postBody')).opacity,
                      sheetRight: Math.round(sheet.right), btns }; }""")
+        # The owner, from the iPhone: "Posted!" sat under the buttons with the
+        # progress bar, cut off at the screen's edge. It is the title now, and
+        # the status line, its job done, goes.
+        _hd = _pg.evaluate("""() => ({ head: document.querySelector('#postSheet .export-head').firstChild.nodeValue.trim(),
+            status: document.getElementById('postStatus').hidden })""")
+        check(f"POST RESULT ({_name}) at {_w}: the sheet's title says Posted!, and no progress bar is left under the buttons",
+              _hd["head"] == "Posted!" and _hd["status"], str(_hd))
         check(f"POST RESULT ({_name}) at {_w}: the posted title is still in its field",
               _st["title"] == "Result probe", f"field reads {_st['title']!r}")
         check(f"POST RESULT ({_name}) at {_w}: the form is back at full opacity, not dimmed under the result",

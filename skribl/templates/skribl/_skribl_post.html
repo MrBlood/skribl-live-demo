@@ -41,14 +41,16 @@
           {# WHERE A VIEWER STARTS (the Pad only; the owner's pick D1, set to Auto).
              Rides in the payload as `playSpeed`, read by lib/replayline.js
              fromPost(); anyone watching can still change it from the line under
-             the drawing. The fourth button is the speed the Pad's preview last
-             watched at, when that is not 1x or Fit (editor_post.js), so a
-             picked speed is one tap. Shown in compose mode too: it is part of
+             the drawing. The fourth button is "Speed" and opens all seven
+             speeds; once one is picked it shows it ("¼×"). It used to be the
+             speed the preview last watched at, which read as a random number
+             (owner: "1/4th?"). Shown in compose mode too: it is part of
              the drawing, and the host's feed player honours it. #}
           {% if speed_row %}
           <div class="post-field post-speed">
             <span class="post-field-label" id="postSpeedLabel">Viewers start at</span>
-            <span class="seg" id="postSpeedSeg" role="group" aria-labelledby="postSpeedLabel"><span class="seg-slider"></span><button type="button" data-speed="auto" class="on">Auto</button><button type="button" data-speed="drawn">As drawn</button><button type="button" data-speed="fit">Fit</button><button type="button" data-speed="" hidden></button></span>
+            <span class="seg" id="postSpeedSeg" role="group" aria-labelledby="postSpeedLabel"><span class="seg-slider"></span><button type="button" data-speed="auto" class="on">Auto</button><button type="button" data-speed="drawn">As drawn</button><button type="button" data-speed="fit">Fit</button><button type="button" data-speed="pick" id="postSpeedPick" aria-expanded="false" aria-controls="postSpeedChips"><span>Speed</span><svg class="post-speed-caret" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg></button></span>
+            <span class="post-speed-chips" id="postSpeedChips" role="group" aria-label="Speed" hidden>{% for r, l in [("0.25","¼×"),("0.5","½×"),("1","1×"),("2","2×"),("4","4×"),("8","8×"),("16","16×")] %}<button type="button" data-rate="{{ r }}">{{ l }}</button>{% endfor %}</span>
             <span class="post-speed-hint" id="postSpeedHint"></span>
           </div>
           {% endif %}

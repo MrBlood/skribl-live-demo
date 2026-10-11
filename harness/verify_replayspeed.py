@@ -378,18 +378,35 @@ with sync_playwright() as p:
     pg.evaluate("() => { if (recording) endRecordingTake(); document.getElementById('postBtn').click(); }")
     pg.wait_for_timeout(700)
     seg = pg.evaluate("""() => [...document.querySelectorAll('#postSpeedSeg button')].filter(b => !b.hidden)
-        .map(b => b.textContent + (b.classList.contains('on') ? '*' : ''))""")
-    check("the Post sheet asks where viewers start: Auto (chosen), As drawn, Fit, and the speed last previewed",
-          seg == ["Auto*", "As drawn", "Fit", "8×"], str(seg))
+        .map(b => b.textContent.trim() + (b.classList.contains('on') ? '*' : ''))""")
+    # The fourth button is "Speed", not the speed last previewed (owner, on the
+    # iPhone: "1/4th?"): the preview was left at 8x here, and the sheet does
+    # not pull it in.
+    check("the Post sheet asks where viewers start: Auto (chosen), As drawn, Fit, and Speed (not the speed last previewed)",
+          seg == ["Auto*", "As drawn", "Fit", "Speed"], str(seg))
     check("...and Auto is what a post carries untouched", pg.evaluate("() => serializeSkribl().playSpeed") == "auto")
+    pg.click("#postSpeedPick"); pg.wait_for_timeout(150)
+    chips = pg.evaluate("""() => { const c = document.getElementById('postSpeedChips'); const r = c.getBoundingClientRect();
+        const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { open: !c.hidden, painted: !!h && c.contains(h), rates: [...c.querySelectorAll('button')].map(b => b.textContent),
+                 taps: [...c.querySelectorAll('button')].map(b => Math.round(b.getBoundingClientRect().height)) }; }""")
+    check("...Speed opens all seven rates, painted, each a 44px tap",
+          chips["open"] and chips["painted"] and chips["rates"] == ["¼×", "½×", "1×", "2×", "4×", "8×", "16×"]
+          and min(chips["taps"]) >= 44, str(chips))
     picked = []
     for v in ("8", "fit", "drawn", "auto"):
-        pg.evaluate("(v) => { const b = document.querySelector('#postSpeedSeg button[data-speed=\"' + v + '\"]'); if (b) b.click(); }", v)
-        picked.append(pg.evaluate("() => [serializeSkribl().playSpeed, document.getElementById('postSpeedHint').textContent]"))
+        if v == "8":
+            pg.click("#postSpeedChips button[data-rate='8']")
+        else:
+            pg.evaluate("(v) => document.querySelector('#postSpeedSeg button[data-speed=\"' + v + '\"]').click()", v)
+        picked.append(pg.evaluate("""() => [serializeSkribl().playSpeed, document.getElementById('postSpeedHint').textContent,
+            document.getElementById('postSpeedPick').textContent.trim(), document.getElementById('postSpeedChips').hidden]"""))
     check("each choice is what the post carries, and the line under it says what it does",
           [x[0] for x in picked] == [8, "fit", "drawn", "auto"]
           and picked[0][1].startswith("At 8×") and picked[1][1].startswith("The whole drawing in about 30 seconds")
           and all(x[1].endswith("Anyone watching can change it.") for x in picked), str(picked))
+    check("...a rate picked from Speed closes the row and the button shows it; another choice puts Speed back",
+          picked[0][2] == "8×" and picked[0][3] and picked[1][2] == "Speed", str(picked))
     h = pg.evaluate("() => document.getElementById('postSpeedSeg').getBoundingClientRect().height")
     check("...and its buttons are a 44px tap", h >= 44, f"{h}px")
     pg.close()

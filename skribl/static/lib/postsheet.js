@@ -45,6 +45,11 @@
     var body = $('postBody');
     var toast = cfg.toast || function () {};
     var lastPostUrl = null, lastPostTitle = '';
+    // The sheet's title says what happened once it has (owner's pick: "Posted!"
+    // as the title, and no progress bar left lying under the buttons).
+    var headEl = sheet ? sheet.querySelector('.export-head') : null;
+    var headText = headEl && headEl.firstChild && headEl.firstChild.nodeType === 3 ? headEl.firstChild : null;
+    var HEAD_IDLE = headText ? headText.nodeValue : '';
     var closeTimer = null;
     var posting = false;
     /* A POST THAT NEVER ANSWERS (v321 preflight, PF-029). The sheet cannot be
@@ -79,6 +84,7 @@
       clearSlow();
       if (state === 'idle') {
         posting = false;
+        if (headText) headText.nodeValue = HEAD_IDLE;
         status.hidden = true;
         status.classList.remove('error');
         progressFill.style.width = '0%';
@@ -161,6 +167,12 @@
       // Share, where the device has a share sheet (v292, SK-AUD-016); a local
       // fallback (#skribl=…) is not a link anyone else can open, so not then.
       if (shareBtn && lastPostUrl && !opts.localOnly && lastPostUrl.charAt(0) !== '#' && navigator.share) shareBtn.hidden = false;
+      // A real post: the title says so and the status line, its job done, goes.
+      // A save on this device only keeps its warning in the status line.
+      if (lastPostUrl && !opts.localOnly && lastPostUrl.charAt(0) !== '#') {
+        if (headText) headText.nodeValue = cfg.compose ? 'Added' : 'Posted!';
+        status.hidden = true;
+      }
     }
 
     /* THE SOUND MARKER MIRRORS THE TOOLBAR, IT DOES NOT RE-DECIDE.
