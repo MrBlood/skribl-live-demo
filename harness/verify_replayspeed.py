@@ -566,13 +566,14 @@ with sync_playwright() as p:
         pg.mouse.up()
         pg.wait_for_timeout(150)
         after_drag = pg.evaluate("() => [idx, document.body.classList.contains('playback-paused'), playing]")
-        # Wide enough to change the page if it were taken for a drag (0.4 of
-        # the width from page 2's start is beat 4.4 of 6, page 3), and still
-        # mostly up and down (0.6 of a 4:3 drawing's height is 0.45 of its
-        # width): a gentler swipe could not tell a guard from no guard.
-        pg.mouse.move(pcv["x"] + pcv["width"] * 0.3, pcv["y"] + pcv["height"] * 0.2)
+        # Wide enough to change the page if it were taken for a drag (0.55 of
+        # the width from page 2's start, beat 1 of 6, is beat 4.3: page 3),
+        # and still mostly up and down (0.8 of a 4:3 drawing's height is 0.6
+        # of its width). A gentler swipe -- the first one here moved 5% of the
+        # width -- passed with the guard deleted: it could not tell.
+        pg.mouse.move(pcv["x"] + pcv["width"] * 0.2, pcv["y"] + pcv["height"] * 0.1)
         pg.mouse.down()
-        pg.mouse.move(pcv["x"] + pcv["width"] * 0.7, pcv["y"] + pcv["height"] * 0.8, steps=10)
+        pg.mouse.move(pcv["x"] + pcv["width"] * 0.75, pcv["y"] + pcv["height"] * 0.9, steps=10)
         pg.mouse.up()
         pg.wait_for_timeout(150)
         after_swipe = pg.evaluate("() => idx")
