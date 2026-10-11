@@ -15672,3 +15672,30 @@ flex-centred line box puts a word's capitals 1-2.5px high, which a
 does that is next, measured before and after by this tool. It is named check_*
 so it is not in the battery or a seal (about 25 minutes). The player's restore
 banner went with it: the census found a control nothing could ever show.
+
+**Flip's preview: speeds, a timeline, and nothing on the drawing (F1, the
+owner's pick C).** The first build put the Pad's scrubber and "watching at 1×"
+over the foot of the drawing; the owner: "All that info on the canvas? ... It's
+gotta be unobtrusive (not on the canvas) ... Be kind to the canvas." A second
+round (everything in the top bar, or a slim bar on the drawing) was passed over
+too. Built: while a Flip plays, the page strip is its timeline -- the page on
+screen is outlined there and a 3px line along the strip's top edge fills as it
+plays (a 44px band to grab; a place on it lands on the page holding that beat,
+so a page held three beats takes three beats of the line) -- and the Duplicate /
+Blank / Tween / Smear row, idle during playback, becomes the speeds. Stop puts
+the row back. The same speeds sit in Playback settings as "Watching speed" (the
+owner: "does stop remove the 16x? So you're going to adjust and it's gone?"):
+the label and its speeds share one 44px line and the small print runs under
+both, the row's full width -- the owner's layout ("Make watching speed a 44px
+tall line then the slider fits and the text runs under it"), after a first try
+here dropped the words and renamed the row, which was not what was asked. FIVE speeds, ¼× to 4×, not the
+Pad's seven: at 12 pages a second 8× asks for 96 pictures a second from a
+screen that shows about 60, so it would skip pages, not show them faster; slow
+is what a Flip is checked at. A speed scales only the preview's clock (each
+page's time, a drawing page's reveal, the elapsed readout), re-anchored
+mid-play; pages per second stays the animation, and the music keeps its own
+pace. Remembered in this browser. lib/replayline.js is unchanged. Pad: its own
+version is to be mocked before it is built. verify_replayspeed drives it at 402
+and 1280 (nothing painted on the drawing's foot, the line in the strip and
+grabbable, the row swap, beats, 4×, the settings row), shown red with the line
+moved over the drawing and with the row left unswapped.
