@@ -1,12 +1,12 @@
-"""Fill in `drawn_ms` / `play_speed` on posts written before the in-post line.
+"""Fill in `line_json` on posts written before the in-post line.
 
     python -m skribl.backfill_line            # what it would do
     python -m skribl.backfill_line --write    # do it
 
-The line under a post in a feed says "Drawn in 15 sec · watching at 1x" before
-anybody presses play, from two columns the listing can read (the payload it
-cannot). New posts carry both from the moment they are made (creation.py);
-this is for the ones made before.
+The line under a post in a feed says "Drawn in 15 sec · watching at 1x" over a
+scrubber in the drawing's shape before anybody presses play, from a column the
+listing can read (the payload it cannot). New posts carry it from the moment
+they are made (creation.py); this is for the ones made before.
 
 A COMMAND, NOT A MIGRATION, for the reason skribl/backfill_canvas.py gives at
 length: v309 put its backfill in a revision and took the site down twice, and
@@ -17,15 +17,16 @@ runs during a deploy. The shape is that file's, deliberately:
   * BOUNDED BATCHES, committed as it goes; interrupt it and what is written
     stays written. SMALLER batches than the canvas one (25, not 200), because
     what crosses the wire here is a drawing's whole stroke list, not a size.
-  * PAGED BY id, with `drawn_ms IS NULL` as the queue across runs, so a row
+  * PAGED BY id, with `line_json IS NULL` as the queue across runs, so a row
     with nothing to write (no points) is stepped past rather than read for ever.
-  * PAD POSTS ONLY, by the `kind` column: a Flip's line counts pages, and its
-    drawn time is not a number anything shows.
+  * PAD POSTS ONLY, by the `kind` column: a Flip's line counts pages, which
+    `pages` already holds.
   * THE DATABASE READS THE PAYLOAD ONCE AND SENDS ONLY WHAT IS NEEDED -- the
-    first page's strokes (or the top level's, a Skribl from before pages) and
-    `playSpeed` -- never the photo, the music, or anything else in it.
-  * IT DECIDES IN PYTHON: validation._payload_drawn_ms and _payload_play_speed,
-    the rules creation.py writes with, so there is one spelling of each.
+    first page's strokes (or the top level's, a Skribl from before pages),
+    `playSpeed` and `pauseMode` -- never the photo, the music, or anything
+    else in it.
+  * IT DECIDES IN PYTHON: validation._payload_line, the rule creation.py
+    writes with, so there is one spelling of it.
 
 EXIT CODES, as backfill_canvas: 0 it ran (including nothing to do, including a
 dry run); 1 at least one batch failed, rows before it are committed; 2 it could
@@ -39,7 +40,7 @@ from sqlalchemy import text
 
 from .models import session as resolve_session
 from .sweep import _die, _load_app
-from .validation import _payload_drawn_ms, _payload_play_speed
+from .validation import _payload_line
 
 EXIT_OK = 0
 EXIT_PARTIAL = 1
@@ -49,7 +50,7 @@ DEFAULT_BATCH = 25
 
 
 def _extract_sql(dialect):
-    """SELECT id, the strokes (first page, else top level) and playSpeed -- never the payload.
+    """SELECT id, the strokes (first page, else top level), playSpeed and pauseMode -- never the payload.
 
     Path operators answer NULL for a path that is not there rather than
     raising, on both engines this project deploys on, which is the trap that
@@ -60,18 +61,20 @@ def _extract_sql(dialect):
     """
     if dialect == "postgresql":
         return ("SELECT id, (payload_json #> '{frames,0,strokes}')::text, "
-                "(payload_json #> '{strokes}')::text, (payload_json #> '{playSpeed}')::text "
-                "FROM skribl_posts WHERE drawn_ms IS NULL AND kind = 'pad' AND id > :last "
+                "(payload_json #> '{strokes}')::text, (payload_json #> '{playSpeed}')::text, "
+                "(payload_json #> '{pauseMode}')::text "
+                "FROM skribl_posts WHERE line_json IS NULL AND kind = 'pad' AND id > :last "
                 "ORDER BY id LIMIT :n")
     if dialect == "sqlite":
         return ("SELECT id, "
                 "CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.frames[0].strokes') END, "
                 "CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.strokes') END, "
-                "CASE WHEN json_valid(payload_json) THEN json_quote(json_extract(payload_json, '$.playSpeed')) END "
-                "FROM skribl_posts WHERE drawn_ms IS NULL AND kind = 'pad' AND id > :last "
+                "CASE WHEN json_valid(payload_json) THEN json_quote(json_extract(payload_json, '$.playSpeed')) END, "
+                "CASE WHEN json_valid(payload_json) THEN json_quote(json_extract(payload_json, '$.pauseMode')) END "
+                "FROM skribl_posts WHERE line_json IS NULL AND kind = 'pad' AND id > :last "
                 "ORDER BY id LIMIT :n")
-    return ("SELECT id, payload_json, NULL, NULL FROM skribl_posts "
-            "WHERE drawn_ms IS NULL AND kind = 'pad' AND id > :last ORDER BY id LIMIT :n")
+    return ("SELECT id, payload_json, NULL, NULL, NULL FROM skribl_posts "
+            "WHERE line_json IS NULL AND kind = 'pad' AND id > :last ORDER BY id LIMIT :n")
 
 
 def _json(raw):
@@ -88,22 +91,28 @@ def _json(raw):
     return raw
 
 
-def _line_from(first, top, speed):
-    """(drawn_ms, play_speed) for one row, through the same two rules creation.py uses."""
-    first, top, speed = _json(first), _json(top), _json(speed)
-    if isinstance(first, dict) and top is None and speed is None:
+def _line_from(first, top, speed, pause):
+    """line_json for one row, through the rule creation.py uses, or None."""
+    first, top, speed, pause = _json(first), _json(top), _json(speed), _json(pause)
+    if isinstance(first, dict) and top is None and speed is None and pause is None:
         # The generic branch: the whole payload came back in the first slot.
-        return _payload_drawn_ms(first), _payload_play_speed(first)
-    pts = first if isinstance(first, list) and first else top
-    return (_payload_drawn_ms({"strokes": pts}) if isinstance(pts, list) else None,
-            _payload_play_speed({"playSpeed": speed}))
+        line = _payload_line(first)
+    else:
+        pts = first if isinstance(first, list) and first else top
+        payload = {"strokes": pts}
+        if speed is not None:
+            payload["playSpeed"] = speed
+        if pause is not None:
+            payload["pauseMode"] = pause
+        line = _payload_line(payload) if isinstance(pts, list) else None
+    return json.dumps(line, separators=(",", ":")) if line else None
 
 
 def run(session, batch=DEFAULT_BATCH, limit=None, write=False, out=sys.stdout):
     """Fill the columns in batches. Returns (looked_at, filled, failed_batches)."""
     dialect = session.get_bind().dialect.name
     select_sql = text(_extract_sql(dialect))
-    update_sql = text("UPDATE skribl_posts SET drawn_ms = :d, play_speed = :s WHERE id = :id")
+    update_sql = text("UPDATE skribl_posts SET line_json = :line WHERE id = :id")
     seen = filled = failed = 0
     last = 0
     while True:
@@ -117,15 +126,15 @@ def run(session, batch=DEFAULT_BATCH, limit=None, write=False, out=sys.stdout):
             return seen, filled, failed + 1
         if not rows:
             break
-        for row_id, first, top, speed in rows:
+        for row_id, first, top, speed, pause in rows:
             seen += 1
             last = max(last, row_id)
-            drawn, play = _line_from(first, top, speed)
-            if drawn is None:
+            line = _line_from(first, top, speed, pause)
+            if line is None:
                 continue
             filled += 1
             if write:
-                session.execute(update_sql, {"d": drawn, "s": play, "id": row_id})
+                session.execute(update_sql, {"line": line, "id": row_id})
         if not write:
             continue
         try:
@@ -142,7 +151,7 @@ def run(session, batch=DEFAULT_BATCH, limit=None, write=False, out=sys.stdout):
 def build_parser():
     p = argparse.ArgumentParser(
         prog="python -m skribl.backfill_line",
-        description="Fill drawn_ms/play_speed on Pad posts written before the in-post line.")
+        description="Fill line_json on Pad posts written before the in-post line.")
     p.add_argument("--app", default="app:create_app",
                    help="module:attribute of the Flask app (default app:create_app)")
     p.add_argument("--batch", type=int, default=DEFAULT_BATCH,
