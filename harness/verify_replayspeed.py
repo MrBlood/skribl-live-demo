@@ -412,6 +412,50 @@ with sync_playwright() as p:
         check(f"[{label}] no page errors", not errs, "; ".join(errs[:2]))
         pg.close()
 
+    # ---- 5b. ROOM TO BREATHE (the owner's pick B, iPhone) -------------------
+    # Two rows of words above a 30px bar sat 21px onto the drawing on every
+    # phone height but the tallest (874, the one the checks above use). The bar
+    # now sits slim and low in the toolbar's band, 24px clear of the screen's
+    # foot, the words are one row in the middle of what is left, and the pauses
+    # note comes with the speeds. Asserted at the owner's height (813, a Home
+    # Screen app) and around it, where the old layout was wrong.
+    print("\nTHE PAD ON A PHONE: ROOM TO BREATHE")
+    for vh in (874, 813, 750, 664):
+        pg = b.new_page(viewport={"width": 402, "height": vh})
+        browsing.goto(pg, BASE, "/")
+        box = pg.locator("#canvas").bounding_box()
+        for k in range(2):
+            pg.mouse.move(box["x"] + 80, box["y"] + 140 + k * 100)
+            pg.mouse.down()
+            for i in range(30):
+                pg.mouse.move(box["x"] + 80 + i * 6, box["y"] + 140 + k * 100 + math.sin(i / 5) * 20)
+                pg.wait_for_timeout(16)
+            pg.mouse.up()
+            pg.wait_for_timeout(2300 if k == 0 else 300)   # a long pause, so "long pauses skipped" applies
+        pg.click("#recordBtn"); pg.wait_for_timeout(300)
+        rest = pg.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return [r.top, r.bottom, r.width]; }")
+        pg.click("#playBtn"); pg.wait_for_timeout(500)
+        g = pg.evaluate("""() => { const q = s => document.querySelector(s), R = s => q(s).getBoundingClientRect();
+            const c = R('#canvas'), w = R('.canvas-wrap'), t = R('#padLine .rl-text'), s = R('#playScrub'), a = getComputedStyle(q('#playScrub'), '::after');
+            const mid = document.elementFromPoint(t.left + t.width / 2, t.top + t.height / 2);
+            return { canvas: [c.top, c.bottom, c.width], rim: w.bottom, textTop: t.top, textBottom: t.bottom, textH: t.height,
+                     scrubTop: s.top, scrubBottom: s.bottom, scrubH: s.height, grab: s.height - parseFloat(a.top) - parseFloat(a.bottom),
+                     foot: innerHeight - s.bottom, painted: !!mid && q('#padLine').contains(mid),
+                     skipNow: getComputedStyle(q('#padLine .rl-skip')).display, skipApplies: !q('#padLine .rl-skip').hidden }; }""")
+        check(f"[402x{vh}] the words clear the drawing and the bar, painted, on one row",
+              g["textTop"] >= g["rim"] + 4 and g["textBottom"] <= g["scrubTop"] - 4 and g["painted"] and g["textH"] < 34,
+              str({k: round(v, 1) if isinstance(v, float) else v for k, v in g.items()}))
+        check(f"[402x{vh}] ...the bar is slim (18px), still a 44px grab, and sits 24px clear of the screen's foot",
+              abs(g["scrubH"] - 18) < 0.5 and g["grab"] >= 44 and abs(g["foot"] - 24) < 1,
+              f"h {g['scrubH']} grab {g['grab']} foot {g['foot']}")
+        check(f"[402x{vh}] ...and the drawing did not move or shrink for it",
+              [round(v, 1) for v in g["canvas"]] == [round(v, 1) for v in rest], f"{rest} -> {g['canvas']}")
+        pg.click("#padLine .rl-speed"); pg.wait_for_timeout(350)
+        opened = pg.evaluate("() => getComputedStyle(document.querySelector('#padLine .rl-skip')).display")
+        check(f"[402x{vh}] \"long pauses skipped\" is not on the line, and shows with the speeds",
+              g["skipApplies"] and g["skipNow"] == "none" and opened != "none", f"applies {g['skipApplies']} rest {g['skipNow']} open {opened}")
+        pg.close()
+
     # ---- 6. THE POST SHEET ----------------------------------------------------
     print("\nTHE POST SHEET")
     pg = b.new_page(viewport={"width": 402, "height": 874})

@@ -5254,6 +5254,11 @@ a.player-btn { text-decoration: none; }
 .play-scrub.rl-scrub { height: 30px; overflow: visible; }
 .play-scrub.rl-scrub::after { top: -7px; bottom: -7px; }   /* 44px */
 #padLine[hidden] { display: none; }
+/* On a phone (editor_draw.js place, pick B): a slim bar low in the band, still
+   44px to grab, and one row of words; the pauses note comes with the speeds. */
+.play-scrub.rl-scrub.in-bar { height: 18px; }
+.play-scrub.rl-scrub.in-bar::after { top: -13px; bottom: -13px; }   /* 44px */
+#padLine.in-bar:not(.open) .rl-skip { display: none; }
 #padLine .rl-chips[hidden] { transform: translateY(4px); }
 body.replaying .autosave-status { opacity: 0; pointer-events: none; }
 

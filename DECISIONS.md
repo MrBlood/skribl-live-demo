@@ -15699,3 +15699,20 @@ version is to be mocked before it is built. verify_replayspeed drives it at 402
 and 1280 (nothing painted on the drawing's foot, the line in the strip and
 grabbable, the row swap, beats, 4×, the settings row), shown red with the line
 moved over the drawing and with the row left unswapped.
+
+**Room to breathe under a Pad replay on a phone (the owner's pick B).** While a
+replay played, "Drawn in 8 sec · watching at ¼×" and "long pauses skipped" sat
+in two rows above a 30px scrubber, and the gap they had was 30px on every phone
+height but the tallest, so they rode 21px onto the drawing (owner's iPhone, a
+Home Screen app at 402x813). The checks measured only 874, where the gap
+happened to be 61. Now, on a phone, the bar is slim (18px; it still grabs at
+44) and sits low in the toolbar's band, 24px clear of the screen's foot (the
+swipe-home strip); the words are one row in the middle of what is left, about
+11px of air each side at 813; "long pauses skipped" shows with the speeds when
+the speed is tapped, where it explains them. The drawing does not move or
+shrink: the toolbar's band was already reserved. All of it is in
+editor_draw.js and the stylesheet, so app.js (the player's budget) is
+untouched. Not for Flip: its preview has no line on the drawing (pick C) and
+its timeline is the 3px line on the page strip. verify_replayspeed ROOM TO
+BREATHE measures 874, 813, 750 and 664; red on the old code at every height,
+and the bar's height check red on its own with the 18px rule removed.

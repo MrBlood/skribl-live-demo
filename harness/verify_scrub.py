@@ -54,6 +54,8 @@ MEASURE = """() => {
     bandMid: (() => { const t = document.getElementById('toolBar').getBoundingClientRect(); return t.top + t.height / 2; })(),
     bandW: document.getElementById('toolBar').getBoundingClientRect().width,
     mid: sb.top + sb.height / 2,
+    bottom: sb.bottom, vh: innerHeight,
+    band: (() => { const t = document.getElementById('toolBar').getBoundingClientRect(); return [t.top, t.bottom]; })(),
     rFrame: parseFloat(getComputedStyle(document.documentElement)
                          .getPropertyValue('--r-frame')) || 0,
   };
@@ -140,9 +142,13 @@ with sync_playwright() as b_ctx:
             # under it. The phone's scrubber lives in the band instead —
             # centred on it, toolbar-wide less 16px each side. The rim contract
             # below is the desktop's, where the toolbar is not a thumb zone.
-            check(f"[{label}] it sits centred in the faded toolbar's band",
-                  abs(m["mid"] - m["bandMid"]) <= 2,
-                  f"bar centre {round(m['mid'], 1)} vs band centre {round(m['bandMid'], 1)}")
+            # Then the owner's pick B: low in that band, 24px clear of the
+            # screen's foot (the swipe-home strip), so the words above it have
+            # room (verify_replayspeed ROOM TO BREATHE has the words' side).
+            want = min(m["band"][1], m["vh"] - 24)
+            check(f"[{label}] it sits low in the faded toolbar's band, 24px clear of the screen's foot",
+                  abs(m["bottom"] - want) <= 1 and m["bottom"] - m["h"] >= m["band"][0] - 1,
+                  f"bar bottom {round(m['bottom'], 1)} vs {round(want, 1)}; band {m['band']}")
             check(f"[{label}] it spans the toolbar's band, 16px in from each end",
                   abs(m["w"] - (m["bandW"] - 32)) <= 1.5,
                   f"w={round(m['w'], 1)}, band={round(m['bandW'], 1)}")
@@ -163,15 +169,16 @@ with sync_playwright() as b_ctx:
 
         # THE DRAWING'S SHAPE IN THE BAR (the owner's replay pick S3): a
         # rounded bar 30px tall that the strip fills edge to edge, painted --
-        # not a 5px hairline. Painted is read off the strip's own pixels: a
+        # not a 5px hairline. On a phone 18px (pick B: room for the words). Painted is read off the strip's own pixels: a
         # canvas sized right and left blank is the failure this is for.
         strip = pg.evaluate("""() => { const s = document.getElementById('playScrub'), c = s.querySelector('canvas.rl-strip');
             if (!c) return null; const r = c.getBoundingClientRect(), b = s.getBoundingClientRect();
             const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let ink = 0;
             for (let i = 3; i < d.length; i += 4) if (d[i] > 0) ink++;
             return { w: r.width, bw: b.width, ink }; }""")
-        check(f"[{label}] it is a rounded bar of the drawing's shape: 30px tall, the strip filling it, and painted",
-              abs(m["h"] - 30) <= 0.5 and m["radius"] >= 6 and strip is not None
+        tall = 18 if label == "phone" else 30
+        check(f"[{label}] it is a rounded bar of the drawing's shape: {tall}px tall, the strip filling it, and painted",
+              abs(m["h"] - tall) <= 0.5 and m["radius"] >= 6 and strip is not None
               and abs(strip["w"] - strip["bw"]) <= 1 and strip["ink"] > 100,
               f"height={m['h']}, radius={m['radius']}, strip={strip}")
 
