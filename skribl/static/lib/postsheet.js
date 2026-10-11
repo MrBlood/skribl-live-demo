@@ -364,7 +364,27 @@
     };
   }
 
-  var api = { attach: attach };
+  /* WHEN A POST FAILS, ONE SET OF WORDS FOR BOTH EDITORS (owner's pick;
+     SK-AUD-010). Always the same first line, so nobody wonders whether their
+     drawing is gone; then what happened; then what to do. Each editor says
+     only WHAT happened -- the recoveries that differ (the Pad keeps a copy on
+     the device when the server cannot be reached) differ in that last clause,
+     not in the first line.
+       failure('server')            5xx: the server had a problem
+       failure('refused', reason)   4xx: the server's own reason, when it gave one
+       failure('odd')               a 2xx that is not a post (a Wi-Fi sign-in page)
+       failure('offline', kept)     no answer; kept: a copy was saved on this device
+       failure('cancelled')         the person cancelled a slow post */
+  var FIRST = 'Couldn\u2019t post. Your drawing is still here';
+  function failure(what, extra) {
+    if (what === 'cancelled') return 'Not posted. Your drawing is still here; Try again sends it.';
+    if (what === 'offline') return FIRST + (extra ? ', saved on this device' : '') + '. Try again when you\u2019re back online.';
+    if (what === 'server') return FIRST + (extra ? ', saved on this device' : '') + '. The server had a problem; try again in a moment.';
+    if (what === 'odd') return FIRST + '. The connection gave a strange answer (a Wi-Fi sign-in page?); try again.';
+    return FIRST + '. ' + (extra || 'The server turned it down.');
+  }
+
+  var api = { attach: attach, failure: failure };
   if (typeof window !== 'undefined') window.SkriblPostSheet = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

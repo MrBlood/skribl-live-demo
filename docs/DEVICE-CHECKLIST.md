@@ -46,8 +46,8 @@ details to send with it.
 
 - [ ] Draw something, close the tab, reopen the Pad → "Draft restored" and the
       drawing is back.
-- [ ] Turn on Airplane Mode, post → "Not posted — saved on this device" with a
-      Try again. Airplane Mode off, Try again → it posts and the device copy
+- [ ] Turn on Airplane Mode, post → "Couldn't post. Your drawing is still here,
+      saved on this device. Try again when you're back online." with a Try again. Airplane Mode off, Try again → it posts and the device copy
       is gone.
 - [ ] Two Safari tabs of the Pad: draw in one, then in the other, close both,
       open the Pad again → the newest drawing opens and "Another drawing from

@@ -337,6 +337,27 @@ delete. Read an old version with `git show <rev>:<path> > /tmp/copy`, which
 cannot touch the working tree. When an edit script goes wrong, FIX IT FORWARD —
 reverting looks faster and is the destructive choice. (Twice: v213, v283.)
 
+## Checking buttons: use the centring tool
+
+The owner: "The centering script/harness should be used whenever checking
+buttons in the future. We don't need to run it every seal, but we should use it
+whenever we need it."
+
+**Any change to a button, a badge, a chip or a mark runs
+`harness/check_centring.py`** (about 25 minutes for every page; narrow it with
+`CENTRING_COMBOS=phone-light` while iterating, then run it whole before the PR).
+It finds every control from the source, proves it reached each one on a live
+page, measures where each mark's ink sits in what is painted around it, and
+fails on a symbol typed as the whole face. It is named `check_*` on purpose:
+not in a bare `run_harness.sh`, not in a seal. Run it directly with a server up.
+
+`harness/centring_baseline.json` holds the findings it started with. A new one
+fails; a fixed one fails until it comes off the list
+(`CENTRING_WRITE_BASELINE=1` after a full run), so the list only shrinks. Its
+measurements are in this box's fonts, not the owner's: a fix is a
+font-independent rule (a drawn mark, `text-box` trimming), never a nudge tuned
+to Liberation Sans.
+
 ## Mistakes from the dock and readout round — do not repeat them
 
 Each of these happened in the session that built the frosted dock, the pen nib

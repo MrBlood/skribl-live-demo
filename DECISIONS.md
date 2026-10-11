@@ -15642,6 +15642,81 @@ to result(). verify_ux drives both editors at 390 and 1100 (painted, inside the
 sheet, the copied key equals the stored one) and renders both pages for a
 signed-in host; each part was shown red on its own.
 
+**When a post fails, one set of words for both editors (owner's pick; SK-AUD-010).**
+The Pad said "Post rejected by the server (503)" or "Not posted -- saved on this
+device"; Flip said "The server could not save it (error 503). Your Skribl is
+safe here". The same failure now opens with the same line on both --
+"Couldn't post. Your drawing is still here" -- then what happened, then what to
+do. The words live once, in the shared Post sheet (lib/postsheet.js,
+SkriblPostSheet.failure); each editor says only what happened (server, refused
+with the server's own reason, an odd answer such as a Wi-Fi sign-in page,
+offline, cancelled). The recoveries still differ where they really do: the Pad
+keeps a copy on this device when the server cannot be reached, and says so in
+the same sentence ("..., saved on this device."); Flip does not claim one.
+verify_flipmeta fails each case at the network on both editors and asks for the
+same first line, the reason, and the honest difference; red on the old code.
+
+**A tool that checks every button is centred (owner: "use it whenever checking
+buttons").** "Make your first skribl" sat visibly high in its button, and the
+owner asked how many more there were. harness/check_centring.py finds every
+control from the source (centring_inventory.py), drives each page until it has
+reached every one (or names why not: the music trim nudges need a decoded
+track), and measures where each mark's ink sits in what is painted around it,
+on phone and desk, light and dark, in each installed face. Word labels are
+measured by their first capital; a tile with its icon above its word is not
+one line. A symbol typed as a control's whole face fails. The first full pass
+is the list in centring_baseline.json: a new finding fails, a fixed one fails
+until it comes off, so the list only shrinks. Most of it is one cause: a
+flex-centred line box puts a word's capitals 1-2.5px high, which a
+`text-box: trim-both cap alphabetic` label fixes in any font -- the sweep that
+does that is next, measured before and after by this tool. It is named check_*
+so it is not in the battery or a seal (about 25 minutes). The player's restore
+banner went with it: the census found a control nothing could ever show.
+
+**Flip's preview: speeds, a timeline, and nothing on the drawing (F1, the
+owner's pick C).** The first build put the Pad's scrubber and "watching at 1×"
+over the foot of the drawing; the owner: "All that info on the canvas? ... It's
+gotta be unobtrusive (not on the canvas) ... Be kind to the canvas." A second
+round (everything in the top bar, or a slim bar on the drawing) was passed over
+too. Built: while a Flip plays, the page strip is its timeline -- the page on
+screen is outlined there and a 3px line along the strip's top edge fills as it
+plays (a 44px band to grab; a place on it lands on the page holding that beat,
+so a page held three beats takes three beats of the line) -- and the Duplicate /
+Blank / Tween / Smear row, idle during playback, becomes the speeds. Stop puts
+the row back. The same speeds sit in Playback settings as "Watching speed" (the
+owner: "does stop remove the 16x? So you're going to adjust and it's gone?"):
+the label and its speeds share one 44px line and the small print runs under
+both, the row's full width -- the owner's layout ("Make watching speed a 44px
+tall line then the slider fits and the text runs under it"), after a first try
+here dropped the words and renamed the row, which was not what was asked. FIVE speeds, ¼× to 4×, not the
+Pad's seven: at 12 pages a second 8× asks for 96 pictures a second from a
+screen that shows about 60, so it would skip pages, not show them faster; slow
+is what a Flip is checked at. A speed scales only the preview's clock (each
+page's time, a drawing page's reveal, the elapsed readout), re-anchored
+mid-play; pages per second stays the animation, and the music keeps its own
+pace. Remembered in this browser. lib/replayline.js is unchanged. Pad: its own
+version is to be mocked before it is built. verify_replayspeed drives it at 402
+and 1280 (nothing painted on the drawing's foot, the line in the strip and
+grabbable, the row swap, beats, 4×, the settings row), shown red with the line
+moved over the drawing and with the row left unswapped.
+
+**Room to breathe under a Pad replay on a phone (the owner's pick B).** While a
+replay played, "Drawn in 8 sec · watching at ¼×" and "long pauses skipped" sat
+in two rows above a 30px scrubber, and the gap they had was 30px on every phone
+height but the tallest, so they rode 21px onto the drawing (owner's iPhone, a
+Home Screen app at 402x813). The checks measured only 874, where the gap
+happened to be 61. Now, on a phone, the bar is slim (18px; it still grabs at
+44) and sits low in the toolbar's band, 24px clear of the screen's foot (the
+swipe-home strip); the words are one row in the middle of what is left, about
+11px of air each side at 813; "long pauses skipped" shows with the speeds when
+the speed is tapped, where it explains them. The drawing does not move or
+shrink: the toolbar's band was already reserved. All of it is in
+editor_draw.js and the stylesheet, so app.js (the player's budget) is
+untouched. Not for Flip: its preview has no line on the drawing (pick C) and
+its timeline is the 3px line on the page strip. verify_replayspeed ROOM TO
+BREATHE measures 874, 813, 750 and 664; red on the old code at every height,
+and the bar's height check red on its own with the 18px rule removed.
+
 **Two tabs, two drawings, nothing lost (SK-AUD-006, the owner's pick T1).** Two
 tabs of one editor shared one autosave slot and the last writer won: tab A
 drew, tab B drew, and A's drawing was gone once A closed. v321's notice said so

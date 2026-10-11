@@ -660,12 +660,14 @@ body {
 .post-submit:not(.post-watch),
 .btn.play.playing,
 .player-cta,
-.reposition-btn.active,
 /* A dark text-shadow lifts LIGHT text off a busy background. .pending-btn was
    dark text on solid yellow, where the same shadow smeared the glyph edges and
    read as blurry — most visibly on "Re-add". It is white on purple now (v317)
-   and stays out of the list; the other three are white-on-colour and benefit. */
-.restore-btn.confirm {
+   and stays out of the list; the others are white-on-colour and benefit. (The
+   restore banner's Restore button left the list with the banner: v294 retired
+   the banner, and its markup outlived it on the player page until the
+   centring census found a control nothing could ever show.) */
+.reposition-btn.active {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 /* .tool-btn.active and .photo-fit-btn.active left this list with the bar
@@ -3269,102 +3271,6 @@ body:has(.flip-export:not([hidden])) .autosave-dismiss {
 .autosave-readd:active { filter: brightness(1.1); }
 .autosave-readd[hidden] { display: none; }
 
-/* ---------- Autosave restore banner ---------- */
-.restore-banner {
-  position: fixed;
-  left: 50%;
-  bottom: 20px;
-  bottom: calc(20px + env(safe-area-inset-bottom));
-  transform: translateX(-50%) translateY(8px);
-  z-index: 250;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 14px 12px 18px;
-  border-radius: 16px;
-  background: rgba(var(--surface-control-rgb), 0.92);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  backdrop-filter: blur(24px) saturate(1.4);
-  border: 1px solid var(--hairline-strong);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease, transform 0.4s var(--spring);
-  max-width: calc(100% - 32px);
-}
-
-.restore-banner.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-  pointer-events: auto;
-}
-
-.restore-banner[hidden] { display: none; }
-
-/* THE TOOLBAR OWNS THE BOTTOM EDGE ON EVERY WIDTH, so the banner is seated a
-   toolbar higher on every width: 56px of toolbar + its 12px bottom margin +
-   20px of air = 88px, floating over the canvas's bottom edge with the tools
-   fully visible beneath. NOT inside a max-width: 640px query, and not a 20px
-   anchor on desktop: a desktop bottom edge is not empty air either -- at
-   1280x900 a 20px banner covers Eraser, Shape, colour, Undo and Redo until the
-   person chooses. verify_drafts measures the overlap on both widths. */
-.restore-banner {
-  bottom: calc(88px + env(safe-area-inset-bottom));
-}
-
-.restore-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.restore-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.restore-sub {
-  font-size: 11px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.restore-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.restore-btn {
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  border: 1px solid transparent;
-  -webkit-tap-highlight-color: transparent;
-  transition: filter 0.15s ease, background 0.15s ease;
-}
-
-.restore-btn.discard {
-  background: transparent;
-  border-color: var(--hairline-strong);
-  color: var(--text-secondary);
-}
-
-.restore-btn.discard:hover { background: rgba(var(--wash-rgb), 0.05); }
-
-.restore-btn.confirm {
-  background: var(--ui-active);
-  color: #fff;
-}
-
-.restore-btn.confirm:hover { filter: brightness(1.1); }
-
 /* Icon-only header button */
 .icon-btn {
   /* Standardized to the tier-1 primary size + rounded-square shape,
@@ -5348,6 +5254,11 @@ a.player-btn { text-decoration: none; }
 .play-scrub.rl-scrub { height: 30px; overflow: visible; }
 .play-scrub.rl-scrub::after { top: -7px; bottom: -7px; }   /* 44px */
 #padLine[hidden] { display: none; }
+/* On a phone (editor_draw.js place, pick B): a slim bar low in the band, still
+   44px to grab, and one row of words; the pauses note comes with the speeds. */
+.play-scrub.rl-scrub.in-bar { height: 18px; }
+.play-scrub.rl-scrub.in-bar::after { top: -13px; bottom: -13px; }   /* 44px */
+#padLine.in-bar:not(.open) .rl-skip { display: none; }
 #padLine .rl-chips[hidden] { transform: translateY(4px); }
 body.replaying .autosave-status { opacity: 0; pointer-events: none; }
 

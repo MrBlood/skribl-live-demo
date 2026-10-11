@@ -2498,7 +2498,7 @@ function startFlipElapsed(resume){
   const total=flipTotalSecs();
   const tick=()=>{
     if(!playing){ flipElapsedRAF=null; return; }
-    const el=(performance.now()-flipPlayStart)/1000;
+    const el=(performance.now()-flipPlayStart)/1000*flipRate;   // the animation's own time
     // The animation loops, so wrap rather than pinning at the total — the badge
     // tracks position within the loop, which is what a viewer is watching.
     flipDurationEl.textContent=fmtFlipSecs(total>0 ? (el % total) : el);
@@ -3658,6 +3658,19 @@ function updateToolState(){
   if(postB) postB.disabled = nothingToShare();
 }
 const flipPlayer=document.getElementById('flipPlayer'), flipProgress=document.getElementById('flipProgress'), flipProgressFill=document.getElementById('flipProgressFill');
+/* WATCHING SPEED (F1, the owner's pick: Pad's line, speeds and scrubber).
+   ¼× to 4×, no Fit (a Flip loops; it has no "whole" to fit). Only the
+   preview's clock is scaled: pages per second is the animation itself and
+   stays in Playback settings, and the music keeps its own pace. Kept in this
+   browser, as the Pad keeps its own. */
+const FLIP_SPEED_KEY = 'skribl_flip_rate';
+let flipRate = 1;
+// Five, not the Pad's seven: at 12 pages a second, 8x asks for 96 pictures a
+// second from a screen that shows about 60, so it would skip pages rather than
+// show them faster (the owner was asked; slow is what a Flip is checked at).
+const FLIP_RATES = [0.25, 0.5, 1, 2, 4];
+try{ const _v = parseFloat(localStorage.getItem(FLIP_SPEED_KEY));
+  if(FLIP_RATES.indexOf(_v) >= 0) flipRate = _v; }catch(_){ }
 const drawOnBtn=document.getElementById('drawOnBtn');
 let scrubbingFrames=false, playI=0;
 /* Paused by a tap on the canvas (lib/tappause.js). Still `playing`, so every
@@ -3964,7 +3977,12 @@ function _playCountFor(page){
   const k = playPlan.slots.indexOf(page);
   return k >= 0 ? k : 0;
 }
-function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgressFill.style.width=(((idx+1)/frames.length)*100)+'%';
+function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgressFill.style.width=(_flipFrac(idx+1)*100)+'%';
+  // The strip follows the page on screen while it plays (F1, pick C).
+  if(playing && strip){ const els=strip.querySelectorAll('.frame');
+    els.forEach((el,i)=>el.classList.toggle('now', i===idx));
+    const cur=els[idx]; if(cur){ const sr=strip.getBoundingClientRect(), cr=cur.getBoundingClientRect();
+      if(cr.left < sr.left || cr.right > sr.right) cur.scrollIntoView({block:'nearest', inline:'nearest'}); } }
   if(window.SkriblScrub && frames.length>1) window.SkriblScrub.sync(flipProgress, idx/(frames.length-1)); }
 
 // --- draw-on replay: reveal each frame's strokes over their recorded timing ---
@@ -4057,10 +4075,7 @@ function playStep(){ if(scrubbingFrames) return;
   // cache from a half-drawn canvas, so it goes nowhere near playPaint().
   if(frameDraw(frames[idx])){
     if(revealRAF){ cancelAnimationFrame(revealRAF); revealRAF = null; }
-    const _d = (typeof window !== 'undefined' && window.SkriblHold)
-      ? window.SkriblHold.pageMs(frames[idx], fps)
-      : Math.max(320, Math.min(8000, _spanOf(frames[idx])));
-    startReveal(frames[idx], _d);
+    startReveal(frames[idx], _pageMsAt(idx));
     updatePlayProgress();
     liveBadge.textContent='\u270E '+(idx+1)+' / '+frames.length; playI++;
     return;
@@ -4132,11 +4147,7 @@ function runPlayTimer(){
     // to reading the hold off the wrong page — which is what it used to do.
     // pageMs, not slotMs: a drawing page is EXEMPT FROM fps and lasts as long
     // as its own strokes took, so its duration is not a whole number of slots.
-    const d = (typeof window !== 'undefined' && window.SkriblHold)
-      ? window.SkriblHold.pageMs(frames[cur], fps)
-      : frameDraw(frames[cur])
-        ? Math.max(320, Math.min(8000, _spanOf(frames[cur])))
-        : (1000 / fps) * frameHold(frames[cur]);
+    const d = _pageMsAt(cur);   // at the watching speed
     const ni = _playPage(playI);
     // An unpainted frame is estimated from its point count at the going rate,
     // so the FIRST play-through is even too — that is the one you watch after
@@ -4197,10 +4208,34 @@ playBtn.addEventListener('click',()=> playing?stop():play());
    paused, and the clocks stop -- the page timer, a drawing page's reveal, the
    elapsed readout and the music. Resume gives each back what it had left. A
    paused Flip still scrubs, and Stop still ends it. */
-function _pageMsAt(i){
+function _pageMsBase(i){
   return (typeof window !== 'undefined' && window.SkriblHold)
     ? window.SkriblHold.pageMs(frames[i], fps)
     : (frameDraw(frames[i]) ? Math.max(320, Math.min(8000, _spanOf(frames[i]))) : (1000 / fps) * frameHold(frames[i]));
+}
+// How long page i stays up in this preview: its time at 1×, at the watching speed.
+function _pageMsAt(i){ return _pageMsBase(i) / flipRate; }
+/* A new speed mid-play carries on from the same place: the elapsed readout,
+   the page timer and a drawing page's reveal are each re-anchored, as the
+   Pad's preview re-anchors its clock (editor_draw.js setPreviewSpeed). */
+function setFlipRate(c){
+  const old = flipRate, now = performance.now();
+  if(!(c > 0) || c === old) return;
+  flipRate = c;
+  try{ localStorage.setItem(FLIP_SPEED_KEY, String(c)); }catch(_){ }
+  syncWatchSegs();
+  if(!playing) return;
+  const t0 = playPaused ? flipPausedAt : now;
+  flipPlayStart = t0 - (t0 - flipPlayStart) * old / c;
+  if(playPaused){ pausedRemain = pausedRemain * old / c; if(pausedRevealAt != null) pausedRevealAt = pausedRevealAt * old / c; return; }
+  const remain = Math.max(0, playDueAt - now) * old / c;
+  clearTimeout(playTimer);
+  playDueAt = now + remain;
+  playTimer = setTimeout(playStepFn, remain);
+  if(revealRAF && revealFrame === frames[idx] && frameDraw(frames[idx])){
+    cancelAnimationFrame(revealRAF); revealRAF = null;
+    startReveal(frames[idx], _pageMsAt(idx), (now - revealStart) * old / c);
+  }
 }
 function pausePlay(){
   if(!playing || playPaused) return;
@@ -4257,7 +4292,8 @@ drawOnBtn.addEventListener('click',()=>{
   chip(on ? 'Every page draws itself' : 'Every page snaps in');
 });
 // scrub through frames (drag to preview any frame)
-function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(0,Math.min(1,frac)); idx=Math.min(n-1, Math.round(frac*(n-1)));
+function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(0,Math.min(1,frac)); scrubToPage(Math.min(n-1, Math.round(frac*(n-1)))); }
+function scrubToPage(i){ const n=frames.length; if(!n) return; idx=Math.max(0, Math.min(n-1, i));
   // Scrubbing shows a page WHOLE, drawing or not: a drag is for finding a page,
   // and revealing strokes under the finger would make the thumbnail you are
   // aiming at depend on how fast you moved.
@@ -4267,20 +4303,38 @@ function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(
   // afresh -- its whole time, and a drawing page its whole reveal.
   if(playPaused){ pausedRemain=0; pausedRevealAt=null; }
   liveBadge.textContent=(playPaused?'\u275A\u275A ':frameDraw(frames[idx])?'\u270E ':'\u25B6 ')+(idx+1)+' / '+n; }
-flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipProgress.setPointerCapture(e.pointerId);}catch(_){} const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
-flipProgress.addEventListener('pointermove',e=>{ if(!scrubbingFrames) return; const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
 function endFrameScrub(){ if(!scrubbingFrames) return; scrubbingFrames=false;
   // Releasing mid-play resumes the page under the finger, revealing it from the
   // start if it draws; the outer timer is still running, so this only restarts
   // the reveal.
-  if(playing && !playPaused && frameDraw(frames[idx])){
-    const _d = (typeof window !== 'undefined' && window.SkriblHold)
-      ? window.SkriblHold.pageMs(frames[idx], fps)
-      : Math.max(320, Math.min(8000, _spanOf(frames[idx])));
-    startReveal(frames[idx], _d);
-  } }
+  if(playing && !playPaused && frameDraw(frames[idx])) startReveal(frames[idx], _pageMsAt(idx));
+}
+/* THE PREVIEW'S CONTROLS, OFF THE DRAWING (F1, the owner's pick C: "be kind
+   to the canvas"). While a Flip plays, the page strip is its timeline: the
+   page on screen is outlined there, and a 3px line along the strip's top edge
+   fills as it plays (a 44px band to grab; a place on it lands on the page
+   holding that beat, so a page held three beats takes three beats of the
+   line). The Duplicate / Blank row does nothing during playback, so the
+   speeds take its place; the same speeds sit in Playback settings for when
+   nothing plays. */
+function _flipEdges(){ const e=[0]; for(let i=0;i<frames.length;i++) e.push(e[i] + _pageMsBase(i)); return e; }
+function _flipFrac(i){ const e=_flipEdges(), T=e[e.length-1]; return T ? e[Math.max(0, Math.min(frames.length, i))] / T : 0; }
+function _flipPageAt(f){ const e=_flipEdges(), t=f*e[e.length-1];
+  for(let i=0;i<frames.length;i++) if(t < e[i+1]) return i;
+  return frames.length-1; }
+const _seekAt = (e) => { const r=flipProgress.getBoundingClientRect(); scrubToPage(_flipPageAt(Math.max(0, Math.min(1, (e.clientX-r.left)/r.width)))); };
+flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipProgress.setPointerCapture(e.pointerId);}catch(_){} _seekAt(e); });
+flipProgress.addEventListener('pointermove',e=>{ if(scrubbingFrames) _seekAt(e); });
 flipProgress.addEventListener('pointerup',endFrameScrub);
 flipProgress.addEventListener('pointercancel',endFrameScrub);
+function syncWatchSegs(){
+  ['flipSpeedSeg','watchSeg'].forEach(id => { const g=document.getElementById(id); if(!g) return;
+    g.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.rate === flipRate)); });
+}
+['flipSpeedSeg','watchSeg'].forEach(id => { const g=document.getElementById(id); if(!g) return;
+  g.addEventListener('click', e => { const b=e.target.closest('button'); if(b) setFlipRate(+b.dataset.rate); });
+  if(window.SkriblSegSlider) window.SkriblSegSlider.attach(g); });
+syncWatchSegs();
 /* The keyboard half. This div declared role="slider" with valuemin/valuemax
    and supplied no tabindex, no valuenow and no key handler, so it announced a
    control nobody could focus or move. Same scrubToFrac() the drag uses, so the
@@ -5604,9 +5658,8 @@ async function shareSkribl(){
       // is the difference between "try again" and "change something". A 500
       // here was an unreachable database, and the old transient chip made that
       // look like the button doing nothing.
-      const why = data.error || (res.status >= 500
-        ? 'The server could not save it (error ' + res.status + '). Your Skribl is safe here — try again in a moment.'
-        : 'The server refused it (error ' + res.status + '). Your Skribl is safe here — nothing was lost.');
+      const why = res.status >= 500 && !data.error ? SkriblPostSheet.failure('server')
+        : SkriblPostSheet.failure('refused', data.error || null);
       showShareFailure(why); chip('Post failed'); sharing=false; return;
     }
     // AN ANSWER THAT IS NOT A POST IS NOT A SUCCESS (preflight PF-028). Any
@@ -5617,7 +5670,7 @@ async function shareSkribl(){
     // for both fields (editor_post.js); so does Flip now, and the key is kept,
     // so Try again finds the post the server may already have made.
     if(!data.id || !data.url){
-      showShareFailure('The server returned an unexpected response. Your Skribl is safe here — try again in a moment.');
+      showShareFailure(SkriblPostSheet.failure('odd'));
       chip('Post failed'); sharing=false; return;
     }
     const url=location.origin + data.url;
@@ -5649,11 +5702,11 @@ async function shareSkribl(){
     showShareResult(url, delKey);
   }catch(err){
     if(err && err.name==='AbortError'){
-      showShareFailure('Cancelled \u2014 not posted. Your Skribl is safe here; Try again sends it.');
+      showShareFailure(SkriblPostSheet.failure('cancelled'));
       chip('Not posted'); sharing=false; return;
     }
     console.error('[skribl] Share failed:', err);
-    showShareFailure('Could not reach the server. Check your connection — your Skribl is still here.');
+    showShareFailure(SkriblPostSheet.failure('offline'));
     chip('Post failed');
   }
   sharing=false;
