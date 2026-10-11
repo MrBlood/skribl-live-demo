@@ -1375,19 +1375,22 @@ with sync_playwright() as sp:
     #   the post ... it's critical"; "all yes"), for four named costs, every
     #   one paid by every page that shows a post, because the line is there at
     #   rest:
-    #     lib/replayline.js  +9,186  the Pad's own line and scrubber -- the
+    #     lib/replayline.js  +8,347  the Pad's own line and scrubber -- the
     #                                module, not a copy, so a post cannot say
     #                                or offer speeds differently from the Pad
     #                                and /s/<id> (this ratchet once paid 289 B
     #                                to keep it out; the line is the reason to
     #                                pay for it now)
     #     lib/scrubkeys.js   +1,604  the keyboard half every scrubber here has
-    #     inlineplayer.css   +4,421  the line, the shaped box, the v4 button
-    #     inlineplayer.js    +4,749  the line at rest from the listing, a
-    #                                Flip's pages as the scrubber, scrub, speed
+    #     inlineplayer.css   +4,391  the line, the shaped box, the v4 button
+    #     inlineplayer.js    +5,646  the line at rest from the listing, a
+    #                                Flip's pages painted in the scrubber (here,
+    #                                through the module's `draw` hook, so the
+    #                                Pad and /s/<id> do not carry them), the
+    #                                stored shape read, scrub, speed
     #   Spent first: the sheet's new rules carry no prose (their reasoning is
     #   in the script's header) and are one line each; the old wash behind the
-    #   play button and its shadow are gone. 58,199 B measured.
+    #   play button and its shadow are gone. 58,227 B measured.
     EMBED_RATCHET = 58_250
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:

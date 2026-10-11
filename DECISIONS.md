@@ -15871,8 +15871,10 @@ building: Chrome left a colour mixed from currentColor stale when a host
 switched theme after load (white words on a light page; the lit loop at 2.43
 contrast), so the line's quiet words are quiet by opacity, and the speed and
 lit loop take the page's own text on a purple tint. Host
-bytes: 38,239 -> 58,199 (the line's module, the scrubber's keys, its styles
-and wiring, each named at the ratchet). Shared: one player, Pad and Flip posts
+bytes: 38,239 -> 58,227 (the line's module, the scrubber's keys, its styles
+and wiring, each named at the ratchet); the page segments are painted by the
+post's own script through a hook in the module, so the shared player carries
+only the hooks. Shared: one player, Pad and Flip posts
 alike; the poster rule is Flip's alone (only Flip has pages). verify_inline
 THE POST measures the shape, the line and its words before any payload, the
 height at rest, playing and paused, the bars unchanged by play, the line's

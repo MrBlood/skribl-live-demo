@@ -7,7 +7,6 @@
  *   SkriblReplayLine.attach(host, opts)        the line, its speed button and the speeds
  *   SkriblReplayLine.clockMap(timeline, pts)   replay ms -> the artist's ms
  *   SkriblReplayLine.scrub(bar, opts)          the drawing's shape in the bar, and dragging it
- *   SkriblReplayLine.shapeOf(text)             a post's stored shape (line_json) -> columns
  *
  * THE OWNER'S SPEC (WORKING-AGREEMENTS.md, "Skribl Pad first"): real time,
  * time-lapse and slow motion, about ¼× to 16× plus "fit", and say what you are
@@ -187,18 +186,21 @@
    * thumb on a phone. More than 10px sideways is a drag; less is left alone
    * so a tap still pauses (lib/tappause.js draws the same line).
    *
-   * scrub(bar, { points, total, map, frac, seek, start, end, shape, pages })
+   * scrub(bar, { points, total, map, frac, seek, start, end, shape, draw, tip })
    *   points()  the timeline (each with x, y, playT, start)
    *   total()   the replay's length at 1x
    *   map()     clockMap() for it, or null (a Flip: no artist's clock)
    *   frac()    where the replay is, 0..1
    *   seek(f)   show the drawing at f
    *   start()   a drag began (hold the replay); end() it ended
-   *   shape()   optional: the columns already worked out (shapeOf), which win
-   *             over points() -- the in-post player has them before it has
-   *             the drawing, and keeps them after, so play changes nothing
-   *   pages()   optional: a Flip's page count, drawn as that many equal
-   *             segments instead of columns, the bubble saying "Page 3 of 12"
+   *   shape()   optional: the columns already worked out (0..1, any count),
+   *             which win over points() -- the in-post player has them
+   *             before it has the drawing, and keeps them after
+   *   draw(ctx, f, w, h, dpr)  optional: paint the bar yourself (the
+   *             in-post player draws a Flip's pages); return false to leave
+   *             it to the columns. The caller's code, so a surface that
+   *             needs neither does not carry it.
+   *   tip(f)    optional: the bubble's words instead of the clock
    * Returns { paint(f), reset(), drag(surface, on) }. */
   var FINE = [[110, 0.25], [48, 0.5]];
   function scrub(bar, o) {
@@ -208,15 +210,13 @@
         head = document.createElement('span');
     cv.className = 'rl-strip'; tip.className = 'rl-bubble'; head.className = 'rl-head';
     [cv, head, tip].forEach(function (e) { e.setAttribute('aria-hidden', 'true'); bar.appendChild(e); });
-    var cols = null, drawnCol = -2, drag = null, pg = 0;
+    var cols = null, drawnCol = -2, drag = null;
 
     function bin() {
       var tl = o.points() || [], T = o.total() || 1, w = bar.clientWidth;
       var n = Math.max(12, Math.round(w / 5)), c = new Array(n).fill(0), mx = 0, k;
-      pg = o.pages ? o.pages() | 0 : 0;
       var sh = o.shape && o.shape();
       drawnCol = -2;
-      if (pg) { cols = []; return; }
       if (sh && sh.length) {
         // Stored at a fixed count; each column here takes the tallest of the
         // stored ones it covers, so a narrow bar keeps its peaks.
@@ -247,29 +247,16 @@
       if (!cols) bin();
       f = Math.max(0, Math.min(1, f));
       head.style.left = f * 100 + '%';   // the playhead moves smoothly; the columns step
-      var n = cols.length, at = Math.round(f * n);
-      // A page fills as it plays, so its key is the playhead's device pixel.
-      if (pg) at = Math.round(f * cv.width);
+      // A painter of the caller's may fill continuously, so its key is the
+      // playhead's device pixel; the columns step.
+      var n = cols.length, at = Math.round(f * (o.draw ? cv.width : n));
       if (at === drawnCol) return;   // only when the playhead crosses a column
       drawnCol = at;
       var x = cv.getContext('2d'), cw = cv.width / n, H = cv.height;
       x.clearRect(0, 0, cv.width, H);
       x.fillStyle = getComputedStyle(bar).color;
-      if (pg) {
-        /* A FLIP'S PAGES, equal widths: a page is what you aim at here, and
-           a held page or a long drawing page would otherwise squeeze the
-           rest to slivers. Played pages are solid, the one on screen fills
-           to the playhead, the rest are faded like unplayed columns. */
-        var g = Math.min(3 * dpr, cv.width / pg * 0.25), sw = (cv.width - g * (pg - 1)) / pg,
-            sh2 = Math.round(H * 0.44), sy = (H - sh2) / 2, r = Math.min(3 * dpr, sw / 2, sh2 / 2);
-        for (var p = 0; p < pg; p++) {
-          var sx = p * (sw + g);
-          seg(x, sx, sy, sw, sh2, r, 0.36);
-          var fill = Math.max(0, Math.min(sw, at - sx));
-          if (fill > 0) { x.save(); x.beginPath(); x.rect(sx, 0, fill, H); x.clip(); seg(x, sx, sy, sw, sh2, r, 1); x.restore(); }
-        }
-        return;
-      }
+      if (o.draw && o.draw(x, f, cv.width, H, dpr) !== false) return;
+      at = Math.round(f * n);
       for (var k = 0; k < n; k++) {
         if (!cols[k]) continue;
         var ch = Math.max(2 * dpr, (0.15 + 0.85 * cols[k]) * H * 0.78);
@@ -277,16 +264,9 @@
         x.fillRect(k * cw + cw * 0.2, (H - ch) / 2, cw * 0.6, ch);
       }
     }
-    function seg(x, sx, sy, sw, h, r, a) {
-      x.globalAlpha = a;
-      x.beginPath();
-      if (x.roundRect) x.roundRect(sx, sy, sw, h, r); else x.rect(sx, sy, sw, h);
-      x.fill();
-    }
     function say(f, fine) {
       var T = o.total() || 0, m = o.map && o.map();
-      tip.textContent = (pg ? 'Page ' + Math.min(pg, Math.floor(f * pg) + 1) + ' of ' + pg
-        : clock(m ? m(f * T) : f * T)) + (fine < 1 ? '  · fine ' + label(fine) : '');
+      tip.textContent = ((o.tip && o.tip(f)) || clock(m ? m(f * T) : f * T)) + (fine < 1 ? '  · fine ' + label(fine) : '');
       tip.style.left = f * 100 + '%';
     }
     function begin(e, f) {
@@ -343,16 +323,9 @@
     return { paint: paint, reset: function () { cols = null; }, drag: dragOn };
   }
 
-  /* A post's stored shape (validation._payload_line): one base-36 digit per
-     column, 0 for none, the square root already taken. -> 0..1 columns. */
-  function shapeOf(t) {
-    if (typeof t !== 'string' || !/^[0-9a-z]+$/.test(t)) return null;
-    return t.split('').map(function (c) { return parseInt(c, 36) / 35; });
-  }
-
   global.SkriblReplayLine = {
     RATES: RATES, FIT_MS: FIT_MS, rate: rate, fromPost: fromPost,
     drawnMs: drawnMs, words: words, label: label, attach: attach,
-    clockMap: clockMap, clock: clock, scrub: scrub, shapeOf: shapeOf
+    clockMap: clockMap, clock: clock, scrub: scrub
   };
 })(window);

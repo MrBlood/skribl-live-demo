@@ -577,6 +577,14 @@
     if (comp) { comp.finish(); comp.present(); }
   }
 
+  /* A post's stored shape (validation._payload_line): one base-36 digit per
+   * column, 0 for none, the square root already taken -> 0..1 columns, which
+   * the scrubber pools to its own width (lib/replayline.js `shape`). */
+  function shapeOf(t) {
+    if (typeof t !== 'string' || !/^[0-9a-z]+$/.test(t)) return null;
+    return t.split('').map(function (c) { return parseInt(c, 36) / 35; });
+  }
+
   function fmt(ms) {
     var s = Math.max(0, Math.round(ms / 1000));
     return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
@@ -1221,6 +1229,31 @@
       if (held) { held = false; play(); }
     }
 
+    /* A FLIP'S PAGES IN THE SCRUBBER, equal widths: a page is what a viewer
+     * aims at, and a held page or a long drawing page would otherwise squeeze
+     * the rest to slivers. Played pages are solid, the one on screen fills to
+     * the playhead, the rest are faded like unplayed columns. Painted here,
+     * through lib/replayline.js's `draw` hook, so the Pad and /s/<id> do not
+     * carry it. A replay answers false and gets the module's columns. */
+    function pageCount() { return flipFrames ? flipFrames.length : payload ? 0 : pagesN; }
+    function drawPages(x, f, W, H, dpr) {
+      var n = pageCount();
+      if (!n) return false;
+      var at = f * W, g = Math.min(3 * dpr, W / n * 0.25), sw = (W - g * (n - 1)) / n,
+          h = Math.round(H * 0.44), y = (H - h) / 2, r = Math.min(3 * dpr, sw / 2, h / 2);
+      function seg(sx, a) {
+        x.globalAlpha = a;
+        x.beginPath();
+        if (x.roundRect) x.roundRect(sx, y, sw, h, r); else x.rect(sx, y, sw, h);
+        x.fill();
+      }
+      for (var p = 0; p < n; p++) {
+        var sx = p * (sw + g), fill = Math.max(0, Math.min(sw, at - sx));
+        seg(sx, 0.36);
+        if (fill > 0) { x.save(); x.beginPath(); x.rect(sx, 0, fill, H); x.clip(); seg(sx, 1); x.restore(); }
+      }
+    }
+
     function pick(c) {
       choice = c; picked = true;
       applyRate(c === 'fit' ? Math.max(1, (payload ? totalMs : info && info.play || 0) / 30000) : +c || 1);
@@ -1579,7 +1612,7 @@
       try { info = JSON.parse(el.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
       if (!info || typeof info !== 'object') info = null;
       pagesN = info && info.pages > 1 ? info.pages | 0 : 0;
-      shapeCols = info && RL.shapeOf(info.shape);
+      shapeCols = info && shapeOf(info.shape);
       /* The listing knows whether there is sound, so mute holds its place
        * from the first paint and the row does not change at the first tap. */
       if (info && typeof info.sound === 'boolean') mark('is-silent', !info.sound);
@@ -1593,7 +1626,8 @@
           map: function () { return clockFn; },
           frac: frac, seek: scrubTo, start: scrubStart, end: scrubEnd,
           shape: function () { return shapeCols; },
-          pages: function () { return flipFrames ? flipFrames.length : payload ? 0 : pagesN; }
+          draw: drawPages,
+          tip: function (f) { var n = pageCount(); return n ? 'Page ' + Math.min(n, Math.floor(f * n) + 1) + ' of ' + n : ''; }
         });
         if (global.SkriblScrub) global.SkriblScrub.attach(bar, { seek: function (f) { scrubStart(); scrubTo(f); scrubEnd(); }, frac: frac });
       }
