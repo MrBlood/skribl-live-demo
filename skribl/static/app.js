@@ -1729,7 +1729,10 @@ function editorReplayFrame() {
   // reading in the drawing's time, which is what the author is judging.
   const elapsed = (performance.now() - playStart) * replayRate;
   if (durationBadge && !durationBadge.hidden) {
-    durationBadge.textContent = formatDuration(Math.min(elapsed, playTotal));
+    // Written when its second changes, not every frame: each write is a
+    // mutation the header's fit (initBrandFit) answers with a layout.
+    const t = formatDuration(Math.min(elapsed, playTotal));
+    if (durationBadge.textContent !== t) durationBadge.textContent = t;
   }
   setScrubProgress(playTotal ? elapsed / playTotal : 1);
   if (playComp) {
@@ -1951,7 +1954,17 @@ if (playScrub) {
       brand.classList.add('brand-collapsed');
       for (const s of steps) if (collides()) header.classList.add(s);
     }
+    // FIT HEARS ITSELF. The padding snap above writes actions' style, which
+    // the observer below watches, so every fit queued the next -- forever,
+    // from page load -- and each outside change (a class, the replay's badge
+    // ticking) started one more such chain beside it. Measured on the Pad at
+    // rest: 3 fits a frame; after one replay, about 58, every one of them a
+    // forced layout, on a page that looked idle. Taking the records drops
+    // only this fit's own writes: anything else was delivered before the
+    // frame this runs in.
+    if (mo) mo.takeRecords();
   }
+  let mo = null;
   const refit = () => requestAnimationFrame(fit);   // measure after layout settles
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(refit);
@@ -1962,7 +1975,8 @@ if (playScrub) {
   }
   // Buttons appear/disappear by toggling `hidden` — catch those too.
   if (typeof MutationObserver !== 'undefined') {
-    new MutationObserver(refit).observe(actions, {
+    mo = new MutationObserver(refit);
+    mo.observe(actions, {
       subtree: true, childList: true, attributes: true,
       attributeFilter: ['hidden', 'class', 'style', 'disabled'],
     });

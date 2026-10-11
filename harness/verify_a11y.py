@@ -2082,14 +2082,19 @@ def _ready_to_play(pg, ed, steps=25):
         _draw_stroke(pg, "#pad", steps)
 
 
+# The Pad's replay watched at 1/4x (its remembered speed, editor_draw.js), so a
+# short stroke is still playing whenever this reads it. Flip loops anyway.
+_QUARTER = "try{localStorage.setItem('skribl_replay_rate','0.25')}catch(e){}"
+
 with sync_playwright() as _pt:
     _bt = _pt.chromium.launch()
     for _ed, _path, _btn in (("Pad", "/", "#playBtn"), ("Flip", "/flip", "#play")):
         _cx = _bt.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+        _cx.add_init_script(_QUARTER)
         _pg = _cx.new_page()
         browsing.goto(_pg, BASE, _path)
         _pg.wait_for_timeout(700)
-        _ready_to_play(_pg, _ed, steps=120)     # long enough to still be playing when read
+        _ready_to_play(_pg, _ed, steps=60)
         _rest = (_pg.evaluate(_PLAY_WORD, _btn), _ax_name(_cx, _pg, _btn))
         _js_click(_pg, _btn, 300)
         _on = (_pg.evaluate(_PLAY_WORD, _btn), _ax_name(_cx, _pg, _btn),
@@ -2108,10 +2113,11 @@ with sync_playwright() as _pt:
 
         # The desk: the tooltip's words, where lib/tooltip.js keeps them.
         _cx = _bt.new_context(viewport={"width": 1280, "height": 860})
+        _cx.add_init_script(_QUARTER)
         _pg = _cx.new_page()
         browsing.goto(_pg, BASE, _path)
         _pg.wait_for_timeout(700)
-        _ready_to_play(_pg, _ed, steps=120)
+        _ready_to_play(_pg, _ed, steps=60)
         _tip_rest = _pg.evaluate("(s) => document.querySelector(s).getAttribute('data-tip')", _btn)
         _js_click(_pg, _btn, 300)
         _tip_on = _pg.evaluate("(s) => document.querySelector(s).getAttribute('data-tip')", _btn)
@@ -2245,18 +2251,43 @@ with sync_playwright() as _pt:
         pg.evaluate(_FREEZE_OFF)
         return hovered, len(names), stuck
 
+    # ONE PAGE PER EDITOR AND THEME, walked through every state and closed
+    # behind itself, because a fresh page per state cost two thirds of this
+    # section's time in reloads and redrawing. Each state proves it OPENED
+    # before its census counts -- a census of a drawer that never opened
+    # passes nothing -- and the last one, the Post sheet, is never closed.
+    # The Pad's replay is watched at 1/4x so it is still running when its
+    # census ends; that is checked too, not assumed.
+    def _opened(pg, st, btn, more):
+        if st == "rest":
+            return True
+        if st == "playing":
+            return pg.evaluate("(s) => document.querySelector(s).classList.contains('playing')", btn)
+        if st in ("pen drawer", "media drawer"):
+            return pg.evaluate(browsing._PAD_CUR) == ("draw" if st == "pen drawer" else "music")
+        if st == "settings":
+            return pg.evaluate("() => !!document.querySelector('#tuneShell.open')")
+        if st == "menu":
+            return pg.evaluate("(s) => document.querySelector(s).getAttribute('aria-expanded') === 'true'", more)
+        return pg.evaluate("""() => { const b = document.getElementById('postSubmitBtn'); if (!b) return false;
+          const r = b.getBoundingClientRect(); const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          return !!h && (h === b || b.contains(h)); }""")
+
     _STATES = ("rest", "playing", "pen drawer", "media drawer", "settings", "menu", "post sheet")
     for _scheme in ("dark", "light"):
         for _ed, _path, _btn, _more in (("Pad", "/", "#playBtn", "#menuBtn"), ("Flip", "/flip", "#play", "#moreBtn")):
+            _cx = _bt.new_context(viewport={"width": 402, "height": 874}, color_scheme=_scheme,
+                                  is_mobile=True, has_touch=True)
+            _cx.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_scheme}');"
+                                f"localStorage.setItem('skribl_replay_rate','0.25')}}catch(e){{}}")
+            _pg = _cx.new_page()
+            browsing.goto(_pg, BASE, _path)
+            _pg.wait_for_timeout(700)
+            _ready_to_play(_pg, _ed, steps=60)
+            if _scheme == "dark":
+                check(f"{_ed}: the phone reports (hover: none), as an iPhone does (the fixture)",
+                      _pg.evaluate("() => matchMedia('(hover: none)').matches"))
             for _st in _STATES:
-                _cx = _bt.new_context(viewport={"width": 402, "height": 874}, color_scheme=_scheme,
-                                      is_mobile=True, has_touch=True)
-                _cx.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_scheme}')}}catch(e){{}}")
-                _pg = _cx.new_page()
-                browsing.goto(_pg, BASE, _path)
-                _pg.wait_for_timeout(700)
-                # A replay long enough to still be running when the census ends.
-                _ready_to_play(_pg, _ed, steps=120 if _st == "playing" else 25)
                 if _st == "playing":
                     _js_click(_pg, _btn, 450)
                 elif _st in ("pen drawer", "media drawer"):
@@ -2268,9 +2299,8 @@ with sync_playwright() as _pt:
                 elif _st == "post sheet":
                     _js_click(_pg, "#postBtn", 900)
                 _where = f"{_scheme} {_ed} {_st}"
-                if _scheme == "dark" and _st == "rest":
-                    check(f"{_ed}: the phone reports (hover: none), as an iPhone does (the fixture)",
-                          _pg.evaluate("() => matchMedia('(hover: none)').matches"))
+                check(f"{_where}: the state is open, so its census means something (the fixture)",
+                      _opened(_pg, _st, _btn, _more))
                 _hov, _n, _stuck = _stuck_after_tap(_cx, _pg)
                 check(f"{_where}: nothing is really under a pointer, so the before reads clean (the fixture)",
                       _hov == 0, f"{_hov} elements :hover")
@@ -2278,49 +2308,65 @@ with sync_playwright() as _pt:
                       f"found {_n}, expected at least 5")
                 if _st == "playing":
                     check(f"{_where}: still playing when the census ended (the fixture)",
-                          _pg.evaluate("(s) => document.querySelector(s).classList.contains('playing')", _btn))
+                          _opened(_pg, _st, _btn, _more))
                 check(f"{_where}: no control stays lit after a tap", not _stuck, "; ".join(_stuck[:5]))
-                _cx.close()
+                # Close behind, so the next state starts from rest.
+                if _st == "playing":
+                    _js_click(_pg, _btn, 400)
+                elif _st in ("pen drawer", "media drawer"):
+                    browsing.pad_drawer_close(_pg, settle=500)
+                elif _st == "settings":
+                    _js_click(_pg, "#tuneBtn", 500)
+                elif _st == "menu":
+                    _pg.keyboard.press("Escape")
+                    _pg.wait_for_timeout(500)
+            _cx.close()
 
     # THE OTHER HALF: A MOUSE STILL LIGHTS THEM. Guarding a rule with a media
     # query that never matches -- a typo, `(hover: hove)` -- would pass every
     # row above and take hover away from the desk too. So the same forcing, on
-    # a desk, must still MOVE one control from each stylesheet and family the
-    # guard went round.
-    for _ed, _path, _setup, _sel in (
-            ("Pad", "/", None, "#postBtn"),
-            ("Pad", "/", "#menuBtn", "#clearMenuItem"),
-            ("Pad", "/", "pen", ".color-dot:not(.active)"),
-            ("Flip", "/flip", None, "#addblank"),
-            ("Flip", "/flip", None, ".frame:not(.on)")):
+    # a desk, must still MOVE one control from each family the guard went
+    # round: the buttons, the menu rows and the swatches in styles.css, the add
+    # buttons and the page tiles in flip.css.
+    def _lights_on_desk(cx, pg, sel):
+        pg.mouse.move(-5, -5)
+        pg.evaluate(_FREEZE_ON)
+        found = pg.evaluate("""(sel) => { document.querySelectorAll('[data-a11y17]').forEach(e => e.removeAttribute('data-a11y17'));
+          const e = document.querySelector(sel); if (!e) return false; e.setAttribute('data-a11y17', '0'); return true; }""", sel)
+        moved = []
+        if found:
+            c = cx.new_cdp_session(pg)
+            c.send("DOM.enable"); c.send("CSS.enable")
+            root = c.send("DOM.getDocument", {"depth": 0})["root"]["nodeId"]
+            pg.evaluate(_CHAIN, 0)
+            ids = c.send("DOM.querySelectorAll", {"nodeId": root, "selector": "[data-a11y17-up]"})["nodeIds"]
+            before = pg.evaluate(_LOOK, 0)
+            for i in ids:
+                c.send("CSS.forcePseudoState", {"nodeId": i, "forcedPseudoClasses": ["hover"]})
+            held = pg.evaluate(_LOOK, 0)
+            for i in ids:
+                c.send("CSS.forcePseudoState", {"nodeId": i, "forcedPseudoClasses": []})
+            moved = [k for k in held if held[k] != before.get(k)]
+            c.detach()
+        pg.evaluate(_FREEZE_OFF)
+        return found, moved
+
+    for _ed, _path, _steps in (("Pad", "/", ((None, "#postBtn"), ("pen", ".color-dot:not(.active)"),
+                                             ("#menuBtn", "#clearMenuItem"))),
+                               ("Flip", "/flip", ((None, "#addblank"), (None, ".frame:not(.on)")))):
         _cx = _bt.new_context(viewport={"width": 1280, "height": 860})
         _pg = _cx.new_page()
         browsing.goto(_pg, BASE, _path)
         _pg.wait_for_timeout(700)
         _ready_to_play(_pg, _ed)
-        if _setup == "pen":
-            browsing.pad_drawer(_pg, "draw", settle=600)
-        elif _setup:
-            _js_click(_pg, _setup, 600)
-        _pg.mouse.move(-5, -5)
-        _pg.evaluate(_FREEZE_ON)
-        _n = _pg.evaluate("""(sel) => { document.querySelectorAll('[data-a11y17]').forEach(e => e.removeAttribute('data-a11y17'));
-          const e = document.querySelector(sel); if (!e) return false; e.setAttribute('data-a11y17', '0'); return true; }""", _sel)
-        _moved = None
-        if _n:
-            _c = _cx.new_cdp_session(_pg)
-            _c.send("DOM.enable"); _c.send("CSS.enable")
-            _root = _c.send("DOM.getDocument", {"depth": 0})["root"]["nodeId"]
-            _pg.evaluate(_CHAIN, 0)
-            _ids = _c.send("DOM.querySelectorAll", {"nodeId": _root, "selector": "[data-a11y17-up]"})["nodeIds"]
-            _before = _pg.evaluate(_LOOK, 0)
-            for _i in _ids:
-                _c.send("CSS.forcePseudoState", {"nodeId": _i, "forcedPseudoClasses": ["hover"]})
-            _held = _pg.evaluate(_LOOK, 0)
-            _moved = [k for k in _held if _held[k] != _before.get(k)]
-            _c.detach()
-        check(f"{_ed} desk: a mouse over {_sel} still lights it — the guard matches a real hover",
-              bool(_moved), "control not found" if not _n else "forced :hover changed nothing")
+        for _open, _sel in _steps:
+            if _open == "pen":
+                browsing.pad_drawer(_pg, "draw", settle=600)
+            elif _open:
+                _js_click(_pg, _open, 600)
+            _found, _moved = _lights_on_desk(_cx, _pg, _sel)
+            check(f"{_ed} desk: a mouse over {_sel} still lights it — the guard matches a real hover",
+                  _found and bool(_moved), "control not found" if not _found else "forced :hover changed nothing")
         _cx.close()
     _bt.close()
 

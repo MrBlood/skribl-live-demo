@@ -3250,6 +3250,81 @@ with sync_playwright() as _gp:
           not _d["over"] and _d["hFill"] == 0 and _d["dFill"] == 0, str(_d))
     _gb.close()
 
+print("\nTHE HEADER SETTLES — an idle Pad asks for no frames, and a replay asks for its own")
+# THE PAD'S HEADER WAS FITTING ITSELF FOREVER. initBrandFit() snaps the button
+# cluster to a whole pixel by writing actions' padding, and the observer that
+# re-fits the header on any change inside actions watches `style` -- so every
+# fit queued the next, from page load, on a page that looked idle. Each outside
+# change (a class toggled, the replay's badge ticking) started one more such
+# chain beside the first, and nothing ever ended one. Measured on main: about
+# 180 frame requests a second on a blank Pad left alone, about 3,500 a second
+# after one replay -- some 58 fits a frame, each a forced layout. Flip and the
+# shared-link player were clean (Flip has no such fit; the player's header is
+# display:none, so it never writes the padding).
+#
+# THE MEASURE IS THE MECHANISM: every requestAnimationFrame request on the page,
+# counted for a second while nothing is happening. Not a count of calls to a
+# function by name -- a renamed function would pass that forever. Headless
+# Chromium paints 60 frames a second, so one stuck chain reads 60 and the old
+# tree read 120-3,500; a settled page reads 0-3 (the save pill's own fade).
+#
+# AND WHILE A REPLAY PLAYS, ITS OWN FRAMES AND LITTLE ELSE. The badge beside
+# Play was rewritten every frame, and each write woke the fit for another
+# layout: 120 requests a second where the replay asks for 60. It is written
+# when its second changes now.
+_RAF_COUNT = """(() => { const raf = window.requestAnimationFrame.bind(window); window.__rafN = 0;
+  window.requestAnimationFrame = (cb) => { window.__rafN++; return raf(cb); }; })()"""
+
+
+def _frames_per_second(pg):
+    pg.evaluate("() => { window.__rafN = 0; }")
+    pg.wait_for_timeout(1000)
+    return pg.evaluate("() => window.__rafN")
+
+
+with sync_playwright() as _ip:
+    _ib = _ip.chromium.launch()
+    for _vw, _vh, _mob in ((1280, 860, False), (402, 874, True)):
+        _ic = _ib.new_context(viewport={"width": _vw, "height": _vh}, is_mobile=_mob, has_touch=_mob)
+        _ic.add_init_script(_RAF_COUNT)
+        _ipg = _ic.new_page()
+        browsing.goto(_ipg, BASE, "/")
+        _ipg.wait_for_timeout(1500)
+        _ipg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _blank = _frames_per_second(_ipg)
+        # A stroke drawn at a hand's pace (about two seconds), so the replay
+        # below lasts long enough to be counted while it runs.
+        _cb = _ipg.locator("#canvas").bounding_box()
+        _ipg.mouse.move(_cb["x"] + 60, _cb["y"] + 80)
+        _ipg.mouse.down()
+        for _i in range(120):
+            _ipg.mouse.move(_cb["x"] + 60 + (_i % 40) * 6, _cb["y"] + 80 + (_i // 40) * 30 + (_i % 40) * 2)
+            _ipg.wait_for_timeout(16)
+        _ipg.mouse.up()
+        _ipg.evaluate("() => document.getElementById('recordBtn').click()")    # Done
+        _ipg.wait_for_timeout(1500)
+        _take = _frames_per_second(_ipg)
+        _ipg.evaluate("() => document.getElementById('playBtn').click()")
+        _ipg.wait_for_timeout(150)
+        _playing = _frames_per_second(_ipg)
+        _was_playing = _ipg.evaluate("() => playing")
+        _ipg.wait_for_timeout(4000)
+        _done = _frames_per_second(_ipg)
+        _still = _ipg.evaluate("() => playing")
+        check(f"Pad {_vw}: a blank page left alone asks for no frames", _blank <= 5,
+              f"{_blank} requestAnimationFrame calls in one idle second")
+        check(f"Pad {_vw}: ...nor once a take is saved", _take <= 5,
+              f"{_take} in one second after Done")
+        check(f"Pad {_vw}: the replay was still running while it was counted (the fixture)", _was_playing)
+        check(f"Pad {_vw}: while the replay plays, its own frames and little else", 0 < _playing <= 90,
+              f"{_playing} in one second (the replay asks for 60)")
+        check(f"Pad {_vw}: the replay ended by itself (the fixture)", not _still)
+        check(f"Pad {_vw}: ...and once it has, nothing is left running", _done <= 5,
+              f"{_done} in one second after the replay ended")
+        _ic.close()
+    _ib.close()
+
+
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")
 for o, n in results:
