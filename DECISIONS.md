@@ -15598,6 +15598,50 @@ verify_galib drives the delete with it set, red on the old words. The editors
 have no Delete of their own (the posted list lives in the Library), so Flip is
 not affected.
 
+**Where the replay speed lives when nothing is playing (owner: "This looks like
+dogshit"; then picks D1 and 2).** #386 kept the speed line under the drawing after
+a replay, on a phone; on the owner's iPhone it sat over the frame's edge,
+crowded under Add take, with "long pauses skipped" falling onto the tools. The
+line now shows only while a replay plays, as before #386, and the speed at rest
+has two homes, neither on the drawing:
+
+* **Canvas settings, "Replay speed", under Pauses** (the other replay setting),
+  on every screen. A beside-Play chip was measured first: at 402px the bar has
+  43px spare and the chip takes 39 (4px left, in this box's fonts), at 390 and
+  375 the bar sheds the wordmark's "pad" -- so the owner chose the settings row.
+* **The Play pill, on a desk** ("Play · 0:02 · 1×", D1), where there is room.
+  Its chips open downward over the top of the drawing; opening them sends away
+  any toast there.
+
+The line, the row and the pill are one choice: each is lib/replayline.js's own
+line attached again, its sentence hidden by CSS (.speed-only) and its button
+named "Replay speed, 2×" by the editor -- built in editor_draw.js, because the
+player loads replayline.js on a byte budget (a compact mode in the library ran
+144 bytes over it). Every new control is a 44px tap (owner: "make sure target
+areas follow the rules too"); verify_replayspeed measures the tap boxes, and
+caught the row's button at 41px before it shipped. Flip: its speed is pages per
+second, already in its Playback settings, so it gets no row; its replay line
+comes with F1. The speeds' own chips also stopped squeezing: an even split
+gave each 28px and "16×" ran 5px out of its pill at every width (the centring
+census); each now shrinks only to its label, and eight still fit a 320px phone.
+verify_replayspeed checks it at 320, 402 and 1100, red on the old rule.
+
+**The delete key, where you post (SK-AUD-009, the owner's pick K1).** Without an
+account only this browser can delete a post. The key that lets any browser do it
+existed, but you met it in the Library, never when you posted. The posted card
+now carries one quiet row under Watch / Share / Copy link: "Only this browser
+can delete it. Keep the key somewhere safe, and you can delete it from any
+browser." with a Copy delete key button (a 44px tap), which copies the same key
+the Library's Copy key does. The gallery tick's line says, once ticked, "Public.
+You'll get a key to delete it from anywhere", since public is when the key
+matters most. Neither is said when the host signs people in: the row is not
+rendered and the tick reads "On, anyone can find it in the gallery" (their
+account is the key). Shared: the sheet is lib/postsheet.js and
+_skribl_post.html, so Pad and Flip both get it; each editor hands its post's key
+to result(). verify_ux drives both editors at 390 and 1100 (painted, inside the
+sheet, the copied key equals the stored one) and renders both pages for a
+signed-in host; each part was shown red on its own.
+
 **When a post fails, one set of words for both editors (owner's pick; SK-AUD-010).**
 The Pad said "Post rejected by the server (503)" or "Not posted -- saved on this
 device"; Flip said "The server could not save it (error 503). Your Skribl is

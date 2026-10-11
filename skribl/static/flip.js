@@ -5612,6 +5612,9 @@ async function shareSkribl(){
       chip('Post failed'); sharing=false; return;
     }
     const url=location.origin + data.url;
+    // The delete key the posted card offers (K1): the server's, or the one this
+    // client minted for a replay. Read before _shareIdem is cleared below.
+    const delKey=data.deleteToken || (_shareIdem && _shareIdem.tok) || null;
     // Record it locally. Without accounts the link is the only handle on a
     // post, and closing the tab used to lose it permanently.
     if(window.SkriblPosted){
@@ -5634,7 +5637,7 @@ async function shareSkribl(){
         window.SkriblRecoveryKey.present({ key: kept.key, url: data.url });
       }
     }
-    showShareResult(url);
+    showShareResult(url, delKey);
   }catch(err){
     if(err && err.name==='AbortError'){
       showShareFailure(SkriblPostSheet.failure('cancelled'));
@@ -5682,11 +5685,11 @@ function showShareFailure(msg){
   postUI.setState('error');
   postUI.el.statusLabel.textContent = msg;
 }
-function showShareResult(url){
+function showShareResult(url, key){
   if(!postUI) return;
   const t = document.getElementById('postTitleInput');
   postUI.setState('success');
-  postUI.result(url, (t && t.value.trim()) || '');
+  postUI.result(url, (t && t.value.trim()) || '', { key: key || null });
   chip('Posted! 🎨');
 }
 

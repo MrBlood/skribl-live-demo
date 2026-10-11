@@ -713,38 +713,63 @@ if (window.SkriblReplayLine) {
   } catch (e) {}
 }
 if (padLine && playScrub && window.SkriblReplayLine) {
+  /* ONE CHOICE, THREE PLACES TO MAKE IT: the line under the drawing while a
+     replay plays; the "Replay speed" row in Canvas settings, under Pauses,
+     at any time (owner's pick 2: nothing on the drawing, the top bar
+     untouched on every phone); and the pill beside Play on a desk (D1).
+     Whichever is used, all three say so. */
+  const hosts = [];
+  const all = (c) => { setPreviewSpeed(c); hosts.forEach(h => h.update()); };
   const line = SkriblReplayLine.attach(padLine, {
     choice: () => replayChoice,
     playMs: () => playTotal || getPlaybackDuration(),
     drawnMs: () => SkriblReplayLine.drawnMs(strokes),
-    pick: setPreviewSpeed,
+    pick: all,
+  });
+  hosts.push(line);
+  // The row and the pill are the same line with its sentence hidden
+  // (styles.css, .speed-only): the button and its chips are what show, and
+  // the button is named here for what it is as well as what it is at. Built
+  // in the editor, not in lib/replayline.js, which the player loads on a
+  // byte budget.
+  const speedOnly = (host) => {
+    if (!host) return null;
+    const l = SkriblReplayLine.attach(host, {
+      choice: () => replayChoice, playMs: () => playTotal || getPlaybackDuration(), pick: all,
+    });
+    const b = host.querySelector('.rl-speed');
+    const name = () => b.setAttribute('aria-label', 'Replay speed, ' + b.textContent);
+    name();
+    const h = { update() { l.update(); name(); }, close: l.close, button: b };
+    hosts.push(h);
+    return h;
+  };
+  const desk = speedOnly(document.getElementById('padSpeed'));
+  const row = speedOnly(document.getElementById('tuneSpeed'));
+  // "Fit" reads in the drawing's own length, which changes as it is drawn:
+  // brought up to date as each is about to be used.
+  if (desk) document.getElementById('playWrap').addEventListener('pointerenter', () => desk.update());
+  const tuneBtn = document.getElementById('tuneBtn');
+  if (row && tuneBtn) tuneBtn.addEventListener('click', () => row.update());
+  // The pill's chips open down over the top of the drawing, where a toast
+  // sits ("Take saved -- ..."); a toast never covers a control being used,
+  // so opening the speed sends it away.
+  if (desk) desk.button.addEventListener('click', () => {
+    if (typeof toast !== 'undefined' && toast) toast.classList.remove('show');
   });
   /* WHERE IT SITS follows the scrubber, which positionScrub (app.js) places:
      under it at a desk, where the canvas has room below; ABOVE it on a phone,
      where the scrubber is in the faded toolbar's band and the screen ends
      below it. Its speeds open upward at both (styles.css #padLine) and close
-     again on a pick. Observed rather than called, so app.js (the
+     again on a pick. It goes with the scrubber when the replay ends: kept
+     after the replay (#386), it sat over the frame's edge and under Add take
+     on the owner's iPhone, so the speed's place at rest is the Canvas
+     settings row instead. Observed rather than called, so app.js (the
      player's budget) carries none of this. */
-  /* AND IT STAYS AFTER THE REPLAY (owner's iPhone: "The speed only stays up
-     for the length of the play time. You can't adjust it if you accidentally
-     put it on 16x or if it's a short drawing"). The scrubber goes when the
-     replay ends; the line does not, so its speed can be changed for the next
-     Play. It goes when the drawing changes: a stroke starts, or the canvas is
-     cleared. */
-  let rest = false, wasShown = false;
   const place = () => {
-    const shown = !playScrub.hidden;
-    // A replay just ended. Where the line has a place of its own -- a phone,
-    // between the drawing and the tools -- it stays. A desk has no such gap
-    // (the tools sit 12-20px under the drawing), so there it goes with the
-    // scrubber until its own place is chosen.
-    if (wasShown && !shown && playScrub.classList.contains('in-bar')) rest = true;
-    if (shown) rest = false;
-    wasShown = shown;
-    const hide = !shown && !rest;
+    const hide = playScrub.hidden;
     if (padLine.hidden !== hide) { padLine.hidden = hide; if (!hide) line.update(); else line.close(); }
     if (hide) return;
-    if (!shown) return;   // at rest it keeps the place the replay left it in
     const up = playScrub.classList.contains('in-bar');
     padLine.style.left = playScrub.style.left;
     padLine.style.width = playScrub.style.width;
@@ -753,13 +778,6 @@ if (padLine && playScrub && window.SkriblReplayLine) {
     else { padLine.style.bottom = ''; padLine.style.top = (top + playScrub.offsetHeight + 10) + 'px'; }
   };
   new MutationObserver(place).observe(playScrub, { attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
-  const away = () => { if (!rest) return; rest = false; place(); };
-  canvas.addEventListener('pointerdown', () => { if (!playing) away(); });
-  const clr = document.getElementById('clearMenuItem');
-  if (clr) clr.addEventListener('click', away);
-  // Undo and redo change how long it took to draw; the line says so.
-  ['undoBtn', 'redoBtn'].forEach(id => { const b = document.getElementById(id);
-    if (b) b.addEventListener('click', () => { if (rest) setTimeout(() => line.update(), 0); }); });
 }
 
 // THE SCRUBBER (lib/replayline.js scrub(), the owner's pick S3): the

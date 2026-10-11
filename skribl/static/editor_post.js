@@ -511,7 +511,7 @@
       } else {
         showToast('Posted! 🎨', null);
       }
-      ui.result(lastPostUrl, lastPostTitle, { localOnly });
+      ui.result(lastPostUrl, lastPostTitle, { localOnly, key: (!localOnly && res && res.deleteToken) || null });
     } catch (e) {
       ui.setState('error');
       if (e && e.message) statusLabel.textContent = e.message;
