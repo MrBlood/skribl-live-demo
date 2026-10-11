@@ -1291,6 +1291,18 @@ const LABEL_STOP = '<span class="btn-label"> Done</span>';
 const LABEL_RECORD = '<span class="btn-label"> Record</span>';
 const LABEL_PLAY = '<span class="btn-label"> Play</span>';
 
+// PLAY AND STOP ARE ONE BUTTON, SO ITS NAME FOLLOWS ITS FACE. The face swapped
+// to a square and the word "Stop" while the aria-label stayed "Play", so a
+// screen reader announced Play over a button that stops (parity audit, owner:
+// "all yes"). One place sets the face, the class, the name and the title the
+// desk tooltip reads (lib/tooltip.js adopts a re-set title), so the four can
+// never disagree again.
+const setPlayBtn = (on) => {
+  playBtn.innerHTML = on ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>' : ICON_PLAY + LABEL_PLAY;
+  playBtn.classList.toggle('playing', on);
+  playBtn.setAttribute('aria-label', playBtn.title = on ? 'Stop' : 'Play');
+};
+
 function formatDuration(ms) {
   const totalSec = Math.floor(ms / 1000);
   const m = Math.floor(totalSec / 60);
@@ -1415,7 +1427,6 @@ function beginRecording(continueTake) {
   // and the menu stay a pair on the right. Moved back when the take ends.
   if (recordBtn.parentElement !== recIndicator) recIndicator.appendChild(recordBtn);
   playWrap.hidden = true;
-  playBtn.innerHTML = ICON_PLAY + LABEL_PLAY;
   postBtn.hidden = true;          // the recording header is its own mode; Post returns on Stop
   durationBadge.hidden = true;
 
@@ -1545,9 +1556,7 @@ function stopPlayback() {
   scrubbing = false;
   playPaused = false;
   document.body.classList.remove('playback-paused');
-  playBtn.innerHTML = ICON_PLAY + LABEL_PLAY;
-  playBtn.disabled = false;
-  playBtn.classList.remove('playing');
+  setPlayBtn(false);
   if (audioEl) audioEl.pause();
   if (typeof stopWebAudioLoop === 'function') stopWebAudioLoop();
   // Play's hold on the iOS playback session ends here -- unless Preview Loop
@@ -1787,8 +1796,7 @@ playBtn.addEventListener('click', () => {
                       // call back until an Image decode has resolved, long
                       // after iOS stops treating this as a user activation.
   playing = true;
-  playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>';
-  playBtn.classList.add('playing');
+  setPlayBtn(true);
   document.body.classList.add('replaying');
   playTotal = playTimeline[playTimeline.length - 1].playT;
   setReplayRate(replayChoice, playTotal);   // a Fit depends on the length just built

@@ -3633,11 +3633,17 @@ window.addEventListener('blur', ()=> endFlipHold(true));
 function nothingToShare(){ return frames.length===1 && !frames[0].strokes.length && !bgImage; }
 const playBtn=document.getElementById('play');
 const liveBadge=document.querySelector('.flip-live');
-function updateToolState(){
-  playBtn.disabled = frames.length < 2 && !frames.some(frameDraw);
-  playBtn.title = playBtn.disabled ? 'Add a second page to flip'
+// The words the desk tooltip shows over Play: Stop while it plays (anything
+// that refreshes the tool state mid-playback must not put "Flip through the
+// pages" back over a Stop button), otherwise what a press will do.
+function playTitle(){
+  return playing ? 'Stop' : playBtn.disabled ? 'Add a second page to flip'
     : (frames.some(frameDraw) ? 'Flip through the pages — drawing pages draw themselves'
                              : 'Flip through the pages');
+}
+function updateToolState(){
+  playBtn.disabled = frames.length < 2 && !frames.some(frameDraw);
+  playBtn.title = playTitle();
   // hide the whole control until there is something to play, matching the
   // Pad (playWrap.hidden = !recorded). Showing "Flip it · 0:00" on a one-page
   // animation advertises an action that cannot run. Reuses playBtn.disabled
@@ -4171,6 +4177,17 @@ function runPlayTimer(){
   const w0 = wait(); playDueAt = performance.now() + w0;
   playTimer = setTimeout(step, w0);
 }
+/* PLAY AND STOP ARE ONE BUTTON, as on the Pad (app.js setPlayBtn): the face,
+   the class, the name a screen reader announces and the title the desk tooltip
+   reads change together. The name used to stay "Flip it" while the face said
+   Stop (parity audit, owner: "all yes"). playTitle() reads `playing`, so call
+   this after `playing` has changed. */
+function setPlayFace(on){
+  playBtn.classList.toggle('playing', on);
+  playBtn.querySelector('span').textContent = on ? 'Stop' : 'Flip it';
+  playBtn.setAttribute('aria-label', on ? 'Stop' : 'Flip it');
+  playBtn.title = playTitle();
+}
 function play(){
   if(playing) return;
   // A single page that draws itself IS worth playing — that is the whole of a
@@ -4180,7 +4197,7 @@ function play(){
   disarmAll(); editIdx = idx;
   if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
   playing=true; document.body.classList.add('playing');
-  playBtn.classList.add('playing'); playBtn.querySelector('span').textContent='Stop';
+  setPlayFace(true);
   if(flipPlayer){ flipPlayer.hidden=false; requestAnimationFrame(()=>flipPlayer.classList.add('show')); }
   startMusic();
   startFlipElapsed();
@@ -4195,7 +4212,7 @@ function stop(){
   playBitmaps = null;                 // playback-scoped: freed the moment it ends
   playPlan = null;
   playing=false; document.body.classList.remove('playing');
-  playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
+  setPlayFace(false);
   clearInterval(playTimer); playTimer=null; if(revealRAF) cancelAnimationFrame(revealRAF); revealRAF=null;
   stopMusic(); scrubbingFrames=false;
   stopFlipElapsed();
