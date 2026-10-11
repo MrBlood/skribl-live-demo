@@ -565,8 +565,10 @@ body {
    anything, and iOS keeps :hover on whatever was tapped last, so an unguarded
    hover rule leaves the control lit after the tap -- Post brightened, a menu
    row tinted, a swatch blown up -- until the next tap somewhere else. Every
-   hover on the editors sits behind (hover: hover); verify_a11y A11Y 17 taps
-   nothing and forces :hover on a phone to prove it. */
+   hover a tap reaches on the editors' main surfaces sits behind (hover: hover):
+   verify_a11y A11Y 17 forces :hover on a phone, without a tap, across seven
+   states of both editors. (Hover rules on controls inside the sheets and
+   drawers it does not open follow, with a check over every rule.) */
 @media (hover: hover) { .btn:hover:not(:disabled) { filter: brightness(1.1); }}
 .btn:active:not(:disabled) { transform: scale(0.94); }
 

@@ -3308,9 +3308,19 @@ with sync_playwright() as _ip:
         _ipg.wait_for_timeout(150)
         _playing = _frames_per_second(_ipg)
         _was_playing = _ipg.evaluate("() => playing")
-        _ipg.wait_for_timeout(4000)
+        # WAIT FOR THE END, THEN COUNT. A fixed four seconds counted the
+        # replay's own last frames as "left running" whenever the stroke above
+        # was drawn slowly: the take lasts as long as the hand took, and under
+        # a full battery's load 120 steps of 16ms ran past the wait (9 frames,
+        # every one editorReplayFrame; reproduced with 44ms steps). The fixture
+        # check below is now the wait's own verdict.
+        try:
+            _ipg.wait_for_function("() => !playing", timeout=30000)
+            _still = False
+        except Exception:
+            _still = True
+        _ipg.wait_for_timeout(300)
         _done = _frames_per_second(_ipg)
-        _still = _ipg.evaluate("() => playing")
         check(f"Pad {_vw}: a blank page left alone asks for no frames", _blank <= 5,
               f"{_blank} requestAnimationFrame calls in one idle second")
         check(f"Pad {_vw}: ...nor once a take is saved", _take <= 5,

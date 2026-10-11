@@ -15788,7 +15788,10 @@ the last thing tapped, and twenty hover rules in styles.css and flip.css had no
 (hover: hover) guard, so after a tap Post stayed brightened behind its own sheet,
 the ⋯ menu's rows stayed tinted, a swatch stayed at 112%, and Flip's page tile
 stayed lifted with its add buttons lit. Each now sits behind the guard the rest
-of the app already used; a mouse lights them exactly as before. Flip's page tile
+of the app already used; a mouse lights them exactly as before. (About sixty
+more hover rules sit on controls inside sheets and drawers the check below does
+not open -- the export sheet, How it works, the photo tab, the music trim -- and
+follow in the next change, with a check over every rule rather than a walk.) Flip's page tile
 reveals its ✕, ⋯ and ×1 on a pointed-at tile only where there is a pointer; on a
 phone they show on the selected tile, as they already did. Shared: both editors
 (and the player's copies of .btn, .btn.play and .menu-item, re-emitted). *The

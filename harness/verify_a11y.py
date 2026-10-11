@@ -2088,13 +2088,25 @@ _QUARTER = "try{localStorage.setItem('skribl_replay_rate','0.25')}catch(e){}"
 
 with sync_playwright() as _pt:
     _bt = _pt.chromium.launch()
-    for _ed, _path, _btn in (("Pad", "/", "#playBtn"), ("Flip", "/flip", "#play")):
-        _cx = _bt.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
-        _cx.add_init_script(_QUARTER)
-        _pg = _cx.new_page()
-        browsing.goto(_pg, BASE, _path)
-        _pg.wait_for_timeout(700)
-        _ready_to_play(_pg, _ed, steps=60)
+    # ONE PAGE PER EDITOR AND FORM, shared by this section and the next: the
+    # two together first cost verify_a11y nearly three minutes against its
+    # ten-minute budget, two thirds of it reloading and redrawing the same
+    # drawing for every state. Each page is driven by element.click() and its
+    # mouse is never left over a control (section 17 says why).
+    _pages = {}
+    for _ed, _path in (("Pad", "/"), ("Flip", "/flip")):
+        for _form, _vp, _mob in (("phone", {"width": 402, "height": 874}, True),
+                                 ("desk", {"width": 1280, "height": 860}, False)):
+            _cx = _bt.new_context(viewport=_vp, color_scheme="dark", is_mobile=_mob, has_touch=_mob)
+            _cx.add_init_script(_QUARTER + "try{localStorage.setItem('skribl_theme_v1','dark')}catch(e){}")
+            _pg = _cx.new_page()
+            browsing.goto(_pg, BASE, _path)
+            _pg.wait_for_timeout(700)
+            _ready_to_play(_pg, _ed, steps=60)
+            _pages[(_ed, _form)] = (_cx, _pg)
+
+    for _ed, _btn in (("Pad", "#playBtn"), ("Flip", "#play")):
+        _cx, _pg = _pages[(_ed, "phone")]
         _rest = (_pg.evaluate(_PLAY_WORD, _btn), _ax_name(_cx, _pg, _btn))
         _js_click(_pg, _btn, 300)
         _on = (_pg.evaluate(_PLAY_WORD, _btn), _ax_name(_cx, _pg, _btn),
@@ -2109,26 +2121,20 @@ with sync_playwright() as _pt:
               _on[1] == _on[0], f"name {_on[1]!r}, word {_on[0]!r}")
         check(f"{_ed}: ...and after Stop, the name comes back with the word",
               _back[1] == _back[0] == _rest[0], f"name {_back[1]!r}, word {_back[0]!r}")
-        _cx.close()
 
         # The desk: the tooltip's words, where lib/tooltip.js keeps them.
-        _cx = _bt.new_context(viewport={"width": 1280, "height": 860})
-        _cx.add_init_script(_QUARTER)
-        _pg = _cx.new_page()
-        browsing.goto(_pg, BASE, _path)
-        _pg.wait_for_timeout(700)
-        _ready_to_play(_pg, _ed, steps=60)
-        _tip_rest = _pg.evaluate("(s) => document.querySelector(s).getAttribute('data-tip')", _btn)
+        _cx, _pg = _pages[(_ed, "desk")]
+        _tip = "(s) => document.querySelector(s).getAttribute('data-tip')"
+        _tip_rest = _pg.evaluate(_tip, _btn)
         _js_click(_pg, _btn, 300)
-        _tip_on = _pg.evaluate("(s) => document.querySelector(s).getAttribute('data-tip')", _btn)
+        _tip_on = _pg.evaluate(_tip, _btn)
         _js_click(_pg, _btn, 300)
-        _tip_back = _pg.evaluate("(s) => document.querySelector(s).getAttribute('data-tip')", _btn)
+        _tip_back = _pg.evaluate(_tip, _btn)
         check(f"{_ed} desk: the tooltip over the playing button says Stop",
               _tip_on == "Stop", f"data-tip {_tip_on!r} (at rest {_tip_rest!r})")
         check(f"{_ed} desk: ...and says what Play does again once it stops",
               bool(_tip_back) and _tip_back != "Stop" and _tip_back == _tip_rest,
               f"data-tip {_tip_back!r}, was {_tip_rest!r} before playing")
-        _cx.close()
 
     # -------------------------------------------------------------- section 17
     print("\nA11Y 17 — a tap leaves nothing lit, on either editor")
@@ -2251,13 +2257,6 @@ with sync_playwright() as _pt:
         pg.evaluate(_FREEZE_OFF)
         return hovered, len(names), stuck
 
-    # ONE PAGE PER EDITOR AND THEME, walked through every state and closed
-    # behind itself, because a fresh page per state cost two thirds of this
-    # section's time in reloads and redrawing. Each state proves it OPENED
-    # before its census counts -- a census of a drawer that never opened
-    # passes nothing -- and the last one, the Post sheet, is never closed.
-    # The Pad's replay is watched at 1/4x so it is still running when its
-    # census ends; that is checked too, not assumed.
     def _opened(pg, st, btn, more):
         if st == "rest":
             return True
@@ -2273,54 +2272,74 @@ with sync_playwright() as _pt:
           const r = b.getBoundingClientRect(); const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
           return !!h && (h === b || b.contains(h)); }""")
 
+    # THE WHOLE WALK IN THE DARK THEME, AND REST AGAIN IN THE LIGHT ONE. A hover
+    # rule is guarded or it is not, whichever theme draws it; the light pass
+    # is there for a rule only the light theme writes, and none of today's
+    # twenty is one -- each showed in the dark walk. Both themes through every
+    # state cost a minute more of a suite that has ten.
     _STATES = ("rest", "playing", "pen drawer", "media drawer", "settings", "menu", "post sheet")
-    for _scheme in ("dark", "light"):
-        for _ed, _path, _btn, _more in (("Pad", "/", "#playBtn", "#menuBtn"), ("Flip", "/flip", "#play", "#moreBtn")):
-            _cx = _bt.new_context(viewport={"width": 402, "height": 874}, color_scheme=_scheme,
-                                  is_mobile=True, has_touch=True)
-            _cx.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_scheme}');"
-                                f"localStorage.setItem('skribl_replay_rate','0.25')}}catch(e){{}}")
-            _pg = _cx.new_page()
-            browsing.goto(_pg, BASE, _path)
-            _pg.wait_for_timeout(700)
-            _ready_to_play(_pg, _ed, steps=60)
-            if _scheme == "dark":
-                check(f"{_ed}: the phone reports (hover: none), as an iPhone does (the fixture)",
-                      _pg.evaluate("() => matchMedia('(hover: none)').matches"))
-            for _st in _STATES:
-                if _st == "playing":
-                    _js_click(_pg, _btn, 450)
-                elif _st in ("pen drawer", "media drawer"):
-                    browsing.pad_drawer(_pg, "draw" if _st == "pen drawer" else "music", settle=600)
-                elif _st == "settings":
-                    _js_click(_pg, "#tuneBtn", 600)
-                elif _st == "menu":
-                    _js_click(_pg, _more, 600)
-                elif _st == "post sheet":
-                    _js_click(_pg, "#postBtn", 900)
-                _where = f"{_scheme} {_ed} {_st}"
-                check(f"{_where}: the state is open, so its census means something (the fixture)",
+    for _ed, _btn, _more in (("Pad", "#playBtn", "#menuBtn"), ("Flip", "#play", "#moreBtn")):
+        _cx, _pg = _pages[(_ed, "phone")]
+        check(f"{_ed}: the phone reports (hover: none), as an iPhone does (the fixture)",
+              _pg.evaluate("() => matchMedia('(hover: none)').matches"))
+        for _st in _STATES:
+            if _st == "playing":
+                _js_click(_pg, _btn, 450)
+                # HELD STILL FOR THE CENSUS ON FLIP. Flip turns its pages on a
+                # timer, every 83 ms at 12 fps, and the strip outlines the page
+                # on screen -- so a turn between the census's reads of one
+                # control moved that outline to the next page and read as a
+                # stuck hover (the shared-page walk, 11 Oct: a two-page cycle
+                # can match `before` and `again` and still differ in `held`).
+                # Paused, as a tap on the drawing pauses it, it is still the
+                # playing chrome, and still `playing` (checked below).
+                if _ed == "Flip":
+                    _pg.evaluate("() => pausePlay()")
+            elif _st in ("pen drawer", "media drawer"):
+                browsing.pad_drawer(_pg, "draw" if _st == "pen drawer" else "music", settle=500)
+            elif _st == "settings":
+                _js_click(_pg, "#tuneBtn", 500)
+            elif _st == "menu":
+                _js_click(_pg, _more, 500)
+            elif _st == "post sheet":
+                _js_click(_pg, "#postBtn", 800)
+            _where = f"{_ed} {_st}"
+            check(f"{_where}: the state is open, so its census means something (the fixture)",
+                  _opened(_pg, _st, _btn, _more))
+            _hov, _n, _stuck = _stuck_after_tap(_cx, _pg)
+            check(f"{_where}: nothing is really under a pointer, so the before reads clean (the fixture)",
+                  _hov == 0, f"{_hov} elements :hover")
+            check(f"{_where}: there are controls to tap ({_n})", _n >= 5,
+                  f"found {_n}, expected at least 5")
+            if _st == "playing":
+                check(f"{_where}: still playing when the census ended (the fixture)",
                       _opened(_pg, _st, _btn, _more))
-                _hov, _n, _stuck = _stuck_after_tap(_cx, _pg)
-                check(f"{_where}: nothing is really under a pointer, so the before reads clean (the fixture)",
-                      _hov == 0, f"{_hov} elements :hover")
-                check(f"{_where}: there are controls to tap ({_n})", _n >= 5,
-                      f"found {_n}, expected at least 5")
-                if _st == "playing":
-                    check(f"{_where}: still playing when the census ended (the fixture)",
-                          _opened(_pg, _st, _btn, _more))
-                check(f"{_where}: no control stays lit after a tap", not _stuck, "; ".join(_stuck[:5]))
-                # Close behind, so the next state starts from rest.
-                if _st == "playing":
-                    _js_click(_pg, _btn, 400)
-                elif _st in ("pen drawer", "media drawer"):
-                    browsing.pad_drawer_close(_pg, settle=500)
-                elif _st == "settings":
-                    _js_click(_pg, "#tuneBtn", 500)
-                elif _st == "menu":
-                    _pg.keyboard.press("Escape")
-                    _pg.wait_for_timeout(500)
-            _cx.close()
+            check(f"{_where}: no control stays lit after a tap", not _stuck, "; ".join(_stuck[:5]))
+            # Close behind, so the next state starts from rest.
+            if _st == "playing":
+                _js_click(_pg, _btn, 300)
+            elif _st in ("pen drawer", "media drawer"):
+                browsing.pad_drawer_close(_pg, settle=350)
+            elif _st == "settings":
+                _js_click(_pg, "#tuneBtn", 350)
+            elif _st == "menu":
+                _pg.keyboard.press("Escape")
+                _pg.wait_for_timeout(350)
+        _cx.close()
+
+    for _ed, _path in (("Pad", "/"), ("Flip", "/flip")):
+        _cx = _bt.new_context(viewport={"width": 402, "height": 874}, color_scheme="light",
+                              is_mobile=True, has_touch=True)
+        _cx.add_init_script("try{localStorage.setItem('skribl_theme_v1','light')}catch(e){}")
+        _pg = _cx.new_page()
+        browsing.goto(_pg, BASE, _path)
+        _pg.wait_for_timeout(700)
+        _ready_to_play(_pg, _ed)
+        _hov, _n, _stuck = _stuck_after_tap(_cx, _pg)
+        check(f"light {_ed} rest: the census ran clean and found controls (the fixture)",
+              _hov == 0 and _n >= 5, f"{_hov} :hover, {_n} controls")
+        check(f"light {_ed} rest: no control stays lit after a tap", not _stuck, "; ".join(_stuck[:5]))
+        _cx.close()
 
     # THE OTHER HALF: A MOUSE STILL LIGHTS THEM. Guarding a rule with a media
     # query that never matches -- a typo, `(hover: hove)` -- would pass every
@@ -2351,19 +2370,15 @@ with sync_playwright() as _pt:
         pg.evaluate(_FREEZE_OFF)
         return found, moved
 
-    for _ed, _path, _steps in (("Pad", "/", ((None, "#postBtn"), ("pen", ".color-dot:not(.active)"),
-                                             ("#menuBtn", "#clearMenuItem"))),
-                               ("Flip", "/flip", ((None, "#addblank"), (None, ".frame:not(.on)")))):
-        _cx = _bt.new_context(viewport={"width": 1280, "height": 860})
-        _pg = _cx.new_page()
-        browsing.goto(_pg, BASE, _path)
-        _pg.wait_for_timeout(700)
-        _ready_to_play(_pg, _ed)
+    for _ed, _steps in (("Pad", ((None, "#postBtn"), ("pen", ".color-dot:not(.active)"),
+                                 ("#menuBtn", "#clearMenuItem"))),
+                        ("Flip", ((None, "#addblank"), (None, ".frame:not(.on)")))):
+        _cx, _pg = _pages[(_ed, "desk")]
         for _open, _sel in _steps:
             if _open == "pen":
-                browsing.pad_drawer(_pg, "draw", settle=600)
+                browsing.pad_drawer(_pg, "draw", settle=500)
             elif _open:
-                _js_click(_pg, _open, 600)
+                _js_click(_pg, _open, 500)
             _found, _moved = _lights_on_desk(_cx, _pg, _sel)
             check(f"{_ed} desk: a mouse over {_sel} still lights it — the guard matches a real hover",
                   _found and bool(_moved), "control not found" if not _found else "forced :hover changed nothing")
