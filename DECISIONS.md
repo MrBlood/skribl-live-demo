@@ -15736,3 +15736,16 @@ tab that had them. Shared: one module, both editors; Flip's autosave is already
 a draft, the Pad's becomes one. verify_drafts drives both editors through two
 tabs, the roll call, the next visit, Keep for later (and opening that draft) and
 Open it; each part was shown red on its own.
+
+**The Post sheet: "Speed" opens the speeds, and "Posted!" is the title (the
+owner's picks, from the iPhone).** The fourth button under "Viewers start at"
+was the speed the preview last watched at; out of context it read as a random
+number ("1/4th?"). It is "Speed" now, opening the seven rates on a row of their
+own (each a 44px tap); a pick closes the row and the button shows the rate, and
+Auto, As drawn or Fit puts "Speed" back. Nothing is pulled in from the preview
+without asking. After a real post the sheet's title says "Posted!" and the
+status line, with its spent progress bar, goes; it had sat under Watch / Share /
+Copy link and run off the bottom of the phone. A save on this device only keeps
+its warning in the status line. Shared: Flip posts through the same sheet, so it
+gets the title (its sheet has no speed row). verify_replayspeed drives the speed
+row; verify_ux checks the title on both editors at 390 and 1100.
