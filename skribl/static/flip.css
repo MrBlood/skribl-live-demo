@@ -891,12 +891,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 34px = the segment height it shares the Onion row with, so the toggle and
-     the 1/2/3 depth segment align instead of the toggle sitting proud. Was 22
-     (chosen for an earlier, shorter segment), then 32; the shared rows render
-     the segments at 34 now (26px cells in a 3px-padded, 1px-bordered group). */
-  width: 34px;
-  height: 34px;
+  /* 32px, the switch every settings row shares on both editors (Grid and
+     Stroke layers wear this class too, so it is not Flip's to change). Was 22,
+     chosen for an earlier, shorter segment. The Onion row's own tint toggle
+     is sized to its neighbour below. */
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-pill);
@@ -904,7 +904,12 @@
   color: var(--text-secondary);
   cursor: pointer;
 }
-.onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (34px box), was 16 (13 originally) */
+.onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
+/* THE ONION ROW'S TINT TOGGLE matches the 1/2/3 segment beside it, so it does
+   not sit proud: 34px, which is what the shared rows render a segment at
+   (26px cells in a 3px-padded, 1px-bordered group). verify_ux holds the two
+   to one height. */
+#onionTintBtn { width: 34px; height: 34px; }
 /* The ON state lives in styles.css only: the accent for every switch, amber
    kept for #onion and #onionTintBtn alone. An amber `.onion-tint.active` used
    to sit here, and because flip.css loads after styles.css at the same
