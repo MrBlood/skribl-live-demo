@@ -1305,7 +1305,11 @@ with sync_playwright() as p:
     # hollow outline around nothing — it read as a focus ring stuck on the
     # button (owner, iPhone) — and Flip's wrap clipped it away entirely. The
     # playing state is a tinted disc on both: the element the eye reads as
-    # the control carries the accent fill, and nothing draws a ring.
+    # the control carries the accent fill, and nothing draws a ring. Since
+    # one Play and Stop that element is the BUTTON on both editors -- Flip's
+    # disc used to be a tint on its wrap, and the wrap is bare on a phone
+    # now, as the Pad's is (the section "one Play and Stop" compares the two
+    # buttons property by property).
     print("\nPARITY — on a phone, playing is a tinted disc on both, never a ring")
     DISC = """(o) => { const btn = document.getElementById(o.btn);
         const disc = o.wrap ? btn.closest(o.wrap) : btn;
@@ -1313,7 +1317,7 @@ with sync_playwright() as p:
         return { playing: btn.classList.contains('playing'), bg: bg,
                  ring: [getComputedStyle(disc).boxShadow, getComputedStyle(btn).boxShadow] }; }"""
     for _route, _btn, _wrap, _cv in (("/skribl-pad", "playBtn", None, "#canvas"),
-                                     ("/flip", "play", ".flip-play-wrap", "#pad")):
+                                     ("/flip", "play", None, "#pad")):
         _q = b.new_page(viewport={"width": 390, "height": 844})
         _q.goto(BASE + _route, wait_until="load"); _q.wait_for_timeout(700)
         _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
