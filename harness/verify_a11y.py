@@ -2386,6 +2386,78 @@ with sync_playwright() as _pt:
     _bt.close()
 
 
+# ------------------------------------------------------------------ section 18
+print("\nA11Y 18 — every control you can see has a name, on a desk as on a phone")
+# THREE BUTTONS SAID NOTHING ON A DESK: the Pad's Undo and Redo and Flip's
+# Eraser. Each carries its word in a hidden span (.undo-label, .tool-btn-label)
+# and its name in `title`; lib/tooltip.js, which runs only on a fine pointer,
+# moves the title into data-tip and copies it to aria-label only when the
+# control has no name otherwise -- and it counted the HIDDEN word as one. So
+# the title went and nothing replaced it: on a phone (no tooltip lib) the three
+# were "Undo last stroke", "Redo last stroke" and "Erase...", and on a laptop
+# a screen reader heard a bare "button". Found comparing the two editors' names
+# for the one Play/Stop round; Flip's Undo and Redo had always carried an
+# aria-label and were fine.
+#
+# READ FROM THE ACCESSIBILITY TREE, every visible control in three states of
+# both editors at both sizes: whatever the markup does, a name is what the
+# tree computes, and an empty one is the defect.
+_NAMED = r"""() => { const out = []; let i = 0;
+  for (const e of document.querySelectorAll('button, [role="button"], a[href], [role="tab"], [role="switch"], input, select, textarea')) {
+    const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2) continue;
+    let shown = true;
+    for (let p = e; p; p = p.parentElement) { const c = getComputedStyle(p); if (c.display === 'none' || c.visibility === 'hidden') { shown = false; break; } }
+    if (!shown) continue;
+    e.setAttribute('data-a11y18', String(i)); out.push(e.id ? '#' + e.id : e.tagName.toLowerCase() + '.' + String(e.className || '').trim().split(/\s+/).join('.'));
+    i++; }
+  return out; }"""
+
+
+def _nameless(cx, pg):
+    labels = pg.evaluate(_NAMED)
+    cdp = cx.new_cdp_session(pg)
+    cdp.send("Accessibility.enable")
+    root = cdp.send("DOM.getDocument", {"depth": -1})["root"]["nodeId"]
+    bad = []
+    for i, lab in enumerate(labels):
+        q = cdp.send("DOM.querySelector", {"nodeId": root, "selector": f'[data-a11y18="{i}"]'})
+        if not q.get("nodeId"):
+            continue
+        ax = cdp.send("Accessibility.getPartialAXTree", {"nodeId": q["nodeId"], "fetchRelatives": False})
+        for n in ax.get("nodes", []):
+            if n.get("ignored"):
+                continue
+            if not ((n.get("name") or {}).get("value") or "").strip():
+                bad.append(lab)
+            break
+    cdp.detach()
+    return len(labels), bad
+
+
+with sync_playwright() as _pn:
+    _bn = _pn.chromium.launch()
+    for _form, _vp, _mob in (("desk", {"width": 1280, "height": 860}, False),
+                             ("phone", {"width": 402, "height": 874}, True)):
+        for _ed, _path, _more in (("Pad", "/", "#menuBtn"), ("Flip", "/flip", "#moreBtn")):
+            _cx = _bn.new_context(viewport=_vp, is_mobile=_mob, has_touch=_mob)
+            _pg = _cx.new_page()
+            browsing.goto(_pg, BASE, _path)
+            _pg.wait_for_timeout(700)
+            _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            for _st in ("rest", "pen drawer", "menu"):
+                if _st == "pen drawer":
+                    browsing.pad_drawer(_pg, "draw", settle=500)
+                elif _st == "menu":
+                    browsing.pad_drawer_close(_pg, settle=300)
+                    _pg.evaluate("(s) => document.querySelector(s).click()", _more)
+                    _pg.wait_for_timeout(500)
+                _n, _bad = _nameless(_cx, _pg)
+                check(f"{_form} {_ed} {_st}: every control you can see has a name ({_n} read)",
+                      _n >= 10 and not _bad, ", ".join(_bad) or f"only {_n} controls found")
+            _cx.close()
+    _bn.close()
+
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [n for ok, n in results if not ok]
 print("\n" + "=" * 62)

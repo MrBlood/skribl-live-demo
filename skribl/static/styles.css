@@ -666,7 +666,6 @@ body {
 .btn.post,
 .name-done,
 .post-submit:not(.post-watch),
-.btn.play.playing,
 .player-cta,
 /* A dark text-shadow lifts LIGHT text off a busy background. .pending-btn was
    dark text on solid yellow, where the same shadow smeared the glyph edges and
@@ -4586,14 +4585,18 @@ button:not([hidden]):has(> svg.mk:only-child) { display: inline-flex; align-item
    time; what stays is the tint every "on" control wears. On a phone it is a
    disc behind the bare glyph, which takes the accent; from 641px it is the
    whole "Stop · 0:05" pill, not an oval around half of it. Pad and Flip get
-   the SAME treatment (Flip's in flip.css). */
-.btn.play.playing { background: var(--seg-on-fill); }
+   the SAME treatment (Flip's in flip.css).
+   ITS WORDS ARE THE "ON" INK, Flip's purple, on both editors (owner: "all
+   yes"): the Pad's Stop was white on the tint, and dark in light mode. That
+   is also why it left the text-shadow list above -- the shadow was for white
+   on solid purple, and this is purple on a soft tint. */
+.btn.play.playing { background: var(--seg-on-fill); color: var(--seg-on-ink); }
 @media (min-width: 641px) {
   .play-wrap:has(.btn.play.playing) { background: var(--seg-on-fill); }
 }
 @media (max-width: 640px) {
   .play-wrap > #playBtn.btn.play.playing,
-  .flip-play-wrap:has(.btn.flip-play.playing) {
+  .play-wrap > #play.btn.flip-play.playing {
     background-color: var(--seg-on-fill);
     border-color: transparent;
     box-shadow: none;
@@ -7509,7 +7512,8 @@ body.replaying .media-card {
    forcing 34 on the button would shrink the one Play the compact header has. */
 @media (min-width: 641px) {
   .play-wrap { height: 36px; }
-  .play-wrap > #playBtn.btn.play { height: 34px; }
+  .play-wrap > #playBtn.btn.play,
+  .play-wrap > #play.btn.flip-play { height: 34px; }   /* Flip's: one Play pill (owner: "all yes") */
 }
 
 /* ---------- the tool tray ------------------------------------------------

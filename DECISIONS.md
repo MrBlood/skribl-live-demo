@@ -15838,3 +15838,35 @@ swipe built in pixels from a one-beat page -- a quarter of the width across,
 1.4 times that down -- leaves the page alone. (The swipe took three tries: the
 first moved too little to tell a guard from none, the second was sized for a
 4:3 box and was sideways in the desk's.)
+
+**One Play and Stop: Flip's takes the Pad's look, and Space plays on both (the
+owner's picks from the parity audit, "all yes").** Flip's Play wore a ring and
+a 16px triangle on a phone where the Pad's is a bare 22px one, tinted its wrap
+while playing where the Pad puts a purple disc behind the square, said "Flip it"
+on a desk and stood 4px wider (its header is never `.compact`, so the row's
+16px padding reached it, not the Pad's 14), and outlined the pill a shade
+stronger. It is the Pad's now at both sizes, and the word is "Play" (Flip keeps
+tenths of a second beside it, because its loops are short). Stop's words on a
+desk are the "on" ink on both editors, Flip's purple: the Pad's were white on
+the tint, and dark in light mode, and left the white-on-purple text-shadow list
+with it. The "▶ 2 / 4" chip came off Flip's drawing; the round Play is a
+pause's one sign on both editors, and verify_tappause now asks that nothing is
+painted where the chip sat. Flip's ⋯ is the Pad's rounded square with a 22px
+mark, its header greys and its Undo and Redo greys are the Pad's, its disabled
+Undo and Redo dim to the Pad's .32, and its words are the Pad's: "Undo last
+stroke", "Redo last stroke", "More options", "Post it and get a link anyone can
+open" (and "Play" in How it works). Space plays and stops the Pad at 100%, as it
+always has Flip; zoomed in it is the grab-pan on both, which lib/canvaszoom.js
+now does for both (it was an option Flip set), and a held Space presses once on
+both, where Flip's repeats used to flip it again and again. Shared: one look,
+one key, one zoom rule; the Pad changes only its Stop ink and its Space. *Also
+fixed, found comparing the two editors' names:* the Pad's Undo and Redo and
+Flip's Eraser had no name at all on a desk, because lib/tooltip.js counted their
+hidden word as a name and removed the title that was the real one; each carries
+an aria-label now, and verify_a11y A11Y 18 reads every visible control's name
+from the accessibility tree, both editors, desk and phone. verify_parity "one
+Play and Stop" compares Flip with the Pad property by property (size, fill,
+ink, outline, glyph, word, name) in both themes, phone and desk, resting and
+playing, so the two cannot drift apart again without going red; the pill's
+width, its speed and the settings panel's name differ by design and are left
+out.

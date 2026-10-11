@@ -2449,7 +2449,7 @@ function abortStrokeForPinch(){
   const flipWrap=document.querySelector('.flip-wrap');
   if(!window.SkriblCanvasZoom || !flipWrap) return;
   ZoomView = window.SkriblCanvasZoom.create({
-    wrap: flipWrap, spaceOnlyWhenZoomed: true,
+    wrap: flipWrap,
     keyRegistry: { surface: 'flip', label: 'hold to grab-pan the magnified canvas' },
     onPaint: (z) => { pad.style.cursor = z > 1.001 ? 'crosshair' : ''; },
     pinch: { surface: pad, canStart: () => !playing && !reposMode,
@@ -3632,7 +3632,6 @@ window.addEventListener('blur', ()=> endFlipHold(true));
 // with a chip). The Pad disables its Post the same way.
 function nothingToShare(){ return frames.length===1 && !frames[0].strokes.length && !bgImage; }
 const playBtn=document.getElementById('play');
-const liveBadge=document.querySelector('.flip-live');
 // The words the desk tooltip shows over Play: Stop while it plays (anything
 // that refreshes the tool state mid-playback must not put "Flip through the
 // pages" back over a Stop button), otherwise what a press will do.
@@ -3656,10 +3655,10 @@ function updateToolState(){
   const undoB=document.getElementById('undo');
   undoB.disabled = frame().strokeGroups.length === 0
     && !(actionLog.length && typeof actionLog[actionLog.length-1] === 'object');
-  undoB.style.opacity = undoB.disabled ? .38 : 1;
+  undoB.style.opacity = undoB.disabled ? .32 : 1;
   const redoB=document.getElementById('redo');
   redoB.disabled = redoStack.length === 0;
-  redoB.style.opacity = redoB.disabled ? .38 : 1;
+  redoB.style.opacity = redoB.disabled ? .32 : 1;
   const postB=document.getElementById('postBtn');
   if(postB) postB.disabled = nothingToShare();
 }
@@ -4083,7 +4082,7 @@ function playStep(){ if(scrubbingFrames) return;
     if(revealRAF){ cancelAnimationFrame(revealRAF); revealRAF = null; }
     startReveal(frames[idx], _pageMsAt(idx));
     updatePlayProgress();
-    liveBadge.textContent='\u270E '+(idx+1)+' / '+frames.length; playI++;
+    playI++;
     return;
   }
   const _blit = playPaint();
@@ -4104,7 +4103,7 @@ function playStep(){ if(scrubbingFrames) return;
     }
   }
   updatePlayProgress();
-  liveBadge.textContent='\u25B6 '+(idx+1)+' / '+frames.length; playI++;
+  playI++;
 }
 // Was a fixed setInterval. With per-page holds each step has its own delay, so it
 // re-schedules itself. playTimer holds a timeout id now — stop() clears both.
@@ -4180,12 +4179,13 @@ function runPlayTimer(){
 /* PLAY AND STOP ARE ONE BUTTON, as on the Pad (app.js setPlayBtn): the face,
    the class, the name a screen reader announces and the title the desk tooltip
    reads change together. The name used to stay "Flip it" while the face said
-   Stop (parity audit, owner: "all yes"). playTitle() reads `playing`, so call
-   this after `playing` has changed. */
+   Stop (parity audit, owner: "all yes"); the resting word is the Pad's "Play"
+   now too, one Play and Stop for both editors. playTitle() reads `playing`,
+   so call this after `playing` has changed. */
 function setPlayFace(on){
   playBtn.classList.toggle('playing', on);
-  playBtn.querySelector('span').textContent = on ? 'Stop' : 'Flip it';
-  playBtn.setAttribute('aria-label', on ? 'Stop' : 'Flip it');
+  playBtn.querySelector('span').textContent = on ? 'Stop' : 'Play';
+  playBtn.setAttribute('aria-label', on ? 'Stop' : 'Play');
   playBtn.title = playTitle();
 }
 function play(){
@@ -4268,7 +4268,6 @@ function pausePlay(){
   pausedMusicAt = null;
   if(_waLoop.playing()){ pausedMusicAt = { wa: _waLoop.elapsed() }; stopWebAudioLoop(); }
   else if(audioEl && !audioEl.paused){ try{ audioEl.pause(); }catch(_){} pausedMusicAt = { native: true }; }
-  liveBadge.textContent='\u275A\u275A '+(idx+1)+' / '+frames.length;
   document.body.classList.add('playback-paused');
 }
 function resumePlay(){
@@ -4276,7 +4275,6 @@ function resumePlay(){
   playPaused = false;
   document.body.classList.remove('playback-paused');
   const now = performance.now();
-  liveBadge.textContent=(frameDraw(frames[idx])?'\u270E ':'\u25B6 ')+(idx+1)+' / '+frames.length;
   flipPlayStart += now - flipPausedAt; startFlipElapsed(true);
   if(pausedRevealAt != null && frameDraw(frames[idx])) startReveal(frames[idx], _pageMsAt(idx), pausedRevealAt);
   const m = pausedMusicAt; pausedMusicAt = null;
@@ -4315,11 +4313,10 @@ function scrubToPage(i){ const n=frames.length; if(!n) return; idx=Math.max(0, M
   // and revealing strokes under the finger would make the thumbnail you are
   // aiming at depend on how fast you moved.
   playI=_playCountFor(idx); render(); updatePlayProgress();
-  // Paused, it stays paused: the badge says so. playI now names the page it
-  // landed on, so the resume's first step is due at once and shows that page
-  // afresh -- its whole time, and a drawing page its whole reveal.
-  if(playPaused){ pausedRemain=0; pausedRevealAt=null; }
-  liveBadge.textContent=(playPaused?'\u275A\u275A ':frameDraw(frames[idx])?'\u270E ':'\u25B6 ')+(idx+1)+' / '+n; }
+  // Paused, it stays paused: the round Play on the drawing says so. playI now
+  // names the page it landed on, so the resume's first step is due at once and
+  // shows that page afresh -- its whole time, and a drawing page its whole reveal.
+  if(playPaused){ pausedRemain=0; pausedRevealAt=null; } }
 function endFrameScrub(){ if(!scrubbingFrames) return; scrubbingFrames=false;
   // Releasing mid-play resumes the page under the finger, revealing it from the
   // start if it draws; the outer timer is still running, so this only restarts
@@ -11057,9 +11054,11 @@ window.addEventListener('keydown', e=>{
   if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); undoStroke(); return; }
   // Space = play / stop (when not magnified — Space pans the zoomed canvas instead),
   // unless a control reached by keyboard owns it: then Space presses that button
-  // or flips that switch, as WAI-ARIA expects (SkriblCanvasZoom.ownsSpace).
+  // or flips that switch, as WAI-ARIA expects (SkriblCanvasZoom.ownsSpace). Once
+  // per press: a held Space repeats, and every repeat flipped it again. The Pad's
+  // Space is the same (editor_tune.js).
   if((e.code==='Space' || e.key===' ') && !(window.SkriblCanvasZoom && window.SkriblCanvasZoom.ownsSpace && window.SkriblCanvasZoom.ownsSpace(e.target))
-     && !(ZoomView && ZoomView.isZoomed())){ e.preventDefault(); playing?stop():play(); return; }
+     && !(ZoomView && ZoomView.isZoomed())){ e.preventDefault(); if(!e.repeat) playing?stop():play(); return; }
   if(playing || moveMode) return;   // page identity must not shift mid-move
   // ArrowLeft/ArrowRight are handled by the flip-scrub block above, which adds
   // hold-to-riffle. Leaving the single-step versions here as well meant BOTH

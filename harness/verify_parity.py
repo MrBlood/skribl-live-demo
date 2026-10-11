@@ -2417,6 +2417,98 @@ with sync_playwright() as p:
         check(f"Flip {_theme}: the onion switch keeps its amber, the colour the onion pages tint",
               flip["onion"]["on"] and flip["onion"]["color"] == flip["amber"], str(flip["onion"]))
 
+    print("\nPARITY — one Play and Stop: Flip's Play, ⋯, greys and names are the Pad's")
+    # THE OWNER: "Shouldn't Flip and Pad look the same? Flip is not as clean as
+    # Pad" -- and, of this round, "all yes". Flip's Play wore a ring and a 16px
+    # glyph on a phone where the Pad's is a bare 22px triangle, put its playing
+    # tint round the wrap instead of a disc behind the square, said "Flip it" on
+    # a desk, and stood 4px wider; its ⋯ was a circle with a 19px mark beside
+    # the Pad's rounded square with a 22px one; its header greys and its Undo
+    # and Redo greys were each the other editor's; Undo said "Undo stroke".
+    #
+    # COMPARED, NOT PINNED: each property is read off both editors and has to
+    # AGREE, so the Pad stays the model and a change to it carries Flip along
+    # rather than failing here -- this is about drift, which is what the owner
+    # asked to stop ("I don't want them to drift"). Read in both themes, at a
+    # phone and a desk, at rest and playing.
+    #
+    # THE DIFFERENCES THAT ARE DESIGN, left out on purpose: the pill's WIDTH
+    # (the Pad's carries its speed, "1/4x", and Flip keeps tenths of a second
+    # because its loops are short), the settings button's NAME (they open
+    # different panels), and a border either side draws in transparent (the
+    # visible border is compared, not the declared one).
+    _LOOKS = r"""(sels) => { const out = {};
+      for (const [k, sel] of Object.entries(sels)) {
+        const e = document.querySelector(sel); if (!e) { out[k] = null; continue; }
+        const c = getComputedStyle(e), r = e.getBoundingClientRect();
+        const s = [...e.querySelectorAll(':scope > svg')].find(x => getComputedStyle(x).display !== 'none');
+        const lab = e.querySelector(':scope > .btn-label, :scope > span');
+        const bw = parseFloat(c.borderTopWidth), clear = /rgba\([^)]*,\s*0\)$/.test(c.borderTopColor) || c.borderTopColor === 'transparent';
+        const o = { h: +r.height.toFixed(1), bg: c.backgroundColor, radius: c.borderTopLeftRadius,
+                    border: bw > 0 && !clear ? c.borderTopWidth + ' ' + c.borderTopColor : 'none',
+                    svg: s ? +s.getBoundingClientRect().width.toFixed(1) : null };
+        if (k !== 'wrap') { o.w = +r.width.toFixed(1); o.fg = c.color; o.op = c.opacity; }
+        if (k === 'play') { o.word = lab ? lab.textContent.trim() : null;
+                            o.wordShown = !!lab && getComputedStyle(lab).display !== 'none' && lab.getBoundingClientRect().width > 0;
+                            o.shadow = c.textShadow; }
+        if (k !== 'wrap' && k !== 'tune') o.name = e.getAttribute('aria-label') || e.getAttribute('title') || e.getAttribute('data-tip');
+        out[k] = o;
+      }
+      return out; }"""
+    _PAIRS = {"pad": {"play": "#playBtn", "wrap": "#playWrap", "more": "#menuBtn", "tune": "#tuneBtn",
+                      "undo": "#undoBtn", "redo": "#redoBtn", "post": "#postBtn"},
+              "flip": {"play": "#play", "wrap": "#flipPlayWrap", "more": "#moreBtn", "tune": "#tuneBtn",
+                       "undo": "#undo", "redo": "#redo", "post": "#postBtn"}}
+    for _form, _vp, _mob in (("phone", {"width": 402, "height": 874}, True),
+                             ("desk", {"width": 1280, "height": 860}, False)):
+        for _theme in ("dark", "light"):
+            _got = {}
+            for _ed, _path, _canvas in (("pad", "/skribl-pad", "#canvas"), ("flip", "/flip", "#pad")):
+                _c = b.new_context(viewport=_vp, color_scheme=_theme, is_mobile=_mob, has_touch=_mob)
+                _c.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_theme}')}}catch(e){{}}")
+                _q = _c.new_page()
+                browsing.goto(_q, BASE, _path)
+                _q.wait_for_timeout(700)
+                _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+                _bx = _q.locator(_canvas).bounding_box()
+                for _k in range(2 if _ed == "flip" else 1):
+                    _q.mouse.move(_bx["x"] + 60, _bx["y"] + 80 + 40 * _k)
+                    _q.mouse.down()
+                    for _i in range(30):
+                        _q.mouse.move(_bx["x"] + 60 + _i * 5, _bx["y"] + 80 + 40 * _k + _i * 2)
+                        _q.wait_for_timeout(12)
+                    _q.mouse.up()
+                    _q.wait_for_timeout(250)
+                    if _ed == "flip" and _k == 0:
+                        _q.evaluate("() => document.getElementById('addcopy').click()")
+                        _q.wait_for_timeout(250)
+                if _ed == "pad":
+                    _q.evaluate("() => document.getElementById('recordBtn').click()")
+                _q.wait_for_timeout(500)
+                _q.mouse.move(-5, -5)           # no real hover in what is read
+                _q.wait_for_timeout(250)
+                _got[(_ed, "rest")] = _q.evaluate(_LOOKS, _PAIRS[_ed])
+                _q.evaluate("(s) => document.querySelector(s).click()", _PAIRS[_ed]["play"])
+                _q.wait_for_timeout(400)
+                _got[(_ed, "playing")] = _q.evaluate(_LOOKS, _PAIRS[_ed])
+                _got[(_ed, "was playing")] = _q.evaluate(
+                    "(s) => document.querySelector(s).classList.contains('playing')", _PAIRS[_ed]["play"])
+                _c.close()
+            check(f"{_form} {_theme}: both editors were playing when read (the fixture)",
+                  _got[("pad", "was playing")] and _got[("flip", "was playing")],
+                  f"pad {_got[('pad', 'was playing')]}, flip {_got[('flip', 'was playing')]}")
+            for _st in ("rest", "playing"):
+                _pd, _fl = _got[("pad", _st)], _got[("flip", _st)]
+                _diffs = []
+                for _ctl in _PAIRS["pad"]:
+                    _a, _b2 = _pd.get(_ctl), _fl.get(_ctl)
+                    if not _a or not _b2:
+                        _diffs.append(f"{_ctl} missing")
+                        continue
+                    _diffs += [f"{_ctl}.{_p}: Pad {_a[_p]!r}, Flip {_b2.get(_p)!r}" for _p in _a if _a[_p] != _b2.get(_p)]
+                check(f"{_form} {_theme} {_st}: Flip's Play, ⋯, settings, Undo, Redo and Post read as the Pad's",
+                      not _diffs, "; ".join(_diffs[:6]) + (f" (+{len(_diffs) - 6} more)" if len(_diffs) > 6 else ""))
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))
