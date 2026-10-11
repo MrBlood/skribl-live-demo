@@ -808,15 +808,14 @@
   /* PLAY IS THE PAD'S PLAY ON A PHONE (one Play/Stop round, owner: "all
      yes"): a bare 22px triangle in a 40px button, no ring around it, and while
      it plays the purple disc behind a square (styles.css, PLAYING IS A STEADY
-     TINT, which holds the disc for both). Below 641, as the Pad's is; the
-     word went at 560 here, so 561-640 showed "Flip it" beside the Pad's bare
-     glyph. */
-  @media (max-width: 640px) {
-    .flip-play span { display: none; }
-    .flip-actions .btn.flip-play { min-width: 0; width: 40px; padding: 0; }
-    .btn.flip-play svg { width: 22px; height: 22px; }
-    .flip-play-wrap { background: transparent; border: none; }
-  }
+     TINT, which holds the disc for both). On the compact size class, which
+     is the Pad's below 641; the word went at 560 here, so 561-640 showed
+     "Flip it" beside the Pad's bare glyph. (The size class, not a width
+     query: lib/sizeclass.js answers where compact begins, once.) */
+  :where(body[data-size="compact"]) .flip-play span { display: none; }
+  :where(body[data-size="compact"]) .flip-actions .btn.flip-play { min-width: 0; width: 40px; padding: 0; }
+  :where(body[data-size="compact"]) .btn.flip-play svg { width: 22px; height: 22px; }
+  :where(body[data-size="compact"]) .flip-play-wrap { background: transparent; border: none; }
   @media (max-width: 560px) {
     .flip-app .header { margin: 7px 6px; }
     .fps-group { gap: 5px; }
