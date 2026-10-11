@@ -549,6 +549,37 @@ with sync_playwright() as p:
               beats == [0, 1, 1, 2, 3], str(beats))
         now = pg.evaluate("() => { const n = [...document.querySelectorAll('#strip .frame')].findIndex(f => f.classList.contains('now')); return [n, idx]; }")
         check(f"[{label}] the strip outlines the page on screen", now[0] == now[1] and now[0] >= 0, str(now))
+        # DRAG ACROSS THE DRAWING (the owner's pick, "all yes"): the Pad's
+        # sideways scrub, page by page. Paused first (a tap), so the page the
+        # drag starts from is known; half the drawing's width from the start
+        # of page 1 is beat 3 of 6, which page 2 holds. Then the two things
+        # that are not a scrub: mostly up and down, and the tap that paused.
+        pcv = pg.locator("#pad").bounding_box()
+        pg.evaluate("() => { scrubToPage(0); }")
+        pg.mouse.click(pcv["x"] + pcv["width"] / 2, pcv["y"] + pcv["height"] / 2)
+        pg.wait_for_timeout(150)
+        held = pg.evaluate("() => [idx, document.body.classList.contains('playback-paused')]")
+        pg.mouse.move(pcv["x"] + pcv["width"] * 0.2, pcv["y"] + pcv["height"] * 0.5)
+        pg.mouse.down()
+        pg.mouse.move(pcv["x"] + pcv["width"] * 0.7, pcv["y"] + pcv["height"] * 0.52, steps=10)
+        mid = pg.evaluate("() => idx")
+        pg.mouse.up()
+        pg.wait_for_timeout(150)
+        after_drag = pg.evaluate("() => [idx, document.body.classList.contains('playback-paused'), playing]")
+        pg.mouse.move(pcv["x"] + pcv["width"] * 0.5, pcv["y"] + pcv["height"] * 0.2)
+        pg.mouse.down()
+        pg.mouse.move(pcv["x"] + pcv["width"] * 0.55, pcv["y"] + pcv["height"] * 0.8, steps=10)
+        pg.mouse.up()
+        pg.wait_for_timeout(150)
+        after_swipe = pg.evaluate("() => idx")
+        check(f"[{label}] a sideways drag across the drawing scrubs a Flip page by page: half its width is half the beats",
+              held == [0, True] and mid == 1 and after_drag[0] == 1, f"paused on {held}, mid-drag {mid}, released {after_drag}")
+        check(f"[{label}] ...a paused Flip stays paused after it, still playing underneath",
+              after_drag[1] and after_drag[2], str(after_drag))
+        check(f"[{label}] ...and a mostly up-and-down drag leaves the page alone", after_swipe == after_drag[0],
+              f"{after_drag[0]} -> {after_swipe}")
+        pg.mouse.click(pcv["x"] + pcv["width"] / 2, pcv["y"] + pcv["height"] / 2)   # carry on, as before
+        pg.wait_for_timeout(150)
         count = """() => new Promise(res => { let n = 0, last = idx; const t0 = performance.now();
             const tick = () => { if (idx !== last) { n++; last = idx; } if (performance.now() - t0 < 1200) requestAnimationFrame(tick); else res(n); };
             requestAnimationFrame(tick); })"""

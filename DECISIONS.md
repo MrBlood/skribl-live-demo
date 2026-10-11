@@ -15816,3 +15816,20 @@ one rule per stylesheet, a misspelt guard, the records, the badge) was shown red
 on its own. The player's JavaScript grows 129 B, from room #390 left behind
 (1,811 B out of app.js, ratchet unmoved); the ratchet now sits just above the
 new measurement. Not testable here: iOS itself (no WebKit in this container).
+
+**Drag across a Flip to scrub it, page by page, as on the Pad (the owner's pick
+from the parity audit, "all yes").** While the Pad's preview plays, a sideways
+drag anywhere on the drawing scrubs it, the drawing's width for the whole
+replay (lib/replayline.js drag()); on Flip only the page strip's line scrubbed,
+and a drag on the drawing did nothing. Now it moves through the pages the same
+way: from the page on screen, the drawing's width for the whole Flip, landing
+on the page that holds that beat (a page held three beats takes three beats of
+the drag, as on the line), and letting go carries on from the page under the
+finger. More than 10px sideways is a drag and less is a tap, which pauses --
+lib/tappause.js's own TAP_SLOP, so the two cannot disagree about which is which
+-- and a mostly up-and-down swipe leaves the page alone. A paused Flip stays
+paused, as it does when scrubbed on the strip. Shared in behaviour, not in
+code: Flip's scrubbing is page-based and lives in flip.js beside the strip's
+line. verify_replayspeed, in the Flip preview section, pauses on page 1, drags
+half the drawing's width and lands on page 2 of a six-beat Flip, and checks the
+swipe and the pause; each was red before.
