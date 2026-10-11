@@ -395,7 +395,7 @@ with sync_playwright() as _p:
               and not _pg.is_visible("#postWatchBtn"),
               f"the sheet says {_said!r}")
         check(f"...and says so, without guessing the cause",
-              "unexpected response" in _said and "safe" in _said, repr(_said))
+              _said.startswith("Couldn\u2019t post. Your drawing is still here") and "strange answer" in _said, repr(_said))
         # THE RETRY: the same button, now Try again.
         _again = _pg.is_visible("#postSubmitBtn") and _pg.is_enabled("#postSubmitBtn")
         if _again:
@@ -495,6 +495,48 @@ with sync_playwright() as _p:
     check("tapping share opens the compose sheet even after a missing element",
           _pg2.is_visible("#postTitleInput"),
           "share did nothing — the failure this whole section exists for")
+
+    # ONE SET OF WORDS FOR BOTH EDITORS (owner's pick; SK-AUD-010). The same
+    # failure on the Pad and on Flip opens with the same line -- nobody
+    # wonders whether their drawing is gone -- then says what happened; only
+    # the recovery may differ (the Pad keeps a copy on this device when the
+    # server cannot be reached). Each failure is made at the network.
+    _FIRST = "Couldn\u2019t post. Your drawing is still here"
+    _cases = (("server", 503, "application/json", "{}"),
+              ("refused", 413, "application/json", '{"error": "It\u2019s bigger than the 24 MB limit."}'),
+              ("odd", 200, "text/html", "<html><body>Sign in to the Wi-Fi</body></html>"),
+              ("offline", None, None, None))
+    _said = {}
+    for _route, _canvas in (("/flip", "#pad"), ("/", "#canvas")):
+        for _kind, _st, _ct, _bd in _cases:
+            _pg = _b.new_page(viewport={"width": 390, "height": 844})
+            def _fail(route, request=None, st=_st, ct=_ct, bd=_bd):
+                if route.request.method != "POST":
+                    return route.continue_()
+                if st is None:
+                    return route.abort("internetdisconnected")
+                route.fulfill(status=st, content_type=ct, body=bd)
+            _pg.route("**/api/skribls", _fail)
+            _pg.goto(f"{BASE}{_route}", wait_until="load"); _pg.wait_for_timeout(1300)
+            _pg.evaluate("() => { window.SkriblHints && SkriblHints.hide && SkriblHints.hide(); }")
+            _bx = _pg.locator(_canvas).bounding_box()
+            _pg.mouse.move(_bx["x"] + 60, _bx["y"] + 60); _pg.mouse.down()
+            _pg.mouse.move(_bx["x"] + 150, _bx["y"] + 130, steps=8); _pg.mouse.up(); _pg.wait_for_timeout(300)
+            if _route == "/":
+                _pg.evaluate("() => { if (typeof recording !== 'undefined' && recording) endRecordingTake(); }")
+            _pg.click("#postBtn"); _pg.wait_for_timeout(400)
+            _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(1500)
+            _said[(_route, _kind)] = _pg.inner_text("#postStatusLabel") if _pg.is_visible("#postStatusLabel") else ""
+            _pg.close()
+    for _kind, *_ in _cases:
+        _f, _p = _said[("/flip", _kind)], _said[("/", _kind)]
+        check(f"failure words, {_kind}: Pad and Flip open with the same line",
+              _f.startswith(_FIRST) and _p.startswith(_FIRST), repr((_p, _f)))
+    check("...a refusal carries the server's own reason, on both",
+          all("bigger than the 24 MB limit" in _said[(r, "refused")] for r in ("/flip", "/")), str(_said))
+    check("...and only the recovery differs: the Pad says it kept a copy on this device, Flip does not claim one",
+          "saved on this device" in _said[("/", "server")] and "saved on this device" in _said[("/", "offline")]
+          and "saved on this device" not in _said[("/flip", "server")] + _said[("/flip", "offline")], str(_said))
     _b.close()
 
 summarise_and_exit()

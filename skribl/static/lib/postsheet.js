@@ -39,6 +39,10 @@
     var shareBtn = $('postShareBtn');
     var copyBtn = $('postCopyBtn');
     var resultRow = $('postResult');
+    var keyRow = $('postKeyRow');        // absent in compose mode and when signed in
+    var keyBtn = $('postKeyBtn');
+    var publicSub = $('postPublicSub');
+    var lastKey = null;
     var status = $('postStatus');
     var statusLabel = $('postStatusLabel');
     var progressFill = $('postProgressFill');
@@ -86,6 +90,8 @@
         if (watchBtn) watchBtn.hidden = true;
         if (shareBtn) shareBtn.hidden = true;
         if (copyBtn) copyBtn.hidden = true;
+        if (keyRow) keyRow.hidden = true;
+        lastKey = null;
         body.style.opacity = '';
         titleInput.disabled = false;
         captionInput.disabled = false;
@@ -161,6 +167,10 @@
       // Share, where the device has a share sheet (v292, SK-AUD-016); a local
       // fallback (#skribl=…) is not a link anyone else can open, so not then.
       if (shareBtn && lastPostUrl && !opts.localOnly && lastPostUrl.charAt(0) !== '#' && navigator.share) shareBtn.hidden = false;
+      // The delete key, when the post came back with one (an anonymous post;
+      // a signed-in author's account is their key, and the row is not rendered).
+      lastKey = (!opts.localOnly && opts.key) || null;
+      if (keyRow) keyRow.hidden = !lastKey;
     }
 
     /* THE SOUND MARKER MIRRORS THE TOOLBAR, IT DOES NOT RE-DECIDE.
@@ -200,6 +210,7 @@
       setState('idle');
       if (cfg.onOpen) cfg.onOpen();
       syncSoundMark();
+      syncPublicSub();
       // Ask before creating server state, not after — see lib/recoverykey.js.
       if (window.SkriblRecoveryKey) window.SkriblRecoveryKey.warnIfVolatile(sheet);
       // Field values persist across an accidental close within the session; they
@@ -273,6 +284,23 @@
       try { await navigator.share({ title: title, url: abs }); }
       catch (e) { if (!e || e.name !== 'AbortError') toast('Sharing didn’t work — open it and copy the link', shareBtn); }
     });
+    if (keyBtn) keyBtn.addEventListener('click', function () {
+      if (!lastKey) return;
+      var R = window.SkriblRecoveryKey;
+      var done = R && R.copy ? R.copy(lastKey)
+        : navigator.clipboard.writeText(lastKey).then(function () { return true; }, function () { return false; });
+      done.then(function (ok) {
+        toast(ok ? 'Delete key copied. Keep it somewhere safe'
+                 : 'Couldn’t copy. The Library has it under Copy key', ok ? null : keyBtn);
+      });
+    });
+    // The gallery tick says what ticking it means, and for an anonymous
+    // author that the key matters most once a post is public.
+    function syncPublicSub() {
+      if (publicInput && publicSub) publicSub.textContent = publicInput.checked ? publicSub.dataset.on : publicSub.dataset.off;
+    }
+    if (publicInput) publicInput.addEventListener('change', syncPublicSub);
+
     if (copyBtn) copyBtn.addEventListener('click', async function () {
       if (!lastPostUrl) return;
       var abs = new URL(lastPostUrl, location.href).href;
@@ -336,7 +364,27 @@
     };
   }
 
-  var api = { attach: attach };
+  /* WHEN A POST FAILS, ONE SET OF WORDS FOR BOTH EDITORS (owner's pick;
+     SK-AUD-010). Always the same first line, so nobody wonders whether their
+     drawing is gone; then what happened; then what to do. Each editor says
+     only WHAT happened -- the recoveries that differ (the Pad keeps a copy on
+     the device when the server cannot be reached) differ in that last clause,
+     not in the first line.
+       failure('server')            5xx: the server had a problem
+       failure('refused', reason)   4xx: the server's own reason, when it gave one
+       failure('odd')               a 2xx that is not a post (a Wi-Fi sign-in page)
+       failure('offline', kept)     no answer; kept: a copy was saved on this device
+       failure('cancelled')         the person cancelled a slow post */
+  var FIRST = 'Couldn\u2019t post. Your drawing is still here';
+  function failure(what, extra) {
+    if (what === 'cancelled') return 'Not posted. Your drawing is still here; Try again sends it.';
+    if (what === 'offline') return FIRST + (extra ? ', saved on this device' : '') + '. Try again when you\u2019re back online.';
+    if (what === 'server') return FIRST + (extra ? ', saved on this device' : '') + '. The server had a problem; try again in a moment.';
+    if (what === 'odd') return FIRST + '. The connection gave a strange answer (a Wi-Fi sign-in page?); try again.';
+    return FIRST + '. ' + (extra || 'The server turned it down.');
+  }
+
+  var api = { attach: attach, failure: failure };
   if (typeof window !== 'undefined') window.SkriblPostSheet = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();
