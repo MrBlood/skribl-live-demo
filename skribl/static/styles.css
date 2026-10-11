@@ -5282,7 +5282,10 @@ a.player-btn { text-decoration: none; }
   transition: opacity 0.26s var(--ease), transform 0.26s var(--ease), display 0.26s allow-discrete; }
 @starting-style { .rl-chips { opacity: 0; transform: translateY(-4px); } }
 .rl-chips[hidden] { display: none; opacity: 0; transform: translateY(-4px); }
-.rl-chips button { position: relative; flex: 1 1 0; min-width: 0; max-width: 48px; height: 34px;
+/* Each speed shrinks only to its own label (a flex item's own minimum): an even split (flex: 1 1 0,
+   min-width: 0) gave every chip 28px and pushed "16×" 5px out of its pill at
+   every width, 320 to 768. Eight across fit the 260px a 320px phone gives. */
+.rl-chips button { position: relative; flex: 1 1 30px; max-width: 48px; height: 34px;
   padding: 0 4px; border: 0; border-radius: var(--r-pill); background: none;
   font: inherit; font-weight: 550; font-variant-numeric: tabular-nums;
   color: var(--text-primary); cursor: pointer; }
@@ -5316,6 +5319,31 @@ a.player-btn { text-decoration: none; }
    line a desk screen can end (a 800px laptop cut them in half) and a phone's
    does. They close on a pick. The autosave pill steps aside meanwhile: it
    sat on the ¼× chip on a phone, and nothing is saved during a replay. */
+/* THE SPEED BESIDE PLAY (desk, owner's D1): the replay line's own button and
+   chips, compact, at the end of the Play pill. Its chips open downward, under
+   the pill, over the top of the drawing. A phone keeps the line under the
+   drawing instead, so the pill has no speed there. */
+.pad-speed { position: relative; display: inline-flex; align-items: center; padding-right: 4px; }
+.speed-only .rl-text { font-size: 0; column-gap: 0; }   /* the sentence's words go; the button stays */
+.speed-only .rl-drawn, .speed-only .rl-skip { display: none; }
+/* THE ROW IN CANVAS SETTINGS (owner's pick 2): the button sits at the row's
+   end like its neighbours' controls; its chips wrap onto their own line
+   under the row, inside the panel, right-aligned, each a 44px tap. */
+#tuneSpeedRow { flex-wrap: wrap; }
+.tune-speed { display: contents; }
+.tune-speed .rl-speed { font-size: 15px; padding: 6px 10px 6px 12px; }
+.tune-speed .rl-speed::before { inset: -6px -2px; }   /* a 44px tap at its 33px */
+.tune-speed .rl-chips { flex-basis: auto; width: max-content; max-width: 100%; margin: 6px 0 2px auto; gap: 0; font-size: 15px; order: 3; }
+.tune-speed .rl-chips button { flex: 0 0 auto; min-width: 44px; max-width: none; padding: 0 6px; }
+.tune-speed .rl-text { order: 1; margin-left: auto; }
+/* While they are open, a zero-height break puts the chips on a line of their own. */
+#tuneSpeedRow:has(.tune-speed.open)::after { content: ''; flex-basis: 100%; height: 0; order: 2; }
+.pad-speed .rl-speed { margin-left: 0; font-size: 13px; line-height: 1.4; padding: 4px 8px 4px 10px; }
+.pad-speed .rl-speed::before { inset: -9px -2px; }   /* a 44px tap at its 26px */
+.pad-speed .rl-chips { position: absolute; top: calc(100% + 10px); right: -4px; z-index: 60; width: max-content; max-width: none; font-size: 14px; }
+.pad-speed .rl-chips button { flex: 0 0 auto; min-width: 44px; max-width: none; padding: 0 8px; }   /* 44 wide; ::before makes it 44 tall */
+.pad-speed.open .rl-speed svg { transform: rotate(180deg); }
+@media (max-width: 640px) { .pad-speed { display: none; } }
 #padLine { position: absolute; z-index: 7; flex-direction: column-reverse; }
 .play-scrub.rl-scrub { height: 30px; overflow: visible; }
 .play-scrub.rl-scrub::after { top: -7px; bottom: -7px; }   /* 44px */
