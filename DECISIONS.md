@@ -15772,3 +15772,44 @@ Blank and Post sat -1.17 to -2.33px off and are within half a pixel now, and
 every label span is exactly one line tall. The baseline in
 centring_baseline.json is rewritten from a full pass and shrinks with it.
 Folds in #391 (the Make buttons).
+
+**Stop says Stop, a tap leaves nothing lit, and the Pad's header stops fitting
+itself (the parity audit's two bug fixes, owner: "all yes"; the third found on
+the way).** *Stop's name:* pressing Play turns the button into a square and the
+word Stop on both editors, and its name stayed "Play" (Pad) or "Flip it" (Flip),
+so a screen reader announced the opposite of what the button does -- on a phone
+the word is hidden and the name is all VoiceOver has -- and the desk tooltip said
+Play over Stop too. One helper per editor now sets the face, the class, the name
+and the title together (app.js setPlayBtn, flip.js setPlayFace; Flip's title
+comes from playTitle(), which reads `playing`, so a tool-state refresh mid-play
+keeps Stop). Shared: the same fix on both; Flip's resting word stays "Flip it"
+until the Play/Stop round renames it. *Nothing stays lit:* iOS keeps :hover on
+the last thing tapped, and twenty hover rules in styles.css and flip.css had no
+(hover: hover) guard, so after a tap Post stayed brightened behind its own sheet,
+the ⋯ menu's rows stayed tinted, a swatch stayed at 112%, and Flip's page tile
+stayed lifted with its add buttons lit. Each now sits behind the guard the rest
+of the app already used; a mouse lights them exactly as before. Flip's page tile
+reveals its ✕, ⋯ and ×1 on a pointed-at tile only where there is a pointer; on a
+phone they show on the selected tile, as they already did. Shared: both editors
+(and the player's copies of .btn, .btn.play and .menu-item, re-emitted). *The
+header:* initBrandFit snaps the button cluster to a whole pixel by writing its
+padding, and its own MutationObserver watches `style`, so every fit queued the
+next, from page load, and every outside change (a class, the replay's badge)
+started another chain beside it: measured on main, 180 frame requests a second
+on a blank Pad left alone and about 3,500 after one replay -- some 58 fits a
+frame, each a forced layout, on a page that looked idle. It takes its own
+mutation records now, and the replay's badge is written when its second changes,
+not every frame. Not for Flip: it has no such fit (0 a second at rest, its 60
+while playing), and the shared-link player's header is hidden, so it never wrote
+the padding. *Checks:* verify_a11y A11Y 16 reads the name from the accessibility
+tree and compares it with the button's own word, playing and not, on both
+editors, and the desk tooltip; A11Y 17 forces :hover along each reachable
+control's chain on a phone, in seven states of both editors and both themes,
+and nothing may change -- and on a desk one control from each family the guard
+went round must still light, so a guard that never matches cannot pass. verify_ux
+THE HEADER SETTLES counts every requestAnimationFrame for an idle second. Each
+was red on main and is green here, and each part (the Pad's name, Flip's name,
+one rule per stylesheet, a misspelt guard, the records, the badge) was shown red
+on its own. The player's JavaScript grows 129 B, from room #390 left behind
+(1,811 B out of app.js, ratchet unmoved); the ratchet now sits just above the
+new measurement. Not testable here: iOS itself (no WebKit in this container).

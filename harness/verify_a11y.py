@@ -2136,9 +2136,9 @@ with sync_playwright() as _pt:
     # somewhere else. So every unguarded hover rule is a highlight that sticks
     # on a phone: Post stayed brightened behind its own sheet, the ⋯ menu's rows
     # stayed tinted, a tapped swatch stayed blown up to 112%, Flip's page tile
-    # stayed lifted 2px and its add buttons lit. Eighteen rules across
-    # styles.css and flip.css, on 40-odd controls (owner: "nothing stays lit
-    # after a tap on iPhone, on both editors").
+    # stayed lifted 2px and its add buttons lit. Twenty rules across
+    # styles.css and flip.css, on some sixty controls across the two editors
+    # (owner: "nothing stays lit after a tap on iPhone, on both editors").
     #
     # HOW A PHONE IS ASKED. Chromium with touch emulation reports
     # (hover: none), as an iPhone does, and CDP's CSS.forcePseudoState puts the
