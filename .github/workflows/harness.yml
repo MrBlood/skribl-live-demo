@@ -146,11 +146,17 @@ jobs:
     name: harness (sqlite)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    # 90, not 30: the harness grew to 89 suites / ~4k assertions and a full run
-    # takes 45-60 minutes on these runners. At 30 both jobs were cancelled
-    # mid-run on every push once the runner outage of Aug 31 lifted — red that
-    # looked like code and was budget.
-    timeout-minutes: 90
+    # 150, not 90, and not 30 before that: each time the budget was set to what
+    # a run took, the battery grew into it. At 89 suites a run took 45-60
+    # minutes and 30 cancelled both jobs mid-run on every push (Aug 31). At 120
+    # suites / ~11k assertions it takes 85-90: on Oct 11 the runs for #405 and
+    # #407 were both cancelled at exactly 90 minutes and #406's finished with
+    # about two to spare — red that looked like code and was budget, again.
+    # 150 leaves room for the next thirty suites; a run that needs more
+    # than that is worth splitting, not budgeting. (GitHub's own ceiling for a
+    # hosted job is 360, and standard runners on a public repository cost
+    # nothing at any length.)
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
@@ -216,11 +222,17 @@ jobs:
     name: harness (postgresql)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    # 90, not 30: the harness grew to 89 suites / ~4k assertions and a full run
-    # takes 45-60 minutes on these runners. At 30 both jobs were cancelled
-    # mid-run on every push once the runner outage of Aug 31 lifted — red that
-    # looked like code and was budget.
-    timeout-minutes: 90
+    # 150, not 90, and not 30 before that: each time the budget was set to what
+    # a run took, the battery grew into it. At 89 suites a run took 45-60
+    # minutes and 30 cancelled both jobs mid-run on every push (Aug 31). At 120
+    # suites / ~11k assertions it takes 85-90: on Oct 11 the runs for #405 and
+    # #407 were both cancelled at exactly 90 minutes and #406's finished with
+    # about two to spare — red that looked like code and was budget, again.
+    # 150 leaves room for the next thirty suites; a run that needs more
+    # than that is worth splitting, not budgeting. (GitHub's own ceiling for a
+    # hosted job is 360, and standard runners on a public repository cost
+    # nothing at any length.)
+    timeout-minutes: 150
 
     services:
       db:
