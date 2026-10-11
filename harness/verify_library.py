@@ -2599,7 +2599,10 @@ with sync_playwright() as _spk:
         _pk.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_th}')}}catch(e){{}}")
         for _path, _sel in (("/library", "#libMake"), ("/library", "#stageEmpty .make"), ("/gallery", "#galleryMake")):
             _pk.goto(BASE + _path, wait_until="load"); _pk.wait_for_timeout(900)
-            _pk.evaluate("() => { const s = document.getElementById('stageEmpty'); if (s) s.hidden = false; }")
+            # Both Make buttons on one page: an empty Library hides the header's
+            # (.lib-empty, L1) and shows the card's, and each is measured.
+            _pk.evaluate("() => { const s = document.getElementById('stageEmpty'); if (s) s.hidden = false;"
+                         " document.querySelectorAll('.lib-empty').forEach(e => e.classList.remove('lib-empty')); }")
             _offs = []
             for _f in ("", "Liberation Sans", "DejaVu Sans", "FreeSans"):
                 _r = _pk.evaluate("""([sel, f]) => { const b = document.querySelector(sel); if (!b) return null;

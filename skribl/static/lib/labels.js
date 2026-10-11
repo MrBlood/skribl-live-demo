@@ -76,5 +76,4 @@
     }).observe(doc.body, { childList: true, subtree: true });
   }
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', start); else start();
-  global.SkriblLabels = { wrap: wrap };
 })(window);
