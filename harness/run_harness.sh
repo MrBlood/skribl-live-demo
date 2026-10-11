@@ -279,6 +279,26 @@ BAD=0
 SKIPPED=0
 SUMMARY=""
 
+# WHAT FAILED, SAID AGAIN WHERE THE END OF THE LOG CAN SEE IT. A full battery
+# prints some fifteen thousand lines and the aggregate below says only that a
+# suite failed and how many of its checks passed. What failed sat thousands of
+# lines up, so a viewer that shows the end of a job -- or a session that can
+# read only a log's last lines -- saw "240/242 passed" and nothing it could act
+# on (main's run for #406, Oct 11). Each failing suite's [FAIL] lines, or the
+# end of its output when it crashed or timed out, are repeated once after the
+# aggregate. Console only: the run record is unchanged. Each line leads with
+# the suite's name, so neither of release_run.py's readers (its row pattern,
+# which wants two spaces and a colon, and its failing-lines grep, which wants
+# the marker first) counts a failure twice.
+FAILED=""
+_note_failures() {
+  local hits
+  hits="$(grep -E '^[[:space:]]*\[FAIL\]' "$2" | head -8 | cut -c1-300 || true)"
+  [ -z "$hits" ] && hits="$(tail -6 "$2" | cut -c1-300 || true)"
+  FAILED="$FAILED
+$(printf '%s\n' "$hits" | sed -e 's/^[[:space:]]*//' -e "s/^/$1 | /" || true)"
+}
+
 for suite in "$@"; do
   echo "================ $suite ================"
   log="$LOGDIR/${suite%.py}.log"
@@ -338,6 +358,7 @@ for suite in "$@"; do
 
   if [ "$rc" -ne 0 ] || [ -z "$line" ]; then
     BAD=$((BAD + 1)); RC=1
+    _note_failures "$suite" "$log"
     if [ -z "$line" ]; then
       SUMMARY="$SUMMARY
   $suite: ERROR — exit $rc, NO assertion summary (crashed before reporting)"
@@ -356,6 +377,7 @@ for suite in "$@"; do
     # summary says X/Y with X<Y is a FAIL, whatever it exited with.
     if [ "$n" -lt "$d" ]; then
       BAD=$((BAD + 1)); RC=1
+      _note_failures "$suite" "$log"
       SUMMARY="$SUMMARY
   $suite: FAIL — exit $rc but summary reports failures: $line"
     else
@@ -374,6 +396,11 @@ printf '%s\n' "$SUMMARY" | sed '/^$/d'
 echo "assertions passed: $TOTAL   (skipped suites contribute 0)"
 echo "suites skipped   : $SKIPPED"
 echo "suites with problems: $BAD"
+if [ -n "$FAILED" ]; then
+  echo
+  echo "================ WHAT FAILED (said again from above) ================"
+  printf '%s\n' "$FAILED" | sed '/^$/d' | head -60 || true
+fi
 
 # Write the run record. LAST-RUN.txt was previously assembled BY HAND from this
 # script's stdout — which is why its tree hash could never be reproduced, and why
