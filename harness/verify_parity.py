@@ -2432,11 +2432,11 @@ with sync_playwright() as p:
     # asked to stop ("I don't want them to drift"). Read in both themes, at a
     # phone and a desk, at rest and playing.
     #
-    # THE DIFFERENCES THAT ARE DESIGN, left out on purpose: the pill's WIDTH
-    # (the Pad's carries its speed, "1/4x", and Flip keeps tenths of a second
-    # because its loops are short), the settings button's NAME (they open
-    # different panels), and a border either side draws in transparent (the
-    # visible border is compared, not the declared one).
+    # THE DIFFERENCES THAT ARE DESIGN, left out on purpose: the settings
+    # button's NAME (they open different panels), and a border either side
+    # draws in transparent (the visible border is compared, not the declared
+    # one). The pill's WIDTH is compared: the Pad's speed and Flip's tenths of
+    # a second sit beside it, not in it, so both pills are the word "Play".
     _LOOKS = r"""(sels) => { const out = {};
       for (const [k, sel] of Object.entries(sels)) {
         const e = document.querySelector(sel); if (!e) { out[k] = null; continue; }
