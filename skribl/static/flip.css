@@ -876,8 +876,10 @@
    borrowed for words, and that cell is gone. Speed's 6 / 12 / 24 sits right
    above Onion's 1 / 2 / 3, though, and at that padding a one-digit cell is
    8px narrower than a two-digit one, so the two would stop lining up as a
-   column. 44 holds every digit, and is the Pad's tap. */
-#fps button, #onionDepthSeg button { min-width: 44px; }
+   column. 44 is the Pad's tap, and with 4px sides it holds every digit, so
+   "12" and "24" are 44 too (at the shared sides they came out 44.8 and the
+   two rows 2px apart: verify_ux). */
+#fps button, #onionDepthSeg button { min-width: 44px; padding-left: 4px; padding-right: 4px; }
 /* SMEAR WEIGHT, Flip's own row, keeps 9px sides rather than the shared 14:
    its three words are the widest seg in either editor's settings, and at 14
    they push the row onto two lines on a phone, where the approved shot had it
@@ -889,11 +891,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 32px = the segment height it shares the Onion row with, so the toggle and
+  /* 34px = the segment height it shares the Onion row with, so the toggle and
      the 1/2/3 depth segment align instead of the toggle sitting proud. Was 22
-     (chosen for an earlier, shorter segment); the segments render at 32 now. */
-  width: 32px;
-  height: 32px;
+     (chosen for an earlier, shorter segment), then 32; the shared rows render
+     the segments at 34 now (26px cells in a 3px-padded, 1px-bordered group). */
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-pill);
@@ -901,7 +904,7 @@
   color: var(--text-secondary);
   cursor: pointer;
 }
-.onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
+.onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (34px box), was 16 (13 originally) */
 /* The ON state lives in styles.css only: the accent for every switch, amber
    kept for #onion and #onionTintBtn alone. An amber `.onion-tint.active` used
    to sit here, and because flip.css loads after styles.css at the same
