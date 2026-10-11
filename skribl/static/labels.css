@@ -1,0 +1,16 @@
+/* WORDS SIT IN THE MIDDLE BY THEIR CAPITALS (lib/labels.js gives each label in
+   a control its own .lbl; this sheet is its other half, loaded by Pad, Flip,
+   the Library and the Gallery -- not the player, which loads neither).
+   Trimmed to cap height and baseline, the box is the capitals, so a centred
+   box is centred capitals in any font; the padding puts back exactly the line
+   box the trim took away, so no control changes size. In a block control the
+   span IS the line: top-aligned, it fills the line box the strut makes, so the
+   capitals sit in the middle of that too. Inside @supports: without text-box
+   the padding would only add height. A label that already had its own span
+   is .lbl-own: trimmed the same, but its display is its own rule's (a tool's
+   word is hidden on a phone), so it works where it is a flex item. */
+@supports (text-box: trim-both cap alphabetic) {
+  .lbl { display: inline-block; max-width: 100%; text-box: trim-both cap alphabetic;
+    padding-block: calc((1lh - 1cap) / 2); vertical-align: top; overflow: inherit; text-overflow: inherit; }
+  .lbl-own { text-box: trim-both cap alphabetic; padding-block: calc((1lh - 1cap) / 2); }
+}

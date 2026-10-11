@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="{{ skribl_asset('fullbar.css') }}">
   {# tooltip.css travels with lib/tooltip.js — see that sheet's header. #}
   <link rel="stylesheet" href="{{ skribl_asset('tooltip.css') }}">
+  <link rel="stylesheet" href="{{ skribl_asset('labels.css') }}">
   {# pagemenu.css travels with lib/pagemenu.js -- the ••• and its sheet (v314). #}
   <link rel="stylesheet" href="{{ skribl_asset('pagemenu.css') }}">
   {# segslider.css travels with lib/segslider.js -- the one pill, which New /
@@ -682,7 +683,7 @@
     {# THE ••• REPLACED "Yours" (v314). The profile is a row in the page menu
        now, beside every other surface and the theme; measured before building,
        a third control here overflowed 390px by 27px. #}
-    <a href="{{ url_for('.skribl_editor') }}" class="make" id="galleryMake">Make one</a>
+    <a href="{{ url_for('.skribl_editor') }}" class="make" id="galleryMake"><span>Make one</span></a>
     <button type="button" class="pm-more" id="pageMenuBtn" aria-label="Menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="pageMenu" title="Menu"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
   </header>
 
@@ -802,6 +803,7 @@
 {# lib/sheetswipe.js: every bottom sheet closes on a swipe down or a tap on
    its grabber. Before report.js and every other script that attaches it. #}
 <script src="{{ skribl_asset('lib/sheetswipe.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/labels.js') }}" defer></script>
 <script src="{{ skribl_asset('lib/report.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pagemenu.js') }}" defer></script>
   {# ONE COPY IMPLEMENTATION, NOT TWO. The card menu's Copy link needs

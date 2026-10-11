@@ -2445,6 +2445,53 @@ _off = {f: {k: v for k, v in d.items() if k != "dot" and (v is None or abs(v) > 
 check("READOUT ALIGNMENT: in every face, each part's ink centre is within 1px of the dot's",
       _align and not any(_off.values()), str(_align))
 
+print("\nWORDS IN THE MIDDLE — a button's capitals sit in its middle, in any font (lib/labels.js)")
+# The owner: "Make your first Skribl doesn't look centered vertically", then
+# "if this happened here, it happened all over?" It had: a flex-centred button
+# centres its label's line box, and where the capitals sit in that box is the
+# font's business. lib/labels.js gives each label its own span and styles.css
+# .lbl trims it to cap height and baseline, padding back the line it took.
+# Asserted on the INK of the first capital, in each installed face, against
+# the button's own box: Flip's Duplicate and Blank (a word alone), Pad's Post
+# (a mark and a word). And no control changes size: every .lbl is exactly one
+# line tall.
+with _sp204() as _wm:
+    _wmb = _wm.chromium.launch()
+    _wmres, _wmlh = {}, {}
+    for _path, _sels in (("/flip", ["#addcopy", "#addblank"]), ("/", ["#postBtn"])):
+        _wmp = _wmb.new_page(viewport={"width": 1280, "height": 860}, device_scale_factor=3)
+        browsing.goto(_wmp, BASE, _path); _wmp.wait_for_timeout(700)
+        if _path == "/":
+            draw(_wmp, "#canvas", 120, 120, n=18); _wmp.wait_for_timeout(400)
+            _wmp.click("#recordBtn"); _wmp.wait_for_timeout(600)
+        _wmlh[_path] = _wmp.evaluate("""() => [...document.querySelectorAll('.lbl')].filter(e => e.offsetWidth)
+            .map(e => { const c = getComputedStyle(e); return Math.abs(e.getBoundingClientRect().height - parseFloat(c.lineHeight)) < 0.6
+                || c.lineHeight === 'normal'; })""")
+        for _f in _faces:
+            _wmp.evaluate("""f => { let s = document.getElementById('wmFace'); if (!s) { s = document.createElement('style');
+                s.id = 'wmFace'; document.head.appendChild(s); } s.textContent = 'button, button * { font-family: "' + f + '", sans-serif !important; }'; }""", _f)
+            _wmp.wait_for_timeout(250)
+            for _sel in _sels:
+                _el = _wmp.locator(_sel)
+                _geo = _wmp.evaluate("""(s) => { const e = document.querySelector(s), r = e.getBoundingClientRect(),
+                    w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+                    for (let t; (t = w.nextNode());) { const i = t.nodeValue.search(/\\S/); if (i < 0) continue;
+                      const g = document.createRange(); g.setStart(t, i); g.setEnd(t, i + 1); const q = g.getBoundingClientRect();
+                      return [q.left - r.left, q.right - r.left, r.height]; } return null; }""", _sel)
+                _full = _Img.open(_io.BytesIO(_el.screenshot())).convert("L")
+                _wmp.evaluate("(s) => { const e = document.querySelector(s); [e, ...e.querySelectorAll('*')].forEach(c => c.style.color = 'transparent'); }", _sel)
+                _plate = _Img.open(_io.BytesIO(_el.screenshot())).convert("L")
+                _wmp.evaluate("(s) => { const e = document.querySelector(s); [e, ...e.querySelectorAll('*')].forEach(c => c.style.color = ''); }", _sel)
+                _ys = [y for y in range(_full.height) if any(abs(_full.getpixel((x, y)) - _plate.getpixel((x, y))) > 60
+                                                            for x in range(int(_geo[0] * 3) + 1, int(_geo[1] * 3) - 1))]
+                _wmres[(_sel, _f)] = round((min(_ys) + max(_ys) + 1) / 6 - _geo[2] / 2, 2) if _ys else None
+        _wmp.close()
+    _wmb.close()
+check("WORDS IN THE MIDDLE: in every face, the first capital of Duplicate, Blank and Post is within half a pixel of its button's middle",
+      _wmres and all(v is not None and abs(v) <= 0.5 for v in _wmres.values()), str(_wmres))
+check("WORDS IN THE MIDDLE: ...and no control changed size for it: every label span is exactly one line tall, on Pad and Flip",
+      all(len(v) >= 3 and all(v) for v in _wmlh.values()), str(_wmlh))
+
 print("\nHEADER ORDER — the take's controls, then settings and the menu; Done beside the readout")
 # Owner's layout B. After a take the header reads Play, Post, then settings
 # and the menu as a pair; while a take records, Done moves to sit beside the
