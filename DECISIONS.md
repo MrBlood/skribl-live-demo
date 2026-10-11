@@ -15598,6 +15598,34 @@ verify_galib drives the delete with it set, red on the old words. The editors
 have no Delete of their own (the posted list lives in the Library), so Flip is
 not affected.
 
+**Where the replay speed lives when nothing is playing (owner: "This looks like
+dogshit"; then picks D1 and 2).** #386 kept the speed line under the drawing after
+a replay, on a phone; on the owner's iPhone it sat over the frame's edge,
+crowded under Add take, with "long pauses skipped" falling onto the tools. The
+line now shows only while a replay plays, as before #386, and the speed at rest
+has two homes, neither on the drawing:
+
+* **Canvas settings, "Replay speed", under Pauses** (the other replay setting),
+  on every screen. A beside-Play chip was measured first: at 402px the bar has
+  43px spare and the chip takes 39 (4px left, in this box's fonts), at 390 and
+  375 the bar sheds the wordmark's "pad" -- so the owner chose the settings row.
+* **The Play pill, on a desk** ("Play · 0:02 · 1×", D1), where there is room.
+  Its chips open downward over the top of the drawing; opening them sends away
+  any toast there.
+
+The line, the row and the pill are one choice: each is lib/replayline.js's own
+line attached again, its sentence hidden by CSS (.speed-only) and its button
+named "Replay speed, 2×" by the editor -- built in editor_draw.js, because the
+player loads replayline.js on a byte budget (a compact mode in the library ran
+144 bytes over it). Every new control is a 44px tap (owner: "make sure target
+areas follow the rules too"); verify_replayspeed measures the tap boxes, and
+caught the row's button at 41px before it shipped. Flip: its speed is pages per
+second, already in its Playback settings, so it gets no row; its replay line
+comes with F1. The speeds' own chips also stopped squeezing: an even split
+gave each 28px and "16×" ran 5px out of its pill at every width (the centring
+census); each now shrinks only to its label, and eight still fit a 320px phone.
+verify_replayspeed checks it at 320, 402 and 1100, red on the old rule.
+
 **The Post sheet: "Speed" opens the speeds, and "Posted!" is the title (the
 owner's picks, from the iPhone).** The fourth button under "Viewers start at"
 was the speed the preview last watched at; out of context it read as a random
