@@ -15831,5 +15831,10 @@ lib/tappause.js's own TAP_SLOP, so the two cannot disagree about which is which
 paused, as it does when scrubbed on the strip. Shared in behaviour, not in
 code: Flip's scrubbing is page-based and lives in flip.js beside the strip's
 line. verify_replayspeed, in the Flip preview section, pauses on page 1, drags
-half the drawing's width and lands on page 2 of a six-beat Flip, and checks the
-swipe and the pause; each was red before.
+half the drawing's width and lands on page 2 of a six-beat Flip (red on main);
+then the two things that are not a scrub, which main passes by doing nothing,
+were each shown red with their guard removed: the Flip stays paused, and a
+swipe built in pixels from a one-beat page -- a quarter of the width across,
+1.4 times that down -- leaves the page alone. (The swipe took three tries: the
+first moved too little to tell a guard from none, the second was sized for a
+4:3 box and was sideways in the desk's.)
