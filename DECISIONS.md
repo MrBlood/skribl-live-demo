@@ -15655,3 +15655,20 @@ keeps a copy on this device when the server cannot be reached, and says so in
 the same sentence ("..., saved on this device."); Flip does not claim one.
 verify_flipmeta fails each case at the network on both editors and asks for the
 same first line, the reason, and the honest difference; red on the old code.
+
+**A tool that checks every button is centred (owner: "use it whenever checking
+buttons").** "Make your first skribl" sat visibly high in its button, and the
+owner asked how many more there were. harness/check_centring.py finds every
+control from the source (centring_inventory.py), drives each page until it has
+reached every one (or names why not: the music trim nudges need a decoded
+track), and measures where each mark's ink sits in what is painted around it,
+on phone and desk, light and dark, in each installed face. Word labels are
+measured by their first capital; a tile with its icon above its word is not
+one line. A symbol typed as a control's whole face fails. The first full pass
+is the list in centring_baseline.json: a new finding fails, a fixed one fails
+until it comes off, so the list only shrinks. Most of it is one cause: a
+flex-centred line box puts a word's capitals 1-2.5px high, which a
+`text-box: trim-both cap alphabetic` label fixes in any font -- the sweep that
+does that is next, measured before and after by this tool. It is named check_*
+so it is not in the battery or a seal (about 25 minutes). The player's restore
+banner went with it: the census found a control nothing could ever show.
