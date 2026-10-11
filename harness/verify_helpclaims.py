@@ -131,7 +131,7 @@ CLAIMS = {
     "Speed": ["verify_replayspeed.py::...saying how long it took to draw and how fast the preview runs",
               "verify_replayspeed.py::a speed picked mid-play carries on from the same place, then runs at it",
               "verify_replayspeed.py::Fit lands the whole replay in about 30 seconds and is never slower than as drawn",
-              "verify_replayspeed.py::the Post sheet asks where viewers start: Auto (chosen), As drawn, Fit, and the speed last previewed",
+              "verify_replayspeed.py::the Post sheet asks where viewers start: Auto (chosen), As drawn, Fit, and Speed (not the speed last previewed)",
               "verify_replayspeed.py::where a post starts: none -> as drawn; Auto -> as drawn under a minute of drawing, Fit over it"],
     # Frames (Flip)
     "Move artwork": ["verify_move.py::every point moved by the SAME offset"],
