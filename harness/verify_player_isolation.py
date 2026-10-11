@@ -729,7 +729,23 @@ with sync_playwright() as sp:
     #   its remembered speed) live in editor_draw.js and the Post sheet's row
     #   in editor_post.js, which the player never loads. 143,732 measured.
     #   A RAISE ADMITTING CONTROLS THE SURFACE WAS MISSING: the target stays.
-    BYTES_RATCHET, BYTES_TARGET = 143_740, 153_800
+    # FOLLOWED DOWN, late: #390 (drawn marks, one slider stepper for both
+    #   editors) took 1,811 B out of app.js and the ratchet stayed where it
+    #   was, so main measured 141,921 under a 143,740 ceiling. This release
+    #   spends 129 B of that room, named, and pins what is left:
+    #     +29  Play/Stop's name follows its face (setPlayBtn): a screen reader
+    #          heard "Play" over a playing Pad's Stop, and the desk tooltip
+    #          said Play too. Spent first: two writes that did nothing (a reset
+    #          of a face that was already Play, a disabled=false nothing ever
+    #          set true).
+    #     +50  the header's fit takes its own mutation records, so it stops
+    #          queuing itself every frame from page load (initBrandFit).
+    #     +50  the replay's badge is written when its second changes, not every
+    #          frame, so a replay no longer wakes that fit sixty times a second.
+    #   All three are in app.js, which the player loads whole (initBrandFit
+    #   runs on the player too).
+    #   142,050 measured.
+    BYTES_RATCHET, BYTES_TARGET = 142_060, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
