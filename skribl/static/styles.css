@@ -4137,6 +4137,20 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   #postSheet .post-result .post-submit { margin: 0; padding: 14px 8px; }
   #postSheet .post-result .post-result-soft { font-size: 14px; }
 }
+/* THE DELETE KEY ROW (K1): under the result, quiet, said once. Its words take
+   the room and the button keeps its label on one line; a 44px tap like every
+   control in the sheet. */
+.post-key { display: flex; align-items: center; gap: 10px; margin: 0 10px 8px; padding: 6px 6px 6px 12px;
+  border-radius: 14px; background: color-mix(in srgb, var(--text-primary) 5%, transparent); }
+.post-key[hidden] { display: none; }
+.post-key-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0;
+  font-size: 13px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+.post-key-sub { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.post-key-btn { flex: none; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--hairline-strong);
+  background: var(--surface-control); color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 600;
+  white-space: nowrap; cursor: pointer; }
+.post-key-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (min-width: 641px) { .post-key { margin: 0 12px 10px; } }
 .post-status { padding: 4px 14px 8px; }
 .post-status[hidden] { display: none; }
 .post-status.error .export-progress-fill { background: var(--danger); }

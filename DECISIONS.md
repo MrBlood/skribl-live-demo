@@ -15625,3 +15625,19 @@ comes with F1. The speeds' own chips also stopped squeezing: an even split
 gave each 28px and "16×" ran 5px out of its pill at every width (the centring
 census); each now shrinks only to its label, and eight still fit a 320px phone.
 verify_replayspeed checks it at 320, 402 and 1100, red on the old rule.
+
+**The delete key, where you post (SK-AUD-009, the owner's pick K1).** Without an
+account only this browser can delete a post. The key that lets any browser do it
+existed, but you met it in the Library, never when you posted. The posted card
+now carries one quiet row under Watch / Share / Copy link: "Only this browser
+can delete it. Keep the key somewhere safe, and you can delete it from any
+browser." with a Copy delete key button (a 44px tap), which copies the same key
+the Library's Copy key does. The gallery tick's line says, once ticked, "Public.
+You'll get a key to delete it from anywhere", since public is when the key
+matters most. Neither is said when the host signs people in: the row is not
+rendered and the tick reads "On, anyone can find it in the gallery" (their
+account is the key). Shared: the sheet is lib/postsheet.js and
+_skribl_post.html, so Pad and Flip both get it; each editor hands its post's key
+to result(). verify_ux drives both editors at 390 and 1100 (painted, inside the
+sheet, the copied key equals the stored one) and renders both pages for a
+signed-in host; each part was shown red on its own.
