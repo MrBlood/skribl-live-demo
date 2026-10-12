@@ -56,6 +56,7 @@ import sys
 import wave
 from assertions import make_check
 import browsing
+import waits
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -255,7 +256,7 @@ _POSTED = _json.dumps([{"id": _seed["id"], "url": _seed["url"], "title": "one pi
                         "visibility": "unlisted", "savedAt": "2026-01-01T00:00:00Z"}])
 
 with sync_playwright() as p:
-    browser = p.chromium.launch()
+    browser = waits.instrument(p.chromium.launch())
 
     def ctx_for(theme, form, forced=False):
         vp, dsf = ({"width": 1400, "height": 900}, 1) if form == "desk" else ({"width": 390, "height": 844}, 1)
@@ -267,7 +268,11 @@ with sync_playwright() as p:
         return c
 
     def settle(q, ms=700):
-        q.wait_for_timeout(ms)
+        # The page settled, not a guessed 700ms: waits.settle ends as soon as
+        # nothing the page has in flight (a drawer's slide, a scroll, a timer)
+        # is due inside MS, and never before. 437 of these were 220 of this
+        # suite's 378 seconds.
+        waits.settle(q, ms)
 
     def draw(q, canvas):
         bb = q.query_selector(canvas).bounding_box()
