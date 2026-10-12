@@ -784,7 +784,13 @@ with sync_playwright() as sp:
     #   Spent first (-1,325 in app.js): the two seeks and the two frame loops
     #   each carried their own three-branch replay call; they fold into
     #   replayStep and seekCanvas. 147,672 measured.
-    BYTES_RATCHET, BYTES_TARGET = 147_680, 153_800
+    # RAISED (the in-post player's half of step 3), for one named cost: +179 B,
+    #   lib/seekcache.js's source and put hooks and its tap -- what the
+    #   in-post player needs, because its photo is a layer of its own and its
+    #   own loop draws. THE PLAYER PAYS FOR HOOKS IT DOES NOT USE, the price of
+    #   one module for three surfaces (as for lib/replayline.js's hooks above).
+    #   147,851 measured.
+    BYTES_RATCHET, BYTES_TARGET = 147_860, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

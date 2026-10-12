@@ -775,7 +775,7 @@ rather than a shared rule.
 | `report.js` | Pad+Flip+library+gallery | "Report a problem" — the context, collected once, for both editors. |
 | `savedrafts.js` | Pad+Flip+library | Saved drafts — ⋯ "Save draft" and "Open a draft…" on both editors (v316), and the Library's Drafts tab (v317). |
 | `scrubkeys.js` | Pad+Flip+player+in-post | Keyboard operation and live value for the three playback scrubbers. |
-| `seekcache.js` | Pad+player | SCRUBBING STARTS NEAR WHERE YOU POINT: a few snapshots of a replay's canvas, so a seek draws only what lies between the nearest one and the target (v322 plan, step 3). |
+| `seekcache.js` | Pad+player+in-post | SCRUBBING STARTS NEAR WHERE YOU POINT: a few snapshots of a replay's canvas, so a seek draws only what lies between the nearest one and the target (v322 plan, step 3). |
 | `segslider.js` | Pad+Flip+library+gallery | THE PILL. Every pick-one control in the product slides one soft tint under its selected option, and this is the one thing that places it (the owner, choosing between four mocked shapes: "a on the pill"). |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapecard.js` | Pad+Flip | The shape card -- the picker that opens above the Shape tool -- one implementation, both editors. |

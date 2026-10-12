@@ -90,6 +90,9 @@
    What they cost a host is argued at the ratchet in verify_inline.py. #}
 <script src="{{ skribl_asset('lib/replayline.js') }}" defer></script>
 <script src="{{ skribl_asset('lib/scrubkeys.js') }}" defer></script>
+{# lib/seekcache.js: a scrub through a long post starts from the nearest copy of its
+   ink (v322 plan, step 3), as on the Pad and /s/<id>. Absent, it seeks from zero. #}
+<script src="{{ skribl_asset('lib/seekcache.js') }}" defer></script>
 <script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
 {%- endmacro %}
 
