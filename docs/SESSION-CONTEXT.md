@@ -253,12 +253,14 @@ satisfied it, with the mechanics the rule leaves out.
 9. **For an outside audit, add the Python packages** so the auditor can run
    the app with no package network: `python3 harness/tools/wheelhouse.py OUT`
    fetches every wheel `constraints.txt` pins (hash-checked) plus the harness's
-   Flask-WTF and Pillow, proves an offline install in a fresh virtual
-   environment, and writes `skribl-wheels-cp312-linux-x86_64.zip` with its
-   README-OFFLINE.txt and SHA256SUMS. Put it in the audit packet beside the
-   release zips and name it in README-FIRST. The v321 auditor could not install
-   Flask, never opened a page, and scored most of the product "not tested" for
-   that reason alone.
+   Flask-WTF and Pillow, proves the offline install by following its own
+   README-OFFLINE.txt from the finished zip in a fresh virtual environment
+   (v322: the first README's lines did not work as written, and a proof that
+   installed from the build folder could not tell), and writes
+   `skribl-wheels-cp312-linux-x86_64.zip` with that README and its
+   SHA256SUMS. Put it in the audit packet beside the release zips and name it
+   in README-FIRST. The v321 auditor could not install Flask, never opened a
+   page, and scored most of the product "not tested" for that reason alone.
 
 Getting step 5 wrong costs either a re-run or a sealed record that contradicts
 evidence already in hand; the second is an evidence gap, so it is a re-run.

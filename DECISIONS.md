@@ -16130,10 +16130,10 @@ Also at this seal, on the owner's yes: the centring check is optional, run when
 something looks off (WORKING-AGREEMENTS.md, "Checking buttons"; owner: "It
 really hasn't found too many actual problems").
 
-**One fix inside this seal, found by its own release run.** The first run went
-red on one check, `verify_a11y`'s "learnSheet on /flip: Escape closes it", with
-Escape working: focus was back on the sheet's opener, and 650ms later the sheet
-was still painted. Repeated alone, the page froze for 1.4-1.7 s after Escape in
+**Two fixes inside this seal.** The first was found by its own release run,
+which went red on one check, `verify_a11y`'s "learnSheet on /flip: Escape
+closes it", with Escape working: focus was back on the sheet's opener, and
+650ms later the sheet was still painted. Repeated alone, the page froze for 1.4-1.7 s after Escape in
 about one run in ten. Chrome's profiler put the time in the browser's own work,
 not Skribl's script, and a trace named it: one compositor commit, the main
 thread waiting in LayerTreeHost::WaitForCommitCompletion while headless
@@ -16141,8 +16141,20 @@ software raster caught up, so the sheet's 300ms hide timer could not run. The
 check now waits for the dialog to stop being painted, up to 3 s, then makes
 sure it stays gone for 350ms. With the hide timer stretched to 1.5 s the old
 wait went red and the new one passes; with Escape doing nothing, both go red.
-The first run was stopped and its record not kept; the record below is the
-second run's, on the tree with the fix.
+That run was stopped and its record not kept.
+
+The second was found while the next run was in its first batch, getting the
+audit packet ready. The offline packages' README-OFFLINE.txt said to unzip them
+with `-d wheels`, which puts the wheels in `wheels/wheels/`, and then pointed
+pip at `wheels`: followed word for word it stops at "No matching distribution
+found for alembic", the wall the v321 auditor hit. `wheelhouse.py`'s proof had
+installed from the folder it built before zipping, so it passed. The README
+now unzips in place, and the proof unpacks the finished zip beside a copy of
+constraints.txt, runs the README's own lines there with the network refused,
+and only then writes the zip. With the old line it goes red on that error and
+writes nothing; with the new one it passes, and the real `unzip` and pip,
+following the zipped README in a fresh folder, install and import. That run
+was stopped too; the record below is the third, on the tree with both fixes.
 
 **Still open, at the v322 seal:**
 
