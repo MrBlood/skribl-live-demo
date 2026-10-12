@@ -111,7 +111,8 @@
   var pending = null;      /* the item asked for and not on the stage yet */
   var player = null;       /* the inlineplayer handle */
   var looping = true;
-  var tick = null;
+  var tick = null;                       /* the transport's next beat (beat() below) */
+  var PLAYING_MS = 100, IDLE_MS = 1000;
 
   function fmt(ms) {
     var s = Math.max(0, Math.round(ms / 1000));
@@ -199,7 +200,7 @@
       markRows();
       player.seek(0);
       player.play();
-      refresh();
+      beat();
       return;
     }
     pending = item;
@@ -240,7 +241,7 @@
         setPlayIcon(false);
         markRows();
         transportLive(true);
-        refresh();
+        beat();
       })
       .catch(function () {
         /* A failure for a request nobody is waiting on any more says nothing:
@@ -287,16 +288,36 @@
                                  : (st.muted ? 'Unmute' : 'Mute');
   }
 
-  tick = setInterval(refresh, 100);
+  /* THE TRANSPORT BEATS ONLY AS FAST AS THE DRAWING MOVES. It read the
+     player ten times a second for as long as the page was open, playing or
+     not, so a phone kept waking up for a drawing that was standing still.
+     Now, in the shape of lib/fullbar.js: every 100ms while it plays, so the
+     scrubber moves as it did, and not at all before a Skribl is on the stage.
+     While it is still, at once after any press or key anywhere on the page,
+     because a still drawing only starts again when somebody asks -- including
+     a tap on the drawing, which the player handles itself and this page does
+     not own (the ten-a-second read was how it noticed those). And once a
+     second besides, a net for any change no press made. */
+  function beat() {
+    clearTimeout(tick);
+    tick = null;
+    if (!player) return;
+    refresh();
+    tick = setTimeout(beat, player.state().state === 'playing' ? PLAYING_MS : IDLE_MS);
+  }
+  ['click', 'pointerup', 'keyup'].forEach(function (type) {
+    // Deferred, so that the press's own handler has run before the read.
+    document.addEventListener(type, function () { setTimeout(beat, 0); }, true);
+  });
   transportLive(false);
   if (btnMute) btnMute.disabled = true;
 
-  btnPlay.addEventListener('click', function () { if (player) { player.toggle(); refresh(); } });
+  btnPlay.addEventListener('click', function () { if (player) { player.toggle(); beat(); } });
   btnRestart.addEventListener('click', function () {
     if (!player) return;
     player.seek(0);
     player.play();
-    refresh();
+    beat();
   });
   btnLoop.addEventListener('click', function () {
     looping = !looping;
@@ -306,7 +327,7 @@
   });
   btnMute.addEventListener('click', function () {
     window.SkriblInline.setSoundOn(!window.SkriblInline.soundOn());
-    refresh();
+    beat();
   });
   btnShare.addEventListener('click', function () {
     if (!current) return;
@@ -383,7 +404,7 @@
     var r = e.currentTarget.getBoundingClientRect();
     var f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
     player.seek(player.state().totalMs * f);
-    refresh();
+    beat();
   });
 
   /* ---- the list ----------------------------------------------------------
