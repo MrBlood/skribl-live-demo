@@ -46,7 +46,7 @@ side, each against its own fresh server (every suite reads `SKRIBL_BASE`):
 A red from a suite release_run.py tags as measuring is re-run alone before it
 counts. It writes no run record; `run_harness.sh` remains the record.
 
-A bare run works but takes about forty minutes; `release_run.py` is the checkpointing
+A bare run works but takes well over an hour; `release_run.py` is the checkpointing
 version for a full aggregate. Suites can also be driven directly, with a server
 already up:
 
@@ -116,6 +116,16 @@ passed on the tree that motivated it, and an ink measure that returned a
 constant and had been green since v206.
 
 A green check is not evidence until it has been shown to go red.
+
+**Wait for a state, not a number of seconds.** `harness/waits.py` has two:
+`until(page, js, name, window=ms)` waits for the app's own signal (a saved
+draft, music back after a reload) and `settle(page, ms)` stands in for a
+sleep after a load, a click or a reload, on a browser passed through
+`waits.instrument()`. Both come back as soon as nothing the page has in flight
+is due inside the old sleep, and never before: a timer, a request, a database
+write, a decode or a chain of animation frames due inside it holds them
+(`verify_waits.py` drives each). A sleep that guards an ABSENCE ("no toast
+within two seconds") stays a sleep.
 
 ## Gotchas
 
@@ -519,6 +529,14 @@ A green check is not evidence until it has been shown to go red.
   and a page never opened online says it is offline. Boots its own server on
   port 5019 and stops it, because Playwright's set_offline() does not reach a
   worker's own fetches.
+
+### After v320 — waiting
+
+- `verify_waits.py` — `harness/waits.py` keeps its promise: each kind of work
+  its counter sees (timers, intervals, requests, IndexedDB, file reads,
+  decodes, animation frames, CSS transitions) holds `settle` while it is due
+  inside the window, nothing holds it past the window, a quiet page comes
+  back early, and a page without the counter gets the plain sleep.
 
 ### After v320 — motion
 
