@@ -328,6 +328,25 @@ def stable(name):
     return WHEN.sub("<when>", name) if name else name
 
 
+# STILL BEFORE IT IS PHOTOGRAPHED. A sheet that slides in, a card that grows as
+# its track decodes, a drawer that glides the page: read mid-way, a control is
+# photographed where it was going. A fixed wait after each step was usually
+# long enough, and the runs that disagreed with each other were the ones where
+# it was not (the music card's bin read 2px off in one run and 29px in the
+# next). So each state waits until every control's box and the scroll have
+# held for three frames and no finite animation is running, up to two seconds.
+STILL = """(limit) => new Promise(done => {
+  const sig = () => { let s = scrollX + ',' + scrollY;
+    for (const el of document.querySelectorAll('button, [role=button]')) { const r = el.getBoundingClientRect();
+      if (r.width && r.height) s += '|' + r.left.toFixed(1) + ',' + r.top.toFixed(1) + ',' + r.width.toFixed(1) + ',' + r.height.toFixed(1); }
+    return s; };
+  const moving = () => document.getAnimations().some(a => a.playState === 'running'
+    && a.effect && a.effect.getComputedTiming().endTime !== Infinity);
+  let last = sig(), still = 0; const t0 = performance.now();
+  (function tick() { const now = sig(); still = (now === last && !moving()) ? still + 1 : 0; last = now;
+    if (still >= 3 || performance.now() - t0 > limit) done(still >= 3); else requestAnimationFrame(tick); })(); })"""
+
+
 def click(pg, sel, wait=350):
     try:
         el = pg.locator(sel).first
@@ -679,9 +698,13 @@ def fan_out():
     names = [f"{s}-{t}" for s, _vp, _m in COMBOS for t in THEMES]
     groups = [g for g in (names[k::JOBS] for k in range(JOBS)) if g]
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="centring-parts-"))
+    # ONE SAMPLE POST FOR ALL OF THEM. Each child posting its own put three in
+    # the Gallery and the Library, so the ends of those lists showed other
+    # controls than a serial run's single post does.
+    shared = json.dumps(post_fixture())
     procs = []
     for k, g in enumerate(groups):
-        env = dict(os.environ, CENTRING_COMBOS=",".join(g), CENTRING_PART=str(tmp / f"part{k}.json"),
+        env = dict(os.environ, CENTRING_COMBOS=",".join(g), CENTRING_PART=str(tmp / f"part{k}.json"), CENTRING_FIXTURE=shared,
                    CENTRING_CROP_PREFIX=f"p{k}-")
         log = open(tmp / f"part{k}.log", "w")
         procs.append((k, g, subprocess.Popen([sys.executable, __file__], env=env, stdout=log,
@@ -714,7 +737,8 @@ if FANNED:
 
 with sync_playwright() as p:
     b = None if FANNED else p.chromium.launch()
-    fx = None if FANNED else post_fixture()
+    fx = None if FANNED else (json.loads(os.environ["CENTRING_FIXTURE"]) if os.environ.get("CENTRING_FIXTURE")
+                              else post_fixture())
     for size, vp, mobile in ([] if FANNED else COMBOS):
         for theme in THEMES:
             combo = f"{size}-{theme}"
@@ -752,9 +776,9 @@ with sync_playwright() as p:
                         errs.append(f"driver {path}: {e}"[:160])
                 for state in guarded(states(pg)):
                     # A drawer glides the page as it opens; a photograph taken
-                    # mid-glide is of where the control was.
+                    # mid-glide is of where the control was (STILL, above).
                     try:
-                        browsing.wait_scroll_still(pg)
+                        pg.evaluate(STILL, 2000)
                     except Exception:
                         pass
                     for c in pg.evaluate(SCAN, EXTRA):
