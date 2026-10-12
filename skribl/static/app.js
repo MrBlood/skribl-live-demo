@@ -777,6 +777,37 @@ function seekDrawRange(cache, timeline, from, to, comp) {
     else { const q = timeline[i - 1]; line(q.x, q.y, p.x, p.y, p.color, p.size, p.erase); }
   }, comp ? () => comp.present() : null);
 }
+// One frame of a replay, or a seek's drawing: through the cache when there is
+// one (taking copies on the way), else the replay core as it always was.
+function replayStep(cache, timeline, from, ms, comp) {
+  const i = cache ? seekDrawRange(cache, timeline, from, cache.indexAt(ms), comp)
+    : replayTimelineToCanvas(timeline, from, ms, comp ? comp.dotFn : drawDot, comp ? comp.lineFn : drawLine);
+  if (comp) comp.present();   // no finish(): the stroke at the playhead stays mid-draw
+  return i;
+}
+/* ONE SEEK for the Pad's preview and the shared player. Paints the canvas at
+   `ms` and hands done() the index it stands at and its compositor: drawn on
+   from `at` (where the canvas stands, on `comp`, unless the layering has been
+   switched since) or from the nearest copy (lib/seekcache.js), when nothing is
+   waiting to paint; otherwise -- no cache, or a base image still decoding --
+   recomposited from the base and replayed from the first point, as every seek
+   used to be. clearAndRestore's restoreSeq guard drops a superseded paint, and
+   the cached path bumps it too, so nothing older paints over it. */
+function seekCanvas(cache, timeline, ms, at, comp, done) {
+  const layers = strokeLayersOn();
+  if (cache && baseReadyNow()) {
+    const target = cache.indexAt(ms), s = cache.start(target, (!!comp === layers) ? at : null, ctx);
+    if (s) {
+      restoreSeq++;
+      if (s.restored) comp = layers ? makeStrokeCompositor(ctx, canvas) : null;
+      return done(replayStep(cache, timeline, s.index, ms, comp), comp);
+    }
+  }
+  clearAndRestore(() => {
+    comp = layers ? makeStrokeCompositor(ctx, canvas) : null;
+    done(replayStep(cache, timeline, 0, ms, comp), comp);
+  });
+}
 let lockToastShown = false;
 /* ---- stylus pressure ------------------------------------------------------
    Pressure scales the existing per-point `size` rather than adding a field, so
@@ -1756,16 +1787,8 @@ function editorReplayFrame() {
     if (durationBadge.textContent !== t) durationBadge.textContent = t;
   }
   setScrubProgress(playTotal ? elapsed / playTotal : 1);
-  if (playSeek) {
-    // The copies a later scrub starts from are taken as playback passes them.
-    playIndex = seekDrawRange(playSeek, playTimeline, playIndex, playSeek.indexAt(elapsed), playComp);
-    if (playComp) playComp.present();
-  } else if (playComp) {
-    playIndex = replayTimelineToCanvas(playTimeline, playIndex, elapsed, playComp.dotFn, playComp.lineFn);
-    playComp.present();
-  } else {
-    playIndex = replayTimelineToCanvas(playTimeline, playIndex, elapsed, drawDot, drawLine);
-  }
+  // The copies a later scrub starts from are taken as playback passes them.
+  playIndex = replayStep(playSeek, playTimeline, playIndex, elapsed, playComp);
   positionEditorNib(playIndex > 0 ? playTimeline[playIndex - 1] : null);
   if (playIndex < playTimeline.length) {
     requestAnimationFrame(editorReplayFrame);
@@ -1775,50 +1798,20 @@ function editorReplayFrame() {
   }
 }
 
-// Seek to a fraction of the replay. lastTargetMs carries the position so the
-// running loop resumes from there on scrub release. With lib/seekcache.js the
-// canvas draws on from where it stands, or from the nearest copy at or before
-// the target; otherwise (and the first time, while the base image decodes) it
-// recomposites the base and replays 0->target. clearAndRestore's restoreSeq
-// guard drops any stale paint from a superseded scrub.
+// Seek to a fraction of the replay (seekCanvas). lastTargetMs carries the
+// position so the running loop resumes from there on scrub release.
 function editorSeek(frac) {
   if (!playing || !playTimeline) return;
   frac = Math.max(0, Math.min(1, frac));
   lastTargetMs = playTotal * frac;
-  const layers = strokeLayersOn();
-  const shown = () => {
+  seekCanvas(playSeek, playTimeline, lastTargetMs, playIndex, playComp, (i, comp) => {
+    playIndex = i; playComp = comp;
     setScrubProgress(frac);
     if (durationBadge && !durationBadge.hidden) {
       durationBadge.textContent = formatDuration(Math.min(lastTargetMs, playTotal));
     }
     positionEditorNib(playIndex > 0 ? playTimeline[playIndex - 1] : null);
-  };
-  if (playSeek && baseReadyNow()) {
-    const target = playSeek.indexAt(lastTargetMs);
-    // The canvas stands at playIndex while the replay owns it, and on the
-    // compositor that drew it, if the layering has not been switched since.
-    const at = playSeek.start(target, (!!playComp === layers) ? playIndex : null, ctx);
-    if (at) {
-      restoreSeq++;   // nothing older may paint over this
-      if (at.restored) playComp = layers ? makeStrokeCompositor(ctx, canvas) : null;
-      playIndex = seekDrawRange(playSeek, playTimeline, at.index, target, playComp);
-      if (playComp) playComp.present();
-      shown();
-      return;
-    }
-  }
-  const paint = () => {
-    playComp = layers ? makeStrokeCompositor(ctx, canvas) : null;
-    if (playSeek) {
-      playIndex = seekDrawRange(playSeek, playTimeline, 0, playSeek.indexAt(lastTargetMs), playComp);
-    } else {
-      playIndex = replayTimelineToCanvas(playTimeline, 0, lastTargetMs,
-        playComp ? playComp.dotFn : drawDot, playComp ? playComp.lineFn : drawLine);
-    }
-    if (playComp) playComp.present();
-    shown();
-  };
-  clearAndRestore(paint);
+  });
 }
 
 playBtn.addEventListener('click', () => {
@@ -4240,42 +4233,17 @@ function showPlayerError(msg, canRetry) {
       elapsedBase = targetMs; setProgress(frac); hideNib();
       return;
     }
-    const layers = strokeLayersOn();
-    const shown = () => {
+    // idx 0 is never taken as where the canvas stands (lib/seekcache.js): the
+    // finished drawing sits on it before the first Play while idx is still 0.
+    seekCanvas(seekCache, timeline, targetMs, idx, strokeComp, (i, comp) => {
+      idx = i; strokeComp = comp;
       elapsedBase = targetMs;
       setProgress(frac);
       showNibAtIndex(idx);
       // Audio alignment is handled on resume: elapsedBase (= targetMs) drives the
       // loop-bed phase offset in audioStart(), so there's no per-seek audio work.
       // (Playback is paused during a scrub; the bed restarts aligned on release.)
-    };
-    // From where the canvas stands, or the nearest copy (lib/seekcache.js);
-    // idx 0 is never trusted, since the finished drawing sits on the canvas
-    // before the first Play while idx is still 0.
-    if (seekCache && baseReadyNow()) {
-      const target = seekCache.indexAt(targetMs);
-      const at = seekCache.start(target, (!!strokeComp === layers) ? idx : null, ctx);
-      if (at) {
-        restoreSeq++;   // nothing older may paint over this
-        if (at.restored) strokeComp = layers ? makeStrokeCompositor(ctx, canvas) : null;
-        idx = seekDrawRange(seekCache, timeline, at.index, target, strokeComp);
-        if (strokeComp) strokeComp.present();   // no finish(): the stroke at the playhead stays mid-draw
-        shown();
-        return;
-      }
-    }
-    const paint = () => {
-      strokeComp = layers ? makeStrokeCompositor(ctx, canvas) : null;
-      if (seekCache) {
-        idx = seekDrawRange(seekCache, timeline, 0, seekCache.indexAt(targetMs), strokeComp);
-      } else {
-        idx = replayTimelineToCanvas(timeline, 0, targetMs,
-          strokeComp ? strokeComp.dotFn : drawDot, strokeComp ? strokeComp.lineFn : drawLine);
-      }
-      if (strokeComp) strokeComp.present();   // no finish(): the stroke at the playhead stays mid-draw
-      shown();
-    };
-    clearAndRestore(paint);   // clear + redraw baseSnapshot, then replay to target
+    });
   }
   // For the suite (verify_replayspeed), as the in-post player's seek(ms) is: an
   // exact place to seek to, and what the canvas then stands on.
@@ -4333,16 +4301,8 @@ function showPlayerError(msg, canRetry) {
       rafId = requestAnimationFrame(frame);
       return;
     }
-    if (seekCache) {
-      // The copies a later scrub starts from are taken as playback passes them.
-      idx = seekDrawRange(seekCache, timeline, idx, seekCache.indexAt(elapsed), strokeComp);
-      if (strokeComp) strokeComp.present();
-    } else if (strokeComp) {
-      idx = replayTimelineToCanvas(timeline, idx, elapsed, strokeComp.dotFn, strokeComp.lineFn);
-      strokeComp.present();
-    } else {
-      idx = replayTimelineToCanvas(timeline, idx, elapsed, drawDot, drawLine);
-    }
+    // The copies a later scrub starts from are taken as playback passes them.
+    idx = replayStep(seekCache, timeline, idx, elapsed, strokeComp);
     setProgress(totalMs ? elapsed / totalMs : 1);
     showNibAtIndex(idx);
     if (idx < timeline.length) rafId = requestAnimationFrame(frame);

@@ -672,10 +672,15 @@ with sync_playwright() as p:
         check(f"[{_label}] every seek of ten, forward, back and nudged, paints exactly what a replay from the first point paints",
               not _bad, f"{len(_bad)} differ, first {_bad[:1]}")
         if _n >= 20000:
-            _back = dict(_rows)[0.3]
-            check(f"[{_label}] ...it keeps copies, and a seek back after a far one starts from one: at most one stretch drawn",
-                  _rows[-1][1]["held"] >= 2 and 0 < _back["drawn"] <= _back["gap"] < _n * 0.3,
-                  f"held {_rows[-1][1]['held']}, the seek to 30% drew {_back['drawn']:,} of {_back['idx']:,} (stretch {_back['gap']:,})")
+            # The first seek draws everything before it (that is what takes the
+            # copies); every one after it, forward or back, starts near its
+            # target -- from a copy or from where the canvas stands, whichever
+            # is further along -- so it draws at most two stretches.
+            _gap = _rows[0][1]["gap"]
+            _after = [(f, r["drawn"]) for f, r in _rows[1:]]
+            check(f"[{_label}] ...it keeps copies, and every seek after the first starts near its target: at most two stretches drawn",
+                  _rows[-1][1]["held"] >= 2 and 0 < _gap < _n * 0.3 and all(0 <= d <= 2 * _gap for _, d in _after),
+                  f"held {_rows[-1][1]['held']}, stretch {_gap:,}, points drawn by each seek after the first {_after}")
         else:
             check(f"[{_label}] a short drawing keeps no copies and seeks as it always did",
                   all(r["held"] == 0 for _, r in _rows), str([r["held"] for _, r in _rows]))
