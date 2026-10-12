@@ -3,6 +3,8 @@ from PIL import Image
 from playwright.sync_api import sync_playwright
 from assertions import make_check
 import browsing
+import waits
+from waits import until, FLIP_MUSIC_SAVED, FLIP_MUSIC_UNSAVED, MUSIC_BACK, MUSIC_NEEDS_READD, PAD_MUSIC_SAVED, PAD_TRACK_BACK
 import os
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
@@ -51,6 +53,7 @@ COLOURS = """(which) => {
 # it clear AA -- third review), so a retuned purple does not redden this.
 WHITE = "rgb(255, 255, 255)"
 
+
 def scribble(pg, box, seed, n=200):
     cx, cy = box["x"]+box["width"]/2, box["y"]+box["height"]/2
     pg.mouse.move(cx, cy); pg.mouse.down()
@@ -64,7 +67,7 @@ with sync_playwright() as p:
     # v292 a bare page follows the OS and headless Chromium says light, on which amber is
     # rgb(138, 91, 0). The pin is the semantics (amber, not green, not red); measured on the
     # ramp it was written for.
-    b = p.chromium.launch(); pg = b.new_page(viewport={"width":1280,"height":900}, color_scheme="dark")
+    b = waits.instrument(p.chromium.launch()); pg = b.new_page(viewport={"width":1280,"height":900}, color_scheme="dark")
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
 
     print("\nFLIP")
@@ -72,7 +75,7 @@ with sync_playwright() as p:
     pg.evaluate("() => localStorage.clear()")
     box = pg.locator("#pad").bounding_box()
     scribble(pg, box, 0.0); pg.wait_for_timeout(1200)
-    pg.set_input_files("#musicInput", WAV); pg.wait_for_timeout(5000)
+    pg.set_input_files("#musicInput", WAV); until(pg, FLIP_MUSIC_SAVED, "Flip's music saved", window=5000)
     c = pg.evaluate(COLOURS, "music")
     # Compared against the --good token rather than a typed literal: the colour
     # was lifted once (too dull at 6px) and a hand-typed hex here would have
@@ -88,7 +91,7 @@ with sync_playwright() as p:
     # re-add to ask for. The amber palette is still a real state — it now
     # means the store failed — so those assertions run against a page with
     # IndexedDB broken, where re-add genuinely is needed.
-    pg.reload(wait_until="load"); pg.wait_for_timeout(4500)   # IDB merge + ~7MB decode
+    pg.reload(wait_until="load"); until(pg, MUSIC_BACK, "the music back after a reload", window=4500)   # IDB merge + ~7MB decode
     c = pg.evaluate(COLOURS, "music")
     check("music dot visible after reload", c["dotHidden"] is False)
     check("music dot GREEN — the media came back from IndexedDB",
@@ -103,8 +106,8 @@ with sync_playwright() as p:
     pgB.evaluate("() => localStorage.clear()")
     boxB = pgB.locator("#pad").bounding_box()
     scribble(pgB, boxB, 0.0); pgB.wait_for_timeout(1200)
-    pgB.set_input_files("#musicInput", WAV); pgB.wait_for_timeout(5000)
-    pgB.reload(wait_until="load"); pgB.wait_for_timeout(1600)
+    pgB.set_input_files("#musicInput", WAV); until(pgB, FLIP_MUSIC_UNSAVED, "Flip's spill giving up", window=5000)
+    pgB.reload(wait_until="load"); until(pgB, MUSIC_NEEDS_READD, "the re-add card", window=1600)
     c = pgB.evaluate(COLOURS, "music")
     check("music dot AMBER when re-add is needed", c["dotBg"] == AMBER and c["dotPending"], c["dotBg"])
     check("re-add card visible", c["cardHidden"] is False)
@@ -122,9 +125,9 @@ with sync_playwright() as p:
     pg.mouse.move(pbox["x"]+120, pbox["y"]+120); pg.mouse.down()
     for i in range(60): pg.mouse.move(pbox["x"]+120+i*3, pbox["y"]+120+math.sin(i/4)*40)
     pg.mouse.up(); pg.wait_for_timeout(1800)
-    pg.set_input_files("#musicInput", WAV); pg.wait_for_timeout(4500)
-    pg.reload(wait_until="load"); pg.wait_for_timeout(2000)
-    pg.wait_for_timeout(4000)   # restore at boot (v294); IDB re-add + decode
+    pg.set_input_files("#musicInput", WAV); until(pg, PAD_MUSIC_SAVED, "the Pad's music saved", window=4500)
+    pg.reload(wait_until="load")
+    until(pg, PAD_TRACK_BACK, "the Pad's track back", window=6000)   # restore at boot (v294); IDB re-add + decode
     # CONTRACT CHANGE (v222): restore used to leave an amber pending dot —
     # the bytes were gone by design and re-adding was the user's job. The
     # bytes now come back from IndexedDB through the real change pipeline,
