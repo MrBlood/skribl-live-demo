@@ -722,8 +722,8 @@ with sync_playwright() as p:
               not _bad, f"{len(_bad)} differ, first {_bad[:1]}")
         _after = [(f, r["drawn"]) for f, r in _rows[1:]]
         check("[shared player, 19,000 points] ...it keeps copies, and every seek after the first starts near its target: at most two stretches drawn",
-              _rows[-1][1]["held"] >= 1 and all(0 <= d <= 2 * 4000 for _, d in _after),
-              f"held {_rows[-1][1]['held']}, points drawn by each seek after the first {_after}")
+              _rows[-1][1]["held"] >= 1 and all(0 <= d <= 2 * _rows[0][1]["gap"] for _, d in _after),
+              f"held {_rows[-1][1]['held']}, stretch {_rows[0][1]['gap']}, points drawn by each seek after the first {_after}")
         _pg.context.close()
     else:
         check("[shared player, 19,000 points] the long drawing posted", False, f"{_st} {_body}")

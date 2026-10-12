@@ -4257,7 +4257,7 @@ function showPlayerError(msg, canRetry) {
   window.__skriblPlayerSeek = (f) => {
     seekTo(f);
     return { idx, ms: elapsedBase, held: seekCache ? seekCache.held() : null,
-             drawn: seekCache ? seekCache.drawn() : null };
+             drawn: seekCache ? seekCache.drawn() : null, gap: seekCache ? seekCache.gap() : null };
   };
   // Keyboard seeking for the SHARED player, which did not even claim the role:
   // a bare div with mousedown/touchstart, so a link sent to a stranger was
