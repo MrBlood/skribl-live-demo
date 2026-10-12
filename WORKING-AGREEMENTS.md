@@ -259,16 +259,16 @@ blank page as full, imports that parsed but did not import.)
 - **NEVER `git checkout` OR `git stash` A FILE THAT HOLDS UNCOMMITTED WORK.**
   Read an old version with `git show <rev>:<path> > /tmp/copy`; fix forward.
 
-## Checking buttons: use the centring tool
+## Checking buttons: the centring tool, when something looks off
 
 The owner: "The centering script/harness should be used whenever checking
-buttons in the future," and later: "make the centring check take a couple
-minutes at most. I can visually tell when things look off if need be." **Any
-change to a button, a badge, a chip or a mark runs
-`harness/check_centring.py`** with a server up: about two minutes, the two
-editors and the link player on a phone in dark and a desk in light.
-`CENTRING_FULL=1` is the full sweep (every page, six screens, three faces,
-about 17 minutes), for rewriting the list. It is `check_*`: not in a bare run
+buttons in the future," then "make the centring check take a couple minutes
+at most. I can visually tell when things look off if need be," and at v322:
+"It really hasn't found too many actual problems." So
+**`harness/check_centring.py` is optional**: run it when something looks off,
+with a server up: about two minutes, the two editors and the link player on a
+phone in dark and a desk in light. `CENTRING_FULL=1` is the full sweep (every
+page, six screens, three faces, about 17 minutes), for rewriting the list. It is `check_*`: not in a bare run
 or a seal. `harness/centring_baseline.json` only shrinks: a new finding fails;
 a fixed one comes off with `CENTRING_WRITE_BASELINE=1`, and the full sweep
 fails until it does. Its measurements are in this box's fonts, so a fix is

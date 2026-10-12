@@ -1,32 +1,32 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-10-10T07:33:05Z
+UTC timestamp           : 2026-10-12T15:42:54Z
 Host                    : Linux x86_64
-Tree SHA-256            : 23105ebb2daca6fd6a911a9bdda65f941a6e3d3c7320fed3ca4df2d9d4880be7
-Git commit              : 6813391
+Tree SHA-256            : f64be8e7ad26a3567732627bc9952af050467e1aaecc36e4757e23e9b9d62f6d
+Git commit              : 1d420f1
 Source state            : generated-only dirty
                             harness/LAST-RUN.txt
                             harness/MP4-ATTESTATION.txt
                             harness/POSTGRES-ATTESTATION.txt
-SKRIBL_VERSION          : v321
+SKRIBL_VERSION          : v322
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.OX8EiZy4Mt/harness.db)
+Database reset          : yes (fresh /tmp/tmp.dVqGDGZdei/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /tmp/claude-0/seal/harness/run_harness.sh verify_icons.py
+Command                 : /home/user/seal/harness/run_harness.sh verify_icons.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-# whole release run: 69 batches recorded as one run
-suites requested : 120
-  verify_a11y.py: ok — 412/412 passed
+# whole release run: 72 batches recorded as one run
+suites requested : 123
+  verify_a11y.py: ok — 540/540 passed
   verify_amber.py: ok — 110/110 passed
   verify_apiedges.py: ok — 54/54 passed
   verify_assetcache.py: ok — 12/12 passed
@@ -37,7 +37,7 @@ suites requested : 120
   verify_beading.py: ok — 31/31 passed
   verify_boot.py: ok — 23/23 passed
   verify_canvas.py: ok — 48/48 passed
-  verify_clouddrafts.py: ok — 87/87 passed
+  verify_clouddrafts.py: ok — 92/92 passed
   verify_compactops.py: ok — 28/28 passed
   verify_compose.py: ok — 86/86 passed
   verify_createpost.py: ok — 74/74 passed
@@ -47,9 +47,9 @@ suites requested : 120
   verify_deletion.py: ok — 67/67 passed
   verify_deletion_foundation.py: ok — 17/17 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: ok — 126/126 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)
+  verify_docs.py: ok — 135/135 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)
   verify_dots.py: ok — 39/39 passed
-  verify_drafts.py: ok — 41/41 passed
+  verify_drafts.py: ok — 47/47 passed
   verify_example.py: ok — 32/32 passed
   verify_exopts.py: ok — 26/26 passed
   verify_exportui.py: ok — 60/60 passed
@@ -58,16 +58,16 @@ suites requested : 120
   verify_fill.py: ok — 28/28 passed
   verify_fix.py: ok — 18/18 passed
   verify_flipdraft.py: ok — 22/22 passed
-  verify_flipmeta.py: ok — 64/64 passed
+  verify_flipmeta.py: ok — 70/70 passed
   verify_flipmotion.py: ok — 27/27 passed
   verify_flipspeed.py: ok — 20/20 passed
   verify_framecache.py: ok — 23/23 passed
   verify_fuzz.py: ok — 7/7 passed
-  verify_galib.py: ok — 68/68 passed
+  verify_galib.py: ok — 70/70 passed
   verify_gallery.py: ok — 185/185 passed
   verify_gifenc.py: ok — 39/39 passed
   verify_help.py: ok — 83/83 passed
-  verify_helpclaims.py: ok — 41/41 passed
+  verify_helpclaims.py: ok — 42/42 passed
   verify_helpdemos.py: ok — 122/122 passed
   verify_hold.py: ok — 64/64 passed
   verify_hostconfig.py: ok — 55/55 passed
@@ -76,20 +76,20 @@ suites requested : 120
   verify_icons.py: ok — 46/46 passed
   verify_identity.py: ok — 71/71 passed
   verify_inbetween.py: ok — 67/67 passed
-  verify_inline.py: ok — 125/125 passed
+  verify_inline.py: ok — 150/150 passed
   verify_input.py: ok — 9/9 passed
   verify_integration.py: ok — 26/26 passed
   verify_jsstrip.py: ok — 34/34 passed
   verify_keys.py: ok — 9/9 passed
   verify_layout.py: ok — 249/249 passed
   verify_lib.py: ok — 8/8 passed
-  verify_library.py: ok — 224/224 passed
+  verify_library.py: ok — 244/244 passed
   verify_liquify.py: ok — 32/32 passed
   verify_loop.py: ok — 22/22 passed
   verify_loopcap.py: ok — 22/22 passed
   verify_loopui.py: ok — 61/61 passed
   verify_media.py: ok — 24/24 passed
-  verify_mediaauthz.py: ok — 48/48 passed
+  verify_mediaauthz.py: ok — 50/50 passed
   verify_medialimits.py: ok — 76/76 passed
   verify_mediameta.py: ok — 61/61 passed
   verify_mediareport.py: ok — 15/15 passed
@@ -101,13 +101,13 @@ suites requested : 120
   verify_muxer.py: ok — 18/18 passed
   verify_nametab.py: ok — 29/29 passed
   verify_offline.py: ok — 28/28 passed
-  verify_onepill.py: ok — 2549/2549 passed
+  verify_onepill.py: ok — 2882/2882 passed
   verify_padcanvas.py: ok — 28/28 passed
   verify_pages.py: ok — 81/81 passed
   verify_pagespan.py: ok — 56/56 passed
-  verify_parity.py: ok — 362/362 passed
+  verify_parity.py: ok — 394/394 passed
   verify_pillfit.py: ok — 24/24 passed
-  verify_player_isolation.py: ok — 67/67 passed
+  verify_player_isolation.py: ok — 77/77 passed
   verify_player_photo.py: ok — 9/9 passed
   verify_pointerpad.py: ok — 25/25 passed
   verify_posted.py: ok — 144/144 passed
@@ -116,15 +116,16 @@ suites requested : 120
   verify_pressure.py: ok — 27/27 passed
   verify_privacy.py: ok — 54/54 passed
   verify_race.py: ok — 17/17 passed
+  verify_replayspeed.py: ok — 108/108 passed
   verify_report.py: ok — 35/35 passed
   verify_review.py: ok — 288/288 passed
   verify_s3.py: ok — 30/30 passed
   verify_scrub.py: ok — 16/16 passed
-  verify_seam.py: ok — 350/350 passed
+  verify_seam.py: ok — 366/366 passed
   verify_select.py: ok — 58/58 passed
   verify_sharecard.py: ok — 27/27 passed
   verify_sharedrules.py: ok — 96/96 passed
-  verify_sheetfit.py: ok — 14/14 passed
+  verify_sheetfit.py: ok — 16/16 passed
   verify_sheetswipe.py: ok — 246/246 passed
   verify_sizeclass.py: ok — 89/89 passed
   verify_smudgeblur.py: ok — 95/95 passed
@@ -134,18 +135,20 @@ suites requested : 120
   verify_surfaces.py: ok — 12/12 passed
   verify_sweepjob.py: ok — 66/66 passed
   verify_takedown.py: ok — 56/56 passed
-  verify_tappause.py: ok — 33/33 passed
+  verify_tappause.py: ok — 40/40 passed
   verify_theme.py: ok — 118/118 passed
   verify_tilereport.py: ok — 32/32 passed
   verify_tips.py: ok — 61/61 passed
   verify_tools.py: ok — 136/136 passed
   verify_tray.py: ok — 145/145 passed
   verify_tween.py: ok — 161/161 passed
-  verify_txcontract.py: ok — 94/94 passed
+  verify_txcontract.py: ok — 95/95 passed
   verify_under.py: ok — 28/28 passed
-  verify_ux.py: ok — 437/437 passed
-  verify_version.py: ok — 36/36 passed
+  verify_ux.py: ok — 483/483 passed
+  verify_version.py: ok — 37/37 passed
+  verify_videoexport.py: ok — 16/16 passed
   verify_visual.py: ok — 78/78 passed
-assertions passed: 10572   (skipped suites contribute 0)
+  verify_waits.py: ok — 17/17 passed
+assertions passed: 11365   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0

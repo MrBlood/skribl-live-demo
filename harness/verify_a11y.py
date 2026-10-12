@@ -558,20 +558,34 @@ with sync_playwright() as p:
               f"shift-tab {_out} left the dialog backwards")
 
         pg.keyboard.press("Escape")
-        pg.wait_for_timeout(650)
         # ESCAPE CLOSES IT (centring drivers, after v321). The focus check below
         # passed on a dialog Escape did nothing to: focus stayed inside it, so it
         # was not on <body>. The three recovery-key overlays shipped that way.
         # Asked of what is PAINTED, not of [hidden]: a dialog that slides off
         # on a timer is gone when its middle shows something else.
+        #
+        # THE CLOSE IS WAITED FOR, NOT GUESSED (the v322 seal). This was a flat
+        # 650ms sleep, and it went red once in the release run on Flip's
+        # examples sheet with Escape working: focus was back on its opener, and
+        # the sheet's own 300ms hide timer could not run for 1.4-1.7s because
+        # the main thread sat in a compositor commit
+        # (LayerTreeHost::WaitForCommitCompletion, in a trace) while headless
+        # software raster caught up. Now up to 3s for the dialog to stop being
+        # painted, then 350ms in which it must stay gone. A dialog Escape does
+        # nothing to still fails, at the 3s mark.
+        painted = """(id) => { const d = document.getElementById(id);
+            if (!d || d.hidden || d.closest('[hidden]')) return false;
+            const cs = getComputedStyle(d), r = d.getBoundingClientRect();
+            if (cs.display === 'none' || cs.visibility === 'hidden' || r.width < 1 || r.height < 1) return false;
+            const at = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, innerHeight / 2));
+            return !!at && d.contains(at); }"""
         if (path, mid) not in ESCAPE_STAYS:
-            still = pg.evaluate("""(id) => { const d = document.getElementById(id);
-                if (!d || d.hidden || d.closest('[hidden]')) return false;
-                const cs = getComputedStyle(d), r = d.getBoundingClientRect();
-                if (cs.display === 'none' || cs.visibility === 'hidden' || r.width < 1 || r.height < 1) return false;
-                const at = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, innerHeight / 2));
-                return !!at && d.contains(at); }""", mid)
+            waits.until(pg, f"() => !({painted})({json.dumps(mid)})", f"{mid} to close", ms=3000)
+            pg.wait_for_timeout(350)
+            still = pg.evaluate(painted, mid)
             check(f"{_tag}: Escape closes it", not still, "still painted after Escape")
+        else:
+            pg.wait_for_timeout(650)
         landed = pg.evaluate("""() => {
             const a = document.activeElement;
             return a === document.body ? '(body)' : (a && a.id) || '(unnamed)'; }""")

@@ -59,12 +59,16 @@ echo "playwright: $("$VENV/bin/python3" -c 'from importlib.metadata import versi
 # it and downloads disabled; fetch only when nothing is there. The build number
 # printed here has to be the one the installed playwright drives — a mismatch
 # fails later with an executable-not-found error that reads like a missing
-# browser (harness/requirements.txt explains the coupling).
+# browser (harness/requirements.txt explains the coupling). Fetching needs
+# Playwright itself: an environment built from the offline wheels
+# (harness/tools/wheelhouse.py) has none, and stopping here stopped the app
+# booting too, which is the half that needs neither (v322).
 BROWSERS="${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
-if [ -z "$(ls -d "$BROWSERS"/chromium* 2>/dev/null)" ]; then
+if [ -z "$(ls -d "$BROWSERS"/chromium* 2>/dev/null)" ] && "$VENV/bin/python3" -c "import playwright" 2>/dev/null; then
   "$VENV/bin/python3" -m playwright install chromium
 fi
-echo "chromium: $(ls -d "$BROWSERS"/chromium-* 2>/dev/null | xargs -n1 basename | tr '\n' ' ')"
+FOUND=$(ls -d "$BROWSERS"/chromium-* 2>/dev/null | xargs -rn1 basename | tr '\n' ' ' || true)
+echo "chromium: ${FOUND:-none -- the app boots; the browser suites need Playwright and Chromium}"
 
 # --- 3 + 4. a fresh database with tables, and the harness's rate limit -------
 # The port is in the name: servers booted in the same second (run_parallel.py
