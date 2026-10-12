@@ -270,8 +270,8 @@ with sync_playwright() as p:
     def settle(q, ms=700):
         # The page settled, not a guessed 700ms: waits.settle ends as soon as
         # nothing the page has in flight (a drawer's slide, a scroll, a timer)
-        # is due inside MS, and never before. 437 of these were 220 of this
-        # suite's 378 seconds.
+        # is due inside MS, and never before. As a plain sleep this line was
+        # 220 of the suite's 378 seconds.
         waits.settle(q, ms)
 
     def draw(q, canvas):
