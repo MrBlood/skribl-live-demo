@@ -458,7 +458,8 @@ function snapStrokeToFinal() {
   lastPos = lastRawPos;
 }
 
-let _mirrorPainting = false;   // re-entry guard for the mirrored paint below
+// _mirrorPainting, the re-entry guard for the mirrored paint below, is app.js's
+// (declared beside drawLine, so the shared player has it too).
 
 // Commit a finished stroke, plus any mirrored copies (lib/mirror.js).
 //
