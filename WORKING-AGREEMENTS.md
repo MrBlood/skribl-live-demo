@@ -351,7 +351,7 @@ buttons in the future. We don't need to run it every seal, but we should use it
 whenever we need it."
 
 **Any change to a button, a badge, a chip or a mark runs
-`harness/check_centring.py`** (about 13 minutes for every page; narrow it with
+`harness/check_centring.py`** (about 16 minutes for every page; narrow it with
 `CENTRING_COMBOS=phone-light` while iterating, then run it whole before the PR).
 It finds every control from the source, proves it reached each one on a live
 page, measures where each mark's ink sits in what is painted around it, and

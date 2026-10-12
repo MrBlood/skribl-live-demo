@@ -37,7 +37,7 @@ ON DEMAND, NOT IN THE BATTERY (owner: "The centering script/harness should be
 used whenever checking buttons in the future. We don't need to run it every
 seal, but we should use it whenever we need it"). Named check_*, not verify_*,
 so neither a bare run_harness.sh nor a seal picks it up. A full pass runs its
-six combinations three at a time in about 13 minutes (one after another it
+six combinations three at a time in about 16 minutes (one after another it
 took 30), past run_harness.sh's 10-minute limit per suite. Run it directly,
 with a server up (harness/bootstrap.sh):
 
