@@ -363,19 +363,65 @@ with sync_playwright() as p:
           pw["norecipe"])
     # THE OMISSION IS ONLY SAFE WHILE EVERY READER TESTS TRUTHINESS. Asserted
     # against the readers themselves, not against a memory of having checked.
+    # EVERY SCRIPT, not a list of the readers someone remembered: the Pad's
+    # autosave leaves `erase: false` out too since v322, so its restore path is
+    # a reader now, and the next one will not announce itself either.
     _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    _bad = []
-    for _n in ("app.js", "flip.js", "inlineplayer.js",
-               "lib/stamps.js", "lib/strokelayers.js"):
-        _path = os.path.join(_root, "skribl", "static", *_n.split("/"))
-        if not os.path.exists(_path):
-            _bad.append(_n + " (missing)"); continue
-        with open(_path) as _fh: _src = _fh.read()
-        for _pat in ("erase === false", "erase !== false", "erase === undefined",
-                     "'erase' in ", '"erase" in '):
-            if _pat in _src: _bad.append(f"{_n}: {_pat}")
-    check("no reader distinguishes erase:false from erase absent",
-          not _bad, "; ".join(_bad[:3]))
+    _static = os.path.join(_root, "skribl", "static")
+    _bad, _seen = [], 0
+    for _dir, _subs, _files in os.walk(_static):
+        for _f in _files:
+            if not _f.endswith(".js") or _f.endswith(".min.js"):
+                continue
+            _n = os.path.relpath(os.path.join(_dir, _f), _static)
+            with open(os.path.join(_dir, _f)) as _fh: _src = _fh.read()
+            _seen += 1
+            for _pat in ("erase === false", "erase !== false", "erase === undefined",
+                         "'erase' in ", '"erase" in '):
+                if _pat in _src: _bad.append(f"{_n}: {_pat}")
+    check("no reader distinguishes erase:false from erase absent, in any of the scripts",
+          not _bad and _seen > 20, f"{_seen} scripts; " + "; ".join(_bad[:3]))
+
+    # BOTH AUTOSAVES WRITE A POINT BY THE SAME RULE (v322 plan, step 1). Flip's
+    # always went through it; the Pad's printed every double (115 bytes a point
+    # against 64), so the same drawing filled the origin's shared storage nearly
+    # twice as fast there. Read
+    # off the real autosave of a real drag, after checking the drawing in memory
+    # does carry digits the rule would cut: otherwise there is nothing to catch.
+    _CONFORM = """(pts) => { const dp = (n) => { const s = String(n), i = s.indexOf('.');
+          return i < 0 ? 0 : s.length - i - 1; };
+        const bad = pts.filter(p => dp(p.x) > 2 || dp(p.y) > 2 || dp(p.size) > 2
+                                    || !Number.isInteger(p.t) || p.erase === false);
+        return { n: pts.length, bad: bad.length, first: bad[0] || null }; }"""
+    for _route, _cv, _key, _flush, _live in (
+            ("/skribl-pad", "#canvas", "skribl_autosave_v1", "flushPadDraft",
+             "() => strokes"),
+            ("/flip", "#pad", "skribl_flip_autosave_v1", "flushFlipDraft",
+             "() => frames.flatMap(f => f.strokes || [])")):
+        _ap = browser.new_page(viewport={"width": 1000, "height": 860})
+        browsing.goto(_ap, BASE, _route)
+        _ap.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        browsing.goto(_ap, BASE, _route)
+        _bx = _ap.locator(_cv).bounding_box()
+        _ap.mouse.move(_bx["x"] + _bx["width"] * 0.3 + 0.37, _bx["y"] + _bx["height"] * 0.4 + 0.61)
+        _ap.mouse.down()
+        for _i in range(1, 16):
+            _ap.mouse.move(_bx["x"] + _bx["width"] * (0.3 + 0.02 * _i) + 0.37,
+                           _bx["y"] + _bx["height"] * (0.4 + 0.013 * _i) + 0.61)
+        _ap.mouse.up()
+        _ap.wait_for_timeout(200)
+        _ap.evaluate(f"() => {_flush}()")
+        _mem = _ap.evaluate(_CONFORM, _ap.evaluate(_live))
+        _raw = _ap.evaluate(f"() => localStorage.getItem('{_key}')")
+        _doc = json.loads(_raw) if _raw else {}
+        _pts = (_doc.get("strokes") or []) if _route == "/skribl-pad" else \
+               [q for f in (_doc.get("frames") or []) for q in (f.get("strokes") or [])]
+        _got = _ap.evaluate(_CONFORM, _pts)
+        check(f"{_route}: its autosave writes every point by the rule (0.01px, whole ms, no erase:false)",
+              _mem["bad"] > 0 and _got["n"] == _mem["n"] and _got["bad"] == 0,
+              f"in memory {_mem['n']} points, {_mem['bad']} with digits to cut; "
+              f"saved {_got['n']}, {_got['bad']} off the rule, e.g. {_got['first']}")
+        _ap.close()
 
     # BOTH PAINTERS TAKE THE UNIFORM-RUN PATH, OR ONE OF THEM BEADS.
     #

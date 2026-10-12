@@ -16209,3 +16209,35 @@ old check goes red in main's exact words and the new one passes; with Play no
 longer ending the pick, each editor's check goes red on its own page, the watch
 reporting the lens up while playing; clean, `verify_parity` 394/394. The v322
 record still describes the tree it sealed: this changes a check, not the app.
+
+## After v322 -- the Pad plan, step 1 begins: the Pad's autosave spells a point the way posts do
+
+The owner said yes to the five-part plan for a long drawing (v322, "Still open"):
+step 1 is that a long drawing autosaves. Measured with the Pad's real points
+(long-double positions and sizes, whole-millisecond times, `erase: false` on
+every one), the Pad's autosave printed 115 bytes a point where
+`lib/pointwrite.js` -- the rule both editors' posts and Flip's autosave already
+write through -- spells the same point in 64. So the Pad's "Storage full" came
+at about half an hour of drawing, not the hour the plan said (that measurement
+drew with points already rounded), and Flip held the same drawing in 56% of the
+room. The Pad's autosave now writes its strokes and its redo strokes through
+the rule: half an hour 4.6 MB to 2.5, an hour 9.7 to 5.4, two hours 19.8 to
+11.0, for a little more time per save (half an hour: about 16 ms to 28 on a
+desk, 74 to 93 on a CPU slowed 4x, measured twice on a quiet box). Same schema
+and readers; a restore brings positions back at 0.01 px, a thirtieth of the
+smallest pixel a screen here shows. The wall moves to just under an hour of
+drawing; the rest of step 1 removes it. That was going to be IndexedDB, as the
+plan said, but a prototype packed the same two-hour drawing into 0.69M
+characters (four a point, lossless against the rule, faster to write than the
+JSON), small enough to stay in the synchronous storage both editors restore
+from, with none of the asynchronous restore, loading state or two-tab keys
+IndexedDB would have needed. That is the next change.
+
+`verify_sharedrules` reads both editors' real autosaves of a real drag and
+requires every point on the rule, after checking that the drawing in memory
+carries digits the rule would cut: red with the Pad's autosave as it was
+(x 212.48581450245726) and with Flip's writer bypassing the rule, each on its
+own page. Its check that no reader treats `erase: false` differently from a
+missing `erase` now scans every script (103) rather than five named ones,
+because the Pad's restore path became such a reader: red on a strict comparison
+planted in `editor_draft.js`, a file the old list never opened.
