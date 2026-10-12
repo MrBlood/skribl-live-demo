@@ -482,6 +482,47 @@ with sync_playwright() as p:
         # is pinned there.
         flip.close()
 
+        # THE SHARED PLAYER, PAST THE LAYERING BUDGET. A drawing with more
+        # see-through strokes than the compositor takes (lib/strokelayers.js
+        # BUDGET) is painted stroke by stroke, and a stroke of varying width
+        # reaches paintStrokesStatic's finished-ink branch, which reads the
+        # mirror's re-entry guard. That guard was declared in editor_draw.js,
+        # which the shared player does not load: the poster threw
+        # "_mirrorPainting is not defined" and the link never became playable
+        # (found while measuring the v322 plan's scrub snapshots).
+        print("\nTHE SHARED PLAYER, PAST THE LAYERING BUDGET -- many see-through strokes still load and play")
+        import json as _json
+        import urllib.request as _ur
+        _pts, _groups = [], []
+        for _k in range(30):                      # BUDGET is 24
+            for _i in range(12):
+                _pts.append({"x": 60 + _i * 12, "y": 40 + _k * 14, "color": "rgba(124,92,255,0.45)",
+                             "size": 3 + (_i % 4), "t": (_k * 12 + _i) * 20, "start": _i == 0})
+            _groups.append(12)
+        _req = _ur.Request(BASE + "/api/skribls", headers={"Content-Type": "application/json"},
+                           data=_json.dumps({"version": 2, "schemaVersion": 2, "playbackMode": "replay", "fps": None,
+                                             "canvasSize": {"cssWidth": 816, "cssHeight": 612}, "title": "see-through",
+                                             "frames": [{"strokes": _pts, "strokeGroups": _groups,
+                                                         "background": {"color": "#f6f2ea"}}]}).encode())
+        _sid = _json.loads(_ur.urlopen(_req, timeout=20).read())["id"]
+        _pp = br.new_page()
+        _errs = []
+        _pp.on("pageerror", lambda e: _errs.append(str(e)))
+        browsing.goto(_pp, BASE, f"/s/{_sid}")
+        _pp.wait_for_timeout(1200)
+        _over = _pp.evaluate("() => window.SkriblStrokeLayers.overBudget(buildPlaybackTimeline(), parseStrokeAlpha, anyStrokeAlpha)")
+        _ink = _pp.evaluate("""() => { const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 8) n++; return n; }""")
+        check("the drawing is past the layering budget, so the poster takes the stroke-by-stroke branch",
+              _over is True, f"overBudget {_over}")
+        check("...and the shared player shows it with no page error",
+              not _errs and _ink > 500, f"errors {_errs[:2]}, {_ink} lit pixels")
+        _pp.click("#playerPlayBtn")
+        _pp.wait_for_timeout(900)
+        _at = _pp.evaluate("() => +document.getElementById('playerProgress').getAttribute('aria-valuenow')")
+        check("...and Play plays it", not _errs and _at > 0, f"progress {_at}, errors {_errs[:2]}")
+        _pp.close()
+
     finally:
         br.close()
 

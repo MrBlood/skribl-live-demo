@@ -16349,3 +16349,25 @@ move: the phone at 402x874 stays at the top.
 refusal at 820, its device-only save at 900, Flip's refusal at 650) and asks
 `elementFromPoint` for the line's first and last rows. Red on main in all
 three, green with the change; the button above the line stays on screen.
+
+## After v322 -- a shared link to a drawing heavy in see-through ink plays again
+
+Found while measuring the v322 plan's scrub snapshots on the shared player. Since
+#293 (the mirror reflects only the live stroke), `paintStrokesStatic()` in
+app.js marks its finished-ink branch as already mirrored by setting the
+mirror's re-entry guard, `_mirrorPainting`. That guard was declared in
+`editor_draw.js`, which the shared player does not load. The branch runs when a
+drawing has more see-through strokes than the layering budget
+(`lib/strokelayers.js`, 24) and one of them varies in width, as any pressure
+stroke does. On the player the poster threw "_mirrorPainting is not defined"
+after its first dot, and nothing after it ran: the link showed a few pixels and
+Play did nothing.
+
+The guard is declared in app.js now, beside `drawLine()`, since app.js is the
+one script every page that paints with it loads; `editor_draw.js` uses that
+one. Flip keeps its own (it does not load app.js).
+
+`verify_beading` THE SHARED PLAYER, PAST THE LAYERING BUDGET posts thirty
+see-through strokes of varying width, confirms the drawing is past the budget,
+and requires the player to show it with no page error and to play. Red on
+main (12 lit pixels, the error, progress 0), green with the change.

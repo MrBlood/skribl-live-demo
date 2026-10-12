@@ -765,7 +765,14 @@ with sync_playwright() as sp:
     #   their promise catch and both change listeners, which the module does
     #   once for all three surfaces. A RAISE ADMITTING A CONTROL THE SURFACE
     #   WAS MISSING: the target stays. 143,974 measured.
-    BYTES_RATCHET, BYTES_TARGET = 143_980, 153_800
+    # RAISED (a shared link that would not play), for one named cost: +29 B,
+    #   the mirror's re-entry guard declared in app.js beside drawLine, where
+    #   paintStrokesStatic's finished-ink branch reads it. It was declared in
+    #   editor_draw.js, which the player never loads, so a drawing past the
+    #   layering budget threw on the player and never played (verify_beading).
+    #   Nothing to spend first: the declaration moved, it did not double.
+    #   144,003 measured.
+    BYTES_RATCHET, BYTES_TARGET = 144_010, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
