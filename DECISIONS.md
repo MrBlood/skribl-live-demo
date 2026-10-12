@@ -16052,3 +16052,43 @@ tail, about 43 minutes over 90 suites, each sleep to be read for what it guards
 before it changes. Found and left: Flip's eraser switch sits at the fold in the
 light desk draw drawer, so whether `verify_onepill` measures it there depends
 on the scroll, with the old waits and the new alike.
+
+**Since the settle entry (#422, #423, #430-#432).** On the owner's yes,
+WORKING-AGREEMENTS.md is a third shorter with every rule kept (#422), and
+main's after-merge check runs as six shards per database (#423), about 19
+minutes instead of 90; `harness/shard.py` picks each shard's suites by
+measured CI seconds. #430 and #431 tidied the night's harness work:
+`run_parallel.py` runs suites on the venv, `verify_helpclaims` fails a tip
+listed twice (the Pad's seven Play & scrub claims had been dropped since
+#410), and `verify_surfaces`' comment no longer names the class it describes,
+which had made that class's dead rules invisible to it. The Library's
+transport rests when the drawing does (#432): it reads the player every 100ms
+while a drawing plays, once a second while it is still, and at once after any
+press or key, so 3 reads in 3 s at rest instead of 30, and a tap on the
+drawing shows Pause in 3 ms.
+
+**The centring check in about two minutes (owner: "make the centring check
+take a couple minutes at most. I can visually tell when things look off if
+need be.").** The full sweep makes about 5,500 measurements in 16.5 minutes,
+and 84% of them are text, photographed once for each of three faces on six
+screens. The everyday run measures the two editors and the link player (about
+170 of the inventory's 232 controls) on a phone in dark and a desk in light,
+text in one face, in four processes: 519 measurements, 0 new, in 110 and 119
+seconds on two runs; with a 2px shift planted on the Shape tool's icon it
+failed in 116 s and named it. It fails only on a new finding. Whether a
+listed finding is fixed, and whether every control is reached, belong to the
+full sweep (`CENTRING_FULL=1`), because a finding near the line wobbles
+across it from run to run. Its helpers wait for the page to settle instead of
+a fixed sleep, and the example viewer, which repaints under every
+photograph, is the sweep's only. A full run showed the tool reading a tool
+tile (an icon over its label) as one mark, about 13px off; it now tells a
+stack from a label, and the Stroke layers glyph, which sat 0.75 of its 24
+units high, is centred in both editors. The list was rewritten by that run
+(2,403 findings to 2,256) and again by the full sweep of this tree (2,261),
+which reached every control and went 5/7 against the first: the two sweeps
+agreed within a quarter pixel on 2,251 of the 2,254 entries both listed, and
+the rest are three photographs that wobble (the Gallery's report-sheet
+Cancel, the other-tab bar's "Keep for later", the draw drawer's "High"), each
+centred in its crop, plus four Library icons at 0.52px. Left for the owner's
+eye, in this box's fonts only: three tool icons about 1px off (the drawings
+are lopsided), and pill labels a little high in DejaVu and FreeSans.
