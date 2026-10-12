@@ -32,6 +32,9 @@
     var submitBtn = $('postSubmitBtn');
     var publicInput = $('postPublicInput');   // absent in compose mode
     var submitLabel = $('postSubmitLabel');
+    var postIcon = $('postSubmitIcon');
+    var backupIcon = $('postBackupIcon');
+    var backingUp = false;   // the button is Save a backup (offerBackup)
     var soundMark = $('postSound');
     var soundDot = $('postSoundDot');
     var soundText = $('postSoundText');
@@ -131,6 +134,7 @@
         submitBtn.disabled = false;
         submitBtn.hidden = false;
         submitLabel.textContent = IDLE_LABEL;
+        showBackup(false);
       } else if (state === 'sending') {
         posting = true;
         status.hidden = false;
@@ -183,6 +187,25 @@
       status.classList.add('error');
       statusLabel.textContent = message;
       progressFill.style.width = '100%';
+    }
+
+    /* TOO LONG TO POST (the Pad plan, step 2; the owner's pick A). The reason
+     * in plain words, said before anything is sent, and the button becomes the
+     * one thing that helps: Save a backup, the ⋯ menu's own words and icon,
+     * which makes a .skribl file. Pressing it puts the sheet away and opens the
+     * editor's own backup (cfg.backup), the drawer the menu opens. Every open
+     * starts at idle, which puts Post back. An editor with no backup to offer
+     * gets the refusal alone. */
+    function offerBackup(message) {
+      refuse(message);
+      if (cfg.backup) showBackup(true);
+    }
+    function showBackup(on) {
+      backingUp = on;
+      if (on) submitLabel.textContent = 'Save a backup';
+      // SVG elements have no .hidden property; the attribute is what hides them.
+      if (postIcon) postIcon.toggleAttribute('hidden', on);
+      if (backupIcon) backupIcon.toggleAttribute('hidden', !on);
     }
 
     /* The row under the posted form: Watch, and for a real link Copy link,
@@ -313,6 +336,7 @@
     captionInput.addEventListener('input', updateCharCount);
     if (cfg.submit) submitBtn.addEventListener('click', function () {
       if (posting) { if (slow && cfg.cancel) { submitBtn.disabled = true; cfg.cancel(); } return; }
+      if (backingUp) { close(); cfg.backup(); return; }
       cfg.submit();
     });
     if (shareBtn) shareBtn.addEventListener('click', async function () {
@@ -391,6 +415,7 @@
       close: close,
       setState: setState,
       refuse: refuse,
+      offerBackup: offerBackup,
       result: result,
       isOpen: function () { return !overlay.hidden; },
       isPosting: function () { return posting; },
@@ -412,13 +437,22 @@
        failure('refused', reason)   4xx: the server's own reason, when it gave one
        failure('odd')               a 2xx that is not a post (a Wi-Fi sign-in page)
        failure('offline', kept)     no answer; kept: a copy was saved on this device
-       failure('cancelled')         the person cancelled a slow post */
+       failure('cancelled')         the person cancelled a slow post
+       failure('pages', why)        Flip: more pages than a post holds, and how
+                                    many to delete (found before sending)
+       failure('long', hint)        longer than a post can hold, found before
+                                    anything was sent (the owner's pick A for
+                                    the Pad plan, step 2); hint: what else the
+                                    editor knows would help (Flip's generated
+                                    pages), after the backup */
   var FIRST = 'Couldn\u2019t post. Your drawing is still here';
   function failure(what, extra) {
     if (what === 'cancelled') return 'Not posted. Your drawing is still here; Try again sends it.';
     if (what === 'offline') return FIRST + (extra ? ', saved on this device' : '') + '. Try again when you\u2019re back online.';
     if (what === 'server') return FIRST + (extra ? ', saved on this device' : '') + '. The server had a problem; try again in a moment.';
     if (what === 'odd') return FIRST + '. The connection gave a strange answer (a Wi-Fi sign-in page?); try again.';
+    if (what === 'pages') return FIRST + '. ' + extra;
+    if (what === 'long') return FIRST + '. It\u2019s longer than a post can hold, so save a backup to keep a copy as a file.' + (extra ? ' ' + extra : '');
     return FIRST + '. ' + (extra || 'The server turned it down.');
   }
 

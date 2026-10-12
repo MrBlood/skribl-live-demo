@@ -430,16 +430,19 @@ with sync_playwright() as _p:
     _pg.mouse.move(_box["x"] + 150, _box["y"] + 130, steps=8)
     _pg.mouse.up()
     _pg.wait_for_timeout(250)
-    _pg.evaluate("""() => { const B = window.SkriblPointBudget;
+    _pb_frames = _pg.evaluate("""() => { const B = window.SkriblPointBudget;
       while (frames.length <= B.MAX_FRAMES) frames.push({ strokes: [], strokeGroups: [], hold: 1 });
-      render(); }""")
+      render(); return B.MAX_FRAMES; }""")
     _pg.click("#postBtn"); _pg.wait_for_timeout(500)
     _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(700)
     _ref = _pg.evaluate("""() => { const s = document.getElementById('postStatus'), l = document.getElementById('postStatusLabel');
       return { shown: !!s && !s.hidden && s.classList.contains('error'), says: l ? l.textContent : '',
                button: (document.getElementById('postSubmitLabel') || {}).textContent || '' }; }""")
+    # Under the first line every failure shares (lib/postsheet.js), since the
+    # Pad plan's step 2: how many pages, what a post holds, how many to delete.
     check("too many pages is said on the sheet's status line, as an error",
-          _ref["shown"] and "pages and the limit is" in _ref["says"], str(_ref))
+          _ref["shown"] and _ref["says"] == "Couldn\u2019t post. Your drawing is still here. It has "
+          + f"{_pb_frames + 1} pages and a post holds {_pb_frames}; delete 1 to post it.", str(_ref))
     check("...nothing is sent, and Post keeps its word rather than offering Try again",
           not _sent and _ref["button"].strip() == "Post to Skribl", f"{_ref}; {len(_sent)} POST(s)")
     _b.close()
