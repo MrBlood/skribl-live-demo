@@ -1,11 +1,15 @@
-"""Wait for a STATE, not a guessed number of seconds.
+"""Wait for the page, not a guessed number of seconds.
 
-The suites slept about thirty minutes in fixed `wait_for_timeout` calls,
-written once each and repeated through their loops, much of it after an
-upload, a reload or a save: each a guess at how long a decode, an IndexedDB
-write or a restore takes on this box. Too short on a slower runner, so a
-check read too early; mostly idle time here. These wait for the app's own
-signal instead, up to a ceiling well above the old guess.
+Fixed `wait_for_timeout` calls were most of the battery's time (a census in
+October 2026: 65 of its 102 suite-minutes), each written once and repeated
+through the suites' loops, many after an upload, a reload or a save: a guess
+at how long a decode, an IndexedDB write or a restore takes on this box. Too
+short on a slower runner, so a check read too early; mostly idle time here.
+
+Two ways out. `until` waits for the app's own signal, up to a ceiling well
+above the old guess. `settle` stands in for a sleep after a load, a click or
+a reload: it comes back as soon as nothing the page has in flight is due
+inside the old sleep, and at the old sleep's end regardless.
 
 A WAIT IS NOT AN ASSERTION. On timeout `until` prints a note and returns
 False, and the check after it decides, under its own name, rather than the
@@ -16,6 +20,8 @@ a sleep.
 The predicates read the same state the app's own pills report: the media tab
 dots and re-add cards, Flip's media spill, the Pad's draft durability.
 """
+import json
+import os
 import time
 
 from playwright.sync_api import TimeoutError as PWTimeout
@@ -79,21 +85,21 @@ PAD_TRACK_BACK = """() => { const d = document.getElementById('musicTabDot');
 # ---------------------------------------------------------------------------
 # SETTLE: the general case of the sleeps after a load, a click or a reload.
 #
-# 570 places slept a fixed 0.6-1.8s after `goto` or `reload` alone. Each
-# meant "let the page finish what it is doing", and a page can be asked that
-# directly: an init script keeps count of the work it has in flight -- timers,
-# fetches and XHRs, IndexedDB transactions, file reads, audio decodes -- and
-# `settle(page, ms)` returns as soon as none of it is still due inside the old
-# window, fonts are loaded and no finite animation is running.
+# Each of those sleeps meant "let the page finish what it is doing", and a
+# page can be asked that directly. An init script (QUIET_JS) keeps count of
+# the work it has in flight: timers and intervals, requests and their bodies,
+# IndexedDB, file reads, decodes, image and media loads, chains of animation
+# frames, scrolls. `settle(page, ms)` returns as soon as none of it is due
+# inside the old window, fonts are loaded and no finite animation is running.
 #
 # NEVER WEAKER THAN THE SLEEP IT REPLACES. Anything that would have happened
 # before the old sleep ended still has to happen before settle returns: a
 # timer due inside the window holds it open, and so does a request in flight.
 # A timer due after the window was never seen by the sleep either. At the old
-# duration it returns regardless, exactly as the sleep did. A chain of
-# animation frames holds it while it keeps asking, so a page that animates
-# until the deadline (a replay) gets the old sleep, never less. An infinite
-# CSS animation (the recording pulse) does not hold it: it moves no layout.
+# duration it returns regardless, exactly as the sleep did, so a page that
+# animates until the deadline (a replay) gets the old sleep, never less. An
+# infinite CSS animation (the recording pulse) never ends, so it is nothing
+# the sleep would have seen finish, and it does not hold settle.
 QUIET_JS = r"""
 (() => {
   if (window.__skQuiet) return;
@@ -132,11 +138,15 @@ QUIET_JS = r"""
     window.cancelIdleCallback = function (id) { q.timers.delete('idle' + id); return _cic.call(this, id); };
   }
   // A chain of animation frames holds settle until it stops asking: a fit
-  // measured over a few frames, a glide done by hand. One that never stops
-  // (a replay) holds it to the deadline, which is the old sleep, not less.
+  // measured over a few frames, a glide done by hand.
   q.lastFrame = -Infinity;
   const _raf = window.requestAnimationFrame;
   window.requestAnimationFrame = function (cb) { q.lastFrame = now(); return _raf.call(this, cb); };
+  // A smooth scroll (scroll-behavior: smooth, a drawer's glide) runs no timer
+  // and asks for no frame of the page's own, so it is seen by its scroll
+  // events: caught on the way down, from the document or any element in it.
+  q.lastScroll = -Infinity;
+  addEventListener('scroll', () => { q.lastScroll = now(); }, { capture: true, passive: true });
   const hold = p => { q.busy++; const done = () => { q.busy--; };
                       p.then(done, done); return p; };
   const holdAll = (proto, names) => { if (proto) for (const m of names) { const f = proto[m];
@@ -199,17 +209,21 @@ QUIET_JS = r"""
   const AC = window.BaseAudioContext || window.AudioContext;
   if (AC && AC.prototype.decodeAudioData) { const _d = AC.prototype.decodeAudioData;
     AC.prototype.decodeAudioData = function () { return hold(_d.apply(this, arguments)); }; }
-  q.quiet = (until) => {
-    if (q.busy > 0) return false;
-    if (now() - q.lastFrame < 50) return false;   // asked for a frame in the last three
-    for (const due of q.timers.values()) if (due <= until) return false;
-    if (document.fonts && document.fonts.status !== 'loaded') return false;
+  // What holds settle, in words, or '' when nothing does. One function both
+  // decides and explains, so WAITS_LOG cannot name a different reason from
+  // the one that held it.
+  q.holding = (until) => {
+    if (q.busy > 0) return 'busy ' + q.busy;
+    for (const due of q.timers.values()) if (due <= until) return 'a timer due in ' + Math.round(due - now()) + 'ms';
+    if (now() - q.lastFrame < 50) return 'animation frames';   // asked for one in the last three
+    if (now() - q.lastScroll < 60) return 'scrolling';
+    if (document.fonts && document.fonts.status !== 'loaded') return 'fonts';
     if (document.getAnimations) for (const a of document.getAnimations()) {
       if (a.playState !== 'running') continue;
       const end = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming().endTime : Infinity;
-      if (end !== Infinity) return false;
+      if (end !== Infinity) return 'animation ' + (a.animationName || a.transitionProperty || 'script');
     }
-    return document.readyState === 'complete';
+    return document.readyState === 'complete' ? '' : 'loading';
   };
 })();
 """
@@ -239,20 +253,45 @@ def settle(page, ms):
     schedules the next step as the last one finishes is seen, and so is
     layout that settles over a few frames (a fit measured in a ResizeObserver
     or a requestAnimationFrame). A page without the counter (not
-    instrumented) gets the plain sleep it had before."""
-    if not page.evaluate("() => !!window.__skQuiet"):
+    instrumented) gets the plain sleep it had before.
+
+    THE DEADLINE IS KEPT HERE, not in the page: a navigation restarts the
+    page's clock, and a deadline read from the old page would hold the new
+    one far past the old sleep. Each poll hands the page what is left."""
+    end = time.monotonic() + ms / 1000
+    try:
+        armed = page.evaluate("() => !!window.__skQuiet")
+    except Exception:
+        armed = False
+    if not armed:
         page.wait_for_timeout(ms)
         return
-    deadline = page.evaluate("() => performance.now()") + ms
-    quiet_since = None
+    quiet_since, held = None, ""
     while True:
-        t, q = page.evaluate("(d) => [performance.now(), window.__skQuiet.quiet(d)]", deadline)
-        if t >= deadline:
+        left = (end - time.monotonic()) * 1000
+        if left <= 0:
+            # WAITS_LOG=path: one line for each settle that ran to its
+            # deadline, naming what held it last -- which suites and pages
+            # stay busy, and so where settle cannot save anything.
+            if os.environ.get("WAITS_LOG"):
+                try:
+                    with open(os.environ["WAITS_LOG"], "a") as fh:
+                        fh.write(json.dumps({"ms": ms, "held": held or "quiet, for under 100ms",
+                                             "url": page.url[-60:]}) + "\n")
+                except Exception:
+                    pass
             return
-        if q:
-            if quiet_since is not None and t - quiet_since >= 100:
+        try:
+            held = page.evaluate("(r) => { const s = window.__skQuiet;"
+                                 " return s ? s.holding(performance.now() + r) : 'no counter yet'; }", left)
+        except Exception:       # mid-navigation: nothing to ask yet, so not quiet
+            held = "navigating"
+        now = time.monotonic()
+        if held == "":
+            if quiet_since is not None and (now - quiet_since) * 1000 >= 100:
                 return
-            quiet_since = quiet_since if quiet_since is not None else t
+            if quiet_since is None:
+                quiet_since = now
         else:
             quiet_since = None
-        page.wait_for_timeout(25)
+        page.wait_for_timeout(min(25, max(1, left)))

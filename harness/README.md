@@ -43,8 +43,8 @@ side, each against its own fresh server (every suite reads `SKRIBL_BASE`):
 
     python3 harness/run_parallel.py -j 3 verify_parity.py verify_tools.py
 
-A red from a suite release_run.py tags as measuring is re-run alone before it
-counts. It writes no run record; `run_harness.sh` remains the record.
+A red from a suite release_run.py tags as measuring, or as sharing a store, is
+re-run alone before it counts. It writes no run record; `run_harness.sh` remains the record.
 
 A bare run works but takes well over an hour; `release_run.py` is the checkpointing
 version for a full aggregate. Suites can also be driven directly, with a server
@@ -119,13 +119,15 @@ A green check is not evidence until it has been shown to go red.
 
 **Wait for a state, not a number of seconds.** `harness/waits.py` has two:
 `until(page, js, name, window=ms)` waits for the app's own signal (a saved
-draft, music back after a reload) and `settle(page, ms)` stands in for a
-sleep after a load, a click or a reload, on a browser passed through
-`waits.instrument()`. Both come back as soon as nothing the page has in flight
-is due inside the old sleep, and never before: a timer, a request, a database
-write, a decode or a chain of animation frames due inside it holds them
-(`verify_waits.py` drives each). A sleep that guards an ABSENCE ("no toast
-within two seconds") stays a sleep.
+draft, music back after a reload) and then settles the rest of the old sleep;
+`settle(page, ms)` stands in for a sleep after a load, a click or a reload, on
+a browser passed through `waits.instrument()`. Settling comes back as soon as
+nothing the page has in flight is due inside the old sleep, and never before:
+a timer, a request, a database write, a decode, a chain of animation frames or
+a scroll due inside it holds it (`verify_waits.py` drives each). `browsing.goto`, `pad_drawer` and
+`pad_drawer_close` settle this way; on a browser without the counter they are
+the old sleep. A sleep that guards an ABSENCE ("no toast within two seconds")
+stays a sleep.
 
 ## Gotchas
 
@@ -534,9 +536,10 @@ within two seconds") stays a sleep.
 
 - `verify_waits.py` — `harness/waits.py` keeps its promise: each kind of work
   its counter sees (timers, intervals, requests, IndexedDB, file reads,
-  decodes, animation frames, CSS transitions) holds `settle` while it is due
-  inside the window, nothing holds it past the window, a quiet page comes
-  back early, and a page without the counter gets the plain sleep.
+  decodes, animation frames, CSS transitions, smooth scrolls) holds `settle`
+  while it is due inside the window, nothing holds it past the window (a
+  navigation included), a quiet page comes back early, and a page without the
+  counter gets the plain sleep.
 
 ### After v320 — motion
 

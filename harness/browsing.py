@@ -2,13 +2,10 @@
 """Shared page-opening for the harness.
 
 WHY. The declutter review aimed Phase 6 at the 133 browser-launch sites. The
-measurement says the launches are not the cost:
-
-    133 chromium.launch()            ~78 seconds in total
-    1,330 wait_for_timeout() calls   ~17 minutes of unconditional sleeping
-
-Thirteen times more wall-clock is spent sleeping than starting browsers, and
-274 of those sleeps sit directly after a `goto()` — waiting for the app to
+measurement says the launches are not the cost: together they take about 78
+seconds, while fixed `wait_for_timeout()` sleeps take most of the battery's
+time (a census in October 2026, loops included: 65 of its 102 suite-minutes).
+Many of those sleeps sat directly after a `goto()` — waiting for the app to
 boot by guessing how long booting takes.
 
 THERE IS A REAL SIGNAL, so the guess is unnecessary. app.js and flip.js each
@@ -24,9 +21,12 @@ read the marker; this makes it the default way in.
 
 A SMALL SETTLE REMAINS ON PURPOSE. Booted is not the same as laid out: some
 assertions measure geometry that a resize observer or a font swap can still
-move. `settle` keeps a fraction of the old sleep rather than assuming the
-marker is the end of all work.
+move. So `goto` and the drawer helpers end with `waits.settle`: on a page
+whose browser went through `waits.instrument()` it ends as soon as the page
+has nothing left due inside the old sleep, and on any other page it IS the
+old sleep.
 """
+import waits
 
 BOOT_MARKER = {
     "/": "pad", "/skribl-pad": "pad", "/flip": "flip",
@@ -132,7 +132,7 @@ def goto(page, base, path, *, settle=150, boot_timeout=5000, require_boot=None):
                 f"require_boot=False AND say why at the call site.") from None
 
     if settle:
-        page.wait_for_timeout(settle)
+        waits.settle(page, settle)
     return page
 
 
@@ -249,7 +249,7 @@ def pad_drawer(page, name, settle=350):
             page.click("#mediaOpenBtn"); page.wait_for_timeout(120)
         if page.evaluate(_PAD_CUR) != name:
             page.click("#mediaTabPhoto" if name == "photo" else "#mediaTabMusic")
-    page.wait_for_timeout(settle)
+    waits.settle(page, settle)
 
 
 def wait_scroll_still(page, limit_ms=2000):
@@ -276,5 +276,5 @@ def pad_drawer_close(page, settle=300):
         page.click("#mediaOpenBtn")
     else:
         return
-    page.wait_for_timeout(settle)
+    waits.settle(page, settle)
     wait_scroll_still(page)

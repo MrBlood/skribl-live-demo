@@ -30,6 +30,7 @@ import sys
 
 from assertions import make_check
 import browsing
+import waits
 
 try:
     from playwright.sync_api import sync_playwright
@@ -142,7 +143,7 @@ def fresh(b, route, height=664):
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
     browsing.goto(pg, BASE, route)
-    pg.wait_for_timeout(900)
+    waits.settle(pg, 900)
     pg.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); }")
     return ctx, pg, errs
 
@@ -151,7 +152,7 @@ def open_sheet(pg, how, closed):
     # Only when shut: some openers toggle, and a mutated grabber leaves it open.
     if pg.evaluate(closed):
         pg.evaluate(how)
-        pg.wait_for_timeout(500)
+        waits.settle(pg, 500)
     return not pg.evaluate(closed)
 
 
@@ -161,7 +162,7 @@ def top_point(pg, sel):
 
 
 with sync_playwright() as p:
-    b = p.chromium.launch()
+    b = waits.instrument(p.chromium.launch())
     for page, name, route, how, sel, closed, grab in SHEETS:
         who = f"{page}: {name}"
         print(f"\n{who}")
@@ -463,7 +464,7 @@ with sync_playwright() as p:
             pg.evaluate("""() => { window.__gripUps = 0;
                 document.querySelector('#drawPanel .drawer-detent-handle').addEventListener('pointerup', () => window.__gripUps++);
                 document.querySelector('#drawPanel .drawer-detent-more').click(); }""")
-            pg.wait_for_timeout(1700)
+            waits.settle(pg, 1700)
             g = pg.evaluate(GRIP)
             check(f"{who}: expanded, the whole grip is painted, edge to edge", g["hit"], str(g))
             # The dock above it is painted too, not pushed into the header's band

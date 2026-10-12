@@ -42,8 +42,8 @@ took 30), past run_harness.sh's 10-minute limit per suite. Run it directly,
 with a server up (harness/bootstrap.sh):
 
     python3 harness/check_centring.py               every page, every combination
-    CENTRING_COMBOS=phone-light python3 harness/check_centring.py
-    CENTRING_JOBS=1 python3 harness/check_centring.py   one combination at a time
+    CENTRING_COMBOS=phone-light python3 harness/check_centring.py   one (calibration, iteration)
+    CENTRING_JOBS=1 python3 harness/check_centring.py   one at a time (default: three)
 
 KNOWN FINDINGS SHRINK, NEW ONES FAIL. harness/centring_baseline.json lists what
 the first full run found (off-centre marks, typed symbols). A finding not on the
@@ -53,9 +53,6 @@ gets shorter -- take it off with CENTRING_WRITE_BASELINE=1 after a full run.
 Writes a report to $CENTRING_OUT (default /tmp/centring-out): report.json and a
 3x crop of each flagged control with crosshairs (green: the painted shape's
 centre; magenta: the mark's optical centre).
-
-    CENTRING_COMBOS=phone-light   run one combination (calibration, iteration)
-    CENTRING_JOBS=3               combinations side by side on a full run (1: serial)
 """
 import io
 import json
@@ -204,6 +201,11 @@ def _centroid(w):
     return sum(i * v for i, v in enumerate(cols)) / sx + 0.5, sum(i * v for i, v in enumerate(rows)) / sy + 0.5
 
 
+def where(pg):
+    """The page a note is about: its address after the server's."""
+    return pg.url.removeprefix(BASE)[:30] or "/"
+
+
 MOVING = []   # controls whose own patch kept changing with nothing hidden
 
 
@@ -221,7 +223,7 @@ def steady(pg, shot, sel):
         if not _diff(a, shot()).getbbox():
             return a
         pg.wait_for_timeout(250)
-    MOVING.append(f"{pg.url.rsplit('/', 1)[-1][:24] or '/'} {sel}")
+    MOVING.append(f"{where(pg)} {sel}")
     return None
 
 
@@ -385,9 +387,9 @@ def click(pg, sel, wait=350):
             pg.wait_for_timeout(wait)
             return True
     except Exception as e:
-        MISSES.append(f"{pg.url.split('5003')[-1][:30]} {sel}: {str(e).replace(chr(10)," | ")[-260:]}")
+        MISSES.append(f"{where(pg)} {sel}: {str(e).replace(chr(10), ' | ')[-260:]}")
         return False
-    MISSES.append(f"{pg.url.split('5003')[-1][:30]} {sel}: not visible")
+    MISSES.append(f"{where(pg)} {sel}: not visible")
     return False
 
 

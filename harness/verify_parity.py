@@ -31,6 +31,7 @@ import sys
 import zlib
 from assertions import make_check
 import browsing
+import waits
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 results = []
@@ -173,7 +174,7 @@ EXISTS = """(sel) => { const e = document.querySelector(sel);
             : { found: false }; }"""
 
 with sync_playwright() as p:
-    b = p.chromium.launch()
+    b = waits.instrument(p.chromium.launch())
     surf = {}
     errs = {"pad": [], "flip": []}
     for name, path in (("pad", "/skribl-pad"), ("flip", "/flip")):
@@ -1514,18 +1515,20 @@ with sync_playwright() as p:
             for _k in ("music", "photo"):
                 _gc = b.new_context(viewport={"width": _w, "height": _h}, is_mobile=True, has_touch=True)
                 _q = _gc.new_page()
-                browsing.goto(_q, BASE, _route); _q.wait_for_timeout(700)
+                browsing.goto(_q, BASE, _route); waits.settle(_q, 700)
                 _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
-                _q.click("#mediaOpenBtn"); _q.wait_for_timeout(400)
+                _q.click("#mediaOpenBtn"); waits.settle(_q, 400)
                 if _k == "music":
                     _q.click("#mediaTabMusic")
-                _q.wait_for_timeout(2500)
+                # The drawer's slide and the scroll that follows it, then the decode,
+                # the growth and its scroll below: settled, not guessed.
+                waits.settle(_q, 2500)
                 _before = _q.evaluate(GROWN)
                 if _k == "music":
                     _q.set_input_files(_in[_k], {"name": "t.wav", "mimeType": "audio/wav", "buffer": wav_bytes(4.0)})
                 else:
                     _q.set_input_files(_in[_k], {"name": "t.png", "mimeType": "image/png", "buffer": png_bytes(64, 48)})
-                _q.wait_for_timeout(2400)
+                waits.settle(_q, 2400)
                 _g = _q.evaluate(GROWN)
                 check(f"{_route} at {_w}x{_h}: a {'song' if _k == 'music' else 'photo'} added to the open card "
                       "brings its end on screen, painted, and the dock stays below the header",
@@ -1537,7 +1540,7 @@ with sync_playwright() as p:
                     # screen, and the follower must not chase the card's end past it: showing
                     # the Fine-tune body moves the follower's baseline. A break of that turned
                     # nothing above red, so this is what pins it.
-                    _q.click("#fineTuneToggle"); _q.wait_for_timeout(1800)
+                    _q.click("#fineTuneToggle"); waits.settle(_q, 1800)
                     _ft = _q.evaluate("""() => { const z = document.getElementById('zoomTrackWrap'), c = document.getElementById('mediaCard');
                         const vh = window.visualViewport ? window.visualViewport.height : innerHeight;
                         return { wave: Math.round(z.getBoundingClientRect().bottom - vh),
@@ -1926,9 +1929,9 @@ with sync_playwright() as p:
 
     def _fresh(ctx, route):
         q = ctx.new_page()
-        q.goto(BASE + route, wait_until="load"); q.wait_for_timeout(600)
+        q.goto(BASE + route, wait_until="load"); waits.settle(q, 600)
         q.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
-        q.goto(BASE + route, wait_until="load"); q.wait_for_timeout(800)
+        q.goto(BASE + route, wait_until="load"); waits.settle(q, 800)
         q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         return q
 
