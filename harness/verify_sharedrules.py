@@ -423,6 +423,68 @@ with sync_playwright() as p:
               f"saved {_got['n']}, {_got['bad']} off the rule, e.g. {_got['first']}")
         _ap.close()
 
+    # AND A LONG DRAWING, PACKED (lib/pointpack.js, v322 plan step 1). The
+    # packer is only worth its place while it is exact: what comes back must
+    # equal what the rule writes, key for key, and anything it cannot describe
+    # must come back as a refusal, never as an approximation.
+    _kp = browser.new_page(viewport={"width": 1000, "height": 860})
+    browsing.goto(_kp, BASE, "/skribl-pad")
+    pk = _kp.evaluate("""() => {
+      const W = window.SkriblPointWrite, P = window.SkriblPointPack; let s = 11;
+      const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+      let trips = 0, off = 0, first = null;
+      for (let trial = 0; trial < 300; trial++) {
+        const pts = [], groups = [], ng = 1 + Math.floor(rnd() * 40);
+        for (let g = 0; g < ng; g++) {
+          const len = Math.floor(rnd() * 60), er = rnd() < 0.2;
+          const col = ['#7c5cff', '#000', 'rgba(1,2,3,0.5)', '#ffffff'][Math.floor(rnd() * 4)];
+          groups.push(len);
+          for (let j = 0; j < len; j++) {
+            const q = { x: (rnd() - 0.2) * 5000 / 3, y: (rnd() - 0.2) * 5000 / 7, color: col, size: rnd() * 40,
+                        t: rnd() < 0.5 ? Math.floor(rnd() * 9e6) : rnd() * 9e6, erase: er };
+            if (j === 0 && rnd() < 0.9) q.start = true;
+            pts.push(q);
+          }
+        }
+        const packed = P.pack(pts, groups);
+        if (!packed) { off++; first = first || { trial, why: 'refused a drawing it should pack' }; continue; }
+        const back = P.unpack(JSON.parse(JSON.stringify(packed))), want = pts.map(W.point);
+        let bad = JSON.stringify(back.groups) !== JSON.stringify(groups) || back.points.length !== want.length;
+        for (let q = 0; q < want.length && !bad; q++)
+          for (const k of new Set([...Object.keys(want[q]), ...Object.keys(back.points[q])]))
+            if (want[q][k] !== back.points[q][k]) { bad = true; first = first || { trial, q, k, want: want[q][k], got: back.points[q][k] }; }
+        if (bad) off++; else trips++;
+      }
+      const b0 = { x: 1.234, y: 5.678, color: '#000', size: 3, t: 10, start: true }, b1 = { x: 2, y: 6, color: '#000', size: 3, t: 20 };
+      const refuse = { 'a key the rule does not write': [[b0, Object.assign({}, b1, { stamp: 'heart' })], [2]],
+        'two colours in one stroke': [[b0, Object.assign({}, b1, { color: '#fff' })], [2]],
+        'a start that is not the first point': [[b0, Object.assign({}, b1, { start: true })], [2]],
+        'start: false': [[Object.assign({}, b0, { start: false }), b1], [2]],
+        'a NaN': [[b0, Object.assign({}, b1, { x: NaN })], [2]],
+        'a number written as a string': [[b0, Object.assign({}, b1, { y: '6' })], [2]],
+        'groups that do not add up': [[b0, b1], [3]],
+        'erase on half a stroke': [[Object.assign({}, b0, { erase: true }), b1], [2]] };
+      const refused = {}; for (const k in refuse) refused[k] = P.pack(refuse[k][0], refuse[k][1]) === null;
+      const good = P.pack([b0, b1], [2]);
+      const breaks = { 'cut short': Object.assign({}, good, { s: good.s.slice(0, -1) }),
+        'a character from outside the form': Object.assign({}, good, { s: 'A' + good.s }),
+        'a count that does not match': Object.assign({}, good, { n: 3 }),
+        'another version': Object.assign({}, good, { v: 2 }),
+        'units left over': Object.assign({}, good, { s: good.s + String.fromCharCode(0x0100) }) };
+      const threw = {}; for (const k in breaks) { try { P.unpack(breaks[k]); threw[k] = false; } catch (e) { threw[k] = true; } }
+      const wide = P.pack([{ x: -99999.99, y: 4096, color: '#000', size: 0, t: 7.2e7, start: true }, b1], [2]).s;
+      let lo = 0xFFFF, hi = 0; for (const c of wide + good.s) { lo = Math.min(lo, c.charCodeAt(0)); hi = Math.max(hi, c.charCodeAt(0)); }
+      return { trips, off, first, refused, threw, lo, hi }; }""")
+    check("a packed drawing comes back exactly as the rule writes it (300 random drawings, through JSON)",
+          pk["trips"] == 300 and pk["off"] == 0, f'{pk["trips"]} exact, {pk["off"]} off: {pk["first"]}')
+    check("...and what the form cannot describe is refused, never approximated",
+          all(pk["refused"].values()), str({k: v for k, v in pk["refused"].items() if not v}) or str(pk["refused"]))
+    check("...and a damaged packed drawing throws rather than reading as a smaller one",
+          all(pk["threw"].values()), str({k: v for k, v in pk["threw"].items() if not v}) or str(pk["threw"]))
+    check("...written only in characters JSON leaves alone and storage keeps: U+0100 to below the surrogates",
+          pk["lo"] >= 0x0100 and pk["hi"] < 0xD800, f'U+{pk["lo"]:04X}..U+{pk["hi"]:04X}')
+    _kp.close()
+
     # BOTH PAINTERS TAKE THE UNIFORM-RUN PATH, OR ONE OF THEM BEADS.
     #
     # A Motion Smear ghost is see-through and its alpha rides in an 8-digit hex.

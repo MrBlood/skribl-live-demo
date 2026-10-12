@@ -248,25 +248,36 @@ function serializeAutosave() {
   // filled the origin's shared ~5 MB here (v322 plan, step 1). Same schema,
   // same readers: the rule changes how a number is spelled, never what the
   // draft holds.
-  const W = window.SkriblPointWrite;
+  const W = window.SkriblPointWrite, P = window.SkriblPointPack;
   const written = (list) => (W ? list.map(W.point) : list.slice());
-  let redoStrokes = null, redoStrokeGroups = null;
-  if (redoStack.length) {
-    const deepest = redoStack[0];
-    if (deepest && deepest.strokes) {
-      redoStrokes = written(deepest.strokes);
-      redoStrokeGroups = (deepest.strokeGroups || []).slice();
-    }
+  const deepest = (redoStack.length && redoStack[0] && redoStack[0].strokes) ? redoStack[0] : null;
+  // A LONG DRAWING IS PACKED (lib/pointpack.js, v322 plan step 1): four
+  // characters a point, lossless against the rule above, so a two-hour drawing
+  // is 0.69 million characters where its JSON would be eleven -- more than the
+  // origin's whole localStorage. Both lists or neither; anything the packer
+  // will not describe exactly falls back to the plain form.
+  let pk = null, rpk = null;
+  if (P && strokes.length + (deepest ? deepest.strokes.length : 0) >= PACK_FROM) {
+    pk = P.pack(strokes, strokeGroups);
+    rpk = (pk && deepest) ? P.pack(deepest.strokes, deepest.strokeGroups || []) : null;
+    if (deepest && !rpk) pk = null;
   }
-  return {
+  const rec = {
     version: 1,
     writerId: WRITER_ID,
     savedAt: new Date().toISOString(),
-    baseSnapshot: baseSnapshot,
-    strokes: written(strokes),
-    strokeGroups: strokeGroups.slice(),
-    redoStrokes: redoStrokes,
-    redoStrokeGroups: redoStrokeGroups,
+    baseSnapshot: baseSnapshot
+  };
+  if (pk) {
+    rec.packed = pk;
+    rec.redoPacked = rpk;
+  } else {
+    rec.strokes = written(strokes);
+    rec.strokeGroups = strokeGroups.slice();
+    rec.redoStrokes = deepest ? written(deepest.strokes) : null;
+    rec.redoStrokeGroups = deepest ? (deepest.strokeGroups || []).slice() : null;
+  }
+  return Object.assign(rec, {
     background: { color: bgColor },
     // Metadata only — no bytes. Prefer live media; fall back to pending meta
     // (from a restore where the user hasn't re-added the file yet) so it persists.
@@ -274,7 +285,31 @@ function serializeAutosave() {
       ? { name: photoBgImg._fileName, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
       : (typeof pendingPhotoMeta !== 'undefined' ? (pendingPhotoMeta || _inFlight.photo) : null),
     musicMeta: currentMusicMeta()
-  };
+  });
+}
+
+// Past this many points (applied and undone together) the draft is packed.
+// The plain form is then over a megabyte, a fifth of the origin's shared
+// localStorage on a browser that counts it in characters and more on one that
+// counts bytes; under it the draft stays the JSON every reader and every suite
+// has always read, byte for byte.
+const PACK_FROM = 20000;
+
+// A packed draft read back into the plain form every reader expects. Throws
+// on a damaged record, and the callers treat that as nothing to restore, never
+// as an empty drawing: this tab does not adopt it, so its first write moves the
+// record aside as a drawing it did not open (lib/othertab.js) instead of
+// writing over it.
+function unpackDraft(d) {
+  if (!d || !d.packed) return d;
+  const P = window.SkriblPointPack;
+  if (!P) throw new Error('a packed drawing, and lib/pointpack.js is not loaded');
+  const a = P.unpack(d.packed);
+  const r = d.redoPacked ? P.unpack(d.redoPacked) : null;
+  d.strokes = a.points; d.strokeGroups = a.groups;
+  d.redoStrokes = r ? r.points : null; d.redoStrokeGroups = r ? r.groups : null;
+  delete d.packed; delete d.redoPacked;
+  return d;
 }
 
 // The loop numbers only mean anything once loadedmetadata/decodeAudioData has
@@ -543,11 +578,14 @@ function readAutosave() {
   try {
     const raw = localStorage.getItem(AUTOSAVE_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw);
+    const data = unpackDraft(JSON.parse(raw));
     const hasDrawing = (data.strokes && data.strokes.length) || data.baseSnapshot;
     const hasMedia = (data.photoMeta && data.photoMeta.name) || (data.musicMeta && data.musicMeta.name);
     return (hasDrawing || hasMedia) ? data : null;
   } catch (e) {
+    // Not silent: a draft that will not read is a drawing the person cannot
+    // see. It is not adopted, so it is moved aside, never written over (above).
+    console.error('[skribl] the saved drawing could not be read:', e);
     return null;
   }
 }
@@ -780,7 +818,7 @@ function restoreAutosave(data) {
     later: (text, at) => {
       if (!window.SkriblSavedDrafts || !window.SkriblSavedDrafts.keep) return false;
       let d;
-      try { d = JSON.parse(text); } catch (e) { return false; }
+      try { d = unpackDraft(JSON.parse(text)); } catch (e) { console.error('[skribl] a waiting drawing could not be read:', e); return false; }
       const when = at ? new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
       const payload = { version: 2, schemaVersion: 2, playbackMode: 'replay', fps: null,
         frames: [{ strokes: d.strokes || [], strokeGroups: d.strokeGroups || [], baseSnapshot: d.baseSnapshot || null,
