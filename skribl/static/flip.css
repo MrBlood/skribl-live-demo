@@ -833,8 +833,7 @@
     .fps-group { gap: 5px; }
     .flip-actions .seg button { padding: 5px 5px; }
   }
-  /* Tight controls + drop the fps LABEL and switch the wordmark to FM so the whole
-     row (fps, onion, grid, draw-on, more, Flip it, Post) fits down to ~340px. */
+  /* 440px and under: tighter gaps and padding. */
   @media (max-width: 440px) {
     .fps-group { gap: 0; }
     /* FULL wordmark stays here. It was dropped at 440px on a free-space

@@ -121,13 +121,17 @@ CLAIMS = {
     "Two timers": ["probe:takes"],
     "Canvas locks between takes": ["probe:takes"],
     "Add more takes": ["verify_ux.py::F4 setup: Add take started a take", "probe:takes"],
+    # One pill text on both editors since #410, so its claims cover both.
     "Play & scrub": ["verify_scrub.py::a real replay shows the bar",
                      "verify_scrub.py::it is a rounded bar of the drawing's shape",
                      "verify_replayspeed.py::the bar shows the drawing's shape: ink where it was drawn, flat where the artist paused",
                      "verify_replayspeed.py::...and slid up off the bar, the same movement covers a quarter of that (fine scrub)",
                      "verify_replayspeed.py::a sideways drag across the drawing scrubs it",
                      "verify_tappause.py::Pad: a tap on the canvas pauses the replay where it is",
-                     "verify_tappause.py::Pad: a second tap carries the replay on from where it paused"],
+                     "verify_tappause.py::Pad: a second tap carries the replay on from where it paused",
+                     "probe:flip_play",
+                     "verify_tappause.py::Flip: a tap on the canvas pauses the flip on the page it is on",
+                     "verify_tappause.py::Flip: a second tap carries the flip on from where it paused"],
     "Speed": ["verify_replayspeed.py::...saying how long it took to draw and how fast the preview runs",
               "verify_replayspeed.py::a speed picked mid-play carries on from the same place, then runs at it",
               "verify_replayspeed.py::Fit lands the whole replay in about 30 seconds and is never slower than as drawn",
@@ -140,9 +144,6 @@ CLAIMS = {
                    "verify_pages.py::onion depth/tint live there and are reachable"],
     "fps": ["verify_gifenc.py::frame delay matches the chosen fps"],
     "Draw-on": ["verify_hold.py::a Draw-on page reaches its last stroke before the page turns"],
-    "Play & scrub": ["probe:flip_play",
-                        "verify_tappause.py::Flip: a tap on the canvas pauses the flip on the page it is on",
-                        "verify_tappause.py::Flip: a second tap carries the flip on from where it paused"],
     # Music
     "Add a track": ["verify_amber.py::Pad GREEN once a track is attached", "probe:media_tabs",
                     "verify_parity.py::{}: a file dropped anywhere on the card is taken, and the wrong kind is refused"],
@@ -207,6 +208,16 @@ def check_names(suite):
 
 
 print("\nCLAIMS — each one names a check that exists, or a probe below")
+# A dict literal keeps the LAST of two equal keys and says nothing, so a pill
+# claimed twice is a claim thrown away: #410 renamed Flip's "Flip it & scrub"
+# to the Pad's "Play & scrub", and the Pad's seven claims for it went unread.
+# Read off this file's source, because the dict itself has already lost them.
+_keys = [k.value for n in ast.walk(ast.parse(pathlib.Path(__file__).read_text(encoding="utf-8")))
+         if isinstance(n, ast.Assign) and any(getattr(t, "id", None) == "CLAIMS" for t in n.targets)
+         for k in n.value.keys if isinstance(k, ast.Constant)]
+_twice = sorted({k for k in _keys if _keys.count(k) > 1})
+check("every pill is claimed once (a second claim replaces the first without a word)",
+      _keys and not _twice, ", ".join(_twice) or f"{len(_keys)} pills, each once")
 _cache = {}
 _bad_refs = []
 for pill, refs in CLAIMS.items():
