@@ -1487,7 +1487,7 @@ _SHEET = """() => { const q = (id) => document.getElementById(id);
            plane: painted(q('postSubmitIcon')), floppy: painted(q('postBackupIcon')) }; }"""
 _AFTER = """() => { const o = document.getElementById('postOverlay'), s = document.getElementById('nameShell'),
     d = document.getElementById('nameDone');
-  return { sheet: !o.hidden && o.classList.contains('open'), drawer: !!s && !s.hidden && getComputedStyle(s).display !== 'none',
+  return { sheet: !o.hidden && o.classList.contains('open'), drawer: !!s && s.classList.contains('open') && !s.inert,
            done: d ? d.textContent.trim() : null }; }"""
 
 
@@ -1564,7 +1564,11 @@ with sync_playwright() as _pw:
               not _after["sheet"] and _after["drawer"] and _after["done"] == "Save a backup", str(_after))
         check("...and the .skribl file it downloads holds every point",
               _pages == [_cap + 1], f"{_pages}")
-        _pg.click("#postBtn"); _pg.wait_for_timeout(500)
+        # A sheet that did not go away (a failure above) is closed first, so
+        # one red check cannot hide the rest behind a click that never lands.
+        if _pg.evaluate(_AFTER)["sheet"]:
+            _pg.keyboard.press("Escape"); _pg.wait_for_timeout(500)
+        _pg.click("#postBtn", timeout=10000); _pg.wait_for_timeout(500)
         _s = _pg.evaluate(_SHEET)
         check("...and opening the sheet again puts Post back",
               _s["label"] == "Post to Skribl" and _s["plane"] and not _s["floppy"] and not _s["shown"], str(_s))
