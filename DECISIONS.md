@@ -16424,3 +16424,45 @@ which its eraser reveals, so its copies have to hold that layer apart; posts
 are capped at 20,000 points until step 4, and the snapshots land there before
 long drawings can be posted. The first seek to a far point still draws
 everything before it once (it is what builds the copies).
+
+## After v322 -- the Pad plan, step 3, the in-post player: a long post scrubs from the nearest copy too
+
+Step 3 gave the Pad's preview and the shared link's player copies of the
+canvas to seek from. The in-post player (the Library, the Gallery, the feed,
+and any host that embeds it) still repainted from zero on every scrub, and step
+4 would let posts be ten times longer, so it gets them before step 4 can land.
+
+Its compositor is not the editors'. It keeps the photo as a layer of its own
+(the base), the ink on a layer above it (dry) and a stroke in progress on a
+third (wet), and an eraser cuts the ink to reveal the photo. A copy of its
+canvas would bake the photo into the ink, so lib/seekcache.js takes two
+optional hooks: `source()`, the canvas to copy, which here is the ink layer
+(after `finish()` bakes any wet stroke, at a stroke boundary, where the next
+dot would bake it anyway), and `put(copy)`, which repaints the underlay,
+makes a fresh compositor over it and seeds its ink layer with the copy. A post
+with no see-through ink and no eraser has no compositor, and copies its whole
+canvas as the editors do. The copies are taken from inside the player's own
+replay loop through the module's `tap()`, rather than by a second loop beside
+it. A new document, or a photo that finishes decoding after the copies were
+taken, drops them.
+
+verify_inline SCRUBBING A LONG POST posts two 19,000-point drawings to the feed,
+one through the compositor (see-through strokes and erasers) and one not, and
+seeks each ten times on two pages: one as served, one with lib/seekcache.js
+refused, where the player seeks from zero as it always did. Every byte of the
+canvas is hashed after each seek and the pages must agree; the reference page
+must hold no copies; every seek after the first on the served page must start
+near its target.
+
+Each check was shown red on its own mutation, one at a time: the compositor
+not seeded from the copy (the layered post, seven seeks of ten differ); the
+opaque post's copy put back a pixel off (the opaque post only); copying the
+visible canvas instead of the ink layer (the layered post -- the visible
+canvas is a frame behind the ink while the loop draws, which is what the
+source hook is for); no copies taken at all (only the checks that seeks start
+near their targets; the pixels stay right).
+
+The embed costs a host 3,831 B more (verify_inline's ledger names it: the
+module 2,810, inlineplayer.js 1,021, after taking the copies from replayTo's
+own loop saved 458), and the shared player 179 B more for hooks it does not
+use (verify_player_isolation's ledger).
