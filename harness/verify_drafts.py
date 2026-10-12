@@ -517,6 +517,106 @@ with sync_playwright() as p:
               hit is None and back >= 1, f"banner={hit} strokes={back}")
         ctx.close()
 
+    # ---------- a long drawing --------------------------------------------
+    print("\nLONG — a two-hour drawing autosaves, packed, and comes back whole")
+    # v322 plan, step 1. Even written by the rule (lib/pointwrite.js) a point
+    # is ~64 characters, so a two-hour drawing (170,717 points at the pace
+    # measured) is eleven million: past the origin's whole localStorage, and
+    # the pill said "Storage full -- not saved" for the rest of the session.
+    # lib/pointpack.js keeps it in 0.69 million. The drawing is generated in
+    # the page from a fixed seed, shaped like a pointer's points (long doubles,
+    # whole milliseconds), loaded the way a draft loads, and generated again
+    # after the reload to compare point for point against the rule.
+    GEN = """(n) => { let s = 7; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+      const pts = [], groups = []; let t = 0; const cols = ['#7c5cff', '#1d1a2b', '#1d1a2b', '#ff7a59'];
+      while (pts.length < n) {
+        const m = 15 + Math.floor(rnd() * 286); let x = 60 + rnd() * 824, y = 60 + rnd() * 600;
+        let ang = rnd() * 6.283; const curv = (rnd() - 0.5) * 0.12, step = 3 + rnd() * 5;
+        const w = [2, 3, 4, 6, 10][Math.floor(rnd() * 5)], col = cols[Math.floor(rnd() * 4)], er = rnd() < 0.05;
+        let k = 0;
+        for (let i = 0; i < m && pts.length < n; i++, k++) {
+          const f = i / (m - 1), sc = 1.0000000123456789;
+          const q = { x: x * sc, y: y * sc, color: col, size: (w * (0.35 + 0.65 * Math.sin(Math.PI * f)) + 0.3) * sc,
+                      t: Math.round(t), erase: er };
+          if (i === 0) q.start = true;
+          pts.push(q); ang += curv;
+          x = Math.min(939, Math.max(5, x + Math.cos(ang) * step)); y = Math.min(715, Math.max(5, y + Math.sin(ang) * step));
+          t += 1000 / 55;
+        }
+        groups.push(k);
+        const r = rnd(); t += r < 0.6 ? 150 + rnd() * 650 : r < 0.9 ? 1000 + rnd() * 3000 : 8000 + rnd() * 32000;
+      }
+      return { pts, groups }; }"""
+    LOAD = """(n) => { const d = (""" + GEN + """)(n);
+      restoreAutosave({ version: 1, strokes: d.pts, strokeGroups: d.groups, background: { color: '#f6f2ea' } });
+      const durable = flushPadDraft();
+      const raw = localStorage.getItem('skribl_autosave_v1') || '', rec = raw ? JSON.parse(raw) : null;
+      const pill = document.getElementById('autosaveStatusText');
+      return { n: d.pts.length, durable, chars: raw.length, keys: rec ? Object.keys(rec) : [],
+               pill: pill ? pill.textContent : null }; }"""
+    SAME = """(n) => { const d = (""" + GEN + """)(n), want = d.pts.map(SkriblPointWrite.point);
+      const sig = (q) => [q.x, q.y, q.size, q.t, q.color, q.start === true, q.erase === true].join(',');
+      let off = 0, first = null;
+      for (let i = 0; i < Math.max(want.length, strokes.length); i++) {
+        const a = want[i] ? sig(want[i]) : null, b = strokes[i] ? sig(strokes[i]) : null;
+        if (a !== b) { off++; if (!first) first = { i, want: a, got: b }; } }
+      return { n: strokes.length, off, first, groups: JSON.stringify(strokeGroups) === JSON.stringify(d.groups),
+               undo: !document.getElementById('undoBtn').disabled }; }"""
+    for _n, _label, _packed in ((170717, "two hours (170,717 points)", True),
+                                (2000, "a short drawing (2,000 points)", False)):
+        ctx = b.new_context()
+        pg = ctx.new_page()
+        errors = []
+        pg.on("pageerror", lambda e: errors.append(str(e)))
+        pg.goto(f"{BASE}/", wait_until="load")
+        pg.wait_for_timeout(800)
+        made = pg.evaluate(LOAD, _n)
+        if _packed:
+            check(f"{_label}: it autosaves, and the pill says so",
+                  made["durable"] and "full" not in (made["pill"] or "").lower() and made["chars"] > 0,
+                  f"durable={made['durable']} pill={made['pill']!r} stored {made['chars']:,} chars")
+            check(f"{_label}: ...packed, in under a million characters of the origin's ~five",
+                  "packed" in made["keys"] and "strokes" not in made["keys"] and made["chars"] < 1_000_000,
+                  f"keys={made['keys']} chars={made['chars']:,}")
+        else:
+            # Under the threshold the draft is the plain JSON every reader and
+            # suite has always read, key for key and in the same order.
+            check(f"{_label}: stays the plain draft, key for key",
+                  made["keys"] == ["version", "writerId", "savedAt", "baseSnapshot", "strokes", "strokeGroups",
+                                   "redoStrokes", "redoStrokeGroups", "background", "photoMeta", "musicMeta"],
+                  str(made["keys"]))
+        pg.reload(wait_until="load")
+        pg.wait_for_timeout(1200)
+        same = pg.evaluate(SAME, _n)
+        check(f"{_label}: after a reload every point is back, by the rule, in its strokes",
+              same["n"] == _n and same["off"] == 0 and same["groups"],
+              f"{same['n']:,} of {_n:,} back, {same['off']} off, groups match {same['groups']}, first {same['first']}")
+        check(f"{_label}: ...and it undoes, as a drawing kept this session does", same["undo"], str(same))
+        check(f"{_label}: no page errors", not errors, "; ".join(errors[:2]))
+        ctx.close()
+
+    # Undone strokes are part of the draft (they come back as redo): packed too.
+    ctx = b.new_context()
+    pg = ctx.new_page()
+    pg.goto(f"{BASE}/", wait_until="load")
+    pg.wait_for_timeout(800)
+    pg.evaluate(LOAD, 60000)
+    for _ in range(3):
+        pg.click("#undoBtn")
+    pg.wait_for_timeout(200)
+    kept = pg.evaluate("""() => { const durable = flushPadDraft(), rec = JSON.parse(localStorage.getItem('skribl_autosave_v1'));
+        return { durable, keys: Object.keys(rec), applied: strokeGroups.length }; }""")
+    pg.reload(wait_until="load")
+    pg.wait_for_timeout(1200)
+    redo = pg.evaluate("""() => { const before = strokeGroups.length, can = !document.getElementById('redoBtn').disabled;
+        for (let i = 0; i < 3; i++) document.getElementById('redoBtn').click();
+        return { before, can, after: strokeGroups.length, points: strokes.length }; }""")
+    check("forty-some minutes with three strokes undone: the undone strokes are packed and come back as redo",
+          kept["durable"] and "redoPacked" in kept["keys"] and redo["can"]
+          and redo["before"] == kept["applied"] and redo["after"] == kept["applied"] + 3 and redo["points"] == 60000,
+          f"saved {kept}, after reload {redo}")
+    ctx.close()
+
     b.close()
 
 # ---------------------------------------------------------------------------
@@ -640,6 +740,45 @@ with sync_playwright() as _p2:
               and len(_w3) == 1 and _w3[0][0].startswith("kept-") and bool(_bar2),
               f"before {_before} after {_after} (A {_astrokes}, B {_bstrokes}); waiting {[k for k, _ in _w3]}")
         _ctx.close()
+
+    # A LONG DRAWING WAITING IN ANOTHER TAB'S PLACE is packed text (v322 plan,
+    # step 1), and Keep for later is the second reader of it: it has to unpack
+    # too, or the draft it files is empty. The text is the editor's own
+    # serializeAutosave() of a long drawing, filed as another tab's waiting
+    # drawing; the page that made it leaves for a page with no editor first, so
+    # its own leaving flush lands where it can be cleared.
+    _ctx = _b2.new_context()
+    _g = _ctx.new_page(); _g.goto(BASE + "/skribl-pad", wait_until="load"); _g.wait_for_timeout(800)
+    _made = _g.evaluate("""(n) => { const d = (""" + GEN + """)(n);
+        restoreAutosave({ version: 1, strokes: d.pts, strokeGroups: d.groups, background: { color: '#f6f2ea' } });
+        window.__longText = JSON.stringify(serializeAutosave());
+        return { packed: !!JSON.parse(window.__longText).packed, chars: window.__longText.length }; }""", 60000)
+    _text = _g.evaluate("() => window.__longText")
+    _g.goto(BASE + "/api/skribls")
+    _g.evaluate("""(t) => { localStorage.removeItem('skribl_autosave_v1'); localStorage.removeItem('skribl_autosave_v1:owner');
+        localStorage.setItem('skribl_autosave_v1:waiting:longtab', JSON.stringify({ w: 'longtab', at: Date.now(), data: t })); }""", _text)
+    _g.close()
+    _c = _ctx.new_page(); _c.set_viewport_size({"width": 1100, "height": 860})
+    _c.goto(BASE + "/skribl-pad", wait_until="load")
+    _c.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.pad"); _c.wait_for_timeout(700)
+    _offered = _c.evaluate(_BAR)
+    if _offered:
+        _c.click(".othertab-later"); _c.wait_for_timeout(1500)
+    _k = [d for d in (_c.evaluate("() => window.SkriblSavedDrafts.list()") or [])
+          if (d.get("title") or "").startswith("From another tab")]
+    _c.close()
+    _same = None
+    if _k:
+        _d = _ctx.new_page(); _d.goto(f"{BASE}/skribl-pad?draft={_k[0]['id']}", wait_until="load")
+        _d.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.pad"); _d.wait_for_timeout(1200)
+        _same = _d.evaluate(SAME, 60000)
+        _d.close()
+    check("a long drawing waiting in another tab's place: Keep for later files the whole drawing, every point back",
+          _made["packed"] and bool(_offered) and len(_k) == 1 and bool(_same)
+          and _same["n"] == 60000 and _same["off"] == 0 and _same["groups"],
+          f"made {_made}, offered {bool(_offered)}, kept {len(_k)}, opened "
+          + (f"{_same['n']:,} points, {_same['off']} off, groups {_same['groups']}" if _same else "nothing"))
+    _ctx.close()
     _b2.close()
 
 bad = [r for r in results if not r[0]]

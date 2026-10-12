@@ -16241,3 +16241,46 @@ own page. Its check that no reader treats `erase: false` differently from a
 missing `erase` now scans every script (103) rather than five named ones,
 because the Pad's restore path became such a reader: red on a strict comparison
 planted in `editor_draft.js`, a file the old list never opened.
+
+## After v322 -- the Pad plan, step 1: a two-hour drawing autosaves
+
+The second half of step 1; the first (above) made the Pad's draft spell its
+points by the rule. A long drawing's points are now kept packed:
+`lib/pointpack.js`, four characters a point, lossless against
+`lib/pointwrite.js`. Past 20,000 points (applied and undone together) the Pad's
+autosave keeps its strokes and its undone strokes packed; under that the draft
+is the plain JSON it always was, key for key. Measured through the Pad's own
+save, median of five: a two-hour drawing (170,717 points) is kept in 0.69
+million characters in 42 ms on a desk and 225 ms on a CPU slowed 4x, where main
+spent 152 and 562 ms to say "Storage full -- not saved" and keep nothing; half
+an hour is 0.16 million characters in 11 ms, where main wrote 2.57 million in
+44.
+
+Not IndexedDB, which the plan named: it answers asynchronously, and on the
+owner's iPhone it has gone quiet with no error (v317), while both editors
+restore synchronously from localStorage as the page loads. Packing keeps a long
+drawing in the storage the restore reads. The restore, the two-tab slot and its
+waiting copies are unchanged; the two readers of a draft's text, the restore
+and Keep for later, unpack it through one function, and a packed draft that
+will not read is logged and treated as nothing to restore, never as an empty
+drawing to write over.
+
+`verify_drafts` LONG: a two-hour drawing autosaves packed in under a million
+characters, comes back after a reload point for point against the rule, and
+undoes; a 2,000-point drawing stays the plain draft, key for key; a 43-minute
+drawing with three strokes undone keeps them, packed, as redo; a long drawing
+waiting in another tab's place is filed whole by Keep for later. Red on main
+(Storage full, nothing back; the redo copy plain, and too big to keep) and, for
+Keep for later alone, on a copy whose Keep for later does not unpack (it filed
+an empty draft). `verify_sharedrules` holds the packer to the rule: 300 random
+drawings come back exactly through JSON; what the form cannot describe (a key
+the rule does not write, two colours in one stroke, a misplaced start, a NaN, a
+number written as a string) is refused; a damaged pack throws rather than
+reading as a smaller drawing; it writes only U+0100 to below the surrogates.
+Each red on its own mutation of the packer. The scan from step 1a caught the
+first draft of the packer testing `'erase' in p`; it tests the type now, and
+absent and false pack alike.
+
+Flip next: its autosave keeps every page's points by the rule and meets the
+same wall with a long animation (its document allows 200,000 points across its
+pages); the packer was written for both editors.
