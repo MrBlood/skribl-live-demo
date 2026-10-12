@@ -16008,3 +16008,31 @@ this box's fonts, with 19px to spare at 402 for the iPhone's. Shared: one rule
 for both editors; the desk is unchanged. verify_parity "the Grid row stays on
 one line on a phone" turns the grid on and measures both editors at 402 and
 390 (two lines on main, one here) and, at 375, that the words still fit.
+
+**The harness, faster: suites side by side, waiting for the page, and a
+centring check that agrees with itself (owner: "1 change is 40 minutes? We
+have an efficiency problem", and that night: "clean up the entropy mess...
+the ultimately efficient effective harness").** Timed from the session's
+transcript, a change took about 40 minutes, half of it suites queued behind
+the one server on 5001, and main's full run took 85-95 minutes to say whether
+a merge was green. Suites now run side by side (#420, #421): every suite reads
+`SKRIBL_BASE`, and `harness/run_parallel.py` gives each worker its own fresh
+server and database and the environment `run_harness.sh` gives, and re-runs
+alone any red from a suite that measures, because load makes those checks fail
+rather than pass; all 122 ran this way in 38.8 minutes. A suite can wait for
+the page instead of a guessed number of seconds (#425): `harness/waits.py` has
+`until`, for the app's own signal, and `settle`, which counts the work a page
+has in flight and never returns before anything due inside the old sleep;
+`verify_waits.py` drives each kind of work on a bare page, and each was shown
+red with its tracking removed. `verify_dots` and `verify_ux`'s load sleeps use
+it so far. The centring check (#424) runs three combinations at a time, waits
+for its controls to hold still, skips a patch that repaints between
+photographs, keys names without their times, and reaches the menu's end and
+the waiting-drawing bar. Against its old list a run on main had reported
+about 270 new findings and 220 fixed (most of them renames from the day's
+merges and names carrying a time), and two runs of one tree measured about 165
+of their 5,300 controls differently; its list is now written by one full run
+and was confirmed 7/7 by a second, 0 new and 0 gone. (#424's merge message
+says the two runs disagreed by 270 and 220; those were each run against the
+old list.) Main's run in six shards (#423, about 19 minutes instead of 90) waits
+for the owner. Unchanged: the seal, the run record, and what any suite asserts.
