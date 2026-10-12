@@ -44,6 +44,7 @@
  *   cache.draw(from, to, point, present)
  *                                     calls point(i) for each i in [from, to), copying the
  *                                     canvas where it wants a snapshot (after present())
+ *   cache.tap(i, present)             the same copy, for a player whose own loop draws
  *
  * A PLAYER WHOSE INK IS NOT ITS CANVAS (the in-post player keeps the photo as a
  * layer of its own, which its eraser reveals) passes opts.source(), the canvas
@@ -140,20 +141,24 @@
       shots.splice(k, 0, shot);
     }
 
+    // At each point a replay draws, before it: a copy, when this is the place
+    // for one. A player that has its own draw loop calls this from it.
+    function tap(i, present) {
+      if (!wants(i)) return;
+      if (present) present();
+      take(i);
+    }
     var lastDrawn = 0;
     function draw(from, to, point, present) {
       lastDrawn = Math.max(0, to - from);
       for (var i = from; i < to; i++) {
-        if (wants(i)) {
-          if (present) present();
-          take(i);
-        }
+        tap(i, present);
         point(i);
       }
       return to;
     }
 
-    return { indexAt: indexAt, start: start, draw: draw,
+    return { indexAt: indexAt, start: start, draw: draw, tap: tap,
              // For the suite: what is held, without handing out the copies.
              held: function () { return shots.map(function (s) { return s.index; }); },
              drawn: function () { return lastDrawn; },   // points the last draw() drew

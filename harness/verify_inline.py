@@ -1393,7 +1393,22 @@ with sync_playwright() as sp:
     #   play button and its shadow are gone. 58,227 B measured; then +42 B
     #   when the words row stopped taking taps (A11Y 10 found the scrubber's
     #   and loop's 44px reach covered where they meet it): 58,292 B measured.
-    EMBED_RATCHET = 58_300
+    # RAISED (the Pad plan, step 3, for this player: a long post scrubs from the
+    #   nearest copy of its ink, not from zero), for one named cost, after
+    #   spending: +3,831 B --
+    #     lib/seekcache.js  +2,810  the copies -- the module the Pad's preview
+    #                               and /s/<id> already use -- with the source
+    #                               and put hooks this player needs, because its
+    #                               photo is a layer of its own that an eraser
+    #                               reveals, so it copies its ink and not its
+    #                               canvas
+    #     inlineplayer.js   +1,021  the compositor's ink layer and seed, the
+    #                               repaint that starts from a copy, and the
+    #                               suite's readout of where a seek started
+    #   Spent first (-458 in inlineplayer.js): the copies are taken from inside
+    #   replayTo's own loop (the module's tap) rather than by a second draw loop
+    #   of its own. 62,123 B measured.
+    EMBED_RATCHET = 62_130
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -1420,8 +1435,8 @@ with sync_playwright() as sp:
     # raises on a 404. Named for the count it checks — it used to be called
     # "every asset the embed macro names is one the server serves", which is
     # the loop's job and not this line's.
-    check("the embed macro names exactly the eight assets a host pays for",
-          len(embed_urls) == 8, str(embed_urls))
+    check("the embed macro names exactly the nine assets a host pays for",
+          len(embed_urls) == 9, str(embed_urls))
     _embed_margin = EMBED_RATCHET - total
     check(f"the in-post player costs a host no more than {EMBED_RATCHET:,} bytes "
           f"of CSS and JavaScript",
