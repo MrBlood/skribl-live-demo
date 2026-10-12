@@ -770,13 +770,21 @@ with sync_playwright() as p:
     pg.click("#redoBtn"); pg.wait_for_timeout(1900)
     check("...said again after an undo took it back under and a redo over",
           pg.evaluate("() => __toasts") == [_LIMIT_WORDS, _LIMIT_WORDS], str(pg.evaluate("() => __toasts")))
+    # FROM THE FIRST PAINT: the restore saves as it boots, so a note it owed
+    # nobody would be said before any wrapper could be installed. The toast's
+    # own text is watched from the moment the page parses.
+    pg.add_init_script("""(() => { window.__boot = [];
+      document.addEventListener('DOMContentLoaded', () => { const t = document.querySelector('.toast'); if (!t) return;
+        new MutationObserver(() => { if (/fit in a post|a post can hold/.test(t.textContent)) window.__boot.push(t.textContent); })
+          .observe(t, { childList: true, characterData: true, subtree: true }); }); })()""")
     pg.reload(wait_until="load")
-    pg.wait_for_timeout(1500)
+    pg.wait_for_timeout(2500)
+    _boot = pg.evaluate("() => window.__boot")
     pg.evaluate(WATCH)
     _stroke(pg)
-    check("a drawing restored at the limit is not told again on its next save",
-          pg.evaluate("() => __toasts") == [] and pg.evaluate("() => strokes.length") > _CAP,
-          f"{pg.evaluate('() => __toasts')} at {pg.evaluate('() => strokes.length')} points")
+    check("a drawing restored at the limit is not told again, as it boots or on its next save",
+          _boot == [] and pg.evaluate("() => __toasts") == [] and pg.evaluate("() => strokes.length") > _CAP,
+          f"at boot {_boot}, after a stroke {pg.evaluate('() => __toasts')} at {pg.evaluate('() => strokes.length')} points")
     check("no page errors", not errors, "; ".join(errors[:2]))
     ctx.close()
 
