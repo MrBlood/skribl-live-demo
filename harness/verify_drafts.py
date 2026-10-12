@@ -655,7 +655,7 @@ with sync_playwright() as p:
           const x = a[i] ? sig(a[i]) : null, y = b[i] ? sig(b[i]) : null;
           if (x !== y) { off++; if (!first) first = { p, i, want: x, got: y }; } } }
       return { pages: frames.length, pts, off, first, groups, photo: !!bgImage }; }"""
-    for _n, _pages, _photo, _label in ((120000, 40, False, "Flip, a long animation (120,000 points on 40 pages)"),
+    for _n, _pages, _photo, _label in ((120000, 40, False, "Flip, a long animation (120,000 points on 39 pages)"),
                                        (60000, 12, True, "Flip, a long animation with a photo (60,000 points)"),
                                        (6000, 6, False, "Flip, a short animation (6,000 points)")):
         ctx = b.new_context()
@@ -666,6 +666,10 @@ with sync_playwright() as p:
         pg.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.flip")
         pg.wait_for_timeout(500)
         made = pg.evaluate(FLIPLOAD, [_n, _pages, _photo])
+        if _photo:
+            # The photo's bytes go to IndexedDB beside the packed record; the
+            # reload waits for that write to land, as a person's would have.
+            pg.wait_for_function("() => _mediaSpillState === 'durable'", timeout=8000)
         if _n >= 20000:
             check(f"{_label}: it autosaves, every page packed, in well under a million characters",
                   made["packed"] == made["pages"] and made["plain"] == 0 and 0 < made["chars"] < 1_000_000
