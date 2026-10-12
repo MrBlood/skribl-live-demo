@@ -5,9 +5,9 @@
  * WHY. Every seek on a replay -- the Pad's preview, the shared link, the
  * in-post player -- cleared the canvas and drew every point from the first one
  * to where the finger was. A two-hour drawing is about 170,000 points, and one
- * seek near its end took 2.9 s on a CPU slowed 4x, so a scrub through it
- * froze. Watching a drawing come alive has to work for the artist's two-hour
- * piece as well as the twenty-second doodle.
+ * seek near its end took about 2 s on a desk and 10 s on a CPU slowed 4x, so a
+ * scrub through it froze. Watching a drawing come alive has to work for the
+ * artist's two-hour piece as well as the twenty-second doodle.
  *
  * WHAT. As a seek's replay passes a stroke boundary in a part of the drawing
  * that has no snapshot yet, the canvas is copied. A later seek restores the

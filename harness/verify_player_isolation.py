@@ -772,7 +772,19 @@ with sync_playwright() as sp:
     #   layering budget threw on the player and never played (verify_beading).
     #   Nothing to spend first: the declaration moved, it did not double.
     #   144,003 measured.
-    BYTES_RATCHET, BYTES_TARGET = 144_010, 153_800
+    # RAISED (the Pad plan, step 3, owner: "scrubbing has to feel good at every
+    #   speed" -- for an artist's two-hour piece too), for one named cost,
+    #   after spending: +3,669 B net --
+    #     lib/seekcache.js 2,631: copies of the canvas a seek starts from,
+    #       taken at stroke boundaries as a replay passes, so a seek on a
+    #       two-hour drawing draws one stretch instead of everything before it.
+    #     app.js +1,038: seekDrawRange, replayStep and seekCanvas -- one seek
+    #       and one replay step for the Pad's preview and this player -- and
+    #       the suite's seek hook.
+    #   Spent first (-1,325 in app.js): the two seeks and the two frame loops
+    #   each carried their own three-branch replay call; they fold into
+    #   replayStep and seekCanvas. 147,672 measured.
+    BYTES_RATCHET, BYTES_TARGET = 147_680, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
