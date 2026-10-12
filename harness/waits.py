@@ -16,6 +16,8 @@ a sleep.
 The predicates read the same state the app's own pills report: the media tab
 dots and re-add cards, Flip's media spill, the Pad's draft durability.
 """
+import json
+import os
 import time
 
 from playwright.sync_api import TimeoutError as PWTimeout
@@ -217,6 +219,20 @@ QUIET_JS = r"""
     }
     return document.readyState === 'complete';
   };
+  // What is holding it, in words, for WAITS_LOG.
+  q.why = (until) => {
+    if (q.busy > 0) return 'busy ' + q.busy;
+    for (const due of q.timers.values()) if (due <= until) return 'a timer due in ' + Math.round(due - now()) + 'ms';
+    if (now() - q.lastFrame < 50) return 'animation frames';
+    if (now() - q.lastScroll < 60) return 'scrolling';
+    if (document.fonts && document.fonts.status !== 'loaded') return 'fonts';
+    if (document.getAnimations) for (const a of document.getAnimations()) {
+      if (a.playState !== 'running') continue;
+      const end = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming().endTime : Infinity;
+      if (end !== Infinity) return 'animation ' + (a.animationName || a.transitionProperty || 'script');
+    }
+    return document.readyState === 'complete' ? '' : 'loading';
+  };
 })();
 """
 
@@ -258,15 +274,25 @@ def settle(page, ms):
     if not armed:
         page.wait_for_timeout(ms)
         return
-    quiet_since = None
+    quiet_since, held = None, ""
     while True:
         left = (end - time.monotonic()) * 1000
         if left <= 0:
+            # WAITS_LOG=path: one line for each settle that ran to its
+            # deadline, naming what held it last -- which suites and pages
+            # stay busy, and so where settle cannot save anything.
+            if os.environ.get("WAITS_LOG"):
+                try:
+                    with open(os.environ["WAITS_LOG"], "a") as fh:
+                        fh.write(json.dumps({"ms": ms, "held": held, "url": page.url[-60:]}) + "\n")
+                except Exception:
+                    pass
             return
         try:
-            q = page.evaluate("(r) => !!(window.__skQuiet && window.__skQuiet.quiet(performance.now() + r))", left)
+            q, held = page.evaluate("(r) => { const s = window.__skQuiet; if (!s) return [false, 'no counter yet'];"
+                                    " const u = performance.now() + r; return [!!s.quiet(u), s.why(u)]; }", left)
         except Exception:       # mid-navigation: nothing to ask yet, so not quiet
-            q = False
+            q, held = False, "navigating"
         now = time.monotonic()
         if q:
             if quiet_since is not None and (now - quiet_since) * 1000 >= 100:
