@@ -1671,6 +1671,44 @@ check("...and it hands decide() every lane's result",
       all(f'"{j}": "${{{{ needs.{j}.result }}}}"' in _mwb for j in ("sqlite", "postgres", "mp4"))
       and "harness/tools/mainwatch.py" in _mwb, "JOB_RESULTS must name all three needs")
 
+# MAIN'S CI SHARDS RUN EVERY SUITE, ONCE. Each battery job is a matrix of
+# shards, and each shard runs the names harness/shard.py prints for "I/N". A
+# picker that dropped a suite would stop CI testing it with every row green;
+# a matrix that grew without the N in its run line would hand a shard nothing,
+# and run_harness.sh given nothing runs everything, into the shard's timeout.
+# Read as the workflow's structure and the picker's own output, not as words.
+print("\nCI SHARDS — main's battery jobs run every suite, once")
+sys.path.insert(0, str(ROOT / "harness"))
+import shard as _shard
+_sizes = []
+for _job in ("sqlite", "postgres"):
+    _jb = re.search(r"^  %s:\n((?:    .*\n|\s*\n)+)" % _job, _wft, re.M)
+    _jb = _jb.group(1) if _jb else ""
+    _mx = re.search(r"^        shard:\s*\[([\d,\s]+)\]\s*$", _jb, re.M)
+    _ids = [int(x) for x in _mx.group(1).split(",") if x.strip()] if _mx else []
+    _runs = re.findall(r"shard\.py \$\{\{ matrix\.shard \}\}/(\d+)", _jb)
+    check(f"the {_job} job is a matrix of shards 1..N",
+          bool(_ids) and _ids == list(range(1, len(_ids) + 1)), f"shard: {_ids}")
+    check(f"...and its run line asks shard.py for I/N with N the matrix's size",
+          bool(_ids) and _runs == [str(len(_ids))], f"a matrix of {len(_ids)}; run lines say {_runs}")
+    _sizes.append(len(_ids))
+_n = _sizes[0] if _sizes and len(set(_sizes)) == 1 else 0
+check("both battery jobs have the same shards", _n > 0, f"sizes {_sizes}")
+_parts = _shard.shards(_n) if _n else []
+_got = [s for p in _parts for s in p]
+_disk = sorted(p.name for p in (ROOT / "harness").glob("verify_*.py"))
+check(f"the {_n} shards cover every suite on disk exactly once",
+      bool(_parts) and sorted(_got) == _disk and len(_got) == len(set(_got)),
+      f"{len(_got)} names ({len(set(_got))} distinct) for {len(_disk)} suites")
+check("...none of them is empty", bool(_parts) and all(_parts),
+      "an empty shard runs every suite, into its timeout")
+check("...verify_postgres.py is in shard 1, where the postgres job's attestation steps run",
+      bool(_parts) and "verify_postgres.py" in _parts[0]
+      and len(re.findall(r"if: (?:always\(\) && )?matrix\.shard == 1$", _wft, re.M)) >= 5,
+      "the attestation reads shard 1's run record")
+check("...and every measured weight still names a suite",
+      not set(_shard.MEASURED) - set(_disk), str(sorted(set(_shard.MEASURED) - set(_disk))))
+
 bad = [r for r in results if not r[0]]
 # The leading "N/M passed" token is a contract run_harness.sh parses with a
 # LEADING-anchored regex, so trailing text is safe — that is how the FAILURES

@@ -278,6 +278,7 @@ TOTAL=0
 BAD=0
 SKIPPED=0
 SUMMARY=""
+TIMES=""
 
 # WHAT FAILED, SAID AGAIN WHERE THE END OF THE LOG CAN SEE IT. A full battery
 # prints some fifteen thousand lines and the aggregate below says only that a
@@ -312,10 +313,14 @@ for suite in "$@"; do
   # setsid puts the suite in its own process group; -k sends KILL if TERM is
   # ignored; and on a timeout the whole group is torn down so nothing is left
   # holding the pipe or a port.
+  t0="$(date +%s%N)"
   setsid timeout -k 15 600 python3 "$suite" >"$log" 2>&1 &
   suite_pid=$!
   wait "$suite_pid"
   rc=$?
+  t_tenths=$(( ($(date +%s%N) - t0) / 100000000 ))
+  TIMES="$TIMES
+$suite $((t_tenths / 10)).$((t_tenths % 10))"
   if [ "$rc" -ge 124 ]; then
     kill -KILL -"$suite_pid" 2>/dev/null || true
     echo "  (suite exceeded its 600s budget and its process group was killed)" >>"$log"
@@ -388,6 +393,15 @@ for suite in "$@"; do
   fi
 done
 
+# SECONDS PER SUITE, slowest first, so the last lines of any log (a CI shard's
+# included) say what each suite cost: harness/shard.py balances main's CI
+# shards by these. Console only, like WHAT FAILED below, and in a shape
+# neither of release_run.py's readers matches (no leading spaces, no colon,
+# no [FAIL] marker). Printed before the aggregate, so what failed and the
+# result stay the last lines.
+echo
+echo "================ SECONDS PER SUITE (slowest first; harness/shard.py) ================"
+printf '%s\n' "$TIMES" | sed '/^$/d' | sort -k2,2 -rn || true
 echo
 
 echo "================ AGGREGATE (machine-generated) ================"

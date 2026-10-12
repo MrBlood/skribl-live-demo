@@ -1,7 +1,7 @@
 name: harness
 
 # CI runs the same run_harness.sh a developer runs — not a reduced subset —
-# across three jobs, because the environments genuinely disagree:
+# in three environments, because they genuinely disagree:
 #   sqlite    the default developer path
 #   postgres  real parallelism, where the rate-limiter reservation race lives
 #   mp4       a browser with an H.264 encoder, which Playwright's Chromium lacks
@@ -23,11 +23,11 @@ name: harness
 # Runner SIZE is the billable knob (4-core and up, GPU, macOS, self-hosted),
 # and nothing here turns it.
 #
-# THE TRIM IS STILL RIGHT, FOR THE OTHER REASON. Three jobs at 40-90 minutes
-# is a long time to sit on a pull request whether or not anyone is invoiced
-# for it. So: pull requests get ONE fast smoke job (the boot suite — does the
+# THE TRIM IS STILL RIGHT, FOR THE OTHER REASON. The full battery is a long
+# time to sit on a pull request (40-90 minutes a job before the shards, about
+# 19 after), whether or not anyone is invoiced for it. So: pull requests get ONE fast smoke job (the boot suite — does the
 # app start and serve at all — plus, since EXT-P1-9, every suite that needs
-# neither a browser nor a server), and the full three-job battery runs only on
+# neither a browser nor a server), and the full battery runs only on
 # pushes to main and on manual dispatch. The working rhythm this repo actually
 # has — the full affected suites run locally before every push, and their
 # counts are quoted in each PR — is what makes that safe: CI's job on a PR is
@@ -143,20 +143,23 @@ jobs:
           echo "every PR-gate suite ran"
 
   sqlite:
-    name: harness (sqlite)
+    name: harness (sqlite ${{ matrix.shard }}/6)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    # 150, not 90, and not 30 before that: each time the budget was set to what
-    # a run took, the battery grew into it. At 89 suites a run took 45-60
-    # minutes and 30 cancelled both jobs mid-run on every push (Aug 31). At 120
-    # suites / ~11k assertions it takes 85-90: on Oct 11 the runs for #405 and
-    # #407 were both cancelled at exactly 90 minutes and #406's finished with
-    # about two to spare — red that looked like code and was budget, again.
-    # 150 leaves room for the next thirty suites; a run that needs more
-    # than that is worth splitting, not budgeting. (GitHub's own ceiling for a
-    # hosted job is 360, and standard runners on a public repository cost
-    # nothing at any length.)
-    timeout-minutes: 150
+    # SIX SHARDS SIDE BY SIDE, which is what the note this replaced said to do
+    # next ("a run that needs more than that is worth splitting, not
+    # budgeting"). One job took 85-95 minutes at 120 suites, so on Oct 11 a red
+    # main took the afternoon to show and the first green came at 6:39 PM.
+    # harness/shard.py picks each shard's suites by their measured seconds, and
+    # the six together run every suite once, about 17 minutes each. Standard
+    # runners on a public repository cost nothing however many there are; six
+    # shards of two databases plus the mp4 job is 13 of the 20 jobs a free
+    # account runs at once. 60 minutes a shard keeps the old habit of room to grow.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
@@ -186,7 +189,7 @@ jobs:
         # without it the browser launches and dies on a missing shared object.
         run: python -m playwright install --with-deps chromium
       - name: Run the harness
-        run: ./harness/run_harness.sh
+        run: ./harness/run_harness.sh $(python3 harness/shard.py ${{ matrix.shard }}/6)
       # THE JOB THAT RUNS ALL 100 SUITES WAS THE ONE WITH NO SKIP GUARD, while
       # the two jobs that run a single suite each had one. run_harness.sh exits
       # 0 on a skip -- correctly, because two lanes are DESIGNED to skip here:
@@ -215,24 +218,27 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
-          name: last-run-sqlite
+          name: last-run-sqlite-${{ matrix.shard }}
           path: harness/LAST-RUN.txt
 
   postgres:
-    name: harness (postgresql)
+    name: harness (postgresql ${{ matrix.shard }}/6)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    # 150, not 90, and not 30 before that: each time the budget was set to what
-    # a run took, the battery grew into it. At 89 suites a run took 45-60
-    # minutes and 30 cancelled both jobs mid-run on every push (Aug 31). At 120
-    # suites / ~11k assertions it takes 85-90: on Oct 11 the runs for #405 and
-    # #407 were both cancelled at exactly 90 minutes and #406's finished with
-    # about two to spare — red that looked like code and was budget, again.
-    # 150 leaves room for the next thirty suites; a run that needs more
-    # than that is worth splitting, not budgeting. (GitHub's own ceiling for a
-    # hosted job is 360, and standard runners on a public repository cost
-    # nothing at any length.)
-    timeout-minutes: 150
+    # SIX SHARDS SIDE BY SIDE, which is what the note this replaced said to do
+    # next ("a run that needs more than that is worth splitting, not
+    # budgeting"). One job took 85-95 minutes at 120 suites, so on Oct 11 a red
+    # main took the afternoon to show and the first green came at 6:39 PM.
+    # harness/shard.py picks each shard's suites by their measured seconds, and
+    # the six together run every suite once, about 17 minutes each. Standard
+    # runners on a public repository cost nothing however many there are; six
+    # shards of two databases plus the mp4 job is 13 of the 20 jobs a free
+    # account runs at once. 60 minutes a shard keeps the old habit of room to grow.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    timeout-minutes: 60
 
     services:
       db:
@@ -328,8 +334,9 @@ jobs:
         # run_harness.sh honours an externally supplied DATABASE_URL and resets
         # by dropping and recreating Skribl's tables, so this is a genuine
         # PostgreSQL run with per-run isolation intact.
-        run: ./harness/run_harness.sh
+        run: ./harness/run_harness.sh $(python3 harness/shard.py ${{ matrix.shard }}/6)
       - name: Verify the migration chain on PostgreSQL
+        if: matrix.shard == 1
         # A SEPARATE, EMPTY database. run_harness.sh resets the supplied one with
         # metadata.create_all(), which leaves the tables present with no
         # alembic_version row — so the baseline revision would then try to create
@@ -344,6 +351,7 @@ jobs:
           python -m alembic upgrade head
           python -m alembic check
       - name: Fail if verify_postgres only SKIPPED
+        if: matrix.shard == 1
         # A skip contributes zero assertions and proves nothing about
         # PostgreSQL. On the one job whose purpose is to prove it, a skip is a
         # failure. NOT the mp4 job's "suites skipped : 0" test: that job runs a
@@ -358,6 +366,7 @@ jobs:
             exit 1
           fi
       - name: Write the PostgreSQL attestation
+        if: matrix.shard == 1
         # THE SAME ARGUMENT AS THE MP4 ATTESTATION, one lane later. Until now a
         # seal could only say `verify_postgres.py` was skipped and CLAIMED by a
         # CI job — existence of a job, not a result — so `release status` could
@@ -387,6 +396,7 @@ jobs:
           PY
           cat harness/POSTGRES-ATTESTATION.txt
       - name: Upload the PostgreSQL attestation
+        if: matrix.shard == 1
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: postgres-attestation
@@ -395,7 +405,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
-          name: last-run-postgres
+          name: last-run-postgres-${{ matrix.shard }}
           path: harness/LAST-RUN.txt
       - name: Print the PostgreSQL attestation LAST
         # A SECOND cat, and not a redundant one. The attestation has to be
@@ -414,7 +424,7 @@ jobs:
         #
         # So the file is printed again as the last thing the job does. Cheap,
         # and it makes the documented remedy actually available on this lane.
-        if: always()
+        if: always() && matrix.shard == 1
         run: cat harness/POSTGRES-ATTESTATION.txt || echo "no attestation written"
 
   mp4:
