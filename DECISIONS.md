@@ -16130,6 +16130,20 @@ Also at this seal, on the owner's yes: the centring check is optional, run when
 something looks off (WORKING-AGREEMENTS.md, "Checking buttons"; owner: "It
 really hasn't found too many actual problems").
 
+**One fix inside this seal, found by its own release run.** The first run went
+red on one check, `verify_a11y`'s "learnSheet on /flip: Escape closes it", with
+Escape working: focus was back on the sheet's opener, and 650ms later the sheet
+was still painted. Repeated alone, the page froze for 1.4-1.7 s after Escape in
+about one run in ten. Chrome's profiler put the time in the browser's own work,
+not Skribl's script, and a trace named it: one compositor commit, the main
+thread waiting in LayerTreeHost::WaitForCommitCompletion while headless
+software raster caught up, so the sheet's 300ms hide timer could not run. The
+check now waits for the dialog to stop being painted, up to 3 s, then makes
+sure it stays gone for 350ms. With the hide timer stretched to 1.5 s the old
+wait went red and the new one passes; with Escape doing nothing, both go red.
+The first run was stopped and its record not kept; the record below is the
+second run's, on the tree with the fix.
+
 **Still open, at the v322 seal:**
 
 * **The Pad's two-hour piece**, measured just before this seal and waiting on
@@ -16147,6 +16161,9 @@ really hasn't found too many actual problems").
   is on the first page too.
 * **The Gallery frames each drawing in black bars** on the light page; the feed
   fits the post to the drawing.
+* **Closing Flip's examples sheet froze headless Chromium for 1.4-1.7 s** in
+  about one run in ten: a compositor commit, not Skribl's script (above). Not
+  seen on a real device, and there is none here to try.
 * **The feel.** "Skribl is kind" is the owner's first word for it; two more may
   follow.
 * **The owner's check of the build** on Windows and an iPhone, and Blooby
