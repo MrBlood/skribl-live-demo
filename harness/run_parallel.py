@@ -30,7 +30,8 @@ suite's [FAIL] lines said again at the end, so a pull request can quote them.
 
 Servers come from harness/bootstrap.sh on ports from 5101 up (the suites that
 host their own servers use fixed ports below that, or a free one), and are
-stopped at the end. The venv is SKRIBL_VENV, or bootstrap's own default.
+stopped at the end. Servers and suites run on one venv, SKRIBL_VENV or
+bootstrap's own default, so a bare `python3` can start this.
 """
 import argparse
 import os
@@ -46,6 +47,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "harness"
 VENV = os.environ.get("SKRIBL_VENV", "/tmp/skribl-venv")
+# The suites' interpreter is the servers' one, which bootstrap.sh makes if it
+# is missing. sys.executable was whatever started this file: a system python3
+# without playwright, and every suite died on its first import.
+PY = str(Path(VENV) / "bin" / "python3")
 LOGS = Path(os.environ.get("RUN_PARALLEL_LOGS", "/tmp/run_parallel"))
 
 
@@ -111,7 +116,7 @@ def run(suite, server, timeout):
     t0 = time.monotonic()
     with open(log, "w", encoding="utf-8") as fh:
         try:
-            code = subprocess.run([sys.executable, str(HARNESS / suite)], cwd=ROOT, env=env,
+            code = subprocess.run([PY, str(HARNESS / suite)], cwd=ROOT, env=env,
                                   stdout=fh, stderr=subprocess.STDOUT, timeout=timeout).returncode
         except subprocess.TimeoutExpired:
             code = "timeout"
@@ -138,10 +143,10 @@ def verdict(r):
 def line(r):
     v = verdict(r)
     if v == "skip":
-        return v, f"  {r['suite']}: SKIPPED (0 assertions) -- {r['skip'] or 'no reason given'}"
+        return f"  {r['suite']}: SKIPPED (0 assertions) -- {r['skip'] or 'no reason given'}"
     got = f"{r['counts'][0]}/{r['counts'][1]} passed" if r["counts"] else "no summary"
     state = "ok" if v == "ok" else f"FAIL -- exit {r['code']}"
-    return v, f"  {r['suite']}: {state} -- {got} ({r['secs'] / 60:.1f} min)"
+    return f"  {r['suite']}: {state} -- {got} ({r['secs'] / 60:.1f} min)"
 
 
 def main():
@@ -181,7 +186,7 @@ def main():
             r = run(suite, server, a.timeout)
             with lock:
                 results.append(r)
-                print(line(r)[1], flush=True)
+                print(line(r), flush=True)
 
     t0 = time.monotonic()
     try:
@@ -194,8 +199,7 @@ def main():
         for i, r in enumerate(results):
             if r["suite"] in alone and verdict(r) == "fail":
                 again = run(r["suite"], up[0], a.timeout)
-                again["suite"] = r["suite"]
-                print(line(again)[1] + "  <- alone, after a red beside others", flush=True)
+                print(line(again) + "  <- alone, after a red beside others", flush=True)
                 results[i] = again
     finally:
         for port, _db in up:

@@ -9,10 +9,12 @@ read a page mid-change -- red for the wrong reason, or green.
 So each kind of work is driven here on a page with nothing else on it, and
 each must hold settle until it is done when it falls inside the window: a
 timer, a chain of timers, a request, a database open and write, a file read,
-a decode, a chain of animation frames, a CSS transition. Nothing may hold it
-past the window, which is the old sleep: a timer due later, an interval, an
-animation that never stops. A quiet page must come back early, or settle
-saves nothing; a page without the counter gets the plain sleep.
+a decode, a chain of animation frames, a CSS transition, a smooth scroll.
+Nothing may hold it past the window, which is the old sleep: a timer due
+later, an interval, an animation that never stops, a navigation partway
+through. A quiet page must come back early, or settle saves nothing. until()
+with a window must settle what the sleep would have waited for after its
+state arrives, and a page without the counter gets the plain sleep.
 
 No Skribl server: the pages come from a small server of this suite's own, so
 IndexedDB and fetch behave as on a real origin.
