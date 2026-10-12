@@ -758,7 +758,7 @@ with sync_playwright() as p:
           _want is not None and _t["shown"] and _t["text"] == _want and pg.evaluate("() => __toasts.length") == 1,
           f"want {_want!r}; toast {_t}; said {pg.evaluate('() => __toasts')}; {_st}")
     check("...where taps go through it, and over no button that is drawn",
-          _t["through"] and not _t["over"], str(_t))
+          _t["text"] == _want and _t["through"] and not _t["over"], str(_t))
     _stroke(pg, 30)
     check("...and the next save, still past 90%, says nothing more",
           pg.evaluate("() => __toasts.length") == 1, str(pg.evaluate("() => __toasts")))
