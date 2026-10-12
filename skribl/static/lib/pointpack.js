@@ -1,5 +1,5 @@
-/* A LONG DRAWING, PACKED: the compact form an autosave keeps its points in
- * once a drawing is long (v322 plan, step 1).
+/* A LONG DRAWING, PACKED: the compact form both editors' autosaves keep their
+ * points in once a drawing is long (v322 plan, step 1).
  *
  * WHY. A browser gives an origin about five million characters of
  * localStorage, shared by both editors' autosaves and every local save. Even
@@ -14,6 +14,11 @@
  * error (v317). Both editors restore their draft synchronously, as the page
  * loads, from localStorage. Packing keeps a long drawing in that storage:
  * nothing about restoring, the two-tab slot or Keep for later changes.
+ *
+ * BOTH EDITORS, PAST 20,000 POINTS. The Pad packs its strokes and its undone
+ * strokes (editor_draft.js serializeAutosave); Flip packs page by page, and
+ * only the copies that live in localStorage (flip.js packFrames). Under the
+ * threshold each writes the plain JSON it always wrote.
  *
  * LOSSLESS AGAINST THE RULE. pack() keeps exactly what pointwrite writes: x,
  * y and size to 0.01, t to a whole millisecond, the colour, `start` and a true

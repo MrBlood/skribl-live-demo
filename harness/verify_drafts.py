@@ -617,6 +617,82 @@ with sync_playwright() as p:
           f"saved {kept}, after reload {redo}")
     ctx.close()
 
+    # FLIP'S HALF (v322 plan, step 1, lib/pointpack.js shared). The same
+    # generator's strokes, cut into pages at stroke boundaries, loaded the way
+    # a saved draft opens (applyFlipDraftObject) and flushed. 120,000 points is
+    # about 7.7 million characters as plain JSON: past the origin's whole
+    # localStorage, so main says it could not save.
+    FLIPGEN = """(n, pages) => { const d = (""" + GEN + """)(n);
+      const frames = [], per = Math.ceil(n / pages); let at = 0, gi = 0;
+      for (let p = 0; p < pages && gi < d.groups.length; p++) {
+        const st = [], gr = [];
+        while (gi < d.groups.length && (st.length < per || p === pages - 1)) {
+          const g = d.groups[gi++]; for (let j = 0; j < g; j++) st.push(d.pts[at++]); gr.push(g); }
+        frames.push({ strokes: st, strokeGroups: gr, background: '#f6f2ea' });
+      }
+      return frames; }"""
+    FLIPLOAD = """([n, pages, photo]) => { const fr = (""" + FLIPGEN + """)(n, pages);
+      const doc = { schemaVersion: 2, version: 2, playbackMode: 'flip', fps: 12, frames: fr };
+      if (photo) { const c = document.createElement('canvas'); c.width = c.height = 8;
+        const x = c.getContext('2d'); x.fillStyle = '#7c5cff'; x.fillRect(0, 0, 8, 8);
+        doc.bgImage = c.toDataURL('image/png'); doc.photo = { name: 'swatch.png', fit: 'cover', opacity: 1 }; }
+      applyFlipDraftObject(doc);
+      flushFlipDraft();
+      const raw = localStorage.getItem('skribl_flip_autosave_v1') || '', rec = raw ? JSON.parse(raw) : null;
+      const pill = document.getElementById('autosaveStatusText');
+      return { n: fr.reduce((k, f) => k + f.strokes.length, 0), pages: fr.length, chars: raw.length,
+               packed: rec ? rec.frames.filter(f => f.packed).length : 0,
+               plain: rec ? rec.frames.filter(f => Array.isArray(f.strokes)).length : 0,
+               lite: !!(rec && rec.mediaInIdb), pill: pill ? pill.textContent : null }; }"""
+    FLIPSAME = """([n, pages]) => { const want = (""" + FLIPGEN + """)(n, pages);
+      const sig = (q) => [q.x, q.y, q.size, q.t, q.color, q.start === true, q.erase === true].join(',');
+      let off = 0, first = null, pts = 0, groups = frames.length === want.length;
+      for (let p = 0; p < Math.max(frames.length, want.length); p++) {
+        const a = want[p] ? want[p].strokes.map(SkriblPointWrite.point) : [], b = frames[p] ? frames[p].strokes : [];
+        pts += b.length;
+        if (!want[p] || !frames[p] || JSON.stringify(want[p].strokeGroups) !== JSON.stringify(frames[p].strokeGroups)) groups = false;
+        for (let i = 0; i < Math.max(a.length, b.length); i++) {
+          const x = a[i] ? sig(a[i]) : null, y = b[i] ? sig(b[i]) : null;
+          if (x !== y) { off++; if (!first) first = { p, i, want: x, got: y }; } } }
+      return { pages: frames.length, pts, off, first, groups, photo: !!bgImage }; }"""
+    for _n, _pages, _photo, _label in ((120000, 40, False, "Flip, a long animation (120,000 points on 39 pages)"),
+                                       (60000, 12, True, "Flip, a long animation with a photo (60,000 points)"),
+                                       (6000, 6, False, "Flip, a short animation (6,000 points)")):
+        ctx = b.new_context()
+        pg = ctx.new_page()
+        errors = []
+        pg.on("pageerror", lambda e: errors.append(str(e)))
+        pg.goto(f"{BASE}/flip", wait_until="load")
+        pg.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.flip")
+        pg.wait_for_timeout(500)
+        made = pg.evaluate(FLIPLOAD, [_n, _pages, _photo])
+        if _photo:
+            # The photo's bytes go to IndexedDB beside the packed record; the
+            # reload waits for that write to land, as a person's would have.
+            pg.wait_for_function("() => _mediaSpillState === 'durable'", timeout=8000)
+        if _n >= 20000:
+            check(f"{_label}: it autosaves, every page packed, in well under a million characters",
+                  made["packed"] == made["pages"] and made["plain"] == 0 and 0 < made["chars"] < 1_000_000
+                  and not any(w in (made["pill"] or "").lower() for w in ("fail", "full")) and made["lite"] == _photo,
+                  f"{made}")
+        else:
+            check(f"{_label}: stays the plain record every reader has always read",
+                  made["packed"] == 0 and made["plain"] == made["pages"], f"{made}")
+        pg.reload(wait_until="load")
+        pg.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.flip")
+        if _photo:
+            pg.wait_for_function("() => !!bgImage", timeout=5000)
+        pg.wait_for_timeout(600)
+        same = pg.evaluate(FLIPSAME, [_n, _pages])
+        check(f"{_label}: after a reload every page and point is back, by the rule"
+              + (", and the photo too" if _photo else ""),
+              same["pages"] == made["pages"] and same["pts"] == _n and same["off"] == 0 and same["groups"]
+              and same["photo"] == _photo,
+              f"{same['pages']} pages, {same['pts']:,} of {_n:,} points, {same['off']} off, "
+              f"groups match {same['groups']}, photo {same['photo']}, first {same['first']}")
+        check(f"{_label}: no page errors", not errors, "; ".join(errors[:2]))
+        ctx.close()
+
     b.close()
 
 # ---------------------------------------------------------------------------
@@ -778,6 +854,44 @@ with sync_playwright() as _p2:
           and _same["n"] == 60000 and _same["off"] == 0 and _same["groups"],
           f"made {_made}, offered {bool(_offered)}, kept {len(_k)}, opened "
           + (f"{_same['n']:,} points, {_same['off']} off, groups {_same['groups']}" if _same else "nothing"))
+    _ctx.close()
+
+    # And Flip's: the waiting text is Flip's own serializer at its
+    # localStorage setting, so a long animation is packed pages.
+    _ctx = _b2.new_context()
+    _g = _ctx.new_page(); _g.goto(BASE + "/flip", wait_until="load")
+    _g.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.flip"); _g.wait_for_timeout(500)
+    _made = _g.evaluate("""([n, pages]) => { const fr = (""" + FLIPGEN + """)(n, pages);
+        applyFlipDraftObject({ schemaVersion: 2, version: 2, playbackMode: 'flip', fps: 12, frames: fr });
+        window.__longText = JSON.stringify(serializeFlip({ media: false, recipes: true, pack: true }));
+        const d = JSON.parse(window.__longText);
+        return { packed: d.frames.filter(f => f.packed).length, pages: d.frames.length, chars: window.__longText.length }; }""",
+        [60000, 12])
+    _text = _g.evaluate("() => window.__longText")
+    _g.goto(BASE + "/api/skribls")
+    _g.evaluate("""(t) => { localStorage.removeItem('skribl_flip_autosave_v1'); localStorage.removeItem('skribl_flip_autosave_v1:owner');
+        localStorage.setItem('skribl_flip_autosave_v1:waiting:longtab', JSON.stringify({ w: 'longtab', at: Date.now(), data: t })); }""", _text)
+    _g.close()
+    _c = _ctx.new_page(); _c.set_viewport_size({"width": 1100, "height": 860})
+    _c.goto(BASE + "/flip", wait_until="load")
+    _c.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.flip"); _c.wait_for_timeout(700)
+    _offered = _c.evaluate(_BAR)
+    if _offered:
+        _c.click(".othertab-later"); _c.wait_for_timeout(1500)
+    _k = [d for d in (_c.evaluate("() => window.SkriblSavedDrafts.list()") or [])
+          if (d.get("title") or "").startswith("From another tab")]
+    _c.close()
+    _same = None
+    if _k:
+        _d = _ctx.new_page(); _d.goto(f"{BASE}/flip?draft={_k[0]['id']}", wait_until="load")
+        _d.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.flip"); _d.wait_for_timeout(1200)
+        _same = _d.evaluate(FLIPSAME, [60000, 12])
+        _d.close()
+    check("Flip, a long animation waiting in another tab's place: Keep for later files every page, every point back",
+          _made["packed"] == _made["pages"] == 12 and bool(_offered) and len(_k) == 1 and bool(_same)
+          and _same["pts"] == 60000 and _same["off"] == 0 and _same["groups"],
+          f"made {_made}, offered {bool(_offered)}, kept {len(_k)}, opened "
+          + (f"{_same['pts']:,} points on {_same['pages']} pages, {_same['off']} off, groups {_same['groups']}" if _same else "nothing"))
     _ctx.close()
     _b2.close()
 

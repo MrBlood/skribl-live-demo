@@ -16285,6 +16285,48 @@ Flip next: its autosave keeps every page's points by the rule and meets the
 same wall with a long animation (its document allows 200,000 points across its
 pages); the packer was written for both editors.
 
+## After v322 -- the Pad plan, step 1, Flip's half: a long animation autosaves
+
+The Pad's packer (`lib/pointpack.js`, above) now keeps Flip's long animations
+too. Flip's autosave lives in the same ~5 MB of localStorage as the Pad's, and a
+point written by the rule is about 64 characters, so about 78,000 points of
+real strokes filled it: a hundred detailed pages, or a few generated pages drawn
+on after they were made (a recipe stores none of its points; an edited one
+stores all of them). Past 20,000 points every page's strokes are kept packed,
+page by page; under that the record is the plain JSON it always was.
+
+Only the copies that live in localStorage are packed: the slot, the lite record
+written beside a photo or track spilled to IndexedDB, and a drawing moved aside
+for another tab. The IndexedDB record is not (a restore takes only its media
+bytes, never its frames), and neither is a saved draft or a .skribl file, which
+the server, the Library and the Pad read without unpacking. The restore and
+Keep for later unpack through one function; a record that will not read is
+logged and restores nothing, so the slot is left alone and the next save moves
+it aside rather than writing over it.
+
+Measured through Flip's own save, median of five, twice on a quiet box: an
+animation of 120,000 points on 39 pages is kept in 0.49 million characters in
+47-57 ms on a desk and 179-220 ms on a CPU slowed 4x, where main spent 210-218
+and 928-973 ms to say "Autosave failed" and keep nothing; 30,000 points on ten
+pages is 0.12 million characters in 11 ms, where main wrote 1.95 million in
+25-28.
+
+`verify_drafts`: a 120,000-point animation on 39 pages autosaves packed in
+0.49 million characters and comes back page for page, point for point against
+the rule; a 60,000-point animation with a photo is packed beside it and the
+photo still comes back from IndexedDB; a 6,000-point one stays plain; a long
+animation waiting in another tab's place is filed whole by Keep for later.
+
+Red on main (Autosave failed, nothing back after the reload; the photo's
+record and the waiting copy plain) and on four mutations, each on its own
+check: a restore that does not unpack brought back 39 empty pages; a Keep for
+later that does not unpack filed twelve empty ones; a lite record written
+unpacked left the photo case plain while the case without media stayed green;
+packing from zero points turned the short case packed (and the two-tab checks,
+which read plain records, red with it).
+
+That finishes step 1 for both editors.
+
 ## After v322 -- the reason a post failed is on screen on a short window
 
 Found while mocking the v322 plan's words for a post that is too long. The Post
