@@ -93,7 +93,7 @@ seal and CI, suites that discard their servers' stderr, and PostgreSQL are in
   own; with nothing exported it opens the app's default sqlite file, which the
   bootstrap never created, and two upload checks fail with "no such table"
   under a traceback that looks like a server bug. Export the bootstrap's
-  (`DATABASE_URL=sqlite:////tmp/skribl-fresh-<stamp>.db`, printed as `db:` at
+  (`DATABASE_URL=sqlite:////tmp/skribl-fresh-<port>-<stamp>.db`, printed as `db:` at
   start) and it passes; `run_harness.sh` does this for every suite.
 
   **AND THE FALLBACK FILE MAY EXIST, WHICH IS THE WORSE CASE.** "No such

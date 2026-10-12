@@ -213,6 +213,7 @@ BATCHES = [
     ["verify_sizeclass.py"],               # measures
     ["verify_compactops.py"],              # measures
     ["verify_fill.py"],                    # measures
+    ["verify_waits.py"],                   # measures — how long settle holds a page
     ["verify_input.py"],                   # unrecorded
     ["verify_smudgeblur.py"],              # measures
     ["verify_stamps.py"],                  # measures
