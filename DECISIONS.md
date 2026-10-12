@@ -16466,3 +16466,81 @@ The embed costs a host 3,831 B more (verify_inline's ledger names it: the
 module 2,810, inlineplayer.js 1,021, after taking the copies from replayTo's
 own loop saved 458), and the shared player 179 B more for hooks it does not
 use (verify_player_isolation's ledger).
+
+## After v322 -- the Pad plan, steps 2 and 4: a Pad drawing posts up to 200,000 points, and past that it says so before sending
+
+The owner's picks from the decision page, A and A. A Pad drawing is one frame,
+and the server held every frame to a Flip page's 20,000 points, so a Pad
+drawing stopped posting at about 15 minutes, and "Save draft" to an account
+with it. Past the cap the Pad uploaded every byte (about 11 MB for two hours of
+drawing) and came back with "'frames[0].strokes' has too many points (39503;
+limit 20000)" under a Try again that could not help.
+
+STEP 4. skribl/validation.py lets a Pad payload's frame spend the whole
+document's budget: MAX_POINTS_PER_PAD, MAX_TOTAL_POINTS by default, and
+MAX_GROUPS_PER_PAD, 50,000 strokes, the page's own ratio of four points a
+stroke, so a drawing of short strokes does not meet a stroke cap nobody chose.
+"Pad" is _payload_kind's answer, the same test every player uses. A Flip page
+keeps 20,000 points and 5,000 strokes. Posts and account drafts share the rule,
+so both move together.
+
+THEIR OWN VARIABLES. The decision page said a Render setting of
+SKRIBL_MAX_POINTS_PER_FRAME would win. Building it turned up that .env.example
+sets exactly that variable to 20000, uncommented, so a deployment configured
+from the example would have kept the Pad at 15 minutes whatever the code said.
+The Pad's two ceilings are SKRIBL_MAX_POINTS_PER_PAD and
+SKRIBL_MAX_GROUPS_PER_PAD instead, named in .env.example, and nothing on Render
+needs changing.
+
+STEP 2. lib/pointbudget.js mirrors the Pad's two ceilings (verify_sharedrules
+pins them), the Pad loads it, and Post asks padFits() before building or
+sending anything. Past the ceiling, the post sheet (lib/postsheet.js, both
+editors) says the owner's words, "Couldn't post. Your drawing is still here.
+It's longer than a post can hold, so save a backup to keep a copy as a file.",
+and its button becomes Save a backup with the ⋯ menu's icon: pressing it puts
+the sheet away and opens the menu's own drawer, which downloads the .skribl
+file. Opening the sheet again puts Post back. Flip says the same words when its
+pages add up past the budget, with the same button, and then what only it
+knows ("Its 3 generated pages make up 27% of it; deleting one frees far more
+room than deleting a drawing."). Its too-many-pages refusal moves under the
+same first line ("It has 201 pages and a post holds 200; delete 1 to post
+it."), and Post keeps its word there, since deleting pages is the remedy.
+
+Measured through the real Pad: a drawing of exactly 200,000 points posts (201
+in 2.7 s, every point on the server); 200,001 is answered in under a second
+with nothing sent, and its backup is a 14 MB .skribl file with every point.
+
+CALIBRATION
+
+verify_posted TOO LONG TO POST drives both editors through Post: a Pad drawing
+of exactly 200,000 points posts and the server holds every point; one point
+more, on a phone in both themes, sends nothing, says the shared words, turns
+Post into Save a backup with the menu's icon painted where the plane was, puts
+the sheet away for the menu's drawer, downloads a .skribl file with every point,
+and gives Post back when the sheet opens again; Flip past the budget says the
+same words and its generated pages, with the same button, and saves every page.
+verify_clouddrafts saves a 200,000-point Pad draft and has one point more
+refused; verify_review asks each cap at its own edge (a Flip page, a Pad
+frame, both stroke caps, the document); verify_sharedrules pins the Pad's two
+numbers to the server's and asks the Pad to load the module; verify_flipmeta
+pins the too-many-pages words.
+
+Each was shown red on its own mutation, each in its own copy on its own server:
+the Pad not asking before Post (the Pad's eight one-past checks; the server's
+jargon came back); the button not turning into Save a backup (the button, the
+drawer and the file, on both editors); the button not routed to the backup
+(the drawer and the file only); the sheet not giving Post back (that check
+only); the server's Pad cap back at 20,000 (the 200,000-point post, the
+200,000-point draft, verify_review's two Pad checks); the Pad's copy of the cap
+at 20,000 (the 200,000-point post, and verify_sharedrules' pin); Flip refusing
+instead of offering the backup (Flip's button and file); and main, where all
+fourteen new post checks, the draft, the two Pad caps, the Pad's module and the
+pages words fail.
+
+Two blind spots were found in the first round and fixed before the second. The
+draft check read its limit from the server's own Pad constant, so it moved down
+with the mutation that lowered it and stayed green; it, and the post checks,
+now ask for the owner's number, the whole budget. And a red check that left the
+sheet open made the next click wait out its timeout and stopped the suite, so
+one failure hid the rest; the sheet is closed first now, and the drawer is asked
+for its own open state rather than whether it is displayed, which it always is.
