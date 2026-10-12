@@ -641,8 +641,10 @@ with sync_playwright() as p:
         groups.push(k); gi++; t += 200 + rnd() * 900; }
       return { pts: pts, groups: groups }; }"""
     # After a seek, the canvas against a replay from the first point on the
-    # same canvas; then the replay owns the canvas on that reference's own
-    # compositor, at the same place, so the next seek carries on from it.
+    # same canvas. The replay's own compositor is LEFT AS THE SEEK LEFT IT: when
+    # the seek was right, it holds what the reference just painted, so the next
+    # seek carries on from it; when the seek kept a stale one, the next seek
+    # shows it. (Handing the reference's compositor back hid exactly that.)
     PAD_SAME = """(f) => { editorSeek(f);
       const r = { idx: playIndex, held: playSeek ? playSeek.held().length : -1,
                   drawn: playSeek ? playSeek.drawn() : -1, gap: playSeek ? playSeek.gap() : -1 };
@@ -653,7 +655,6 @@ with sync_playwright() as p:
         if (comp) comp.present(); });
       const b = ctx.getImageData(0, 0, w, h).data; let off = 0;
       for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) off++;
-      playComp = comp;
       return Object.assign(r, { off: off, ref: i }); }"""
     SEQ = [0.9, 0.3, 0.95, 0.5, 0.52, 0.1, 1.0, 0.75, 0.76, 0.2]
     for _layers, _n in (("on", 60000), ("off", 60000), ("on", 2000)):
@@ -711,12 +712,18 @@ with sync_playwright() as p:
         browsing.goto(_pg, BASE, f"/s/{_body['id']}")
         _pg.wait_for_function("() => typeof window.__skriblPlayerSeek === 'function'")
         _pg.wait_for_timeout(600)
+        # Played first, as a viewer would: the replay's own compositor exists
+        # before the first seek, so a seek that kept it instead of its own shows.
+        _pg.click("#playerPlayBtn")
+        _pg.wait_for_timeout(500)
         _rows = [(f, _pg.evaluate(PLAYER_SAME, f)) for f in SEQ]
         _bad = [(f, r) for f, r in _rows if r["off"]]
         check("[shared player, 19,000 points] every seek of ten paints exactly what a replay from the first point paints",
               not _bad, f"{len(_bad)} differ, first {_bad[:1]}")
-        check("[shared player, 19,000 points] ...and it keeps copies to start from",
-              _rows[-1][1]["held"] >= 1, str([r["held"] for _, r in _rows]))
+        _after = [(f, r["drawn"]) for f, r in _rows[1:]]
+        check("[shared player, 19,000 points] ...it keeps copies, and every seek after the first starts near its target: at most two stretches drawn",
+              _rows[-1][1]["held"] >= 1 and all(0 <= d <= 2 * 4000 for _, d in _after),
+              f"held {_rows[-1][1]['held']}, points drawn by each seek after the first {_after}")
         _pg.context.close()
     else:
         check("[shared player, 19,000 points] the long drawing posted", False, f"{_st} {_body}")
