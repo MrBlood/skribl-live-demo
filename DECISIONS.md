@@ -16143,18 +16143,26 @@ sure it stays gone for 350ms. With the hide timer stretched to 1.5 s the old
 wait went red and the new one passes; with Escape doing nothing, both go red.
 That run was stopped and its record not kept.
 
-The second was found while the next run was in its first batch, getting the
-audit packet ready. The offline packages' README-OFFLINE.txt said to unzip them
-with `-d wheels`, which puts the wheels in `wheels/wheels/`, and then pointed
-pip at `wheels`: followed word for word it stops at "No matching distribution
-found for alembic", the wall the v321 auditor hit. `wheelhouse.py`'s proof had
-installed from the folder it built before zipping, so it passed. The README
-now unzips in place, and the proof unpacks the finished zip beside a copy of
-constraints.txt, runs the README's own lines there with the network refused,
-and only then writes the zip. With the old line it goes red on that error and
-writes nothing; with the new one it passes, and the real `unzip` and pip,
-following the zipped README in a fresh folder, install and import. That run
-was stopped too; the record below is the third, on the tree with both fixes.
+The second was found getting the audit packet ready while the next runs
+began: the offline packages' README-OFFLINE.txt did not work as written, three
+ways. Its unzip line (`-d wheels`) put the wheels in `wheels/wheels/` while its
+pip lines looked in `wheels`, so it stopped at "No matching distribution found
+for alembic", the wall the v321 auditor hit. Its `harness/bootstrap.sh` line
+named no environment, so bootstrap.sh ignored the one just built and tried to
+make its own from the network. And given that environment, bootstrap.sh
+stopped at fetching Chromium, which needs Playwright, which the offline wheels
+leave out, so the app never booted. `wheelhouse.py`'s proof had installed from
+the folder it built before zipping, and passed. Now the README unzips in
+place, makes the environment with `--system-site-packages` so an auditor's own
+Playwright is used, and runs `harness/bootstrap.sh .venv`; bootstrap.sh fetches
+Chromium only when there is a Playwright to fetch it with, and boots the app
+either way; and the proof runs every README line in the tree the source zip
+carries, with the finished zip beside it and pip's network refused, through to
+the app answering. Each of the three breaks turns it red and writes no zip.
+Followed by hand from the v322 source zip, with the system's Python 3.12 and
+pip offline, the README's lines brought the app up and every page answered and
+drew. The two runs started meanwhile were stopped; the record below is the
+fourth, on the tree with both fixes.
 
 **Still open, at the v322 seal:**
 
