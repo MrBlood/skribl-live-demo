@@ -714,13 +714,20 @@ with sync_playwright() as p:
       restoreAutosave({ version: 1, strokes: d.pts, strokeGroups: d.groups, background: { color: '#f6f2ea' } });
       flushPadDraft(); window.__toasts = []; return strokes.length; }"""
     PACE = """() => ({ n: strokes.length, g: strokeGroups.length, ms: SkriblReplayLine.drawnMs(strokes) })"""
+    # COVERED IS A PAINT. A button counts only where it is drawn under the
+    # toast: elementFromPoint at the middle of the overlap, which sees through
+    # the toast because taps do. A closed drawer's Done and a hidden grid
+    # button keep their boxes there and are not drawn (a rect is not a paint).
     TOAST = """() => { const t = document.querySelector('.toast'), r = t.getBoundingClientRect();
       const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       const over = [...document.querySelectorAll('button')].filter(b => { const q = b.getBoundingClientRect();
-        return q.width && q.height && getComputedStyle(b).visibility !== 'hidden'
-          && q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top; }).map(b => b.id || b.className);
+        const x0 = Math.max(q.left, r.left), x1 = Math.min(q.right, r.right), y0 = Math.max(q.top, r.top), y1 = Math.min(q.bottom, r.bottom);
+        if (x1 <= x0 || y1 <= y0) return false;
+        const h = document.elementFromPoint((x0 + x1) / 2, (y0 + y1) / 2);
+        return !!(h && (h === b || b.contains(h))); }).map(b => b.id || b.className);
       return { shown: !t.hidden && t.classList.contains('show'), text: t.textContent,
-               through: !!(hit && hit.closest('#canvas, #canvasWrap, .canvas-wrap')), over }; }"""
+               through: getComputedStyle(t).pointerEvents === 'none' && !!hit && hit !== t && !t.contains(hit),
+               over }; }"""
 
     def _stroke(pg, dx=0):
         # A restored drawing is a finished take: Add take carries on drawing it.
@@ -750,7 +757,7 @@ with sync_playwright() as p:
     check("crossing 90%: after the save, how many minutes more fit, at this drawing's pace",
           _want is not None and _t["shown"] and _t["text"] == _want and pg.evaluate("() => __toasts.length") == 1,
           f"want {_want!r}; toast {_t}; said {pg.evaluate('() => __toasts')}; {_st}")
-    check("...where taps go through it to the canvas, and over no button",
+    check("...where taps go through it, and over no button that is drawn",
           _t["through"] and not _t["over"], str(_t))
     _stroke(pg, 30)
     check("...and the next save, still past 90%, says nothing more",
