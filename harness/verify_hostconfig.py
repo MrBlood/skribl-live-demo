@@ -34,6 +34,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import urllib.error
 import urllib.request
 
@@ -150,6 +151,12 @@ PROBE = (
 
 def boot(**env):
     e = {k: v for k, v in os.environ.items() if k not in SCRUB}
+    # A real deployment names its database, and since PF-022 a production
+    # boot without one refuses before it reaches the secret checks below.
+    # These cases leaned on the DATABASE_URL run_harness.sh exports, so run
+    # any other way they went red on the wrong refusal. verify_hostseams owns
+    # the no-database case; here every boot has one.
+    e.setdefault("DATABASE_URL", "sqlite:///" + os.path.join(tempfile.gettempdir(), "hostconfig-boot.db"))
     e.update(env)
     p = subprocess.run([sys.executable, "-c", PROBE], cwd=ROOT, env=e,
                        capture_output=True, text=True)

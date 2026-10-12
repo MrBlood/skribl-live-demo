@@ -70,23 +70,44 @@ def free(port):
 
 
 def boot(port):
-    """One fresh server (its own database) on PORT, or None with the reason printed."""
+    """One fresh server on PORT, as (port, its database), or None with the reason printed.
+
+    THE DATABASE TRAVELS WITH THE ADDRESS. Several suites also open the
+    database in-process (a Flask test client, a direct query) through
+    DATABASE_URL, which run_harness.sh exports for them; given only the
+    server's address they opened an empty default and failed on "no such
+    table" (verify_delivery, verify_deletion_foundation, in this tool's first
+    full run)."""
     out = subprocess.run([str(HARNESS / "bootstrap.sh"), VENV, str(port)], cwd=ROOT,
                          capture_output=True, text=True, timeout=600)
-    if out.returncode != 0 or f"127.0.0.1:{port}" not in out.stdout:
+    db = re.search(r"db:\s*(\S+\.db)", out.stdout)
+    if out.returncode != 0 or f"127.0.0.1:{port}" not in out.stdout or not db:
         print(f"  server on {port} did not start:\n{out.stdout[-600:]}{out.stderr[-600:]}")
         return None
-    return port
+    return port, db.group(1)
 
 
 def stop(port):
     subprocess.run(["fuser", "-k", f"{port}/tcp"], capture_output=True)
 
 
-def run(suite, port, timeout):
+def run(suite, server, timeout):
+    port, db = server
     LOGS.mkdir(parents=True, exist_ok=True)
     log = LOGS / (suite[:-3] + ".log")
-    env = dict(os.environ, SKRIBL_BASE=f"http://127.0.0.1:{port}")
+    # What run_harness.sh gives a suite: its server, that server's database,
+    # and the posting limit the harness raises (bootstrap raised it for the
+    # server; a suite that posts in-process needs it too).
+    env = dict(os.environ, SKRIBL_BASE=f"http://127.0.0.1:{port}",
+               DATABASE_URL=f"sqlite:///{db}",
+               SKRIBL_RATE_MAX_POSTS=os.environ.get("SKRIBL_RATE_MAX_POSTS", "100000"))
+    # A suite that reads SKRIBL_BASE with NO default treats "unset" as "bring
+    # your own server" (verify_deletion_foundation needs the local media
+    # store, which the shared server does not use), so it gets none, as under
+    # run_harness.sh. Read off the call itself, not a list of names.
+    if re.search(r"""os\.environ\.get\(\s*["']SKRIBL_BASE["']\s*\)""",
+                 (HARNESS / suite).read_text(encoding="utf-8", errors="replace")):
+        env.pop("SKRIBL_BASE")
     t0 = time.monotonic()
     with open(log, "w", encoding="utf-8") as fh:
         try:
@@ -131,26 +152,26 @@ def main():
         up = [x for x in ex.map(boot, ports) if x]
     if not up:
         sys.exit("no server started")
-    print(f"{len(up)} server(s) on {', '.join(map(str, up))}; {len(suites)} suite(s), "
+    print(f"{len(up)} server(s) on {', '.join(str(s[0]) for s in up)}; {len(suites)} suite(s), "
           f"{sum(s in alone for s in suites)} of them re-run alone if red")
 
     results, lock = [], threading.Lock()
     queue = list(suites)
 
-    def worker(port):
+    def worker(server):
         while True:
             with lock:
                 if not queue:
                     return
                 suite = queue.pop(0)
-            r = run(suite, port, a.timeout)
+            r = run(suite, server, a.timeout)
             with lock:
                 results.append(r)
                 print(line(r)[1], flush=True)
 
     t0 = time.monotonic()
     try:
-        threads = [threading.Thread(target=worker, args=(port,)) for port in up]
+        threads = [threading.Thread(target=worker, args=(server,)) for server in up]
         for t in threads:
             t.start()
         for t in threads:
@@ -163,7 +184,7 @@ def main():
                 print(line(again)[1] + "  <- alone, after a red beside others", flush=True)
                 results[i] = again
     finally:
-        for port in up:
+        for port, _db in up:
             stop(port)
 
     bad = [r for r in results if not line(r)[0]]
