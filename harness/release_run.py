@@ -558,9 +558,9 @@ def tree_hash():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
-    # RESUME. A full aggregate takes ~25 minutes of wall clock. Some execution
-    # environments — including the sandbox this is usually run in — cap a single
-    # invocation well below that and do not let a background process survive
+    # RESUME. A full aggregate runs every suite, and takes longer than some
+    # execution environments — including the sandbox this is usually run in —
+    # allow a single invocation; nor do they let a background process survive
     # between invocations, so the run is killed part-way and no evidence is
     # produced at all. The tempting workaround is to run batches by hand and add
     # the numbers up, which is precisely the hand-typed total this whole file

@@ -330,9 +330,9 @@ print("\nSURFACES — stylesheets keep no rule nothing can match")
 # slider, a loading spinner and its @keyframes. Dead CSS is quieter than dead
 # JavaScript because nothing ever fails to load — the rule simply never matches.
 #
-# ONLY FULLY-DEAD RULE-SETS COUNT. A selector list like
-# `.slider:focus, .opacity-slider:focus` keeps a dead fragment beside a live
-# one, and trimming those is not worth it: the attempt ate a comment
+# ONLY FULLY-DEAD RULE-SETS COUNT. A selector list that pairs a live class
+# with a retired one keeps a dead fragment beside the live one, and trimming
+# those is not worth it: the attempt ate a comment
 # terminator, corrupted the shared .slider rule, and verify_sizeclass and
 # verify_tray caught it. A fragment that can never match costs a few bytes and
 # breaks nothing; a rule-set devoted entirely to a class nobody applies is the

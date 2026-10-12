@@ -45,8 +45,6 @@ def summarise_and_exit():
 
 def _hardcoded():
     """Export filenames still written as literals rather than named."""
-    import glob
-    pat = re.compile(r"""(?<!: )['"]skribl(?:-flip|-animation|-frame-)?[.'"]""")
     out = []
     for f in ("editor_export.js", "flip.js"):
         src = open(os.path.join(STATIC_DIR, f), encoding="utf-8").read()
