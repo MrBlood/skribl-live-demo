@@ -167,419 +167,188 @@ code they describe changes; a config check before a release) and not its maratho
 
 ## Start here (read order for a new session)
 
-1. **`START-HERE.md`** — the session primer, and the current state of the
-   tree. Its opening block deliberately contains no numbers: verify totals
-   against `harness/RELEASE.md` (and, in a release archive, its `SHA256SUMS`)
-   rather than trusting prose.
-   Its invariants table names each rule a change can break and the suite
-   that enforces it.
-2. **`DECISIONS.md`** — why the tree is the way it is, newest at the bottom.
-   Version headings REPEAT (the numbering restarted twice), so the LAST
-   occurrence of a number is the current one; see the note at the head of
-   its version log. Entries are true as written and not maintained after.
-3. **`docs/SESSION-CONTEXT.md`** — how a fresh session checks the ground and
-   gets to a running server (`harness/bootstrap.sh`), the seal as it is
-   actually executed, how the owner works, and where the project came from.
+1. **`START-HERE.md`**: the session primer and the tree's current state. Its
+   opening block has no numbers on purpose; totals come from
+   `harness/RELEASE.md` (and a release archive's `SHA256SUMS`). Its invariants
+   table names each rule a change can break and the suite that enforces it.
+2. **`DECISIONS.md`**: why the tree is the way it is, newest at the bottom.
+   Version headings repeat (the numbering restarted twice), so the last
+   occurrence of a number is the current one. Entries are true as written and
+   not maintained after. The stories behind the rules below live there.
+3. **`docs/SESSION-CONTEXT.md`**: checking the ground, getting a server
+   (`harness/bootstrap.sh`), the seal as actually executed, how the owner works.
 4. **`FUTURE.md`** for direction, **`docs/INTEGRATION.md`** to mount Skribl
    into another Flask app.
 
-Conversations are not the memory — these files are. Prefer a fresh session
+Conversations are not the memory; these files are. Prefer a fresh session
 reading them over a long one carrying a compacted summary.
 
 ## How work ships here
 
-Implement → run the AFFECTED suites locally → commit with an explicit file
-list (never `git add -A`) → push → PR → squash-merge. Quote the suite counts
-in the PR: that local run is what justifies CI's PR-side trim (below).
+Implement → run the AFFECTED suites → commit with an explicit file list (never
+`git add -A`) → push → PR → squash-merge. Quote the suite counts in the PR:
+that local run is what justifies CI's PR-side trim.
 
-- Run suites with `./harness/run_harness.sh [verify_x.py ...]`; bare runs
-  everything. A run reporting `skipped N` is not the run you think it is.
-- **Before a PR, run the affected suites side by side:**
-  `python3 harness/run_parallel.py -j 3 verify_parity.py verify_tools.py` gives each its own
-  fresh server and re-runs ALONE any red suite that measures (release_run.py's
-  tag) before believing it. It leaves `LAST-RUN.txt` and the docs alone;
-  `run_harness.sh` and the seal are still the record. (Owner: "1 change is 40
-  minutes? We have an efficiency problem." Half of each change was suites
-  waiting their turn on one server.)
-- **A pull request runs its AFFECTED suites, named one by one, not the full
-  battery.** The full battery belongs to a seal and to a change that
-  genuinely rewires many suites (an import move, a shared-harness edit);
-  main's post-merge CI runs it for every merge. An "affected" list built by
-  grepping suites for common words ("menu", "report") is the full battery by
-  another name, and it cost the owner a morning that way. Name the suites
-  that exercise the files the diff touches, and say in the PR that the full
-  battery was not run.
+- **Run the affected suites side by side:** `python3 harness/run_parallel.py
+  -j 3 verify_parity.py verify_tools.py` gives each its own fresh server and
+  re-runs ALONE any red suite that measures (release_run.py's tag) before
+  believing it. `./harness/run_harness.sh [suites]` is the serial runner and,
+  with the seal, the record. A run reporting `skipped N` is not the run you
+  think it is.
+- **Name the affected suites one by one** (the ones that exercise the files the
+  diff touches) and say in the PR the full battery was not run. The full
+  battery is for a seal and for changes that rewire many suites; main's CI runs
+  it after every merge. Grepping suites for common words is the full battery
+  by another name.
+- **Open the PR as soon as the new check is green** and let slower suites run
+  alongside CI; update the description before merging. One PR per screen, not
+  per fix.
 - After ANY change to `skribl/static/styles.css`, re-emit the player's CSS:
   `python3 harness/tools/cssgraph.py --emit harness/tools/css_live.json
   skribl/static/player.css`.
 - All work goes on the branch the session names; it is reused across PRs.
 
-**A TEXT CONTROL UNDER 16px MAKES iOS MAGNIFY THE PAGE, and it is a gate now
-because it was a comment before.** iOS Safari zooms the whole page when a
-focused input computes under 16px and does not reliably zoom back, so the
-person types one word and is left panning. `styles.css` has said so at
-`.zoom-hud .zoom-val-input` since the zoom HUD was written; the profile page
-was written later with its own sheet, never inherited the rule, and shipped a
-12.5px search field. **Any new surface, any new stylesheet: every `input`,
-`textarea` and `select` that takes text is at least 16px.** `verify_a11y`'s
-A11Y 11b reads the COMPUTED size on the real element, on all five pages, and
-drives open the two fields that are built on demand (the recovery overlays and
-the zoom HUD's %) — the first draft missed the second and went green on a 13px
-mutation of the very rule the floor came from.
+**A TEXT CONTROL UNDER 16px MAKES iOS MAGNIFY THE PAGE.** Every `input`,
+`textarea` and `select` that takes text is at least 16px, on any new surface or
+sheet (`verify_a11y` A11Y 11b reads the computed size on all five pages,
+including fields built on demand). And never `maximum-scale=1` or
+`user-scalable=no`: that takes pinch-zoom from everybody (A11Y 11).
 
-And never `maximum-scale=1` or `user-scalable=no`. That is the other way to
-stop the zoom and it takes pinch-zoom away from everybody; A11Y 11 fails any
-page that tries it, so the two sections are each other's guard rail.
-
-**Gates that bite, in `verify_docs.py`:** every `lib/*.js` must be named in
-some `.md` (the shared-module index in START-HERE.md is where); no document
-may name a repo file that is not there; no doc may hand-type a tree hash or
-an assertion count outside the generated `<!-- HARNESS-COUNTS -->` stanza.
-Numbers in prose go stale silently — point at the generated record instead.
+**Gates that bite, in `verify_docs.py`:** every `lib/*.js` is named in some
+`.md` (START-HERE's module index); no document names a repo file that is not
+there; no doc hand-types a tree hash or an assertion count outside the
+generated `<!-- HARNESS-COUNTS -->` stanza. Point at the generated record.
 
 ## Calibrate the instrument before believing it
 
 **Run every new check against one case you know is BAD and one you know is
-GOOD. If it cannot tell them apart, the instrument is wrong, not the tree.**
+GOOD. If it cannot tell them apart, the instrument is wrong, not the tree.** A
+green check is not evidence until it has been shown to go red. (v281/v282 made
+as many broken instruments as real defects: a route gate keyed by path alone,
+a packaging check that never opened `alembic.ini`, an ink measure that read a
+blank page as full, imports that parsed but did not import.)
 
-This is the mutation test moved BEFORE the fix instead of after, and it is
-here because the v281/v282 work produced roughly as many broken instruments
-as real defects. Each of these reached a commit or a run:
-
-- The README route-table gate reused a set of PATHS, so GET, PATCH and DELETE
-  on one route collapsed into a single entry. **It would have passed on the
-  tree that motivated it.** A mutation said so; nothing else would have.
-- The packaging verifier called `db.create_all()` and never opened
-  `alembic.ini` or `skribl/migrations` — it would have reported a runtime
-  package missing either as VERIFIED. The `Procfile` runs
-  `alembic upgrade head`; so does the check now.
-- `verify_ux`'s ink measure counted `alpha > 0`. Flip's canvas is opaque, so
-  it always returned exactly width*height/4 and `ink > 5000` would have
-  passed on a blank page — since v206, because the fixture in use saturated
-  it too.
-- `import browsing` landed below first use in five suites. The check had been
-  "all 99 parse", and a misplaced import is valid syntax: parsing proves
-  nothing about importing.
-
-A green check is not evidence until it has been shown to go red.
-
-**A MUTATION TO A TEMPLATE IS INVISIBLE UNTIL THE SERVER IS BOUNCED.**
-`harness/bootstrap.sh` runs Flask with `--no-reload`, so Jinja caches every
-template it has already compiled. Edit a `.html` file, re-run the suite, and it
-reads the OLD markup — the mutation comes back green and the calibration proves
-nothing. Restart the server (same database is fine) and confirm with
-`curl -s http://127.0.0.1:5001/<page> | grep <the mutated selector>` before
-believing either colour. Static `.js` and `.css` are read per request and need
-no bounce; only templates do.
-
-**AND A RECT IS NOT A PAINT.** `getBoundingClientRect()` says where a box WOULD
-be and says nothing about an ancestor clipping it — a clipped element keeps its
-geometry and loses only its pixels. An assertion about whether something is
-VISIBLE has to ask what is painted (`document.elementFromPoint` at a point
-inside it), never where its coordinates are. The v308 overhang check went green
-on a badge `overflow: hidden` had made invisible, with the rect reading exactly
-the offsets the fix intended. Size and position are questions coordinates CAN
-answer; visibility is not one of them.
-
-**Mutate per COMPONENT, not once per change** (learned in v212, where it was
-the only thing that caught the error). A single all-or-nothing revert can show
-red for one component's sake while another's assertion pins nothing. That
-release fixed the same unguarded line on Pad and Flip and asserted both the
-same way — but Flip's `reveal()` already repainted both canvases, so Flip
-**self-heals the scenario and was never broken by it**. The Flip assertion was
-green against the broken tree and green against the fix.
-
-Which yields a second rule: **when two surfaces share a fix, they may need
-DIFFERENT assertions.** Pin the surface that can fail the user-visible
-scenario with that scenario; pin the surface that cannot with the property the
-fix actually governs.
-
-**Its companion, learned the expensive way: do not edit mechanically where
-prose and code interleave.** Three automated passes over the stylesheets each
-produced fresh damage — a stranded trailing comment, an emptied media query, a
-deleted note documenting a live token, and finally a corrupted `.slider` rule
-that `verify_sizeclass` and `verify_tray` caught. Comments are prose and prose
-needs reading.
-
-**And for a change that touches many suites, the sample IS the full run.** The
-five broken imports and two crashed suites above were each caught by running
-all 99, never by a representative subset. Commit before running it, so the
-work survives being wrong.
-
-**A CHECK FOR ABSENCE MUST MATCH THE MECHANISM, NOT THE WORD** — and this one
-has now happened three times, in three different files, which is why it is a
-rule rather than an anecdote:
-
-- `verify_review` asserted "the player does not load this module" with a
-  substring search. The template's COMMENT explaining the absence contains the
-  filename, so the check read the explanation as the thing it was looking for.
-- Two `/library` gates were substring searches that passed on their own prose.
-- v283: a comment in `run_harness.sh` explained that generated names must be
-  spelled out — by SHOWING the flag syntax it was describing. `verify_docs`
-  scrapes that file for exactly that syntax, so it read the illustration and
-  found a file called `...`.
-
-Match the tag, the token, the parsed structure — never the human sentence
-around it. And do not write an example of a machine-read literal in prose the
-machine reads: the v281 stamp nearly deleted a whole section because notes
-quoted the counts marker verbatim.
-
-**A POPULATION THAT SPANS ROUTES CARRIES THE ROUTE IN ITS IDENTITY.** The modal
-census swept Pad and Flip for `aria-modal` ids and put them in one set, so the
-shared Help and Export dialogs — one template, included by both editors — were
-counted twice and driven once, on the Pad. Flip's copies had no focus
-management at all and the census was green (v292; outside review of v291).
-Same markup is not same behaviour: key a cross-page census by `(route, id)`,
-and a shared id is two instances until each has been driven on its own page.
-
-**An assertion that can only pass while the work is OUTSTANDING is a TODO in a
-test's clothes.** `verify_seam`'s "a split is still worth doing" asserted
-`editor_lines > player_lines` and went red the moment `editor_draw.js` landed —
-the fix succeeding is what broke it. Invert such a check to guard the
-achievement instead, so it goes red when the ground is LOST.
-
-**NEVER `git checkout` OR `git stash` A FILE THAT HOLDS UNCOMMITTED WORK.**
-With nothing committed to fall back to, checkout is not an undo, it is a
-delete. Read an old version with `git show <rev>:<path> > /tmp/copy`, which
-cannot touch the working tree. When an edit script goes wrong, FIX IT FORWARD —
-reverting looks faster and is the destructive choice. (Twice: v213, v283.)
+- **A MUTATION TO A TEMPLATE IS INVISIBLE UNTIL THE SERVER IS BOUNCED**: Flask
+  runs with `--no-reload` and caches compiled templates. Restart it and confirm
+  with `curl` before believing either colour. Static `.js`/`.css` need no bounce.
+- **AND A RECT IS NOT A PAINT.** Ask visibility of what is painted
+  (`document.elementFromPoint` inside it), never of coordinates: a clipped
+  element keeps its rect and loses its pixels.
+- **Mutate per COMPONENT, not once per change.** One revert can go red for one
+  part while another part's assertion pins nothing. **When two surfaces share a
+  fix, they may need DIFFERENT assertions**: pin the one that can fail the
+  user's scenario with that scenario, and the one that cannot with the
+  property the fix governs. (v212: Flip's `reveal()` repainted both canvases,
+  so Flip could not fail the scenario and its copy of the assertion pinned
+  nothing.)
+- **For calibration, run only the part that matters**: a trimmed copy of the
+  suite (fixture plus the section) shows red/green in seconds; run the whole
+  suite once at the end.
+- **Do not edit mechanically where prose and code interleave.** Comments are
+  prose and need reading; scripted passes over the stylesheets damaged them
+  three times.
+- **For a change that touches many suites, the sample IS the full run.** Commit
+  before running it, so the work survives being wrong.
+- **A CHECK FOR ABSENCE MUST MATCH THE MECHANISM, NOT THE WORD**: the tag, the
+  token, the parsed structure, never the sentence around it. And do not write
+  an example of a machine-read literal in prose the machine reads.
+- **A POPULATION THAT SPANS ROUTES CARRIES THE ROUTE IN ITS IDENTITY**: key a
+  cross-page census by `(route, id)`; same markup is not same behaviour.
+- **An assertion that can only pass while the work is OUTSTANDING is a TODO in
+  a test's clothes.** Invert it to guard the achievement.
+- **NEVER `git checkout` OR `git stash` A FILE THAT HOLDS UNCOMMITTED WORK.**
+  Read an old version with `git show <rev>:<path> > /tmp/copy`; fix forward.
 
 ## Checking buttons: use the centring tool
 
 The owner: "The centering script/harness should be used whenever checking
-buttons in the future. We don't need to run it every seal, but we should use it
-whenever we need it."
+buttons in the future." **Any change to a button, a badge, a chip or a mark
+runs `harness/check_centring.py`** (with a server up; `CENTRING_COMBOS=
+phone-light` while iterating, whole before the PR). It is `check_*`: not in a
+bare run or a seal. `harness/centring_baseline.json` only shrinks: a new
+finding fails, a fixed one fails until it comes off the list
+(`CENTRING_WRITE_BASELINE=1` after a full run). Its measurements are in this
+box's fonts, so a fix is font-independent (a drawn mark, `text-box` trimming),
+never a nudge tuned to Liberation Sans.
 
-**Any change to a button, a badge, a chip or a mark runs
-`harness/check_centring.py`** (about 16 minutes for every page; narrow it with
-`CENTRING_COMBOS=phone-light` while iterating, then run it whole before the PR).
-It finds every control from the source, proves it reached each one on a live
-page, measures where each mark's ink sits in what is painted around it, and
-fails on a symbol typed as the whole face. It is named `check_*` on purpose:
-not in a bare `run_harness.sh`, not in a seal. Run it directly with a server up.
+## Mistakes from the dock and readout round: do not repeat them
 
-`harness/centring_baseline.json` holds the findings it started with. A new one
-fails; a fixed one fails until it comes off the list
-(`CENTRING_WRITE_BASELINE=1` after a full run), so the list only shrinks. Its
-measurements are in this box's fonts, not the owner's: a fix is a
-font-independent rule (a drawn mark, `text-box` trimming), never a nudge tuned
-to Liberation Sans.
-
-## Mistakes from the dock and readout round — do not repeat them
-
-Each of these happened in the session that built the frosted dock, the pen nib
-and the recording readout (from PR #271 onward). Each cost the owner a round trip.
-
-**A CHANGE TO THE HEADER OR THE DOCK RUNS `verify_pointerpad`.** PR #275 kept
-the recording readout lit while the pen is down and was merged on a list of
-"affected suites" that left pointerpad out; pointerpad asserts every header
-child fades while stroking, and main went red. For any change to the header,
-the dock, or what `body.stroking` does, the minimum is `verify_ux`,
-`verify_pointerpad`, `verify_layout`, `verify_sizeclass` and `verify_a11y`, and
-the honest default is the full battery.
-
-**DO NOT TUNE AN OPTICAL NUDGE TO THIS CONTAINER'S FONTS.** A 1px `top:` nudge
-measured here in Liberation Sans put the recording clock visibly LOW on the
-owner's Windows machine, which renders Segoe UI. The owner works on Windows
-and an iPhone; this box has neither font. Alignment has to be font-independent
-(`text-box: trim-both cap alphabetic` is what the readout uses) and asserted in
-more than one face — `verify_ux` READOUT ALIGNMENT forces each installed face
-and measures ink. The same goes for weights: Segoe UI has no 500, so a 500
-request renders Regular there.
-
-**"IT DOESN'T SHOW ON MY PHONE" IS A STALE PAGE UNTIL PROVEN OTHERWISE.** Twice
-the owner's phone was running the page from before a merge, and a WebKit
-investigation was started both times. First give the owner a one-glance tell
-for the new build (a label or control the merge changed) and ask them to
-reload; only then suspect the engine. There is no WebKit here, so an iPhone
-engine bug cannot be reproduced — say so rather than guessing.
-
-**NEVER CITE A RUN THAT DID NOT REPORT.** A PR description once called a local
-run "green" after that run had been killed before printing a result. A killed,
-interrupted or still-running battery is "not run"; say that in the PR, in those
-words.
-
-**RESTATE THE TARGET BEFORE MOCKING OPTIONS.** "The swoosh looks generic" was
-read as "the selection pill looks generic", and five selection styles were
-mocked before the owner pointed at the swoosh again. When feedback names a
-thing on screen, say in one line which element will change before drawing
-alternatives.
-
-**A MOCK MUST MEASURE WHAT THE OWNER SAW.** When the owner says something is
-off-centre or too heavy, measure it (ink centres, computed weights) on both
-themes and at phone and desktop widths, and show before/after — the owner
-catches half-pixel drift by eye.
+- **A CHANGE TO THE HEADER OR THE DOCK RUNS `verify_pointerpad`**, with
+  `verify_ux`, `verify_layout`, `verify_sizeclass` and `verify_a11y` (anything
+  touching what `body.stroking` does too).
+- **DO NOT TUNE AN OPTICAL NUDGE TO THIS CONTAINER'S FONTS.** The owner renders
+  Segoe UI (Windows) and SF (iPhone); this box has neither. Align with
+  `text-box: trim-both cap alphabetic` and assert in more than one face.
+  Segoe UI has no 500.
+- **"IT DOESN'T SHOW ON MY PHONE" IS A STALE PAGE UNTIL PROVEN OTHERWISE.**
+  Give a one-glance tell for the new build and ask for a reload. No WebKit
+  here, so an iPhone engine bug cannot be reproduced; say so.
+- **NEVER CITE A RUN THAT DID NOT REPORT.** Killed, interrupted or still
+  running is "not run".
+- **RESTATE THE TARGET BEFORE MOCKING OPTIONS**, in one line naming the element.
+- **A MOCK MUST MEASURE WHAT THE OWNER SAW**: ink centres and computed weights,
+  both themes, phone and desk, before and after.
 
 ## Decluttering has a stopping condition
 
-Continue only while a targeted semantic review identifies a specific duplicated
-or obsolete concept with concrete maintenance cost. **"Load-bearing" and "reason
-unknown" are valid outcomes, not invitations to keep searching.** Resume cleanup
-when a concrete stale claim, duplication, defect, or maintenance problem
-provides a target.
-
-So the question is not "what can we declutter next?" but "what concrete thing is
-currently duplicated, stale, contradictory, or costly to maintain?" If there is
-no answer, do not run a pass. No percentage, no clutter score, no recurring
-duplication scan — the tree has enough machinery. (Outside review of v285, which
-ended the broad arc that ran from v282.)
+Clean up only when a targeted review finds a specific duplicated, stale,
+contradictory or costly thing. **"Load-bearing" and "reason unknown" are valid
+outcomes, not invitations to keep searching.** No percentages, clutter scores
+or recurring scans. Time is a cost: a check or habit that slows every change
+for nothing is a target.
 
 ## Sealing a release
 
-Bump `SKRIBL_VERSION` in `skribl/core.py`, add the `DECISIONS.md` entry, and
-update the version lines in `README.md` and `ARCHIVE-README.md` (both are
-pinned by `verify_docs`). Then `harness/release_run.py` for the full
-aggregate — it checkpoints, so a killed run resumes on the same frozen tree.
-On PASS, `harness/stamp_docs.py` writes the counts into the docs. **Do not
-edit a tracked file once a run has frozen its tree hash**, or the sealed
-record describes a tree that no longer exists; restart the run instead.
+Bump `SKRIBL_VERSION` in `skribl/core.py`, add the `DECISIONS.md` entry,
+update the version lines in `README.md` and `ARCHIVE-README.md` (pinned by
+`verify_docs`), then `harness/release_run.py` (it checkpoints and resumes on
+the same frozen tree). On PASS, `harness/stamp_docs.py`, then commit, and check
+with `stamp_docs.py --check` rather than re-running a suite.
+`docs/SESSION-CONTEXT.md` §4 has the sequence end to end.
 
-**RESTORE `LAST-RUN.txt` ONLY WHEN THE RUN SHOULD NOT BE PUBLISHED.** The habit
-below is right after a calibration run, a one-suite run or a RED one, and wrong
-after a full green one — and applied by reflex it destroys the very record you
-just spent forty minutes earning. v308: a full battery went green at 5,928,
-`run_harness.sh` stamped the four docs, and `git show HEAD:harness/LAST-RUN.txt
-> harness/LAST-RUN.txt` then put the PREVIOUS run's record back before the diff
-was even read. The docs said 5,928, the record said 5,786, and the PR gate
-caught it as `stamp_docs.py --check` reporting four files STALE.
-
-The record cannot be reconstructed: the only way back to those counts is
-another full run. So ask which run the docs should describe BEFORE touching
-that file — and if the answer is "this one", commit `harness/LAST-RUN.txt`
-alongside the stanzas rather than restoring it.
-
-**The generated stanzas no longer follow a partial run.** `run_harness.sh`
-stamps the counts into the docs after every invocation, which is what keeps
-them current — and what put a deliberately reddened one-suite calibration run
-into `START-HERE.md` twice in one session, both times reaching a commit.
-`stamp_docs.py` now refuses to stamp a record that did not walk every suite on
-disk, so a calibration run leaves the docs describing the last run that did.
-The restore-before-committing habit is still worth having; it is no longer the
-only thing standing between a mutation test and a published result.
-
-**And do not run `run_harness.sh` AFTER the release run.** Every invocation
-rewrites `harness/LAST-RUN.txt`, so one ad-hoc suite replaces the whole-run
-record with a one-suite record, and the checkpoint is deleted on success so
-there is nothing to resume from — it costs a full re-run. The stanza-restore
-habit covers the docs and not this. For a source-only suite, invoke it
-directly (`python3 harness/verify_docs.py`), which does not touch the record.
-Order the seal: release run, then `stamp_docs.py`, then commit, and check
-`stamp_docs.py --check` rather than re-running a suite.
-
-**DO NOT RUN POSTGRESQL IN THIS CONTAINER DURING A SEAL.** `verify_postgres.py`
-skipping locally is the DESIGNED configuration, not a gap: `SKIP_COVERAGE` names
-the `postgres` CI job that runs it in an environment this one lacks, and the
-sealed record says so by name. Starting the cluster to "improve" the record from
-two skips to one costs more than it buys.
-
-Measured, same tree, same suite, the only variable being the cluster:
-
-    PostgreSQL up      verify_hold 2nd-worst frame deviation  32 ms  FAIL
-    PostgreSQL down    verify_hold 2nd-worst frame deviation   1 ms  PASS
-
-`verify_hold` asserts frame-pacing evenness and its tolerance already allows one
-contention outlier; the checkpointer and autovacuum supply a second. The same
-holds for anything else periodically hungry on this box during a run — the
-browser timing suites are the instrument, and background load is noise in it.
-
-**THE MP4 ATTESTATION HAS TO BE PULLED INTO THE TREE, NOT MERELY DISPATCHED.**
-`release_run.py` reads `harness/MP4-ATTESTATION.txt` from the LOCAL working
-tree when it renders `RELEASE.md` at the end of the run; the CI job writes that
-file on the runner. Those two never meet on their own, so **dispatching the job
-concurrently is necessary and NOT sufficient** — the attestation has to be
-carried across by hand, while the run is still going:
-
-1. Dispatch `harness.yml` on the branch carrying the exact tree being sealed.
-2. When the `mp4` job finishes (~1 minute), write its attestation into
-   `harness/MP4-ATTESTATION.txt`. The file is in `GENERATED`, so writing it
-   does NOT move the frozen tree hash — confirm that with `release_run.tree_hash()`
-   before believing it.
-3. Confirm `release_run.mp4_attestation(frozen)` says `verified`, not `STALE`.
-4. Only then let the run reach its final render.
-
-Get it wrong and the choice is a re-run (~42 minutes) or a sealed record whose
-mp4 line contradicts evidence already in hand. The second is an evidence gap,
-so it is a re-run.
-
-The `postgres` job's attestation (`harness/POSTGRES-ATTESTATION.txt`) is
-carried on the same terms, and its `cat` is that job's LAST step because the
-service container's teardown pushes anything earlier past what the log reader
-returns. To hold the run before its final render, run it in `--budget` slices
-or `kill -STOP` it from a separate script — a `pgrep -f` pattern typed on the
-same command line matches its own shell. `docs/SESSION-CONTEXT.md` §4 has the
-sequence end to end.
-
-If the environment's egress proxy refuses GitHub's artifact blob storage (403
-on CONNECT, which is the normal case here), the job's own `cat` step puts the
-file verbatim in the log — transcribe from there. That is not hand-typed
-evidence: nothing is computed or invented, and the load-bearing field
-self-verifies, because `release_run` reports STALE on any tree-hash mismatch.
-A bad transcription fails closed.
+- **Do not edit a tracked file once a run has frozen its tree hash**; restart
+  the run instead.
+- **RESTORE `LAST-RUN.txt` ONLY WHEN THE RUN SHOULD NOT BE PUBLISHED** (a
+  calibration, one-suite or red run). After a full green run, commit it with
+  the stanzas; its counts cannot be reconstructed without another full run.
+  (`stamp_docs.py` refuses a record that did not walk every suite, so a
+  calibration run cannot reach the docs; the restore habit is still good.)
+- **Do not run `run_harness.sh` AFTER the release run**: every invocation
+  rewrites `LAST-RUN.txt`. Drive a source-only suite directly instead.
+- **DO NOT RUN POSTGRESQL IN THIS CONTAINER DURING A SEAL.** Skipping
+  `verify_postgres.py` locally is the designed configuration (CI's postgres
+  job runs it); with the cluster up, `verify_hold`'s frame pacing went from
+  1ms to 32ms and failed.
+- **THE MP4 AND POSTGRES ATTESTATIONS HAVE TO BE PULLED INTO THE TREE, NOT
+  MERELY DISPATCHED.** Dispatch `harness.yml` on the branch with the exact
+  tree, write each job's attestation into `harness/MP4-ATTESTATION.txt` /
+  `harness/POSTGRES-ATTESTATION.txt` before the run's final render (they are
+  generated files and do not move the tree hash), and confirm
+  `release_run.mp4_attestation(frozen)` says `verified`. If the artifact store
+  is refused (403), transcribe from the job's own `cat` step; a bad
+  transcription reports STALE and fails closed. Getting this wrong costs a
+  full re-run.
 
 ## Spending: ask before incurring costs (owner's standing rule)
 
 Never take an action that could create or increase a bill on any of the
-owner's accounts — GitHub, Render, or any other service — without asking
-first and getting an explicit yes. This includes, concretely:
+owner's accounts (GitHub, Render, anything else) without an explicit yes:
+larger or self-hosted runners, new or upgraded services or plans, a sign-up to
+anything with a paid tier, or anything whose cost scales with use. When in
+doubt, treat it as billing and ask, with a plain estimate.
 
-- Moving CI onto larger runners (4-core and up, GPU, macOS), self-hosted
-  paid runners, or any runner class that is not GitHub's standard hosted
-  one. **Standard runners are the free case; runner SIZE is the billable
-  knob.** See the note below before assuming a CI change costs anything.
-- Creating or upgrading services, plans, databases, storage, bandwidth
-  tiers, or autoscaling on Render (or any host).
-- Signing the project up for any third-party service that has a paid tier,
-  even when starting on the free tier.
-- Anything whose cost scales with usage in a way the owner cannot see
-  coming (per-request billing, storage growth, egress).
+**GITHUB ACTIONS DOES NOT BILL THIS REPOSITORY**: it is public and every job
+runs on `ubuntu-latest`, a standard runner, so runs, dispatches, artifacts and
+caches cost nothing. Runner SIZE and self-hosting are what would bill. Check
+both facts before repeating either claim (the repo's visibility; `grep -n
+runs-on .github/workflows/*.yml`), and do not ask permission theatrically for
+something that cannot cost money.
 
-When in doubt about whether something bills, treat it as if it does: stop
-and ask, with a plain-language estimate of the cost.
+## CI: turnaround, not money
 
-**GITHUB ACTIONS DOES NOT BILL THIS REPOSITORY, and this paragraph exists
-because the rule above used to say it did.** `MrBlood/skribl-live-demo` is
-public, and every job in `.github/workflows/harness.yml` runs on
-`ubuntu-latest` — a standard GitHub-hosted runner. Standard runners on
-public repositories have no minute allowance and no per-minute charge, and
-Actions artifact and cache storage is free there too. So running the full
-battery, dispatching a job by hand, or adding a trigger costs nothing.
-
-Two things that WOULD bill even on a public repository, and are the reason
-the bullet above still exists: a larger runner size, and a self-hosted
-runner on paid infrastructure.
-
-**The history is real and its billing premise is not.** The note atop
-`harness.yml` records a day when the full battery ran 30 times; whatever
-the repository's visibility was then, it is public now, so that day would
-cost nothing today. Verify before repeating the claim — the visibility and
-the `runs-on:` labels are the two facts that decide it, and both are
-checkable in about ten seconds:
-
-    gh repo view --json visibility        # or the API; must say "public"
-    grep -n 'runs-on' .github/workflows/*.yml
-
-A standing rule that asks for permission on something that cannot cost
-money teaches Cal to ask for permission theatrically, which is
-how a real spending question gets waved through with the rest.
-
-## CI economics — turnaround, not money
-
-Pull requests run the smoke job, which since EXT-P1-9 is the boot suite PLUS
-every suite that needs neither a browser nor the shared server — about 765
-assertions in roughly a minute. The full three-job harness still runs on
-pushes to main and manual dispatch. The full suites run locally before every
-push; that, and now the PR gate, is what makes the post-merge trim safe.
-
-Add a suite to that gate only if it needs neither a browser nor a server. One
-that quietly wants the shared server passes locally and fails there, and a PR
-gate that cries wolf gets ignored — which is worse than not having one.
-
-**The trim's justification is WALL-CLOCK, not cost.** Three jobs at 40-90
-minutes each is a long time to sit on a pull request, and free minutes are
-not free minutes-of-your-life. The trim was originally written up as a
-money-saving measure; on a public repository with standard runners it never
-was one, and keeping the wrong reason attached to a right decision is how
-the decision gets reversed by someone who checks the reason.
-
-Still ask before widening triggers — not because it bills, but because it
-is the owner's call how much CI noise a pull request generates.
+Pull requests run the smoke job: the boot suite plus every suite that needs
+neither a browser nor the shared server, in about a minute. The full harness
+runs on pushes to main and on manual dispatch. Add a suite to the PR gate only
+if it needs neither a browser nor a server; a gate that cries wolf gets
+ignored. The trim is about wall-clock, not cost. Still ask before widening
+triggers: how much CI noise a pull request makes is the owner's call.
