@@ -288,7 +288,10 @@ try:
                             for i in range(n)]
             f["strokeGroups"] = [n]
             return dict(payload, frames=[f])
-        _lim = SV.MAX_POINTS_PER_PAD
+        # The owner's number -- a Pad drawing may spend the whole budget -- and
+        # not the server's Pad constant, so a server that lowered that
+        # constant shows here instead of moving the check down with it.
+        _lim = SV.MAX_TOTAL_POINTS
         st, made_long = api(pa, "POST", "", {"kind": "pad", "title": "Two hours", "payload": _long(_lim)})
         check(f"a Pad draft of {_lim:,} points, as long as a post can hold, saves",
               st == 201 and (made_long or {}).get("id"), f"{st} {(made_long or {}).get('error', '')[:100]}")

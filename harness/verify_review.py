@@ -158,18 +158,19 @@ check("a Flip page holds a page's points, and no more",
       _flip(A.MAX_POINTS_PER_FRAME, 1) is None
       and _cap in (_flip(A.MAX_POINTS_PER_FRAME + 1, 1) or ""),
       f"{_flip(A.MAX_POINTS_PER_FRAME + 1, 1)!r}")
+_pp, _pg = getattr(A, "MAX_POINTS_PER_PAD", None), getattr(A, "MAX_GROUPS_PER_PAD", None)
 check("a Pad drawing's one frame holds the whole budget, and no more",
-      A.MAX_POINTS_PER_PAD == A.MAX_TOTAL_POINTS and _pad(A.MAX_POINTS_PER_PAD) is None
-      and f"limit {A.MAX_POINTS_PER_PAD})" in (_pad(A.MAX_POINTS_PER_PAD + 1) or ""),
-      f"{_pad(A.MAX_POINTS_PER_PAD + 1)!r}")
+      _pp == A.MAX_TOTAL_POINTS and _pad(A.MAX_TOTAL_POINTS) is None
+      and f"limit {A.MAX_TOTAL_POINTS})" in (_pad(A.MAX_TOTAL_POINTS + 1) or ""),
+      f"MAX_POINTS_PER_PAD {_pp}; at the budget {_pad(A.MAX_TOTAL_POINTS)!r}; one over {_pad(A.MAX_TOTAL_POINTS + 1)!r}")
 check("a Pad drawing's strokes scale with its points; a Flip page's do not",
-      A.MAX_GROUPS_PER_PAD == A.MAX_GROUPS_PER_FRAME * A.MAX_POINTS_PER_PAD // A.MAX_POINTS_PER_FRAME
-      and _pad(A.MAX_GROUPS_PER_PAD, A.MAX_GROUPS_PER_PAD) is None
-      and "too many entries" in (_pad(A.MAX_GROUPS_PER_PAD + 1, A.MAX_GROUPS_PER_PAD + 1) or "")
+      _pg is not None and _pg == A.MAX_GROUPS_PER_FRAME * A.MAX_TOTAL_POINTS // A.MAX_POINTS_PER_FRAME
+      and _pad(_pg, _pg) is None
+      and "too many entries" in (_pad(_pg + 1, _pg + 1) or "")
       and "too many entries" in (A._validate_payload_complexity({"playbackMode": "flip", "frames": [
           dict(_pts(A.MAX_GROUPS_PER_FRAME + 1), strokeGroups=[1] * (A.MAX_GROUPS_PER_FRAME + 1)),
           _pts(1)]}) or ""),
-      f"pad {A.MAX_GROUPS_PER_PAD}, page {A.MAX_GROUPS_PER_FRAME}")
+      f"pad {_pg}, page {A.MAX_GROUPS_PER_FRAME}")
 _over = [A.MAX_POINTS_PER_FRAME - 1] * (A.MAX_TOTAL_POINTS // (A.MAX_POINTS_PER_FRAME - 1) + 1)
 check("total points capped",
       "Too many points overall" in (_flip(*_over) or ""), f"{_flip(*_over)!r}")

@@ -1479,7 +1479,7 @@ _FILL_FLIP = """(gen) => { const B = window.SkriblPointBudget;
 # What the button shows, by what is PAINTED: the hidden icon has no box, and the
 # shown one is what elementFromPoint finds at its middle.
 _SHEET = """() => { const q = (id) => document.getElementById(id);
-  const painted = (el) => { const r = el.getBoundingClientRect(); if (!r.width) return false;
+  const painted = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); if (!r.width) return false;
     const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     return !!(h && (h === el || el.contains(h))); };
   return { says: q('postStatusLabel').textContent, error: q('postStatus').classList.contains('error'),
@@ -1528,7 +1528,7 @@ def _backup(pg, what):
 
 with sync_playwright() as _pw:
     _bt = _pw.chromium.launch()
-    _cap = _V.MAX_POINTS_PER_PAD
+    _cap = _V.MAX_TOTAL_POINTS   # the owner's number for a Pad drawing: the whole budget
     # AT the cap: the Pad posts it, and the server keeps every point.
     _c, _pg, _sent = _start(_bt, "/skribl-pad", "#canvas", "pad", {"width": 1280, "height": 900})
     _pg.evaluate(_FILL_PAD, _cap)
