@@ -3644,8 +3644,8 @@ function updateToolState(){
   playBtn.disabled = frames.length < 2 && !frames.some(frameDraw);
   playBtn.title = playTitle();
   // hide the whole control until there is something to play, matching the
-  // Pad (playWrap.hidden = !recorded). Showing "Flip it · 0:00" on a one-page
-  // animation advertises an action that cannot run. Reuses playBtn.disabled
+  // Pad (playWrap.hidden = !recorded). Showing Play on a one-page animation
+  // advertises an action that cannot run. Reuses playBtn.disabled
   // rather than restating the condition, so the two can never disagree — but
   // never hide it mid-playback, which would yank the Stop button out from under
   // the user.

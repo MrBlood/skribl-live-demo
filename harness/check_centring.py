@@ -1,8 +1,8 @@
 """Every control's mark sits in the middle of what you see: the centring census.
 
 The owner: "Some buttons with regular ascii or Unicode doesn't get centered",
-and then: build the checker into the harness as a real suite, so it runs with
-every battery and catches new buttons on its own.
+and then: build the checker into the harness, so it catches new buttons on its
+own. (Later, on demand rather than in every battery: see ON DEMAND below.)
 
 1. FIND EVERYTHING, THEN PROVE IT WAS REACHED. The population is read from
    the source (harness/centring_inventory.py: every <button>, role="button",
@@ -858,7 +858,7 @@ with sync_playwright() as p:
                             try:
                                 m = (measure_words(pg, c["id"], c["cap"], keep=True) if words
                                      else measure(pg, c["id"], c["rect"], keep=True))
-                            except Exception as e:
+                            except Exception:
                                 m = None
                             if face:
                                 js(pg, "(s) => { const e = document.querySelector(s); if (e) e.style.fontFamily = ''; }",

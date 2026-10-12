@@ -194,7 +194,6 @@ def audit(page, route, theme, form, state):
     for g in groups:
         ident = (route, g["key"])
         tag = f"{route} {g['key']} [{theme} {form}{', ' + state if state else ''}]"
-        first = ident not in seen
         seen.add(ident)
         if state == "tune":
             tune_seen.add((route, g["key"], form))
