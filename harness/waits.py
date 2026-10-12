@@ -16,6 +16,8 @@ a sleep.
 The predicates read the same state the app's own pills report: the media tab
 dots and re-add cards, Flip's media spill, the Pad's draft durability.
 """
+import json
+import os
 import time
 
 from playwright.sync_api import TimeoutError as PWTimeout
@@ -135,6 +137,11 @@ QUIET_JS = r"""
   // measured over a few frames, a glide done by hand. One that never stops
   // (a replay) holds it to the deadline, which is the old sleep, not less.
   q.lastFrame = -Infinity;
+  // A smooth scroll (scroll-behavior: smooth, a drawer's glide) runs no timer
+  // and asks for no frame of the page's own, so it is seen by its scroll
+  // events: caught on the way down, from the document or any element in it.
+  q.lastScroll = -Infinity;
+  addEventListener('scroll', () => { q.lastScroll = now(); }, { capture: true, passive: true });
   const _raf = window.requestAnimationFrame;
   window.requestAnimationFrame = function (cb) { q.lastFrame = now(); return _raf.call(this, cb); };
   const hold = p => { q.busy++; const done = () => { q.busy--; };
@@ -202,6 +209,7 @@ QUIET_JS = r"""
   q.quiet = (until) => {
     if (q.busy > 0) return false;
     if (now() - q.lastFrame < 50) return false;   // asked for a frame in the last three
+    if (now() - q.lastScroll < 60) return false;  // still scrolling
     for (const due of q.timers.values()) if (due <= until) return false;
     if (document.fonts && document.fonts.status !== 'loaded') return false;
     if (document.getAnimations) for (const a of document.getAnimations()) {
@@ -210,6 +218,20 @@ QUIET_JS = r"""
       if (end !== Infinity) return false;
     }
     return document.readyState === 'complete';
+  };
+  // What is holding it, in words, for WAITS_LOG.
+  q.why = (until) => {
+    if (q.busy > 0) return 'busy ' + q.busy;
+    for (const due of q.timers.values()) if (due <= until) return 'a timer due in ' + Math.round(due - now()) + 'ms';
+    if (now() - q.lastFrame < 50) return 'animation frames';
+    if (now() - q.lastScroll < 60) return 'scrolling';
+    if (document.fonts && document.fonts.status !== 'loaded') return 'fonts';
+    if (document.getAnimations) for (const a of document.getAnimations()) {
+      if (a.playState !== 'running') continue;
+      const end = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming().endTime : Infinity;
+      if (end !== Infinity) return 'animation ' + (a.animationName || a.transitionProperty || 'script');
+    }
+    return document.readyState === 'complete' ? '' : 'loading';
   };
 })();
 """
@@ -239,20 +261,44 @@ def settle(page, ms):
     schedules the next step as the last one finishes is seen, and so is
     layout that settles over a few frames (a fit measured in a ResizeObserver
     or a requestAnimationFrame). A page without the counter (not
-    instrumented) gets the plain sleep it had before."""
-    if not page.evaluate("() => !!window.__skQuiet"):
+    instrumented) gets the plain sleep it had before.
+
+    THE DEADLINE IS KEPT HERE, not in the page: a navigation restarts the
+    page's clock, and a deadline read from the old page would hold the new
+    one far past the old sleep. Each poll hands the page what is left."""
+    end = time.monotonic() + ms / 1000
+    try:
+        armed = page.evaluate("() => !!window.__skQuiet")
+    except Exception:
+        armed = False
+    if not armed:
         page.wait_for_timeout(ms)
         return
-    deadline = page.evaluate("() => performance.now()") + ms
-    quiet_since = None
+    quiet_since, held = None, ""
     while True:
-        t, q = page.evaluate("(d) => [performance.now(), window.__skQuiet.quiet(d)]", deadline)
-        if t >= deadline:
+        left = (end - time.monotonic()) * 1000
+        if left <= 0:
+            # WAITS_LOG=path: one line for each settle that ran to its
+            # deadline, naming what held it last -- which suites and pages
+            # stay busy, and so where settle cannot save anything.
+            if os.environ.get("WAITS_LOG"):
+                try:
+                    with open(os.environ["WAITS_LOG"], "a") as fh:
+                        fh.write(json.dumps({"ms": ms, "held": held, "url": page.url[-60:]}) + "\n")
+                except Exception:
+                    pass
             return
+        try:
+            q, held = page.evaluate("(r) => { const s = window.__skQuiet; if (!s) return [false, 'no counter yet'];"
+                                    " const u = performance.now() + r; return [!!s.quiet(u), s.why(u)]; }", left)
+        except Exception:       # mid-navigation: nothing to ask yet, so not quiet
+            q, held = False, "navigating"
+        now = time.monotonic()
         if q:
-            if quiet_since is not None and t - quiet_since >= 100:
+            if quiet_since is not None and (now - quiet_since) * 1000 >= 100:
                 return
-            quiet_since = quiet_since if quiet_since is not None else t
+            if quiet_since is None:
+                quiet_since = now
         else:
             quiet_since = None
-        page.wait_for_timeout(25)
+        page.wait_for_timeout(min(25, max(1, left)))

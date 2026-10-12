@@ -61,6 +61,11 @@ PAGES = {
           const b = document.getElementById('b'); b.style.opacity = '0';
           b.addEventListener('transitionend', () => { window.done = 1; }); }));""",
     "state-then-work": "setTimeout(() => { window.ready = 1; }, 100); setTimeout(() => { window.done = 1; }, 900);",
+    # A smooth scroll runs no timer and no frame of the page's own.
+    "smooth-scroll": """document.documentElement.style.scrollBehavior = 'smooth';
+        document.body.innerHTML = '<div style="height:20000px"></div>';
+        addEventListener('scrollend', () => { window.done = scrollY; });
+        requestAnimationFrame(() => scrollTo(0, 15000));""",
 }
 
 
@@ -120,6 +125,21 @@ with sync_playwright() as p:
                        ("interval", "an interval ticking every 200 ms")):
         ms, done = timed(pg, name, 900)
         check(f"{what}: held to the window, and no further", 850 <= ms < 1600, f"{ms:.0f} ms of 900")
+
+    print("\nA SCROLL HOLDS IT, AND A NAVIGATION DOES NOT STRETCH IT")
+    ms, done = timed(pg, "smooth-scroll", 4000)
+    check("a smooth scroll is done before settle returns", bool(done), f"scrollend at {done!r} after {ms:.0f} ms")
+    # The page has been open three seconds when it leaves, so a deadline read
+    # from its clock would hold the next page (whose clock starts again near
+    # zero, and which never goes quiet) about three seconds past the window.
+    pg.goto(f"{ORIGIN}/p/idle", wait_until="load")
+    pg.wait_for_timeout(3000)
+    pg.evaluate("() => setTimeout(() => { location.href = '/p/interval'; }, 200)")
+    t0 = time.monotonic()
+    waits.settle(pg, 1500)
+    ms = (time.monotonic() - t0) * 1000
+    check("a page that navigates while settle waits is held no longer than the window",
+          1400 <= ms < 2300, f"{ms:.0f} ms of 1500")
 
     print("\nUNTIL WITH A WINDOW: the state, then what the sleep would have waited for")
     pg.goto(f"{ORIGIN}/p/state-then-work", wait_until="load")

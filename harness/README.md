@@ -123,9 +123,11 @@ draft, music back after a reload) and `settle(page, ms)` stands in for a
 sleep after a load, a click or a reload, on a browser passed through
 `waits.instrument()`. Both come back as soon as nothing the page has in flight
 is due inside the old sleep, and never before: a timer, a request, a database
-write, a decode or a chain of animation frames due inside it holds them
-(`verify_waits.py` drives each). A sleep that guards an ABSENCE ("no toast
-within two seconds") stays a sleep.
+write, a decode, a chain of animation frames or a scroll due inside it holds
+them (`verify_waits.py` drives each). `browsing.goto`, `pad_drawer` and
+`pad_drawer_close` settle this way; on a browser without the counter they are
+the old sleep. A sleep that guards an ABSENCE ("no toast within two seconds")
+stays a sleep.
 
 ## Gotchas
 
@@ -534,9 +536,10 @@ within two seconds") stays a sleep.
 
 - `verify_waits.py` — `harness/waits.py` keeps its promise: each kind of work
   its counter sees (timers, intervals, requests, IndexedDB, file reads,
-  decodes, animation frames, CSS transitions) holds `settle` while it is due
-  inside the window, nothing holds it past the window, a quiet page comes
-  back early, and a page without the counter gets the plain sleep.
+  decodes, animation frames, CSS transitions, smooth scrolls) holds `settle`
+  while it is due inside the window, nothing holds it past the window (a
+  navigation included), a quiet page comes back early, and a page without the
+  counter gets the plain sleep.
 
 ### After v320 — motion
 

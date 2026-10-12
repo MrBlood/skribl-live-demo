@@ -37,6 +37,7 @@ Requires a running server:
     ./harness/run_harness.sh verify_a11y.py
 """
 import json
+import waits
 import math
 import pathlib
 import re
@@ -98,7 +99,7 @@ def _wav1(rate=8000):
 
 
 with sync_playwright() as p:
-    browser = p.chromium.launch()
+    browser = waits.instrument(p.chromium.launch())
 
     # ------------------------------------------------------------ section 1
     print("\nA11Y 0 — an id is a name, and a name has to be unique")
@@ -461,7 +462,7 @@ with sync_playwright() as p:
                 pg.click(step[6:])
             elif step.startswith("js:"):
                 pg.evaluate(step[3:])
-            pg.wait_for_timeout(450)
+            waits.settle(pg, 450)   # the dialog's own timers and slide, not a guess
 
     # BOTH SURFACES. The census walked the Pad only, so a dialog that exists on
     # Flip alone (its post sheet) could declare modal semantics — or fail to —
@@ -521,7 +522,7 @@ with sync_playwright() as p:
         _tag = f"{mid} on {path}"
         pg = browser.new_page(viewport={"width": 1280, "height": 900})
         pg.goto(BASE + path, wait_until="load")
-        pg.wait_for_timeout(1200)
+        waits.settle(pg, 1200)
         _drive(pg, recipe)
 
         inside = pg.evaluate("""(id) => {
@@ -1155,7 +1156,7 @@ with sync_playwright() as p:
                          ("320", {"width": 320, "height": 568})):
             _pg = browser.new_page(viewport=_vp)
             _pg.goto(BASE + _path, wait_until="load")
-            _pg.wait_for_timeout(1000)
+            waits.settle(_pg, 1000)
             if _open:
                 _pg.click(_open)
                 _pg.wait_for_timeout(600)

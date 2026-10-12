@@ -28,6 +28,11 @@ move. `settle` keeps a fraction of the old sleep rather than assuming the
 marker is the end of all work.
 """
 
+# The settles below are waits.settle: on a page whose browser went through
+# waits.instrument() they end as soon as the page has nothing left due inside
+# the old sleep; on any other page they ARE the old sleep.
+import waits
+
 BOOT_MARKER = {
     "/": "pad", "/skribl-pad": "pad", "/flip": "flip",
     "/library": "library", "/feed": "feed", "/gallery": "gallery",
@@ -132,7 +137,7 @@ def goto(page, base, path, *, settle=150, boot_timeout=5000, require_boot=None):
                 f"require_boot=False AND say why at the call site.") from None
 
     if settle:
-        page.wait_for_timeout(settle)
+        waits.settle(page, settle)
     return page
 
 
@@ -249,7 +254,7 @@ def pad_drawer(page, name, settle=350):
             page.click("#mediaOpenBtn"); page.wait_for_timeout(120)
         if page.evaluate(_PAD_CUR) != name:
             page.click("#mediaTabPhoto" if name == "photo" else "#mediaTabMusic")
-    page.wait_for_timeout(settle)
+    waits.settle(page, settle)
 
 
 def wait_scroll_still(page, limit_ms=2000):
@@ -276,5 +281,5 @@ def pad_drawer_close(page, settle=300):
         page.click("#mediaOpenBtn")
     else:
         return
-    page.wait_for_timeout(settle)
+    waits.settle(page, settle)
     wait_scroll_still(page)
