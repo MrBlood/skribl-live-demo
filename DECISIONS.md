@@ -16036,3 +16036,19 @@ and was confirmed 7/7 by a second, 0 new and 0 gone. (#424's merge message
 says the two runs disagreed by 270 and 220; those were each run against the
 old list.) Main's run in six shards (#423, about 19 minutes instead of 90) waits
 for the owner. Unchanged: the seal, the run record, and what any suite asserts.
+
+**Settle where the sleeping is (#427, #428).** A census of every suite's fixed
+sleeps (a hook totalling each `wait_for_timeout` and `time.sleep` by the line
+that asked for it) put 65 of the battery's 102 suite-minutes in them, and the
+biggest single line was `verify_onepill`'s own `settle()` helper: a 700ms sleep
+called 437 times, 220 of that suite's 378 seconds. `waits.settle` now also
+waits out a scroll and keeps its deadline across a navigation (`verify_waits`
+shows each red without its fix), `WAITS_LOG` names what held a settle that ran
+to its deadline, and the drawer helpers in `browsing.py` settle, which on a
+browser without the counter is the old sleep. With their browsers
+instrumented, each alone on a fresh server and every check passing: onepill
+-15%, a11y -8%, parity -9%, sheetswipe -11%. The rest of the sleeping is a long
+tail, about 43 minutes over 90 suites, each sleep to be read for what it guards
+before it changes. Found and left: Flip's eraser switch sits at the fold in the
+light desk draw drawer, so whether `verify_onepill` measures it there depends
+on the scroll, with the old waits and the new alike.
