@@ -16371,3 +16371,56 @@ one. Flip keeps its own (it does not load app.js).
 see-through strokes of varying width, confirms the drawing is past the budget,
 and requires the player to show it with no page error and to play. Red on
 main (12 lit pixels, the error, progress 0), green with the change.
+
+## After v322 -- the Pad plan, step 3: scrubbing a long drawing starts near where you point
+
+Every seek on a replay cleared the canvas and drew every point from the first
+one to the target. A two-hour drawing is about 170,000 points, and a seek near
+its end took about 2 s on a desk and 10 s on a CPU slowed 4x, every time, so
+a scrub through it froze.
+
+`lib/seekcache.js` keeps a few copies of the canvas, taken just before a stroke
+begins as a replay passes a stretch that has none, and a seek starts from the
+further along of where the canvas already stands and the nearest copy at or
+before its target. At most 64 MB of copies a replay (sixteen at most), never
+closer than 4,000 points apart, so a drawing under 4,000 points keeps none and
+seeks as it always did; a resize drops them. The Pad's preview and the shared
+link's player use it, through one seek and one replay step in app.js beside
+the replay core, and their frame loops take copies as playback passes, so scrubbing back
+after watching is short from the start.
+
+A copy is the canvas's own pixels, put back by drawImage at the identity
+transform, and taken at a stroke boundary, after the see-through compositor
+has presented: a new compositor seeded from the restored canvas carries on
+exactly. verify_replayspeed compares every byte of the canvas after each seek
+of a sequence (forward, back, nudged) against a replay from the first point.
+
+Measured on a two-hour drawing (170,717 points, a desk window at 2x pixels),
+seeking 90%, 30%, 95%, 50%, 52%, 10%, 100%, 75%, 76%, 20%: main took 0.19 to
+1.86 s every seek, and 0.9 to 10.1 s on a CPU slowed 4x; now the first seek
+takes what it always took (1.8 s; 9.3 s slowed), because it is what builds the
+copies, and every seek after it 20 to 326 ms (85 to 1,212 ms slowed).
+
+Each check was shown red on its own mutation: a copy put back a pixel off
+(every pixel check); copies taken mid-stroke (only the layered cases -- with
+the layering off a mid-stroke copy is harmless, which is why the boundary rule
+is there); starting from where the canvas stands even when a copy is further
+along (only the checks that every seek after the first draws at most two
+stretches); the Pad's seek keeping its old compositor (only the Pad); the
+player's (only the player); the shared seek not making a new one after a
+restore (the layered cases on both). The first round left two of those green:
+the Pad check handed the reference's compositor back after each comparison,
+which repaired the very state it was meant to catch, and the player was never
+played before it was scrubbed, so there was no stale compositor to keep. Both
+fixed, and all six went red the second time.
+
+The shared player's JavaScript grows by 3,669 B (verify_player_isolation's
+ledger names it), after folding the two seeks' and the two frame loops' own
+copies of the replay call into one seek and one replay step, which took the
+app.js share from 2,322 B to 1,038.
+
+NOT YET: the in-post player (inlineplayer.js) keeps the photo as its own layer,
+which its eraser reveals, so its copies have to hold that layer apart; posts
+are capped at 20,000 points until step 4, and the snapshots land there before
+long drawings can be posted. The first seek to a far point still draws
+everything before it once (it is what builds the copies).

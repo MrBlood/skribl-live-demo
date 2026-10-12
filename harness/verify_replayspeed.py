@@ -617,6 +617,116 @@ with sync_playwright() as p:
         check(f"[{label}] the speed is remembered in this browser", pg.evaluate("() => flipRate") == 0.5)
         pg.evaluate("() => localStorage.removeItem('skribl_flip_rate')")
         pg.close()
+
+    # ---- SCRUBBING A LONG DRAWING (v322 plan, step 3, lib/seekcache.js) -------
+    # A seek used to clear the canvas and draw every point from the first: a
+    # two-hour drawing took 2.9 s a seek on a CPU slowed 4x. Now a seek starts
+    # from the nearest copy of the canvas. What has to hold is that it paints
+    # EXACTLY what a replay from the first point paints -- read as pixels, every
+    # byte, after each seek of a sequence that goes forward, back, and nudges
+    # -- and that it really did start near its target, read as how many points
+    # it drew. The drawing has see-through strokes (the compositor's wet layer)
+    # and erasers in it; the Pad is checked with the layering on and off.
+    print("\nSCRUBBING A LONG DRAWING -- a seek starts from the nearest copy and paints what a replay from the start paints")
+    LONG = """(n) => { let s = 11; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+      const pts = [], groups = []; let t = 0, gi = 0;
+      while (pts.length < n) {
+        const m = 20 + Math.floor(rnd() * 200); let x = 60 + rnd() * 700, y = 60 + rnd() * 480, a = rnd() * 6.283;
+        const col = gi % 5 === 2 ? 'rgba(124,92,255,0.45)' : ['#1f1b2e', '#7c5cff', '#ff7a59'][gi % 3];
+        const er = gi % 23 === 7; let k = 0;
+        for (let i = 0; i < m && pts.length < n; i++, k++) {
+          pts.push({ x: x, y: y, color: col, size: 2.5 + 6 * Math.sin(Math.PI * i / m), t: Math.round(t), start: i === 0, erase: er });
+          a += (rnd() - 0.5) * 0.3; x = Math.min(800, Math.max(10, x + Math.cos(a) * 5)); y = Math.min(590, Math.max(10, y + Math.sin(a) * 5));
+          t += 18; }
+        groups.push(k); gi++; t += 200 + rnd() * 900; }
+      return { pts: pts, groups: groups }; }"""
+    # After a seek, the canvas against a replay from the first point on the
+    # same canvas. The replay's own compositor is LEFT AS THE SEEK LEFT IT: when
+    # the seek was right, it holds what the reference just painted, so the next
+    # seek carries on from it; when the seek kept a stale one, the next seek
+    # shows it. (Handing the reference's compositor back hid exactly that.)
+    PAD_SAME = """(f) => { editorSeek(f);
+      const r = { idx: playIndex, held: playSeek ? playSeek.held().length : -1,
+                  drawn: playSeek ? playSeek.drawn() : -1, gap: playSeek ? playSeek.gap() : -1 };
+      const w = canvas.width, h = canvas.height, a = ctx.getImageData(0, 0, w, h).data.slice();
+      const layers = strokeLayersOn(); let comp = null, i = -1;
+      clearAndRestore(() => { comp = layers ? makeStrokeCompositor(ctx, canvas) : null;
+        i = replayTimelineToCanvas(playTimeline, 0, lastTargetMs, comp ? comp.dotFn : drawDot, comp ? comp.lineFn : drawLine);
+        if (comp) comp.present(); });
+      const b = ctx.getImageData(0, 0, w, h).data; let off = 0;
+      for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) off++;
+      return Object.assign(r, { off: off, ref: i }); }"""
+    SEQ = [0.9, 0.3, 0.95, 0.5, 0.52, 0.1, 1.0, 0.75, 0.76, 0.2]
+    for _layers, _n in (("on", 60000), ("off", 60000), ("on", 2000)):
+        _pg = b.new_context(viewport={"width": 1280, "height": 820}).new_page()
+        browsing.goto(_pg, BASE, "/skribl-pad")
+        _pg.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.pad")
+        _pg.evaluate("([n, layers]) => { if (layers === 'off') window.SKRIBL_STROKE_LAYERS = false; const d = (" + LONG + """)(n);
+            restoreAutosave({ version: 1, strokes: d.pts, strokeGroups: d.groups, background: { color: '#f6f2ea' } }); }""",
+                     [_n, _layers])
+        _pg.wait_for_timeout(500)
+        _pg.click("#playBtn"); _pg.wait_for_timeout(250)
+        _pg.evaluate("() => { scrubbing = true; }")      # the replay holds still; the seeks are the suite's
+        _rows = [(f, _pg.evaluate(PAD_SAME, f)) for f in SEQ]
+        _bad = [(f, r) for f, r in _rows if r["off"] or r["idx"] != r["ref"]]
+        _label = f"Pad, {_n:,} points, layering {_layers}"
+        check(f"[{_label}] every seek of ten, forward, back and nudged, paints exactly what a replay from the first point paints",
+              not _bad, f"{len(_bad)} differ, first {_bad[:1]}")
+        if _n >= 20000:
+            # The first seek draws everything before it (that is what takes the
+            # copies); every one after it, forward or back, starts near its
+            # target -- from a copy or from where the canvas stands, whichever
+            # is further along -- so it draws at most two stretches.
+            _gap = _rows[0][1]["gap"]
+            _after = [(f, r["drawn"]) for f, r in _rows[1:]]
+            check(f"[{_label}] ...it keeps copies, and every seek after the first starts near its target: at most two stretches drawn",
+                  _rows[-1][1]["held"] >= 2 and 0 < _gap < _n * 0.3 and all(0 <= d <= 2 * _gap for _, d in _after),
+                  f"held {_rows[-1][1]['held']}, stretch {_gap:,}, points drawn by each seek after the first {_after}")
+        else:
+            check(f"[{_label}] a short drawing keeps no copies and seeks as it always did",
+                  all(r["held"] == 0 for _, r in _rows), str([r["held"] for _, r in _rows]))
+        _pg.context.close()
+
+    # The shared link's player, with the same drawing at what a post may carry
+    # today (20,000 points a page). Its compositor is the editor's; the
+    # reference is drawn on an offscreen canvas so the player's own state is
+    # left as it is between seeks.
+    _d = b.new_page()
+    browsing.goto(_d, BASE, "/")
+    _gen = _d.evaluate("(n) => (" + LONG + ")(n)", 19000)
+    _d.close()
+    _st, _body = post({"version": 2, "schemaVersion": 2, "playbackMode": "replay", "fps": None,
+                       "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+                       "frames": [{"strokes": _gen["pts"], "strokeGroups": _gen["groups"], "background": {"color": "#f6f2ea"}}],
+                       "title": "a long drawing"})
+    PLAYER_SAME = """(f) => { const r = window.__skriblPlayerSeek(f);
+      const w = canvas.width, h = canvas.height, a = ctx.getImageData(0, 0, w, h).data;
+      const off = document.createElement('canvas'); off.width = w; off.height = h;
+      const comp = makeStrokeCompositor(off.getContext('2d'), off);
+      replayTimelineToCanvas(buildPlaybackTimeline(), 0, r.ms, comp.dotFn, comp.lineFn); comp.present();
+      const b = off.getContext('2d').getImageData(0, 0, w, h).data; let n = 0;
+      for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) n++;
+      return Object.assign(r, { off: n, held: r.held ? r.held.length : -1 }); }"""
+    if _st in (200, 201) and _body.get("id"):
+        _pg = b.new_context(viewport={"width": 1280, "height": 820}).new_page()
+        browsing.goto(_pg, BASE, f"/s/{_body['id']}")
+        _pg.wait_for_function("() => typeof window.__skriblPlayerSeek === 'function'")
+        _pg.wait_for_timeout(600)
+        # Played first, as a viewer would: the replay's own compositor exists
+        # before the first seek, so a seek that kept it instead of its own shows.
+        _pg.click("#playerPlayBtn")
+        _pg.wait_for_timeout(500)
+        _rows = [(f, _pg.evaluate(PLAYER_SAME, f)) for f in SEQ]
+        _bad = [(f, r) for f, r in _rows if r["off"]]
+        check("[shared player, 19,000 points] every seek of ten paints exactly what a replay from the first point paints",
+              not _bad, f"{len(_bad)} differ, first {_bad[:1]}")
+        _after = [(f, r["drawn"]) for f, r in _rows[1:]]
+        check("[shared player, 19,000 points] ...it keeps copies, and every seek after the first starts near its target: at most two stretches drawn",
+              _rows[-1][1]["held"] >= 1 and all(0 <= d <= 2 * _rows[0][1]["gap"] for _, d in _after),
+              f"held {_rows[-1][1]['held']}, stretch {_rows[0][1]['gap']}, points drawn by each seek after the first {_after}")
+        _pg.context.close()
+    else:
+        check("[shared player, 19,000 points] the long drawing posted", False, f"{_st} {_body}")
     b.close()
 
 print("\n" + "=" * 62)
