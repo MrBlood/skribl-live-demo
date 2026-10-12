@@ -20,6 +20,7 @@ gets wrong, and therefore the useful one to pin.
 """
 from playwright.sync_api import sync_playwright
 import browsing
+import waits
 import os
 
 
@@ -55,7 +56,7 @@ def draw(page, sel, x0, y0, n=22):
 
 
 with sync_playwright() as p:
-    br = p.chromium.launch()
+    br = waits.instrument(p.chromium.launch())
     ctx = br.new_context(viewport={"width": 1280, "height": 900})
 
     print("\nFLIP — the export sheet now names the format (was the caveat)")
@@ -192,12 +193,12 @@ print("\nDISMISS — every overlay has a keyboard and a pointer exit")
 # dim; a scrim with no keyboard exit is a dead end, and dimming the page
 # implies tapping the dim dismisses it.
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     _pg = _b.new_page(viewport={"width": 390, "height": 844})
     _errs = []
     _pg.on("pageerror", lambda e: _errs.append(str(e)))
     _pg.goto(f"{BASE}/flip", wait_until="load")
-    _pg.wait_for_timeout(1300)
+    waits.settle(_pg, 1300)
 
     def _menu_open():
         return _pg.evaluate("() => !document.getElementById('moreMenu').hidden")
@@ -249,7 +250,7 @@ print("\nWORDMARK — the fullest label that fits, at every width")
 # was showing a 23px abbreviation. Measured: FLIP MODE needs 86px, FLIP 34, FM
 # 23; free space is 193px at 760+, 154 at 440, 66 at 340.
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     # Measured by FORCING each candidate and reading header.scrollWidth against
     # clientWidth — not by summing child widths. Flex shrinks the controls
     # first, so an arithmetic "free space" figure hides the squeeze and reports
@@ -262,7 +263,7 @@ with sync_playwright() as _p:
     for _w in (1000, 430, 393, 375, 360, 340, 300):
         _pg = _b.new_page(viewport={"width": _w, "height": 844})
         _pg.goto(f"{BASE}/flip", wait_until="load")
-        _pg.wait_for_timeout(1200)
+        waits.settle(_pg, 1200)
         _shown = _pg.evaluate("""() => { const w = document.querySelector('.flip-word');
           const m = w && w.querySelector('.brand-mark');
           const r = m ? m.getBoundingClientRect() : {width: 0, height: 0};
@@ -296,14 +297,14 @@ print("\nGRID — centred, on exact pixels, closed on all four edges")
 # It is a canvas now: every line on a whole DEVICE pixel, closing edges drawn
 # explicitly, inset read from the border rather than assumed.
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     for _w, _dpr in ((393, 3), (1000, 2), (760, 1)):
         _pg = _b.new_page(viewport={"width": _w, "height": 844},
                           device_scale_factor=_dpr)
         _errs = []
         _pg.on("pageerror", lambda e: _errs.append(str(e)))
         _pg.goto(f"{BASE}/flip", wait_until="load")
-        _pg.wait_for_timeout(1250)
+        waits.settle(_pg, 1250)
         _pg.evaluate("() => { document.getElementById('flipGrid')"
                      ".classList.add('on'); syncGrid(); }")
         _pg.wait_for_timeout(350)
@@ -358,13 +359,13 @@ print("\nGRID — even lines, measured from the pixels")
 #   2. a double grid — a canvas still paints its CSS background-image, so a
 #      leftover gradient rule under the canvas draws a SECOND grid through it
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     for _vw, _dpr, _label in ((393, 3, "phone"), (1000, 2, "desktop")):
         _ctx = _b.new_context(viewport={"width": _vw, "height": 852},
                               device_scale_factor=_dpr)
         _pg = _ctx.new_page()
         _pg.goto(f"{BASE}/flip", wait_until="load")
-        _pg.wait_for_timeout(1300)
+        waits.settle(_pg, 1300)
         _pg.evaluate("() => { grid = true;"
                      " const g = document.getElementById('flipGrid');"
                      " g.classList.add('on'); syncGrid(); }")
@@ -436,12 +437,12 @@ print("\nDRAWERS ON A PHONE — the last row is not sliced by the browser")
 #   2. refitDrawer() used scrollIntoView({block:'nearest'}), which scrolls the
 #      MINIMUM amount — a drawer already partly on screen got no scroll at all
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     _ctx = _b.new_context(viewport={"width": 393, "height": 760},
                           has_touch=True, is_mobile=True)
     _pg = _ctx.new_page()
     _pg.goto(f"{BASE}/flip", wait_until="load")
-    _pg.wait_for_timeout(1400)
+    waits.settle(_pg, 1400)
     browsing.pad_drawer(_pg, "draw", settle=1100)   # the pen, tapped again
 
     _m = _pg.evaluate("""() => {
@@ -510,11 +511,11 @@ check("and neither editor still carries its own copy of that toggle",
       "two copies of a rule is how they drift apart")
 
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     for _name, _path in (("Flip", "/flip"), ("Pad", "/skribl-pad")):
         _pg = _b.new_page(viewport={"width": 393, "height": 852})
         _pg.goto(f"{BASE}{_path}", wait_until="load")
-        _pg.wait_for_timeout(1250)
+        waits.settle(_pg, 1250)
 
         def _active():
             return _pg.evaluate("() => [...document.querySelectorAll("
@@ -556,12 +557,12 @@ print("\nWORDMARK WEIGHT — the phone is not a thinner brand")
 # an accident of shrinking.
 _PHONE_MARK = 26   # must match the 480px step in styles.css / flip.css
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     _sizes = {}
     for _w in (375, 393, 430, 1000):
         _pg = _b.new_page(viewport={"width": _w, "height": 844})
         _pg.goto(f"{BASE}/flip", wait_until="load")
-        _pg.wait_for_timeout(1150)
+        waits.settle(_pg, 1150)
         _sizes[_w] = _pg.evaluate("""() => { const m = document.querySelector('.flip-word .brand-mark');
           const h = document.querySelector('.header');
           const r = m.getBoundingClientRect();
@@ -596,7 +597,7 @@ with sync_playwright() as _p:
     for _w, _fine in ((1000, True), (393, True)):
         _pg = _b.new_page(viewport={"width": _w, "height": 844})
         _pg.goto(f"{BASE}/flip", wait_until="load")
-        _pg.wait_for_timeout(1200)
+        waits.settle(_pg, 1200)
         _pg.evaluate("() => { document.getElementById('flipGrid')"
                      ".classList.add('on'); syncGrid(); }")
         _pg.wait_for_timeout(300)
@@ -663,10 +664,10 @@ print("\nICONS — legible at button size, not just at 24px")
 # icon would quietly contradict its own setting. The NAME stays "Onion skin":
 # it is the correct animation term, and only the drawing was the problem.
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     _pg = _b.new_page(viewport={"width": 390, "height": 844})
     _pg.goto(f"{BASE}/flip", wait_until="load")
-    _pg.wait_for_timeout(1300)
+    waits.settle(_pg, 1300)
 
     # STROKED icons only. A filled glyph — the play triangle, the ... dots —
     # reports stroke-width 1 because nothing sets it, and it is never drawn.
@@ -701,10 +702,10 @@ print("\nPENDING MEDIA — dismissing the re-add card clears its dot")
 # next ran and hid it. Dismissing turned the dot green; opening the drawer made
 # it vanish.
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     _pg = _b.new_page(viewport={"width": 1100, "height": 900})
     _pg.goto(f"{BASE}/flip", wait_until="load")
-    _pg.wait_for_timeout(1300)
+    waits.settle(_pg, 1300)
 
     def _dot(kind):
         return _pg.evaluate(f"""() => {{ const d = document.getElementById('{kind}TabDot');
@@ -743,10 +744,10 @@ print("\nTUNE PANEL — controls in a stacked row are the same size")
 # which read as a box rather than a round toggle once its active state gave it
 # a background.
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     _pg = _b.new_page(viewport={"width": 1000, "height": 900})
     _pg.goto(f"{BASE}/flip", wait_until="load")
-    _pg.wait_for_timeout(1300)
+    waits.settle(_pg, 1300)
     _pg.click("#tuneBtn")
     _pg.wait_for_timeout(400)
 
@@ -798,14 +799,14 @@ with sync_playwright() as _p:
 
 print("\nCANVAS — the edge survives every state, and a stroke survives the edge")
 with sync_playwright() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     # The ring's rgba is the DARK theme's; since v292 a bare page follows the
     # OS, and headless Chromium says light. Ask for the theme the pin measures.
     _pd = _b.new_page(viewport={"width": 1000, "height": 900}, color_scheme="dark")
     _errs = []
     _pd.on("pageerror", lambda e: _errs.append(str(e)))
     _pd.goto(f"{BASE}/skribl-pad", wait_until="load")
-    _pd.wait_for_timeout(1300)
+    waits.settle(_pd, 1300)
 
     def _ring():
         return _pd.evaluate("() => getComputedStyle(document.querySelector"
@@ -862,7 +863,7 @@ print("\n" + "=" * 60)
 print("\nV204 PINS — Pad tune drawer, Grid overlay, Flip intro toast")
 from playwright.sync_api import sync_playwright as _sp204
 with _sp204() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     # Pad: tune button opens the drawer; Grid toggles the overlay canvas.
     pg = _b.new_page(viewport={"width": 900, "height": 800})
     browsing.goto(pg, BASE, "/")
@@ -981,7 +982,7 @@ with _sp204() as _p:
           not pg.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
     # Flip undo/redo are now rounded-square tiles, not circles.
     fpx = _b.new_page(viewport={"width": 900, "height": 800})
-    fpx.goto(BASE + "/flip", wait_until="load"); fpx.wait_for_timeout(700)
+    fpx.goto(BASE + "/flip", wait_until="load"); waits.settle(fpx, 700)
     rad = fpx.evaluate("() => getComputedStyle(document.getElementById('undo')).borderRadius")
     check("V205-fix: Flip undo/redo are rounded-square tiles (were circles) — matches Pad + tool shape rule",
           rad == "12px", f"border-radius {rad}")
@@ -991,7 +992,7 @@ with _sp204() as _p:
     # It toggled 'on' (unstyled) instead of 'active' since v204, so the overlay
     # drew but the button stayed dark. Pin all three siblings to .active.
     fg = _b.new_page(viewport={"width": 1280, "height": 900})
-    fg.goto(BASE + "/flip", wait_until="load"); fg.wait_for_timeout(700)
+    fg.goto(BASE + "/flip", wait_until="load"); waits.settle(fg, 700)
     fg.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
     fg.click("#tuneBtn"); fg.wait_for_timeout(350)
     for bid, nm in (("gridBtn", "grid"), ("arcGuideBtn", "motion guides"), ("onionTintBtn", "onion tint")):
@@ -1017,7 +1018,7 @@ with _sp204() as _p:
     _AUD = wav_bytes()
     for pw in (363, 390, 1280):
         mp = _b.new_page(viewport={"width": pw, "height": 844})
-        mp.goto(BASE + "/", wait_until="load"); mp.wait_for_timeout(700)
+        mp.goto(BASE + "/", wait_until="load"); waits.settle(mp, 700)
         browsing.pad_drawer(mp, "music"); mp.wait_for_timeout(300)
         mp.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); mp.wait_for_timeout(1500)
         mp.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-pressed') !== 'true') t.click(); }")
@@ -1083,7 +1084,7 @@ with _sp204() as _p:
     for pw in (375, 390):
         for path, nm in (("/", "Pad"), ("/flip", "Flip")):
             ph = _b.new_page(viewport={"width": pw, "height": 844})
-            ph.goto(BASE + path, wait_until="load"); ph.wait_for_timeout(700)
+            ph.goto(BASE + path, wait_until="load"); waits.settle(ph, 700)
             def _fit(page):
                 return page.evaluate("""() => {
                     const vw = document.documentElement.clientWidth;
@@ -1240,7 +1241,7 @@ with _sp204() as _p:
     # Menu verbiage aligned across editors + Clear all in BOTH menus.
     # (pg was closed above; open a fresh Pad page for the Pad-side checks.)
     pg = _b.new_page(viewport={"width": 1280, "height": 900})
-    pg.goto(BASE + "/", wait_until="load"); pg.wait_for_timeout(600)
+    pg.goto(BASE + "/", wait_until="load"); waits.settle(pg, 600)
     pad_items = pg.evaluate("() => [...document.querySelectorAll('#menuSheet .menu-item, .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
     flip_items = fp.evaluate("() => [...document.querySelectorAll('#moreMenu .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
     def has(items, s): return any(s in x for x in items)
@@ -1383,7 +1384,7 @@ with _sp204() as _p:
                     + Math.abs(d[i+2] - bb) + Math.abs(d[i+3] - ba) > 24) n++;
             }}
             return n; }}""")
-    dp = _b.new_page(viewport={"width": 1280, "height": 900}); dp.goto(BASE + "/", wait_until="load"); dp.wait_for_timeout(600)
+    dp = _b.new_page(viewport={"width": 1280, "height": 900}); dp.goto(BASE + "/", wait_until="load"); waits.settle(dp, 600)
     dp.set_input_files("#draftInput", {"name": "replay.skribl", "mimeType": "application/json", "buffer": _gal}); dp.wait_for_timeout(1400)
     # No backslash inside the f-string expression: legal only from Python 3.12,
     # a SyntaxError that kills the whole suite on 3.11.
@@ -1407,7 +1408,7 @@ with _sp204() as _p:
             break
     check("FORMAT: ...and REPLAYS — the drawing grows over time on Play", _b2 > _a, f"ink {_a} -> {_b2}")
     dp.close()
-    df = _b.new_page(viewport={"width": 1280, "height": 900}); df.goto(BASE + "/flip", wait_until="load"); df.wait_for_timeout(800)
+    df = _b.new_page(viewport={"width": 1280, "height": 900}); df.goto(BASE + "/flip", wait_until="load"); waits.settle(df, 800)
     df.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
     df.set_input_files("#draftInput", {"name": "flipbook.skribl", "mimeType": "application/json", "buffer": _bnc}); df.wait_for_timeout(1400)
     check("FORMAT: a flipbook .skribl loads in Flip as 24 pages @ 12fps",
@@ -1423,7 +1424,7 @@ with _sp204() as _p:
     # and the button toggled loop internally but never lit — it read as dead.
     # Post the galaxy, open the real player, press Repeat, check the fill.
     import json as _json, re as _re
-    _pp = _b.new_page(viewport={"width": 1280, "height": 900}); _pp.goto(BASE + "/", wait_until="load"); _pp.wait_for_timeout(600)
+    _pp = _b.new_page(viewport={"width": 1280, "height": 900}); _pp.goto(BASE + "/", wait_until="load"); waits.settle(_pp, 600)
     _pp.set_input_files("#draftInput", {"name": "g.skribl", "mimeType": "application/json", "buffer": _gal}); _pp.wait_for_timeout(1200)
     _payload = _pp.evaluate("() => JSON.stringify(serializeSkribl())")
     _resp = _pp.evaluate("""async (body) => { const r = await fetch('/api/skribls', {method:'POST', headers:{'Content-Type':'application/json'}, body}); return {status: r.status, text: await r.text()}; }""", _payload)
@@ -1433,7 +1434,7 @@ with _sp204() as _p:
     except Exception: pass
     check("V207: posting the galaxy demo yields a player id", bool(_pid), str(_resp)[:100])
     if _pid:
-        _pl = _b.new_page(viewport={"width": 1000, "height": 800}); _pl.goto(f"{BASE}/s/{_pid}", wait_until="load"); _pl.wait_for_timeout(1000)
+        _pl = _b.new_page(viewport={"width": 1000, "height": 800}); _pl.goto(f"{BASE}/s/{_pid}", wait_until="load"); waits.settle(_pl, 1000)
         # Loop ships ON (the players' one-family pass), so the lit look is
         # read at rest and the press must put it OUT. Lit is the one pill's
         # tint, not Play's solid violet.
@@ -1452,7 +1453,7 @@ with _sp204() as _p:
     # and the header overflowed. Pills must never wrap; Post keeps its short
     # label until ~720px where the long one genuinely fits.
     for pw in (641, 660, 700):
-        _n = _b.new_page(viewport={"width": pw, "height": 900}); _n.goto(BASE + "/", wait_until="load"); _n.wait_for_timeout(600)
+        _n = _b.new_page(viewport={"width": pw, "height": 900}); _n.goto(BASE + "/", wait_until="load"); waits.settle(_n, 600)
         _bb = _n.locator("#canvas").bounding_box(); _n.mouse.move(_bb["x"] + 200, _bb["y"] + 200); _n.mouse.down()   # arms the take (v288)
         for _i in range(1, 10): _n.mouse.move(_bb["x"] + 200 + _i * 12, _bb["y"] + 200 + _i * 7)
         _n.mouse.up(); _n.wait_for_timeout(300); _n.click("#recordBtn"); _n.wait_for_timeout(450)
@@ -1470,7 +1471,7 @@ with _sp204() as _p:
     # (frees header space), styled as an .onion-tint toggle so it lights ORANGE
     # like grid / motion / tint. setOnion() and the row-mute behaviour unchanged.
     # The orange below is the dark theme's shade (v292: a bare page follows the OS, so ask for dark).
-    _o = _b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark"); _o.goto(BASE + "/flip", wait_until="load"); _o.wait_for_timeout(800)
+    _o = _b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark"); _o.goto(BASE + "/flip", wait_until="load"); waits.settle(_o, 800)
     _o.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
     check("V207: the onion toggle is no longer in the header",
           _o.evaluate("() => !document.querySelector('.header #onion')"))
@@ -1494,7 +1495,7 @@ with _sp204() as _p:
     # this bar, so every check below runs on both — Pad was still drawing the
     # old four-cell control when the stepper shipped on Flip.
     for path, nm, opener in (("/", "Pad", "@pad:music"), ("/flip", "Flip", "@pad:music")):
-        _z = _b.new_page(viewport={"width": 1280, "height": 900}); _z.goto(BASE + path, wait_until="load"); _z.wait_for_timeout(800)
+        _z = _b.new_page(viewport={"width": 1280, "height": 900}); _z.goto(BASE + path, wait_until="load"); waits.settle(_z, 800)
         _z.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
         ux_open(_z, opener); _z.wait_for_timeout(300)
         _z.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _z.wait_for_timeout(1500)
@@ -1633,7 +1634,7 @@ with _sp204() as _p:
     # actual glyph (same SVG the button renders); concept pills (Brush size,
     # Pressure) do not. And the Onion-skin text no longer says "in the header"
     # (onion moved to the tune drawer this release).
-    _h = _b.new_page(viewport={"width": 1000, "height": 900}); _h.goto(BASE + "/flip", wait_until="load"); _h.wait_for_timeout(800)
+    _h = _b.new_page(viewport={"width": 1000, "height": 900}); _h.goto(BASE + "/flip", wait_until="load"); waits.settle(_h, 800)
     _h.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
     _h.evaluate("() => openHelpDrawer()"); _h.wait_for_timeout(400)
     _h.evaluate("() => document.querySelectorAll('#helpDrawer .accordion-header').forEach(h => { if (!h.classList.contains('open')) h.click(); })"); _h.wait_for_timeout(300)
@@ -1653,7 +1654,7 @@ with _sp204() as _p:
     # on purpose); icon 16->18 to match tier-2 toggles; tap area added. And the
     # help pill's glyph must be the button's OWN glyph, not a lookalike.
     for path, nm, opener in (("/", "Pad", "@pad:draw"), ("/flip", "Flip", "@pad:draw")):
-        _e = _b.new_page(viewport={"width": 1280, "height": 900}); _e.goto(BASE + path, wait_until="load"); _e.wait_for_timeout(800)
+        _e = _b.new_page(viewport={"width": 1280, "height": 900}); _e.goto(BASE + path, wait_until="load"); waits.settle(_e, 800)
         _e.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
         ux_open(_e, opener); _e.wait_for_timeout(400)
         _eg = _e.evaluate("""() => { const e = document.getElementById('eyedropperBtn'); if (!e) return null;
@@ -1677,7 +1678,7 @@ with _sp204() as _p:
     # buttons used the fullwidth ＋ — text glyphs render at different weights
     # across fonts/platforms and did not match their SVG neighbours. Hold's
     # ×N COUNT stays text (it is a number, not an icon).
-    _s = _b.new_page(viewport={"width": 1280, "height": 900}); _s.goto(BASE + "/flip", wait_until="load"); _s.wait_for_timeout(800)
+    _s = _b.new_page(viewport={"width": 1280, "height": 900}); _s.goto(BASE + "/flip", wait_until="load"); waits.settle(_s, 800)
     _s.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); addFrame(true); }")
     _s.wait_for_timeout(300)
     _ic2 = _s.evaluate("""() => { const ids = ['pbLeft','pbRight','pbCopy','pbDel'];
@@ -1782,7 +1783,7 @@ with _sp204() as _p:
     for pw in (375, 390):
         for path, nm, openers in (("/", "Pad", ("#tuneBtn", "@pad:draw", "@pad:photo", "@pad:music")),
                                   ("/flip", "Flip", ("#tuneBtn", "@pad:draw", "@pad:photo", "@pad:music"))):
-            _f = _b.new_page(viewport={"width": pw, "height": 844}); _f.goto(BASE + path, wait_until="load"); _f.wait_for_timeout(700)
+            _f = _b.new_page(viewport={"width": pw, "height": 844}); _f.goto(BASE + path, wait_until="load"); waits.settle(_f, 700)
             _f.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
             _r = _f.evaluate(_AUDIT)
             check(f"PHONE {nm}@{pw}: every control on-screen, no scroll, no overlap, no clip (base)", _AUDIT_OK(_r), str(_r))
@@ -1825,7 +1826,7 @@ with _sp204() as _p:
     # for air nobody can see.
     for pw in (320, 375, 390, 430):
         _floor = 4 if pw <= 340 else 8
-        _h = _b.new_page(viewport={"width": pw, "height": 844}); _h.goto(BASE + "/", wait_until="load"); _h.wait_for_timeout(700)
+        _h = _b.new_page(viewport={"width": pw, "height": 844}); _h.goto(BASE + "/", wait_until="load"); waits.settle(_h, 700)
         _g = _h.evaluate(_HDR)
         check(f"V210 header@{pw}: on first load the cluster clears the brand (or the wordmark collapsed)",
               _g["gap"] >= _floor, f"gap {_g['gap']}px (floor {_floor}), words shown {_g['wordsShown']}")
@@ -1966,11 +1967,11 @@ check("A1: decode/fetch failures are no longer silent",
 # an inset shadow is unclippable by construction, so pin the construction.
 from playwright.sync_api import sync_playwright as _sp
 with _sp() as _p:
-    _b = _p.chromium.launch()
+    _b = waits.instrument(_p.chromium.launch())
     for _w in (461, 390, 344):
         _pg = _b.new_page(viewport={"width": _w, "height": 800})
         _pg.goto(f"{BASE}/skribl-pad", wait_until="load")
-        _pg.wait_for_timeout(400)
+        waits.settle(_pg, 400)
         _probe = _pg.evaluate("""() => {
             const el = document.querySelector('.canvas-wrap');
             if (!el) return null;
@@ -1991,7 +1992,7 @@ with _sp() as _p:
     _b.close()
 
 with _sp() as _p3:
-    _b = _p3.chromium.launch()
+    _b = waits.instrument(_p3.chromium.launch())
     _F3_INIT = """
     window.__ord = [];
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -2088,13 +2089,13 @@ with _sp() as _p3:
 # drag across the canvas, and count strokes. Zero, at 100% AND magnified, on
 # both editors. A key held down in Playwright is a real keydown/keyup pair.
 with _sp() as _p4:
-    _b = _p4.chromium.launch()
+    _b = waits.instrument(_p4.chromium.launch())
     for nm, url, canvas_sel, count_js in (
             ("pad", "/", "#canvas", "() => strokes.length"),
             ("flip", "/flip", "#pad", "() => frame().strokes.length")):
         for magnified in (False, True):
             _s = _b.new_page(viewport={"width": 1280, "height": 900})
-            _s.goto(BASE + url, wait_until="load"); _s.wait_for_timeout(700)
+            _s.goto(BASE + url, wait_until="load"); waits.settle(_s, 700)
             if magnified:
                 # magnify through the app's own zoom API (both editors expose
                 # ZoomView.setPct) — the button is behind the magnify toggle
@@ -2173,10 +2174,10 @@ _HDR = """() => {
 }"""
 
 with sync_playwright() as _b13:
-    _br13 = _b13.chromium.launch()
+    _br13 = waits.instrument(_b13.chromium.launch())
     _c13 = _br13.new_context(viewport={"width": 900, "height": 900})
     _p13 = _c13.new_page()
-    _p13.goto(BASE + "/", wait_until="load"); _p13.wait_for_timeout(700)
+    _p13.goto(BASE + "/", wait_until="load"); waits.settle(_p13, 700)
     _p13.evaluate("() => localStorage.clear()")
     _p13.evaluate("() => { if (!recording) beginRecording(false); }"); _p13.wait_for_timeout(350)   # v288: no idle Record button
     _baseline = _p13.evaluate(_HDR)
@@ -2266,14 +2267,14 @@ _MEASURE = """() => {
   return out;
 }"""
 with sync_playwright() as _pz:
-    _zb = _pz.chromium.launch()
+    _zb = waits.instrument(_pz.chromium.launch())
     _under_new = []
     _seen = set()
     _export_size = None
     for _url, _label in (("/", "Pad"), ("/flip", "Flip")):
         _zp = _zb.new_page(viewport={"width": 1280, "height": 900})
         _zp.goto(BASE + _url, wait_until="load")
-        _zp.wait_for_timeout(2000)
+        waits.settle(_zp, 2000)
         for _sel in ("#menuBtn", "#exportItem"):
             try:
                 _zp.click(_sel, timeout=3000)
@@ -2312,11 +2313,11 @@ print("\nAUTO-RECORD — the header button is a Done button, and one honest exce
 # property through the real transitions; red on v287, where the button was
 # always in the header.
 with _sp204() as _ar:
-    _arb = _ar.chromium.launch()
+    _arb = waits.instrument(_ar.chromium.launch())
     _arp = _arb.new_page(viewport={"width": 1100, "height": 900})
     browsing.goto(_arp, BASE, "/")
     _arp.evaluate("() => localStorage.clear()")
-    _arp.reload(wait_until="load"); _arp.wait_for_timeout(700)
+    _arp.reload(wait_until="load"); waits.settle(_arp, 700)
     _AR = """() => { const b = document.getElementById('recordBtn');
         return { hidden: b.hidden, active: b.classList.contains('active'), recording: recording,
                  pill: !document.getElementById('addTakePill').hidden }; }"""
@@ -2338,7 +2339,7 @@ with _sp204() as _ar:
     _arp2 = _arb.new_page(viewport={"width": 1100, "height": 900})
     browsing.goto(_arp2, BASE, "/")
     _arp2.evaluate("() => localStorage.clear()")
-    _arp2.reload(wait_until="load"); _arp2.wait_for_timeout(700)
+    _arp2.reload(wait_until="load"); waits.settle(_arp2, 700)
     _s3 = _arp2.evaluate("""() => { hasContent = true; recorded = false; recording = false;
         updateEmptyHint(); const b = document.getElementById('recordBtn');
         return { hidden: b.hidden, active: b.classList.contains('active') }; }""")
@@ -2357,11 +2358,11 @@ print("\nTHE TAKE'S READOUT — calm while you draw, and lit while the pen is do
 # the pen down and moving, that the bars are running then and still at rest,
 # and that nothing in the recording header paints the danger colour.
 with _sp204() as _rr:
-    _rrb = _rr.chromium.launch()
+    _rrb = waits.instrument(_rr.chromium.launch())
     _rrp = _rrb.new_page(viewport={"width": 402, "height": 874})
     browsing.goto(_rrp, BASE, "/")
     _rrp.evaluate("() => localStorage.clear()")
-    _rrp.reload(wait_until="load"); _rrp.wait_for_timeout(700)
+    _rrp.reload(wait_until="load"); waits.settle(_rrp, 700)
     draw(_rrp, "#canvas", 120, 120, n=18)
     _rrp.wait_for_timeout(400)
     _RR = """() => {
@@ -2409,11 +2410,11 @@ print("\nREADOUT ALIGNMENT — the dot, bars, clock, plays and Done share one li
 import io as _io
 from PIL import Image as _Img
 with _sp204() as _al:
-    _alb = _al.chromium.launch()
+    _alb = waits.instrument(_al.chromium.launch())
     _alp = _alb.new_page(viewport={"width": 1280, "height": 860}, device_scale_factor=2)
     browsing.goto(_alp, BASE, "/")
     _alp.evaluate("() => localStorage.clear()")
-    _alp.reload(wait_until="load"); _alp.wait_for_timeout(700)
+    _alp.reload(wait_until="load"); waits.settle(_alp, 700)
     draw(_alp, "#canvas", 120, 120, n=18); _alp.wait_for_timeout(600)
     _alp.evaluate("""() => { clearInterval(recTimerInterval); document.getElementById('recTimer').textContent = '0:05';
         document.getElementById('recPlays').textContent = 'plays 2:33'; }""")
@@ -2457,11 +2458,11 @@ print("\nWORDS IN THE MIDDLE — a button's capitals sit in its middle, in any f
 # (a mark and a word). And no control changes size: every .lbl is exactly one
 # line tall.
 with _sp204() as _wm:
-    _wmb = _wm.chromium.launch()
+    _wmb = waits.instrument(_wm.chromium.launch())
     _wmres, _wmlh = {}, {}
     for _path, _sels in (("/flip", ["#addcopy", "#addblank"]), ("/", ["#postBtn"])):
         _wmp = _wmb.new_page(viewport={"width": 1280, "height": 860}, device_scale_factor=3)
-        browsing.goto(_wmp, BASE, _path); _wmp.wait_for_timeout(700)
+        browsing.goto(_wmp, BASE, _path); waits.settle(_wmp, 700)
         if _path == "/":
             draw(_wmp, "#canvas", 120, 120, n=18); _wmp.wait_for_timeout(400)
             _wmp.click("#recordBtn"); _wmp.wait_for_timeout(600)
@@ -2500,11 +2501,11 @@ print("\nHEADER ORDER — the take's controls, then settings and the menu; Done 
 # home when the take ends. Done must still RECEDE while the pen is down --
 # it now lives inside the readout, which is the one thing that stays lit.
 with _sp204() as _ho:
-    _hob = _ho.chromium.launch()
+    _hob = waits.instrument(_ho.chromium.launch())
     _hop = _hob.new_page(viewport={"width": 1280, "height": 860})
     browsing.goto(_hop, BASE, "/")
     _hop.evaluate("() => localStorage.clear()")
-    _hop.reload(wait_until="load"); _hop.wait_for_timeout(700)
+    _hop.reload(wait_until="load"); waits.settle(_hop, 700)
     draw(_hop, "#canvas", 120, 120, n=18); _hop.wait_for_timeout(400)
     _HO = """() => { const d = document.getElementById('recordBtn'), t = document.getElementById('recTimer');
         const eff = el => { let o = 1; for (; el; el = el.parentElement) o *= +getComputedStyle(el).opacity; return o; };
@@ -2538,14 +2539,14 @@ print("\nPHONE RECORDING HEADER — the take is centred, and the header comes ba
 # owner: "if you're removing the branding, then center it". Measured as the
 # space either side of the readout inside the header, at two phone widths.
 with _sp204() as _pc:
-    _pcb = _pc.chromium.launch()
+    _pcb = waits.instrument(_pc.chromium.launch())
     _pcr = {}
     for _w in (320, 390):
         _pcx = _pcb.new_context(viewport={"width": _w, "height": 844}, has_touch=True, is_mobile=True)
         _pcp = _pcx.new_page()
         browsing.goto(_pcp, BASE, "/")
         _pcp.evaluate("() => localStorage.clear()")
-        _pcp.reload(wait_until="load"); _pcp.wait_for_timeout(700)
+        _pcp.reload(wait_until="load"); waits.settle(_pcp, 700)
         draw(_pcp, "#canvas", 60, 80, n=18); _pcp.wait_for_timeout(500)
         _m = _pcp.evaluate("""() => { const h = document.querySelector('.header').getBoundingClientRect(),
               r = document.getElementById('recIndicator').getBoundingClientRect();
@@ -2574,7 +2575,7 @@ print("\nSEG PILLS — every visible segmented control shows its selection, on b
 # trackAll() was called: Pad mirror/pause/speed (speed has since moved to
 # the replay's line), Flip mirror/smear weight.
 with _sp204() as _sg:
-    _sgb = _sg.chromium.launch()
+    _sgb = waits.instrument(_sg.chromium.launch())
     for _route in ("/", "/flip"):
         _sgp = _sgb.new_page(viewport={"width": 402, "height": 874})
         browsing.goto(_sgp, BASE, _route)
@@ -2611,7 +2612,7 @@ def _seg_fill(page):
           const m = bg.match(/rgba?\\(([^)]+)\\)/), a = m ? (m[1].split(',')[3] === undefined ? 1 : +m[1].split(',')[3]) : 0;
           return { id: g.id, pill: g.hasAttribute('data-pill'), alpha: a }; })""")
 with _sp204() as _sf:
-    _sfb = _sf.chromium.launch()
+    _sfb = waits.instrument(_sf.chromium.launch())
     _sfp = _sfb.new_page(viewport={"width": 402, "height": 874})
     # Matched as a regex: the asset URL carries a content-hash query
     # (segslider.js?v=...), which a glob ending in .js does not match -- the
@@ -2647,18 +2648,18 @@ _FITQ = """() => { const g = document.getElementById('photoFitGroup'), s = docum
     return { active: a.textContent.trim(), pillW: Math.round(sr.width), btnW: Math.round(ar.width),
              under: Math.abs((sr.left + sr.width / 2) - (ar.left + ar.width / 2)) < 3, bg: getComputedStyle(a).backgroundColor }; }"""
 with _sp204() as _ft:
-    _ftb = _ft.chromium.launch()
+    _ftb = waits.instrument(_ft.chromium.launch())
     _ftp = _ftb.new_page(viewport={"width": 1400, "height": 900})
     browsing.goto(_ftp, BASE, "/")
     _ftp.evaluate("() => localStorage.clear()")
-    _ftp.reload(wait_until="load"); _ftp.wait_for_timeout(700)
+    _ftp.reload(wait_until="load"); waits.settle(_ftp, 700)
     browsing.pad_drawer(_ftp, "photo")
     _ftp.set_input_files("#photoInput", files=[{"name": "fit.png", "mimeType": "image/png", "buffer": _fit_png.getvalue()}])
     _ftp.wait_for_timeout(1000)
     _ftp.click('.photo-fit-btn[data-fit="contain"]'); _ftp.wait_for_timeout(300)
     browsing.pad_drawer_close(_ftp)
     draw(_ftp, "#canvas", 120, 120, n=18); _ftp.wait_for_timeout(2500)
-    _ftp.reload(wait_until="load"); _ftp.wait_for_timeout(2500)
+    _ftp.reload(wait_until="load"); waits.settle(_ftp, 2500)
     browsing.pad_drawer(_ftp, "photo"); _ftp.wait_for_timeout(600)
     _fit_restored = _ftp.evaluate(_FITQ)
     _ftp.close()
@@ -2666,7 +2667,7 @@ with _sp204() as _ft:
     _ftp.route(_re.compile(r"/lib/segslider\.js(\?|$)"), lambda r: r.abort())
     browsing.goto(_ftp, BASE, "/", require_boot=False)
     _ftp.evaluate("() => localStorage.clear()")
-    _ftp.reload(wait_until="load"); _ftp.wait_for_timeout(700)
+    _ftp.reload(wait_until="load"); waits.settle(_ftp, 700)
     browsing.pad_drawer(_ftp, "photo")
     _ftp.set_input_files("#photoInput", files=[{"name": "fit.png", "mimeType": "image/png", "buffer": _fit_png.getvalue()}])
     _ftp.wait_for_timeout(1000)
@@ -2691,11 +2692,11 @@ print("\nCLEAR ALL — arming is announced, does not race a timer, and Flip's me
 # a long safety net) rather than for three seconds; and both Flip controls
 # call one clearAllPages() after their own confirmation.
 with _sp() as _cp:
-    _cb = _cp.chromium.launch()
+    _cb = waits.instrument(_cp.chromium.launch())
     for _path, _name, _item in (("/", "Pad", "#clearMenuItem"), ("/flip", "Flip", "#miClearAll")):
         _pg = _cb.new_page(viewport={"width": 1100, "height": 900})
         browsing.goto(_pg, BASE, _path)
-        _pg.wait_for_timeout(600)
+        waits.settle(_pg, 600)
         if _path == "/flip":
             draw(_pg, "#pad", 200, 200, n=16)
             _pg.evaluate("() => addFrame(true)")
@@ -2758,10 +2759,10 @@ _WHITE = """() => { const cv = document.getElementById('pad'); const d = cv.getC
   let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 200 && d[i + 2] > 200) n++; return n; }"""
 _DOC = "() => ({ pages: frames.length, strokes: frames[0].strokes.length, photo: bgImage ? bgImage.length : 0, music: musicData ? musicData.length : 0 })"
 with _sp() as _np:
-    _nb = _np.chromium.launch()
+    _nb = waits.instrument(_np.chromium.launch())
     _pg = _nb.new_page(viewport={"width": 1100, "height": 900}, color_scheme="dark")
     browsing.goto(_pg, BASE, "/flip")
-    _pg.wait_for_timeout(600)
+    waits.settle(_pg, 600)
     _pg.evaluate("() => window.SkriblHints && SkriblHints.hide()")
     _pg.evaluate(_PHOTO)
     _pg.wait_for_timeout(600)
@@ -2820,7 +2821,7 @@ print("\nSHARE — on a device with a share sheet, Send it is a Share button; Co
 # page and its argument read back: the mechanism is the call, with the URL
 # the page shows.
 with _sp() as _sh:
-    _shb = _sh.chromium.launch()
+    _shb = waits.instrument(_sh.chromium.launch())
     for _path, _name, _btn in (("/flip", "Flip", "#postShareBtn"), ("/", "Pad", "#postShareBtn")):
         for _has in (True, False):
             _ctx = _shb.new_context(viewport={"width": 1100, "height": 900})
@@ -2831,7 +2832,7 @@ with _sp() as _sh:
                 _ctx.add_init_script("""Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });""")
             _pg = _ctx.new_page()
             browsing.goto(_pg, BASE, _path)
-            _pg.wait_for_timeout(600)
+            waits.settle(_pg, 600)
             if _path == "/flip":
                 draw(_pg, "#pad", 200, 200, n=16)
                 _pg.wait_for_timeout(300)
@@ -2892,7 +2893,7 @@ print("\nPOST RESULT — one row of what to do next, and the title stays on scre
 # onto two lines beside one-line buttons, which this would have said, had it
 # ever been asked of Flip. So it is asked of both editors.
 with _sp() as _pr:
-    _prb = _pr.chromium.launch()
+    _prb = waits.instrument(_pr.chromium.launch())
     for _name, _path in (("Pad", "/"), ("Flip", "/flip")):
       for _w in (390, 1100):
         _ctx = _prb.new_context(viewport={"width": _w, "height": 844 if _w == 390 else 900})
@@ -2901,7 +2902,7 @@ with _sp() as _pr:
                 value: { writeText: async (t) => { window.__copied = t; } } });""")
         _pg = _ctx.new_page()
         browsing.goto(_pg, BASE, _path)
-        _pg.wait_for_timeout(600)
+        waits.settle(_pg, 600)
         if _path == "/":
             draw(_pg, "#canvas", 200, 200, n=16)
             _pg.wait_for_timeout(300)
@@ -3033,14 +3034,14 @@ _SIG = r"""() => { const o = {};
   }
   return o; }"""
 with _sp() as _ps:
-    _psb = _ps.chromium.launch()
+    _psb = waits.instrument(_ps.chromium.launch())
     for _w in (390, 1100):
         _sigs = {}
         for _name, _path in (("Pad", "/"), ("Flip", "/flip")):
             _ctx = _psb.new_context(viewport={"width": _w, "height": 844 if _w == 390 else 900})
             _pg = _ctx.new_page()
             browsing.goto(_pg, BASE, _path)
-            _pg.wait_for_timeout(600)
+            waits.settle(_pg, 600)
             _pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
             draw(_pg, "#canvas" if _path == "/" else "#pad", 200, 200, n=16)
             _pg.wait_for_timeout(300)
@@ -3067,10 +3068,10 @@ print("\nCOPY — one noun for the unit, a backup is a backup, and the two edito
 # library; it says it first. And Help opens, on both editors, with one
 # sentence on how Pad and Flip relate.
 with _sp() as _cp:
-    _cb = _cp.chromium.launch()
+    _cb = waits.instrument(_cp.chromium.launch())
     _fp = _cb.new_page(viewport={"width": 1100, "height": 900})
     browsing.goto(_fp, BASE, "/flip")
-    _fp.wait_for_timeout(600)
+    waits.settle(_fp, 600)
     _fp.click("#tuneBtn"); _fp.wait_for_timeout(300)
     _words = _fp.evaluate("""() => {
       const out = [];
@@ -3092,7 +3093,7 @@ with _sp() as _cp:
     _fp.close()
     _pp = _cb.new_page(viewport={"width": 1100, "height": 900})
     browsing.goto(_pp, BASE, "/")
-    _pp.wait_for_timeout(600)
+    waits.settle(_pp, 600)
     _pp.click("#menuBtn"); _pp.wait_for_timeout(400)
     _items = _pp.evaluate("() => [...document.querySelectorAll('#menuSheet .menu-item')].map(b => b.textContent.replace(/\\s+/g, ' ').trim())")
     check("COPY (Pad): the menu says Save a backup / Open a backup, not draft",
@@ -3105,7 +3106,7 @@ with _sp() as _cp:
     check("COPY (Pad): Help opens with how Pad and Flip relate", "two ways to make a Skribl" in _helpp, _helpp[:200])
     _pp.keyboard.press("Escape"); _pp.wait_for_timeout(400)
     # Your Skribls is the profile page since v304; the same sentence, above the same list.
-    _pp.goto(BASE + "/library", wait_until="load"); _pp.wait_for_timeout(900)
+    _pp.goto(BASE + "/library", wait_until="load"); waits.settle(_pp, 900)
     _order = _pp.evaluate("""() => { const f = document.querySelector('#postedPanel .posted-foot'), l = document.getElementById('postedList');
       if (!f || !l) return null; return { foot: f.getBoundingClientRect().top, list: l.getBoundingClientRect().top, text: f.textContent.trim().slice(0, 40) }; }""")
     check("COPY (Pad): Your Skribls says 'saved in this browser only' ABOVE the list, before it reads as a library",
@@ -3120,10 +3121,10 @@ print("\nTHE PILL UNDER HOW IT WORKS — the amber warning yields to every surfa
 # post and export sheets. Same rule, same mechanism (opacity 0, and the × loses
 # its taps), driven on both editors through the real menu row.
 with sync_playwright() as _pp_:
-    _pb = _pp_.chromium.launch()
+    _pb = waits.instrument(_pp_.chromium.launch())
     for _path, _open in (("/skribl-pad", ("#menuBtn", "#helpItem")), ("/flip", ("#moreBtn", "#miInfo"))):
         _hp = _pb.new_page(viewport={"width": 390, "height": 844})
-        _hp.goto(BASE + _path, wait_until="load"); _hp.wait_for_timeout(1200)
+        _hp.goto(BASE + _path, wait_until="load"); waits.settle(_hp, 1200)
         # The pill is put up and HELD: the editor's autosave loop would take a
         # hand-shown pill down again within a second (a saved pill self-hides),
         # which is the module's behaviour and not the rule under test. The rule
@@ -3168,7 +3169,7 @@ _GROUND = """(dock) => { const h = document.querySelector('.header'), t = docume
              dFill: a(tc.backgroundColor), dShadow: tc.boxShadow !== 'none', scrolled: Math.round(scrollY),
              tuneOnHeader: !!at && h.contains(at) }; }"""
 with sync_playwright() as _gp:
-    _gb = _gp.chromium.launch()
+    _gb = waits.instrument(_gp.chromium.launch())
     for _route, _dock, _canvas in (("/skribl-pad", ".toolbar", "#canvas"), ("/flip", ".flip-tools", "#pad")):
         for _theme in ("dark", "light"):
             # 664 tall, a short phone: at 844 the end of Music left the drawing
@@ -3178,7 +3179,7 @@ with sync_playwright() as _gp:
                                   color_scheme=_theme)
             _gc.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_theme}')}}catch(e){{}}")
             _g = _gc.new_page()
-            browsing.goto(_g, BASE, _route); _g.wait_for_timeout(900)
+            browsing.goto(_g, BASE, _route); waits.settle(_g, 900)
             _g.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
             _r = _g.evaluate(_GROUND, _dock)
             check(f"{_route} {_theme}: at rest the header and the dock paint no card",
@@ -3223,7 +3224,7 @@ with sync_playwright() as _gp:
         _fc = _gb.new_context(viewport={"width": 390, "height": 664}, is_mobile=True, has_touch=True, color_scheme=_theme)
         _fc.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_theme}')}}catch(e){{}}")
         _f = _fc.new_page()
-        browsing.goto(_f, BASE, "/flip"); _f.wait_for_timeout(900)
+        browsing.goto(_f, BASE, "/flip"); waits.settle(_f, 900)
         _f.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _f.click("#tuneBtn"); _f.wait_for_timeout(500)
         browsing.wait_scroll_still(_f, 3000)
@@ -3245,7 +3246,7 @@ with sync_playwright() as _gp:
               _s["over"] and _s["tuneOnHeader"], str(_s))
         _fc.close()
     _g = _gb.new_page(viewport={"width": 1366, "height": 900})
-    browsing.goto(_g, BASE, "/skribl-pad"); _g.wait_for_timeout(800)
+    browsing.goto(_g, BASE, "/skribl-pad"); waits.settle(_g, 800)
     _d = _g.evaluate(_GROUND, ".toolbar")
     check("/skribl-pad desktop: the header and the dock paint no card",
           not _d["over"] and _d["hFill"] == 0 and _d["dFill"] == 0, str(_d))
@@ -3284,13 +3285,13 @@ def _frames_per_second(pg):
 
 
 with sync_playwright() as _ip:
-    _ib = _ip.chromium.launch()
+    _ib = waits.instrument(_ip.chromium.launch())
     for _vw, _vh, _mob in ((1280, 860, False), (402, 874, True)):
         _ic = _ib.new_context(viewport={"width": _vw, "height": _vh}, is_mobile=_mob, has_touch=_mob)
         _ic.add_init_script(_RAF_COUNT)
         _ipg = _ic.new_page()
         browsing.goto(_ipg, BASE, "/")
-        _ipg.wait_for_timeout(1500)
+        waits.settle(_ipg, 1500)
         _ipg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _blank = _frames_per_second(_ipg)
         # A stroke drawn at a hand's pace (about two seconds), so the replay
