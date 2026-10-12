@@ -693,6 +693,120 @@ with sync_playwright() as p:
         check(f"{_label}: no page errors", not errors, "; ".join(errors[:2]))
         ctx.close()
 
+    print("\nNEARLY TOO LONG — a note at 90% and at the limit, after a save, twice at most")
+    # The Pad plan, step 5 (the owner's pick A). Nothing said anything until
+    # Post failed at the end of the work. Now, after a save that crossed 90% of
+    # what a post can hold, the toast where "Draft restored" goes says how many
+    # minutes more fit at THIS drawing's pace; after one that reached the
+    # limit, that it is all still saved here -- and only if that save landed.
+    # Each is said once, again only after falling back under it, never over a
+    # restored drawing, and taps go through it to the canvas. Every toast is
+    # recorded by wrapping showToast, so "said once" is counted, not guessed.
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from skribl import validation as _V
+    _CAP = _V.MAX_POINTS_PER_PAD
+    _LIMIT_WORDS = "That’s as long as a post can hold. It’s all still saved here."
+    # Only the note's own sentences are counted: Add take and its kin have toasts of their own.
+    WATCH = """() => { window.__toasts = []; const real = window.showToast;
+      window.showToast = function (m) { if (/fit in a post|a post can hold/.test(m)) window.__toasts.push(m);
+        return real.apply(this, arguments); }; }"""
+    LOADN = """(n) => { const d = (""" + GEN + """)(n);
+      restoreAutosave({ version: 1, strokes: d.pts, strokeGroups: d.groups, background: { color: '#f6f2ea' } });
+      flushPadDraft(); window.__toasts = []; return strokes.length; }"""
+    PACE = """() => ({ n: strokes.length, g: strokeGroups.length, ms: SkriblReplayLine.drawnMs(strokes) })"""
+    TOAST = """() => { const t = document.querySelector('.toast'), r = t.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      const over = [...document.querySelectorAll('button')].filter(b => { const q = b.getBoundingClientRect();
+        return q.width && q.height && getComputedStyle(b).visibility !== 'hidden'
+          && q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.top; }).map(b => b.id || b.className);
+      return { shown: !t.hidden && t.classList.contains('show'), text: t.textContent,
+               through: !!(hit && hit.closest('#canvas, #canvasWrap, .canvas-wrap')), over }; }"""
+
+    def _stroke(pg, dx=0):
+        # A restored drawing is a finished take: Add take carries on drawing it.
+        if pg.is_visible("#addTakePill"):
+            pg.click("#addTakePill"); pg.wait_for_timeout(250)
+        bx = pg.locator("#canvas").bounding_box()
+        pg.mouse.move(bx["x"] + 60 + dx, bx["y"] + 60); pg.mouse.down()
+        pg.mouse.move(bx["x"] + 220 + dx, bx["y"] + 140, steps=24); pg.mouse.up()
+        pg.wait_for_timeout(1900)        # the autosave's 1.2 s, and the note after it
+
+    def _minutes(st):
+        share = max(st["n"] / _CAP, st["g"] / _V.MAX_GROUPS_PER_PAD)
+        n = round((1 - share) / share * st["ms"] / 60000)
+        return f"About {n} more minutes will fit in a post." if n >= 2 else None
+
+    ctx = b.new_context(viewport={"width": 402, "height": 874})
+    pg = ctx.new_page()
+    errors = []
+    pg.on("pageerror", lambda e: errors.append(str(e)))
+    pg.goto(f"{BASE}/", wait_until="load")
+    pg.wait_for_timeout(800)
+    pg.evaluate(WATCH)
+    pg.evaluate(LOADN, int(_CAP * 0.9) - 8)
+    _stroke(pg)
+    _st, _t = pg.evaluate(PACE), pg.evaluate(TOAST)
+    _want = _minutes(_st)
+    check("crossing 90%: after the save, how many minutes more fit, at this drawing's pace",
+          _want is not None and _t["shown"] and _t["text"] == _want and pg.evaluate("() => __toasts.length") == 1,
+          f"want {_want!r}; toast {_t}; said {pg.evaluate('() => __toasts')}; {_st}")
+    check("...where taps go through it to the canvas, and over no button",
+          _t["through"] and not _t["over"], str(_t))
+    _stroke(pg, 30)
+    check("...and the next save, still past 90%, says nothing more",
+          pg.evaluate("() => __toasts.length") == 1, str(pg.evaluate("() => __toasts")))
+    pg.evaluate(LOADN, _CAP - 8)
+    _stroke(pg)
+    check("reaching the limit: that it is as long as a post can hold, and all still saved here",
+          pg.evaluate("() => __toasts") == [_LIMIT_WORDS], str(pg.evaluate("() => __toasts")))
+    pg.click("#undoBtn"); pg.wait_for_timeout(1900)
+    pg.click("#redoBtn"); pg.wait_for_timeout(1900)
+    check("...said again after an undo took it back under and a redo over",
+          pg.evaluate("() => __toasts") == [_LIMIT_WORDS, _LIMIT_WORDS], str(pg.evaluate("() => __toasts")))
+    pg.reload(wait_until="load")
+    pg.wait_for_timeout(1500)
+    pg.evaluate(WATCH)
+    _stroke(pg)
+    check("a drawing restored at the limit is not told again on its next save",
+          pg.evaluate("() => __toasts") == [] and pg.evaluate("() => strokes.length") > _CAP,
+          f"{pg.evaluate('() => __toasts')} at {pg.evaluate('() => strokes.length')} points")
+    check("no page errors", not errors, "; ".join(errors[:2]))
+    ctx.close()
+
+    # A save that did NOT land never says "still saved here".
+    ctx = b.new_context()
+    pg = ctx.new_page()
+    pg.goto(f"{BASE}/", wait_until="load")
+    pg.wait_for_timeout(800)
+    pg.evaluate(WATCH)
+    pg.evaluate(LOADN, _CAP - 8)
+    pg.evaluate("""() => { Storage.prototype.setItem = function () {
+      throw new DOMException('full', 'QuotaExceededError'); }; }""")
+    _stroke(pg)
+    check("...and when the save failed, the limit is said without promising it is saved",
+          pg.evaluate("() => __toasts") == ["That’s as long as a post can hold."],
+          str(pg.evaluate("() => __toasts")))
+    ctx.close()
+
+    # Flip: the same note, counting pages, in the chip where its "Draft restored" goes.
+    ctx = b.new_context(viewport={"width": 402, "height": 874})
+    pg = ctx.new_page()
+    pg.goto(f"{BASE}/flip", wait_until="load")
+    pg.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.flip")
+    pg.wait_for_timeout(500)
+    pg.evaluate("""() => { window.__chips = []; const real = window.chip;
+      window.chip = function (m) { window.__chips.push(m); return real.apply(this, arguments); };
+      const B = window.SkriblPointBudget;
+      while (frames.length < B.MAX_FRAMES * 0.9) frames.push({ strokes: [], strokeGroups: [], hold: 1 }); render(); }""")
+    _bx = pg.locator("#pad").bounding_box()
+    pg.mouse.move(_bx["x"] + 60, _bx["y"] + 60); pg.mouse.down()
+    pg.mouse.move(_bx["x"] + 160, _bx["y"] + 130, steps=12); pg.mouse.up()
+    pg.wait_for_timeout(1500)
+    _fc = pg.evaluate("""() => ({ said: window.__chips, shown: document.getElementById('flipChip').classList.contains('show'),
+                                  pages: frames.length }) """)
+    check("Flip at 90% of its pages: how many more pages fit, in its chip",
+          _fc["said"] == ["About 20 more pages will fit in a post."] and _fc["shown"], str(_fc))
+
     b.close()
 
 # ---------------------------------------------------------------------------

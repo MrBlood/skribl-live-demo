@@ -1114,6 +1114,19 @@ if (window.SkriblAutosavePill) window.SkriblAutosavePill.configure({
 });
 function showAutosaveStatus(state){
   if(window.SkriblAutosavePill) window.SkriblAutosavePill.show(state);
+  if(state !== 'saving') noteLength(/^saved/.test(state));
+}
+/* THE NOTE NEAR THE LIMIT, the Pad's (editor_draft.js noteLength), counting
+   pages: at 90% of what a Flip can hold, by its points or its pages, whichever
+   runs out first, how many more pages fit at its own average; at the limit,
+   that it is all still saved here. Said in the chip, where "Draft restored" is. */
+// var, not const: hoisted, so a save reported before this line runs finds no note rather than throwing.
+var _lengthNote = (window.SkriblPointBudget && window.SkriblPointBudget.note) ? window.SkriblPointBudget.note() : null;
+function noteLength(saved){
+  if(!_lengthNote) return;
+  const B = window.SkriblPointBudget, share = B.docShare(frames);
+  const lv = _lengthNote.tell(share);
+  if(lv) chip(B.noteWords(lv, share, frames.length, 'page', saved));
 }
 // Export progress overlay + cancel.
 let _exportAbort=false;
@@ -11378,6 +11391,8 @@ if (musicData) { decodeForWaveform(); if (typeof setCrossfadeUI==='function') se
 refreshPendingCards();
 
 if (restored) chip('Draft restored');
+// A restored animation already near the limit was told so before the reload.
+if (restored && _lengthNote) _lengthNote.prime(window.SkriblPointBudget.docShare(frames));
 window.addEventListener('load', ()=>{ sizeStage(); positionToolSlider(); syncSelBar(); });
 
 // Report sheet — shared via lib/report.js so the two editors collect the same

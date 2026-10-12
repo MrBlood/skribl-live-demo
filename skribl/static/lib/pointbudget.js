@@ -128,12 +128,58 @@
     return (points || 0) <= MAX_PAD_POINTS && (strokes || 0) <= MAX_PAD_STROKES;
   }
 
+  /* HOW MUCH OF A POST IS SPENT, 0 to 1 and past it, by whichever ceiling
+     runs out first: a Pad drawing's points or its strokes, a Flip's points or
+     its pages. */
+  function padShare(points, strokes) {
+    return Math.max((points || 0) / MAX_PAD_POINTS, (strokes || 0) / MAX_PAD_STROKES);
+  }
+  function docShare(frames) {
+    return Math.max(totalPoints(frames) / MAX_TOTAL_POINTS,
+                    ((frames && frames.length) || 0) / MAX_FRAMES);
+  }
+
+  /* THE NOTE NEAR THE LIMIT (the Pad plan, step 5; the owner's pick A). Said
+     twice at most, at 90% of what a post can hold and at the limit, in the
+     spot and look of "Draft restored", and only after a save, so "still saved
+     here" is that save's word. note() makes one per editor. tell(share)
+     answers 90 or 100 the first time a level is reached and null otherwise; a
+     level fallen back under (an undo, a deleted page) can be reached, and
+     said, again. prime(share) takes the level a restored drawing already
+     stands at, without a word. */
+  function note() {
+    var said = 0;
+    function level(share) { return share >= 1 ? 100 : share >= 0.9 ? 90 : 0; }
+    return {
+      tell: function (share) { var lv = level(share), up = lv > said; said = lv; return up ? lv : null; },
+      prime: function (share) { said = level(share); }
+    };
+  }
+
+  /* The words. `spent` is what the share has cost so far in the unit the
+     sentence counts -- the Pad's minutes of drawing, a Flip's pages -- so what
+     is left is said at the pace of THIS drawing. */
+  function noteWords(lv, share, spent, unit, saved) {
+    if (lv === 100) return 'That\u2019s as long as a post can hold.'
+      + (saved ? ' It\u2019s all still saved here.' : '');
+    if (!(spent > 0) || !(share > 0)) return 'It\u2019s nearly as long as a post can hold.';
+    var n = Math.round(Math.max(0, 1 - share) / share * spent);
+    if (unit === 'page') return n >= 2 ? 'About ' + n + ' more pages will fit in a post.'
+      : n === 1 ? 'About one more page will fit in a post.' : 'Less than a page more will fit in a post.';
+    return n >= 2 ? 'About ' + n + ' more minutes will fit in a post.'
+      : n === 1 ? 'About a minute more will fit in a post.' : 'Less than a minute more will fit in a post.';
+  }
+
   var api = {
     MAX_TOTAL_POINTS: MAX_TOTAL_POINTS,
     MAX_FRAMES: MAX_FRAMES,
     MAX_PAD_POINTS: MAX_PAD_POINTS,
     MAX_PAD_STROKES: MAX_PAD_STROKES,
     padFits: padFits,
+    padShare: padShare,
+    docShare: docShare,
+    note: note,
+    noteWords: noteWords,
     pagesLeft: pagesLeft,
     pagesWouldFit: pagesWouldFit,
     overPages: overPages,

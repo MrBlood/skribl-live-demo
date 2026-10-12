@@ -428,6 +428,23 @@ if (window.SkriblAutosavePill) window.SkriblAutosavePill.configure({
 });
 function showAutosaveStatus(state) {
   if (window.SkriblAutosavePill) window.SkriblAutosavePill.show(state);
+  if (state !== 'saving') noteLength(/^saved/.test(state));
+}
+
+// THE NOTE NEAR THE LIMIT (the Pad plan, step 5): at 90% of what a post can
+// hold, how many more minutes fit at this drawing's own pace, and at the limit,
+// that it is all still saved here. lib/pointbudget.js decides when and says it;
+// this says it after a save, where "Draft restored" is said, so "still saved
+// here" is the save's own word. Flip's is the same note, counting pages.
+// var, not const: hoisted, so a save reported before this line runs finds no note rather than throwing.
+var _lengthNote = (window.SkriblPointBudget && SkriblPointBudget.note) ? SkriblPointBudget.note() : null;
+function noteLength(saved) {
+  if (!_lengthNote) return;
+  const B = SkriblPointBudget, share = B.padShare(strokes.length, strokeGroups.length);
+  const lv = _lengthNote.tell(share);
+  if (!lv) return;
+  const ms = window.SkriblReplayLine ? SkriblReplayLine.drawnMs(strokes) : 0;
+  showToast(B.noteWords(lv, share, ms / 60000, 'minute', saved), null);
 }
 
 function writeAutosave() {
@@ -795,6 +812,8 @@ function restoreAutosave(data) {
   const saved = PAD_DRAFT_OFF ? null : readAutosave();
   if (saved) {
     restoreAutosave(saved);
+    // A restored drawing already near the limit was told so before the reload.
+    if (_lengthNote) _lengthNote.prime(SkriblPointBudget.padShare(strokes.length, strokeGroups.length));
     sessionOwnedDraft = true;
     if (padSlot) padSlot.adopt();   // this drawing is ours to write over now
     // Media bytes come back from IndexedDB by driving the SAME pipeline a
