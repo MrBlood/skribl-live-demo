@@ -54,6 +54,9 @@
 /* IMMERSIVE, BARE and PLAIN: the page adds the class, the component owns the
    rules. BARE hides the transport and keeps the veil; IMMERSIVE hides both the
    share card and the veil; PLAIN is below. Why, in inlineplayer.js. */
+/* A POST: shaped to its drawing, a tall one narrowed to a screenful (v322). */
+.skribl-inline.is-shaped{width:min(100%,calc(min(70vh,640px) * var(--skribl-ar,1.7778)));margin-left:auto;margin-right:auto}
+.skribl-inline.has-line :is(.skribl-inline-prog,.skribl-inline-dur){display:none}
 .skribl-inline.is-immersive { width: 100%; height: 100%; border: 0; border-radius: 0; }
 .skribl-inline.is-immersive :is(.skribl-inline-poster, .skribl-inline-veil),
 .skribl-inline.is-bare :is(.skribl-inline-controls, .skribl-inline-dur) {
@@ -94,13 +97,12 @@
   opacity: 0;
 }
 
-/* Veil + play: the only control an idle post shows. A feed is not a player. */
+/* Veil + play: the only control ON an idle post (v322: no wash). */
 .skribl-inline-veil {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  background: radial-gradient(120px 120px at 50% 50%, rgba(0, 0, 0, 0.28), transparent 70%);
   transition: opacity 0.25s;
   pointer-events: none;
 }
@@ -108,24 +110,26 @@
 .skribl-inline.is-playing .skribl-inline-veil { opacity: 0; }
 
 .skribl-inline-play {
+  box-sizing: border-box;
   width: 52px;
   height: 52px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(12, 10, 24, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  background: #ffffff;
+  border: 2px solid rgba(124, 92, 255, 0.65);
 }
 
 .skribl-inline-play svg {
   width: 22px;
   height: 22px;
-  fill: #ffffff;
+  fill: #7c5cff;
   margin-left: 2px;
 }
 
-.skribl-inline:hover .skribl-inline-play { background: rgba(20, 16, 40, 0.7); }
+@media (hover: hover) {
+  .skribl-inline:hover .skribl-inline-play { background: #f3efff; }
+}
 
 /* Busy: without it, the first tap on a large post looks like a dead box. */
 .skribl-inline-play.is-busy svg { display: none; }
@@ -135,8 +139,8 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  border-top-color: #ffffff;
+  border: 2px solid rgba(124, 92, 255, 0.25);
+  border-top-color: #7c5cff;
   animation: skribl-inline-spin 0.7s linear infinite;
 }
 
@@ -184,8 +188,10 @@
 }
 
 .skribl-inline.is-playing .skribl-inline-controls,
-.skribl-inline:hover .skribl-inline-controls,
 .skribl-inline:focus-within .skribl-inline-controls { opacity: 1; }
+@media (hover: hover) {
+  .skribl-inline:hover .skribl-inline-controls { opacity: 1; }
+}
 
 /* ROUND AND SOLID. Round like every other player's controls; solid because
    on a host's light page these sit on the pale letterbox beside a drawing,
@@ -211,10 +217,12 @@
 .skribl-inline-loop::before { content: ''; position: absolute; inset: -5px; }
 
 /* Silent: no mute button at all. Loop stays — a silent drawing repeats. */
-.skribl-inline.is-silent .skribl-inline-mute { display: none; }
+:is(.skribl-inline, .skribl-inline-line).is-silent .skribl-inline-mute { display: none; }
 
-.skribl-inline-mute:hover,
-.skribl-inline-loop:hover { background: #20222b; }
+@media (hover: hover) {
+  .skribl-inline-mute:hover,
+  .skribl-inline-loop:hover { background: #20222b; }
+}
 
 .skribl-inline-mute:focus-visible,
 .skribl-inline-loop:focus-visible {
@@ -231,7 +239,9 @@
   background: #3a2f78;
   border-color: #8f78ff;
 }
-.skribl-inline-loop:hover { background: #45388c; }
+@media (hover: hover) {
+  .skribl-inline-loop:hover { background: #45388c; }
+}
 
 .skribl-inline.is-noloop .skribl-inline-loop {
   color: #e7e9ea;
@@ -251,8 +261,8 @@
 }
 
 .skribl-inline-mute .skribl-inline-off { display: none; }
-.skribl-inline.is-muted .skribl-inline-mute .skribl-inline-off { display: block; }
-.skribl-inline.is-muted .skribl-inline-mute .skribl-inline-on { display: none; }
+:is(.skribl-inline, .skribl-inline-line).is-muted .skribl-inline-mute .skribl-inline-off { display: block; }
+:is(.skribl-inline, .skribl-inline-line).is-muted .skribl-inline-mute .skribl-inline-on { display: none; }
 
 /* The progress hairline — the whole transport. Not a scrub track: it takes no
    pointer events, because a 2.5px target on a phone steals the play tap. */
@@ -293,7 +303,8 @@
   text-align: center;
 }
 
-.skribl-inline [hidden] { display: none !important; }
+.skribl-inline [hidden],
+.skribl-inline-line [hidden] { display: none !important; }
 
 /* Reduced motion keeps the replay — it IS the content — and drops the chrome
    animation. */
@@ -302,6 +313,40 @@
   .skribl-inline * { transition: none !important; }
   .skribl-inline-play.is-busy::after { animation: none; }
 }
+
+/* THE LINE under a post (v322). Why: inlineplayer.js. */
+.skribl-inline-line{position:relative;display:flex;flex-direction:column;gap:6px;margin:10px 0 0;font-size:14px;line-height:1.4;visibility:hidden;-webkit-tap-highlight-color:transparent}
+.skribl-inline-line.is-on{visibility:visible}
+.skribl-inline-row{display:flex;align-items:center;gap:4px}
+.skribl-inline-scrub{position:relative;flex:1;height:18px;border-radius:9px;color:var(--accent,#7c5cff);background:color-mix(in srgb,var(--accent,#7c5cff) 10%,transparent);touch-action:none;cursor:pointer}
+.skribl-inline-scrub::after{content:'';position:absolute;left:0;right:0;top:-13px;bottom:-13px}
+.skribl-inline-scrub:focus-visible{outline:2px solid var(--accent,#7c5cff);outline-offset:2px}
+.skribl-inline-line .rl-strip{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.skribl-inline-line .rl-head{position:absolute;top:1px;bottom:1px;width:2px;margin-left:-1px;border-radius:1px;background:var(--accent,#7c5cff);pointer-events:none}
+.skribl-inline-line .rl-bubble{position:absolute;bottom:calc(100% + 10px);transform:translateX(-50%);z-index:2;white-space:pre;padding:4px 10px;border-radius:10px;font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;color:#fff;background:#1d1a2b;opacity:0;transition:opacity .15s;pointer-events:none}
+.skribl-inline-scrub.dragging .rl-bubble{opacity:1}
+.skribl-inline-say{position:relative;min-height:30px;display:flex;justify-content:center;text-align:center;pointer-events:none}
+.skribl-inline-say .rl-text{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;column-gap:5px}
+.skribl-inline-say b{font-weight:600}
+.skribl-inline-say :is(.rl-speed,.rl-chips){pointer-events:auto}
+.skribl-inline-say :is(.rl-m,.rl-skip){opacity:.62}
+.skribl-inline-say .rl-skip{flex-basis:100%;font-size:13px}
+.skribl-inline-say .rl-speed,.skribl-inline-line .skribl-inline-loop{color:inherit;background:color-mix(in srgb,var(--accent,#7c5cff) 18%,transparent)}
+.skribl-inline-say .rl-speed{position:relative;display:inline-flex;align-items:center;gap:3px;margin-left:2px;padding:3px 9px 3px 11px;border:0;border-radius:999px;font:inherit;font-weight:650;font-variant-numeric:tabular-nums;cursor:pointer}
+.skribl-inline-say .rl-speed::before{content:'';position:absolute;inset:-10px -3px}
+.skribl-inline-say .rl-speed svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.skribl-inline-say.open .rl-speed svg{transform:rotate(180deg)}
+.skribl-inline-say .rl-chips{position:absolute;bottom:calc(100% + 2px);left:50%;transform:translateX(-50%);z-index:3;display:flex;gap:2px;padding:4px;width:max-content;max-width:100%;box-sizing:border-box;border-radius:999px;background:Canvas;color:CanvasText;box-shadow:0 8px 24px rgba(0,0,0,.22),0 0 0 1px color-mix(in srgb,CanvasText 12%,transparent)}
+.skribl-inline-say .rl-chips button{position:relative;flex:1 1 30px;max-width:48px;height:34px;padding:0 4px;border:0;border-radius:999px;background:none;color:inherit;font:inherit;font-weight:550;font-variant-numeric:tabular-nums;cursor:pointer}
+.skribl-inline-say .rl-chips button::before{content:'';position:absolute;inset:-5px 0}
+.skribl-inline-say .rl-chips button[data-r="fit"]{max-width:54px;flex-grow:1.3;margin-left:4px}
+.skribl-inline-say .rl-chips button[aria-pressed="true"]{font-weight:700;color:color-mix(in srgb,var(--accent,#7c5cff) 72%,CanvasText);background:color-mix(in srgb,var(--accent,#7c5cff) 18%,transparent)}
+.skribl-inline-line .skribl-inline-controls{position:static;display:flex;gap:2px;opacity:1}
+.skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop){width:32px;height:32px;border:0;font:inherit}
+.skribl-inline-line .skribl-inline-mute,.skribl-inline-line.is-noloop .skribl-inline-loop{color:inherit;background:none}
+.skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop)::before{inset:-6px}
+.skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop[aria-pressed="false"]) svg{opacity:.62}
+@media (hover:hover){.skribl-inline-line :is(.skribl-inline-mute,.skribl-inline-loop):hover{background:color-mix(in srgb,var(--accent,#7c5cff) 22%,transparent)}}
 
 /* The optional title line under the player (skribl_inline title=...). */
 .skribl-inline-title{display:flex;align-items:baseline;gap:8px;margin:8px 2px 0;font-size:14px;line-height:1.3}

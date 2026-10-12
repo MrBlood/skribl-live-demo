@@ -15917,6 +15917,52 @@ read, so a page that loaded none cannot pass: before this change it found 57
 unguarded on the Pad, 67 on Flip and 5 on the player (67, 87 and 8 before
 #406), and none after it.
 
+**The post: shaped to its drawing, the Pad's line under it, a quiet play
+button, and Blooby on the card (the owner's picks for the in-post player:
+"bring Pad's watching experience into the post ... it's critical"; "all
+yes").** A post was a 16:9 box with bars beside every drawing that was not
+16:9, a dark play button with a haze under it, and two controls on the drawing.
+Now the box takes the drawing's shape (a 4:3 drawing measures 1.333 against
+1.333; a tall one is narrowed to fit a screen rather than barred). Under it,
+always, sits the Pad's own line -- lib/replayline.js, the module the Pad and
+/s/<id> use: the scrubber in the drawing's shape and "Drawn in 15 sec ·
+watching at 1×", the speed in it a button; a Flip's scrubber is one segment a
+page and its line says "12 pages · watching at 1×". It is there at rest, so a
+post is the same height resting, playing and paused (440px on a phone, 587px
+on a desk, all three). Mute and loop moved into it, off the drawing; the time
+badge and the hairline gave way to it. A tap on the drawing still pauses and
+carries on. The play button is the owner's v4: white, a thin purple edge, no
+shadow, no wash. NOTHING FETCHES UNTIL SOMEBODY ASKS still holds, so the
+line's numbers and shape at rest come from a new nullable column, `line_json`
+(validation._payload_line: the drawing's time, the replay's at the post's own
+pause setting, the author's speed and 128 columns of the scrubber's shape, each
+a port of the player's own function), written at post time; the listing's
+`line` adds whether there is sound and a Flip's page count, and the macro takes
+it as `line_info`. No data work in the migration (v309's lesson): older posts
+fill in with `python -m skribl.backfill_line --write`, batched and resumable,
+and until then their line says what it can. Flip's card, Library tile and
+previews now share one poster rule (flip.js posterPage): with a page kept
+underneath, the first inked page drawn on it, painted over it -- Blooby on the
+card, where "the first page with ink" was the empty card. The gallery's tiles
+keep their own transport (line=False) and their 16:9 box. Found while
+building: Chrome left a colour mixed from currentColor stale when a host
+switched theme after load (white words on a light page; the lit loop at 2.43
+contrast), so the line's quiet words are quiet by opacity, and the speed and
+lit loop take the page's own text on a purple tint. Host
+bytes: 38,239 -> 58,292 (the line's module, the scrubber's keys, its styles
+and wiring, each named at the ratchet); the page segments are painted by the
+post's own script through a hook in the module, so the shared player carries
+only the hooks. Shared: one player, Pad and Flip posts
+alike; the poster rule is Flip's alone (only Flip has pages). verify_inline
+THE POST measures the shape, the line and its words before any payload, the
+height at rest, playing and paused, the bars unchanged by play, the line's
+numbers against the player's, a drag on an unplayed post, the speed, a Flip's
+page segments, the button, 44px targets, a theme switch, every hover guarded
+and Blooby's poster page; each part shown red on its own. verify_a11y's A11Y 10
+then found the words row lying over the bottom edge of the scrubber's and the
+loop's 44px reach on the host feed (four widths red), so the row takes no taps
+and only the speed and its chips opt back in.
+
 **Full screen on the shared link works on an iPhone too, and the ⋯ steps
 aside in full screen (owner, from a shared link on the phone: "why is there
 no full screen available on link player?").** The link page offered full

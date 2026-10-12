@@ -81,6 +81,15 @@
    off — this player is Web Audio, and iOS routes that into a session the switch
    mutes. Claimed on the unmute tap only, never on load. #}
 <script src="{{ skribl_asset('lib/audiosession.js') }}" defer></script>
+{# lib/replayline.js and lib/scrubkeys.js: THE LINE UNDER THE DRAWING (v322,
+   the owner's pick for the in-post player, "all yes"). The Pad's own line --
+   "Drawn in 15 sec · watching at 1×", the speed in it a button, and the
+   scrubber in the drawing's shape -- is the Pad's module, not a copy of it,
+   so a post cannot offer different speeds or say them differently from the
+   Pad and /s/<id>; scrubkeys is the keyboard half every scrubber here has.
+   What they cost a host is argued at the ratchet in verify_inline.py. #}
+<script src="{{ skribl_asset('lib/replayline.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/scrubkeys.js') }}" defer></script>
 <script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
 {%- endmacro %}
 
@@ -93,18 +102,11 @@
     where the macro grows an element and the copy does not. Building the worked
     example in examples/host_app found it, because a host trying to preview a
     draft has no macro to call and would copy the same block a third time. #}
-{% macro _skribl_inline_insides(controls=true, progress=true) -%}
-  <canvas class="skribl-inline-canvas" hidden></canvas>
-  <div class="skribl-inline-veil">
-    <div class="skribl-inline-play">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-    </div>
-  </div>
-  <div class="skribl-inline-dur" hidden>
-    <span class="skribl-inline-dur-text"></span>
-  </div>
-{% if controls %}  {# Two controls, in one cluster. Mute hides itself on a silent Skribl
-     (.is-silent); loop stays, because a silent drawing still repeats. #}
+{#  The mute and loop pair: inside the box for a draft, in the line under the
+    drawing for a post (v322: "the loop button comes off the drawing"). Mute
+    hides itself on a silent Skribl (.is-silent); loop stays, because a silent
+    drawing still repeats. #}
+{% macro _skribl_inline_controls() -%}
   <div class="skribl-inline-controls">
     <button type="button" class="skribl-inline-mute"
             aria-pressed="true" aria-label="Unmute" title="Sound is off">
@@ -123,6 +125,19 @@
       </svg>
     </button>
   </div>
+{%- endmacro %}
+
+{% macro _skribl_inline_insides(controls=true, progress=true) -%}
+  <canvas class="skribl-inline-canvas" hidden></canvas>
+  <div class="skribl-inline-veil">
+    <div class="skribl-inline-play">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+  </div>
+  <div class="skribl-inline-dur" hidden>
+    <span class="skribl-inline-dur-text"></span>
+  </div>
+{% if controls %}{{ _skribl_inline_controls() }}
 {% endif %}
   {# progress=false HIDES the hairline rather than omitting it: inlineplayer.js
      requires the element (its absence means "not the macro's markup") and
@@ -133,26 +148,44 @@
   <div class="skribl-inline-err" hidden></div>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None) -%}
+{% macro skribl_inline(public_id, alt='', bp='skribl', canvas_w=None, canvas_h=None, progress=true, title=None, line=true, line_info=None) -%}
 {# is-muted and is-silent are the pre-script truth: sound is off by default, and
    nothing yet knows whether this Skribl has any. inlineplayer.js clears
    is-silent when the payload turns out to carry a loop.
 
    canvas_w/canvas_h are the DRAWING's size — `post.canvas_w`, `post.canvas_h`,
-   or the same two keys off the listing JSON. Pass them and the idle poster is
-   framed exactly where the canvas will be, instead of showing the share card's
-   own ground and plate border either side of a drawing that is not 16:9. Leave
-   them out and the poster keeps the band crop it had before v309, which is
-   also what a post written before that column gets: OPTIONAL, because a host
-   who upgrades the package without touching their template must not have their
-   posters change shape, and because `canvasSize` is itself optional in a
-   payload. Both or neither — one edge alone frames nothing. #}
-<div class="skribl-inline is-muted is-silent"
+   or the same two keys off the listing JSON. Pass them and THE BOX TAKES THE
+   DRAWING'S SHAPE (v322; before it, they framed the poster inside a 16:9 box),
+   so a 4:3 drawing has no bars beside it, and the shape is in the markup, so
+   nothing moves when the script arrives. Leave them out and the box stays
+   16:9 with the poster's band crop, which is also what a post written before
+   that column gets: OPTIONAL, because a host who upgrades the package without
+   touching their template must not have their posts break, and because
+   `canvasSize` is itself optional in a payload. Both or neither — one edge
+   alone frames nothing.
+
+   THE LINE UNDER THE DRAWING (v322, the owner's pick for the in-post player):
+   the Pad's scrubber and its words, "Drawn in 15 sec · watching at 1×" or
+   "12 pages · watching at 1×", always there, so a post is the same height at
+   rest and playing and the feed never jumps. `line_info` is the listing's
+   `line` (`post.line` server-side): pass it and the line says its numbers,
+   shows the drawing's shape and keeps mute's place before anybody presses
+   play; leave it out and it says what it can until the drawing arrives.
+   line=false leaves the line out, for a surface with a transport of its own
+   (the gallery's cards). #}
+{%- set shaped = line and canvas_w and canvas_h %}
+<div class="skribl-inline is-muted is-silent{% if line %} has-line{% endif %}{% if shaped %} is-shaped{% endif %}"
      data-skribl-inline
      data-skribl-id="{{ public_id }}"
 {%- if canvas_w and canvas_h %}
      data-skribl-w="{{ canvas_w }}"
      data-skribl-h="{{ canvas_h }}"
+{%- endif %}
+{%- if shaped %}
+     style="aspect-ratio: {{ canvas_w }} / {{ canvas_h }}; --skribl-ar: {{ '%.5f'|format(canvas_w|float / canvas_h|float) }}"
+{%- endif %}
+{%- if line and line_info %}
+     data-skribl-line='{{ line_info|tojson }}'
 {%- endif %}
      data-skribl-api="{{ url_for(bp ~ '.create_skribl') }}"
      role="button"
@@ -169,8 +202,22 @@
 {# `progress` reaches the insides the same way the draft macro passes it. A
    host whose own surface draws a scrubber over the drawing wants one progress
    indicator, not two; the gallery's card transport is the first caller to say
-   so. Default true, so every existing call is unchanged. #}
-{{ _skribl_inline_insides(progress=progress) }}</div>
+   so. Default true, so every existing call is unchanged. With the line, the
+   hairline and the time badge give way to it (inlineplayer.css). #}
+{{ _skribl_inline_insides(progress=progress, controls=not line) }}</div>
+{#- The line's markup is here, empty, for the same reason as the rest: it holds
+    its height from the first paint, so the script filling it moves nothing.
+    It stays invisible until the script does (is-on) -- a scrubber that cannot
+    scrub is not something to show. #}
+{%- if line %}
+<div class="skribl-inline-line is-muted is-silent">
+  <div class="skribl-inline-row">
+    <div class="skribl-inline-scrub" aria-label="Scrub"></div>
+{{ _skribl_inline_controls() }}
+  </div>
+  <div class="skribl-inline-say"></div>
+</div>
+{%- endif %}
 {#- THE TITLE LINE (v315), under the player and outside it: pass `title` and a
     line with the drawing's name and the word Skribl follows the box, the way a
     caption follows a photo. Leave it out and nothing is rendered, so a host

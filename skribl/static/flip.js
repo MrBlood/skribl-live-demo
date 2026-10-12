@@ -5491,7 +5491,7 @@ document.addEventListener('DOMContentLoaded', () => {
       || !!pendingPhotoMeta || !!pendingMusicMeta,
     busy: flipMediaBusy,
     thumbnail: () => { const c=document.createElement('canvas'); c.width=CW; c.height=CH;
-      drawFrameTo(c.getContext('2d'), frames.find(f => f && f.strokes && f.strokes.length) || frames[0]); return c; },
+      drawFrameTo(c.getContext('2d'), posterPage()); return c; },
     otherUrl: () => { const a=document.getElementById('padBtn'); return a ? a.getAttribute('href') : null; },
     closeMenu: () => closeMenu(),
     toast: (m) => chip(m)
@@ -5577,12 +5577,27 @@ function buildSharePayload(){
    way to start an animation and would make the poster a blank rectangle. A
    poster's job is to say what the thing IS. So: the first page with ink,
    falling back to page 0 when nothing has any. A video's poster frame is
-   picked the same way and for the same reason. */
+   picked the same way and for the same reason.
+
+   A PAGE THAT STAYS UNDERNEATH IS THE STAGE, NOT THE PICTURE (v322, the
+   owner's pick for the in-post player). Blooby's card draws the card on page
+   1 and Blooby on the pages kept over it, so "the first page with ink" was
+   the empty card -- the post's preview showed a card with nobody on it. With
+   a valid `under`, the poster is the first inked page drawn ON it, and
+   drawFrameTo() paints the page underneath beneath it, as every player
+   does: the card with Blooby. One answer for the card, the Library tile, the
+   composer and the post sheet's preview, so the four cannot disagree. */
+function posterPage(){
+  const inked = f => f && f.strokes && f.strokes.length;
+  const u = _validUnder();
+  const top = u ? frames.slice(u.from, u.to + 1).find(inked) : null;
+  return top || frames.find(inked) || frames[0];
+}
 function _shareCardDataURL(){
   const PC = window.SkriblPostedCard;
   if (!PC || !PC.build) return null;
   try {
-    let pick = frames.find(f => f && f.strokes && f.strokes.length) || frames[0];
+    let pick = posterPage();
     if (!pick) return null;
     const flat = document.createElement('canvas');
     flat.width = CW; flat.height = CH;
@@ -5647,7 +5662,7 @@ async function shareSkribl(){
       const _payload=buildSharePayload();
       delete _payload.visibility;           // the host's composer decides
       const _flat=document.createElement('canvas'); _flat.width=CW; _flat.height=CH;
-      const _pick=frames.find(f => f && f.strokes && f.strokes.length) || frames[0];
+      const _pick=posterPage();
       drawFrameTo(_flat.getContext('2d'), _pick);
       window.SkriblCompose.deliver(_payload, _flat.toDataURL('image/png'));
       if(postUI) postUI.setState('idle');
@@ -5771,11 +5786,11 @@ var postUI = window.SkriblPostSheet ? window.SkriblPostSheet.attach({
   toast: (msg) => chip(msg),
   submit: () => shareSkribl(),
   cancel: () => { if(_shareAbort) _shareAbort.abort(); },
-  // The poster page, the one the share card shows (see _shareCardDataURL):
-  // the first page with ink, on the drawing's own ground.
+  // The poster page, the one the share card shows (posterPage), on the
+  // drawing's own ground.
   preview: () => {
     try{
-      const pick = frames.find(f => f && f.strokes && f.strokes.length) || frames[0];
+      const pick = posterPage();
       if(!pick) return null;
       const flat = document.createElement('canvas'); flat.width = CW; flat.height = CH;
       drawFrameTo(flat.getContext('2d'), pick);

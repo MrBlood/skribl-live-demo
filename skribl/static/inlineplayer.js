@@ -54,13 +54,50 @@
  *
  * THE PRODUCT RULES
  * -----------------
- * TWO VIEWER CONTROLS, AND ONLY TWO: mute and loop. Scrub, speed and
- * frame-step belong on the full player -- a post that grows a transport stops
- * being a post -- but these two are about whether the thing in front of you
- * keeps making noise and keeps moving, which is the viewer's business in a way
- * that seeking is not. They share one cluster at bottom left so a post has one
- * control area, and so a silent Skribl (which hides mute) does not leave a
- * lone button floating in the corner.
+ * A POST GREW A WAY TO WATCH IT (v322, the owner: "bring Pad's watching
+ * experience into the post ... it's critical"; "all yes"). This said, until
+ * then, that a post gets two controls and no transport -- "a post that grows a
+ * transport stops being a post". The owner decided the opposite, for the
+ * reason Pad exists: the drawing is a performance, and watching it is the
+ * point. So under the drawing, never on it, sits the Pad's own line --
+ * lib/replayline.js, the module the Pad and /s/<id> use, so a post cannot
+ * offer other speeds or say them differently:
+ *
+ *   THE SCRUBBER, in the drawing's shape (a Flip: one segment per page), and
+ *   "Drawn in 15 sec · watching at 1×" (a Flip: "12 pages · watching at 1×"),
+ *   the speed in it the button that opens the speeds.
+ *   ALWAYS THERE, at rest too, so a post is the same height before and after
+ *   the first tap and the feed under the thumb never jumps. The numbers and
+ *   the shape at rest are the post's `line` (validation._payload_line), read
+ *   from the listing, because NOTHING FETCHES UNTIL SOMEBODY ASKS (below).
+ *   MUTE AND LOOP MOVED INTO IT, off the drawing, with the time badge and the
+ *   progress hairline gone: the line says both. A tap on the drawing still
+ *   pauses and carries on, with the play button showing while it is paused.
+ *
+ * The box takes the drawing's shape there too (the macro's canvas size), so a
+ * 4:3 drawing has no bars beside it, and a tall drawing is narrowed to fit a
+ * screen (70vh, at most 640px tall) rather than given bars. A surface with its
+ * own transport leaves the line out (line=false: the gallery's cards) and
+ * keeps the old 16:9 box with its mute and loop on it, as a draft does.
+ *
+ * THE STYLESHEET'S SIDE OF IT, said here with the rest of the reasoning, so
+ * the sheet stays values a host can read before overriding one. The play
+ * button is white with a 2px purple edge and no shadow -- the owner's v4,
+ * the one that read on paper, on a dark canvas and on purple ink without
+ * darkening anything -- in fixed colours, because it sits on the drawing,
+ * not on the host's page. The line takes the host's text colour; its quiet
+ * words are quiet by OPACITY (and take no taps: an opacity layer sits over
+ * the speed's finger area otherwise; the whole words row takes none, so the
+ * scrubber's and loop's reach is theirs where it meets the row, and only the
+ * speed and its chips opt back in), never by a colour mixed from
+ * currentColor, because Chrome left such a mix stale when a host switched
+ * theme after load (the light page showed the dark page's words, white on
+ * white). For the same reason the speed and lit loop take the page's text on
+ * an accent tint rather than an accent mixed toward it: the tint carries the
+ * colour, and the words read on any page, whichever theme it has switched
+ * to. Every control in the line is 44px to a finger by an invisible
+ * ::before/::after, and its speeds open upward over the scrubber, closing on
+ * a pick.
  *
  * LOOP IS ON BY DEFAULT, so the lit state is the RESTING state and the button
  * dims when switched OFF -- the opposite of mute, whose resting state is muted.
@@ -286,13 +323,13 @@
     var playT = 0;
     var s0 = strokes[0];
     var out = [{ x: s0.x, y: s0.y, color: s0.color, size: s0.size,
-                 erase: s0.erase, start: s0.start, playT: 0 }];
+                 erase: s0.erase, start: s0.start, playT: 0, i: 0 }];
     for (var i = 1; i < strokes.length; i++) {
       var gap = strokes[i].t - strokes[i - 1].t;
       if (gap > 0) playT += Math.min(gap, cap);
       var s = strokes[i];
       out.push({ x: s.x, y: s.y, color: s.color, size: s.size,
-                 erase: s.erase, start: s.start, playT: playT });
+                 erase: s.erase, start: s.start, playT: playT, i: i });
     }
     return out;
   }
@@ -542,6 +579,14 @@
     if (comp) { comp.finish(); comp.present(); }
   }
 
+  /* A post's stored shape (validation._payload_line): one base-36 digit per
+   * column, 0 for none, the square root already taken -> 0..1 columns, which
+   * the scrubber pools to its own width (lib/replayline.js `shape`). */
+  function shapeOf(t) {
+    if (typeof t !== 'string' || !/^[0-9a-z]+$/.test(t)) return null;
+    return t.split('').map(function (c) { return parseInt(c, 36) / 35; });
+  }
+
   function fmt(ms) {
     var s = Math.max(0, Math.round(ms / 1000));
     return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
@@ -583,7 +628,7 @@
    * PLATE_R / PLATE_IN are lib/sharecard.js's PLATE_R and PLATE_LW. */
   var BOX_A = 16 / 9, PLATE_R = 18, PLATE_IN = 2;
 
-  function fitPoster(img, w, h) {
+  function fitPoster(img, w, h, boxA) {
     /* Where the card put the drawing: drawingRect(), rounding included --
      * matching the card's own rounding is what makes one scale factor exact
      * on both axes below. */
@@ -594,14 +639,14 @@
     /* Where the CANVAS will be, in units of the box's HEIGHT. The component
      * letterboxes it, so whichever axis runs out first decides: cw is the
      * width, ch the height, and ch = cw / a covers both cases at once. */
-    var a = dw / dh, cw = Math.min(a, BOX_A), ch = cw / a;
+    var A = boxA || BOX_A, a = dw / dh, cw = Math.min(a, A), ch = cw / a;
     /* One factor, card pixels -> box-height units, so the image scales
      * uniformly and the drawing's rect lands on the canvas's rect. */
     var k = cw / dw, st = img.style, i = PLATE_IN;
     function p(n, of) { return n / of * 100 + '%'; }
-    st.width = p(CARD_W * k, BOX_A);
+    st.width = p(CARD_W * k, A);
     st.height = p(CARD_H * k, 1);
-    st.left = p((BOX_A - cw) / 2 - dx * k, BOX_A);
+    st.left = p((A - cw) / 2 - dx * k, A);
     st.top = p((1 - ch) / 2 - dy * k, 1);
     /* The stylesheet centres the band crop with a transform; this one is
      * positioned outright, so the transform has to go or it shifts twice. */
@@ -636,8 +681,13 @@
     var durEl = el.querySelector('.skribl-inline-dur');
     var durText = el.querySelector('.skribl-inline-dur-text');
     var playEl = el.querySelector('.skribl-inline-play');
-    var muteBtn = el.querySelector('.skribl-inline-mute');
-    var loopBtn = el.querySelector('.skribl-inline-loop');
+    /* THE LINE UNDER THE DRAWING (v322): the macro's next sibling, holding the
+     * scrubber, the words and -- off the drawing now -- mute and loop. */
+    var line = el.nextElementSibling;
+    if (!line || !line.classList.contains('skribl-inline-line')) line = null;
+    function q(sel) { return el.querySelector(sel) || (line && line.querySelector(sel)); }
+    var muteBtn = q('.skribl-inline-mute');
+    var loopBtn = q('.skribl-inline-loop');
     var errEl = el.querySelector('.skribl-inline-err');
     /* An id is NOT required — a draft's skribl is attached by payload and has
      * none (api.attach below). The canvas and the two chrome elements are, and
@@ -662,6 +712,13 @@
        offscreen layers can match it instead of inferring it from CSS. */
     var pixelRatio = 1;
     var rate = 1;                             // the viewer's speed; see frame()
+    /* What the speed button says: 'fit' or a rate. `rate` is what it comes
+     * to; `picked` is the viewer having chosen, which the drawing arriving
+     * must not undo. */
+    var choice = 1, picked = false;
+    var RL = global.SkriblReplayLine, lineUI = null, scrubUI = null, bar = null;
+    var info = null, pagesN = 0, shapeCols = null, drawnMs = null, held = false, pendingF = null;
+    var clockFn = null;   // replay ms -> the artist's, for the scrubber's bubble
     var state = 'idle';                       // idle | playing | paused
     var elapsed = 0, t0 = 0, raf = null, drawn = 0;
     /* The page and progress this player last PAINTED, which is how
@@ -709,18 +766,9 @@
       setRate: function (r) {
         r = +r;
         if (!(r > 0)) return rate;
-        if (state === 'playing') { elapsed += segElapsed(); t0 = now(); }
-        rate = r;
-        /* The drawing's speed is already changed by the line above; the audio
-         * graph is a second, weaker thing. It is rebuilt on an AudioContext
-         * the browser is allowed to take away, and a throw from in here used
-         * to escape setRate with the new rate already applied -- so the caller
-         * never got its return, never repainted, and the control reported a
-         * speed the player was no longer running at. Silence is a degradation
-         * and a lying label is a bug, which is the same order of preference
-         * the decode path states a few hundred lines down. */
-        if (state === 'playing') { try { startAudio(); } catch (e) {} }
-        return rate;
+        choice = r; picked = true;
+        if (lineUI) lineUI.update();
+        return applyRate(r);
       },
       rate: function () { return rate; },
       state: function () {
@@ -754,6 +802,22 @@
     el._skriblInline = me;
 
     function now() { return global.performance ? performance.now() : Date.now(); }
+
+    /* THE CLOCK AT A NEW SPEED -- setRate's, and the speed button's. */
+    function applyRate(r) {
+      if (state === 'playing') { elapsed += segElapsed(); t0 = now(); }
+      rate = r;
+      /* The drawing's speed is already changed by the line above; the audio
+       * graph is a second, weaker thing. It is rebuilt on an AudioContext
+       * the browser is allowed to take away, and a throw from in here used
+       * to escape setRate with the new rate already applied -- so the caller
+       * never got its return, never repainted, and the control reported a
+       * speed the player was no longer running at. Silence is a degradation
+       * and a lying label is a bug, which is the same order of preference
+       * the decode path states a few hundred lines down. */
+      if (state === 'playing') { try { startAudio(); } catch (e) {} }
+      return rate;
+    }
 
     function busy(on) {
       if (playEl) playEl.classList.toggle('is-busy', !!on);
@@ -831,7 +895,8 @@
       var f0 = frames[0] || {};
       music = (f0.music && f0.music.data) ? f0.music : (payload.music || null);
       if (music && !music.data) music = null;
-      el.classList.toggle('is-silent', !music);
+      mark('is-silent', !music);
+      drawnMs = clockFn = null;
 
       /* The underlay: background colour, then a photo or base snapshot.
        *
@@ -909,7 +974,11 @@
         var H = global.SkriblHold;
         flipPlan = (H && H.plan) ? H.plan(frames, flipFps, payload.loop) : null;
         totalMs = flipPlan ? flipPlan.cycle : Math.max(1, (frames.length / flipFps) * 1000);
-        rate = 1;   // a Flip has no author's speed; a post swapped in before it may have set one
+        /* A Flip has no author's speed (a post swapped in before it may have
+         * set one); a viewer's pick stands, unless it was Fit, which a loop
+         * has no whole to fit. */
+        if (!picked || choice === 'fit') choice = 1;
+        rate = choice;
         underPage = (H && H.underOf) ? H.underOf(payload.under, frames.length) : null;
       } else {
         timeline = buildTimeline(f0.strokes || [], payload.pauseMode);
@@ -924,12 +993,22 @@
          * gap between points, uncapped. */
         var ps = payload.playSpeed, st = f0.strokes || [], dm = 0;
         for (var k = 1; k < st.length; k++) if (st[k].t > st[k - 1].t) dm += st[k].t - st[k - 1].t;
-        rate = ps === 'fit' || (ps === 'auto' && dm > 60000) ? Math.max(1, totalMs / 30000)
+        drawnMs = dm;
+        if (RL && timeline.length > 1) clockFn = RL.clockMap(timeline, st);
+        /* A speed the viewer picked before the drawing arrived is theirs. */
+        if (!picked) choice = ps === 'fit' || (ps === 'auto' && dm > 60000) ? 'fit'
           : [0.25, 0.5, 1, 2, 4, 8, 16].indexOf(ps) >= 0 ? ps : 1;
+        rate = choice === 'fit' ? Math.max(1, totalMs / 30000) : choice;
       }
 
       if (durText) durText.textContent = fmt(totalMs);
       if (durEl) durEl.hidden = false;
+      if (lineUI) {
+        lineUI.update();
+        var fitB = line.querySelector('[data-r="fit"]');
+        if (fitB) fitB.hidden = !!flipFrames;
+      }
+      if (scrubUI) scrubUI.reset();
       renderIdle();
     }
 
@@ -1084,6 +1163,102 @@
                ? timeline[drawn - 1] : null);
       }
       prog.style.width = (totalMs ? Math.min(1, at / totalMs) * 100 : 0) + '%';
+      paintLine();
+    }
+
+    /* ---- the line ------------------------------------------------------- */
+
+    function paintLine() {
+      if (!scrubUI) return;
+      var f = frac();
+      scrubUI.paint(f);
+      if (global.SkriblScrub) global.SkriblScrub.sync(bar, f);
+    }
+
+    function curMs() { return state === 'playing' ? elapsed + segElapsed() : elapsed; }
+
+    /* WHERE THE REPLAY IS, 0..1, as the scrubber shows it. A replay is its
+     * clock over its length. A FLIP IS ITS PAGES: one equal segment each, the
+     * playhead moving through a page's segment as that page's time passes,
+     * because a page is what a viewer aims at and a held page or a long
+     * drawing page would otherwise squeeze the rest to slivers. A forever
+     * loop's clock wraps inside its stretch (lib/holdtiming.js), so its
+     * playhead circles those pages and never goes back to page 1. */
+    function frac() {
+      if (!payload || !totalMs) return 0;
+      var t = curMs();
+      if (!flipFrames || !flipPlan) return Math.max(0, Math.min(1, t / totalMs));
+      var P = flipPlan, n = flipFrames.length;
+      if (P.forever && t >= P.introMs) t = P.introMs + ((t - P.introMs) % P.stretchMs);
+      else if (t >= P.cycle) return 1;
+      var lo = 0, hi = P.slots.length - 1;
+      while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (P.starts[mid] <= t) lo = mid; else hi = mid - 1; }
+      var i = P.slots[lo] | 0;
+      return Math.max(0, Math.min(1, (i + Math.min(1, (t - P.starts[lo]) / (P.ms[i] || 1))) / n));
+    }
+
+    /* ...and back: a place on the scrubber -> the clock. A Flip's page plays
+     * from its first slot; a page a forever loop never reaches lands on the
+     * last one that plays. */
+    function msAt(f) {
+      f = Math.max(0, Math.min(1, f));
+      if (!flipFrames || !flipPlan) return f * totalMs;
+      var P = flipPlan, n = flipFrames.length, pg = Math.min(n - 1, Math.floor(f * n));
+      var s = P.slots.indexOf(pg), into = f * n - pg;
+      if (s < 0) { for (s = P.slots.length - 1; s > 0 && P.slots[s] > pg; s--); into = 1; }
+      return Math.min(P.starts[s] + into * (P.ms[P.slots[s]] || 0), Math.max(0, totalMs - 1));
+    }
+
+    /* A DRAG ON THE SCRUBBER: hold the replay, show each place asked for,
+     * carry on from the last one if it was playing. The drawing may not be
+     * here yet -- a viewer can grab the line of a post nobody has played --
+     * so the first touch asks for it and the last place is shown when it
+     * comes. A poster gives way to the canvas as soon as there is a place. */
+    function scrubStart() {
+      held = state === 'playing';
+      if (held) pause();
+      if (!payload) load().then(function (p) { if (p && pendingF != null) scrubTo(pendingF); });
+    }
+    function scrubTo(f) {
+      if (!payload) { pendingF = f; return; }
+      pendingF = null;
+      if (state === 'playing') pause();
+      if (state === 'idle') { state = 'paused'; el.classList.add('is-paused'); }
+      elapsed = msAt(f);
+      render(elapsed, true, true);
+    }
+    function scrubEnd() {
+      if (held) { held = false; play(); }
+    }
+
+    /* A FLIP'S PAGES IN THE SCRUBBER, equal widths: a page is what a viewer
+     * aims at, and a held page or a long drawing page would otherwise squeeze
+     * the rest to slivers. Played pages are solid, the one on screen fills to
+     * the playhead, the rest are faded like unplayed columns. Painted here,
+     * through lib/replayline.js's `draw` hook, so the Pad and /s/<id> do not
+     * carry it. A replay answers false and gets the module's columns. */
+    function pageCount() { return flipFrames ? flipFrames.length : payload ? 0 : pagesN; }
+    function drawPages(x, f, W, H, dpr) {
+      var n = pageCount();
+      if (!n) return false;
+      var at = f * W, g = Math.min(3 * dpr, W / n * 0.25), sw = (W - g * (n - 1)) / n,
+          h = Math.round(H * 0.44), y = (H - h) / 2, r = Math.min(3 * dpr, sw / 2, h / 2);
+      function seg(sx, a) {
+        x.globalAlpha = a;
+        x.beginPath();
+        if (x.roundRect) x.roundRect(sx, y, sw, h, r); else x.rect(sx, y, sw, h);
+        x.fill();
+      }
+      for (var p = 0; p < n; p++) {
+        var sx = p * (sw + g), fill = Math.max(0, Math.min(sw, at - sx));
+        seg(sx, 0.36);
+        if (fill > 0) { x.save(); x.beginPath(); x.rect(sx, 0, fill, H); x.clip(); seg(sx, 1); x.restore(); }
+      }
+    }
+
+    function pick(c) {
+      choice = c; picked = true;
+      applyRate(c === 'fit' ? Math.max(1, (payload ? totalMs : info && info.play || 0) / 30000) : +c || 1);
     }
 
     /* The nib rides in the BOX's coordinate space while the point is in the
@@ -1235,8 +1410,15 @@
       srcNode = gainNode = null;
     }
 
+    /* A state class goes on the box AND the line, which holds the controls
+     * the class styles now (v322). */
+    function mark(c, on) {
+      el.classList.toggle(c, on);
+      if (line) line.classList.toggle(c, on);
+    }
+
     function applyLoop() {
-      el.classList.toggle('is-noloop', !looping);
+      mark('is-noloop', !looping);
       if (!loopBtn) return;
       loopBtn.setAttribute('aria-pressed', looping ? 'true' : 'false');
       loopBtn.setAttribute('aria-label', looping ? 'Stop repeating' : 'Repeat');
@@ -1257,7 +1439,7 @@
 
     function applySound() {
       var on = soundOn();
-      el.classList.toggle('is-muted', !on);
+      mark('is-muted', !on);
       if (muteBtn) {
         muteBtn.setAttribute('aria-pressed', on ? 'false' : 'true');
         muteBtn.setAttribute('aria-label', on ? 'Mute' : 'Unmute');
@@ -1403,16 +1585,76 @@
       });
     }
 
+    /* THE DRAWING'S SHAPE, if the page knows it (v309). Absent -- an old row,
+     * a payload with no canvasSize, a host that has not passed it through --
+     * the box stays 16:9 and the stylesheet's band crop stands. A POST (the
+     * box with a line) TAKES THAT SHAPE (v322): no bars beside the drawing,
+     * and the poster's drawing fills it. The macro writes the same when it
+     * is given the size; a page that clones it fills the size in after. */
+    var pw = +el.getAttribute('data-skribl-w');
+    var ph = +el.getAttribute('data-skribl-h');
+    var shaped = !!line && pw > 0 && ph > 0;
+    if (shaped) {
+      el.style.aspectRatio = pw + ' / ' + ph;
+      el.style.setProperty('--skribl-ar', (pw / ph).toFixed(5));
+      el.classList.add('is-shaped');
+    }
     if (poster) {
       /* A post whose card 404s (a store that lost the thumbnail, a host without
        * the card route) must not show a broken-image glyph in the feed. */
       poster.addEventListener('error', function () { poster.hidden = true; });
-      /* THE DRAWING'S SHAPE, if the page knows it (v309). Absent -- an old row,
-       * a payload with no canvasSize, a host that has not passed it through --
-       * the stylesheet's band crop stands. See fitPoster above. */
-      var pw = +el.getAttribute('data-skribl-w');
-      var ph = +el.getAttribute('data-skribl-h');
-      if (pw > 0 && ph > 0) fitPoster(poster, pw, ph);
+      if (pw > 0 && ph > 0) fitPoster(poster, pw, ph, shaped ? pw / ph : 0);
+    }
+
+    /* THE LINE, built once its module is here. Before the drawing arrives it
+     * says what the listing said (`line` and `pages`) and shows the stored
+     * shape; after, it reads the drawing, and keeps the stored shape so the
+     * bars under the thumb do not change at the first tap. */
+    if (line && RL) {
+      try { info = JSON.parse(el.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
+      if (!info || typeof info !== 'object') info = null;
+      pagesN = info && info.pages > 1 ? info.pages | 0 : 0;
+      shapeCols = info && shapeOf(info.shape);
+      /* The listing knows whether there is sound, so mute holds its place
+       * from the first paint and the row does not change at the first tap. */
+      if (info && typeof info.sound === 'boolean') mark('is-silent', !info.sound);
+      if (info) { choice = RL.fromPost(info.speed, info.drawn); rate = RL.rate(choice, info.play); }
+      bar = line.querySelector('.skribl-inline-scrub');
+      var say = line.querySelector('.skribl-inline-say');
+      if (bar) {
+        scrubUI = RL.scrub(bar, {
+          points: function () { return (!flipFrames && timeline) || []; },
+          total: function () { return payload ? totalMs : info ? info.play : 0; },
+          map: function () { return clockFn; },
+          frac: frac, seek: scrubTo, start: scrubStart, end: scrubEnd,
+          shape: function () { return shapeCols; },
+          draw: drawPages,
+          tip: function (f) { var n = pageCount(); return n ? 'Page ' + Math.min(n, Math.floor(f * n) + 1) + ' of ' + n : ''; }
+        });
+        if (global.SkriblScrub) global.SkriblScrub.attach(bar, { seek: function (f) { scrubStart(); scrubTo(f); scrubEnd(); }, frac: frac });
+      }
+      if (say) {
+        lineUI = RL.attach(say, {
+          choice: function () { return choice; },
+          pick: pick,
+          playMs: function () { return payload ? totalMs : info ? info.play : 0; },
+          drawnMs: function () { return payload ? drawnMs : info ? info.drawn : null; },
+          lead: function () {
+            var n = flipFrames ? flipFrames.length : payload ? 0 : pagesN;
+            return n > 1 ? '<b>' + n + ' pages</b><span class="rl-m"> · </span>' : '';
+          }
+        });
+        var fit0 = say.querySelector('[data-r="fit"]');
+        if (fit0) fit0.hidden = pagesN > 1;
+      }
+      /* A tap on the line is the line's: a host that makes the whole post a
+       * link must not navigate on a scrub or a speed. */
+      line.addEventListener('click', function (e) { e.stopPropagation(); });
+      line.classList.add('is-on');
+      paintLine();
+      /* At rest nothing else paints it, so a line laid out late (a host
+       * revealing the post, a font arriving) paints when its size lands. */
+      if (bar && global.ResizeObserver) new global.ResizeObserver(function () { paintLine(); }).observe(bar);
     }
 
     applySound();

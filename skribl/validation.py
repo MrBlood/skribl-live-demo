@@ -79,6 +79,102 @@ def _payload_kind(payload):
     return "flip" if _payload_pages(payload) > 1 else "pad"
 
 
+# THE IN-POST LINE (v322): what the line under a post says before anybody
+# presses play -- "Drawn in 15 sec · watching at 1×" -- and the shape its
+# scrubber shows. LINE_SHAPE_BINS columns of ink, one character each.
+LINE_SHAPE_BINS = 128
+_LINE_DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz"
+# inlineplayer.js PAUSE_CAPS, and its default: a payload with no pauseMode
+# replays Tight, so its line has to measure Tight too. None is Keep (no cap).
+_PAUSE_CAPS = {"keep": None, "trim": 250, "tight": 50}
+
+
+def _line_num(p, key):
+    v = p.get(key) if isinstance(p, dict) else None
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+def _payload_line(payload):
+    """The in-post line's summary for a Pad Skribl, as a dict, or None.
+
+        {"drawn": ms, "play": ms, "speed": <playSpeed or None>, "shape": "0a3f..."}
+
+    WHY IT IS STORED, for the fifth time on this row and for the same measured
+    reason as `kind`, `pages` and the canvas size: the listing defers
+    `payload_json` on purpose, so a post in a feed cannot look inside itself --
+    and the line under it (the owner's pick for the in-post player, "all
+    yes") has to say how long the drawing took before anybody asks for it.
+
+    EVERY NUMBER IS A PORT, never a second definition, so the line under a post
+    cannot disagree with the line under the same drawing once it plays:
+      drawn  lib/replayline.js drawnMs(): every positive gap between
+             consecutive points, uncapped -- the artist's time.
+      play   inlineplayer.js buildTimeline(): the same gaps, each capped by the
+             payload's pauseMode (Tight when it has none, as the player
+             replays it) -- how long the replay runs at 1x, which Fit's number
+             and "long pauses skipped" are worked out from.
+      speed  the author's `playSpeed`, as posted, or None (plays as drawn);
+             lib/replayline.js fromPost() turns it into where a viewer starts.
+      shape  lib/replayline.js scrub()'s bins at a fixed LINE_SHAPE_BINS: the
+             ink laid down in each stretch of the replay, square-rooted against
+             the most in any one, as a base-36 digit (0 is no ink; any ink is
+             at least 1, so a light stretch still shows). The scrubber shows
+             this both before and after the payload arrives, so pressing play
+             changes nothing under the drawing.
+
+    None for a Flip (its line counts pages, and `pages` is already a column)
+    and for a drawing with fewer than two points. The frames come out the way
+    the players find them (inlineplayer.js framesOf): `frames[0]` when there
+    are frames, the top level otherwise.
+
+    Pure + import-light so it can be unit-tested headless.
+    """
+    if not isinstance(payload, dict) or _payload_kind(payload) == "flip":
+        return None
+    frames = payload.get("frames")
+    if isinstance(frames, list) and frames:
+        first = frames[0]
+        pts = first.get("strokes") if isinstance(first, dict) else None
+    else:
+        pts = payload.get("strokes")
+    if not isinstance(pts, list) or len(pts) < 2:
+        return None
+    mode = payload.get("pauseMode")
+    cap = _PAUSE_CAPS[mode] if isinstance(mode, str) and mode in _PAUSE_CAPS else _PAUSE_CAPS["tight"]
+    drawn = 0.0
+    play_t = [0.0]
+    for i in range(1, len(pts)):
+        a, b = _line_num(pts[i - 1], "t"), _line_num(pts[i], "t")
+        gap = (b - a) if (a is not None and b is not None) else 0
+        if gap > 0:
+            drawn += gap
+            play_t.append(play_t[-1] + (gap if cap is None else min(gap, cap)))
+        else:
+            play_t.append(play_t[-1])
+    total = play_t[-1] or 1
+    n = LINE_SHAPE_BINS
+    ink = [0.0] * n
+    for k in range(1, len(pts)):
+        p, q = pts[k], pts[k - 1]
+        if isinstance(p, dict) and p.get("start"):
+            continue
+        x1, y1, x0, y0 = (_line_num(p, "x"), _line_num(p, "y"),
+                          _line_num(q, "x"), _line_num(q, "y"))
+        if None in (x1, y1, x0, y0):
+            continue
+        j = min(n - 1, int(math.floor(play_t[k] / total * n)))
+        ink[j] += math.hypot(x1 - x0, y1 - y0)
+    top = max(ink)
+    shape = "".join(
+        _LINE_DIGITS[max(1, int(round(math.sqrt(v / top) * 35)))] if (top and v) else "0"
+        for v in ink)
+    speed = payload.get("playSpeed")
+    if speed is not None and _validate_play_speed(speed):
+        speed = None
+    return {"drawn": int(round(drawn)), "play": int(round(play_t[-1])),
+            "speed": speed, "shape": shape}
+
+
 def _payload_canvas(payload):
     """The drawing's own size, as (w, h), or (None, None) when it has none.
 

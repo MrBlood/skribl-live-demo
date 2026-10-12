@@ -522,9 +522,16 @@ with sync_playwright() as sp:
     # POST rather than page-wide (mute is page-wide) because repeating is a
     # property of the drawing in front of you; the asymmetry is deliberate and
     # asserted here so it cannot be quietly unified.
+    # IN THE LINE UNDER THE DRAWING since v322 ("the loop button comes off
+    # the drawing"); a box without the line keeps it inside.
+    _LOOP_BTN = """(id) => { const el = document.querySelector('[data-skribl-id="' + id + '"]');
+        return el.querySelector('.skribl-inline-loop')
+          || (el.nextElementSibling && el.nextElementSibling.querySelector('.skribl-inline-loop')); }"""
     loop_state = pg.evaluate("""(id) => {
         const el = document.querySelector('[data-skribl-id="' + id + '"]');
-        const btn = el.querySelector('.skribl-inline-loop');
+        const ln = el.nextElementSibling;
+        const btn = el.querySelector('.skribl-inline-loop')
+          || (ln && ln.querySelector('.skribl-inline-loop'));
         return { present: !!btn, pressed: btn && btn.getAttribute('aria-pressed'),
                  noloop: el.classList.contains('is-noloop') }; }""", id_m)
     check("a post carries a loop control", loop_state["present"], json.dumps(loop_state))
@@ -532,25 +539,49 @@ with sync_playwright() as sp:
           loop_state["pressed"] == "true" and loop_state["noloop"] is False,
           json.dumps(loop_state))
     # LIT LOOP KEEPS ITS ICON ON A HOST THAT NAMES ITS OWN ACCENT. The chip
-    # used to take its ink and edge from --accent over a see-through ground;
+    # once took its ink and edge from --accent over a see-through ground;
     # skribls.net defines --accent, and on its light page the chip read as a
-    # violet square with no icon. Asked with a host accent set, of the
-    # computed ink and ground: the ground is solid and the ink is not the
-    # host's colour.
+    # violet square with no icon. In the line (v322) it is lit the way the
+    # speed beside it is -- the page's own text on an accent tint -- so the
+    # question is asked of what the eye gets: the icon's ink against its
+    # ground laid over the page, with the host's accent set, on a dark page
+    # and then, AFTER LOAD, a light one (an accent mixed toward currentColor
+    # stayed the dark page's colour there: 2.43, the first run of this check;
+    # Chrome never recomputes such a mix when the page's colour changes).
+    # 3:1 is the floor for a control's graphics (WCAG 1.4.11).
     host_look = pg.evaluate("""(id) => {
-        const b = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-loop');
-        /* On the button itself: nothing between it and a host's :root can
-           then stand in for the host's value. */
+        const el = document.querySelector('[data-skribl-id="' + id + '"]');
+        const b = el.querySelector('.skribl-inline-loop')
+          || el.nextElementSibling.querySelector('.skribl-inline-loop');
+        const cx = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+        cx.canvas.width = cx.canvas.height = 1;
+        const px = (...layers) => { cx.clearRect(0, 0, 1, 1);
+          for (const c of layers) { cx.fillStyle = c; cx.fillRect(0, 0, 1, 1); }
+          return Array.from(cx.getImageData(0, 0, 1, 1).data).slice(0, 3); };
+        const lum = (c) => { const v = c.map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+          return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+        const out = {};
         b.style.setProperty('--accent', '#6d4cf0');
-        const c = getComputedStyle(b);
-        const out = { ground: c.backgroundColor, ink: c.color,
-                      seen: c.getPropertyValue('--accent').trim() };
-        b.style.removeProperty('--accent');
+        /* The button fades its colour over 0.15s, so a read straight after
+           the switch is the fade's first frame; the settled colour is the
+           question, so the fade is held off while it is asked. */
+        b.style.transition = 'none';
+        for (const [name, page, ink] of [['dark', '#0b0d12', '#e8eaef'], ['light', '#ffffff', '#1d1a2b']]) {
+          document.body.style.setProperty('background', page, 'important');
+          document.body.style.setProperty('color', ink, 'important');
+          const c = getComputedStyle(b);
+          const ground = px(page, c.backgroundColor), icon = px(page, c.backgroundColor, c.color);
+          const L1 = lum(icon), L2 = lum(ground);
+          out[name] = { ground: ground, icon: icon,
+                        ratio: Math.round((Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05) * 100) / 100 };
+        }
+        b.style.removeProperty('--accent'); b.style.removeProperty('transition');
+        document.body.style.removeProperty('background'); document.body.style.removeProperty('color');
         return out; }""", id_m)
-    check("lit Loop is a solid ground with its own ink, whatever the host calls --accent",
-          host_look["seen"] == "#6d4cf0"
-          and host_look["ink"] != "rgb(109, 76, 240)" and "rgba" not in host_look["ground"]
-          and host_look["ink"] != host_look["ground"], json.dumps(host_look))
+    check("lit Loop's icon stands out from its ground on a dark host and a light one, "
+          "whatever the host calls --accent",
+          host_look["dark"]["ratio"] >= 3 and host_look["light"]["ratio"] >= 3,
+          json.dumps(host_look))
 
     # The audio fixture, played and unmuted, so there is something to stop.
     pg.evaluate("() => window.SkriblInline.setSoundOn(true)")
@@ -565,14 +596,13 @@ with sync_playwright() as sp:
           f"analyser peak {playing_peak} — measured on the audio graph, not "
           f"inferred from a node existing")
 
-    # TURN THE LOOP OFF and let the replay run past its end.
-    pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"] "
-                ".skribl-inline-loop').click()", id_m)
+    # TURN THE LOOP OFF and let the replay run past its end. (_LOOP_BTN finds
+    # it in the line under a post, or in a box without one.)
+    pg.evaluate("(id) => (" + _LOOP_BTN + ")(id).click()", id_m)
     after_click = pg.evaluate("""(id) => {
         const el = document.querySelector('[data-skribl-id="' + id + '"]');
         return { noloop: el.classList.contains('is-noloop'),
-                 pressed: el.querySelector('.skribl-inline-loop')
-                            .getAttribute('aria-pressed') }; }""", id_m)
+                 pressed: (""" + _LOOP_BTN + """)(id).getAttribute('aria-pressed') }; }""", id_m)
     check("the control reports the state it just changed to",
           after_click["noloop"] is True and after_click["pressed"] == "false",
           json.dumps(after_click))
@@ -598,8 +628,7 @@ with sync_playwright() as sp:
 
     # Turning it back on restarts a replay sitting at its end, rather than
     # appearing to do nothing until the next tap.
-    pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"] "
-                ".skribl-inline-loop').click()", id_m)
+    pg.evaluate("(id) => (" + _LOOP_BTN + ")(id).click()", id_m)
     try:
         pg.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'",
                              arg=id_m, timeout=5000)
@@ -1167,11 +1196,24 @@ with sync_playwright() as sp:
           "og-card" not in _landed, f"landed on {_landed}")
     cp.evaluate((ROOT / "skribl" / "static" / "lib" / "sharecard.js")
                 .read_text(encoding="utf-8"))
+    # A BOX WITH NO SIZE. Every fixture here carries its canvas size, so every
+    # post in this feed takes its drawing's shape (v322) and shows its poster
+    # by fitPoster(); the band crop below is what a post WITHOUT a size shows
+    # -- a row from before the column, a host that does not pass it -- so it
+    # is measured on one: the page's own template, cloned as feed.js clones
+    # it, with no size written in.
+    cp.evaluate("""(id) => {
+        const t = document.getElementById('skriblPostTpl').content.cloneNode(true);
+        const box = t.querySelector('[data-skribl-inline]');
+        box.setAttribute('data-skribl-id', id); box.id = 'bandBox';
+        const img = box.querySelector('.skribl-inline-poster');
+        img.setAttribute('src', img.getAttribute('src').replace('__ID__', id));
+        const holder = document.createElement('article');
+        holder.appendChild(t);
+        document.getElementById('feedList').appendChild(holder);
+        window.SkriblInline.mount(holder); }""", id_a)
     geom = cp.evaluate("""() => {
-        // SCOPED TO THE FEED. The page's first .skribl-inline is the
-        // COMPOSER's draft box now, and a draft has no poster to crop — it is
-        // not published, so there is no card. Selecting it read null.
-        const el = document.querySelector('#feedList .skribl-inline');
+        const el = document.getElementById('bandBox');
         const img = el.querySelector('.skribl-inline-poster');
         const box = el.getBoundingClientRect(), pr = img.getBoundingClientRect();
         // The poster's percentage height and top resolve against the PADDING
@@ -1329,7 +1371,29 @@ with sync_playwright() as sp:
     #   here rather than loading that module (7.8 KB a host would pay), and a
     #   Flip resetting it. Spent first: nothing in adopt() was dead; the rule
     #   is one loop and one expression. 38,239 B measured.
-    EMBED_RATCHET = 38_250
+    # RAISED (the in-post player, owner: "bring Pad's watching experience into
+    #   the post ... it's critical"; "all yes"), for four named costs, every
+    #   one paid by every page that shows a post, because the line is there at
+    #   rest:
+    #     lib/replayline.js  +8,347  the Pad's own line and scrubber -- the
+    #                                module, not a copy, so a post cannot say
+    #                                or offer speeds differently from the Pad
+    #                                and /s/<id> (this ratchet once paid 289 B
+    #                                to keep it out; the line is the reason to
+    #                                pay for it now)
+    #     lib/scrubkeys.js   +1,604  the keyboard half every scrubber here has
+    #     inlineplayer.css   +4,433  the line, the shaped box, the v4 button
+    #     inlineplayer.js    +5,646  the line at rest from the listing, a
+    #                                Flip's pages painted in the scrubber (here,
+    #                                through the module's `draw` hook, so the
+    #                                Pad and /s/<id> do not carry them), the
+    #                                stored shape read, scrub, speed
+    #   Spent first: the sheet's new rules carry no prose (their reasoning is
+    #   in the script's header) and are one line each; the old wash behind the
+    #   play button and its shadow are gone. 58,227 B measured; then +42 B
+    #   when the words row stopped taking taps (A11Y 10 found the scrubber's
+    #   and loop's 44px reach covered where they meet it): 58,292 B measured.
+    EMBED_RATCHET = 58_300
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -1356,8 +1420,8 @@ with sync_playwright() as sp:
     # raises on a 404. Named for the count it checks — it used to be called
     # "every asset the embed macro names is one the server serves", which is
     # the loop's job and not this line's.
-    check("the embed macro names exactly the six assets a host pays for",
-          len(embed_urls) == 6, str(embed_urls))
+    check("the embed macro names exactly the eight assets a host pays for",
+          len(embed_urls) == 8, str(embed_urls))
     _embed_margin = EMBED_RATCHET - total
     check(f"the in-post player costs a host no more than {EMBED_RATCHET:,} bytes "
           f"of CSS and JavaScript",
@@ -1398,7 +1462,7 @@ with sync_playwright() as sp:
     # that was drawn. Three shapes, because the error's size depends on how far
     # the drawing is from 16:9 and one landscape fixture would have shown a
     # third of it. Two widths, because the box is fluid.
-    print("\nIN-POST — a drawing keeps its own aspect in a 16:9 box")
+    print("\nIN-POST — a drawing keeps its own aspect in its box")
     for _label, _cw, _chh in (("9:16", 450, 800), ("4:3", 816, 612), ("1:1", 700, 700)):
         _pts = [{"x": 30 + i * 8, "y": 30 + i * 14, "color": "#e9ecf5", "size": 8,
                  "t": i * 30, "start": i == 0, "erase": False} for i in range(40)]
@@ -1656,6 +1720,276 @@ with sync_playwright() as sp:
                       f"blurred photo that keeps its edge is the blur being "
                       f"discarded, which is what a feed box used to do")
         _rp.close()
+
+    # ---------------------------------------------------------------------------
+    # THE POST (v322, the owner's pick for the in-post player: "bring Pad's
+    # watching experience into the post ... it's critical"; "all yes").
+    #
+    # The box takes the drawing's shape; under it, always, the Pad's line --
+    # the scrubber in the drawing's shape and "Drawn in 15 sec · watching at
+    # 1×", the speed in it a button -- with mute and loop beside the scrubber,
+    # off the drawing; the play button is white with a thin purple edge. All of
+    # it at rest, from the listing, because NOTHING FETCHES UNTIL SOMEBODY
+    # ASKS: so each check below that is about rest also proves no payload was
+    # fetched. Measured at a phone's width with touch, where the 44px targets
+    # matter, on fresh pages so no earlier check's state leaks in.
+    print("\nTHE POST — shaped to its drawing, the line under it, before anybody asks")
+    # ITS OWN POSTS, made here: by now this suite has posted enough that its
+    # first fixtures have left the top of the feed. Real recordings through
+    # the Pad (post_one), one with sound, and the three-page Flip with holds.
+    id_a, _e1 = post_one(b, "The post fixture")
+    id_b, _e2 = post_one(b, "The post fixture, unplayed")
+    id_m, _e3 = post_one(b, "The post fixture with sound", music=True)
+    try:
+        flip_id = post_flip("The post flip fixture")["id"]
+    except Exception:
+        flip_id = None
+    check("the post's own fixtures were posted (fixture)", bool(id_a and id_b and id_m and flip_id),
+          f"{id_a}, {id_b}, {id_m}, {flip_id}; {(_e1 + _e2 + _e3)[:2]}")
+    _listing = json.loads(urllib.request.urlopen(BASE + "/api/skribls?limit=100", timeout=20).read())
+    _items = _listing.get("items", _listing) if isinstance(_listing, dict) else _listing
+    _by = {i["id"]: i for i in _items}
+    _la, _lm = (_by.get(id_a) or {}).get("line") or {}, (_by.get(id_m) or {}).get("line") or {}
+    _lf = (_by.get(flip_id) or {}).get("line") or {} if flip_id else {}
+    check("the listing carries each post's line: the drawing's time, its replay's, the author's "
+          "speed and the scrubber's shape",
+          isinstance(_la.get("drawn"), int) and _la["drawn"] > 0 and isinstance(_la.get("play"), int)
+          and "speed" in _la and re.fullmatch(r"[0-9a-z]{128}", _la.get("shape") or "") is not None
+          and set(_la.get("shape") or "0") != {"0"}, json.dumps(_la)[:240])
+    check("...and whether it has sound, so mute holds its place from the first paint",
+          _la.get("sound") is False and _lm.get("sound") is True,
+          f"{_la.get('sound')!r} / {_lm.get('sound')!r}")
+    if flip_id:
+        check("...and a Flip's line is its page count, not a drawing time",
+              _lf.get("pages") == 3 and "drawn" not in _lf, json.dumps(_lf))
+
+    _pp = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True, has_touch=True)
+    _pg2 = _pp.new_page()
+    _perrs, _preqs = [], []
+    _pg2.on("pageerror", lambda e: _perrs.append(str(e)))
+    _pg2.on("request", lambda r: _preqs.append(r.url)
+            if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
+    browsing.goto(_pg2, BASE, "/feed")
+    _pg2.wait_for_timeout(600)
+    _POST = """(id) => {
+      const el = document.querySelector('[data-skribl-id="' + id + '"]');
+      const ln = el.nextElementSibling, r = el.getBoundingClientRect();
+      const strip = ln && ln.querySelector('.rl-strip');
+      let ink = 0; const tall = new Set();
+      if (strip && strip.width) { const W = strip.width, H = strip.height, d = strip.getContext('2d').getImageData(0, 0, W, H).data;
+        for (let i = 3; i < d.length; i += 4) if (d[i] > 0) ink++;
+        /* THE SHAPE, NOT JUST INK: how tall each painted column is. An even
+           placeholder track (no shape known) paints every column the same
+           height, so it has one distinct height; a drawing has many. */
+        for (let x = 0; x < W; x++) { let h = 0; for (let y = 0; y < H; y++) if (d[(y * W + x) * 4 + 3] > 0) h++; if (h) tall.add(h); } }
+      return { aspect: r.width / r.height, w: +el.getAttribute('data-skribl-w'), h: +el.getAttribute('data-skribl-h'),
+               line: !!ln && ln.classList.contains('skribl-inline-line'), on: !!ln && ln.classList.contains('is-on'),
+               text: ln && ln.querySelector('.rl-text') ? ln.querySelector('.rl-text').innerText.replace(/\\s+/g, ' ').trim() : null,
+               strip: strip ? strip.toDataURL() : null, ink: ink, heights: tall.size,
+               height: Math.round((el.closest('article') || el).getBoundingClientRect().height * 10) / 10,
+               fit: !!(ln && ln.querySelector('[data-r="fit"]') && !ln.querySelector('[data-r="fit"]').hidden) }; }"""
+    _rest = _pg2.evaluate(_POST, id_a)
+    _words = _pg2.evaluate("(ms) => window.SkriblReplayLine ? window.SkriblReplayLine.words(ms) : '?'", _la.get("drawn") or 0)
+    # "long pauses skipped" joins the words when the replay skips a tenth or
+    # more of the drawing's time (lib/replayline.js), which a hand's pauses
+    # often do -- so the whole sentence is worked out from the listing too.
+    _d, _p = _la.get("drawn") or 0, _la.get("play") or 0
+    _said = f"Drawn in {_words} · watching at 1×" + (
+        " long pauses skipped" if _d - _p >= _d / 10 and _d - _p >= 1000 else "")
+    check("a post takes its drawing's shape: no bars beside it",
+          _rest["w"] > 0 and abs(_rest["aspect"] - _rest["w"] / _rest["h"]) < 0.01,
+          f"box {_rest['aspect']:.3f} vs drawing {_rest['w']}x{_rest['h']}")
+    check("the line is under the drawing at rest, saying what it is, before any payload",
+          _rest["line"] and _rest["on"] and _rest["text"] == _said
+          and not _preqs, f"{_rest['text']!r} (expected {_said!r}); payload requests {len(_preqs)}")
+    check("...over the drawing's shape, painted from the listing alone",
+          _rest["ink"] > 200 and _rest["heights"] >= 4 and not _preqs,
+          f"{_rest['ink']} painted pixels, {_rest['heights']} different column heights")
+    if flip_id:
+        _frest = _pg2.evaluate(_POST, flip_id)
+        check("a Flip's line counts its pages and offers no Fit, before any payload",
+              _frest["text"] == "3 pages · watching at 1×" and not _frest["fit"] and not _preqs,
+              f"{_frest['text']!r}, Fit shown {_frest['fit']}")
+
+    # THE FEED NEVER JUMPS, AND PRESSING PLAY CHANGES NOTHING UNDER THE DRAWING:
+    # the same post height at rest, playing and paused, and the scrubber's
+    # bars the same pixels before the drawing arrived and after it settled.
+    _pg2.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_a)
+    _pg2.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'", arg=id_a, timeout=15000)
+    _pg2.wait_for_timeout(900)
+    _playing = _pg2.evaluate(_POST, id_a)
+    _head = _pg2.evaluate("""(id) => { const ln = document.querySelector('[data-skribl-id="' + id + '"]').nextElementSibling;
+        const h = ln && ln.querySelector('.rl-head'); return h ? parseFloat(h.style.left) || 0 : -1; }""", id_a)
+    _pg2.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_a)
+    _pg2.wait_for_timeout(300)
+    _paused = _pg2.evaluate(_POST, id_a)
+    _pst = _pg2.evaluate("(id) => window.SkriblInline.find(id).state().state", id_a)
+    check("a tap on the drawing pauses it, with the play button showing",
+          _pst == "paused" and _pg2.evaluate("""(id) => getComputedStyle(document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-veil')).opacity""", id_a) == "1",
+          _pst)
+    check("the post is the same height at rest, playing and paused",
+          _rest["height"] == _playing["height"] == _paused["height"],
+          f"{_rest['height']} / {_playing['height']} / {_paused['height']}")
+    check("the scrubber's playhead moves while it plays", 0 < _head < 100, f"{_head}%")
+    _pg2.evaluate("() => window.SkriblInline.stopAll()")
+    _pg2.wait_for_timeout(200)
+    _settled = _pg2.evaluate(_POST, id_a)
+    check("pressing play changes nothing under the drawing: the same bars before and after",
+          _settled["strip"] == _rest["strip"] and _rest["strip"] is not None,
+          "the strip repainted differently once the drawing arrived")
+    check("...and the words stay the post's own", bool(_rest["text"]) and _settled["text"] == _rest["text"],
+          repr(_settled["text"]))
+
+    # THE PLAYER'S NUMBERS ARE THE LISTING'S: the server ported the clock, so
+    # the line at rest and the drawing playing cannot disagree.
+    _par = _pg2.evaluate("""async (id) => {
+        const p = window.SkriblInline.find(id).state();
+        const r = await fetch(document.querySelector('[data-skribl-id="' + id + '"]').getAttribute('data-skribl-api') + '/' + id);
+        const j = await r.json(); const f = (j.skribl || j).frames;
+        return { total: p.totalMs, drawn: window.SkriblReplayLine ? window.SkriblReplayLine.drawnMs(f[0].strokes) : -1 }; }""", id_a)
+    check("the line's numbers are the player's: the replay's length and the drawing's time",
+          abs(_par["total"] - _la.get("play", -9)) <= 1 and abs(_par["drawn"] - _la.get("drawn", -9)) <= 1,
+          f"player {_par} vs listing play {_la.get('play')}, drawn {_la.get('drawn')}")
+
+    # DRAG THE SCRUBBER OF A POST NOBODY HAS PLAYED: it fetches, and shows the
+    # place it was dragged to, paused there with the poster gone.
+    _SCRUB_AT = """(id) => { const ln = document.querySelector('[data-skribl-id="' + id + '"]').nextElementSibling;
+        const b = ln && ln.querySelector('.skribl-inline-scrub'); if (!b) return null; b.scrollIntoView({block: 'center'});
+        const r = b.getBoundingClientRect(); return [r.left, r.top + r.height / 2, r.width]; }"""
+    _bar = _pg2.evaluate(_SCRUB_AT, id_b)
+    if _bar:
+        _pg2.mouse.move(_bar[0] + 4, _bar[1]); _pg2.mouse.down()
+        for _k in range(1, 11):
+            _pg2.mouse.move(_bar[0] + 4 + (_bar[2] * 0.5 - 4) * _k / 10, _bar[1]); _pg2.wait_for_timeout(30)
+        _pg2.mouse.up()
+        try:
+            _pg2.wait_for_function("(id) => window.SkriblInline.find(id).state().loaded", arg=id_b, timeout=15000)
+        except PWTimeout:
+            pass
+        _pg2.wait_for_timeout(300)
+    _ds = _pg2.evaluate("""(id) => { const s = window.SkriblInline.find(id).state();
+        return { state: s.state, frac: s.elapsedMs / s.totalMs,
+                 poster: getComputedStyle(document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-poster')).opacity }; }""", id_b)
+    check("dragging the scrubber of an unplayed post shows the place it was dragged to",
+          _ds["state"] == "paused" and abs(_ds["frac"] - 0.5) < 0.06 and _ds["poster"] == "0", json.dumps(_ds))
+
+    # THE SPEED IN THE LINE IS THE BUTTON. One tap opens the speeds over the
+    # scrubber, one picks and closes, and the clock runs at it.
+    _IN_LINE = """([id, sel]) => { const ln = document.querySelector('[data-skribl-id="' + id + '"]').nextElementSibling;
+        return ln && ln.querySelector(sel); }"""
+    _pg2.evaluate("(a) => { const n = (" + _IN_LINE + ")(a); if (n) n.click(); }", [id_b, ".rl-speed"])
+    _pg2.wait_for_timeout(250)
+    _open = _pg2.evaluate("(a) => { const n = (" + _IN_LINE + ")(a); return !!n && !n.hidden; }", [id_b, ".rl-chips"])
+    _pg2.evaluate("(a) => { const n = (" + _IN_LINE + ")(a); if (n) n.click(); }", [id_b, '.rl-chips [data-r="2"]'])
+    _pg2.wait_for_timeout(200)
+    _sp = _pg2.evaluate("""(id) => { const ln = document.querySelector('[data-skribl-id="' + id + '"]').nextElementSibling;
+        const ch = ln && ln.querySelector('.rl-chips'), tx = ln && ln.querySelector('.rl-text');
+        return { rate: window.SkriblInline.find(id).rate(), closed: !!ch && ch.hidden,
+                 text: tx ? tx.innerText.replace(/\\s+/g, ' ').trim() : '' }; }""", id_b)
+    check("the speed in the line opens the speeds, and a pick plays at it and closes them",
+          _open and _sp["rate"] == 2 and _sp["closed"] and "watching at 2×" in _sp["text"], json.dumps(_sp))
+
+    # A FLIP'S SCRUBBER IS ITS PAGES, one equal segment each, not its clock.
+    # Pages of 333, 667 and 333 ms: a quarter of the way along is three
+    # quarters into page 1 (250 ms) where the clock would say page 2 (333),
+    # and 70% is just into page 3 (1,033 ms) where the clock says page 2
+    # (933). Halfway would not tell them apart -- both read 667.
+    if flip_id:
+        _fb = _pg2.evaluate(_SCRUB_AT, flip_id)
+        _ftimes = []
+        for _f in ((0.25, 0.7) if _fb else ()):
+            _pg2.mouse.click(_fb[0] + _fb[2] * _f, _fb[1])
+            try:
+                _pg2.wait_for_function("(id) => window.SkriblInline.find(id).state().loaded", arg=flip_id, timeout=15000)
+            except PWTimeout:
+                pass
+            _pg2.wait_for_timeout(250)
+            _ftimes.append(_pg2.evaluate("(id) => window.SkriblInline.find(id).state().elapsedMs", flip_id))
+        check("a Flip's scrubber is one segment a page, not its clock: a quarter lands in page 1, 70% in page 3",
+              len(_ftimes) == 2 and abs(_ftimes[0] - 250) < 40 and 1000 <= _ftimes[1] < 1334, f"{_ftimes} ms")
+
+    # THE PLAY BUTTON (the owner's v4): white, a thin purple edge, no shadow,
+    # and no wash behind it.
+    _pb = _pg2.evaluate("""(id) => { const el = document.querySelector('[data-skribl-id="' + id + '"]');
+        const c = getComputedStyle(el.querySelector('.skribl-inline-play'));
+        return { bg: c.backgroundColor, edge: c.borderTopWidth + ' ' + c.borderTopColor, shadow: c.boxShadow,
+                 veil: getComputedStyle(el.querySelector('.skribl-inline-veil')).backgroundImage,
+                 tri: getComputedStyle(el.querySelector('.skribl-inline-play svg')).fill }; }""", id_m)
+    check("the play button is white with a thin purple edge, no shadow and no wash behind it",
+          _pb["bg"] == "rgb(255, 255, 255)" and _pb["edge"].startswith("2px rgba(124, 92, 255")
+          and _pb["shadow"] == "none" and _pb["veil"] == "none" and _pb["tri"] == "rgb(124, 92, 255)",
+          json.dumps(_pb))
+
+    # OFF THE DRAWING, AND 44px TO A FINGER. Mute and loop live in the line
+    # now, and the speed, the scrubber and loop each answer a finger over 44px
+    # -- asked of what is painted there (elementFromPoint), not of a rect.
+    _tg = _pg2.evaluate("""(id) => { const el = document.querySelector('[data-skribl-id="' + id + '"]'), ln = el.nextElementSibling;
+        if (!ln || !ln.classList.contains('skribl-inline-line')) return { inBox: !!el.querySelector('.skribl-inline-loop'), inLine: false,
+          muteShown: false, speed: 0, scrub: 0, loop: 0 };
+        ln.scrollIntoView({block: 'center'});
+        const tall = (n) => { const b = n.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2;
+          const own = (t) => !!t && (t === n || n.contains(t)); let up = 0, dn = 0;
+          while (up < 40 && own(document.elementFromPoint(x, y - up - 1))) up++;
+          while (dn < 40 && own(document.elementFromPoint(x, y + dn + 1))) dn++; return up + dn + 1; };
+        return { inBox: !!el.querySelector('.skribl-inline-loop, .skribl-inline-mute'),
+                 inLine: !!ln.querySelector('.skribl-inline-loop') && !!ln.querySelector('.skribl-inline-mute'),
+                 muteShown: getComputedStyle(ln.querySelector('.skribl-inline-mute')).display !== 'none',
+                 speed: tall(ln.querySelector('.rl-speed')), scrub: tall(ln.querySelector('.skribl-inline-scrub')),
+                 loop: tall(ln.querySelector('.skribl-inline-loop')) }; }""", id_m)
+    check("mute and loop are off the drawing, in the line under it",
+          not _tg["inBox"] and _tg["inLine"], json.dumps(_tg))
+    check("...and a post with sound shows mute there before it is played", _tg["muteShown"], json.dumps(_tg))
+    check("the speed, the scrubber and loop are each 44px to a finger",
+          min(_tg["speed"], _tg["scrub"], _tg["loop"]) >= 44, json.dumps(_tg))
+
+    # A HOST THAT SWITCHES THEME AFTER LOAD. The line takes the host's text;
+    # its quiet words were once a colour mixed from it, and Chrome left that
+    # mix stale when the page's colour changed (the light page showed the
+    # dark page's words, white on white). They are quiet by opacity now.
+    _th = _pg2.evaluate("""(id) => { const ln = document.querySelector('[data-skribl-id="' + id + '"]').nextElementSibling;
+        const q = ln && ln.querySelector('.rl-m'); if (!q) return { color: null, opacity: '1' };
+        document.body.style.setProperty('color', 'rgb(29, 26, 43)', 'important');
+        const c = getComputedStyle(q);
+        const out = { color: c.color, opacity: c.opacity };
+        document.body.style.removeProperty('color'); return out; }""", id_a)
+    check("after the host switches theme, the line's quiet words take its new colour",
+          _th["color"] == "rgb(29, 26, 43)" and float(_th["opacity"]) < 0.8, json.dumps(_th))
+    check("no page errors on the post", not _perrs, "; ".join(_perrs[:2]))
+    _pp.close()
+
+    # NO STICKY HOVER. iOS keeps :hover on the last thing tapped, so a hover
+    # outside (hover: hover) stays lit on a phone. Asked of the sheet's rules,
+    # every one: a :hover selector must sit inside a (hover: hover) block.
+    _hv = _pg2 = None
+    _hc = b.new_page(viewport={"width": 620, "height": 900})
+    browsing.goto(_hc, BASE, "/feed")
+    _hv = _hc.evaluate("""() => { const bad = [];
+        for (const sh of document.styleSheets) { if (!/inlineplayer\\.css/.test(sh.href || '')) continue;
+          const walk = (rules, guarded) => { for (const r of rules) {
+            if (r.media && r.cssRules) walk(r.cssRules, guarded || /hover:\\s*hover/.test(r.media.mediaText));
+            else if (r.selectorText && /:hover/.test(r.selectorText) && !guarded) bad.push(r.selectorText); } };
+          walk(sh.cssRules, false); }
+        return bad; }""")
+    _hc.close()
+    check("every hover in the post's stylesheet waits for a real hover, so a tap leaves nothing lit",
+          _hv == [], "; ".join(_hv))
+
+    # THE BLOOBY CARD'S POSTER SHOWS BLOOBY. A page kept underneath is the
+    # stage, not the picture: the poster is the first inked page drawn on it,
+    # with it painted beneath (flip.js posterPage). The card's own page 1 is
+    # the empty card. Asked of the editor that builds the card, on the demo.
+    _fl = b.new_page(viewport={"width": 1280, "height": 900})
+    browsing.goto(_fl, BASE, "/flip")
+    _fl.wait_for_timeout(800)
+    _demo = json.loads((ROOT / "skribl" / "static" / "help" / "demos" / "flip-blooby-card.json").read_text(encoding="utf-8"))
+    _poster = _fl.evaluate("""(d) => { applyPayload(d);
+        if (typeof posterPage !== 'function') return { missing: true };
+        const withUnder = frames.indexOf(posterPage());
+        const keep = docUnder; docUnder = null; const without = frames.indexOf(posterPage()); docUnder = keep;
+        return { withUnder: withUnder, without: without }; }""", _demo)
+    _fl.close()
+    check("the Blooby card's poster is Blooby on the card, not the empty card",
+          _poster.get("withUnder") == 1 and _poster.get("without") == 0, json.dumps(_poster))
 
     b.close()
 
