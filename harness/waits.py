@@ -135,6 +135,11 @@ QUIET_JS = r"""
   // measured over a few frames, a glide done by hand. One that never stops
   // (a replay) holds it to the deadline, which is the old sleep, not less.
   q.lastFrame = -Infinity;
+  // A smooth scroll (scroll-behavior: smooth, a drawer's glide) runs no timer
+  // and asks for no frame of the page's own, so it is seen by its scroll
+  // events: caught on the way down, from the document or any element in it.
+  q.lastScroll = -Infinity;
+  addEventListener('scroll', () => { q.lastScroll = now(); }, { capture: true, passive: true });
   const _raf = window.requestAnimationFrame;
   window.requestAnimationFrame = function (cb) { q.lastFrame = now(); return _raf.call(this, cb); };
   const hold = p => { q.busy++; const done = () => { q.busy--; };
@@ -202,6 +207,7 @@ QUIET_JS = r"""
   q.quiet = (until) => {
     if (q.busy > 0) return false;
     if (now() - q.lastFrame < 50) return false;   // asked for a frame in the last three
+    if (now() - q.lastScroll < 60) return false;  // still scrolling
     for (const due of q.timers.values()) if (due <= until) return false;
     if (document.fonts && document.fonts.status !== 'loaded') return false;
     if (document.getAnimations) for (const a of document.getAnimations()) {
@@ -239,20 +245,34 @@ def settle(page, ms):
     schedules the next step as the last one finishes is seen, and so is
     layout that settles over a few frames (a fit measured in a ResizeObserver
     or a requestAnimationFrame). A page without the counter (not
-    instrumented) gets the plain sleep it had before."""
-    if not page.evaluate("() => !!window.__skQuiet"):
+    instrumented) gets the plain sleep it had before.
+
+    THE DEADLINE IS KEPT HERE, not in the page: a navigation restarts the
+    page's clock, and a deadline read from the old page would hold the new
+    one far past the old sleep. Each poll hands the page what is left."""
+    end = time.monotonic() + ms / 1000
+    try:
+        armed = page.evaluate("() => !!window.__skQuiet")
+    except Exception:
+        armed = False
+    if not armed:
         page.wait_for_timeout(ms)
         return
-    deadline = page.evaluate("() => performance.now()") + ms
     quiet_since = None
     while True:
-        t, q = page.evaluate("(d) => [performance.now(), window.__skQuiet.quiet(d)]", deadline)
-        if t >= deadline:
+        left = (end - time.monotonic()) * 1000
+        if left <= 0:
             return
+        try:
+            q = page.evaluate("(r) => !!(window.__skQuiet && window.__skQuiet.quiet(performance.now() + r))", left)
+        except Exception:       # mid-navigation: nothing to ask yet, so not quiet
+            q = False
+        now = time.monotonic()
         if q:
-            if quiet_since is not None and t - quiet_since >= 100:
+            if quiet_since is not None and (now - quiet_since) * 1000 >= 100:
                 return
-            quiet_since = quiet_since if quiet_since is not None else t
+            if quiet_since is None:
+                quiet_since = now
         else:
             quiet_since = None
-        page.wait_for_timeout(25)
+        page.wait_for_timeout(min(25, max(1, left)))
