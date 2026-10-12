@@ -62,6 +62,17 @@ list fails; in the full sweep a listed one that no longer reproduces fails too,
 so the list only gets shorter -- take it off with CENTRING_WRITE_BASELINE=1,
 which rewrites the entries this run measured and keeps the rest.
 
+THREE PHOTOGRAPHS WOBBLE between full sweeps, and only those: the Gallery's
+report-sheet Cancel (a dark pill a shade off its backdrop), the other-tab
+bar's "Keep for later" (the bar's shadow inside the patch) and the draw
+drawer's "High" (in DejaVu). Each sits centred in its crop, and which screen
+reads one as off changes from run to run. Two full sweeps on one day, the
+first waiting on fixed sleeps and the second settling, agreed within a quarter
+pixel on 2,251 of the 2,254 entries both listed. The three that moved were
+these, and so were five of the nine that only one of them listed; the other
+four are the Library's end-of-list icons at 0.52px, just over the line. A
+full sweep that differs only there wants its list rewritten, not a fix.
+
 Writes a report to $CENTRING_OUT (default /tmp/centring-out): report.json and a
 3x crop of each flagged control with crosshairs (green: the painted shape's
 centre; magenta: the mark's optical centre).
@@ -110,8 +121,8 @@ ONLY = (set(filter(None, os.environ.get("CENTRING_COMBOS", "").split(",")))
         or (set() if FULL_SWEEP else set(FAST_COMBOS)))
 ONLY_SCEN = (set(filter(None, os.environ.get("CENTRING_SCENARIOS", "").split(",")))   # indexes into scenarios()
              or (set() if FULL_SWEEP else {str(i) for i in FAST_SCENARIOS}))
-# What a scenario costs, in the measurements one screen of it makes (the full
-# sweep of v322), so the processes below can be handed equal shares.
+# What a scenario costs, in the measurements one screen of it makes (a full
+# sweep, October 2026), so the processes below can be handed equal shares.
 SCEN_WEIGHT = {0: 160, 1: 150, 2: 10, 3: 10, 4: 20, 5: 15, 6: 15, 7: 60, 8: 30, 9: 5,
                10: 12, 11: 5, 12: 20, 13: 5, 14: 5, 15: 10, 16: 5, 17: 10, 18: 5}
 # SIDE BY SIDE. Screens and pages share nothing but the server, so the work is
@@ -803,7 +814,8 @@ def fan_out():
         procs.append((k, g, subprocess.Popen([sys.executable, __file__], env=env, stdout=log,
                                              stderr=subprocess.STDOUT), log, time.monotonic()))
     print(f"{len(procs)} processes side by side: "
-          + "; ".join(",".join(g) + " " + ",".join(sc) for g, sc in shares))
+          + "; ".join(",".join(g) + ("" if len(sc) == len(scenarios(fx)) else " pages " + ",".join(sc))
+                      for g, sc in shares))
     failed = []
     for k, g, proc, log, t0 in procs:
         proc.wait()
