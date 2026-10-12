@@ -59,6 +59,7 @@ import json
 import math
 import os
 import pathlib
+import re
 import struct
 import sys
 import time
@@ -89,6 +90,14 @@ COMBOS = [("phone", {"width": 402, "height": 874}, True), ("short", {"width": 39
 THEMES = ("light", "dark")
 ONLY = set(filter(None, os.environ.get("CENTRING_COMBOS", "").split(",")))
 ONLY_SCEN = set(filter(None, os.environ.get("CENTRING_SCENARIOS", "").split(",")))   # indexes, for working on one driver
+# SIDE BY SIDE. The six combinations share nothing but the server, and run one
+# after another they took 25 minutes. A full run hands them to CENTRING_JOBS
+# processes (default 3), each this file with CENTRING_COMBOS naming its share
+# and CENTRING_PART naming the file it writes what it measured into; this one
+# merges the parts and gives the verdicts. CENTRING_JOBS=1 is the old serial run.
+JOBS = max(1, int(os.environ.get("CENTRING_JOBS", "3") or 1))
+PART = os.environ.get("CENTRING_PART")
+CROP_PREFIX = os.environ.get("CENTRING_CROP_PREFIX", "")
 
 # Controls the suite does not reach, each with its reason. Kept short: an
 # entry here is a control nobody checks.
@@ -309,6 +318,15 @@ def js(pg, code, arg=None):
 
 MISSES = []
 
+# A NAME THAT CARRIES A TIME is a different string on every run: a draft's
+# delete button says "Delete Skribl · Oct 12 1:47 AM". Keyed as it read, each
+# run listed every such button as one finding fixed and another new.
+WHEN = re.compile(r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}(?:, \d{4})? \d{1,2}:\d{2}(?:\s?[AP]M)?")
+
+
+def stable(name):
+    return WHEN.sub("<when>", name) if name else name
+
 
 def click(pg, sel, wait=350):
     try:
@@ -391,15 +409,26 @@ def editor_common(pg, menu, export_item, canvas):
     click(pg, "#paintTargetSeg [data-target=ink], #paintTargetSeg [data-target=pen], #paintTargetSeg button")
     click(pg, "#eyedropperBtn"); yield "eyedropper"; esc(pg)
     click(pg, "#penToolBtn")
-    click(pg, menu); yield "menu"; esc(pg)
+    click(pg, menu); yield "menu"
+    # The menu's last rows (Report, the Tips switch) sit below the fold at
+    # every size, and only what is painted in view counts as reached.
+    js(pg, "() => { const e = document.getElementById('hintSeg'); if (e) e.scrollIntoView({ block: 'center' }); }")
+    pg.wait_for_timeout(300); yield "menu, its end"; esc(pg)
     click(pg, "#tuneBtn"); click(pg, "#gridBtn"); yield "settings, grid"; click(pg, "#gridBtn"); click(pg, "#tuneBtn")
     js(pg, "() => { if (window.SkriblRecoveryKey) SkriblRecoveryKey.present({ key: 'skrb_centring_key' }); }"); pg.wait_for_timeout(400)
     yield "recovery key"
     js(pg, "() => window.SkriblRecoveryKey && SkriblRecoveryKey.close()")
     js(pg, "() => showToast('Cleared', null, { label: 'Undo', onClick() {} })"); pg.wait_for_timeout(200); yield "toast with undo"
     draw(pg, canvas)   # the notice speaks only when this tab has work to lose
-    js(pg, "() => { window.dispatchEvent(new StorageEvent('storage', { key: AUTOSAVE_KEY, newValue: 'x', storageArea: localStorage })); }")
-    pg.wait_for_timeout(500); yield "two-tab notice"
+    # ANOTHER TAB'S DRAWING IS WAITING (lib/othertab.js, T1): the bar the
+    # editor offers when the slot has a copy no open tab answers for. One is
+    # put beside the slot and the editor's own slot asked to offer it, after
+    # its roll call, as a visit would.
+    js(pg, """() => { localStorage.setItem(AUTOSAVE_KEY + ':waiting:centring',
+                JSON.stringify({ w: 'centring', at: Date.now() - 60000, data: '{}' }));
+              const slot = typeof padSlot !== 'undefined' ? padSlot : typeof flipSlot !== 'undefined' ? flipSlot : null;
+              if (slot) slot.offer({}); }""")
+    pg.wait_for_timeout(600); yield "another tab's drawing waiting"
     click(pg, ".othertab-x")
     click(pg, "#mediaOpenBtn"); click(pg, "#mediaTabPhoto"); yield "media card, no photo"; click(pg, "#mediaOpenBtn")
     js(pg, "() => { if (typeof pendingPhotoMeta !== 'undefined') { pendingPhotoMeta = { name: 'p.jpg' }; } if (typeof pendingMusicMeta !== 'undefined') { pendingMusicMeta = { name: 'song.mp3', trimStart: 0, trimEnd: 4 }; } if (typeof refreshPendingCards === 'function') refreshPendingCards(); }")
@@ -642,10 +671,51 @@ def help_error(pg, menu, item):
 inventory = centring_inventory.entries()
 reached, typed_bad, rows, errs = set(), {}, [], []
 
+
+def fan_out():
+    """Run the combinations in JOBS child processes; merge what they measured."""
+    import subprocess
+    import tempfile
+    names = [f"{s}-{t}" for s, _vp, _m in COMBOS for t in THEMES]
+    groups = [g for g in (names[k::JOBS] for k in range(JOBS)) if g]
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="centring-parts-"))
+    procs = []
+    for k, g in enumerate(groups):
+        env = dict(os.environ, CENTRING_COMBOS=",".join(g), CENTRING_PART=str(tmp / f"part{k}.json"),
+                   CENTRING_CROP_PREFIX=f"p{k}-")
+        log = open(tmp / f"part{k}.log", "w")
+        procs.append((k, g, subprocess.Popen([sys.executable, __file__], env=env, stdout=log,
+                                             stderr=subprocess.STDOUT), log, time.monotonic()))
+    print(f"{len(procs)} processes side by side: " + "; ".join(",".join(g) for _k, g, *_ in procs))
+    failed = []
+    for k, g, proc, log, t0 in procs:
+        proc.wait()
+        log.close()
+        part = tmp / f"part{k}.json"
+        print(f"  {','.join(g)}: exit {proc.returncode} after {(time.monotonic() - t0) / 60:.1f} min")
+        if proc.returncode != 0 or not part.exists():
+            failed.append(f"{','.join(g)} (exit {proc.returncode}): "
+                          + " | ".join((tmp / f"part{k}.log").read_text(errors="replace").strip().splitlines()[-3:]))
+            continue
+        got = json.loads(part.read_text())
+        rows.extend(got["rows"])
+        reached.update(got["reached"])
+        for pg_, n, v in got["typed"]:
+            typed_bad.setdefault((pg_, n), v)
+        errs.extend(got["errs"])
+        MISSES.extend(got["misses"])
+    rows.sort(key=lambda r: names.index(r["combo"]))      # the serial run's order
+    check(f"all {len(procs)} side-by-side processes finished and reported", not failed, "; ".join(failed)[:600])
+
+
+FANNED = JOBS > 1 and not ONLY and not ONLY_SCEN and not PART
+if FANNED:
+    fan_out()
+
 with sync_playwright() as p:
-    b = p.chromium.launch()
-    fx = post_fixture()
-    for size, vp, mobile in COMBOS:
+    b = None if FANNED else p.chromium.launch()
+    fx = None if FANNED else post_fixture()
+    for size, vp, mobile in ([] if FANNED else COMBOS):
         for theme in THEMES:
             combo = f"{size}-{theme}"
             if ONLY and combo not in ONLY:
@@ -690,7 +760,7 @@ with sync_playwright() as p:
                     for c in pg.evaluate(SCAN, EXTRA):
                         reached.update(c["keys"])
                         if c["typed"]:
-                            typed_bad.setdefault((path if not path.startswith("/s/") else "/s/<id>", c["name"]), c["typed"])
+                            typed_bad.setdefault((path if not path.startswith("/s/") else "/s/<id>", stable(c["name"])), c["typed"])
                         # An icon alone, a label of three characters or fewer, or a
                         # badge or chip. A menu row with an icon AND words is a
                         # line of text, aligned by the row, and not in scope.
@@ -731,15 +801,23 @@ with sync_playwright() as p:
                                 continue
                             dx, dy, painted, crop = m
                             row = {"combo": combo, "page": path if not path.startswith("/s/") else "/s/<id>", "state": state,
-                                   "control": c["name"] or c["keys"][0] if c["keys"] else c["tag"], "keys": c["keys"],
+                                   "control": stable(c["name"]) or c["keys"][0] if c["keys"] else c["tag"], "keys": c["keys"],
                                    "size": [round(c["rect"][2], 1), round(c["rect"][3], 1)], "face": face or ("text" if textual else "icon"),
                                    "typed": c["typed"], "text": c["text"], "extra": c["extra"], "dx": dx, "dy": dy, "painted": painted}
                             if max(abs(dx), abs(dy)) > TOL and crop is not None:
-                                fn = f"{len(rows):04d}.png"
+                                fn = f"{CROP_PREFIX}{len(rows):04d}.png"
                                 crop.save(OUT / fn); row["crop"] = fn
                             rows.append(row)
                 ctx.close()
-    b.close()
+    if b:
+        b.close()
+
+if PART:
+    # A child of fan_out(): hand back what was measured; the parent judges.
+    pathlib.Path(PART).write_text(json.dumps({
+        "rows": rows, "reached": sorted(reached), "errs": errs, "misses": MISSES,
+        "typed": [[k[0], k[1], v] for k, v in typed_bad.items()]}))
+    sys.exit(0)
 
 # ------------------------------------------------------------------ verdicts
 BASELINE = pathlib.Path(__file__).with_name("centring_baseline.json")
