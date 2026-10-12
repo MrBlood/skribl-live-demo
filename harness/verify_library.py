@@ -260,6 +260,48 @@ with sync_playwright() as sp:
     check("the scrub track seeks the drawing",
           0.6 < sought < 0.9, f"landed at {sought:.2f} of the replay")
 
+    # THE TRANSPORT RESTS WHEN THE DRAWING DOES. It read the player ten times a
+    # second for as long as the page was open, playing or not, and a phone kept
+    # waking up for a drawing standing still. Every read repaints the play
+    # icon, so counting the icon's repaints counts the reads.
+    _READS = """(ms) => new Promise(done => {
+        let n = 0;
+        const mo = new MutationObserver(r => { n += r.length; });
+        mo.observe(document.getElementById('playIcon'), { childList: true });
+        setTimeout(() => { mo.disconnect(); done(n); }, ms); })"""
+    _STATE = """() => { const el = document.getElementById('stageBox');
+        return window.SkriblInline.players().filter(x => x.el === el)[0].state().state; }"""
+    _still = pg.evaluate(_STATE)
+    _reads = pg.evaluate(_READS, 3000)
+    check("with the drawing still, the transport reads the player about once a second, not ten times",
+          _still != "playing" and _reads <= 5, f"{_reads} reads in 3 s, the player {_still}")
+    # ...and a tap on the drawing, which the player handles itself, still shows
+    # on the transport at once. The tap lands just after a read, so a read of
+    # its own would be a second away: Pause showing at once means the press
+    # woke the transport, not the clock.
+    pg.evaluate("""() => new Promise(done => {
+        const mo = new MutationObserver(() => { mo.disconnect(); done(); });
+        mo.observe(document.getElementById('playIcon'), { childList: true }); })""")
+    pg.evaluate("""() => { window.__tapAt = 0; window.__lit = 0;
+        document.addEventListener('pointerup', () => { window.__tapAt = performance.now(); },
+                                  { capture: true, once: true });
+        // The glyph, not the title: lib/tooltip.js takes titles over. The two
+        // bars of Pause are what the eye sees.
+        const icon = document.getElementById('playIcon');
+        const mo = new MutationObserver(() => {
+          if (!window.__lit && icon.innerHTML.includes('M6 5h4')) { window.__lit = performance.now(); mo.disconnect(); } });
+        mo.observe(icon, { childList: true }); }""")
+    _box = pg.locator("#stageBox").bounding_box()
+    pg.mouse.click(_box["x"] + _box["width"] / 2, _box["y"] + _box["height"] / 2)
+    try:
+        pg.wait_for_function("() => window.__lit > 0", timeout=3000)
+    except PWTimeout:
+        pass
+    _tap = pg.evaluate("""() => ({ lag: window.__lit && window.__tapAt ? window.__lit - window.__tapAt : null })""")
+    _tap["state"] = pg.evaluate(_STATE)
+    check("...and a tap on the drawing shows on the transport at once (Play turns to Pause)",
+          _tap["state"] == "playing" and _tap["lag"] is not None and _tap["lag"] < 400, json.dumps(_tap))
+
     # A post has no loop toggle (inlineplayer.css says why); a page ABOUT one
     # does, because somebody looking at a single drawing may want it to stop.
     pg.click("#btnLoop")
