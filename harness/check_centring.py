@@ -169,9 +169,18 @@ SCAN = r"""(extra) => {
             const q = r1.getBoundingClientRect(); if (q.width > 1) cap = [q.left, q.width]; } } }
       lines = tops.size; }
     // An icon ABOVE the words (a tool tile) is a stack, not a one-line label.
+    // The words' boxes are the TEXT's alone. A range over the whole control
+    // returns the icon's own box among them, and an icon is never above
+    // itself, so no tile read as a stack: each was measured as a one-line
+    // label, its name 13px below the middle of a tile it sits low in by design.
     let stack = false;
     { const ic = [...el.querySelectorAll('svg, img')].map(e => e.getBoundingClientRect()).find(b => b.width > 2 && b.height > 2);
-      const rg = document.createRange(); rg.selectNodeContents(el); const tb = [...rg.getClientRects()].filter(q => q.width > 1 && q.height > 1);
+      const tb = [], w3 = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      for (let t; (t = w3.nextNode());) {
+        const p = t.parentElement;
+        if (!t.nodeValue.trim() || !p || p.closest('[hidden]') || getComputedStyle(p).display === 'none') continue;
+        const r3 = document.createRange(); r3.selectNodeContents(t);
+        for (const q of r3.getClientRects()) if (q.width > 1 && q.height > 1) tb.push(q); }
       if (ic && tb.length) { const top = Math.min(...tb.map(q => q.top)), bot = Math.max(...tb.map(q => q.bottom));
         stack = ic.bottom <= top + 1 || ic.top >= bot - 1; } }
     const svg = [...el.querySelectorAll('svg, img, canvas')].some(s => { const b = s.getBoundingClientRect(); return b.width > 2 && b.height > 2 && getComputedStyle(s).visibility !== 'hidden'; });
