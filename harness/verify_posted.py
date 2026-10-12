@@ -1450,4 +1450,145 @@ with sync_playwright() as _pw:
         _pg.context.close()
     _bw.close()
 
+# ---------------------------------------------------------------------------
+print("\nTOO LONG TO POST — said before anything is sent, and the button saves a backup")
+# The Pad plan, steps 2 and 4 (the owner's picks, A and A). A Pad drawing's one
+# frame may hold the whole budget, MAX_POINTS_PER_PAD; at 20,000 it stopped
+# posting at about 15 minutes of drawing, and past the cap it uploaded every
+# byte and came back as "'frames[0].strokes' has too many points". Now: AT the
+# cap it posts, for real; one point past it, nothing is sent, the reason is the
+# words both editors share (lib/postsheet.js failure('long')), and Post becomes
+# Save a backup -- the ⋯ menu's drawer, and a .skribl file holding every point.
+# Flip says the same when its pages add up past the budget, and then what only
+# it knows: how much of the length its generated pages are.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from skribl import validation as _V
+_LONG = ("Couldn’t post. Your drawing is still here. It’s longer than a post can hold, "
+         "so save a backup to keep a copy as a file.")
+_FILL_PAD = """(n) => { const need = n - strokes.length;
+  for (let i = 0; i < need; i++) strokes.push({ x: 20 + (i % 700), y: 20 + ((i / 700) | 0) % 500,
+    color: '#7c5cff', size: 3, t: 4000 + i * 18, start: i === 0 });
+  strokeGroups.push(need); return strokes.length; }"""
+_FILL_FLIP = """(gen) => { const B = window.SkriblPointBudget;
+  const page = (n) => { const s = []; for (let i = 0; i < n; i++) s.push({ x: 20 + (i % 600),
+    y: 20 + ((i / 600) | 0) % 400, color: '#7c5cff', size: 3, t: i * 18, start: i === 0 });
+    return { strokes: s, strokeGroups: [n], hold: 1 }; };
+  while (B.totalPoints(frames) <= B.MAX_TOTAL_POINTS) frames.push(page(19000));
+  for (let i = 0; i < gen; i++) genRecipe.set(frames[frames.length - 1 - i], { kind: 'check' });
+  render(); return frames.length; }"""
+# What the button shows, by what is PAINTED: the hidden icon has no box, and the
+# shown one is what elementFromPoint finds at its middle.
+_SHEET = """() => { const q = (id) => document.getElementById(id);
+  const painted = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); if (!r.width) return false;
+    const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return !!(h && (h === el || el.contains(h))); };
+  return { says: q('postStatusLabel').textContent, error: q('postStatus').classList.contains('error'),
+           shown: !q('postStatus').hidden, label: q('postSubmitLabel').textContent.trim(),
+           plane: painted(q('postSubmitIcon')), floppy: painted(q('postBackupIcon')) }; }"""
+_AFTER = """() => { const o = document.getElementById('postOverlay'), s = document.getElementById('nameShell'),
+    d = document.getElementById('nameDone');
+  return { sheet: !o.hidden && o.classList.contains('open'), drawer: !!s && s.classList.contains('open') && !s.inert,
+           done: d ? d.textContent.trim() : null }; }"""
+
+
+def _start(pw, path, sel, boot, viewport):
+    ctx = pw.new_context(viewport=viewport, accept_downloads=True)
+    pg = ctx.new_page()
+    sent = []
+    pg.on("request", lambda r: sent.append(r.url) if r.method == "POST" and "/api/skribls" in r.url else None)
+    pg.goto(BASE + path, wait_until="load")
+    pg.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{boot}")
+    pg.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+    bx = pg.locator(sel).bounding_box()
+    pg.mouse.move(bx["x"] + 80, bx["y"] + 80); pg.mouse.down()
+    pg.mouse.move(bx["x"] + 200, bx["y"] + 160, steps=10); pg.mouse.up()
+    pg.wait_for_timeout(300)
+    if boot == "pad" and pg.is_visible("#recordBtn"):
+        pg.click("#recordBtn"); pg.wait_for_timeout(400)
+    return ctx, pg, sent
+
+
+def _backup(pg, what):
+    """Press Save a backup: the sheet goes, the menu's drawer comes, and
+    confirming it downloads a .skribl file. Returns (after, pages) where pages
+    is the file's frames' point counts, or None."""
+    pg.click("#postSubmitBtn"); pg.wait_for_timeout(700)
+    after = pg.evaluate(_AFTER)
+    pages = None
+    if after["drawer"]:
+        try:
+            with pg.expect_download(timeout=60000) as dl:
+                pg.click("#nameDone")
+            doc = json.loads(open(dl.value.path(), encoding="utf-8").read())
+            pages = [len(f.get("strokes") or []) for f in (doc.get("frames") or [doc])]
+        except Exception as e:
+            pages = repr(e)[:120]
+    return after, pages
+
+
+with sync_playwright() as _pw:
+    _bt = _pw.chromium.launch()
+    _cap = _V.MAX_TOTAL_POINTS   # the owner's number for a Pad drawing: the whole budget
+    # AT the cap: the Pad posts it, and the server keeps every point.
+    _c, _pg, _sent = _start(_bt, "/skribl-pad", "#canvas", "pad", {"width": 1280, "height": 900})
+    _pg.evaluate(_FILL_PAD, _cap)
+    _pg.click("#postBtn"); _pg.wait_for_timeout(500)
+    _pg.click("#postSubmitBtn")
+    _pg.wait_for_function("() => /Posted/.test(document.querySelector('#postSheet .export-head').textContent)"
+                          " || document.getElementById('postStatus').classList.contains('error')", timeout=120000)
+    _rec = _pg.evaluate("() => JSON.parse(localStorage.getItem('skribl_posted_v1') || '[]')[0] || null")
+    _held = None
+    if _rec and _rec.get("id"):
+        with urllib.request.urlopen(f"{API}/{_rec['id']}") as _r:
+            _env = json.loads(_r.read())
+        _pl = _env.get("skribl") or {}   # the GET envelope's drawing (routes.py)
+        _held = len(((_pl.get("frames") or [_pl])[0]).get("strokes") or [])
+    check(f"Pad: a drawing of exactly {_cap:,} points, as long as a post can hold, posts",
+          _held == _cap, f"server holds {_held}; status {_pg.text_content('#postStatusLabel')!r}")
+    _c.close()
+
+    # One point past it, on a phone in both themes.
+    for _scheme in ("light", "dark"):
+        _c, _pg, _sent = _start(_bt, "/skribl-pad", "#canvas", "pad", {"width": 402, "height": 874})
+        _pg.emulate_media(color_scheme=_scheme)
+        _pg.evaluate(_FILL_PAD, _cap + 1)
+        _pg.click("#postBtn"); _pg.wait_for_timeout(500)
+        _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(500)
+        _s = _pg.evaluate(_SHEET)
+        check(f"Pad ({_scheme}), one point past it: nothing is sent, and the reason is the shared words",
+              not _sent and _s["shown"] and _s["error"] and _s["says"] == _LONG, f"{_s}; {len(_sent)} POST(s)")
+        check(f"...and Post has become Save a backup, with the menu's icon painted in place of the plane",
+              _s["label"] == "Save a backup" and _s["floppy"] and not _s["plane"], str(_s))
+        _after, _pages = _backup(_pg, "pad")
+        check("...which puts the sheet away and opens the ⋯ menu's own drawer",
+              not _after["sheet"] and _after["drawer"] and _after["done"] == "Save a backup", str(_after))
+        check("...and the .skribl file it downloads holds every point",
+              _pages == [_cap + 1], f"{_pages}")
+        # A sheet that did not go away (a failure above) is closed first, so
+        # one red check cannot hide the rest behind a click that never lands.
+        if _pg.evaluate(_AFTER)["sheet"]:
+            _pg.keyboard.press("Escape"); _pg.wait_for_timeout(500)
+        _pg.click("#postBtn", timeout=10000); _pg.wait_for_timeout(500)
+        _s = _pg.evaluate(_SHEET)
+        check("...and opening the sheet again puts Post back",
+              _s["label"] == "Post to Skribl" and _s["plane"] and not _s["floppy"] and not _s["shown"], str(_s))
+        _c.close()
+
+    # Flip, its pages adding up past the budget, three of them generated.
+    _c, _pg, _sent = _start(_bt, "/flip", "#pad", "flip", {"width": 402, "height": 874})
+    _n = _pg.evaluate(_FILL_FLIP, 3)
+    _pg.click("#postBtn"); _pg.wait_for_timeout(500)
+    _pg.click("#postSubmitBtn"); _pg.wait_for_timeout(500)
+    _s = _pg.evaluate(_SHEET)
+    check("Flip, past the budget: nothing is sent, the same words, then its generated pages",
+          not _sent and _s["error"] and _s["says"].startswith(_LONG + " Its 3 generated pages make up "),
+          f"{_s}; {len(_sent)} POST(s)")
+    check("...and the same Save a backup button",
+          _s["label"] == "Save a backup" and _s["floppy"] and not _s["plane"], str(_s))
+    _after, _pages = _backup(_pg, "flip")
+    check("...which saves every page",
+          not _after["sheet"] and isinstance(_pages, list) and len(_pages) == _n, f"{_after}; {_pages}")
+    _c.close()
+    _bt.close()
+
 summarise_and_exit()

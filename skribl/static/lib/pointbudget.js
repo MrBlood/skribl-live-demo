@@ -33,6 +33,12 @@
  * validation.py says why it exists -- a payload that pins a phone -- and this
  * module exists because the client spent a budget it could not see, which is a
  * different problem with a different fix.
+ *
+ * THE PAD COUNTS HERE TOO (the Pad plan, steps 2 and 4). A Pad drawing is one
+ * frame, and the server lets that frame spend the whole document's budget
+ * (MAX_POINTS_PER_PAD) where a Flip page holds a page's. Until then nothing in
+ * the Pad counted: a drawing past the cap uploaded every byte and came back as
+ * "'frames[0].strokes' has too many points". padFits() is asked before Post.
  */
 (function () {
   'use strict';
@@ -43,6 +49,10 @@
   var MAX_TOTAL_POINTS = 200000;
   // Mirrors SKRIBL_MAX_FRAMES in skribl/validation.py, pinned the same way.
   var MAX_FRAMES = 200;
+  // Mirror SKRIBL_MAX_POINTS_PER_PAD and SKRIBL_MAX_GROUPS_PER_PAD: a Pad
+  // drawing's one frame, its points and its strokes. Pinned the same way.
+  var MAX_PAD_POINTS = MAX_TOTAL_POINTS;
+  var MAX_PAD_STROKES = 50000;
 
   /* Every point on every page. Frames that are missing or malformed contribute
      nothing rather than throwing: this runs on the post path, and a budget
@@ -111,9 +121,19 @@
     return ((frames && frames.length) || 0) > MAX_FRAMES;
   }
 
+  /* WOULD THIS PAD DRAWING POST? `points` and `strokes` are its two counts
+     (the Pad's strokes array and its strokeGroups). Both ceilings are the
+     server's for a Pad frame, inclusive, as wouldFit() is. */
+  function padFits(points, strokes) {
+    return (points || 0) <= MAX_PAD_POINTS && (strokes || 0) <= MAX_PAD_STROKES;
+  }
+
   var api = {
     MAX_TOTAL_POINTS: MAX_TOTAL_POINTS,
     MAX_FRAMES: MAX_FRAMES,
+    MAX_PAD_POINTS: MAX_PAD_POINTS,
+    MAX_PAD_STROKES: MAX_PAD_STROKES,
+    padFits: padFits,
     pagesLeft: pagesLeft,
     pagesWouldFit: pagesWouldFit,
     overPages: overPages,

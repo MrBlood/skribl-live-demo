@@ -56,6 +56,9 @@ import sqlalchemy as sa
 from assertions import make_check
 import browsing
 
+sys.path.insert(0, str(ROOT))
+from skribl import validation as SV   # the server's own ceilings, not a copy
+
 results = []
 check = make_check(results)
 CAP = 3
@@ -273,6 +276,31 @@ try:
         st, bad = api(pa, "POST", "", {"kind": "pad", "payload": huge})
         check("a payload over a post's bounds is refused like a post's",
               st in (400, 413), f"{st} {(bad or {}).get('error', '')[:80]}")
+        # A PAD DRAWING AS LONG AS A POST CAN HOLD SAVES AS A DRAFT TOO (the Pad
+        # plan, step 4): drafts are checked by the post's own rule, which held
+        # a Pad drawing to a Flip page's 20,000 points until then -- "Save
+        # draft" failed at about 15 minutes of drawing along with Post. The
+        # long one is deleted again at once, so the cap below is unchanged.
+        def _long(n):
+            f = dict(payload["frames"][0])
+            f["strokes"] = [{"x": 10 + i % 700, "y": 10 + (i // 700) % 500, "color": "#7c5cff",
+                             "size": 3, "t": i * 18, **({"start": True} if i == 0 else {})}
+                            for i in range(n)]
+            f["strokeGroups"] = [n]
+            return dict(payload, frames=[f])
+        # The owner's number -- a Pad drawing may spend the whole budget -- and
+        # not the server's Pad constant, so a server that lowered that
+        # constant shows here instead of moving the check down with it.
+        _lim = SV.MAX_TOTAL_POINTS
+        st, made_long = api(pa, "POST", "", {"kind": "pad", "title": "Two hours", "payload": _long(_lim)})
+        check(f"a Pad draft of {_lim:,} points, as long as a post can hold, saves",
+              st == 201 and (made_long or {}).get("id"), f"{st} {(made_long or {}).get('error', '')[:100]}")
+        if st == 201:
+            api(pa, "DELETE", "/" + made_long["id"])
+        st, bad = api(pa, "POST", "", {"kind": "pad", "title": "Too long", "payload": _long(_lim + 1)})
+        check("...and one point more is refused, by the post's own words",
+              st == 400 and "too many points" in (bad or {}).get("error", ""),
+              f"{st} {(bad or {}).get('error', '')[:100]}")
 
         for i in range(CAP - 1):
             api(pa, "POST", "", {"kind": "pad", "title": f"fill {i}", "payload": payload})

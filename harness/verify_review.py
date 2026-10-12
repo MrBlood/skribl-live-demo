@@ -139,8 +139,41 @@ check("a real WAVE container is accepted",
 
 print("\n#8 — structural complexity limits")
 check("frame count capped", A._validate_payload_complexity({"frames": [{}] * (A.MAX_FRAMES + 1)}) is not None)
+# WHICH CAP REFUSED IT, not merely that something did: this check used to pass
+# on a payload with no strokeGroups, which is refused for that before any point
+# cap is read. A Pad drawing's frame may spend the whole budget and a Flip page
+# holds a page's (the Pad plan, step 4), so each is asked at its own edge.
+def _pts(n):
+    return {"strokes": [{"x": 1, "y": 1}] * n, "strokeGroups": [n] if n else []}
+def _pad(n, groups=None):
+    f = _pts(n)
+    if groups is not None:
+        f["strokeGroups"] = [1] * (groups - 1) + [n - groups + 1]
+    return A._validate_payload_complexity({"playbackMode": "replay", "frames": [f]})
+def _flip(*pages):
+    return A._validate_payload_complexity({"playbackMode": "flip",
+                                           "frames": [_pts(n) for n in pages]})
+_cap = f"limit {A.MAX_POINTS_PER_FRAME})"
+check("a Flip page holds a page's points, and no more",
+      _flip(A.MAX_POINTS_PER_FRAME, 1) is None
+      and _cap in (_flip(A.MAX_POINTS_PER_FRAME + 1, 1) or ""),
+      f"{_flip(A.MAX_POINTS_PER_FRAME + 1, 1)!r}")
+_pp, _pg = getattr(A, "MAX_POINTS_PER_PAD", None), getattr(A, "MAX_GROUPS_PER_PAD", None)
+check("a Pad drawing's one frame holds the whole budget, and no more",
+      _pp == A.MAX_TOTAL_POINTS and _pad(A.MAX_TOTAL_POINTS) is None
+      and f"limit {A.MAX_TOTAL_POINTS})" in (_pad(A.MAX_TOTAL_POINTS + 1) or ""),
+      f"MAX_POINTS_PER_PAD {_pp}; at the budget {_pad(A.MAX_TOTAL_POINTS)!r}; one over {_pad(A.MAX_TOTAL_POINTS + 1)!r}")
+check("a Pad drawing's strokes scale with its points; a Flip page's do not",
+      _pg is not None and _pg == A.MAX_GROUPS_PER_FRAME * A.MAX_TOTAL_POINTS // A.MAX_POINTS_PER_FRAME
+      and _pad(_pg, _pg) is None
+      and "too many entries" in (_pad(_pg + 1, _pg + 1) or "")
+      and "too many entries" in (A._validate_payload_complexity({"playbackMode": "flip", "frames": [
+          dict(_pts(A.MAX_GROUPS_PER_FRAME + 1), strokeGroups=[1] * (A.MAX_GROUPS_PER_FRAME + 1)),
+          _pts(1)]}) or ""),
+      f"pad {_pg}, page {A.MAX_GROUPS_PER_FRAME}")
+_over = [A.MAX_POINTS_PER_FRAME - 1] * (A.MAX_TOTAL_POINTS // (A.MAX_POINTS_PER_FRAME - 1) + 1)
 check("total points capped",
-      A._validate_payload_complexity({"frames": [{"strokes": [{"x": 1, "y": 1}] * (A.MAX_POINTS_PER_FRAME + 1)}]}) is not None)
+      "Too many points overall" in (_flip(*_over) or ""), f"{_flip(*_over)!r}")
 check("NaN coordinate rejected",
       A._validate_payload_complexity({"frames": [{"strokes": [{"x": float("nan"), "y": 1}]}]}) is not None)
 check("Infinity coordinate rejected",

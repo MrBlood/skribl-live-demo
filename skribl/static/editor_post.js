@@ -35,6 +35,7 @@
     compose: window.SKRIBL_MODE === 'compose',
     toast: showToast,
     submit: () => submit(),
+    backup: () => openSaveBackup(),   // editor_menu.js: the ⋯ menu's Save a backup
     cancel: () => { if (sendSkribl._abort) sendSkribl._abort.abort(); },
     onOpen: () => { pendingLocalId = null; openChips(false); renderSpeed(); },
     // Mirror the pad's shape so the snapshot shows whole (no crop), and match
@@ -414,6 +415,17 @@
   }
 
   async function submit() {
+    // TOO LONG FOR A POST, SAID BEFORE ANYTHING IS BUILT OR SENT (the Pad plan,
+    // step 2). A drawing past the server's ceiling for a Pad frame
+    // (lib/pointbudget.js mirrors it) used to upload every byte, about 11 MB
+    // for two hours of drawing, and come back as "'frames[0].strokes' has too
+    // many points". The counts are the payload's: captureCurrentFrame() copies
+    // these two arrays. The server still decides; this only answers sooner.
+    const B = window.SkriblPointBudget;
+    if (B && !B.padFits(strokes.length, strokeGroups.length)) {
+      ui.offerBackup(SkriblPostSheet.failure('long'));
+      return;
+    }
     ui.setState('sending');
     const payload = await buildPostPayload();
     if (!payload) { ui.setState('idle'); return; }

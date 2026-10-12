@@ -632,6 +632,24 @@ MAX_FRAMES = _env_int("SKRIBL_MAX_FRAMES", 200, minimum=1)
 MAX_POINTS_PER_FRAME = _env_int("SKRIBL_MAX_POINTS_PER_FRAME", 20_000, minimum=1)
 MAX_TOTAL_POINTS = _env_int("SKRIBL_MAX_TOTAL_POINTS", 200_000, minimum=1)
 MAX_GROUPS_PER_FRAME = _env_int("SKRIBL_MAX_GROUPS_PER_FRAME", 5_000, minimum=1)
+# A PAD DRAWING IS ONE FRAME, AND IT MAY SPEND THE WHOLE DOCUMENT'S BUDGET (the
+# owner's pick for the Pad plan, step 4: about 2 h 25 min of drawing at the pace
+# measured). The two caps above were set for a Flip PAGE, which plays many times
+# a second; at 20,000 points a Pad drawing stopped posting at about 15 minutes,
+# which is "far above anything the editors produce" for a page and not for a
+# drawing. Measured on a two-hour drawing (170,717 points): it loads in 1.9 s on
+# a desk and 5.8 s on a CPU slowed 4x, plays at Fit at 60 fps, and scrubs from
+# the nearest copy (lib/seekcache.js). MAX_TOTAL_POINTS still binds it.
+#
+# STROKES SCALE WITH IT, at the page's own ratio of four points a stroke, or a
+# drawing of short strokes would meet a stroke cap the owner never chose.
+#
+# ITS OWN VARIABLES, NOT SKRIBL_MAX_POINTS_PER_FRAME. .env.example sets that one
+# to 20000, uncommented, so a deployment configured from the example would have
+# held the Pad at 15 minutes whatever this file said. lib/pointbudget.js
+# mirrors both; verify_sharedrules.py pins the pair.
+MAX_POINTS_PER_PAD = _env_int("SKRIBL_MAX_POINTS_PER_PAD", MAX_TOTAL_POINTS, minimum=1)
+MAX_GROUPS_PER_PAD = _env_int("SKRIBL_MAX_GROUPS_PER_PAD", 50_000, minimum=1)
 # 8, because that is what the CLIENTS obey — lib/holdtiming.js clamps with
 # Math.min(h, MAX_HOLD) and flip.js and app.js both read it from there. This was
 # 8, so a payload with a hold of 5 to 8 posted cleanly and then played at up to
@@ -656,12 +674,13 @@ def _finite(n):
     return isinstance(n, (int, float)) and not isinstance(n, bool) and math.isfinite(n)
 
 
-def _validate_points(points, label, budget):
+def _validate_points(points, label, budget, cap=None):
+    cap = cap or MAX_POINTS_PER_FRAME
     if not isinstance(points, list):
         return f"'{label}' must be a list.", budget
-    if len(points) > MAX_POINTS_PER_FRAME:
+    if len(points) > cap:
         return (f"'{label}' has too many points ({len(points)}; limit "
-                f"{MAX_POINTS_PER_FRAME}).", budget)
+                f"{cap}).", budget)
     budget -= len(points)
     if budget < 0:
         return f"Too many points overall (limit {MAX_TOTAL_POINTS}).", budget
@@ -690,7 +709,7 @@ def _validate_points(points, label, budget):
     return None, budget
 
 
-def _validate_stroke_groups(groups, label, stroke_count):
+def _validate_stroke_groups(groups, label, stroke_count, cap=None):
     """Group entries are per-stroke point counts; they must account for exactly
     the points present. Applied to BOTH the classic root-level payload and each
     frame — round 3 only covered frames, so a classic Pad payload could carry
@@ -719,7 +738,7 @@ def _validate_stroke_groups(groups, label, stroke_count):
         return f"'{label}' is required when its strokes array contains points."
     if not isinstance(groups, list):
         return f"'{label}' must be a list."
-    if len(groups) > MAX_GROUPS_PER_FRAME:
+    if len(groups) > (cap or MAX_GROUPS_PER_FRAME):
         return f"'{label}' has too many entries."
     total = 0
     for index, value in enumerate(groups):
@@ -771,13 +790,18 @@ def _validate_payload_complexity(payload):
                 return (f"'canvasSize.{key}' must be a whole number between 1 and "
                         f"{MAX_CANVAS_EDGE}.")
     budget = MAX_TOTAL_POINTS
+    # Which editor made it, as every player decides it: a Pad drawing's frame
+    # may hold the whole budget (MAX_POINTS_PER_PAD), a Flip page a page's.
+    pad = _payload_kind(payload) == "pad"
+    pcap = MAX_POINTS_PER_PAD if pad else MAX_POINTS_PER_FRAME
+    gcap = MAX_GROUPS_PER_PAD if pad else MAX_GROUPS_PER_FRAME
     root_strokes = payload.get("strokes", [])
-    err, budget = _validate_points(root_strokes, "strokes", budget)
+    err, budget = _validate_points(root_strokes, "strokes", budget, pcap)
     if err:
         return err
     if isinstance(root_strokes, list):
         err = _validate_stroke_groups(payload.get("strokeGroups"), "strokeGroups",
-                                      len(root_strokes))
+                                      len(root_strokes), gcap)
         if err:
             return err
     frames = payload.get("frames")
@@ -809,12 +833,12 @@ def _validate_payload_complexity(payload):
         if not isinstance(frame, dict):
             return f"'frames[{i}]' must be an object."
         frame_strokes = frame.get("strokes", [])
-        err, budget = _validate_points(frame_strokes, f"frames[{i}].strokes", budget)
+        err, budget = _validate_points(frame_strokes, f"frames[{i}].strokes", budget, pcap)
         if err:
             return err
         if isinstance(frame_strokes, list):
             err = _validate_stroke_groups(frame.get("strokeGroups"),
-                                          f"frames[{i}].strokeGroups", len(frame_strokes))
+                                          f"frames[{i}].strokeGroups", len(frame_strokes), gcap)
             if err:
                 return err
         hold = frame.get("hold")

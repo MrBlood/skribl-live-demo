@@ -272,6 +272,31 @@ with sync_playwright() as p:
               f"{_pb} — a document of exactly {_V.MAX_FRAMES} pages must post, "
               f"and the {_V.MAX_FRAMES + 1}st must not be offered")
 
+    # THE PAD'S CEILING, A THIRD PAIR IN THE SAME MODULE (the Pad plan, step 4).
+    # A Pad drawing's one frame may spend the whole budget, and its strokes
+    # scale with it; the Pad asks padFits() before Post, so a copy that drifted
+    # low would refuse drawings the server takes, and one that drifted high
+    # would upload what it refuses. Asked on the Pad, which must load it.
+    _pp = browser.new_page(viewport={"width": 1000, "height": 860})
+    browsing.goto(_pp, BASE, "/skribl-pad")
+    _pad = _pp.evaluate("""() => { const B = window.SkriblPointBudget;
+      if (!B || !B.padFits) return null;
+      return { points: B.MAX_PAD_POINTS, strokes: B.MAX_PAD_STROKES,
+               atBoth: B.padFits(B.MAX_PAD_POINTS, B.MAX_PAD_STROKES),
+               pointOver: B.padFits(B.MAX_PAD_POINTS + 1, 1),
+               strokeOver: B.padFits(B.MAX_PAD_STROKES + 1, B.MAX_PAD_STROKES + 1) }; }""")
+    _pp.close()
+    check("the Pad loads lib/pointbudget.js and can ask it", _pad is not None,
+          "no SkriblPointBudget.padFits on the Pad — a long drawing uploads every byte to be told no")
+    if _pad:
+        check("the server's Pad ceiling is the one the Pad counts against, points and strokes",
+              _pad["points"] == _V.MAX_POINTS_PER_PAD and _pad["strokes"] == _V.MAX_GROUPS_PER_PAD,
+              f"server {_V.MAX_POINTS_PER_PAD} points / {_V.MAX_GROUPS_PER_PAD} strokes, "
+              f"client {_pad['points']} / {_pad['strokes']}")
+        check("...and both boundaries are inclusive",
+              _pad["atBoth"] is True and _pad["pointOver"] is False and _pad["strokeOver"] is False,
+              f"{_pad} — exactly the cap must post; one past either must not")
+
     _cmax = clamp["max"]
     check("the server's hold ceiling is the one the clients actually obey",
           _V.MAX_HOLD == _cmax,

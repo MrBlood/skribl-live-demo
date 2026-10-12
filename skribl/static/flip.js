@@ -5684,24 +5684,25 @@ async function shareSkribl(){
      free 27 drawings' worth, over on pages any page will do. Saying "too big"
      for both would send a person hunting for the expensive page when what they
      have is simply too many. */
+  /* Both under the same first line as every failure (lib/postsheet.js),
+     since the Pad plan's step 2. */
   if(_B && _B.overPages && _B.overPages(frames)){
-    showShareError('This Skribl is ' + frames.length + ' pages and the limit is '
-      + _B.MAX_FRAMES + '. Delete ' + (frames.length - _B.MAX_FRAMES)
-      + ' to post it. Nothing is lost; your Skribl is still here.');
+    showShareError(SkriblPostSheet.failure('pages', 'It has ' + frames.length
+      + ' pages and a post holds ' + _B.MAX_FRAMES + '; delete '
+      + (frames.length - _B.MAX_FRAMES) + ' to post it.'));
     chip('Too many pages'); return;
   }
+  /* Too long: the Pad's words and its Save a backup button, and then what
+     only Flip knows -- how much of the length its generated pages are. */
   if(_B && _B.overBudget(frames)){
     const d = _B.describe(frames, f => !!genRecipe.get(f));
-    showShareError('This Skribl is ' + d.total.toLocaleString() + ' points and the '
-      + 'limit is ' + d.limit.toLocaleString() + '.'
-      + (d.generatedPages
-         ? ' Its ' + d.generatedPages + ' generated page'
-           + (d.generatedPages === 1 ? ' is ' : 's are ')
-           + Math.round(100 * d.generated / Math.max(1, d.total))
-           + '% of that — deleting one frees far more room than deleting a drawing.'
-         : '')
-      + ' Nothing is lost; your Skribl is still here.');
-    chip('Too big to post'); return;
+    if(postUI) postUI.offerBackup(SkriblPostSheet.failure('long', d.generatedPages
+      ? 'Its ' + d.generatedPages + ' generated page'
+        + (d.generatedPages === 1 ? ' is ' : 's make up ')
+        + Math.round(100 * d.generated / Math.max(1, d.total))
+        + '% of it; deleting one frees far more room than deleting a drawing.'
+      : null));
+    chip('Too long to post'); return;
   }
   if(playing) stop();
   // COMPOSE: hand the animation back and publish nothing. Everything a post
@@ -5838,6 +5839,7 @@ var postUI = window.SkriblPostSheet ? window.SkriblPostSheet.attach({
   opener: document.getElementById('postBtn'),
   toast: (msg) => chip(msg),
   submit: () => shareSkribl(),
+  backup: () => openSaveBackup(),   // the ⋯ menu's Save a backup, below
   cancel: () => { if(_shareAbort) _shareAbort.abort(); },
   // The poster page, the one the share card shows (posterPage), on the
   // drawing's own ground.
@@ -6507,10 +6509,12 @@ if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.attach(moreMenu, { handle: 
 })();
 
 bindEl('postBtn', 'click', openShareCompose);
-bindEl('miSave', 'click',()=>{ closeMenu();
-  // Name it as part of saving — the drawer's button reads "Save a backup".
+// Name it as part of saving — the drawer's button reads "Save a backup". Named,
+// because the Post sheet offers the same backup when an animation is too long.
+function openSaveBackup(){
   if(window.SkriblName && window.SkriblName.open){ window.SkriblName.open({label:'Save a backup', onConfirm:saveDraft}); }
-  else { saveDraft(); } });
+  else { saveDraft(); } }
+bindEl('miSave', 'click',()=>{ closeMenu(); openSaveBackup(); });
 bindEl('miLoad', 'click',()=>{ closeMenu(); draftInput.click(); });
 /* ---- Export sheet: the Pad's shared chooser (_skribl_export.html), wired to
    Flip's existing encoders. The menu's "Export…" opens it; each format runs the

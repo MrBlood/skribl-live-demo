@@ -181,15 +181,19 @@ function clearAllWithUndo() {
   });
 })();
 
-bindEl('saveDraftItem', 'click', () => {
-  closeMenu();
-  // Name it as part of saving: the drawer opens with the current/auto name and
-  // its button reads "Save a backup" — confirming runs the actual download.
+// Name it as part of saving: the drawer opens with the current/auto name and
+// its button reads "Save a backup" — confirming runs the actual download. Named,
+// because the Post sheet offers the same backup when a drawing is too long to post.
+function openSaveBackup() {
   if (window.SkriblName && window.SkriblName.open) {
     window.SkriblName.open({ label: 'Save a backup', onConfirm: saveDraft });
   } else {
     saveDraft();
   }
+}
+bindEl('saveDraftItem', 'click', () => {
+  closeMenu();
+  openSaveBackup();
 });
 
 bindEl('loadDraftItem', 'click', () => {
