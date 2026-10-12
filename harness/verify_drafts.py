@@ -23,6 +23,7 @@ Uses the runner's server on :5001 like the other browser suites.
 import json, sys, time
 from pathlib import Path
 from assertions import make_check
+import os
 
 try:
     from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
@@ -30,7 +31,7 @@ except ImportError:
     print("SKIP: playwright is not installed")
     sys.exit(0)
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = Path(__file__).resolve().parents[1]
 
 results = []

@@ -25,8 +25,9 @@ Browser suite: drives the real editors on the harness server, like verify_boot.
 import re
 import sys
 from assertions import make_check
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 try:
     from playwright.sync_api import sync_playwright

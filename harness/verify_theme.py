@@ -55,8 +55,9 @@ import re
 import sys
 from assertions import make_check
 import browsing
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CSS = ROOT / "skribl" / "static" / "styles.css"
 TPL = ROOT / "skribl" / "templates" / "skribl"

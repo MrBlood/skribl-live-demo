@@ -15,8 +15,9 @@ import re
 import urllib.request
 from pathlib import Path
 from assertions import make_check
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = Path(__file__).resolve().parent.parent
 
 results = []

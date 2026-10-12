@@ -22,8 +22,9 @@ import json
 import urllib.request
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 results = []
 check = make_check(results)

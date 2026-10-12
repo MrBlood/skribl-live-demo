@@ -45,8 +45,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from skribl.jsstrip import strip_bytes, strip_comments, strip_css_bytes   # noqa: E402
 from assertions import make_check
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 STATIC = ROOT / "skribl" / "static"
 
 results = []

@@ -57,8 +57,9 @@ import tempfile
 from playwright.sync_api import sync_playwright
 from assertions import make_check
 import browsing
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 # One row, measured. A wrapped bar is a taller bar.
 ONE_ROW_MAX_PX = 80

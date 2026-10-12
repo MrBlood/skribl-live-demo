@@ -34,7 +34,7 @@ from assertions import make_check
 # number moving, which is the exact failure this section used to encode.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 results = []
 
