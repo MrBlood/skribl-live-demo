@@ -240,11 +240,21 @@ function serializeAutosave() {
   // Persist the deepest undone state too — redoStack[0] is the maximal drawing
   // (most strokes). With it plus the applied strokes above, a refresh can rebuild
   // the redo stack, so undone strokes aren't lost on reload.
+  //
+  // POINTS ARE WRITTEN THE WAY POSTS WRITE THEM (lib/pointwrite.js): 0.01px,
+  // whole milliseconds, no `erase: false`. Flip's autosave always went through
+  // the rule and the Pad's printed every double in full: 115 bytes a point
+  // against 64, measured on a long drawing, so about half an hour of drawing
+  // filled the origin's shared ~5 MB here (v322 plan, step 1). Same schema,
+  // same readers: the rule changes how a number is spelled, never what the
+  // draft holds.
+  const W = window.SkriblPointWrite;
+  const written = (list) => (W ? list.map(W.point) : list.slice());
   let redoStrokes = null, redoStrokeGroups = null;
   if (redoStack.length) {
     const deepest = redoStack[0];
     if (deepest && deepest.strokes) {
-      redoStrokes = deepest.strokes.slice();
+      redoStrokes = written(deepest.strokes);
       redoStrokeGroups = (deepest.strokeGroups || []).slice();
     }
   }
@@ -253,7 +263,7 @@ function serializeAutosave() {
     writerId: WRITER_ID,
     savedAt: new Date().toISOString(),
     baseSnapshot: baseSnapshot,
-    strokes: strokes.slice(),
+    strokes: written(strokes),
     strokeGroups: strokeGroups.slice(),
     redoStrokes: redoStrokes,
     redoStrokeGroups: redoStrokeGroups,
