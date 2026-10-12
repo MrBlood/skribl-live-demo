@@ -32,8 +32,9 @@ from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 from assertions import make_check
 from playerready import await_player, await_player_error
 import browsing
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 WAV = "/tmp/player_isolation.wav"
 
 # THE FIXTURE HAS AUDIO ON PURPOSE, and it is load-bearing for the split.

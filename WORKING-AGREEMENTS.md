@@ -194,6 +194,13 @@ in the PR: that local run is what justifies CI's PR-side trim (below).
 
 - Run suites with `./harness/run_harness.sh [verify_x.py ...]`; bare runs
   everything. A run reporting `skipped N` is not the run you think it is.
+- **Before a PR, run the affected suites side by side:**
+  `python3 harness/run_parallel.py -j 3 verify_parity.py verify_tools.py` gives each its own
+  fresh server and re-runs ALONE any red suite that measures (release_run.py's
+  tag) before believing it. It leaves `LAST-RUN.txt` and the docs alone;
+  `run_harness.sh` and the seal are still the record. (Owner: "1 change is 40
+  minutes? We have an efficiency problem." Half of each change was suites
+  waiting their turn on one server.)
 - **A pull request runs its AFFECTED suites, named one by one, not the full
   battery.** The full battery belongs to a seal and to a change that
   genuinely rewires many suites (an import move, a shared-harness edit);

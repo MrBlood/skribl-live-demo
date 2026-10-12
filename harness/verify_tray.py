@@ -36,8 +36,9 @@ the first version of this suite did not catch:
 import sys
 from assertions import make_check
 import browsing
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 try:
     from playwright.sync_api import sync_playwright

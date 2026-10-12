@@ -1139,7 +1139,7 @@ with sync_playwright() as p:
           "no recovery surface — this is the v280 blocker")
 
     # A share LINK, not a bare id, because that is what somebody actually has.
-    pd.fill("#recoverId", f"http://127.0.0.1:5001/s/{made['id']}")
+    pd.fill("#recoverId", f"{BASE}/s/{made['id']}")
     pd.fill("#recoverKey", made["tok"])
     pd.click("#recoverDelete")
     pd.wait_for_timeout(1200)

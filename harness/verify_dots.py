@@ -3,8 +3,9 @@ from PIL import Image
 from playwright.sync_api import sync_playwright
 from assertions import make_check
 import browsing
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 WAV = "/tmp/boombap.wav"
 # See verify_amber.py: the original uploaded loop isn't in this sandbox, so
 # synthesize an equivalent over-quota track (30s stereo -> ~6.7 MB base64).

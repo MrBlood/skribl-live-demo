@@ -39,8 +39,9 @@ suite past a single invocation in the first place.
 """
 from playwright.sync_api import sync_playwright
 import browsing
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 import math as _math
 import re as _re2
 import pathlib

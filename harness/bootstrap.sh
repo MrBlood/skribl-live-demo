@@ -28,9 +28,9 @@
 #
 #   fuser -k $PORT/tcp          or          kill $(lsof -ti :$PORT)
 #
-# About a third of the suites ignore SKRIBL_BASE and hardcode 127.0.0.1:5001
-# (`grep -L SKRIBL_BASE harness/verify_*.py` lists every suite that does not read
-# it), so the default port is the one to keep for a shared server.
+# Every suite reads SKRIBL_BASE (36 of them hardcoded 127.0.0.1:5001 until the
+# efficiency pass), so a server on any port serves any suite, and several can run
+# side by side: harness/run_parallel.py boots its own, one per worker.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 1
@@ -86,4 +86,3 @@ done
 echo "server:   http://127.0.0.1:$PORT/   db: $DB   log: $LOG"
 echo "suites:   SKRIBL_BASE=http://127.0.0.1:$PORT $VENV/bin/python3 harness/verify_<x>.py"
 echo "stop:     fuser -k $PORT/tcp"
-[ "$PORT" = "5001" ] || echo "note: suites that hardcode 127.0.0.1:5001 will not find this server; use the default port for them"

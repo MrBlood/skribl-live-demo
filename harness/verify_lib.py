@@ -1,8 +1,9 @@
 import math, struct, wave, json
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 WAV = "/tmp/smoke.wav"
 with wave.open(WAV, "wb") as w:
     w.setnchannels(2); w.setsampwidth(2); w.setframerate(44100)

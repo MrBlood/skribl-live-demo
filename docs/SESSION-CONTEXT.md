@@ -75,10 +75,11 @@ already say.** The traps about the interpreter, the difference between the
 seal and CI, suites that discard their servers' stderr, and PostgreSQL are in
 `START-HERE.md`; read that list. These are the rest:
 
-- **Keep the shared server on port 5001.** Only some suites read
-  `SKRIBL_BASE`; a third hardcode `127.0.0.1:5001`, and the rest start their
-  own app or need none. `grep -L SKRIBL_BASE harness/verify_*.py` lists the
-  suites that do not read it on the current tree; do not trust a count typed here.
+- **Any port serves any suite now.** Every suite that uses the shared server
+  reads `SKRIBL_BASE` (default `127.0.0.1:5001`); the rest start their own app
+  or need none. So the suites a change touches can run side by side:
+  `python3 harness/run_parallel.py -j 3 verify_parity.py verify_tools.py`, one fresh server per
+  worker. `run_harness.sh` still uses 5001 and is still the record.
 - **A server started by hand posts into the real rate limit.** `run_harness.sh`
   and `harness/bootstrap.sh` both export `SKRIBL_RATE_MAX_POSTS` for the
   harness; start Flask without it and the posting suites together sit near the

@@ -2,8 +2,9 @@ import math, struct, wave, json
 from playwright.sync_api import sync_playwright
 from assertions import make_check
 import browsing
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 WAV = "/tmp/boombap.wav"
 # Was a real uploaded loop; that upload isn't in this sandbox, so synthesize a
 # track that fills the same role: long enough that its base64 blows the ~4.5 MB

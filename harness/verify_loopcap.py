@@ -11,8 +11,9 @@ bug would have failed them. These assertions pin the numbers instead.
 import base64, json, math, struct, wave
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import os
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 LONG = "/tmp/long42.wav"
 
 # 42s stereo — the exact case from the writeup. Long enough that an uncropped

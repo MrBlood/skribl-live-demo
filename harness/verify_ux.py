@@ -20,6 +20,7 @@ gets wrong, and therefore the useful one to pin.
 """
 from playwright.sync_api import sync_playwright
 import browsing
+import os
 
 
 def ux_open(pg, op):
@@ -33,7 +34,7 @@ def ux_close(pg, op):
     if op.startswith("@pad:"): browsing.pad_drawer_close(pg, settle=0)
     else: pg.click(op)
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 import pathlib
 from assertions import make_check
 import source

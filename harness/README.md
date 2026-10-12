@@ -38,6 +38,14 @@ posting rate limit the way `run_harness.sh` does, and leaves a server on port
     ./harness/run_harness.sh verify_move.py verify_pages.py   # name them
     ./harness/run_harness.sh                                  # everything
 
+To check a change before a pull request, run the suites it touches side by
+side, each against its own fresh server (every suite reads `SKRIBL_BASE`):
+
+    python3 harness/run_parallel.py -j 3 verify_parity.py verify_tools.py
+
+A red from a suite release_run.py tags as measuring is re-run alone before it
+counts. It writes no run record; `run_harness.sh` remains the record.
+
 A bare run works but takes about forty minutes; `release_run.py` is the checkpointing
 version for a full aggregate. Suites can also be driven directly, with a server
 already up:

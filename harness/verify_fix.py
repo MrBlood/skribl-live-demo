@@ -2,7 +2,7 @@ import json, math, struct, wave, os
 from playwright.sync_api import sync_playwright
 from assertions import make_check
 
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 def make_wav(path, seconds, sr=44100):
     with wave.open(path, "wb") as w:

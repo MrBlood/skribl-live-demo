@@ -30,9 +30,10 @@ from playwright.sync_api import sync_playwright
 from assertions import make_check
 import source
 import browsing
+import os
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-BASE = "http://127.0.0.1:5001"
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 FLIP = BASE + "/flip"
 
 results = []
