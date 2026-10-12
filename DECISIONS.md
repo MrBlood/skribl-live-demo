@@ -16326,3 +16326,26 @@ packing from zero points turned the short case packed (and the two-tab checks,
 which read plain records, red with it).
 
 That finishes step 1 for both editors.
+
+## After v322 -- the reason a post failed is on screen on a short window
+
+Found while mocking the v322 plan's words for a post that is too long. The Post
+sheet's status line is its last row, and when the sheet is taller than the
+window the sheet scrolls; nothing scrolled it when the line appeared. Measured
+on main, at 1280 wide: the Pad's refusal sat under the sheet's bottom edge on a
+window 820px tall (and at 760, 700, 600), the Pad's "saved on this device" was
+hidden even at 900 because the Watch row above it pushes it down, and Flip's
+shorter sheet hid its refusal at 650. In each, a person saw "Try again" and no
+reason, in a sheet that did not look scrollable.
+
+`lib/postsheet.js` now watches the status line, and whenever it shows or its
+words change, scrolls the sheet just far enough to bring the line in with a
+little air under it. Watched rather than called from each state, because both
+editors write the line themselves after `setState()`, and the Pad's
+device-only save never calls `setState()` at all. A sheet that fits does not
+move: the phone at 402x874 stays at the top.
+
+`verify_posted` A SHORT WINDOW drives each case where it failed (the Pad's
+refusal at 820, its device-only save at 900, Flip's refusal at 650) and asks
+`elementFromPoint` for the line's first and last rows. Red on main in all
+three, green with the change; the button above the line stays on screen.
