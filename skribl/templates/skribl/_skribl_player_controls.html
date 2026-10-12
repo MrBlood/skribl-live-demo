@@ -45,9 +45,10 @@
       </button>
       {#- Full screen: the profile stage has had it since v304 and the link a
           person actually SHARES did not, which is the wrong way round. Hidden
-          until app.js confirms the API exists, the same way Mute is hidden
-          until there is audio — a control that cannot work should not be on
-          screen. Same glyph as the stage's #btnFull so the two surfaces are
+          until app.js wires it through lib/immersive.js (the real API, or on
+          an iPhone a pinned CSS state), and never shown where there is no
+          #playerFullExit to leave by: the editor includes this partial too.
+          Same glyph as the stage's #btnFull so the two surfaces are
           recognisably one product. -#}
       <button type="button" class="player-btn" id="playerFullBtn" aria-label="Full screen" aria-pressed="false" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>

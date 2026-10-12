@@ -4393,24 +4393,24 @@ function showPlayerError(msg, canRetry) {
   // one is built to a host's byte budget), but that is an argument about CODE,
   // not about which buttons a viewer gets.
   //
-  // SHOWN ONLY IF IT CAN WORK. fullscreenEnabled is false in an iframe without
-  // allowfullscreen and on iOS Safari for non-video elements, and a button that
-  // silently does nothing is worse than no button -- the same rule Mute follows
-  // two lines up. webkit* spellings included because that is what older iPadOS
-  // answers to, which is a device this project is actually used on.
-  // ONE WAY OUT, SHARED: both controls leave through _fsOff, so they cannot
-  // drift. What this block cost the player's size target is argued at the
-  // target, in verify_jsstrip.py, where the number lives.
+  // ON AN IPHONE TOO, through lib/immersive.js. This used to be offered only
+  // where the Fullscreen API answered, and iOS Safari has that API for <video>
+  // and nothing else, so the phone where a drawing is smallest had no way to
+  // make it bigger (owner, from a shared link: "why is there no full screen
+  // available on link player?"). The Gallery and the Library had the same gap
+  // and took the same fix: the real API where there is one, and where there is
+  // not, or it refuses, a CSS state that pins the wrapper over the screen. The
+  // button can always work now, so it is always offered.
+  // ONE WAY OUT, SHARED: both controls leave through the module's close, so
+  // they cannot drift. What this block costs the player is argued at the byte
+  // ratchet in verify_player_isolation.py, where the number lives.
   // canvasWrap, not a second handle on it: `.canvas-wrap` IS the canvas's parent.
   // AND ONLY IF THERE IS A WAY OUT. The EDITOR includes this same partial and
   // runs this player for the `#skribl=` fallback, but #playerFullExit lives in
   // skribl_player.html -- so there, full screen would render a subtree with no
   // exit in it. verify_player_isolation drives that page.
   const _fsExit = document.getElementById('playerFullExit');
-  const _fsReq = canvasWrap.requestFullscreen || canvasWrap.webkitRequestFullscreen;
-  // Unguarded: fsFull is true only while our wrapper IS the fullscreen element.
-  const _fsOff = () => { if (fsFull) (document.exitFullscreen || document.webkitExitFullscreen).call(document); };
-  if (pFull && _fsExit && _fsReq && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
+  if (pFull && _fsExit && window.SkriblImmersive) {
     pFull.hidden = false;
     // THE TRANSPORT TRAVELS WITH THE DRAWING. Only the top-layer subtree
     // renders in full screen, so a transport left in .player-shell is a
@@ -4425,9 +4425,9 @@ function showPlayerError(msg, canRetry) {
     // is where it goes back.
     const _bar = document.getElementById('playerBar');
     let _barHome = null;
-    const _syncFull = () => {
-      const on = (document.fullscreenElement
-                  || document.webkitFullscreenElement) === canvasWrap;
+    // `on` from the module, which answers for both ways in: our wrapper as
+    // the fullscreen element, or its pinned CSS state.
+    const _syncFull = on => {
       fsFull = on;
       pFull.setAttribute('aria-pressed', '' + on);
       pFull.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
@@ -4446,18 +4446,11 @@ function showPlayerError(msg, canRetry) {
       }
       layoutPlayerCanvas();      // the box just changed shape
     };
-    pFull.addEventListener('click', () => {
-      if (fsFull) return _fsOff();
-      // Promise-returning in modern browsers, undefined in older ones; the
-      // catch is on the value, not assumed.
-      const r = _fsReq.call(canvasWrap);
-      if (r && r.catch) r.catch(() => {});
-    });
+    const _full = SkriblImmersive.attach(canvasWrap, { onChange: _syncFull });
+    pFull.addEventListener('click', _full.toggle);
     // The exit control inside the fullscreened subtree — see the note beside
-    // it in skribl_player.html. The SAME handler as the button above.
-    _fsExit.addEventListener('click', _fsOff);
-    ['fullscreenchange', 'webkitfullscreenchange'].forEach(e =>
-      document.addEventListener(e, _syncFull));
+    // it in skribl_player.html. The SAME way out as the button above.
+    _fsExit.addEventListener('click', _full.close);
   }
 
   if (pLoop) pLoop.addEventListener('click', () => {
