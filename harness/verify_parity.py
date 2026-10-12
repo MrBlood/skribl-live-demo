@@ -2599,6 +2599,43 @@ with sync_playwright() as p:
         check(f"{_form}: the dock's Pen and Eraser {'carry their words' if _words else 'are bare icons'}, the same width on both editors",
               all(_pt) and _pt == _ft and all(t["shown"] == _words for t in _pt), f"Pad {_pt} | Flip {_ft}")
 
+    print("\nPARITY — the Grid row stays on one line on a phone (owner: \"A on the grid\")")
+    # With the grid on, Coarse / Medium / Fine dropped under "Grid" on the
+    # owner's 402px iPhone (the row wanted 367px of its 356) and the sheet grew
+    # a line. The words take Flip's Smear 9px sides and the label yields its
+    # 140px, so the row is one line from 390px up on both editors. The row
+    # check above reads the sheet with the grid OFF, where the three words are
+    # not on screen at all, so it could not see this. Narrower, the words may
+    # drop under the label as any row's controls do, and must still fit.
+    _GRID = r"""() => { const row = document.getElementById('tuneGridRow'), sw = document.getElementById('gridBtn'),
+      g = document.getElementById('gridDensityGroup'), clip = row.closest('.tune-clip') || row.parentElement;
+      const a = sw.getBoundingClientRect(), s = g.getBoundingClientRect(), r = row.getBoundingClientRect(), k = clip.getBoundingClientRect();
+      const cells = [...document.querySelectorAll('#gridDensitySeg button')].map(x => Math.round(x.getBoundingClientRect().width * 10) / 10);
+      return { lines: s.top >= a.bottom - 4 ? 2 : 1, h: Math.round(r.height), cells, shown: s.width > 0,
+               inside: s.left >= k.left - 0.5 && s.right <= k.right + 0.5 }; }"""
+    for _vw in (402, 390, 375):
+        for _ed, _path in (("pad", "/skribl-pad"), ("flip", "/flip")):
+            _c = b.new_context(viewport={"width": _vw, "height": 874}, is_mobile=True, has_touch=True)
+            _q = _c.new_page()
+            browsing.goto(_q, BASE, _path)
+            _q.wait_for_timeout(700)
+            _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            _q.evaluate("(s) => document.querySelector(s).click()", "#tuneBtn")
+            _q.wait_for_timeout(600)
+            if _q.get_attribute("#gridBtn", "aria-checked") != "true":
+                _q.evaluate("() => document.getElementById('gridBtn').click()")
+                _q.wait_for_timeout(300)
+            _g = _q.evaluate(_GRID)
+            _c.close()
+            if _vw >= 390:
+                check(f"{_vw}px {_ed.capitalize()}: with the grid on, Coarse / Medium / Fine sit on "
+                      f"the Grid row's one line, each a full finger",
+                      _g["shown"] and _g["lines"] == 1 and min(_g["cells"]) >= 44, str(_g))
+            else:
+                check(f"{_vw}px {_ed.capitalize()}: narrower, the words may drop under the label, "
+                      f"and still fit inside the sheet, each a full finger",
+                      _g["shown"] and _g["inside"] and min(_g["cells"]) >= 44, str(_g))
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))
