@@ -745,7 +745,17 @@ with sync_playwright() as sp:
     #   All three are in app.js, which the player loads whole (initBrandFit
     #   runs on the player too).
     #   142,050 measured.
-    BYTES_RATCHET, BYTES_TARGET = 142_060, 153_800
+    # RAISED (owner, from a shared link on an iPhone: "why is there no full
+    #   screen available on link player?"), for one named cost, after
+    #   spending: +1,414 B net --
+    #     lib/immersive.js 1,874: the Gallery's and the Library's own module,
+    #       the real Fullscreen API where there is one and a pinned CSS state
+    #       where there is not (iOS Safari has the API for <video> only).
+    #   Spent first (-460 in app.js): the player's own request and exit calls,
+    #   their promise catch and both change listeners, which the module does
+    #   once for all three surfaces. A RAISE ADMITTING A CONTROL THE SURFACE
+    #   WAS MISSING: the target stays. 143,464 measured.
+    BYTES_RATCHET, BYTES_TARGET = 143_470, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -1216,14 +1226,19 @@ with sync_playwright() as sp:
             const pr = play.getBoundingClientRect();
             const hit = document.elementFromPoint(pr.left + pr.width / 2,
                                                   pr.top + pr.height / 2);
-            const shown = id => { const e = document.getElementById(id);
-                                  return e ? getComputedStyle(e).display : 'absent'; };
+            /* BOXES, NOT `display`: the three ways off live inside the ⋯
+               menu, and a child of a `display: none` parent keeps its own
+               computed display -- so asking each for `none` reads the menu's
+               standing down as all three still shown. */
+            const boxes = id => { const e = document.getElementById(id);
+                                  return e ? e.getClientRects().length : 'absent'; };
             return { inWrap: w.contains(b),
                      painted: !!(hit && play.contains(hit)),
                      barH: Math.round(br.height),
                      band: Math.round(parseFloat(getComputedStyle(w).paddingBottom) || 0),
                      overlap: Math.round(Math.max(0, cr.bottom - br.top)),
-                     copy: shown('playerCopyBtn'), gallery: shown('playerGalleryLink') }; }""")
+                     more: boxes('playerMoreBtn'), share: boxes('playerShareBtn'),
+                     copy: boxes('playerCopyBtn'), gallery: boxes('playerGalleryLink') }; }""")
         check("...and the transport came with it, painted and pressable",
               not _bar.get("missing") and _bar["inWrap"] and _bar["painted"],
               f"{_bar} \u2014 a control outside the fullscreened subtree keeps its "
@@ -1235,11 +1250,18 @@ with sync_playwright() as sp:
               f"{_bar} \u2014 the bar is absolute and the drawing does not know it "
               f"is there; the wrapper reserves the measured height, and the fit "
               f"scale subtracts the same number so the two cannot disagree")
-        check("...and the two ways OFF this drawing stand down while it fills the screen",
-              not _bar.get("missing") and _bar["copy"] == "none"
-              and _bar["gallery"] == "none",
-              f"{_bar} \u2014 Copy link and Gallery both take a person somewhere "
-              f"else, which is the one thing full screen is not for")
+        # THE \u22ef WITH THEM. Share, Copy link and Gallery moved into the \u22ef menu,
+        # and the rule that stood them down still named the three, so the \u22ef
+        # stayed on screen in full screen and opened an empty sliver of a menu
+        # over the drawing -- a control that does nothing. This row asked for
+        # the three to be `display: none` and was green the whole time.
+        check("...and the ways OFF this drawing stand down while it fills the "
+              "screen, the \u22ef that holds them included",
+              not _bar.get("missing") and _bar["more"] == 0
+              and _bar["share"] == 0 and _bar["copy"] == 0 and _bar["gallery"] == 0,
+              f"{_bar} \u2014 Share, Copy link and Gallery all take a person "
+              f"somewhere else, which is the one thing full screen is not for; "
+              f"a \u22ef left on screen opens a menu with nothing in it")
 
         # ---- THE NIB RIDES ITS OWN LINE --------------------------------
         #
@@ -1288,6 +1310,159 @@ with sync_playwright() as sp:
         check("...and leaving it returns the control to its resting state",
               not _off["fs"] and _off["pressed"] == "false", str(_off))
     _fp.close()
+
+    # ------------------------------------------------------------------
+    # FULL SCREEN ON AN IPHONE, which is where it was missing.
+    #
+    # Owner, from a shared link on the phone: "why is there no full screen
+    # available on link player?" iOS Safari has the Fullscreen API for <video>
+    # and nothing else, so the control above was correctly hidden there, and
+    # the phone, where a drawing is smallest, had no way to make it bigger. The
+    # Gallery and the Library had the same gap and closed it with
+    # lib/immersive.js; this page uses the same module, which pins the wrapper
+    # over the screen as a CSS state where the API is missing or refuses.
+    #
+    # THE API IS TAKEN AWAY BY AN INIT SCRIPT, the only way to reach the
+    # phone's path from a browser that has one (verify_library does the same).
+    # There is no WebKit here, so what iPhone Safari itself makes of the page
+    # is not tested; every behaviour the stand-in is responsible for is.
+    print("\nFULL SCREEN ON AN IPHONE — the same link, with no Fullscreen API")
+    _ictx = b.new_context(viewport={"width": 402, "height": 874}, is_mobile=True,
+                          has_touch=True, device_scale_factor=3)
+    _ip = _ictx.new_page()
+    _ip.add_init_script("""
+      try { Object.defineProperty(document, 'fullscreenEnabled',
+        { configurable: true, get: function () { return false; } }); } catch (e) {}
+      try { Object.defineProperty(document, 'webkitFullscreenEnabled',
+        { configurable: true, get: function () { return false; } }); } catch (e) {}
+      try { delete Element.prototype.requestFullscreen; } catch (e) {}
+      try { delete Element.prototype.webkitRequestFullscreen; } catch (e) {}
+    """)
+    _ip.goto(link, wait_until="load")
+    await_player(_ip, what="the shared link's player on a phone with no Fullscreen API")
+    _ip.wait_for_timeout(1200)
+    _i_rest = _ip.evaluate("""() => {
+        const w = document.querySelector('.canvas-wrap'), r = w.getBoundingClientRect();
+        const b = document.getElementById('playerFullBtn');
+        return { api: !!(document.fullscreenEnabled || document.webkitFullscreenEnabled
+                         || Element.prototype.requestFullscreen),
+                 offered: !!(b && !b.hidden),
+                 wrap: [r.left, r.top, r.width, r.height].map(Math.round) }; }""")
+    check("the simulation is real: this page believes it has no Fullscreen API",
+          _i_rest["api"] is False,
+          f"{_i_rest} — with the API present this block tests the path the "
+          f"desk block above already covers")
+    check("...and the shared link still OFFERS full screen",
+          _i_rest["offered"] is True,
+          f"{_i_rest} — hidden here is the owner's 'why is there no full "
+          f"screen available on link player?', from an iPhone")
+    if _i_rest["offered"] is True:
+        _ip.tap("#playerFullBtn")
+        _ip.wait_for_timeout(700)
+        _i_on = _ip.evaluate("""() => {
+            const w = document.querySelector('.canvas-wrap'), c = w.querySelector('canvas');
+            const bar = document.getElementById('playerBar');
+            const r = w.getBoundingClientRect(), cr = c.getBoundingClientRect(),
+                  br = bar.getBoundingClientRect();
+            const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+            /* PAINTED ON TOP, asked of whatever owns the pixel at each corner:
+               a wrapper with the right rect under the page's own column would
+               pass any question about coordinates. */
+            const mine = (x, y) => { const e = document.elementFromPoint(x, y);
+                                     return !!(e && w.contains(e)); };
+            const hits = id => { const e = document.getElementById(id);
+                const q = e.getBoundingClientRect();
+                const h = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+                return !!(h && e.contains(h)); };
+            const dpr = window.devicePixelRatio || 1;
+            const aw = c.width / dpr, ah = c.height / dpr;
+            const band = parseFloat(getComputedStyle(w).paddingBottom) || 0;
+            const btn = document.getElementById('playerFullBtn');
+            return { wrap: [r.left, r.top, r.width, r.height].map(Math.round), vw: vw, vh: vh,
+                     corners: [mine(1, 1), mine(vw - 2, 1), mine(1, vh - 2), mine(vw - 2, vh - 2)],
+                     canvas: [cr.width, cr.height].map(Math.round),
+                     fit: Math.round(Math.min(vw / aw, (vh - band) / ah) * aw),
+                     shape: [aw, ah], band: Math.round(band),
+                     overlap: Math.round(Math.max(0, cr.bottom - br.top)),
+                     inWrap: w.contains(bar), play: hits('playerPlayBtn'),
+                     exit: hits('playerFullExit'),
+                     more: document.getElementById('playerMoreBtn').getClientRects().length,
+                     pressed: btn.getAttribute('aria-pressed'),
+                     label: btn.getAttribute('aria-label') }; }""")
+        check("...and pressing it lays the drawing over the whole screen, "
+              "painted on top of the page",
+              _i_on["wrap"][:2] == [0, 0] and abs(_i_on["wrap"][2] - _i_on["vw"]) <= 1
+              and abs(_i_on["wrap"][3] - _i_on["vh"]) <= 1 and all(_i_on["corners"]),
+              f"{_i_on} — the stand-in pins itself; the page writes an inline "
+              f"size on this box, which the real API's UA rule overrides and a "
+              f"class does not unless it says !important")
+        check("...the drawing as big as the screen lets it be, in its own shape",
+              abs(_i_on["canvas"][0] - _i_on["fit"]) <= 1 and _i_on["canvas"][1] > 0
+              and abs(_i_on["canvas"][0] / _i_on["canvas"][1]
+                      - _i_on["shape"][0] / _i_on["shape"][1]) < 0.02,
+              f"{_i_on} — the fit is the smaller of the screen's width and "
+              f"the height above the transport, at the authored shape")
+        check("...with the transport on it, painted, pressable and below the drawing",
+              _i_on["inWrap"] and _i_on["play"] and _i_on["band"] > 20
+              and _i_on["overlap"] == 0, str(_i_on))
+        check("...the way out on screen, the ⋯ standing down, and the "
+              "control saying where it is",
+              _i_on["exit"] and _i_on["more"] == 0 and _i_on["pressed"] == "true"
+              and _i_on["label"] == "Leave full screen", str(_i_on))
+
+        # THE PAGE BEHIND DOES NOT MOVE, asked by scrolling it. This page is
+        # exactly a screen tall, so a wheel would move nothing with or without
+        # the lock and the row would pass for the wrong reason; a tall block
+        # goes under the drawing first, so there IS a page to scroll. With the
+        # lock taken off, the same wheel moved it 600px (measured while writing
+        # this row).
+        _ip.evaluate("() => { const d = document.createElement('div'); d.id = '__tall';"
+                     " d.style.height = '2400px'; document.body.appendChild(d); }")
+        _ip.mouse.move(_i_on["vw"] / 2, _i_on["vh"] / 3)
+        _ip.mouse.wheel(0, 600)
+        _ip.wait_for_timeout(400)
+        _i_scroll = _ip.evaluate("() => { const y = Math.round(window.scrollY);"
+                                 " document.getElementById('__tall').remove();"
+                                 " window.scrollTo(0, 0); return y; }")
+        check("...and the page behind it does not scroll",
+              _i_scroll == 0,
+              f"a wheel over the drawing moved the page behind it {_i_scroll}px "
+              f"— somebody else's page sliding past under a full-screen drawing")
+
+        # A MISSING ✕ MUST FAIL, NOT CRASH, for the reason the desk block
+        # gives: tapping a control that is not on screen is a 30s timeout and
+        # a run with no summary. Its absence is already a red row above.
+        if _i_on["exit"]:
+            _ip.tap("#playerFullExit")
+        else:                      # fall back so the REST of the run survives
+            _ip.evaluate("() => document.getElementById('playerFullExit').click()")
+        _ip.wait_for_timeout(700)
+        _i_off = _ip.evaluate("""() => {
+            const w = document.querySelector('.canvas-wrap'), r = w.getBoundingClientRect();
+            const bar = document.getElementById('playerBar');
+            return { wrap: [r.left, r.top, r.width, r.height].map(Math.round),
+                     pinned: w.classList.contains('is-immersive-page'),
+                     locked: document.documentElement.classList.contains('skribl-immersive'),
+                     home: bar.parentElement ? bar.parentElement.id : null,
+                     pressed: document.getElementById('playerFullBtn').getAttribute('aria-pressed') }; }""")
+        check("...and the ✕ puts everything back where it was",
+              all(abs(a - b_) <= 1 for a, b_ in zip(_i_off["wrap"], _i_rest["wrap"]))
+              and not _i_off["pinned"] and not _i_off["locked"]
+              and _i_off["home"] == "playerShell" and _i_off["pressed"] == "false",
+              f"{_i_off} against {_i_rest['wrap']} at rest")
+
+        # AND ESCAPE, for the desk this path also serves (a frame that refuses
+        # the API). A browser leaves real full screen on Escape by itself;
+        # nothing leaves this one unless the module does.
+        _ip.tap("#playerFullBtn")
+        _ip.wait_for_timeout(500)
+        _ip.keyboard.press("Escape")
+        _ip.wait_for_timeout(400)
+        _i_esc = _ip.evaluate("() => [document.querySelector('.canvas-wrap').classList"
+                              ".contains('is-immersive-page'), document.getElementById"
+                              "('playerFullBtn').getAttribute('aria-pressed')]")
+        check("...and Escape leaves it too", _i_esc == [False, "false"], str(_i_esc))
+    _ictx.close()
 
     # THE EDITOR RUNS THIS PLAYER TOO, and it does not have the way out.
     #

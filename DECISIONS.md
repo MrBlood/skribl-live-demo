@@ -15916,3 +15916,37 @@ Flip and the player for any :hover rule outside the guard, and says how many it
 read, so a page that loaded none cannot pass: before this change it found 57
 unguarded on the Pad, 67 on Flip and 5 on the player (67, 87 and 8 before
 #406), and none after it.
+
+**Full screen on the shared link works on an iPhone too, and the ⋯ steps
+aside in full screen (owner, from a shared link on the phone: "why is there
+no full screen available on link player?").** The link page offered full
+screen only where the Fullscreen API answered, and iOS Safari has that API for
+`<video>` and nothing else, so on the phone the button was hidden; the docs
+pass above left exactly this for the device pass, and the device pass found it.
+The page now goes through lib/immersive.js, as the Gallery and the Library do:
+the real API where there is one, and where there is not, or it refuses,
+`.is-immersive-page` pins the drawing's box over the screen and
+`skribl-immersive` stops the page behind it from scrolling. Every full-screen
+rule on the player is written for both as one
+`.canvas-wrap:is(:fullscreen, .is-immersive-page)` selector rather than a
+list, because a browser that does not know `:fullscreen` drops a whole list
+that names it, and the iPhone is the browser this is for. The stand-in's
+pinning says `!important`, as the Fullscreen spec's own UA rule does: the
+player writes an inline size on that box, and in real full screen it is the
+UA's `!important` that beats it. The transport moves in with the drawing as it
+already did, and the ✕ and Escape leave. Found on the way: in full screen the
+⋯ stayed on screen and opened an empty sliver of a menu, because the rule that
+stands Share, Copy link and Gallery down still named the three after they moved
+into the ⋯ (its check asked each for `display: none`, which a child of a
+hidden menu never reports); the ⋯ itself stands down now. The player loads one
+more script, lib/immersive.js (1,874 B served), and app.js lost its own API
+calls (460 B), named at the byte ratchet in verify_player_isolation. Pad and
+Flip: shared, one player shows both. verify_player_isolation "FULL SCREEN ON
+AN IPHONE" takes the API away and asks for the button; for the drawing laid
+over the whole screen and painted on top, at its fitted size and shape; for
+the transport on it, below the drawing, and the ⋯ gone; for a page behind that
+does not scroll under a wheel; and for the ✕ and Escape putting everything
+back. On main the button is not offered; each part of the fix broken alone
+turned its own row red (the pinning without `!important`, the page lock, the
+⋯, the ✕ and the transport each styled for the real API only). Not tested
+here: iPhone Safari itself, which this container does not have.

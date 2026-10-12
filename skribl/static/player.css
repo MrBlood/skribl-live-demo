@@ -351,6 +351,14 @@ html { scrollbar-gutter: stable both-edges; }
    gutter is reserving room for a scrollbar that cannot appear. Where :has() is
    not supported the behaviour is what it was, which is the 20px, not a break. */
 html:has(:fullscreen) { scrollbar-gutter: auto; }
+/* AND THE SAME FOR FULL SIZE WITHOUT THE API. lib/immersive.js pins an element
+   over the screen and puts `skribl-immersive` on <html>; the page behind must
+   not scroll (iOS Safari honours that on html or on body, depending on which
+   one scrolls, so both), and with nothing to scroll there is no gutter to
+   keep. Its own rule, not added to the one above: a browser that does not know
+   `:fullscreen` would drop both. */
+html.skribl-immersive { scrollbar-gutter: auto; }
+html.skribl-immersive, html.skribl-immersive body { overflow: hidden; }
 
 /* Skribl scrollbars — a thin, quiet grey thumb on a clear track, everywhere: the
    menus, the help drawer, panels, page scroll. It was the accent (--ui-line) on a
@@ -1240,8 +1248,19 @@ body.player-mode .app {
    fullscreen rule says `calc(100vh * 16 / 9)`, which assumes every drawing is
    16:9 and is only harmless because the canvas keeps its own ratio inside the
    box. The JS branch fits the authored shape at ANY ratio — the lesson the
-   in-post player's stretch bug taught, applied rather than repeated. */
-.canvas-wrap:fullscreen {
+   in-post player's stretch bug taught, applied rather than repeated.
+
+   AND ITS STAND-IN ON AN IPHONE. iOS Safari has the Fullscreen API for
+   <video> and nothing else, so app.js goes through lib/immersive.js, which
+   puts `.is-immersive-page` on the wrapper where the API is missing or
+   refuses. Every rule below is written for both as ONE selector, for the
+   reason the Gallery and the Library give: a stand-in that drifts from the
+   real thing is two full-screen modes, and nobody can tell which one they are
+   in. :is() and not a selector list, which is not style: a browser that does
+   not know `:fullscreen` drops a whole list that names it, and the iPhone is
+   the browser this is for. :is() forgives the name it does not know and keeps
+   the other. */
+.canvas-wrap:is(:fullscreen, .is-immersive-page) {
   /* BELT AND BRACES, MEASURED AS SUCH. The Fullscreen spec's UA stylesheet
      sizes the top-layer element with `width: 100% !important` and
      `max-width: none !important`, which outranks these four lines and the
@@ -1266,6 +1285,26 @@ body.player-mode .app {
   display: grid;
   place-items: center;
 }
+/* THE STAND-IN PINS ITSELF, the one thing the API did that a class has to do
+   on its own: the declarations the Fullscreen spec's UA sheet gives the
+   element in the top layer, `!important` for the same reason it has them.
+   layoutPlayerCanvas() writes an inline width and height onto this box, and in
+   real full screen it is the UA's `!important` that beats them; here, without
+   it, the wrapper stays the size it was in the page. 100dvh, not 100vh: on a
+   phone `vh` is the tallest the viewport ever gets, so with the URL bar
+   showing, the transport would sit under it. */
+.canvas-wrap.is-immersive-page {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000;
+  margin: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+}
 /* TWO CLASSES, NOT ONE, AND THAT IS THE WHOLE FIX. This was `.full-exit`,
    which ties on specificity with `.player-btn` -- the other class the same
    button carries -- so the winner was decided by which rule came LAST in the
@@ -1278,7 +1317,7 @@ body.player-mode .app {
 .player-btn.full-exit { display: none; position: absolute; top: 14px; right: 14px;
   z-index: 3; width: 44px; height: 44px; background: var(--surface-deep);
   border-color: var(--hairline-strong); color: var(--text-primary); }
-.canvas-wrap:fullscreen .player-btn.full-exit { display: grid; place-items: center; }
+.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-btn.full-exit { display: grid; place-items: center; }
 
 /* THE TRANSPORT GOES FULL SCREEN WITH THE DRAWING. Full screen renders only
    the top-layer subtree, and the transport row lives in .player-shell below
@@ -1290,7 +1329,7 @@ body.player-mode .app {
    and the button row stay direct flex children of the shell, exactly as they
    were before there was anything around them. */
 .player-bar { display: contents; }
-.canvas-wrap:fullscreen .player-bar {
+.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-bar {
   display: flex;
   flex-direction: column;
   gap: 11px;
@@ -1311,24 +1350,25 @@ body.player-mode .app {
 /* SHARE, COPY LINK AND GALLERY STAND DOWN IN FULL SCREEN. All take a person off
    this drawing, which is the one thing full screen is for; the transport is
    what belongs over a picture filling the display. They are a tap away again
-   the moment the drawing is not. */
-.canvas-wrap:fullscreen #playerShareBtn,
-.canvas-wrap:fullscreen #playerCopyBtn,
-.canvas-wrap:fullscreen #playerGalleryLink { display: none; }
+   the moment the drawing is not.
+   THE ⋯ STANDS DOWN, because that is where the three live now (the owner's
+   "C1 everywhere"). Hiding them inside it left the ⋯ on screen in full
+   screen, opening an empty sliver of a menu over the drawing. */
+.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-more { display: none; }
 /* AND THE BAR DOES NOT STAND ON THE DRAWING. `--pbar` is the bar's measured
    height, written by app.js; the wrapper centres its canvas in the grid's
    CONTENT box, so reserving the band here is what keeps the bottom of a
    drawing out from behind the controls. playerFitScale() subtracts the same
    number, because clientHeight includes padding and the scale has to agree
    with the centring. */
-.canvas-wrap:fullscreen { padding-bottom: var(--pbar, 0px); }
+.canvas-wrap:is(:fullscreen, .is-immersive-page) { padding-bottom: var(--pbar, 0px); }
 /* THE TRACK TAKES THE WIDTH IT IS GIVEN. `max-width: 340px` is right under a
    centred column and wrong across a screen: a scrubber a quarter of the way
    along a 1900px bar reads as a progress meter somebody forgot to finish. Full
    screen is also where a drawing is long enough that seeking to a moment
    matters, and a 340px track is a coarse instrument for it. */
-.canvas-wrap:fullscreen .player-progress,
-.canvas-wrap:fullscreen .player-time { max-width: none; }
+.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-progress,
+.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-time { max-width: none; }
 
 body.player-mode .canvas-wrap {
   flex: none;
