@@ -725,7 +725,7 @@ function serializeFlip(opts){
   const withMedia = !opts || opts.media !== false;
   // Opt-in: the autosave asks, saveDraft()'s .skribl file never does.
   const recipes = !!(opts && opts.recipes);
-  return {
+  const doc = {
     schemaVersion: 2, version: 2,
     playbackMode: 'flip', fps: fps,
     // The looped stretch, only when there is a valid one: a document without a
@@ -783,6 +783,55 @@ function serializeFlip(opts){
       return o;
     }))
   };
+  // Opt-in like recipes, and only the copies that live in localStorage ask.
+  return (opts && opts.pack) ? packFrames(doc) : doc;
+}
+/* A LONG ANIMATION, PACKED (v322 plan, step 1, the Pad's lib/pointpack.js
+   shared). The slot lives in the origin's ~5 MB of localStorage, beside the
+   Pad's, and a point written by the rule is about 64 characters, so about
+   78,000 points of real strokes filled it: a hundred detailed pages, or a few
+   generated pages drawn on after they were made (a recipe stores none of its
+   points, an edited one stores all of them). Past PACK_FROM points every page's
+   strokes are kept packed, about four characters a point, lossless against the
+   rule; under it the record is the plain JSON it always was, key for key.
+
+   ONLY THE localStorage COPIES. The slot, the lite record beside a spilled
+   photo or track, and a drawing moved aside for another tab are packed. The
+   IndexedDB record is not (its frames are never applied, only its bytes), and
+   neither is a saved draft or a .skribl file: other readers -- the server, the
+   Library, the Pad -- read those, and none of them unpacks.
+
+   A page pack() cannot describe stays plain, and a recipe has no points to
+   pack. Every reader of a packed record goes through unpackFrames(). */
+const PACK_FROM = 20000;
+function packFrames(doc){
+  const P = window.SkriblPointPack;
+  if(!P || !Array.isArray(doc.frames)) return doc;
+  let n = 0;
+  for(const f of doc.frames) if(f && Array.isArray(f.strokes)) n += f.strokes.length;
+  if(n < PACK_FROM) return doc;
+  doc.frames = doc.frames.map(f => {
+    if(!f || !Array.isArray(f.strokes) || !f.strokes.length) return f;
+    const pk = P.pack(f.strokes, Array.isArray(f.strokeGroups) ? f.strokeGroups : []);
+    if(!pk) return f;
+    const { strokes: _s, strokeGroups: _g, ...rest } = f;
+    return Object.assign({ packed: pk }, rest);
+  });
+  return doc;
+}
+// Throws on a page that will not read, and when the packer did not load: a
+// caller treats that as nothing to restore, never as an empty animation.
+function unpackFrames(doc){
+  if(!doc || !Array.isArray(doc.frames) || !doc.frames.some(f => f && f.packed)) return doc;
+  const P = window.SkriblPointPack;
+  if(!P) throw new Error('the animation is packed and lib/pointpack.js did not load');
+  doc.frames = doc.frames.map(f => {
+    if(!f || !f.packed) return f;
+    const u = P.unpack(f.packed);
+    const { packed: _p, ...rest } = f;
+    return Object.assign({ strokes: u.points, strokeGroups: u.groups }, rest);
+  });
+  return doc;
 }
 // localStorage is capped at ~5 MB per origin. A background image and especially a
 // music track are stored as base64 data URLs, which inflate the payload by 4/3 and
@@ -848,7 +897,7 @@ function saveNow(){
     // Nothing to spill: the lite payload IS the full payload, so this is one
     // synchronous write and no IndexedDB round trip.
     try {
-      slotWrite(JSON.stringify(serializeFlip({ recipes: true })));
+      slotWrite(JSON.stringify(serializeFlip({ recipes: true, pack: true })));
       // 'saved' when this write omitted nothing AND nothing is waiting; amber
       // when a media record IS waiting to be re-added.
       //
@@ -886,7 +935,7 @@ function saveNow(){
     // bytes. Try the old way — the whole payload into localStorage — and let
     // the quota decide. This is the ONLY route that still attempts it.
     try {
-      slotWrite(JSON.stringify(serializeFlip({ recipes: true })));
+      slotWrite(JSON.stringify(serializeFlip({ recipes: true, pack: true })));
       showAutosaveStatus('saved');
       return;
     } catch (e) {
@@ -956,7 +1005,7 @@ function saveNow(){
     _mediaSpillState = 'failed';
   }
   try {
-    const lite = serializeFlip({ media: false, recipes: true });
+    const lite = serializeFlip({ media: false, recipes: true, pack: true });
     lite.mediaInIdb = true; lite.idbSavedAt = stamp;
     slotWrite(JSON.stringify(lite));
     // THE DRAWING IS SAFE; THE MEDIA BYTES ARE STILL IN FLIGHT. Until v229 this
@@ -1195,6 +1244,10 @@ function tryRestore(){
     const raw = localStorage.getItem(AUTOSAVE_KEY);
     if (!raw) return false;
     const d = JSON.parse(raw);
+    // Before anything else is taken from it: a record that will not read
+    // restores nothing, and leaves the slot alone (the session owns nothing).
+    try { unpackFrames(d); }
+    catch (e) { console.error('[skribl] the saved animation could not be read:', e); return false; }
     if (d.mediaOmitted) {
       pendingMusicMeta = (d.musicMeta && d.musicMeta.name) ? d.musicMeta : null;
       pendingPhotoMeta = (d.photo && d.photo.name) ? d.photo : null;
@@ -5456,7 +5509,7 @@ function loadDraftFile(file){
       // claiming the same 5s loop.
       if (musicData) decodeForWaveform();
       fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
-      if(!FLIP_COMPOSE){ try{ slotWrite(JSON.stringify(serializeFlip({ recipes: true }))); }catch(_){ } }  // best-effort
+      if(!FLIP_COMPOSE){ try{ slotWrite(JSON.stringify(serializeFlip({ recipes: true, pack: true }))); }catch(_){ } }  // best-effort
       chip(ok?'Draft loaded':'Loaded');
     }catch(err){ chip('Could not read file'); }
   };
@@ -11242,10 +11295,10 @@ const restored = tryRestore();
 // Pad's is. A Flip autosave is already a Flip draft, so "Keep for later"
 // files it as it is (a photo or track its tab spilled stays with that tab).
 if(flipSlot) flipSlot.offer({
-  current: () => nothingToShare() && !musicData && !bgImage ? null : JSON.stringify(serializeFlip({ media: false, recipes: true })),
+  current: () => nothingToShare() && !musicData && !bgImage ? null : JSON.stringify(serializeFlip({ media: false, recipes: true, pack: true })),
   later: (text, at) => {
     if(!window.SkriblSavedDrafts || !window.SkriblSavedDrafts.keep) return false;
-    let d; try{ d = JSON.parse(text); }catch(_){ return false; }
+    let d; try{ d = unpackFrames(JSON.parse(text)); }catch(e){ console.error('[skribl] a waiting animation could not be read:', e); return false; }
     const when = at ? new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
     return window.SkriblSavedDrafts.keep('flip', 'From another tab' + (when ? ', ' + when : ''), d)
       .then(() => { chip(window.SkriblSavedDrafts.where() === 'account' ? 'Kept in your drafts' : 'Kept in Drafts on this browser'); return true; },
