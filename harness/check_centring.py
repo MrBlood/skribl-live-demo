@@ -36,12 +36,14 @@ every battery and catches new buttons on its own.
 ON DEMAND, NOT IN THE BATTERY (owner: "The centering script/harness should be
 used whenever checking buttons in the future. We don't need to run it every
 seal, but we should use it whenever we need it"). Named check_*, not verify_*,
-so neither a bare run_harness.sh nor a seal picks it up; a full pass takes about
-25 minutes, past run_harness.sh's 10-minute limit per suite. Run it directly,
+so neither a bare run_harness.sh nor a seal picks it up. A full pass runs its
+six combinations three at a time in about 16 minutes (one after another it
+took 30), past run_harness.sh's 10-minute limit per suite. Run it directly,
 with a server up (harness/bootstrap.sh):
 
     python3 harness/check_centring.py               every page, every combination
     CENTRING_COMBOS=phone-light python3 harness/check_centring.py
+    CENTRING_JOBS=1 python3 harness/check_centring.py   one combination at a time
 
 KNOWN FINDINGS SHRINK, NEW ONES FAIL. harness/centring_baseline.json lists what
 the first full run found (off-centre marks, typed symbols). A finding not on the
@@ -53,12 +55,14 @@ Writes a report to $CENTRING_OUT (default /tmp/centring-out): report.json and a
 centre; magenta: the mark's optical centre).
 
     CENTRING_COMBOS=phone-light   run one combination (calibration, iteration)
+    CENTRING_JOBS=3               combinations side by side on a full run (1: serial)
 """
 import io
 import json
 import math
 import os
 import pathlib
+import re
 import struct
 import sys
 import time
@@ -89,6 +93,14 @@ COMBOS = [("phone", {"width": 402, "height": 874}, True), ("short", {"width": 39
 THEMES = ("light", "dark")
 ONLY = set(filter(None, os.environ.get("CENTRING_COMBOS", "").split(",")))
 ONLY_SCEN = set(filter(None, os.environ.get("CENTRING_SCENARIOS", "").split(",")))   # indexes, for working on one driver
+# SIDE BY SIDE. The six combinations share nothing but the server, and run one
+# after another they took 30 minutes. A full run hands them to CENTRING_JOBS
+# processes (default 3), each this file with CENTRING_COMBOS naming its share
+# and CENTRING_PART naming the file it writes what it measured into; this one
+# merges the parts and gives the verdicts. CENTRING_JOBS=1 is the old serial run.
+JOBS = max(1, int(os.environ.get("CENTRING_JOBS", "3") or 1))
+PART = os.environ.get("CENTRING_PART")
+CROP_PREFIX = os.environ.get("CENTRING_CROP_PREFIX", "")
 
 # Controls the suite does not reach, each with its reason. Kept short: an
 # entry here is a control nobody checks.
@@ -192,6 +204,27 @@ def _centroid(w):
     return sum(i * v for i, v in enumerate(cols)) / sx + 0.5, sum(i * v for i, v in enumerate(rows)) / sy + 0.5
 
 
+MOVING = []   # controls whose own patch kept changing with nothing hidden
+
+
+def steady(pg, shot, sel):
+    """The control's patch as it is, if it holds still; None if it will not.
+
+    Three photographs make a measurement -- as it is, mark hidden, control
+    hidden -- and the ink is what changed between the first two. A neighbour
+    that repaints in the meantime (a waveform still drawing, a playhead) was
+    counted as ink: the music card's bin read 9px off in one run, from a
+    photograph without the bin in it. Its boxes never move, so the stillness
+    wait cannot see it; two photographs with nothing hidden can."""
+    for _ in range(4):
+        a = shot()
+        if not _diff(a, shot()).getbbox():
+            return a
+        pg.wait_for_timeout(250)
+    MOVING.append(f"{pg.url.rsplit('/', 1)[-1][:24] or '/'} {sel}")
+    return None
+
+
 def measure(pg, ctr, rect, keep=False):
     """(dx, dy) of the mark's optical centre from the painted shape's centre, in CSS px, or None."""
     pad = 3
@@ -208,7 +241,10 @@ def measure(pg, ctr, rect, keep=False):
     sel = f'[data-ctr="{ctr}"]'
     shot = lambda: Image.open(io.BytesIO(pg.screenshot(clip=clip, animations="disabled"))).convert("RGB")
     pg.evaluate("(s) => document.querySelector(s).classList.add('__ctr_meas')", sel)
-    full = shot()
+    full = steady(pg, shot, sel)
+    if full is None:
+        pg.evaluate("(s) => document.querySelector(s).classList.remove('__ctr_meas')", sel)
+        return None
     pg.evaluate("(s) => document.querySelector(s).classList.add('__ctr_ink')", sel)
     plate = shot()
     pg.evaluate("(s) => document.querySelector(s).classList.add('__ctr_gone')", sel)
@@ -257,7 +293,10 @@ def measure_words(pg, ctr, cap, keep=False):
     clip = {"x": max(0, x - pad), "y": max(0, y - pad), "width": w + 2 * pad, "height": h + 2 * pad}
     shot = lambda: Image.open(io.BytesIO(pg.screenshot(clip=clip, animations="disabled"))).convert("RGB")
     pg.evaluate("(s) => document.querySelector(s).classList.add('__ctr_meas')", sel)
-    full = shot()
+    full = steady(pg, shot, sel)
+    if full is None:
+        pg.evaluate("(s) => document.querySelector(s).classList.remove('__ctr_meas')", sel)
+        return None
     pg.evaluate("(s) => document.querySelector(s).classList.add('__ctr_ink')", sel)
     plate = shot()
     pg.evaluate("(s) => document.querySelector(s).classList.add('__ctr_gone')", sel)
@@ -308,6 +347,34 @@ def js(pg, code, arg=None):
 
 
 MISSES = []
+
+# A NAME THAT CARRIES A TIME is a different string on every run: a draft's
+# delete button says "Delete Skribl · Oct 12 1:47 AM". Keyed as it read, each
+# run listed every such button as one finding fixed and another new.
+WHEN = re.compile(r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}(?:, \d{4})? \d{1,2}:\d{2}(?:\s?[AP]M)?")
+
+
+def stable(name):
+    return WHEN.sub("<when>", name) if name else name
+
+
+# STILL BEFORE IT IS PHOTOGRAPHED. A sheet that slides in, a card that grows as
+# its track decodes, a drawer that glides the page: read mid-way, a control is
+# photographed where it was going. A fixed wait after each step was usually
+# long enough, and the runs that disagreed with each other were the ones where
+# it was not (the Gallery report's Cancel read 0.2px off in one run and 4.8px
+# in the next). So each state waits until every control's box and the scroll have
+# held for three frames and no finite animation is running, up to two seconds.
+STILL = """(limit) => new Promise(done => {
+  const sig = () => { let s = scrollX + ',' + scrollY;
+    for (const el of document.querySelectorAll('button, [role=button]')) { const r = el.getBoundingClientRect();
+      if (r.width && r.height) s += '|' + r.left.toFixed(1) + ',' + r.top.toFixed(1) + ',' + r.width.toFixed(1) + ',' + r.height.toFixed(1); }
+    return s; };
+  const moving = () => document.getAnimations().some(a => a.playState === 'running'
+    && a.effect && a.effect.getComputedTiming().endTime !== Infinity);
+  let last = sig(), still = 0; const t0 = performance.now();
+  (function tick() { const now = sig(); still = (now === last && !moving()) ? still + 1 : 0; last = now;
+    if (still >= 3 || performance.now() - t0 > limit) done(still >= 3); else requestAnimationFrame(tick); })(); })"""
 
 
 def click(pg, sel, wait=350):
@@ -391,15 +458,26 @@ def editor_common(pg, menu, export_item, canvas):
     click(pg, "#paintTargetSeg [data-target=ink], #paintTargetSeg [data-target=pen], #paintTargetSeg button")
     click(pg, "#eyedropperBtn"); yield "eyedropper"; esc(pg)
     click(pg, "#penToolBtn")
-    click(pg, menu); yield "menu"; esc(pg)
+    click(pg, menu); yield "menu"
+    # The menu's last rows (Report, the Tips switch) sit below the fold at
+    # every size, and only what is painted in view counts as reached.
+    js(pg, "() => { const e = document.getElementById('hintSeg'); if (e) e.scrollIntoView({ block: 'center' }); }")
+    pg.wait_for_timeout(300); yield "menu, its end"; esc(pg)
     click(pg, "#tuneBtn"); click(pg, "#gridBtn"); yield "settings, grid"; click(pg, "#gridBtn"); click(pg, "#tuneBtn")
     js(pg, "() => { if (window.SkriblRecoveryKey) SkriblRecoveryKey.present({ key: 'skrb_centring_key' }); }"); pg.wait_for_timeout(400)
     yield "recovery key"
     js(pg, "() => window.SkriblRecoveryKey && SkriblRecoveryKey.close()")
     js(pg, "() => showToast('Cleared', null, { label: 'Undo', onClick() {} })"); pg.wait_for_timeout(200); yield "toast with undo"
     draw(pg, canvas)   # the notice speaks only when this tab has work to lose
-    js(pg, "() => { window.dispatchEvent(new StorageEvent('storage', { key: AUTOSAVE_KEY, newValue: 'x', storageArea: localStorage })); }")
-    pg.wait_for_timeout(500); yield "two-tab notice"
+    # ANOTHER TAB'S DRAWING IS WAITING (lib/othertab.js, T1): the bar the
+    # editor offers when the slot has a copy no open tab answers for. One is
+    # put beside the slot and the editor's own slot asked to offer it, after
+    # its roll call, as a visit would.
+    js(pg, """() => { localStorage.setItem(AUTOSAVE_KEY + ':waiting:centring',
+                JSON.stringify({ w: 'centring', at: Date.now() - 60000, data: '{}' }));
+              const slot = typeof padSlot !== 'undefined' ? padSlot : typeof flipSlot !== 'undefined' ? flipSlot : null;
+              if (slot) slot.offer({}); }""")
+    pg.wait_for_timeout(600); yield "another tab's drawing waiting"
     click(pg, ".othertab-x")
     click(pg, "#mediaOpenBtn"); click(pg, "#mediaTabPhoto"); yield "media card, no photo"; click(pg, "#mediaOpenBtn")
     js(pg, "() => { if (typeof pendingPhotoMeta !== 'undefined') { pendingPhotoMeta = { name: 'p.jpg' }; } if (typeof pendingMusicMeta !== 'undefined') { pendingMusicMeta = { name: 'song.mp3', trimStart: 0, trimEnd: 4 }; } if (typeof refreshPendingCards === 'function') refreshPendingCards(); }")
@@ -412,6 +490,12 @@ def editor_common(pg, menu, export_item, canvas):
     try:
         pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
         pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=15000)
+        # ...and DECODED: the card's controls and its waveform change as the
+        # decode lands, which is after "loaded". Two runs of the same tree
+        # disagreed only here, until this waited for it.
+        pg.wait_for_function("() => !window._skriblDecodePending && typeof currentAudioBuffer !== 'undefined'"
+                             " && !!currentAudioBuffer", timeout=15000)
+        pg.wait_for_timeout(300)
     except Exception:
         pass
     yield "media card, song (Trim)"
@@ -641,11 +725,60 @@ def help_error(pg, menu, item):
 # ------------------------------------------------------------------ run
 inventory = centring_inventory.entries()
 reached, typed_bad, rows, errs = set(), {}, [], []
+restless = []   # states whose controls never held still for three frames in two seconds
+
+
+def fan_out():
+    """Run the combinations in JOBS child processes; merge what they measured."""
+    import subprocess
+    import tempfile
+    names = [f"{s}-{t}" for s, _vp, _m in COMBOS for t in THEMES]
+    groups = [g for g in (names[k::JOBS] for k in range(JOBS)) if g]
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="centring-parts-"))
+    # ONE SAMPLE POST FOR ALL OF THEM. Each child posting its own put three in
+    # the Gallery and the Library, so the ends of those lists showed other
+    # controls than a serial run's single post does.
+    shared = json.dumps(post_fixture())
+    procs = []
+    for k, g in enumerate(groups):
+        env = dict(os.environ, CENTRING_COMBOS=",".join(g), CENTRING_PART=str(tmp / f"part{k}.json"), CENTRING_FIXTURE=shared,
+                   CENTRING_CROP_PREFIX=f"p{k}-")
+        log = open(tmp / f"part{k}.log", "w")
+        procs.append((k, g, subprocess.Popen([sys.executable, __file__], env=env, stdout=log,
+                                             stderr=subprocess.STDOUT), log, time.monotonic()))
+    print(f"{len(procs)} processes side by side: " + "; ".join(",".join(g) for _k, g, *_ in procs))
+    failed = []
+    for k, g, proc, log, t0 in procs:
+        proc.wait()
+        log.close()
+        part = tmp / f"part{k}.json"
+        print(f"  {','.join(g)}: exit {proc.returncode} after {(time.monotonic() - t0) / 60:.1f} min")
+        if proc.returncode != 0 or not part.exists():
+            failed.append(f"{','.join(g)} (exit {proc.returncode}): "
+                          + " | ".join((tmp / f"part{k}.log").read_text(errors="replace").strip().splitlines()[-3:]))
+            continue
+        got = json.loads(part.read_text())
+        rows.extend(got["rows"])
+        reached.update(got["reached"])
+        for pg_, n, v in got["typed"]:
+            typed_bad.setdefault((pg_, n), v)
+        errs.extend(got["errs"])
+        MISSES.extend(got["misses"])
+        restless.extend(got.get("restless", []))
+        MOVING.extend(got.get("moving", []))
+    rows.sort(key=lambda r: names.index(r["combo"]))      # the serial run's order
+    check(f"all {len(procs)} side-by-side processes finished and reported", not failed, "; ".join(failed)[:600])
+
+
+FANNED = JOBS > 1 and not ONLY and not ONLY_SCEN and not PART
+if FANNED:
+    fan_out()
 
 with sync_playwright() as p:
-    b = p.chromium.launch()
-    fx = post_fixture()
-    for size, vp, mobile in COMBOS:
+    b = None if FANNED else p.chromium.launch()
+    fx = None if FANNED else (json.loads(os.environ["CENTRING_FIXTURE"]) if os.environ.get("CENTRING_FIXTURE")
+                              else post_fixture())
+    for size, vp, mobile in ([] if FANNED else COMBOS):
         for theme in THEMES:
             combo = f"{size}-{theme}"
             if ONLY and combo not in ONLY:
@@ -682,15 +815,16 @@ with sync_playwright() as p:
                         errs.append(f"driver {path}: {e}"[:160])
                 for state in guarded(states(pg)):
                     # A drawer glides the page as it opens; a photograph taken
-                    # mid-glide is of where the control was.
+                    # mid-glide is of where the control was (STILL, above).
                     try:
-                        browsing.wait_scroll_still(pg)
+                        if not pg.evaluate(STILL, 2000):
+                            restless.append(f"{combo} {path} {state}")
                     except Exception:
                         pass
                     for c in pg.evaluate(SCAN, EXTRA):
                         reached.update(c["keys"])
                         if c["typed"]:
-                            typed_bad.setdefault((path if not path.startswith("/s/") else "/s/<id>", c["name"]), c["typed"])
+                            typed_bad.setdefault((path if not path.startswith("/s/") else "/s/<id>", stable(c["name"])), c["typed"])
                         # An icon alone, a label of three characters or fewer, or a
                         # badge or chip. A menu row with an icon AND words is a
                         # line of text, aligned by the row, and not in scope.
@@ -731,15 +865,23 @@ with sync_playwright() as p:
                                 continue
                             dx, dy, painted, crop = m
                             row = {"combo": combo, "page": path if not path.startswith("/s/") else "/s/<id>", "state": state,
-                                   "control": c["name"] or c["keys"][0] if c["keys"] else c["tag"], "keys": c["keys"],
+                                   "control": stable(c["name"]) or c["keys"][0] if c["keys"] else c["tag"], "keys": c["keys"],
                                    "size": [round(c["rect"][2], 1), round(c["rect"][3], 1)], "face": face or ("text" if textual else "icon"),
                                    "typed": c["typed"], "text": c["text"], "extra": c["extra"], "dx": dx, "dy": dy, "painted": painted}
                             if max(abs(dx), abs(dy)) > TOL and crop is not None:
-                                fn = f"{len(rows):04d}.png"
+                                fn = f"{CROP_PREFIX}{len(rows):04d}.png"
                                 crop.save(OUT / fn); row["crop"] = fn
                             rows.append(row)
                 ctx.close()
-    b.close()
+    if b:
+        b.close()
+
+if PART:
+    # A child of fan_out(): hand back what was measured; the parent judges.
+    pathlib.Path(PART).write_text(json.dumps({
+        "rows": rows, "reached": sorted(reached), "errs": errs, "misses": MISSES, "restless": restless, "moving": MOVING,
+        "typed": [[k[0], k[1], v] for k, v in typed_bad.items()]}))
+    sys.exit(0)
 
 # ------------------------------------------------------------------ verdicts
 BASELINE = pathlib.Path(__file__).with_name("centring_baseline.json")
@@ -792,7 +934,14 @@ stale_typed = [t for t in base["typed"] if t not in typed_now] if FULL else []
 check("every listed typed symbol is still there (a fixed one comes off the list)",
       not stale_typed, f"{len(stale_typed)} fixed: " + "; ".join(stale_typed[:8]))
 (OUT / "report.json").write_text(json.dumps({"rows": rows, "off": off, "typed": [[k[0], k[1], v] for k, v in typed_bad.items()],
-                                             "unreached": unreached, "misses": MISSES, "inventory": inventory, "errors": errs[:50]}, indent=1))
+                                             "unreached": unreached, "misses": MISSES, "restless": restless,
+                                             "moving": MOVING, "inventory": inventory, "errors": errs[:50]}, indent=1))
+if restless:
+    print(f"{len(restless)} state(s) never held still, so what was measured there may have been moving: "
+          + "; ".join(restless[:8]))
+if MOVING:
+    print(f"{len(MOVING)} measurement(s) skipped because something in the control's patch kept repainting: "
+          + "; ".join(MOVING[:8]))
 print(f"report: {OUT / 'report.json'}")
 
 print("\n" + "=" * 62)
