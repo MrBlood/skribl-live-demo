@@ -67,6 +67,32 @@
     var slowTimer = null, slow = false;
     function clearSlow() { clearTimeout(slowTimer); slowTimer = null; slow = false; }
 
+    /* THE REASON IS ON SCREEN. The status line is the sheet's last row, and on
+       a desk window 820px tall it sat 10px under the sheet's bottom edge, not
+       drawn: a post that failed showed "Try again" and no reason, unless you
+       thought to scroll a sheet that did not look scrollable (measured for the
+       v322 plan's decisions, both themes). So whenever the line shows or
+       changes, the sheet scrolls just far enough to bring it in, with a little
+       air under it. Watched rather than called from each state: both editors
+       write the line themselves after setState(), and the Pad's device-only
+       save never calls setState() at all. */
+    function revealStatus() {
+      if (!sheet || status.hidden || overlay.hidden) return;
+      var room = Math.min(sheet.getBoundingClientRect().bottom, window.innerHeight) - 12;
+      var over = status.getBoundingClientRect().bottom - room;
+      if (over > 0) sheet.scrollTop += Math.ceil(over);
+      // A layout where something other than the sheet scrolls: the browser's own way.
+      if (status.getBoundingClientRect().bottom > window.innerHeight) status.scrollIntoView({ block: 'nearest' });
+    }
+    if (status && typeof MutationObserver === 'function') {
+      var revealFrame = 0;
+      new MutationObserver(function () {
+        cancelAnimationFrame(revealFrame);
+        revealFrame = requestAnimationFrame(revealStatus);   // after the caller's words are laid out
+      }).observe(status, { attributes: true, attributeFilter: ['hidden', 'class'],
+                           childList: true, characterData: true, subtree: true });
+    }
+
     function updateCharCount() {
       // The limit is whatever the field enforces (rendered from
       // skribl_limits.caption); a literal here drifted to 280 against 300.
