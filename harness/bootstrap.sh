@@ -67,7 +67,10 @@ fi
 echo "chromium: $(ls -d "$BROWSERS"/chromium-* 2>/dev/null | xargs -n1 basename | tr '\n' ' ')"
 
 # --- 3 + 4. a fresh database with tables, and the harness's rate limit -------
-DB="/tmp/skribl-fresh-$(date +%s).db"
+# The port is in the name: servers booted in the same second (run_parallel.py
+# starts several at once) shared one file, and all but one failed with
+# "database is locked".
+DB="/tmp/skribl-fresh-$PORT-$(date +%s).db"
 export DATABASE_URL="sqlite:///$DB"
 export SKRIBL_RATE_MAX_POSTS="${SKRIBL_RATE_MAX_POSTS:-100000}"
 "$VENV/bin/python3" -c "from app import app, db; app.app_context().push(); db.create_all()" \
