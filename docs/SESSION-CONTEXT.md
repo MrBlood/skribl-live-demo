@@ -169,7 +169,7 @@ records why.
 **Commit with an explicit file list, push, open a pull request, quote the
 suite runs in it, squash-merge.** Pull requests run the smoke job, which is the boot suite plus the
 browserless/serverless suites (EXT-P1-9); the
-push to `main` runs the full three-job battery, and Render deploys `main`. The
+push to `main` runs the full battery, and Render deploys `main`. The
 branch the session was given is reused across pull requests.
 
 **When the owner asks for a bug check before a seal, expect to find bugs.**

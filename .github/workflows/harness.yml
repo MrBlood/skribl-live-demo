@@ -1,7 +1,7 @@
 name: harness
 
 # CI runs the same run_harness.sh a developer runs — not a reduced subset —
-# across three jobs, because the environments genuinely disagree:
+# in three environments, because they genuinely disagree:
 #   sqlite    the default developer path
 #   postgres  real parallelism, where the rate-limiter reservation race lives
 #   mp4       a browser with an H.264 encoder, which Playwright's Chromium lacks
@@ -23,11 +23,11 @@ name: harness
 # Runner SIZE is the billable knob (4-core and up, GPU, macOS, self-hosted),
 # and nothing here turns it.
 #
-# THE TRIM IS STILL RIGHT, FOR THE OTHER REASON. Three jobs at 40-90 minutes
-# is a long time to sit on a pull request whether or not anyone is invoiced
-# for it. So: pull requests get ONE fast smoke job (the boot suite — does the
+# THE TRIM IS STILL RIGHT, FOR THE OTHER REASON. The full battery is a long
+# time to sit on a pull request (40-90 minutes a job before the shards, about
+# 19 after), whether or not anyone is invoiced for it. So: pull requests get ONE fast smoke job (the boot suite — does the
 # app start and serve at all — plus, since EXT-P1-9, every suite that needs
-# neither a browser nor a server), and the full three-job battery runs only on
+# neither a browser nor a server), and the full battery runs only on
 # pushes to main and on manual dispatch. The working rhythm this repo actually
 # has — the full affected suites run locally before every push, and their
 # counts are quoted in each PR — is what makes that safe: CI's job on a PR is
