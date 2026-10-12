@@ -761,7 +761,7 @@ rather than a shared rule.
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
 | `pointbudget.js` | Flip | The DOCUMENT's budget — the numbers the editors were spending without being able to see them. |
-| `pointpack.js` | Pad | A LONG DRAWING, PACKED: the compact form an autosave keeps its points in once a drawing is long (v322 plan, step 1). |
+| `pointpack.js` | Pad+Flip | A LONG DRAWING, PACKED: the compact form both editors' autosaves keep their points in once a drawing is long (v322 plan, step 1). |
 | `pointwrite.js` | Pad+Flip | How a point is WRITTEN — the shared rule for both editors' serializers. |
 | `posted.js` | Pad+Flip+library | Your Skribls — a local record of what you have posted. |
 | `postedaudio.js` | Pad+Flip | What a POST stores, which is deliberately not what an EXPORT downloads. |
