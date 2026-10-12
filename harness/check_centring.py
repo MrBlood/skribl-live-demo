@@ -36,19 +36,31 @@ own. (Later, on demand rather than in every battery: see ON DEMAND below.)
 ON DEMAND, NOT IN THE BATTERY (owner: "The centering script/harness should be
 used whenever checking buttons in the future. We don't need to run it every
 seal, but we should use it whenever we need it"). Named check_*, not verify_*,
-so neither a bare run_harness.sh nor a seal picks it up. A full pass runs its
-six combinations three at a time in about 16 minutes (one after another it
-took 30), past run_harness.sh's 10-minute limit per suite. Run it directly,
-with a server up (harness/bootstrap.sh):
+so neither a bare run_harness.sh nor a seal picks it up. Run it directly, with
+a server up (harness/bootstrap.sh):
 
-    python3 harness/check_centring.py               every page, every combination
-    CENTRING_COMBOS=phone-light python3 harness/check_centring.py   one (calibration, iteration)
-    CENTRING_JOBS=1 python3 harness/check_centring.py   one at a time (default: three)
+    python3 harness/check_centring.py               the everyday run, about two minutes
+    CENTRING_FULL=1 python3 harness/check_centring.py   the full sweep, about 17 minutes
+    CENTRING_COMBOS=phone-light CENTRING_SCENARIOS=0 python3 harness/check_centring.py   one screen, one page
+
+TWO MINUTES, NOT SEVENTEEN (owner: "make the centring check take a couple
+minutes at most. I can visually tell when things look off if need be."). The
+full sweep measures six screens in three faces, and 84% of its 5,582
+measurements were text, photographed once for each face. The everyday run
+measures two screens -- a phone in dark and a desk in light, so both sizes
+and both themes are seen -- with text in one face, on the two editors and the
+link player, which hold about 170 of the inventory's 232 controls. The
+Library, Gallery and feed, the error and signed-in states, and the reach of
+every control in the inventory are the full sweep's. And the everyday run
+fails only on a NEW finding: whether a listed one has since been fixed is
+housekeeping for the full sweep, because a near-threshold finding wobbles
+across that line from run to run and a gate that cries wolf gets ignored.
 
 KNOWN FINDINGS SHRINK, NEW ONES FAIL. harness/centring_baseline.json lists what
 the first full run found (off-centre marks, typed symbols). A finding not on the
-list fails; a listed one that no longer reproduces fails too, so the list only
-gets shorter -- take it off with CENTRING_WRITE_BASELINE=1 after a full run.
+list fails; in the full sweep a listed one that no longer reproduces fails too,
+so the list only gets shorter -- take it off with CENTRING_WRITE_BASELINE=1,
+which rewrites the entries this run measured and keeps the rest.
 
 Writes a report to $CENTRING_OUT (default /tmp/centring-out): report.json and a
 3x crop of each flagged control with crosshairs (green: the painted shape's
@@ -68,6 +80,7 @@ import urllib.request
 from assertions import make_check
 import browsing
 import centring_inventory
+import waits
 
 try:
     from playwright.sync_api import sync_playwright
@@ -84,18 +97,29 @@ check = make_check(results, with_detail=True)
 
 TOL = 1 / 3          # CSS px: one screen pixel at 3x
 DPR = 3
-FACES = ("Liberation Sans", "DejaVu Sans", "FreeSans")
+ALL_FACES = ("Liberation Sans", "DejaVu Sans", "FreeSans")
 COMBOS = [("phone", {"width": 402, "height": 874}, True), ("short", {"width": 390, "height": 664}, True),
           ("desk", {"width": 1280, "height": 800}, False)]
 THEMES = ("light", "dark")
-ONLY = set(filter(None, os.environ.get("CENTRING_COMBOS", "").split(",")))
-ONLY_SCEN = set(filter(None, os.environ.get("CENTRING_SCENARIOS", "").split(",")))   # indexes, for working on one driver
-# SIDE BY SIDE. The six combinations share nothing but the server, and run one
-# after another they took 30 minutes. A full run hands them to CENTRING_JOBS
-# processes (default 3), each this file with CENTRING_COMBOS naming its share
-# and CENTRING_PART naming the file it writes what it measured into; this one
-# merges the parts and gives the verdicts. CENTRING_JOBS=1 is the old serial run.
-JOBS = max(1, int(os.environ.get("CENTRING_JOBS", "3") or 1))
+FULL_SWEEP = bool(os.environ.get("CENTRING_FULL"))
+FAST_COMBOS = ("phone-dark", "desk-light")
+FAST_SCENARIOS = (0, 1, 12)      # scenarios() below: the Pad, Flip and the link player
+FACES = (tuple(filter(None, os.environ.get("CENTRING_FACES", "").split(",")))
+         or (ALL_FACES if FULL_SWEEP else ALL_FACES[:1]))
+ONLY = (set(filter(None, os.environ.get("CENTRING_COMBOS", "").split(",")))
+        or (set() if FULL_SWEEP else set(FAST_COMBOS)))
+ONLY_SCEN = (set(filter(None, os.environ.get("CENTRING_SCENARIOS", "").split(",")))   # indexes into scenarios()
+             or (set() if FULL_SWEEP else {str(i) for i in FAST_SCENARIOS}))
+# What a scenario costs, in the measurements one screen of it makes (the full
+# sweep of v322), so the processes below can be handed equal shares.
+SCEN_WEIGHT = {0: 160, 1: 150, 2: 10, 3: 10, 4: 20, 5: 15, 6: 15, 7: 60, 8: 30, 9: 5,
+               10: 12, 11: 5, 12: 20, 13: 5, 14: 5, 15: 10, 16: 5, 17: 10, 18: 5}
+# SIDE BY SIDE. Screens and pages share nothing but the server, so the work is
+# handed to CENTRING_JOBS processes (default 4, one a core): each this file with
+# CENTRING_COMBOS and CENTRING_SCENARIOS naming its share and CENTRING_PART the
+# file it writes what it measured into; this one merges the parts and gives the
+# verdicts. CENTRING_JOBS=1 runs everything in this process.
+JOBS = max(1, int(os.environ.get("CENTRING_JOBS", "4") or 1))
 PART = os.environ.get("CENTRING_PART")
 CROP_PREFIX = os.environ.get("CENTRING_CROP_PREFIX", "")
 
@@ -393,7 +417,9 @@ def click(pg, sel, wait=350):
         el = pg.locator(sel).first
         if el.count() and el.is_visible():
             el.click(timeout=3000)
-            pg.wait_for_timeout(wait)
+            # The page settled, not a guessed 350ms; every state is still
+            # held still for three frames before it is photographed (STILL).
+            waits.settle(pg, wait)
             return True
     except Exception as e:
         MISSES.append(f"{where(pg)} {sel}: {str(e).replace(chr(10), ' | ')[-260:]}")
@@ -406,7 +432,7 @@ def hover(pg, sel, wait=300):
     try:
         el = pg.locator(sel + ":visible").first
         if el.count():
-            el.hover(timeout=3000); pg.wait_for_timeout(wait)
+            el.hover(timeout=3000); waits.settle(pg, wait)
     except Exception:
         pass
 
@@ -422,7 +448,7 @@ def esc(pg, wait=350):
     # measurement can leave focus on the page behind it, so put it back in
     # the topmost open dialog first.
     js(pg, FOCUS_TOP)
-    pg.keyboard.press("Escape"); pg.wait_for_timeout(wait)
+    pg.keyboard.press("Escape"); waits.settle(pg, wait)
 
 
 def draw(pg, sel="#canvas", n=40):
@@ -433,7 +459,7 @@ def draw(pg, sel="#canvas", n=40):
     pg.mouse.move(cx - 80, cy); pg.mouse.down()
     for i in range(n):
         pg.mouse.move(cx - 80 + i * 4, cy + math.sin(i / 6) * 40)
-    pg.mouse.up(); pg.wait_for_timeout(250)
+    pg.mouse.up(); waits.settle(pg, 250)
 
 
 def post_fixture():
@@ -525,7 +551,10 @@ def editor_common(pg, menu, export_item, canvas):
     click(pg, menu); click(pg, "#nameItem, #miName", 500); yield "name"; esc(pg)
     click(pg, menu); click(pg, "#helpItem, #miInfo", 900); yield "how it works"
     click(pg, "#learnPeek", 900); yield "examples"
-    click(pg, "#learnSheet .learn-card .learn-stage", 900); yield "example viewer"
+    if FULL_SWEEP:
+        # A demo replaying: every photograph of it repaints, so each control
+        # is shot again and again (steady). Ten seconds a screen; the sweep's.
+        click(pg, "#learnSheet .learn-card .learn-stage", 900); yield "example viewer"
     esc(pg); esc(pg); esc(pg)
 
 
@@ -541,7 +570,7 @@ def pad_states(pg):
     click(pg, "#padLine .rl-speed"); yield "replay speeds"
     click(pg, "#playBtn")
     click(pg, "#menuBtn"); click(pg, "#exportItem", 700); yield "export"
-    click(pg, "#exportGif", 150); yield "export, rendering"; pg.wait_for_timeout(2500); esc(pg)
+    click(pg, "#exportGif", 150); yield "export, rendering"; waits.settle(pg, 2500); esc(pg)
     js(pg, SHARE_STUB)
     click(pg, "#postBtn", 700); yield "post sheet, ready"
     click(pg, "#postSubmitBtn", 2500); yield "post sheet, posted"
@@ -740,24 +769,41 @@ restless = []   # states whose controls never held still for three frames in two
 
 
 def fan_out():
-    """Run the combinations in JOBS child processes; merge what they measured."""
+    """Hand the screens and pages to JOBS child processes; merge what they measured."""
     import subprocess
     import tempfile
-    names = [f"{s}-{t}" for s, _vp, _m in COMBOS for t in THEMES]
-    groups = [g for g in (names[k::JOBS] for k in range(JOBS)) if g]
+    names = [f"{s}-{t}" for s, _vp, _m in COMBOS for t in THEMES if not ONLY or f"{s}-{t}" in ONLY]
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="centring-parts-"))
     # ONE SAMPLE POST FOR ALL OF THEM. Each child posting its own put three in
     # the Gallery and the Library, so the ends of those lists showed other
     # controls than a serial run's single post does.
-    shared = json.dumps(post_fixture())
+    fx = post_fixture()
+    shared = json.dumps(fx)
+    scen = sorted(ONLY_SCEN or {str(i) for i in range(len(scenarios(fx)))}, key=int)
+    if len(names) >= JOBS:
+        # More screens than processes (the full sweep): whole screens each.
+        shares = [(g, scen) for g in (names[k::JOBS] for k in range(JOBS)) if g]
+    else:
+        # Fewer (the everyday run): each screen's pages split between its
+        # processes, the heaviest first, each onto the lightest share so far.
+        shares = []
+        for n in names:
+            loads = [[0, []] for _ in range(max(1, JOBS // len(names)))]
+            for s in sorted(scen, key=lambda s: -SCEN_WEIGHT.get(int(s), 10)):
+                low = min(loads, key=lambda l: l[0])
+                low[0] += SCEN_WEIGHT.get(int(s), 10)
+                low[1].append(s)
+            shares += [([n], sorted(l[1], key=int)) for l in loads if l[1]]
     procs = []
-    for k, g in enumerate(groups):
-        env = dict(os.environ, CENTRING_COMBOS=",".join(g), CENTRING_PART=str(tmp / f"part{k}.json"), CENTRING_FIXTURE=shared,
+    for k, (g, sc) in enumerate(shares):
+        env = dict(os.environ, CENTRING_COMBOS=",".join(g), CENTRING_SCENARIOS=",".join(sc),
+                   CENTRING_FACES=",".join(FACES), CENTRING_PART=str(tmp / f"part{k}.json"), CENTRING_FIXTURE=shared,
                    CENTRING_CROP_PREFIX=f"p{k}-")
         log = open(tmp / f"part{k}.log", "w")
         procs.append((k, g, subprocess.Popen([sys.executable, __file__], env=env, stdout=log,
                                              stderr=subprocess.STDOUT), log, time.monotonic()))
-    print(f"{len(procs)} processes side by side: " + "; ".join(",".join(g) for _k, g, *_ in procs))
+    print(f"{len(procs)} processes side by side: "
+          + "; ".join(",".join(g) + " " + ",".join(sc) for g, sc in shares))
     failed = []
     for k, g, proc, log, t0 in procs:
         proc.wait()
@@ -781,7 +827,7 @@ def fan_out():
     check(f"all {len(procs)} side-by-side processes finished and reported", not failed, "; ".join(failed)[:600])
 
 
-FANNED = JOBS > 1 and not ONLY and not ONLY_SCEN and not PART
+FANNED = JOBS > 1 and not PART
 if FANNED:
     fan_out()
 
@@ -802,6 +848,7 @@ with sync_playwright() as p:
                     continue
                 ctx = b.new_context(viewport=vp, device_scale_factor=DPR, color_scheme=theme,
                                     is_mobile=mobile, has_touch=mobile, **extra)
+                waits.instrument(ctx)          # so the helpers' waits can settle
                 for code in inits:
                     ctx.add_init_script(code)
                 for pat, status in routes.items():
@@ -815,7 +862,7 @@ with sync_playwright() as p:
                     browsing.goto(pg, BASE, path, require_boot=False)
                 except Exception as e:
                     errs.append(f"{path}: {e}"[:120]); ctx.close(); continue
-                pg.wait_for_timeout(700)
+                waits.settle(pg, 700)
                 js(pg, "() => { window.SkriblHints && SkriblHints.hide && SkriblHints.hide(); }")
                 pg.add_style_tag(content=HIDE_CSS)
                 seen = set()
@@ -824,7 +871,13 @@ with sync_playwright() as p:
                         yield from gen
                     except Exception as e:
                         errs.append(f"driver {path}: {e}"[:160])
+                t_state = time.monotonic()
                 for state in guarded(states(pg)):
+                    # Where the time goes, for whoever tunes this next: the
+                    # driver reaching this state plus the last one's photos.
+                    if time.monotonic() - t_state > 3:
+                        print(f"  slow: {path} '{state}' {time.monotonic() - t_state:.1f}s", flush=True)
+                    t_state = time.monotonic()
                     # A drawer glides the page as it opens; a photograph taken
                     # mid-glide is of where the control was (STILL, above).
                     try:
@@ -896,15 +949,18 @@ if PART:
 
 # ------------------------------------------------------------------ verdicts
 BASELINE = pathlib.Path(__file__).with_name("centring_baseline.json")
-FULL = not ONLY and not ONLY_SCEN
+FULL = not ONLY and not ONLY_SCEN and set(FACES) == set(ALL_FACES)
 def off_key(r):
     return f"{r['page']} | {r['control']} | {r['combo']} | {r['face']}"
 inv_keys = {e["key"] for e in inventory}
 unreached = sorted(k for k in inv_keys if k not in reached and k not in UNREACHABLE)
 print(f"\nfound in source {len(inv_keys)} / reached live {len(inv_keys) - len(unreached) - len([k for k in UNREACHABLE if k in inv_keys])}"
       f" / named exceptions {len([k for k in UNREACHABLE if k in inv_keys])} / unreached {len(unreached)} (must be 0)")
-check("every control in the inventory was reached on a live page (or is a named exception)",
-      not unreached, f"{len(unreached)} unreached: " + ", ".join(unreached[:40]))
+if FULL:
+    check("every control in the inventory was reached on a live page (or is a named exception)",
+          not unreached, f"{len(unreached)} unreached: " + ", ".join(unreached[:40]))
+else:
+    print("  (whether every control is reached is the full sweep's to judge: CENTRING_FULL=1)")
 check("every inventory exception still names a control that exists",
       all(k in inv_keys for k in UNREACHABLE), str([k for k in UNREACHABLE if k not in inv_keys]))
 off = sorted((r for r in rows if max(abs(r["dx"]), abs(r["dy"])) > TOL), key=lambda r: -max(abs(r["dx"]), abs(r["dy"])))
@@ -914,11 +970,14 @@ for r in rows:
     worst[k] = max(worst.get(k, 0), abs(r["dx"]), abs(r["dy"]))
 typed_now = sorted(f"{pg_} | {n}" for (pg_, n) in typed_bad)
 if os.environ.get("CENTRING_WRITE_BASELINE"):
-    if not FULL:
-        print("CENTRING_WRITE_BASELINE needs a full run (no CENTRING_COMBOS / CENTRING_SCENARIOS)")
-        sys.exit(2)
-    BASELINE.write_text(json.dumps({"off": {k: round(v, 2) for k, v in sorted(worst.items()) if v > TOL},
-                                    "typed": typed_now}, indent=1, ensure_ascii=False) + "\n")
+    # The entries this run measured are rewritten; the rest (other screens,
+    # faces and pages, which only the full sweep sees) are kept as they were.
+    _old = json.loads(BASELINE.read_text()) if BASELINE.exists() else {"off": {}, "typed": []}
+    _off = {} if FULL else {k: v for k, v in _old["off"].items() if k not in worst}
+    _off.update({k: round(v, 2) for k, v in worst.items() if v > TOL})
+    BASELINE.write_text(json.dumps({"off": dict(sorted(_off.items())),
+                                    "typed": typed_now if FULL else sorted(set(_old["typed"]) | set(typed_now))},
+                                   indent=1, ensure_ascii=False) + "\n")
     print(f"baseline written: {BASELINE}")
 base = json.loads(BASELINE.read_text()) if BASELINE.exists() else {"off": {}, "typed": []}
 # A finding on the list may wobble by a tenth of a pixel between runs; a
@@ -935,15 +994,19 @@ combos_run = {r["combo"] for r in rows}
 stale_off = [k for k, v in base["off"].items()
              if (k in worst and worst[k] <= TOL) or (FULL and k not in worst)
              if k.split(" | ")[2] in combos_run or FULL]
-check("every listed finding still reproduces (a fixed one comes off the list)",
-      not stale_off, f"{len(stale_off)} fixed or gone: " + "; ".join(stale_off[:8])
-      + " -- rewrite the list with CENTRING_WRITE_BASELINE=1 after a full run")
+if FULL:
+    check("every listed finding still reproduces (a fixed one comes off the list)",
+          not stale_off, f"{len(stale_off)} fixed or gone: " + "; ".join(stale_off[:8])
+          + " -- rewrite the list with CENTRING_WRITE_BASELINE=1 after a full run")
+elif stale_off:
+    print(f"  ({len(stale_off)} listed finding(s) measured inside a third of a pixel this time; the full sweep judges those)")
 new_typed = [t for t in typed_now if t not in base["typed"]]
 check("no NEW control's visible face is a typed symbol character",
       not new_typed, f"{len(new_typed)}: " + "; ".join(f"{t} {typed_bad.get(tuple(t.split(' | ', 1)), '')}" for t in new_typed[:12]))
-stale_typed = [t for t in base["typed"] if t not in typed_now] if FULL else []
-check("every listed typed symbol is still there (a fixed one comes off the list)",
-      not stale_typed, f"{len(stale_typed)} fixed: " + "; ".join(stale_typed[:8]))
+if FULL:
+    stale_typed = [t for t in base["typed"] if t not in typed_now]
+    check("every listed typed symbol is still there (a fixed one comes off the list)",
+          not stale_typed, f"{len(stale_typed)} fixed: " + "; ".join(stale_typed[:8]))
 (OUT / "report.json").write_text(json.dumps({"rows": rows, "off": off, "typed": [[k[0], k[1], v] for k, v in typed_bad.items()],
                                              "unreached": unreached, "misses": MISSES, "restless": restless,
                                              "moving": MOVING, "inventory": inventory, "errors": errs[:50]}, indent=1))

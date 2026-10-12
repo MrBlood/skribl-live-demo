@@ -262,14 +262,18 @@ blank page as full, imports that parsed but did not import.)
 ## Checking buttons: use the centring tool
 
 The owner: "The centering script/harness should be used whenever checking
-buttons in the future." **Any change to a button, a badge, a chip or a mark
-runs `harness/check_centring.py`** (with a server up; `CENTRING_COMBOS=
-phone-light` while iterating, whole before the PR). It is `check_*`: not in a
-bare run or a seal. `harness/centring_baseline.json` only shrinks: a new
-finding fails, a fixed one fails until it comes off the list
-(`CENTRING_WRITE_BASELINE=1` after a full run). Its measurements are in this
-box's fonts, so a fix is font-independent (a drawn mark, `text-box` trimming),
-never a nudge tuned to Liberation Sans.
+buttons in the future," and later: "make the centring check take a couple
+minutes at most. I can visually tell when things look off if need be." **Any
+change to a button, a badge, a chip or a mark runs
+`harness/check_centring.py`** with a server up: about two minutes, the two
+editors and the link player on a phone in dark and a desk in light.
+`CENTRING_FULL=1` is the full sweep (every page, six screens, three faces,
+about 17 minutes), for rewriting the list. It is `check_*`: not in a bare run
+or a seal. `harness/centring_baseline.json` only shrinks: a new finding fails;
+a fixed one comes off with `CENTRING_WRITE_BASELINE=1`, and the full sweep
+fails until it does. Its measurements are in this box's fonts, so a fix is
+font-independent (a drawn mark, `text-box` trimming), never a nudge tuned to
+Liberation Sans.
 
 ## Mistakes from the dock and readout round: do not repeat them
 
