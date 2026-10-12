@@ -227,8 +227,10 @@ satisfied it, with the mechanics the rule leaves out.
 5. **While it holds, carry both attestations into the tree.** The `mp4` and
    `postgres` jobs each write a file naming the tree they tested; artifact
    download is blocked, so transcribe each from the job's own `cat` step (the
-   postgres job prints its attestation last, because its service container's
-   teardown pushes anything earlier out of the log reader's reach). Write them
+   postgres job runs as four shards, and shard 1, which `harness/shard.py`
+   always gives `verify_postgres.py`, prints the attestation last, because its
+   service container's teardown pushes anything earlier out of the log
+   reader's reach). Write them
    to `harness/MP4-ATTESTATION.txt` and `harness/POSTGRES-ATTESTATION.txt`.
    Both are in `release_run.GENERATED`, so writing them does not move the
    frozen hash — confirm with `release_run.tree_hash()`, then confirm
