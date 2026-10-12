@@ -1404,4 +1404,50 @@ with sync_playwright() as _ps:
         _pg.context.close()
     _bs.close()
 
+# ---------------------------------------------------------------------------
+print("\nA SHORT WINDOW — the reason a post failed is on screen, not under the sheet's edge")
+# The status line is the sheet's last row. Measured on main for the v322 plan's
+# decisions: on a desk window 820px tall the Pad's refusal sat 24px under the
+# sheet's bottom edge, the Pad's "saved on this device" (the Watch row above it
+# pushes it down) was hidden even at 900px, and Flip's shorter sheet hid its
+# refusal at 650px. Each case is driven where it failed. VISIBLE IS A PAINT:
+# the label is asked for at its first line and at its last, by
+# elementFromPoint, because a clipped label keeps its rect.
+_SEEN = """() => { const s = document.getElementById('postStatusLabel'), r = s.getBoundingClientRect();
+    const at = (y) => { const h = document.elementFromPoint(r.left + r.width / 2, y); return !!(h && (h === s || s.contains(h))); };
+    return { first: at(r.top + 6), last: at(r.bottom - 4), bottom: Math.round(r.bottom),
+             sheet: Math.round(document.getElementById('postSheet').getBoundingClientRect().bottom),
+             text: s.textContent.slice(0, 70) }; }"""
+with sync_playwright() as _pw:
+    _bw = _pw.chromium.launch()
+    for _ed, _path, _sel, _boot, _how, _h in (("Pad", "/skribl-pad", "#canvas", "pad", "refused", 820),
+                                              ("Pad", "/skribl-pad", "#canvas", "pad", "device", 900),
+                                              ("Flip", "/flip", "#pad", "flip", "refused", 650)):
+        _pg = _bw.new_context(viewport={"width": 1280, "height": _h}).new_page()
+        if _how == "refused":
+            _pg.route("**/api/skribls", lambda r: r.fulfill(status=400, content_type="application/json",
+                                                             body='{"error": "Turned down for this check."}')
+                      if r.request.method == "POST" else r.continue_())
+        else:
+            _pg.route("**/api/skribls", lambda r: r.abort() if r.request.method == "POST" else r.continue_())
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
+        _pg.evaluate("() => { if (window.SkriblHints) SkriblHints.hide(); }")
+        _bx = _pg.locator(_sel).bounding_box()
+        _pg.mouse.move(_bx["x"] + 80, _bx["y"] + 80); _pg.mouse.down()
+        _pg.mouse.move(_bx["x"] + 200, _bx["y"] + 160, steps=10); _pg.mouse.up()
+        _pg.wait_for_timeout(300)
+        if _ed == "Pad" and _pg.is_visible("#recordBtn"):
+            _pg.click("#recordBtn"); _pg.wait_for_timeout(400)
+        _pg.click("#postBtn"); _pg.wait_for_timeout(500)
+        _pg.click("#postSubmitBtn")
+        _pg.wait_for_function("() => document.getElementById('postStatus').classList.contains('error')", timeout=15000)
+        _pg.wait_for_timeout(300)
+        _s = _pg.evaluate(_SEEN)
+        _what = "saved on this device" if _how == "device" else "refused"
+        check(f"{_ed}, {_what}, a desk window {_h}px tall: the reason is on screen, first line to last",
+              _s["first"] and _s["last"] and "Couldn" in _s["text"], str(_s))
+        _pg.context.close()
+    _bw.close()
+
 summarise_and_exit()
