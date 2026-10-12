@@ -6576,6 +6576,18 @@ body.playing .flip-grid { display: none; }
   /* The cluster keeps its own gap and never touches the clip edge. */
   #onionGroup, .tune-row > .seg, .tune-row > .tune-tool { margin-right: 4px; }
 }
+/* THE GRID ROW ON ONE LINE (owner, from the mock: "A on the grid"). With the
+   grid on, Coarse / Medium / Fine dropped under "Grid" on a 402px phone: the
+   row wanted 367px of its 356. The three words take the 9px sides Flip's
+   Smear row already has, and the label stops asking for 140px, so the row is
+   one line from 390px up -- 50px tall instead of 90, and the sheet no longer
+   jumps a line when the grid goes on. Fine is still 44.7px, a full finger.
+   Narrower than 390 it drops under the label, as any row does. Both editors:
+   the row is shared. */
+@media (max-width: 640px) {
+  #tuneGridRow .tune-label { flex-basis: auto; }
+  #gridDensitySeg button { padding-left: 9px; padding-right: 9px; }
+}
 
 /* 3. Header: the control cluster must never sit against — or under — the
    brand. Two states, both measured on a real phone and reproduced here:

@@ -15996,3 +15996,15 @@ back. On main the button is not offered; each part of the fix broken alone
 turned its own row red (the pinning without `!important`, the page lock, the
 ⋯, the ✕ and the transport each styled for the real API only). Not tested
 here: iPhone Safari itself, which this container does not have.
+
+**The Grid row stays on one line on a phone (owner, from the mock: "A on the
+grid").** With the grid on, Coarse / Medium / Fine dropped under "Grid" on a
+402px phone (the row wanted 367px of its 356), so the settings sheet grew a
+line the moment the grid went on. On phones the three words take the 9px
+sides Flip's Smear row already has, and the label stops reserving 140px: the
+row is one line from 390px up, 50px tall instead of 90, and Fine is still
+44.7px wide; narrower, it drops under the label as any row does. Measured in
+this box's fonts, with 19px to spare at 402 for the iPhone's. Shared: one rule
+for both editors; the desk is unchanged. verify_parity "the Grid row stays on
+one line on a phone" turns the grid on and measures both editors at 402 and
+390 (two lines on main, one here) and, at 375, that the words still fit.
