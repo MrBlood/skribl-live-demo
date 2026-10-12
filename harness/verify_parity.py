@@ -2166,6 +2166,13 @@ with sync_playwright() as p:
     # a pinch picked a colour nobody aimed; forced colours erased the handle.
     GONE = """() => { const e = document.querySelector('.eyedropper-lens'), p = document.querySelector('.eyedropper-pill');
         return !document.getElementById('eyedropperBtn').classList.contains('picking') && (!e || e.hidden) && (!p || p.hidden); }"""
+    # Every frame for 4 s from before a press: did `playing` turn true, and did
+    # any frame of it still have the pick up?
+    WATCH_PLAY = f"""() => {{ const gone = {GONE}, t0 = performance.now();
+        const w = window.__playWatch = {{ saw: false, lens: false }};
+        const tick = () => {{ if (playing) {{ w.saw = true; if (!gone()) w.lens = true; }}
+            if (performance.now() - t0 < 4000) requestAnimationFrame(tick); }};
+        requestAnimationFrame(tick); }}"""
     FOCUS = """() => { const a = document.activeElement; if (!a) return null;
         const r = a.getBoundingClientRect(), v = a.checkVisibility ? a.checkVisibility({ visibilityProperty: true }) : true;
         return { id: a.id || '', cls: String(a.className || ''), tag: a.tagName, pill: !!a.closest('.eyedropper-pill'),
@@ -2230,6 +2237,13 @@ with sync_playwright() as p:
         check(f"{_route}: switching to the eraser ends the pick", _q.evaluate(GONE), str(_q.evaluate(LS)))
         _q.evaluate("() => setTool('pen')")
         # Playback ends it: by the Pad's Play button, and by Flip's Space.
+        # WATCHED EVERY FRAME, NOT LOOKED AT ONCE (v322). The Pad's replay here
+        # is one quick stroke, about 0.4 s on a slow box and shorter on a fast
+        # one, so a single look 300 ms after Play raced the replay's end: main
+        # went red with the pick correctly ended ("playing False, lens None").
+        # Both editors end the pick before `playing` turns true, so the watch,
+        # started before the press, asks for a replay and for no frame of it
+        # with the lens or the pill still up.
         if _route == "/skribl-pad":
             _q.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }"); _q.wait_for_timeout(300)
             _arm(_q)
@@ -2239,17 +2253,20 @@ with sync_playwright() as p:
             check("/skribl-pad: Cancel on a finished take restores the locked-canvas cursor",
                   _cur == "not-allowed" and _q.evaluate(GONE), repr(_cur))
             _arm(_q)
-            _q.click("#playBtn"); _q.wait_for_timeout(300)
-            _pl = _q.evaluate("() => playing")
+            _q.evaluate(WATCH_PLAY)
+            _q.click("#playBtn")
         else:
             _q.evaluate("() => addFrame()"); _q.wait_for_timeout(200)
             _stroke(_q, _cv, False, None, 0.4, "#26b0ff")
             _q.evaluate(SETC, "#00a95c")
             _arm(_q)
-            _q.keyboard.press("Space"); _q.wait_for_timeout(300)
-            _pl = _q.evaluate("() => playing")
+            _q.evaluate(WATCH_PLAY)
+            _q.keyboard.press("Space")
+        waits.until(_q, "() => window.__playWatch.saw", "the replay to start", ms=3000)
+        _q.wait_for_timeout(300)                  # a few more frames of it, lens or none
+        _w = _q.evaluate("() => window.__playWatch")
         check(f"{_route}: starting playback ends the pick: no lens or pill over the moving frames",
-              _pl and _q.evaluate(GONE), f"playing {_pl}, lens {_q.evaluate(LS)}")
+              _w["saw"] and not _w["lens"], f"{_w}, lens now {_q.evaluate(LS)}")
         _q.close()
     _lctx.close()
 
