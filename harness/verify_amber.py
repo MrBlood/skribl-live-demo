@@ -3,6 +3,7 @@ from playwright.sync_api import sync_playwright
 from assertions import make_check
 import browsing
 import os
+import waits
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 WAV = "/tmp/boombap.wav"
@@ -56,7 +57,7 @@ def scribble(pg, box, seed, n=200):
     pg.mouse.up()
 
 with sync_playwright() as p:
-    b = p.chromium.launch()
+    b = waits.instrument(p.chromium.launch())
     # THE DARK THEME, EXPLICITLY (v292): the literals below are the dark ramp's amber. Since
     # v292 a bare page follows the OS and headless Chromium says light, on which amber is
     # rgb(138, 91, 0). The pin is the semantics (amber, not green, not red); measured on the
@@ -65,7 +66,7 @@ with sync_playwright() as p:
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
 
     print("\nFLIP — light turns amber when the file is dropped")
-    pg.goto(BASE+"/flip", wait_until="load"); pg.wait_for_timeout(700)
+    pg.goto(BASE+"/flip", wait_until="load"); waits.settle(pg, 700)
     pg.evaluate("() => localStorage.clear()")
     box = pg.locator("#pad").bounding_box()
     scribble(pg, box, 0.0)
@@ -82,7 +83,7 @@ with sync_playwright() as p:
     # with a working store the session IS fully recoverable and the honest
     # light is GREEN. Amber didn't die — it moved to the failure case, and the
     # old persistence assertions moved with it (broken-store section below).
-    pg.set_input_files("#musicInput", WAV); pg.wait_for_timeout(5000)
+    pg.set_input_files("#musicInput", WAV); waits.until(pg, waits.FLIP_MUSIC_SAVED, "the track spilled to the store", window=5000)
     s = pg.evaluate(STATE)
     check("GREEN after the drop — the spill made the session recoverable",
           "partial" not in s["cls"] and "failed" not in s["cls"],
@@ -98,7 +99,7 @@ with sync_playwright() as p:
           "partial" not in s["cls"], f"{s['text']!r}")
 
     print("\nFLIP — after reload the media comes BACK from IndexedDB")
-    pg.reload(wait_until="load"); pg.wait_for_timeout(4500)   # merge + ~7MB decode
+    pg.reload(wait_until="load"); waits.until(pg, waits.MUSIC_BACK, "the track back from the store", window=4500)   # merge + ~7MB decode
     m = pg.evaluate("""() => ({ music: typeof musicData === 'string' && musicData.slice(0,10) === 'data:audio',
         cardHidden: document.getElementById('musicPending').hidden,
         frames: frames.length })""")
@@ -114,14 +115,14 @@ with sync_playwright() as p:
     errs2 = []; pg2.on("pageerror", lambda e: errs2.append(str(e)))
     pg2.add_init_script(
         "Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
-    pg2.goto(BASE+"/flip", wait_until="load"); pg2.wait_for_timeout(700)
+    pg2.goto(BASE+"/flip", wait_until="load"); waits.settle(pg2, 700)
     pg2.evaluate("() => localStorage.clear()")
     box2 = pg2.locator("#pad").bounding_box()
     scribble(pg2, box2, 0.0)
     for k in range(1,4):
         pg2.evaluate("addFrame(false)"); pg2.wait_for_timeout(70); scribble(pg2, box2, k*1.2)
-    pg2.wait_for_timeout(1300)
-    pg2.set_input_files("#musicInput", WAV); pg2.wait_for_timeout(5000)
+    waits.settle(pg2, 1300)
+    pg2.set_input_files("#musicInput", WAV); waits.until(pg2, waits.FLIP_MUSIC_UNSAVED, "the track loaded with nowhere to spill", window=5000)
     s = pg2.evaluate(STATE)
     check("amber (not green, not red) after the drop", "partial" in s["cls"] and "failed" not in s["cls"],
           f"{s['text']!r} dot={s['dot']}")
@@ -176,7 +177,7 @@ with sync_playwright() as p:
           "an acknowledged warning that comes back on the next stroke was never acknowledged")
 
     print("\nFLIP — re-add card in the music drawer after reload (store still broken)")
-    pg2.reload(wait_until="load"); pg2.wait_for_timeout(1500)
+    pg2.reload(wait_until="load"); waits.settle(pg2, 1500)
     snap_pending = pg2.evaluate("() => Object.fromEntries(Object.entries(localStorage))")
     s = pg2.evaluate(STATE)
     check("amber immediately on restore", "partial" in s["cls"], f"{s['text']!r}")
@@ -267,7 +268,7 @@ with sync_playwright() as p:
           dismissed,
           f"{dwhy} — this button is the ONLY thing that clears a pending record, "
           "and until v238 it sat 0x0 in a drawer nothing on screen pointed at")
-    pg2.wait_for_timeout(1600)
+    waits.settle(pg2, 1600)
     s = pg2.evaluate(STATE)
     check("dismissing the card ENDS the amber",
           "partial" not in s["cls"],
@@ -293,7 +294,7 @@ with sync_playwright() as p:
     # that runs no editor, then open a fresh one.
     pg2.goto(BASE + "/static/lib/drawers.js", wait_until="load")   # the editor's pagehide flush has now run, on the OLD state
     pg2.evaluate("(snap) => { localStorage.clear(); for (const [k, v] of Object.entries(snap)) localStorage.setItem(k, v); }", snap_pending)
-    pg2.goto(BASE+"/flip", wait_until="load"); pg2.wait_for_timeout(1500)
+    pg2.goto(BASE+"/flip", wait_until="load"); waits.settle(pg2, 1500)
     s = pg2.evaluate(STATE)
     check("amber again on the restore", "partial" in s["cls"], f"{s['text']!r}")
     xbtn = pg2.evaluate("""() => { const x = document.getElementById('autosaveStatusDismiss');
@@ -304,7 +305,7 @@ with sync_playwright() as p:
           str(xbtn))
     xclicked, xwhy = try_click(pg2, "#autosaveStatusDismiss")
     check("...that takes a tap", xclicked, xwhy)
-    pg2.wait_for_timeout(1600)
+    waits.settle(pg2, 1600)
     s = pg2.evaluate(STATE)
     check("the pill's Dismiss ENDS the amber without a drawer",
           "partial" not in s["cls"] and pg2.evaluate("() => _flipDrawerCtl.current()") is None,
@@ -316,7 +317,7 @@ with sync_playwright() as p:
     print("\nFLIP — re-adding the file restores the loop and clears the warning")
     pg2.evaluate("() => { trimStart=0; trimEnd=6; }")   # pretend the saved loop was 0-6s
     pg2.evaluate("() => { pendingMusicMeta = {name:'boombap.wav', trimStart:1, trimEnd:7, crossfadeMs:40, enabled:true}; }")
-    pg2.set_input_files("#musicInput", WAV); pg2.wait_for_timeout(5000)
+    pg2.set_input_files("#musicInput", WAV); waits.settle(pg2, 5000)
     check("saved loop reapplied on re-add",
           abs(pg2.evaluate("() => trimStart") - 1) < 0.01 and abs(pg2.evaluate("() => trimEnd") - 7) < 0.01,
           f"trim {pg2.evaluate('() => trimStart.toFixed(2)')}–{pg2.evaluate('() => trimEnd.toFixed(2)')}s, "
@@ -326,7 +327,7 @@ with sync_playwright() as p:
     pg2.close()
 
     print("\nPAD — same honest amber instead of a green light")
-    pg.goto(BASE+"/skribl-pad", wait_until="load"); pg.wait_for_timeout(1200)
+    pg.goto(BASE+"/skribl-pad", wait_until="load"); waits.settle(pg, 1200)
     pg.evaluate("() => localStorage.clear()")
     pbox = pg.locator("canvas").first.bounding_box()
     pg.mouse.move(pbox["x"]+120, pbox["y"]+120); pg.mouse.down()
@@ -334,7 +335,7 @@ with sync_playwright() as p:
     pg.mouse.up(); pg.wait_for_timeout(1800)
     s = pg.evaluate(STATE)
     check("Pad green with no media", "partial" not in s["cls"], f"{s['text']!r} dot={s['dot']}")
-    pg.set_input_files("#musicInput", WAV); pg.wait_for_timeout(4500)
+    pg.set_input_files("#musicInput", WAV); waits.until(pg, waits.PAD_MUSIC_SAVED, "the track's bytes in the store", window=4500)
     s = pg.evaluate(STATE)
     check("Pad GREEN once a track is attached — its bytes are in IndexedDB",
           "partial" not in s["cls"], f"{s['text']!r} dot={s['dot']}")
@@ -351,13 +352,13 @@ with sync_playwright() as p:
     errs3 = []; pg3.on("pageerror", lambda e: errs3.append(str(e)))
     pg3.add_init_script(
         "Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
-    pg3.goto(BASE+"/skribl-pad", wait_until="load"); pg3.wait_for_timeout(1200)
+    pg3.goto(BASE+"/skribl-pad", wait_until="load"); waits.settle(pg3, 1200)
     pg3.evaluate("() => localStorage.clear()")
     pbox3 = pg3.locator("canvas").first.bounding_box()
     pg3.mouse.move(pbox3["x"]+120, pbox3["y"]+120); pg3.mouse.down()
     for i in range(60): pg3.mouse.move(pbox3["x"]+120+i*3, pbox3["y"]+120+math.sin(i/4)*40)
-    pg3.mouse.up(); pg3.wait_for_timeout(1800)
-    pg3.set_input_files("#musicInput", WAV); pg3.wait_for_timeout(4500)
+    pg3.mouse.up(); waits.settle(pg3, 1800)
+    pg3.set_input_files("#musicInput", WAV); waits.settle(pg3, 4500)
     s = pg3.evaluate(STATE)
     check("Pad: amber with the track loaded and no store to hold it", "partial" in s["cls"], f"{s['text']!r}")
     noroute3 = pg3.evaluate("""() => { const el = document.getElementById('autosaveStatus'), t = document.getElementById('autosaveStatusText');
@@ -390,17 +391,17 @@ with sync_playwright() as p:
     # stops 9px short, and this pin would be vacuous.)
     pgm = b.new_page(viewport={"width": 390, "height": 664}, color_scheme="dark")
     pgm.add_init_script("Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
-    pgm.goto(BASE+"/skribl-pad", wait_until="load"); pgm.wait_for_timeout(1200)
+    pgm.goto(BASE+"/skribl-pad", wait_until="load"); waits.settle(pgm, 1200)
     pgm.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
     # The 9:16 canvas a portrait phone actually shows (from a screenshot):
     # it reaches the bottom of the screen, which is where the pill lives.
     pgm.evaluate("() => { const b = document.querySelector('#canvasSeg [data-size=\"tall\"]'); if (b) b.click(); }")
-    pgm.wait_for_timeout(600)
+    waits.settle(pgm, 600)
     mbox = pgm.locator("canvas").first.bounding_box()
     pgm.mouse.move(mbox["x"]+80, mbox["y"]+120); pgm.mouse.down()
     for i in range(40): pgm.mouse.move(mbox["x"]+80+i*3, mbox["y"]+120+math.sin(i/4)*30)
-    pgm.mouse.up(); pgm.wait_for_timeout(1800)
-    pgm.set_input_files("#musicInput", WAV); pgm.wait_for_timeout(4500)
+    pgm.mouse.up(); waits.settle(pgm, 1800)
+    pgm.set_input_files("#musicInput", WAV); waits.settle(pgm, 4500)
     sm = pgm.evaluate(STATE)
     check("Pad phone: amber, with the pill over the canvas", "partial" in sm["cls"] and pgm.evaluate("""() => { const p = document.getElementById('autosaveStatus').getBoundingClientRect(), c = document.querySelector('canvas').getBoundingClientRect();
         return !(p.right <= c.left || p.left >= c.right || p.bottom <= c.top || p.top >= c.bottom); }"""), f"{sm['text']!r}")
@@ -411,7 +412,7 @@ with sync_playwright() as p:
           pgm.evaluate("() => document.getElementById('autosaveStatus').hidden") is True and pgm.evaluate("() => strokes.length") == strokes_m,
           f"hidden={pgm.evaluate('() => document.getElementById(\'autosaveStatus\').hidden')} strokes {strokes_m} -> {pgm.evaluate('() => strokes.length')}")
     pgm.close()
-    pg3.reload(wait_until="load"); pg3.wait_for_timeout(2700)
+    pg3.reload(wait_until="load"); waits.settle(pg3, 2700)
     check("Pad: the draft is applied at boot, with no banner (v294)",
           pg3.evaluate("() => { const b = document.getElementById('restoreBanner'); return (!b || b.hidden) && strokes.length > 0; }"),
           "a banner, or an empty canvas, on the return visit")
@@ -439,7 +440,7 @@ with sync_playwright() as p:
     gone = pg3.evaluate("() => new Promise(r => setTimeout(() => r(!document.getElementById('autosaveStatus').classList.contains('show')), 150))")
     check("Pad: the pill goes the moment Dismiss is tapped, not after the save it schedules",
           gone is True, f"still showing 150 ms after the tap: {not gone}")
-    pg3.wait_for_timeout(1600)
+    waits.settle(pg3, 1600)
     s = pg3.evaluate(STATE)
     check("Pad: the pill's Dismiss ENDS the amber without a drawer",
           xc and "partial" not in s["cls"] and pg3.evaluate("() => _padDrawerCtl.current()") is None,
@@ -457,7 +458,7 @@ with sync_playwright() as p:
     # Flip re-spills the whole payload on every save and heals by itself.
     def pad_page(hook):
         pg = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
-        pg.goto(BASE+"/skribl-pad", wait_until="load"); pg.wait_for_timeout(1200)
+        pg.goto(BASE+"/skribl-pad", wait_until="load"); waits.settle(pg, 1200)
         pg.evaluate("() => localStorage.clear()")
         pg.evaluate("""(hook) => { const orig = SkriblDraftStore.put.bind(SkriblDraftStore); window.__puts = 0;
             SkriblDraftStore.put = (k, v) => { window.__puts++; return (window.__puts === 1) ? hook() : orig(k, v); }; }""".replace("hook()", hook))
@@ -468,13 +469,13 @@ with sync_playwright() as p:
         for i in range(50): pg.mouse.move(box["x"]+120+i*3, box["y"]+y+math.sin(i/4)*30)
         pg.mouse.up()
     pg4, box4 = pad_page("Promise.reject(new Error('transient'))")
-    stroke(pg4, box4, 120); pg4.wait_for_timeout(1800)
+    stroke(pg4, box4, 120); waits.settle(pg4, 1800)
     pg4.set_input_files("#musicInput", WAV); pg4.wait_for_timeout(500)   # before the attach's own save retries
     s = pg4.evaluate(STATE)
     check("Pad: amber after the store refuses the bytes once", "partial" in s["cls"], f"{s['text']!r}")
     r4c, r4why = try_click(pg4, "#autosaveStatusDismiss"); pg4.wait_for_timeout(500)
     check("Pad: acknowledged", r4c and pg4.evaluate("() => document.getElementById('autosaveStatus').hidden") is True, r4why)
-    stroke(pg4, box4, 260); pg4.wait_for_timeout(2500)
+    stroke(pg4, box4, 260); waits.settle(pg4, 2500)
     s = pg4.evaluate(STATE)
     puts = pg4.evaluate("() => window.__puts")
     check("Pad: the next save retries the write, the bytes land, and the pill speaks again — green",
@@ -485,15 +486,15 @@ with sync_playwright() as p:
     pg4.close()
 
     pg5, box5 = pad_page("new Promise(() => {})")
-    stroke(pg5, box5, 120); pg5.wait_for_timeout(1800)
-    pg5.set_input_files("#musicInput", WAV); pg5.wait_for_timeout(2500)
+    stroke(pg5, box5, 120); waits.settle(pg5, 1800)
+    pg5.set_input_files("#musicInput", WAV); waits.settle(pg5, 2500)
     s = pg5.evaluate(STATE)
     check("Pad: amber while a write that never settles is in flight", "partial" in s["cls"], f"{s['text']!r}")
     stroke(pg5, box5, 260); pg5.wait_for_timeout(2500)
     check("Pad: a save inside the deadline does not pile a second write on a hung one",
           pg5.evaluate("() => window.__puts") == 1, f"puts={pg5.evaluate('() => window.__puts')}")
     pg5.wait_for_timeout(9000)   # past the 12s deadline in total
-    stroke(pg5, box5, 400); pg5.wait_for_timeout(2500)
+    stroke(pg5, box5, 400); waits.settle(pg5, 2500)
     s = pg5.evaluate(STATE)
     check("Pad: past the deadline the hung write is given up, retried on the next save, and the amber ends",
           pg5.evaluate("() => window.__puts") >= 2 and "partial" not in s["cls"],
@@ -526,14 +527,14 @@ with sync_playwright() as p:
     # 1.2 s later, so a tab that dies in that window comes back offering a
     # re-add card for a track the user removed.
     fp6 = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
-    fp6.goto(BASE+"/flip", wait_until="load"); fp6.wait_for_timeout(700)
+    fp6.goto(BASE+"/flip", wait_until="load"); waits.settle(fp6, 700)
     fp6.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
     fbox6 = fp6.locator("#pad").bounding_box()
     scribble(fp6, fbox6, 0.0)
-    fp6.set_input_files("#musicInput", WAV); fp6.wait_for_timeout(5000)
+    fp6.set_input_files("#musicInput", WAV); waits.until(fp6, waits.FLIP_MUSIC_SAVED, "the track spilled to the store", window=5000)
     stored6 = fp6.evaluate("() => SkriblDraftStore.get('flip:draft').then(r => !!(r && r.json)).catch(() => false)")
     check("Flip: the spill put the payload in the store", stored6 is True)
-    fp6.evaluate("() => removeMusic()"); fp6.wait_for_timeout(2000)
+    fp6.evaluate("() => removeMusic()"); waits.settle(fp6, 2000)
     left6 = fp6.evaluate("() => SkriblDraftStore.get('flip:draft').then(r => !!(r && r.json)).catch(() => false)")
     check("Flip: removing the last media deletes the stored payload with it",
           left6 is False,
@@ -541,13 +542,13 @@ with sync_playwright() as p:
     fp6.close()
 
     pd6 = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
-    pd6.goto(BASE+"/skribl-pad", wait_until="load"); pd6.wait_for_timeout(1200)
+    pd6.goto(BASE+"/skribl-pad", wait_until="load"); waits.settle(pd6, 1200)
     pd6.evaluate("() => localStorage.clear()")
     pbox6 = pd6.locator("canvas").first.bounding_box()
     pd6.mouse.move(pbox6["x"]+120, pbox6["y"]+120); pd6.mouse.down()
     for i in range(50): pd6.mouse.move(pbox6["x"]+120+i*3, pbox6["y"]+120+math.sin(i/4)*30)
-    pd6.mouse.up(); pd6.wait_for_timeout(1800)
-    pd6.set_input_files("#musicInput", WAV); pd6.wait_for_timeout(4500)
+    pd6.mouse.up(); waits.settle(pd6, 1800)
+    pd6.set_input_files("#musicInput", WAV); waits.until(pd6, waits.PAD_MUSIC_SAVED, "the track's bytes in the store", window=4500)
     # Remove, then read the DRAFT immediately — inside the 1.2 s debounce, which
     # is the window a dying tab falls into. Two clicks: the bin asks first (the
     # first arms it, lib/pendingcards.js), and the second is the Remove.
@@ -582,9 +583,9 @@ with sync_playwright() as p:
                                 ("desktop", {"width": 1280, "height": 900}, False)):
         _ctx = b.new_context(viewport=_vp, color_scheme="dark", has_touch=_touch, is_mobile=_touch)
         _p = _ctx.new_page()
-        _p.goto(BASE + "/skribl-pad", wait_until="load"); _p.wait_for_timeout(1200)
+        _p.goto(BASE + "/skribl-pad", wait_until="load"); waits.settle(_p, 1200)
         _p.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); SkriblAutosavePill.show('saved-no-media'); }")
-        _p.wait_for_timeout(500)
+        waits.settle(_p, 500)
         _s = _p.evaluate(SEEN)
         check(f"{_label}: the × is drawn at rest, not only when touched",
               _s["restVisible"], f"puck fill {_s['puckFill']} border {_s['puckBorder']}px — "
@@ -613,11 +614,11 @@ with sync_playwright() as p:
     # shown at the moment of restore, before the store had been asked — a false
     # alarm flashed on every healthy restore.
     pg6, box6 = pad_page("orig(k, v)")   # a working store; the hook counts puts
-    pg6.set_input_files("#musicInput", WAV); pg6.wait_for_timeout(4500)
+    pg6.set_input_files("#musicInput", WAV); waits.until(pg6, waits.PAD_MUSIC_SAVED, "the track's bytes in the store", window=4500)
     check("Pad: a track with no strokes is saved as a draft",
           pg6.evaluate("() => { const r = localStorage.getItem('skribl_autosave_v1'); return !!(r && JSON.parse(r).musicMeta && JSON.parse(r).musicMeta.name); }"),
           "the draft slot is empty: media alone was 'nothing meaningful' and the bytes in the store are orphans")
-    pg6.reload(wait_until="load"); pg6.wait_for_timeout(6000)
+    pg6.reload(wait_until="load"); waits.until(pg6, waits.PAD_TRACK_BACK, "the track back at boot", window=6000)
     check("Pad: ...and back at boot, bytes and all, for a media-only draft",
           pg6.evaluate("() => !!(audioEl && audioEl._fileName === 'boombap.wav')"),
           "the track did not come back from the store on the return visit")
@@ -625,8 +626,8 @@ with sync_playwright() as p:
 
     # Findings 2 and 3, on a draft that restores today (a stroke plus the track).
     pg7, box7 = pad_page("orig(k, v)")
-    stroke(pg7, box7, 120); pg7.wait_for_timeout(1800)
-    pg7.set_input_files("#musicInput", WAV); pg7.wait_for_timeout(4500)
+    stroke(pg7, box7, 120); waits.settle(pg7, 1800)
+    pg7.set_input_files("#musicInput", WAV); waits.until(pg7, waits.PAD_MUSIC_SAVED, "the track's bytes in the store", window=4500)
     # The restore runs at boot now, so the instruments go in BEFORE the page
     # scripts: a setter trap catches the store the moment lib/draftstore.js
     # defines it, and the pill is sampled from the first frame.
@@ -685,12 +686,12 @@ with sync_playwright() as p:
     # canvas wrote no photo. Driven with a file that cannot decode, which is
     # also the other half: it must come back as pending, not vanish.
     pgR = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
-    pgR.goto(BASE+"/skribl-pad", wait_until="load"); pgR.wait_for_timeout(1200)
+    pgR.goto(BASE+"/skribl-pad", wait_until="load"); waits.settle(pgR, 1200)
     pgR.evaluate("() => localStorage.clear()")
     pbR = pgR.locator("canvas").first.bounding_box()
     pgR.mouse.move(pbR["x"]+120, pbR["y"]+120); pgR.mouse.down()
     for i in range(30): pgR.mouse.move(pbR["x"]+120+i*4, pbR["y"]+120+math.sin(i/4)*30)
-    pgR.mouse.up(); pgR.wait_for_timeout(1500)
+    pgR.mouse.up(); waits.settle(pgR, 1500)
     flight = pgR.evaluate("""() => {
         pendingPhotoMeta = { name: 'broken.png', fit: 'contain', opacity: 0.6 };
         const input = document.getElementById('photoInput');
@@ -732,12 +733,12 @@ with sync_playwright() as p:
     # book-keeping, so a reload could re-attach the PREVIOUS photo or ask about
     # a file the opened draft never had.
     pgO = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
-    pgO.goto(BASE+"/skribl-pad", wait_until="load"); pgO.wait_for_timeout(1200)
+    pgO.goto(BASE+"/skribl-pad", wait_until="load"); waits.settle(pgO, 1200)
     pgO.evaluate("() => localStorage.clear()")
     pbO = pgO.locator("canvas").first.bounding_box()
     pgO.mouse.move(pbO["x"]+100, pbO["y"]+100); pgO.mouse.down()
     for i in range(25): pgO.mouse.move(pbO["x"]+100+i*4, pbO["y"]+100+math.sin(i/4)*25)
-    pgO.mouse.up(); pgO.wait_for_timeout(800)
+    pgO.mouse.up(); waits.settle(pgO, 800)
     PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
     opened = pgO.evaluate("""async (png) => {
         // The session before: a remembered photo, its bytes in the store.
@@ -809,11 +810,11 @@ with sync_playwright() as p:
     _png = pathlib.Path(tempfile.gettempdir()) / "skribl_amber_probe.png"
     _png.write_bytes(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
     pg8, box8 = pad_page("orig(k, v)")
-    stroke(pg8, box8, 120); pg8.wait_for_timeout(600)
-    pg8.set_input_files("#photoInput", str(_png)); pg8.wait_for_timeout(1500)
+    stroke(pg8, box8, 120); waits.settle(pg8, 600)
+    pg8.set_input_files("#photoInput", str(_png)); waits.settle(pg8, 1500)
     pg8.evaluate("""() => { document.querySelector('.photo-fit-btn[data-fit="contain"]').click();
         const o = document.getElementById('photoOpacity'); o.value = 40; o.dispatchEvent(new Event('input', { bubbles: true })); }""")
-    pg8.wait_for_timeout(2000)
+    waits.settle(pg8, 2000)
     saved8 = pg8.evaluate("() => { const d = JSON.parse(localStorage.getItem('skribl_autosave_v1') || '{}'); return d.photoMeta ? [d.photoMeta.fit, d.photoMeta.opacity] : null; }")
     check("Pad: the adjustments are in the draft", saved8 == ["contain", 0.4], str(saved8))
     # The slow decode check has to be in place before the boot restore runs;
@@ -821,7 +822,7 @@ with sync_playwright() as p:
     # replaces whatever is assigned.
     pg8.add_init_script("""Object.defineProperty(window, 'skriblDecodeCheckImage', { configurable: true,
         get: () => ((f) => new Promise(r => setTimeout(() => r(null), 700))), set: () => {} });""")
-    pg8.reload(wait_until="load"); pg8.wait_for_timeout(4700)
+    pg8.reload(wait_until="load"); waits.settle(pg8, 4700)
     got8 = pg8.evaluate("() => [photoFit, photoOpacityVal_, photoBgImg.style.display, photoBgImg.style.opacity]")
     check("Pad: after a slow decode the restored photo is showing",
           got8[2] == "block", f"{got8}")
@@ -836,11 +837,11 @@ with sync_playwright() as p:
     # autosave. The pill still said Saved; a tab killed then lost the document.
     pgP = b.new_page(viewport={"width": 1280, "height": 900})
     pgP.on("pageerror", lambda e: errs.append(f"photo-only: {e}"))
-    pgP.goto(BASE + "/skribl-pad", wait_until="load"); pgP.wait_for_timeout(1000)
+    pgP.goto(BASE + "/skribl-pad", wait_until="load"); waits.settle(pgP, 1000)
     pgP.evaluate("() => { localStorage.clear(); }")
-    pgP.reload(wait_until="load"); pgP.wait_for_timeout(1000)
+    pgP.reload(wait_until="load"); waits.settle(pgP, 1000)
     pgP.set_input_files("#photoInput", str(_png))
-    pgP.wait_for_function("() => mediaDraft.photo === 'durable'", timeout=20000); pgP.wait_for_timeout(1800)
+    pgP.wait_for_function("() => mediaDraft.photo === 'durable'", timeout=20000); waits.settle(pgP, 1800)
     AUTO = "() => { const r = localStorage.getItem('skribl_autosave_v1'); if (!r) return null; const d = JSON.parse(r); return d.photoMeta ? d.photoMeta.name : 'no photo'; }"
     before = pgP.evaluate(AUTO)
     pgP.add_init_script("""(() => { let v; Object.defineProperty(window, 'skriblDecodeCheckImage', { configurable: true,
@@ -888,7 +889,7 @@ with sync_playwright() as p:
         pgS.on("pageerror", lambda e, nm=nm: errs.append(f"save-busy {nm}: {e}"))
         if nm == "Flip":
             pgS.add_init_script(SLOW_DECODE)
-        pgS.goto(BASE + route, wait_until="load"); pgS.wait_for_timeout(1200)
+        pgS.goto(BASE + route, wait_until="load"); waits.settle(pgS, 1200)
         pgS.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
         if nm == "Pad":
             pgS.evaluate(SLOW_NORMALISE)
@@ -896,7 +897,7 @@ with sync_playwright() as p:
         pgS.wait_for_timeout(200)                      # the read has started, the decode has not finished
         early = pgS.evaluate(SAVE)
         toast = pgS.evaluate("() => document.body.innerText.includes('Preparing media')")
-        pgS.wait_for_timeout(4000)
+        waits.settle(pgS, 4000)
         late = pgS.evaluate(SAVE)
         check(f"{nm}: Save draft while a photo is still being read waits, and says so",
               early is None and toast, f"saved={early}, toast={toast}")
@@ -911,12 +912,12 @@ with sync_playwright() as p:
     # slowed so the newer photo lands first.
     pgX = b.new_page(viewport={"width": 1280, "height": 900})
     pgX.on("pageerror", lambda e: errs.append(f"restore-standdown: {e}"))
-    pgX.goto(BASE + "/skribl-pad", wait_until="load"); pgX.wait_for_timeout(1200)
+    pgX.goto(BASE + "/skribl-pad", wait_until="load"); waits.settle(pgX, 1200)
     pgX.evaluate("""() => { localStorage.clear(); const orig = SkriblDraftStore.get;
         SkriblDraftStore.get = (k) => new Promise(r => setTimeout(() => r(orig.call(SkriblDraftStore, k)), 1500));
         reAddMediaFromStore('photo', 'photoInput', { name: 'old.png' }); }""")
     pgX.set_input_files("#photoInput", {"name": "new.png", "mimeType": "image/png", "buffer": _png1((30, 160, 90))})
-    pgX.wait_for_timeout(3500)
+    waits.settle(pgX, 3500)
     stood = pgX.evaluate("""async () => { const s = await SkriblSavedDrafts.save();
         return { restoring: _restoring.photo, photo: photoBgImg._fileName, saved: !!s }; }""")
     check("Pad: a restore overtaken by a newer photo stands down, and Save draft saves",
@@ -935,7 +936,7 @@ with sync_playwright() as p:
     # "no" on any tree.
     pgW = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
     pgW.on("pageerror", lambda e: errs.append(f"pad-rows: {e}"))
-    pgW.goto(BASE + "/skribl-pad", wait_until="load"); pgW.wait_for_timeout(1200)
+    pgW.goto(BASE + "/skribl-pad", wait_until="load"); waits.settle(pgW, 1200)
     pgW.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
     import base64 as _b64, io as _io
     _wb = _io.BytesIO()
@@ -994,7 +995,7 @@ with sync_playwright() as p:
     # answer certain.
     ctxF = b.new_context(viewport={"width": 1280, "height": 900})
     pgF = ctxF.new_page(); pgF.on("pageerror", lambda e: errs.append(f"flip-draft: {e}"))
-    pgF.goto(BASE + "/flip", wait_until="load"); pgF.wait_for_timeout(1200)
+    pgF.goto(BASE + "/flip", wait_until="load"); waits.settle(pgF, 1200)
     pgF.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
     boxF = pgF.locator("#pad").bounding_box()
     pgF.mouse.move(boxF["x"] + 50, boxF["y"] + 50); pgF.mouse.down()
@@ -1003,7 +1004,7 @@ with sync_playwright() as p:
     pgF.evaluate("() => clearAllPages()")
     pgF.set_input_files("#imageInput", {"name": "auto.png", "mimeType": "image/png", "buffer": _png1((200, 40, 40))})
     pgF.wait_for_function("() => !!bgImage", timeout=20000)
-    pgF.evaluate("() => flushFlipDraft()"); pgF.wait_for_timeout(1500)
+    pgF.evaluate("() => flushFlipDraft()"); waits.settle(pgF, 1500)
     pgF2 = ctxF.new_page(); pgF2.on("pageerror", lambda e: errs.append(f"flip-draft: {e}"))
     pgF2.add_init_script("""(() => { let v; Object.defineProperty(window, 'SkriblDraftStore', { configurable: true, get: () => v,
         set: (x) => { const g = x.get; x.get = function (k) { const pr = g.apply(this, arguments);

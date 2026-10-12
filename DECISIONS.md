@@ -16092,3 +16092,16 @@ Cancel, the other-tab bar's "Keep for later", the draw drawer's "High"), each
 centred in its crop, plus four Library icons at 0.52px. Left for the owner's
 eye, in this box's fonts only: three tool icons about 1px off (the drawings
 are lopsided), and pill labels a little high in DejaVu and FreeSans.
+
+**verify_amber settles too (the next round of #427 and #428).** It had the
+most sleeps left, 88 of them, 190 written seconds in a suite of about 280.
+Each was read for what the check after it asks. 49 now settle (a load, a
+stroke's save, a tap whose effect the next check needs, where an early
+return can only fail loudly) and 9 wait for the app's own signal, the music
+predicates `verify_dots` already uses. 30 stay sleeps on purpose: every one
+before a check that something did NOT happen, where an early return would
+pass silently, the short ones that catch a moment in between, and the
+deadlines. Each alone on a fresh server, 110/110 both: 285 s before, 244
+after (-15%). Of the 58 waits, 19 still ran to their old deadline, most of
+them on the Pad after a stroke, which keeps doing a little work until just
+before the window closes; that is where the next saving is.
