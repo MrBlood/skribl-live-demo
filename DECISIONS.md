@@ -16188,3 +16188,24 @@ fourth, on the tree with both fixes.
   follow.
 * **The owner's check of the build** on Windows and an iPhone, and Blooby
   cheering after a post (FUTURE.md 6l), both after the outside audit.
+
+## After v322 -- main red on the seal's own merge: a check that raced a short replay
+
+Main's after-merge battery at d556500, the v322 seal, went red on one check in
+one shard: `verify_parity`'s "/skribl-pad: starting playback ends the pick",
+reading "playing False, lens None". The pick had ended, as it should; so had the
+replay. The check looked once, 300 ms after Play, at a replay of one quick
+stroke that lasts about 0.4 s on the build box and starts about 60 ms after the
+click, and whose length is however long the test took to draw the stroke, so a
+faster runner leaves less of it. The same tree had passed the suite twice that
+day, in the release run and in CI.
+
+Both editors end the pick in the Play path before `playing` turns true (the
+Pad's Play handler calls `stopPicking()`, Flip's `play()` calls
+`setPicking(false)`), so the check now watches from inside the page, every
+frame, from before the press: it asks for a replay and for no frame of it with
+the lens or the pill still up. With the replay at 4x, over before 300 ms, the
+old check goes red in main's exact words and the new one passes; with Play no
+longer ending the pick, each editor's check goes red on its own page, the watch
+reporting the lens up while playing; clean, `verify_parity` 394/394. The v322
+record still describes the tree it sealed: this changes a check, not the app.
