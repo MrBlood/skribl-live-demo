@@ -770,7 +770,10 @@ body.player-mode .canvas-area { display: contents; }
    verify_tappause) and all but vanished on a dark canvas; white with an
    edge reads on paper, on a dark
    canvas and on purple ink, and darkens nothing. Fixed colours, not the
-   theme's: it sits on the drawing's own ground, not the page's. Shown by
+   theme's: it sits on the drawing's own ground, not the page's. The arrow
+   is --accent, the brand purple, which has one value in both themes; a
+   token rather than the literal because verify_theme holds every ink in the
+   chrome to one (#416 typed #7c5cff and main went red on it). Shown by
    body.playback-paused alone, which each editor's stop clears (the player's
    Play, end and restart), and it takes no taps -- the tap
    that lands on it is the canvas's, and resumes. */
@@ -793,7 +796,7 @@ body.playback-paused .tap-paused { display: grid; }
   background: #ffffff;
   border: 2px solid rgba(124, 92, 255, 0.65);
 }
-.tap-paused-disc svg { width: 26px; height: 26px; fill: #7c5cff; margin-left: 3px; }
+.tap-paused-disc svg { width: 26px; height: 26px; fill: var(--accent); margin-left: 3px; }
 
 .canvas-empty-hint {
   position: absolute;
