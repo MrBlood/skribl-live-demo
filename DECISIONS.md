@@ -16544,3 +16544,56 @@ now ask for the owner's number, the whole budget. And a red check that left the
 sheet open made the next click wait out its timeout and stopped the suite, so
 one failure hid the rest; the sheet is closed first now, and the drawer is asked
 for its own open state rather than whether it is displayed, which it always is.
+
+## After v322 -- the Pad plan, step 5: a note at 90% of what a post can hold, and at the limit
+
+The owner's pick A. Until steps 2 and 4 nothing said anything until Post failed
+at the end of the work; now, while drawing, the toast where "Draft restored" is
+said (showToast's place under the header, taps passing through, never over a
+button) says it twice at most: after a save that crossed 90% of what a post can
+hold, how many minutes more fit at this drawing's own pace ("About 14 more
+minutes will fit in a post."); after one that reached the limit, "That's as
+long as a post can hold. It's all still saved here." The second sentence only
+when that save landed: a failed save says the first alone.
+
+lib/pointbudget.js holds the rule for both editors. padShare() and docShare()
+say how much of a post is spent by whichever ceiling runs out first (a Pad
+drawing's points or strokes, a Flip's points or pages); note() makes one
+teller per editor, which answers each level the first time it is reached and
+again only after the drawing has fallen back under it (an undo, a deleted
+page); prime() takes the level of a drawing restored at boot without a word,
+since it was told before the reload; noteWords() says it, the minutes or pages
+left being what is left of the share at the rate it was spent. Each editor
+calls it from the one place its saves report, showAutosaveStatus().
+
+Flip: shared. The same note in Flip's chip, counting pages: "About 20 more
+pages will fit in a post."
+
+CALIBRATION
+
+verify_drafts NEARLY TOO LONG loads the two-hour generator's drawing just under
+90% and draws one stroke across it on a phone, then asks for the exact sentence
+(the minutes worked out again in Python from the drawing's points and time),
+that taps go through the toast and that no button drawn under it is covered
+(asked by elementFromPoint, which sees through it as taps do); then that the
+next save says nothing, the limit is said once, said again after an undo and a
+redo, not said as a drawing restored at the limit boots or on its next save,
+and said without "still saved here" when the save failed (localStorage made to
+refuse). Flip at 180 of 200 pages says "About 20 more pages".
+
+Each was shown red on its own mutation, each in its own copy on its own server:
+the Pad's save never asking (the Pad's five note checks); the teller answering
+every save (the next save, the undo and redo, the restore and Flip's); no
+re-arming after falling back (the undo and redo); no prime at restore (the
+restore); "saved" taken as given (the failed save); the minutes counted ten
+times over (the sentence); Flip's save never asking (Flip's); and the tree
+before this change (all six note checks).
+
+Three things were wrong in the first round. The placement check read boxes: a
+closed drawer's Done and a hidden grid button keep theirs under the toast, so
+it called them covered; it asks what is painted now. The restore check
+installed its recorder after the page had booted, and the boot's own save is
+where a missing prime speaks, so that mutation stayed green; the toast is
+watched from the first paint now. And the copy meant to be the tree before this
+change was taken from the wrong commit and passed everything; taken from the
+right one, it fails all six.
