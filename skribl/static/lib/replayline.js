@@ -77,20 +77,25 @@
   var CARET = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg>';
   var n = 0;
 
-  /* attach(host, { choice, pick, playMs, drawnMs, fit })
+  /* attach(host, { choice, pick, playMs, drawnMs, fit, lead })
    *   choice()   the current choice ('fit' or a rate)
    *   pick(c)    the caller applies a new choice (re-anchoring its own clock)
    *   playMs()   the replay's length at 1×, for Fit and its number
    *   drawnMs()  the artist's time, or null where it means nothing (a Flip)
    *   fit        false to leave Fit out (a Flip loops; it has no "whole")
+   *   lead()     what the line opens with when there is no drawn time -- the
+   *              in-post player's "<b>12 pages</b> · " for a Flip -- or omitted
    * Returns { update, close }. The caller calls update() whenever the
    * drawing or the choice changes under it. */
   function attach(host, o) {
     if (!host || !o) return null;
     var id = 'rl' + (++n);
     host.classList.add('replay-line');
+    /* The quiet words are in .rl-m spans, so a page that cannot name a
+       muted colour (the in-post player, on a host's page) can quieten them
+       and leave the numbers at full strength. */
     host.innerHTML = '<span class="rl-text"><span class="rl-drawn"></span>' +
-      'watching at <button type="button" class="rl-speed" aria-expanded="false" aria-controls="' + id +
+      '<span class="rl-m">watching at</span> <button type="button" class="rl-speed" aria-expanded="false" aria-controls="' + id +
       '"><span></span>' + CARET + '</button><span class="rl-skip">long pauses skipped</span></span>' +
       '<span class="rl-chips" id="' + id + '" role="group" aria-label="Speed" hidden>' +
       RATES.map(function (r) { return '<button type="button" data-r="' + r + '">' + label(r) + '</button>'; }).join('') +
@@ -107,7 +112,8 @@
     function update() {
       var c = o.choice(), p = o.playMs(), d = o.drawnMs ? o.drawnMs() : null;
       btn.firstChild.textContent = (c === 'fit' ? 'Fit · ' : '') + label(rate(c, p));
-      drawn.innerHTML = d ? 'Drawn in <b>' + words(d) + '</b> · ' : '';
+      drawn.innerHTML = d ? '<span class="rl-m">Drawn in </span><b>' + words(d) + '</b><span class="rl-m"> · </span>'
+        : o.lead ? o.lead() || '' : '';
       skip.hidden = !(d && d - p >= d / 10 && d - p >= 1000);
       chips.querySelectorAll('button').forEach(function (b) {
         b.setAttribute('aria-pressed', '' + (b.dataset.r === String(c)));
@@ -180,13 +186,21 @@
    * thumb on a phone. More than 10px sideways is a drag; less is left alone
    * so a tap still pauses (lib/tappause.js draws the same line).
    *
-   * scrub(bar, { points, total, map, frac, seek, start, end })
+   * scrub(bar, { points, total, map, frac, seek, start, end, shape, draw, tip })
    *   points()  the timeline (each with x, y, playT, start)
    *   total()   the replay's length at 1x
    *   map()     clockMap() for it, or null (a Flip: no artist's clock)
    *   frac()    where the replay is, 0..1
    *   seek(f)   show the drawing at f
    *   start()   a drag began (hold the replay); end() it ended
+   *   shape()   optional: the columns already worked out (0..1, any count),
+   *             which win over points() -- the in-post player has them
+   *             before it has the drawing, and keeps them after
+   *   draw(ctx, f, w, h, dpr)  optional: paint the bar yourself (the
+   *             in-post player draws a Flip's pages); return false to leave
+   *             it to the columns. The caller's code, so a surface that
+   *             needs neither does not carry it.
+   *   tip(f)    optional: the bubble's words instead of the clock
    * Returns { paint(f), reset(), drag(surface, on) }. */
   var FINE = [[110, 0.25], [48, 0.5]];
   function scrub(bar, o) {
@@ -201,6 +215,18 @@
     function bin() {
       var tl = o.points() || [], T = o.total() || 1, w = bar.clientWidth;
       var n = Math.max(12, Math.round(w / 5)), c = new Array(n).fill(0), mx = 0, k;
+      var sh = o.shape && o.shape();
+      drawnCol = -2;
+      if (sh && sh.length) {
+        // Stored at a fixed count; each column here takes the tallest of the
+        // stored ones it covers, so a narrow bar keeps its peaks.
+        cols = c.map(function (_, j) {
+          var v = 0, q = Math.floor(j * sh.length / n), e = Math.max(q + 1, Math.floor((j + 1) * sh.length / n));
+          for (; q < e && q < sh.length; q++) v = Math.max(v, sh[q]);
+          return v;
+        });
+        return;
+      }
       for (k = 1; k < tl.length; k++) {
         if (tl[k].start) continue;
         var j = Math.min(n - 1, Math.floor(tl[k].playT / T * n));
@@ -210,23 +236,27 @@
       // No ink to show (a Flip, whose pages are not a stroke timeline): an
       // even track, so the played part still reads.
       cols = c.map(function (v) { return mx ? (v ? Math.sqrt(v / mx) : 0) : 0.2; });
-      drawnCol = -2;
     }
     function paint(f) {
-      if (!cols) bin();
       var dpr = Math.min(2, window.devicePixelRatio || 1), w = bar.clientWidth, h = bar.clientHeight;
       if (!w || !h) return;
+      // A new width is a new number of columns, so it bins again.
+      if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cols = null;
+      }
+      if (!cols) bin();
       f = Math.max(0, Math.min(1, f));
       head.style.left = f * 100 + '%';   // the playhead moves smoothly; the columns step
-      var n = cols.length, at = Math.round(f * n);
-      if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
-        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); drawnCol = -2;
-      }
+      // A painter of the caller's may fill continuously, so its key is the
+      // playhead's device pixel; the columns step.
+      var n = cols.length, at = Math.round(f * (o.draw ? cv.width : n));
       if (at === drawnCol) return;   // only when the playhead crosses a column
       drawnCol = at;
       var x = cv.getContext('2d'), cw = cv.width / n, H = cv.height;
       x.clearRect(0, 0, cv.width, H);
       x.fillStyle = getComputedStyle(bar).color;
+      if (o.draw && o.draw(x, f, cv.width, H, dpr) !== false) return;
+      at = Math.round(f * n);
       for (var k = 0; k < n; k++) {
         if (!cols[k]) continue;
         var ch = Math.max(2 * dpr, (0.15 + 0.85 * cols[k]) * H * 0.78);
@@ -236,7 +266,7 @@
     }
     function say(f, fine) {
       var T = o.total() || 0, m = o.map && o.map();
-      tip.textContent = clock(m ? m(f * T) : f * T) + (fine < 1 ? '  · fine ' + label(fine) : '');
+      tip.textContent = ((o.tip && o.tip(f)) || clock(m ? m(f * T) : f * T)) + (fine < 1 ? '  · fine ' + label(fine) : '');
       tip.style.left = f * 100 + '%';
     }
     function begin(e, f) {

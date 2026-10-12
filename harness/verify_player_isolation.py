@@ -745,7 +745,16 @@ with sync_playwright() as sp:
     #   All three are in app.js, which the player loads whole (initBrandFit
     #   runs on the player too).
     #   142,050 measured.
-    BYTES_RATCHET, BYTES_TARGET = 142_060, 153_800
+    # RAISED (the in-post player, owner: "all yes"), for one named cost:
+    #   +510 B, lib/replayline.js's hooks for the line under a post -- a shape
+    #   the caller already has (pooled to the bar's width), a painter and a
+    #   bubble of the caller's, a lead for the words, the quiet words in their
+    #   own spans, and a fresh bin when the bar changes width. THE PLAYER PAYS
+    #   FOR HOOKS IT DOES NOT USE, and that is the price of one module for three
+    #   surfaces; what only a post needs -- a Flip's pages painted as segments,
+    #   reading the stored shape -- lives in inlineplayer.js, which the player
+    #   never loads (it was 1,349 B here before it moved). 142,560 measured.
+    BYTES_RATCHET, BYTES_TARGET = 142_570, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
