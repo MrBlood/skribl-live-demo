@@ -34,7 +34,7 @@
  * replay position is still zero, so position zero is never taken to mean "the
  * canvas holds nothing yet" -- a seek from there restores or starts over.
  *
- *   var cache = SkriblSeekCache.make(canvas, timeline)
+ *   var cache = SkriblSeekCache.make(canvas, timeline, opts)
  *   cache.indexAt(ms)                 the first point a replay to `ms` leaves undrawn
  *   cache.start(target, current, ctx) where to draw from: the further along of `current`
  *                                     (above zero, not past `target`: where the canvas
@@ -44,6 +44,12 @@
  *   cache.draw(from, to, point, present)
  *                                     calls point(i) for each i in [from, to), copying the
  *                                     canvas where it wants a snapshot (after present())
+ *
+ * A PLAYER WHOSE INK IS NOT ITS CANVAS (the in-post player keeps the photo as a
+ * layer of its own, which its eraser reveals) passes opts.source(), the canvas
+ * to copy, and opts.put(copy), which puts one back and replaces the default
+ * restore. Both are asked at the moment, so they may follow a compositor the
+ * player makes again on every repaint.
  */
 (function () {
   'use strict';
@@ -52,8 +58,9 @@
   var MAX_SHOTS = 16;
   var MIN_GAP = 4000;              // points between copies, at least
 
-  function make(canvas, timeline) {
+  function make(canvas, timeline, opts) {
     var n = timeline ? timeline.length : 0;
+    var source = opts && opts.source, put = opts && opts.put;
     var w, h, count, gap, slots, shots;
     function size() {
       w = canvas.width; h = canvas.height;
@@ -91,6 +98,7 @@
     }
 
     function restore(shot, ctx) {
+      if (put) return put(shot.canvas);
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1;
@@ -124,7 +132,7 @@
       if (!valid()) return;
       var c = canvas.ownerDocument.createElement('canvas');
       c.width = w; c.height = h;
-      c.getContext('2d').drawImage(canvas, 0, 0);
+      c.getContext('2d').drawImage(source ? source() : canvas, 0, 0);
       var shot = { index: i, canvas: c };
       slots[Math.floor(i / gap)] = shot;
       var k = shots.length;

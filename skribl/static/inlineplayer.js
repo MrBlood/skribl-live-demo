@@ -504,6 +504,16 @@
         visCtx.restore();
       },
       finish: function () { if (wetActive) bakeWet(); },
+      /* The ink layer, for lib/seekcache.js to copy (after finish(), at a
+       * stroke boundary, so nothing is half drawn), and seed() to start a
+       * fresh compositor from such a copy. The photo stays the base. */
+      dry: dry,
+      seed: function (copy) {
+        dctx.save();
+        dctx.setTransform(1, 0, 0, 1, 0, 0);
+        dctx.drawImage(copy, 0, 0);
+        dctx.restore();
+      },
     };
   }
 
@@ -728,6 +738,9 @@
     var lastShown;
     /* Rebuilt on every full repaint; null for an all-opaque payload. */
     var comp = null;
+    /* lib/seekcache.js for this document's replay: made on its first full
+     * repaint, dropped when the document or its underlay changes. */
+    var seekCache = null;
     var buffer = null, srcNode = null, gainNode = null, decoding = false;
     var music = null;
     /* PER POST, unlike mute, and that asymmetry is deliberate. Sound is
@@ -785,7 +798,12 @@
         return { id: id, state: state, totalMs: totalMs,
                  elapsedMs: state === 'playing' ? elapsed + segElapsed() : elapsed,
                  kind: flipFrames ? 'flip' : 'replay', hasAudio: !!music,
-                 muted: !soundOn(), loaded: !!payload, failed: failed };
+                 muted: !soundOn(), loaded: !!payload, failed: failed,
+                 /* lib/seekcache.js: the copies held, and the points the last
+                 * repaint drew, so the suite can see where a seek started. */
+                 copies: seekCache ? seekCache.held().length : 0,
+                 drawnLast: seekCache ? seekCache.drawn() : -1,
+                 stretch: seekCache ? seekCache.gap() : 0 };
       },
       /* Also for the suite: freeze the drawing at an exact offset so the two
        * players can be compared at the SAME point in the replay rather than at
@@ -866,6 +884,7 @@
 
     function adopt(p) {
       payload = p || {};
+      seekCache = null;
       var frames = framesOf(payload);
       size = logicalSize(payload);
 
@@ -945,6 +964,7 @@
          * had just been. Route through the same idle rule instead. */
         img.onload = function () {
           under.image = img;
+          seekCache = null;   // its copies hold the canvas from before the photo
           if (state === 'idle') renderIdle(); else render(elapsed, true);
         };
         img.src = src;
@@ -1076,6 +1096,36 @@
       }
     }
 
+    /* What a copy is, and how one comes back: the compositor's ink layer when
+     * there is one (the photo stays its base, which an eraser reveals), else
+     * the whole canvas. */
+    function seekSource() { return comp ? comp.dry : canvas; }
+    function seekPut(copy) {
+      clear();
+      comp = makeCompositor(ctx, canvas, timeline, pixelRatio);
+      if (comp) { comp.seed(copy); return; }
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(copy, 0, 0);
+      ctx.restore();
+    }
+    /* replayTo(), point by point through the cache, which copies the ink at a
+     * stroke boundary on the way. */
+    function seekReplay(from, at) {
+      var to = seekCache.indexAt(at);
+      seekCache.draw(from, to, function (i) {
+        var p = timeline[i], q = timeline[i - 1], st = p.start || i === 0;
+        if (comp) {
+          if (st) comp.dot(p.x, p.y, p.color, p.size, p.erase);
+          else comp.line(q.x, q.y, p.x, p.y, p.color, p.size, p.erase);
+        } else if (st) drawDot(ctx, p.x, p.y, p.color, p.size, p.erase);
+        else drawLine(ctx, q.x, q.y, p.x, p.y, p.color, p.size, p.erase);
+      }, comp ? comp.finish : null);
+      if (comp) comp.present();
+      return to;
+    }
+
     /* Full repaint from zero. The incremental path below only appends, which is
      * what makes a replay cheap; anything that moves time backwards (seek,
      * loop, a resize) comes through here. */
@@ -1156,8 +1206,18 @@
          * tick, which is the beading it exists to prevent. Built once per full
          * repaint, and `full` is exactly the set of things that move time
          * backwards: start, seek, loop, resize. */
-        if (full) { clear(); drawn = 0; comp = makeCompositor(ctx, canvas, timeline, pixelRatio); }
-        drawn = replayTo(ctx, timeline, drawn, at, comp);
+        if (full) {
+          /* FROM THE NEAREST COPY, NOT FROM ZERO (lib/seekcache.js, the v322
+           * plan's step 3 for the editors and /s/<id>). A scrub may carry on
+           * from where the canvas stands; anything else that repaints starts
+           * from a copy at or before `at`, or from nothing as it always did. */
+          var SC = global.SkriblSeekCache;
+          if (SC && !seekCache && timeline.length) seekCache = SC.make(canvas, timeline, { source: seekSource, put: seekPut });
+          var s = seekCache && seekCache.start(seekCache.indexAt(at), jump && drawn > 0 ? drawn : null, ctx);
+          if (s) drawn = s.index;   // put() rebuilt the compositor if it restored a copy
+          else { clear(); drawn = 0; comp = makeCompositor(ctx, canvas, timeline, pixelRatio); }
+        }
+        drawn = seekCache ? seekReplay(drawn, at) : replayTo(ctx, timeline, drawn, at, comp);
         if (comp && drawn >= timeline.length) comp.finish();
         setNib(state === 'playing' && drawn > 0 && drawn < timeline.length
                ? timeline[drawn - 1] : null);

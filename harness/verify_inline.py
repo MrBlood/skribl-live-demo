@@ -2237,6 +2237,93 @@ with sync_playwright() as _ep:
     _eb.close()
 
 
+# ---------------------------------------------------------------------------
+print("\nSCRUBBING A LONG POST -- a seek starts from the nearest copy and paints what a seek from zero paints")
+# The v322 plan's step 3, for the in-post player. Its compositor keeps the
+# photo as a layer of its own, which an eraser reveals, so its copies are of
+# the ink layer and come back on a fresh compositor (lib/seekcache.js's source
+# and put). THE REFERENCE is the same post on a page where lib/seekcache.js is
+# refused, so that player seeks from zero as it always did; every byte of the
+# canvas is hashed after each of ten seeks and the two pages must agree. The
+# seeks after the first must also have started near their targets. One post
+# goes through the compositor (see-through strokes and erasers), one does not.
+LONGPOST = """([n, mixed]) => { let s = 11; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const pts = [], groups = []; let t = 0, gi = 0;
+  while (pts.length < n) {
+    const m = 20 + Math.floor(rnd() * 200); let x = 60 + rnd() * 700, y = 60 + rnd() * 480, a = rnd() * 6.283;
+    const col = mixed && gi % 5 === 2 ? 'rgba(124,92,255,0.45)' : ['#1f1b2e', '#7c5cff', '#ff7a59'][gi % 3];
+    const er = mixed && gi % 23 === 7; let k = 0;
+    for (let i = 0; i < m && pts.length < n; i++, k++) {
+      pts.push({ x: x, y: y, color: col, size: 2.5 + 6 * Math.sin(Math.PI * i / m), t: Math.round(t), start: i === 0, erase: er });
+      a += (rnd() - 0.5) * 0.3; x = Math.min(800, Math.max(10, x + Math.cos(a) * 5)); y = Math.min(590, Math.max(10, y + Math.sin(a) * 5));
+      t += 18; }
+    groups.push(k); gi++; t += 200 + rnd() * 900; }
+  return { pts: pts, groups: groups }; }"""
+_HASH = """(id) => { const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
+  const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 2166136261;
+  for (let i = 0; i < d.length; i++) { h ^= d[i]; h = Math.imul(h, 16777619); }
+  let ink = 0; for (let i = 3; i < d.length; i += 4) if (d[i - 3] < 200) ink++;
+  return [h >>> 0, ink]; }"""
+SEQ3 = [0.9, 0.3, 0.95, 0.5, 0.52, 0.1, 1.0, 0.75, 0.76, 0.2]
+with sync_playwright() as _sp3:
+    _b3 = _sp3.chromium.launch()
+    _ids = {}
+    try:
+        _gp = _b3.new_page()
+        browsing.goto(_gp, BASE, "/")
+        for _kind, _mixed in (("layered", True), ("opaque", False)):
+            _gen = _gp.evaluate(LONGPOST, [19000, _mixed])
+            _req = urllib.request.Request(
+                BASE + "/api/skribls", headers={"Content-Type": "application/json"},
+                data=json.dumps({"title": f"Harness long {_kind}", "visibility": "public", "version": 2,
+                                 "schemaVersion": 2, "playbackMode": "replay", "fps": None,
+                                 "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+                                 "frames": [{"strokes": _gen["pts"], "strokeGroups": _gen["groups"],
+                                             "background": {"color": "#f6f2ea"}}]}).encode())
+            with urllib.request.urlopen(_req, timeout=30) as _r:
+                _ids[_kind] = json.loads(_r.read().decode())["id"]
+        _gp.close()
+    except Exception as exc:                               # noqa: BLE001
+        check("two long posts were made (fixture)", False, f"{type(exc).__name__}: {exc}")
+
+    def _scrub(block):
+        pg = _b3.new_page(viewport={"width": 620, "height": 900})
+        if block:
+            pg.route("**/lib/seekcache.js*", lambda r: r.abort())
+        browsing.goto(pg, BASE, "/feed")
+        out = {}
+        for kind, sid in _ids.items():
+            pg.evaluate("(id) => { const el = document.querySelector('[data-skribl-id=\"' + id + '\"]');"
+                        " el.scrollIntoView(); el.click(); }", sid)
+            pg.wait_for_function("(id) => window.SkriblInline.find(id) && window.SkriblInline.find(id).state().loaded",
+                                 arg=sid, timeout=20000)
+            rows = []
+            for f in SEQ3:
+                st = pg.evaluate("([id, f]) => { const p = window.SkriblInline.find(id);"
+                                 " p.seek(f * p.state().totalMs); return p.state(); }", [sid, f])
+                rows.append((f, pg.evaluate(_HASH, sid), st["copies"], st["drawnLast"], st["stretch"]))
+            out[kind] = rows
+        pg.close()
+        return out
+
+    if len(_ids) == 2:
+        _with, _without = _scrub(False), _scrub(True)
+        for _kind in ("layered", "opaque"):
+            _a, _z = _with[_kind], _without[_kind]
+            _diff = [f for (f, h, *_), (_f, hz, *_) in zip(_a, _z) if h[0] != hz[0]]
+            check(f"[{_kind} post, 19,000 points] the reference really seeks from zero: no copies on the page that refuses the cache",
+                  all(r[2] == 0 for r in _z) and all(r[1][1] > 1000 for r in _z[:1]),
+                  f"copies {[r[2] for r in _z]}, ink {_z[0][1][1]}")
+            check(f"[{_kind} post, 19,000 points] every seek of ten paints exactly what a seek from zero paints",
+                  not _diff, f"{len(_diff)} of 10 differ: {_diff}")
+            _stretch = _a[0][4]
+            _after = [(f, d) for f, _h, _c, d, _s in _a[1:]]
+            check(f"[{_kind} post, 19,000 points] ...it keeps copies, and every seek after the first starts near its target",
+                  _a[-1][2] >= 1 and 0 < _stretch and all(0 <= d <= 2 * _stretch for _, d in _after),
+                  f"copies {_a[-1][2]}, stretch {_stretch}, points drawn after the first {_after}")
+    _b3.close()
+
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)
