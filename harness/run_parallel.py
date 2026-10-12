@@ -118,16 +118,30 @@ def run(suite, server, timeout):
     text = log.read_text(encoding="utf-8", errors="replace")
     counts = re.findall(r"^\s*(\d+)/(\d+) passed", text, re.M)
     fails = [l.strip()[:300] for l in text.splitlines() if re.match(r"\s*\[FAIL\]", l)][:8]
+    skip = re.search(r"^SUITE-SKIPPED:\s*(.*)$", text, re.M)
     return {"suite": suite, "code": code, "counts": counts[-1] if counts else None,
             "fails": fails or ([] if code == 0 else text.splitlines()[-6:]),
+            "skip": skip.group(1).strip() if skip else None,
             "secs": time.monotonic() - t0, "log": str(log)}
 
 
-def line(r):
-    got = f"{r['counts'][0]}/{r['counts'][1]} passed" if r["counts"] else "no summary"
+def verdict(r):
+    """ok, skip or fail. Exit 77 is a suite declining to run for a missing
+    prerequisite (verify_mp4 without real Chrome): run_harness.sh reports it as
+    SKIPPED, apart from the passes and not as a failure, and so does this."""
+    if r["code"] == 77:
+        return "skip"
     ok = r["code"] == 0 and r["counts"] and r["counts"][0] == r["counts"][1]
-    state = "ok" if ok else f"FAIL -- exit {r['code']}"
-    return ok, f"  {r['suite']}: {state} -- {got} ({r['secs'] / 60:.1f} min)"
+    return "ok" if ok else "fail"
+
+
+def line(r):
+    v = verdict(r)
+    if v == "skip":
+        return v, f"  {r['suite']}: SKIPPED (0 assertions) -- {r['skip'] or 'no reason given'}"
+    got = f"{r['counts'][0]}/{r['counts'][1]} passed" if r["counts"] else "no summary"
+    state = "ok" if v == "ok" else f"FAIL -- exit {r['code']}"
+    return v, f"  {r['suite']}: {state} -- {got} ({r['secs'] / 60:.1f} min)"
 
 
 def main():
@@ -178,7 +192,7 @@ def main():
             t.join()
         # Every other suite has finished: nothing runs beside these.
         for i, r in enumerate(results):
-            if r["suite"] in alone and not line(r)[0]:
+            if r["suite"] in alone and verdict(r) == "fail":
                 again = run(r["suite"], up[0], a.timeout)
                 again["suite"] = r["suite"]
                 print(line(again)[1] + "  <- alone, after a red beside others", flush=True)
@@ -187,9 +201,13 @@ def main():
         for port, _db in up:
             stop(port)
 
-    bad = [r for r in results if not line(r)[0]]
-    print(f"\n{len(results) - len(bad)}/{len(results)} suites ok in {(time.monotonic() - t0) / 60:.1f} min"
-          f" (logs in {LOGS})")
+    bad = [r for r in results if verdict(r) == "fail"]
+    skipped = [r for r in results if verdict(r) == "skip"]
+    ok = len(results) - len(bad) - len(skipped)
+    print(f"\n{ok}/{len(results)} suites ok in {(time.monotonic() - t0) / 60:.1f} min (logs in {LOGS})")
+    if skipped:
+        print(f"{len(skipped)} skipped, so their coverage is NOT shown by this run: "
+              + ", ".join(r["suite"] for r in skipped))
     if bad:
         print("\n================ WHAT FAILED ================")
         for r in bad:
