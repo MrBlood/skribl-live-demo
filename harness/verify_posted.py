@@ -1541,7 +1541,7 @@ with sync_playwright() as _pw:
     if _rec and _rec.get("id"):
         with urllib.request.urlopen(f"{API}/{_rec['id']}") as _r:
             _env = json.loads(_r.read())
-        _pl = _env.get("payload") or _env
+        _pl = _env.get("skribl") or {}   # the GET envelope's drawing (routes.py)
         _held = len(((_pl.get("frames") or [_pl])[0]).get("strokes") or [])
     check(f"Pad: a drawing of exactly {_cap:,} points, as long as a post can hold, posts",
           _held == _cap, f"server holds {_held}; status {_pg.text_content('#postStatusLabel')!r}")
