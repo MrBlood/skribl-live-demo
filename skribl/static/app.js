@@ -469,6 +469,13 @@ function drawDot(x, y, c, s, erase) {
   ctx.globalCompositeOperation = 'source-over';
 }
 
+// The mirror's re-entry guard, declared HERE because app.js is the one script
+// every page that paints with drawLine loads. It lived in editor_draw.js, which
+// the shared player does not load, so paintStrokesStatic's finished-ink branch
+// (below; it runs when a drawing has more see-through strokes than the layering
+// budget) threw "_mirrorPainting is not defined" on the player, and a shared
+// link to such a drawing never became playable. editor_draw.js uses this one.
+let _mirrorPainting = false;
 function drawLine(x1, y1, x2, y2, c, s, erase) {
   // Paint the reflections alongside, so the mirror is visible WHILE drawing
   // rather than appearing on release. No points are generated here — the commit
