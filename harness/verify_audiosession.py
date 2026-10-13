@@ -424,10 +424,12 @@ with sync_playwright() as p:
             pg.goto(f"{BASE}/s/{lid}", wait_until="load")
             pg.wait_for_function("() => typeof window.__skriblPlayerSeek === 'function'")
             pg.wait_for_timeout(1500)
-            pg.evaluate("() => { window.__skriblPlayerSeek(1); }")
-            pg.click("#playerPlayBtn")
-            pg.click("#playerPlayBtn")
-            _st = pg.evaluate("() => [seekRacing(), document.getElementById('playerPlayBtn').getAttribute('aria-label')]")
+            # The two presses in one task, two frames into the race, so it
+            # cannot land between them (with real clicks it can, on CI).
+            _st = pg.evaluate("""async () => { window.__skriblPlayerSeek(1);
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                const b = document.getElementById('playerPlayBtn'); b.click(); b.click();
+                return [seekRacing(), b.getAttribute('aria-label')]; }""")
             pg.wait_for_timeout(700)
             _held = pg.evaluate(held)
             check("a Play taken back while a far jump races there lets the session go",

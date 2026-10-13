@@ -2377,6 +2377,17 @@ _FF_LANDED = """(id) => new Promise(res => { const p = window.SkriblInline.find(
         res({ frames: fr, ms: ms, lt: window.__ff ? window.__ff.lt.slice() : [], racing: p.state().racing }), 60))); };
     t(); })"""
 _FF_STATE = "(id) => { const s = window.SkriblInline.find(id).state(); return [s.state, s.racing, s.elapsedMs, s.totalMs]; }"
+# PRESSES MID-RACE GO IN ONE TASK, a couple of frames into the race, so it
+# cannot land between them: with real clicks it did on CI, the waiting Play
+# started, and the second press paused real playback. `_FF_IN(body)` seeks to
+# `f` of the post, waits two frames and runs `body` with `p`, `el` (the post)
+# and `st()` (its state) in hand.
+def _FF_IN(body):
+    return ("""async ([id, f, sel]) => { const p = window.SkriblInline.find(id),
+        el = document.querySelector('[data-skribl-id="' + id + '"]');
+      const st = () => { const s = p.state(); return [s.state, s.racing, s.elapsedMs, s.totalMs]; };
+      p.seek(f * p.state().totalMs); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      """ + body + " }")
 with sync_playwright() as _sp4:
     _b4 = _sp4.chromium.launch()
     _ffid = None
@@ -2471,19 +2482,14 @@ with sync_playwright() as _sp4:
         # it back: by a tap on the post, and by its keys. The first from rest,
         # as the Library seeks a post nobody has played yet: taken back, it is
         # paused where it was pointed, not "at rest" with its drawing showing.
-        _post = f'[data-skribl-id="{_ffid}"]'
-        _pl.evaluate("(id) => { const p = window.SkriblInline.find(id); p.seek(0.5 * p.state().totalMs); }", _ffid)
-        _pl.click(_post); _q1 = _pl.evaluate(_FF_STATE, _ffid)
-        _pl.click(_post); _q2 = _pl.evaluate(_FF_STATE, _ffid)
+        _q1, _q2 = _pl.evaluate(_FF_IN("el.click(); const a = st(); el.click(); return [a, st()];"), [_ffid, 0.5, ""])
         _pl.evaluate(_FF_LANDED, _ffid); _pl.wait_for_timeout(300)
         _q3 = _pl.evaluate(_FF_STATE, _ffid)
         check("[in-post] Play pressed mid-race (a tap, from rest) says it plays and waits; a second tap takes it back, paused where it was pointed",
               _q1[:2] == ["playing", True] and _q2[:2] == ["paused", True] and _q3[:2] == ["paused", False]
               and abs(_q3[2] - 0.5 * _q3[3]) < 1, f"{_q1} {_q2} {_q3}")
-        _pl.evaluate("(id) => { const p = window.SkriblInline.find(id); p.seek(0.97 * p.state().totalMs); }", _ffid)
-        _pl.focus(_post)
-        _pl.keyboard.press("Enter"); _k1 = _pl.evaluate(_FF_STATE, _ffid)
-        _pl.keyboard.press("Enter"); _k2 = _pl.evaluate(_FF_STATE, _ffid)
+        _k1, _k2 = _pl.evaluate(_FF_IN("""const key = () => el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+            key(); const a = st(); key(); return [a, st()];"""), [_ffid, 0.97, ""])
         _pl.evaluate(_FF_LANDED, _ffid); _pl.wait_for_timeout(300)
         _k3 = _pl.evaluate(_FF_STATE, _ffid)
         check("[in-post] ...and so do its keys",
@@ -2494,20 +2500,20 @@ with sync_playwright() as _sp4:
         # A drag holds a Play that waits, as it holds playing: nothing starts
         # under the finger, and letting go plays.
         _pl = _ffpage()
-        _pl.evaluate("(id) => { const p = window.SkriblInline.find(id); p.seek(0.5 * p.state().totalMs); }", _ffid)
-        _pl.click(_post); _g1 = _pl.evaluate(_FF_STATE, _ffid)
-        _bx = _pl.locator(_sel).bounding_box()
-        _pl.mouse.move(_bx["x"] + _bx["width"] * 0.95, _bx["y"] + _bx["height"] / 2)
-        _pl.mouse.down()
+        _HOLD = """const bar = document.querySelector(sel), r = bar.getBoundingClientRect();
+            const ptr = (t) => bar.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, isPrimary: true,
+              pointerId: 9, button: 0, clientX: r.left + r.width * 0.95, clientY: r.top + r.height / 2 }));"""
+        _g1, _gd = _pl.evaluate(_FF_IN("el.click(); const a = st(); " + _HOLD + " ptr('pointerdown'); return [a, st()];"),
+                                [_ffid, 0.5, _sel])   # a Play that waits, then the finger goes down on the line, and stays
         _pl.evaluate(_FF_LANDED, _ffid); _pl.wait_for_timeout(300)
         _g2 = _pl.evaluate(_FF_STATE, _ffid)
         _pl.wait_for_timeout(300)
         _g3 = _pl.evaluate(_FF_STATE, _ffid)
-        _pl.mouse.up(); _pl.wait_for_timeout(400)
+        _pl.evaluate("([id, f, sel]) => { " + _HOLD + " ptr('pointerup'); }", [_ffid, 0, _sel]); _pl.wait_for_timeout(400)
         _g4 = _pl.evaluate(_FF_STATE, _ffid)
         check("[in-post] a drag holds a Play that waits, as it holds playing: nothing starts under the finger, and letting go plays",
-              _g1[:2] == ["playing", True] and _g2[0] == "paused" and _g3[0] == "paused" and _g2[2] == _g3[2]
-              and _g4[0] == "playing" and _g4[2] > _g3[2], f"{_g1} {_g2} {_g3} {_g4}")
+              _g1[:2] == ["playing", True] and _gd[:2] == ["paused", True] and _g2[0] == "paused" and _g3[0] == "paused"
+              and _g2[2] == _g3[2] and _g4[0] == "playing" and _g4[2] > _g3[2], f"{_g1} {_gd} {_g2} {_g3} {_g4}")
         _pl.close()
         _ref.close()
     _b4.close()
