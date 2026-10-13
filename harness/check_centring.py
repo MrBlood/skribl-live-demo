@@ -579,15 +579,15 @@ def pad_states(pg):
     js(pg, "() => setPauseMode('keep')")
     click(pg, "#playBtn", 500); yield "replay"
     click(pg, "#padLine .rl-speed"); yield "replay speeds"
-    # FULL SCREEN WHILE IT PLAYS (lib/watchfull.js): the take from the top at a
-    # quarter, so it is still playing, then paused from the band so its
-    # controls stay up while they are photographed; out by its x.
-    js(pg, "() => { if (playing) stopPlayback(); setPreviewSpeed(0.25); }")
+    # FULL SCREEN WHILE IT PLAYS (lib/watchfull.js): the take from the top,
+    # paused at once -- it is a second long -- so its controls stay up while
+    # they are photographed; out by its x.
+    js(pg, "() => { if (playing) stopPlayback(); }")
     click(pg, "#playBtn", 300)
+    js(pg, "() => playing && !playPaused && pausePlayback()")
     if click(pg, "#padLine .full-btn", 600):
-        click(pg, ".watch-play", 300); yield "replay, full screen"
+        yield "replay, full screen"
         click(pg, ".watch-exit", 600)
-    js(pg, "() => setPreviewSpeed(1)")
     click(pg, "#playBtn")
     click(pg, "#menuBtn"); click(pg, "#exportItem", 700); yield "export"
     click(pg, "#exportGif", 150); yield "export, rendering"; waits.settle(pg, 2500); esc(pg)

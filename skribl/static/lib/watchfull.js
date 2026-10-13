@@ -36,8 +36,11 @@
 
   var doc = global.document;
   /* The link player's own glyphs (app.js ICON_PLAY_P / ICON_PAUSE_P), and
-     its exit's x (skribl_player.html #playerFullExit). */
-  var PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+     its exit's x (skribl_player.html #playerFullExit) -- but the arrow sits
+     0.58 to the left of theirs. A triangle's middle, to the eye, is halfway
+     between its box and its mass (check_centring), and theirs is 0.58 right
+     of the circle's: a known finding there, not carried into a new control. */
+  var PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.42 5v14l11-7z"/></svg>';
   var PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/>' +
     '<rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
   var CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
