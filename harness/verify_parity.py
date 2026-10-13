@@ -2849,13 +2849,23 @@ with sync_playwright() as p:
         return Math.round(Math.hypot(r.left + r.width / 2 - (c.left + p.x * c.width / lg.width),
                                      r.top + r.height / 2 - (c.top + p.y * c.height / lg.height))); }"""
     POINTS = "() => frames.reduce((n, f) => n + f.strokes.length, 0)"
+    PAINTED = """(sel) => { const el = document.querySelector(sel); if (!el) return false; const x = el.getBoundingClientRect();
+        if (!x.width || !x.height) return false;
+        const h = document.elementFromPoint(x.left + x.width / 2, x.top + x.height / 2); return !!h && el.contains(h); }"""
+
+    def _fills(s, page):
+        """Over the whole screen, the drawing as big as it allows, centred, in the page's shape."""
+        cw, ch = s["canvas"][2], s["canvas"][3]
+        whole = (abs(cw - s["vw"]) <= 1 and abs(s["canvas"][1] * 2 + ch - s["vh"]) <= 2) or \
+                (abs(ch - s["vh"]) <= 1 and abs(s["canvas"][0] * 2 + cw - s["vw"]) <= 2)
+        return whole and s["wrap"] == [0, 0, s["vw"], s["vh"]] and abs(cw / ch - page["canvas"][2] / page["canvas"][3]) < 0.02
 
     def _long_pad(ctx):
-        """The Pad with a take whose replay outlasts a fade at the slowest speed: three slow strokes."""
+        """The Pad with a take whose replay outlasts every wait below at the slowest speed: four slow strokes."""
         q = _fresh(ctx, "/skribl-pad")
-        for k in range(3):
+        for k in range(4):
             bx = q.locator("#canvas").bounding_box()
-            y = bx["y"] + bx["height"] * (0.3 + 0.2 * k)
+            y = bx["y"] + bx["height"] * (0.25 + 0.16 * k)
             q.mouse.move(bx["x"] + bx["width"] * 0.2, y); q.mouse.down()
             for s in range(1, 31):
                 q.mouse.move(bx["x"] + bx["width"] * (0.2 + 0.02 * s), y + 8 * math.sin(s / 3)); q.wait_for_timeout(30)
@@ -2883,14 +2893,10 @@ with sync_playwright() as p:
             _page = _q.evaluate(FS, _o)
             _q.click(_o["btn"]); _q.wait_for_timeout(600)
             _s = _q.evaluate(FS, _o)
-            _cw, _ch = _s["canvas"][2], _s["canvas"][3]
-            _fits = (abs(_cw - _s["vw"]) <= 1 and abs(_s["canvas"][1] * 2 + _ch - _s["vh"]) <= 2) or \
-                    (abs(_ch - _s["vh"]) <= 1 and abs(_s["canvas"][0] * 2 + _cw - _s["vw"]) <= 2)
-            _shape = abs(_cw / _ch - _page["canvas"][2] / _page["canvas"][3]) < 0.02
             check(f"{_tag}: it opens over the whole screen ({'the stand-in' if _dev == 'phone' else 'the real API'}), "
                   "the drawing as big as the screen allows, centred, in its own shape",
-                  _s["mode"] == ("stand-in" if _dev == "phone" else "api") and _s["wrap"] == [0, 0, _s["vw"], _s["vh"]]
-                  and _fits and _shape and _cw > _page["canvas"][2], f"page {_page['canvas']} -> {_s}")
+                  _s["mode"] == ("stand-in" if _dev == "phone" else "api") and _fills(_s, _page)
+                  and _s["canvas"][2] > _page["canvas"][2], f"page {_page['canvas']} -> {_s}")
             check(f"{_tag}: the band carries the editor's own controls, with Play and a way out painted",
                   _s["band"] == [x[1:] for x in _o["carry"]] + ["watch-row"] and _s["play"] and _s["exit"]
                   and _s["label"] == "Leave full screen" and _s["pressed"] == "true", str(_s))
@@ -2900,6 +2906,40 @@ with sync_playwright() as p:
                     _q.wait_for_timeout(250); _gap.append(_q.evaluate(NIB))
                 check(f"{_tag}: the replay's pen dot rides the point being drawn, in the middle of the screen",
                       all(g is not None and g <= 2 for g in _gap), str(_gap))
+            # THE SPEED, FROM THE BAND. The owner: the controls "should be there
+            # in case you want to adjust the speed". Changed without leaving, the
+            # drawing playing on; the Pad's chooser is a menu, and an open menu
+            # keeps them up however long it is open.
+            if _route == "/skribl-pad":
+                _sp = {"opener": _q.evaluate(PAINTED, ".watch-band .rl-speed")}
+                if _sp["opener"]:
+                    _q.click(".watch-band .rl-speed"); _q.wait_for_timeout(3000)
+                    _sp.update(asleep=_q.evaluate(FS, _o)["asleep"], half=_q.evaluate(PAINTED, ".watch-band [data-r='0.5']"))
+                check(f"{_tag}: the speed opens from the band, and stays up as long as it is open",
+                      _sp["opener"] and _sp.get("half") and _sp.get("asleep") is False, str(_sp))
+                if _sp.get("half"):
+                    _q.click(".watch-band [data-r='0.5']"); _q.wait_for_timeout(200)
+                    _sp["picked"] = _q.evaluate("() => [replayChoice, playing && !playPaused, !!document.querySelector('.watch-band')]")
+                    _q.click(".watch-band .rl-speed"); _q.click(".watch-band [data-r='0.25']")
+                check(f"{_tag}: ...and a speed picked there takes, in full screen, the drawing playing on",
+                      _sp.get("picked") == [0.5, True, True], str(_sp))
+            else:
+                _sp = {"half": _q.evaluate(PAINTED, ".watch-band [data-rate='0.5']")}
+                if _sp["half"]:
+                    _q.click(".watch-band [data-rate='0.5']"); _q.wait_for_timeout(200)
+                    _sp["picked"] = _q.evaluate("() => [flipRate, playing && !playPaused, !!document.querySelector('.watch-band')]")
+                    _q.click(".watch-band [data-rate='1']")
+                check(f"{_tag}: a speed picked in the band takes, in full screen, the drawing playing on",
+                      _sp.get("picked") == [0.5, True, True], str(_sp))
+            if _dev == "phone":
+                # TURNED ON ITS SIDE AND BACK, it fits each screen: each editor's
+                # own layout asks full screen first (layoutEditorCanvas, fitPad).
+                _turn = []
+                for _vp in ({"width": 874, "height": 402}, {"width": 402, "height": 874}):
+                    _q.set_viewport_size(_vp); _q.wait_for_timeout(400)
+                    _turn.append(_q.evaluate(FS, _o))
+                check(f"{_tag}: turned on its side and back, the drawing fills each screen it is given, centred, in its own shape",
+                      all(_fills(_t, _page) for _t in _turn), " | ".join(f"{_t['vw']}x{_t['vh']}: {_t['canvas']}" for _t in _turn))
             _q.wait_for_timeout(3000)
             _z = _q.evaluate(FS, _o)
             check(f"{_tag}: a quiet spell while it plays puts the controls away and leaves the drawing",

@@ -136,7 +136,10 @@
        pressed what. */
     new MutationObserver(function () { if (full.isOn()) sync(); })
       .observe(doc.body, { attributes: true, attributeFilter: ['class'] });
-    global.addEventListener('resize', function () { if (full.isOn()) o.fit(true); });
+    /* No resize listener here: each editor's own layout asks full screen
+       first (app.js layoutEditorCanvas, flip.js fitPad), and those run on a
+       resize and on a phone's orientationchange, which a listener here would
+       miss. */
 
     return { isOn: full.isOn, close: full.close };
   }
