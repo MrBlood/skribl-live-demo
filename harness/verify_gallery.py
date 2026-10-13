@@ -796,7 +796,7 @@ with sync_playwright() as _spg:
     # as the screen and narrower than it -- never shorter than it.
     check("...and the drawing SCALES UP to the display rather than sitting at its own size",
           _fs["canvas"]["w"] == _fs["vw"] and _fs["canvas"]["h"] == _fs["usable"]
-          and _fs["band"] > 20 and _fs["fit"] == "contain",
+          and _fs["band"] == 0 and _fs["fit"] == "contain",
           f"canvas {_fs['canvas']} object-fit={_fs['fit']!r} in "
           f"{_fs['vw']}x{_fs['vh']} — `max-width: 100%` only ever shrinks, so an "
           f"816x612 drawing measured 816x612 on a 900x900 screen. contain is "
