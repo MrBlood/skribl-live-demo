@@ -16698,3 +16698,55 @@ NOT TESTED HERE: whether a Play that waits still gets sound on an iPhone. The
 unlock and the claim happen in the tap, which is what iOS asks, but this box
 has no WebKit, and its Chromium starts audio unlocked, so the locked case
 cannot be made to happen.
+
+## After v322 -- the Pad keeps every pen sample a frame batches, as Flip has since v230
+
+The owner's yes, after making Bloom showed it: the Pad never got v230's fix for
+"when I draw circles fast we get a lot of straight line segments". v230 wired
+lib/inputsamples.js into Flip alone -- its commit touched flip.js and no Pad
+file -- and lib/brushes.js has said since that both editors capture with the
+coalesced points, which was true of one. A pointermove comes once a frame while
+a phone samples the finger at 120-240Hz, so the Pad stored a fast circle at the
+frame rate, as a polygon, where Flip stored the same circle smooth.
+
+continueDraw (editor_draw.js) now does what Flip's handler does, through the
+same lib: extract() the batch the browser kept, map each sample through the
+Pad's own getPos, thin() it from the last point stored, and store what is left,
+each sample through the stabilizer, Shift's axis and the brush, each with its
+OWN pressure -- pressureSize reads the sample, not the event, or a taper
+flattens across the batch. The batch shares one `t`, as on Flip: it arrived
+together, and a replay draws it in one step, as the live line did. A move that
+carries one event -- every move an engine without the batch makes, and every
+one the harness's mouse makes -- stores exactly what it did before. The wet
+layer is presented once a batch.
+
+Flip: shared. One lib, both editors; Flip's handler is unchanged.
+
+What changes on the canvas: a fast stroke stores more points, so it bends where
+the pen bent, and the thinning keeps a slow one at about what it cost. The
+pencil brush tapers by the distance between stored points (shape() in
+lib/brushes.js), so on the Pad it now tapers less on a fast flick than it did
+-- exactly as Flip's pencil already did. If the pencil should taper more on
+both, that is the one number in shape().
+
+CALIBRATION
+
+verify_input.py could not see a batch arrive through Playwright's mouse, which
+sends one event per move, and said so; it tested the thinning rule alone.
+Chromium honours `coalescedEvents` in the PointerEvent constructor, so the
+suite now hands each editor one pointermove carrying its samples, as a phone
+does, and reads what was stored before the pen lifts: eight samples twenty
+pixels apart become eight points where the pen went, their widths rising as the
+pressure does; forty samples a third of a pixel apart thin to under a third,
+the last where the pen is; a move without a batch stores its one point; and the
+two editors keep the same points from the same batch. Against the tree before
+this change, four go red -- the Pad's lib not loaded, one point of eight, one
+width, and the Pad keeping 1 where Flip keeps 8 -- and Flip's stay green. Seven
+mutations, each in its own copy on its own server, each red on its own check:
+the Pad ignoring the batch, taking the event's pressure, not thinning, and its
+page not loading the lib; Flip the first three ways. So Flip's v230 handler is
+pinned for the first time by what it stores, not only by its thinning rule.
+
+NOT TESTED HERE: Safari's batches. This box has no WebKit. Wherever
+getCoalescedEvents is missing or empty, the Pad stores one point a move, as
+before, and the no-batch check holds that.
