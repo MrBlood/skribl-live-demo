@@ -790,7 +790,20 @@ with sync_playwright() as sp:
     #   own loop draws. THE PLAYER PAYS FOR HOOKS IT DOES NOT USE, the price of
     #   one module for three surfaces (as for lib/replayline.js's hooks above).
     #   147,851 measured.
-    BYTES_RATCHET, BYTES_TARGET = 147_860, 153_800
+    # RAISED (the first far jump races there, owner: "yes, A" from the mock),
+    #   for one named cost, after spending: +1,758 B net --
+    #     lib/seekcache.js +790: far(), which says when a jump races (a long
+    #       draw through a stretch with no copy yet), and race(), its slices a
+    #       frame -- one module for all three players.
+    #     app.js +968: seekCanvas's race path; the Pad's preview holding its
+    #       clock and its loop while it races; this player's Play waiting for
+    #       the landing, and a second press, a tap or a drag taking it back;
+    #       and the suite's seek hook answering when it lands.
+    #   Spent first (-121 in app.js, -74 in lib/seekcache.js): the Pad's
+    #   keyboard seek re-anchored the clock itself, which the seek now does;
+    #   the hook was compacted; and the module dropped what no caller read.
+    #   149,609 measured.
+    BYTES_RATCHET, BYTES_TARGET = 149_620, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

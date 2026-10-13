@@ -645,7 +645,8 @@ with sync_playwright() as p:
     # the seek was right, it holds what the reference just painted, so the next
     # seek carries on from it; when the seek kept a stale one, the next seek
     # shows it. (Handing the reference's compositor back hid exactly that.)
-    PAD_SAME = """(f) => { editorSeek(f);
+    PAD_SAME = """async (f) => { editorSeek(f);
+      await new Promise(res => { const t = () => seekRacing() ? requestAnimationFrame(t) : res(); t(); });   // a far first jump races there
       const r = { idx: playIndex, held: playSeek ? playSeek.held().length : -1,
                   drawn: playSeek ? playSeek.drawn() : -1, gap: playSeek ? playSeek.gap() : -1 };
       const w = canvas.width, h = canvas.height, a = ctx.getImageData(0, 0, w, h).data.slice();
@@ -699,7 +700,7 @@ with sync_playwright() as p:
                        "canvasSize": {"cssWidth": 816, "cssHeight": 612},
                        "frames": [{"strokes": _gen["pts"], "strokeGroups": _gen["groups"], "background": {"color": "#f6f2ea"}}],
                        "title": "a long drawing"})
-    PLAYER_SAME = """(f) => { const r = window.__skriblPlayerSeek(f);
+    PLAYER_SAME = """async (f) => { const r = await window.__skriblPlayerSeek(f);   // once it lands
       const w = canvas.width, h = canvas.height, a = ctx.getImageData(0, 0, w, h).data;
       const off = document.createElement('canvas'); off.width = w; off.height = h;
       const comp = makeStrokeCompositor(off.getContext('2d'), off);
@@ -727,6 +728,292 @@ with sync_playwright() as p:
         _pg.context.close()
     else:
         check("[shared player, 19,000 points] the long drawing posted", False, f"{_st} {_body}")
+
+    # ---- THE FIRST FAR JUMP RACES THERE (the owner's pick A, from the mock) ----
+    # The copies above make every jump after the first short. The first jump to
+    # a far part of a long drawing still drew everything up to it at once, and
+    # the page stood still: the bar stuck, then the picture jumped. Now it is
+    # drawn a slice a frame (lib/seekcache.js race()). Read on a phone the
+    # owner's width at 2x for the Pad and on a 2x desk for the shared player: at
+    # 2x a stretch between copies is wider than a race's threshold, so "it has
+    # copies there" and "it is short" are two different questions. What has to
+    # hold:
+    #   * the bar and the clock say where it was pointed AT ONCE, while the
+    #     drawing is still behind;
+    #   * the page keeps moving: frames are painted while it races, and no task
+    #     holds one up past 300 ms (the same jump drawn at once is one task of
+    #     about a second and a half here). 300, not 50: this box draws a 2x
+    #     canvas in software, so a frame that also takes a copy runs 60 ms or
+    #     so, and over 200 with three other suites sharing the machine;
+    #   * it lands on EXACTLY what a replay from the first point paints, every
+    #     byte, and plays on from there;
+    #   * the clock holds the place pointed while it races, so a pause mid-race
+    #     pauses there;
+    #   * a newer seek mid-race takes over from where the canvas really stands;
+    #   * Play pressed mid-race waits for the landing; a second press, or a tap
+    #     on the drawing, takes it back; a drag holds it;
+    #   * Stop or Restart mid-race leaves nothing racing over the canvas;
+    #   * a jump through parts it has copies of lands at once, and so does a
+    #     short one into new ground.
+    print("\nTHE FIRST FAR JUMP RACES THERE -- the page keeps moving, and it lands on exactly today's picture")
+    FF_N = 120000
+    FF_WATCH = """() => { if (!window.__ff) { window.__ff = { lt: [], frames: 0 };
+        new PerformanceObserver(l => { for (const e of l.getEntries()) window.__ff.lt.push(Math.round(e.duration)); }).observe({ type: 'longtask' });
+        const f = () => { window.__ff.frames++; requestAnimationFrame(f); }; requestAnimationFrame(f); }
+      window.__ff.lt = []; window.__ff.frames = 0; }"""
+    # Until it lands; then two frames and a beat, so a long task in the landing
+    # frame has been reported before it is read.
+    FF_LANDED = """() => new Promise(res => { const t0 = performance.now();
+        const t = () => { if (seekRacing() && performance.now() - t0 < 60000) return requestAnimationFrame(t);
+          const fr = window.__ff ? window.__ff.frames : 0, ms = Math.round(performance.now() - t0);
+          requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() =>
+            res({ frames: fr, ms: ms, lt: window.__ff ? window.__ff.lt.slice() : [], racing: seekRacing() }), 60))); };
+        t(); })"""
+    FRAMES2 = "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"
+    # The Pad's canvas against a replay of exactly the points it stands on,
+    # with the replay held still while it is read (scrubbing). As PAD_SAME,
+    # the replay's own compositor is left as the seek left it.
+    PAD_AT = """() => { scrubbing = true;
+      const n = playIndex, w = canvas.width, h = canvas.height, a = ctx.getImageData(0, 0, w, h).data.slice();
+      const layers = strokeLayersOn(); let comp = null, i = -1;
+      clearAndRestore(() => { comp = layers ? makeStrokeCompositor(ctx, canvas) : null;
+        i = replayTimelineToCanvas(playTimeline, 0, n ? playTimeline[n - 1].playT : -1, comp ? comp.dotFn : drawDot, comp ? comp.lineFn : drawLine);
+        if (comp) comp.present(); });
+      const b = ctx.getImageData(0, 0, w, h).data; let off = 0;
+      for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) off++;
+      return { off: off, idx: n, ref: i, to: playSeek.indexAt(lastTargetMs) }; }"""
+    # A seek that lands exactly on point K: between its time and the next.
+    PAD_TO = "(k) => (playTimeline[k - 1].playT + 0.5) / playTotal"
+
+    # ---- the Pad, on a phone the owner's width ---------------------------------
+    _fc = b.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=2)
+    _pg = _fc.new_page()
+    browsing.goto(_pg, BASE, "/skribl-pad")
+    _pg.wait_for_function("() => window.__skriblBoot && window.__skriblBoot.pad")
+    _pg.evaluate("(n) => { const d = (" + LONG + """)(n);
+        restoreAutosave({ version: 1, strokes: d.pts, strokeGroups: d.groups, background: { color: '#f6f2ea' } }); }""", FF_N)
+    _pg.wait_for_timeout(500)
+    _pg.click("#playBtn"); _pg.wait_for_timeout(400)
+    _pg.evaluate(FF_WATCH)
+    _bx = _pg.locator("#playScrub").bounding_box()
+    _x = round(_bx["x"] + _bx["width"] * 0.8)
+    _pg.mouse.click(_x, _bx["y"] + _bx["height"] / 2)      # a tap on the bar, as a person makes it
+    _f = (_x - _bx["x"]) / _bx["width"]
+    _now = _pg.evaluate("""() => ({ racing: seekRacing(), at: playIndex, to: playSeek.indexAt(lastTargetMs),
+        f: lastTargetMs / playTotal, fill: parseFloat(playScrubFill.style.width) / 100, gap: playSeek.gap(),
+        badge: durationBadge.hidden ? null : durationBadge.textContent, want: formatDuration(lastTargetMs) })""")
+    check("[Pad, 120,000 points, phone at 2x] a first far jump races there: the bar and the clock say where it was pointed at once, while the drawing is still behind",
+          _now["racing"] and _now["at"] < _now["to"] and abs(_now["f"] - _f) < 0.01 and abs(_now["fill"] - _now["f"]) < 1e-6
+          and (_now["badge"] is None or _now["badge"] == _now["want"]), str(_now))
+    _land = _pg.evaluate(FF_LANDED)
+    check("[Pad] ...the page keeps moving while it does: frames are painted, and none is held up past 300 ms",
+          not _land["racing"] and _land["frames"] >= 5 and max(_land["lt"] or [0]) < 300,
+          f"{_land['frames']} frames in {_land['ms']} ms, long tasks {_land['lt']}")
+    _pg.wait_for_timeout(300)
+    _c = _pg.evaluate(PAD_AT)
+    check("[Pad] ...it lands on exactly what a replay from the first point paints, every byte, and plays on from there",
+          _c["off"] == 0 and _c["ref"] == _c["idx"] and _c["idx"] >= _now["to"], f"{_c}; landed at {_now['to']}")
+    # SHORT ONES LAND AT ONCE. The race is for a long draw through a part with
+    # no copy yet. Into new ground but short -- 6,000 points across into the
+    # first stretch without a copy -- and back through parts with copies,
+    # 9,000 points past the nearest one: both at once, and exact.
+    _e = _pg.evaluate("""() => { const g = playSeek.gap(), n = playSeek.count(), held = playSeek.held(), T = playTimeline,
+          to = (i) => (T[i - 1].playT + 0.5) / playTotal, have = held.map(c => Math.floor(c / g));
+        let s = 1; while (s <= n && have.indexOf(s) >= 0) s++;
+        const B = s * g;                                   // where the first stretch with no copy starts
+        const out = { gap: g, held: held.length, B: B, ok: s <= n && B + 3000 < T.length };
+        if (!out.ok) return out;
+        editorSeek(to(B - 3000)); out.a = [seekRacing(), playIndex, B - 3000];
+        editorSeek(to(B + 3000)); out.b = [seekRacing(), playIndex, B + 3000];
+        const c = held[Math.floor(held.length / 2)], next = held.find(h => h > c) || T.length;
+        const K = Math.min(c + 9000, next - 1, (Math.floor(c / g) + 1) * g - 1);
+        editorSeek(to(K)); out.c = [seekRacing(), playIndex, K, K - c];
+        return out; }""")
+    _cs = _pg.evaluate(PAD_AT)
+    check("[Pad] a short jump into new ground (6,000 points) and one back through parts it has copies of (over 8,000 past the nearest) both land at once, exactly",
+          _e["ok"] and _e["gap"] > 9000 and not _e["a"][0] and _e["a"][1] == _e["a"][2] and not _e["b"][0] and _e["b"][1] == _e["b"][2]
+          and not _e["c"][0] and _e["c"][1] == _e["c"][2] and _e["c"][3] > 8000 and _cs["off"] == 0,
+          f"{_e}; picture {_cs}")
+    # A FRESH PREVIEW (Play again: a new timeline and no copies) for the rest.
+    # The newer seek comes two frames in, before the race has passed a stretch
+    # and taken a copy: a seek that restores a copy repaints the canvas from it
+    # and would hide a race that never said where it had got to.
+    _pg.click("#playBtn"); _pg.wait_for_timeout(200)          # Stop
+    _pg.click("#playBtn"); _pg.wait_for_timeout(300)          # Play
+    _d = _pg.evaluate("""async () => { editorSeek(0.9); const from = playIndex;
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const at = playIndex, held = playSeek.held().length; editorSeek(0.6); const again = seekRacing();
+        await new Promise(res => { const t = () => seekRacing() ? requestAnimationFrame(t) : res(); t(); });
+        return { from: from, at: at, held: held, again: again }; }""")
+    _dc = _pg.evaluate(PAD_AT)
+    check("[Pad] a newer seek mid-race takes over from where the canvas stands, and lands exactly too",
+          _d["at"] > _d["from"] and _d["held"] == 0 and _d["again"] and _dc["off"] == 0 and _dc["ref"] == _dc["idx"]
+          and _dc["idx"] >= _dc["to"], f"{_d}; {_dc}")
+    # (Short of the end, where a pause's clock is capped and could not show
+    # running ahead; and with the drag's hold off, which PAD_AT left on.)
+    _pg.evaluate("() => { scrubbing = false; editorSeek(0.97); }")
+    _pg.wait_for_timeout(250)
+    _p = _pg.evaluate("""() => { const was = seekRacing(), want = playTotal * 0.97; pausePlayback();
+        const r = { racing: was, off: lastTargetMs - want }; resumePlayback(); return r; }""")
+    check("[Pad] the clock holds the place pointed while it races: a pause a quarter of a second in pauses there, not where the clock ran on to",
+          _p["racing"] and 0 <= _p["off"] < 50, f"{_p} (ms past the place pointed)")
+    # And a third, for Stop.
+    _pg.click("#playBtn"); _pg.wait_for_timeout(200)          # Stop
+    _pg.click("#playBtn"); _pg.wait_for_timeout(300)          # Play
+    _pg.evaluate("() => editorSeek(0.9)")
+    _pg.evaluate(FRAMES2)
+    _was = _pg.evaluate("() => seekRacing()")
+    _pg.click("#playBtn")                                     # Stop, mid-race
+    _pg.evaluate("() => new Promise(r => { let n = 8; const t = () => --n ? requestAnimationFrame(t) : r(); requestAnimationFrame(t); })")
+    _st = _pg.evaluate("""() => { const w = canvas.width, h = canvas.height, a = ctx.getImageData(0, 0, w, h).data.slice();
+        clearAndRestore(() => paintStrokesStatic(strokes)); const b = ctx.getImageData(0, 0, w, h).data; let off = 0;
+        for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) off++; return { off: off, racing: seekRacing(), playing: playing }; }""")
+    check("[Pad] Stop while it races: the finished drawing comes back, and nothing races on over it",
+          _was and _st["off"] == 0 and not _st["racing"] and not _st["playing"], f"racing when stopped {_was}; {_st}")
+    _fc.close()
+
+    # ---- the shared player, on a 2x desk ---------------------------------------
+    _fg = b.new_page()
+    browsing.goto(_fg, BASE, "/")
+    _gen = _fg.evaluate("(n) => (" + LONG + ")(n)", FF_N)
+    _fg.close()
+    _st2, _body2 = post({"version": 2, "schemaVersion": 2, "playbackMode": "replay", "fps": None,
+                         "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+                         "frames": [{"strokes": _gen["pts"], "strokeGroups": _gen["groups"], "background": {"color": "#f6f2ea"}}],
+                         "title": "a two-hour drawing"})
+    _gen = None
+    # The canvas against a replay from the first point to where the player
+    # says it stands, on an offscreen canvas so the player is left as it is.
+    PLAYER_AT = """async (f) => { const r = await window.__skriblPlayerSeek(f);
+      const w = canvas.width, h = canvas.height, a = ctx.getImageData(0, 0, w, h).data;
+      const off = document.createElement('canvas'); off.width = w; off.height = h;
+      const comp = makeStrokeCompositor(off.getContext('2d'), off);
+      replayTimelineToCanvas(buildPlaybackTimeline(), 0, r.ms, comp.dotFn, comp.lineFn); comp.present();
+      const b = off.getContext('2d').getImageData(0, 0, w, h).data; let n = 0;
+      for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) n++;
+      return { off: n, ms: r.ms, idx: r.idx }; }"""
+    BTN = "() => document.getElementById('playerPlayBtn').getAttribute('aria-label')"
+    FILL = "() => parseFloat(document.getElementById('playerProgressFill').style.width) / 100"
+
+    def _player():
+        c = b.new_context(viewport={"width": 1280, "height": 820}, device_scale_factor=2)
+        pg = c.new_page()
+        browsing.goto(pg, BASE, f"/s/{_body2['id']}")
+        pg.wait_for_function("() => typeof window.__skriblPlayerSeek === 'function'")
+        pg.wait_for_timeout(600)
+        pg.click("#playerPlayBtn")
+        pg.wait_for_timeout(600)
+        return c, pg
+
+    if _st2 in (200, 201) and _body2.get("id"):
+        _c1, _pg = _player()
+        _pg.evaluate(FF_WATCH)
+        _bx = _pg.locator("#playerProgress").bounding_box()
+        _x = round(_bx["x"] + _bx["width"] * 0.8)
+        _pg.mouse.click(_x, _bx["y"] + _bx["height"] / 2)   # a tap on the bar while it plays
+        _f = (_x - _bx["x"]) / _bx["width"]
+        _now = _pg.evaluate("""() => { const T = buildPlaybackTimeline(), tot = T[T.length - 1].playT,
+            fill = parseFloat(document.getElementById('playerProgressFill').style.width) / 100;
+            return { racing: seekRacing(), fill: fill, at: document.getElementById('playerAt').textContent,
+                     want: SkriblReplayLine.clock(SkriblReplayLine.clockMap(T, strokes)(fill * tot)),
+                     btn: document.getElementById('playerPlayBtn').getAttribute('aria-label') }; }""")
+        check("[shared player, 120,000 points, desk at 2x] a first far jump races there: the bar and the clock say where it was pointed at once, and the button says Pause for the Play that waits",
+              _now["racing"] and abs(_now["fill"] - _f) < 0.01 and _now["at"] == _now["want"] and _now["btn"] == "Pause", str(_now))
+        _land = _pg.evaluate(FF_LANDED)
+        check("[shared player] ...the page keeps moving while it does: frames are painted, and none is held up past 300 ms",
+              not _land["racing"] and _land["frames"] >= 5 and max(_land["lt"] or [0]) < 300,
+              f"{_land['frames']} frames in {_land['ms']} ms, long tasks {_land['lt']}")
+        _a = _pg.evaluate(FILL)
+        _pg.wait_for_timeout(300)
+        _b2 = _pg.evaluate(FILL)
+        _btn = _pg.evaluate(BTN)
+        _pg.click("#playerPlayBtn")                           # pause
+        _cc = _pg.evaluate(PLAYER_AT, _b2 + 0.01)
+        check("[shared player] ...it plays on from where it landed, and the picture is exactly what a replay from the first point paints",
+              _b2 > _a >= _now["fill"] - 1e-9 and _btn == "Pause" and _cc["off"] == 0,
+              f"bar {_a} -> {_b2}, button {_btn!r}; {_cc}")
+        _d = _pg.evaluate("""async () => { const p = window.__skriblPlayerSeek(1);
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            const mid = seekRacing(); const q = window.__skriblPlayerSeek(0.93); const again = seekRacing();
+            await q; return { mid: mid, again: again }; }""")
+        _dc = _pg.evaluate(PLAYER_AT, 0.93)
+        check("[shared player] a newer seek mid-race takes over from where the canvas stands, and lands exactly too",
+              _d["mid"] and _d["again"] and _dc["off"] == 0, f"{_d}; {_dc}")
+        _c1.close()
+
+        # Play pressed mid-race waits for the landing, and a second press, or a
+        # tap on the drawing, takes it back -- as either would pause playing.
+        _c2, _pg = _player()
+        _pg.evaluate("() => { window.__skriblPlayerSeek(0.5); }")
+        _pg.click("#playerPlayBtn"); _q1 = _pg.evaluate(BTN)
+        _pg.click("#playerPlayBtn"); _q2 = _pg.evaluate(BTN)
+        _l = _pg.evaluate(FF_LANDED); _pg.wait_for_timeout(300)
+        _g = [_q1, _q2, _l["racing"], _pg.evaluate(BTN), _pg.evaluate(FILL)]
+        check("[shared player] Play pressed mid-race says Pause and waits; a second press takes it back, and the drawing stays where it was pointed",
+              _g[:4] == ["Pause", "Play", False, "Play"] and abs(_g[4] - 0.5) < 1e-6, str(_g))
+        _pg.evaluate("() => { window.__skriblPlayerSeek(0.97); }")
+        _was = _pg.evaluate("() => seekRacing()")
+        _pg.click("#playerPlayBtn"); _q1 = _pg.evaluate(BTN)
+        _cv = _pg.locator("#canvas").bounding_box()
+        _pg.mouse.click(_cv["x"] + _cv["width"] / 2, _cv["y"] + _cv["height"] / 2)   # a tap on the drawing
+        _q2 = _pg.evaluate(BTN)
+        _pg.evaluate(FF_LANDED); _pg.wait_for_timeout(300)
+        _h = [_was, _q1, _q2, _pg.evaluate(BTN), _pg.evaluate(FILL)]
+        check("[shared player] ...and so does a tap on the drawing",
+              _h[:4] == [True, "Pause", "Play", "Play"] and abs(_h[4] - 0.97) < 1e-6, str(_h))
+        _c2.close()
+
+        # Restart mid-race, with a Play waiting, starts the drawing over: nothing
+        # races on, and the Play that waited is spent -- a keyboard step after
+        # it holds still, as a step while playing always has.
+        _c3, _pg = _player()
+        _pg.evaluate("() => { window.__skriblPlayerSeek(0.9); }")
+        _pg.click("#playerPlayBtn")                           # a Play that waits
+        _was = _pg.evaluate("() => seekRacing()")
+        _pg.click("#playerRestartBtn")
+        _pg.wait_for_timeout(400)
+        _r = [_was, _pg.evaluate("() => seekRacing()"), _pg.evaluate(BTN), _pg.evaluate(FILL)]
+        _pg.focus("#playerProgress")
+        _pg.keyboard.press("ArrowRight")
+        _pg.wait_for_timeout(300)
+        _r.append(_pg.evaluate(BTN))
+        _rc = _pg.evaluate(PLAYER_AT, _pg.evaluate(FILL) + 0.01)
+        check("[shared player] Restart while it races, with a Play waiting, starts the drawing over; nothing races on over it, and the Play that waited is spent",
+              _r[0] and not _r[1] and _r[2] == "Pause" and _r[3] < 0.05 and _r[4] == "Play" and _rc["off"] == 0, f"{_r}; {_rc}")
+        # A drag to the very end while it plays stays on the finished drawing,
+        # as it always did, though the drawing gets there after the finger lifts.
+        _pg.click("#playerPlayBtn"); _pg.wait_for_timeout(300)   # playing again
+        _bx = _pg.locator("#playerProgress").bounding_box()
+        _pg.mouse.move(_bx["x"] + _bx["width"] * 0.9, _bx["y"] + _bx["height"] / 2)
+        _pg.mouse.down()
+        _pg.mouse.move(_bx["x"] + _bx["width"] + 40, _bx["y"] + _bx["height"] / 2, steps=4)
+        _pg.mouse.up()
+        _was = _pg.evaluate("() => seekRacing()")
+        _pg.evaluate(FF_LANDED); _pg.wait_for_timeout(400)
+        _j = [_was, _pg.evaluate(BTN), _pg.evaluate(FILL)]
+        check("[shared player] a drag to the very end while it plays stays on the finished drawing, though the drawing gets there after the finger lifts",
+              _j == [True, "Play", 1.0], str(_j))
+        _c3.close()
+
+        # A drag holds a Play that waits, as it holds playing: nothing starts
+        # under the finger, and letting go plays.
+        _c4, _pg = _player()
+        _pg.evaluate("() => { window.__skriblPlayerSeek(0.5); }")
+        _pg.click("#playerPlayBtn"); _q1 = _pg.evaluate(BTN)
+        _bx = _pg.locator("#playerProgress").bounding_box()
+        _pg.mouse.move(_bx["x"] + _bx["width"] * 0.95, _bx["y"] + _bx["height"] / 2)
+        _pg.mouse.down()
+        _pg.evaluate(FF_LANDED); _pg.wait_for_timeout(300)
+        _h1 = [_pg.evaluate(BTN), _pg.evaluate(FILL)]
+        _pg.wait_for_timeout(300)
+        _h2 = _pg.evaluate(FILL)
+        _pg.mouse.up(); _pg.wait_for_timeout(400)
+        _k = [_q1, _h1[0], _h1[1] == _h2, _pg.evaluate(BTN), _pg.evaluate(FILL) > _h2]
+        check("[shared player] a drag holds a Play that waits, as it holds playing: nothing starts under the finger, and letting go plays",
+              _k == ["Pause", "Play", True, "Pause", True], f"{_k}; held at {_h1[1]}")
+        _c4.close()
+    else:
+        check("[shared player, 120,000 points] the two-hour drawing posted", False, f"{_st2} {_body2}")
     b.close()
 
 print("\n" + "=" * 62)

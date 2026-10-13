@@ -799,20 +799,42 @@ function replayStep(cache, timeline, from, ms, comp) {
    waiting to paint; otherwise -- no cache, or a base image still decoding --
    recomposited from the base and replayed from the first point, as every seek
    used to be. clearAndRestore's restoreSeq guard drops a superseded paint, and
-   the cached path bumps it too, so nothing older paints over it. */
-function seekCanvas(cache, timeline, ms, at, comp, done) {
+   the cached path bumps it too, so nothing older paints over it.
+
+   A FAR FIRST JUMP RACES (lib/seekcache.js race(), the owner's pick A): given
+   a step(), a seek the cache calls far is drawn a slice a frame, with step(i,
+   comp) after each slice so the caller's place, compositor and pen dot move
+   with the drawing (a newer seek then starts from where the canvas really
+   stands), and done() once it lands. A newer seek, and anything that repaints
+   from the base, stops it (seekStop); seekRacing() is what a replay loop and
+   Play wait on. */
+let _race = null;
+function seekRacing() { return !!_race; }
+function seekStop() { if (_race) _race.stop(); _race = null; }
+function seekCanvas(cache, timeline, ms, at, comp, done, step) {
   const layers = strokeLayersOn();
+  seekStop();
+  const go = (from, comp) => {
+    const to = cache ? cache.indexAt(ms) : 0;
+    if (!step || !cache || !cache.far(from, to)) return done(replayStep(cache, timeline, from, ms, comp), comp);
+    step(from, comp);
+    _race = SkriblSeekCache.race(from, to, (i, j) => {
+      seekDrawRange(cache, timeline, i, j, comp);
+      if (comp) comp.present();
+      return j;
+    }, (i) => step(i, comp), (i) => { _race = null; done(i, comp); });
+  };
   if (cache && baseReadyNow()) {
     const target = cache.indexAt(ms), s = cache.start(target, (!!comp === layers) ? at : null, ctx);
     if (s) {
       restoreSeq++;
       if (s.restored) comp = layers ? makeStrokeCompositor(ctx, canvas) : null;
-      return done(replayStep(cache, timeline, s.index, ms, comp), comp);
+      return go(s.index, comp);
     }
   }
   clearAndRestore(() => {
     comp = layers ? makeStrokeCompositor(ctx, canvas) : null;
-    done(replayStep(cache, timeline, 0, ms, comp), comp);
+    go(0, comp);
   });
 }
 let lockToastShown = false;
@@ -1670,6 +1692,7 @@ function baseReadyNow() {
     || !!(_baseImgCache && _baseImgCache.src === preRecordSnapshot && _baseImgCache.img.complete);
 }
 function clearAndRestore(callback) {
+  seekStop();   // a race would draw on over the base
   const seq = ++restoreSeq;
   const { width: cw, height: ch } = getCanvasLogicalSize();
   ctx.clearRect(0, 0, cw, ch);
@@ -1782,7 +1805,9 @@ function hideScrub() {
 
 function editorReplayFrame() {
   if (!playing || playPaused) return;   // paused: resumePlayback() starts the loop again
-  if (scrubbing) { requestAnimationFrame(editorReplayFrame); return; }  // frozen at the scrub position
+  // Frozen at the scrub position, and while a far jump races there (its
+  // landing re-anchors the clock, editorSeek).
+  if (scrubbing || seekRacing()) { requestAnimationFrame(editorReplayFrame); return; }
   // Scaled CLOCK, not scaled data: elapsed wall time is converted into position
   // along the drawing's own timeline. The badge and the scrub bar therefore keep
   // reading in the drawing's time, which is what the author is judging.
@@ -1806,19 +1831,26 @@ function editorReplayFrame() {
 }
 
 // Seek to a fraction of the replay (seekCanvas). lastTargetMs carries the
-// position so the running loop resumes from there on scrub release.
+// position so the running loop resumes from there on scrub release. The bar
+// and the badge say it at once, while a far first jump races there, and the
+// clock is held there until it lands: whatever reads it meanwhile -- a pause,
+// a new speed, a drag on the drawing -- gets the place it was pointed, and the
+// replay carries on from it.
 function editorSeek(frac) {
   if (!playing || !playTimeline) return;
   frac = Math.max(0, Math.min(1, frac));
   lastTargetMs = playTotal * frac;
-  seekCanvas(playSeek, playTimeline, lastTargetMs, playIndex, playComp, (i, comp) => {
+  setScrubProgress(frac);
+  if (durationBadge && !durationBadge.hidden) {
+    const t = formatDuration(Math.min(lastTargetMs, playTotal));
+    if (durationBadge.textContent !== t) durationBadge.textContent = t;
+  }
+  const at = (i, comp) => {
     playIndex = i; playComp = comp;
-    setScrubProgress(frac);
-    if (durationBadge && !durationBadge.hidden) {
-      durationBadge.textContent = formatDuration(Math.min(lastTargetMs, playTotal));
-    }
+    playStart = performance.now() - lastTargetMs / replayRate;
     positionEditorNib(playIndex > 0 ? playTimeline[playIndex - 1] : null);
-  });
+  };
+  seekCanvas(playSeek, playTimeline, lastTargetMs, playIndex, playComp, at, at);
 }
 
 playBtn.addEventListener('click', () => {
@@ -1884,11 +1916,7 @@ if (playScrub) {
   // does, so the two cannot diverge.
   if (window.SkriblScrub) {
     window.SkriblScrub.attach(playScrub, {
-      seek: (f) => {
-        if (!playing) return;
-        editorSeek(f);
-        playStart = performance.now() - lastTargetMs / replayRate;
-      },
+      seek: editorSeek,   // which holds the clock where it lands
       frac: () => (playTotal ? lastTargetMs / playTotal : 0),
     });
   }
@@ -4002,6 +4030,9 @@ function showPlayerError(msg, canRetry) {
   const ICON_MUTED_P = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/></svg>';
 
   let running = false;
+  // Play pressed while a far jump races there (seekRacing): it starts when the
+  // drawing lands, and the button says Pause meanwhile, as it will then.
+  let queued = false;
   let rafId = null;
   let elapsedBase = 0;   // ms elapsed before the current run segment
   let segStart = 0;      // performance.now() at the current segment's start
@@ -4017,8 +4048,8 @@ function showPlayerError(msg, canRetry) {
 
   function setPlayIcon() {
     if (!pPlay) return;
-    pPlay.innerHTML = running ? ICON_PAUSE_P : ICON_PLAY_P;
-    pPlay.setAttribute('aria-label', running ? 'Pause' : 'Play');
+    pPlay.innerHTML = running || queued ? ICON_PAUSE_P : ICON_PLAY_P;
+    pPlay.setAttribute('aria-label', running || queued ? 'Pause' : 'Play');
   }
   function setProgress(frac) {
     if (pFill) pFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
@@ -4240,24 +4271,27 @@ function showPlayerError(msg, canRetry) {
       elapsedBase = targetMs; setProgress(frac); hideNib();
       return;
     }
+    // The bar and the clock are where it was pointed AT ONCE, while a far
+    // first jump races there (seekCanvas); a jump that lands at once sets the
+    // same. Audio alignment is handled on resume: elapsedBase drives the loop
+    // bed's phase in audioStart(), so there's no per-seek audio work.
+    elapsedBase = targetMs;
+    setProgress(frac);
     // idx 0 is never taken as where the canvas stands (lib/seekcache.js): the
     // finished drawing sits on it before the first Play while idx is still 0.
     seekCanvas(seekCache, timeline, targetMs, idx, strokeComp, (i, comp) => {
       idx = i; strokeComp = comp;
-      elapsedBase = targetMs;
-      setProgress(frac);
       showNibAtIndex(idx);
-      // Audio alignment is handled on resume: elapsedBase (= targetMs) drives the
-      // loop-bed phase offset in audioStart(), so there's no per-seek audio work.
-      // (Playback is paused during a scrub; the bed restarts aligned on release.)
-    });
+      if (queued) { queued = false; play(); }
+    }, (i, comp) => { idx = i; strokeComp = comp; showNibAtIndex(idx); });
   }
   // For the suite (verify_replayspeed), as the in-post player's seek(ms) is: an
-  // exact place to seek to, and what the canvas then stands on.
+  // exact place to seek to, and what the canvas then stands on once it lands
+  // (a promise, for a far first jump that races there).
   window.__skriblPlayerSeek = (f) => {
     seekTo(f);
-    return { idx, ms: elapsedBase, held: seekCache ? seekCache.held() : null,
-             drawn: seekCache ? seekCache.drawn() : null, gap: seekCache ? seekCache.gap() : null };
+    return new Promise((res) => { const t = () => seekRacing() ? requestAnimationFrame(t) : res({ idx, ms: elapsedBase,
+      held: seekCache ? seekCache.held() : null, drawn: seekCache ? seekCache.drawn() : null, gap: seekCache ? seekCache.gap() : null }); t(); });
   };
   // Keyboard seeking for the SHARED player, which did not even claim the role:
   // a bare div with mousedown/touchstart, so a link sent to a stranger was
@@ -4353,6 +4387,11 @@ function showPlayerError(msg, canRetry) {
     // the click gesture. running is still false here and begin() owns setting
     // it, so the intent is passed explicitly.
     syncAudioSession(true);
+    // Mid-race the drawing is not yet where it was pointed, and the first
+    // frame would draw the rest of the way at once: the freeze the race is
+    // there to avoid. So Play waits for the landing (seekTo comes back here),
+    // AFTER the unlock and the claim above, which have to happen in the tap.
+    if (seekRacing()) { queued = true; setPlayIcon(); return; }
     if (fresh) {
       elapsedBase = 0;
       setProgress(0);
@@ -4390,6 +4429,7 @@ function showPlayerError(msg, canRetry) {
   }
 
   function pause() {
+    if (queued) { queued = false; setPlayIcon(); syncAudioSession(); }
     if (!running) return;
     running = false;
     cancelAnimationFrame(rafId);
@@ -4402,6 +4442,8 @@ function showPlayerError(msg, canRetry) {
   function restart() {
     cancelAnimationFrame(rafId);
     running = false;
+    queued = false;
+    seekStop();   // from the start, not from where a race was going
     audioPause();
     elapsedBase = 0;
     idx = 0;
@@ -4430,7 +4472,7 @@ function showPlayerError(msg, canRetry) {
     // silence a shared link's music entirely; claimed here rather than in the
     // mute toggle for that reason. play() and pause() both end by syncing, so
     // the tap only has to pick the right one. See lib/audiosession.js.
-    running ? pause() : play();
+    running || queued ? pause() : play();
   });
   if (pRestart) pRestart.addEventListener('click', restart);
   // FULL SCREEN. The profile stage has it and /s/<id> -- the page a person
@@ -4533,8 +4575,10 @@ function showPlayerError(msg, canRetry) {
     points: () => isFlip ? [] : timeline, total: () => totalMs, map: () => _map,
     frac: () => (totalMs ? Math.min(1, elapsedBase / totalMs) : 0),
     seek: seekTo,
-    start: () => { wasRunning = running; if (running) pause(); },
-    end: () => { if (wasRunning && idx < timeline.length) play(); },
+    // A Play waiting on a race counts as playing; and the end is asked of
+    // where the drag left the clock, which a race has not reached yet.
+    start: () => { wasRunning = running || queued; pause(); },
+    end: () => { if (wasRunning && (isFlip ? idx < timeline.length : elapsedBase < totalMs)) play(); },
   });
   if (strip) strip.drag(canvas, () => true);
   // TAP TO PAUSE, as on the Pad (lib/tappause.js; the owner's pick 6): once
@@ -4542,7 +4586,7 @@ function showPlayerError(msg, canRetry) {
   // the glass play mark standing in the middle while it is paused. play(),
   // restart() and the end clear the mark, so nothing else can leave it behind.
   if (window.SkriblTapPause) SkriblTapPause.attach({ surface: canvas, host: canvasWrap,
-    playing: () => running || elapsedBase > 0, paused: () => !running,
+    playing: () => running || elapsedBase > 0, paused: () => !running && !queued,
     pause: () => { pause(); document.body.classList.add('playback-paused'); }, resume: play });
 
   /* SPEED, IN THE LINE THAT SAYS WHAT YOU ARE WATCHING (lib/replayline.js;

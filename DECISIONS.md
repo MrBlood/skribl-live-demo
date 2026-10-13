@@ -16597,3 +16597,104 @@ where a missing prime speaks, so that mutation stayed green; the toast is
 watched from the first paint now. And the copy meant to be the tree before this
 change was taken from the wrong commit and passed everything; taken from the
 right one, it fails all six.
+
+## After v322 -- the first far jump races there: fast-forward instead of a freeze
+
+The owner's pick A, from the mock ("yes, A"). Step 3's copies made every jump
+after the first short, but the first jump to a far part of a long drawing
+still drew everything up to it at once, and the page stood still: the bar
+stuck where it was, then the picture jumped. Now that jump is drawn a slice a
+frame, about 24 ms of drawing each, so the page keeps moving: the bar and the
+clock are where it was pointed at once, the drawing races there, and the pen
+dot rides along on the Pad's preview and the shared link. In all three
+players: the Pad's preview, the shared link's player, and the in-post player
+(a feed, the Gallery, the Library).
+
+`lib/seekcache.js` holds the rule and the slices, so the three cannot race
+differently. far() says a jump races when it would draw more than 8,000 points
+(a minute or two of drawing) through a stretch with no copy yet -- the first
+visit there; a jump through stretches that have their copies lands at once, as
+it did, however long, and so does any short one. race() draws the points a
+slice a frame through the caller's own drawing call; the slices grow or shrink
+to take about 24 ms each, never more than doubling from one frame to the
+next. The slices draw the same points in the same order as the one long draw,
+and presenting between them repaints nothing a later present does not, so a
+race lands on exactly the picture the jump drawn at once paints.
+
+What waits on it, and what stops it:
+
+- The caller is told where the race stands after every slice, so a newer seek
+  mid-race takes over from where the canvas really is (forward, it carries on
+  from there; back, it starts from a copy).
+- The Pad's replay loop holds still while it races, and its clock is held at
+  the place pointed, so a pause, a new speed or a drag on the drawing mid-race
+  all read that place, and the replay carries on from it when it lands.
+- Play pressed mid-race waits for the landing (the first frame would otherwise
+  draw the rest of the way at once, which is the freeze again). The button
+  says Pause meanwhile, as it will then; a second press, a tap on the drawing,
+  or a drag takes the Play back, as each would pause playing. On the shared
+  link the sound is unlocked and the iPhone's session claimed in the tap
+  itself, before it waits, and released if the Play is taken back; Restart
+  spends a waiting Play. A drag to the very end while playing stays on the
+  finished drawing, as it always did. The in-post player's waiting Play from
+  rest (the Library seeks a post nobody has played) is paused where it was
+  pointed if taken back.
+- Anything that repaints from the base stops a race: Stop on the Pad (the
+  finished drawing comes back), Restart on the shared link, and in the in-post
+  player any repaint at all (settled, a new post, a resize).
+
+Measured on the shared link, a 120,000-point post at 2x, a tap at 80% while
+playing: main stood still 1.5 to 1.6 s in one task (8.6 to 8.7 s on a CPU
+slowed 4x); now it lands after 1.6 s with no frame over 63 ms and 55 painted
+meanwhile (9.7 to 9.9 s slowed, no frame over 177 ms).
+
+Flip: not for Flip. Flip scrubs page by page, and its heavy pages are already
+kept as pictures (lib/framebitmap.js), so it never draws thousands of points
+to jump.
+
+CALIBRATION
+
+verify_replayspeed THE FIRST FAR JUMP RACES THERE (sixteen checks) taps the
+bar at 80% on a 120,000-point drawing, the Pad on a phone the owner's width at
+2x and the shared link on a 2x desk -- 2x so a stretch between copies is wider
+than the threshold, and "has its copies" and "is short" are different
+questions. It reads the bar and the clock at once, frames and long tasks while
+it races, every byte at the landing against a replay from the first point, a
+newer seek mid-race, a pause mid-race, Play mid-race and each way of taking it
+back, Stop and Restart mid-race, a drag to the end, a drag holding a waiting
+Play, and a short jump into new ground and a long one back through copies.
+verify_inline has the same for the in-post player on a feed (eight checks,
+the reference a page that refuses lib/seekcache.js, so it seeks from zero),
+and verify_audiosession one: a Play taken back mid-race lets the session go.
+The existing long-drawing checks in both suites wait for a landing.
+
+Thirty-three mutations, each in its own copy on its own server, every one red:
+the race never starting (twelve checks on the Pad and the link, seven in the
+in-post player); a race claiming its landing a slice early (the pixel checks,
+old and new); far() ignoring copies, or the threshold (only the short-jump
+check); the caller not told after each slice (the Pad's supersede and clock,
+the link's supersede); the link's own place not kept (its supersede); the
+Pad's loop not waiting, its clock not held, a repaint from the base not
+stopping a race; each bar set only at the landing; eleven pieces of the link's
+waiting Play, its session release among them; and eleven in the in-post
+player, its race and what stops it among them -- each red on its own check.
+The tree before this change fails seven of the eight in-post checks; the
+eighth is exactness, which it has.
+
+Two things were wrong in the first round. The Pad's supersede came a quarter
+of a second into the race, by when the race had passed a stretch and taken a
+copy, so the newer seek restored from it and healed a race that never said
+where it had got to; the link's check went red and the Pad's stayed green. It
+comes two frames in now, before any copy (and says none is held), and goes red
+too. And "keeps moving" was a 200 ms bar: with four suites sharing the machine,
+one frame of an unrelated mutation's race took 220 ms; 300 ms is still five
+times under the freeze.
+
+The shared player's JavaScript grows by 1,758 B and the in-post player's by
+1,416 B (both ledgers name it), after spending 195 B and 278 B of what the
+change itself added.
+
+NOT TESTED HERE: whether a Play that waits still gets sound on an iPhone. The
+unlock and the claim happen in the tap, which is what iOS asks, but this box
+has no WebKit, and its Chromium starts audio unlocked, so the locked case
+cannot be made to happen.

@@ -1408,7 +1408,20 @@ with sync_playwright() as sp:
     #   Spent first (-458 in inlineplayer.js): the copies are taken from inside
     #   replayTo's own loop (the module's tap) rather than by a second draw loop
     #   of its own. 62,123 B measured.
-    EMBED_RATCHET = 62_130
+    # RAISED (the first far jump races there, owner: "yes, A" from the mock),
+    #   for one named cost, after spending: +1,416 B, paid by every page that
+    #   shows a post, because a scrub is there at rest --
+    #     lib/seekcache.js  +790  far() and race(): when a jump races, and its
+    #                             slices a frame -- the module /s/<id> and the
+    #                             Pad use, so the three cannot race differently
+    #     inlineplayer.js   +626  the race in render(), Play waiting for the
+    #                             landing (and a tap, a key or a drag taking it
+    #                             back), and the suite's readout of a race
+    #   Spent first (-204 in inlineplayer.js, -74 in lib/seekcache.js): the
+    #   tap and the key go through toggle() rather than each carrying it, the
+    #   playing and paused looks are one helper, and the module dropped what no
+    #   caller read. 63,539 B measured.
+    EMBED_RATCHET = 63_550
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -2314,8 +2327,10 @@ with sync_playwright() as _sp3:
                                  arg=sid, timeout=20000)
             rows = []
             for f in SEQ3:
-                st = pg.evaluate("([id, f]) => { const p = window.SkriblInline.find(id);"
-                                 " p.seek(f * p.state().totalMs); return p.state(); }", [sid, f])
+                # Once it lands: a far first jump races there.
+                st = pg.evaluate("([id, f]) => new Promise(res => { const p = window.SkriblInline.find(id);"
+                                 " p.seek(f * p.state().totalMs);"
+                                 " const t = () => p.state().racing ? requestAnimationFrame(t) : res(p.state()); t(); })", [sid, f])
                 rows.append((f, pg.evaluate(_HASH, sid), st["copies"], st["drawnLast"], st["stretch"]))
             out[kind] = rows
         pg.close()
@@ -2337,6 +2352,165 @@ with sync_playwright() as _sp3:
                   _a[-1][2] >= 1 and 0 < _stretch and all(0 <= d <= 2 * _stretch for _, d in _after),
                   f"copies {_a[-1][2]}, stretch {_stretch}, points drawn after the first {_after}")
     _b3.close()
+
+
+# ---------------------------------------------------------------------------
+print("\nTHE FIRST FAR JUMP RACES THERE -- the in-post player keeps moving, and lands on exactly today's picture")
+# The owner's pick A, from the mock, in the in-post player (a feed, the
+# Gallery, the Library): a first jump to a far part of a long post is drawn a
+# slice a frame (lib/seekcache.js race()), not all at once. Read at 2x, where a
+# stretch between copies is wider than a race's threshold. THE REFERENCE is
+# the same post on a page that refuses lib/seekcache.js, so its player seeks
+# from zero at once, as every seek used to; every byte is hashed on both. The
+# bar for "keeps moving" is no task past 300 ms: the same jump drawn at once is
+# one task of over a second here, and a frame that also takes a copy of a 2x
+# canvas, drawn in software, runs to 60 ms or so, and past 200 with other
+# suites sharing the machine.
+_FF_WATCH = """() => { if (!window.__ff) { window.__ff = { lt: [], frames: 0 };
+    new PerformanceObserver(l => { for (const e of l.getEntries()) window.__ff.lt.push(Math.round(e.duration)); }).observe({ type: 'longtask' });
+    const f = () => { window.__ff.frames++; requestAnimationFrame(f); }; requestAnimationFrame(f); }
+  window.__ff.lt = []; window.__ff.frames = 0; }"""
+_FF_LANDED = """(id) => new Promise(res => { const p = window.SkriblInline.find(id), t0 = performance.now();
+    const t = () => { if (p.state().racing && performance.now() - t0 < 60000) return requestAnimationFrame(t);
+      const fr = window.__ff ? window.__ff.frames : 0, ms = Math.round(performance.now() - t0);
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() =>
+        res({ frames: fr, ms: ms, lt: window.__ff ? window.__ff.lt.slice() : [], racing: p.state().racing }), 60))); };
+    t(); })"""
+_FF_STATE = "(id) => { const s = window.SkriblInline.find(id).state(); return [s.state, s.racing, s.elapsedMs, s.totalMs]; }"
+with sync_playwright() as _sp4:
+    _b4 = _sp4.chromium.launch()
+    _ffid = None
+    try:
+        _gp = _b4.new_page()
+        browsing.goto(_gp, BASE, "/")
+        _gen = _gp.evaluate(LONGPOST, [120000, True])
+        _req = urllib.request.Request(
+            BASE + "/api/skribls", headers={"Content-Type": "application/json"},
+            data=json.dumps({"title": "Harness two-hour post", "visibility": "public", "version": 2,
+                             "schemaVersion": 2, "playbackMode": "replay", "fps": None,
+                             "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+                             "frames": [{"strokes": _gen["pts"], "strokeGroups": _gen["groups"],
+                                         "background": {"color": "#f6f2ea"}}]}).encode())
+        with urllib.request.urlopen(_req, timeout=60) as _r:
+            _ffid = json.loads(_r.read().decode())["id"]
+        _gen = None
+        _gp.close()
+    except Exception as exc:                               # noqa: BLE001
+        check("a two-hour post was made (fixture)", False, f"{type(exc).__name__}: {exc}")
+
+    def _ffpage(block=False, play=True):
+        pg = _b4.new_page(viewport={"width": 620, "height": 900}, device_scale_factor=2)
+        if block:
+            pg.route("**/lib/seekcache.js*", lambda r: r.abort())
+        browsing.goto(pg, BASE, "/feed")
+        pg.wait_for_function("(id) => !!document.querySelector('[data-skribl-id=\"' + id + '\"]')", arg=_ffid, timeout=30000)
+        pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').scrollIntoView({ block: 'center' })", _ffid)
+        pg.click(f'[data-skribl-id="{_ffid}"]')                # a tap: it loads and plays
+        pg.wait_for_function("(id) => window.SkriblInline.find(id) && window.SkriblInline.find(id).state().loaded", arg=_ffid, timeout=30000)
+        pg.wait_for_timeout(600)
+        if not play:
+            pg.evaluate("(id) => window.SkriblInline.find(id).pause()", _ffid)
+        return pg
+
+    if _ffid:
+        _ref = _ffpage(block=True, play=False)
+
+        def _refhash(ms):
+            _ref.evaluate("([id, ms]) => window.SkriblInline.find(id).seek(ms)", [_ffid, ms])
+            return _ref.evaluate(_HASH, _ffid)[0]
+
+        _pl = _ffpage()
+        _pl.evaluate(_FF_WATCH)
+        _sel = f'[data-skribl-id="{_ffid}"] + .skribl-inline-line .skribl-inline-scrub'
+        _bx = _pl.locator(_sel).bounding_box()
+        _x = round(_bx["x"] + _bx["width"] * 0.8)
+        _pl.mouse.click(_x, _bx["y"] + _bx["height"] / 2)      # a tap on the line while it plays
+        _f = (_x - _bx["x"]) / _bx["width"]
+        _now = _pl.evaluate("([id, sel]) => { const s = window.SkriblInline.find(id).state();"
+                            " return { racing: s.racing, state: s.state, f: s.elapsedMs / s.totalMs,"
+                            " now: +document.querySelector(sel).getAttribute('aria-valuenow') }; }", [_ffid, _sel])
+        check("[in-post, 120,000 points, 2x] a first far jump races there: the line says where it was pointed at once, and the Play the scrub carries on with waits, saying it plays",
+              _now["racing"] and _now["state"] == "playing" and abs(_now["f"] - _f) < 0.01 and _now["now"] == round(_now["f"] * 100), str(_now))
+        _land = _pl.evaluate(_FF_LANDED, _ffid)
+        check("[in-post] ...the page keeps moving while it does: frames are painted, and none is held up past 300 ms",
+              not _land["racing"] and _land["frames"] >= 5 and max(_land["lt"] or [0]) < 300,
+              f"{_land['frames']} frames in {_land['ms']} ms, long tasks {_land['lt']}")
+        _s1 = _pl.evaluate(_FF_STATE, _ffid)
+        _pl.wait_for_timeout(300)
+        _s2 = _pl.evaluate(_FF_STATE, _ffid)
+        _ms = _pl.evaluate("(id) => { const p = window.SkriblInline.find(id); p.pause(); const ms = p.state().elapsedMs; p.seek(ms); return ms; }", _ffid)
+        _same = _pl.evaluate(_HASH, _ffid)[0] == _refhash(_ms)
+        check("[in-post] ...it plays on from where it landed, and the picture is exactly what a seek from zero paints",
+              _s1[0] == _s2[0] == "playing" and _s2[2] > _s1[2] >= _now["f"] * _s1[3] - 1 and _same,
+              f"{_s1[:3]} -> {_s2[:3]}, same picture {_same}")
+        _d = _pl.evaluate("""async (id) => { const p = window.SkriblInline.find(id), T = p.state().totalMs; p.seek(T);
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            const mid = p.state().racing; p.seek(0.93 * T); const again = p.state().racing;
+            await new Promise(res => { const t = () => p.state().racing ? requestAnimationFrame(t) : res(); t(); });
+            return { mid: mid, again: again, ms: p.state().elapsedMs }; }""", _ffid)
+        _same = _pl.evaluate(_HASH, _ffid)[0] == _refhash(_d["ms"])
+        check("[in-post] a newer seek mid-race takes over from where the canvas stands, and lands exactly too",
+              _d["mid"] and _d["again"] and _same, f"{_d}, same picture {_same}")
+        _pl.close()
+
+        # Anything that repaints stops a race: settled mid-race (scrolled past,
+        # or another post started), it shows the post at rest and nothing races
+        # on over it.
+        _pl = _ffpage()
+        _pl.evaluate("(id) => { const p = window.SkriblInline.find(id); p.seek(0.9 * p.state().totalMs); }", _ffid)
+        _pl.evaluate("() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
+        _was = _pl.evaluate("(id) => window.SkriblInline.find(id).state().racing", _ffid)
+        _pl.evaluate("(id) => window.SkriblInline.find(id).settle()", _ffid)
+        _pl.evaluate("() => new Promise(r => { let n = 8; const t = () => --n ? requestAnimationFrame(t) : r(); requestAnimationFrame(t); })")
+        _ref.evaluate("(id) => window.SkriblInline.find(id).settle()", _ffid)
+        _same = _pl.evaluate(_HASH, _ffid)[0] == _ref.evaluate(_HASH, _ffid)[0]
+        check("[in-post] settled while it races, it shows the post at rest, and nothing races on over it",
+              _was and _same and not _pl.evaluate("(id) => window.SkriblInline.find(id).state().racing", _ffid),
+              f"racing when settled {_was}, same picture {_same}")
+        # Play pressed mid-race waits for the landing, and a second press takes
+        # it back: by a tap on the post, and by its keys. The first from rest,
+        # as the Library seeks a post nobody has played yet: taken back, it is
+        # paused where it was pointed, not "at rest" with its drawing showing.
+        _post = f'[data-skribl-id="{_ffid}"]'
+        _pl.evaluate("(id) => { const p = window.SkriblInline.find(id); p.seek(0.5 * p.state().totalMs); }", _ffid)
+        _pl.click(_post); _q1 = _pl.evaluate(_FF_STATE, _ffid)
+        _pl.click(_post); _q2 = _pl.evaluate(_FF_STATE, _ffid)
+        _pl.evaluate(_FF_LANDED, _ffid); _pl.wait_for_timeout(300)
+        _q3 = _pl.evaluate(_FF_STATE, _ffid)
+        check("[in-post] Play pressed mid-race (a tap, from rest) says it plays and waits; a second tap takes it back, paused where it was pointed",
+              _q1[:2] == ["playing", True] and _q2[:2] == ["paused", True] and _q3[:2] == ["paused", False]
+              and abs(_q3[2] - 0.5 * _q3[3]) < 1, f"{_q1} {_q2} {_q3}")
+        _pl.evaluate("(id) => { const p = window.SkriblInline.find(id); p.seek(0.97 * p.state().totalMs); }", _ffid)
+        _pl.focus(_post)
+        _pl.keyboard.press("Enter"); _k1 = _pl.evaluate(_FF_STATE, _ffid)
+        _pl.keyboard.press("Enter"); _k2 = _pl.evaluate(_FF_STATE, _ffid)
+        _pl.evaluate(_FF_LANDED, _ffid); _pl.wait_for_timeout(300)
+        _k3 = _pl.evaluate(_FF_STATE, _ffid)
+        check("[in-post] ...and so do its keys",
+              _k1[:2] == ["playing", True] and _k2[:2] == ["paused", True] and _k3[:2] == ["paused", False]
+              and abs(_k3[2] - 0.97 * _k3[3]) < 1, f"{_k1} {_k2} {_k3}")
+        _pl.close()
+
+        # A drag holds a Play that waits, as it holds playing: nothing starts
+        # under the finger, and letting go plays.
+        _pl = _ffpage()
+        _pl.evaluate("(id) => { const p = window.SkriblInline.find(id); p.seek(0.5 * p.state().totalMs); }", _ffid)
+        _pl.click(_post); _g1 = _pl.evaluate(_FF_STATE, _ffid)
+        _bx = _pl.locator(_sel).bounding_box()
+        _pl.mouse.move(_bx["x"] + _bx["width"] * 0.95, _bx["y"] + _bx["height"] / 2)
+        _pl.mouse.down()
+        _pl.evaluate(_FF_LANDED, _ffid); _pl.wait_for_timeout(300)
+        _g2 = _pl.evaluate(_FF_STATE, _ffid)
+        _pl.wait_for_timeout(300)
+        _g3 = _pl.evaluate(_FF_STATE, _ffid)
+        _pl.mouse.up(); _pl.wait_for_timeout(400)
+        _g4 = _pl.evaluate(_FF_STATE, _ffid)
+        check("[in-post] a drag holds a Play that waits, as it holds playing: nothing starts under the finger, and letting go plays",
+              _g1[:2] == ["playing", True] and _g2[0] == "paused" and _g3[0] == "paused" and _g2[2] == _g3[2]
+              and _g4[0] == "playing" and _g4[2] > _g3[2], f"{_g1} {_g2} {_g3} {_g4}")
+        _pl.close()
+        _ref.close()
+    _b4.close()
 
 
 passed = sum(1 for ok, _ in results if ok)

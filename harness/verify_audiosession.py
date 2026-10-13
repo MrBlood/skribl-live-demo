@@ -34,11 +34,13 @@ HUNG unlock and asserts the fallback plumbing, but nothing anywhere asserted
 that preview produces sound at all. That is why a silent preview could be
 reported by a person rather than by a suite.
 """
+import json
 import math
 import os
 import pathlib
 import struct
 import sys
+import urllib.request
 import wave
 from assertions import make_check
 import browsing
@@ -376,6 +378,62 @@ with sync_playwright() as p:
               f"released {drops} time(s) mid-loop — a tear-down and reacquire "
               "every pass")
         pg.close()
+
+        # A PLAY THAT WAITS FOR A RACE, TAKEN BACK, LETS THE SESSION GO. A
+        # first far jump on a long drawing races there (app.js seekCanvas), and
+        # Play pressed meanwhile waits for the landing -- but claims at once,
+        # because the claim has to be inside the tap. A second press takes the
+        # Play back and must release with it, or the lock screen says Skribl is
+        # playing a drawing that never started. The same post's music, under a
+        # drawing long enough to race (120,000 points, at 2x).
+        lid = None
+        try:
+            with urllib.request.urlopen(f"{BASE}/api/skribls/{pid}", timeout=30) as _r:
+                _sk = json.loads(_r.read().decode())["skribl"]
+            _s, _pts, _groups, _t, _gi = [11], [], [], 0.0, 0
+
+            def _rnd():
+                _s[0] = (_s[0] * 16807) % 2147483647
+                return _s[0] / 2147483647
+            while len(_pts) < 120000:
+                _m, _k = 20 + int(_rnd() * 200), 0
+                _x, _y, _a = 60 + _rnd() * 700, 60 + _rnd() * 480, _rnd() * 6.283
+                for _i in range(_m):
+                    if len(_pts) >= 120000:
+                        break
+                    _pts.append({"x": round(_x, 1), "y": round(_y, 1), "color": ["#1f1b2e", "#7c5cff", "#ff7a59"][_gi % 3],
+                                 "size": round(2.5 + 6 * math.sin(math.pi * _i / _m), 2), "t": round(_t), "start": _i == 0})
+                    _a += (_rnd() - 0.5) * 0.3
+                    _x, _y = min(800, max(10, _x + math.cos(_a) * 5)), min(590, max(10, _y + math.sin(_a) * 5))
+                    _t += 18
+                    _k += 1
+                _groups.append(_k)
+                _gi += 1
+                _t += 200 + _rnd() * 900
+            _sk["frames"][0]["strokes"], _sk["frames"][0]["strokeGroups"] = _pts, _groups
+            _sk["title"], _sk["visibility"] = "session, a long drawing", "public"
+            _req = urllib.request.Request(f"{BASE}/api/skribls", data=json.dumps(_sk).encode(),
+                                          headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(_req, timeout=60) as _r:
+                lid = json.loads(_r.read().decode())["id"]
+        except Exception as exc:                           # noqa: BLE001
+            check("a long drawing carrying music was posted (fixture)", False, f"{type(exc).__name__}: {exc}")
+        if lid:
+            pg = b.new_page(viewport={"width": 390, "height": 840}, device_scale_factor=2)
+            pg.add_init_script(AS_IPHONE)
+            pg.goto(f"{BASE}/s/{lid}", wait_until="load")
+            pg.wait_for_function("() => typeof window.__skriblPlayerSeek === 'function'")
+            pg.wait_for_timeout(1500)
+            pg.evaluate("() => { window.__skriblPlayerSeek(1); }")
+            pg.click("#playerPlayBtn")
+            pg.click("#playerPlayBtn")
+            _st = pg.evaluate("() => [seekRacing(), document.getElementById('playerPlayBtn').getAttribute('aria-label')]")
+            pg.wait_for_timeout(700)
+            _held = pg.evaluate(held)
+            check("a Play taken back while a far jump races there lets the session go",
+                  _st == [True, "Play"] and _held is False,
+                  f"racing and the button after the second press {_st}; held {_held}")
+            pg.close()
 
     print("\n6 — active() MEANS HELD, NOT ATTEMPTED")
     # claim() used to set its flag synchronously after a fire-and-forget play().
