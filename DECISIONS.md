@@ -17049,3 +17049,76 @@ touch.
 NOT TESTED HERE: Safari and the iPhone itself. The stand-in is driven in
 Chromium with the API removed, so how iOS's own bars sit around it is not
 observed here.
+
+## After v322 -- every full screen steps back while it plays
+
+The owner's picks for full screen, which the editors took first (#455), on
+the three surfaces that show a posted drawing: the link page, the Gallery and
+the Library. The controls go away a moment after the drawing starts and come
+back at the first move, tap or key; the drawing has the whole screen.
+
+- lib/chromefade.js takes the first-tap rule from lib/watchfull.js, as
+  `tapWakes`: a finger's press on a faded screen is swallowed, and so is the
+  click it makes, so it neither pauses nor draws; a mouse's click is the
+  page's. The click matters as much as the press: the in-post player pauses on
+  a click, the editors and the link page on the press. watchfull keeps only
+  its own rule, that nothing draws once the drawing stops. One rule, five
+  surfaces.
+- The link page starts the fade with its full screen and stops it on the way
+  out, and setPlayIcon tells it the play state, so a pause from a key or
+  anything else that is not a touch brings the controls back. Awake while it
+  is paused or finished, or while its speed menu is open. lib/fullbar.js does
+  the same for the Gallery's and the Library's bar: running() is the pages'
+  own word that full screen opened or closed, and sync() reads the player's
+  state every beat. The pages' x fades with the bar (fullbar.css).
+- THE BAND GOES. The link page kept a band the height of its bar under the
+  drawing (--pbar), and the bar kept its own (--skfull-band) on the Gallery
+  and the Library, after a pug whose feet were behind the controls ("fullscreen
+  where the controls cover the bottom of the canvas?"). With the controls away
+  while it plays, the drawing has the whole screen, and they lie over its foot
+  only while someone is using them: paused, finished, or just touched -- as in
+  the editors. On a 1333x906 desk the link page's drawing goes from 738 to 906
+  tall; on the owner's phone a 4:3 drawing was already as wide as the screen.
+- The link page reads player.css, which keeps only the rules a capture of the
+  player saw match. The fade's match only in full screen and asleep, which no
+  capture scene reaches, so they are listed as live for the player in
+  css_live.json, as the light ramp was. The band's rule left the list with
+  the rule.
+- The player loads lib/chromefade.js now: +2,014 B, and verify_player_isolation's
+  ratchet moves for that named cost.
+- THE LIBRARY'S DRAWING STAYS IN ITS OWN 16:9 FRAME in full screen: 302 wide
+  on a 402 phone, the authored 816x612 on a desk. That is older than this. The
+  Gallery plays the drawing on the way in and lets the component fill the
+  screen (`is-immersive`); the Library does neither. It takes the fade through
+  the shared bar, and the frame is listed for its own change.
+
+Flip: shared. The editors had the fade already; the first-tap rule they had
+of their own now lives in the module all five use.
+
+CALIBRATION
+
+verify_fullfade (new, solo in the seal: it measures what is painted after a
+timed quiet spell) walks the link page, the Gallery and the Library on the
+owner's 402x874 phone with the Fullscreen API taken away -- the stand-in an
+iPhone gets -- and on a 1333x906 desk with the real one: the whole screen (the
+link page and the Gallery), the quiet spell, a pause from elsewhere, a
+finger's first tap or a mouse's move, the next tap or click, and paused
+staying up. Visible means painted (elementFromPoint), because a faded control
+keeps its rect. The band rows in verify_player_isolation (two) and
+verify_gallery (two, now one) ask the opposite of what they asked: that no
+band is kept under the drawing.
+
+Thirteen breaks, each in its own copy on its own server, each red on its own
+rows: the first-tap guard off (every phone's tap rows); its click half alone
+off (the Gallery's and the Library's, and not the link page's, which pauses
+on the press); the link page's fade never started, and its play state never
+told; the link page's band back (its whole-screen rows, and
+verify_player_isolation's two); the bar's fade never started, and its play
+state never told; fullbar.css's asleep rule gone; the Gallery's band back (its
+whole-screen rows, and verify_gallery's); the asleep rule missing from
+player.css, as an emit without the css_live entries leaves it; the module's
+script tag gone from the link page, and from the Gallery; and the editors'
+tapWakes flag gone (both editors' first-tap rows, in verify_parity).
+
+NOT TESTED HERE: Safari and the iPhone itself. The stand-in is driven in
+Chromium with the API removed.

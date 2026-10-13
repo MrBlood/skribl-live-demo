@@ -3720,15 +3720,11 @@ function showPlayerError(msg, canRetry) {
   // the document behind it still has a scrollbar. Measuring the box is also
   // what layoutEditorCanvas does.
   //
-  // LESS THE BAR'S BAND. The transport is moved into the wrapper in full
-  // screen and sits over the bottom edge, so the space a drawing may use is the
-  // box minus that. clientHeight INCLUDES padding, so the padding the sheet
-  // uses to centre the canvas does not come off here and the number has to be
-  // subtracted by hand -- if it were not, the scale and the centring would
-  // disagree and the drawing would be pushed off the top. `--pbar` is the
-  // height _syncFull measured when it moved the bar in, so reading it back is
-  // both shorter than a second DOM lookup and the only way the two cannot
-  // disagree: they are then the same number, not two measurements of it.
+  // THE WHOLE BOX, BAR AND ALL. The transport lies over the drawing's foot
+  // while it is up and steps back while it plays (lib/chromefade.js, the
+  // owner's picks for every full screen), so the drawing is fitted to the
+  // screen, not to the screen less a band. It used to reserve one (`--pbar`)
+  // under the drawing, from before the controls stepped back.
   //
   // THE PROSE IS OUT HERE AND NOT IN THE BODY, which is not style. verify_seam
   // measures the player's reachable set as the sum of its NAMED functions'
@@ -3736,9 +3732,7 @@ function showPlayerError(msg, canRetry) {
   // counted function costs exactly what a statement costs. Out here it costs
   // nothing and says the same thing.
   function playerFitScale() {
-    if (fsFull) return Math.min(canvasWrap.clientWidth / authorW,
-      Math.max(1, canvasWrap.clientHeight
-        - (parseFloat(canvasWrap.style.getPropertyValue('--pbar')) || 0)) / authorH);
+    if (fsFull) return Math.min(canvasWrap.clientWidth / authorW, canvasWrap.clientHeight / authorH);
     // Measure the COLUMN the canvas actually lives in, not the viewport. This
     // used to be `window.innerWidth - 40`, and .app has a max-width: on a 1023px
     // viewport the column is 718px, so the scale came out at the 1:1 cap and the
@@ -4046,6 +4040,7 @@ function showPlayerError(msg, canRetry) {
   let loop = true;
   let strokeComp = null; // wet/dry stroke compositor for low-opacity replay (flag-gated)
   let muted = false;
+  let _fade = null;      // the controls stepping back in full screen (below)
   // lib/seekcache.js: copies of the canvas a seek starts from (see editorSeek).
   const seekCache = (!isFlip && timeline.length && window.SkriblSeekCache)
     ? SkriblSeekCache.make(canvas, timeline) : null;
@@ -4054,6 +4049,7 @@ function showPlayerError(msg, canRetry) {
     if (!pPlay) return;
     pPlay.innerHTML = running || queued ? ICON_PAUSE_P : ICON_PLAY_P;
     pPlay.setAttribute('aria-label', running || queued ? 'Pause' : 'Play');
+    if (_fade) _fade.poke();
   }
   function setProgress(frac) {
     if (pFill) pFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
@@ -4517,6 +4513,13 @@ function showPlayerError(msg, canRetry) {
     // is where it goes back.
     const _bar = document.getElementById('playerBar');
     let _barHome = null;
+    // THE CONTROLS STEP BACK WHILE IT PLAYS (lib/chromefade.js, the owner's
+    // picks for every full screen): after a quiet spell the band and the x
+    // fade and the drawing has the whole screen; a move, a key or a tap brings
+    // them back, a finger's first tap on a faded screen only that. Up while it
+    // is paused or finished, or while the speed menu is open.
+    _fade = window.SkriblChromeFade && SkriblChromeFade.attach(canvasWrap, { tapWakes: true,
+      awake: () => !(running || queued) || !!(_bar && _bar.querySelector('[aria-expanded="true"]')) });
     // `on` from the module, which answers for both ways in: our wrapper as
     // the fullscreen element, or its pinned CSS state.
     const _syncFull = on => {
@@ -4527,15 +4530,12 @@ function showPlayerError(msg, canRetry) {
         if (on) {
           if (!_barHome) _barHome = _bar.nextSibling;
           canvasWrap.appendChild(_bar);
-          // The band the sheet reserves so the canvas is centred ABOVE the
-          // bar. Read after the move, when the bar has a box in its new home.
-          canvasWrap.style.setProperty('--pbar', _bar.offsetHeight + 'px');
         } else {
-          canvasWrap.style.removeProperty('--pbar');
           const shell = document.getElementById('playerShell');
           if (shell) shell.insertBefore(_bar, _barHome);
         }
       }
+      if (_fade) _fade[on ? 'start' : 'stop']();
       layoutPlayerCanvas();      // the box just changed shape
     };
     const _full = SkriblImmersive.attach(canvasWrap, { onChange: _syncFull });

@@ -813,7 +813,15 @@ with sync_playwright() as sp:
     #   none) and the hook's guard, now an optional call. The full screen itself
     #   is lib/watchfull.js and lib/chromefade.js, which the player never loads.
     #   149,737 measured.
-    BYTES_RATCHET, BYTES_TARGET = 149_750, 153_800
+    # RAISED (every full screen steps back, the owner's picks), for one named
+    #   cost: +2,014 B -- lib/chromefade.js, which the player loads now that its
+    #   own full screen puts the controls away while a drawing plays (the
+    #   sentence above was true until this), and the few lines in app.js that
+    #   start it, stop it and tell it the play state. The band the bar used to
+    #   keep under the drawing went with it (--pbar, its set, its removal and
+    #   the fit's subtraction), which is what the 16 B net in app.js is after.
+    #   151,751 measured.
+    BYTES_RATCHET, BYTES_TARGET = 151_760, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -1302,12 +1310,16 @@ with sync_playwright() as sp:
               f"{_bar} \u2014 a control outside the fullscreened subtree keeps its "
               f"rect and loses its pixels, so this asks what is under the "
               f"pointer rather than where the box is")
-        check("...standing below the drawing rather than on it",
-              not _bar.get("missing") and _bar["barH"] > 20
-              and _bar["overlap"] == 0 and abs(_bar["band"] - _bar["barH"]) <= 1,
-              f"{_bar} \u2014 the bar is absolute and the drawing does not know it "
-              f"is there; the wrapper reserves the measured height, and the fit "
-              f"scale subtracts the same number so the two cannot disagree")
+        # NOTHING IS KEPT UNDER THE DRAWING FOR IT. The wrapper used to reserve
+        # the bar's measured height as a band (the Gallery's pug, whose feet
+        # were behind the controls); the owner's picks for every full screen
+        # put the controls away while a drawing plays instead, so the drawing
+        # has the whole screen and the bar lies over its foot while it is up.
+        # The stepping back itself is verify_fullfade's.
+        check("...lying over the drawing's foot, with no band kept under the drawing for it",
+              not _bar.get("missing") and _bar["barH"] > 20 and _bar["band"] == 0,
+              f"{_bar} \u2014 a band under the drawing is the reservation the "
+              f"fade replaced: the drawing would stop short of the screen")
         # THE \u22ef WITH THEM. Share, Copy link and Gallery moved into the \u22ef menu,
         # and the rule that stood them down still named the three, so the \u22ef
         # stayed on screen in full screen and opened an empty sliver of a menu
@@ -1459,10 +1471,9 @@ with sync_playwright() as sp:
               and abs(_i_on["canvas"][0] / _i_on["canvas"][1]
                       - _i_on["shape"][0] / _i_on["shape"][1]) < 0.02,
               f"{_i_on} — the fit is the smaller of the screen's width and "
-              f"the height above the transport, at the authored shape")
-        check("...with the transport on it, painted, pressable and below the drawing",
-              _i_on["inWrap"] and _i_on["play"] and _i_on["band"] > 20
-              and _i_on["overlap"] == 0, str(_i_on))
+              f"its height, at the authored shape")
+        check("...with the transport on it, painted and pressable, and no band kept under the drawing",
+              _i_on["inWrap"] and _i_on["play"] and _i_on["band"] == 0, str(_i_on))
         check("...the way out on screen, the ⋯ standing down, and the "
               "control saying where it is",
               _i_on["exit"] and _i_on["more"] == 0 and _i_on["pressed"] == "true"

@@ -179,6 +179,18 @@
 
     function player() { return getPlayer(); }
 
+    /* THE BAR STEPS BACK WHILE IT PLAYS (lib/chromefade.js; the owner's picks
+       for every full screen): after a quiet spell it fades with the page's x,
+       and a move, a key or a tap brings it back -- a finger's first tap on a
+       faded screen only that. Up while the drawing is not playing. running()
+       is the page's word that full screen opened or closed; never on a card. */
+    var fade = opts.variant !== 'skfull-card' && global.SkriblChromeFade
+      ? global.SkriblChromeFade.attach(wrap, { tapWakes: true, awake: function () {
+          var st = player() && player().state();
+          return !st || st.state !== 'playing';
+        } }) : null;
+    var fadePlaying = null;
+
     function seekTo(e) {
       var pl = player();
       if (!pl) return;
@@ -324,6 +336,7 @@
       }
       setHTML(bPlay, playing ? ICON.pause : ICON.play);
       label(bPlay, playing ? 'Pause' : 'Play');
+      if (fade && fadePlaying !== playing) { fadePlaying = playing; fade.poke(); }
 
       var loop = !!(pl && pl.looping());
       bLoop.classList.toggle('on', loop);
@@ -455,6 +468,7 @@
       }
     }
     function running(on) {
+      if (fade) fade[on ? 'start' : 'stop']();
       if (on) { if (!raf && !tick) beat(); return; }
       if (raf) global.cancelAnimationFrame(raf);
       if (tick) global.clearTimeout(tick);
@@ -462,30 +476,13 @@
       tick = null;
     }
 
-    /* ---- the band the bar occupies, published to the thing it sits on ----
-     *
-     * IN FULL SCREEN THE BAR MAY NOT STAND ON THE DRAWING. A video player can
-     * lay controls over a scrim; a drawing is the entire content and its bottom
-     * edge is part of it. The host reserves the bar's height as padding and
-     * centres the drawing in what is left.
-     *
-     * MEASURED, NOT ASSUMED: the height moves with the safe-area inset, the
-     * scrub row and the text metrics of whatever font resolved, so a constant
-     * would be right here and wrong on a phone with a home indicator.
-     *
-     * The CARD's bar does none of this -- it is hidden in full screen, and on
-     * a card the overlay is the point. Two bars share this wrapper, so the
-     * card's is filtered out here rather than in the CSS, or the last one to
-     * measure would win. */
-    if (opts.variant !== 'skfull-card') {
-      wrap.classList.add('skfull-host');
-      if (global.ResizeObserver) {
-        new global.ResizeObserver(function (rec) {
-          var h = rec[0] ? rec[0].target.offsetHeight : 0;
-          wrap.style.setProperty('--skfull-band', (h || 0) + 'px');
-        }).observe(bar);
-      }
-    }
+    /* THE HOST IS MARKED for the sheet's fade (fullbar.css). The bar used to
+       reserve its own measured height on it, a band under the drawing, after a
+       pug whose feet were behind the controls; with the bar away while it
+       plays, the drawing has the whole screen, and the bar lies over its foot
+       only while someone is using it. The card's bar is not the host's: it is
+       hidden in full screen. */
+    if (opts.variant !== 'skfull-card') wrap.classList.add('skfull-host');
 
     sync();
     return { el: bar, sync: sync, running: running };

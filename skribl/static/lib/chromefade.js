@@ -11,16 +11,22 @@
  * ONE RULE, EVERY SURFACE THAT GOES FULL SCREEN. This owns only WHEN: it
  * puts `chrome-asleep` on the root after a quiet spell and takes it off at
  * the first sign of a person. What fades is the page's CSS (styles.css,
- * "CONTROLS THAT STEP BACK"), so a surface cannot fade differently by
- * accident.
+ * "CONTROLS THAT STEP BACK", and fullbar.css for the Gallery's and the
+ * Library's bar), so a surface cannot fade differently by accident.
  *
  * NEVER ASLEEP WHEN IT WOULD STRAND SOMEONE. `awake()` is the caller's: a
  * paused or finished drawing keeps its controls, so does an open menu. A
- * key, a focus moving in, a press and a mouse that moves all wake it. What
- * else a press does is the caller's: the editors let a finger's first tap on
- * a faded screen only wake it, as a video app does (lib/watchfull.js).
+ * key, a focus moving in, a press and a mouse that moves all wake it.
  *
- *   SkriblChromeFade.attach(root, { awake, ms })
+ * THE FIRST TAP ON A FADED SCREEN ONLY BRINGS THEM BACK (the owner: "matching
+ * how video apps work"), wherever `tapWakes` asks for it: a finger's press
+ * while they are away is swallowed, and so is the click it makes, so it
+ * neither pauses nor draws. The click matters as much as the press: the
+ * in-post player pauses on a click, the editors and the link page on the
+ * press (lib/tappause.js). A mouse has already woken them by moving there, so
+ * its click is the page's.
+ *
+ *   SkriblChromeFade.attach(root, { awake, ms, tapWakes })
  *     -> { start, stop, poke, asleep }
  *   start()  begin watching (full screen opened); arms the first quiet spell
  *   stop()   stop watching and wake for good (full screen closed)
@@ -61,6 +67,25 @@
       if (far) wake();
     }
     function any() { wake(); }
+    /* Registered here, ahead of start()'s own, so the press still finds them
+       asleep; and a click is swallowed only just after a swallowed press, so
+       a key's click never is. */
+    var swallowTill = 0;
+    if (o.tapWakes) {
+      root.addEventListener('pointerdown', function (e) {
+        swallowTill = 0;
+        if (!on || e.pointerType === 'mouse' || !root.classList.contains(ASLEEP)) return;
+        swallowTill = e.timeStamp + 1000;
+        e.preventDefault();
+        e.stopPropagation();
+      }, true);
+      root.addEventListener('click', function (e) {
+        if (e.timeStamp > swallowTill) return;
+        swallowTill = 0;
+        e.preventDefault();
+        e.stopPropagation();
+      }, true);
+    }
 
     function start() {
       if (on) return;

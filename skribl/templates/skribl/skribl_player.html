@@ -266,6 +266,8 @@
      Fullscreen API for <video> only, so there the drawing goes big as a pinned
      CSS state; the Gallery and the Library use the same module. #}
   <script src="{{ skribl_asset('lib/immersive.js') }}" defer></script>
+  {# lib/chromefade.js: in full screen the controls step back while it plays (the owner's picks). #}
+  <script src="{{ skribl_asset('lib/chromefade.js') }}" defer></script>
   {# lib/seekcache.js: a scrub through a long drawing starts from the nearest copy (v322 plan, step 3). #}
   <script src="{{ skribl_asset('lib/seekcache.js') }}" defer></script>
   <script src="{{ skribl_asset('app.js') }}" defer></script>

@@ -325,6 +325,13 @@ stays a sleep.
   stood, the music's loop is stopped and started again at the offset it had
   reached, and a drag, two fingers or Stop are not taps. Each drag times its
   own press, so it can only pass by its distance.
+- `verify_fullfade.py` — every full screen that shows a posted drawing (the
+  link page, the Gallery and the Library) puts its controls away while it
+  plays, on the owner's 402x874 phone without the Fullscreen API and on a
+  1333x906 desk with it: the drawing has the whole screen, a quiet spell takes
+  the bar and the x away while it plays on, a pause from elsewhere brings them
+  back, a finger's first tap only wakes them (a mouse's move on a desk), the
+  next tap pauses, and paused they stay up. Visible means painted.
 - `verify_framecache.py` — a static page is rasterised at most once per
   playback, on BOTH surfaces. Pins the blit as pixel-identical to the paint it
   replaced (only after asserting 1:1 display, where that claim is honest), the
