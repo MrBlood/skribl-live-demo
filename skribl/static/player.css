@@ -325,6 +325,10 @@
   /* Motion */
   --spring: cubic-bezier(0.4, 0.0, 0.2, 1.1);
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* How far an open drawer's contents dim while a drawing plays, in both
+     editors (styles.css "Replay auto-hide", flip.css). Mocked with the owner. */
+  --drawer-rest: 0.4;
 }
 
 * { box-sizing: border-box; }

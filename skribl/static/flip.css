@@ -254,12 +254,16 @@
   /* THE DOCK STEPS ASIDE WHILE A FLIP PLAYS, as the Pad's does (styles.css,
      "Replay auto-hide"; the owner's pick, "all yes"): the drawing is the show.
      It stayed lit and tappable, and its Undo did nothing mid-play. Opacity
-     only, so the canvas never resizes; an open drawer goes with it, and the
-     "Saved" note hides as the Pad's does (body.replaying .autosave-status). */
+     only, so the canvas never resizes, and the "Saved" note hides as the
+     Pad's does (body.replaying .autosave-status). An open drawer RESTS, as
+     the Pad's does: where it was, inert, its contents dimmed to --drawer-rest
+     (the glass is never what fades). It used to vanish and leave its space
+     empty under the animation. */
   .flip-tools, .flip-app .tab-panel { transition: opacity 0.3s ease; }
   body.playing .flip-tools,
-  body.playing .tab-panel,
   body.playing .autosave-status { opacity: 0; pointer-events: none; }
+  body.playing .tab-panel, body.playing .media-card { pointer-events: none; }
+  body.playing .tab-panel > *, body.playing .media-card > .media-tabs { opacity: var(--drawer-rest); }
 
   /* gap 4 / padding 7 are PAD'S numbers, adopted wholesale in v224. Flip used
      8 and 12 and was 52px wider and 10px taller than Pad for the same nine

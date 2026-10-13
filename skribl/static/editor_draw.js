@@ -703,6 +703,14 @@ if (window.SkriblTapPause) {
 //
 // HERE, NOT IN app.js, for the player's byte budget: the player loads app.js
 // whole and has its own line (app.js, the orchestrator).
+//
+// PLAY SHOWS THE WHOLE DRAWING (lib/drawerdetent.js revealTop, Flip's too):
+// on a short phone an open drawer scrolls the page, the sticky header keeps
+// Play in reach, and the drawing played with its top under the header. Bound
+// after app.js's own Play handler, so `playing` says which way the tap went.
+playBtn.addEventListener('click', () => {
+  if (playing && window.SkriblDrawerDetent) SkriblDrawerDetent.revealTop(canvas);
+});
 const SPEED_KEY = 'skribl_replay_rate';
 function setPreviewSpeed(c) {
   const now = performance.now();
