@@ -16883,3 +16883,38 @@ twice. With DRIFT at 300px it is red again; at 10px #452's own check goes red,
 its 13px drift left standing. Both edges of the number are pinned.
 
 NOT TESTED HERE: Safari.
+
+## After v322 -- a reload brings a Pad drawing back on its own canvas
+
+The owner, on a desk, with Bloom open in the Pad: "looks weird on reload. this
+happens (the offset) sometimes." Bloom sat low and to the left of its frame,
+its foot cut off, the right of the frame empty. Measured from the screenshot,
+the mandala's middle stood 353 drawing units from the frame's corner on both
+axes at one scale: its strokes were right, and its canvas was not. Bloom is
+square, 707x707; the frame was 816x612, the 4:3 preset.
+
+The Pad's autosave held the strokes, the ground and the media's names, and
+never the canvas's size. A reload made the canvas lib/canvassizes.js bestFor
+suggests for the window -- the preset that shows largest in the band, ties
+to 4:3 -- and put the restored strokes on it. On one window that is square,
+on another 4:3, which is why it came and went. A post made after such a
+reload would have carried the wrong size too. Flip's autosave has always held
+its size and restored it first (applyPayload).
+
+- editor_draft.js: the autosave holds the drawing's canvasSize, as a post
+  does, and restoreAutosave adopts it before anything is painted, as
+  loadSkribl does; the canvas picker is told. An autosave written before this
+  carries no size and keeps the window's choice, so Bloom wants opening once
+  more from its file; from then on its shape comes back with it.
+- Flip: already right, and now pinned beside the Pad.
+
+CALIBRATION
+
+verify_drafts SHAPE: a 9:16 drawing on a 1333x906 desk, where a fresh canvas
+starts at another shape, loaded through each editor's Load and left by a
+reload. Its one mark is the middle of its canvas, read from the canvas's own
+pixels. Red on main for the Pad -- back on a square canvas, the middle empty --
+and green for Flip; green for both here. Taking out either half, the size in
+the save or its adoption in the restore, turns the Pad's row red again.
+
+NOT TESTED HERE: Windows itself, or Safari.
