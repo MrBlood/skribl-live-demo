@@ -16819,3 +16819,39 @@ The Media card's fill transition went with the replay it was for.
 NOT TESTED HERE: Safari. The rest dims contents rather than the frosted card
 because WebKit can fail to repaint an animated backdrop-filter; that rule is
 followed here, not observed.
+
+## After v322 -- the dock stays below the header after a photo lands
+
+Found while proving the resting drawer (#451): beside other suites,
+verify_parity went red on "a photo added to the open card ... the dock stays
+below the header", the Pad at 390x640, with the dock 9px under the pinned
+header. It was red on main the same way, three runs of three under the same
+load, so it was not that change; and it was not only load. Alone, on a quiet
+box, a photo left the page past the growth follower's cap in anything from
+none of eight runs to six of six, batch to batch: the photo's row grows while
+the glide is under way, and the browser's scroll anchoring and the glide
+itself carry the page on past its target, up to the 13px the page has left.
+With anchoring switched off two runs of six still went past, so the fix does
+not depend on the cause.
+
+- lib/drawerdetent.js followGrowth: its re-asserts at 300, 700 and 1200ms
+  pushed the page down to the card's end and never pulled it back, so a drift
+  past the cap stayed. They now take it back to the cap. A focus hand-off and
+  a second reveal were ruled out first: focus never moved, and nothing in the
+  photo path scrolls.
+- Flip: shared, and at this size it cannot happen there: Flip's page ends
+  17px short of its own cap. A song cannot reach the cap on either editor at
+  390x640, 375x667 or 390x844.
+
+CALIBRATION
+
+The drift comes and goes with timing, so the new check makes it: the page to
+its end just after the photo lands, the measured 13px past the cap, and asks
+that it is taken back. Red on main (the dock stays 9px under the header),
+green here, and red again with the take-back threshold raised to 20px.
+
+Who can meet it: a photo leaves the page 221px short of the cap on the
+owner's 402x874 phone and 14px short on a 375x667 one, so only a phone as
+short as 640px reaches the cap at all.
+
+NOT TESTED HERE: Safari on a phone that short.
