@@ -2807,6 +2807,174 @@ with sync_playwright() as p:
           not _hid["whole"] and _shown["whole"] and _q.evaluate("() => playing"), f"before {_hid}; on Space {_shown}")
     _dc.close()
 
+    # ---- full screen while it plays ---------------------------------------------
+    # The owner's picks from the measured mock ("I like your picks"): the way in
+    # at the end of the line under the drawing (Flip: the end of its speed row),
+    # the drawing as big as the screen goes, and the controls fading a moment
+    # after it starts. One module for both (lib/watchfull.js), so both are driven
+    # the same way: an iPhone-sized phone with no Fullscreen API, which takes the
+    # pinned stand-in (lib/immersive.js), and a desk with the real one. Visible
+    # means PAINTED (elementFromPoint), and gone means not painted: a faded
+    # control keeps its rect.
+    print("\nPARITY — full screen while it plays: the way in, the whole screen, the band, the fade, and back, on both")
+    NO_API = """(() => { try {
+      Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => false, configurable: true });
+      Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { get: () => false, configurable: true }); } catch (e) {}
+      try { delete Element.prototype.requestFullscreen; } catch (e) {}
+      try { delete Element.prototype.webkitRequestFullscreen; } catch (e) {} })();"""
+    FW = {"/skribl-pad": {"wrap": ".canvas-wrap", "cv": "#canvas", "btn": "#padLine .full-btn",
+                          "carry": ["#playScrub", "#padLine"], "after": "rl-speed"},
+          "/flip": {"wrap": ".flip-wrap", "cv": "#pad", "btn": "#flipSpeeds .full-btn",
+                    "carry": ["#flipProgress", "#flipSpeeds"], "after": "seg"}}
+    WAY = """(o) => { const b = document.querySelector(o.btn), c = document.querySelector(o.cv); if (!b) return null;
+        const r = b.getBoundingClientRect(), cr = c.getBoundingClientRect(), t = getComputedStyle(b, '::before');
+        const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2), prev = b.previousElementSibling;
+        return { painted: !!h && b.contains(h), after: prev ? prev.className : null,
+                 off: r.bottom <= cr.top || r.top >= cr.bottom || r.right <= cr.left || r.left >= cr.right,
+                 tap: [Math.round(r.width - 2 * (parseFloat(t.left) || 0)), Math.round(r.height - 2 * (parseFloat(t.top) || 0))] }; }"""
+    FS = """(o) => { const w = document.querySelector(o.wrap), c = document.querySelector(o.cv), b = document.querySelector(o.btn);
+        const r = c.getBoundingClientRect(), q = w.getBoundingClientRect(), band = w.querySelector('.watch-band');
+        const paint = el => { if (!el) return false; const x = el.getBoundingClientRect(); if (!x.width || !x.height) return false;
+            const h = document.elementFromPoint(x.left + x.width / 2, x.top + x.height / 2); return !!h && el.contains(h); };
+        return { mode: document.fullscreenElement === w ? 'api' : (w.classList.contains('is-immersive-page') ? 'stand-in' : 'page'),
+                 wrap: [q.left, q.top, q.width, q.height].map(Math.round), canvas: [r.left, r.top, r.width, r.height].map(Math.round),
+                 band: band ? [...band.children].map(e => e.id || e.className.split(' ')[0]) : [],
+                 play: paint(w.querySelector('.watch-play')), exit: paint(w.querySelector('.watch-exit')),
+                 asleep: w.classList.contains('chrome-asleep'), drawing: paint(c),
+                 label: b && b.getAttribute('aria-label'), pressed: b && b.getAttribute('aria-pressed'),
+                 homes: o.carry.map(s => document.querySelector(s).parentElement.className.split(' ')[0]),
+                 locked: document.documentElement.classList.contains('skribl-immersive'), vw: innerWidth, vh: innerHeight }; }"""
+    NIB = """() => { const n = document.querySelector('.canvas-wrap .player-nib'); if (!n || n.hidden || !(playIndex > 0)) return null;
+        const r = n.getBoundingClientRect(), c = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize(), p = playTimeline[playIndex - 1];
+        return Math.round(Math.hypot(r.left + r.width / 2 - (c.left + p.x * c.width / lg.width),
+                                     r.top + r.height / 2 - (c.top + p.y * c.height / lg.height))); }"""
+    POINTS = "() => frames.reduce((n, f) => n + f.strokes.length, 0)"
+
+    def _long_pad(ctx):
+        """The Pad with a take whose replay outlasts a fade at the slowest speed: three slow strokes."""
+        q = _fresh(ctx, "/skribl-pad")
+        for k in range(3):
+            bx = q.locator("#canvas").bounding_box()
+            y = bx["y"] + bx["height"] * (0.3 + 0.2 * k)
+            q.mouse.move(bx["x"] + bx["width"] * 0.2, y); q.mouse.down()
+            for s in range(1, 31):
+                q.mouse.move(bx["x"] + bx["width"] * (0.2 + 0.02 * s), y + 8 * math.sin(s / 3)); q.wait_for_timeout(30)
+            q.mouse.up(); q.wait_for_timeout(200)
+        q.evaluate("() => { if (typeof endRecordingTake === 'function' && recording) endRecordingTake(); }")
+        q.wait_for_timeout(300)
+        return q
+
+    for _route, _o in FW.items():
+        _name = "Pad" if _route == "/skribl-pad" else "Flip"
+        for _dev, _opts in (("phone", {"viewport": {"width": 402, "height": 874}, "is_mobile": True, "has_touch": True}),
+                            ("desk", {"viewport": {"width": 1333, "height": 906}})):
+            _fc = b.new_context(**_opts)
+            if _dev == "phone":
+                _fc.add_init_script(NO_API)
+            _q = _long_pad(_fc) if _route == "/skribl-pad" else _drawn(_fc, _route)
+            if _route == "/skribl-pad":
+                _q.evaluate("() => setPreviewSpeed(0.25)")
+            _q.click(ED[_route][1]); _q.wait_for_timeout(500)
+            _tag = f"{_route} on a {_dev}"
+            _w = _q.evaluate(WAY, _o)
+            check(f"{_tag}: the way in sits at the end of the {'line under the drawing' if _name == 'Pad' else 'speed row'}, "
+                  "painted, off the drawing and 44px to tap",
+                  bool(_w) and _w["painted"] and _w["off"] and _o["after"] in (_w["after"] or "") and min(_w["tap"]) >= 44, str(_w))
+            _page = _q.evaluate(FS, _o)
+            _q.click(_o["btn"]); _q.wait_for_timeout(600)
+            _s = _q.evaluate(FS, _o)
+            _cw, _ch = _s["canvas"][2], _s["canvas"][3]
+            _fits = (abs(_cw - _s["vw"]) <= 1 and abs(_s["canvas"][1] * 2 + _ch - _s["vh"]) <= 2) or \
+                    (abs(_ch - _s["vh"]) <= 1 and abs(_s["canvas"][0] * 2 + _cw - _s["vw"]) <= 2)
+            _shape = abs(_cw / _ch - _page["canvas"][2] / _page["canvas"][3]) < 0.02
+            check(f"{_tag}: it opens over the whole screen ({'the stand-in' if _dev == 'phone' else 'the real API'}), "
+                  "the drawing as big as the screen allows, centred, in its own shape",
+                  _s["mode"] == ("stand-in" if _dev == "phone" else "api") and _s["wrap"] == [0, 0, _s["vw"], _s["vh"]]
+                  and _fits and _shape and _cw > _page["canvas"][2], f"page {_page['canvas']} -> {_s}")
+            check(f"{_tag}: the band carries the editor's own controls, with Play and a way out painted",
+                  _s["band"] == [x[1:] for x in _o["carry"]] + ["watch-row"] and _s["play"] and _s["exit"]
+                  and _s["label"] == "Leave full screen" and _s["pressed"] == "true", str(_s))
+            if _route == "/skribl-pad":
+                _gap = []
+                for _k in range(3):
+                    _q.wait_for_timeout(250); _gap.append(_q.evaluate(NIB))
+                check(f"{_tag}: the replay's pen dot rides the point being drawn, in the middle of the screen",
+                      all(g is not None and g <= 2 for g in _gap), str(_gap))
+            _q.wait_for_timeout(3000)
+            _z = _q.evaluate(FS, _o)
+            check(f"{_tag}: a quiet spell while it plays puts the controls away and leaves the drawing",
+                  _z["asleep"] and not _z["play"] and not _z["exit"] and _z["drawing"], str(_z))
+            _c = _q.locator(_o["cv"]).bounding_box()
+            _mid = (_c["x"] + _c["width"] / 2, _c["y"] + _c["height"] / 2)
+            if _dev == "phone":
+                # A FINGER'S FIRST TAP ON A FADED SCREEN ONLY BRINGS THE CONTROLS
+                # BACK (the owner: "matching how video apps work"), so the speed
+                # can be reached without stopping the drawing; with them up, a
+                # tap pauses, as it does on the page.
+                _q.touchscreen.tap(*_mid); _q.wait_for_timeout(300)
+                _t1, _on1 = _q.evaluate(FS, _o), _q.evaluate("() => playing && !playPaused")
+                check(f"{_tag}: a finger's first tap on the faded screen only brings the controls back; the drawing plays on",
+                      not _t1["asleep"] and _t1["play"] and _t1["exit"] and _on1, f"{_t1}; plays on {_on1}")
+                _q.touchscreen.tap(*_mid); _q.wait_for_timeout(300)
+                _t2, _p2 = _q.evaluate(FS, _o), _q.evaluate("() => playPaused")
+                check(f"{_tag}: ...and with them up, the next tap pauses it, as on the page",
+                      _p2 and not _t2["asleep"] and _t2["play"], f"{_t2}; paused {_p2}")
+                _q.touchscreen.tap(*_mid); _q.wait_for_timeout(300)    # on again, for the band's own Play below
+            else:
+                _q.mouse.move(40, 40); _q.mouse.move(60, 70); _q.wait_for_timeout(450)
+                _m = _q.evaluate(FS, _o)
+                check(f"{_tag}: ...and a mouse that moves brings them back", not _m["asleep"] and _m["play"] and _m["exit"], str(_m))
+            _q.click(".watch-play"); _q.wait_for_timeout(3000)
+            _p = _q.evaluate(FS, _o)
+            check(f"{_tag}: paused from the band, they stay up however long it rests",
+                  _q.evaluate("() => playPaused") and not _p["asleep"] and _p["play"], str(_p))
+            _q.click(".watch-play")
+            if _dev == "desk":      # the mouse comes to rest on the drawing, and the spell runs out under it
+                _q.mouse.move(*_mid)
+            _q.wait_for_timeout(3000)
+            check(f"{_tag}: ...and go again once it plays on", _q.evaluate(FS, _o)["asleep"]
+                  and _q.evaluate("() => playing && !playPaused"))
+            if _dev == "desk":
+                # A MOUSE'S CLICK IS A PAUSE, faded or not: a video app on a desk
+                # takes it so. Only a finger's first tap is held back.
+                _q.mouse.down(); _q.mouse.up(); _q.wait_for_timeout(300)
+                _k = _q.evaluate(FS, _o)
+                check(f"{_tag}: a click on the faded drawing pauses it at once, and the controls come back",
+                      _q.evaluate("() => playPaused") and not _k["asleep"] and _k["play"], str(_k))
+                _q.mouse.down(); _q.mouse.up(); _q.wait_for_timeout(300)    # and on again, as it was
+            if _route == "/flip":
+                # NOTHING DRAWS IN FULL SCREEN. Flip's canvas takes a stroke the
+                # moment its preview stops; the Pad's finished take is locked
+                # anyway, so this is pinned where it can fail.
+                _q.evaluate("() => stop()"); _q.wait_for_timeout(400)
+                _n0 = _q.evaluate(POINTS)
+                _bx = _q.locator("#pad").bounding_box()
+                _q.mouse.move(_bx["x"] + _bx["width"] * 0.3, _bx["y"] + _bx["height"] * 0.5); _q.mouse.down()
+                _q.mouse.move(_bx["x"] + _bx["width"] * 0.6, _bx["y"] + _bx["height"] * 0.55, steps=6); _q.mouse.up()
+                _q.wait_for_timeout(300)
+                _r = _q.evaluate(FS, _o)
+                check(f"{_tag}: once it stops, a stroke on the drawing draws nothing and the controls stay up",
+                      _q.evaluate(POINTS) == _n0 and not _r["asleep"] and _r["play"], f"points {_n0} -> {_q.evaluate(POINTS)}; {_r}")
+                # Playing again from the band, so the page it goes back to is
+                # the one it left: Flip's speed row only shows while it plays.
+                _q.click(".watch-play"); _q.wait_for_timeout(400)
+            _q.click(".watch-exit"); _q.wait_for_timeout(600)
+            _x = _q.evaluate(FS, _o)
+            check(f"{_tag}: the way out puts back the page: the drawing at its size, the controls where they were",
+                  _x["mode"] == "page" and _x["canvas"] == _page["canvas"] and _x["homes"] == _page["homes"]
+                  and _x["label"] == "Full screen" and _x["pressed"] == "false" and not _x["locked"] and not _x["band"],
+                  f"page {_page['canvas']} {_page['homes']} -> {_x}")
+            if _dev == "phone":
+                if not _q.evaluate(ED[_route][2]):
+                    _q.click(ED[_route][1]); _q.wait_for_timeout(400)
+                _q.click(_o["btn"]); _q.wait_for_timeout(500)
+                _e0 = _q.evaluate(FS, _o)["mode"]
+                _q.keyboard.press("Escape"); _q.wait_for_timeout(500)
+                _e = _q.evaluate(FS, _o)
+                check(f"{_tag}: Escape leaves the stand-in too, and lets the page scroll again",
+                      _e0 == "stand-in" and _e["mode"] == "page" and not _e["locked"], f"{_e0} -> {_e['mode']}, locked {_e['locked']}")
+            _fc.close()
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))

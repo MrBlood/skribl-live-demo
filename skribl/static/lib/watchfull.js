@@ -3,7 +3,7 @@
  * THE OWNER, after the measured mock ("I like your picks"): the button at the
  * end of the line under the drawing -- Flip's at the end of its speed row --
  * and in full screen the controls fade a moment after the drawing starts,
- * coming back when the mouse moves or a finger taps; a tap still pauses.
+ * coming back when the mouse moves or a finger taps.
  *
  * ONE MODULE, BOTH EDITORS. Each hands over its own frame, its own button,
  * what travels into the band (the Pad's scrubber and line, Flip's progress
@@ -22,9 +22,10 @@
  * rules (styles.css, :is(.canvas-wrap, .watch-full)), so the three are
  * recognisably one full screen and cannot drift apart.
  *
- * NOTHING DRAWS IN FULL SCREEN. It is for watching. While the drawing plays
- * a tap pauses it, as on the page (lib/tappause.js); once it has finished, a
- * press on it wakes the controls and goes no further.
+ * A TAP IS A VIDEO APP'S TAP. On a faded screen a finger's first tap only
+ * brings the controls back; with them up, a tap pauses, as on the page
+ * (lib/tappause.js). NOTHING DRAWS IN FULL SCREEN: it is for watching, and
+ * once the drawing has stopped a press on it goes no further.
  *
  *   SkriblWatchFull.makeButton()  -> the way in, for the editor to place
  *   SkriblWatchFull.attach({ wrap, button, carry, fit, playing, paused,
@@ -116,8 +117,17 @@
       else o.pause();
       sync();
     });
+    /* THE FIRST TAP ON A FADED SCREEN ONLY BRINGS THE CONTROLS BACK (the
+       owner: "matching how video apps work"), so a finger can reach the speed
+       without stopping the drawing; once they are up, a tap pauses as it does
+       on the page. A mouse is different: it has already woken them by moving
+       there, so its click is a pause. And nothing draws in full screen: once
+       the drawing stops, a press on it goes no further. Registered before the
+       fade's own listener, so `asleep()` is still the state the touch found. */
     wrap.addEventListener('pointerdown', function (e) {
-      if (!full.isOn() || o.playing() || band.contains(e.target) || exit.contains(e.target)) return;
+      if (!full.isOn() || band.contains(e.target) || exit.contains(e.target)) return;
+      var wakeOnly = !!fade && fade.asleep() && e.pointerType !== 'mouse';
+      if (o.playing() && !wakeOnly) return;
       e.preventDefault();
       e.stopPropagation();
     }, true);

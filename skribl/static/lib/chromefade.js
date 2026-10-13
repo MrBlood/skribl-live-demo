@@ -3,10 +3,10 @@
  *
  * THE OWNER, from the full-screen mock: in full screen the controls fade a
  * moment after the drawing starts, and come back when the mouse moves or a
- * finger taps -- a tap still pauses. Measured, that is what makes full screen
- * full size: in a 1333x906 window the Pad's drawing is 738px tall with the
- * controls kept in a band under it and 906 with them gone. The drawing takes
- * the whole screen; the controls lie over its foot when they are up.
+ * finger taps. Measured, that is what makes full screen full size: in a
+ * 1333x906 window the Pad's drawing is 738px tall with the controls kept in a
+ * band under it and 906 with them gone. The drawing takes the whole screen;
+ * the controls lie over its foot when they are up.
  *
  * ONE RULE, EVERY SURFACE THAT GOES FULL SCREEN. This owns only WHEN: it
  * puts `chrome-asleep` on the root after a quiet spell and takes it off at
@@ -16,9 +16,9 @@
  *
  * NEVER ASLEEP WHEN IT WOULD STRAND SOMEONE. `awake()` is the caller's: a
  * paused or finished drawing keeps its controls, so does an open menu. A
- * key, a focus moving in, a press and a mouse that moves all wake it; a
- * finger's tap is a press, so it wakes the controls and pauses the drawing
- * in the same touch, and paused is awake.
+ * key, a focus moving in, a press and a mouse that moves all wake it. What
+ * else a press does is the caller's: the editors let a finger's first tap on
+ * a faded screen only wake it, as a video app does (lib/watchfull.js).
  *
  *   SkriblChromeFade.attach(root, { awake, ms })
  *     -> { start, stop, poke, asleep }
