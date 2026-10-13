@@ -1549,6 +1549,30 @@ with sync_playwright() as p:
                           "screen and the page does not chase the card's end", _ft["wave"] <= 0 and _ft["end"] > 40, str(_ft))
                 _gc.close()
 
+    # THE CAP IS HELD, NOT ONLY AIMED AT (lib/drawerdetent.js followGrowth). The
+    # check above went red beside other suites on main, the Pad at 390x640 with
+    # its dock 9px under the header; alone it drifted in anything from none of
+    # eight runs to six of six: the photo's row grows during the glide and the
+    # browser's scroll anchoring carries the page past the cap. Whether that drift
+    # happens is timing, so this MAKES it -- the page to its end just after the
+    # photo lands, the 13px past the cap that was measured -- and asks that it is
+    # taken back. Flip's page ends 17px short of its own cap at this size and
+    # cannot go past it; the shared code is pinned here, on the Pad.
+    _gc = b.new_context(viewport={"width": 390, "height": 640}, is_mobile=True, has_touch=True)
+    _q = _gc.new_page()
+    browsing.goto(_q, BASE, "/skribl-pad"); waits.settle(_q, 700)
+    _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    _q.click("#mediaOpenBtn"); waits.settle(_q, 400); waits.settle(_q, 2500)
+    _q.set_input_files("#photoInput", {"name": "t.png", "mimeType": "image/png", "buffer": png_bytes(64, 48)})
+    _q.wait_for_timeout(450)
+    _drift = _q.evaluate("""() => { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+        return Math.round(document.querySelector('#toolBar').getBoundingClientRect().top - document.querySelector('.header').getBoundingClientRect().bottom); }""")
+    waits.settle(_q, 1800)
+    _held = _q.evaluate(GROWN)
+    check("/skribl-pad at 390x640: a photo's glide carried past the cap is taken back, the dock below the header",
+          _drift < 0 and 0 <= _held["dockClear"] <= 8, f"pushed to dockClear {_drift}, then {_held}")
+    _gc.close()
+
     # ---- the empty drop area ---------------------------------------------------
     # Until a file is added the row is one quiet drop area: a real button that
     # fills it (a Tab stop the old row never had), a title and one line of

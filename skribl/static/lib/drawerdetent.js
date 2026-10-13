@@ -295,7 +295,17 @@
    * controls on top of controls (verify_ux's phone audit), and the reason
    * Fine-tune's own nudge stops at its waveform. Capped there, a short phone
    * may still leave the last row to scroll to; growth only ever scrolls
-   * down. */
+   * down, but for one thing.
+   *
+   * THE CAP IS HELD, NOT ONLY AIMED AT. On a 390x640 phone a photo could
+   * leave the page past it, the dock 1-9px under the header -- in anything
+   * from none of eight runs to six of six, batch to batch on one box: the
+   * photo's row changes height while the glide is under way, and the
+   * browser's scroll anchoring and the glide itself carry the page on past
+   * the target. With anchoring switched off, two runs of six still went past,
+   * so the re-asserts take back the drift whatever moved it. There is little room for one: of
+   * the three phones verify_parity drives, only the Pad's photo at 390x640
+   * can scroll past the cap at all, and by 13px. */
   function followGrowth(card, o) {
     if (!card || typeof ResizeObserver === 'undefined') return;
     var dock = o.dock || null, lastH = 0;
@@ -318,7 +328,10 @@
           if (card.offsetParent === null) return;
           var scroller = document.scrollingElement || document.documentElement;
           var t = target();
-          if (t > scroller.scrollTop + 1) scroller.scrollTop = t;
+          if (t > scroller.scrollTop + 1) { scroller.scrollTop = t; return; }
+          if (!dock || dock.offsetParent === null) return;
+          var over = stuckBottom() + 4 - dock.getBoundingClientRect().top;
+          if (over > 1) scroller.scrollTop -= over;
         }, ms);
       });
     }
