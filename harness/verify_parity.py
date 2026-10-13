@@ -2854,6 +2854,13 @@ with sync_playwright() as p:
         if (!x.width || !x.height) return false;
         const h = document.elementFromPoint(x.left + x.width / 2, x.top + x.height / 2); return !!h && el.contains(h); }"""
 
+    def _band(q, sel):
+        """A press on a control in the band, as a person makes it: a faded band is woken first, so a
+        regression that leaves it faded is a red row below, not a click that waits out its timeout."""
+        if q.evaluate("() => !!document.querySelector('.chrome-asleep')"):
+            q.mouse.move(5, 5); q.mouse.move(25, 25); q.wait_for_timeout(450)
+        q.click(sel)
+
     def _fills(s, page):
         """Over the whole screen, the drawing as big as it allows, centred, in the page's shape."""
         cw, ch = s["canvas"][2], s["canvas"][3]
@@ -2914,22 +2921,22 @@ with sync_playwright() as p:
             if _route == "/skribl-pad":
                 _sp = {"opener": _q.evaluate(PAINTED, ".watch-band .rl-speed")}
                 if _sp["opener"]:
-                    _q.click(".watch-band .rl-speed"); _q.wait_for_timeout(3000)
+                    _band(_q, ".watch-band .rl-speed"); _q.wait_for_timeout(3000)
                     _sp.update(asleep=_q.evaluate(FS, _o)["asleep"], half=_q.evaluate(PAINTED, ".watch-band [data-r='0.5']"))
                 check(f"{_tag}: the speed opens from the band, and stays up as long as it is open",
                       _sp["opener"] and _sp.get("half") and _sp.get("asleep") is False, str(_sp))
                 if _sp.get("half"):
-                    _q.click(".watch-band [data-r='0.5']"); _q.wait_for_timeout(200)
+                    _band(_q, ".watch-band [data-r='0.5']"); _q.wait_for_timeout(200)
                     _sp["picked"] = _q.evaluate("() => [replayChoice, playing && !playPaused, !!document.querySelector('.watch-band')]")
-                    _q.click(".watch-band .rl-speed"); _q.click(".watch-band [data-r='0.25']")
+                    _band(_q, ".watch-band .rl-speed"); _band(_q, ".watch-band [data-r='0.25']")
                 check(f"{_tag}: ...and a speed picked there takes, in full screen, the drawing playing on",
                       _sp.get("picked") == [0.5, True, True], str(_sp))
             else:
                 _sp = {"half": _q.evaluate(PAINTED, ".watch-band [data-rate='0.5']")}
                 if _sp["half"]:
-                    _q.click(".watch-band [data-rate='0.5']"); _q.wait_for_timeout(200)
+                    _band(_q, ".watch-band [data-rate='0.5']"); _q.wait_for_timeout(200)
                     _sp["picked"] = _q.evaluate("() => [flipRate, playing && !playPaused, !!document.querySelector('.watch-band')]")
-                    _q.click(".watch-band [data-rate='1']")
+                    _band(_q, ".watch-band [data-rate='1']")
                 check(f"{_tag}: a speed picked in the band takes, in full screen, the drawing playing on",
                       _sp.get("picked") == [0.5, True, True], str(_sp))
             if _dev == "phone":
@@ -2965,11 +2972,11 @@ with sync_playwright() as p:
                 _q.mouse.move(40, 40); _q.mouse.move(60, 70); _q.wait_for_timeout(450)
                 _m = _q.evaluate(FS, _o)
                 check(f"{_tag}: ...and a mouse that moves brings them back", not _m["asleep"] and _m["play"] and _m["exit"], str(_m))
-            _q.click(".watch-play"); _q.wait_for_timeout(3000)
+            _band(_q, ".watch-play"); _q.wait_for_timeout(3000)
             _p = _q.evaluate(FS, _o)
             check(f"{_tag}: paused from the band, they stay up however long it rests",
                   _q.evaluate("() => playPaused") and not _p["asleep"] and _p["play"], str(_p))
-            _q.click(".watch-play")
+            _band(_q, ".watch-play")
             if _dev == "desk":      # the mouse comes to rest on the drawing, and the spell runs out under it
                 _q.mouse.move(*_mid)
             _q.wait_for_timeout(3000)
@@ -2998,8 +3005,8 @@ with sync_playwright() as p:
                       _q.evaluate(POINTS) == _n0 and not _r["asleep"] and _r["play"], f"points {_n0} -> {_q.evaluate(POINTS)}; {_r}")
                 # Playing again from the band, so the page it goes back to is
                 # the one it left: Flip's speed row only shows while it plays.
-                _q.click(".watch-play"); _q.wait_for_timeout(400)
-            _q.click(".watch-exit"); _q.wait_for_timeout(600)
+                _band(_q, ".watch-play"); _q.wait_for_timeout(400)
+            _band(_q, ".watch-exit"); _q.wait_for_timeout(600)
             _x = _q.evaluate(FS, _o)
             check(f"{_tag}: the way out puts back the page: the drawing at its size, the controls where they were",
                   _x["mode"] == "page" and _x["canvas"] == _page["canvas"] and _x["homes"] == _page["homes"]
