@@ -109,7 +109,7 @@ function establishEditorCanvas(w, h) {
 // the drawing — rotating just re-fits the display.
 function layoutEditorCanvas() {
   if (!authoredW || !authoredH) return;
-  if (window._skriblFullFit && window._skriblFullFit()) return;   // full screen lays it out (editor_draw.js)
+  if (window._skriblFullFit?.()) return;   // full screen lays it out (editor_draw.js)
   const areaEl = canvasArea || canvasWrap.parentElement || canvasWrap;
   const area = areaEl.getBoundingClientRect();
   // Subtract the padding. getBoundingClientRect() reports the BORDER box, so
@@ -1674,8 +1674,8 @@ function positionEditorNib(p) {
   // From the canvas's own corner, which is the frame's only on the page: in
   // full screen the frame is the screen and the canvas sits in its middle.
   const wr = canvasWrap.getBoundingClientRect();
-  nib.style.left = (rect.left - wr.left - canvasWrap.clientLeft + p.x * sx) + 'px';
-  nib.style.top = (rect.top - wr.top - canvasWrap.clientTop + p.y * sy) + 'px';
+  nib.style.left = (rect.left - wr.left + p.x * sx) + 'px';
+  nib.style.top = (rect.top - wr.top + p.y * sy) + 'px';
   nib.classList.toggle('erase', !!p.erase);
   if (!p.erase) nib.style.setProperty('--nib-rgb', nibRGB(p.color));
   nib.hidden = false;

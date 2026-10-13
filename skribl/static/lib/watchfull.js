@@ -100,7 +100,9 @@
         if (fade) fade.start();
       } else {
         if (fade) fade.stop();
-        homes.forEach(function (h) { h.parent.insertBefore(h.el, h.next); });
+        // Last carried, first home: each one's anchor is then back on the page,
+        // even where two carried controls sit side by side.
+        homes.reverse().forEach(function (h) { h.parent.insertBefore(h.el, h.next); });
         homes = [];
         if (band.parentNode) band.parentNode.removeChild(band);
         if (exit.parentNode) exit.parentNode.removeChild(exit);

@@ -803,7 +803,17 @@ with sync_playwright() as sp:
     #   keyboard seek re-anchored the clock itself, which the seek now does;
     #   the hook was compacted; and the module dropped what no caller read.
     #   149,609 measured.
-    BYTES_RATCHET, BYTES_TARGET = 149_620, 153_800
+    # RAISED (the editors' full screen, owner: "I like your picks"), for one
+    #   named cost, after spending: +128 B, two editor-only lines in app.js,
+    #   which the player loads whole -- layoutEditorCanvas asks full screen
+    #   first, so every re-layout (a resize, a phone's orientationchange, a
+    #   draft loading) keeps the drawing fitted, and the replay's pen dot is
+    #   placed from the canvas's own corner, which is the frame's corner only
+    #   on the page. Spent first (-70): the frame-border terms (the frame has
+    #   none) and the hook's guard, now an optional call. The full screen itself
+    #   is lib/watchfull.js and lib/chromefade.js, which the player never loads.
+    #   149,737 measured.
+    BYTES_RATCHET, BYTES_TARGET = 149_750, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

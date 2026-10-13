@@ -536,7 +536,7 @@ with sync_playwright() as p:
             return { clear: foot.every(e => e === pad || (e && e.closest && e.closest('.zoom-layer'))),
                      inStrip: !!line.closest('.strip-wrap'), lineH: Math.round(lr.height), band: parseFloat(band.height),
                      linePainted: !!document.elementFromPoint(lr.left + lr.width / 2, lr.top + 1) && line.contains(document.elementFromPoint(lr.left + lr.width / 2, lr.top + 1)),
-                     speeds: [...sp.querySelectorAll('button')].map(x => x.textContent), speedsPainted: !!hit && sp.contains(hit),
+                     speeds: [...sp.querySelectorAll('[data-rate]')].map(x => x.textContent), speedsPainted: !!hit && sp.contains(hit),
                      addHidden: !add || getComputedStyle(add).display === 'none' }; }""")
         check(f"[{label}] playing, nothing sits on the drawing: its foot shows the drawing itself",
               st["clear"], str(st))
