@@ -693,6 +693,59 @@ with sync_playwright() as p:
         check(f"{_label}: no page errors", not errors, "; ".join(errors[:2]))
         ctx.close()
 
+    print("\nSHAPE — a reload brings a drawing back on its own canvas, not the one the window suggests")
+    # The owner, on a desk: a square drawing came back low and to the left, its
+    # foot cut off. The Pad's autosave did not hold the canvas's size, so a
+    # reload put the strokes on whatever preset the window suggested
+    # (lib/canvassizes.js bestFor) -- square on one window, 4:3 on another,
+    # which is why it happened only sometimes. A 9:16 drawing on a desk makes it
+    # certain: no desk band suggests 9:16. Its one mark is the middle of its
+    # canvas, so on its own canvas the middle pixel is ink and on any other it
+    # is not. Flip's autosave has always held its size; it is driven the same
+    # way so the two cannot drift. Loaded through each editor's own Load, and
+    # left by a reload, whose pagehide flush is the save (FLUSH, above).
+    SHAPE_W, SHAPE_H = 531, 944                          # lib/canvassizes.js 'tall'
+    def _shape_payload(flip):
+        mark = [{"x": SHAPE_W / 2 - 30 + i * 6, "y": SHAPE_H / 2, "color": "#7c5cff", "size": 48, "t": i * 40,
+                 **({"start": True} if i == 0 else {})} for i in range(11)]
+        frame = {"strokes": mark, "strokeGroups": [len(mark)], "background": {"color": "#f6f2ea"}}
+        return json.dumps({"version": 2, "schemaVersion": 2, "playbackMode": "flip" if flip else "replay",
+                           "fps": 8 if flip else None, "canvasSize": {"cssWidth": SHAPE_W, "cssHeight": SHAPE_H, "dpr": 1},
+                           "frames": [frame, frame] if flip else [frame]}).encode()
+    SHAPE_READ = """(flip) => { const c = document.getElementById(flip ? 'pad' : 'canvas');
+        const px = c.getContext('2d').getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data;
+        const r = c.getBoundingClientRect();
+        return { size: flip ? [CW, CH] : [authoredW, authoredH], shown: [Math.round(r.width), Math.round(r.height)],
+                 ink: Math.abs(px[0] - 124) < 40 && Math.abs(px[1] - 92) < 40 && Math.abs(px[2] - 255) < 40 }; }"""
+    for _route, _flip, _menu, _item in (("/skribl-pad", False, "#menuBtn", "#loadDraftItem"),
+                                        ("/flip", True, "#moreBtn", "#miLoad")):
+        ctx = b.new_context(viewport={"width": 1333, "height": 906})
+        pg = ctx.new_page()
+        errors = []
+        pg.on("pageerror", lambda e: errors.append(str(e)))
+        pg.goto(f"{BASE}{_route}", wait_until="load")
+        pg.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        pg.reload(wait_until="load"); pg.wait_for_timeout(700)
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _fresh = pg.evaluate(SHAPE_READ, _flip)["size"]
+        pg.click(_menu); pg.wait_for_timeout(300)
+        with pg.expect_file_chooser() as _fc:
+            pg.click(_item)
+        _fc.value.set_files({"name": "tall.skribl", "mimeType": "application/json", "buffer": _shape_payload(_flip)})
+        pg.wait_for_timeout(1200)
+        _open = pg.evaluate(SHAPE_READ, _flip)
+        pg.reload(wait_until="load"); pg.wait_for_timeout(1500)
+        _back = pg.evaluate(SHAPE_READ, _flip)
+        _label = "Pad" if not _flip else "Flip"
+        check(f"{_label} at 1333x906: a 9:16 drawing reloads on its own 9:16 canvas, its middle in the middle"
+              " (this window would start a fresh one at another shape)",
+              _fresh != [SHAPE_W, SHAPE_H] and _open["size"] == [SHAPE_W, SHAPE_H] and _open["ink"]
+              and _back["size"] == [SHAPE_W, SHAPE_H] and _back["ink"]
+              and abs(_back["shown"][0] / _back["shown"][1] - SHAPE_W / SHAPE_H) < 0.01,
+              f"fresh {_fresh}; opened {_open}; after the reload {_back}")
+        check(f"{_label}: no page errors", not errors, "; ".join(errors[:2]))
+        ctx.close()
+
     print("\nNEARLY TOO LONG — a note at 90% and at the limit, after a save, twice at most")
     # The Pad plan, step 5 (the owner's pick A). Nothing said anything until
     # Post failed at the end of the work. Now, after a save that crossed 90% of
