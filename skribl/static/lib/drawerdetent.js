@@ -58,7 +58,9 @@
    * end is already visible, so browsers that got it right the first time
    * feel nothing.
    */
+  var revealGen = 0;   // a newer reveal calls off an older one's re-asserts
   function revealPanelEnd(panel, behavior) {
+    var mine = ++revealGen;
     function target() {
       var r = panel.getBoundingClientRect();
       var scroller = document.scrollingElement || document.documentElement;
@@ -67,16 +69,35 @@
       return Math.max(0, Math.min(want, max));
     }
     requestAnimationFrame(function () {
+      if (mine !== revealGen) return;
       window.scrollTo({ top: target(), behavior: behavior || 'smooth' });
     });
     [300, 700, 1200].forEach(function (ms) {
       setTimeout(function () {
-        if (panel.hidden || panel.classList.contains('eyedropper-veiled')) return;
+        if (mine !== revealGen || panel.hidden || panel.classList.contains('eyedropper-veiled')) return;
         if (panel.getBoundingClientRect().bottom > viewH() + 1) {
           (document.scrollingElement || document.documentElement).scrollTop = target();
         }
       }, ms);
     });
+  }
+
+  /* PLAY SHOWS THE WHOLE DRAWING. With a drawer open the page can sit scrolled
+   * down to it while Play is still in reach -- the phone's header is sticky,
+   * and Flip's Space starts a Flip from anywhere -- and the drawing then played
+   * with its top under the header. Measured: 26-45px of the Pad's on a 375x667
+   * phone with any drawer open, 53px of a Flip's on a 402x874 one, and all but
+   * the bottom 64px of a Flip's on a desk. The drawing heads the page in both
+   * editors, so the top of the page is where it is whole. A no-op when it is
+   * already in view; and it calls off a drawer's pending re-asserts above,
+   * which would carry the page straight back down to the drawer. */
+  function revealTop(el, behavior) {
+    revealGen++;
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    if (r.top >= stuckBottom() - 1 && r.bottom <= viewH() + 1) return;
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: behavior || (still ? 'auto' : 'smooth') });
   }
 
   /* STEP ASIDE FOR THE EYEDROPPER. On a phone an open colour panel scrolls the
@@ -312,6 +333,6 @@
     }).observe(card);
   }
 
-  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, veil: veil, shrinkGently: shrinkGently,
-                                followGrowth: followGrowth };
+  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd, revealTop: revealTop, veil: veil,
+                                shrinkGently: shrinkGently, followGrowth: followGrowth };
 }());

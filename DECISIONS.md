@@ -16752,3 +16752,70 @@ pinned for the first time by what it stores, not only by its thinning rule.
 NOT TESTED HERE: Safari's batches. This box has no WebKit. Wherever
 getCoalescedEvents is missing or empty, the Pad stores one point a move, as
 before, and the no-batch check holds that.
+
+## After v322 -- an open drawer rests while a drawing plays, and Play shows the whole drawing
+
+The owner, at the desk with Bloom open and the Draw drawer up: "it disappears
+the drawer contents to draw it but leaves all the empty space. is that good?"
+It was not. Both editors faded an open drawer to nothing while a drawing played
+and held its space, so the drawing played above a hole -- on the desk, 456px of
+empty page under it. Mocked against "now": the drawer closed and the drawing
+re-centred (the owner: "I don't necessarily like the options of spreading the
+space out"), and the owner's own idea, which they asked for: keep it open, "it
+might be a pain to open it again".
+
+- An open drawer RESTS while a drawing plays, in both editors: open where it
+  was, its contents dimmed to --drawer-rest (one token in styles.css for both),
+  taking no taps, and Stop wakes it. By its CONTENTS, never its own opacity --
+  it is frosted glass, the header's v315 rule -- and the Media card keeps its
+  glass too, where it used to drop it.
+- Flip's tap-away rule closed the drawer on Play's own tap, and would have
+  closed a resting one on any tap mid-play, since taps pass through it. Now
+  Play and Stop are not a tap away, and nothing is while a Flip plays.
+- Play shows the whole drawing (lib/drawerdetent.js revealTop, both editors).
+  With a drawer open the page can sit scrolled down to it while Play is still
+  in reach -- the phone's header is sticky -- and the drawing played with its
+  top under the header: 26-45px of the Pad's on a 375x667 phone with any drawer
+  open, 53px of a Flip's on the owner's 402x874, and Space on a desk played a
+  Flip with only its bottom 64px on screen. The owner found Play reachable only
+  from the top on their own phone and desk, which holds for the Pad there; the
+  reveal is a no-op whenever the drawing is already whole. It calls off a
+  drawer's pending re-asserts (revealPanelEnd's, at 300, 700 and 1200ms), which
+  carried the page straight back down when Play followed a drawer's opening.
+
+Flip: shared. One token, one reveal, the same rest. Flip's play swaps its page
+strip for its speed row, which lifts what is below by 24px, as it always did.
+
+CALIBRATION
+
+verify_parity's new section, on both editors at the owner's 402x874 and a
+375x667 phone, and Flip at 1280x900 with Space: the drawer still open, its
+contents at --drawer-rest with the glass kept, PAINTED -- the swatch row's
+pixels read against its ground, because a vanished drawer keeps its rect --
+inert to a real tap, and awake after Stop; and every reveal check first shows
+the drawing was hidden. verify_motion: the Media card keeps its glass through
+a replay, and its contents wake from rest. The tree before this change fails
+seven of the eleven that can run on it (Flip's drawer closed under Play's tap,
+so two of its checks cannot) and two of verify_motion's twenty. Fourteen
+mutations, each in its own copy on its own server, each red on its own check:
+each editor's rest at zero, the Pad's old vanish, each drawer taking taps,
+Flip's Stop and its mid-play taps counted as a tap away, the Media card
+dropping its glass or fading its tabs, each editor's reveal removed, the shared
+reveal made a no-op, and the re-assert guard removed from either side. Flip's
+drawers reveal with one scrollIntoView and no re-asserts, so its "Play as a
+drawer opens" check holds with or without the guard; the guard is pinned by
+the Pad's.
+
+The rest dims and wakes on the drawers' own content fade, the motion survey's
+zero-specificity rule. The first draft gave it a 0.3s transition of its own,
+and a class selector beats :where(): every child of every drawer, in both
+editors, went from 0.2s to 0.3s, and any child with a transition of its own
+would have lost it. No suite saw it -- each measures the fade it was written
+for, and a slower one still passes -- so every drawer child's computed
+transition was read on main and on the branch, both editors, phone and desk,
+each drawer open: 144 of 204 readings differed with the rule, none without it.
+The Media card's fill transition went with the replay it was for.
+
+NOT TESTED HERE: Safari. The rest dims contents rather than the frosted card
+because WebKit can fail to repaint an animated backdrop-filter; that rule is
+followed here, not observed.

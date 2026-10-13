@@ -20,7 +20,8 @@ a value moves over time, never about whether something is visible.
 
 Calibrated red, per component, against: the header's fade-through removed (the
 mark and the readout each), the scrub bar's allow-discrete removed, the Media
-card's fill transition removed, the drawer contents' fade removed, the page
+card dropping its glass for a replay, its contents left at nothing while
+resting, the drawer contents' fade removed, the page
 height hold removed (Pad and Flip each), Flip's scroll home put back to
 'auto', the popovers' transition removed, the
 Flip menu dim's animation removed, and the pill put back on its spring.
@@ -127,20 +128,29 @@ with sync_playwright() as p:
           bool(tabs) and tabs[0] < 0.5 and between(tabs, 0, 1) >= 2,
           f"first {tabs[:1]}, {between(tabs, 0, 1)} frames between")
 
-    print("\nTHE END OF A REPLAY — the scrub bar and the card return calmly")
+    print("\nTHE END OF A REPLAY — the scrub bar fades, and the resting card wakes calmly")
     pg.wait_for_timeout(600)
-    rows = record(pg, [[".play-scrub", "opacity"], [".media-card", "fillAlpha"], [None, "replaying"]],
+    rows = record(pg, [[".play-scrub", "opacity"], [".media-card", "fillAlpha"],
+                       [".media-card > .media-tabs", "opacity"], [None, "replaying"]],
                   4500, lambda: pg.click("#playBtn"))
-    ends = [i for i in range(1, len(rows)) if rows[i - 1][2] and not rows[i][2]]
+    ends = [i for i in range(1, len(rows)) if rows[i - 1][3] and not rows[i][3]]
     after = rows[ends[0]:] if ends else []
     check("the replay ran and ended inside the window", bool(ends), f"{len(rows)} frames")
     scrub = [r[0] for r in after if r[0] is not None]
     check("the scrub bar fades out as it stands",
           between(scrub, 1, 0) >= 2, f"{between(scrub, 1, 0)} frames between")
-    fill = [r[1] for r in after]
-    top = max(fill) if fill else 0
-    check("the Media card's fill comes back over several frames",
-          top > 0.3 and between(fill, 0, top, 0.02) >= 2, f"{between(fill, 0, top, 0.02)} frames between")
+    # The card RESTS while the drawing plays (the owner, "all yes"): it keeps
+    # its glass the whole way -- it used to drop it and fill back in -- and
+    # its contents dim to --drawer-rest, then wake as the replay ends.
+    fill = [r[1] for r in rows if isinstance(r[1], (int, float))]
+    check("the Media card keeps its glass through the replay and after it",
+          bool(fill) and min(fill) > 0.3 and max(fill) - min(fill) < 0.02,
+          f"fill {min(fill or [0]):.2f} to {max(fill or [0]):.2f}")
+    tabs = [r[2] for r in after if isinstance(r[2], (int, float))]
+    rested = [r[2] for r in rows if r[3] and isinstance(r[2], (int, float))]
+    check("...and its contents wake from rest over several frames",
+          bool(rested) and abs(min(rested) - 0.4) < 0.02 and between(tabs, 0.4, 1) >= 2 and tabs[-1] > 0.95,
+          f"rested at {min(rested or [0]):.2f}; {between(tabs, 0.4, 1)} frames between; last {tabs[-1:]}")
 
     print("\nPOPOVERS — the shape picker")
     pg.click("#mediaOpenBtn"); pg.wait_for_timeout(700)

@@ -2656,6 +2656,133 @@ with sync_playwright() as p:
                       f"and still fit inside the sheet, each a full finger",
                       _g["shown"] and _g["inside"] and min(_g["cells"]) >= 44, str(_g))
 
+    # ---- an open drawer rests while the drawing plays ----------------------------
+    # The owner, a drawer open, pressing Play: "it disappears the drawer contents
+    # ... but leaves all the empty space". Both editors faded an open drawer to
+    # nothing and held its space, so the drawing played over a hole. Now it RESTS
+    # where it was: its contents dim to --drawer-rest, its glass stays, it takes
+    # no taps, and Stop wakes it. Read as PAINT where it matters (a faded drawer
+    # keeps its rect), and every tap is a real one -- Flip's tap-away rule closed
+    # the drawer on Play's own tap, which a scripted play() never showed.
+    # And Play shows the whole drawing: with a drawer open the page can sit
+    # scrolled down to it while Play is in reach (the sticky header on a short
+    # phone, Flip's on any phone, Space on a desk), and the drawing played with
+    # its top under the header. Each reveal check first shows it was hidden.
+    print("\nPARITY — an open drawer rests while the drawing plays, and Play shows the whole drawing, on both")
+    import io
+    from PIL import Image
+    REST = """() => { const p = document.getElementById('drawPanel'), k = p.querySelector('.color-section');
+        const cs = getComputedStyle(p), r = p.getBoundingClientRect();
+        return { open: !p.hidden, top: Math.round(r.top + scrollY), panel: +cs.opacity, child: +getComputedStyle(k).opacity,
+                 rest: +getComputedStyle(document.documentElement).getPropertyValue('--drawer-rest'), events: cs.pointerEvents,
+                 glass: cs.backdropFilter !== 'none' && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' }; }"""
+    DOTS = """() => { const d = [...document.querySelectorAll('#colorGroup .color-dot[data-color]')].filter(e => e.getBoundingClientRect().width);
+        const g = document.getElementById('colorGroup').getBoundingClientRect(), pick = d.find(e => e.dataset.color !== color);
+        if (!pick) return null;   // the drawer is not showing: closed, which is the fault being looked for
+        const r = pick.getBoundingClientRect();
+        return { clip: { x: g.left, y: g.top, width: g.width, height: g.height }, tap: [r.left + r.width / 2, r.top + r.height / 2] }; }"""
+    INVIEW = """(sel) => { const r = document.querySelector(sel).getBoundingClientRect(), h = document.querySelector('.header');
+        const cs = getComputedStyle(h), under = ['sticky', 'fixed'].includes(cs.position) ? (parseFloat(cs.top) || 0) + h.getBoundingClientRect().height : 0;
+        return { whole: r.top >= under - 1 && r.bottom <= innerHeight + 1, top: Math.round(r.top), under: Math.round(under), y: Math.round(scrollY) }; }"""
+    ED = {"/skribl-pad": ("#canvas", "#playBtn", "() => playing"), "/flip": ("#pad", "#play", "() => playing")}
+
+    def _inked(q, clip):
+        """The share of `clip`'s pixels that stand off its median: about 0 on a blank band."""
+        im = Image.open(io.BytesIO(q.screenshot(clip=clip))).convert("RGB")
+        px = list(im.getdata())
+        med = sorted(px, key=sum)[len(px) // 2]
+        return sum(1 for p_ in px if sum(abs(a - c) for a, c in zip(p_, med)) > 60) / len(px)
+
+    def _drawn(ctx, route):
+        """A fresh editor with something to play: strokes on the Pad; two drawn pages on Flip."""
+        q = _fresh(ctx, route)
+        cv = ED[route][0]
+        for k in range(2):
+            bx = q.locator(cv).bounding_box()
+            y = bx["y"] + bx["height"] * (0.35 + 0.2 * k)
+            q.mouse.move(bx["x"] + bx["width"] * 0.25, y); q.mouse.down()
+            for s in range(1, 13):
+                q.mouse.move(bx["x"] + bx["width"] * (0.25 + 0.04 * s), y + 6 * math.sin(s))
+            q.mouse.up(); q.wait_for_timeout(200)
+            if route == "/flip" and k == 0:
+                q.evaluate("() => addFrame(false)"); q.wait_for_timeout(300)
+        # The first stroke arms a take on the Pad, and Play hides while one records.
+        q.evaluate("() => { if (typeof endRecordingTake === 'function' && recording) endRecordingTake(); }")
+        q.wait_for_timeout(300)
+        return q
+
+    for _route, (_cv, _play, _playing) in ED.items():
+        _rc = b.new_context(viewport={"width": 402, "height": 874})
+        _q = _drawn(_rc, _route)
+        browsing.pad_drawer(_q, "draw")
+        _q.evaluate("() => window.scrollTo(0, 0)"); browsing.wait_scroll_still(_q)
+        _b4 = _q.evaluate(REST)
+        if _route == "/skribl-pad":     # two strokes replay in a second or two: watch at a quarter
+            _q.evaluate("() => setPreviewSpeed(0.25)")
+        _q.click(_play); _q.wait_for_timeout(700); browsing.wait_scroll_still(_q)
+        # Play brings the drawing up; the resting drawer is where it was, below it.
+        _q.evaluate("() => document.getElementById('colorGroup').scrollIntoView({ block: 'center' })")
+        browsing.wait_scroll_still(_q)
+        _on, _dots = _q.evaluate(REST), _q.evaluate(DOTS)
+        # "Where it was" within 40px: Flip swaps its page strip for its speed row
+        # as it plays, which lifts what is below by 24px. Closing it is the fault.
+        check(f"{_route}: Play leaves an open drawer open where it was; its contents rest at --drawer-rest and its glass stays",
+              _b4["open"] and _on["open"] and abs(_on["top"] - _b4["top"]) <= 40 and _on["rest"] == 0.4
+              and abs(_on["child"] - _on["rest"]) < 0.01 and _on["panel"] == 1 and _on["glass"], f"before {_b4}; playing {_on}")
+        if _dots is None:    # closed under the drawing's own Play tap: nothing below can be looked at
+            check(f"{_route}: ...it is painted, not gone: the swatch row still shows while the drawing plays", False, f"closed: {_on}")
+        else:
+            _ink = _inked(_q, _dots["clip"])
+            check(f"{_route}: ...it is painted, not gone: the swatch row still shows while the drawing plays",
+                  _ink > 0.05, f"{_ink:.3f} of the row's pixels stand off its ground")
+            _c0 = _q.evaluate("() => color")
+            _q.mouse.click(*_dots["tap"]); _q.wait_for_timeout(250)
+            _after = {"color": _q.evaluate("() => color"), "playing": _q.evaluate(_playing)}
+            check(f"{_route}: ...and inert: a tap on a swatch mid-play changes nothing, and the drawing plays on",
+                  _after["color"] == _c0 and _after["playing"] and _on["events"] == "none", f"{_c0} -> {_after}, {_on['events']}")
+            _q.click(_play); _q.wait_for_timeout(700)
+            _off, _d2 = _q.evaluate(REST), _q.evaluate(DOTS)
+            if _d2:
+                _q.mouse.click(*_d2["tap"]); _q.wait_for_timeout(250)
+            _woke = _q.evaluate("() => color")
+            check(f"{_route}: Stop wakes it, open where it was: full strength, and a tap on a swatch takes",
+                  _off["open"] and _off["child"] == 1 and _off["events"] != "none" and _woke != _c0, f"{_off}; colour {_c0} -> {_woke}")
+        _rc.close()
+
+        # A short phone, scrolled down to an open Music drawer: Play from the sticky header.
+        _sc = b.new_context(viewport={"width": 375, "height": 667})
+        _q = _drawn(_sc, _route)
+        browsing.pad_drawer(_q, "music"); _q.wait_for_timeout(1400)
+        _q.evaluate("() => window.scrollTo(0, document.documentElement.scrollHeight)"); browsing.wait_scroll_still(_q)
+        _hid = _q.evaluate(INVIEW, _cv)
+        _q.click(_play); _q.wait_for_timeout(200); browsing.wait_scroll_still(_q)
+        _shown = _q.evaluate(INVIEW, _cv)
+        check(f"{_route} at 375x667, scrolled to an open drawer: Play brings the whole drawing into view, below the header",
+              not _hid["whole"] and _shown["whole"], f"before {_hid}; on Play {_shown}")
+        _q.click(_play); _q.wait_for_timeout(400)
+        # Play straight after the drawer opens: its settle re-asserts (300/700/1200ms)
+        # must not carry the page back down to it.
+        browsing.pad_drawer_close(_q); browsing.wait_scroll_still(_q)
+        browsing.pad_drawer(_q, "music", settle=0); _q.wait_for_timeout(120)
+        _q.click(_play); _q.wait_for_timeout(1700)
+        _late = _q.evaluate(INVIEW, _cv)
+        check(f"{_route} at 375x667: Play pressed as a drawer opens still shows the whole drawing once the drawer has settled",
+              _late["whole"], str(_late))
+        _sc.close()
+
+    # Space on a desk starts a Flip from anywhere, the page scrolled down to a drawer.
+    _dc = b.new_context(viewport={"width": 1280, "height": 900})
+    _q = _drawn(_dc, "/flip")
+    browsing.pad_drawer(_q, "draw"); _q.wait_for_timeout(1400)
+    _q.evaluate("() => { window.scrollTo(0, document.documentElement.scrollHeight); document.activeElement && document.activeElement.blur(); }")
+    browsing.wait_scroll_still(_q)
+    _hid = _q.evaluate(INVIEW, "#pad")
+    _q.keyboard.press("Space"); _q.wait_for_timeout(200); browsing.wait_scroll_still(_q)
+    _shown = _q.evaluate(INVIEW, "#pad")
+    check("/flip at 1280x900, scrolled to an open drawer: Space plays it with the whole Flip in view",
+          not _hid["whole"] and _shown["whole"] and _q.evaluate("() => playing"), f"before {_hid}; on Space {_shown}")
+    _dc.close()
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))

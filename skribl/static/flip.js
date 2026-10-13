@@ -4262,6 +4262,10 @@ function play(){
   if(picking) setPicking(false);     // no lens over a moving frame (Space reaches here with the drawer open)
   disarmAll(); editIdx = idx;
   if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
+  // The whole Flip in view (lib/drawerdetent.js revealTop, the Pad's too): the
+  // sticky header and Space both start a Flip with the page scrolled down to
+  // an open drawer, and it played with its top under the header.
+  if(window.SkriblDrawerDetent) SkriblDrawerDetent.revealTop(pad);
   playing=true; document.body.classList.add('playing');
   setPlayFace(true);
   if(flipPlayer){ flipPlayer.hidden=false; requestAnimationFrame(()=>flipPlayer.classList.add('show')); }
@@ -4938,6 +4942,11 @@ document.addEventListener('click',e=>{ const t=e.target;
   // chosen. Pad never hit this: its inputs sit INSIDE the drawer partial.
   // (v206) Ignore the file inputs here.
   if(t.closest('input[type=file]')) return;
+  // Play and Stop are not a tap away, and nothing is while a Flip plays: an
+  // open drawer RESTS then and wakes at Stop, as the Pad's does (flip.css; the
+  // owner, "all yes"). Its taps pass through it to the page, which this would
+  // read as a tap away and close it -- the drawer was meant to do nothing.
+  if(playing || t.closest('#play')) return;
   if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#penToolBtn') && !t.closest('#eraserToolBtn')) closePop();
   // #mediaCard, not only the panel and the tabs: the card holds both, and the
   // seam and padding between them are part of it, not a tap away from it.
