@@ -2678,6 +2678,7 @@ with sync_playwright() as p:
                  glass: cs.backdropFilter !== 'none' && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' }; }"""
     DOTS = """() => { const d = [...document.querySelectorAll('#colorGroup .color-dot[data-color]')].filter(e => e.getBoundingClientRect().width);
         const g = document.getElementById('colorGroup').getBoundingClientRect(), pick = d.find(e => e.dataset.color !== color);
+        if (!pick) return null;   // the drawer is not showing: closed, which is the fault being looked for
         const r = pick.getBoundingClientRect();
         return { clip: { x: g.left, y: g.top, width: g.width, height: g.height }, tap: [r.left + r.width / 2, r.top + r.height / 2] }; }"""
     INVIEW = """(sel) => { const r = document.querySelector(sel).getBoundingClientRect(), h = document.querySelector('.header');
@@ -2728,20 +2729,24 @@ with sync_playwright() as p:
         check(f"{_route}: Play leaves an open drawer open where it was; its contents rest at --drawer-rest and its glass stays",
               _b4["open"] and _on["open"] and abs(_on["top"] - _b4["top"]) <= 40 and _on["rest"] == 0.4
               and abs(_on["child"] - _on["rest"]) < 0.01 and _on["panel"] == 1 and _on["glass"], f"before {_b4}; playing {_on}")
-        _ink = _inked(_q, _dots["clip"])
-        check(f"{_route}: ...it is painted, not gone: the swatch row still shows while the drawing plays",
-              _ink > 0.05, f"{_ink:.3f} of the row's pixels stand off its ground")
-        _c0 = _q.evaluate("() => color")
-        _q.mouse.click(*_dots["tap"]); _q.wait_for_timeout(250)
-        _after = {"color": _q.evaluate("() => color"), "playing": _q.evaluate(_playing)}
-        check(f"{_route}: ...and inert: a tap on a swatch mid-play changes nothing, and the drawing plays on",
-              _after["color"] == _c0 and _after["playing"] and _on["events"] == "none", f"{_c0} -> {_after}, {_on['events']}")
-        _q.click(_play); _q.wait_for_timeout(700)
-        _off = _q.evaluate(REST)
-        _q.mouse.click(*_q.evaluate(DOTS)["tap"]); _q.wait_for_timeout(250)
-        _woke = _q.evaluate("() => color")
-        check(f"{_route}: Stop wakes it, open where it was: full strength, and a tap on a swatch takes",
-              _off["open"] and _off["child"] == 1 and _off["events"] != "none" and _woke != _c0, f"{_off}; colour {_c0} -> {_woke}")
+        if _dots is None:    # closed under the drawing's own Play tap: nothing below can be looked at
+            check(f"{_route}: ...it is painted, not gone: the swatch row still shows while the drawing plays", False, f"closed: {_on}")
+        else:
+            _ink = _inked(_q, _dots["clip"])
+            check(f"{_route}: ...it is painted, not gone: the swatch row still shows while the drawing plays",
+                  _ink > 0.05, f"{_ink:.3f} of the row's pixels stand off its ground")
+            _c0 = _q.evaluate("() => color")
+            _q.mouse.click(*_dots["tap"]); _q.wait_for_timeout(250)
+            _after = {"color": _q.evaluate("() => color"), "playing": _q.evaluate(_playing)}
+            check(f"{_route}: ...and inert: a tap on a swatch mid-play changes nothing, and the drawing plays on",
+                  _after["color"] == _c0 and _after["playing"] and _on["events"] == "none", f"{_c0} -> {_after}, {_on['events']}")
+            _q.click(_play); _q.wait_for_timeout(700)
+            _off, _d2 = _q.evaluate(REST), _q.evaluate(DOTS)
+            if _d2:
+                _q.mouse.click(*_d2["tap"]); _q.wait_for_timeout(250)
+            _woke = _q.evaluate("() => color")
+            check(f"{_route}: Stop wakes it, open where it was: full strength, and a tap on a swatch takes",
+                  _off["open"] and _off["child"] == 1 and _off["events"] != "none" and _woke != _c0, f"{_off}; colour {_c0} -> {_woke}")
         _rc.close()
 
         # A short phone, scrolled down to an open Music drawer: Play from the sticky header.
