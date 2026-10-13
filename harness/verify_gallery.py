@@ -600,18 +600,15 @@ with sync_playwright() as _spg:
 
     # ---- FULL SCREEN, WHERE THE DRAWING IS THE WHOLE SCREEN ---------------
     #
-    # THE BAR IS NOT ALLOWED TO STAND ON THE DRAWING. It is absolutely
-    # positioned at the bottom with a scrim over it, which is how a video
-    # player works and is wrong for a drawing: a video's bottom strip is
-    # usually nothing, and a drawing's bottom edge is part of the picture. The
-    # owner, of a pug whose feet were behind the controls: "fullscreen where
-    # the controls cover the bottom of the canvas?"
-    #
-    # ASKED AS AN OVERLAP OF TWO PAINTED BOXES. The canvas is the drawing's
-    # own element and the bar is opaque enough to hide whatever is under it, so
-    # "the canvas ends at or above where the bar begins" is the whole property.
-    # The reserved band is reported alongside it, because a zero band with a
-    # zero overlap would mean the bar had simply failed to render.
+    # THE BAR STEPS BACK WHILE IT PLAYS, SO NOTHING IS KEPT UNDER THE
+    # DRAWING FOR IT. The owner, of a pug whose feet were behind the controls:
+    # "fullscreen where the controls cover the bottom of the canvas?" -- and
+    # the host reserved the bar's measured height under the drawing for it.
+    # The owner's picks for every full screen answer it the other way: the
+    # controls go away a moment after the drawing starts (lib/chromefade.js;
+    # verify_fullfade walks it), so the drawing has the whole screen and the
+    # bar lies over its foot only while someone is using it. A band would make
+    # the drawing stop short of the screen.
     _band = _pg2.evaluate("""() => {
         const st = document.querySelector('.tileStage');
         const bar = st && st.querySelector('.skfull:not(.skfull-card)');
@@ -623,18 +620,11 @@ with sync_playwright() as _spg:
                  barH: Math.round(b.height),
                  canvas: [Math.round(c.width), Math.round(c.height)],
                  overlap: Math.round(Math.max(0, c.bottom - b.top)) }; }""")
-    check("in full screen the bar stands below the drawing, not on it",
-          not _band.get("missing") and _band["barH"] > 20
-          and _band["overlap"] == 0,
-          f"{_band} \u2014 the bar is absolute and the drawing does not know it "
-          f"is there; the host has to reserve the height or the bottom of "
-          f"every drawing is behind the controls")
-    check("...and the band it reserves is the height the bar actually became",
-          not _band.get("missing") and _band["host"]
-          and abs(_band["band"] - _band["barH"]) <= 1,
-          f"{_band} \u2014 measured and not assumed: this height moves with the "
-          f"safe-area inset and the resolved font, so a number in the sheet "
-          f"would be right on this machine and wrong on a phone")
+    check("in full screen the bar lies over the drawing's foot, with no band kept under the drawing for it",
+          not _band.get("missing") and _band["host"] and _band["barH"] > 20
+          and _band["band"] == 0 and _band["overlap"] > 0,
+          f"{_band} \u2014 a band is the reservation the fade replaced; the bar "
+          f"has to be there, over the drawing's box, for this to mean anything")
 
     # THE LABEL IS A REPORT ON THE PLAYER AND MUST NEVER BE THE CASUALTY OF
     # THE PLAYER HAVING A BAD MOMENT.
@@ -784,13 +774,10 @@ with sync_playwright() as _spg:
     _pg2.evaluate("() => document.querySelector('.tileStage').requestFullscreen()")
     _pg2.wait_for_timeout(1800)
     _fs = _pg2.evaluate(_FS_GEOM)
-    # `usable`, NOT `vh`, AND THE BAND IS NAMED RATHER THAN SUBTRACTED
-    # QUIETLY. The full-screen bar reserves its own measured height on the host
-    # since v310 -- it used to be absolutely positioned over the drawing, and
-    # the drawing's bottom edge went behind the controls -- so "the whole
-    # display" now means the display minus that band. The band is asserted to
-    # be a real number on its own row below; a reservation of zero would make
-    # this row pass by being back where it started.
+    # `usable` IS THE DISPLAY LESS ANY BAND KEPT UNDER THE DRAWING. From v310
+    # the full-screen bar reserved its own height there; the owner's picks put
+    # the controls away while it plays instead, so the band is 0 and the box
+    # fills the whole display (an earlier row asks that no band is kept).
     check("full screen: the box fills the display, top-left to bottom-right",
           _fs["box"]["w"] == _fs["vw"] and _fs["box"]["h"] == _fs["usable"]
           and _fs["box"]["l"] == 0 and _fs["box"]["t"] == 0,

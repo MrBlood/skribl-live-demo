@@ -76,6 +76,7 @@
     /* Awake while it is not running -- finished or paused -- and while a menu
        in the band is open: never fade what someone is in the middle of. */
     var fade = global.SkriblChromeFade ? global.SkriblChromeFade.attach(wrap, {
+      tapWakes: true,
       awake: function () { return !o.playing() || o.paused() || !!band.querySelector('[aria-expanded="true"]'); }
     }) : null;
 
@@ -124,17 +125,13 @@
       else o.pause();
       sync();
     });
-    /* THE FIRST TAP ON A FADED SCREEN ONLY BRINGS THE CONTROLS BACK (the
-       owner: "matching how video apps work"), so a finger can reach the speed
-       without stopping the drawing; once they are up, a tap pauses as it does
-       on the page. A mouse is different: it has already woken them by moving
-       there, so its click is a pause. And nothing draws in full screen: once
-       the drawing stops, a press on it goes no further. Registered before the
-       fade's own listener, so `asleep()` is still the state the touch found. */
+    /* A finger's first tap on a faded screen only brings the controls back,
+       so it can reach the speed without stopping the drawing: the fade's own
+       rule (tapWakes above), every full screen's. Once they are up, a tap
+       pauses as it does on the page. And nothing draws in full screen: once
+       the drawing stops, a press on it goes no further. */
     wrap.addEventListener('pointerdown', function (e) {
-      if (!full.isOn() || band.contains(e.target) || exit.contains(e.target)) return;
-      var wakeOnly = !!fade && fade.asleep() && e.pointerType !== 'mouse';
-      if (o.playing() && !wakeOnly) return;
+      if (!full.isOn() || o.playing() || band.contains(e.target) || exit.contains(e.target)) return;
       e.preventDefault();
       e.stopPropagation();
     }, true);

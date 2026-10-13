@@ -33,24 +33,17 @@
   font-family: inherit;
 }
 
-/* THE WHOLE DRAWING STAYS VISIBLE IN FULL SCREEN. The bar overlays, so the
-   thing it overlays has to stand back: the host reserves the bar's measured
-   height (lib/fullbar.js writes `--skfull-band` from a ResizeObserver) and
-   centres its content in what is left. The scrim then falls on the letterbox
-   rather than on the picture, which is the difference between a control that
-   floats over a video and a control that stands on somebody's drawing
-   (of a pug whose feet were behind the buttons).
-
-   `box-sizing: border-box` is stated rather than inherited: this sheet is
-   loaded by pages that may or may not set it globally, and on a `100vh`
-   element a content-box reading turns the reservation into an overflow. The
-   fallback of 0px is what a browser without ResizeObserver gets, and that is
-   the behaviour this rule replaced -- no reservation, bar over the drawing. */
-.skfull-host:fullscreen,
-.skfull-host.is-immersive-page {
-  box-sizing: border-box;
-  padding-bottom: var(--skfull-band, 0px);
-}
+/* THE BAR STEPS BACK WHILE IT PLAYS, AND THE DRAWING HAS THE WHOLE SCREEN
+   (lib/chromefade.js says when; the owner's picks for every full screen, the
+   link page's and the editors' too: styles.css "CONTROLS THAT STEP BACK").
+   After a quiet spell the bar and the page's x fade, and the pointer with
+   them; the first move, tap or key brings them back. The host used to keep
+   the bar's measured height as a band under the drawing, after a pug whose
+   feet were behind the buttons; now the controls lie over its foot only
+   while someone is using them -- paused, finished, or just touched. */
+.skfull-host :is(.skfull:not(.skfull-card), .tileExit, .full-exit) { transition: opacity 0.35s ease; }
+.skfull-host.chrome-asleep :is(.skfull:not(.skfull-card), .tileExit, .full-exit) { opacity: 0; pointer-events: none; }
+.skfull-host.chrome-asleep { cursor: none; }
 
 /* THE SCRUBBER GETS ITS OWN ROW, which is the one layout decision here worth
    stating: squeezed between the buttons it is a 6px target on a phone, and a
