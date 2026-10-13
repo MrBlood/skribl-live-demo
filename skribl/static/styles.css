@@ -1587,9 +1587,11 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    its space empty under the drawing; closed, the canvas would recentre and the
    drawer would want opening again after Stop. So it stays where it is, dimmed
    to --drawer-rest and inert, and wakes at Stop. By its CONTENTS, never its
-   own opacity: it is frosted glass (the header's v315 rule, below). Flip's
+   own opacity: it is frosted glass (the header's v315 rule, below). It dims
+   and wakes on the contents' own fade ("A DRAWER'S CONTENTS FADE IN", near
+   the end of this file), which is zero-specificity on purpose: a rule here
+   would override it and every transition a child has of its own. Flip's
    drawers rest the same way and by the same amount (flip.css). */
-.tab-panel > * { transition: opacity 0.3s ease; }
 body.replaying .tab-panel { pointer-events: none; }
 body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 
@@ -8093,14 +8095,13 @@ body.replaying .media-card { pointer-events: none; }
 }
 
 /* THE END OF A REPLAY RETURNS CALMLY (motion survey). The dock already faded
-   back in; two things did not. The scrub bar left in one frame -- it hides by
-   [hidden], so display now waits out its own 0.25s fade (allow-discrete), and
-   app.js no longer empties it on the way out. And the Media card's fill and
-   shadow, dropped for the replay, came back at once; they fade now. Its blur
-   still switches instantly: a backdrop-filter is never what is animated here
-   (the header's v315 rule), and over the plain page it is not visible. */
+   back in; the scrub bar left in one frame -- it hides by [hidden], so display
+   now waits out its own 0.25s fade (allow-discrete), and app.js no longer
+   empties it on the way out. The Media card used to drop its fill, shadow and
+   blur for a replay and take them back at the end; it keeps them now, resting
+   with the drawers (body.replaying, near the top of this file), so it has
+   nothing of its own to bring back. */
 .play-scrub { transition: opacity 0.25s var(--ease), display 0.25s allow-discrete; }
-.media-card { transition: background-color 0.3s ease, box-shadow 0.3s ease; }
 
 /* A DRAWER'S CONTENTS FADE IN WHEN IT OPENS OR CHANGES (motion survey: going
    from the Pen drawer to Media swapped the whole panel in one frame). Whenever
