@@ -278,6 +278,14 @@ function serializeAutosave() {
     rec.redoStrokeGroups = deepest ? (deepest.strokeGroups || []).slice() : null;
   }
   return Object.assign(rec, {
+    // THE DRAWING'S OWN CANVAS, as a post carries it (serializeSkribl) and
+    // Flip's autosave always has. Without it a reload put the strokes on the
+    // preset this window suggested: a square drawing came back on 4:3, low and
+    // to the left, its foot cut off (the owner, on a desk).
+    canvasSize: (() => {
+      const lg = getCanvasLogicalSize();
+      return { cssWidth: Math.round(lg.width), cssHeight: Math.round(lg.height) };
+    })(),
     background: { color: bgColor },
     // Metadata only — no bytes. Prefer live media; fall back to pending meta
     // (from a restore where the user hasn't re-added the file yet) so it persists.
@@ -706,6 +714,15 @@ function setCanvasGround(hex) {
 
 function restoreAutosave(data) {
   clearCanvas();
+  // Its own canvas before anything is painted, as loadSkribl and Flip's restore
+  // do, so every stroke lands where it was drawn. An autosave from before it
+  // carried one keeps the size this window chose.
+  const size = data.canvasSize;
+  if (size && size.cssWidth > 0 && size.cssHeight > 0) {
+    establishEditorCanvas(size.cssWidth, size.cssHeight);
+    layoutEditorCanvas();
+    if (typeof window.syncCanvasSeg === 'function') window.syncCanvasSeg();
+  }
   if (data.background && data.background.color) {
     bgColor = data.background.color;
     canvasWrap.style.backgroundColor = bgColor;
