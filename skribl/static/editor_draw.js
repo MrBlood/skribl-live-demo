@@ -723,6 +723,7 @@ function setPreviewSpeed(c) {
   if (!playPaused && _waLoop.playing()) startWebAudioLoop(null, _waLoop.elapsed());
 }
 const padLine = document.getElementById('padLine');
+let padFull = null;   // lib/watchfull.js, attached with the line below
 if (window.SkriblReplayLine) {
   try {
     const v = localStorage.getItem(SPEED_KEY), c = v === 'fit' ? v : parseFloat(v);
@@ -744,6 +745,11 @@ if (padLine && playScrub && window.SkriblReplayLine) {
     pick: all,
   });
   hosts.push(line);
+  // FULL SCREEN WHILE IT PLAYS (lib/watchfull.js, Flip's too; the owner's
+  // picks): the way in sits at the end of this line, beside the speed, so it
+  // is there only while a drawing plays and never on the drawing.
+  const fullBtn = window.SkriblWatchFull ? SkriblWatchFull.makeButton() : null;
+  if (fullBtn) padLine.querySelector('.rl-speed').after(fullBtn);
   // The row and the pill are the same line with its sentence hidden
   // (styles.css, .speed-only): the button and its chips are what show, and
   // the button is named here for what it is as well as what it is at. Built
@@ -813,7 +819,33 @@ if (padLine && playScrub && window.SkriblReplayLine) {
     else { padLine.style.bottom = ''; padLine.style.top = (top + playScrub.offsetHeight + 10) + 'px'; }
   };
   new MutationObserver(place).observe(playScrub, { attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
+  // In full screen the scrubber and this line travel into the band, and the
+  // band's Play is this preview's own: Play, then pause and resume as a tap does.
+  if (fullBtn) {
+    padFull = SkriblWatchFull.attach({
+      wrap: canvasWrap, button: fullBtn, carry: [playScrub, padLine], fit: padFullFit,
+      playing: () => playing, paused: () => playPaused,
+      play: () => { if (!playing) playBtn.click(); }, pause: pausePlayback, resume: resumePlayback,
+    });
+  }
 }
+
+// THE DRAWING AT THE SIZE OF THE SCREEN while full screen is up. Every layout
+// of the canvas asks here first (app.js layoutEditorCanvas), so a rotation or
+// a resize keeps it fitted. Uncapped, as the link page's full screen is: past
+// the size it was drawn at the lines soften a little, and the mock said so.
+function padFullFit(on) {
+  if (on) {
+    const s = Math.min(canvasWrap.clientWidth / authoredW, canvasWrap.clientHeight / authoredH);
+    canvas.style.width = Math.round(authoredW * s) + 'px';
+    canvas.style.height = Math.round(authoredH * s) + 'px';
+    if (window._skriblSyncPadGrid) window._skriblSyncPadGrid();
+    return;
+  }
+  layoutEditorCanvas();
+  if (playing) positionScrub();
+}
+window._skriblFullFit = () => { if (!padFull || !padFull.isOn()) return false; padFullFit(true); return true; };
 
 // THE SCRUBBER (lib/replayline.js scrub(), the owner's pick S3): the
 // drawing's shape in the bar, the artist's clock in a bubble while dragging,

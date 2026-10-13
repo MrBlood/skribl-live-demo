@@ -4909,7 +4909,7 @@ body.player-mode .app {
    not know `:fullscreen` drops a whole list that names it, and the iPhone is
    the browser this is for. :is() forgives the name it does not know and keeps
    the other. */
-.canvas-wrap:is(:fullscreen, .is-immersive-page) {
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) {
   /* BELT AND BRACES, MEASURED AS SUCH. The Fullscreen spec's UA stylesheet
      sizes the top-layer element with `width: 100% !important` and
      `max-width: none !important`, which outranks these four lines and the
@@ -4942,7 +4942,7 @@ body.player-mode .app {
    it, the wrapper stays the size it was in the page. 100dvh, not 100vh: on a
    phone `vh` is the tallest the viewport ever gets, so with the URL bar
    showing, the transport would sit under it. */
-.canvas-wrap.is-immersive-page {
+:is(.canvas-wrap, .watch-full).is-immersive-page {
   position: fixed !important;
   inset: 0 !important;
   z-index: 2147483000;
@@ -4966,7 +4966,7 @@ body.player-mode .app {
 .player-btn.full-exit { display: none; position: absolute; top: 14px; right: 14px;
   z-index: 3; width: 44px; height: 44px; background: var(--surface-deep);
   border-color: var(--hairline-strong); color: var(--text-primary); }
-.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-btn.full-exit { display: grid; place-items: center; }
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-btn.full-exit { display: grid; place-items: center; }
 
 /* THE TRANSPORT GOES FULL SCREEN WITH THE DRAWING. Full screen renders only
    the top-layer subtree, and the transport row lives in .player-shell below
@@ -4978,7 +4978,7 @@ body.player-mode .app {
    and the button row stay direct flex children of the shell, exactly as they
    were before there was anything around them. */
 .player-bar { display: contents; }
-.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-bar {
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-bar {
   display: flex;
   flex-direction: column;
   gap: 11px;
@@ -5016,8 +5016,70 @@ body.player-mode .app {
    along a 1900px bar reads as a progress meter somebody forgot to finish. Full
    screen is also where a drawing is long enough that seeking to a moment
    matters, and a 340px track is a coarse instrument for it. */
-.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-progress,
-.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-time { max-width: none; }
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-progress,
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-time { max-width: none; }
+
+/* FULL SCREEN IN THE EDITORS (lib/watchfull.js; the owner's picks). The
+   frame, the band and the x above are the link page's own rules, widened to
+   the editors' frames (.watch-full), so the three are one full screen. What
+   follows is only what an editor's frame holds that the player's does not.
+
+   THE DRAWING SITS IN THE MIDDLE. An editor's zoom layer is its magnifier
+   (absolute over the Pad's frame, a transform on both); in full screen it is
+   a plain item in the frame's grid, as the player's canvas is, at the size
+   watchfull's fit gives the canvas, and never magnified: full screen is the
+   whole drawing. */
+.watch-full:is(:fullscreen, .is-immersive-page) .zoom-layer {
+  position: relative;
+  inset: auto;
+  transform: none !important;
+}
+/* The drawing's furniture stays on the page: Add take, the magnifier's pill,
+   the empty-canvas words and the grid. */
+.watch-full:is(:fullscreen, .is-immersive-page) :is(#addTakePill, .zoom-hud, .canvas-empty-hint, .flip-grid) {
+  display: none !important;
+}
+/* WHAT THE BAND CARRIES. The Pad's scrubber and line, and Flip's progress
+   line and speed row, are placed on the page by script (positionScrub, the
+   line's place(), Flip's strip); in the band they are rows of its column. */
+.watch-band :is(.play-scrub, #padLine, .flip-timeline, .flip-speeds) {
+  position: relative !important;
+  inset: auto !important;
+  width: auto !important;
+  margin: 0 !important;
+}
+.watch-band .play-scrub { align-self: stretch; }
+.watch-row { display: flex; justify-content: center; gap: 12px; }
+
+/* THE WAY IN (lib/watchfull.js makeButton): the link page's four corners, at
+   the end of the Pad's line beside the speed and of Flip's speed row. 44px to
+   tap at any size it is drawn. It takes no height of its own in the Pad's line
+   (margin-block): the speed pill sets that row's 27px, and a 32px row moved the
+   line by a half pixel on a phone, and the speed chips' words with it
+   (check_centring). */
+.full-btn { position: relative; display: inline-grid; place-items: center; flex: none;
+  width: 32px; height: 32px; margin: -3px 0 -3px 6px; padding: 0; border: 0; border-radius: 50%;
+  background: rgba(var(--wash-rgb), 0.08); color: var(--text-primary); cursor: pointer; }
+.full-btn svg { width: 16px; height: 16px; }
+.full-btn::before { content: ''; position: absolute; inset: -6px; }
+.flip-speeds .full-btn { width: 44px; height: 44px; margin: 0 0 0 8px;
+  border: 1px solid var(--hairline-strong); background: rgb(var(--surface-control-rgb)); }
+.flip-speeds .full-btn svg { width: 18px; height: 18px; }
+.flip-speeds .full-btn::before { inset: 0; }
+
+/* CONTROLS THAT STEP BACK (lib/chromefade.js; the owner's picks): in full
+   screen the band and the x fade a moment after a drawing starts and come
+   back at the first move, tap or key. The drawing does not move when they
+   come and go -- it already has the whole screen, and they lie over its
+   foot -- and the pointer goes with them, so a still mouse leaves nothing on
+   the picture. */
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) :is(.player-bar, .player-btn.full-exit) {
+  transition: opacity 0.35s var(--ease);
+}
+.chrome-asleep :is(.player-bar, .player-btn.full-exit) { opacity: 0; pointer-events: none; }
+.chrome-asleep { cursor: none; }
+/* Over the Pad's own replay cursor too (Flip's is in flip.css). */
+body:not(.player-mode).replaying .chrome-asleep #canvas { cursor: none !important; }
 
 body.player-mode .canvas-wrap {
   flex: none;

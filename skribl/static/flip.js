@@ -107,7 +107,11 @@ function stageAvail(stage){
   return { w: stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
            h: stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) };
 }
+// lib/watchfull.js, attached beside tap-to-pause below. Declared here, above
+// fitPad, which asks it first and runs from the first layout on.
+let flipFull = null;
 function fitPad(){
+  if(flipFull && flipFull.isOn()){ flipFullFit(true); return; }
   const stage = document.querySelector('.flip-stage');
   const avail = stageAvail(stage);
   const availW = avail.w, availH = avail.h;
@@ -4356,6 +4360,33 @@ function resumePlay(){
 if(window.SkriblTapPause){
   window.SkriblTapPause.attach({ surface: pad, host: document.querySelector('.flip-wrap'),
     playing: () => playing, paused: () => playPaused, pause: pausePlay, resume: resumePlay });
+}
+// FULL SCREEN WHILE IT PLAYS (lib/watchfull.js, the Pad's too; the owner's
+// picks): the way in at the end of the speed row, which shows only while a
+// Flip plays. In full screen the progress line and the row travel into the
+// band, and the band's Play is this preview's own.
+(function(){
+  const row = document.getElementById('flipSpeeds'), line = document.getElementById('flipProgress');
+  if(!window.SkriblWatchFull || !row || !line) return;
+  const b = SkriblWatchFull.makeButton();
+  row.appendChild(b);
+  flipFull = SkriblWatchFull.attach({
+    wrap: document.querySelector('.flip-wrap'), button: b, carry: [line, row], fit: flipFullFit,
+    playing: () => playing, paused: () => playPaused,
+    play: () => { if(!playing) play(); }, pause: pausePlay, resume: resumePlay,
+  });
+})();
+// The page at the size of the screen while full screen is up; fitPad comes
+// here then, so a rotation keeps it fitted. Uncapped, as the Pad's and the
+// link page's are: past the size it was drawn at, lines soften a little.
+function flipFullFit(on){
+  const w = document.querySelector('.flip-wrap');
+  w.style.backgroundColor = on ? bgColor : '';   // the ground, edge to edge
+  if(!on){ fitPad(); return; }
+  const s = Math.min(w.clientWidth / CW, w.clientHeight / CH);
+  pad.style.width = Math.round(CW*s)+'px';
+  pad.style.height = Math.round(CH*s)+'px';
+  syncGrid();
 }
 // The Draw drawer's switch now sets EVERY page, because per-page draw is the
 // real control and a document-wide preview mode beside it would be the same
