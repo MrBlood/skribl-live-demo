@@ -393,37 +393,45 @@ function continueDraw(e) {
   if (tool === 'shape') { _constrainActive = !!(e && e.shiftKey);
     if (window.SkriblShapeTool) window.SkriblShapeTool.preview(pos, _constrainActive);
     return; }
-  // Stabilizer: ease the drawn point toward the raw position. At smoothingAlpha
-  // === 1 this is a no-op (dp === pos), so "Off" is byte-identical to before.
-  // The smoothed point is what gets stored, so replay reproduces it exactly.
-  if (!smoothPt) smoothPt = { x: lastPos.x, y: lastPos.y };
-  smoothPt = {
-    x: smoothPt.x + (pos.x - smoothPt.x) * smoothingAlpha,
-    y: smoothPt.y + (pos.y - smoothPt.y) * smoothingAlpha
-  };
-  let dp = smoothingAlpha >= 1 ? pos : smoothPt;
-  // Shift-to-constrain (lib/constrain.js). Anchored at the stroke's FIRST
-  // point, so every captured point is collinear with it and the line is
-  // genuinely straight; see the note in that file about why per-segment
-  // snapping staircases. Applied AFTER the stabilizer so the two do not fight.
-  _constrainActive = !!(e && e.shiftKey);
-  if (_constrainActive && typeof SkriblConstrain !== 'undefined' && currentStroke.length) {
-    dp = SkriblConstrain.apply(currentStroke[0], dp, true);
-  }
+  // EVERY SAMPLE THE BROWSER CAUGHT, not just the one a frame it hands this
+  // listener (lib/inputsamples.js, Flip's since v230). The screen samples a
+  // pen or finger at 120-240Hz and a pointermove comes once a frame, so a fast
+  // circle was stored as a polygon. Thinned from the last point stored, so a
+  // slow stroke costs what it always did; whole events, so each sample keeps
+  // its own pressure. The batch shares one `t`, as on Flip: it came together.
+  const S = window.SkriblInputSamples;
+  const batch = S
+    ? S.thin(S.extract(e).map((ev) => { const q = getPos(ev); return { ev: ev, x: q.x, y: q.y }; }), _brushLastPt, S.MIN_DIST)
+    : [{ ev: e, x: pos.x, y: pos.y }];
   const t = recording ? Date.now() - startTime : 0;
   const erase = tool === 'eraser';
   const drawColor = erase ? bgColor : penColorFor(color);
-  const drawSize = _brushWidth(pressureSize(e, _eraserSize(size, erase), erase), dp, erase);
-  _brushLastPt = { x: dp.x, y: dp.y };
-  const point = { x: dp.x, y: dp.y, color: drawColor, size: drawSize, t, erase };
-  currentStroke.push(point);
-  if (_slActive) {
-    drawLineOn(_wetCtx, lastPos.x, lastPos.y, dp.x, dp.y, solidStrokeColor(drawColor), drawSize);
-    presentWet();
-  } else {
-    drawLine(lastPos.x, lastPos.y, dp.x, dp.y, drawColor, drawSize, erase);
+  _constrainActive = !!(e && e.shiftKey);
+  for (const s of batch) {
+    // Stabilizer: ease the drawn point toward the raw position. At smoothingAlpha
+    // === 1 this is a no-op (dp is the sample), so "Off" stores what was caught.
+    // The smoothed point is what gets stored, so replay reproduces it exactly.
+    if (!smoothPt) smoothPt = { x: lastPos.x, y: lastPos.y };
+    smoothPt = {
+      x: smoothPt.x + (s.x - smoothPt.x) * smoothingAlpha,
+      y: smoothPt.y + (s.y - smoothPt.y) * smoothingAlpha
+    };
+    let dp = smoothingAlpha >= 1 ? { x: s.x, y: s.y } : smoothPt;
+    // Shift-to-constrain (lib/constrain.js). Anchored at the stroke's FIRST
+    // point, so every captured point is collinear with it and the line is
+    // genuinely straight; see the note in that file about why per-segment
+    // snapping staircases. Applied AFTER the stabilizer so the two do not fight.
+    if (_constrainActive && typeof SkriblConstrain !== 'undefined' && currentStroke.length) {
+      dp = SkriblConstrain.apply(currentStroke[0], dp, true);
+    }
+    const drawSize = _brushWidth(pressureSize(s.ev, _eraserSize(size, erase), erase), dp, erase);
+    _brushLastPt = { x: dp.x, y: dp.y };
+    currentStroke.push({ x: dp.x, y: dp.y, color: drawColor, size: drawSize, t, erase });
+    if (_slActive) drawLineOn(_wetCtx, lastPos.x, lastPos.y, dp.x, dp.y, solidStrokeColor(drawColor), drawSize);
+    else drawLine(lastPos.x, lastPos.y, dp.x, dp.y, drawColor, drawSize, erase);
+    lastPos = dp;
   }
-  lastPos = dp;
+  if (_slActive) presentWet();   // once for the batch: a frame shows it once anyway
 }
 
 // With smoothing on, the drawn line lags the finger, so a stroke would end
