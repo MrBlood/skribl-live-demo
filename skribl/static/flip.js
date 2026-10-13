@@ -4942,9 +4942,11 @@ document.addEventListener('click',e=>{ const t=e.target;
   // chosen. Pad never hit this: its inputs sit INSIDE the drawer partial.
   // (v206) Ignore the file inputs here.
   if(t.closest('input[type=file]')) return;
-  // Play and Stop are not a tap away: an open drawer RESTS while a Flip plays
-  // and wakes at Stop, as the Pad's does (flip.css; the owner, "all yes").
-  if(t.closest('#play')) return;
+  // Play and Stop are not a tap away, and nothing is while a Flip plays: an
+  // open drawer RESTS then and wakes at Stop, as the Pad's does (flip.css; the
+  // owner, "all yes"). Its taps pass through it to the page, which this would
+  // read as a tap away and close it -- the drawer was meant to do nothing.
+  if(playing || t.closest('#play')) return;
   if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#penToolBtn') && !t.closest('#eraserToolBtn')) closePop();
   // #mediaCard, not only the panel and the tabs: the card holds both, and the
   // seam and padding between them are part of it, not a tap away from it.
