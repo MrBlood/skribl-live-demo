@@ -11,8 +11,8 @@
  * ONE RULE, EVERY SURFACE THAT GOES FULL SCREEN. This owns only WHEN: it
  * puts `chrome-asleep` on the root after a quiet spell and takes it off at
  * the first sign of a person. What fades is the page's CSS (styles.css,
- * "CONTROLS THAT STEP BACK"), so a surface cannot fade differently by
- * accident.
+ * "CONTROLS THAT STEP BACK", and fullbar.css for the Gallery's and the
+ * Library's bar), so a surface cannot fade differently by accident.
  *
  * NEVER ASLEEP WHEN IT WOULD STRAND SOMEONE. `awake()` is the caller's: a
  * paused or finished drawing keeps its controls, so does an open menu. A

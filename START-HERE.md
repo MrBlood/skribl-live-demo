@@ -716,7 +716,7 @@ rather than a shared rule.
 | `canvasground.js` | Pad+Flip | The ground a new drawing starts on: Paper in the light theme, the dark canvas in the dark one. |
 | `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `canvaszoom.js` | Pad+Flip | The canvas magnifier: zoom, pan, the HUD, its grip, wheel and Space-drag. |
-| `chromefade.js` | Pad+Flip | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
+| `chromefade.js` | Pad+Flip+player+library+gallery | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
 | `composehost.js` | HOST | The pad button's lifecycle, for a HOST's composer. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
