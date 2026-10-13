@@ -17122,3 +17122,35 @@ tapWakes flag gone (both editors' first-tap rows, in verify_parity).
 
 NOT TESTED HERE: Safari and the iPhone itself. The stand-in is driven in
 Chromium with the API removed.
+
+## After v322 -- the Library's full screen fills the screen and plays
+
+The Library took the fade through the shared bar (#456), and its drawing still
+stood in a 16:9 frame in full screen: 302 wide on the owner's 402x874 phone,
+its authored 816x612 on a 1333x906 desk, where the Gallery's fills the screen.
+The two full screens are meant to look the same (v308).
+
+- library.js puts the stage's player in the component's own full-screen
+  state, `is-immersive` (inlineplayer.css: the box takes the stage, the canvas
+  fits it at the drawing's own shape, the poster and the veil stand down), as
+  gallery.js does, and plays it on the way in. With the poster hidden, a
+  drawing not yet started would be an empty screen: full screen plays it, as
+  the Gallery's does.
+- The page's 16:9 frame for the box in full screen goes. It was a copy of the
+  component's ratio, which the page's own comment called a duplication
+  nothing gated. Beside `is-immersive` it changes nothing at a phone's or a
+  desk's size; it only narrowed the box on a screen wider than 16:9, where
+  the drawing is contained either way.
+- The stage keeps its grid: with the box at 100% of it, grid and flex
+  measured the same (402x874, 1333x906).
+
+Flip: not for Flip. The editors' full screen is lib/watchfull.js; this is the
+Library's player.
+
+CALIBRATION: verify_fullfade asks the Library for the whole screen too, and
+its walk no longer presses Play: full screen does. Its two breaks, each in its own copy:
+the box not handed to the component (the Library's whole-screen rows red on
+a phone and a desk), and no play on the way in (those, and every row that
+needs it playing). verify_library's two rows that held the copy and the
+component's ratio together now ask that the page keeps no copy and that
+library.js hands the box over; each shown red with its break put back.
