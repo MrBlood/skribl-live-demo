@@ -579,6 +579,15 @@ def pad_states(pg):
     js(pg, "() => setPauseMode('keep')")
     click(pg, "#playBtn", 500); yield "replay"
     click(pg, "#padLine .rl-speed"); yield "replay speeds"
+    # FULL SCREEN WHILE IT PLAYS (lib/watchfull.js): the take from the top at a
+    # quarter, so it is still playing, then paused from the band so its
+    # controls stay up while they are photographed; out by its x.
+    js(pg, "() => { if (playing) stopPlayback(); setPreviewSpeed(0.25); }")
+    click(pg, "#playBtn", 300)
+    if click(pg, "#padLine .full-btn", 600):
+        click(pg, ".watch-play", 300); yield "replay, full screen"
+        click(pg, ".watch-exit", 600)
+    js(pg, "() => setPreviewSpeed(1)")
     click(pg, "#playBtn")
     click(pg, "#menuBtn"); click(pg, "#exportItem", 700); yield "export"
     click(pg, "#exportGif", 150); yield "export, rendering"; waits.settle(pg, 2500); esc(pg)
@@ -606,7 +615,13 @@ def flip_states(pg):
     js(pg, "() => { selClipboard = frames[idx].strokes.slice(0, 2); selSpans = [[0, frames[idx].strokes.length]]; syncSelBar(); }"); yield "selection, clipboard"
     js(pg, "() => setTool('stamp')"); pg.wait_for_timeout(300); yield "stamps"
     js(pg, "() => setTool('pen')")
-    click(pg, "#play", 700); yield "playing"; click(pg, "#play")
+    click(pg, "#play", 700); yield "playing"
+    # Full screen while it plays (lib/watchfull.js): paused from the band so its
+    # controls stay up while they are photographed; out by its x.
+    if click(pg, "#flipSpeeds .full-btn", 600):
+        click(pg, ".watch-play", 300); yield "playing, full screen"
+        click(pg, ".watch-exit", 600)
+    click(pg, "#play")
     click(pg, "#moreBtn"); click(pg, "#miExport", 700); yield "export"
     esc(pg)   # a format chosen closes the sheet, then the progress shows
     js(pg, "() => exportShow('Exporting…')"); pg.wait_for_timeout(200); yield "export, progress"

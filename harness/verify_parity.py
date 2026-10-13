@@ -2990,6 +2990,24 @@ with sync_playwright() as p:
                 check(f"{_tag}: a click on the faded drawing pauses it at once, and the controls come back",
                       _q.evaluate("() => playPaused") and not _k["asleep"] and _k["play"], str(_k))
                 _q.mouse.down(); _q.mouse.up(); _q.wait_for_timeout(300)    # and on again, as it was
+            if _route == "/skribl-pad":
+                # WATCHED TO ITS END, in full screen: the finished drawing keeps
+                # its controls, its Play says so, and plays it again from the top.
+                _q.evaluate("() => setPreviewSpeed(16)")
+                for _w8 in range(40):
+                    if not _q.evaluate("() => playing"):
+                        break
+                    _q.wait_for_timeout(200)
+                _q.wait_for_timeout(2800)      # longer than a quiet spell
+                _f = _q.evaluate(FS, _o)
+                _f["label"] = _q.evaluate("() => document.querySelector('.watch-play').getAttribute('aria-label')")
+                check(f"{_tag}: watched to its end, it stays full screen with its controls up and Play to see it again",
+                      not _q.evaluate("() => playing") and _f["mode"] != "page" and not _f["asleep"] and _f["play"]
+                      and _f["exit"] and _f["label"] == "Play", str(_f))
+                _q.evaluate("() => setPreviewSpeed(0.25)")
+                _band(_q, ".watch-play"); _q.wait_for_timeout(400)
+                check(f"{_tag}: ...and Play in the band plays it again, from the top",
+                      _q.evaluate("() => playing && !playPaused && playIndex < playTimeline.length / 2"))
             if _route == "/flip":
                 # NOTHING DRAWS IN FULL SCREEN. Flip's canvas takes a stroke the
                 # moment its preview stops; the Pad's finished take is locked
@@ -3006,6 +3024,7 @@ with sync_playwright() as p:
                 # Playing again from the band, so the page it goes back to is
                 # the one it left: Flip's speed row only shows while it plays.
                 _band(_q, ".watch-play"); _q.wait_for_timeout(400)
+                check(f"{_tag}: ...and Play in the band plays it again", _q.evaluate("() => playing && !playPaused"))
             _band(_q, ".watch-exit"); _q.wait_for_timeout(600)
             _x = _q.evaluate(FS, _o)
             check(f"{_tag}: the way out puts back the page: the drawing at its size, the controls where they were",

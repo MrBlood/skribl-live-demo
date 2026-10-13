@@ -103,6 +103,13 @@ def _scripts():
         for m in re.finditer(r"el\(\s*['\"]button['\"]\s*,\s*['\"]([^'\"]+)['\"]", src_nc):
             cls = [c for c in m.group(1).split() if c not in LOOKS] or m.group(1).split()
             out.append({"key": "." + cls[0], "src": f"{rel}:{src_nc[:m.start()].count(chr(10)) + 1}", "face": "?"})
+        # A module's own builder, button('classes', ...) (lib/watchfull.js):
+        # its classes are an argument, which the createElement pattern above
+        # cannot see, so the editors' full-screen controls were missing here.
+        if re.search(r"\bfunction\s+button\s*\(", src_nc):
+            for m in re.finditer(r"(?<![\w.])button\(\s*['\"]([^'\"]+)['\"]", src_nc):
+                cls = [c for c in m.group(1).split() if c not in LOOKS] or m.group(1).split()
+                out.append({"key": "." + cls[0], "src": f"{rel}:{src_nc[:m.start()].count(chr(10)) + 1}", "face": "?"})
         for m in re.finditer(r"<button\b([^>]*)>", src_nc):
             k = _key(m.group(1).replace("\\'", "'"))
             if k and "'" not in k and "+" not in k:
