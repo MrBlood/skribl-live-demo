@@ -2843,7 +2843,8 @@ with sync_playwright() as p:
                  asleep: w.classList.contains('chrome-asleep'), drawing: paint(c),
                  label: b && b.getAttribute('aria-label'), pressed: b && b.getAttribute('aria-pressed'),
                  homes: o.carry.map(s => document.querySelector(s).parentElement.className.split(' ')[0]),
-                 locked: document.documentElement.classList.contains('skribl-immersive'), vw: innerWidth, vh: innerHeight }; }"""
+                 locked: document.documentElement.classList.contains('skribl-immersive'), vw: innerWidth, vh: innerHeight,
+                 focus: !!b && document.activeElement === b }; }"""
     NIB = """() => { const n = document.querySelector('.canvas-wrap .player-nib'); if (!n || n.hidden || !(playIndex > 0)) return null;
         const r = n.getBoundingClientRect(), c = canvas.getBoundingClientRect(), lg = getCanvasLogicalSize(), p = playTimeline[playIndex - 1];
         return Math.round(Math.hypot(r.left + r.width / 2 - (c.left + p.x * c.width / lg.width),
@@ -3004,6 +3005,8 @@ with sync_playwright() as p:
                   _x["mode"] == "page" and _x["canvas"] == _page["canvas"] and _x["homes"] == _page["homes"]
                   and _x["label"] == "Full screen" and _x["pressed"] == "false" and not _x["locked"] and not _x["band"],
                   f"page {_page['canvas']} {_page['homes']} -> {_x}")
+            check(f"{_tag}: ...and the x hands focus back to the way in, as a dialog gives it back to what opened it",
+                  _x["focus"], _q.evaluate("() => document.activeElement && (document.activeElement.className || document.activeElement.tagName)"))
             if _dev == "phone":
                 if not _q.evaluate(ED[_route][2]):
                     _q.click(ED[_route][1]); _q.wait_for_timeout(400)

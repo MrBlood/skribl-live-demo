@@ -84,7 +84,10 @@
     }
 
     function onChange(on) {
-      var had = doc.activeElement === o.button;
+      /* Focus follows the way in: into the band with it, and back to it on
+         the way out from anywhere in full screen -- the x, the band, Escape --
+         as a dialog hands focus back to what opened it. */
+      var had = doc.activeElement === o.button || (!on && wrap.contains(doc.activeElement));
       o.button.setAttribute('aria-pressed', '' + on);
       o.button.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
       if (on) {
@@ -103,8 +106,7 @@
         if (exit.parentNode) exit.parentNode.removeChild(exit);
       }
       o.fit(on);
-      /* A focused element that is moved loses focus to <body>; the button
-         someone just pressed keeps it, wherever it now sits. */
+      // A focused element that is moved, or removed, loses focus to <body>.
       if (had) o.button.focus({ preventScroll: true });
     }
 
