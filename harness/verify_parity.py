@@ -1573,6 +1573,30 @@ with sync_playwright() as p:
           _drift < 0 and 0 <= _held["dockClear"] <= 8, f"pushed to dockClear {_drift}, then {_held}")
     _gc.close()
 
+    # ...BUT A PERSON'S SCROLL IS NOT A DRIFT. The take-back stood for 1.2s
+    # after any growth and fought whoever scrolled on in that time: a song
+    # added and the page scrolled on to its end came straight back to the cap,
+    # three runs of three, and verify_ux's end-of-Music check went red with it
+    # whenever its scroll landed inside that window. A song, Fine-tune open, the
+    # growth's own glide let land, then the end -- inside the window, where the
+    # last take-back is still to come -- and the page must stay there.
+    _gc = b.new_context(viewport={"width": 390, "height": 664}, is_mobile=True, has_touch=True)
+    _q = _gc.new_page()
+    browsing.goto(_q, BASE, "/skribl-pad"); waits.settle(_q, 700)
+    _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    browsing.pad_drawer(_q, "music", settle=400)
+    _q.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": wav_bytes(3, 22050)})
+    _q.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=15000)
+    _q.wait_for_timeout(350)
+    _q.click("#fineTuneToggle"); _q.wait_for_timeout(250)
+    _end = _q.evaluate("() => { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }); return Math.round(scrollY); }")
+    _q.wait_for_timeout(1400)
+    _kept = _q.evaluate("() => Math.round(scrollY)")
+    _cap = _q.evaluate(GROWN)
+    check("/skribl-pad at 390x664: a song added and the page scrolled on to its end stays there; only a drift is taken back",
+          _cap["dockClear"] < -24 and abs(_kept - _end) <= 1, f"scrolled to {_end}, then {_kept}; {_cap}")
+    _gc.close()
+
     # ---- the empty drop area ---------------------------------------------------
     # Until a file is added the row is one quiet drop area: a real button that
     # fills it (a Tab stop the old row never had), a title and one line of
