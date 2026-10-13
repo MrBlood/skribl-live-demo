@@ -51,6 +51,26 @@
  * to copy, and opts.put(copy), which puts one back and replaces the default
  * restore. Both are asked at the moment, so they may follow a compositor the
  * player makes again on every repaint.
+ *
+ * THE FIRST FAR JUMP RACES (the owner's pick A, from the mock). Copies make
+ * every jump after the first short; the first one to a far part of the drawing
+ * still has to draw everything up to it, and drawn at once that froze the page
+ * -- the bar stuck where it was and then the picture jumped. A seek that would
+ * draw more than RACE_FROM points through a part with no copy yet draws them a
+ * slice a frame instead, each slice about RACE_MS long, so the page keeps
+ * moving: the player puts the bar where it was pointed at once, the drawing
+ * races there, and the pen dot rides along. The slices draw the same points in
+ * the same order as the one long draw, and presenting between them changes
+ * nothing a later present would not repaint, so it lands on the same picture.
+ * A jump through parts that have their copies lands at once, as before; so
+ * does any jump under RACE_FROM points, which is a minute or two of drawing.
+ *
+ *   cache.far(from, to)               a seek drawing [from, to) should race
+ *   SkriblSeekCache.race(from, to, slice, step, done)
+ *                                     calls slice(i, j) to draw [i, j) once a frame
+ *                                     (it returns where it got to), step(i) after each
+ *                                     slice that leaves more, done(i) when it lands
+ *                                     -> { stop() }: a newer seek stops it
  */
 (function () {
   'use strict';
@@ -58,6 +78,8 @@
   var BUDGET = 64 * 1024 * 1024;   // bytes of copies for one replay
   var MAX_SHOTS = 16;
   var MIN_GAP = 4000;              // points between copies, at least
+  var RACE_FROM = 8000;            // points a seek draws at once, at most, before racing
+  var RACE_MS = 24;                // ms of drawing in each frame of a race
 
   function make(canvas, timeline, opts) {
     var n = timeline ? timeline.length : 0;
@@ -121,6 +143,16 @@
       return { index: shot.index, restored: true };
     }
 
+    // A long draw through a stretch with no copy yet: the first jump there.
+    // With no room for copies at all, every long draw is one.
+    function far(from, to) {
+      if (to - from <= RACE_FROM) return false;
+      if (!valid() || !count) return true;
+      var a = Math.max(1, Math.floor(from / gap)), b = Math.min(count, Math.floor((to - 1) / gap));
+      for (var k = a; k <= b; k++) if (!slots[k]) return true;
+      return false;
+    }
+
     function wants(i) {
       if (!count || i <= 0 || i >= n) return false;
       var p = timeline[i];
@@ -158,14 +190,31 @@
       return to;
     }
 
-    return { indexAt: indexAt, start: start, draw: draw, tap: tap,
+    return { indexAt: indexAt, start: start, draw: draw, tap: tap, far: far,
              // For the suite: what is held, without handing out the copies.
              held: function () { return shots.map(function (s) { return s.index; }); },
              drawn: function () { return lastDrawn; },   // points the last draw() drew
              gap: function () { return gap; }, count: function () { return count; } };
   }
 
-  var api = { make: make, BUDGET: BUDGET, MIN_GAP: MIN_GAP };
+  // The slices grow or shrink to take about RACE_MS each on this device, but
+  // never more than double from one frame to the next, so a run of tiny
+  // points cannot set up one long slice through big ones.
+  function race(from, to, slice, step, done) {
+    var i = from, per = 1000, live = true;
+    function tick() {
+      if (!live) return;
+      var t = performance.now();
+      i = slice(i, Math.min(to, i + per));
+      per = Math.max(200, Math.min(per * 2, Math.round(per * RACE_MS / Math.max(1, performance.now() - t))));
+      if (i >= to) { live = false; done(i); }
+      else { step(i); requestAnimationFrame(tick); }
+    }
+    requestAnimationFrame(tick);
+    return { stop: function () { live = false; } };
+  }
+
+  var api = { make: make, race: race, BUDGET: BUDGET, MIN_GAP: MIN_GAP };
   if (typeof window !== 'undefined') window.SkriblSeekCache = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

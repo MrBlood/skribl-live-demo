@@ -743,6 +743,10 @@
     /* lib/seekcache.js for this document's replay: made on its first full
      * repaint, dropped when the document or its underlay changes. */
     var seekCache = null, drewFrom = 0;
+    /* A far first jump racing there (lib/seekcache.js race(), the owner's
+     * pick A): any repaint stops it. Play pressed meanwhile waits for it to
+     * land (`queued`), and says it is playing, as it will be. */
+    var racer = null, queued = false;
     var buffer = null, srcNode = null, gainNode = null, decoding = false;
     var music = null;
     /* PER POST, unlike mute, and that asymmetry is deliberate. Sound is
@@ -767,7 +771,7 @@
        * the host's, the clock is still this one. */
       play: play,
       pause: pause,
-      toggle: function () { if (state === 'playing') pause(); else play(); },
+      toggle: function () { if (state === 'playing' || queued) pause(); else play(); },
       /* Posts loop: a still frame at the end of a two-second replay reads as
        * broken, and a Flip document IS a loop. A library stage can offer the
        * choice, because somebody looking at one drawing on purpose may want it
@@ -797,7 +801,7 @@
          * `elapsed + segElapsed()`, which is why the drawing obeys the rate
          * even when nothing else does. A probe that reads THIS field instead
          * of the pixels agrees with the bug. */
-        return { id: id, state: state, totalMs: totalMs,
+        return { id: id, state: queued ? 'playing' : state, totalMs: totalMs, racing: !!racer,
                  elapsedMs: state === 'playing' ? elapsed + segElapsed() : elapsed,
                  kind: flipFrames ? 'flip' : 'replay', hasAudio: !!music,
                  muted: !soundOn(), loaded: !!payload, failed: failed,
@@ -1118,6 +1122,7 @@
      * loop, a resize) comes through here. */
     function render(at, full, jump) {
       if (!payload) return;
+      if (racer) { racer.stop(); racer = null; }
       if (flipFrames) {
         var H = global.SkriblHold;
         /* THROUGH displayAt() WHEN PLAYING, because no instant of the live
@@ -1204,14 +1209,36 @@
           if (s) drawn = s.index;   // put() rebuilt the compositor if it restored a copy
           else { clear(); drawn = 0; comp = makeCompositor(ctx, canvas, timeline, pixelRatio); }
           drewFrom = drawn;
+          /* A FAR FIRST JUMP RACES THERE, a slice a frame, through the same
+           * replayTo to the same points; the bar and the line say where it is
+           * going at once (below). Only a jump: an idle poster, a resize or a
+           * loop repaints at once, as it always did. */
+          var to = jump && seekCache ? seekCache.indexAt(at) : 0;
+          if (to && seekCache.far(drawn, to)) {
+            racer = SC.race(drawn, to, function (i, j) {
+              return (drawn = replayTo(ctx, timeline, i, j < to ? timeline[j - 1].playT : at, comp, seekCache));
+            }, function () {}, landed);
+          }
         }
-        drawn = replayTo(ctx, timeline, drawn, at, comp, seekCache);
-        if (comp && drawn >= timeline.length) comp.finish();
+        if (!racer) {
+          drawn = replayTo(ctx, timeline, drawn, at, comp, seekCache);
+          if (comp && drawn >= timeline.length) comp.finish();
+        }
         setNib(state === 'playing' && drawn > 0 && drawn < timeline.length
                ? timeline[drawn - 1] : null);
       }
       prog.style.width = (totalMs ? Math.min(1, at / totalMs) * 100 : 0) + '%';
       paintLine();
+    }
+
+    function landed() {
+      racer = null;
+      if (queued) { queued = false; play(); }
+    }
+    /* What the box shows: playing, or paused. */
+    function look(on) {
+      el.classList.toggle('is-playing', on);
+      el.classList.toggle('is-paused', !on);
     }
 
     /* ---- the line ------------------------------------------------------- */
@@ -1263,7 +1290,7 @@
      * so the first touch asks for it and the last place is shown when it
      * comes. A poster gives way to the canvas as soon as there is a place. */
     function scrubStart() {
-      held = state === 'playing';
+      held = state === 'playing' || queued;
       if (held) pause();
       if (!payload) load().then(function (p) { if (p && pendingF != null) scrubTo(pendingF); });
     }
@@ -1565,27 +1592,37 @@
        * ways: it stops nothing when it starts, and a post starting does not
        * stop it, so a panel of examples can loop together. */
       if (!me.ambient) for (var i = 0; i < players.length; i++) if (players[i] !== me && !players[i].ambient) players[i].settle();
+      /* Mid-race the drawing is not where it was pointed yet, and the first
+       * frame would draw the rest of the way at once: the freeze the race is
+       * there to avoid. The box says it plays now, the sound is unlocked now,
+       * inside the tap, and landed() comes back here. */
+      if (racer) {
+        queued = true;
+        if (state === 'idle') state = 'paused';
+        look(true);
+        if (music) { var ac = ensureCtx(); if (ac && ac.resume) ac.resume(); }
+        return;
+      }
       if (elapsed >= totalMs) elapsed = 0;
       /* Always a full repaint from zero when starting at zero — posterless, the
        * canvas is currently holding the FINISHED drawing (renderIdle), and the
        * incremental path only ever appends. */
       if (elapsed === 0) render(0, true);
       state = 'playing';
-      el.classList.add('is-playing');
-      el.classList.remove('is-paused');
+      look(true);
       t0 = now();
       raf = global.requestAnimationFrame(frame);
       startAudio();
     }
 
     function pause() {
+      if (queued) { queued = false; look(false); }
       if (state !== 'playing') return;
       elapsed += segElapsed();
       if (raf) global.cancelAnimationFrame(raf);
       raf = null;
       state = 'paused';
-      el.classList.remove('is-playing');
-      el.classList.add('is-paused');
+      look(false);
       setNib(null);
       stopAudio();
     }
@@ -1610,13 +1647,13 @@
          navigated to the post page (v316, the real profile page). */
       e.stopPropagation();
       if (muteBtn && muteBtn.contains(e.target)) return;
-      if (state === 'playing') pause(); else play();
+      me.toggle();
     });
 
     el.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
       e.preventDefault();                 /* Space scrolls the feed otherwise */
-      if (state === 'playing') pause(); else play();
+      me.toggle();
     });
 
     if (muteBtn) {
