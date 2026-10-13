@@ -16727,7 +16727,9 @@ the pen bent, and the thinning keeps a slow one at about what it cost. The
 pencil brush tapers by the distance between stored points (shape() in
 lib/brushes.js), so on the Pad it now tapers less on a fast flick than it did
 -- exactly as Flip's pencil already did. If the pencil should taper more on
-both, that is the one number in shape().
+both, that is the one number in shape(). Likewise the stabilizer, when it is
+on, eases toward each stored point as Flip's does, so a fast stroke is eased
+over a shorter distance than before; at its default, Off, nothing changes.
 
 CALIBRATION
 
