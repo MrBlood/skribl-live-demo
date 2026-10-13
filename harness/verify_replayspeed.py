@@ -770,6 +770,15 @@ with sync_playwright() as p:
             res({ frames: fr, ms: ms, lt: window.__ff ? window.__ff.lt.slice() : [], racing: seekRacing() }), 60))); };
         t(); })"""
     FRAMES2 = "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"
+    # PRESSES MID-RACE GO IN ONE TASK, a couple of frames into the race, so it
+    # cannot land between them. With real clicks it did on CI: the waiting Play
+    # started at the landing and the second press paused real playback, which
+    # proves nothing about taking a waiting Play back. Each check also asks
+    # that the race was still running after its presses. Real input reaches
+    # the same handlers, and the first check's tap on the bar is a real one.
+    IN2 = "await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));"
+    PTR = """(el, type, x, y, id) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true,
+        isPrimary: true, pointerId: id, button: 0, clientX: x, clientY: y }))"""
     # The Pad's canvas against a replay of exactly the points it stands on,
     # with the replay held still while it is read (scrubbing). As PAD_SAME,
     # the replay's own compositor is left as the seek left it.
@@ -849,21 +858,18 @@ with sync_playwright() as p:
     check("[Pad] a newer seek mid-race takes over from where the canvas stands, and lands exactly too",
           _d["at"] > _d["from"] and _d["held"] == 0 and _d["again"] and _dc["off"] == 0 and _dc["ref"] == _dc["idx"]
           and _dc["idx"] >= _dc["to"], f"{_d}; {_dc}")
-    # (Short of the end, where a pause's clock is capped and could not show
-    # running ahead; and with the drag's hold off, which PAD_AT left on.)
-    _pg.evaluate("() => { scrubbing = false; editorSeek(0.97); }")
-    _pg.wait_for_timeout(250)
-    _p = _pg.evaluate("""() => { const was = seekRacing(), want = playTotal * 0.97; pausePlayback();
-        const r = { racing: was, off: lastTargetMs - want }; resumePlayback(); return r; }""")
-    check("[Pad] the clock holds the place pointed while it races: a pause a quarter of a second in pauses there, not where the clock ran on to",
-          _p["racing"] and 0 <= _p["off"] < 50, f"{_p} (ms past the place pointed)")
-    # And a third, for Stop.
+    # A third, for a pause and then Stop, twelve frames into a race to 97%
+    # (short of the end, where a pause's clock is capped and could not show
+    # running ahead), each in one task with the race seen running.
     _pg.click("#playBtn"); _pg.wait_for_timeout(200)          # Stop
     _pg.click("#playBtn"); _pg.wait_for_timeout(300)          # Play
-    _pg.evaluate("() => editorSeek(0.9)")
-    _pg.evaluate(FRAMES2)
-    _was = _pg.evaluate("() => seekRacing()")
-    _pg.click("#playBtn")                                     # Stop, mid-race
+    _p = _pg.evaluate("""async () => { editorSeek(0.97);
+        for (let n = 0; n < 12; n++) await new Promise(r => requestAnimationFrame(r));
+        const was = seekRacing(), want = playTotal * 0.97; pausePlayback();
+        const r = { racing: was, off: lastTargetMs - want }; resumePlayback(); return r; }""")
+    check("[Pad] the clock holds the place pointed while it races: a pause twelve frames in pauses there, not where the clock ran on to",
+          _p["racing"] and 0 <= _p["off"] < 50, f"{_p} (ms past the place pointed)")
+    _was = _pg.evaluate("() => { const was = seekRacing(); document.getElementById('playBtn').click(); return was; }")   # Stop, mid-race
     _pg.evaluate("() => new Promise(r => { let n = 8; const t = () => --n ? requestAnimationFrame(t) : r(); requestAnimationFrame(t); })")
     _st = _pg.evaluate("""() => { const w = canvas.width, h = canvas.height, a = ctx.getImageData(0, 0, w, h).data.slice();
         clearAndRestore(() => paintStrokesStatic(strokes)); const b = ctx.getImageData(0, 0, w, h).data; let off = 0;
@@ -944,35 +950,36 @@ with sync_playwright() as p:
         # Play pressed mid-race waits for the landing, and a second press, or a
         # tap on the drawing, takes it back -- as either would pause playing.
         _c2, _pg = _player()
-        _pg.evaluate("() => { window.__skriblPlayerSeek(0.5); }")
-        _pg.click("#playerPlayBtn"); _q1 = _pg.evaluate(BTN)
-        _pg.click("#playerPlayBtn"); _q2 = _pg.evaluate(BTN)
+        _g = _pg.evaluate("""async () => { window.__skriblPlayerSeek(0.5); """ + IN2 + """
+            const b = document.getElementById('playerPlayBtn'), was = seekRacing();
+            b.click(); const q1 = b.getAttribute('aria-label'); b.click(); const q2 = b.getAttribute('aria-label');
+            return [was, q1, q2, seekRacing()]; }""")
         _l = _pg.evaluate(FF_LANDED); _pg.wait_for_timeout(300)
-        _g = [_q1, _q2, _l["racing"], _pg.evaluate(BTN), _pg.evaluate(FILL)]
+        _g += [_l["racing"], _pg.evaluate(BTN), _pg.evaluate(FILL)]
         check("[shared player] Play pressed mid-race says Pause and waits; a second press takes it back, and the drawing stays where it was pointed",
-              _g[:4] == ["Pause", "Play", False, "Play"] and abs(_g[4] - 0.5) < 1e-6, str(_g))
-        _pg.evaluate("() => { window.__skriblPlayerSeek(0.97); }")
-        _was = _pg.evaluate("() => seekRacing()")
-        _pg.click("#playerPlayBtn"); _q1 = _pg.evaluate(BTN)
-        _cv = _pg.locator("#canvas").bounding_box()
-        _pg.mouse.click(_cv["x"] + _cv["width"] / 2, _cv["y"] + _cv["height"] / 2)   # a tap on the drawing
-        _q2 = _pg.evaluate(BTN)
+              _g[:6] == [True, "Pause", "Play", True, False, "Play"] and abs(_g[6] - 0.5) < 1e-6, str(_g))
+        _h = _pg.evaluate("""async () => { window.__skriblPlayerSeek(0.97); """ + IN2 + """
+            const b = document.getElementById('playerPlayBtn'), cv = document.getElementById('canvas'), r = cv.getBoundingClientRect();
+            const x = r.left + r.width / 2, y = r.top + r.height / 2, was = seekRacing();
+            b.click(); const q1 = b.getAttribute('aria-label');
+            (""" + PTR + """)(cv, 'pointerdown', x, y, 7); (""" + PTR + """)(cv, 'pointerup', x, y, 7);   // a tap on the drawing
+            return [was, q1, b.getAttribute('aria-label'), seekRacing()]; }""")
         _pg.evaluate(FF_LANDED); _pg.wait_for_timeout(300)
-        _h = [_was, _q1, _q2, _pg.evaluate(BTN), _pg.evaluate(FILL)]
+        _h += [_pg.evaluate(BTN), _pg.evaluate(FILL)]
         check("[shared player] ...and so does a tap on the drawing",
-              _h[:4] == [True, "Pause", "Play", "Play"] and abs(_h[4] - 0.97) < 1e-6, str(_h))
+              _h[:5] == [True, "Pause", "Play", True, "Play"] and abs(_h[5] - 0.97) < 1e-6, str(_h))
         _c2.close()
 
         # Restart mid-race, with a Play waiting, starts the drawing over: nothing
         # races on, and the Play that waited is spent -- a keyboard step after
         # it holds still, as a step while playing always has.
         _c3, _pg = _player()
-        _pg.evaluate("() => { window.__skriblPlayerSeek(0.9); }")
-        _pg.click("#playerPlayBtn")                           # a Play that waits
-        _was = _pg.evaluate("() => seekRacing()")
-        _pg.click("#playerRestartBtn")
+        _r = _pg.evaluate("""async () => { window.__skriblPlayerSeek(0.9); """ + IN2 + """
+            const was = seekRacing(); document.getElementById('playerPlayBtn').click();   // a Play that waits
+            const q = document.getElementById('playerPlayBtn').getAttribute('aria-label');
+            document.getElementById('playerRestartBtn').click(); return [was && q === 'Pause']; }""")
         _pg.wait_for_timeout(400)
-        _r = [_was, _pg.evaluate("() => seekRacing()"), _pg.evaluate(BTN), _pg.evaluate(FILL)]
+        _r += [_pg.evaluate("() => seekRacing()"), _pg.evaluate(BTN), _pg.evaluate(FILL)]
         _pg.focus("#playerProgress")
         _pg.keyboard.press("ArrowRight")
         _pg.wait_for_timeout(300)
@@ -998,19 +1005,21 @@ with sync_playwright() as p:
         # A drag holds a Play that waits, as it holds playing: nothing starts
         # under the finger, and letting go plays.
         _c4, _pg = _player()
-        _pg.evaluate("() => { window.__skriblPlayerSeek(0.5); }")
-        _pg.click("#playerPlayBtn"); _q1 = _pg.evaluate(BTN)
-        _bx = _pg.locator("#playerProgress").bounding_box()
-        _pg.mouse.move(_bx["x"] + _bx["width"] * 0.95, _bx["y"] + _bx["height"] / 2)
-        _pg.mouse.down()
+        HOLD = """(type) => { const bar = document.getElementById('playerProgress'), r = bar.getBoundingClientRect();
+            (""" + PTR + """)(bar, type, r.left + r.width * 0.95, r.top + r.height / 2, 9); }"""
+        _k = _pg.evaluate("""async () => { window.__skriblPlayerSeek(0.5); """ + IN2 + """
+            const b = document.getElementById('playerPlayBtn'), was = seekRacing();
+            b.click(); const q1 = b.getAttribute('aria-label');
+            (""" + HOLD + """)('pointerdown');   // the finger goes down on the bar, and stays
+            return [was, q1, b.getAttribute('aria-label'), seekRacing()]; }""")
         _pg.evaluate(FF_LANDED); _pg.wait_for_timeout(300)
         _h1 = [_pg.evaluate(BTN), _pg.evaluate(FILL)]
         _pg.wait_for_timeout(300)
         _h2 = _pg.evaluate(FILL)
-        _pg.mouse.up(); _pg.wait_for_timeout(400)
-        _k = [_q1, _h1[0], _h1[1] == _h2, _pg.evaluate(BTN), _pg.evaluate(FILL) > _h2]
+        _pg.evaluate("() => (" + HOLD + ")('pointerup')"); _pg.wait_for_timeout(400)
+        _k += [_h1[0], _h1[1] == _h2, _pg.evaluate(BTN), _pg.evaluate(FILL) > _h2]
         check("[shared player] a drag holds a Play that waits, as it holds playing: nothing starts under the finger, and letting go plays",
-              _k == ["Pause", "Play", True, "Pause", True], f"{_k}; held at {_h1[1]}")
+              _k == [True, "Pause", "Play", True, "Play", True, "Pause", True], f"{_k}; held at {_h1[1]}")
         _c4.close()
     else:
         check("[shared player, 120,000 points] the two-hour drawing posted", False, f"{_st2} {_body2}")
