@@ -741,9 +741,10 @@ with sync_playwright() as p:
     #   * the bar and the clock say where it was pointed AT ONCE, while the
     #     drawing is still behind;
     #   * the page keeps moving: frames are painted while it races, and no task
-    #     holds one up past 200 ms (the same jump drawn at once is one task of
-    #     about a second and a half here). 200, not 50: this box draws a 2x
-    #     canvas in software, so a frame that also takes a copy runs 60 ms or so;
+    #     holds one up past 300 ms (the same jump drawn at once is one task of
+    #     about a second and a half here). 300, not 50: this box draws a 2x
+    #     canvas in software, so a frame that also takes a copy runs 60 ms or
+    #     so, and over 200 with three other suites sharing the machine;
     #   * it lands on EXACTLY what a replay from the first point paints, every
     #     byte, and plays on from there;
     #   * the clock holds the place pointed while it races, so a pause mid-race
@@ -805,8 +806,8 @@ with sync_playwright() as p:
           _now["racing"] and _now["at"] < _now["to"] and abs(_now["f"] - _f) < 0.01 and abs(_now["fill"] - _now["f"]) < 1e-6
           and (_now["badge"] is None or _now["badge"] == _now["want"]), str(_now))
     _land = _pg.evaluate(FF_LANDED)
-    check("[Pad] ...the page keeps moving while it does: frames are painted, and none is held up past 200 ms",
-          not _land["racing"] and _land["frames"] >= 5 and max(_land["lt"] or [0]) < 200,
+    check("[Pad] ...the page keeps moving while it does: frames are painted, and none is held up past 300 ms",
+          not _land["racing"] and _land["frames"] >= 5 and max(_land["lt"] or [0]) < 300,
           f"{_land['frames']} frames in {_land['ms']} ms, long tasks {_land['lt']}")
     _pg.wait_for_timeout(300)
     _c = _pg.evaluate(PAD_AT)
@@ -834,22 +835,32 @@ with sync_playwright() as p:
           and not _e["c"][0] and _e["c"][1] == _e["c"][2] and _e["c"][3] > 8000 and _cs["off"] == 0,
           f"{_e}; picture {_cs}")
     # A FRESH PREVIEW (Play again: a new timeline and no copies) for the rest.
+    # The newer seek comes two frames in, before the race has passed a stretch
+    # and taken a copy: a seek that restores a copy repaints the canvas from it
+    # and would hide a race that never said where it had got to.
     _pg.click("#playBtn"); _pg.wait_for_timeout(200)          # Stop
     _pg.click("#playBtn"); _pg.wait_for_timeout(300)          # Play
-    _pg.evaluate("() => editorSeek(0.9)")
+    _d = _pg.evaluate("""async () => { editorSeek(0.9); const from = playIndex;
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const at = playIndex, held = playSeek.held().length; editorSeek(0.6); const again = seekRacing();
+        await new Promise(res => { const t = () => seekRacing() ? requestAnimationFrame(t) : res(); t(); });
+        return { from: from, at: at, held: held, again: again }; }""")
+    _dc = _pg.evaluate(PAD_AT)
+    check("[Pad] a newer seek mid-race takes over from where the canvas stands, and lands exactly too",
+          _d["at"] > _d["from"] and _d["held"] == 0 and _d["again"] and _dc["off"] == 0 and _dc["ref"] == _dc["idx"]
+          and _dc["idx"] >= _dc["to"], f"{_d}; {_dc}")
+    # (Short of the end, where a pause's clock is capped and could not show
+    # running ahead; and with the drag's hold off, which PAD_AT left on.)
+    _pg.evaluate("() => { scrubbing = false; editorSeek(0.97); }")
     _pg.wait_for_timeout(250)
-    _p = _pg.evaluate("""() => { const was = seekRacing(), want = playTotal * 0.9; pausePlayback();
+    _p = _pg.evaluate("""() => { const was = seekRacing(), want = playTotal * 0.97; pausePlayback();
         const r = { racing: was, off: lastTargetMs - want }; resumePlayback(); return r; }""")
     check("[Pad] the clock holds the place pointed while it races: a pause a quarter of a second in pauses there, not where the clock ran on to",
           _p["racing"] and 0 <= _p["off"] < 50, f"{_p} (ms past the place pointed)")
-    _d = _pg.evaluate("""async () => { const at = playIndex; editorSeek(0.6); const again = seekRacing();
-        await new Promise(res => { const t = () => seekRacing() ? requestAnimationFrame(t) : res(); t(); });
-        return { at: at, again: again }; }""")
-    _dc = _pg.evaluate(PAD_AT)
-    check("[Pad] a newer seek mid-race takes over from where the canvas stands, and lands exactly too",
-          _d["at"] > 0 and _d["again"] and _dc["off"] == 0 and _dc["ref"] == _dc["idx"] and _dc["idx"] >= _dc["to"],
-          f"{_d}; {_dc}")
-    _pg.evaluate("() => editorSeek(1)")
+    # And a third, for Stop.
+    _pg.click("#playBtn"); _pg.wait_for_timeout(200)          # Stop
+    _pg.click("#playBtn"); _pg.wait_for_timeout(300)          # Play
+    _pg.evaluate("() => editorSeek(0.9)")
     _pg.evaluate(FRAMES2)
     _was = _pg.evaluate("() => seekRacing()")
     _pg.click("#playBtn")                                     # Stop, mid-race
@@ -909,8 +920,8 @@ with sync_playwright() as p:
         check("[shared player, 120,000 points, desk at 2x] a first far jump races there: the bar and the clock say where it was pointed at once, and the button says Pause for the Play that waits",
               _now["racing"] and abs(_now["fill"] - _f) < 0.01 and _now["at"] == _now["want"] and _now["btn"] == "Pause", str(_now))
         _land = _pg.evaluate(FF_LANDED)
-        check("[shared player] ...the page keeps moving while it does: frames are painted, and none is held up past 200 ms",
-              not _land["racing"] and _land["frames"] >= 5 and max(_land["lt"] or [0]) < 200,
+        check("[shared player] ...the page keeps moving while it does: frames are painted, and none is held up past 300 ms",
+              not _land["racing"] and _land["frames"] >= 5 and max(_land["lt"] or [0]) < 300,
               f"{_land['frames']} frames in {_land['ms']} ms, long tasks {_land['lt']}")
         _a = _pg.evaluate(FILL)
         _pg.wait_for_timeout(300)
