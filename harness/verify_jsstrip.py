@@ -248,8 +248,13 @@ with sync_playwright() as sp:
     # and into editor_photo.js -- see the target below) is what makes lowering
     # it honest rather than aspirational, and 480 B of margin is the same order
     # the previous pin used.
+    # RAISED WITH verify_player_isolation's ledger, which names the cost: the
+    # link page loads lib/chromefade.js since every full screen steps back
+    # while it plays (+2,014 B, 151,751 measured, #456). The two suites read
+    # the same template, and this pin was left behind when that one moved --
+    # main went red on it, which is the "disagreement is a real signal" above.
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 150_300,
+          lean_total <= 151_760,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a
