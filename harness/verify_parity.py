@@ -3044,9 +3044,11 @@ with sync_playwright() as p:
             if _dev == "phone":
                 if not _q.evaluate(ED[_route][2]):
                     _q.click(ED[_route][1]); _q.wait_for_timeout(400)
-                _q.click(_o["btn"]); _q.wait_for_timeout(500)
-                _e0 = _q.evaluate(FS, _o)["mode"]
-                _q.keyboard.press("Escape"); _q.wait_for_timeout(500)
+                _e0 = None      # the way in, if the way out put it back
+                if _q.evaluate(PAINTED, _o["btn"]):
+                    _q.click(_o["btn"]); _q.wait_for_timeout(500)
+                    _e0 = _q.evaluate(FS, _o)["mode"]
+                    _q.keyboard.press("Escape"); _q.wait_for_timeout(500)
                 _e = _q.evaluate(FS, _o)
                 check(f"{_tag}: Escape leaves the stand-in too, and lets the page scroll again",
                       _e0 == "stand-in" and _e["mode"] == "page" and not _e["locked"], f"{_e0} -> {_e['mode']}, locked {_e['locked']}")
