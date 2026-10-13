@@ -305,7 +305,14 @@
    * the target. With anchoring switched off, two runs of six still went past,
    * so the re-asserts take back the drift whatever moved it. There is little room for one: of
    * the three phones verify_parity drives, only the Pad's photo at 390x640
-   * can scroll past the cap at all, and by 13px. */
+   * can scroll past the cap at all, and by 13px.
+   *
+   * A DRIFT, NOT A PERSON'S SCROLL. The take-back stood for 1.2s after any
+   * growth and fought whoever scrolled on in that time: a song added and the
+   * page scrolled to its end came straight back to the cap, 231px, in three
+   * runs of three. A drift is the few px a glide overshoots; a scroll is a
+   * screenful. Past DRIFT the page is where the person put it, and it stays. */
+  var DRIFT = 24;
   function followGrowth(card, o) {
     if (!card || typeof ResizeObserver === 'undefined') return;
     var dock = o.dock || null, lastH = 0;
@@ -331,7 +338,7 @@
           if (t > scroller.scrollTop + 1) { scroller.scrollTop = t; return; }
           if (!dock || dock.offsetParent === null) return;
           var over = stuckBottom() + 4 - dock.getBoundingClientRect().top;
-          if (over > 1) scroller.scrollTop -= over;
+          if (over > 1 && over <= DRIFT) scroller.scrollTop -= over;
         }, ms);
       });
     }

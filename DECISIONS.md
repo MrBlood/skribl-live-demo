@@ -16855,3 +16855,31 @@ owner's 402x874 phone and 14px short on a 375x667 one, so only a phone as
 short as 640px reaches the cap at all.
 
 NOT TESTED HERE: Safari on a phone that short.
+
+## After v322 -- a person's scroll past the drawer's cap is theirs; only a drift is taken back
+
+Found while proving the editors' full screen: verify_ux's "scrolled to the end
+of Music, the drawing has gone above the header" went red on that branch,
+beside other suites and alone, with the Pad's page back at 394 after the test
+had scrolled it to 625. Main passed the same suite. It was #452's.
+followGrowth's re-asserts at 300, 700 and 1200ms after a card grows pull the
+page back to the cap when it is past it, which takes back the glide's drift --
+and also a person's own scroll, if it lands inside those 1.2 seconds. A song
+added and the page scrolled on to its end came straight back to the cap in
+three runs of three on main; verify_ux passed there only because its scroll
+happened to land after the last re-assert.
+
+- lib/drawerdetent.js followGrowth: the take-back is for a drift, DRIFT (24px)
+  or less. The glide's overshoot measured 13px; a scroll is a screenful, 231px
+  in the case that went red. Past that, the page is where the person put it.
+- Flip: shared, the same code.
+
+CALIBRATION
+
+verify_parity's new check, beside #452's: a song, Fine-tune open, the
+growth's own glide let land, then the page to its end inside the take-back
+window, and it must stay there. Red on main twice (625, then 394), green here
+twice. With DRIFT at 300px it is red again; at 10px #452's own check goes red,
+its 13px drift left standing. Both edges of the number are pinned.
+
+NOT TESTED HERE: Safari.
