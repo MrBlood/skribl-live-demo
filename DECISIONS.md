@@ -16918,3 +16918,134 @@ and green for Flip; green for both here. Taking out either half, the size in
 the save or its adoption in the restore, turns the Pad's row red again.
 
 NOT TESTED HERE: Windows itself, or Safari.
+
+## After v322 -- full screen while it plays, in the Pad and Flip
+
+The owner, at the measured mock of full screen for the editors: "I like your
+picks". The picks: the way in at the end of the line under the drawing --
+Flip's at the end of its speed row -- and, in full screen, the controls
+stepping back a moment after the drawing starts, so the drawing takes the
+whole height and the controls lie over its foot when they come back. Asked
+whether faded controls come back to change the speed: they do, and the owner
+added, "make the first tap on a faded phone just reveal the controls without
+pausing, matching how video apps work".
+
+- lib/watchfull.js, one module for both editors. Each hands over its frame,
+  its button, what travels into the band (the Pad's scrubber and line; Flip's
+  progress line and speed row), how to lay its canvas out, and its own play,
+  pause and resume. The way in is the link page's four corners, there only
+  while a drawing plays and never on the drawing. Going full screen is
+  lib/immersive.js: the real API on a desk, the pinned stand-in on an iPhone,
+  which has none for an element. Escape leaves either.
+- The drawing is as big as the screen allows, centred, in its own shape, and
+  uncapped as on the link page: past the size it was drawn at the lines soften
+  a little, and the mock said so. Measured: the Pad on the owner's 402x874
+  from 378 to 402 wide, and on a 1333x906 desk from 694 to 906 tall; Flip from
+  378x284 to 402x302, and from 673x505 to 1208x906. Never magnified: a Pad
+  zoomed in on a detail (Flip fits its magnifier on Play; the Pad keeps it)
+  goes full screen as the whole drawing and comes back to the page as it was.
+- The frame, the band and the x are the link page's own rules, widened to
+  `:is(.canvas-wrap, .watch-full)` at the same specificity, so the three full
+  screens are one look and cannot drift. The controls are MOVED into the band,
+  not copied, and put back on the way out: one of every control, every
+  handler still bound. Focus goes with the way in, and the way out hands it
+  back to it, as a dialog does.
+- lib/chromefade.js says WHEN they step back: after 2.5s of quiet while it
+  plays. A mouse that moves 3px, a press, a key or focus brings them back; a
+  paused or finished drawing, or the Pad's open speed menu, keeps them up.
+  styles.css says WHAT steps back, so the link page and the Gallery can take
+  the same rule next.
+- A finger's first tap on a faded screen only brings the controls back; with
+  them up, a tap pauses, as on the page. A mouse's click pauses at once, as a
+  video app on a desk takes it: the mouse has already woken them by moving
+  there. Nothing draws in full screen. A drawing watched to its end keeps its
+  controls up, and Play in the band plays it again.
+- Found on the way: the Pad's replay pen dot was placed from its frame's
+  corner, which is the canvas's corner only on the page. In full screen the
+  canvas sits in the middle of the frame and the dot was off by the
+  letterbox; it is placed from the canvas's own corner now, the same point on
+  the page.
+- Each editor's own layout asks full screen first (layoutEditorCanvas,
+  fitPad), and those already run on a resize and on a phone's
+  orientationchange. The first draft also listened for resize in the module,
+  which did the same work again and would have missed orientationchange; it
+  went, and each editor's hook is pinned on its own.
+
+Flip: shared. One module, one fade, one look. Flip's canvas takes a stroke the
+moment its preview stops, so "nothing draws in full screen" is pinned there.
+
+CALIBRATION
+
+verify_parity's new section drives both editors on the owner's 402x874 phone
+with the Fullscreen API taken away -- the stand-in an iPhone gets -- and on a
+1333x906 desk with the real one. Visible means painted (elementFromPoint),
+because a faded control keeps its rect. It checks the way in, placed and 44px
+to tap; the whole screen, centred, in the drawing's shape, again after the
+phone turns on its side and back, and on a Pad magnified to 200%; the band
+carrying the editor's own controls, Flip's with the link page's progress line;
+the Pad's pen dot on the point being drawn; the speed changed from the band,
+the Pad's open menu holding the controls up; the quiet spell; a mouse move, a
+finger's first tap and a mouse click, each doing what a video app's does;
+paused from the band and played on; watched to the end and played again;
+Flip's stroke after a stop; the way out, focus included; and Escape from the
+stand-in.
+
+Twenty-two mutations, each in its own copy on its own server, each red on its
+own check: the band carrying nothing; each editor's fit made a no-op; the fade
+never falling asleep; a paused drawing, and a finished one, let fall asleep;
+Flip's stroke let through once it stops; a finger's first tap pausing; a
+mouse's click held back like a finger's; the controls not put back; the pen
+dot placed from the frame's corner again; the zoom layer left as on the page,
+and its transform alone kept; the band's row rule removed; each editor's
+layout hook removed; focus not handed back; each editor's Play from the band
+made a no-op; and Flip's three band rules -- the line, its fill, the row's
+padding -- each removed. The band's row rule is pinned on the Pad: on Flip it
+only tidies the look, and no check reads that.
+
+The link player loads app.js whole, so the two editor lines it now carries --
+the layout's question and the pen dot's corner -- cost it 128 B after 70 were
+spent (the frame-border terms, which are always 0, and the hook's guard):
+verify_player_isolation's ratchet moves for that named cost, and the full
+screen itself stays in modules the player never loads. verify_replayspeed read
+Flip's speeds as every button in their row; the row holds the way in now, so
+it reads the speeds by data-rate, the mechanism that makes one. The band's
+controls go home last first, so two carried side by side would not throw --
+none do today, so nothing can show that red, and it is said here instead.
+
+Found on the way and fixed apart, because it was #452's: verify_ux's end of
+Music went red on this branch, the page pulled back to the drawer's cap after
+the test had scrolled past it. The cap's take-back fought a person's own
+scroll for 1.2s after any growth, on main too (#453).
+
+Found on the way and fixed here: two of Flip's band rules sat in styles.css,
+where flip.css's body.playing page rules outranked them, so the band kept the
+page's 3px line and padded row until they moved into flip.css.
+
+The centring census could not see the three new buttons -- the module builds
+them through its own button('classes') helper, which the inventory's patterns
+missed -- so it learned that pattern (232 controls to 235, nothing else
+added), and its Pad and Flip scenarios now go full screen and photograph the
+band. Its first run found three things, each fixed by a rule rather than a
+nudge to this box's fonts. The band's Play used the link page's arrow, which
+sits 0.58 right of its circle: a triangle's middle, to the eye, is halfway
+between its box and its mass, so the band's is drawn 0.58 left and is
+centred; the link page's stays a known finding for its own PR. The way in, at
+32px, made the Pad's line 5px taller than the speed pill's 27px, and on a
+phone that line is set by its foot and centred, so it moved by a half pixel
+and the speed chips' words with it: the way in takes no height of its own in
+the line now (margin-block), and the line measures as main's to the
+hundredth. And the speed read the scenario's quarter, so the scenario pauses
+the take instead of slowing it. The census then matched main's own run: the
+canvas settings' Grid overlay, photographed under a hover on the desk, is new
+on main too, at the same 1.65px. The full sweep reached every control in the
+inventory. One reading stays at the line and is said here rather than nudged:
+the Pad's way in sits a third of a pixel off its circle on every screen -- an
+inline SVG is drawn on whole pixels, and the line's words leave the button
+between them -- and 0.34 on the dark desk, a hundredth over. Flip's, in its
+row, reads 0. The sweep's other new readings are the other-tab bar's "Open
+it" and the Gallery's "Load more" in the two extra faces, which this does not
+touch.
+
+NOT TESTED HERE: Safari and the iPhone itself. The stand-in is driven in
+Chromium with the API removed, so how iOS's own bars sit around it is not
+observed here.
