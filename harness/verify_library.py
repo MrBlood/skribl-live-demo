@@ -1373,36 +1373,31 @@ check("every template that loads inlineplayer.js also loads lib/audiosession.js"
       f"plays the post without its music")
 
 # ---------------------------------------------------------------------------
-# THE STAGE'S FULL SCREEN RULE CARRIES A COPY OF THE BOX'S ASPECT RATIO.
+# THE STAGE'S FULL SCREEN IS THE COMPONENT'S OWN, NOT A COPY OF ITS RATIO.
 #
-# skribl_library.html sizes the fullscreened player with
-# `width: min(100vw, calc(100vh * 16 / 9))`, and 16/9 there is not a property
-# of the drawing -- it is .skribl-inline's own `aspect-ratio`, hard-coded in
-# inlineplayer.css because 16:9 is the widest canvas lib/canvassizes.js offers
-# and everything narrower letterboxes inside it. The comment beside that rule
-# used to claim the player "sets it from the payload", which would have made
-# the copy harmless; it does not, so the two numbers have to agree or the
-# fullscreen box stops matching the player inside it.
+# skribl_library.html used to size the fullscreened player with
+# `width: min(100vw, calc(100vh * 16 / 9))` -- a copy of .skribl-inline's own
+# `aspect-ratio` in inlineplayer.css -- and these rows held the two numbers
+# together. The drawing then stood in a 16:9 frame at a fraction of the screen
+# (302 wide on the owner's 402 phone) while the Gallery's filled it. The page
+# now puts the player in the component's own full-screen state, as gallery.js
+# does, and the copy is gone: what the box measures in full screen is
+# verify_fullfade's, on a phone and a desk.
 #
-# BOTH READ FROM THE DECLARATIONS, never from the prose around them: one from
-# the `aspect-ratio` property, one from inside the calc().
-print("\nFULL SCREEN — the stage's box matches the player's own ratio")
-_css = (ROOT / "skribl" / "static" / "inlineplayer.css").read_text(encoding="utf-8")
+# READ FROM THE DECLARATIONS, never from the prose around them: the copy's
+# calc(), and the call that hands the box to the component.
+print("\nFULL SCREEN — the stage's box is the component's own, not a copy of its ratio")
 _lib = (ROOT / "skribl" / "templates" / "skribl"
         / "skribl_library.html").read_text(encoding="utf-8")
-_box = re.search(r"aspect-ratio:\s*(\d+)\s*/\s*(\d+)", _css)
+_libjs = (ROOT / "skribl" / "static" / "library.js").read_text(encoding="utf-8")
 _stage = re.search(r"calc\(\s*100vh\s*\*\s*(\d+)\s*/\s*(\d+)\s*\)", _lib)
-check("both ratios were actually found, not defaulted",
-      bool(_box) and bool(_stage),
-      f"inlineplayer.css: {_box.groups() if _box else 'NOT FOUND'}; "
-      f"skribl_library.html: {_stage.groups() if _stage else 'NOT FOUND'} — a "
-      f"regex that matches nothing compares nothing and passes")
-check("the stage's fullscreen width uses the player box's own aspect ratio",
-      bool(_box) and bool(_stage) and _box.groups() == _stage.groups(),
-      f"player box {_box.group(1) if _box else '?'}:{_box.group(2) if _box else '?'} "
-      f"against stage rule {_stage.group(1) if _stage else '?'}:"
-      f"{_stage.group(2) if _stage else '?'} — a fullscreen box of one shape "
-      f"around a player of another puts ground where the drawing should be")
+check("the page keeps no copy of the player box's ratio for its full screen",
+      not _stage, f"found calc(100vh * {_stage.group(1)} / {_stage.group(2)}) — a copy "
+      f"nothing keeps in step, and a frame narrower than the screen" if _stage else "")
+_handed = bool(re.search(r"stageBox\.classList\.toggle\(\s*'is-immersive'", _libjs))
+check("...the component's own full-screen state sizes it instead (library.js hands the box over)",
+      _handed, "" if _handed else "library.js no longer puts is-immersive on the stage's "
+      "player — without it the box keeps its page size inside a full-screen stage")
 
 
 # ---------------------------------------------------------------------------
