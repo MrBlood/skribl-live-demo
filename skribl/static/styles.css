@@ -5049,8 +5049,6 @@ body.player-mode .app {
   margin: 0 !important;
 }
 .watch-band .play-scrub { align-self: stretch; }
-.watch-band .flip-speeds { padding: 0; }
-.watch-band .flip-timeline { height: 6px; border-radius: 999px; }
 .watch-row { display: flex; justify-content: center; gap: 12px; }
 
 /* THE WAY IN (lib/watchfull.js makeButton): the link page's four corners, at

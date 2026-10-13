@@ -257,10 +257,16 @@
      nothing else on it. The ground fills the screen instead (flipFullFit), as
      the Pad's and the link page's do. The speeds keep their size in the band,
      and the pointer goes when the controls do (styles.css, CONTROLS THAT STEP
-     BACK). */
+     BACK).
+     IN THE BAND THE PROGRESS LINE IS THE LINK PAGE'S, 6px and round
+     (styles.css .player-progress), and the speed row sits flush: here, under
+     the page's body.playing rules above, which a plain .watch-band rule in
+     styles.css loses to. Two of them did, and the band kept the page's 3px. */
   .watch-full:is(:fullscreen, .is-immersive-page) #pad { border: 0; border-radius: 0; box-shadow: none; }
-  body.playing .watch-band .flip-speeds { justify-content: center; }
+  body.playing .watch-band .flip-speeds { justify-content: center; padding: 0; }
   body.playing .watch-band .flip-speeds .seg { flex: 0 1 360px; }
+  body.playing .watch-band .flip-timeline { height: 6px; border-radius: 999px; }
+  body.playing .watch-band .flip-timeline .player-progress-fill { border-radius: 999px; }
   body.playing .chrome-asleep #pad { cursor: none !important; }
   /* THE DOCK STEPS ASIDE WHILE A FLIP PLAYS, as the Pad's does (styles.css,
      "Replay auto-hide"; the owner's pick, "all yes"): the drawing is the show.

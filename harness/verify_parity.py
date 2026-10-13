@@ -2908,6 +2908,14 @@ with sync_playwright() as p:
             check(f"{_tag}: the band carries the editor's own controls, with Play and a way out painted",
                   _s["band"] == [x[1:] for x in _o["carry"]] + ["watch-row"] and _s["play"] and _s["exit"]
                   and _s["label"] == "Leave full screen" and _s["pressed"] == "true", str(_s))
+            if _route == "/flip":
+                # Flip's page rules (body.playing) outrank a plain band rule: two
+                # did, and the band kept the page's 3px line. It is the link page's.
+                _lk = _q.evaluate("""() => { const p = document.getElementById('flipProgress'), f = p.querySelector('.player-progress-fill');
+                    return { h: getComputedStyle(p).height, r: getComputedStyle(p).borderTopLeftRadius,
+                             fill: getComputedStyle(f).borderTopLeftRadius, pad: getComputedStyle(document.getElementById('flipSpeeds')).paddingLeft }; }""")
+                check(f"{_tag}: in the band, the progress line is the link page's, 6px and round, and the speed row sits flush",
+                      _lk == {"h": "6px", "r": "999px", "fill": "999px", "pad": "0px"}, str(_lk))
             if _route == "/skribl-pad":
                 _gap = []
                 for _k in range(3):
