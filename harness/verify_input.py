@@ -12,17 +12,21 @@ drawLine(), so it renders as a 24-sided polygon. The same circle over 2s gets
 ~120 points and looks smooth.
 
 WHAT THIS SUITE CAN AND CANNOT SEE, said plainly because it changes what the
-assertions are worth. Playwright's synthetic pointer events are not coalesced —
-`getCoalescedEvents()` returns the single event — so the harness CANNOT observe
-the extra samples arriving. Asserting "a fast circle now has more points" here
-would pass on a build with the fix ripped out, which is the exact failure mode
-this project keeps rediscovering.
+assertions are worth. Playwright's mouse sends one event per move, never a
+batch -- `getCoalescedEvents()` returns that single event -- so through it the
+extra samples CANNOT be seen arriving, and "a fast circle now has more points"
+asserted that way would pass on a build with the fix ripped out. That is the
+exact failure mode this project keeps rediscovering.
 
-So this tests the part that IS observable and the part that carries the risk:
-the thinning rule, on the pure function, at the boundaries that matter. The
-filter is what makes the fix affordable, and it is where a regression would be
-silent — too aggressive and the curve comes back faceted, too lax and a fast
-stroke eats the frame's point budget.
+So this tests the thinning rule on the pure function, at the boundaries that
+matter: the filter is what makes the fix affordable, and it is where a
+regression would be silent -- too aggressive and the curve comes back faceted,
+too lax and a fast stroke eats the point budget. AND it hands each editor a
+batch the other way: Chromium honours `coalescedEvents` in the PointerEvent
+constructor, so one pointermove can carry eight samples as a phone delivers
+them, and what each editor STORES from it is observable. The Pad joined Flip on
+this lib long after v230 had fixed Flip alone; the same batch now goes through
+both handlers.
 """
 import os
 import sys
@@ -150,6 +154,73 @@ with sync_playwright() as p:
               f"{land} vs pointer {expect} — a lagged point here means the "
               "stabilizer is being applied to the eraser, which the code says "
               "in a comment that it does not do")
+
+        print("\nA BATCH, AS A PHONE HANDS IT OVER -- the Pad keeps it as Flip does")
+        # One pointermove carrying its samples (the last at the event's own
+        # position, as a browser builds it). What the editor stored from the
+        # move is read before the pen lifts; `want` is each sample through the
+        # editor's own pointer-to-canvas mapping. The first sample sits 20 px
+        # from the pen-down, so thinning from the stored start keeps it.
+        MOVE = """([sel, list, map, down, pts, batch]) => {
+          const el = document.querySelector(sel), r = el.getBoundingClientRect();
+          const L = new Function('return ' + list), M = new Function('e', 'return ' + map + '(e)');
+          const ev = (type, p, extra) => new PointerEvent(type, Object.assign({ bubbles: true, cancelable: true,
+              isPrimary: true, pointerId: 7, pointerType: 'pen', button: 0, buttons: 1,
+              clientX: r.left + p[0], clientY: r.top + p[1], pressure: p[2] }, extra || {}));
+          el.dispatchEvent(ev('pointerdown', down));
+          const before = L().length, samples = pts.map((p) => ev('pointermove', p));
+          el.dispatchEvent(ev('pointermove', pts[pts.length - 1], batch ? { coalescedEvents: samples } : {}));
+          const got = L().slice(before).map((q) => ({ x: q.x, y: q.y, size: q.size }));
+          const want = samples.map((s) => { const w = M(s); return { x: w.x, y: w.y }; });
+          el.dispatchEvent(ev('pointerup', pts[pts.length - 1], { buttons: 0, pressure: 0 }));
+          return { got: got, want: want }; }"""
+        DOWN = [80, 194, 0.5]
+        FAST = [[100 + 20 * i, 200 + 6 * i, round(0.2 + 0.1 * i, 2)] for i in range(8)]   # pressure rising
+        SLOW = [[80 + 0.3 * i, 194, 0.5] for i in range(1, 41)]
+        EDITORS = {"Pad": ("/skribl-pad", "#canvas", "currentStroke", "getPos"),
+                   "Flip": ("/flip", "#pad", "(strokeFrame || frame()).strokes", "pos")}
+
+        def _same(a, b):
+            return abs(a["x"] - b["x"]) < 0.01 and abs(a["y"] - b["y"]) < 0.01
+
+        kept = {}
+        for name, (route, sel, lst, mp) in EDITORS.items():
+            pg = br.new_page(viewport={"width": 1280, "height": 900})
+            perrs = []
+            pg.on("pageerror", lambda e, perrs=perrs: perrs.append(str(e)))
+            browsing.goto(pg, BASE, route)
+            pg.evaluate("() => { localStorage.clear(); }")
+            pg.reload(wait_until="networkidle")
+            pg.wait_for_timeout(700)
+            pg.evaluate("() => { window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide(); }")
+            if name == "Pad":
+                check("lib/inputsamples.js is loaded on the Pad too",
+                      pg.evaluate("() => typeof window.SkriblInputSamples") == "object",
+                      "the Pad's template must list it, or the Pad keeps one point a frame")
+            f = pg.evaluate(MOVE, [sel, lst, mp, DOWN, FAST, True])
+            kept[name] = len(f["got"])
+            check(f"[{name}] a fast batch keeps every sample: 8 samples 20 px apart, 8 points where the pen went",
+                  len(f["got"]) == 8 and all(_same(g, w) for g, w in zip(f["got"], f["want"])),
+                  f"{len(f['got'])} stored: {f['got'][:3]} ... want {f['want'][:3]} ... -- one point here is "
+                  "the polygon the live demo reported, a fast circle stored at the frame rate")
+            sizes = [g["size"] for g in f["got"]]
+            check(f"[{name}] ...each with its own pressure: the line swells along the batch as the pen presses",
+                  len(sizes) == 8 and all(b > a for a, b in zip(sizes, sizes[1:])),
+                  f"widths {sizes} for pressure rising 0.2 to 0.9 -- equal widths mean the batch took "
+                  "the last event's pressure, which flattens every taper")
+            s = pg.evaluate(MOVE, [sel, lst, mp, DOWN, SLOW, True])
+            check(f"[{name}] a slow batch is thinned: 40 samples 0.3 px apart keep under a third, the last where the pen is",
+                  0 < len(s["got"]) < 40 / 3 and _same(s["got"][-1], s["want"][-1]),
+                  f"{len(s['got'])} of 40 kept, last {s['got'][-1:]} vs {s['want'][-1]} -- unthinned, a slow "
+                  "stroke costs several times its points for no visible gain")
+            o = pg.evaluate(MOVE, [sel, lst, mp, DOWN, FAST, False])
+            check(f"[{name}] a move with no batch (older Safari) still stores its one point",
+                  len(o["got"]) == 1 and _same(o["got"][0], o["want"][-1]),
+                  f"{o['got']} vs {o['want'][-1]}")
+            check(f"[{name}] no page error", not perrs, "; ".join(perrs[:2]))
+            pg.close()
+        check("both editors keep the same points from the same batch",
+              kept.get("Pad") == kept.get("Flip") == 8, str(kept))
 
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:
