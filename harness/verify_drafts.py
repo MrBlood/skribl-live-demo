@@ -580,10 +580,12 @@ with sync_playwright() as p:
                   f"keys={made['keys']} chars={made['chars']:,}")
         else:
             # Under the threshold the draft is the plain JSON every reader and
-            # suite has always read, key for key and in the same order.
+            # suite has always read, key for key and in the same order -- with
+            # the canvas's size, the one key added since (SHAPE, below).
             check(f"{_label}: stays the plain draft, key for key",
                   made["keys"] == ["version", "writerId", "savedAt", "baseSnapshot", "strokes", "strokeGroups",
-                                   "redoStrokes", "redoStrokeGroups", "background", "photoMeta", "musicMeta"],
+                                   "redoStrokes", "redoStrokeGroups", "canvasSize", "background", "photoMeta",
+                                   "musicMeta"],
                   str(made["keys"]))
         pg.reload(wait_until="load")
         pg.wait_for_timeout(1200)
