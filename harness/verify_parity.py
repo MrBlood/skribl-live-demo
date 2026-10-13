@@ -2842,7 +2842,7 @@ with sync_playwright() as p:
                  play: paint(w.querySelector('.watch-play')), exit: paint(w.querySelector('.watch-exit')),
                  asleep: w.classList.contains('chrome-asleep'), drawing: paint(c),
                  label: b && b.getAttribute('aria-label'), pressed: b && b.getAttribute('aria-pressed'),
-                 homes: o.carry.map(s => document.querySelector(s).parentElement.className.split(' ')[0]),
+                 homes: o.carry.map(s => { const e = document.querySelector(s); return e && e.parentElement ? e.parentElement.className.split(' ')[0] : null; }),
                  locked: document.documentElement.classList.contains('skribl-immersive'), vw: innerWidth, vh: innerHeight,
                  focus: !!b && document.activeElement === b }; }"""
     NIB = """() => { const n = document.querySelector('.canvas-wrap .player-nib'); if (!n || n.hidden || !(playIndex > 0)) return null;
@@ -3043,6 +3043,27 @@ with sync_playwright() as p:
                 check(f"{_tag}: Escape leaves the stand-in too, and lets the page scroll again",
                       _e0 == "stand-in" and _e["mode"] == "page" and not _e["locked"], f"{_e0} -> {_e['mode']}, locked {_e['locked']}")
             _fc.close()
+
+    # NEVER MAGNIFIED: full screen is the whole drawing. Flip fits its
+    # magnifier on Play; the Pad keeps it, so a Pad zoomed in on a detail goes
+    # full screen as the whole drawing and comes back to it still magnified.
+    _zc = b.new_context(viewport={"width": 1333, "height": 906})
+    _q = _drawn(_zc, "/skribl-pad")
+    _q.evaluate("() => { ZoomView.enable(); ZoomView.setPct(200); }"); _q.wait_for_timeout(400)
+    _q.click("#playBtn"); _q.wait_for_timeout(300)
+    _q.evaluate("() => pausePlayback()"); _q.wait_for_timeout(200)
+    _zo = FW["/skribl-pad"]
+    _zp = _q.evaluate(FS, _zo)
+    _q.click(_zo["btn"]); _q.wait_for_timeout(600)
+    _zs = _q.evaluate(FS, _zo)
+    check("/skribl-pad on a desk, magnified to 200%: full screen is the whole drawing, never magnified",
+          _q.evaluate("() => ZoomView.get().zoom") > 1.9 and _zs["mode"] == "api" and _fills(_zs, _zp), f"page {_zp['canvas']} -> {_zs}")
+    _band(_q, ".watch-exit"); _q.wait_for_timeout(600)
+    _zx = _q.evaluate(FS, _zo)
+    check("/skribl-pad on a desk: ...and back on the page it is magnified as it was",
+          _zx["mode"] == "page" and _zx["canvas"] == _zp["canvas"] and _q.evaluate("() => ZoomView.get().zoom") > 1.9,
+          f"{_zp['canvas']} -> {_zx['canvas']}")
+    _zc.close()
 
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
