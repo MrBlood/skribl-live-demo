@@ -2467,15 +2467,16 @@ with sync_playwright() as _sp4:
               _was and _same and not _pl.evaluate("(id) => window.SkriblInline.find(id).state().racing", _ffid),
               f"racing when settled {_was}, same picture {_same}")
         # Play pressed mid-race waits for the landing, and a second press takes
-        # it back: by a tap on the post, and by its keys.
+        # it back: by a tap on the post, and by its keys. The first from rest,
+        # as the Library seeks a post nobody has played yet: taken back, it is
+        # paused where it was pointed, not "at rest" with its drawing showing.
         _post = f'[data-skribl-id="{_ffid}"]'
-        _pl.click(_post); _pl.wait_for_timeout(300)           # playing again
         _pl.evaluate("(id) => { const p = window.SkriblInline.find(id); p.seek(0.5 * p.state().totalMs); }", _ffid)
         _pl.click(_post); _q1 = _pl.evaluate(_FF_STATE, _ffid)
         _pl.click(_post); _q2 = _pl.evaluate(_FF_STATE, _ffid)
         _pl.evaluate(_FF_LANDED, _ffid); _pl.wait_for_timeout(300)
         _q3 = _pl.evaluate(_FF_STATE, _ffid)
-        check("[in-post] Play pressed mid-race (a tap) says it plays and waits; a second tap takes it back, and the drawing stays where it was pointed",
+        check("[in-post] Play pressed mid-race (a tap, from rest) says it plays and waits; a second tap takes it back, paused where it was pointed",
               _q1[:2] == ["playing", True] and _q2[:2] == ["paused", True] and _q3[:2] == ["paused", False]
               and abs(_q3[2] - 0.5 * _q3[3]) < 1, f"{_q1} {_q2} {_q3}")
         _pl.evaluate("(id) => { const p = window.SkriblInline.find(id); p.seek(0.97 * p.state().totalMs); }", _ffid)
