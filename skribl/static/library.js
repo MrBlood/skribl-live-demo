@@ -388,6 +388,12 @@
       btnFull.title = on ? 'Leave full screen' : 'Full screen';
       btnFull.setAttribute('aria-label', btnFull.title);
       if (fbar) fbar.running(!!on);
+      /* THE DRAWING FILLS THE SCREEN AND PLAYS, as the Gallery's tile does
+         (gallery.js onFs): `is-immersive` is the component's own full-screen
+         state, and it hides the poster, so a drawing not yet started would be
+         an empty screen -- full screen plays it. */
+      stageBox.classList.toggle('is-immersive', !!on);
+      if (on && player && player.state().state !== 'playing') { player.play(); beat(); }
     };
     var imm = window.SkriblImmersive.attach(stageWrap, { onChange: syncFull });
     btnFull.addEventListener('click', function () { imm.toggle(); });

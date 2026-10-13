@@ -517,20 +517,14 @@
     .state b { color: var(--text-2); font-weight: 600; }
     .state a { color: var(--accent-tint); }
     .state[hidden] { display: none; }
-    /* FULL SCREEN: the stage wrap owns the display and the in-post player box
-       is fitted to the shorter side of it. Black ground, as a cinema is.
-
-       THE 16/9 HERE IS THE BOX'S RATIO, NOT THE DRAWING'S, and this comment
-       used to say the opposite -- "the player keeps its own aspect
-       (inlineplayer.css sets it from the payload)". It does not: .skribl-inline
-       carries a hard-coded `aspect-ratio: 16 / 9`, because 16:9 is the widest
-       canvas lib/canvassizes.js offers and anything narrower letterboxes
-       INSIDE that box. So the result on screen is right -- a 1:1 drawing is
-       centred with ground either side, exactly as it is in a feed -- but the
-       reason written here was wrong, and the number below is a COPY of the one
-       in inlineplayer.css. Change that ratio and this line has to move with
-       it; nothing gates the pair, which is the cost of the duplication and is
-       why it is stated rather than left to be discovered. */
+    /* FULL SCREEN: the stage wrap owns the display and the drawing fills it,
+       as the Gallery's does. The page puts the component in its own
+       full-screen state (`is-immersive`, inlineplayer.css; library.js), which
+       sizes the box to the stage and fits the canvas to it at the drawing's
+       own shape. Black ground, as a cinema is. This page used to frame the
+       box at 16:9 in full screen, a copy of the component's ratio, and a
+       drawing stood in it at a fraction of the screen: 302 wide on a 402
+       phone, its authored 816 on a 1333 desk. */
     /* FULL SIZE WITHOUT A FULLSCREEN API (lib/immersive.js). iOS Safari has
        one for <video> and nothing else, so on the device where a drawing is
        smallest there was no way to make it bigger -- this page correctly hid a
@@ -554,8 +548,6 @@
          gets, so with the URL bar showing the bottom of the drawing would sit
          underneath it. */
       width: 100vw; height: 100dvh; }
-    .stageCanvasWrap:fullscreen .skribl-inline,
-    .stageCanvasWrap.is-immersive-page .skribl-inline { width: min(100vw, calc(100vh * 16 / 9)); max-height: 100vh; }
     .full-exit { display: none; position: absolute; top: 14px; right: 14px; z-index: 3; width: 44px; height: 44px;
       background: var(--plate-glass); border-color: var(--plate-edge); color: var(--plate-ink); }
     .stageCanvasWrap:fullscreen .full-exit,

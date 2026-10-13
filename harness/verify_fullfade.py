@@ -12,9 +12,8 @@ lib/chromefade.js, so they are asked in the same words.
 
 WHAT IS ASKED, ON EACH SURFACE AND SCREEN
   * The drawing has the whole screen: nothing is kept under it for the bar,
-    which lies over its foot while it is up. (The link page and the Gallery.
-    The Library frames its drawing in its own 16:9 box, which is its own
-    question.)
+    which lies over its foot while it is up. On the Library too, which used
+    to frame its drawing in a 16:9 box at a fraction of the screen.
   * After a quiet spell while it plays, the bar and the x are not on screen,
     and the drawing plays on.
   * Paused from somewhere other than the screen -- a key, a remote -- they come
@@ -121,10 +120,9 @@ def library_in(pg, fx):
         local: false, has_audio: false, at: Date.now() }]))""", fx)
     browsing.goto(pg, BASE, "/library")
     pg.wait_for_function("() => !document.getElementById('btnFull').disabled", timeout=10000)
+    # Full screen plays it, as the Gallery's does (library.js syncFull).
     pg.evaluate("() => document.getElementById('btnFull').click()")
-    pg.wait_for_timeout(700)
-    pg.evaluate("() => document.querySelector('.stageCanvasWrap .skfull:not(.skfull-card) .skfull-play').click()")
-    pg.wait_for_timeout(500)
+    pg.wait_for_timeout(1200)
 
 
 INLINE = "document.querySelector('{root} .skribl-inline')._skriblInline"
@@ -139,7 +137,7 @@ SURFACES = [
     ("The Library", library_in, ".stageCanvasWrap", ".skfull:not(.skfull-card)", "#fullExit",
      ".skribl-inline-canvas",
      "() => " + INLINE.format(root=".stageCanvasWrap") + ".state().state === 'playing'",
-     "() => " + INLINE.format(root=".stageCanvasWrap") + ".toggle()", False),
+     "() => " + INLINE.format(root=".stageCanvasWrap") + ".toggle()", True),
 ]
 
 
