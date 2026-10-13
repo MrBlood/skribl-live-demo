@@ -716,6 +716,7 @@ rather than a shared rule.
 | `canvasground.js` | Pad+Flip | The ground a new drawing starts on: Paper in the light theme, the dark canvas in the dark one. |
 | `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `canvaszoom.js` | Pad+Flip | The canvas magnifier: zoom, pan, the HUD, its grip, wheel and Space-drag. |
+| `chromefade.js` | Pad+Flip | Controls that step back while a drawing plays, and come back the moment someone reaches for them. |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
 | `composehost.js` | HOST | The pad button's lifecycle, for a HOST's composer. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
@@ -736,7 +737,7 @@ rather than a shared rule.
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
 | `holdtiming.js` | Pad+Flip+player+library+in-post | Per-page timing — the ONE definition of how long a page lasts and how much of a drawing page has been revealed, shared by the Flip editor and every surface that plays one. |
 | `homescreen.js` | Pad+Flip | Getting Skribl onto the Home Screen: the ⋯ row, the one-time banner, and the steps sheet both open. |
-| `immersive.js` | player+library+gallery | Full size on the devices that have a Fullscreen API, and on the one that does not. |
+| `immersive.js` | Pad+Flip+player+library+gallery | Full size on the devices that have a Fullscreen API, and on the one that does not. |
 | `inputsamples.js` | Pad+Flip | The points the browser already captured and the handler was throwing away. |
 | `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things answer at once. |
 | `labels.js` | Pad+Flip+library+gallery | WORDS IN A BUTTON SIT IN THE MIDDLE BY THEIR CAPITALS, in any font. |
@@ -793,6 +794,7 @@ rather than a shared rule.
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |
 | `tooltip.js` | Pad+Flip+library+gallery | Styled tooltips, replacing the browser's. |
 | `videorecord.js` | Pad+Flip | The video both editors make where WebCodecs cannot make an MP4: ONE exporter. |
+| `watchfull.js` | Pad+Flip | Full screen in the editors: the drawing as big as the screen goes, while it plays. |
 | `zoomstep.js` | Pad+Flip | The loop-detail magnification stepper — the ladder, the chrome, and the rule for stepping it, in one place because Pad and Flip both draw this control. |
 <!-- /GEN:MODULE-INDEX -->
 

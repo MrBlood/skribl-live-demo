@@ -1267,7 +1267,7 @@ body.player-mode .app {
    not know `:fullscreen` drops a whole list that names it, and the iPhone is
    the browser this is for. :is() forgives the name it does not know and keeps
    the other. */
-.canvas-wrap:is(:fullscreen, .is-immersive-page) {
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) {
   /* BELT AND BRACES, MEASURED AS SUCH. The Fullscreen spec's UA stylesheet
      sizes the top-layer element with `width: 100% !important` and
      `max-width: none !important`, which outranks these four lines and the
@@ -1300,7 +1300,7 @@ body.player-mode .app {
    it, the wrapper stays the size it was in the page. 100dvh, not 100vh: on a
    phone `vh` is the tallest the viewport ever gets, so with the URL bar
    showing, the transport would sit under it. */
-.canvas-wrap.is-immersive-page {
+:is(.canvas-wrap, .watch-full).is-immersive-page {
   position: fixed !important;
   inset: 0 !important;
   z-index: 2147483000;
@@ -1324,7 +1324,7 @@ body.player-mode .app {
 .player-btn.full-exit { display: none; position: absolute; top: 14px; right: 14px;
   z-index: 3; width: 44px; height: 44px; background: var(--surface-deep);
   border-color: var(--hairline-strong); color: var(--text-primary); }
-.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-btn.full-exit { display: grid; place-items: center; }
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-btn.full-exit { display: grid; place-items: center; }
 
 /* THE TRANSPORT GOES FULL SCREEN WITH THE DRAWING. Full screen renders only
    the top-layer subtree, and the transport row lives in .player-shell below
@@ -1336,7 +1336,7 @@ body.player-mode .app {
    and the button row stay direct flex children of the shell, exactly as they
    were before there was anything around them. */
 .player-bar { display: contents; }
-.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-bar {
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-bar {
   display: flex;
   flex-direction: column;
   gap: 11px;
@@ -1374,8 +1374,8 @@ body.player-mode .app {
    along a 1900px bar reads as a progress meter somebody forgot to finish. Full
    screen is also where a drawing is long enough that seeking to a moment
    matters, and a 340px track is a coarse instrument for it. */
-.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-progress,
-.canvas-wrap:is(:fullscreen, .is-immersive-page) .player-time { max-width: none; }
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-progress,
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-time { max-width: none; }
 
 body.player-mode .canvas-wrap {
   flex: none;

@@ -251,6 +251,17 @@
      playing or paused Flip showed nothing at all (the owner, clicking it to
      pause). */
   body.playing #pad { cursor: default !important; }
+  /* IN FULL SCREEN THE DRAWING IS THE SCREEN (lib/watchfull.js, the Pad's
+     too): the page frame above -- the edge, the rounded corners, the drop
+     shadow -- is for finding the canvas on a page, and full screen has
+     nothing else on it. The ground fills the screen instead (flipFullFit), as
+     the Pad's and the link page's do. The speeds keep their size in the band,
+     and the pointer goes when the controls do (styles.css, CONTROLS THAT STEP
+     BACK). */
+  .watch-full:is(:fullscreen, .is-immersive-page) #pad { border: 0; border-radius: 0; box-shadow: none; }
+  body.playing .watch-band .flip-speeds { justify-content: center; }
+  body.playing .watch-band .flip-speeds .seg { flex: 0 1 360px; }
+  body.playing .chrome-asleep #pad { cursor: none !important; }
   /* THE DOCK STEPS ASIDE WHILE A FLIP PLAYS, as the Pad's does (styles.css,
      "Replay auto-hide"; the owner's pick, "all yes"): the drawing is the show.
      It stayed lit and tappable, and its Undo did nothing mid-play. Opacity
