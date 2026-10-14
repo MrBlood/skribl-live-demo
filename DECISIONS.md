@@ -17326,3 +17326,34 @@ the host's token with its two leading hyphens, and XML forbids a double hyphen
 inside a comment, so the image was invalid and the box stayed empty. The
 at-rest row waits for the blank to load before judging its colour, because an
 empty box passes a colour test for the wrong reason.
+
+## After v322 -- the link player's Play arrow sits in the middle of its circle
+
+The owner's fifth pick from the skribls.net mock: the link page's Play arrow
+gets the fix the full-screen band's already has. It sat 0.56-0.58px right of
+its circle on every screen (check_centring), because the one play every player
+draws (verify_icons) puts the triangle's box in the middle, and a triangle's
+middle, to the eye, is halfway between its box and its mass.
+
+The band (lib/watchfull.js) draws its own arrow 0.58 left. The link player
+cannot without leaving the one play, so it moves the same glyph instead: one
+rule on its primary button, `translate: -0.58px` (0.58 of the glyph's 24 units
+at its 24px), matched by the glyph's path so that Pause, which is symmetric,
+stays put. The rule is the player's controls' own, so the Pad's page, which
+includes the same controls, carries it too. The in-post player's Play disc and
+the tap-to-pause disc have nudges of their own and are not touched.
+
+The player's stylesheet grows by 69 B and stays under its ratchet (36,578 of
+37,250), so nothing there moves; css_live.json names the new selector, as it
+names .player-btn.active, because no scene at rest would find it otherwise.
+
+Flip: not for Flip. Its watch band already draws the arrow this way, and its
+editor's Play is the header's own wider triangle.
+
+CALIBRATION: verify_icons, two new rows at the centring tool's own line, a
+third of a CSS pixel (the section's 0.6 for the eraser would pass the arrow
+before the fix), on the owner's 402x874 at 3x. With the fix: Play
+(-0.13, -0.08), Pause (-0.08, -0.08). The rule taken out: Play (0.50, -0.08),
+red. The rule on every glyph in the button: Pause (-0.63, -0.08), red.
+check_centring on the link page, all six screens: -0.02 to -0.05, from 0.56 and
+0.58 in the list, whose six rows come off it.

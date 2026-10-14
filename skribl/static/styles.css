@@ -5290,6 +5290,12 @@ a.player-btn { text-decoration: none; }
   color: #fff;
 }
 .player-btn.primary svg { width: 24px; height: 24px; }
+/* Play's arrow, centred to the eye: a triangle's middle is halfway between its
+   box and its mass, 0.58 of the glyph's 24 units left of where the one play
+   (verify_icons) puts it -- the rule the full-screen band's arrow is drawn to
+   (lib/watchfull.js). Matched by the glyph, so Pause, which is symmetric,
+   stays put. */
+.player-btn.primary svg:has(path[d^="M8 5"]) { translate: -0.58px; }
 @media (hover: hover) { .player-btn.primary:hover { background: var(--accent-bright); } }
 
 /* A LIT TOGGLE IS THE ONE PILL'S SELECTED LOOK -- its tint and its ink, as
