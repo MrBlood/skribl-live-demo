@@ -182,12 +182,14 @@
     /* THE BAR STEPS BACK WHILE IT PLAYS (lib/chromefade.js; the owner's picks
        for every full screen): after a quiet spell it fades with the page's x,
        and a move, a key or a tap brings it back -- a finger's first tap on a
-       faded screen only that. Up while the drawing is not playing. running()
-       is the page's word that full screen opened or closed; never on a card. */
+       faded screen only that. Up while the drawing is paused part-way or not
+       started; finished, it comes up as the drawing ends and steps back again,
+       so the finished drawing is seen whole. running() is the page's word that
+       full screen opened or closed; never on a card. */
     var fade = opts.variant !== 'skfull-card' && global.SkriblChromeFade
       ? global.SkriblChromeFade.attach(wrap, { tapWakes: true, awake: function () {
           var st = player() && player().state();
-          return !st || st.state !== 'playing';
+          return !st || (st.state !== 'playing' && !(st.totalMs && st.elapsedMs >= st.totalMs));
         } }) : null;
     var fadePlaying = null;
 

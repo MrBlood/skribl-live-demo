@@ -73,11 +73,13 @@
     var exit = button('player-btn full-exit watch-exit', CLOSE, 'Leave full screen');
     var homes = [];
 
-    /* Awake while it is not running -- finished or paused -- and while a menu
-       in the band is open: never fade what someone is in the middle of. */
+    /* Awake while it is paused, and while a menu in the band is open: never
+       fade what someone is in the middle of. Once it stops -- the Pad's take
+       watched to its end -- they come up and step back again, so the finished
+       drawing is seen whole. Flip's play goes round until it is stopped. */
     var fade = global.SkriblChromeFade ? global.SkriblChromeFade.attach(wrap, {
       tapWakes: true,
-      awake: function () { return !o.playing() || o.paused() || !!band.querySelector('[aria-expanded="true"]'); }
+      awake: function () { return o.paused() || !!band.querySelector('[aria-expanded="true"]'); }
     }) : null;
 
     function sync() {
