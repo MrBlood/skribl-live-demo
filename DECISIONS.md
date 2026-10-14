@@ -17180,3 +17180,46 @@ CALIBRATION: verify_fullfade samples a 1.5-second drawing every 200 ms over
 three laps on the phone and the desk, reading the progress bar to prove the
 laps happened. Red on both rows with each half of the fix put back on its
 own: the unguarded wake, and onEnded setting the icon before it repeats.
+
+## After v322 -- a finished drawing is seen whole in full screen
+
+The owner, shown the full-screen A/B (the drawing fills the screen and the
+controls lie over its foot when they are up, against a band kept under the
+drawing for them): keep A, and "I like it" to the one extra offered with it.
+When a drawing finishes, its controls come up as it ends, with Play to see
+it again, and then step back after the next quiet spell like they do while
+it plays, so the finished drawing is seen whole. A tap or a mouse move
+brings them back. Paused part-way, they stay up, as before.
+
+- Finished means STOPPED AT THE END, not stopped after playing. On the link
+  page that is where its progress bar stands (setProgress keeps it), because
+  onEnded puts the playhead back at the start for the next Play. The in-post
+  player says it outright: paused with elapsedMs at totalMs (lib/fullbar.js).
+  A scrub back from the end is a pause like any other, and not started is
+  not finished: the link page's full screen does not play on the way in, so
+  its controls wait there with Play.
+- lib/watchfull.js: the editors are awake only while paused. The Pad's take
+  watched to its end comes up and steps back. Flip's play goes round until
+  it is stopped, so its full screen rarely gets there; stopped by a key, it
+  steps back too.
+- lib/chromefade.js is unchanged in code: the callers poke as a drawing ends
+  (the lap fix before this made that true only for a real end) and their
+  awake() says no. Its note says so.
+- The link page's player grows by 42 B. verify_player_isolation's ledger
+  names the cost, and verify_jsstrip's cap moves with it.
+
+Flip: shared. The rule is in lib/watchfull.js, which both editors use.
+
+CALIBRATION: verify_fullfade watches the link page, the Gallery and the
+Library to the end with repeat off, on the owner's 402x874 phone and on a
+1333x906 desk. Four rows each: they come up as it ends (and were away while
+it played its last seconds), they step back after a quiet spell with
+nothing painted over the drawing, a first tap or a move brings them back
+without starting it again, and a scrub back to the middle keeps them up.
+verify_parity asks the same of the Pad: up as it ends, away after a quiet
+spell, back at a tap or a move. Breaks, each in its own copy: the link
+page's awake() not reading the bar, setProgress not keeping it, lib/fullbar.js
+counting the end as paused, and lib/watchfull.js counting stopped as awake,
+each red on its own surface's rows. Two more broke the other way, treating a
+pause part-way as finished, in lib/fullbar.js and on the link page, and the
+"paused, they stay up" and scrub-back rows went red.
