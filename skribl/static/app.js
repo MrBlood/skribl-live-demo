@@ -4041,6 +4041,7 @@ function showPlayerError(msg, canRetry) {
   let strokeComp = null; // wet/dry stroke compositor for low-opacity replay (flag-gated)
   let muted = false;
   let _fade = null;      // the controls stepping back in full screen (below)
+  let barAt = 0;         // where the progress bar stands, 0 to 1 (setProgress)
   // lib/seekcache.js: copies of the canvas a seek starts from (see editorSeek).
   const seekCache = (!isFlip && timeline.length && window.SkriblSeekCache)
     ? SkriblSeekCache.make(canvas, timeline) : null;
@@ -4056,6 +4057,7 @@ function showPlayerError(msg, canRetry) {
     if (_fade && !running) _fade.poke();
   }
   function setProgress(frac) {
+    barAt = frac;
     if (pFill) pFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
     if (pAt) pAt.textContent = clock(atMs(Math.max(0, Math.min(1, frac)) * totalMs));
     if (strip) strip.paint(frac);
@@ -4521,9 +4523,12 @@ function showPlayerError(msg, canRetry) {
     // picks for every full screen): after a quiet spell the band and the x
     // fade and the drawing has the whole screen; a move, a key or a tap brings
     // them back, a finger's first tap on a faded screen only that. Up while it
-    // is paused or finished, or while the speed menu is open.
+    // is paused part-way, or not started, or while the speed menu is open.
+    // Finished -- stopped with the bar at its end -- they come up as it ends
+    // and step back again, so the finished drawing is seen whole (the owner,
+    // after the full-screen A/B). The in-post player's rule (lib/fullbar.js).
     _fade = window.SkriblChromeFade && SkriblChromeFade.attach(canvasWrap, { tapWakes: true,
-      awake: () => !(running || queued) || !!(_bar && _bar.querySelector('[aria-expanded="true"]')) });
+      awake: () => !(running || queued) && barAt < 1 || !!(_bar && _bar.querySelector('[aria-expanded="true"]')) });
     // `on` from the module, which answers for both ways in: our wrapper as
     // the fullscreen element, or its pinned CSS state.
     const _syncFull = on => {

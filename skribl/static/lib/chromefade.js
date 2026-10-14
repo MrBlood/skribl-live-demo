@@ -15,8 +15,13 @@
  * Library's bar), so a surface cannot fade differently by accident.
  *
  * NEVER ASLEEP WHEN IT WOULD STRAND SOMEONE. `awake()` is the caller's: a
- * paused or finished drawing keeps its controls, so does an open menu. A
+ * drawing paused part-way keeps its controls, so does an open menu. A
  * key, a focus moving in, a press and a mouse that moves all wake it.
+ *
+ * A FINISHED DRAWING IS SEEN WHOLE (the owner, after the full-screen A/B: the
+ * drawing fills the screen, so the controls lie over its foot when they are
+ * up). The caller pokes as it ends, so they come up with Play to see it again,
+ * and its awake() says no, so they step back after the next quiet spell.
  *
  * THE FIRST TAP ON A FADED SCREEN ONLY BRINGS THEM BACK (the owner: "matching
  * how video apps work"), wherever `tapWakes` asks for it: a finger's press

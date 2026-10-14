@@ -825,7 +825,11 @@ with sync_playwright() as sp:
     #   the controls only when the drawing stops, where it woke them on every
     #   play-icon change, and a lap no longer sets the icon, so a drawing that
     #   repeats keeps them away from lap to lap. 151,767 measured.
-    BYTES_RATCHET, BYTES_TARGET = 151_770, 153_800
+    # RAISED (the owner, after the full-screen A/B: a finished drawing seen
+    #   whole), for one named cost: +42 B -- app.js keeps where its progress
+    #   bar stands, so its fade can tell a drawing stopped at its end, whose
+    #   controls step back, from one paused part-way. 151,809 measured.
+    BYTES_RATCHET, BYTES_TARGET = 151_820, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

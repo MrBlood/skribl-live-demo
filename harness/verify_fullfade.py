@@ -22,6 +22,13 @@ WHAT IS ASKED, ON EACH SURFACE AND SCREEN
     it. On a desk a mouse's move does that, and its click is a pause.
   * With them up, the next tap pauses, as it does on the page.
   * Paused, they stay up past the next quiet spell.
+  * Watched to its end with repeat off, they come up as it ends, then step
+    back after a quiet spell like any other, so the finished drawing is seen
+    whole (the owner, after the full-screen A/B: the drawing fills the screen,
+    so when they are up they lie over its foot). A first tap or a move brings
+    them back without starting it again, and a scrub back from there is a
+    pause like any other: finished means stopped AT THE END, not stopped
+    after playing.
   * On the link page, a short drawing that repeats keeps them away from lap
     to lap. Every lap used to bring them back, which on a drawing shorter
     than the quiet spell meant they never left.
@@ -130,6 +137,23 @@ def library_in(pg, fx):
 
 
 INLINE = "document.querySelector('{root} .skribl-inline')._skriblInline"
+# Per surface: finished (stopped at the end), the way to its end (repeat off,
+# five seconds of the nine left, playing), and a scrub back to the middle.
+_IN = {r: INLINE.format(root=r) for r in ("[data-fade-probe]", ".stageCanvasWrap")}
+ENDS = {
+    "The link page": (
+        "() => document.getElementById('playerPlayBtn').getAttribute('aria-label') === 'Play'"
+        " && parseFloat(document.getElementById('playerProgressFill').style.width) >= 99.9",
+        """async () => { const l = document.getElementById('playerLoopBtn');
+            if (l.getAttribute('aria-pressed') === 'true') l.click();
+            await window.__skriblPlayerSeek(4 / 9); document.getElementById('playerPlayBtn').click(); }""",
+        "() => window.__skriblPlayerSeek(0.5)"),
+}
+for _name, _root in (("The Gallery", "[data-fade-probe]"), ("The Library", ".stageCanvasWrap")):
+    ENDS[_name] = (
+        "() => { const s = " + _IN[_root] + ".state(); return s.state === 'paused' && s.totalMs > 0 && s.elapsedMs >= s.totalMs; }",
+        "() => { const p = " + _IN[_root] + "; p.setLoop(false); p.seek(p.state().totalMs * 4 / 9); p.toggle(); }",
+        "() => { const p = " + _IN[_root] + "; p.seek(p.state().totalMs / 2); }")
 SURFACES = [
     ("The link page", link_in, ".canvas-wrap", "#playerBar", "#playerFullExit", ".canvas-wrap > canvas",
      "() => document.getElementById('playerPlayBtn').getAttribute('aria-label') === 'Pause'",
@@ -206,6 +230,37 @@ def walk(b, fx, name, go_in, root, bar, x, cv, playing, toggle, whole, finger):
     later = st()
     check(f"{who}: paused, they stay up past the next quiet spell",
           not later["asleep"] and later["bar"] and not later["playing"], str(later))
+    fin, to_end, back = ENDS[name]
+    pg.evaluate(to_end)
+    pg.wait_for_timeout(QUIET_MS)
+    last = st()                        # its last seconds, playing, with them away
+    for _ in range(60):
+        if pg.evaluate(fin):
+            break
+        pg.wait_for_timeout(100)
+    pg.wait_for_timeout(400)           # the bar's beat sees it on its next turn
+    ends = st()
+    check(f"{who}: watched to its end, they come up as it ends (away while it played its last seconds)",
+          last["asleep"] and last["playing"] and pg.evaluate(fin) and not ends["asleep"] and ends["bar"],
+          f"last seconds {last}; ended {ends}")
+    pg.wait_for_timeout(QUIET_MS)
+    rest = st()
+    check(f"{who}: finished, they step back after a quiet spell, and the finished drawing is whole",
+          rest["asleep"] and rest["bar"] is False and rest["x"] is False and pg.evaluate(fin), str(rest))
+    if finger:
+        pg.touchscreen.tap(px, py)
+    else:
+        pg.mouse.move(px, py)
+    pg.wait_for_timeout(400)
+    again = st()
+    check(f"{who}: " + ("a finger's first tap on the finished drawing brings them back and does not start it again"
+                        if finger else "a mouse that moves over the finished drawing brings them back"),
+          not again["asleep"] and again["bar"] and pg.evaluate(fin), str(again))
+    pg.evaluate(back)
+    pg.wait_for_timeout(QUIET_MS)
+    scrub = st()
+    check(f"{who}: from there, a scrub back to the middle is a pause: they stay up past a quiet spell",
+          not scrub["asleep"] and scrub["bar"] and not scrub["playing"] and not pg.evaluate(fin), str(scrub))
     check(f"{who}: no page errors", not errs, "; ".join(errs[:2]))
     ctx.close()
 

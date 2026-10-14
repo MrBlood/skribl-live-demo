@@ -3023,19 +3023,35 @@ with sync_playwright() as p:
                       _q.evaluate("() => playPaused") and not _k["asleep"] and _k["play"], str(_k))
                 _q.mouse.down(); _q.mouse.up(); _q.wait_for_timeout(300)    # and on again, as it was
             if _route == "/skribl-pad":
-                # WATCHED TO ITS END, in full screen: the finished drawing keeps
-                # its controls, its Play says so, and plays it again from the top.
+                # WATCHED TO ITS END, in full screen: it stays full screen with
+                # its controls up and Play to see it again; then they step back
+                # after a quiet spell, so the finished drawing is seen whole
+                # (the owner, after the full-screen A/B); a tap or a move brings
+                # them back without playing it; and Play plays it from the top.
                 _q.evaluate("() => setPreviewSpeed(16)")
                 for _w8 in range(40):
                     if not _q.evaluate("() => playing"):
                         break
                     _q.wait_for_timeout(200)
-                _q.wait_for_timeout(2800)      # longer than a quiet spell
+                _q.wait_for_timeout(300)
                 _f = _q.evaluate(FS, _o)
                 _f["label"] = _q.evaluate("() => document.querySelector('.watch-play').getAttribute('aria-label')")
                 check(f"{_tag}: watched to its end, it stays full screen with its controls up and Play to see it again",
                       not _q.evaluate("() => playing") and _f["mode"] != "page" and not _f["asleep"] and _f["play"]
                       and _f["exit"] and _f["label"] == "Play", str(_f))
+                _q.wait_for_timeout(2800)      # longer than a quiet spell
+                _r8 = _q.evaluate(FS, _o)
+                check(f"{_tag}: ...then they step back after a quiet spell, and the finished drawing is whole",
+                      not _q.evaluate("() => playing") and _r8["mode"] != "page" and _r8["asleep"]
+                      and not _r8["play"] and not _r8["exit"] and _r8["drawing"], str(_r8))
+                if _dev == "phone":
+                    _q.touchscreen.tap(*_mid)
+                else:
+                    _q.mouse.move(_mid[0] + 30, _mid[1] + 20)
+                _q.wait_for_timeout(400)
+                _w8 = _q.evaluate(FS, _o)
+                check(f"{_tag}: ...and a " + ("tap" if _dev == "phone" else "mouse that moves") + " brings them back, without playing it",
+                      not _q.evaluate("() => playing") and not _w8["asleep"] and _w8["play"] and _w8["exit"], str(_w8))
                 _q.evaluate("() => setPreviewSpeed(0.25)")
                 _band(_q, ".watch-play"); _q.wait_for_timeout(400)
                 check(f"{_tag}: ...and Play in the band plays it again, from the top",
@@ -3051,7 +3067,7 @@ with sync_playwright() as p:
                 _q.mouse.move(_bx["x"] + _bx["width"] * 0.6, _bx["y"] + _bx["height"] * 0.55, steps=6); _q.mouse.up()
                 _q.wait_for_timeout(300)
                 _r = _q.evaluate(FS, _o)
-                check(f"{_tag}: once it stops, a stroke on the drawing draws nothing and the controls stay up",
+                check(f"{_tag}: once it stops, a stroke on the drawing draws nothing, and the controls are up",
                       _q.evaluate(POINTS) == _n0 and not _r["asleep"] and _r["play"], f"points {_n0} -> {_q.evaluate(POINTS)}; {_r}")
                 # Playing again from the band, so the page it goes back to is
                 # the one it left: Flip's speed row only shows while it plays.
