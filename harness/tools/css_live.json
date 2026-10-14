@@ -67,6 +67,7 @@
     ".player-btn.full-exit",
     ".player-btn.primary",
     ".player-btn.primary svg",
+    ".player-btn.primary svg:has(path[d^=\"M8 5\"])",
     ".player-btn.primary:hover",
     ".player-btn:active",
     ".player-btn:hover",

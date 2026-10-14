@@ -31,8 +31,10 @@ this suite finds the reasoning instead of a failing assertion inviting them to
 repeat the mistake.
 """
 import io
+import json
 import os
 import sys
+import urllib.request
 
 from PIL import Image
 from assertions import make_check
@@ -350,6 +352,42 @@ with sync_playwright() as _pc:
                       _h is not None and abs(_h[1]) <= 0.6, f"optical offset {_h} px")
         _pg.close()
     _bc.close()
+
+
+# THE LINK PLAYER'S PLAY, BY ITS INK (the owner's pick after v322: "the same
+# fix the full-screen bar's arrow already has"). The one play every player
+# draws puts the triangle's box in the middle, and its middle, to the eye, is
+# halfway between its box and its mass, so the arrow read 0.56-0.58px right of
+# its circle on every screen (check_centring). The link player moves the same
+# glyph 0.58px left with one rule matched by its path, so the one play above
+# still holds and Pause, which is symmetric, stays put. Judged at the centring
+# tool's own line, a third of a CSS pixel: this section's 0.6 for the eraser
+# would pass the arrow before the fix.
+print("\nTHE LINK PLAYER'S PLAY — the arrow sits in the middle of its circle by its ink, and Pause does not move")
+_pts = [{"x": 120 + i * 6, "y": 300 + (i % 7) * 4, "color": "#1f1b2e", "size": 6, "t": i * 40,
+         "erase": False, "start": i == 0} for i in range(240)]
+_req = urllib.request.Request(BASE + "/api/skribls", method="POST", headers={"Content-Type": "application/json"},
+                              data=json.dumps({"title": "Arrow probe", "schemaVersion": 2,
+                                               "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+                                               "frames": [{"strokes": _pts, "strokeGroups": [len(_pts)],
+                                                           "background": {"color": "#f6f2ea"}}]}).encode())
+_url = json.loads(urllib.request.urlopen(_req, timeout=20).read())["url"]
+with sync_playwright() as _pp:
+    _bp = _pp.chromium.launch()
+    _cp = _bp.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=3, is_mobile=True, has_touch=True)
+    _pg = _cp.new_page(); browsing.goto(_pg, BASE, _url)
+    _pg.wait_for_selector("#playerPlayBtn svg")
+    _pg.add_style_tag(content=_HIDE)
+    _pl = _optical(_pg, "#playerPlayBtn")
+    check("the link player's Play arrow sits in the middle of its circle by its ink, within a third of a pixel",
+          _pl is not None and abs(_pl[0]) <= 1 / 3 and abs(_pl[1]) <= 1 / 3, f"optical offset {_pl} px")
+    _pg.click("#playerPlayBtn")
+    _pg.wait_for_function("() => document.querySelector('#playerPlayBtn').getAttribute('aria-label') === 'Pause'")
+    _pg.wait_for_timeout(300)
+    _pa = _optical(_pg, "#playerPlayBtn")
+    check("...and its Pause stays in the middle: the nudge is the arrow's alone",
+          _pa is not None and abs(_pa[0]) <= 1 / 3 and abs(_pa[1]) <= 1 / 3, f"optical offset {_pa} px")
+    _bp.close()
 
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
