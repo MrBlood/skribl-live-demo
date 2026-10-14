@@ -3294,6 +3294,156 @@ with sync_playwright() as _spc:
     _bc.close()
 
 
+print("\nGALLERY — a drawing taken down is not on the gallery you come Back to")
+# THE OWNER ASKED whether a drawing deleted in the Library should leave the
+# Gallery. It does: Delete removes the post and every later listing omits it.
+# But Gallery -> Library -> Delete -> Back showed it again, two ways:
+#
+#   * THE LISTING CAME FROM THE BROWSER'S OWN COPY. It carried no
+#     Cache-Control, and a history load prefers a stored response, fresh or
+#     not: the Back read GET /api/skribls from disk (fromDiskCache, measured)
+#     and listed the deleted post. no-store is the one directive a history
+#     load cannot reuse.
+#   * A PAGE RESTORED FROM MEMORY RUNS NOTHING AGAIN. Safari and Chrome keep
+#     whole pages for Back (the back-forward cache). Headless Chromium will
+#     not (BackForwardCacheDisabledForDelegate), so the restore is driven with
+#     the event a browser fires for one, pageshow with persisted set.
+#     NOT TESTED HERE: a real restore, in WebKit or in any browser.
+#
+# The partial-answer rows hand the page a crafted listing, because only an
+# answer that stops short can show which absences the page may believe.
+def _owned_post(title):
+    """A public post and the key that can take it down."""
+    pts = [{"x": 120 + i * 40, "y": 140 + (i % 3) * 30, "color": "#7c5cff",
+            "size": 12, "t": i * 120} for i in range(12)]
+    body = {"title": title, "version": 2, "schemaVersion": 2, "visibility": "public",
+            "playbackMode": "replay", "frames": [{"strokes": pts, "strokeGroups": [len(pts)]}],
+            "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+    req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        j = json.loads(r.read().decode())
+    return {"id": j["id"], "url": j["url"], "title": title, "kind": "pad", "pages": 1,
+            "visibility": "public", "tok": j["deleteToken"], "local": False,
+            "has_audio": False, "at": 0}
+
+
+_TILES = "() => Array.from(document.querySelectorAll('#galleryList > article.tile')).map(t => t.dataset.id)"
+_SETTLED = ("() => ({ ids: Array.from(document.querySelectorAll('#galleryList > article.tile'))"
+            ".map(t => t.dataset.id), idle: !document.getElementById('galleryMore').disabled })")
+# What the Library's own Delete sends, sent from the page (the gallery
+# carries the token the Library would).
+_TAKE_DOWN = """async ([id, tok, how]) => {
+    const h = { 'Content-Type': 'application/json' };
+    const csrf = document.body.getAttribute('data-skribl-csrf');
+    if (csrf) h['X-Skribl-CSRF'] = csrf;
+    const body = how === 'delete' ? { deleteToken: tok } : { visibility: 'unlisted', deleteToken: tok };
+    const r = await fetch(document.body.getAttribute('data-skribl-api') + '/' + id,
+      { method: how === 'delete' ? 'DELETE' : 'PATCH', headers: h, credentials: 'same-origin',
+        body: JSON.stringify(body) });
+    return r.status; }"""
+_RESTORE = "() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))"
+
+with urllib.request.urlopen(BASE + "/api/skribls?limit=1", timeout=20) as _r:
+    _cc = _r.headers.get("Cache-Control")
+check("the listing is never stored: Cache-Control private, no-store",
+      _cc == "private, no-store",
+      f"{_cc!r} -- with no Cache-Control a Back load reuses the browser's copy "
+      f"of the listing, fresh or not, and an author's own listing carries their "
+      f"private posts, which no shared cache may keep (as PF-017 said of the payload)")
+
+with sync_playwright() as _spb:
+    _bb = _spb.chromium.launch()
+    _cb = _bb.new_context(viewport={"width": 1280, "height": 900})
+    _pb = _cb.new_page()
+    _stay = _owned_post(TAG + " back stays")
+    _gone = _owned_post(TAG + " back")
+    _both = f"[{json.dumps(_stay['id'])}, {json.dumps(_gone['id'])}]"
+    browsing.goto(_pb, BASE, "/gallery")
+    _before = _until(_pb, _SETTLED, f"v.idle && {_both}.every(i => v.ids.includes(i))")
+    check("the gallery lists two new public drawings (the Back row's precondition)",
+          all(i in (_before or {}).get("ids", []) for i in (_stay["id"], _gone["id"])), str(_before))
+    _pb.evaluate("(e) => localStorage.setItem('skribl_posted_v1', JSON.stringify(e))", [_gone])
+    browsing.goto(_pb, BASE, "/library")
+    _del = f'.posted-row[data-id="{_gone["id"]}"] .posted-delete'
+    _pb.wait_for_selector(_del, timeout=15000)
+    _pb.click(_del)
+    _pb.wait_for_timeout(250)
+    _pb.click(_del)
+    _pb.wait_for_function("(id) => !document.querySelector('.posted-row[data-id=\"' + id + '\"]')",
+                          arg=_gone["id"], timeout=15000)
+    _pb.go_back()
+    _pb.wait_for_function("() => location.pathname.endsWith('/gallery') && "
+                          "!!(window.__skriblBoot && window.__skriblBoot.gallery)", timeout=15000)
+    _back = _until(_pb, _SETTLED, f"v.idle && v.ids.includes({json.dumps(_stay['id'])})")
+    check("Back from deleting it in the Library: the one that stayed is listed, the deleted one is not",
+          bool(_back) and _stay["id"] in _back.get("ids", []) and _gone["id"] not in _back.get("ids", []),
+          f"{_back!r} -- the deleted drawing came back with the page")
+
+    # RESTORED FROM MEMORY: fresh drawings; one is deleted and one made link
+    # only behind the page's back, then the browser's restore event. Three
+    # more are posted first so the short answers below have four tiles to
+    # work on even on an empty database.
+    for _w in ("one", "two", "three"):
+        _owned_post(TAG + " restore filler " + _w)
+    _a, _b, _k = (_owned_post(TAG + " restore " + w) for w in ("gone", "linkonly", "kept"))
+    browsing.goto(_pb, BASE, "/gallery")
+    _until(_pb, _SETTLED, f"v.idle && [{json.dumps(_a['id'])}, {json.dumps(_k['id'])}]"
+                          f".every(i => v.ids.includes(i))")
+    _pb.evaluate("() => document.querySelectorAll('#galleryList > article.tile')"
+                 ".forEach((t, i) => { t.__seen = i; })")
+    _order = _pb.evaluate(_TILES)
+    _st = [_pb.evaluate(_TAKE_DOWN, [_a["id"], _a["tok"], "delete"]),
+           _pb.evaluate(_TAKE_DOWN, [_b["id"], _b["tok"], "patch"])]
+    _pb.evaluate(_RESTORE)
+    _after = _until(_pb, _TILES, f"!v.includes({json.dumps(_a['id'])}) && !v.includes({json.dumps(_b['id'])})")
+    check("restored from memory: the deleted tile and the link-only tile come off; the rest stay",
+          _st == [204, 200] and _after == [i for i in _order if i not in (_a["id"], _b["id"])],
+          f"take-downs answered {_st}; before {len(_order)} tiles, after {len(_after or [])}: "
+          f"gone listed {_a['id'] in (_after or [])}, link-only listed {_b['id'] in (_after or [])}")
+    _same = _pb.evaluate("() => Array.from(document.querySelectorAll('#galleryList > article.tile'))"
+                         ".every(t => typeof t.__seen === 'number')")
+    check("...and the tiles that stay are the same tiles: nothing is rebuilt, so the place is kept",
+          _same is True, "a tile without its mark was built again -- a reload of the grid, which "
+                         "empties it and loses where somebody was")
+
+    # AN ANSWER THAT STOPS SHORT. Newest first, a missing tile ABOVE one the
+    # answer names is gone; one below the last it names is not known.
+    _shown = _pb.evaluate(_TILES)
+    check("the short answers have four tiles to work on (their precondition)",
+          len(_shown) >= 4, f"{len(_shown)} tiles")
+    _hole, _tail = _shown[1], _shown[-1]
+    _crafted = {"items": [{"id": i} for i in _shown if i not in (_hole, _tail)], "next_cursor": "more"}
+    _pb.route("**/api/skribls?*", lambda route: route.fulfill(
+        status=200, content_type="application/json", body=json.dumps(_crafted)))
+    _pb.evaluate(_RESTORE)
+    _short = _until(_pb, _TILES, f"!v.includes({json.dumps(_hole)})")
+    check("a short answer, newest first: the tile above a named one comes off, the last one stays",
+          _short is not None and _hole not in _short and _tail in _short,
+          f"hole listed {_hole in (_short or [])}, tail listed {_tail in (_short or [])}")
+    _pb.unroute("**/api/skribls?*")
+    _pb.click(".tabs .tab[data-sort='hot']")
+    _hot = _until(_pb, _SETTLED, "v.idle && v.ids.length > 2")
+    _hids = (_hot or {}).get("ids", [])
+    _crafted = {"items": [{"id": i} for i in _hids[:1] + _hids[2:]], "next_cursor": "more"}
+    _pb.route("**/api/skribls?*", lambda route: route.fulfill(
+        status=200, content_type="application/json", body=json.dumps(_crafted)))
+    _pb.evaluate(_RESTORE)
+    _pb.wait_for_timeout(700)
+    check("...and under Hot, which reorders by plays, only the whole list can say: nothing comes off",
+          len(_hids) > 2 and _pb.evaluate(_TILES) == _hids,
+          f"{len(_hids)} tiles; {_pb.evaluate(_TILES) == _hids}")
+    _pb.unroute("**/api/skribls?*")
+
+    _asked = []
+    _pb.on("request", lambda r: _asked.append(r.url) if "/api/skribls?" in r.url else None)
+    _pb.evaluate("() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false }))")
+    _pb.wait_for_timeout(700)
+    check("an ordinary pageshow asks nothing: the first load already did",
+          _asked == [], str(_asked))
+    _bb.close()
+
+
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")
 sys.exit(0 if passed == len(results) else 1)

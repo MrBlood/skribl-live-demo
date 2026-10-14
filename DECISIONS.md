@@ -17357,3 +17357,53 @@ before the fix), on the owner's 402x874 at 3x. With the fix: Play
 red. The rule on every glyph in the button: Pause (-0.63, -0.08), red.
 check_centring on the link page, all six screens: -0.02 to -0.05, from 0.56 and
 0.58 in the list, whose six rows come off it.
+
+## After v322 -- a drawing deleted in the Library is gone from the Gallery you come Back to
+
+The owner asked whether a drawing deleted from the Library should leave the
+Gallery too. It does, and always did: Delete takes the post down for everyone,
+and every listing after it leaves the drawing out. Driven on a local server:
+two public drawings and one link only, Delete on the first, and the server
+answers 404 for it and its link page while a fresh Gallery lists the second.
+
+One path brought it back. The Gallery, then the Library in the same tab,
+Delete, then Back: the Gallery showed the deleted drawing again, looking
+playable until it was tapped (the tap said "This drawing isn't here
+anymore."). The listing sent no Cache-Control, and a history load prefers a
+stored response whether or not it is fresh: Chromium read GET /api/skribls
+from disk (fromDiskCache, measured) and never asked the server.
+
+* The listing sends `Cache-Control: private, no-store`, the one directive a
+  history load cannot reuse. It is also the payload GET's rule since PF-017:
+  the listing is read through visibility (an author's own listing carries
+  their private posts, and a host's feed_filter decides per viewer), so no
+  shared cache may keep it either.
+* A Gallery restored from memory (the back-forward cache Safari and Chrome
+  keep for Back) runs none of its script again, so no-store cannot reach it.
+  On `pageshow` with `persisted` it asks the listing again and takes off the
+  tiles the answer no longer names. Nothing is added and nothing else is
+  rebuilt, so the place in the grid is kept. An absence counts only where the
+  answer covers the tile: the whole list came back, or, newest first, the tile
+  sits above one the answer names. Hot reorders by plays, so there only the
+  whole list can say.
+
+What stays as it was, on purpose: the eye switch (In gallery, or link only)
+takes a drawing out of the Gallery and keeps its link working; Clear list
+forgets this browser's list and takes nothing down; and the Library offers
+Delete only for a drawing this browser holds the key for. A Gallery open on
+another device keeps a deleted drawing until it reloads, and a tap on it says
+it isn't here anymore.
+
+NOT TESTED HERE: a real back-forward restore. Headless Chromium refuses one
+(BackForwardCacheDisabledForDelegate) and there is no WebKit, so the restore
+is driven with the event a browser fires for one.
+
+Flip: shared. The Gallery and the Library list Pad and Flip drawings alike.
+
+CALIBRATION: verify_gallery, "a drawing taken down", nine rows. On main, four
+are red: the header, the Back row, the restore row and the short answer. Each
+part of the fix broken on its own: no-store off (the header and Back rows red),
+no restore handler (restore, short answer), every absence believed (short
+answer, Hot), any pageshow (the ordinary pageshow row), the grid reloaded
+instead of pruned (restore, same tiles, short answer, Hot), Hot read like New
+(Hot). Each red on its own rows, and all nine green with the fix.

@@ -1109,7 +1109,18 @@ def register_routes(bp, *, index_route=False):
             nxt = _encode_cursor(rows[-1]) if (rows and has_more) else None
 
         _attach_authors(items)
-        return jsonify({"items": items, "next_cursor": nxt})
+        resp = jsonify({"items": items, "next_cursor": nxt})
+        # NEVER STORED, for two reasons. It is read through visibility (an
+        # author's own listing carries their private posts, and a host's
+        # feed_filter decides per viewer), so no cache another viewer shares
+        # may keep it, as PF-017 said of the payload GET. And the browser kept
+        # its OWN copy: a Back to the gallery read this from disk without
+        # asking, because a history load prefers a stored response whether or
+        # not it is fresh, so a drawing deleted in the Library a moment before
+        # was listed again. no-store is the one directive a history load cannot
+        # reuse. (verify_gallery, "a drawing taken down".)
+        resp.headers["Cache-Control"] = "private, no-store"
+        return resp
 
     def _attach_authors(items):
         """Describe each item's author, resolving each DISTINCT user_id once.
