@@ -122,11 +122,15 @@
   border: 2px solid rgba(124, 92, 255, 0.65);
 }
 
+/* Centred to the eye, which is LEFT of its box: a triangle's middle, to the
+   eye, is halfway between its box and its mass, 0.583 of the glyph's 24 units
+   (2.43%). This was a 2px margin-left, which moved it the other way: 1.4px
+   right of its disc (verify_icons, EVERY PLAY). */
 .skribl-inline-play svg {
   width: 22px;
   height: 22px;
   fill: #7c5cff;
-  margin-left: 2px;
+  translate: -2.43%;
 }
 
 @media (hover: hover) {
