@@ -203,10 +203,12 @@ the viewer's own choice if one is stored, else their device's light or dark
 setting.
 
 **What a viewer gets.** Tap to play, tap to pause. The drawing redraws itself
-with a progress hairline along the bottom edge and a nib at the pen. It plays
-at the speed its author chose for viewers (the post's `playSpeed`: Auto, as
-drawn, Fit or a rate), as `/s/<id>` starts. Two controls, and only two — no
-scrub, no speed control, no frame-step; those live on `/s/<id>`:
+with a nib at the pen. It plays at the speed its author chose for viewers (the
+post's `playSpeed`: Auto, as drawn, Fit or a rate), as `/s/<id>` starts, and
+the line under it scrubs and changes the speed (¼× to 16×, and Fit). With
+`line=False` there is no scrubbing or speed in the post -- those live on
+`/s/<id>` -- and a hairline along the bottom edge shows the progress instead.
+Either way there are two buttons, beside the scrubber or on the drawing:
 
 - **Mute**, **page-wide**, and sound starts off (muted): sound is environmental, so
   unmuting one post unmutes the feed for that session (`sessionStorage`).
