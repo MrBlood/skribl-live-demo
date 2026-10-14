@@ -17407,3 +17407,79 @@ no restore handler (restore, short answer), every absence believed (short
 answer, Hot), any pageshow (the ordinary pageshow row), the grid reloaded
 instead of pruned (restore, same tiles, short answer, Hot), Hot read like New
 (Hot). Each red on its own rows, and all nine green with the fix.
+
+## After v322 -- every Play arrow sits in the middle of its disc
+
+The owner's yes to the two steps offered after #466: the same arrow fix for the
+Library's, the Gallery's and Flip's Play, and the Play inside a post measured.
+Read by its ink at the owner's 402x874, 3x (the Gallery card on a desk too),
+each was off to the right:
+
+    the Library's Play                          0.46
+    the full-screen bar (Library and Gallery)   0.95, and 0.51 low
+    the Gallery card's Play                     0.81, and 0.6 high
+    the Play inside a post                      1.51
+    the paused Play (tap to pause)              2.56
+
+The post's is the one every Gallery tile and every skribls.net post shows, and
+the paused Play is the one the Pad, Flip and the link page show on their canvas.
+Neither is a control, so the centring tool never reached them.
+
+Three causes, three fixes:
+
+* The one play glyph puts its box in the middle, and its middle, to the eye, is
+  halfway between its box and its mass: 0.583 of its 24 units right, 2.43% of
+  its width. The Library's, the card's and the bar's Play move it back with
+  `translate: -2.43%`, matched by the glyph's path so Pause, which is
+  symmetric, stays put: #466's rule for the link player, as a share of the
+  glyph so one rule serves every size.
+* Both discs carried a nudge the other way: the post's a 2px margin-left, the
+  paused one 3px. Both give way to the same translate.
+* The bar and the card drew the mark on a half pixel: (48 - 19) / 2 and
+  (40 - 15) / 2. A renderer rounds a half pixel one way or the other (this one
+  to whole CSS pixels, a phone to a third of one), so even the bar's Pause read
+  half a pixel off. They draw 20 and 16 now.
+
+After: every one within a tenth of a pixel (-0.09 to -0.04 across, 0 down).
+
+Flip's header Play is left as it is. It is a wider triangle whose own offset is
+0.15px, under the line. The 0.53 the centring tool reads there is where this
+box's fonts put the button on the pixel grid (x = 158.42), and a nudge for that
+would be tuned to those fonts. NOT TESTED HERE: Safari, and the owner's Windows
+fonts.
+
+THE INSTRUMENT. verify_icons' _optical weighted each pixel's mass at its top
+left corner, so every mark read 0.08px up and left; it counts a pixel by its
+middle now. The x1 badge's row passed at 0.59 against a line of 0.6 and reads
+0.67 honestly in Liberation Sans; its line is 0.75 now, halfway to the 1.5px
+miss it exists for. Taking the badge's trim off reads (-0.35, 0.58, 0.63) in
+the three faces and stays green, at the old line as at the new: the row guards
+the 1.5px miss, and nothing pins the trim itself (the centring tool lists the
+badge at 0.48 to 0.8 as a known finding). The new rows read each control on
+whole pixels, moved by the fraction of where its page puts it, so a reading is
+the control's own drawing; a half pixel inside a control is still read.
+
+Flip: shared. The paused Play is Flip's too, fixed in the same rule; its watch
+band's arrow was already centred (#466).
+
+CALIBRATION: verify_icons, EVERY PLAY, eight rows, all red on main. Each part
+broken on its own against the fix: the Library's rule off (its row red); the
+bar's mark back to 19px (bar Play and Pause); the glyph translate off in the
+bar and card (bar Play, card phone and desk); the card's mark back to 15px
+(card phone and desk); the translate on every glyph (Pause); the post's
+margin-left back, or its translate off (the post's row); the paused disc's
+margin-left back (Pad and Flip).
+
+check_centring, the full sweep on the fixed tree: the Library's Play reads -0.09
+on every screen and the Gallery card's -0.06, and their eight rows come off its
+list (the two short screens read directly, where the sweep did not photograph
+the button). The Library's full-screen Pause, 0.6 on main and on no list, reads
+0. The sweep's other differences from its list touch nothing this change
+touches. It stops reaching the Library's states after full screen on some
+screens (main too: three of six there, four here), since the bar steps back
+while a drawing plays, which came after the last full sweep. And three readings
+move from run to run with what is behind or around a control: the Pad's
+watch-band Play while a drawing replays behind its corners (0 in main's run,
+1.41 in this one), the Gallery's Load more in DejaVu and FreeSans (0.17 and
+0.84; it sits wherever the gallery's length leaves it), and the Pad's Full
+screen on a dark desk (0.34 in both).
