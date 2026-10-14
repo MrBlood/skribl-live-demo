@@ -146,7 +146,14 @@
   background: var(--accent, #7c5cff);
   color: #fff;
 }
-.skfull-play svg { width: 19px; height: 19px; }
+/* 20, not 19: (48 - 19) / 2 put the mark on a half pixel, which a renderer
+   rounds one way or the other, and Pause read half a pixel off both ways
+   (verify_icons, EVERY PLAY). */
+.skfull-play svg { width: 20px; height: 20px; }
+/* Play's arrow, centred to the eye: a triangle's middle, to the eye, is
+   halfway between its box and its mass, 0.583 of the glyph's 24 units (2.43%)
+   left of where the box puts it. Matched by the glyph, so Pause stays put. */
+.skfull-play svg:has(path[d^="M8 5"]) { translate: -2.43%; }
 @media (hover: hover) { .skfull-play:hover { background: var(--accent, #7c5cff); filter: brightness(1.08); } }
 
 .skfull-rate {
@@ -350,6 +357,9 @@
   background: var(--accent, #7c5cff);
   color: #fff;
 }
+/* 16 on its own disc: (40 - 15) / 2 is a half pixel, and the card's Play read
+   half a pixel high there. */
+.skfull-card .skfull-play svg { width: 16px; height: 16px; }
 .skfull-card .skfull-track {
   height: 5px;
   background: rgba(255, 255, 255, 0.26);

@@ -808,7 +808,11 @@ body.playback-paused .tap-paused { display: grid; }
   background: #ffffff;
   border: 2px solid rgba(124, 92, 255, 0.65);
 }
-.tap-paused-disc svg { width: 26px; height: 26px; fill: var(--accent); margin-left: 3px; }
+/* Centred to the eye, which is LEFT of its box: a triangle's middle, to the
+   eye, is halfway between its box and its mass, 0.583 of the glyph's 24 units
+   (2.43%). This was a 3px margin-left, which moved it the other way: 2.6px
+   right of its disc (verify_icons, EVERY PLAY). */
+.tap-paused-disc svg { width: 26px; height: 26px; fill: var(--accent); translate: -2.43%; }
 
 .canvas-empty-hint {
   position: absolute;

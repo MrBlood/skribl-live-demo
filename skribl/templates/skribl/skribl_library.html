@@ -260,6 +260,11 @@
        action colour is Make one. */
     .tbtn.play { width: 46px; height: 46px; background: var(--control); color: var(--text);
       border-color: var(--hairline-strong); }
+    /* Play's arrow, centred to the eye: a triangle's middle, to the eye, is
+       halfway between its box and its mass, 0.583 of the glyph's 24 units
+       (2.43%) left of where the box puts it (verify_icons, EVERY PLAY).
+       Matched by the glyph, so Pause, which is symmetric, stays put. */
+    .tbtn.play svg:has(path[d^="M8 5"]) { translate: -2.43%; }
     /* A LIT TOGGLE IS THE ONE PILL'S SELECTED LOOK (#11): its tint and its
        ink (segslider.css), not a third, paler outlined purple. */
     .tbtn.on { color: var(--seg-on-ink); border-color: transparent; background: var(--seg-on-fill); }
