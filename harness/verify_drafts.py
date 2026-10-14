@@ -748,6 +748,52 @@ with sync_playwright() as p:
         check(f"{_label}: no page errors", not errors, "; ".join(errors[:2]))
         ctx.close()
 
+    # WITHOUT ITS SIZE. The owner's iPhone, after a reload: Bloom (square) came
+    # back on the phone's 9:16 at 0.76, off to the right, its right side gone.
+    # An autosave written by a page older than canvasSize -- one still open in
+    # another tab -- holds no size, and the restore kept the window's. Now it
+    # keeps the window's only while every point fits, and otherwise takes the
+    # preset that holds them. Written as such a page wrote it: the Pad's own
+    # save, its size taken out from a page that is not the Pad, so no flush of
+    # the Pad's puts it back.
+    def _nosize(points):
+        frame = {"strokes": points, "strokeGroups": [len(points)], "background": {"color": "#f6f2ea"}}
+        return json.dumps({"version": 2, "schemaVersion": 2, "playbackMode": "replay", "fps": None,
+                           "canvasSize": {"cssWidth": 707, "cssHeight": 707, "dpr": 1}, "frames": [frame]}).encode()
+    def _dots(xy):
+        return [{"x": x + i * 6, "y": y, "color": "#7c5cff", "size": 48, "t": (k * 11 + i) * 40,
+                 **({"start": True} if i == 0 else {})} for k, (x, y) in enumerate(xy) for i in range(11)]
+    for _what, _pts, _want in (
+            ("square and reaching past the phone's 9:16, comes back on the square that holds it, its middle in the middle",
+             _dots([(353 - 30, 353), (640, 353)]), [707, 707]),
+            ("whose points all fit the phone's 9:16, stays on the 9:16 this window chose, as before",
+             _dots([(170, 200)]), [SHAPE_W, SHAPE_H])):
+        ctx = b.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+        pg = ctx.new_page()
+        errors = []
+        pg.on("pageerror", lambda e: errors.append(str(e)))
+        pg.goto(f"{BASE}/skribl-pad", wait_until="load")
+        pg.evaluate("() => { try { localStorage.clear(); } catch (e) {} }")
+        pg.reload(wait_until="load"); pg.wait_for_timeout(700)
+        pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _fresh = pg.evaluate(SHAPE_READ, False)["size"]
+        pg.click("#menuBtn"); pg.wait_for_timeout(300)
+        with pg.expect_file_chooser() as _fc:
+            pg.click("#loadDraftItem")
+        _fc.value.set_files({"name": "nosize.skribl", "mimeType": "application/json", "buffer": _nosize(_pts)})
+        pg.wait_for_timeout(1200)
+        pg.goto(f"{BASE}/api/skribls", wait_until="load")          # the Pad's pagehide flush lands here
+        _had = pg.evaluate("""() => { const k = 'skribl_autosave_v1', d = JSON.parse(localStorage.getItem(k));
+            const had = d.canvasSize; delete d.canvasSize; localStorage.setItem(k, JSON.stringify(d)); return had; }""")
+        pg.goto(f"{BASE}/skribl-pad", wait_until="load"); pg.wait_for_timeout(1500)
+        _back = pg.evaluate(SHAPE_READ, False)
+        check(f"Pad at 402x874: an autosave with no size (an older page's), {_what}",
+              _fresh == [SHAPE_W, SHAPE_H] and bool(_had) and _back["size"] == _want
+              and (_want == [SHAPE_W, SHAPE_H] or _back["ink"]),
+              f"fresh {_fresh}; saved size before it was taken out {_had}; after the reload {_back}")
+        check("Pad, an autosave with no size: no page errors", not errors, "; ".join(errors[:2]))
+        ctx.close()
+
     print("\nNEARLY TOO LONG — a note at 90% and at the limit, after a save, twice at most")
     # The Pad plan, step 5 (the owner's pick A). Nothing said anything until
     # Post failed at the end of the work. Now, after a save that crossed 90% of
@@ -918,6 +964,7 @@ with sync_playwright() as _p2:
     for _ed, _path, _sel, _key, _boot, _ink_js in (
             ("Pad", "/skribl-pad", "#canvas", "skribl_autosave_v1", "pad", "() => strokes.length"),
             ("Flip", "/flip", "#pad", "skribl_flip_autosave_v1", "flip", "() => frames.reduce((n, f) => n + f.strokes.length, 0)")):
+        _size_js = "() => [authoredW, authoredH]" if _ed == "Pad" else "() => [CW, CH]"
         def _open(ctx, url=None, w=1100):
             pg = ctx.new_page()
             pg.set_viewport_size({"width": w, "height": 860})
@@ -946,6 +993,7 @@ with sync_playwright() as _p2:
               len(_w2) == 1 and _n(_w2[0][1]) == _n(_theirs) and _n(_slot2) not in (_n(_mine), _n(_theirs)),
               f"waiting {[(k, _n(v)) for k, v in _w2]}, slot {_n(_slot2)}")
         _bstrokes = _b.evaluate(_ink_js)
+        _bsize = _b.evaluate(_size_js)
         _a.close(); _b.close()
         # The next visit: the newest opens, the other is offered.
         _c = _open(_ctx, w=402); _c.wait_for_timeout(700)
@@ -970,9 +1018,17 @@ with sync_playwright() as _p2:
             _e = _ctx.new_page(); _e.goto(BASE + "/api/skribls")
             _e.evaluate(f"() => {{ localStorage.removeItem('{_key}'); localStorage.removeItem('{_key}:owner'); }}")
             _e.close()
-            _d = _open(_ctx, f"{_path}?draft={_k[0]['id']}"); _d.wait_for_timeout(900)
+            _d = _open(_ctx, f"{_path}?draft={_k[0]['id']}", w=402); _d.wait_for_timeout(900)
             check(f"{_ed}: ...and that draft opens with the other tab's drawing",
                   _d.evaluate(_ink_js) == _bstrokes and _bstrokes > 0, f"{_d.evaluate(_ink_js)} vs {_bstrokes}")
+            # ON ITS OWN CANVAS: the kept draft carries its size, as a post
+            # does. Opened at 402px, where a fresh canvas starts another shape.
+            _fctx = _b2.new_context(); _f = _fctx.new_page(); _f.set_viewport_size({"width": 402, "height": 860})
+            _f.goto(BASE + _path, wait_until="load"); _f.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
+            _fresh402 = _f.evaluate(_size_js); _fctx.close()
+            check(f"{_ed}: ...on its own canvas, though a fresh one at 402px starts another shape",
+                  _d.evaluate(_size_js) == _bsize and _bsize != _fresh402,
+                  f"opened {_d.evaluate(_size_js)}; kept from {_bsize}; fresh at 402px {_fresh402}")
             _d.close()
         else:
             _c.close()
