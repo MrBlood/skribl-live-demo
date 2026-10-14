@@ -22,6 +22,9 @@ WHAT IS ASKED, ON EACH SURFACE AND SCREEN
     it. On a desk a mouse's move does that, and its click is a pause.
   * With them up, the next tap pauses, as it does on the page.
   * Paused, they stay up past the next quiet spell.
+  * On the link page, a short drawing that repeats keeps them away from lap
+    to lap. Every lap used to bring them back, which on a drawing shorter
+    than the quiet spell meant they never left.
 
 VISIBLE MEANS PAINTED. A faded control keeps its rect, so each one is asked of
 elementFromPoint at a point inside it (WORKING-AGREEMENTS, "a rect is not a
@@ -60,17 +63,18 @@ NO_API = """(() => { try {
 QUIET_MS = 3300          # past lib/chromefade.js's 2.5 s and its 0.35 s fade
 
 
-def post():
+def post(rings=6):
     """Six rings of 60 points, 25 ms apart: about nine seconds of drawing, long
-    enough to play through two quiet spells. Public, so the Gallery lists it."""
+    enough to play through two quiet spells. Public, so the Gallery lists it.
+    One ring is a drawing of 1.5 seconds, shorter than a quiet spell."""
     pts = []
-    for k in range(6):
+    for k in range(rings):
         for i in range(60):
             a = i / 59 * math.pi * 2
             pts.append({"x": 408 + math.cos(a) * (60 + k * 40), "y": 306 + math.sin(a) * (40 + k * 30),
                         "color": "#7c5cff", "size": 10, "t": (k * 60 + i) * 25, "start": i == 0})
     body = {"title": "Steps back", "version": 2, "schemaVersion": 2, "visibility": "public",
-            "playbackMode": "replay", "frames": [{"strokes": pts, "strokeGroups": [60] * 6}],
+            "playbackMode": "replay", "frames": [{"strokes": pts, "strokeGroups": [60] * rings}],
             "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
     req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"})
@@ -206,6 +210,33 @@ def walk(b, fx, name, go_in, root, bar, x, cv, playing, toggle, whole, finger):
     ctx.close()
 
 
+def laps(b, fx, finger):
+    """A drawing shorter than the quiet spell, repeating as it does by default:
+    the bar stays away through the laps that follow. The link page told the
+    fade at every lap that its state had changed, so they came back each time,
+    and on this drawing never left. Sampled every 200 ms over three laps, with
+    the progress bar read alongside to prove the laps happened."""
+    who = f"The link page ({'phone' if finger else 'desk'})"
+    ctx = b.new_context(**(PHONE if finger else DESK))
+    pg = ctx.new_page()
+    if finger:
+        pg.add_init_script(NO_API)
+    link_in(pg, fx)
+    if not finger:
+        pg.mouse.move(2, 2)
+    pg.wait_for_timeout(QUIET_MS)
+    seen = []
+    for _ in range(25):
+        seen.append(pg.evaluate("""() => [document.querySelector('.canvas-wrap').classList.contains('chrome-asleep'),
+            parseFloat(document.getElementById('playerProgressFill').style.width) || 0]"""))
+        pg.wait_for_timeout(200)
+    away = [a for a, _ in seen]
+    wraps = sum(1 for (_, f0), (_, f1) in zip(seen, seen[1:]) if f1 < f0 - 20)
+    check(f"{who}: a short drawing that repeats keeps them away from lap to lap",
+          all(away) and wraps >= 2, f"{wraps} laps; " + "".join("z" if a else "U" for a in away))
+    ctx.close()
+
+
 print("\nFULL SCREEN STEPS BACK — the link page, the Gallery and the Library")
 with sync_playwright() as p:
     b = p.chromium.launch()
@@ -213,6 +244,9 @@ with sync_playwright() as p:
     for name, go_in, root, bar, x, cv, playing, toggle, whole in SURFACES:
         for finger in (True, False):
             walk(b, fx, name, go_in, root, bar, x, cv, playing, toggle, whole, finger)
+    short = post(rings=1)
+    for finger in (True, False):
+        laps(b, short, finger)
     b.close()
 
 print("\n" + "=" * 62)

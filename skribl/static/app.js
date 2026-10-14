@@ -4049,7 +4049,11 @@ function showPlayerError(msg, canRetry) {
     if (!pPlay) return;
     pPlay.innerHTML = running || queued ? ICON_PAUSE_P : ICON_PLAY_P;
     pPlay.setAttribute('aria-label', running || queued ? 'Pause' : 'Play');
-    if (_fade) _fade.poke();
+    // Stopped, the controls come back, whoever stopped it. Only stopped: a
+    // drawing that repeats starts over without stopping (onEnded), and a poke
+    // there brought them back every lap -- for good, on anything shorter than
+    // the fade's quiet spell.
+    if (_fade && !running) _fade.poke();
   }
   function setProgress(frac) {
     if (pFill) pFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
@@ -4459,11 +4463,11 @@ function showPlayerError(msg, canRetry) {
     // Reset so the next Play restarts cleanly rather than resuming at the end.
     elapsedBase = 0;
     idx = 0;
-    setPlayIcon();
     // Loop first, and only sync if it does NOT restart: releasing here and
     // reclaiming inside restart() would drop and retake the session on every
-    // lap, which is exactly the churn a held session should not produce.
-    if (loop) restart(); else syncAudioSession();
+    // lap, which is exactly the churn a held session should not produce. The
+    // button likewise: a lap goes on saying Pause (restart's play sets it).
+    if (loop) restart(); else { setPlayIcon(); syncAudioSession(); }
   }
 
   if (pPlay) pPlay.addEventListener('click', () => {
