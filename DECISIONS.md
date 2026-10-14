@@ -17154,3 +17154,29 @@ a phone and a desk), and no play on the way in (those, and every row that
 needs it playing). verify_library's two rows that held the copy and the
 component's ratio together now ask that the page keeps no copy and that
 library.js hands the box over; each shown red with its break put back.
+
+## After v322 -- a drawing that repeats keeps the controls away
+
+Found while building the next full-screen change: on the link page, in full
+screen, a short drawing that repeats (the default) never let its controls
+step back. Measured on a 1333x906 desk: a 2-second drawing kept them up the
+whole time, and a 5-second one brought them back for about 2.6 seconds of
+every lap. The Gallery and the Library were fine.
+
+- setPlayIcon told the fade the state had changed every time it ran, and a
+  lap runs it twice: onEnded sets Play, then restart's play sets Pause. Each
+  call woke the controls for another quiet spell. The fade is now told only
+  when the drawing stops, a pause or the end of a drawing that does not
+  repeat. A lap sets the icon once, after restart, so the button keeps saying
+  Pause from lap to lap.
+- The link page's player grows by 16 B. verify_player_isolation's ledger
+  names the cost, and verify_jsstrip's cap moves with it (#459 was that pair
+  coming apart).
+
+Flip: not for Flip. The editors and the in-post player tell the fade only
+when the play state really flips, so a lap never reached them.
+
+CALIBRATION: verify_fullfade samples a 1.5-second drawing every 200 ms over
+three laps on the phone and the desk, reading the progress bar to prove the
+laps happened. Red on both rows with each half of the fix put back on its
+own: the unguarded wake, and onEnded setting the icon before it repeats.

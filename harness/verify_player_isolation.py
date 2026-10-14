@@ -821,7 +821,11 @@ with sync_playwright() as sp:
     #   keep under the drawing went with it (--pbar, its set, its removal and
     #   the fit's subtraction), which is what the 16 B net in app.js is after.
     #   151,751 measured.
-    BYTES_RATCHET, BYTES_TARGET = 151_760, 153_800
+    # RAISED (a fix to the above), for one named cost: +16 B -- app.js wakes
+    #   the controls only when the drawing stops, where it woke them on every
+    #   play-icon change, and a lap no longer sets the icon, so a drawing that
+    #   repeats keeps them away from lap to lap. 151,767 measured.
+    BYTES_RATCHET, BYTES_TARGET = 151_770, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
