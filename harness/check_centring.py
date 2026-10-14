@@ -663,9 +663,28 @@ def player_states(pg):
     click(pg, "#playerFullBtn", 800); yield "full screen"; esc(pg, 600)
 
 
+def leave_full(pg, exit_sel):
+    """Out of a full screen the way a person gets out of one while it plays.
+    Its controls step back after a quiet spell (lib/chromefade.js), and the
+    photographs of the full-screen state take longer than that spell, so the x
+    was asleep and a tap went to the drawing under it: the walk stayed in full
+    screen, every state after it photographed the same bar, and the Library's
+    later controls went unmeasured on four screens of six with nothing said. So
+    the pointer moves first, as a hand does, and a walk that is still in full
+    screen afterwards stops with that reason (EVERY WALK, below)."""
+    vp = pg.viewport_size or {"width": 800, "height": 600}
+    pg.mouse.move(vp["width"] / 2, vp["height"] / 2)
+    pg.mouse.move(vp["width"] / 2 + 12, vp["height"] / 2 + 12)
+    waits.settle(pg, 300)
+    click(pg, exit_sel)
+    esc(pg, 500)
+    if js(pg, "() => !!document.fullscreenElement || !!document.querySelector('.is-immersive, .is-immersive-page')") is True:
+        raise RuntimeError(f"still in full screen after {exit_sel}")
+
+
 def library_states(pg):
     yield "rest"
-    click(pg, "#btnFull", 800); yield "full screen"; click(pg, "#fullExit"); esc(pg, 500)
+    click(pg, "#btnFull", 800); yield "full screen"; leave_full(pg, "#fullExit")
     pg.fill("#postedSearch", "Cen") if pg.locator("#postedSearch").count() else None
     pg.wait_for_timeout(300); yield "search"
     click(pg, "#searchClear")
@@ -683,7 +702,7 @@ def gallery_states(pg):
     yield "a tile"
     click(pg, ".tileMore"); yield "tile menu"
     click(pg, ".cmItem.cmReport", 600); yield "report"; esc(pg)
-    click(pg, ".skfull-full", 900); yield "a tile, full screen"; click(pg, ".tileExit"); esc(pg)
+    click(pg, ".skfull-full", 900); yield "a tile, full screen"; leave_full(pg, ".tileExit")
     click(pg, "#pageMenuBtn"); yield "page menu"; esc(pg)
 
 
@@ -990,6 +1009,14 @@ else:
     print("  (whether every control is reached is the full sweep's to judge: CENTRING_FULL=1)")
 check("every inventory exception still names a control that exists",
       all(k in inv_keys for k in UNREACHABLE), str([k for k in UNREACHABLE if k not in inv_keys]))
+# EVERY WALK RUNS TO ITS END, on every screen. Reach is judged across the whole
+# sweep, so a control photographed on two screens of six counted as reached
+# while a walk stuck in full screen on the other four said nothing at all. A
+# driver that raises, or finds itself where it should not be (leave_full),
+# stops its walk; this is where that stop is heard.
+_stopped = [e for e in errs if e.startswith("driver ")]
+check("every page's walk ran to its end on every screen",
+      not _stopped, f"{len(_stopped)} stopped early: " + "; ".join(_stopped[:6]))
 off = sorted((r for r in rows if max(abs(r["dx"]), abs(r["dy"])) > TOL), key=lambda r: -max(abs(r["dx"]), abs(r["dy"])))
 worst = {}
 for r in rows:
