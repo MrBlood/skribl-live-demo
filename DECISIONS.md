@@ -17272,3 +17272,57 @@ asked "Should there be more controls": keep the scrubber and the line at the
 end, as the link page's full screen does (A); leave it (B); A plus the link
 page's restart and repeat (C). The owner: "It's good as is." So B. Not to be
 offered again without a new reason.
+
+## After v322 -- a drawing that can't be shown says so kindly
+
+The owner asked to see posts as they will look on skribls.net, in every state
+of the player, and picked from a mock built on the site's own Home page source
+("all yes"). Two picks are notes for the site, in #464: docs/SKRIBLS-NET.md
+places a drawing the way the site places a video, beside its photo frame and
+not inside it (inside, the drawing had two frames and the loop button touched
+the frame's edge, 0px), and passes `line_info`, which INTEGRATION.md has
+carried since v322 and that list had not; its composer items now describe the
+thread composer Home has become. This entry is the third pick.
+
+A drawing that can't be shown was a black box: the blank standing in for a
+poster was the dark canvas ground, and a tap put red words in the code face at
+its foot, under a Play that did nothing. Now:
+
+- At rest, the blank (a post with no thumbnail, or one this viewer cannot see)
+  is see-through, so the box shows the page's own ground with Play on it.
+- After a tap, the API's 404 -- deleted, or no longer this viewer's to see; it
+  never says which -- reads "This drawing isn’t here anymore." and asks for
+  nothing more. Anything else (offline, a 500, a dropped connection) reads
+  "Couldn’t load this drawing. Tap to try again.", and a tap tries again; when
+  the drawing arrives it plays and its line comes back.
+- The words sit where the drawing would be, in the page's own type and its
+  --text-dim (the page's text colour where a host has no such token); the
+  rest of the box is hidden, the line under it steps away, and the box's
+  accessible name says the same words.
+- "Drawing", not "Skribl": on skribls.net every post is a Skribl, so
+  "Couldn't load this Skribl" read as the whole post failing.
+
+The in-post player costs a host 1,432 more bytes (inlineplayer.js +1,017,
+inlineplayer.css +415); verify_inline's ratchet names them.
+
+Flip: shared. The failure comes before the player knows what kind of drawing
+it is, so a Flip post fails the same way, words and all; one probe covers both.
+
+CALIBRATION: verify_inline's new section, on a 402-wide page with the host's
+ground set light, as skribls.net's is; everything seen is read from pixels
+(the Play disc takes no pointer events, so elementFromPoint looks straight
+through it). Against main, 8 of its 9 rows were red. The ninth -- a second tap
+on a drawing that is gone asks the server nothing more -- was green on main,
+which never tried again at all; it guards the new retry. Eight breaks, each
+red on its own rows and no others: the blank painted dark again (the at-rest
+row, 8/9); a 404 treated as worth another try (the words, the name and the
+second-tap rows, 6/9); the rest of the box left painted (the no-Play row); the
+code face kept (the type row); the line left showing (the line row); the
+box's name left as Play (the name row); no retry on a tap, and a retry that
+leaves the line hidden (the tries-again row, each 8/9).
+
+Found on the way: the first see-through blank never loaded. Its comment named
+the host's token with its two leading hyphens, and XML forbids a double hyphen
+inside a comment, so the image was invalid and the box stayed empty. The
+at-rest row waits for the blank to load before judging its colour, because an
+empty box passes a colour test for the wrong reason.

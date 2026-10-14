@@ -804,7 +804,7 @@
         return { id: id, state: queued ? 'playing' : state, totalMs: totalMs, racing: !!racer,
                  elapsedMs: state === 'playing' ? elapsed + segElapsed() : elapsed,
                  kind: flipFrames ? 'flip' : 'replay', hasAudio: !!music,
-                 muted: !soundOn(), loaded: !!payload, failed: failed,
+                 muted: !soundOn(), loaded: !!payload, failed: !!failed,
                  /* lib/seekcache.js: the copies held, and the points drawn
                  * since the last full repaint, so the suite can see where a
                  * seek started. */
@@ -848,10 +848,45 @@
       if (playEl) playEl.classList.toggle('is-busy', !!on);
     }
 
-    function fail(msg) {
-      failed = true;
+    /* A DRAWING THAT CAN'T BE SHOWN SAYS SO KINDLY (the owner's pick after
+     * v322, from a mock on skribls.net's own Home page). It was a black box,
+     * red words in the code face and a Play that did nothing. Now the box keeps
+     * the page's ground and type (inlineplayer.css, .is-failed) and says one
+     * of two things, because the API answers one of two ways. A 404 is final:
+     * the drawing was deleted, or is no longer this viewer's to see, and the
+     * API never says which (routes.py: 404, not 403) -- so it says the drawing
+     * isn't here anymore and asks for nothing. Anything else (offline, a 500,
+     * a dropped connection) is worth another try, and a tap tries. "Drawing",
+     * not "Skribl": on skribls.net every post is a Skribl, and "couldn't load
+     * this Skribl" reads as the whole post failing. */
+    var label = el.getAttribute('aria-label');
+    var FAIL_WORDS = { gone: ['This drawing isn’t here anymore.'],
+                       retry: ['Couldn’t load this drawing.', 'Tap to try again.'],
+                       unwired: ['This Skribl is not wired up.'] };
+    function fail(kind) {
+      failed = kind;
       busy(false);
-      if (errEl) { errEl.textContent = msg; errEl.hidden = false; }
+      var words = FAIL_WORDS[kind];
+      el.classList.add('is-failed');
+      el.classList.toggle('is-retry', kind === 'retry');
+      if (line) line.classList.add('is-failed');
+      el.setAttribute('aria-label', words.join(' '));
+      if (errEl) {
+        errEl.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20c2.5-.5 4-2 6-4.5"/>' +
+          '<path d="M14.5 5.5l4 4L10 18l-4.5.5.5-4.5z"/><path d="M13 7l4 4"/></svg>';
+        for (var i = 0; i < words.length; i++) {
+          var s = document.createElement('span'); s.textContent = words[i]; errEl.appendChild(s);
+        }
+        errEl.hidden = false;
+      }
+    }
+
+    function unfail() {
+      failed = false;
+      el.classList.remove('is-failed', 'is-retry');
+      if (line) line.classList.remove('is-failed');
+      el.setAttribute('aria-label', label);
+      if (errEl) { errEl.hidden = true; errEl.textContent = ''; }
     }
 
     function load() {
@@ -860,7 +895,7 @@
         /* Nothing to fetch from. The macro always writes the endpoint in, so
          * this is hand-built markup missing data-skribl-api — say so rather
          * than guess a path. */
-        fail("This Skribl is not wired up.");
+        fail('unwired');
         return Promise.resolve(null);
       }
       loading = true;
@@ -868,7 +903,7 @@
       return global.fetch(api + '/' + encodeURIComponent(id),
                           { credentials: 'same-origin' })
         .then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
+          if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
           return r.json();
         })
         .then(function (body) {
@@ -882,9 +917,9 @@
           busy(false);
           return payload;
         })
-        .catch(function () {
+        .catch(function (e) {
           loading = false;
-          fail("Couldn't load this Skribl.");
+          fail(e && (e.status === 404 || e.status === 410) ? 'gone' : 'retry');
           return null;
         });
     }
@@ -1581,6 +1616,7 @@
     }
 
     function play() {
+      if (failed === 'retry') unfail();
       if (failed) return;
       if (!payload) {
         load().then(function (p) { if (p) play(); });

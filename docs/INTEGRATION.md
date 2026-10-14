@@ -193,7 +193,8 @@ endpoint returns the whole payload, base64 audio included.
 
 **Theme.** The box follows your page: every colour in `inlineplayer.css` is
 `var(--token, fallback)` and the token names are the ones a feed already has —
-`--bg-elev`, `--border`, `--radius`, `--accent`, `--accent-2`. Define them
+`--bg-elev`, `--border`, `--radius`, `--accent`, `--accent-2`, and `--text-dim`
+for the words a drawing that can't be shown says (below). Define them
 under whatever stamps your theme (skribls.net uses `data-theme` on `<html>`)
 and the player re-colours with the page; define nothing and it is dark. The
 drawing itself never follows a theme — its ground is part of the drawing. If
@@ -219,7 +220,15 @@ Either way there are two buttons, beside the scrubber or on the drawing:
   it.
 
 One Skribl plays at a time, page-wide. Scrolling a playing post out of view
-settles it. A post whose payload will not load says so rather than sitting dead.
+settles it. A drawing that can't be shown says so, in your page's colours and
+type, where the drawing would be: one that has been deleted, or is no longer
+this viewer's to see, says "This drawing isn’t here anymore." and asks for
+nothing more; one that couldn't load (a dropped connection, a server error)
+says "Couldn’t load this drawing. Tap to try again.", and a tap tries again.
+The line under it steps away until there is a drawing to scrub. At rest, before
+anybody taps, such a post shows your page's ground with Play on it, never a
+black box: the blank that stands in for a poster it cannot show is
+see-through.
 
 **Posts you add after the page loads need one call.** The player mounts every
 `skribl_inline` box once, when the page loads. A feed that appends posts later
