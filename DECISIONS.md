@@ -17223,3 +17223,42 @@ counting the end as paused, and lib/watchfull.js counting stopped as awake,
 each red on its own surface's rows. Two more broke the other way, treating a
 pause part-way as finished, in lib/fullbar.js and on the link page, and the
 "paused, they stay up" and scrub-back rows went red.
+
+## After v322 -- a Pad drawing with no saved size comes back whole
+
+The owner's iPhone, after a reload: Bloom (707x707, square) came back on the
+phone's 9:16 canvas (531x944) at 0.76 of its size, off to the right with its
+right side cut off. "It happens periodically from a reload." #454 made the
+autosave hold the canvas's size, and every save the Pad makes now carries it;
+five reloads of Bloom at three phone heights here all came back 707x707. A
+fresh Pad on that phone starts 9:16, and 402/531 is the 0.76 in the
+screenshot, so that reload restored Bloom from a record with no size. One
+writer still makes those: a Pad page loaded before #454 and still open in
+another tab, which writes the shared autosave whenever it saves. And one path
+in today's code dropped the size: Keep for later on another tab's drawing
+filed it without one, so the draft opened on whatever shape the opening
+window chose.
+
+- editor_draft.js holdStrokes: a drawing that comes back with no size keeps
+  the window's canvas while every point fits, as it always did; when that
+  would cut it off, it takes the preset that holds it most closely (the
+  smallest width plus height among those that contain its points). Bloom's
+  points reach 700 across: only the square holds them.
+- Keep for later files canvasSize with the drawing, as a post carries it.
+  Flip's already did: it keeps the whole autosave.
+- Editor-only. The link player loads neither editor_draft.js nor
+  lib/canvassizes.js, so its byte budget does not move.
+
+Flip: not for Flip. Its autosave has always held its size, and its Keep for
+later keeps the whole record; verify_drafts asks both editors the same.
+
+CALIBRATION: verify_drafts, on the owner's 402x874: the Pad's own save of a
+square drawing, its size taken out from a page that is not the Pad (as an
+older page would have written it), reloads on the square with its middle in
+the middle; one whose points all fit stays on the phone's 9:16; and a drawing
+kept for later from another tab opens at 402px on its own canvas, for the
+Pad and for Flip. Three breaks, each in its own copy, each red on its own row
+and no other (86/87): the restore not asking whether the drawing fits (the
+square row), Keep for later without the size (the Pad's own-canvas row; Flip's
+stays green, it never used that code), and a drawing that fits moved anyway
+(the stays-on-9:16 row).
