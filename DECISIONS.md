@@ -17262,3 +17262,13 @@ and no other (86/87): the restore not asking whether the drawing fits (the
 square row), Keep for later without the size (the Pad's own-canvas row; Flip's
 stays green, it never used that code), and a drawing that fits moved anyway
 (the stays-on-9:16 row).
+
+## After v322 -- the Pad's full screen keeps Play alone when a drawing finishes
+
+When the Pad's replay finishes in full screen, its scrubber and its "Drawn in
+... watching at ..." line hide, as they do on the page, where a finished
+replay is back to editing; the band holds Play alone. Offered after the owner
+asked "Should there be more controls": keep the scrubber and the line at the
+end, as the link page's full screen does (A); leave it (B); A plus the link
+page's restart and repeat (C). The owner: "It's good as is." So B. Not to be
+offered again without a new reason.
