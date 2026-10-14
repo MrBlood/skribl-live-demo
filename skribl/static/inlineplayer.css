@@ -3,7 +3,9 @@
  *
  * IT FOLLOWS THE HOST'S THEME: every colour reads a custom property with its
  * own value as the fallback. Tokens consumed, all optional: --bg-elev,
- * --border, --radius, --accent, --accent-2.
+ * --border, --radius, --accent, --accent-2, and --text-dim for the words a
+ * drawing that can't be shown says (without it they take the page's text
+ * colour).
  *
  * 128.0488% and -5.4878% below are the poster's no-script fallback crop. Why,
  * and everything else that is reasoning rather than a value: inlineplayer.js.
@@ -291,17 +293,14 @@
   pointer-events: none;
 }
 
-.skribl-inline-err {
-  position: absolute;
-  inset: auto 9px 9px 9px;
-  font-size: 11.5px;
-  color: #ffd7e2;
-  background: rgba(6, 7, 10, 0.78);
-  border: 1px solid rgba(255, 90, 134, 0.35);
-  padding: 6px 9px;
-  border-radius: 8px;
-  text-align: center;
-}
+/* A drawing that can't be shown: the page's ground and type, plain words, and nothing to tap but a retry (owner, after v322). Why: fail() in inlineplayer.js. */
+.skribl-inline.is-failed{font-family:inherit;cursor:default}
+.skribl-inline.is-retry{cursor:pointer}
+.skribl-inline.is-failed>:not(.skribl-inline-err){visibility:hidden}
+.skribl-inline-line.is-failed{display:none}
+.skribl-inline-err{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:6px;padding:16px;color:var(--text-dim);font-size:15px;font-weight:500;text-align:center}
+.skribl-inline-err svg{width:34px;height:34px;margin-bottom:4px;opacity:.75;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.skribl-inline.is-retry .skribl-inline-err span+span{color:var(--accent,#7c5cff);font-weight:600}
 
 .skribl-inline [hidden],
 .skribl-inline-line [hidden] { display: none !important; }

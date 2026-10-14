@@ -1421,7 +1421,18 @@ with sync_playwright() as sp:
     #   tap and the key go through toggle() rather than each carrying it, the
     #   playing and paused looks are one helper, and the module dropped what no
     #   caller read. 63,539 B measured.
-    EMBED_RATCHET = 63_550
+    # RAISED (a drawing that can't be shown says so kindly, the owner's pick
+    #   from the skribls.net mock), for one named cost: +1,432 B, paid by every
+    #   page that shows a post, because the words have to be there before
+    #   anything fails --
+    #     inlineplayer.js   +1,017  the two answers (gone, and worth another
+    #                               try), their words, the box's name, the
+    #                               retry, and the pencil mark
+    #     inlineplayer.css    +415  the page's ground and type, the rest of the
+    #                               box hidden and the line stepping away; the
+    #                               old dark error pill's rule is gone
+    #   64,971 B measured.
+    EMBED_RATCHET = 64_980
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -2517,6 +2528,154 @@ with sync_playwright() as _sp4:
         _pl.close()
         _ref.close()
     _b4.close()
+
+
+# ---------------------------------------------------------------------------
+# A DRAWING THAT CAN'T BE SHOWN SAYS SO KINDLY (the owner's pick after v322,
+# from a mock on skribls.net's own Home page). It was a black box -- the blank
+# poster was the dark canvas ground -- then red words in the code face and a
+# Play that did nothing. Two probes, cloned from the feed's own box with their
+# lines: one for a drawing that is gone (an id the API answers 404 for, which
+# is also its answer for a post this viewer may no longer see) and one for a
+# real post whose payload request is dropped and then let through. The host's
+# ground is set light, as skribls.net's is, so the black box and the page's
+# ground cannot be mistaken for each other. Every probe of what is SEEN reads
+# pixels or elementFromPoint, never a rect.
+print("\nIN-POST — a drawing that can't be shown says so kindly, in the page's own colours and type")
+_GONE_WORDS = "This drawing isn’t here anymore."
+_DROP_WORDS = ["Couldn’t load this drawing.", "Tap to try again."]
+_GROUND = (246, 248, 250)          # the host's --bg-elev, set below
+
+
+def _px(pg, sel, fx, fy):
+    """The colour PAINTED at a fraction of an element's box (a screenshot, not a style)."""
+    import io
+    from PIL import Image
+    r = pg.locator(sel).bounding_box()
+    shot = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+    k = shot.width / pg.viewport_size["width"]
+    return shot.getpixel((int((r["x"] + r["width"] * fx) * k), int((r["y"] + r["height"] * fy) * k)))
+
+
+def _near(c, ref, tol=8):
+    return all(abs(a - b) <= tol for a, b in zip(c, ref))
+
+
+def _purple_at_centre(pg, sel, half=30):
+    """Pixels of the Play disc's purple (its arrow and its ring) painted within
+    `half` CSS px of the box's centre. elementFromPoint cannot answer this: the
+    veil and the disc take no pointer events, so it sees straight through them."""
+    import io
+    from PIL import Image
+    r = pg.locator(sel).bounding_box()
+    shot = Image.open(io.BytesIO(pg.screenshot())).convert("RGB")
+    k = shot.width / pg.viewport_size["width"]
+    cx, cy = (r["x"] + r["width"] / 2) * k, (r["y"] + r["height"] / 2) * k
+    n = 0
+    for x in range(int(cx - half * k), int(cx + half * k)):
+        for y in range(int(cy - half * k), int(cy + half * k)):
+            pr, pg_, pb = shot.getpixel((x, y))
+            if pb > 200 and pb - pg_ > 70 and pr < 190:
+                n += 1
+    return n
+
+
+with sync_playwright() as _kp:
+    _kb = _kp.chromium.launch()
+    _kc = json.loads((ROOT / "skribl" / "static" / "help" / "demos" / "cat.json").read_text())
+    _kc["title"] = "Kind probe"
+    _kreq = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_kc).encode(),
+                                   headers={"Content-Type": "application/json"})
+    _kid = json.loads(urllib.request.urlopen(_kreq).read())["id"]
+    _kpg = _kb.new_page(viewport={"width": 402, "height": 874}, device_scale_factor=2)
+    _asked = []
+    _kpg.on("request", lambda r: _asked.append(r.url) if "/api/skribls/" in r.url else None)
+    browsing.goto(_kpg, BASE, "/feed")
+    # The probes are the macro's own markup: the feed page carries it as the
+    # template its script fills in, so no internals are written here by hand.
+    _kpg.evaluate("""([gone, real]) => {
+        const st = document.documentElement.style;
+        st.setProperty('--bg-elev', '#f6f8fa'); st.setProperty('--text-dim', '#5b7083');
+        const tpl = document.getElementById('skriblPostTpl').innerHTML;
+        for (const [id, pid] of [[gone, 'goneProbe'], [real, 'dropProbe']]) {
+          const host = document.createElement('article'); host.id = pid + 'Post';
+          host.style.cssText = 'display:block; width: 360px; margin: 16px auto';
+          host.innerHTML = tpl.split('__ID__').join(id);
+          host.querySelector('.skribl-inline').id = pid;
+          host.querySelector('.skribl-inline-line').id = pid + 'Line';
+          document.body.prepend(host);
+        }
+        SkriblInline.mount(document); }""", ["gone0000000", _kid])
+    # The blank must LOAD to be judged: an SVG that is not valid XML (a double
+    # hyphen in its comment did it once, in this change) never paints, and a
+    # box with nothing in it would pass the colour test for the wrong reason.
+    try:
+        _kpg.wait_for_function("() => { const i = document.querySelector('#goneProbe .skribl-inline-poster');"
+                               " return i.complete && i.naturalWidth > 0; }", timeout=10000)
+        _blank = True
+    except PWTimeout:
+        _blank = False
+    _kpg.locator("#goneProbePost").scroll_into_view_if_needed(); _kpg.wait_for_timeout(300)
+    _rest = _px(_kpg, "#goneProbe", 0.12, 0.5)
+    check("at rest, a drawing with no poster of its own shows the page's ground, not a black box",
+          _blank and _near(_rest, _GROUND),
+          f"painted {_rest}, the page's ground {_GROUND}" + ("" if _blank else "; the blank poster never loaded"))
+
+    _kpg.locator("#goneProbe").click()
+    try:
+        _kpg.wait_for_function("() => SkriblInline.find('gone0000000').state().failed", timeout=10000)
+    except PWTimeout:
+        pass
+    _kpg.wait_for_timeout(300)
+    _g = _kpg.evaluate("""() => { const b = document.querySelector('#goneProbe'), e = b.querySelector('.skribl-inline-err');
+        const ln = document.querySelector('#goneProbeLine');
+        return { words: e && !e.hidden ? e.innerText.replace(/\\s+/g, ' ').trim() : null,
+                 font: e ? getComputedStyle(e).fontFamily : null, host: getComputedStyle(b.parentElement).fontFamily,
+                 line: getComputedStyle(ln).display, label: b.getAttribute('aria-label'),
+                 failed: SkriblInline.find('gone0000000').state().failed }; }""")
+    _gonePx = _px(_kpg, "#goneProbe", 0.12, 0.5)
+    _gonePurple = _purple_at_centre(_kpg, "#goneProbe")
+    check("a drawing that is gone says so in plain words, and says 'drawing' -- on skribls.net every post is a Skribl",
+          _g["words"] == _GONE_WORDS, f"{_g['words']!r}")
+    check("...in the page's own type, not the code face",
+          _g["font"] == _g["host"] and "monospace" not in (_g["font"] or ""), f"{_g['font']!r} vs the page's {_g['host']!r}")
+    check("...on the page's ground, with nothing painted that asks for a tap: no Play where the words are",
+          _gonePurple == 0 and _near(_gonePx, _GROUND),
+          f"{_gonePurple} pixels of the Play disc's purple at the centre; the ground painted {_gonePx}")
+    check("...and the line under it steps away: there is nothing to scrub",
+          _g["line"] == "none", f"the line's display is {_g['line']!r}")
+    check("...and the box's name says the same words, for a screen reader",
+          _g["label"] == _GONE_WORDS, f"{_g['label']!r}")
+    _before = len([u for u in _asked if "gone0000000" in u])
+    _kpg.locator("#goneProbe").click(); _kpg.wait_for_timeout(700)
+    _after = len([u for u in _asked if "gone0000000" in u])
+    check("a second tap on a drawing that is gone asks the server nothing more",
+          _before == 1 and _after == 1, f"payload requests: {_before} after the first tap, {_after} after the second")
+
+    _kpg.route(f"**/api/skribls/{_kid}", lambda r: r.abort())
+    _kpg.locator("#dropProbePost").scroll_into_view_if_needed(); _kpg.wait_for_timeout(200)
+    _kpg.locator("#dropProbe").click()
+    try:
+        _kpg.wait_for_function(f"() => SkriblInline.find('{_kid}').state().failed", timeout=10000)
+    except PWTimeout:
+        pass
+    _kpg.wait_for_timeout(300)
+    _d = _kpg.evaluate("""() => { const e = document.querySelector('#dropProbe .skribl-inline-err');
+        return e && !e.hidden ? [...e.querySelectorAll('span')].map(s => s.innerText.trim()) : (e ? [e.innerText] : null); }""")
+    check("a drawing that couldn't load (a dropped connection) says so, and offers another try",
+          _d == _DROP_WORDS, f"{_d}")
+    _kpg.unroute(f"**/api/skribls/{_kid}")
+    _kpg.locator("#dropProbe").click()
+    try:
+        _kpg.wait_for_function(f"() => {{ const s = SkriblInline.find('{_kid}').state(); return s.loaded && s.state === 'playing'; }}",
+                               timeout=10000)
+    except PWTimeout:
+        pass
+    _r = _kpg.evaluate(f"""() => {{ const s = SkriblInline.find('{_kid}').state(), b = document.querySelector('#dropProbe');
+        return [s.state, s.loaded, !!s.failed, b.classList.contains('is-failed'), getComputedStyle(document.querySelector('#dropProbeLine')).display]; }}""")
+    check("...and a tap tries again: with the connection back, the drawing plays and the line returns",
+          _r[0] == "playing" and _r[1] and not _r[2] and not _r[3] and _r[4] != "none", f"{_r}")
+    _kb.close()
 
 
 passed = sum(1 for ok, _ in results if ok)
