@@ -712,11 +712,35 @@ function setCanvasGround(hex) {
   updateVignette();
 }
 
+// A DRAWING THAT COMES BACK WITHOUT ITS OWN SIZE -- an autosave written by a
+// page older than canvasSize, say one still open in another tab -- goes on the
+// canvas this window chose when every point fits, as it always did. When that
+// would cut it off, it goes on the preset that holds it most closely
+// (lib/canvassizes.js). The owner's iPhone, after a reload: Bloom, square, came
+// back on the phone's 9:16 at 0.76, off to the right and its right side gone.
+function holdStrokes(pts) {
+  let mx = 0, my = 0;
+  for (let i = 0; i < pts.length; i++) {
+    if (pts[i].x > mx) mx = pts[i].x;
+    if (pts[i].y > my) my = pts[i].y;
+  }
+  if (mx <= authoredW && my <= authoredH) return;
+  let fit = null;
+  for (const t of (window.SkriblCanvasSizes ? window.SkriblCanvasSizes.SIZES : [])) {
+    if (t.w >= mx && t.h >= my && (!fit || t.w + t.h < fit.w + fit.h)) fit = t;
+  }
+  if (!fit) return;
+  establishEditorCanvas(fit.w, fit.h);
+  layoutEditorCanvas();
+  if (typeof window.syncCanvasSeg === 'function') window.syncCanvasSeg();
+}
+
 function restoreAutosave(data) {
   clearCanvas();
   // Its own canvas before anything is painted, as loadSkribl and Flip's restore
   // do, so every stroke lands where it was drawn. An autosave from before it
-  // carried one keeps the size this window chose.
+  // carried one keeps the size this window chose, unless that would cut the
+  // drawing off (holdStrokes, below).
   const size = data.canvasSize;
   if (size && size.cssWidth > 0 && size.cssHeight > 0) {
     establishEditorCanvas(size.cssWidth, size.cssHeight);
@@ -731,6 +755,9 @@ function restoreAutosave(data) {
   updateVignette();
   strokes = (data.strokes || []).slice();
   strokeGroups = (data.strokeGroups || []).slice();
+  if (!(size && size.cssWidth > 0 && size.cssHeight > 0)) {
+    holdStrokes(data.redoStrokes && data.redoStrokes.length ? data.redoStrokes : strokes);
+  }
 
   const { width: cw, height: ch } = getCanvasLogicalSize();
   // The autosave stores the *applied* strokes in strokes/strokeGroups and, if any
@@ -856,7 +883,9 @@ function restoreAutosave(data) {
       let d;
       try { d = unpackDraft(JSON.parse(text)); } catch (e) { console.error('[skribl] a waiting drawing could not be read:', e); return false; }
       const when = at ? new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
-      const payload = { version: 2, schemaVersion: 2, playbackMode: 'replay', fps: null,
+      // Its canvas goes with it, as a post's does: without it the draft opened
+      // on whatever shape the opening window chose.
+      const payload = { version: 2, schemaVersion: 2, playbackMode: 'replay', fps: null, canvasSize: d.canvasSize || null,
         frames: [{ strokes: d.strokes || [], strokeGroups: d.strokeGroups || [], baseSnapshot: d.baseSnapshot || null,
                    background: d.background || null, photo: null, music: null }] };
       return window.SkriblSavedDrafts.keep('pad', 'From another tab' + (when ? ', ' + when : ''), payload)
