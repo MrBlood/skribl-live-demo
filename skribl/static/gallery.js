@@ -768,10 +768,7 @@
         if (items.length) window.SkriblInline.mount(list);
         cursor = (body && body.next_cursor) || null;
         more.hidden = !cursor;
-        /* Two empty states: nothing in the gallery at all, and nothing that
-           matches what was typed. */
-        empty.hidden = list.children.length > 0 || !!query;
-        if (noneEl) noneEl.hidden = list.children.length > 0 || !query;
+        emptyStates();
       })
       .catch(function () {
         if (myGen !== gen) return;
@@ -786,6 +783,57 @@
         more.disabled = false;
       });
   }
+
+  /* Two empty states: nothing in the gallery at all, and nothing that
+     matches what was typed. */
+  function emptyStates() {
+    empty.hidden = list.children.length > 0 || !!query;
+    if (noneEl) noneEl.hidden = list.children.length > 0 || !query;
+  }
+
+  /* ---- Back to a gallery kept in memory --------------------------------
+     A DRAWING DELETED IN THE LIBRARY CAME BACK WITH THE GALLERY. Safari and
+     Chrome can keep a whole page for Back (the back-forward cache) and
+     restore it, tiles, scroll and all, without running a line of this file
+     again; so Gallery, Library, Delete, Back showed the deleted drawing,
+     looking playable until it was tapped. (The other half was the listing,
+     which a Back load read from the browser's own copy until the server
+     said no-store: routes.py, list_skribls.)
+
+     So a restored page asks the listing again and takes off the tiles it no
+     longer names. Nothing is added and nothing else is rebuilt, so the
+     place in the grid is kept. An absence only means "gone" where the answer
+     covers the tile: the whole list came back, or, newest first (an order
+     that cannot reshuffle), the tile sits above one the answer does name.
+     Hot reorders by plays, so there only the whole list can say. */
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted || !list.children.length) return;
+    var tiles = Array.prototype.slice.call(list.children);
+    var myGen = gen;
+    fetch(api + '?limit=' + Math.min(100, tiles.length + PAGE) + '&sort=' + sort
+          + (query ? '&q=' + encodeURIComponent(query) : ''), { credentials: 'same-origin' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (body) {
+        if (myGen !== gen) return;       /* a newer load owns the grid now */
+        var named = {}, items = (body && body.items) || [];
+        for (var i = 0; i < items.length; i++) named[items[i].id] = true;
+        var judged = 0;                  /* tiles before this index can be judged */
+        if (!(body && body.next_cursor)) judged = tiles.length;
+        else if (sort === 'new') {
+          for (var j = tiles.length - 1; j >= 0; j--) {
+            if (named[tiles[j].getAttribute('data-id')]) { judged = j; break; }
+          }
+        }
+        for (var k = 0; k < judged; k++) {
+          if (!named[tiles[k].getAttribute('data-id')]) list.removeChild(tiles[k]);
+        }
+        emptyStates();
+      })
+      .catch(function () { /* the tiles stay; a tap on a gone one says so */ });
+  });
 
   /* ---- the report sheet ------------------------------------------------
      A report is a row in the operator's queue (POST /api/skribls/<id>/report),
