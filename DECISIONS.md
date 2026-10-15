@@ -17484,6 +17484,75 @@ watch-band Play while a drawing replays behind its corners (0 in main's run,
 0.84; it sits wherever the gallery's length leaves it), and the Pad's Full
 screen on a dark desk (0.34 in both).
 
+## After v322 -- a drawing's picture keeps the card's round corner at every shape
+
+Found while mocking the Gallery without its black bars. Before a drawing plays,
+the in-post player shows its share card clipped down to the drawing, with the
+card's own rounded corner (fitPoster in inlineplayer.js). The corner's radius
+was worked out as a share of the DRAWING, and CSS resolves inset()'s radius
+against the IMAGE, which is the whole card, the same as its four edges. So the
+corner stretched by the card's width over the drawing's, worst on a tall
+drawing: 28.8 x 8.4 px in a Gallery tile and 86.9 x 25.6 px in a post, where
+the card's corner at that size is 6.6 and 19.8 round, drawn as a long curve
+with the box's ground showing in it. It is a share of the card now, both ways.
+
+verify_inline, IN-POST, one new row: it reads the computed clip against the
+image's own box at all four canvas shapes, in a box with no line (a Gallery
+tile) and one with it (a post), and wants each corner round and the card's
+size. Red on main (all eight bent, the square too), green with the fix.
+
+Flip: shared. Every post and tile uses this one function, a Pad's or a Flip's.
+
+## After v322 -- the centring sweep walks every screen to its end, and reads full screens awake
+
+The tool fix offered after #468, on the owner's "all yes". Since a full
+screen's controls started stepping back while a drawing plays (#456, #461),
+the full sweep (harness/check_centring.py) had been misreading full screens
+three ways, and said nothing about any of them:
+
+* THE WALK STAYED IN FULL SCREEN. The Library's walk tapped the x of a bar
+  that had stepped back, so the tap went to the drawing, and every state
+  after it photographed the same bar: the Library's later controls went
+  unmeasured on four screens of six. The walk now moves the pointer first, as
+  a hand does, and a walk still in full screen afterwards stops with that
+  reason. A new row, "every page's walk ran to its end on every screen",
+  fails on any walk that stopped early. Red with the pointer move taken out
+  (four Library walks stuck), green with it.
+* THE BAR WENT TO SLEEP WHILE IT WAS PHOTOGRAPHED. Three faces take longer
+  than the quiet spell, so on the short screens the Library's Speed was read
+  in one face of three or not at all, and the list the first full sweep wrote
+  dropped findings it had simply not seen. In a full-screen state the pointer
+  now moves over the drawing before the census and before each photograph,
+  and the photograph waits until the bar is all the way back. A new row,
+  "every photograph in a full screen was taken with its controls showing",
+  fails on any photograph whose bar had stepped back by its end. Calibrated
+  on the five pages with a full screen, all six screens, three faces: without
+  the wake, 8 photographs asleep and the Library's full screen read 6 of 9
+  controls on two screens and 8 on a third; with it, none asleep and 9 of 9
+  everywhere.
+* A STROKE BEHIND THE BAR READ AS INK. Over a drawing that plays, something
+  drawn behind the bar between two of a measurement's three photographs
+  counts as part of the mark: the Library's Repeat read 2.75px high in one
+  run and 0.5 in the next three. In a full screen a reading now counts when
+  the next one agrees (to a tenth of a pixel, up to four readings; none
+  failed to agree in the full sweep). Calibrated by spoiling the first
+  reading of every pair, 3px high: with the rule each control is recorded at
+  its true value, and without it each reads at least 3px off and the run goes red.
+
+THE LIST, rewritten from the full sweep on the fixed tool (5,568
+measurements; 2,254 findings, was 2,247). Off came three readings from an
+older sweep that read inside a third of a pixel in both of today's runs: the
+Pad's Fit at 7.39 and Keep for later at 10.0 on two screens. On came the
+Pad's Full screen on a dark desk (0.34), the Gallery's Load more in DejaVu
+Sans and FreeSans on the phone and desk screens (0.84), and Open it on a
+light desk in Liberation Sans (1.67, under a shadow from the card above it;
+0.17 in the sweep before). Those last ones move between runs with what is
+around them, so a later sweep can read them on either side of the line.
+Thirty-five more moved by five hundredths or less.
+
+The sweep takes 20.0 minutes, from 18.2: the wake's waits and the second
+readings.
+
 ## After v322 -- no black box above "This Skribl couldn't be found"
 
 Found while mocking Blooby on this page. When a link's drawing can't be shown

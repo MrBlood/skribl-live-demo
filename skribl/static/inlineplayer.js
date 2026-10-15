@@ -664,9 +664,13 @@
      * positioned outright, so the transform has to go or it shifts twice. */
     st.transform = 'none';
     st.maxWidth = 'none';
+    /* The corner is a share of the IMAGE, which is the whole card, because
+     * that is what inset()'s radius resolves against like its four edges. As
+     * a share of the drawing it stretched by the card's width over the
+     * drawing's: a tall one's came out 87 x 26 px for the card's 20 round. */
     st.clipPath = 'inset(' + p(dy + i, CARD_H) + ' ' + p(CARD_W - dx - dw + i, CARD_W)
       + ' ' + p(CARD_H - dy - dh + i, CARD_H) + ' ' + p(dx + i, CARD_W)
-      + ' round ' + p(PLATE_R - i, dw - i * 2) + '/' + p(PLATE_R - i, dh - i * 2) + ')';
+      + ' round ' + p(PLATE_R - i, CARD_W) + '/' + p(PLATE_R - i, CARD_H) + ')';
   }
 
   /* ---- one box ----------------------------------------------------------- */
