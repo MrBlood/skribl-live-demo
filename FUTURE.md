@@ -804,17 +804,19 @@ D's drawing-in replays at the pace its pen events were sent, about eight
 seconds on a loaded box; redrawn on a quiet one it comes out quicker. A3 is
 2.3 MB as a .skribl, 0.4 MB gzipped.
 
-OPEN, THE OWNER'S TO PICK (put to them at the v323 seal, each with the
-default offered, so "all yes" was a complete answer):
+CHOSEN, by the owner at the v323 seal (asked "what does all yes say yes to?"
+first, then picked):
 
-* WHICH TAKE. Offered: A3, calm, landing with a little life, about two seconds
-  to full size on a phone. Or a mix, D's drawing-in with A3's landing.
-* SPEED. Offered: as it is, or a touch slower to full size.
-* WHERE HE LIVES. Offered: the first time Skribl opens on a phone, growing
-  from the icon to full screen and waving, then fading into the canvas; once
-  only, a tap skips him, a still hello under Reduce Motion, and one piece of
-  code for both editors. The other homes named: a hello post at the top of
-  the Gallery, or the empty Library before anything is saved.
+* WHICH TAKE: C, "walks up to you". "I like the one where blooby walks in from
+  far away. he's small and he walks in to be big." Not the default A3.
+* SPEED: "just right", as drawn: about 3.4 s to full size.
+* WHERE HE LIVES: the first time Skribl opens on a phone, growing to full
+  screen and waving, then fading into the canvas; once only, a tap skips him,
+  a still hello under Reduce Motion, and one piece of code for both editors.
+
+NEXT: the mock, before any of it is built: C on the first open, light and
+dark, phone (402px) and desk, beside today's empty canvas; measured, including
+how 3.4 s feels as a first hello and that a tap skips him at once.
 
 Whichever home, he plays in Skribl's own player (the takes were filmed in the
 in-post player, `inlineplayer.js`), so "drawings that draw themselves" is the
