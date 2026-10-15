@@ -842,7 +842,11 @@ with sync_playwright() as sp:
     # RAISED (a bug fix: no black box above "couldn't be found"), for one
     #   named cost: +26 B -- app.js takes the canvas's empty frame down with
     #   the shell when the page says a drawing can't be shown. 151,835 measured.
-    BYTES_RATCHET, BYTES_TARGET = 151_840, 153_800
+    # RAISED (the owner's pick A, Blooby's link page), for one named cost:
+    #   +400 B -- lib/holdtiming.js posterOf, the poster page as one rule for
+    #   Flip's card and this player, and the app.js line that rests a Flip on
+    #   it, so a link opens on the page its card shows. 152,235 measured.
+    BYTES_RATCHET, BYTES_TARGET = 152_240, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
