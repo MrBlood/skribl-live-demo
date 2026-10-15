@@ -737,7 +737,19 @@ What it would take, in the order it would have to land:
 * THE PLAYERS' BYTES: the lib ships in them, so the byte ratchets will move,
   and that is the owner's call each time.
 
-## 6l. Blooby around the app, and on dark grounds (owner, at the v319 seal; parked before the next)
+## 6l. Blooby around the app, and on dark grounds (owner, at the v319 seal; parked before the next) — BUILT
+
+**BUILT — kept for the reasoning.** Each place was mocked in both themes, on a
+phone and a desk, and picked by the owner after v322: his pen above "Draw
+anything" and "Draw page 1" on an empty canvas, and his question mark where a
+drawing can't be shown or the Library's list didn't load (#474); his cheer
+beside "Posted!" (#476). The dark ground was answered by a badge, not a
+sticker: wherever the app shows him on a page he is the Home Screen icon in
+small with the whole star, which brings its own lilac, so one picture reads in
+both themes and on every canvas colour (owner, of the white-edged sticker it
+replaced on the empty Library: "the sticker doesn't cut it and looks bad in
+both themes"). The oops and sleep poses are drawn and unused. What the owner
+asked for next is 6m.
 
 Carried as "still open" through two seals and put here by the owner, asked
 before the seal after v320, so it is a plan rather than an open question.
@@ -759,9 +771,55 @@ Build it as one pass: mock each place, phone and desktop, both themes, before
 any of it.
 
 Asked again in the cleanup before the seal after v320, "does blooby celebrate
-when you post?" -- he does not; a post says "Posted!" and nothing more -- and
-the owner's answer was "keep it parked until after the audit". START-HERE
-carries it with the device check.
+when you post?" -- he did not then; a post said "Posted!" and nothing more --
+and the owner's answer was "keep it parked until after the audit". He cheers
+now (#476), and START-HERE puts him on the device check.
+
+## 6m. Blooby says hi: he grows to full screen, waving (owner, after #476)
+
+THE ASK, the night the cheer merged: "make a blooby waving start small then
+emerge at full screen. Animate him waving the whole time. Keep star background
+logo and start blooby small and grow full size -- show multiple
+interpretations and iterations of your perspective on what that means. Mock it
+and think kind and cool. ... As a .skribl"
+
+WHAT EXISTS: seven takes, each a real Flip drawn with the pen through the real
+editor by `harness/tools/make_grow.py`, on a 9:16 canvas in the icon's lilac.
+The whole star is the page underneath, drawn once; Blooby is redrawn a little
+bigger on every page, his arm at the next step of the wave; at full size his
+wave loops forever, one wave a second at 12 pages a second. The owner has all
+seven as .skribl files (Flip, ⋯ → Open a backup) and a filmed mock. Measured
+from the takes as drawn here:
+
+    take                          pages   pen points   full size at
+    A1  even                         49       26,247        2.1 s
+    A2  eased                        49       28,929        2.1 s
+    A3  eased, settle and twinkle    51       30,944        2.2 s
+    B   pops up from a dot           39       24,227        1.2 s
+    C   walks up to you              65       28,614        3.4 s
+    D   draws himself, then grows    46       27,975        9.6 s
+    E   the whole logo grows         34       40,445        1.8 s
+
+D's drawing-in replays at the pace its pen events were sent, about eight
+seconds on a loaded box; redrawn on a quiet one it comes out quicker. A3 is
+2.3 MB as a .skribl, 0.4 MB gzipped.
+
+OPEN, THE OWNER'S TO PICK (put to them at the v323 seal, each with the
+default offered, so "all yes" was a complete answer):
+
+* WHICH TAKE. Offered: A3, calm, landing with a little life, about two seconds
+  to full size on a phone. Or a mix, D's drawing-in with A3's landing.
+* SPEED. Offered: as it is, or a touch slower to full size.
+* WHERE HE LIVES. Offered: the first time Skribl opens on a phone, growing
+  from the icon to full screen and waving, then fading into the canvas; once
+  only, a tap skips him, a still hello under Reduce Motion, and one piece of
+  code for both editors. The other homes named: a hello post at the top of
+  the Gallery, or the empty Library before anything is saved.
+
+Whichever home, he plays in Skribl's own player (the takes were filmed in the
+in-post player, `inlineplayer.js`), so "drawings that draw themselves" is the
+greeting itself. Shipping the file into the app is the payload-size question
+above: `lib/pointpack.js` keeps a point in four characters.
 
 ## 7. The honest state
 

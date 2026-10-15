@@ -89,6 +89,20 @@ EDITOR_INK = """() => {
 }"""
 
 
+def frame_booted(page, key, timeout=30000):
+    """Wait until the editor in #padFrame says it is ready: app.js raises
+    __skriblBoot.pad on its last line, flip.js __skriblBoot.flip. Fixed waits
+    of 3-4 s stood in for this, and in the v323 seal's second release run a
+    stroke drawn after one landed before the Pad was listening: no stroke, so
+    Record stayed hidden through the click's whole 30 s. A frame that has just
+    switched editors is waited on by the new one's key, which the old document
+    never carried."""
+    page.wait_for_function("""k => { const f = document.getElementById('padFrame');
+        const w = f && f.contentWindow;
+        return !!(w && w.__skriblBoot && w.__skriblBoot[k]); }""", arg=key, timeout=timeout)
+    page.wait_for_timeout(300)
+
+
 with sync_playwright() as sp:
     b = sp.chromium.launch()
     # THE DARK THEME, EXPLICITLY (v292): the literals below are the dark ramp's amber. Since
@@ -118,7 +132,9 @@ with sync_playwright() as sp:
     src_before = pg.evaluate(
         "() => document.getElementById('padFrame').getAttribute('src')")
     pg.click("#padBtn")
-    pg.wait_for_timeout(4000)
+    # Ready when the Pad says so (frame_booted). SKRIBL_MODE below is no sign
+    # of it: the template sets that before any script runs.
+    frame_booted(pg, "pad")
     mode = pg.evaluate("() => document.getElementById('padFrame').contentWindow.SKRIBL_MODE")
     check("the pad icon opens the editor in compose mode",
           mode == "compose", f"SKRIBL_MODE={mode!r}")
@@ -521,7 +537,7 @@ with sync_playwright() as sp:
     # the rest of the flow crashes before a later check could name the cause.
     def attach_one(blank_claim):
         pi.click("#padBtn")
-        pi.wait_for_timeout(4000)
+        frame_booted(pi, "pad")
         _ink = pi.evaluate(EDITOR_INK)
         check(blank_claim, _ink == 0, f"{_ink} inked pixels as the Pad opened")
         fi = pi.frame_locator("#padFrame")
@@ -656,13 +672,13 @@ with sync_playwright() as sp:
     _fp.on("request", lambda r: _fposts.append(r.url) if r.method == "POST" and "/api/skribls" in r.url else None)
     browsing.goto(_fp, BASE, "/feed")
     _fp.click("#padBtn")
-    _fp.wait_for_timeout(3000)
+    frame_booted(_fp, "pad")
     _ff = _cur(_fp)
     _ff.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
     _ff.evaluate("() => { localStorage.removeItem('skribl_flip_autosave_v1'); document.getElementById('menuBtn').click(); }")
     _fp.wait_for_timeout(400)
     _ff.evaluate("() => document.getElementById('flipBtn').click()")
-    _fp.wait_for_timeout(3500)
+    frame_booted(_fp, "flip")
     _ff = _cur(_fp)
     _ff.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
     _hdr = _ff.evaluate("""() => ({ path: location.pathname + location.search, x: !!document.getElementById('composeCloseBtn'),
@@ -711,7 +727,7 @@ with sync_playwright() as sp:
     check("switching back with an animation on the canvas asks first, in the composer's words",
           _sh["shown"] and _sh["title"] == "Switch to Skribl Pad?" and _sh["go"] == "Switch", str(_sh))
     _ff.evaluate("() => document.getElementById('leaveGo').click()")
-    _fp.wait_for_timeout(3000)
+    frame_booted(_fp, "pad")
     _ff = _cur(_fp)
     _pb = _ff.evaluate("() => ({ path: location.pathname + location.search, blank: !hasContent })")
     check("...and the Pad opens in the composer, blank: Flip's animation is not pushed into it",

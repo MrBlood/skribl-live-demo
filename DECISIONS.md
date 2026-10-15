@@ -17714,3 +17714,83 @@ him (1).
 
 Flip: shared. One sheet, one script, one badge; only the line differs, because
 Flip's drawings play rather than draw themselves.
+
+## After v322 -- what three release runs toward v323 found, and notes for the next session
+
+Asked "Should we seal?" before starting a new session, three release runs toward
+v323 each stopped on something different. Each was found rather than run again,
+and the fixes land here without the version bump: the seal is the next thing to
+do, from this tree.
+
+**`verify_parity` had outgrown the 600-second budget every suite runs under**
+(`harness/run_harness.sh`). The first run stopped it with all 469 checks it had
+reached passing and its last section unfinished: 514 s on CI (run 1210, 477
+checks), past 600 s on the box. That section, full screen while it plays in the
+Pad and Flip (`lib/watchfull.js`), is `verify_watchfull.py` now, moved whole,
+its assertions word for word, with the three helpers it borrowed (`ED`,
+`_fresh`, `_drawn`). Run alone on the box, `verify_parity` took 500 s for 409
+checks and `verify_watchfull` 113 s for 68; on CI 407 s and 99 s. With the Pad's
+way in taken away, the new suite goes red on the Pad's first row; with Flip's,
+on Flip's first row, and all 36 of the Pad's pass.
+
+**The Gallery ignored words typed before it listened** (`verify_hot`, second
+run). The search box is in the page's own HTML and `gallery.js` is deferred, so
+on a slow phone a person can type before anything listens, and a browser that
+restores fields on Back fills the box itself: the box said "beta fish" over a
+grid of everything. `gallery.js` now reads the box's words for its first
+listing. HOT 5c holds `gallery.js` at the route until the words are in, so the
+race is driven every time: red on its two rows with the old `gallery.js`, green
+with the fix. HOT 5b now acts only once the page is listening (its boot flag),
+so it tests the in-flight race it names.
+
+**`verify_compose` drew before the framed Pad was listening** (second run). A
+fixed four seconds stood in for the editor in the composer's frame being ready,
+and the stroke drawn after it landed first, so Record stayed hidden through the
+click's whole 30 s. `frame_booted()` waits for the framed editor's own boot flag
+(`__skriblBoot.pad`, `.flip`) at all five editor opens. With the Pad's script
+held six seconds, the old wait fails as the run did and the new one passes,
+86/86.
+
+**A frozen sample read as a jump** (`verify_motion`, third run, the only red in
+11,721 assertions across all 125 suites, both CI lanes attested). Flip's tool
+row read "526 -> 768, 0 frames between" as the last drawer closed. Twenty
+closes on the quiet box read 8 or 9 frames each, and Flip's close costs no long
+task at all at full speed and at most 108 ms on a CPU slowed 4x (the Pad's 81):
+nothing in the editor swallows a glide. The sampler reads on the page's own
+thread, once a frame, so a stall there lets the compositor carry the glide
+through while nothing is read. It now records the longest wait between frames,
+and a glide sample in which a frame waited past 250 ms is taken again, at most
+twice. Calibrated three ways: a 700 ms freeze after the first close fails the
+old check in the run's own words and passes the new one ("taken again after
+frames of [683] ms"); Flip made to jump home (`behavior: 'auto'`) fails the new
+check with its frames still 17 ms apart, the Pad's row green; untouched, 20/20.
+
+Also here, none of it app code: `harness/tools/make_grow.py`, which draws the
+seven growing-Blooby takes put to the owner the night of the cheer (FUTURE.md
+6m), kept in the tree because it lived only in a session's scratch space;
+FUTURE.md 6l marked BUILT, its dark ground answered by the badge the owner chose
+over the sticker; and START-HERE's device check given Blooby's places to look
+at, in place of "Blooby cheering after a post", which was parked then and is
+built now.
+
+**For the seal.** CI's full battery was green on every tree the runs froze
+(runs 1210, 1211, 1212). The third run's record (FAIL on the glide only) was
+kept out of the tree. Of v322's still-open list, the two-hour piece (#438 to
+#446), Blooby's link resting on the empty card (#473), the Gallery's black bars
+(#475) and the cheer (#476) are done.
+
+**Still open, after v322:**
+
+* **The v323 seal**, from this tree: `docs/SESSION-CONTEXT.md` §4.
+* **Growing Blooby (FUTURE.md 6m)**: which take, what speed, and where he
+  lives, put to the owner with defaults (A3, as it is, the first time Skribl
+  opens on a phone) and not yet answered.
+* **The owner's check of the build** on Windows and an iPhone (START-HERE,
+  "First after the seal"), now with Blooby's places on its checklist. None of
+  this has been seen on WebKit or in Segoe UI.
+* **Closing Flip's examples sheet froze headless Chromium for 1.4-1.7 s** in
+  about one run in ten (v322): unchanged, never seen on a real device.
+* **Several loops in one Flip (FUTURE.md 6k)** and the product ideas in
+  FUTURE.md 4 wait for the owner to choose.
+* **The feel.** "Skribl is kind" is the owner's first word for it; two more may
+  follow.

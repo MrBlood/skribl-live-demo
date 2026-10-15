@@ -824,8 +824,10 @@ seal after v320 at the owner's word, with this instruction: raise it as one of
 the first things once that seal and its audit are done. Refresh the checklist
 for the build as sealed before offering it.
 
-Raise with it Blooby cheering after a post (FUTURE 6l), which the owner asked
-about in that cleanup and said to keep parked until after the audit.
+Put on its checklist Blooby around the app (FUTURE 6l), which the owner asked
+about in that cleanup and parked until after the audit: he is built now, his
+pen on the empty canvas, his question mark where a drawing can't be shown, his
+cheer after a post, and the owner has seen each only in mocks made here.
 
 ### Closed: the bottom-toolbar redesign
 

@@ -6,8 +6,8 @@ THE OWNER, at the full-screen mock: the controls step back a moment after the
 drawing starts and come back when the mouse moves or a finger taps ("I like
 your picks"), and "make the first tap on a faded phone just reveal the
 controls without pausing, matching how video apps work". The editors took it
-first (verify_parity, "full screen while it plays"); this asks the same of the
-three surfaces that show a posted drawing. All of them use one module,
+first (verify_watchfull, once a section of verify_parity); this asks the same
+of the three surfaces that show a posted drawing. All of them use one module,
 lib/chromefade.js, so they are asked in the same words.
 
 WHAT IS ASKED, ON EACH SURFACE AND SCREEN

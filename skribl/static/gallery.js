@@ -1165,6 +1165,13 @@
 
   document.getElementById('galleryRetry').addEventListener('click', function () { load(true); });
   more.addEventListener('click', function () { load(false); });
+  /* WORDS ALREADY IN THE BOX COUNT. The box is in the page's own HTML and
+   * this script is deferred, so on a slow phone a person can type before
+   * anything here listens, and a browser that restores fields on Back puts
+   * the last words there itself. The first listing asks for them, so the grid
+   * never shows everything under a search it ignored (found by the v323
+   * seal's second release run; verify_hot HOT 5c). */
+  query = (qEl.value || '').trim().slice(0, 80);
   load(true);
 })();
 
