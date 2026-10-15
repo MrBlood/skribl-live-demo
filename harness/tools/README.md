@@ -29,6 +29,11 @@ the editor recorded. All of these need the local server.
 
 `verify_helpdemos.py` is the suite that holds the panel to these files.
 
+`make_grow.py` uses the same pipeline for a mock rather than the panel:
+Blooby growing from small to full screen on his star, waving, in the seven
+takes put to the owner at v323 (FUTURE.md 6m), saved as `.skribl` files to a
+folder you name. Nothing in the app uses it yet.
+
 ## Measurement
 
 `cssgraph.py` emits `player.css` (run it after any `styles.css` change — the

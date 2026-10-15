@@ -161,6 +161,7 @@ BATCHES = [
     ["verify_motion.py"],                  # measures — frames per transition, rAF
     ["verify_framecache.py"],              # measures
     ["verify_parity.py"],                  # measures
+    ["verify_watchfull.py"],               # measures — what is painted after a timed quiet spell, in both editors
     ["verify_audio.py", "verify_seam.py", "verify_loopcap.py", "verify_audiostate.py"],
     ["verify_gifenc.py", "verify_muxer.py", "verify_mp4.py", "verify_flipmeta.py"],
     ["verify_feed.py", "verify_media.py", "verify_storage.py", "verify_privacy.py",

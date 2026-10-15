@@ -299,8 +299,16 @@ with sync_playwright() as sp:
             route.continue_()
         rp.route(re.compile(r"/api/skribls\?"), _hold)
         rp.goto(BASE + "/gallery", wait_until="commit")
-        # The page is up but the listing is still open: act now.
+        # The page is up but the listing is still open: act now -- once the
+        # page is LISTENING. The tabs and the box are in the HTML and
+        # gallery.js is deferred, so the selector alone can resolve before
+        # anything listens: the v323 seal's second release run typed into a
+        # box nothing heard, and the first listing went out without the words
+        # (HOT 5c below pins that case on its own). gallery.js raises its boot
+        # flag on its last line, after the first listing has gone out, which
+        # the route is holding.
         rp.wait_for_selector('.tab[data-sort="hot"]', timeout=15000)
+        rp.wait_for_function("() => !!(window.__skriblBoot && window.__skriblBoot.gallery)", timeout=15000)
         _act(rp)
         held["release"] = True
         rp.wait_for_timeout(2500)
@@ -325,6 +333,47 @@ with sync_playwright() as sp:
                   bool(_state["titles"]) and all("beta fish" in t.lower() for t in _state["titles"]),
                   f"q={_state['q']!r} -> {_state['titles']}")
         rp.close()
+
+    # ---- WORDS TYPED BEFORE THE PAGE LISTENS (found by the v323 seal) ----
+    #
+    # The box is in the page's own HTML and gallery.js is deferred, so on a
+    # slow phone a person can type before anything listens, and a browser
+    # that restores fields on Back fills the box itself. gallery.js read the
+    # box only on an input event, so those words sat over a grid of
+    # everything. DRIVEN AT THE RACE: the route holds gallery.js until the
+    # words are in, so they land before the script runs, every time.
+    print("\nHOT 5c — words typed before the page listens are what it searches")
+    rp = br.new_page(viewport={"width": 1280, "height": 900})
+    seen, gate = [], {"open": False}
+    rp.on("request", lambda rq: seen.append(rq.url) if "/api/skribls?" in rq.url else None)
+
+    def _gate(route):
+        for _ in range(100):
+            if gate["open"]:
+                break
+            rp.wait_for_timeout(100)
+        route.continue_()
+    rp.route(re.compile(r"/gallery\.js(\?|$)"), _gate)
+    rp.goto(BASE + "/gallery", wait_until="commit")
+    rp.wait_for_selector("#galleryQ", timeout=15000)
+    rp.fill("#galleryQ", "beta fish")
+    _early = rp.evaluate("() => !!(window.__skriblBoot && window.__skriblBoot.gallery)")
+    gate["open"] = True
+    rp.wait_for_function("() => !!(window.__skriblBoot && window.__skriblBoot.gallery)", timeout=15000)
+    _shown = []
+    for _ in range(80):
+        _shown = rp.evaluate(TILES)
+        if _shown:
+            break
+        rp.wait_for_timeout(100)
+    check("precondition: the words went in before gallery.js ran",
+          not _early and rp.evaluate("() => document.getElementById('galleryQ').value") == "beta fish",
+          f"booted before the words: {_early}")
+    check("the first listing asks for the words already in the box",
+          bool(seen) and "q=beta" in seen[0], f"requests: {seen}")
+    check("...and the grid holds only what the box says",
+          bool(_shown) and all("beta fish" in t.lower() for t in _shown), f"{_shown}")
+    rp.close()
     br.close()
 
 # ------------------------------------------------------------------ section 6

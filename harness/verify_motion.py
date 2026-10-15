@@ -54,14 +54,26 @@ SAMPLER = """([probes, ms]) => { window.__mo = null; const out = []; const t0 = 
     if (what === 'fillAlpha') { const m = c.backgroundColor.match(/[\\d.]+/g);
       return !m ? 0 : (m.length > 3 ? +m[3] : 1); }
     return parseFloat(c[what]); };
-  (function tick(t) { out.push(probes.map(read)); if (t - t0 < ms) requestAnimationFrame(tick); else window.__mo = out; })(t0); }"""
+  let last = t0, gap = 0;
+  (function tick(t) { out.push(probes.map(read)); gap = Math.max(gap, t - last); last = t;
+    if (t - t0 < ms) requestAnimationFrame(tick); else { window.__mogap = gap; window.__mo = out; } })(t0); }"""
 
 
 def record(pg, probes, ms, action):
     pg.evaluate(SAMPLER, [probes, ms])
     action()
     pg.wait_for_function("() => window.__mo !== null", timeout=ms + 10000)
+    record.gap = pg.evaluate("window.__mogap")     # the longest wait between two frames, ms
     return pg.evaluate("window.__mo")
+
+
+record.gap = 0
+# A FROZEN SAMPLE IS NO SAMPLE. The sampler reads on the page's own thread, once
+# a frame. If that thread stalls for most of a motion, the compositor can carry
+# the motion through while nothing is read, and the record shows its two ends
+# with nothing between: a cut the screen never showed. Longer than this between
+# two frames and a sample is taken again (see the drawer glide below).
+STALL_MS = 250
 
 
 def between(vals, a, b, margin=0.05):
@@ -174,16 +186,28 @@ with sync_playwright() as p:
         rows = record(pg, [[bar, "top"]], 900, lambda: pg.click("#mediaOpenBtn"))
         tops = [r[0] for r in rows]
         ctx.close()
-        return scrolled, tops
+        return scrolled, tops, record.gap
 
     for name, path, bar in (("Pad", "/skribl-pad", "#toolBar"), ("Flip", "/flip", ".flip-tools")):
         print(f"\nCLOSING THE LAST DRAWER ({name}) — the page glides home")
-        scrolled, tops = drawer_close(path, bar)
+        # Taken again, at most twice, only when a frame waited past STALL_MS:
+        # the v323 seal's third release run read Flip "526 -> 768, 0 frames
+        # between" once, and twenty tries on a quiet box read 8 or 9 each, with
+        # Flip's close costing at most 0.1 s even on a CPU slowed 4x. A real
+        # jump keeps its frames coming every ~16 ms, so it is never retried.
+        stalls = []
+        for attempt in range(3):
+            scrolled, tops, gap = drawer_close(path, bar)
+            mid = between(tops, tops[0], tops[-1], 20)
+            if mid >= 3 or gap <= STALL_MS:
+                break
+            stalls.append(round(gap))
+        again = f"; taken again after frames of {stalls} ms" if stalls else ""
         check(f"{name}: opening Media scrolled the page, so closing it has somewhere to go",
               scrolled > 40, f"scrollY {scrolled}")
-        mid = between(tops, tops[0], tops[-1], 20)
         check(f"{name}: the tool row passes through several positions on its way down, never one jump",
-              abs(tops[-1] - tops[0]) > 40 and mid >= 3, f"{tops[0]:.0f} -> {tops[-1]:.0f}, {mid} frames between")
+              abs(tops[-1] - tops[0]) > 40 and mid >= 3,
+              f"{tops[0]:.0f} -> {tops[-1]:.0f}, {mid} frames between, longest frame {gap:.0f} ms{again}")
 
     print("\nFLIP — the tool tray and the menu's dim")
     ctx, pg = phone(b)
