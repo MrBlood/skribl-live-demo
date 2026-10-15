@@ -663,19 +663,38 @@ def player_states(pg):
     click(pg, "#playerFullBtn", 800); yield "full screen"; esc(pg, 600)
 
 
-def leave_full(pg, exit_sel):
-    """Out of a full screen the way a person gets out of one while it plays.
-    Its controls step back after a quiet spell (lib/chromefade.js), and the
-    photographs of the full-screen state take longer than that spell, so the x
-    was asleep and a tap went to the drawing under it: the walk stayed in full
-    screen, every state after it photographed the same bar, and the Library's
-    later controls went unmeasured on four screens of six with nothing said. So
-    the pointer moves first, as a hand does, and a walk that is still in full
-    screen afterwards stops with that reason (EVERY WALK, below)."""
+# A FULL SCREEN'S CONTROLS STEP BACK while a drawing plays (lib/chromefade.js),
+# and photographing them in three faces takes longer than the quiet spell. So the
+# bar went to sleep part-way through: on the short screens the Library's Speed
+# was photographed in one face of three or not at all, and a list rewritten from
+# that run dropped findings it had simply not seen. In a full-screen state the
+# pointer moves over the drawing before the census and before each photograph,
+# as a hand near the bar does, and the photograph waits until the bar is all the
+# way back. BAR is every part chromefade puts to sleep (fullbar.css, player.css).
+BAR = ".skfull:not(.skfull-card), .tileExit, .full-exit, .player-bar"
+AWAKE = ("() => !document.querySelector('.chrome-asleep') && [...document.querySelectorAll("
+         + json.dumps(BAR) + ")].every(e => getComputedStyle(e).opacity === '1')")
+
+
+def wake(pg):
     vp = pg.viewport_size or {"width": 800, "height": 600}
     pg.mouse.move(vp["width"] / 2, vp["height"] / 2)
     pg.mouse.move(vp["width"] / 2 + 12, vp["height"] / 2 + 12)
-    waits.settle(pg, 300)
+    try:
+        pg.wait_for_function(AWAKE, timeout=3000)
+    except Exception:
+        pass   # judged after the photograph, where it matters (EVERY PHOTOGRAPH, below)
+
+
+def leave_full(pg, exit_sel):
+    """Out of a full screen the way a person gets out of one while it plays.
+    Its controls step back after a quiet spell, so the x was asleep and a tap
+    went to the drawing under it: the walk stayed in full screen, every state
+    after it photographed the same bar, and the Library's later controls went
+    unmeasured on four screens of six with nothing said. So the pointer moves
+    first (wake, above), and a walk that is still in full screen afterwards
+    stops with that reason (EVERY WALK, below)."""
+    wake(pg)
     click(pg, exit_sel)
     esc(pg, 500)
     if js(pg, "() => !!document.fullscreenElement || !!document.querySelector('.is-immersive, .is-immersive-page')") is True:
@@ -811,6 +830,7 @@ def help_error(pg, menu, item):
 inventory = centring_inventory.entries()
 reached, typed_bad, rows, errs = set(), {}, [], []
 restless = []   # states whose controls never held still for three frames in two seconds
+asleep = []     # photographs in a full screen whose bar had stepped back by the end of them
 
 
 def fan_out():
@@ -869,6 +889,7 @@ def fan_out():
         MISSES.extend(got["misses"])
         restless.extend(got.get("restless", []))
         MOVING.extend(got.get("moving", []))
+        asleep.extend(got.get("asleep", []))
     rows.sort(key=lambda r: names.index(r["combo"]))      # the serial run's order
     check(f"all {len(procs)} side-by-side processes finished and reported", not failed, "; ".join(failed)[:600])
 
@@ -931,6 +952,9 @@ with sync_playwright() as p:
                             restless.append(f"{combo} {path} {state}")
                     except Exception:
                         pass
+                    full = "full screen" in state
+                    if full:
+                        wake(pg)
                     for c in pg.evaluate(SCAN, EXTRA):
                         reached.update(c["keys"])
                         if c["typed"]:
@@ -963,11 +987,31 @@ with sync_playwright() as p:
                             if face:
                                 js(pg, "([s, f]) => { document.querySelector(s).style.fontFamily = '\"' + f + '\"'; }",
                                    [f'[data-ctr="{c["id"]}"]', face])
-                            try:
-                                m = (measure_words(pg, c["id"], c["cap"], keep=True) if words
-                                     else measure(pg, c["id"], c["rect"], keep=True))
-                            except Exception:
-                                m = None
+                            def read():
+                                if full:
+                                    wake(pg)
+                                try:
+                                    got = (measure_words(pg, c["id"], c["cap"], keep=True) if words
+                                           else measure(pg, c["id"], c["rect"], keep=True))
+                                except Exception:
+                                    got = None
+                                if full and js(pg, AWAKE) is not True:
+                                    asleep.append(f"{combo} {path} {state} '{stable(c['name'])}' {face or 'icon'}")
+                                return got
+                            m = read()
+                            # OVER A DRAWING THAT PLAYS, a stroke drawn behind the bar between
+                            # two of a measurement's three photographs reads as ink: the
+                            # Library's Repeat read 2.75px high in one run and 0.5 in the next
+                            # three. In a full screen a reading counts when the next agrees.
+                            if full and m:
+                                for _ in range(3):
+                                    again = read()
+                                    if m and again and abs(again[0] - m[0]) <= 0.1 and abs(again[1] - m[1]) <= 0.1:
+                                        break
+                                    m = again
+                                else:
+                                    MOVING.append(f"{where(pg)} '{stable(c['name'])}': no two readings agreed")
+                                    m = None
                             if face:
                                 js(pg, "(s) => { const e = document.querySelector(s); if (e) e.style.fontFamily = ''; }",
                                    f'[data-ctr="{c["id"]}"]')
@@ -990,7 +1034,7 @@ if PART:
     # A child of fan_out(): hand back what was measured; the parent judges.
     pathlib.Path(PART).write_text(json.dumps({
         "rows": rows, "reached": sorted(reached), "errs": errs, "misses": MISSES, "restless": restless, "moving": MOVING,
-        "typed": [[k[0], k[1], v] for k, v in typed_bad.items()]}))
+        "asleep": asleep, "typed": [[k[0], k[1], v] for k, v in typed_bad.items()]}))
     sys.exit(0)
 
 # ------------------------------------------------------------------ verdicts
@@ -1017,6 +1061,11 @@ check("every inventory exception still names a control that exists",
 _stopped = [e for e in errs if e.startswith("driver ")]
 check("every page's walk ran to its end on every screen",
       not _stopped, f"{len(_stopped)} stopped early: " + "; ".join(_stopped[:6]))
+# EVERY PHOTOGRAPH IN A FULL SCREEN IS OF ITS BAR AWAKE (wake, above). A control
+# photographed asleep reads nothing, or a fading half of itself, and a list
+# rewritten from that run drops what it could not see.
+check("every photograph in a full screen was taken with its controls showing",
+      not asleep, f"{len(asleep)} taken asleep: " + "; ".join(asleep[:6]))
 off = sorted((r for r in rows if max(abs(r["dx"]), abs(r["dy"])) > TOL), key=lambda r: -max(abs(r["dx"]), abs(r["dy"])))
 worst = {}
 for r in rows:
