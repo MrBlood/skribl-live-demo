@@ -101,13 +101,13 @@ CONTROLS = [
     # Your Skribls left both editors in v304: it is the profile page (/library),
     # reached from a menu row on each. Same row on both, so parity holds.
     ("your skribls",       "#postedItem",      "#miPosted",       ""),
+    # The empty canvas's words, and Blooby with his pen above them, on both.
+    ("empty-canvas hint",  "#canvasEmptyHint", "#flipEmptyHint",  ""),
     # --- declared differences ---------------------------------------------
     ("page filmstrip",     None,               "#strip",
      "Flip only: pages are what make it an animation tool."),
     ("page grid overlay",  None,               "#gridBtn",
      "Flip only: alignment across pages is a Flip problem."),
-    ("empty-canvas hint",  "#canvasEmptyHint", None,
-     "Pad only: Flip's filmstrip already shows the page is blank."),
 ]
 
 # Controls where the OPTIONS are the same feature on both surfaces. Everything

@@ -118,9 +118,10 @@
   <!-- Persistent load-failure panel (shown instead of a transient toast, so a
        failed load never leaves a blank page). -->
   <div class="player-error" id="playerError" hidden>
-    <div class="player-error-icon" aria-hidden="true">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    </div>
+    {# Blooby thinking, his question mark (the owner's pick from the Blooby mock),
+       where the circled ! was: something isn't here, and nobody is to blame.
+       Decorative; the words below say what happened. #}
+    <img class="player-error-icon" src="{{ skribl_asset('brand/blooby-think.webp') }}" alt="" width="96" height="96">
     <div class="player-error-title" id="playerErrorMsg">Couldn't load this Skribl.</div>
     <div class="player-error-actions">
       <button type="button" id="playerRetryBtn" class="player-error-btn primary">Try again</button>

@@ -107,7 +107,8 @@
           {# Same whisper Pad's blank canvas carries — Flip's was a silent dark
              rectangle. Hidden the moment the document has any content. #}
           <div id="flipEmptyHint" class="canvas-empty-hint">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            {# Blooby with his pen, the Pad's picture (see skribl_editor.html). #}
+            <img src="{{ skribl_asset('brand/blooby-pen.webp') }}" alt="" width="72" height="72">
             <span>Draw page 1</span>
             <span class="canvas-empty-sub">Add pages below — they flip into an animation</span>
           </div>

@@ -208,7 +208,7 @@
     .stage-empty[hidden] { display: none; }
     .stage-empty img { height: 52%; width: auto; }
     .stage-empty .se-title { color: var(--text); font-weight: 700; font-size: 16px; }
-    .stage-error .se-icon { height: 30%; width: auto; color: var(--text-2); }
+    .stage-error .se-icon { height: 44%; width: auto; }
     .stage-error .se-sub { color: var(--text-2); font-size: 14px; line-height: 1.4; max-width: 30ch; }
     .stage-error .make { border: 0; font: inherit; font-weight: 600; font-size: 13px; gap: 8px; cursor: pointer; }
     .stage-error .make svg { width: 16px; height: 16px; }
@@ -639,7 +639,7 @@
          had posted nothing. The same frame, saying what happened and that the
          Skribls are still there, with a way to ask again. #}
       <div class="stage-empty stage-error" id="stageError" hidden>
-        <svg class="se-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M8.5 8.6A5 5 0 0 0 6.5 18H17a3.5 3.5 0 0 0 1.9-.6M20.7 14.6A3.5 3.5 0 0 0 17.5 10h-.3A6 6 0 0 0 10.4 5.6"/></svg>
+        <img class="se-icon" src="{{ skribl_asset('brand/blooby-think.webp') }}" alt="" width="384" height="384">
         <div class="se-title">Couldn’t load your Skribls</div>
         <div class="se-sub">They’re still there.</div>
         <button type="button" class="make" id="libRetry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span>Try again</span></button>

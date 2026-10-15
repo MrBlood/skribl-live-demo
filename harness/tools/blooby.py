@@ -3,7 +3,7 @@
 
     python3 harness/tools/blooby.py card OUTDIR
     python3 harness/tools/blooby.py icon skribl/static [MASTER.png]
-    python3 harness/tools/blooby.py badge skribl/static/brand
+    python3 harness/tools/blooby.py badge skribl/static/brand [POSE]
 
 Blooby is built from his own Flip drawing (flipworks.wave: the marker fill, the
 two-sided outline, the feet, the ground), so every pose keeps the hand he was
@@ -627,9 +627,10 @@ def icon_compose(him, side=ICON_MASTER, star_r=None, fill=None):
     return tile.convert("RGB")
 
 
-def draw_him(base="http://127.0.0.1:5001", dpr=ICON_DPR):
-    """Blooby waving, drawn in the real Pad on a transparent ground, returned
-    as RGBA cropped to his ink. Needs the local server.
+def draw_him(base="http://127.0.0.1:5001", dpr=ICON_DPR, name="wave"):
+    """Blooby in a pose (waving unless `name` says otherwise), drawn in the
+    real Pad on a transparent ground, returned as RGBA cropped to his ink.
+    Needs the local server.
 
     Drawn at a calm tempo: a fast hand captures too few points along each
     curve, and his eyes came out as hexagons the first time."""
@@ -646,7 +647,7 @@ def draw_him(base="http://127.0.0.1:5001", dpr=ICON_DPR):
             document.querySelector(`#canvasSeg button[data-size='${id}']`).click(); }""")
         pg.wait_for_timeout(300)
         pg.evaluate("() => { setTool('pen'); if (window.SkriblPressure) SkriblPressure.setEnabled(true); }")
-        artdraw.draw(pg, pose("wave", ground=False), tempo=1.2, pause_tempo=6.0)
+        artdraw.draw(pg, pose(name, ground=False), tempo=1.2, pause_tempo=6.0)
         pg.wait_for_timeout(500)
         url = pg.evaluate("() => document.getElementById('canvas').toDataURL('image/png')")
         b.close()
@@ -681,22 +682,24 @@ def badge_compose(him, side=BADGE_SIDE):
     return tile.resize((side, side), Image.LANCZOS)
 
 
-def draw_badge(out, base="http://127.0.0.1:5001"):
-    """Draw Blooby and write OUT/blooby-star.webp. Needs the local server."""
-    path = pathlib.Path(out) / "blooby-star.webp"
-    badge_compose(draw_him(base, dpr=4)).save(path, "WEBP", quality=92, method=6)
+def draw_badge(out, base="http://127.0.0.1:5001", name="wave"):
+    """Draw Blooby in pose `name` and write OUT/blooby-star.webp (waving: the
+    empty Library's) or OUT/blooby-<name>.webp (pen: the empty canvas; think:
+    a drawing or a list that can't be shown). Needs the local server."""
+    path = pathlib.Path(out) / ("blooby-star.webp" if name == "wave" else f"blooby-{name}.webp")
+    badge_compose(draw_him(base, dpr=4, name=name)).save(path, "WEBP", quality=92, method=6)
     return path
 
 
 if __name__ == "__main__":
     if len(sys.argv) not in (3, 4) or sys.argv[1] not in ("card", "icon", "badge") \
-            or (len(sys.argv) == 4 and sys.argv[1] != "icon"):
+            or (len(sys.argv) == 4 and sys.argv[1] not in ("icon", "badge")):
         raise SystemExit(__doc__.split("\n\n")[1])
     if sys.argv[1] == "icon":
         print("wrote", ", ".join(str(x) for x in draw_icons(sys.argv[2], master=(sys.argv[3:] or [None])[0])))
         raise SystemExit(0)
     if sys.argv[1] == "badge":
-        print("wrote", draw_badge(sys.argv[2]))
+        print("wrote", draw_badge(sys.argv[2], name=(sys.argv[3:] or ["wave"])[0]))
         raise SystemExit(0)
     draw_card(sys.argv[2])
     print("wrote", ", ".join(f"{sys.argv[2]}/{n}" for n in ("card.png", "card-paper.png", "card-dark.png")))
