@@ -1489,14 +1489,9 @@ body.player-mode #canvas {
   max-width: 340px;
   padding: 8px 20px;
 }
-.player-error-icon {
-  width: 46px; height: 46px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%;
-  color: var(--text-secondary);
-  background: rgba(var(--wash-rgb), 0.06);
-  border: 1px solid var(--hairline);
-}
+/* Blooby thinking (skribl_player.html): his badge brings its own lilac and
+   corner, so no ring and no wash behind him. */
+.player-error-icon { display: block; width: 96px; height: 96px; }
 .player-error-title { font-size: 16px; font-weight: 650; color: var(--text-primary); }
 .player-error-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 2px; }
 .player-error-btn {
