@@ -3614,6 +3614,10 @@ function showPlayerError(msg, canRetry) {
   if (shell) shell.hidden = true;
   const err = document.getElementById('playerError');
   if (!err) { showToast(msg, null); return; }   // fallback if markup is absent
+  // Nothing to draw, so no frame to draw it in. Left up, the empty canvas sat
+  // above the words in the canvas's dark ground: a black box that never loaded,
+  // 718 x 539 on a desk, in both themes.
+  canvasWrap.hidden = true;
   const m = document.getElementById('playerErrorMsg');
   if (m && msg) m.textContent = msg;
   err.hidden = false;

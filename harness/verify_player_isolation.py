@@ -463,10 +463,18 @@ with sync_playwright() as sp:
     check("GET /s/<unknown> answers 404", _st == 404, f"status {_st}")
     check("...and still renders the player shell, so the page can say so itself",
           'id="playerError"' in _body and 'id="playerShell"' in _body)
+    # FRAME: what is PAINTED halfway between the top of the page and the panel.
+    # The canvas's frame used to stay up above the words, empty, in the
+    # canvas's dark ground -- a black box that never loaded, 718 x 539 here,
+    # in both themes (found mocking Blooby on this page). Asked of the paint,
+    # not of the frame's box: a rect says where it would be, not that it shows.
     VIS = """() => { const vis = el => !!el && !el.hidden && el.offsetParent !== null;
-      return { panel: vis(document.getElementById('playerError')),
+      const p = document.getElementById('playerError'), top = p ? p.getBoundingClientRect().top : 0;
+      const at = document.elementFromPoint(innerWidth / 2, Math.max(1, top / 2));
+      return { panel: vis(p),
                retry: vis(document.getElementById('playerRetryBtn')),
-               msg: (document.getElementById('playerErrorMsg') || {}).textContent || '' }; }"""
+               msg: (document.getElementById('playerErrorMsg') || {}).textContent || '',
+               frame: !!at && !!at.closest('.canvas-wrap') }; }"""
     _mp = b.new_page(viewport={"width": 1280, "height": 900})
     _mp.goto(BASE + "/s/not-a-real-id", wait_until="load")
     # THE PANEL, NOT A COUNT OF MILLISECONDS. This was wait_for_timeout(1200),
@@ -480,6 +488,7 @@ with sync_playwright() as sp:
     check("the page says the Skribl could not be found", _m["panel"] and "found" in _m["msg"], str(_m))
     check("...and offers no Try again for it", _m["retry"] is False,
           "a reload cannot make a missing Skribl appear; the button is a promise it cannot keep")
+    check("...with no empty canvas frame above the words", _m["panel"] and _m["frame"] is False, str(_m))
     _mp.close()
     _np = b.new_page(viewport={"width": 1280, "height": 900})
     _np.route("**/api/skribls/**", lambda route: route.abort())
@@ -487,6 +496,7 @@ with sync_playwright() as sp:
     _np.wait_for_timeout(1200)
     _n = _np.evaluate(VIS)
     check("a network failure on a real post keeps Try again", _n["panel"] and _n["retry"] is True, str(_n))
+    check("...and no empty canvas frame above it either", _n["panel"] and _n["frame"] is False, str(_n))
     _np.close()
 
     print("\nHALF B — isolation ratchets (green ≠ done; see the targets)")
@@ -829,7 +839,10 @@ with sync_playwright() as sp:
     #   whole), for one named cost: +42 B -- app.js keeps where its progress
     #   bar stands, so its fade can tell a drawing stopped at its end, whose
     #   controls step back, from one paused part-way. 151,809 measured.
-    BYTES_RATCHET, BYTES_TARGET = 151_820, 153_800
+    # RAISED (a bug fix: no black box above "couldn't be found"), for one
+    #   named cost: +26 B -- app.js takes the canvas's empty frame down with
+    #   the shell when the page says a drawing can't be shown. 151,835 measured.
+    BYTES_RATCHET, BYTES_TARGET = 151_840, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
