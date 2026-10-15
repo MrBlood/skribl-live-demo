@@ -57,6 +57,12 @@
     var headEl = sheet ? sheet.querySelector('.export-head') : null;
     var headText = headEl && headEl.firstChild && headEl.firstChild.nodeType === 3 ? headEl.firstChild : null;
     var HEAD_IDLE = headText ? headText.nodeValue : '';
+    // And Blooby cheers beside it, the line under it saying who can watch
+    // (_skribl_post.html). Neither is rendered in compose mode.
+    var cheer = $('postCheer');
+    var subEl = $('postSub');
+    var SUB_IDLE = subEl ? subEl.textContent : '';
+    var SUB_POSTED = subEl ? subEl.getAttribute('data-posted') : null;
     var closeTimer = null;
     var posting = false;
     /* A POST THAT NEVER ANSWERS (v321 preflight, PF-029). The sheet cannot be
@@ -118,6 +124,8 @@
       if (state === 'idle') {
         posting = false;
         if (headText) headText.nodeValue = HEAD_IDLE;
+        if (cheer) cheer.hidden = true;
+        if (subEl) subEl.textContent = SUB_IDLE;
         status.hidden = true;
         status.classList.remove('error');
         progressFill.style.width = '0%';
@@ -226,6 +234,8 @@
       // A save on this device only keeps its warning in the status line.
       if (lastPostUrl && !opts.localOnly && lastPostUrl.charAt(0) !== '#') {
         if (headText) headText.nodeValue = cfg.compose ? 'Added' : 'Posted!';
+        if (cheer) cheer.hidden = false;
+        if (SUB_POSTED) subEl.textContent = SUB_POSTED;
         status.hidden = true;
       }
       // The delete key, when the post came back with one (an anonymous post;

@@ -481,6 +481,114 @@ with sync_playwright() as p:
     c.close()
     b.close()
 
+print("\nBLOOBY CHEERS — once a drawing has posted, beside 'Posted!', in both editors")
+# The owner's pick from the Blooby mock ("Cheer is best"): after a real post the
+# sheet shows Blooby cheering beside "Posted!", and the line under it says what
+# is true then -- anyone with the link can watch it (the server's default is
+# unlisted; the sheet only ever adds public) -- in each editor's own words: the
+# Pad's drawings draw themselves, Flip's play. Opened again, the sheet is back
+# to how it starts. A save kept on this device only (the post failed) does not
+# cheer, and compose mode, where nothing is posted yet, has no cheer at all.
+# Painted, as above: the share of his box in his badge's colours.
+_POSTED = """() => { const c = document.getElementById('postCheer'), s = document.getElementById('postSub');
+    const h = document.querySelector('#postSheet .export-head'), box = e => { if (!e) return null;
+      const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; };
+    const t = h && h.firstChild && h.firstChild.nodeType === 3 ? h.firstChild : null;
+    let left = null;
+    if (t) { const rg = document.createRange(); rg.selectNodeContents(t); left = rg.getBoundingClientRect().left; }
+    return { shown: !!c && !c.hidden, src: c ? (c.getAttribute('src') || '').split('?')[0].split('/').pop() : null,
+             done: !!c && c.complete && c.naturalWidth > 0, cheer: box(c && !c.hidden ? c : null),
+             head: t ? t.nodeValue : null, headBox: box(h), words: left, line: s ? s.textContent.trim() : null }; }"""
+
+
+def _post_from(b, path, canvas, theme="light", viewport=None, die=False):
+    """A fresh editor, one stroke, Post, and the sheet once it has answered."""
+    c = b.new_context(viewport=viewport or {"width": 402, "height": 874}, color_scheme=theme)
+    pg = c.new_page()
+    browsing.goto(pg, BASE, f"{path}?theme={theme}")
+    pg.evaluate("() => { if (window.SkriblHints) window.SkriblHints.hide(); }")
+    if die:
+        pg.route("**/api/skribls**", lambda r: r.abort() if r.request.method == "POST" else r.continue_())
+    bx = pg.locator(canvas).bounding_box()
+    pg.mouse.move(bx["x"] + bx["width"] * 0.3, bx["y"] + bx["height"] * 0.3)
+    pg.mouse.down()
+    pg.mouse.move(bx["x"] + bx["width"] * 0.6, bx["y"] + bx["height"] * 0.5, steps=10)
+    pg.mouse.up()
+    pg.wait_for_timeout(300)
+    if path == "/skribl-pad":
+        pg.click("#recordBtn")
+        pg.wait_for_timeout(400)
+    pg.click("#postBtn")
+    pg.wait_for_timeout(500)
+    pg.fill("#postTitleInput", "Cheer probe")
+    pg.click("#postSubmitBtn")
+    pg.wait_for_selector("#postResult:not([hidden])" if not die else "#postStatus:not([hidden])", timeout=15000)
+    pg.wait_for_timeout(2500 if die else 600)
+    return c, pg
+
+
+def _beside(r):
+    """His box left of the words and level with the title, nothing overlapping."""
+    if not (r["cheer"] and r["headBox"] and r["words"] is not None):
+        return False
+    x, y, w, h = r["cheer"]
+    hy, hh = r["headBox"][1], r["headBox"][3]
+    return x + w <= r["words"] - 6 and y < hy + hh and y + h > hy
+
+
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    for theme in ("light", "dark"):
+        c, pg = _post_from(b, "/skribl-pad", "#canvas", theme)
+        r = pg.evaluate(_POSTED)
+        share = _lilac(pg, r["cheer"])
+        check(f"Pad, {theme}: after a post Blooby cheers beside 'Posted!', painted, and the line says anyone "
+              "with the link can watch it draw itself",
+              r["shown"] and r["src"] == "blooby-cheer.webp" and r["done"] and share > 0.5 and r["head"] == "Posted!"
+              and r["line"] == "Anyone with the link can watch it draw itself." and _beside(r),
+              f"{ {k: r[k] for k in ('shown', 'src', 'head', 'line')} } lilac {share:.0%} beside {_beside(r)}")
+        if theme == "light":
+            pg.keyboard.press("Escape")
+            pg.wait_for_timeout(500)
+            pg.click("#postBtn")
+            pg.wait_for_timeout(600)
+            again = pg.evaluate(_POSTED)
+            check("...and opened again, the sheet is back to how it starts: no cheer, its first title and line",
+                  not again["shown"] and again["head"] == "Post your Skribl"
+                  and again["line"] == "Add a title and share it to Skribl",
+                  f"{ {k: again[k] for k in ('shown', 'head', 'line')} }")
+        c.close()
+    c, pg = _post_from(b, "/skribl-pad", "#canvas", "light", {"width": 1280, "height": 900})
+    r = pg.evaluate(_POSTED)
+    check("Pad on a desk: the cheer sits beside the words too",
+          r["shown"] and r["head"] == "Posted!" and _beside(r), f"cheer {r['cheer']} head {r['headBox']} words {r['words']}")
+    c.close()
+    c, pg = _post_from(b, "/flip", "#pad", "light")
+    r = pg.evaluate(_POSTED)
+    share = _lilac(pg, r["cheer"])
+    check("Flip: the same cheer after a post, and its line says anyone with the link can watch it play",
+          r["shown"] and r["src"] == "blooby-cheer.webp" and r["done"] and share > 0.5 and r["head"] == "Posted!"
+          and r["line"] == "Anyone with the link can watch it play." and _beside(r),
+          f"{ {k: r[k] for k in ('shown', 'src', 'head', 'line')} } lilac {share:.0%} beside {_beside(r)}")
+    c.close()
+    c, pg = _post_from(b, "/skribl-pad", "#canvas", "light", die=True)
+    r = pg.evaluate(_POSTED)
+    check("a drawing kept on this device only (the post failed) gets no cheer, and the line stays",
+          not r["shown"] and r["line"] == "Add a title and share it to Skribl",
+          f"{ {k: r[k] for k in ('shown', 'head', 'line')} }")
+    c.close()
+    b.close()
+
+# Compose mode posts nothing, so the sheet carries no cheer and no posted line:
+# asked of the served markup's elements, not of words.
+_cmp = {}
+for _path in ("/skribl-pad?compose=1", "/flip?compose=1"):
+    _html = urllib.request.urlopen(BASE + _path, timeout=20).read().decode()
+    _cmp[_path] = (bool(re.search(r'<img\b[^>]*\bid="postCheer"', _html)),
+                   bool(re.search(r'<div\b[^>]*\bid="postSub"[^>]*\bdata-posted=', _html)))
+check("compose mode, where nothing is posted yet, has no cheer and no posted line, in either editor",
+      _cmp and all(v == (False, False) for v in _cmp.values()), str(_cmp))
+
 bad = [r for r in results if not r[0]]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

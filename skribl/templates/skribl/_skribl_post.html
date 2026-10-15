@@ -18,12 +18,25 @@
          a second opinion could disagree with it. A <span>, not a button: on the
          toolbar this opens the music drawer, here there is nothing to open, so
          it carries no hover or active state and nothing invites a tap. #}
-      <div class="export-head">{{ "Add to your post" if compose else "Post your Skribl" }}<span
-           class="post-sound" id="postSound" hidden>{{ music_glyph() }}<span
-           class="tab-dot" id="postSoundDot"></span><span class="post-sound-sr"
-           id="postSoundText"></span></span></div>
-      <div class="export-sub">{{ "It goes inline in the post, and plays there"
-                                 if compose else "Add a title and share it to Skribl" }}</div>
+      {# BLOOBY CHEERS ONCE IT HAS POSTED (the owner's pick from the Blooby mock,
+         "Cheer is best"): beside "Posted!", and the line under it says what is
+         true then. Anyone with the link can watch it: the server's default is
+         unlisted and the sheet only ever adds public. Hidden until a real post
+         comes back (lib/postsheet.js result()), and not rendered in compose
+         mode, where nothing is posted yet. His badge brings its own lilac, so
+         one picture serves both themes. Each editor says what its drawings do
+         (`posted_line`): the Pad's draw themselves, Flip's play. #}
+      <div class="post-top">
+        {% if not compose %}<img class="post-cheer" id="postCheer" src="{{ skribl_asset('brand/blooby-cheer.webp') }}" alt="" width="52" height="52" hidden>{% endif %}
+        <div class="post-top-words">
+          <div class="export-head">{{ "Add to your post" if compose else "Post your Skribl" }}<span
+               class="post-sound" id="postSound" hidden>{{ music_glyph() }}<span
+               class="tab-dot" id="postSoundDot"></span><span class="post-sound-sr"
+               id="postSoundText"></span></span></div>
+          <div class="export-sub" id="postSub"{% if not compose %} data-posted="{{ posted_line|default('Anyone with the link can watch it draw itself.') }}"{% endif %}>{{ "It goes inline in the post, and plays there"
+                                     if compose else "Add a title and share it to Skribl" }}</div>
+        </div>
+      </div>
       <div class="post-body" id="postBody">
         <div class="post-preview" id="postPreview">
           <img id="postPreviewImg" class="post-preview-img" alt="Preview of your Skribl">
