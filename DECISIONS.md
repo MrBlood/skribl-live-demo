@@ -17606,3 +17606,42 @@ host pays for posterOf without running it, the trade that ratchet's own rules
 name (a module of its own would put a request on the /s/ player and on Flip).
 
 Flip: this is Flip's. Its card and its link now ask the same function.
+
+## After v322 -- on a phone each Gallery card takes its drawing's shape; on a desk the frames line up
+
+The owner's pick C from the Gallery mock ("A (and C)", marked on the phone).
+Every Gallery card was a 16:9 box with its drawing letterboxed inside and the
+player's dark ground either side: a tall drawing on a phone was a stripe
+between two black bars, 68% of its box. Now:
+
+- One card to a row (the grid's own breakpoint, 860px and under), each box
+  takes its drawing's shape, as a post does, and its picture fills it.
+- Two to a row the boxes stay 16:9, so a row's two drawings line up, and the
+  frame has no line, so a drawing sits on its card (option B).
+- Either way the ground beside a drawing is the card's colour. Both are two of
+  the player's own tokens set on `.tile` (`--bg-elev: var(--panel)`, and
+  `--border: transparent` two to a row), so still no rule on the page touches
+  the player.
+- A drawing whose post never said its size keeps the 16:9 box everywhere.
+
+The player gained me.shape(on): the shaping a post gets at attach, made
+callable either way, with fitPoster run again for the new box. Its percentages
+are shares of the box, and a picture left framed for the box it left lands 43
+to 123 px from where the drawing will be. gallery.js asks
+matchMedia('(max-width: 860px)'), the grid's own query, after each page of
+cards mounts and on every change. The in-post player's limit moves +119 B
+(65,386 measured).
+
+verify_gallery, a new section of 17 rows: phone and desk in both themes, and
+one page narrowed across the breakpoint both ways (861, 860, 861, 860), where
+the grid's columns and the cards' shape have to agree. 10 red on main; the 7
+that pass there guard what must not change (the desk stays 16:9 and framed, a
+drawing with no size stays 16:9). Seven breaks, each red on its own rows:
+shape() keeping the old framing (3), no shaping after mount (4), no change
+listener (1), the query drifting to 900px (1), shape(false) not undoing (1), no
+card-colour ground (4), the desk keeping the line (3). verify_inline, four
+rows on the switch itself: three red on main, and three breaks each red on
+its own row.
+
+Flip: shared. A Flip's card in the Gallery takes its shape the same way,
+through the same player; neither editor changes.

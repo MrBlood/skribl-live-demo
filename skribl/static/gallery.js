@@ -32,6 +32,24 @@
      touch the page while its own number is still the current one. See load(). */
   var gen = 0;
 
+  /* THE CARD'S SHAPE (the owner's pick C from the Gallery mock). One card to
+     a row, as on a phone, the box takes its drawing's shape, as a post does,
+     so a tall drawing is no longer a stripe between two dark bars. Two to a
+     row the boxes stay 16:9, so a row's two drawings line up, and the ground
+     beside a drawing is the card's own colour (this page's sheet, `.tile`).
+     The player does the shaping, poster and all (inlineplayer.js me.shape);
+     this only says when. The query is the grid's own, character for
+     character, and verify_gallery holds the two together either side of it. */
+  var oneCol = window.matchMedia && window.matchMedia('(max-width: 860px)');
+  function shapeCards() {
+    var on = !!(oneCol && oneCol.matches), boxes = list.querySelectorAll('[data-skribl-inline]');
+    for (var i = 0; i < boxes.length; i++) {
+      var p = boxes[i]._skriblInline;
+      if (p && p.shape) p.shape(on);
+    }
+  }
+  if (oneCol && oneCol.addEventListener) oneCol.addEventListener('change', shapeCards);
+
   /* A LINK THE HOST SUPPLIED IS STILL SOMEBODY ELSE'S STRING. `author.url`
      comes from the host's resolver, which a host may well build from a
      database column, so it is not trusted to be a web address: an
@@ -765,7 +783,7 @@
         if (myGen !== gen) return;
         var items = (body && body.items) || [];
         for (var i = 0; i < items.length; i++) list.appendChild(tile(items[i]));
-        if (items.length) window.SkriblInline.mount(list);
+        if (items.length) { window.SkriblInline.mount(list); shapeCards(); }
         cursor = (body && body.next_cursor) || null;
         more.hidden = !cursor;
         emptyStates();

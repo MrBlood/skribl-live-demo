@@ -1715,21 +1715,22 @@
      * the box stays 16:9 and the stylesheet's band crop stands. A POST (the
      * box with a line) TAKES THAT SHAPE (v322): no bars beside the drawing,
      * and the poster's drawing fills it. The macro writes the same when it
-     * is given the size; a page that clones it fills the size in after. */
+     * is given the size; a page that clones it fills the size in after.
+     * me.shape(on) switches later, framing the poster again (gallery.js). */
     var pw = +el.getAttribute('data-skribl-w');
     var ph = +el.getAttribute('data-skribl-h');
-    var shaped = !!line && pw > 0 && ph > 0;
-    if (shaped) {
-      el.style.aspectRatio = pw + ' / ' + ph;
-      el.style.setProperty('--skribl-ar', (pw / ph).toFixed(5));
-      el.classList.add('is-shaped');
-    }
-    if (poster) {
-      /* A post whose card 404s (a store that lost the thumbnail, a host without
-       * the card route) must not show a broken-image glyph in the feed. */
-      poster.addEventListener('error', function () { poster.hidden = true; });
-      if (pw > 0 && ph > 0) fitPoster(poster, pw, ph, shaped ? pw / ph : 0);
-    }
+    me.shape = function (on) {
+      var s = el.style, ok = pw > 0 && ph > 0;
+      on = !!on && ok;
+      s.aspectRatio = on ? pw + '/' + ph : '';
+      s.setProperty('--skribl-ar', on ? (pw / ph).toFixed(5) : '');
+      el.classList.toggle('is-shaped', on);
+      if (poster && ok) fitPoster(poster, pw, ph, on ? pw / ph : 0);
+    };
+    /* A post whose card 404s (a store that lost the thumbnail, a host without
+     * the card route) must not show a broken-image glyph in the feed. */
+    if (poster) poster.addEventListener('error', function () { poster.hidden = true; });
+    me.shape(line);
 
     /* THE LINE, built once its module is here. Before the drawing arrives it
      * says what the listing said (`line` and `pages`) and shows the stored

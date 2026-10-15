@@ -177,6 +177,15 @@
       background: var(--panel); border: 1px solid var(--hairline); border-radius: 16px;
       display: flex; flex-direction: column; min-width: 0; overflow: hidden;
     }
+    /* THE DRAWING ON THE CARD (the owner's pick C from the Gallery mock), in
+       two of the player's own tokens set on the card, so still no rule here
+       touches the player. The ground beside a drawing is the card's colour,
+       not a dark box. Two cards to a row the boxes stay 16:9, so a row's
+       drawings line up, and lose their line, so a drawing sits on its card;
+       one to a row each box takes its drawing's shape (gallery.js) and keeps
+       its line, as mocked. The query is the grid's own, turned over. */
+    .tile { --bg-elev: var(--panel); }
+    @media not all and (max-width: 860px) { .tile { --border: transparent; } }
     /* A GRID, AND THE TITLE SPANS IT. As a flex row the head held the avatar,
        the name and the title in ONE item and the fact run beside it, so the
        run's width came out of the title as well as the name -- and the run
