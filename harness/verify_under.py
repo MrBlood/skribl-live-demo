@@ -152,6 +152,14 @@ with sync_playwright() as p:
         pg = ctx.new_page()
         browsing.goto(pg, BASE, f"/s/{pid}")
         await_player(pg, what="the under fixture's player")
+        # AT REST, THE POSTER PAGE (lib/holdtiming.js posterOf): the first page
+        # with ink among those over the page underneath, with the card under
+        # it -- the page the share card shows. It rested on page 1 alone, the
+        # card with nobody on it (the owner's pick A, the Blooby link mock).
+        rest = pg.evaluate(SAMPLER, ["#canvas", COLS, W, H, CARD_Y, 400])
+        check("/s/: before Play it rests on its poster page, the first page drawn over the one "
+              "underneath, with the card under it",
+              set(rest) == {"1"} and rest["1"]["min"] > 0.8, str(rest))
         pg.click("#playerPlayBtn")
         judge("/s/", pg.evaluate(SAMPLER, ["#canvas", COLS, W, H, CARD_Y, 4500]))
         pg.close()

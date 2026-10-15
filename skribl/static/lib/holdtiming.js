@@ -211,6 +211,19 @@
     return { page: p, from: a, to: b };
   }
 
+  /* THE POSTER PAGE: what a Flip shows before it plays. The first page with
+   * ink among the pages something sits under (Blooby's card is page 1, empty
+   * of him, and the first page over it is the picture), else the first page
+   * with ink, else page 0. Flip draws its share card from it and the /s/
+   * player rests on it, so the link and every card show the same page. */
+  function posterOf(frames, raw) {
+    var u = underOf(raw, frames.length), ink = function (f) { return f && f.strokes && f.strokes.length; };
+    var k = u ? frames.slice(u.from, u.to + 1).findIndex(ink) : -1;
+    if (k >= 0) return u.from + k;
+    k = frames.findIndex(ink);
+    return k < 0 ? 0 : k;
+  }
+
   /* THE PLAY ORDER. Every surface that plays a Flip asks this, not the page
    * list, so a loop cannot mean one thing in the editor and another in a
    * player -- the reason this module exists. `slots` is the order pages play
@@ -321,6 +334,7 @@
     MAX_LOOP_TIMES: MAX_LOOP_TIMES,
     loopOf: loopOf,
     underOf: underOf,
+    posterOf: posterOf,
     plan: plan,
     wrapMs: wrapMs,
     displayAt: displayAt

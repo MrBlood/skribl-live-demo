@@ -4004,6 +4004,11 @@ function showPlayerError(msg, canRetry) {
     } else flipUnderPaint(at);   // an empty page over the page underneath shows just that
     lastFlipDrawn = at;
   }
+  // AT REST, THE POSTER PAGE (lib/holdtiming.js posterOf), the one its card
+  // and every other surface show. loadSkribl painted page 0, and a Flip that
+  // starts on a page meant to stay underneath opened on that page alone:
+  // Blooby's link showed his card with nobody on it.
+  if (isFlip && _hold && _hold.posterOf) drawFlipFrame(_hold.posterOf(flipFrames, data.under), 1);
   const totalMs = isFlip ? flipDurMs : (timeline.length ? timeline[timeline.length - 1].playT : 0);
 
   const pPlay = document.getElementById('playerPlayBtn');

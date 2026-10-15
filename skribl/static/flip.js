@@ -5691,13 +5691,13 @@ function buildSharePayload(){
    the empty card -- the post's preview showed a card with nobody on it. With
    a valid `under`, the poster is the first inked page drawn ON it, and
    drawFrameTo() paints the page underneath beneath it, as every player
-   does: the card with Blooby. One answer for the card, the Library tile, the
-   composer and the post sheet's preview, so the four cannot disagree. */
+   does: the card with Blooby. One answer, lib/holdtiming.js posterOf, for the
+   card, the Library tile, the composer, the post sheet's preview and the /s/
+   player at rest, so the five cannot disagree. */
 function posterPage(){
-  const inked = f => f && f.strokes && f.strokes.length;
-  const u = _validUnder();
-  const top = u ? frames.slice(u.from, u.to + 1).find(inked) : null;
-  return top || frames.find(inked) || frames[0];
+  const H = window.SkriblHold;
+  if (H && H.posterOf) return frames[H.posterOf(frames, docUnder)];
+  return frames.find(f => f && f.strokes && f.strokes.length) || frames[0];
 }
 function _shareCardDataURL(){
   const PC = window.SkriblPostedCard;

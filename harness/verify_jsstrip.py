@@ -255,9 +255,10 @@ with sync_playwright() as sp:
     # main went red on it, which is the "disagreement is a real signal" above.
     # And with it again for the lap fix (+16 B, 151,767 measured), and for a
     # finished drawing seen whole in full screen (+42 B, 151,809 measured),
-    # and for the empty frame gone from "couldn't be found" (+26 B, 151,835).
+    # and for the empty frame gone from "couldn't be found" (+26 B, 151,835),
+    # and for a Flip's link resting on its poster page (+400 B, 152,235).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 151_840,
+          lean_total <= 152_240,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a

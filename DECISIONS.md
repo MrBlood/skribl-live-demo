@@ -17575,6 +17575,38 @@ match on a working player, which this one never does.
 
 Flip: shared. A Flip's link page is this same player.
 
+## After v322 -- a Flip's link opens on the page its card shows
+
+The owner's pick A from the Blooby mock. Blooby's card is a Flip that draws
+the card on page 1 and keeps it under the pages where he waves, so its link
+page, which painted page 1 before Play, opened on an empty card -- while the
+feed, the Gallery, the Library and the share card all showed him waving on
+page 2, because Flip draws the card from its poster page.
+
+The poster page is one rule now, lib/holdtiming.js posterOf: the first page
+with ink among the pages something sits under, else the first page with ink,
+else page 0 -- Flip's posterPage rule, moved, not changed. flip.js asks it for
+the card, the Library tile, the composer and the post sheet's preview; the /s/
+player asks it once its pages are ready and rests on that page, with the page
+underneath painted beneath it, through the same drawFlipFrame that plays it.
+Play still starts at page 1. A Pad drawing's link already rests on the
+finished drawing, and the in-post player rests on the card itself.
+
+verify_under, THE /s/ PLAYER, one new row: before Play the canvas shows the
+fixture's poster page (the first page over the one underneath, its bar in its
+own column) with the card under it, read off the painted canvas. Red on main
+(the card alone); green here. Each part broken on its own goes red on it: the
+player's rest line taken out, and posterOf answering page 0.
+
+The player's JavaScript ratchet moves by the named cost, both pins together:
++400 B, 152,235 measured -- posterOf in lib/holdtiming.js, which the player
+loads, and the one line that rests on it. So does the in-post player's, +296 B
+(65,267 measured): every page that shows a post loads lib/holdtiming.js, so a
+host pays for posterOf without running it, the trade that ratchet's own rules
+name (a module of its own would put a request on the /s/ player and on Flip).
+
+Flip: this is Flip's. Its card and its link now ask the same function.
+
 ## After v322 -- Blooby on the empty canvas, and where something can't be shown
 
 The owner's picks from the Blooby mock (FUTURE.md 6l): on an empty canvas,
