@@ -17678,3 +17678,39 @@ its own row.
 
 Flip: shared. A Flip's card in the Gallery takes its shape the same way,
 through the same player; neither editor changes.
+
+## After v322 -- Blooby cheers when a drawing has posted
+
+The owner's pick from the Blooby mock: "Cheer is best". Once a post comes
+back, the post sheet shows Blooby cheering beside "Posted!", and the line under
+it says what is true then: "Anyone with the link can watch it draw itself." on
+the Pad, "Anyone with the link can watch it play." in Flip. It used to go on
+saying "Add a title and share it to Skribl" after the post had gone. The line
+holds for every post the sheet makes: the server's default visibility is
+unlisted, and the sheet only ever adds public.
+
+- The badge is blooby-cheer.webp, drawn by harness/tools/blooby.py badge
+  through the real Pad like the pen and the thinking ones: the Home Screen icon
+  in small with the whole star, so his lilac comes with him and one picture
+  serves both themes. 52px and decorative (alt=""); the words say it.
+- The sheet's top is a row now (.post-top): the badge, then the title and its
+  line, which step in 12px beside him. Nothing moves until a post comes back.
+- lib/postsheet.js result() shows him and swaps the line for a real post only,
+  not for a save kept on this device (the post failed); the sheet opened again
+  is back to its first title and line. Compose mode posts nothing, so there the
+  template renders neither the badge nor a posted line.
+- Each editor names its own line: `posted_line`, passed by Flip's include; the
+  Pad takes the template's default.
+
+verify_identity, BLOOBY CHEERS, seven rows: the Pad in both themes (painted,
+beside the words, its line), the sheet opened again, the Pad on a desk, Flip
+with its own line, a device-only save, and compose mode in both editors (read
+from the served markup's elements). Six red on main; the compose row cannot
+be, there being no cheer on main to leak. Seven breaks, each red on its own
+rows: the cheer never shown (4), the line not swapped (3), the sheet opened
+again keeping him (1), a device-only save cheering (1), the badge stacked
+above the words (4), Flip saying the Pad's line (1), compose mode rendering
+him (1).
+
+Flip: shared. One sheet, one script, one badge; only the line differs, because
+Flip's drawings play rather than draw themselves.

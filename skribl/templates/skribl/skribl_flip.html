@@ -510,7 +510,8 @@
   {# THE POST SHEET IS THE PAD'S (owner: "shouldn't flip and pad look the same?
      flip is not as clean as pad"). One partial for both editors, as the export
      chooser is; lib/postsheet.js is its behaviour and shareSkribl drives it. #}
-  {% include 'skribl/_skribl_post.html' %}
+  {# Flip's drawings play rather than draw themselves, and the posted line says so. #}
+  {% with posted_line='Anyone with the link can watch it play.' %}{% include 'skribl/_skribl_post.html' %}{% endwith %}
 
 <!-- Route config. Flip had NO config block: flip.js hardcoded fetch('/api/skribls')
      and a '/s/' fallback, so it was the one surface a url_prefix would have

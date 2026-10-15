@@ -685,7 +685,8 @@ def badge_compose(him, side=BADGE_SIDE):
 def draw_badge(out, base="http://127.0.0.1:5001", name="wave"):
     """Draw Blooby in pose `name` and write OUT/blooby-star.webp (waving: the
     empty Library's) or OUT/blooby-<name>.webp (pen: the empty canvas; think:
-    a drawing or a list that can't be shown). Needs the local server."""
+    a drawing or a list that can't be shown; cheer: the post sheet once a
+    drawing has posted). Needs the local server."""
     path = pathlib.Path(out) / ("blooby-star.webp" if name == "wave" else f"blooby-{name}.webp")
     badge_compose(draw_him(base, dpr=4, name=name)).save(path, "WEBP", quality=92, method=6)
     return path

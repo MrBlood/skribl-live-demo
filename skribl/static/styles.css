@@ -3613,6 +3613,15 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   padding: 0 14px 10px;
 }
 
+/* THE POST SHEET'S TOP (_skribl_post.html): its title and line, and once a post
+   has gone up, Blooby cheering beside them, at the words' own inset. #postSheet
+   on the last rule because the desk's padding for the words carries it. */
+.post-top { display: flex; align-items: center; }
+.post-top-words { flex: 1; min-width: 0; }
+.post-cheer { flex: none; display: block; width: 52px; height: 52px; margin: 6px 0 4px 14px; }
+.post-cheer[hidden] { display: none; }
+#postSheet .post-cheer:not([hidden]) + .post-top-words > * { padding-left: 12px; }
+
 /* IN styles.css, NOT flip.css, because BOTH editors render it. It was defined
    only in flip.css, which Pad does not load — so Pad's "Background" label in the
    shared GIF toggle has been falling back to browser defaults, rendering at body
@@ -3829,6 +3838,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   #postOverlay.open #postSheet { transform: translateY(0) scale(1); }
   #postSheet .export-head { font-size: 17px; padding: 8px 16px 4px; }
   #postSheet .export-sub { padding: 0 16px 12px; }
+  #postSheet .post-cheer { margin-left: 16px; }
   #postSheet .post-body { padding: 4px 16px 12px; }
   #postSheet .post-preview { max-height: 300px; }
   /* The Pad's sheet carries "Viewers start at" (about 96px), and the preview
