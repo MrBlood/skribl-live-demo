@@ -332,6 +332,13 @@ stays a sleep.
   the bar and the x away while it plays on, a pause from elsewhere brings them
   back, a finger's first tap only wakes them (a mouse's move on a desk), the
   next tap pauses, and paused they stay up. Visible means painted.
+- `verify_watchfull.py` — full screen while it plays, in the Pad and Flip
+  (lib/watchfull.js), on the same phone and desk: the way in at the end of the
+  line under the drawing, the drawing as big as the screen allows, the band
+  with the editor's own controls, the fade and what wakes it, a finished
+  drawing seen whole, and the way back to the page, focus and all. It was
+  verify_parity's last section until the v323 seal found that suite past its
+  600-second budget.
 - `verify_framecache.py` — a static page is rasterised at most once per
   playback, on BOTH surfaces. Pins the blit as pixel-identical to the paint it
   replaced (only after asserting 1:1 display, where that claim is honest), the
