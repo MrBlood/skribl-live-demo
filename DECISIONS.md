@@ -17574,3 +17574,36 @@ the rule needs :has(), and player.css carries only the selectors cssgraph saw
 match on a working player, which this one never does.
 
 Flip: shared. A Flip's link page is this same player.
+
+## After v322 -- Blooby on the empty canvas, and where something can't be shown
+
+The owner's picks from the Blooby mock (FUTURE.md 6l): on an empty canvas,
+Blooby with his pen where the little pen mark was, above "Draw anything" on
+the Pad and "Draw page 1" in Flip; where a link's drawing can't be shown, and
+where the Library's list didn't load, Blooby thinking, his question mark,
+where the circled ! and the crossed-out cloud were ("probably question mark
+guy"). The words are unchanged. The cheer after a post was mocked too and
+waits for the owner's word.
+
+Each is the badge harness/tools/blooby.py draws through the real Pad from his
+own strokes, the Home Screen icon in small with the whole star, as on the
+empty Library: his lilac comes with him, so one picture reads on a light
+canvas, a dark one, both themes and every colour setting. `badge OUTDIR POSE`
+writes blooby-pen.webp and blooby-think.webp beside blooby-star.webp (waving,
+still the default and still its name). They are decorative (alt=""), sized by
+their width and height (72 on the canvas, 96 on the link page, 44% of the
+Library's card), and on the canvas he leaves with the words at the first
+stroke, since he is inside the hint that fades. The link page's
+.player-error-icon rule loses its ring and wash; player.css is re-emitted.
+
+verify_identity, BLOOBY AROUND THE APP, seven rows, read off a screenshot of
+each picture's box (the hint takes no pointer events, so elementFromPoint sees
+through it): the Pad's in both themes, its leaving at the first stroke, Flip's,
+the link page's in both themes and the Library's. All seven red on main;
+green here. Each row reads its own page, so each is red without its own
+picture. verify_parity's table carried "empty-canvas hint: Pad only: Flip's
+filmstrip already shows the page is blank" -- untrue since Flip's blank-page
+whisper -- and lists it as a control both editors have now.
+
+Flip: shared. The same picture in Flip's hint; the post sheet and the link
+page are the same for both.
