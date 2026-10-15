@@ -2678,6 +2678,57 @@ with sync_playwright() as _kp:
     _kb.close()
 
 
+print("\nIN-POST — a poster's corner is the card's own corner, round at every shape")
+# fitPoster() clips the share card down to the drawing with the card's rounded
+# plate. Its radius was worked out as a share of the DRAWING, and CSS resolves
+# inset()'s radius against the IMAGE, which is the whole card: the corner came
+# out stretched by the card's width over the drawing's. A tall drawing's was
+# 27.7 x 8.1 px on a phone instead of 6.3 round, a long curve with the box's
+# ground showing in it (found mocking the Gallery without its bars). Read from
+# the computed clip and the image's own box, at every canvas shape, in a box
+# with no line (a Gallery tile) and in one with it (a post, shaped to its
+# drawing). The card's own corner is PLATE_R less the hairline, card pixels.
+_CORNER_CARD = 16
+_SHAPES = [(816, 612), (944, 531), (707, 707), (531, 944)]
+with sync_playwright() as _rp:
+    _rb = _rp.chromium.launch()
+    _rc = json.loads((ROOT / "skribl" / "static" / "help" / "demos" / "cat.json").read_text())
+    _rc["title"] = "Corner probe"
+    _rid = json.loads(urllib.request.urlopen(urllib.request.Request(
+        BASE + "/api/skribls", data=json.dumps(_rc).encode(),
+        headers={"Content-Type": "application/json"})).read())["id"]
+    _rpg = _rb.new_page(viewport={"width": 402, "height": 874}, device_scale_factor=2)
+    browsing.goto(_rpg, BASE, "/feed")
+    _rpg.evaluate("""([id, shapes]) => {
+        const tpl = document.getElementById('skriblPostTpl').innerHTML;
+        shapes.forEach(([w, h], k) => [false, true].forEach(line => {
+          const host = document.createElement('article');
+          host.style.cssText = 'display:block; width: 360px; margin: 16px auto';
+          host.innerHTML = tpl.split('__ID__').join(id);
+          const box = host.querySelector('.skribl-inline');
+          box.id = 'corner' + k + (line ? 'post' : 'tile');
+          box.setAttribute('data-skribl-w', w); box.setAttribute('data-skribl-h', h);
+          if (!line) host.querySelector('.skribl-inline-line').remove();
+          document.body.prepend(host);
+        }));
+        SkriblInline.mount(document); }""", [_rid, _SHAPES])
+    _rpg.wait_for_function("() => [...document.querySelectorAll('[id^=corner] .skribl-inline-poster')]"
+                           ".every(i => i.complete && i.naturalWidth > 0)", timeout=10000)
+    _round = _rpg.evaluate("""(card) => [...document.querySelectorAll('[id^=corner]')].map(box => {
+        const img = box.querySelector('.skribl-inline-poster'), r = img.getBoundingClientRect();
+        const m = /round\\s+([\\d.]+)%(?:\\s*\\/\\s*([\\d.]+)%)?/.exec(getComputedStyle(img).clipPath);
+        if (!m) return [box.id, null, null, null];
+        const rx = parseFloat(m[1]) / 100 * r.width, ry = parseFloat(m[2] || m[1]) / 100 * r.height;
+        return [box.id + ' ' + box.dataset.skriblW + 'x' + box.dataset.skriblH, +rx.toFixed(2), +ry.toFixed(2),
+                +(card * r.width / 1200).toFixed(2)]; })""", _CORNER_CARD)
+    _bent = [x for x in _round if x[1] is None or abs(x[1] - x[2]) > 0.1 or abs(x[1] - x[3]) > 0.1]
+    check("a poster's corner is the card's own corner at every canvas shape: round, and the card's "
+          "size wherever the box puts it, in a Gallery tile and in a post",
+          len(_round) == 8 and not _bent,
+          "; ".join(f"{n}: {rx} x {ry} px, the card's is {want}" for n, rx, ry, want in (_bent or _round)[:4]))
+    _rb.close()
+
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)
