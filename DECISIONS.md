@@ -17483,3 +17483,25 @@ watch-band Play while a drawing replays behind its corners (0 in main's run,
 1.41 in this one), the Gallery's Load more in DejaVu and FreeSans (0.17 and
 0.84; it sits wherever the gallery's length leaves it), and the Pad's Full
 screen on a dark desk (0.34 in both).
+
+## After v322 -- no black box above "This Skribl couldn't be found"
+
+Found while mocking Blooby on this page. When a link's drawing can't be shown
+(not there, or the connection dropped), the player hides its shell and shows
+a panel saying so -- and left the canvas's frame up above it, empty, in the
+canvas's dark ground: a black box that never loaded, 402 x 302 on a phone and
+718 x 539 on a desk, in both themes. showPlayerError() takes the frame down
+with the shell now, so the panel stands alone in the middle of the page.
+
+verify_player_isolation, MISSING, two new rows (the not-found page and a real
+post whose fetch is cut off): what is painted halfway between the top of the
+page and the panel is not the canvas's frame. Asked of the paint, with
+elementFromPoint, not of the frame's box. Red on main, both rows; green here.
+
+The player's JavaScript ratchet moves with it, both pins together
+(verify_player_isolation, verify_jsstrip): +26 B, 151,835 measured, for the
+one line. The CSS ratchet had the room (36,579 of 37,250) but not the means:
+the rule needs :has(), and player.css carries only the selectors cssgraph saw
+match on a working player, which this one never does.
+
+Flip: shared. A Flip's link page is this same player.
