@@ -17745,6 +17745,21 @@ BUILT, its dark ground answered by the badge the owner chose over the sticker;
 and START-HERE's device check given Blooby's places to look at, in place of
 "Blooby cheering after a post", which was parked then and is built now.
 
+**A fix inside this seal, found by its own release run.** The run stopped
+`verify_parity` at the 600-second budget every suite runs under
+(`harness/run_harness.sh`), with all 469 checks it had reached passing and its
+last section unfinished. Not a flake: the suite had grown, as the editors' full
+screen was added to it, to 514 s on CI (run 1210, 477 checks) and past 600 s
+on the seal's box. That section, full screen while it plays in the Pad and Flip
+(`lib/watchfull.js`), is `verify_watchfull.py` now, moved whole, its assertions
+word for word, with the three helpers it borrowed (`ED`, `_fresh`, `_drawn`);
+`verify_parity` keeps everything else. Run alone here, `verify_parity` took
+500 s for 409 checks and `verify_watchfull` 113 s for 68, the 477 between them.
+With the Pad's way in taken away, the new suite goes red on the Pad's first row;
+with Flip's, it goes red on Flip's first row and all 36 of the Pad's pass. That
+run was stopped and its record not kept; the record below is the second, on
+the tree with the fix.
+
 Of v322's still-open list, the two-hour piece (#438 to #446), Blooby's link
 resting on the empty card (#473), the Gallery's black bars (#475) and the cheer
 (#476) are done.
