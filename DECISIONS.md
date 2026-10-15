@@ -17840,3 +17840,14 @@ run's record was not kept; the record below is the next one, on the fixed tree.
   FUTURE.md 4 wait for the owner to choose.
 * **The feel.** "Skribl is kind" is the owner's first word for it; two more may
   follow.
+
+## After v323 -- growing Blooby: the owner picks C, walking up to you
+
+Asked at the v323 seal what "all yes" would say yes to, the owner picked
+instead: take C, "walks up to you" ("I like the one where blooby walks in from
+far away. he's small and he walks in to be big"), at its drawn speed ("speed is
+just right", about 3.4 s to full size), living where offered: the first time
+Skribl opens on a phone, once only, a tap skips him, a still hello under Reduce
+Motion, one piece of code for both editors. FUTURE.md 6m holds the choice and
+the next step, a measured mock before anything is built. Nothing in the app
+changes here.
