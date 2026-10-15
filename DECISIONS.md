@@ -17745,7 +17745,8 @@ BUILT, its dark ground answered by the badge the owner chose over the sticker;
 and START-HERE's device check given Blooby's places to look at, in place of
 "Blooby cheering after a post", which was parked then and is built now.
 
-**A fix inside this seal, found by its own release run.** The run stopped
+**Three fixes inside this seal, each found by one of its release runs.** The
+first run stopped
 `verify_parity` at the 600-second budget every suite runs under
 (`harness/run_harness.sh`), with all 469 checks it had reached passing and its
 last section unfinished. Not a flake: the suite had grown, as the editors' full
@@ -17756,9 +17757,24 @@ word for word, with the three helpers it borrowed (`ED`, `_fresh`, `_drawn`);
 `verify_parity` keeps everything else. Run alone here, `verify_parity` took
 500 s for 409 checks and `verify_watchfull` 113 s for 68, the 477 between them.
 With the Pad's way in taken away, the new suite goes red on the Pad's first row;
-with Flip's, it goes red on Flip's first row and all 36 of the Pad's pass. That
-run was stopped and its record not kept; the record below is the second, on
-the tree with the fix.
+with Flip's, it goes red on Flip's first row and all 36 of the Pad's pass.
+
+The second run, on the tree with that fix, failed two suites that had passed
+in the first run and on CI, and each was found rather than re-run. In
+`verify_hot` the Gallery had ignored words typed into its search box before
+`gallery.js`, which is deferred, began to listen: the box said "beta fish"
+over a grid of everything. That is the person's experience on a slow phone,
+and after a browser restores the field on Back, so the fix is the app's:
+`gallery.js` reads the box's words for its first listing. HOT 5c holds
+`gallery.js` at the route until the words are in, so the race is driven every
+time: red on its two rows with the old `gallery.js`, green with the fix; HOT 5b
+now acts only once the page is listening, so it tests the in-flight race it
+names. In `verify_compose` a fixed four seconds stood in for the framed Pad
+being ready, and the stroke drawn after it landed before the Pad listened, so
+Record stayed hidden; `frame_booted()` waits for the framed editor's own boot
+flag at all five editor opens. With the Pad's script held six seconds, the old
+wait fails as the run did and the new one passes, 86/86. Both runs were
+stopped and their records not kept; the record below is the third.
 
 Of v322's still-open list, the two-hour piece (#438 to #446), Blooby's link
 resting on the empty card (#473), the Gallery's black bars (#475) and the cheer
