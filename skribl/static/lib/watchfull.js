@@ -92,8 +92,11 @@
     function onChange(on) {
       /* Focus follows the way in: into the band with it, and back to it on
          the way out from anywhere in full screen -- the x, the band, Escape --
-         as a dialog hands focus back to what opened it. */
-      var had = doc.activeElement === o.button || (!on && wrap.contains(doc.activeElement));
+         as a dialog hands focus back to what opened it. The browser can drop
+         focus to the page as it leaves its own full screen, before this hears
+         of it, so focus on nothing counts as in full screen too (v323). */
+      var a = doc.activeElement;
+      var had = a === o.button || (!on && (!a || a === doc.body || wrap.contains(a)));
       o.button.setAttribute('aria-pressed', '' + on);
       o.button.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
       if (on) {

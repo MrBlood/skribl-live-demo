@@ -122,6 +122,7 @@ with sync_playwright() as p:
         return Math.round(Math.hypot(r.left + r.width / 2 - (c.left + p.x * c.width / lg.width),
                                      r.top + r.height / 2 - (c.top + p.y * c.height / lg.height))); }"""
     POINTS = "() => frames.reduce((n, f) => n + f.strokes.length, 0)"
+    AE = "() => { const a = document.activeElement; return a ? (a.id || a.className || a.tagName) : null; }"
     PAINTED = """(sel) => { const el = document.querySelector(sel); if (!el) return false; const x = el.getBoundingClientRect();
         if (!x.width || !x.height) return false;
         const h = document.elementFromPoint(x.left + x.width / 2, x.top + x.height / 2); return !!h && el.contains(h); }"""
@@ -340,6 +341,24 @@ with sync_playwright() as p:
                 _e = _q.evaluate(FS, _o)
                 check(f"{_tag}: Escape leaves the stand-in too, and lets the page scroll again",
                       _e0 == "stand-in" and _e["mode"] == "page" and not _e["locked"], f"{_e0} -> {_e['mode']}, locked {_e['locked']}")
+            else:
+                # The browser can drop focus to the page as it leaves its full
+                # screen, before fullscreenchange arrives: the v323 release run
+                # read <body> here on a loaded box, where CI and a quiet box read
+                # the way in. Dropped on purpose, so the race is driven every time.
+                if not _q.evaluate(ED[_route][2]):
+                    _q.click(ED[_route][1]); _q.wait_for_timeout(400)
+                _d0 = None
+                if _q.evaluate(PAINTED, _o["btn"]):
+                    _q.click(_o["btn"]); _q.wait_for_timeout(600)
+                    _d0 = _q.evaluate(FS, _o)["mode"]
+                    _q.evaluate("""(w) => { const x = document.querySelector(w + ' .watch-exit'); x.focus();
+                        document.activeElement.blur(); document.exitFullscreen(); }""", _o["wrap"])
+                    _q.wait_for_timeout(600)
+                _d = _q.evaluate(FS, _o)
+                check(f"{_tag}: ...and focus comes back to the way in even when the browser drops it on the way out",
+                      _d0 == "api" and _d["mode"] == "page" and _d["focus"],
+                      f"{_d0} -> {_d['mode']}, focus on {_q.evaluate(AE)}")
             _fc.close()
 
     # NEVER MAGNIFIED: full screen is the whole drawing. Flip fits its
