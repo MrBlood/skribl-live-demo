@@ -1432,7 +1432,16 @@ with sync_playwright() as sp:
     #                               box hidden and the line stepping away; the
     #                               old dark error pill's rule is gone
     #   64,971 B measured.
-    EMBED_RATCHET = 64_980
+    # RAISED (a Flip's link opens on the page its card shows, the owner's pick
+    #   A from the Blooby mock), for one named cost: +296 B, lib/holdtiming.js
+    #   posterOf, the poster page as one rule for Flip's card and the /s/
+    #   player. WHICH CALLER PAYS: every page that shows a post, for a function
+    #   only the /s/ player and Flip run -- this player rests on the card
+    #   itself. Carving it into a module of its own would put a request on both
+    #   of those to save a host less than a third of a kilobyte, the trade the
+    #   rules above already declined once. Spent first: posterOf was written as
+    #   two findIndex calls rather than loops (-22). 65,267 B measured.
+    EMBED_RATCHET = 65_270
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
