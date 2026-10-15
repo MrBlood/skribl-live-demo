@@ -17484,6 +17484,25 @@ watch-band Play while a drawing replays behind its corners (0 in main's run,
 0.84; it sits wherever the gallery's length leaves it), and the Pad's Full
 screen on a dark desk (0.34 in both).
 
+## After v322 -- a drawing's picture keeps the card's round corner at every shape
+
+Found while mocking the Gallery without its black bars. Before a drawing plays,
+the in-post player shows its share card clipped down to the drawing, with the
+card's own rounded corner (fitPoster in inlineplayer.js). The corner's radius
+was worked out as a share of the DRAWING, and CSS resolves inset()'s radius
+against the IMAGE, which is the whole card, the same as its four edges. So the
+corner stretched by the card's width over the drawing's, worst on a tall
+drawing: 28.8 x 8.4 px in a Gallery tile and 86.9 x 25.6 px in a post, where
+the card's corner at that size is 6.6 and 19.8 round, drawn as a long curve
+with the box's ground showing in it. It is a share of the card now, both ways.
+
+verify_inline, IN-POST, one new row: it reads the computed clip against the
+image's own box at all four canvas shapes, in a box with no line (a Gallery
+tile) and one with it (a post), and wants each corner round and the card's
+size. Red on main (all eight bent, the square too), green with the fix.
+
+Flip: shared. Every post and tile uses this one function, a Pad's or a Flip's.
+
 ## After v322 -- the centring sweep walks every screen to its end, and reads full screens awake
 
 The tool fix offered after #468, on the owner's "all yes". Since a full
