@@ -3444,6 +3444,174 @@ with sync_playwright() as _spb:
     _bb.close()
 
 
+# ---------------------------------------------------------------------------
+print("\nGALLERY — on a phone each card takes its drawing's shape; on a desk the frames line up")
+# THE OWNER'S PICK C from the Gallery mock: "A (and C)". Every tile was a 16:9
+# box with the drawing letterboxed in it, the space beside it the player's
+# dark ground -- a tall drawing on a phone was a stripe between two black bars.
+# Now, one card to a row (the grid's own breakpoint), the box takes its
+# drawing's shape, as a post does; two to a row the boxes stay 16:9 so a row's
+# drawings line up, the ground beside a drawing is the card's colour and the
+# frame has no line. The player does the shaping (inlineplayer.js me.shape) and
+# must frame the picture before Play again for the new box, since its
+# percentages are shares of the box: a shape switched without that leaves the
+# share card framed for a box that is no longer there.
+#
+# Four canvas shapes and one post that never said its size, which keeps 16:9
+# everywhere. "Where the picture shows" is the poster's box less its clip;
+# "where the drawing will be" is the drawing contained in the inside of the
+# box. Size and position, which coordinates can answer. Up to about 2.6 px
+# apart is the card's plate hairline, scaled up; a picture still framed for
+# the box it left measured 43 to 123 px off.
+def _shaped_post(title, size):
+    pts = [{"x": 60 + i * 30, "y": 80 + (i % 4) * 40, "color": "#7c5cff",
+            "size": 10, "t": i * 90} for i in range(14)]
+    body = {"title": title, "version": 2, "schemaVersion": 2, "visibility": "public",
+            "playbackMode": "replay", "frames": [{"strokes": pts, "strokeGroups": [len(pts)]}]}
+    if size:
+        body["canvasSize"] = {"cssWidth": size[0], "cssHeight": size[1]}
+    req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode())["id"]
+
+
+_CSIZES = [(531, 944), (816, 612), (707, 707), (944, 531)]
+_cids = [_shaped_post(f"{TAG} shape {w}x{h}", (w, h)) for w, h in _CSIZES]
+_cnone = _shaped_post(f"{TAG} shape unsaid", None)
+_CMEASURE = r"""(ids) => ids.map(id => {
+  const t = document.querySelector('#galleryList > article.tile[data-id="' + id + '"]');
+  if (!t) return { id: id, missing: true };
+  const box = t.querySelector('.skribl-inline'), r = box.getBoundingClientRect(), cs = getComputedStyle(box);
+  const pw = +box.dataset.skriblW || 0, ph = +box.dataset.skriblH || 0;
+  const b = parseFloat(cs.borderTopWidth) || 0;
+  const inn = { x: r.left + b, y: r.top + b, w: r.width - 2 * b, h: r.height - 2 * b };
+  let want = null;
+  if (pw && ph) {
+    const k = Math.min(inn.w / pw, inn.h / ph), w = pw * k, h = ph * k;
+    want = { x: inn.x + (inn.w - w) / 2, y: inn.y + (inn.h - h) / 2, w: w, h: h };
+  }
+  const img = box.querySelector('.skribl-inline-poster'), ir = img.getBoundingClientRect();
+  const m = /inset\(([^)]*?)(?:\s+round[^)]*)?\)/.exec(getComputedStyle(img).clipPath || '');
+  let shown = null;
+  if (m) {
+    const v = m[1].trim().split(/\s+/).map(x => parseFloat(x) / 100);
+    const tp = v[0], rp = v.length > 1 ? v[1] : v[0], bp = v.length > 2 ? v[2] : v[0];
+    const lp = v.length > 3 ? v[3] : rp;
+    shown = { x: ir.left + lp * ir.width, y: ir.top + tp * ir.height,
+              w: ir.width * (1 - lp - rp), h: ir.height * (1 - tp - bp) };
+  }
+  const off = want && shown ? Math.max(Math.abs(shown.x - want.x), Math.abs(shown.y - want.y),
+      Math.abs(shown.x + shown.w - want.x - want.w), Math.abs(shown.y + shown.h - want.y - want.h)) : null;
+  const fill = want ? (want.w * want.h) / (inn.w * inn.h) : null;
+  return { id: id, pw: pw, ph: ph, shaped: box.classList.contains('is-shaped'),
+           ar: r.width / r.height, w: +r.width.toFixed(1), h: +r.height.toFixed(1),
+           off: off === null ? null : +off.toFixed(2), fill: fill === null ? null : +fill.toFixed(4),
+           ground: cs.backgroundColor, card: getComputedStyle(t).backgroundColor,
+           line: cs.borderTopColor };
+})"""
+_CCOLS = ("() => getComputedStyle(document.getElementById('galleryList'))"
+          ".gridTemplateColumns.split(' ').filter(Boolean).length")
+_CREADY = """(ids) => ids.every(id => {
+  const i = document.querySelector('#galleryList > article.tile[data-id="' + id + '"] img.skribl-inline-poster');
+  return i && i.complete && i.naturalWidth > 0; })"""
+_ALL = _cids + [_cnone]
+
+
+def _alpha(c):
+    m = re.match(r"rgba?\(([^)]*)\)", c or "")
+    parts = [x.strip() for x in (m.group(1).split(",") if m else [])]
+    return float(parts[3]) if len(parts) == 4 else (1.0 if parts else None)
+
+
+def _cfacts(rows, sized):
+    return "; ".join(f"{r['pw']}x{r['ph']} {r['w']}x{r['h']} shaped={r['shaped']} off={r['off']}"
+                     for r in rows if (r.get("pw") > 0) == sized and not r.get("missing"))
+
+
+def _gallery_at(cb, theme, **vp):
+    ctx = cb.new_context(color_scheme=theme, **vp)
+    pg = ctx.new_page()
+    browsing.goto(pg, BASE, f"/gallery?theme={theme}", require_boot=False)
+    pg.wait_for_function(_CREADY, arg=_ALL, timeout=15000)
+    return ctx, pg
+
+
+with sync_playwright() as _cp:
+    _cb = _cp.chromium.launch()
+    for _theme in ("light", "dark"):
+        _ctx, _pg = _gallery_at(_cb, _theme, viewport={"width": 402, "height": 874},
+                                device_scale_factor=2, is_mobile=True, has_touch=True)
+        _rows, _cols = _pg.evaluate(_CMEASURE, _ALL), _pg.evaluate(_CCOLS)
+        _sized = [r for r in _rows if r.get("pw")]
+        _bare = [r for r in _rows if not r.get("missing") and not r.get("pw")]
+        check(f"phone, {_theme}: one card to a row, and each box takes its drawing's shape",
+              _cols == 1 and len(_sized) == 4 and all(
+                  r["shaped"] and abs(r["ar"] / (r["pw"] / r["ph"]) - 1) < 0.01 for r in _sized),
+              f"{_cols} column(s); " + _cfacts(_rows, True))
+        check("...the picture before Play lands where the drawing will, and the drawing fills its box",
+              len(_sized) == 4 and all(r["off"] is not None and r["off"] <= 3 and r["fill"] > 0.99
+                                       for r in _sized),
+              "; ".join(f"{r['pw']}x{r['ph']}: {r['off']} px off, fills {r['fill']}" for r in _sized))
+        check("...a drawing that never said its size keeps the 16:9 box",
+              len(_bare) == 1 and not _bare[0]["shaped"] and abs(_bare[0]["ar"] / (16 / 9) - 1) < 0.01,
+              str([(r["w"], r["h"], r["shaped"]) for r in _bare]))
+        check("...and the ground behind a drawing is the card's own colour, not a dark box",
+              len(_rows) == 5 and all(not r.get("missing") and r["ground"] == r["card"] for r in _rows),
+              str(sorted({(r.get("ground"), r.get("card")) for r in _rows})))
+        _ctx.close()
+
+    for _theme in ("light", "dark"):
+        _ctx, _pg = _gallery_at(_cb, _theme, viewport={"width": 1280, "height": 800})
+        _rows, _cols = _pg.evaluate(_CMEASURE, _ALL), _pg.evaluate(_CCOLS)
+        _found = [r for r in _rows if not r.get("missing")]
+        _sizes = {(r["w"], r["h"]) for r in _found}
+        check(f"desk, {_theme}: two cards to a row, and every box is the same 16:9, so a row lines up",
+              _cols == 2 and len(_found) == 5 and len(_sizes) == 1
+              and all(not r["shaped"] and abs(r["ar"] / (16 / 9) - 1) < 0.005 for r in _found),
+              f"{_cols} column(s); boxes {sorted(_sizes)}; shaped "
+              f"{[r['shaped'] for r in _found]}")
+        check("...the picture before Play lands where the drawing will inside it",
+              all(r["off"] is not None and r["off"] <= 3 for r in _found if r["pw"]),
+              _cfacts(_rows, True))
+        check("...the ground beside each drawing is the card's colour, and the frame has no line",
+              len(_found) == 5 and all(r["ground"] == r["card"] and _alpha(r["line"]) == 0
+                                       for r in _found),
+              str(sorted({(r["ground"], r["card"], r["line"]) for r in _found})))
+        _ctx.close()
+
+    # ACROSS THE BREAKPOINT, BOTH WAYS, ON ONE PAGE: a phone turned on its side
+    # or a window narrowed. The page asks the grid's own question
+    # ('(max-width: 860px)'); at 860 and 861 the grid's columns and the cards'
+    # shape have to agree, which is what holds the two literals together.
+    _ctx, _pg = _gallery_at(_cb, "light", viewport={"width": 1280, "height": 800})
+    _walk = []
+    for _w in (861, 860, 861, 860):
+        _pg.set_viewport_size({"width": _w, "height": 800})
+        _pg.wait_for_timeout(250)
+        _rows, _cols = _pg.evaluate(_CMEASURE, _ALL), _pg.evaluate(_CCOLS)
+        _walk.append((_w, _cols, [r for r in _rows if r.get("pw")]))
+    _agree = all(all(r["shaped"] for r in rows) if cols == 1 else not any(r["shaped"] for r in rows)
+                 for _w, cols, rows in _walk)
+    check("narrowed to 860px the grid is one column and every card takes its shape; at 861 it is two "
+          "and none does, both ways",
+          [c for _w, c, _r in _walk] == [2, 1, 2, 1] and _agree,
+          "; ".join(f"{w}px: {c} col, shaped {sum(r['shaped'] for r in rows)}/4" for w, c, rows in _walk))
+    check("...and the picture is framed again at every change, so it lands where the drawing will",
+          all(r["off"] is not None and r["off"] <= 3 for _w, _c, rows in _walk for r in rows),
+          "; ".join(f"{w}px: " + ", ".join(str(r["off"]) for r in rows) for w, _c, rows in _walk))
+    _lines = []
+    for _w in (861, 860):
+        _pg.set_viewport_size({"width": _w, "height": 800})
+        _pg.wait_for_timeout(250)
+        _lines.append((_w, _alpha(_pg.evaluate(
+            "() => getComputedStyle(document.querySelector('#galleryList .skribl-inline')).borderTopColor"))))
+    check("...and the frame's line follows: none two to a row, the player's own one to a row, as mocked",
+          _lines[0][1] == 0 and (_lines[1][1] or 0) > 0, str(_lines))
+    _ctx.close()
+    _cb.close()
+
+
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")
 sys.exit(0 if passed == len(results) else 1)

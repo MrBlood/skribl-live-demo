@@ -1441,7 +1441,17 @@ with sync_playwright() as sp:
     #   of those to save a host less than a third of a kilobyte, the trade the
     #   rules above already declined once. Spent first: posterOf was written as
     #   two findIndex calls rather than loops (-22). 65,267 B measured.
-    EMBED_RATCHET = 65_270
+    # RAISED (the Gallery's cards take their drawing's shape one to a row and
+    #   stay 16:9 two to a row, the owner's pick C from the Gallery mock), for
+    #   one named cost: +119 B in inlineplayer.js, me.shape(on), the box's
+    #   shape switched either way after it is attached, with the poster framed
+    #   again for the new box. WHICH CALLER PAYS: every page that shows a post,
+    #   for a switch only the Gallery throws today; it is the same few lines
+    #   that shape a post at attach, made callable, so a host pays for the
+    #   wrapper and not for a second copy. Spent first: its note is one line
+    #   (fitPoster's own says why the poster must follow the box). 65,386 B
+    #   measured.
+    EMBED_RATCHET = 65_390
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -2736,6 +2746,87 @@ with sync_playwright() as _rp:
           len(_round) == 8 and not _bent,
           "; ".join(f"{n}: {rx} x {ry} px, the card's is {want}" for n, rx, ry, want in (_bent or _round)[:4]))
     _rb.close()
+
+
+print("\nIN-POST — a page can put a box in its drawing's shape and back, and the picture follows")
+# me.shape(on), for a page whose layout changes under its boxes: the Gallery
+# shapes its cards one to a row and keeps them 16:9 two to a row (the owner's
+# pick C). The box takes the drawing's shape or goes back to 16:9, and the
+# picture before Play is framed again for the box it is in, because
+# fitPoster's percentages are shares of the box: framed for the box it left,
+# it lands tens of pixels from where the drawing will be. Driven on line-less
+# boxes (a Gallery card's kind) cloned from the feed's own template, one that
+# knows its drawing's size and one that does not. "Off" is the furthest edge of
+# the picture's clip from the drawing contained in the box; up to about 2.6 px
+# is the card's plate hairline, scaled up.
+_SHAPE_READ = r"""(id) => {
+  const box = document.getElementById(id), p = box && box._skriblInline;
+  if (!p) return null;
+  const r = box.getBoundingClientRect(), cs = getComputedStyle(box), b = parseFloat(cs.borderTopWidth) || 0;
+  const inn = { x: r.left + b, y: r.top + b, w: r.width - 2 * b, h: r.height - 2 * b };
+  const pw = +box.dataset.skriblW || 0, ph = +box.dataset.skriblH || 0;
+  let off = null;
+  if (pw && ph) {
+    const k = Math.min(inn.w / pw, inn.h / ph), w = pw * k, h = ph * k;
+    const want = { x: inn.x + (inn.w - w) / 2, y: inn.y + (inn.h - h) / 2, w: w, h: h };
+    const img = box.querySelector('.skribl-inline-poster'), ir = img.getBoundingClientRect();
+    const m = /inset\(([^)]*?)(?:\s+round[^)]*)?\)/.exec(getComputedStyle(img).clipPath || '');
+    if (m) {
+      const v = m[1].trim().split(/\s+/).map(x => parseFloat(x) / 100);
+      const tp = v[0], rp = v.length > 1 ? v[1] : v[0], bp = v.length > 2 ? v[2] : v[0], lp = v.length > 3 ? v[3] : rp;
+      const sx = ir.left + lp * ir.width, sy = ir.top + tp * ir.height;
+      const sw = ir.width * (1 - lp - rp), sh = ir.height * (1 - tp - bp);
+      off = +Math.max(Math.abs(sx - want.x), Math.abs(sy - want.y),
+                      Math.abs(sx + sw - want.x - want.w), Math.abs(sy + sh - want.y - want.h)).toFixed(2);
+    }
+  }
+  return { shaped: box.classList.contains('is-shaped'), ar: +(r.width / r.height).toFixed(4),
+           size: [+r.width.toFixed(1), +r.height.toFixed(1)], off: off, can: typeof p.shape === 'function' };
+}"""
+with sync_playwright() as _sp2:
+    _sb = _sp2.chromium.launch()
+    _sc = json.loads((ROOT / "skribl" / "static" / "help" / "demos" / "cat.json").read_text())
+    _sc["title"] = "Shape probe"
+    _sid = json.loads(urllib.request.urlopen(urllib.request.Request(
+        BASE + "/api/skribls", data=json.dumps(_sc).encode(),
+        headers={"Content-Type": "application/json"})).read())["id"]
+    _spg = _sb.new_page(viewport={"width": 402, "height": 874}, device_scale_factor=2)
+    browsing.goto(_spg, BASE, "/feed")
+    _spg.evaluate("""(id) => {
+        const tpl = document.getElementById('skriblPostTpl').innerHTML;
+        [['shapeTall', 531, 944], ['shapeUnsaid', 0, 0]].forEach(([name, w, h]) => {
+          const host = document.createElement('article');
+          host.style.cssText = 'display:block; width: 360px; margin: 16px auto';
+          host.innerHTML = tpl.split('__ID__').join(id);
+          const box = host.querySelector('.skribl-inline');
+          box.id = name;
+          if (w) { box.setAttribute('data-skribl-w', w); box.setAttribute('data-skribl-h', h); }
+          host.querySelector('.skribl-inline-line').remove();
+          document.body.prepend(host);
+        });
+        SkriblInline.mount(document); }""", _sid)
+    _spg.wait_for_function("() => [...document.querySelectorAll('[id^=shape] .skribl-inline-poster')]"
+                           ".every(i => i.complete && i.naturalWidth > 0)", timeout=10000)
+    _SHAPE = "([id, on]) => { const p = document.getElementById(id)._skriblInline; if (p.shape) p.shape(on); }"
+    _rest = _spg.evaluate(_SHAPE_READ, "shapeTall")
+    check("a box with no line rests 16:9, its picture framed for 16:9",
+          bool(_rest) and not _rest["shaped"] and abs(_rest["ar"] / (16 / 9) - 1) < 0.01
+          and _rest["off"] is not None and _rest["off"] <= 3, str(_rest))
+    _spg.evaluate(_SHAPE, ["shapeTall", True])
+    _on = _spg.evaluate(_SHAPE_READ, "shapeTall")
+    check("shape(true) gives it the drawing's shape and frames the picture again for that box",
+          bool(_on) and _on["can"] and _on["shaped"] and abs(_on["ar"] / (531 / 944) - 1) < 0.01
+          and _on["off"] is not None and _on["off"] <= 3, str(_on))
+    _spg.evaluate(_SHAPE, ["shapeTall", False])
+    _off = _spg.evaluate(_SHAPE_READ, "shapeTall")
+    check("...and shape(false) puts it back to 16:9, the picture framed for 16:9 again",
+          bool(_off) and _off["can"] and not _off["shaped"] and abs(_off["ar"] / (16 / 9) - 1) < 0.01
+          and _off["off"] is not None and _off["off"] <= 3, str(_off))
+    _spg.evaluate(_SHAPE, ["shapeUnsaid", True])
+    _un = _spg.evaluate(_SHAPE_READ, "shapeUnsaid")
+    check("a box that doesn't know its drawing's size stays 16:9 when asked to take its shape",
+          bool(_un) and _un["can"] and not _un["shaped"] and abs(_un["ar"] / (16 / 9) - 1) < 0.01, str(_un))
+    _sb.close()
 
 
 passed = sum(1 for ok, _ in results if ok)
