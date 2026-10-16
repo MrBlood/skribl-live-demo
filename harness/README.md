@@ -338,6 +338,13 @@ stays a sleep.
   tooltip, then the card, and moving away closes it; `?` tags every button,
   a tag opens its card, Escape closes; How it works' Name every button; the
   first-time note once; automation never meets any of it unless it asks.
+- `verify_ask.py` — Ask, How it works as one question (lib/ask.js), Pad and
+  Flip: it opens on its home every time, the field empty, each editor's own
+  four often-asked; a sheet on a phone, a dialog on a desk; typing gives the
+  best answer and every matching entry lit, cousins as whole words only, and
+  says so kindly when nothing matches; every answer opens and names only
+  buttons on its page; Show me lights the real button, the tap goes on, Back
+  to Ask returns; Escape goes back a step; New here? plays the tour.
 - `verify_contrast.py` — every word on every sheet against what is painted
   behind it (owner, after v323: "check contrasts and consistency on all our
   changes, and future changes"): the menu (main, New, Settings), Your drafts,

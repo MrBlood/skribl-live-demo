@@ -12,8 +12,8 @@ it did not. This suite does, on Pad and Flip, light and dark, a phone and a
 desk, for each surface a person can open:
 
   the menu (main, New, Settings), Your drafts, Export, Report a problem,
-  Post, How it works (Watch, Look it up), Tune, a button's card and the
-  name tags (lib/learncard.js).
+  Post, How it works (Ask's home, its answers, an answer; lib/ask.js), Tune,
+  a button's card, a Show me step and the name tags (lib/learncard.js).
 
 THE GROUND IS READ FROM PIXELS, NOT STYLES: the surface is photographed once
 with every word made transparent, and each word's ground is the colour
@@ -105,7 +105,7 @@ CENSUS = r"""(root) => {
   const s = (el) => { const cs = getComputedStyle(el); return { bg: cs.backgroundColor, edge: cs.borderTopWidth !== '0px' ? cs.borderTopColor : 'none',
     r: cs.borderTopLeftRadius, blur: cs.backdropFilter }; };
   const cards = {};
-  for (const sel of ['.menu-tile', '.menu-list', '.seg', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.learn-chip',
+  for (const sel of ['.menu-tile', '.menu-list', '.seg', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
                      '.help-tip', '.help-search', '.export-opt', '.tune-row', '.post-card']) {
     const el = [...R.querySelectorAll(sel)].find(e => e.getClientRects().length);
     if (el) cards[sel] = s(el);
@@ -196,9 +196,17 @@ def surfaces(name, ids, q, canvas, btn):
         q.wait_for_timeout(600)
         q.click("#postBtn"); q.wait_for_timeout(900)
 
-    def look():
+    def answers():
         via(ids["help"], 1200)()
-        q.click("#helpTabLook"); q.wait_for_timeout(700)
+        q.fill("#helpSearch", "loop"); q.wait_for_timeout(700)
+
+    def answer():
+        via(ids["help"], 1200)()
+        q.click("#askOften [data-answer]"); q.wait_for_timeout(900)
+
+    def step():
+        answer()
+        q.click("#askAnswer .ask-show"); q.wait_for_timeout(1500)
 
     def tune():
         q.click("#tuneBtn"); q.wait_for_timeout(700)
@@ -215,10 +223,12 @@ def surfaces(name, ids, q, canvas, btn):
             ("Your drafts", via("openCloudDraftItem"), "#savedDraftsSheet"),
             ("Export", via(ids["export"]), "#exportSheet"), ("Report a problem", via(ids["report"]), "#reportSheet"),
             ("Post", post, "#postSheet"),
-            ("How it works, Watch", via(ids["help"], 1500), "#helpDrawer .help-drawer-inner"),
-            ("How it works, Look it up", look, "#helpDrawer .help-drawer-inner"),
+            ("Ask", via(ids["help"], 1500), "#helpDrawer .help-drawer-inner"),
+            ("Ask, its answers", answers, "#helpDrawer .help-drawer-inner"),
+            ("Ask, an answer", answer, "#helpDrawer .help-drawer-inner"),
             ("Tune", tune, "#tuneShell"),
-            ("A button's card", card, ".lc-card"), ("Name every button", names, ".lc-tags"))
+            ("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
+            ("Name every button", names, ".lc-tags"))
 
 
 census = {}
@@ -261,7 +271,7 @@ with sync_playwright() as p:
 # difference is drift), and every sheet the menu opens is the menu's paper.
 print("\nCONSISTENCY")
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
-         "How it works, Watch", "How it works, Look it up")
+         "Ask", "Ask, its answers", "Ask, an answer")
 for scheme in ("light", "dark"):
     labels = sorted({k[2] for k in census if k[1] == scheme})
     for label in labels:
@@ -275,7 +285,7 @@ for scheme in ("light", "dark"):
     grounds = {(n, label): census[(n, scheme, label)]["sheet"]["bg"] for (n, sc, label) in census
                if sc == scheme and label in PAPER and census[(n, sc, label)]}
     check(f"{scheme}: every sheet the menu opens is one paper ({len(grounds)} read)",
-          len(grounds) >= (2 if ONLY else 18) and len(set(grounds.values())) == 1,
+          len(grounds) >= (2 if ONLY else 20) and len(set(grounds.values())) == 1,
           "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(grounds.items())))
 
 print("\nEach surface's own colours, for reading side by side")

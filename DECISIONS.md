@@ -18105,3 +18105,40 @@ How it works' tabs, scrolled (owner's phone): the examples showed through
 the lilac track, which is a wash, and in the gutters beside it. A band of the
 menu's paper now sits behind the tabs from the title band down and gutter to
 gutter, with the track drawn on it.
+
+## After v323 -- Ask
+
+Piece two of the help in four layers (FUTURE.md 6p), after the Ask mock and
+"All yes": How it works is Ask, lib/ask.js, one module for the Pad and Flip.
+Its two tabs are gone. One field, "Ask in your own words"; empty, it shows
+Ask's home: New here? (the one-minute tour, full screen), what people often
+ask (each editor its own four), the examples in a strip of pictures, Name
+every button, and Everything, by section. Typed into, the best how-to answer
+comes first with Show me and How, then every entry that matches with the
+word lit. lib/helpsearch.js now knows everyday cousins of words ("repeat"
+finds the loop entries), as whole words only: "loop" had matched Brush
+style's "repeated". Nothing found says so, with other words to try and
+"hold one".
+
+An answer is its example, a few steps in the app's own words, Show me and
+what is related. Show me puts How it works away and lights the real button
+with piece one's card, "1 of 3", one step at a time; tapping the lit button
+goes on, and Back to Ask comes back to the answer. Each step names its
+button in the page (data-sel), and verify_ask opens every answer on both
+editors and finds each one, so a renamed button cannot leave an answer
+pointing at nothing. Escape on an answer or on the answers goes back a step.
+
+A sheet on a phone (it rises to 10% from the top, so the drawing shows
+above it, with a handle) and a dialog in the middle on a desk (680px at
+most). The field sits as far below the title as from the sides (the owner's
+earlier rule) and is 17px. The strip's cards are pictures, so Try it rides
+with the example full screen; "More about" on each card went (typing does
+it, and a button card's More asks Ask). The hidden chips went with the tabs.
+The strip asks for the next example as each one comes near, so a swipe
+meets it loaded.
+
+verify_ask holds each promise; verify_helpdemos, verify_help, verify_menu,
+verify_contrast (four Ask surfaces, including a Show me step) and
+check_centring read Ask instead of the tabs. learncard.js left verify_surfaces'
+self-installing list, since Ask now reads it.
+

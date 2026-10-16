@@ -164,7 +164,7 @@
     var related = (a.related || []).map(function (r) { return byId[r]; }).filter(Boolean);
     answerEl.innerHTML = '<button type="button" class="ask-back" id="askBack"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Ask</button>'
       + '<h2 class="ask-answer-t" id="askAnswerT" tabindex="-1"></h2><div class="ask-answer-pic"></div>'
-      + '<ol class="ask-steps">' + a.steps.map(function (s) { return '<li><span>' + s[0] + '</span></li>'; }).join('') + '</ol>'
+      + '<ol class="ask-steps">' + a.steps.map(function (s) { return '<li' + (s[1] ? ' data-sel="' + s[1] + '"' : '') + '><span>' + s[0] + '</span></li>'; }).join('') + '</ol>'
       + '<button type="button" class="ask-go ask-show" data-show="' + a.id + '">Show me</button>'
       + (related.length ? '<h3 class="ask-k">Related</h3><div class="ask-list" role="list">' + related.map(rowHtml).join('') + '</div>' : '');
     answerEl.querySelector('.ask-answer-t').textContent = a.title;
