@@ -6097,7 +6097,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
    example big, one under another on a phone and two to a row on a desk. Look
    it up: search and every entry. The tabs stay up under the title band as the
    panel scrolls (its 69px: 20 + 32 + 16, and its line). */
-.help-tabs { position: sticky; top: 69px; z-index: 3; display: flex; gap: 4px; margin: 12px 24px 0;
+.help-tabs { position: sticky; top: 69px; z-index: 3; display: flex; gap: 4px; margin: 12px 18px 0;
   padding: 4px; border-radius: 14px; border: 1px solid var(--line-faint);
   background: rgb(var(--surface-panel-rgb)); box-shadow: 0 -12px 0 rgb(var(--surface-panel-rgb)); }
 .help-tab { flex: 1; min-height: 44px; border: 0; border-radius: 10px; background: transparent;
@@ -6105,8 +6105,11 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .help-tab[aria-selected="true"] { background: var(--accent-fill); color: #fff; }
 @media (hover: hover) { .help-tab[aria-selected="false"]:hover { background: var(--surface-tint); } }
 .help-tab:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-.help-learn { padding: 16px 24px 40px; }
+.help-learn { padding: 16px 18px 40px; }
 .help-learn[hidden], .help-look[hidden] { display: none; }
+/* An entry scrolled to (a card's More about) stops under the title band and
+   the tabs, 69 + 12 + 54, with 12 to spare, not behind them. */
+.help-look .help-tip { scroll-margin-top: 147px; }
 .learn-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 0 0 16px; flex: none; }
 .learn-chips::-webkit-scrollbar { display: none; }
 .learn-chip { flex: none; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line-faint);
@@ -6194,11 +6197,13 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .learn-retry:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 @media (hover: hover) { .learn-try:hover { filter: brightness(1.08); } }
 .learn-try:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-/* A phone: the 18px gutter the rest of the panel keeps; Flip's five chips fit
-   the width without the row scrolling and clipping All at the edge. A desk:
-   two examples to a row, and the panel's content held to a readable width. */
+/* One 18px gutter at every width, the one Look it up's search and sections
+   keep, so the tabs, the chips, the examples and the search share their edges.
+   A phone: Flip's five chips fit the width without the row scrolling and
+   clipping All at the edge. A desk: two examples to a row, and the panel's
+   content held to a readable width (the tabs 36px narrower: the gutters). */
 @media (max-width: 640px) {
-  .help-tabs { margin: 10px 18px 0; }
+  .help-tabs { margin-top: 10px; }
   .help-learn { padding: 14px 18px 32px; }
   .learn-chips { gap: 6px; }
   .learn-chip { padding: 0 12px; }
@@ -6208,7 +6213,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 }
 @media (min-width: 960px) {
   .help-tabs, .help-learn, .help-look { max-width: 920px; margin-left: auto; margin-right: auto; }
-  .help-tabs { margin-top: 12px; }
+  .help-tabs { max-width: 884px; margin-top: 12px; }
 }
 .help-empty[hidden] { display: none; }
 .help-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 4px; }

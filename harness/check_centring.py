@@ -561,11 +561,12 @@ def editor_common(pg, menu, export_item, canvas):
     click(pg, menu); click(pg, "#reportItem, #miReport", 700); yield "report"; esc(pg)
     click(pg, menu); click(pg, "#nameItem, #miName", 500); yield "name"; esc(pg)
     click(pg, menu); click(pg, "#helpItem, #miInfo", 900); yield "how it works"
-    click(pg, "#learnPeek", 900); yield "examples"
+    click(pg, "#helpTabLook", 700); yield "how it works, look it up"
     if FULL_SWEEP:
         # A demo replaying: every photograph of it repaints, so each control
         # is shot again and again (steady). Ten seconds a screen; the sweep's.
-        click(pg, "#learnSheet .learn-card .learn-stage", 900); yield "example viewer"
+        click(pg, "#helpTabWatch", 700)
+        click(pg, "#helpWatch .learn-card .learn-stage", 900); yield "example viewer"
     esc(pg); esc(pg); esc(pg)
 
 
@@ -823,7 +824,7 @@ def drafts_blocked(pg):
 
 
 def help_error(pg, menu, item):
-    click(pg, menu); click(pg, item, 900); click(pg, "#learnPeek", 1500); yield "examples failed"
+    click(pg, menu); click(pg, item, 2400); yield "examples failed"
 
 
 # ------------------------------------------------------------------ run

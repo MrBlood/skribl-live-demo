@@ -196,9 +196,7 @@ stays a sleep.
   strokes, `tools/artworks.py` and `tools/flipworks.py`, performed as real pen
   input by `tools/artdraw.py` on `tools/handmotion.py`'s hand;
   `tools/review_art.py` shows each in the player before it ships. The clips
-  are recorded from the app by `tools/make_help_clips.py`, and the bar's
-  previews are stills of finished examples taken from the real panel by
-  `tools/make_help_thumbs.py`.
+  are recorded from the app by `tools/make_help_clips.py`.
 - `verify_keys.py` — the global keydown map. flip.js attaches eight listeners,
   five of them Escape, and ArrowLeft/Right were once bound twice and both
   fired on one press.

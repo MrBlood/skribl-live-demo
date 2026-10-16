@@ -15,22 +15,21 @@ this holds the cards to what they claim, on both editors:
      Flip, each tool Flip shares with Pad does (Flip's own tools arrive with
      their examples in the next change, and this census grows to all of them).
   3. NOTHING LOADS UNTIL IT IS ASKED FOR. The editor fetches nothing for it;
-     opening How it works fetches only the bar's three previews; the player,
-     examples and clips come with the drawer.
-  THE BAR AND THE DRAWER (owner: "it fills the page"): How it works shows one
-     "Watch it work" bar that counts the examples from the page; the drawer
-     opens over the panel, its chips show one group or all, and it closes on
-     Escape (leaving How it works open), a pull or tap on its grip, and with
-     How it works.
-  4. THEY PLAY, TOGETHER, AND STOP. In the open drawer the replays paint ink
+     opening How it works fetches the player and the examples near the screen,
+     the rest as they are scrolled to.
+  TWO TABS (owner's pick, layout 1, FUTURE.md 6n): How it works opens on
+     Watch, the examples big, one under another; its chips show one group or
+     all. Look it up is the second tab: search and every entry, nothing
+     playing. The arrows move between the tabs, and a card's More about opens
+     its tool's entry there.
+  4. THEY PLAY, TOGETHER, AND STOP. On Watch the replays paint ink
      that changes over time -- read off the canvas pixels -- and more than one
      plays at once (the player's ambient mode). The clips advance and match
-     the theme. Drawer or panel closed, everything stops.
+     the theme. On Look it up, or with the panel closed, everything stops.
   5. TRY IT picks the tool by the editor's own route and closes the panel;
      Shape's card is left open, as a tap on Shape leaves it.
   6. REDUCED MOTION: nothing plays; each replay shows its finished drawing and
      each clip its poster, and the clips are not even fetched.
-  7. SEARCH: typing hands the panel to the reference; the bar steps aside.
 """
 import json
 import math
@@ -138,20 +137,23 @@ TECHNIQUES = {"onion": "#onion", "inbetween": "#addinbetween", "smear": "#addtwe
 EXTRAS = {"takes": "#addTakePill", "speed": "#padLine .rl-speed", "photo": "#photoUploadBtn", "export": "#exportItem",
           "zoom": "#magnifyBtn"}
 OPEN = "() => { window.SkriblHints && window.SkriblHints.hide(); openHelpDrawer(); }"
-SHEET = "() => document.getElementById('learnPeek').click()"
-CARDS = "#learnSheet .learn-card"
-STATE = """() => ({
-    sheet: !document.getElementById('learnSheet').hidden,
-    replays: [...document.querySelectorAll('#learnSheet .learn-card[data-demo]')].map(c =>
+SHEET = "() => document.getElementById('helpTabWatch').click()"
+CARDS = "#helpWatch .learn-card"
+STATE = """() => { const i = document.querySelector('#helpDrawer .help-drawer-inner').getBoundingClientRect(),
+    t = document.querySelector('#helpDrawer .help-tabs').getBoundingClientRect(),
+    vis = e => { const r = e.getBoundingClientRect(); return r.height > 0 && r.bottom > t.bottom + r.height * 0.4 && r.top < i.bottom - r.height * 0.4; };
+    return {
+    sheet: (!document.getElementById('helpDrawer').hidden && !document.getElementById('helpWatch').hidden),
+    replays: [...document.querySelectorAll('#helpWatch .learn-card[data-demo]')].map(c =>
         c._learnPlayer ? c._learnPlayer.state().state : 'none'),
-    clips: [...document.querySelectorAll('#learnSheet .learn-video')].map(v => ({
+    clips: [...document.querySelectorAll('#helpWatch .learn-video')].map(v => ({
         src: v.getAttribute('src') || '', poster: v.getAttribute('poster') || '', t: v.currentTime, paused: v.paused,
-        start: v.closest('.learn-card').dataset.group === 'start' })) })"""
+        start: v.closest('.learn-card').dataset.group === 'start', vis: vis(v.closest('.learn-stage')) })) }; }"""
 PLAYER = lambda u: u.endswith("inlineplayer.js") or "/help/demos/" in u or "/help/clips/" in u
 EXAMPLE = lambda u: "/help/demos/" in u or ("/help/clips/" in u and (u.endswith(".mp4") or u.endswith(".webm")))
 # The sheet scrolled to its end in steps, so every example comes near the
 # screen once -- which is when it is fetched (V319-005).
-SCROLL_ALL = "() => { const s = document.querySelector('#learnSheet .learn-sheet-scroll'); s.scrollTop += s.clientHeight * 0.8; return s.scrollTop + s.clientHeight >= s.scrollHeight - 2; }"
+SCROLL_ALL = "() => { const s = document.querySelector('#helpDrawer .help-drawer-inner'); s.scrollBy({ top: s.clientHeight * 0.8, behavior: 'instant' }); return s.scrollTop + s.clientHeight >= s.scrollHeight - 2; }"
 def scroll_all(pg):
     for _ in range(40):
         done = pg.evaluate(SCROLL_ALL)
@@ -172,10 +174,10 @@ with sync_playwright() as p:
         browsing.goto(pg, BASE, route)
         pg.wait_for_timeout(900)
 
-        # 3. lazy, in two steps: the editor fetches nothing; How it works
-        # fetches only the bar's previews; the drawer fetches the rest.
-        early = [u for u in fetched if PLAYER(u) or "/help/thumbs/" in u]
-        check(f"{name}: the editor fetches no player, example, clip or preview until How it works opens",
+        # 3. lazy: the editor fetches nothing; How it works fetches what is
+        # near the screen.
+        early = [u for u in fetched if PLAYER(u)]
+        check(f"{name}: the editor fetches no player, example or clip until How it works opens",
               not early, str(early[:3]))
 
         # 2. census
@@ -185,7 +187,7 @@ with sync_playwright() as p:
         # page (Select, Liquify, Smudge, Blur, Fill, Stamps, Artwork) are clips.
         tools = set(dock) if name == "Pad" else set(reg or [])
         cards = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-learn-tool]')].map(c => c.dataset.learnTool)")
-        tries = pg.evaluate("() => [...document.querySelectorAll('#learnSheet .learn-try')].map(b => b.dataset.try)")
+        tries = pg.evaluate("() => [...document.querySelectorAll('#helpWatch .learn-try')].map(b => b.dataset.try)")
         check(f"{name}: every tool ({', '.join(sorted(tools))}) has an example card with Try it",
               bool(tools) and tools <= set(cards) and tools <= set(tries),
               f"tools {sorted(tools)}, cards {cards}, Try it {tries}")
@@ -203,7 +205,7 @@ with sync_playwright() as p:
             return pg.evaluate(f"""() => ({{
                 controls: Object.fromEntries(Object.entries({json.dumps(controls)}).map(([k, s]) => [k, !!document.querySelector(s)])),
                 cards: [...document.querySelectorAll('{CARDS}[data-group={g}]')].map(c => c.dataset.clipName),
-                chip: !!document.querySelector('#learnSheet .learn-chip[data-filter={g}]') }})""")
+                chip: !!document.querySelector('#helpWatch .learn-chip[data-filter={g}]') }})""")
         mine, theirs = (("techniques", TECHNIQUES), ("extras", EXTRAS)) if name == "Flip" else (("extras", EXTRAS), ("techniques", TECHNIQUES))
         got = group(*mine)
         check(f"{name}: every one of its {mine[0]} (" + ", ".join(sorted(mine[1])) + ") is a control in the editor and has an example under its chip",
@@ -214,52 +216,58 @@ with sync_playwright() as p:
               pg.evaluate(f"() => document.querySelectorAll('{CARDS}[data-group=start]').length") == 3
               and pg.evaluate(f"() => document.querySelectorAll('{CARDS}[data-group=start].learn-clip').length") == 2)
 
-        # THE BAR: what the page shows instead of the cards.
+        # TWO TABS: How it works opens on Watch, the examples big.
         fetched.clear()
         pg.evaluate(OPEN)
         pg.wait_for_timeout(900)
-        bar = pg.evaluate("""() => { const b = document.getElementById('learnPeek'), r = b.getBoundingClientRect();
-            return { n: document.querySelectorAll('#learnSheet .learn-card').length,
-                     said: document.getElementById('learnPeekCount').textContent,
-                     thumbs: [...b.querySelectorAll('img')].map(i => i.complete && i.naturalWidth > 0),
-                     h: r.height, sheet: !document.getElementById('learnSheet').hidden }; }""")
-        check(f"{name}: How it works shows one bar, not the cards: the drawer is shut and the bar is under 100px",
-              bar["h"] < 100 and not bar["sheet"], str(bar))
-        check(f"{name}: the bar counts the examples there are (counted, not typed)",
-              bar["said"].startswith(f"{bar['n']} "), str(bar))
-        check(f"{name}: the bar's three previews load when How it works opens",
-              len(bar["thumbs"]) == 3 and all(bar["thumbs"]), str(bar["thumbs"]))
-        check(f"{name}: opening How it works fetches no player, example or clip (only the drawer does)",
-              not [u for u in fetched if PLAYER(u)], str([u for u in fetched if PLAYER(u)][:3]))
+        tabs = pg.evaluate("""() => { const t = id => document.getElementById(id);
+            const c = document.querySelector('#helpWatch .learn-card .learn-stage').getBoundingClientRect();
+            return { n: document.querySelectorAll('#helpWatch .learn-card').length,
+                     watch: t('helpTabWatch').getAttribute('aria-selected'), look: t('helpTabLook').getAttribute('aria-selected'),
+                     shown: !t('helpWatch').hidden, lookShown: !t('helpLook').hidden,
+                     card: Math.round(c.width), title: getComputedStyle(document.querySelector('#helpWatch .learn-title')).fontSize }; }""")
+        bar = tabs
+        check(f"{name}: How it works opens on Watch: its tab chosen, the examples showing, Look it up not",
+              tabs["watch"] == "true" and tabs["look"] == "false" and tabs["shown"] and not tabs["lookShown"], str(tabs))
+        check(f"{name}: ...and the examples are big: the first over 400px wide, its title 20px",
+              tabs["card"] > 400 and tabs["title"] == "20px", str(tabs))
 
-        # 4. plays, once the drawer is open
-        fetched.clear()
-        pg.evaluate(SHEET)
-        pg.wait_for_timeout(900)
+        # 4. plays, once How it works is open
         a = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-demo]')].map({INK})")
         pg.wait_for_timeout(1500)
         z = pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}[data-demo]')].map({INK})")
         s = pg.evaluate(STATE)
         # On screen in the drawer's scroll, or not: a card scrolled out of view
         # is paused by design and is not asked to change.
-        seen = pg.evaluate(f"""() => {{ const sc = document.querySelector('#learnSheet .learn-sheet-scroll').getBoundingClientRect();
+        seen = pg.evaluate(f"""() => {{ const sc = (() => {{ const i = document.querySelector('#helpDrawer .help-drawer-inner').getBoundingClientRect(), t = document.querySelector('#helpDrawer .help-tabs').getBoundingClientRect(); return {{ top: t.bottom, bottom: i.bottom }}; }})();
             return [...document.querySelectorAll('{CARDS}[data-demo]')].map(c => {{ const r = c.querySelector('.learn-stage').getBoundingClientRect();
               return r.bottom > sc.top + r.height * 0.4 && r.top < sc.bottom - r.height * 0.4; }}); }}""")
         moving = [x != y for x, y, v in zip(a, z, seen) if v]
-        check(f"{name}: in the drawer, every replay on screen paints ink and changes as it plays",
-              all(x > 50 for x, v in zip(z, seen) if v) and len(moving) >= 2 and sum(moving) >= len(moving) - 1,
+        check(f"{name}: on Watch, every replay on screen paints ink and changes as it plays",
+              all(x > 50 for x, v in zip(z, seen) if v) and moving and all(moving),
               f"ink then {a}, later {z}, on screen {seen}")
         # LOADING FOLLOWS THE EYE (outside audit V319-005). Opening the drawer
         # fetched every example in it, about 3 MB, for someone come to watch
-        # one. Now: what is on screen and the row after it, and no more.
+        # one. Now: what is on screen and the next one or two, and no more.
         asked = sorted({u for u in fetched if EXAMPLE(u)})
-        check(f"{name}: opening the drawer fetches the examples near the screen, not all {bar['n']}",
+        check(f"{name}: opening How it works fetches the examples near the screen, not all {bar['n']}",
               0 < len(asked) < bar["n"] - 3, f"{len(asked)} fetched of {bar['n']}: {[u.split('/')[-1] for u in asked]}")
-        check(f"{name}: several examples play at once (the player's ambient mode)",
-              s["replays"].count("playing") >= 3, str(s["replays"]))
-        painted = pg.evaluate("""() => [...document.querySelectorAll('#learnSheet .learn-stage')].every(st => {
+        # Big cards: about a row a screen. Scrolled to the first row of two
+        # replays, both play (the player's ambient mode).
+        pg.evaluate(f"""() => {{ const cs = [...document.querySelectorAll('{CARDS}[data-demo]')], sc = document.querySelector('#helpDrawer .help-drawer-inner'),
+            t = document.querySelector('#helpDrawer .help-tabs').getBoundingClientRect().bottom;
+            const row = cs.find((c, k) => k && Math.abs(c.getBoundingClientRect().top - cs[k - 1].getBoundingClientRect().top) < 2) || cs[1];
+            sc.scrollBy({{ top: row.getBoundingClientRect().top - t - 12, behavior: 'instant' }}); }}""")
+        pg.wait_for_timeout(1500)
+        two = pg.evaluate(STATE)["replays"]
+        check(f"{name}: a row of two examples plays at once (the player's ambient mode)",
+              two.count("playing") >= 2, str(two))
+        pg.evaluate("() => { document.querySelector('#helpDrawer .help-drawer-inner').scrollTo({ top: 0, behavior: 'instant' }); }")
+        pg.wait_for_timeout(600)
+        s = pg.evaluate(STATE)
+        painted = pg.evaluate("""() => [...document.querySelectorAll('#helpWatch .learn-stage')].every(st => {
             const r = st.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight || !r.width) return true;
-            const sc = document.querySelector('#learnSheet .learn-sheet-scroll').getBoundingClientRect();
+            const sc = (() => { const i = document.querySelector('#helpDrawer .help-drawer-inner').getBoundingClientRect(), t = document.querySelector('#helpDrawer .help-tabs').getBoundingClientRect(); return { top: t.bottom, bottom: i.bottom }; })();
             if (r.bottom < sc.top || r.top > sc.bottom) return true;
             const y = Math.min(sc.bottom - 2, Math.max(sc.top + 2, r.top + r.height / 2));
             const at = document.elementFromPoint(r.left + r.width / 2, y);
@@ -268,12 +276,12 @@ with sync_playwright() as p:
         t0 = [c["t"] for c in s["clips"]]
         pg.wait_for_timeout(900)
         s2 = pg.evaluate(STATE)
-        nclips = pg.evaluate("() => document.querySelectorAll('#learnSheet .learn-clip').length")
-        # The quick start's clips are on screen when the drawer opens, so they
-        # play; a clip further down plays when scrolled to, and is not asked to.
-        check(f"{name}: the screen clips play (time advances) and every clip matches the dark theme",
-              all(t2 > t1 for t1, t2, c in zip(t0, [c["t"] for c in s2["clips"]], s2["clips"]) if c["start"])
-              and sum(1 for c in s2["clips"] if c["start"]) == 2
+        nclips = pg.evaluate("() => document.querySelectorAll('#helpWatch .learn-clip').length")
+        # A clip on screen plays; one further down plays when scrolled to,
+        # and is not asked to.
+        check(f"{name}: the screen clips on screen play (time advances) and every clip matches the dark theme",
+              all(t2 > t1 for t1, t2, c in zip(t0, [c["t"] for c in s2["clips"]], s2["clips"]) if c["vis"])
+              and any(c["vis"] for c in s2["clips"])
               and all("-dark." in c["src"] for c in s2["clips"] if c["src"]) and len(s2["clips"]) == nclips, str(s2["clips"]))
         pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
         pg.wait_for_timeout(500)
@@ -291,15 +299,15 @@ with sync_playwright() as p:
         check(f"{name}: scrolled to the end, every example has been fetched and set up",
               all(x != "none" for x in s4["replays"]) and all("-dark." in c["src"] for c in s4["clips"]),
               f"replays {s4['replays']}, clips {[c['src'].split('/')[-1] for c in s4['clips']]}")
-        pg.evaluate("() => { document.querySelector('#learnSheet .learn-sheet-scroll').scrollTop = 0; }")
+        pg.evaluate("() => { document.querySelector('#helpDrawer .help-drawer-inner').scrollTo({ top: 0, behavior: 'instant' }); }")
         pg.wait_for_timeout(300)
 
         # THE CHIPS show one group, or all.
         shown = lambda: pg.evaluate(f"() => [...document.querySelectorAll('{CARDS}')].filter(c => c.offsetParent)"
                                     ".map(c => c.dataset.group)")
-        pg.click('#learnSheet .learn-chip[data-filter="tools"]'); pg.wait_for_timeout(150)
+        pg.click('#helpWatch .learn-chip[data-filter="tools"]'); pg.wait_for_timeout(150)
         only = shown()
-        pg.click('#learnSheet .learn-chip[data-filter="all"]'); pg.wait_for_timeout(150)
+        pg.click('#helpWatch .learn-chip[data-filter="all"]'); pg.wait_for_timeout(150)
         back = shown()
         check(f"{name}: Tools shows the tool cards and nothing else; All brings every card back",
               only and set(only) == {"tools"} and len(back) == bar["n"], f"tools {only}, all {len(back)}")
@@ -311,10 +319,10 @@ with sync_playwright() as p:
         VIEW = """() => { const v = document.getElementById('learnViewer'), st = document.getElementById('learnViewerStage');
             const box = st.querySelector('.skribl-inline'), vid = st.querySelector('video');
             const r = (box || vid) ? (box || vid).getBoundingClientRect() : null;
-            return { open: !v.hidden, w: r ? Math.round(r.width) : 0,
+            return { open: !v.hidden, w: r ? Math.round(r.width) : 0, h: r ? Math.round(r.height) : 0,
                      player: box && box._skriblInline ? box._skriblInline.state().state : null,
                      t: vid ? vid.currentTime : null, title: document.getElementById('learnViewerTitle').textContent,
-                     cards: [...document.querySelectorAll('#learnSheet .learn-card[data-demo]')].map(c =>
+                     cards: [...document.querySelectorAll('#helpWatch .learn-card[data-demo]')].map(c =>
                        c._learnPlayer ? c._learnPlayer.state().state : 'none') }; }"""
         first = pg.locator(f"{CARDS}[data-demo]").first
         cw = first.locator(".learn-stage").bounding_box()["width"]
@@ -326,77 +334,69 @@ with sync_playwright() as p:
         check(f"{name}: ...and the cards pause beneath it", "playing" not in v1["cards"], str(v1["cards"]))
         pg.keyboard.press("Escape"); pg.wait_for_timeout(400)
         back = pg.evaluate("() => ({ viewer: !document.getElementById('learnViewer').hidden,"
-                           " sheet: !document.getElementById('learnSheet').hidden,"
+                           " sheet: (!document.getElementById('helpDrawer').hidden && !document.getElementById('helpWatch').hidden),"
                            " focus: !!(document.activeElement && document.activeElement.classList.contains('learn-stage')) })")
         check(f"{name}: Escape closes full screen only, focus back on the card", 
               not back["viewer"] and back["sheet"] and back["focus"], str(back))
         clip = pg.locator(f"{CARDS}.learn-clip").first
+        ch = clip.locator(".learn-stage").bounding_box()["height"]
         clip.locator(".learn-stage").click()
         pg.wait_for_timeout(700)
         c1 = pg.evaluate(VIEW); pg.wait_for_timeout(900); c2 = pg.evaluate(VIEW)
-        check(f"{name}: a tap on a clip opens it full screen, and it plays",
-              c1["open"] and c1["w"] >= 2 * cw * 0.45 and (c2["t"] or 0) > (c1["t"] or 0), f"{c1} then t={c2['t']}")
+        check(f"{name}: a tap on a clip opens it full screen, larger than its card, and it plays",
+              c1["open"] and c1["h"] >= 1.25 * ch and (c2["t"] or 0) > (c1["t"] or 0), f"{c1} then t={c2['t']}, card {ch:.0f}px tall")
         pg.click("#learnViewerClose"); pg.wait_for_timeout(300)
         check(f"{name}: the close button puts it away",
               pg.evaluate("() => document.getElementById('learnViewer').hidden") is True)
 
-        # THE DRAWER CLOSES, and stops what it was playing.
-        pg.keyboard.press("Escape"); pg.wait_for_timeout(500)
-        esc = pg.evaluate("() => ({ sheet: !document.getElementById('learnSheet').hidden,"
-                          " help: !document.getElementById('helpDrawer').hidden,"
-                          " focus: document.activeElement && document.activeElement.id })")
+        # LOOK IT UP, the second tab: the reference, and nothing playing.
+        # From far down Watch, the change of tab lands at the top at once: the
+        # panel scrolls smoothly, and it glided back past every example.
+        jump = pg.evaluate("""() => new Promise(res => { const sc = document.querySelector('#helpDrawer .help-drawer-inner');
+            sc.scrollTo({ top: 2000, behavior: 'instant' }); const from = sc.scrollTop;
+            document.getElementById('helpTabLook').click();
+            requestAnimationFrame(() => requestAnimationFrame(() => res([from, sc.scrollTop]))); })""")
+        check(f"{name}: a change of tab from far down lands at the top at once, no glide",
+              jump[0] > 1000 and jump[1] == 0, f"from {jump[0]}px, two frames later {jump[1]}px")
+        pg.wait_for_timeout(500)
+        look = pg.evaluate("""() => { const f = document.getElementById('helpSearch'), r = f.getBoundingClientRect();
+            const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { watch: !document.getElementById('helpWatch').hidden, look: !document.getElementById('helpLook').hidden,
+                     chosen: document.getElementById('helpTabLook').getAttribute('aria-selected'),
+                     search: !!at && (at === f || f.contains(at)),
+                     entries: [...document.querySelectorAll('#helpLook .help-tip')].length }; }""")
         s4 = pg.evaluate(STATE)
-        check(f"{name}: Escape closes the drawer and leaves How it works open, focus back on the bar",
-              not esc["sheet"] and esc["help"] and esc["focus"] == "learnPeek", str(esc))
-        check(f"{name}: with the drawer closed, nothing keeps playing",
+        check(f"{name}: Look it up shows the search, painted, and the entries; Watch steps away",
+              look["look"] and not look["watch"] and look["chosen"] == "true" and look["search"] and look["entries"] > 20, str(look))
+        check(f"{name}: ...and on Look it up nothing keeps playing",
               "playing" not in s4["replays"] and all(c["paused"] for c in s4["clips"]), str(s4))
-        if not esc["help"]:                 # a failure above shut the panel; carry on
-            pg.evaluate(OPEN); pg.wait_for_timeout(500)
-        pg.evaluate(SHEET); pg.wait_for_timeout(500)
-        # The sheet glides up for .34s and under load can still be moving at
-        # 500ms: a pull that starts on a moving grip measured 2 failures in 5.
-        # Wait for it to be OPEN and its slide FINISHED -- "the grip held still
-        # for 100ms" alone was fooled by a sheet that had not started moving
-        # yet (Flip, 1 run in 3: the pull landed as it rose, -15px of 144).
-        pg.wait_for_function("""() => { const s = document.getElementById('learnSheet'),
-            p = s && s.querySelector('.learn-sheet-panel'); if (!s || !s.classList.contains('open')) return false;
-            const t = getComputedStyle(p).transform; return t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)'; }""", timeout=4000)
-        g, prev = None, None
-        for _ in range(30):
-            g = pg.locator("#learnGrip").bounding_box()
-            if prev and g and abs(g["y"] - prev["y"]) < 0.5:
-                break
-            prev = g; pg.wait_for_timeout(100)
-        PANEL_TOP = "() => document.querySelector('#learnSheet .learn-sheet-panel').getBoundingClientRect().top"
-        top0 = pg.evaluate(PANEL_TOP)
-        pg.mouse.move(g["x"] + g["width"] / 2, g["y"] + g["height"] / 2); pg.mouse.down()
-        for k in range(1, 9):
-            pg.mouse.move(g["x"] + g["width"] / 2, g["y"] + g["height"] / 2 + k * 18); pg.wait_for_timeout(16)
-        # A press and release on the grip is a tap, and a tap closes it too, so
-        # "closed afterwards" alone passed with no pull at all. Only a pull
-        # carries the sheet down under the finger before it lets go.
-        followed = pg.evaluate(PANEL_TOP) - top0
-        pg.mouse.up(); pg.wait_for_timeout(500)
-        check(f"{name}: a pull down on the grip carries the drawer with it, and closes it",
-              followed > 60 and pg.evaluate("() => document.getElementById('learnSheet').hidden") is True,
-              f"followed the finger {followed:.0f}px of 144")
-        pg.evaluate(SHEET); pg.wait_for_timeout(500)
-        pg.click("#learnGrip"); pg.wait_for_timeout(500)
-        check(f"{name}: a tap on the grip closes it too",
-              pg.evaluate("() => document.getElementById('learnSheet').hidden") is True)
-
-        # 7. search
-        pg.evaluate(SHEET); pg.wait_for_timeout(400)
-        pg.evaluate("() => document.getElementById('learnSheet').querySelector('[data-learn-close].learn-close').click()")
-        pg.wait_for_timeout(400)
-        pg.fill("#helpSearch", "loop")
-        pg.wait_for_timeout(300)
-        check(f"{name}: searching hands the panel to the reference (the bar steps aside)",
-              pg.evaluate("() => document.getElementById('helpLearn').hidden") is True)
-        pg.fill("#helpSearch", "")
-        pg.wait_for_timeout(300)
-        check(f"{name}: and clearing the search brings it back",
-              pg.evaluate("() => document.getElementById('helpLearn').hidden") is False)
+        pg.focus("#helpTabLook"); pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(900)
+        kb = pg.evaluate("""() => ({ focus: document.activeElement && document.activeElement.id,
+            chosen: document.getElementById('helpTabWatch').getAttribute('aria-selected'),
+            shown: !document.getElementById('helpWatch').hidden })""")
+        s4b = pg.evaluate(STATE)
+        check(f"{name}: an arrow key moves between the tabs: back on Watch, its tab focused, playing again",
+              kb["focus"] == "helpTabWatch" and kb["chosen"] == "true" and kb["shown"] and "playing" in s4b["replays"],
+              f"{kb}, replays {s4b['replays']}")
+        # MORE ABOUT a tool: its entry in Look it up, opened, on screen, focused.
+        more = pg.locator('#helpWatch .learn-more[data-more-tool="eraser"]')
+        more.scroll_into_view_if_needed(); more.click()
+        # Scrolled to after its section has opened (about .34s); up to 2s.
+        try:
+            pg.wait_for_function("() => document.activeElement && document.activeElement.matches('#helpLook .help-tip[data-help-tool=eraser]')", timeout=2000)
+        except Exception:
+            pass
+        pg.wait_for_timeout(150)
+        # LANDS UNDER THE TABS: its top just below them, painted. Merely "on
+        # screen" passed with the entry left half a screen down, scrolled to
+        # while its section was still folded.
+        ent = pg.evaluate("""() => { const t = document.querySelector('#helpLook .help-tip[data-help-tool=eraser]');
+            const r = t.getBoundingClientRect(), at = document.elementFromPoint(r.left + 20, r.top + Math.min(r.height / 2, 20));
+            const tabs = document.querySelector('#helpDrawer .help-tabs').getBoundingClientRect().bottom;
+            return { look: !document.getElementById('helpLook').hidden, open: t.classList.contains('is-open'),
+                     focus: document.activeElement === t, painted: !!at && t.contains(at), below: Math.round(r.top - tabs) }; }""")
+        check(f"{name}: More about Eraser opens Look it up at the Eraser's entry: opened, at the top under the tabs, focused",
+              ent["look"] and ent["open"] and ent["focus"] and ent["painted"] and 0 <= ent["below"] <= 40, str(ent))
 
         # 4. closing How it works closes the drawer and stops everything
         pg.evaluate(SHEET); pg.wait_for_timeout(700)
@@ -404,20 +404,20 @@ with sync_playwright() as p:
         pg.evaluate("() => document.getElementById('helpClose').click()")
         pg.wait_for_timeout(700)
         s5 = pg.evaluate(STATE)
-        check(f"{name}: closing How it works closes the drawer; nothing keeps playing",
+        check(f"{name}: closing How it works stops everything; nothing keeps playing",
               not s5["sheet"] and "playing" not in s5["replays"] and all(c["paused"] for c in s5["clips"]), str(s5))
         check(f"{name}: ...and closes full screen with it",
               pg.evaluate("() => document.getElementById('learnViewer').hidden") is True)
 
         # 5. Try it
         for t in sorted(tools):
-            if not pg.locator(f'#learnSheet .learn-try[data-try="{t}"]').count():
+            if not pg.locator(f'#helpWatch .learn-try[data-try="{t}"]').count():
                 check(f"{name}: Try it on {t} picks it and closes How it works", False, "no Try it for this tool")
                 continue
             pg.evaluate(OPEN); pg.wait_for_timeout(500)
             pg.evaluate(SHEET); pg.wait_for_timeout(500)
-            pg.locator(f'#learnSheet .learn-try[data-try="{t}"]').scroll_into_view_if_needed()
-            pg.click(f'#learnSheet .learn-try[data-try="{t}"]')
+            pg.locator(f'#helpWatch .learn-try[data-try="{t}"]').scroll_into_view_if_needed()
+            pg.click(f'#helpWatch .learn-try[data-try="{t}"]')
             # How it works closes on a transition of about half a second; under
             # a busy page it can run past a fixed 600ms. Wait for it, up to 3s,
             # so a panel that never closes still fails.
@@ -507,12 +507,11 @@ with sync_playwright() as p:
         else:
             pg.evaluate(OPEN); pg.wait_for_timeout(800)
         pg.evaluate(SHEET); pg.wait_for_timeout(900)
-        pg.evaluate("() => document.querySelector('#learnSheet .learn-stage[role=button]').click()")
+        pg.evaluate("() => document.querySelector('#helpWatch .learn-stage[role=button]').click()")
         pg.wait_for_timeout(900)
         seen = pg.evaluate("""() => { const r = e => { const b = e.getBoundingClientRect(); return [Math.round(b.top), Math.round(b.bottom)]; };
             const d = document.getElementById('helpDrawer');
             return { drawer: r(d), position: getComputedStyle(d).position,
-                     sheet: r(document.querySelector('#learnSheet .learn-sheet-panel')),
                      example: r(document.getElementById('learnViewerStage')),
                      caption: r(document.querySelector('#learnViewer .learn-viewer-cap')), vh: innerHeight }; }""")
         check(f"{name}: (setup) with Photo/Music open the page is taller than a phone",
@@ -520,7 +519,7 @@ with sync_playwright() as p:
         check(f"{name}: How it works is pinned to the screen, not to the page",
               seen["position"] == "fixed", str(seen))
         check(f"{name}: on a phone with a panel open, How it works and its examples fill the screen, no more",
-              seen["drawer"] == [0, seen["vh"]] and seen["sheet"][1] == seen["vh"], str(seen))
+              seen["drawer"] == [0, seen["vh"]], str(seen))
         # Not asserted: "the example and its close button are wholly on screen".
         # In Chromium the old drawer still squeezed the caption on at 600 and
         # 664 tall (it is the iPhone's bars that pushed it off), so that check
@@ -533,7 +532,7 @@ with sync_playwright() as p:
     # the sheet must say how many, in one banner a screen reader hears, with a
     # Retry that brings them back once the network does.
     FAILS = """() => {
-        const box = document.getElementById('learnFail'), cards = [...document.querySelectorAll('#learnSheet .learn-card')];
+        const box = document.getElementById('learnFail'), cards = [...document.querySelectorAll('#helpWatch .learn-card')];
         let painted = false;
         if (box && !box.hidden) { const r = box.getBoundingClientRect();
             const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
@@ -545,7 +544,7 @@ with sync_playwright() as p:
                  status: (document.getElementById('learnFailCount') || { getAttribute() { return null; } }).getAttribute('role'),
                  players: cards.filter(c => c.hasAttribute('data-demo') && c._learnPlayer).length,
                  demos: cards.filter(c => c.hasAttribute('data-demo')).length,
-                 clipsOk: [...document.querySelectorAll('#learnSheet .learn-video')]
+                 clipsOk: [...document.querySelectorAll('#helpWatch .learn-video')]
                      .every(v => !!v.getAttribute('src') && !v.error),
                  body: a === document.body }; }"""
     print("\nWHEN AN EXAMPLE CANNOT LOAD")
@@ -569,8 +568,8 @@ with sync_playwright() as p:
         pg.evaluate(OPEN); pg.wait_for_timeout(500)
         pg.evaluate(SHEET); pg.wait_for_timeout(1500)
         scroll_all(pg)
-        # The banner heads the sheet; read it where it is, at the top.
-        pg.evaluate("() => { document.querySelector('#learnSheet .learn-sheet-scroll').scrollTop = 0; }")
+        # The banner heads Watch; read it where it is, at the top.
+        pg.evaluate("() => { document.querySelector('#helpDrawer .help-drawer-inner').scrollTo({ top: 0, behavior: 'instant' }); }")
         pg.wait_for_timeout(300)
         f0 = pg.evaluate(FAILS)
         check(f"{name}: offline, every example is marked as not loaded -- the screen clips too",
@@ -600,7 +599,7 @@ with sync_playwright() as p:
         _one = [""]
         browsing.goto(pg, BASE, route)
         pg.wait_for_timeout(800)
-        _one[0] = pg.evaluate("() => document.querySelector('#learnSheet .learn-card[data-demo]').getAttribute('data-demo').split('?')[0].split('/').pop()")
+        _one[0] = pg.evaluate("() => document.querySelector('#helpWatch .learn-card[data-demo]').getAttribute('data-demo').split('?')[0].split('/').pop()")
         pg.evaluate(OPEN); pg.wait_for_timeout(500)
         pg.evaluate(SHEET); pg.wait_for_timeout(1500)
         scroll_all(pg)

@@ -212,6 +212,13 @@
     all.forEach(function (c) { if (!c._learnWanted) { near.unobserve(c); near.observe(c); } });
   }
   function syncAll() { cards.forEach(sync); clips.forEach(sync); }
+  // To the top AT ONCE: the panel scrolls smoothly, and gliding back up past
+  // every example on a change of tab or chip looked like a fault.
+  function toTop() {
+    if (!scroller) return;
+    if (scroller.scrollTo) scroller.scrollTo({ top: 0, behavior: 'instant' });
+    else scroller.scrollTop = 0;
+  }
 
   // ---- the two tabs -------------------------------------------------------------
   function showTab(watch, focus) {
@@ -224,7 +231,7 @@
     sheet.hidden = !sheetOpen;
     look.hidden = sheetOpen;
     if (focus) (sheetOpen ? tabWatch : tabLook).focus({ preventScroll: true });
-    if (sheetOpen !== was && scroller) scroller.scrollTop = 0;
+    if (sheetOpen !== was) toTop();
     if (sheetOpen) startAll();
     syncAll();
     look.dispatchEvent(new CustomEvent('helptab', { bubbles: true, detail: { look: !sheetOpen } }));
@@ -255,7 +262,7 @@
       var f = chip.getAttribute('data-filter');
       sheet.querySelectorAll('.learn-chip').forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
       all.forEach(function (c) { c.hidden = f !== 'all' && c.getAttribute('data-group') !== f; });
-      if (scroller && scroller.scrollTop > sheet.offsetTop) scroller.scrollTop = 0;
+      if (scroller && scroller.scrollTop > sheet.offsetTop) toTop();
     });
   });
 
@@ -356,13 +363,31 @@
     if (!tip) return;
     var body = tip.closest('.accordion-body');
     var head = body && body.previousElementSibling;
-    if (head && head.classList.contains('accordion-header') && !head.classList.contains('open')) head.click();
+    var opening = !!(head && head.classList.contains('accordion-header') && !head.classList.contains('open'));
+    if (opening) head.click();
     tip.classList.add('is-open');
     tip.setAttribute('tabindex', '-1');
-    requestAnimationFrame(function () {
-      tip.scrollIntoView({ block: 'start' });
-      tip.focus({ preventScroll: true });
-    });
+    // Scrolled to once its section has OPENED: scrolled to while the section
+    // still glided open, it went to where the entry was then, folded up under
+    // the section's title, and the entry ended half a screen down. The section
+    // opens in two glides, its height and its inner padding, so it lands on
+    // each one's end (the padding's moved it 19px). At once, not the panel's
+    // smooth glide; styles.css keeps it clear of the tabs (scroll-margin-top).
+    var landed = false;
+    function land() {
+      landed = true;
+      tip.scrollIntoView({ block: 'start', behavior: 'instant' });
+      if (document.activeElement !== tip) tip.focus({ preventScroll: true });
+    }
+    if (opening) {
+      var inner = body.querySelector('.accordion-inner');
+      var settle = function (ev) {
+        if ((ev.target === body && ev.propertyName === 'grid-template-rows') ||
+            (ev.target === inner && ev.propertyName === 'padding-top')) land();
+      };
+      body.addEventListener('transitionend', settle);
+      setTimeout(function () { body.removeEventListener('transitionend', settle); if (!landed) land(); }, 900);
+    } else requestAnimationFrame(land);
   });
 
   sheet.addEventListener('click', function (e) {

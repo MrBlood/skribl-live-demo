@@ -172,6 +172,9 @@ with sync_playwright() as p:
         sp.evaluate("() => { const d = document.getElementById('helpDrawer');"
                     " if (d) { d.hidden = false; d.classList.add('open'); } }")
         sp.wait_for_timeout(250)
+        # The reference is How it works' second tab (layout 1, FUTURE.md 6n).
+        sp.click("#helpTabLook")
+        sp.wait_for_timeout(250)
 
         check(f"{surface}: the shared search lib is published",
               sp.evaluate("() => !!window.SkriblHelpSearch"),
@@ -181,14 +184,16 @@ with sync_playwright() as p:
               sp.is_visible("#helpSearch"))
         # ROOM UNDER THE TITLE BAND. The field had no top margin and sat on the
         # band's bottom edge (owner's iPhone, both editors); it now has as much
-        # above it as on each side. Measured at a desk and a phone width.
+        # above it as on each side. Since layout 1 the band it sits under is the
+        # tabs', and its side the edge of its own column (Look it up, held to
+        # a readable width on a desk). Measured at a desk and a phone width.
         for _w, _h in ((1280, 720), (402, 874)):
             sp.set_viewport_size({"width": _w, "height": _h})
             sp.wait_for_timeout(150)
             _gap = sp.evaluate("""() => {
-              const h = document.querySelector('#helpDrawer .help-drawer-head').getBoundingClientRect();
+              const h = document.querySelector('#helpDrawer .help-tabs').getBoundingClientRect();
               const f = document.querySelector('#helpDrawer .help-search').getBoundingClientRect();
-              const d = document.querySelector('#helpDrawer .help-drawer-inner').getBoundingClientRect();
+              const d = document.querySelector('#helpDrawer .help-look').getBoundingClientRect();
               return { above: f.top - h.bottom, side: f.left - d.left }; }""")
             check(f"{surface} at {_w}px: the search field has room under the title band, as much as at its side",
                   _gap["above"] >= 12 and abs(_gap["above"] - _gap["side"]) <= 1, str(_gap))
@@ -321,9 +326,12 @@ with sync_playwright() as p:
     # max-height 1600px, which "Save, export & sharing" outgrew on a phone --
     # its last tip ran into the border, cut off. Measured on the rendered
     # sheet with every section open, at iPhone width, on both editors.
-    OPEN_ALL = """() => { (window.openHelpDrawer || (() => { document.getElementById('helpDrawer').hidden = false; }))();
-        document.querySelectorAll('#helpDrawer .accordion-header').forEach(h => {
-          if (h.getAttribute('aria-expanded') !== 'true') h.click(); }); }"""
+    # After the opening has settled: every opening starts on Watch, set by
+    # an observer that runs after this script, so the tab is chosen later.
+    OPEN_ALL = """() => new Promise(res => { (window.openHelpDrawer || (() => { document.getElementById('helpDrawer').hidden = false; }))();
+        setTimeout(() => { document.getElementById('helpTabLook').click();
+          document.querySelectorAll('#helpDrawer .accordion-header').forEach(h => {
+            if (h.getAttribute('aria-expanded') !== 'true') h.click(); }); res(); }, 60); })"""
     LAYOUT = """() => {
       const out = { clipped: [], beside: [], sections: 0, tips: 0 };
       document.querySelectorAll('#helpDrawer .accordion-body').forEach(b => {
@@ -348,7 +356,17 @@ with sync_playwright() as p:
         ph = b.new_page(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
         ph.goto(BASE + path, wait_until="load"); ph.wait_for_timeout(1200)
         ph.evaluate("() => { window.SkriblHints && SkriblHints.hide(); }")
-        ph.evaluate(OPEN_ALL); ph.wait_for_timeout(700)
+        ph.evaluate(OPEN_ALL)
+        # Each section glides open in .34s; under a loaded box that ran past a
+        # fixed 700ms. Wait for every open one to reach its full height, up to
+        # 3s, so a section that never does still fails below.
+        try:
+            ph.wait_for_function("""() => { const bs = [...document.querySelectorAll('#helpDrawer .accordion-body.open')];
+                return bs.length && bs.every(b => { const i = b.querySelector('.accordion-inner');
+                  return i && i.scrollHeight - i.clientHeight <= 1 && b.getBoundingClientRect().height > 40; }); }""", timeout=3000)
+        except Exception:
+            pass
+        ph.wait_for_timeout(200)
         lay = ph.evaluate(LAYOUT)
         check(f"{surface}: every help section opens to its full height, with room below its last tip",
               lay["sections"] >= 5 and not lay["clipped"], str(lay["clipped"]) + f" of {lay['sections']} sections")
