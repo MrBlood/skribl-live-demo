@@ -198,6 +198,7 @@ BATCHES = [
     ["verify_hello.py"],                   # measures — a hello that waits out its own wave
     ["verify_menu.py"],                    # measures — painted targets, waits out each page and Undo
     ["verify_contrast.py"],                # measures — painted grounds, photographed with the words hidden
+    ["verify_learncard.py"],               # measures — real touch holds and mouse rests, timed
     ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
      "verify_flipdraft.py", "verify_fuzz.py"],
     ["verify_onepill.py"],                 # measures — painted pixels and sub-pixel geometry

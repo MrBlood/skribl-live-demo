@@ -18071,3 +18071,30 @@ sheets (New, Settings, Export, Post) keep the old grey track; Export's
 options are grey boxes, not the menu's white cards; cards use five corner
 sizes. WORKING-AGREEMENTS now says every sheet, colour or token change runs
 verify_contrast, every mock quotes its contrast, and a role keeps its token.
+
+## After v323 -- the card on the button
+
+The owner rejected the How it works redesigns ("We don't use the underlines
+selection anywhere"; "Be original and elegant and utilitarian (and kind)"),
+then, of three competing pitches, asked to combine them: help in four layers
+(FUTURE.md 6p). Piece one is the card on the button, lib/learncard.js, one
+module for the Pad and Flip, after the button cards mock and "All yes".
+
+Hold a button about half a second on a touch screen, or rest on it about a
+second with a mouse, for its card: its name, one sentence, its example
+playing (the same real Skribl How it works plays, through the in-post
+player; a phone recording for Photo and music and Post), More and Got it. A
+quick tap stays a tap, a moving finger is not a hold, and the lift after the
+card opens does not press the button. On a desk the app's own tooltip names
+the button first and the card grows out of that pause; the tooltip steps
+aside while it shows. Holding keeps its jobs: a Flip page held still lifts to
+be moved, the slider's + held repeats, and those, with the x1 badge, get
+their card from their name tag. "?" (or How it works' Name every button) tags
+every button, the greyed-out Undo and Redo too. A first-time note says it
+once, not on the visit Blooby says hi. Automation never meets any of it
+unless it asks, like the hello.
+
+verify_learncard holds each promise on both editors with real touch, every
+row shown red by its own planted break; verify_contrast reads a card and the
+name tags. Not tested here: iPhone Safari, whose press-and-hold callout the
+buttons turn off with -webkit-touch-callout.

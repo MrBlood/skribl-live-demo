@@ -742,6 +742,7 @@ rather than a shared rule.
 | `inputsamples.js` | Pad+Flip | The points the browser already captured and the handler was throwing away. |
 | `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things answer at once. |
 | `labels.js` | Pad+Flip+library+gallery | WORDS IN A BUTTON SIT IN THE MIDDLE BY THEIR CAPITALS, in any font. |
+| `learncard.js` | Pad+Flip | The card on the button: help where the question is (owner, after v323: "Can we combine them so we get the best, most helpful yet unobtrusive?", then "All yes" to the button cards mock). |
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
 | `loopwave.js` | Pad+Flip | The music drawer's zoomed loop view: which stretch of the track it shows, where the two trim handles sit in it, and the waveform drawn into it. |
 | `marks.js` | Pad+Flip+library+gallery | The app's marks for controls a script builds: plus, minus, close, check, arrow, cloned from the <template id="skriblMark-NAME"> that _skribl_marks.html puts on the page, so a script and a template draw the same mark from one source. |

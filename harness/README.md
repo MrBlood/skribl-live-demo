@@ -330,6 +330,14 @@ stays a sleep.
   the bar and the x away while it plays on, a pause from elsewhere brings them
   back, a finger's first tap only wakes them (a mouse's move on a desk), the
   next tap pauses, and paused they stay up. Visible means painted.
+- `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
+  Flip: holding a button (real touch) opens its card with its example; a
+  quick tap stays a tap, a moving finger is no hold, the lift does not press,
+  Got it gives focus back; holding a Flip page still lifts it to move and the
+  slider's + still repeats, with no card; resting with a mouse shows the
+  tooltip, then the card, and moving away closes it; `?` tags every button,
+  a tag opens its card, Escape closes; How it works' Name every button; the
+  first-time note once; automation never meets any of it unless it asks.
 - `verify_contrast.py` — every word on every sheet against what is painted
   behind it (owner, after v323: "check contrasts and consistency on all our
   changes, and future changes"): the menu (main, New, Settings), Your drafts,

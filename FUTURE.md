@@ -946,6 +946,25 @@ both editors, a "Things to try" list, and accessibility under all of it. The
 owner found layout 1 better but still "difficult to use" and "pretty generic
 thinking"; the last proposal put Hold to learn and Draw along first.
 
+## 6p. Help in four layers (owner, after v323: "Can we combine them so we get the best, most helpful yet unobtrusive?"; piece one built)
+
+Three pitches (Ask, Hold to learn, the little book) were joined into one help
+that stays quiet until reached for, quietest first: ON THE BUTTON (hold it
+on a phone, rest on it on a desk: its card, with its example), ASK (How it
+works becomes a field in your own words, "New here? Watch Skribl in a
+minute", what people often ask, and Show me, which lights the real button and
+opens that same card), THE LITTLE BOOK behind "New here?" (one idea a page,
+Draw along from its pages), and NAME EVERY BUTTON (? on a desk). The only
+thing that appears unasked is a first-time note, once.
+
+PIECE ONE, BUILT: lib/learncard.js. Holding keeps every job it had (owner:
+"how will that affect buttons you hold already like moving pages on flip?"):
+Flip's pages, the slider's - and + and the x1 badge get their card from their
+name tag. NEXT, IN THIS ORDER: Ask (replacing How it works, with Show me),
+then the little book and Draw along. The card's More opens How it works
+searched for the button until Ask is there. Flip's sliders have no - and +
+(Pad's do, on a desk); noticed here, not changed.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
