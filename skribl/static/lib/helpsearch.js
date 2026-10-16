@@ -85,8 +85,55 @@
         var isOpen = header.classList.toggle('open');
         header.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         if (body && body.classList.contains('accordion-body')) body.classList.toggle('open', isOpen);
+        if (isOpen) fitSoon();
       });
     });
+
+    // MORE (How it works layout 1, after v323): each entry shows its first
+    // two lines, and More shows the rest. The words stay in .help-desc, all of
+    // them, so search finds them and every check reading an entry still does;
+    // only the drawing is clamped. Added before the markup is cached, so a
+    // highlight that rewrites an entry keeps its button; clicks are heard on
+    // the drawer for the same reason.
+    [].slice.call(drawer.querySelectorAll('.help-tip')).forEach(function (tip) {
+      if (tip.querySelector('.help-more')) return;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'help-more';
+      b.textContent = 'More';
+      b.setAttribute('aria-expanded', 'false');
+      tip.appendChild(b);
+    });
+    // Only while How it works is open, and once a frame at most: it reads
+    // every entry's layout, and run on each resize with the panel shut it
+    // held up the editors (Flip's Play disc began its fade late).
+    var fitting = false;
+    function fitSoon() {
+      if (fitting || drawer.hidden) return;
+      fitting = true;
+      requestAnimationFrame(function () { fitting = false; fitMore(); });
+    }
+    function fitMore() {
+      if (drawer.hidden) return;
+      [].slice.call(drawer.querySelectorAll('.help-tip')).forEach(function (tip) {
+        var b = tip.querySelector('.help-more'), d = tip.querySelector('.help-desc');
+        if (!b || !d) return;
+        var open = tip.classList.contains('is-open');
+        b.textContent = open ? 'Less' : 'More';
+        b.setAttribute('aria-expanded', String(open));
+        // A rendered entry whose words all fit has nothing more to show.
+        if (!open && d.clientHeight) b.hidden = d.scrollHeight <= d.clientHeight + 1;
+      });
+    }
+    drawer.addEventListener('click', function (e) {
+      var b = e.target.closest('.help-more');
+      if (!b) return;
+      var tip = b.closest('.help-tip');
+      tip.classList.toggle('is-open');
+      fitMore();
+    });
+    drawer.addEventListener('helptab', fitSoon);
+    global.addEventListener('resize', fitSoon);
 
     var sections = headers.map(function (h) {
       var body = h.nextElementSibling;
@@ -119,6 +166,8 @@
         sec.items.forEach(function (item) {
           var match = !q || textOf(item).indexOf(q) >= 0;
           item.hidden = !match;
+          // A match is shown whole: the words it matched may be past two lines.
+          item.classList.toggle('is-searching', !!q && match);
           if (match) { hits++; highlight(item, q); }
         });
         shown += hits;
@@ -138,6 +187,7 @@
           : (total + ' entries in ' + sections.length + ' sections');
       }
       if (emptyEl) emptyEl.hidden = !(q && shown === 0);
+      fitSoon();
       return shown;
     }
 

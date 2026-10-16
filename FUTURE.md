@@ -850,7 +850,7 @@ Reduce Motion, one module for both editors (lib/hello.js,
 `_skribl_hello.html`, brand/blooby-hello.json; verify_hello). The badge came
 off first.
 
-## 6n. How it works: show it, hand over the pen, keep the manual for looking things up (proposed)
+## 6n. How it works: show it, hand over the pen, keep the manual for looking things up (3 and 4 built)
 
 ASKED after the hello mock: does How it works make sense, and should it be
 reimagined? Measured on the Pad and Flip, phone and desk: it opens on a
@@ -888,6 +888,18 @@ examples, app pictures too small to read, 12px text. Flip shares all of it
 (one help drawer and one examples module today). Order: 3 and 4, then 2,
 after the Blooby work. NEXT: a mock of 2 and 3 beside today's, phone and desk,
 both themes.
+
+BUILT, 3 and 4 (layout 1, after v323): two tabs under the title band, Watch
+and Look it up, and every opening starts on Watch at the top. Watch: the
+examples big, one under another on a phone and two to a row on a desk (the
+mock's layout; a swipe from one to the next is not built), chips, Try it, and
+on a tool's card "More about" it, which opens its entry in Look it up. Look it
+up: search, one sentence on how Pad and Flip relate, each entry its name and
+first two lines with More for the rest (every word stays in the entry, so a
+search still finds and shows it whole), 15-16px text; Make a Skribl last,
+closed. The bar and the sheet it opened are gone, and their previews with
+them. One help drawer and one examples module, so Flip has all of it. Left: 2,
+help at the tool.
 
 Whichever home, he plays in Skribl's own player (the takes were filmed in the
 in-post player, `inlineplayer.js`), so "drawings that draw themselves" is the

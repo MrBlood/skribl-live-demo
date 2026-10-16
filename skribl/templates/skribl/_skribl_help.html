@@ -19,21 +19,13 @@
       <span>How it works</span>
       <button type="button" id="helpClose" class="help-close" aria-label="Close help drawer">{{ mark('close') }}</button>
     </div>
-    {# Search sits above everything: forty-odd entries across 7 sections is past the
-       point where browsing beats searching. Counts are filled in by
-       lib/helpsearch.js from the DOM — the hand-typed "N tips" badges drifted
-       the moment a tip was added, so nothing here states a number. #}
-    <div class="help-search">
-      <span class="help-search-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      </span>
-      <input type="search" id="helpSearch" class="help-search-input" autocomplete="off"
-             placeholder="Search &mdash; try {% if is_flip %}loop, onion, pressure{% else %}loop, record, pressure{% endif %}" aria-label="Search help">
-    </div>
-    <div class="help-search-count" id="helpSearchCount" aria-live="polite"></div>
-    <div class="help-empty" id="helpEmpty" hidden>
-      <div class="help-empty-title">Nothing matches that</div>
-      <div class="help-empty-sub">Try <strong>loop</strong>, <strong>{% if is_flip %}onion{% else %}record{% endif %}</strong>, <strong>pressure</strong> or <strong>export</strong>.</div>
+    {# ---- TWO TABS (owner's pick, layout 1 of three, after v323) ----------
+       Watch first: the examples, big, one under another, each a real Skribl
+       played by the in-post player. Look it up second: search and every
+       entry, two lines each with More for the rest. FUTURE.md 6n. #}
+    <div class="help-tabs" role="tablist" aria-label="How it works">
+      <button type="button" role="tab" class="help-tab" id="helpTabWatch" aria-controls="helpWatch" aria-selected="true">Watch</button>
+      <button type="button" role="tab" class="help-tab" id="helpTabLook" aria-controls="helpLook" aria-selected="false" tabindex="-1">Look it up</button>
     </div>
     {# ---- LEARN BY WATCHING (lib/helplearn.js) ---------------------------
        Every card plays a REAL Skribl: harness/tools/make_art.py and
@@ -67,62 +59,111 @@
         <span class="learn-title">{% if n %}<span class="learn-n" aria-hidden="true">{{ n }}</span>{% endif %}{{ title }}</span>
         <span class="learn-line">{{ line }}</span>
         {% if tool %}<button type="button" class="learn-try" data-try="{{ tool }}" aria-label="Try the {{ title }}">Try it</button>{% endif %}
+        {% if tool %}<button type="button" class="learn-more" data-more-tool="{{ tool }}">More about {{ title }}</button>{% endif %}
       </figcaption>
     </figure>
     {%- endmacro %}
-    {# The page shows one bar; the examples live in a drawer of their own
-       (#learnSheet, below), because there are many and more coming (owner:
-       "it fills the page and seems like a lot of stuff"). Its three previews
-       are still pictures (harness/tools/make_help_thumbs.py); nothing plays,
-       and the player is not fetched, until the drawer opens. #}
-    <section class="help-learn" id="helpLearn" aria-label="Watch how it works"
+    <section class="help-learn" id="helpWatch" role="tabpanel" aria-labelledby="helpTabWatch"
              data-player-css="{{ skribl_asset('inlineplayer.css') }}"
              data-player-js="{{ skribl_asset('inlineplayer.js') }}">
-      <button type="button" class="learn-peek" id="learnPeek" aria-controls="learnSheet" aria-expanded="false">
-        {% set peek_thumbs = ['flip-wave', 'pen', 'flip-bounce'] if is_flip else ['cat', 'pen', 'scene'] %}
-        <span class="learn-peek-stack" aria-hidden="true">
-          {%- for th in peek_thumbs %}<img alt="" width="52" height="39" data-src="{{ skribl_asset('help/thumbs/' ~ th ~ '.webp') }}">{% endfor -%}
-        </span>
-        <span class="learn-peek-text">
-          <span class="learn-peek-title">Watch it work</span>
-          <span class="learn-peek-sub" id="learnPeekCount">Short examples to watch</span>
-        </span>
-        <span class="learn-peek-go" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg></span>
-      </button>
-      <h3 class="learn-h learn-ref-h">Every control, explained</h3>
+      <div class="learn-chips" role="group" aria-label="Show">
+        <button type="button" class="learn-chip" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" class="learn-chip" data-filter="start" aria-pressed="false">Start</button>
+        <button type="button" class="learn-chip" data-filter="tools" aria-pressed="false">Tools</button>
+        <button type="button" class="learn-chip" data-filter="ideas" aria-pressed="false">Ideas</button>
+        {% if is_flip %}<button type="button" class="learn-chip" data-filter="techniques" aria-pressed="false">Techniques</button>{% else %}<button type="button" class="learn-chip" data-filter="extras" aria-pressed="false">Extras</button>{% endif %}
+      </div>
+        {# WHAT DID NOT LOAD, said once (outside audit V319-004). A failed
+           example was a blank tile and nothing else; they fail together when
+           the connection is gone, so one line counts them and one Retry asks
+           again for those alone. lib/helplearn.js fills and shows it. #}
+        <div class="learn-fail" id="learnFail" hidden>
+          <svg class="learn-fail-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M8.5 8.6A5 5 0 0 0 6.5 18H17a3.5 3.5 0 0 0 1.9-.6M20.7 14.6A3.5 3.5 0 0 0 17.5 10h-.3A6 6 0 0 0 10.4 5.6"/></svg>
+          <div class="learn-fail-words"><div id="learnFailCount" role="status"></div><div class="learn-fail-sub">Check your connection, then try again.</div></div>
+          <button type="button" class="learn-retry" id="learnRetry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Retry</button>
+        </div>
+        <div class="learn-all">
+          {% if is_flip %}
+          {{ learn_card('flip-wave', 'Draw', 'Draw a page, add the next, and it moves.', 'start', n=1) }}
+          {% else %}
+          {{ learn_card('cat', 'Draw', 'Every stroke is recorded as you make it.', 'start', n=1) }}
+          {% endif %}
+          {{ learn_card(None, 'Add music', 'Pick a song and the part that loops.', 'start', n=2, clip='music', shape='screen') }}
+          {{ learn_card(None, 'Post', 'Get a link that plays anywhere.', 'start', n=3, clip='post', shape='screen') }}
+          {{ learn_card('pen', 'Pen', 'Any color, any size. With a stylus, press harder for a thicker line.', 'tools', tool='pen') }}
+          {{ learn_card('eraser', 'Eraser', 'Wipe back to the canvas. Tap it again to change its size.', 'tools', tool='eraser') }}
+          {{ learn_card('shape', 'Shape', 'Lines, boxes, ovals and polygons, with rounded corners if you like.', 'tools', tool='shape') }}
+          {% if is_flip %}
+          {# Flip's own tools change strokes already on the page, which a page
+             does not record, so these are screen clips of the editor. #}
+          {{ learn_card(None, 'Select', 'Draw a box round part of a page, then move, scale or turn it.', 'tools', tool='select', clip='select') }}
+          {{ learn_card(None, 'Liquify', 'Push lines along with your finger and they bend.', 'tools', tool='liquify', clip='liquify') }}
+          {{ learn_card(None, 'Smudge', 'Drag through lines to pull their colors into each other.', 'tools', tool='smudge', clip='smudge') }}
+          {{ learn_card(None, 'Blur', 'Brush over a line to soften it.', 'tools', tool='blur', clip='blur') }}
+          {{ learn_card(None, 'Fill', 'Tap inside a closed shape to fill it with your color.', 'tools', tool='fill', clip='fill') }}
+          {{ learn_card(None, 'Stamps', 'Save a selection as a stamp, then tap to place copies.', 'tools', tool='stamp', clip='stamp') }}
+          {{ learn_card(None, 'Artwork', 'Drag to move everything on the page at once.', 'tools', tool='artmove', clip='artmove') }}
+          {# Techniques: the page strip and the playback settings, filmed as the
+             whole phone screen so every tap stays in frame. #}
+          {{ learn_card(None, 'Onion skin', 'See the page before, faintly, and line the next drawing up with it.', 'techniques', clip='onion', shape='screen') }}
+          {{ learn_card(None, 'Tween', 'Draw two poses and tap Tween: Flip adds the page halfway between.', 'techniques', clip='inbetween', shape='screen') }}
+          {{ learn_card(None, 'Smear', 'A page that shows the whole swing, so the move reads as speed.', 'techniques', clip='smear', shape='screen') }}
+          {{ learn_card(None, 'Hold a page', 'Tap a page’s ×1 to make it linger, up to four beats.', 'techniques', clip='hold', shape='screen') }}
+          {{ learn_card(None, 'Motion guides', 'See the path a drawing travels. Closer dots mean slower.', 'techniques', clip='guides', shape='screen') }}
+          {% endif %}
+          {% if not is_flip %}
+          {# Extras: the rest of what Pad does with a drawing, filmed as the whole
+             phone screen. #}
+          {{ learn_card(None, 'Add a take', 'Tap Add take to draw more. The replay plays every take in order.', 'extras', clip='takes', shape='screen') }}
+          {{ learn_card(None, 'Speed', 'Watch it slow, real time or as a time-lapse. Tap the speed under the replay.', 'extras', clip='speed', shape='screen') }}
+          {{ learn_card(None, 'Add a photo', 'Put a picture behind your drawing, then fill, fit or move it.', 'extras', clip='photo', shape='screen') }}
+          {{ learn_card(None, 'Export', 'Save a still, a video with its music, or a looping GIF.', 'extras', clip='export', shape='screen') }}
+          {{ learn_card(None, 'Zoom', 'On a computer, the magnifier zooms in and you scroll to look around. On a phone, pinch.', 'extras', clip='zoom', shape='desk') }}
+          {% endif %}
+          {# Ideas: each editor leads with its own kind and shows one of the other's. #}
+          {% if is_flip %}
+          {{ learn_card('flip-bounce', 'Squash and stretch', 'The ball stretches as it falls and flattens as it lands.', 'ideas') }}
+          {{ learn_card('flip-blooby-card', 'A card that waves', 'Draw the card and keep it under, draw Blooby, then loop his wave forever.', 'ideas') }}
+          {{ learn_card('scene', 'A little world', 'In Pad: near lines heavy, far lines light.', 'ideas') }}
+          {{ learn_card('snail', 'One line', 'In Pad: draw it all without lifting the pen.', 'ideas') }}
+          {% else %}
+          {{ learn_card('scene', 'A little world', 'Near lines heavy, far lines light, and it has depth.', 'ideas') }}
+          {{ learn_card('snail', 'One line', 'Draw it all without lifting the pen.', 'ideas') }}
+          {{ learn_card('footballer', 'Outline first', 'Get the big shape down, then the folds, the face last.', 'ideas') }}
+          {{ learn_card('skull', 'Fill it in', 'Scribble the solid parts in with the pen, and the fill replays too.', 'ideas') }}
+          {{ learn_card('pug', 'Colour first', 'Lay the colours in with a broad pen, then draw the lines over them.', 'ideas') }}
+          {{ learn_card('blooby-card', 'Trading card', 'Colour the card, frame it, letter its title, then draw who is on it.', 'ideas') }}
+          {# Beside the still card, for now (owner): the same card as a Flip, kept
+             under its pages while Blooby draws himself in and then waves on a
+             Forever loop. #}
+          {{ learn_card('flip-blooby-card', 'A card that waves', 'In Flip: draw the card and keep it under, draw Blooby, then loop his wave forever.', 'ideas') }}
+          {{ learn_card('flip-wave', 'Make it move', 'In Flip: a page at a time, and Blooby waves hello.', 'ideas') }}
+          {% endif %}
+        </div>
     </section>
+    <section class="help-look" id="helpLook" role="tabpanel" aria-labelledby="helpTabLook" hidden>
+    {# Search sits above everything: forty-odd entries across 7 sections is past the
+       point where browsing beats searching. Counts are filled in by
+       lib/helpsearch.js from the DOM — the hand-typed "N tips" badges drifted
+       the moment a tip was added, so nothing here states a number. #}
+    <div class="help-search">
+      <span class="help-search-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </span>
+      <input type="search" id="helpSearch" class="help-search-input" autocomplete="off"
+             placeholder="Search &mdash; try {% if is_flip %}loop, onion, pressure{% else %}loop, record, pressure{% endif %}" aria-label="Search help">
+    </div>
+    <div class="help-search-count" id="helpSearchCount" aria-live="polite"></div>
+    <div class="help-empty" id="helpEmpty" hidden>
+      <div class="help-empty-title">Nothing matches that</div>
+      <div class="help-empty-sub">Try <strong>loop</strong>, <strong>{% if is_flip %}onion{% else %}record{% endif %}</strong>, <strong>pressure</strong> or <strong>export</strong>.</div>
+    </div>
     <div class="help-steps">
       <div class="help-intro">
-        Pad and Flip are two ways to make a Skribl: Pad replays a drawing as it was drawn, Flip plays pages one after another. Each keeps its own draft; the link between them is a door, not a conversion. {% if is_flip %}Flip is a page-by-page animator — draw a stack of pages, then flip through them. A one-page Flip is just a drawing; add pages to make it move.{% else %}Skribl Pad turns a drawing into a replay you can watch draw itself, with an optional music loop and background image, then post to a shareable link.{% endif %}
-        Search above, or tap a section to open it.
+        Pad and Flip are two ways to make a Skribl: Pad replays a drawing as it was drawn, Flip plays pages one after another. Search, or tap a section to open it.
       </div>
 
       <div class="accordion">
-
-        {# ---- App workflow (app-specific) ---------------------------------- #}
-        <button type="button" class="accordion-header open" aria-expanded="true">
-          <span class="accordion-icon"><svg viewBox="14 14 72 72" fill="currentColor"><polygon points="50,14 56.5,38.7 81.2,32 63,50 81.2,68 56.5,61.3 50,86 43.5,61.3 18.8,68 37,50 18.8,32 43.5,38.7"/></svg></span>
-          <span class="accordion-title">{% if is_flip %}Make a Flip{% else %}Make a Skribl{% endif %}</span>
-          <span class="accordion-count"></span>
-          <span class="accordion-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-        </button>
-        <div class="accordion-body open"><div class="accordion-inner">
-          {% if is_flip %}
-          <div class="help-step"><span class="help-num">1</span><div><div class="help-title">Draw a page</div><div class="help-desc">Pick a color and brush size and sketch. <strong>Tap Pen again</strong> for the full <strong>Draw</strong> menu (colors, custom picker, eyedropper, brush size, background, opacity, smoothing). Need a different shape? The <strong>&#8943;</strong> menu switches the canvas between <strong>4:3</strong>, <strong>16:9</strong>, <strong>1:1</strong> and <strong>9:16</strong> — your drawings keep their position.</div></div></div>
-          <div class="help-step"><span class="help-num">2</span><div><div class="help-title">Add pages to animate</div><div class="help-desc"><strong>Duplicate</strong> copies the current page so you can nudge, erase, and redraw the difference; <strong>Blank</strong> starts empty. Turn on <strong>Onion skin</strong> to trace over the pages beneath — set how many show through (<strong>1&#8211;3</strong>) and tint them by distance so you can tell them apart. Hover a page in the strip to <strong>move</strong>, <strong>copy</strong> or <strong>hold</strong> it. To drag a page somewhere else, press and hold it until it lifts &mdash; on a phone it buzzes &mdash; then drag; that way a flick along the strip scrolls it instead of shuffling your pages. To work on several pages at once, open a page&rsquo;s <strong>&#8943;</strong> menu and choose <strong>Select through here</strong>: every page from the one you are on through that one is selected, and <strong>Move</strong>, <strong>Copy</strong>, <strong>Draw on</strong> and <strong>Delete</strong> then act on the whole run. On a desktop, <strong>Shift</strong>-click a page does the same.</div></div></div>
-          <div class="help-step"><span class="help-num">3</span><div><div class="help-title">Set the timing</div><div class="help-desc">Choose <strong>6 / 12 / 24</strong> pages per second under <strong>Playback settings</strong> — that is the speed for the whole animation, except any page set to <strong>Draw-on</strong>, which takes as long as it took you to draw rather than a fixed number of frames. To linger on one page, use its <strong>&#215;1</strong> button in the strip to hold it for up to four beats; held pages show a badge so you can read the timing at a glance. Turn on <strong>Motion guides</strong> to see the path your drawing travels between pages, with dots spaced to show its speed — closer dots mean slower movement. It is a preview aid; it never appears in the finished animation.</div></div></div>
-          <div class="help-step"><span class="help-num">4</span><div><div class="help-title">Music &amp; image (optional)</div><div class="help-desc">Add a looping <strong>music</strong> track and a background <strong>image</strong> for the whole animation — see the Music &amp; looping and Background image sections below.</div></div></div>
-          <div class="help-step"><span class="help-num">5</span><div><div class="help-title">Play &amp; Post</div><div class="help-desc">Hit <strong>Play</strong> to preview the loop (drag the scrub bar to check any frame). When it looks right, tap <strong>Post</strong> to give it a title and caption, then get a link that plays for anyone, on any device.</div></div></div>
-          <div class="help-step"><span class="help-num">6</span><div><div class="help-title">Watching a shared Skribl</div><div class="help-desc">Anyone who opens your link gets a simple player: <strong>Play / Pause</strong>, <strong>Restart</strong> to jump back to the beginning, <strong>Loop</strong> to play it again when it ends (it lights up when on), a bar you can drag &mdash; or nudge with the arrow keys &mdash; to jump to any moment, <strong>Mute</strong> for the music, <strong>Full screen</strong> to fill the screen (the <strong>&#10005;</strong> in the corner, or <strong>Esc</strong>, comes back out); tap the drawing to pause and again to carry on, or drag across it to move through it; the line under the bar says how fast you are watching, and the speed in it opens <strong>&frac14;&times;</strong> to <strong>16&times;</strong>; the <strong>&#8943;</strong> menu beside them holds <strong>Share</strong>, <strong>Copy link</strong> and <strong>Public gallery</strong> to see what others chose to show. Nothing to install and no account needed.</div></div></div>
-          {% else %}
-          <div class="help-step"><span class="help-num">1</span><div><div class="help-title">Draw your canvas</div><div class="help-desc">Pick a color and brush size and sketch anything. Your first stroke on a blank canvas starts recording by itself.</div></div></div>
-          <div class="help-step"><span class="help-num">2</span><div><div class="help-title">Record the replay</div><div class="help-desc">Every stroke is captured with its timing, and Undo / Redo both work mid-take. Tap <strong>Done</strong> when the take is finished — then tap <strong>Add take</strong> on the canvas to add another; the replay plays them back to back. <strong>New Skribl</strong> at the top of the <strong>&#8943;</strong> menu asks twice before it starts over, and offers an <strong>Undo</strong> afterwards that brings back your drawing, music and image.</div></div></div>
-          <div class="help-step"><span class="help-num">3</span><div><div class="help-title">Add music (optional)</div><div class="help-desc">Open the <strong>Music</strong> tab, add a track, and pick a loop — see the Music section below.</div></div></div>
-          <div class="help-step"><span class="help-num">4</span><div><div class="help-title">Add a background image (optional)</div><div class="help-desc">Open the <strong>Photo</strong> tab to place a photo behind your drawing — see the Background image section below.</div></div></div>
-          <div class="help-step"><span class="help-num">5</span><div><div class="help-title">Preview and post</div><div class="help-desc">Hit <strong>Play</strong> to watch the replay with your music underneath. When it looks right, tap <strong>Post</strong> to give it a title and caption — the link works for anyone you share it with.</div></div></div>
-          <div class="help-step"><span class="help-num">6</span><div><div class="help-title">Watching a shared Skribl</div><div class="help-desc">Anyone who opens your link gets a simple player: <strong>Play / Pause</strong>, <strong>Restart</strong> to jump back to the beginning, <strong>Loop</strong> to play it again when it ends (it lights up when on), a bar you can drag &mdash; or nudge with the arrow keys &mdash; to jump to any moment, <strong>Mute</strong> for the music, <strong>Full screen</strong> to fill the screen (the <strong>&#10005;</strong> in the corner, or <strong>Esc</strong>, comes back out); tap the drawing to pause and again to carry on, or drag across it to move through it; the line under the bar says how long it took to draw and how fast you are watching, and the speed in it opens <strong>&frac14;&times;</strong> to <strong>16&times;</strong> and <strong>Fit</strong> (the whole thing in about 30 seconds); the <strong>&#8943;</strong> menu beside them holds <strong>Share</strong>, <strong>Copy link</strong> and <strong>Public gallery</strong> to see what others chose to show. Nothing to install and no account needed.</div></div></div>
-          {% endif %}
-        </div></div>
 
         {# ---- Drawing tools (shared) --------------------------------------- #}
         <button type="button" class="accordion-header" aria-expanded="false">
@@ -274,98 +315,35 @@
           <div class="help-tip"><span class="help-pill">Menus &amp; panels</span><div class="help-desc">Anything that slides up &mdash; the <strong>&#8943;</strong> menu, Export, Post, your drafts &mdash; closes with a tap on the grey bar at its top or a swipe down, and eases away. A swipe on a panel never reloads the page. While a post is sending, its panel stays put until it finishes.</div></div>
         </div></div>
 
+        {# ---- Make a Skribl, start to finish: last, closed (How it works layout 1, after v323): the
+             examples on Watch show the start; these steps stay for the detail ---------------------------------- #}
+        <button type="button" class="accordion-header" aria-expanded="false">
+          <span class="accordion-icon"><svg viewBox="14 14 72 72" fill="currentColor"><polygon points="50,14 56.5,38.7 81.2,32 63,50 81.2,68 56.5,61.3 50,86 43.5,61.3 18.8,68 37,50 18.8,32 43.5,38.7"/></svg></span>
+          <span class="accordion-title">{% if is_flip %}Make a Flip{% else %}Make a Skribl{% endif %}</span>
+          <span class="accordion-count"></span>
+          <span class="accordion-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </button>
+        <div class="accordion-body"><div class="accordion-inner">
+          {% if is_flip %}
+          <div class="help-step"><span class="help-num">1</span><div><div class="help-title">Draw a page</div><div class="help-desc">Pick a color and brush size and sketch. <strong>Tap Pen again</strong> for the full <strong>Draw</strong> menu (colors, custom picker, eyedropper, brush size, background, opacity, smoothing). Need a different shape? The <strong>&#8943;</strong> menu switches the canvas between <strong>4:3</strong>, <strong>16:9</strong>, <strong>1:1</strong> and <strong>9:16</strong> — your drawings keep their position.</div></div></div>
+          <div class="help-step"><span class="help-num">2</span><div><div class="help-title">Add pages to animate</div><div class="help-desc"><strong>Duplicate</strong> copies the current page so you can nudge, erase, and redraw the difference; <strong>Blank</strong> starts empty. Turn on <strong>Onion skin</strong> to trace over the pages beneath — set how many show through (<strong>1&#8211;3</strong>) and tint them by distance so you can tell them apart. Hover a page in the strip to <strong>move</strong>, <strong>copy</strong> or <strong>hold</strong> it. To drag a page somewhere else, press and hold it until it lifts &mdash; on a phone it buzzes &mdash; then drag; that way a flick along the strip scrolls it instead of shuffling your pages. To work on several pages at once, open a page&rsquo;s <strong>&#8943;</strong> menu and choose <strong>Select through here</strong>: every page from the one you are on through that one is selected, and <strong>Move</strong>, <strong>Copy</strong>, <strong>Draw on</strong> and <strong>Delete</strong> then act on the whole run. On a desktop, <strong>Shift</strong>-click a page does the same.</div></div></div>
+          <div class="help-step"><span class="help-num">3</span><div><div class="help-title">Set the timing</div><div class="help-desc">Choose <strong>6 / 12 / 24</strong> pages per second under <strong>Playback settings</strong> — that is the speed for the whole animation, except any page set to <strong>Draw-on</strong>, which takes as long as it took you to draw rather than a fixed number of frames. To linger on one page, use its <strong>&#215;1</strong> button in the strip to hold it for up to four beats; held pages show a badge so you can read the timing at a glance. Turn on <strong>Motion guides</strong> to see the path your drawing travels between pages, with dots spaced to show its speed — closer dots mean slower movement. It is a preview aid; it never appears in the finished animation.</div></div></div>
+          <div class="help-step"><span class="help-num">4</span><div><div class="help-title">Music &amp; image (optional)</div><div class="help-desc">Add a looping <strong>music</strong> track and a background <strong>image</strong> for the whole animation — see the Music &amp; looping and Background image sections below.</div></div></div>
+          <div class="help-step"><span class="help-num">5</span><div><div class="help-title">Play &amp; Post</div><div class="help-desc">Hit <strong>Play</strong> to preview the loop (drag the scrub bar to check any frame). When it looks right, tap <strong>Post</strong> to give it a title and caption, then get a link that plays for anyone, on any device.</div></div></div>
+          <div class="help-step"><span class="help-num">6</span><div><div class="help-title">Watching a shared Skribl</div><div class="help-desc">Anyone who opens your link gets a simple player: <strong>Play / Pause</strong>, <strong>Restart</strong> to jump back to the beginning, <strong>Loop</strong> to play it again when it ends (it lights up when on), a bar you can drag &mdash; or nudge with the arrow keys &mdash; to jump to any moment, <strong>Mute</strong> for the music, <strong>Full screen</strong> to fill the screen (the <strong>&#10005;</strong> in the corner, or <strong>Esc</strong>, comes back out); tap the drawing to pause and again to carry on, or drag across it to move through it; the line under the bar says how fast you are watching, and the speed in it opens <strong>&frac14;&times;</strong> to <strong>16&times;</strong>; the <strong>&#8943;</strong> menu beside them holds <strong>Share</strong>, <strong>Copy link</strong> and <strong>Public gallery</strong> to see what others chose to show. Nothing to install and no account needed.</div></div></div>
+          {% else %}
+          <div class="help-step"><span class="help-num">1</span><div><div class="help-title">Draw your canvas</div><div class="help-desc">Pick a color and brush size and sketch anything. Your first stroke on a blank canvas starts recording by itself.</div></div></div>
+          <div class="help-step"><span class="help-num">2</span><div><div class="help-title">Record the replay</div><div class="help-desc">Every stroke is captured with its timing, and Undo / Redo both work mid-take. Tap <strong>Done</strong> when the take is finished — then tap <strong>Add take</strong> on the canvas to add another; the replay plays them back to back. <strong>New Skribl</strong> at the top of the <strong>&#8943;</strong> menu asks twice before it starts over, and offers an <strong>Undo</strong> afterwards that brings back your drawing, music and image.</div></div></div>
+          <div class="help-step"><span class="help-num">3</span><div><div class="help-title">Add music (optional)</div><div class="help-desc">Open the <strong>Music</strong> tab, add a track, and pick a loop — see the Music section below.</div></div></div>
+          <div class="help-step"><span class="help-num">4</span><div><div class="help-title">Add a background image (optional)</div><div class="help-desc">Open the <strong>Photo</strong> tab to place a photo behind your drawing — see the Background image section below.</div></div></div>
+          <div class="help-step"><span class="help-num">5</span><div><div class="help-title">Preview and post</div><div class="help-desc">Hit <strong>Play</strong> to watch the replay with your music underneath. When it looks right, tap <strong>Post</strong> to give it a title and caption — the link works for anyone you share it with.</div></div></div>
+          <div class="help-step"><span class="help-num">6</span><div><div class="help-title">Watching a shared Skribl</div><div class="help-desc">Anyone who opens your link gets a simple player: <strong>Play / Pause</strong>, <strong>Restart</strong> to jump back to the beginning, <strong>Loop</strong> to play it again when it ends (it lights up when on), a bar you can drag &mdash; or nudge with the arrow keys &mdash; to jump to any moment, <strong>Mute</strong> for the music, <strong>Full screen</strong> to fill the screen (the <strong>&#10005;</strong> in the corner, or <strong>Esc</strong>, comes back out); tap the drawing to pause and again to carry on, or drag across it to move through it; the line under the bar says how long it took to draw and how fast you are watching, and the speed in it opens <strong>&frac14;&times;</strong> to <strong>16&times;</strong> and <strong>Fit</strong> (the whole thing in about 30 seconds); the <strong>&#8943;</strong> menu beside them holds <strong>Share</strong>, <strong>Copy link</strong> and <strong>Public gallery</strong> to see what others chose to show. Nothing to install and no account needed.</div></div></div>
+          {% endif %}
+        </div></div>
+
       </div>
     </div>
-  </div>
-  {# ---- THE EXAMPLES DRAWER (lib/helplearn.js) -------------------------
-     Over the panel, outside its scroll, so the reference stays where it was.
-     Closes like every sheet: a tap on the grip or a pull down, the scrim,
-     the close button, or Escape (which leaves How it works open). #}
-  <div class="learn-sheet" id="learnSheet" role="dialog" aria-modal="true" aria-labelledby="learnSheetTitle" hidden>
-    <div class="learn-scrim" data-learn-close></div>
-    <div class="learn-sheet-panel">
-      <button type="button" class="learn-grip" id="learnGrip" data-learn-close aria-label="Close the examples"></button>
-      <div class="learn-sheet-head">
-        <h3 class="learn-sheet-title" id="learnSheetTitle" tabindex="-1">Watch it work</h3>
-        <button type="button" class="help-close learn-close" data-learn-close aria-label="Close the examples">{{ mark('close') }}</button>
-      </div>
-      <div class="learn-chips" role="group" aria-label="Show">
-        <button type="button" class="learn-chip" data-filter="all" aria-pressed="true">All</button>
-        <button type="button" class="learn-chip" data-filter="start" aria-pressed="false">Start</button>
-        <button type="button" class="learn-chip" data-filter="tools" aria-pressed="false">Tools</button>
-        <button type="button" class="learn-chip" data-filter="ideas" aria-pressed="false">Ideas</button>
-        {% if is_flip %}<button type="button" class="learn-chip" data-filter="techniques" aria-pressed="false">Techniques</button>{% else %}<button type="button" class="learn-chip" data-filter="extras" aria-pressed="false">Extras</button>{% endif %}
-      </div>
-      <div class="learn-sheet-scroll">
-        {# WHAT DID NOT LOAD, said once (outside audit V319-004). A failed
-           example was a blank tile and nothing else; they fail together when
-           the connection is gone, so one line counts them and one Retry asks
-           again for those alone. lib/helplearn.js fills and shows it. #}
-        <div class="learn-fail" id="learnFail" hidden>
-          <svg class="learn-fail-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M8.5 8.6A5 5 0 0 0 6.5 18H17a3.5 3.5 0 0 0 1.9-.6M20.7 14.6A3.5 3.5 0 0 0 17.5 10h-.3A6 6 0 0 0 10.4 5.6"/></svg>
-          <div class="learn-fail-words"><div id="learnFailCount" role="status"></div><div class="learn-fail-sub">Check your connection, then try again.</div></div>
-          <button type="button" class="learn-retry" id="learnRetry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Retry</button>
-        </div>
-        <div class="learn-all">
-          {% if is_flip %}
-          {{ learn_card('flip-wave', 'Draw', 'Draw a page, add the next, and it moves.', 'start', n=1) }}
-          {% else %}
-          {{ learn_card('cat', 'Draw', 'Every stroke is recorded as you make it.', 'start', n=1) }}
-          {% endif %}
-          {{ learn_card(None, 'Add music', 'Pick a song and the part that loops.', 'start', n=2, clip='music', shape='screen') }}
-          {{ learn_card(None, 'Post', 'Get a link that plays anywhere.', 'start', n=3, clip='post', shape='screen') }}
-          {{ learn_card('pen', 'Pen', 'Any color, any size. With a stylus, press harder for a thicker line.', 'tools', tool='pen') }}
-          {{ learn_card('eraser', 'Eraser', 'Wipe back to the canvas. Tap it again to change its size.', 'tools', tool='eraser') }}
-          {{ learn_card('shape', 'Shape', 'Lines, boxes, ovals and polygons, with rounded corners if you like.', 'tools', tool='shape') }}
-          {% if is_flip %}
-          {# Flip's own tools change strokes already on the page, which a page
-             does not record, so these are screen clips of the editor. #}
-          {{ learn_card(None, 'Select', 'Draw a box round part of a page, then move, scale or turn it.', 'tools', tool='select', clip='select') }}
-          {{ learn_card(None, 'Liquify', 'Push lines along with your finger and they bend.', 'tools', tool='liquify', clip='liquify') }}
-          {{ learn_card(None, 'Smudge', 'Drag through lines to pull their colors into each other.', 'tools', tool='smudge', clip='smudge') }}
-          {{ learn_card(None, 'Blur', 'Brush over a line to soften it.', 'tools', tool='blur', clip='blur') }}
-          {{ learn_card(None, 'Fill', 'Tap inside a closed shape to fill it with your color.', 'tools', tool='fill', clip='fill') }}
-          {{ learn_card(None, 'Stamps', 'Save a selection as a stamp, then tap to place copies.', 'tools', tool='stamp', clip='stamp') }}
-          {{ learn_card(None, 'Artwork', 'Drag to move everything on the page at once.', 'tools', tool='artmove', clip='artmove') }}
-          {# Techniques: the page strip and the playback settings, filmed as the
-             whole phone screen so every tap stays in frame. #}
-          {{ learn_card(None, 'Onion skin', 'See the page before, faintly, and line the next drawing up with it.', 'techniques', clip='onion', shape='screen') }}
-          {{ learn_card(None, 'Tween', 'Draw two poses and tap Tween: Flip adds the page halfway between.', 'techniques', clip='inbetween', shape='screen') }}
-          {{ learn_card(None, 'Smear', 'A page that shows the whole swing, so the move reads as speed.', 'techniques', clip='smear', shape='screen') }}
-          {{ learn_card(None, 'Hold a page', 'Tap a page’s ×1 to make it linger, up to four beats.', 'techniques', clip='hold', shape='screen') }}
-          {{ learn_card(None, 'Motion guides', 'See the path a drawing travels. Closer dots mean slower.', 'techniques', clip='guides', shape='screen') }}
-          {% endif %}
-          {% if not is_flip %}
-          {# Extras: the rest of what Pad does with a drawing, filmed as the whole
-             phone screen. #}
-          {{ learn_card(None, 'Add a take', 'Tap Add take to draw more. The replay plays every take in order.', 'extras', clip='takes', shape='screen') }}
-          {{ learn_card(None, 'Speed', 'Watch it slow, real time or as a time-lapse. Tap the speed under the replay.', 'extras', clip='speed', shape='screen') }}
-          {{ learn_card(None, 'Add a photo', 'Put a picture behind your drawing, then fill, fit or move it.', 'extras', clip='photo', shape='screen') }}
-          {{ learn_card(None, 'Export', 'Save a still, a video with its music, or a looping GIF.', 'extras', clip='export', shape='screen') }}
-          {{ learn_card(None, 'Zoom', 'On a computer, the magnifier zooms in and you scroll to look around. On a phone, pinch.', 'extras', clip='zoom', shape='desk') }}
-          {% endif %}
-          {# Ideas: each editor leads with its own kind and shows one of the other's. #}
-          {% if is_flip %}
-          {{ learn_card('flip-bounce', 'Squash and stretch', 'The ball stretches as it falls and flattens as it lands.', 'ideas') }}
-          {{ learn_card('flip-blooby-card', 'A card that waves', 'Draw the card and keep it under, draw Blooby, then loop his wave forever.', 'ideas') }}
-          {{ learn_card('scene', 'A little world', 'In Pad: near lines heavy, far lines light.', 'ideas') }}
-          {{ learn_card('snail', 'One line', 'In Pad: draw it all without lifting the pen.', 'ideas') }}
-          {% else %}
-          {{ learn_card('scene', 'A little world', 'Near lines heavy, far lines light, and it has depth.', 'ideas') }}
-          {{ learn_card('snail', 'One line', 'Draw it all without lifting the pen.', 'ideas') }}
-          {{ learn_card('footballer', 'Outline first', 'Get the big shape down, then the folds, the face last.', 'ideas') }}
-          {{ learn_card('skull', 'Fill it in', 'Scribble the solid parts in with the pen, and the fill replays too.', 'ideas') }}
-          {{ learn_card('pug', 'Colour first', 'Lay the colours in with a broad pen, then draw the lines over them.', 'ideas') }}
-          {{ learn_card('blooby-card', 'Trading card', 'Colour the card, frame it, letter its title, then draw who is on it.', 'ideas') }}
-          {# Beside the still card, for now (owner): the same card as a Flip, kept
-             under its pages while Blooby draws himself in and then waves on a
-             Forever loop. #}
-          {{ learn_card('flip-blooby-card', 'A card that waves', 'In Flip: draw the card and keep it under, draw Blooby, then loop his wave forever.', 'ideas') }}
-          {{ learn_card('flip-wave', 'Make it move', 'In Flip: a page at a time, and Blooby waves hello.', 'ideas') }}
-          {% endif %}
-        </div>
-      </div>
-    </div>
+    </section>
   </div>
   {# ---- FULL SCREEN (lib/helplearn.js) ----------------------------------
      A tap on any example opens it large over the panel (owner: "we should

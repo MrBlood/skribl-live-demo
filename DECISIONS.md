@@ -17914,3 +17914,42 @@ automation let through, a seen per editor, the feed's 70vh cap, a ground other
 than his lilac. Writing it found one real fault before it shipped: the switch
 that lets a test ask for him also skipped the phone check, so a forced desk got
 him.
+
+## After v323 -- How it works, layout 1: Watch first, Look it up second
+
+The owner: "Go with 1". FUTURE.md 6n says what each tab holds. This is what
+building and checking it found.
+
+The panel itself is the scroller now (the sheet had its own), and it scrolls
+smoothly. Two things moved because of it. A change of tab from far down Watch
+glided back up past every example; it jumps to the top now. And a card's More
+about scrolled to its entry while the entry's section was still folding open,
+so the entry ended half a screen down; it lands when the section has finished
+opening, on both of its glides (its height, then its padding, which moved it
+19 px), and stops under the tabs. Both were found by `verify_helpdemos`, not by
+eye. On a desk the tabs ran 18-24 px wider than the examples and the search
+under them; the panel keeps one 18 px gutter at every width now, so their edges
+line up.
+
+`verify_helpdemos` follows the new page: it opens on Watch, the cards are big
+(over 400 px, titles 20 px), what is on screen plays and a row of two plays
+together, Look it up shows the search and stops everything, the arrow keys move
+between the tabs, a change of tab lands at the top, and More about Eraser lands
+on its entry under the tabs, focused. Each new row was shown red by its own
+break, served in place of the real file: the glide back, no arrow keys, no
+focus, small titles, the entry scrolled to while folded, no room under the
+tabs. "Nothing plays on Look it up" needed two breaks to go red, the tab's own
+pause and the cards' out-of-view one, since either alone keeps it true.
+`verify_help` opens Look it up before it searches; its "room under the band"
+row measures from the tabs now, and its open-every-section row waits for the
+sections to finish opening (a fixed 700 ms ran short on a loaded box). The bar's
+previews and `make_help_thumbs.py` are gone with the bar.
+
+`verify_parity` found the last one, red beside the others and alone: Flip's
+Play disc at 390 px was still almost clear 150 ms after a tap (alpha 0.016;
+0.21 on main). The More buttons were sized on every window resize, reading
+every entry's layout with How it works shut, and that held up the frame the
+disc's fade starts on. Swapping in main's copy of each help script and then its
+stylesheet pinned it to `lib/helpsearch.js`; it sizes them now only with the
+panel open, once a frame at most, and the disc reads 0.21 again.
+

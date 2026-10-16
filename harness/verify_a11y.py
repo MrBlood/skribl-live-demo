@@ -400,18 +400,16 @@ with sync_playwright() as p:
         # row that opened it, which is inside the menu and closed by then.
         ("/", "savedDraftsSheet"):     ("click:#menuBtn|click:#openCloudDraftItem", None),
         ("/flip", "savedDraftsSheet"): ("click:#moreBtn|click:#openCloudDraftItem", None),
-        # HOW IT WORKS' OWN LAYERS (v320; outside audit V319-002). The
-        # examples sheet and the full-screen viewer cover the panel and were
-        # role="region", so this census never saw them and Tab went straight
-        # through to the panel's Close underneath. Dialogs now, one instance
-        # per editor. Escape closes only the top layer: the sheet hands focus
-        # back to the bar that opened it, the viewer to its card.
-        ("/", "learnSheet"):      ("click:#menuBtn|click:#helpItem|click:#learnPeek", "learnPeek"),
-        ("/flip", "learnSheet"):  ("click:#moreBtn|click:#miInfo|click:#learnPeek", "learnPeek"),
-        ("/", "learnViewer"):     ("click:#menuBtn|click:#helpItem|click:#learnPeek"
-                                   "|click:#learnSheet .learn-card .learn-stage", None),
-        ("/flip", "learnViewer"): ("click:#moreBtn|click:#miInfo|click:#learnPeek"
-                                   "|click:#learnSheet .learn-card .learn-stage", None),
+        # HOW IT WORKS' FULL-SCREEN EXAMPLE (v320; outside audit V319-002).
+        # It covers the panel and was role="region", so this census never saw
+        # it and Tab went straight through to the panel's Close underneath. A
+        # dialog now, one per editor; Escape closes it alone and hands focus
+        # back to its card. (The examples were a sheet over the panel too; since
+        # layout 1 they are its Watch tab, FUTURE.md 6n.)
+        ("/", "learnViewer"):     ("click:#menuBtn|click:#helpItem"
+                                   "|click:#helpWatch .learn-card .learn-stage", None),
+        ("/flip", "learnViewer"): ("click:#moreBtn|click:#miInfo"
+                                   "|click:#helpWatch .learn-card .learn-stage", None),
         # FLIP'S EXPORT PROGRESS (v320), found by A11Y 2a's layer sweep on its
         # first run: a full-screen overlay with a Cancel in it that Tab walked
         # straight out of. Opened the way an export opens it; Escape is Cancel,
