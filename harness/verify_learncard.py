@@ -49,7 +49,9 @@ CARD = """() => { const c = document.querySelector('.lc-card'); if (!c) return n
   const r = c.getBoundingClientRect(), at = document.elementFromPoint(r.left + r.width / 2, r.top + 30);
   return { name: c.querySelector('.lc-t').textContent, line: c.querySelector('.lc-line').textContent,
            painted: !!at && c.contains(at), example: !!c.querySelector('.lc-stage, .lc-phone'),
-           ok: !!c.querySelector('.lc-ok'), hint: (c.querySelector('.lc-hint') || {}).textContent || '' }; }"""
+           ok: !!c.querySelector('.lc-ok'), hint: (c.querySelector('.lc-hint') || {}).textContent || '',
+           rows: [...c.querySelectorAll('.lc-do > div')].map(d => [d.querySelector('dt').textContent, d.querySelector('dd').textContent]),
+           rowsPainted: [...c.querySelectorAll('.lc-do dt')].every(e => { const q = e.getBoundingClientRect(), a = document.elementFromPoint(q.left + 4, q.top + q.height / 2); return !!a && e.contains(a); }) }; }"""
 
 
 def center(q, sel):
@@ -100,7 +102,12 @@ with sync_playwright() as p:
             check(f"{name}: holding Pen opens its card, painted, with its example and Got it",
                   card and card["name"] == "Pen" and card["painted"] and card["example"] and card["ok"], str(card))
             if card:
-                pen_lines[name] = card["line"]
+                pen_lines[name] = card["line"] + " | " + str(card["rows"])
+            # WHAT A TAP DOES (owner: Pen "opens a drawer but it's not
+            # mentioned what a fast tap does"): its own row, painted.
+            check(f"{name}: Pen's card says what a tap and a sideways drag do, each its own painted row",
+                  card and [r[0] for r in card["rows"]] == ["Tap again", "Drag sideways"]
+                  and "Colour" in card["rows"][0][1] and card["rowsPainted"], str(card and card["rows"]))
             q.click(".lc-card .lc-ok")
             q.wait_for_timeout(200)
             gone = q.evaluate("() => [!document.querySelector('.lc-card'), document.activeElement && document.activeElement.id]")
@@ -240,6 +247,27 @@ with sync_playwright() as p:
                   not q.evaluate("() => !!document.querySelector('.lc-card, .lc-note')"))
             c.close()
         part("automation", auto)
+
+        # 8. EVERY BUTTON THAT OPENS SOMETHING SAYS WHAT A TAP DOES: the
+        # buttons whose tap opens a drawer, a picker, a tray or a sheet.
+        def taps():
+            c, q = fresh(b, PHONE, route)
+            missing, seen = [], []
+            for sel in ("#penToolBtn", "#eraserToolBtn", "#shapeToolBtn", "#toolMoreBtn", "#mediaOpenBtn",
+                        "#postBtn", "#tuneBtn", "#menuBtn", "#moreBtn"):
+                if not q.evaluate("(s) => { const e = document.querySelector(s); return !!e && !!e.getClientRects().length; }", sel):
+                    continue
+                seen.append(sel)
+                q.evaluate("(s) => window.SkriblLearnCard.open(s)", sel)
+                q.wait_for_timeout(250)
+                card = q.evaluate(CARD)
+                if not card or not any(r[0].startswith("Tap") for r in card["rows"]):
+                    missing.append(f"{sel}: {card and card['rows']}")
+                q.evaluate("() => window.SkriblLearnCard.close()")
+            check(f"{name}: every button that opens something says on its card what a tap does ({len(seen)} on this page)",
+                  len(seen) >= 6 and not missing, "; ".join(missing))
+            c.close()
+        part("tap rows", taps)
 
     check("Pen's card says the same on the Pad and Flip", len(pen_lines) == 2 and len(set(pen_lines.values())) == 1, str(pen_lines))
     b.close()

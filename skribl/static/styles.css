@@ -7625,6 +7625,12 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .lc-body { padding: 0 4px 2px; }
 .lc-card .lc-t, .lc-banner .lc-t { margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
 .lc-card .lc-line, .lc-banner .lc-line, .lc-note .lc-line { margin: 0; font-size: 14px; line-height: 1.4; color: var(--text-secondary); }
+/* What each gesture does: the verb in small violet words, what it does in the
+   card's ink, under a rule of the card's own line. */
+.lc-do { display: grid; gap: 6px; margin: 10px 0 0; padding-top: 8px; border-top: 1px solid var(--menu-card-line); }
+.lc-do > div { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: baseline; }
+.lc-do dt { font-size: 13px; font-weight: 700; color: var(--accent-ink); white-space: nowrap; }
+.lc-do dd { margin: 0; font-size: 14px; line-height: 1.35; color: var(--text-primary); }
 .lc-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
 .lc-more { min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--accent-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
 .lc-hint { font-size: 14px; color: var(--text-secondary); }

@@ -44,37 +44,51 @@
 
   // name, sentence, example (demo: a real Skribl from How it works; clip: a
   // phone recording), the How it works search that More opens, and tagOnly
-  // where holding already does something.
+  // where holding already does something. DO is what each gesture does, one
+  // row each under the sentence (owner: Pen "opens a drawer but it's not
+  // mentioned what a fast tap does"; the tap rows mock, "All yes"): every
+  // button that opens something says so, read off what its tap really does.
   var CARDS = [
     { sel: '#penToolBtn', name: 'Pen', tag: 'Pen', demo: 'pen',
-      line: 'Press harder for a thicker line. Tap Pen again for colour and brush; drag sideways for size.' },
+      line: 'Press harder for a thicker line.',
+      do: [['Tap again', 'Colour, brush and size'], ['Drag sideways', 'Size, without opening anything']] },
     { sel: '#eraserToolBtn', name: 'Eraser', tag: 'Eraser', demo: 'eraser',
-      line: 'Rubs out what you drew, and the replay shows it rubbing out.' },
+      line: 'Rubs out what you drew, and the replay shows it rubbing out.',
+      do: [['Tap again', 'Eraser size']] },
     { sel: '#shapeToolBtn', name: 'Shapes', tag: 'Shapes', demo: 'shape', more: 'Shape',
-      line: 'Straight lines, rectangles, ovals and polygons. Tap again to pick which.' },
+      line: 'Straight lines, rectangles, ovals and polygons.',
+      do: [['Tap', 'Pick line, box, oval or polygon']] },
     { sel: '#toolMoreBtn', name: 'More tools', tag: 'More tools', more: 'Fill',
-      line: 'Fill, blur, smudge, select, stamp and more, for this page.' },
+      line: 'Fill, blur, smudge, select, stamp and more, for this page.',
+      do: [['Tap', 'Every tool, in a tray']] },
     { sel: '#undoBtn, #undo', name: 'Undo', tag: 'Undo', line: 'Takes back your last stroke. Redo puts it back.' },
     { sel: '#redoBtn, #redo', name: 'Redo', tag: 'Redo', more: 'Undo', line: 'Puts back what Undo took away.' },
     { sel: '#mediaOpenBtn', name: 'Photo and music', tag: 'Photo and music', clip: 'photo', more: 'Music',
-      line: 'A photo under your drawing, or a song that loops while it plays.' },
+      line: 'A photo under your drawing, or a song that loops while it plays.',
+      do: [['Tap', 'Opens Photo and Music']] },
     { sel: '#postBtn', name: 'Post', tag: 'Post', clip: 'post',
-      line: 'Get a link anyone can open to watch your drawing draw itself.' },
+      line: 'Get a link anyone can open to watch your drawing draw itself.',
+      do: [['Tap', 'A title and caption, then post']] },
     { sel: '#tuneBtn', name: 'Tune', tag: 'Tune', more: 'Grid',
-      line: 'Grid, mirror, pauses, and how fast Play shows your drawing.' },
+      line: 'Grid, mirror, and how your drawing plays.',
+      do: [['Tap', 'Opens Tune']] },
     { sel: '#menuBtn, #moreBtn', name: 'Menu', tag: 'Menu', more: 'Export',
-      line: 'New, Save, Export, your drafts, and help.' },
+      line: 'New, Save, Export, your drafts, and help.',
+      do: [['Tap', 'Opens the menu']] },
     { sel: '#addcopy', name: 'Duplicate', tag: 'Duplicate', demo: 'flip-wave',
       line: 'A new page that starts as a copy of this one. Nudge it and redraw: that’s animation.' },
     { sel: '#addblank', name: 'Blank', tag: 'Blank', more: 'Duplicate', line: 'A new empty page after this one.' },
     { sel: '#addinbetween', name: 'Tween', tag: 'Tween', line: 'Draws one page halfway between this page and the next.' },
     { sel: '#addtween', name: 'Smear', tag: 'Smear', line: 'Shows the movement between two drawings, like a long exposure.' },
     { sel: '#strip .frame', name: 'Pages', tag: 'Pages', tagOnly: true, more: 'Reorder',
-      line: 'Tap a page to open it. Hold a page, then drag to move it.' },
+      line: 'Every page of your Flip, in order.',
+      do: [['Tap', 'Open that page'], ['Hold, then drag', 'Move it']] },
     { sel: '.holdbadge', name: 'How long a page stays', tag: 'Page time', tagOnly: true, more: 'Hold',
-      line: 'Tap ×1 to keep this page on screen longer: ×2, ×3, ×4.' },
+      line: 'How long this page stays on screen.',
+      do: [['Tap', '×2, ×3, ×4 as long']] },
     { sel: '.slider-nudge-btn', name: 'Slider steps', tag: 'Steps', tagOnly: true, more: 'Size',
-      line: 'Each tap on − or + nudges the value; hold to keep going.' }
+      line: 'Fine steps for the slider beside them.',
+      do: [['Tap', 'One step'], ['Hold', 'Keep going']] }
   ];
 
   function shown(el) {
@@ -191,6 +205,17 @@
       + '</div>';
     body.querySelector('.lc-t').textContent = spec.name;
     body.querySelector('.lc-line').textContent = spec.line;
+    if (spec.do) {
+      var dl = document.createElement('dl');
+      dl.className = 'lc-do';
+      spec.do.forEach(function (d) {
+        var row = document.createElement('div');
+        var dt = document.createElement('dt'); dt.textContent = d[0];
+        var dd = document.createElement('dd'); dd.textContent = d[1];
+        row.appendChild(dt); row.appendChild(dd); dl.appendChild(row);
+      });
+      body.querySelector('.lc-line').after(dl);
+    }
     cardEl.appendChild(pic); cardEl.appendChild(body);
     document.body.appendChild(cardEl);
     var ex = picture(spec, pic);
