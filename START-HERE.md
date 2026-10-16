@@ -732,6 +732,7 @@ rather than a shared rule.
 | `fullbar.js` | library+gallery | The full-screen bar: one transport, and the SAME one on both surfaces. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
 | `headerglass.js` | Pad+Flip | The header's ground, only while the drawing is under it. |
+| `hello.js` | — | Blooby says hi: the first time Skribl opens on a phone (FUTURE.md 6m). |
 | `helplearn.js` | Pad+Flip | How it works, shown: the examples drawer in the help panel. |
 | `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |

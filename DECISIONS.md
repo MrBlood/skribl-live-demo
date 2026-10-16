@@ -17883,3 +17883,34 @@ no picture in the hint (the element, not a word), the words at the middle within
 red on its bad case: the Pad with the old page (one picture, 40 px off), Flip
 with his picture put back into its hint, and the Pad's words made to stay
 (12.5% ink after a stroke). The badge image stays in `brand/` for blooby.py.
+
+## After v323 -- Blooby says hi on the first open
+
+The owner: "Go with 1, and all yes on the hello." The hello is built; How it
+works layout 1 (Watch first, Look it up as the second tab) is next, its own PR.
+
+The first time Skribl opens on a phone, Pad or Flip, Blooby walks up from far
+away on his star, waves once and fades into the canvas: take C as the owner
+approved it (FUTURE.md 6m), played by the in-post player from
+`brand/blooby-hello.json` (1.79 MB, 299 KB as served). `lib/hello.js` decides:
+a touch screen whose short side is under 600 css px, never seen in this
+browser, a page of its own; then it fetches the player and the drawing, and if
+they are not there in 4 s he does not come this time and is not marked seen.
+Once only (one mark for both editors); a tap or Escape skips him; under Reduce
+Motion he is a still hello, the finished drawing, for 1.8 s before the fade.
+
+Sharp: the in-post player draws at most 2 pixels a point, a feed's many
+players' memory and paint. `attach()` takes `maxDpr` now, and only the hello
+asks for 3. Full width: a post's shaped box keeps to 70vh for a feed; the
+hello's own rule takes the whole screen (344 px wide on a 402 px phone
+without it).
+
+Automation never meets him unless it asks (`window.__skriblHelloForce`), or
+every suite's first canvas would have him on it. `verify_hello` asks, and one
+row shows that without asking he stays away. Each of its 14 rows was shown red
+by its own break, served in place of the real file: no maxDpr, no leaving after
+the wave, no seen mark, no tap, Reduce Motion ignored, a composer's frame or
+automation let through, a seen per editor, the feed's 70vh cap, a ground other
+than his lilac. Writing it found one real fault before it shipped: the switch
+that lets a test ask for him also skipped the phone check, so a forced desk got
+him.

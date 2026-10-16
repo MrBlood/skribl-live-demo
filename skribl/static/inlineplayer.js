@@ -934,7 +934,11 @@
       var frames = framesOf(payload);
       size = logicalSize(payload);
 
-      var dpr = Math.min(global.devicePixelRatio || 1, 2);
+      /* At most 2 pixels a point: a feed holds many players and a third
+       * pixel is half again the memory and paint for each. One player alone
+       * on the screen may ask for its screen's own (attach's maxDpr): Blooby's
+       * hello on a 3x phone, which at 2 drew soft. */
+      var dpr = Math.min(global.devicePixelRatio || 1, me.maxDpr || 2);
       pixelRatio = dpr;
       canvas.width = Math.round(size.w * dpr);
       canvas.height = Math.round(size.h * dpr);
@@ -1845,7 +1849,7 @@
       var poster = el.querySelector('.skribl-inline-poster');
       if (poster) poster.parentNode.removeChild(poster);
       var p = attach(el);
-      if (p) { p.ambient = !!(opts && opts.ambient); if (io) io.observe(el); p.adopt(payload); }
+      if (p) { p.ambient = !!(opts && opts.ambient); p.maxDpr = (opts && opts.maxDpr) || 0; if (io) io.observe(el); p.adopt(payload); }
       return p;
     },
     stopAll: function () { for (var i = 0; i < players.length; i++) players[i].settle(); },

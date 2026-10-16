@@ -1,0 +1,16 @@
+{#
+   BLOOBY SAYS HI (FUTURE.md 6m): the first time Skribl opens on a phone he
+   walks up from far away on his star, waves once, and fades into the canvas.
+   Once only; a tap skips him; a still hello under Reduce Motion. One partial
+   for both editors, played by the in-post player (the hello is a Flip drawn
+   with the real pen by harness/tools/make_grow.py take C). lib/hello.js
+   decides whether he comes at all and fetches nothing when he does not.
+#}
+{% from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
+<div id="skriblHello" class="skribl-hello" role="img" aria-label="Blooby walks up and waves hello" hidden
+     data-hello="{{ skribl_asset('brand/blooby-hello.json') }}"
+     data-player-css="{{ skribl_asset('inlineplayer.css') }}"
+     data-player-js="{{ skribl_asset('inlineplayer.js') }}">
+  {{ skribl_inline_draft('skriblHelloBox', controls=false, progress=false, plain=true) }}
+</div>
+<script src="{{ skribl_asset('lib/hello.js') }}" defer></script>

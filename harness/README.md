@@ -332,6 +332,14 @@ stays a sleep.
   the bar and the x away while it plays on, a pause from elsewhere brings them
   back, a finger's first tap only wakes them (a mouse's move on a desk), the
   next tap pauses, and paused they stay up. Visible means painted.
+- `verify_hello.py` — Blooby says hi (lib/hello.js): the first open on a
+  phone, Pad and Flip, light and dark. He fills the screen in his own lilac,
+  full width and drawn at the phone's 3 pixels a point, walks up and waves,
+  fades into the canvas, and never comes again; a tap skips him and draws
+  nothing; a still hello under Reduce Motion; never on a desk, in a
+  composer's frame, or to automation that did not ask, and nothing of his is
+  fetched there. Each row was shown red by its own break, served in place of
+  the real file.
 - `verify_watchfull.py` — full screen while it plays, in the Pad and Flip
   (lib/watchfull.js), on the same phone and desk: the way in at the end of the
   line under the drawing, the drawing as big as the screen allows, the band
