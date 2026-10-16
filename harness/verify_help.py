@@ -172,8 +172,8 @@ with sync_playwright() as p:
         sp.evaluate("() => { const d = document.getElementById('helpDrawer');"
                     " if (d) { d.hidden = false; d.classList.add('open'); } }")
         sp.wait_for_timeout(250)
-        # The reference is How it works' second tab (layout 1, FUTURE.md 6n).
-        sp.click("#helpTabLook")
+        # The reference is Ask's "Everything, by section" (piece two, FUTURE.md 6p).
+        sp.click("#askBrowse")
         sp.wait_for_timeout(250)
 
         check(f"{surface}: the shared search lib is published",
@@ -184,16 +184,16 @@ with sync_playwright() as p:
               sp.is_visible("#helpSearch"))
         # ROOM UNDER THE TITLE BAND. The field had no top margin and sat on the
         # band's bottom edge (owner's iPhone, both editors); it now has as much
-        # above it as on each side. Since layout 1 the band it sits under is the
-        # tabs', and its side the edge of its own column (Look it up, held to
-        # a readable width on a desk). Measured at a desk and a phone width.
+        # above it as on each side. Since Ask (piece two) the field is Ask's own,
+        # under the title band, and its side the edge of the sheet or dialog.
+        # Measured at a desk and a phone width.
         for _w, _h in ((1280, 720), (402, 874)):
             sp.set_viewport_size({"width": _w, "height": _h})
             sp.wait_for_timeout(150)
             _gap = sp.evaluate("""() => {
-              const h = document.querySelector('#helpDrawer .help-tabs').getBoundingClientRect();
-              const f = document.querySelector('#helpDrawer .help-search').getBoundingClientRect();
-              const d = document.querySelector('#helpDrawer .help-look').getBoundingClientRect();
+              const h = document.querySelector('#helpDrawer .help-drawer-head').getBoundingClientRect();
+              const f = document.querySelector('#helpDrawer .ask-bar .help-search').getBoundingClientRect();
+              const d = document.querySelector('#helpDrawer .help-drawer-inner').getBoundingClientRect();
               return { above: f.top - h.bottom, side: f.left - d.left }; }""")
             check(f"{surface} at {_w}px: the search field has room under the title band, as much as at its side",
                   _gap["above"] >= 12 and abs(_gap["above"] - _gap["side"]) <= 1, str(_gap))
@@ -326,10 +326,10 @@ with sync_playwright() as p:
     # max-height 1600px, which "Save, export & sharing" outgrew on a phone --
     # its last tip ran into the border, cut off. Measured on the rendered
     # sheet with every section open, at iPhone width, on both editors.
-    # After the opening has settled: every opening starts on Watch, set by
-    # an observer that runs after this script, so the tab is chosen later.
+    # After the opening has settled: every opening starts on Ask's home, set
+    # by an observer that runs after this script, so the list is chosen later.
     OPEN_ALL = """() => new Promise(res => { (window.openHelpDrawer || (() => { document.getElementById('helpDrawer').hidden = false; }))();
-        setTimeout(() => { document.getElementById('helpTabLook').click();
+        setTimeout(() => { document.getElementById('askBrowse').click();
           document.querySelectorAll('#helpDrawer .accordion-header').forEach(h => {
             if (h.getAttribute('aria-expanded') !== 'true') h.click(); }); res(); }, 60); })"""
     LAYOUT = """() => {

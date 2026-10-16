@@ -176,6 +176,13 @@
     if (hl) hl.show('answer');
     answerEl.querySelector('.ask-answer-t').focus({ preventScroll: true });
   }
+  // Back to Ask's home from the answers: the field emptied, focus in it.
+  function home() {
+    if (input.value) { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); }
+    var hl = helpLearn();
+    if (hl) hl.show('home');
+    input.focus({ preventScroll: true });
+  }
   function back() {
     if (example) { example.stop(); example = null; }
     var hl = helpLearn();
@@ -197,17 +204,22 @@
   }
 
   drawer.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-answer], [data-show], #askBack, #askTour, #askBrowse');
+    var t = e.target.closest('[data-answer], [data-show], #askBack, #askLookBack, #askTour, #askBrowse');
     if (!t || !drawer.contains(t)) return;
     if (t.id === 'askBack') { back(); return; }
+    if (t.id === 'askLookBack') { home(); return; }
     if (t.id === 'askTour') { var hl = helpLearn(); if (hl) hl.watch(t.getAttribute('data-tour')); return; }
     if (t.id === 'askBrowse') { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); var h = helpLearn(); if (h) h.show('look'); return; }
     if (t.hasAttribute('data-show')) { showMe(t.getAttribute('data-show')); return; }
     openAnswer(t.getAttribute('data-answer'));
   });
-  // Escape on an answer goes back to Ask, not out of How it works.
+  // Escape on an answer or the answers goes back a step, not out of How it works.
+  var lookEl = document.getElementById('helpLook');
   drawer.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !answerEl.hidden) { e.stopPropagation(); e.preventDefault(); back(); }
+    var v = document.getElementById('learnViewer');
+    if (e.key !== 'Escape' || (v && !v.hidden)) return;      // the viewer closes first
+    if (!answerEl.hidden) { e.stopPropagation(); e.preventDefault(); back(); }
+    else if (lookEl && !lookEl.hidden) { e.stopPropagation(); e.preventDefault(); home(); }
   }, true);
 
   // Every opening starts at Ask's home with an empty field.

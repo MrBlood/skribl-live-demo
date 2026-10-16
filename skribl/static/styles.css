@@ -6109,7 +6109,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
    Its 69px: the title band's 20 + 32 + 16 and its line. A band of the menu's
    paper behind it reaches the page's edges and up to the band, so nothing
    shows through or beside it while the page scrolls under it. */
-.ask-bar { position: sticky; top: 69px; z-index: 3; margin: 0 18px; padding: 12px 0 8px; }
+.ask-bar { position: sticky; top: 69px; z-index: 3; margin: 0 18px; padding: 18px 0 8px; }   /* as much room above the field as at its side */
 .ask-bar::before { content: ""; position: absolute; z-index: -1; top: -1px; bottom: 0; left: -18px; right: -18px;
   background: var(--menu-paper); pointer-events: none; }
 .ask-bar .help-search { margin: 0; min-height: 52px; padding: 0 14px; border-radius: 14px; }
@@ -6119,14 +6119,6 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 /* An entry scrolled to (a card's More about) stops under the title band and
    Ask's field, 69 + 72, with 6 to spare, not behind them. */
 .help-look .help-tip { scroll-margin-top: 147px; }
-.learn-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 0 0 16px; flex: none; }
-.learn-chips::-webkit-scrollbar { display: none; }
-.learn-chip { flex: none; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line-faint);
-  background: transparent; color: var(--text-primary); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
-@media (hover: hover) { .learn-chip:hover { background: var(--surface-tint); } }
-.learn-chip[aria-pressed="true"] { background: var(--seg-on-fill); border-color: transparent; color: var(--seg-on-ink); }   /* the one pill's tint, as every choice */
-.learn-chip:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-.learn-all { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 
 .learn-card { margin: 0; display: flex; flex-direction: column; min-width: 0;
   border: 1px solid var(--line-faint); border-radius: 18px; overflow: hidden;
@@ -6183,9 +6175,9 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .learn-try { min-height: 44px; padding: 0 22px; border-radius: 12px; border: 0;
   background: var(--accent-fill); color: #fff; font: inherit; font-size: 16px; font-weight: 650; cursor: pointer; }
 .learn-cap .learn-try { margin-top: 10px; }
-.learn-more { min-height: 44px; margin-top: 10px; padding: 0; border: 0; background: transparent;
-  color: var(--ui-hi); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
-.learn-more:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; border-radius: 6px; }
+/* In the strip the cards are pictures; Try it rides with the example full screen. */
+.learn-viewer-cap .learn-try { margin-left: auto; }
+.learn-viewer-cap .learn-try[hidden] { display: none; }
 /* An example that did not load (V319-004): the picture gives way to a dashed
    outline and the sheet's one banner (#learnFail) says how many and offers
    Retry. Whatever half-loaded stays hidden rather than sitting there blank. */
@@ -6206,21 +6198,11 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .learn-retry:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 @media (hover: hover) { .learn-try:hover { filter: brightness(1.08); } }
 .learn-try:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-/* One 18px gutter at every width, the one Look it up's search and sections
-   keep, so the tabs, the chips, the examples and the search share their edges.
-   A phone: Flip's five chips fit the width without the row scrolling and
-   clipping All at the edge. A desk: two examples to a row, and the panel's
-   content held to a readable width (the tabs 36px narrower: the gutters). */
+/* One 18px gutter at every width, the one Ask's field and the answers keep,
+   so the field, the examples and the entries share their edges. On a desk
+   the dialog itself holds them to a readable width. */
 @media (max-width: 640px) {
   .help-learn { padding: 14px 18px 32px; }
-  .learn-chips { gap: 6px; }
-  .learn-chip { padding: 0 12px; }
-}
-@media (min-width: 760px) {
-  .learn-all { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (min-width: 960px) {
-  .help-learn, .help-look, .ask-answer { max-width: 920px; margin-left: auto; margin-right: auto; }
 }
 .help-empty[hidden] { display: none; }
 .help-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 4px; }
@@ -7547,9 +7529,6 @@ body.stroking .toolbar, body.stroking .flip-tools {
     transition: transform .35s var(--ease), opacity .25s ease; }
   .help-drawer.open .help-drawer-inner { transform: translate(-50%, 0); opacity: 1; }
 }
-.learn-chip { background: var(--menu-card); border-color: var(--menu-card-line); }
-@media (hover: hover) { .learn-chip:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
-.learn-chip[aria-pressed="true"] { background: var(--seg-on-fill); border-color: transparent; }
 .learn-card, .help-tip, .help-search, .accordion-header { background: var(--menu-card); border-color: var(--menu-card-line); }
 .learn-card { box-shadow: var(--menu-card-drop); }
 
@@ -7583,7 +7562,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .learn-all > .learn-card { flex: 0 0 168px; scroll-snap-align: start; scroll-margin-left: 18px; }
 .learn-all .learn-cap { padding: 8px 10px 10px; }
 .learn-all .learn-title { font-size: 15px; font-weight: 650; }
-.learn-all :is(.learn-line, .learn-try, .learn-more, .learn-n) { display: none; }
+.learn-all :is(.learn-line, .learn-try, .learn-n) { display: none; }
 @media (min-width: 641px) { .learn-all > .learn-card { flex-basis: 200px; } }
 .ask-best[hidden] { display: none; }
 .help-look.ask-searching .help-intro { display: none; }   /* the intro is for the whole list, not for answers */
@@ -7600,6 +7579,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .ask-answer[hidden] { display: none; }
 .ask-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 4px; border: 0; background: transparent;
   color: var(--accent-ink); font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+#helpLook > .ask-back { margin: 0 18px; }                       /* on the field's edge, as on an answer */
 .ask-answer-t { margin: 4px 4px 14px; font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1.15; outline: none; }
 .ask-answer-pic { overflow: hidden; border-radius: 16px; border: 1px solid var(--menu-card-line); background: var(--menu-card); }
 .ask-answer-pic .lc-phone { height: 220px; border-radius: 0; }

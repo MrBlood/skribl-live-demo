@@ -6,11 +6,12 @@
  * what the eraser does, and there is no second, simplified renderer to drift
  * from the real one.
  *
- * TWO TABS, WATCH FIRST (the owner's pick, layout 1 of three, after v323;
- * FUTURE.md 6n). How it works opens on Watch: every example, big, one under
- * another, chips to show one group. Look it up is the second tab: search and
- * every entry (lib/helpsearch.js). It replaced a bar that opened a drawer of
- * the examples over a 2,700-word manual.
+ * ASK'S HOME (piece two of the help, FUTURE.md 6p; lib/ask.js). How it
+ * works opens on Ask: the tour, what people often ask, and every example in
+ * a strip of pictures, each opening full screen with its Try it. Typed into,
+ * or "Everything, by section", it shows the answers: search and every entry
+ * (lib/helpsearch.js). It replaced two tabs (layout 1, FUTURE.md 6n), and
+ * before them a bar that opened a drawer over a 2,700-word manual.
  *
  * NOTHING LOADS UNTIL IT IS ASKED FOR. The editor fetches no player and no
  * example until How it works opens; then an example is fetched as it comes
@@ -268,16 +269,6 @@
     if (viewerOpen) { e.stopPropagation(); e.preventDefault(); closeViewer(); }
   });
 
-  // Chips show one group, or all.
-  sheet.querySelectorAll('.learn-chip').forEach(function (chip) {
-    chip.addEventListener('click', function () {
-      var f = chip.getAttribute('data-filter');
-      sheet.querySelectorAll('.learn-chip').forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
-      all.forEach(function (c) { c.hidden = f !== 'all' && c.getAttribute('data-group') !== f; });
-      if (scroller && scroller.scrollTop > sheet.offsetTop) toTop();
-    });
-  });
-
   // ---- full screen ------------------------------------------------------------
   // A tap on an example opens it large (owner: "we should be allowed to click
   // ... and have it full screen"). A replay gets a player of its own, built
@@ -308,6 +299,12 @@
     vStage.innerHTML = '';
     vStage.removeAttribute('data-shape');
     vFrom = card.querySelector('.learn-stage');
+    var vTry = document.getElementById('learnViewerTry'), cTry = card.querySelector('[data-try]');
+    if (vTry) {
+      vTry.hidden = !cTry;
+      if (cTry) { vTry.setAttribute('data-try', cTry.getAttribute('data-try')); vTry.setAttribute('aria-label', cTry.getAttribute('aria-label') || 'Try it'); }
+      else vTry.removeAttribute('data-try');
+    }
     viewerOpen = true;
     syncAll();
     viewer.hidden = false;
@@ -353,6 +350,8 @@
     });
   });
   if (viewer) viewer.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-try]');
+    if (t) { tryTool(t.getAttribute('data-try')); return; }
     if (e.target.closest('[data-viewer-close]')) closeViewer();
   });
 
@@ -368,51 +367,10 @@
   new MutationObserver(onOpenChange).observe(drawer, { attributes: true, attributeFilter: ['hidden'] });
   if (!drawer.hidden) onOpenChange();
 
-  // More about a tool: its entry in Look it up, its section opened, the
-  // entry opened, scrolled to and focused.
-  sheet.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-more-tool]');
-    if (!b) return;
-    var tip = look.querySelector('.help-tip[data-help-tool="' + b.getAttribute('data-more-tool') + '"]');
-    // The whole list, not what was last asked: an entry hidden by a query
-    // cannot be scrolled to.
-    var q = document.getElementById('helpSearch');
-    if (q && q.value) { q.value = ''; q.dispatchEvent(new Event('input', { bubbles: true })); }
-    showTab(false);
-    if (!tip) return;
-    var body = tip.closest('.accordion-body');
-    var head = body && body.previousElementSibling;
-    var opening = !!(head && head.classList.contains('accordion-header') && !head.classList.contains('open'));
-    if (opening) head.click();
-    tip.classList.add('is-open');
-    tip.setAttribute('tabindex', '-1');
-    // Scrolled to once its section has OPENED: scrolled to while the section
-    // still glided open, it went to where the entry was then, folded up under
-    // the section's title, and the entry ended half a screen down. The section
-    // opens in two glides, its height and its inner padding, so it lands on
-    // each one's end (the padding's moved it 19px). At once, not the panel's
-    // smooth glide; styles.css keeps it clear of the tabs (scroll-margin-top).
-    var landed = false;
-    function land() {
-      landed = true;
-      tip.scrollIntoView({ block: 'start', behavior: 'instant' });
-      if (document.activeElement !== tip) tip.focus({ preventScroll: true });
-    }
-    if (opening) {
-      var inner = body.querySelector('.accordion-inner');
-      var settle = function (ev) {
-        if ((ev.target === body && ev.propertyName === 'grid-template-rows') ||
-            (ev.target === inner && ev.propertyName === 'padding-top')) land();
-      };
-      body.addEventListener('transitionend', settle);
-      setTimeout(function () { body.removeEventListener('transitionend', settle); if (!landed) land(); }, 900);
-    } else requestAnimationFrame(land);
-  });
-
-  sheet.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-try]');
-    if (!b) return;
-    var tool = b.getAttribute('data-try');
+  // Try it: How it works closes and the editor holds that tool. The strip's
+  // cards are pictures, so it rides with the example full screen.
+  function tryTool(tool) {
+    closeViewer();
     var close = document.getElementById('helpClose');
     if (close) close.click();
     // After this tap has finished travelling: the shape card's dismisser hears
@@ -424,6 +382,10 @@
       // means "hold this tool", so an active one is left as it is.
       if (btn && !btn.classList.contains('active')) btn.click();
     }, 0);
+  }
+  sheet.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-try]');
+    if (b) tryTool(b.getAttribute('data-try'));
   });
 
   // Ask (lib/ask.js) switches the views and opens an example full screen.
