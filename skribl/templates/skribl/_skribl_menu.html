@@ -73,7 +73,7 @@
        saved draft, and the .skribl file both ways. #}
     <button type="button" class="menu-item" id="openCloudDraftItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 13h8M8 16h5"/></svg><span class="menu-item-text">Your drafts<span class="menu-item-sub">Open, rename, keep as a file</span></span>{{ chev }}</button>
     <a href="{{ url_for('.skribl_gallery') }}" id="{{ ids.gal }}" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="menu-item-text">Public gallery<span class="menu-item-sub">What people chose to show</span></span>{{ chev }}</a>
-    <button type="button" class="menu-item" data-menu-go="settings" id="menuSettingsItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="menu-item-text">Settings<span class="menu-item-sub">Theme, tips and canvas</span></span>{{ chev }}</button>
+    <button type="button" class="menu-item" data-menu-go="settings" id="menuSettingsItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.09 2.59 L13.91 2.59 L14.13 5.12 L15.36 5.63 L17.30 4.00 L20.00 6.70 L18.37 8.64 L18.88 9.87 L21.41 10.09 L21.41 13.91 L18.88 14.13 L18.37 15.36 L20.00 17.30 L17.30 20.00 L15.36 18.37 L14.13 18.88 L13.91 21.41 L10.09 21.41 L9.87 18.88 L8.64 18.37 L6.70 20.00 L4.00 17.30 L5.63 15.36 L5.12 14.13 L2.59 13.91 L2.59 10.09 L5.12 9.87 L5.63 8.64 L4.00 6.70 L6.70 4.00 L8.64 5.63 L9.87 5.12Z"/><circle cx="12" cy="12" r="3"/></svg><span class="menu-item-text">Settings<span class="menu-item-sub">Theme, tips and canvas</span></span>{{ chev }}</button>
   </div>
 
   <div class="menu-foot">
@@ -106,7 +106,9 @@
   <p class="menu-page-note" id="newSkriblNote">This one isn&rsquo;t lost: Undo brings it back.</p>
 </div>
 
-{# SETTINGS: the rows that sat below the menu's fold. Same ids and handlers
+{# SETTINGS: the rows that sat below the menu's fold. Its row wears a gear,
+   the app's preferences, and the header's sliders are Tune, the drawing's
+   (owner, after the menu: two settings had worn one icon).  Same ids and handlers
    as before; the Canvas row is also how a drawing changes shape later (Flip
    keeps every drawing's position; the Pad's is locked once you draw). #}
 <div class="menu-page" data-menu-page="settings" hidden>

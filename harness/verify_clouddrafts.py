@@ -188,6 +188,12 @@ def menu_click(fr, item, btn="#menuBtn"):
     fr.locator(btn).click()
     fr.locator(item).wait_for(state="visible", timeout=5000)
     fr.locator(item).click()
+    if item == "#saveCloudDraftItem":
+        # The first Save of an unnamed drawing asks for a name (after the
+        # menu's tiles); keep the one it offers, as one tap does.
+        fr.wait_for_timeout(400)
+        if fr.evaluate("() => { const s = document.getElementById('nameShell'); return !!s && s.classList.contains('open'); }"):
+            fr.locator("#nameDone").click()
 
 
 try:
