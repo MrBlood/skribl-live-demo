@@ -660,7 +660,9 @@ check("every probe a claim names is written", _named <= set(PROBES), str(sorted(
 
 from playwright.sync_api import sync_playwright   # noqa: E402
 
-MENU = """() => [...document.querySelectorAll('#menuSheet .menu-item, #moreMenu .menu-item')]
+# Every control the ⋯ menu holds: its rows, and since the tiles (after v323)
+# the tiles, the editor switch, New Skribl's Start and the foot's link.
+MENU = """() => [...document.querySelectorAll(':is(#menuSheet, #moreMenu) :is(.menu-item, .menu-tile, .menu-editor, .menu-start, .menu-foot-link)')]
     .map(b => { const t = b.querySelector('.menu-item-text');
                 const n = t ? [...t.childNodes].filter(c => c.nodeType === 3).map(c => c.textContent).join('') : b.textContent;
                 return n.replace(/\\s+/g, ' ').trim(); })

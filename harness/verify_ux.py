@@ -1151,8 +1151,10 @@ with _sp204() as _p:
     _fl = pg.evaluate("""() => {
         const f = document.getElementById('flipBtn');
         const r = f.getBoundingClientRect();
+        // Its words and its name: since the menu's tiles (after v323) the
+        // switch shows "Flip" and its name says the rest.
         return { w: Math.round(r.width), h: Math.round(r.height),
-                 text: (f.textContent || '').replace(/\\s+/g, ' ').trim() };
+                 text: ((f.textContent || '') + ' ' + (f.getAttribute('aria-label') || '')).replace(/\\s+/g, ' ').trim() };
     }""")
     check("V219: ...and it has a real box once the menu is open (a row nobody can reach is not a relocation)",
           _fl["w"] > 100 and _fl["h"] >= 40, str(_fl))
