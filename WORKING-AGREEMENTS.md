@@ -259,6 +259,25 @@ blank page as full, imports that parsed but did not import.)
 - **NEVER `git checkout` OR `git stash` A FILE THAT HOLDS UNCOMMITTED WORK.**
   Read an old version with `git show <rev>:<path> > /tmp/copy`; fix forward.
 
+## Contrast and consistency: every change, every sheet
+
+The owner, after v323: "I think we are drifting. We need to check contrasts
+and consistency on all our changes, and future changes."
+
+- **A CHANGE TO A SHEET, A COLOUR OR A TOKEN RUNS `verify_contrast`**: every
+  word on every sheet (the menu and its pages, Your drafts, Export, Report,
+  Post, How it works, Tune), Pad and Flip, light and dark, phone and desk,
+  read against what is painted behind it; then each surface the same on Pad
+  and Flip, and every sheet the menu opens one paper.
+- **A MOCK QUOTES ITS CONTRAST** beside "now", on the ground it proposes, and
+  says what it does to every other surface of the same kind, not only the one
+  the owner pointed at.
+- **SAME ROLE, SAME TOKEN.** A sheet the menu opens wears `--menu-paper`; a
+  card `--menu-card` with `--menu-card-line`; a choice the one pill; an action
+  `--accent-fill`; small violet words `--accent-ink`; secondary words the
+  sheet's ink. A new value for a role that has one is drift unless the owner
+  chose it.
+
 ## Checking buttons: the centring tool, when something looks off
 
 The owner: "The centering script/harness should be used whenever checking

@@ -18037,3 +18037,37 @@ verify_menu reads the pixels on each side of the list's edge, light and dark
 on both editors: red on B as first mocked (light only, as the owner saw), red
 with the glass back, red on Flip alone with Flip's rule broken. Your drafts'
 paper is pinned to the menu's.
+
+## After v323 -- contrast and consistency, checked on every sheet
+
+The owner, after the How it works mock: "I think we are drifting. We need to
+check contrasts and consistency on all our changes, and future changes."
+
+verify_contrast opens every sheet a person can open (the menu, New, Settings,
+Your drafts, Export, Report a problem, Post, How it works on both tabs, Tune)
+on Pad and Flip, light and dark, a phone and a desk, photographs it with its
+words made transparent, and reads every word against the colour painted
+behind it. Its first run found 36 sheets with words under AA. The menu's new
+lilac had lowered three (the Pad/Flip labels, Your drafts' lines, Flip's
+version line, which never had the menu's ink rule because Flip's menu is
+.flip-menu). The rest were older: Report's "Copy details" and How it works'
+step numbers were white at 12px on --ui-active (4.35:1); How it works' More
+links and tip counts, and Tune's hints, were grey on glass at 3.3 to 4.4:1.
+
+Fixed by role, not by line: the light theme's sheet ink now covers every
+sheet (the menu, Flip's menu, Your drafts, How it works, Tune) and every soft
+grey; a selected pill's ink is #4c31c4 (5:1 on the tint over the lilac);
+white words sit on --accent-fill; small violet words are --accent-ink. The
+instrument was checked against arithmetic (Copy details: 4.35, as computed)
+and against a planted pale and a planted black link (each red in the theme
+where it is unreadable, green in the other). It waits for a gliding sheet to
+hold still, and skips How it works' 60px edge fade, where words are on their
+way out of view.
+
+Consistency asserted where it is already decided: every surface the same on
+Pad and Flip, every sheet the menu opens one paper (each shown red by its own
+break). Found and not yet changed, for the owner: the choices on the lilac
+sheets (New, Settings, Export, Post) keep the old grey track; Export's
+options are grey boxes, not the menu's white cards; cards use five corner
+sizes. WORKING-AGREEMENTS now says every sheet, colour or token change runs
+verify_contrast, every mock quotes its contrast, and a role keeps its token.

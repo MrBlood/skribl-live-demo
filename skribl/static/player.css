@@ -2122,7 +2122,7 @@ a.player-btn { text-decoration: none; }
      over the drawers' track, under the unselected label's 4.99. One step
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground
      a pill sits on; the tint itself, the look the owner chose, does not move. */
-  --seg-on-ink:              #5434dc;
+  --seg-on-ink:              #4c31c4;   /* 5:1 on the tint over the menu's lilac (was #5434dc, 4.4:1; verify_contrast) */
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
