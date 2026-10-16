@@ -476,6 +476,7 @@
     <input type="file" id="imageInput" aria-label="Choose an image file" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden">
     <input type="file" id="musicInput" aria-label="Choose an audio file" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" class="vis-hidden">
     <input type="file" id="draftInput" aria-label="Open a saved .skribl file" accept=".skribl,application/json,text/plain,application/octet-stream,text/*" class="vis-hidden">
+    {% include 'skribl/_skribl_hello.html' %}
     {% with kind='flip' %}{% include 'skribl/_skribl_help.html' %}
 {% endwith %}
 {# Your Skribls moved to the profile page (/library) in v304; the drawer is not included here. #}

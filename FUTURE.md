@@ -844,9 +844,11 @@ editors: the words stay, and sit at the canvas's middle without him (40 px
 below it with him). So the hello fades into the canvas rather than shrinking
 into a badge.
 
-STILL TO SAY YES TO before building: the star as fixed, sharp at 3x, one wave
-then the fade, a tap skips, a still hello under Reduce Motion, one module for
-both editors; two PRs, the badge first.
+SAID YES TO ("all yes on the hello") and BUILT after v323: the star as
+fixed, sharp at 3x, one wave then the fade, a tap skips, a still hello under
+Reduce Motion, one module for both editors (lib/hello.js,
+`_skribl_hello.html`, brand/blooby-hello.json; verify_hello). The badge came
+off first.
 
 ## 6n. How it works: show it, hand over the pen, keep the manual for looking things up (proposed)
 
@@ -868,7 +870,9 @@ and out of the way (Procreate's handbook). Looom, beautiful and award-winning,
 is the warning: controls that feel obtuse at first get learned from outside
 courses.
 
-THE PROPOSAL, put to the owner and not yet answered:
+THE PROPOSAL (the owner picked layout 1, Watch first, from a mock of three:
+1 Watch first with Look it up as the second tab, 2 Look it up first, 3 both on
+one page):
 
 1. First open: Blooby's hello (6m), the only thing shown uninvited.
 2. Help at the tool: the first time a tool is picked, a small card above the

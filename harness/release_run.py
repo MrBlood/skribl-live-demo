@@ -195,6 +195,7 @@ BATCHES = [
     ["verify_sharedrules.py", "verify_theme.py", "verify_boot.py",
      "verify_identity.py"],                # v303: the manifest, icons and theme-color
     ["verify_nametab.py"],                 # unrecorded
+    ["verify_hello.py"],                   # measures — a hello that waits out its own wave
     ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
      "verify_flipdraft.py", "verify_fuzz.py"],
     ["verify_onepill.py"],                 # measures — painted pixels and sub-pixel geometry

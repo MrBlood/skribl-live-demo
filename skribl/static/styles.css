@@ -1307,6 +1307,37 @@ body.playback-paused .tap-paused { display: grid; }
   opacity: 0;
 }
 
+/* BLOOBY SAYS HI (lib/hello.js, FUTURE.md 6m): the first open on a phone.
+   His own lilac, the Home Screen icon's, fills the screen in both themes, and
+   his drawing sits in it at its 9:16, as wide as the screen allows. He comes
+   in over a quarter second and leaves over half a second, into the canvas;
+   under Reduce Motion that fade is all that moves. */
+.skribl-hello {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #cdbfff;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.skribl-hello.is-on { opacity: 1; }
+.skribl-hello.is-leaving { opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
+/* .is-shaped too: a post's shaped box keeps to 70vh for a feed (inlineplayer.css);
+   the hello has the whole screen. */
+.skribl-hello .skribl-inline,
+.skribl-hello .skribl-inline.is-shaped {
+  width: min(100vw, calc(100dvh * 531 / 944));
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #cdbfff;
+  cursor: default;
+}
+.skribl-hello :is(.skribl-inline-veil, .skribl-inline-play, .skribl-inline-dur, .skribl-inline-prog, .skribl-inline-nib) { display: none; }
+
 /* ...AND ON A LIGHT CANVAS, DARK INK (owner: "the grid is white so doesn't
    show on light background", and the empty-state hint with it). The canvas
    is the drawing's own colour, so it is the CANVAS's luminance that decides,
