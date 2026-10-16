@@ -932,6 +932,10 @@ Not built, and asked about: a count of which buttons are pressed (private,
 in Skribl's own database; only with the owner's yes), and naming the
 drawing from the header, which has no name in it today.
 
+AFTER IT WENT LIVE (owner: "It looks good"): Settings in the menu wears a
+gear, the header's sliders are named Tune on both editors, and the first Save
+of an unnamed drawing asks for a name, the date name filled in and selected.
+
 NEXT, IN THIS ORDER (owner, after v323): "finish the … first. Don't start on
 how it works until we're done with …". When the menu is merged and the owner
 is happy with it, come back to How it works (6n). Its open ideas: Hold to

@@ -17989,3 +17989,26 @@ own break served in place of the real file (thirteen breaks). About a dozen
 suites that clicked rows now inside a page or the drafts sheet go there
 first. A count of which buttons people press was offered and is not built.
 
+## After v323 -- a gear, Tune, and a first Save that asks
+
+The owner, after the menu went live: "Should we reuse the settings icon in
+menu or change it? Or change icon in top toolbar? ... Should save draft ask
+for a name?" Then, from the mock: "All yes."
+
+The menu's Settings row and the header's sliders wore one icon for two
+things. Settings holds the app's preferences, so it takes a gear (drawn here,
+eight teeth and a hub); the header keeps its sliders, which tune what you are
+drawing, and is named Tune on both editors. Pad called it "Canvas settings"
+though the canvas shape was never in it; Flip called it "Playback settings"
+though half of it is drawing aids.
+
+The first Save of a drawing with no name drops the name box (lib/nametab.js),
+the date name filled in and selected: one tap keeps it, typing replaces it,
+backing out changes nothing, and later Saves are quiet. Writing its check found
+that a drawing's file keeps its date name as its title and opening it puts
+that in the field as if typed, so after any reload an unnamed drawing looked
+named: a date name now counts as none (SkriblName.isAuto, any locale's
+"Skribl · date time"). The box already selected its text on focus, so the
+select written for it came out again; its row was shown red by breaking the
+box's own. verify_menu's six new rows were each shown red by their own break.
+
