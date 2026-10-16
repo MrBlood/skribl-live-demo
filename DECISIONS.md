@@ -17953,3 +17953,39 @@ disc's fade starts on. Swapping in main's copy of each help script and then its
 stylesheet pinned it to `lib/helpsearch.js`; it sizes them now only with the
 panel open, once a frame at most, and the disc reads 0.21 again.
 
+## After v323 -- the ⋯ menu, smaller and kinder
+
+The owner, on the menu mock: "I like it all. Yes to all." Then: "Are those
+pills sliders with the smooth slide toggles. Are they consistent with other
+choices?" They were not: the mock drew solid purple buttons, and so did the
+How it works tabs merged the night before. Everywhere else a choice is the
+one soft tint lib/segslider.js slides. The menu's switch, its shape picker
+and its Settings rows use it, and so do How it works' tabs and chips now.
+FUTURE.md 6o says what the menu holds.
+
+ONE MENU. `_skribl_menu.html` is included by both editors, and the editors'
+ids still differ (Flip's mi* names), so the partial is the one place that
+maps them. Every id the editors bound is kept, so every handler is the one
+that was there. Three moved on purpose:
+- New Skribl is a page: the shape, then Start. The two-tap arm is gone; the
+  page asks the question it asked. Undo brings the drawing back on its own
+  shape: the Pad's load already set the canvas from the drawing, and Flip's
+  clear backup holds the size now.
+- Naming and the two .skribl rows are written in the menu but live in the
+  drafts sheet: lib/savedrafts.js moves the elements themselves in the first
+  time it opens, so the listeners each editor bound at load go with them.
+- Theme, Tips and Canvas are the Settings page. The Pad's canvas still locks
+  once you draw; New is how a drawing takes another shape there.
+
+Found while checking: the shape picker had no choice lit until its page
+opened (verify_a11y, one-of-N); the drafts sheet now says the drawing's name
+at its top, so a check that the deleted draft was gone read the whole sheet
+and found the name; and "More about" in How it works read 19 px low under a
+busy run because its read came between two landings (the test waits for the
+entry to hold still now; the app lands where it should).
+
+`verify_menu` holds each promise on both editors, every row shown red by its
+own break served in place of the real file (thirteen breaks). About a dozen
+suites that clicked rows now inside a page or the drafts sheet go there
+first. A count of which buttons people press was offered and is not built.
+

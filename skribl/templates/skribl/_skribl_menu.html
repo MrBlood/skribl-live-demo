@@ -45,11 +45,11 @@
      the switch keeps ?compose=1 so "Add to post" stays on both sides. #}
   <span class="seg menu-editor-seg" role="group" aria-label="Editor"><span class="seg-slider"></span>
     {%- if is_flip -%}
-    <a href="{{ url_for('.skribl_editor') }}{% if compose %}?compose=1{% endif %}" id="padBtn" class="menu-editor" aria-label="Back to Skribl Pad">{{ pad_ic }}<span>Pad</span></a>
+    <a href="{{ url_for('.skribl_editor') }}{% if compose %}?compose=1{% endif %}" id="padBtn" class="menu-editor" aria-label="Back to Skribl Pad: replay a drawing as it was drawn, a separate draft from this one">{{ pad_ic }}<span>Pad</span></a>
     <button type="button" class="menu-editor on" aria-label="Flip, the editor you are in">{{ flip_ic }}<span>Flip</span></button>
     {%- else -%}
     <button type="button" class="menu-editor on" aria-label="Pad, the editor you are in">{{ pad_ic }}<span>Pad</span></button>
-    <a href="{{ url_for('.skribl_flip') }}{% if compose %}?compose=1{% endif %}" id="flipBtn" class="menu-editor" aria-label="Switch to Flip Mode">{{ flip_ic }}<span>Flip</span></a>
+    <a href="{{ url_for('.skribl_flip') }}{% if compose %}?compose=1{% endif %}" id="flipBtn" class="menu-editor" aria-label="Flip Mode: make an animation page by page, a separate draft from this one">{{ flip_ic }}<span>Flip</span></a>
     {%- endif -%}
   </span>
 
