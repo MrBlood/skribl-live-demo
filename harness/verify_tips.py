@@ -413,8 +413,8 @@ with sync_playwright() as p:
                          " tips: document.getElementById('hintSeg').getBoundingClientRect().width,"
                          " canvas: document.getElementById('canvasSeg').getBoundingClientRect().width,"
                          " gap: document.getElementById('hintSeg').getBoundingClientRect().left"
-                         "      - document.querySelectorAll('#moreMenu .menu-row-label')[0]"
-                         "        .getBoundingClientRect().right })")
+                         "      - document.getElementById('hintSeg').closest('.menu-row').querySelector('.menu-row-label')"
+                         "        .getBoundingClientRect().right })")   # Tips' own label: Theme leads the Settings page now
     check("the Tips and Canvas switches are the same width",
           abs(widths["tips"] - widths["canvas"]) < 2,
           f"tips {round(widths['tips'])} vs canvas {round(widths['canvas'])}")

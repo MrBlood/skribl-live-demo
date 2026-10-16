@@ -775,7 +775,7 @@ with sync_playwright() as p:
     # Match on the accessible name, not the href literal: the href is now
     # url_for-derived (P0-1) and renders as /skribl-pad at the root and as
     # <prefix>/skribl-pad under a mount — a[href='/'] matched neither.
-    back = pg.locator('#padBtn, .pad-btn, a[aria-label="Back to Skribl Pad"]').first
+    back = pg.locator('#padBtn, .pad-btn, a[aria-label^="Back to Skribl Pad"]').first
     if back.count() == 0:
         check("Flip has a link back to Pad to guard", False,
               "no back-link found — update this selector if it was renamed")

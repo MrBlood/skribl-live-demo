@@ -51,7 +51,8 @@ for tpl in sorted(_layout.TEMPLATES_DIR.glob("*.html")):
 
 print("\nRENDERED — the page shows what app.py says")
 html = urllib.request.urlopen(BASE + "/").read().decode("utf-8", "replace")
-label = re.search(r'class="menu-version">([^<]*)</div>', html)
+# A <span> in the ⋯ menu's foot since the tiles (after v323); a <div> before.
+label = re.search(r'class="menu-version">([^<]*)</(?:div|span)>', html)
 check("the Pad renders a version label", bool(label), label.group(1) if label else "missing")
 rendered = label.group(1).strip() if label else ""
 check("the label carries the current version", bool(version) and version in rendered,
@@ -61,7 +62,7 @@ check("the label still reads 'Skribl Pad · <version>'",
 check("the stale v96 string is gone from the served page", "v96" not in html)
 
 flip_html = urllib.request.urlopen(BASE + "/flip").read().decode("utf-8", "replace")
-flip_label = re.search(r'class="menu-version">([^<]*)</div>', flip_html)
+flip_label = re.search(r'class="menu-version">([^<]*)</(?:div|span)>', flip_html)
 check("Flip renders a version label too (added v105)", bool(flip_label),
       flip_label.group(1) if flip_label else "missing")
 flip_rendered = flip_label.group(1).strip() if flip_label else ""
@@ -73,6 +74,9 @@ check("both surfaces report the SAME version",
 
 print("\nANTI-DRIFT — the template is genuinely driven by the constant")
 tpl_src = _layout.template("skribl_editor.html").read_text(encoding="utf-8")
+# The label is written once, in the ⋯ menu both editors include (after v323).
+if "_skribl_menu.html" in tpl_src:
+    tpl_src += _layout.template("_skribl_menu.html").read_text(encoding="utf-8")
 check("skribl_editor.html interpolates skribl_version instead of a literal",
       "{{ skribl_version }}" in tpl_src)
 

@@ -169,13 +169,13 @@ try:
         print("\nPREFIX — clicked navigation stays under the prefix")
         # Flip → Pad is the guard-free direction: one real click.
         back_href = fp.evaluate(
-            "() => { const a = document.querySelector('a[aria-label=\"Back to Skribl Pad\"]');"
+            "() => { const a = document.querySelector('a[aria-label^=\"Back to Skribl Pad\"]');"
             " return a ? a.getAttribute('href') : null; }")
         check("Flip's back link is prefix-derived", 
               back_href is not None and back_href.startswith(PREFIX + "/"),
               str(back_href))
         fp.click("#moreBtn"); fp.wait_for_timeout(400)   # v293: the link is a ⋯ menu row
-        fp.click('a[aria-label="Back to Skribl Pad"]')
+        fp.click('a[aria-label^="Back to Skribl Pad"]')   # its name begins so; it goes on to say what the Pad is
         fp.wait_for_load_state("load")
         check("clicking it lands under the prefix",
               fp.url.startswith(BASE + PREFIX + "/"), fp.url)
