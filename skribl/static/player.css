@@ -185,6 +185,18 @@
   --glass-fill: rgba(var(--surface-well-2-rgb), 0.78);
   --glass-drop: rgba(0, 0, 0, 0.30);
   --glass: 0 0 0 1px var(--header-rim), 0 6px 20px var(--glass-drop);
+  /* THE MENU'S PAPER (owner, after v323: "Is this the best color look?"; B2
+     of the colour mock). The menu and the sheets it opens are solid, not
+     glass: a sheet with a breath of Skribl purple, white cards that stand off
+     it, and a lilac edge on each card, so a tinted row (How it works, This
+     drawing) never melts into the sheet. Dark: a purple-black sheet, cards a
+     step lighter. Light values in the light ramp. */
+  --menu-paper:      #17142a;
+  --menu-card:       #231e3b;
+  --menu-card-line:  rgba(167, 146, 255, 0.12);
+  --menu-card-rule:  rgba(167, 146, 255, 0.12);
+  --menu-card-drop:  0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+  --menu-track:      rgba(124, 92, 255, 0.16);
   /* A SELECTED OPTION IS A TINT, AN ACTION IS SOLID. The same purple used to
      mean both, so a drawer carried five or six purple slabs and nothing said
      which one did something. Segments (Pen / Background, Off / Low / High,
@@ -2100,6 +2112,12 @@ a.player-btn { text-decoration: none; }
   /* Light flips the rim: a near-white edge, light catching the card. */
   --header-rim:              rgba(255, 255, 255, 0.9);
   --glass-drop:              rgba(20, 24, 40, 0.10);
+  --menu-paper:              #f3f0ff;
+  --menu-card:               #ffffff;
+  --menu-card-line:          rgba(124, 92, 255, 0.34);
+  --menu-card-rule:          rgba(80, 60, 170, 0.10);
+  --menu-card-drop:          0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+  --menu-track:              rgba(124, 92, 255, 0.11);
   /* AA on what is actually painted behind it: #5b3be6 was 4.37:1 on the tint
      over the drawers' track, under the unselected label's 4.99. One step
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground

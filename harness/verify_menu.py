@@ -24,10 +24,15 @@ below holds a promise the new menu made, on the Pad and on Flip:
   8. THE FIRST SAVE ASKS FOR A NAME, filled in and selected; backing out leaves
      the drawing unnamed and unsaved, one tap keeps the name and saves, and the
      next Save is quiet.
+  9. THE MENU'S PAPER (the colour mock, B2): the sheet is solid, not glass,
+     and every card's edge shows against it, light and dark. On B as first
+     mocked, How it works' lilac fill met the lilac sheet with no line between
+     (owner's screenshot); read from the pixels on each side of the edge.
 
 Visible means painted: elementFromPoint inside the thing, not its rect.
 """
 import math
+import io
 import os
 import sys
 
@@ -40,6 +45,7 @@ check = make_check(results, detail_on_pass=False)
 
 try:
     from playwright.sync_api import sync_playwright
+    from PIL import Image
 except ImportError:
     print("SKIP: playwright is not installed")
     sys.exit(0)
@@ -60,6 +66,8 @@ FIT = """() => { const s = """ + SHEET + """, r = s.getBoundingClientRect();
   return { scrolls: s.scrollHeight > s.clientHeight + 1, top: Math.round(r.top), bottom: Math.round(r.bottom), vh: innerHeight,
            targets: t.length, small, name: getComputedStyle(it).fontSize,
            sub: getComputedStyle(it.querySelector('.menu-item-sub')).fontSize }; }"""
+EDGE = """() => { const s = """ + SHEET + """, l = s.querySelector('.menu-list'), r = l.getBoundingClientRect(),
+  cs = getComputedStyle(s); return {x: r.left, y: r.top + 32, blur: cs.backdropFilter, bg: cs.backgroundColor}; }"""
 ORDER = """() => { const s = """ + SHEET + """;
   return [...s.querySelectorAll('.menu-page[data-menu-page="main"] :is(.menu-tile, .menu-list > .menu-item:not([hidden]), .menu-foot-link)')]
            .map(e => e.textContent.replace(/\\s+/g, ' ').trim().split(' ').slice(0, 2).join(' ')); }"""
@@ -106,6 +114,19 @@ with sync_playwright() as p:
                 check(f"{name}, {dev}, {scheme}: the menu fits without scrolling, every target 44px or more, names 16px over 14px",
                       not f["scrolls"] and f["bottom"] <= f["vh"] and f["targets"] >= 10 and not f["small"]
                       and f["name"] == "16px" and f["sub"] == "14px", str(f))
+                if dev == "phone":
+                    # 9. the paper: solid, and the list's edge shows. At the
+                    # phone's 2x, the pixel 3px outside the list (the sheet),
+                    # its 1px border, and How it works' fill just inside.
+                    e = q.evaluate(EDGE)
+                    im = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
+                    X, Y = round(e["x"] * 2), round(e["y"] * 2)
+                    out, rim, fill = im.getpixel((X - 6, Y)), im.getpixel((X, Y)), im.getpixel((X + 20, Y))
+                    dist = lambda u, v: sum(abs(i - j) for i, j in zip(u, v))
+                    solid = e["blur"] == "none" and e["bg"].startswith("rgb(")
+                    check(f"{name}, {scheme}: the menu is solid paper, and How it works' card edge shows against it",
+                          solid and max(dist(rim, out), dist(fill, out)) >= 30,
+                          f"blur={e['blur']} bg={e['bg']} sheet={out} edge={rim} fill={fill}")
                 if dev == "phone" and scheme == "light":
                     orders[name] = q.evaluate(ORDER)
                     # 3. the switch
@@ -192,6 +213,9 @@ with sync_playwright() as p:
                        thumb: !!s.querySelector('.sdrafts-this-thumb img') }; }""")
             check(f"{name}: Your drafts shows this drawing (picture and name) and the .skribl file both ways",
                   d["name"] and d["files"] == 2 and d["thumb"], str(d))
+            pp = q.evaluate("""() => { const d = getComputedStyle(document.getElementById('savedDraftsSheet')), m = getComputedStyle(""" + SHEET + """);
+              return { drafts: d.backgroundColor, menu: m.backgroundColor, blur: d.backdropFilter }; }""")
+            check(f"{name}: Your drafts is on the menu's paper", pp["drafts"] == pp["menu"] and pp["blur"] == "none", str(pp))
             if not d["name"]:
                 return
             q.click("#nameItem", timeout=3000)

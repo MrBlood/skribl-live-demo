@@ -162,6 +162,18 @@
   --glass-fill: rgba(var(--surface-well-2-rgb), 0.78);
   --glass-drop: rgba(0, 0, 0, 0.30);
   --glass: 0 0 0 1px var(--header-rim), 0 6px 20px var(--glass-drop);
+  /* THE MENU'S PAPER (owner, after v323: "Is this the best color look?"; B2
+     of the colour mock). The menu and the sheets it opens are solid, not
+     glass: a sheet with a breath of Skribl purple, white cards that stand off
+     it, and a lilac edge on each card, so a tinted row (How it works, This
+     drawing) never melts into the sheet. Dark: a purple-black sheet, cards a
+     step lighter. Light values in the light ramp. */
+  --menu-paper:      #17142a;
+  --menu-card:       #231e3b;
+  --menu-card-line:  rgba(167, 146, 255, 0.12);
+  --menu-card-rule:  rgba(167, 146, 255, 0.12);
+  --menu-card-drop:  0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+  --menu-track:      rgba(124, 92, 255, 0.16);
   /* A SELECTED OPTION IS A TINT, AN ACTION IS SOLID. The same purple used to
      mean both, so a drawer carried five or six purple slabs and nothing said
      which one did something. Segments (Pen / Background, Off / Low / High,
@@ -7497,6 +7509,26 @@ body.stroking .toolbar, body.stroking .flip-tools {
   border: 0;
   box-shadow: var(--glass);
 }
+/* THE MENU'S PAPER (tokens in :root). After the shared glass above, so it
+   wins: the menu sheet (Pad's, and every .menu-sheet it opens: Export, Report,
+   Post), Flip's menu and Your drafts are solid lilac paper with white cards.
+   Solid, so the canvas behind no longer greys it. The dock's drawers and Tune
+   keep the glass: they belong to the dock. */
+.menu-sheet, .flip-menu, .sdrafts-sheet {
+  background: var(--menu-paper);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.menu-tile, .menu-list, .sdrafts-row, .sdrafts-files {
+  background: var(--menu-card);
+  border-color: var(--menu-card-line);
+  box-shadow: var(--menu-card-drop);
+}
+@media (hover: hover) { .menu-tile:not(:disabled):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+.sdrafts-this { box-shadow: inset 0 0 0 1px var(--menu-card-line); }
+.menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden]),
+.sdrafts-files > .menu-item + .menu-item { border-top-color: var(--menu-card-rule); }
+.seg.menu-editor-seg { background: var(--menu-track); border-color: transparent; }   /* .seg.: the one pill's track rule comes later */
 .tune-shell { background: var(--glass-fill); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .tune-shell.open { border: 0; box-shadow: var(--glass); }
 /* EXCEPT THE SHAPE PICKER, WHICH IS SOLID. It hangs inside the dock, and the
@@ -8012,6 +8044,12 @@ body.replaying .media-card { pointer-events: none; }
   /* Light flips the rim: a near-white edge, light catching the card. */
   --header-rim:              rgba(255, 255, 255, 0.9);
   --glass-drop:              rgba(20, 24, 40, 0.10);
+  --menu-paper:              #f3f0ff;
+  --menu-card:               #ffffff;
+  --menu-card-line:          rgba(124, 92, 255, 0.34);
+  --menu-card-rule:          rgba(80, 60, 170, 0.10);
+  --menu-card-drop:          0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+  --menu-track:              rgba(124, 92, 255, 0.11);
   /* AA on what is actually painted behind it: #5b3be6 was 4.37:1 on the tint
      over the drawers' track, under the unselected label's 4.99. One step
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground

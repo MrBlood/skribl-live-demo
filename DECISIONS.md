@@ -18012,3 +18012,28 @@ named: a date name now counts as none (SkriblName.isAuto, any locale's
 select written for it came out again; its row was shown red by breaking the
 box's own. verify_menu's six new rows were each shown red by their own break.
 
+
+## After v323 -- the menu's paper
+
+The owner, with a screenshot of the light menu: "Is this the best color look?"
+It was not: the sheet was glass, so the canvas behind it turned it a flat
+grey, the tiles and rows were nearly the same grey, and the brightest thing on
+it was the Pad/Flip switch. A mock of three looks (paper, lilac, denser glass)
+and the owner's "I like b, but the lilac is same color on how it works so you
+can't really see border": in light, How it works' tint met the lilac sheet
+with no line between. Of a white row (my pick) and a lilac edge on every card,
+the owner chose the edge; it keeps How it works the row that catches the eye,
+which matters while help is hard to find. "All yes."
+
+The menu and every .menu-sheet (Export, Report, Post), Flip's menu and Your
+drafts are solid lilac paper (`--menu-paper`) with white cards
+(`--menu-card`) that carry a lilac edge and a soft lilac shadow; dark is a
+purple-black sheet with cards a step lighter. The switch's track takes a
+purple wash. Tokens, so the light ramp overrides each. The dock's drawers and
+Tune keep the dock's glass: they belong to the dock, not the menu. How it works'
+drawer waits for its own redesign (FUTURE 6o).
+
+verify_menu reads the pixels on each side of the list's edge, light and dark
+on both editors: red on B as first mocked (light only, as the owner saw), red
+with the glass back, red on Flip alone with Flip's rule broken. Your drafts'
+paper is pinned to the menu's.
