@@ -294,17 +294,18 @@ with sync_playwright() as p:
 
         sp.fill("#helpSearch", "")
         sp.wait_for_timeout(250)
-        # A placeholder that suggests a term this surface does not have sends
-        # the user straight into the empty state. "onion" is Flip-only.
-        placeholder = sp.get_attribute("#helpSearch", "placeholder")
-        suggested = [w.strip(" ,.") for w in placeholder.split("try")[-1].split(",")]
+        # A suggestion of a term this surface does not have sends the user
+        # straight back into the empty state. "onion" is Flip-only. Since Ask
+        # the suggestions are the empty state's own "Try other words, like".
+        suggested = sp.evaluate("() => [...document.querySelectorAll('#helpLook .help-empty-sub strong')].map(s => s.textContent.trim())")
+        check(f"{surface}: nothing found suggests other words to try", len(suggested) >= 2, str(suggested))
         for term in [t for t in suggested if t]:
             sp.fill("#helpSearch", term)
             sp.wait_for_timeout(180)
             hits = sp.evaluate(VISIBLE)
             check(f"{surface}: the suggested term {term!r} finds something",
                   hits > 0,
-                  "the placeholder points at a term this surface does not have")
+                  "the empty state suggests a term this surface does not have")
 
         sp.fill("#helpSearch", "")
         sp.wait_for_timeout(200)
