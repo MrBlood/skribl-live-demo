@@ -1556,10 +1556,11 @@ body.stroking .strip-wrap {
    scrolls, and takes Done off screen (verify_move). Inside the card the bar
    needs less inset of its own: 6px, not 10, on a phone. */
 :where(body[data-size="compact"]) .strip-wrap .pagebar { padding-left: 6px; padding-right: 6px; }
-/* Flip's own menu popover wears the material like every other sheet. */
+/* Flip's own menu popover wears the Pad menu's paper (styles.css, THE MENU'S
+   PAPER): solid lilac, no blur. One menu, one look. */
 .flip-menu {
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  background: var(--menu-paper);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
   border: 0; box-shadow: var(--glass);
 }
 
