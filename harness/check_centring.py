@@ -560,11 +560,12 @@ def editor_common(pg, menu, export_item, canvas):
     click(pg, menu); click(pg, "#reportItem, #miReport", 700); yield "report"; esc(pg)
     click(pg, menu); click(pg, "#openCloudDraftItem", 900); click(pg, "#nameItem", 500); yield "name"; esc(pg)
     click(pg, menu); click(pg, "#helpItem, #miInfo", 900); yield "how it works"
-    click(pg, "#helpTabLook", 700); yield "how it works, look it up"
+    click(pg, "#askOften [data-answer]", 700); yield "how it works, an answer"
+    click(pg, "#askBack", 500); click(pg, "#askBrowse", 700); yield "how it works, everything"
     if FULL_SWEEP:
         # A demo replaying: every photograph of it repaints, so each control
         # is shot again and again (steady). Ten seconds a screen; the sweep's.
-        click(pg, "#helpTabWatch", 700)
+        click(pg, "#askLookBack", 700)
         click(pg, "#helpWatch .learn-card .learn-stage", 900); yield "example viewer"
     esc(pg); esc(pg); esc(pg)
 

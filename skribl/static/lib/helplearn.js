@@ -6,11 +6,12 @@
  * what the eraser does, and there is no second, simplified renderer to drift
  * from the real one.
  *
- * TWO TABS, WATCH FIRST (the owner's pick, layout 1 of three, after v323;
- * FUTURE.md 6n). How it works opens on Watch: every example, big, one under
- * another, chips to show one group. Look it up is the second tab: search and
- * every entry (lib/helpsearch.js). It replaced a bar that opened a drawer of
- * the examples over a 2,700-word manual.
+ * ASK'S HOME (piece two of the help, FUTURE.md 6p; lib/ask.js). How it
+ * works opens on Ask: the tour, what people often ask, and every example in
+ * a strip of pictures, each opening full screen with its Try it. Typed into,
+ * or "Everything, by section", it shows the answers: search and every entry
+ * (lib/helpsearch.js). It replaced two tabs (layout 1, FUTURE.md 6n), and
+ * before them a bar that opened a drawer over a 2,700-word manual.
  *
  * NOTHING LOADS UNTIL IT IS ASKED FOR. The editor fetches no player and no
  * example until How it works opens; then an example is fetched as it comes
@@ -34,7 +35,11 @@
   var tabWatch = document.getElementById('helpTabWatch');
   var tabLook = document.getElementById('helpTabLook');
   var box = sheet;
-  if (!drawer || !sheet || !look || !tabWatch || !tabLook) return;
+  // ASK (after v323) took the two tabs' place: Watch is Ask's home and Look it
+  // up its answers, switched by what is typed (lib/ask.js) through show()
+  // below. The tabs are optional, so this file still drives either markup.
+  var answer = document.getElementById('askAnswer');
+  if (!drawer || !sheet || !look) return;
   var scroller = drawer.querySelector('.help-drawer-inner');
 
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -163,7 +168,7 @@
                                                : n + ' examples couldn\u2019t load.');
     // Retry hides the banner it is in; focus goes to the Watch tab rather
     // than to <body>.
-    if (was && !n && failBox.contains(document.activeElement)) tabWatch.focus({ preventScroll: true });
+    if (was && !n && failBox.contains(document.activeElement)) (tabWatch || document.getElementById('helpSearch')).focus({ preventScroll: true });
   }
   function failed(card) {
     card.classList.add('learn-failed');
@@ -201,8 +206,16 @@
     if (card.hasAttribute('data-clip-dark')) { startClip(card); sync(card); }
     else loadPlayer().then(function () { start(card); sync(card); });
   }
+  // The examples sit in a strip that scrolls sideways (Ask's home), which
+  // the sheet's margin cannot see past: each one that comes near asks for
+  // the next in the strip too, so a swipe meets it loaded.
   var near = window.IntersectionObserver ? new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) { if (e.isIntersecting && open()) want(e.target); });
+    entries.forEach(function (e) {
+      if (!e.isIntersecting || !open()) return;
+      want(e.target);
+      var next = e.target.nextElementSibling;
+      if (next && all.indexOf(next) >= 0) want(next);
+    });
   }, { root: scroller, rootMargin: '0px 0px 50% 0px' }) : null;
   function startAll() {
     // No observer (a very old browser): everything, as before.
@@ -213,29 +226,36 @@
   }
   function syncAll() { cards.forEach(sync); clips.forEach(sync); }
   // To the top AT ONCE: the panel scrolls smoothly, and gliding back up past
-  // every example on a change of tab or chip looked like a fault.
+  // every example on a change of view looked like a fault.
   function toTop() {
     if (!scroller) return;
     if (scroller.scrollTo) scroller.scrollTo({ top: 0, behavior: 'instant' });
     else scroller.scrollTop = 0;
   }
 
-  // ---- the two tabs -------------------------------------------------------------
-  function showTab(watch, focus) {
-    var was = sheetOpen;
-    sheetOpen = !!watch;
-    tabWatch.setAttribute('aria-selected', String(sheetOpen));
-    tabLook.setAttribute('aria-selected', String(!sheetOpen));
-    tabWatch.tabIndex = sheetOpen ? 0 : -1;
-    tabLook.tabIndex = sheetOpen ? -1 : 0;
-    sheet.hidden = !sheetOpen;
-    look.hidden = sheetOpen;
-    if (focus) (sheetOpen ? tabWatch : tabLook).focus({ preventScroll: true });
-    if (sheetOpen !== was) toTop();
+  // ---- the views: home (the examples), the answers, one answer --------------
+  var view = 'home';
+  function show(next, focus) {
+    var was = view;
+    view = next;
+    sheetOpen = view === 'home';
+    sheet.hidden = view !== 'home';
+    look.hidden = view !== 'look';
+    if (answer) answer.hidden = view !== 'answer';
+    if (tabWatch && tabLook) {
+      tabWatch.setAttribute('aria-selected', String(sheetOpen));
+      tabLook.setAttribute('aria-selected', String(!sheetOpen));
+      tabWatch.tabIndex = sheetOpen ? 0 : -1;
+      tabLook.tabIndex = sheetOpen ? -1 : 0;
+      if (focus) (sheetOpen ? tabWatch : tabLook).focus({ preventScroll: true });
+    }
+    if (view !== was) toTop();
     if (sheetOpen) startAll();
     syncAll();
-    look.dispatchEvent(new CustomEvent('helptab', { bubbles: true, detail: { look: !sheetOpen } }));
+    look.dispatchEvent(new CustomEvent('helptab', { bubbles: true, detail: { look: view === 'look' } }));
   }
+  function showTab(watch, focus) { show(watch ? 'home' : 'look', focus); }
+  if (tabWatch && tabLook) {
   tabWatch.addEventListener('click', function () { showTab(true); });
   tabLook.addEventListener('click', function () { showTab(false); });
   // A tab list's own keys: the arrows move between the tabs, Home and End to
@@ -249,21 +269,12 @@
       }
     });
   });
+  }
   // Escape closes full screen first; otherwise it is the panel's (the
   // editors' window-level Escape closes How it works).
   drawer.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
     if (viewerOpen) { e.stopPropagation(); e.preventDefault(); closeViewer(); }
-  });
-
-  // Chips show one group, or all.
-  sheet.querySelectorAll('.learn-chip').forEach(function (chip) {
-    chip.addEventListener('click', function () {
-      var f = chip.getAttribute('data-filter');
-      sheet.querySelectorAll('.learn-chip').forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
-      all.forEach(function (c) { c.hidden = f !== 'all' && c.getAttribute('data-group') !== f; });
-      if (scroller && scroller.scrollTop > sheet.offsetTop) toTop();
-    });
   });
 
   // ---- full screen ------------------------------------------------------------
@@ -296,6 +307,12 @@
     vStage.innerHTML = '';
     vStage.removeAttribute('data-shape');
     vFrom = card.querySelector('.learn-stage');
+    var vTry = document.getElementById('learnViewerTry'), cTry = card.querySelector('[data-try]');
+    if (vTry) {
+      vTry.hidden = !cTry;
+      if (cTry) { vTry.setAttribute('data-try', cTry.getAttribute('data-try')); vTry.setAttribute('aria-label', cTry.getAttribute('aria-label') || 'Try it'); }
+      else vTry.removeAttribute('data-try');
+    }
     viewerOpen = true;
     syncAll();
     viewer.hidden = false;
@@ -341,11 +358,13 @@
     });
   });
   if (viewer) viewer.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-try]');
+    if (t) { tryTool(t.getAttribute('data-try')); return; }
     if (e.target.closest('[data-viewer-close]')) closeViewer();
   });
 
   // ---- How it works opening and closing -------------------------------------
-  // Every opening starts on Watch, at the top.
+  // Every opening starts on Ask's home, at the top.
   // A clip already fetched in one theme is swapped on opening when the theme
   // changed while How it works was shut, which is the only time it can: Theme
   // lives in the menu (owner's phone, dark, after v323: the light clip).
@@ -356,47 +375,10 @@
   new MutationObserver(onOpenChange).observe(drawer, { attributes: true, attributeFilter: ['hidden'] });
   if (!drawer.hidden) onOpenChange();
 
-  // More about a tool: its entry in Look it up, its section opened, the
-  // entry opened, scrolled to and focused.
-  sheet.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-more-tool]');
-    if (!b) return;
-    var tip = look.querySelector('.help-tip[data-help-tool="' + b.getAttribute('data-more-tool') + '"]');
-    showTab(false);
-    if (!tip) return;
-    var body = tip.closest('.accordion-body');
-    var head = body && body.previousElementSibling;
-    var opening = !!(head && head.classList.contains('accordion-header') && !head.classList.contains('open'));
-    if (opening) head.click();
-    tip.classList.add('is-open');
-    tip.setAttribute('tabindex', '-1');
-    // Scrolled to once its section has OPENED: scrolled to while the section
-    // still glided open, it went to where the entry was then, folded up under
-    // the section's title, and the entry ended half a screen down. The section
-    // opens in two glides, its height and its inner padding, so it lands on
-    // each one's end (the padding's moved it 19px). At once, not the panel's
-    // smooth glide; styles.css keeps it clear of the tabs (scroll-margin-top).
-    var landed = false;
-    function land() {
-      landed = true;
-      tip.scrollIntoView({ block: 'start', behavior: 'instant' });
-      if (document.activeElement !== tip) tip.focus({ preventScroll: true });
-    }
-    if (opening) {
-      var inner = body.querySelector('.accordion-inner');
-      var settle = function (ev) {
-        if ((ev.target === body && ev.propertyName === 'grid-template-rows') ||
-            (ev.target === inner && ev.propertyName === 'padding-top')) land();
-      };
-      body.addEventListener('transitionend', settle);
-      setTimeout(function () { body.removeEventListener('transitionend', settle); if (!landed) land(); }, 900);
-    } else requestAnimationFrame(land);
-  });
-
-  sheet.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-try]');
-    if (!b) return;
-    var tool = b.getAttribute('data-try');
+  // Try it: How it works closes (and full screen with it) and the editor
+  // holds that tool. The strip's cards are pictures, so it rides with the
+  // example full screen.
+  function tryTool(tool) {
     var close = document.getElementById('helpClose');
     if (close) close.click();
     // After this tap has finished travelling: the shape card's dismisser hears
@@ -408,6 +390,20 @@
       // means "hold this tool", so an active one is left as it is.
       if (btn && !btn.classList.contains('active')) btn.click();
     }, 0);
+  }
+  sheet.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-try]');
+    if (b) tryTool(b.getAttribute('data-try'));
   });
 
+  // Ask (lib/ask.js) switches the views and opens an example full screen.
+  window.SkriblHelpLearn = {
+    show: show,
+    view: function () { return view; },
+    watch: function (name) {
+      var card = all.filter(function (c) { return (c.getAttribute('data-demo-name') || c.getAttribute('data-clip-name')) === name; })[0];
+      if (card) openViewer(card);
+      return !!card;
+    }
+  };
 }());

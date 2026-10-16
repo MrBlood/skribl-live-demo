@@ -12,7 +12,7 @@ below holds a promise the new menu made, on the Pad and on Flip:
      order; only the editor lit in the switch differs.
   3. A CHOICE IS THE SLIDING TINT. The switch lights the editor you are in
      with the app's pill (placed by lib/segslider.js); the other is a link
-     to the other editor. How it works' tabs are a track of the same pill.
+     to the other editor. How it works opens Ask: one field, no tabs.
   4. PAGES. New opens its page with focus on Back; Escape comes back to the
      main page with focus on New; every opening starts on the main page.
   5. NEW SKRIBL, one tap after the shape: the drawing goes, the canvas takes
@@ -283,19 +283,19 @@ with sync_playwright() as p:
         check(f"{name}: no page errors", not errs, "; ".join(errs[:2]))
         c.close()
 
-        # 3. How it works' tabs: the same pill
+        # 3. How it works opens Ask (piece two, FUTURE.md 6p): the tabs it
+        # had are gone, so the field is the first thing, empty, on Ask's home.
         c = b.new_context(**PHONE)
         q = c.new_page()
         browsing.goto(q, BASE, route)
         q.wait_for_timeout(800)
         q.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); openHelpDrawer(); }")
         q.wait_for_timeout(900)
-        t = q.evaluate("""() => { const tabs = document.querySelector('.help-tabs'), on = document.getElementById('helpTabWatch');
-          const pill = tabs.querySelector(':scope > .seg-slider'), p = pill.getBoundingClientRect(), o = on.getBoundingClientRect();
-          return { pill: tabs.hasAttribute('data-pill') && Math.abs(p.left - o.left) < 2 && Math.abs(p.width - o.width) < 2,
-                   bg: getComputedStyle(on).backgroundColor }; }""")
-        check(f"{name}: How it works' tabs are a track of the same sliding pill, not a solid button",
-              t["pill"] and t["bg"] in ("rgba(0, 0, 0, 0)", "transparent"), str(t))
+        t = q.evaluate("""() => { const f = document.getElementById('helpSearch'), home = document.getElementById('helpWatch');
+          return { tabs: document.querySelectorAll('#helpDrawer [role=tab]').length, field: !!f && f.offsetParent !== null && f.value === '',
+                   home: !!home && !home.hidden, tour: !!document.getElementById('askTour') }; }""")
+        check(f"{name}: How it works opens Ask: one empty field on Ask's home, no tabs",
+              t["tabs"] == 0 and t["field"] and t["home"] and t["tour"], str(t))
         c.close()
 
     check("Pad and Flip show the same menu, tile for tile and row for row",

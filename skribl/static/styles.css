@@ -6104,38 +6104,21 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 }
 .help-empty { margin: 8px 18px 16px; padding: 26px 12px; text-align: center; }
 
-/* ---- How it works: two tabs, Watch first (lib/helplearn.js) ------------------
-   The owner's pick, layout 1 of three, after v323 (FUTURE.md 6n). Watch: every
-   example big, one under another on a phone and two to a row on a desk. Look
-   it up: search and every entry. The tabs stay up under the title band as the
-   panel scrolls (its 69px: 20 + 32 + 16, and its line). */
-.help-tabs { position: sticky; top: 69px; z-index: 3; display: flex; gap: 4px; margin: 12px 18px 0;
-  padding: 4px; border-radius: 14px; border: 1px solid var(--line-faint);
-  background: rgb(var(--surface-panel-rgb)); box-shadow: 0 -12px 0 rgb(var(--surface-panel-rgb)); }
-.help-tab { flex: 1; min-height: 44px; border: 0; border-radius: 10px; background: transparent;
-  color: var(--text-secondary); font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
-.help-tab { position: relative; z-index: 1; }
-/* THE ONE PILL, as every other choice (after v323): a soft tint slides to the
-   tab, which takes the tint's ink. They were solid purple with white type. */
-.help-tabs { --seg-inset: 4px; }
-.help-tabs > .seg-slider { border-radius: 10px; }
-.help-tab[aria-selected="true"] { color: var(--seg-on-ink); }
-.help-tabs:not([data-pill]) > .help-tab[aria-selected="true"] { background: var(--seg-on-fill); }
-@media (hover: hover) { .help-tab[aria-selected="false"]:hover { background: var(--surface-tint); } }
-.help-tab:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+/* ---- Ask's field, up under the title as the page scrolls (lib/ask.js) -------
+   It took the two tabs' place (owner, after v323: the Ask mock, "All yes").
+   Its 69px: the title band's 20 + 32 + 16 and its line. A band of the menu's
+   paper behind it reaches the page's edges and up to the band, so nothing
+   shows through or beside it while the page scrolls under it. */
+.ask-bar { position: sticky; top: 69px; z-index: 3; margin: 0 18px; padding: 18px 0 8px; }   /* as much room above the field as at its side */
+.ask-bar::before { content: ""; position: absolute; z-index: -1; top: -1px; bottom: 0; left: -18px; right: -18px;
+  background: var(--menu-paper); pointer-events: none; }
+.ask-bar .help-search { margin: 0; min-height: 52px; padding: 0 14px; border-radius: 14px; }
+.ask-bar .help-search-input { height: 50px; font-size: 17px; }   /* 16px and up, or iOS magnifies the page */
 .help-learn { padding: 16px 18px 40px; }
 .help-learn[hidden], .help-look[hidden] { display: none; }
 /* An entry scrolled to (a card's More about) stops under the title band and
-   the tabs, 69 + 12 + 54, with 12 to spare, not behind them. */
+   Ask's field, 69 + 72, with 6 to spare, not behind them. */
 .help-look .help-tip { scroll-margin-top: 147px; }
-.learn-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 0 0 16px; flex: none; }
-.learn-chips::-webkit-scrollbar { display: none; }
-.learn-chip { flex: none; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line-faint);
-  background: transparent; color: var(--text-primary); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
-@media (hover: hover) { .learn-chip:hover { background: var(--surface-tint); } }
-.learn-chip[aria-pressed="true"] { background: var(--seg-on-fill); border-color: transparent; color: var(--seg-on-ink); }   /* the one pill's tint, as every choice */
-.learn-chip:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-.learn-all { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 
 .learn-card { margin: 0; display: flex; flex-direction: column; min-width: 0;
   border: 1px solid var(--line-faint); border-radius: 18px; overflow: hidden;
@@ -6192,9 +6175,9 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .learn-try { min-height: 44px; padding: 0 22px; border-radius: 12px; border: 0;
   background: var(--accent-fill); color: #fff; font: inherit; font-size: 16px; font-weight: 650; cursor: pointer; }
 .learn-cap .learn-try { margin-top: 10px; }
-.learn-more { min-height: 44px; margin-top: 10px; padding: 0; border: 0; background: transparent;
-  color: var(--ui-hi); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
-.learn-more:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; border-radius: 6px; }
+/* In the strip the cards are pictures; Try it rides with the example full screen. */
+.learn-viewer-cap .learn-try { margin-left: auto; }
+.learn-viewer-cap .learn-try[hidden] { display: none; }
 /* An example that did not load (V319-004): the picture gives way to a dashed
    outline and the sheet's one banner (#learnFail) says how many and offers
    Retry. Whatever half-loaded stays hidden rather than sitting there blank. */
@@ -6215,23 +6198,11 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .learn-retry:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 @media (hover: hover) { .learn-try:hover { filter: brightness(1.08); } }
 .learn-try:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
-/* One 18px gutter at every width, the one Look it up's search and sections
-   keep, so the tabs, the chips, the examples and the search share their edges.
-   A phone: Flip's five chips fit the width without the row scrolling and
-   clipping All at the edge. A desk: two examples to a row, and the panel's
-   content held to a readable width (the tabs 36px narrower: the gutters). */
+/* One 18px gutter at every width, the one Ask's field and the answers keep,
+   so the field, the examples and the entries share their edges. On a desk
+   the dialog itself holds them to a readable width. */
 @media (max-width: 640px) {
-  .help-tabs { margin-top: 10px; }
   .help-learn { padding: 14px 18px 32px; }
-  .learn-chips { gap: 6px; }
-  .learn-chip { padding: 0 12px; }
-}
-@media (min-width: 760px) {
-  .learn-all { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (min-width: 960px) {
-  .help-tabs, .help-learn, .help-look { max-width: 920px; margin-left: auto; margin-right: auto; }
-  .help-tabs { max-width: 884px; margin-top: 12px; }
 }
 .help-empty[hidden] { display: none; }
 .help-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 4px; }
@@ -7540,20 +7511,94 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .help-drawer-inner::after { background: linear-gradient(to bottom, transparent, var(--menu-paper)); }
 .help-drawer-head { background: var(--menu-paper); border-bottom-color: transparent; }   /* one colour above and below: its line would show only at the edges, beside the tabs' mask */
 .help-close { background: var(--menu-card); border-color: var(--menu-card-line); }
-/* THE TABS ARE A SOLID BAR WHEN THE PAGE SCROLLS UNDER THEM (owner's phone,
-   scrolled: the examples showed through the lilac track, which is a wash, and
-   beside it in the gutters). A band of paper behind them reaches the page's
-   edges and up to the title band; the track is drawn on it; the pill and the
-   words stay above both (the pill is z-index 0, the tabs 1). */
-.help-tabs { background: transparent; border-color: transparent; box-shadow: none; }
-.help-tabs::before, .help-tabs::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
-.help-tabs::before { top: -13px; bottom: -1px; left: -18px; right: -18px; background: var(--menu-paper); }   /* -18: the gutter exactly, so nothing scrolls sideways */
-.help-tabs::after { inset: -1px; border-radius: 14px; background: var(--menu-track); }
-.learn-chip { background: var(--menu-card); border-color: var(--menu-card-line); }
-@media (hover: hover) { .learn-chip:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
-.learn-chip[aria-pressed="true"] { background: var(--seg-on-fill); border-color: transparent; }
+/* ASK IS A SHEET ON A PHONE AND A DIALOG ON A DESK (the Ask mock, "All yes"):
+   it rises most of the way, so the drawing stays in view behind it, where How
+   it works had covered the whole screen. On a desk it sits in the middle, like
+   Spotlight. The example viewer still fills the screen (it is the drawer's,
+   not the sheet's). */
+@media (max-width: 640px) {
+  .help-drawer-inner { top: 10vh; bottom: 0; height: auto; border-radius: 22px 22px 0 0; transform: translateY(100%);
+    box-shadow: 0 -12px 40px rgba(20, 10, 60, .22); }
+  .help-drawer.open .help-drawer-inner { transform: translateY(0); }
+  .help-drawer-head::before { content: ""; position: absolute; left: 50%; top: 8px; width: 40px; height: 5px; margin-left: -20px;
+    border-radius: 3px; background: var(--menu-card-line); }
+}
+@media (min-width: 641px) {
+  .help-drawer-inner { left: 50%; right: auto; top: 7vh; bottom: auto; width: min(680px, calc(100vw - 48px)); height: auto; max-height: 86vh;
+    border-radius: 22px; transform: translate(-50%, 24px); opacity: 0; box-shadow: 0 24px 60px rgba(20, 10, 60, .3);
+    transition: transform .35s var(--ease), opacity .25s ease; }
+  .help-drawer.open .help-drawer-inner { transform: translate(-50%, 0); opacity: 1; }
+}
 .learn-card, .help-tip, .help-search, .accordion-header { background: var(--menu-card); border-color: var(--menu-card-line); }
 .learn-card { box-shadow: var(--menu-card-drop); }
+
+/* ---- Ask's home, answers and answer (lib/ask.js) ----------------------------
+   The menu's paper and white cards, its rows and its kickers. The examples are
+   a strip that scrolls sideways (each a real Skribl, playing as it comes into
+   view; a tap watches it full screen). */
+.ask-k { margin: 18px 4px 8px; font-size: 13px; font-weight: 700; letter-spacing: .02em; color: var(--text-secondary); }
+.ask-tour { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 88px; padding: 10px; text-align: left; cursor: pointer;
+  background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: 16px; box-shadow: var(--menu-card-drop);
+  color: var(--text-primary); font: inherit; }
+.ask-tour-pic { position: relative; flex: none; width: 96px; height: 68px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 12%, var(--menu-card)); }
+.ask-tour-pic::before { content: ""; position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%; background: var(--accent-fill); }
+.ask-tour-pic::after { content: ""; position: absolute; left: 50%; top: 50%; margin: -7px 0 0 -4px; border-style: solid; border-width: 7px 0 7px 12px;
+  border-color: transparent transparent transparent #fff; }
+.ask-tour-t { display: flex; flex-direction: column; gap: 2px; font-size: 17px; font-weight: 700; }
+.ask-tour-sub, .ask-row-sub { font-size: 14px; font-weight: 400; color: var(--text-secondary); }
+.ask-list { display: flex; flex-direction: column; overflow: hidden; background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: 16px; }
+.ask-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px; text-align: left; cursor: pointer;
+  border: 0; background: transparent; color: var(--text-primary); font: inherit; }
+.ask-list > .ask-row + .ask-row { border-top: 1px solid var(--menu-card-rule); }
+.ask-row-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 16px; font-weight: 650; }
+.ask-row > svg { flex: none; color: var(--text-secondary); }
+.ask-browse { margin-top: 12px; background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: 16px; }
+@media (hover: hover) { .ask-row:hover, .ask-tour:hover { background: color-mix(in srgb, var(--accent) 6%, var(--menu-card)); } }
+.ask-tour:focus-visible, .ask-row:focus-visible, .ask-go:focus-visible, .ask-back:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+.help-learn .learn-names { margin: 16px 0 0; }
+.learn-all { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  margin: 0 -18px; padding: 2px 18px 8px; align-items: flex-start; }
+.learn-all::-webkit-scrollbar { display: none; }
+.learn-all > .learn-card { flex: 0 0 168px; scroll-snap-align: start; scroll-margin-left: 18px; }
+.learn-all .learn-cap { padding: 8px 10px 10px; }
+.learn-all .learn-title { font-size: 15px; font-weight: 650; }
+.learn-all :is(.learn-line, .learn-try, .learn-n) { display: none; }
+@media (min-width: 641px) { .learn-all > .learn-card { flex-basis: 200px; } }
+.ask-best[hidden] { display: none; }
+.help-look.ask-searching .help-intro { display: none; }   /* the intro is for the whole list, not for answers */
+.ask-best { margin: 0 18px; }
+.ask-best .ask-k:first-child { margin-top: 4px; }
+.ask-best-card { padding: 14px; background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: 16px; box-shadow: var(--menu-card-drop); }
+.ask-best-t { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
+.ask-best-sub { margin: 0; font-size: 14px; color: var(--text-secondary); }
+.ask-best-do { display: flex; gap: 10px; margin-top: 12px; }
+.ask-go { flex: 1; min-height: 48px; padding: 0 18px; border: 0; border-radius: 14px; background: var(--accent-fill); color: #fff;
+  font: inherit; font-size: 16px; font-weight: 650; cursor: pointer; }
+.ask-go.quiet { background: var(--menu-card); color: var(--text-primary); border: 1px solid var(--menu-card-line); }
+.ask-answer { padding: 4px 18px 40px; }
+.ask-answer[hidden] { display: none; }
+.ask-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 4px; border: 0; background: transparent;
+  color: var(--accent-ink); font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+#helpLook > .ask-back { margin: 0 18px; }                       /* on the field's edge, as on an answer */
+.ask-answer-t { margin: 4px 4px 14px; font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1.15; outline: none; }
+.ask-answer-pic { overflow: hidden; border-radius: 16px; border: 1px solid var(--menu-card-line); background: var(--menu-card); }
+.ask-answer-pic .lc-phone { height: 220px; border-radius: 0; }
+.ask-answer-pic .lc-phone video { width: 150px; }
+.ask-answer-pic .lc-stage { border-radius: 0; }
+.ask-steps { counter-reset: s; margin: 10px 0 0; padding: 0; list-style: none; }
+.ask-steps li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 4px; font-size: 16px; line-height: 1.4; }
+.ask-steps li + li { border-top: 1px solid var(--menu-card-rule); }
+.ask-steps li::before { counter-increment: s; content: counter(s); flex: none; display: grid; place-items: center; width: 26px; height: 26px; margin-top: 1px;
+  border-radius: 50%; background: var(--accent-fill); color: #fff; font-size: 13px; font-weight: 700; }
+.ask-show { width: 100%; min-height: 52px; margin-top: 8px; }
+/* Show me's card: the answer over it, a dot a step; said in words, with no
+   arrow, when its button is not on the screen. */
+.lc-kick { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.lc-k { font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.lc-dots { display: flex; gap: 5px; flex: none; }
+.lc-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--menu-card-line); }
+.lc-dots i.on { width: 18px; border-radius: 4px; background: var(--accent); }
+.lc-free::after { display: none; }
 .accordion-header.open { background: color-mix(in srgb, var(--accent) 6%, var(--menu-card)); }
 .learn-clip .learn-stage { background: var(--menu-card); }
 .help-desc, .help-intro { color: var(--text-secondary); }   /* the sheet's secondary ink: --text-soft-3 read 4.38:1 on the dark card (verify_contrast) */

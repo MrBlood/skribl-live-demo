@@ -946,7 +946,7 @@ both editors, a "Things to try" list, and accessibility under all of it. The
 owner found layout 1 better but still "difficult to use" and "pretty generic
 thinking"; the last proposal put Hold to learn and Draw along first.
 
-## 6p. Help in four layers (owner, after v323: "Can we combine them so we get the best, most helpful yet unobtrusive?"; piece one built)
+## 6p. Help in four layers (owner, after v323: "Can we combine them so we get the best, most helpful yet unobtrusive?"; pieces one and two built)
 
 Three pitches (Ask, Hold to learn, the little book) were joined into one help
 that stays quiet until reached for, quietest first: ON THE BUTTON (hold it
@@ -960,10 +960,17 @@ thing that appears unasked is a first-time note, once.
 PIECE ONE, BUILT: lib/learncard.js. Holding keeps every job it had (owner:
 "how will that affect buttons you hold already like moving pages on flip?"):
 Flip's pages, the slider's - and + and the x1 badge get their card from their
-name tag. NEXT, IN THIS ORDER: Ask (replacing How it works, with Show me),
-then the little book and Draw along. The card's More opens How it works
-searched for the button until Ask is there. Flip's sliders have no - and +
-(Pad's do, on a desk); noticed here, not changed.
+name tag. Flip's sliders have no - and + (Pad's do, on a desk); noticed
+here, not changed.
+
+PIECE TWO, BUILT: lib/ask.js (the Ask mock, "All yes"). How it works is one
+field; a sheet on a phone, a dialog in the middle on a desk. Thirteen how-to
+answers to start (each editor sees its own), written as steps with Show me;
+the rest come from the entries, with everyday cousins of the words. A card's
+More asks Ask for the button. "New here?" plays the one-minute tour. NEXT:
+the little book behind "New here?" and Draw along (mock first); more answers
+over time, from what people type and find nothing for (nothing typed leaves
+the app today, so that needs the owner's say).
 
 ## 7. The honest state
 

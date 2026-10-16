@@ -708,6 +708,7 @@ rather than a shared rule.
 | module | loaded on | what it owns |
 |---|---|---|
 | `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
+| `ask.js` | Pad+Flip | Ask: How it works as one question in your own words (owner, after v323: the Ask mock, "All yes"; piece two of the help in four layers, FUTURE.md 6p). |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
 | `audiosession.js` | Pad+Flip+player+library+in-post | Making Web Audio audible on an iPhone whose ringer switch is off. |
 | `autosavepill.js` | Pad+Flip | lib/autosavepill.js — the autosave pill: one owner for its five states and, when media is missing, the way out. |

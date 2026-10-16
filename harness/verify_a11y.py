@@ -405,7 +405,7 @@ with sync_playwright() as p:
         # it and Tab went straight through to the panel's Close underneath. A
         # dialog now, one per editor; Escape closes it alone and hands focus
         # back to its card. (The examples were a sheet over the panel too; since
-        # layout 1 they are its Watch tab, FUTURE.md 6n.)
+        # Ask they are a strip on its home, FUTURE.md 6p.)
         ("/", "learnViewer"):     ("click:#menuBtn|click:#helpItem"
                                    "|click:#helpWatch .learn-card .learn-stage", None),
         ("/flip", "learnViewer"): ("click:#moreBtn|click:#miInfo"

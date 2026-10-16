@@ -24,6 +24,39 @@
     return (el.textContent || '').toLowerCase();
   }
 
+  /* EVERYDAY COUSINS (Ask, after v323: "ask in your own words"). A query is
+     also each word people use for the same thing, so "repeat" finds the loop
+     entries and "picture" the photo ones. Words, not sentences: this is a
+     list, not a chatbot, and it never leaves the page. Each row is one idea;
+     a query that is any word of a row (or starts one, from three letters)
+     matches entries holding any word of it. */
+  var COUSINS = [
+    ['loop', 'repeat', 'again and again', 'forever'],
+    ['music', 'song', 'sound', 'audio', 'track'],
+    ['speed', 'faster', 'slower', 'slow', 'fast', 'time-lapse', 'timelapse'],
+    ['photo', 'picture', 'image', 'background', 'trace'],
+    ['post', 'share', 'link', 'publish', 'send'],
+    ['export', 'download', 'gif', 'video', 'mp4', 'png'],
+    ['save', 'draft', 'keep', 'backup'],
+    ['undo', 'mistake', 'oops', 'take back'],
+    ['colour', 'color', 'paint'],
+    ['size', 'thick', 'thin', 'bigger', 'smaller'],
+    ['erase', 'eraser', 'rub out', 'delete'],
+    ['take', 'record', 'again'],
+    ['page', 'frame', 'animate', 'animation', 'move', 'flipbook'],
+    ['new', 'start', 'blank', 'fresh', 'clear']
+  ];
+  function cousins(q) {
+    var out = [q];
+    if (q.length < 3) return out;
+    COUSINS.forEach(function (row) {
+      if (row.some(function (w) { return w === q || w.indexOf(q) === 0; })) {
+        row.forEach(function (w) { if (out.indexOf(w) < 0) out.push(w); });
+      }
+    });
+    return out;
+  }
+
   // Highlighting rewrites innerHTML, so the original markup has to be kept
   // somewhere restorable. Reading it back out of the DOM after a highlight
   // would re-capture the <mark> wrappers and compound them on every keystroke.
@@ -159,16 +192,23 @@
 
     function apply() {
       var q = input ? input.value.trim().toLowerCase() : '';
+      var words = q ? cousins(q) : [];
       var shown = 0;
 
       sections.forEach(function (sec) {
         var hits = 0;
         sec.items.forEach(function (item) {
-          var match = !q || textOf(item).indexOf(q) >= 0;
+          var text = textOf(item);
+          // What was typed matches anywhere in a word; a cousin only as a whole
+          // word ("repeat" must not find "repeated passes" for "loop").
+          var hit = !q ? '' : (words.filter(function (w, k) {
+            return k === 0 ? text.indexOf(w) >= 0 : new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(text);
+          })[0] || null);
+          var match = !q || hit !== null;
           item.hidden = !match;
           // A match is shown whole: the words it matched may be past two lines.
           item.classList.toggle('is-searching', !!q && match);
-          if (match) { hits++; highlight(item, q); }
+          if (match) { hits++; highlight(item, hit || q); }
         });
         shown += hits;
         sec.header.hidden = q ? hits === 0 : false;
@@ -220,5 +260,5 @@
     return { apply: apply, reset: function () { if (input) input.value = ''; apply(); }, total: total };
   }
 
-  global.SkriblHelpSearch = { init: init };
+  global.SkriblHelpSearch = { init: init, cousins: cousins };
 })(window);

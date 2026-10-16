@@ -157,9 +157,9 @@
     close(false);
     if (typeof window.openHelpDrawer !== 'function') return;
     window.openHelpDrawer();
-    var look = document.getElementById('helpTabLook'), q = document.getElementById('helpSearch');
+    // More is Ask (lib/ask.js), asked about this button.
+    var q = document.getElementById('helpSearch');
     setTimeout(function () {
-      if (look) look.click();
       if (q) { q.value = spec.more || spec.name; q.dispatchEvent(new Event('input', { bubbles: true })); }
     }, 60);
   }
@@ -224,6 +224,51 @@
   function leaveSoon() {
     clearTimeout(leaveTimer);
     leaveTimer = setTimeout(function () { if (current && current.how === 'rest') close(false); }, GRACE);
+  }
+
+  // ---- Show me: an answer's steps, each on its real button (lib/ask.js) -------
+  // The same card, with the answer's name over it, a dot for each step, Back
+  // to Ask and Next. Tapping the lit button goes on by itself. A step whose
+  // button is not on the screen (yet: a drawer still opening) is waited for a
+  // moment, then said in words above the dock, with no arrow.
+  function steps(list, opts) {
+    var i = 0;
+    function render(tries) {
+      var st = list[i];
+      var el = st.sel ? Array.prototype.find.call(document.querySelectorAll(st.sel), shown) : null;
+      if (st.sel && !el && (tries || 0) < 8) { setTimeout(function () { render((tries || 0) + 1); }, 150); return; }
+      close(false);
+      var last = i === list.length - 1;
+      cardEl = document.createElement('div');
+      cardEl.className = 'lc-card lc-step' + (el ? '' : ' lc-free');
+      cardEl.setAttribute('role', 'dialog');
+      cardEl.setAttribute('aria-labelledby', 'lcTitle');
+      cardEl.innerHTML = '<div class="lc-body"><div class="lc-kick"><span class="lc-k"></span><span class="lc-dots" aria-hidden="true">'
+        + list.map(function (x, k) { return '<i' + (k === i ? ' class="on"' : '') + '></i>'; }).join('') + '</span></div>'
+        + '<p class="lc-t" id="lcTitle"></p><p class="lc-line"></p><div class="lc-foot">'
+        + '<button type="button" class="lc-more">Back to Ask</button><button type="button" class="lc-ok"></button></div></div>';
+      cardEl.querySelector('.lc-k').textContent = opts.title + ' \u00b7 ' + (i + 1) + ' of ' + list.length;
+      cardEl.querySelector('.lc-t').textContent = st.name;
+      cardEl.querySelector('.lc-line').innerHTML = st.html;   // the answers' own words (lib/ask.js), not anyone's input
+      cardEl.querySelector('.lc-ok').textContent = last ? 'Done' : 'Next';
+      document.body.appendChild(cardEl);
+      current = { spec: { name: st.name }, el: el || document.body, how: 'step', ex: null };
+      document.body.classList.add('lc-open');
+      if (el) { el.classList.add('lc-target'); place(el); }
+      else {
+        var dock = document.getElementById('penToolBtn'), b = dock ? dock.getBoundingClientRect() : { top: innerHeight - 80 };
+        cardEl.style.left = Math.max(12, (innerWidth - cardEl.offsetWidth) / 2) + 'px';
+        cardEl.style.top = Math.max(8, b.top - cardEl.offsetHeight - 16) + 'px';
+      }
+      var go = function () { if (last) close(false); else { i++; render(0); } };
+      cardEl.querySelector('.lc-ok').addEventListener('click', go);
+      cardEl.querySelector('.lc-more').addEventListener('click', function () { close(false); if (opts.back) opts.back(); });
+      if (el) el.addEventListener('click', function () {
+        setTimeout(function () { if (current && current.how === 'step' && current.el === el) go(); }, 350);
+      }, { once: true });
+      cardEl.querySelector('.lc-ok').focus({ preventScroll: true });
+    }
+    render(0);
   }
 
   // ---- holding (touch) -----------------------------------------------------
@@ -405,6 +450,7 @@
 
   window.SkriblLearnCard = {
     open: function (t) { return open(t, 'tag'); }, close: function () { close(false); },
+    steps: steps, picture: picture,
     tags: tags, note: note, cards: CARDS,
     isOpen: function () { return !!cardEl; }
   };
