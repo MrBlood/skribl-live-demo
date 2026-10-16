@@ -239,7 +239,10 @@
     var saveNow = el('button', 'sdrafts-save', 'Save');
     saveNow.type = 'button';
     saveNow.setAttribute('aria-label', 'Save this drawing to your drafts');
-    saveNow.addEventListener('click', function () { save().then(function (sum) { if (sum) refresh(); }); });
+    saveNow.addEventListener('click', function () {
+      if (asks()) hide();   // the name box drops from the header, under this sheet
+      saveAsking().then(function (sum) { if (sum && !sheet.hidden) refresh(); });
+    });
     mine.appendChild(thisPic);
     if (nameBtn) { nameBtn.addEventListener('click', hide, true); mine.appendChild(nameBtn); }
     mine.appendChild(saveNow);
@@ -523,6 +526,54 @@
     });
   }
 
+  /* THE FIRST SAVE ASKS FOR A NAME (owner, after the menu: "Should save draft
+     ask for a name?"). Saved under a date name straight away, Your drafts
+     filled with names nobody could tell apart. So the first Save of a drawing
+     that has no name and is not a draft yet drops the name box (lib/nametab.js),
+     filled with the date name and selected: one tap on Save keeps it, typing
+     replaces it. Every Save after that is quiet. Backing out leaves the
+     drawing as unnamed as it was: the filled-in name goes with the box.
+     A date name in the field is still no name (a reopened drawing brings its
+     date name back as its title): the box asks with that one selected. */
+  function nameField() { return doc.getElementById('skriblName'); }
+  function asks() {
+    var el = nameField();
+    if (!el || opts._current || !global.SkriblName || !global.SkriblName.open) return false;
+    var v = el.value.trim();
+    return !v || (global.SkriblName.isAuto && global.SkriblName.isAuto(v));
+  }
+  function saveAsking() {
+    if (!asks()) return save();
+    // Refusals first, so the box never opens for a save that cannot happen.
+    if (opts.busy && opts.busy()) { opts.toast('Preparing media \u2014 try again in a moment'); return Promise.resolve(null); }
+    if (opts.hasContent && !opts.hasContent()) { opts.toast('Draw something to save'); return Promise.resolve(null); }
+    return new Promise(function (resolve) {
+      var el = nameField(), shell = doc.getElementById('nameShell');
+      var filled = null, kept = false, seen = false, watch = null;
+      global.SkriblName.open({ label: 'Save', onConfirm: function () { kept = true; save().then(resolve); } });
+      setTimeout(function () {
+        if (!el) return;
+        if (!el.value) {
+          filled = global.SkriblName.get();
+          el.value = filled;
+          el.dispatchEvent(new Event('input'));
+        }
+        // Selected: the box selects its text as it takes focus (nametab.js).
+      }, 60);
+      if (shell && global.MutationObserver) {
+        watch = new MutationObserver(function () {
+          var open = shell.classList.contains('open');
+          if (open) { seen = true; return; }
+          if (!seen) return;
+          watch.disconnect();
+          if (!kept && filled && el.value === filled) { el.value = ''; el.dispatchEvent(new Event('input')); }
+          if (!kept) resolve(null);
+        });
+        watch.observe(shell, { attributes: true, attributeFilter: ['class'] });
+      }
+    });
+  }
+
   /* ?draft=<id> on the way in: the other editor handed this one over. */
   function openFromUrl() {
     var id = null;
@@ -560,12 +611,13 @@
       opts._current = null;
       var saveBtn = doc.getElementById('saveCloudDraftItem');
       var openBtn = doc.getElementById('openCloudDraftItem');
-      if (saveBtn) saveBtn.addEventListener('click', function () { if (opts.closeMenu) opts.closeMenu(); save(); });
+      if (saveBtn) saveBtn.addEventListener('click', function () { if (opts.closeMenu) opts.closeMenu(); saveAsking(); });
       if (openBtn) openBtn.addEventListener('click', function () { if (opts.closeMenu) opts.closeMenu(); show(openBtn); });
       openFromUrl();
       return this;
     },
     save: save,
+    saveAsking: saveAsking,   // the menu's Save: asks for a name the first time
     open: show,
     close: hide,
     /* New Skribl: whatever is drawn next is a new draft, not the old one. */

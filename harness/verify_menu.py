@@ -19,6 +19,11 @@ below holds a promise the new menu made, on the Pad and on Flip:
      the shape picked, and Undo brings back both the drawing and its shape.
   6. YOUR DRAFTS holds the name and the .skribl file both ways; the name opens
      the name drawer and puts the sheet away.
+  7. TWO SETTINGS, TWO ICONS: the menu's Settings wears a gear, the header's
+     sliders are named Tune on both editors.
+  8. THE FIRST SAVE ASKS FOR A NAME, filled in and selected; backing out leaves
+     the drawing unnamed and unsaved, one tap keeps the name and saves, and the
+     next Save is quiet.
 
 Visible means painted: elementFromPoint inside the thing, not its rect.
 """
@@ -195,7 +200,54 @@ with sync_playwright() as p:
                             " sheet: !document.getElementById('savedDraftsSheet').hidden })")
             check(f"{name}: the name opens the name drawer and puts the drafts sheet away", nm["drawer"] and not nm["sheet"], str(nm))
 
-        for label, fn in (("the pages", pages), ("New Skribl", new_skribl), ("Your drafts", drafts)):
+        def icons():
+            ic = q.evaluate("""() => ({ gear: document.querySelector('#menuSettingsItem > svg').innerHTML,
+              tune: document.querySelector('#tuneBtn svg').innerHTML,
+              name: document.getElementById('tuneBtn').getAttribute('aria-label'),
+              title: document.querySelector('#tunePanel .tune-title').textContent.trim() })""")
+            check(f"{name}: Settings in the menu and the header's sliders wear different icons; the sliders are named Tune",
+                  ic["gear"] != ic["tune"] and "circle" in ic["gear"] and ic["name"] == "Tune" and ic["title"] == "Tune",
+                  f"same icon: {ic['gear'] == ic['tune']}, name {ic['name']!r}, title {ic['title']!r}")
+
+        BOX = """() => { const i = document.getElementById('skriblName');
+          return { open: document.getElementById('nameShell').classList.contains('open'), value: i.value,
+                   selected: i.selectionEnd - i.selectionStart, label: document.getElementById('nameDone').textContent }; }"""
+        TITLES = "() => SkriblSavedDrafts.list().then(xs => xs.map(x => x.title))"
+
+        def first_save():
+            scribble(q, cv)
+            if name == "Pad":
+                q.evaluate("() => { if (recording) document.getElementById('recordBtn').click(); }")
+                q.wait_for_timeout(300)
+            # Empty, or the date name a reopened drawing brings back: no name yet.
+            was = q.evaluate("() => document.getElementById('skriblName').value")
+            open_menu(q, btn)
+            q.click("#saveCloudDraftItem", timeout=3000)
+            q.wait_for_timeout(700)
+            ask = q.evaluate(BOX)
+            check(f"{name}: the first Save asks for a name, the date name filled in and selected, its button Save",
+                  ask["open"] and ask["value"].startswith("Skribl") and ask["selected"] == len(ask["value"]) and ask["label"] == "Save",
+                  str(ask))
+            q.keyboard.press("Escape")
+            q.wait_for_timeout(500)
+            out = [q.evaluate(BOX), q.evaluate(TITLES)]
+            check(f"{name}: backing out leaves the name as it was and saves nothing",
+                  not out[0]["open"] and out[0]["value"] == was and out[1] == [], f"was {was!r}: {out}")
+            open_menu(q, btn)
+            q.click("#saveCloudDraftItem", timeout=3000)
+            q.wait_for_timeout(700)
+            q.click("#nameDone", timeout=3000)
+            q.wait_for_timeout(1200)
+            kept = q.evaluate(TITLES)
+            check(f"{name}: one tap keeps the date name and saves", len(kept) == 1 and kept[0].startswith("Skribl"), str(kept))
+            open_menu(q, btn)
+            q.click("#saveCloudDraftItem", timeout=3000)
+            q.wait_for_timeout(1200)
+            again = [q.evaluate(BOX)["open"], q.evaluate(TITLES)]
+            check(f"{name}: the next Save is quiet: no question, the same draft", not again[0] and again[1] == kept, str(again))
+
+        for label, fn in (("the pages", pages), ("New Skribl", new_skribl), ("Your drafts", drafts),
+                          ("the icons", icons), ("the first Save", first_save)):
             # A fresh page each, so one part's break cannot leave the next in its state.
             q.close()
             q = c.new_page()

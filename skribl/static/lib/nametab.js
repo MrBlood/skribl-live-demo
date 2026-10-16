@@ -151,6 +151,14 @@
       var typed = inputEl();
       el.value = (typed && typed.value) ? typed.value.trim() : '';
     },
+    // IS THIS THE DATE NAME, not one a person chose? A drawing's file keeps its
+    // date name as its title, and opening it puts that in the field as if it
+    // were typed; the first Save asks for a name only while it is one of these
+    // (lib/savedrafts.js). The shape of computeDefault() in any locale: "Skribl ·",
+    // a date, and a time.
+    isAuto: function (t) {
+      return typeof t === 'string' && /^Skribl \u00b7 .+\d{1,2}[:.]\d{2}(\s?[AaPp]\.?\s?[Mm]\.?)?$/.test(t.trim());
+    },
     // opts = { onConfirm?, label? }. onConfirm runs when the drawer is confirmed
     // (Save draft passes its save here so the file is named as it is saved);
     // label sets the confirm button's text, defaulting to "Done" for a rename.

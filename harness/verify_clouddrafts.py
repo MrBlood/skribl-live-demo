@@ -188,6 +188,15 @@ def menu_click(fr, item, btn="#menuBtn"):
     fr.locator(btn).click()
     fr.locator(item).wait_for(state="visible", timeout=5000)
     fr.locator(item).click()
+    if item == "#saveCloudDraftItem":
+        # The first Save of an unnamed drawing asks for a name (after the
+        # menu's tiles); keep the one it offers, as one tap does.
+        # A locator, not evaluate(): fr is sometimes the composer's frame.
+        try:
+            fr.locator("#nameShell.open").wait_for(state="attached", timeout=900)
+        except Exception:
+            return
+        fr.locator("#nameDone").click()
 
 
 try:
