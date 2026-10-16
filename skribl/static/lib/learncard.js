@@ -369,33 +369,39 @@
   }, true);
   window.addEventListener('resize', function () { close(false); if (tagLayer) tags(false); });
 
-  var namesBtn = document.getElementById('learnNames');
-  if (namesBtn) {
-    var sub = namesBtn.querySelector('.learn-names-sub');
-    if (sub && !touchFirst) sub.textContent = 'Or rest on any button, or press ?';
-    namesBtn.addEventListener('click', function () {
-      if (typeof window.closeHelpDrawer === 'function') window.closeHelpDrawer();
-      setTimeout(function () { tags(true); }, 420);
-    });
-  }
-
-  if (live && window.top === window && !/[?&]compose=1\b/.test(location.search)) {
-    var helloComing = false;
-    try { helloComing = !!document.getElementById('skriblHello') && localStorage.getItem('skribl.hello.v1') !== '1'
-                        && window.matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) {}
-    // One welcome at a time: while a first-use hint (lib/hints.js) is up,
-    // the note waits for it to go; if it is still up after a while, the note
-    // comes on another visit.
-    var tries = 0;
-    var later = function () {
-      var hint = Array.prototype.some.call(document.querySelectorAll('.skribl-hint'), function (h) {
-        return !h.hidden && h.getClientRects().length && getComputedStyle(h).visibility !== 'hidden';
+  // IT WIRES ITSELF: How it works' Name every button and the first-time note
+  // are hooked up once the page is parsed. Nothing on the page reads
+  // window.SkriblLearnCard; it is there for the suites that ask
+  // (verify_learncard, verify_contrast), as harness/verify_surfaces records.
+  document.addEventListener('DOMContentLoaded', function () {
+    var namesBtn = document.getElementById('learnNames');
+    if (namesBtn) {
+      var sub = namesBtn.querySelector('.learn-names-sub');
+      if (sub && !touchFirst) sub.textContent = 'Or rest on any button, or press ?';
+      namesBtn.addEventListener('click', function () {
+        if (typeof window.closeHelpDrawer === 'function') window.closeHelpDrawer();
+        setTimeout(function () { tags(true); }, 420);
       });
-      if (!hint) { note(false); return; }
-      if (++tries < 20) setTimeout(later, 1500);
-    };
-    if (!helloComing) setTimeout(later, 1500);
-  }
+    }
+
+    if (live && window.top === window && !/[?&]compose=1\b/.test(location.search)) {
+      var helloComing = false;
+      try { helloComing = !!document.getElementById('skriblHello') && localStorage.getItem('skribl.hello.v1') !== '1'
+                          && window.matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) {}
+      // One welcome at a time: while a first-use hint (lib/hints.js) is up,
+      // the note waits for it to go; if it is still up after a while, the note
+      // comes on another visit.
+      var tries = 0;
+      var later = function () {
+        var hint = Array.prototype.some.call(document.querySelectorAll('.skribl-hint'), function (h) {
+          return !h.hidden && h.getClientRects().length && getComputedStyle(h).visibility !== 'hidden';
+        });
+        if (!hint) { note(false); return; }
+        if (++tries < 20) setTimeout(later, 1500);
+      };
+      if (!helloComing) setTimeout(later, 1500);
+    }
+  });
 
   window.SkriblLearnCard = {
     open: function (t) { return open(t, 'tag'); }, close: function () { close(false); },

@@ -237,7 +237,8 @@ print("\nSURFACES — every module a page loads is a module that page can reach"
 # editors do read it, which is why the entry below stays needed.
 # lib/homescreen.js as well: it finds its own row, card and steps sheet on
 # DOMContentLoaded; SkriblHomeScreen.open exists for verify_a11y's census.
-_SELF_INSTALLING = {"pillfit.js", "segslider.js", "homescreen.js"}
+_SELF_INSTALLING = {"pillfit.js", "segslider.js", "homescreen.js",
+                    "learncard.js"}   # the card on the button: wires its own listeners; its global is for the suites
 
 _TPL = ROOT / "skribl" / "templates" / "skribl"
 _ST = ROOT / "skribl" / "static"
