@@ -7529,6 +7529,25 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden]),
 .sdrafts-files > .menu-item + .menu-item { border-top-color: var(--menu-card-rule); }
 .seg.menu-editor-seg { background: var(--menu-track); border-color: transparent; }   /* .seg.: the one pill's track rule comes later */
+/* HOW IT WORKS ON THE MENU'S PAPER (owner, after v323: "you never fixed the
+   top? And the colors are looking bad on the all, start, tools"). It is a sheet
+   the menu opens, so it wears the menu's paper and cards, as WORKING-AGREEMENTS
+   says every such sheet does. Its title band, its tabs' mask and the page are
+   then one colour, so the mask that hid pictures sliding under the tabs no
+   longer shows as a bump above them; the tabs are the menu switch's track; the
+   chips and cards are the menu's white cards with the lilac edge. */
+.help-drawer-inner { background: var(--menu-paper); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.help-drawer-inner::after { background: linear-gradient(to bottom, transparent, var(--menu-paper)); }
+.help-drawer-head { background: var(--menu-paper); border-bottom-color: transparent; }   /* one colour above and below: its line would show only at the edges, beside the tabs' mask */
+.help-close { background: var(--menu-card); border-color: var(--menu-card-line); }
+.help-tabs { background: var(--menu-track); border-color: transparent; box-shadow: 0 -12px 0 var(--menu-paper); }
+.learn-chip { background: var(--menu-card); border-color: var(--menu-card-line); }
+@media (hover: hover) { .learn-chip:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
+.learn-chip[aria-pressed="true"] { background: var(--seg-on-fill); border-color: transparent; }
+.learn-card, .help-tip, .help-search, .accordion-header { background: var(--menu-card); border-color: var(--menu-card-line); }
+.learn-card { box-shadow: var(--menu-card-drop); }
+.accordion-header.open { background: color-mix(in srgb, var(--accent) 6%, var(--menu-card)); }
+.learn-clip .learn-stage { background: var(--menu-card); }
 .tune-shell { background: var(--glass-fill); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .tune-shell.open { border: 0; box-shadow: var(--glass); }
 /* EXCEPT THE SHAPE PICKER, WHICH IS SOLID. It hangs inside the dock, and the

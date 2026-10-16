@@ -248,7 +248,8 @@ with sync_playwright() as p:
 # wear the same sheet and the same cards (one product, two editors: any
 # difference is drift), and every sheet the menu opens is the menu's paper.
 print("\nCONSISTENCY")
-PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post")
+PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
+         "How it works, Watch", "How it works, Look it up")
 for scheme in ("light", "dark"):
     labels = sorted({k[2] for k in census if k[1] == scheme})
     for label in labels:
@@ -262,7 +263,7 @@ for scheme in ("light", "dark"):
     grounds = {(n, label): census[(n, scheme, label)]["sheet"]["bg"] for (n, sc, label) in census
                if sc == scheme and label in PAPER and census[(n, sc, label)]}
     check(f"{scheme}: every sheet the menu opens is one paper ({len(grounds)} read)",
-          len(grounds) >= (2 if ONLY else 14) and len(set(grounds.values())) == 1,
+          len(grounds) >= (2 if ONLY else 18) and len(set(grounds.values())) == 1,
           "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(grounds.items())))
 
 print("\nEach surface's own colours, for reading side by side")
