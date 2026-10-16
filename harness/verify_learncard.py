@@ -211,8 +211,15 @@ with sync_playwright() as p:
             c.add_init_script(FORCE)
             q = c.new_page()
             q.add_init_script("try { localStorage.setItem('skribl.hello.v1', '1'); } catch (e) {}")
+            # a first-use hint up when the note would come (Pad shows none of its own on a first open)
+            q.add_init_script("addEventListener('load', () => setTimeout(() => window.SkriblHints && SkriblHints.show('lcTestHint', 'A first-use hint'), 300));")
             browsing.goto(q, BASE, route)
             q.wait_for_timeout(2200)
+            # one welcome at a time: with a first-use hint up, the note waits
+            both = q.evaluate("() => !!document.querySelector('.lc-note') && [...document.querySelectorAll('.skribl-hint')].some(h => !h.hidden && h.getClientRects().length)")
+            check(f"{name}: the note never shows while a first-use hint is up", not both)
+            q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            q.wait_for_timeout(2000)
             first = q.evaluate("() => { const n = document.querySelector('.lc-note'); return n && n.querySelector('.lc-line').textContent; }")
             if first:
                 q.click(".lc-note .lc-ok")

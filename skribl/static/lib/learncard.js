@@ -25,7 +25,8 @@
  * from their name tag. The Pages card says how to move a page.
  *
  * THE FIRST-TIME NOTE says so once, ever, on a page of its own, and not on
- * the visit Blooby says hi (lib/hello.js): one welcome at a time.
+ * the visit Blooby says hi (lib/hello.js) nor while a first-use hint is up
+ * (lib/hints.js): one welcome at a time.
  *
  * AUTOMATION NEVER MEETS ANY OF THIS unless it asks (window.__skriblLearnForce,
  * set before the page loads), as with the hello: a card that opened when a
@@ -382,7 +383,18 @@
     var helloComing = false;
     try { helloComing = !!document.getElementById('skriblHello') && localStorage.getItem('skribl.hello.v1') !== '1'
                         && window.matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) {}
-    if (!helloComing) setTimeout(function () { note(false); }, 1500);
+    // One welcome at a time: while a first-use hint (lib/hints.js) is up,
+    // the note waits for it to go; if it is still up after a while, the note
+    // comes on another visit.
+    var tries = 0;
+    var later = function () {
+      var hint = Array.prototype.some.call(document.querySelectorAll('.skribl-hint'), function (h) {
+        return !h.hidden && h.getClientRects().length && getComputedStyle(h).visibility !== 'hidden';
+      });
+      if (!hint) { note(false); return; }
+      if (++tries < 20) setTimeout(later, 1500);
+    };
+    if (!helloComing) setTimeout(later, 1500);
   }
 
   window.SkriblLearnCard = {
