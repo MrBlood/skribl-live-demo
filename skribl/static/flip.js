@@ -6485,6 +6485,7 @@ const moreScrim=document.getElementById('moreScrim');
 // link. The post-time record and the recovery-key panel stay here.
 window._skriblPostedUI = null;
 function openMenu(){ if(window._skriblSyncHintToggle) window._skriblSyncHintToggle();
+  if(window.SkriblMenuPages) window.SkriblMenuPages.reset();   // every opening starts on the main page
   if(window._skriblSyncThemeToggle) window._skriblSyncThemeToggle();
   if(window.SkriblSheetSwipe) window.SkriblSheetSwipe.cancelSlide(moreMenu);
   moreMenu.hidden=false; if(moreScrim) moreScrim.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true');
@@ -11002,6 +11003,8 @@ function clearAllPages(opts){
   const _draftId = window.SkriblSavedDrafts ? window.SkriblSavedDrafts.forget() : null;   // a new Skribl is a new draft
   clearFramesBackup = { doc: doc, frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv, draftId: _draftId,
                         bg: bgColor,
+                        // ...and its shape, which New Skribl may change (its page in the ⋯ menu).
+                        cw: CW, ch: CH,
                         // A new Skribl is a new title; Undo brings the old one back (v317).
                         name: (window.SkriblName && window.SkriblName.reset) ? window.SkriblName.reset() : null };
   /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
@@ -11044,6 +11047,7 @@ bindEl('clearUndo', 'click',()=>{
     // load the saved drafts use (which retires the backup itself).
     const b = clearFramesBackup;
     applyFlipDraftObject(b.doc);
+    if(b.cw && b.ch) { applyCanvasSize(b.cw, b.ch); syncCanvasSeg(); }   // the shape it was drawn on
     if(b.name && window.SkriblName) window.SkriblName.restore(b.name);
     if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(b.draftId);
     redoStack.length=0; updateToolState();
@@ -11057,6 +11061,7 @@ bindEl('clearUndo', 'click',()=>{
   if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
   if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
   if(clearFramesBackup.bg && clearFramesBackup.bg !== bgColor) setBg(clearFramesBackup.bg);   // New Skribl moved it
+  if(clearFramesBackup.cw && clearFramesBackup.ch) { applyCanvasSize(clearFramesBackup.cw, clearFramesBackup.ch); syncCanvasSeg(); }   // ...and maybe its shape
   if(clearFramesBackup.name && window.SkriblName) window.SkriblName.restore(clearFramesBackup.name);
   if(window.SkriblSavedDrafts) window.SkriblSavedDrafts.resume(clearFramesBackup.draftId);   // and the saved draft it was
   clearFramesBackup=null; redoStack.length=0;
@@ -11252,25 +11257,24 @@ bindEl('miInfo', 'click',()=>{ closeMenu(); openHelpDrawer(); });
 // Clear all from the ... menu (v206; the Pad's words since v290). Same two-tap arm as the Pad's Clear
 // all: first tap arms (menu stays open for the confirm), second tap clears,
 // through clearAllPages() — the same action the drawer's button calls.
-// THE ARM HOLDS UNTIL THE PERSON LEAVES IT, not for three seconds (v292,
-// SK-AUD-018): it disarms when the menu closes, when focus leaves the item,
-// and on a long safety net — a destructive action should not be a race
-// against a timer, where a slow second tap met a disarmed button and armed it
-// again. The armed label is also spoken (announceConfirm).
+// NEW SKRIBL, from its page in the ⋯ menu (owner, after v323; lib/menupages.js),
+// the Pad's handler in Flip's words. The page is the question the two-tap arm
+// used to ask: pick the shape, then Start. clearAllPages({media:true}) keeps
+// its backup and Undo, which bring the shape back too. An empty Flip only
+// takes the new shape; the pages keep their positions on it, as always.
 (function(){
   const item=document.getElementById('miClearAll'); if(!item) return;
-  const label=item.querySelector('.new-label'); let armed=false, t=null;
-  const disarm=()=>{ clearTimeout(t); armed=false; item.classList.remove('armed'); if(label) label.textContent='New Skribl'; };
   item.addEventListener('click',e=>{ e.stopPropagation();
     if(playing) return;
+    const want=window.SkriblMenuPages ? window.SkriblMenuPages.chosenSize() : null;
+    const preset=want ? FLIP_SIZES.find(x=>x.id===want) : null;
+    const reshape=!!(preset && preset.id!==currentSizeId());
     const empty = frames.length===1 && frames[0].strokes.length===0 && !flipHasMedia();
-    if(empty){ chip('Already a fresh one'); closeMenu(); return; }
-    if(!armed){ armed=true; item.classList.add('armed'); if(label) label.textContent='Tap again to start over'; announceConfirm('Tap again to start over'); clearTimeout(t); t=setTimeout(disarm,20000); return; }
-    disarm(); closeMenu(); disarmAll();
-    clearAllPages({ media: true });
+    closeMenu(); disarmAll();
+    if(!empty) clearAllPages({ media: true });
+    if(reshape){ applyCanvasSize(preset.w, preset.h); syncCanvasSeg(); }
+    if(empty && !reshape) chip('Already a fresh one');
   });
-  item.addEventListener('focusout', ()=>{ if(armed) disarm(); });
-  document.addEventListener('skribl:menu-closed', disarm);
 })();
 helpClose.addEventListener('click', closeHelpDrawer);
 helpBackdrop.addEventListener('click', closeHelpDrawer);

@@ -31,6 +31,7 @@ function openMenu() {
   clearTimeout(menuCloseTimer);
   if (window.SkriblSheetSwipe) window.SkriblSheetSwipe.cancelSlide(menuSheet);   // reopened mid-close: from where it is
   updateClearVisibility();
+  if (window.SkriblMenuPages) window.SkriblMenuPages.reset();   // every opening starts on the main page
   // Re-read the stored state on every open. It is shared with Flip and can be
   // changed in another tab, and a switch showing the opposite of what is
   // stored is worse than no switch.
@@ -50,7 +51,6 @@ function openMenu() {
 function closeMenu(instant) {
   menuOverlay.classList.remove('open');
   if (menuBtn) menuBtn.setAttribute('aria-expanded', 'false');
-  if (window._skriblDisarmClearAll) window._skriblDisarmClearAll();   // a closed menu holds no armed confirmation
   clearTimeout(menuCloseTimer);
   // Return focus to whatever opened it. Before this, closing left focus
   // wherever it had been when the sheet appeared — usually nowhere.
@@ -133,51 +133,23 @@ function clearAllWithUndo() {
   });
 }
 
-// "Clear all" wipes music/photo too, so it's the most destructive action —
-// guarded with the same two-tap arm as the drawer's Clear drawing. The first tap
-// arms (menu stays open for the confirm); the second clears everything.
-(function initClearAllMenu() {
+// NEW SKRIBL, from its page in the ⋯ menu (owner, after v323; lib/menupages.js).
+// The page is the question the two-tap arm used to ask: pick the shape, then
+// Start. Undo brings the old drawing back, its shape with it (loadSkribl sets
+// the canvas from the drawing). An empty canvas only takes the new shape.
+(function initNewSkribl() {
   const item = document.getElementById('clearMenuItem');
   if (!item) return;
-  let armed = false, armTimer = null;
-  const label = item.querySelector('.new-label');
-  const disarm = () => { clearTimeout(armTimer); armed = false; item.classList.remove('armed'); if (label) label.textContent = 'New Skribl'; };
-  // THE ARM HOLDS UNTIL THE PERSON LEAVES IT, not for three seconds (v292;
-  // outside review of v291, SK-AUD-018): it disarms when the menu closes, when
-  // focus leaves the item, and on a long safety net. A destructive action
-  // should not be a race against a timer — a slow second tap met a disarmed
-  // button and armed it again. And the armed label is SPOKEN, through the live
-  // region the template carries for it, not only shown.
-  const announce = (text) => { const st = document.getElementById('confirmStatus'); if (st) { st.textContent = ''; st.textContent = text; } };
-  window._skriblDisarmClearAll = disarm;
-  item.addEventListener('focusout', () => { if (armed) disarm(); });
   item.addEventListener('click', () => {
     if (recording) { showToast('Stop recording before starting a new one', item); return; }
-    if (!armed) {
-      armed = true;
-      item.classList.add('armed');
-      if (label) label.textContent = 'Tap again to start over';
-      announce('Tap again to start over');
-      clearTimeout(armTimer);
-      armTimer = setTimeout(disarm, 20000);
-      return;   // keep the menu open for the confirm tap
-    }
-    disarm();
-    // "Clear all" wipes strokes, music, photo AND the background — then calls
-    // clearAutosave(), so even the recovery copy is gone. The two-tap arm above
-    // guards against the accidental tap, but nothing could undo a deliberate one.
-    // Snapshot the whole document first, through the SAME serialize the draft and
-    // autosave paths use, and offer a one-tap restore via loadSkribl(). Reusing
-    // that pair means media comes back too, with no parallel restore logic.
-    // Skipped while media is still being prepared (mediaBusy), because the
-    // snapshot would capture a half-loaded photo or track — same guard saveDraft
-    // uses. In that case the clear still happens, just without the undo offer.
-    // Undo now offers Redo, and Redo re-offers Undo — so the clear becomes a
-    // toggle you can flip either way, rather than the one-shot restore v106 had.
-    // Redo simply re-runs this same function, which re-snapshots the restored
-    // document; no second snapshot is stored and the two can never fall out of sync.
-    clearAllWithUndo();
+    const want = window.SkriblMenuPages ? window.SkriblMenuPages.chosenSize() : null;
+    const seg = want && document.querySelector('#canvasSeg button[data-size="' + want + '"]');
+    const reshape = !!(seg && !seg.classList.contains('on'));
+    const work = hasContent || recorded;
+    if (work) clearAllWithUndo();
     closeMenu();
+    if (reshape) seg.click();   // free now: the canvas is empty
+    if (!work && !reshape) showToast('Already a fresh one');
   });
 })();
 

@@ -23,7 +23,9 @@
        Watch first: the examples, big, one under another, each a real Skribl
        played by the in-post player. Look it up second: search and every
        entry, two lines each with More for the rest. FUTURE.md 6n. #}
-    <div class="help-tabs" role="tablist" aria-label="How it works">
+    {# A track of the app's one sliding pill (lib/segslider.js reads the
+       tabs' aria-selected; it never writes to a .seg-track). #}
+    <div class="help-tabs seg-track" role="tablist" aria-label="How it works"><span class="seg-slider" aria-hidden="true"></span>
       <button type="button" role="tab" class="help-tab" id="helpTabWatch" aria-controls="helpWatch" aria-selected="true">Watch</button>
       <button type="button" role="tab" class="help-tab" id="helpTabLook" aria-controls="helpLook" aria-selected="false" tabindex="-1">Look it up</button>
     </div>
