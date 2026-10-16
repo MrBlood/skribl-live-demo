@@ -389,17 +389,19 @@ with sync_playwright() as p:
     b.close()
 
 # --------------------------------------------------------------------------
-print("\nBLOOBY AROUND THE APP — his pen on an empty canvas, thinking where something can't be shown")
-# THE OWNER'S PICKS from the Blooby mock: on an empty canvas, Blooby with his
-# pen where the little pen mark was (the Pad and Flip both); where a link's
-# drawing can't be shown, and where the Library's list didn't load, Blooby
-# thinking, his question mark, where the circled ! and the crossed cloud were.
-# Each is the badge blooby.py draws, the Home Screen icon in small with the
-# whole star, so his own lilac comes with him onto any ground. Asked of what is
-# PAINTED: the share of the picture's box that is his lilac and purple, in a
-# screenshot (the empty-canvas hint takes no pointer events, so elementFromPoint
-# sees straight through it). And on the canvas he leaves with the words at the
-# first stroke.
+print("\nBLOOBY AROUND THE APP — the words alone on an empty canvas, Blooby thinking where something can't be shown")
+# THE OWNER'S PICKS from the Blooby mock: where a link's drawing can't be
+# shown, and where the Library's list didn't load, Blooby thinking, his
+# question mark, where the circled ! and the crossed cloud were. Each is the
+# badge blooby.py draws, the Home Screen icon in small with the whole star, so
+# his own lilac comes with him onto any ground. Asked of what is PAINTED: the
+# share of the picture's box that is his lilac and purple, in a screenshot.
+# THE EMPTY CANVAS HAS THE WORDS ALONE: Blooby with his pen stood above them
+# (#474) until the owner took him off after v323 ("It's too much"), on the Pad
+# and Flip. Asked of the hint itself (no picture in it), of its words' place
+# (the canvas's middle; 40px below it while he stood there) and of their ink,
+# in a screenshot: the hint takes no pointer events, so elementFromPoint sees
+# straight through it. They leave at the first stroke.
 _SHOWN = """(sel) => { const i = document.querySelector(sel); if (!i) return null;
     i.scrollIntoView({ block: 'center' }); const r = i.getBoundingClientRect();
     return { src: (i.getAttribute('src') || '').split('?')[0].split('/').pop(),
@@ -416,6 +418,28 @@ def _lilac(pg, box):
     return sum(1 for r, g, b_ in px if b_ > r + 12 and b_ > g + 12) / max(1, len(px))
 
 
+# The empty canvas's words: no picture among them, where they sit against the
+# canvas's middle, and their box to look for ink in.
+_HINT = """(o) => { const h = document.getElementById(o.hint), c = document.querySelector(o.cv); if (!h || !c) return null;
+    const cr = c.getBoundingClientRect(), r = [...h.querySelectorAll('span')].map(s => s.getBoundingClientRect()).filter(x => x.width);
+    if (!r.length) return { pictures: h.querySelectorAll('img, svg, picture').length, off: null, box: null };
+    const top = Math.min(...r.map(x => x.top)), bot = Math.max(...r.map(x => x.bottom));
+    const left = Math.min(...r.map(x => x.left)), right = Math.max(...r.map(x => x.right));
+    return { pictures: h.querySelectorAll('img, svg, picture').length,
+             off: Math.round((top + bot) / 2 - (cr.top + cr.height / 2)), box: [left, top, right - left, bot - top] }; }"""
+
+
+def _inked(pg, box):
+    """The share of `box` that differs from its own commonest colour: words painted there, or not."""
+    if not box or box[2] < 8 or box[3] < 8:
+        return 0.0
+    shot = Image.open(io.BytesIO(pg.screenshot(clip={"x": box[0], "y": box[1], "width": box[2], "height": box[3]}))).convert("RGB")
+    ground = max(shot.getcolors(1 << 20), key=lambda c: c[0])[1]
+    raw = shot.tobytes()
+    px = [raw[i:i + 3] for i in range(0, len(raw), 3)]
+    return sum(1 for q in px if sum(abs(q[k] - ground[k]) for k in range(3)) > 60) / max(1, len(px))
+
+
 with sync_playwright() as p:
     b = p.chromium.launch()
     for theme in ("light", "dark"):
@@ -424,10 +448,11 @@ with sync_playwright() as p:
         browsing.goto(pg, BASE, "/skribl-pad")
         pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
         pg.wait_for_timeout(400)
-        s = pg.evaluate(_SHOWN, "#canvasEmptyHint img")
-        share = _lilac(pg, s and s["box"])
-        check(f"Pad, {theme}: Blooby with his pen above 'Draw anything', painted on the empty canvas",
-              bool(s) and s["src"] == "blooby-pen.webp" and s["done"] and share > 0.5, f"{s} lilac {share:.0%}")
+        s = pg.evaluate(_HINT, {"hint": "canvasEmptyHint", "cv": "#canvas"})
+        ink = _inked(pg, s and s["box"])
+        check(f"Pad, {theme}: 'Draw anything' alone on the empty canvas, painted at its middle",
+              bool(s) and s["pictures"] == 0 and s["off"] is not None and abs(s["off"]) <= 3 and ink > 0.02,
+              f"{s} ink {ink:.1%}")
         if theme == "light":
             cv = pg.locator("#canvas").bounding_box()
             pg.mouse.move(cv["x"] + cv["width"] * 0.15, cv["y"] + cv["height"] * 0.12)
@@ -436,19 +461,20 @@ with sync_playwright() as p:
                 pg.mouse.move(cv["x"] + cv["width"] * (0.15 + 0.03 * k), cv["y"] + cv["height"] * 0.12)
             pg.mouse.up()
             pg.wait_for_timeout(700)
-            after = _lilac(pg, s and s["box"])
-            check("Pad: ...and he leaves with the words at the first stroke",
-                  bool(s) and after < 0.05, f"lilac {after:.0%} after a stroke")
+            after = _inked(pg, s and s["box"])
+            check("Pad: ...and the words leave at the first stroke",
+                  bool(s) and s["box"] is not None and after < 0.005, f"ink {after:.1%} after a stroke")
         c.close()
     c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme="light")
     pg = c.new_page()
     browsing.goto(pg, BASE, "/flip")
     pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide && window.SkriblHints.hide()")
     pg.wait_for_timeout(400)
-    s = pg.evaluate(_SHOWN, "#flipEmptyHint img")
-    share = _lilac(pg, s and s["box"])
-    check("Flip: the same Blooby with his pen above 'Draw page 1'",
-          bool(s) and s["src"] == "blooby-pen.webp" and s["done"] and share > 0.5, f"{s} lilac {share:.0%}")
+    s = pg.evaluate(_HINT, {"hint": "flipEmptyHint", "cv": "#pad"})
+    ink = _inked(pg, s and s["box"])
+    check("Flip: 'Draw page 1' alone the same way, painted at the canvas's middle",
+          bool(s) and s["pictures"] == 0 and s["off"] is not None and abs(s["off"]) <= 3 and ink > 0.02,
+          f"{s} ink {ink:.1%}")
     c.close()
     for theme in ("light", "dark"):
         c = b.new_context(viewport={"width": 402, "height": 874}, color_scheme=theme)

@@ -17867,3 +17867,19 @@ Asked whether How it works makes sense, and then to look at what works for
 apps that want to be intuitive, beautiful, kind and useful, the answer is
 FUTURE.md 6n: show a drawing, hand over the pen, keep the manual for looking
 things up. Proposed, not built; the Blooby work goes first.
+
+## After v323 -- the empty canvas says its words alone
+
+The owner, looking at the hello mock: "we need to take blooby off the draw
+anything screen. It's too much." Then, finding him still there: "Did you leave
+blooby on draw anything page". He comes off both editors' empty canvas; the
+words stay, and sit at the canvas's middle (40 px below it while he stood
+above them). Blooby keeps his other places: the Home Screen icon, the empty
+Library, the cheer after a post, and where something can't be shown.
+
+`verify_identity`'s three rows that pinned his picture now pin its absence:
+no picture in the hint (the element, not a word), the words at the middle within
+3 px, their ink in a screenshot, and gone after the first stroke. Each was shown
+red on its bad case: the Pad with the old page (one picture, 40 px off), Flip
+with his picture put back into its hint, and the Pad's words made to stay
+(12.5% ink after a stroke). The badge image stays in `brand/` for blooby.py.

@@ -839,7 +839,7 @@ MOCKED, the same night, on the real Pad page in the real in-post player, phone
   docstring. Mock films did not play in the owner's viewer; GIFs rendered page
   by page through the player at 3x did.
 
-ALSO DECIDED: Blooby comes off the empty canvas ("It's too much"), on both
+ALSO DECIDED, AND BUILT: Blooby comes off the empty canvas ("It's too much"), on both
 editors: the words stay, and sit at the canvas's middle without him (40 px
 below it with him). So the hello fades into the canvas rather than shrinking
 into a badge.
