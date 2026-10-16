@@ -81,6 +81,8 @@ def run(page, label, path):
     menu_btn = "#menuBtn" if path == "/" else "#moreBtn"
     page.click(menu_btn)
     page.wait_for_timeout(200)
+    page.click("#openCloudDraftItem")   # the name lives in Your drafts (after v323)
+    page.wait_for_timeout(600)
     page.click("#nameItem")
     page.wait_for_timeout(300)
     shell_open = page.evaluate("() => document.getElementById('nameShell').classList.contains('open')")
@@ -114,6 +116,8 @@ def run(page, label, path):
     save_item = "#saveDraftItem" if path == "/" else "#miSave"
     page.click(menu_btn)
     page.wait_for_timeout(200)
+    page.click("#openCloudDraftItem")   # Save as a file lives in Your drafts (after v323)
+    page.wait_for_timeout(600)
     page.click(save_item)
     page.wait_for_timeout(300)
     save_open = page.evaluate("() => document.getElementById('nameShell').classList.contains('open')")

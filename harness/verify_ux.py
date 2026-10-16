@@ -145,15 +145,18 @@ with sync_playwright() as p:
           pad.evaluate("() => !recording && !document.getElementById('clearMenuItem').disabled"),
           f"recording={pad.evaluate('() => recording')}")
 
+    # NEW SKRIBL ASKS ON ITS OWN PAGE (after v323): New opens the page with the
+    # shape, which is the question the two-tap arm used to ask; Start clears.
     pad.evaluate("() => { document.getElementById('menuBtn').click(); }")
     pad.wait_for_timeout(400)
-    pad.evaluate("() => { document.getElementById('clearMenuItem').click(); }")   # arms
-    pad.wait_for_timeout(200)
-    armed = pad.evaluate("() => document.getElementById('clearMenuItem').classList.contains('armed')")
-    check("first tap arms rather than clears", armed and pad.evaluate("() => strokes.length") == before)
-    pad.evaluate("() => { document.getElementById('clearMenuItem').click(); }")   # confirms
+    pad.evaluate("() => { document.getElementById('menuNewTile').click(); }")
+    pad.wait_for_timeout(300)
+    asked = pad.evaluate("() => SkriblMenuPages.current()")
+    check("New asks first: it opens its page and clears nothing", asked == "new" and pad.evaluate("() => strokes.length") == before,
+          f"page {asked}")
+    pad.evaluate("() => { document.getElementById('clearMenuItem').click(); }")   # Start
     pad.wait_for_timeout(600)
-    check("second tap clears", pad.evaluate("() => strokes.length") == 0)
+    check("Start clears", pad.evaluate("() => strokes.length") == 0)
 
     toast = pad.evaluate("""() => { const t=document.getElementById('toast');
         const b=t.querySelector('.toast-action');
@@ -1148,8 +1151,10 @@ with _sp204() as _p:
     _fl = pg.evaluate("""() => {
         const f = document.getElementById('flipBtn');
         const r = f.getBoundingClientRect();
+        // Its words and its name: since the menu's tiles (after v323) the
+        // switch shows "Flip" and its name says the rest.
         return { w: Math.round(r.width), h: Math.round(r.height),
-                 text: (f.textContent || '').replace(/\\s+/g, ' ').trim() };
+                 text: ((f.textContent || '') + ' ' + (f.getAttribute('aria-label') || '')).replace(/\\s+/g, ' ').trim() };
     }""")
     check("V219: ...and it has a real box once the menu is open (a row nobody can reach is not a relocation)",
           _fl["w"] > 100 and _fl["h"] >= 40, str(_fl))
@@ -1242,8 +1247,11 @@ with _sp204() as _p:
     # (pg was closed above; open a fresh Pad page for the Pad-side checks.)
     pg = _b.new_page(viewport={"width": 1280, "height": 900})
     pg.goto(BASE + "/", wait_until="load"); waits.settle(pg, 600)
-    pad_items = pg.evaluate("() => [...document.querySelectorAll('#menuSheet .menu-item, .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
-    flip_items = fp.evaluate("() => [...document.querySelectorAll('#moreMenu .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
+    # Every row, tile and button the menu holds, its pages and the rows that
+    # move into Your drafts included (the ⋯ menu after v323).
+    _ITEMS = "(sel) => [...document.querySelectorAll(sel + ' :is(.menu-item, .menu-tile, .menu-start)')].map(b => b.textContent.replace(/\\s+/g,' ').trim())"
+    pad_items = pg.evaluate(_ITEMS, "#menuSheet")
+    flip_items = fp.evaluate(_ITEMS, "#moreMenu")
     def has(items, s): return any(s in x for x in items)
     # The extension moved out of the action's name into a sub-label —
     # "Save draft" is the action, ".skribl" is a detail. Parity still holds:
@@ -1251,23 +1259,27 @@ with _sp204() as _p:
     # the label itself.
     # A backup, not a draft — autosave is the persistence model, the file
     # is the copy you keep or move.
-    check("V269: Pad menu says 'Save a backup' like Flip", has(pad_items, "Save a backup"), str(pad_items))
-    check("V269: Pad menu says 'Open a backup…' like Flip", has(pad_items, "Open a backup"), str(pad_items))
-    check("V269: Flip menu says 'Save a backup' / 'Open a backup…' too",
-          has(flip_items, "Save a backup") and has(flip_items, "Open a backup"), str(flip_items))
+    # Since the menu's tiles (after v323) the file rows say what they make:
+    # "Save as a file" / "Open a file…", each over its .skribl sub-label.
+    check("V269: Pad menu says 'Save as a file' like Flip", has(pad_items, "Save as a file"), str(pad_items))
+    check("V269: Pad menu says 'Open a file…' like Flip", has(pad_items, "Open a file"), str(pad_items))
+    check("V269: Flip menu says 'Save as a file' / 'Open a file…' too",
+          has(flip_items, "Save as a file") and has(flip_items, "Open a file"), str(flip_items))
     check("V269: neither menu titles an action with '(.skribl)' any more",
           not has(pad_items, "(.skribl)") and not has(flip_items, "(.skribl)"),
           str([x for x in pad_items + flip_items if "(.skribl)" in x]))
-    check("V206: Pad menu says 'Export…' like Flip", has(pad_items, "Export\u2026"), str(pad_items))
-    # v316: the row is "New Skribl" now, first in both menus (owner) — same id,
-    # same arm, same Undo.
-    check("V316: Flip menu has 'New Skribl'", has(flip_items, "New Skribl"), str(flip_items))
-    check("V316: Pad menu has 'New Skribl'", has(pad_items, "New Skribl"), str(pad_items))
-    # How it works now leads both menus, tinted (owner chose it, "B"), and New
-    # Skribl is the first ACTION under it -- the v316 rule, one row down.
-    _first = lambda page_, sel: page_.evaluate(f"() => {{ const m = document.querySelector('{sel}'); return m ? [...m.querySelectorAll('.menu-item')].slice(0, 2).map(b => b.id) : null; }}")
-    check("V316: How it works leads both menus, and New Skribl is the first action under it",
-          _first(pg, "#menuSheet") == ["helpItem", "clearMenuItem"] and _first(fp, "#moreMenu") == ["miInfo", "miClearAll"],
+    check("V206: Pad menu says 'Export' like Flip", has(pad_items, "Export") and has(flip_items, "Export"), str(pad_items))
+    # v316: "New Skribl" (owner) -- since the tiles, the New tile and its page's
+    # "Start a new Skribl".
+    check("V316: Flip menu has 'New' and 'Start a new Skribl'", has(flip_items, "Start a new Skribl") and "New" in flip_items, str(flip_items))
+    check("V316: Pad menu has 'New' and 'Start a new Skribl'", has(pad_items, "Start a new Skribl") and "New" in pad_items, str(pad_items))
+    # New is the first tile (the four done most), and How it works still leads
+    # the list, tinted (owner chose it, "B").
+    _first = lambda page_, sel: page_.evaluate(f"""() => {{ const m = document.querySelector('{sel}'); if (!m) return null;
+      const t = m.querySelector('.menu-tile'), r = m.querySelector('.menu-list > .menu-item');
+      return [t && t.id, r && r.id, !!(r && r.classList.contains('menu-feature'))]; }}""")
+    check("V316: New is the first tile on both, and How it works leads the list, tinted",
+          _first(pg, "#menuSheet") == ["menuNewTile", "helpItem", True] and _first(fp, "#moreMenu") == ["menuNewTile", "miInfo", True],
           f"pad {_first(pg, '#menuSheet')}, flip {_first(fp, '#moreMenu')}")
     # V317: A NEW SKRIBL IS A NEW TITLE (owner: "it should change title, not
     # leave the last title"). New Skribl kept the old name, so the next save and
@@ -2708,31 +2720,33 @@ with _sp() as _cp:
             _pg.wait_for_timeout(300)
             _pg.click("#recordBtn")
             _pg.wait_for_timeout(500)
+        # THE QUESTION IS A PAGE NOW (after v323): New opens New Skribl, the
+        # shape and a Start button, and nothing is cleared until Start. Focus
+        # goes to the page (its Back), so a screen reader is told where it is.
         _pg.click("#menuBtn" if _path == "/" else "#moreBtn")
         _pg.wait_for_timeout(500)
-        _pg.click(_item)
-        _pg.wait_for_timeout(200)
-        _armed = _pg.evaluate(f"""() => {{ const it = document.querySelector('{_item}');
-          const st = document.getElementById('confirmStatus');
-          return {{ armed: it.classList.contains('armed'), label: it.textContent.replace(/\\s+/g, ' ').trim(),
-                    status: st ? st.textContent.trim() : null }}; }}""")
-        check(f"CLEAR ALL ({_name}): the first tap arms and the live region says so",
-              _armed["armed"] and _armed["status"] and _armed["status"] in _armed["label"], str(_armed))
+        _pg.click("#menuNewTile")
+        _pg.wait_for_timeout(300)
+        _asked = _pg.evaluate("""() => ({ page: SkriblMenuPages.current(),
+          focus: document.activeElement && document.activeElement.getAttribute('aria-label'),
+          content: typeof hasContent !== 'undefined' ? hasContent : frames[0].strokes.length > 0 })""")
+        check(f"CLEAR ALL ({_name}): New asks first, on its own page, focus there, nothing cleared",
+              _asked["page"] == "new" and _asked["focus"] == "Back" and _asked["content"], str(_asked))
         _pg.wait_for_timeout(3600)
-        _still = _pg.evaluate(f"() => document.querySelector('{_item}').classList.contains('armed')")
-        check(f"CLEAR ALL ({_name}): the arm does not expire in three seconds under the person's finger", _still,
-              "disarmed on a timer — a slow second tap re-arms instead of clearing")
+        _still = _pg.evaluate("() => SkriblMenuPages.current()")
+        check(f"CLEAR ALL ({_name}): the question does not expire under the person's finger", _still == "new",
+              f"page {_still} after 3.6 s")
         _pg.click(_item)
         _pg.wait_for_timeout(600)
         if _path == "/flip":
             _after = _pg.evaluate("() => ({ frames: frames.length, strokes: frames[0].strokes.length, undo: !document.getElementById('clearUndo').disabled, cbClicks: window.__cbClicks })")
-            check(f"CLEAR ALL ({_name}): the second tap clears every page and offers Undo",
+            check(f"CLEAR ALL ({_name}): Start clears every page and offers Undo",
                   _after["frames"] == 1 and _after["strokes"] == 0 and _after["undo"], str(_after))
             check(f"CLEAR ALL ({_name}): ...through the shared action, not by clicking the drawer's button for it",
                   _after["cbClicks"] == 0, f"{_after['cbClicks']} synthetic clicks on #clear")
         else:
-            _after = _pg.evaluate("() => ({ content: typeof hasContent !== 'undefined' ? hasContent : null, armed: document.querySelector('#clearMenuItem').classList.contains('armed') })")
-            check(f"CLEAR ALL ({_name}): the second tap clears the drawing", _after["content"] is False and not _after["armed"], str(_after))
+            _after = _pg.evaluate("() => ({ content: typeof hasContent !== 'undefined' ? hasContent : null })")
+            check(f"CLEAR ALL ({_name}): Start clears the drawing", _after["content"] is False, str(_after))
         _pg.close()
     _cb.close()
 
@@ -2776,19 +2790,18 @@ with _sp() as _np:
           "photo" in _said and "Media" in _said and _pg.evaluate("() => !!bgImage"), repr(_said))
     _pg.keyboard.press("Escape")
     _pg.wait_for_timeout(300)
-    # The owner's page: New Skribl, through the real menu and its two-tap arm.
+    # The owner's page: New Skribl, through the real menu: New, then Start.
     _pg.click("#moreBtn")
     _pg.wait_for_timeout(400)
+    _pg.click("#menuNewTile")
+    _pg.wait_for_timeout(300)
     _pg.click("#miClearAll")
-    _pg.wait_for_timeout(200)
-    _armed = _pg.evaluate("() => document.getElementById('miClearAll').classList.contains('armed')")
-    if _armed:   # unarmed, the menu has closed on "Already a fresh one" -- the bug itself
-        _pg.click("#miClearAll")
     _pg.wait_for_timeout(600)
+    _fresh = _pg.evaluate("() => document.getElementById('flipChip').textContent")
     _ink1 = _pg.evaluate(_WHITE)
-    check("NEW SKRIBL: on a page whose picture is the photo, New Skribl arms and clears the canvas",
-          _ink0 > 2000 and _armed and _ink1 == 0 and _pg.evaluate("() => !bgImage"),
-          f"white px {_ink0} -> {_ink1}, armed {_armed}, photo left {_pg.evaluate('() => !!bgImage')}")
+    check("NEW SKRIBL: on a page whose picture is the photo, New Skribl clears the canvas (not 'Already a fresh one')",
+          _ink0 > 2000 and _ink1 == 0 and _pg.evaluate("() => !bgImage") and "fresh one" not in _fresh,
+          f"white px {_ink0} -> {_ink1}, chip {_fresh!r}, photo left {_pg.evaluate('() => !!bgImage')}")
     # Strokes, photo and music together; all three go, and Undo brings all three back.
     draw(_pg, "#pad", 200, 200, n=16)
     _pg.evaluate(_PHOTO)
@@ -2797,8 +2810,8 @@ with _sp() as _np:
     _before = _pg.evaluate(_DOC)
     _pg.click("#moreBtn")
     _pg.wait_for_timeout(400)
-    _pg.click("#miClearAll")
-    _pg.wait_for_timeout(200)
+    _pg.click("#menuNewTile")
+    _pg.wait_for_timeout(300)
     _pg.click("#miClearAll")
     _pg.wait_for_timeout(600)
     _cleared = _pg.evaluate(_DOC)
@@ -3096,11 +3109,12 @@ with _sp() as _cp:
     waits.settle(_pp, 600)
     _pp.click("#menuBtn"); _pp.wait_for_timeout(400)
     _items = _pp.evaluate("() => [...document.querySelectorAll('#menuSheet .menu-item')].map(b => b.textContent.replace(/\\s+/g, ' ').trim())")
-    check("COPY (Pad): the menu says Save a backup / Open a backup, not draft",
-          any("Save a backup" in x for x in _items) and any("Open a backup" in x for x in _items)
-          and not any("draft" in x.lower() for x in _items if "backup" in x.lower()), str(_items))
-    check("COPY (Pad): the Flip Mode row says it is a separate draft, page by page",
-          any("page by page" in x and "separate" in x for x in _items), str([x for x in _items if "Flip" in x]))
+    check("COPY (Pad): the file rows say what they make: Save as a file / Open a file, each a .skribl file",
+          any("Save as a file" in x and ".skribl" in x for x in _items) and any("Open a file" in x and ".skribl" in x for x in _items), str(_items))
+    # The switch to Flip says it in its name since the menu's tiles (after v323).
+    _fm = _pp.evaluate("() => document.getElementById('flipBtn').getAttribute('aria-label') || ''")
+    check("COPY (Pad): the way to Flip says it is a separate draft, page by page",
+          "page by page" in _fm and "separate" in _fm, _fm)
     _pp.click("#helpItem"); _pp.wait_for_timeout(500)
     _helpp = _pp.evaluate("() => document.getElementById('helpDrawer').textContent.replace(/\\s+/g, ' ')")
     check("COPY (Pad): Help opens with how Pad and Flip relate", "two ways to make a Skribl" in _helpp, _helpp[:200])

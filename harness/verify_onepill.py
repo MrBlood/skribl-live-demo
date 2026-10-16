@@ -281,8 +281,9 @@ with sync_playwright() as p:
         q.mouse.up(); settle(q, 400)
 
     def menu_rows(q):
-        # A phone's menu is a sheet taller than the screen: each row is
-        # measured where a thumb would scroll it to.
+        # Theme, Tips and Canvas are the ⋯ menu's Settings page (after v323);
+        # each row is measured where a thumb would scroll it to.
+        q.evaluate("() => SkriblMenuPages.show('settings', false)"); settle(q, 300)
         for sid in ("themeSeg", "hintSeg", "canvasSeg"):
             q.evaluate("(i) => document.getElementById(i).scrollIntoView({block: 'center'})", sid)
             settle(q, 450)

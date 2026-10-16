@@ -1,0 +1,128 @@
+{# =====================================================================
+   The ⋯ menu, ONE for both editors (owner, after v323: "I like it all. Yes
+   to all", from the menu mock). Included inside Pad's #menuSheet and Flip's
+   #moreMenu:
+       {% with kind='pad'  %}{% include 'skribl/_skribl_menu.html' %}{% endwith %}
+       {% with kind='flip' %}{% include 'skribl/_skribl_menu.html' %}{% endwith %}
+
+   It was fifteen equal rows that scrolled on a phone and on a desk. Now: the
+   editor switch, the four things done most as tiles, four rows, a quiet foot,
+   and two small pages inside the same sheet (New Skribl, Settings) that
+   lib/menupages.js shows. Every control keeps the id its editor binds, so
+   the handlers are the ones that were there; the ids still differ by editor
+   (Flip's mi* names), and this file is the one place that says which.
+
+   Naming and the .skribl file rows live in the drafts sheet now. They are
+   written here, in .menu-movers, and lib/savedrafts.js moves the elements
+   themselves into its sheet the first time it opens, so the listeners each
+   editor bound to them at load go with them.
+
+   A choice is the app's sliding tint (.seg, lib/segslider.js), as everywhere
+   else: the editor switch, the canvas shape, Tips, Theme. FUTURE.md 6o.
+   ===================================================================== #}
+{% import 'skribl/_skribl_homescreen.html' as hs with context %}
+{% set is_flip = (kind == 'flip') %}
+{% set ids = {
+  'help':   'miInfo'     if is_flip else 'helpItem',
+  'start':  'miClearAll' if is_flip else 'clearMenuItem',
+  'export': 'miExport'   if is_flip else 'exportItem',
+  'lib':    'miPosted'   if is_flip else 'postedItem',
+  'gal':    'miGallery'  if is_flip else 'galleryItem',
+  'report': 'miReport'   if is_flip else 'reportItem',
+  'fsave':  'miSave'     if is_flip else 'saveDraftItem',
+  'fopen':  'miLoad'     if is_flip else 'loadDraftItem',
+} %}
+{% set chev %}<svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>{% endset %}
+{% set back %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>{% endset %}
+{% set pad_ic %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 15c2-4 4 2 8-4"/></svg>{% endset %}
+{% set flip_ic %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/><path d="M12 6.5v13.3"/></svg>{% endset %}
+<div class="menu-handle"></div>
+
+<div class="menu-page" data-menu-page="main">
+  {# WHICH EDITOR, as a choice rather than an action: the one you are in is
+     lit, the other is a link (still <a href>, so open-in-new-tab works, and
+     still #flipBtn / #padBtn, so each editor's leaving guard binds). Composing,
+     the switch keeps ?compose=1 so "Add to post" stays on both sides. #}
+  <span class="seg menu-editor-seg" role="group" aria-label="Editor"><span class="seg-slider"></span>
+    {%- if is_flip -%}
+    <a href="{{ url_for('.skribl_editor') }}{% if compose %}?compose=1{% endif %}" id="padBtn" class="menu-editor" aria-label="Back to Skribl Pad: replay a drawing as it was drawn, a separate draft from this one">{{ pad_ic }}<span>Pad</span></a>
+    <button type="button" class="menu-editor on" aria-label="Flip, the editor you are in">{{ flip_ic }}<span>Flip</span></button>
+    {%- else -%}
+    <button type="button" class="menu-editor on" aria-label="Pad, the editor you are in">{{ pad_ic }}<span>Pad</span></button>
+    <a href="{{ url_for('.skribl_flip') }}{% if compose %}?compose=1{% endif %}" id="flipBtn" class="menu-editor" aria-label="Flip Mode: make an animation page by page, a separate draft from this one">{{ flip_ic }}<span>Flip</span></a>
+    {%- endif -%}
+  </span>
+
+  {# THE FOUR DONE MOST, as tiles. Save is one tap and says so in a toast;
+     every draft is in Your drafts below. #}
+  <div class="menu-tiles">
+    <button type="button" class="menu-tile" data-menu-go="new" id="menuNewTile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>New</span></button>
+    <button type="button" class="menu-tile" id="saveCloudDraftItem" aria-label="Save draft {{ 'to your account' if skribl_signed_in else 'on this browser' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.8A6 6 0 0 0 4.5 13 3 3 0 0 0 6 19z"/><path d="M12 12v6"/><path d="M9.5 14.5 12 12l2.5 2.5"/></svg><span>Save</span></button>
+    <button type="button" class="menu-tile" id="{{ ids.export }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Export</span></button>
+    {# YOUR SKRIBLS IS THE PROFILE PAGE (v304): a link to /library. #}
+    <a href="{{ url_for('.skribl_library') }}" class="menu-tile" id="{{ ids.lib }}" aria-label="Your Skribl Library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Library</span></a>
+  </div>
+
+  <div class="menu-list">
+    {# How it works stays first and tinted (owner chose B): the first thing a
+       new person sees when they open ⋯. #}
+    <button type="button" class="menu-item menu-feature" id="{{ ids.help }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M10 8.6v6.8l5.6-3.4z" fill="currentColor"/></svg><span class="menu-item-text">How it works<span class="menu-item-sub">Watch it, or look it up</span></span>{{ chev }}</button>
+    {% if not compose %}{{ hs.row() }}{{ hs.reload_row() }}{% endif %}
+    {# Drafts and backups, one row (owner: "Could drafts and backups be one
+       choice"): the drafts sheet holds this drawing's name and Save, every
+       saved draft, and the .skribl file both ways. #}
+    <button type="button" class="menu-item" id="openCloudDraftItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 13h8M8 16h5"/></svg><span class="menu-item-text">Your drafts<span class="menu-item-sub">Open, rename, keep as a file</span></span>{{ chev }}</button>
+    <a href="{{ url_for('.skribl_gallery') }}" id="{{ ids.gal }}" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="menu-item-text">Public gallery<span class="menu-item-sub">What people chose to show</span></span>{{ chev }}</a>
+    <button type="button" class="menu-item" data-menu-go="settings" id="menuSettingsItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="menu-item-text">Settings<span class="menu-item-sub">Theme, tips and canvas</span></span>{{ chev }}</button>
+  </div>
+
+  <div class="menu-foot">
+    <button type="button" class="menu-foot-link" id="{{ ids.report }}" data-skribl-report>Report a problem</button>
+    <span class="menu-version">Skribl {{ 'Flip' if is_flip else 'Pad' }} · {{ skribl_version }}</span>
+  </div>
+
+  {# Moved into the drafts sheet by lib/savedrafts.js the first time it opens
+     (see the top of this file). Hidden until then: nothing reaches them here. #}
+  <div class="menu-movers" hidden>
+    <button type="button" class="sdrafts-this-name" id="nameItem" data-drafts-slot="name"><span class="sdrafts-this-k">This drawing</span><span class="sdrafts-this-v"><span id="nameItemSub">Untitled</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span></button>
+    <button type="button" class="menu-item" id="{{ ids.fsave }}" data-drafts-slot="file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span class="menu-item-text">Save as a file<span class="menu-item-sub">A .skribl file to keep or move</span></span></button>
+    <button type="button" class="menu-item" id="{{ ids.fopen }}" data-drafts-slot="file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span class="menu-item-text">Open a file&hellip;<span class="menu-item-sub">A .skribl file you saved</span></span></button>
+  </div>
+</div>
+
+{# NEW SKRIBL: the shape, then Start. This page is the "are you sure" the
+   two-tap arm used to be; Undo still brings the old drawing back. #}
+<div class="menu-page" data-menu-page="new" hidden>
+  <div class="menu-page-head"><button type="button" class="menu-back" data-menu-go="main" aria-label="Back">{{ back }}</button><h2 class="menu-page-title">New Skribl</h2></div>
+  <div class="menu-label" id="newSizeLbl">Canvas shape</div>
+  {# The ids are lib/canvassizes.js's, the labels its too (menupages.js
+     fills them from the table, as the Settings row's are). #}
+  <span class="seg menu-shape-seg" id="newSizeSeg" role="group" aria-labelledby="newSizeLbl"><span class="seg-slider"></span>
+    {%- for sid, lbl, w, h in [('classic', '4:3', 24, 18), ('wide', '16:9', 28, 16), ('square', '1:1', 20, 20), ('tall', '9:16', 16, 28)] -%}
+    <button type="button" data-size="{{ sid }}"{% if loop.first %} class="on"{% endif %}><i class="menu-shape" style="width:{{ w }}px;height:{{ h }}px" aria-hidden="true"></i><span class="menu-shape-lbl">{{ lbl }}</span></button>
+    {%- endfor -%}
+  </span>
+  <button type="button" class="menu-start" id="{{ ids.start }}"><span class="new-label">Start a new Skribl</span></button>
+  <p class="menu-page-note" id="newSkriblNote">This one isn&rsquo;t lost: Undo brings it back.</p>
+</div>
+
+{# SETTINGS: the rows that sat below the menu's fold. Same ids and handlers
+   as before; the Canvas row is also how a drawing changes shape later (Flip
+   keeps every drawing's position; the Pad's is locked once you draw). #}
+<div class="menu-page" data-menu-page="settings" hidden>
+  <div class="menu-page-head"><button type="button" class="menu-back" data-menu-go="main" aria-label="Back">{{ back }}</button><h2 class="menu-page-title">Settings</h2></div>
+  <div class="menu-row">
+    <span class="menu-row-label">Theme</span>
+    <span class="seg theme-seg" id="themeSeg" role="group" aria-label="Interface theme"><span class="seg-slider"></span><button type="button" data-theme="system" title="Follow the device's appearance setting">System</button><button type="button" data-theme="dark">Dark</button><button type="button" data-theme="light">Light</button></span>
+  </div>
+  {# The SAME setting on both editors: lib/hints.js keeps it under one key. #}
+  <div class="menu-row">
+    <span class="menu-row-label">Tips<span class="menu-row-sub">First-time notes</span></span>
+    <span class="seg hint-seg" id="hintSeg" role="group" aria-label="First-use tips"><span class="seg-slider"></span><button type="button" data-hints="on">On</button><button type="button" data-hints="off">Off</button></span>
+  </div>
+  <div class="menu-row">
+    <span class="menu-row-label">Canvas</span>
+    <span class="seg canvas-seg" id="canvasSeg" role="group" aria-label="Canvas shape"><span class="seg-slider"></span><button type="button" data-size="classic"{% if is_flip %} class="on"{% endif %}>4:3</button><button type="button" data-size="wide">16:9</button><button type="button" data-size="square">1:1</button><button type="button" data-size="tall">9:16</button></span>
+  </div>
+  <div class="menu-row-note" id="canvasSegNote"{% if is_flip %} hidden{% endif %}></div>
+</div>

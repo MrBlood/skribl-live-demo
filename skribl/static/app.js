@@ -296,9 +296,10 @@ function syncStateAfterHistoryChange(restoredHasContent) {
 }
 
 function updateClearVisibility() {
-  // Clear now lives in the overflow menu; disable it during recording
+  // New Skribl's Start, on its page in the ⋯ menu: off while recording. An
+  // empty canvas can still start (it takes the shape picked on that page).
   const clearItem = document.getElementById('clearMenuItem');
-  if (clearItem) clearItem.disabled = recording || !(hasContent || recorded);
+  if (clearItem) clearItem.disabled = recording;
 }
 
 // Reflect the post-record lock in the cursor so it's obvious the canvas

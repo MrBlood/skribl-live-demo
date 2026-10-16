@@ -330,6 +330,16 @@ stays a sleep.
   the bar and the x away while it plays on, a pause from elsewhere brings them
   back, a finger's first tap only wakes them (a mouse's move on a desk), the
   next tap pauses, and paused they stay up. Visible means painted.
+- `verify_menu.py` — the ⋯ menu, one for both editors (_skribl_menu.html,
+  lib/menupages.js): on a phone and a desk, light and dark, it fits without
+  scrolling, every target 44px, names 16px over 14px; Pad's and Flip's are
+  the same tile for tile; the switch lights the editor you are in with the
+  sliding pill; New and Settings are pages (focus on Back, Escape back to the
+  menu, every opening on the main page); New Skribl starts over on the shape
+  picked in one tap and Undo brings back the drawing and its shape; Your
+  drafts holds the name and the .skribl file both ways; How it works' tabs are
+  the same pill. Each row was shown red by its own break, served in place of
+  the real file.
 - `verify_hello.py` — Blooby says hi (lib/hello.js): the first open on a
   phone, Pad and Flip, light and dark. He fills the screen in his own lilac,
   full width and drawn at the phone's 3 pixels a point, walks up and waves,

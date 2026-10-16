@@ -1017,6 +1017,8 @@ with sync_playwright() as p:
     for sel, openers in groups:
         for pg_, opener, panel in openers:
             ensure_open(pg_, opener, panel)
+            if sel in ("#hintSeg", "#canvasSeg"):   # the menu's Settings page (after v323)
+                pg_.evaluate("() => window.SkriblMenuPages && SkriblMenuPages.show('settings', false)")
         settle(pad, sel)
         settle(flip, sel)
         pm, fm = pad.evaluate(measure, sel), flip.evaluate(measure, sel)
@@ -1086,7 +1088,9 @@ with sync_playwright() as p:
                    num(s.fontSize), s.fontWeight, num(s.borderRadius), num(s.columnGap || s.gap),
                    svg ? Math.round(svg.getBoundingClientRect().width) : 0].join('/') }; });
       const cs = getComputedStyle(root);
-      const pills = [...root.querySelectorAll('.seg button')].map(b => Math.round(b.getBoundingClientRect().height));
+      // The pills on show: the menu's other pages are hidden, their pills 0 tall.
+      const pills = [...root.querySelectorAll('.seg button')].filter(b => b.getClientRects().length)
+                      .map(b => Math.round(b.getBoundingClientRect().height));
       return { items, surface: [cs.backgroundColor, num(cs.borderTopLeftRadius), cs.boxShadow !== 'none', num(cs.paddingLeft)].join('|'),
                width: Math.round(root.getBoundingClientRect().width), pillMin: Math.min(...pills), pillMax: Math.max(...pills),
                bottom: Math.round(root.getBoundingClientRect().bottom), vh: innerHeight,

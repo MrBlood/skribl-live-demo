@@ -507,10 +507,9 @@ def editor_common(pg, menu, export_item, canvas):
     click(pg, "#eyedropperBtn"); yield "eyedropper"; esc(pg)
     click(pg, "#penToolBtn")
     click(pg, menu); yield "menu"
-    # The menu's last rows (Report, the Tips switch) sit below the fold at
-    # every size, and only what is painted in view counts as reached.
-    js(pg, "() => { const e = document.getElementById('hintSeg'); if (e) e.scrollIntoView({ block: 'center' }); }")
-    pg.wait_for_timeout(300); yield "menu, its end"; esc(pg)
+    # Its two pages (after v323): New Skribl and Settings.
+    click(pg, "#menuNewTile", 500); yield "menu, new skribl"; esc(pg)
+    click(pg, "#menuSettingsItem", 500); yield "menu, settings"; esc(pg); esc(pg)
     click(pg, "#tuneBtn"); click(pg, "#gridBtn"); yield "settings, grid"; click(pg, "#gridBtn"); click(pg, "#tuneBtn")
     js(pg, "() => { if (window.SkriblRecoveryKey) SkriblRecoveryKey.present({ key: 'skrb_centring_key' }); }"); pg.wait_for_timeout(400)
     yield "recovery key"
@@ -559,7 +558,7 @@ def editor_common(pg, menu, export_item, canvas):
     click(pg, menu); click(pg, "#openCloudDraftItem, #miOpenDraft", 900); yield "drafts sheet"
     click(pg, ".sdrafts-del", 400); yield "drafts sheet, delete asked"; esc(pg)
     click(pg, menu); click(pg, "#reportItem, #miReport", 700); yield "report"; esc(pg)
-    click(pg, menu); click(pg, "#nameItem, #miName", 500); yield "name"; esc(pg)
+    click(pg, menu); click(pg, "#openCloudDraftItem", 900); click(pg, "#nameItem", 500); yield "name"; esc(pg)
     click(pg, menu); click(pg, "#helpItem, #miInfo", 900); yield "how it works"
     click(pg, "#helpTabLook", 700); yield "how it works, look it up"
     if FULL_SWEEP:

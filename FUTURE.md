@@ -906,6 +906,42 @@ in-post player, `inlineplayer.js`), so "drawings that draw themselves" is the
 greeting itself. Shipping the file into the app is the payload-size question
 above: `lib/pointpack.js` keeps a point in four characters.
 
+## 6o. The ⋯ menu, smaller and kinder (owner, after v323: built)
+
+ASKED: "What about a crowded … menu? Is there a way to consolidate that menu?
+... Could drafts and backups be one choice each?" Measured on the owner's
+402x874 phone: fifteen equal rows at 14px over 12px, 769px of the screen,
+and it still scrolled, with Report a problem, Tips, Theme and Canvas 299px
+below the bottom. It scrolled on a desk too. Nothing counts which buttons
+people press, so "used most" is a judgement: Export, saving a draft, New and
+the Library.
+
+THE MENU NOW (the mock, then "I like it all. Yes to all"): which editor, as
+the app's sliding tint; four tiles, New, Save, Export, Library; four rows,
+How it works (still first and tinted), Your drafts, Public gallery,
+Settings; Report a problem and the version at the foot. 540px on the phone,
+no scroll on either screen, names 16px over 14px, every target 44px. One
+partial for both editors (`_skribl_menu.html`) and `lib/menupages.js` for its
+two pages: New Skribl (the canvas shape, then one tap to start; Undo brings
+the drawing and its shape back) and Settings (Theme, Tips, Canvas). Drafts
+and backups are one row: Your drafts holds this drawing's name and Save,
+every saved draft, and Save as a file / Open a file. How it works' tabs and
+chips became the sliding tint too ("Are they consistent with other choices?").
+
+Not built, and asked about: a count of which buttons are pressed (private,
+in Skribl's own database; only with the owner's yes), and naming the
+drawing from the header, which has no name in it today.
+
+NEXT, IN THIS ORDER (owner, after v323): "finish the … first. Don't start on
+how it works until we're done with …". When the menu is merged and the owner
+is happy with it, come back to How it works (6n). Its open ideas: Hold to
+learn (press and hold any control for a card with its example), Draw along
+(an example plays faintly on your own canvas to trace), "Show me" (ask in
+your own words and the real button glows), help when stuck, a quiet "?" in
+both editors, a "Things to try" list, and accessibility under all of it. The
+owner found layout 1 better but still "difficult to use" and "pretty generic
+thinking"; the last proposal put Hold to learn and Draw along first.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough

@@ -259,7 +259,7 @@ with sync_playwright() as p:
     pad.evaluate("() => document.getElementById('recordBtn').click()")
     pad.wait_for_timeout(700)
     n_before = pad.evaluate("() => strokes.length")
-    pad.evaluate("() => { document.getElementById('clearMenuItem').click(); }")
+    # New Skribl's Start, on its page in the ⋯ menu: one tap (after v323).
     pad.evaluate("() => { document.getElementById('clearMenuItem').click(); }")
     pad.wait_for_timeout(600)
     check("cleared", pad.evaluate("() => strokes.length") == 0)

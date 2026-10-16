@@ -731,6 +731,7 @@ with sync_playwright() as p:
         pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _fresh = pg.evaluate(SHAPE_READ, _flip)["size"]
         pg.click(_menu); pg.wait_for_timeout(300)
+        pg.click("#openCloudDraftItem"); pg.wait_for_timeout(700)   # the file rows live in Your drafts (after v323)
         with pg.expect_file_chooser() as _fc:
             pg.click(_item)
         _fc.value.set_files({"name": "tall.skribl", "mimeType": "application/json", "buffer": _shape_payload(_flip)})
@@ -778,6 +779,7 @@ with sync_playwright() as p:
         pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _fresh = pg.evaluate(SHAPE_READ, False)["size"]
         pg.click("#menuBtn"); pg.wait_for_timeout(300)
+        pg.click("#openCloudDraftItem"); pg.wait_for_timeout(700)   # the file rows live in Your drafts (after v323)
         with pg.expect_file_chooser() as _fc:
             pg.click("#loadDraftItem")
         _fc.value.set_files({"name": "nosize.skribl", "mimeType": "application/json", "buffer": _nosize(_pts)})

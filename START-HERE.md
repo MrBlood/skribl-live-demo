@@ -747,6 +747,7 @@ rather than a shared rule.
 | `marks.js` | Pad+Flip+library+gallery | The app's marks for controls a script builds: plus, minus, close, check, arrow, cloned from the <template id="skriblMark-NAME"> that _skribl_marks.html puts on the page, so a script and a template draw the same mark from one source. |
 | `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
 | `mediatabs.js` | Pad+Flip | The Media button and its Photo and Music tabs -- shared by Pad and Flip. |
+| `menupages.js` | Pad+Flip | The ⋯ menu's pages: the main page, New Skribl and Settings, one sheet (templates/skribl/_skribl_menu.html; owner, after v323, from the menu mock). |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
 | `modalfocus.js` | Pad+Flip+library+gallery | Focus for surfaces that declare aria-modal="true". |
 | `mp4export.js` | Pad+Flip | MP4 export through WebCodecs + the vendored mp4-muxer: one encoder pipeline for both editors (SK312-003, v315). |

@@ -199,7 +199,7 @@
   }
 
   /* ---- the sheet ------------------------------------------------------- */
-  var sheet = null, scrim = null, listEl = null, opts = null, opener = null;
+  var sheet = null, scrim = null, listEl = null, opts = null, opener = null, thisPic = null;
   var armOnRender = null;   // a ?draft=<id> that arrived over work on the canvas
 
   function build() {
@@ -224,14 +224,42 @@
       ? 'Saved to your account, on every device you sign in on.'
       : 'Saved on this browser only.');
     listEl = el('div', 'sdrafts-list');
+    /* THIS DRAWING, and THE FILE BOTH WAYS (owner, after v323: drafts and
+       backups as one choice). The ⋯ menu writes the name row and the two
+       .skribl rows in .menu-movers (templates/skribl/_skribl_menu.html); the
+       elements themselves move here, so the listeners each editor bound to
+       them at load (lib/nametab.js; editor_menu.js / flip.js) come along. A
+       tap on one puts this sheet away first: each opens something of its own. */
+    var movers = doc.querySelector('.menu-movers');
+    var nameBtn = movers && movers.querySelector('[data-drafts-slot="name"]');
+    var fileBtns = movers ? [].slice.call(movers.querySelectorAll('[data-drafts-slot="file"]')) : [];
+    var mine = el('div', 'sdrafts-this');
+    thisPic = el('span', 'sdrafts-thumb sdrafts-this-thumb');
+    thisPic.setAttribute('aria-hidden', 'true');
+    var saveNow = el('button', 'sdrafts-save', 'Save');
+    saveNow.type = 'button';
+    saveNow.setAttribute('aria-label', 'Save this drawing to your drafts');
+    saveNow.addEventListener('click', function () { save().then(function (sum) { if (sum) refresh(); }); });
+    mine.appendChild(thisPic);
+    if (nameBtn) { nameBtn.addEventListener('click', hide, true); mine.appendChild(nameBtn); }
+    mine.appendChild(saveNow);
+    var savedLbl = el('h3', 'sdrafts-label', 'Saved drafts');
+    var files = el('div', 'sdrafts-files');
+    fileBtns.forEach(function (b) { b.addEventListener('click', hide, true); files.appendChild(b); });
     // A phone's grabber, like every other sheet's: tap it or swipe the sheet
     // down to close (lib/sheetswipe.js). Hidden above phone widths.
     var grab = el('div', 'sdrafts-grab');
     grab.setAttribute('aria-hidden', 'true');
     sheet.appendChild(grab);
     sheet.appendChild(head);
+    sheet.appendChild(mine);
+    sheet.appendChild(savedLbl);
     sheet.appendChild(sub);
     sheet.appendChild(listEl);
+    if (fileBtns.length) {
+      sheet.appendChild(el('h3', 'sdrafts-label', 'As a file'));
+      sheet.appendChild(files);
+    }
     doc.body.appendChild(scrim);
     doc.body.appendChild(sheet);
     scrim.addEventListener('click', hide);
@@ -276,7 +304,7 @@
     if (stalled()) listEl.appendChild(el('p', 'sdrafts-stalled', STALLED));
     if (!items.length) {
       listEl.appendChild(el('p', 'sdrafts-empty',
-        'No saved drafts yet. Save one from \u22EF \u2192 Save draft.'));
+        'No saved drafts yet. Save this one with Save, above.'));
       return;
     }
     items.forEach(function (it) {
@@ -405,11 +433,24 @@
     });
   }
 
+  // The drawing on the canvas, small, as its draft would be saved.
+  function paintThis() {
+    if (!thisPic) return;
+    thisPic.textContent = '';
+    var src = thumbFrom(opts.thumbnail && opts.thumbnail());
+    if (!src) return;
+    var img = doc.createElement('img');
+    img.alt = '';
+    img.src = src;
+    thisPic.appendChild(img);
+  }
+
   function show(from) {
     if (!opts) return;   // the sheet is an editor's; the Library lists drafts itself
     if (!sheet) build();
     opener = from || null;
     if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.cancelSlide(sheet);
+    paintThis();
     sheet.hidden = false;
     scrim.hidden = false;
     if (global.SkriblSheetSwipe) global.SkriblSheetSwipe.slideIn(sheet);
