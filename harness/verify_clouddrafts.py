@@ -417,7 +417,8 @@ try:
                   cfg and cfg.get("signedIn") is True and cfg.get("limit") == CAP
                   and where == "account", f"{cfg} where={where}")
             pa.locator("#moreBtn" if "flip" in path else "#menuBtn").click()
-            sub = pa.locator("#saveCloudDraftItem").inner_text()
+            # The Save tile says where in its name (the ⋯ menu's tiles, after v323).
+            sub = pa.locator("#saveCloudDraftItem").get_attribute("aria-label") or ""
             check(f"{path} ⋯ Save draft says 'To your account'", "account" in sub.lower(), sub)
             pa.keyboard.press("Escape")
         browsing.goto(anon, BASE, "/skribl/skribl-pad", require_boot=False)
@@ -849,7 +850,8 @@ try:
         pd.locator("#savedDraftsSheet .sdrafts-del").nth(kb_row).focus()
         pd.keyboard.press("Enter"); pd.wait_for_timeout(150); pd.keyboard.press("Enter"); pd.wait_for_timeout(900)
         kb = pd.evaluate("""() => { const a = document.activeElement, s = document.getElementById('savedDraftsSheet');
-            return { inSheet: s.contains(a), what: a.className, gone: !s.textContent.includes('Delete me by keyboard') }; }""")
+            return { inSheet: s.contains(a), what: a.className,
+                     gone: !s.querySelector('.sdrafts-list').textContent.includes('Delete me by keyboard') }; }""")   # the list: "This drawing" above it says the name too
         pd.keyboard.press("Escape"); pd.wait_for_timeout(500)
         kb["escClosed"] = pd.evaluate("() => document.getElementById('savedDraftsSheet').hidden")
         check("the sheet: a draft deleted from the keyboard leaves focus in the sheet, where Escape still closes it",

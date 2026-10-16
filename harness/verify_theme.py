@@ -175,8 +175,11 @@ check("no prefers-color-scheme rule in the stylesheet: the ramp is one block, re
       "is followed by stamping data-theme, in _skribl_theme_boot.html and lib/theme.js")
 
 print("\nTHEME — both surfaces carry the same switch, wired to the same key")
+MENU = (TPL / "_skribl_menu.html").read_text(encoding="utf-8")   # the ⋯ menu both editors include (after v323)
 for name in ("skribl_editor.html", "skribl_flip.html"):
     html = (TPL / name).read_text(encoding="utf-8")
+    if "_skribl_menu.html" in html:
+        html += MENU
     check(f"{name}: has a Theme row with System, Dark and Light",
           'id="themeSeg"' in html and ">Theme<" in html
           and 'data-theme="system"' in html and 'data-theme="dark"' in html and 'data-theme="light"' in html)
@@ -690,13 +693,9 @@ with sync_playwright() as p:
             pg.wait_for_timeout(300)
             pg.evaluate("() => document.getElementById('menuBtn').click()")
             pg.wait_for_timeout(400)
-            pg.evaluate("() => document.getElementById('clearMenuItem').click()")    # arms
-            pg.wait_for_timeout(200)
-            pg.evaluate("() => document.getElementById('clearMenuItem').click()")    # confirms
+            pg.evaluate("() => document.getElementById('clearMenuItem').click()")    # Start: one tap (after v323)
         else:
-            pg.evaluate("() => document.getElementById('miClearAll').click()")       # arms
-            pg.wait_for_timeout(200)
-            pg.evaluate("() => document.getElementById('miClearAll').click()")       # confirms
+            pg.evaluate("() => document.getElementById('miClearAll').click()")       # Start: one tap (after v323)
         pg.wait_for_timeout(600)
         st_new = ground(pg, label)
         check(f"{label}: New Skribl in the light theme starts on Paper",

@@ -279,6 +279,12 @@ with sync_playwright() as p:
     check("pull, pause, let go is 'put it back', not a flick",
           pg.evaluate("() => document.getElementById('menuOverlay').hidden") is False, "")
     # Scrolled down, a pull on the first rows scrolls back up instead of closing.
+    # The menu fits a 664px phone since its tiles (after v323), so this is a
+    # short window's: 480 tall, where it still scrolls.
+    ctx.close()
+    ctx, pg, errs = fresh(b, "/skribl-pad", height=480)
+    open_sheet(pg, "() => document.getElementById('menuBtn').click()", "() => document.getElementById('menuOverlay').hidden")
+    x, y = top_point(pg, "#menuSheet")
     can = pg.evaluate("() => { const s = document.getElementById('menuSheet'); s.scrollTop = 120; return s.scrollTop; }")
     pg.evaluate(TOUCH, ["#menuSheet", "touchstart", x, y])
     first = pg.evaluate(TOUCH, ["#menuSheet", "touchmove", x, y + 3])

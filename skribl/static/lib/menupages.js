@@ -81,6 +81,17 @@
     show('main', true);
   });
 
+  // ONE CHOICE LIT FROM THE START (verify_a11y: every pick-one has exactly
+  // one pressed). The template lights the first; this follows the drawing's
+  // own shape whenever the Settings row's lit option moves, except while the
+  // New page is open and the choice there is the person's.
+  var canvasSeg = doc.getElementById('canvasSeg');
+  if (canvasSeg && global.MutationObserver) {
+    new MutationObserver(function () { if (current() !== 'new') syncNew(); })
+      .observe(canvasSeg, { subtree: true, attributes: true, attributeFilter: ['class'] });
+  }
+  syncNew();
+
   global.SkriblMenuPages = {
     reset: function () { show('main', false); },
     show: show,

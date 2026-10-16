@@ -386,7 +386,15 @@ with sync_playwright() as p:
             pg.wait_for_function("() => document.activeElement && document.activeElement.matches('#helpLook .help-tip[data-help-tool=eraser]')", timeout=2000)
         except Exception:
             pass
-        pg.wait_for_timeout(150)
+        # Focus comes with the first landing; the section's padding glide can
+        # still move it after, on a busy box. Read it once it has held still.
+        prev = None
+        for _ in range(20):
+            top = pg.evaluate("() => Math.round(document.querySelector('#helpLook .help-tip[data-help-tool=eraser]').getBoundingClientRect().top)")
+            if top == prev:
+                break
+            prev = top
+            pg.wait_for_timeout(150)
         # LANDS UNDER THE TABS: its top just below them, painted. Merely "on
         # screen" passed with the entry left half a screen down, scrolled to
         # while its section was still folded.

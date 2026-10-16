@@ -99,7 +99,7 @@
      fills them from the table, as the Settings row's are). #}
   <span class="seg menu-shape-seg" id="newSizeSeg" role="group" aria-labelledby="newSizeLbl"><span class="seg-slider"></span>
     {%- for sid, lbl, w, h in [('classic', '4:3', 24, 18), ('wide', '16:9', 28, 16), ('square', '1:1', 20, 20), ('tall', '9:16', 16, 28)] -%}
-    <button type="button" data-size="{{ sid }}"><i class="menu-shape" style="width:{{ w }}px;height:{{ h }}px" aria-hidden="true"></i><span class="menu-shape-lbl">{{ lbl }}</span></button>
+    <button type="button" data-size="{{ sid }}"{% if loop.first %} class="on"{% endif %}><i class="menu-shape" style="width:{{ w }}px;height:{{ h }}px" aria-hidden="true"></i><span class="menu-shape-lbl">{{ lbl }}</span></button>
     {%- endfor -%}
   </span>
   <button type="button" class="menu-start" id="{{ ids.start }}"><span class="new-label">Start a new Skribl</span></button>

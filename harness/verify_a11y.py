@@ -812,8 +812,10 @@ with sync_playwright() as p:
               ", ".join(r["stops"]) + " — a keyboard user pays a press per option to cross a row")
         # ...and it FOLLOWS a click, on a seg that was class-only before v292.
         if _path == "/":
-            _seg = "#hintSeg"          # Tips, in the ⋯ menu
+            _seg = "#hintSeg"          # Tips, on the ⋯ menu's Settings page
             pg.click("#menuBtn")
+            pg.wait_for_timeout(300)
+            pg.click("#menuSettingsItem")
         else:
             _seg = "#fps"              # Speed, in the Tune drawer
             pg.click("#tuneBtn")
@@ -1442,6 +1444,8 @@ with sync_playwright() as p:
             return f.apply(this, a); }; }""")
         _pg.click(_menu)
         _pg.wait_for_timeout(300)
+        _pg.click("#openCloudDraftItem")   # the name lives in Your drafts (after v323)
+        _pg.wait_for_timeout(600)
         _pg.click("#nameItem")
         _pg.wait_for_timeout(90)          # open has fired (40ms); focus (200ms) has not
         # A DOM click, not Playwright's: its actionability wait holds the click
@@ -2385,7 +2389,7 @@ with sync_playwright() as _pt:
         return found, moved
 
     for _ed, _steps in (("Pad", ((None, "#postBtn"), ("pen", ".color-dot:not(.active)"),
-                                 ("#menuBtn", "#clearMenuItem"))),
+                                 ("#menuBtn", "#menuNewTile"))),
                         ("Flip", ((None, "#addblank"), (None, ".frame:not(.on)")))):
         _cx, _pg = _pages[(_ed, "desk")]
         for _open, _sel in _steps:

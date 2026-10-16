@@ -378,6 +378,8 @@ with sync_playwright() as p:
     # moved to Pad. `fp` below stays on #moreBtn because it really is on Flip.
     hp.locator("#menuBtn, #moreBtn").first.click()
     hp.wait_for_timeout(400)
+    hp.click("#menuSettingsItem")   # Tips is on the menu's Settings page (after v323)
+    hp.wait_for_timeout(300)
     check("the Tips toggle is in the menu", hp.is_visible("#hintSeg"))
     check("it shows On while hints are enabled",
           hp.evaluate("() => document.querySelector"
@@ -401,6 +403,8 @@ with sync_playwright() as p:
     fp.wait_for_timeout(1400)
     fp.click("#moreBtn")
     fp.wait_for_timeout(400)
+    fp.click("#menuSettingsItem")
+    fp.wait_for_timeout(300)
 
     heights = fp.evaluate("() => ({"
                           " tips: document.getElementById('hintSeg').getBoundingClientRect().height,"
@@ -446,6 +450,7 @@ with sync_playwright() as p:
         _rp.goto(f"{BASE}{_path}", wait_until="load"); _rp.wait_for_timeout(900)
         _rp.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
         _rp.click(_btn); _rp.wait_for_timeout(500)
+        _rp.click("#menuSettingsItem"); _rp.wait_for_timeout(400)
         _room = _rp.evaluate(ROOM)
         _tight = [f"{seg} {lab!r} {room}px" for seg, lab, room in _room["pills"] if room < 8]
         check(f"at {_w} on {_path}: every menu pill keeps 8px beside its label",
@@ -464,6 +469,8 @@ with sync_playwright() as p:
     pd.wait_for_timeout(1400)
     pd.click("#menuBtn")
     pd.wait_for_timeout(400)
+    pd.click("#menuSettingsItem")
+    pd.wait_for_timeout(300)
     check("the Tips control is in Pad's menu too", pd.is_visible("#hintSeg"),
           "a user on Pad would have to open Flip to turn tips off")
     check("Pad reads OFF because Flip set it",

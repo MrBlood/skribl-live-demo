@@ -126,9 +126,9 @@ with sync_playwright() as p:
     # -----------------------------------------------------------------------
     print("\nPAD CANVAS — free while empty")
     pg.evaluate("() => { const m = document.getElementById('menuOverlay');"
-                " if (m) { m.hidden = false; m.classList.add('open'); } }")
+                " if (m) { m.hidden = false; m.classList.add('open'); } SkriblMenuPages.show('settings', false); }")
     pg.wait_for_timeout(250)
-    check("the canvas row is visible in the menu", pg.is_visible("#canvasSeg"))
+    check("the canvas row is visible in the menu (its Settings page, after v323)", pg.is_visible("#canvasSeg"))
 
     for sid in ("tall", "square", "wide"):
         sz = next(s for s in pad_sizes if s["id"] == sid)
