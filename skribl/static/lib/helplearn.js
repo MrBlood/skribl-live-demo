@@ -1,4 +1,4 @@
-/* How it works, shown: the examples drawer in the help panel.
+/* How it works, shown: the Watch tab of the help panel, and its two tabs.
  *
  * Every card plays a REAL Skribl -- drawn through the editor with real pen
  * input by harness/tools/make_art.py and make_flip.py -- through the same
@@ -6,22 +6,21 @@
  * what the eraser does, and there is no second, simplified renderer to drift
  * from the real one.
  *
- * THE PAGE SHOWS ONE BAR. "Watch it work" (#learnPeek) opens a drawer of
- * every example (#learnSheet), with chips to show one group; the reference
- * below the bar stays where it was. The owner asked for it ("it fills the page
- * and seems like a lot of stuff") with many more examples coming.
+ * TWO TABS, WATCH FIRST (the owner's pick, layout 1 of three, after v323;
+ * FUTURE.md 6n). How it works opens on Watch: every example, big, one under
+ * another, chips to show one group. Look it up is the second tab: search and
+ * every entry (lib/helpsearch.js). It replaced a bar that opened a drawer of
+ * the examples over a 2,700-word manual.
  *
- * NOTHING LOADS UNTIL IT IS ASKED FOR. Opening How it works fetches the bar's
- * three small previews; the player, its stylesheet and the examples are
- * fetched the first time the drawer opens. Examples play only while the
- * drawer is open and their card is on screen, silent and looping, all
- * together (the player's ambient mode: an example never stops another, see
- * inlineplayer.js play()). With reduced motion asked for, each card shows its
- * finished drawing and does not play.
+ * NOTHING LOADS UNTIL IT IS ASKED FOR. The editor fetches no player and no
+ * example until How it works opens; then an example is fetched as it comes
+ * within half a screen of view. Examples play only while Watch is showing
+ * and their card is on screen, silent and looping, all together (the
+ * player's ambient mode: an example never stops another, see inlineplayer.js
+ * play()). With reduced motion asked for, each card shows its finished
+ * drawing and does not play.
  *
- * THE DRAWER CLOSES like every sheet: a tap on its grip or a pull down, the
- * scrim, its close button, or Escape -- which closes the drawer and leaves How
- * it works open. Closing How it works closes it too.
+ * MORE ABOUT a tool takes you to its entry in Look it up, opened.
  *
  * TRY IT closes the panel and picks the tool by the editor's own route -- the
  * dock button on Pad, shelfSetTool on Flip, which also open the shape card --
@@ -29,11 +28,14 @@
  */
 (function () {
   'use strict';
-  var box = document.getElementById('helpLearn');
   var drawer = document.getElementById('helpDrawer');
-  var sheet = document.getElementById('learnSheet');
-  var peek = document.getElementById('learnPeek');
-  if (!box || !drawer || !sheet || !peek) return;
+  var sheet = document.getElementById('helpWatch');
+  var look = document.getElementById('helpLook');
+  var tabWatch = document.getElementById('helpTabWatch');
+  var tabLook = document.getElementById('helpTabLook');
+  var box = sheet;
+  if (!drawer || !sheet || !look || !tabWatch || !tabLook) return;
+  var scroller = drawer.querySelector('.help-drawer-inner');
 
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var all = Array.prototype.slice.call(sheet.querySelectorAll('.learn-card'));
@@ -42,10 +44,6 @@
   var ready = null;
   var visible = new Set();
   var sheetOpen = false;
-
-  // The bar says how many there are, counted here, never typed.
-  var count = document.getElementById('learnPeekCount');
-  if (count) count.textContent = all.length + ' short examples';
 
   function loadPlayer() {
     if (ready) return ready;
@@ -163,12 +161,9 @@
     failBox.hidden = !n;
     failCount.textContent = !n ? '' : (n === 1 ? '1 example couldn\u2019t load.'
                                                : n + ' examples couldn\u2019t load.');
-    // Retry hides the banner it is in; focus goes to the sheet's heading
-    // rather than to <body>.
-    if (was && !n && failBox.contains(document.activeElement)) {
-      var title = document.getElementById('learnSheetTitle');
-      if (title) title.focus({ preventScroll: true });
-    }
+    // Retry hides the banner it is in; focus goes to the Watch tab rather
+    // than to <body>.
+    if (was && !n && failBox.contains(document.activeElement)) tabWatch.focus({ preventScroll: true });
   }
   function failed(card) {
     card.classList.add('learn-failed');
@@ -199,7 +194,6 @@
   // for now when it comes within half a screen of the sheet's view, so what
   // opening costs is what is on screen and the row after it. Playback was
   // already tied to visibility (`io` above); this ties the fetch to it too.
-  var scroller = sheet.querySelector('.learn-sheet-scroll');
   function want(card) {
     if (card._learnWanted) return;
     card._learnWanted = true;
@@ -208,7 +202,7 @@
     else loadPlayer().then(function () { start(card); sync(card); });
   }
   var near = window.IntersectionObserver ? new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) { if (e.isIntersecting && sheetOpen) want(e.target); });
+    entries.forEach(function (e) { if (e.isIntersecting && open()) want(e.target); });
   }, { root: scroller, rootMargin: '0px 0px 50% 0px' }) : null;
   function startAll() {
     // No observer (a very old browser): everything, as before.
@@ -219,83 +213,41 @@
   }
   function syncAll() { cards.forEach(sync); clips.forEach(sync); }
 
-  // ---- the drawer ----------------------------------------------------------
-  var panel = sheet.querySelector('.learn-sheet-panel');
-  var hideTimer = 0;
-  // Reduced motion: the drawer appears and goes without gliding. Set here, not
-  // in styles.css, whose reduced-motion blocks the player's stylesheet carries.
-  if (reduce) {
-    if (panel) panel.style.transition = 'none';
-    var scrim = sheet.querySelector('.learn-scrim');
-    if (scrim) scrim.style.transition = 'none';
-  }
-  function openSheet() {
-    if (sheetOpen) return;
-    clearTimeout(hideTimer);
-    sheetOpen = true;
-    sheet.hidden = false;
-    void sheet.offsetWidth;            // let it lay out closed, then glide up
-    sheet.classList.add('open');
-    peek.setAttribute('aria-expanded', 'true');
-    /* A LAYER OVER A DIALOG IS A DIALOG (outside audit V319-002). This was a
-       region, so nothing kept Tab in it and the third press reached How it
-       works' own Close underneath. The modal owner traps Tab and remembers
-       the way back; focus then goes to the heading, as it always has. */
-    if (window.SkriblModal) window.SkriblModal.open(sheet, peek);
-    var title = document.getElementById('learnSheetTitle');
-    if (title) title.focus({ preventScroll: true });
-    startAll();
-  }
-  function closeSheet(instant) {
-    if (!sheetOpen) return;
-    sheetOpen = false;
-    sheet.classList.remove('open');
-    if (panel) panel.style.transform = '';
-    peek.setAttribute('aria-expanded', 'false');
+  // ---- the two tabs -------------------------------------------------------------
+  function showTab(watch, focus) {
+    var was = sheetOpen;
+    sheetOpen = !!watch;
+    tabWatch.setAttribute('aria-selected', String(sheetOpen));
+    tabLook.setAttribute('aria-selected', String(!sheetOpen));
+    tabWatch.tabIndex = sheetOpen ? 0 : -1;
+    tabLook.tabIndex = sheetOpen ? -1 : 0;
+    sheet.hidden = !sheetOpen;
+    look.hidden = sheetOpen;
+    if (focus) (sheetOpen ? tabWatch : tabLook).focus({ preventScroll: true });
+    if (sheetOpen !== was && scroller) scroller.scrollTop = 0;
+    if (sheetOpen) startAll();
     syncAll();
-    var done = function () { if (!sheetOpen) sheet.hidden = true; };
-    clearTimeout(hideTimer);
-    if (instant || reduce) done(); else hideTimer = setTimeout(done, 300);
-    if (!drawer.hidden && sheet.contains(document.activeElement)) {
-      if (window.SkriblModal) window.SkriblModal.close(sheet);
-      else peek.focus({ preventScroll: true });
-    }
+    look.dispatchEvent(new CustomEvent('helptab', { bubbles: true, detail: { look: !sheetOpen } }));
   }
-  peek.addEventListener('click', openSheet);
-  sheet.addEventListener('click', function (e) {
-    if (e.target.closest('[data-learn-close]') && !dragged) closeSheet();
-    dragged = false;
+  tabWatch.addEventListener('click', function () { showTab(true); });
+  tabLook.addEventListener('click', function () { showTab(false); });
+  // A tab list's own keys: the arrows move between the tabs, Home and End to
+  // either end.
+  [tabWatch, tabLook].forEach(function (t) {
+    t.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        var watch = e.key === 'Home' ? true : e.key === 'End' ? false : t !== tabWatch;
+        showTab(watch, true);
+      }
+    });
   });
-  // Escape closes the drawer and leaves How it works open: caught inside the
-  // panel, before the editors' window-level Escape that closes the panel.
+  // Escape closes full screen first; otherwise it is the panel's (the
+  // editors' window-level Escape closes How it works).
   drawer.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    if (viewerOpen) { e.stopPropagation(); e.preventDefault(); closeViewer(); return; }
-    if (sheetOpen) { e.stopPropagation(); e.preventDefault(); closeSheet(); }
+    if (viewerOpen) { e.stopPropagation(); e.preventDefault(); closeViewer(); }
   });
-  // A pull down on the grip closes it, as every sheet's grabber does.
-  var grip = document.getElementById('learnGrip');
-  var y0 = null, dy = 0, dragged = false;
-  if (grip && panel) {
-    grip.addEventListener('pointerdown', function (e) {
-      y0 = e.clientY; dy = 0; dragged = false;
-      try { grip.setPointerCapture(e.pointerId); } catch (err) {}
-    });
-    grip.addEventListener('pointermove', function (e) {
-      if (y0 == null) return;
-      dy = Math.max(0, e.clientY - y0);
-      if (dy > 6) { dragged = true; panel.style.transition = 'none'; panel.style.transform = 'translateY(' + dy + 'px)'; }
-    });
-    var end = function () {
-      if (y0 == null) return;
-      y0 = null;
-      panel.style.transition = '';
-      if (dragged && dy > 70) { dragged = false; closeSheet(); }
-      else panel.style.transform = '';
-    };
-    grip.addEventListener('pointerup', end);
-    grip.addEventListener('pointercancel', end);
-  }
 
   // Chips show one group, or all.
   sheet.querySelectorAll('.learn-chip').forEach(function (chip) {
@@ -303,8 +255,7 @@
       var f = chip.getAttribute('data-filter');
       sheet.querySelectorAll('.learn-chip').forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
       all.forEach(function (c) { c.hidden = f !== 'all' && c.getAttribute('data-group') !== f; });
-      var sc = sheet.querySelector('.learn-sheet-scroll');
-      if (sc) sc.scrollTop = 0;
+      if (scroller && scroller.scrollTop > sheet.offsetTop) scroller.scrollTop = 0;
     });
   });
 
@@ -387,25 +338,31 @@
   });
 
   // ---- How it works opening and closing -------------------------------------
+  // Every opening starts on Watch, at the top.
   function onOpenChange() {
-    if (!drawer.hidden) {
-      box.querySelectorAll('img[data-src]').forEach(function (im) {
-        if (!im.getAttribute('src')) im.setAttribute('src', im.getAttribute('data-src'));
-      });
-    } else {
-      closeViewer();
-      closeSheet(true);
-    }
-    syncAll();
+    if (!drawer.hidden) showTab(true);
+    else { closeViewer(); syncAll(); }
   }
   new MutationObserver(onOpenChange).observe(drawer, { attributes: true, attributeFilter: ['hidden'] });
   if (!drawer.hidden) onOpenChange();
 
-  // While searching, the reference is what answers; the examples step aside.
-  var search = document.getElementById('helpSearch');
-  if (search) search.addEventListener('input', function () {
-    box.hidden = !!search.value.trim();
-    if (box.hidden) closeSheet(true);
+  // More about a tool: its entry in Look it up, its section opened, the
+  // entry opened, scrolled to and focused.
+  sheet.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-more-tool]');
+    if (!b) return;
+    var tip = look.querySelector('.help-tip[data-help-tool="' + b.getAttribute('data-more-tool') + '"]');
+    showTab(false);
+    if (!tip) return;
+    var body = tip.closest('.accordion-body');
+    var head = body && body.previousElementSibling;
+    if (head && head.classList.contains('accordion-header') && !head.classList.contains('open')) head.click();
+    tip.classList.add('is-open');
+    tip.setAttribute('tabindex', '-1');
+    requestAnimationFrame(function () {
+      tip.scrollIntoView({ block: 'start' });
+      tip.focus({ preventScroll: true });
+    });
   });
 
   sheet.addEventListener('click', function (e) {
