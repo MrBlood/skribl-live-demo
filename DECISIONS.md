@@ -17851,3 +17851,19 @@ Skribl opens on a phone, once only, a tap skips him, a still hello under Reduce
 Motion, one piece of code for both editors. FUTURE.md 6m holds the choice and
 the next step, a measured mock before anything is built. Nothing in the app
 changes here.
+
+## After v323 -- the hello mocked, Blooby off the empty canvas, and How it works rethought
+
+Docs and a tool, no app code. The night of the v323 seal the owner looked at
+take C on the first open and found two things the mock had missed: the star's
+white was missing under Blooby (he had grown too big for it and stood below its
+middle) and the star's edges were soft (a band of light round it, gaps at its
+corners, and a player that draws at 2 pixels per point on a 3x phone). FUTURE.md
+6m says what fixed each and how it was measured; `harness/tools/make_grow.py`
+carries the switches, off unless set, so the seven takes draw as before. The
+owner also took Blooby off the empty canvas ("It's too much"), on both editors.
+
+Asked whether How it works makes sense, and then to look at what works for
+apps that want to be intuitive, beautiful, kind and useful, the answer is
+FUTURE.md 6n: show a drawing, hand over the pen, keep the manual for looking
+things up. Proposed, not built; the Blooby work goes first.
