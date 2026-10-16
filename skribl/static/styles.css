@@ -4514,7 +4514,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 .accordion-count {
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text-secondary);   /* --text-muted on its pill read 3.8:1 light, 4.3 dark */
   background: var(--surface-control-hover);
   border: 1px solid var(--line-2);
   padding: 3px 8px;
@@ -4606,7 +4606,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 }
 .help-tip:is(.is-open, .is-searching) .help-desc { display: block; -webkit-line-clamp: none; overflow: visible; }
 .help-more { min-height: 44px; margin: -6px 0 -8px; padding: 0; border: 0; background: transparent;
-  color: var(--ui-hi); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+  color: var(--accent-ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }   /* small violet words take --accent-ink (--ui-hi read 3.3:1 in light) */
 .help-more[hidden], .help-tip.is-searching .help-more { display: none; }
 .help-more:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; border-radius: 6px; }
 
@@ -4642,7 +4642,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--ui-active);
+  background: var(--accent-fill);   /* white at 12px needs the action fill: --ui-active was 4.35:1 */
   color: #fff;
   font-size: 12px;
   font-weight: 800;
@@ -6401,7 +6401,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .report-privacy { margin: 0 16px 10px; font-size: 11px; color: var(--text-secondary); }
 .report-actions { display: flex; gap: 8px; padding: 0 14px 12px; }
 .report-actions .panel-btn { flex: 1 1 0; text-align: center; }
-.report-primary { background: var(--ui-active); border-color: transparent; color: #fff; }
+.report-primary { background: var(--accent-fill); border-color: transparent; color: #fff; }   /* the action fill every primary button wears: white on --ui-active was 4.35:1 */
 
 /* ---- tooltips -------------------------------------------------------------
    IN tooltip.css, NOT HERE. The rules moved out when /library and /gallery
@@ -8054,7 +8054,7 @@ body.replaying .media-card { pointer-events: none; }
      over the drawers' track, under the unselected label's 4.99. One step
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground
      a pill sits on; the tint itself, the look the owner chose, does not move. */
-  --seg-on-ink:              #5434dc;
+  --seg-on-ink:              #4c31c4;   /* 5:1 on the tint over the menu's lilac (was #5434dc, 4.4:1; verify_contrast) */
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
@@ -8112,10 +8112,16 @@ body.replaying .media-card { pointer-events: none; }
    ramp was measured on: --text-secondary came out 3.53:1 on the Pad's light
    desktop menu. Inside the sheet the secondary, soft and muted words take one
    darker ink -- the same value the gallery's and library's glass sheets use
-   (pagemenu.css) -- and clear AA on the pixels actually behind them. */
-:root[data-theme="light"] .menu-sheet {
+   (pagemenu.css) -- and clear AA on the pixels actually behind them.
+   EVERY SHEET, NOT THE MENU ALONE (owner, after v323: "We need to check
+   contrasts and consistency"): Flip's menu, Your drafts, How it works and Tune
+   are the same kind of surface and take the same ink; verify_contrast read
+   them at 3.8 to 4.4:1 while only the menu had it. */
+:root[data-theme="light"] :is(.menu-sheet, .flip-menu, .sdrafts-sheet, .help-drawer-inner, .tune-shell) {
   --text-secondary: var(--on-glass-2);
+  --text-soft: var(--on-glass-2);
   --text-soft-2: var(--on-glass-2);
+  --text-soft-3: var(--on-glass-2);
   --text-muted: var(--on-glass-2);
 }
 

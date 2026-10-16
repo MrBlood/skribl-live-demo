@@ -330,6 +330,15 @@ stays a sleep.
   the bar and the x away while it plays on, a pause from elsewhere brings them
   back, a finger's first tap only wakes them (a mouse's move on a desk), the
   next tap pauses, and paused they stay up. Visible means painted.
+- `verify_contrast.py` — every word on every sheet against what is painted
+  behind it (owner, after v323: "check contrasts and consistency on all our
+  changes, and future changes"): the menu (main, New, Settings), Your drafts,
+  Export, Report a problem, Post, How it works (Watch, Look it up) and Tune,
+  on Pad and Flip, light and dark, a phone and a desk. The ground is a
+  photograph of the sheet with its words made transparent; WCAG AA (4.5:1,
+  3:1 large), disabled controls and a sheet's edge fade exempt. Then
+  consistency: each surface the same on Pad and Flip, and every sheet the menu
+  opens one paper. `CONTRAST_ONLY="Export|Post"` reads only those.
 - `verify_menu.py` — the ⋯ menu, one for both editors (_skribl_menu.html,
   lib/menupages.js): on a phone and a desk, light and dark, it fits without
   scrolling, every target 44px, names 16px over 14px; Pad's and Flip's are
