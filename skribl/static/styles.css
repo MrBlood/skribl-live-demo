@@ -7548,6 +7548,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .learn-card { box-shadow: var(--menu-card-drop); }
 .accordion-header.open { background: color-mix(in srgb, var(--accent) 6%, var(--menu-card)); }
 .learn-clip .learn-stage { background: var(--menu-card); }
+.help-desc, .help-intro { color: var(--text-secondary); }   /* the sheet's secondary ink: --text-soft-3 read 4.38:1 on the dark card (verify_contrast) */
 .tune-shell { background: var(--glass-fill); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .tune-shell.open { border: 0; box-shadow: var(--glass); }
 /* EXCEPT THE SHAPE PICKER, WHICH IS SOLID. It hangs inside the dock, and the
