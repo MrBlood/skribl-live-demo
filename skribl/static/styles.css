@@ -7540,7 +7540,15 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .help-drawer-inner::after { background: linear-gradient(to bottom, transparent, var(--menu-paper)); }
 .help-drawer-head { background: var(--menu-paper); border-bottom-color: transparent; }   /* one colour above and below: its line would show only at the edges, beside the tabs' mask */
 .help-close { background: var(--menu-card); border-color: var(--menu-card-line); }
-.help-tabs { background: var(--menu-track); border-color: transparent; box-shadow: 0 -12px 0 var(--menu-paper); }
+/* THE TABS ARE A SOLID BAR WHEN THE PAGE SCROLLS UNDER THEM (owner's phone,
+   scrolled: the examples showed through the lilac track, which is a wash, and
+   beside it in the gutters). A band of paper behind them reaches the page's
+   edges and up to the title band; the track is drawn on it; the pill and the
+   words stay above both (the pill is z-index 0, the tabs 1). */
+.help-tabs { background: transparent; border-color: transparent; box-shadow: none; }
+.help-tabs::before, .help-tabs::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
+.help-tabs::before { top: -13px; bottom: -1px; left: -18px; right: -18px; background: var(--menu-paper); }   /* -18: the gutter exactly, so nothing scrolls sideways */
+.help-tabs::after { inset: -1px; border-radius: 14px; background: var(--menu-track); }
 .learn-chip { background: var(--menu-card); border-color: var(--menu-card-line); }
 @media (hover: hover) { .learn-chip:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 .learn-chip[aria-pressed="true"] { background: var(--seg-on-fill); border-color: transparent; }

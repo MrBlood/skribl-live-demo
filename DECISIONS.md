@@ -18095,6 +18095,13 @@ once, not on the visit Blooby says hi. Automation never meets any of it
 unless it asks, like the hello.
 
 verify_learncard holds each promise on both editors with real touch, every
-row shown red by its own planted break; verify_contrast reads a card and the
+row shown red by its own planted break (a moving finger is cancelled twice
+over, by the browser's own pointercancel and by the card's 10px rule, so its
+row went red only with both taken out); verify_contrast reads a card and the
 name tags. Not tested here: iPhone Safari, whose press-and-hold callout the
 buttons turn off with -webkit-touch-callout.
+
+How it works' tabs, scrolled (owner's phone): the examples showed through
+the lilac track, which is a wash, and in the gutters beside it. A band of the
+menu's paper now sits behind the tabs from the title band down and gutter to
+gutter, with the track drawn on it.
