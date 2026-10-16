@@ -66,7 +66,7 @@
   <div class="menu-list">
     {# How it works stays first and tinted (owner chose B): the first thing a
        new person sees when they open ⋯. #}
-    <button type="button" class="menu-item menu-feature" id="{{ ids.help }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M10 8.6v6.8l5.6-3.4z" fill="currentColor"/></svg><span class="menu-item-text">How it works<span class="menu-item-sub">Watch it, or look it up</span></span>{{ chev }}</button>
+    <button type="button" class="menu-item menu-feature" id="{{ ids.help }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M10 8.6v6.8l5.6-3.4z" fill="currentColor"/></svg><span class="menu-item-text">How it works<span class="menu-item-sub">Ask in your own words</span></span>{{ chev }}</button>
     {% if not compose %}{{ hs.row() }}{{ hs.reload_row() }}{% endif %}
     {# Drafts and backups, one row (owner: "Could drafts and backups be one
        choice"): the drafts sheet holds this drawing's name and Save, every

@@ -34,7 +34,11 @@
   var tabWatch = document.getElementById('helpTabWatch');
   var tabLook = document.getElementById('helpTabLook');
   var box = sheet;
-  if (!drawer || !sheet || !look || !tabWatch || !tabLook) return;
+  // ASK (after v323) took the two tabs' place: Watch is Ask's home and Look it
+  // up its answers, switched by what is typed (lib/ask.js) through show()
+  // below. The tabs are optional, so this file still drives either markup.
+  var answer = document.getElementById('askAnswer');
+  if (!drawer || !sheet || !look) return;
   var scroller = drawer.querySelector('.help-drawer-inner');
 
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -163,7 +167,7 @@
                                                : n + ' examples couldn\u2019t load.');
     // Retry hides the banner it is in; focus goes to the Watch tab rather
     // than to <body>.
-    if (was && !n && failBox.contains(document.activeElement)) tabWatch.focus({ preventScroll: true });
+    if (was && !n && failBox.contains(document.activeElement)) (tabWatch || document.getElementById('helpSearch')).focus({ preventScroll: true });
   }
   function failed(card) {
     card.classList.add('learn-failed');
@@ -220,22 +224,29 @@
     else scroller.scrollTop = 0;
   }
 
-  // ---- the two tabs -------------------------------------------------------------
-  function showTab(watch, focus) {
-    var was = sheetOpen;
-    sheetOpen = !!watch;
-    tabWatch.setAttribute('aria-selected', String(sheetOpen));
-    tabLook.setAttribute('aria-selected', String(!sheetOpen));
-    tabWatch.tabIndex = sheetOpen ? 0 : -1;
-    tabLook.tabIndex = sheetOpen ? -1 : 0;
-    sheet.hidden = !sheetOpen;
-    look.hidden = sheetOpen;
-    if (focus) (sheetOpen ? tabWatch : tabLook).focus({ preventScroll: true });
-    if (sheetOpen !== was) toTop();
+  // ---- the views: home (the examples), the answers, one answer --------------
+  var view = 'home';
+  function show(next, focus) {
+    var was = view;
+    view = next;
+    sheetOpen = view === 'home';
+    sheet.hidden = view !== 'home';
+    look.hidden = view !== 'look';
+    if (answer) answer.hidden = view !== 'answer';
+    if (tabWatch && tabLook) {
+      tabWatch.setAttribute('aria-selected', String(sheetOpen));
+      tabLook.setAttribute('aria-selected', String(!sheetOpen));
+      tabWatch.tabIndex = sheetOpen ? 0 : -1;
+      tabLook.tabIndex = sheetOpen ? -1 : 0;
+      if (focus) (sheetOpen ? tabWatch : tabLook).focus({ preventScroll: true });
+    }
+    if (view !== was) toTop();
     if (sheetOpen) startAll();
     syncAll();
-    look.dispatchEvent(new CustomEvent('helptab', { bubbles: true, detail: { look: !sheetOpen } }));
+    look.dispatchEvent(new CustomEvent('helptab', { bubbles: true, detail: { look: view === 'look' } }));
   }
+  function showTab(watch, focus) { show(watch ? 'home' : 'look', focus); }
+  if (tabWatch && tabLook) {
   tabWatch.addEventListener('click', function () { showTab(true); });
   tabLook.addEventListener('click', function () { showTab(false); });
   // A tab list's own keys: the arrows move between the tabs, Home and End to
@@ -249,6 +260,7 @@
       }
     });
   });
+  }
   // Escape closes full screen first; otherwise it is the panel's (the
   // editors' window-level Escape closes How it works).
   drawer.addEventListener('keydown', function (e) {
@@ -345,7 +357,7 @@
   });
 
   // ---- How it works opening and closing -------------------------------------
-  // Every opening starts on Watch, at the top.
+  // Every opening starts on Ask's home, at the top.
   // A clip already fetched in one theme is swapped on opening when the theme
   // changed while How it works was shut, which is the only time it can: Theme
   // lives in the menu (owner's phone, dark, after v323: the light clip).
@@ -362,6 +374,10 @@
     var b = e.target.closest('[data-more-tool]');
     if (!b) return;
     var tip = look.querySelector('.help-tip[data-help-tool="' + b.getAttribute('data-more-tool') + '"]');
+    // The whole list, not what was last asked: an entry hidden by a query
+    // cannot be scrolled to.
+    var q = document.getElementById('helpSearch');
+    if (q && q.value) { q.value = ''; q.dispatchEvent(new Event('input', { bubbles: true })); }
     showTab(false);
     if (!tip) return;
     var body = tip.closest('.accordion-body');
@@ -410,4 +426,14 @@
     }, 0);
   });
 
+  // Ask (lib/ask.js) switches the views and opens an example full screen.
+  window.SkriblHelpLearn = {
+    show: show,
+    view: function () { return view; },
+    watch: function (name) {
+      var card = all.filter(function (c) { return (c.getAttribute('data-demo-name') || c.getAttribute('data-clip-name')) === name; })[0];
+      if (card) openViewer(card);
+      return !!card;
+    }
+  };
 }());

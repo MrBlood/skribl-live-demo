@@ -16,18 +16,23 @@
   <div class="help-backdrop" id="helpBackdrop"></div>
   <div class="help-drawer-inner">
     <div class="help-drawer-head">
-      <span>How it works</span>
+      <span>What would you like to do?</span>
       <button type="button" id="helpClose" class="help-close" aria-label="Close help drawer">{{ mark('close') }}</button>
     </div>
-    {# ---- TWO TABS (owner's pick, layout 1 of three, after v323) ----------
-       Watch first: the examples, big, one under another, each a real Skribl
-       played by the in-post player. Look it up second: search and every
-       entry, two lines each with More for the rest. FUTURE.md 6n. #}
-    {# A track of the app's one sliding pill (lib/segslider.js reads the
-       tabs' aria-selected; it never writes to a .seg-track). #}
-    <div class="help-tabs seg-track" role="tablist" aria-label="How it works"><span class="seg-slider" aria-hidden="true"></span>
-      <button type="button" role="tab" class="help-tab" id="helpTabWatch" aria-controls="helpWatch" aria-selected="true">Watch</button>
-      <button type="button" role="tab" class="help-tab" id="helpTabLook" aria-controls="helpLook" aria-selected="false" tabindex="-1">Look it up</button>
+    {# ---- ASK (owner, after v323: the Ask mock, "All yes"; FUTURE.md 6p) ----
+       How it works opens on one question in your own words. The field stays up
+       under the title as the page scrolls; empty, the page below is Ask's home
+       (the tour, what people often ask, examples to watch, Name every button);
+       typed into, it is the answers (lib/ask.js) and every entry that matches
+       (lib/helpsearch.js, with everyday cousins of the words). #}
+    <div class="ask-bar">
+      <div class="help-search">
+        <span class="help-search-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </span>
+        <input type="search" id="helpSearch" class="help-search-input" autocomplete="off"
+               placeholder="Ask in your own words" aria-label="Ask in your own words">
+      </div>
     </div>
     {# ---- LEARN BY WATCHING (lib/helplearn.js) ---------------------------
        Every card plays a REAL Skribl: harness/tools/make_art.py and
@@ -65,12 +70,16 @@
       </figcaption>
     </figure>
     {%- endmacro %}
-    <section class="help-learn" id="helpWatch" role="tabpanel" aria-labelledby="helpTabWatch"
+    <section class="help-learn" id="helpWatch" aria-label="Ask"
              data-player-css="{{ skribl_asset('inlineplayer.css') }}"
              data-player-js="{{ skribl_asset('inlineplayer.js') }}">
-      {# The name tags' way in (lib/learncard.js): a tag on every button, and a tag opens that button's card. #}
-      <button type="button" class="learn-names" id="learnNames"><span class="learn-names-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.5"/></svg></span><span class="learn-names-t">Name every button<span class="learn-names-sub">Or hold any button to learn it</span></span></button>
-      <div class="learn-chips" role="group" aria-label="Show">
+      {# Ask's home: the way in for someone new, the jobs people ask about most
+         (lib/ask.js fills them), and the examples, each a real Skribl. #}
+      <button type="button" class="ask-tour" id="askTour" data-tour="{{ 'flip-wave' if is_flip else 'cat' }}"><span class="ask-tour-pic" aria-hidden="true"></span><span class="ask-tour-t">New here?<span class="ask-tour-sub">Watch Skribl in a minute, then try it.</span></span></button>
+      <h3 class="ask-k" id="askOftenK">People often ask</h3>
+      <div class="ask-list" id="askOften" role="list" aria-labelledby="askOftenK"></div>
+      <h3 class="ask-k">Watch an example</h3>
+      <div class="learn-chips" role="group" aria-label="Show" hidden>
         <button type="button" class="learn-chip" data-filter="all" aria-pressed="true">All</button>
         <button type="button" class="learn-chip" data-filter="start" aria-pressed="false">Start</button>
         <button type="button" class="learn-chip" data-filter="tools" aria-pressed="false">Tools</button>
@@ -144,23 +153,20 @@
           {{ learn_card('flip-wave', 'Make it move', 'In Flip: a page at a time, and Blooby waves hello.', 'ideas') }}
           {% endif %}
         </div>
+      {# The name tags' way in (lib/learncard.js): a tag on every button, and a tag opens that button's card. #}
+      <button type="button" class="learn-names" id="learnNames"><span class="learn-names-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.5"/></svg></span><span class="learn-names-t">Name every button<span class="learn-names-sub">Or hold any button to learn it</span></span></button>
+      <button type="button" class="ask-row ask-browse" id="askBrowse"><span class="ask-row-t">Everything, by section<span class="ask-row-sub">Every tool and setting, in one list</span></span></button>
     </section>
-    <section class="help-look" id="helpLook" role="tabpanel" aria-labelledby="helpTabLook" hidden>
-    {# Search sits above everything: forty-odd entries across 7 sections is past the
-       point where browsing beats searching. Counts are filled in by
+    <section class="help-look" id="helpLook" aria-label="Answers" hidden>
+    {# The best how-to answer for what was typed, above the entries (lib/ask.js). #}
+    <div class="ask-best" id="askBest" hidden></div>
+    {# The field is Ask's, above everything (the ask-bar). Counts are filled in by
        lib/helpsearch.js from the DOM — the hand-typed "N tips" badges drifted
        the moment a tip was added, so nothing here states a number. #}
-    <div class="help-search">
-      <span class="help-search-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      </span>
-      <input type="search" id="helpSearch" class="help-search-input" autocomplete="off"
-             placeholder="Search &mdash; try {% if is_flip %}loop, onion, pressure{% else %}loop, record, pressure{% endif %}" aria-label="Search help">
-    </div>
     <div class="help-search-count" id="helpSearchCount" aria-live="polite"></div>
     <div class="help-empty" id="helpEmpty" hidden>
-      <div class="help-empty-title">Nothing matches that</div>
-      <div class="help-empty-sub">Try <strong>loop</strong>, <strong>{% if is_flip %}onion{% else %}record{% endif %}</strong>, <strong>pressure</strong> or <strong>export</strong>.</div>
+      <div class="help-empty-title">Nothing for that yet</div>
+      <div class="help-empty-sub">Try other words, like <strong>loop</strong>, <strong>{% if is_flip %}onion{% else %}record{% endif %}</strong> or <strong>export</strong>. Or ask the buttons themselves: hold one.</div>
     </div>
     <div class="help-steps">
       <div class="help-intro">
@@ -348,6 +354,8 @@
       </div>
     </div>
     </section>
+    {# An answer: its example, its steps, Show me, and what is related (lib/ask.js). #}
+    <section class="ask-answer" id="askAnswer" aria-labelledby="askAnswerT" hidden></section>
   </div>
   {# ---- FULL SCREEN (lib/helplearn.js) ----------------------------------
      A tap on any example opens it large over the panel (owner: "we should
