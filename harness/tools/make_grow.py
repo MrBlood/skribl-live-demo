@@ -29,6 +29,14 @@ OUTDIR/<take>.json (the share payload) and OUTDIR/<take>.meta.json. Needs the
 local server (SKRIBL_BASE). A page that draws itself replays at the pace its
 pen events were sent, so a busy machine records it slower: take D's drawing-in
 came out at about eight seconds on a loaded box.
+
+THE HELLO AS MOCKED AT THE v323 SEAL (FUTURE.md 6m): take C with
+
+    GROW_FILL_FRAC=0.525 GROW_LIFT=0.087 GROW_NOGLOW=1 GROW_SOLID=1
+
+-- Blooby at the icon's share of the star and standing on its white, no band
+of light round the star, its corners filled. Unset, every take draws as it
+did when the owner first saw the seven.
 """
 import copy
 import json
@@ -61,8 +69,8 @@ STAR_INNER = blooby.ICON_STAR_INNER
 # THE WHOLE STAR, as the app's Blooby badge has it (blooby.BADGE_*): in a tall
 # phone frame the icon's star, its points running off the sides, read as a
 # white band across the screen. All six points inside, a little margin.
-STAR_FRAC = 0.5                   # its points' reach, as a share of the width
-FILL_FRAC = 0.70                  # his full height, as a share of the width (the badge's)
+STAR_FRAC = float(os.environ.get("GROW_STAR_FRAC", 0.5))   # its points' reach, as a share of the width
+FILL_FRAC = float(os.environ.get("GROW_FILL_FRAC", 0.70))  # his full height, as a share of the width (the badge's)
 
 # ------------------------------------------------------------------ Blooby
 
@@ -213,6 +221,8 @@ def star_strokes(cx, cy, r, cw, ch, scale=1.0):
     edge_w, fill_w = max(3.0, 14 * scale), max(4.0, 26 * scale)
     glow = [S(blooby.dense(p, 5), "form", GLOW, size=max(3, 12 * scale), peak=1.0, flat=True, pace=1.4)
             for p in clip(star_pts(cx, cy, r + 15 * scale), m, m, cw - m, ch - m)]
+    if os.environ.get("GROW_NOGLOW"):
+        glow = []                 # a crisp edge: no band of light round the star
     # dense(): points close together, so the pen's smoothing follows each row's
     # turn instead of bowing it out past the edge (blooby.card's colouring does the same).
     fill = [S(blooby.dense(p, 4), "fill", WHITE, size=fill_w, pace=2.6, peak=1.0, flat=True)
@@ -230,6 +240,13 @@ def star_strokes(cx, cy, r, cw, ch, scale=1.0):
                    for q in clip(p, m, m, cw - m, ch - m)]
     edge = [S(blooby.dense(p, 4), "form", WHITE, size=edge_w, peak=1.0, flat=True, pace=1.2)
             for p in clip(star_pts(cx, cy, r), m, m, cw - m, ch - m)]
+    if os.environ.get("GROW_SOLID"):
+        # Four more white lines just inside the edge: the rows' round ends cannot
+        # reach into a point's narrow corners, and left lilac slivers there
+        # (456 device pixels inside the star at 3x; none with these).
+        for d in (0.7, 1.4, 2.1, 2.8):
+            edge += [S(blooby.dense(p, 4), "form", WHITE, size=edge_w, peak=1.0, flat=True, pace=1.2)
+                     for p in clip(star_pts(cx, cy, r - d * edge_w), m, m, cw - m, ch - m)]
     return glow + fill + spines + edge
 
 
@@ -246,7 +263,7 @@ def ease_out_back(t, c=0.9):
 def take(name, cw, ch):
     """The pages of a take: dicts saying what each page holds."""
     k_full = FILL_FRAC * cw / REF_H              # his full height, the badge's share of the width
-    mid = (cw / 2, ch / 2)
+    mid = (cw / 2, ch / 2 - float(os.environ.get("GROW_LIFT", 0)) * cw)   # where he stands, lifted onto the star
     pages, loop_n, star_page = [], 24, True
     feet_full = (mid[0] + (REF_FEET[0] - REF_C[0]) * k_full, mid[1] + (REF_FEET[1] - REF_C[1]) * k_full)
 

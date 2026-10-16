@@ -818,6 +818,73 @@ NEXT: the mock, before any of it is built: C on the first open, light and
 dark, phone (402px) and desk, beside today's empty canvas; measured, including
 how 3.4 s feels as a first hello and that a tap skips him at once.
 
+MOCKED, the same night, on the real Pad page in the real in-post player, phone
+402x874 light and dark. What the owner's eye found, and what fixed it:
+
+* "SEE THE WHITE IN THE STAR MISSING": at full size Blooby stood below the
+  star's middle, his feet and shadow on lilac beside its narrow bottom point.
+  He was 0.70 of the width tall on a star reaching 0.5; the icon has him barely
+  taller than the star's reach. Fixed by the icon's share (0.525) and standing
+  him 0.087 of the width higher, where the star is 76 px wide each side of his
+  feet against his shadow's 59. The bigger-star alternative was mocked too; its
+  side points run off the screen, the white band turned down when the takes
+  were first drawn.
+* "THE STAR EDGES LOOK BLURRY": the band of light round the star (soft, with a
+  round blob at each tip) is gone; the white fill now reaches the corners (456
+  lilac device pixels inside the star at 3x before, 0 after, the count first
+  shown to read 0 on a painted solid star); and the player draws at most 2
+  pixels per point where an iPhone shows 3, so the hello draws at the phone's
+  own 3. Only the hello: feeds and the Gallery keep the cap.
+* The tool's switches for all of this are in `harness/tools/make_grow.py`'s
+  docstring. Mock films did not play in the owner's viewer; GIFs rendered page
+  by page through the player at 3x did.
+
+ALSO DECIDED: Blooby comes off the empty canvas ("It's too much"), on both
+editors: the words stay, and sit at the canvas's middle without him (40 px
+below it with him). So the hello fades into the canvas rather than shrinking
+into a badge.
+
+STILL TO SAY YES TO before building: the star as fixed, sharp at 3x, one wave
+then the fade, a tap skips, a still hello under Reduce Motion, one module for
+both editors; two PRs, the badge first.
+
+## 6n. How it works: show it, hand over the pen, keep the manual for looking things up (proposed)
+
+ASKED after the hello mock: does How it works make sense, and should it be
+reimagined? Measured on the Pad and Flip, phone and desk: it opens on a
+2,726-word manual (Flip's 4,125), 56 and 64 entries in 12px text, one step a
+155-word sentence, desk lines past 100 characters; the examples sit behind one
+bar, two to a row about 180 px wide on a phone, three of the first being
+pictures of the app's own screens. What works: the examples are real drawings
+in the real player, Try it, search, nothing loads until asked, stills under
+Reduce Motion, contrast 5.6:1 light and 6.3:1 dark, all 19 examples named.
+
+WHAT THE BEST OF THEM DO (looked up at the owner's ask): people learn by doing
+(Apple's onboarding guidance; NN/g's study of 70 people on 4 apps: 91% task
+success after a tutorial, 94% after skipping it); help belongs at the tool, once
+and sparingly (Apple's tips; Duolingo's hints in the moment); short demos with
+a way straight into the tool (Adobe Fresco, FlipaClip); the manual searchable
+and out of the way (Procreate's handbook). Looom, beautiful and award-winning,
+is the warning: controls that feel obtuse at first get learned from outside
+courses.
+
+THE PROPOSAL, put to the owner and not yet answered:
+
+1. First open: Blooby's hello (6m), the only thing shown uninvited.
+2. Help at the tool: the first time a tool is picked, a small card above the
+   tools plays its example with one kind line and "Got it"; once only, never
+   over the canvas.
+3. How it works opens on Watch: the examples big, one at a time, swipe for
+   the next, Try it hands over the pen; chips for Start, Tools, Ideas.
+4. Look it up: search and short answers, one or two sentences each, "More"
+   for the rest, 15-16px text.
+
+Goes away: the manual as the first screen, the steps that repeat the Start
+examples, app pictures too small to read, 12px text. Flip shares all of it
+(one help drawer and one examples module today). Order: 3 and 4, then 2,
+after the Blooby work. NEXT: a mock of 2 and 3 beside today's, phone and desk,
+both themes.
+
 Whichever home, he plays in Skribl's own player (the takes were filmed in the
 in-post player, `inlineplayer.js`), so "drawings that draw themselves" is the
 greeting itself. Shipping the file into the app is the payload-size question
