@@ -85,7 +85,7 @@
         var isOpen = header.classList.toggle('open');
         header.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         if (body && body.classList.contains('accordion-body')) body.classList.toggle('open', isOpen);
-        if (isOpen) requestAnimationFrame(fitMore);
+        if (isOpen) fitSoon();
       });
     });
 
@@ -104,7 +104,17 @@
       b.setAttribute('aria-expanded', 'false');
       tip.appendChild(b);
     });
+    // Only while How it works is open, and once a frame at most: it reads
+    // every entry's layout, and run on each resize with the panel shut it
+    // held up the editors (Flip's Play disc began its fade late).
+    var fitting = false;
+    function fitSoon() {
+      if (fitting || drawer.hidden) return;
+      fitting = true;
+      requestAnimationFrame(function () { fitting = false; fitMore(); });
+    }
     function fitMore() {
+      if (drawer.hidden) return;
       [].slice.call(drawer.querySelectorAll('.help-tip')).forEach(function (tip) {
         var b = tip.querySelector('.help-more'), d = tip.querySelector('.help-desc');
         if (!b || !d) return;
@@ -122,8 +132,8 @@
       tip.classList.toggle('is-open');
       fitMore();
     });
-    drawer.addEventListener('helptab', function () { requestAnimationFrame(fitMore); });
-    global.addEventListener('resize', fitMore);
+    drawer.addEventListener('helptab', fitSoon);
+    global.addEventListener('resize', fitSoon);
 
     var sections = headers.map(function (h) {
       var body = h.nextElementSibling;
@@ -177,7 +187,7 @@
           : (total + ' entries in ' + sections.length + ' sections');
       }
       if (emptyEl) emptyEl.hidden = !(q && shown === 0);
-      requestAnimationFrame(fitMore);
+      fitSoon();
       return shown;
     }
 

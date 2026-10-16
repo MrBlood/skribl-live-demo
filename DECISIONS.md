@@ -17945,3 +17945,11 @@ row measures from the tabs now, and its open-every-section row waits for the
 sections to finish opening (a fixed 700 ms ran short on a loaded box). The bar's
 previews and `make_help_thumbs.py` are gone with the bar.
 
+`verify_parity` found the last one, red beside the others and alone: Flip's
+Play disc at 390 px was still almost clear 150 ms after a tap (alpha 0.016;
+0.21 on main). The More buttons were sized on every window resize, reading
+every entry's layout with How it works shut, and that held up the frame the
+disc's fade starts on. Swapping in main's copy of each help script and then its
+stylesheet pinned it to `lib/helpsearch.js`; it sizes them now only with the
+panel open, once a frame at most, and the disc reads 0.21 again.
+
