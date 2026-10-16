@@ -206,8 +206,16 @@
     if (card.hasAttribute('data-clip-dark')) { startClip(card); sync(card); }
     else loadPlayer().then(function () { start(card); sync(card); });
   }
+  // The examples sit in a strip that scrolls sideways (Ask's home), which
+  // the sheet's margin cannot see past: each one that comes near asks for
+  // the next in the strip too, so a swipe meets it loaded.
   var near = window.IntersectionObserver ? new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) { if (e.isIntersecting && open()) want(e.target); });
+    entries.forEach(function (e) {
+      if (!e.isIntersecting || !open()) return;
+      want(e.target);
+      var next = e.target.nextElementSibling;
+      if (next && all.indexOf(next) >= 0) want(next);
+    });
   }, { root: scroller, rootMargin: '0px 0px 50% 0px' }) : null;
   function startAll() {
     // No observer (a very old browser): everything, as before.
@@ -218,7 +226,7 @@
   }
   function syncAll() { cards.forEach(sync); clips.forEach(sync); }
   // To the top AT ONCE: the panel scrolls smoothly, and gliding back up past
-  // every example on a change of tab or chip looked like a fault.
+  // every example on a change of view looked like a fault.
   function toTop() {
     if (!scroller) return;
     if (scroller.scrollTo) scroller.scrollTo({ top: 0, behavior: 'instant' });
@@ -367,10 +375,10 @@
   new MutationObserver(onOpenChange).observe(drawer, { attributes: true, attributeFilter: ['hidden'] });
   if (!drawer.hidden) onOpenChange();
 
-  // Try it: How it works closes and the editor holds that tool. The strip's
-  // cards are pictures, so it rides with the example full screen.
+  // Try it: How it works closes (and full screen with it) and the editor
+  // holds that tool. The strip's cards are pictures, so it rides with the
+  // example full screen.
   function tryTool(tool) {
-    closeViewer();
     var close = document.getElementById('helpClose');
     if (close) close.click();
     // After this tap has finished travelling: the shape card's dismisser hears
