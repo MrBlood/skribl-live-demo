@@ -154,6 +154,7 @@
       }
       magnifyOn = onState;
       hud.hidden = !onState;
+      if (onState) keepOnScreen();       // the screen may have turned since it was put away
       if (magnifyBtn) {
         magnifyBtn.classList.toggle('active', onState);
         magnifyBtn.setAttribute('aria-pressed', onState ? 'true' : 'false');
@@ -209,27 +210,43 @@
 
     global.addEventListener('resize', function () { if (zoom > 1) render(false); });
 
-    // ---- the grip: drag the HUD, dock it to the nearest corner --------------
+    // ---- the grip: drag the HUD anywhere on the screen ---------------------
+    // Owner: "It should be draggable anywhere on screen (example phone size
+    // there's room to drag it outside the canvas)"; the magnifier mock, "All
+    // yes". It docked to the page's four corners, so on a phone it always sat
+    // on the drawing. Dropped, it stays exactly there, whole on screen, and
+    // is there again next time (each editor its own spot). Until it is first
+    // moved it sits in the page's corner as before. To be free of the page
+    // it leaves it for the body: a fixed box inside the wrap would scroll
+    // and clip with it.
     var grip = doc.getElementById('zoomGrip');
-    var snapEl = null, dragging = false, grabDX = 0, grabDY = 0;
-    function corners() {
-      var r = wrap.getBoundingClientRect();
-      var pw = hud.offsetWidth, ph = hud.offsetHeight, m = 12;
-      return {
-        tl: { key: 'tl', x: m, y: m },
-        tr: { key: 'tr', x: r.width - pw - m, y: m },
-        bl: { key: 'bl', x: m, y: r.height - ph - m },
-        br: { key: 'br', x: r.width - pw - m, y: r.height - ph - m }
-      };
+    var dragging = false, grabDX = 0, grabDY = 0, M = 4;
+    var KEY = 'skribl.zoomhud.' + (wrap.classList.contains('flip-wrap') ? 'flip' : 'pad') + '.v1';
+    function inside(x, y) {
+      return { x: Math.max(M, Math.min(global.innerWidth - hud.offsetWidth - M, x)),
+               y: Math.max(M, Math.min(global.innerHeight - hud.offsetHeight - M, y)) };
     }
-    function nearestCorner(x, y) {
-      var c = corners(), best = null, bd = Infinity;
-      for (var k in c) {
-        var d = Math.hypot(x - c[k].x, y - c[k].y);
-        if (d < bd) { bd = d; best = c[k]; }
-      }
-      return best;
+    function free(x, y) {
+      if (hud.parentNode !== doc.body) doc.body.appendChild(hud);
+      hud.classList.add('zoom-free');
+      var at = inside(x, y);
+      hud.style.left = at.x + 'px';
+      hud.style.top = at.y + 'px';
+      hud.style.right = 'auto';
+      hud.style.bottom = 'auto';
+      return at;
     }
+    function saved() {
+      try { var v = JSON.parse(global.localStorage.getItem(KEY) || 'null'); return v && isFinite(v.x) && isFinite(v.y) ? v : null; }
+      catch (e) { return null; }
+    }
+    function keepOnScreen() {
+      if (!hud.classList.contains('zoom-free') || hud.hidden) return;
+      free(parseFloat(hud.style.left) || 0, parseFloat(hud.style.top) || 0);
+    }
+    var spot = saved();
+    if (spot) free(spot.x, spot.y);
+    global.addEventListener('resize', keepOnScreen);
     function pointer(ev) {
       var t = global.SkriblEventPoint.at(ev);
       return { x: t.clientX, y: t.clientY };
@@ -237,19 +254,12 @@
     function gripStart(ev) {
       ev.preventDefault();
       ev.stopPropagation();
-      var r = hud.getBoundingClientRect(), wrapR = wrap.getBoundingClientRect(), p = pointer(ev);
+      var r = hud.getBoundingClientRect(), p = pointer(ev);
       grabDX = p.x - r.left;
       grabDY = p.y - r.top;
       dragging = true;
       hud.classList.add('dragging');
-      hud.style.right = 'auto';
-      hud.style.bottom = 'auto';
-      hud.style.left = (r.left - wrapR.left) + 'px';
-      hud.style.top = (r.top - wrapR.top) + 'px';
-      snapEl = doc.createElement('div');
-      snapEl.className = 'zoom-snap';
-      snapEl.style.height = hud.offsetHeight + 'px';
-      wrap.appendChild(snapEl);
+      free(r.left, r.top);
       if (ev.type === 'mousedown') {
         global.addEventListener('mousemove', gripMove);
         global.addEventListener('mouseup', gripEnd);
@@ -262,23 +272,15 @@
     function gripMove(ev) {
       if (!dragging) return;
       ev.preventDefault();
-      var wrapR = wrap.getBoundingClientRect(), p = pointer(ev);
-      var x = Math.max(0, Math.min(wrapR.width - hud.offsetWidth, p.x - wrapR.left - grabDX));
-      var y = Math.max(0, Math.min(wrapR.height - hud.offsetHeight, p.y - wrapR.top - grabDY));
-      hud.style.left = x + 'px';
-      hud.style.top = y + 'px';
-      var near = nearestCorner(x, y);
-      if (snapEl) { snapEl.style.left = near.x + 'px'; snapEl.style.top = near.y + 'px'; }
+      var p = pointer(ev);
+      free(p.x - grabDX, p.y - grabDY);
     }
     function gripEnd() {
       if (!dragging) return;
       dragging = false;
       hud.classList.remove('dragging');
-      var x = parseFloat(hud.style.left) || 0, y = parseFloat(hud.style.top) || 0;
-      var near = nearestCorner(x, y);
-      hud.style.left = ''; hud.style.top = ''; hud.style.right = ''; hud.style.bottom = '';
-      hud.setAttribute('data-corner', near.key);
-      if (snapEl) { snapEl.remove(); snapEl = null; }
+      var at = { x: parseFloat(hud.style.left) || 0, y: parseFloat(hud.style.top) || 0 };
+      try { global.localStorage.setItem(KEY, JSON.stringify(at)); } catch (e) {}
       global.removeEventListener('mousemove', gripMove);
       global.removeEventListener('mouseup', gripEnd);
       global.removeEventListener('touchmove', gripMove);

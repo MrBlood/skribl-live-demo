@@ -18142,3 +18142,31 @@ verify_contrast (four Ask surfaces, including a Show me step) and
 check_centring read Ask instead of the tabs. learncard.js left verify_surfaces'
 self-installing list, since Ask now reads it.
 
+## After v323 -- what a tap does, and the magnifier anywhere
+
+Two asks after Ask, mocked and "All yes".
+
+The button cards say what a tap does. The owner: Pen "opens a drawer but
+it's not mentioned what a fast tap does". Pen's card did say it, mid-
+sentence; most cards for a button that opens something did not. Under the
+sentence each card now has a row per gesture, the verb in small violet
+words (--accent-ink, 6.9:1 light, 5.8:1 dark): Pen's Tap again (colour,
+brush and size) and Drag sideways (size, without opening anything),
+Eraser, Shapes, More tools, Photo and music, Post, Tune, the menu, Flip's
+pages, the x1 badge and the slider steps, read off what each tap really
+does in the code. Tune's sentence no longer names Pad-only pauses.
+
+The magnifier's controls drag anywhere on the screen. They docked to the
+page's four corners, so on a phone they always sat on the drawing. Dropped,
+they stay exactly there, whole on screen (kept so when the screen turns or
+shrinks), and are there next time, each editor its own spot. Until first
+moved they sit in the page's corner as before. Free, they leave the page
+for the body, fixed, over the toolbar and header and under every popover
+and sheet. The corner ghost went. One module, so Pad and Flip change
+together.
+
+verify_learncard checks Pen's rows painted and a Tap row on every button
+that opens something; verify_helpclaims drags the controls off the page
+and reloads. Each row was shown red by its own break (a missing row, hidden
+rows, the old docking code, a spot not remembered).
+

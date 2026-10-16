@@ -410,24 +410,33 @@ def probe_magnifier(b, nm, path):
 
 
 def probe_dock(b, nm, path):
-    """Dragging the pill's grip docks the zoom controls in another corner."""
+    """Dragging the pill's grip puts the zoom controls anywhere on the screen,
+    off the drawing too, and they are there again after a reload (owner:
+    "draggable anywhere on screen"; the magnifier mock, "All yes")."""
     ctx, pg, errs = fresh(b, path)
     pg.evaluate("() => document.getElementById('magnifyBtn').click()")
     pg.wait_for_timeout(300)
     hud0 = pg.locator("#zoomHud").bounding_box()
     grip = pg.locator("#zoomGrip").bounding_box()
-    vw = pg.viewport_size
     pg.mouse.move(grip["x"] + grip["width"] / 2, grip["y"] + grip["height"] / 2)
     pg.mouse.down()
-    tx = 60 if hud0["x"] > vw["width"] / 2 else vw["width"] - 60
-    ty = 120 if hud0["y"] > vw["height"] / 2 else vw["height"] - 120
-    pg.mouse.move(tx, ty, steps=12)
+    # To the screen's left edge, which is off the page on every editor here.
+    pg.mouse.move(8 + grip["width"] / 2, 200, steps=12)
     pg.mouse.up()
-    pg.wait_for_timeout(500)
-    hud1 = pg.locator("#zoomHud").bounding_box()
+    pg.wait_for_timeout(400)
+    WHERE = """() => { const h = document.getElementById('zoomHud').getBoundingClientRect(),
+        w = document.querySelector('.canvas-wrap, .flip-wrap').getBoundingClientRect(),
+        g = document.getElementById('zoomGrip').getBoundingClientRect(), at = document.elementFromPoint(g.left + g.width / 2, g.top + g.height / 2);
+      return { x: Math.round(h.left), y: Math.round(h.top), off: h.right <= w.left + 1, painted: !!at && document.getElementById('zoomHud').contains(at) }; }"""
+    hud1 = pg.evaluate(WHERE)
+    pg.reload()
+    pg.wait_for_timeout(800)
+    pg.evaluate("() => { window.SkriblHints && SkriblHints.hide(); document.getElementById('magnifyBtn').click(); }")
+    pg.wait_for_timeout(300)
+    hud2 = pg.evaluate(WHERE)
     ctx.close()
-    moved = abs(hud1["x"] - hud0["x"]) > 100 or abs(hud1["y"] - hud0["y"]) > 100
-    return moved and not errs, f"pill {round(hud0['x'])},{round(hud0['y'])} -> {round(hud1['x'])},{round(hud1['y'])}"
+    ok = hud1["off"] and hud1["painted"] and abs(hud1["y"] - (200 - grip["height"] / 2)) <= 2 and hud2["x"] == hud1["x"] and hud2["y"] == hud1["y"]
+    return ok and not errs, f"pill {round(hud0['x'])},{round(hud0['y'])} -> {hud1} -> after a reload {hud2}"
 
 
 def slow_drag(pg, sel, x0, y0, x1, y1, ms):
