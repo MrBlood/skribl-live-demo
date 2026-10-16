@@ -346,8 +346,11 @@
 
   // ---- How it works opening and closing -------------------------------------
   // Every opening starts on Watch, at the top.
+  // A clip already fetched in one theme is swapped on opening when the theme
+  // changed while How it works was shut, which is the only time it can: Theme
+  // lives in the menu (owner's phone, dark, after v323: the light clip).
   function onOpenChange() {
-    if (!drawer.hidden) showTab(true);
+    if (!drawer.hidden) { clips.forEach(function (c) { if (c._learnWanted) startClip(c); }); showTab(true); }
     else { closeViewer(); syncAll(); }
   }
   new MutationObserver(onOpenChange).observe(drawer, { attributes: true, attributeFilter: ['hidden'] });

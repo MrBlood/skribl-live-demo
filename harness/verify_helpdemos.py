@@ -416,6 +416,20 @@ with sync_playwright() as p:
               not s5["sheet"] and "playing" not in s5["replays"] and all(c["paused"] for c in s5["clips"]), str(s5))
         check(f"{name}: ...and closes full screen with it",
               pg.evaluate("() => document.getElementById('learnViewer').hidden") is True)
+        # THE THEME CHANGED WHILE IT WAS SHUT, which is the only way (Theme is in
+        # the menu): reopened, the clips already fetched are in the new theme
+        # (owner's phone, dark, after v323: the light clip in a dark card).
+        pg.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
+        pg.wait_for_timeout(300)
+        pg.evaluate(OPEN); pg.wait_for_timeout(800)
+        s6 = pg.evaluate(STATE)
+        check(f"{name}: themed while shut, reopened: the clips are the light recording",
+              any(c["src"] for c in s6["clips"])
+              and all("-light." in c["src"] and "-light." in c["poster"] for c in s6["clips"] if c["src"]),
+              str([c["src"].split("/")[-1] for c in s6["clips"]]))
+        pg.evaluate("() => document.getElementById('helpClose').click()"); pg.wait_for_timeout(500)
+        pg.evaluate("() => document.documentElement.removeAttribute('data-theme')")
+        pg.wait_for_timeout(300)
 
         # 5. Try it
         for t in sorted(tools):
