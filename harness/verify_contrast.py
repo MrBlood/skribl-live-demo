@@ -12,7 +12,8 @@ it did not. This suite does, on Pad and Flip, light and dark, a phone and a
 desk, for each surface a person can open:
 
   the menu (main, New, Settings), Your drafts, Export, Report a problem,
-  Post, How it works (Watch, Look it up) and Tune.
+  Post, How it works (Watch, Look it up), Tune, a button's card and the
+  name tags (lib/learncard.js).
 
 THE GROUND IS READ FROM PIXELS, NOT STYLES: the surface is photographed once
 with every word made transparent, and each word's ground is the colour
@@ -202,13 +203,22 @@ def surfaces(name, ids, q, canvas, btn):
     def tune():
         q.click("#tuneBtn"); q.wait_for_timeout(700)
 
+    # The card on the button and the name tags (lib/learncard.js), which the
+    # page only shows to automation that asks (see the context's init script).
+    def card():
+        q.evaluate("() => window.SkriblLearnCard.open('#penToolBtn')"); q.wait_for_timeout(900)
+
+    def names():
+        q.evaluate("() => window.SkriblLearnCard.tags(true)"); q.wait_for_timeout(400)
+
     return (("the menu", menu, m), ("New", page("new"), m), ("Settings", page("settings"), m),
             ("Your drafts", via("openCloudDraftItem"), "#savedDraftsSheet"),
             ("Export", via(ids["export"]), "#exportSheet"), ("Report a problem", via(ids["report"]), "#reportSheet"),
             ("Post", post, "#postSheet"),
             ("How it works, Watch", via(ids["help"], 1500), "#helpDrawer .help-drawer-inner"),
             ("How it works, Look it up", look, "#helpDrawer .help-drawer-inner"),
-            ("Tune", tune, "#tuneShell"))
+            ("Tune", tune, "#tuneShell"),
+            ("A button's card", card, ".lc-card"), ("Name every button", names, ".lc-tags"))
 
 
 census = {}
@@ -219,6 +229,8 @@ with sync_playwright() as p:
         for scheme in ("light", "dark"):
             for dev, opts in (("phone", PHONE), ("desk", DESK)):
                 c = b.new_context(color_scheme=scheme, **opts)
+                c.add_init_script("window.__skriblLearnForce = true;"
+                                  "try { localStorage.setItem('skribl.learncard.note.v1', '1'); } catch (e) {}")
                 q = c.new_page()
                 for label, opener, root in surfaces(name, ids, q, canvas, btn):
                     if ONLY and label not in ONLY:

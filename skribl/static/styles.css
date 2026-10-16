@@ -7540,7 +7540,15 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .help-drawer-inner::after { background: linear-gradient(to bottom, transparent, var(--menu-paper)); }
 .help-drawer-head { background: var(--menu-paper); border-bottom-color: transparent; }   /* one colour above and below: its line would show only at the edges, beside the tabs' mask */
 .help-close { background: var(--menu-card); border-color: var(--menu-card-line); }
-.help-tabs { background: var(--menu-track); border-color: transparent; box-shadow: 0 -12px 0 var(--menu-paper); }
+/* THE TABS ARE A SOLID BAR WHEN THE PAGE SCROLLS UNDER THEM (owner's phone,
+   scrolled: the examples showed through the lilac track, which is a wash, and
+   beside it in the gutters). A band of paper behind them reaches the page's
+   edges and up to the title band; the track is drawn on it; the pill and the
+   words stay above both (the pill is z-index 0, the tabs 1). */
+.help-tabs { background: transparent; border-color: transparent; box-shadow: none; }
+.help-tabs::before, .help-tabs::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
+.help-tabs::before { top: -13px; bottom: -1px; left: -18px; right: -18px; background: var(--menu-paper); }   /* -18: the gutter exactly, so nothing scrolls sideways */
+.help-tabs::after { inset: -1px; border-radius: 14px; background: var(--menu-track); }
 .learn-chip { background: var(--menu-card); border-color: var(--menu-card-line); }
 @media (hover: hover) { .learn-chip:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); } }
 .learn-chip[aria-pressed="true"] { background: var(--seg-on-fill); border-color: transparent; }
@@ -7549,6 +7557,62 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .accordion-header.open { background: color-mix(in srgb, var(--accent) 6%, var(--menu-card)); }
 .learn-clip .learn-stage { background: var(--menu-card); }
 .help-desc, .help-intro { color: var(--text-secondary); }   /* the sheet's secondary ink: --text-soft-3 read 4.38:1 on the dark card (verify_contrast) */
+
+/* THE CARD ON THE BUTTON (lib/learncard.js; owner, after v323: the button
+   cards mock, "All yes"). The menu's white card with its lilac edge, so help
+   looks like the rest of Skribl's sheets: a name, one sentence, the example
+   playing, More and Got it. Its arrow points at the button, which wears a
+   ring while its card is open. The name tags are small white capsules; the
+   first-time note and the tags' banner are cards above the dock. */
+.lc-card { position: fixed; z-index: 140; width: min(300px, calc(100vw - 24px)); padding: 12px;
+  background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: 16px;
+  box-shadow: var(--menu-card-drop), 0 18px 40px rgba(20, 10, 60, .22); color: var(--text-primary); }
+.lc-card::after { content: ""; position: absolute; left: var(--lc-ax, 50%); bottom: -8px; width: 14px; height: 14px; margin-left: -7px;
+  background: var(--menu-card); border-right: 1px solid var(--menu-card-line); border-bottom: 1px solid var(--menu-card-line); transform: rotate(45deg); }
+.lc-card.lc-below::after { bottom: auto; top: -8px; transform: rotate(225deg); }
+.lc-pic { margin-bottom: 12px; }
+.lc-stage { position: relative; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; }
+.lc-stage .skribl-inline { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border: 0; border-radius: 0; background: transparent; cursor: default; }
+.lc-stage .skribl-inline-veil, .lc-stage .skribl-inline-dur { display: none !important; }
+.lc-phone { position: relative; height: 160px; border-radius: 12px; overflow: hidden; background: color-mix(in srgb, var(--accent) 8%, var(--menu-card)); }
+.lc-phone video { position: absolute; left: 50%; top: 14px; width: 112px; aspect-ratio: 600 / 1298; transform: translateX(-50%); object-fit: cover;
+  border-radius: 16px 16px 0 0; border: 1px solid var(--menu-card-line); border-bottom: 0; box-shadow: 0 8px 22px rgba(40, 25, 110, .18); }
+.lc-body { padding: 0 4px 2px; }
+.lc-card .lc-t, .lc-banner .lc-t { margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.lc-card .lc-line, .lc-banner .lc-line, .lc-note .lc-line { margin: 0; font-size: 14px; line-height: 1.4; color: var(--text-secondary); }
+.lc-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.lc-more { min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--accent-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
+.lc-hint { font-size: 14px; color: var(--text-secondary); }
+.lc-ok { flex: none; min-height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--accent-fill); color: #fff;
+  font: inherit; font-size: 16px; font-weight: 650; cursor: pointer; }
+.lc-more:focus-visible, .lc-ok:focus-visible, .lc-tag:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+.lc-target { outline: 3px solid var(--accent); outline-offset: 3px; }
+.lc-tags { position: fixed; inset: 0; z-index: 140; pointer-events: none; }
+.lc-tag { position: fixed; pointer-events: auto; padding: 4px 10px; min-height: 28px; border-radius: 999px; white-space: nowrap;
+  background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop);
+  color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.lc-tag::before { content: ""; position: absolute; inset: -8px -2px; }   /* a 44px target around a small capsule */
+.lc-banner, .lc-note { position: fixed; z-index: 141; left: 50%; transform: translateX(-50%); width: min(440px, calc(100vw - 32px));
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; pointer-events: auto;
+  background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: 16px; box-shadow: var(--menu-card-drop), 0 12px 30px rgba(20, 10, 60, .18); }
+.lc-banner { top: calc(140px + env(safe-area-inset-top, 0px)); }   /* under the header's tags, clear of the dock's */
+body.lc-open .skribl-tip { display: none !important; }   /* the card grows out of the tooltip's pause; one at a time */
+.lc-banner .lc-t { font-size: 17px; font-weight: 650; margin-bottom: 2px; }
+.lc-note .lc-line { flex: 1; font-size: 16px; font-weight: 600; color: var(--text-primary); }
+.lc-note-ic { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 10px; background: var(--seg-on-fill); color: var(--seg-on-ink); }
+.lc-note-ic svg { width: 18px; height: 18px; }
+/* Holding a button for its card brings no system callout, selection or
+   magnifier on a phone (WebKit's own press-and-hold; not tested here). */
+:is(#penToolBtn, #eraserToolBtn, #shapeToolBtn, #toolMoreBtn, #undoBtn, #redoBtn, #undo, #redo, #mediaOpenBtn, #postBtn, #tuneBtn, #menuBtn, #moreBtn,
+    #addcopy, #addblank, #addinbetween, #addtween) { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* How it works' way in to the name tags, at the top of Watch. */
+.learn-names { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; margin: 0 0 14px; padding: 10px 14px; text-align: left;
+  background: var(--menu-card); border: 1px solid var(--menu-card-line); border-radius: 16px; color: var(--text-primary); font: inherit; cursor: pointer; }
+.learn-names-ic { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 10px; background: var(--seg-on-fill); color: var(--seg-on-ink); }
+.learn-names-ic svg { width: 18px; height: 18px; }
+.learn-names-t { display: flex; flex-direction: column; gap: 2px; font-size: 16px; font-weight: 650; }
+.learn-names-sub { font-size: 14px; font-weight: 400; color: var(--text-secondary); }
+.learn-names:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 .tune-shell { background: var(--glass-fill); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .tune-shell.open { border: 0; box-shadow: var(--glass); }
 /* EXCEPT THE SHAPE PICKER, WHICH IS SOLID. It hangs inside the dock, and the
