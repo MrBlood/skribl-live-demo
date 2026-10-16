@@ -124,10 +124,11 @@ with sync_playwright() as p:
         stray = [t[:50] for t in res["texts"] if not cousin.search(t)]
         check(f"{name}: ...and each one holds the word, or a cousin as a whole word (\"repeated\" is not \"repeat\")",
               not stray, str(stray))
-        ask(q, "repeat")
+        # "song" is in no entry: only its cousins (music, sound...) find them.
+        ask(q, "song")
         rep = q.evaluate("() => [...document.querySelectorAll('#helpLook .help-tip')].filter(t => t.offsetParent !== null).map(t => t.textContent)")
-        check(f"{name}: an everyday cousin finds them: \"repeat\" lists the loop entries",
-              any("loop" in t.lower() for t in rep), f"{len(rep)} entries")
+        check(f"{name}: an everyday cousin finds them: \"song\", a word no entry uses, lists the music entries",
+              any("music" in t.lower() for t in rep) and not any("song" in t.lower() for t in rep), f"{len(rep)} entries")
         ask(q, "zzqx")
         none = q.evaluate("""() => { const e = document.querySelector('#helpLook .help-empty');
           return { shown: !!e && !e.hidden && e.offsetParent !== null, best: !document.getElementById('askBest').hidden,
