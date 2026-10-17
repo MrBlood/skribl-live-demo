@@ -412,8 +412,11 @@
     var n = document.createElement('div');
     n.className = 'lc-note'; n.setAttribute('role', 'status');
     n.innerHTML = '<span class="lc-note-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.5"/></svg></span><p class="lc-line"></p><button type="button" class="lc-ok">Got it</button>';
-    n.querySelector('.lc-line').textContent = touchFirst ? 'Hold any button to see what it does.'
-      : 'Rest on any button to see what it does. Press ? to name them all.';
+    // And once, where the little book is (lib/book.js), which never opens
+    // by itself (owner: "as long as it's kind").
+    n.querySelector('.lc-line').textContent = (touchFirst ? 'Hold any button to see what it does.'
+      : 'Rest on any button to see what it does. Press ? to name them all.')
+      + ' New here? There\u2019s a little book in How it works.';
     var done = function () { try { localStorage.setItem(NOTE_KEY, '1'); } catch (e) {} n.remove(); };
     n.querySelector('.lc-ok').addEventListener('click', done);
     document.body.appendChild(n);
