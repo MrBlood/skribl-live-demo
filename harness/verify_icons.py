@@ -255,6 +255,36 @@ for _rel, _n in _SITES.items():
         _short.append(f"{_rel}: {_have} of {_n}")
 check("every bin site draws the ribbed bin, body and ribs", not _short, "; ".join(_short))
 
+# ONE RELOAD (owner, after v324: "The reload icon looks wrong"). It was a
+# circle whose arrowhead sat ON the rim with its tail run into the middle, so
+# it read as a G or an e. Every reload (the installed app's menu row, the new
+# version's note, Learn's and the Library's Try again) draws the circle-arrow,
+# its head outside the rim: path data, as the bin. And as PAINT: drawn at
+# 96px, the middle of the circle holds no ink, which the old drawing's tail
+# crossed.
+print("\nONE RELOAD — every reload is the circle-arrow, its middle empty")
+_RELOAD_OLD = ["M20 11a8 8 0 1 0-2.3 5.7", "M20 4v7h-7"]
+_RELOAD = ["M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8", "M21 3v5h-5"]
+_left = sorted(f"{p.relative_to(_ROOT)}: {d}" for p, t in _SRC.items() for d in _drawn(t) if d in _RELOAD_OLD)
+check("no retired reload shape is drawn anywhere (templates and scripts)", not _left, "; ".join(_left[:4]))
+_RSITES = ["templates/skribl/_skribl_homescreen.html", "static/lib/offline.js",
+           "templates/skribl/_skribl_help.html", "templates/skribl/skribl_library.html"]
+_short = [r for r in _RSITES if not all(('d="' + d + '"') in _SRC.get(_ROOT / r, "") for d in _RELOAD)]
+check("every reload site draws the circle-arrow", not _short, "; ".join(_short))
+with sync_playwright() as _rp:
+    _rb = _rp.chromium.launch()
+    _rq = _rb.new_page(viewport={"width": 96, "height": 96})
+    _rq.set_content('<body style="margin:0;background:#fff"><svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#000" '
+                    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+                    + "".join(f'<path d="{d}"/>' for d in _RELOAD) + '</svg></body>')
+    _im = Image.open(io.BytesIO(_rq.screenshot())).convert("L")
+    _rb.close()
+# The middle: a disc of 4 units (16px) round the circle's centre (12,12), well
+# inside the 9-unit circle and clear of the arrowhead, which ends at (16,8).
+_ink = sum(1 for x in range(96) for y in range(96) if (x - 48) ** 2 + (y - 48) ** 2 <= 16 ** 2 and _im.getpixel((x, y)) < 200)
+check("the reload's circle is empty in the middle, as a circle-arrow is (no tail crossing it)",
+      _ink == 0, f"{_ink} inked pixels within 16px of the centre, at 96px")
+
 # ONE SET OF PLAYER ICONS (owner: "are all the icons consistent across all the
 # players?"). They were not: two restarts, two loops, three speakers, three
 # links, each player drawing its own. Same rule as the bin, same instrument --

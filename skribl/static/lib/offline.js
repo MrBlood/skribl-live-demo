@@ -77,7 +77,7 @@
     var ic = doc.createElement('span');
     ic.className = 'skribl-hint-ic';
     ic.setAttribute('aria-hidden', 'true');
-    ic.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>';
+    ic.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>';
     var text = doc.createElement('span');
     text.className = 'skribl-hint-text';
     text.textContent = 'A new version of Skribl is ready';
