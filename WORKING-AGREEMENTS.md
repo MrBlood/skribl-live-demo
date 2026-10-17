@@ -118,6 +118,15 @@ job is done: tapping a stamp closes the stamp drawer, "because what if I want to
 stamp where the stamp drawer sits?" Feedback toasts must never cover a button
 someone is pressing fast (the blur-undo toast sat on top of Undo).
 
+**Kind transitions, never jumpy.** "The transition should be smooth. No
+transitions should be jumpy. Kind transitions right." Anything that moves
+glides there: a pill slides before the page changes, a page fades into the
+next, a replay plays point after point, a sheet rises rather than appears. A
+hop, a snap or a frozen moment followed by a jump is a bug, at every speed.
+Check it the way the replay is checked (verify_glide): read the moving thing
+on every animation frame, and show the check red on the jumpy version first.
+Reduced motion keeps things still, never abrupt.
+
 **Tools should feel like real tools.** Blur showed "a different colour" after
 four passes and was "wonky" on a background drawing. A brush should show its
 real size (a circle the width of the blur) and do what its name says. Treat

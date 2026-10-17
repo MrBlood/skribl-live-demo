@@ -18251,3 +18251,17 @@ verify_menu taps the other editor on both and reads the pill under it while
 the page is still up, then the arrival, and the fetch ahead; each red with
 its part taken out (with no glide the page left at once).
 
+## After v323 -- kind transitions
+
+The owner: "The transition should be smooth. No transitions should be
+jumpy. Kind transitions right." Written into WORKING-AGREEMENTS as a rule
+that holds everywhere, with how to check it (every animation frame, red on
+the jumpy version first). Applied first where the owner saw it: between
+Skribl's own pages (both editors, the Library, the Gallery, the player) a
+soft cross-fade instead of a cut, styles.css @view-transition, .28s; a
+browser without it keeps the plain cut, and so does reduced motion. The Pad |
+Flip switch now glides its pill, then the next editor fades in over this
+one. verify_menu reads pagereveal's viewTransition on the arriving editor,
+both ways; red with the rule off. The player's CSS ratchet rises +107 B for
+it, a named cost. Not tested here: iPhone Safari, which has it from 18.2.
+

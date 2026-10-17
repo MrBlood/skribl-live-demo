@@ -2214,3 +2214,15 @@ a.player-btn { text-decoration: none; }
   .seg-slider, .photo-fit-slider, .tool-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }
 @media (prefers-reduced-motion: reduce) { .bk-root .bk, .bk-root .bk-scrim { transition: none; } }
+
+/* KIND TRANSITIONS (owner, after v323: "The transition should be smooth. No
+   transitions should be jumpy. Kind transitions right"). Between Skribl's
+   own pages (the two editors, the Library, the Gallery) a soft cross-fade,
+   not a cut: the Pad | Flip switch glides its pill (lib/editorswitch.js),
+   then the next editor fades in over this one. Both pages must ask for it,
+   and every page that loads this sheet does. A browser without it keeps the
+   plain cut; reduced motion keeps it too. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .28s; animation-timing-function: ease; }
+}
