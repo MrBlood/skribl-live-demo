@@ -290,3 +290,10 @@ html:has(.pm-overlay:not([hidden])) { overscroll-behavior-y: none; }
     @keyframes pm-drop { from { transform: translateY(-8px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
   }
 }
+
+/* A FINGER SHOWS NO RING (lib/modalfocus.js marks data-input on <html>).
+   Safari draws :focus-visible for a script's focus after a tap, so every
+   sheet opened with an outline round its first row (owner's iPhone, after
+   v324). After a pointer, focus outlines are hidden; a key press brings them
+   back for the keyboard, where they belong. */
+html[data-input="pointer"] :focus-visible { outline: none !important; }

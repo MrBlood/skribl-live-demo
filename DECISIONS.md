@@ -18476,3 +18476,19 @@ band ends at the header's foot) and for no clip-path on the header; red on
 the clipped band (33/37 trimmed, 90/94), green here. The strip under the
 iPhone's clock is Safari's, painted from the page's theme colour, which the
 pages already declare. No WebKit in this box: the phone is the test.
+
+## After v324 -- a finger shows no focus ring
+
+The owner's iPhone, the Library and Gallery menus open: a purple outline round
+the first row ("?"). Every sheet moves focus to its first control on opening,
+for the keyboard's sake (lib/modalfocus.js), and Safari draws :focus-visible
+for a script's focus even after a tap; Chromium does not. The page now notes
+how it was last used, a pointer or a key, on <html> (data-input), and after a
+pointer the stylesheets hide focus outlines. Focus moves exactly as before,
+and a key press brings every ring back. All four pages and every sheet.
+
+verify_menu and verify_galib read it in two parts, since Chromium cannot be
+made to draw the ring after a tap: a pointer marks the page, and a focused
+control whose ring is showing paints none once the page is so marked, and
+paints it again after a key. Red without the stylesheet rule and red without
+the script.

@@ -141,5 +141,21 @@
     if (focusable(fallback)) { fallback.focus(); }
   }
 
+  /* A FINGER SHOWS NO RING (owner's iPhone, after v324: a purple outline
+     round the first row of every sheet the moment it opened). open() moves
+     focus in for the keyboard's sake, and Safari draws :focus-visible for a
+     script's focus even after a tap, which Chromium does not. So the page
+     notes how it was last used -- a pointer or a key -- on <html>
+     (data-input), and the stylesheets hide focus outlines while it is
+     "pointer". Focus moves exactly as before; a key press brings every ring
+     back. styles.css and pagemenu.css; verify_menu and verify_galib. */
+  var doc = global.document, root = doc.documentElement;
+  function mark(how) { if (root.getAttribute('data-input') !== how) root.setAttribute('data-input', how); }
+  doc.addEventListener('pointerdown', function () { mark('pointer'); }, true);
+  doc.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    mark('key');
+  }, true);
+
   global.SkriblModal = { open: open, close: close };
 })(window);

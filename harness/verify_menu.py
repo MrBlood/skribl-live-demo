@@ -350,6 +350,32 @@ with sync_playwright() as p:
               t["tabs"] == 0 and t["field"] and t["home"] and t["tour"], str(t))
         c.close()
 
+        # 5. A FINGER SHOWS NO RING (owner's iPhone, after v324: an outline round
+        # the first row of every sheet as it opened; Safari draws :focus-visible
+        # for the script's focus after a tap). Read in two parts, as verify_galib
+        # does: a pointer marks the page "pointer" (lib/modalfocus.js), and a
+        # tile whose ring IS showing (reached by a key) paints none once the
+        # page is so marked, and paints it again after a key.
+        c = b.new_context(**DESK)
+        q = c.new_page()
+        browsing.goto(q, BASE, route)
+        q.wait_for_timeout(800)
+        q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        q.click(f"#{btn}")
+        q.wait_for_timeout(700)
+        how = q.evaluate("() => document.documentElement.getAttribute('data-input')")
+        q.keyboard.press("Tab"); q.keyboard.press("Shift+Tab"); q.wait_for_timeout(150)
+        RING = """() => { const el = document.activeElement; if (!el || el === document.body) return null;
+          const c = getComputedStyle(el); return { fv: el.matches(':focus-visible'), outline: c.outlineStyle,
+            how: document.documentElement.getAttribute('data-input'), what: el.id || el.className }; }"""
+        k = q.evaluate(RING)
+        q.evaluate("() => document.documentElement.setAttribute('data-input', 'pointer')")
+        t = q.evaluate(RING)
+        check(f"{name}: a pointer marks the page, and the menu's focused tile paints no ring after a pointer, as on a phone",
+              how == "pointer" and t and t["fv"] and t["outline"] == "none", f"after the click {how}; {t}")
+        check(f"{name}: ...and a key brings the ring back", k and k["fv"] and k["how"] == "key" and k["outline"] != "none", str(k))
+        c.close()
+
         # 4. Your drafts' rows (owner's iPhone, after v324: "Weird border"). A
         # saved row is as wide as the cards above and below it, and a focused
         # row's ring is drawn INSIDE the row: the old ring sat 3px outside the
