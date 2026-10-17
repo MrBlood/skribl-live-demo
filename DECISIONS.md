@@ -18509,3 +18509,34 @@ verify_ux and verify_galib read the strip on every frame of the fade: fixed,
 the same place and size, colour passing through, ending at the header's foot;
 red on the shadow band (33/37 trimmed, 94/98), green here. No WebKit in this
 box: the phone is the test.
+
+## After v324 -- the player's foot, and large words on the brand purple
+
+The owner, from the link player on the iPhone: "Shouldn't there be more space
+under the controls and have made with skribl on the bottom?", and of the
+contrast round: "the purple has to stay the accent color -- it's the brand
+color. Is there another way to contrast it?" From the mock, "All yes".
+
+- On the link player, Make your own Skribl sits 32px under the controls (it
+  was 16), and "made with skribl" sits at the foot of the screen, 24px above
+  its edge and the phone's safe area, instead of 16px under the button. The
+  app keeps that room at its foot; the drawing keeps its size; short screens
+  still hide the mark.
+- The brand purple stays. White on it is 5.3:1. Bold text at 18.66px and up
+  is large, and WCAG's top level holds large text to 4.5:1, so the big purple
+  buttons (the player's Make your own Skribl, Post to Skribl, Start a new
+  Skribl, Your drafts' Save) carry 19px bold words and pass it with the
+  purple unchanged. The small pills (Make one, the header's Post) stay at AA:
+  at 19px they would outgrow the header.
+
+verify_player_isolation reads the foot on a phone in both themes (the gap,
+the mark at the foot and clear of the button, the button's words large); red
+without the change (79/85). verify_contrast holds the big buttons' words on
+the purple to large text, and to 4.5:1. The player's CSS ratchet rose by the
+named 440 bytes.
+
+The same round, the owner of the Gallery's header: "Doesn't skribl look
+tiny up there?" With the page's word gone the mark stood alone beside a
+44px Make one; it is 30px now (it was 24; the editors' lockup is 26 with
+"pad" or "flip" beside it), still on the page text's edge. verify_galib's
+one-lockup row reads 30.
