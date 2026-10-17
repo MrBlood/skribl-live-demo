@@ -176,6 +176,9 @@ try:
               str(back_href))
         fp.click("#moreBtn"); fp.wait_for_timeout(400)   # v293: the link is a ⋯ menu row
         fp.click('a[aria-label^="Back to Skribl Pad"]')   # its name begins so; it goes on to say what the Pad is
+        # The page it leaves is already loaded: wait for the ADDRESS to change
+        # (the switch glides its pill first, lib/editorswitch.js), then load.
+        fp.wait_for_url(lambda u: "/flip" not in u, timeout=5000)
         fp.wait_for_load_state("load")
         check("clicking it lands under the prefix",
               fp.url.startswith(BASE + PREFIX + "/"), fp.url)
