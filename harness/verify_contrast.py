@@ -82,20 +82,24 @@ WORDS = r"""(root) => {
     if (el.closest('[hidden], [aria-hidden="true"], :disabled, [aria-disabled="true"], svg')) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility !== 'visible') continue;
-    let box = null;
-    for (const t of texts) { const r = document.createRange(); r.selectNodeContents(t);
-      for (const q of r.getClientRects()) { if (!q.width || !q.height) continue;
-        box = box ? {l: Math.min(box.l, q.left), t: Math.min(box.t, q.top), r: Math.max(box.r, q.right), b: Math.max(box.b, q.bottom)}
-                  : {l: q.left, t: q.top, r: q.right, b: q.bottom}; } }
-    if (!box || box.r <= 0 || box.b <= 0 || box.l >= innerWidth || box.t >= innerHeight || box.b > floor) continue;
-    // painted, not merely laid out: what is on top at the box's centre is this or inside it
-    const at = document.elementFromPoint((box.l + box.r) / 2, (box.t + box.b) / 2);
-    if (!at || !(el === at || el.contains(at) || at.contains(el))) continue;
+    // EACH LINE OF EACH TEXT ITS OWN BOX. One box round all of an element's
+    // text took in what sat between its lines: main's CI (wider fonts than
+    // this box) wrapped an entry Ask had found, and the box round its first
+    // line and its last reached the lit "loop" between them, so grey words
+    // were read against the lilac of a word they were not on (4.20).
     let op = 1; for (let a = el; a && a.nodeType === 1; a = a.parentElement) op *= parseFloat(getComputedStyle(a).opacity);
     const c = rgb(cs.color);
     const name = el.id ? '#' + el.id : el.tagName.toLowerCase() + (el.classList.length ? '.' + [...el.classList].slice(0, 2).join('.') : '');
-    out.push({ name, text: texts.map(t => t.textContent.trim()).join(' ').slice(0, 28), box,
-               ink: [c[0], c[1], c[2], c[3] * op], px: parseFloat(cs.fontSize), w: parseInt(cs.fontWeight, 10) });
+    for (const t of texts) { const r = document.createRange(); r.selectNodeContents(t);
+      for (const q of r.getClientRects()) { if (!q.width || !q.height) continue;
+        const box = {l: q.left, t: q.top, r: q.right, b: q.bottom};
+        if (box.r <= 0 || box.b <= 0 || box.l >= innerWidth || box.t >= innerHeight || box.b > floor) continue;
+        // painted, not merely laid out: what is on top at the box's centre is this or inside it
+        const at = document.elementFromPoint((box.l + box.r) / 2, (box.t + box.b) / 2);
+        if (!at || !(el === at || el.contains(at) || at.contains(el))) continue;
+        out.push({ name, text: t.textContent.trim().slice(0, 28), box,
+                   ink: [c[0], c[1], c[2], c[3] * op], px: parseFloat(cs.fontSize), w: parseInt(cs.fontWeight, 10) });
+      } }
   }
   return out;
 }"""
