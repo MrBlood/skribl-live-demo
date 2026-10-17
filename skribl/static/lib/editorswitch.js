@@ -26,7 +26,12 @@
     var here = seg.querySelector('button.menu-editor');
     if (!link || !here) return;
 
-    link.addEventListener('click', function (e) {
+    // Heard on the window, after the tap has reached the link itself: each
+    // editor's leave guard listens there and, when work is at risk, stops the
+    // tap and asks first. Listening on the link would hear it before a guard
+    // that loads later (verify_drafts caught exactly that).
+    window.addEventListener('click', function (e) {
+      if (!e.target.closest || e.target.closest('a.menu-editor') !== link) return;
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       e.preventDefault();
       var pill = seg.querySelector('.seg-slider'), a = link.getBoundingClientRect(), h = here.getBoundingClientRect();
