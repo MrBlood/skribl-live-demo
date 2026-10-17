@@ -18459,3 +18459,20 @@ purple has to stay the accent color -- it's the brand color".
 
 verify_contrast reads, on a phone, every word not on the brand purple at 7:1
 (4.5 if large); red on the old inks (29 of 32 rows), green here.
+
+## After v324 -- the header's band, lifted rather than clipped
+
+The owner's iPhone, the band in place on Pad: the drawing still showed above
+the header ("Should this happen?"). The band was a spread shadow clipped to
+its strip by a negative clip-path inset; Chromium honours that, and Safari
+kept the clip to the header's own box, so on the phone the band was only the
+header's height. Each shadow is now lifted by its own spread, so its lower
+edge lands on the header's foot (the hairline 1px under it) with no clip at
+all, and it reaches the top of the page and its sides in any engine. The
+same on the Gallery and Library (pagemenu.css).
+
+verify_ux and verify_galib read every frame of the fade for the lift (the
+band ends at the header's foot) and for no clip-path on the header; red on
+the clipped band (33/37 trimmed, 90/94), green here. The strip under the
+iPhone's clock is Safari's, painted from the page's theme colour, which the
+pages already declare. No WebKit in this box: the phone is the test.
