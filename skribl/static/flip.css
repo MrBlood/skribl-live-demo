@@ -1225,7 +1225,7 @@
      line of its own. Labels now sit above their controls and each readout is a
      sentence under the control it describes. */
   .export-options { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
-  .export-optscope { font-size: 11.5px; color: var(--text-secondary); opacity: .85; }
+  .export-optscope { font-size: 11.5px; color: var(--text-secondary); }   /* no fade: 7:1 like every secondary word */
   .export-optblock { display: flex; flex-direction: column; gap: 6px; }
   /* .export-optlbl moved to styles.css: the shared export partial's GIF
      toggle uses it too, and Pad does not load this file. */

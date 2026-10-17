@@ -18438,3 +18438,24 @@ passing through, never unclipped while painting); red on the floating card,
 on a band that grows, and on one whose clip comes off at once. verify_galib
 does the same for the Gallery and Library, and holds the header at rest to no
 card with the mark on the text's edge; red on the old header (82/94).
+
+## After v324 -- two inks in Pad and Flip, every word off the purple 7:1
+
+The owner, of the contrast round's mock: "The two inks looks sharp", and "the
+purple has to stay the accent color -- it's the brand color".
+
+- Pad and Flip had five greys for secondary words, and 572 words read under
+  7:1 (lowest 4.7). They now use one second ink per theme, the Gallery and
+  Library's: #b7bfcc dark (10.9 on the page, 9.7 on the paper, 8.6 on a card),
+  #3f4756 light (9.4 on a card, 8.3 on the lilac paper). The selected word in
+  a switch (--seg-on-ink #d4c9ff / #36209a) and the small violet words
+  (--accent-ink #c1b2ff / #4c31c4) sit a step further from their ground. The
+  drawer's subtle buttons take the second ink, and Export's note loses its
+  fade.
+- The brand purple stays; white on it (5.3:1) is held to AA.
+- The new check found a real overlap: with a song just loaded, "Saved" sat on
+  Flip's button card, over its title. It rests while a button's card is
+  open, as it does while a drawing plays.
+
+verify_contrast reads, on a phone, every word not on the brand purple at 7:1
+(4.5 if large); red on the old inks (29 of 32 rows), green here.

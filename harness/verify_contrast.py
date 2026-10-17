@@ -86,6 +86,14 @@ WORDS = r"""(root) => {
   const fa = getComputedStyle(R, '::after');
   const fade = fa.content !== 'none' && fa.position === 'sticky' ? parseFloat(fa.height) || 0 : 0;
   const floor = Math.min(innerHeight, R.getBoundingClientRect().bottom) - fade;
+  // WORDS ON THE BRAND PURPLE. White on --accent-fill is 5.3:1 and the purple
+  // stays the brand's (owner, after v324), so those words are held to AA and
+  // every other word to 7:1 (verify_contrast, TWO INKS).
+  const pr = document.createElement('i'); pr.style.color = 'var(--accent-fill)'; document.body.appendChild(pr);
+  const purple = getComputedStyle(pr).color; pr.remove();
+  const onFill = (el) => { for (let a = el; a && a.nodeType === 1; a = a.parentElement) {
+      const b = getComputedStyle(a); if (b.backgroundImage !== 'none') return false;
+      if (rgb(b.backgroundColor)[3] > 0) return b.backgroundColor === purple; } return false; };
   const out = [];
   for (const el of R.querySelectorAll('*')) {
     const texts = [...el.childNodes].filter(n => n.nodeType === 3 && n.textContent.trim());
@@ -109,7 +117,7 @@ WORDS = r"""(root) => {
         // painted, not merely laid out: what is on top at the box's centre is this or inside it
         const at = document.elementFromPoint((box.l + box.r) / 2, (box.t + box.b) / 2);
         if (!at || !(el === at || el.contains(at) || at.contains(el))) continue;
-        out.push({ name, text: t.textContent.trim().slice(0, 28), box,
+        out.push({ name, text: t.textContent.trim().slice(0, 28), box, fill: onFill(el),
                    ink: [c[0], c[1], c[2], c[3] * op], px: parseFloat(cs.fontSize), w: parseInt(cs.fontWeight, 10) });
       } }
   }
@@ -158,7 +166,11 @@ SETTLED = r"""(root) => new Promise(res => { const R = document.querySelector(ro
   })(); })"""
 
 
+SHORT7 = []   # every word under 7:1 that is not on the brand purple, per surface (cleared each read)
+
+
 def measure(q, root, scale):
+    SHORT7.clear()
     q.evaluate(SETTLED, root)
     # A sheet still gliding (How it works scrolls smoothly) moves its words
     # between the read and the photograph; read again until they hold still.
@@ -191,6 +203,11 @@ def measure(q, root, scale):
         w["ratio"] = round(worst, 2)
         if worst < need:
             low.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{need}')
+        # TWO INKS (owner, after v324: "The two inks looks sharp"): every word
+        # not on the brand purple reads 7:1 (4.5 if large, WCAG's AAA).
+        sharp = 4.5 if (w["px"] >= 24 or (w["px"] >= 18.66 and w["w"] >= 700)) else 7
+        if worst < sharp and not w.get("fill"):
+            SHORT7.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{sharp}')
     return words, low
 
 
@@ -334,6 +351,10 @@ with sync_playwright() as p:
                         continue
                     check(f"{where}: every word clears AA on what is painted behind it ({len(words)} read)",
                           bool(words) and not low, "; ".join(low[:6]) + (f" (+{len(low) - 6} more)" if len(low) > 6 else ""))
+                    if dev == "phone":
+                        _s7 = list(dict.fromkeys(SHORT7))
+                        check(f"{where}: every word off the brand purple reads 7:1 (two inks)",
+                              bool(words) and not _s7, "; ".join(_s7[:6]) + (f" (+{len(_s7) - 6} more)" if len(_s7) > 6 else ""))
                     if dev == "phone":
                         census[(name, scheme, label)] = q.evaluate(CENSUS, root)
                 c.close()
