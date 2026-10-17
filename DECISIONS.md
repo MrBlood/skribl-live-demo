@@ -18492,3 +18492,20 @@ made to draw the ring after a tap: a pointer marks the page, and a focused
 control whose ring is showing paints none once the page is so marked, and
 paints it again after a key. Red without the stylesheet rule and red without
 the script.
+
+## After v324 -- the header's band, a strip fixed to the screen
+
+The owner's iPhone again, after the lifted band: "still shows after reload".
+Twice the band was a shadow round the header (clipped, then lifted by its
+spread) and twice Safari painted it only inside the header's box. Now it is
+the header's ::before, a strip fixed to the screen from above its top (into
+the status bar) down to the header's foot, which lib/headerglass.js (Pad,
+Flip) and lib/pagemenu.js (Gallery, Library) write as --header-foot as the
+page moves. A fixed box is the screen's, so no engine trims it to the header,
+and it adds nothing to the page's width. It is always there, transparent,
+and only its colour fades.
+
+verify_ux and verify_galib read the strip on every frame of the fade: fixed,
+the same place and size, colour passing through, ending at the header's foot;
+red on the shadow band (33/37 trimmed, 94/98), green here. No WebKit in this
+box: the phone is the test.

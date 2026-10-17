@@ -90,24 +90,27 @@ html { scroll-padding-top: 96px; }
   position: sticky; top: 12px; z-index: 40;
   display: flex; align-items: center; gap: 12px;
   margin: 0 0 18px; padding: 10px 0;
-  background: transparent; box-shadow: var(--band-off);
-  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+  background: transparent;
+  transition: background-color 0.25s ease;
 }
 .top .spacer { flex: 1; }
 /* SCROLLED, A BAND IN THE PAGE'S OWN GROUND, the editors' (styles.css, THE
    GROUND IS A BAND): from the top of the window to just under the controls,
-   the full width, a hairline along its foot. Two spread shadows, each
-   lifted by its own spread so it ends at the header's foot, so nothing
-   scrolled under the header shows above it, beside it or through it (v318,
-   and the owner after v324), the page gains no width, and no clip is needed
-   (Safari kept a negative clip-path inset to the header's box). At rest the
-   shadows are there and transparent, so only their colour fades
-   (lib/pagemenu.js marks .scrolled). verify_galib. */
-:root { --band-off: 0 -100vmax 0 100vmax transparent, 0 calc(1px - 100vmax) 0 100vmax transparent; }
-.top.scrolled {
-  background: var(--base);
-  box-shadow: 0 -100vmax 0 100vmax var(--base), 0 calc(1px - 100vmax) 0 100vmax var(--hairline);
+   the full width, a hairline along its foot, so nothing scrolled under the
+   header shows above it, beside it or through it (v318, and the owner after
+   v324). A fixed strip of its own, the header's ::before, from above the
+   screen's top to the header's foot (lib/pagemenu.js writes --header-foot):
+   Safari painted the earlier shadow bands only inside the header's box. It
+   is always there, transparent, so only its colour fades (lib/pagemenu.js
+   marks .scrolled). verify_galib. */
+.top::before {
+  content: ""; position: fixed; left: 0; right: 0; top: -120px; z-index: -1;
+  height: calc(120px + var(--header-foot, 0px));
+  background-color: transparent; box-shadow: 0 1px 0 transparent; pointer-events: none;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
 }
+.top.scrolled { background: var(--base); }
+.top.scrolled::before { background-color: var(--base); box-shadow: 0 1px 0 var(--hairline); }
 @media (max-width: 640px) {
   .top { top: 6px; padding: 8px 0; }
 }

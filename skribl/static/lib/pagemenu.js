@@ -112,8 +112,13 @@
   function pinned() {
     var top = document.querySelector('.top');
     if (!top) return;
-    var on = function () { top.classList.toggle('scrolled', (global.scrollY || 0) > 0); };
+    var on = function () {
+      top.classList.toggle('scrolled', (global.scrollY || 0) > 0);
+      // The band's foot (pagemenu.css, .top::before): the fixed strip ends here.
+      document.documentElement.style.setProperty('--header-foot', Math.round(top.getBoundingClientRect().bottom) + 'px');
+    };
     global.addEventListener('scroll', on, { passive: true });
+    global.addEventListener('resize', on);
     on();
   }
 
