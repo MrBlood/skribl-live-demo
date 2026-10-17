@@ -39,6 +39,9 @@
       var scrolled = (global.scrollY || doc.documentElement.scrollTop || 0) > 1;
       var over = scrolled || (a.bottom > b.top + 1 && a.top < b.bottom - 1 && a.right > b.left && a.left < b.right);
       header.classList.toggle('over-canvas', over);
+      // The band's foot (styles.css, .header::before): a fixed strip from the
+      // screen's top to here, so it has to be told where "here" is.
+      doc.documentElement.style.setProperty('--header-foot', Math.round(a.bottom) + 'px');
     }
     function later() {
       if (queued) return;

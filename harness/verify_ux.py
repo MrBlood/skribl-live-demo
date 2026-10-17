@@ -3289,27 +3289,30 @@ with sync_playwright() as _gp:
     _gb.close()
 
 print("\nTHE BAND FADES — read on every frame, it changes colour only")
-# KIND TRANSITIONS, NEVER JUMPY (WORKING-AGREEMENTS). The header's band is two
-# spread shadows clipped to a strip. Read on every animation frame as it comes
-# and goes: the shadows keep their size (the band never grows out of the
-# controls), their colour passes through in-between values (a fade, not a
-# snap), and on every frame each shadow is lifted by its own spread, so its
-# lower edge sits on the header's foot (the hairline 1px under it) and a
-# fading band never paints over the page below. No clip: Safari kept a
-# negative clip-path inset to the header's box (owner's iPhone, after v324). Pad and Flip share the rule; Pad is read, and
+# KIND TRANSITIONS, NEVER JUMPY (WORKING-AGREEMENTS). The header's band is its
+# ::before, a strip fixed to the screen. Read on every animation frame as it
+# comes and goes: the strip keeps its place and size (the band never grows out
+# of the controls), its colour passes through in-between values (a fade, not
+# a snap), and on every frame it ends at the header's foot. A shadow round the header (clipped,
+# then lifted) was painted by Safari only inside the header's box (owner's
+# iPhone, after v324: "still shows after reload"); a fixed box is the
+# screen's. Pad and Flip share the rule; Pad is read, and
 # the Gallery's band (pagemenu.css) is read the same way in verify_galib.
 BAND_FRAMES = """(on) => new Promise(done => { const h = document.querySelector('.header'), out = [];
     h.classList.toggle('over-canvas', on); let n = 0;
-    const f = () => { const c = getComputedStyle(h); out.push([c.boxShadow, c.clipPath]); if (++n < 30) requestAnimationFrame(f); else done(out); };
+    const f = () => { const c = getComputedStyle(h, '::before');
+      out.push([c.position, c.top, c.height, c.backgroundColor, h.getBoundingClientRect().bottom, getComputedStyle(h).clipPath, c.content]);
+      if (++n < 30) requestAnimationFrame(f); else done(out); };
     requestAnimationFrame(f); })"""
 def band_frames(frames):
-    """[(spreads, max alpha, ends at the foot)] per frame, from the computed box-shadow."""
+    """[(geometry, alpha, ends at the foot)] per frame, from the header's ::before strip."""
     rows = []
-    for shadow, clip in frames:
-        parts = _re.findall(r"(rgba?\([^)]*\))\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px", shadow)
-        alphas = [float(c.split(",")[3].rstrip(")")) if c.startswith("rgba") else 1.0 for c, *_ in parts]
-        rows.append((tuple(round(float(p[4])) for p in parts), max(alphas or [0.0]),
-                     len(parts) == 2 and all(abs(float(p[2]) + float(p[4]) - i) < 1 for i, p in enumerate(parts))))
+    for pos, top, height, bg, foot, clip, content in frames:
+        m = _re.findall(r"[\d.]+", bg)
+        alpha = float(m[3]) if len(m) > 3 else (1.0 if m else 0.0)
+        num = lambda v: float(v[:-2]) if v.endswith("px") else float("nan")   # "auto" when there is no strip
+        t, hgt = num(top), num(height)
+        rows.append(((pos, t if t == t else None, hgt if hgt == hgt else None, content != "none"), alpha, abs(t + hgt - foot) <= 1))
     return rows
 with sync_playwright() as _bp:
     _bb = _bp.chromium.launch()
@@ -3321,13 +3324,13 @@ with sync_playwright() as _bp:
         for _on, _way in ((True, "in"), (False, "out")):
             _fr = _q.evaluate(BAND_FRAMES, _on)
             _rows = band_frames(_fr)
-            _clip = sorted({c for _, c in _fr} - {"none"})
-            _sizes = {r[0] for r in _rows}
+            _clip = sorted({f[5] for f in _fr} - {"none"})
+            _geo = {r[0] for r in _rows}
             _mid = [r for r in _rows if 0.02 < r[1] < 0.98]
             _bare = [i for i, r in enumerate(_rows) if r[1] > 0.01 and not r[2]]
-            check(f"Pad {_theme}: the band fades {_way} by colour alone, never growing, never past the header's foot",
-                  len(_sizes) == 1 and min(next(iter(_sizes)) or (0,)) >= 300 and len(_mid) >= 3 and not _bare and not _clip,
-                  f"sizes {sorted(_sizes)[:3]}, {len(_mid)} in-between frames, frames painting past the foot {_bare[:5]}, clip {_clip}")
+            check(f"Pad {_theme}: the band is a strip fixed to the screen, fading {_way} by colour alone, never growing, ending at the header's foot",
+                  len(_geo) == 1 and next(iter(_geo))[0] == "fixed" and next(iter(_geo))[3] and len(_mid) >= 3 and not _bare and not _clip,
+                  f"strip {sorted(_geo)[:3]}, {len(_mid)} in-between frames, frames off the foot {_bare[:5]}, clip {_clip}")
         _bc.close()
     _bb.close()
 

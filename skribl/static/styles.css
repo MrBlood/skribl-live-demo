@@ -5903,7 +5903,7 @@ body:has(.lc-card:not([hidden])) .autosave-status { opacity: 0; pointer-events: 
    dock never lies over the drawing, so it has no ground at all. The player
    keeps its header card (body.player-mode). */
 body:not(.player-mode) .header:not(.over-canvas) {
-  background-color: transparent; background-image: none; box-shadow: var(--band-off);
+  background-color: transparent; background-image: none; box-shadow: none;
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
 /* THE GROUND IS A BAND, NOT A CARD (owner, after v324: "I def don't like the
@@ -5911,30 +5911,35 @@ body:not(.player-mode) .header:not(.over-canvas) {
    floating card left the drawing showing in the gap above it and around its
    corners. Its ground is now one strip in the page's own colour from the top
    of the screen to just under the controls, the full width, with a hairline
-   along its foot; the controls do not move. Drawn as two spread shadows,
-   each lifted by its own spread so its lower edge lands on the header's
-   foot (the hairline's, 1px under it): a shadow adds nothing to the page's
-   scroll width, which a wide box would, and it needs no clip. The first cut
-   clipped a centred shadow to the strip with a negative clip-path inset;
-   Safari kept the clip to the header's own box, so on the owner's iPhone the
-   band was only the header's height and the drawing showed above it ("Should
-   this happen?"). The Gallery and Library wear the same band (pagemenu.css
-   .top.scrolled).
-   KIND, NEVER JUMPY: at rest the two shadows are already there, transparent,
-   at full size, so only their colour fades (0.25s) and the band never grows
-   out of the controls. */
-body:not(.player-mode) .header {
-  --band-off: 0 -100vmax 0 100vmax transparent, 0 calc(1px - 100vmax) 0 100vmax transparent;   /* on the header, not :root: the player has none */
+   along its foot; the controls do not move.
+   A STRIP OF ITS OWN, FIXED TO THE SCREEN. Twice the band was a shadow round
+   the header -- clipped to the strip, then lifted by its own spread -- and
+   twice Safari painted it only inside the header's box, so on the owner's
+   iPhone the drawing still showed above the header ("still shows after
+   reload"). Now the header's ::before is a fixed strip from above the
+   screen's top (into the status bar) down to the header's foot, which
+   lib/headerglass.js writes as --header-foot as the page moves. A fixed box
+   is the screen's, so no engine trims it to the header, and it adds nothing
+   to the page's width. The Gallery and Library wear the same strip
+   (pagemenu.css .top::before).
+   KIND, NEVER JUMPY: the strip is always there, transparent, at full size,
+   so only its colour fades (0.25s); it never grows out of the controls. */
+body:not(.player-mode) .header::before {
+  content: ""; position: fixed; left: 0; right: 0; top: -120px; z-index: -1;
+  height: calc(120px + var(--header-foot, 0px));
+  background-color: transparent; box-shadow: 0 1px 0 transparent; pointer-events: none;
   transition: background-color 0.25s ease, box-shadow 0.25s ease;
 }
+body:not(.player-mode) .header { transition: background-color 0.25s ease; }
 body:not(.player-mode) .header.over-canvas {
   background: var(--surface-deep); border-radius: 0;
-  -webkit-backdrop-filter: none; backdrop-filter: none;
-  box-shadow: 0 -100vmax 0 100vmax var(--surface-deep), 0 calc(1px - 100vmax) 0 100vmax var(--hairline);
+  -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
 }
+body:not(.player-mode) .header.over-canvas::before { background-color: var(--surface-deep); box-shadow: 0 1px 0 var(--hairline); }
 /* A finger drawing under it still fades the header to nothing (body.stroking,
-   above), band and all. */
-body.stroking:not(.player-mode) .header.over-canvas { background-color: transparent; box-shadow: var(--band-off); }
+   above), strip and all. */
+body.stroking:not(.player-mode) .header.over-canvas { background-color: transparent; }
+body.stroking:not(.player-mode) .header.over-canvas::before { background-color: transparent; box-shadow: 0 1px 0 transparent; }
 /* ...AND ON TOP of what passes under it. The Pad's dock sits at layer 41 (its
    trays and the shape card stack inside it), above the header's 30, so once
    the page scrolled the dock up under a grounded header its icons were drawn
