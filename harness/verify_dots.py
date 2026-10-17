@@ -163,7 +163,7 @@ RING = """() => {
   const probe = document.createElement('i');
   probe.style.color = 'rgb(' + getComputedStyle(document.documentElement).getPropertyValue('--surface-well-2-rgb').trim() + ')';
   document.body.appendChild(probe); const ground = getComputedStyle(probe).color; probe.remove();
-  const out = { ground };
+  const out = { ground, track: getComputedStyle(document.getElementById('photoTabDot').closest('.media-tabs')).backgroundColor };
   ids.forEach(id => { const d = document.getElementById(id), c = getComputedStyle(d), r = d.getBoundingClientRect();
     out[id] = { shadow: c.boxShadow, border: c.borderTopWidth, w: c.width, h: c.height, bg: c.backgroundColor,
                 x: r.left, y: r.top, rw: r.width }; });
@@ -208,20 +208,26 @@ with sync_playwright() as p:
                           f"tab {t['shadow']} {t['w']}x{t['h']} b{t['border']} vs dock "
                           f"{dock['shadow']} {dock['w']}x{dock['h']} b{dock['border']}")
                 if dsf == 3:
-                    # One device pixel in from the photo tab dot's left edge, on
-                    # its centre row, is ring; its centre is the dot's own colour.
+                    # On the photo tab dot's centre row, between the track and
+                    # the dot, some device pixel is the ring's own colour; its
+                    # centre is the dot's. The row is SCANNED, not read at one
+                    # offset: the dot sits on a fractional x, so a fixed "one
+                    # pixel in" read the ring's blended edge once the tabs moved
+                    # by a pixel (v324's drawers) and called a painted ring missing.
                     t = r["photoTabDot"]
                     shot = pg.screenshot(clip={"x": t["x"] - 2, "y": t["y"] - 2,
                                                "width": t["rw"] + 4, "height": t["rw"] + 4})
                     im = Image.open(io.BytesIO(shot)).convert("RGB")
                     cy = im.height // 2
-                    edge = im.getpixel((2 * dsf + 1, cy))
+                    row = [im.getpixel((i, cy)) for i in range(im.width // 2)]
                     centre = im.getpixel((im.width // 2, cy))
-                    ring_c, dot_c = _rgbt(r["ground"]), _rgbt(t["bg"])
+                    ring_c, dot_c, track_c = _rgbt(r["ground"]), _rgbt(t["bg"]), _rgbt(r["track"])
                     dist = lambda a, c: sum(abs(x - y) for x, y in zip(a, c))
-                    check(f"{tag}: the tab dot's ring is painted (edge nearer the ring, centre the dot)",
-                          dist(edge, ring_c) < dist(edge, dot_c) and dist(centre, dot_c) < 40,
-                          f"edge {edge} ring {ring_c} dot {dot_c} centre {centre}")
+                    ringed = [px for px in row if dist(px, ring_c) < 15
+                              and dist(px, ring_c) < dist(px, track_c) and dist(px, ring_c) < dist(px, dot_c)]
+                    check(f"{tag}: the tab dot's ring is painted (a ring pixel between the track and the dot, centre the dot)",
+                          bool(ringed) and dist(centre, dot_c) < 40,
+                          f"row {row} ring {ring_c} track {track_c} dot {dot_c} centre {centre}")
                 ctx.close()
     b.close()
 

@@ -225,8 +225,12 @@ def surfaces(name, ids, q, canvas, btn):
             q.wait_for_timeout(10)
         q.mouse.up(); q.wait_for_timeout(400)
         # Pad records from the first stroke; Done ends the take and brings Post back.
-        q.evaluate("() => { if (document.body.classList.contains('recording')) document.getElementById('recordBtn').click(); }")
-        q.wait_for_timeout(600)
+        # On a slow runner a fixed wait was not enough: Post was still disabled
+        # and the click timed out (main's CI, after v324). So end the take
+        # whenever it shows, and wait for Post itself.
+        q.wait_for_function("""() => {
+          if (document.body.classList.contains('recording')) document.getElementById('recordBtn').click();
+          return !document.getElementById('postBtn').disabled; }""", timeout=15000)
         q.click("#postBtn"); q.wait_for_timeout(900)
 
     def answers():
