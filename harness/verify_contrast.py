@@ -30,7 +30,9 @@ control is exempt (WCAG 1.4.3). Each surface also reports its own colours
 import io
 import math
 import os
+import struct
 import sys
+import wave
 
 from assertions import make_check
 import browsing
@@ -53,10 +55,19 @@ ONLY = [s for s in os.environ.get("CONTRAST_ONLY", "").split("|") if s]   # labe
 # (editor, route, menu button, canvas, ids that differ by editor)
 EDITORS = (
     ("Pad", "/skribl-pad", "menuBtn", "#canvas",
-     dict(menu="menuSheet", help="helpItem", export="exportItem", report="reportItem")),
+     dict(menu="menuSheet", help="helpItem", export="exportItem", report="reportItem", photo="#photoInput")),
     ("Flip", "/flip", "moreBtn", "#pad",
-     dict(menu="moreMenu", help="miInfo", export="miExport", report="miReport")),
+     dict(menu="moreMenu", help="miInfo", export="miExport", report="miReport", photo="#imageInput")),
 )
+
+# A picture and a song to load into the photo and music drawers.
+_im = Image.new("RGB", (300, 300), (243, 240, 255))
+_pb = io.BytesIO(); _im.save(_pb, "PNG"); PNG = _pb.getvalue()
+_wb = io.BytesIO()
+with wave.open(_wb, "wb") as _w:
+    _w.setnchannels(1); _w.setsampwidth(2); _w.setframerate(22050)
+    _w.writeframes(b"".join(struct.pack("<h", int(8000 * math.sin(i / 8))) for i in range(22050 * 4)))
+WAV = _wb.getvalue()
 
 HIDE_TEXT = """* { color: transparent !important; -webkit-text-fill-color: transparent !important;
   text-shadow: none !important; caret-color: transparent !important; }
@@ -89,6 +100,7 @@ WORDS = r"""(root) => {
     // were read against the lilac of a word they were not on (4.20).
     let op = 1; for (let a = el; a && a.nodeType === 1; a = a.parentElement) op *= parseFloat(getComputedStyle(a).opacity);
     const c = rgb(cs.color);
+    if (c[3] * op < 0.01) continue;   // not painted: a bubble shown only while dragging
     const name = el.id ? '#' + el.id : el.tagName.toLowerCase() + (el.classList.length ? '.' + [...el.classList].slice(0, 2).join('.') : '');
     for (const t of texts) { const r = document.createRange(); r.selectNodeContents(t);
       for (const q of r.getClientRects()) { if (!q.width || !q.height) continue;
@@ -112,7 +124,8 @@ CENSUS = r"""(root) => {
   const cards = {};
   for (const sel of ['.menu-tile', '.menu-list', '.seg', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
                      '.help-tip', '.help-search', '.export-opt', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
-                     '.bk-pic', '.ask-go', '.menu-start', '.export-nameinput', '.post-input', '.bk-back']) {
+                     '.bk-pic', '.ask-go', '.menu-start', '.export-nameinput', '.post-input', '.bk-back',
+                     '.smooth-seg', '.media-tabs', '.photo-fit-group', '.reposition-btn', '.clear-drawer-btn', '.edge-controls']) {
     const el = [...R.querySelectorAll(sel)].find(e => e.getClientRects().length);
     if (el) cards[sel] = s(el);
   }
@@ -240,6 +253,30 @@ def surfaces(name, ids, q, canvas, btn):
     def tune():
         q.click("#tuneBtn"); q.wait_for_timeout(700)
 
+    # THE DOCK'S DRAWERS AS THEY ARE USED (after v324, the drawers mock): the
+    # draw drawer unfolded, Photo with a picture in it, Music with a song, on
+    # Trim and on Fine-tune. Opened empty, six lines too faint to read were
+    # never in view to be measured.
+    def drawer():
+        browsing.pad_drawer(q, "draw"); q.wait_for_timeout(500)
+        if q.evaluate("() => { const m = document.getElementById('drawerDetentMore'); return !!m && !!m.getClientRects().length && getComputedStyle(m).display !== 'none'; }"):
+            q.click("#drawerDetentMore"); q.wait_for_timeout(900)
+
+    def photo():
+        browsing.pad_drawer(q, "photo"); q.wait_for_timeout(400)
+        q.set_input_files(ids["photo"], {"name": "photo.png", "mimeType": "image/png", "buffer": PNG})
+        q.wait_for_timeout(1500)
+
+    def music(fine):
+        def f():
+            browsing.pad_drawer(q, "music"); q.wait_for_timeout(400)
+            q.set_input_files("#musicInput", {"name": "song.wav", "mimeType": "audio/wav", "buffer": WAV})
+            q.wait_for_function("() => typeof currentAudioBuffer !== 'undefined' && !!currentAudioBuffer", timeout=20000)
+            q.wait_for_timeout(700)
+            if fine:
+                q.click("#fineTuneToggle"); q.wait_for_timeout(900)
+        return f
+
     # The card on the button and the name tags (lib/learncard.js), which the
     # page only shows to automation that asks (see the context's init script).
     def card():
@@ -257,6 +294,8 @@ def surfaces(name, ids, q, canvas, btn):
             ("Ask, an answer", answer, "#helpDrawer .help-drawer-inner"),
             ("The little book", book, "#bookRoot .bk"), ("Draw along", along, ".da-pill"),
             ("Tune", tune, "#tuneShell"),
+            ("The draw drawer", drawer, "#drawPanel"), ("Photo, with a picture", photo, "#mediaCard"),
+            ("Music, Trim", music(False), "#mediaCard"), ("Music, Fine-tune", music(True), "#mediaCard"),
             ("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
             ("Name every button", names, ".lc-tags"))
 
@@ -296,10 +335,39 @@ with sync_playwright() as p:
                 c.close()
     b.close()
 
+# THE DRAWER'S EDGE SHOWS (owner, after v324: "I can't really see the edges
+# of the drawer"). The page's pixel just outside a drawer's left edge, against
+# the strongest of the drawer's first three columns there: the dock's glass
+# measured 1.01:1 in light, no edge at all; the menu's card line is 1.53 in
+# light and 1.29 in dark. At the phone's 2x, the draw drawer and the photo card.
+print("\nTHE DRAWERS' EDGE")
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    for name, route, btn, canvas, ids in EDITORS:
+        for scheme in ("light", "dark"):
+            c = b.new_context(color_scheme=scheme, **PHONE)
+            q = c.new_page()
+            for what, root in (("draw", "#drawPanel"), ("photo", "#mediaCard")):
+                if ONLY and "edge" not in ONLY:
+                    continue
+                browsing.goto(q, BASE, route); q.wait_for_timeout(700)
+                q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+                browsing.pad_drawer(q, what); q.wait_for_timeout(700)
+                r = q.evaluate("(s) => { const b = document.querySelector(s).getBoundingClientRect(); return [b.left, b.top, b.height]; }", root)
+                im = Image.open(io.BytesIO(q.screenshot())).convert("RGB")
+                X, Y = round(r[0] * 2), round((r[1] + min(r[2], 120) / 2) * 2)
+                page = im.getpixel((X - 8, Y))
+                rim = max((im.getpixel((X + k, Y)) for k in range(3)), key=lambda px: abs(lum(px) - lum(page)))
+                check(f"{name}, {scheme}: the {what} drawer's edge shows against the page (1.25:1 or more)",
+                      ratio(rim, page) >= 1.25, f"page {page} edge {rim} {ratio(rim, page):.2f}")
+            c.close()
+    b.close()
+
 # CONSISTENCY, asserted where the answer is already decided: Pad and Flip
 # wear the same sheet and the same cards (one product, two editors: any
 # difference is drift), and every sheet the menu opens is the menu's paper.
 print("\nCONSISTENCY")
+DRAWERS = ("Tune", "The draw drawer", "Photo, with a picture", "Music, Trim", "Music, Fine-tune")
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
          "Ask", "Ask, its answers", "Ask, an answer", "The little book")
 for scheme in ("light", "dark"):
@@ -325,27 +393,40 @@ for scheme in ("light", "dark"):
     # a sheet 22, a card 16, a button or field 12.
     tile = ((census.get(("Pad", scheme, "the menu")) or {}).get("cards", {}).get(".menu-tile") or {}).get("bg")
     cardlike = {(n, l, sel): census[(n, sc, l)]["cards"][sel]["bg"] for (n, sc, l) in census
-                for sel in (".seg", ".export-opt")
-                if sc == scheme and l in ("the menu", "New", "Settings", "Export") and census[(n, sc, l)]
+                for sel in (".seg", ".export-opt", ".smooth-seg", ".media-tabs", ".photo-fit-group", ".reposition-btn",
+                            ".clear-drawer-btn", ".edge-controls")
+                if sc == scheme and l in ("the menu", "New", "Settings", "Export") + DRAWERS and census[(n, sc, l)]
                 and sel in census[(n, sc, l)]["cards"]}
-    check(f"{scheme}: every choice on the menu's sheets, and Export's options, is a white card like the menu's tiles ({len(cardlike)} read)",
-          bool(tile) and len(cardlike) >= (1 if ONLY else 8) and set(cardlike.values()) == {tile},
+    check(f"{scheme}: every choice on the menu's sheets and in the dock's drawers, and Export's options, is a white card "
+          f"like the menu's tiles ({len(cardlike)} read)",
+          bool(tile) and len(cardlike) >= (1 if ONLY else 20) and set(cardlike.values()) == {tile},
           f"tile {tile}; " + "; ".join(f"{n} {l} {sel}: {v}" for (n, l, sel), v in sorted(cardlike.items()) if v != tile))
     KIND = {".menu-tile": "16px", ".menu-list": "16px", ".sdrafts-this": "16px", ".sdrafts-files": "16px", ".learn-card": "16px",
             ".ask-tour": "16px", ".ask-best-card": "16px", ".ask-list": "16px", ".help-tip": "16px", ".accordion-header": "16px",
             ".export-opt": "16px", ".post-preview": "16px", ".bk-pic": "16px", ".sdrafts-row": "16px",
             ".seg": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
-            ".post-input": "12px", ".bk-back": "12px"}
+            ".post-input": "12px", ".bk-back": "12px", ".smooth-seg": "12px", ".media-tabs": "12px", ".photo-fit-group": "12px",
+            ".reposition-btn": "12px", ".clear-drawer-btn": "12px", ".edge-controls": "12px"}
+    # The dock's drawers and Tune are the menu's paper too (the drawers mock, C).
+    paper = (census.get(("Pad", scheme, "the menu")) or {}).get("sheet", {}).get("bg")
+    drawers = {(n, l): census[(n, sc, l)]["sheet"]["bg"] for (n, sc, l) in census
+               if sc == scheme and l in DRAWERS and census[(n, sc, l)]}
+    check(f"{scheme}: every drawer the dock opens, and Tune, is the menu's paper ({len(drawers)} read)",
+          bool(paper) and len(drawers) >= (1 if ONLY else 10) and set(drawers.values()) == {paper},
+          f"paper {paper}; " + "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(drawers.items()) if g != paper))
     off, seen = [], 0
     for (n, sc, l), cz in census.items():
-        if sc != scheme or l not in PAPER or not cz:
+        if sc != scheme or l not in PAPER + DRAWERS or not cz:
             continue
         seen += 1
-        if cz["sheet"]["r"] != "22px":
+        # A sheet is 22; a drawer is a card in the dock, 16 (Tune spans the top, square).
+        want = "22px" if l in PAPER else ("0px" if l == "Tune" else "16px")
+        if cz["sheet"]["r"] != want:
             off.append(f"{n} {l} sheet {cz['sheet']['r']}")
         off += [f"{n} {l} {sel} {v['r']}" for sel, v in cz["cards"].items() if sel in KIND and v["r"] != KIND[sel]]
-    check(f"{scheme}: one corner per kind on the menu's sheets: a sheet 22, a card 16, a button or field 12 ({seen} sheets read)",
-          seen >= (1 if ONLY else 22) and not off, "; ".join(sorted(set(off)))[:400])
+    check(f"{scheme}: one corner per kind on the menu's sheets and the dock's drawers: a sheet 22, a drawer or card 16, "
+          f"a button or field 12 ({seen} read)",
+          seen >= (1 if ONLY else 32) and not off, "; ".join(sorted(set(off)))[:400])
 
 print("\nEach surface's own colours, for reading side by side")
 for (name, scheme, label), cz in sorted(census.items(), key=lambda kv: (kv[0][1], kv[0][2], kv[0][0])):
