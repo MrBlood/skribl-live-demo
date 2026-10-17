@@ -375,36 +375,40 @@ with sync_playwright() as p:
         pg.close()
 
     # ============================================================== HEADER
-    print("\nGALIB 4 -- one header card and one lockup on both pages")
+    print("\nGALIB 4 -- one header and one lockup on both pages")
+    # THE EDITORS' HEADER (owner, after v324: the mock, C, "All yes"). No card
+    # at rest: the controls sit on the page and the mark lines up with the
+    # page's own text (the card's padding had set it 14px in, "indented"
+    # under the heading), the page's word beside the mark is gone (the heading
+    # says it), and once scrolled the ground is a band (the scrolled reads at
+    # the end paint it, and its fade frame by frame). Sticky either way, and the band adds no width to the page.
     HEAD = """() => { const t = document.querySelector('.top'), cs = getComputedStyle(t);
-      const tag = getComputedStyle(document.querySelector('.brand .tag'));
       const mk = getComputedStyle(document.querySelector('#galleryMake, #libMake'));
-      return { pos: cs.position, bf: cs.backdropFilter, shadow: cs.boxShadow, radius: cs.borderTopLeftRadius,
-               top: t.getBoundingClientRect().top, over: document.documentElement.scrollWidth - innerWidth,
-               clip: t.scrollWidth - t.clientWidth, bg: cs.backgroundColor,
-               lockup: [document.querySelector('.brand .brand-mark').getBoundingClientRect().height,
-                        tag.fontWeight, tag.fontSize, tag.letterSpacing, mk.fontWeight, mk.fontSize] }; }"""
+      const a = (c) => { const m = c.match(/[\\d.]+/g); return !m ? 0 : (m.length > 3 ? +m[3] : 1); };
+      const paints = (s) => s !== 'none' && (s.match(/rgba?\\([^)]*\\)/g) || []).some(c => a(c) > 0);
+      const h1 = document.querySelector('h1, #whoName');
+      return { pos: cs.position, fill: a(cs.backgroundColor), shadow: paints(cs.boxShadow), scrolled: t.classList.contains('scrolled'),
+               top: Math.round(t.getBoundingClientRect().top), over: document.documentElement.scrollWidth - innerWidth,
+               mark: Math.round(document.querySelector('.brand .brand-mark').getBoundingClientRect().left),
+               text: h1 ? Math.round(h1.getBoundingClientRect().left) : null, word: !!document.querySelector('.brand .tag'),
+               lockup: [document.querySelector('.brand .brand-mark').getBoundingClientRect().height, mk.fontWeight, mk.fontSize] }; }"""
     lockups = {}
     for path in ("/gallery", "/library"):
-        pg = open_page(ctx, path)
-        pg.evaluate("window.scrollTo(0, 600)"); pg.wait_for_timeout(300)
-        h = pg.evaluate(HEAD)
-        lockups[path] = h["lockup"]
-        check(f"{path}: the header is a glass card, sticky, still 12px from the top once scrolled",
-              h["pos"] == "sticky" and "blur(14px)" in h["bf"] and "0px 0px 0px 1px" in h["shadow"]
-              and h["radius"] == "16px" and abs(h["top"] - 12) <= 1, str(h))
-        pg.close()
-        pg = open_page(phone, path)
-        pg.evaluate("window.scrollTo(0, 600)"); pg.wait_for_timeout(300)
-        h = pg.evaluate(HEAD)
-        check(f"{path} at 390: the card is solid and pinned, and nothing overflows",
-              h["pos"] == "sticky" and h["bf"] == "none" and _rgba(h["bg"])[1] == 1.0
-              and abs(h["top"] - 6) <= 1 and h["over"] <= 0 and h["clip"] <= 0, str(h))
-        pg.close()
-    check("ONE lockup: mark height, word weight/size/tracking and Make one's weight/size agree on both pages",
-          lockups["/gallery"] == lockups["/library"]
-          and lockups["/gallery"][0] == 24 and lockups["/gallery"][1:] == ["700", "11px", "1.76px", "600", "13px"],
-          str(lockups))
+        for dev, c_, pin in (("desk", ctx, 12), ("390", phone, 6)):
+            pg = open_page(c_, path)
+            h = pg.evaluate(HEAD)
+            lockups[path] = h["lockup"]
+            check(f"{path} {dev}: at rest the header paints no card, and the mark lines up with the page's text, no word beside it",
+                  h["pos"] == "sticky" and h["fill"] == 0 and not h["shadow"] and not h["scrolled"]
+                  and h["text"] is not None and abs(h["mark"] - h["text"]) <= 1 and not h["word"], str(h))
+            pg.evaluate("document.body.style.minHeight = '3000px'; window.scrollTo(0, 600)"); pg.wait_for_timeout(500)
+            h = pg.evaluate(HEAD)
+            check(f"{path} {dev}: scrolled, it is pinned {pin}px from the top on its ground, and nothing overflows",
+                  h["pos"] == "sticky" and h["scrolled"] and h["fill"] == 1 and h["shadow"]
+                  and abs(h["top"] - pin) <= 1 and h["over"] <= 0, str(h))
+            pg.close()
+    check("ONE lockup: mark height and Make one's weight/size agree on both pages",
+          lockups["/gallery"] == lockups["/library"] and lockups["/gallery"] == [24, "600", "13px"], str(lockups))
 
     # ========================================================= REPORT SHEET
     print("\nGALIB 5 -- the report sheet: a bottom sheet on a phone, a centred card on a desktop")
@@ -556,9 +560,43 @@ with sync_playwright() as p:
                 _mid = _flat(_png, (int(_r["mid0"]), int(_r["top"]) + 6, max(int(_r["mid0"]) + 2, int(_r["mid1"])), int(_r["bottom"]) - 6))
                 check(f"{_path} {_theme} {_vw}: scrolled, nothing shows above the pinned header",
                       _gap <= 8, f"the gap above the card varies by {_gap}/255 (scrolled content shows through)")
-                check(f"{_path} {_theme} {_vw}: scrolled, nothing shows through the header card",
-                      _mid <= 8, f"a strip inside the card varies by {_mid}/255 (text reads through the glass)")
+                check(f"{_path} {_theme} {_vw}: scrolled, nothing shows through the header",
+                      _mid <= 8, f"a strip inside the header varies by {_mid}/255 (text reads through it)")
+                # ...nor BESIDE it: the ground is a band the full width (owner,
+                # after v324: "I def don't like the look of the stuff showing
+                # under top bar").
+                _side = max(_flat(_png, (0, int(_r["top"]) + 4, max(2, int(_r["l"]) - 2), int(_r["bottom"]) - 4)),
+                            _flat(_png, (min(_vw - 2, int(_r["l"] + _r["w"]) + 2), int(_r["top"]) + 4, _vw, int(_r["bottom"]) - 4)))
+                check(f"{_path} {_theme} {_vw}: scrolled, nothing shows beside the header",
+                      _side <= 8, f"the strips beside the header vary by {_side}/255")
                 _c.close()
+
+    # THE BAND FADES BY COLOUR ALONE (KIND TRANSITIONS, NEVER JUMPY), read on
+    # every animation frame as .scrolled comes and goes, as verify_ux reads the
+    # editors': the band's shadows keep their size, their colour passes
+    # through in-between values, and while any of it paints the clip is on.
+    _BF = """(on) => new Promise(done => { const h = document.querySelector('.top'), out = [];
+        h.classList.toggle('scrolled', on); let n = 0;
+        const f = () => { const c = getComputedStyle(h); out.push([c.boxShadow, c.clipPath]); if (++n < 30) requestAnimationFrame(f); else done(out); };
+        requestAnimationFrame(f); })"""
+    import re as _re
+    for _theme in ("light", "dark"):
+        _c = b.new_context(viewport={"width": 390, "height": 700})
+        _p = _c.new_page()
+        _p.goto(f"{BASE}/gallery?theme={_theme}", wait_until="load"); _p.wait_for_timeout(700)
+        for _on, _way in ((True, "in"), (False, "out")):
+            _rows = []
+            for _sh, _cl in _p.evaluate(_BF, _on):
+                _parts = _re.findall(r"(rgba?\([^)]*\))\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px", _sh)
+                _al = [float(c.split(",")[3].rstrip(")")) if c.startswith("rgba") else 1.0 for c, *_ in _parts]
+                _rows.append((tuple(round(float(x[4])) for x in _parts), max(_al or [0.0]), "-1px" in _cl))
+            _sizes = {r[0] for r in _rows}
+            _mid = [r for r in _rows if 0.02 < r[1] < 0.98]
+            _bare = [i for i, r in enumerate(_rows) if r[1] > 0.01 and not r[2]]
+            check(f"/gallery {_theme}: the header's band fades {_way} by colour alone, never growing, never painting unclipped",
+                  len(_sizes) == 1 and min(next(iter(_sizes)) or (0,)) >= 300 and len(_mid) >= 3 and not _bare,
+                  f"sizes {sorted(_sizes)[:3]}, {len(_mid)} in-between frames, unclipped painting frames {_bare[:5]}")
+        _c.close()
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

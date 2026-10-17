@@ -5897,11 +5897,38 @@ body.replaying .autosave-status { opacity: 0; pointer-events: none; }
    change, never a backdrop-filter or an opacity (the v315 WebKit rule). The
    dock never lies over the drawing, so it has no ground at all. The player
    keeps its header card (body.player-mode). */
-body:not(.player-mode) .header { transition: background-color 0.25s ease, box-shadow 0.25s ease; }
 body:not(.player-mode) .header:not(.over-canvas) {
-  background-color: transparent; background-image: none; box-shadow: none;
+  background-color: transparent; background-image: none; box-shadow: var(--band-off);
   -webkit-backdrop-filter: none; backdrop-filter: none;
 }
+/* THE GROUND IS A BAND, NOT A CARD (owner, after v324: "I def don't like the
+   look of the stuff showing under top bar"; the mock, C, "All yes"). The
+   floating card left the drawing showing in the gap above it and around its
+   corners. Its ground is now one strip in the page's own colour from the top
+   of the screen to just under the controls, the full width, with a hairline
+   along its foot; the controls do not move. Drawn as two spread shadows,
+   clipped to that band: a shadow adds nothing to the page's scroll width,
+   which a wide box would. The Gallery and Library wear the same band
+   (pagemenu.css .top.scrolled).
+   KIND, NEVER JUMPY: at rest the two shadows are already there, transparent,
+   at full size, so only their colour fades (0.25s) and the band never grows
+   out of the controls. The clip goes on at once and comes off only after the
+   fade out, so a fading band never paints past its strip. */
+body:not(.player-mode) .header {
+  --band-off: 0 0 0 100vmax transparent, 0 1px 0 100vmax transparent;   /* on the header, not :root: the player has none */
+  clip-path: inset(-100vmax);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, clip-path 0s linear 0.25s;
+}
+body:not(.player-mode) .header.over-canvas {
+  background: var(--surface-deep); border-radius: 0;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: 0 0 0 100vmax var(--surface-deep), 0 1px 0 100vmax var(--hairline);
+  clip-path: inset(-100vmax -100vmax -1px -100vmax);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, clip-path 0s;
+}
+/* A finger drawing under it still fades the header to nothing (body.stroking,
+   above), band and all. */
+body.stroking:not(.player-mode) .header.over-canvas { background-color: transparent; box-shadow: var(--band-off); }
 /* ...AND ON TOP of what passes under it. The Pad's dock sits at layer 41 (its
    trays and the shape card stack inside it), above the header's 30, so once
    the page scrolled the dock up under a grounded header its icons were drawn
