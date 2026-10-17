@@ -252,6 +252,30 @@ with sync_playwright() as p:
         painted_focus(pg, path)
         pg.close()
 
+    # A FINGER SHOWS NO RING (owner's iPhone, after v324: a purple outline round
+    # the menu's first row as it opened). The menu moves focus to its first
+    # row, and Safari draws :focus-visible for that even after a tap. Chromium
+    # cannot be made to, so the two parts are read apart: a pointer marks the
+    # page "pointer" (lib/modalfocus.js), and a row whose ring IS showing
+    # (reached by a key) paints none once the page is marked so -- the state
+    # Safari is in after a tap -- and paints it again after a key.
+    RING = """() => { const el = document.activeElement; if (!el || el === document.body) return null;
+      const c = getComputedStyle(el); return { fv: el.matches(':focus-visible'), outline: c.outlineStyle,
+        how: document.documentElement.getAttribute('data-input'), what: el.className || el.tagName }; }"""
+    for path in ("/gallery", "/library"):
+        pg = open_page(ctx, path)
+        pg.click("#pageMenuBtn"); pg.wait_for_timeout(700)
+        how = pg.evaluate("() => document.documentElement.getAttribute('data-input')")
+        pg.keyboard.press("Tab"); pg.keyboard.press("Shift+Tab"); pg.wait_for_timeout(150)
+        k = pg.evaluate(RING)
+        pg.evaluate("() => document.documentElement.setAttribute('data-input', 'pointer')")
+        t = pg.evaluate(RING)
+        check(f"{path}: a pointer marks the page, and a focused row with its ring showing paints none after a pointer, as on a phone",
+              how == "pointer" and t and t["fv"] and t["outline"] == "none", f"after the click {how}; {t}")
+        check(f"{path}: ...and a key brings the ring back",
+              k and k["fv"] and k["how"] == "key" and k["outline"] != "none", str(k))
+        pg.close()
+
     # ========================================================= DELETE FLOWS
     print("\nGALIB 2 -- the draft bin asks without moving; a posted Delete holds its arm")
     pg = open_page(ctx, "/library#drafts")
