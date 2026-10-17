@@ -601,7 +601,11 @@
     .stat b { display: inline; font-size: 14px; font-weight: 700; }
     .stat span { font-size: 14px; }
     .player, .posted-row, .draft-row { background: var(--card); border-color: var(--card-line); box-shadow: var(--card-drop); }
-    .posted-row.posted-row-keyed { background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
+    /* The row that is playing is the one tint, with no edge and no drop, as a
+       lit row is everywhere (verify_onepill R1); its colour written out, a
+       12% accent on the card in each ramp. */
+    .posted-row.posted-row-keyed { background: #2e2552; border-color: transparent; box-shadow: none; }
+    :root[data-theme="light"] .posted-row.posted-row-keyed { background: #efebff; }
     .search input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
     .tbtn:not(.on), .posted-copy, .posted-key, .more { background: var(--card); border-color: var(--card-line); }
     .posted-copy, .posted-key, .posted-gallery, .posted-delete { border-radius: 12px; }
