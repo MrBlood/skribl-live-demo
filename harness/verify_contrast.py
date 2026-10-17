@@ -333,7 +333,7 @@ for scheme in ("light", "dark"):
           f"tile {tile}; " + "; ".join(f"{n} {l} {sel}: {v}" for (n, l, sel), v in sorted(cardlike.items()) if v != tile))
     KIND = {".menu-tile": "16px", ".menu-list": "16px", ".sdrafts-this": "16px", ".sdrafts-files": "16px", ".learn-card": "16px",
             ".ask-tour": "16px", ".ask-best-card": "16px", ".ask-list": "16px", ".help-tip": "16px", ".accordion-header": "16px",
-            ".export-opt": "16px", ".post-preview": "16px", ".bk-pic": "16px",
+            ".export-opt": "16px", ".post-preview": "16px", ".bk-pic": "16px", ".sdrafts-row": "16px",
             ".seg": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
             ".post-input": "12px", ".bk-back": "12px"}
     off, seen = [], 0
