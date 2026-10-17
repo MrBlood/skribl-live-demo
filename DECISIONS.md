@@ -18230,3 +18230,24 @@ Pad at 1/4x it moves on nearly every frame, never still for more than two;
 every row red with untie() turned off (nib moving on a quarter to a third of
 the frames). Not tested here: iPhone Safari itself.
 
+## After v323 -- the Pad | Flip switch moves before it goes
+
+The owner's iPhone: "when I click flip, starts loading flip and never shows
+the button move, then boom you're in flip. It takes a while to flip back and
+forth and it never shows the pill move." The menu's other editor is a plain
+link, so the browser left at once and the pill never moved; the screen sat
+still while the next editor loaded. lib/editorswitch.js, one module for both
+menus: a tap glides the pill under the other editor and lights its name,
+and the page goes when it has arrived (280 ms, the pill's .26s glide; at
+once with reduced motion; never for a tap that means a new tab). It moves
+the pill itself, because lib/segslider.js follows a selected button and
+would put it back, and it marks the switch data-going, which segslider does
+not watch. Each editor's leave guard hears the tap first (the module loads
+last) and still stops it when work is at risk. The other editor's page is
+fetched ahead once this one has settled, so the trip is quicker; Back from
+it puts the pill home.
+
+verify_menu taps the other editor on both and reads the pill under it while
+the page is still up, then the arrival, and the fetch ahead; each red with
+its part taken out (with no glide the page left at once).
+

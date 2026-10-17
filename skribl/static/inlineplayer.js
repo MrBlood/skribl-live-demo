@@ -333,11 +333,7 @@
     }
     /* Points that arrived in one bundle play one after another, not at once:
      * lib/holdtiming.js untie(), the rule the editors' replays share. */
-    var H = global.SkriblHold;
-    if (H && H.untie && out.length > 1) {
-      var t = H.untie(out.map(function (p) { return p.playT; }), out);
-      for (var k = 0; k < out.length; k++) out[k].playT = t[k];
-    }
+    if (global.SkriblHold) global.SkriblHold.untie(out);
     return out;
   }
 

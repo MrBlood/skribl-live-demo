@@ -1426,16 +1426,10 @@ function buildPlaybackTimeline() {
     const s = strokes[i];
     timeline.push({ x: s.x, y: s.y, color: s.color, size: s.size, erase: s.erase, start: s.start, playT: playT, i: i });
   }
-  return untieTimeline(timeline);
-}
-// Points that arrived in one bundle play one after another, not at once
-// (lib/holdtiming.js untie(): the rule every replay shares).
-function untieTimeline(tl) {
-  const H = window.SkriblHold;
-  if (!H || !H.untie || tl.length < 2) return tl;
-  const t = H.untie(tl.map((p) => p.playT), tl);
-  for (let k = 0; k < tl.length; k++) tl[k].playT = t[k];
-  return tl;
+  // Points that arrived in one bundle play one after another, not at once
+  // (lib/holdtiming.js untie(): the rule every replay shares).
+  if (window.SkriblHold) SkriblHold.untie(timeline);
+  return timeline;
 }
 
 function getPlaybackDuration() {
