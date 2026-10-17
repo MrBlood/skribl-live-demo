@@ -18313,3 +18313,28 @@ choices, in one change shared by the Pad and Flip:
 verify_contrast now holds the white card and the corners on every sheet the
 menu opens; verify_ask the field's gap; verify_menu the desk room. Each row
 was shown red on the tree before this change. "Draw along" keeps its name.
+
+## After v324 -- the Gallery and Library menu, on the editors' paper
+
+The owner, after the Pad and Flip sheets went to one look: "Are you checking
+gallery and library too?" They were not. The ••• menu on those two pages has
+its own stylesheet (pagemenu.css, which restates what it needs because
+neither page loads styles.css), so the editors' paper never reached it: it
+was still the Pad's old glass, its Theme switch on the grey track, 20 and 16
+corners and 6px of room on a desk. After the mock, "All yes" to A:
+
+- The editors' menu, minus what only an editor has: their solid lilac paper,
+  the four places in one white card at their row size (16px names over 14px
+  lines), Theme on a white-card track, Report a problem and the version at the
+  foot. Report copies at once, as before; what it copied ("the details, no
+  drawings") is said under the foot after the tap, since the foot has no room
+  to say it first. The sheet 22, the card 16, 336 wide with 12px of room on a
+  desk.
+- pagemenu.css restates styles.css's paper tokens on .pm-sheet, both ramps.
+  The report sheet and a tile's menu keep the glass: they are not the menu.
+
+verify_galib reads the paper, the card and the track off the Pad's own menu
+in the same theme and holds this one to them, painted, on both pages; it was
+shown red on the glass menu. The pages themselves (their header, New | Hot,
+the search field) still wear the older grey and glass; that is a look of its
+own, not mocked yet.
