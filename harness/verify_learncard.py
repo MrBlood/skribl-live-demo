@@ -234,7 +234,8 @@ with sync_playwright() as p:
             q.wait_for_timeout(2200)
             again = q.evaluate("() => !!document.querySelector('.lc-note')")
             check(f"{name}: the first-time note shows once ('{first}'), and Got it is for good",
-                  first == "Hold any button to see what it does." and not again, f"{first} / again {again}")
+                  first == "Hold any button to see what it does. New here? There\u2019s a little book in How it works."
+                  and not again, f"{first} / again {again}")
             c.close()
         part("note", note)
 

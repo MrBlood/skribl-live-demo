@@ -345,6 +345,15 @@ stays a sleep.
   says so kindly when nothing matches; every answer opens and names only
   buttons on its page; Show me lights the real button, the tap goes on, Back
   to Ask returns; Escape goes back a step; New here? plays the tour.
+- `verify_book.py` — the little book and Draw along (lib/book.js,
+  lib/drawalong.js), Pad and Flip: it never opens by itself; New here? opens
+  page 1 with its example playing; a sheet that fits its page on a phone, a
+  dialog on a desk; Next, Back, a swipe and the arrows turn the pages; Draw
+  along only on a drawing page; Escape and the x go back to How it works;
+  Start drawing leaves you drawing; Draw along lays the cat in the zoom layer
+  over the drawing, the pill under the header; any real stroke counts, a tap
+  does not; Skip; Done and Escape put it away; the drawing holds the stroke
+  and nothing of the guide (canvas pixels).
 - `verify_contrast.py` — every word on every sheet against what is painted
   behind it (owner, after v323: "check contrasts and consistency on all our
   changes, and future changes"): the menu (main, New, Settings), Your drafts,

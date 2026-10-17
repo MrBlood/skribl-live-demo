@@ -12,8 +12,9 @@ it did not. This suite does, on Pad and Flip, light and dark, a phone and a
 desk, for each surface a person can open:
 
   the menu (main, New, Settings), Your drafts, Export, Report a problem,
-  Post, How it works (Ask's home, its answers, an answer; lib/ask.js), Tune,
-  a button's card, a Show me step and the name tags (lib/learncard.js).
+  Post, How it works (Ask's home, its answers, an answer; lib/ask.js), the
+  little book and Draw along (lib/book.js, lib/drawalong.js), Tune, a
+  button's card, a Show me step and the name tags (lib/learncard.js).
 
 THE GROUND IS READ FROM PIXELS, NOT STYLES: the surface is photographed once
 with every word made transparent, and each word's ground is the colour
@@ -218,6 +219,15 @@ def surfaces(name, ids, q, canvas, btn):
         via(ids["help"], 1200)()
         q.click("#askOften [data-answer]"); q.wait_for_timeout(900)
 
+    def book():
+        via(ids["help"], 1200)()
+        q.click("#askTour"); q.wait_for_timeout(600)
+        q.click("#bkNext"); q.wait_for_timeout(1500)       # the drawing page: Draw along shows
+
+    def along():
+        book()
+        q.click("#bkAlong"); q.wait_for_timeout(1200)
+
     def step():
         answer()
         q.click("#askAnswer .ask-show"); q.wait_for_timeout(1500)
@@ -240,6 +250,7 @@ def surfaces(name, ids, q, canvas, btn):
             ("Ask", via(ids["help"], 1500), "#helpDrawer .help-drawer-inner"),
             ("Ask, its answers", answers, "#helpDrawer .help-drawer-inner"),
             ("Ask, an answer", answer, "#helpDrawer .help-drawer-inner"),
+            ("The little book", book, "#bookRoot .bk"), ("Draw along", along, ".da-pill"),
             ("Tune", tune, "#tuneShell"),
             ("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
             ("Name every button", names, ".lc-tags"))
@@ -285,7 +296,7 @@ with sync_playwright() as p:
 # difference is drift), and every sheet the menu opens is the menu's paper.
 print("\nCONSISTENCY")
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
-         "Ask", "Ask, its answers", "Ask, an answer")
+         "Ask", "Ask, its answers", "Ask, an answer", "The little book")
 for scheme in ("light", "dark"):
     labels = sorted({k[2] for k in census if k[1] == scheme})
     for label in labels:
@@ -299,7 +310,7 @@ for scheme in ("light", "dark"):
     grounds = {(n, label): census[(n, scheme, label)]["sheet"]["bg"] for (n, sc, label) in census
                if sc == scheme and label in PAPER and census[(n, sc, label)]}
     check(f"{scheme}: every sheet the menu opens is one paper ({len(grounds)} read)",
-          len(grounds) >= (2 if ONLY else 20) and len(set(grounds.values())) == 1,
+          len(grounds) >= (2 if ONLY else 22) and len(set(grounds.values())) == 1,
           "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(grounds.items())))
 
 print("\nEach surface's own colours, for reading side by side")

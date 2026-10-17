@@ -18170,3 +18170,36 @@ that opens something; verify_helpclaims drags the controls off the page
 and reloads. Each row was shown red by its own break (a missing row, hidden
 rows, the old docking code, a spot not remembered).
 
+## After v323 -- the little book and Draw along
+
+Piece three of the help (FUTURE.md 6p), after the little book mock: "Yes to
+all as long as it's kind". Ask's New here? opens the little book,
+lib/book.js, one module for the Pad and Flip: one idea a page, each with its
+real example playing (a Skribl replaying, or a phone recording), a title and
+one sentence. Pad has six pages (Hi, Draw, Watch it come alive, Rubbing out
+is part of the show, Add a song, Share it), Flip five (Make it move in place
+of the speed page). A sheet that fits its page on a phone, so the drawing
+stays in view above it, a dialog on a desk; the menu's paper and cards, Next
+the one accent fill. Next, Back, a swipe or the arrows turn the pages; the
+last says Start drawing.
+
+Kind, as asked: it never opens by itself (the first-time note says once
+where it is); Escape or the x go back to How it works; nothing is lost.
+
+Draw along, lib/drawalong.js: on the Draw page, the cat's real 33 strokes
+lie faintly on your canvas in the order they were drawn; the next is darker,
+on a halo of the card's colour so it shows on any background, with a dot
+where it starts. It never judges a line: any stroke on the page counts and
+the next one shows (a tap does not); Skip and Done. The guide is its own
+canvas in the zoom layer, so it zooms and pans with the drawing and is never
+part of it: not recorded, posted or exported. Flip's page shows the Pen
+example (Flip's How it works has no cat) and draws along the same cat, on
+the page you are on; the cat's address rides on the book.
+
+verify_book holds each promise on both editors with real touch, every row
+shown red by its own break (it opening itself, no swipe, Escape not going
+back, Draw along on every page, the x, a tap counting, no Skip, the guide
+outside the zoom layer, the guide painted into the drawing, Done not putting
+it away, a full-height sheet, a too-wide dialog). verify_contrast reads the
+book and the pill; verify_ask's New here? row reads the book.
+

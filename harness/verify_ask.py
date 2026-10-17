@@ -224,10 +224,10 @@ with sync_playwright() as p:
         check(f"{name}: closed and opened again, Ask starts on its home, the field empty",
               v["home"] and not v["look"] and not v["answer"] and v["field"] == "", str(v))
 
-        # 5. New here?
+        # 5. New here? opens the little book (lib/book.js; verify_book holds it).
         q.click("#askTour"); q.wait_for_timeout(1200)
-        tour = q.evaluate("() => ({ open: !document.getElementById('learnViewer').hidden, title: document.getElementById('learnViewerTitle').textContent })")
-        check(f"{name}: New here? plays the one-minute tour full screen", tour["open"] and tour["title"], str(tour))
+        tour = q.evaluate("() => ({ open: !document.getElementById('bookRoot').hidden, title: document.getElementById('bkTitle').textContent })")
+        check(f"{name}: New here? opens the little book", tour["open"] and tour["title"], str(tour))
         check(f"{name}: no page errors", not errs, "; ".join(errs[:2]))
         c.close()
 
