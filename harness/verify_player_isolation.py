@@ -1024,7 +1024,13 @@ with sync_playwright() as sp:
     #   Skribl's own pages (@view-transition and its .28s ease), which both
     #   sides must ask for, so a shared link fades into the Gallery its menu
     #   opens. 37,346 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 37_350, 119_844, 40_000
+    # RAISED (owner, after v324: "more space under the controls and have
+    #   made with skribl on the bottom", and the brand purple kept with large
+    #   words on its big buttons), for named costs: +440 B -- the app's foot
+    #   room, the mark pinned to the foot, the button's 32px gap, and the
+    #   19px bold words on .player-cta and the editors' big purple buttons
+    #   (one rule; the player carries its own). 37,742 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 37_750, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
@@ -1834,6 +1840,32 @@ with sync_playwright() as sp:
     check("Share without a share sheet copies the link, says so, and closes the card",
           not _has_share and not _m5["open"] and "cop" in _toast.lower(),
           f"share sheet present: {_has_share}; {_m5}; toast {_toast!r}")
+
+    # THE PLAYER'S FOOT (owner, after v324: "Shouldn't there be more space
+    # under the controls and have made with skribl on the bottom?"; and the
+    # brand purple kept, its button's words large: B, "All yes"). On a phone,
+    # both themes: Make your own Skribl sits 28px or more under the controls,
+    # "made with" sits at the foot of the screen (24px above its edge) and
+    # clear of the button, and the button's words are large text (bold,
+    # 18.66px and up), which WCAG's top level holds to 4.5:1 -- the purple's
+    # 5.3 passes it.
+    print("\nTHE PLAYER'S FOOT — room under the controls, the mark at the bottom, large words on the purple")
+    for _sch in ("dark", "light"):
+        _fc = b.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True, color_scheme=_sch)
+        _fp = _fc.new_page()
+        _fp.goto(link, wait_until="load"); _fp.wait_for_timeout(2500)
+        _g = _fp.evaluate("""() => { const c = document.querySelector('.player-controls').getBoundingClientRect(),
+            a = document.querySelector('.player-cta').getBoundingClientRect(), m = document.querySelector('.player-brand').getBoundingClientRect(),
+            cs = getComputedStyle(document.querySelector('.player-cta'));
+            return { gap: Math.round(a.top - c.bottom), foot: Math.round(innerHeight - m.bottom), clear: Math.round(m.top - a.bottom),
+                     px: parseFloat(cs.fontSize), w: parseInt(cs.fontWeight, 10), over: document.documentElement.scrollHeight - innerHeight }; }""")
+        check(f"{_sch}: Make your own Skribl sits 28px or more under the controls",
+              _g["gap"] >= 28, str(_g))
+        check(f"{_sch}: made with skribl sits at the foot of the screen, clear of the button, and the page does not scroll",
+              abs(_g["foot"] - 24) <= 2 and _g["clear"] >= 24 and _g["over"] <= 0, str(_g))
+        check(f"{_sch}: the button's words on the brand purple are large text (bold, 18.66px and up)",
+              _g["px"] >= 18.66 and _g["w"] >= 700, str(_g))
+        _fc.close()
 
     pg.close()
     b.close()

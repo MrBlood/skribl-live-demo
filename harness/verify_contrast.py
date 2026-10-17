@@ -205,8 +205,10 @@ def measure(q, root, scale):
             low.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{need}')
         # TWO INKS (owner, after v324: "The two inks looks sharp"): every word
         # not on the brand purple reads 7:1 (4.5 if large, WCAG's AAA).
+        # On the purple only LARGE words are held to it (4.5, the big buttons'
+        # 19px bold); the small pills stay at AA (owner: the purple stays).
         sharp = 4.5 if (w["px"] >= 24 or (w["px"] >= 18.66 and w["w"] >= 700)) else 7
-        if worst < sharp and not w.get("fill"):
+        if worst < sharp and not (w.get("fill") and sharp == 7):
             SHORT7.append(f'{w["name"]} "{w["text"]}" {worst:.2f}<{sharp}')
     return words, low
 
@@ -351,6 +353,13 @@ with sync_playwright() as p:
                         continue
                     check(f"{where}: every word clears AA on what is painted behind it ({len(words)} read)",
                           bool(words) and not low, "; ".join(low[:6]) + (f" (+{len(low) - 6} more)" if len(low) > 6 else ""))
+                    if label in ("New", "Your drafts", "Post"):
+                        # BIG WORDS ON THE PURPLE (owner, after v324, B): the big
+                        # purple buttons carry large words, 19px bold.
+                        _fw = [w for w in words if w.get("fill")]
+                        check(f"{where}: the big purple button's words are large (bold, 18.66px and up)",
+                              bool(_fw) and all(w["px"] >= 18.66 and w["w"] >= 700 for w in _fw),
+                              "; ".join(f'"{w["text"]}" {w["px"]}px {w["w"]}' for w in _fw[:4]) or "no words on the purple")
                     if dev == "phone":
                         _s7 = list(dict.fromkeys(SHORT7))
                         check(f"{where}: every word off the brand purple reads 7:1 (two inks)",

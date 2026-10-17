@@ -5568,6 +5568,19 @@ body:has(.lc-card:not([hidden])) .autosave-status { opacity: 0; pointer-events: 
   overflow: visible;
   color: var(--text-secondary);
 }
+/* ROOM UNDER THE CONTROLS, AND THE MARK AT THE FOOT (owner, after v324:
+   "Shouldn't there be more space under the controls and have made with
+   skribl on the bottom?"; the mock, "All yes"). Make your own Skribl sits
+   32px under the controls (it was 16), and "made with" sits at the foot of
+   the screen, 24px above its edge and the phone's safe area, instead of
+   16px under the button with the room below it empty. The app keeps that
+   much room at its foot, so nothing runs under the mark; the drawing keeps
+   its size (the fit measures the shell live). Short screens hide the mark,
+   as before. */
+body.player-mode .app { position: relative; padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+body.player-mode .player-shell { position: static; }
+.player-cta { margin-top: 16px; }
+.player-brand { position: absolute; left: 0; right: 0; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
 
 /* Short viewports (landscape phones, ~360–414px tall): the metadata shell is a
    fixed ~267px, which — with the canvas floor + app padding — overflowed and
@@ -8716,3 +8729,14 @@ body.drawalong .canvas-empty-hint { display: none; }
    back for the keyboard, where they belong. */
 html[data-input="pointer"] :focus-visible { outline: none !important; }
 html[data-input="pointer"] .sdrafts-row:has(> .sdrafts-open:focus-visible) { outline: none; }
+
+/* BIG WORDS ON THE BRAND PURPLE (owner, after v324: "the purple has to stay
+   the accent color -- it's the brand color", then B from the mock, "All
+   yes"). White on --accent-fill is 5.3:1. Bold at 18.66px and up is LARGE
+   text, which WCAG's top level holds to 4.5:1, so the big purple buttons
+   carry 19px bold words and pass it with the purple unchanged. The small
+   pills (Make one, the header's Post) stay at AA: at 19px they would
+   outgrow the header. verify_contrast. */
+#postSheet #postSubmitBtn, .menu-start, .sdrafts-save, .player-cta { font-size: 19px; font-weight: 700; }
+.player-cta { padding: 12px 24px; }
+.player-cta .cta-star { font-size: 20px; }

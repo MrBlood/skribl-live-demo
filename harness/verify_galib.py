@@ -432,7 +432,7 @@ with sync_playwright() as p:
                   and abs(h["top"] - pin) <= 1 and h["over"] <= 0, str(h))
             pg.close()
     check("ONE lockup: mark height and Make one's weight/size agree on both pages",
-          lockups["/gallery"] == lockups["/library"] and lockups["/gallery"] == [24, "600", "13px"], str(lockups))
+          lockups["/gallery"] == lockups["/library"] and lockups["/gallery"] == [30, "600", "13px"], str(lockups))
 
     # ========================================================= REPORT SHEET
     print("\nGALIB 5 -- the report sheet: a bottom sheet on a phone, a centred card on a desktop")

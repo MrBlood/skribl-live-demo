@@ -116,7 +116,8 @@ html { scroll-padding-top: 96px; }
 }
 
 /* ---- THE ONE LOCKUP ------------------------------------------------------
-   Mark 24 and Make one 600 / 13; the page's word beside the mark is gone
+   Mark 30 (owner, after v324: "Doesn't skribl look tiny up there?", B) and
+   Make one 600 / 13; the page's word beside the mark is gone
    (owner, after v324: the heading under it already says it). The two pages
    drew it two ways (a 21px mark and a 12px word at .2em beside a 24px mark
    and an 11px word), so the brand changed size as you moved between them.
@@ -125,7 +126,7 @@ html { scroll-padding-top: 96px; }
    underlining the word. */
 .brand { display: flex; align-items: center; gap: 6px; min-height: 44px;
   text-decoration: none; }
-.brand .brand-mark { height: 24px; width: auto; display: block; overflow: visible; color: var(--text); }
+.brand .brand-mark { height: 30px; width: auto; display: block; overflow: visible; color: var(--text); }
 /* The mark's ink: the gradient stops _skribl_brand_mark.html carries, as
    styles.css colours them. Without these the signature paints black
    (v294, from a phone; verify_library reads the computed stops). */
