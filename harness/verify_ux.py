@@ -3293,20 +3293,23 @@ print("\nTHE BAND FADES — read on every frame, it changes colour only")
 # spread shadows clipped to a strip. Read on every animation frame as it comes
 # and goes: the shadows keep their size (the band never grows out of the
 # controls), their colour passes through in-between values (a fade, not a
-# snap), and while any of it paints, the clip is on (a fading band never
-# paints over the page below). Pad and Flip share the rule; Pad is read, and
+# snap), and on every frame each shadow is lifted by its own spread, so its
+# lower edge sits on the header's foot (the hairline 1px under it) and a
+# fading band never paints over the page below. No clip: Safari kept a
+# negative clip-path inset to the header's box (owner's iPhone, after v324). Pad and Flip share the rule; Pad is read, and
 # the Gallery's band (pagemenu.css) is read the same way in verify_galib.
 BAND_FRAMES = """(on) => new Promise(done => { const h = document.querySelector('.header'), out = [];
     h.classList.toggle('over-canvas', on); let n = 0;
     const f = () => { const c = getComputedStyle(h); out.push([c.boxShadow, c.clipPath]); if (++n < 30) requestAnimationFrame(f); else done(out); };
     requestAnimationFrame(f); })"""
 def band_frames(frames):
-    """[(spreads, max alpha, clipped)] per frame, from computed box-shadow and clip-path."""
+    """[(spreads, max alpha, ends at the foot)] per frame, from the computed box-shadow."""
     rows = []
     for shadow, clip in frames:
         parts = _re.findall(r"(rgba?\([^)]*\))\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px", shadow)
         alphas = [float(c.split(",")[3].rstrip(")")) if c.startswith("rgba") else 1.0 for c, *_ in parts]
-        rows.append((tuple(round(float(p[4])) for p in parts), max(alphas or [0.0]), "-1px" in clip))
+        rows.append((tuple(round(float(p[4])) for p in parts), max(alphas or [0.0]),
+                     len(parts) == 2 and all(abs(float(p[2]) + float(p[4]) - i) < 1 for i, p in enumerate(parts))))
     return rows
 with sync_playwright() as _bp:
     _bb = _bp.chromium.launch()
@@ -3316,13 +3319,15 @@ with sync_playwright() as _bp:
         _q = _bc.new_page()
         browsing.goto(_q, BASE, "/skribl-pad"); waits.settle(_q, 900)
         for _on, _way in ((True, "in"), (False, "out")):
-            _rows = band_frames(_q.evaluate(BAND_FRAMES, _on))
+            _fr = _q.evaluate(BAND_FRAMES, _on)
+            _rows = band_frames(_fr)
+            _clip = sorted({c for _, c in _fr} - {"none"})
             _sizes = {r[0] for r in _rows}
             _mid = [r for r in _rows if 0.02 < r[1] < 0.98]
             _bare = [i for i, r in enumerate(_rows) if r[1] > 0.01 and not r[2]]
-            check(f"Pad {_theme}: the band fades {_way} by colour alone, never growing, never painting unclipped",
-                  len(_sizes) == 1 and min(next(iter(_sizes)) or (0,)) >= 300 and len(_mid) >= 3 and not _bare,
-                  f"sizes {sorted(_sizes)[:3]}, {len(_mid)} in-between frames, unclipped painting frames {_bare[:5]}")
+            check(f"Pad {_theme}: the band fades {_way} by colour alone, never growing, never past the header's foot",
+                  len(_sizes) == 1 and min(next(iter(_sizes)) or (0,)) >= 300 and len(_mid) >= 3 and not _bare and not _clip,
+                  f"sizes {sorted(_sizes)[:3]}, {len(_mid)} in-between frames, frames painting past the foot {_bare[:5]}, clip {_clip}")
         _bc.close()
     _bb.close()
 

@@ -574,7 +574,8 @@ with sync_playwright() as p:
     # THE BAND FADES BY COLOUR ALONE (KIND TRANSITIONS, NEVER JUMPY), read on
     # every animation frame as .scrolled comes and goes, as verify_ux reads the
     # editors': the band's shadows keep their size, their colour passes
-    # through in-between values, and while any of it paints the clip is on.
+    # through in-between values, and each is lifted by its own spread so the
+    # band ends at the header's foot (no clip: Safari kept one to the box).
     _BF = """(on) => new Promise(done => { const h = document.querySelector('.top'), out = [];
         h.classList.toggle('scrolled', on); let n = 0;
         const f = () => { const c = getComputedStyle(h); out.push([c.boxShadow, c.clipPath]); if (++n < 30) requestAnimationFrame(f); else done(out); };
@@ -586,16 +587,19 @@ with sync_playwright() as p:
         _p.goto(f"{BASE}/gallery?theme={_theme}", wait_until="load"); _p.wait_for_timeout(700)
         for _on, _way in ((True, "in"), (False, "out")):
             _rows = []
-            for _sh, _cl in _p.evaluate(_BF, _on):
+            _fr = _p.evaluate(_BF, _on)
+            _clip = sorted({c for _, c in _fr} - {"none"})
+            for _sh, _cl in _fr:
                 _parts = _re.findall(r"(rgba?\([^)]*\))\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px", _sh)
                 _al = [float(c.split(",")[3].rstrip(")")) if c.startswith("rgba") else 1.0 for c, *_ in _parts]
-                _rows.append((tuple(round(float(x[4])) for x in _parts), max(_al or [0.0]), "-1px" in _cl))
+                _rows.append((tuple(round(float(x[4])) for x in _parts), max(_al or [0.0]),
+                              len(_parts) == 2 and all(abs(float(x[2]) + float(x[4]) - i) < 1 for i, x in enumerate(_parts))))
             _sizes = {r[0] for r in _rows}
             _mid = [r for r in _rows if 0.02 < r[1] < 0.98]
             _bare = [i for i, r in enumerate(_rows) if r[1] > 0.01 and not r[2]]
-            check(f"/gallery {_theme}: the header's band fades {_way} by colour alone, never growing, never painting unclipped",
-                  len(_sizes) == 1 and min(next(iter(_sizes)) or (0,)) >= 300 and len(_mid) >= 3 and not _bare,
-                  f"sizes {sorted(_sizes)[:3]}, {len(_mid)} in-between frames, unclipped painting frames {_bare[:5]}")
+            check(f"/gallery {_theme}: the header's band fades {_way} by colour alone, never growing, never past the header's foot",
+                  len(_sizes) == 1 and min(next(iter(_sizes)) or (0,)) >= 300 and len(_mid) >= 3 and not _bare and not _clip,
+                  f"sizes {sorted(_sizes)[:3]}, {len(_mid)} in-between frames, frames painting past the foot {_bare[:5]}, clip {_clip}")
         _c.close()
     b.close()
 

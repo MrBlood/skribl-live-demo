@@ -5912,24 +5912,25 @@ body:not(.player-mode) .header:not(.over-canvas) {
    corners. Its ground is now one strip in the page's own colour from the top
    of the screen to just under the controls, the full width, with a hairline
    along its foot; the controls do not move. Drawn as two spread shadows,
-   clipped to that band: a shadow adds nothing to the page's scroll width,
-   which a wide box would. The Gallery and Library wear the same band
-   (pagemenu.css .top.scrolled).
+   each lifted by its own spread so its lower edge lands on the header's
+   foot (the hairline's, 1px under it): a shadow adds nothing to the page's
+   scroll width, which a wide box would, and it needs no clip. The first cut
+   clipped a centred shadow to the strip with a negative clip-path inset;
+   Safari kept the clip to the header's own box, so on the owner's iPhone the
+   band was only the header's height and the drawing showed above it ("Should
+   this happen?"). The Gallery and Library wear the same band (pagemenu.css
+   .top.scrolled).
    KIND, NEVER JUMPY: at rest the two shadows are already there, transparent,
    at full size, so only their colour fades (0.25s) and the band never grows
-   out of the controls. The clip goes on at once and comes off only after the
-   fade out, so a fading band never paints past its strip. */
+   out of the controls. */
 body:not(.player-mode) .header {
-  --band-off: 0 0 0 100vmax transparent, 0 1px 0 100vmax transparent;   /* on the header, not :root: the player has none */
-  clip-path: inset(-100vmax);
-  transition: background-color 0.25s ease, box-shadow 0.25s ease, clip-path 0s linear 0.25s;
+  --band-off: 0 -100vmax 0 100vmax transparent, 0 calc(1px - 100vmax) 0 100vmax transparent;   /* on the header, not :root: the player has none */
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
 }
 body:not(.player-mode) .header.over-canvas {
   background: var(--surface-deep); border-radius: 0;
   -webkit-backdrop-filter: none; backdrop-filter: none;
-  box-shadow: 0 0 0 100vmax var(--surface-deep), 0 1px 0 100vmax var(--hairline);
-  clip-path: inset(-100vmax -100vmax -1px -100vmax);
-  transition: background-color 0.25s ease, box-shadow 0.25s ease, clip-path 0s;
+  box-shadow: 0 -100vmax 0 100vmax var(--surface-deep), 0 calc(1px - 100vmax) 0 100vmax var(--hairline);
 }
 /* A finger drawing under it still fades the header to nothing (body.stroking,
    above), band and all. */
