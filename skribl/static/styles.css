@@ -1126,11 +1126,14 @@ body.stroking .skribl-hint {
   -webkit-user-select: none;
 }
 .zoom-hud[hidden] { display: none; }
-/* Corner docking — JS sets data-corner; inline left/top override while dragging. */
+/* In the page's corner until first moved (data-corner); then free anywhere on
+   the screen (lib/canvaszoom.js puts it on the body, fixed, at its spot). Over
+   the strip and the dock, under the sheets and menus. */
 .zoom-hud[data-corner="br"] { right: 12px;  bottom: 12px; }
 .zoom-hud[data-corner="bl"] { left: 12px;   bottom: 12px; }
 .zoom-hud[data-corner="tr"] { right: 12px;  top: 12px; }
 .zoom-hud[data-corner="tl"] { left: 12px;   top: 12px; }
+.zoom-hud.zoom-free { position: fixed; z-index: 43; }   /* over the toolbar (41) and header (42), under the popovers (44+) and every sheet */
 .zoom-hud.dragging {
   opacity: 0.9;
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--ui-line);
@@ -1224,17 +1227,6 @@ body.stroking .skribl-hint {
   inset: 0;
   z-index: 4;
   background: transparent;
-}
-
-/* Dashed snap-target ghost shown in the corner the pill will dock to. */
-.zoom-snap {
-  position: absolute;
-  z-index: 5;
-  width: 46px;
-  border-radius: 16px;
-  border: 2px dashed rgba(124, 92, 255, 0.55);
-  background: rgba(124, 92, 255, 0.06);
-  pointer-events: none;
 }
 
 /* TAP TO PAUSE (lib/tappause.js: both editors, and the shared player since
@@ -7625,6 +7617,12 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .lc-body { padding: 0 4px 2px; }
 .lc-card .lc-t, .lc-banner .lc-t { margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
 .lc-card .lc-line, .lc-banner .lc-line, .lc-note .lc-line { margin: 0; font-size: 14px; line-height: 1.4; color: var(--text-secondary); }
+/* What each gesture does: the verb in small violet words, what it does in the
+   card's ink, under a rule of the card's own line. */
+.lc-do { display: grid; gap: 6px; margin: 10px 0 0; padding-top: 8px; border-top: 1px solid var(--menu-card-line); }
+.lc-do > div { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: baseline; }
+.lc-do dt { font-size: 13px; font-weight: 700; color: var(--accent-ink); white-space: nowrap; }
+.lc-do dd { margin: 0; font-size: 14px; line-height: 1.35; color: var(--text-primary); }
 .lc-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
 .lc-more { min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--accent-ink); font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
 .lc-hint { font-size: 14px; color: var(--text-secondary); }

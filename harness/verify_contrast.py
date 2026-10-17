@@ -126,7 +126,21 @@ def ratio(a, b):
     return (max(x, y) + 0.05) / (min(x, y) + 0.05)
 
 
+# A ground still changing colour does not move a word, so the stillness read
+# below cannot see it: main's CI caught an entry Ask had just opened, in a
+# section still opening, at 4.20 (Pad, dark, phone) where it settles above
+# 4.5. Every finite animation and transition inside the surface has finished
+# before the photograph, up to 2.5s; endless ones (a spinner) are not waited on.
+SETTLED = r"""(root) => new Promise(res => { const R = document.querySelector(root), t0 = performance.now();
+  (function poll() {
+    const busy = !!R && document.getAnimations().some(a => a.playState === 'running' && a.effect && a.effect.target
+      && R.contains(a.effect.target) && isFinite(a.effect.getComputedTiming().endTime));
+    if (!busy || performance.now() - t0 > 2500) res(!busy); else setTimeout(poll, 50);
+  })(); })"""
+
+
 def measure(q, root, scale):
+    q.evaluate(SETTLED, root)
     # A sheet still gliding (How it works scrolls smoothly) moves its words
     # between the read and the photograph; read again until they hold still.
     for _ in range(6):
