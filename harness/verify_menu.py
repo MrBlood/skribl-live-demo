@@ -288,6 +288,9 @@ with sync_playwright() as p:
         # the other editor puts the pill under it while this page is still
         # up, then the other editor arrives; and it was fetched ahead.
         c = b.new_context(**PHONE)
+        # The arriving page says whether it came in by a cross-fade (KIND
+        # TRANSITIONS, styles.css @view-transition): pagereveal carries one.
+        c.add_init_script("window.addEventListener('pagereveal', (e) => { window.__faded = !!e.viewTransition; });")
         q = c.new_page()
         browsing.goto(q, BASE, route)
         q.wait_for_timeout(800)
@@ -318,6 +321,9 @@ with sync_playwright() as p:
             arrived = False
         check(f"{name}: a tap on the other editor slides the pill under it while this page is still up, then goes there",
               glide["under"] and glide["path"].rstrip("/") == route.rstrip("/") and arrived, f"{glide}, arrived {arrived}")
+        q.wait_for_timeout(400)
+        faded = q.evaluate("() => window.__faded") if arrived else None
+        check(f"{name}: ...and the other editor fades in over this one, not a cut", faded is True, str(faded))
         c.close()
 
         # 3. How it works opens Ask (piece two, FUTURE.md 6p): the tabs it

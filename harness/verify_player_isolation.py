@@ -1019,7 +1019,12 @@ with sync_playwright() as sp:
     #   .rl-bubble), and the tap-to-pause mark (.tap-paused), which the player
     #   shows now as the editors do. The More card's speed-row rules went
     #   (-4 selectors). 37,239 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 37_250, 119_844, 40_000
+    # RAISED (owner: "No transitions should be jumpy. Kind transitions
+    #   right"), for one named cost: +107 B -- the cross-fade between
+    #   Skribl's own pages (@view-transition and its .28s ease), which both
+    #   sides must ask for, so a shared link fades into the Gallery its menu
+    #   opens. 37,346 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 37_350, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
