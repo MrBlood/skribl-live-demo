@@ -18338,3 +18338,33 @@ in the same theme and holds this one to them, painted, on both pages; it was
 shown red on the glass menu. The pages themselves (their header, New | Hot,
 the search field) still wear the older grey and glass; that is a look of its
 own, not mocked yet.
+
+## After v324 -- the dock's drawers on the menu's paper
+
+The owner, on the draw drawer after the sheets went to one look: "Does the
+card match?", then on the photo and music drawers: "These and any others
+too", and on the first mock: "I can't really see the edges of the drawer. Why
+not use the menu treatment?" Measured, the drawers' edge was 1.01:1 against
+the page in light (1.07 in dark): the dock's glass ("make the drawers match
+the frosted bar too", an earlier choice) over a page of nearly its colour. The
+mock had kept the glass and only whitened the controls (A); the owner's
+question was the better answer, and C, "All yes":
+
+- The draw, photo and music drawers, the shape picker, Flip's tool tray and
+  Tune are the menu's paper with its cards' lilac edge and drop (the edge
+  1.53:1 in light, 1.29 in dark, and the shadow). The dock bar, the header and
+  Flip's page strip keep the glass: they are the frame the drawers rise from.
+- Every control on them is a white card with the lilac edge: the tracks,
+  slider rows, the ± buttons, the stepper boxes, Reposition, Reset, Clear
+  drawing, Match Drawing Time, Test Seam, the zoom box. Buttons and boxes 12,
+  Loop Detail a 16 card. They had used six greys and five corners.
+- Seven lines were too faint to read, every one of them on a drawer as it is
+  used (a photo or a song loaded), where verify_contrast never looked: the
+  photo's hint, Trim's times, "Loop Detail", the zoom's "1×", Preview Loop's
+  white words, Flip's "Clear all pages" and Pad's "Clear drawing" (dark).
+
+verify_contrast opens the drawers loaded (the draw drawer unfolded, a picture,
+a song on Trim and on Fine-tune), holds them to the paper, the white cards
+and the corners, and measures the edge against the page; every row was shown
+red on the tree before. It no longer reads a word painted at opacity 0 (Trim's
+time bubbles, shown only while dragging), which it had read as 1.00:1.
