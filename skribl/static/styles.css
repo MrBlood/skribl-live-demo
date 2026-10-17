@@ -6952,7 +6952,12 @@ body.playing .flip-grid { display: none; }
    OVER the content, 8 px inside the list's right edge, so the thumb sat on the
    cards' borders. The cards stop 12 px short; where a desktop bar takes a
    gutter of its own, that is 12 px of breathing room. */
-.sdrafts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 12px; }
+/* The rows are as wide as the cards above and below them (a 12px gutter on
+   the right made them narrower), and the list keeps room inside its own clip
+   for a row's drop (owner's iPhone, after v324: the last row's shadow was cut
+   flat). */
+.sdrafts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+  padding: 0 0 14px; margin-bottom: -14px; }
 .sdrafts-empty { margin: 18px 4px; font-size: 14px; color: var(--text-muted); text-align: center; }
 .sdrafts-retry { align-self: center; min-height: 44px; padding: 0 20px; border-radius: 999px;
   border: 1px solid var(--hairline, #252a35); background: transparent; color: var(--text-heading);
@@ -6969,6 +6974,12 @@ body.playing .flip-grid { display: none; }
 /* Hover only where a pointer hovers: on a phone a tap leaves :hover stuck, and
    it drew a box inside the card. */
 @media (hover: hover) { .sdrafts-open:hover { background: rgba(var(--wash-rgb), .05); } }
+/* FOCUS IS THE ROW'S, drawn inside it. The global ring sat 3px OUTSIDE the
+   open button, which is narrower than the card (the bin is beside it), so it
+   was a second, shorter outline whose left edge the list's clip cut off
+   (owner's iPhone, after v324). */
+.sdrafts-open:focus-visible { outline: none; }
+.sdrafts-row:has(> .sdrafts-open:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .sdrafts-stalled { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.4;
   color: var(--text-secondary); background: rgba(var(--wash-rgb), .06); }
 .sdrafts-thumb { flex: 0 0 auto; width: 72px; height: 54px; border-radius: 9px; overflow: hidden;

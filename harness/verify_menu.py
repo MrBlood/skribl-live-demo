@@ -34,6 +34,7 @@ Visible means painted: elementFromPoint inside the thing, not its rect.
 import math
 import io
 import os
+import re
 import sys
 
 from assertions import make_check
@@ -348,6 +349,51 @@ with sync_playwright() as p:
         check(f"{name}: How it works opens Ask: one empty field on Ask's home, no tabs",
               t["tabs"] == 0 and t["field"] and t["home"] and t["tour"], str(t))
         c.close()
+
+        # 4. Your drafts' rows (owner's iPhone, after v324: "Weird border"). A
+        # saved row is as wide as the cards above and below it, and a focused
+        # row's ring is drawn INSIDE the row: the old ring sat 3px outside the
+        # open button, shorter than the card, and the list's clip cut its left
+        # edge. Read as a painted pixel just inside the row's left edge.
+        for scheme in ("light", "dark"):
+            c = b.new_context(color_scheme=scheme, **PHONE)
+            q = c.new_page()
+            browsing.goto(q, BASE, route)
+            q.wait_for_timeout(800)
+            q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+            scribble(q, cv)
+            open_menu(q, btn)
+            q.click("#openCloudDraftItem", timeout=3000)
+            q.wait_for_timeout(800)
+            q.click("#savedDraftsSheet .sdrafts-save", timeout=3000)
+            q.wait_for_timeout(900)
+            if q.locator("#nameShell.open").count():
+                q.click("#nameDone", timeout=3000)
+                q.wait_for_timeout(900)
+            if q.locator("#savedDraftsSheet").is_hidden():
+                open_menu(q, btn)
+                q.click("#openCloudDraftItem", timeout=3000)
+            q.locator("#savedDraftsSheet .sdrafts-open").first.wait_for(timeout=5000)
+            q.wait_for_timeout(600)
+            w = q.evaluate("""() => { const s = document.getElementById('savedDraftsSheet');
+              const wd = sel => { const e = s.querySelector(sel); return e ? [Math.round(e.getBoundingClientRect().left), Math.round(e.getBoundingClientRect().right)] : null; };
+              return { row: wd('.sdrafts-row'), mine: wd('.sdrafts-this'), files: wd('.sdrafts-files') }; }""")
+            check(f"{name} {scheme}: a saved draft's row is as wide as the cards above and below it",
+                  w["row"] and w["row"] == w["mine"] == w["files"], str(w))
+            # Keyboard focus: Tab onto the row's open button from the bin above it.
+            q.focus("#savedDraftsSheet .sdrafts-row .sdrafts-del")
+            q.keyboard.press("Shift+Tab")
+            q.wait_for_timeout(300)
+            r = q.evaluate("""() => { const o = document.querySelector('#savedDraftsSheet .sdrafts-open'), row = o.parentElement,
+              b = row.getBoundingClientRect(), p = document.createElement('i');
+              p.style.color = 'var(--focus-ring)'; document.body.appendChild(p); const ring = getComputedStyle(p).color; p.remove();
+              return { fv: o.matches(':focus-visible'), x: b.left, y: b.top + b.height / 2, ring }; }""")
+            im = Image.open(io.BytesIO(q.screenshot(clip={"x": r["x"], "y": r["y"] - 2, "width": 6, "height": 4}))).convert("RGB")
+            px = im.getpixel((2, 4))   # 1 css px inside the row's left edge (2x)
+            want = tuple(round(float(v)) for v in re.findall(r"[\d.]+", r["ring"])[:3])
+            check(f"{name} {scheme}: a focused draft row's ring is painted inside the row, its left edge not cut",
+                  r["fv"] and sum(abs(a - b_) for a, b_ in zip(px, want)) < 60, f"focus-visible {r['fv']}, pixel {px}, ring {want}")
+            c.close()
 
     check("Pad and Flip show the same menu, tile for tile and row for row",
           orders.get("Pad") and orders.get("Pad") == orders.get("Flip"), f"Pad {orders.get('Pad')}, Flip {orders.get('Flip')}")
