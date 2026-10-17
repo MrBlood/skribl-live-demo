@@ -256,9 +256,12 @@ with sync_playwright() as sp:
     # And with it again for the lap fix (+16 B, 151,767 measured), and for a
     # finished drawing seen whole in full screen (+42 B, 151,809 measured),
     # and for the empty frame gone from "couldn't be found" (+26 B, 151,835),
-    # and for a Flip's link resting on its poster page (+400 B, 152,235).
+    # and for a Flip's link resting on its poster page (+400 B, 152,235),
+    # and for a replay that glides, lib/holdtiming.js untie() (+475 B,
+    # 152,710), raised in verify_player_isolation and missed here: main went
+    # red on it again, the same signal.
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 152_240,
+          lean_total <= 152_715,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a
@@ -336,7 +339,10 @@ with sync_playwright() as sp:
         headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(_req, timeout=15) as _r:
         _pid = json.loads(_r.read())["id"]
-    SIG = """() => [...document.querySelectorAll('*')].map(el => {
+    # The other editor's page, fetched ahead (lib/editorswitch.js), is a
+    # <link> added to the head when the page is idle: in one load and not yet
+    # in the other, it shifts every element after it. It carries no style.
+    SIG = """() => [...document.querySelectorAll('*')].filter(el => !el.matches('link[data-editor-ahead]')).map(el => {
         const cs = getComputedStyle(el), kv = [];
         for (let i = 0; i < cs.length; i++) kv.push(cs[i] + ':' + cs.getPropertyValue(cs[i]));
         // SORTED: Chromium enumerates custom properties in a different order on
