@@ -77,15 +77,16 @@
      under WCAG AA's 4.5:1 for normal-size text -- and they were carrying
      instructions, trim times, optional-field state and character counters at
      10-13px, which is worse in practice than the ratio alone suggests.
-     There is no dimmer tier that also passes: --text-muted (#7d8496) is 4.61:1
-     against the lightest surface here, so anything meaningfully fainter fails
-     somewhere. --text-dim survives for DISABLED controls and placeholders,
+     There is no dimmer tier that also passes: --text-muted was #7d8496 at
+     4.61:1 against the lightest surface here, and since the two inks (owner,
+     after v324: "The two inks looks sharp") it is the one second ink, 7:1 and
+     up, so anything meaningfully fainter fails somewhere. --text-dim survives for DISABLED controls and placeholders,
      where the text-contrast requirement does not apply. Everything a user reads
      uses --text-muted; verify_a11y.py holds that line and fails a token that is
      defined, used by no rule and unable to pass. */
-  --text-soft: #8a93a6;
-  --text-soft-2: #8b93a5;
-  --text-soft-3: #8b97a8;
+  --text-soft: #b7bfcc;           /* TWO INKS (owner, after v324): every secondary word is the one */
+  --text-soft-2: #b7bfcc;         /* second ink, 7:1 or more on the page, the paper and the cards */
+  --text-soft-3: #b7bfcc;
   --text-tool-3: #a8b0bf;
   --text-tool-2: #a9b1c1;
   --text-tool: #a8b2c1;           /* .tool-btn at rest */
@@ -146,8 +147,8 @@
 
   /* Text */
   --text-primary: #f6f7f9;
-  --text-secondary: #9aa2b1;
-  --text-muted: #7d8496;
+  --text-secondary: #b7bfcc;      /* 10.9 on the page, 9.7 on the paper, 8.6 on a card */
+  --text-muted: #b7bfcc;
   --text-dim: #575f6e;
   /* The increased-contrast counterparts. Mapped over the four above under
      prefers-contrast: more, at the end of this sheet; defined HERE so the media
@@ -205,7 +206,7 @@
      (3.1:1; this is 6.5:1 on the drawers' track). --ui-hi is not the selected
      ink anywhere: the dock wore it, at 3.1:1 dark and 2.9:1 light. */
   --seg-on-fill: rgba(124, 92, 255, 0.22);
-  --seg-on-ink: #b9a8ff;
+  --seg-on-ink: #d4c9ff;          /* 8.0:1 on the tint over a card (was #b9a8ff, 5.97) */
 
   /* The letterpress relief on the signature (SINK, not pop,
      and asked for the old purple halo to go). A bright lower edge and a
@@ -303,7 +304,7 @@
   --under-rgb: 96, 165, 250;
   --accent-tint: #d6ccff;
   --accent-tint-2: #d5cfff;
-  --accent-ink: #a08cff;   /* small violet words on a dark ground, 4.5:1 and up (PF-011) */
+  --accent-ink: #c1b2ff;   /* small violet words on a dark ground, 7:1 and up (was #a08cff, 4.5:1; PF-011) */
 
   /* Radii */
   --r-control: 12px;
@@ -2085,15 +2086,15 @@ a.player-btn { text-decoration: none; }
 
   /* Text — the brightest becomes the darkest ink */
   --text-dim:                #8c94a3;
-  --text-muted:              #6c7483;
+  --text-muted:              #3f4756;   /* TWO INKS: the one second ink, 8.3:1 on the lilac paper */
   --text-muted-hc:           #3d4452;   /* prefers-contrast: more — 8.3:1 on the darkest light surface */
   --text-dim-hc:             #4f5765;
   --hairline-hc:             rgba(0,0,0,0.28);
   --hairline-strong-hc:      rgba(0,0,0,0.42);
-  --text-soft:               #5f6775;
-  --text-soft-2:             #5f6775;
-  --text-soft-3:             #5c6472;
-  --text-secondary:          #545c6a;
+  --text-soft:               #3f4756;
+  --text-soft-2:             #3f4756;
+  --text-soft-3:             #3f4756;
+  --text-secondary:          #3f4756;
   --text-tool-3:             #4b535f;
   --text-tool-2:             #4b535f;
   --text-tool:               #48505d;   /* .tool-btn at rest */
@@ -2127,7 +2128,7 @@ a.player-btn { text-decoration: none; }
      over the drawers' track, under the unselected label's 4.99. One step
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground
      a pill sits on; the tint itself, the look the owner chose, does not move. */
-  --seg-on-ink:              #4c31c4;   /* 5:1 on the tint over the menu's lilac (was #5434dc, 4.4:1; verify_contrast) */
+  --seg-on-ink:              #36209a;   /* 7.8:1 on the tint over the menu's lilac (was #4c31c4, 5:1; verify_contrast) */
   /* Letterpress for a light surface: the classic bright ledge below the
      ink, a whisper of shade above. */
   --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
@@ -2173,7 +2174,7 @@ a.player-btn { text-decoration: none; }
   --under-rgb:     29, 78, 216;
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
-  --accent-ink:    #5a3ad8;
+  --accent-ink:    #4c31c4;   /* 7.4:1 on the lilac paper (was #5a3ad8, 6.2) */
   /* ON-GLASS INK (below the ramp): the secondary words on a light glass
      sheet, which lets some of the dim and the page through. */
   --on-glass-2:    #3f4756;
