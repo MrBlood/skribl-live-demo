@@ -65,7 +65,7 @@
       --hairline-soft: #1b2028;
       --text: #eef1f6;
       --text-2: #aab3c2;
-      --text-3: #7d8799;      /* 5.0:1 on a row; #6b7688 was 3.9:1 (v321 preflight, PF-009) */
+      --text-3: var(--text-2);   /* TWO INKS (after v324): the third grey, #7d8799, was 5.0:1 */
       --accent: #7c5cff;
       --accent-2: #5b8cff;
       --accent-fill: #6d4cf0;   /* a fill carrying words: AA with white (styles.css) */
@@ -81,7 +81,7 @@
       --r-control: 12px;
       --r-sm: 12px;
       --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --font-mono: var(--font-ui);   /* the app's sans (after v324): monospace read as inspected */
       /* posted.css's vocabulary (styles.css's names), on this palette. */
       --surface-panel: var(--panel); --surface-control: var(--control); --surface-control-hover: var(--control-hi);
       --surface-sheet: var(--panel); --surface-well: var(--control); --surface-tint: rgba(124,92,255,0.08); --surface-tint-lit: rgba(124,92,255,0.14);
@@ -120,7 +120,7 @@
       --hairline-soft: #e3e7ee;
       --text: #14171d;
       --text-2: #4b5563;
-      --text-3: #6b7280;
+      --text-3: var(--text-2);   /* TWO INKS: #6b7280 was 4.8:1 */
       /* styles.css's light --accent-tint (#11): #5b3fd6 was a third purple,
          paler than the editors' text tint on the same white. */
       --accent-tint: #4c31c4;
@@ -563,6 +563,49 @@
     .more svg { width: 15px; height: 15px; }
     .foot { margin-top: 30px; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); text-align: center; }
     .foot b { color: var(--text-2); font-weight: 600; }
+
+    /* ---- ONE LOOK WITH THE EDITORS (owner, after v324: "What should gallery/
+       library look like in keeping with the rest of the app? I want
+       consistency simplicity elegant and perfectly sharp contrast"; "go ahead
+       with your choices"). The page stays the plain ground with the glass
+       header card, as the editors' page is; lilac paper is for what rises.
+       What sits on the page is the editors' parts: a card is the menu's white
+       card with its lilac edge and drop, a choice is a track on that card, a
+       field is Ask's white field. TWO INKS: --text-3 is --text-2 (above), 7.1
+       to 7.6:1 on the page and the cards in both themes, and the monospace
+       capitals are the app's own sans in sentence case. */
+    :root {
+      --card: #231e3b;
+      --card-line: rgba(167, 146, 255, 0.12);
+      --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+    }
+    :root[data-theme="light"] {
+      --card: #ffffff;
+      --card-line: rgba(124, 92, 255, 0.34);
+      --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+    }
+    /* SHARP: the second ink one step further from the ground than the
+       editors' (7:1 and up on the page, the cards and a lit row), the
+       switches' words in it, and the page's name beside the mark in the
+       first ink. The action purple is the app's, shared with the editors. */
+    :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; }
+    :root[data-theme="light"] { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; }
+    .brand .tag { color: var(--text); }
+    .seg-track { background: var(--card); border-color: var(--card-line); }
+    /* The library's name is a title and one line, as the gallery's: the card
+       it sat in was one more box around words. */
+    .profile { background: none; border: 0; border-radius: 0; padding: 0; flex-direction: column; align-items: flex-start; gap: 4px; }
+    .who .name { font-size: 22px; }   /* the gallery's title */
+    .stats { margin-left: 0; }
+    .stat { display: flex; align-items: baseline; gap: 5px; text-align: left; }
+    .stat b { display: inline; font-size: 14px; font-weight: 700; }
+    .stat span { font-size: 14px; }
+    .player, .posted-row, .draft-row { background: var(--card); border-color: var(--card-line); box-shadow: var(--card-drop); }
+    .posted-row.posted-row-keyed { background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
+    .search input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
+    .tbtn:not(.on), .posted-copy, .posted-key, .more { background: var(--card); border-color: var(--card-line); }
+    .posted-copy, .posted-key, .posted-gallery, .posted-delete { border-radius: 12px; }
+    .now .lbl, .stat span, .kind { text-transform: none; letter-spacing: normal; font-size: 13px; }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
