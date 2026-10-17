@@ -1436,8 +1436,9 @@ with sync_playwright() as p:
     # the open drawer were two glass slabs, 8px apart and of different widths
     # (520 against 694 at a desktop width), each with its own rim and shadow.
     # They are ONE card now: #mediaCard wraps the strip and both panels and
-    # wears the glass; the panel inside goes clear, and the strip sits inset in
-    # the card as a track. Fresh, empty drawers, so a tall loaded panel cannot
+    # wears the card's material (the glass until after v324; the menu's paper
+    # with its edge since, the drawers mock C), the panel inside goes clear,
+    # and the strip sits inset in the card as a track, 16px inside its edge. Fresh, empty drawers, so a tall loaded panel cannot
     # scroll the strip off the top of a phone (lib/drawerdetent.js reveals the
     # panel's END); and every point is on screen before it is asked about.
     print("\nPARITY — the Photo | Music tabs and the open drawer are one card, on both")
@@ -1448,14 +1449,16 @@ with sync_playwright() as p:
         const ps = getComputedStyle(p), ts = getComputedStyle(tabs), cs = getComputedStyle(card);
         const inCard = (x, y) => { if (y < 0 || y >= innerHeight) return 'off-screen'; const e = document.elementFromPoint(x, y); return !!e && card.contains(e); };
         const cx = c.left + c.width / 2, padL = parseFloat(ps.paddingLeft), padR = parseFloat(ps.paddingRight);
+        // Inside the card's edge line: the drawers mock gave the card a 1px edge.
+        const bl = parseFloat(cs.borderLeftWidth), br = parseFloat(cs.borderRightWidth), bt = parseFloat(cs.borderTopWidth), bb = parseFloat(cs.borderBottomWidth);
         return { card: true,
                  parents: [tabs, g('photoPanel'), g('musicPanel')].every(e => e.parentElement === card),
-                 inset: [t.left - c.left, c.right - t.right, t.top - c.top],
+                 inset: [t.left - c.left - bl, c.right - br - t.right, t.top - c.top - bt],
                  content: Math.abs(t.left - (r.left + padL)) <= 0.5 && Math.abs(t.right - (r.right - padR)) <= 0.5,
-                 span: Math.abs(r.left - c.left) <= 0.5 && Math.abs(r.right - c.right) <= 0.5 && Math.abs(r.bottom - c.bottom) <= 0.5,
+                 span: Math.abs(r.left - c.left - bl) <= 0.5 && Math.abs(r.right - c.right + br) <= 0.5 && Math.abs(r.bottom - c.bottom + bb) <= 0.5,
                  seam: [inCard(cx, t.bottom + (r.top - t.bottom) / 2), inCard(cx, r.top + 1)],
                  gap: Math.round(r.top - t.bottom),
-                 glass: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backdropFilter !== 'none',
+                 paper: cs.backgroundColor.startsWith('rgb(') && cs.backdropFilter === 'none' && bt === 1,
                  clear: ps.backgroundColor === 'rgba(0, 0, 0, 0)' && ps.boxShadow === 'none' && ps.backdropFilter === 'none'
                         && ts.backdropFilter === 'none' };
     }"""
@@ -1478,8 +1481,8 @@ with sync_playwright() as p:
                       all(abs(v - 16) <= 0.5 for v in _c["inset"]) and _c["content"] and _c["span"], str(_c))
                 check(f"{_route} at {_vw}, {_k}: the seam between tabs and drawer is painted by the card, not the page",
                       _c["seam"] == [True, True], str(_c))
-                check(f"{_route} at {_vw}, {_k}: the card wears the glass and the drawer inside it is clear",
-                      _c["glass"] and _c["clear"], str(_c))
+                check(f"{_route} at {_vw}, {_k}: the card wears the menu's paper with its edge and the drawer inside it is clear",
+                      _c["paper"] and _c["clear"], str(_c))
             if _route == "/flip":
                 _dlg = _q.evaluate("""() => { const p = document.getElementById('photoPanel');
                     return { role: p.getAttribute('role'), label: p.getAttribute('aria-label'),
@@ -2712,7 +2715,7 @@ with sync_playwright() as p:
     # The owner, a drawer open, pressing Play: "it disappears the drawer contents
     # ... but leaves all the empty space". Both editors faded an open drawer to
     # nothing and held its space, so the drawing played over a hole. Now it RESTS
-    # where it was: its contents dim to --drawer-rest, its glass stays, it takes
+    # where it was: its contents dim to --drawer-rest, its card stays, it takes
     # no taps, and Stop wakes it. Read as PAINT where it matters (a faded drawer
     # keeps its rect), and every tap is a real one -- Flip's tap-away rule closed
     # the drawer on Play's own tap, which a scripted play() never showed.
@@ -2727,7 +2730,7 @@ with sync_playwright() as p:
         const cs = getComputedStyle(p), r = p.getBoundingClientRect();
         return { open: !p.hidden, top: Math.round(r.top + scrollY), panel: +cs.opacity, child: +getComputedStyle(k).opacity,
                  rest: +getComputedStyle(document.documentElement).getPropertyValue('--drawer-rest'), events: cs.pointerEvents,
-                 glass: cs.backdropFilter !== 'none' && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' }; }"""
+                 card: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' }; }"""
     DOTS = """() => { const d = [...document.querySelectorAll('#colorGroup .color-dot[data-color]')].filter(e => e.getBoundingClientRect().width);
         const g = document.getElementById('colorGroup').getBoundingClientRect(), pick = d.find(e => e.dataset.color !== color);
         if (!pick) return null;   // the drawer is not showing: closed, which is the fault being looked for
@@ -2778,9 +2781,9 @@ with sync_playwright() as p:
         _on, _dots = _q.evaluate(REST), _q.evaluate(DOTS)
         # "Where it was" within 40px: Flip swaps its page strip for its speed row
         # as it plays, which lifts what is below by 24px. Closing it is the fault.
-        check(f"{_route}: Play leaves an open drawer open where it was; its contents rest at --drawer-rest and its glass stays",
+        check(f"{_route}: Play leaves an open drawer open where it was; its contents rest at --drawer-rest and its card stays",
               _b4["open"] and _on["open"] and abs(_on["top"] - _b4["top"]) <= 40 and _on["rest"] == 0.4
-              and abs(_on["child"] - _on["rest"]) < 0.01 and _on["panel"] == 1 and _on["glass"], f"before {_b4}; playing {_on}")
+              and abs(_on["child"] - _on["rest"]) < 0.01 and _on["panel"] == 1 and _on["card"], f"before {_b4}; playing {_on}")
         if _dots is None:    # closed under the drawing's own Play tap: nothing below can be looked at
             check(f"{_route}: ...it is painted, not gone: the swatch row still shows while the drawing plays", False, f"closed: {_on}")
         else:

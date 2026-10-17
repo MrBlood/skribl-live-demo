@@ -8614,3 +8614,45 @@ body.drawalong .canvas-empty-hint { display: none; }
   @view-transition { navigation: auto; }
   ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .28s; animation-timing-function: ease; }
 }
+
+/* THE DOCK'S DRAWERS ON THE MENU'S PAPER (owner, after v324: "I can't really
+   see the edges of the drawer. Why not use the menu treatment?"; the drawers
+   mock, C, "All yes"). The draw, photo and music drawers, the shape picker,
+   Flip's tool tray and Tune wore the dock's glass ("make the drawers match the
+   frosted bar too"), which measured 1.01:1 against the page at its edge in
+   light: no edge at all. They are the menu's paper now, with its cards' lilac
+   edge and drop (1.53:1 in light, 1.29 in dark, and the shadow), and every
+   control on them is a white card. The dock bar, the header and Flip's page
+   strip keep the glass: they are the frame, the drawers rise from it. The
+   panel inside the photo and music card is the card's, not a second edge.
+   LAST IN THE FILE, the controls' scope in :where(): these win over each
+   control's own rule, and its :hover and :disabled still win over these. */
+:is(.tab-panel:not(.media-card > .tab-panel), .media-card, .shape-pop, .tool-tray, .tune-shell) {
+  background: var(--menu-paper);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+:is(.tab-panel:not(.media-card > .tab-panel), .media-card, .shape-pop, .tool-tray, .tune-shell.open) {
+  border: 1px solid var(--menu-card-line);
+  box-shadow: var(--menu-card-drop);
+}
+.tune-shell.open { border-top: 0; }
+.tool-tray::after { border-top-color: var(--menu-paper); }
+:where(.tab-panel, .media-card, .shape-pop, .tool-tray, .tune-shell) :is(.seg, .smooth-seg, .photo-fit-group, .media-tabs, .gif-seg,
+    .brush-slider-line, .reposition-btn, .panel-btn, .clear-drawer-btn, .loop-btn:where(.subtle), .edge-controls, .mag-step,
+    .slider-nudge-btn, .eyedropper-btn, .loop-zoom) {
+  background: var(--menu-card); border: 1px solid var(--menu-card-line);
+}
+:where(.tab-panel, .media-card, .shape-pop, .tool-tray, .tune-shell) :is(.reposition-btn, .panel-btn, .clear-drawer-btn,
+    .edge-controls, .mag-step, .slider-nudge-btn, .eyedropper-btn) { border-radius: var(--r-control); }
+:where(.tab-panel, .media-card) .loop-zoom { border-radius: var(--r-card); }
+:where(.tab-panel, .media-card) .nudge-btn { background: color-mix(in srgb, var(--accent) 7%, var(--menu-card)); }
+:where(.tab-panel, .media-card, .tool-tray, .tune-shell) .drawer-divider { background: var(--menu-card-line); }
+/* Words in the drawers that were too faint (the drawers mock, measured on the
+   loaded photo and music drawers): secondary words take the sheet's ink, the
+   zoom's value the small violet words', and Preview Loop's white words sit on
+   the action fill. */
+#repositionHint, #trimStartLabel, #trimEndLabel, .loop-zoom-head > span:first-child, #clearLabel { color: var(--text-secondary); }
+:where(.tab-panel, .media-card) .clear-drawer-btn { color: var(--text-secondary); }   /* 4.19 on the dark card; hover, armed and disabled still win */
+:where(.tab-panel, .media-card) .clear-drawer-btn:is(:hover, .armed) { color: var(--danger-soft); }   /* --danger read 4.44 on the dark card's hover tint */
+#zoomMagVal { color: var(--accent-ink); }
+#previewLoopBtn { background: var(--accent-fill); }
