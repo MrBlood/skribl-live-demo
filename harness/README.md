@@ -354,6 +354,11 @@ stays a sleep.
   over the drawing, the pill under the header; any real stroke counts, a tap
   does not; Skip; Done and Escape put it away; the drawing holds the stroke
   and nothing of the guide (canvas pixels).
+- `verify_glide.py` — a replay glides (lib/holdtiming.js untie()): a stroke
+  recorded in bundles of points sharing one time plays point after point,
+  read off the nib's place on every animation frame, on the shared player at
+  1/4x and 1x and on the Pad at 1/4x; a Flip page that draws itself reveals
+  one point at a time; the replay's length is what it was.
 - `verify_contrast.py` — every word on every sheet against what is painted
   behind it (owner, after v323: "check contrasts and consistency on all our
   changes, and future changes"): the menu (main, New, Settings), Your drafts,

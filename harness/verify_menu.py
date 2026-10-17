@@ -283,6 +283,43 @@ with sync_playwright() as p:
         check(f"{name}: no page errors", not errs, "; ".join(errs[:2]))
         c.close()
 
+        # 4. THE SWITCH GLIDES BEFORE IT GOES (owner's iPhone, after v323:
+        # "never shows the button move, then boom you're in flip"). A tap on
+        # the other editor puts the pill under it while this page is still
+        # up, then the other editor arrives; and it was fetched ahead.
+        c = b.new_context(**PHONE)
+        q = c.new_page()
+        browsing.goto(q, BASE, route)
+        q.wait_for_timeout(800)
+        q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        other = "#flipBtn" if name == "Pad" else "#padBtn"
+        there = q.evaluate("(s) => new URL(document.querySelector(s).href).pathname", other)
+        try:
+            q.wait_for_selector('link[rel="prefetch"][data-editor-ahead]', state="attached", timeout=8000)
+            ahead = q.evaluate("() => new URL(document.querySelector('link[rel=\"prefetch\"][data-editor-ahead]').href).pathname")
+        except Exception:
+            ahead = None
+        check(f"{name}: the other editor's page is fetched ahead, once this one has settled",
+              ahead is not None and ahead.rstrip("/") == there.rstrip("/"), str(ahead))
+        open_menu(q, btn)
+        # A page that leaves at once takes this evaluation with it: that is
+        # the failure this row exists for, said as one.
+        try:
+            glide = q.evaluate("""(sel) => new Promise(res => { const a = document.querySelector(sel), pill = a.parentElement.querySelector('.seg-slider');
+                a.click();
+                setTimeout(() => { const p = pill.getBoundingClientRect(), o = a.getBoundingClientRect();
+                  res({ under: Math.abs((p.left + p.width / 2) - (o.left + o.width / 2)) < 4, path: location.pathname }); }, 265); })""", other)
+        except Exception as e:
+            glide = {"under": False, "path": "left at once: " + str(e)[:60]}
+        try:
+            q.wait_for_url(lambda u: u.split("?")[0].rstrip("/").endswith(there.rstrip("/")), timeout=5000)
+            arrived = True
+        except Exception:
+            arrived = False
+        check(f"{name}: a tap on the other editor slides the pill under it while this page is still up, then goes there",
+              glide["under"] and glide["path"].rstrip("/") == route.rstrip("/") and arrived, f"{glide}, arrived {arrived}")
+        c.close()
+
         # 3. How it works opens Ask (piece two, FUTURE.md 6p): the tabs it
         # had are gone, so the field is the first thing, empty, on Ask's home.
         c = b.new_context(**PHONE)

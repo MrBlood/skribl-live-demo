@@ -846,7 +846,14 @@ with sync_playwright() as sp:
     #   +400 B -- lib/holdtiming.js posterOf, the poster page as one rule for
     #   Flip's card and this player, and the app.js line that rests a Flip on
     #   it, so a link opens on the page its card shows. 152,235 measured.
-    BYTES_RATCHET, BYTES_TARGET = 152_240, 153_800
+    # RAISED (a bug fix, owner's iPhone: "Why is it jumpy ... It does it at 1x
+    #   too"), for one named cost: +475 B -- lib/holdtiming.js untie(), one
+    #   rule spreading a bundle of points that arrived together over the
+    #   moment before it, and the app.js line that applies it to the replay's
+    #   timeline. Spent first: untie() takes a timeline as it is, so each
+    #   caller is one line rather than a map and a write-back (-130).
+    #   152,710 measured.
+    BYTES_RATCHET, BYTES_TARGET = 152_715, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

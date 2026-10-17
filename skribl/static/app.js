@@ -1426,6 +1426,9 @@ function buildPlaybackTimeline() {
     const s = strokes[i];
     timeline.push({ x: s.x, y: s.y, color: s.color, size: s.size, erase: s.erase, start: s.start, playT: playT, i: i });
   }
+  // Points that arrived in one bundle play one after another, not at once
+  // (lib/holdtiming.js untie(): the rule every replay shares).
+  if (window.SkriblHold) SkriblHold.untie(timeline);
   return timeline;
 }
 

@@ -1451,7 +1451,14 @@ with sync_playwright() as sp:
     #   wrapper and not for a second copy. Spent first: its note is one line
     #   (fitPoster's own says why the poster must follow the box). 65,386 B
     #   measured.
-    EMBED_RATCHET = 65_390
+    # RAISED (a bug fix, owner's iPhone: "Why is it jumpy ... It does it at 1x
+    #   too"), for one named cost: +485 B -- lib/holdtiming.js untie(), which
+    #   spreads a bundle of points that arrived together over the moment
+    #   before it, and inlineplayer.js's line applying it to the timeline.
+    #   WHICH CALLER PAYS: every page that shows a post, and every post it
+    #   shows plays smoothly for it. Spent first: one line per caller, untie()
+    #   taking the timeline as it is (-137 here). 65,871 B measured.
+    EMBED_RATCHET = 65_875
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

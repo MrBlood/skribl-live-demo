@@ -331,6 +331,9 @@
       out.push({ x: s.x, y: s.y, color: s.color, size: s.size,
                  erase: s.erase, start: s.start, playT: playT, i: i });
     }
+    /* Points that arrived in one bundle play one after another, not at once:
+     * lib/holdtiming.js untie(), the rule the editors' replays share. */
+    if (global.SkriblHold) global.SkriblHold.untie(out);
     return out;
   }
 

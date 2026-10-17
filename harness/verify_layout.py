@@ -674,7 +674,18 @@ with sync_playwright() as p:
         pg.click("#menuBtn")
         pg.wait_for_timeout(250)
         pg.click("#flipBtn")
-        pg.wait_for_timeout(300)
+        # The outcome, not a fixed wait: since the switch glides before it
+        # goes (lib/editorswitch.js, 280 ms), Flip arrives a little later. Up
+        # to 3 s for either answer: Flip, or the leave sheet.
+        for _ in range(15):
+            pg.wait_for_timeout(200)
+            if "/flip" in pg.url:
+                break
+            try:
+                if pg.evaluate("() => !document.getElementById('leaveSheet').hidden"):
+                    break
+            except Exception:
+                pass
 
     # A 1x1 PNG is enough: the guard reads whether photoBg is set, not what it is.
     _PNG = base64.b64decode(
@@ -790,7 +801,11 @@ with sync_playwright() as p:
         # Mode row), opened AFTER the stroke — a press on the canvas closes it.
         pg.click("#moreBtn"); pg.wait_for_timeout(400)
         back.click()
-        pg.wait_for_timeout(300)
+        # The outcome, not a fixed wait (the switch glides first, 280 ms).
+        for _ in range(15):
+            pg.wait_for_timeout(200)
+            if pg.url != before:
+                break
         check("Flip — leaving navigates freely; Flip persists its work, so a confirm would be a false alarm",
               "/flip" not in pg.url,
               f"stayed on {pg.url} — a guard appeared on the surface that does not need one")

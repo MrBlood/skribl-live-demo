@@ -6274,6 +6274,9 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .menu-editor-seg > .menu-editor svg { width: 18px; height: 18px; flex: none; }
 .menu-editor-seg > .menu-editor:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
 @media (hover: hover) { .menu-editor-seg > a.menu-editor:hover { color: var(--text-primary); } }
+/* Going to the other editor (lib/editorswitch.js): its name lights as the pill arrives. */
+.menu-editor-seg[data-going] > button.menu-editor { color: var(--text-soft); }
+.menu-editor-seg[data-going] > a.menu-editor { color: var(--seg-on-ink); }
 
 .menu-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; flex: none; }
 .menu-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;

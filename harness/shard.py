@@ -42,7 +42,7 @@ MEASURED = {
     "verify_jsstrip.py": 60, "verify_layout.py": 150, "verify_library.py": 160,
     "verify_onepill.py": 340, "verify_parity.py": 430, "verify_posted.py": 130,
     "verify_replayspeed.py": 70, "verify_review.py": 70, "verify_sheetswipe.py": 170,
-    "verify_smudgeblur.py": 60, "verify_tappause.py": 100, "verify_hello.py": 70, "verify_menu.py": 120, "verify_contrast.py": 380, "verify_learncard.py": 60, "verify_ask.py": 70, "verify_book.py": 60, "verify_theme.py": 90,
+    "verify_smudgeblur.py": 60, "verify_tappause.py": 100, "verify_hello.py": 70, "verify_menu.py": 120, "verify_contrast.py": 380, "verify_learncard.py": 60, "verify_ask.py": 70, "verify_book.py": 60, "verify_glide.py": 40, "verify_theme.py": 90,
     "verify_tools.py": 180, "verify_tray.py": 60, "verify_ux.py": 420,
 }
 SMALL = 15          # every other suite: the rest averaged 14 seconds

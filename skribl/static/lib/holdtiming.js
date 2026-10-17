@@ -108,6 +108,31 @@
   function playTimes(p) {
     for (var t = [0], a = 0, i = 1, g; i < p.length; i++) t.push(a += (g = p[i].t - p[i - 1].t) > 0 ? Math.min(g, GAP_MAX) : 0);
     if (!a) for (i = 1; i < p.length; i++) t[i] = i * 16;
+    return untie(t, p);
+  }
+
+  /* POINTS THAT ARRIVED TOGETHER PLAY ONE AFTER ANOTHER (owner's iPhone,
+   * after v323: "Why is it jumpy when drawing? ... It does it at 1x too").
+   * A pointermove hands over every sample since the last one, a frame's worth
+   * or more, and the editors stamp the whole bundle with one time; so a replay
+   * put the bundle down at once, held still, and jumped, and the slower the
+   * speed the longer the hold. Here a bundle of equal times is spread evenly
+   * over the moment before it (at most 34 ms, so a pause still reads as
+   * a pause), its last point kept where it was. Played times only: the
+   * drawing is not changed, its length is not changed (the last point of
+   * each bundle stays put), and every drawing ever made plays smoothly.
+   * One rule for every replay: the Pad's (app.js), the posted player's
+   * (inlineplayer.js) and a Flip page that draws itself (playTimes above). */
+  /* untie(times, points) on a list of times, or untie(timeline) on a
+   * replay's timeline, whose points carry their own playT. */
+  function untie(t, p) {
+    var o = !p, n = t.length, j = 0, k, m, s, q, T = function (i) { return o ? t[i].playT : t[i]; };
+    for (p = p || t; j < n; j = k + 1) {
+      for (k = j; k + 1 < n && T(k + 1) === T(j) && !p[k + 1].start;) k++;
+      m = k - j + 1;
+      s = j && m > 1 ? Math.min(T(j) - T(j - 1), 34) : 0;
+      for (q = 0; s > 0 && q < m; q++) o ? t[j + q].playT = T(k) - s + s * (q + 1) / m : t[j + q] = T(k) - s + s * (q + 1) / m;
+    }
     return t;
   }
   function spanMs(frame) {
@@ -337,7 +362,8 @@
     posterOf: posterOf,
     plan: plan,
     wrapMs: wrapMs,
-    displayAt: displayAt
+    displayAt: displayAt,
+    untie: untie
   };
 
   if (typeof window !== 'undefined') window.SkriblHold = api;
