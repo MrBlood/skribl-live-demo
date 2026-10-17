@@ -8653,5 +8653,6 @@ body.drawalong .canvas-empty-hint { display: none; }
    the action fill. */
 #repositionHint, #trimStartLabel, #trimEndLabel, .loop-zoom-head > span:first-child, #clearLabel { color: var(--text-secondary); }
 :where(.tab-panel, .media-card) .clear-drawer-btn { color: var(--text-secondary); }   /* 4.19 on the dark card; hover, armed and disabled still win */
+:where(.tab-panel, .media-card) .clear-drawer-btn:is(:hover, .armed) { color: var(--danger-soft); }   /* --danger read 4.44 on the dark card's hover tint */
 #zoomMagVal { color: var(--accent-ink); }
 #previewLoopBtn { background: var(--accent-fill); }
