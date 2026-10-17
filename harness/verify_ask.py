@@ -99,6 +99,13 @@ with sync_playwright() as p:
         check(f"{name}: ...and the examples are there to watch", home["examples"] > 10, str(home))
         check(f"{name}: the field is 16px or more, so iOS does not magnify the page",
               float(home["size"].rstrip("px")) >= 16, home["size"])
+        # Ask's top (owner, after v324: the sheets mock, "Tighter"): the field
+        # sits as far below the title as the first card sits below the field.
+        gap = q.evaluate("""() => { const t = document.querySelector('#helpDrawer .help-drawer-head span').getBoundingClientRect(),
+          f = document.querySelector('#helpDrawer .help-search').getBoundingClientRect(), c = document.getElementById('askTour').getBoundingClientRect();
+          return { above: Math.round(f.top - t.bottom), below: Math.round(c.top - f.bottom) }; }""")
+        check(f"{name}: the field sits as far below the title as the first card below it (within 4px)",
+              abs(gap["above"] - gap["below"]) <= 4, str(gap))
         geo = q.evaluate("""() => { const r = document.querySelector('.help-drawer-inner').getBoundingClientRect();
           return { top: Math.round(r.top), bottom: Math.round(r.bottom), left: Math.round(r.left), right: Math.round(r.right), vw: innerWidth, vh: innerHeight }; }""")
         check(f"{name}: on a phone Ask is a sheet: full width, rising most of the way, the drawing showing above it",

@@ -196,7 +196,6 @@
   --menu-card-line:  rgba(167, 146, 255, 0.12);
   --menu-card-rule:  rgba(167, 146, 255, 0.12);
   --menu-card-drop:  0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
-  --menu-track:      rgba(124, 92, 255, 0.16);
   /* A SELECTED OPTION IS A TINT, AN ACTION IS SOLID. The same purple used to
      mean both, so a drawer carried five or six purple slabs and nothing said
      which one did something. Segments (Pen / Background, Off / Low / High,
@@ -327,6 +326,13 @@
      container wants 9px to look concentric, and one inset 4px wants 8px.
      Setting this to 999px restores every pill in one line. */
   --r-seg: 12px;
+  /* ONE CORNER PER KIND (owner, after v324: the sheets mock, "All yes"). A
+     sheet the menu opens, a card on it, and a button or field on that card
+     each have one corner, wherever they are; the pill inside a track keeps
+     --seg-pill-r (concentric), and small icon tiles and round pills their own. */
+  --r-sheet: 22px;
+  --r-card: 16px;
+  --r-control: 12px;
   /* THE ONE PILL (owner: "a on the pill", chosen from four mocked shapes).
      Every pick-one track holds its pill --seg-inset in from all four sides,
      and the pill's corner is the track's less that inset, so the two curves
@@ -2117,7 +2123,6 @@ a.player-btn { text-decoration: none; }
   --menu-card-line:          rgba(124, 92, 255, 0.34);
   --menu-card-rule:          rgba(80, 60, 170, 0.10);
   --menu-card-drop:          0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
-  --menu-track:              rgba(124, 92, 255, 0.11);
   /* AA on what is actually painted behind it: #5b3be6 was 4.37:1 on the tint
      over the drawers' track, under the unselected label's 4.99. One step
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground

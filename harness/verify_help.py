@@ -182,21 +182,24 @@ with sync_playwright() as p:
               "plain accordion")
         check(f"{surface}: the search field is present",
               sp.is_visible("#helpSearch"))
-        # ROOM UNDER THE TITLE BAND. The field had no top margin and sat on the
-        # band's bottom edge (owner's iPhone, both editors); it now has as much
-        # above it as on each side. Since Ask (piece two) the field is Ask's own,
-        # under the title band, and its side the edge of the sheet or dialog.
+        # ROOM UNDER THE TITLE. The field had no top margin and sat on the title
+        # band's bottom edge, a drawn line (owner's iPhone, both editors). Since
+        # Ask the band is the sheet's own paper with no line, and after v324
+        # (the sheets mock, "Tighter") the field sits as far below the title as
+        # the first card below it (verify_ask). Held here: no edge drawn for the
+        # field to sit on, and at least 16px between the title and the field.
         # Measured at a desk and a phone width.
         for _w, _h in ((1280, 720), (402, 874)):
             sp.set_viewport_size({"width": _w, "height": _h})
             sp.wait_for_timeout(150)
-            _gap = sp.evaluate("""() => {
-              const h = document.querySelector('#helpDrawer .help-drawer-head').getBoundingClientRect();
+            _gap = sp.evaluate(r"""() => {
+              const h = document.querySelector('#helpDrawer .help-drawer-head'), cs = getComputedStyle(h);
+              const t = h.querySelector('span').getBoundingClientRect();
               const f = document.querySelector('#helpDrawer .ask-bar .help-search').getBoundingClientRect();
-              const d = document.querySelector('#helpDrawer .help-drawer-inner').getBoundingClientRect();
-              return { above: f.top - h.bottom, side: f.left - d.left }; }""")
-            check(f"{surface} at {_w}px: the search field has room under the title band, as much as at its side",
-                  _gap["above"] >= 12 and abs(_gap["above"] - _gap["side"]) <= 1, str(_gap))
+              const line = parseFloat(cs.borderBottomWidth) > 0 && !/rgba\(.*, 0\)$|transparent/.test(cs.borderBottomColor);
+              return { title: Math.round(f.top - t.bottom), line, color: cs.borderBottomColor }; }""")
+            check(f"{surface} at {_w}px: the search field has room under the title, and no band edge drawn to sit on",
+                  _gap["title"] >= 16 and not _gap["line"], str(_gap))
         sp.set_viewport_size({"width": 1280, "height": 720})
         sp.wait_for_timeout(150)
 

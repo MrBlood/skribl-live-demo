@@ -689,8 +689,8 @@
   .flip-menu { position: absolute; top: 58px; right: 12px; z-index: 60; width: 336px;   /* tracks styles.css .menu-sheet (v293: 240 -> 260 for the Theme row; 336 for the tiles, after v323) */
     background: rgba(var(--surface-control-rgb), 0.9);
     -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4);
-    border: 1px solid var(--hairline-strong); border-radius: 16px;
-    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5); padding: 6px;
+    border: 1px solid var(--hairline-strong); border-radius: var(--r-sheet);
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5); padding: 12px;   /* 6 until after v324: the switch at the top nearly touched the edge */
     /* Bounded like the Pad's sheet (styles.css: top, then 24px below). With no
        cap it ran past the window's bottom -- 915px in a 900px window -- and
        its last rows could not be reached (owner, v318; verify_parity). */
@@ -708,7 +708,7 @@
      requires. */
   :where(body[data-size="compact"]) .flip-menu { position: fixed; top: auto; left: 0; right: 0; bottom: 0;
     min-width: 0; width: auto; box-sizing: border-box;
-    border: 0; border-radius: 20px 20px 0 0;
+    border: 0; border-radius: var(--r-sheet) var(--r-sheet) 0 0;
     padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
     max-height: 88dvh; overflow-y: auto; }
   :where(body[data-size="compact"]) .flip-menu:not([hidden]) { animation: flip-sheet-up 0.35s var(--spring); }
