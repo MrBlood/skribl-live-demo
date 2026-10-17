@@ -18540,3 +18540,23 @@ tiny up there?" With the page's word gone the mark stood alone beside a
 44px Make one; it is 30px now (it was 24; the editors' lockup is 26 with
 "pad" or "flip" beside it), still on the page text's edge. verify_galib's
 one-lockup row reads 30.
+
+## After v324 -- skribl gallery, skribl library, in the same hand
+
+The owner, scrolled down the Gallery on the iPhone: "when you scroll you
+don't know where you are -library, gallery, where. It should say gallery or
+library in the same cursive. Same size." From the mock, "Yes".
+
+- The Gallery's lockup reads "skribl gallery" and the Library's "skribl
+  library", the way Pad and Flip read "skribl pad" and "skribl flip". The
+  words are hand-lettered in the mark's own pen (one stroke, the same slant
+  and weight); the a, l, i, b and r follow "skribl", "pad" and "flip", and the
+  g, e and y are drawn to match. The colour sweep runs on from the mark into
+  the word.
+- The word is the mark's height (30px) and sits as close to it as "pad" does
+  on Pad. It is a drawing, so it changes no contrast; the lockup still names
+  the page to a screen reader, and the page heading stays.
+
+verify_galib reads the lockup on a phone and a desk: the
+word's height is the mark's, and it sits within a few pixels of it. Red
+without the word (98/102), green with it (102/102).

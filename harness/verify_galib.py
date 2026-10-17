@@ -415,6 +415,9 @@ with sync_playwright() as p:
                top: Math.round(t.getBoundingClientRect().top), over: document.documentElement.scrollWidth - innerWidth,
                mark: Math.round(document.querySelector('.brand .brand-mark').getBoundingClientRect().left),
                text: h1 ? Math.round(h1.getBoundingClientRect().left) : null, word: !!document.querySelector('.brand .tag'),
+               hand: (() => { const w = document.querySelector('.brand .brand-word svg path'), m = document.querySelector('.brand .brand-mark');
+                 return w ? [Math.round(w.ownerSVGElement.getBoundingClientRect().height), Math.round(m.getBoundingClientRect().height),
+                              Math.round(w.ownerSVGElement.getBoundingClientRect().left - m.getBoundingClientRect().right)] : null; })(),
                lockup: [document.querySelector('.brand .brand-mark').getBoundingClientRect().height, mk.fontWeight, mk.fontSize] }; }"""
     lockups = {}
     for path in ("/gallery", "/library"):
@@ -422,9 +425,15 @@ with sync_playwright() as p:
             pg = open_page(c_, path)
             h = pg.evaluate(HEAD)
             lockups[path] = h["lockup"]
-            check(f"{path} {dev}: at rest the header paints no card, and the mark lines up with the page's text, no word beside it",
+            check(f"{path} {dev}: at rest the header paints no card, and the mark lines up with the page's text, no word in capitals beside it",
                   h["pos"] == "sticky" and h["fill"] == 0 and not h["shadow"] and not h["scrolled"]
                   and h["text"] is not None and abs(h["mark"] - h["text"]) <= 1 and not h["word"], str(h))
+            # THE PAGE'S WORD IN THE SAME HAND (owner, after v324: "when you scroll
+            # you don't know where you are ... It should say gallery or library in
+            # the same cursive. Same size."): drawn beside the mark, as tall, and
+            # as close as "pad" sits on the Pad (within a few px either way).
+            check(f"{path} {dev}: the lockup writes the page's word beside the mark, the mark's height, close to it",
+                  h["hand"] and h["hand"][0] == h["hand"][1] and -4 <= h["hand"][2] <= 2, str(h["hand"]))
             pg.evaluate("document.body.style.minHeight = '3000px'; window.scrollTo(0, 600)"); pg.wait_for_timeout(500)
             h = pg.evaluate(HEAD)
             check(f"{path} {dev}: scrolled, it is pinned {pin}px from the top on its ground, and nothing overflows",

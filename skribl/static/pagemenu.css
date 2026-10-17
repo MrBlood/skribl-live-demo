@@ -127,6 +127,8 @@ html { scroll-padding-top: 96px; }
 .brand { display: flex; align-items: center; gap: 6px; min-height: 44px;
   text-decoration: none; }
 .brand .brand-mark { height: 30px; width: auto; display: block; overflow: visible; color: var(--text); }
+.brand .brand-word { display: block; line-height: 0; margin-left: -7px; }   /* as close as "pad" sits on the Pad */
+.brand .brand-word svg { height: 30px; width: auto; display: block; overflow: visible; }
 /* The mark's ink: the gradient stops _skribl_brand_mark.html carries, as
    styles.css colours them. Without these the signature paints black
    (v294, from a phone; verify_library reads the computed stops). */
