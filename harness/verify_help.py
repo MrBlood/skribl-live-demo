@@ -192,7 +192,7 @@ with sync_playwright() as p:
         for _w, _h in ((1280, 720), (402, 874)):
             sp.set_viewport_size({"width": _w, "height": _h})
             sp.wait_for_timeout(150)
-            _gap = sp.evaluate("""() => {
+            _gap = sp.evaluate(r"""() => {
               const h = document.querySelector('#helpDrawer .help-drawer-head'), cs = getComputedStyle(h);
               const t = h.querySelector('span').getBoundingClientRect();
               const f = document.querySelector('#helpDrawer .ask-bar .help-search').getBoundingClientRect();
