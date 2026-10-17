@@ -114,6 +114,14 @@ with sync_playwright() as p:
                 check(f"{name}, {dev}, {scheme}: the menu fits without scrolling, every target 44px or more, names 16px over 14px",
                       not f["scrolls"] and f["bottom"] <= f["vh"] and f["targets"] >= 10 and not f["small"]
                       and f["name"] == "16px" and f["sub"] == "14px", str(f))
+                if dev == "desk":
+                    # The menu's room inside its edge (owner, after v324: the
+                    # sheets mock, "All yes"): 6px put the switch nearly on it.
+                    room = q.evaluate("""() => { const m = [...document.querySelectorAll('#menuSheet, #moreMenu')].find(e => e.getClientRects().length);
+                      const s = m.querySelector('.menu-editor-seg').getBoundingClientRect(), r = m.getBoundingClientRect(), cs = getComputedStyle(m);
+                      return { pad: cs.padding, top: Math.round(s.top - r.top - parseFloat(cs.borderTopWidth)) }; }""")
+                    check(f"{name}, desk, {scheme}: the menu has 12px of room inside its edge, so the switch clears the top",
+                          room["pad"] == "12px" and room["top"] >= 12, str(room))
                 if dev == "phone":
                     # 9. the paper: solid, and the list's edge shows. At the
                     # phone's 2x, the pixel 3px outside the list (the sheet),

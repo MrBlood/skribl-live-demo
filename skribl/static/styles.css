@@ -173,7 +173,6 @@
   --menu-card-line:  rgba(167, 146, 255, 0.12);
   --menu-card-rule:  rgba(167, 146, 255, 0.12);
   --menu-card-drop:  0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
-  --menu-track:      rgba(124, 92, 255, 0.16);
   /* A SELECTED OPTION IS A TINT, AN ACTION IS SOLID. The same purple used to
      mean both, so a drawer carried five or six purple slabs and nothing said
      which one did something. Segments (Pen / Background, Off / Low / High,
@@ -304,6 +303,13 @@
      container wants 9px to look concentric, and one inset 4px wants 8px.
      Setting this to 999px restores every pill in one line. */
   --r-seg: 12px;
+  /* ONE CORNER PER KIND (owner, after v324: the sheets mock, "All yes"). A
+     sheet the menu opens, a card on it, and a button or field on that card
+     each have one corner, wherever they are; the pill inside a track keeps
+     --seg-pill-r (concentric), and small icon tiles and round pills their own. */
+  --r-sheet: 22px;
+  --r-card: 16px;
+  --r-control: 12px;
   /* THE ONE PILL (owner: "a on the pill", chosen from four mocked shapes).
      Every pick-one track holds its pill --seg-inset in from all four sides,
      and the pill's corner is the track's less that inset, so the two curves
@@ -3692,9 +3698,9 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .export-nameinput {
   flex: 1;
   min-width: 0;
-  background: rgba(var(--wash-rgb), 0.03);
-  border: 1px solid var(--hairline);
-  border-radius: 10px;
+  background: var(--menu-card);   /* the white of Ask's field (after v324: the sheets mock) */
+  border: 1px solid var(--menu-card-line);
+  border-radius: var(--r-control);
   padding: 9px 11px;
   font-family: inherit;
   font-size: 16px;
@@ -3725,9 +3731,12 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   gap: 12px;
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid var(--hairline);
-  background: rgba(var(--wash-rgb), 0.02);
-  border-radius: 12px;
+  /* A card like the menu's (after v324: the sheets mock, "All yes"); they
+     were see-through grey boxes on the lilac paper. */
+  border: 1px solid var(--menu-card-line);
+  background: var(--menu-card);
+  box-shadow: var(--menu-card-drop);
+  border-radius: var(--r-card);
   cursor: pointer;
   text-align: left;
   margin-bottom: 8px;
@@ -3760,7 +3769,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 .export-opt-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .export-opt-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
-.export-opt-desc { font-size: 11.5px; color: var(--text-muted); }
+.export-opt-desc { font-size: 11.5px; color: var(--text-secondary); }   /* --text-muted read 4.25:1 on the dark card */
 
 /* GIF is a grouped "tray": the option card and its Background/Transparent toggle
    share one bordered box, so the toggle clearly belongs to GIF instead of reading
@@ -3768,16 +3777,17 @@ body.player-mode #canvasEmptyHint { display: none !important; }
    and the toggle sits flush beneath, split by a hairline so the hierarchy reads.
    When the toggle is hidden (GIF unavailable) the group looks like a normal card. */
 .export-opt-group {
-  border: 1px solid var(--hairline);
-  background: rgba(var(--wash-rgb), 0.02);
-  border-radius: 12px;
+  border: 1px solid var(--menu-card-line);
+  background: var(--menu-card);
+  box-shadow: var(--menu-card-drop);
+  border-radius: var(--r-card);
   margin-bottom: 8px;
   overflow: hidden;
 }
-.export-opt-group .export-opt { border: 0; background: none; border-radius: 0; margin-bottom: 0; }
+.export-opt-group .export-opt { border: 0; background: none; box-shadow: none; border-radius: 0; margin-bottom: 0; }
 @media (hover: hover) { .export-opt-group:has(.export-opt:hover:not(:disabled)) { border-color: rgba(124,92,255,0.4); } }
 @media (hover: hover) { .export-opt-group .export-opt:hover:not(:disabled) { background: rgba(124,92,255,0.08); border-color: transparent; } }
-.export-opt-group .export-gif-toggle { border-top: 1px solid var(--hairline); padding-top: 10px; }
+.export-opt-group .export-gif-toggle { border-top: 1px solid var(--menu-card-rule); padding-top: 10px; }
 
 /* GIF background toggle (segmented) -- a track of the one pill, like every
    pick-one control (A SELECTED OPTION IS A TINT, below). It was the one
@@ -3906,7 +3916,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   width: 100%;
   aspect-ratio: 16 / 10;
   max-height: 240px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   overflow: hidden;
   background: #0d0f14;
   border: 1px solid var(--hairline);
@@ -4033,7 +4043,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   width: 100%;
   background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--hairline);
-  border-radius: 10px;
+  border-radius: var(--r-control);
   padding: 9px 11px;
   color: var(--text-primary);
   font-size: 16px;
@@ -4201,13 +4211,17 @@ body.player-mode #canvasEmptyHint { display: none !important; }
     top: 64px;
     right: max(18px, calc(50% - 360px + 18px));
     width: 336px;   /* 220 until v290, 240 until v293, 260 until the menu's tiles (after v323): four of them at 16px type */
-    border-radius: 16px;
+    border-radius: var(--r-sheet);
     transform: translateY(-8px) scale(0.96);
     opacity: 0;
     transform-origin: top right;
     transition: transform 0.28s var(--spring), opacity 0.2s ease;
   }
   .menu-overlay.open .menu-sheet { transform: translateY(0) scale(1); opacity: 1; }
+  /* The menu's own room inside its edge: 6px put the Pad | Flip switch nearly
+     on the top edge (owner, after v324: the sheets mock, "All yes"). 12px is
+     the phone sheet's side room. Flip's menu matches (flip.css .flip-menu). */
+  #menuSheet { padding: 12px; }
   /* Nothing bounded these. A sheet taller than the window simply ran off the
      bottom with no way to reach it — found when a fourth options block pushed
      the export sheet's last control out of a 900px viewport, but it applied to
@@ -4239,7 +4253,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
     right: 0;
     bottom: 0;
     width: 100%;
-    border-radius: 20px 20px 0 0;
+    border-radius: var(--r-sheet) var(--r-sheet) 0 0;
     padding: 8px 12px calc(16px + var(--home-bar, env(safe-area-inset-bottom, 0px)));
     transform: translateY(100%);
     transition: transform 0.35s var(--spring);
@@ -4401,7 +4415,10 @@ html.help-open, html.help-open body { overflow: hidden; }
      inside .help-drawer-inner, itself a backdrop-filter layer, and WebKit
      drops a backdrop-filter nested in another -- leaving a see-through bar. */
   background: rgb(var(--surface-panel-rgb));
-  padding: 20px 32px 16px;
+  /* 18 / 8, the title 4px in from the field's edge (owner, after v324: the
+     sheets mock, "Tighter"): 20 / 16 at 32 left 41px between the title and
+     Ask's field, twice the gap under it, and the title 14px in from it. */
+  padding: 18px 18px 8px 22px;
   border-bottom: 1px solid var(--hairline);
   z-index: 3;
   margin-bottom: 0;
@@ -4453,7 +4470,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   width: 100%;
   padding: 14px 16px;
   border: 1px solid var(--line-faint);
-  border-radius: 14px;
+  border-radius: var(--r-card);
   background: var(--surface-sheet-2);
   color: var(--text-strong);
   cursor: pointer;
@@ -4543,7 +4560,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   grid-template-rows: 0fr;
   overflow: hidden;
   background: var(--surface-raised);
-  border-radius: 0 0 14px 14px;
+  border-radius: 0 0 var(--r-card) var(--r-card);
   border: 1px solid transparent;
   border-top: none;
   margin-top: -1px;
@@ -6098,22 +6115,22 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 
 /* ---- Ask's field, up under the title as the page scrolls (lib/ask.js) -------
    It took the two tabs' place (owner, after v323: the Ask mock, "All yes").
-   Its 69px: the title band's 20 + 32 + 16 and its line. A band of the menu's
+   Its 59px: the title band's 18 + 32 + 8 and its line. A band of the menu's
    paper behind it reaches the page's edges and up to the band, so nothing
    shows through or beside it while the page scrolls under it. */
-.ask-bar { position: sticky; top: 69px; z-index: 3; margin: 0 18px; padding: 18px 0 8px; }   /* as much room above the field as at its side */
+.ask-bar { position: sticky; top: 59px; z-index: 3; margin: 0 18px; padding: 8px 0; }   /* with the band's 8, the field sits as far below the title as the first card below it */
 .ask-bar::before { content: ""; position: absolute; z-index: -1; top: -1px; bottom: 0; left: -18px; right: -18px;
   background: var(--menu-paper); pointer-events: none; }
-.ask-bar .help-search { margin: 0; min-height: 52px; padding: 0 14px; border-radius: 14px; }
+.ask-bar .help-search { margin: 0; min-height: 52px; padding: 0 14px; border-radius: var(--r-control); }
 .ask-bar .help-search-input { height: 50px; font-size: 17px; }   /* 16px and up, or iOS magnifies the page */
 .help-learn { padding: 16px 18px 40px; }
 .help-learn[hidden], .help-look[hidden] { display: none; }
 /* An entry scrolled to (a card's More about) stops under the title band and
-   Ask's field, 69 + 72, with 6 to spare, not behind them. */
-.help-look .help-tip { scroll-margin-top: 147px; }
+   Ask's field, the band's 59 and the field's 68, not behind them. */
+.help-look .help-tip { scroll-margin-top: 127px; }
 
 .learn-card { margin: 0; display: flex; flex-direction: column; min-width: 0;
-  border: 1px solid var(--line-faint); border-radius: 18px; overflow: hidden;
+  border: 1px solid var(--line-faint); border-radius: var(--r-card); overflow: hidden;
   background: var(--surface-sheet-2); }
 .learn-card[hidden] { display: none; }
 /* No ground of its own: each drawing paints its own background (the player
@@ -6321,7 +6338,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .menu-shape-seg > button { flex: 1 1 0; height: 100%; padding: 0 4px; display: grid; grid-template-rows: 32px auto;
   justify-items: center; align-items: center; gap: 6px; font-size: 14px; }
 .menu-shape { display: block; border: 2px solid currentColor; border-radius: 4px; opacity: .8; }
-.menu-start { min-height: 52px; width: 100%; border: 0; border-radius: 14px; background: var(--accent-fill); color: #fff;
+.menu-start { min-height: 52px; width: 100%; border: 0; border-radius: var(--r-control); background: var(--accent-fill); color: #fff;
   font: inherit; font-size: 17px; font-weight: 600; cursor: pointer; flex: none; }
 .menu-start:disabled { opacity: .45; cursor: default; }
 .menu-page-note { margin: 10px 0 2px; font-size: 14px; color: var(--text-secondary); text-align: center; }
@@ -6356,7 +6373,7 @@ body:not(.player-mode) :is(.toolbar, .flip-tools) {
 .report-details {
   margin: 8px 14px 6px; padding: 11px 12px;
   background: var(--surface-raised);
-  border: 1px solid var(--hairline-strong); border-radius: 10px;
+  border: 1px solid var(--hairline-strong); border-radius: var(--r-control);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11.5px; line-height: 1.6; color: var(--text-primary);
   /* pre keeps the line breaks; wrapping stops a long user-agent string forcing
@@ -6923,7 +6940,7 @@ body.playing .flip-grid { display: none; }
   width: min(460px, calc(100vw - 32px)); max-height: min(640px, calc(100vh - 48px));
   display: flex; flex-direction: column;
   background: var(--surface-pop); border: 1px solid var(--hairline, #252a35);
-  border-radius: 18px; padding: 18px 16px 12px; box-shadow: 0 24px 60px rgba(0,0,0,.6);
+  border-radius: var(--r-sheet); padding: 18px 16px 12px; box-shadow: 0 24px 60px rgba(0,0,0,.6);
 }
 .sdrafts-sheet[hidden] { display: none; }
 .sdrafts-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px; }
@@ -6994,7 +7011,7 @@ body.playing .flip-grid { display: none; }
   color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 .sdrafts-label { margin: 4px 4px 0; font-size: 13px; font-weight: 700; color: var(--text-secondary); letter-spacing: .2px; flex: none; }
 .sdrafts-label + .sdrafts-sub { margin-top: 2px; }
-.sdrafts-files { display: flex; flex-direction: column; margin-top: 8px; border-radius: 14px; overflow: hidden;
+.sdrafts-files { display: flex; flex-direction: column; margin-top: 8px; border-radius: var(--r-card); overflow: hidden;
   border: 1px solid var(--hairline, #252a35); flex: none; }
 .sdrafts-files > .menu-item { min-height: 60px; border-radius: 0; font-size: 16px; }
 .sdrafts-files > .menu-item + .menu-item { border-top: 1px solid var(--hairline); }
@@ -7004,7 +7021,7 @@ body.playing .flip-grid { display: none; }
 .sdrafts-grab { display: none; }
 @media (max-width: 640px) {
   .sdrafts-sheet { top: auto; bottom: 0; transform: translateX(-50%); width: 100%;
-    max-height: 78vh; border-radius: 18px 18px 0 0; padding-top: 8px;
+    max-height: 78vh; border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding-top: 8px;
     padding-bottom: calc(12px + var(--home-bar, env(safe-area-inset-bottom, 0px))); }
   .sdrafts-grab { display: block; flex: none; position: relative; width: 40px; height: 5px;
     margin: 0 auto 10px; border-radius: 999px; background: var(--text-secondary); opacity: .7; cursor: pointer; }
@@ -7494,7 +7511,16 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .sdrafts-this { box-shadow: inset 0 0 0 1px var(--menu-card-line); }
 .menu-list > .menu-item:not([hidden]) ~ .menu-item:not([hidden]),
 .sdrafts-files > .menu-item + .menu-item { border-top-color: var(--menu-card-rule); }
-.seg.menu-editor-seg { background: var(--menu-track); border-color: transparent; }   /* .seg.: the one pill's track rule comes later */
+/* EVERY CHOICE ON THE PAPER IS A WHITE CARD (owner, after v324: the sheets
+   mock, A, "All yes"). The Pad | Flip switch was a lilac track that ran into
+   the lilac paper, and Theme, Tips, Canvas and New's shapes kept the old grey
+   one: two looks for one control. Each track is now a card with the lilac
+   edge, like the tiles beside it; the one pill still says which is chosen. */
+:is(.menu-sheet, .flip-menu) .seg { background: var(--menu-card); border-color: var(--menu-card-line); }
+/* An open section of Ask's answers continues its card: it was the grey of
+   the old glass, not the paper's. */
+.accordion-body { background: var(--menu-card); }
+.report-sheet .panel-btn { border-radius: var(--r-control); }
 /* HOW IT WORKS ON THE MENU'S PAPER (owner, after v323: "you never fixed the
    top? And the colors are looking bad on the all, start, tools"). It is a sheet
    the menu opens, so it wears the menu's paper and cards, as WORKING-AGREEMENTS
@@ -7567,7 +7593,7 @@ body.stroking .toolbar, body.stroking .flip-tools {
 .ask-best-t { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
 .ask-best-sub { margin: 0; font-size: 14px; color: var(--text-secondary); }
 .ask-best-do { display: flex; gap: 10px; margin-top: 12px; }
-.ask-go { flex: 1; min-height: 48px; padding: 0 18px; border: 0; border-radius: 14px; background: var(--accent-fill); color: #fff;
+.ask-go { flex: 1; min-height: 48px; padding: 0 18px; border: 0; border-radius: var(--r-control); background: var(--accent-fill); color: #fff;
   font: inherit; font-size: 16px; font-weight: 650; cursor: pointer; }
 .ask-go.quiet { background: var(--menu-card); color: var(--text-primary); border: 1px solid var(--menu-card-line); }
 .ask-answer { padding: 4px 18px 40px; }
@@ -8179,7 +8205,6 @@ body.replaying .media-card { pointer-events: none; }
   --menu-card-line:          rgba(124, 92, 255, 0.34);
   --menu-card-rule:          rgba(80, 60, 170, 0.10);
   --menu-card-drop:          0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
-  --menu-track:              rgba(124, 92, 255, 0.11);
   /* AA on what is actually painted behind it: #5b3be6 was 4.37:1 on the tint
      over the drawers' track, under the unselected label's 4.99. One step
      deeper in the same hue is 4.84:1 there and 4.5 on the darkest light ground
@@ -8542,7 +8567,7 @@ body.replaying .media-card { pointer-events: none; }
 .bk-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px 4px; }
 .bk-kick { font-size: 13px; font-weight: 700; color: var(--accent-ink); }
 .bk-body { flex: 1; min-height: 0; overflow: auto; padding: 6px 18px 0; touch-action: pan-y; }
-.bk-pic { border-radius: 18px; overflow: hidden; background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); }
+.bk-pic { border-radius: var(--r-card); overflow: hidden; background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); }
 .bk-pic[hidden] { display: none; }
 .bk-pic .lc-stage { aspect-ratio: 4 / 3; border-radius: 0; }
 .bk-pic .lc-phone { height: 300px; border-radius: 0; }
@@ -8556,7 +8581,7 @@ body.replaying .media-card { pointer-events: none; }
 .bk-dots { display: flex; gap: 6px; flex: 1; }
 .bk-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--menu-card-line); transition: width .2s var(--ease); }
 .bk-dots i.on { width: 20px; border-radius: 4px; background: var(--accent-fill); }
-.bk-back, .bk-next { min-height: 48px; border-radius: 14px; font: inherit; font-size: 16px; font-weight: 650; cursor: pointer; }
+.bk-back, .bk-next { min-height: 48px; border-radius: var(--r-control); font: inherit; font-size: 16px; font-weight: 650; cursor: pointer; }
 .bk-back { padding: 0 16px; border: 1px solid var(--menu-card-line); background: var(--menu-card); color: var(--text-primary); }
 .bk-back[hidden] { display: none; }
 .bk-next { padding: 0 22px; border: 0; background: var(--accent-fill); color: #fff; }

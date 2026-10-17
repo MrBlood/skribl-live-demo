@@ -111,7 +111,8 @@ CENSUS = r"""(root) => {
     r: cs.borderTopLeftRadius, blur: cs.backdropFilter }; };
   const cards = {};
   for (const sel of ['.menu-tile', '.menu-list', '.seg', '.sdrafts-row', '.sdrafts-files', '.sdrafts-this', '.learn-card', '.ask-row', '.ask-tour', '.ask-best-card',
-                     '.help-tip', '.help-search', '.export-opt', '.tune-row', '.post-card']) {
+                     '.help-tip', '.help-search', '.export-opt', '.tune-row', '.post-card', '.ask-list', '.accordion-header', '.post-preview',
+                     '.bk-pic', '.ask-go', '.menu-start', '.export-nameinput', '.post-input', '.bk-back']) {
     const el = [...R.querySelectorAll(sel)].find(e => e.getClientRects().length);
     if (el) cards[sel] = s(el);
   }
@@ -316,6 +317,35 @@ for scheme in ("light", "dark"):
     check(f"{scheme}: every sheet the menu opens is one paper ({len(grounds)} read)",
           len(grounds) >= (2 if ONLY else 22) and len(set(grounds.values())) == 1,
           "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(grounds.items())))
+
+    # ONE LOOK ON THE PAPER (owner, after v324: the sheets mock, "All yes").
+    # Every pick-one track on the menu's sheets (the Pad | Flip switch, New's
+    # shapes, Theme, Tips, Canvas) and Export's options are the menu's white
+    # card, the colour of the tiles; and each kind of thing has one corner:
+    # a sheet 22, a card 16, a button or field 12.
+    tile = ((census.get(("Pad", scheme, "the menu")) or {}).get("cards", {}).get(".menu-tile") or {}).get("bg")
+    cardlike = {(n, l, sel): census[(n, sc, l)]["cards"][sel]["bg"] for (n, sc, l) in census
+                for sel in (".seg", ".export-opt")
+                if sc == scheme and l in ("the menu", "New", "Settings", "Export") and census[(n, sc, l)]
+                and sel in census[(n, sc, l)]["cards"]}
+    check(f"{scheme}: every choice on the menu's sheets, and Export's options, is a white card like the menu's tiles ({len(cardlike)} read)",
+          bool(tile) and len(cardlike) >= (1 if ONLY else 8) and set(cardlike.values()) == {tile},
+          f"tile {tile}; " + "; ".join(f"{n} {l} {sel}: {v}" for (n, l, sel), v in sorted(cardlike.items()) if v != tile))
+    KIND = {".menu-tile": "16px", ".menu-list": "16px", ".sdrafts-this": "16px", ".sdrafts-files": "16px", ".learn-card": "16px",
+            ".ask-tour": "16px", ".ask-best-card": "16px", ".ask-list": "16px", ".help-tip": "16px", ".accordion-header": "16px",
+            ".export-opt": "16px", ".post-preview": "16px", ".bk-pic": "16px",
+            ".seg": "12px", ".help-search": "12px", ".ask-go": "12px", ".menu-start": "12px", ".export-nameinput": "12px",
+            ".post-input": "12px", ".bk-back": "12px"}
+    off, seen = [], 0
+    for (n, sc, l), cz in census.items():
+        if sc != scheme or l not in PAPER or not cz:
+            continue
+        seen += 1
+        if cz["sheet"]["r"] != "22px":
+            off.append(f"{n} {l} sheet {cz['sheet']['r']}")
+        off += [f"{n} {l} {sel} {v['r']}" for sel, v in cz["cards"].items() if sel in KIND and v["r"] != KIND[sel]]
+    check(f"{scheme}: one corner per kind on the menu's sheets: a sheet 22, a card 16, a button or field 12 ({seen} sheets read)",
+          seen >= (1 if ONLY else 22) and not off, "; ".join(sorted(set(off)))[:400])
 
 print("\nEach surface's own colours, for reading side by side")
 for (name, scheme, label), cz in sorted(census.items(), key=lambda kv: (kv[0][1], kv[0][2], kv[0][0])):
