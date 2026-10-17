@@ -5510,6 +5510,10 @@ a.player-btn { text-decoration: none; }
 #padLine.in-bar:not(.open) .rl-skip { display: none; }
 #padLine .rl-chips[hidden] { transform: translateY(4px); }
 body.replaying .autosave-status { opacity: 0; pointer-events: none; }
+/* ...and while a button's card is open (lib/learncard.js): with a song just
+   loaded, "Saved" sat on the card's title and first line (verify_contrast's
+   7:1 row read it at 6.85, after v324). Pad and Flip share it. */
+body:has(.lc-card:not([hidden])) .autosave-status { opacity: 0; pointer-events: none; }
 
 .player-cta {
   display: inline-flex;
