@@ -722,8 +722,10 @@ with sync_playwright() as sp:
                  title: document.title, h1: (document.getElementById('whoName') || {}).textContent,
                  menu: g ? g.getAttribute('aria-controls') : null, make: m ? m.getAttribute('href') : null,
                  gh: h(g), mh: h(m), ghost: !!document.querySelector('.top .ghost') }; }""")
-    check("the bar says library, and the page is named Your Skribl Library",
-          head["tag"] == "library" and head["label"] == "Your Skribl Library"
+    # No word beside the mark since v324 (owner: the heading says it); the
+    # lockup still names the page to a screen reader.
+    check("the lockup names the page, and the page is named Your Skribl Library",
+          head["tag"] is None and head["label"] == "Your Skribl Library"
           and head["title"] == "Your Skribl Library" and head["h1"] == "Your Skribl Library", str(head))
     check("Make one and the page menu are in the bar, Make one pointing at the Pad",
           head["menu"] == "pageMenu" and (head["make"] or "").endswith("/skribl-pad") and not head["ghost"],

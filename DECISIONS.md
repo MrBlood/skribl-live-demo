@@ -18402,3 +18402,39 @@ glass header card, as the editors' page is; lilac paper is for what rises
 verify_galib holds every word on both pages to 7:1 on real pixels, phone and
 desk, both themes; shown red on the pages before (4.83 to 6.72). Its library
 Play row accepts the card's own ground as neutral, still refusing an accent.
+
+## After v324 -- the header, a band when anything is under it
+
+The owner, from the iPhone: the Gallery's header "kind of looks indented since
+there is text below it. Kind of redundant text", then of Pad zoomed in, its
+stroke showing above and around the pinned header card: "I def don't like the
+look of the stuff showing under top bar". From the mock, C, "All yes", on all
+four pages.
+
+- At rest nothing changes on Pad and Flip: no card, the controls on the page.
+  The Gallery and Library now match them: no card at rest, the mark lined up
+  with the page's own text (the card's padding had set it 14px in), the
+  page's word beside the mark gone (the heading under it says it; the lockup
+  still names the page to a screen reader), and the ⋯ without its ring, as
+  the editors' ⋯.
+- Once anything is under the header (the page scrolled, or the drawing behind
+  it), its ground is a BAND, not a floating card: one strip in the page's own
+  colour from the top of the screen to just under the controls, the full
+  width, with a hairline along its foot. Nothing shows above it, beside it or
+  through it, and the controls do not move. Drawn as two spread shadows
+  clipped to the strip, so the page gains no width.
+- Kind, never jumpy: at rest the band's shadows are already there,
+  transparent, at full size, so it fades in by colour alone (0.25s) and never
+  grows out of the controls; its clip goes on at once and comes off only
+  after the fade out, so a fading band never paints over the page below.
+- Gallery and Library are full pages Skribl draws, also under skribls.net
+  (docs/INTEGRATION.md), so this header is their top bar there too. Wrapping
+  them in the site's own layout is a separate change for when the site is
+  ready.
+
+verify_ux reads Pad and Flip's band as paint (above and beside the header,
+only the page's ground) and its fade on every frame (size constant, colour
+passing through, never unclipped while painting); red on the floating card,
+on a band that grows, and on one whose clip comes off at once. verify_galib
+does the same for the Gallery and Library, and holds the header at rest to no
+card with the mark on the text's edge; red on the old header (82/94).

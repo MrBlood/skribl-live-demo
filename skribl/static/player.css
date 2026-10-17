@@ -1846,6 +1846,20 @@ a.player-btn { text-decoration: none; }
      no backdrop-filter has no blurred layer to leave stale. */
   .header { background: rgb(var(--surface-well-2-rgb));
             -webkit-backdrop-filter: none; backdrop-filter: none; }}
+/* THE GROUND IS A BAND, NOT A CARD (owner, after v324: "I def don't like the
+   look of the stuff showing under top bar"; the mock, C, "All yes"). The
+   floating card left the drawing showing in the gap above it and around its
+   corners. Its ground is now one strip in the page's own colour from the top
+   of the screen to just under the controls, the full width, with a hairline
+   along its foot; the controls do not move. Drawn as two spread shadows,
+   clipped to that band: a shadow adds nothing to the page's scroll width,
+   which a wide box would. The Gallery and Library wear the same band
+   (pagemenu.css .top.scrolled).
+   KIND, NEVER JUMPY: at rest the two shadows are already there, transparent,
+   at full size, so only their colour fades (0.25s) and the band never grows
+   out of the controls. The clip goes on at once and comes off only after the
+   fade out, so a fading band never paints past its strip. */
+:root { --band-off: 0 0 0 100vmax transparent, 0 1px 0 100vmax transparent; }
 
 /* ===================================================================
    Apple header polish (v75): Record keeps its label (sheds when tight),

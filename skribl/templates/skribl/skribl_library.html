@@ -590,7 +590,6 @@
        first ink. The action purple is the app's, shared with the editors. */
     :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; }
     :root[data-theme="light"] { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; }
-    .brand .tag { color: var(--text); }
     .seg-track { background: var(--card); border-color: var(--card-line); }
     /* The library's name is a title and one line, as the gallery's: the card
        it sat in was one more box around words. */
@@ -632,7 +631,6 @@
     {# The same lockup as the gallery's, markup and rules (pagemenu.css). #}
     <div class="brand" role="img" aria-label="Your Skribl Library">
       {% include 'skribl/_skribl_brand_mark.html' %}
-      <span class="tag">library</span>
     </div>
     <div class="spacer"></div>
     {# The editor, and the page menu (v314). Until the v304 proofread nothing

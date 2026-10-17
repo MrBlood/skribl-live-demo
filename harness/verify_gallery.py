@@ -1655,16 +1655,14 @@ with sync_playwright() as _spa:
     #
     # `text-decoration-line` and not the shorthand: the shorthand resolves to
     # a string carrying the colour and style too, which move with the theme.
+    # The page's word beside the mark is gone since v324 (owner: the heading
+    # under it already says it); the link is still asked for its underline.
     _brand = _pa.evaluate("""() => {
         const b = document.querySelector('.brand');
-        const t = b && b.querySelector('.tag');
-        if (!b || !t) return { missing: true };
-        return { tag: t.textContent.trim(),
-                 brand: getComputedStyle(b).textDecorationLine,
-                 word: getComputedStyle(t).textDecorationLine }; }""")
-    check("the wordmark carries no underline, on either the link or the word",
-          not _brand.get("missing") and _brand["brand"] == "none"
-          and _brand["word"] == "none",
+        if (!b) return { missing: true };
+        return { brand: getComputedStyle(b).textDecorationLine, word: !!b.querySelector('.tag') }; }""")
+    check("the wordmark carries no underline, and no word beside the mark repeats the heading",
+          not _brand.get("missing") and _brand["brand"] == "none" and not _brand["word"],
           f"{_brand} \u2014 an <a> with no `text-decoration` is underlined by the "
           f"browser, and the library's lockup is a <div> that never was")
 

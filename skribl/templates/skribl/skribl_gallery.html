@@ -696,7 +696,6 @@
        first ink. The action purple is the app's, shared with the editors. */
     :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; --danger: #ff7a9c; }   /* Report on a tile's menu, over the card: 4.49 */
     :root[data-theme="light"] { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; }
-    .brand .tag { color: var(--text); }
     .seg-track { background: var(--card); border-color: var(--card-line); }
     .tile { background: var(--card); border-color: var(--card-line); box-shadow: var(--card-drop); --bg-elev: var(--card); }
     .find input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
@@ -717,7 +716,6 @@
   <header class="top">
     <a class="brand" href="{{ url_for('.skribl_editor') }}" aria-label="Skribl">
       {% include 'skribl/_skribl_brand_mark.html' %}
-      <span class="tag">gallery</span>
     </a>
     <span class="spacer"></span>
     {# THE ••• REPLACED "Yours" (v314). The profile is a row in the page menu

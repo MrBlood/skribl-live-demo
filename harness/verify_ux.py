@@ -3179,8 +3179,12 @@ _GROUND = """(dock) => { const h = document.querySelector('.header'), t = docume
     const hc = getComputedStyle(h), tc = getComputedStyle(t), b = document.getElementById('tuneBtn').getBoundingClientRect();
     const at = document.elementFromPoint(b.left + 3, b.top + b.height / 2);
     const a = (c) => { const m = c.match(/[\\d.]+/g); return !m ? 0 : (m.length > 3 ? +m[3] : 1); };
-    return { over: h.classList.contains('over-canvas'), hFill: a(hc.backgroundColor), hShadow: hc.boxShadow !== 'none',
-             dFill: a(tc.backgroundColor), dShadow: tc.boxShadow !== 'none', scrolled: Math.round(scrollY),
+    // A shadow PAINTS only if one of its colours does: at rest the header
+    // already carries its band's two shadows, transparent, so the band can
+    // fade in by colour alone (styles.css, THE GROUND IS A BAND).
+    const paints = (s) => s !== 'none' && (s.match(/rgba?\\([^)]*\\)/g) || []).some(c => a(c) > 0);
+    return { over: h.classList.contains('over-canvas'), hFill: a(hc.backgroundColor), hShadow: paints(hc.boxShadow),
+             dFill: a(tc.backgroundColor), dShadow: paints(tc.boxShadow), scrolled: Math.round(scrollY),
              tuneOnHeader: !!at && h.contains(at) }; }"""
 with sync_playwright() as _gp:
     _gb = waits.instrument(_gp.chromium.launch())
@@ -3204,6 +3208,24 @@ with sync_playwright() as _gp:
                   _o["scrolled"] > 0 and _o["over"] and _o["hFill"] == 1 and _o["tuneOnHeader"], str(_o))
             check(f"{_route} {_theme}: ...while the dock still paints none",
                   _o["dFill"] == 0 and not _o["dShadow"], str(_o))
+            # THE GROUND IS A BAND (owner, after v324: "I def don't like the look
+            # of the stuff showing under top bar"). The floating card left the
+            # drawing showing in the gap above it and beside its corners. Read
+            # as PAINT, once the fade is done: above the header, and beside it
+            # on both sides, every pixel is the page's own ground.
+            _g.wait_for_timeout(500)
+            _hb = _g.evaluate("""() => { const r = document.querySelector('.header').getBoundingClientRect(), i = document.createElement('i');
+                i.style.color = 'var(--surface-deep)'; document.body.appendChild(i); const g = getComputedStyle(i).color; i.remove();
+                return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, vw: innerWidth, ground: g }; }""")
+            _im = _Img.open(_io.BytesIO(_g.screenshot())).convert("RGB")
+            _want = tuple(int(float(v)) for v in _re.findall(r"[\d.]+", _hb["ground"])[:3])
+            _ys = range(int(_hb["top"]) + 4, int(_hb["bottom"]) - 4)
+            _strip = ([(x, y) for y in range(0, max(1, int(_hb["top"]))) for x in range(0, _hb["vw"], 3)]
+                      + [(x, y) for y in _ys for x in range(0, max(1, int(_hb["left"]) - 1))]
+                      + [(x, y) for y in _ys for x in range(int(_hb["right"]) + 1, _hb["vw"])])
+            _off = max(max(abs(a - b_) for a, b_ in zip(_im.getpixel(xy), _want)) for xy in _strip)
+            check(f"{_route} {_theme}: ...and its ground is a band: above the header and beside it, only the page's ground",
+                  _off <= 6, f"{len(_strip)} pixels read, the most off by {_off}/255 from {_want}; header {_hb}")
             # SCROLLED PAST THE DRAWING (owner's iPhone, after v321): at the
             # end of a long drawer the drawing has gone above the header and
             # the dock and the drawer are what is under it. The ground stayed
@@ -3265,6 +3287,44 @@ with sync_playwright() as _gp:
     check("/skribl-pad desktop: the header and the dock paint no card",
           not _d["over"] and _d["hFill"] == 0 and _d["dFill"] == 0, str(_d))
     _gb.close()
+
+print("\nTHE BAND FADES — read on every frame, it changes colour only")
+# KIND TRANSITIONS, NEVER JUMPY (WORKING-AGREEMENTS). The header's band is two
+# spread shadows clipped to a strip. Read on every animation frame as it comes
+# and goes: the shadows keep their size (the band never grows out of the
+# controls), their colour passes through in-between values (a fade, not a
+# snap), and while any of it paints, the clip is on (a fading band never
+# paints over the page below). Pad and Flip share the rule; Pad is read, and
+# the Gallery's band (pagemenu.css) is read the same way in verify_galib.
+BAND_FRAMES = """(on) => new Promise(done => { const h = document.querySelector('.header'), out = [];
+    h.classList.toggle('over-canvas', on); let n = 0;
+    const f = () => { const c = getComputedStyle(h); out.push([c.boxShadow, c.clipPath]); if (++n < 30) requestAnimationFrame(f); else done(out); };
+    requestAnimationFrame(f); })"""
+def band_frames(frames):
+    """[(spreads, max alpha, clipped)] per frame, from computed box-shadow and clip-path."""
+    rows = []
+    for shadow, clip in frames:
+        parts = _re.findall(r"(rgba?\([^)]*\))\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px", shadow)
+        alphas = [float(c.split(",")[3].rstrip(")")) if c.startswith("rgba") else 1.0 for c, *_ in parts]
+        rows.append((tuple(round(float(p[4])) for p in parts), max(alphas or [0.0]), "-1px" in clip))
+    return rows
+with sync_playwright() as _bp:
+    _bb = _bp.chromium.launch()
+    for _theme in ("light", "dark"):
+        _bc = _bb.new_context(viewport={"width": 390, "height": 664}, is_mobile=True, has_touch=True, color_scheme=_theme)
+        _bc.add_init_script(f"try{{localStorage.setItem('skribl_theme_v1','{_theme}')}}catch(e){{}}")
+        _q = _bc.new_page()
+        browsing.goto(_q, BASE, "/skribl-pad"); waits.settle(_q, 900)
+        for _on, _way in ((True, "in"), (False, "out")):
+            _rows = band_frames(_q.evaluate(BAND_FRAMES, _on))
+            _sizes = {r[0] for r in _rows}
+            _mid = [r for r in _rows if 0.02 < r[1] < 0.98]
+            _bare = [i for i, r in enumerate(_rows) if r[1] > 0.01 and not r[2]]
+            check(f"Pad {_theme}: the band fades {_way} by colour alone, never growing, never painting unclipped",
+                  len(_sizes) == 1 and min(next(iter(_sizes)) or (0,)) >= 300 and len(_mid) >= 3 and not _bare,
+                  f"sizes {sorted(_sizes)[:3]}, {len(_mid)} in-between frames, unclipped painting frames {_bare[:5]}")
+        _bc.close()
+    _bb.close()
 
 print("\nTHE HEADER SETTLES — an idle Pad asks for no frames, and a replay asks for its own")
 # THE PAD'S HEADER WAS FITTING ITSELF FOREVER. initBrandFit() snaps the button

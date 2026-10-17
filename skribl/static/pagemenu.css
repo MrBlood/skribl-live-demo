@@ -81,43 +81,42 @@
    into view behind the card is a focus nobody can see. */
 html { scroll-padding-top: 96px; }
 
-/* ---- THE HEADER CARD: the Pad's, on both pages ---------------------------
-   Floating, frosted, rimmed, 16 corner, and sticky so the way to make one and
-   the menu stay in reach. On a phone it is SOLID, as the Pad's is (v317):
-   pinned over moving content, a blur is the thing WebKit fails to repaint. */
+/* ---- THE HEADER: the Pad's, on both pages ---------------------------------
+   Sticky, so the way to make one and the menu stay in reach. NO CARD AT REST
+   (owner, after v324: the mock, C, "All yes"): the controls sit on the page,
+   the mark lined up with the page's own text below it. The card's padding had
+   put it 14px further in, which read as indented under "Public gallery". */
 .top {
   position: sticky; top: 12px; z-index: 40;
   display: flex; align-items: center; gap: 12px;
-  margin: 0 0 18px; padding: 10px 10px 10px 18px;
-  border-radius: 16px;
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  box-shadow: var(--glass);
+  margin: 0 0 18px; padding: 10px 0;
+  background: transparent; box-shadow: var(--band-off);
+  clip-path: inset(-100vmax);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, clip-path 0s linear 0.25s;
 }
 .top .spacer { flex: 1; }
-/* SCROLLED, THE CARD SITS ON THE PAGE'S OWN GROUND (owner, v318: the page's
-   title read through the pinned glass, and the card under it showed in the gap
-   above). A shadow spread past the window and clipped to a band -- from the
-   window's top to just under the card -- in --base, the page's ground. Not a
-   ::before: inside the card's stacking context that paints OVER its glass.
-   Only once scrolled (lib/pagemenu.js), when the ground's glow has scrolled
-   away with the page, so the band never covers it. verify_galib. */
+/* SCROLLED, A BAND IN THE PAGE'S OWN GROUND, the editors' (styles.css, THE
+   GROUND IS A BAND): from the top of the window to just under the controls,
+   the full width, a hairline along its foot. Two spread shadows clipped to
+   that strip, so nothing scrolled under the header shows above it, beside it
+   or through it (v318, and the owner after v324), and the page gains no
+   width. At rest the shadows are there and transparent, so only their colour
+   fades; the clip comes off after the fade out (lib/pagemenu.js marks
+   .scrolled). verify_galib. */
+:root { --band-off: 0 0 0 100vmax transparent, 0 1px 0 100vmax transparent; }
 .top.scrolled {
-  box-shadow: var(--glass), 0 0 0 100vmax var(--base);
-  clip-path: inset(-12px -100vmax -14px -100vmax);
-  /* A shadow never paints under its own box, so the card's middle still saw
-     the page: its glass is laid over the ground instead -- the same colour it
-     shows at rest over an empty page, now opaque to what scrolls below. */
-  background: linear-gradient(var(--glass-fill), var(--glass-fill)), var(--base);
+  background: var(--base);
+  box-shadow: 0 0 0 100vmax var(--base), 0 1px 0 100vmax var(--hairline);
+  clip-path: inset(-100vmax -100vmax -1px -100vmax);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, clip-path 0s;
 }
 @media (max-width: 640px) {
-  .top { top: 6px; padding: 8px 8px 8px 14px; background: var(--glass-solid);
-    -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .top.scrolled { clip-path: inset(-6px -100vmax -14px -100vmax); background: var(--glass-solid); }
+  .top { top: 6px; padding: 8px 0; }
 }
 
 /* ---- THE ONE LOCKUP ------------------------------------------------------
-   Mark 24, the page's word 700 / 11 / .16em, Make one 600 / 13. The two pages
+   Mark 24 and Make one 600 / 13; the page's word beside the mark is gone
+   (owner, after v324: the heading under it already says it). The two pages
    drew it two ways (a 21px mark and a 12px word at .2em beside a 24px mark
    and an 11px word), so the brand changed size as you moved between them.
    min-height 44: on the gallery the lockup is a link, and a 24px mark is not
@@ -131,8 +130,6 @@ html { scroll-padding-top: 96px; }
    (v294, from a phone; verify_library reads the computed stops). */
 .brand-grad-a { stop-color: var(--accent); }
 .brand-grad-b { stop-color: var(--accent-2); }
-.brand .tag { font-weight: 700; letter-spacing: .16em; font-size: 11px;
-  text-transform: uppercase; color: var(--text-2); padding-top: 3px; }
 .make {
   display: inline-flex; align-items: center; min-height: 44px;
   padding: 0 16px; border-radius: 999px; text-decoration: none;
@@ -151,7 +148,7 @@ html { scroll-padding-top: 96px; }
 /* 360 IS THE DESIGN TARGET AND 320 THE SAFETY NET (START-HERE). The mark,
    its word, Make one and the ••• are wider than 320 inside the card; the word
    is what the page's own heading already says, so it goes first. */
-@media (max-width: 380px) { .brand .tag { display: none; } .top { gap: 8px; } }
+@media (max-width: 380px) { .top { gap: 8px; } }
 
 /* The ••• in each header. Round, 44px, in the header's own hairline -- the
    same weight as the gallery's "Yours" pill it replaced, so the header does
@@ -161,7 +158,7 @@ html { scroll-padding-top: 96px; }
   display: inline-grid; place-items: center;
   width: 44px; height: 44px; padding: 0;
   border-radius: 999px;
-  border: 1px solid var(--hairline);
+  border: 1px solid transparent;   /* no ring, as the editors' ⋯ (owner, after v324) */
   background: transparent; color: var(--text-2);
   cursor: pointer;
 }
