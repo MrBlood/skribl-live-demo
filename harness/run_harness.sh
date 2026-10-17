@@ -313,8 +313,13 @@ for suite in "$@"; do
   # setsid puts the suite in its own process group; -k sends KILL if TERM is
   # ignored; and on a timeout the whole group is torn down so nothing is left
   # holding the pipe or a port.
+  # verify_contrast reads every word on every sheet and drawer, both editors,
+  # both themes, phone and desk; since the drawers joined it (v324) it takes
+  # longer than 600s on CI, so it alone has a longer budget.
+  budget=600
+  [ "$suite" = "verify_contrast.py" ] && budget=1500
   t0="$(date +%s%N)"
-  setsid timeout -k 15 600 python3 "$suite" >"$log" 2>&1 &
+  setsid timeout -k 15 "$budget" python3 "$suite" >"$log" 2>&1 &
   suite_pid=$!
   wait "$suite_pid"
   rc=$?
@@ -323,7 +328,7 @@ for suite in "$@"; do
 $suite $((t_tenths / 10)).$((t_tenths % 10))"
   if [ "$rc" -ge 124 ]; then
     kill -KILL -"$suite_pid" 2>/dev/null || true
-    echo "  (suite exceeded its 600s budget and its process group was killed)" >>"$log"
+    echo "  (suite exceeded its ${budget}s budget and its process group was killed)" >>"$log"
   fi
   set -e
   cat "$log"

@@ -439,6 +439,9 @@ with sync_playwright() as p:
     # ============================================================= CONTRAST
     print("\nGALIB 6 -- every word inside the glass sheets clears AA on the pixels behind it")
     MENU_TEXT = ['.pm-text', '.pm-sub', '.pm-label', '.pm-version', '.pm-foot-link', '.pm-seg > button']
+    PAGE_TEXT = ['h1', '.sub', '.who .bio', '.stat b', '.stat span', '.brand .tag', '.tile .tt', '.tile .tdn', '.tile .tm',
+                 '.seg-track > button', '.now .lbl', '.pmeta .ptitle', '.pmeta .prow > span', '.kind', '.telapsed',
+                 '.posted-title', '.posted-sub', '.posted-count', '.foot', '.state']
     REPORT_TEXT = ['#reportTitle', '.sheet-card > p', '.reasons legend', '.reason', 'label > .sheet-status',
                    '.sheet-status > span', '.sheet-actions .btn']
     for form, kw in (("desktop", DESK), ("phone", PHONE)):
@@ -447,6 +450,15 @@ with sync_playwright() as p:
             c2 = b.new_context(storage_state=state, color_scheme=theme, **kw)
             for path in ("/gallery", "/library"):
                 pg = open_page(c2, path, theme)
+                # PERFECTLY SHARP (owner, after v324: "consistency simplicity
+                # elegant and perfectly sharp contrast"). Every word on the page
+                # itself reads 7:1 or more against what is behind it, both
+                # inks; the action purple's white words (Make one) are the
+                # app's, shared with the editors, and held to AA with them.
+                res = glass_contrast(pg, PAGE_TEXT, dsf)
+                soft = [x for x in res if x[1] < 7]
+                check(f"{path} {form} {theme}: every word on the page reads 7:1 or more on real pixels ({len(res)} measured)",
+                      len(res) >= 6 and not soft, str(soft[:5]))
                 pg.click("#pageMenuBtn"); pg.wait_for_timeout(700)
                 res = glass_contrast(pg, MENU_TEXT, dsf)
                 bad = [x for x in res if x[1] < x[2]]
@@ -498,10 +510,13 @@ with sync_playwright() as p:
     for theme in ("dark", "light"):
         pg = open_page(ctx, "/library", theme)
         pl = pg.evaluate("""() => { const cs = getComputedStyle(document.getElementById('btnPlay'));
-          return { img: cs.backgroundImage, shadow: cs.boxShadow, bg: cs.backgroundColor, ink: cs.color }; }""")
+          return { img: cs.backgroundImage, shadow: cs.boxShadow, bg: cs.backgroundColor, ink: cs.color,
+                   card: getComputedStyle(document.querySelector('.player')).backgroundColor }; }""")
         rgb = _rgba(pl["bg"])[0]
-        check(f"/library {theme}: Play has no accent gradient, no glow, and a neutral ground",
-              pl["img"] == "none" and pl["shadow"] == "none" and max(rgb) - min(rgb) < 24, str(pl))
+        # NEUTRAL: grey, or the card it sits on (after v324 the player's
+        # controls are the card's white, the app's card, as the editors').
+        check(f"/library {theme}: Play has no accent gradient, no glow, and a neutral ground (grey, or its card's)",
+              pl["img"] == "none" and pl["shadow"] == "none" and (max(rgb) - min(rgb) < 24 or pl["bg"] == pl["card"]), str(pl))
         pg.close()
 
     phone.close()

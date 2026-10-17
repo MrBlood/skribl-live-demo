@@ -45,12 +45,12 @@
       --hairline: rgba(255,255,255,0.09);
       --text: #eef1f6;
       --text-2: #aab3c2;
-      --text-3: #7d8799;      /* 5.0:1 on a tile, 5.4:1 on the page (v321 preflight, PF-009: #6b7688 was 3.9:1) */
+      --text-3: var(--text-2);   /* TWO INKS (after v324): the third grey, #7d8799, was 5.0:1 */
       --accent: #7c5cff;
       --accent-2: #5b8cff;
       --accent-fill: #6d4cf0;   /* a fill carrying words: AA with white (styles.css) */
       --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --font-mono: var(--font-ui);   /* the app's sans (after v324): monospace read as inspected */
       /* tooltip.css's three names, on this palette — the same shape the
          profile uses for posted.css's vocabulary. */
       --surface-control-hover: var(--control-hi);
@@ -79,7 +79,7 @@
       --hairline: rgba(0,0,0,0.12);
       --text: #14171d;
       --text-2: #4b5563;
-      --text-3: #6b7280;
+      --text-3: var(--text-2);   /* TWO INKS: #6b7280 was 4.8:1 */
       --hairline-strong: rgba(0,0,0,0.18);
       --danger: #c1104a;
     }
@@ -669,6 +669,37 @@
     .more-wrap { display: flex; justify-content: center; margin-top: 22px; }
     .foot { margin-top: 34px; text-align: center; color: var(--text-3); font-size: 12.5px; }
     .foot a { color: var(--text-2); }
+
+    /* ---- ONE LOOK WITH THE EDITORS (owner, after v324: "What should gallery/
+       library look like in keeping with the rest of the app? I want
+       consistency simplicity elegant and perfectly sharp contrast"; "go ahead
+       with your choices"). The page stays the plain ground with the glass
+       header card, as the editors' page is; lilac paper is for what rises.
+       What sits on the page is the editors' parts: a card is the menu's white
+       card with its lilac edge and drop, a choice is a track on that card, a
+       field is Ask's white field. TWO INKS: --text-3 is --text-2 (above), 7.1
+       to 7.6:1 on the page and the cards in both themes, and the monospace
+       capitals are the app's own sans in sentence case. */
+    :root {
+      --card: #231e3b;
+      --card-line: rgba(167, 146, 255, 0.12);
+      --card-drop: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+    }
+    :root[data-theme="light"] {
+      --card: #ffffff;
+      --card-line: rgba(124, 92, 255, 0.34);
+      --card-drop: 0 1px 2px rgba(60, 40, 140, 0.08), 0 6px 18px rgba(60, 40, 140, 0.09);
+    }
+    /* SHARP: the second ink one step further from the ground than the
+       editors' (7:1 and up on the page, the cards and a lit row), the
+       switches' words in it, and the page's name beside the mark in the
+       first ink. The action purple is the app's, shared with the editors. */
+    :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; --danger: #ff7a9c; }   /* Report on a tile's menu, over the card: 4.49 */
+    :root[data-theme="light"] { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; }
+    .brand .tag { color: var(--text); }
+    .seg-track { background: var(--card); border-color: var(--card-line); }
+    .tile { background: var(--card); border-color: var(--card-line); box-shadow: var(--card-drop); --bg-elev: var(--card); }
+    .find input { background: var(--card); border-color: var(--card-line); border-radius: 12px; }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
