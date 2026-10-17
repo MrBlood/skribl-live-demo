@@ -16,8 +16,10 @@ PAINTED or DRIVEN question, never "a style changed":
   DELETE FLOWS    the draft bin asks without moving and without a timer race,
                   on the library and on the editors' sheet; a posted Delete
                   holds its arm past the four seconds it used to give.
-  MENU            glass (a real backdrop-filter, the chosen fill), a popover
-                  under the ••• on a desktop, a full-bleed sheet on a phone.
+  MENU            the editors' paper (after v324: solid, the same paper,
+                  white cards with the lilac edge, read off the Pad's own
+                  menu), a popover under the ••• on a desktop, a full-bleed
+                  sheet on a phone.
   HEADER          one glass card, sticky, on both pages; ONE lockup whose
                   measured values agree across the two; nothing overflows 390.
   REPORT SHEET    a bottom sheet with a grab bar on a phone, a centred card on
@@ -321,26 +323,44 @@ with sync_playwright() as p:
     pg.close()
 
     # ================================================================ MENU
-    print("\nGALIB 3 -- the page menu is the Pad's glass: a popover on a desktop, a sheet on a phone")
+    print("\nGALIB 3 -- the page menu is the editors' menu: their paper and cards, a popover on a desktop, a sheet on a phone")
+    # THE EDITORS' PAPER (after v324: the Gallery and Library menu mock, A,
+    # "All yes"). It was the Pad's glass; the editors' menu moved to solid
+    # lilac paper with white cards after v323, and this one now wears the
+    # same, read here off the Pad's own menu in the same theme, not typed.
     MENU = """() => { const s = document.getElementById('pageMenu'), b = document.getElementById('pageMenuBtn');
       const sr = s.getBoundingClientRect(), br = b.getBoundingClientRect(), cs = getComputedStyle(s);
       const scrim = getComputedStyle(document.getElementById('pageMenuOverlay'), '::before');
+      const l = s.querySelector('.pm-list'), lc = l ? getComputedStyle(l) : null, t = s.querySelector('.pm-seg');
       return { right: sr.right - br.right, gap: sr.top - br.bottom, w: sr.width, left: sr.left,
                bottom: innerHeight - sr.bottom, vw: innerWidth, bf: cs.backdropFilter, bg: cs.backgroundColor,
-               shadow: cs.boxShadow, weight: getComputedStyle(s.querySelector('.pm-item')).fontWeight,
+               r: cs.borderTopLeftRadius, pad: cs.paddingTop,
+               card: lc && lc.backgroundColor, line: lc && lc.borderTopColor, cardR: lc && lc.borderTopLeftRadius,
+               places: l ? l.querySelectorAll('a[data-dest]').length : 0, track: t && getComputedStyle(t).backgroundColor,
+               weight: getComputedStyle(s.querySelector('.pm-item')).fontWeight,
                scrim: scrim.backgroundColor, scrimBf: scrim.backdropFilter }; }"""
-    for path in ("/gallery", "/library"):
-        for theme, alpha in (("dark", 0.78), ("light", 0.9)):
+    PAD = """() => { const m = document.getElementById('menuSheet'), l = m.querySelector('.menu-list'), t = m.querySelector('.menu-editor-seg');
+      return { bg: getComputedStyle(m).backgroundColor, card: getComputedStyle(l).backgroundColor,
+               line: getComputedStyle(l).borderTopColor, track: getComputedStyle(t).backgroundColor }; }"""
+    for theme in ("dark", "light"):
+        pg = open_page(ctx, "/skribl-pad", theme)
+        pg.evaluate("() => document.getElementById('menuBtn').click()"); pg.wait_for_timeout(700)
+        pad = pg.evaluate(PAD)
+        pg.close()
+        for path in ("/gallery", "/library"):
             pg = open_page(ctx, path, theme)
             pg.click("#pageMenuBtn"); pg.wait_for_timeout(500)
             m = pg.evaluate(MENU)
-            a = _rgba(m["bg"])[1]
-            check(f"{path} {theme}: the menu is glass -- blur(14px), a {alpha} fill, the rim, 600 rows, a blurred .4 dim",
-                  "blur(14px)" in m["bf"] and abs(a - alpha) < 0.011 and "0px 0px 0px 1px" in m["shadow"]
-                  and m["weight"] == "600" and "blur(2px)" in m["scrimBf"] and abs(_rgba(m["scrim"])[1] - 0.4) < 0.01, str(m))
+            check(f"{path} {theme}: the menu is the editors' paper -- solid, the Pad's paper, its four places one card "
+                  "of the Pad's white with the lilac edge, Theme on that card, 600 rows, a blurred .4 dim",
+                  m["bf"] == "none" and m["bg"] == pad["bg"] and m["places"] == 4 and m["card"] == pad["card"]
+                  and m["line"] == pad["line"] and m["track"] == pad["card"] and m["weight"] == "600"
+                  and "blur(2px)" in m["scrimBf"] and abs(_rgba(m["scrim"])[1] - 0.4) < 0.01, f"{m} pad={pad}")
             if theme == "dark":
-                check(f"{path}: on a desktop it is a 300px popover under the ••• -- right edges flush, 8px below",
-                      abs(m["right"]) <= 1 and abs(m["gap"] - 8) <= 1 and abs(m["w"] - 300) <= 1, str(m))
+                check(f"{path}: on a desktop it is the editors' popover under the ••• -- 336 wide, a 22 corner, "
+                      "12px of room, cards at 16, right edges flush, 8px below",
+                      abs(m["right"]) <= 1 and abs(m["gap"] - 8) <= 1 and abs(m["w"] - 336) <= 1
+                      and m["r"] == "22px" and m["pad"] == "12px" and m["cardR"] == "16px", str(m))
             pg.close()
     phone = b.new_context(storage_state=state, **PHONE)
     for path in ("/gallery", "/library"):
@@ -418,7 +438,7 @@ with sync_playwright() as p:
 
     # ============================================================= CONTRAST
     print("\nGALIB 6 -- every word inside the glass sheets clears AA on the pixels behind it")
-    MENU_TEXT = ['.pm-text', '.pm-sub', '.pm-label', '.pm-version', '.pm-seg > button']
+    MENU_TEXT = ['.pm-text', '.pm-sub', '.pm-label', '.pm-version', '.pm-foot-link', '.pm-seg > button']
     REPORT_TEXT = ['#reportTitle', '.sheet-card > p', '.reasons legend', '.reason', 'label > .sheet-status',
                    '.sheet-status > span', '.sheet-actions .btn']
     for form, kw in (("desktop", DESK), ("phone", PHONE)):

@@ -84,7 +84,8 @@
       });
     });
     // Report a problem: collect with lib/report.js, copy with the one copy
-    // implementation (lib/postedui.js), and say in the row which happened.
+    // implementation (lib/postedui.js), and say under the foot which happened
+    // and what was copied (the link at the foot has no room to say it first).
     var report = sheet.querySelector('[data-pm-report]');
     var reportSays = sheet.querySelector('[data-pm-report-status]');
     if (report && reportSays) {
@@ -93,7 +94,7 @@
         if (!R || !P) { reportSays.textContent = "Couldn't collect the details on this page"; return; }
         P.copyText(R.collect()).then(function (ok) {
           reportSays.textContent = ok
-            ? 'Copied — paste it into your message, with what went wrong'
+            ? 'Copied the details, no drawings — paste them into your message, with what went wrong'
             : "Couldn't copy — your browser blocked the clipboard";
         });
       });
