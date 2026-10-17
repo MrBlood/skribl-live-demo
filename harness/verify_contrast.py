@@ -12,8 +12,9 @@ it did not. This suite does, on Pad and Flip, light and dark, a phone and a
 desk, for each surface a person can open:
 
   the menu (main, New, Settings), Your drafts, Export, Report a problem,
-  Post, How it works (Ask's home, its answers, an answer; lib/ask.js), Tune,
-  a button's card, a Show me step and the name tags (lib/learncard.js).
+  Post, How it works (Ask's home, its answers, an answer; lib/ask.js), the
+  little book and Draw along (lib/book.js, lib/drawalong.js), Tune, a
+  button's card, a Show me step and the name tags (lib/learncard.js).
 
 THE GROUND IS READ FROM PIXELS, NOT STYLES: the surface is photographed once
 with every word made transparent, and each word's ground is the colour
@@ -81,20 +82,24 @@ WORDS = r"""(root) => {
     if (el.closest('[hidden], [aria-hidden="true"], :disabled, [aria-disabled="true"], svg')) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility !== 'visible') continue;
-    let box = null;
-    for (const t of texts) { const r = document.createRange(); r.selectNodeContents(t);
-      for (const q of r.getClientRects()) { if (!q.width || !q.height) continue;
-        box = box ? {l: Math.min(box.l, q.left), t: Math.min(box.t, q.top), r: Math.max(box.r, q.right), b: Math.max(box.b, q.bottom)}
-                  : {l: q.left, t: q.top, r: q.right, b: q.bottom}; } }
-    if (!box || box.r <= 0 || box.b <= 0 || box.l >= innerWidth || box.t >= innerHeight || box.b > floor) continue;
-    // painted, not merely laid out: what is on top at the box's centre is this or inside it
-    const at = document.elementFromPoint((box.l + box.r) / 2, (box.t + box.b) / 2);
-    if (!at || !(el === at || el.contains(at) || at.contains(el))) continue;
+    // EACH LINE OF EACH TEXT ITS OWN BOX. One box round all of an element's
+    // text took in what sat between its lines: main's CI (wider fonts than
+    // this box) wrapped an entry Ask had found, and the box round its first
+    // line and its last reached the lit "loop" between them, so grey words
+    // were read against the lilac of a word they were not on (4.20).
     let op = 1; for (let a = el; a && a.nodeType === 1; a = a.parentElement) op *= parseFloat(getComputedStyle(a).opacity);
     const c = rgb(cs.color);
     const name = el.id ? '#' + el.id : el.tagName.toLowerCase() + (el.classList.length ? '.' + [...el.classList].slice(0, 2).join('.') : '');
-    out.push({ name, text: texts.map(t => t.textContent.trim()).join(' ').slice(0, 28), box,
-               ink: [c[0], c[1], c[2], c[3] * op], px: parseFloat(cs.fontSize), w: parseInt(cs.fontWeight, 10) });
+    for (const t of texts) { const r = document.createRange(); r.selectNodeContents(t);
+      for (const q of r.getClientRects()) { if (!q.width || !q.height) continue;
+        const box = {l: q.left, t: q.top, r: q.right, b: q.bottom};
+        if (box.r <= 0 || box.b <= 0 || box.l >= innerWidth || box.t >= innerHeight || box.b > floor) continue;
+        // painted, not merely laid out: what is on top at the box's centre is this or inside it
+        const at = document.elementFromPoint((box.l + box.r) / 2, (box.t + box.b) / 2);
+        if (!at || !(el === at || el.contains(at) || at.contains(el))) continue;
+        out.push({ name, text: t.textContent.trim().slice(0, 28), box,
+                   ink: [c[0], c[1], c[2], c[3] * op], px: parseFloat(cs.fontSize), w: parseInt(cs.fontWeight, 10) });
+      } }
   }
   return out;
 }"""
@@ -218,6 +223,15 @@ def surfaces(name, ids, q, canvas, btn):
         via(ids["help"], 1200)()
         q.click("#askOften [data-answer]"); q.wait_for_timeout(900)
 
+    def book():
+        via(ids["help"], 1200)()
+        q.click("#askTour"); q.wait_for_timeout(600)
+        q.click("#bkNext"); q.wait_for_timeout(1500)       # the drawing page: Draw along shows
+
+    def along():
+        book()
+        q.click("#bkAlong"); q.wait_for_timeout(1200)
+
     def step():
         answer()
         q.click("#askAnswer .ask-show"); q.wait_for_timeout(1500)
@@ -240,6 +254,7 @@ def surfaces(name, ids, q, canvas, btn):
             ("Ask", via(ids["help"], 1500), "#helpDrawer .help-drawer-inner"),
             ("Ask, its answers", answers, "#helpDrawer .help-drawer-inner"),
             ("Ask, an answer", answer, "#helpDrawer .help-drawer-inner"),
+            ("The little book", book, "#bookRoot .bk"), ("Draw along", along, ".da-pill"),
             ("Tune", tune, "#tuneShell"),
             ("A button's card", card, ".lc-card"), ("A Show me step", step, ".lc-card"),
             ("Name every button", names, ".lc-tags"))
@@ -285,7 +300,7 @@ with sync_playwright() as p:
 # difference is drift), and every sheet the menu opens is the menu's paper.
 print("\nCONSISTENCY")
 PAPER = ("the menu", "New", "Settings", "Your drafts", "Export", "Report a problem", "Post",
-         "Ask", "Ask, its answers", "Ask, an answer")
+         "Ask", "Ask, its answers", "Ask, an answer", "The little book")
 for scheme in ("light", "dark"):
     labels = sorted({k[2] for k in census if k[1] == scheme})
     for label in labels:
@@ -299,7 +314,7 @@ for scheme in ("light", "dark"):
     grounds = {(n, label): census[(n, scheme, label)]["sheet"]["bg"] for (n, sc, label) in census
                if sc == scheme and label in PAPER and census[(n, sc, label)]}
     check(f"{scheme}: every sheet the menu opens is one paper ({len(grounds)} read)",
-          len(grounds) >= (2 if ONLY else 20) and len(set(grounds.values())) == 1,
+          len(grounds) >= (2 if ONLY else 22) and len(set(grounds.values())) == 1,
           "; ".join(f"{n} {l}: {g}" for (n, l), g in sorted(grounds.items())))
 
 print("\nEach surface's own colours, for reading side by side")

@@ -74,7 +74,7 @@
              data-player-js="{{ skribl_asset('inlineplayer.js') }}">
       {# Ask's home: the way in for someone new, the jobs people ask about most
          (lib/ask.js fills them), and the examples, each a real Skribl. #}
-      <button type="button" class="ask-tour" id="askTour" data-tour="{{ 'flip-wave' if is_flip else 'cat' }}"><span class="ask-tour-pic" aria-hidden="true"></span><span class="ask-tour-t">New here?<span class="ask-tour-sub">Watch Skribl in a minute, then try it.</span></span></button>
+      <button type="button" class="ask-tour" id="askTour"><span class="ask-tour-pic" aria-hidden="true"></span><span class="ask-tour-t">New here?<span class="ask-tour-sub">A little book: one idea a page, and you can draw along.</span></span></button>
       <h3 class="ask-k" id="askOftenK">People often ask</h3>
       <div class="ask-list" id="askOften" role="list" aria-labelledby="askOftenK"></div>
       <h3 class="ask-k">Watch an example</h3>
@@ -364,6 +364,31 @@
         <button type="button" class="learn-try" id="learnViewerTry" hidden>Try it</button>
         <button type="button" class="help-close" id="learnViewerClose" data-viewer-close aria-label="Close full screen">{{ mark('close') }}</button>
       </div>
+    </div>
+  </div>
+</div>
+{# THE LITTLE BOOK (lib/book.js; owner, after v323: the little book mock,
+   "Yes to all as long as it's kind"). What Ask's New here? opens: one idea a
+   page, its example playing, Draw along on a drawing page (lib/drawalong.js).
+   Never opens by itself; closing it goes back to How it works. #}
+<div class="bk-root" id="bookRoot" role="dialog" aria-modal="true" aria-labelledby="bkTitle" data-along-cat="{{ skribl_asset('help/demos/cat.json') }}" hidden>
+  <div class="bk-scrim" data-book-close></div>
+  <div class="bk">
+    <div class="bk-handle" aria-hidden="true"></div>
+    <div class="bk-head">
+      <span class="bk-kick" id="bkKick"></span>
+      <button type="button" class="help-close" data-book-close aria-label="Close the little book">{{ mark('close') }}</button>
+    </div>
+    <div class="bk-body">
+      <div class="bk-pic" id="bkPic"></div>
+      <h2 class="bk-t" id="bkTitle"></h2>
+      <p class="bk-s" id="bkLine"></p>
+      <button type="button" class="bk-along" id="bkAlong" hidden>Draw along</button>
+    </div>
+    <div class="bk-foot">
+      <div class="bk-dots" id="bkDots" aria-hidden="true"></div>
+      <button type="button" class="bk-back" id="bkBack">Back</button>
+      <button type="button" class="bk-next" id="bkNext">Next</button>
     </div>
   </div>
 </div>

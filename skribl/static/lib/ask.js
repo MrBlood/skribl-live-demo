@@ -3,7 +3,7 @@
  * 6p). One module for the Pad and Flip.
  *
  * THE FIELD DECIDES THE PAGE. Empty, How it works shows Ask's home: the
- * one-minute tour, what people often ask, the examples to watch and Name
+ * little book (lib/book.js), what people often ask, the examples to watch and Name
  * every button (lib/helplearn.js's view, which used to be the Watch tab).
  * Typed into, it shows the answers: the best how-to answer first, then every
  * entry that matches (lib/helpsearch.js, which knows the everyday cousins of
@@ -208,7 +208,7 @@
     if (!t || !drawer.contains(t)) return;
     if (t.id === 'askBack') { back(); return; }
     if (t.id === 'askLookBack') { home(); return; }
-    if (t.id === 'askTour') { var hl = helpLearn(); if (hl) hl.watch(t.getAttribute('data-tour')); return; }
+    if (t.id === 'askTour') { if (window.SkriblBook) window.SkriblBook.open(); return; }
     if (t.id === 'askBrowse') { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); var h = helpLearn(); if (h) h.show('look'); return; }
     if (t.hasAttribute('data-show')) { showMe(t.getAttribute('data-show')); return; }
     openAnswer(t.getAttribute('data-answer'));

@@ -712,6 +712,7 @@ rather than a shared rule.
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
 | `audiosession.js` | Pad+Flip+player+library+in-post | Making Web Audio audible on an iPhone whose ringer switch is off. |
 | `autosavepill.js` | Pad+Flip | lib/autosavepill.js — the autosave pill: one owner for its five states and, when media is missing, the way out. |
+| `book.js` | Pad+Flip | The little book: what Ask's "New here?" opens (owner, after v323: the little book mock, "Yes to all as long as it's kind"; piece three of the help in four layers, FUTURE.md 6p). |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
 | `brushfield.js` | Flip | The arithmetic behind tools that act on ink already on the page. |
 | `canvasground.js` | Pad+Flip | The ground a new drawing starts on: Paper in the light theme, the dark canvas in the dark one. |
@@ -723,6 +724,7 @@ rather than a shared rule.
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
 | `draftstore.js` | Pad+Flip+library | Draft media persistence — the bytes localStorage cannot hold. |
 | `dragtrack.js` | Pad+Flip | A horizontal drag on a track: the plumbing, once, for both editors. |
+| `drawalong.js` | Pad+Flip | Draw along: a drawing from the little book, laid faintly on your own canvas one stroke at a time, for you to trace at your pace (owner, after v323: the little book mock, "Yes to all as long as it's kind"; FUTURE.md 6p). |
 | `drawerdetent.js` | Pad+Flip | The draw drawer's HALF detent — one implementation, both editors. |
 | `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both editors had hand-rolled: named panels above/below a toolbar, at most one open, the opener button reflecting state, and a scroll that reveals the opened panel without stranding it under browser chrome. |
 | `erasersize.js` | Pad+Flip | Eraser size — shared by both editors. |

@@ -7,7 +7,7 @@
  * from the real one.
  *
  * ASK'S HOME (piece two of the help, FUTURE.md 6p; lib/ask.js). How it
- * works opens on Ask: the tour, what people often ask, and every example in
+ * works opens on Ask: the little book, what people often ask, and every example in
  * a strip of pictures, each opening full screen with its Try it. Typed into,
  * or "Everything, by section", it shows the answers: search and every entry
  * (lib/helpsearch.js). It replaced two tabs (layout 1, FUTURE.md 6n), and
@@ -396,14 +396,9 @@
     if (b) tryTool(b.getAttribute('data-try'));
   });
 
-  // Ask (lib/ask.js) switches the views and opens an example full screen.
+  // Ask (lib/ask.js) switches the views.
   window.SkriblHelpLearn = {
     show: show,
-    view: function () { return view; },
-    watch: function (name) {
-      var card = all.filter(function (c) { return (c.getAttribute('data-demo-name') || c.getAttribute('data-clip-name')) === name; })[0];
-      if (card) openViewer(card);
-      return !!card;
-    }
+    view: function () { return view; }
   };
 }());

@@ -8513,3 +8513,64 @@ body.replaying .media-card { pointer-events: none; }
 .othertab-open:disabled, .othertab-later:disabled { opacity: .55; cursor: default; }
 /* The buttons start their own line: a zero-height break after Not now. */
 .othertab::after { content: ''; order: 1; flex-basis: 100%; height: 0; }
+
+/* THE LITTLE BOOK (lib/book.js; the little book mock, "Yes to all as long as
+   it's kind"). Ask's paper and cards: a sheet that fits its page on a phone,
+   so the drawing stays in view above it; a dialog in the middle on a desk.
+   The kicker is small violet words, Next the one accent fill. */
+.bk-root { position: fixed; inset: 0; z-index: 100; }
+.bk-root[hidden] { display: none; }
+.bk-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); opacity: 0; transition: opacity .25s ease; }   /* How it works' own scrim */
+.bk-root.open .bk-scrim { opacity: 1; }
+.bk { position: absolute; display: flex; flex-direction: column; background: var(--menu-paper); color: var(--text-primary);
+  transition: transform .35s var(--ease), opacity .25s ease; }
+@media (max-width: 640px) {
+  .bk { left: 0; right: 0; bottom: 0; max-height: 90vh; border-radius: 22px 22px 0 0; box-shadow: 0 -12px 40px rgba(20, 10, 60, .22); transform: translateY(100%); }
+  .bk-root.open .bk { transform: translateY(0); }
+}
+@media (min-width: 641px) {
+  .bk { left: 50%; top: 8vh; width: min(560px, calc(100vw - 48px)); max-height: 84vh; border-radius: 22px;
+    box-shadow: 0 24px 60px rgba(20, 10, 60, .3); transform: translate(-50%, 24px); opacity: 0; }
+  .bk-root.open .bk { transform: translate(-50%, 0); opacity: 1; }
+  .bk-handle { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .bk-root .bk, .bk-root .bk-scrim { transition: none; } }
+.bk-handle { width: 40px; height: 5px; border-radius: 3px; background: var(--menu-card-line); margin: 8px auto 0; flex: none; }
+.bk-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px 4px; }
+.bk-kick { font-size: 13px; font-weight: 700; color: var(--accent-ink); }
+.bk-body { flex: 1; min-height: 0; overflow: auto; padding: 6px 18px 0; touch-action: pan-y; }
+.bk-pic { border-radius: 18px; overflow: hidden; background: var(--menu-card); border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop); }
+.bk-pic[hidden] { display: none; }
+.bk-pic .lc-stage { aspect-ratio: 4 / 3; border-radius: 0; }
+.bk-pic .lc-phone { height: 300px; border-radius: 0; }
+.bk-pic .lc-phone video { width: 150px; }
+.bk-t { margin: 18px 2px 6px; font-size: 26px; font-weight: 750; letter-spacing: -.02em; line-height: 1.15; }
+.bk-s { margin: 0 2px; font-size: 17px; line-height: 1.45; color: var(--text-secondary); }
+.bk-along { margin: 16px 2px 0; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px;
+  border: 1px solid var(--menu-card-line); background: var(--menu-card); color: var(--accent-ink); font: inherit; font-size: 16px; font-weight: 650; cursor: pointer; }
+.bk-along[hidden] { display: none; }
+.bk-foot { display: flex; align-items: center; gap: 10px; padding: 14px 18px calc(18px + env(safe-area-inset-bottom)); }
+.bk-dots { display: flex; gap: 6px; flex: 1; }
+.bk-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--menu-card-line); transition: width .2s var(--ease); }
+.bk-dots i.on { width: 20px; border-radius: 4px; background: var(--accent-fill); }
+.bk-back, .bk-next { min-height: 48px; border-radius: 14px; font: inherit; font-size: 16px; font-weight: 650; cursor: pointer; }
+.bk-back { padding: 0 16px; border: 1px solid var(--menu-card-line); background: var(--menu-card); color: var(--text-primary); }
+.bk-back[hidden] { display: none; }
+.bk-next { padding: 0 22px; border: 0; background: var(--accent-fill); color: #fff; }
+.bk-along:focus-visible, .bk-back:focus-visible, .bk-next:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
+
+/* DRAW ALONG (lib/drawalong.js): the guide sits on the drawing, in the zoom
+   layer, and takes no touch; the pill sits under the header, never over a
+   button. The canvas's starter words step aside while it is out. */
+.da-guide { position: absolute; z-index: 2; pointer-events: none; }
+body.drawalong .canvas-empty-hint { display: none; }
+.da-pill { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+  max-width: calc(100vw - 24px); padding: 6px 6px 6px 14px; border-radius: 999px; background: var(--menu-card);
+  border: 1px solid var(--menu-card-line); box-shadow: var(--menu-card-drop), 0 10px 28px rgba(20, 10, 60, .2); color: var(--text-primary); }
+.da-pill b { font-size: 14px; font-weight: 700; color: var(--accent-ink); white-space: nowrap; }
+.da-where { font-size: 14px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.da-pill button { flex: none; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 0; font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; }
+.da-skip { background: transparent; color: var(--text-primary); }
+.da-skip[hidden] { display: none; }
+.da-done { background: var(--accent-fill); color: #fff; }
+.da-pill button:focus-visible { outline: 2px solid var(--ui-hi); outline-offset: 2px; }
