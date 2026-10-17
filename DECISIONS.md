@@ -18368,3 +18368,37 @@ a song on Trim and on Fine-tune), holds them to the paper, the white cards
 and the corners, and measures the edge against the page; every row was shown
 red on the tree before. It no longer reads a word painted at opacity 0 (Trim's
 time bubbles, shown only while dragging), which it had read as 1.00:1.
+
+## After v324 -- the Gallery and Library pages, sharp
+
+The owner: "What should gallery/library look like in keeping with the rest of
+the app? I want consistency simplicity elegant and perfectly sharp contrast",
+then "I like your lilac paper rule so go ahead with your choices for
+library/gallery without it". The rule: the page is the plain ground with the
+glass header card, as the editors' page is; lilac paper is for what rises
+(menus, sheets, drawers).
+
+- What sits on the page is the editors' parts: every card (a gallery tile,
+  Now playing, a list row, a draft) the menu's white card with its lilac edge
+  and drop; every switch a track on that card; the search fields Ask's white
+  field; the library's name a title and one line, as the gallery's, its card
+  gone.
+- Two inks, sharp. The third grey is the second ink, and the second ink is
+  one step further from the ground than the editors' (#3f4756 light, #b7bfcc
+  dark), so every word on both pages reads 7:1 or more in both themes (it was
+  4.8 to 6.7). The switches' words take it; the selected one's violet is
+  deeper in light and brighter in dark. The page's name beside the mark is
+  the first ink. The action purple's white words (Make one, 5.3:1) are the
+  app's, shared with the editors; making them 7:1 is an app-wide round of its
+  own.
+- The monospace capitals ("NOW PLAYING", "POSTED", "SILENT") are the app's
+  own sans in sentence case: --font-mono is --font-ui on these pages.
+- The gallery tile keeps its order (who made it, the title, the drawing), the
+  owner's earlier pick that matches a post on skribls.net. Its still is the
+  finished drawing already: the share card every post made in the app
+  carries. The blank tiles in the first mock were posts made through the API
+  without one.
+
+verify_galib holds every word on both pages to 7:1 on real pixels, phone and
+desk, both themes; shown red on the pages before (4.83 to 6.72). Its library
+Play row accepts the card's own ground as neutral, still refusing an accent.
