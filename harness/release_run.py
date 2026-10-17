@@ -201,6 +201,7 @@ BATCHES = [
     ["verify_learncard.py"],               # measures — real touch holds and mouse rests, timed
     ["verify_ask.py"],                     # measures — real touch, painted cards, timed steps
     ["verify_book.py"],                    # measures — real touch strokes, painted pages, canvas pixels
+    ["verify_glide.py"],                   # measures — the nib's place on every animation frame
     ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
      "verify_flipdraft.py", "verify_fuzz.py"],
     ["verify_onepill.py"],                 # measures — painted pixels and sub-pixel geometry

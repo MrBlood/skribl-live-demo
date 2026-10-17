@@ -18203,3 +18203,30 @@ outside the zoom layer, the guide painted into the drawing, Done not putting
 it away, a full-height sheet, a too-wide dialog). verify_contrast reads the
 book and the pill; verify_ask's New here? row reads the book.
 
+## After v323 -- a replay glides
+
+The owner's iPhone: "Why is it jumpy when drawing? ... The playback. It does
+it at 1x too." A pointermove hands over every sample since the last one, and
+both editors stamp the whole bundle with one time (editor_draw.js: "The batch
+shares one `t`"). Replay draws whole segments once their time has come and
+never part of one, so it put each bundle down at once, held still, and
+jumped; at 1/4x each hold lasted four times as long, and the nib hopped with
+it while the scrub bar glided. The owner's scrub bar showed it: one smooth
+stroke drawn as evenly spaced clumps of ink.
+
+lib/holdtiming.js untie(), one rule for every replay (the Pad's timeline in
+app.js, the posted and in-post players in inlineplayer.js, and a Flip page
+that draws itself): a bundle of equal times is spread evenly over the moment
+before it, at most 34 ms so a pause still reads as a pause, its last point
+kept where it was. Played times only: no drawing changes, no replay's length
+changes, and every drawing ever made plays smoothly. A stroke's first bundle
+has no moment before it and still comes together. Recording each sample's
+own time (a coalesced event's timeStamp) would be more exact for new
+drawings; not done here, since untie() already covers them and the old ones.
+
+verify_glide watches the nib on every animation frame: on the shared player
+at 1/4x (bundles of 4, 16 ms apart) and at 1x (12, 48 ms apart), and on the
+Pad at 1/4x it moves on nearly every frame, never still for more than two;
+every row red with untie() turned off (nib moving on a quarter to a third of
+the frames). Not tested here: iPhone Safari itself.
+

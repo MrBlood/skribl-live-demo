@@ -108,6 +108,34 @@
   function playTimes(p) {
     for (var t = [0], a = 0, i = 1, g; i < p.length; i++) t.push(a += (g = p[i].t - p[i - 1].t) > 0 ? Math.min(g, GAP_MAX) : 0);
     if (!a) for (i = 1; i < p.length; i++) t[i] = i * 16;
+    return untie(t, p);
+  }
+
+  /* POINTS THAT ARRIVED TOGETHER PLAY ONE AFTER ANOTHER (owner's iPhone,
+   * after v323: "Why is it jumpy when drawing? ... It does it at 1x too").
+   * A pointermove hands over every sample since the last one, a frame's worth
+   * or more, and the editors stamp the whole bundle with one time; so a replay
+   * put the bundle down at once, held still, and jumped, and the slower the
+   * speed the longer the hold. Here a bundle of equal times is spread evenly
+   * over the moment before it (at most SPREAD ms, so a pause still reads as
+   * a pause), its last point kept where it was. Played times only: the
+   * drawing is not changed, its length is not changed (the last point of
+   * each bundle stays put), and every drawing ever made plays smoothly.
+   * One rule for every replay: the Pad's (app.js), the posted player's
+   * (inlineplayer.js) and a Flip page that draws itself (playTimes above). */
+  var SPREAD = 34;
+  function untie(t, p) {
+    var n = t.length, j = 0;
+    while (j < n) {
+      var k = j;
+      while (k + 1 < n && t[k + 1] === t[j] && !(p[k + 1] && p[k + 1].start)) k++;
+      var m = k - j + 1;
+      if (m > 1) {
+        var span = Math.min(j > 0 ? t[j] - t[j - 1] : 0, SPREAD);
+        if (span > 0) for (var q = 0; q < m; q++) t[j + q] = t[k] - span + span * (q + 1) / m;
+      }
+      j = k + 1;
+    }
     return t;
   }
   function spanMs(frame) {
@@ -337,7 +365,8 @@
     posterOf: posterOf,
     plan: plan,
     wrapMs: wrapMs,
-    displayAt: displayAt
+    displayAt: displayAt,
+    untie: untie
   };
 
   if (typeof window !== 'undefined') window.SkriblHold = api;
