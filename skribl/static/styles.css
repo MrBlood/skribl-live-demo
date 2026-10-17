@@ -6952,12 +6952,14 @@ body.playing .flip-grid { display: none; }
    OVER the content, 8 px inside the list's right edge, so the thumb sat on the
    cards' borders. The cards stop 12 px short; where a desktop bar takes a
    gutter of its own, that is 12 px of breathing room. */
-/* The rows are as wide as the cards above and below them (a 12px gutter on
-   the right made them narrower), and the list keeps room inside its own clip
-   for a row's drop (owner's iPhone, after v324: the last row's shadow was cut
-   flat). */
+/* The rows are as wide as the cards above and below them, and the list keeps
+   room inside its own clip for a row's drop (owner's iPhone, after v324: the
+   rows were narrower and the last one's shadow was cut flat). Only while the
+   list SCROLLS do the rows leave iOS's scroll bar its 12px lane (v317), which
+   lib/savedrafts.js marks .sdrafts-scrolls. */
 .sdrafts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
   padding: 0 0 14px; margin-bottom: -14px; }
+.sdrafts-list.sdrafts-scrolls { padding-right: 12px; }
 .sdrafts-empty { margin: 18px 4px; font-size: 14px; color: var(--text-muted); text-align: center; }
 .sdrafts-retry { align-self: center; min-height: 44px; padding: 0 20px; border-radius: 999px;
   border: 1px solid var(--hairline, #252a35); background: transparent; color: var(--text-heading);

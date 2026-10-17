@@ -224,6 +224,8 @@
       ? 'Saved to your account, on every device you sign in on.'
       : 'Saved on this browser only.');
     listEl = el('div', 'sdrafts-list');
+    // The scroll bar's lane, only while the list scrolls (styles.css).
+    if (typeof global.ResizeObserver === 'function') new global.ResizeObserver(lane).observe(listEl);
     /* THIS DRAWING, and THE FILE BOTH WAYS (owner, after v323: drafts and
        backups as one choice). The ⋯ menu writes the name row and the two
        .skribl rows in .menu-movers (templates/skribl/_skribl_menu.html); the
@@ -412,6 +414,13 @@
         openBtn.focus();
       }
     });
+    lane();
+  }
+  /* iOS paints its scroll bar OVER the list, so while the list scrolls the
+     rows leave it a lane (v317); while it does not, they are as wide as the
+     cards above and below them (owner's iPhone, after v324). */
+  function lane() {
+    if (listEl) listEl.classList.toggle('sdrafts-scrolls', listEl.scrollHeight > listEl.clientHeight + 1);
   }
 
   // Only the LATEST list draws: an earlier read that answers late would put a
