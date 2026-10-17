@@ -410,6 +410,10 @@ with sync_playwright() as p:
                                    "|click:#helpWatch .learn-card .learn-stage", None),
         ("/flip", "learnViewer"): ("click:#moreBtn|click:#miInfo"
                                    "|click:#helpWatch .learn-card .learn-stage", None),
+        # THE LITTLE BOOK (lib/book.js): Ask's New here? opens it, a dialog
+        # of its own over the editor (How it works steps aside).
+        ("/", "bookRoot"):        ("click:#menuBtn|click:#helpItem|click:#askTour", None),
+        ("/flip", "bookRoot"):    ("click:#moreBtn|click:#miInfo|click:#askTour", None),
         # FLIP'S EXPORT PROGRESS (v320), found by A11Y 2a's layer sweep on its
         # first run: a full-screen overlay with a Cancel in it that Tab walked
         # straight out of. Opened the way an export opens it; Escape is Cancel,
