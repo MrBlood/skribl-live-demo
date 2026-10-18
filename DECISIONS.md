@@ -18591,3 +18591,23 @@ verify_galib GALIB 9 holds the pill's words, its corner (red on a desk
 without it; a phone's box already has the drawing's shape) and the title;
 GALIB 7 the ⋯, its menu, its contrast, Escape and a tap elsewhere, and the
 menu's Delete arming and deleting; each red without its piece.
+
+## After v324 -- the Gallery card's pill plays (a bug fix)
+
+The owner's iPhone, on the Gallery after #515: "When I tap the white button
+I get screenshot -- I would have to push play to play. I thought that was a
+play button." The card's bar rises across the drawing's foot, where the
+pill sits; raised on the touch (pointerdown, and the focus the tap gives the
+player), it was under the finger by the time the click landed, and the tap
+went to its Repeat. The pill and the bar were drawn over each other.
+
+- While a card is not playing, a tap on the drawing plays it and the bar
+  comes up after the click, not under it (gallery.js `peekAfter`).
+- An untouched card's hover no longer raises the bar over its pill: the card
+  offers one thing until it has started. A paused card's hover does, as
+  before. Whenever the bar is up, the pill steps aside at the bar's pace.
+
+verify_galib GALIB 9 taps the pill on a phone and clicks it on a desk: the
+drawing plays and Repeat is untouched; with the bar up the pill is not
+drawn. Red on the old code (idle, and on the phone Repeat switched off --
+the owner's screenshot), green on the fix.
