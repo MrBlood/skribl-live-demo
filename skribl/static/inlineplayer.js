@@ -667,6 +667,9 @@
      * positioned outright, so the transform has to go or it shifts twice. */
     st.transform = 'none';
     st.maxWidth = 'none';
+    /* The drawing's corner, for a button that sits in it (.is-says). */
+    var bx = img.parentNode.style;
+    bx.setProperty('--sx', p((A - cw) / 2, A)); bx.setProperty('--sy', p((1 - ch) / 2, 1));
     /* The corner is a share of the IMAGE, which is the whole card, because
      * that is what inset()'s radius resolves against like its four edges. As
      * a share of the drawing it stretched by the card's width over the
@@ -1743,9 +1746,15 @@
      * says what the listing said (`line` and `pages`) and shows the stored
      * shape; after, it reads the drawing, and keeps the stored shape so the
      * bars under the thumb do not change at the first tap. */
+    try { info = JSON.parse(el.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
+    if (!info || typeof info !== 'object') info = null;
+    /* NO LINE, THE PLAY BUTTON SAYS IT (the owner's pick A, after v324: "all
+     * yes"): a card with no line under it (the Gallery's) still says what you
+     * are about to watch, "drawn in 15 sec", and the button moves to the
+     * corner, off the drawing's face (inlineplayer.css .is-says). */
+    var says = !line && RL && info && playEl && (info.pages > 1 ? info.pages + ' pages' : info.drawn > 0 ? 'drawn in ' + RL.words(info.drawn) : '');
+    if (says) { playEl.insertAdjacentHTML('beforeend', '<span>' + says + '</span>'); mark('is-says', true); }
     if (line && RL) {
-      try { info = JSON.parse(el.getAttribute('data-skribl-line') || 'null'); } catch (e) { info = null; }
-      if (!info || typeof info !== 'object') info = null;
       pagesN = info && info.pages > 1 ? info.pages | 0 : 0;
       shapeCols = info && shapeOf(info.shape);
       /* The listing knows whether there is sound, so mute holds its place

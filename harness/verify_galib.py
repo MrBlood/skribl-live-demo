@@ -556,6 +556,31 @@ with sync_playwright() as p:
               pl["img"] == "none" and pl["shadow"] == "none" and (max(rgb) - min(rgb) < 24 or pl["bg"] == pl["card"]), str(pl))
         pg.close()
 
+    # ======================================================= THE CARD'S PILL
+    print("\nGALIB 9 -- a gallery card says how it was drawn, in the drawing's corner, off its face")
+    # The owner's pick A after v324 ("all yes"): the play button is a pill,
+    # "drawn in 1 sec", inside the drawing's lower-left corner -- the drawing,
+    # not the box, which is wider than it two to a row -- and the drawing's
+    # middle is the drawing's again. The title is the strong ink.
+    for dev, c_ in (("desk", ctx), ("390", phone)):
+        for theme in ("light", "dark"):
+            pg = open_page(c_, "/gallery", theme)
+            pl = pg.evaluate("""(tag) => { const t = [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag));
+              if (!t) return null; t.scrollIntoView({block: 'center'});
+              const box = t.querySelector('[data-skribl-inline]'), play = box.querySelector('.skribl-inline-play'),
+                    r = play.getBoundingClientRect(), b = box.getBoundingClientRect();
+              // The drawing, letterboxed in the box by its own shape.
+              const a = box.dataset.skriblW / box.dataset.skriblH, w = Math.min(b.width, b.height * a), h = w / a;
+              const d = { l: b.left + (b.width - w) / 2, r: b.right - (b.width - w) / 2, b: b.bottom - (b.height - h) / 2 };
+              const mid = document.elementFromPoint((d.l + d.r) / 2, b.top + b.height / 2);
+              const tt = getComputedStyle(t.querySelector('.tt')), ink = getComputedStyle(t.querySelector('.tdn')).color;
+              return { words: play.textContent.trim(), inL: Math.round(r.left - d.l), inB: Math.round(d.b - r.bottom),
+                       midFree: !play.contains(mid), size: tt.fontSize, weight: tt.fontWeight, strong: tt.color !== getComputedStyle(t.querySelector('.tm')).color }; }""", f"{TAG} coil")
+            check(f"/gallery {dev} {theme}: the card's play says 'drawn in 1 sec', 8-16px inside the drawing's lower-left corner, the drawing's middle clear, the title 16px in the strong ink",
+                  bool(pl) and pl["words"] == "drawn in 1 sec" and 8 <= pl["inL"] <= 16 and 8 <= pl["inB"] <= 16 and pl["midFree"]
+                  and pl["size"] == "16px" and int(pl["weight"]) >= 600 and pl["strong"], str(pl))
+            pg.close()
+
     phone.close()
     ctx.close()
 
