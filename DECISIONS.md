@@ -18736,3 +18736,37 @@ check that the stand-in file really is a WebM with a video track and no frame:
 fix. The MP4 route is untouched: it encodes every frame itself.
 
 Pad and Flip: shared, one module.
+
+## After v325 -- a finger that lifted unheard no longer costs the next stroke (a bug fix)
+
+The owner, on an iPhone, checklist P1: "I made several fast strokes and
+eventually it won't draw one. It might be when I draw fast and it goes
+offscreen. Sometimes next one draws and then soon fails."
+
+A stroke belongs to one pointer: both editors refuse a second pointer while
+one is drawing, so a palm cannot steer it. When a finger lifts and the page's
+handlers never hear it (no pointerup, pointercancel, lostpointercapture,
+touchend or touchcancel), the editor still holds a stroke for a finger that is
+gone. It refuses the next finger as if it were a second one, and only that
+finger's own lift clears the state: one stroke lost, the next drawn, then lost
+again, exactly the pattern on the owner's phone. Simulated in Chromium with
+real touch input, the browser ending the touch and a listener installed
+before the page's own swallowing the end events: both editors did it.
+
+Why the lift went unheard on the owner's phone is not known here; there is no
+WebKit in this box. What the editors can know is the screen: a refused
+finger's touchstart lists every touch on the glass, and if it lists only that
+finger, the stroke's own finger is gone. `lib/lostlift.js`, one module for
+both editors, then ends the stuck stroke, kept as it stands, and runs the
+editor's own pointerdown again for the new finger. A real second finger or a
+palm is a second touch, so it is refused as before, and two fingers on the
+canvas are still a pinch. Touch only, and only for a refusal that arrived with
+that same press (read off the page's clock: a browser need not measure event
+timeStamps from one origin).
+
+`verify_pointerpad` gains the lost lift on both editors, with the pinch as its
+edge: 25/31 before (the stuck stroke was kept when the refused finger lifted,
+and that finger's own stroke was lost: 1 group to 2, wanting 3), 31/31 after.
+Not tested on an iPhone; the owner's next checklist run is the test.
+
+Pad and Flip: shared, one module.

@@ -2025,7 +2025,7 @@ function sizeFor(e, base){
 }
 let reposActive=false, reposStart=null;
 pad.addEventListener('contextmenu', e=>e.preventDefault());
-pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return;
+const _padDown = e=>{ if(playing) return; if(pinching) return;
   // Space held = grab-pan; never a stroke (v211). Guarded HERE because Flip
   // draws on pointerdown, which fires BEFORE the mousedown the pan
   // intercept listens for — so a capture-phase mousedown was always too late.
@@ -2148,7 +2148,17 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   liveBegin(strokeFrame);   // before the first point: the cache is the ink BEFORE this stroke
   _liveHead = { x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true };
   strokeFrame.strokes.push(_liveHead);
-  render(); });
+  render(); };
+pad.addEventListener('pointerdown', _padDown);
+// A FINGER THAT LIFTED WITHOUT THE PAGE HEARING IT (after v325, the owner's
+// iPhone) kept its stroke "down" and cost the next one; lib/lostlift.js,
+// shared with the Pad, ends the stuck stroke as it stands and lets the next
+// finger draw.
+if(window.SkriblLostLift) window.SkriblLostLift.watch(pad, {
+  owner: ()=>(drawing ? strokePointerId : null),
+  end: ()=>endStroke(),
+  down: _padDown
+});
 pad.addEventListener('pointermove', e=>{
   if(pinching){ return; }
   if(liquifying){
