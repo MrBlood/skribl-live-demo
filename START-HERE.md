@@ -323,7 +323,9 @@ for the exports themselves). With `SKRIBL_KEEP_EXPORTS` naming a directory,
 `verify_mp4.py` writes each export it inspects there; unset, it writes nothing.
 The job reads them back with ffprobe (streams, codecs, decoded frame count,
 whether the audio is louder than silence, a contact sheet of each Flip) into
-the `mp4-exports` artifact, beside each file's SHA-256 and the tree hash. That
+the `mp4-exports` artifact, beside each file's SHA-256 and the tree hash (a
+manual run also prints the files into its log, for a reader the artifact
+store refuses). That
 directory is outside the checkout on purpose: `tree_files` walks the disk, so a
 file kept inside would change the hash the attestation names.
 

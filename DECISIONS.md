@@ -18694,7 +18694,9 @@ inspects to the directory `SKRIBL_KEEP_EXPORTS` names (unset, it writes
 nothing), and the mp4 job reads them back with ffprobe and ffmpeg's
 volumedetect into an `mp4-exports` artifact: streams, codecs, decoded frame
 count, how loud the audio is, a contact sheet of each Flip, each file's
-SHA-256 and the tree hash. A standard runner and an artifact: free.
+SHA-256 and the tree hash. A standard runner and an artifact: free. A
+manual run also prints the files into its log, the attestations' fallback,
+because the build container gets a 403 from the artifact store.
 
 Two traps, both caught before CI saw them. The files first went inside the
 checkout, where `release_run.tree_files` (it walks the disk, not git) would

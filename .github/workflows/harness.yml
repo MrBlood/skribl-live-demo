@@ -566,6 +566,15 @@ jobs:
           name: mp4-exports
           path: ${{ runner.temp }}/mp4-exports/
           if-no-files-found: error
+      - name: Print the kept exports, for a reader the artifact store refuses
+        # The attestations' fallback, for the files: the build container gets
+        # a 403 from the artifact store, so their bytes go in the log, to be
+        # rebuilt there and checked against the SHA-256s in the report above.
+        # Manual runs only; a merge's run has no reader waiting for them.
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          cd "$RUNNER_TEMP/mp4-exports"
+          for f in *; do echo "BEGIN $f"; base64 -w 0 -- "$f"; echo; echo "END $f"; done
 
   # SOMEBODY READS MAIN NOW (v314). The battery above runs after a merge, and
   # for a long time nothing read its result: main sat red for about five hours
