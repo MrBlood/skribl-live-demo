@@ -5417,7 +5417,8 @@ a.player-btn { text-decoration: none; }
    Pad under its scrubber (above it on a phone, where the speeds open upward).
    The pressed speed is the selection tint every pick-one pill uses. */
 .replay-line { display: flex; flex-direction: column; align-items: center; gap: 8px;
-  width: 100%; font-size: 15px; line-height: 1.4; color: var(--text-muted); text-align: center; }
+  width: 100%; font-size: 15px; line-height: 1.4; color: var(--text-muted); text-align: center;
+  transition: opacity 0.15s var(--ease); }
 .replay-line b { color: var(--text-primary); font-weight: 600; }
 .rl-text { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 5px; }
 .rl-speed { position: relative; display: inline-flex; align-items: center; gap: 3px;
@@ -5462,11 +5463,18 @@ a.player-btn { text-decoration: none; }
 .rl-strip { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .rl-head { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; border-radius: 2px;
   background: var(--accent); box-shadow: 0 0 0 2px var(--surface-base); pointer-events: none; }
-.rl-bubble { position: absolute; bottom: calc(100% + 10px); transform: translateX(-50%); white-space: pre;
+/* A layer up (z-index 2): riding above a finger it is over the drawing, and the
+   link page's canvas sits at 1, so the bubble went under it there. */
+.rl-bubble { position: absolute; z-index: 2; bottom: calc(100% + 10px); transform: translateX(-50%); white-space: pre;
   padding: 4px 10px; border-radius: 10px; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums;
   color: var(--text-primary); background: rgb(var(--surface-control-rgb)); border: 1px solid var(--hairline-strong);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2); opacity: 0; transition: opacity 0.15s var(--ease); pointer-events: none; }
 .rl-scrub.dragging .rl-bubble { opacity: 1; }
+/* While it shows, the bubble is the clock, and the words beside the bar fade
+   until the finger lifts: on a phone the Pad's sit just over the bar, where
+   the bubble rides (the owner's P5, pick A). On all three players, so they
+   scrub alike; the in-post one's rule is in inlineplayer.css. */
+.rl-scrub.dragging ~ .replay-line { opacity: 0; }
 .player-progress.rl-scrub { height: 30px; }
 .rl-scrub .player-progress-fill, .rl-scrub .play-scrub-fill { display: none; }
 /* The Pad: placed by editor_draw.js beside the scrubber, which app.js places. */

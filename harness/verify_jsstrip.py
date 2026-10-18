@@ -261,9 +261,11 @@ with sync_playwright() as sp:
     # 152,710), raised in verify_player_isolation and missed here: main went
     # red on it again, the same signal. And for the icons app.js writes,
     # aria-hidden on each since WAVE read them as images with no alternative
-    # text (+171 B, 152,881 measured), raised in both places together.
+    # text (+171 B, 152,881 measured), raised in both places together. And
+    # for the scrubber's clock riding over the finger (+305 B, 153,186
+    # measured), raised in both places together again.
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 152_886,
+          lean_total <= 153_191,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a

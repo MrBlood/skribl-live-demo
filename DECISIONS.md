@@ -18977,3 +18977,33 @@ this change. A video with music has not been made in Firefox yet.
 The first green run (Firefox 142.0.1, run 1343 on GitHub): 12/12. The Pad's
 video held 47 frames and Flip's two pages 3, where Chromium makes about 83
 and 4 from the same steps: that is the sampling.
+
+## After v326 -- the scrubber's clock rides over the finger (the owner's P5, pick A)
+
+On the owner's iPhone the clock in the scrubber's bubble sat 10px over the
+bar, which on a phone is under the fingertip, and on the Pad it landed on the
+"Drawn in ... watching at" words just above the bar ("You never fixed the time
+on the scrubber"). Of three ways, the owner picked A: the bubble rides over the
+finger.
+
+A finger or a pen now carries the bubble 56px over the touch, and up with it
+when it slides up into fine scrub, so neither the fingertip nor the slide
+covers it. A mouse covers nothing, so its bubble keeps to 10px over the bar.
+At either end of the drawing the bubble stays on screen; it hung a few pixels
+off the edge at the start on the Pad and in the in-post player. While it
+shows, the words beside the bar fade, and come back when the finger lifts, so
+two lines of words never sit on each other. Riding that high it is over the
+drawing, and on the link page the canvas sits a layer up, so the bubble went
+under it there; it is a layer up now too. One module (`lib/replayline.js`):
+the Pad's preview, the share link and the in-post player (the one under each
+post on a host page such as skribls.net) scrub alike. The Gallery's full
+screen and the Library's stage keep their own bars, which have no bubble.
+Flip: not for Flip; it scrubs with its page strip, which has no bubble either.
+
+`verify_replayspeed` section 5c drives a real finger (CDP touches) on all
+three players and a real pen and mouse on the link page: 22 rows. On the old
+code 14 of them are red (the bubble's place, its paint under the fingertip,
+the fade and the ends), and the mouse row is red with a mouse that rode up
+too. The two link-page rows over the drawing were red on the first build of
+this and are what found the canvas on top. Costs, each named on its ratchet:
+the player's JS +305 B, its CSS +103 B, the in-post player +394 B.
