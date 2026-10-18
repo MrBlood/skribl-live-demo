@@ -18612,25 +18612,31 @@ drawing plays and Repeat is untouched; with the bar up the pill is not
 drawn. Red on the old code (idle, and on the phone Repeat switched off --
 the owner's screenshot), green on the fix.
 
-## After v324 -- back from off screen, the card; the pill's spinner up front (bug fixes)
+## After v324 -- scrolled past, a post waits; at rest, its card; the pill's spinner up front (bug fixes)
 
 The owner's iPhone after #516: "When I click drawn in # minutes it takes a
 second or 2, then plays. Takes too much time. if I scroll the screen goes
 away. Nothing on canvas ... It goes away when scrolled out of sight then
 come back and blank screen."
 
-- A post that played and was scrolled away rests again (settle()), and the
-  canvas at time zero -- for a drawing on a ground, the ground and nothing
-  else -- was left over the finished card. Resting puts the card back on
-  top; a play brings the canvas back. Every post on every host, not only the
-  Gallery's.
+- A playing post scrolled out of view was settled back to the start; then,
+  "It goes away even if it's playing and I scroll it out of view". It
+  pauses where it was now (no drawing for nobody), and carries on when it
+  comes back. A post another one stopped meanwhile stays stopped.
+- A post that rests again (settle(): another post started) left the canvas
+  at time zero -- for a drawing on a ground, the ground and nothing else --
+  over the finished card. Resting puts the card back on top; a play brings
+  the canvas back. Every post on every host, not only the Gallery's.
 - The first play fetches the drawing, which for a long one (Bloom, drawn in
   21 min) takes a moment; the pill's spinner was after its words, easy to
   miss. It takes the arrow's place now, so the tap answers at once. Nothing
   is fetched before the tap, still: a touch that starts a scroll is not
   somebody asking, and a feed that prefetched would move megabytes.
 
-verify_galib GALIB 9: a card played, scrolled away and back shows its card
-at its middle and plays again on the canvas; while loading, the spinner is
-ahead of the words. Red on the old player, green on the fix. The embed
-ratchet rose by the named 147 B.
+verify_galib GALIB 9: a playing card scrolled away is paused where it was
+and plays on when it is back; stopped by another post it shows its card at
+its middle; while loading, the spinner is ahead of the words. Each red on
+the old player without its piece, green on the fix. verify_inline's
+scrolled-away row read 'idle' after a stopAll() whatever the scroll did, so
+it could not fail; it plays the post first now, and holds the pause and the
+carrying on. The embed ratchet rose by the named 280 B.

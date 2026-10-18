@@ -1807,18 +1807,28 @@
 
   /* ---- mounting ---------------------------------------------------------- */
 
-  /* Off-screen posts stop. Without this, scrolling away from a playing Skribl
-   * leaves it drawing and looping into a viewport nobody is looking at — the
-   * battery cost of a feed autoplaying forever, paid for nothing. Guarded
-   * because IntersectionObserver is the one API here a very old browser may
-   * lack, and its absence should cost a behaviour, not the player. */
+  /* Off-screen posts pause, and carry on when they come back. Without the
+   * pause, scrolling away from a playing Skribl leaves it drawing and looping
+   * into a viewport nobody is looking at — the battery cost of a feed
+   * autoplaying forever, paid for nothing. It PAUSED rather than reset until
+   * after v324: it was settled back to the start, and the owner scrolled a
+   * drawing past and lost it ("It goes away even if it's playing and I scroll
+   * it out of view"). A post another one stopped meanwhile stays stopped.
+   * Guarded because IntersectionObserver is the one API here a very old
+   * browser may lack, and its absence should cost a behaviour, not the
+   * player. */
   var io = null;
   if (global.IntersectionObserver) {
     io = new global.IntersectionObserver(function (entries) {
       for (var i = 0; i < entries.length; i++) {
-        if (entries[i].isIntersecting) continue;
         var p = entries[i].target._skriblInline;
-        if (p) p.settle();
+        if (!p) continue;
+        if (!entries[i].isIntersecting) {
+          if (p.state().state === 'playing') { p.pause(); p.away = 1; }
+        } else if (p.away) {
+          p.away = 0;
+          if (p.state().state === 'paused') p.play();
+        }
       }
     }, { threshold: 0.1 });
   }
