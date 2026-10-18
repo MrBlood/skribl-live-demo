@@ -18715,9 +18715,11 @@ exported". SK-AUD-003's fix had made a recording a success when it had bytes
 and the container's signature at its start, and a header with nothing behind
 it has both. Reproduced on v325 with a stand-in recorder that hands back a
 header-only WebM: both editors downloaded it and said it worked ("Animation
-exported", "Video exported"). The real recorder made such a file once; in 84
-more exports under CPU starvation and beside other browsers it did not, so it
-is rare. A false success all the same.
+exported", "Video exported"). The real recorder made such a file once; in 76
+more exports (12 on a quiet machine, 24 with the CPU starved, 40 beside other
+browsers) it did not, so it is rare. A false success all the same. (This
+entry first said 84; the run logs hold 76, and the count was corrected with
+the Copy link fix.)
 
 `lib/videorecord.js`, one module for both editors, now also asks the file for
 a frame: a block on a WebM's video track, or an MP4 `mdat` with bytes in it,
