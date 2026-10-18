@@ -18640,3 +18640,29 @@ the old player without its piece, green on the fix. verify_inline's
 scrolled-away row read 'idle' after a stopAll() whatever the scroll did, so
 it could not fail; it plays the post first now, and holds the pause and the
 carrying on. The embed ratchet rose by the named 280 B.
+
+## After v324 -- the pill is glass
+
+The owner, on a dark drawing: "It should sample the background where the
+pill will sit and contrast accordingly ... So dark and light (and in
+between) pill contrast." Of the first mock, "dark looks bad"; of the
+second, "D glass".
+
+- The Gallery card's "drawn in ..." pill is a frosted pane: the drawing
+  behind it shows through, blurred, so it carries the drawing's own colour,
+  with a light top edge and a soft drop. Over a light drawing it is light
+  glass with violet words (#3a24a8); over a dark one, dark glass with white.
+- Which is read off the card already on screen -- its lower-left, where the
+  pill sits -- over white, so a see-through card (a post made without one)
+  reads as it shows. Nothing more is fetched. A card that cannot be read
+  keeps the light glass.
+- Measured on the pixels behind the words: 11.0 on a night-purple drawing,
+  7.4 on lilac, 9.4 on paper, phone and desk. Scrolling 20 cards, frames
+  held at 16.7 ms with the glass as with the white pill (this box's
+  Chromium; not tested on an iPhone).
+
+verify_galib GALIB 9 posts a dark drawing with its card, made as the Pad
+makes one, and holds both glasses and their words at 7:1; red without the
+tone (the dark post), and red on the white pill. It caught the see-through
+card reading dark before it shipped. The embed ratchet rose by the named
+1,387 B.
