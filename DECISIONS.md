@@ -19086,3 +19086,22 @@ under, at WAVE's own line (the 11px words are another question, not asked).
 Each of the five rules must read 12px, and both trim bubbles must stay over
 the track with the handles at its ends. On the old CSS 10 of 24 pass (every
 rule at 10px, the bubbles 24px off the track); now 24 of 24.
+
+## After v326 -- Firefox's frame counts wander, so the smoke stops counting them
+
+"Firefox's frames, pushed" said Flip's two-page video held 4 of 4 frames in
+Firefox both times after the push. The next two runs held 5 (main went red,
+#534), then 3. Over four runs with the push: 4, 4, 5 and 3 of 4; with sampling
+before it, 3 and 3. On CI, Gecko takes a pushed frame at its next screen
+refresh, when it has the time, so the count is the runner's more than the
+recorder's. The push stays: the module promises a frame per beat, Chromium
+keeps it, and Firefox comes closer with it than without.
+
+The Firefox smoke no longer counts beats. It asks each video to be a real file
+with frames in it, at least one per page on Flip; it prints the plan beside
+the count, and Flip's frames with their times and sizes. The beat-for-beat
+promise is held where it holds: `verify_videoexport`, in Chromium, with
+requestFrame moved onto the stream as Gecko has it. Both of Flip's pages in the
+smoke hold the same stroke, so a frame's size cannot say which page it shows;
+telling the pages apart in Firefox's file would mean decoding it, which the
+smoke does not do.

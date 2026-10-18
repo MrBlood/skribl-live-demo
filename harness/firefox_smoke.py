@@ -275,29 +275,25 @@ def section(name, run):
 
 
 # THE PLAN: how many beats each editor's video is made of, asked of the page
-# before it exports. The recorder pushes one frame per beat (lib/videorecord.js,
-# ONE FRAME PER TICK), so a WebM holds exactly that many; a recorder that only
-# samples the canvas holds fewer. Flip's 12 a second are five screen refreshes
-# apart, so they hold exactly in Gecko too. The Pad's 30 are two apart, and
-# Gecko takes a pushed frame at its next refresh, one per refresh, so on a busy
-# machine two can merge (63 of 82, then 47 of 78, on CI: about 18 a second
-# however they are asked for); the Pad is held to never more than
-# its beats, which still catches a doubled first frame. And once, on main
-# after #533, Gecko made Flip one frame more than its beats (5 of 4, where the
-# runs before made 4 of 4). Until where that frame sits is known, Flip is held
-# to every beat and at most one more, and each frame's time and size is
-# printed. An MP4 is made elsewhere (lib/mp4export.js) and is only asked for
-# frames.
+# before it exports, and printed beside what the file holds. It is not held to
+# in Firefox: Gecko takes a pushed frame at its next screen refresh, when it
+# has the time, and on CI its count wanders on both editors (the Pad's 30 a
+# second came out 63 of 82, 47 of 78 and 57 of 81; Flip's two pages 4, 4, 5
+# and 3 of 4 over four runs, push or sample). So each video is asked to be a
+# real file with frames in it, at least one per page on Flip, and Flip's
+# frames are printed with their times and sizes. The beat-for-beat promise is
+# Chromium's and verify_videoexport's. (Both of Flip's pages here hold the
+# same stroke, so a frame's size cannot tell one page from the other.) An MP4
+# is made elsewhere (lib/mp4export.js) and is only asked for frames.
 PAD_PLAN = """() => { const t = buildPlaybackTimeline(), ms = t.length ? t[t.length - 1].playT : 0;
   return Math.ceil(ms * 30 / 1000) + 1 + Math.round(700 * 30 / 1000); }"""
 FLIP_PLAN = "() => { const r = exRange(); return exportUnits(r.from - 1, r.to - 1).length * exLoops; }"
 
 
-def filmed(pg, opener, name, plan, also=True, exact=True, slack=0, show=False):
-    """The editor's video, checked against its plan: a WebM holds a frame for
-    every beat and at most `slack` more (exact), or never more than its beats.
-    `show` prints each frame's time and size. A video that never comes fails
-    this check alone: the post after it still runs."""
+def filmed(pg, opener, name, plan, least, also=True, show=False):
+    """The editor's video: a real file with at least `least` frames, printed
+    beside its plan. `show` prints each frame's time and size. A video that
+    never comes fails this check alone: the post after it still runs."""
     want = pg.evaluate(plan)
     try:
         fname, data = export(pg, opener)
@@ -305,7 +301,7 @@ def filmed(pg, opener, name, plan, also=True, exact=True, slack=0, show=False):
         check(name, False, f"{type(e).__name__}: {str(e).splitlines()[0][:240]}")
         return
     kind, n = video(data)
-    ok = (want <= n <= want + slack if exact else 3 < n <= want) if kind == "webm" else n > 3
+    ok = n >= least
     if show and kind == "webm":
         print("    its frames (ms: bytes): " + ", ".join(f"{t}: {b:,}" for t, b in webm_blocks(data)))
     check(name, also and ok and len(data) > 1000,
@@ -348,8 +344,7 @@ with sync_playwright() as p:
               pg.evaluate("() => playing && !document.getElementById('playScrub').hidden"))
         pg.evaluate("() => { if (playing) document.getElementById('playBtn').click(); }")
         pg.wait_for_timeout(400)
-        filmed(pg, "exportItem", "...its video is a real file, never more frames than its replay's beats", PAD_PLAN,
-               exact=False)
+        filmed(pg, "exportItem", "...its video is a real file with frames in it", PAD_PLAN, 4)
         ticked, res = post(pg, "Firefox smoke, Pad", ".post-check")
         got["pad"] = res["url"] or ""
         check("...and it posts through its own sheet, ticked public, and gets its link",
@@ -366,8 +361,8 @@ with sync_playwright() as p:
         pg.click("#addblank")
         pg.wait_for_timeout(300)
         draw(pg, "#pad")
-        filmed(pg, "miExport", "...its two pages make a real video file, a frame for every beat and at most one more",
-               FLIP_PLAN, also=pg.evaluate("() => frames.length") == 2, slack=1, show=True)
+        filmed(pg, "miExport", "...its two pages make a real video file, a frame for each at least", FLIP_PLAN, 2,
+               also=pg.evaluate("() => frames.length") == 2, show=True)
         ticked, res = post(pg, "Firefox smoke, Flip", "#postSheet .post-check")
         got["flip"] = res["url"] or ""
         check("...and it posts through its own sheet, ticked public, and gets its link",
