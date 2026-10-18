@@ -18796,3 +18796,28 @@ audio; after, it decodes. Not tested on an iPhone here; the owner's next
 export is the test.
 
 Pad and Flip: shared (`lib/mp4export.js` is both editors' MP4 route).
+
+## After v325 -- Copy link says it copied, out loud (a bug fix)
+
+The owner's VoiceOver pass (device checklist V4, a Library row's ⋯): "copy
+link doesn't say copied." The row's Copy link changed its own word to Copied
+for a moment and said nothing else. VoiceOver does not read a label changing
+under it, so only a refusal, which went to the drawer's live region, was ever
+heard. A copy that works now speaks "Link copied" there too, the words the
+Library's stage and the Gallery's menu already used. `lib/postedui.js` is the
+one place, so the drawers' lists on the Pad and Flip get it as well.
+
+A share link's Copy link answered no one at all: the player's toast was the
+one on the site with no live semantics. It now carries the editors' own
+(`role="status"`, polite, atomic). The live-region census in `verify_a11y`
+read the toast on the Pad only; the same id on another page is another
+member, so the player's is read too, and its Copy link is driven.
+
+Calibrated red, then green: `verify_posted` 162/163 before (the live region
+empty while the row said Copied), 163/163 after; the player's toast had no
+role, polite or atomic before, and has all three after, with Copy link's
+answer landing in it. Not tested with VoiceOver here: the toast appears and
+fills in the same moment, as the editors' does, and whether VoiceOver reads
+that is for a real iPhone to say.
+
+Pad and Flip: shared (`lib/postedui.js` is both editors' posted list).

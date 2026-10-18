@@ -443,7 +443,10 @@
         }, 1400);
       }
       copyText(text).then(function (ok) {
-        if (ok) { say('Copied', true); return; }
+        // SPOKEN AS WELL AS SHOWN (the owner's VoiceOver pass, after v325:
+        // "copy link doesn't say copied"). A label changing under the
+        // reader is not announced, so only a refusal was ever heard.
+        if (ok) { say('Copied', true); announce('Link copied'); return; }
         // The link is on the row already, so there is something to point at
         // rather than a dead end.
         say("Couldn't copy");
