@@ -19143,3 +19143,49 @@ Open it's swap); now 30 of 30. Two mutations each fail the check for their
 part: without the note said at once, the boot no longer says it (28 of 30);
 when Keep for later's own note is not the one, "Draft restored" follows it
 (28 of 30).
+
+## After v326 -- Drafts rows end as posted rows do, in the Library (D3)
+
+The owner's pick A from the D3 mock: "Drafts get the same ⋯ as your posts". A
+draft row ended in a bin (tap twice to delete) while a posted row ended in a
+⋯ on a phone and labelled buttons on a desk, so the two lists on one page
+behaved differently.
+
+Now a phone's ⋯ opens Open in Pad (or Flip), Save a .skribl file, and Delete,
+last, under a line: the posted rows' menu, on the same paper. A desk shows
+Save file and Delete in the posted rows' pills; the card itself opens the
+draft, as before. The menu words read 16:1 in light and 15.9:1 in dark,
+Delete 9.8 and 10.7; on a desk Save file reads 9.4 and 8.6, Delete 11 and
+9.5. Those are the mock's numbers, measured again on the built page.
+
+Save a .skribl file is new: the file the editor's Save as a file makes,
+without opening the draft, because a draft holds exactly that. A Flip draft
+keeps an in-between page as its recipe, which only Flip can draw, and the
+format's other readers cannot read a recipe; so a Flip draft holding one
+writes no file, and its row says to open it in Flip and save it there. The
+mock did not show that case.
+
+Delete asks once, and the arm never moves (the v317 bin rule). In the phone's
+menu the button is the menu's width, so its word becomes "Tap again to
+delete". On a desk the first build did the same, and the longer word pushed
+Save file 66px aside, under the next click; so a desk's Delete keeps its word
+and its box and turns red, and the row's second line asks "Tap Delete again
+to delete it", in Delete's own ink (the theme's danger red was 4.2:1 there
+in dark). The first build's armed Delete also turned unreadable under the
+pointer (white on pale pink, 1:1); its red now outranks the hover.
+
+`lib/savedrafts.js` `rowEnd()` builds the end and `saveFile()` the file, for
+the editors' Your drafts sheet next, which draws the same row. The pills wear
+posted.css's own rules and the phone menu the posted menu's, by name, so the
+two lists cannot drift apart. The Library loads `lib/nametab.js` for the file
+name; its drawer is the editors' and does nothing there.
+
+`verify_galib` GALIB 2b holds the draft menu to the posted menu's checks: one
+⋯ at 44px, the three words in order and each 44px tall and painted, Open's
+link, Delete past its 13px rule, 7:1 on real pixels, asking in place, Escape
+and a tap elsewhere closing it, one menu at a time; on a desk the two pills
+and the file itself (named for the title, the draft's own JSON) and the Flip
+refusal. GALIB 2's desk Delete keeps its box. On main's code 20 of 156 fail;
+on this branch 156 of 156 pass. Three mutations each fail their own check:
+the Flip refusal removed, the desk's word changed, the tap elsewhere not
+heard.
