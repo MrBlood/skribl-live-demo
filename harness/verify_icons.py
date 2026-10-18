@@ -526,8 +526,10 @@ with sync_playwright() as _pe:
             # owner's pick after v324): its arrow leads the words, so it is
             # held level, not centred across the pill. The disc is read on
             # the preview feed below, where a post keeps it.
+            # The words put out of the reading, so the ink read is the arrow's.
+            _pg.evaluate("(s) => document.querySelector(s).style.color = 'transparent'", _tile + " .skribl-inline-play span")
             _pg.evaluate(_GRID, _tile + " .skribl-inline-play"); _pg.wait_for_timeout(60)
-            _pl = _optical(_pg, _tile + " .skribl-inline-play svg")
+            _pl = _optical(_pg, _tile + " .skribl-inline-play")
             check("the Gallery card's pill: its arrow sits level in it, within a third of a pixel",
                   _pl is not None and abs(_pl[1]) <= 1 / 3, f"optical offset {_pl} px")
         _pg.evaluate("(s) => document.querySelector(s).classList.add('ctl-on')", _tile)
