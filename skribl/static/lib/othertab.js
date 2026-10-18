@@ -14,9 +14,18 @@
  * tab's newest drawing waits beside it.
  *
  * On the next visit the newest opens, as it always did, and a waiting drawing
- * is OFFERED in one line: "Open it" (this tab's drawing waits in its place) or
- * "Keep for later" (it goes to Drafts). Only a drawing no open tab is still
- * holding: the tabs answer a roll call on a BroadcastChannel first.
+ * is OFFERED in one line that says when it was left: "Open it" or "Keep for
+ * later" (it goes to Drafts). Only a drawing no open tab is still holding: the
+ * tabs answer a roll call on a BroadcastChannel first.
+ *
+ * ONE QUESTION, ANSWERED ONCE (D2, the owner's pick A). "Open it" used to put
+ * this tab's drawing where the other had waited, so the reload asked the same
+ * question about the drawing just left, and "Open it" again swapped them back,
+ * forever. Now it keeps this tab's drawing in Drafts first, as Save draft makes
+ * one, and after the reload one note says where it went. Only if Drafts can't
+ * take it does it wait in the other's place, as before: nothing is lost either
+ * way. And the editor's "Draft restored" waits until no question is showing;
+ * said at boot, it sat on the question's words.
  *
  *   var slot = SkriblOtherTab.slot(key)
  *   slot.read()           the newest drawing (the slot's text), or null
@@ -26,10 +35,15 @@
  *                         removes it, never another tab's
  *   slot.adopt()          this tab just opened the drawing in the slot, so it
  *                         may write over that one without moving it
- *   slot.offer({ later(text, at) -> Promise<bool>, current() -> text })
+ *   slot.offer({ later(text, at) -> Promise<bool>, current() -> text,
+ *                keep() -> Promise<bool>, restored, note(words) })
  *                         after the editor has restored: offer what waits.
- *                         "Open it" puts this tab's drawing (current()) aside,
- *                         makes the other the newest and reloads.
+ *                         "Open it" keeps this tab's drawing in Drafts (keep();
+ *                         if it can't, current() waits in the other's place),
+ *                         makes the other the newest and reloads. note() is
+ *                         the visit's one note, said once no question shows:
+ *                         where "Open it" put the last drawing, or "Draft
+ *                         restored" when the editor restored one.
  *   slot.frozen()         true once "Open it" has run: write nothing more
  *   slot.wouldMove()      a write now would move another tab's drawing aside
  *                         (a flush with nothing new skips it, or a tab closing
@@ -42,11 +56,24 @@
   'use strict';
   var doc = global.document;
   function ls() { try { return global.localStorage; } catch (_) { return null; } }
+  function ss() { try { return global.sessionStorage; } catch (_) { return null; } }
+
+  // When a waiting drawing was left: its time today, its day before that.
+  function when(at) {
+    if (!at) return '';
+    try {
+      var d = new Date(at);
+      var tm = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      if (d.toDateString() === new Date().toDateString()) return ' at ' + tm;
+      return ' on ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' at ' + tm;
+    } catch (_) { return ''; }
+  }
 
   function slot(key) {
     var me = Math.random().toString(36).slice(2) + Date.now().toString(36);
     var OWNER = key + ':owner';
     var WAIT = key + ':waiting:';
+    var KEPT = key + ':kept';   // sessionStorage: "Open it" kept this tab's drawing in Drafts
     var adopted = null;   // the owner record of the drawing this tab opened
     var frozen = false;   // set by "Open it": this page is about to reload
     var alive = {};       // writers that answered the roll call
@@ -125,9 +152,18 @@
     function hide() { if (bar) bar.hidden = true; }
     function offer(opts) {
       opts = opts || {};
+      // The visit's one note: where "Open it" put the drawing this tab had
+      // open (marked just before its reload), or else "Draft restored".
+      var owed = null;
+      try {
+        var t = ss();
+        if (t && t.getItem(KEPT)) { t.removeItem(KEPT); owed = 'The drawing you had open is in Drafts'; }
+      } catch (_) {}
+      if (!owed && opts.restored) owed = 'Draft restored';
+      function say() { var w = owed; owed = null; if (w && opts.note) opts.note(w); }
       function go() {
         var list = waiting();
-        if (!list.length) { hide(); return; }
+        if (!list.length) { hide(); say(); return; }
         var entry = list[0];
         if (!bar) {
           bar = doc.createElement('div');
@@ -141,25 +177,24 @@
             + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" '
             + 'stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
           doc.body.appendChild(bar);
-          bar.querySelector('.othertab-x').addEventListener('click', hide);
+          bar.querySelector('.othertab-x').addEventListener('click', function () { hide(); say(); });
         }
         var words = bar.querySelector('.othertab-words');
         var openBtn = bar.querySelector('.othertab-open');
         var laterBtn = bar.querySelector('.othertab-later');
-        words.textContent = 'Another drawing from a different tab is waiting.';
-        /* OPENED THE WAY EVERY VISIT OPENS ONE. This tab's drawing waits in the
-           other's place, the other becomes the newest, and the page reloads:
-           the editor's own boot restore -- the tested path, media and all --
-           does the rest. Nothing is replaced until this tab's drawing is safe;
-           if there is no room for it, nothing is. */
-        openBtn.onclick = function () {
+        words.textContent = 'Another drawing is waiting, from a different tab' + when(entry.at) + '.';
+        /* OPENED THE WAY EVERY VISIT OPENS ONE. The other becomes the newest
+           and the page reloads: the editor's own boot restore -- the tested
+           path, media and all -- does the rest. Nothing is replaced until this
+           tab's drawing is safe: in Drafts, or else (`aside`) waiting in the
+           other's place. If there is no room for that, nothing is. */
+        function swap(aside, kept) {
           var s = ls();
           var put = [];
           try {
-            var current = opts.current ? opts.current() : null;
-            if (current) {
+            if (aside) {
               var id = 'kept-' + Date.now().toString(36);
-              s.setItem(WAIT + id, JSON.stringify({ w: id, at: Date.now(), data: current }));
+              s.setItem(WAIT + id, JSON.stringify({ w: id, at: Date.now(), data: aside }));
               put.push(WAIT + id);
             }
             s.setItem(key, entry.data);
@@ -170,21 +205,35 @@
             words.textContent = 'There’s no room here to keep both. Keep it for later instead.';
             return;
           }
+          if (kept) { try { ss().setItem(KEPT, '1'); } catch (_) {} }
           frozen = true;
           hide();
           (opts.open || function () { global.location.reload(); })();
+        }
+        openBtn.onclick = function () {
+          var current = opts.current ? opts.current() : null;
+          if (!current || !opts.keep) { swap(current, false); return; }
+          laterBtn.disabled = openBtn.disabled = true;
+          Promise.resolve().then(opts.keep).then(function (ok) { return !!ok; }, function () { return false; })
+            .then(function (ok) {
+              laterBtn.disabled = openBtn.disabled = false;
+              swap(ok ? null : (opts.current() || current), ok);
+            });
         };
         laterBtn.onclick = function () {
           laterBtn.disabled = openBtn.disabled = true;
           Promise.resolve(opts.later(entry.data, entry.at)).then(function (ok) {
             laterBtn.disabled = openBtn.disabled = false;
             if (!ok) return;   // not kept: it stays waiting, and the editor said why
+            owed = null;       // the editor said where it went: that was the note
             try { ls().removeItem(entry.key); } catch (_) {}
             go();
           }, function () { laterBtn.disabled = openBtn.disabled = false; });
         };
         bar.hidden = false;
       }
+      // Nothing waiting, nothing to ask: the note is said at once.
+      if (!waiting().length) say();
       // The roll call: an open tab answers within a frame or two.
       if (chan) { chan.postMessage({ who: true }); setTimeout(go, 300); } else go();
     }

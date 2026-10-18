@@ -653,6 +653,19 @@
       return backend.save(null, { kind: kind, title: title || 'Untitled Skribl', payload: payload, thumbnail: null })
         .then(function () { return true; });
     },
+    /* The drawing on screen becomes a new draft, made as Save draft makes one
+       (its name, its picture, its media), never written over the draft it was
+       opened from: "Open it" keeps it before another tab's drawing opens in
+       its place (lib/othertab.js, D2). Resolves true once it is kept; false
+       while media is still being read, and the drawing is kept another way. */
+    keepShown: function () {
+      if (!opts || (opts.busy && opts.busy())) return Promise.resolve(false);
+      var payload;
+      try { payload = opts.serialize(); } catch (e) { return Promise.resolve(false); }
+      var title = (global.SkriblName && global.SkriblName.get()) || 'Untitled Skribl';
+      return backend.save(null, { kind: opts.kind, title: title, payload: payload, thumbnail: thumbFrom(opts.thumbnail && opts.thumbnail()) })
+        .then(function () { return true; });
+    },
     ago: ago
   };
 })(window);
