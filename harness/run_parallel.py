@@ -14,12 +14,24 @@ Chromium competing for the CPU reads as a moved pixel or a late frame there,
 which is why the seal runs them alone. Most of the heavy suites carry that
 tag, so running them one at a time here would save almost nothing. Load
 makes those checks fail, not pass, so they run side by side with the rest,
-and any of them that comes back red runs again alone, nothing beside it, and
-that answer is the one reported. A red from an untagged suite is reported as
-it is: a re-run is only for contention, never to wash out a flake. The tag
-is the one place the decision lives, and this reads it rather than keeping a
-second list. Main's full run after every merge still runs them as the seal
-does.
+and any of them that comes back red runs again alone, nothing beside it. A red
+from an untagged suite is reported as it is: a re-run is only for contention,
+never to wash out a flake. The tag is the one place the decision lives, and
+this reads it rather than keeping a second list. Main's full run after every
+merge still runs them as the seal does.
+
+THE FIRST RED IS KEPT, AND A GREEN ALONE DOES NOT ERASE IT (the outside
+reviewer of v325, QA-001). The alone answer used to replace the red one: the
+summary read 19/19 and the exit was 0, and the red run's log was overwritten
+by the re-run, so the red that found a real defect survived only because
+someone copied it off the terminal. Now the red run keeps its log, the re-run
+writes its own (<suite>.alone.log), and a suite that went red beside others
+and green alone is INTERMITTENT: both counts on its line, listed apart, never
+counted as ok, and the exit is 3 (1 when anything simply failed), so a script
+or a summary cannot read it as a clean pass. Whether an intermittent red was
+load or a defect is a judgement the person quoting it has to make, in words.
+No release gate uses this runner: the seal (release_run.py) and CI
+(run_harness.sh) run each suite once and report what it said.
 
 WHAT IT DOES NOT DO. It does not write harness/LAST-RUN.txt, stamp the docs
 or stand in for a seal, which is still release_run.py. Its result lines are
@@ -96,10 +108,16 @@ def stop(port):
     subprocess.run(["fuser", "-k", f"{port}/tcp"], capture_output=True)
 
 
-def run(suite, server, timeout):
+def log_path(suite, tag=""):
+    """verify_x.log for a suite's run, verify_x.alone.log for its re-run alone:
+    the re-run never writes over the run it re-runs."""
+    return LOGS / (suite[:-3] + ("." + tag if tag else "") + ".log")
+
+
+def run(suite, server, timeout, tag=""):
     port, db = server
     LOGS.mkdir(parents=True, exist_ok=True)
-    log = LOGS / (suite[:-3] + ".log")
+    log = log_path(suite, tag)
     # What run_harness.sh gives a suite: its server, that server's database,
     # and the posting limit the harness raises (bootstrap raised it for the
     # server; a suite that posts in-process needs it too).
@@ -131,22 +149,72 @@ def run(suite, server, timeout):
 
 
 def verdict(r):
-    """ok, skip or fail. Exit 77 is a suite declining to run for a missing
-    prerequisite (verify_mp4 without real Chrome): run_harness.sh reports it as
-    SKIPPED, apart from the passes and not as a failure, and so does this."""
+    """ok, skip, fail or intermittent. Exit 77 is a suite declining to run for a
+    missing prerequisite (verify_mp4 without real Chrome): run_harness.sh
+    reports it as SKIPPED, apart from the passes and not as a failure, and so
+    does this. A re-run alone (it carries the red run as "first") that passed
+    is intermittent; one that failed again is a failure."""
     if r["code"] == 77:
         return "skip"
     ok = r["code"] == 0 and r["counts"] and r["counts"][0] == r["counts"][1]
+    if ok and r.get("first"):
+        return "intermittent"
     return "ok" if ok else "fail"
+
+
+def got(r):
+    return f"{r['counts'][0]}/{r['counts'][1]}" if r["counts"] else "no summary"
 
 
 def line(r):
     v = verdict(r)
     if v == "skip":
         return f"  {r['suite']}: SKIPPED (0 assertions) -- {r['skip'] or 'no reason given'}"
-    got = f"{r['counts'][0]}/{r['counts'][1]} passed" if r["counts"] else "no summary"
+    if r.get("first"):
+        f = r["first"]
+        state = "INTERMITTENT" if v == "intermittent" else f"FAIL -- exit {r['code']}"
+        return (f"  {r['suite']}: {state} -- {got(f)} passed beside others, {got(r)} alone "
+                f"({f['secs'] / 60:.1f} + {r['secs'] / 60:.1f} min)")
     state = "ok" if v == "ok" else f"FAIL -- exit {r['code']}"
-    return f"  {r['suite']}: {state} -- {got} ({r['secs'] / 60:.1f} min)"
+    return f"  {r['suite']}: {state} -- {got(r)} passed ({r['secs'] / 60:.1f} min)"
+
+
+def rerun_alone(results, alone, again):
+    """Each tagged suite that failed runs again, alone, through again(suite);
+    the red run rides along on the new result as "first", never discarded."""
+    for i, r in enumerate(results):
+        if r["suite"] in alone and verdict(r) == "fail":
+            nxt = again(r["suite"])
+            nxt["first"] = r
+            print(line(nxt), flush=True)
+            results[i] = nxt
+    return results
+
+
+def report(results, minutes):
+    """The summary and the exit code: 0 all ok (skips said apart), 1 if any
+    suite failed, 3 if none failed but one or more was intermittent."""
+    bad = [r for r in results if verdict(r) == "fail"]
+    flaky = [r for r in results if verdict(r) == "intermittent"]
+    skipped = [r for r in results if verdict(r) == "skip"]
+    ok = len(results) - len(bad) - len(flaky) - len(skipped)
+    out = [f"\n{ok}/{len(results)} suites ok in {minutes:.1f} min (logs in {LOGS})"]
+    if flaky:
+        out.append(f"{len(flaky)} INTERMITTENT, red beside others and green alone, so NOT counted as ok "
+                   "(quote both counts, and say whether the red was load or a defect): "
+                   + ", ".join(r["suite"] for r in flaky))
+    if skipped:
+        out.append(f"{len(skipped)} skipped, so their coverage is NOT shown by this run: "
+                   + ", ".join(r["suite"] for r in skipped))
+    if bad or flaky:
+        out.append("\n================ WHAT FAILED ================")
+        for r in bad:
+            for f in r["fails"]:
+                out.append(f"{r['suite']} | {f}")
+        for r in flaky:
+            for f in r["first"]["fails"]:
+                out.append(f"{r['suite']} | beside others, green alone | {f}")
+    return "\n".join(out), (1 if bad else 3 if flaky else 0)
 
 
 def main():
@@ -196,28 +264,14 @@ def main():
         for t in threads:
             t.join()
         # Every other suite has finished: nothing runs beside these.
-        for i, r in enumerate(results):
-            if r["suite"] in alone and verdict(r) == "fail":
-                again = run(r["suite"], up[0], a.timeout)
-                print(line(again) + "  <- alone, after a red beside others", flush=True)
-                results[i] = again
+        rerun_alone(results, alone, lambda s: run(s, up[0], a.timeout, tag="alone"))
     finally:
         for port, _db in up:
             stop(port)
 
-    bad = [r for r in results if verdict(r) == "fail"]
-    skipped = [r for r in results if verdict(r) == "skip"]
-    ok = len(results) - len(bad) - len(skipped)
-    print(f"\n{ok}/{len(results)} suites ok in {(time.monotonic() - t0) / 60:.1f} min (logs in {LOGS})")
-    if skipped:
-        print(f"{len(skipped)} skipped, so their coverage is NOT shown by this run: "
-              + ", ".join(r["suite"] for r in skipped))
-    if bad:
-        print("\n================ WHAT FAILED ================")
-        for r in bad:
-            for f in r["fails"]:
-                print(f"{r['suite']} | {f}")
-    sys.exit(1 if bad else 0)
+    text, code = report(results, (time.monotonic() - t0) / 60)
+    print(text)
+    sys.exit(code)
 
 
 if __name__ == "__main__":

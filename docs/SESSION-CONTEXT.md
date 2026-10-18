@@ -79,7 +79,9 @@ seal and CI, suites that discard their servers' stderr, and PostgreSQL are in
   reads `SKRIBL_BASE` (default `127.0.0.1:5001`); the rest start their own app
   or need none. So the suites a change touches can run side by side:
   `python3 harness/run_parallel.py -j 3 verify_parity.py verify_tools.py`, one fresh server per
-  worker. `run_harness.sh` still uses 5001 and is still the record.
+  worker. A suite that measures and goes red is re-run alone; if it is green
+  alone it reports INTERMITTENT with both counts, keeps the red run's log, and
+  the run exits 3. `run_harness.sh` still uses 5001 and is still the record.
 - **A server started by hand posts into the real rate limit.** `run_harness.sh`
   and `harness/bootstrap.sh` both export `SKRIBL_RATE_MAX_POSTS` for the
   harness; start Flask without it and the posting suites together sit near the
