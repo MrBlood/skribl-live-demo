@@ -100,6 +100,9 @@ TEXT_RECTS = """(sels) => {
   for (const s of sels) for (const el of document.querySelectorAll(s)) {
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || !el.getClientRects().length) continue;
+    // A box a pixel wide paints no words (a count read out but not drawn),
+    // though its text's own rects still report their full width.
+    const own = el.getBoundingClientRect(); if (own.width <= 1 || own.height <= 1) continue;
     const rects = [];
     for (const n of el.childNodes) {
       if (n.nodeType !== 3 || !n.textContent.trim()) continue;
@@ -478,7 +481,10 @@ with sync_playwright() as p:
     MENU_TEXT = ['.pm-text', '.pm-sub', '.pm-label', '.pm-version', '.pm-foot-link', '.pm-seg > button']
     PAGE_TEXT = ['h1', '.sub', '.who .bio', '.stat b', '.stat span', '.brand .tag', '.tile .tt', '.tile .tdn', '.tile .tm',
                  '.seg-track > button', '.now .lbl', '.pmeta .ptitle', '.pmeta .prow > span', '.kind', '.telapsed',
-                 '.posted-title', '.posted-sub', '.posted-count', '.foot', '.state']
+                 '.posted-title', '.posted-sub', '.posted-count', '.foot', '.state',
+                 # a desk row's own buttons and the note under the list: the
+                 # red Delete read 5.1 here while nothing measured it
+                 '.posted-actions .posted-lbl', '.posted-foot-note > span', '.posted-clearbtn', '.posted-clearbtn > span']
     REPORT_TEXT = ['#reportTitle', '.sheet-card > p', '.reasons legend', '.reason', 'label > .sheet-status',
                    '.sheet-status > span', '.sheet-actions .btn']
     for form, kw in (("desktop", DESK), ("phone", PHONE)):
@@ -518,29 +524,98 @@ with sync_playwright() as p:
             c2.close()
 
     # ========================================================= ROW ACTIONS
-    print("\nGALIB 7 -- at 390, no dead tap between a row's actions")
+    print("\nGALIB 7 -- at 390, one ⋯ a row; its own buttons open under it with their words, no dead tap between them")
+    # The owner's pick A after v324 ("all yes"): four unlabelled round icons
+    # under each title became one ⋯, and the row's own buttons open under it
+    # as its menu -- the same buttons, so Copied, the gallery switch and
+    # Delete's second tap are unchanged. Delete is last, past a rule.
+    def _tap(loc):
+        # Only what is there: without the ⋯ the rows below report red rather
+        # than the suite stopping on a 30 s wait.
+        if loc.count() and loc.first.is_visible():
+            loc.first.tap()
+    for theme in ("light", "dark"):
+        pg = open_page(phone, "/library", theme)
+        pg.wait_for_timeout(600)
+        rest = pg.evaluate("""() => { const rows = [...document.querySelectorAll('.posted-row.posted-row-keyed')];
+          return { rows: rows.length,
+                   dots: rows.filter(r => { const b = r.querySelector('.posted-more'); if (!b) return false;
+                     const x = b.getBoundingClientRect(); return x.width >= 44 && x.height >= 44; }).length,
+                   strips: rows.filter(r => r.querySelector('.posted-actions').getClientRects().length).length }; }""")
+        check(f"library 390 {theme}: every keyed row shows one ⋯, 44px, and no strip of icons",
+              rest["rows"] >= 3 and rest["dots"] == rest["rows"] and rest["strips"] == 0, str(rest))
+        row = pg.locator(".posted-row.posted-row-keyed").nth(1)
+        row.scroll_into_view_if_needed()
+        _tap(row.locator(".posted-more")); pg.wait_for_timeout(300)
+        m = pg.evaluate("""() => { const r = document.querySelector('.posted-row.more-open'); if (!r) return null;
+          const s = r.querySelector('.posted-actions'), sr = s.getBoundingClientRect();
+          const bs = [...s.querySelectorAll('button')].filter(b => b.getClientRects().length)
+                       .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+          let dead = 0;
+          // The rule before Delete is the one gap, on purpose (a menu's
+          // destructive row stands apart); it is held to its 13px instead.
+          const rule = bs.length > 1 ? Math.round(bs[bs.length - 1].getBoundingClientRect().top - bs[bs.length - 2].getBoundingClientRect().bottom) : 0;
+          for (let i = 0; i + 2 < bs.length; i++) {
+            const a = bs[i].getBoundingClientRect(), c = bs[i + 1].getBoundingClientRect(), x = a.left + a.width / 2;
+            for (let y = Math.ceil(a.bottom) - 1; y <= Math.floor(c.top) + 1; y++) {
+              const hit = document.elementFromPoint(x, y);
+              if (!hit || !hit.closest || !hit.closest('.posted-actions button')) dead++; } }
+          return { words: bs.map(b => b.textContent.trim()), last: bs.length && bs[bs.length - 1].classList.contains('posted-delete'),
+                   tall: bs.every(b => b.getBoundingClientRect().height >= 44), dead, rule,
+                   onScreen: sr.left >= 0 && sr.right <= innerWidth && sr.bottom <= innerHeight,
+                   focus: document.activeElement === bs.find(b => b.classList.contains('posted-copy')),
+                   expanded: r.querySelector('.posted-more').getAttribute('aria-expanded') }; }""")
+        check(f"library 390 {theme}: the ⋯ opens the row's buttons with their words, Delete last, each 44px tall, on screen, the first focused",
+              bool(m) and m["words"][:1] == ["Copy link"] and m["last"] and m["tall"] and m["onScreen"] and m["focus"]
+              and m["expanded"] == "true" and all(m["words"]), str(m))
+        mc = glass_contrast(pg, ['.posted-row.more-open .posted-actions .posted-lbl'], 2)
+        check(f"library 390 {theme}: every word in the open menu reads 7:1 or more on real pixels ({len(mc)} measured)",
+              len(mc) >= 4 and not [x for x in mc if x[1] < 7], str([x for x in mc if x[1] < 7][:4]))
+        check(f"library 390 {theme}: every point between two of its buttons lands on one of them, but for the 13px rule before Delete",
+              bool(m) and m["dead"] == 0 and m["rule"] <= 13, str(m and [m["dead"], m["rule"]]))
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+        shut = pg.evaluate("() => [!document.querySelector('.posted-row.more-open'), document.activeElement.classList.contains('posted-more')]")
+        check(f"library 390 {theme}: Escape closes it and hands focus back to the ⋯", shut == [True, True], str(shut))
+        _tap(row.locator(".posted-more")); pg.wait_for_timeout(200)
+        pg.mouse.click(5, 120); pg.wait_for_timeout(200)
+        check(f"library 390 {theme}: a tap anywhere else closes it",
+              pg.evaluate("() => !document.querySelector('.posted-row.more-open')"))
+        pg.close()
+    # And the menu's Delete is the row's Delete: it arms in place, and the
+    # second tap takes the post down.
     pg = open_page(phone, "/library")
     pg.wait_for_timeout(600)
-    gaps = pg.evaluate("""() => { const out = [];
-      for (const strip of document.querySelectorAll('.posted-actions')) {
-        const bs = [...strip.querySelectorAll('button')].filter(b => b.getClientRects().length);
-        if (bs.length < 2) continue;
-        bs[0].scrollIntoView({ block: 'center' });
-        for (let i = 0; i + 1 < bs.length; i++) {
-          const a = bs[i].getBoundingClientRect(), c = bs[i + 1].getBoundingClientRect();
-          if (Math.abs(a.top - c.top) > 2) continue;           // wrapped onto the next line
-          const y = a.top + a.height / 2;
-          for (let x = Math.ceil(a.right) - 1; x <= Math.floor(c.left) + 1; x++) {
-            const hit = document.elementFromPoint(x, y);
-            if (!hit || !hit.closest || !hit.closest('.posted-actions button')) out.push(Math.round(x) + ':' + (hit ? (hit.className.baseVal !== undefined ? hit.tagName : hit.className) : 'none'));
-          }
-        }
-      }
-      return { dead: out.length, sample: out.slice(0, 6),
-               strips: document.querySelectorAll('.posted-actions').length }; }""")
-    check("library at 390: every point between two row actions lands on one of them",
-          gaps["strips"] >= 3 and gaps["dead"] == 0, str(gaps))
+    victim = pg.locator(".posted-row.posted-row-keyed", has_text=f"{TAG} tide")
+    victim.scroll_into_view_if_needed()
+    _tap(victim.locator(".posted-more")); pg.wait_for_timeout(200)
+    _tap(victim.locator(".posted-delete")); pg.wait_for_timeout(300)
+    armed = pg.evaluate("""(t) => { const r = [...document.querySelectorAll('.posted-row')].find(e => e.textContent.includes(t));
+      const d = r && r.querySelector('.posted-delete'); return d && [d.classList.contains('armed'), d.textContent.trim(), r.classList.contains('more-open')]; }""", f"{TAG} tide")
+    ac = glass_contrast(pg, ['.posted-row.more-open .posted-delete.armed .posted-lbl'], 2)
+    check("library 390: the armed warning reads 7:1 or more on its red", len(ac) == 1 and ac[0][1] >= 7, str(ac))
+    _tap(victim.locator(".posted-delete")); pg.wait_for_timeout(1500)
+    gone = pg.evaluate("(t) => ![...document.querySelectorAll('.posted-row')].some(e => e.textContent.includes(t))", f"{TAG} tide")
+    check("library 390: the menu's Delete arms in place, saying so, and the second tap takes the post down",
+          armed == [True, "Tap again to delete", True] and gone, f"{armed}, gone {gone}")
     pg.close()
+
+    # The count repeats "N posted" above it, so it is drawn only while a
+    # search narrows it, and read out either way; the note about this
+    # browser sits under the list, not between the switches and it.
+    for dev, c_ in (("desk", ctx), ("390", phone)):
+        pg = open_page(c_, "/library")
+        pg.wait_for_timeout(600)
+        CNT = """() => { const c = document.getElementById('postedCount'), r = c.getBoundingClientRect();
+          const rows = [...document.querySelectorAll('#postedList .posted-row')], f = document.querySelector('#postedPanel .posted-foot-top');
+          return { text: c.textContent, drawn: r.width > 2 && r.height > 2, live: c.getAttribute('aria-live'),
+                   under: !!f && rows.length > 0 && f.getBoundingClientRect().top >= rows[rows.length - 1].getBoundingClientRect().bottom }; }"""
+        c0 = pg.evaluate(CNT)
+        pg.fill("#postedSearch", "coil"); pg.wait_for_timeout(300)
+        c1 = pg.evaluate(CNT)
+        check(f"library {dev}: the count is read but not drawn at rest, drawn while a search narrows it, and the note sits under the list",
+              "Skribl" in c0["text"] and not c0["drawn"] and c0["live"] == "polite" and " of " in c1["text"] and c1["drawn"] and c0["under"],
+              f"{c0} -> {c1}")
+        pg.close()
 
     # ========================================================= LIBRARY PLAY
     print("\nGALIB 8 -- the library's Play is quiet, like the Pad's")
@@ -555,6 +630,31 @@ with sync_playwright() as p:
         check(f"/library {theme}: Play has no accent gradient, no glow, and a neutral ground (grey, or its card's)",
               pl["img"] == "none" and pl["shadow"] == "none" and (max(rgb) - min(rgb) < 24 or pl["bg"] == pl["card"]), str(pl))
         pg.close()
+
+    # ======================================================= THE CARD'S PILL
+    print("\nGALIB 9 -- a gallery card says how it was drawn, in the drawing's corner, off its face")
+    # The owner's pick A after v324 ("all yes"): the play button is a pill,
+    # "drawn in 1 sec", inside the drawing's lower-left corner -- the drawing,
+    # not the box, which is wider than it two to a row -- and the drawing's
+    # middle is the drawing's again. The title is the strong ink.
+    for dev, c_ in (("desk", ctx), ("390", phone)):
+        for theme in ("light", "dark"):
+            pg = open_page(c_, "/gallery", theme)
+            pl = pg.evaluate("""(tag) => { const t = [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag));
+              if (!t) return null; t.scrollIntoView({block: 'center'});
+              const box = t.querySelector('[data-skribl-inline]'), play = box.querySelector('.skribl-inline-play'),
+                    r = play.getBoundingClientRect(), b = box.getBoundingClientRect();
+              // The drawing, letterboxed in the box by its own shape.
+              const a = box.dataset.skriblW / box.dataset.skriblH, w = Math.min(b.width, b.height * a), h = w / a;
+              const d = { l: b.left + (b.width - w) / 2, r: b.right - (b.width - w) / 2, b: b.bottom - (b.height - h) / 2 };
+              const mid = document.elementFromPoint((d.l + d.r) / 2, b.top + b.height / 2);
+              const tt = getComputedStyle(t.querySelector('.tt')), ink = getComputedStyle(t.querySelector('.tdn')).color;
+              return { words: play.textContent.trim(), inL: Math.round(r.left - d.l), inB: Math.round(d.b - r.bottom),
+                       midFree: !play.contains(mid), size: tt.fontSize, weight: tt.fontWeight, strong: tt.color !== getComputedStyle(t.querySelector('.tm')).color }; }""", f"{TAG} coil")
+            check(f"/gallery {dev} {theme}: the card's play says 'drawn in 1 sec', 8-16px inside the drawing's lower-left corner, the drawing's middle clear, the title 16px in the strong ink",
+                  bool(pl) and pl["words"] == "drawn in 1 sec" and 8 <= pl["inL"] <= 16 and 8 <= pl["inB"] <= 16 and pl["midFree"]
+                  and pl["size"] == "16px" and int(pl["weight"]) >= 600 and pl["strong"], str(pl))
+            pg.close()
 
     phone.close()
     ctx.close()

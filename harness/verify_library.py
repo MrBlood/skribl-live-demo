@@ -591,13 +591,17 @@ with sync_playwright() as sp:
         if _sheet:
             # A held column stops the overflow; a row that still did not wrap
             # would pay for it by squeezing its title to nothing. So on a phone
-            # with a sheet, a plain row's two actions sit under the title, and
-            # the title keeps its room.
+            # with a sheet, a plain row's two actions go behind its one ⋯ (the
+            # owner's pick A after v324; they sat under the title before), the
+            # ⋯ on the title's line, and the title keeps its room.
             _pr = _mp.evaluate("""() => { const r = document.querySelector('.posted-row[data-id=plainrow]');
-                const t = r.querySelector('.posted-main').getBoundingClientRect(), a = r.querySelector('.posted-actions').getBoundingClientRect();
-                return { titleW: Math.round(t.width), below: a.top >= t.bottom - 1, actions: r.querySelectorAll('.posted-actions button').length }; }""")
-            check(f"{_lab}: a plain row's two actions sit under its title, which keeps its room",
-                  _pr["actions"] == 2 and _pr["below"] and _pr["titleW"] >= 120, str(_pr))
+                const t = r.querySelector('.posted-main').getBoundingClientRect(), m = r.querySelector('.posted-more');
+                const mr = m && m.getBoundingClientRect();
+                return { titleW: Math.round(t.width), more: !!mr && mr.width >= 44 && mr.top < t.bottom && mr.bottom > t.top && mr.right <= innerWidth,
+                         actions: r.querySelectorAll('.posted-actions button').length,
+                         strip: !!r.querySelector('.posted-actions').getClientRects().length }; }""")
+            check(f"{_lab}: a plain row's two actions are behind one ⋯ on its title's line, and the title keeps its room",
+                  _pr["actions"] == 2 and _pr["more"] and not _pr["strip"] and _pr["titleW"] >= 120, str(_pr))
         _mctx.close()
 
     # ---- full screen -------------------------------------------------------

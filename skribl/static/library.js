@@ -601,6 +601,7 @@
       onRender: words,
       source: me ? hostSource : null,
       pageEmpty: true,
+      rowMenu: true,
       onRemoved: function (id) { hostRows = hostRows.filter(function (e) { return e.id !== id; }); }
     });
     window._skriblPostedUI = ui;

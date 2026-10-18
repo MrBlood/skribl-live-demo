@@ -335,6 +335,11 @@
     var source = typeof opts.source === 'function' ? opts.source : null;
     var poster = typeof opts.poster === 'function' ? opts.poster : null;
     var onSelect = typeof opts.onSelect === 'function' ? opts.onSelect : null;
+    /* ONE ⋯ A ROW ON A PHONE (/library, the owner's pick A after v324: "all
+       yes"): the row's own buttons, with their words, open under it as its
+       menu, so Copied, the gallery switch and Delete's second tap are the
+       same buttons doing the same things. The drawers do not ask for it. */
+    var rowMenu = !!opts.rowMenu;
     var filter = typeof opts.filter === 'function' ? opts.filter : null;
     var listEl = document.getElementById('postedList');
     var countEl = document.getElementById('postedCount');
@@ -470,6 +475,7 @@
 
     function paint(all, hits, q) {
       if (countEl) {
+        countEl.classList.toggle('is-q', !!q);
         countEl.textContent = !all.length ? ''
           : q ? (hits.length + ' of ' + all.length)
               : (all.length + (all.length === 1 ? ' Skribl' : ' Skribls'));
@@ -565,7 +571,7 @@
            does where the system has a share sheet -- which is every phone,
            and was the row that ran off the right edge of one. */
         var many = may || !!(global.navigator && global.navigator.share);
-        return '<div class="posted-row' + (may ? ' posted-row-keyed' : '') + (many ? ' posted-row-many' : '') + '" data-id="' + esc(e.id) + '">' +
+        return '<div class="posted-row' + (may ? ' posted-row-keyed' : '') + (many ? ' posted-row-many' : '') + (rowMenu && many ? ' has-more' : '') + '" data-id="' + esc(e.id) + '">' +
           /* The poster where the page can build one (the profile), and the
              kind's icon always -- as a badge over the poster, because a Flip
              is marked with the book everywhere else in the app. */
@@ -623,6 +629,9 @@
             '<span class="posted-sub">' + (poster ? kindMark : '') + esc(sub) +
               ((vis && !(may && vis)) ? ' \u00b7 ' + esc(visWord) : '') + '</span>' +
           '</a>' +
+          (rowMenu && many ? '<button type="button" class="posted-more" aria-expanded="false" aria-label="More for ' +
+            esc(e.title || 'Untitled Skribl') + '"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/>' +
+            '<circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>' : '') +
           '<span class="posted-actions">' +
           /* EVERY TITLE BELOW SAYS WHAT THE LABEL DOES NOT. A tooltip on
              "Copy link" reading "Copy link" is noise that teaches people to
@@ -723,7 +732,28 @@
       });
     }
 
+    /* The row's ⋯: open its buttons under it, first one focused; a tap
+       anywhere else or Escape closes it, and Escape hands focus back. */
+    function more(row, on) {
+      var open = listEl.querySelector('.posted-row.more-open');
+      if (open && open !== row) more(open, false);
+      if (!row) return;
+      var b = row.querySelector('.posted-more');
+      row.classList.toggle('more-open', on);
+      b.setAttribute('aria-expanded', on ? 'true' : 'false');
+      if (on) { var f = row.querySelector('.posted-actions button'); if (f) f.focus(); }
+    }
+    global.document.addEventListener('pointerdown', function (e) {
+      var open = listEl.querySelector('.posted-row.more-open');
+      if (open && !open.contains(e.target)) more(open, false);
+    }, true);
+    listEl.addEventListener('keydown', function (e) {
+      var open = e.key === 'Escape' && e.target.closest && e.target.closest('.posted-row.more-open');
+      if (open) { e.stopPropagation(); more(open, false); open.querySelector('.posted-more').focus(); }
+    });
     listEl.addEventListener('click', function (ev) {
+      var mb = ev.target.closest('.posted-more');
+      if (mb) { var mr = mb.closest('.posted-row'); more(mr, !mr.classList.contains('more-open')); return; }
       var sel = onSelect && ev.target.closest('.posted-main[data-select]');
       if (sel) {
         ev.preventDefault();

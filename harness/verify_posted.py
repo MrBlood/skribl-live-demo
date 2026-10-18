@@ -1094,8 +1094,18 @@ with sync_playwright() as p:
         return out; }""")
     _k, _p = _rows.get("keyedrow"), _rows.get("plainrow")
     check("at 390: the keyed row's meta line is ONE line", _k and _k["subLines"] == 1, str(_k))
-    check("at 390: ...and its three actions sit under the title, not beside it", _k and _k["actions"] == 3 and _k["actionsBelow"], str(_k))
-    check("at 390: ...each still tall enough to tap (24px floor, a neighbour on each side)", _k and _k["minActionH"] >= 24, str(_k))
+    # THE THREE ACTIONS ARE BEHIND THE ROW'S ⋯ on /library now (the owner's
+    # pick A after v324), and open under the title when it is tapped.
+    _more = pm.evaluate("() => { const b = document.querySelector('.posted-row[data-id=\"keyedrow\"] .posted-more'); return !!b && !!b.getClientRects().length; }")
+    if _more:
+        pm.click('.posted-row[data-id="keyedrow"] .posted-more'); pm.wait_for_timeout(200)
+        _k = pm.evaluate("""() => { const r = document.querySelector('.posted-row[data-id="keyedrow"]'), main = r.querySelector('.posted-main');
+            const acts = [...r.querySelectorAll('.posted-copy, .posted-delete, .posted-key')].filter(a => a.getClientRects().length);
+            return { actions: acts.length, actionsBelow: acts.length ? Math.min(...acts.map(a => a.getBoundingClientRect().top)) >= main.getBoundingClientRect().bottom - 1 : null,
+                     minActionH: acts.length ? Math.min(...acts.map(a => Math.round(a.getBoundingClientRect().height))) : null,
+                     subLines: 1, overflow: r.scrollWidth > r.clientWidth + 1 }; }""")
+    check("at 390: ...and its three actions are behind its ⋯, opening under the title", _more and _k and _k["actions"] == 3 and _k["actionsBelow"], str(_k))
+    check("at 390: ...each a full 44px to tap", _k and (_k["minActionH"] or 0) >= 44, str(_k))
     check("at 390: the plain row keeps its one action beside the title", _p and _p["actions"] == 1 and _p["actionsBelow"] is False and _p["subLines"] == 1, str(_p))
     check("at 390: neither row overflows its box", _k and _p and not _k["overflow"] and not _p["overflow"], f"{_k} {_p}")
     pm.close()

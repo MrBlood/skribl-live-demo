@@ -482,6 +482,11 @@
       box.setAttribute('data-skribl-w', item.canvas_w);
       box.setAttribute('data-skribl-h', item.canvas_h);
     }
+    /* What the card's play button says, "drawn in 15 sec" or "6 pages" (the
+       player's `says`), from the listing as feed.js gives it to the line. A
+       Flip's `line` is null (its line counts pages), so it gets its pages. */
+    var said = item.line || (item.kind === 'flip' && item.pages > 1 ? { pages: item.pages } : null);
+    if (said) box.setAttribute('data-skribl-line', JSON.stringify(said));
     var poster = box.querySelector('.skribl-inline-poster');
     if (poster) {
       poster.setAttribute('src', poster.getAttribute('src').replace('__ID__', encodeURIComponent(item.id)));
@@ -527,7 +532,8 @@
 
     var says = [];
     if (item.kind === 'flip') says.push(item.pages > 1 ? item.pages + ' pages' : 'a flip');
-    else if (item.kind === 'pad') says.push('a replay');
+    else if (item.kind === 'pad') says.push('a replay' + (item.line && item.line.drawn > 0 && window.SkriblReplayLine
+      ? ', drawn in ' + window.SkriblReplayLine.words(item.line.drawn) : ''));
     if (item.has_audio === true) says.push('with sound');
     else if (item.has_audio === false) says.push('silent');
     if (says.length) {

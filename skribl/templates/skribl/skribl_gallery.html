@@ -214,8 +214,13 @@
     .tile .thead .tt { grid-column: 1 / -1; grid-row: 2; padding-left: 2px; }
     /* The TITLE sits under the name, the way a post's body does. It used to
        share a flex row with the time, the play count and two buttons. */
-    .tile .tt { font-size: 13.5px; color: var(--text-2); overflow: hidden;
-      text-overflow: ellipsis; white-space: nowrap; min-width: 0; margin-top: 1px; }
+    /* The title in the strong ink (the owner's pick A, after v324): it is
+       what you scan the cards for. It was 13.5px in the second ink, on one
+       line; at 16px a title of ordinary length needs a second, so it takes
+       two before it is cut. */
+    .tile .tt { font-size: 16px; font-weight: 650; line-height: 1.3; color: var(--text); overflow: hidden;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal;
+      overflow-wrap: anywhere; min-width: 0; margin-top: 4px; }
     /* NO `margin-left: auto` HERE. An auto margin absorbs every pixel of free
        space in the row BEFORE the flexible items get any, so `.tauth` never
        grew past its content: 66px sat empty between the time and Report while

@@ -18560,3 +18560,34 @@ library in the same cursive. Same size." From the mock, "Yes".
 verify_galib reads the lockup on a phone and a desk: the
 word's height is the mark's, and it sits within a few pixels of it. Red
 without the word (98/102), green with it (102/102).
+
+## After v324 -- a Gallery card says how it was drawn; a calmer Library list
+
+The owner: "mock the gallery and library pages", and of the mock, "All yes".
+
+- A Gallery card's play button is a pill, "drawn in 15 sec" (a Flip: its
+  pages), in the drawing's lower-left corner, so the drawing's face is its
+  own and you know what you are about to watch. It is the player's (a box
+  with no line under it takes `.is-says`); the box reads the post's line from
+  the listing, and the corner is the drawing's, not the box's, which is wider
+  two to a row. A host with the line already says it there. The card's title
+  is the strong ink at 16px. The embed ratchet rose by the named 722 B.
+- The Library: the count that repeated "6 posted" is read out and drawn only
+  while a search narrows it; the note about this browser sits under the list,
+  once, as "Kept in this browser. Clearing site data forgets them and their
+  keys, so save a key." (verify_posted pins its "this browser" and "site
+  data"); on a phone each row has one ⋯, and its own buttons open under it
+  with their words, Delete last past a rule -- the same buttons, so Copied,
+  the gallery switch and Delete's second tap are unchanged. The desk keeps
+  its labelled strip. Pad and Flip's drawers do not take the ⋯.
+- A fix that rode along: on a desk the red Delete read 5.1 (light) and 5.9
+  (dark), and the selected "In gallery" 6.7, under these pages' 7:1, and the
+  armed warning was white on the bright red (6.1, 3.4 in dark). The red is a
+  step deeper, the selected ink is the editors' #36209a, and the armed red
+  is #9e0b39 (8.2). verify_galib's 7:1 census had not listed the rows'
+  buttons or the note; it does now, and it skips a box that paints no area.
+
+verify_galib GALIB 9 holds the pill's words, its corner (red on a desk
+without it; a phone's box already has the drawing's shape) and the title;
+GALIB 7 the ⋯, its menu, its contrast, Escape and a tap elsewhere, and the
+menu's Delete arming and deleting; each red without its piece.

@@ -588,8 +588,8 @@
        editors' (7:1 and up on the page, the cards and a lit row), the
        switches' words in it, and the page's name beside the mark in the
        first ink. The action purple is the app's, shared with the editors. */
-    :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; }
-    :root[data-theme="light"] { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #3f27a8; }
+    :root { --text-2: #b7bfcc; --seg-off-ink: var(--text-2); --seg-on-ink: #d4c9ff; --danger-soft: #ffb3c6; }
+    :root[data-theme="light"] { --text-2: #3f4756; --seg-off-ink: var(--text-2); --seg-on-ink: #36209a; --danger-soft: #7a0a2d; }
     .seg-track { background: var(--card); border-color: var(--card-line); }
     /* The library's name is a title and one line, as the gallery's: the card
        it sat in was one more box around words. */
@@ -609,6 +609,56 @@
     .tbtn:not(.on), .posted-copy, .posted-key, .more { background: var(--card); border-color: var(--card-line); }
     .posted-copy, .posted-key, .posted-gallery, .posted-delete { border-radius: 12px; }
     .now .lbl, .stat span, .kind { text-transform: none; letter-spacing: normal; font-size: 13px; }
+    /* A CALMER LIST (the owner's pick A after v324: "all yes"). The count
+       repeats "6 posted" above, so it is drawn only while a search narrows
+       it ("2 of 6"), and is still read out; the note about this browser sits
+       under the list (_skribl_posted.html), said once, with no rules around
+       it. The selected pill's ink is the editors' #36209a, and Delete's red
+       one step deeper, so a desk row's small words read 7:1 too. */
+    .posted-count:not(.is-q) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .posted-foot-top { border: 0; margin: 20px 0 0; padding: 0; text-align: center; justify-content: center; }
+    .posted-foot-top .posted-foot-note { font-size: 14px; line-height: 1.5; color: var(--text-2); }
+    .posted-foot-top .posted-foot-acts { justify-content: center; }
+    .posted-foot-top .posted-clearbtn { color: var(--accent-ink); font-weight: 600; text-decoration: none; }
+    /* ON A PHONE, ONE ⋯ A ROW, and its own buttons open under it with their
+       words, on the menu's paper (lib/postedui.js rowMenu). The desk keeps
+       the labelled strip: there is room for it. */
+    .posted-more { display: none; }
+    @media (max-width: 640px) {
+      .posted-row.has-more { position: relative; }
+      .posted-row.has-more.more-open { z-index: 5; }
+      .posted-row.has-more .posted-more { display: grid; place-items: center; grid-row: 1; grid-column: 3;
+        width: 44px; height: 44px; margin: -6px -6px -6px 0; padding: 0; border: 0; border-radius: 12px;
+        background: none; color: var(--text-2); cursor: pointer; }
+      .posted-more svg { width: 18px; height: 18px; fill: currentColor; }
+      .posted-row.has-more .posted-actions { display: none; }
+      .posted-row.has-more.more-open .posted-actions { display: flex; flex-direction: column; align-items: stretch;
+        position: absolute; right: 8px; top: calc(100% - 10px); min-width: 210px; padding: 6px; gap: 0;
+        background: var(--mp); border: 1px solid var(--ml); border-radius: 16px;
+        box-shadow: 0 12px 40px rgba(30, 16, 90, 0.22), 0 2px 6px rgba(30, 16, 90, 0.10); }
+      .posted-row.has-more .posted-actions button { display: flex; align-items: center; gap: 12px; width: 100%;
+        min-height: 44px; padding: 12px 14px; border: 0; border-radius: 10px; background: none;
+        color: var(--text); font: inherit; font-size: 15px; font-weight: 600; text-align: left; }
+      .posted-row.has-more .posted-actions button::before { inset: 0; }
+      .posted-row.has-more .posted-actions .posted-lbl { display: inline; }
+      .posted-row.has-more .posted-actions .posted-ico { display: block; width: 18px; height: 18px; color: var(--text-2); }
+      .posted-row.has-more .posted-actions button.said .posted-ico { display: block; }
+      .posted-row.has-more .posted-actions .posted-gallery.on { color: var(--seg-on-ink); background: none; }
+      .posted-row.has-more .posted-actions .posted-gallery.on::after { content: '\2713'; margin-left: auto; }
+      /* Delete last, past a rule, as every menu's destructive row is. */
+      .posted-row.has-more .posted-actions .posted-delete { order: 9; position: relative; margin-top: 13px; }
+      .posted-row.has-more .posted-actions .posted-delete::after { content: ''; position: absolute;
+        left: 8px; right: 8px; top: -7px; height: 1px; background: var(--ml); }
+      .posted-row.has-more .posted-actions .posted-delete,
+      .posted-row.has-more .posted-actions .posted-delete .posted-ico { color: var(--danger-soft); }
+      .posted-row.has-more .posted-actions .posted-delete.armed,
+      .posted-row.has-more .posted-actions .posted-delete.armed .posted-ico { background: #9e0b39; color: #fff; }
+    }
+    /* Armed, the second tap's warning is white on a red deep enough to read
+       7:1 (it was the bright red, 3.4 in dark). */
+    .posted-actions .posted-delete.armed { background: #9e0b39; color: #fff; }
+    :root { --mp: #17142a; --ml: rgba(167, 146, 255, 0.18); }
+    :root[data-theme="light"] { --mp: #f3f0ff; --ml: rgba(124, 92, 255, 0.34); }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>

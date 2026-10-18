@@ -1458,7 +1458,16 @@ with sync_playwright() as sp:
     #   WHICH CALLER PAYS: every page that shows a post, and every post it
     #   shows plays smoothly for it. Spent first: one line per caller, untie()
     #   taking the timeline as it is (-137 here). 65,871 B measured.
-    EMBED_RATCHET = 65_875
+    # RAISED (a Gallery card says how it was drawn, "drawn in 15 sec", in the
+    #   drawing's corner, the owner's pick A after v324), for one named cost:
+    #   +722 B -- inlineplayer.js reading the post's line where there is no
+    #   line to put it in, and writing the drawing's corner where fitPoster
+    #   already knows it; inlineplayer.css the pill (.is-says), three rules.
+    #   WHICH CALLER PAYS: every page that shows a post, for a look only a
+    #   line-less box takes (the Gallery's cards); a host with the line
+    #   already says it there. Spent first: the CSS is three dense rules and
+    #   one line of pointer. 66,593 B measured.
+    EMBED_RATCHET = 66_597
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
