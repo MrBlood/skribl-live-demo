@@ -168,6 +168,9 @@
       + '<button type="button" class="ask-go ask-show" data-show="' + a.id + '">Show me</button>'
       + (related.length ? '<h3 class="ask-k">Related</h3><div class="ask-list" role="list">' + related.map(rowHtml).join('') + '</div>' : '');
     answerEl.querySelector('.ask-answer-t').textContent = a.title;
+    // Named by its heading once the heading exists: the template's reference
+    // pointed at nothing until a first answer (WAVE, after v325).
+    answerEl.setAttribute('aria-labelledby', 'askAnswerT');
     var pic = answerEl.querySelector('.ask-answer-pic');
     var lc = window.SkriblLearnCard;
     example = (lc && lc.picture) ? lc.picture({ demo: a.demo, clip: a.clip }, pic) : null;

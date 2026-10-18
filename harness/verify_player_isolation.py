@@ -853,7 +853,13 @@ with sync_playwright() as sp:
     #   timeline. Spent first: untie() takes a timeline as it is, so each
     #   caller is one line rather than a map and a write-back (-130).
     #   152,710 measured.
-    BYTES_RATCHET, BYTES_TARGET = 152_715, 153_800
+    # RAISED (a bug fix: WAVE on the owner's phone read the icons as images
+    #   with no alternative text), for one named cost: +171 B -- the nine icons
+    #   app.js writes (Play, Stop and Record on the editor, the player's play,
+    #   pause, sound and muted, the shape cursor) carry aria-hidden="true"
+    #   themselves, 19 B each, as every icon in the templates now does. Nothing
+    #   to spend against: the attribute is the fix. 152,881 measured.
+    BYTES_RATCHET, BYTES_TARGET = 152_886, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:

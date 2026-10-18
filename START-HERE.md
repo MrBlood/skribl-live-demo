@@ -75,6 +75,7 @@ here is the rule you can break tomorrow.
 | The player's JS stays under its ratchet, measured on what is SERVED (comments stripped), not what is on disk. | `verify_jsstrip.py`, `verify_player_isolation.py` |
 | `[hidden]` is honoured on every control that uses it. | `verify_layout.py`, `verify_help.py`, `verify_move.py` |
 | No readable text uses a token that fails WCAG AA. | `verify_a11y.py` |
+| WAVE's error rules find nothing on any page, fresh or filled: an icon is hidden or named on the svg itself, every field and label says something, no heading is empty, no ARIA reference points at nothing. | `verify_a11y.py` (A11Y 19) |
 | A token that cannot pass AA must be USED somewhere the requirement does not reach, or not exist. | `verify_a11y.py` |
 | Every `aria-modal` surface is routed through `SkriblModal`, and the population is generated from the DOM and the JS source, not listed. | `verify_a11y.py` |
 | Every id on a rendered page is unique — `getElementById` and `url(#…)` both take the first match. | `verify_a11y.py` |

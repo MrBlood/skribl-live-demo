@@ -18826,3 +18826,44 @@ fills in the same moment, as the editors' does, and whether VoiceOver reads
 that is for a real iPhone to say.
 
 Pad and Flip: shared (`lib/postedui.js` is both editors' posted list).
+
+## After v325 -- WAVE reads no errors on any page (a bug fix)
+
+The owner ran WAVE (WebAIM's checker) on the live Pad from their phone: 76
+errors, 0 contrast errors, 23 alerts, an AIM score of 3.3 out of 10. Read
+here with WAVE's own rules, the Pad gave the same 69, 3, 2, 1 and 1, and the
+other pages had their share: Flip 89, the player 13, the Library 12, the feed
+4, the Gallery 2.
+
+* **Sixty-nine were icons.** WAVE counts an inline `<svg>` as an image, and
+  one that is neither named nor `aria-hidden="true"` itself is "missing
+  alternative text". Every such icon sat in a control or beside words that
+  already said what it meant (VoiceOver read each tool's name in the owner's
+  V2 pass), and many were already hidden by a wrapper, which WAVE does not
+  count. 144 icon tags in templates and scripts now carry the attribute
+  themselves. The brand signature is hidden by default, because every lockup
+  names itself; under a shared drawing, where "made with" is followed only by
+  the drawing of the word, it is an image named "Skribl".
+* **Three file pickers had no name**: the Pad's photo, music and .skribl
+  pickers. They carry Flip's words for the same three now.
+* **Two empty labels** wrapped the custom colour dots. The invisible colour
+  input covers its dot and is named itself, so the wrapper is a span now and
+  taps land exactly as before. The Library's search label holds its words in
+  hidden text, where the field's name had been an aria-label.
+* **The help book's title was empty until it opened.** It starts as page
+  one's title, which the book writes again on open.
+* **The Ask answer was labelled by a heading that only an answer creates.**
+  The answer names itself when it renders.
+
+`verify_a11y` A11Y 19 reads WAVE's five error rules on all six pages at phone
+and desk sizes, with the Library holding a row, the Gallery a card and Flip
+three pages (a reading of an empty page fails rather than passing): 0/12 on
+v325, 12/12 now. `verify_ask` checks the answer is named by its own title,
+shown red by removing the line that names it. Nothing on screen changes. The
+alerts are left as they are: the 10px words (the tip counts, "Sides",
+"Recent", the time bubbles) are the owner's design call, the How it works
+videos are silent, and the repeated Gallery link and Play's tooltip are not
+errors. Not tested with WAVE itself here: the live site is out of reach from
+this box, so the owner's next WAVE run is the confirmation.
+
+Pad and Flip: shared, partials and the same rule on both.

@@ -2549,6 +2549,96 @@ with sync_playwright() as _ph:
         _pg.close()
     _bh.close()
 
+# ------------------------------------------------------------------ section 19
+print("\nA11Y 19 — WAVE's error rules find nothing, on every page, fresh or filled")
+# THE OWNER RAN WAVE (WebAIM's checker) ON THE LIVE PAD after v325: 76 errors
+# and an AIM score of 3.3 out of 10. Sixty-nine were icons: WAVE counts an
+# inline <svg> as an image, and one that is neither named nor carries
+# aria-hidden="true" ITSELF is "missing alternative text" (an aria-hidden
+# wrapper does not count for it, so the icons the tree had already hidden by
+# their wrapper were counted too). The other seven: three file pickers with no
+# name, two empty <label>s around the custom colour dots, the help book's empty
+# title, and the Ask answer's aria-labelledby pointing at a heading that only
+# existed after a first answer. Every page had its own share (Flip 89, the
+# player 13, the Library 12, the feed 4, the Gallery 2).
+#
+# THE RULES ARE WAVE'S, read the way WAVE reads them, so this goes red where
+# the owner's next WAVE run would. Calibrated against WAVE's own report: on
+# v325's Pad at phone size it read exactly WAVE's 69, 3, 2, 1 and 1. Its alerts
+# (small text, redundant links and titles, video present) are judgement calls,
+# not errors, and are not asked here.
+#
+# FILLED AS WELL AS FRESH: icons are also written by scripts (a Library row, a
+# Gallery card, Flip's page strip), so each page is read with something in it.
+_WAVE_ERRORS = r"""() => {
+  const out = [];
+  const who = el => { let anc = ''; for (let n = el.parentElement; n; n = n.parentElement) if (n.id) { anc = ' in #' + n.id; break; }
+    const cls = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean)[0];
+    return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (cls ? '.' + cls : '') + anc; };
+  const txt = el => (el.textContent || '').replace(/\s+/g, ' ').trim();
+  const alts = el => [...el.querySelectorAll('img[alt]')].map(i => i.alt).join('').trim();
+  document.querySelectorAll('img:not([alt]), input[type=image]:not([alt])').forEach(el => out.push('an image with no alt: ' + who(el)));
+  document.querySelectorAll('svg').forEach(el => {
+    if (el.getAttribute('aria-hidden') === 'true' || ['presentation', 'none'].includes(el.getAttribute('role'))) return;
+    const t = el.querySelector(':scope > title');
+    if ((el.getAttribute('aria-label') || '').trim() || (el.getAttribute('aria-labelledby') || '').trim() || (t && t.textContent.trim())) return;
+    out.push('an icon neither hidden nor named: ' + who(el.parentElement)); });
+  document.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]):not([type=image]), select, textarea').forEach(el => {
+    const lb = el.getAttribute('aria-labelledby');
+    if ((el.id && document.querySelector('label[for="' + CSS.escape(el.id) + '"]')) || el.closest('label')
+        || (el.getAttribute('aria-label') || '').trim() || (lb && lb.split(/\s+/).every(i => document.getElementById(i)))
+        || (el.getAttribute('title') || '').trim()) return;
+    out.push('a field with no label: ' + who(el)); });
+  document.querySelectorAll('label').forEach(el => { if (!txt(el) && !alts(el)) out.push('an empty label: ' + who(el)); });
+  document.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(el => { if (!txt(el) && !alts(el)) out.push('an empty heading: ' + who(el)); });
+  document.querySelectorAll('[aria-labelledby],[aria-describedby]').forEach(el => {
+    for (const a of ['aria-labelledby', 'aria-describedby']) {
+      const miss = (el.getAttribute(a) || '').split(/\s+/).filter(i => i && !document.getElementById(i));
+      if (miss.length) out.push(a + ' points at nothing (#' + miss.join(', #') + '): ' + who(el)); } });
+  return out; }"""
+import urllib.request as _ur
+_wbody = {"title": "Wave fixture", "version": 2, "schemaVersion": 2, "visibility": "public",
+          "playbackMode": "replay", "canvasSize": {"cssWidth": 816, "cssHeight": 612},
+          "frames": [{"strokes": [{"x": 120 + i * 40, "y": 140 + (i % 3) * 30, "color": "#7c5cff",
+                                   "size": 12, "t": i * 120} for i in range(12)], "strokeGroups": [12]}]}
+with _ur.urlopen(_ur.Request(BASE + "/api/skribls", data=json.dumps(_wbody).encode(),
+                             headers={"Content-Type": "application/json"}), timeout=20) as _r:
+    _wj = json.loads(_r.read().decode())
+# What lib/posted.js writes when a sheet's post succeeds, so the Library has a row.
+_wrow = [{"id": _wj["id"], "url": _wj["url"], "title": "Wave fixture", "kind": "pad", "pages": 1,
+          "visibility": "public", "tok": _wj["deleteToken"], "local": False, "has_audio": True, "at": 0}]
+with sync_playwright() as _pw:
+    _bw = _pw.chromium.launch()
+    for _size, _opts in (("phone", dict(viewport={"width": 402, "height": 874}, device_scale_factor=2,
+                                         is_mobile=True, has_touch=True)),
+                         ("desk", dict(viewport={"width": 1280, "height": 900}))):
+        _ctx = _bw.new_context(**_opts)
+        for _name, _path in (("the Pad", "/"), ("Flip", "/flip"), ("the Gallery", "/gallery"),
+                             ("the Library", "/library"), ("the feed", "/feed"),
+                             ("a share link", "/s/" + _wj["id"])):
+            _pg = _ctx.new_page()
+            browsing.goto(_pg, BASE, _path, require_boot=False)
+            if _name == "the Library":
+                _pg.evaluate("(e) => localStorage.setItem('skribl_posted_v1', JSON.stringify(e))", _wrow)
+                _pg.reload(wait_until="load")
+            if _name == "Flip":
+                _pg.wait_for_timeout(600)
+                _pg.evaluate("() => { addFrame(false); addFrame(false); }")
+            _pg.wait_for_timeout(1500)
+            _f = _pg.evaluate(_WAVE_ERRORS)
+            # Filled means filled: a reading of an empty list would pass for one.
+            _n = _pg.evaluate("""() => ({ rows: document.querySelectorAll('#postedList .posted-row').length,
+                cards: document.querySelectorAll('#galleryList > *').length,
+                pages: typeof frames !== 'undefined' ? frames.length : 0 })""")
+            _filled = {"the Library": _n["rows"] >= 1, "the Gallery": _n["cards"] >= 1,
+                       "Flip": _n["pages"] == 3}.get(_name, True)
+            check(f"{_size}, {_name}: none of WAVE's error rules fires",
+                  not _f and _filled, ("; ".join(_f[:4]) + (f" (+{len(_f) - 4} more)" if len(_f) > 4 else ""))
+                  if _f else ("" if _filled else f"read empty, so it proves nothing: {_n}"))
+            _pg.close()
+        _ctx.close()
+    _bw.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [n for ok, n in results if not ok]
 print("\n" + "=" * 62)

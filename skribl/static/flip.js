@@ -2539,7 +2539,7 @@ function abortStrokeForPinch(){
 
 /* ---- frame strip ---- */
 const strip = document.getElementById('strip');
-const DEL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const DEL_SVG='<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function disarmAll(){
   // _tiles(), not children: see refreshThumb. armedDel is a PAGE index and
   // can be past the paste ghost, which would disarm a different tile's X.
@@ -2775,7 +2775,7 @@ function buildStrip(){
       // only, which is the defect verify_a11y was written after finding five of.
       + (frameDraw(f) ? '<span class="drawmark" role="img" '
           + 'aria-label="Page '+(i+1)+' draws itself">'
-          + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          + '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
           + 'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
           + '<path d="M4 20l4-1 9.5-9.5a2 2 0 0 0-3-3L5 16l-1 4z"/></svg></span>' : '')
       + _marks
@@ -4631,12 +4631,12 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // copy its icon from the button the way it does for the others; it
         // carries its own (the pen glyph the button wore before the swoosh).
         { id: 'pen',    label: 'Pen',    btn: 'penToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+          icon: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
               + 'stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>' },
         { id: 'eraser', label: 'Eraser', btn: 'eraserToolBtn' },
         { id: 'shape',  label: 'Shape',  btn: 'shapeToolBtn' },
         { id: 'select', label: 'Select', btn: 'selectToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          icon: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
               + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
               + '<path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943'
@@ -4650,7 +4650,7 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // was: a warp is wide and low. Cleaner than the smear at 24px, which is
         // the size that decides.
         { id: 'liquify', label: 'Liquify', btn: 'liquifyToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          icon: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2.13" stroke-linecap="round" stroke-linejoin="round">'
               + '<g transform="translate(12 12) scale(0.94) translate(-12 -12)">'
               + '<path d="M2 12q2.5 2 5 0t5 0 5 0 5 0"/>'
@@ -4679,7 +4679,7 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // BEFORE shipping, not at 4x. The hand that shipped was admired at 4x
         // and was never once looked at the size a person actually sees it.
         { id: 'smudge', label: 'Smudge', btn: 'smudgeToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          icon: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
               + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
               + '<path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>'
@@ -4700,7 +4700,7 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // drawing, and deliberately so: it is the only tool whose whole subject
         // is softness. Do not "tidy" it into outlined rings again.
         { id: 'blur', label: 'Blur', btn: 'blurToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          icon: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
               + '<circle cx="12" cy="12" r="9.2" fill="currentColor" stroke="none" opacity=".13"/>'
               + '<circle cx="12" cy="12" r="6.6" fill="currentColor" stroke="none" opacity=".22"/>'
@@ -4722,7 +4722,7 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // it is measured. Matching the SPEC (box, stroke, area band) is not the
         // same as matching the HAND.
         { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          icon: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
               + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
               + '<path d="M11 7 6 2"/>'
@@ -4734,7 +4734,7 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + 'a1.205 1.205 0 0 1 0 1.704l-7.592 7.592a3.615 3.615 0 0 1-5.112 0'
               + 'l-3.888-3.888a3.615 3.615 0 0 1 0-5.112L5.67 7.33"/></g></svg>' },
         { id: 'stamp', label: 'Stamps', btn: 'stampToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          icon: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
               + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
               + '<path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13"/>'
@@ -4742,7 +4742,7 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + 'a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1z"/>'
               + '<path d="M5 22h14"/></g></svg>' },
         { id: 'artmove', label: 'Artwork', btn: 'artmoveToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          icon: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
               + '<path d="M12 4v16M4 12h16M12 4l-2.5 2.5M12 4l2.5 2.5'
               + 'M12 20l-2.5-2.5M12 20l2.5-2.5M4 12l2.5-2.5M4 12l2.5 2.5'

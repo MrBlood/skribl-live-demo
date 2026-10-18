@@ -36,7 +36,7 @@
    * unevenly against each other.
    */
   var ICON_FLIP =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"' +
+    '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"' +
     ' stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/>' +
     '<path d="M12 6.5v13.3"/></svg>';
@@ -46,7 +46,7 @@
    * "Start drawing" hint — so a Pad Skribl was marked with a pencil facing
    * away from the one the user just drew with. */
   var ICON_PAD =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"' +
+    '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"' +
     ' stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
 
@@ -57,7 +57,7 @@
      field) shows nothing rather than claiming silence, which is the bug this
      badge shipped alongside the fix for. */
   var ICON_SOUND =
-    '<svg class="posted-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+    '<svg aria-hidden="true" class="posted-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
     ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>' +
     '<path d="M19 5a9 9 0 0 1 0 14"/></svg>';
