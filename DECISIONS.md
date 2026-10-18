@@ -18950,3 +18950,26 @@ Checked here on Chromium (`SKRIBL_SMOKE_ENGINE=chromium`): 12/12, and 7/11
 with Flip's script broken on purpose, naming the error. Its counters read 342
 frames in an MP4 the repository ships, as ffprobe does, and none in a WebM
 header with no frame behind it.
+
+**What Firefox found on its first runs** (Firefox 142, 18 October). Neither
+editor's video came: the export sat at "Recording…" with its bar full, and
+Flip's Cancel did nothing. That Firefox has no H.264 encoder, so the video goes
+to the recorder, and with no music the recorder was asked for
+`video/webm;codecs=vp8,opus`. Gecko's recorder, asked for an audio codec with
+no audio track, waits for one: its start event came only at stop(), then no
+data and no stop. Six trials in Firefox told it apart: both types naming opus
+stalled, however the canvas was captured; the four without it recorded.
+Chromium records either way, which is why nothing in the battery saw it.
+
+`lib/videorecord.js` now asks for a type with sound only when the stream has
+an audio track (THE TYPE FOLLOWS THE TRACKS), one change for both editors.
+`verify_videoexport` puts in a stand-in recorder that waits as Gecko's did, on
+each editor with no music: red on the old recorder (no video in 15 s; it asked
+for `vp9,opus`), green on the new. The smoke now fails a missing video on its
+own and still posts behind it: every red Firefox has shown so far was this one.
+
+Still Firefox's own: it captures by sampling here, because its requestFrame is
+on the stream and the recorder looks on the track. In the trials, sampling
+kept 8 or 9 of 16 painted frames and the stream's requestFrame kept them all,
+so Firefox's videos are choppier than Chromium's. That is on the list, not in
+this change. A video with music has not been made in Firefox yet.

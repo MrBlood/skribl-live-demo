@@ -36,6 +36,12 @@
  * track joins the stream; it starts with the recorder and stops with it. If it
  * cannot be added, info.withoutMusic is true and the editor says so.
  *
+ * THE TYPE FOLLOWS THE TRACKS (after v326). A type that names an audio codec
+ * is asked for only when the stream has an audio track. Gecko's recorder,
+ * asked for opus with none, waits for one: it never starts and never stops,
+ * and both editors sat at "Recording…" for good. Firefox's first run on CI
+ * found it; Chromium records either way.
+ *
  * A RECORDING IS A SUCCESS ONLY IF SOMETHING CAME OUT: at least one chunk, a
  * blob with bytes in it, the container's own signature at its start (EBML for
  * WebM, `ftyp` for MP4), a frame inside it, and no recorder error. A check of
@@ -56,8 +62,10 @@
 (function (global) {
   'use strict';
 
-  var TYPES = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9',
-               'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+  // With sound, the types that carry it come first; without, they are not
+  // asked for at all (THE TYPE FOLLOWS THE TRACKS).
+  var SOUND = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus'];
+  var TYPES = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
 
   function capture(canvas, fps) {
     var s = canvas.captureStream(0), t = s.getVideoTracks()[0];
@@ -172,13 +180,15 @@
 
   function recordVideo(o) {
     if (typeof MediaRecorder === 'undefined' || !o.canvas.captureStream) { o.fail('start'); return false; }
-    var mime = TYPES.filter(function (t) { return MediaRecorder.isTypeSupported(t); })[0];
-    if (!mime) { o.fail('start'); return false; }
     var cap = capture(o.canvas, o.fps), bed = music(o.music, cap.stream);
+    var mime = (cap.stream.getAudioTracks().length ? SOUND.concat(TYPES) : TYPES)
+      .filter(function (t) { return MediaRecorder.isTypeSupported(t); })[0];
     var chunks = [], error = null, rec, iv = null, k = 0;
     var end = function () { if (iv) clearInterval(iv); iv = null; if (bed) bed.stop(); };
+    var refuse = function () { end(); cap.stream.getTracks().forEach(function (t) { t.stop(); }); o.fail('start'); return false; };
+    if (!mime) return refuse();
     try { rec = new MediaRecorder(cap.stream, { mimeType: mime }); }
-    catch (e) { end(); o.fail('start'); return false; }
+    catch (e) { return refuse(); }
     rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
     rec.onerror = function (e) { error = (e && e.error && e.error.name) || 'error'; };
     rec.onstop = function () {

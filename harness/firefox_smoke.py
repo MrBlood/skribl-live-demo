@@ -186,82 +186,6 @@ OFFERS = """async () => { const t = ['video/webm;codecs=vp9,opus', 'video/webm;c
     : t.filter(x => MediaRecorder.isTypeSupported(x)).join(', ') || 'no type')
     + '; requestFrame: ' + (has('CanvasCaptureMediaStreamTrack') ? 'on the track' : has('CanvasCaptureMediaStream') ? 'on the stream' : 'none'); }"""
 
-# DIAGNOSTIC, for the run that finds where Firefox's recorder stalls; it comes
-# out with the fix. A trial records 15 frames of a small canvas one way
-# ('mime|how': how is auto = captureStream(30), stream = captureStream(0) and
-# the stream's requestFrame; 'dom' puts the canvas in the page) and says what
-# the recorder did, with the bytes it made.
-PROBE = """async (mode) => {
-  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  const t0 = performance.now(), at = () => Math.round(performance.now() - t0), ev = [];
-  const [mime, how] = mode.split('|');
-  const cv = document.createElement('canvas'); cv.width = 160; cv.height = 120;
-  if (how.includes('dom')) document.body.appendChild(cv);
-  const c = cv.getContext('2d'); let k = 0;
-  const paint = () => { c.fillStyle = (k++ % 2) ? '#7c5cff' : '#ffffff'; c.fillRect(0, 0, 160, 120); };
-  paint();
-  let s, push = () => {};
-  try {
-    if (how.startsWith('auto')) s = cv.captureStream(30);
-    else { s = cv.captureStream(0); push = () => s.requestFrame(); }
-  } catch (e) { return { say: 'captureStream threw ' + e.name }; }
-  let r;
-  try { r = mime ? new MediaRecorder(s, { mimeType: mime }) : new MediaRecorder(s); }
-  catch (e) { return { say: 'new MediaRecorder threw ' + e.name + ': ' + e.message }; }
-  const parts = [];
-  r.ondataavailable = (e) => { ev.push(at() + ' data ' + (e.data ? e.data.size : 0)); if (e.data && e.data.size) parts.push(e.data); };
-  r.onerror = (e) => ev.push(at() + ' error ' + (e.error ? e.error.name : '?'));
-  r.onstart = () => ev.push(at() + ' start');
-  const stopped = new Promise((res) => { r.onstop = () => { ev.push(at() + ' stop'); res(true); }; });
-  try { r.start(); } catch (e) { return { say: 'start() threw ' + e.name + ': ' + e.message }; }
-  for (let i = 0; i < 15; i++) { await wait(33); paint(); try { push(); } catch (e) { ev.push('push threw ' + e.name); break; } }
-  await wait(33);
-  try { r.stop(); } catch (e) { ev.push('stop() threw ' + e.name); }
-  const ok = await Promise.race([stopped, wait(5000).then(() => false)]);
-  if (cv.parentNode) cv.remove();
-  const ab = parts.length ? await new Blob(parts).arrayBuffer() : new ArrayBuffer(0);
-  return { say: (ok ? '' : 'NO onstop 5 s after stop(), state ' + r.state + '; ') + 'mimeType ' + r.mimeType + '; ' + ev.join(', '),
-           bytes: Array.from(new Uint8Array(ab)) };
-}"""
-PROBES = ["video/webm;codecs=vp8,opus|auto", "video/webm;codecs=vp8|auto", "|auto",
-          "video/webm;codecs=vp8,opus|stream", "video/webm;codecs=vp8|stream", "video/webm;codecs=vp8|auto dom"]
-
-# DIAGNOSTIC too: lib/videorecord.js itself on an editor-sized canvas, with
-# every recorder call and event it makes, timed.
-REAL = """async () => {
-  const t0 = performance.now(), at = () => Math.round(performance.now() - t0), ev = [];
-  const P = MediaRecorder.prototype, s0 = P.start, s1 = P.stop;
-  P.start = function () { const r = this;
-    ['start', 'stop', 'dataavailable', 'error'].forEach((n) => r.addEventListener(n, (e) => ev.push(at() + ' ' + n + (e.data ? ' ' + e.data.size : ''))));
-    ev.push(at() + ' start() ' + r.mimeType + ' on ' + r.stream.getTracks().map((t) => t.kind + ' ' + t.readyState).join(', '));
-    return s0.apply(this, arguments); };
-  P.stop = function () { ev.push(at() + ' stop() in ' + this.state); return s1.apply(this, arguments); };
-  const cv = document.createElement('canvas'); cv.width = 816; cv.height = 612;
-  const c = cv.getContext('2d');
-  const end = await new Promise((res) => {
-    const ok = SkriblVideoRecord.recordVideo({ canvas: cv, fps: 30, frames: 30, music: null,
-      draw: (k) => { c.fillStyle = k % 2 ? '#7c5cff' : '#ffffff'; c.fillRect(0, 0, 816, 612); },
-      progress: () => {}, cancelled: () => false,
-      done: (b, ext) => res('done: ' + b.size + ' B ' + ext), fail: (why) => res('fail: ' + why), cancel: () => res('cancel') });
-    if (!ok) res('did not start');
-    setTimeout(() => res('NOTHING after 8 s'), 8000);
-  });
-  P.start = s0; P.stop = s1;
-  return end + '; ' + ev.join(', ');
-}"""
-
-
-def probe(pg):
-    """DIAGNOSTIC: print what each recorder trial made."""
-    for mode in PROBES:
-        r = pg.evaluate(PROBE, mode)
-        try:
-            kind, n = video(bytes(r["bytes"])) if r.get("bytes") else ("nothing", 0)
-        except Exception as e:
-            kind, n = f"unreadable ({type(e).__name__})", 0
-        print(f"    probe {mode}: {kind}, {n} video frames, {len(r.get('bytes') or [])} B; {r['say']}")
-    print(f"    probe recordVideo: {pg.evaluate(REAL)}")
-
 
 def export(pg, opener):
     """The editor's own Export sheet, Video: the bytes it downloads. When none
@@ -348,7 +272,6 @@ with sync_playwright() as p:
     def pad():
         pg = page("/")
         print(f"  ({ENGINE} offers: {pg.evaluate(OFFERS)})")
-        probe(pg)
         draw(pg, "#canvas")
         pts, ink = pg.evaluate("() => strokes.length"), pg.evaluate(INK, "#canvas")
         check("the Pad boots, and a stroke is drawing data and ink on its canvas",
