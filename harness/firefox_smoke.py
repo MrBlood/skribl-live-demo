@@ -236,16 +236,30 @@ def section(name, run):
         check(f"{name}: every step ran", False, f"{type(e).__name__}: {str(e).splitlines()[0][:240]}")
 
 
-def filmed(pg, opener, name, least, also=True):
-    """The editor's video, checked for at least `least` frames. A video that
-    never comes fails this check alone: the post after it still runs."""
+# THE PLAN: how many beats each editor's video is made of, asked of the page
+# before it exports. The recorder pushes one frame per beat (lib/videorecord.js,
+# ONE FRAME PER TICK), so a WebM holds exactly that many; a recorder that only
+# samples the canvas holds fewer. An MP4 is made elsewhere (lib/mp4export.js)
+# and is only asked for frames.
+PAD_PLAN = """() => { const t = buildPlaybackTimeline(), ms = t.length ? t[t.length - 1].playT : 0;
+  return Math.ceil(ms * 30 / 1000) + 1 + Math.round(700 * 30 / 1000); }"""
+FLIP_PLAN = "() => { const r = exRange(); return exportUnits(r.from - 1, r.to - 1).length * exLoops; }"
+
+
+def filmed(pg, opener, name, plan, also=True):
+    """The editor's video, checked against its plan: a WebM holds a frame for
+    every beat. A video that never comes fails this check alone: the post
+    after it still runs."""
+    want = pg.evaluate(plan)
     try:
         fname, data = export(pg, opener)
     except Exception as e:
         check(name, False, f"{type(e).__name__}: {str(e).splitlines()[0][:240]}")
         return
     kind, n = video(data)
-    check(name, also and n >= least and len(data) > 1000, f"{fname}: {kind}, {n} video frames, {len(data):,} B")
+    ok = n == want if kind == "webm" else n > 3
+    check(name, also and ok and len(data) > 1000,
+          f"{fname}: {kind}, {n} video frames of {want} planned, {len(data):,} B")
 
 
 with sync_playwright() as p:
@@ -284,7 +298,7 @@ with sync_playwright() as p:
               pg.evaluate("() => playing && !document.getElementById('playScrub').hidden"))
         pg.evaluate("() => { if (playing) document.getElementById('playBtn').click(); }")
         pg.wait_for_timeout(400)
-        filmed(pg, "exportItem", "...its video is a real file with frames in it", 4)
+        filmed(pg, "exportItem", "...its video is a real file, a frame for every beat of its replay", PAD_PLAN)
         ticked, res = post(pg, "Firefox smoke, Pad", ".post-check")
         got["pad"] = res["url"] or ""
         check("...and it posts through its own sheet, ticked public, and gets its link",
@@ -301,7 +315,7 @@ with sync_playwright() as p:
         pg.click("#addblank")
         pg.wait_for_timeout(300)
         draw(pg, "#pad")
-        filmed(pg, "miExport", "...its two pages make a real video file, a frame for each at least", 2,
+        filmed(pg, "miExport", "...its two pages make a real video file, a frame for every beat, the first not doubled", FLIP_PLAN,
                also=pg.evaluate("() => frames.length") == 2)
         ticked, res = post(pg, "Firefox smoke, Flip", "#postSheet .post-check")
         got["flip"] = res["url"] or ""
