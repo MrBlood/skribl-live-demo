@@ -522,12 +522,28 @@ with sync_playwright() as _pe:
         _pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", _tile)
         _pg.wait_for_timeout(300)
         if _where == "phone":
-            _centred("the Play inside a post (the in-post player: every Gallery tile, every skribls.net post)",
-                     _read(_pg, _tile + " .skribl-inline-play"))
+            # A Gallery card's Play is a pill that says how it was drawn (the
+            # owner's pick after v324): its arrow leads the words, so it is
+            # held level, not centred across the pill. The disc is read on
+            # the preview feed below, where a post keeps it.
+            _pg.evaluate(_GRID, _tile + " .skribl-inline-play"); _pg.wait_for_timeout(60)
+            _pl = _optical(_pg, _tile + " .skribl-inline-play svg")
+            check("the Gallery card's pill: its arrow sits level in it, within a third of a pixel",
+                  _pl is not None and abs(_pl[1]) <= 1 / 3, f"optical offset {_pl} px")
         _pg.evaluate("(s) => document.querySelector(s).classList.add('ctl-on')", _tile)
         _pg.wait_for_timeout(300)
         _centred(f"the Gallery card's Play, {_where}", _read(_pg, _tile + " .skfull-card .skfull-play"))
         _pg.close()
+    # THE DISC, where a post keeps it: the in-post player with its line under
+    # it, as every skribls.net post is drawn (the preview feed is that page).
+    _pg = _phone.new_page(); browsing.goto(_pg, BASE, "/feed")
+    _post = f'[data-skribl-id="{_fx["id"]}"]'
+    _pg.wait_for_selector(_post + " .skribl-inline-play svg", state="visible")
+    _pg.add_style_tag(content=_HIDE)
+    _pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", _post)
+    _pg.wait_for_timeout(300)
+    _centred("the Play inside a post (the in-post player: every skribls.net post)", _read(_pg, _post + " .skribl-inline-play"))
+    _pg.close()
 
     for _path, _boot in (("/skribl-pad", "pad"), ("/flip", "flip")):
         _pg = _phone.new_page(); browsing.goto(_pg, BASE, _path)

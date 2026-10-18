@@ -211,7 +211,7 @@ SEED_POSTED = """
       window.SkriblPosted.add({id:'seedB', url:'/s/seedB', kind:'flip', pages:6,
         title:'Unending J', tok:'k', visibility:'unlisted'}); }"""
 
-ROW_STRIP = "() => { const r = document.querySelector('.posted-row-keyed');\n  if (!r) return null;\n  const acts = r.querySelector('.posted-actions');\n  const thumb = r.querySelector('.posted-thumb');\n  const btns = [...acts.querySelectorAll('button')];\n  const tops = new Set(btns.map(b => Math.round(b.getBoundingClientRect().top)));\n  const main = r.querySelector('.posted-main');\n  return { thumbL: Math.round(thumb.getBoundingClientRect().left),\n           mainL: Math.round(main.getBoundingClientRect().left),\n           actsL: Math.round(btns[0].getBoundingClientRect().left),\n           lines: tops.size, n: btns.length,\n           right: Math.max(...btns.map(b => Math.round(b.getBoundingClientRect().right))),\n           words: btns.filter(b => { const l = b.querySelector('.posted-lbl');\n                     return l && getComputedStyle(l).display !== 'none'; }).length,\n           icons: btns.filter(b => { const i = b.querySelector('.posted-ico');\n                     return i && getComputedStyle(i).display !== 'none'; }).length,\n           named: btns.every(b => (b.getAttribute('aria-label') || '').length > 8) }; }"
+ROW_STRIP = "() => { const r = document.querySelector('.posted-row-keyed');\n  if (!r) return null;\n  const acts = r.querySelector('.posted-actions');\n  const thumb = r.querySelector('.posted-thumb');\n  const btns = [...acts.querySelectorAll('button')];\n  const tops = new Set(btns.map(b => Math.round(b.getBoundingClientRect().top)));\n  const main = r.querySelector('.posted-main');\n  return { thumbL: Math.round(thumb.getBoundingClientRect().left),\n           mainL: Math.round(main.getBoundingClientRect().left),\n           actsL: Math.round(btns[0].getBoundingClientRect().left),\n           actsT: Math.round(Math.min(...btns.map(b => b.getBoundingClientRect().top))),\n           mainB: Math.round(main.getBoundingClientRect().bottom),\n           lines: tops.size, n: btns.length,\n           right: Math.max(...btns.map(b => Math.round(b.getBoundingClientRect().right))),\n           words: btns.filter(b => { const l = b.querySelector('.posted-lbl');\n                     return l && getComputedStyle(l).display !== 'none'; }).length,\n           icons: btns.filter(b => { const i = b.querySelector('.posted-ico');\n                     return i && getComputedStyle(i).display !== 'none'; }).length,\n           named: btns.every(b => (b.getAttribute('aria-label') || '').length > 8) }; }"
 
 # `del` WAS THE THIRD ITEM ON THE TITLE LINE and v311 took it off a posted
 # row (the x that removed the entry without touching the Skribl). It is read
@@ -225,6 +225,7 @@ ROW_LINE = """
                            return e ? Math.round(e.getBoundingClientRect().top) : null; };
       return { thumb: y('.posted-thumb'), main: y('.posted-main'),
                dels: row.querySelectorAll('.posted-del').length,
+               more: y('.posted-more'), shown: !!row.querySelector('.posted-actions').getClientRects().length,
                acts: y('.posted-actions') }; }"""
 
 HEADER_GEOMETRY = """() => {
@@ -558,9 +559,11 @@ with sync_playwright() as p:
                       max(line) - min(line) < 40,
                       f"tops {line} — a spread this large means one of them "
                       f"wrapped, which is the defect the grid replaced")
-                check(f"library @{w}px ...and the actions are BELOW it",
-                      rowy["acts"] > max(line),
-                      f"actions top {rowy['acts']} against title line {max(line)}")
+                # BEHIND ONE ⋯ ON THAT LINE (the owner's pick A after v324):
+                # the strip that sat below it opens from the ⋯ now.
+                check(f"library @{w}px ...and the actions are behind one ⋯ on it",
+                      rowy["more"] is not None and abs(rowy["more"] - max(line)) < 40 and not rowy["shown"],
+                      f"⋯ top {rowy['more']} against title line {max(line)}, strip shown {rowy['shown']}")
                 check(f"library @{w}px ...and a posted row carries no × at all",
                       rowy["dels"] == 0,
                       f"{rowy['dels']} .posted-del on a keyed row — v311 took "
@@ -590,6 +593,9 @@ with sync_playwright() as p:
         _page.evaluate(SEED_POSTED)
         _page.reload(wait_until="load")
         _page.wait_for_timeout(1400)
+        # The row's buttons are behind its ⋯ on a phone; open it to read them.
+        if _page.locator('.posted-row-keyed .posted-more').count():
+            _page.click('.posted-row-keyed .posted-more'); _page.wait_for_timeout(200)
         _strip = _page.evaluate(ROW_STRIP)
         _page.close()
         if not _strip:
@@ -610,16 +616,17 @@ with sync_playwright() as p:
         # a number nothing on the page has any more. The one-line row below is
         # what stops the indent costing a wrap, and the two only make sense
         # together.
-        check(f"library @{_w}px the actions line up with the title, not the thumb",
-              _strip["actsL"] == _strip["mainL"],
-              f"first button at {_strip['actsL']}, title at {_strip['mainL']}, "
-              f"thumb at {_strip['thumbL']} — equal to the THUMB's left is "
-              f"the v293 layout the owner asked to move off")
-        check(f"library @{_w}px ...and all {_strip['n']} of them fit ONE line",
-              _strip["lines"] == 1 and _strip["right"] <= _w,
+        # OPENED FROM THE ⋯ (the owner's pick A after v324), the strip is the
+        # row's menu: under the title, one button a line, each with its icon
+        # AND its word, which a strip of bare icons at 34px could not carry.
+        check(f"library @{_w}px the ⋯ opens the actions under the title",
+              _strip["actsT"] >= _strip["mainB"] - 1,
+              f"first button at {_strip['actsT']}, title's foot at {_strip['mainB']}")
+        check(f"library @{_w}px ...each of the {_strip['n']} on its own line, on screen",
+              _strip["lines"] == _strip["n"] and _strip["right"] <= _w,
               f"{_strip['lines']} line(s), rightmost edge {_strip['right']} of {_w}")
-        check(f"library @{_w}px ...as icons, with the words put away",
-              _strip["icons"] == _strip["n"] and _strip["words"] == 0,
+        check(f"library @{_w}px ...each with its icon and its word",
+              _strip["icons"] == _strip["n"] and _strip["words"] == _strip["n"],
               f"{_strip['icons']} icons and {_strip['words']} words showing on "
               f"{_strip['n']} buttons")
         check(f"library @{_w}px ...each still saying what it does, to a reader",
