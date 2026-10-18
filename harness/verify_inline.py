@@ -642,22 +642,49 @@ with sync_playwright() as sp:
     pg.wait_for_timeout(200)
 
     # ---- scrolling away ----------------------------------------------------
+    # PLAYING FIRST. This read 'idle' after stopAll() above whatever scrolling
+    # did, so it could not fail; the post is in view and playing, looped so
+    # it is still playing when it is scrolled past.
+    pg.evaluate("""(id) => { document.querySelector('[data-skribl-id="' + id + '"]').scrollIntoView({block: 'center'});
+        const p = window.SkriblInline.find(id); p.setLoop(true); p.play(); }""", id_b)
+    try:
+        pg.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing' && window.SkriblInline.find(id).state().elapsedMs > 50",
+                             arg=id_b, timeout=8000)
+    except PWTimeout:
+        pass
     pg.evaluate("""() => {
         const spacer = document.createElement('div');
         spacer.style.height = '250vh';
         document.body.appendChild(spacer);
         window.scrollTo(0, document.body.scrollHeight); }""")
     # The IntersectionObserver's callback is the state; wait for it, not 1200ms.
+    # PAUSED, NOT SETTLED (the owner, after v324: "It goes away even if it's
+    # playing and I scroll it out of view"): it waits where it was, and
+    # carries on when it is back in view.
+    _was = pg.evaluate("(id) => window.SkriblInline.find(id).state().state", id_b)
     try:
-        pg.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'idle'",
+        pg.wait_for_function("(id) => window.SkriblInline.find(id).state().state !== 'playing'",
                              arg=id_b, timeout=5000)
     except PWTimeout:
         pass
     scrolled = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_b)
-    check("scrolling a playing post out of view settles it",
-          scrolled["state"] == "idle",
-          f"{scrolled['state']} — a feed that keeps drawing off-screen burns "
-          f"battery for nobody")
+    check("scrolling a playing post out of view pauses it where it was",
+          _was == "playing" and scrolled["state"] == "paused" and scrolled["elapsedMs"] > 0,
+          f"{_was} -> {scrolled['state']} at {scrolled['elapsedMs']} ms — a feed that keeps "
+          f"drawing off-screen burns battery for nobody, and one that resets it loses the drawing")
+    pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').scrollIntoView({block: 'center'})", id_b)
+    try:
+        pg.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'",
+                             arg=id_b, timeout=5000)
+    except PWTimeout:
+        pass
+    back = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_b)
+    check("...and back in view, it carries on from there",
+          back["state"] == "playing" and back["elapsedMs"] >= scrolled["elapsedMs"],
+          f"{back['state']} at {back['elapsedMs']} ms")
+    pg.evaluate("() => window.SkriblInline.stopAll()")
+    pg.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
+    pg.wait_for_timeout(300)
 
     # ---- a post that cannot load ------------------------------------------
     bad = pg.evaluate("""() => {
@@ -1467,7 +1494,17 @@ with sync_playwright() as sp:
     #   line-less box takes (the Gallery's cards); a host with the line
     #   already says it there. Spent first: the CSS is three dense rules and
     #   one line of pointer. 66,593 B measured.
-    EMBED_RATCHET = 66_597
+    # RAISED (a bug fix, owner's iPhone after #516: "It goes away when scrolled
+    #   out of sight then come back and blank screen"; "It goes away even if
+    #   it's playing and I scroll it out of view"), for one named cost:
+    #   +280 B -- the observer pausing a post that leaves the screen and
+    #   carrying it on when it comes back, where it settled it to the start;
+    #   settle() putting the card back on top (the canvas at time zero was
+    #   left over it: a blank page) and look() bringing the canvas back on a
+    #   play; inlineplayer.css the pill's spinner where its arrow was. WHICH
+    #   CALLER PAYS: every page that shows a post, and every post scrolled
+    #   past keeps its place for it. 66,873 B measured.
+    EMBED_RATCHET = 66_877
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
