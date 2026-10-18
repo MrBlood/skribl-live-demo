@@ -18705,3 +18705,34 @@ runner's temp directory. And a dry run of the step here read the report's own
 file back as a video (ffmpeg reads text with its tty demuxer), so the file
 list is now taken before the report exists. Keeping was shown both ways on a
 trimmed copy of the suite: four files with the variable set, none without.
+
+## After v325 -- a video with no frame in it is not a success (a bug fix)
+
+The evidence run for the v325 auditor ran `verify_videoexport` beside two
+other suites and an install, on a loaded machine, and it went red: Flip's
+silent WebM walked as no tracks and no frames, and the chip said "Animation
+exported". SK-AUD-003's fix had made a recording a success when it had bytes
+and the container's signature at its start, and a header with nothing behind
+it has both. Reproduced on v325 with a stand-in recorder that hands back a
+header-only WebM: both editors downloaded it and said it worked ("Animation
+exported", "Video exported"). The real recorder made such a file once; in 84
+more exports under CPU starvation and beside other browsers it did not, so it
+is rare. A false success all the same.
+
+`lib/videorecord.js`, one module for both editors, now also asks the file for
+a frame: a block on a WebM's video track, or an MP4 `mdat` with bytes in it,
+looked for in its first 4 MB (a header alone is a few hundred bytes, so a
+larger file is not one). Without one it is 'empty', and the editor says what
+both already say for an empty recording: "The video came out empty, so
+nothing was saved. Try again." Still not a decoder. The frame finder was
+checked on 13 files: real WebMs from both editors, the same files cut back to
+their headers, and plain, fast-start and fragmented MP4s with and without
+samples. An MP4 holding only audio samples would still pass; nothing here
+makes one.
+
+`verify_videoexport` gains the header-only recorder on both editors and a
+check that the stand-in file really is a WebM with a video track and no frame:
+17/19 on the old recorder (exactly the two new checks red), 19/19 with the
+fix. The MP4 route is untouched: it encodes every frame itself.
+
+Pad and Flip: shared, one module.
