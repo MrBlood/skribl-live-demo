@@ -299,8 +299,8 @@ with sync_playwright() as p:
     pg.wait_for_timeout(900)
     DEL = """() => { const d = document.querySelector('#draftsList .draft-del');
       const row = d.closest('.draft-row'), m = row.querySelector('.draft-meta'), r = d.getBoundingClientRect();
-      const f = row.querySelector('.draft-file').getBoundingClientRect();
-      return { w: r.width, h: r.height, x: r.left, fx: f.left, armed: d.classList.contains('armed'),
+      const f = row.querySelector('.draft-file');   // none before D3: the bin stood alone
+      return { w: r.width, h: r.height, x: r.left, fx: f ? f.getBoundingClientRect().left : null, armed: d.classList.contains('armed'),
                word: d.textContent.trim(), meta: m.textContent, live: m.getAttribute('aria-live'),
                label: d.getAttribute('aria-label'), ink: getComputedStyle(d).color }; }"""
     b0 = pg.evaluate(DEL)
@@ -309,7 +309,7 @@ with sync_playwright() as p:
     b1 = pg.evaluate(DEL)
     check("library: the armed Delete keeps its word, its box and its place, and so does Save file beside it",
           b1["armed"] and b0["w"] == b1["w"] and b0["h"] == b1["h"] >= 34 and b0["x"] == b1["x"]
-          and b0["fx"] == b1["fx"] and b0["word"] == b1["word"] == "Delete", f"{b0} -> {b1}")
+          and b0["fx"] is not None and b0["fx"] == b1["fx"] and b0["word"] == b1["word"] == "Delete", f"{b0} -> {b1}")
     check("library: the question is on the meta line, which speaks, and Delete's ink turns",
           b1["meta"] != b0["meta"] and "again" in b1["meta"] and b1["live"] == "polite"
           and b1["label"].startswith("Tap again") and b1["ink"] != b0["ink"], f"{b0} -> {b1}")
@@ -630,7 +630,10 @@ with sync_playwright() as p:
                "frames": [_ROW, {"gen": {"n": 1}, "background": "#ffffff"}, _ROW]}
     DMENU = """(t) => { const r = [...document.querySelectorAll('#draftsList .draft-row')].find(e => e.textContent.includes(t));
       if (!r) return null; const vis = e => !!(e && e.getClientRects().length);
-      const more = r.querySelector('.draft-more'), mr = more.getBoundingClientRect(), s = r.querySelector('.draft-acts'), sr = s.getBoundingClientRect();
+      const more = r.querySelector('.draft-more'), s = r.querySelector('.draft-acts');
+      if (!more || !s) return { missing: true, more: null, open: false, expanded: null, words: [], tall: false, dead: 0,
+                                rule: 0, painted: false, onScreen: false, href: '', focus: false, del: [false, ''] };
+      const mr = more.getBoundingClientRect(), sr = s.getBoundingClientRect();
       const bs = [...r.querySelectorAll('.draft-act')].filter(vis).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
       let dead = 0;
       for (let i = 0; i + 2 < bs.length; i++) {
@@ -685,15 +688,18 @@ with sync_playwright() as p:
         pg.close()
     pg = open_page(phone, "/library#drafts")
     pg.wait_for_timeout(600)
+    # The newest is listed first, so the tweened Flip draft sits above. Its
+    # menu opens down over the row below, so the lower row's menu is opened
+    # first and the upper ⋯ is the one tapped while it is open.
+    _tap(pg.locator("#draftsList .draft-row", has_text=f"{TAG} file me").locator(".draft-more")); pg.wait_for_timeout(250)
     tw = pg.locator("#draftsList .draft-row", has_text=f"{TAG} tweened")
     tw.scroll_into_view_if_needed()
     _tap(tw.locator(".draft-more")); pg.wait_for_timeout(250)
     t1 = pg.evaluate(DMENU, f"{TAG} tweened")
-    _tap(pg.locator("#draftsList .draft-row", has_text=f"{TAG} file me").locator(".draft-more")); pg.wait_for_timeout(250)
-    t2 = [pg.evaluate(DMENU, f"{TAG} tweened"), pg.evaluate(DMENU, f"{TAG} file me")]
-    check("drafts 390: a Flip draft's menu opens it in Flip, and opening another row's menu closes the first",
-          bool(t1) and t1["words"][:1] == ["Open in Flip"] and "/flip?draft=" in t1["href"]
-          and all(t2) and not t2[0]["open"] and t2[1]["open"], f"{t1 and [t1['words'], t1['href']]}; {[x and x['open'] for x in t2]}")
+    t2 = pg.evaluate(DMENU, f"{TAG} file me")
+    check("drafts 390: a Flip draft's menu opens it in Flip, and opening one row's menu closes another's",
+          bool(t1) and t1["words"][:1] == ["Open in Flip"] and "/flip?draft=" in t1["href"] and t1["open"]
+          and bool(t2) and not t2["open"], f"{t1 and [t1['words'], t1['href'], t1['open']]}; file me open {t2 and t2['open']}")
     pg.close()
 
     # A desk: the card opens the draft, and the row's end is Save file and
@@ -718,18 +724,22 @@ with sync_playwright() as p:
         pg.close()
     pg = open_page(desk_d, "/library#drafts")
     pg.wait_for_timeout(600)
-    with pg.expect_download(timeout=15000) as dl:
-        pg.locator("#draftsList .draft-row", has_text=f"{TAG} file me").locator(".draft-file").click()
-    got = dl.value
-    body = json.loads(open(got.path(), encoding="utf-8").read())
+    fbtn = pg.locator("#draftsList .draft-row", has_text=f"{TAG} file me").locator(".draft-file")
+    got, body = None, None
+    if fbtn.count():
+        with pg.expect_download(timeout=15000) as dl:
+            fbtn.click()
+        got = dl.value
+        body = json.loads(open(got.path(), encoding="utf-8").read())
     check("drafts desk: Save file writes the draft as the editor's .skribl file, named for its title, without opening it",
-          got.suggested_filename == f"{TAG}-file-me.skribl" and body == FILE_ME and pg.url.endswith("/library#drafts"),
-          f"{got.suggested_filename}; same as kept: {body == FILE_ME}; at {pg.url}")
+          bool(got) and got.suggested_filename == f"{TAG}-file-me.skribl" and body == FILE_ME and pg.url.endswith("/library#drafts"),
+          f"{got and got.suggested_filename}; same as kept: {body == FILE_ME}; at {pg.url}")
     _downloads = []
     pg.on("download", lambda x: _downloads.append(x.suggested_filename))
     trow = pg.locator("#draftsList .draft-row", has_text=f"{TAG} tweened")
-    trow.locator(".draft-file").click(); pg.wait_for_timeout(1200)
-    said = trow.locator(".draft-meta").inner_text()
+    if trow.locator(".draft-file").count():
+        trow.locator(".draft-file").click(); pg.wait_for_timeout(1200)
+    said = trow.locator(".draft-meta").inner_text() if trow.count() else ""
     check("drafts desk: a Flip draft holding an in-between page writes no file, and its row says only Flip can draw those, and how",
           not _downloads and "Only Flip can draw its in-between pages" in said and "open it in Flip" in said,
           f"downloads {_downloads}; said {said!r}")
