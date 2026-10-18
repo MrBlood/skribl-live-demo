@@ -243,6 +243,16 @@ with sync_playwright() as p:
     for t in ("half a tree", "unfinished cat"):
         pad.evaluate("(t) => { SkriblSavedDrafts.forget && SkriblSavedDrafts.forget(); SkriblName.set(t); return SkriblSavedDrafts.save(); }", f"{TAG} {t}")
         pad.wait_for_timeout(500)
+    # A DARK DRAWING WITH ITS CARD, for the glass pill: made the way the
+    # Pad's Post makes one (the card is what the pill reads its tone off).
+    _nb = {"title": f"{TAG} night", "version": 2, "schemaVersion": 2, "visibility": "public", "playbackMode": "replay",
+           "frames": [{"strokes": [{"x": 200 + i * 30, "y": 200 + (i % 4) * 25, "color": "#c9b8ff", "size": 10, "t": i * 120} for i in range(14)],
+                       "strokeGroups": [14], "background": {"color": "#1e1640"}}],
+           "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+    pad.evaluate("(d) => loadSkribl(d)", _nb); pad.wait_for_timeout(1200)
+    _nb["thumbnail"] = pad.evaluate("() => window.SkriblPostedCard.build(window.skriblPreviewCanvas())")
+    urllib.request.urlopen(urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_nb).encode(),
+                                                  headers={"Content-Type": "application/json"}), timeout=20).read()
     remember(pad, mine)
     state = ctx.storage_state(indexed_db=True)
     pad.close()
@@ -715,6 +725,17 @@ with sync_playwright() as p:
                 rest = pg.evaluate(ST, sel)
                 check(f"/gallery {dev}: ...and stopped by another post, it rests on its drawing, not on a blank page",
                       rest["state"] == "idle" and "skribl-inline-poster" in (rest["at"] or ""), str(rest))
+                # GLASS (the owner's pick D): light over a light drawing,
+                # dark over a dark one, the words 7:1 on the pixels behind.
+                for tag, dark in ((f"{TAG} coil", False), (f"{TAG} night", True)):
+                    gs = pg.evaluate("""(tag) => { const t = [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag));
+                      t.scrollIntoView({block: 'center'}); const b = t.querySelector('[data-skribl-inline]');
+                      return { id: b.dataset.skriblId, dark: b.classList.contains('is-says-dark'),
+                               bf: getComputedStyle(b.querySelector('.skribl-inline-play')).backdropFilter }; }""", tag)
+                    pg.wait_for_timeout(300)
+                    gc = glass_contrast(pg, [f'[data-skribl-id="{gs["id"]}"] .skribl-inline-play span'], 2 if dev == "390" else 1)
+                    check(f"/gallery {dev}: the pill is {'dark' if dark else 'light'} glass over a {'dark' if dark else 'light'} drawing, its words 7:1 on the pixels behind",
+                          gs["dark"] is dark and "blur" in (gs["bf"] or "") and len(gc) == 1 and gc[0][1] >= 7, f"{gs}, {gc}")
                 # Loading, the spinner takes the arrow's place, at the pill's start.
                 busy = pg.evaluate("""(s) => { const p = document.querySelector(s + ' .skribl-inline-play'); p.classList.add('is-busy');
                   const sp = getComputedStyle(p, '::after'), w = p.querySelector('span').getBoundingClientRect(), pr = p.getBoundingClientRect();

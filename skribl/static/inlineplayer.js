@@ -667,6 +667,7 @@
      * positioned outright, so the transform has to go or it shifts twice. */
     st.transform = 'none';
     st.maxWidth = 'none';
+    img._d = [dx, dy, dw, dh];       // where the drawing is, for tone()
     var bx = img.parentNode.style;   // the drawing's corner, for .is-says
     bx.setProperty('--sx', p((A - cw) / 2, A)); bx.setProperty('--sy', p((1 - ch) / 2, 1));
     /* The corner is a share of the IMAGE, which is the whole card, because
@@ -1754,7 +1755,25 @@
     if (!info || typeof info !== 'object') info = null;
     /* No line under it (the Gallery's cards): the play button says it. */
     var says = !line && RL && info && playEl && (info.pages > 1 ? info.pages + ' pages' : info.drawn > 0 ? 'drawn in ' + RL.words(info.drawn) : '');
-    if (says) { playEl.insertAdjacentHTML('beforeend', '<span>' + says + '</span>'); mark('is-says', true); }
+    if (says) { playEl.insertAdjacentHTML('beforeend', '<span>' + says + '</span>'); mark('is-says', true); tone(); }
+    /* THE PILL IS GLASS, and the glass is dark or light by the drawing under
+     * it (the owner's pick D after v324): the card's lower-left, where the
+     * pill sits, read off the card already on screen. A card that cannot be
+     * read (another origin's, say) keeps the light glass. */
+    function tone() {
+      if (!poster) return;
+      if (!poster.naturalWidth) { poster.addEventListener('load', tone, { once: true }); return; }
+      try {
+        var d = poster._d || [0, 0, CARD_W, CARD_H], k = poster.naturalWidth / CARD_W, c = doc.createElement('canvas'), L = 0;
+        c.width = c.height = 8;
+        var g = c.getContext('2d');
+        g.fillStyle = '#fff'; g.fillRect(0, 0, 8, 8);   // a see-through card reads light, as it shows
+        g.drawImage(poster, d[0] * k, (d[1] + d[3] * 0.7) * k, d[2] * 0.5 * k, d[3] * 0.3 * k, 0, 0, 8, 8);
+        var px = g.getImageData(0, 0, 8, 8).data;
+        for (var j = 0; j < px.length; j += 4) L += 0.2126 * px[j] + 0.7152 * px[j + 1] + 0.0722 * px[j + 2];
+        mark('is-says-dark', L / 64 < 115);
+      } catch (e) { /* tainted or unreadable: the light glass */ }
+    }
     if (line && RL) {
       pagesN = info && info.pages > 1 ? info.pages | 0 : 0;
       shapeCols = info && shapeOf(info.shape);

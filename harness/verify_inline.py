@@ -1504,7 +1504,15 @@ with sync_playwright() as sp:
     #   play; inlineplayer.css the pill's spinner where its arrow was. WHICH
     #   CALLER PAYS: every page that shows a post, and every post scrolled
     #   past keeps its place for it. 66,873 B measured.
-    EMBED_RATCHET = 66_877
+    # RAISED (the Gallery card's pill is glass, light over a light drawing and
+    #   dark over a dark one, the owner's pick D after v324), for one named
+    #   cost: +1,387 B -- inlineplayer.css the glass, its dark tone and its
+    #   hover (dense rules, one line of pointer); inlineplayer.js tone(),
+    #   reading the card's lower-left off the card already on screen, over
+    #   white so a see-through card reads as it shows. WHICH CALLER PAYS:
+    #   every page that shows a post, for a look only a line-less box takes
+    #   (the Gallery's cards). 68,260 B measured.
+    EMBED_RATCHET = 68_264
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
