@@ -28,8 +28,10 @@
  * in the video exactly when one is pushed, so frame 0 goes in once the
  * recorder runs, then one per tick, and nothing is added or dropped by a
  * sampling clock. The stop waits one more tick so the last frame keeps its
- * time. Where requestFrame is missing it falls back to captureStream(fps),
- * which samples the canvas itself.
+ * time. requestFrame is the track's in Chromium and the stream's in Gecko;
+ * where neither has one it falls back to captureStream(fps), which samples
+ * the canvas itself. Firefox did until after v326, looking on the track
+ * only, and kept about half the frames.
  *
  * THE MUSIC is the loop the post and the MP4 use (the trimmed, crossfaded
  * buffer), played on a looping source into a MediaStreamDestination whose
@@ -46,8 +48,14 @@
  * blob with bytes in it, the container's own signature at its start (EBML for
  * WebM, `ftyp` for MP4), a frame inside it, and no recorder error. A check of
  * the start is not a decoder; it is what tells a file from a 0-byte or garbage
- * download. fail() gets 'start' | 'empty' | 'unreadable' | a recorder error's
- * name.
+ * download. fail() gets 'start' | 'empty' | 'unreadable' | 'stalled' | a
+ * recorder error's name.
+ *
+ * THE STOP IS WAITED FOR, NOT TRUSTED (after v326). Cancel still works while
+ * the recorder's own stop comes, and a recorder that never answers fails as
+ * 'stalled' at the limit (the video's own length, and 15 s at least) instead
+ * of holding the progress up for good: once every frame was in, nothing was
+ * left to notice a cancel.
  *
  * A SIGNATURE IS NOT A VIDEO (after v325). The evidence run for the v325 audit
  * caught Chromium's recorder, on a loaded machine, handing back a WebM with no
@@ -69,8 +77,9 @@
 
   function capture(canvas, fps) {
     var s = canvas.captureStream(0), t = s.getVideoTracks()[0];
-    if (t && typeof t.requestFrame === 'function') {
-      return { stream: s, manual: true, push: function () { try { t.requestFrame(); } catch (e) {} } };
+    var by = t && typeof t.requestFrame === 'function' ? t : typeof s.requestFrame === 'function' ? s : null;
+    if (t && by) {
+      return { stream: s, manual: true, push: function () { try { by.requestFrame(); } catch (e) {} } };
     }
     if (t) t.stop();
     return { stream: canvas.captureStream(fps), manual: false, push: function () {} };
@@ -183,8 +192,10 @@
     var cap = capture(o.canvas, o.fps), bed = music(o.music, cap.stream);
     var mime = (cap.stream.getAudioTracks().length ? SOUND.concat(TYPES) : TYPES)
       .filter(function (t) { return MediaRecorder.isTypeSupported(t); })[0];
-    var chunks = [], error = null, rec, iv = null, k = 0;
+    var chunks = [], error = null, rec, iv = null, wait = null, over = false, k = 0;
     var end = function () { if (iv) clearInterval(iv); iv = null; if (bed) bed.stop(); };
+    // Once only: the recorder's own stop, a cancel while it comes, or the limit.
+    var finish = function (then) { if (over) return; over = true; if (wait) clearInterval(wait); wait = null; then(); };
     var refuse = function () { end(); cap.stream.getTracks().forEach(function (t) { t.stop(); }); o.fail('start'); return false; };
     if (!mime) return refuse();
     try { rec = new MediaRecorder(cap.stream, { mimeType: mime }); }
@@ -193,18 +204,29 @@
     rec.onerror = function (e) { error = (e && e.error && e.error.name) || 'error'; };
     rec.onstop = function () {
       end();
-      if (o.cancelled && o.cancelled()) { o.cancel(); return; }
-      var type = mime.split(';')[0], blob = new Blob(chunks, { type: type });
-      if (error) { o.fail(error); return; }
-      if (!chunks.length || !blob.size) { o.fail('empty'); return; }
-      blob.slice(0, SCAN).arrayBuffer().then(function (ab) {
-        var head = new Uint8Array(ab);
-        if (!looksLike(head, mime)) { o.fail('unreadable'); return; }
-        if (blob.size <= SCAN && !hasFrame(head, mime)) { o.fail('empty'); return; }
-        o.done(blob, /mp4/.test(type) ? 'mp4' : 'webm', { withoutMusic: !!o.music && !bed });
-      }, function () { o.fail('unreadable'); });
+      finish(function () {
+        if (o.cancelled && o.cancelled()) { o.cancel(); return; }
+        var type = mime.split(';')[0], blob = new Blob(chunks, { type: type });
+        if (error) { o.fail(error); return; }
+        if (!chunks.length || !blob.size) { o.fail('empty'); return; }
+        blob.slice(0, SCAN).arrayBuffer().then(function (ab) {
+          var head = new Uint8Array(ab);
+          if (!looksLike(head, mime)) { o.fail('unreadable'); return; }
+          if (blob.size <= SCAN && !hasFrame(head, mime)) { o.fail('empty'); return; }
+          o.done(blob, /mp4/.test(type) ? 'mp4' : 'webm', { withoutMusic: !!o.music && !bed });
+        }, function () { o.fail('unreadable'); });
+      });
     };
-    var stop = function () { end(); try { rec.stop(); } catch (e) { o.fail('error'); } };
+    // THE STOP IS WAITED FOR, NOT TRUSTED (above).
+    var stop = function () {
+      end();
+      try { rec.stop(); } catch (e) { finish(function () { o.fail('error'); }); return; }
+      var t0 = Date.now(), limit = Math.max(15000, 1000 * o.frames / o.fps);
+      wait = setInterval(function () {
+        if (o.cancelled && o.cancelled()) finish(o.cancel);
+        else if (Date.now() - t0 > limit) finish(function () { o.fail('stalled'); });
+      }, 200);
+    };
     var tick = function () { o.draw(k); cap.push(); k++; if (o.progress) o.progress(k / o.frames); };
     if (!cap.manual) o.draw(0);   // auto capture samples whatever is there from the start
     rec.start();

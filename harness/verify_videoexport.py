@@ -28,11 +28,17 @@ WHAT IS ASKED, AND HOW IT IS READ
     it waits for one and never stops, so both editors sat at "Recording…". A
     stand-in that does the same goes in on each editor with no music: each
     must ask for a type with no audio codec, and its frames must come out.
+  * Gecko's requestFrame is on the stream, not the track: with it moved there,
+    Flip's three pages must still be three pushes and three frames (Firefox
+    sampled the canvas instead, and kept about half). And a recorder that
+    never answers its stop is given up on at the limit, saying so, with Cancel
+    working while the stop is waited for, on both editors.
 """
 import math
 import os
 import struct
 import sys
+import time
 
 from assertions import make_check
 import browsing
@@ -136,13 +142,14 @@ HEADER_ONLY = (_el(b"\x1a\x45\xdf\xa3", _el(b"\x42\x86", b"\x01") + _el(b"\x42\x
                                                  + _el(b"\x86", b"V_VP9"))))
 
 # A MediaRecorder that records nothing, raises an error, hands back bytes that
-# are not a video, or a WebM header with no frame behind it. Installed over the
-# real one for one export.
+# are not a video, a WebM header with no frame behind it, or never answers its
+# stop at all. Installed over the real one for one export.
 FAKE = """(mode) => { window.__RealMR = window.__RealMR || window.MediaRecorder;
   class Fake { constructor(stream, o) { this.state = 'inactive'; this.mimeType = (o && o.mimeType) || 'video/webm'; }
     static isTypeSupported() { return true; }
     start() { this.state = 'recording'; }
     stop() { this.state = 'inactive'; setTimeout(() => {
+      if (mode === 'stall') return;          // never answers: no data, no stop
       if (mode === 'error' && this.onerror) this.onerror({ error: { name: 'EncodingError' } });
       const bytes = mode === 'garbage' ? 'not a video at all'
         : mode === 'headeronly' ? new Uint8Array(window.__headerOnly) : new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 1, 2, 3, 4]);
@@ -168,6 +175,16 @@ GECKO = """() => { window.__RealMR = window.__RealMR || window.MediaRecorder; co
       r.start(); }
     stop() { if (this.real) this.real.stop(); else this.state = 'inactive'; } }
   window.MediaRecorder = Gecko; }"""
+# GECKO'S requestFrame, which is the canvas stream's, not its track's: moved
+# there, counting each push in __pushed.
+GECKO_SHAPE = """() => { const P = HTMLCanvasElement.prototype, cs = P.captureStream;
+  window.__pushed = 0;
+  P.captureStream = function (fps) { const s = cs.call(this, fps), t = s.getVideoTracks()[0];
+    if (t && typeof t.requestFrame === 'function') { const rf = t.requestFrame.bind(t);
+      Object.defineProperty(t, 'requestFrame', { value: undefined });
+      s.requestFrame = function () { window.__pushed++; rf(); }; }
+    return s; };
+  window.__undoGecko = () => { P.captureStream = cs; }; }"""
 # The MP4 path, told it can encode video and cannot encode AAC.
 NO_AAC = """() => { const M = window.SkriblMp4; window.__realMp4 = window.__realMp4 || { prepare: M.prepare, aac: M.aacSupported };
   window.__aacAsked = false;
@@ -231,6 +248,18 @@ with sync_playwright() as p:
           "a type with no audio codec, and its three frames come out",
           gk_ok and bool(asked) and not any("opus" in t for t in asked), f"{gk_said}; asked {asked}")
 
+    pg.evaluate(GECKO_SHAPE)
+    try:
+        gs, _ = flip_export(pg, timeout=15000)
+        gs_n = video_frames(webm(gs))
+    except Exception as e:
+        gs_n = f"no video ({type(e).__name__})"
+        pg.evaluate("() => { exporting = false; exportHide(); }")
+    pushed = pg.evaluate("() => window.__pushed")
+    pg.evaluate("() => window.__undoGecko()")
+    check("with Gecko's requestFrame (on the stream, not the track), Flip pushes each of its three pages: "
+          "three pushes, three frames", pushed == 3 and gs_n == 3, f"{pushed} pushes, {gs_n} video frames")
+
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
     pg.wait_for_function("() => !!musicData && !!currentAudioBuffer", timeout=15000)
     pg.evaluate(PAGES, {"n": 3, "fps": 4, "colors": ["#ff2020", "#20c020", "#2040ff"]})
@@ -276,6 +305,34 @@ with sync_playwright() as p:
         check(f"Flip: a recorder that {why} downloads nothing and says the video came out empty",
               not got and msg.startswith("The video came out empty") and not pg.evaluate("() => exporting"),
               f"{len(got)} download(s), chip '{msg}'")
+    # THE STOP IS WAITED FOR, NOT TRUSTED (lib/videorecord.js, after v326).
+    pg.evaluate(FAKE, "stall")
+    t0 = time.monotonic()
+    pg.evaluate("() => exportWebM()")
+    try:
+        pg.wait_for_function("() => !exporting", timeout=25000)
+        waited = round(time.monotonic() - t0, 1)
+    except Exception:
+        waited = None
+        pg.evaluate("() => { exporting = false; exportHide(); }")
+    msg = pg.evaluate("() => document.getElementById('flipChip').textContent")
+    check("Flip: a recorder that never answers its stop is given up on at the limit (15 s), and says so",
+          waited is not None and 14 <= waited <= 20 and msg.startswith("The video came out empty"),
+          f"gave up after {waited} s, chip '{msg}'")
+    pg.evaluate("() => exportWebM()")
+    pg.wait_for_timeout(1800)                    # every frame in, the stop asked for
+    t0 = time.monotonic()
+    pg.click("#flipExportCancel")
+    try:
+        pg.wait_for_function("() => !exporting", timeout=5000)
+        took = round(time.monotonic() - t0, 2)
+    except Exception:
+        took = None
+        pg.evaluate("() => { exporting = false; exportHide(); }")
+    msg = pg.evaluate("() => document.getElementById('flipChip').textContent")
+    pg.evaluate(REAL)
+    check("Flip: Cancel works while that stop is waited for", took is not None and took < 1.5 and msg == "Export cancelled",
+          f"closed after {took} s, chip '{msg}'")
     check("Flip: no page errors", not errs, "; ".join(errs[:2]))
     ctx.close()
 
@@ -348,6 +405,35 @@ with sync_playwright() as p:
               f"{len(got)} download(s), toast '{msg}', button disabled {btn}")
         pg.evaluate("() => { const o = document.getElementById('exportOverlay'); if (o && !o.hidden) document.getElementById('exportCancel').click(); }")
         pg.wait_for_timeout(600)
+    pad_back = """() => { ['exportVideo', 'exportPng'].forEach((id) => { document.getElementById(id).disabled = false; });
+        document.getElementById('exportProgress').hidden = true; }"""
+    pg.evaluate(FAKE, "stall")
+    pg.evaluate("() => { document.getElementById('toast').textContent = ''; }")
+    t0 = time.monotonic()
+    pg.evaluate(pad_export_trigger())
+    try:
+        pg.wait_for_function("() => document.getElementById('toast').textContent.startsWith('The video came out empty')"
+                             " && !document.getElementById('exportVideo').disabled", timeout=25000)
+        waited = round(time.monotonic() - t0, 1)
+    except Exception:
+        waited = None
+        pg.evaluate(pad_back)
+    check("the Pad: a recorder that never answers its stop is given up on at the limit (15 s), says so, "
+          "and gives the button back", waited is not None and 14 <= waited <= 20, f"gave up after {waited} s")
+    pg.evaluate(pad_export_trigger())
+    pg.wait_for_timeout(2500)                    # every frame in, the stop asked for
+    t0 = time.monotonic()
+    pg.click("#exportCancel")
+    try:
+        pg.wait_for_function("() => document.getElementById('exportProgress').hidden"
+                             " && !document.getElementById('exportVideo').disabled", timeout=5000)
+        took = round(time.monotonic() - t0, 2)
+    except Exception:
+        took = None
+        pg.evaluate(pad_back)
+    pg.evaluate(REAL)
+    check("the Pad: Cancel works while that stop is waited for, and gives the button back",
+          took is not None and took < 1.5, f"closed after {took} s")
     check("the Pad: no page errors", not errs, "; ".join(errs[:2]))
     ctx.close()
     b.close()

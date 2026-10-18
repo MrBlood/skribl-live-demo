@@ -19007,3 +19007,29 @@ the fade and the ends), and the mouse row is red with a mouse that rode up
 too. The two link-page rows over the drawing were red on the first build of
 this and are what found the canvas on top. Costs, each named on its ratchet:
 the player's JS +305 B, its CSS +103 B, the in-post player +394 B.
+
+## After v326 -- Firefox's frames, pushed; and a stop that never comes
+
+Two follow-ups from Firefox's first runs, both in `lib/videorecord.js`, the
+one recorder both editors use. Bug fixes, from the list #530 left.
+
+**Frames, pushed.** Gecko keeps requestFrame on the canvas stream, not on its
+track. The recorder looked on the track, found nothing, and fell back to
+sampling the canvas: in Firefox the Pad's video held 48 of the 82 frames its
+export planned, and Flip's two pages 3 of 4 (run 1350, red on the old
+recorder). It now pushes through whichever has the method. The smoke counts
+each video against the export's own plan, read from the page; Chromium lands
+on it exactly (82 of 82, 83 of 83, 4 of 4). `verify_videoexport` moves
+requestFrame onto the stream in Chromium: three pages must be three pushes
+and three frames. The old recorder made no pushes, and Chromium's sampling
+happened to give three frames, which is why the check counts the pushes.
+
+**A stop that never comes.** Once every frame was in, nothing was left to
+notice a cancel, so a recorder that never answered its stop (Gecko's did,
+before the type fix) held the progress up for good. The stop is now waited
+for with a limit, the video's own length and 15 s at least, after which it
+fails as 'stalled' and the editor says the video came out empty, nothing
+saved; Cancel ends the wait at once. `verify_videoexport` puts in a stand-in
+that never answers: given up on at 16 and 17 s on Flip and the Pad, and
+Cancel during the wait closes the export in under 0.2 s. All four red on the
+old recorder.
