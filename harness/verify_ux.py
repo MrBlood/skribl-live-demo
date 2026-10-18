@@ -3119,12 +3119,15 @@ with _sp() as _cp:
     _helpp = _pp.evaluate("() => document.getElementById('helpDrawer').textContent.replace(/\\s+/g, ' ')")
     check("COPY (Pad): Help opens with how Pad and Flip relate", "two ways to make a Skribl" in _helpp, _helpp[:200])
     _pp.keyboard.press("Escape"); _pp.wait_for_timeout(400)
-    # Your Skribls is the profile page since v304; the same sentence, above the same list.
+    # Your Skribls is the profile page since v304; the same sentence, UNDER the
+    # list since the owner's pick A after v324 ("a calmer Library list": the
+    # list is what a person came for, and the note is said once, after it).
+    # It still names this browser; verify_posted pins the site-data clause.
     _pp.goto(BASE + "/library", wait_until="load"); waits.settle(_pp, 900)
     _order = _pp.evaluate("""() => { const f = document.querySelector('#postedPanel .posted-foot'), l = document.getElementById('postedList');
       if (!f || !l) return null; return { foot: f.getBoundingClientRect().top, list: l.getBoundingClientRect().top, text: f.textContent.trim().slice(0, 40) }; }""")
-    check("COPY (Pad): Your Skribls says 'saved in this browser only' ABOVE the list, before it reads as a library",
-          _order and _order["foot"] < _order["list"] and "browser" in _order["text"], str(_order))
+    check("COPY (Pad): Your Skribls says it is kept in this browser, under the list",
+          _order and _order["foot"] > _order["list"] and "browser" in _order["text"], str(_order))
     _pp.close()
     _cb.close()
 
