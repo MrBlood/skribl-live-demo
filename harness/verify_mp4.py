@@ -226,6 +226,19 @@ with sync_playwright() as p:
         : false""")
     print(f"  (AAC encoding in this browser: {AAC})")
 
+    # KEEP THE FILES, WHEN ASKED (after v325). An auditor asked for the
+    # real-Chrome exports themselves, not only this suite's word for them.
+    # With SKRIBL_KEEP_EXPORTS naming a directory, each file inspected below
+    # is also written there (pad.mp4, flip-music.mp4, ...) for the mp4 CI
+    # job's ffprobe report; unset, nothing is written. Keeping is evidence,
+    # not a check: a file that cannot be written is said, and the CI step
+    # that counts the files is what fails.
+    KEEP = os.environ.get("SKRIBL_KEEP_EXPORTS")
+    BYTES = """async () => {
+        const u = new Uint8Array(await window.__exports[window.__exports.length - 1].arrayBuffer());
+        let s = ''; for (let i = 0; i < u.length; i += 32768) s += String.fromCharCode.apply(null, u.subarray(i, i + 32768));
+        return btoa(s); }"""
+
     # Two passes per editor. Silent: the video path. With music: the shared
     # encoder also tiles the loop into the audio track -- or, where AAC cannot
     # be encoded, the export must fall back to WebM rather than ship a silent MP4.
@@ -254,6 +267,16 @@ with sync_playwright() as p:
             got = pg.evaluate(INSPECT)
         except Exception as e:
             got = {"type": None, "bytes": 0, "boxes": [], "traks": 0, "error": str(e)[:160]}
+        if KEEP and got["bytes"]:
+            try:
+                import base64
+                name = editor.lower() + ("-music" if music else "") + (".mp4" if got["type"] == "video/mp4" else ".webm")
+                os.makedirs(KEEP, exist_ok=True)
+                with open(os.path.join(KEEP, name), "wb") as fh:
+                    fh.write(base64.b64decode(pg.evaluate(BYTES)))
+                print(f"  (kept {name}: {got['bytes']} B)")
+            except Exception as e:
+                print(f"  (could not keep the {editor} export: {e})")
         types = [b["type"] for b in got["boxes"]]
         tag = editor + (" with music" if music else "")
         if music and not AAC:

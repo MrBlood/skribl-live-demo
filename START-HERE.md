@@ -318,6 +318,15 @@ The file is excluded from BOTH tree-hash lists (`release_run.GENERATED` and
 a hash, so including it would make writing the evidence change the thing the
 evidence is about. The two lists must stay identical — that is the v221 defect.
 
+The job also keeps the files it checked (after v325, for an auditor who asked
+for the exports themselves). With `SKRIBL_KEEP_EXPORTS` naming a directory,
+`verify_mp4.py` writes each export it inspects there; unset, it writes nothing.
+The job reads them back with ffprobe (streams, codecs, decoded frame count,
+whether the audio is louder than silence, a contact sheet of each Flip) into
+the `mp4-exports` artifact, beside each file's SHA-256 and the tree hash. That
+directory is outside the checkout on purpose: `tree_files` walks the disk, so a
+file kept inside would change the hash the attestation names.
+
 ### Environment traps, in the order they will bite
 
 * `apt-get update` fails outright until the blocked nodesource repo is moved
