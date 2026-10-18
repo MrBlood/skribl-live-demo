@@ -18952,8 +18952,8 @@ frames in an MP4 the repository ships, as ffprobe does, and none in a WebM
 header with no frame behind it.
 
 **What Firefox found on its first runs** (Firefox 142, 18 October). Neither
-editor's video came: the export sat at "Recording…" with its bar full, and
-Flip's Cancel did nothing. That Firefox has no H.264 encoder, so the video goes
+editor's video came: the export sat at "Recording…" with its bar full, for
+good. That Firefox has no H.264 encoder, so the video goes
 to the recorder, and with no music the recorder was asked for
 `video/webm;codecs=vp8,opus`. Gecko's recorder, asked for an audio codec with
 no audio track, waits for one: its start event came only at stop(), then no
@@ -18973,3 +18973,7 @@ on the stream and the recorder looks on the track. In the trials, sampling
 kept 8 or 9 of 16 painted frames and the stream's requestFrame kept them all,
 so Firefox's videos are choppier than Chromium's. That is on the list, not in
 this change. A video with music has not been made in Firefox yet.
+
+The first green run (Firefox 142.0.1, run 1343 on GitHub): 12/12. The Pad's
+video held 47 frames and Flip's two pages 3, where Chromium makes about 83
+and 4 from the same steps: that is the sampling.
