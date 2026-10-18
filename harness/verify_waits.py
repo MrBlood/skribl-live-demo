@@ -57,7 +57,7 @@ PAGES = {
         const go = () => ac.decodeAudioData(wav.slice(0)).then(() => { if (++k < 5) go(); else window.done = 1; }); go();""",
     "frames": "let n = 0; const f = () => { if (++n < 40) requestAnimationFrame(f); else window.done = 1; }; requestAnimationFrame(f);",
     "endless-frames": "const f = () => requestAnimationFrame(f); requestAnimationFrame(f);",
-    "interval": "setInterval(() => { window.ticks = (window.ticks || 0) + 1; }, 200);",
+    "interval": "setInterval(() => { window.ticks = (window.ticks || 0) + 1; (window.tickAt = window.tickAt || []).push(performance.now()); }, 200);",
     "transition": """document.body.innerHTML = '<div id=b style="width:40px;height:40px;background:#000;transition:opacity .6s">';
         requestAnimationFrame(() => requestAnimationFrame(() => {
           const b = document.getElementById('b'); b.style.opacity = '0';
@@ -123,10 +123,27 @@ with sync_playwright() as p:
     ms, done = timed(pg, "late-timer", 900)
     check("a timer due after the window does not hold it (the sleep never saw it fire either)",
           ms < 600 and not done, f"{ms:.0f} ms of 900, done={done!r}")
-    for name, what in (("endless-frames", "animation frames that never stop (a replay)"),
-                       ("interval", "an interval ticking every 200 ms")):
-        ms, done = timed(pg, name, 900)
-        check(f"{what}: held to the window, and no further", 850 <= ms < 1600, f"{ms:.0f} ms of 900")
+    ms, done = timed(pg, "endless-frames", 900)
+    check("animation frames that never stop (a replay): held to the window, and no further",
+          850 <= ms < 1600, f"{ms:.0f} ms of 900")
+    # AN INTERVAL IS OWED THE SLEEP'S VIEW, NOT ITS LENGTH (after v326). Settle
+    # may let go once the next tick falls past the window, so how early it
+    # goes depends on where the ticks fall against the window: their clock
+    # starts at the page's load, the window when goto returns. A floor on the
+    # time went red on CI at 837 ms with nothing due in between, and a 95 ms
+    # pause between load and settle reproduced it here. What settle owes is
+    # that no tick lands between its return and the window's end, read on the
+    # page's own clock.
+    pg.goto(f"{ORIGIN}/p/interval", wait_until="load")
+    p0 = pg.evaluate("() => performance.now()")
+    t0 = time.monotonic()
+    waits.settle(pg, 900)
+    ms = (time.monotonic() - t0) * 1000
+    p1 = pg.evaluate("() => performance.now()")
+    pg.wait_for_timeout(max(0, 900 - ms) + 50)
+    missed = pg.evaluate("([a, b]) => (window.tickAt || []).filter((t) => t > a && t <= b).length", [p1, p0 + 900])
+    check("an interval ticking every 200 ms: held until no tick is due inside the window, and no further",
+          missed == 0 and ms < 1600, f"{ms:.0f} ms of 900; {missed} tick(s) after settle returned, inside the window")
 
     print("\nA SCROLL HOLDS IT, AND A NAVIGATION DOES NOT STRETCH IT")
     ms, done = timed(pg, "smooth-scroll", 4000)
