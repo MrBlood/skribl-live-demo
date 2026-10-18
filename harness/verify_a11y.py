@@ -2639,6 +2639,126 @@ with sync_playwright() as _pw:
         _ctx.close()
     _bw.close()
 
+print("\nA11Y 20 — no words at 10px or under (WAVE's very small text), and the ones that were are 12px")
+# THE 10px WORDS, AT 12px (the owner's pick from the v326 mocks). WAVE calls
+# text at 10px or under very small, and these drew it: Flip's tool tray's
+# labels, the draw drawer's Recent, the shape card's knobs, How it works' tip
+# counts and the music trim's time bubbles. Each page is read at rest and in
+# the state that shows each of them, on a phone and on a desk: every text node
+# laid out, not see-through, at its computed size, at WAVE's own line (10px or
+# under; the 11px words are another question, not asked here). Each rule that
+# drew them is then read at the 12px the owner picked.
+#
+# NOT YET FLIP'S PAGE STRIP. At 12px its words ran into each other on a
+# phone's 104px tile (the forever chip under the page's ⋯ and its touch box,
+# page 10 and on into the hold badge, the ×1 a pixel off centre in two faces),
+# which the mock, measuring each word alone, did not show. How the strip fits
+# them is the owner's to pick, so its tiles are left out of the reading until
+# then. (The duration badge is 10px only on a phone, where it is hidden.)
+_SMALL = r"""() => { const out = new Set();
+  const who = el => { let anc = ''; for (let n = el.parentElement; n; n = n.parentElement) if (n.id) { anc = ' in #' + n.id; break; }
+    const cls = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean)[0];
+    return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (cls ? '.' + cls : '') + anc; };
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let t = w.nextNode(); t; t = w.nextNode()) {
+    const s = t.textContent.trim(), el = t.parentElement;
+    if (!s || !el || el.closest('script, style, title, noscript, #strip .frame')) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width <= 1 || r.height <= 1) continue;
+    let o = 1;
+    for (let a = el; a; a = a.parentElement) o *= parseFloat(getComputedStyle(a).opacity);
+    if (o < 0.05 || getComputedStyle(el).visibility === 'hidden') continue;
+    const px = parseFloat(getComputedStyle(el).fontSize);
+    if (px <= 10) out.add(who(el) + ' at ' + px + 'px ("' + s.slice(0, 16) + '")'); }
+  return [...out]; }"""
+# What each rule that drew 10px words computes to, on the first one laid out.
+_AT = """(sels) => sels.map(s => { const e = [...document.querySelectorAll(s)].find(e => e.getClientRects().length);
+  return [s, e ? parseFloat(getComputedStyle(e).fontSize) : null]; })"""
+_WAS10 = {"the draw drawer, with Recent": [".recent-label"], "the shape card, Sides": [".shape-knob label"],
+          "How it works, its tip counts": [".accordion-count"], "the music trim, both handles held": [".trim-bubble"],
+          "Flip's tool tray": [".tool-tray-btn"]}
+
+
+def _boot20(pg, path, key):
+    pg.goto(BASE + path, wait_until="load")
+    pg.wait_for_function("(k) => window.__skriblBoot && window.__skriblBoot[k]", arg=key, timeout=10000)
+    pg.evaluate("() => { if (window.SkriblHints) window.SkriblHints.hide(); }")
+    pg.wait_for_timeout(300)
+
+
+with sync_playwright() as _pw:
+    _b20 = _pw.chromium.launch()
+    for _size, _opts in (("phone", dict(viewport={"width": 402, "height": 874}, device_scale_factor=2,
+                                         is_mobile=True, has_touch=True)),
+                         ("desk", dict(viewport={"width": 1280, "height": 900}))):
+        _ctx = _b20.new_context(**_opts)
+        _pg = _ctx.new_page()
+        _read = {}
+        # The Pad at rest, then its drawers.
+        _boot20(_pg, "/", "pad")
+        _read["the Pad"] = _pg.evaluate(_SMALL)
+        browsing.pad_drawer(_pg, "draw")
+        _pg.evaluate("() => { const r = document.getElementById('recentRow'); if (r) r.hidden = false; }")
+        _pg.wait_for_timeout(200)
+        _read["the draw drawer, with Recent"] = _pg.evaluate(_SMALL)
+        _at = _pg.evaluate(_AT, _WAS10["the draw drawer, with Recent"])
+        _boot20(_pg, "/", "pad")
+        _pg.click('[data-tool="shape"]'); _pg.wait_for_timeout(300)
+        if _pg.evaluate("() => document.getElementById('shapePop').hidden"):
+            _pg.click('[data-tool="shape"]'); _pg.wait_for_timeout(300)
+        _pg.evaluate("() => { const b = document.querySelector('#shapeSeg [data-shape=poly]'); if (b) b.click(); }")
+        _pg.wait_for_timeout(300)
+        _read["the shape card, Sides"] = _pg.evaluate(_SMALL)
+        _at += _pg.evaluate(_AT, _WAS10["the shape card, Sides"])
+        _boot20(_pg, "/", "pad")
+        _pg.evaluate("() => openHelpDrawer()"); _pg.wait_for_timeout(600)
+        _pg.evaluate("() => { document.getElementById('helpWatch').hidden = true; document.getElementById('helpLook').hidden = false; }")
+        _pg.wait_for_timeout(500)
+        _read["How it works, its tip counts"] = _pg.evaluate(_SMALL)
+        _at += _pg.evaluate(_AT, _WAS10["How it works, its tip counts"])
+        _boot20(_pg, "/", "pad")
+        _pg.click("#mediaOpenBtn"); _pg.wait_for_timeout(300)
+        _pg.evaluate("() => { const t = document.getElementById('mediaTabMusic'); if (t) t.click(); }")
+        _pg.wait_for_timeout(300)
+        _pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _wav1()})
+        _pg.wait_for_function("() => document.getElementById('musicUploadBtn').classList.contains('loaded')", timeout=15000)
+        _pg.evaluate("() => document.querySelectorAll('.music-trim-handle').forEach(h => h.classList.add('dragging'))")
+        _pg.wait_for_timeout(300)
+        _read["the music trim, both handles held"] = _pg.evaluate(_SMALL)
+        _at += _pg.evaluate(_AT, _WAS10["the music trim, both handles held"])
+        _held = _pg.evaluate("""() => { const t = document.getElementById('musicTrack').getBoundingClientRect();
+            return [...document.querySelectorAll('.trim-bubble')].map(b => { const r = b.getBoundingClientRect();
+              return [Math.round(r.left - t.left), Math.round(t.right - r.right)]; }); }""")
+        # Flip with a few pages, at rest and with its tool tray open.
+        _boot20(_pg, "/flip", "flip")
+        _pg.evaluate("() => { addFrame(false); addFrame(false); buildStrip(); }")
+        _pg.wait_for_timeout(400)
+        _read["Flip"] = _pg.evaluate(_SMALL)
+        if _pg.evaluate("() => { const m = document.getElementById('toolMoreBtn'); return !!m && !m.hidden; }"):
+            _pg.click("#toolMoreBtn"); _pg.wait_for_timeout(500)
+        _read["Flip's tool tray"] = _pg.evaluate(_SMALL) if _pg.evaluate(
+            "() => { const t = document.getElementById('toolTray'); return !!t && !t.hidden; }") else ["(the tray did not open)"]
+        _at += _pg.evaluate(_AT, _WAS10["Flip's tool tray"])
+        # The pages with no editor in them, filled.
+        for _name, _path in (("the Gallery", "/gallery"), ("a share link", "/s/" + _wj["id"])):
+            browsing.goto(_pg, BASE, _path, require_boot=False)
+            _pg.wait_for_timeout(1200)
+            _read[_name] = _pg.evaluate(_SMALL)
+        browsing.goto(_pg, BASE, "/library", require_boot=False)
+        _pg.evaluate("(e) => localStorage.setItem('skribl_posted_v1', JSON.stringify(e))", _wrow)
+        _pg.reload(wait_until="load"); _pg.wait_for_timeout(1200)
+        _read["the Library"] = _pg.evaluate(_SMALL)
+        for _where, _small in _read.items():
+            check(f"{_size}, {_where}: no words at 10px or under", not _small,
+                  "; ".join(_small[:4]) + (f" (+{len(_small) - 4} more)" if len(_small) > 4 else ""))
+        _off = [f"{sel} {px}px" for sel, px in _at if px != 12]
+        check(f"{_size}: every rule that drew 10px words is at 12px, each read where it shows",
+              len(_at) == sum(len(v) for v in _WAS10.values()) and not _off, "; ".join(_off) or f"{len(_at)} read")
+        check(f"{_size}, the music trim's bubbles stay over the track, both held at the ends",
+              len(_held) == 2 and all(a >= 0 and b >= 0 for a, b in _held), str(_held))
+        _ctx.close()
+    _b20.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [n for ok, n in results if not ok]
 print("\n" + "=" * 62)

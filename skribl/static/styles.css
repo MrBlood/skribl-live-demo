@@ -2047,7 +2047,7 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 .eyedropper-btn.picking { background: var(--ui-active); color: #fff; border-color: transparent; }
 
 .recent-row { display: flex; align-items: center; gap: 10px; }
-.recent-label { font-size: 10px; }
+.recent-label { font-size: 12px; }
 .recent-colors { display: flex; align-items: center; gap: 7px; }
 .recent-swatch {
   width: 22px; height: 22px; border-radius: 50%; padding: 0; border: 0;
@@ -2696,14 +2696,18 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
   background: var(--surface-well);
 }
 
+/* THE TIME READS FROM ITS CUT LINE INWARD (the 12px words, after v326).
+   Centred on its handle, the start's bubble hung off the screen's left edge
+   with the loop at 0:00, and the end's off the right at the track's end. The
+   start's now begins at its line and the end's finishes at its, so both stay
+   over the track wherever the handles sit. */
 .trim-bubble {
   position: absolute;
   bottom: calc(100% + 5px);
   left: 50%;
-  transform: translateX(-50%);
   background: var(--ui-active);
   color: #fff;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   padding: 2px 5px;
@@ -2717,7 +2721,6 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
 .trim-bubble.right {
   left: auto;
   right: 50%;
-  transform: translateX(50%);
 }
 
 .music-trim-handle.dragging .trim-bubble {
@@ -4522,7 +4525,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 }
 
 .accordion-count {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);   /* --text-muted on its pill read 3.8:1 light, 4.3 dark */
   background: var(--surface-control-hover);
@@ -7266,7 +7269,7 @@ html:has(.flip-export:not([hidden])) { overscroll-behavior-y: none; }
    lands on the slider it belongs to. */
 .shape-knob { display: flex; align-items: center; gap: 8px; padding: 6px 4px 0;
   margin-block: 17px; }
-.shape-knob label { font-size: 10px; font-weight: 600; letter-spacing: .04em;
+.shape-knob label { font-size: 12px; font-weight: 600; letter-spacing: .04em;
   text-transform: uppercase; color: var(--text-muted); flex: 0 0 58px; white-space: nowrap; }
 .shape-knob input[type="range"] { flex: 1 1 auto; min-width: 90px; accent-color: var(--ui-hi); }
 .shape-knob output { font-size: 11px; font-weight: 600; color: var(--text-primary);
@@ -8148,11 +8151,11 @@ body.replaying .media-card { pointer-events: none; }
      sliding under it. */
   border: none; border-radius: var(--seg-pill-r);
   background: transparent; color: var(--text-tool-lit);
-  /* Longhand, not `font: 600 10px/1 inherit`. That shorthand is INVALID -- the
+  /* Longhand, not `font: 600 12px/1 inherit`. That shorthand is INVALID -- the
      family slot does not accept `inherit` -- so the whole declaration was
      dropped and the cells rendered in the UA default face at ~13px. */
   font-family: inherit;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: .01em;

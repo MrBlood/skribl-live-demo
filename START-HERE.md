@@ -76,6 +76,7 @@ here is the rule you can break tomorrow.
 | `[hidden]` is honoured on every control that uses it. | `verify_layout.py`, `verify_help.py`, `verify_move.py` |
 | No readable text uses a token that fails WCAG AA. | `verify_a11y.py` |
 | WAVE's error rules find nothing on any page, fresh or filled: an icon is hidden or named on the svg itself, every field and label says something, no heading is empty, no ARIA reference points at nothing. | `verify_a11y.py` (A11Y 19) |
+| No words at 10px or under, WAVE's very small text, on any page or where the five that drew them show: Flip's tool tray's labels, the draw drawer's Recent, the shape card's knobs, How it works' tip counts and the music trim's time bubbles are 12px, and the bubbles stay over the track. Flip's page strip is left out until the owner picks how its words fit at 12px. | `verify_a11y.py` (A11Y 20) |
 | A token that cannot pass AA must be USED somewhere the requirement does not reach, or not exist. | `verify_a11y.py` |
 | Every `aria-modal` surface is routed through `SkriblModal`, and the population is generated from the DOM and the JS source, not listed. | `verify_a11y.py` |
 | Every id on a rendered page is unique — `getElementById` and `url(#…)` both take the first match. | `verify_a11y.py` |
