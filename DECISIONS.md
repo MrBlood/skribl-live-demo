@@ -18767,8 +18767,11 @@ that same press (read off the page's clock: a browser need not measure event
 timeStamps from one origin).
 
 `verify_pointerpad` gains the lost lift on both editors, with the pinch as its
-edge: 25/31 before (the stuck stroke was kept when the refused finger lifted,
-and that finger's own stroke was lost: 1 group to 2, wanting 3), 31/31 after.
+edge: 29/31 before, exactly the two lost-lift rows red (the stuck stroke was
+kept when the refused finger lifted, and that finger's own stroke was lost: 1
+group to 2, wanting 3), 31/31 after. (This entry, and the squash commit,
+first said 25/31; the red run's log says 29/31, and the entry was corrected
+after the merge.)
 Not tested on an iPhone; the owner's next checklist run is the test.
 
 Pad and Flip: shared, one module.
