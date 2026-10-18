@@ -174,7 +174,12 @@
    * styles.css's business and not this file's.
    *
    * THE ARTIST'S CLOCK IN A BUBBLE while dragging, so "where am I" is
-   * answered in the time the line talks in.
+   * answered in the time the line talks in. It rides LIFT px over a finger or
+   * a pen, and up with it into fine scrub: 10px over the bar was under the
+   * fingertip and on the line's words on the owner's iPhone (P5, their pick
+   * A). A mouse covers nothing, so there it keeps to 10px over the bar. Kept
+   * on screen at both ends; the words beside the bar fade while it shows
+   * (styles.css), so two lines of words never sit on each other.
    *
    * FINE SCRUB: slide the finger up off the bar and the same movement covers
    * half, then a quarter, of the replay (iPhone video does this). A press
@@ -202,7 +207,7 @@
    *             needs neither does not carry it.
    *   tip(f)    optional: the bubble's words instead of the clock
    * Returns { paint(f), reset(), drag(surface, on) }. */
-  var FINE = [[110, 0.25], [48, 0.5]];
+  var FINE = [[110, 0.25], [48, 0.5]], LIFT = 56;
   function scrub(bar, o) {
     if (!bar || !o) return null;
     bar.classList.add('rl-scrub');
@@ -264,10 +269,13 @@
         x.fillRect(k * cw + cw * 0.2, (H - ch) / 2, cw * 0.6, ch);
       }
     }
-    function say(f, fine) {
-      var T = o.total() || 0, m = o.map && o.map();
+    // r is the bar's box; lift how far over it the bubble's foot wants to be.
+    function say(f, fine, r, lift) {
+      var T = o.total() || 0, m = o.map && o.map(), vw = document.documentElement.clientWidth;
       tip.textContent = ((o.tip && o.tip(f)) || clock(m ? m(f * T) : f * T)) + (fine < 1 ? '  · fine ' + label(fine) : '');
-      tip.style.left = f * 100 + '%';
+      var w = tip.offsetWidth / 2;
+      tip.style.left = Math.max(w + 8, Math.min(vw - w - 8, r.left + f * r.width)) - r.left + 'px';
+      tip.style.bottom = 'calc(100% + ' + Math.max(10, Math.min(lift, r.top - tip.offsetHeight - 8)) + 'px)';
     }
     function begin(e, f) {
       drag = { x: e.clientX, f: f, id: e.pointerId };
@@ -281,7 +289,7 @@
       FINE.forEach(function (p) { if (fine === 1 && up > p[0] && drag.bar) fine = p[1]; });
       drag.f = Math.max(0, Math.min(1, drag.f + (e.clientX - drag.x) / (drag.w || r.width) * fine));
       drag.x = e.clientX;
-      o.seek(drag.f); paint(drag.f); say(drag.f, fine);
+      o.seek(drag.f); paint(drag.f); say(drag.f, fine, r, e.pointerType === 'mouse' ? 10 : up + LIFT);
     }
     function finish(e) {
       if (!drag || (e && e.pointerId !== drag.id)) return;

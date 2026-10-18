@@ -859,7 +859,14 @@ with sync_playwright() as sp:
     #   pause, sound and muted, the shape cursor) carry aria-hidden="true"
     #   themselves, 19 B each, as every icon in the templates now does. Nothing
     #   to spend against: the attribute is the fix. 152,881 measured.
-    BYTES_RATCHET, BYTES_TARGET = 152_886, 153_800
+    # RAISED (the owner's P5, pick A: the scrubber's clock rides over the
+    #   finger), for one named cost: +305 B -- lib/replayline.js placing the
+    #   bubble LIFT px over a finger or a pen (a mouse keeps it 10px over the
+    #   bar) and keeping it on screen at both ends, which is a measure of the
+    #   bubble and the bar on each move. One module for the Pad, this player
+    #   and the in-post one, so the three cannot place it differently.
+    #   153,186 measured.
+    BYTES_RATCHET, BYTES_TARGET = 153_191, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
@@ -1036,7 +1043,13 @@ with sync_playwright() as sp:
     #   room, the mark pinned to the foot, the button's 32px gap, and the
     #   19px bold words on .player-cta and the editors' big purple buttons
     #   (one rule; the player carries its own). 37,742 measured.
-    CSS_RATCHET, CSS_WAS, CSS_TARGET = 37_750, 119_844, 40_000
+    # RAISED (the owner's P5, pick A), for one named cost: +103 B -- the line
+    #   under the track fading while the scrubber's bubble shows, and back when
+    #   the finger lifts (.rl-scrub.dragging ~ .replay-line, and the line's
+    #   0.15s fade), listed live in css_live.json because nothing at rest
+    #   matches it; and the bubble a layer up, since riding above a finger it
+    #   is over this page's canvas, which sits at z-index 1. 37,845 measured.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 37_850, 119_844, 40_000
     total_css = sum(css_bytes.values())
     check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
           f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",

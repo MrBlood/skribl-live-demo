@@ -23,7 +23,9 @@ WHAT IS ASKED, AND HOW IT IS READ
   * The scrubber's shape is read off its own pixels: ink where the drawing was
     drawn, nothing where the artist paused.
   * Drags are real mouse drags; how far the replay moved is read from the
-    slider's own value.
+    slider's own value. Where the bubble rides is read under REAL touches and
+    a real pen (CDP), so the pointer type is the browser's own, and its paint
+    from what is on top at its middle.
   * The author's pick is read from the payload serializeSkribl() writes, the
     server's answer to a bad one, and where each player starts with it.
 """
@@ -455,6 +457,163 @@ with sync_playwright() as p:
         check(f"[402x{vh}] \"long pauses skipped\" is not on the line, and shows with the speeds",
               g["skipApplies"] and g["skipNow"] == "none" and opened != "none", f"applies {g['skipApplies']} rest {g['skipNow']} open {opened}")
         pg.close()
+
+    # ---- 5c. THE BUBBLE RIDES OVER THE FINGER (the owner's P5, pick A) -------
+    # 10px over the bar, the artist's clock sat under the fingertip and on the
+    # Pad's words on the owner's iPhone. A finger or a pen now carries it 56px
+    # over the touch, up with it into fine scrub, kept on screen at both ends;
+    # a mouse keeps it 10px over the bar; and while it shows, the words beside
+    # the bar fade -- on the Pad, the link page and the in-post player alike.
+    print("\nTHE BUBBLE OVER THE FINGER")
+    LIFT = 56
+    # PAINTED is what is on top at the bubble's middle, passing over layers
+    # faded to nothing (the words, which fade so the bubble shows through).
+    BUB = """([bar, line]) => { const q = s => document.querySelector(s), t = q(bar + ' .rl-bubble');
+        const r = t.getBoundingClientRect(), cs = getComputedStyle(t);
+        const seen = el => { for (let n = el; n; n = n.parentElement) if (getComputedStyle(n).opacity === '0') return false; return true; };
+        t.style.pointerEvents = 'auto';   // it takes no touches; asked here only what is painted on top
+        const e = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2).find(seen);
+        t.style.pointerEvents = '';
+        return { bottom: r.bottom, left: r.left, right: r.right, shown: cs.opacity, painted: !!e && t.contains(e),
+                 barTop: q(bar).getBoundingClientRect().top, words: getComputedStyle(q(line)).opacity,
+                 vw: document.documentElement.clientWidth }; }"""
+
+    def finger(pg, cdp, bar, line, name):
+        """A real finger on the bar: press at a quarter, drag along it, slide up
+        into fine scrub, back down and off the right end, then the left end, and
+        lift there (the start, so the Pad's preview is still running after)."""
+        pg.evaluate("(s) => document.querySelector(s).scrollIntoView({ block: 'center' })", bar)
+        pg.wait_for_timeout(150)
+        bx = pg.locator(bar).bounding_box()
+        x, y = bx["x"] + bx["width"] * 0.25, bx["y"] + bx["height"] / 2
+
+        def t(kind, px, py):
+            cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": [] if kind == "touchEnd" else [{"x": px, "y": py}]})
+            pg.wait_for_timeout(16)
+
+        t("touchStart", x, y)
+        for k in range(1, 7):
+            t("touchMove", x + bx["width"] * 0.2 * k / 6, y)
+        x += bx["width"] * 0.2
+        pg.wait_for_timeout(250)   # the bubble and the words fade over 0.15s
+        on = pg.evaluate(BUB, [bar, line])
+        for k in range(1, 5):
+            t("touchMove", x, y - 130 * k / 4)
+        up = pg.evaluate(BUB, [bar, line])
+        vw = on["vw"]
+        for k in range(1, 9):
+            t("touchMove", x + (vw - 1 - x) * k / 8, y)
+        hi = pg.evaluate(BUB, [bar, line])
+        for k in range(1, 9):
+            t("touchMove", vw - 1 - (vw - 2) * k / 8, y)
+        lo = pg.evaluate(BUB, [bar, line])
+        t("touchEnd", 0, 0)
+        pg.wait_for_timeout(300)
+        after = pg.evaluate(BUB, [bar, line])
+        r1 = lambda d: {k: round(v, 1) if isinstance(v, float) else v for k, v in d.items()}
+        check(f"[{name}] a finger's press shows the clock {LIFT}px over the touch, painted, not under the fingertip",
+              on["shown"] == "1" and on["painted"] and abs(on["bottom"] - (y - LIFT)) <= 1, f"touch at {y:.1f}: {r1(on)}")
+        check(f"[{name}] ...and slid up into fine scrub, the bubble rides up with the finger",
+              up["painted"] and abs(up["bottom"] - (y - 130 - LIFT)) <= 1, f"touch at {y - 130:.1f}: {r1(up)}")
+        check(f"[{name}] ...the words beside the bar fade while it shows",
+              on["words"] == "0" and up["words"] == "0", f"{on['words']} / {up['words']}")
+        check(f"[{name}] ...the bubble stays on screen at both ends of the drawing",
+              hi["right"] <= vw - 7.5 and lo["left"] >= 7.5 and hi["painted"] and lo["painted"],
+              f"end: right {hi['right']:.1f} of {vw}; start: left {lo['left']:.1f}")
+        check(f"[{name}] ...and when the finger lifts, the bubble goes and the words come back",
+              after["shown"] == "0" and after["words"] == "1", r1(after))
+
+    phone = b.new_context(viewport={"width": 402, "height": 874}, device_scale_factor=2, is_mobile=True, has_touch=True)
+
+    # The Pad's preview, at a quarter speed so it is still running when the finger lifts.
+    pg = phone.new_page()
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    browsing.goto(pg, BASE, "/")
+    box = pg.locator("#canvas").bounding_box()
+    for k in range(2):
+        pg.mouse.move(box["x"] + 60, box["y"] + 120 + k * 120)
+        pg.mouse.down()
+        for i in range(60):
+            pg.mouse.move(box["x"] + 60 + i * 4, box["y"] + 120 + k * 120 + math.sin(i / 6) * 30)
+            pg.wait_for_timeout(16)
+        pg.mouse.up()
+        pg.wait_for_timeout(300)
+    pg.click("#recordBtn"); pg.wait_for_timeout(300)
+    pg.click("#playBtn"); pg.wait_for_timeout(300)
+    pick(pg, "#padLine", "0.25")
+    pg.wait_for_timeout(400)   # the speeds close
+    finger(pg, pg.context.new_cdp_session(pg), "#playScrub", "#padLine", "Pad, phone")
+    check("[Pad, phone] ...the preview carries on after the drag", pg.evaluate("() => playing && !scrubbing"))
+    check("[Pad, phone] no page errors", not errs, "; ".join(errs[:2]))
+    pg.close()
+
+    # The link page, on the same phone; then a finger on the drawing itself.
+    pg = phone.new_page()
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.goto(BASE + keep["url"], wait_until="load")
+    pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
+    pg.wait_for_timeout(300)
+    cdp = pg.context.new_cdp_session(pg)
+    finger(pg, cdp, "#playerProgress", "#playerLine", "link page, phone")
+    cv = pg.locator("#canvas").bounding_box()
+    cx, cy = cv["x"] + 60, cv["y"] + cv["height"] * 0.6
+    cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": cx, "y": cy}]})
+    for k in range(1, 9):
+        cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": cx + 12 * k, "y": cy}]})
+        pg.wait_for_timeout(16)
+    pg.wait_for_timeout(250)
+    on = pg.evaluate(BUB, ["#playerProgress", "#playerLine"])
+    cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+    check(f"[link page, phone] a finger dragging across the drawing itself has the clock {LIFT}px over it too",
+          on["shown"] == "1" and on["painted"] and abs(on["bottom"] - (cy - LIFT)) <= 1, f"touch at {cy:.1f}: {on}")
+    check("[link page, phone] no page errors", not errs, "; ".join(errs[:2]))
+    pg.close()
+
+    # The in-post player, in the feed (a public post, so the feed lists it).
+    _, pub = post(drawing(50000, "keep", extra={"visibility": "public", "title": "Bubble fixture"}))
+    pg = phone.new_page()
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    browsing.goto(pg, BASE, "/feed")
+    sel = f'[data-skribl-id="{pub["id"]}"] + .skribl-inline-line'
+    pg.wait_for_selector(sel + ".is-on", timeout=10000)
+    finger(pg, pg.context.new_cdp_session(pg), sel + " .skribl-inline-scrub", sel + " .skribl-inline-say", "in-post, phone")
+    check("[in-post, phone] no page errors", not errs, "; ".join(errs[:2]))
+    pg.close()
+    phone.close()
+
+    # A mouse covers nothing: its bubble keeps to 10px over the bar, slid up or
+    # not. A pen is a hand on the glass, as a finger is.
+    pg = b.new_page(viewport={"width": 1100, "height": 900})
+    pg.goto(BASE + keep["url"], wait_until="load")
+    pg.wait_for_function("() => !!document.querySelector('#playerLine .rl-speed')", timeout=10000)
+    pg.wait_for_timeout(300)
+    bx = pg.locator("#playerProgress").bounding_box()
+    x, y = bx["x"] + bx["width"] * 0.3, bx["y"] + bx["height"] / 2
+    pg.mouse.move(x, y); pg.mouse.down()
+    pg.mouse.move(x + 60, y, steps=4); pg.wait_for_timeout(250)
+    m_on = pg.evaluate(BUB, ["#playerProgress", "#playerLine"])
+    pg.mouse.move(x + 60, y - 130, steps=4)
+    m_up = pg.evaluate(BUB, ["#playerProgress", "#playerLine"])
+    pg.mouse.up(); pg.wait_for_timeout(300)
+    check("[link page, desk] a mouse's bubble keeps to 10px over the bar, on it and slid up off it",
+          abs(m_on["bottom"] - (m_on["barTop"] - 10)) <= 1 and abs(m_up["bottom"] - (m_up["barTop"] - 10)) <= 1
+          and m_on["shown"] == "1" and m_on["painted"], f"{m_on} / {m_up}")
+    cdp = pg.context.new_cdp_session(pg)
+    pen = lambda kind, py, px=x: cdp.send("Input.dispatchMouseEvent", {"type": kind, "x": px, "y": py, "button": "left",
+                                                                      "buttons": 0 if kind == "mouseReleased" else 1,
+                                                                      "clickCount": 1, "pointerType": "pen", "force": 0.5})
+    pen("mousePressed", y)
+    for k in range(1, 5):
+        pen("mouseMoved", y, x + 15 * k); pg.wait_for_timeout(16)
+    pg.wait_for_timeout(250)
+    p_on = pg.evaluate(BUB, ["#playerProgress", "#playerLine"])
+    pen("mouseReleased", y, x + 60)
+    check(f"[link page, desk] ...and a pen's rides {LIFT}px over its tip, as a finger's does",
+          p_on["shown"] == "1" and abs(p_on["bottom"] - (y - LIFT)) <= 1, f"pen at {y:.1f}: {p_on}")
+    pg.close()
 
     # ---- 6. THE POST SHEET ----------------------------------------------------
     print("\nTHE POST SHEET")

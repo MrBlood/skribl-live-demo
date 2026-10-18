@@ -1512,7 +1512,14 @@ with sync_playwright() as sp:
     #   white so a see-through card reads as it shows. WHICH CALLER PAYS:
     #   every page that shows a post, for a look only a line-less box takes
     #   (the Gallery's cards). 68,260 B measured.
-    EMBED_RATCHET = 68_264
+    # RAISED (the owner's P5, pick A: the scrubber's clock rides over the
+    #   finger), for one named cost: +394 B -- lib/replayline.js placing the
+    #   bubble over a finger or a pen and keeping it on screen (+305), and
+    #   inlineplayer.css fading the words under the line while it shows
+    #   (+89). WHICH CALLER PAYS: every page that shows a post, because the
+    #   scrubber is there at rest; it is the Pad's module, so a post cannot
+    #   place the clock differently from the Pad and /s/<id>. 68,654 B measured.
+    EMBED_RATCHET = 68_658
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
