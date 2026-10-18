@@ -20,7 +20,7 @@ prerequisite. Every scenario here was a REAL loss path before this work:
 
 Uses the runner's server on :5001 like the other browser suites.
 """
-import json, sys, time
+import json, re, sys, time
 from pathlib import Path
 from assertions import make_check
 import os
@@ -961,6 +961,21 @@ def _n(text):
     pts = [p for f in d["frames"] for p in (f.get("strokes") or [])] if "frames" in d else (d.get("strokes") or [])
     return (len(pts), round(pts[0]["x"]) if pts else None)
 _WAIT = "(k) => Object.keys(localStorage).filter(x => x.startsWith(k + ':waiting:')).sort().map(x => [x.split(':waiting:')[1], JSON.parse(localStorage.getItem(x)).data])"
+# EVERY NOTE A PAGE SAYS, from its first script on (D2): the words written into
+# the Pad's toast or Flip's chip, whether the question was showing then, and
+# whether the page's own boot script said it (document.currentScript is set
+# only while a script runs, never in a timer or a tap). Read at the setter,
+# because "Draft restored" is said while the page parses, before an observer
+# added at DOMContentLoaded could hear it.
+_NOTES = """(() => { window.__notes = [];
+  const d = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
+  Object.defineProperty(Node.prototype, 'textContent', { configurable: true, enumerable: d.enumerable, get: d.get,
+    set(v) { if ((this.id === 'toast' || this.id === 'flipChip') && String(v).trim()) {
+        const b = document.querySelector('.othertab');
+        window.__notes.push([String(v), !!(b && !b.hidden), !!document.currentScript]); }
+      d.set.call(this, v); } }); })()"""
+_SAID = "() => window.__notes.map(n => n[0])"
+_ASKS = re.compile(r"^Another drawing is waiting, from a different tab (?:on [A-Z][a-z]{2} \d{1,2} )?at \d{1,2}:\d{2}\s?[AP]M\.$")
 with sync_playwright() as _p2:
     _b2 = _p2.chromium.launch()
     for _ed, _path, _sel, _key, _boot, _ink_js in (
@@ -998,10 +1013,12 @@ with sync_playwright() as _p2:
         _bsize = _b.evaluate(_size_js)
         _a.close(); _b.close()
         # The next visit: the newest opens, the other is offered.
+        _ctx.add_init_script(_NOTES)
         _c = _open(_ctx, w=402); _c.wait_for_timeout(700)
         _bar = _c.evaluate(_BAR)
-        check(f"{_ed}: the next visit opens the newest drawing and offers the waiting one, painted, at 402px",
-              bool(_bar) and _bar["painted"] and "waiting" in _bar["words"]
+        _said0 = _c.evaluate(_SAID)
+        check(f"{_ed}: the next visit opens the newest drawing and offers the waiting one, painted, at 402px, saying when it was left",
+              bool(_bar) and _bar["painted"] and bool(_ASKS.match(_bar["words"]))
               and _n(_c.evaluate(f"() => localStorage.getItem('{_key}')")) == _n(_slot2), str(_bar))
         check(f"{_ed}: ...its buttons say Open it, Keep for later and Not now, each a 44px tap on screen",
               bool(_bar) and [b[0] for b in _bar["btns"]] == ["Open it", "Keep for later", "Not now"]
@@ -1013,6 +1030,12 @@ with sync_playwright() as _p2:
         check(f"{_ed}: Keep for later files it under Drafts and it stops waiting",
               len(_k) == 1 and not _c.evaluate(_WAIT, _key) and _c.evaluate(_BAR) is None,
               f"drafts {[d.get('title') for d in (_kept or [])]}, waiting {len(_c.evaluate(_WAIT, _key))}")
+        # ONE NOTE (D2): "Draft restored" said at boot sat on the question's
+        # words. It waits for the question, and an answer that says where the
+        # drawing went is the one note.
+        _said1 = _c.evaluate(_SAID)
+        check(f"{_ed}: ...nothing is said over the question, and Keep for later's own note is the one said",
+              _said0 == [] and _said1 == ["Kept in Drafts on this browser"], f"while asking {_said0}; after {_said1}")
         if _k:
             # The kept draft opens on a blank editor with B's strokes.
             # (Closed first: its pagehide flush would put its own drawing back.)
@@ -1036,9 +1059,12 @@ with sync_playwright() as _p2:
             _c.close()
         _ctx.close()
 
-        # OPEN IT: this tab's drawing waits in the other's place, and the page
-        # reloads into the other one.
+        # OPEN IT, ANSWERED ONCE (D2, the owner's pick A): the drawing this tab
+        # had open goes to Drafts as Save draft makes one, the page reloads into
+        # the other, and nothing is asked again. It used to wait in the other's
+        # place, so the reload asked the same question back about it, forever.
         _ctx = _b2.new_context()
+        _ctx.add_init_script(_NOTES)
         _a = _open(_ctx); _b = _open(_ctx)
         _ink(_a, _sel, -60); _a.wait_for_timeout(1800)
         _ink(_b, _sel, 60); _ink(_b, _sel, 20); _b.wait_for_timeout(1800)
@@ -1046,17 +1072,60 @@ with sync_playwright() as _p2:
         _a.close(); _b.close()
         _c = _open(_ctx); _c.wait_for_timeout(700)
         _before = _c.evaluate(_ink_js)
-        if _c.evaluate(_BAR):
+        _asked = _c.evaluate(_SAID) if _c.evaluate(_BAR) else None
+        if _asked is not None:
             with _c.expect_navigation():
                 _c.click(".othertab-open")
             _c.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
             _c.wait_for_timeout(800)
         _after, _bar2 = _c.evaluate(_ink_js), _c.evaluate(_BAR)
         _w3 = _c.evaluate(_WAIT, _key)
-        check(f"{_ed}: Open it reloads into the waiting drawing, and the one it replaced waits in its place",
+        _dr = _c.evaluate("() => window.SkriblSavedDrafts.list()") or []
+        check(f"{_ed}: Open it reloads into the waiting drawing; the one it replaced is in Drafts, nothing waits, nothing is asked",
               _before == _bstrokes and _after == _astrokes and _astrokes != _bstrokes
-              and len(_w3) == 1 and _w3[0][0].startswith("kept-") and bool(_bar2),
-              f"before {_before} after {_after} (A {_astrokes}, B {_bstrokes}); waiting {[k for k, _ in _w3]}")
+              and not _w3 and _bar2 is None and len(_dr) == 1,
+              f"before {_before} after {_after} (A {_astrokes}, B {_bstrokes}); waiting {[k for k, _ in _w3]}; "
+              f"asked {_bar2}; drafts {[d.get('title') for d in _dr]}")
+        check(f"{_ed}: ...kept as Save draft keeps one: its name and its picture",
+              len(_dr) == 1 and (_dr[0].get("title") or "").startswith("Skribl · ")
+              and (_dr[0].get("thumbnail") or "").startswith("data:image/jpeg"),
+              f"{[(d.get('title'), (d.get('thumbnail') or '')[:22]) for d in _dr]}")
+        _said = _c.evaluate(_SAID)
+        check(f"{_ed}: ...and one note says where it went: no \"Draft restored\" over the question, none after",
+              _asked == [] and _said == ["The drawing you had open is in Drafts"], f"while asking {_asked}; after the reload {_said}")
+        # "DRAFT RESTORED" WAITS FOR THE QUESTION, and is said when Not now
+        # puts it away. A drawing left two days ago says its day.
+        _c.evaluate(f"""() => localStorage.setItem('{_key}:waiting:zz',
+            JSON.stringify({{ w: 'zz', at: Date.now() - 2 * 864e5, data: localStorage.getItem('{_key}') }}))""")
+        _c.reload(wait_until="load")
+        _c.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
+        _c.wait_for_timeout(700)
+        _bar3, _said3 = _c.evaluate(_BAR), _c.evaluate(_SAID)
+        if _bar3:
+            _c.click(".othertab-x"); _c.wait_for_timeout(300)
+        _notes3 = _c.evaluate("() => window.__notes")
+        check(f"{_ed}: \"Draft restored\" waits for the question and is said once Not now puts it away; two days on, it says the day",
+              bool(_bar3) and " on " in _bar3["words"] and bool(_ASKS.match(_bar3["words"]))
+              and _said3 == [] and _notes3 == [["Draft restored", False, False]],
+              f"asked {_bar3 and _bar3['words']!r}; while asking {_said3}; after {_notes3}")
+        _c.evaluate(f"() => localStorage.removeItem('{_key}:waiting:zz')")
+        _c.reload(wait_until="load")
+        _c.wait_for_function(f"() => window.__skriblBoot && window.__skriblBoot.{_boot}")
+        _c.wait_for_timeout(700)
+        check(f"{_ed}: ...and with nothing waiting it is said as the draft opens, by the boot itself",
+              _c.evaluate("() => window.__notes") == [["Draft restored", False, True]] and _c.evaluate(_BAR) is None,
+              str(_c.evaluate("() => window.__notes")))
+        if len(_dr) == 1:
+            # The kept draft opens with the drawing that was on screen. (Closed
+            # first, as above: its pagehide flush would put its drawing back.)
+            _c.close()
+            _e = _ctx.new_page(); _e.goto(BASE + "/api/skribls")
+            _e.evaluate(f"() => {{ localStorage.removeItem('{_key}'); localStorage.removeItem('{_key}:owner'); }}")
+            _e.close()
+            _d = _open(_ctx, f"{_path}?draft={_dr[0]['id']}"); _d.wait_for_timeout(900)
+            check(f"{_ed}: ...and that draft opens with the drawing that was on screen",
+                  _d.evaluate(_ink_js) == _bstrokes and _bstrokes > 0, f"{_d.evaluate(_ink_js)} vs {_bstrokes}")
+            _d.close()
         _ctx.close()
 
     # A LONG DRAWING WAITING IN ANOTHER TAB'S PLACE is packed text (v322 plan,

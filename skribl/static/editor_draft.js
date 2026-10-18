@@ -816,11 +816,8 @@ function restoreAutosave(data) {
   // The bytes are asked for next (reAddMediaFromStore, below). The route amber
   // is shown by the store lookup when it MISSES, not here: shown at this
   // moment it was a false alarm flashed on every healthy restore (v294 audit,
-  // finding 3), teaching the user to ignore the real one.
-  //
-  // The same words Flip says, because it is the same event (v294 audit,
-  // finding 5). "Drawing restored" belongs to Clear's undo, in app.js.
-  showToast('Draft restored', null);
+  // finding 3), teaching the user to ignore the real one. "Draft restored" is
+  // said by the boot below, once no question is showing.
 }
 
 // ---------- Autosave wiring ----------
@@ -875,9 +872,18 @@ function restoreAutosave(data) {
   // ANOTHER TAB'S DRAWING IS WAITING (lib/othertab.js, T1): offered once the
   // newest has opened. "Keep for later" files it under Drafts as it is: its
   // strokes and ground (an autosave holds a photo's or a track's name, never
-  // its bytes, so those stay with the tab that had them).
+  // its bytes, so those stay with the tab that had them). "Open it" keeps the
+  // drawing on screen in Drafts as Save draft would, media and all (D2).
+  //
+  // "Draft restored" is the offer's to say, once no question is showing: said
+  // here at boot it sat on the question's words. The same words Flip says,
+  // because it is the same event (v294 audit, finding 5). "Drawing restored"
+  // belongs to Clear's undo, in app.js.
   if (padSlot) padSlot.offer({
+    restored: !!saved,
+    note: (words) => showToast(words, null),
     current: () => (hasContent || strokes.length || redoStack.length) ? JSON.stringify(serializeAutosave()) : null,
+    keep: () => window.SkriblSavedDrafts && window.SkriblSavedDrafts.keepShown ? window.SkriblSavedDrafts.keepShown() : false,
     later: (text, at) => {
       if (!window.SkriblSavedDrafts || !window.SkriblSavedDrafts.keep) return false;
       let d;
@@ -893,6 +899,7 @@ function restoreAutosave(data) {
               (e) => { showToast((e && e.message) || 'Couldn’t keep it — it stays waiting', null); return false; });
     }
   });
+  else if (saved) showToast('Draft restored', null);
 
   // No draft to come back to is a new drawing: it starts on the theme's
   // ground, Paper in the light theme (lib/canvasground.js). A restored draft

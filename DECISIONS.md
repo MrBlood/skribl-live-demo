@@ -19105,3 +19105,41 @@ requestFrame moved onto the stream as Gecko has it. Both of Flip's pages in the
 smoke hold the same stroke, so a frame's size cannot say which page it shows;
 telling the pages apart in Firefox's file would mean decoding it, which the
 smoke does not do.
+
+## After v326 -- two tabs: one question, answered once (D2)
+
+The owner's pick A from the D2 mock. With a drawing waiting from another tab,
+"Open it" swapped the two: this tab's drawing waited where the other had, and
+the page reloaded into the other. The reload then asked the same question
+about the drawing just left, and "Open it" again swapped them back, forever.
+"Draft restored" also sat on the question's words for its first seconds.
+
+Now "Open it" keeps this tab's drawing in Drafts first, made as Save draft
+makes one (its name, its picture, its media; a new draft, never written over
+one it was opened from), and opens the other. After the reload one note says
+where it went, "The drawing you had open is in Drafts", and nothing is asked.
+Only if Drafts can't take it (media still being read, a full store, an account
+that doesn't answer) does it wait in the other's place, as before, so nothing
+is lost either way. The question says when the other drawing was left:
+"Another drawing is waiting, from a different tab at 2:41 PM.", and its day
+when that was not today, which the mock did not show; the time alone would
+mislead.
+
+"Draft restored" waits until no question is showing, and is said when Not now
+puts the question away. An answer that says where a drawing went is the one
+note: after Keep for later, "Kept in Drafts on this browser" is said and
+"Draft restored" is not, so two notes don't follow each other. With nothing
+waiting it is said as the draft opens, as before.
+
+One module, `lib/othertab.js`, asks on both editors, so Flip has the same.
+`lib/savedrafts.js` gained `keepShown()`: Save draft's making, without its
+toasts.
+
+`verify_drafts` TWO TABS reads every note a page says from its first script
+on, at the textContent setter, because "Draft restored" is said while the page
+parses. With each note it keeps whether the question was showing and whether
+the boot itself said it. On main's code 14 of 28 failed (the words, the notes,
+Open it's swap); now 30 of 30. Two mutations each fail the check for their
+part: without the note said at once, the boot no longer says it (28 of 30);
+when Keep for later's own note is not the one, "Draft restored" follows it
+(28 of 30).

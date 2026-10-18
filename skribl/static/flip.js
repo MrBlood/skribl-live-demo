@@ -11362,20 +11362,6 @@ function mediaBytesAtRisk(){
 
 /* ---- boot ---- */
 const restored = tryRestore();
-// ANOTHER TAB'S DRAWING IS WAITING (lib/othertab.js, T1), offered as the
-// Pad's is. A Flip autosave is already a Flip draft, so "Keep for later"
-// files it as it is (a photo or track its tab spilled stays with that tab).
-if(flipSlot) flipSlot.offer({
-  current: () => nothingToShare() && !musicData && !bgImage ? null : JSON.stringify(serializeFlip({ media: false, recipes: true, pack: true })),
-  later: (text, at) => {
-    if(!window.SkriblSavedDrafts || !window.SkriblSavedDrafts.keep) return false;
-    let d; try{ d = unpackFrames(JSON.parse(text)); }catch(e){ console.error('[skribl] a waiting animation could not be read:', e); return false; }
-    const when = at ? new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
-    return window.SkriblSavedDrafts.keep('flip', 'From another tab' + (when ? ', ' + when : ''), d)
-      .then(() => { chip(window.SkriblSavedDrafts.where() === 'account' ? 'Kept in your drafts' : 'Kept in Drafts on this browser'); return true; },
-            (e) => { chip((e && e.message) || 'Couldn\u2019t keep it \u2014 it stays waiting'); return false; });
-  }
-});
 // No draft to come back to is a new Flip: it starts on the theme's ground,
 // Paper in the light theme (lib/canvasground.js), as the Pad's does. A
 // restored draft brought its own, and is never moved by the theme.
@@ -11444,7 +11430,26 @@ if (musicData) { decodeForWaveform(); if (typeof setCrossfadeUI==='function') se
   bind('photoPendingDismiss', ()=>{ pendingPhotoMeta=null; refreshPendingCards(); scheduleSave(); }); }
 refreshPendingCards();
 
-if (restored) chip('Draft restored');
+// ANOTHER TAB'S DRAWING IS WAITING (lib/othertab.js, T1), offered as the
+// Pad's is. A Flip autosave is already a Flip draft, so "Keep for later"
+// files it as it is (a photo or track its tab spilled stays with that tab).
+// "Open it" keeps the animation on screen in Drafts as Save draft would (D2),
+// and "Draft restored" is the offer's to say, once no question is showing.
+if(flipSlot) flipSlot.offer({
+  restored,
+  note: chip,
+  current: () => nothingToShare() && !musicData && !bgImage ? null : JSON.stringify(serializeFlip({ media: false, recipes: true, pack: true })),
+  keep: () => window.SkriblSavedDrafts && window.SkriblSavedDrafts.keepShown ? window.SkriblSavedDrafts.keepShown() : false,
+  later: (text, at) => {
+    if(!window.SkriblSavedDrafts || !window.SkriblSavedDrafts.keep) return false;
+    let d; try{ d = unpackFrames(JSON.parse(text)); }catch(e){ console.error('[skribl] a waiting animation could not be read:', e); return false; }
+    const when = at ? new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+    return window.SkriblSavedDrafts.keep('flip', 'From another tab' + (when ? ', ' + when : ''), d)
+      .then(() => { chip(window.SkriblSavedDrafts.where() === 'account' ? 'Kept in your drafts' : 'Kept in Drafts on this browser'); return true; },
+            (e) => { chip((e && e.message) || 'Couldn’t keep it — it stays waiting'); return false; });
+  }
+});
+else if (restored) chip('Draft restored');
 // A restored animation already near the limit was told so before the reload.
 if (restored && _lengthNote) _lengthNote.prime(window.SkriblPointBudget.docShare(frames));
 window.addEventListener('load', ()=>{ sizeStage(); positionToolSlider(); syncSelBar(); });
