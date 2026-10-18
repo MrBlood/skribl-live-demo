@@ -163,6 +163,13 @@ with sync_playwright() as p:
               v["answer"] and not v["home"] and ans["steps"] >= 2 and ans["show"] and ans["pic"] and ans["related"] >= 1
               and ans["focus"] == "askAnswerT", f"{v} {ans}")
         check(f"{name}: ...and Show me is painted", q.evaluate(PAINTED, "#askAnswer .ask-show"))
+        # Named by its title once there is one (WAVE, after v325: the template's
+        # reference pointed at a heading that only an answer creates).
+        nm = q.evaluate("""() => { const a = document.getElementById('askAnswer'), id = a.getAttribute('aria-labelledby');
+          const t = id && document.getElementById(id);
+          return { id, inside: !!t && a.contains(t), text: t ? t.textContent.trim() : null }; }""")
+        check(f"{name}: ...and the answer is named by its own title", nm["id"] == "askAnswerT" and nm["inside"]
+              and nm["text"] == ans["title"], str(nm))
 
         # Every answer this editor has: each step that names a button names
         # one on this page. Opened as a person does, one by one, through a

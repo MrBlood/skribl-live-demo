@@ -55,7 +55,7 @@ const _SHAPE_GLYPH = {
 function updateShapeCursor(x, y) {
   const kind = (typeof shapeKind !== 'undefined') ? shapeKind : 'line';
   shapeCursor.innerHTML =
-    '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" ' +
+    '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" ' +
     'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ' +
     'style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))">' +
     (_SHAPE_GLYPH[kind] || _SHAPE_GLYPH.line) + '</svg>';
@@ -1360,9 +1360,9 @@ const recTimer = document.getElementById('recTimer');
 const recPlays = document.getElementById('recPlays');
 const durationBadge = document.getElementById('durationBadge');
 
-const ICON_STOP = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="3.5"/></svg>';
-const ICON_RECORD = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>';
-const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>';
+const ICON_STOP = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="3.5"/></svg>';
+const ICON_RECORD = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>';
+const ICON_PLAY = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>';
 const LABEL_STOP = '<span class="btn-label"> Done</span>';
 const LABEL_RECORD = '<span class="btn-label"> Record</span>';
 const LABEL_PLAY = '<span class="btn-label"> Play</span>';
@@ -1374,7 +1374,7 @@ const LABEL_PLAY = '<span class="btn-label"> Play</span>';
 // desk tooltip reads (lib/tooltip.js adopts a re-set title), so the four can
 // never disagree again.
 const setPlayBtn = (on) => {
-  playBtn.innerHTML = on ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>' : ICON_PLAY + LABEL_PLAY;
+  playBtn.innerHTML = on ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>' : ICON_PLAY + LABEL_PLAY;
   playBtn.classList.toggle('playing', on);
   playBtn.setAttribute('aria-label', playBtn.title = on ? 'Stop' : 'Play');
 };
@@ -4035,10 +4035,10 @@ function showPlayerError(msg, canRetry) {
   if (pDur) pDur.textContent = clock(atMs(totalMs));
   let strip = null;   // the scrubber (below), painted with the progress
 
-  const ICON_PLAY_P = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-  const ICON_PAUSE_P = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
-  const ICON_SOUND_P = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>';
-  const ICON_MUTED_P = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/></svg>';
+  const ICON_PLAY_P = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  const ICON_PAUSE_P = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+  const ICON_SOUND_P = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>';
+  const ICON_MUTED_P = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/></svg>';
 
   let running = false;
   // Play pressed while a far jump races there (seekRacing): it starts when the

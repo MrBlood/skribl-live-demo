@@ -26,9 +26,15 @@
    share a sweep are byte-identical, so sharing one gradient is correct
    rather than merely harmless. verify_a11y.py fails a page with any
    duplicate id now, which is the general form of this bug. #}
+{# A DRAWING, SO IT SAYS WHAT IT IS OR SAYS NOTHING (WAVE on the owner's
+   phone, after v325). Every lockup that includes it already names itself
+   ("Skribl Pad", "Skribl Flip", the gallery's link), so by default the mark
+   is hidden from screen readers. Where it is the only place the name is
+   written ("made with" under a shared drawing), the include passes
+   brand_label and the mark becomes an image with that name. #}
 {%- set _brand_sweep = brand_sweep|default(65) -%}
 {%- set _brand_grad = 'skink-m' ~ _brand_sweep -%}
-<svg class="brand-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 65 30" fill="none" stroke="url(#{{ _brand_grad }})" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><defs><linearGradient id="{{ _brand_grad }}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="{{ _brand_sweep }}" y2="0"><stop offset="0" class="brand-grad-a"/><stop offset="1" class="brand-grad-b"/></linearGradient></defs><g transform="skewX(-8)"><path class="st" d="M 13.6,15.6
+<svg class="brand-mark"{% if brand_label %} role="img" aria-label="{{ brand_label }}"{% else %} aria-hidden="true"{% endif %} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 65 30" fill="none" stroke="url(#{{ _brand_grad }})" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><defs><linearGradient id="{{ _brand_grad }}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="{{ _brand_sweep }}" y2="0"><stop offset="0" class="brand-grad-a"/><stop offset="1" class="brand-grad-b"/></linearGradient></defs><g transform="skewX(-8)"><path class="st" d="M 13.6,15.6
 C 10.6,13.8 6.9,15.3 7.5,17.5
 C 8.1,19.9 12.7,19.1 13.1,21.4
 C 13.4,23.6 9.7,25.1 6.9,23.3

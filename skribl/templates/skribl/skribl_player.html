@@ -49,7 +49,7 @@
   {# record button removed — authoring control, absent on the player #}
       <div class="play-wrap" id="playWrap" hidden>
         <button type="button" id="playBtn" class="btn play btn-icon" title="Play" aria-label="Play">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
           <span class="btn-label">Play</span>
         </button>
         <span id="durationBadge" class="duration-badge" hidden>0:00</span>
@@ -95,10 +95,10 @@
         this is that pattern, not a second invention. Shown by CSS under
         :fullscreen only. -#}
     <button type="button" class="player-btn full-exit" id="playerFullExit" aria-label="Leave full screen">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
     </button>
     <div id="canvasEmptyHint" class="canvas-empty-hint">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
       <span>Start drawing</span>
     </div>
   </div>
