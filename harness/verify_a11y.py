@@ -1876,11 +1876,11 @@ with sync_playwright() as p:
                 check(f"{_route} {_theme}: {_r['sel']} white on its fill clears AA for its size",
                       _r["fills"] > 0 and _r["worst"] is not None and _r["worst"] >= _r["need"], str(_r))
             if _route == "/library" and _theme == "light":
-                # The armed Delete? on a light row: its fill is a 10% tint,
-                # which ON_FILL composites over white -- the row IS white here.
-                # It was a literal pink, 2.27:1 (third review).
-                for _r in _cpg.evaluate(ON_FILL, [["button.draft-del.armed"]]):
-                    check("/library light: the armed Delete? reads on its row",
+                # A draft row's armed Delete (D3): white on the deep red, in
+                # the row's end as the page builds it. The bin it replaced had
+                # a 10% tint, once a literal pink at 2.27:1 (third review).
+                for _r in _cpg.evaluate(ON_FILL, [[".draft-acts", "button.draft-del.armed"]]):
+                    check("/library light: a draft's armed Delete reads on its red",
                           _r["worst"] is not None and _r["worst"] >= _r["need"], str(_r))
             _sw = _cpg.evaluate(ACCENT_SWEEP)
             check(f"{_route} {_theme}: every word on an accent fill clears AA ({_sw['seen']} measured)",

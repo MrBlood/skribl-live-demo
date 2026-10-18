@@ -290,29 +290,34 @@ with sync_playwright() as p:
         pg.close()
 
     # ========================================================= DELETE FLOWS
-    print("\nGALIB 2 -- the draft bin asks without moving; a posted Delete holds its arm")
+    print("\nGALIB 2 -- a draft's Delete asks without moving; a posted Delete holds its arm")
+    # A DESK'S DELETE KEEPS ITS BOX (the v317 bin rule, kept by D3's labelled
+    # Delete): armed, it turns red with its word and its size, and the row's
+    # second line asks. "Tap again to delete" in the button would have pushed
+    # Save file aside, under the next click.
     pg = open_page(ctx, "/library#drafts")
     pg.wait_for_timeout(900)
-    BIN = """() => { const d = document.querySelector('#draftsList .draft-del');
+    DEL = """() => { const d = document.querySelector('#draftsList .draft-del');
       const row = d.closest('.draft-row'), m = row.querySelector('.draft-meta'), r = d.getBoundingClientRect();
-      return { w: r.width, h: r.height, x: r.left, armed: d.classList.contains('armed'),
-               meta: m.textContent, live: m.getAttribute('aria-live'), label: d.getAttribute('aria-label'),
-               ink: getComputedStyle(d).color }; }"""
-    b0 = pg.evaluate(BIN)
+      const f = row.querySelector('.draft-file').getBoundingClientRect();
+      return { w: r.width, h: r.height, x: r.left, fx: f.left, armed: d.classList.contains('armed'),
+               word: d.textContent.trim(), meta: m.textContent, live: m.getAttribute('aria-live'),
+               label: d.getAttribute('aria-label'), ink: getComputedStyle(d).color }; }"""
+    b0 = pg.evaluate(DEL)
     pg.click("#draftsList .draft-del >> nth=0")
     pg.wait_for_timeout(250)
-    b1 = pg.evaluate(BIN)
-    check("library: the armed bin keeps its 44px box and its place",
-          b1["armed"] and b0["w"] == b1["w"] == 44 and b0["h"] == b1["h"] == 44 and b0["x"] == b1["x"],
-          f"{b0} -> {b1}")
-    check("library: the question is on the meta line, which speaks, and the bin's ink turns",
+    b1 = pg.evaluate(DEL)
+    check("library: the armed Delete keeps its word, its box and its place, and so does Save file beside it",
+          b1["armed"] and b0["w"] == b1["w"] and b0["h"] == b1["h"] >= 34 and b0["x"] == b1["x"]
+          and b0["fx"] == b1["fx"] and b0["word"] == b1["word"] == "Delete", f"{b0} -> {b1}")
+    check("library: the question is on the meta line, which speaks, and Delete's ink turns",
           b1["meta"] != b0["meta"] and "again" in b1["meta"] and b1["live"] == "polite"
           and b1["label"].startswith("Tap again") and b1["ink"] != b0["ink"], f"{b0} -> {b1}")
     pg.keyboard.press("Tab"); pg.wait_for_timeout(200)
-    check("library: focus leaving the bin disarms it", not pg.evaluate(BIN)["armed"])
+    check("library: focus leaving Delete disarms it", not pg.evaluate(DEL)["armed"])
     pg.click("#draftsList .draft-del >> nth=0"); pg.wait_for_timeout(200)
     pg.mouse.click(5, 400); pg.wait_for_timeout(200)
-    b2 = pg.evaluate(BIN)
+    b2 = pg.evaluate(DEL)
     check("library: a tap anywhere else disarms it, and the meta line comes back",
           not b2["armed"] and b2["meta"] == b0["meta"], str(b2))
     pg.close()
@@ -608,6 +613,128 @@ with sync_playwright() as p:
     check("library 390: the menu's Delete arms in place, saying so, and the second tap takes the post down",
           armed == [True, "Tap again to delete", True] and gone, f"{armed}, gone {gone}")
     pg.close()
+
+    # A DRAFT ROW ENDS AS A POSTED ROW DOES (D3, the owner's pick A): a
+    # phone's one ⋯ with Open in Pad (or Flip), Save a .skribl file and
+    # Delete, last, under a line; a desk's Save file and Delete. It ended in a
+    # bin, so the two lists behaved differently. lib/savedrafts.js rowEnd.
+    print("\nGALIB 2b -- a draft row ends as a posted row does: a phone's ⋯, a desk's Save file and Delete")
+    _ROW = {"strokes": [{"x": 40 + i * 9, "y": 60 + (i % 4) * 7, "color": "#7c5cff", "size": 6, "t": i * 30} for i in range(16)],
+            "strokeGroups": [16], "background": {"color": "#ffffff"}}
+    FILE_ME = {"version": 2, "schemaVersion": 2, "playbackMode": "replay", "title": f"{TAG} file me",
+               "canvasSize": {"cssWidth": 400, "cssHeight": 300}, "frames": [_ROW]}
+    # A Flip draft keeps an in-between page as its recipe (flip.js
+    # serializeFlip), which only Flip can draw.
+    TWEENED = {"version": 2, "schemaVersion": 2, "playbackMode": "flip", "fps": 8, "title": f"{TAG} tweened",
+               "canvasSize": {"cssWidth": 400, "cssHeight": 300},
+               "frames": [_ROW, {"gen": {"n": 1}, "background": "#ffffff"}, _ROW]}
+    DMENU = """(t) => { const r = [...document.querySelectorAll('#draftsList .draft-row')].find(e => e.textContent.includes(t));
+      if (!r) return null; const vis = e => !!(e && e.getClientRects().length);
+      const more = r.querySelector('.draft-more'), mr = more.getBoundingClientRect(), s = r.querySelector('.draft-acts'), sr = s.getBoundingClientRect();
+      const bs = [...r.querySelectorAll('.draft-act')].filter(vis).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+      let dead = 0;
+      for (let i = 0; i + 2 < bs.length; i++) {
+        const a = bs[i].getBoundingClientRect(), c = bs[i + 1].getBoundingClientRect(), x = a.left + a.width / 2;
+        for (let y = Math.ceil(a.bottom) - 1; y <= Math.floor(c.top) + 1; y++) {
+          const hit = document.elementFromPoint(x, y);
+          if (!hit || !hit.closest || !hit.closest('.draft-act')) dead++; } }
+      const rule = bs.length > 1 ? Math.round(bs[bs.length - 1].getBoundingClientRect().top - bs[bs.length - 2].getBoundingClientRect().bottom) : 0;
+      return { more: vis(more) ? [Math.round(mr.width), Math.round(mr.height)] : null, open: r.classList.contains('more-open'),
+               expanded: more.getAttribute('aria-expanded'), words: bs.map(b => b.innerText.trim()),
+               tall: bs.every(b => b.getBoundingClientRect().height >= 44), dead, rule,
+               painted: bs.every(b => { const q = b.getBoundingClientRect(), at = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); return !!(at && b.contains(at)); }),
+               onScreen: !bs.length || (sr.left >= 0 && sr.right <= innerWidth && sr.bottom <= innerHeight),
+               href: (bs[0] && bs[0].getAttribute('href')) || '', focus: !!bs.length && document.activeElement === bs[0],
+               del: (() => { const d = r.querySelector('.draft-del'); return [d.classList.contains('armed'), d.innerText.trim()]; })() }; }"""
+    seed = open_page(phone, "/library#drafts")
+    seed.evaluate("(p) => SkriblSavedDrafts.keep('pad', p.title, p)", FILE_ME)
+    seed.evaluate("(p) => SkriblSavedDrafts.keep('flip', p.title, p)", TWEENED)
+    seed.close()
+    for theme in ("light", "dark"):
+        # The theme rides in the query, which must come before the hash, so
+        # the tab is chosen by its own control.
+        pg = open_page(phone, "/library", theme)
+        _tap(pg.locator("#tabDrafts")); pg.wait_for_timeout(700)
+        rest = pg.evaluate(DMENU, f"{TAG} file me")
+        check(f"drafts 390 {theme}: a draft row ends in one ⋯, 44px, and no buttons beside it",
+              bool(rest) and rest["more"] == [44, 44] and rest["words"] == [] and rest["expanded"] == "false", str(rest))
+        row = pg.locator("#draftsList .draft-row", has_text=f"{TAG} file me")
+        row.scroll_into_view_if_needed()
+        _tap(row.locator(".draft-more")); pg.wait_for_timeout(300)
+        m = pg.evaluate(DMENU, f"{TAG} file me")
+        check(f"drafts 390 {theme}: its ⋯ opens Open in Pad, Save a .skribl file and Delete, each 44px tall, painted, on screen, the first focused",
+              bool(m) and m["open"] and m["expanded"] == "true" and m["words"] == ["Open in Pad", "Save a .skribl file", "Delete"]
+              and m["tall"] and m["painted"] and m["onScreen"] and m["focus"], str(m))
+        check(f"drafts 390 {theme}: ...Open goes to the Pad with the draft, and Delete stands apart, past the 13px rule, with no dead point between the others",
+              bool(m) and "?draft=" in m["href"] and 8 <= m["rule"] <= 13 and m["dead"] == 0, str(m and [m["href"], m["rule"], m["dead"]]))
+        mc = glass_contrast(pg, ['.draft-row.more-open .draft-act .draft-lbl'], 2)
+        check(f"drafts 390 {theme}: every word in the open menu reads 7:1 or more on real pixels ({len(mc)} measured)",
+              len(mc) == 3 and not [x for x in mc if x[1] < 7], str(mc))
+        _tap(row.locator(".draft-del")); pg.wait_for_timeout(250)
+        a = pg.evaluate(DMENU, f"{TAG} file me")
+        ac = glass_contrast(pg, ['.draft-row.more-open .draft-del.armed .draft-lbl'], 2)
+        check(f"drafts 390 {theme}: the menu's Delete asks in place, the menu still open, reading 7:1 or more on its red",
+              bool(a) and a["del"] == [True, "Tap again to delete"] and a["open"] and len(ac) == 1 and ac[0][1] >= 7, f"{a and a['del']}, {ac}")
+        pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+        shut = pg.evaluate("() => [!document.querySelector('.draft-row.more-open'), document.activeElement.classList.contains('draft-more')]")
+        check(f"drafts 390 {theme}: Escape closes it and hands focus back to the ⋯", shut == [True, True], str(shut))
+        _tap(row.locator(".draft-more")); pg.wait_for_timeout(200)
+        pg.mouse.click(5, 120); pg.wait_for_timeout(200)
+        check(f"drafts 390 {theme}: a tap anywhere else closes it",
+              pg.evaluate("() => !document.querySelector('.draft-row.more-open')"))
+        pg.close()
+    pg = open_page(phone, "/library#drafts")
+    pg.wait_for_timeout(600)
+    tw = pg.locator("#draftsList .draft-row", has_text=f"{TAG} tweened")
+    tw.scroll_into_view_if_needed()
+    _tap(tw.locator(".draft-more")); pg.wait_for_timeout(250)
+    t1 = pg.evaluate(DMENU, f"{TAG} tweened")
+    _tap(pg.locator("#draftsList .draft-row", has_text=f"{TAG} file me").locator(".draft-more")); pg.wait_for_timeout(250)
+    t2 = [pg.evaluate(DMENU, f"{TAG} tweened"), pg.evaluate(DMENU, f"{TAG} file me")]
+    check("drafts 390: a Flip draft's menu opens it in Flip, and opening another row's menu closes the first",
+          bool(t1) and t1["words"][:1] == ["Open in Flip"] and "/flip?draft=" in t1["href"]
+          and all(t2) and not t2[0]["open"] and t2[1]["open"], f"{t1 and [t1['words'], t1['href']]}; {[x and x['open'] for x in t2]}")
+    pg.close()
+
+    # A desk: the card opens the draft, and the row's end is Save file and
+    # Delete. Save file is the file the editor's Save as a file makes, with
+    # no editor open; a Flip draft holding an in-between page says why not.
+    desk_d = b.new_context(storage_state=state, accept_downloads=True, **DESK)
+    seed = open_page(desk_d, "/library#drafts")
+    seed.evaluate("(p) => SkriblSavedDrafts.keep('pad', p.title, p)", FILE_ME)
+    seed.evaluate("(p) => SkriblSavedDrafts.keep('flip', p.title, p)", TWEENED)
+    seed.close()
+    for theme in ("light", "dark"):
+        pg = open_page(desk_d, "/library", theme)
+        pg.click("#tabDrafts"); pg.wait_for_timeout(700)
+        d = pg.evaluate(DMENU, f"{TAG} file me")
+        check(f"drafts desk {theme}: the row ends in Save file and Delete, painted, 34px or more, and no ⋯",
+              bool(d) and d["more"] is None and d["words"] == ["Save file", "Delete"] and d["painted"]
+              and all(h >= 34 for h in pg.evaluate("(t) => [...[...document.querySelectorAll('#draftsList .draft-row')].find(e => e.textContent.includes(t)).querySelectorAll('.draft-act')].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect().height)", f"{TAG} file me")),
+              str(d))
+        dc = glass_contrast(pg, ['#draftsList .draft-file .draft-lbl', '#draftsList .draft-del .draft-lbl'], 1)
+        check(f"drafts desk {theme}: Save file and Delete read 7:1 or more on real pixels ({len(dc)} measured)",
+              len(dc) >= 4 and not [x for x in dc if x[1] < 7], str([x for x in dc if x[1] < 7][:4]))
+        pg.close()
+    pg = open_page(desk_d, "/library#drafts")
+    pg.wait_for_timeout(600)
+    with pg.expect_download(timeout=15000) as dl:
+        pg.locator("#draftsList .draft-row", has_text=f"{TAG} file me").locator(".draft-file").click()
+    got = dl.value
+    body = json.loads(open(got.path(), encoding="utf-8").read())
+    check("drafts desk: Save file writes the draft as the editor's .skribl file, named for its title, without opening it",
+          got.suggested_filename == f"{TAG}-file-me.skribl" and body == FILE_ME and pg.url.endswith("/library#drafts"),
+          f"{got.suggested_filename}; same as kept: {body == FILE_ME}; at {pg.url}")
+    _downloads = []
+    pg.on("download", lambda x: _downloads.append(x.suggested_filename))
+    trow = pg.locator("#draftsList .draft-row", has_text=f"{TAG} tweened")
+    trow.locator(".draft-file").click(); pg.wait_for_timeout(1200)
+    said = trow.locator(".draft-meta").inner_text()
+    check("drafts desk: a Flip draft holding an in-between page writes no file, and its row says only Flip can draw those, and how",
+          not _downloads and "Only Flip can draw its in-between pages" in said and "open it in Flip" in said,
+          f"downloads {_downloads}; said {said!r}")
+    pg.close()
+    desk_d.close()
 
     # The count repeats "N posted" above it, so it is drawn only while a
     # search narrows it, and read out either way; the note about this

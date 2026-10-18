@@ -776,12 +776,11 @@
   var SD = window.SkriblSavedDrafts;
 
   /* THE SAME ROW AS THE EDITORS' SHEET (v317): picture, name, "Pad · 12m
-     ago", and a bin. The owner: too many bubble pills, and the sheet "looks
-     nothing like the others". The card itself opens the draft, in the editor
-     that made it; the bin asks once, and only one row asks at a time. */
-  var BIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
-    + 'stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/>'
-    + '<path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+     ago". The owner: too many bubble pills, and the sheet "looks nothing like
+     the others". The card itself opens the draft, in the editor that made it.
+     Its end is a posted row's (D3, the owner's pick A; lib/savedrafts.js
+     rowEnd): a phone's ⋯ with Open, Save a .skribl file and Delete, a desk's
+     Save file and Delete. Delete asks once, and only one row asks at a time. */
   var draftDisarmers = [];
   function draftRow(it) {
     var row = document.createElement('div');
@@ -789,9 +788,10 @@
     var kind = it.kind === 'flip' ? 'Flip' : 'Pad';
     var title = it.title || 'Untitled Skribl';
     var base = it.kind === 'flip' ? draftsCfg.flip : draftsCfg.pad;
+    var href = (base || '') + '?draft=' + encodeURIComponent(it.id);
     var open = document.createElement('a');
     open.className = 'draft-open';
-    open.href = (base || '') + '?draft=' + encodeURIComponent(it.id);
+    open.href = href;
     open.setAttribute('aria-label', 'Open ' + title + ' in ' + kind);
     var pic = document.createElement('span');
     pic.className = 'draft-pic';
@@ -808,70 +808,31 @@
     name.textContent = title;
     var meta = document.createElement('span');
     meta.className = 'draft-meta';
-    meta.textContent = kind + ' \u00B7 ' + (SD ? SD.ago(it.updatedAt) : '');
+    meta.textContent = kind + ' · ' + (SD ? SD.ago(it.updatedAt) : '');
     words.appendChild(name);
     words.appendChild(meta);
     open.appendChild(pic);
     open.appendChild(words);
-    var del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'draft-del';
-    del.innerHTML = BIN;
-    del.setAttribute('aria-label', 'Delete ' + title);
-    /* THE BIN ASKS WITHOUT MOVING (#3; the v317 bin rule). Armed, it keeps
-       its 44px circle and tints its icon, and the META LINE asks -- spoken,
-       since the line is a live region. It disarms when focus leaves it, on a
-       tap anywhere else, and on a 20 s safety net: a question that never goes
-       away is a trap for the next stray tap, and one that goes away in four
-       seconds is a race. The editors' saved-drafts sheet is the same row. */
-    meta.setAttribute('aria-live', 'polite');
-    var metaText = meta.textContent, armed = false, armT = null;
-    function outside(e) { if (!del.contains(e.target)) disarm(); }
-    function disarm() {
-      if (!armed) return;
-      armed = false;
-      clearTimeout(armT);
-      document.removeEventListener('pointerdown', outside, true);
-      del.classList.remove('armed');
-      meta.classList.remove('asks');
-      meta.textContent = metaText;
-      del.setAttribute('aria-label', 'Delete ' + title);
-    }
-    draftDisarmers.push(disarm);
-    del.addEventListener('focusout', disarm);
-    del.addEventListener('click', function () {
-      if (!armed) {
-        draftDisarmers.forEach(function (d) { if (d !== disarm) d(); });
-        armed = true;
-        del.classList.add('armed');
-        meta.classList.add('asks');
-        meta.textContent = 'Tap the bin again to delete';
-        del.setAttribute('aria-label', 'Tap again to delete ' + title);
-        armT = setTimeout(disarm, 20000);
-        document.addEventListener('pointerdown', outside, true);
-        return;
-      }
-      disarm();
-      // The rebuilt list takes the focused bin with it: focus goes to the row
-      // that took this one's place, or the Drafts tab (third review). Read
-      // before the bin is disabled, which drops its focus by itself.
-      var at = Array.prototype.indexOf.call(dList.querySelectorAll('.draft-row'), row);
-      var hadFocus = row.contains(document.activeElement);
-      del.disabled = true;
-      SD.remove(it.id).then(renderDrafts, function (e) {
-        del.disabled = false;
-        meta.textContent = metaText = e.message;
-        return false;
-      }).then(function (ok) {
-        if (ok === false || !hadFocus) return;
-        var rows = dList.querySelectorAll('.draft-row');
-        var next = rows[Math.min(at, rows.length - 1)];
-        var target = (next && next.querySelector('.draft-open')) || document.getElementById('tabDrafts');
-        if (target) target.focus();
-      });
-    });
     row.appendChild(open);
-    row.appendChild(del);
+    SD.rowEnd(row, it, {
+      href: href,
+      meta: meta,   // where a passing answer, and a desk's Delete question, is said
+      disarmers: draftDisarmers,
+      remove: function () {
+        // The rebuilt list takes the focused Delete with it: focus goes to the
+        // row that took this one's place, or the Drafts tab (third review).
+        // Read first: rowEnd disables the button next, which drops its focus.
+        var at = Array.prototype.indexOf.call(dList.querySelectorAll('.draft-row'), row);
+        var hadFocus = row.contains(document.activeElement);
+        return SD.remove(it.id).then(renderDrafts).then(function () {
+          if (!hadFocus) return;
+          var rows = dList.querySelectorAll('.draft-row');
+          var next = rows[Math.min(at, rows.length - 1)];
+          var target = (next && next.querySelector('.draft-open')) || document.getElementById('tabDrafts');
+          if (target) target.focus();
+        });
+      }
+    });
     return row;
   }
 
