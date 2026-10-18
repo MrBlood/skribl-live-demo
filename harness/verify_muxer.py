@@ -179,6 +179,71 @@ with sync_playwright() as p:
     check("no jsdelivr request of any kind remains",
           not [u for u in reqs if "jsdelivr" in u], str([u for u in reqs if "jsdelivr" in u][:1]))
 
+    # THE AAC CONFIG, NOT A DESCRIPTOR AROUND IT (after v325, the owner's
+    # iPhone exports). The music on an iPhone MP4 was all there, but the file's
+    # esds held a whole MPEG-4 ES_Descriptor where the two-byte
+    # AudioSpecificConfig belongs: Safari's AudioEncoder hands back the
+    # descriptor as decoderConfig.description, and the muxer wrapped it again.
+    # Apple's player coped; ffmpeg read the wrapper's first byte as the config
+    # ("audio object type 0") and so does every player built on it. SAFARI is
+    # that description, read out of the owner's file. The export's own encode()
+    # is driven with stand-in encoders (no H.264 is needed for the container),
+    # so this pins the wiring, not only the helper.
+    print("\nMP4 AUDIO — the file carries the AAC config itself, as Safari or Chrome describes it")
+    SAFARI = "038080802200000004808080144014001800000000000000000005808080021190068080800102"
+    ENCODE = """async (desc) => {
+      await window.skriblLoadVendor('mp4muxer');
+      const hex = (h) => Uint8Array.from(h.match(/../g).map(x => parseInt(x, 16)));
+      const RealVE = window.VideoEncoder, RealAE = window.AudioEncoder;
+      class FakeVE { constructor(o) { this.o = o; this.encodeQueueSize = 0; } configure(c) { this.c = c; }
+        encode(f, opt) { const first = !this.sent; this.sent = true;
+          this.o.output(new EncodedVideoChunk({ type: first || (opt && opt.keyFrame) ? 'key' : 'delta', timestamp: f.timestamp,
+                                                duration: 33333, data: new Uint8Array(16) }),
+            first ? { decoderConfig: { codec: this.c.codec, codedWidth: this.c.width, codedHeight: this.c.height,
+                                       description: new Uint8Array([1, 0x42, 0, 0x1f, 0xff, 0xe0, 0]) } } : undefined); }
+        async flush() {} close() {} }
+      class FakeAE { constructor(o) { this.o = o; } configure(c) { this.c = c; }
+        encode(a) { const first = !this.sent; this.sent = true;
+          this.o.output(new EncodedAudioChunk({ type: 'key', timestamp: a.timestamp, duration: 21333, data: new Uint8Array(24) }),
+            first ? { decoderConfig: { codec: 'mp4a.40.2', sampleRate: this.c.sampleRate,
+                                       numberOfChannels: this.c.numberOfChannels, description: hex(desc) } } : undefined); }
+        async flush() {} close() {} }
+      window.VideoEncoder = FakeVE; window.AudioEncoder = FakeAE;
+      try {
+        const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+        const buf = new OfflineAudioContext(2, 48000, 48000).createBuffer(2, 4800, 48000);
+        const out = await window.SkriblMp4.encode({ ready: { MM: window.Mp4Muxer, avcCodec: 'avc1.42001f', w: 64, h: 64 },
+          canvas: c, durationSec: 0.2, audio: buf, drawFrame: async () => {}, aborted: () => false, progress: () => {} });
+        return Array.from(new Uint8Array(out));
+      } catch (e) { return String(e); }
+      finally { window.VideoEncoder = RealVE; window.AudioEncoder = RealAE; } }"""
+
+    def dsi(mp4):
+        """The esds's DecoderSpecificInfo: what a player reads as the AudioSpecificConfig."""
+        if not isinstance(mp4, list):
+            return mp4
+        b = bytes(mp4)
+        i = b.find(b"esds")
+        if i < 0:
+            return None
+        def desc(j):
+            tag, j, n = b[j], j + 1, 0
+            while True:
+                c = b[j]; j += 1; n = (n << 7) | (c & 0x7F)
+                if not c & 0x80:
+                    return tag, j, j + n
+        tag, s, e = desc(i + 8)                     # ES_Descriptor, after the box's version and flags
+        tag, s, e = desc(s + 3)                     # DecoderConfigDescriptor
+        tag, s, e = desc(s + 13)                    # DecoderSpecificInfo
+        return b[s:e].hex() if tag == 5 else None
+
+    got = dsi(flip.evaluate(ENCODE, SAFARI))
+    check("Safari's description: the file's AAC config is the two bytes 11 90 (AAC-LC, 48 kHz, stereo), not the descriptor around them",
+          got == "1190", f"DecoderSpecificInfo {got!r}")
+    got = dsi(flip.evaluate(ENCODE, "1190"))
+    check("Chrome's description (already the config) is written exactly as it came",
+          got == "1190", f"DecoderSpecificInfo {got!r}")
+
     br.close()
 
 ok = sum(1 for o, _ in results if o)

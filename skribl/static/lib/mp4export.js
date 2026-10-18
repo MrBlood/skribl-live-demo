@@ -57,6 +57,52 @@
 
   function yieldNow() { return new Promise(function (r) { setTimeout(r, 0); }); }
 
+  /* SAFARI'S AAC DESCRIPTION IS A WHOLE DESCRIPTOR (after v325, the owner's
+   * iPhone exports). WebCodecs gives the AudioSpecificConfig (two bytes for
+   * AAC-LC) as decoderConfig.description, and the muxer writes it into the
+   * file's esds. Safari gave a whole MPEG-4 ES_Descriptor instead, with the
+   * config buried three levels down, and the muxer wrapped it again: Apple's
+   * player coped, but ffmpeg, and every player built on it, read the
+   * wrapper's first byte as the config ("audio object type 0") and played the
+   * video with no sound. The music itself was all there. So the config is dug
+   * out before the muxer sees it; a description that is already a config
+   * (Chrome's) passes through untouched, and so does one this cannot read. */
+  function descriptor(b, i) {                       // {tag, start, end} of the MPEG-4 descriptor at i
+    if (i >= b.length) return null;
+    var tag = b[i++], len = 0, n = 0, c;
+    do { if (i >= b.length || n++ === 4) return null; c = b[i++]; len = (len << 7) | (c & 0x7f); } while (c & 0x80);
+    return i + len > b.length ? null : { tag: tag, start: i, end: i + len };
+  }
+  function audioConfigIn(b) {
+    var es = descriptor(b, b[0] === 0x03 ? 0 : 4);   // a bare descriptor, or an esds body (version and flags first)
+    if (!es || es.tag !== 0x03) return null;
+    var f = b[es.start + 2], i = es.start + 3;
+    if (f & 0x80) i += 2;                            // dependsOn_ES_ID
+    if (f & 0x40) i += 1 + (b[i] || 0);              // URL
+    if (f & 0x20) i += 2;                            // OCR_ES_ID
+    for (var d = descriptor(b, i); d && d.end <= es.end; d = descriptor(b, d.end)) {
+      if (d.tag !== 0x04) continue;                  // DecoderConfigDescriptor: 13 bytes, then its own descriptors
+      for (var s = descriptor(b, d.start + 13); s && s.end <= d.end; s = descriptor(b, s.end)) {
+        if (s.tag === 0x05) return b.slice(s.start, s.end);   // DecoderSpecificInfo: the AudioSpecificConfig
+      }
+    }
+    return null;
+  }
+  function aacConfig(meta) {
+    var dc = meta && meta.decoderConfig, d = dc && dc.description;
+    if (!d) return meta;
+    var b = d instanceof ArrayBuffer ? new Uint8Array(d) : new Uint8Array(d.buffer, d.byteOffset, d.byteLength);
+    if (b[0] !== 0x03 && !(b.length > 4 && b[0] === 0 && b[4] === 0x03)) return meta;   // already a config
+    var asc = audioConfigIn(b);
+    if (!asc || !asc.length) return meta;
+    var cfg = {}, out = {}, k;
+    for (k in dc) cfg[k] = dc[k];
+    cfg.description = asc;
+    for (k in meta) out[k] = meta[k];
+    out.decoderConfig = cfg;
+    return out;
+  }
+
   /* o: { ready (from prepare), canvas (w x h, the frame source),
    *      durationSec, audio (AudioBuffer of ONE loop, or null),
    *      drawFrame(f, isLast)  paints frame f into canvas (called in order),
@@ -76,7 +122,7 @@
     vEnc.configure({ codec: rd.avcCodec, width: w, height: h, bitrate: 6000000, framerate: FPS });
     var aEnc = null;
     if (audio) {
-      aEnc = new AudioEncoder({ output: function (c, m) { muxer.addAudioChunk(c, m); }, error: function (e) { encErr = e; } });
+      aEnc = new AudioEncoder({ output: function (c, m) { muxer.addAudioChunk(c, aacConfig(m)); }, error: function (e) { encErr = e; } });
       aEnc.configure({ codec: 'mp4a.40.2', numberOfChannels: audio.numberOfChannels, sampleRate: audio.sampleRate, bitrate: 128000 });
     }
     function close() {
@@ -133,5 +179,5 @@
     }
   }
 
-  global.SkriblMp4 = { pickAvcCodec: pickAvcCodec, aacSupported: aacSupported, prepare: prepare, encode: encode };
+  global.SkriblMp4 = { pickAvcCodec: pickAvcCodec, aacSupported: aacSupported, prepare: prepare, encode: encode, aacConfig: aacConfig };
 })(window);
