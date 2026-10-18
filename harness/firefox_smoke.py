@@ -158,33 +158,127 @@ def draw(pg, sel):
 # Each page's console errors and warnings, for a failure to quote.
 LOGS = {}
 
-SAID = """() => [document.getElementById('toast'), document.getElementById('flipChip'), document.getElementById('exportOverlay')]
-  .filter(Boolean).map(e => (e.id + ': ' + (e.hidden ? '(hidden) ' : '') + e.textContent.replace(/\\s+/g, ' ').trim()).slice(0, 160)).join(' | ')"""
+# What the page shows while a video is made: the toast or chip, and each
+# editor's progress (its words and how far its bar is).
+SAID = """() => { const t = (id) => document.getElementById(id);
+  const words = (id) => t(id) && (id + ': ' + (t(id).hidden ? '(hidden) ' : '') + t(id).textContent.replace(/\\s+/g, ' ').trim().slice(0, 120));
+  const bar = (id) => t(id) && (id + ' at ' + (t(id).style.width || '0%'));
+  return [words('toast'), words('flipChip'), words('exportProgress'), bar('exportProgressFill'), words('flipExport'), bar('flipExportFill')]
+    .filter(Boolean).join(' | '); }"""
+
+# Puts away what a stalled export leaves over the page (the Pad's sheet, Flip's
+# progress), so the steps after it still run.
+UNSTICK = """() => { const o = document.getElementById('exportOverlay');
+  if (o && !o.hidden) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  const f = document.getElementById('flipExport');
+  if (f && !f.hidden) { f.hidden = true; if (typeof exporting !== 'undefined') exporting = false; } }"""
 
 # What this browser offers a video: the MP4 path (WebCodecs, H.264) or the
-# recorder's (MediaRecorder, WebM), and which recorder types it takes.
+# recorder's (MediaRecorder, WebM), which recorder types it takes, and where
+# its requestFrame is (Chromium's is on the track, Gecko's on the stream).
 OFFERS = """async () => { const t = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
   let avc = 'no VideoEncoder';
   if (typeof VideoEncoder !== 'undefined') {
     try { avc = (await VideoEncoder.isConfigSupported({ codec: 'avc1.42001f', width: 816, height: 612, bitrate: 6000000, framerate: 30 })).supported ? 'H.264 yes' : 'H.264 no'; }
     catch (e) { avc = 'H.264 threw ' + e.name; } }
+  const has = (k) => typeof window[k] !== 'undefined' && 'requestFrame' in window[k].prototype;
   return 'WebCodecs: ' + avc + '; MediaRecorder: ' + (typeof MediaRecorder === 'undefined' ? 'none'
     : t.filter(x => MediaRecorder.isTypeSupported(x)).join(', ') || 'no type')
-    + '; requestFrame: ' + (typeof CanvasCaptureMediaStreamTrack !== 'undefined' && 'requestFrame' in CanvasCaptureMediaStreamTrack.prototype); }"""
+    + '; requestFrame: ' + (has('CanvasCaptureMediaStreamTrack') ? 'on the track' : has('CanvasCaptureMediaStream') ? 'on the stream' : 'none'); }"""
+
+# DIAGNOSTIC, for the run that finds where Firefox's recorder stalls; it comes
+# out with the fix. A trial records 15 frames of a small canvas one way
+# ('mime|how': how is auto = captureStream(30), stream = captureStream(0) and
+# the stream's requestFrame; 'dom' puts the canvas in the page) and says what
+# the recorder did, with the bytes it made.
+PROBE = """async (mode) => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const t0 = performance.now(), at = () => Math.round(performance.now() - t0), ev = [];
+  const [mime, how] = mode.split('|');
+  const cv = document.createElement('canvas'); cv.width = 160; cv.height = 120;
+  if (how.includes('dom')) document.body.appendChild(cv);
+  const c = cv.getContext('2d'); let k = 0;
+  const paint = () => { c.fillStyle = (k++ % 2) ? '#7c5cff' : '#ffffff'; c.fillRect(0, 0, 160, 120); };
+  paint();
+  let s, push = () => {};
+  try {
+    if (how.startsWith('auto')) s = cv.captureStream(30);
+    else { s = cv.captureStream(0); push = () => s.requestFrame(); }
+  } catch (e) { return { say: 'captureStream threw ' + e.name }; }
+  let r;
+  try { r = mime ? new MediaRecorder(s, { mimeType: mime }) : new MediaRecorder(s); }
+  catch (e) { return { say: 'new MediaRecorder threw ' + e.name + ': ' + e.message }; }
+  const parts = [];
+  r.ondataavailable = (e) => { ev.push(at() + ' data ' + (e.data ? e.data.size : 0)); if (e.data && e.data.size) parts.push(e.data); };
+  r.onerror = (e) => ev.push(at() + ' error ' + (e.error ? e.error.name : '?'));
+  r.onstart = () => ev.push(at() + ' start');
+  const stopped = new Promise((res) => { r.onstop = () => { ev.push(at() + ' stop'); res(true); }; });
+  try { r.start(); } catch (e) { return { say: 'start() threw ' + e.name + ': ' + e.message }; }
+  for (let i = 0; i < 15; i++) { await wait(33); paint(); try { push(); } catch (e) { ev.push('push threw ' + e.name); break; } }
+  await wait(33);
+  try { r.stop(); } catch (e) { ev.push('stop() threw ' + e.name); }
+  const ok = await Promise.race([stopped, wait(5000).then(() => false)]);
+  if (cv.parentNode) cv.remove();
+  const ab = parts.length ? await new Blob(parts).arrayBuffer() : new ArrayBuffer(0);
+  return { say: (ok ? '' : 'NO onstop 5 s after stop(), state ' + r.state + '; ') + 'mimeType ' + r.mimeType + '; ' + ev.join(', '),
+           bytes: Array.from(new Uint8Array(ab)) };
+}"""
+PROBES = ["video/webm;codecs=vp8,opus|auto", "video/webm;codecs=vp8|auto", "|auto",
+          "video/webm;codecs=vp8,opus|stream", "video/webm;codecs=vp8|stream", "video/webm;codecs=vp8|auto dom"]
+
+# DIAGNOSTIC too: lib/videorecord.js itself on an editor-sized canvas, with
+# every recorder call and event it makes, timed.
+REAL = """async () => {
+  const t0 = performance.now(), at = () => Math.round(performance.now() - t0), ev = [];
+  const P = MediaRecorder.prototype, s0 = P.start, s1 = P.stop;
+  P.start = function () { const r = this;
+    ['start', 'stop', 'dataavailable', 'error'].forEach((n) => r.addEventListener(n, (e) => ev.push(at() + ' ' + n + (e.data ? ' ' + e.data.size : ''))));
+    ev.push(at() + ' start() ' + r.mimeType + ' on ' + r.stream.getTracks().map((t) => t.kind + ' ' + t.readyState).join(', '));
+    return s0.apply(this, arguments); };
+  P.stop = function () { ev.push(at() + ' stop() in ' + this.state); return s1.apply(this, arguments); };
+  const cv = document.createElement('canvas'); cv.width = 816; cv.height = 612;
+  const c = cv.getContext('2d');
+  const end = await new Promise((res) => {
+    const ok = SkriblVideoRecord.recordVideo({ canvas: cv, fps: 30, frames: 30, music: null,
+      draw: (k) => { c.fillStyle = k % 2 ? '#7c5cff' : '#ffffff'; c.fillRect(0, 0, 816, 612); },
+      progress: () => {}, cancelled: () => false,
+      done: (b, ext) => res('done: ' + b.size + ' B ' + ext), fail: (why) => res('fail: ' + why), cancel: () => res('cancel') });
+    if (!ok) res('did not start');
+    setTimeout(() => res('NOTHING after 8 s'), 8000);
+  });
+  P.start = s0; P.stop = s1;
+  return end + '; ' + ev.join(', ');
+}"""
+
+
+def probe(pg):
+    """DIAGNOSTIC: print what each recorder trial made."""
+    for mode in PROBES:
+        r = pg.evaluate(PROBE, mode)
+        try:
+            kind, n = video(bytes(r["bytes"])) if r.get("bytes") else ("nothing", 0)
+        except Exception as e:
+            kind, n = f"unreadable ({type(e).__name__})", 0
+        print(f"    probe {mode}: {kind}, {n} video frames, {len(r.get('bytes') or [])} B; {r['say']}")
+    print(f"    probe recordVideo: {pg.evaluate(REAL)}")
 
 
 def export(pg, opener):
     """The editor's own Export sheet, Video: the bytes it downloads. When none
-    comes, the failure says what the page said instead and what it logged."""
+    comes, it prints what the page said instead and what it logged, and puts
+    the stalled export away so the steps after it still run."""
     pg.evaluate("(id) => document.getElementById(id).click()", opener)
     pg.wait_for_selector("#exportVideo", state="visible", timeout=5000)
     try:
         with pg.expect_download(timeout=60000) as dl:
             pg.click("#exportVideo")
     except Exception as e:
-        logs = LOGS.get(id(pg), [])[-4:]
-        raise RuntimeError(f"no video after 60 s; the page says: {pg.evaluate(SAID)}; "
-                           f"it logged: {logs or 'nothing'}") from e
+        print(f"    the page says: {pg.evaluate(SAID)}")
+        for line in LOGS.get(id(pg), [])[-6:] or ["nothing"]:
+            print(f"    it logged: {line}")
+        pg.evaluate(UNSTICK)
+        pg.wait_for_timeout(400)
+        raise RuntimeError(f"no video ({type(e).__name__}: {str(e).splitlines()[0][:120]})") from e
     data = open(dl.value.path(), "rb").read()
     pg.evaluate("() => { const o = document.getElementById('exportOverlay'); if (o && !o.hidden) document.getElementById('exportCancel').click(); }")
     pg.wait_for_timeout(400)
@@ -218,6 +312,18 @@ def section(name, run):
         check(f"{name}: every step ran", False, f"{type(e).__name__}: {str(e).splitlines()[0][:240]}")
 
 
+def filmed(pg, opener, name, least, also=True):
+    """The editor's video, checked for at least `least` frames. A video that
+    never comes fails this check alone: the post after it still runs."""
+    try:
+        fname, data = export(pg, opener)
+    except Exception as e:
+        check(name, False, f"{type(e).__name__}: {str(e).splitlines()[0][:240]}")
+        return
+    kind, n = video(data)
+    check(name, also and n >= least and len(data) > 1000, f"{fname}: {kind}, {n} video frames, {len(data):,} B")
+
+
 with sync_playwright() as p:
     try:
         b = getattr(p, ENGINE).launch()
@@ -234,7 +340,7 @@ with sync_playwright() as p:
         pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(f"{path}: {e}"))
         mine = LOGS.setdefault(id(pg), [])
-        pg.on("console", lambda m: mine.append(f"{m.type}: {m.text[:160]}") if m.type in ("error", "warning") else None)
+        pg.on("console", lambda m: mine.append(f"{m.type}: {m.text[:400]}") if m.type in ("error", "warning") else None)
         browsing.goto(pg, BASE, path)
         pg.evaluate(hide)
         return pg
@@ -242,6 +348,7 @@ with sync_playwright() as p:
     def pad():
         pg = page("/")
         print(f"  ({ENGINE} offers: {pg.evaluate(OFFERS)})")
+        probe(pg)
         draw(pg, "#canvas")
         pts, ink = pg.evaluate("() => strokes.length"), pg.evaluate(INK, "#canvas")
         check("the Pad boots, and a stroke is drawing data and ink on its canvas",
@@ -254,10 +361,7 @@ with sync_playwright() as p:
               pg.evaluate("() => playing && !document.getElementById('playScrub').hidden"))
         pg.evaluate("() => { if (playing) document.getElementById('playBtn').click(); }")
         pg.wait_for_timeout(400)
-        name, data = export(pg, "exportItem")
-        kind, n = video(data)
-        check("...its video is a real file with frames in it", n > 3 and len(data) > 1000,
-              f"{name}: {kind}, {n} video frames, {len(data):,} B")
+        filmed(pg, "exportItem", "...its video is a real file with frames in it", 4)
         ticked, res = post(pg, "Firefox smoke, Pad", ".post-check")
         got["pad"] = res["url"] or ""
         check("...and it posts through its own sheet, ticked public, and gets its link",
@@ -274,11 +378,8 @@ with sync_playwright() as p:
         pg.click("#addblank")
         pg.wait_for_timeout(300)
         draw(pg, "#pad")
-        name, data = export(pg, "miExport")
-        kind, n = video(data)
-        check("...its two pages make a real video file, a frame for each at least",
-              pg.evaluate("() => frames.length") == 2 and n >= 2 and len(data) > 1000,
-              f"{name}: {kind}, {n} video frames, {len(data):,} B")
+        filmed(pg, "miExport", "...its two pages make a real video file, a frame for each at least", 2,
+               also=pg.evaluate("() => frames.length") == 2)
         ticked, res = post(pg, "Firefox smoke, Flip", "#postSheet .post-check")
         got["flip"] = res["url"] or ""
         check("...and it posts through its own sheet, ticked public, and gets its link",
