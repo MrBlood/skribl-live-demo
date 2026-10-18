@@ -102,6 +102,8 @@ stale the same way (the paragraph under the list says so too):
     verify_galib.py      the gallery and the library in the family's chrome:
                          painted focus on every Tab stop, glass menu, header
                          and report sheet, bins that ask without moving
+    verify_runreport.py  run_parallel.py keeps its first red: red beside
+                         others and green alone is INTERMITTENT, never ok
 
 That list is a sample and always was — there are far more suites on disk than
 appear here, and `RELEASE.md` names every one of them.

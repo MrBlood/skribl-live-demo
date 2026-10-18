@@ -201,7 +201,9 @@ that local run is what justifies CI's PR-side trim.
 - **Run the affected suites side by side:** `python3 harness/run_parallel.py
   -j 3 verify_parity.py verify_tools.py` gives each its own fresh server and
   re-runs ALONE any red suite that measures (release_run.py's tag) before
-  believing it. `./harness/run_harness.sh [suites]` is the serial runner and,
+  believing it. A red beside others that goes green alone is INTERMITTENT, not
+  ok (exit 3, both logs kept): quote both counts in the PR and say whether the
+  red was load or a defect. `./harness/run_harness.sh [suites]` is the serial runner and,
   with the seal, the record. A run reporting `skipped N` is not the run you
   think it is.
 - **Name the affected suites one by one** (the ones that exercise the files the

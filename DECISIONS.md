@@ -18810,7 +18810,10 @@ for a moment and said nothing else. VoiceOver does not read a label changing
 under it, so only a refusal, which went to the drawer's live region, was ever
 heard. A copy that works now speaks "Link copied" there too, the words the
 Library's stage and the Gallery's menu already used. `lib/postedui.js` is the
-one place, so the drawers' lists on the Pad and Flip get it as well.
+one place. (This entry first said the editors' drawers carry the same list and
+get it as well; they have not carried it since v304, when it moved to the
+Library. The editors' own Copy link, in the Post sheet after posting, already
+answered through the editors' live toast.)
 
 A share link's Copy link answered no one at all: the player's toast was the
 one on the site with no live semantics. It now carries the editors' own
@@ -18825,7 +18828,9 @@ answer landing in it. Not tested with VoiceOver here: the toast appears and
 fills in the same moment, as the editors' does, and whether VoiceOver reads
 that is for a real iPhone to say.
 
-Pad and Flip: shared (`lib/postedui.js` is both editors' posted list).
+Pad and Flip: not for either editor (the posted list lives in the Library;
+this line first said it was both editors' list, which it has not been since
+v304).
 
 ## After v325 -- WAVE reads no errors on any page (a bug fix)
 
@@ -18867,3 +18872,31 @@ errors. Not tested with WAVE itself here: the live site is out of reach from
 this box, so the owner's next WAVE run is the confirmation.
 
 Pad and Flip: shared, partials and the same rule on both.
+
+## After v325 -- the parallel runner keeps its first red (the outside reviewer's QA-001)
+
+The outside reviewer of the v325 packet read our own run back to us:
+`verify_videoexport` 14/16 beside other suites, 16/16 when re-run alone, then
+"19/19 suites ok" and exit 0. That red had found a real defect (a video with
+no frame called a success), and the summary showed only the clean re-run;
+the red run's log had been written over by the re-run, and survived only
+because it was copied off the terminal.
+
+`harness/run_parallel.py` still re-runs a red suite that measures alone,
+because load makes those checks fail. What changed is what it says after:
+the red run keeps its log, the re-run writes its own
+(`<suite>.alone.log`), and a suite red beside others and green alone is
+INTERMITTENT, with both counts on its line, listed apart, not counted as ok,
+its red failures said again, and the run's exit is 3 (1 when anything simply
+failed). Whether the red was load or a defect is now a judgement the person
+quoting it has to write down.
+
+The reviewer also asked whether any release gate used the permissive logic.
+None does: the seal (`release_run.py`) and CI (`run_harness.sh`) run each
+suite once and report what it said; the re-run alone exists only in this
+development runner.
+
+`verify_runreport`, a source suite on the PR gate (no browser, no server),
+drives the runner's re-run step with a stand-in suite and its report with
+results built in the suite: 13/13, and 7/13 with the old rule put back (a
+green alone counted as ok).
