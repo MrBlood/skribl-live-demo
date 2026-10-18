@@ -155,12 +155,36 @@ def draw(pg, sel):
     pg.wait_for_timeout(300)
 
 
+# Each page's console errors and warnings, for a failure to quote.
+LOGS = {}
+
+SAID = """() => [document.getElementById('toast'), document.getElementById('flipChip'), document.getElementById('exportOverlay')]
+  .filter(Boolean).map(e => (e.id + ': ' + (e.hidden ? '(hidden) ' : '') + e.textContent.replace(/\\s+/g, ' ').trim()).slice(0, 160)).join(' | ')"""
+
+# What this browser offers a video: the MP4 path (WebCodecs, H.264) or the
+# recorder's (MediaRecorder, WebM), and which recorder types it takes.
+OFFERS = """async () => { const t = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+  let avc = 'no VideoEncoder';
+  if (typeof VideoEncoder !== 'undefined') {
+    try { avc = (await VideoEncoder.isConfigSupported({ codec: 'avc1.42001f', width: 816, height: 612, bitrate: 6000000, framerate: 30 })).supported ? 'H.264 yes' : 'H.264 no'; }
+    catch (e) { avc = 'H.264 threw ' + e.name; } }
+  return 'WebCodecs: ' + avc + '; MediaRecorder: ' + (typeof MediaRecorder === 'undefined' ? 'none'
+    : t.filter(x => MediaRecorder.isTypeSupported(x)).join(', ') || 'no type')
+    + '; requestFrame: ' + (typeof CanvasCaptureMediaStreamTrack !== 'undefined' && 'requestFrame' in CanvasCaptureMediaStreamTrack.prototype); }"""
+
+
 def export(pg, opener):
-    """The editor's own Export sheet, Video: the bytes it downloads."""
+    """The editor's own Export sheet, Video: the bytes it downloads. When none
+    comes, the failure says what the page said instead and what it logged."""
     pg.evaluate("(id) => document.getElementById(id).click()", opener)
     pg.wait_for_selector("#exportVideo", state="visible", timeout=5000)
-    with pg.expect_download(timeout=60000) as dl:
-        pg.click("#exportVideo")
+    try:
+        with pg.expect_download(timeout=60000) as dl:
+            pg.click("#exportVideo")
+    except Exception as e:
+        logs = LOGS.get(id(pg), [])[-4:]
+        raise RuntimeError(f"no video after 60 s; the page says: {pg.evaluate(SAID)}; "
+                           f"it logged: {logs or 'nothing'}") from e
     data = open(dl.value.path(), "rb").read()
     pg.evaluate("() => { const o = document.getElementById('exportOverlay'); if (o && !o.hidden) document.getElementById('exportCancel').click(); }")
     pg.wait_for_timeout(400)
@@ -209,12 +233,15 @@ with sync_playwright() as p:
     def page(path):
         pg = ctx.new_page()
         pg.on("pageerror", lambda e: errs.append(f"{path}: {e}"))
+        mine = LOGS.setdefault(id(pg), [])
+        pg.on("console", lambda m: mine.append(f"{m.type}: {m.text[:160]}") if m.type in ("error", "warning") else None)
         browsing.goto(pg, BASE, path)
         pg.evaluate(hide)
         return pg
 
     def pad():
         pg = page("/")
+        print(f"  ({ENGINE} offers: {pg.evaluate(OFFERS)})")
         draw(pg, "#canvas")
         pts, ink = pg.evaluate("() => strokes.length"), pg.evaluate(INK, "#canvas")
         check("the Pad boots, and a stroke is drawing data and ink on its canvas",
