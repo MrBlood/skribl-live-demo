@@ -2012,6 +2012,13 @@ _CONTRAST = r"""() => {
   const L = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
   const rgba = s => { const m = s.match(/[\d.]+/g); if (!m) return null; return [+m[0], +m[1], +m[2], m.length > 3 ? +m[3] : 1]; };
   const over = (top, under) => [0, 1, 2].map(i => top[i] * top[3] + under[i] * (1 - top[3]));
+  // GLASS OVER A DRAWING HAS NO COMPUTED GROUND: what is behind the Gallery
+  // card's pill is the drawing, blurred through it, which no stylesheet
+  // knows. Its words are measured on the pixels instead (verify_galib GALIB
+  // 9, both tones at 7:1); here it is the one named exemption, not a pass.
+  const glass = el => { for (let e = el; e; e = e.parentElement) {
+      const cs = getComputedStyle(e); if (cs.backdropFilter !== 'none' && e.closest('.skribl-inline')) return true;
+      const c = rgba(cs.backgroundColor); if (c && c[3] >= 1) return false; } return false; };
   const ground = el => { const stack = []; for (let e = el; e; e = e.parentElement) {
       const c = rgba(getComputedStyle(e).backgroundColor); if (c && c[3] > 0) { stack.push(c); if (c[3] >= 1) break; } }
     let g = [255, 255, 255]; for (let i = stack.length - 1; i >= 0; i--) g = stack[i][3] >= 1 ? stack[i].slice(0, 3) : over(stack[i], g);
@@ -2026,6 +2033,7 @@ _CONTRAST = r"""() => {
     const size = parseFloat(cs.fontSize), bold = +cs.fontWeight >= 700;
     if (size >= 24 || (bold && size >= 18.66)) continue;
     const fg = rgba(cs.color); if (!fg) continue;
+    if (glass(el)) continue;
     const bg = ground(el); const f = fg[3] < 1 ? over(fg, bg) : fg.slice(0, 3);
     const a = L(f), b = L(bg), ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
     if (ratio < 4.5) bad.push((el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : el.tagName.toLowerCase())
