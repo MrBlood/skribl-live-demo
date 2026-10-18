@@ -38,9 +38,20 @@
  *
  * A RECORDING IS A SUCCESS ONLY IF SOMETHING CAME OUT: at least one chunk, a
  * blob with bytes in it, the container's own signature at its start (EBML for
- * WebM, `ftyp` for MP4) and no recorder error. A check of the start is not a
- * decoder; it is what tells a file from a 0-byte or garbage download. fail()
- * gets 'start' | 'empty' | 'unreadable' | a recorder error's name.
+ * WebM, `ftyp` for MP4), a frame inside it, and no recorder error. A check of
+ * the start is not a decoder; it is what tells a file from a 0-byte or garbage
+ * download. fail() gets 'start' | 'empty' | 'unreadable' | a recorder error's
+ * name.
+ *
+ * A SIGNATURE IS NOT A VIDEO (after v325). The evidence run for the v325 audit
+ * caught Chromium's recorder, on a loaded machine, handing back a WebM with no
+ * frame in it: it passed the signature check, downloaded, and the chip said
+ * "Animation exported". Rare (once, then not in 84 more tries under load), but
+ * a false success, so a finished file must now hold a frame: a block on a
+ * WebM's video track, or an MP4 `mdat` with bytes in it, looked for in the
+ * file's first 4 MB (a header alone is a few hundred bytes, so a file larger
+ * than that is not one). Otherwise it is 'empty', and the editor says so.
+ * Still not a decoder: enough to tell a video from a header.
  */
 (function (global) {
   'use strict';
@@ -93,6 +104,72 @@
     return bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
   }
 
+  var SCAN = 4 * 1024 * 1024;
+
+  // An EBML variable-length integer at b[i]: {v, n} (n bytes long), or null
+  // past the end. `marker` keeps the length bits, as element IDs are written.
+  function vint(b, i, marker) {
+    if (i >= b.length) return null;
+    var first = b[i], mask = 0x80, n = 1;
+    while (n <= 8 && !(first & mask)) { mask >>= 1; n++; }
+    if (n > 8 || i + n > b.length) return null;
+    var v = marker ? first : first & (mask - 1);
+    for (var k = 1; k < n; k++) v = v * 256 + b[i + k];
+    return { v: v, n: n };
+  }
+
+  // Blocks on a WebM's video tracks (TrackType 1). Segment, Cluster, Tracks,
+  // TrackEntry and BlockGroup are entered rather than skipped, which also
+  // copes with the unknown sizes MediaRecorder writes; anything else is
+  // skipped whole. The same walk verify_videoexport reads files with.
+  var ENTER = { 0x18538067: 1, 0x1F43B675: 1, 0x1654AE6B: 1, 0xA0: 1 };
+  function webmVideoBlocks(b) {
+    var types = {}, blocks = {}, num = null, type = null, i = 0, n = 0, tn;
+    function keep() { if (num !== null) types[num] = type; num = type = null; }
+    while (i < b.length - 2) {
+      var id = vint(b, i, true), sz = id && vint(b, i + id.n, false);
+      if (!sz) break;
+      var body = i + id.n + sz.n;
+      if (ENTER[id.v]) { i = body; continue; }
+      if (id.v === 0xAE) { keep(); i = body; continue; }                 // TrackEntry
+      if (id.v === 0xD7 || id.v === 0x83) {                              // TrackNumber, TrackType
+        var x = 0;
+        for (var k = 0; k < sz.v && body + k < b.length; k++) x = x * 256 + b[body + k];
+        if (id.v === 0xD7) num = x; else type = x;
+      } else if (id.v === 0xA3 || id.v === 0xA1) {                       // SimpleBlock, Block
+        keep();
+        var t = vint(b, body, false);
+        if (t) blocks[t.v] = (blocks[t.v] || 0) + 1;
+      }
+      i = body + sz.v;
+    }
+    keep();
+    for (tn in blocks) if (types[tn] === 1) n += blocks[tn];
+    return n;
+  }
+
+  // An MP4's top-level boxes, walked for an mdat with bytes in it.
+  function mp4HasSamples(b) {
+    var i = 0;
+    while (i + 8 <= b.length) {
+      var size = b[i] * 16777216 + (b[i + 1] << 16) + (b[i + 2] << 8) + b[i + 3], head = 8;
+      var type = String.fromCharCode(b[i + 4], b[i + 5], b[i + 6], b[i + 7]);
+      if (size === 1 && i + 16 <= b.length) {
+        size = (b[i + 8] * 16777216 + (b[i + 9] << 16) + (b[i + 10] << 8) + b[i + 11]) * 4294967296
+             + b[i + 12] * 16777216 + (b[i + 13] << 16) + (b[i + 14] << 8) + b[i + 15];
+        head = 16;
+      } else if (size === 0) size = b.length - i;                        // runs to the end of the file
+      if (type === 'mdat') return size > head;
+      if (size < head) return false;
+      i += size;
+    }
+    return false;
+  }
+
+  function hasFrame(bytes, mime) {
+    return /mp4/.test(mime) ? mp4HasSamples(bytes) : webmVideoBlocks(bytes) > 0;
+  }
+
   function recordVideo(o) {
     if (typeof MediaRecorder === 'undefined' || !o.canvas.captureStream) { o.fail('start'); return false; }
     var mime = TYPES.filter(function (t) { return MediaRecorder.isTypeSupported(t); })[0];
@@ -110,8 +187,10 @@
       var type = mime.split(';')[0], blob = new Blob(chunks, { type: type });
       if (error) { o.fail(error); return; }
       if (!chunks.length || !blob.size) { o.fail('empty'); return; }
-      blob.slice(0, 8).arrayBuffer().then(function (ab) {
-        if (!looksLike(new Uint8Array(ab), mime)) { o.fail('unreadable'); return; }
+      blob.slice(0, SCAN).arrayBuffer().then(function (ab) {
+        var head = new Uint8Array(ab);
+        if (!looksLike(head, mime)) { o.fail('unreadable'); return; }
+        if (blob.size <= SCAN && !hasFrame(head, mime)) { o.fail('empty'); return; }
         o.done(blob, /mp4/.test(type) ? 'mp4' : 'webm', { withoutMusic: !!o.music && !bed });
       }, function () { o.fail('unreadable'); });
     };

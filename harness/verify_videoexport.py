@@ -19,6 +19,10 @@ WHAT IS ASKED, AND HOW IT IS READ
   * The failures are driven with a stand-in MediaRecorder that produces no
     data, raises an error, or produces bytes that are not a WebM; each must
     download nothing and say so, on both editors.
+  * And one that hands back a WebM header with no frame behind it (after
+    v325): the kind of file Chromium's recorder once made on a loaded
+    machine. It passed the signature check, downloaded and said "Animation
+    exported"; now the file must hold a frame.
 """
 import math
 import os
@@ -112,15 +116,32 @@ PAGES = """(o) => { frames.length = 0;
     f.strokes.push(...pts); f.strokeGroups.push(pts.length); frames.push(f); }
   fps = o.fps; exLoops = 1; idx = 0; buildStrip(); render(); updateToolState(); }"""
 
-# A MediaRecorder that records nothing, raises an error, or hands back bytes
-# that are not a video. Installed over the real one for one export.
+def _el(eid, payload):
+    n = len(payload)
+    return eid + (bytes([0x80 | n]) if n < 0x7F else bytes([0x40 | (n >> 8), n & 0xFF])) + payload
+
+
+# What Chromium's recorder hands back when it stops before its first frame: an
+# EBML header, a Segment of unknown size, its Info and Tracks (one video
+# track), and no Cluster -- every byte valid, no frame anywhere.
+HEADER_ONLY = (_el(b"\x1a\x45\xdf\xa3", _el(b"\x42\x86", b"\x01") + _el(b"\x42\x82", b"webm"))
+               + b"\x18\x53\x80\x67\x01\xff\xff\xff\xff\xff\xff\xff"
+               + _el(b"\x15\x49\xa9\x66", _el(b"\x2a\xd7\xb1", b"\x0f\x42\x40"))
+               + _el(b"\x16\x54\xae\x6b", _el(b"\xae", _el(b"\xd7", b"\x01") + _el(b"\x83", b"\x01")
+                                                 + _el(b"\x86", b"V_VP9"))))
+
+# A MediaRecorder that records nothing, raises an error, hands back bytes that
+# are not a video, or a WebM header with no frame behind it. Installed over the
+# real one for one export.
 FAKE = """(mode) => { window.__RealMR = window.__RealMR || window.MediaRecorder;
   class Fake { constructor(stream, o) { this.state = 'inactive'; this.mimeType = (o && o.mimeType) || 'video/webm'; }
     static isTypeSupported() { return true; }
     start() { this.state = 'recording'; }
     stop() { this.state = 'inactive'; setTimeout(() => {
       if (mode === 'error' && this.onerror) this.onerror({ error: { name: 'EncodingError' } });
-      if (mode !== 'empty' && this.ondataavailable) this.ondataavailable({ data: new Blob([mode === 'garbage' ? 'not a video at all' : new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 1, 2, 3, 4])]) });
+      const bytes = mode === 'garbage' ? 'not a video at all'
+        : mode === 'headeronly' ? new Uint8Array(window.__headerOnly) : new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 1, 2, 3, 4]);
+      if (mode !== 'empty' && this.ondataavailable) this.ondataavailable({ data: new Blob([bytes]) });
       if (this.onstop) this.onstop(); }, 30); } }
   window.MediaRecorder = Fake; }"""
 REAL = "() => { if (window.__RealMR) window.MediaRecorder = window.__RealMR; }"
@@ -205,7 +226,12 @@ with sync_playwright() as p:
     pg.wait_for_timeout(600)
 
     print("\nFLIP -- an empty or broken recording is not a success")
-    for mode, why in (("empty", "records nothing"), ("error", "raises an error"), ("garbage", "returns bytes that are not a video")):
+    hdr = webm(HEADER_ONLY)
+    check("(the fixture) the header-only WebM walks as one video track and no frame",
+          hdr["tracks"] == {1: 1} and not hdr["blocks"], str(hdr))
+    pg.evaluate("(b) => { window.__headerOnly = b; }", list(HEADER_ONLY))
+    for mode, why in (("empty", "records nothing"), ("error", "raises an error"), ("garbage", "returns bytes that are not a video"),
+                      ("headeronly", "returns a WebM header with no frame behind it")):
         pg.evaluate(FAKE, mode)
         got = no_download(pg, "() => exportWebM()")
         msg = pg.evaluate("() => document.getElementById('flipChip').textContent")
@@ -256,7 +282,9 @@ with sync_playwright() as p:
           pg.evaluate("() => window.__aacAsked") and kinds(padm) == ["audio", "video"], f"{padm['tracks']} {padm['blocks']}")
     pg.evaluate(REAL_MP4)
     pg.wait_for_timeout(1200)
-    for mode, why in (("empty", "records nothing"), ("garbage", "returns bytes that are not a video")):
+    pg.evaluate("(b) => { window.__headerOnly = b; }", list(HEADER_ONLY))
+    for mode, why in (("empty", "records nothing"), ("garbage", "returns bytes that are not a video"),
+                      ("headeronly", "returns a WebM header with no frame behind it")):
         pg.evaluate(FAKE, mode)
         got = no_download(pg, pad_export_trigger(), wait=6000)
         msg = pg.evaluate("() => document.getElementById('toast').textContent")
