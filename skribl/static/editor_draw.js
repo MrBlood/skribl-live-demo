@@ -569,7 +569,7 @@ function commitActiveStroke() {
 // autosave trigger. A mousemove/mouseup listener added for a canvas press
 // would never fire -- verify_pointerpad drives each of them with a real mouse.
 let strokePointerId = null;
-canvas.addEventListener('pointerdown', (e) => {
+function _canvasDown(e) {
   if (pinching) return;
   if (drawing && strokePointerId !== null && e.pointerId !== strokePointerId) return;
   startDraw(e);
@@ -577,7 +577,8 @@ canvas.addEventListener('pointerdown', (e) => {
     strokePointerId = e.pointerId;
     try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* synthetic or already released */ }
   }
-});
+}
+canvas.addEventListener('pointerdown', _canvasDown);
 canvas.addEventListener('pointermove', (e) => {
   if (drawing && strokePointerId !== null && e.pointerId !== strokePointerId) return;
   continueDraw(e);
@@ -618,6 +619,19 @@ window.addEventListener('pointercancel', _releaseChrome, true);
 window.addEventListener('touchend', (e) => { if (!e.touches || e.touches.length === 0) _releaseChrome(null); }, true);
 window.addEventListener('touchcancel', () => _releaseChrome(null), true);
 canvas.addEventListener('lostpointercapture', (e) => { if (drawing && e.pointerId === strokePointerId) _endStrokeFor(e); });
+// AND WHEN NONE OF THOSE COMES (after v325, the owner's iPhone): a finger that
+// lifted without the page hearing it kept its stroke "down", and the next
+// finger was refused as if it were a second one. lib/lostlift.js, shared with
+// Flip: a refused finger that is the only touch on the glass ends the stuck
+// stroke, kept as it stands, and draws its own. Not on the player, which has
+// no lib/lostlift.js.
+if (window.SkriblLostLift) {
+  window.SkriblLostLift.watch(canvas, {
+    owner: () => (drawing ? strokePointerId : null),
+    end: () => _endStrokeFor(null),
+    down: _canvasDown
+  });
+}
 /* NO pointerleave -> endDraw.
  *
  * It ended the stroke the moment the cursor crossed the canvas edge, so

@@ -213,6 +213,72 @@ with sync_playwright() as sp:
     check("no page errors from touch", not errs, "; ".join(errs[:2]))
     ctx.close()
 
+    # A STROKE WHOSE LIFT NEVER CAME (after v325; the owner's iPhone, checklist
+    # P1: "several fast strokes and eventually it won't draw one... sometimes
+    # next one draws and then soon fails"). A finger the browser knows has
+    # lifted, whose end never reached the page's handlers, left the editor
+    # holding a stroke for a finger that was gone: it refused the next finger,
+    # and only the lift after that cleared the state. Simulated exactly so: the
+    # browser ends the touch, and a listener installed before the page's own
+    # swallows the end events (pointerup, pointercancel, lostpointercapture,
+    # touchend, touchcancel). Both editors, real touch input; lib/lostlift.js is
+    # the rule they share. The second row is its edge: two fingers really on
+    # the glass are still a pinch, never a stroke.
+    print("\nPOINTER PAD AND FLIP — a stroke whose lift never came does not cost the next one")
+    for name, route, surface, groups in (("Pad", "/skribl-pad", "#canvas", "strokeGroups.length"),
+                                         ("Flip", "/flip", "#pad", "frames[idx].strokeGroups.length")):
+        lctx = b.new_context(viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
+        lctx.add_init_script("""window.__dropLift = false;
+          for (const k of ['pointerup', 'pointercancel', 'lostpointercapture', 'touchend', 'touchcancel'])
+            window.addEventListener(k, (e) => { if (window.__dropLift) e.stopImmediatePropagation(); }, true);""")
+        lp = lctx.new_page()
+        lerrs = []
+        lp.on("pageerror", lambda e: lerrs.append(str(e)))
+        lp.goto(BASE + route, wait_until="load")
+        lp.evaluate("() => localStorage.clear()")
+        lp.reload(wait_until="load")
+        lp.wait_for_function("(s) => typeof drawing !== 'undefined' && !!document.querySelector(s)", arg=surface, timeout=15000)
+        lp.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        lcdp = lctx.new_cdp_session(lp)
+        r = lp.locator(surface).bounding_box()
+        cx, cy = r["x"] + r["width"] / 2, r["y"] + r["height"] / 2
+
+        def lt(kind, pts):
+            lcdp.send("Input.dispatchTouchEvent",
+                      {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i} for i, (x, y) in pts]})
+
+        def lstroke(tid, y, end=True):
+            lt("touchStart", [(tid, (cx - 90, y))])
+            for k in range(1, 9):
+                lt("touchMove", [(tid, (cx - 90 + k * 20, y + (k % 2) * 6))])
+            if end:
+                lt("touchEnd", [])
+
+        G = "() => " + groups
+        lstroke(1, cy - 120)
+        g0 = lp.evaluate(G)
+        lstroke(2, cy - 60, end=False)
+        lp.evaluate("() => { window.__dropLift = true; }")
+        lt("touchEnd", [])                    # the finger lifts; the page never hears it
+        lp.evaluate("() => { window.__dropLift = false; }")
+        stuck = lp.evaluate("() => drawing")
+        lstroke(3, cy)                        # the next finger
+        g1 = lp.evaluate(G)
+        check(f"{name}: after a stroke whose lift never came, the next finger draws, and the stuck stroke is kept",
+              stuck is True and g1 == g0 + 2 and lp.evaluate("() => !drawing"),
+              f"groups {g0} -> {g1} (both strokes want a group: +2); drawing while stuck: {stuck}")
+        lt("touchStart", [(4, (cx - 60, cy + 80))])
+        lt("touchMove", [(4, (cx - 50, cy + 80))])
+        lt("touchStart", [(4, (cx - 50, cy + 80)), (5, (cx + 60, cy + 80))])
+        for k in range(1, 6):
+            lt("touchMove", [(4, (cx - 50 - k * 10, cy + 80)), (5, (cx + 60 + k * 10, cy + 80))])
+        lt("touchEnd", [])
+        g2 = lp.evaluate(G)
+        check(f"{name}: ...and two fingers on the glass are still a pinch that draws nothing",
+              g2 == g1, f"groups {g1} -> {g2}")
+        check(f"{name}: no page errors from a lost lift", not lerrs, "; ".join(lerrs[:2]))
+        lctx.close()
+
     # THE PANEL GOES AWAY ON A PHONE (owner's iPhone: "how to disappear the
     # magnifier? why is it showing on the phone?"). A pinch turns magnify on,
     # HUD and all; the only control that turned it off was #magnifyBtn, which a
