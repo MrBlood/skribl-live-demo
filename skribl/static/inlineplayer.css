@@ -133,13 +133,10 @@
   translate: -2.43%;
 }
 
-/* No line under it (the Gallery's cards): the button says what you'll watch,
-   in the corner, off the drawing's face (inlineplayer.js `says`). 8.3:1. */
-.skribl-inline.is-says .skribl-inline-veil { place-items: end start; padding: 12px;
-  left: var(--sx, 0); bottom: var(--sy, 0); }
-.skribl-inline.is-says .skribl-inline-play { display: flex; gap: 7px; width: auto; height: 38px;
-  border-radius: 19px; padding: 0 14px 0 10px; font: 600 14px var(--font-ui, system-ui, sans-serif); color: #4c31c4; }
-.is-says .skribl-inline-play svg { width: 16px; height: 16px; translate: none; }
+/* No line: the button says it, in the drawing's corner (inlineplayer.js). */
+.is-says .skribl-inline-veil{place-items:end start;padding:12px;left:var(--sx,0);bottom:var(--sy,0)}
+.is-says .skribl-inline-play{display:flex;gap:7px;width:auto;height:38px;border-radius:19px;padding:0 14px 0 10px;font:600 14px var(--font-ui,system-ui,sans-serif);color:#4c31c4}
+.is-says .skribl-inline-play svg{width:16px;height:16px;translate:none}
 
 @media (hover: hover) {
   .skribl-inline:hover .skribl-inline-play { background: #f3efff; }

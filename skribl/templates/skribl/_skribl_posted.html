@@ -13,41 +13,6 @@
 <section id="postedPanel" class="posted-panel" aria-label="Your Skribl Library">
   {# The count the module writes: "3 Skribls", or "1 of 3" while searching. #}
   <div class="help-search-count posted-count" id="postedCount" aria-live="polite"></div>
-  {# ONE SENTENCE, MEASURED. This said all of it -- custody, key custody, and
-     the eviction rule for a Skribl saved on this device because posting
-     failed -- in forty-six words, which on a 390px phone is seven lines and
-     116px: fifteen per cent of the viewport spent on a caveat, above the
-     list it qualifies, before a single Skribl is visible. Every clause was
-     TRUE, and nothing about a true clause entitles it to be read first.
-     What stays is the part somebody can act on while looking at this page.
-     The eviction rule moved into the "Your Skribl Library" tip in How it works
-     (_skribl_help.html), where the rest of the browser-storage model already
-     lives and where a person goes when they want the whole answer. #}
-  <div class="posted-foot posted-foot-top">
-    {# Two wordings, one shown (library.js marks <body> .lib-empty while the
-       list is empty): with nothing posted yet, ONE honest line about where the
-       list lives and what clearing site data takes with it, and its action
-       right after it (the owner's L1; SK-AUD-008, 009). #}
-    <span class="posted-foot-note"><span class="pf-some">Saved in this browser only &middot; clearing
-      site data removes them, and the keys that delete them</span><span class="pf-none">Kept in this
-      browser. Clearing site data forgets this list and the keys that delete your posts.</span></span>
-    {# THEIR OWN ROW. They were floated to the right of the paragraph above,
-       so the text wrapped around a gap that had two links in it and the
-       links themselves landed wherever the last line finished. One short
-       note, then the two things you can do about it. #}
-    <span class="posted-foot-acts">
-      {# The other half of the recovery key. Until v281 the product could show
-         a key and never accept one back, so a user who did as they were told
-         -- save it, then lose the browser -- held the credential and had no
-         way to spend it. Sits beside Clear list because this is where
-         somebody goes when the list is not what they expected. #}
-      <button type="button" id="postedRecover" class="posted-clearbtn"
-              title="Put a Skribl back in this list using the key you saved for it"><span class="pf-some">Use a recovery key</span><span class="pf-none">Have a key? Use it</span></button>
-      <button type="button" id="postedClear" class="posted-clearbtn"
-              title="Empty this browser's list. The Skribls stay online, and their keys go">Clear list</button>
-    </span>
-  </div>
-
   {# The undo shelf: deleting a LOCAL save is reversible for twelve seconds,
      and a reversible act has to SAY so or it is not one. It served the posted
      row's x as well until v311 removed that control; the shelf's job is
@@ -66,6 +31,45 @@
   </div>
 
   <div class="posted-list" id="postedList"></div>
+
+  {# UNDER THE LIST, SAID ONCE AND KINDLY (the owner's pick A after v324:
+     "all yes"). It sat above the list, between the switches and the first
+     Skribl, with a rule either side; the list is what a person came for.
+     The class keeps its old name, which library.js and the suites read.
+     ONE SENTENCE, MEASURED. This said all of it -- custody, key custody, and
+     the eviction rule for a Skribl saved on this device because posting
+     failed -- in forty-six words, which on a 390px phone is seven lines and
+     116px: fifteen per cent of the viewport spent on a caveat, above the
+     list it qualifies, before a single Skribl is visible. Every clause was
+     TRUE, and nothing about a true clause entitles it to be read first.
+     What stays is the part somebody can act on while looking at this page.
+     The eviction rule moved into the "Your Skribl Library" tip in How it works
+     (_skribl_help.html), where the rest of the browser-storage model already
+     lives and where a person goes when they want the whole answer. #}
+  <div class="posted-foot posted-foot-top">
+    {# Two wordings, one shown (library.js marks <body> .lib-empty while the
+       list is empty): with nothing posted yet, ONE honest line about where the
+       list lives and what clearing site data takes with it, and its action
+       right after it (the owner's L1; SK-AUD-008, 009). #}
+    <span class="posted-foot-note"><span class="pf-some">Kept in this browser. Clearing site data forgets
+      them and their keys, so save a key.</span><span class="pf-none">Kept in this
+      browser. Clearing site data forgets this list and the keys that delete your posts.</span></span>
+    {# THEIR OWN ROW. They were floated to the right of the paragraph above,
+       so the text wrapped around a gap that had two links in it and the
+       links themselves landed wherever the last line finished. One short
+       note, then the two things you can do about it. #}
+    <span class="posted-foot-acts">
+      {# The other half of the recovery key. Until v281 the product could show
+         a key and never accept one back, so a user who did as they were told
+         -- save it, then lose the browser -- held the credential and had no
+         way to spend it. Sits beside Clear list because this is where
+         somebody goes when the list is not what they expected. #}
+      <button type="button" id="postedRecover" class="posted-clearbtn"
+              title="Put a Skribl back in this list using the key you saved for it"><span class="pf-some">Use a recovery key</span><span class="pf-none">Have a key? Use it</span></button>
+      <button type="button" id="postedClear" class="posted-clearbtn"
+              title="Empty this browser's list. The Skribls stay online, and their keys go">Clear list</button>
+    </span>
+  </div>
 
   {# Deletion succeeds or fails asynchronously and the row simply vanishes on
      success, which tells a screen-reader user nothing. #}
