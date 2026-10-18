@@ -19044,3 +19044,45 @@ saved; Cancel ends the wait at once. `verify_videoexport` puts in a stand-in
 that never answers: given up on at 16 and 17 s on Flip and the Pad, and
 Cancel during the wait closes the export in under 0.2 s. All four red on the
 old recorder.
+
+## After v326 -- the 10px words, at 12px, outside Flip's page strip
+
+WAVE calls text at 10px or under very small. Five rules outside Flip's page
+strip drew it, and all five are 12px now, in their own colours (the owner's
+pick from the mocks): Flip's tool tray's labels, the draw drawer's Recent, the
+shape card's Sides and Rounding (Flip's stamp and smudge Size share the rule),
+How it works' tip counts, and the music trim's time bubbles. Each fits where
+it sits; the tray's tiles grow from 52 to 54px. The duration badge is 10px
+only on a phone, where it is hidden, so it stays.
+
+The trim bubbles also read from their cut lines inward. Centred on its
+handle, the start's bubble hung 24px off the track's left edge with the loop
+at 0:00, and the end's off the right at the track's end. The start's now
+begins at its line and the end's finishes at its, so both stay over the track
+wherever the handles sit. The mock anchored them at the handle's box, 8px
+further out; the line is cleaner, and it cannot cross the track's ends. Pad
+and Flip share the drawer and its rules.
+
+**Not yet Flip's page strip.** The mock measured each word alone, and each
+fit. On a phone's 104px tile, at 12px, the strip's words ran into each other:
+the forever chip "∞ page 2" grew 7px to the left, 2px over the page's ⋯ and
+into its 44px touch box, so a tap on the ∞ would open the page menu; page
+numbers from 10 reach the hold badge; and the ×1 sat 0.83 and 1.0px off
+centre in DejaVu Sans and FreeSans. `verify_loopui` and `verify_icons` caught
+the first and the last. The strip's six rules stay at 10px until the owner
+picks how they fit, from a mock of the strip itself.
+
+One of the five was under 4.5:1 before and still is, because its colours did
+not change: the trim bubble's white on the bright purple, 4.4:1. So is the
+strip's loop chip, at 4.3:1 in light. A colour is the owner's call, so both
+are on the list.
+
+`verify_tray` pinned the tray labels at 10px, the sheet's own size rather
+than the UA's ~13px, after a broken `font` shorthand once dropped it; the pin
+moves with the sheet to 12px. `verify_a11y` A11Y 20 reads every page at rest
+(Flip's strip tiles left out until the owner's pick) and each of the five in
+the state that shows it, on a phone and a desk. No words may be at 10px or
+under, at WAVE's own line (the 11px words are another question, not asked).
+Each of the five rules must read 12px, and both trim bubbles must stay over
+the track with the handles at its ends. On the old CSS 10 of 24 pass (every
+rule at 10px, the bubbles 24px off the track); now 24 of 24.

@@ -230,9 +230,10 @@ with sync_playwright() as p:
               s["trayActive"] == ["pen"], str(s["trayActive"]))
         # REGRESSION PIN. `font: 600 10px/1 inherit` is an invalid shorthand --
         # the family slot does not accept `inherit` -- so the whole declaration
-        # was dropped and the labels rendered in the UA default face.
+        # was dropped and the labels rendered in the UA default face (~13px).
+        # The sheet's size is 12px since the 10px words went to 12 (after v326).
         check(f"{surface}: the tray labels take the sheet's type, not the UA's",
-              s["trayFontSize"] == "10px", str(s["trayFontSize"]))
+              s["trayFontSize"] == "12px", str(s["trayFontSize"]))
 
         page.click(f".tool-tray-btn[data-tool='{TRIAL}']")
         page.wait_for_timeout(300)
