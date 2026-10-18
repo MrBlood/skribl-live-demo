@@ -242,7 +242,8 @@ def section(name, run):
 # samples the canvas holds fewer. Flip's 12 a second are five screen refreshes
 # apart, so they hold exactly in Gecko too. The Pad's 30 are two apart, and
 # Gecko takes a pushed frame at its next refresh, one per refresh, so on a busy
-# machine two can merge (63 of 82 on CI); the Pad is held to never more than
+# machine two can merge (63 of 82, then 47 of 78, on CI: about 18 a second
+# however they are asked for); the Pad is held to never more than
 # its beats, which still catches a doubled first frame. An MP4 is made
 # elsewhere (lib/mp4export.js) and is only asked for frames.
 PAD_PLAN = """() => { const t = buildPlaybackTimeline(), ms = t.length ? t[t.length - 1].playT : 0;

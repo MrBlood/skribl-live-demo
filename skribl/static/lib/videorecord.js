@@ -31,7 +31,7 @@
  * time. requestFrame is the track's in Chromium and the stream's in Gecko;
  * where neither has one it falls back to captureStream(fps), which samples
  * the canvas itself. Firefox did until after v326, looking on the track
- * only, and kept about half the frames.
+ * only, and dropped one of Flip's four pages.
  *
  * THE MUSIC is the loop the post and the MP4 use (the trimmed, crossfaded
  * buffer), played on a looping source into a MediaStreamDestination whose

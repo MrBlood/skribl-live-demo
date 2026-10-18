@@ -30,9 +30,9 @@ WHAT IS ASKED, AND HOW IT IS READ
     must ask for a type with no audio codec, and its frames must come out.
   * Gecko's requestFrame is on the stream, not the track: with it moved there,
     Flip's three pages must still be three pushes and three frames (Firefox
-    sampled the canvas instead, and kept about half). And a recorder that
-    never answers its stop is given up on at the limit, saying so, with Cancel
-    working while the stop is waited for, on both editors.
+    sampled the canvas instead, and dropped one of Flip's four pages). And a
+    recorder that never answers its stop is given up on at the limit, saying
+    so, with Cancel working while the stop is waited for, on both editors.
 """
 import math
 import os
