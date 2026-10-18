@@ -19024,6 +19024,14 @@ requestFrame onto the stream in Chromium: three pages must be three pushes
 and three frames. The old recorder made no pushes, and Chromium's sampling
 happened to give three frames, which is why the check counts the pushes.
 
+In Firefox after the fix (run 1351): Flip's 4 of 4, where sampling had
+dropped a page, and the Pad's 63 of 82, up from 48. Gecko takes a pushed
+frame at its next screen refresh, one per refresh, so at 30 a second on a
+busy machine two pushes can still merge. Not chased further: waiting for each
+refresh would stretch the replay's time instead, and the replay's timing is
+the performance. The smoke holds Flip (12 a second, five refreshes apart) to
+exactly its beats, and the Pad to never more than its beats.
+
 **A stop that never comes.** Once every frame was in, nothing was left to
 notice a cancel, so a recorder that never answered its stop (Gecko's did,
 before the type fix) held the progress up for good. The stop is now waited
