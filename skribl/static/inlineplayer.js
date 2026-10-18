@@ -1285,6 +1285,7 @@
     }
     /* What the box shows: playing, or paused. */
     function look(on) {
+      if (size) canvas.hidden = false;
       el.classList.toggle('is-playing', on);
       el.classList.toggle('is-paused', !on);
     }
@@ -1686,6 +1687,10 @@
       elapsed = 0;
       el.classList.remove('is-paused');
       prog.style.width = '0';
+      /* Back to rest, the card on top: the canvas at time zero is the blank
+       * page (the owner's iPhone: "scrolled out of sight then come back and
+       * blank screen"). look() brings it back on the next play. */
+      if (hasPoster) canvas.hidden = true;
       if (payload) renderIdle();
     }
 

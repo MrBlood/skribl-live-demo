@@ -1467,7 +1467,14 @@ with sync_playwright() as sp:
     #   line-less box takes (the Gallery's cards); a host with the line
     #   already says it there. Spent first: the CSS is three dense rules and
     #   one line of pointer. 66,593 B measured.
-    EMBED_RATCHET = 66_597
+    # RAISED (a bug fix, owner's iPhone after #516: "It goes away when scrolled
+    #   out of sight then come back and blank screen"), for one named cost:
+    #   +147 B -- settle() putting the card back on top (the canvas at time
+    #   zero was left over it: a blank page) and look() bringing the canvas
+    #   back on a play; inlineplayer.css the pill's spinner where its arrow
+    #   was. WHICH CALLER PAYS: every page that shows a post, and every post
+    #   scrolled away and back shows its drawing for it. 66,740 B measured.
+    EMBED_RATCHET = 66_744
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

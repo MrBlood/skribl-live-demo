@@ -18611,3 +18611,26 @@ verify_galib GALIB 9 taps the pill on a phone and clicks it on a desk: the
 drawing plays and Repeat is untouched; with the bar up the pill is not
 drawn. Red on the old code (idle, and on the phone Repeat switched off --
 the owner's screenshot), green on the fix.
+
+## After v324 -- back from off screen, the card; the pill's spinner up front (bug fixes)
+
+The owner's iPhone after #516: "When I click drawn in # minutes it takes a
+second or 2, then plays. Takes too much time. if I scroll the screen goes
+away. Nothing on canvas ... It goes away when scrolled out of sight then
+come back and blank screen."
+
+- A post that played and was scrolled away rests again (settle()), and the
+  canvas at time zero -- for a drawing on a ground, the ground and nothing
+  else -- was left over the finished card. Resting puts the card back on
+  top; a play brings the canvas back. Every post on every host, not only the
+  Gallery's.
+- The first play fetches the drawing, which for a long one (Bloom, drawn in
+  21 min) takes a moment; the pill's spinner was after its words, easy to
+  miss. It takes the arrow's place now, so the tap answers at once. Nothing
+  is fetched before the tap, still: a touch that starts a scroll is not
+  somebody asking, and a feed that prefetched would move megabytes.
+
+verify_galib GALIB 9: a card played, scrolled away and back shows its card
+at its middle and plays again on the canvas; while loading, the spinner is
+ahead of the words. Red on the old player, green on the fix. The embed
+ratchet rose by the named 147 B.

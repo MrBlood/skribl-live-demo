@@ -688,6 +688,38 @@ with sync_playwright() as p:
                 check(f"/gallery {dev}: with the card's bar up, the pill steps aside", both[0] == 1 and both[1] == 0, str(both))
                 pg.close()
 
+                # BACK FROM OFF SCREEN, THE CARD (owner's iPhone after #516:
+                # "It goes away when scrolled out of sight then come back and
+                # blank screen"). A post that played and was scrolled away rests
+                # again, and the canvas at time zero -- the blank page -- was
+                # left over the finished card. What is painted at the drawing's
+                # middle is the card again, and a tap plays on the canvas.
+                pg = open_page(c_, "/gallery", theme)
+                sel = pg.evaluate("""(tag) => { const t = [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag));
+                  t.scrollIntoView({block: 'center'}); return '[data-skribl-id="' + t.dataset.id + '"]'; }""", f"{TAG} coil")
+                pg.wait_for_timeout(300)
+                pg.evaluate("(s) => document.querySelector(s)._skriblInline.play()", sel); pg.wait_for_timeout(1500)
+                pg.add_style_tag(content="body { padding-bottom: 3000px !important; }")   # room to leave
+                pg.evaluate("() => scrollTo(0, 99999)"); pg.wait_for_timeout(900)
+                pg.evaluate("(s) => document.querySelector(s).scrollIntoView({block: 'center'})", sel); pg.wait_for_timeout(900)
+                PAINTED = """(s) => { const b = document.querySelector(s), r = b.getBoundingClientRect();
+                  const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 3);
+                  return { state: b._skriblInline.state().state, at: hit ? hit.tagName + '.' + hit.className : null }; }"""
+                back = pg.evaluate(PAINTED, sel)
+                pg.evaluate("(s) => document.querySelector(s)._skriblInline.play()", sel); pg.wait_for_timeout(700)
+                again = pg.evaluate(PAINTED, sel)
+                check(f"/gallery {dev}: a card played and scrolled away comes back showing its drawing, and plays again on the canvas",
+                      back["state"] == "idle" and "skribl-inline-poster" in (back["at"] or "")
+                      and again["state"] == "playing" and (again["at"] or "").startswith("CANVAS"), f"{back} -> {again}")
+                # Loading, the spinner takes the arrow's place, at the pill's start.
+                busy = pg.evaluate("""(s) => { const p = document.querySelector(s + ' .skribl-inline-play'); p.classList.add('is-busy');
+                  const sp = getComputedStyle(p, '::after'), w = p.querySelector('span').getBoundingClientRect(), pr = p.getBoundingClientRect();
+                  const r = { order: sp.order, arrow: getComputedStyle(p.querySelector('svg')).display, wordsFromLeft: Math.round(w.left - pr.left) };
+                  p.classList.remove('is-busy'); return r; }""", sel)
+                check(f"/gallery {dev}: while it loads, the spinner sits where the arrow was, ahead of the words",
+                      busy["order"] == "-1" and busy["arrow"] == "none" and busy["wordsFromLeft"] >= 20, str(busy))
+                pg.close()
+
     phone.close()
     ctx.close()
 
