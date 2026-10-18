@@ -931,6 +931,34 @@ with sync_playwright() as p:
           (pg.evaluate(LIVE, "flipChip") or {}).get("text") == "Nothing to copy yet")
     pg.close()
 
+    # THE PLAYER'S TOAST IS ONE TOO (the owner's VoiceOver pass, after v325).
+    # The same id on another page: the census above reads the Pad's, and a
+    # share link's carried no live semantics at all, so its Copy link answered
+    # no one. The fixture serves section 7 as well (headings, the canvas name).
+    import urllib.request as _ur
+    _req = _ur.Request(BASE + "/api/skribls", method="POST",
+                       data=json.dumps({"frames": [{"strokes": [], "strokeGroups": [],
+                                                    "background": {"color": "#101418"}}],
+                                        "title": "Heading fixture"}).encode(),
+                       headers={"Content-Type": "application/json"})
+    with _ur.urlopen(_req, timeout=15) as _r:
+        _pid = json.loads(_r.read())["id"]
+    pg = browser.new_page(viewport={"width": 1280, "height": 900})
+    browsing.goto(pg, BASE, "/s/" + _pid)
+    r = pg.evaluate(LIVE, "toast")
+    check("the player's #toast is a polite, atomic live region",
+          r is not None and r["role"] == "status" and r["live"] == "polite"
+          and r["atomic"] == "true", str(r))
+    pg.evaluate("""() => Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: () => Promise.resolve() }, configurable: true })""")
+    pg.click("#playerMoreBtn")
+    pg.click("#playerCopyBtn")
+    pg.wait_for_timeout(300)
+    r = pg.evaluate(LIVE, "toast")
+    check("...and its Copy link's answer lands in it",
+          (r or {}).get("text") == "Link copied", str(r))
+    pg.close()
+
     # ------------------------------------------------------------ section 7
     print("\nA11Y 7 — every page has one heading and one main region")
     # The v287 audit found no <h1> and no landmark on Pad, Flip, the player or
@@ -940,14 +968,6 @@ with sync_playwright() as p:
     # tree and there is nothing to press. Counted in the TREE, not the DOM: an
     # h1 inside a [hidden] panel (the Pad carries the player partial in its
     # posted panel) is not a heading anyone hears. Red on v287 for all five.
-    import urllib.request as _ur
-    _req = _ur.Request(BASE + "/api/skribls", method="POST",
-                       data=json.dumps({"frames": [{"strokes": [], "strokeGroups": [],
-                                                    "background": {"color": "#101418"}}],
-                                        "title": "Heading fixture"}).encode(),
-                       headers={"Content-Type": "application/json"})
-    with _ur.urlopen(_req, timeout=15) as _r:
-        _pid = json.loads(_r.read())["id"]
     TREE = """() => {
       const live = el => { for (let n = el; n; n = n.parentElement) {
           if (n.hidden || getComputedStyle(n).display === 'none') return false; }

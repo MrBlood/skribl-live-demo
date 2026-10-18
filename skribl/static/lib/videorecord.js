@@ -46,7 +46,7 @@
  * A SIGNATURE IS NOT A VIDEO (after v325). The evidence run for the v325 audit
  * caught Chromium's recorder, on a loaded machine, handing back a WebM with no
  * frame in it: it passed the signature check, downloaded, and the chip said
- * "Animation exported". Rare (once, then not in 84 more tries under load), but
+ * "Animation exported". Rare (once, then not in 76 more tries, 64 under load), but
  * a false success, so a finished file must now hold a frame: a block on a
  * WebM's video track, or an MP4 `mdat` with bytes in it, looked for in the
  * file's first 4 MB (a header alone is a few hundred bytes, so a file larger

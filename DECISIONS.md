@@ -18715,9 +18715,11 @@ exported". SK-AUD-003's fix had made a recording a success when it had bytes
 and the container's signature at its start, and a header with nothing behind
 it has both. Reproduced on v325 with a stand-in recorder that hands back a
 header-only WebM: both editors downloaded it and said it worked ("Animation
-exported", "Video exported"). The real recorder made such a file once; in 84
-more exports under CPU starvation and beside other browsers it did not, so it
-is rare. A false success all the same.
+exported", "Video exported"). The real recorder made such a file once; in 76
+more exports (12 on a quiet machine, 24 with the CPU starved, 40 beside other
+browsers) it did not, so it is rare. A false success all the same. (This
+entry first said 84; the run logs hold 76, and the count was corrected with
+the Copy link fix.)
 
 `lib/videorecord.js`, one module for both editors, now also asks the file for
 a frame: a block on a WebM's video track, or an MP4 `mdat` with bytes in it,
@@ -18796,3 +18798,28 @@ audio; after, it decodes. Not tested on an iPhone here; the owner's next
 export is the test.
 
 Pad and Flip: shared (`lib/mp4export.js` is both editors' MP4 route).
+
+## After v325 -- Copy link says it copied, out loud (a bug fix)
+
+The owner's VoiceOver pass (device checklist V4, a Library row's ⋯): "copy
+link doesn't say copied." The row's Copy link changed its own word to Copied
+for a moment and said nothing else. VoiceOver does not read a label changing
+under it, so only a refusal, which went to the drawer's live region, was ever
+heard. A copy that works now speaks "Link copied" there too, the words the
+Library's stage and the Gallery's menu already used. `lib/postedui.js` is the
+one place, so the drawers' lists on the Pad and Flip get it as well.
+
+A share link's Copy link answered no one at all: the player's toast was the
+one on the site with no live semantics. It now carries the editors' own
+(`role="status"`, polite, atomic). The live-region census in `verify_a11y`
+read the toast on the Pad only; the same id on another page is another
+member, so the player's is read too, and its Copy link is driven.
+
+Calibrated red, then green: `verify_posted` 162/163 before (the live region
+empty while the row said Copied), 163/163 after; the player's toast had no
+role, polite or atomic before, and has all three after, with Copy link's
+answer landing in it. Not tested with VoiceOver here: the toast appears and
+fills in the same moment, as the editors' does, and whether VoiceOver reads
+that is for a real iPhone to say.
+
+Pad and Flip: shared (`lib/postedui.js` is both editors' posted list).

@@ -113,7 +113,10 @@
   <div id="autosaveStatus" class="autosave-status" hidden><span class="autosave-dot"></span><span id="autosaveStatusText">Saved</span></div>
 
   <!-- Toast -->
-  <div id="toast" class="toast" hidden></div>
+  {# A live region, as the editors' toast is: Copy link's answer, and a
+     refusal's, are spoken as well as shown (the owner's VoiceOver pass, after
+     v325). It had no live semantics, so a share link answered no one. #}
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
   <!-- Persistent load-failure panel (shown instead of a transient toast, so a
        failed load never leaves a blank page). -->

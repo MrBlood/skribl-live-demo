@@ -201,6 +201,31 @@ with sync_playwright() as p:
     pg.evaluate("""() => { document.execCommand = window.__origExec;
         delete navigator.clipboard; }""")
 
+    # A COPY THAT WORKED IS SPOKEN TOO (the owner's VoiceOver pass, after
+    # v325: "copy link doesn't say copied"). The row changed its own word to
+    # Copied and said nothing else; VoiceOver does not read a label changing
+    # under it, so only a refusal was ever heard. Driven on a clipboard that
+    # accepts, read in the live region, not in the button.
+    _took = pg.evaluate("""() => {
+        Object.defineProperty(navigator, 'clipboard', {
+          value: { writeText: function () { return Promise.resolve(); } },
+          configurable: true });
+        const live = document.getElementById('postedStatus');
+        if (live) live.textContent = '';
+        return !!document.querySelector('#postedList .posted-copy'); }""")
+    if _took:
+        pg.click("#postedList .posted-copy")
+        pg.wait_for_timeout(300)
+        _ok = pg.evaluate("""() => {
+            const b = document.querySelector('#postedList .posted-copy');
+            return { label: b ? b.textContent : null,
+                     live: (document.getElementById('postedStatus') || {}).textContent || '' }; }""")
+        check("a copy that worked says so where a screen reader hears it",
+              _ok["live"] == "Link copied", str(_ok))
+        check("...and the row still shows it, for eyes",
+              _ok["label"] == "Copied", str(_ok))
+    pg.evaluate("() => { delete navigator.clipboard; }")
+
     # -----------------------------------------------------------------------
     print("\nYOUR SKRIBLS — a posted row cannot be forgotten, and wears one glyph per act")
     pid = entry.get("id")
