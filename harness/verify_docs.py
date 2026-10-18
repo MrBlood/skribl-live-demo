@@ -1134,8 +1134,18 @@ if _wf.is_file():
               _suite in _wf_text,
               "a job that never invokes the suite covers nothing")
     check("the mp4 lane FAILS on a skip rather than reporting green",
-          "SKIPPED on the job that exists to run it" in _wf_text,
+          "MP4 suite SKIPPED on the job that exists to run it" in _wf_text,
           "a lane that tolerates the skip it exists to prevent is not a lane")
+    # THE FIREFOX LANE, read as its own block: it runs the smoke, after a
+    # merge only, and a skip fails it -- the build container has no Firefox,
+    # so this job is the only place the smoke runs at all.
+    _ffb = re.search(r"^  firefox:\n((?:    .*\n|\s*\n)+)", _wf_text, re.M)
+    _ffb = _ffb.group(1) if _ffb else ""
+    check("the firefox lane runs harness/firefox_smoke.py after a merge, and FAILS on a skip",
+          "run_harness.sh firefox_smoke.py" in _ffb and "github.event_name != 'pull_request'" in _ffb
+          and "Firefox smoke SKIPPED on the job that exists to run it" in _ffb
+          and (ROOT / "harness" / "firefox_smoke.py").is_file(),
+          "no firefox job, or one that runs on pull requests, runs no smoke, or lets a skip pass")
     # SUPERSEDED PUSHES SHOULD NOT KEEP RUNNING. Three jobs of 20-30 minutes
     # started on every push; without a concurrency group the runs finished
     # anyway, against commits nobody would merge. This comment used to open
@@ -1618,7 +1628,8 @@ else:
 
 print("\nDOCS — somebody reads main: a red battery opens an issue, a green one closes it")
 # v314. main sat red twice with nobody reading it (DECISIONS v311, v312). The
-# `main-watch` job reads the three battery results and hands them to
+# `main-watch` job reads the after-merge results (the battery's three and
+# Firefox's) and hands them to
 # harness/tools/mainwatch.py's decide(), which is driven here, case by case, on
 # every pull request -- the job itself only ever runs after a merge, so this is
 # the only place its logic is exercised before main needs it.
@@ -1654,8 +1665,8 @@ _wft = (ROOT / ".github" / "workflows" / "harness.yml").read_text(encoding="utf-
 _mwb = re.search(r"^  main-watch:\n((?:    .*\n|\s*\n)+)", _wft, re.M)
 _mwb = _mwb.group(1) if _mwb else ""
 check("the main-watch job exists", bool(_mwb), "no `main-watch:` job in harness.yml")
-check("...it waits for all three battery jobs",
-      re.search(r"^    needs:\s*\[\s*sqlite\s*,\s*postgres\s*,\s*mp4\s*\]\s*$", _mwb, re.M) is not None,
+check("...it waits for all four after-merge jobs (the battery's three and Firefox)",
+      re.search(r"^    needs:\s*\[\s*sqlite\s*,\s*postgres\s*,\s*mp4\s*,\s*firefox\s*\]\s*$", _mwb, re.M) is not None,
       "a job that does not need a lane cannot see it fail")
 _if = re.search(r"^    if:\s*(.+)$", _mwb, re.M)
 _if = _if.group(1) if _if else ""
@@ -1668,8 +1679,8 @@ check("...its token can write issues and nothing broader",
       re.search(r"^    permissions:\n      contents: read\n      issues: write\n", _mwb, re.M) is not None,
       "permissions block missing or wider than contents:read + issues:write")
 check("...and it hands decide() every lane's result",
-      all(f'"{j}": "${{{{ needs.{j}.result }}}}"' in _mwb for j in ("sqlite", "postgres", "mp4"))
-      and "harness/tools/mainwatch.py" in _mwb, "JOB_RESULTS must name all three needs")
+      all(f'"{j}": "${{{{ needs.{j}.result }}}}"' in _mwb for j in ("sqlite", "postgres", "mp4", "firefox"))
+      and "harness/tools/mainwatch.py" in _mwb, "JOB_RESULTS must name all four needs")
 
 # MAIN'S CI SHARDS RUN EVERY SUITE, ONCE. Each battery job is a matrix of
 # shards, and each shard runs the names harness/shard.py prints for "I/N". A

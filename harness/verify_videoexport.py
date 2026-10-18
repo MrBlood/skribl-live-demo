@@ -23,6 +23,11 @@ WHAT IS ASKED, AND HOW IT IS READ
     v325): the kind of file Chromium's recorder once made on a loaded
     machine. It passed the signature check, downloaded and said "Animation
     exported"; now the file must hold a frame.
+  * And Gecko's recorder (after v326), as Firefox's first run on CI found it:
+    asked for a type that names an audio codec when there is no audio track,
+    it waits for one and never stops, so both editors sat at "Recording…". A
+    stand-in that does the same goes in on each editor with no music: each
+    must ask for a type with no audio codec, and its frames must come out.
 """
 import math
 import os
@@ -145,6 +150,24 @@ FAKE = """(mode) => { window.__RealMR = window.__RealMR || window.MediaRecorder;
       if (this.onstop) this.onstop(); }, 30); } }
   window.MediaRecorder = Fake; }"""
 REAL = "() => { if (window.__RealMR) window.MediaRecorder = window.__RealMR; }"
+# GECKO'S RECORDER, as Firefox's first run on CI found it (after v326): asked
+# for a type that names an audio codec when the stream has no audio track, it
+# waits for one, and never starts or stops. Otherwise it is the real one.
+# Every type it is asked for is kept in __asked.
+GECKO = """() => { window.__RealMR = window.__RealMR || window.MediaRecorder; const Real = window.__RealMR;
+  window.__asked = [];
+  class Gecko {
+    constructor(stream, o) { const t = (o && o.mimeType) || ''; window.__asked.push(t);
+      this.mimeType = t; this.state = 'inactive';
+      this.real = /opus/.test(t) && !stream.getAudioTracks().length ? null : new Real(stream, o); }
+    static isTypeSupported(t) { return Real.isTypeSupported(t); }
+    start() { this.state = 'recording'; const r = this.real; if (!r) return;
+      r.ondataavailable = (e) => this.ondataavailable && this.ondataavailable(e);
+      r.onerror = (e) => this.onerror && this.onerror(e);
+      r.onstop = () => { this.state = 'inactive'; if (this.onstop) this.onstop(); };
+      r.start(); }
+    stop() { if (this.real) this.real.stop(); else this.state = 'inactive'; } }
+  window.MediaRecorder = Gecko; }"""
 # The MP4 path, told it can encode video and cannot encode AAC.
 NO_AAC = """() => { const M = window.SkriblMp4; window.__realMp4 = window.__realMp4 || { prepare: M.prepare, aac: M.aacSupported };
   window.__aacAsked = false;
@@ -193,6 +216,20 @@ with sync_playwright() as p:
     check("three pages at one beat each are three frames: the first page is not doubled",
           video_frames(pinfo) == 3, f"{video_frames(pinfo)} video frames, blocks {pinfo['blocks']}")
     check("...and the chip says it was exported", plain_chip == "Animation exported", plain_chip)
+
+    pg.evaluate(GECKO)
+    try:
+        gk, gk_chip = flip_export(pg, timeout=15000)
+        gk_said = f"{video_frames(webm(gk))} video frames, chip '{gk_chip}'"
+        gk_ok = video_frames(webm(gk)) == 3 and gk_chip == "Animation exported"
+    except Exception as e:
+        gk_said, gk_ok = f"no video in 15 s ({type(e).__name__})", False
+        pg.evaluate("() => { exporting = false; exportHide(); }")
+    asked = pg.evaluate("() => window.__asked")
+    pg.evaluate(REAL)
+    check("with Gecko's recorder (it waits for any audio track a type names), Flip with no music asks for "
+          "a type with no audio codec, and its three frames come out",
+          gk_ok and bool(asked) and not any("opus" in t for t in asked), f"{gk_said}; asked {asked}")
 
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
     pg.wait_for_function("() => !!musicData && !!currentAudioBuffer", timeout=15000)
@@ -268,6 +305,22 @@ with sync_playwright() as p:
     good = webm(open(dl.value.path(), "rb").read())
     check("the Pad's video still exports, with its frames, and no music track when it has no music",
           kinds(good) == ["video"] and video_frames(good) > 3, f"{good['tracks']} {good['blocks']}")
+    pg.wait_for_timeout(1200)
+    pg.evaluate(GECKO)
+    try:
+        with pg.expect_download(timeout=15000) as dl:
+            pg.evaluate(pad_export_trigger())
+        gk = webm(open(dl.value.path(), "rb").read())
+        gk_said, gk_ok = f"{gk['tracks']} {gk['blocks']}", kinds(gk) == ["video"] and video_frames(gk) > 3
+    except Exception as e:
+        gk_said, gk_ok = f"no video in 15 s ({type(e).__name__})", False
+        pg.evaluate("""() => { ['exportVideo', 'exportPng'].forEach((id) => { document.getElementById(id).disabled = false; });
+            document.getElementById('exportProgress').hidden = true; }""")
+    asked = pg.evaluate("() => window.__asked")
+    pg.evaluate(REAL)
+    check("the Pad, with Gecko's recorder and no music: it asks for a type with no audio codec, and its frames come out",
+          gk_ok and bool(asked) and not any("opus" in t for t in asked), f"{gk_said}; asked {asked}")
+    pg.evaluate("() => { const o = document.getElementById('exportOverlay'); if (o && !o.hidden) document.getElementById('exportCancel').click(); }")
     pg.wait_for_timeout(1200)
     # The same route as Flip's: a song on, the MP4 told there is no AAC.
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
