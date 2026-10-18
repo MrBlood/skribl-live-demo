@@ -18770,3 +18770,29 @@ and that finger's own stroke was lost: 1 group to 2, wanting 3), 31/31 after.
 Not tested on an iPhone; the owner's next checklist run is the test.
 
 Pad and Flip: shared, one module.
+
+## After v325 -- an iPhone video's music plays everywhere, not only on Apple's player (a bug fix)
+
+The owner's iPhone exports from the device checklist (E1, E2) played with
+their music on the phone. Read here with ffprobe, the music track would not
+open: "Audio object type 0 is not implemented", 0 channels. The samples were
+all there (pulled out and given the right config, they decode as AAC-LC,
+48 kHz, stereo, at the music's own level), but the file's esds held a whole
+MPEG-4 ES_Descriptor where the two-byte AudioSpecificConfig belongs. Safari's
+AudioEncoder gives that descriptor as `decoderConfig.description` (Chrome
+gives the config itself), and the muxer wrapped what it was given. Apple's
+player copes; ffmpeg reads the wrapper's first byte as the config, and so does
+everything built on it: many upload sites, Android, most players off Apple's.
+
+`lib/mp4export.js` now digs the config out of such a descriptor before the
+muxer sees it (`aacConfig`). A description that is already a config passes
+through untouched, and so does one it cannot read. `verify_muxer` drives the
+export's own `encode()` with stand-in encoders that describe their audio the
+way Safari's did on the owner's phone (the bytes read out of that file) and
+the way Chrome's does: the file's config was the 39-byte descriptor before
+the fix and is `11 90` (AAC-LC, 48 kHz, stereo) with it. Played end to end
+here with real AAC frames through the vendored muxer: before, ffmpeg opened no
+audio; after, it decodes. Not tested on an iPhone here; the owner's next
+export is the test.
+
+Pad and Flip: shared (`lib/mp4export.js` is both editors' MP4 route).
