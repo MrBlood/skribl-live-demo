@@ -696,9 +696,12 @@
         if (pl && bx.contains(e.target) && pl.state().state !== 'playing') { peekAfter = true; return; }
         peek(false);
       });
+      /* CAPTURE: the player stops its click from bubbling (a post inside a
+         link must not navigate), so the stage hears it on the way down -- by
+         then the click has its target, and the bar cannot take it. */
       stage.addEventListener('click', function () {
         if (peekAfter) { peekAfter = false; peek(false); }
-      });
+      }, true);
       /* STICKY ONLY FOR A KEYBOARD, and this is the line that actually pinned
          the bar. A tap on the artwork moves focus INTO the stage (the player
          element carries tabindex="0"), so `focusin` fired on every tap and

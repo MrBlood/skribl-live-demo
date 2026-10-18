@@ -1049,6 +1049,11 @@ with sync_playwright() as _spk:
     # transports -- the card's and the full-screen one, which is display:none
     # until the stage is full size. The unqualified selector resolved to 48
     # buttons on 24 cards and picked a hidden one.
+    # An untouched card's bar does not rise over its pill (the pill plays it,
+    # the owner's iPhone after #515), so the drawing is started first, as a
+    # person starts it; the bar follows the click.
+    _pk.click(".tileStage .skribl-inline")
+    _pk.wait_for_timeout(400)
     _pk.hover(".tileStage")
     _pk.wait_for_timeout(250)
     _pk.click(".tileStage .skfull-card .skfull-play")
@@ -2925,10 +2930,14 @@ with sync_playwright() as _spf:
     _pf.mouse.move(_cx, _cy)
     _pf.wait_for_timeout(3200)
     _idle = _pf.evaluate(_PAINT)
-    check("hovering a card at REST shows its transport, with no clock on it",
-          _idle.get("painted") is True and _idle.get("isPlaying") is False,
-          f"{_idle!r} — painted=False means the hover reveal was retired rather "
-          f"than scoped, and a stopped tile now offers nothing to a mouse")
+    # AN UNTOUCHED CARD OFFERS ITS PILL, NOT ITS BAR (the owner's iPhone after
+    # #515: the bar rose over the "drawn in" pill and took its click). What a
+    # stopped tile offers a mouse is the pill, still painted under the hover.
+    _pill = _pf.evaluate("""() => { const v = document.querySelector('.tile .skribl-inline.is-says .skribl-inline-veil');
+        return v ? +getComputedStyle(v).opacity : null; }""")
+    check("hovering an untouched card leaves its play pill, not the bar over it",
+          _idle.get("painted") is False and _idle.get("isPlaying") is False and _pill == 1,
+          f"{_idle!r}, pill opacity {_pill} — a bar painted here covers the pill a person is reaching for")
 
     # 2. AND A PLAYING CARD'S BAR GOES, WITH THE POINTER STILL ON THE DRAWING.
     #    This is the row the old class census could not fail.
@@ -3046,6 +3055,9 @@ with sync_playwright() as _spr:
     post_public_api("speed control fixture")
     browsing.goto(_pr, BASE, "/gallery")
     _pr.wait_for_timeout(1800)
+    # Started first: an untouched card's bar does not rise over its pill.
+    _pr.click(".tile .skribl-inline")
+    _pr.wait_for_timeout(400)
     _pr.hover(".tile .tileStage")
     _pr.wait_for_timeout(300)
     _pr.click(".tile .skfull-card .skfull-full", force=True)
