@@ -1,35 +1,36 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-10-18T12:56:41Z
+UTC timestamp           : 2026-10-18T18:53:05Z
 Host                    : Linux x86_64
-Tree SHA-256            : a1a430c045e694cb9a4ea37a42839bb162c19de846e63708cd07f8a92e1ca8b6
-Git commit              : 1ce7a2a
+Tree SHA-256            : be57963bbea3b06bda3880850585c92eb48401ef8e4aa9a5d5151bedb69d82a5
+Git commit              : 314c66f
 Source state            : generated-only dirty
                             harness/LAST-RUN.txt
                             harness/MP4-ATTESTATION.txt
                             harness/POSTGRES-ATTESTATION.txt
-SKRIBL_VERSION          : v325
+                            harness/RELEASE.md
+SKRIBL_VERSION          : v326
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.7ybdxqniBo/harness.db)
+Database reset          : yes (fresh /tmp/tmp.8ltxPay24l/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_icons.py
+Command                 : /tmp/claude-0/-home-user-skribl-live-demo/a4e6ef3b-ebd2-5619-a35c-1b51d9aabaa0/scratchpad/seal326/clone/harness/run_harness.sh verify_icons.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
 # whole release run: 81 batches recorded as one run
-suites requested : 132
-  verify_a11y.py: ok — 540/540 passed
+suites requested : 133
+  verify_a11y.py: ok — 554/554 passed
   verify_amber.py: ok — 110/110 passed
   verify_apiedges.py: ok — 54/54 passed
-  verify_ask.py: ok — 52/52 passed
+  verify_ask.py: ok — 54/54 passed
   verify_assetcache.py: ok — 12/12 passed
   verify_audio.py: ok — 18/18 passed
   verify_audiosession.py: ok — 39/39 passed
@@ -106,7 +107,7 @@ suites requested : 132
   verify_motion.py: ok — 20/20 passed
   verify_move.py: ok — 82/82 passed
   verify_mp4.py: SKIPPED (0 assertions) — WebCodecs present but no H.264 profile is supported: {'avc1.42001f': False, 'avc1.4d0028': False, 'avc1.640028': False}
-  verify_muxer.py: ok — 18/18 passed
+  verify_muxer.py: ok — 20/20 passed
   verify_nametab.py: ok — 29/29 passed
   verify_offline.py: ok — 28/28 passed
   verify_onepill.py: ok — 2918/2918 passed
@@ -117,8 +118,8 @@ suites requested : 132
   verify_pillfit.py: ok — 24/24 passed
   verify_player_isolation.py: ok — 85/85 passed
   verify_player_photo.py: ok — 9/9 passed
-  verify_pointerpad.py: ok — 25/25 passed
-  verify_posted.py: ok — 161/161 passed
+  verify_pointerpad.py: ok — 31/31 passed
+  verify_posted.py: ok — 163/163 passed
   verify_postgres.py: SKIPPED (0 assertions) — cannot connect to PostgreSQL at the configured DSN (OperationalError)
   verify_prefix.py: ok — 36/36 passed
   verify_pressure.py: ok — 27/27 passed
@@ -127,9 +128,10 @@ suites requested : 132
   verify_replayspeed.py: ok — 132/132 passed
   verify_report.py: ok — 35/35 passed
   verify_review.py: ok — 291/291 passed
+  verify_runreport.py: ok — 13/13 passed
   verify_s3.py: ok — 30/30 passed
   verify_scrub.py: ok — 16/16 passed
-  verify_seam.py: ok — 399/399 passed
+  verify_seam.py: ok — 402/402 passed
   verify_select.py: ok — 58/58 passed
   verify_sharecard.py: ok — 27/27 passed
   verify_sharedrules.py: ok — 105/105 passed
@@ -154,10 +156,10 @@ suites requested : 132
   verify_under.py: ok — 29/29 passed
   verify_ux.py: ok — 491/491 passed
   verify_version.py: ok — 39/39 passed
-  verify_videoexport.py: ok — 16/16 passed
+  verify_videoexport.py: ok — 19/19 passed
   verify_visual.py: ok — 78/78 passed
   verify_waits.py: ok — 17/17 passed
   verify_watchfull.py: ok — 70/70 passed
-assertions passed: 12402   (skipped suites contribute 0)
+assertions passed: 12447   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
