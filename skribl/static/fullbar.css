@@ -305,8 +305,20 @@
   opacity: 1;
   pointer-events: auto;
 }
+/* THE CARD'S PLAY PILL sits where this bar rises (inlineplayer.css .is-says,
+   the owner's pick A after v324). While the bar is up it has the play -- its
+   own Play where the pill's arrow was -- so the pill steps aside, at the bar's
+   pace; the two drawn over each other was the owner's iPhone screenshot. */
+.tile.ctl-on .is-says .skribl-inline-veil { opacity: 0; transition: opacity 0.18s ease; }
 @media (hover: hover) {
-  .tileStage:not(.is-playing):hover .skfull.skfull-card, .tileStage .skfull.skfull-card:hover {
+  .tileStage:not(.is-playing):hover .is-says.is-paused .skribl-inline-veil { opacity: 0; transition: opacity 0.18s ease; }
+}
+/* NOT OVER AN UNTOUCHED CARD'S PILL. A card that has not started says one
+   thing, "drawn in 15 sec", and is played by clicking it; a bar rising on
+   the hover covered the pill and took its click. Once started (paused) hover
+   brings the bar as before, and the pill steps aside for it (below). */
+@media (hover: hover) {
+  .tileStage:not(.is-playing):not(:has(.is-says:not(.is-paused))):hover .skfull.skfull-card, .tileStage .skfull.skfull-card:hover {
     opacity: 1;
     pointer-events: auto;
   }

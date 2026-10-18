@@ -683,9 +683,21 @@
 
          Scoped to the stage, focus means what it should here: somebody has
          tabbed into the transport itself. */
+      /* AFTER THE TAP, NOT UNDER IT, while the drawing is not playing. The
+         bar rises across the drawing's foot, where the play pill sits (the
+         owner's pick A after v324), so raised on the pointerdown it took the
+         click meant for the pill: "I would have to push play to play. I
+         thought that was a play button." The tap plays; the bar follows it. */
+      var peekAfter = false;
       stage.addEventListener('pointerdown', function (e) {
+        peekAfter = false;
         if (e.target.closest('.skfull')) return;
+        var bx = stage.querySelector('.skribl-inline'), pl = bx && bx._skriblInline;
+        if (pl && bx.contains(e.target) && pl.state().state !== 'playing') { peekAfter = true; return; }
         peek(false);
+      });
+      stage.addEventListener('click', function () {
+        if (peekAfter) { peekAfter = false; peek(false); }
       });
       /* STICKY ONLY FOR A KEYBOARD, and this is the line that actually pinned
          the bar. A tap on the artwork moves focus INTO the stage (the player
@@ -698,6 +710,9 @@
          must not vanish from under a tab key. So ask which kind of focus this
          is, and let a finger have the ordinary fading peek. */
       stage.addEventListener('focusin', function (e) {
+        /* A tap focuses the player on its way down: that is the tap above,
+           and its bar comes after the click. */
+        if (peekAfter && !keyboardFocus(e.target)) return;
         peek(keyboardFocus(e.target));
       });
       stage.addEventListener('focusout', function () {

@@ -655,6 +655,38 @@ with sync_playwright() as p:
                   bool(pl) and pl["words"] == "drawn in 1 sec" and 8 <= pl["inL"] <= 16 and 8 <= pl["inB"] <= 16 and pl["midFree"]
                   and pl["size"] == "16px" and int(pl["weight"]) >= 600 and pl["strong"], str(pl))
             pg.close()
+            # THE PILL PLAYS (owner's iPhone: "When I tap the white button ...
+            # I would have to push play to play. I thought that was a play
+            # button."). The card's bar rose on the touch, across the pill, and
+            # took the tap. A real tap or click at the pill's middle starts the
+            # drawing, and the pill is never drawn under the bar.
+            if theme == "light":
+                pg = open_page(c_, "/gallery", theme)
+                sel = pg.evaluate("""(tag) => { const t = [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag));
+                  t.scrollIntoView({block: 'center'}); return '[data-skribl-id="' + t.dataset.id + '"]'; }""", f"{TAG} coil")
+                pg.wait_for_timeout(300)
+                r = pg.evaluate("(s) => { const b = document.querySelector(s + ' .skribl-inline-play').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }", sel)
+                loop0 = pg.evaluate("(s) => document.querySelector(s).closest('article.tile').querySelector('.skfull-card .skfull-loop').getAttribute('aria-pressed')", sel)
+                if dev == "390":
+                    pg.touchscreen.tap(r[0], r[1])
+                else:
+                    pg.mouse.move(r[0], r[1]); pg.wait_for_timeout(400); pg.mouse.click(r[0], r[1])
+                pg.wait_for_timeout(700)
+                st = pg.evaluate("""(s) => { const b = document.querySelector(s), t = b.closest('article.tile');
+                  return { state: b._skriblInline && b._skriblInline.state().state,
+                           loop: t.querySelector('.skfull-card .skfull-loop').getAttribute('aria-pressed') }; }""", sel)
+                check(f"/gallery {dev}: a {'tap' if dev == '390' else 'click'} on the pill plays the drawing, and does not land on the card's bar",
+                      st["state"] == "playing" and st["loop"] == loop0, f"{st}, repeat before {loop0}")
+                pg.close()
+                pg = open_page(c_, "/gallery", theme)
+                pg.evaluate("(tag) => [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag)).scrollIntoView({block: 'center'})", f"{TAG} coil")
+                pg.wait_for_timeout(300)
+                pg.evaluate("(tag) => [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag)).classList.add('ctl-on')", f"{TAG} coil")
+                pg.wait_for_timeout(400)
+                both = pg.evaluate("""(tag) => { const t = [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag));
+                  return [+getComputedStyle(t.querySelector('.skfull-card')).opacity, +getComputedStyle(t.querySelector('.skribl-inline-veil')).opacity]; }""", f"{TAG} coil")
+                check(f"/gallery {dev}: with the card's bar up, the pill steps aside", both[0] == 1 and both[1] == 0, str(both))
+                pg.close()
 
     phone.close()
     ctx.close()
