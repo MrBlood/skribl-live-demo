@@ -54,6 +54,13 @@ already up:
     python3 -m flask --app app run --port 5001 --no-reload
     cd harness && python3 verify_audio.py
 
+**Firefox** is CI's, after a merge: `harness/firefox_smoke.py` boots the five
+pages, draws on both editors, posts from both, plays the link and counts the
+frames in each editor's video, in Firefox. It is not a `verify_` suite, so a
+bare run and a seal never meet it; there is no Firefox in the build container,
+where it would only skip. `SKRIBL_SMOKE_ENGINE=chromium` runs the same steps on
+Chromium, which is how a change to it is checked here.
+
 ## The suites
 
 **Assertion counts are NOT listed here.** This section used to carry one per
