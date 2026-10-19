@@ -230,6 +230,13 @@ BATCHES = [
     ["verify_smudgeblur.py"],              # measures
     ["verify_stamps.py"],                  # measures
     ["verify_icons.py"],                   # measures — rasterised ink boxes
+    # After v326: the whole-app review's edges and words, and one music editor.
+    # All five reached main in no batch, so the v327 run would have refused to
+    # start; release_run.py --dry-run said so before this line.
+    ["verify_padedges.py"],                # measures — canvas pixels: an export mid-replay, a draft's see-through strokes
+    ["verify_flipedges.py", "verify_words.py"],
+    ["verify_viewedges.py"],               # store — posts public fixtures to the shared server, which verify_gallery and verify_hot count
+    ["verify_music.py"],                   # measures — a preview's playhead over time, on both editors
 ]
 
 

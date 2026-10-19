@@ -20041,3 +20041,88 @@ key" on the Post sheet, the owner's K1, "recovery key" in the Library).
 
 Pad and Flip: shared words, both editors, except where one has what the
 other does not (Flip's strip and stamps, the Pad's takes).
+
+## After v326 -- one music editor: the Pad and Flip share the music drawer (bug fixes)
+
+The owner, with Flip's Fine-tune on screen: "flip has crossfade ... it needs
+to be the same music editor on both pad and flip." (The words review had said
+Flip had no Crossfade, from a search that stopped short; it was wrong, and
+the help was put right in that PR.) The drawer's markup was already one file
+and its arithmetic was shared, but every control's wiring was written twice,
+in editor_music.js, editor_photo.js and app.js for the Pad and in flip.js for
+Flip, and the copies had drifted. lib/musicdrawer.js is the one copy now:
+Trim | Fine-tune, the loop detail's zoom and Scroll, the edges' drags and
+nudges, Crossfade, Match Drawing Time, Preview Loop, Test Seam and the
+switch. Each editor hands it its own state through hooks; the state stays
+where it was (the Pad's player reads it through app.js). Where the two
+differed, each now does what the better side did:
+
+- Crossfade carried a playing preview over to the new join on Flip; the Pad's
+  kept the old join until it was stopped. Both carry it now, Play's music too.
+- Test Seam played the join on the Pad (the loop's last 1.25 s, the join, its
+  first 1.25 s) and the loop from its top, twice, on Flip; with a crossfade
+  set, the Pad played the whole clip three times instead. Both play the join,
+  on the baked clip, the posted loop itself, so the crossfade is in it. It
+  stays an <audio> element played inside the tap, the path that is heard on
+  an iPhone set to silent (not tested here: no WebKit).
+- Preview Loop's fallback, when Web Audio cannot start, was the baked clip
+  looping on the Pad and the raw track wrapped by a timer on Flip, where no
+  crossfade is heard. Both loop the baked clip.
+- The Pad's Preview Loop played at the replay's speed, pitch and all, because
+  the gapless engine follows the replay for Play. A preview is the loop as
+  posted: 1x.
+- The Pad saved a trim only on a mouseup or touchend ON the strip, so an edge
+  let go past it was never saved. Every change to the loop saves itself when
+  it lands, as Flip's did.
+- Match Drawing Time counted Flip's pages at one frame each: no holds, no
+  drawing pages, no loops (lib/holdtiming.js plan has the length as it
+  plays). And on a Flip with nothing drawn it set a 0.5 s loop; it leaves the
+  loop alone, as the Pad's does. Flip does not fit a new track to the drawing
+  on its own, as the Pad does: a Flip loops, and a one-second song would
+  stutter under it (not for Flip, by its nature).
+- The switch, off, silenced Flip's Play; on the Pad it paused the <audio>
+  element only, while the gapless loop and any preview played on. On again
+  mid-Play, Flip's music came back and the Pad's did not. Off is silence now,
+  Play's music and any preview, and on brings Play's music back where the
+  drawing is. A preview is its own request, so it still plays while the
+  switch is off.
+- The Pad dropped a switched-off track from its draft, its autosave and the
+  New Skribl undo: the song was lost. Flip kept it. The Pad keeps it now,
+  marked off, and opens it off; a post (and the composer's) leaves it out,
+  as Flip's does, so what the author last heard is what a viewer hears.
+- A new track kept the Pad's last zoom, focus and scroll, the last song's
+  view. Both start a new track, or a new document, on the whole loop at 1x.
+- Flip took a photo named song.mp3 as far as a failed decode; it is refused
+  by its type now, in the Pad's words (lib/media_validation.js).
+- Flip's Play left a preview playing under it; Play stops a preview first, as
+  the Pad's always has.
+
+Loose ends, gone: the Scroll and Crossfade rows were built by script in each
+editor and are the drawer's markup now; Flip's music file input was a second
+copy outside the drawer, visually hidden and still reached by Tab (one input
+now, the drawer's, out of the Tab order, and Flip's photo and backup inputs
+too); the step size's buttons were named differently on each; the Pad's
+"Plays for" label never showed, because the loop's summary wrote over it on
+the first trim; and Flip's mute flag was never set.
+
+Pad and Flip: shared, one module both load. Kept apart by nature: how each
+Play plays music (the Pad's follows the replay's speed, Flip's keeps its own
+pace and loops, the owner's F1), and the fit on adding a track (Pad only).
+
+The player's scripts are 3,134 B lighter (151,670 -> 148,536), and the names
+the two editors both define fell from 62 to 53 (verify_surfaces). The new
+verify_music drives every row on both editors; each was red on one of them
+before.
+
+Found on the way, by the affected suites. The Pad's video export still called
+the Test Seam stop this change took away, so an export threw before its
+download: fixed, and a search for every removed name found no other caller.
+verify_tools kept two exemptions for the music strip's old save triggers,
+which the drawer replaced; its stale-entry check said so, and they are gone.
+And the next seal could not have started: release_run.py refuses while a
+suite on disk is in no batch, and five had reached main in none over five
+pull requests (verify_padedges, verify_flipedges, verify_viewedges and
+verify_words from the whole-app review, and verify_music here), which only
+the seal's own dry run would have said. Each is placed now and tagged by what
+it does, and verify_docs asks the same question on every pull request, so the
+next unplaced suite is red where it is added (red on main, green here).

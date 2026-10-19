@@ -438,10 +438,11 @@
       showToast('Video export not supported on this browser', null);
       return;
     }
-    // Stop any live playback/preview/seam so live audio doesn't overlap export.
+    // Stop any live playback, and the music drawer's preview (Preview Loop or
+    // Test Seam, one preview in lib/musicdrawer.js), so live audio doesn't
+    // overlap the export.
     stopPlayback();
     stopLoopPreview();
-    stopSeamTest();
 
     // Prefer a real MP4 (H.264/AAC) via WebCodecs + muxer when available. Returns
     // false (cleanly, no UI left dangling) if unsupported or on failure, so we

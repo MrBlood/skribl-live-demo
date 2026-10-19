@@ -336,15 +336,17 @@ function unpackDraft(d) {
 // the name with null trim values so the load-time defaults apply instead of a
 // bogus loop. (Flip doesn't need this: decodeForWaveform installs its 20s
 // default BEFORE applying any saved meta, so a null never reaches the clamp.)
+// The switch rides along, as Flip's musicMeta has always carried it: a track
+// left off comes back off.
 function currentMusicMeta() {
   const prev = (typeof pendingMusicMeta !== 'undefined') ? pendingMusicMeta : null;
   if (!(audioEl && audioEl._fileName)) return prev;
   const decoded = Number.isFinite(audioDuration) && audioDuration > 0 && trimEnd > trimStart;
   if (!decoded) {
     if (prev && prev.name === audioEl._fileName) return prev;
-    return { name: audioEl._fileName, trimStart: null, trimEnd: null, crossfadeMs: loopCrossfadeMs };
+    return { name: audioEl._fileName, trimStart: null, trimEnd: null, crossfadeMs: loopCrossfadeMs, enabled: musicEnabled };
   }
-  return { name: audioEl._fileName, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs };
+  return { name: audioEl._fileName, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs, enabled: musicEnabled };
 }
 
 /* The pill itself — its five states, the wording, and the way out — is
@@ -950,16 +952,9 @@ function restoreAutosave(data) {
   bindEl('photoRemove', 'click', scheduleAutosave);
   bindEl('photoOpacity', 'input', scheduleAutosave);
   bindEl('photoBlur', 'input', scheduleAutosave);
-  // Loop changes: trim handles, nudges, match-drawing, zoom handles all funnel
-  // through updateTrimUI → so trigger autosave from the music track interactions.
-  musicTrack.addEventListener('mouseup', scheduleAutosave);
-  musicTrack.addEventListener('touchend', scheduleAutosave);
-  if (zoomTrackWrap) {
-    zoomTrackWrap.addEventListener('mouseup', scheduleAutosave);
-    zoomTrackWrap.addEventListener('touchend', scheduleAutosave);
-  }
-  document.querySelectorAll('.nudge-btn').forEach(b => b.addEventListener('click', scheduleAutosave));
-  matchDrawingBtn.addEventListener('click', scheduleAutosave);
+  // The loop's changes (its edges, nudges, Match Drawing Time, Crossfade and
+  // the switch) save themselves: lib/musicdrawer.js calls this when each lands.
+  // The strip's own mouseup and touchend here missed a drag let go past it.
   document.querySelectorAll('.photo-fit-btn').forEach(b => b.addEventListener('click', scheduleAutosave));
 })();
 

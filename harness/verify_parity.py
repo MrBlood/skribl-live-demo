@@ -633,16 +633,18 @@ with sync_playwright() as p:
 
     check("Pad's trim clamp delegates to the shared module",
           pad.evaluate("""() => {
-              // nudgeTrim returns early on !audioEl, so the preconditions have
+              // A nudge does nothing without a track, so the preconditions have
               // to be established or the spy reads 0 and looks like drift. A
               // guard short-circuiting the call is the commonest false
-              // negative for an assertion shaped like this one.
+              // negative for an assertion shaped like this one. The nudge is
+              // the drawer's (lib/musicdrawer.js), so it is its button pressed.
               audioEl = audioEl || {};
               audioDuration = 120; trimStart = 5; trimEnd = 10;
               const S = window.SkriblLoopTrim; const orig = S.setHandle;
               let calls = 0;
               S.setHandle = function () { calls++; return orig.apply(this, arguments); };
-              try { nudgeTrim('start', 1); } catch (e) { return 'threw: ' + e; }
+              try { document.querySelector('.nudge-btn[data-which="start"][data-amount="1"]').click(); }
+              catch (e) { return 'threw: ' + e; }
               finally { S.setHandle = orig; }
               return calls; }""") == 1,
           "a surface with its own copy of the arithmetic passes everything "

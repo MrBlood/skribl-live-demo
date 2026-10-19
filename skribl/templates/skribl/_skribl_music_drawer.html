@@ -1,15 +1,18 @@
 {% from 'skribl/_skribl_marks.html' import mark %}
 {# Shared "Music" drawer — loop: the file row, waveform trim, loop summary/actions,
-   fine-tune loop (zoom waveform + nudge grid). Behavior-preserving: each surface
-   renders its EXACT current markup + IDs; only divergent pieces are gated on `kind`.
-   Pad-only: #musicInput (Flip's is a wider-accept input outside the panel) + the
-   #matchDrawingLabel span + "Use finer/coarser step" aria text. Both render the
-   #musicPending re-add card. Flip-only: .draw-popout dialog root, and the
-   empty row's hint says "under every page" where the Pad's says "under your
-   drawing" -- which is all its old footer ("Loops while you Flip -- one track for
-   the whole animation") added, so the footer went: one idea, said once. The Photo | Music tabs head the media card this panel
-   sits in (#mediaCard), so it has no heading of its own; the dialog keeps its
-   aria-label. Include with:
+   fine-tune loop (zoom waveform, Scroll, nudge grid, Crossfade). ONE MUSIC
+   EDITOR (owner: "it needs to be the same music editor on both pad and flip"):
+   the markup is this file and every control's wiring is lib/musicdrawer.js,
+   which both editors load. The Scroll and Crossfade rows were built by script,
+   once in each editor, and live here now, as does the one #musicInput (Flip's
+   was a second copy outside the panel, visually hidden but still reached by
+   Tab). Only what differs by nature is gated on `kind`: Flip's .draw-popout
+   dialog root, and the empty row's hint, which says "under every page" where
+   the Pad's says "under your drawing" -- which is all Flip's old footer
+   ("Loops while you Flip -- one track for the whole animation") added, so the
+   footer went: one idea, said once. Both render the #musicPending re-add card. The Photo | Music tabs head the media card this
+   panel sits in (#mediaCard), so it has no heading of its own; the dialog keeps
+   its aria-label. Include with:
      {% with kind='pad'  %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
      {% with kind='flip' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
 
@@ -37,9 +40,7 @@
     <button type="button" id="musicToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Toggle music on or off"><span class="layer-toggle-knob"></span></button>
     <button type="button" id="musicRemove" class="dropzone-remove" hidden title="Remove the track" aria-label="Remove the track"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
   </div>
-  {% if kind != 'flip' -%}
   <input type="file" id="musicInput" aria-label="Choose an audio file" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" style="display:none">
-  {%- endif %}
 
   <div id="musicPending" class="pending-card" hidden>
     <div class="pending-icon">
@@ -89,6 +90,7 @@
             <div class="zoom-handle" id="zoomHandleStart" data-which="start" hidden><div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div></div>
             <div class="zoom-handle" id="zoomHandleEnd" data-which="end" hidden><div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div></div>
           </div>
+          <div class="zoom-pan-row"><span class="zoom-pan-label">Scroll</span><input type="range" id="zoomPanSlider" class="slider" min="0" max="1000" value="500" step="1" aria-label="Scroll the loop detail view"></div>
           <div class="finetune-panel">
             <div class="finetune-grid">
               <div class="edge-group">
@@ -109,18 +111,19 @@
               </div>
               <div class="edge-group">
                 <span class="edge-name">Step size</span>
-                <div class="edge-controls"{% if kind != 'flip' %} aria-label="Fine tune step size"{% endif %}>
-                  <button type="button" id="nudgeStepFiner" class="nudge-btn" aria-label="{{ 'Finer step' if kind == 'flip' else 'Use finer step' }}">{{ mark('minus') }}</button>
+                <div class="edge-controls">
+                  <button type="button" id="nudgeStepFiner" class="nudge-btn" aria-label="Finer step">{{ mark('minus') }}</button>
                   <span id="nudgeStepLabel" class="edge-readout step-readout">0.1s</span>
-                  <button type="button" id="nudgeStepCoarser" class="nudge-btn" aria-label="{{ 'Coarser step' if kind == 'flip' else 'Use coarser step' }}">{{ mark('plus') }}</button>
+                  <button type="button" id="nudgeStepCoarser" class="nudge-btn" aria-label="Coarser step">{{ mark('plus') }}</button>
                 </div>
               </div>
             </div>
           </div>
+          <div class="crossfade-row"><span class="crossfade-label">Crossfade</span><input type="range" id="crossfadeSlider" class="slider" min="0" max="500" value="0" step="5" aria-label="Loop crossfade length"><span class="crossfade-val" id="crossfadeVal">Off</span></div>
         </div>
       </div>
       <div class="loop-preview-row">
-        <span id="loopSummary" class="loop-summary">Loop: 0:00 &rarr; 0:00 &middot; 0.0s{% if kind != 'flip' %} <span id="matchDrawingLabel" class="match-drawing-label"></span>{% endif %}</span>
+        <span id="loopSummary" class="loop-summary">Loop: 0:00 &rarr; 0:00 &middot; 0.0s</span>
         <div class="loop-actions">
           <button type="button" id="matchDrawingBtn" class="loop-btn subtle">Match Drawing Time</button>
           <button type="button" id="testSeamBtn" class="loop-btn subtle">Test Seam</button>

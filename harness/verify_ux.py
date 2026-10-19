@@ -1955,13 +1955,15 @@ check("the editor loop applies the same rule",
       "if (ctx.state === 'running') return go();" in _loopjs
       and "c.state !== 'running') return false;" in _loopjs
       and "SkriblAudioLoop.engine(" in _appjs)
-# The two native fallbacks are Preview Loop's and Play's music loop's, which
-# left app.js for editor_music.js (the player never names them); the onFail
-# they are handed is still app.js's startWebAudioLoop's.
+# The two native fallbacks are Play's music loop's (editor_music.js) and
+# Preview Loop's, which is lib/musicdrawer.js's, one copy for both editors (the
+# player names neither); the onFail they are handed is still app.js's
+# startWebAudioLoop's.
 _musicjs = source.read_js(ROOT / "skribl" / "static" / "editor_music.js")
+_drawerjs = source.read_js(ROOT / "skribl" / "static" / "lib" / "musicdrawer.js")
 check("a failed unlock hands off to native audio instead of claiming success",
       "onFail" in _appjs and "playNativeLooped" in _musicjs
-      and "startLoopPreviewNative" in _musicjs)
+      and "h.loop.start(fallback" in _drawerjs and "function loopNative" in _drawerjs)
 check("A1: decode/fetch failures are no longer silent",
       "music decode failed" in _appjs and "music fetch failed" in _appjs)
 

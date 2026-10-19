@@ -398,7 +398,14 @@
     // trimEnd: an uncropped payload keeps the authored trim, so the metadata
     // looks identical either way. Located through the shared accessor so no
     // further consumer has to know where a frame keeps its media.
-    const media = window.SkriblPayload.currentFrameMedia(payload);
+    let media = window.SkriblPayload.currentFrameMedia(payload);
+    // A track switched off stays in a draft and stays out of a post, as on
+    // Flip: what the author last heard is what a viewer hears. The accessor's
+    // `music` is read once, so it is asked again after the change.
+    if (media.music && media.music.enabled === false) {
+      media.setMusic(null);
+      media = window.SkriblPayload.currentFrameMedia(payload);
+    }
     if (media.music && media.music.data && !currentAudioBuffer) {
       // Decode failed (not merely late — we awaited it). Post the full sample
       // rather than fail the post, but SAY SO: this is how the size regression

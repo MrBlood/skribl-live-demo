@@ -269,9 +269,14 @@ with sync_playwright() as sp:
     # verify_player_isolation and missed here: main went red on it, the same
     # signal once more. And LOWERED by the carve that paid for it, in both
     # places together: Preview Loop, Test Seam and Play's music loop left
-    # app.js for editor_music.js (-6,992 B, 151,673 measured).
+    # app.js for editor_music.js (-6,992 B, 151,673 measured). And LOWERED
+    # again, in both places together, by one music editor: the music drawer's
+    # controls (the edges' nudges, Match Drawing Time, Crossfade's and
+    # Scroll's sync, the switch, the dead "Plays for" label) left app.js for
+    # lib/musicdrawer.js, which the player never loads (-3,134 B, 148,536
+    # measured).
     check("stripping keeps the player's JS under its ratchet",
-          lean_total <= 151_678,
+          lean_total <= 148_541,
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a

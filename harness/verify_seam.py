@@ -247,7 +247,8 @@ if _marker in _appjs:
     #
     _extracted = 0
     for _name in ("editor_export.js", "editor_post.js", "editor_menu.js",
-                  "editor_music.js", "editor_photo.js", "lib/slidernudge.js"):
+                  "editor_music.js", "editor_photo.js", "lib/slidernudge.js",
+                  "lib/musicdrawer.js"):
         _p = _layout.STATIC_DIR / _name
         if not _p.exists():
             continue
@@ -290,7 +291,7 @@ if _marker in _appjs:
     _never = {"editor_export.js", "editor_post.js", "editor_menu.js", "editor_music.js",
               "editor_photo.js", "editor_shapes.js", "editor_draw.js", "editor_tune.js",
               "lib/sheetswipe.js", "lib/postsheet.js", "lib/canvasground.js",
-              "lib/slidernudge.js"}
+              "lib/slidernudge.js", "lib/musicdrawer.js"}
     # lib/tappause.js LEFT this list on purpose: since the owner's replay picks
     # the shared player pauses on a tap too, through the same module rather than
     # a second copy of it (verify_replayspeed drives it there).
@@ -352,8 +353,18 @@ if _marker in _appjs:
     # new. Uncounted, the move read as 2110 -> 2067, a "leak" while the
     # player-reachable set stood still at 98 functions / 1680 lines. Counted:
     # 2119 (the rest is the marks the editor bundles now draw).
+    # lib/musicdrawer.js is counted for the same reason, and the floor RISES
+    # to meet it (2070 -> 2330). The music drawer's controls (the edges'
+    # drags and nudges, Scroll, Crossfade, Match Drawing Time, Preview Loop,
+    # Test Seam and the switch) left editor_music.js, editor_photo.js and
+    # app.js's editor-only spans for it, and Flip's copies with them: one copy
+    # for both editors, which only the editors load (_never above). Uncounted,
+    # the move read as 2185 -> 1943, a "leak" while the player-reachable set
+    # FELL, 100 -> 98 functions and 1730 -> 1714 lines. Counted: 2335, and
+    # left at the old floor that would let 265 lines of editor code leak
+    # unseen, which is v317's warning; so the floor follows the measurement.
     check("editor-only code has not leaked into the player's reachable set",
-          _editor_total >= 2070,
+          _editor_total >= 2330,
           f"{_editor_total} lines editor-only ({_editor_lines} still in app.js, "
           f"{_extracted} extracted), was 2467 — something the player now calls "
           f"used to be editor-only")

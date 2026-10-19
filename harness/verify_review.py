@@ -701,8 +701,13 @@ _all_tpl = "\n".join(_tpl.values())
 check("no wildcard audio/* picker remains", 'accept="audio/*' not in _all_tpl)
 check("no wildcard image/* picker remains", 'accept="image/*' not in _all_tpl)
 check("the AIFF offer is gone (the server has no AIFF support)", ".aiff" not in _all_tpl)
+# One audio picker for both editors since they share the music drawer (after
+# v326): the drawer's #musicInput. Its accept list, not the page around it.
+_music_accept = re.search(r'<input[^>]*id="musicInput"[^>]*accept="([^"]*)"',
+                          _tpl["_skribl_music_drawer.html"])
+_music_accept = _music_accept.group(1).split(",") if _music_accept else []
 for ext in (".mp3", ".wav", ".flac"):
-    check(f"the audio picker still offers {ext}", ext in _tpl["skribl_flip.html"])
+    check(f"the audio picker still offers {ext}", ext in _music_accept)
 
 # Anti-drift: the browser's allow-list must agree with the server's.
 with sync_playwright() as p3:

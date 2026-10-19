@@ -88,8 +88,8 @@
       setPauseMode(b.getAttribute('data-pause'));
       try { localStorage.setItem(PAUSE_KEY, b.getAttribute('data-pause')); } catch (e2) {}
       renderPause();
-      // The duration badge and the music "Plays for ..." label are both derived
-      // from the capped total, so they are stale the instant this changes.
+      // The duration badge is derived from the capped total, so it is stale
+      // the instant this changes.
       if (typeof updateDrawingTimeLabels === 'function') updateDrawingTimeLabels();
     });
     // A loaded draft carries its own mode; refresh the seg when the drawer opens.
