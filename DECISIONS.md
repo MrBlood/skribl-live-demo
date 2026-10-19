@@ -19752,3 +19752,44 @@ card is as far from the drawing as the empty one is (3.4 against 3.5), and
 the same as the drawing here (0).
 
 The in-post player costs a host 928 B more (verify_inline, named).
+
+## After v326 -- a lost lift with a thumb on the glass no longer stops the Pad (a bug fix)
+
+The owner, on an iPhone, the v326 re-test (T1, the Pad): "When I go really
+fast it stops accepting strokes at a certain point, but after a little wait
+it will accept them again. Not sure it has anything to do with edge." And T2,
+Flip: "Seems like flip works but not pad".
+
+The lost-lift fix above rescues a finger the Pad refused by reading the touch
+list: if the new finger was the only touch on the glass, the stroke's own
+finger was gone. Anything else touching the glass, a thumb resting at its
+foot while the other hand draws fast, made the count two. Then the Pad
+refused every finger after a lost lift, and only the last touch lifting
+cleared it: strokes stop, then come back after a pause, as the owner saw.
+Flip ends a stroke on any lift, so it lost only the stroke after it. Driven
+here with real touch input, a thumb resting off the drawing and one lift
+swallowed before the page's handlers: the Pad drew none of the next four
+strokes and Flip drew three. Why lifts go unheard on the owner's phone is
+still not known here (there is no WebKit in this box). This is the pattern
+reproduced; the next re-test is the test.
+
+`lib/lostlift.js`, shared by both editors, now remembers the stroke's own
+touch from the touchstart that came with its pointerdown. A refused finger
+draws when that touch is no longer on the glass, whatever else is. A real
+second finger leaves it there, so it is refused as before, and two fingers on
+the drawing are still a pinch. A stroke whose touch it never saw is judged by
+the count, as before. And any touch ending anywhere that leaves the stroke's
+touch off the glass ends the stroke, so a stuck stroke can no longer keep the
+chrome faded until the next press on the drawing.
+
+Checks. verify_pointerpad gains the resting thumb on both editors: after the
+lost lift, the next four strokes give 2, 3, 4 and 5 groups (the stuck one
+kept). On the Pad alone, a tap beside the drawing ends a second stuck stroke,
+kept, with the take's Done back at full strength. Flip ends a stroke on any
+lift, so it cannot fail that row. Each piece, taken away on its own, turns
+its own rows red. The old module: the Pad 0, 0, 0, 0, Flip 1, 2, 3, 4, and the
+tap leaves the Pad drawing, chrome faded. The rescue by count alone: the same
+three rows. No lift rule: only the tap row. The fix: 11/11 on that part of the
+suite.
+
+Pad and Flip: shared, one module.

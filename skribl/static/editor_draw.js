@@ -622,9 +622,10 @@ canvas.addEventListener('lostpointercapture', (e) => { if (drawing && e.pointerI
 // AND WHEN NONE OF THOSE COMES (after v325, the owner's iPhone): a finger that
 // lifted without the page hearing it kept its stroke "down", and the next
 // finger was refused as if it were a second one. lib/lostlift.js, shared with
-// Flip: a refused finger that is the only touch on the glass ends the stuck
-// stroke, kept as it stands, and draws its own. Not on the player, which has
-// no lib/lostlift.js.
+// Flip: once the stroke's own touch is off the glass, a refused finger ends
+// the stuck stroke, kept as it stands, and draws its own, whatever else rests
+// on the glass; so does any lift that leaves it off. Not on the player, which
+// has no lib/lostlift.js.
 if (window.SkriblLostLift) {
   window.SkriblLostLift.watch(canvas, {
     owner: () => (drawing ? strokePointerId : null),

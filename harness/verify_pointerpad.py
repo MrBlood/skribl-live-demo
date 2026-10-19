@@ -279,6 +279,81 @@ with sync_playwright() as sp:
         check(f"{name}: no page errors from a lost lift", not lerrs, "; ".join(lerrs[:2]))
         lctx.close()
 
+    # AND WITH A THUMB RESTING ON THE GLASS (the owner's iPhone, the v326
+    # re-test: "When I go really fast it stops accepting strokes at a certain
+    # point, but after a little wait it will accept them again", and Flip
+    # fine). The rescue above first asked whether the new finger was the ONLY
+    # touch on the glass; a thumb resting off the drawing made it two, so the
+    # Pad refused every finger after a lost lift until the thumb lifted, and
+    # Flip, which ends a stroke on any lift, lost the one after it. Now the
+    # stroke's own touch decides. The second row is the Pad's alone: a tap
+    # anywhere that leaves the stroke's finger off the glass ends the stuck
+    # stroke and brings the chrome back. Flip ends a stroke on any lift, so it
+    # cannot fail that one.
+    print("\nPOINTER PAD AND FLIP — a lost lift with a thumb resting on the glass")
+    for name, route, surface, groups in (("Pad", "/skribl-pad", "#canvas", "strokeGroups.length"),
+                                         ("Flip", "/flip", "#pad", "frames[idx].strokeGroups.length")):
+        tctx = b.new_context(viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
+        tctx.add_init_script("""window.__dropLift = false;
+          for (const k of ['pointerup', 'pointercancel', 'lostpointercapture', 'touchend', 'touchcancel'])
+            window.addEventListener(k, (e) => { if (window.__dropLift) e.stopImmediatePropagation(); }, true);""")
+        tp = tctx.new_page()
+        terrs = []
+        tp.on("pageerror", lambda e: terrs.append(str(e)))
+        tp.goto(BASE + route, wait_until="load")
+        tp.evaluate("() => localStorage.clear()")
+        tp.reload(wait_until="load")
+        tp.wait_for_function("(s) => typeof drawing !== 'undefined' && !!document.querySelector(s)", arg=surface, timeout=15000)
+        tp.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        tcdp = tctx.new_cdp_session(tp)
+        r = tp.locator(surface).bounding_box()
+        cx, cy = r["x"] + r["width"] / 2, r["y"] + r["height"] / 2
+        THUMB = [(9, (8, 870))]               # at the foot of the glass, off the drawing
+
+        def tt(kind, pts):
+            # CDP: a touchStart or touchMove lists every touch that is down; a
+            # touchEnd lists the touches that lift.
+            tcdp.send("Input.dispatchTouchEvent",
+                      {"type": kind, "touchPoints": [{"x": x, "y": y, "id": i} for i, (x, y) in pts]})
+
+        def tstroke(tid, y, drop=False):
+            tt("touchStart", THUMB + [(tid, (cx - 90, y))])
+            for k in range(1, 9):
+                tt("touchMove", THUMB + [(tid, (cx - 90 + k * 20, y + (k % 2) * 6))])
+            if drop:
+                tp.evaluate("() => { window.__dropLift = true; }")
+            tt("touchEnd", [(tid, (cx + 70, y))])
+            if drop:
+                tp.evaluate("() => { window.__dropLift = false; }")
+
+        G = "() => " + groups
+        tt("touchStart", THUMB)
+        tstroke(1, cy - 150)
+        g0 = tp.evaluate(G)
+        tstroke(2, cy - 100, drop=True)        # this lift is never heard
+        after = []
+        for k, y in enumerate((cy - 50, cy, cy + 50, cy + 100)):
+            tstroke(3 + k, y)
+            after.append(tp.evaluate(G) - g0)
+        check(f"{name}: a lost lift with a thumb resting off the drawing: the next finger draws, and every one after",
+              after == [2, 3, 4, 5], f"groups after each later stroke {after}, wanting 2, 3, 4, 5 (the stuck one kept)")
+        if name == "Pad":
+            tstroke(7, cy + 150, drop=True)    # stuck again, and no press on the drawing follows
+            stuck = tp.evaluate("() => drawing")
+            g1 = tp.evaluate(G)
+            tt("touchStart", THUMB + [(8, (3, 300))])   # a tap beside the drawing
+            tt("touchEnd", [(8, (3, 300))])
+            tp.wait_for_timeout(450)
+            done = tp.evaluate("""() => ({ drawing, stroking: document.body.classList.contains('stroking'),
+                done: +getComputedStyle(document.querySelector('.rec-indicator > .btn.record')).opacity })""")
+            check("Pad: ...and a tap beside the drawing ends a stuck stroke, kept, and the chrome comes back",
+                  stuck is True and done["drawing"] is False and not done["stroking"] and done["done"] > 0.9
+                  and tp.evaluate(G) == g1 + 1,
+                  f"stuck {stuck}; after the tap {done}; groups {g1} -> {tp.evaluate(G)}")
+        tt("touchEnd", THUMB)
+        check(f"{name}: no page errors with a thumb resting", not terrs, "; ".join(terrs[:2]))
+        tctx.close()
+
     # THE PANEL GOES AWAY ON A PHONE (owner's iPhone: "how to disappear the
     # magnifier? why is it showing on the phone?"). A pinch turns magnify on,
     # HUD and all; the only control that turned it off was #magnifyBtn, which a
