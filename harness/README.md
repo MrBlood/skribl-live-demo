@@ -357,6 +357,14 @@ stays a sleep.
   its pauses and its viewers' speed; New Skribl clears a photo on its own; an
   image export taken mid-replay is the whole drawing; a draft opened over a
   drawing never played paints its see-through strokes once.
+- `verify_flipedges.py` — Flip's edges the same review found, with a real
+  mouse or touch, desk and phone where they differ, each red on the code
+  before its fix: Undo clear works when tapped; a new document starts with
+  no history; an undo acts on the page it was done on after a Duplicate
+  shifted the pages; the page bar takes no press during playback on a desk;
+  Select through here works on a phone; after Cut, Paste is within reach on
+  a blank page and Ctrl+V pastes; the strip counts pages, not the paste
+  ghost; a tile's x says its arm out loud and names its page.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,
