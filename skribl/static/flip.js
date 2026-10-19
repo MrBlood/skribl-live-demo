@@ -4394,6 +4394,7 @@ if(window.SkriblTapPause){
     wrap: document.querySelector('.flip-wrap'), button: b, carry: [line, row], fit: flipFullFit,
     playing: () => playing, paused: () => playPaused,
     play: () => { if(!playing) play(); }, pause: pausePlay, resume: resumePlay,
+    canvas: () => pad,   // the band's colours, read from the page; its photo is in it (drawBackdrop)
   });
 })();
 // The page at the size of the screen while full screen is up; fitPad comes

@@ -807,6 +807,7 @@ rather than a shared rule.
 | `sheetswipe.js` | Pad+Flip+library+gallery | Sheets that go away — one swipe, every bottom sheet. |
 | `sizeclass.js` | Flip | One size decision, made once, for the whole app. |
 | `slidernudge.js` | Pad+Flip | - and + beside a range slider, for exact steps a slider alone cannot land on with a finger. |
+| `smartfade.js` | Pad+Flip+player+library+gallery | The smart fade: one reading of a drawing for every bar that lies over it. |
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
 | `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
