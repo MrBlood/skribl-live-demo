@@ -29,8 +29,9 @@ carries a URL instead of a megabyte. Backends:
 
 Keys are the SHA-256 of the CONTENT, so identical media is stored once no matter
 how many posts carry it — the same photo reposted by fifty people costs one
-file — and a stored object can be cached immutably forever, because a different
-byte is a different key.
+file — and a stored object's bytes never change, because a different byte is a
+different key. Who may read them can change, so /media/<key> is cached briefly
+or not at all (routes.py, PUBLIC_MEDIA_MAX_AGE).
 """
 import base64
 import copy
@@ -939,9 +940,10 @@ def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True)
 # store does, and the route authorises against the post that owns the object
 # before reading it. The cost is that bytes cross the app rather than going
 # straight from the bucket. The answer to that is a CDN in front of /media/<key>
-# — the response is already `immutable` and cached for a year when every
-# referencing post is public, and `private, no-store` when one is not, which is
-# the distinction a bucket URL cannot make.
+# — with the deployment's opt-in it is publicly cached for five minutes
+# (PUBLIC_MEDIA_MAX_AGE) when every referencing post is public, and it is
+# `private, no-store` otherwise, which is the distinction a bucket URL cannot
+# make.
 #
 # PRESIGNED URLS ARE NOT AN ALTERNATIVE HERE. The URL is written into
 # payload_json and lives as long as the post; a presigned URL expires. A post

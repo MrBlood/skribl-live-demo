@@ -223,7 +223,10 @@ def create_app():
     _demo_id = (os.environ.get("SKRIBL_DEMO_IDENTITY") or "").strip()
     _demo_key = (os.environ.get("SKRIBL_DEMO_LOGIN_KEY") or "").strip()
     current_user_id = None
-    if _demo_id and len(_demo_key) < 16:
+    # Said only when the demo does boot: with CSRF off it refuses just below,
+    # and the log said it would run anonymous first (after v326, the server
+    # review). verify_hostseams pins the refusal; verify_hostconfig the order.
+    if _demo_id and len(_demo_key) < 16 and csrf is not None:
         app.logger.warning(
             "SKRIBL_DEMO_IDENTITY is set but SKRIBL_DEMO_LOGIN_KEY is %s: nobody "
             "is signed in and the demo runs anonymous. Set a key of 16+ "

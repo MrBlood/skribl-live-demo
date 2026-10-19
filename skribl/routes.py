@@ -374,8 +374,8 @@ def register_routes(bp, *, index_route=False):
         # renders no posts of its own: the page fetches GET /api/skribls and
         # clones the skribl_inline() macro for each item, so what it shows is
         # whatever this deployment actually has, under the same visibility rules
-        # every other reader gets. That is the difference between this and
-        # /library above, which draws demo tiles nobody posted.
+        # every other reader gets. /library above plays real posts too, the
+        # signed-in author's own; this is the public listing, as a feed shows it.
         #
         # Registered so the component can be seen and driven live
         # (harness/verify_inline.py drives this page). A host does not need this
@@ -734,7 +734,10 @@ def register_routes(bp, *, index_route=False):
             return jsonify({"error": "A concurrent request is already using "
                                      "this idempotency key."}), 409
         except SkriblRejected as rejected:
-            return jsonify({"error": rejected.message}), rejected.status
+            body = {"error": rejected.message}
+            if getattr(rejected, "detail", None):
+                body["detail"] = rejected.detail
+            return jsonify(body), rejected.status
         except SkriblUnavailable as unavailable:
             return jsonify({"error": unavailable.message}), unavailable.status
         except Exception:
@@ -899,8 +902,8 @@ def register_routes(bp, *, index_route=False):
             abort(404)
         raw, content_type = found
         resp = current_app.response_class(raw, mimetype=content_type)
-        # Content-addressed, so the bytes at this URL can never change: cache
-        # forever. This is the whole point of hashing the content for the key.
+        # Content-addressed, so the bytes at this URL can never change; who may
+        # read them can, so the window is short (PUBLIC_MEDIA_MAX_AGE).
         # Only cache publicly when EVERY referencing post is public. Content
         # addressing makes the bytes immutable, but it does not make them
         # public, and a shared cache does not re-check authorisation.
@@ -1238,7 +1241,12 @@ def register_routes(bp, *, index_route=False):
                 .filter(SkriblPost.public_id.in_(ids))
                 .all())
         viewer = bp.skribl_current_user_id()
-        return jsonify({"items": [r.feed_dict() for r in rows if r.visible_to(viewer)]})
+        resp = jsonify({"items": [r.feed_dict() for r in rows if r.visible_to(viewer)]})
+        # Read through visible_to(), as the listing is, so never kept by a
+        # cache another viewer shares (after v326, the server review: a
+        # private post's title came back here with no Cache-Control at all).
+        resp.headers["Cache-Control"] = "private, no-store"
+        return resp
 
     @bp.get("/api/skribls/<public_id>")
     def get_skribl(public_id):
@@ -1446,6 +1454,8 @@ def register_routes(bp, *, index_route=False):
 
     def _draft_error(exc):
         body = {"error": exc.message}
+        if getattr(exc, "detail", None):
+            body["detail"] = exc.detail
         if isinstance(exc, DraftConflict):
             body.update(conflict=True, current=exc.current)
         return jsonify(body), getattr(exc, "status", 404)
@@ -1454,18 +1464,22 @@ def register_routes(bp, *, index_route=False):
     def list_saved_drafts():
         """The signed-in author's saved drafts: a list, no payloads."""
         try:
-            return jsonify({"items": list_drafts(bp.skribl_current_user_id()),
+            resp = jsonify({"items": list_drafts(bp.skribl_current_user_id()),
                             "limit": _max_drafts()})
         except DraftRejected as exc:
             return _draft_error(exc)
+        resp.headers["Cache-Control"] = "private, no-store"   # one person's, as above
+        return resp
 
     @bp.get("/api/drafts/<draft_id>")
     def get_saved_draft(draft_id):
         """Open one of your saved drafts, with its payload."""
         try:
-            return jsonify(get_draft(bp.skribl_current_user_id(), draft_id))
+            resp = jsonify(get_draft(bp.skribl_current_user_id(), draft_id))
         except (DraftRejected, DraftNotFound) as exc:
             return _draft_error(exc)
+        resp.headers["Cache-Control"] = "private, no-store"
+        return resp
 
     @bp.post("/api/drafts")
     def create_saved_draft():

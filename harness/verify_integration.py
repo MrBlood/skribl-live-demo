@@ -347,6 +347,71 @@ check("clearing the policy restores the built-in rules",
       c4.get(f"/s/api/skribls/{pid}").status_code == 200,
       "a public post is readable again once the host policy is removed")
 
+print("\nINTEGRATION — the server review after v326: what a smaller host still gets")
+# A HOST WITH NO SECRET_KEY, on the memory backend it gets by default: every
+# play and every report answered 500, because the rate limiter's identity
+# hash demanded a key the memory backend never stores. Memory forgets on a
+# restart anyway; a key that lasts the process is all it needs.
+import os as _os
+_nk = Flask("nokey")
+_nk.config.update(SQLALCHEMY_DATABASE_URI="sqlite:///:memory:")
+_nkdb = SQLAlchemy(_nk)
+skribl.models.attach_to_metadata(_nkdb.metadata)
+skribl.init_skribl(_nk, session=lambda: _nkdb.session)
+
+
+@_nk.after_request
+def _nk_commit(resp):
+    if resp.status_code < 500:
+        _nkdb.session.commit()
+    return resp
+
+
+with _nk.app_context():
+    _nkdb.create_all()
+_nc = _nk.test_client()
+_np = _nc.post("/api/skribls", json=payload("no key"))
+_nid = (_np.get_json() or {}).get("id")
+_ng = _nc.get(f"/api/skribls/{_nid}")
+_nr = _nc.post(f"/api/skribls/{_nid}/report", json={"reason": "spam"})
+check("a host with no SECRET_KEY posts, plays and takes a report (memory backend)",
+      _np.status_code == 201 and _ng.status_code == 200 and _nr.status_code < 500,
+      f"post {_np.status_code}, play {_ng.status_code}, report {_nr.status_code}")
+
+# A DELETE'S BODY IS BOUNDED AS A PATCH'S IS. The request cap covered POST,
+# PUT and PATCH; a DELETE's body, its delete key, is read too, and 50 KB of
+# it answered 204 where the same on a PATCH was 413. A host that sets no
+# MAX_CONTENT_LENGTH is the case: Skribl's own cap is the one that applies.
+_d = _nc.post("/api/skribls", json=payload("to delete")).get_json() or {}
+_os.environ["SKRIBL_MAX_REQUEST_BYTES"] = "2048"
+try:
+    _big = _nc.delete(f"/api/skribls/{_d.get('id')}",
+                      json={"deleteToken": _d.get("deleteToken"), "pad": "x" * 50_000})
+    _small = _nc.delete(f"/api/skribls/{_d.get('id')}", json={"deleteToken": _d.get("deleteToken")})
+finally:
+    _os.environ.pop("SKRIBL_MAX_REQUEST_BYTES", None)
+check("a DELETE with a body over the request cap is refused, and a small one still deletes",
+      _big.status_code == 413 and _small.status_code == 204,
+      f"50 KB body {_big.status_code} (want 413); plain {_small.status_code} (want 204)")
+
+# WHAT DEPENDS ON WHO IS SIGNED IN IS NEVER KEPT BY A SHARED CACHE. The
+# listing and the payload say private, no-store; the cards' meta (which can
+# carry a private post's title) and the drafts said nothing at all.
+CURRENT["id"] = 42
+_priv = c4.post("/s/api/skribls", json=payload("secret title", visibility="private")).get_json()["id"]
+_meta = c4.get(f"/s/api/skribls/meta?ids={_priv}")
+_ds = c4.post("/s/api/drafts", json={"kind": "pad", "title": "mine",
+                                     "payload": payload("mine")})
+_did = (_ds.get_json() or {}).get("id")
+_dl = c4.get("/s/api/drafts")
+_dg = c4.get(f"/s/api/drafts/{_did}")
+_cc = {k: (r.status_code, r.headers.get("Cache-Control")) for k, r in
+       (("meta", _meta), ("drafts", _dl), ("draft", _dg))}
+check("the cards' meta and the drafts say private, no-store",
+      all(code == 200 and (cc or "").replace(" ", "") == "private,no-store" for code, cc in _cc.values())
+      and "secret title" in _meta.get_data(as_text=True),
+      f"{_cc}; draft save {_ds.status_code}")
+
 print("\nINTEGRATION — the contract refuses to be used wrongly")
 try:
     skribl.create_blueprint()

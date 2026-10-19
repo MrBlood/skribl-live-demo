@@ -19793,3 +19793,57 @@ three rows. No lift rule: only the tap row. The fix: 11/11 on that part of the
 suite.
 
 Pad and Flip: shared, one module.
+
+## After v326 -- the server review: what a hand-built request, a smaller host and a big photo meet (bug fixes)
+
+A read-only review of the server and its documents, before the next seal,
+found six things a request or a host could reach. Each was reproduced with
+the test client; each now has a row that is red on the code before it.
+
+- A point's time `t` was never bounded. An infinite one (1e400 in the JSON),
+  a 400-digit one, or a gap too wide for a float answered 500 when the line
+  under the post was summed; a NaN was stored as a bare NaN token, which no
+  browser can read back, so the post could never play. A 400-digit x
+  answered 500 too, through math.isfinite. `t` is now finite and within a
+  million million milliseconds, an int of any length counts as finite, a NaN
+  anywhere else in the payload is refused (json.dumps with allow_nan=False,
+  where the remainder is measured), and the line refuses to sum what it cannot.
+  The editors never send these; a hand-built request can.
+- A host with no SECRET_KEY, on the memory rate limiter it gets by default,
+  answered 500 to every play and every report: the limiter's identity hash
+  demanded a key only the db backend stores. Memory forgets on a restart, so
+  it now uses a key that lasts the process. The db backend still refuses.
+- A photo or a song too big to post told the person a field path: "Couldn't
+  post. 'frames[0].photo.data' is too large (8200 kB; limit 8000 kB)." It now
+  says "The photo is too big to post (8.2 MB; up to 8 MB). Try a smaller
+  one.", and "save" for a draft. The field's version moved to a `detail` key
+  for an API caller to match on.
+- A DELETE's body (its delete key) escaped the request cap that bounds POST,
+  PUT and PATCH: 50 KB of it answered 204 where the same on a PATCH was 413.
+  It is bounded on the read now, chunked included, and a DELETE that sends no
+  body still needs no length.
+- The cards' meta, which can carry a private post's title, and the two
+  drafts reads went out with no Cache-Control. They say private, no-store,
+  as the listing and the payload already did.
+- The demo with SKRIBL_DEMO_IDENTITY set, no login key and CSRF off logged
+  that nobody was signed in and the demo would run anonymous, then refused to
+  boot for want of CSRF. The refusal is the design verify_hostseams pins (an
+  identity without CSRF fails closed, naming the switch); the warning now
+  comes only when the demo does boot, with CSRF on.
+
+And the documents it found out of date: SESSION-CONTEXT's standing
+preferences contradicted WORKING-AGREEMENTS on the PR ending, the branch and
+how many options a mock offers, and now point there. The README described the
+in-post player before v322, and put the CSP nonce in app.py rather than
+skribl/security.py. INTEGRATION's asset list missed the line's three modules,
+said the box is always 16:9, and said a draft has no Library entry. Five
+source comments described caching, demo tiles and an idempotency scope that
+are gone. FUTURE's 6m and 6o did not say they were built.
+
+Checks: verify_apiedges (the time, the 400-digit x, NaN elsewhere, and the
+two baseSnapshot rows reading the field from `detail`), verify_media (every
+refusal in plain words with its field in `detail`, and the 8.2 MB photo),
+verify_integration (the host with no key, the DELETE body, the private
+headers), verify_hostconfig (the demo's refusal said once, and its warning
+when it boots). Red on the code before: apiedges 53/61, media 15/25,
+integration 26/29, hostconfig 56/57.
