@@ -176,12 +176,13 @@ GEOM = """(t) => {
   const cv = box.querySelector('.skribl-inline-canvas'), img = box.querySelector('.skribl-inline-poster');
   const R = e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; };
   const live = cv && !cv.hidden;
-  let d;
+  let d, plate = 0;
   if (live) d = R(cv);
   else { const p = img.getBoundingClientRect(), s = p.width / 1200, q = img._d;
-         d = [p.left + (q[0] + 2) * s, p.top + (q[1] + 2) * s, p.left + (q[0] + q[2] - 2) * s, p.top + (q[1] + q[3] - 2) * s]; }
+         d = [p.left + (q[0] + 2) * s, p.top + (q[1] + 2) * s, p.left + (q[0] + q[2] - 2) * s, p.top + (q[1] + q[3] - 2) * s];
+         plate = (18 - 2) * s; }
   const btn = c => { const e = bar.querySelector('.skfull-' + c); return e && { r: R(e), ink: getComputedStyle(e).color }; };
-  return { live, bar: R(bar), box: R(box), stage: R(t.querySelector('.tileStage')), drawing: d,
+  return { live, plate, bar: R(bar), box: R(box), stage: R(t.querySelector('.tileStage')), drawing: d,
            time: R(bar.querySelector('.skfull-dur')), timeInk: getComputedStyle(bar.querySelector('.skfull-dur')).color,
            play: R(bar.querySelector('.skfull-play')), loop: btn('loop'), mute: btn('mute'), full: btn('full'),
            radius: parseFloat(getComputedStyle(box).borderBottomLeftRadius), border: parseFloat(getComputedStyle(box).borderBottomWidth),
@@ -261,6 +262,21 @@ class Card:
         return tuple(sorted(p[i] for p in ring)[len(ring) // 2] for i in range(3))
 
 
+def outside_corners(c, bare, gone, x0, x1, y1, rad):
+    """Points just outside the drawing's two bottom rounds (2.5px past the
+    arc, inside its square corner): where a rectangle of fade would paint the
+    drawing's paper over the card. The largest change there, bar fade alone
+    against bar away."""
+    out = []
+    for side, cx in ((-1, x0 + rad), (1, x1 - rad)):
+        cy = y1 - rad
+        for a in range(15, 80, 8):
+            t = math.radians(a)
+            x, y = cx + side * (rad + 2.5) * math.cos(t), cy + (rad + 2.5) * math.sin(t)
+            out.append(ratio(c.px(bare, x, y), c.px(gone, x, y)))
+    return max(out), len(out)
+
+
 def frange(a, b, step):
     x = a
     while x < b:
@@ -306,15 +322,9 @@ with sync_playwright() as p:
     # Just outside the drawing's bottom corners, on the card's own colour:
     # where a rectangle of fade would have painted the paper over the round.
     rad, bw, bx = g["radius"], g["border"], g["box"]
-    rin, corner = rad - bw, []
-    for side in (-1, 1):
-        cx, cy = (bx[0] + bw + rin) if side < 0 else (bx[2] - bw - rin), bx[3] - bw - rin
-        for a in range(15, 80, 8):
-            t = math.radians(a)
-            corner.append(ratio(c.px(bare, cx + side * (rin + 2.5) * math.cos(t), cy + (rin + 2.5) * math.sin(t)),
-                                c.px(gone, cx + side * (rin + 2.5) * math.cos(t), cy + (rin + 2.5) * math.sin(t))))
+    worst, npts = outside_corners(c, bare, gone, bx[0] + bw, bx[2] - bw, bx[3] - bw, rad - bw)
     check("...and the fade stays inside the drawing's round corners (the card's colour just outside them is untouched)",
-          max(corner) <= 1.05, f"largest change {max(corner):.2f} over {len(corner)} points outside the two corners")
+          worst <= 1.05, f"largest change {worst:.2f} over {npts} points outside the two corners")
     check("...and on a phone the row sits inside the drawing, not over the card's edge",
           g["play"][0] >= d[0] + 2 and g["time"][2] <= d[2] - 2,
           f"play's left {g['play'][0]:.1f} and time's right {g['time'][2]:.1f} against the drawing {d[0]:.1f}..{d[2]:.1f}")
@@ -346,8 +356,11 @@ with sync_playwright() as p:
           all(lum(v) > 0.5 for v in fills.values()),
           ", ".join(f"{k} {lum(v):.2f}" for k, v in fills.items()))
     d, ym = c.g["drawing"], (c.g["bar"][1] + c.g["bar"][3]) / 2
-    moved, _, _ = c.fade_moves(d[0] + 3, d[2] - 3, ym)
+    moved, bare, gone = c.fade_moves(d[0] + 3, d[2] - 3, ym)
     check("...and the fade cannot be seen on its empty paper", moved is not None and moved <= 1.10, f"median {moved:.2f}")
+    worst, npts = outside_corners(c, bare, gone, d[0], d[2], d[3], c.g["plate"])
+    check("...and it keeps to the card image's own rounder corners (the plate's)",
+          worst <= 1.05, f"largest change {worst:.2f} over {npts} points outside the plate's {c.g['plate']:.1f}px rounds")
     c = Card(pg, titles["dark"], phone=True, play=False)
     shown = c.shot()
     fills = {k: c.fill(shown, k) for k in ("loop", "full")}
