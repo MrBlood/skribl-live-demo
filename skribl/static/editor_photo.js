@@ -275,64 +275,8 @@ updateSliderFill(photoBlurEl);
     if (el) addSliderNudgers(el, { step: parseFloat(el.step) || 1 });
   });
 
-  // ---- (2) Loop Detail pan: scroll slider + waveform drag ----
-  const zoomWrap = document.getElementById('zoomTrackWrap');
-  if (zoomWrap) {
-    const panRow = document.createElement('div');
-    panRow.className = 'zoom-pan-row';
-    panRow.innerHTML =
-      '<span class="zoom-pan-label">Scroll</span>' +
-      '<input type="range" id="zoomPanSlider" class="slider" min="0" max="1000" value="500" step="1" aria-label="Scroll the loop detail view">';
-    zoomWrap.insertAdjacentElement('afterend', panRow);
-    const panSlider = document.getElementById('zoomPanSlider');
-    panSlider.addEventListener('input', () => {
-      if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
-      zoomCenter = (parseInt(panSlider.value, 10) / 1000) * audioDuration;
-      zoomFocus = 'free';
-      syncZoomFocusButtons();
-      updateTrimUI();
-    });
-    addSliderNudgers(panSlider, {
-      nudgeFn: (dir) => {
-        if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
-        const zw = getZoomWindow();
-        const center = (zw.start + zw.end) / 2;
-        const half = zw.duration / 2;
-        const lo = half, hi = Math.max(half, audioDuration - half);
-        zoomCenter = Math.max(lo, Math.min(center + dir * zw.duration * 0.1, hi));
-        zoomFocus = 'free';
-        syncZoomFocusButtons();
-        updateTrimUI();
-      }
-    });
-    dragZoomPan(zoomWrap);
-  }
-
-  // ---- (3) Crossfade control (bake-only; default Off) ----
-  const finePanel = document.querySelector('.finetune-panel');
-  const cfRow = document.createElement('div');
-  cfRow.className = 'crossfade-row';
-  cfRow.innerHTML =
-    '<span class="crossfade-label">Crossfade</span>' +
-    '<input type="range" id="crossfadeSlider" class="slider" min="0" max="500" value="0" step="5" aria-label="Loop crossfade length">' +
-    '<span class="crossfade-val" id="crossfadeVal">Off</span>';
-  if (finePanel) finePanel.insertAdjacentElement('afterend', cfRow);
-  else {
-    const preRow = document.querySelector('.loop-preview-row');
-    if (preRow) preRow.parentNode.insertBefore(cfRow, preRow);
-  }
-  const cf = document.getElementById('crossfadeSlider');
-  if (cf) {
-    cf.addEventListener('input', () => {
-      loopCrossfadeMs = parseInt(cf.value, 10) || 0;
-      setCrossfadeUI();
-      // Refresh the loop waveform so the amber crossfade bands track the slider.
-      if (typeof updateTrimUI === 'function') updateTrimUI();
-      if (typeof scheduleAutosave === 'function') scheduleAutosave();
-    });
-    addSliderNudgers(cf, { step: 5 });
-    setCrossfadeUI();
-  }
+  // The Loop Detail's Scroll and Crossfade are the music drawer's now
+  // (lib/musicdrawer.js, shared with Flip, their rows in the drawer's markup).
 })();
 
 /* ---- CARVED OUT OF app.js -----------------------------------------
@@ -499,34 +443,6 @@ function beginPhotoDrag(e) {
   window.addEventListener('pointermove', move, { passive: false });
   window.addEventListener('pointerup', up);
   window.addEventListener('pointercancel', up);
-}
-
-// Drag the Loop Detail waveform to pan the window. Ignores drags that start on
-// an edge handle (those resize the loop) so the two never fight.
-function dragZoomPan(wrap) {
-  SkriblDragTrack.bind(wrap, function (e) {
-    if (!audioEl || !Number.isFinite(audioDuration) || audioDuration <= 0) return null;
-    if (e.target.closest('.zoom-handle')) return null;   // let the handle drag win
-    e.preventDefault();
-    const rect = wrap.getBoundingClientRect();
-    const zw = getZoomWindow();
-    const startCenter = (zw.start + zw.end) / 2;
-    const winDur = zw.duration;
-    const startX = SkriblEventPoint.at(e).clientX;
-    wrap.classList.add('panning');
-    return {
-      move: function (clientX) {
-        const deltaT = -((clientX - startX) / rect.width) * winDur;
-        const half = winDur / 2;
-        const lo = half, hi = Math.max(half, audioDuration - half);
-        zoomCenter = Math.max(lo, Math.min(startCenter + deltaT, hi));
-        zoomFocus = 'free';
-        syncZoomFocusButtons();
-        updateTrimUI();
-      },
-      end: function () { wrap.classList.remove('panning'); }
-    };
-  });
 }
 
 /* THE BINDING TRAVELS WITH THE FUNCTION, and leaving it behind is what the

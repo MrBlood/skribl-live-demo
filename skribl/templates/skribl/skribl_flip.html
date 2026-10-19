@@ -396,9 +396,10 @@
     <div class="flip-menu" id="moreMenu" role="dialog" aria-modal="true" aria-label="More options" hidden>
       {% with kind='flip' %}{% include 'skribl/_skribl_menu.html' %}{% endwith %}
     </div>
-    <input type="file" id="imageInput" aria-label="Choose an image file" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden">
-    <input type="file" id="musicInput" aria-label="Choose an audio file" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" class="vis-hidden">
-    <input type="file" id="draftInput" aria-label="Open a saved .skribl file" accept=".skribl,application/json,text/plain,application/octet-stream,text/*" class="vis-hidden">
+    {# Out of the Tab order: visually hidden, a keyboard stopped on them and saw
+       nothing (the music drawer's own input is display:none, as the Pad's are). #}
+    <input type="file" id="imageInput" aria-label="Choose an image file" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden" tabindex="-1">
+    <input type="file" id="draftInput" aria-label="Open a saved .skribl file" accept=".skribl,application/json,text/plain,application/octet-stream,text/*" class="vis-hidden" tabindex="-1">
     {% include 'skribl/_skribl_hello.html' %}
     {% with kind='flip' %}{% include 'skribl/_skribl_help.html' %}
 {% endwith %}
@@ -554,6 +555,9 @@
   {# lib/loopwave.js: the zoomed loop view -- window, handles, waveform -- one copy (v315). #}
   <script src="{{ skribl_asset('lib/loopwave.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/zoomstep.js') }}" defer></script>
+  {# lib/musicdrawer.js: the music drawer's controls, one copy with the Pad's (the owner:
+     "the same music editor on both pad and flip"). Before flip.js, which wires it. #}
+  <script src="{{ skribl_asset('lib/musicdrawer.js') }}" defer></script>
   <!-- Flip ONLY, deliberately. flip.js is not served to the player, so nothing
        here reaches a shared link. Adding it to app.js would put it on the
        player's critical path, and that path is currently OVER its byte ratchet

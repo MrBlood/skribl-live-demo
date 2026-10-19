@@ -110,7 +110,15 @@ shared = sorted(app_fns & flip_fns)
 # 60 -> 62, RECOUNTED rather than raised: the census reads the Pad's whole
 # surface now (above), and 62 is what it finds, after the music preview carve
 # as before it.
-PARALLEL_RATCHET = 62
+# 62 -> 53, the right way at last, and by the cure v211 named: one music
+# editor (lib/musicdrawer.js). Ten names left both files -- dragHandle,
+# dragRangeWindow, dragZoomHandle, dragZoomPan, nudgeTrim, updateNudgeStepLabel,
+# setLoopToDrawingLength, startLoopPreview, startLoopPreviewNative,
+# syncZoomFocusButtons -- and one came in, resetMusicView, the same kind of
+# one-line adapter as the four that stayed (stopLoopPreview, setCrossfadeUI,
+# updateZoomPanSlider): each editor's typeof-guarded callers reach the shared
+# drawer through it, and the drawer itself is written once.
+PARALLEL_RATCHET = 53
 check(f"the Pad (app.js and its editor modules) and flip.js define at most "
       f"{PARALLEL_RATCHET} of the same function names", len(shared) <= PARALLEL_RATCHET,
       f"{len(shared)}: {', '.join(shared[:8])}... — each one is a fix that has "

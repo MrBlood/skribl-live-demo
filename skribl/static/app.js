@@ -286,8 +286,6 @@ function syncStateAfterHistoryChange(restoredHasContent) {
     durationBadge.hidden = !showTakeControls;
   } else {
     durationBadge.hidden = true;
-    const matchLabel = document.getElementById('matchDrawingLabel');
-    if (matchLabel) matchLabel.textContent = '';
   }
   document.querySelector('.header').classList.toggle('compact', recording || recorded);
   updateEmptyHint();
@@ -1447,10 +1445,6 @@ function updateDrawingTimeLabels() {
   if (durationBadge) {
     durationBadge.textContent = formatDuration(playMs);
   }
-  const matchLabel = document.getElementById('matchDrawingLabel');
-  if (matchLabel) {
-    matchLabel.textContent = strokes.length ? 'Plays for ' + formatDuration(playMs) : '';
-  }
 }
 
 let recTimerInterval = null;
@@ -1610,8 +1604,6 @@ function clearCanvas() {
   postBtn.disabled = true;
   document.querySelector('.header').classList.remove('compact');
   updateClearVisibility();
-  const matchLabel = document.getElementById('matchDrawingLabel');
-  if (matchLabel) matchLabel.textContent = '';
   if (ZoomView) ZoomView.fit();
   clearBackup = null;                       // a fresh clear/reset invalidates any prior undo snapshot
   if (typeof updateClearUndoBtn === 'function') updateClearUndoBtn();
@@ -2216,14 +2208,6 @@ function getZoomWindow() {
                                             mag: zoomMag, center: zoomCenter, focus: zoomFocus });
 }
 
-// Reflect the active focus anchor on the Loop/Start/End buttons; nothing is
-// highlighted while free-panning ('free'). Called when panning takes over.
-function syncZoomFocusButtons() {
-  document.querySelectorAll('.zoom-mag-btn[data-focus]').forEach(b => {
-    b.classList.toggle('on', zoomFocus !== 'free' && b.dataset.focus === zoomFocus);
-  });
-}
-
 function updateZoomHandles() {
   if (!zoomTrackWrap || !zoomHandleStart || !zoomHandleEnd || !window.SkriblLoopWave) return;
   if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
@@ -2393,83 +2377,15 @@ function isImageFile(file) {
   return SKRIBL_IMAGE_EXTENSIONS.test(file.name || '');
 }
 
-function setLoopToDrawingLength() {
-  if (!audioEl || !strokes.length) return;
-  const drawingSeconds = getPlaybackDuration() / 1000;
-  const loopLength = window.SkriblLoopTrim.loopLength(drawingSeconds, audioDuration);
-  // Resize in place: keep the current start, just change the length. Only pull
-  // the start back if the loop would otherwise run past the end of the song.
-  trimEnd = trimStart + loopLength;
-  if (trimEnd > audioDuration) {
-    trimEnd = audioDuration;
-    trimStart = Math.max(0, trimEnd - loopLength);
-  }
-  updateTrimUI();
-}
 
 
 
-
-// Drag the middle of the selection to slide the whole loop window along the
-// song, keeping its length locked. Edges (handles) still resize independently
-// because they sit above the range in z-order. Stops at the song boundaries.
-
-// --- Match drawing and the loop nudgers (Preview Loop and Test Seam are
-// editor_music.js's) ---
-const matchDrawingBtn = _authoringCtl('matchDrawingBtn');
-
-const nudgeSteps = [0.01, 0.02, 0.05, 0.1];
-let nudgeStepIdx = 3;
-const nudgeStepLabel = document.getElementById('nudgeStepLabel');
-const nudgeStepFinerBtn = _authoringCtl('nudgeStepFiner');
-const nudgeStepCoarserBtn = _authoringCtl('nudgeStepCoarser');
-
-function updateNudgeStepLabel() {
-  nudgeStepLabel.textContent = nudgeSteps[nudgeStepIdx] + 's';
-  nudgeStepFinerBtn.disabled = nudgeStepIdx === 0;
-  nudgeStepCoarserBtn.disabled = nudgeStepIdx === nudgeSteps.length - 1;
-}
-
-nudgeStepFinerBtn.addEventListener('click', () => {
-  nudgeStepIdx = Math.max(0, nudgeStepIdx - 1);
-  updateNudgeStepLabel();
-});
-
-nudgeStepCoarserBtn.addEventListener('click', () => {
-  nudgeStepIdx = Math.min(nudgeSteps.length - 1, nudgeStepIdx + 1);
-  updateNudgeStepLabel();
-});
-
-function nudgeTrim(which, direction) {
-  if (!audioEl) return;
-  // Guard against a stray caller (e.g. a button without data-which/amount):
-  // a NaN amount would corrupt trimEnd and make updateTrimUI reset the loop.
-  if ((which !== 'start' && which !== 'end') || !Number.isFinite(direction)) return;
-  const amount = direction * nudgeSteps[nudgeStepIdx];
-  // 'slide', matching Flip's nudge and both zoom tracks.
-  {
-    const _n = window.SkriblLoopTrim.setHandle(
-      { start: trimStart, end: trimEnd, duration: audioDuration },
-      which, (which === 'start' ? trimStart : trimEnd) + amount, 'slide');
-    trimStart = _n.start; trimEnd = _n.end;
-  }
-  updateTrimUI();
-}
-
-// Only the loop-edge nudgers carry data-which; scope to them so the step-size
-// +/- buttons (which share the .nudge-btn class) can't trigger a trim nudge.
-document.querySelectorAll('.nudge-btn[data-which]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    nudgeTrim(btn.dataset.which, parseFloat(btn.dataset.amount));
-  });
-});
-
-matchDrawingBtn.addEventListener('click', setLoopToDrawingLength);
 
 // Preview Loop's flag. stopPlayback reads it, and the player reaches
-// stopPlayback through loadSkribl, so it stays here: the preview itself, Test
-// Seam and Play's music loop are editor_music.js's, which the player never
-// loads.
+// stopPlayback through loadSkribl, so it stays here. The music drawer's
+// controls (the loop's edges and nudges, Match Drawing Time, Preview Loop and
+// Test Seam) are lib/musicdrawer.js's, shared with Flip, and Play's music loop
+// is editor_music.js's: the player loads neither.
 let previewingLoop = false;
 
 // --- Eraser cursor ---
@@ -2659,45 +2575,6 @@ const photoBlurValEl = document.getElementById('photoBlurVal');
 
 // Set initial track fills so both sliders render correctly before any input
 
-// ===== Slider nudgers + Loop Detail pan + crossfade control =================
-// Three related additions, all self-contained (DOM + CSS injected here so the
-// whole feature lives in this file and neither HTML template needs editing):
-//   (1) +/- buttons on every range slider, for exact incremental control since
-//       a slider alone can't land on a precise value on a phone.
-//   (2) Scroll the Loop Detail window anywhere along the song — drag the
-//       waveform or use a scroll slider — instead of only the Loop/Start/End
-//       anchors. Adds a pan center to getZoomWindow (already wired above).
-//   (3) A loop crossfade length control (bake-only — see buildTrimmedLoopWav).
-
-// The - / + beside each range slider: lib/slidernudge.js, one copy for both
-// editors (Flip's had drifted). Not loaded by the player, which has no sliders.
-
-// Sync the crossfade slider + label from loopCrossfadeMs (load / re-add / reset).
-function setCrossfadeUI() {
-  const s = document.getElementById('crossfadeSlider');
-  const v = document.getElementById('crossfadeVal');
-  if (s) { s.value = loopCrossfadeMs; if (typeof updateSliderFill === 'function') updateSliderFill(s); }
-  if (v) v.textContent = loopCrossfadeMs > 0 ? loopCrossfadeMs + ' ms' : 'Off';
-}
-
-// Reflect the current zoom-window center onto the pan slider (called from
-// updateTrimUI). No-op until the slider is injected.
-function updateZoomPanSlider() {
-  const s = document.getElementById('zoomPanSlider');
-  if (!s) return;
-  if (!Number.isFinite(audioDuration) || audioDuration <= 0) { s.value = 500; return; }
-  const zw = getZoomWindow();
-  const center = (zw.start + zw.end) / 2;
-  const frac = Math.max(0, Math.min(1, center / audioDuration));
-  s.value = Math.round(frac * 1000);
-  if (typeof updateSliderFill === 'function') updateSliderFill(s);
-}
-
-
-
-
-
-
 // ---------- Skribl name (title) ----------
 // The name-tab UI + auto-default naming live in lib/nametab.js, shared with
 // Flip (window.SkriblName). serializeSkribl reads the current title through it.
@@ -2762,6 +2639,12 @@ function captureCurrentFrame() {
     if (hasContent && strokes.length === 0) baseSnapshot = canvas.toDataURL();
     else if (preRecordSnapshot) baseSnapshot = preRecordSnapshot;
   } catch (e) { baseSnapshot = null; }
+  // A track switched off stays in the draft, marked so, as Flip's does; a
+  // post leaves it out (editor_post.js). Dropping it lost the song.
+  const music = audioEl && audioEl._objectUrl
+    ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs }
+    : null;
+  if (music && !musicEnabled) music.enabled = false;
   return {
     strokes: strokes.slice(),
     strokeGroups: strokeGroups.slice(),
@@ -2770,9 +2653,7 @@ function captureCurrentFrame() {
     photo: photoBgImg && photoBgImg._draftData && photoBgImg.style.display !== 'none'
       ? { data: photoBgImg._draftData, name: photoBgImg._fileName || null, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
       : null,
-    music: audioEl && audioEl._objectUrl && musicEnabled
-      ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs }
-      : null
+    music: music
   };
 }
 
@@ -2919,7 +2800,7 @@ function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBu
 const _waLoop = window.SkriblAudioLoop.engine({
   ctx: () => audioCtx,
   build: buildLoopAudioBuffer,
-  rate: musicRate,
+  rate: () => previewingLoop ? 1 : musicRate(),   // a preview is the loop as posted
 });
 function stopWebAudioLoop() { _waLoop.stop(); }
 // Called from the Play handler INSIDE the gesture (F3): Play reaches start()
@@ -2996,11 +2877,12 @@ function resetMediaForLoad() {
   // would throw the moment the player's template drops the editor shell.
   if (!document.body.classList.contains('player-mode')) {
     if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
+    if (typeof resetMusicView === 'function') resetMusicView();   // whole loop, 1x
     if (musicDetail) musicDetail.hidden = true;
     if (musicInput) musicInput.value = '';
     if (musicUploadBtn) musicUploadBtn.classList.remove('loaded');
-    // A draft stores no switch: what it saved plays. A switch left off by the
-    // last session would call the draft's track "Muted" and silence it.
+    // On, unless the draft's track says it was switched off (below): a
+    // switch left off by the last session must not silence this one's.
     if (typeof resetMusicToggle === 'function') resetMusicToggle();
     if (typeof padMusicRow === 'function') padMusicRow();
     if (musicTabDot) musicTabDot.hidden = true;
@@ -3221,6 +3103,7 @@ function loadSkribl(data) {
     trimStart = data.music.trimStart != null ? data.music.trimStart : 0;
     trimEnd = data.music.trimEnd != null ? data.music.trimEnd : null;
     loopCrossfadeMs = data.music.crossfadeMs != null ? data.music.crossfadeMs : 0;
+    if (data.music.enabled === false) { musicEnabled = false; syncLayerToggle(document.getElementById('musicToggle'), false); }
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     fetch(data.music.data).then(r => r.arrayBuffer()).then(buf => {
       if (loadSeq !== skriblLoadSeq) return;   // superseded before the bytes arrived
@@ -4460,13 +4343,7 @@ function resetMusicToggle() { musicEnabled = true; syncLayerToggle(document.getE
     if (photoBgImg) photoBgImg.style.display = (photoEnabled && photoBgImg.src) ? 'block' : 'none';
     if (typeof updateRepositionUI === 'function') updateRepositionUI();
   });
-  const mt = document.getElementById('musicToggle');
-  if (mt) mt.addEventListener('click', (e) => {
-    e.stopPropagation();
-    musicEnabled = !musicEnabled;
-    syncLayerToggle(mt, musicEnabled);
-    if (!musicEnabled && audioEl) audioEl.pause();
-  });
+  // The music switch is the music drawer's (lib/musicdrawer.js), as on Flip.
 })();
 
 

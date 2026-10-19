@@ -2749,12 +2749,6 @@ body.replaying .tab-panel > * { opacity: var(--drawer-rest); }
   flex-wrap: wrap;
 }
 
-.match-drawing-label {
-  color: var(--ui-hi);
-  font-weight: 600;
-  margin-left: 4px;
-}
-
 .loop-summary {
   font-size: 12px;
   color: var(--text-tool);

@@ -383,6 +383,19 @@ stays a sleep.
   not Flip Mode; P and E on both; Smudge; how to ask a button; the name's
   reach); Ask's drafts and draw-more answers; the Post and Shape cards; the
   book's speeds; and Draw along's ending, whole in a phone's pill.
+- `verify_music.py` — one music editor on both editors (lib/musicdrawer.js,
+  the owner's "it needs to be the same music editor on both pad and flip"),
+  every row driven on the Pad and on Flip and red on one of them before: no
+  editor keeps its own copy of a control; the Scroll and Crossfade rows are
+  the drawer's markup; one file input, out of the Tab order; the step size
+  named the same; Crossfade carries a playing preview to the new join; Test
+  Seam plays the join, crossfade and all; Preview Loop's fallback is the
+  baked clip, at 1x whatever the replay's speed; an edge let go off the strip
+  is saved; Match Drawing Time counts each page at its own length and leaves
+  an empty Flip alone; the switch silences Play and a preview, brings Play's
+  music back, and a switched-off track stays in a Pad draft, its autosave and
+  its reopening while a post leaves it out; a new track starts at 1x; a photo
+  named song.mp3 is refused by its type; and Play stops a preview.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

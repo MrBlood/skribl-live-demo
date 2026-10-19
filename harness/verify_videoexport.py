@@ -263,7 +263,7 @@ with sync_playwright() as p:
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
     pg.wait_for_function("() => !!musicData && !!currentAudioBuffer", timeout=15000)
     pg.evaluate(PAGES, {"n": 3, "fps": 4, "colors": ["#ff2020", "#20c020", "#2040ff"]})
-    on = pg.evaluate("() => musicEnabled && !musicMuted")
+    on = pg.evaluate("() => musicEnabled")
     withm, withm_chip = flip_export(pg)
     minfo = webm(withm)
     check("with music on, the WebM has a video track AND an audio track",

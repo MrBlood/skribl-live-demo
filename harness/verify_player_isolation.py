@@ -884,7 +884,15 @@ with sync_playwright() as sp:
     #   editor_music.js, -6,992 B (app.js 113,584 -> 106,592 parsed), which
     #   brings the player back under BYTES_TARGET with 2,127 B to spare. The
     #   room is not spent: the ratchet follows it down. 151,673 measured.
-    BYTES_RATCHET, BYTES_TARGET = 151_678, 153_800
+    # LOWERED (the owner: "it needs to be the same music editor on both pad
+    #   and flip"): the music drawer's controls left app.js for
+    #   lib/musicdrawer.js, one copy for both editors that the player never
+    #   loads -- the edges' nudges and step, Match Drawing Time, Crossfade's
+    #   and Scroll's sync, the focus cells' sync, the music switch and the
+    #   "Plays for" label that never showed (-3,194 B), less what the Pad's
+    #   draft now says of a switched-off track and the view's reset on a load
+    #   (+60). 148,536 measured; the ratchet follows it down.
+    BYTES_RATCHET, BYTES_TARGET = 148_541, 153_800
     # The page's own HTML. The brand is the one-stroke skribl signature INLINE
     # in the page (~1.4KB of paths, a ~0.9KB nonce'd draw-on script, and the
     # <linearGradient> defs), and inline is load-bearing rather than lazy:
