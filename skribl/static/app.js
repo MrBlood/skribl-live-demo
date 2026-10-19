@@ -2576,7 +2576,7 @@ function applyPhotoPosition() {
 }
 
 function enterReposition() {
-  if (recording) { showToast('Tap Done to finish the take, then move the photo', document.getElementById('repositionBtn')); return; }
+  if (recording) { showToast('Tap Done, then move the photo', document.getElementById('repositionBtn')); return; }
   repositioning = true;
   const btn = document.getElementById('repositionBtn');
   if (btn) { btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true'); }
@@ -2612,7 +2612,7 @@ function updateRepositionUI() {
     hint.hidden = !available;
     hint.textContent = enabled
       ? 'In Fill, parts of your image may be cropped. Drag the image to choose which part shows behind your drawing.'
-      : 'Tap Done to finish the take, then move the image.';
+      : 'Tap Done, then move the image.';
   }
   if (!enabled && repositioning) exitReposition();
 }

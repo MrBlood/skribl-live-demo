@@ -349,6 +349,14 @@ stays a sleep.
   without), a pick reaching the drawing; the drawing's ground to the screen's
   edges; who drew it in the top corner across from the x, clear on its
   glass, stepping back with the controls; the x and the button leaving.
+- `verify_padedges.py` — the Pad's edges a review found after v326, each
+  driven on the real page and each red on the code before its fix: the photo
+  and the music outlive Clear drawing and a post (a reload said "Media
+  missing"); Undo and Redo during a replay end it first; a shape tap with no
+  drag draws nothing and starts no take; a reload keeps the drawing's name,
+  its pauses and its viewers' speed; New Skribl clears a photo on its own; an
+  image export taken mid-replay is the whole drawing; a draft opened over a
+  drawing never played paints its see-through strokes once.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,
