@@ -366,10 +366,13 @@ with sync_playwright() as p:
     side = sorted(ratio(c.px(a, x, ym), c.px(z, x, ym)) for x in frange(left[0], left[1], 1))
     check("on a desk the card's own colour beside the drawing is untouched by the fade",
           side and side[-1] <= 1.05, f"largest change {side[-1]:.2f} across the card beside the drawing; the scrim was 7.0 on a light page")
+    # MUTE, NOT LOOP: Repeat is lit by default, and its violet tint over a
+    # dark card reads dark in either glass, so a Loop that never turned
+    # passed the row below (calibration: the theme watch removed, still green).
     shown = c.shot()
-    over = c.fill(shown, "loop")
+    over = c.fill(shown, "mute")
     check("...and a control over the card's colour takes ITS tone: light glass on a light page",
-          lum(over) > 0.5, f"Loop's fill {lum(over):.2f}, over the card beside the drawing")
+          lum(over) > 0.5, f"Mute's fill {lum(over):.2f}, over the card beside the drawing")
     tw = c.time_worst()
     check("...and the time over it reads", tw >= 4.5, f"worst {tw:.2f}:1")
     # The page's theme turns: the card's colour with it, and the control too.
@@ -377,9 +380,9 @@ with sync_playwright() as p:
     pg.wait_for_timeout(400)
     c.g = c.tile.evaluate(GEOM)
     shown = c.shot()
-    over = c.fill(shown, "loop")
+    over = c.fill(shown, "mute")
     check("...and when the page turns dark, that control turns to dark glass with it",
-          lum(over) < 0.2, f"Loop's fill {lum(over):.2f} after the theme turned")
+          lum(over) < 0.2, f"Mute's fill {lum(over):.2f} after the theme turned")
     pg.close()
 
     print("\nCARD FADE — a drawing that cannot be read keeps the scrim")
