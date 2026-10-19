@@ -364,10 +364,13 @@
           smartCards.push({ wrap: wrap, update: update });
           update();
         },
+        /* The host has left (a search or a sort rebuilds the grid): its
+           watches go, and so does its place in the theme's list. */
         stop: function () {
           if (ro) ro.disconnect();
           if (mo) mo.disconnect();
           ro = mo = null;
+          smartCards = smartCards.filter(function (c) { return c.wrap !== wrap; });
         }
       };
     }
