@@ -19399,3 +19399,22 @@ eyedropper picking, Play, the nudges) keep it: an icon needs 3:1.
 A11Y 6c lists the seven, by the rule each is drawn by (the bars' two Done
 buttons are two entries). On the old colours all 16 readings failed, light and
 dark; with the action violet, 16 of 16 pass.
+
+## After v326 -- the clock clears the playhead in full screen
+
+Found while measuring the full-screen fade's mock: on the link page in full
+screen, at a drawing's end, where a finished drawing rests, the scrubber's
+playhead sat on the last digit of the clock under it. The clock's -10px pull
+was set for the old 6px track; under the scrubber's 30px bar it leaves the
+clock 1px below the bar in full screen's 11px gap, and the playhead pokes 3px
+past the bar with a 2px ring. On the page the column's 16px gap leaves 6px, so
+the page was clear.
+
+In full screen the clock sits 6px under the bar too (`margin-top: -5px` after
+an `.rl-scrub`). The rule is state-only, so it is listed live in
+css_live.json for the player's CSS, which is all the link page loads.
+
+verify_fullfade reads it off painted pixels, phone and desk: the clock's row
+shot as shown, with the playhead away, and with the digits see-through; no
+pixel may be both the playhead's and a digit's. Red on the old rule (5 pixels
+on a phone, 2 on a desk) and with the rule left out of player.css alone.

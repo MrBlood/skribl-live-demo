@@ -1392,6 +1392,12 @@ body.player-mode .app {
    matters, and a 340px track is a coarse instrument for it. */
 :is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-progress,
 :is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .player-time { max-width: none; }
+/* THE CLOCK CLEARS THE PLAYHEAD. Its -10px pull (below) was set for the 6px
+   track; under the scrubber's 30px bar, in this band's 11px gap, it left the
+   clock 1px under the bar, and the playhead pokes 3px past the bar with a 2px
+   ring: at a drawing's end, where a finished drawing rests, it sat on the last
+   digit. 6px under, as on the page, where the column's 16px gap makes it. */
+:is(.canvas-wrap, .watch-full):is(:fullscreen, .is-immersive-page) .rl-scrub + .player-time { margin-top: -5px; }
 
 /* CONTROLS THAT STEP BACK (lib/chromefade.js; the owner's picks for every
    full screen -- the link page's, the editors', and the Gallery's and the
