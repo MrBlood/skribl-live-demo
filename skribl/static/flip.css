@@ -788,8 +788,12 @@
   .frame .holdbadge.idle { background: rgba(var(--glass-deep-2-rgb), .82); color: var(--text-secondary); }
   @media (hover: hover) { .frame .holdbadge:hover { filter: brightness(1.12); } }
   .frame .holdbadge:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
-  /* The drawn ×, a capital's height beside the count (flip.js HOLD_X). */
-  .frame .holdbadge .holdx { width: 8px; height: 8px; margin-right: 1px; vertical-align: 0; }
+  /* The drawn ×, a capital's height beside the count (flip.js HOLD_X): 1cap
+     is the face's own capital, so the ×'s box runs baseline to cap like the
+     digits beside it and the two share a middle in any font. At a fixed 8px
+     it sat a third of a pixel under them in DejaVu Sans, and verify_icons read
+     the badge 0.78px low there; where cap is unsupported, 8px as before. */
+  .frame .holdbadge .holdx { width: 8px; height: 8px; width: 1cap; height: 1cap; margin-right: 1px; vertical-align: 0; }
   .btn.flip-play:disabled { opacity: .38; cursor: default; box-shadow: none; }
   /* The menu the ⋯ opens. Fixed rather than absolute so it escapes the strip's
      own overflow — a popover clipped by the scroller it belongs to is a popover
