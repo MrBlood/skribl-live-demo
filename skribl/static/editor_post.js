@@ -278,6 +278,15 @@
   // Kept local (a few lines duplicated from export) so the delicate export IIFE
   // stays untouched. Returns a <canvas>, or null on failure.
   function buildPreviewCanvas() {
+    /* THE FINISHED DRAWING, NOT THE CANVAS AS IT STANDS. A replay running or
+       paused part-way has the canvas cleared and half redrawn, so a card made
+       then was a picture of the replay so far: Bloom, posted while it replayed,
+       rested in the Gallery as an empty square and drew itself when tapped
+       (the owner, after v326). Ending the replay puts the whole drawing back
+       (stopPlayback), and every caller here is someone posting, saving or
+       attaching it, which ends the watching anyway. Flip draws its card page
+       on its own canvas (flip.js), so it never had this. */
+    if (typeof playing !== 'undefined' && playing && typeof stopPlayback === 'function') stopPlayback();
     try {
       const w = canvas.width, h = canvas.height;
       const out = document.createElement('canvas');

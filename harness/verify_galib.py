@@ -38,6 +38,7 @@ Requires a running server:
 """
 import json
 import os
+import re
 import statistics
 import sys
 import urllib.request
@@ -231,6 +232,26 @@ with sync_playwright() as p:
     b = p.chromium.launch()
 
     # ---- fixtures ---------------------------------------------------------
+    # A MID-TONE DRAWING (after v326): a mid-green took the dark glass by its
+    # average and its words read 3.7:1; the glass picks by what reads now.
+    # And A TALL, PHONE-SHAPED ONE, narrower on a desk than the pill's words.
+    # Posted FIRST, so they are the oldest and the Gallery's first screen is
+    # what it was (a tall card first left five lines of words on a phone's
+    # first screen, where the page's contrast row reads at least six), and in
+    # a context of their own, so the Pad's autosave does not carry them into
+    # the drafts the Pad saves below.
+    _fx = b.new_context(**DESK)
+    _fp = open_page(_fx, "/skribl-pad")
+    for _t, _bg, _w, _h in (("meadow", "#4f7a2a", 816, 612), ("reed", "#1e1640", 390, 844)):
+        _mb = {"title": f"{TAG} {_t}", "version": 2, "schemaVersion": 2, "visibility": "public", "playbackMode": "replay",
+               "frames": [{"strokes": [{"x": 60 + i * 20, "y": 120 + (i % 4) * 25, "color": "#ff4fa3", "size": 8, "t": i * 120} for i in range(14)],
+                           "strokeGroups": [14], "background": {"color": _bg}}],
+               "canvasSize": {"cssWidth": _w, "cssHeight": _h}}
+        _fp.evaluate("(d) => loadSkribl(d)", _mb); _fp.wait_for_timeout(1200)
+        _mb["thumbnail"] = _fp.evaluate("() => window.SkriblPostedCard.build(window.skriblPreviewCanvas())")
+        urllib.request.urlopen(urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_mb).encode(),
+                                                      headers={"Content-Type": "application/json"}), timeout=20).read()
+    _fx.close()
     mine = [post(f"{TAG} {w}") for w in ("coil", "wave", "tide")] + [post(f"{TAG} private", "unlisted")]
     ctx = b.new_context(**DESK)
     pad = open_page(ctx, "/skribl-pad")
@@ -830,11 +851,14 @@ with sync_playwright() as p:
         pg.close()
 
     # ======================================================= THE CARD'S PILL
-    print("\nGALIB 9 -- a gallery card says how it was drawn, in the drawing's corner, off its face")
+    print("\nGALIB 9 -- a gallery card says how it was drawn, centred on the drawing's foot, off its face")
     # The owner's pick A after v324 ("all yes"): the play button is a pill,
-    # "drawn in 1 sec", inside the drawing's lower-left corner -- the drawing,
-    # not the box, which is wider than it two to a row -- and the drawing's
-    # middle is the drawing's again. The title is the strong ink.
+    # "drawn in 1 sec", on the drawing -- the drawing, not the box, which is
+    # wider than it two to a row -- and the drawing's middle is the drawing's
+    # again. The title is the strong ink. CENTRED ON ITS FOOT SINCE the
+    # owner's pick A after v326: in the lower-left corner it ran past a tall
+    # drawing's right edge, read as centred while the drawing did not, and
+    # on a light page its words sat on the card.
     for dev, c_ in (("desk", ctx), ("390", phone)):
         for theme in ("light", "dark"):
             pg = open_page(c_, "/gallery", theme)
@@ -847,11 +871,29 @@ with sync_playwright() as p:
               const d = { l: b.left + (b.width - w) / 2, r: b.right - (b.width - w) / 2, b: b.bottom - (b.height - h) / 2 };
               const mid = document.elementFromPoint((d.l + d.r) / 2, b.top + b.height / 2);
               const tt = getComputedStyle(t.querySelector('.tt')), ink = getComputedStyle(t.querySelector('.tdn')).color;
-              return { words: play.textContent.trim(), inL: Math.round(r.left - d.l), inB: Math.round(d.b - r.bottom),
+              return { words: play.textContent.trim(), inL: Math.round(r.left - d.l), inR: Math.round(d.r - r.right),
+                       off: Math.round(((r.left + r.right) / 2 - (d.l + d.r) / 2) * 10) / 10, inB: Math.round(d.b - r.bottom),
                        midFree: !play.contains(mid), size: tt.fontSize, weight: tt.fontWeight, strong: tt.color !== getComputedStyle(t.querySelector('.tm')).color }; }""", f"{TAG} coil")
-            check(f"/gallery {dev} {theme}: the card's play says 'drawn in 1 sec', 8-16px inside the drawing's lower-left corner, the drawing's middle clear, the title 16px in the strong ink",
-                  bool(pl) and pl["words"] == "drawn in 1 sec" and 8 <= pl["inL"] <= 16 and 8 <= pl["inB"] <= 16 and pl["midFree"]
+            check(f"/gallery {dev} {theme}: the card's play says 'drawn in 1 sec', centred on the drawing's foot 8-16px up and inside its edges, the drawing's middle clear, the title 16px in the strong ink",
+                  bool(pl) and pl["words"] == "drawn in 1 sec" and abs(pl["off"]) <= 1 and pl["inL"] >= 8 and pl["inR"] >= 8
+                  and 8 <= pl["inB"] <= 16 and pl["midFree"]
                   and pl["size"] == "16px" and int(pl["weight"]) >= 600 and pl["strong"], str(pl))
+            # ALWAYS INSIDE: a drawing narrower than the pill's words keeps the
+            # time, centred, and its name still says how it was drawn. A tall,
+            # phone-shaped drawing on a desk, two to a row, is that drawing.
+            if dev == "desk":
+                nr = pg.evaluate("""(tag) => { const t = [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag));
+                  if (!t) return null; t.scrollIntoView({block: 'center'});
+                  const box = t.querySelector('[data-skribl-inline]'), play = box.querySelector('.skribl-inline-play'),
+                        r = play.getBoundingClientRect(), b = box.getBoundingClientRect();
+                  const a = box.dataset.skriblW / box.dataset.skriblH, w = Math.min(b.width, b.height * a);
+                  const l = b.left + (b.width - w) / 2, rr = l + w;
+                  return { words: play.textContent.trim(), name: box.getAttribute('aria-label'), drawing: Math.round(w),
+                           inL: Math.round(r.left - l), inR: Math.round(rr - r.right),
+                           off: Math.round(((r.left + r.right) / 2 - (l + rr) / 2) * 10) / 10 }; }""", f"{TAG} reed")
+                check(f"/gallery desk {theme}: on a drawing narrower than the words, the pill keeps the time, centred and inside it, and its name still says how it was drawn",
+                      bool(nr) and re.fullmatch(r"\d+ sec", nr["words"] or "") is not None and abs(nr["off"]) <= 1
+                      and nr["inL"] >= 8 and nr["inR"] >= 8 and "drawn in " + nr["words"] in (nr["name"] or ""), str(nr))
             pg.close()
             # THE PILL PLAYS (owner's iPhone: "When I tap the white button ...
             # I would have to push play to play. I thought that was a play
@@ -915,6 +957,16 @@ with sync_playwright() as p:
                       rest["state"] == "idle" and "skribl-inline-poster" in (rest["at"] or ""), str(rest))
                 # GLASS (the owner's pick D): light over a light drawing,
                 # dark over a dark one, the words 7:1 on the pixels behind.
+                # A MID-TONE DRAWING TAKES THE GLASS ITS WORDS READ ON (after
+                # v326): by its average the green is dark, and white words on
+                # the dark glass over it read 3.7:1.
+                gm = pg.evaluate("""(tag) => { const t = [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag));
+                  t.scrollIntoView({block: 'center'}); const b = t.querySelector('[data-skribl-inline]');
+                  return { id: b.dataset.skriblId, dark: b.classList.contains('is-says-dark') }; }""", f"{TAG} meadow")
+                pg.wait_for_timeout(300)
+                gmc = glass_contrast(pg, [f'[data-skribl-id="{gm["id"]}"] .skribl-inline-play span'], 2 if dev == "390" else 1)
+                check(f"/gallery {dev}: on a mid-tone drawing the pill takes the glass its words read on, 4.5:1 or more",
+                      gm["dark"] is False and len(gmc) == 1 and gmc[0][1] >= 4.5, f"{gm}, {gmc}")
                 for tag, dark in ((f"{TAG} coil", False), (f"{TAG} night", True)):
                     gs = pg.evaluate("""(tag) => { const t = [...document.querySelectorAll('article.tile')].find(a => a.textContent.includes(tag));
                       t.scrollIntoView({block: 'center'}); const b = t.querySelector('[data-skribl-inline]');

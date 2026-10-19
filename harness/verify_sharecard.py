@@ -251,6 +251,67 @@ if bare_id:
           _pb != pad_bytes and _pb != flip_bytes and 0 < len(_pb) < 2_000,
           f"{len(_pb):,} B")
 
+# A POST MADE PART-WAY THROUGH ITS REPLAY CARRIES THE WHOLE DRAWING (the
+# owner, after v326: Bloom rested in the Gallery as an empty square, and drew
+# itself when tapped). The Pad's card is its canvas flattened at post time,
+# and a replay running or paused part-way has that canvas cleared and half
+# redrawn, so the card was a picture of the replay so far. Driven the way it
+# happens: draw, press Play, stop part-way (paused, the same canvas as
+# running, held still for the measure), post. The served card is compared
+# with the card the same drawing makes at rest and with the empty card its
+# ground alone makes, both built by the same builder in the same page before
+# Play was pressed: the posted card has to be the drawing, not the ground.
+print("\nA POST MADE PART-WAY THROUGH ITS REPLAY")
+_CMP = """async ([a, b, c]) => {
+  const px = src => new Promise(ok => { const im = new Image(); im.onload = () => {
+    const cv = document.createElement('canvas'); cv.width = 300; cv.height = 158;
+    const g = cv.getContext('2d'); g.drawImage(im, 0, 0, 300, 158); ok(g.getImageData(0, 0, 300, 158).data); };
+    im.onerror = () => ok(null); im.src = src; });
+  const [A, B, C] = await Promise.all([px(a), px(b), px(c)]);
+  if (!A || !B || !C) return null;
+  const d = (x, y) => { let s = 0; for (let i = 0; i < x.length; i += 4) s += Math.abs(x[i] - y[i]) + Math.abs(x[i + 1] - y[i + 1]) + Math.abs(x[i + 2] - y[i + 2]); return s / (x.length / 4); };
+  return { posted: Math.round(d(A, B) * 10) / 10, empty: Math.round(d(C, B) * 10) / 10 }; }"""
+with sync_playwright() as sp:
+    b = sp.chromium.launch()
+    pg = b.new_page(viewport={"width": 1280, "height": 900})
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    browsing.goto(pg, BASE, "/skribl-pad")
+    pg.evaluate("() => localStorage.clear()")
+    box = pg.locator("#canvas").bounding_box()
+    for row in range(4):
+        pg.mouse.move(box["x"] + 80, box["y"] + 90 + row * 110)
+        pg.mouse.down()
+        for i in range(30):
+            pg.mouse.move(box["x"] + 80 + i * 22, box["y"] + 90 + row * 110 + (i % 5) * 14)
+            pg.wait_for_timeout(30)
+        pg.mouse.up()
+    pg.wait_for_timeout(400)
+    pg.click("#recordBtn")
+    pg.wait_for_timeout(400)
+    _rest = pg.evaluate("""() => { const f = window.skriblPreviewCanvas(), e = document.createElement('canvas');
+        e.width = f.width; e.height = f.height; const g = e.getContext('2d');
+        g.fillStyle = (typeof bgColor !== 'undefined' && bgColor) || '#0d0f14'; g.fillRect(0, 0, e.width, e.height);
+        return [SkriblPostedCard.build(f), SkriblPostedCard.build(e)]; }""")
+    pg.click("#playBtn")
+    pg.wait_for_timeout(250)
+    _part = pg.evaluate("() => { pausePlayback(); return { playing: playing, paused: playPaused }; }")
+    pg.click("#postBtn")
+    pg.wait_for_timeout(800)
+    pg.fill("#postTitleInput", "Posted part-way through its replay")
+    _posted = browsing.submit_post(pg)
+    _mid_id = re.search(r"/s/([A-Za-z0-9_-]+)", _posted["url"] or "")
+    check("a Pad Skribl was posted with its replay paused part-way (fixture)",
+          bool(_mid_id) and _part == {"playing": True, "paused": True},
+          f"{_posted.get('url')}; replay {_part}")
+    _cmp = pg.evaluate(_CMP, [BASE + "/s/" + _mid_id.group(1) + "/card.png", _rest[0], _rest[1]]) if _mid_id else None
+    check("...and its card is the whole drawing, as it is at rest, not the replay so far",
+          bool(_cmp) and _cmp["empty"] > 1 and _cmp["posted"] < _cmp["empty"] / 4,
+          f"{_cmp} -- the mean step from the card at rest to the posted one, and to the "
+          f"card of the ground alone; a posted card near the empty one is Bloom's empty square")
+    check("no page errors posting part-way", not errs, "; ".join(errs[:2]))
+    b.close()
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)

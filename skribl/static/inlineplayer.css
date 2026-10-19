@@ -133,11 +133,13 @@
   translate: -2.43%;
 }
 
-/* No line: the button says it, in the drawing's corner (inlineplayer.js). */
-.is-says .skribl-inline-veil{place-items:end start;padding:12px;left:var(--sx,0);bottom:var(--sy,0)}
+/* No line: the button says it, centred on the drawing's foot and inside it
+   (the owner's pick A after v326; inlineplayer.js keeps the time alone on a
+   drawing too narrow for the words). The veil spans the drawing. */
+.is-says .skribl-inline-veil{place-items:end center;padding:12px;left:var(--sx,0);right:var(--sx,0);bottom:var(--sy,0)}
 /* Glass (the owner's pick D): light over a light drawing, dark over a dark
    one (.is-says-dark, read off the card). 7:1 on the pixels behind it. */
-.is-says .skribl-inline-play{display:flex;gap:7px;width:auto;height:40px;border-radius:20px;padding:0 14px 0 10px;font:600 14px var(--font-ui,system-ui,sans-serif);color:#3a24a8;background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.9);-webkit-backdrop-filter:blur(12px) saturate(1.6);backdrop-filter:blur(12px) saturate(1.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 3px 12px rgba(10,6,30,.14)}
+.is-says .skribl-inline-play{display:flex;gap:7px;white-space:nowrap;width:auto;height:40px;border-radius:20px;padding:0 14px 0 10px;font:600 14px var(--font-ui,system-ui,sans-serif);color:#3a24a8;background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.9);-webkit-backdrop-filter:blur(12px) saturate(1.6);backdrop-filter:blur(12px) saturate(1.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 3px 12px rgba(10,6,30,.14)}
 .is-says.is-says-dark .skribl-inline-play{color:#fff;background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.26);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 3px 12px rgba(10,6,30,.4)}
 .is-says .skribl-inline-play svg{width:16px;height:16px;translate:none;fill:currentColor}
 .is-says .skribl-inline-play.is-busy::after{order:-1;width:12px;height:12px;border-color:currentColor;border-top-color:transparent}
