@@ -365,11 +365,7 @@
        says "Not one rule touches .skribl-inline: the component is the
        component", and a `:fullscreen` rule on it would be exactly that. The
        wrapper takes the display and the component sizes itself inside it,
-       which is the same shape the profile's .stageCanvasWrap uses.
-
-       The button exists only where the API does. iPhone Safari has fullscreen
-       for <video> alone, and a control that did nothing there would be worse
-       than not having one — the same rule library.js states at its own. */
+       which is the same shape the profile's .stageCanvasWrap uses. */
     var stage = document.createElement('div');
     stage.className = 'tileStage';
     /* THE CONTROL IS UNCONDITIONAL. Gating it on `fullscreenEnabled` meant no
@@ -420,8 +416,7 @@
           var a = item.author || {};
           return { title: item.title,
                    name: a.display_name || a.username || '',
-                   handle: a.username ? '@' + a.username : '',
-                   avatar: safeHref(a.avatar_url) };
+                   handle: a.username ? '@' + a.username : '' };
         },
         onExit: function () { if (imm) imm.close(); }
       }) : null;
@@ -455,8 +450,10 @@
         box.classList.toggle('is-immersive', !!big);
         if (!pl) return;
         if (big) { pl.play(); return; }
-        pl.pause();
-        if (pl.state().loaded) pl.seek(0);
+        // The player's own way back to being a post: idle, the card on top.
+        // Paused at 0:00 left the card see-through over a blank canvas, the
+        // drawing's ground and one dot (after v326, the viewing pages' review).
+        pl.settle();
       };
       imm = window.SkriblImmersive.attach(stage, { onChange: onFs });
     }
@@ -613,8 +610,6 @@
       foot = window.SkriblFullBar.attach(stage, {
         variant: 'skfull-card',
         controls: ['play', 'loop', 'mute', 'full'],
-        who: false,
-        scrubRow: false,
         player: function () {
           var b = stage.querySelector('.skribl-inline');
           return (b && b._skriblInline) || null;
@@ -1168,8 +1163,8 @@
         t.setAttribute('aria-pressed', String(on));
       });
       if (subEl) subEl.textContent = sort === 'hot'
-        ? 'Most played in the last seven days. Tap one to watch it draw itself.'
-        : 'Skribls people chose to show. Tap one to watch it draw itself.';
+        ? 'Most played in the last seven days. Tap one to watch it come alive.'
+        : 'Skribls people chose to show. Tap one to watch it come alive.';
       load(true);
     });
   });

@@ -19940,3 +19940,53 @@ and two comments describing things that are gone are gone.
 Pad and Flip: Flip's. The Pad's own review is above; Flip's New Skribl
 still undoes through Undo clear, where the Pad shows an Undo chip (a choice
 for the owner).
+
+## After v326 -- the viewing pages' review: the card, full screen, the Library and a post's box (bug fixes)
+
+A read-only review of the pages where a drawing is watched -- the Gallery's
+cards, the Gallery's and the Library's full screen, the Library's stage and
+the box a post plays in -- found eight places where what a person saw or
+heard was not what was true. Each now has a row in the new verify_viewedges,
+red on the code before it (1/16 there, the no-page-error row the one that
+passes); two parts that share a row were each reverted alone, and each went
+red on its own.
+
+- Leaving the Gallery's full screen left the card see-through over a blank
+  canvas: it paused the player and sought to 0:00, where the poster steps
+  aside. It settles the player now, the way a post a person scrolled past
+  goes back to being a post.
+- The speeds, opened in the Gallery's or the Library's full screen, faded
+  away with the band while the drawing played. The band stays up while one
+  of its menus is open, as the link page's always has.
+- Loop turned off in the Library's full screen stayed lit on the page, and
+  took two presses to turn back on: the page kept a flag of its own. The
+  page reads the player's loop as it reads its clock, and a press toggles
+  from the player.
+- A host's Library printed the signed-in id in full screen as a name and an
+  @handle. It names who drew it from the listing's author, as the Gallery
+  does, and nothing when there is none.
+- A card with sound said "This Skribl has no sound", greyed out, until its
+  first play. Before it loads, the listing says whether it has sound.
+- The card's scrubber said slider and Tab passed it by. It is one now
+  (lib/scrubkeys.js, as every other scrubber here), named Scrub.
+- The card said "Repeat" and "Sound is on / off" where its own full screen,
+  the link page and the Library say Loop and Mute / Unmute; the state words
+  stay in the tip.
+- The Library's Play said "Play" to a screen reader while it played, and
+  its Mute said "Mute" while a press would unmute; a post's box said "Play
+  this Skribl" while it played. Each is named by what a press does next.
+  The box's name costs every page that shows a post 99 B, raised in writing
+  in verify_inline (70,359 B measured).
+
+And the Gallery says "Tap one to watch it come alive" (a Flip does not draw
+itself; the owner's own words for watching), its empty state names the
+switch an author can use later, in the Library; three colours of the old
+full-screen exit and two of the Library's ramp that nothing read are gone
+(verify_viewedges counts a page's own names, not styles.css's vocabulary,
+which each page maps for the sheets it shares); two dead options and an
+unread avatar left the Gallery's bar; and five comments that still
+described the iPhone as having no full screen, a post as two controls, and
+a suite by its old name say what is true.
+
+Pad and Flip: the editors' own full screen (lib/watchfull.js) keeps its band
+up while its speeds are open already; nothing here changes either editor.

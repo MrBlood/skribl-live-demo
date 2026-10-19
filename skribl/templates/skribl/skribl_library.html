@@ -59,12 +59,10 @@
     :root {
       color-scheme: dark;
       --base: {{ skribl_theme_ground.dark }};
-      --deep: #06070a;
       --raised: #0f1218;
       --panel: #13161c;
       --control: #171b23;
       --control-hi: #1c212c;
-      --pop: #1b1f27;
       --hairline: #242a36;
       --hairline-soft: #1b2028;
       --text: #eef1f6;
@@ -96,13 +94,11 @@
          until v313, tuned for the dark ground and nothing else. */
       --hover-edge: #3a4658;
       /* The colours this sheet used to type at its rules (#20). A poster's
-         plate and the full-screen exit's sit on a drawing in both themes, so
-         they have no light values. */
+         plate sits on a drawing in both themes, so it has no light value.
+         (The full-screen exit's went with the old bar: the band is
+         fullband.css's.) */
       --plate: #0b0d12;
       --plate-ring: rgba(6,7,10,.9);
-      --plate-glass: rgba(6,7,10,.72);
-      --plate-edge: rgba(255,255,255,.18);
-      --plate-ink: #eef1f6;
       --wash-accent: rgba(124,92,255,.06);
       --ground-glow-a: rgba(124,92,255,0.10);
       --ground-glow-b: rgba(91,140,255,0.07);
@@ -114,12 +110,10 @@
     :root[data-theme="light"] {
       color-scheme: light;
       --base: {{ skribl_theme_ground.light }};
-      --deep: #e9ecf2;
       --raised: #ffffff;
       --panel: #ffffff;
       --control: #f1f3f7;
       --control-hi: #e7eaf0;
-      --pop: #ffffff;
       --hairline: #d9dee7;
       --hairline-soft: #e3e7ee;
       --text: #14171d;
@@ -796,10 +790,11 @@
         <button class="tbtn play" id="btnPlay" title="Play" aria-label="Play"><svg aria-hidden="true" id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
         <button class="tbtn on" id="btnLoop" title="Loop" aria-label="Loop" aria-pressed="true"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
         <button class="tbtn" id="btnMute" title="Mute" aria-label="Mute"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg></button>
-        {# FULL SCREEN (v304): the stage, on the whole display, through the
-           Fullscreen API. Shown only where the browser allows it (iPhone
-           Safari allows it for <video> alone), hidden otherwise rather than
-           dead. Escape and the same button both leave. #}
+        {# FULL SCREEN (v304): the stage, on the whole display. Hidden until
+           library.js has lib/immersive.js to drive it, which pins the stage
+           over the viewport where the Fullscreen API is missing (iPhone
+           Safari has it for <video> alone). Escape and the same button both
+           leave. #}
         <button class="tbtn" id="btnFull" title="Full screen" aria-label="Full screen" aria-pressed="false" hidden><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
         <button class="tbtn" id="btnShare" title="Copy link" aria-label="Copy link"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
         <span class="telapsed" id="tElapsed">0:00 / 0:00</span>

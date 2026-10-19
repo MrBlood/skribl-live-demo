@@ -17,10 +17,11 @@
  * transport around it, and the grid.
  *
  * THE TRANSPORT IS THE DIFFERENCE BETWEEN THE TWO SURFACES, and it is
- * deliberate. A post gets a play tap and a mute button, because a feed is not a
- * media player (inlineplayer.css says so at the mute rule). A profile tab is a
- * page ABOUT the drawings — somebody came here to look at one — so scrub,
- * restart and a loop toggle belong.
+ * deliberate. A post wears the line under it (the scrubber, the speeds, loop
+ * and mute: inlineplayer.js, since v322) and keeps to the feed's width. A
+ * profile tab is a page ABOUT the drawings — somebody came here to look at
+ * one — so the stage has a transport of its own: scrub, restart, play,
+ * loop, mute, full screen and a copy of its link.
  *
  * ONE PAYLOAD AT A TIME. The grid tiles are share-card images, not players. Fifty mounted players each
  * holding a payload is tens of megabytes for a page of thumbnails, and
@@ -270,6 +271,9 @@
       ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
       : '<path d="M8 5v14l11-7z"/>';
     btnPlay.title = on ? 'Pause' : 'Play';
+    // Its name follows too: a screen reader heard "Play" while it played, the
+    // title changing alone (after v326, the viewing pages' review).
+    btnPlay.setAttribute('aria-label', on ? 'Pause' : 'Play');
   }
 
   /* The transport reads the PLAYER's clock rather than keeping one of its own.
@@ -284,8 +288,17 @@
     setPlayIcon(st.state === 'playing');
     btnMute.classList.toggle('on', !st.muted);
     btnMute.disabled = !st.hasAudio;
-    btnMute.title = !st.hasAudio ? 'This Skribl has no sound'
-                                 : (st.muted ? 'Unmute' : 'Mute');
+    var said = !st.hasAudio ? 'This Skribl has no sound' : (st.muted ? 'Unmute' : 'Mute');
+    btnMute.title = said;
+    btnMute.setAttribute('aria-label', said);   // the tip's words are its name too
+    // LOOP IS THE PLAYER'S, read back as the clock is: full screen's band
+    // turns it off on the same player, and this button stayed lit, then took
+    // two presses to turn looping back on (the viewing pages' review).
+    if (typeof player.looping === 'function' && player.looping() !== looping) {
+      looping = player.looping();
+      btnLoop.classList.toggle('on', looping);
+      btnLoop.setAttribute('aria-pressed', String(looping));
+    }
   }
 
   /* THE TRANSPORT BEATS ONLY AS FAST AS THE DRAWING MOVES. It read the
@@ -320,7 +333,7 @@
     beat();
   });
   btnLoop.addEventListener('click', function () {
-    looping = !looping;
+    looping = !(player && typeof player.looping === 'function' ? player.looping() : looping);
     this.classList.toggle('on', looping);
     this.setAttribute('aria-pressed', String(looping));
     if (player) player.setLoop(looping);
@@ -356,11 +369,8 @@
   });
 
   /* ---- full screen -------------------------------------------------------
-     The stage wrap on the whole display, through the Fullscreen API. The
-     button exists only where the API does: iPhone Safari has it for <video>
-     alone, and a button that did nothing there would be worse than none.
-     Escape leaves through the browser; the button leaves too, and its
-     pressed state follows the document, not a flag of its own. */
+     The stage wrap on the whole display. Escape leaves; the button leaves
+     too, and its pressed state follows the page, not a flag of its own. */
   /* FULL SIZE, ON EVERY DEVICE (lib/immersive.js). Gating this on
      `document.fullscreenEnabled` is right on its own terms and wrong in
      practice: iOS Safari has the API for <video> and nothing else, so the
@@ -376,9 +386,14 @@
     var fbar = window.SkriblFullBar ? window.SkriblFullBar.attach(stageWrap, {
       player: function () { return player; },
       meta: function () {
+        /* WHO MADE IT, AS THE GALLERY SAYS IT: the listing's resolved author.
+           This printed the signed-in id as a name and an @handle (after
+           v326, the viewing pages' review); a host's id is a key, not a
+           name. No author, no name. */
+        var a = (current && current.author) || {};
         return current ? { title: current.title,
-                           name: me || '',
-                           handle: me ? '@' + me : '' } : null;
+                           name: a.display_name || a.username || '',
+                           handle: a.username ? '@' + a.username : '' } : null;
       },
       onExit: function () { imm.close(); }
     }) : null;
@@ -429,7 +444,8 @@
                 said" into the same false, which is what put SILENT on a
                 Skribl with music. */
              has_audio: e.has_audio === true ? true : e.has_audio === false ? false : null,
-             visibility: e.visibility || (me ? '' : 'unlisted') };
+             visibility: e.visibility || (me ? '' : 'unlisted'),
+             author: e.author || null };
   }
 
   function passes(e) {
@@ -703,6 +719,7 @@
                           visibility: i.visibility || '',
                           canvas_w: i.canvas_w || 0, canvas_h: i.canvas_h || 0,
                           has_audio: i.has_audio === true ? true : i.has_audio === false ? false : null,
+                          author: i.author || null,
                           owned: true, tok: null });
         });
         items = hostRows.map(asItem);

@@ -1312,11 +1312,14 @@
       racer = null;
       if (queued) { queued = false; play(); }
     }
-    /* What the box shows: playing, or paused. */
+    /* What the box shows: playing, or paused. And its name says what a tap
+     * does next: "Play this Skribl" while it played (after v326, the viewing
+     * pages' review). */
     function look(on) {
       if (size) canvas.hidden = false;
       el.classList.toggle('is-playing', on);
       el.classList.toggle('is-paused', !on);
+      if (label && !failed) el.setAttribute('aria-label', on ? label.replace(/^Play/, 'Pause') : label);
     }
 
     /* ---- the line ------------------------------------------------------- */
@@ -1611,9 +1614,9 @@
      * uses for the Pad's preview and for /s/.
      *
      * Per PLAYER, not per page: a feed scrolls past twenty of these and a rate
-     * chosen on one is not a statement about the next. The full-screen bar is
-     * where it is offered (lib/fullbar.js); a post in a feed still has two
-     * controls and no transport. */
+     * chosen on one is not a statement about the next. The speeds are in the
+     * line under a post (lib/replayline.js), and in the band a host builds
+     * from it (lib/fullbar.js). */
     function segElapsed() { return (now() - t0) * rate; }
 
     function frame() {
