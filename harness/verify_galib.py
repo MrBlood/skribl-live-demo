@@ -702,6 +702,35 @@ with sync_playwright() as p:
           and bool(t2) and not t2["open"], f"{t1 and [t1['words'], t1['href'], t1['open']]}; file me open {t2 and t2['open']}")
     pg.close()
 
+    # THE LAST ROW AT THE SCREEN'S FOOT (the owner's iPhone, after #538: the
+    # last draft's menu opened under its row and past the screen, with only
+    # Open in sight). With the screen ending 12px under the last row, its
+    # menu stands above its ⋯, inside the screen, every word painted; and so
+    # does a posted row's, whose rules it shares.
+    FOOT = """(sel) => { const rows = [...document.querySelectorAll(sel)], r = rows[rows.length - 1];
+      if (!r) return null; const menu = r.querySelector('.draft-acts, .posted-actions'), more = r.querySelector('.draft-more, .posted-more');
+      const bs = [...menu.querySelectorAll('.draft-act, button')].filter(b => b.getClientRects().length);
+      const q = menu.getBoundingClientRect(), m = more.getBoundingClientRect();
+      return { open: r.classList.contains('more-open'), items: bs.length,
+               painted: bs.length > 0 && bs.every(b => { const x = b.getBoundingClientRect(), at = document.elementFromPoint(x.left + x.width / 2, x.top + x.height / 2); return !!(at && b.contains(at)); }),
+               inside: q.top >= 0 && Math.round(q.bottom) <= innerHeight, above: Math.round(q.bottom) <= Math.round(m.top) + 1 }; }"""
+    for _list, _tab, _sel in (("drafts", "#tabDrafts", "#draftsList .draft-row"), ("posted", "#tabSkribls", ".posted-row.posted-row-keyed")):
+        for theme in ("light", "dark"):
+            pg = open_page(phone, "/library", theme)
+            _tap(pg.locator(_tab)); pg.wait_for_timeout(700)
+            last = pg.locator(_sel).last
+            if not last.count():
+                check(f"{_list} 390 {theme}: the last row's menu, at the screen's foot, stands above its ⋯, inside the screen, every word painted", False, "no rows")
+                pg.close(); continue
+            last.evaluate("r => r.scrollIntoView({ block: 'end' })"); pg.wait_for_timeout(200)
+            _h = pg.evaluate("(sel) => { const rows = [...document.querySelectorAll(sel)]; return Math.round(rows[rows.length - 1].getBoundingClientRect().bottom) + 12; }", _sel)
+            pg.set_viewport_size({"width": pg.viewport_size["width"], "height": _h}); pg.wait_for_timeout(300)
+            _tap(last.locator(".draft-more, .posted-more")); pg.wait_for_timeout(300)
+            ft = pg.evaluate(FOOT, _sel)
+            check(f"{_list} 390 {theme}: the last row's menu, at the screen's foot, stands above its ⋯, inside the screen, every word painted",
+                  bool(ft) and ft["open"] and ft["items"] >= 3 and ft["inside"] and ft["painted"] and ft["above"], f"{ft}, screen {_h}px")
+            pg.close()
+
     # A desk: the card opens the draft, and the row's end is Save file and
     # Delete. Save file is the file the editor's Save as a file makes, with
     # no editor open; a Flip draft holding an in-between page says why not.
