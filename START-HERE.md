@@ -171,6 +171,7 @@ here is the rule you can break tomorrow.
 | Work on the canvas, including media still on its way back from the store, is asked about before a draft replaces it; a late store answer never lands on a different document; Save draft waits for a file still being read. | `verify_amber.py`, `verify_clouddrafts.py` |
 | Every bottom sheet closes on a tap of its grabber or a swipe down, owns the touch from its first pixel (no pull-to-refresh), and eases away. | `verify_sheetswipe.py` |
 | The Gallery card's fade takes its colours from the drawing under it: invisible on empty paper, inside the drawing's round corners and off the card beside it; each glass control takes the tone of what is under it; the time reads at 4.5:1 on painted pixels; a drawing that cannot be read keeps the scrim; Mute steps aside on a silent drawing, on the card and in full screen, from the first paint. | `verify_cardfade.py` |
+| One full screen, everywhere: the Gallery's and the Library's full screen is the link page's -- its band (the scrubber in the drawing's shape, the artist's clock, the words with every speed, the buttons), its x and the drawing's ground to the screen's edges -- built by `lib/fullbar.js` band() in the link page's markup, from styles.css's own rules (`fullband.css`, emitted by `harness/tools/cssgraph.py` like `player.css`), with who drew it in the top corner. | `verify_onefull.py` (every part measured against the link page's), `verify_seam.py` (`fullband.css` byte for byte what the tool emits) |
 | Every full screen's bar takes its colours from the drawing too (the Gallery's and the Library's, the link page's, Pad's and Flip's), read by the card's own reading (lib/smartfade.js): the fade unseen on empty paper and no fog on a dark drawing; every word at 4.5:1 on its worst painted pixel; each control's glass by what is under it, turning with the theme; a title crossing a tall drawing's edge in a capsule; a photo under the drawing as a picture of its own keeps the scrim. | `verify_fullsmart.py` |
 
 **One from v179 did NOT survive, and is recorded here rather than quietly
@@ -796,11 +797,11 @@ rather than a shared rule.
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
 | `recoverykey.js` | Pad+Flip+library | Both ends of an anonymous author's revocation key: showing one, taking one back, and standing between a bulk clear and the keys it would discard. |
-| `replayline.js` | Pad+player+in-post | How fast a replay runs, and the line that says what you are watching. |
+| `replayline.js` | Pad+player+library+in-post | How fast a replay runs, and the line that says what you are watching. |
 | `report.js` | Pad+Flip+library+gallery | "Report a problem" — the context, collected once, for both editors. |
 | `savedrafts.js` | Pad+Flip+library | Saved drafts — ⋯ "Save draft" and "Open a draft…" on both editors (v316), and the Library's Drafts tab (v317). |
-| `scrubkeys.js` | Pad+Flip+player+in-post | Keyboard operation and live value for the three playback scrubbers. |
-| `seekcache.js` | Pad+player+in-post | SCRUBBING STARTS NEAR WHERE YOU POINT: a few snapshots of a replay's canvas, so a seek draws only what lies between the nearest one and the target (v322 plan, step 3). |
+| `scrubkeys.js` | Pad+Flip+player+library+in-post | Keyboard operation and live value for the three playback scrubbers. |
+| `seekcache.js` | Pad+player+library+in-post | SCRUBBING STARTS NEAR WHERE YOU POINT: a few snapshots of a replay's canvas, so a seek draws only what lies between the nearest one and the target (v322 plan, step 3). |
 | `segslider.js` | Pad+Flip+library+gallery | THE PILL. Every pick-one control in the product slides one soft tint under its selected option, and this is the one thing that places it (the owner, choosing between four mocked shapes: "a on the pill"). |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapecard.js` | Pad+Flip | The shape card -- the picker that opens above the Shape tool -- one implementation, both editors. |

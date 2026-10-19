@@ -16,10 +16,11 @@
    restyled. Rules are taken one by one, inside @media too, in their original
    order.
 
-   THE COST IS DUPLICATION, paid for by an assertion: verify_cssplit.py
-   regenerates this file and fails if it differs by one byte from what
-   styles.css and the recorded census produce. A rule edited in styles.css
-   and not re-emitted here is a red suite. */
+   THE COST IS DUPLICATION, paid for by an assertion: verify_seam.py, on
+   every pull request, regenerates this file with player.css and fails if it
+   differs by one byte from what styles.css and the recorded census produce.
+   A rule edited in styles.css and not re-emitted here is a red suite; the
+   one command that re-emits player.css re-emits this too. */
 
 /* The band's tokens: styles.css's :root and its light theme, on a full-screen frame. */
 .watch-full:is(:fullscreen, .is-immersive-page) {

@@ -339,6 +339,16 @@ stays a sleep.
   the bar and the x away while it plays on, a pause from elsewhere brings them
   back, a finger's first tap only wakes them (a mouse's move on a desk), the
   next tap pauses, and paused they stay up. Visible means painted.
+- `verify_onefull.py` — one full screen, everywhere: the Gallery's and the
+  Library's are the link page's (owner: "why can't the gallery player look
+  like the others? with the same scrubber and all?", then "All yes"). The
+  same drawing at the same place on all three, on the owner's phone and a
+  desk, in both themes: the band in the link page's order with the x in the
+  corner, every part measuring the same by its computed size, spacing, type,
+  colours and glass; the artist's clock; every speed and Fit (a Flip's
+  without), a pick reaching the drawing; the drawing's ground to the screen's
+  edges; who drew it in the top corner across from the x, clear on its
+  glass, stepping back with the controls; the x and the button leaving.
 - `verify_learncard.py` — the card on the button (lib/learncard.js), Pad and
   Flip: holding a button (real touch) opens its card with its example; a
   quick tap stays a tap, a moving finger is no hold, the lift does not press,

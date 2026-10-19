@@ -177,7 +177,9 @@ def open_link(b, view, theme):
         pg.add_init_script(NO_API)
     pg.add_init_script(f"try {{ localStorage.setItem('skribl_theme_v1', '{theme}'); }} catch (e) {{}}")
     browsing.goto(pg, BASE, "/s/" + DRAWING["id"])
-    pg.wait_for_timeout(1800)
+    # The button shows once the player has its drawing; a busy box takes longer.
+    pg.wait_for_selector("#playerFullBtn", state="visible", timeout=60000)
+    pg.wait_for_timeout(600)
     pg.click("#playerFullBtn")
     pg.wait_for_timeout(1200)
     pause_at(pg, LINK, 0.42, True)
@@ -265,8 +267,11 @@ with sync_playwright() as p:
             pg = opener(b, view, theme)
             errs = []
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            # The same place as the link page's playhead, to the pixel it paints.
-            pause_at(pg, P, (ref["head"] or 42) / 100, False)
+            try:
+                # The same place as the link page's playhead, to the pixel it paints.
+                pause_at(pg, P, (ref["head"] or 42) / 100, False)
+            except Exception:                 # no band to pause: the rows below say so
+                pass
             got = pg.evaluate(READ, [P, PROPS])
             check(f"{sname} ({where}): the link page's band, in its order (scrubber, clock, words, buttons) with the x in the corner",
                   got["order"] == ref["order"] and got["buttons"] == ref["buttons"] and got["strip"] and ref["strip"]
@@ -278,12 +283,16 @@ with sync_playwright() as p:
                   got["at"] == ref["at"] and got["dur"] == ref["dur"] and got["words"] == ref["words"],
                   f"here {got['at']} of {got['dur']} '{got['words']}'; link {ref['at']} of {ref['dur']} '{ref['words']}'")
             if vname == "phone" and theme == "dark":
-                pg.click(P["line"] + " .rl-speed")
-                pg.wait_for_timeout(300)
-                chips = pg.evaluate("(s) => [...document.querySelectorAll(s + ' .rl-chips button')].filter(b => !b.hidden).map(b => b.textContent)", P["line"])
-                pg.click(P["line"] + " .rl-chips [data-r='4']")
-                pg.wait_for_timeout(300)
-                rate = pg.evaluate("(F) => document.querySelector(F + ' .skribl-inline')._skriblInline.rate()", P["frame"])
+                chips, rate = [], None
+                try:
+                    pg.click(P["line"] + " .rl-speed", timeout=4000)
+                    pg.wait_for_timeout(300)
+                    chips = pg.evaluate("(s) => [...document.querySelectorAll(s + ' .rl-chips button')].filter(b => !b.hidden).map(b => b.textContent)", P["line"])
+                    pg.click(P["line"] + " .rl-chips [data-r='4']", timeout=4000)
+                    pg.wait_for_timeout(300)
+                    rate = pg.evaluate("(F) => document.querySelector(F + ' .skribl-inline')._skriblInline.rate()", P["frame"])
+                except Exception as exc:
+                    chips = [f"no speeds: {str(exc)[:80]}"]
                 check(f"{sname}: the words' speed opens every one of the link page's speeds and Fit, and a pick reaches the drawing",
                       chips == ["¼×", "½×", "1×", "2×", "4×", "8×", "16×", "Fit"] and rate == 4, f"{chips} -> {rate}")
             w = pg.evaluate(WHO, P["frame"])
@@ -303,10 +312,13 @@ with sync_playwright() as p:
 
     # A Flip: its pages in the scrubber and no Fit, as on the link page.
     pg = open_gallery(b, PHONE, "dark", FLIP)
-    pg.click(GAL["line"] + " .rl-speed")
-    pg.wait_for_timeout(400)
-    fl = pg.evaluate("""(F) => ({ chips: [...document.querySelectorAll(F + ' .rl-chips button')].filter(b => !b.hidden).map(b => b.textContent),
-        words: document.querySelector(F + ' .rl-text').innerText.replace(/\\s+/g, ' ').trim() })""", GAL["frame"])
+    try:
+        pg.click(GAL["line"] + " .rl-speed", timeout=4000)
+        pg.wait_for_timeout(400)
+        fl = pg.evaluate("""(F) => ({ chips: [...document.querySelectorAll(F + ' .rl-chips button')].filter(b => !b.hidden).map(b => b.textContent),
+            words: document.querySelector(F + ' .rl-text').innerText.replace(/\\s+/g, ' ').trim() })""", GAL["frame"])
+    except Exception as exc:
+        fl = {"chips": [], "words": f"no words: {str(exc)[:80]}"}
     check("Gallery: a Flip says its pages and offers every speed but Fit, as everywhere",
           fl["chips"] == ["¼×", "½×", "1×", "2×", "4×", "8×", "16×"] and fl["words"].startswith("3 pages · watching at"), str(fl))
     pg.close()
@@ -315,21 +327,25 @@ with sync_playwright() as p:
     # and the full-screen button leave.
     pg = open_gallery(b, DESK, "light")
     pg.wait_for_timeout(4200)
-    asleep = pg.evaluate("""(F) => { const f = document.querySelector(F); return f && { asleep: f.classList.contains('chrome-asleep'),
-        band: getComputedStyle(f.querySelector(':scope > .player-bar')).opacity, who: getComputedStyle(f.querySelector(':scope > .fb-who')).opacity }; }""", GAL["frame"])
+    asleep = pg.evaluate("""(F) => { const f = document.querySelector(F), band = f && f.querySelector(':scope > .player-bar'), who = f && f.querySelector(':scope > .fb-who');
+        return f && band && who && { asleep: f.classList.contains('chrome-asleep'), band: getComputedStyle(band).opacity, who: getComputedStyle(who).opacity }; }""", GAL["frame"])
     check("Gallery: while the drawing plays the band steps back, and who drew it with it",
           bool(asleep) and asleep["asleep"] and asleep["band"] == "0" and asleep["who"] == "0", str(asleep))
     pg.mouse.move(400, 300)
     pg.mouse.move(420, 320)
     pg.wait_for_timeout(500)
-    pg.click(GAL["x"])
-    pg.wait_for_timeout(700)
-    left_x = pg.evaluate("(F) => !document.querySelector(F)", GAL["frame"])
+    left_x = left_full = False
+    try:
+        pg.click(GAL["x"], timeout=4000)
+        pg.wait_for_timeout(700)
+        left_x = pg.evaluate("(F) => !document.querySelector(F)", GAL["frame"])
+    except Exception:
+        pass
     pg.close()
     pg = open_gallery(b, PHONE, "dark")
-    pg.evaluate("(s) => document.querySelector(s).click()", GAL["full"])
-    pg.wait_for_timeout(700)
-    left_full = pg.evaluate("(F) => !document.querySelector(F)", GAL["frame"])
+    if pg.evaluate("(s) => { const b = document.querySelector(s); if (b) b.click(); return !!b; }", GAL["full"]):
+        pg.wait_for_timeout(700)
+        left_full = pg.evaluate("(F) => !document.querySelector(F)", GAL["frame"])
     pg.close()
     check("Gallery: the x and the full-screen button both leave full screen", left_x and left_full, f"x {left_x}, button {left_full}")
     b.close()
